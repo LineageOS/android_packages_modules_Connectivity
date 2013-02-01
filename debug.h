@@ -18,7 +18,7 @@
 #ifndef __DEBUG_H__
 #define __DEBUG_H__
 
-// set to 1 to enable debug logging
+// set to 1 to enable debug logging and packet dumping.
 #define CLAT_DEBUG 0
 
 #endif /* __DEBUG_H__ */

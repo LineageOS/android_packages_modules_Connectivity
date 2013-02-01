@@ -28,9 +28,12 @@
 #include <netinet/icmp6.h>
 #include <linux/icmp.h>
 
+#include "debug.h"
 #include "checksum.h"
 #include "clatd.h"
 #include "logging.h"
+
+#if CLAT_DEBUG
 
 /* print ip header */
 void dump_ip(struct iphdr *header) {
@@ -223,3 +226,5 @@ void logcat_hexdump(const char *info, const char *data, size_t len) {
 
   logmsg(ANDROID_LOG_WARN,"info %s len %d data %s", info, len, output);
 }
+
+#endif  // CLAT_DEBUG
