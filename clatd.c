@@ -38,7 +38,7 @@
 #include <netinet/icmp6.h>
 #include <linux/icmp.h>
 
-#include <linux/capability.h>
+#include <sys/capability.h>
 #include <linux/prctl.h>
 #include <linux/if.h>
 #include <linux/if_tun.h>
