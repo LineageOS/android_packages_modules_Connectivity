@@ -79,36 +79,6 @@ void set_forwarding(int fd, const char *setting) {
   }
 }
 
-/* function: set_accept_ra
- * accepts IPv6 RAs on all interfaces, even when forwarding is on
- */
-void set_accept_ra() {
-  int fd, i;
-  const char *interface_names[] = {"wlan0","default",NULL};
-  const char ipv6_sysctl[] = "/proc/sys/net/ipv6/conf/";
-  const char accept_ra[] = "/accept_ra";
-
-  for(i = 0; interface_names[i]; i++) {
-    ssize_t sysctl_path_len = strlen(ipv6_sysctl)+strlen(interface_names[i])+strlen(accept_ra)+1;
-    char *sysctl_path = malloc(sysctl_path_len);
-    if(!sysctl_path) {
-      logmsg(ANDROID_LOG_FATAL,"set_accept_ra: malloc failed");
-      exit(1);
-    }
-    snprintf(sysctl_path, sysctl_path_len, "%s%s%s", ipv6_sysctl, interface_names[i], accept_ra);
-
-    fd = open(sysctl_path, O_RDWR);
-    free(sysctl_path);
-    if(fd < 0) {
-      continue;
-    }
-    if(write(fd, "2\n", 2) < 0) {
-      logmsg(ANDROID_LOG_WARN,"write to (%s)accept_ra failed: %s",interface_names[i],strerror(errno));
-    }
-    close(fd);
-  }
-}
-
 /* function: stop_loop
  * signal handler: stop the event loop
  */
@@ -495,10 +465,6 @@ int main(int argc, char **argv) {
     logmsg(ANDROID_LOG_FATAL,"open /proc/sys/net/ipv6/conf/all/forwarding failed: %s",strerror(errno));
     exit(1);
   }
-
-  // forwarding slows down IPv6 config while transitioning to wifi
-  // forwarding also removes default routes learned from a RA
-  set_accept_ra();
 
   // run under a regular user
   drop_root();
