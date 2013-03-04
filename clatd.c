@@ -109,10 +109,10 @@ void set_accept_ra() {
   }
 }
 
-/* function: got_sigterm
- * signal handler: mark it time to clean up
+/* function: stop_loop
+ * signal handler: stop the event loop
  */
-void got_sigterm(int signal) {
+void stop_loop(int signal) {
   running = 0;
 }
 
@@ -474,6 +474,7 @@ int main(int argc, char **argv) {
     printf("I need an interface\n");
     exit(1);
   }
+  logmsg(ANDROID_LOG_INFO,"Starting clat on %s", uplink_interface);
 
   // open the tunnel device before dropping privs
   tunnel.fd6 = tun_open();
@@ -502,10 +503,9 @@ int main(int argc, char **argv) {
   // run under a regular user
   drop_root();
 
-  if(signal(SIGTERM, got_sigterm) == SIG_ERR) {
-    logmsg(ANDROID_LOG_FATAL, "sigterm handler failed: %s", strerror(errno));
-    exit(1);
-  }
+  // When run from netd, the environment variable ANDROID_DNS_MODE is set to
+  // "local", but that only works for the netd process itself.
+  unsetenv("ANDROID_DNS_MODE");
 
   configure_interface(uplink_interface, plat_prefix, &tunnel);
 
@@ -514,9 +514,15 @@ int main(int argc, char **argv) {
   set_default_ipv6_route(uplink_interface);
   set_forwarding(forwarding_fd,"1\n");
 
-  event_loop(&tunnel); // event_loop returns if someone sets the tun interface down manually
+  // Loop until someone sends us a signal or brings down the tun interface.
+  if(signal(SIGTERM, stop_loop) == SIG_ERR) {
+    logmsg(ANDROID_LOG_FATAL, "sigterm handler failed: %s", strerror(errno));
+    exit(1);
+  }
+  event_loop(&tunnel);
 
   set_forwarding(forwarding_fd,"0\n");
+  logmsg(ANDROID_LOG_INFO,"Shutting down clat on %s", uplink_interface);
 
   return 0;
 }

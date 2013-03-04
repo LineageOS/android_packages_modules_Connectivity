@@ -38,6 +38,9 @@ int plat_prefix(const char *ipv4_name, struct in6_addr *prefix) {
   int status, plat_addr_set, ipv4_records, ipv6_records;
   struct in6_addr plat_addr, this_plat_addr;
   struct sockaddr_in6 *this_addr;
+  char plat_addr_str[INET6_ADDRSTRLEN];
+
+  logmsg(ANDROID_LOG_INFO, "Detecting NAT64 prefix from DNS...");
 
   result = NULL;
   plat_addr_set = 0;
@@ -71,12 +74,12 @@ int plat_prefix(const char *ipv4_name, struct in6_addr *prefix) {
       continue;
     }
 
+    inet_ntop(AF_INET6, &plat_addr, plat_addr_str, sizeof(plat_addr_str));
     if(!IN6_ARE_ADDR_EQUAL(&plat_addr, &this_plat_addr)) {
-      char plat_addr_str[INET6_ADDRSTRLEN], this_plat_addr_str[INET6_ADDRSTRLEN];
+      char this_plat_addr_str[INET6_ADDRSTRLEN];
+      inet_ntop(AF_INET6, &this_plat_addr, this_plat_addr_str, sizeof(this_plat_addr_str));
       logmsg(ANDROID_LOG_ERROR,"plat_prefix/two different plat addrs = %s,%s",
-          inet_ntop(AF_INET6, &plat_addr, plat_addr_str, sizeof(plat_addr_str)),
-          inet_ntop(AF_INET6, &this_plat_addr, this_plat_addr_str, sizeof(this_plat_addr_str))
-          );
+             plat_addr_str,this_plat_addr_str);
     }
   }
   if(result != NULL) {
@@ -86,6 +89,8 @@ int plat_prefix(const char *ipv4_name, struct in6_addr *prefix) {
     logmsg(ANDROID_LOG_WARN,"plat_prefix/no dns64 detected\n");
     return -1;
   }
+
+  logmsg(ANDROID_LOG_INFO, "Detected NAT64 prefix %s/96", plat_addr_str);
   *prefix = plat_addr;
   return 1;
 }
