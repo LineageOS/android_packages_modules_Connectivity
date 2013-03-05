@@ -23,6 +23,5 @@
 #define ROUTE_REPLACE 1
 #define ROUTE_CREATE 2
 int if_route(const char *ifname, int family, const void *destination, int cidr, const void *gateway, int metric, int mtu, int change_type);
-void set_default_ipv6_route(const char *device);
 
 #endif
