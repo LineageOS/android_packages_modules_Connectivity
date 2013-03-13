@@ -213,13 +213,6 @@ void configure_tun_ip(const struct tun_data *tunnel) {
   }
 
   configure_tun_ipv6(tunnel);
-
-  /* setup default ipv4 route */
-  status = if_route(tunnel->device4, AF_INET, &default_4, 0, NULL, 1, 0, ROUTE_REPLACE);
-  if(status < 0) {
-    logmsg(ANDROID_LOG_FATAL,"configure_tun_ip/if_route failed: %s",strerror(-status));
-    exit(1);
-  }
 }
 
 /* function: drop_root
