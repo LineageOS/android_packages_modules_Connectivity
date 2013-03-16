@@ -7,8 +7,6 @@ LOCAL_C_INCLUDES := external/libnl-headers
 LOCAL_STATIC_LIBRARIES := libnl_2
 LOCAL_SHARED_LIBRARIES := libcutils
 
-LOCAL_MODULE_TAGS := debug
-
 LOCAL_MODULE := clatd
 
 include $(BUILD_EXECUTABLE)
