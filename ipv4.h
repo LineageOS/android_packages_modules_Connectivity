@@ -18,6 +18,8 @@
 #ifndef __IPV4_H__
 #define __IPV4_H__
 
-void ip_packet(int fd, const char *packet, size_t len);
+#include "translate.h"
+
+int ipv4_packet(clat_packet out, int pos, const char *packet, size_t len);
 
 #endif /* __IPV4_H__ */

@@ -25,6 +25,7 @@
 #include <netinet/ip6.h>
 #include <netinet/icmp6.h>
 #include <linux/icmp.h>
+#include <arpa/inet.h>
 
 #include "translate.h"
 #include "checksum.h"
@@ -36,84 +37,26 @@
 
 /* function: icmp6_packet
  * takes an icmp6 packet and sets it up for translation
- * fd     - tun interface fd
- * packet - ip payload
- * len    - size of ip payload
- * ip6    - ip6 header
+ * out      - output packet
+ * icmp6    - pointer to icmp6 header in packet
+ * checksum - pseudo-header checksum (unused)
+ * len      - size of ip payload
+ * returns: the highest position in the output clat_packet that's filled in
  */
-void icmp6_packet(int fd, const char *packet, size_t len, struct ip6_hdr *ip6) {
-  struct icmp6_hdr icmp6;
+int icmp6_packet(clat_packet out, int pos, const struct icmp6_hdr *icmp6, uint32_t checksum,
+                 size_t len) {
   const char *payload;
   size_t payload_size;
 
-  if(len < sizeof(icmp6)) {
-    logmsg_dbg(ANDROID_LOG_ERROR,"icmp6_packet/(too small)");
-    return;
+  if(len < sizeof(struct icmp6_hdr)) {
+    logmsg_dbg(ANDROID_LOG_ERROR, "icmp6_packet/(too small)");
+    return 0;
   }
 
-  memcpy(&icmp6, packet, sizeof(icmp6));
-  payload = packet + sizeof(icmp6);
-  payload_size = len - sizeof(icmp6);
+  payload = (const char *) (icmp6 + 1);
+  payload_size = len - sizeof(struct icmp6_hdr);
 
-  icmp6_to_icmp(fd, ip6, &icmp6, payload, payload_size);
-}
-
-/* function: tcp6_packet
- * takes a tcp packet and sets it up for translation
- * fd     - tun interface fd
- * packet - ip payload
- * len    - size of ip payload
- * ip6    - ip6 header
- */
-void tcp6_packet(int fd, const char *packet, size_t len, struct ip6_hdr *ip6) {
-  const struct tcphdr *tcp = (const struct tcphdr *) packet;
-  const char *payload;
-  size_t payload_size, header_size;
-
-  if(len < sizeof(tcp)) {
-    logmsg_dbg(ANDROID_LOG_ERROR,"tcp6_packet/(too small)");
-    return;
-  }
-
-  if(tcp->doff < 5) {
-    logmsg_dbg(ANDROID_LOG_ERROR,"tcp6_packet/tcp header length set to less than 5: %x", tcp->doff);
-    return;
-  }
-
-  if((size_t) tcp->doff*4 > len) {
-    logmsg_dbg(ANDROID_LOG_ERROR,"tcp6_packet/tcp header length set too large: %x", tcp->doff);
-    return;
-  }
-
-  header_size = tcp->doff * 4;
-  payload = packet + header_size;
-  payload_size = len - header_size;
-
-  tcp6_to_tcp(fd, ip6, tcp, header_size, payload, payload_size);
-}
-
-/* function: udp6_packet
- * takes a udp packet and sets it up for translation
- * fd     - tun interface fd
- * packet - ip payload
- * len    - size of ip payload
- * ip6    - ip6 header
- */
-void udp6_packet(int fd, const char *packet, size_t len, struct ip6_hdr *ip6) {
-  struct udphdr udp;
-  const char *payload;
-  size_t payload_size;
-
-  if(len < sizeof(udp)) {
-    logmsg_dbg(ANDROID_LOG_ERROR,"udp6_packet/(too small)");
-    return;
-  }
-
-  memcpy(&udp, packet, sizeof(udp));
-  payload = packet + sizeof(udp);
-  payload_size = len - sizeof(udp);
-
-  udp6_to_udp(fd,ip6,&udp,payload,payload_size);
+  return icmp6_to_icmp(out, pos, icmp6, checksum, payload, payload_size);
 }
 
 /* function: log_bad_address
@@ -132,53 +75,81 @@ void log_bad_address(const char *fmt, const struct in6_addr *badaddr) {
 
 /* function: ipv6_packet
  * takes an ipv6 packet and hands it off to the layer 4 protocol function
- * fd     - tun interface fd
+ * out    - output packet
  * packet - packet data
  * len    - size of packet
+ * returns: the highest position in the output clat_packet that's filled in
  */
-void ipv6_packet(int fd, const char *packet, size_t len) {
-  struct ip6_hdr header;
+int ipv6_packet(clat_packet out, int pos, const char *packet, size_t len) {
+  const struct ip6_hdr *ip6 = (struct ip6_hdr *) packet;
+  struct iphdr *ip_targ = (struct iphdr *) out[pos].iov_base;
+  uint8_t protocol;
   const char *next_header;
   size_t len_left;
+  uint32_t checksum;
+  int iov_len;
   int i;
 
-  if(len < sizeof(header)) {
-    logmsg_dbg(ANDROID_LOG_ERROR,"ipv6_packet/too short for an ip6 header");
-    return;
+  if(len < sizeof(struct ip6_hdr)) {
+    logmsg_dbg(ANDROID_LOG_ERROR, "ipv6_packet/too short for an ip6 header");
+    return 0;
   }
 
-  memcpy(&header, packet, sizeof(header));
-
-  next_header = packet + sizeof(header);
-  len_left = len - sizeof(header);
-
-  if(IN6_IS_ADDR_MULTICAST(&header.ip6_dst)) {
-    log_bad_address("ipv6_packet/multicast %s", &header.ip6_dst);
-    return; // silently ignore
+  if(IN6_IS_ADDR_MULTICAST(&ip6->ip6_dst)) {
+    log_bad_address("ipv6_packet/multicast %s", &ip6->ip6_dst);
+    return 0; // silently ignore
   }
 
   for(i = 0; i < 3; i++) {
-    if(header.ip6_src.s6_addr32[i] != Global_Clatd_Config.plat_subnet.s6_addr32[i]) {
-      log_bad_address("ipv6_packet/wrong source address: %s", &header.ip6_src);
-      return;
+    if(ip6->ip6_src.s6_addr32[i] != Global_Clatd_Config.plat_subnet.s6_addr32[i]) {
+      log_bad_address("ipv6_packet/wrong source address: %s", &ip6->ip6_src);
+      return 0;
     }
   }
-  if(!IN6_ARE_ADDR_EQUAL(&header.ip6_dst, &Global_Clatd_Config.ipv6_local_subnet)) {
-    log_bad_address("ipv6_packet/wrong destination address: %s", &header.ip6_dst);
-    return;
+  if(!IN6_ARE_ADDR_EQUAL(&ip6->ip6_dst, &Global_Clatd_Config.ipv6_local_subnet)) {
+    log_bad_address("ipv6_packet/wrong destination address: %s", &ip6->ip6_dst);
+    return 0;
   }
 
+  next_header = packet + sizeof(struct ip6_hdr);
+  len_left = len - sizeof(struct ip6_hdr);
+
+  protocol = ip6->ip6_nxt;
+  if (protocol == IPPROTO_ICMPV6) {
+    // ICMP and ICMPv6 have different protocol numbers.
+    protocol = IPPROTO_ICMP;
+  }
+
+  /* Fill in the IPv4 header. We need to do this before we translate the packet because TCP and
+   * UDP include parts of the IP header in the checksum. Set the length to zero because we don't
+   * know it yet.
+   */
+  fill_ip_header(ip_targ, 0, protocol, ip6);
+  out[pos].iov_len = sizeof(struct iphdr);
+
+  // Calculate the pseudo-header checksum.
+  checksum = ipv4_pseudo_header_checksum(0, ip_targ, len_left);
+
   // does not support IPv6 extension headers, this will drop any packet with them
-  if(header.ip6_nxt == IPPROTO_ICMPV6) {
-    icmp6_packet(fd,next_header,len_left,&header);
-  } else if(header.ip6_nxt == IPPROTO_TCP) {
-    tcp6_packet(fd,next_header,len_left,&header);
-  } else if(header.ip6_nxt == IPPROTO_UDP) {
-    udp6_packet(fd,next_header,len_left,&header);
+  if(protocol == IPPROTO_ICMP) {
+    iov_len = icmp6_packet(out, pos + 1, (const struct icmp6_hdr *) next_header, checksum,
+                           len_left);
+  } else if(ip6->ip6_nxt == IPPROTO_TCP) {
+    iov_len = tcp_packet(out, pos + 1, (const struct tcphdr *) next_header, checksum,
+                         len_left);
+  } else if(ip6->ip6_nxt == IPPROTO_UDP) {
+    iov_len = udp_packet(out, pos + 1, (const struct udphdr *) next_header, checksum,
+                         len_left);
   } else {
 #if CLAT_DEBUG
-    logmsg(ANDROID_LOG_ERROR,"ipv6_packet/unknown next header type: %x",header.ip6_nxt);
+    logmsg(ANDROID_LOG_ERROR, "ipv6_packet/unknown next header type: %x",ip6->ip6_nxt);
     logcat_hexdump("ipv6/nxthdr", packet, len);
 #endif
+    return 0;
   }
+
+  // Set the length and calculate the checksum.
+  ip_targ->tot_len = htons(ntohs(ip_targ->tot_len) + payload_length(out, pos));
+  ip_targ->check = ip_checksum(ip_targ, sizeof(struct iphdr));
+  return iov_len;
 }

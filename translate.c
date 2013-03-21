@@ -16,7 +16,6 @@
  * translate.c - CLAT functions / partial implementation of rfc6145
  */
 #include <string.h>
-#include <sys/uio.h>
 
 #include <netinet/in.h>
 #include <netinet/ip.h>
@@ -27,11 +26,27 @@
 #include <netinet/icmp6.h>
 #include <linux/icmp.h>
 
+#include "translate.h"
 #include "checksum.h"
 #include "clatd.h"
 #include "config.h"
 #include "logging.h"
 #include "debug.h"
+
+/* function: payload_length
+ * calculates the total length of the packet components after pos
+ * packet - packet to calculate the length of
+ * pos    - position to start counting from
+ * returns: the total length of the packet components after pos
+ */
+uint16_t payload_length(clat_packet packet, int pos) {
+  size_t len = 0;
+  int i;
+  for (i = pos + 1; i < POS_MAX; i++) {
+    len += packet[i].iov_len;
+  }
+  return len;
+}
 
 /* function: fill_tun_header
  * fill in the header for the tun fd
@@ -46,6 +61,7 @@ void fill_tun_header(struct tun_pi *tun_header, uint16_t proto) {
 /* function: ipv6_src_to_ipv4_src
  * return the corresponding ipv4 address for the given ipv6 address
  * sourceaddr - ipv6 source address
+ * returns: the IPv4 address
  */
 uint32_t ipv6_src_to_ipv4_src(const struct in6_addr *sourceaddr) {
   // assumes a /96 plat subnet
@@ -53,29 +69,28 @@ uint32_t ipv6_src_to_ipv4_src(const struct in6_addr *sourceaddr) {
 }
 
 /* function: fill_ip_header
- * generating an ipv4 header from an ipv6 header (called by the layer 4 protocol-specific functions)
- * ip_targ     - (ipv4) target packet header, source addr: original ipv4 addr, dest addr: local subnet addr
+ * generate an ipv4 header from an ipv6 header
+ * ip_targ     - (ipv4) target packet header, source: original ipv4 addr, dest: local subnet addr
  * payload_len - length of other data inside packet
  * protocol    - protocol number (tcp, udp, etc)
- * old_header  - (ipv6) source packet header, source addr: nat64 prefix, dest addr: local subnet prefix
+ * old_header  - (ipv6) source packet header, source: nat64 prefix, dest: local subnet prefix
  */
-void fill_ip_header(struct iphdr *ip_targ, uint16_t payload_len, uint8_t protocol, const struct ip6_hdr *old_header) {
-  memset(ip_targ, 0, sizeof(ip_targ));
+void fill_ip_header(struct iphdr *ip, uint16_t payload_len, uint8_t protocol,
+                    const struct ip6_hdr *old_header) {
+  memset(ip, 0, sizeof(struct iphdr));
 
-  ip_targ->ihl = 5;
-  ip_targ->version = 4;
-  ip_targ->tos = 0;
-  ip_targ->tot_len = htons(sizeof(struct iphdr) + payload_len);
-  ip_targ->id = 0;
-  ip_targ->frag_off = htons(IP_DF);
-  ip_targ->ttl = old_header->ip6_hlim;
-  ip_targ->protocol = protocol;
-  ip_targ->check = 0;
+  ip->ihl = 5;
+  ip->version = 4;
+  ip->tos = 0;
+  ip->tot_len = htons(sizeof(struct iphdr) + payload_len);
+  ip->id = 0;
+  ip->frag_off = htons(IP_DF);
+  ip->ttl = old_header->ip6_hlim;
+  ip->protocol = protocol;
+  ip->check = 0;
 
-  ip_targ->saddr = ipv6_src_to_ipv4_src(&old_header->ip6_src);
-  ip_targ->daddr = Global_Clatd_Config.ipv4_local_subnet.s_addr;
-
-  ip_targ->check = ip_checksum(ip_targ, sizeof(struct iphdr));
+  ip->saddr = ipv6_src_to_ipv4_src(&old_header->ip6_src);
+  ip->daddr = Global_Clatd_Config.ipv4_local_subnet.s_addr;
 }
 
 /* function: ipv4_dst_to_ipv6_dst
@@ -93,13 +108,14 @@ struct in6_addr ipv4_dst_to_ipv6_dst(uint32_t destination) {
 }
 
 /* function: fill_ip6_header
- * generating an ipv6 header from an ipv4 header (called by the layer 4 protocol-specific functions)
- * ip6         - (ipv6) target packet header, source addr: local subnet prefix, dest addr: nat64 prefix
+ * generate an ipv6 header from an ipv4 header
+ * ip6         - (ipv6) target packet header, source: local subnet prefix, dest: nat64 prefix
  * payload_len - length of other data inside packet
  * protocol    - protocol number (tcp, udp, etc)
- * old_header  - (ipv4) source packet header, source addr: local subnet addr, dest addr: internet's ipv4 addr
+ * old_header  - (ipv4) source packet header, source: local subnet addr, dest: internet's ipv4 addr
  */
-void fill_ip6_header(struct ip6_hdr *ip6, uint16_t payload_len, uint8_t protocol, const struct iphdr *old_header) {
+void fill_ip6_header(struct ip6_hdr *ip6, uint16_t payload_len, uint8_t protocol,
+                     const struct iphdr *old_header) {
   memset(ip6, 0, sizeof(struct ip6_hdr));
 
   ip6->ip6_vfc = 6 << 4;
@@ -113,289 +129,196 @@ void fill_ip6_header(struct ip6_hdr *ip6, uint16_t payload_len, uint8_t protocol
 
 /* function: icmp_to_icmp6
  * translate ipv4 icmp to ipv6 icmp (only currently supports echo/echo reply)
- * fd           - tun interface fd
- * ip           - source packet ipv4 header
+ * out          - output packet
  * icmp         - source packet icmp header
+ * checksum     - pseudo-header checksum
  * payload      - icmp payload
  * payload_size - size of payload
+ * returns: the highest position in the output clat_packet that's filled in
  */
-void icmp_to_icmp6(int fd, const struct iphdr *ip, const struct icmphdr *icmp, const char *payload, size_t payload_size) {
-  struct ip6_hdr ip6_targ;
-  struct icmp6_hdr icmp6_targ;
-  struct iovec io_targ[4];
-  struct tun_pi tun_header;
+int icmp_to_icmp6(clat_packet out, int pos, const struct icmphdr *icmp, uint32_t checksum,
+                  const char *payload, size_t payload_size) {
+  struct icmp6_hdr *icmp6_targ = out[pos].iov_base;
   uint32_t checksum_temp;
 
   if((icmp->type != ICMP_ECHO) && (icmp->type != ICMP_ECHOREPLY)) {
-    logmsg_dbg(ANDROID_LOG_WARN,"icmp_to_icmp6/unhandled icmp type: 0x%x",icmp->type);
-    return;
+    logmsg_dbg(ANDROID_LOG_WARN,"icmp_to_icmp6/unhandled icmp type: 0x%x", icmp->type);
+    return 0;
   }
 
-  fill_tun_header(&tun_header,ETH_P_IPV6);
+  memset(icmp6_targ, 0, sizeof(struct icmp6_hdr));
+  icmp6_targ->icmp6_type = (icmp->type == ICMP_ECHO) ? ICMP6_ECHO_REQUEST : ICMP6_ECHO_REPLY;
+  icmp6_targ->icmp6_code = 0;
+  icmp6_targ->icmp6_id = icmp->un.echo.id;
+  icmp6_targ->icmp6_seq = icmp->un.echo.sequence;
 
-  fill_ip6_header(&ip6_targ,payload_size + sizeof(icmp6_targ),IPPROTO_ICMPV6,ip);
+  icmp6_targ->icmp6_cksum = 0;
+  checksum = ip_checksum_add(checksum, icmp6_targ, sizeof(struct icmp6_hdr));
+  checksum = ip_checksum_add(checksum, payload, payload_size);
+  icmp6_targ->icmp6_cksum = ip_checksum_finish(checksum);
 
-  memset(&icmp6_targ, 0, sizeof(icmp6_targ));
-  icmp6_targ.icmp6_type = (icmp->type == ICMP_ECHO) ? ICMP6_ECHO_REQUEST : ICMP6_ECHO_REPLY;
-  icmp6_targ.icmp6_code = 0;
-  icmp6_targ.icmp6_cksum = 0;
-  icmp6_targ.icmp6_id = icmp->un.echo.id;
-  icmp6_targ.icmp6_seq = icmp->un.echo.sequence;
+  out[pos].iov_len = sizeof(struct icmp6_hdr);
+  out[POS_PAYLOAD].iov_base = (char *) payload;
+  out[POS_PAYLOAD].iov_len = payload_size;
 
-  checksum_temp = ipv6_pseudo_header_checksum(0, &ip6_targ, sizeof(icmp6_targ) + payload_size);
-  checksum_temp = ip_checksum_add(checksum_temp, &icmp6_targ, sizeof(icmp6_targ));
-  checksum_temp = ip_checksum_add(checksum_temp, payload, payload_size);
-  icmp6_targ.icmp6_cksum = ip_checksum_finish(checksum_temp);
-
-  io_targ[0].iov_base = &tun_header;
-  io_targ[0].iov_len = sizeof(tun_header);
-  io_targ[1].iov_base = &ip6_targ;
-  io_targ[1].iov_len = sizeof(ip6_targ);
-  io_targ[2].iov_base = &icmp6_targ;
-  io_targ[2].iov_len = sizeof(icmp6_targ);
-  io_targ[3].iov_base = (char *)payload;
-  io_targ[3].iov_len = payload_size;
-
-  writev(fd, io_targ, 4);
+  return POS_PAYLOAD + 1;
 }
 
 /* function: icmp6_to_icmp
  * translate ipv6 icmp to ipv4 icmp (only currently supports echo/echo reply)
- * fd           - tun interface fd
- * ip6          - source packet ipv6 header
+ * out          - output packet
  * icmp6        - source packet icmp6 header
+ * checksum     - pseudo-header checksum (unused)
  * payload      - icmp6 payload
  * payload_size - size of payload
+ * returns: the highest position in the output clat_packet that's filled in
  */
-void icmp6_to_icmp(int fd, const struct ip6_hdr *ip6, const struct icmp6_hdr *icmp6, const char *payload, size_t payload_size) {
-  struct iphdr ip_targ;
-  struct icmphdr icmp_targ;
-  struct iovec io_targ[4];
-  struct tun_pi tun_header;
-  uint32_t temp_icmp_checksum;
+int icmp6_to_icmp(clat_packet out, int pos, const struct icmp6_hdr *icmp6, uint32_t checksum,
+                  const char *payload, size_t payload_size) {
+  struct icmphdr *icmp_targ = out[pos].iov_base;
 
   if((icmp6->icmp6_type != ICMP6_ECHO_REQUEST) && (icmp6->icmp6_type != ICMP6_ECHO_REPLY)) {
     logmsg_dbg(ANDROID_LOG_WARN,"icmp6_to_icmp/unhandled icmp6 type: 0x%x",icmp6->icmp6_type);
-    return;
+    return 0;
   }
 
-  memset(&icmp_targ, 0, sizeof(icmp_targ));
+  memset(icmp_targ, 0, sizeof(struct icmphdr));
 
-  fill_tun_header(&tun_header,ETH_P_IP);
-  fill_ip_header(&ip_targ,sizeof(icmp_targ) + payload_size, IPPROTO_ICMP, ip6);
+  icmp_targ->type = (icmp6->icmp6_type == ICMP6_ECHO_REQUEST) ? ICMP_ECHO : ICMP_ECHOREPLY;
+  icmp_targ->code = 0x0;
+  icmp_targ->un.echo.id = icmp6->icmp6_id;
+  icmp_targ->un.echo.sequence = icmp6->icmp6_seq;
 
-  icmp_targ.type = (icmp6->icmp6_type == ICMP6_ECHO_REQUEST) ? ICMP_ECHO : ICMP_ECHOREPLY;
-  icmp_targ.code = 0x0;
-  icmp_targ.checksum = 0;
-  icmp_targ.un.echo.id = icmp6->icmp6_id;
-  icmp_targ.un.echo.sequence = icmp6->icmp6_seq;
+  icmp_targ->checksum = 0;
+  checksum = ip_checksum_add(0, icmp_targ, sizeof(struct icmphdr));
+  checksum = ip_checksum_add(checksum, (void *)payload, payload_size);
+  icmp_targ->checksum = ip_checksum_finish(checksum);
 
-  temp_icmp_checksum = ip_checksum_add(0, &icmp_targ, sizeof(icmp_targ));
-  temp_icmp_checksum = ip_checksum_add(temp_icmp_checksum, (void *)payload, payload_size);
-  icmp_targ.checksum = ip_checksum_finish(temp_icmp_checksum);
+  out[pos].iov_len = sizeof(struct icmphdr);
+  out[POS_PAYLOAD].iov_base = (char *) payload;
+  out[POS_PAYLOAD].iov_len = payload_size;
 
-  io_targ[0].iov_base = &tun_header;
-  io_targ[0].iov_len = sizeof(tun_header);
-  io_targ[1].iov_base = &ip_targ;
-  io_targ[1].iov_len = sizeof(ip_targ);
-  io_targ[2].iov_base = &icmp_targ;
-  io_targ[2].iov_len = sizeof(icmp_targ);
-  io_targ[3].iov_base = (char *)payload;
-  io_targ[3].iov_len = payload_size;
+  return POS_PAYLOAD + 1;
+}
 
-  writev(fd, io_targ, 4);
+/* function: udp_packet
+ * takes a udp packet and sets it up for translation
+ * out      - output packet
+ * udp      - pointer to udp header in packet
+ * checksum - pseudo-header checksum
+ * len      - size of ip payload
+ */
+int udp_packet(clat_packet out, int pos, const struct udphdr *udp, uint32_t checksum, size_t len) {
+  const char *payload;
+  size_t payload_size;
+
+  if(len < sizeof(struct udphdr)) {
+    logmsg_dbg(ANDROID_LOG_ERROR,"udp_packet/(too small)");
+    return 0;
+  }
+
+  payload = (const char *) (udp + 1);
+  payload_size = len - sizeof(struct udphdr);
+
+  return udp_translate(out, pos, udp, checksum, payload, payload_size);
+}
+
+/* function: tcp_packet
+ * takes a tcp packet and sets it up for translation
+ * out      - output packet
+ * tcp      - pointer to tcp header in packet
+ * checksum - pseudo-header checksum
+ * len      - size of ip payload
+ * returns: the highest position in the output clat_packet that's filled in
+ */
+int tcp_packet(clat_packet out, int pos, const struct tcphdr *tcp, uint32_t checksum, size_t len) {
+  const char *payload;
+  size_t payload_size, header_size;
+
+  if(len < sizeof(struct tcphdr)) {
+    logmsg_dbg(ANDROID_LOG_ERROR,"tcp_packet/(too small)");
+    return 0;
+  }
+
+  if(tcp->doff < 5) {
+    logmsg_dbg(ANDROID_LOG_ERROR,"tcp_packet/tcp header length set to less than 5: %x", tcp->doff);
+    return 0;
+  }
+
+  if((size_t) tcp->doff*4 > len) {
+    logmsg_dbg(ANDROID_LOG_ERROR,"tcp_packet/tcp header length set too large: %x", tcp->doff);
+    return 0;
+  }
+
+  header_size = tcp->doff * 4;
+  payload = ((const char *) tcp) + header_size;
+  payload_size = len - header_size;
+
+  return tcp_translate(out, pos, tcp, header_size, checksum, payload, payload_size);
 }
 
 /* function: udp_translate
  * common between ipv4/ipv6 - setup checksum and send udp packet
- * fd           - tun interface fd
- * udp          - source packet udp header
- * payload      - udp payload
+ * out          - output packet
+ * udp          - udp header
+ * checksum     - pseudo-header checksum
+ * payload      - tcp payload
  * payload_size - size of payload
- * io_targ      - iovec with tun and ipv4/ipv6 header (see below)
- *     array position 0 - tun header
- *     array position 1 - ipv4/ipv6 header
- *     array position 2 - empty (will be udp header)
- *     array position 3 - empty (will be payload)
- * checksum     - partial checksum covering ipv4/ipv6 header
+ * returns: the highest position in the output clat_packet that's filled in
  */
-void udp_translate(int fd, const struct udphdr *udp, const char *payload, size_t payload_size, struct iovec *io_targ, uint32_t checksum) {
-  struct udphdr udp_targ;
+int udp_translate(clat_packet out, int pos, const struct udphdr *udp, uint32_t checksum,
+                  const char *payload, size_t payload_size) {
+  struct udphdr *udp_targ = out[pos].iov_base;
 
-  memcpy(&udp_targ, udp, sizeof(udp_targ));
-  udp_targ.check = 0; // reset checksum, to be calculated
+  memcpy(udp_targ, udp, sizeof(struct udphdr));
+  udp_targ->check = 0; // reset checksum, to be calculated
 
-  checksum = ip_checksum_add(checksum, &udp_targ, sizeof(struct udphdr));
+  checksum = ip_checksum_add(checksum, udp_targ, sizeof(struct udphdr));
   checksum = ip_checksum_add(checksum, payload, payload_size);
-  udp_targ.check = ip_checksum_finish(checksum);
+  udp_targ->check = ip_checksum_finish(checksum);
 
-  io_targ[2].iov_base = &udp_targ;
-  io_targ[2].iov_len = sizeof(udp_targ);
-  io_targ[3].iov_base = (char *)payload;
-  io_targ[3].iov_len = payload_size;
+  out[pos].iov_len = sizeof(struct udphdr);
+  out[POS_PAYLOAD].iov_base = (char *) payload;
+  out[POS_PAYLOAD].iov_len = payload_size;
 
-  writev(fd, io_targ, 4);
-}
-
-/* function: udp_to_udp6
- * translate ipv4 udp to ipv6 udp
- * fd           - tun interface fd
- * ip           - source packet ipv4 header
- * udp          - source packet udp header
- * payload      - udp payload
- * payload_size - size of payload
- */
-void udp_to_udp6(int fd, const struct iphdr *ip, const struct udphdr *udp, const char *payload, size_t payload_size) {
-  struct ip6_hdr ip6_targ;
-  struct iovec io_targ[4];
-  struct tun_pi tun_header;
-  uint32_t checksum;
-
-  fill_tun_header(&tun_header,ETH_P_IPV6);
-
-  fill_ip6_header(&ip6_targ,payload_size + sizeof(struct udphdr),IPPROTO_UDP,ip);
-
-  checksum = ipv6_pseudo_header_checksum(0, &ip6_targ, sizeof(*udp) + payload_size);
-
-  io_targ[0].iov_base = &tun_header;
-  io_targ[0].iov_len = sizeof(tun_header);
-  io_targ[1].iov_base = &ip6_targ;
-  io_targ[1].iov_len = sizeof(ip6_targ);
-
-  udp_translate(fd,udp,payload,payload_size,io_targ,checksum);
-}
-
-/* function: udp6_to_udp
- * translate ipv6 udp to ipv4 udp
- * fd           - tun interface fd
- * ip6          - source packet ipv6 header
- * udp          - source packet udp header
- * payload      - udp payload
- * payload_size - size of payload
- */
-void udp6_to_udp(int fd, const struct ip6_hdr *ip6, const struct udphdr *udp, const char *payload, size_t payload_size) {
-  struct iphdr ip_targ;
-  struct iovec io_targ[4];
-  struct tun_pi tun_header;
-  uint32_t checksum;
-
-  fill_tun_header(&tun_header,ETH_P_IP);
-
-  fill_ip_header(&ip_targ,payload_size + sizeof(struct udphdr),IPPROTO_UDP,ip6);
-
-  checksum = ipv4_pseudo_header_checksum(0, &ip_targ, sizeof(*udp) + payload_size);
-
-  io_targ[0].iov_base = &tun_header;
-  io_targ[0].iov_len = sizeof(tun_header);
-  io_targ[1].iov_base = &ip_targ;
-  io_targ[1].iov_len = sizeof(ip_targ);
-
-  udp_translate(fd,udp,payload,payload_size,io_targ,checksum);
+  return POS_PAYLOAD + 1;
 }
 
 /* function: tcp_translate
  * common between ipv4/ipv6 - setup checksum and send tcp packet
- * fd           - tun interface fd
- * tcp          - source packet tcp header
+ * out          - output packet
+ * tcp          - tcp header
+ * header_size  - size of tcp header including options
+ * checksum     - partial checksum covering ipv4/ipv6 header
  * payload      - tcp payload
  * payload_size - size of payload
- * io_targ      - iovec with tun and ipv4/ipv6 header (see below)
- *     array position 0 - tun header
- *     array position 1 - ipv4/ipv6 header
- *     array position 2 - empty (will be tcp header)
- *     array position 3 - empty (will be payload)
- * checksum     - partial checksum covering ipv4/ipv6 header
+ * returns: the highest position in the output clat_packet that's filled in
  *
  * TODO: mss rewrite
  * TODO: hosts without pmtu discovery - non DF packets will rely on fragmentation (unimplemented)
  */
-void tcp_translate(int fd, const struct tcphdr *tcp, size_t header_size, const char *payload,
-                   size_t payload_size, struct iovec *io_targ, uint32_t checksum) {
-  union {
-    // Reserve space for the maximum size of the TCP header, including options. The TCP header
-    // length field is 4 bits long and counts 4-byte words, so it can be at most 60 bytes.
-    char buf[15 * 4];
-    struct tcphdr tcp;
-  } header;
+int tcp_translate(clat_packet out, int pos, const struct tcphdr *tcp, size_t header_size,
+                  uint32_t checksum, const char *payload, size_t payload_size) {
+  struct tcphdr *tcp_targ = out[pos].iov_base;
+  out[pos].iov_len = header_size;
 
-  if (header_size > sizeof(header.buf)) {
-    // A TCP header cannot be more than 60 bytes long, so this can never happen unless there is a
-    // bug in the caller.
+  if (header_size > MAX_TCP_HDR) {
+    // A TCP header cannot be more than MAX_TCP_HDR bytes long because it's a 4-bit field that
+    // counts in 4-byte words. So this can never happen unless there is a bug in the caller.
     logmsg(ANDROID_LOG_ERROR, "tcp_translate: header too long %d > %d, truncating",
-           header_size, sizeof(header.buf));
-    header_size = sizeof(header.buf);
+           header_size, MAX_TCP_HDR);
+    header_size = MAX_TCP_HDR;
   }
 
-  memcpy(&header, tcp, header_size);
+  memcpy(tcp_targ, tcp, header_size);
 
-  header.tcp.check = 0;
-  checksum = ip_checksum_add(checksum, &header, header_size);
+  tcp_targ->check = 0;
+  checksum = ip_checksum_add(checksum, tcp_targ, header_size);
   checksum = ip_checksum_add(checksum, payload, payload_size);
-  header.tcp.check = ip_checksum_finish(checksum);
+  tcp_targ->check = ip_checksum_finish(checksum);
 
-  io_targ[2].iov_base = &header;
-  io_targ[2].iov_len = header_size;
+  out[POS_PAYLOAD].iov_base = (char *)payload;
+  out[POS_PAYLOAD].iov_len = payload_size;
 
-  io_targ[3].iov_base = (char *)payload;
-  io_targ[3].iov_len = payload_size;
-}
-
-/* function: tcp_to_tcp6
- * translate ipv4 tcp to ipv6 tcp
- * fd           - tun interface fd
- * ip           - source packet ipv4 header
- * tcp          - source packet tcp header
- * header_size  - size of tcp header including options
- * payload      - tcp payload
- * payload_size - size of payload
- */
-void tcp_to_tcp6(int fd, const struct iphdr *ip, const struct tcphdr *tcp, size_t header_size,
-                 const char *payload, size_t payload_size) {
-  struct ip6_hdr ip6_targ;
-  struct iovec io_targ[5];
-  struct tun_pi tun_header;
-  uint32_t checksum;
-
-  fill_tun_header(&tun_header,ETH_P_IPV6);
-
-  fill_ip6_header(&ip6_targ, header_size + payload_size, IPPROTO_TCP, ip);
-
-  checksum = ipv6_pseudo_header_checksum(0, &ip6_targ, header_size + payload_size);
-
-  io_targ[0].iov_base = &tun_header;
-  io_targ[0].iov_len = sizeof(tun_header);
-  io_targ[1].iov_base = &ip6_targ;
-  io_targ[1].iov_len = sizeof(ip6_targ);
-
-  tcp_translate(fd, tcp, header_size, payload, payload_size, io_targ, checksum);
-}
-
-/* function: tcp6_to_tcp
- * translate ipv6 tcp to ipv4 tcp
- * fd           - tun interface fd
- * ip6          - source packet ipv6 header
- * tcp          - source packet tcp header
- * header_size  - size of tcp header including options
- * payload      - tcp payload
- * payload_size - size of payload
- */
-void tcp6_to_tcp(int fd, const struct ip6_hdr *ip6, const struct tcphdr *tcp, size_t header_size,
-                 const char *payload, size_t payload_size) {
-  struct iphdr ip_targ;
-  struct iovec io_targ[5];
-  struct tun_pi tun_header;
-  uint32_t checksum;
-
-  fill_tun_header(&tun_header,ETH_P_IP);
-
-  fill_ip_header(&ip_targ, header_size + payload_size, IPPROTO_TCP, ip6);
-
-  checksum = ipv4_pseudo_header_checksum(0, &ip_targ, header_size + payload_size);
-
-  io_targ[0].iov_base = &tun_header;
-  io_targ[0].iov_len = sizeof(tun_header);
-  io_targ[1].iov_base = &ip_targ;
-  io_targ[1].iov_len = sizeof(ip_targ);
-
-  tcp_translate(fd, tcp, header_size, payload, payload_size, io_targ, checksum);
+  return POS_PAYLOAD + 1;
 }

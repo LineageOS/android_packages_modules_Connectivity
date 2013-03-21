@@ -31,127 +31,73 @@
 #include "ipv4.h"
 #include "logging.h"
 #include "debug.h"
+#include "dump.h"
 
 /* function: icmp_packet
- * takes an icmp packet and sets it up for translation
- * fd     - tun interface fd
- * packet - ip payload
- * len    - size of ip payload
- * ip     - ip header
+ * translates an icmp packet
+ * out      - output packet
+ * icmp     - pointer to icmp header in packet
+ * checksum - pseudo-header checksum
+ * len      - size of ip payload
+ * returns: the highest position in the output clat_packet that's filled in
  */
-void icmp_packet(int fd, const char *packet, size_t len, struct iphdr *ip) {
-  struct icmphdr icmp;
+int icmp_packet(clat_packet out, int pos, const struct icmphdr *icmp, uint32_t checksum,
+                size_t len) {
   const char *payload;
   size_t payload_size;
 
-  if(len < sizeof(icmp)) {
-    logmsg_dbg(ANDROID_LOG_ERROR,"icmp_packet/(too small)");
-    return;
+  if(len < sizeof(struct icmphdr)) {
+    logmsg_dbg(ANDROID_LOG_ERROR, "icmp_packet/(too small)");
+    return 0;
   }
 
-  memcpy(&icmp, packet, sizeof(icmp));
-  payload = packet + sizeof(icmp);
-  payload_size = len - sizeof(icmp);
+  payload = (const char *) (icmp + 1);
+  payload_size = len - sizeof(struct icmphdr);
 
-  icmp_to_icmp6(fd,ip,&icmp,payload,payload_size);
+  return icmp_to_icmp6(out, pos, icmp, checksum, payload, payload_size);
 }
 
-/* function: tcp_packet
- * takes a tcp packet and sets it up for translation
- * fd     - tun interface fd
- * packet - ip payload
- * len    - size of ip payload
- * ip     - ip header
- */
-void tcp_packet(int fd, const char *packet, size_t len, struct iphdr *ip) {
-  const struct tcphdr *tcp = (const struct tcphdr *) packet;
-  const char *payload;
-  size_t payload_size, header_size;
-
-  if(len < sizeof(tcp)) {
-    logmsg_dbg(ANDROID_LOG_ERROR,"tcp_packet/(too small)");
-    return;
-  }
-
-  if(tcp->doff < 5) {
-    logmsg_dbg(ANDROID_LOG_ERROR,"tcp_packet/tcp header length set to less than 5: %x", tcp->doff);
-    return;
-  }
-
-  if((size_t) tcp->doff*4 > len) {
-    logmsg_dbg(ANDROID_LOG_ERROR,"tcp_packet/tcp header length set too large: %x", tcp->doff);
-    return;
-  }
-
-  header_size = tcp->doff * 4;
-  payload = packet + header_size;
-  payload_size = len - header_size;
-
-  tcp_to_tcp6(fd, ip, tcp, header_size, payload, payload_size);
-}
-
-/* function: udp_packet
- * takes a udp packet and sets it up for translation
- * fd     - tun interface fd
- * packet - ip payload
- * len    - size of ip payload
- * ip     - ip header
- */
-void udp_packet(int fd, const char *packet, size_t len, const struct iphdr *ip) {
-  struct udphdr udp;
-  const char *payload;
-  size_t payload_size;
-
-  if(len < sizeof(udp)) {
-    logmsg_dbg(ANDROID_LOG_ERROR,"udp_packet/(too small)");
-    return;
-  }
-
-  memcpy(&udp, packet, sizeof(udp));
-  payload = packet + sizeof(udp);
-  payload_size = len - sizeof(udp);
-
-  udp_to_udp6(fd,ip,&udp,payload,payload_size);
-}
-
-/* function: ip_packet
- * takes an ip packet and hands it off to the layer 4 protocol function
- * fd     - tun interface fd
+/* function: ipv4_packet
+ * translates an ipv4 packet
+ * out    - output packet
  * packet - packet data
  * len    - size of packet
+ * returns: the highest position in the output clat_packet that's filled in
  */
-void ip_packet(int fd, const char *packet, size_t len) {
-  struct iphdr header;
+int ipv4_packet(clat_packet out, int pos, const char *packet, size_t len) {
+  const struct iphdr *header = (struct iphdr *) packet;
+  struct ip6_hdr *ip6_targ = (struct ip6_hdr *) out[pos].iov_base;
   uint16_t frag_flags;
+  uint8_t nxthdr;
   const char *next_header;
   size_t len_left;
+  uint32_t checksum;
+  int iov_len;
 
-  if(len < sizeof(header)) {
-    logmsg_dbg(ANDROID_LOG_ERROR,"ip_packet/too short for an ip header");
-    return;
+  if(len < sizeof(struct iphdr)) {
+    logmsg_dbg(ANDROID_LOG_ERROR, "ip_packet/too short for an ip header");
+    return 0;
   }
 
-  memcpy(&header, packet, sizeof(header));
-
-  frag_flags = ntohs(header.frag_off);
+  frag_flags = ntohs(header->frag_off);
   if(frag_flags & IP_MF) { // this could theoretically be supported, but isn't
-    logmsg_dbg(ANDROID_LOG_ERROR,"ip_packet/more fragments set, dropping");
-    return;
+    logmsg_dbg(ANDROID_LOG_ERROR, "ip_packet/more fragments set, dropping");
+    return 0;
   }
 
-  if(header.ihl < 5) {
-    logmsg_dbg(ANDROID_LOG_ERROR,"ip_packet/ip header length set to less than 5: %x",header.ihl);
-    return;
+  if(header->ihl < 5) {
+    logmsg_dbg(ANDROID_LOG_ERROR, "ip_packet/ip header length set to less than 5: %x", header->ihl);
+    return 0;
   }
 
-  if((size_t)header.ihl*4 > len) { // ip header length larger than entire packet
-    logmsg_dbg(ANDROID_LOG_ERROR,"ip_packet/ip header length set too large: %x",header.ihl);
-    return;
+  if((size_t) header->ihl * 4 > len) { // ip header length larger than entire packet
+    logmsg_dbg(ANDROID_LOG_ERROR, "ip_packet/ip header length set too large: %x", header->ihl);
+    return 0;
   }
 
-  if(header.version != 4) {
-    logmsg_dbg(ANDROID_LOG_ERROR,"ip_packet/ip header version not 4: %x",header.version);
-    return;
+  if(header->version != 4) {
+    logmsg_dbg(ANDROID_LOG_ERROR, "ip_packet/ip header version not 4: %x", header->version);
+    return 0;
   }
 
   /* rfc6145 - If any IPv4 options are present in the IPv4 packet, they MUST be
@@ -159,19 +105,40 @@ void ip_packet(int fd, const char *packet, size_t len) {
    * translate the options.
    */
 
-  next_header = packet + header.ihl*4;
-  len_left = len - header.ihl*4;
+  next_header = packet + header->ihl*4;
+  len_left = len - header->ihl * 4;
 
-  if(header.protocol == IPPROTO_ICMP) {
-    icmp_packet(fd,next_header,len_left,&header);
-  } else if(header.protocol == IPPROTO_TCP) {
-    tcp_packet(fd,next_header,len_left,&header);
-  } else if(header.protocol == IPPROTO_UDP) {
-    udp_packet(fd,next_header,len_left,&header);
+  nxthdr = header->protocol;
+  if (nxthdr == IPPROTO_ICMP) {
+    // ICMP and ICMPv6 have different protocol numbers.
+    nxthdr = IPPROTO_ICMPV6;
+  }
+
+  /* Fill in the IPv6 header. We need to do this before we translate the packet because TCP and
+   * UDP include parts of the IP header in the checksum. Set the length to zero because we don't
+   * know it yet.
+   */
+  fill_ip6_header(ip6_targ, 0, nxthdr, header);
+  out[pos].iov_len = sizeof(struct ip6_hdr);
+
+  // Calculate the pseudo-header checksum.
+  checksum = ipv6_pseudo_header_checksum(0, ip6_targ, len_left);
+
+  if(nxthdr == IPPROTO_ICMPV6) {
+    iov_len = icmp_packet(out, pos + 1, (const struct icmphdr *) next_header, checksum, len_left);
+  } else if(nxthdr == IPPROTO_TCP) {
+    iov_len = tcp_packet(out, pos + 1, (const struct tcphdr *) next_header, checksum, len_left);
+  } else if(nxthdr == IPPROTO_UDP) {
+    iov_len = udp_packet(out, pos + 1, (const struct udphdr *) next_header, checksum, len_left);
   } else {
 #if CLAT_DEBUG
-    logmsg_dbg(ANDROID_LOG_ERROR,"ip_packet/unknown protocol: %x",header.protocol);
+    logmsg_dbg(ANDROID_LOG_ERROR, "ip_packet/unknown protocol: %x",header->protocol);
     logcat_hexdump("ipv4/protocol", packet, len);
 #endif
+    return 0;
   }
+
+  // Set the length.
+  ip6_targ->ip6_plen = htons(payload_length(out, pos));
+  return iov_len;
 }

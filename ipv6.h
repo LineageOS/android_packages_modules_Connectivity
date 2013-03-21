@@ -18,6 +18,8 @@
 #ifndef __IPV6_H__
 #define __IPV6_H__
 
-void ipv6_packet(int fd, const char *packet, size_t len);
+#include "translate.h"
+
+int ipv6_packet(clat_packet out, int pos, const char *packet, size_t len);
 
 #endif /* __IPV6_H__ */
