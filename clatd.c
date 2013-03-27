@@ -192,23 +192,24 @@ void interface_poll(const struct tun_data *tunnel) {
  * tunnel - tun device data
  */
 void configure_tun_ip(const struct tun_data *tunnel) {
-  struct in_addr default_4;
   int status;
 
-  default_4.s_addr = INADDR_ANY;
+  // Configure the interface before bringing it up. As soon as we bring the interface up, the
+  // framework will be notified and will assume the interface's configuration has been finalized.
+  status = add_address(tunnel->device4, AF_INET, &Global_Clatd_Config.ipv4_local_subnet,
+      32, &Global_Clatd_Config.ipv4_local_subnet);
+  if(status < 0) {
+    logmsg(ANDROID_LOG_FATAL,"configure_tun_ip/if_address(4) failed: %s",strerror(-status));
+    exit(1);
+  }
 
   if((status = if_up(tunnel->device6, Global_Clatd_Config.mtu)) < 0) {
     logmsg(ANDROID_LOG_FATAL,"configure_tun_ip/if_up(6) failed: %s",strerror(-status));
     exit(1);
   }
+
   if((status = if_up(tunnel->device4, Global_Clatd_Config.ipv4mtu)) < 0) {
     logmsg(ANDROID_LOG_FATAL,"configure_tun_ip/if_up(4) failed: %s",strerror(-status));
-    exit(1);
-  }
-  status = add_address(tunnel->device4, AF_INET, &Global_Clatd_Config.ipv4_local_subnet,
-      32, &Global_Clatd_Config.ipv4_local_subnet);
-  if(status < 0) {
-    logmsg(ANDROID_LOG_FATAL,"configure_tun_ip/if_address(4) failed: %s",strerror(-status));
     exit(1);
   }
 
