@@ -28,12 +28,12 @@
 
 /* function: ip_checksum_add
  * adds data to a checksum
- * current_sum - the current checksum (or 0 to start a new checksum)
+ * current - the current checksum (or 0 to start a new checksum)
  * data        - the data to add to the checksum
  * len         - length of data
  */
-uint32_t ip_checksum_add(uint32_t current_sum, const void *data, int len) {
-  uint32_t checksum = current_sum;
+uint32_t ip_checksum_add(uint32_t current, const void *data, int len) {
+  uint32_t checksum = current;
   int left = len;
   const uint16_t *data_16 = data;
 
@@ -76,38 +76,40 @@ uint16_t ip_checksum(const void *data, int len) {
 
 /* function: ipv6_pseudo_header_checksum
  * calculate the pseudo header checksum for use in tcp/udp/icmp headers
- * current_sum - the current checksum or 0 to start a new checksum
- * ip6         - the ipv6 header
+ * current - the current checksum or 0 to start a new checksum
+ * ip6     - the ipv6 header
+ * len     - the transport length (transport header + payload)
  */
-uint32_t ipv6_pseudo_header_checksum(uint32_t current_sum, const struct ip6_hdr *ip6) {
+uint32_t ipv6_pseudo_header_checksum(uint32_t current, const struct ip6_hdr *ip6, uint16_t len) {
   uint32_t checksum_len, checksum_next;
 
-  checksum_len = htonl(ntohs(ip6->ip6_plen));
+  checksum_len = htonl((uint32_t) len);
   checksum_next = htonl(ip6->ip6_nxt);
 
-  current_sum = ip_checksum_add(current_sum,&(ip6->ip6_src),sizeof(struct in6_addr));
-  current_sum = ip_checksum_add(current_sum,&(ip6->ip6_dst),sizeof(struct in6_addr));
-  current_sum = ip_checksum_add(current_sum,&checksum_len,sizeof(checksum_len));
-  current_sum = ip_checksum_add(current_sum,&checksum_next,sizeof(checksum_next));
+  current = ip_checksum_add(current, &(ip6->ip6_src), sizeof(struct in6_addr));
+  current = ip_checksum_add(current, &(ip6->ip6_dst), sizeof(struct in6_addr));
+  current = ip_checksum_add(current, &checksum_len, sizeof(checksum_len));
+  current = ip_checksum_add(current, &checksum_next, sizeof(checksum_next));
 
-  return current_sum;
+  return current;
 }
 
 /* function: ipv4_pseudo_header_checksum
  * calculate the pseudo header checksum for use in tcp/udp headers
- * current_sum - the current checksum or 0 to start a new checksum
- * ip          - the ipv4 header
+ * current - the current checksum or 0 to start a new checksum
+ * ip      - the ipv4 header
+ * len     - the transport length (transport header + payload)
  */
-uint32_t ipv4_pseudo_header_checksum(uint32_t current_sum, const struct iphdr *ip) {
+uint32_t ipv4_pseudo_header_checksum(uint32_t current, const struct iphdr *ip, uint16_t len) {
   uint16_t temp_protocol, temp_length;
 
   temp_protocol = htons(ip->protocol);
-  temp_length = htons(ntohs(ip->tot_len) - ip->ihl*4);
+  temp_length = htons(len);
 
-  current_sum = ip_checksum_add(current_sum, &(ip->saddr), sizeof(uint32_t));
-  current_sum = ip_checksum_add(current_sum, &(ip->daddr), sizeof(uint32_t));
-  current_sum = ip_checksum_add(current_sum, &temp_protocol, sizeof(uint16_t));
-  current_sum = ip_checksum_add(current_sum, &temp_length, sizeof(uint16_t));
+  current = ip_checksum_add(current, &(ip->saddr), sizeof(uint32_t));
+  current = ip_checksum_add(current, &(ip->daddr), sizeof(uint32_t));
+  current = ip_checksum_add(current, &temp_protocol, sizeof(uint16_t));
+  current = ip_checksum_add(current, &temp_length, sizeof(uint16_t));
 
-  return current_sum;
+  return current;
 }

@@ -18,11 +18,11 @@
 #ifndef __CHECKSUM_H__
 #define __CHECKSUM_H__
 
-uint32_t ip_checksum_add(uint32_t current_sum, const void *data, int len);
+uint32_t ip_checksum_add(uint32_t current, const void *data, int len);
 uint16_t ip_checksum_finish(uint32_t temp_sum);
 uint16_t ip_checksum(const void *data, int len);
 
-uint32_t ipv6_pseudo_header_checksum(uint32_t current_sum, const struct ip6_hdr *ip6);
-uint32_t ipv4_pseudo_header_checksum(uint32_t current_sum, const struct iphdr *ip);
+uint32_t ipv6_pseudo_header_checksum(uint32_t current, const struct ip6_hdr *ip6, uint16_t len);
+uint32_t ipv4_pseudo_header_checksum(uint32_t current, const struct iphdr *ip, uint16_t len);
 
 #endif /* __CHECKSUM_H__ */

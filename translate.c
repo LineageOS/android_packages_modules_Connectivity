@@ -142,7 +142,7 @@ void icmp_to_icmp6(int fd, const struct iphdr *ip, const struct icmphdr *icmp, c
   icmp6_targ.icmp6_id = icmp->un.echo.id;
   icmp6_targ.icmp6_seq = icmp->un.echo.sequence;
 
-  checksum_temp = ipv6_pseudo_header_checksum(0,&ip6_targ);
+  checksum_temp = ipv6_pseudo_header_checksum(0, &ip6_targ, sizeof(icmp6_targ) + payload_size);
   checksum_temp = ip_checksum_add(checksum_temp, &icmp6_targ, sizeof(icmp6_targ));
   checksum_temp = ip_checksum_add(checksum_temp, payload, payload_size);
   icmp6_targ.icmp6_cksum = ip_checksum_finish(checksum_temp);
@@ -255,7 +255,7 @@ void udp_to_udp6(int fd, const struct iphdr *ip, const struct udphdr *udp, const
 
   fill_ip6_header(&ip6_targ,payload_size + sizeof(struct udphdr),IPPROTO_UDP,ip);
 
-  checksum = ipv6_pseudo_header_checksum(0, &ip6_targ);
+  checksum = ipv6_pseudo_header_checksum(0, &ip6_targ, sizeof(*udp) + payload_size);
 
   io_targ[0].iov_base = &tun_header;
   io_targ[0].iov_len = sizeof(tun_header);
@@ -283,7 +283,7 @@ void udp6_to_udp(int fd, const struct ip6_hdr *ip6, const struct udphdr *udp, co
 
   fill_ip_header(&ip_targ,payload_size + sizeof(struct udphdr),IPPROTO_UDP,ip6);
 
-  checksum = ipv4_pseudo_header_checksum(0, &ip_targ);
+  checksum = ipv4_pseudo_header_checksum(0, &ip_targ, sizeof(*udp) + payload_size);
 
   io_targ[0].iov_base = &tun_header;
   io_targ[0].iov_len = sizeof(tun_header);
@@ -363,7 +363,7 @@ void tcp_to_tcp6(int fd,const struct iphdr *ip, const struct tcphdr *tcp, const 
 
   fill_ip6_header(&ip6_targ,payload_size+options_size+sizeof(struct tcphdr),IPPROTO_TCP,ip);
 
-  checksum = ipv6_pseudo_header_checksum(0, &ip6_targ);
+  checksum = ipv6_pseudo_header_checksum(0, &ip6_targ, sizeof(*tcp) + options_size + payload_size);
 
   io_targ[0].iov_base = &tun_header;
   io_targ[0].iov_len = sizeof(tun_header);
@@ -393,7 +393,7 @@ void tcp6_to_tcp(int fd,const struct ip6_hdr *ip6, const struct tcphdr *tcp, con
 
   fill_ip_header(&ip_targ,payload_size+options_size+sizeof(struct tcphdr),IPPROTO_TCP,ip6);
 
-  checksum = ipv4_pseudo_header_checksum(0, &ip_targ);
+  checksum = ipv4_pseudo_header_checksum(0, &ip_targ, sizeof(*tcp) + payload_size + options_size);
 
   io_targ[0].iov_base = &tun_header;
   io_targ[0].iov_len = sizeof(tun_header);
