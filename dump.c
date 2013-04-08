@@ -216,15 +216,24 @@ void dump_tcp6(const struct tcphdr *tcp, const struct ip6_hdr *ip6, const char *
 
 /* generic hex dump */
 void logcat_hexdump(const char *info, const char *data, size_t len) {
-  char output[PACKETLEN*2+1];
+  char output[PACKETLEN*3+2];
   size_t i;
 
   for(i = 0; i < len && i < PACKETLEN; i++) {
-    snprintf(output + i*2, 3, "%02x", (uint8_t)data[i]);
+    snprintf(output + i*3, 4, " %02x", (uint8_t)data[i]);
   }
-  output[len*2+2] = '\0';
+  output[len*3+3] = '\0';
 
-  logmsg(ANDROID_LOG_WARN,"info %s len %d data %s", info, len, output);
+  logmsg(ANDROID_LOG_WARN,"info %s len %d data%s", info, len, output);
 }
 
+void dump_iovec(const struct iovec *iov, int iov_len) {
+  int i;
+  char *str;
+  for (i = 0; i < iov_len; i++) {
+    asprintf(&str, "iov[%d]: ", i);
+    logcat_hexdump(str, iov[i].iov_base, iov[i].iov_len);
+    free(str);
+  }
+}
 #endif  // CLAT_DEBUG
