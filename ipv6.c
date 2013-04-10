@@ -100,12 +100,11 @@ int ipv6_packet(clat_packet out, int pos, const char *packet, size_t len) {
     return 0; // silently ignore
   }
 
-  for(i = 0; i < 3; i++) {
-    if(ip6->ip6_src.s6_addr32[i] != Global_Clatd_Config.plat_subnet.s6_addr32[i]) {
-      log_bad_address("ipv6_packet/wrong source address: %s", &ip6->ip6_src);
-      return 0;
-    }
+  if (!is_in_plat_subnet(&ip6->ip6_src) && ip6->ip6_nxt) {
+    log_bad_address("ipv6_packet/wrong source address: %s", &ip6->ip6_src);
+    return 0;
   }
+
   if(!IN6_ARE_ADDR_EQUAL(&ip6->ip6_dst, &Global_Clatd_Config.ipv6_local_subnet)) {
     log_bad_address("ipv6_packet/wrong destination address: %s", &ip6->ip6_dst);
     return 0;
@@ -149,7 +148,7 @@ int ipv6_packet(clat_packet out, int pos, const char *packet, size_t len) {
   }
 
   // Set the length and calculate the checksum.
-  ip_targ->tot_len = htons(ntohs(ip_targ->tot_len) + payload_length(out, pos));
+  ip_targ->tot_len = htons(ntohs(ip_targ->tot_len) + packet_length(out, pos));
   ip_targ->check = ip_checksum(ip_targ, sizeof(struct iphdr));
   return iov_len;
 }

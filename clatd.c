@@ -333,11 +333,11 @@ void packet_handler(const struct tun_data *tunnel, struct tun_pi *tun_header, co
   if(ntohs(tun_header->proto) == ETH_P_IP) {
     fd = tunnel->fd6;
     fill_tun_header(&tun_targ, ETH_P_IPV6);
-    iov_len = ipv4_packet(out, POS_IPHDR, packet, packetsize);
+    iov_len = ipv4_packet(out, CLAT_POS_IPHDR, packet, packetsize);
   } else if(ntohs(tun_header->proto) == ETH_P_IPV6) {
     fd = tunnel->fd4;
     fill_tun_header(&tun_targ, ETH_P_IP);
-    iov_len = ipv6_packet(out, POS_IPHDR, packet, packetsize);
+    iov_len = ipv6_packet(out, CLAT_POS_IPHDR, packet, packetsize);
   } else {
     logmsg(ANDROID_LOG_WARN,"packet_handler: unknown packet type = %x",tun_header->proto);
   }

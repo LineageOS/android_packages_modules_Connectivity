@@ -139,6 +139,6 @@ int ipv4_packet(clat_packet out, int pos, const char *packet, size_t len) {
   }
 
   // Set the length.
-  ip6_targ->ip6_plen = htons(payload_length(out, pos));
+  ip6_targ->ip6_plen = htons(packet_length(out, pos));
   return iov_len;
 }

@@ -23,14 +23,21 @@
 #define MAX_TCP_HDR (15 * 4)   // Data offset field is 4 bits and counts in 32-bit words.
 
 // A clat_packet is an array of iovec structures representing a packet that we are translating.
-// The POS_XXX constants represent the array indices within the clat_packet that contain specific
-// parts of the packet.
-enum clat_packet_index { POS_TUNHDR, POS_IPHDR, POS_TRANSPORTHDR, POS_ICMPIPHDR,
-                         POS_PAYLOAD, POS_MAX };
-typedef struct iovec clat_packet[POS_MAX];
+// The CLAT_POS_XXX constants represent the array indices within the clat_packet that contain
+// specific parts of the packet. The packet_* functions operate on all the packet segments past a
+// given position.
+enum clat_packet_index { CLAT_POS_TUNHDR, CLAT_POS_IPHDR, CLAT_POS_TRANSPORTHDR,
+                         CLAT_POS_PAYLOAD, CLAT_POS_MAX };
+typedef struct iovec clat_packet[CLAT_POS_MAX];
 
-// Returns the total length of the packet components after index.
-uint16_t payload_length(clat_packet packet, int index);
+// Calculates the checksum over all the packet components starting from pos.
+uint16_t packet_checksum(uint32_t checksum, clat_packet packet, int pos);
+
+// Returns the total length of the packet components after pos.
+uint16_t packet_length(clat_packet packet, int pos);
+
+// Returns true iff the given IPv6 address is in the plat subnet.
+int is_in_plat_subnet(const struct in6_addr *addr6);
 
 // Functions to create tun, IPv4, and IPv6 headers.
 void fill_tun_header(struct tun_pi *tun_header, uint16_t proto);
