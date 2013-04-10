@@ -27,6 +27,7 @@
 // specific parts of the packet. The packet_* functions operate on all the packet segments past a
 // given position.
 enum clat_packet_index { CLAT_POS_TUNHDR, CLAT_POS_IPHDR, CLAT_POS_TRANSPORTHDR,
+                         CLAT_POS_ICMPERR_IPHDR, CLAT_POS_ICMPERR_TRANSPORTHDR,
                          CLAT_POS_PAYLOAD, CLAT_POS_MAX };
 typedef struct iovec clat_packet[CLAT_POS_MAX];
 

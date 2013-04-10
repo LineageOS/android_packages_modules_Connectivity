@@ -317,12 +317,16 @@ void packet_handler(const struct tun_data *tunnel, struct tun_pi *tun_header, co
   struct tun_pi tun_targ;
   char iphdr[sizeof(struct ip6_hdr)];
   char transporthdr[MAX_TCP_HDR];
+  char icmp_iphdr[sizeof(struct ip6_hdr)];
+  char icmp_transporthdr[MAX_TCP_HDR];
 
   // iovec of the packets we'll send. This gets passed down to the translation functions.
   clat_packet out = {
     { &tun_targ, sizeof(tun_targ) },  // Tunnel header.
     { iphdr, 0 },                     // IP header.
     { transporthdr, 0 },              // Transport layer header.
+    { icmp_iphdr, 0 },                // ICMP error inner IP header.
+    { icmp_transporthdr, 0 },         // ICMP error transport layer header.
     { NULL, 0 },                      // Payload. No buffer, it's a pointer to the original payload.
   };
 

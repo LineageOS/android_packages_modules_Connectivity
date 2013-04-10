@@ -26,6 +26,7 @@
 #include <netinet/icmp6.h>
 #include <linux/icmp.h>
 
+#include "icmp.h"
 #include "translate.h"
 #include "checksum.h"
 #include "clatd.h"
@@ -53,7 +54,7 @@ uint16_t packet_checksum(uint32_t checksum, clat_packet packet, int pos) {
 /* function: packet_length
  * returns the total length of all the packet components after pos
  * packet - packet to calculate the length of
- * pos    - position to start counting from
+ * pos    - position to start counting after
  * returns: the total length of the packet components after pos
  */
 uint16_t packet_length(clat_packet packet, int pos) {
@@ -80,13 +81,15 @@ int is_in_plat_subnet(const struct in6_addr *addr6) {
  * returns: the IPv4 address
  */
 uint32_t ipv6_addr_to_ipv4_addr(const struct in6_addr *addr6) {
-
   if (is_in_plat_subnet(addr6)) {
     // Assumes a /96 plat subnet.
     return addr6->s6_addr32[3];
-  } else {
-    // Currently this can only be our own address; other packets are dropped by ipv6_packet.
+  } else if (IN6_ARE_ADDR_EQUAL(addr6, &Global_Clatd_Config.ipv6_local_subnet)) {
+    // Special-case our own address.
     return Global_Clatd_Config.ipv4_local_subnet.s_addr;
+  } else {
+    // Third party packet. Let the caller deal with it.
+    return INADDR_NONE;
   }
 }
 
@@ -127,6 +130,7 @@ void fill_tun_header(struct tun_pi *tun_header, uint16_t proto) {
  */
 void fill_ip_header(struct iphdr *ip, uint16_t payload_len, uint8_t protocol,
                     const struct ip6_hdr *old_header) {
+  int ttl_guess;
   memset(ip, 0, sizeof(struct iphdr));
 
   ip->ihl = 5;
@@ -141,6 +145,14 @@ void fill_ip_header(struct iphdr *ip, uint16_t payload_len, uint8_t protocol,
 
   ip->saddr = ipv6_addr_to_ipv4_addr(&old_header->ip6_src);
   ip->daddr = ipv6_addr_to_ipv4_addr(&old_header->ip6_dst);
+
+  // Third-party ICMPv6 message. This may have been originated by an native IPv6 address.
+  // In that case, the source IPv6 address can't be translated and we need to make up an IPv4
+  // source address. For now, use 255.0.0.<ttl>, which at least looks useful in traceroute.
+  if (ip->saddr == (uint32_t) INADDR_NONE) {
+    ttl_guess = icmp_guess_ttl(old_header->ip6_hlim);
+    ip->saddr = htonl((0xff << 24) + ttl_guess);
+  }
 }
 
 /* function: fill_ip6_header
@@ -164,7 +176,7 @@ void fill_ip6_header(struct ip6_hdr *ip6, uint16_t payload_len, uint8_t protocol
 }
 
 /* function: icmp_to_icmp6
- * translate ipv4 icmp to ipv6 icmp (only currently supports echo/echo reply)
+ * translate ipv4 icmp to ipv6 icmp
  * out          - output packet
  * icmp         - source packet icmp header
  * checksum     - pseudo-header checksum
@@ -175,31 +187,53 @@ void fill_ip6_header(struct ip6_hdr *ip6, uint16_t payload_len, uint8_t protocol
 int icmp_to_icmp6(clat_packet out, int pos, const struct icmphdr *icmp, uint32_t checksum,
                   const char *payload, size_t payload_size) {
   struct icmp6_hdr *icmp6_targ = out[pos].iov_base;
-  uint32_t checksum_temp;
-
-  if((icmp->type != ICMP_ECHO) && (icmp->type != ICMP_ECHOREPLY)) {
-    logmsg_dbg(ANDROID_LOG_WARN,"icmp_to_icmp6/unhandled icmp type: 0x%x", icmp->type);
-    return 0;
-  }
+  uint8_t icmp6_type;
+  int clat_packet_len;
 
   memset(icmp6_targ, 0, sizeof(struct icmp6_hdr));
-  icmp6_targ->icmp6_type = (icmp->type == ICMP_ECHO) ? ICMP6_ECHO_REQUEST : ICMP6_ECHO_REPLY;
-  icmp6_targ->icmp6_code = 0;
-  icmp6_targ->icmp6_id = icmp->un.echo.id;
-  icmp6_targ->icmp6_seq = icmp->un.echo.sequence;
+
+  icmp6_type = icmp_to_icmp6_type(icmp->type, icmp->code);
+  icmp6_targ->icmp6_type = icmp6_type;
+  icmp6_targ->icmp6_code = icmp_to_icmp6_code(icmp->type, icmp->code);
 
   out[pos].iov_len = sizeof(struct icmp6_hdr);
-  out[CLAT_POS_PAYLOAD].iov_base = (char *) payload;
-  out[CLAT_POS_PAYLOAD].iov_len = payload_size;
+
+  if (pos == CLAT_POS_TRANSPORTHDR &&
+      is_icmp_error(icmp->type) &&
+      icmp6_type != ICMP6_PARAM_PROB) {
+    // An ICMP error we understand, one level deep.
+    // Translate the nested packet (the one that caused the error).
+    clat_packet_len = ipv4_packet(out, pos + 1, payload, payload_size);
+
+    // The pseudo-header checksum was calculated on the transport length of the original IPv4
+    // packet that we were asked to translate. This transport length is 20 bytes smaller than it
+    // needs to be, because the ICMP error contains an IPv4 header, which we will be translating to
+    // an IPv6 header, which is 20 bytes longer. Fix it up here. This is simpler than the
+    // alternative, which is to always update the pseudo-header checksum in all UDP/TCP/ICMP
+    // translation functions (rather than pre-calculating it when translating the IPv4 header).
+    // We only need to do this for ICMP->ICMPv6, not ICMPv6->ICMP, because ICMP does not use the
+    // pseudo-header when calculating its checksum (as the IPv4 header has its own checksum).
+    checksum = htonl(ntohl(checksum) + 20);
+  } else if (icmp6_type == ICMP6_ECHO_REQUEST || icmp6_type == ICMP6_ECHO_REPLY) {
+    // Ping packet.
+    icmp6_targ->icmp6_id = icmp->un.echo.id;
+    icmp6_targ->icmp6_seq = icmp->un.echo.sequence;
+    out[CLAT_POS_PAYLOAD].iov_base = (char *) payload;
+    out[CLAT_POS_PAYLOAD].iov_len = payload_size;
+    clat_packet_len = CLAT_POS_PAYLOAD + 1;
+  } else {
+    // Unknown type/code. The type/code conversion functions have already logged an error.
+    return 0;
+  }
 
   icmp6_targ->icmp6_cksum = 0;  // Checksum field must be 0 when calculating checksum.
   icmp6_targ->icmp6_cksum = packet_checksum(checksum, out, pos);
 
-  return CLAT_POS_PAYLOAD + 1;
+  return clat_packet_len;
 }
 
 /* function: icmp6_to_icmp
- * translate ipv6 icmp to ipv4 icmp (only currently supports echo/echo reply)
+ * translate ipv6 icmp to ipv4 icmp
  * out          - output packet
  * icmp6        - source packet icmp6 header
  * checksum     - pseudo-header checksum (unused)
@@ -210,27 +244,40 @@ int icmp_to_icmp6(clat_packet out, int pos, const struct icmphdr *icmp, uint32_t
 int icmp6_to_icmp(clat_packet out, int pos, const struct icmp6_hdr *icmp6, uint32_t checksum,
                   const char *payload, size_t payload_size) {
   struct icmphdr *icmp_targ = out[pos].iov_base;
-
-  if((icmp6->icmp6_type != ICMP6_ECHO_REQUEST) && (icmp6->icmp6_type != ICMP6_ECHO_REPLY)) {
-    logmsg_dbg(ANDROID_LOG_WARN,"icmp6_to_icmp/unhandled icmp6 type: 0x%x",icmp6->icmp6_type);
-    return 0;
-  }
+  uint8_t icmp_type;
+  int ttl;
+  int clat_packet_len;
 
   memset(icmp_targ, 0, sizeof(struct icmphdr));
 
-  icmp_targ->type = (icmp6->icmp6_type == ICMP6_ECHO_REQUEST) ? ICMP_ECHO : ICMP_ECHOREPLY;
-  icmp_targ->code = 0x0;
-  icmp_targ->un.echo.id = icmp6->icmp6_id;
-  icmp_targ->un.echo.sequence = icmp6->icmp6_seq;
+  icmp_type = icmp6_to_icmp_type(icmp6->icmp6_type, icmp6->icmp6_code);
+  icmp_targ->type = icmp_type;
+  icmp_targ->code = icmp6_to_icmp_code(icmp6->icmp6_type, icmp6->icmp6_code);
 
   out[pos].iov_len = sizeof(struct icmphdr);
-  out[CLAT_POS_PAYLOAD].iov_base = (char *) payload;
-  out[CLAT_POS_PAYLOAD].iov_len = payload_size;
+
+  if (pos == CLAT_POS_TRANSPORTHDR &&
+      is_icmp6_error(icmp6->icmp6_type) &&
+      icmp_type != ICMP_PARAMETERPROB) {
+    // An ICMPv6 error we understand, one level deep.
+    // Translate the nested packet (the one that caused the error).
+    clat_packet_len = ipv6_packet(out, pos + 1, payload, payload_size);
+  } else if (icmp_type == ICMP_ECHO || icmp_type == ICMP_ECHOREPLY) {
+    // Ping packet.
+    icmp_targ->un.echo.id = icmp6->icmp6_id;
+    icmp_targ->un.echo.sequence = icmp6->icmp6_seq;
+    out[CLAT_POS_PAYLOAD].iov_base = (char *) payload;
+    out[CLAT_POS_PAYLOAD].iov_len = payload_size;
+    clat_packet_len = CLAT_POS_PAYLOAD + 1;
+  } else {
+      // Unknown type/code. The type/code conversion functions have already logged an error.
+    return 0;
+  }
 
   icmp_targ->checksum = 0;  // Checksum field must be 0 when calculating checksum.
   icmp_targ->checksum = packet_checksum(0, out, pos);
 
-  return CLAT_POS_PAYLOAD + 1;
+  return clat_packet_len;
 }
 
 /* function: udp_packet

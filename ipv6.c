@@ -64,12 +64,14 @@ int icmp6_packet(clat_packet out, int pos, const struct icmp6_hdr *icmp6, uint32
  * fmt     - printf-style format, use %s to place the address
  * badaddr - the bad address in question
  */
-void log_bad_address(const char *fmt, const struct in6_addr *badaddr) {
+void log_bad_address(const char *fmt, const struct in6_addr *src, const struct in6_addr *dst) {
 #if CLAT_DEBUG
-  char badaddr_str[INET6_ADDRSTRLEN];
+  char srcstr[INET6_ADDRSTRLEN];
+  char dststr[INET6_ADDRSTRLEN];
 
-  inet_ntop(AF_INET6, badaddr, badaddr_str, sizeof(badaddr_str));
-  logmsg_dbg(ANDROID_LOG_ERROR,fmt,badaddr_str);
+  inet_ntop(AF_INET6, src, srcstr, sizeof(srcstr));
+  inet_ntop(AF_INET6, dst, dststr, sizeof(dststr));
+  logmsg_dbg(ANDROID_LOG_ERROR, fmt, srcstr, dststr);
 #endif
 }
 
@@ -91,22 +93,27 @@ int ipv6_packet(clat_packet out, int pos, const char *packet, size_t len) {
   int i;
 
   if(len < sizeof(struct ip6_hdr)) {
-    logmsg_dbg(ANDROID_LOG_ERROR, "ipv6_packet/too short for an ip6 header");
+    logmsg_dbg(ANDROID_LOG_ERROR, "ipv6_packet/too short for an ip6 header: %d", len);
     return 0;
   }
 
   if(IN6_IS_ADDR_MULTICAST(&ip6->ip6_dst)) {
-    log_bad_address("ipv6_packet/multicast %s", &ip6->ip6_dst);
+    log_bad_address("ipv6_packet/multicast %s->%s", &ip6->ip6_src, &ip6->ip6_dst);
     return 0; // silently ignore
   }
 
-  if (!is_in_plat_subnet(&ip6->ip6_src) && ip6->ip6_nxt) {
-    log_bad_address("ipv6_packet/wrong source address: %s", &ip6->ip6_src);
-    return 0;
-  }
-
-  if(!IN6_ARE_ADDR_EQUAL(&ip6->ip6_dst, &Global_Clatd_Config.ipv6_local_subnet)) {
-    log_bad_address("ipv6_packet/wrong destination address: %s", &ip6->ip6_dst);
+  // If the packet is not from the plat subnet to the local subnet, or vice versa, drop it, unless
+  // it's an ICMP packet (which can come from anywhere). We do not send IPv6 packets from the plat
+  // subnet to the local subnet, but these can appear as inner packets in ICMP errors, so we need
+  // to translate them. We accept third-party ICMPv6 errors, even though their source addresses
+  // cannot be translated, so that things like unreachables and traceroute will work. fill_ip_header
+  // takes care of faking a source address for them.
+  if (!(is_in_plat_subnet(&ip6->ip6_src) &&
+        IN6_ARE_ADDR_EQUAL(&ip6->ip6_dst, &Global_Clatd_Config.ipv6_local_subnet)) &&
+      !(is_in_plat_subnet(&ip6->ip6_dst) &&
+        IN6_ARE_ADDR_EQUAL(&ip6->ip6_src, &Global_Clatd_Config.ipv6_local_subnet)) &&
+      ip6->ip6_nxt != IPPROTO_ICMPV6) {
+    log_bad_address("ipv6_packet/wrong source address: %s->%s", &ip6->ip6_src, &ip6->ip6_dst);
     return 0;
   }
 
@@ -141,7 +148,7 @@ int ipv6_packet(clat_packet out, int pos, const char *packet, size_t len) {
                          len_left);
   } else {
 #if CLAT_DEBUG
-    logmsg(ANDROID_LOG_ERROR, "ipv6_packet/unknown next header type: %x",ip6->ip6_nxt);
+    logmsg(ANDROID_LOG_ERROR, "ipv6_packet/unknown next header type: %x", ip6->ip6_nxt);
     logcat_hexdump("ipv6/nxthdr", packet, len);
 #endif
     return 0;
