@@ -5,7 +5,7 @@ LOCAL_SRC_FILES:=clatd.c dump.c checksum.c translate.c ipv4.c ipv6.c config.c dn
 
 LOCAL_C_INCLUDES := external/libnl-headers
 LOCAL_STATIC_LIBRARIES := libnl_2
-LOCAL_SHARED_LIBRARIES := libcutils
+LOCAL_SHARED_LIBRARIES := libcutils liblog
 
 LOCAL_MODULE := clatd
 
