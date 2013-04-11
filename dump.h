@@ -29,5 +29,6 @@ void dump_udp6(const struct udphdr *udp, const struct ip6_hdr *ip6, const char *
 void dump_tcp6(const struct tcphdr *tcp, const struct ip6_hdr *ip6, const char *payload, size_t payload_size, const char *options, size_t options_size);
 
 void logcat_hexdump(const char *info, const char *data, size_t len);
+void dump_iovec(const struct iovec *iov, int iov_len);
 
 #endif /* __DUMP_H__ */
