@@ -303,44 +303,41 @@ void udp6_to_udp(int fd, const struct ip6_hdr *ip6, const struct udphdr *udp, co
  *     array position 0 - tun header
  *     array position 1 - ipv4/ipv6 header
  *     array position 2 - empty (will be tcp header)
- *     array position 3 - empty (will be tcp options or payload)
- *     array position 4 - empty (can be payload)
+ *     array position 3 - empty (will be payload)
  * checksum     - partial checksum covering ipv4/ipv6 header
- * options      - pointer to tcp option buffer
- * options_size - size of tcp option buffer
  *
  * TODO: mss rewrite
  * TODO: hosts without pmtu discovery - non DF packets will rely on fragmentation (unimplemented)
  */
-void tcp_translate(int fd, const struct tcphdr *tcp, const char *payload, size_t payload_size, struct iovec *io_targ, uint32_t checksum, const char *options, size_t options_size) {
-  struct tcphdr tcp_targ;
-  int targ_index = 2;
+void tcp_translate(int fd, const struct tcphdr *tcp, size_t header_size, const char *payload,
+                   size_t payload_size, struct iovec *io_targ, uint32_t checksum) {
+  union {
+    // Reserve space for the maximum size of the TCP header, including options. The TCP header
+    // length field is 4 bits long and counts 4-byte words, so it can be at most 60 bytes.
+    char buf[15 * 4];
+    struct tcphdr tcp;
+  } header;
 
-  memcpy(&tcp_targ, tcp, sizeof(tcp_targ));
-  tcp_targ.check = 0;
-
-  checksum = ip_checksum_add(checksum, &tcp_targ, sizeof(tcp_targ));
-  if(options) {
-    checksum = ip_checksum_add(checksum, options, options_size);
+  if (header_size > sizeof(header.buf)) {
+    // A TCP header cannot be more than 60 bytes long, so this can never happen unless there is a
+    // bug in the caller.
+    logmsg(ANDROID_LOG_ERROR, "tcp_translate: header too long %d > %d, truncating",
+           header_size, sizeof(header.buf));
+    header_size = sizeof(header.buf);
   }
+
+  memcpy(&header, tcp, header_size);
+
+  header.tcp.check = 0;
+  checksum = ip_checksum_add(checksum, &header, header_size);
   checksum = ip_checksum_add(checksum, payload, payload_size);
-  tcp_targ.check = ip_checksum_finish(checksum);
+  header.tcp.check = ip_checksum_finish(checksum);
 
-  io_targ[targ_index].iov_base = &tcp_targ;
-  io_targ[targ_index].iov_len = sizeof(tcp_targ);
-  targ_index++;
+  io_targ[2].iov_base = &header;
+  io_targ[2].iov_len = header_size;
 
-  if(options) {
-    io_targ[targ_index].iov_base = (char *)options;
-    io_targ[targ_index].iov_len = options_size;
-    targ_index++;
-  }
-
-  io_targ[targ_index].iov_base = (char *)payload;
-  io_targ[targ_index].iov_len = payload_size;
-  targ_index++;
-
-  writev(fd, io_targ, targ_index);
+  io_targ[3].iov_base = (char *)payload;
+  io_targ[3].iov_len = payload_size;
 }
 
 /* function: tcp_to_tcp6
@@ -348,12 +345,12 @@ void tcp_translate(int fd, const struct tcphdr *tcp, const char *payload, size_t
  * fd           - tun interface fd
  * ip           - source packet ipv4 header
  * tcp          - source packet tcp header
+ * header_size  - size of tcp header including options
  * payload      - tcp payload
  * payload_size - size of payload
- * options      - tcp options
- * options_size - size of options
  */
-void tcp_to_tcp6(int fd,const struct iphdr *ip, const struct tcphdr *tcp, const char *payload, size_t payload_size, const char *options, size_t options_size) {
+void tcp_to_tcp6(int fd, const struct iphdr *ip, const struct tcphdr *tcp, size_t header_size,
+                 const char *payload, size_t payload_size) {
   struct ip6_hdr ip6_targ;
   struct iovec io_targ[5];
   struct tun_pi tun_header;
@@ -361,16 +358,16 @@ void tcp_to_tcp6(int fd,const struct iphdr *ip, const struct tcphdr *tcp, const 
 
   fill_tun_header(&tun_header,ETH_P_IPV6);
 
-  fill_ip6_header(&ip6_targ,payload_size+options_size+sizeof(struct tcphdr),IPPROTO_TCP,ip);
+  fill_ip6_header(&ip6_targ, header_size + payload_size, IPPROTO_TCP, ip);
 
-  checksum = ipv6_pseudo_header_checksum(0, &ip6_targ, sizeof(*tcp) + options_size + payload_size);
+  checksum = ipv6_pseudo_header_checksum(0, &ip6_targ, header_size + payload_size);
 
   io_targ[0].iov_base = &tun_header;
   io_targ[0].iov_len = sizeof(tun_header);
   io_targ[1].iov_base = &ip6_targ;
   io_targ[1].iov_len = sizeof(ip6_targ);
 
-  tcp_translate(fd,tcp,payload,payload_size,io_targ,checksum,options,options_size);
+  tcp_translate(fd, tcp, header_size, payload, payload_size, io_targ, checksum);
 }
 
 /* function: tcp6_to_tcp
@@ -378,12 +375,12 @@ void tcp_to_tcp6(int fd,const struct iphdr *ip, const struct tcphdr *tcp, const 
  * fd           - tun interface fd
  * ip6          - source packet ipv6 header
  * tcp          - source packet tcp header
+ * header_size  - size of tcp header including options
  * payload      - tcp payload
  * payload_size - size of payload
- * options      - tcp options
- * options_size - size of options
  */
-void tcp6_to_tcp(int fd,const struct ip6_hdr *ip6, const struct tcphdr *tcp, const char *payload, size_t payload_size, const char *options, size_t options_size) {
+void tcp6_to_tcp(int fd, const struct ip6_hdr *ip6, const struct tcphdr *tcp, size_t header_size,
+                 const char *payload, size_t payload_size) {
   struct iphdr ip_targ;
   struct iovec io_targ[5];
   struct tun_pi tun_header;
@@ -391,14 +388,14 @@ void tcp6_to_tcp(int fd,const struct ip6_hdr *ip6, const struct tcphdr *tcp, con
 
   fill_tun_header(&tun_header,ETH_P_IP);
 
-  fill_ip_header(&ip_targ,payload_size+options_size+sizeof(struct tcphdr),IPPROTO_TCP,ip6);
+  fill_ip_header(&ip_targ, header_size + payload_size, IPPROTO_TCP, ip6);
 
-  checksum = ipv4_pseudo_header_checksum(0, &ip_targ, sizeof(*tcp) + payload_size + options_size);
+  checksum = ipv4_pseudo_header_checksum(0, &ip_targ, header_size + payload_size);
 
   io_targ[0].iov_base = &tun_header;
   io_targ[0].iov_len = sizeof(tun_header);
   io_targ[1].iov_base = &ip_targ;
   io_targ[1].iov_len = sizeof(ip_targ);
 
-  tcp_translate(fd,tcp,payload,payload_size,io_targ,checksum,options,options_size);
+  tcp_translate(fd, tcp, header_size, payload, payload_size, io_targ, checksum);
 }

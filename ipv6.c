@@ -66,40 +66,30 @@ void icmp6_packet(int fd, const char *packet, size_t len, struct ip6_hdr *ip6) {
  * ip6    - ip6 header
  */
 void tcp6_packet(int fd, const char *packet, size_t len, struct ip6_hdr *ip6) {
-  struct tcphdr tcp;
+  const struct tcphdr *tcp = (const struct tcphdr *) packet;
   const char *payload;
-  const char *options;
-  size_t payload_size, options_size;
+  size_t payload_size, header_size;
 
   if(len < sizeof(tcp)) {
     logmsg_dbg(ANDROID_LOG_ERROR,"tcp6_packet/(too small)");
     return;
   }
 
-  memcpy(&tcp, packet, sizeof(tcp));
-
-  if(tcp.doff < 5) {
-    logmsg_dbg(ANDROID_LOG_ERROR,"tcp6_packet/tcp header length set to less than 5: %x",tcp.doff);
+  if(tcp->doff < 5) {
+    logmsg_dbg(ANDROID_LOG_ERROR,"tcp6_packet/tcp header length set to less than 5: %x", tcp->doff);
     return;
   }
 
-  if((size_t)tcp.doff*4 > len) {
-    logmsg_dbg(ANDROID_LOG_ERROR,"tcp6_packet/tcp header length set too large: %x",tcp.doff);
+  if((size_t) tcp->doff*4 > len) {
+    logmsg_dbg(ANDROID_LOG_ERROR,"tcp6_packet/tcp header length set too large: %x", tcp->doff);
     return;
   }
 
-  if(tcp.doff > 5) {
-    options = packet + sizeof(tcp);
-    options_size = tcp.doff*4 - sizeof(tcp);
-  } else {
-    options = NULL;
-    options_size = 0;
-  }
+  header_size = tcp->doff * 4;
+  payload = packet + header_size;
+  payload_size = len - header_size;
 
-  payload = packet + tcp.doff*4;
-  payload_size = len - tcp.doff*4;
-
-  tcp6_to_tcp(fd,ip6,&tcp,payload,payload_size,options,options_size);
+  tcp6_to_tcp(fd, ip6, tcp, header_size, payload, payload_size);
 }
 
 /* function: udp6_packet
