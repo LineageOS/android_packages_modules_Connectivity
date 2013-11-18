@@ -28,7 +28,6 @@
 
 #include "translate.h"
 #include "checksum.h"
-#include "ipv4.h"
 #include "logging.h"
 #include "debug.h"
 #include "dump.h"
