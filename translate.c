@@ -279,6 +279,22 @@ int icmp6_to_icmp(clat_packet out, int pos, const struct icmp6_hdr *icmp6,
   return clat_packet_len;
 }
 
+/* function: generic_packet
+ * takes a generic IP packet and sets it up for translation
+ * out      - output packet
+ * pos      - position in the output packet of the transport header
+ * payload  - pointer to IP payload
+ * len      - size of ip payload
+ * returns: the highest position in the output clat_packet that's filled in
+ */
+int generic_packet(clat_packet out, int pos, const char *payload, size_t len) {
+  out[pos].iov_len = 0;
+  out[CLAT_POS_PAYLOAD].iov_base = (char *) payload;
+  out[CLAT_POS_PAYLOAD].iov_len = len;
+
+  return CLAT_POS_PAYLOAD + 1;
+}
+
 /* function: udp_packet
  * takes a udp packet and sets it up for translation
  * out      - output packet
