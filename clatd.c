@@ -144,7 +144,6 @@ void deconfigure_tun_ipv6(const struct tun_data *tunnel) {
  * tunnel - tun device data
  */
 void configure_tun_ipv6(const struct tun_data *tunnel) {
-  struct in6_addr local_nat64_prefix_6;
   int status;
 
   status = if_route(tunnel->device6, AF_INET6, &Global_Clatd_Config.ipv6_local_subnet,
@@ -377,7 +376,6 @@ void read_packet(int active_fd, const struct tun_data *tunnel) {
     logmsg(ANDROID_LOG_WARN,"read_packet/tun interface removed");
     running = 0;
   } else {
-    struct tun_pi tun_header;
     ssize_t header_size = sizeof(struct tun_pi);
 
     if(readlen < header_size) {
