@@ -245,7 +245,6 @@ int icmp6_to_icmp(clat_packet out, int pos, const struct icmp6_hdr *icmp6, uint3
                   const char *payload, size_t payload_size) {
   struct icmphdr *icmp_targ = out[pos].iov_base;
   uint8_t icmp_type;
-  int ttl;
   int clat_packet_len;
 
   memset(icmp_targ, 0, sizeof(struct icmphdr));
