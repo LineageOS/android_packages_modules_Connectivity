@@ -205,6 +205,13 @@ void configure_tun_ip(const struct tun_data *tunnel) {
     exit(1);
   }
 
+  status = add_address(tunnel->device6, AF_INET6, &Global_Clatd_Config.ipv6_local_address,
+      64, NULL);
+  if(status < 0) {
+    logmsg(ANDROID_LOG_FATAL,"configure_tun_ip/if_address(6) failed: %s",strerror(-status));
+    exit(1);
+  }
+
   if((status = if_up(tunnel->device6, Global_Clatd_Config.mtu)) < 0) {
     logmsg(ANDROID_LOG_FATAL,"configure_tun_ip/if_up(6) failed: %s",strerror(-status));
     exit(1);
@@ -470,7 +477,7 @@ int main(int argc, char **argv) {
   // open the tunnel device before dropping privs
   tunnel.fd6 = tun_open();
   if(tunnel.fd6 < 0) {
-    logmsg(ANDROID_LOG_FATAL, "tun_open failed: %s", strerror(errno));
+    logmsg(ANDROID_LOG_FATAL, "tun_open6 failed: %s", strerror(errno));
     exit(1);
   }
 
