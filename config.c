@@ -255,6 +255,9 @@ int read_config(const char *file, const char *uplink_interface, const char *plat
   if(!config_item_ip(root, "ipv4_local_subnet", DEFAULT_IPV4_LOCAL_SUBNET, &Global_Clatd_Config.ipv4_local_subnet))
     goto failed;
 
+  if(!config_item_ip6(root, "ipv6_local_address", DEFAULT_IPV6_LOCAL_ADDRESS, &Global_Clatd_Config.ipv6_local_address))
+    goto failed;
+
   if(plat_prefix) { // plat subnet is coming from the command line
     if(inet_pton(AF_INET6, plat_prefix, &Global_Clatd_Config.plat_subnet) <= 0) {
       logmsg(ANDROID_LOG_FATAL,"invalid IPv6 address specified for plat prefix: %s", plat_prefix);
@@ -295,6 +298,7 @@ void dump_config() {
 
   logmsg(ANDROID_LOG_DEBUG,"mtu = %d",Global_Clatd_Config.mtu);
   logmsg(ANDROID_LOG_DEBUG,"ipv4mtu = %d",Global_Clatd_Config.ipv4mtu);
+  logmsg(ANDROID_LOG_DEBUG,"ipv6_local_address = %s",inet_ntop(AF_INET6, &Global_Clatd_Config.ipv6_local_address, charbuffer, sizeof(charbuffer)));
   logmsg(ANDROID_LOG_DEBUG,"ipv6_local_subnet = %s",inet_ntop(AF_INET6, &Global_Clatd_Config.ipv6_local_subnet, charbuffer, sizeof(charbuffer)));
   logmsg(ANDROID_LOG_DEBUG,"ipv4_local_subnet = %s",inet_ntop(AF_INET, &Global_Clatd_Config.ipv4_local_subnet, charbuffer, sizeof(charbuffer)));
   logmsg(ANDROID_LOG_DEBUG,"plat_subnet = %s",inet_ntop(AF_INET6, &Global_Clatd_Config.plat_subnet, charbuffer, sizeof(charbuffer)));
