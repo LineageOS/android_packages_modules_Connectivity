@@ -139,7 +139,7 @@ uint8_t icmp6_to_icmp_type(uint8_t type, uint8_t code) {
   }
 
   // We don't understand this ICMP type. Return parameter problem so the caller will bail out.
-  logmsg_dbg(ANDROID_LOG_DEBUG, "icmp6_to_icmp_type: unhandled ICMP type %d", type);
+  logmsg_dbg(ANDROID_LOG_DEBUG, "icmp6_to_icmp_type: unhandled ICMP type/code %d/%d", type, code);
   return ICMP_PARAMETERPROB;
 }
 

@@ -90,7 +90,6 @@ int ipv6_packet(clat_packet out, int pos, const char *packet, size_t len) {
   size_t len_left;
   uint32_t checksum;
   int iov_len;
-  int i;
 
   if(len < sizeof(struct ip6_hdr)) {
     logmsg_dbg(ANDROID_LOG_ERROR, "ipv6_packet/too short for an ip6 header: %d", len);

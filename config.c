@@ -154,7 +154,7 @@ void free_config() {
  * does dns lookups to set the plat subnet or exits on failure, waits forever for a dns response with a query backoff timer
  */
 void dns64_detection() {
-  int i, backoff_sleep, status;
+  int backoff_sleep, status;
   struct in6_addr tmp_ptr;
 
   backoff_sleep = 1;
