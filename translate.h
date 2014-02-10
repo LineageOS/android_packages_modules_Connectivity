@@ -61,12 +61,14 @@ int icmp6_to_icmp(clat_packet out, int pos, const struct icmp6_hdr *icmp6,
 int generic_packet(clat_packet out, int pos, const char *payload, size_t len);
 
 // Translate TCP and UDP packets.
-int tcp_packet(clat_packet out, int pos, const struct tcphdr *tcp, uint32_t checksum, size_t len);
-int udp_packet(clat_packet out, int pos, const struct udphdr *udp, uint32_t checksum, size_t len);
+int tcp_packet(clat_packet out, int pos, const struct tcphdr *tcp,
+               uint32_t old_sum, uint32_t new_sum, size_t len);
+int udp_packet(clat_packet out, int pos, const struct udphdr *udp,
+               uint32_t old_sum, uint32_t new_sum, size_t len);
 
 int tcp_translate(clat_packet out, int pos, const struct tcphdr *tcp, size_t header_size,
-                  uint32_t checksum, const char *payload, size_t payload_size);
-int udp_translate(clat_packet out, int pos, const struct udphdr *udp, uint32_t checksum,
-                  const char *payload, size_t payload_size);
+                  uint32_t old_sum, uint32_t new_sum, const char *payload, size_t payload_size);
+int udp_translate(clat_packet out, int pos, const struct udphdr *udp,
+                  uint32_t old_sum, uint32_t new_sum, const char *payload, size_t payload_size);
 
 #endif /* __TRANSLATE_H__ */
