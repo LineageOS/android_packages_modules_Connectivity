@@ -18,7 +18,17 @@
 #ifndef __TRANSLATE_H__
 #define __TRANSLATE_H__
 
+#include <netinet/in.h>
+#include <netinet/ip.h>
+#include <netinet/ip_icmp.h>
+#include <netinet/udp.h>
+#include <netinet/tcp.h>
+#include <netinet/ip6.h>
+#include <netinet/icmp6.h>
+#include <linux/icmp.h>
 #include <linux/if_tun.h>
+
+#include "clatd.h"
 
 #define MAX_TCP_HDR (15 * 4)   // Data offset field is 4 bits and counts in 32-bit words.
 
@@ -46,6 +56,10 @@ void fill_ip_header(struct iphdr *ip_targ, uint16_t payload_len, uint8_t protoco
                     const struct ip6_hdr *old_header);
 void fill_ip6_header(struct ip6_hdr *ip6, uint16_t payload_len, uint8_t protocol,
                      const struct iphdr *old_header);
+
+// Translate and send packets.
+void translate_packet(const struct tun_data *tunnel, struct tun_pi *tun_header, const char *packet,
+                      size_t packetsize);
 
 // Translate IPv4 and IPv6 packets.
 int ipv4_packet(clat_packet out, int pos, const char *packet, size_t len);
