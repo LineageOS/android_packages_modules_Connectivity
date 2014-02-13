@@ -18,6 +18,7 @@
 #ifndef __CLATD_H__
 #define __CLATD_H__
 
+#include <linux/if.h>
 #include <linux/if_tun.h>
 
 #define MAXMTU 1500
@@ -29,5 +30,10 @@
 
 // how frequently (in seconds) to poll for an address change while there is no traffic
 #define NO_TRAFFIC_INTERFACE_POLL_FREQUENCY 90
+
+struct tun_data {
+  char device6[IFNAMSIZ], device4[IFNAMSIZ];
+  int fd6, fd4;
+};
 
 #endif /* __CLATD_H__ */
