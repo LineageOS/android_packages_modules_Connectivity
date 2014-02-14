@@ -208,12 +208,10 @@ int icmp_to_icmp6(clat_packet out, int pos, const struct icmphdr *icmp, uint32_t
     // The pseudo-header checksum was calculated on the transport length of the original IPv4
     // packet that we were asked to translate. This transport length is 20 bytes smaller than it
     // needs to be, because the ICMP error contains an IPv4 header, which we will be translating to
-    // an IPv6 header, which is 20 bytes longer. Fix it up here. This is simpler than the
-    // alternative, which is to always update the pseudo-header checksum in all UDP/TCP/ICMP
-    // translation functions (rather than pre-calculating it when translating the IPv4 header).
+    // an IPv6 header, which is 20 bytes longer. Fix it up here.
     // We only need to do this for ICMP->ICMPv6, not ICMPv6->ICMP, because ICMP does not use the
     // pseudo-header when calculating its checksum (as the IPv4 header has its own checksum).
-    checksum = htonl(ntohl(checksum) + 20);
+    checksum = checksum + htons(20);
   } else if (icmp6_type == ICMP6_ECHO_REQUEST || icmp6_type == ICMP6_ECHO_REPLY) {
     // Ping packet.
     icmp6_targ->icmp6_id = icmp->un.echo.id;
@@ -298,10 +296,12 @@ int generic_packet(clat_packet out, int pos, const char *payload, size_t len) {
  * takes a udp packet and sets it up for translation
  * out      - output packet
  * udp      - pointer to udp header in packet
- * checksum - pseudo-header checksum
+ * old_sum  - pseudo-header checksum of old header
+ * new_sum  - pseudo-header checksum of new header
  * len      - size of ip payload
  */
-int udp_packet(clat_packet out, int pos, const struct udphdr *udp, uint32_t checksum, size_t len) {
+int udp_packet(clat_packet out, int pos, const struct udphdr *udp,
+               uint32_t old_sum, uint32_t new_sum, size_t len) {
   const char *payload;
   size_t payload_size;
 
@@ -313,7 +313,7 @@ int udp_packet(clat_packet out, int pos, const struct udphdr *udp, uint32_t chec
   payload = (const char *) (udp + 1);
   payload_size = len - sizeof(struct udphdr);
 
-  return udp_translate(out, pos, udp, checksum, payload, payload_size);
+  return udp_translate(out, pos, udp, old_sum, new_sum, payload, payload_size);
 }
 
 /* function: tcp_packet
@@ -324,7 +324,8 @@ int udp_packet(clat_packet out, int pos, const struct udphdr *udp, uint32_t chec
  * len      - size of ip payload
  * returns: the highest position in the output clat_packet that's filled in
  */
-int tcp_packet(clat_packet out, int pos, const struct tcphdr *tcp, uint32_t checksum, size_t len) {
+int tcp_packet(clat_packet out, int pos, const struct tcphdr *tcp,
+               uint32_t old_sum, uint32_t new_sum, size_t len) {
   const char *payload;
   size_t payload_size, header_size;
 
@@ -347,20 +348,21 @@ int tcp_packet(clat_packet out, int pos, const struct tcphdr *tcp, uint32_t chec
   payload = ((const char *) tcp) + header_size;
   payload_size = len - header_size;
 
-  return tcp_translate(out, pos, tcp, header_size, checksum, payload, payload_size);
+  return tcp_translate(out, pos, tcp, header_size, old_sum, new_sum, payload, payload_size);
 }
 
 /* function: udp_translate
  * common between ipv4/ipv6 - setup checksum and send udp packet
  * out          - output packet
  * udp          - udp header
- * checksum     - pseudo-header checksum
+ * old_sum      - pseudo-header checksum of old header
+ * new_sum      - pseudo-header checksum of new header
  * payload      - tcp payload
  * payload_size - size of payload
  * returns: the highest position in the output clat_packet that's filled in
  */
-int udp_translate(clat_packet out, int pos, const struct udphdr *udp, uint32_t checksum,
-                  const char *payload, size_t payload_size) {
+int udp_translate(clat_packet out, int pos, const struct udphdr *udp, uint32_t old_sum,
+                  uint32_t new_sum, const char *payload, size_t payload_size) {
   struct udphdr *udp_targ = out[pos].iov_base;
 
   memcpy(udp_targ, udp, sizeof(struct udphdr));
@@ -369,8 +371,22 @@ int udp_translate(clat_packet out, int pos, const struct udphdr *udp, uint32_t c
   out[CLAT_POS_PAYLOAD].iov_base = (char *) payload;
   out[CLAT_POS_PAYLOAD].iov_len = payload_size;
 
-  udp_targ->check = 0;  // Checksum field must be 0 when calculating checksum.
-  udp_targ->check = packet_checksum(checksum, out, pos);
+  if (udp_targ->check) {
+    udp_targ->check = ip_checksum_adjust(udp->check, old_sum, new_sum);
+  } else {
+    // Zero checksums are special. RFC 768 says, "An all zero transmitted checksum value means that
+    // the transmitter generated no checksum (for debugging or for higher level protocols that
+    // don't care)." However, in IPv6 zero UDP checksums were only permitted by RFC 6935 (2013). So
+    // for safety we recompute it.
+    udp_targ->check = 0;  // Checksum field must be 0 when calculating checksum.
+    udp_targ->check = packet_checksum(new_sum, out, pos);
+  }
+
+  // RFC 768: "If the computed checksum is zero, it is transmitted as all ones (the equivalent
+  // in one's complement arithmetic)."
+  if (!udp_targ->check) {
+    udp_targ->check = 0xffff;
+  }
 
   return CLAT_POS_PAYLOAD + 1;
 }
@@ -389,7 +405,7 @@ int udp_translate(clat_packet out, int pos, const struct udphdr *udp, uint32_t c
  * TODO: hosts without pmtu discovery - non DF packets will rely on fragmentation (unimplemented)
  */
 int tcp_translate(clat_packet out, int pos, const struct tcphdr *tcp, size_t header_size,
-                  uint32_t checksum, const char *payload, size_t payload_size) {
+                  uint32_t old_sum, uint32_t new_sum, const char *payload, size_t payload_size) {
   struct tcphdr *tcp_targ = out[pos].iov_base;
   out[pos].iov_len = header_size;
 
@@ -406,8 +422,7 @@ int tcp_translate(clat_packet out, int pos, const struct tcphdr *tcp, size_t hea
   out[CLAT_POS_PAYLOAD].iov_base = (char *)payload;
   out[CLAT_POS_PAYLOAD].iov_len = payload_size;
 
-  tcp_targ->check = 0;  // Checksum field must be 0 when calculating checksum.
-  tcp_targ->check = packet_checksum(checksum, out, pos);
+  tcp_targ->check = ip_checksum_adjust(tcp->check, old_sum, new_sum);
 
   return CLAT_POS_PAYLOAD + 1;
 }
