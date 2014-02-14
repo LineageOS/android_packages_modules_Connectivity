@@ -8,11 +8,13 @@ LOCAL_C_INCLUDES := external/libnl/include
 LOCAL_STATIC_LIBRARIES := libnl
 LOCAL_SHARED_LIBRARIES := libcutils liblog
 
+# The clat daemon.
 LOCAL_MODULE := clatd
 
 include $(BUILD_EXECUTABLE)
 
 
+# The configuration file.
 include $(CLEAR_VARS)
 
 LOCAL_MODULE := clatd.conf
@@ -21,3 +23,20 @@ LOCAL_MODULE_PATH := $(TARGET_OUT)/etc
 LOCAL_SRC_FILES := $(LOCAL_MODULE)
 
 include $(BUILD_PREBUILT)
+
+
+# Unit tests.
+ifneq ($(TARGET_SIMULATOR),true)
+
+include $(CLEAR_VARS)
+
+LOCAL_MODULE := clatd_test
+LOCAL_CFLAGS := -Wall -Werror
+LOCAL_SRC_FILES := clatd_test.cpp dump.c checksum.c translate.c icmp.c ipv4.c ipv6.c logging.c
+LOCAL_MODULE_TAGS := eng tests
+LOCAL_SHARED_LIBRARIES := liblog
+LOCAL_MODULE_PATH := $(TARGET_OUT)/bin
+
+include $(BUILD_NATIVE_TEST)
+
+endif
