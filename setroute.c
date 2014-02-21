@@ -23,7 +23,6 @@
 #include <linux/rtnetlink.h>
 #include <netlink/handlers.h>
 #include <netlink/msg.h>
-#include <netlink-types.h>
 
 #include "netlink_msg.h"
 #include "setroute.h"
