@@ -125,8 +125,8 @@ int ipv6_packet(clat_packet out, int pos, const char *packet, size_t len) {
   out[pos].iov_len = sizeof(struct iphdr);
 
   // Calculate the pseudo-header checksum.
-  old_sum = ipv6_pseudo_header_checksum(0, ip6, len_left);
-  new_sum = ipv4_pseudo_header_checksum(0, ip_targ, len_left);
+  old_sum = ipv6_pseudo_header_checksum(ip6, len_left, protocol);
+  new_sum = ipv4_pseudo_header_checksum(ip_targ, len_left);
 
   // does not support IPv6 extension headers, this will drop any packet with them
   if (protocol == IPPROTO_ICMP) {
