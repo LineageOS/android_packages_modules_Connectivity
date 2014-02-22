@@ -22,6 +22,7 @@
 #include <string.h>
 #include <errno.h>
 
+#include <netlink-local.h>
 #include <netlink-types.h>
 #include <netlink/socket.h>
 #include <netlink/netlink.h>
