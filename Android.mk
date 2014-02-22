@@ -4,8 +4,8 @@ include $(CLEAR_VARS)
 LOCAL_SRC_FILES:=clatd.c dump.c checksum.c translate.c icmp.c ipv4.c ipv6.c config.c dns64.c logging.c getaddr.c getroute.c netlink_callbacks.c netlink_msg.c setif.c setroute.c mtu.c
 
 LOCAL_CFLAGS := -Wall -Werror
-LOCAL_C_INCLUDES := external/libnl-headers
-LOCAL_STATIC_LIBRARIES := libnl_2
+LOCAL_C_INCLUDES := external/libnl/include
+LOCAL_STATIC_LIBRARIES := libnl
 LOCAL_SHARED_LIBRARIES := libcutils liblog
 
 LOCAL_MODULE := clatd
