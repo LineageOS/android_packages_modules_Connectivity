@@ -130,7 +130,8 @@ void dump_icmp6(struct icmp6_hdr *icmp6) {
 }
 
 /* print udp header */
-void dump_udp_generic(const struct udphdr *udp, uint32_t temp_checksum, const char *payload, size_t payload_size) {
+void dump_udp_generic(const struct udphdr *udp, uint32_t temp_checksum,
+                      const uint8_t *payload, size_t payload_size) {
   uint16_t my_checksum;
 
   temp_checksum = ip_checksum_add(temp_checksum, udp, sizeof(struct udphdr));
@@ -145,14 +146,16 @@ void dump_udp_generic(const struct udphdr *udp, uint32_t temp_checksum, const ch
 }
 
 /* print ipv4/udp header */
-void dump_udp(const struct udphdr *udp, const struct iphdr *ip, const char *payload, size_t payload_size) {
+void dump_udp(const struct udphdr *udp, const struct iphdr *ip,
+              const uint8_t *payload, size_t payload_size) {
   uint32_t temp_checksum;
   temp_checksum = ipv4_pseudo_header_checksum(ip, sizeof(*udp) + payload_size);
   dump_udp_generic(udp, temp_checksum, payload, payload_size);
 }
 
 /* print ipv6/udp header */
-void dump_udp6(const struct udphdr *udp, const struct ip6_hdr *ip6, const char *payload, size_t payload_size) {
+void dump_udp6(const struct udphdr *udp, const struct ip6_hdr *ip6,
+               const uint8_t *payload, size_t payload_size) {
   uint32_t temp_checksum;
   temp_checksum = ipv6_pseudo_header_checksum(ip6, sizeof(*udp) + payload_size, IPPROTO_UDP);
   dump_udp_generic(udp, temp_checksum, payload, payload_size);
@@ -200,7 +203,9 @@ void dump_tcp_generic(const struct tcphdr *tcp, const char *options, size_t opti
 }
 
 /* print ipv4/tcp header */
-void dump_tcp(const struct tcphdr *tcp, const struct iphdr *ip, const char *payload, size_t payload_size, const char *options, size_t options_size) {
+void dump_tcp(const struct tcphdr *tcp, const struct iphdr *ip,
+              const uint8_t *payload, size_t payload_size,
+              const char *options, size_t options_size) {
   uint32_t temp_checksum;
 
   temp_checksum = ipv4_pseudo_header_checksum(ip, sizeof(*tcp) + options_size + payload_size);
@@ -208,7 +213,9 @@ void dump_tcp(const struct tcphdr *tcp, const struct iphdr *ip, const char *payl
 }
 
 /* print ipv6/tcp header */
-void dump_tcp6(const struct tcphdr *tcp, const struct ip6_hdr *ip6, const char *payload, size_t payload_size, const char *options, size_t options_size) {
+void dump_tcp6(const struct tcphdr *tcp, const struct ip6_hdr *ip6,
+               const uint8_t *payload, size_t payload_size,
+               const char *options, size_t options_size) {
   uint32_t temp_checksum;
 
   temp_checksum = ipv6_pseudo_header_checksum(ip6, sizeof(*tcp) + options_size + payload_size, IPPROTO_TCP);
@@ -216,13 +223,13 @@ void dump_tcp6(const struct tcphdr *tcp, const struct ip6_hdr *ip6, const char *
 }
 
 /* generic hex dump */
-void logcat_hexdump(const char *info, const char *data, size_t len) {
+void logcat_hexdump(const char *info, const uint8_t *data, size_t len) {
   char output[PACKETLEN*3+2];
   size_t i;
 
   output[0] = '\0';
   for(i = 0; i < len && i < PACKETLEN; i++) {
-    snprintf(output + i*3, 4, " %02x", (uint8_t)data[i]);
+    snprintf(output + i*3, 4, " %02x", data[i]);
   }
   output[len*3+3] = '\0';
 

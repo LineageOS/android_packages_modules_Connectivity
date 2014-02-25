@@ -60,12 +60,12 @@ void fill_ip6_header(struct ip6_hdr *ip6, uint16_t payload_len, uint8_t protocol
                      const struct iphdr *old_header);
 
 // Translate and send packets.
-void translate_packet(const struct tun_data *tunnel, struct tun_pi *tun_header, const char *packet,
-                      size_t packetsize);
+void translate_packet(const struct tun_data *tunnel, struct tun_pi *tun_header,
+                      const uint8_t *packet, size_t packetsize);
 
 // Translate IPv4 and IPv6 packets.
-int ipv4_packet(clat_packet out, int pos, const char *packet, size_t len);
-int ipv6_packet(clat_packet out, int pos, const char *packet, size_t len);
+int ipv4_packet(clat_packet out, int pos, const uint8_t *packet, size_t len);
+int ipv6_packet(clat_packet out, int pos, const uint8_t *packet, size_t len);
 
 // Deal with fragmented packets.
 size_t maybe_fill_frag_header(struct ip6_frag *frag_hdr, struct ip6_hdr *ip6_targ,
@@ -74,12 +74,13 @@ uint8_t parse_frag_header(const struct ip6_frag *frag_hdr, struct iphdr *ip_targ
 
 // Translate ICMP packets.
 int icmp_to_icmp6(clat_packet out, int pos, const struct icmphdr *icmp, uint32_t checksum,
-                  const char *payload, size_t payload_size);
+                  const uint8_t *payload, size_t payload_size);
 int icmp6_to_icmp(clat_packet out, int pos, const struct icmp6_hdr *icmp6,
-                  const char *payload, size_t payload_size);
+                  const uint8_t *payload, size_t payload_size);
 
 // Translate generic IP packets.
-int generic_packet(clat_packet out, int pos, const char *payload, size_t len);
+int generic_packet(clat_packet out, int pos,
+                   const uint8_t *payload, size_t len);
 
 // Translate TCP and UDP packets.
 int tcp_packet(clat_packet out, int pos, const struct tcphdr *tcp,
@@ -88,8 +89,10 @@ int udp_packet(clat_packet out, int pos, const struct udphdr *udp,
                uint32_t old_sum, uint32_t new_sum, size_t len);
 
 int tcp_translate(clat_packet out, int pos, const struct tcphdr *tcp, size_t header_size,
-                  uint32_t old_sum, uint32_t new_sum, const char *payload, size_t payload_size);
+                  uint32_t old_sum, uint32_t new_sum,
+                  const uint8_t *payload, size_t payload_size);
 int udp_translate(clat_packet out, int pos, const struct udphdr *udp,
-                  uint32_t old_sum, uint32_t new_sum, const char *payload, size_t payload_size);
+                  uint32_t old_sum, uint32_t new_sum,
+                  const uint8_t *payload, size_t payload_size);
 
 #endif /* __TRANSLATE_H__ */
