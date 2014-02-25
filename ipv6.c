@@ -34,7 +34,8 @@
  * len      - size of ip payload
  * returns: the highest position in the output clat_packet that's filled in
  */
-int icmp6_packet(clat_packet out, int pos, const struct icmp6_hdr *icmp6, size_t len) {
+int icmp6_packet(clat_packet out, clat_packet_index pos, const struct icmp6_hdr *icmp6,
+                 size_t len) {
   const uint8_t *payload;
   size_t payload_size;
 
@@ -74,7 +75,7 @@ void log_bad_address(const char *fmt, const struct in6_addr *src, const struct i
  * len    - size of packet
  * returns: the highest position in the output clat_packet that's filled in
  */
-int ipv6_packet(clat_packet out, int pos, const uint8_t *packet, size_t len) {
+int ipv6_packet(clat_packet out, clat_packet_index pos, const uint8_t *packet, size_t len) {
   const struct ip6_hdr *ip6 = (struct ip6_hdr *) packet;
   struct iphdr *ip_targ = (struct iphdr *) out[pos].iov_base;
   struct ip6_frag *frag_hdr = NULL;
