@@ -101,28 +101,28 @@ static const char kIPv6PlatSubnet[] = "64:ff9b::";
   0, 0, 0, (protocol),
 
 // A fragmented DNS request.
-static const char kIPv4Frag1[] = {
+static const uint8_t kIPv4Frag1[] = {
     0x45, 0x00, 0x00, 0x24, 0xfe, 0x47, 0x20, 0x00, 0x40, 0x11,
     0x8c, 0x6d, 0xc0, 0x00, 0x00, 0x04, 0x08, 0x08, 0x08, 0x08,
     0x14, 0x5d, 0x00, 0x35, 0x00, 0x29, 0x68, 0xbb, 0x50, 0x47,
     0x01, 0x00, 0x00, 0x01, 0x00, 0x00
 };
-static const char kIPv4Frag2[] = {
+static const uint8_t kIPv4Frag2[] = {
     0x45, 0x00, 0x00, 0x24, 0xfe, 0x47, 0x20, 0x02, 0x40, 0x11,
     0x8c, 0x6b, 0xc0, 0x00, 0x00, 0x04, 0x08, 0x08, 0x08, 0x08,
     0x00, 0x00, 0x00, 0x00, 0x04, 0x69, 0x70, 0x76, 0x34, 0x06,
     0x67, 0x6f, 0x6f, 0x67, 0x6c, 0x65
 };
-static const char kIPv4Frag3[] = {
+static const uint8_t kIPv4Frag3[] = {
     0x45, 0x00, 0x00, 0x1d, 0xfe, 0x47, 0x00, 0x04, 0x40, 0x11,
     0xac, 0x70, 0xc0, 0x00, 0x00, 0x04, 0x08, 0x08, 0x08, 0x08,
     0x03, 0x63, 0x6f, 0x6d, 0x00, 0x00, 0x01, 0x00, 0x01
 };
-static const char *kIPv4Fragments[] = { kIPv4Frag1, kIPv4Frag2, kIPv4Frag3 };
-static const int kIPv4FragLengths[] = { sizeof(kIPv4Frag1), sizeof(kIPv4Frag2),
-                                        sizeof(kIPv4Frag3) };
+static const uint8_t *kIPv4Fragments[] = { kIPv4Frag1, kIPv4Frag2, kIPv4Frag3 };
+static const size_t kIPv4FragLengths[] = { sizeof(kIPv4Frag1), sizeof(kIPv4Frag2),
+                                           sizeof(kIPv4Frag3) };
 
-static const char kIPv6Frag1[] = {
+static const uint8_t kIPv6Frag1[] = {
     0x60, 0x00, 0x00, 0x00, 0x00, 0x18, 0x2c, 0x40, 0x20, 0x01,
     0x0d, 0xb8, 0x00, 0x00, 0x0b, 0x11, 0x00, 0x00, 0x00, 0x00,
     0x00, 0x00, 0x04, 0x64, 0x00, 0x64, 0xff, 0x9b, 0x00, 0x00,
@@ -132,7 +132,7 @@ static const char kIPv6Frag1[] = {
     0x00, 0x01, 0x00, 0x00
 };
 
-static const char kIPv6Frag2[] = {
+static const uint8_t kIPv6Frag2[] = {
     0x60, 0x00, 0x00, 0x00, 0x00, 0x18, 0x2c, 0x40, 0x20, 0x01,
     0x0d, 0xb8, 0x00, 0x00, 0x0b, 0x11, 0x00, 0x00, 0x00, 0x00,
     0x00, 0x00, 0x04, 0x64, 0x00, 0x64, 0xff, 0x9b, 0x00, 0x00,
@@ -142,7 +142,7 @@ static const char kIPv6Frag2[] = {
     0x6f, 0x67, 0x6c, 0x65
 };
 
-static const char kIPv6Frag3[] = {
+static const uint8_t kIPv6Frag3[] = {
     0x60, 0x00, 0x00, 0x00, 0x00, 0x11, 0x2c, 0x40, 0x20, 0x01,
     0x0d, 0xb8, 0x00, 0x00, 0x0b, 0x11, 0x00, 0x00, 0x00, 0x00,
     0x00, 0x00, 0x04, 0x64, 0x00, 0x64, 0xff, 0x9b, 0x00, 0x00,
@@ -150,11 +150,11 @@ static const char kIPv6Frag3[] = {
     0x11, 0x00, 0x00, 0x20, 0x00, 0x00, 0xfe, 0x47, 0x03, 0x63,
     0x6f, 0x6d, 0x00, 0x00, 0x01, 0x00, 0x01
 };
-static const char *kIPv6Fragments[] = { kIPv6Frag1, kIPv6Frag2, kIPv6Frag3 };
-static const int kIPv6FragLengths[] = { sizeof(kIPv6Frag1), sizeof(kIPv6Frag2),
-                                        sizeof(kIPv6Frag3) };
+static const uint8_t *kIPv6Fragments[] = { kIPv6Frag1, kIPv6Frag2, kIPv6Frag3 };
+static const size_t kIPv6FragLengths[] = { sizeof(kIPv6Frag1), sizeof(kIPv6Frag2),
+                                           sizeof(kIPv6Frag3) };
 
-static const char kReassembledIPv4[] = {
+static const uint8_t kReassembledIPv4[] = {
     0x45, 0x00, 0x00, 0x3d, 0xfe, 0x47, 0x00, 0x00, 0x40, 0x11,
     0xac, 0x54, 0xc0, 0x00, 0x00, 0x04, 0x08, 0x08, 0x08, 0x08,
     0x14, 0x5d, 0x00, 0x35, 0x00, 0x29, 0x68, 0xbb, 0x50, 0x47,
@@ -170,8 +170,8 @@ static const uint32_t kPayloadPartialChecksum = 0x31e9c;
 static const uint16_t kUdpV4Checksum          = 0xd0c7;
 static const uint16_t kUdpV6Checksum          = 0xa74a;
 
-int ip_version(const char *packet) {
-  int version = packet[0] >> 4;
+uint8_t ip_version(const uint8_t *packet) {
+  uint8_t version = packet[0] >> 4;
   return version;
 }
 
@@ -197,7 +197,7 @@ int ipv6_fragment_offset(struct ip6_frag *frag) {
   return ntohs((frag->ip6f_offlg & IP6F_OFF_MASK) >> 3);
 }
 
-void check_packet(const char *packet, size_t len, const char *msg) {
+void check_packet(const uint8_t *packet, size_t len, const char *msg) {
   void *payload;
   size_t payload_length = 0;
   uint32_t pseudo_checksum = 0;
@@ -282,16 +282,16 @@ void check_packet(const char *packet, size_t len, const char *msg) {
   }
 }
 
-void reassemble_packet(const char **fragments, const int lengths[], int numpackets,
-                       char *reassembled, size_t *reassembled_len, const char *msg) {
+void reassemble_packet(const uint8_t **fragments, const size_t lengths[], int numpackets,
+                       uint8_t *reassembled, size_t *reassembled_len, const char *msg) {
   struct iphdr *ip = NULL;
   struct ip6_hdr *ip6 = NULL;
   int total_length, pos = 0;
   uint8_t protocol;
-  int version = ip_version(fragments[0]);
+  uint8_t version = ip_version(fragments[0]);
 
   for (int i = 0; i < numpackets; i++) {
-    const char *packet = fragments[i];
+    const uint8_t *packet = fragments[i];
     int len = lengths[i];
     int headersize, payload_offset;
 
@@ -370,7 +370,7 @@ void reassemble_packet(const char **fragments, const int lengths[], int numpacke
   *reassembled_len = total_length;
 }
 
-void check_data_matches(const char *expected, const char *actual, size_t len, const char *msg) {
+void check_data_matches(const uint8_t *expected, const uint8_t *actual, size_t len, const char *msg) {
   if (memcmp(expected, actual, len)) {
     // Hex dump, 20 bytes per line, one space between bytes (1 byte = 3 chars), indented by 4.
     int hexdump_len = len * 3 + (len / 20 + 1) * 5;
@@ -392,9 +392,9 @@ void check_data_matches(const char *expected, const char *actual, size_t len, co
   }
 }
 
-void fix_udp_checksum(char* packet) {
+void fix_udp_checksum(uint8_t* packet) {
   uint32_t pseudo_checksum;
-  int version = ip_version(packet);
+  uint8_t version = ip_version(packet);
   struct udphdr *udp;
   switch (version) {
     case 4: {
@@ -418,7 +418,7 @@ void fix_udp_checksum(char* packet) {
   udp->check = ip_checksum_finish(ip_checksum_add(pseudo_checksum, udp, ntohs(udp->len)));
 }
 
-void do_translate_packet(const char *original, size_t original_len, char *out, size_t *outlen,
+void do_translate_packet(const uint8_t *original, size_t original_len, uint8_t *out, size_t *outlen,
                          const char *msg) {
   int fds[2];
   if (socketpair(AF_UNIX, SOCK_DGRAM | SOCK_NONBLOCK, 0, fds)) {
@@ -471,17 +471,17 @@ void do_translate_packet(const char *original, size_t original_len, char *out, s
   }
 }
 
-void check_translated_packet(const char *original, size_t original_len,
-                             const char *expected, size_t expected_len, const char *msg) {
-  char translated[MAXMTU];
+void check_translated_packet(const uint8_t *original, size_t original_len,
+                             const uint8_t *expected, size_t expected_len, const char *msg) {
+  uint8_t translated[MAXMTU];
   size_t translated_len = sizeof(translated);
   do_translate_packet(original, original_len, translated, &translated_len, msg);
   EXPECT_EQ(expected_len, translated_len) << msg << ": Translated packet length incorrect\n";
   check_data_matches(expected, translated, translated_len, msg);
 }
 
-void check_fragment_translation(const char *original[], const int original_lengths[],
-                                const char *expected[], const int expected_lengths[],
+void check_fragment_translation(const uint8_t *original[], const size_t original_lengths[],
+                                const uint8_t *expected[], const size_t expected_lengths[],
                                 int numfragments, const char *msg) {
   for (int i = 0; i < numfragments; i++) {
     // Check that each of the fragments translates as expected.
@@ -492,12 +492,12 @@ void check_fragment_translation(const char *original[], const int original_lengt
   }
 
   // Sanity check that reassembling the original and translated fragments produces valid packets.
-  char reassembled[MAXMTU];
+  uint8_t reassembled[MAXMTU];
   size_t reassembled_len = sizeof(reassembled);
   reassemble_packet(original, original_lengths, numfragments, reassembled, &reassembled_len, msg);
   check_packet(reassembled, reassembled_len, msg);
 
-  char translated[MAXMTU];
+  uint8_t translated[MAXMTU];
   size_t translated_len = sizeof(translated);
   do_translate_packet(reassembled, reassembled_len, translated, &translated_len, msg);
   check_packet(translated, translated_len, msg);
@@ -516,37 +516,37 @@ class ClatdTest : public ::testing::Test {
 
 TEST_F(ClatdTest, Sanitycheck) {
   // Sanity checks the data.
-  char v4_header[] = { IPV4_UDP_HEADER };
+  uint8_t v4_header[] = { IPV4_UDP_HEADER };
   ASSERT_EQ(sizeof(struct iphdr), sizeof(v4_header)) << "Test IPv4 header: incorrect length\n";
 
-  char v6_header[] = { IPV6_UDP_HEADER };
+  uint8_t v6_header[] = { IPV6_UDP_HEADER };
   ASSERT_EQ(sizeof(struct ip6_hdr), sizeof(v6_header)) << "Test IPv6 header: incorrect length\n";
 
-  char udp_header[] = { UDP_HEADER };
+  uint8_t udp_header[] = { UDP_HEADER };
   ASSERT_EQ(sizeof(struct udphdr), sizeof(udp_header)) << "Test UDP header: incorrect length\n";
 
   // Sanity checks check_packet.
   struct udphdr *udp;
-  char v4_udp_packet[] = { IPV4_UDP_HEADER UDP_HEADER PAYLOAD };
+  uint8_t v4_udp_packet[] = { IPV4_UDP_HEADER UDP_HEADER PAYLOAD };
   udp = (struct udphdr *) (v4_udp_packet + sizeof(struct iphdr));
   fix_udp_checksum(v4_udp_packet);
   ASSERT_EQ(kUdpV4Checksum, udp->check) << "UDP/IPv4 packet checksum sanity check\n";
   check_packet(v4_udp_packet, sizeof(v4_udp_packet), "UDP/IPv4 packet sanity check");
 
-  char v6_udp_packet[] = { IPV6_UDP_HEADER UDP_HEADER PAYLOAD };
+  uint8_t v6_udp_packet[] = { IPV6_UDP_HEADER UDP_HEADER PAYLOAD };
   udp = (struct udphdr *) (v6_udp_packet + sizeof(struct ip6_hdr));
   fix_udp_checksum(v6_udp_packet);
   ASSERT_EQ(kUdpV6Checksum, udp->check) << "UDP/IPv6 packet checksum sanity check\n";
   check_packet(v6_udp_packet, sizeof(v6_udp_packet), "UDP/IPv6 packet sanity check");
 
-  char ipv4_ping[] = { IPV4_ICMP_HEADER IPV4_PING PAYLOAD };
+  uint8_t ipv4_ping[] = { IPV4_ICMP_HEADER IPV4_PING PAYLOAD };
   check_packet(ipv4_ping, sizeof(ipv4_ping), "IPv4 ping sanity check");
 
-  char ipv6_ping[] = { IPV6_ICMPV6_HEADER IPV6_PING PAYLOAD };
+  uint8_t ipv6_ping[] = { IPV6_ICMPV6_HEADER IPV6_PING PAYLOAD };
   check_packet(ipv6_ping, sizeof(ipv6_ping), "IPv6 ping sanity check");
 
   // Sanity checks reassemble_packet.
-  char reassembled[MAXMTU];
+  uint8_t reassembled[MAXMTU];
   size_t total_length = sizeof(reassembled);
   reassemble_packet(kIPv4Fragments, kIPv4FragLengths, ARRAYSIZE(kIPv4Fragments),
                     reassembled, &total_length, "Reassembly sanity check");
@@ -567,15 +567,15 @@ TEST_F(ClatdTest, Sanitycheck) {
 TEST_F(ClatdTest, PseudoChecksum) {
   uint32_t pseudo_checksum;
 
-  char v4_header[] = { IPV4_UDP_HEADER };
-  char v4_pseudo_header[] = { IPV4_PSEUDOHEADER(v4_header, UDP_LEN) };
+  uint8_t v4_header[] = { IPV4_UDP_HEADER };
+  uint8_t v4_pseudo_header[] = { IPV4_PSEUDOHEADER(v4_header, UDP_LEN) };
   pseudo_checksum = ipv4_pseudo_header_checksum((struct iphdr *) v4_header, UDP_LEN);
   EXPECT_EQ(ip_checksum_finish(pseudo_checksum),
             ip_checksum(v4_pseudo_header, sizeof(v4_pseudo_header)))
             << "ipv4_pseudo_header_checksum incorrect\n";
 
-  char v6_header[] = { IPV6_UDP_HEADER };
-  char v6_pseudo_header[] = { IPV6_PSEUDOHEADER(v6_header, IPPROTO_UDP, UDP_LEN) };
+  uint8_t v6_header[] = { IPV6_UDP_HEADER };
+  uint8_t v6_pseudo_header[] = { IPV6_PSEUDOHEADER(v6_header, IPPROTO_UDP, UDP_LEN) };
   pseudo_checksum = ipv6_pseudo_header_checksum((struct ip6_hdr *) v6_header, UDP_LEN, IPPROTO_UDP);
   EXPECT_EQ(ip_checksum_finish(pseudo_checksum),
             ip_checksum(v6_pseudo_header, sizeof(v6_pseudo_header)))
@@ -583,15 +583,15 @@ TEST_F(ClatdTest, PseudoChecksum) {
 }
 
 TEST_F(ClatdTest, TransportChecksum) {
-  char udphdr[] = { UDP_HEADER };
-  char payload[] = { PAYLOAD };
+  uint8_t udphdr[] = { UDP_HEADER };
+  uint8_t payload[] = { PAYLOAD };
   EXPECT_EQ(kUdpPartialChecksum, ip_checksum_add(0, udphdr, sizeof(udphdr)))
             << "UDP partial checksum\n";
   EXPECT_EQ(kPayloadPartialChecksum, ip_checksum_add(0, payload, sizeof(payload)))
             << "Payload partial checksum\n";
 
-  char ip[] = { IPV4_UDP_HEADER };
-  char ip6[] = { IPV6_UDP_HEADER };
+  uint8_t ip[] = { IPV4_UDP_HEADER };
+  uint8_t ip6[] = { IPV6_UDP_HEADER };
   uint32_t ipv4_pseudo_sum = ipv4_pseudo_header_checksum((struct iphdr *) ip, UDP_LEN);
   uint32_t ipv6_pseudo_sum = ipv6_pseudo_header_checksum((struct ip6_hdr *) ip6, UDP_LEN,
                                                          IPPROTO_UDP);
@@ -643,8 +643,8 @@ TEST_F(ClatdTest, AdjustChecksum) {
 }
 
 TEST_F(ClatdTest, Translate) {
-  char udp_ipv4[] = { IPV4_UDP_HEADER UDP_HEADER PAYLOAD };
-  char udp_ipv6[] = { IPV6_UDP_HEADER UDP_HEADER PAYLOAD };
+  uint8_t udp_ipv4[] = { IPV4_UDP_HEADER UDP_HEADER PAYLOAD };
+  uint8_t udp_ipv6[] = { IPV6_UDP_HEADER UDP_HEADER PAYLOAD };
   fix_udp_checksum(udp_ipv4);
   fix_udp_checksum(udp_ipv6);
   check_translated_packet(udp_ipv4, sizeof(udp_ipv4), udp_ipv6, sizeof(udp_ipv6),
@@ -652,8 +652,8 @@ TEST_F(ClatdTest, Translate) {
   check_translated_packet(udp_ipv6, sizeof(udp_ipv6), udp_ipv4, sizeof(udp_ipv4),
                           "UDP/IPv6 -> UDP/IPv4 translation");
 
-  char ipv4_ping[] = { IPV4_ICMP_HEADER IPV4_PING PAYLOAD };
-  char ipv6_ping[] = { IPV6_ICMPV6_HEADER IPV6_PING PAYLOAD };
+  uint8_t ipv4_ping[] = { IPV4_ICMP_HEADER IPV4_PING PAYLOAD };
+  uint8_t ipv6_ping[] = { IPV6_ICMPV6_HEADER IPV6_PING PAYLOAD };
   check_translated_packet(ipv4_ping, sizeof(ipv4_ping), ipv6_ping, sizeof(ipv6_ping),
                           "ICMP->ICMPv6 translation");
   check_translated_packet(ipv6_ping, sizeof(ipv6_ping), ipv4_ping, sizeof(ipv4_ping),

@@ -225,7 +225,7 @@ uint8_t parse_frag_header(const struct ip6_frag *frag_hdr, struct iphdr *ip_targ
  * returns: the highest position in the output clat_packet that's filled in
  */
 int icmp_to_icmp6(clat_packet out, int pos, const struct icmphdr *icmp, uint32_t checksum,
-                  const char *payload, size_t payload_size) {
+                  const uint8_t *payload, size_t payload_size) {
   struct icmp6_hdr *icmp6_targ = out[pos].iov_base;
   uint8_t icmp6_type;
   int clat_packet_len;
@@ -256,7 +256,7 @@ int icmp_to_icmp6(clat_packet out, int pos, const struct icmphdr *icmp, uint32_t
     // Ping packet.
     icmp6_targ->icmp6_id = icmp->un.echo.id;
     icmp6_targ->icmp6_seq = icmp->un.echo.sequence;
-    out[CLAT_POS_PAYLOAD].iov_base = (char *) payload;
+    out[CLAT_POS_PAYLOAD].iov_base = (uint8_t *) payload;
     out[CLAT_POS_PAYLOAD].iov_len = payload_size;
     clat_packet_len = CLAT_POS_PAYLOAD + 1;
   } else {
@@ -279,7 +279,7 @@ int icmp_to_icmp6(clat_packet out, int pos, const struct icmphdr *icmp, uint32_t
  * returns: the highest position in the output clat_packet that's filled in
  */
 int icmp6_to_icmp(clat_packet out, int pos, const struct icmp6_hdr *icmp6,
-                  const char *payload, size_t payload_size) {
+                  const uint8_t *payload, size_t payload_size) {
   struct icmphdr *icmp_targ = out[pos].iov_base;
   uint8_t icmp_type;
   int clat_packet_len;
@@ -302,7 +302,7 @@ int icmp6_to_icmp(clat_packet out, int pos, const struct icmp6_hdr *icmp6,
     // Ping packet.
     icmp_targ->un.echo.id = icmp6->icmp6_id;
     icmp_targ->un.echo.sequence = icmp6->icmp6_seq;
-    out[CLAT_POS_PAYLOAD].iov_base = (char *) payload;
+    out[CLAT_POS_PAYLOAD].iov_base = (uint8_t *) payload;
     out[CLAT_POS_PAYLOAD].iov_len = payload_size;
     clat_packet_len = CLAT_POS_PAYLOAD + 1;
   } else {
@@ -324,9 +324,10 @@ int icmp6_to_icmp(clat_packet out, int pos, const struct icmp6_hdr *icmp6,
  * len      - size of ip payload
  * returns: the highest position in the output clat_packet that's filled in
  */
-int generic_packet(clat_packet out, int pos, const char *payload, size_t len) {
+int generic_packet(clat_packet out, int pos,
+                   const uint8_t *payload, size_t len) {
   out[pos].iov_len = 0;
-  out[CLAT_POS_PAYLOAD].iov_base = (char *) payload;
+  out[CLAT_POS_PAYLOAD].iov_base = (uint8_t *) payload;
   out[CLAT_POS_PAYLOAD].iov_len = len;
 
   return CLAT_POS_PAYLOAD + 1;
@@ -342,7 +343,7 @@ int generic_packet(clat_packet out, int pos, const char *payload, size_t len) {
  */
 int udp_packet(clat_packet out, int pos, const struct udphdr *udp,
                uint32_t old_sum, uint32_t new_sum, size_t len) {
-  const char *payload;
+  const uint8_t *payload;
   size_t payload_size;
 
   if(len < sizeof(struct udphdr)) {
@@ -350,7 +351,7 @@ int udp_packet(clat_packet out, int pos, const struct udphdr *udp,
     return 0;
   }
 
-  payload = (const char *) (udp + 1);
+  payload = (const uint8_t *) (udp + 1);
   payload_size = len - sizeof(struct udphdr);
 
   return udp_translate(out, pos, udp, old_sum, new_sum, payload, payload_size);
@@ -366,7 +367,7 @@ int udp_packet(clat_packet out, int pos, const struct udphdr *udp,
  */
 int tcp_packet(clat_packet out, int pos, const struct tcphdr *tcp,
                uint32_t old_sum, uint32_t new_sum, size_t len) {
-  const char *payload;
+  const uint8_t *payload;
   size_t payload_size, header_size;
 
   if(len < sizeof(struct tcphdr)) {
@@ -385,7 +386,7 @@ int tcp_packet(clat_packet out, int pos, const struct tcphdr *tcp,
   }
 
   header_size = tcp->doff * 4;
-  payload = ((const char *) tcp) + header_size;
+  payload = ((const uint8_t *) tcp) + header_size;
   payload_size = len - header_size;
 
   return tcp_translate(out, pos, tcp, header_size, old_sum, new_sum, payload, payload_size);
@@ -401,14 +402,15 @@ int tcp_packet(clat_packet out, int pos, const struct tcphdr *tcp,
  * payload_size - size of payload
  * returns: the highest position in the output clat_packet that's filled in
  */
-int udp_translate(clat_packet out, int pos, const struct udphdr *udp, uint32_t old_sum,
-                  uint32_t new_sum, const char *payload, size_t payload_size) {
+int udp_translate(clat_packet out, int pos, const struct udphdr *udp,
+                  uint32_t old_sum, uint32_t new_sum,
+                  const uint8_t *payload, size_t payload_size) {
   struct udphdr *udp_targ = out[pos].iov_base;
 
   memcpy(udp_targ, udp, sizeof(struct udphdr));
 
   out[pos].iov_len = sizeof(struct udphdr);
-  out[CLAT_POS_PAYLOAD].iov_base = (char *) payload;
+  out[CLAT_POS_PAYLOAD].iov_base = (uint8_t *) payload;
   out[CLAT_POS_PAYLOAD].iov_len = payload_size;
 
   if (udp_targ->check) {
@@ -442,7 +444,8 @@ int udp_translate(clat_packet out, int pos, const struct udphdr *udp, uint32_t o
  * returns: the highest position in the output clat_packet that's filled in
  */
 int tcp_translate(clat_packet out, int pos, const struct tcphdr *tcp, size_t header_size,
-                  uint32_t old_sum, uint32_t new_sum, const char *payload, size_t payload_size) {
+                  uint32_t old_sum, uint32_t new_sum,
+                  const uint8_t *payload, size_t payload_size) {
   struct tcphdr *tcp_targ = out[pos].iov_base;
   out[pos].iov_len = header_size;
 
@@ -456,7 +459,7 @@ int tcp_translate(clat_packet out, int pos, const struct tcphdr *tcp, size_t hea
 
   memcpy(tcp_targ, tcp, header_size);
 
-  out[CLAT_POS_PAYLOAD].iov_base = (char *)payload;
+  out[CLAT_POS_PAYLOAD].iov_base = (uint8_t *) payload;
   out[CLAT_POS_PAYLOAD].iov_len = payload_size;
 
   tcp_targ->check = ip_checksum_adjust(tcp->check, old_sum, new_sum);
@@ -471,8 +474,8 @@ int tcp_translate(clat_packet out, int pos, const struct tcphdr *tcp, size_t hea
  * packet     - packet
  * packetsize - size of packet
  */
-void translate_packet(const struct tun_data *tunnel, struct tun_pi *tun_header, const char *packet,
-                      size_t packetsize) {
+void translate_packet(const struct tun_data *tunnel, struct tun_pi *tun_header,
+                      const uint8_t *packet, size_t packetsize) {
   int fd;
   int iov_len = 0;
 
