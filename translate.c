@@ -16,15 +16,7 @@
  * translate.c - CLAT functions / partial implementation of rfc6145
  */
 #include <string.h>
-
-#include <netinet/in.h>
-#include <netinet/ip.h>
-#include <netinet/ip_icmp.h>
-#include <netinet/udp.h>
-#include <netinet/tcp.h>
-#include <netinet/ip6.h>
-#include <netinet/icmp6.h>
-#include <linux/icmp.h>
+#include <sys/uio.h>
 
 #include "icmp.h"
 #include "translate.h"
@@ -174,6 +166,7 @@ void fill_ip6_header(struct ip6_hdr *ip6, uint16_t payload_len, uint8_t protocol
   ip6->ip6_src = ipv4_addr_to_ipv6_addr(old_header->saddr);
   ip6->ip6_dst = ipv4_addr_to_ipv6_addr(old_header->daddr);
 }
+
 
 /* function: icmp_to_icmp6
  * translate ipv4 icmp to ipv6 icmp
@@ -425,4 +418,54 @@ int tcp_translate(clat_packet out, int pos, const struct tcphdr *tcp, size_t hea
   tcp_targ->check = ip_checksum_adjust(tcp->check, old_sum, new_sum);
 
   return CLAT_POS_PAYLOAD + 1;
+}
+
+/* function: translate_packet
+ * takes a tun header and a packet and sends it down the stack
+ * tunnel     - tun device data
+ * tun_header - tun header
+ * packet     - packet
+ * packetsize - size of packet
+ */
+void translate_packet(const struct tun_data *tunnel, struct tun_pi *tun_header, const char *packet,
+                      size_t packetsize) {
+  int fd;
+  int iov_len = 0;
+
+  // Allocate buffers for all packet headers.
+  struct tun_pi tun_targ;
+  char iphdr[sizeof(struct ip6_hdr)];
+  char transporthdr[MAX_TCP_HDR];
+  char icmp_iphdr[sizeof(struct ip6_hdr)];
+  char icmp_transporthdr[MAX_TCP_HDR];
+
+  // iovec of the packets we'll send. This gets passed down to the translation functions.
+  clat_packet out = {
+    { &tun_targ, sizeof(tun_targ) },  // Tunnel header.
+    { iphdr, 0 },                     // IP header.
+    { transporthdr, 0 },              // Transport layer header.
+    { icmp_iphdr, 0 },                // ICMP error inner IP header.
+    { icmp_transporthdr, 0 },         // ICMP error transport layer header.
+    { NULL, 0 },                      // Payload. No buffer, it's a pointer to the original payload.
+  };
+
+  if(tun_header->flags != 0) {
+    logmsg(ANDROID_LOG_WARN, "translate_packet: unexpected flags = %d", tun_header->flags);
+  }
+
+  if(ntohs(tun_header->proto) == ETH_P_IP) {
+    fd = tunnel->fd6;
+    fill_tun_header(&tun_targ, ETH_P_IPV6);
+    iov_len = ipv4_packet(out, CLAT_POS_IPHDR, packet, packetsize);
+  } else if(ntohs(tun_header->proto) == ETH_P_IPV6) {
+    fd = tunnel->fd4;
+    fill_tun_header(&tun_targ, ETH_P_IP);
+    iov_len = ipv6_packet(out, CLAT_POS_IPHDR, packet, packetsize);
+  } else {
+    logmsg(ANDROID_LOG_WARN, "translate_packet: unknown packet type = %x",tun_header->proto);
+  }
+
+  if (iov_len > 0) {
+    writev(fd, out, iov_len);
+  }
 }
