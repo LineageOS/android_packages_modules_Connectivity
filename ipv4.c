@@ -112,8 +112,8 @@ int ipv4_packet(clat_packet out, int pos, const char *packet, size_t len) {
   out[pos].iov_len = sizeof(struct ip6_hdr);
 
   // Calculate the pseudo-header checksum.
-  old_sum = ipv4_pseudo_header_checksum(header, len_left);
-  new_sum = ipv6_pseudo_header_checksum(ip6_targ, len_left, nxthdr);
+  old_sum = ipv4_pseudo_header_checksum(0, header, len_left);
+  new_sum = ipv6_pseudo_header_checksum(0, ip6_targ, len_left);
 
   if (nxthdr == IPPROTO_ICMPV6) {
     iov_len = icmp_packet(out, pos + 1, (const struct icmphdr *) next_header, new_sum, len_left);

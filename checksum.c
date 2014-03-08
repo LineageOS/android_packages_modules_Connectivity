@@ -84,16 +84,16 @@ uint16_t ip_checksum(const void *data, int len) {
 
 /* function: ipv6_pseudo_header_checksum
  * calculate the pseudo header checksum for use in tcp/udp/icmp headers
- * ip6      - the ipv6 header
- * len      - the transport length (transport header + payload)
- * protocol - the transport layer protocol, can be different from ip6->ip6_nxt for fragments
+ * current - the current checksum or 0 to start a new checksum
+ * ip6     - the ipv6 header
+ * len     - the transport length (transport header + payload)
  */
-uint32_t ipv6_pseudo_header_checksum(const struct ip6_hdr *ip6, uint16_t len, uint8_t protocol) {
+uint32_t ipv6_pseudo_header_checksum(uint32_t current, const struct ip6_hdr *ip6, uint16_t len) {
   uint32_t checksum_len, checksum_next;
-  checksum_len = htonl((uint32_t) len);
-  checksum_next = htonl(protocol);
 
-  uint32_t current = 0;
+  checksum_len = htonl((uint32_t) len);
+  checksum_next = htonl(ip6->ip6_nxt);
+
   current = ip_checksum_add(current, &(ip6->ip6_src), sizeof(struct in6_addr));
   current = ip_checksum_add(current, &(ip6->ip6_dst), sizeof(struct in6_addr));
   current = ip_checksum_add(current, &checksum_len, sizeof(checksum_len));
@@ -104,16 +104,16 @@ uint32_t ipv6_pseudo_header_checksum(const struct ip6_hdr *ip6, uint16_t len, ui
 
 /* function: ipv4_pseudo_header_checksum
  * calculate the pseudo header checksum for use in tcp/udp headers
+ * current - the current checksum or 0 to start a new checksum
  * ip      - the ipv4 header
  * len     - the transport length (transport header + payload)
  */
-uint32_t ipv4_pseudo_header_checksum(const struct iphdr *ip, uint16_t len) {
+uint32_t ipv4_pseudo_header_checksum(uint32_t current, const struct iphdr *ip, uint16_t len) {
   uint16_t temp_protocol, temp_length;
 
   temp_protocol = htons(ip->protocol);
   temp_length = htons(len);
 
-  uint32_t current = 0;
   current = ip_checksum_add(current, &(ip->saddr), sizeof(uint32_t));
   current = ip_checksum_add(current, &(ip->daddr), sizeof(uint32_t));
   current = ip_checksum_add(current, &temp_protocol, sizeof(uint16_t));
