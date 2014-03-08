@@ -51,9 +51,6 @@
 #define DEVICENAME6 "clat"
 #define DEVICENAME4 "clat4"
 
-/* 40 bytes IPv6 header - 20 bytes IPv4 header + 8 bytes fragment header */
-#define MTU_DELTA 28
-
 int forwarding_fd = -1;
 volatile sig_atomic_t running = 1;
 
@@ -274,9 +271,8 @@ void configure_interface(const char *uplink_interface, const char *plat_prefix, 
     Global_Clatd_Config.mtu = 1280;
   }
 
-  if(Global_Clatd_Config.ipv4mtu <= 0 ||
-     Global_Clatd_Config.ipv4mtu > Global_Clatd_Config.mtu - MTU_DELTA) {
-    Global_Clatd_Config.ipv4mtu = Global_Clatd_Config.mtu - MTU_DELTA;
+  if(Global_Clatd_Config.ipv4mtu <= 0 || (Global_Clatd_Config.ipv4mtu > Global_Clatd_Config.mtu - 20)) {
+    Global_Clatd_Config.ipv4mtu = Global_Clatd_Config.mtu-20;
     logmsg(ANDROID_LOG_WARN,"ipv4mtu now set to = %d",Global_Clatd_Config.ipv4mtu);
   }
 
