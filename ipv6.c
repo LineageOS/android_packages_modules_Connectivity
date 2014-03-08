@@ -88,7 +88,7 @@ int ipv6_packet(clat_packet out, int pos, const char *packet, size_t len) {
   uint8_t protocol;
   const char *next_header;
   size_t len_left;
-  uint32_t old_sum, new_sum;
+  uint32_t checksum;
   int iov_len;
 
   if(len < sizeof(struct ip6_hdr)) {
@@ -133,17 +133,16 @@ int ipv6_packet(clat_packet out, int pos, const char *packet, size_t len) {
   out[pos].iov_len = sizeof(struct iphdr);
 
   // Calculate the pseudo-header checksum.
-  old_sum = ipv6_pseudo_header_checksum(0, ip6, len_left);
-  new_sum = ipv4_pseudo_header_checksum(0, ip_targ, len_left);
+  checksum = ipv4_pseudo_header_checksum(0, ip_targ, len_left);
 
   // does not support IPv6 extension headers, this will drop any packet with them
   if (protocol == IPPROTO_ICMP) {
     iov_len = icmp6_packet(out, pos + 1, (const struct icmp6_hdr *) next_header, len_left);
   } else if (ip6->ip6_nxt == IPPROTO_TCP) {
-    iov_len = tcp_packet(out, pos + 1, (const struct tcphdr *) next_header, old_sum, new_sum,
+    iov_len = tcp_packet(out, pos + 1, (const struct tcphdr *) next_header, checksum,
                          len_left);
   } else if (ip6->ip6_nxt == IPPROTO_UDP) {
-    iov_len = udp_packet(out, pos + 1, (const struct udphdr *) next_header, old_sum, new_sum,
+    iov_len = udp_packet(out, pos + 1, (const struct udphdr *) next_header, checksum,
                          len_left);
   } else if (ip6->ip6_nxt == IPPROTO_GRE) {
     iov_len = generic_packet(out, pos + 1, next_header, len_left);
