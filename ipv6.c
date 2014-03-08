@@ -29,6 +29,7 @@
 
 #include "translate.h"
 #include "checksum.h"
+#include "ipv6.h"
 #include "logging.h"
 #include "dump.h"
 #include "config.h"
