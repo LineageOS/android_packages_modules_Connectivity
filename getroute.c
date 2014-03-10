@@ -90,7 +90,8 @@ static int get_default_route_cb(struct nl_msg *msg, void *data) {
  * err  - netlink message
  * arg  - (int *) storage for the error number
  */
-static int error_handler(struct sockaddr_nl *nla, struct nlmsgerr *err, void *arg) {
+static int error_handler(__attribute__((unused)) struct sockaddr_nl *nla,
+                         struct nlmsgerr *err, void *arg) {
   int *retval = arg;
   if(err->error < 0) { // error_handler called even on no error (NLMSG_ERROR reply type used)
     *retval = err->error;
