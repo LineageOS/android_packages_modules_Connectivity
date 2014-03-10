@@ -47,6 +47,10 @@ void fill_ip_header(struct iphdr *ip_targ, uint16_t payload_len, uint8_t protoco
 void fill_ip6_header(struct ip6_hdr *ip6, uint16_t payload_len, uint8_t protocol,
                      const struct iphdr *old_header);
 
+// Translate IPv4 and IPv6 packets.
+int ipv4_packet(clat_packet out, int pos, const char *packet, size_t len);
+int ipv6_packet(clat_packet out, int pos, const char *packet, size_t len);
+
 // Translate ICMP packets.
 int icmp_to_icmp6(clat_packet out, int pos, const struct icmphdr *icmp, uint32_t checksum,
                   const char *payload, size_t payload_size);

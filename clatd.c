@@ -47,8 +47,6 @@
 
 #include <private/android_filesystem_config.h>
 
-#include "ipv4.h"
-#include "ipv6.h"
 #include "translate.h"
 #include "clatd.h"
 #include "config.h"
