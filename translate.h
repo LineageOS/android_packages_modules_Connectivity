@@ -36,11 +36,9 @@
 // The CLAT_POS_XXX constants represent the array indices within the clat_packet that contain
 // specific parts of the packet. The packet_* functions operate on all the packet segments past a
 // given position.
-enum clat_packet_index {
-    CLAT_POS_TUNHDR, CLAT_POS_IPHDR, CLAT_POS_FRAGHDR, CLAT_POS_TRANSPORTHDR,
-    CLAT_POS_ICMPERR_IPHDR, CLAT_POS_ICMPERR_FRAGHDR, CLAT_POS_ICMPERR_TRANSPORTHDR,
-    CLAT_POS_PAYLOAD, CLAT_POS_MAX
-};
+enum clat_packet_index { CLAT_POS_TUNHDR, CLAT_POS_IPHDR, CLAT_POS_TRANSPORTHDR,
+                         CLAT_POS_ICMPERR_IPHDR, CLAT_POS_ICMPERR_TRANSPORTHDR,
+                         CLAT_POS_PAYLOAD, CLAT_POS_MAX };
 typedef struct iovec clat_packet[CLAT_POS_MAX];
 
 // Calculates the checksum over all the packet components starting from pos.
@@ -66,11 +64,6 @@ void translate_packet(const struct tun_data *tunnel, struct tun_pi *tun_header, 
 // Translate IPv4 and IPv6 packets.
 int ipv4_packet(clat_packet out, int pos, const char *packet, size_t len);
 int ipv6_packet(clat_packet out, int pos, const char *packet, size_t len);
-
-// Deal with fragmented packets.
-size_t maybe_fill_frag_header(struct ip6_frag *frag_hdr, struct ip6_hdr *ip6_targ,
-                              const struct iphdr *old_header);
-uint8_t parse_frag_header(const struct ip6_frag *frag_hdr, struct iphdr *ip_targ);
 
 // Translate ICMP packets.
 int icmp_to_icmp6(clat_packet out, int pos, const struct icmphdr *icmp, uint32_t checksum,
