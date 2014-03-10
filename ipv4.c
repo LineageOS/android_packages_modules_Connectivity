@@ -123,14 +123,12 @@ int ipv4_packet(clat_packet out, int pos, const char *packet, size_t len) {
   // Calculate the pseudo-header checksum.
   checksum = ipv6_pseudo_header_checksum(0, ip6_targ, len_left);
 
-  if (nxthdr == IPPROTO_ICMPV6) {
+  if(nxthdr == IPPROTO_ICMPV6) {
     iov_len = icmp_packet(out, pos + 1, (const struct icmphdr *) next_header, checksum, len_left);
-  } else if (nxthdr == IPPROTO_TCP) {
+  } else if(nxthdr == IPPROTO_TCP) {
     iov_len = tcp_packet(out, pos + 1, (const struct tcphdr *) next_header, checksum, len_left);
-  } else if (nxthdr == IPPROTO_UDP) {
+  } else if(nxthdr == IPPROTO_UDP) {
     iov_len = udp_packet(out, pos + 1, (const struct udphdr *) next_header, checksum, len_left);
-  } else if (nxthdr == IPPROTO_GRE) {
-    iov_len = generic_packet(out, pos + 1, next_header, len_left);
   } else {
 #if CLAT_DEBUG
     logmsg_dbg(ANDROID_LOG_ERROR, "ip_packet/unknown protocol: %x",header->protocol);
