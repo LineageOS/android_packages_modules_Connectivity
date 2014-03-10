@@ -220,6 +220,7 @@ void logcat_hexdump(const char *info, const char *data, size_t len) {
   char output[PACKETLEN*3+2];
   size_t i;
 
+  output[0] = '\0';
   for(i = 0; i < len && i < PACKETLEN; i++) {
     snprintf(output + i*3, 4, " %02x", (uint8_t)data[i]);
   }
