@@ -54,7 +54,7 @@ int ipv6_packet(clat_packet out, int pos, const char *packet, size_t len);
 // Translate ICMP packets.
 int icmp_to_icmp6(clat_packet out, int pos, const struct icmphdr *icmp, uint32_t checksum,
                   const char *payload, size_t payload_size);
-int icmp6_to_icmp(clat_packet out, int pos, const struct icmp6_hdr *icmp6,
+int icmp6_to_icmp(clat_packet out, int pos, const struct icmp6_hdr *icmp6, uint32_t checksum,
                   const char *payload, size_t payload_size);
 
 // Translate TCP and UDP packets.

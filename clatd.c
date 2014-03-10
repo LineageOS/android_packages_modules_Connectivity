@@ -82,7 +82,7 @@ void set_forwarding(int fd, const char *setting) {
 /* function: stop_loop
  * signal handler: stop the event loop
  */
-void stop_loop() {
+void stop_loop(int signal) {
   running = 0;
 }
 

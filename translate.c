@@ -149,7 +149,7 @@ void fill_ip_header(struct iphdr *ip, uint16_t payload_len, uint8_t protocol,
   // Third-party ICMPv6 message. This may have been originated by an native IPv6 address.
   // In that case, the source IPv6 address can't be translated and we need to make up an IPv4
   // source address. For now, use 255.0.0.<ttl>, which at least looks useful in traceroute.
-  if ((uint32_t) ip->saddr == INADDR_NONE) {
+  if (ip->saddr == (uint32_t) INADDR_NONE) {
     ttl_guess = icmp_guess_ttl(old_header->ip6_hlim);
     ip->saddr = htonl((0xff << 24) + ttl_guess);
   }
@@ -236,11 +236,12 @@ int icmp_to_icmp6(clat_packet out, int pos, const struct icmphdr *icmp, uint32_t
  * translate ipv6 icmp to ipv4 icmp
  * out          - output packet
  * icmp6        - source packet icmp6 header
+ * checksum     - pseudo-header checksum (unused)
  * payload      - icmp6 payload
  * payload_size - size of payload
  * returns: the highest position in the output clat_packet that's filled in
  */
-int icmp6_to_icmp(clat_packet out, int pos, const struct icmp6_hdr *icmp6,
+int icmp6_to_icmp(clat_packet out, int pos, const struct icmp6_hdr *icmp6, uint32_t checksum,
                   const char *payload, size_t payload_size) {
   struct icmphdr *icmp_targ = out[pos].iov_base;
   uint8_t icmp_type;

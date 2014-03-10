@@ -42,7 +42,8 @@
  * len      - size of ip payload
  * returns: the highest position in the output clat_packet that's filled in
  */
-int icmp6_packet(clat_packet out, int pos, const struct icmp6_hdr *icmp6, size_t len) {
+int icmp6_packet(clat_packet out, int pos, const struct icmp6_hdr *icmp6, uint32_t checksum,
+                 size_t len) {
   const char *payload;
   size_t payload_size;
 
@@ -54,7 +55,7 @@ int icmp6_packet(clat_packet out, int pos, const struct icmp6_hdr *icmp6, size_t
   payload = (const char *) (icmp6 + 1);
   payload_size = len - sizeof(struct icmp6_hdr);
 
-  return icmp6_to_icmp(out, pos, icmp6, payload, payload_size);
+  return icmp6_to_icmp(out, pos, icmp6, checksum, payload, payload_size);
 }
 
 /* function: log_bad_address
@@ -62,18 +63,16 @@ int icmp6_packet(clat_packet out, int pos, const struct icmp6_hdr *icmp6, size_t
  * fmt     - printf-style format, use %s to place the address
  * badaddr - the bad address in question
  */
-#if CLAT_DEBUG
 void log_bad_address(const char *fmt, const struct in6_addr *src, const struct in6_addr *dst) {
+#if CLAT_DEBUG
   char srcstr[INET6_ADDRSTRLEN];
   char dststr[INET6_ADDRSTRLEN];
 
   inet_ntop(AF_INET6, src, srcstr, sizeof(srcstr));
   inet_ntop(AF_INET6, dst, dststr, sizeof(dststr));
   logmsg_dbg(ANDROID_LOG_ERROR, fmt, srcstr, dststr);
-}
-#else
-#define log_bad_address(fmt, src, dst)
 #endif
+}
 
 /* function: ipv6_packet
  * takes an ipv6 packet and hands it off to the layer 4 protocol function
@@ -137,7 +136,8 @@ int ipv6_packet(clat_packet out, int pos, const char *packet, size_t len) {
 
   // does not support IPv6 extension headers, this will drop any packet with them
   if(protocol == IPPROTO_ICMP) {
-    iov_len = icmp6_packet(out, pos + 1, (const struct icmp6_hdr *) next_header, len_left);
+    iov_len = icmp6_packet(out, pos + 1, (const struct icmp6_hdr *) next_header, checksum,
+                           len_left);
   } else if(ip6->ip6_nxt == IPPROTO_TCP) {
     iov_len = tcp_packet(out, pos + 1, (const struct tcphdr *) next_header, checksum,
                          len_left);
