@@ -29,6 +29,15 @@
 #include <arpa/inet.h>
 #include <fcntl.h>
 
+#include <netinet/in.h>
+#include <netinet/ip.h>
+#include <netinet/ip_icmp.h>
+#include <netinet/udp.h>
+#include <netinet/tcp.h>
+#include <netinet/ip6.h>
+#include <netinet/icmp6.h>
+#include <linux/icmp.h>
+
 #include <sys/capability.h>
 #include <sys/uio.h>
 #include <linux/prctl.h>
@@ -53,6 +62,11 @@
 
 int forwarding_fd = -1;
 volatile sig_atomic_t running = 1;
+
+struct tun_data {
+  char device6[IFNAMSIZ], device4[IFNAMSIZ];
+  int fd6, fd4;
+};
 
 /* function: set_forwarding
  * enables/disables ipv6 forwarding
@@ -291,6 +305,56 @@ void configure_interface(const char *uplink_interface, const char *plat_prefix, 
   configure_tun_ip(tunnel);
 }
 
+/* function: packet_handler
+ * takes a tun header and a packet and sends it down the stack
+ * tunnel     - tun device data
+ * tun_header - tun header
+ * packet     - packet
+ * packetsize - size of packet
+ */
+void packet_handler(const struct tun_data *tunnel, struct tun_pi *tun_header, const char *packet,
+                    size_t packetsize) {
+  int fd;
+  int iov_len = 0;
+
+  // Allocate buffers for all packet headers.
+  struct tun_pi tun_targ;
+  char iphdr[sizeof(struct ip6_hdr)];
+  char transporthdr[MAX_TCP_HDR];
+  char icmp_iphdr[sizeof(struct ip6_hdr)];
+  char icmp_transporthdr[MAX_TCP_HDR];
+
+  // iovec of the packets we'll send. This gets passed down to the translation functions.
+  clat_packet out = {
+    { &tun_targ, sizeof(tun_targ) },  // Tunnel header.
+    { iphdr, 0 },                     // IP header.
+    { transporthdr, 0 },              // Transport layer header.
+    { icmp_iphdr, 0 },                // ICMP error inner IP header.
+    { icmp_transporthdr, 0 },         // ICMP error transport layer header.
+    { NULL, 0 },                      // Payload. No buffer, it's a pointer to the original payload.
+  };
+
+  if(tun_header->flags != 0) {
+    logmsg(ANDROID_LOG_WARN,"packet_handler: unexpected flags = %d", tun_header->flags);
+  }
+
+  if(ntohs(tun_header->proto) == ETH_P_IP) {
+    fd = tunnel->fd6;
+    fill_tun_header(&tun_targ, ETH_P_IPV6);
+    iov_len = ipv4_packet(out, CLAT_POS_IPHDR, packet, packetsize);
+  } else if(ntohs(tun_header->proto) == ETH_P_IPV6) {
+    fd = tunnel->fd4;
+    fill_tun_header(&tun_targ, ETH_P_IP);
+    iov_len = ipv6_packet(out, CLAT_POS_IPHDR, packet, packetsize);
+  } else {
+    logmsg(ANDROID_LOG_WARN,"packet_handler: unknown packet type = %x",tun_header->proto);
+  }
+
+  if (iov_len > 0) {
+    writev(fd, out, iov_len);
+  }
+}
+
 /* function: read_packet
  * reads a packet from the tunnel fd and passes it down the stack
  * active_fd - tun file descriptor marked ready for reading
@@ -319,7 +383,7 @@ void read_packet(int active_fd, const struct tun_data *tunnel) {
       return;
     }
 
-    translate_packet(tunnel, (struct tun_pi *) packet, packet + header_size, readlen - header_size);
+    packet_handler(tunnel, (struct tun_pi *) packet, packet + header_size, readlen - header_size);
   }
 }
 
