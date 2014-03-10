@@ -42,12 +42,14 @@ void logmsg(int prio, const char *fmt, ...) {
  * fmt  - printf format specifier
  * ...  - printf format arguments
  */
-void logmsg_dbg(int prio, const char *fmt, ...) {
 #if CLAT_DEBUG
+void logmsg_dbg(int prio, const char *fmt, ...) {
   va_list ap;
 
   va_start(ap, fmt);
   __android_log_vprint(prio, "clatd", fmt, ap);
   va_end(ap);
-#endif
 }
+#else
+void logmsg_dbg(__attribute__((unused)) int prio, __attribute__((unused)) const char *fmt, ...) {}
+#endif
