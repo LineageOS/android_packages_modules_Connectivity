@@ -85,7 +85,9 @@ static int getaddr_cb(struct nl_msg *msg, void *data) {
  * err  - netlink message
  * arg  - (struct target) info for which address we're looking for
  */
-static int error_handler(struct sockaddr_nl *nla, struct nlmsgerr *err, void *arg) {
+static int error_handler(__attribute__((unused)) struct sockaddr_nl *nla,
+                         __attribute__((unused)) struct nlmsgerr *err,
+                         __attribute__((unused)) void *arg) {
   return NL_OK;
 }
 

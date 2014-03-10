@@ -27,7 +27,7 @@
  * msg  - netlink message
  * data - pointer to an int, stores the success code
  */
-static int ack_handler(struct nl_msg *msg, void *data) {
+static int ack_handler(__attribute__((unused)) struct nl_msg *msg, void *data) {
   int *retval = data;
   *retval = 0;
   return NL_OK;
@@ -39,7 +39,8 @@ static int ack_handler(struct nl_msg *msg, void *data) {
  * err  - netlink error message
  * arg  - pointer to an int, stores the error code
  */
-static int error_handler(struct sockaddr_nl *nla, struct nlmsgerr *err, void *arg) {
+static int error_handler(__attribute__((unused)) struct sockaddr_nl *nla,
+                         struct nlmsgerr *err, void *arg) {
   int *retval = arg;
   if(err->error < 0) {
     *retval = err->error;
