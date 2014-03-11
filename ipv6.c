@@ -136,14 +136,16 @@ int ipv6_packet(clat_packet out, int pos, const char *packet, size_t len) {
   checksum = ipv4_pseudo_header_checksum(0, ip_targ, len_left);
 
   // does not support IPv6 extension headers, this will drop any packet with them
-  if(protocol == IPPROTO_ICMP) {
+  if (protocol == IPPROTO_ICMP) {
     iov_len = icmp6_packet(out, pos + 1, (const struct icmp6_hdr *) next_header, len_left);
-  } else if(ip6->ip6_nxt == IPPROTO_TCP) {
+  } else if (ip6->ip6_nxt == IPPROTO_TCP) {
     iov_len = tcp_packet(out, pos + 1, (const struct tcphdr *) next_header, checksum,
                          len_left);
-  } else if(ip6->ip6_nxt == IPPROTO_UDP) {
+  } else if (ip6->ip6_nxt == IPPROTO_UDP) {
     iov_len = udp_packet(out, pos + 1, (const struct udphdr *) next_header, checksum,
                          len_left);
+  } else if (ip6->ip6_nxt == IPPROTO_GRE) {
+    iov_len = generic_packet(out, pos + 1, next_header, len_left);
   } else {
 #if CLAT_DEBUG
     logmsg(ANDROID_LOG_ERROR, "ipv6_packet/unknown next header type: %x", ip6->ip6_nxt);
