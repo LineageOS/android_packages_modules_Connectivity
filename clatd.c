@@ -302,7 +302,7 @@ void configure_interface(const char *uplink_interface, const char *plat_prefix, 
  */
 void read_packet(int active_fd, const struct tun_data *tunnel) {
   ssize_t readlen;
-  char packet[PACKETLEN];
+  uint8_t packet[PACKETLEN];
 
   // in case something ignores the packet length
   memset(packet, 0, PACKETLEN);

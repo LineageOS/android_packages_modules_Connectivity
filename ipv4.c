@@ -33,7 +33,7 @@
  */
 int icmp_packet(clat_packet out, int pos, const struct icmphdr *icmp, uint32_t checksum,
                 size_t len) {
-  const char *payload;
+  const uint8_t *payload;
   size_t payload_size;
 
   if(len < sizeof(struct icmphdr)) {
@@ -41,7 +41,7 @@ int icmp_packet(clat_packet out, int pos, const struct icmphdr *icmp, uint32_t c
     return 0;
   }
 
-  payload = (const char *) (icmp + 1);
+  payload = (const uint8_t *) (icmp + 1);
   payload_size = len - sizeof(struct icmphdr);
 
   return icmp_to_icmp6(out, pos, icmp, checksum, payload, payload_size);
@@ -54,13 +54,13 @@ int icmp_packet(clat_packet out, int pos, const struct icmphdr *icmp, uint32_t c
  * len    - size of packet
  * returns: the highest position in the output clat_packet that's filled in
  */
-int ipv4_packet(clat_packet out, int pos, const char *packet, size_t len) {
+int ipv4_packet(clat_packet out, int pos, const uint8_t *packet, size_t len) {
   const struct iphdr *header = (struct iphdr *) packet;
   struct ip6_hdr *ip6_targ = (struct ip6_hdr *) out[pos].iov_base;
   struct ip6_frag *frag_hdr;
   size_t frag_hdr_len;
   uint8_t nxthdr;
-  const char *next_header;
+  const uint8_t *next_header;
   size_t len_left;
   uint32_t old_sum, new_sum;
   int iov_len;
