@@ -26,8 +26,6 @@ include $(BUILD_PREBUILT)
 
 
 # Unit tests.
-ifneq ($(TARGET_SIMULATOR),true)
-
 include $(CLEAR_VARS)
 
 LOCAL_MODULE := clatd_test
@@ -38,5 +36,3 @@ LOCAL_SHARED_LIBRARIES := liblog
 LOCAL_MODULE_PATH := $(TARGET_OUT)/bin
 
 include $(BUILD_NATIVE_TEST)
-
-endif
