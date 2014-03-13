@@ -3,9 +3,9 @@ include $(CLEAR_VARS)
 
 LOCAL_SRC_FILES:=clatd.c dump.c checksum.c translate.c icmp.c ipv4.c ipv6.c config.c dns64.c logging.c getaddr.c getroute.c netlink_callbacks.c netlink_msg.c setif.c setroute.c mtu.c
 
-LOCAL_CFLAGS := -Wall -Werror
-LOCAL_C_INCLUDES := external/libnl-headers
-LOCAL_STATIC_LIBRARIES := libnl_2
+LOCAL_CFLAGS := -Wall -Werror -Wunused-parameter
+LOCAL_C_INCLUDES := external/libnl/include
+LOCAL_STATIC_LIBRARIES := libnl
 LOCAL_SHARED_LIBRARIES := libcutils liblog
 
 # The clat daemon.
@@ -29,7 +29,7 @@ include $(BUILD_PREBUILT)
 include $(CLEAR_VARS)
 
 LOCAL_MODULE := clatd_test
-LOCAL_CFLAGS := -Wall -Werror
+LOCAL_CFLAGS := -Wall -Werror -Wunused-parameter
 LOCAL_SRC_FILES := clatd_test.cpp dump.c checksum.c translate.c icmp.c ipv4.c ipv6.c logging.c
 LOCAL_MODULE_TAGS := eng tests
 LOCAL_SHARED_LIBRARIES := liblog
