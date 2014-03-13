@@ -72,6 +72,11 @@ size_t maybe_fill_frag_header(struct ip6_frag *frag_hdr, struct ip6_hdr *ip6_tar
                               const struct iphdr *old_header);
 uint8_t parse_frag_header(const struct ip6_frag *frag_hdr, struct iphdr *ip_targ);
 
+// Deal with fragmented packets.
+size_t maybe_fill_frag_header(struct ip6_frag *frag_hdr, struct ip6_hdr *ip6_targ,
+                              const struct iphdr *old_header);
+uint8_t parse_frag_header(const struct ip6_frag *frag_hdr, struct iphdr *ip_targ);
+
 // Translate ICMP packets.
 int icmp_to_icmp6(clat_packet out, clat_packet_index pos, const struct icmphdr *icmp,
                   uint32_t checksum, const uint8_t *payload, size_t payload_size);
