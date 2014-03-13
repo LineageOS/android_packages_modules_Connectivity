@@ -167,6 +167,53 @@ void fill_ip6_header(struct ip6_hdr *ip6, uint16_t payload_len, uint8_t protocol
   ip6->ip6_dst = ipv4_addr_to_ipv6_addr(old_header->daddr);
 }
 
+/* function: maybe_fill_frag_header
+ * fills a fragmentation header
+ * generate an ipv6 fragment header from an ipv4 header
+ * frag_hdr    - target (ipv6) fragmentation header
+ * ip6_targ    - target (ipv6) header
+ * old_header  - (ipv4) source packet header
+ * returns: the length of the fragmentation header if present, or zero if not present
+ */
+size_t maybe_fill_frag_header(struct ip6_frag *frag_hdr, struct ip6_hdr *ip6_targ,
+                              const struct iphdr *old_header) {
+  uint16_t frag_flags = ntohs(old_header->frag_off);
+  uint16_t frag_off = frag_flags & IP_OFFMASK;
+  if (frag_off == 0 && (frag_flags & IP_MF) == 0) {
+    // Not a fragment.
+    return 0;
+  }
+
+  frag_hdr->ip6f_nxt = ip6_targ->ip6_nxt;
+  frag_hdr->ip6f_reserved = 0;
+  // In IPv4, the offset is the bottom 13 bits; in IPv6 it's the top 13 bits.
+  frag_hdr->ip6f_offlg = htons(frag_off << 3);
+  if (frag_flags & IP_MF) {
+    frag_hdr->ip6f_offlg |= IP6F_MORE_FRAG;
+  }
+  frag_hdr->ip6f_ident = htonl(ntohs(old_header->id));
+  ip6_targ->ip6_nxt = IPPROTO_FRAGMENT;
+
+  return sizeof(*frag_hdr);
+}
+
+/* function: parse_frag_header
+ * return the length of the fragmentation header if present, or zero if not present
+ * generate an ipv6 fragment header from an ipv4 header
+ * frag_hdr    - (ipv6) fragmentation header
+ * ip_targ     - target (ipv4) header
+ * returns: the next header value
+ */
+uint8_t parse_frag_header(const struct ip6_frag *frag_hdr, struct iphdr *ip_targ) {
+  uint16_t frag_off = (ntohs(frag_hdr->ip6f_offlg & IP6F_OFF_MASK) >> 3);
+  if (frag_hdr->ip6f_offlg & IP6F_MORE_FRAG) {
+    frag_off |= IP_MF;
+  }
+  ip_targ->frag_off = htons(frag_off);
+  ip_targ->id = htons(ntohl(frag_hdr->ip6f_ident) & 0xffff);
+  ip_targ->protocol = frag_hdr->ip6f_nxt;
+  return frag_hdr->ip6f_nxt;
+}
 
 /* function: icmp_to_icmp6
  * translate ipv4 icmp to ipv6 icmp
@@ -393,9 +440,6 @@ int udp_translate(clat_packet out, int pos, const struct udphdr *udp, uint32_t o
  * payload      - tcp payload
  * payload_size - size of payload
  * returns: the highest position in the output clat_packet that's filled in
- *
- * TODO: mss rewrite
- * TODO: hosts without pmtu discovery - non DF packets will rely on fragmentation (unimplemented)
  */
 int tcp_translate(clat_packet out, int pos, const struct tcphdr *tcp, size_t header_size,
                   uint32_t old_sum, uint32_t new_sum, const char *payload, size_t payload_size) {
@@ -435,16 +479,20 @@ void translate_packet(const struct tun_data *tunnel, struct tun_pi *tun_header, 
   // Allocate buffers for all packet headers.
   struct tun_pi tun_targ;
   char iphdr[sizeof(struct ip6_hdr)];
+  char fraghdr[sizeof(struct ip6_frag)];
   char transporthdr[MAX_TCP_HDR];
   char icmp_iphdr[sizeof(struct ip6_hdr)];
+  char icmp_fraghdr[sizeof(struct ip6_frag)];
   char icmp_transporthdr[MAX_TCP_HDR];
 
   // iovec of the packets we'll send. This gets passed down to the translation functions.
   clat_packet out = {
     { &tun_targ, sizeof(tun_targ) },  // Tunnel header.
     { iphdr, 0 },                     // IP header.
+    { fraghdr, 0 },                   // Fragment header.
     { transporthdr, 0 },              // Transport layer header.
     { icmp_iphdr, 0 },                // ICMP error inner IP header.
+    { icmp_fraghdr, 0 },              // ICMP error fragmentation header.
     { icmp_transporthdr, 0 },         // ICMP error transport layer header.
     { NULL, 0 },                      // Payload. No buffer, it's a pointer to the original payload.
   };
