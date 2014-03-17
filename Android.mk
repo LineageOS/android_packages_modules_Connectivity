@@ -33,6 +33,5 @@ LOCAL_CFLAGS := -Wall -Werror -Wunused-parameter
 LOCAL_SRC_FILES := clatd_test.cpp dump.c checksum.c translate.c icmp.c ipv4.c ipv6.c logging.c
 LOCAL_MODULE_TAGS := eng tests
 LOCAL_SHARED_LIBRARIES := liblog
-LOCAL_MODULE_PATH := $(TARGET_OUT)/bin
 
 include $(BUILD_NATIVE_TEST)
