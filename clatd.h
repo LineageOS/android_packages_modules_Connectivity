@@ -23,7 +23,7 @@
 
 #define MAXMTU 1500
 #define PACKETLEN (MAXMTU+sizeof(struct tun_pi))
-#define CLATD_VERSION "1.1"
+#define CLATD_VERSION "1.2"
 
 // how frequently (in seconds) to poll for an address change while traffic is passing
 #define INTERFACE_POLL_FREQUENCY 30
