@@ -286,8 +286,8 @@ void reassemble_packet(const uint8_t **fragments, const size_t lengths[], int nu
                        uint8_t *reassembled, size_t *reassembled_len, const char *msg) {
   struct iphdr *ip = NULL;
   struct ip6_hdr *ip6 = NULL;
-  int total_length, pos = 0;
-  uint8_t protocol;
+  size_t  total_length, pos = 0;
+  uint8_t protocol = 0;
   uint8_t version = ip_version(fragments[0]);
 
   for (int i = 0; i < numpackets; i++) {
@@ -345,7 +345,7 @@ void reassemble_packet(const uint8_t **fragments, const size_t lengths[], int nu
     // Copy the payload.
     int payload_length = len - payload_offset;
     total_length += payload_length;
-    ASSERT_LT(total_length, (int) *reassembled_len) << msg << ": Reassembly buffer too small\n";
+    ASSERT_LT(total_length, *reassembled_len) << msg << ": Reassembly buffer too small\n";
     memcpy(reassembled + pos, packet + payload_offset, payload_length);
     pos += payload_length;
   }
@@ -596,8 +596,8 @@ TEST_F(ClatdTest, TransportChecksum) {
   uint32_t ipv6_pseudo_sum = ipv6_pseudo_header_checksum((struct ip6_hdr *) ip6, UDP_LEN,
                                                          IPPROTO_UDP);
 
-  EXPECT_EQ(0x3ad0, ipv4_pseudo_sum) << "IPv4 pseudo-checksum sanity check\n";
-  EXPECT_EQ(0x2644b, ipv6_pseudo_sum) << "IPv6 pseudo-checksum sanity check\n";
+  EXPECT_EQ(0x3ad0U, ipv4_pseudo_sum) << "IPv4 pseudo-checksum sanity check\n";
+  EXPECT_EQ(0x2644bU, ipv6_pseudo_sum) << "IPv6 pseudo-checksum sanity check\n";
   EXPECT_EQ(
       kUdpV4Checksum,
       ip_checksum_finish(ipv4_pseudo_sum + kUdpPartialChecksum + kPayloadPartialChecksum))
