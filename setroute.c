@@ -61,7 +61,7 @@ int if_route(const char *ifname, int family, const void *destination, int prefix
 
   memset(&rt, 0, sizeof(rt));
   rt.rtm_family = family;
-  rt.rtm_table = RT_TABLE_MAIN;
+  rt.rtm_table = RT_TABLE_LOCAL;
   rt.rtm_dst_len = prefixlen;
   switch(change_type) {
     case ROUTE_DELETE:
