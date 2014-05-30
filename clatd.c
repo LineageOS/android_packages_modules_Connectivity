@@ -42,6 +42,7 @@
 #include "clatd.h"
 #include "config.h"
 #include "logging.h"
+#include "resolv_netid.h"
 #include "setif.h"
 #include "setroute.h"
 #include "mtu.h"
@@ -252,11 +253,12 @@ void drop_root() {
  * uplink_interface - network interface to use to reach the ipv6 internet
  * plat_prefix      - PLAT prefix to use
  * tunnel           - tun device data
+ * net_id           - NetID to use, NETID_UNSET indicates use of default network
  */
-void configure_interface(const char *uplink_interface, const char *plat_prefix, struct tun_data *tunnel) {
+void configure_interface(const char *uplink_interface, const char *plat_prefix, struct tun_data *tunnel, unsigned net_id) {
   int error;
 
-  if(!read_config("/system/etc/clatd.conf", uplink_interface, plat_prefix)) {
+  if(!read_config("/system/etc/clatd.conf", uplink_interface, plat_prefix, net_id)) {
     logmsg(ANDROID_LOG_FATAL,"read_config failed");
     exit(1);
   }
@@ -374,6 +376,7 @@ void print_help() {
   printf("android-clat arguments:\n");
   printf("-i [uplink interface]\n");
   printf("-p [plat prefix]\n");
+  printf("-n [NetId]\n");
 }
 
 /* function: main
@@ -382,18 +385,22 @@ void print_help() {
 int main(int argc, char **argv) {
   struct tun_data tunnel;
   int opt;
-  char *uplink_interface = NULL, *plat_prefix = NULL;
+  char *uplink_interface = NULL, *plat_prefix = NULL, *net_id_str = NULL;
+  unsigned net_id = NETID_UNSET;
 
   strcpy(tunnel.device6, DEVICENAME6);
   strcpy(tunnel.device4, DEVICENAME4);
 
-  while((opt = getopt(argc, argv, "i:p:h")) != -1) {
+  while((opt = getopt(argc, argv, "i:p:n:h")) != -1) {
     switch(opt) {
       case 'i':
         uplink_interface = optarg;
         break;
       case 'p':
         plat_prefix = optarg;
+        break;
+      case 'n':
+        net_id_str = optarg;
         break;
       case 'h':
       default:
@@ -407,6 +414,14 @@ int main(int argc, char **argv) {
     logmsg(ANDROID_LOG_FATAL, "clatd called without an interface");
     printf("I need an interface\n");
     exit(1);
+  }
+  if (net_id_str != NULL) {
+    char *end_ptr;
+    net_id = strtoul(net_id_str, &end_ptr, 0);
+    if (net_id == ULONG_MAX || *net_id_str == 0 || *end_ptr != 0) {
+      logmsg(ANDROID_LOG_FATAL, "clatd called with invalid NetID %s", net_id_str);
+      exit(1);
+    }
   }
   logmsg(ANDROID_LOG_INFO, "Starting clat version %s on %s", CLATD_VERSION, uplink_interface);
 
@@ -438,7 +453,7 @@ int main(int argc, char **argv) {
   // "local", but that only works for the netd process itself.
   unsetenv("ANDROID_DNS_MODE");
 
-  configure_interface(uplink_interface, plat_prefix, &tunnel);
+  configure_interface(uplink_interface, plat_prefix, &tunnel, net_id);
 
   set_forwarding(forwarding_fd,"1\n");
 
