@@ -33,7 +33,7 @@
 
 struct tun_data {
   char device6[IFNAMSIZ], device4[IFNAMSIZ];
-  int fd6, fd4;
+  int read_fd6, write_fd6, fd4;
 };
 
 #endif /* __CLATD_H__ */

@@ -248,6 +248,24 @@ void drop_root() {
   }
 }
 
+/* function: open_raw_socket
+ * opens the raw socket for sending IPv6 packets
+ */
+void open_raw_socket(struct tun_data *tunnel) {
+  int rawsock = socket(AF_INET6, SOCK_RAW, IPPROTO_RAW);
+  if (rawsock < 0) {
+    logmsg(ANDROID_LOG_FATAL, "raw socket failed: %s", strerror(errno));
+    exit(1);
+  }
+
+  int off = 0;
+  if (setsockopt(rawsock, SOL_IPV6, IPV6_CHECKSUM, &off, sizeof(off)) < 0) {
+    logmsg(ANDROID_LOG_WARN, "could not disable checksum on raw socket: %s", strerror(errno));
+  }
+
+  tunnel->write_fd6 = rawsock;
+}
+
 /* function: configure_interface
  * reads the configuration and applies it to the interface
  * uplink_interface - network interface to use to reach the ipv6 internet
@@ -282,7 +300,7 @@ void configure_interface(const char *uplink_interface, const char *plat_prefix, 
     logmsg(ANDROID_LOG_WARN,"ipv4mtu now set to = %d",Global_Clatd_Config.ipv4mtu);
   }
 
-  error = tun_alloc(tunnel->device6, tunnel->fd6);
+  error = tun_alloc(tunnel->device6, tunnel->read_fd6);
   if(error < 0) {
     logmsg(ANDROID_LOG_FATAL,"tun_alloc failed: %s",strerror(errno));
     exit(1);
@@ -334,7 +352,7 @@ void read_packet(int active_fd, const struct tun_data *tunnel) {
     int fd;
     uint16_t proto = ntohs(tun_header->proto);
     if (proto == ETH_P_IP) {
-      fd = tunnel->fd6;
+      fd = tunnel->write_fd6;
     } else if (proto == ETH_P_IPV6) {
       fd = tunnel->fd4;
     } else {
@@ -357,7 +375,7 @@ void event_loop(const struct tun_data *tunnel) {
   // start the poll timer
   last_interface_poll = time(NULL);
 
-  wait_fd[0].fd = tunnel->fd6;
+  wait_fd[0].fd = tunnel->read_fd6;
   wait_fd[0].events = POLLIN;
   wait_fd[0].revents = 0;
   wait_fd[1].fd = tunnel->fd4;
@@ -443,8 +461,8 @@ int main(int argc, char **argv) {
   logmsg(ANDROID_LOG_INFO, "Starting clat version %s on %s", CLATD_VERSION, uplink_interface);
 
   // open the tunnel device before dropping privs
-  tunnel.fd6 = tun_open();
-  if(tunnel.fd6 < 0) {
+  tunnel.read_fd6 = tun_open();
+  if(tunnel.read_fd6 < 0) {
     logmsg(ANDROID_LOG_FATAL, "tun_open6 failed: %s", strerror(errno));
     exit(1);
   }
@@ -462,6 +480,8 @@ int main(int argc, char **argv) {
            strerror(errno));
     exit(1);
   }
+
+  open_raw_socket(&tunnel);
 
   // run under a regular user
   drop_root();
