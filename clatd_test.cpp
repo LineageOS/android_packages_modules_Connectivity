@@ -418,6 +418,13 @@ void fix_udp_checksum(uint8_t* packet) {
   udp->check = ip_checksum_finish(ip_checksum_add(pseudo_checksum, udp, ntohs(udp->len)));
 }
 
+// Testing stub for send_rawv6. The real version uses sendmsg() with a
+// destination IPv6 address, and attempting to call that on our test socketpair
+// fd results in EINVAL.
+extern "C" void send_rawv6(int fd, clat_packet out, int iov_len) {
+    writev(fd, out, iov_len);
+}
+
 void do_translate_packet(const uint8_t *original, size_t original_len, uint8_t *out, size_t *outlen,
                          const char *msg) {
   int fds[2];
@@ -453,19 +460,25 @@ void do_translate_packet(const uint8_t *original, size_t original_len, uint8_t *
 
   translate_packet(write_fd, (version == 4), original, original_len);
 
-  struct tun_pi new_tun_header;
-  struct iovec iov[] = {
-    { &new_tun_header, sizeof(new_tun_header) },
-    { out, *outlen }
-  };
-  int len = readv(read_fd, iov, 2);
-  if (len > (int) sizeof(new_tun_header)) {
-    ASSERT_LT((size_t) len, *outlen) << msg << ": Translated packet buffer too small\n";
-    EXPECT_EQ(expected_proto, new_tun_header.proto) << msg << "Unexpected tun proto\n";
-    *outlen = len - sizeof(new_tun_header);
+  if (version == 6) {
+    // Translating to IPv4. Expect a tun header.
+    struct tun_pi new_tun_header;
+    struct iovec iov[] = {
+      { &new_tun_header, sizeof(new_tun_header) },
+      { out, *outlen }
+    };
+    int len = readv(read_fd, iov, 2);
+    if (len > (int) sizeof(new_tun_header)) {
+      ASSERT_LT((size_t) len, *outlen) << msg << ": Translated packet buffer too small\n";
+      EXPECT_EQ(expected_proto, new_tun_header.proto) << msg << "Unexpected tun proto\n";
+      *outlen = len - sizeof(new_tun_header);
+    } else {
+      FAIL() << msg << ": Packet was not translated";
+      *outlen = 0;
+    }
   } else {
-    FAIL() << msg << ": Packet was not translated";
-    *outlen = 0;
+    // Translating to IPv6. Expect raw packet.
+    *outlen = read(read_fd, out, *outlen);
   }
 }
 
