@@ -424,17 +424,13 @@ void do_translate_packet(const uint8_t *original, size_t original_len, uint8_t *
   if (socketpair(AF_UNIX, SOCK_DGRAM | SOCK_NONBLOCK, 0, fds)) {
     abort();
   }
-  struct tun_data tunnel = {
-    "clat", "clat4",
-    fds[0], fds[1]
-  };
   struct tun_pi tun_header = { 0, 0 };
 
   char foo[512];
   snprintf(foo, sizeof(foo), "%s: Invalid original packet", msg);
   check_packet(original, original_len, foo);
 
-  int read_fd;
+  int read_fd, write_fd;
   uint16_t expected_proto;
   int version = ip_version(original);
   switch (version) {
@@ -442,18 +438,20 @@ void do_translate_packet(const uint8_t *original, size_t original_len, uint8_t *
       tun_header.proto = htons(ETH_P_IP);
       expected_proto = htons(ETH_P_IPV6);
       read_fd = fds[1];
+      write_fd = fds[0];
       break;
     case 6:
       tun_header.proto = htons(ETH_P_IPV6);
       expected_proto = htons(ETH_P_IP);
       read_fd = fds[0];
+      write_fd = fds[1];
       break;
     default:
       FAIL() << msg << ": Unsupported IP version " << version << "\n";
       break;
   }
 
-  translate_packet(&tunnel, &tun_header, original, original_len);
+  translate_packet(write_fd, (version == 4), original, original_len);
 
   struct tun_pi new_tun_header;
   struct iovec iov[] = {

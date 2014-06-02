@@ -466,15 +466,13 @@ int tcp_translate(clat_packet out, clat_packet_index pos, const struct tcphdr *t
 }
 
 /* function: translate_packet
- * takes a tun header and a packet and sends it down the stack
- * tunnel     - tun device data
- * tun_header - tun header
+ * takes a packet, translates it, and writes it to fd
+ * fd         - fd to write translated packet to
+ * to_ipv6    - true if translating to ipv6, false if translating to ipv4
  * packet     - packet
  * packetsize - size of packet
  */
-void translate_packet(const struct tun_data *tunnel, struct tun_pi *tun_header,
-                      const uint8_t *packet, size_t packetsize) {
-  int fd;
+void translate_packet(int fd, int to_ipv6, const uint8_t *packet, size_t packetsize) {
   int iov_len = 0;
 
   // Allocate buffers for all packet headers.
@@ -498,23 +496,14 @@ void translate_packet(const struct tun_data *tunnel, struct tun_pi *tun_header,
     { NULL, 0 },                      // Payload. No buffer, it's a pointer to the original payload.
   };
 
-  if(tun_header->flags != 0) {
-    logmsg(ANDROID_LOG_WARN, "translate_packet: unexpected flags = %d", tun_header->flags);
-  }
-
-  if(ntohs(tun_header->proto) == ETH_P_IP) {
-    fd = tunnel->fd6;
-    fill_tun_header(&tun_targ, ETH_P_IPV6);
+  if (to_ipv6) {
     iov_len = ipv4_packet(out, CLAT_POS_IPHDR, packet, packetsize);
-  } else if(ntohs(tun_header->proto) == ETH_P_IPV6) {
-    fd = tunnel->fd4;
-    fill_tun_header(&tun_targ, ETH_P_IP);
-    iov_len = ipv6_packet(out, CLAT_POS_IPHDR, packet, packetsize);
   } else {
-    logmsg(ANDROID_LOG_WARN, "translate_packet: unknown packet type = %x",tun_header->proto);
+    iov_len = ipv6_packet(out, CLAT_POS_IPHDR, packet, packetsize);
   }
 
   if (iov_len > 0) {
+    fill_tun_header(&tun_targ, to_ipv6 ? ETH_P_IPV6 : ETH_P_IP);
     writev(fd, out, iov_len);
   }
 }

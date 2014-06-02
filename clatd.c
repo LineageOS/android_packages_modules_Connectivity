@@ -306,7 +306,8 @@ void read_packet(int active_fd, const struct tun_data *tunnel) {
   ssize_t readlen;
   uint8_t packet[PACKETLEN];
 
-  // in case something ignores the packet length
+  // In case something ignores the packet length.
+  // TODO: remove it.
   memset(packet, 0, PACKETLEN);
 
   readlen = read(active_fd,packet,PACKETLEN);
@@ -325,7 +326,23 @@ void read_packet(int active_fd, const struct tun_data *tunnel) {
       return;
     }
 
-    translate_packet(tunnel, (struct tun_pi *) packet, packet + header_size, readlen - header_size);
+    struct tun_pi *tun_header = (struct tun_pi *) packet;
+    if(tun_header->flags != 0) {
+      logmsg(ANDROID_LOG_WARN, "%s: unexpected flags = %d", __func__, tun_header->flags);
+    }
+
+    int fd;
+    uint16_t proto = ntohs(tun_header->proto);
+    if (proto == ETH_P_IP) {
+      fd = tunnel->fd6;
+    } else if (proto == ETH_P_IPV6) {
+      fd = tunnel->fd4;
+    } else {
+      logmsg(ANDROID_LOG_WARN, "%s: unknown packet type = 0x%x", __func__, proto);
+      return;
+    }
+
+    translate_packet(fd, (proto == ETH_P_IP), packet + header_size, readlen - header_size);
   }
 }
 
