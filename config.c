@@ -31,7 +31,6 @@
 #include "logging.h"
 #include "getaddr.h"
 #include "clatd.h"
-#include "setroute.h"
 
 struct clat_config Global_Clatd_Config;
 
