@@ -418,7 +418,7 @@ int main(int argc, char **argv) {
   if (net_id_str != NULL) {
     char *end_ptr;
     net_id = strtoul(net_id_str, &end_ptr, 0);
-    if (net_id == ULONG_MAX || *net_id_str == 0 || *end_ptr != 0) {
+    if (*net_id_str == 0 || *end_ptr != 0) {
       logmsg(ANDROID_LOG_FATAL, "clatd called with invalid NetID %s", net_id_str);
       exit(1);
     }
