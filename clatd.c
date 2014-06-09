@@ -458,10 +458,11 @@ int main(int argc, char **argv) {
         mark_str = optarg;
         break;
       case 'h':
-      default:
         print_help();
+        exit(0);
+      default:
+        logmsg(ANDROID_LOG_FATAL, "Unknown option -%c. Exiting.", (char) optopt);
         exit(1);
-        break;
     }
   }
 
@@ -480,8 +481,10 @@ int main(int argc, char **argv) {
     exit(1);
   }
 
-  logmsg(ANDROID_LOG_INFO, "Starting clat version %s on %s netid=%s mark=%s", CLATD_VERSION,
-         uplink_interface, net_id_str, mark_str);
+  logmsg(ANDROID_LOG_INFO, "Starting clat version %s on %s netid=%s mark=%s",
+         CLATD_VERSION, uplink_interface,
+         net_id_str ? net_id_str : "(none)",
+         mark_str ? mark_str : "(none)");
 
   // open the tunnel device and our raw sockets before dropping privs
   tunnel.fd4 = tun_open();
