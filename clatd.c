@@ -178,7 +178,7 @@ void interface_poll(const struct tun_data *tunnel) {
     // Update our packet socket filter to reflect the new 464xlat IP address.
     if (!configure_packet_socket(tunnel->read_fd6)) {
         // Things aren't going to work. Bail out and hope we have better luck next time.
-        // We don't log an error here because attach_filter has already done so.
+        // We don't log an error here because configure_packet_socket has already done so.
         exit(1);
     }
   }
@@ -244,10 +244,12 @@ void drop_root() {
   }
 }
 
-/* function: open_socket
- * opens raw and packet sockets
+/* function: open_sockets
+ * opens a packet socket to receive IPv6 packets and a raw socket to send them
+ * tunnel - tun device data
+ * mark - the socket mark to use for the sending raw socket
  */
-void open_sockets(struct tun_data *tunnel) {
+void open_sockets(struct tun_data *tunnel, uint32_t mark) {
   int rawsock = socket(AF_INET6, SOCK_RAW, IPPROTO_RAW);
   if (rawsock < 0) {
     logmsg(ANDROID_LOG_FATAL, "raw socket failed: %s", strerror(errno));
@@ -257,6 +259,9 @@ void open_sockets(struct tun_data *tunnel) {
   int off = 0;
   if (setsockopt(rawsock, SOL_IPV6, IPV6_CHECKSUM, &off, sizeof(off)) < 0) {
     logmsg(ANDROID_LOG_WARN, "could not disable checksum on raw socket: %s", strerror(errno));
+  }
+  if (mark != MARK_UNSET && setsockopt(rawsock, SOL_SOCKET, SO_MARK, &mark, sizeof(mark)) < 0) {
+    logmsg(ANDROID_LOG_ERROR, "could not set mark on raw socket: %s", strerror(errno));
   }
 
   tunnel->write_fd6 = rawsock;
@@ -412,6 +417,18 @@ void print_help() {
   printf("-i [uplink interface]\n");
   printf("-p [plat prefix]\n");
   printf("-n [NetId]\n");
+  printf("-m [socket mark]\n");
+}
+
+/* function: parse_unsigned
+ * parses a string as a decimal/hex/octal unsigned integer
+ * str - the string to parse
+ * out - the unsigned integer to write to, gets clobbered on failure
+ */
+int parse_unsigned(const char *str, unsigned *out) {
+    char *end_ptr;
+    *out = strtoul(str, &end_ptr, 0);
+    return *str && !*end_ptr;
 }
 
 /* function: main
@@ -420,12 +437,13 @@ void print_help() {
 int main(int argc, char **argv) {
   struct tun_data tunnel;
   int opt;
-  char *uplink_interface = NULL, *plat_prefix = NULL, *net_id_str = NULL;
+  char *uplink_interface = NULL, *plat_prefix = NULL, *net_id_str = NULL, *mark_str = NULL;
   unsigned net_id = NETID_UNSET;
+  uint32_t mark = MARK_UNSET;
 
   strcpy(tunnel.device4, DEVICENAME4);
 
-  while((opt = getopt(argc, argv, "i:p:n:h")) != -1) {
+  while((opt = getopt(argc, argv, "i:p:n:m:h")) != -1) {
     switch(opt) {
       case 'i':
         uplink_interface = optarg;
@@ -435,6 +453,9 @@ int main(int argc, char **argv) {
         break;
       case 'n':
         net_id_str = optarg;
+        break;
+      case 'm':
+        mark_str = optarg;
         break;
       case 'h':
       default:
@@ -446,18 +467,21 @@ int main(int argc, char **argv) {
 
   if(uplink_interface == NULL) {
     logmsg(ANDROID_LOG_FATAL, "clatd called without an interface");
-    printf("I need an interface\n");
     exit(1);
   }
-  if (net_id_str != NULL) {
-    char *end_ptr;
-    net_id = strtoul(net_id_str, &end_ptr, 0);
-    if (*net_id_str == 0 || *end_ptr != 0) {
-      logmsg(ANDROID_LOG_FATAL, "clatd called with invalid NetID %s", net_id_str);
-      exit(1);
-    }
+
+  if (net_id_str != NULL && !parse_unsigned(net_id_str, &net_id)) {
+    logmsg(ANDROID_LOG_FATAL, "invalid NetID %s", net_id_str);
+    exit(1);
   }
-  logmsg(ANDROID_LOG_INFO, "Starting clat version %s on %s", CLATD_VERSION, uplink_interface);
+
+  if (mark_str != NULL && !parse_unsigned(mark_str, &mark)) {
+    logmsg(ANDROID_LOG_FATAL, "invalid mark %s", mark_str);
+    exit(1);
+  }
+
+  logmsg(ANDROID_LOG_INFO, "Starting clat version %s on %s netid=%s mark=%s", CLATD_VERSION,
+         uplink_interface, net_id_str, mark_str);
 
   // open the tunnel device and our raw sockets before dropping privs
   tunnel.fd4 = tun_open();
@@ -466,7 +490,7 @@ int main(int argc, char **argv) {
     exit(1);
   }
 
-  open_sockets(&tunnel);
+  open_sockets(&tunnel, mark);
 
   // run under a regular user
   drop_root();
