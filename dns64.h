@@ -18,6 +18,6 @@
 #ifndef __DNS64_H__
 #define __DNS64_H__
 
-int plat_prefix(const char *ipv4_name, struct in6_addr *prefix);
+int plat_prefix(const char *ipv4_name, unsigned net_id, struct in6_addr *prefix);
 
 #endif

@@ -152,15 +152,16 @@ void free_config() {
 
 /* function: dns64_detection
  * does dns lookups to set the plat subnet or exits on failure, waits forever for a dns response with a query backoff timer
+ * net_id - (optional) netId to use, NETID_UNSET indicates use of default network
  */
-void dns64_detection() {
+void dns64_detection(unsigned net_id) {
   int backoff_sleep, status;
   struct in6_addr tmp_ptr;
 
   backoff_sleep = 1;
 
   while(1) {
-    status = plat_prefix(Global_Clatd_Config.plat_from_dns64_hostname,&tmp_ptr);
+    status = plat_prefix(Global_Clatd_Config.plat_from_dns64_hostname,net_id,&tmp_ptr);
     if(status > 0) {
       memcpy(&Global_Clatd_Config.plat_subnet, &tmp_ptr, sizeof(struct in6_addr));
       return;
@@ -223,8 +224,10 @@ int subnet_from_interface(cnode *root, const char *interface) {
  * file             - filename to parse
  * uplink_interface - interface to use to reach the internet and supplier of address space
  * plat_prefix      - (optional) plat prefix to use, otherwise follow config file
+ * net_id           - (optional) netId to use, NETID_UNSET indicates use of default network
  */
-int read_config(const char *file, const char *uplink_interface, const char *plat_prefix) {
+int read_config(const char *file, const char *uplink_interface, const char *plat_prefix,
+        unsigned net_id) {
   cnode *root = config_node("", "");
   void *tmp_ptr = NULL;
 
@@ -277,7 +280,7 @@ int read_config(const char *file, const char *uplink_interface, const char *plat
 
       if(!(Global_Clatd_Config.plat_from_dns64_hostname = config_item_str(root, "plat_from_dns64_hostname", DEFAULT_DNS64_DETECTION_HOSTNAME)))
         goto failed;
-      dns64_detection();
+      dns64_detection(net_id);
     }
   }
 

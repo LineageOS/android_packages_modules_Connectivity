@@ -27,13 +27,15 @@
 
 #include "dns64.h"
 #include "logging.h"
+#include "resolv_netid.h"
 
 /* function: plat_prefix
  * looks up an ipv4-only hostname and looks for a nat64 /96 prefix, returns 1 on success, 0 on temporary failure, -1 on permanent failure
- * ipv4_name - name to lookup
- * prefix    - the plat /96 prefix
+ * ipv4_name  - name to lookup
+ * net_id     - (optional) netId to use, NETID_UNSET indicates use of default network
+ * prefix     - the plat /96 prefix
  */
-int plat_prefix(const char *ipv4_name, struct in6_addr *prefix) {
+int plat_prefix(const char *ipv4_name, unsigned net_id, struct in6_addr *prefix) {
   struct addrinfo hints, *result, *p;
   int status, plat_addr_set, ipv4_records, ipv6_records;
   struct in6_addr plat_addr, this_plat_addr;
@@ -48,7 +50,7 @@ int plat_prefix(const char *ipv4_name, struct in6_addr *prefix) {
 
   bzero(&hints, sizeof(hints));
   hints.ai_family = AF_UNSPEC;
-  status = getaddrinfo(ipv4_name, NULL, &hints, &result);
+  status = android_getaddrinfofornet(ipv4_name, NULL, &hints, net_id, MARK_UNSET, &result);
   if(status != 0) {
     logmsg(ANDROID_LOG_ERROR,"plat_prefix/dns(%s) status = %d/%s\n", ipv4_name, status, gai_strerror(status));
     return 0;
