@@ -465,6 +465,30 @@ int tcp_translate(clat_packet out, clat_packet_index pos, const struct tcphdr *t
   return CLAT_POS_PAYLOAD + 1;
 }
 
+void send_tun(int fd, clat_packet out, int iov_len) {
+  writev(fd, out, iov_len);
+}
+
+// Weak symbol so we can override it in the unit test.
+void send_rawv6(int fd, clat_packet out, int iov_len) __attribute__((weak));
+
+void send_rawv6(int fd, clat_packet out, int iov_len) {
+  // A send on a raw socket requires a destination address to be specified even if the socket's
+  // protocol is IPPROTO_RAW. This is the address that will be used in routing lookups; the
+  // destination address in the packet header only affects what appears on the wire, not where the
+  // packet is sent to.
+  static struct sockaddr_in6 sin6 = { AF_INET6, 0, 0, { { { 0, 0, 0, 0 } } }, 0 };
+  static struct msghdr msg = {
+    .msg_name = &sin6,
+    .msg_namelen = sizeof(sin6),
+  };
+
+  msg.msg_iov = out,
+  msg.msg_iovlen = iov_len,
+  sin6.sin6_addr = ((struct ip6_hdr *) out[CLAT_POS_IPHDR].iov_base)->ip6_dst;
+  sendmsg(fd, &msg, 0);
+}
+
 /* function: translate_packet
  * takes a packet, translates it, and writes it to fd
  * fd         - fd to write translated packet to
@@ -486,7 +510,7 @@ void translate_packet(int fd, int to_ipv6, const uint8_t *packet, size_t packets
 
   // iovec of the packets we'll send. This gets passed down to the translation functions.
   clat_packet out = {
-    { &tun_targ, sizeof(tun_targ) },  // Tunnel header.
+    { &tun_targ, 0 },                 // Tunnel header.
     { iphdr, 0 },                     // IP header.
     { fraghdr, 0 },                   // Fragment header.
     { transporthdr, 0 },              // Transport layer header.
@@ -498,12 +522,15 @@ void translate_packet(int fd, int to_ipv6, const uint8_t *packet, size_t packets
 
   if (to_ipv6) {
     iov_len = ipv4_packet(out, CLAT_POS_IPHDR, packet, packetsize);
+    if (iov_len > 0) {
+      send_rawv6(fd, out, iov_len);
+    }
   } else {
     iov_len = ipv6_packet(out, CLAT_POS_IPHDR, packet, packetsize);
-  }
-
-  if (iov_len > 0) {
-    fill_tun_header(&tun_targ, to_ipv6 ? ETH_P_IPV6 : ETH_P_IP);
-    writev(fd, out, iov_len);
+    if (iov_len > 0) {
+      fill_tun_header(&tun_targ, ETH_P_IP);
+      out[CLAT_POS_TUNHDR].iov_len = sizeof(tun_targ);
+      send_tun(fd, out, iov_len);
+    }
   }
 }
