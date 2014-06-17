@@ -212,7 +212,7 @@ void configure_tun_ip(const struct tun_data *tunnel) {
  * drops root privs but keeps the needed capability
  */
 void drop_root() {
-  gid_t groups[] = { AID_INET };
+  gid_t groups[] = { AID_INET, AID_VPN };
   if(setgroups(sizeof(groups)/sizeof(groups[0]), groups) < 0) {
     logmsg(ANDROID_LOG_FATAL,"drop_root/setgroups failed: %s",strerror(errno));
     exit(1);
@@ -486,17 +486,18 @@ int main(int argc, char **argv) {
          net_id_str ? net_id_str : "(none)",
          mark_str ? mark_str : "(none)");
 
-  // open the tunnel device and our raw sockets before dropping privs
+  // open our raw sockets before dropping privs
+  open_sockets(&tunnel, mark);
+
+  // run under a regular user
+  drop_root();
+
+  // we can create tun devices as non-root because we're in the VPN group.
   tunnel.fd4 = tun_open();
   if(tunnel.fd4 < 0) {
     logmsg(ANDROID_LOG_FATAL, "tun_open4 failed: %s", strerror(errno));
     exit(1);
   }
-
-  open_sockets(&tunnel, mark);
-
-  // run under a regular user
-  drop_root();
 
   // When run from netd, the environment variable ANDROID_DNS_MODE is set to
   // "local", but that only works for the netd process itself.
