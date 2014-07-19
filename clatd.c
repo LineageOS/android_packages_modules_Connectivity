@@ -32,7 +32,6 @@
 
 #include <sys/capability.h>
 #include <sys/uio.h>
-#include <linux/prctl.h>
 #include <linux/filter.h>
 #include <linux/if.h>
 #include <linux/if_tun.h>
