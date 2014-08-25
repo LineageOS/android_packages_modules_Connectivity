@@ -375,17 +375,13 @@ void read_packet(int active_fd, const struct tun_data *tunnel) {
  */
 void event_loop(const struct tun_data *tunnel) {
   time_t last_interface_poll;
-  struct pollfd wait_fd[2];
+  struct pollfd wait_fd[] = {
+    { tunnel->read_fd6, POLLIN, 0 },
+    { tunnel->fd4, POLLIN, 0 },
+  };
 
   // start the poll timer
   last_interface_poll = time(NULL);
-
-  wait_fd[0].fd = tunnel->read_fd6;
-  wait_fd[0].events = POLLIN;
-  wait_fd[0].revents = 0;
-  wait_fd[1].fd = tunnel->fd4;
-  wait_fd[1].events = POLLIN;
-  wait_fd[1].revents = 0;
 
   while(running) {
     if(poll(wait_fd, 2, NO_TRAFFIC_INTERFACE_POLL_FREQUENCY*1000) == -1) {
@@ -393,9 +389,14 @@ void event_loop(const struct tun_data *tunnel) {
         logmsg(ANDROID_LOG_WARN,"event_loop/poll returned an error: %s",strerror(errno));
       }
     } else {
-      int i;
-      for(i = 0; i < 2; i++) {
-        if((wait_fd[i].revents & POLLIN) != 0) {
+      size_t i;
+      for(i = 0; i < ARRAY_SIZE(wait_fd); i++) {
+        // Call read_packet if the socket has data to be read, but also if an
+        // error is waiting. If we don't call read() after getting POLLERR, a
+        // subsequent poll() will return immediately with POLLERR again,
+        // causing this code to spin in a loop. Calling read() will clear the
+        // socket error flag instead.
+        if(wait_fd[i].revents != 0) {
           read_packet(wait_fd[i].fd,tunnel);
         }
       }
