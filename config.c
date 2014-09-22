@@ -165,16 +165,11 @@ void dns64_detection(unsigned net_id) {
       memcpy(&Global_Clatd_Config.plat_subnet, &tmp_ptr, sizeof(struct in6_addr));
       return;
     }
-    if(status < 0) {
-      logmsg(ANDROID_LOG_FATAL, "dns64_detection/no dns64, giving up\n");
-      exit(1);
-    }
-    logmsg(ANDROID_LOG_WARN, "dns64_detection failed, sleeping for %d seconds", backoff_sleep);
+    logmsg(ANDROID_LOG_WARN, "dns64_detection -- error, sleeping for %d seconds", backoff_sleep);
     sleep(backoff_sleep);
+    backoff_sleep *= 2;
     if(backoff_sleep >= 120) {
       backoff_sleep = 120;
-    } else {
-      backoff_sleep *= 2;
     }
   }
 }
