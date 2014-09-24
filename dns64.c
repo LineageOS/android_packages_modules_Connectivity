@@ -30,69 +30,44 @@
 #include "resolv_netid.h"
 
 /* function: plat_prefix
- * looks up an ipv4-only hostname and looks for a nat64 /96 prefix, returns 1 on success, 0 on temporary failure, -1 on permanent failure
+ * looks up an ipv4-only hostname and looks for a nat64 /96 prefix, returns 1 on success, 0 on failure
  * ipv4_name  - name to lookup
  * net_id     - (optional) netId to use, NETID_UNSET indicates use of default network
  * prefix     - the plat /96 prefix
  */
 int plat_prefix(const char *ipv4_name, unsigned net_id, struct in6_addr *prefix) {
-  struct addrinfo hints, *result, *p;
-  int status, plat_addr_set, ipv4_records, ipv6_records;
-  struct in6_addr plat_addr, this_plat_addr;
-  struct sockaddr_in6 *this_addr;
+  const struct addrinfo hints = {
+    .ai_family = AF_INET6,
+  };
+  int status;
+  struct addrinfo *result = NULL;
+  struct in6_addr plat_addr;
   char plat_addr_str[INET6_ADDRSTRLEN];
 
   logmsg(ANDROID_LOG_INFO, "Detecting NAT64 prefix from DNS...");
 
-  result = NULL;
-  plat_addr_set = 0;
-  ipv4_records = ipv6_records = 0;
-
-  bzero(&hints, sizeof(hints));
-  hints.ai_family = AF_UNSPEC;
   status = android_getaddrinfofornet(ipv4_name, NULL, &hints, net_id, MARK_UNSET, &result);
-  if(status != 0) {
-    logmsg(ANDROID_LOG_ERROR,"plat_prefix/dns(%s) status = %d/%s\n", ipv4_name, status, gai_strerror(status));
+  if (status != 0 || result == NULL) {
+    logmsg(ANDROID_LOG_ERROR, "plat_prefix/dns(%s) status = %d/%s",
+           ipv4_name, status, gai_strerror(status));
     return 0;
   }
 
-  for(p = result; p; p = p->ai_next) {
-    if(p->ai_family == AF_INET) {
-      ipv4_records++;
-      continue;
-    }
-    if(p->ai_family != AF_INET6) {
-      logmsg(ANDROID_LOG_WARN,"plat_prefix/unexpected address family: %d\n", p->ai_family);
-      continue;
-    }
-    ipv6_records++;
-    this_addr = (struct sockaddr_in6 *)p->ai_addr;
-    this_plat_addr = this_addr->sin6_addr;
-    this_plat_addr.s6_addr32[3] = 0;
+  // Use only the first result.  If other records are present, possibly with
+  // differing DNS64 prefixes they are ignored (there is very little sensible
+  // that could be done with them at this time anyway).
 
-    if(!plat_addr_set) {
-      plat_addr = this_plat_addr;
-      plat_addr_set = 1;
-      continue;
-    }
+  if (result->ai_family != AF_INET6) {
+    logmsg(ANDROID_LOG_WARN, "plat_prefix/unexpected address family: %d", result->ai_family);
+    return 0;
+  }
+  plat_addr = ((struct sockaddr_in6 *)result->ai_addr)->sin6_addr;
+  // Only /96 DNS64 prefixes are supported at this time.
+  plat_addr.s6_addr32[3] = 0;
+  freeaddrinfo(result);
 
-    inet_ntop(AF_INET6, &plat_addr, plat_addr_str, sizeof(plat_addr_str));
-    if(!IN6_ARE_ADDR_EQUAL(&plat_addr, &this_plat_addr)) {
-      char this_plat_addr_str[INET6_ADDRSTRLEN];
-      inet_ntop(AF_INET6, &this_plat_addr, this_plat_addr_str, sizeof(this_plat_addr_str));
-      logmsg(ANDROID_LOG_ERROR,"plat_prefix/two different plat addrs = %s,%s",
-             plat_addr_str,this_plat_addr_str);
-    }
-  }
-  if(result != NULL) {
-    freeaddrinfo(result);
-  }
-  if(ipv4_records > 0 && ipv6_records == 0) {
-    logmsg(ANDROID_LOG_WARN,"plat_prefix/no dns64 detected\n");
-    return -1;
-  }
-
-  logmsg(ANDROID_LOG_INFO, "Detected NAT64 prefix %s/96", plat_addr_str);
+  logmsg(ANDROID_LOG_INFO, "Detected NAT64 prefix %s/96",
+         inet_ntop(AF_INET6, &plat_addr, plat_addr_str, sizeof(plat_addr_str)));
   *prefix = plat_addr;
   return 1;
 }
