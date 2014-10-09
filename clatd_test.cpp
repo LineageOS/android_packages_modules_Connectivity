@@ -20,6 +20,7 @@
 
 #include <stdio.h>
 #include <arpa/inet.h>
+#include <netinet/in6.h>
 #include <sys/uio.h>
 
 #include <gtest/gtest.h>
@@ -370,7 +371,7 @@ void reassemble_packet(const uint8_t **fragments, const size_t lengths[], int nu
   *reassembled_len = total_length;
 }
 
-void check_data_matches(const uint8_t *expected, const uint8_t *actual, size_t len, const char *msg) {
+void check_data_matches(const void *expected, const void *actual, size_t len, const char *msg) {
   if (memcmp(expected, actual, len)) {
     // Hex dump, 20 bytes per line, one space between bytes (1 byte = 3 chars), indented by 4.
     int hexdump_len = len * 3 + (len / 20 + 1) * 5;
@@ -382,11 +383,11 @@ void check_data_matches(const uint8_t *expected, const uint8_t *actual, size_t l
         sprintf(actual_hexdump + pos, "\n   ");
         pos += 4;
       }
-      sprintf(expected_hexdump + pos, " %02x", expected[i]);
-      sprintf(actual_hexdump + pos, " %02x", actual[i]);
+      sprintf(expected_hexdump + pos, " %02x", ((uint8_t *) expected)[i]);
+      sprintf(actual_hexdump + pos, " %02x", ((uint8_t *) actual)[i]);
       pos += 3;
     }
-    FAIL() << msg << ": Translated packet doesn't match"
+    FAIL() << msg << ": Data doesn't match"
            << "\n  Expected:" << (char *) expected_hexdump
            << "\n  Actual:" << (char *) actual_hexdump << "\n";
   }
@@ -460,6 +461,7 @@ void do_translate_packet(const uint8_t *original, size_t original_len, uint8_t *
 
   translate_packet(write_fd, (version == 4), original, original_len);
 
+  snprintf(foo, sizeof(foo), "%s: Invalid translated packet", msg);
   if (version == 6) {
     // Translating to IPv4. Expect a tun header.
     struct tun_pi new_tun_header;
@@ -472,13 +474,15 @@ void do_translate_packet(const uint8_t *original, size_t original_len, uint8_t *
       ASSERT_LT((size_t) len, *outlen) << msg << ": Translated packet buffer too small\n";
       EXPECT_EQ(expected_proto, new_tun_header.proto) << msg << "Unexpected tun proto\n";
       *outlen = len - sizeof(new_tun_header);
+      check_packet(out, *outlen, msg);
     } else {
-      FAIL() << msg << ": Packet was not translated";
+      FAIL() << msg << ": Packet was not translated: len=" << len;
       *outlen = 0;
     }
   } else {
     // Translating to IPv6. Expect raw packet.
     *outlen = read(read_fd, out, *outlen);
+    check_packet(out, *outlen, msg);
   }
 }
 
@@ -514,6 +518,44 @@ void check_fragment_translation(const uint8_t *original[], const size_t original
   check_packet(translated, translated_len, msg);
 }
 
+int get_transport_checksum(const uint8_t *packet) {
+  struct iphdr *ip;
+  struct ip6_hdr *ip6;
+  uint8_t protocol;
+  const void *payload;
+
+  int version = ip_version(packet);
+  switch (version) {
+    case 4:
+      ip = (struct iphdr *) packet;
+      if (is_ipv4_fragment(ip)) {
+          return -1;
+      }
+      protocol = ip->protocol;
+      payload = ip + 1;
+      break;
+    case 6:
+      ip6 = (struct ip6_hdr *) packet;
+      protocol = ip6->ip6_nxt;
+      payload = ip6 + 1;
+      break;
+    default:
+      return -1;
+  }
+
+  switch (protocol) {
+    case IPPROTO_UDP:
+      return ((struct udphdr *) payload)->check;
+
+    case IPPROTO_TCP:
+      return ((struct tcphdr *) payload)->check;
+
+    case IPPROTO_FRAGMENT:
+    default:
+      return -1;
+  }
+}
+
 struct clat_config Global_Clatd_Config;
 
 class ClatdTest : public ::testing::Test {
@@ -522,10 +564,126 @@ class ClatdTest : public ::testing::Test {
     inet_pton(AF_INET, kIPv4LocalAddr, &Global_Clatd_Config.ipv4_local_subnet);
     inet_pton(AF_INET6, kIPv6PlatSubnet, &Global_Clatd_Config.plat_subnet);
     inet_pton(AF_INET6, kIPv6LocalAddr, &Global_Clatd_Config.ipv6_local_subnet);
+    Global_Clatd_Config.ipv6_host_id = in6addr_any;
   }
 };
 
-TEST_F(ClatdTest, Sanitycheck) {
+void expect_ipv6_addr_equal(struct in6_addr *expected, struct in6_addr *actual) {
+  if (!IN6_ARE_ADDR_EQUAL(expected, actual)) {
+    char expected_str[INET6_ADDRSTRLEN], actual_str[INET6_ADDRSTRLEN];
+    inet_ntop(AF_INET6, expected, expected_str, sizeof(expected_str));
+    inet_ntop(AF_INET6, actual, actual_str, sizeof(actual_str));
+    FAIL()
+        << "Unexpected IPv6 address:: "
+        << "\n  Expected: " << expected_str
+        << "\n  Actual:   " << actual_str
+        << "\n";
+  }
+}
+
+TEST_F(ClatdTest, TestIPv6PrefixEqual) {
+  EXPECT_TRUE(ipv6_prefix_equal(&Global_Clatd_Config.plat_subnet,
+                                &Global_Clatd_Config.plat_subnet));
+  EXPECT_FALSE(ipv6_prefix_equal(&Global_Clatd_Config.plat_subnet,
+                                 &Global_Clatd_Config.ipv6_local_subnet));
+
+  struct in6_addr subnet2 = Global_Clatd_Config.ipv6_local_subnet;
+  EXPECT_TRUE(ipv6_prefix_equal(&Global_Clatd_Config.ipv6_local_subnet, &subnet2));
+  EXPECT_TRUE(ipv6_prefix_equal(&subnet2, &Global_Clatd_Config.ipv6_local_subnet));
+
+  subnet2.s6_addr[6] = 0xff;
+  EXPECT_FALSE(ipv6_prefix_equal(&Global_Clatd_Config.ipv6_local_subnet, &subnet2));
+  EXPECT_FALSE(ipv6_prefix_equal(&subnet2, &Global_Clatd_Config.ipv6_local_subnet));
+}
+
+int count_onebits(const void *data, size_t size) {
+  int onebits = 0;
+  for (size_t pos = 0; pos < size; pos++) {
+    uint8_t *byte = ((uint8_t*) data) + pos;
+    for (int shift = 0; shift < 8; shift++) {
+      onebits += (*byte >> shift) & 1;
+    }
+  }
+  return onebits;
+}
+
+TEST_F(ClatdTest, TestCountOnebits) {
+  uint64_t i;
+  i = 1;
+  ASSERT_EQ(1, count_onebits(&i, sizeof(i)));
+  i <<= 61;
+  ASSERT_EQ(1, count_onebits(&i, sizeof(i)));
+  i |= ((uint64_t) 1 << 33);
+  ASSERT_EQ(2, count_onebits(&i, sizeof(i)));
+  i = 0xf1000202020000f0;
+  ASSERT_EQ(5 + 1 + 1 + 1 + 4, count_onebits(&i, sizeof(i)));
+}
+
+TEST_F(ClatdTest, TestGenIIDConfigured) {
+  struct in6_addr myaddr, expected;
+  ASSERT_TRUE(inet_pton(AF_INET6, "::bad:ace:d00d", &Global_Clatd_Config.ipv6_host_id));
+  ASSERT_TRUE(inet_pton(AF_INET6, "2001:db8:1:2:0:bad:ace:d00d", &expected));
+  ASSERT_TRUE(inet_pton(AF_INET6, "2001:db8:1:2:f076:ae99:124e:aa54", &myaddr));
+  config_generate_local_ipv6_subnet(&myaddr);
+  expect_ipv6_addr_equal(&expected, &myaddr);
+}
+
+TEST_F(ClatdTest, TestGenIIDRandom) {
+  struct in6_addr interface_ipv6;
+  ASSERT_TRUE(inet_pton(AF_INET6, "2001:db8:1:2:f076:ae99:124e:aa54", &interface_ipv6));
+  Global_Clatd_Config.ipv6_host_id = in6addr_any;
+
+  // Generate a boatload of random IIDs.
+  int onebits = 0;
+  uint64_t prev_iid = 0;
+  for (int i = 0; i < 100000; i++) {
+    struct in6_addr myaddr =  interface_ipv6;
+
+    config_generate_local_ipv6_subnet(&myaddr);
+
+    // Check the generated IP address is in the same prefix as the interface IPv6 address.
+    EXPECT_TRUE(ipv6_prefix_equal(&interface_ipv6, &myaddr));
+
+    // Check that consecutive IIDs are not the same.
+    uint64_t iid = * (uint64_t*) (&myaddr.s6_addr[8]);
+    ASSERT_TRUE(iid != prev_iid)
+        << "Two consecutive random IIDs are the same: "
+        << std::showbase << std::hex
+        << iid << "\n";
+    prev_iid = iid;
+
+    // Check that the IID is checksum-neutral with the NAT64 prefix and the
+    // local prefix.
+    struct in_addr *ipv4addr = &Global_Clatd_Config.ipv4_local_subnet;
+    struct in6_addr *plat_subnet = &Global_Clatd_Config.plat_subnet;
+
+    uint16_t c1 = ip_checksum_finish(ip_checksum_add(0, ipv4addr, sizeof(*ipv4addr)));
+    uint16_t c2 = ip_checksum_finish(ip_checksum_add(0, plat_subnet, sizeof(*plat_subnet)) +
+                                     ip_checksum_add(0, &myaddr, sizeof(myaddr)));
+
+    if (c1 != c2) {
+      char myaddr_str[INET6_ADDRSTRLEN], plat_str[INET6_ADDRSTRLEN], ipv4_str[INET6_ADDRSTRLEN];
+      inet_ntop(AF_INET6, &myaddr, myaddr_str, sizeof(myaddr_str));
+      inet_ntop(AF_INET6, plat_subnet, plat_str, sizeof(plat_str));
+      inet_ntop(AF_INET, ipv4addr, ipv4_str, sizeof(ipv4_str));
+      FAIL()
+          << "Bad IID: " << myaddr_str
+          << " not checksum-neutral with " << ipv4_str << " and " << plat_str
+          << std::showbase << std::hex
+          << "\n  IPv4 checksum: " << c1
+          << "\n  IPv6 checksum: " << c2
+          << "\n";
+    }
+
+    // Check that IIDs are roughly random and use all the bits by counting the
+    // total number of bits set to 1 in a random sample of 100000 generated IIDs.
+    onebits += count_onebits(&iid, sizeof(iid));
+  }
+  EXPECT_LE(3190000, onebits);
+  EXPECT_GE(3210000, onebits);
+}
+
+TEST_F(ClatdTest, DataSanitycheck) {
   // Sanity checks the data.
   uint8_t v4_header[] = { IPV4_UDP_HEADER };
   ASSERT_EQ(sizeof(struct iphdr), sizeof(v4_header)) << "Test IPv4 header: incorrect length\n";
@@ -680,4 +838,44 @@ TEST_F(ClatdTest, Fragmentation) {
   check_fragment_translation(kIPv6Fragments, kIPv6FragLengths,
                              kIPv4Fragments, kIPv4FragLengths,
                              ARRAYSIZE(kIPv6Fragments), "IPv6->IPv4 fragment translation");
+}
+
+void check_translate_checksum_neutral(const uint8_t *original, size_t original_len,
+                                      size_t expected_len, const char *msg) {
+  uint8_t translated[MAXMTU];
+  size_t translated_len = sizeof(translated);
+  do_translate_packet(original, original_len, translated, &translated_len, msg);
+  EXPECT_EQ(expected_len, translated_len) << msg << ": Translated packet length incorrect\n";
+  // do_translate_packet already checks packets for validity and verifies the checksum.
+  int original_check = get_transport_checksum(original);
+  int translated_check = get_transport_checksum(translated);
+  ASSERT_NE(-1, original_check);
+  ASSERT_NE(-1, translated_check);
+  ASSERT_EQ(original_check, translated_check)
+      << "Not checksum neutral: original and translated checksums differ\n";
+}
+
+TEST_F(ClatdTest, TranslateChecksumNeutral) {
+  // Generate a random clat IPv6 address and check that translation is checksum-neutral.
+  Global_Clatd_Config.ipv6_host_id = in6addr_any;
+  ASSERT_TRUE(inet_pton(AF_INET6, "2001:db8:1:2:f076:ae99:124e:aa54",
+                        &Global_Clatd_Config.ipv6_local_subnet));
+  config_generate_local_ipv6_subnet(&Global_Clatd_Config.ipv6_local_subnet);
+  ASSERT_NE((uint32_t) 0x00000464, Global_Clatd_Config.ipv6_local_subnet.s6_addr32[3]);
+  ASSERT_NE((uint32_t) 0, Global_Clatd_Config.ipv6_local_subnet.s6_addr32[3]);
+
+  // Check that translating UDP packets is checksum-neutral. First, IPv4.
+  uint8_t udp_ipv4[] = { IPV4_UDP_HEADER UDP_HEADER PAYLOAD };
+  fix_udp_checksum(udp_ipv4);
+  check_translate_checksum_neutral(udp_ipv4, sizeof(udp_ipv4), sizeof(udp_ipv4) + 20,
+                                   "UDP/IPv4 -> UDP/IPv6 checksum neutral");
+
+  // Now try IPv6.
+  uint8_t udp_ipv6[] = { IPV6_UDP_HEADER UDP_HEADER PAYLOAD };
+  // The test packet uses the static IID, not the random IID. Fix up the source address.
+  struct ip6_hdr *ip6 = (struct ip6_hdr *) udp_ipv6;
+  memcpy(&ip6->ip6_src, &Global_Clatd_Config.ipv6_local_subnet, sizeof(ip6->ip6_src));
+  fix_udp_checksum(udp_ipv6);
+  check_translate_checksum_neutral(udp_ipv4, sizeof(udp_ipv4), sizeof(udp_ipv4) + 20,
+                                   "UDP/IPv4 -> UDP/IPv6 checksum neutral");
 }

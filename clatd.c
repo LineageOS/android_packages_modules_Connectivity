@@ -164,16 +164,16 @@ void interface_poll(const struct tun_data *tunnel) {
     return;
   }
 
-  config_generate_local_ipv6_subnet(&interface_ip->ip6);
+  if(!ipv6_prefix_equal(&interface_ip->ip6, &Global_Clatd_Config.ipv6_local_subnet)) {
+    config_generate_local_ipv6_subnet(&interface_ip->ip6);
 
-  if(!IN6_ARE_ADDR_EQUAL(&interface_ip->ip6, &Global_Clatd_Config.ipv6_local_subnet)) {
     char from_addr[INET6_ADDRSTRLEN], to_addr[INET6_ADDRSTRLEN];
     inet_ntop(AF_INET6, &Global_Clatd_Config.ipv6_local_subnet, from_addr, sizeof(from_addr));
     inet_ntop(AF_INET6, &interface_ip->ip6, to_addr, sizeof(to_addr));
-    logmsg(ANDROID_LOG_WARN, "clat subnet changed from %s to %s", from_addr, to_addr);
+    logmsg(ANDROID_LOG_WARN, "clat IPv6 address changed from %s to %s", from_addr, to_addr);
 
     // Start translating packets to the new prefix.
-    memcpy(&Global_Clatd_Config.ipv6_local_subnet, &interface_ip->ip6, sizeof(struct in6_addr));
+    Global_Clatd_Config.ipv6_local_subnet = interface_ip->ip6;
 
     // Update our packet socket filter to reflect the new 464xlat IP address.
     if (!configure_packet_socket(tunnel->read_fd6)) {

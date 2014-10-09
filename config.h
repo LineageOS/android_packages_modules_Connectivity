@@ -40,5 +40,6 @@ extern struct clat_config Global_Clatd_Config;
 int read_config(const char *file, const char *uplink_interface, const char *plat_prefix,
         unsigned net_id);
 void config_generate_local_ipv6_subnet(struct in6_addr *interface_ip);
+int ipv6_prefix_equal(struct in6_addr *a1, struct in6_addr *a2);
 
 #endif /* __CONFIG_H__ */

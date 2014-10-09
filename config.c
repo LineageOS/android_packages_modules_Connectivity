@@ -31,6 +31,7 @@
 #include "logging.h"
 #include "getaddr.h"
 #include "clatd.h"
+#include "checksum.h"
 
 struct clat_config Global_Clatd_Config;
 
@@ -149,6 +150,16 @@ void free_config() {
   }
 }
 
+/* function: ipv6_prefix_equal
+ * compares the prefixes two ipv6 addresses. assumes the prefix lengths are both /64.
+ * a1 - first address
+ * a2 - second address
+ * returns: 0 if the subnets are different, 1 if they are the same.
+ */
+int ipv6_prefix_equal(struct in6_addr *a1, struct in6_addr *a2) {
+    return !memcmp(a1, a2, 8);
+}
+
 /* function: dns64_detection
  * does dns lookups to set the plat subnet or exits on failure, waits forever for a dns response with a query backoff timer
  * net_id - (optional) netId to use, NETID_UNSET indicates use of default network
@@ -175,6 +186,28 @@ void dns64_detection(unsigned net_id) {
 }
 
 
+void gen_random_iid(struct in6_addr *myaddr, struct in_addr *ipv4_local_subnet,
+                    struct in6_addr *plat_subnet) {
+  // Fill last 8 bytes of IPv6 address with random bits.
+  arc4random_buf(&myaddr->s6_addr[8], 8);
+
+  // Make the IID checksum-neutral. That is, make it so that:
+  //   checksum(Local IPv4 | Remote IPv4) = checksum(Local IPv6 | Remote IPv6)
+  // in other words (because remote IPv6 = NAT64 prefix | Remote IPv4):
+  //   checksum(Local IPv4) = checksum(Local IPv6 | NAT64 prefix)
+  // Do this by adjusting the two bytes in the middle of the IID.
+
+  uint16_t middlebytes = (myaddr->s6_addr[11] << 8) + myaddr->s6_addr[12];
+
+  uint32_t c1 = ip_checksum_add(0, ipv4_local_subnet, sizeof(*ipv4_local_subnet));
+  uint32_t c2 = ip_checksum_add(0, plat_subnet, sizeof(*plat_subnet)) +
+                ip_checksum_add(0, myaddr, sizeof(*myaddr));
+
+  uint16_t delta = ip_checksum_adjust(middlebytes, c1, c2);
+  myaddr->s6_addr[11] = delta >> 8;
+  myaddr->s6_addr[12] = delta & 0xff;
+}
+
 /* function: config_generate_local_ipv6_subnet
  * generates the local ipv6 subnet when given the interface ip
  * requires config.ipv6_host_id
@@ -183,8 +216,16 @@ void dns64_detection(unsigned net_id) {
 void config_generate_local_ipv6_subnet(struct in6_addr *interface_ip) {
   int i;
 
-  for(i = 2; i < 4; i++) {
-    interface_ip->s6_addr32[i] = Global_Clatd_Config.ipv6_host_id.s6_addr32[i];
+  if (IN6_IS_ADDR_UNSPECIFIED(&Global_Clatd_Config.ipv6_host_id)) {
+    /* Generate a random interface ID. */
+    gen_random_iid(interface_ip,
+                   &Global_Clatd_Config.ipv4_local_subnet,
+                   &Global_Clatd_Config.plat_subnet);
+  } else {
+    /* Use the specified interface ID. */
+    for(i = 2; i < 4; i++) {
+      interface_ip->s6_addr32[i] = Global_Clatd_Config.ipv6_host_id.s6_addr32[i];
+    }
   }
 }
 
@@ -195,10 +236,12 @@ void config_generate_local_ipv6_subnet(struct in6_addr *interface_ip) {
  */
 int subnet_from_interface(cnode *root, const char *interface) {
   union anyip *interface_ip;
+  char addrstr[INET6_ADDRSTRLEN];
 
-  if(!config_item_ip6(root, "ipv6_host_id", "::464", &Global_Clatd_Config.ipv6_host_id))
+  if(!config_item_ip6(root, "ipv6_host_id", "::", &Global_Clatd_Config.ipv6_host_id))
     return 0;
 
+  // TODO: check that the prefix length is /64.
   interface_ip = getinterface_ip(interface, AF_INET6);
   if(!interface_ip) {
     logmsg(ANDROID_LOG_FATAL,"unable to find an ipv6 ip on interface %s",interface);
@@ -209,6 +252,9 @@ int subnet_from_interface(cnode *root, const char *interface) {
   free(interface_ip);
 
   config_generate_local_ipv6_subnet(&Global_Clatd_Config.ipv6_local_subnet);
+
+  inet_ntop(AF_INET6, &Global_Clatd_Config.ipv6_local_subnet, addrstr, sizeof(addrstr));
+  logmsg(ANDROID_LOG_INFO, "Using %s on %s", addrstr, interface);
 
   return 1;
 }
@@ -239,9 +285,6 @@ int read_config(const char *file, const char *uplink_interface, const char *plat
   }
 
   strncpy(Global_Clatd_Config.default_pdp_interface, uplink_interface, sizeof(Global_Clatd_Config.default_pdp_interface));
-
-  if(!subnet_from_interface(root,Global_Clatd_Config.default_pdp_interface))
-    goto failed;
 
   if(!config_item_int16_t(root, "mtu", "-1", &Global_Clatd_Config.mtu))
     goto failed;
@@ -274,6 +317,9 @@ int read_config(const char *file, const char *uplink_interface, const char *plat
       dns64_detection(net_id);
     }
   }
+
+  if(!subnet_from_interface(root,Global_Clatd_Config.default_pdp_interface))
+    goto failed;
 
 
   return 1;
