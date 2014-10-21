@@ -229,36 +229,6 @@ void config_generate_local_ipv6_subnet(struct in6_addr *interface_ip) {
   }
 }
 
-/* function: subnet_from_interface
- * finds the ipv6 subnet configured on the specified interface
- * root      - parsed configuration
- * interface - network interface name
- */
-int subnet_from_interface(cnode *root, const char *interface) {
-  union anyip *interface_ip;
-  char addrstr[INET6_ADDRSTRLEN];
-
-  if(!config_item_ip6(root, "ipv6_host_id", "::", &Global_Clatd_Config.ipv6_host_id))
-    return 0;
-
-  // TODO: check that the prefix length is /64.
-  interface_ip = getinterface_ip(interface, AF_INET6);
-  if(!interface_ip) {
-    logmsg(ANDROID_LOG_FATAL,"unable to find an ipv6 ip on interface %s",interface);
-    return 0;
-  }
-
-  memcpy(&Global_Clatd_Config.ipv6_local_subnet, &interface_ip->ip6, sizeof(struct in6_addr));
-  free(interface_ip);
-
-  config_generate_local_ipv6_subnet(&Global_Clatd_Config.ipv6_local_subnet);
-
-  inet_ntop(AF_INET6, &Global_Clatd_Config.ipv6_local_subnet, addrstr, sizeof(addrstr));
-  logmsg(ANDROID_LOG_INFO, "Using %s on %s", addrstr, interface);
-
-  return 1;
-}
-
 /* function: read_config
  * reads the config file and parses it into the global variable Global_Clatd_Config. returns 0 on failure, 1 on success
  * file             - filename to parse
@@ -284,7 +254,9 @@ int read_config(const char *file, const char *uplink_interface, const char *plat
     goto failed;
   }
 
-  strncpy(Global_Clatd_Config.default_pdp_interface, uplink_interface, sizeof(Global_Clatd_Config.default_pdp_interface));
+  Global_Clatd_Config.default_pdp_interface = strdup(uplink_interface);
+  if (!Global_Clatd_Config.default_pdp_interface)
+    goto failed;
 
   if(!config_item_int16_t(root, "mtu", "-1", &Global_Clatd_Config.mtu))
     goto failed;
@@ -318,9 +290,8 @@ int read_config(const char *file, const char *uplink_interface, const char *plat
     }
   }
 
-  if(!subnet_from_interface(root,Global_Clatd_Config.default_pdp_interface))
+  if (!config_item_ip6(root, "ipv6_host_id", "::", &Global_Clatd_Config.ipv6_host_id))
     goto failed;
-
 
   return 1;
 

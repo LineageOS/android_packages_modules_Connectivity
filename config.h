@@ -19,7 +19,6 @@
 #define __CONFIG_H__
 
 #include <netinet/in.h>
-#include <sys/system_properties.h>
 
 #define DEFAULT_IPV4_LOCAL_SUBNET "192.0.0.4"
 
@@ -31,7 +30,7 @@ struct clat_config {
   struct in6_addr ipv6_host_id;
   struct in_addr ipv4_local_subnet;
   struct in6_addr plat_subnet;
-  char default_pdp_interface[PROP_VALUE_MAX];
+  char *default_pdp_interface;
   char *plat_from_dns64_hostname;
 };
 
