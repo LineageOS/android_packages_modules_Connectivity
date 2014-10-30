@@ -51,7 +51,7 @@
 #include "getaddr.h"
 #include "dump.h"
 
-#define DEVICENAME4 "clat4"
+#define DEVICEPREFIX "v4-"
 
 /* 40 bytes IPv6 header - 20 bytes IPv4 header + 8 bytes fragment header */
 #define MTU_DELTA 28
@@ -156,11 +156,11 @@ int configure_packet_socket(int sock) {
  */
 void interface_poll(const struct tun_data *tunnel) {
   union anyip *interface_ip;
+  char *interface = Global_Clatd_Config.default_pdp_interface;
 
-  interface_ip = getinterface_ip(Global_Clatd_Config.default_pdp_interface, AF_INET6);
+  interface_ip = getinterface_ip(interface, AF_INET6);
   if(!interface_ip) {
-    logmsg(ANDROID_LOG_WARN,"unable to find an ipv6 ip on interface %s",
-           Global_Clatd_Config.default_pdp_interface);
+    logmsg(ANDROID_LOG_WARN,"unable to find an ipv6 ip on interface %s", interface);
     return;
   }
 
@@ -441,8 +441,7 @@ int main(int argc, char **argv) {
   char *uplink_interface = NULL, *plat_prefix = NULL, *net_id_str = NULL, *mark_str = NULL;
   unsigned net_id = NETID_UNSET;
   uint32_t mark = MARK_UNSET;
-
-  strcpy(tunnel.device4, DEVICENAME4);
+  unsigned len;
 
   while((opt = getopt(argc, argv, "i:p:n:m:h")) != -1) {
     switch(opt) {
@@ -479,6 +478,12 @@ int main(int argc, char **argv) {
 
   if (mark_str != NULL && !parse_unsigned(mark_str, &mark)) {
     logmsg(ANDROID_LOG_FATAL, "invalid mark %s", mark_str);
+    exit(1);
+  }
+
+  len = snprintf(tunnel.device4, sizeof(tunnel.device4), "%s%s", DEVICEPREFIX, uplink_interface);
+  if (len >= sizeof(tunnel.device4)) {
+    logmsg(ANDROID_LOG_FATAL, "interface name too long '%s'", tunnel.device4);
     exit(1);
   }
 
