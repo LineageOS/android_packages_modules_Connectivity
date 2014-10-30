@@ -150,42 +150,6 @@ int configure_packet_socket(int sock) {
   return 1;
 }
 
-/* function: interface_poll
- * polls the uplink network interface for address changes
- * tunnel - tun device data
- */
-void interface_poll(const struct tun_data *tunnel) {
-  union anyip *interface_ip;
-  char *interface = Global_Clatd_Config.default_pdp_interface;
-
-  interface_ip = getinterface_ip(interface, AF_INET6);
-  if(!interface_ip) {
-    logmsg(ANDROID_LOG_WARN,"unable to find an ipv6 ip on interface %s", interface);
-    return;
-  }
-
-  if(!ipv6_prefix_equal(&interface_ip->ip6, &Global_Clatd_Config.ipv6_local_subnet)) {
-    config_generate_local_ipv6_subnet(&interface_ip->ip6);
-
-    char from_addr[INET6_ADDRSTRLEN], to_addr[INET6_ADDRSTRLEN];
-    inet_ntop(AF_INET6, &Global_Clatd_Config.ipv6_local_subnet, from_addr, sizeof(from_addr));
-    inet_ntop(AF_INET6, &interface_ip->ip6, to_addr, sizeof(to_addr));
-    logmsg(ANDROID_LOG_WARN, "clat IPv6 address changed from %s to %s", from_addr, to_addr);
-
-    // Start translating packets to the new prefix.
-    Global_Clatd_Config.ipv6_local_subnet = interface_ip->ip6;
-
-    // Update our packet socket filter to reflect the new 464xlat IP address.
-    if (!configure_packet_socket(tunnel->read_fd6)) {
-        // Things aren't going to work. Bail out and hope we have better luck next time.
-        // We don't log an error here because configure_packet_socket has already done so.
-        exit(1);
-    }
-  }
-
-  free(interface_ip);
-}
-
 /* function: configure_tun_ip
  * configures the ipv4 and ipv6 addresses on the tunnel interface
  * tunnel - tun device data
@@ -273,6 +237,58 @@ void open_sockets(struct tun_data *tunnel, uint32_t mark) {
   }
 
   tunnel->read_fd6 = packetsock;
+}
+
+/* function: update_clat_ipv6_address
+ * picks the clat IPv6 address and configures packet translation to use it.
+ * tunnel - tun device data
+ * interface - uplink interface name
+ * returns: 1 on success, 0 on failure
+ */
+int update_clat_ipv6_address(const struct tun_data *tunnel, const char *interface) {
+  union anyip *interface_ip;
+  char addrstr[INET6_ADDRSTRLEN];
+
+  // TODO: check that the prefix length is /64.
+  interface_ip = getinterface_ip(interface, AF_INET6);
+  if (!interface_ip) {
+    logmsg(ANDROID_LOG_ERROR, "Unable to find an IPv6 address on interface %s", interface);
+    return 0;
+  }
+
+  // If our prefix hasn't changed, do nothing. (If this is the first time we configure an IPv6
+  // address, Global_Clatd_Config.ipv6_local_subnet will be ::, which won't match our new prefix.)
+  if (ipv6_prefix_equal(&interface_ip->ip6, &Global_Clatd_Config.ipv6_local_subnet)) {
+    free(interface_ip);
+    return 1;
+  }
+
+  // Generate an interface ID.
+  config_generate_local_ipv6_subnet(&interface_ip->ip6);
+  inet_ntop(AF_INET6, &interface_ip->ip6, addrstr, sizeof(addrstr));
+
+  if (IN6_IS_ADDR_UNSPECIFIED(&Global_Clatd_Config.ipv6_local_subnet)) {
+    // Startup.
+    logmsg(ANDROID_LOG_INFO, "Using %s on %s", addrstr, interface);
+  } else {
+    // Prefix change.
+    char from_addr[INET6_ADDRSTRLEN];
+    inet_ntop(AF_INET6, &Global_Clatd_Config.ipv6_local_subnet, from_addr, sizeof(from_addr));
+    logmsg(ANDROID_LOG_INFO, "clat IPv6 address changed from %s to %s", from_addr, addrstr);
+  }
+
+  // Start translating packets to the new prefix.
+  Global_Clatd_Config.ipv6_local_subnet = interface_ip->ip6;
+  free(interface_ip);
+
+  // Update our packet socket filter to reflect the new 464xlat IP address.
+  if (!configure_packet_socket(tunnel->read_fd6)) {
+      // Things aren't going to work. Bail out and hope we have better luck next time.
+      // We don't log an error here because configure_packet_socket has already done so.
+      exit(1);
+  }
+
+  return 1;
 }
 
 /* function: configure_interface
@@ -404,7 +420,7 @@ void event_loop(const struct tun_data *tunnel) {
 
     time_t now = time(NULL);
     if(last_interface_poll < (now - INTERFACE_POLL_FREQUENCY)) {
-      interface_poll(tunnel);
+      update_clat_ipv6_address(tunnel, Global_Clatd_Config.default_pdp_interface);
       last_interface_poll = now;
     }
   }
@@ -511,10 +527,7 @@ int main(int argc, char **argv) {
 
   configure_interface(uplink_interface, plat_prefix, &tunnel, net_id);
 
-  if (!configure_packet_socket(tunnel.read_fd6)) {
-    // We've already logged an error.
-    exit(1);
-  }
+  update_clat_ipv6_address(&tunnel, uplink_interface);
 
   // Loop until someone sends us a signal or brings down the tun interface.
   if(signal(SIGTERM, stop_loop) == SIG_ERR) {
