@@ -275,10 +275,12 @@ int update_clat_ipv6_address(const struct tun_data *tunnel, const char *interfac
     char from_addr[INET6_ADDRSTRLEN];
     inet_ntop(AF_INET6, &Global_Clatd_Config.ipv6_local_subnet, from_addr, sizeof(from_addr));
     logmsg(ANDROID_LOG_INFO, "clat IPv6 address changed from %s to %s", from_addr, addrstr);
+    del_anycast_address(tunnel->write_fd6, &Global_Clatd_Config.ipv6_local_subnet);
   }
 
   // Start translating packets to the new prefix.
   Global_Clatd_Config.ipv6_local_subnet = interface_ip->ip6;
+  add_anycast_address(tunnel->write_fd6, &Global_Clatd_Config.ipv6_local_subnet, interface);
   free(interface_ip);
 
   // Update our packet socket filter to reflect the new 464xlat IP address.
@@ -534,9 +536,11 @@ int main(int argc, char **argv) {
     logmsg(ANDROID_LOG_FATAL, "sigterm handler failed: %s", strerror(errno));
     exit(1);
   }
+
   event_loop(&tunnel);
 
   logmsg(ANDROID_LOG_INFO,"Shutting down clat on %s", uplink_interface);
+  del_anycast_address(tunnel.write_fd6, &Global_Clatd_Config.ipv6_local_subnet);
 
   return 0;
 }
