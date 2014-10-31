@@ -157,6 +157,22 @@ int configure_packet_socket(int sock) {
 void configure_tun_ip(const struct tun_data *tunnel) {
   int status;
 
+  // Pick an IPv4 address to use by finding a free address in the configured prefix. Technically,
+  // there is a race here - if another clatd calls config_select_ipv4_address after we do, but
+  // before we call add_address, it can end up having the same IP address as we do. But the time
+  // window in which this can happen is extremely small, and even if we end up with a duplicate
+  // address, the only damage is that IPv4 TCP connections won't be reset until both interfaces go
+  // down.
+  in_addr_t localaddr = config_select_ipv4_address(&Global_Clatd_Config.ipv4_local_subnet,
+                                                   Global_Clatd_Config.ipv4_local_prefixlen);
+  if (localaddr == INADDR_NONE) {
+    logmsg(ANDROID_LOG_FATAL,"No free IPv4 address in %s/%d",
+           inet_ntoa(Global_Clatd_Config.ipv4_local_subnet),
+           Global_Clatd_Config.ipv4_local_prefixlen);
+    exit(1);
+  }
+  Global_Clatd_Config.ipv4_local_subnet.s_addr = localaddr;
+
   // Configure the interface before bringing it up. As soon as we bring the interface up, the
   // framework will be notified and will assume the interface's configuration has been finalized.
   status = add_address(tunnel->device4, AF_INET, &Global_Clatd_Config.ipv4_local_subnet,
@@ -165,6 +181,10 @@ void configure_tun_ip(const struct tun_data *tunnel) {
     logmsg(ANDROID_LOG_FATAL,"configure_tun_ip/if_address(4) failed: %s",strerror(-status));
     exit(1);
   }
+
+  char addrstr[INET_ADDRSTRLEN];
+  inet_ntop(AF_INET, &Global_Clatd_Config.ipv4_local_subnet, addrstr, sizeof(addrstr));
+  logmsg(ANDROID_LOG_INFO, "Using IPv4 address %s on %s", addrstr, tunnel->device4);
 
   if((status = if_up(tunnel->device4, Global_Clatd_Config.ipv4mtu)) < 0) {
     logmsg(ANDROID_LOG_FATAL,"configure_tun_ip/if_up(4) failed: %s",strerror(-status));
@@ -269,7 +289,7 @@ int update_clat_ipv6_address(const struct tun_data *tunnel, const char *interfac
 
   if (IN6_IS_ADDR_UNSPECIFIED(&Global_Clatd_Config.ipv6_local_subnet)) {
     // Startup.
-    logmsg(ANDROID_LOG_INFO, "Using %s on %s", addrstr, interface);
+    logmsg(ANDROID_LOG_INFO, "Using IPv6 address %s on %s", addrstr, interface);
   } else {
     // Prefix change.
     char from_addr[INET6_ADDRSTRLEN];

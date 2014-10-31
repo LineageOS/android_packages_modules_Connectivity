@@ -683,6 +683,59 @@ TEST_F(ClatdTest, TestGenIIDRandom) {
   EXPECT_GE(3210000, onebits);
 }
 
+extern "C" addr_free_func config_is_ipv4_address_free;
+int never_free(in_addr_t /* addr */) { return 0; }
+int always_free(in_addr_t /* addr */) { return 1; }
+int only2_free(in_addr_t addr) { return (ntohl(addr) & 0xff) == 2; }
+int over6_free(in_addr_t addr) { return (ntohl(addr) & 0xff) >= 6; }
+int only10_free(in_addr_t addr) { return (ntohl(addr) & 0xff) == 10; }
+
+TEST_F(ClatdTest, SelectIPv4Address) {
+  struct in_addr addr;
+
+  inet_pton(AF_INET, kIPv4LocalAddr, &addr);
+
+  addr_free_func orig_config_is_ipv4_address_free = config_is_ipv4_address_free;
+
+  // If no addresses are free, return INADDR_NONE.
+  config_is_ipv4_address_free = never_free;
+  EXPECT_EQ(INADDR_NONE, config_select_ipv4_address(&addr, 29));
+  EXPECT_EQ(INADDR_NONE, config_select_ipv4_address(&addr, 16));
+
+  // If the configured address is free, pick that. But a prefix that's too big is invalid.
+  config_is_ipv4_address_free = always_free;
+  EXPECT_EQ(inet_addr(kIPv4LocalAddr), config_select_ipv4_address(&addr, 29));
+  EXPECT_EQ(inet_addr(kIPv4LocalAddr), config_select_ipv4_address(&addr, 20));
+  EXPECT_EQ(INADDR_NONE, config_select_ipv4_address(&addr, 15));
+
+  // A prefix length of 32 works, but anything above it is invalid.
+  EXPECT_EQ(inet_addr(kIPv4LocalAddr), config_select_ipv4_address(&addr, 32));
+  EXPECT_EQ(INADDR_NONE, config_select_ipv4_address(&addr, 33));
+
+  // If another address is free, pick it.
+  config_is_ipv4_address_free = over6_free;
+  EXPECT_EQ(inet_addr("192.0.0.6"), config_select_ipv4_address(&addr, 29));
+
+  // Check that we wrap around to addresses that are lower than the first address.
+  config_is_ipv4_address_free = only2_free;
+  EXPECT_EQ(inet_addr("192.0.0.2"), config_select_ipv4_address(&addr, 29));
+  EXPECT_EQ(INADDR_NONE, config_select_ipv4_address(&addr, 30));
+
+  // If a free address exists outside the prefix, we don't pick it.
+  config_is_ipv4_address_free = only10_free;
+  EXPECT_EQ(INADDR_NONE, config_select_ipv4_address(&addr, 29));
+  EXPECT_EQ(inet_addr("192.0.0.10"), config_select_ipv4_address(&addr, 24));
+
+  // Now try using the real function which sees if IP addresses are free using bind().
+  // Assume that the machine running the test has the address 127.0.0.1, but not 8.8.8.8.
+  config_is_ipv4_address_free = orig_config_is_ipv4_address_free;
+  addr.s_addr = inet_addr("8.8.8.8");
+  EXPECT_EQ(inet_addr("8.8.8.8"), config_select_ipv4_address(&addr, 29));
+
+  addr.s_addr = inet_addr("127.0.0.1");
+  EXPECT_EQ(inet_addr("127.0.0.2"), config_select_ipv4_address(&addr, 29));
+}
+
 TEST_F(ClatdTest, DataSanitycheck) {
   // Sanity checks the data.
   uint8_t v4_header[] = { IPV4_UDP_HEADER };

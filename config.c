@@ -185,7 +185,12 @@ void dns64_detection(unsigned net_id) {
   }
 }
 
-
+/* function: gen_random_iid
+ * picks a random interface ID that is checksum neutral with the IPv4 address and the NAT64 prefix
+ * myaddr            - IPv6 address to write to
+ * ipv4_local_subnet - clat IPv4 address
+ * plat_subnet       - NAT64 prefix
+ */
 void gen_random_iid(struct in6_addr *myaddr, struct in_addr *ipv4_local_subnet,
                     struct in6_addr *plat_subnet) {
   // Fill last 8 bytes of IPv6 address with random bits.
@@ -206,6 +211,61 @@ void gen_random_iid(struct in6_addr *myaddr, struct in_addr *ipv4_local_subnet,
   uint16_t delta = ip_checksum_adjust(middlebytes, c1, c2);
   myaddr->s6_addr[11] = delta >> 8;
   myaddr->s6_addr[12] = delta & 0xff;
+}
+
+// Factored out to a separate function for testability.
+int connect_is_ipv4_address_free(in_addr_t addr) {
+  int s = socket(AF_INET, SOCK_DGRAM, 0);
+  if (s == -1) {
+    return 0;
+  }
+
+  // Attempt to connect to the address. If the connection succeeds and getsockname returns the same
+  // the address then the address is already assigned to the system and we can't use it.
+  struct sockaddr_in sin = { .sin_family = AF_INET, .sin_addr = { addr }, .sin_port = 53 };
+  socklen_t len = sizeof(sin);
+  int inuse = connect(s, (struct sockaddr *) &sin, sizeof(sin)) == 0 &&
+              getsockname(s, (struct sockaddr *) &sin, &len) == 0 &&
+              (size_t) len >= sizeof(sin) &&
+              sin.sin_addr.s_addr == addr;
+
+  close(s);
+  return !inuse;
+}
+
+addr_free_func config_is_ipv4_address_free = connect_is_ipv4_address_free;
+
+/* function: config_select_ipv4_address
+ * picks a free IPv4 address, starting from ip and trying all addresses in the prefix in order
+ * ip        - the IP address from the configuration file
+ * prefixlen - the length of the prefix from which addresses may be selected.
+ * returns: the IPv4 address, or INADDR_NONE if no addresses were available
+ */
+in_addr_t config_select_ipv4_address(const struct in_addr *ip, int16_t prefixlen) {
+  in_addr_t chosen = INADDR_NONE;
+
+  // Don't accept prefixes that are too large because we scan addresses one by one.
+  if (prefixlen < 16 || prefixlen > 32) {
+      return chosen;
+  }
+
+  // All these are in host byte order.
+  in_addr_t mask = 0xffffffff >> (32 - prefixlen) << (32 - prefixlen);
+  in_addr_t ipv4 = ntohl(ip->s_addr);
+  in_addr_t first_ipv4 = ipv4;
+  in_addr_t prefix = ipv4 & mask;
+
+  // Pick the first IPv4 address in the pool, wrapping around if necessary.
+  // So, for example, 192.0.0.4 -> 192.0.0.5 -> 192.0.0.6 -> 192.0.0.7 -> 192.0.0.0.
+  do {
+     if (config_is_ipv4_address_free(htonl(ipv4))) {
+       chosen = htonl(ipv4);
+       break;
+     }
+     ipv4 = prefix | ((ipv4 + 1) & ~mask);
+  } while (ipv4 != first_ipv4);
+
+  return chosen;
 }
 
 /* function: config_generate_local_ipv6_subnet
@@ -264,7 +324,12 @@ int read_config(const char *file, const char *uplink_interface, const char *plat
   if(!config_item_int16_t(root, "ipv4mtu", "-1", &Global_Clatd_Config.ipv4mtu))
     goto failed;
 
-  if(!config_item_ip(root, "ipv4_local_subnet", DEFAULT_IPV4_LOCAL_SUBNET, &Global_Clatd_Config.ipv4_local_subnet))
+  if(!config_item_ip(root, "ipv4_local_subnet", DEFAULT_IPV4_LOCAL_SUBNET,
+                     &Global_Clatd_Config.ipv4_local_subnet))
+    goto failed;
+
+  if(!config_item_int16_t(root, "ipv4_local_prefixlen", DEFAULT_IPV4_LOCAL_PREFIXLEN,
+                          &Global_Clatd_Config.ipv4_local_prefixlen))
     goto failed;
 
   if(plat_prefix) { // plat subnet is coming from the command line
@@ -311,6 +376,7 @@ void dump_config() {
   logmsg(ANDROID_LOG_DEBUG,"ipv4mtu = %d",Global_Clatd_Config.ipv4mtu);
   logmsg(ANDROID_LOG_DEBUG,"ipv6_local_subnet = %s",inet_ntop(AF_INET6, &Global_Clatd_Config.ipv6_local_subnet, charbuffer, sizeof(charbuffer)));
   logmsg(ANDROID_LOG_DEBUG,"ipv4_local_subnet = %s",inet_ntop(AF_INET, &Global_Clatd_Config.ipv4_local_subnet, charbuffer, sizeof(charbuffer)));
+  logmsg(ANDROID_LOG_DEBUG,"ipv4_local_prefixlen = %d", Global_Clatd_Config.ipv4_local_prefixlen);
   logmsg(ANDROID_LOG_DEBUG,"plat_subnet = %s",inet_ntop(AF_INET6, &Global_Clatd_Config.plat_subnet, charbuffer, sizeof(charbuffer)));
   logmsg(ANDROID_LOG_DEBUG,"default_pdp_interface = %s",Global_Clatd_Config.default_pdp_interface);
 }
