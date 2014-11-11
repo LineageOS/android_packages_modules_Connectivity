@@ -565,6 +565,7 @@ class ClatdTest : public ::testing::Test {
     inet_pton(AF_INET6, kIPv6PlatSubnet, &Global_Clatd_Config.plat_subnet);
     inet_pton(AF_INET6, kIPv6LocalAddr, &Global_Clatd_Config.ipv6_local_subnet);
     Global_Clatd_Config.ipv6_host_id = in6addr_any;
+    Global_Clatd_Config.use_dynamic_iid = 1;
   }
 };
 
@@ -621,11 +622,16 @@ TEST_F(ClatdTest, TestCountOnebits) {
 
 TEST_F(ClatdTest, TestGenIIDConfigured) {
   struct in6_addr myaddr, expected;
+  Global_Clatd_Config.use_dynamic_iid = 0;
   ASSERT_TRUE(inet_pton(AF_INET6, "::bad:ace:d00d", &Global_Clatd_Config.ipv6_host_id));
   ASSERT_TRUE(inet_pton(AF_INET6, "2001:db8:1:2:0:bad:ace:d00d", &expected));
   ASSERT_TRUE(inet_pton(AF_INET6, "2001:db8:1:2:f076:ae99:124e:aa54", &myaddr));
   config_generate_local_ipv6_subnet(&myaddr);
   expect_ipv6_addr_equal(&expected, &myaddr);
+
+  Global_Clatd_Config.use_dynamic_iid = 1;
+  config_generate_local_ipv6_subnet(&myaddr);
+  EXPECT_FALSE(IN6_ARE_ADDR_EQUAL(&expected, &myaddr));
 }
 
 TEST_F(ClatdTest, TestGenIIDRandom) {
