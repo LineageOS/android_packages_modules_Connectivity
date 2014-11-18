@@ -25,6 +25,7 @@
 #include <unistd.h>
 
 #include <cutils/config_utils.h>
+#include <netutils/ifc.h>
 
 #include "config.h"
 #include "dns64.h"
@@ -276,7 +277,7 @@ in_addr_t config_select_ipv4_address(const struct in_addr *ip, int16_t prefixlen
 void config_generate_local_ipv6_subnet(struct in6_addr *interface_ip) {
   int i;
 
-  if (IN6_IS_ADDR_UNSPECIFIED(&Global_Clatd_Config.ipv6_host_id)) {
+  if (Global_Clatd_Config.use_dynamic_iid) {
     /* Generate a random interface ID. */
     gen_random_iid(interface_ip,
                    &Global_Clatd_Config.ipv4_local_subnet,
@@ -300,6 +301,7 @@ int read_config(const char *file, const char *uplink_interface, const char *plat
         unsigned net_id) {
   cnode *root = config_node("", "");
   void *tmp_ptr = NULL;
+  unsigned flags;
 
   if(!root) {
     logmsg(ANDROID_LOG_FATAL,"out of memory");
@@ -357,6 +359,17 @@ int read_config(const char *file, const char *uplink_interface, const char *plat
 
   if (!config_item_ip6(root, "ipv6_host_id", "::", &Global_Clatd_Config.ipv6_host_id))
     goto failed;
+
+  /* In order to prevent multiple devices attempting to use the same clat address, never use a
+     statically-configured interface ID on a broadcast interface such as wifi. */
+  if (!IN6_IS_ADDR_UNSPECIFIED(&Global_Clatd_Config.ipv6_host_id)) {
+    ifc_init();
+    ifc_get_info(Global_Clatd_Config.default_pdp_interface, NULL, NULL, &flags);
+    ifc_close();
+    Global_Clatd_Config.use_dynamic_iid = (flags & IFF_BROADCAST) != 0;
+  } else {
+    Global_Clatd_Config.use_dynamic_iid = 1;
+  }
 
   return 1;
 

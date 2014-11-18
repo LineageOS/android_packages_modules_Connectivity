@@ -33,6 +33,7 @@ struct clat_config {
   struct in6_addr plat_subnet;
   char *default_pdp_interface;
   char *plat_from_dns64_hostname;
+  int use_dynamic_iid;
 };
 
 extern struct clat_config Global_Clatd_Config;
