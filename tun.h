@@ -21,10 +21,12 @@
 #include <linux/if.h>
 
 #include "clatd.h"
+#include "ring.h"
 
 struct tun_data {
   char device4[IFNAMSIZ];
   int read_fd6, write_fd6, fd4;
+  struct packet_ring ring;
 };
 
 int tun_open();
