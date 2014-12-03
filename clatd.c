@@ -51,6 +51,7 @@
 #include "getaddr.h"
 #include "dump.h"
 #include "tun.h"
+#include "ring.h"
 
 #define DEVICENAME4 "clat4"
 
@@ -229,13 +230,10 @@ void open_sockets(struct tun_data *tunnel, uint32_t mark) {
 
   tunnel->write_fd6 = rawsock;
 
-  int packetsock = socket(AF_PACKET, SOCK_DGRAM, htons(ETH_P_IPV6));
-  if (packetsock < 0) {
-    logmsg(ANDROID_LOG_FATAL, "packet socket failed: %s", strerror(errno));
+  tunnel->read_fd6 = ring_create(tunnel);
+  if (tunnel->read_fd6 < 0) {
     exit(1);
   }
-
-  tunnel->read_fd6 = packetsock;
 }
 
 /* function: configure_interface
@@ -282,16 +280,16 @@ void configure_interface(const char *uplink_interface, const char *plat_prefix, 
 }
 
 /* function: read_packet
- * reads a packet from the tunnel fd and passes it down the stack
- * active_fd - tun file descriptor marked ready for reading
- * tunnel    - tun device data
+ * reads a packet from the tunnel fd and translates it
+ * read_fd  - file descriptor to read original packet from
+ * write_fd - file descriptor to write translated packet to
+ * to_ipv6  - whether the packet is to be translated to ipv6 or ipv4
  */
-void read_packet(int active_fd, const struct tun_data *tunnel) {
+void read_packet(int read_fd, int write_fd, int to_ipv6) {
   ssize_t readlen;
   uint8_t buf[PACKETLEN], *packet;
-  int fd;
 
-  readlen = read(active_fd, buf, PACKETLEN);
+  readlen = read(read_fd, buf, PACKETLEN);
 
   if(readlen < 0) {
     logmsg(ANDROID_LOG_WARN,"read_packet/read error: %s", strerror(errno));
@@ -302,41 +300,32 @@ void read_packet(int active_fd, const struct tun_data *tunnel) {
     return;
   }
 
-  if (active_fd == tunnel->fd4) {
-    ssize_t header_size = sizeof(struct tun_pi);
-
-    if (readlen < header_size) {
-      logmsg(ANDROID_LOG_WARN,"read_packet/short read: got %ld bytes", readlen);
-      return;
-    }
-
-    struct tun_pi *tun_header = (struct tun_pi *) buf;
-    uint16_t proto = ntohs(tun_header->proto);
-    if (proto != ETH_P_IP) {
-      logmsg(ANDROID_LOG_WARN, "%s: unknown packet type = 0x%x", __func__, proto);
-      return;
-    }
-
-    if(tun_header->flags != 0) {
-      logmsg(ANDROID_LOG_WARN, "%s: unexpected flags = %d", __func__, tun_header->flags);
-    }
-
-    fd = tunnel->write_fd6;
-    packet = buf + header_size;
-    readlen -= header_size;
-  } else {
-    fd = tunnel->fd4;
-    packet = buf;
+  struct tun_pi *tun_header = (struct tun_pi *) buf;
+  if (readlen < (ssize_t) sizeof(*tun_header)) {
+    logmsg(ANDROID_LOG_WARN,"read_packet/short read: got %ld bytes", readlen);
+    return;
   }
 
-  translate_packet(fd, (fd == tunnel->write_fd6), packet, readlen);
+  uint16_t proto = ntohs(tun_header->proto);
+  if (proto != ETH_P_IP) {
+    logmsg(ANDROID_LOG_WARN, "%s: unknown packet type = 0x%x", __func__, proto);
+    return;
+  }
+
+  if(tun_header->flags != 0) {
+    logmsg(ANDROID_LOG_WARN, "%s: unexpected flags = %d", __func__, tun_header->flags);
+  }
+
+  packet = (uint8_t *) (tun_header + 1);
+  readlen -= sizeof(*tun_header);
+  translate_packet(write_fd, to_ipv6, packet, readlen);
 }
 
 /* function: event_loop
  * reads packets from the tun network interface and passes them down the stack
  * tunnel - tun device data
  */
-void event_loop(const struct tun_data *tunnel) {
+void event_loop(struct tun_data *tunnel) {
   time_t last_interface_poll;
   struct pollfd wait_fd[] = {
     { tunnel->read_fd6, POLLIN, 0 },
@@ -352,16 +341,16 @@ void event_loop(const struct tun_data *tunnel) {
         logmsg(ANDROID_LOG_WARN,"event_loop/poll returned an error: %s",strerror(errno));
       }
     } else {
-      size_t i;
-      for(i = 0; i < ARRAY_SIZE(wait_fd); i++) {
-        // Call read_packet if the socket has data to be read, but also if an
-        // error is waiting. If we don't call read() after getting POLLERR, a
-        // subsequent poll() will return immediately with POLLERR again,
-        // causing this code to spin in a loop. Calling read() will clear the
-        // socket error flag instead.
-        if(wait_fd[i].revents != 0) {
-          read_packet(wait_fd[i].fd,tunnel);
-        }
+      // Call read_packet if the socket has data to be read, but also if an
+      // error is waiting. If we don't call read() after getting POLLERR, a
+      // subsequent poll() will return immediately with POLLERR again,
+      // causing this code to spin in a loop. Calling read() will clear the
+      // socket error flag instead.
+      if (wait_fd[0].revents) {
+        ring_read(&tunnel->ring, tunnel->fd4, 0 /* to_ipv6 */);
+      }
+      if (wait_fd[1].revents) {
+        read_packet(tunnel->fd4, tunnel->write_fd6, 1 /* to_ipv6 */);
       }
     }
 
