@@ -18,6 +18,10 @@
 #ifndef __TUN_H__
 #define __TUN_H__
 
+#include <linux/if.h>
+
+#include "clatd.h"
+
 struct tun_data {
   char device4[IFNAMSIZ];
   int read_fd6, write_fd6, fd4;
@@ -26,5 +30,6 @@ struct tun_data {
 int set_nonblocking(int fd);
 int tun_open();
 int tun_alloc(char *dev, int fd);
+void send_tun(int fd, clat_packet out, int iov_len);
 
 #endif

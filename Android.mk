@@ -30,7 +30,7 @@ include $(CLEAR_VARS)
 
 LOCAL_MODULE := clatd_test
 LOCAL_CFLAGS := -Wall -Werror -Wunused-parameter
-LOCAL_SRC_FILES := clatd_test.cpp dump.c checksum.c translate.c icmp.c ipv4.c ipv6.c logging.c
+LOCAL_SRC_FILES := clatd_test.cpp dump.c checksum.c translate.c icmp.c ipv4.c ipv6.c logging.c tun.c
 LOCAL_MODULE_TAGS := eng tests
 LOCAL_SHARED_LIBRARIES := liblog
 
