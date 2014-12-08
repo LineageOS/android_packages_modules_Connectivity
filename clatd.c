@@ -50,6 +50,7 @@
 #include "mtu.h"
 #include "getaddr.h"
 #include "dump.h"
+#include "tun.h"
 
 #define DEVICEPREFIX "v4-"
 
@@ -63,44 +64,6 @@ volatile sig_atomic_t running = 1;
  */
 void stop_loop() {
   running = 0;
-}
-
-/* function: tun_open
- * tries to open the tunnel device
- */
-int tun_open() {
-  int fd;
-
-  fd = open("/dev/tun", O_RDWR);
-  if(fd < 0) {
-    fd = open("/dev/net/tun", O_RDWR);
-  }
-
-  return fd;
-}
-
-/* function: tun_alloc
- * creates a tun interface and names it
- * dev - the name for the new tun device
- */
-int tun_alloc(char *dev, int fd) {
-  struct ifreq ifr;
-  int err;
-
-  memset(&ifr, 0, sizeof(ifr));
-
-  ifr.ifr_flags = IFF_TUN;
-  if( *dev ) {
-    strncpy(ifr.ifr_name, dev, IFNAMSIZ);
-    ifr.ifr_name[IFNAMSIZ-1] = '\0';
-  }
-
-  if( (err = ioctl(fd, TUNSETIFF, (void *) &ifr)) < 0 ){
-    close(fd);
-    return err;
-  }
-  strcpy(dev, ifr.ifr_name);
-  return 0;
 }
 
 /* function: configure_packet_socket

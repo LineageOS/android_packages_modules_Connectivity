@@ -1,5 +1,5 @@
 /*
- * Copyright 2011 Daniel Drown
+ * Copyright 2014 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,21 +13,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- * clatd.h - main system definitions
+ * tun.h - tun device functions
  */
-#ifndef __CLATD_H__
-#define __CLATD_H__
+#ifndef __TUN_H__
+#define __TUN_H__
 
-#define MAXMTU 1500
-#define PACKETLEN (MAXMTU+sizeof(struct tun_pi))
-#define CLATD_VERSION "1.4"
+struct tun_data {
+  char device4[IFNAMSIZ];
+  int read_fd6, write_fd6, fd4;
+};
 
-#define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
+int set_nonblocking(int fd);
+int tun_open();
+int tun_alloc(char *dev, int fd);
 
-// how frequently (in seconds) to poll for an address change while traffic is passing
-#define INTERFACE_POLL_FREQUENCY 30
-
-// how frequently (in seconds) to poll for an address change while there is no traffic
-#define NO_TRAFFIC_INTERFACE_POLL_FREQUENCY 90
-
-#endif /* __CLATD_H__ */
+#endif
