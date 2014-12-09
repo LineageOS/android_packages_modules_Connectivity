@@ -22,6 +22,9 @@
 #include <linux/if.h>
 #include <linux/if_tun.h>
 #include <sys/ioctl.h>
+#include <sys/uio.h>
+
+#include "clatd.h"
 
 /* function: tun_open
  * tries to open the tunnel device
@@ -59,4 +62,8 @@ int tun_alloc(char *dev, int fd) {
   }
   strcpy(dev, ifr.ifr_name);
   return 0;
+}
+
+void send_tun(int fd, clat_packet out, int iov_len) {
+  writev(fd, out, iov_len);
 }
