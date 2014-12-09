@@ -64,6 +64,26 @@ int tun_alloc(char *dev, int fd) {
   return 0;
 }
 
-void send_tun(int fd, clat_packet out, int iov_len) {
-  writev(fd, out, iov_len);
+/* function: set_nonblocking
+ * sets a filedescriptor to non-blocking mode
+ * fd - the filedescriptor
+ * returns: 0 on success, -1 on failure
+ */
+int set_nonblocking(int fd) {
+  int flags = fcntl(fd, F_GETFL);
+  if (flags == -1) {
+    return flags;
+  }
+  return fcntl(fd, F_SETFL, flags | O_NONBLOCK);
+}
+
+/* function: send_tun
+ * sends a clat_packet to a tun interface
+ * fd      - the tun filedescriptor
+ * out     - the packet to send
+ * iov_len - the number of entries in the clat_packet
+ * returns: number of bytes read on success, -1 on failure
+ */
+int send_tun(int fd, clat_packet out, int iov_len) {
+  return writev(fd, out, iov_len);
 }
