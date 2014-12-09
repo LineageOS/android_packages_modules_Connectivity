@@ -35,3 +35,13 @@ LOCAL_MODULE_TAGS := eng tests
 LOCAL_SHARED_LIBRARIES := liblog
 
 include $(BUILD_NATIVE_TEST)
+
+# Microbenchmark.
+include $(CLEAR_VARS)
+
+LOCAL_MODULE := clatd_microbenchmark
+LOCAL_CFLAGS := -Wall -Werror -Wunused-parameter
+LOCAL_SRC_FILES := clatd_microbenchmark.c checksum.c tun.c
+LOCAL_MODULE_TAGS := eng tests
+
+include $(BUILD_NATIVE_TEST)

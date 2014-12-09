@@ -27,9 +27,9 @@ struct tun_data {
   int read_fd6, write_fd6, fd4;
 };
 
-int set_nonblocking(int fd);
 int tun_open();
 int tun_alloc(char *dev, int fd);
-void send_tun(int fd, clat_packet out, int iov_len);
+int send_tun(int fd, clat_packet out, int iov_len);
+int set_nonblocking(int fd);
 
 #endif
