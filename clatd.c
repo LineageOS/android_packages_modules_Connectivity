@@ -214,7 +214,7 @@ void drop_root() {
  * mark - the socket mark to use for the sending raw socket
  */
 void open_sockets(struct tun_data *tunnel, uint32_t mark) {
-  int rawsock = socket(AF_INET6, SOCK_RAW, IPPROTO_RAW);
+  int rawsock = socket(AF_INET6, SOCK_RAW | SOCK_NONBLOCK, IPPROTO_RAW);
   if (rawsock < 0) {
     logmsg(ANDROID_LOG_FATAL, "raw socket failed: %s", strerror(errno));
     exit(1);
@@ -276,6 +276,12 @@ void configure_interface(const char *uplink_interface, const char *plat_prefix, 
     exit(1);
   }
 
+  error = set_nonblocking(tunnel->fd4);
+  if (error < 0) {
+    logmsg(ANDROID_LOG_FATAL, "set_nonblocking failed: %s", strerror(errno));
+    exit(1);
+  }
+
   configure_tun_ip(tunnel);
 }
 
@@ -292,7 +298,9 @@ void read_packet(int read_fd, int write_fd, int to_ipv6) {
   readlen = read(read_fd, buf, PACKETLEN);
 
   if(readlen < 0) {
-    logmsg(ANDROID_LOG_WARN,"read_packet/read error: %s", strerror(errno));
+    if (errno != EAGAIN) {
+      logmsg(ANDROID_LOG_WARN,"read_packet/read error: %s", strerror(errno));
+    }
     return;
   } else if(readlen == 0) {
     logmsg(ANDROID_LOG_WARN,"read_packet/tun interface removed");
