@@ -856,7 +856,7 @@ TEST_F(ClatdTest, AdjustChecksum) {
     { 0x1215, 0x5560, 0x15560 + 20, 0x1200 },
     { 0xd0c7, 0x3ad0, 0x2644b, 0xa74a },
   };
-  unsigned i, failed = 0;
+  unsigned i = 0;
 
   for (i = 0; i < ARRAYSIZE(DATA); i++) {
     struct checksum_data *data = DATA + i;
@@ -889,7 +889,6 @@ TEST_F(ClatdTest, Translate) {
 }
 
 TEST_F(ClatdTest, Fragmentation) {
-  int len, i;
   check_fragment_translation(kIPv4Fragments, kIPv4FragLengths,
                              kIPv6Fragments, kIPv6FragLengths,
                              ARRAYSIZE(kIPv4Fragments), "IPv4->IPv6 fragment translation");
