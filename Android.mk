@@ -32,7 +32,7 @@ LOCAL_MODULE := clatd_test
 LOCAL_CFLAGS := -Wall -Werror -Wunused-parameter
 LOCAL_SRC_FILES := clatd_test.cpp checksum.c translate.c icmp.c ipv4.c ipv6.c logging.c config.c tun.c
 LOCAL_MODULE_TAGS := eng tests
-LOCAL_SHARED_LIBRARIES := liblog
+LOCAL_SHARED_LIBRARIES := liblog libnetutils
 
 include $(BUILD_NATIVE_TEST)
 
