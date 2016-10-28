@@ -71,8 +71,7 @@ public class IpConnectivityEventBuilderTest extends TestCase {
                 "    transport_types: 3",
                 "  >",
                 "  time_ms: 1",
-                ">",
-                "version: 2");
+                ">");
 
         verifySerialization(want, ev);
     }
@@ -94,8 +93,7 @@ public class IpConnectivityEventBuilderTest extends TestCase {
                 "    state_transition: \"SomeState\"",
                 "  >",
                 "  time_ms: 1",
-                ">",
-                "version: 2");
+                ">");
 
         verifySerialization(want, ev);
     }
@@ -116,8 +114,7 @@ public class IpConnectivityEventBuilderTest extends TestCase {
                 "    state_transition: \"\"",
                 "  >",
                 "  time_ms: 1",
-                ">",
-                "version: 2");
+                ">");
 
         verifySerialization(want, ev);
     }
@@ -163,8 +160,7 @@ public class IpConnectivityEventBuilderTest extends TestCase {
                 "    return_codes: 178",
                 "  >",
                 "  time_ms: 1",
-                ">",
-                "version: 2");
+                ">");
 
         verifySerialization(want, ev);
     }
@@ -185,8 +181,7 @@ public class IpConnectivityEventBuilderTest extends TestCase {
                 "    latency_ms: 5678",
                 "  >",
                 "  time_ms: 1",
-                ">",
-                "version: 2");
+                ">");
 
         verifySerialization(want, ev);
     }
@@ -205,8 +200,7 @@ public class IpConnectivityEventBuilderTest extends TestCase {
                 "    if_name: \"wlan0\"",
                 "  >",
                 "  time_ms: 1",
-                ">",
-                "version: 2");
+                ">");
 
         verifySerialization(want, ev);
     }
@@ -229,8 +223,7 @@ public class IpConnectivityEventBuilderTest extends TestCase {
                 "    >",
                 "  >",
                 "  time_ms: 1",
-                ">",
-                "version: 2");
+                ">");
 
         verifySerialization(want, ev);
     }
@@ -255,8 +248,7 @@ public class IpConnectivityEventBuilderTest extends TestCase {
                 "    probe_result: 204",
                 "    probe_type: 1",
                 "  >",
-                ">",
-                "version: 2");
+                ">");
 
         verifySerialization(want, ev);
     }
@@ -282,8 +274,7 @@ public class IpConnectivityEventBuilderTest extends TestCase {
                 "    program_length: 2048",
                 "  >",
                 "  time_ms: 1",
-                ">",
-                "version: 2");
+                ">");
 
         verifySerialization(want, ev);
     }
@@ -314,8 +305,7 @@ public class IpConnectivityEventBuilderTest extends TestCase {
                 "    zero_lifetime_ras: 1",
                 "  >",
                 "  time_ms: 1",
-                ">",
-                "version: 2");
+                ">");
 
         verifySerialization(want, ev);
     }
@@ -342,8 +332,7 @@ public class IpConnectivityEventBuilderTest extends TestCase {
                 "    router_lifetime: 2000",
                 "  >",
                 "  time_ms: 1",
-                ">",
-                "version: 2");
+                ">");
 
         verifySerialization(want, ev);
     }

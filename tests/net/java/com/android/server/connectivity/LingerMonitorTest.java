@@ -24,7 +24,6 @@ import android.net.Network;
 import android.net.NetworkCapabilities;
 import android.net.NetworkInfo;
 import android.net.NetworkMisc;
-import android.test.suitebuilder.annotation.SmallTest;
 import android.text.format.DateUtils;
 import com.android.internal.R;
 import com.android.server.ConnectivityService;
@@ -71,7 +70,6 @@ public class LingerMonitorTest extends TestCase {
         mMonitor = new TestableLingerMonitor(mCtx, mNotifier, HIGH_DAILY_LIMIT, HIGH_RATE_LIMIT);
     }
 
-    @SmallTest
     public void testTransitions() {
         setNotificationSwitch(transition(WIFI, CELLULAR));
         NetworkAgentInfo nai1 = wifiNai(100);
@@ -81,7 +79,6 @@ public class LingerMonitorTest extends TestCase {
         assertFalse(mMonitor.isNotificationEnabled(nai2, nai1));
     }
 
-    @SmallTest
     public void testNotificationOnLinger() {
         setNotificationSwitch(transition(WIFI, CELLULAR));
         setNotificationType(LingerMonitor.NOTIFY_TYPE_NOTIFICATION);
@@ -92,7 +89,6 @@ public class LingerMonitorTest extends TestCase {
         verifyNotification(from, to);
     }
 
-    @SmallTest
     public void testToastOnLinger() {
         setNotificationSwitch(transition(WIFI, CELLULAR));
         setNotificationType(LingerMonitor.NOTIFY_TYPE_TOAST);
@@ -103,7 +99,6 @@ public class LingerMonitorTest extends TestCase {
         verifyToast(from, to);
     }
 
-    @SmallTest
     public void testNotificationClearedAfterDisconnect() {
         setNotificationSwitch(transition(WIFI, CELLULAR));
         setNotificationType(LingerMonitor.NOTIFY_TYPE_NOTIFICATION);
@@ -117,7 +112,6 @@ public class LingerMonitorTest extends TestCase {
         verify(mNotifier, times(1)).clearNotification(100);
     }
 
-    @SmallTest
     public void testNotificationClearedAfterSwitchingBack() {
         setNotificationSwitch(transition(WIFI, CELLULAR));
         setNotificationType(LingerMonitor.NOTIFY_TYPE_NOTIFICATION);
@@ -131,7 +125,6 @@ public class LingerMonitorTest extends TestCase {
         verify(mNotifier, times(1)).clearNotification(100);
     }
 
-    @SmallTest
     public void testUniqueToast() {
         setNotificationSwitch(transition(WIFI, CELLULAR));
         setNotificationType(LingerMonitor.NOTIFY_TYPE_TOAST);
@@ -149,7 +142,6 @@ public class LingerMonitorTest extends TestCase {
         verifyNoNotifications();
     }
 
-    @SmallTest
     public void testMultipleNotifications() {
         setNotificationSwitch(transition(WIFI, CELLULAR));
         setNotificationType(LingerMonitor.NOTIFY_TYPE_NOTIFICATION);
@@ -168,7 +160,6 @@ public class LingerMonitorTest extends TestCase {
         verifyNotification(wifi2, cell);
     }
 
-    @SmallTest
     public void testRateLimiting() throws InterruptedException {
         mMonitor = new TestableLingerMonitor(mCtx, mNotifier, HIGH_DAILY_LIMIT, LOW_RATE_LIMIT);
 
@@ -194,7 +185,6 @@ public class LingerMonitorTest extends TestCase {
         verifyNoNotifications();
     }
 
-    @SmallTest
     public void testDailyLimiting() throws InterruptedException {
         mMonitor = new TestableLingerMonitor(mCtx, mNotifier, LOW_DAILY_LIMIT, HIGH_RATE_LIMIT);
 
@@ -221,7 +211,6 @@ public class LingerMonitorTest extends TestCase {
         verifyNoNotifications();
     }
 
-    @SmallTest
     public void testUniqueNotification() {
         setNotificationSwitch(transition(WIFI, CELLULAR));
         setNotificationType(LingerMonitor.NOTIFY_TYPE_NOTIFICATION);
@@ -238,7 +227,6 @@ public class LingerMonitorTest extends TestCase {
         verifyNotification(from, to);
     }
 
-    @SmallTest
     public void testIgnoreNeverValidatedNetworks() {
         setNotificationType(LingerMonitor.NOTIFY_TYPE_TOAST);
         setNotificationSwitch(transition(WIFI, CELLULAR));
@@ -250,7 +238,6 @@ public class LingerMonitorTest extends TestCase {
         verifyNoNotifications();
     }
 
-    @SmallTest
     public void testIgnoreCurrentlyValidatedNetworks() {
         setNotificationType(LingerMonitor.NOTIFY_TYPE_TOAST);
         setNotificationSwitch(transition(WIFI, CELLULAR));
@@ -262,7 +249,6 @@ public class LingerMonitorTest extends TestCase {
         verifyNoNotifications();
     }
 
-    @SmallTest
     public void testNoNotificationType() {
         setNotificationType(LingerMonitor.NOTIFY_TYPE_TOAST);
         setNotificationSwitch();
@@ -273,7 +259,6 @@ public class LingerMonitorTest extends TestCase {
         verifyNoNotifications();
     }
 
-    @SmallTest
     public void testNoTransitionToNotify() {
         setNotificationType(LingerMonitor.NOTIFY_TYPE_NONE);
         setNotificationSwitch(transition(WIFI, CELLULAR));
@@ -284,7 +269,6 @@ public class LingerMonitorTest extends TestCase {
         verifyNoNotifications();
     }
 
-    @SmallTest
     public void testDifferentTransitionToNotify() {
         setNotificationType(LingerMonitor.NOTIFY_TYPE_TOAST);
         setNotificationSwitch(transition(CELLULAR, WIFI));
