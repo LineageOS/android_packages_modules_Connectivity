@@ -208,7 +208,7 @@ class EthernetNetworkFactory {
             InterfaceConfiguration config = mNMService.getInterfaceConfig(iface);
 
             if (config == null) {
-                Log.e(TAG, "Null iterface config for " + iface + ". Bailing out.");
+                Log.e(TAG, "Null interface config for " + iface + ". Bailing out.");
                 return;
             }
 
@@ -220,7 +220,9 @@ class EthernetNetworkFactory {
                 Log.e(TAG, "Interface unexpectedly changed from " + iface + " to " + mIface);
                 mNMService.setInterfaceDown(iface);
             }
-        } catch (RemoteException e) {
+        } catch (RemoteException | IllegalStateException e) {
+            // Either the system is crashing or the interface has disappeared. Just ignore the
+            // error; we haven't modified any state because we only do that if our calls succeed.
             Log.e(TAG, "Error upping interface " + mIface + ": " + e);
         }
     }
