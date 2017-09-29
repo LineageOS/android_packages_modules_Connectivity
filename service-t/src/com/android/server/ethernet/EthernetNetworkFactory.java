@@ -248,25 +248,6 @@ class EthernetNetworkFactory {
         return true;
     }
 
-    private boolean setStaticIpAddress(StaticIpConfiguration staticConfig) {
-        if (staticConfig.ipAddress != null &&
-                staticConfig.gateway != null &&
-                staticConfig.dnsServers.size() > 0) {
-            try {
-                Log.i(TAG, "Applying static IPv4 configuration to " + mIface + ": " + staticConfig);
-                InterfaceConfiguration config = mNMService.getInterfaceConfig(mIface);
-                config.setLinkAddress(staticConfig.ipAddress);
-                mNMService.setInterfaceConfig(mIface, config);
-                return true;
-            } catch(RemoteException|IllegalStateException e) {
-               Log.e(TAG, "Setting static IP address failed: " + e.getMessage());
-            }
-        } else {
-            Log.e(TAG, "Invalid static IP configuration.");
-        }
-        return false;
-    }
-
     public void updateAgent() {
         if (mNetworkAgent == null) return;
         if (DBG) {
@@ -332,55 +313,52 @@ class EthernetNetworkFactory {
                     mNetworkInfo));
         }
 
-        LinkProperties linkProperties;
-
         IpConfiguration config = mEthernetManager.getConfiguration();
 
-        if (config.getIpAssignment() == IpAssignment.STATIC) {
-            if (!setStaticIpAddress(config.getStaticIpConfiguration())) {
-                // We've already logged an error.
-                return;
-            }
-            linkProperties = config.getStaticIpConfiguration().toLinkProperties(mIface);
-        } else {
-            mNetworkInfo.setDetailedState(DetailedState.OBTAINING_IPADDR, null, mHwAddr);
-            IpManager.Callback ipmCallback = new IpManager.Callback() {
-                @Override
-                public void onProvisioningSuccess(LinkProperties newLp) {
-                    mHandler.post(() -> onIpLayerStarted(newLp));
-                }
-
-                @Override
-                public void onProvisioningFailure(LinkProperties newLp) {
-                    mHandler.post(() -> onIpLayerStopped(newLp));
-                }
-
-                @Override
-                public void onLinkPropertiesChange(LinkProperties newLp) {
-                    mHandler.post(() -> updateLinkProperties(newLp));
-                }
-            };
-
-            stopIpManager();
-            mIpManager = new IpManager(mContext, mIface, ipmCallback);
-
-            if (config.getProxySettings() == ProxySettings.STATIC ||
-                    config.getProxySettings() == ProxySettings.PAC) {
-                mIpManager.setHttpProxy(config.getHttpProxy());
+        mNetworkInfo.setDetailedState(DetailedState.OBTAINING_IPADDR, null, mHwAddr);
+        IpManager.Callback ipmCallback = new IpManager.Callback() {
+            @Override
+            public void onProvisioningSuccess(LinkProperties newLp) {
+                mHandler.post(() -> onIpLayerStarted(newLp));
             }
 
-            final String tcpBufferSizes = mContext.getResources().getString(
-                    com.android.internal.R.string.config_ethernet_tcp_buffers);
-            if (!TextUtils.isEmpty(tcpBufferSizes)) {
-                mIpManager.setTcpBufferSizes(tcpBufferSizes);
+            @Override
+            public void onProvisioningFailure(LinkProperties newLp) {
+                mHandler.post(() -> onIpLayerStopped(newLp));
             }
 
-            final ProvisioningConfiguration provisioningConfiguration =
-                    mIpManager.buildProvisioningConfiguration()
-                            .withProvisioningTimeoutMs(0)
-                            .build();
-            mIpManager.startProvisioning(provisioningConfiguration);
+            @Override
+            public void onLinkPropertiesChange(LinkProperties newLp) {
+                mHandler.post(() -> updateLinkProperties(newLp));
+            }
+        };
+
+        stopIpManager();
+        mIpManager = new IpManager(mContext, mIface, ipmCallback);
+
+        if (config.getProxySettings() == ProxySettings.STATIC ||
+                config.getProxySettings() == ProxySettings.PAC) {
+            mIpManager.setHttpProxy(config.getHttpProxy());
         }
+
+        final String tcpBufferSizes = mContext.getResources().getString(
+                com.android.internal.R.string.config_ethernet_tcp_buffers);
+        if (!TextUtils.isEmpty(tcpBufferSizes)) {
+            mIpManager.setTcpBufferSizes(tcpBufferSizes);
+        }
+
+        final ProvisioningConfiguration provisioningConfiguration;
+        if (config.getIpAssignment() == IpAssignment.STATIC) {
+            provisioningConfiguration = IpManager.buildProvisioningConfiguration()
+                    .withStaticConfiguration(config.getStaticIpConfiguration())
+                    .build();
+        } else {
+            provisioningConfiguration = mIpManager.buildProvisioningConfiguration()
+                    .withProvisioningTimeoutMs(0)
+                    .build();
+        }
+
+        mIpManager.startProvisioning(provisioningConfiguration);
     }
 
     /**
