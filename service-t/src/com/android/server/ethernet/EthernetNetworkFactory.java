@@ -280,11 +280,14 @@ public class EthernetNetworkFactory extends NetworkFactory {
         }
 
         private void start() {
+            if (mIpClient != null) {
+                if (DBG) Log.d(TAG, "IpClient already started");
+                return;
+            }
             if (DBG) {
                 Log.d(TAG, String.format("starting IpClient(%s): mNetworkInfo=%s", name,
                         mNetworkInfo));
             }
-            if (mIpClient != null) stop();
 
             mNetworkInfo.setDetailedState(DetailedState.OBTAINING_IPADDR, null, mHwAddress);
 
@@ -325,6 +328,7 @@ public class EthernetNetworkFactory extends NetworkFactory {
         void onIpLayerStopped(LinkProperties linkProperties) {
             // This cannot happen due to provisioning timeout, because our timeout is 0. It can only
             // happen if we're provisioned and we lose provisioning.
+            stop();
             start();
         }
 
@@ -338,12 +342,11 @@ public class EthernetNetworkFactory extends NetworkFactory {
         /** Returns true if state has been modified */
         boolean updateLinkState(boolean up) {
             if (mLinkUp == up) return false;
-
             mLinkUp = up;
+
+            stop();
             if (up) {
                 start();
-            } else {
-                stop();
             }
 
             return true;
