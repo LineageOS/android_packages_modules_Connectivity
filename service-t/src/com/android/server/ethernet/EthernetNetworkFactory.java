@@ -355,8 +355,10 @@ public class EthernetNetworkFactory extends NetworkFactory {
         void stop() {
             if (mIpClient != null) {
                 mIpClient.shutdown();
+                mIpClient.awaitShutdown();
                 mIpClient = null;
             }
+
             // ConnectivityService will only forget our NetworkAgent if we send it a NetworkInfo object
             // with a state of DISCONNECTED or SUSPENDED. So we can't simply clear our NetworkInfo here:
             // that sets the state to IDLE, and ConnectivityService will still think we're connected.
