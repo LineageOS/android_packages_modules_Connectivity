@@ -49,7 +49,7 @@ int plat_prefix(const char *ipv4_name, unsigned net_id, struct in6_addr *prefix)
 
   // Be sure to query local DNS64 servers, bypassing Private DNS (if enabled).
   if (net_id != NETID_UNSET) {
-    net_id += NETID_USE_LOCAL_NAMESERVERS;
+    net_id |= NETID_USE_LOCAL_NAMESERVERS;
   }
 
   status = android_getaddrinfofornet(ipv4_name, NULL, &hints, net_id, MARK_UNSET, &result);
