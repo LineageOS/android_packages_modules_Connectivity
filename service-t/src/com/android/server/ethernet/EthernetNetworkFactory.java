@@ -440,7 +440,12 @@ public class EthernetNetworkFactory extends NetworkFactory {
             NetworkInterfaceState ifaceState = mTrackingInterfaces.get(iface);
             pw.println(iface + ":" + ifaceState);
             pw.increaseIndent();
-            ifaceState.mIpClient.dump(fd, pw, args);
+            final IpClient ipClient = ifaceState.mIpClient;
+            if (ipClient != null) {
+                ipClient.dump(fd, pw, args);
+            } else {
+                pw.println("IpClient is null");
+            }
             pw.decreaseIndent();
         }
         pw.decreaseIndent();
