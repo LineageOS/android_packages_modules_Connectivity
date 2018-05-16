@@ -382,19 +382,28 @@ void event_loop(struct tun_data *tunnel) {
   last_interface_poll = time(NULL);
 
   while(running) {
-    if(poll(wait_fd, 2, NO_TRAFFIC_INTERFACE_POLL_FREQUENCY*1000) == -1) {
-      if(errno != EINTR) {
-        logmsg(ANDROID_LOG_WARN,"event_loop/poll returned an error: %s",strerror(errno));
+    if (poll(wait_fd, ARRAY_SIZE(wait_fd),
+             NO_TRAFFIC_INTERFACE_POLL_FREQUENCY * 1000) == -1) {
+      if (errno != EINTR) {
+        logmsg(ANDROID_LOG_WARN,"event_loop/poll returned an error: %s", strerror(errno));
       }
     } else {
+      if (wait_fd[0].revents & POLLIN) {
+        ring_read(&tunnel->ring, tunnel->fd4, 0 /* to_ipv6 */);
+      }
+      // If any other bit is set, assume it's due to an error (i.e. POLLERR).
+      if (wait_fd[0].revents & ~POLLIN) {
+        // ring_read doesn't clear the error indication on the socket.
+        recv(tunnel->read_fd6, NULL, 0, MSG_PEEK);
+        logmsg(ANDROID_LOG_WARN, "event_loop: clearing error on read_fd6: %s",
+               strerror(errno));
+      }
+
       // Call read_packet if the socket has data to be read, but also if an
       // error is waiting. If we don't call read() after getting POLLERR, a
       // subsequent poll() will return immediately with POLLERR again,
       // causing this code to spin in a loop. Calling read() will clear the
       // socket error flag instead.
-      if (wait_fd[0].revents) {
-        ring_read(&tunnel->ring, tunnel->fd4, 0 /* to_ipv6 */);
-      }
       if (wait_fd[1].revents) {
         read_packet(tunnel->fd4, tunnel->write_fd6, 1 /* to_ipv6 */);
       }
