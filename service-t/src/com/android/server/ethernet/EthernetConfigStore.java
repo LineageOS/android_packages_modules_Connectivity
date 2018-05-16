@@ -16,6 +16,7 @@
 
 package com.android.server.ethernet;
 
+import android.annotation.Nullable;
 import android.net.IpConfiguration;
 import android.os.Environment;
 import android.util.ArrayMap;
@@ -77,9 +78,11 @@ public class EthernetConfigStore {
         }
     }
 
+    @Nullable
     public IpConfiguration getIpConfigurationForDefaultInterface() {
         synchronized (mSync) {
-            return new IpConfiguration(mIpConfigurationForDefaultInterface);
+            return mIpConfigurationForDefaultInterface == null
+                    ? null : new IpConfiguration(mIpConfigurationForDefaultInterface);
         }
     }
 }
