@@ -1,4 +1,4 @@
-# Copyright (C) 2014 The Android Open Source Project
+# Copyright (C) 2018 The Android Open Source Project
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -11,22 +11,26 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+#
 
 LOCAL_PATH := $(call my-dir)
-
-# Build the java code
-# ============================================================
-
 include $(CLEAR_VARS)
 
-LOCAL_AIDL_INCLUDES := $(LOCAL_PATH)/java
-LOCAL_SRC_FILES := $(call all-java-files-under, java) \
-	$(call all-Iaidl-files-under, java) \
-	$(call all-logtags-files-under, java)
+LOCAL_SRC_FILES := $(call all-java-files-under, java)
 
-LOCAL_JAVA_LIBRARIES := services
-LOCAL_MODULE := ethernet-service
+LOCAL_PACKAGE_NAME := EthernetServiceTests
 
-include $(BUILD_JAVA_LIBRARY)
+LOCAL_CERTIFICATE := platform
+LOCAL_PRIVATE_PLATFORM_APIS := true
 
-include $(call all-makefiles-under,$(LOCAL_PATH))
+LOCAL_MODULE_TAGS := tests
+
+LOCAL_JAVA_LIBRARIES := \
+        android.test.runner \
+        android.test.base
+
+LOCAL_STATIC_JAVA_LIBRARIES := \
+        android-support-test \
+        ethernet-service
+
+include $(BUILD_PACKAGE)
