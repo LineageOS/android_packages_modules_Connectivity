@@ -36,10 +36,13 @@ import android.text.TextUtils;
 import android.util.ArrayMap;
 import android.util.Log;
 
+import com.android.internal.annotations.VisibleForTesting;
 import com.android.internal.util.IndentingPrintWriter;
 import com.android.server.net.BaseNetworkObserver;
 
 import java.io.FileDescriptor;
+import java.net.InetAddress;
+import java.util.ArrayList;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -300,7 +303,7 @@ final class EthernetTracker {
         mNetworkCapabilities.put(name, nc);
 
         if (tokens.length > 2 && !TextUtils.isEmpty(tokens[2])) {
-            IpConfiguration ipConfig = createStaticIpConfiguration(tokens[2]);
+            IpConfiguration ipConfig = parseStaticIpConfiguration(tokens[2]);
             mIpConfigurations.put(name, ipConfig);
         }
     }
@@ -342,11 +345,54 @@ final class EthernetTracker {
         return nc;
     }
 
-    private static IpConfiguration createStaticIpConfiguration(String strIpAddress) {
-        StaticIpConfiguration staticIpConfiguration = new StaticIpConfiguration();
-        staticIpConfiguration.ipAddress = new LinkAddress(strIpAddress);
-        return new IpConfiguration(
-                IpAssignment.STATIC, ProxySettings.NONE, staticIpConfiguration, null);
+    /**
+     * Parses static IP configuration.
+     *
+     * @param staticIpConfig represents static IP configuration in the following format: {@code
+     * ip=<ip-address/mask> gateway=<ip-address> dns=<comma-sep-ip-addresses>
+     *     domains=<comma-sep-domains>}
+     */
+    @VisibleForTesting
+    static IpConfiguration parseStaticIpConfiguration(String staticIpConfig) {
+        StaticIpConfiguration ipConfig = new StaticIpConfiguration();
+
+        for (String keyValueAsString : staticIpConfig.trim().split(" ")) {
+            if (TextUtils.isEmpty(keyValueAsString)) continue;
+
+            String[] pair = keyValueAsString.split("=");
+            if (pair.length != 2) {
+                throw new IllegalArgumentException("Unexpected token: " + keyValueAsString
+                        + " in " + staticIpConfig);
+            }
+
+            String key = pair[0];
+            String value = pair[1];
+
+            switch (key) {
+                case "ip":
+                    ipConfig.ipAddress = new LinkAddress(value);
+                    break;
+                case "domains":
+                    ipConfig.domains = value;
+                    break;
+                case "gateway":
+                    ipConfig.gateway = InetAddress.parseNumericAddress(value);
+                    break;
+                case "dns": {
+                    ArrayList<InetAddress> dnsAddresses = new ArrayList<>();
+                    for (String address: value.split(",")) {
+                        dnsAddresses.add(InetAddress.parseNumericAddress(address));
+                    }
+                    ipConfig.dnsServers.addAll(dnsAddresses);
+                    break;
+                }
+                default : {
+                    throw new IllegalArgumentException("Unexpected key: " + key
+                            + " in " + staticIpConfig);
+                }
+            }
+        }
+        return new IpConfiguration(IpAssignment.STATIC, ProxySettings.NONE, ipConfig, null);
     }
 
     private static IpConfiguration createDefaultIpConfiguration() {
