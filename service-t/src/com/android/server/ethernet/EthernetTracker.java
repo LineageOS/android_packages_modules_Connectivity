@@ -314,6 +314,7 @@ final class EthernetTracker {
         nc.addCapability(NetworkCapabilities.NET_CAPABILITY_NOT_RESTRICTED);
         nc.addCapability(NetworkCapabilities.NET_CAPABILITY_NOT_METERED);
         nc.addCapability(NetworkCapabilities.NET_CAPABILITY_NOT_ROAMING);
+        nc.addCapability(NetworkCapabilities.NET_CAPABILITY_NOT_CONGESTED);
 
         return nc;
     }
