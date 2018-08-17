@@ -33,6 +33,7 @@ import android.net.NetworkSpecifier;
 import android.net.StringNetworkSpecifier;
 import android.net.ip.IpClient;
 import android.net.ip.IpClient.ProvisioningConfiguration;
+import android.net.util.InterfaceParams;
 import android.os.Handler;
 import android.text.TextUtils;
 import android.util.Log;
@@ -328,7 +329,11 @@ public class EthernetNetworkFactory extends NetworkFactory {
             // This cannot happen due to provisioning timeout, because our timeout is 0. It can only
             // happen if we're provisioned and we lose provisioning.
             stop();
-            start();
+            // If the interface has disappeared provisioning will fail over and over again, so
+            // there is no point in starting again
+            if (null != InterfaceParams.getByName(name)) {
+                start();
+            }
         }
 
         void updateLinkProperties(LinkProperties linkProperties) {
