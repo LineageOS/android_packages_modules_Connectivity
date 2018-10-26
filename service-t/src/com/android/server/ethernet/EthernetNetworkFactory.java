@@ -72,6 +72,10 @@ public class EthernetNetworkFactory extends NetworkFactory {
 
     @Override
     public boolean acceptRequest(NetworkRequest request, int score) {
+        if (request.type == NetworkRequest.Type.TRACK_DEFAULT) {
+            return false;
+        }
+
         if (DBG) {
             Log.d(TAG, "acceptRequest, request: " + request + ", score: " + score);
         }
@@ -424,6 +428,7 @@ public class EthernetNetworkFactory extends NetworkFactory {
         @Override
         public String toString() {
             return getClass().getSimpleName() + "{ "
+                    + "refCount: " + refCount + ", "
                     + "iface: " + name + ", "
                     + "up: " + mLinkUp + ", "
                     + "hwAddress: " + mHwAddress + ", "
