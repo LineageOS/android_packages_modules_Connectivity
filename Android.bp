@@ -1,0 +1,95 @@
+// The clat daemon.
+cc_binary {
+    name: "clatd",
+
+    srcs: [
+        "clatd.c",
+        "dump.c",
+        "checksum.c",
+        "translate.c",
+        "icmp.c",
+        "ipv4.c",
+        "ipv6.c",
+        "config.c",
+        "dns64.c",
+        "logging.c",
+        "getaddr.c",
+        "netlink_callbacks.c",
+        "netlink_msg.c",
+        "setif.c",
+        "mtu.c",
+        "tun.c",
+        "ring.c",
+    ],
+
+    cflags: [
+        "-Wall",
+        "-Werror",
+        "-Wunused-parameter",
+
+        // Bug: http://b/33566695
+        "-Wno-address-of-packed-member",
+    ],
+
+    include_dirs: ["bionic/libc/dns/include"],
+    header_libs: ["libnetd_client_headers"],
+    static_libs: ["libnl"],
+    shared_libs: [
+        "libcutils",
+        "liblog",
+        "libnetutils",
+    ],
+
+}
+
+// The configuration file.
+prebuilt_etc {
+    name: "clatd.conf",
+    src: "clatd.conf",
+}
+
+// Unit tests.
+cc_test {
+    name: "clatd_test",
+    cflags: [
+        "-Wall",
+        "-Werror",
+        "-Wunused-parameter",
+
+        // Bug: http://b/33566695
+        "-Wno-address-of-packed-member",
+    ],
+
+    srcs: [
+        "clatd_test.cpp",
+        "checksum.c",
+        "translate.c",
+        "icmp.c",
+        "ipv4.c",
+        "ipv6.c",
+        "logging.c",
+        "config.c",
+        "tun.c",
+    ],
+
+    shared_libs: [
+        "liblog",
+        "libnetutils",
+    ],
+}
+
+// Microbenchmark.
+cc_test {
+    name: "clatd_microbenchmark",
+
+    cflags: [
+        "-Wall",
+        "-Werror",
+        "-Wunused-parameter",
+    ],
+    srcs: [
+        "clatd_microbenchmark.c",
+        "checksum.c",
+        "tun.c",
+    ],
+}
