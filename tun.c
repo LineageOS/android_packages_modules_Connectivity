@@ -15,14 +15,14 @@
  *
  * tun.c - tun device functions
  */
-#include <fcntl.h>
-#include <string.h>
-#include <unistd.h>
 #include <arpa/inet.h>
+#include <fcntl.h>
 #include <linux/if.h>
 #include <linux/if_tun.h>
+#include <string.h>
 #include <sys/ioctl.h>
 #include <sys/uio.h>
+#include <unistd.h>
 
 #include "clatd.h"
 
@@ -33,7 +33,7 @@ int tun_open() {
   int fd;
 
   fd = open("/dev/tun", O_RDWR);
-  if(fd < 0) {
+  if (fd < 0) {
     fd = open("/dev/net/tun", O_RDWR);
   }
 
@@ -51,12 +51,12 @@ int tun_alloc(char *dev, int fd) {
   memset(&ifr, 0, sizeof(ifr));
 
   ifr.ifr_flags = IFF_TUN;
-  if( *dev ) {
+  if (*dev) {
     strncpy(ifr.ifr_name, dev, IFNAMSIZ);
-    ifr.ifr_name[IFNAMSIZ-1] = '\0';
+    ifr.ifr_name[IFNAMSIZ - 1] = '\0';
   }
 
-  if( (err = ioctl(fd, TUNSETIFF, (void *) &ifr)) < 0 ){
+  if ((err = ioctl(fd, TUNSETIFF, (void *)&ifr)) < 0) {
     close(fd);
     return err;
   }
@@ -84,6 +84,4 @@ int set_nonblocking(int fd) {
  * iov_len - the number of entries in the clat_packet
  * returns: number of bytes read on success, -1 on failure
  */
-int send_tun(int fd, clat_packet out, int iov_len) {
-  return writev(fd, out, iov_len);
-}
+int send_tun(int fd, clat_packet out, int iov_len) { return writev(fd, out, iov_len); }

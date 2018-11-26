@@ -21,7 +21,7 @@
 #include <sys/uio.h>
 
 #define MAXMTU 1500
-#define PACKETLEN (MAXMTU+sizeof(struct tun_pi))
+#define PACKETLEN (MAXMTU + sizeof(struct tun_pi))
 #define CLATD_VERSION "1.4"
 
 #define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
@@ -37,9 +37,15 @@
 // specific parts of the packet. The packet_* functions operate on all the packet segments past a
 // given position.
 typedef enum {
-    CLAT_POS_TUNHDR, CLAT_POS_IPHDR, CLAT_POS_FRAGHDR, CLAT_POS_TRANSPORTHDR,
-    CLAT_POS_ICMPERR_IPHDR, CLAT_POS_ICMPERR_FRAGHDR, CLAT_POS_ICMPERR_TRANSPORTHDR,
-    CLAT_POS_PAYLOAD, CLAT_POS_MAX
+  CLAT_POS_TUNHDR,
+  CLAT_POS_IPHDR,
+  CLAT_POS_FRAGHDR,
+  CLAT_POS_TRANSPORTHDR,
+  CLAT_POS_ICMPERR_IPHDR,
+  CLAT_POS_ICMPERR_FRAGHDR,
+  CLAT_POS_ICMPERR_TRANSPORTHDR,
+  CLAT_POS_PAYLOAD,
+  CLAT_POS_MAX
 } clat_packet_index;
 typedef struct iovec clat_packet[CLAT_POS_MAX];
 

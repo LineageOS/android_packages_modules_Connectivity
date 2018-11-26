@@ -18,9 +18,9 @@
 #ifndef __CHECKSUM_H__
 #define __CHECKSUM_H__
 
-#include <stdint.h>
 #include <netinet/ip.h>
 #include <netinet/ip6.h>
+#include <stdint.h>
 
 uint32_t ip_checksum_add(uint32_t current, const void *data, int len);
 uint16_t ip_checksum_finish(uint32_t temp_sum);
