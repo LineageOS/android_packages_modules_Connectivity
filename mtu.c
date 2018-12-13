@@ -16,12 +16,12 @@
  * mtu.c - get interface mtu
  */
 
-#include <string.h>
-#include <stdlib.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <sys/ioctl.h>
 #include <net/if.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/ioctl.h>
+#include <sys/socket.h>
+#include <sys/types.h>
 
 #include "mtu.h"
 
@@ -34,12 +34,12 @@ int getifmtu(const char *ifname) {
   struct ifreq if_mtu;
 
   fd = socket(AF_INET, SOCK_STREAM, 0);
-  if(fd < 0) {
+  if (fd < 0) {
     return -1;
   }
   strncpy(if_mtu.ifr_name, ifname, IFNAMSIZ);
   if_mtu.ifr_name[IFNAMSIZ - 1] = '\0';
-  if(ioctl(fd, SIOCGIFMTU, &if_mtu) < 0) {
+  if (ioctl(fd, SIOCGIFMTU, &if_mtu) < 0) {
     return -1;
   }
   return if_mtu.ifr_mtu;
