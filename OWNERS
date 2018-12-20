@@ -1,2 +1,6 @@
+include platform/system/netd:/OWNERS
+
+# TODO: remove this after we make sure first line is working.
+# Add one owner as fail-safe.
 lorenzo@google.com
-ek@google.com
+
