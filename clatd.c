@@ -154,40 +154,52 @@ void configure_tun_ip(const struct tun_data *tunnel) {
   }
 }
 
-/* function: drop_root
- * drops root privs but keeps the needed capability
+/* function: set_capability
+ * set the permitted, effective and inheritable capabilities of the current
+ * thread
  */
-void drop_root() {
+void set_capability(uint64_t target_cap) {
+  struct __user_cap_header_struct header = {
+    .version = _LINUX_CAPABILITY_VERSION_3,
+    .pid     = 0  // 0 = change myself
+  };
+  struct __user_cap_data_struct cap[_LINUX_CAPABILITY_U32S_3] = {};
+
+  cap[0].permitted = cap[0].effective = cap[0].inheritable = target_cap;
+  cap[1].permitted = cap[1].effective = cap[1].inheritable = target_cap >> 32;
+
+  if (capset(&header, cap) < 0) {
+    logmsg(ANDROID_LOG_FATAL, "capset failed: %s", strerror(errno));
+    exit(1);
+  }
+}
+
+/* function: drop_root_but_keep_caps
+ * drops root privs but keeps the needed capabilities
+ */
+void drop_root_but_keep_caps() {
   gid_t groups[] = { AID_INET, AID_VPN };
   if (setgroups(sizeof(groups) / sizeof(groups[0]), groups) < 0) {
-    logmsg(ANDROID_LOG_FATAL, "drop_root/setgroups failed: %s", strerror(errno));
+    logmsg(ANDROID_LOG_FATAL, "setgroups failed: %s", strerror(errno));
     exit(1);
   }
 
-  prctl(PR_SET_KEEPCAPS, 1, 0, 0, 0);
+  prctl(PR_SET_KEEPCAPS, 1);
 
-  if (setgid(AID_CLAT) < 0) {
-    logmsg(ANDROID_LOG_FATAL, "drop_root/setgid failed: %s", strerror(errno));
+  if (setresgid(AID_CLAT, AID_CLAT, AID_CLAT) < 0) {
+    logmsg(ANDROID_LOG_FATAL, "setresgid failed: %s", strerror(errno));
     exit(1);
   }
-  if (setuid(AID_CLAT) < 0) {
-    logmsg(ANDROID_LOG_FATAL, "drop_root/setuid failed: %s", strerror(errno));
+  if (setresuid(AID_CLAT, AID_CLAT, AID_CLAT) < 0) {
+    logmsg(ANDROID_LOG_FATAL, "setresuid failed: %s", strerror(errno));
     exit(1);
   }
 
-  struct __user_cap_header_struct header;
-  struct __user_cap_data_struct cap;
-  memset(&header, 0, sizeof(header));
-  memset(&cap, 0, sizeof(cap));
-
-  header.version = _LINUX_CAPABILITY_VERSION;
-  header.pid     = 0;  // 0 = change myself
-  cap.effective = cap.permitted = (1 << CAP_NET_ADMIN);
-
-  if (capset(&header, &cap) < 0) {
-    logmsg(ANDROID_LOG_FATAL, "drop_root/capset failed: %s", strerror(errno));
-    exit(1);
-  }
+  // keep CAP_NET_RAW capability to open raw socket, and CAP_IPC_LOCK for mmap
+  // to lock memory.
+  set_capability((1 << CAP_NET_ADMIN) |
+                 (1 << CAP_NET_RAW) |
+                 (1 << CAP_IPC_LOCK));
 }
 
 /* function: open_sockets
@@ -494,11 +506,14 @@ int main(int argc, char **argv) {
   logmsg(ANDROID_LOG_INFO, "Starting clat version %s on %s netid=%s mark=%s", CLATD_VERSION,
          uplink_interface, net_id_str ? net_id_str : "(none)", mark_str ? mark_str : "(none)");
 
+  // run under a regular user but keep needed capabilities
+  drop_root_but_keep_caps();
+
   // open our raw sockets before dropping privs
   open_sockets(&tunnel, mark);
 
-  // run under a regular user
-  drop_root();
+  // keeps only admin capability
+  set_capability(1 << CAP_NET_ADMIN);
 
   // we can create tun devices as non-root because we're in the VPN group.
   tunnel.fd4 = tun_open();
