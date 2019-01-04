@@ -29,6 +29,7 @@
 #include <netinet/udp.h>
 
 #include "clatd.h"
+#include "common.h"
 
 #define MAX_TCP_HDR (15 * 4)  // Data offset field is 4 bits and counts in 32-bit words.
 

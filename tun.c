@@ -24,7 +24,7 @@
 #include <sys/uio.h>
 #include <unistd.h>
 
-#include "clatd.h"
+#include "common.h"
 
 /* function: tun_open
  * tries to open the tunnel device
