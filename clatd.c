@@ -228,13 +228,36 @@ void open_sockets(struct tun_data *tunnel, uint32_t mark) {
   }
 }
 
-/* function: update_clat_ipv6_address
+int ipv6_address_changed(const char *interface) {
+  union anyip *interface_ip;
+
+  interface_ip = getinterface_ip(interface, AF_INET6);
+  if (!interface_ip) {
+    logmsg(ANDROID_LOG_ERROR, "Unable to find an IPv6 address on interface %s", interface);
+    return 1;
+  }
+
+  if (!ipv6_prefix_equal(&interface_ip->ip6, &Global_Clatd_Config.ipv6_local_subnet)) {
+    char oldstr[INET6_ADDRSTRLEN];
+    char newstr[INET6_ADDRSTRLEN];
+    inet_ntop(AF_INET6, &Global_Clatd_Config.ipv6_local_subnet, oldstr, sizeof(oldstr));
+    inet_ntop(AF_INET6, &interface_ip->ip6, newstr, sizeof(newstr));
+    logmsg(ANDROID_LOG_INFO, "IPv6 prefix on %s changed: %s -> %s", interface, oldstr, newstr);
+    free(interface_ip);
+    return 1;
+  } else {
+    free(interface_ip);
+    return 0;
+  }
+}
+
+/* function: configure_clat_ipv6_address
  * picks the clat IPv6 address and configures packet translation to use it.
  *   tunnel - tun device data
  *   interface - uplink interface name
  *   returns: 1 on success, 0 on failure
  */
-int update_clat_ipv6_address(const struct tun_data *tunnel, const char *interface) {
+int configure_clat_ipv6_address(const struct tun_data *tunnel, const char *interface) {
   union anyip *interface_ip;
   char addrstr[INET6_ADDRSTRLEN];
 
@@ -245,27 +268,10 @@ int update_clat_ipv6_address(const struct tun_data *tunnel, const char *interfac
     return 0;
   }
 
-  // If our prefix hasn't changed, do nothing. (If this is the first time we configure an IPv6
-  // address, Global_Clatd_Config.ipv6_local_subnet will be ::, which won't match our new prefix.)
-  if (ipv6_prefix_equal(&interface_ip->ip6, &Global_Clatd_Config.ipv6_local_subnet)) {
-    free(interface_ip);
-    return 1;
-  }
-
   // Generate an interface ID.
   config_generate_local_ipv6_subnet(&interface_ip->ip6);
   inet_ntop(AF_INET6, &interface_ip->ip6, addrstr, sizeof(addrstr));
-
-  if (IN6_IS_ADDR_UNSPECIFIED(&Global_Clatd_Config.ipv6_local_subnet)) {
-    // Startup.
-    logmsg(ANDROID_LOG_INFO, "Using IPv6 address %s on %s", addrstr, interface);
-  } else {
-    // Prefix change.
-    char from_addr[INET6_ADDRSTRLEN];
-    inet_ntop(AF_INET6, &Global_Clatd_Config.ipv6_local_subnet, from_addr, sizeof(from_addr));
-    logmsg(ANDROID_LOG_INFO, "clat IPv6 address changed from %s to %s", from_addr, addrstr);
-    del_anycast_address(tunnel->write_fd6, &Global_Clatd_Config.ipv6_local_subnet);
-  }
+  logmsg(ANDROID_LOG_INFO, "Using IPv6 address %s on %s", addrstr, interface);
 
   // Start translating packets to the new prefix.
   Global_Clatd_Config.ipv6_local_subnet = interface_ip->ip6;
@@ -276,7 +282,7 @@ int update_clat_ipv6_address(const struct tun_data *tunnel, const char *interfac
   if (!configure_packet_socket(tunnel->read_fd6)) {
     // Things aren't going to work. Bail out and hope we have better luck next time.
     // We don't log an error here because configure_packet_socket has already done so.
-    exit(1);
+    return 0;
   }
 
   return 1;
@@ -330,6 +336,10 @@ void configure_interface(const char *uplink_interface, const char *plat_prefix,
   }
 
   configure_tun_ip(tunnel);
+
+  if (!configure_clat_ipv6_address(tunnel, uplink_interface)) {
+    exit(1);
+  }
 }
 
 /* function: read_packet
@@ -418,8 +428,9 @@ void event_loop(struct tun_data *tunnel) {
 
     time_t now = time(NULL);
     if (last_interface_poll < (now - INTERFACE_POLL_FREQUENCY)) {
-      update_clat_ipv6_address(tunnel, Global_Clatd_Config.default_pdp_interface);
-      last_interface_poll = now;
+      if (ipv6_address_changed(Global_Clatd_Config.default_pdp_interface)) {
+        break;
+      }
     }
   }
 }
