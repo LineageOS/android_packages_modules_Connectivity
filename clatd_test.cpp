@@ -24,16 +24,21 @@
 #include <sys/uio.h>
 
 #include <gtest/gtest.h>
+#include "tun_interface.h"
 
 extern "C" {
 #include "checksum.h"
 #include "clatd.h"
 #include "config.h"
+#include "getaddr.h"
 #include "translate.h"
+#include "tun.h"
 }
 
 // For convenience.
 #define ARRAYSIZE(x) sizeof((x)) / sizeof((x)[0])
+
+using android::net::TunInterface;
 
 // Default translation parameters.
 static const char kIPv4LocalAddr[]  = "192.0.0.4";
@@ -557,14 +562,25 @@ struct clat_config Global_Clatd_Config;
 
 class ClatdTest : public ::testing::Test {
  protected:
+  static TunInterface sTun;
+
   virtual void SetUp() {
     inet_pton(AF_INET, kIPv4LocalAddr, &Global_Clatd_Config.ipv4_local_subnet);
     inet_pton(AF_INET6, kIPv6PlatSubnet, &Global_Clatd_Config.plat_subnet);
-    inet_pton(AF_INET6, kIPv6LocalAddr, &Global_Clatd_Config.ipv6_local_subnet);
+    memset(&Global_Clatd_Config.ipv6_local_subnet, 0, sizeof(in6_addr));
     Global_Clatd_Config.ipv6_host_id    = in6addr_any;
     Global_Clatd_Config.use_dynamic_iid = 1;
+    Global_Clatd_Config.default_pdp_interface = const_cast<char *>(sTun.name().c_str());
   }
+
+  // Static because setting up the tun interface takes about 40ms.
+  static void SetUpTestCase() { ASSERT_EQ(0, sTun.init()); }
+
+  // Closing the socket removes the interface and IP addresses.
+  static void TearDownTestCase() { sTun.destroy(); }
 };
+
+TunInterface ClatdTest::sTun;
 
 void expect_ipv6_addr_equal(struct in6_addr *expected, struct in6_addr *actual) {
   if (!IN6_ARE_ADDR_EQUAL(expected, actual)) {
@@ -868,6 +884,9 @@ TEST_F(ClatdTest, AdjustChecksum) {
 }
 
 TEST_F(ClatdTest, Translate) {
+  // This test uses hardcoded packets so the clatd address must be fixed.
+  inet_pton(AF_INET6, kIPv6LocalAddr, &Global_Clatd_Config.ipv6_local_subnet);
+
   uint8_t udp_ipv4[] = { IPV4_UDP_HEADER UDP_HEADER PAYLOAD };
   uint8_t udp_ipv6[] = { IPV6_UDP_HEADER UDP_HEADER PAYLOAD };
   fix_udp_checksum(udp_ipv4);
@@ -886,6 +905,9 @@ TEST_F(ClatdTest, Translate) {
 }
 
 TEST_F(ClatdTest, Fragmentation) {
+  // This test uses hardcoded packets so the clatd address must be fixed.
+  inet_pton(AF_INET6, kIPv6LocalAddr, &Global_Clatd_Config.ipv6_local_subnet);
+
   check_fragment_translation(kIPv4Fragments, kIPv4FragLengths, kIPv6Fragments, kIPv6FragLengths,
                              ARRAYSIZE(kIPv4Fragments), "IPv4->IPv6 fragment translation");
 
@@ -914,7 +936,7 @@ TEST_F(ClatdTest, TranslateChecksumNeutral) {
   ASSERT_TRUE(inet_pton(AF_INET6, "2001:db8:1:2:f076:ae99:124e:aa54",
                         &Global_Clatd_Config.ipv6_local_subnet));
   config_generate_local_ipv6_subnet(&Global_Clatd_Config.ipv6_local_subnet);
-  ASSERT_NE((uint32_t)0x00000464, Global_Clatd_Config.ipv6_local_subnet.s6_addr32[3]);
+  ASSERT_NE(htonl((uint32_t)0x00000464), Global_Clatd_Config.ipv6_local_subnet.s6_addr32[3]);
   ASSERT_NE((uint32_t)0, Global_Clatd_Config.ipv6_local_subnet.s6_addr32[3]);
 
   // Check that translating UDP packets is checksum-neutral. First, IPv4.
@@ -931,4 +953,40 @@ TEST_F(ClatdTest, TranslateChecksumNeutral) {
   fix_udp_checksum(udp_ipv6);
   check_translate_checksum_neutral(udp_ipv4, sizeof(udp_ipv4), sizeof(udp_ipv4) + 20,
                                    "UDP/IPv4 -> UDP/IPv6 checksum neutral");
+}
+
+TEST_F(ClatdTest, GetInterfaceIp) {
+  union anyip *ip = getinterface_ip(sTun.name().c_str(), AF_INET6);
+  ASSERT_NE(nullptr, ip);
+  in6_addr expected = sTun.srcAddr();
+  in6_addr actual   = ip->ip6;
+  expect_ipv6_addr_equal(&expected, &actual);
+}
+
+TEST_F(ClatdTest, UpdateIpv6Address) {
+  // Create some fake but realistic-looking sockets so update_clat_ipv6_address doesn't balk.
+  struct tun_data tunnel = {
+    .write_fd6 = socket(AF_INET6, SOCK_RAW | SOCK_NONBLOCK, IPPROTO_RAW),
+    .read_fd6  = socket(AF_PACKET, SOCK_DGRAM, htons(ETH_P_IPV6)),
+  };
+
+  // Run update_clat_ipv6_address with no local IID yet picked.
+  ASSERT_TRUE(IN6_IS_ADDR_UNSPECIFIED(&Global_Clatd_Config.ipv6_local_subnet));
+  ASSERT_EQ(1, update_clat_ipv6_address(&tunnel, sTun.name().c_str()));
+
+  // Check that it generated an IID in the same prefix as the address assigned to the interface,
+  // and that the IID is not the default IID.
+  in6_addr addr = sTun.srcAddr();
+  EXPECT_TRUE(ipv6_prefix_equal(&Global_Clatd_Config.ipv6_local_subnet, &addr));
+  EXPECT_FALSE(IN6_ARE_ADDR_EQUAL(&Global_Clatd_Config.ipv6_local_subnet, &addr));
+  EXPECT_NE(htonl((uint32_t)0x00000464), Global_Clatd_Config.ipv6_local_subnet.s6_addr32[3]);
+  EXPECT_NE((uint32_t)0, Global_Clatd_Config.ipv6_local_subnet.s6_addr32[3]);
+
+  // Check that the packet socket is bound to the interface. We can't check the socket filter
+  // because there is no way to fetch it from the kernel.
+  sockaddr_ll sll;
+  socklen_t len = sizeof(sll);
+  ASSERT_EQ(0, getsockname(tunnel.read_fd6, reinterpret_cast<sockaddr *>(&sll), &len));
+  EXPECT_EQ(htons(ETH_P_IPV6), sll.sll_protocol);
+  EXPECT_EQ(sll.sll_ifindex, sTun.ifindex());
 }
