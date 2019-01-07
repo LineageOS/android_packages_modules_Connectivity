@@ -1,26 +1,5 @@
-// The clat daemon.
-cc_binary {
-    name: "clatd",
-
-    srcs: [
-        "clatd.c",
-        "dump.c",
-        "checksum.c",
-        "translate.c",
-        "icmp.c",
-        "ipv4.c",
-        "ipv6.c",
-        "config.c",
-        "dns64.c",
-        "logging.c",
-        "getaddr.c",
-        "netlink_callbacks.c",
-        "netlink_msg.c",
-        "setif.c",
-        "mtu.c",
-        "tun.c",
-        "ring.c",
-    ],
+cc_defaults {
+    name: "clatd_defaults",
 
     cflags: [
         "-Wall",
@@ -31,15 +10,51 @@ cc_binary {
         "-Wno-address-of-packed-member",
     ],
 
+    // For NETID_UNSET and MARK_UNSET.
     include_dirs: ["bionic/libc/dns/include"],
+
+    // For NETID_USE_LOCAL_NAMESERVERS.
     header_libs: ["libnetd_client_headers"],
+}
+
+// Code used both by the daemon and by unit tests.
+filegroup {
+    name: "clatd_common",
+    srcs: [
+        "checksum.c",
+        "config.c",
+        "clatd.c",
+        "dns64.c",
+        "dump.c",
+        "getaddr.c",
+        "icmp.c",
+        "ipv4.c",
+        "ipv6.c",
+        "logging.c",
+        "mtu.c",
+        "netlink_callbacks.c",
+        "netlink_msg.c",
+        "ring.c",
+        "setif.c",
+        "tun.c",
+        "translate.c",
+    ],
+}
+
+// The clat daemon.
+cc_binary {
+    name: "clatd",
+    defaults: ["clatd_defaults"],
+    srcs: [
+        ":clatd_common",
+        "main.c"
+    ],
     static_libs: ["libnl"],
     shared_libs: [
         "libcutils",
         "liblog",
         "libnetutils",
     ],
-
 }
 
 // The configuration file.
@@ -51,28 +66,18 @@ prebuilt_etc {
 // Unit tests.
 cc_test {
     name: "clatd_test",
-    cflags: [
-        "-Wall",
-        "-Werror",
-        "-Wunused-parameter",
-
-        // Bug: http://b/33566695
-        "-Wno-address-of-packed-member",
-    ],
-
+    defaults: ["clatd_defaults"],
     srcs: [
-        "clatd_test.cpp",
-        "checksum.c",
-        "translate.c",
-        "icmp.c",
-        "ipv4.c",
-        "ipv6.c",
-        "logging.c",
-        "config.c",
-        "tun.c",
+        ":clatd_common",
+        "clatd_test.cpp"
     ],
-
+    static_libs: [
+        "libbase",
+        "libnetd_test_tun_interface",
+        "libnl",
+    ],
     shared_libs: [
+        "libcutils",
         "liblog",
         "libnetutils",
     ],
@@ -81,12 +86,7 @@ cc_test {
 // Microbenchmark.
 cc_test {
     name: "clatd_microbenchmark",
-
-    cflags: [
-        "-Wall",
-        "-Werror",
-        "-Wunused-parameter",
-    ],
+    defaults: ["clatd_defaults"],
     srcs: [
         "clatd_microbenchmark.c",
         "checksum.c",

@@ -19,6 +19,7 @@
 
 #include "checksum.h"
 #include "clatd.h"
+#include "common.h"
 #include "config.h"
 #include "debug.h"
 #include "icmp.h"
