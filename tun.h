@@ -20,7 +20,7 @@
 
 #include <linux/if.h>
 
-#include "clatd.h"
+#include "common.h"
 #include "ring.h"
 
 struct tun_data {
