@@ -24,6 +24,8 @@
 #include <sys/uio.h>
 
 #include <gtest/gtest.h>
+
+#include "netutils/ifc.h"
 #include "tun_interface.h"
 
 extern "C" {
@@ -963,16 +965,16 @@ TEST_F(ClatdTest, GetInterfaceIp) {
   expect_ipv6_addr_equal(&expected, &actual);
 }
 
-TEST_F(ClatdTest, UpdateIpv6Address) {
+TEST_F(ClatdTest, ConfigureIpv6Address) {
   // Create some fake but realistic-looking sockets so update_clat_ipv6_address doesn't balk.
   struct tun_data tunnel = {
     .write_fd6 = socket(AF_INET6, SOCK_RAW | SOCK_NONBLOCK, IPPROTO_RAW),
     .read_fd6  = socket(AF_PACKET, SOCK_DGRAM, htons(ETH_P_IPV6)),
   };
 
-  // Run update_clat_ipv6_address with no local IID yet picked.
+  // Run configure_clat_ipv6_address.
   ASSERT_TRUE(IN6_IS_ADDR_UNSPECIFIED(&Global_Clatd_Config.ipv6_local_subnet));
-  ASSERT_EQ(1, update_clat_ipv6_address(&tunnel, sTun.name().c_str()));
+  ASSERT_EQ(1, configure_clat_ipv6_address(&tunnel, sTun.name().c_str()));
 
   // Check that it generated an IID in the same prefix as the address assigned to the interface,
   // and that the IID is not the default IID.
@@ -989,4 +991,33 @@ TEST_F(ClatdTest, UpdateIpv6Address) {
   ASSERT_EQ(0, getsockname(tunnel.read_fd6, reinterpret_cast<sockaddr *>(&sll), &len));
   EXPECT_EQ(htons(ETH_P_IPV6), sll.sll_protocol);
   EXPECT_EQ(sll.sll_ifindex, sTun.ifindex());
+}
+
+TEST_F(ClatdTest, Ipv6AddressChanged) {
+  // Configure the clat IPv6 address.
+  struct tun_data tunnel = {
+    .write_fd6 = socket(AF_INET6, SOCK_RAW | SOCK_NONBLOCK, IPPROTO_RAW),
+    .read_fd6  = socket(AF_PACKET, SOCK_DGRAM, htons(ETH_P_IPV6)),
+  };
+  const char *ifname = sTun.name().c_str();
+  ASSERT_EQ(1, configure_clat_ipv6_address(&tunnel, ifname));
+  EXPECT_EQ(0, ipv6_address_changed(ifname));
+  EXPECT_EQ(0, ipv6_address_changed(ifname));
+
+  // Change the IP address on the tun interface to a new prefix.
+  char srcaddr[INET6_ADDRSTRLEN];
+  char dstaddr[INET6_ADDRSTRLEN];
+  ASSERT_NE(nullptr, inet_ntop(AF_INET6, &sTun.srcAddr(), srcaddr, sizeof(srcaddr)));
+  ASSERT_NE(nullptr, inet_ntop(AF_INET6, &sTun.dstAddr(), dstaddr, sizeof(dstaddr)));
+  EXPECT_EQ(0, ifc_del_address(ifname, srcaddr, 64));
+  EXPECT_EQ(0, ifc_del_address(ifname, dstaddr, 64));
+
+  // Check that we can tell that the address has changed.
+  EXPECT_EQ(0, ifc_add_address(ifname, "2001:db8::1:2", 64));
+  EXPECT_EQ(1, ipv6_address_changed(ifname));
+  EXPECT_EQ(1, ipv6_address_changed(ifname));
+
+  // Restore the tun interface configuration.
+  sTun.destroy();
+  ASSERT_EQ(0, sTun.init());
 }

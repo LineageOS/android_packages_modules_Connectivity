@@ -127,7 +127,8 @@ int main(int argc, char **argv) {
 
   configure_interface(uplink_interface, plat_prefix, &tunnel, net_id);
 
-  update_clat_ipv6_address(&tunnel, uplink_interface);
+  // Drop all remaining capabilities.
+  set_capability(0);
 
   // Loop until someone sends us a signal or brings down the tun interface.
   if (signal(SIGTERM, stop_loop) == SIG_ERR) {

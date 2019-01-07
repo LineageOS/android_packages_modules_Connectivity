@@ -39,7 +39,7 @@ void set_capability(uint64_t target_cap);
 void drop_root_but_keep_caps();
 void open_sockets(struct tun_data *tunnel, uint32_t mark);
 int ipv6_address_changed(const char *interface);
-int update_clat_ipv6_address(const struct tun_data *tunnel, const char *interface);
+int configure_clat_ipv6_address(const struct tun_data *tunnel, const char *interface);
 void configure_interface(const char *uplink_interface, const char *plat_prefix,
                          struct tun_data *tunnel, unsigned net_id);
 void event_loop(struct tun_data *tunnel);
