@@ -42,6 +42,8 @@ void print_help() {
   printf("android-clat arguments:\n");
   printf("-i [uplink interface]\n");
   printf("-p [plat prefix]\n");
+  printf("-4 [IPv4 address]\n");
+  printf("-6 [IPv6 address]\n");
   printf("-n [NetId]\n");
   printf("-m [socket mark]\n");
 }
@@ -53,17 +55,24 @@ int main(int argc, char **argv) {
   struct tun_data tunnel;
   int opt;
   char *uplink_interface = NULL, *plat_prefix = NULL, *net_id_str = NULL, *mark_str = NULL;
+  char *v4_addr = NULL, *v6_addr = NULL;
   unsigned net_id = NETID_UNSET;
   uint32_t mark   = MARK_UNSET;
   unsigned len;
 
-  while ((opt = getopt(argc, argv, "i:p:n:m:h")) != -1) {
+  while ((opt = getopt(argc, argv, "i:p:4:6:n:m:h")) != -1) {
     switch (opt) {
       case 'i':
         uplink_interface = optarg;
         break;
       case 'p':
         plat_prefix = optarg;
+        break;
+      case '4':
+        v4_addr = optarg;
+        break;
+      case '6':
+        v6_addr = optarg;
         break;
       case 'n':
         net_id_str = optarg;
@@ -101,8 +110,10 @@ int main(int argc, char **argv) {
     exit(1);
   }
 
-  logmsg(ANDROID_LOG_INFO, "Starting clat version %s on %s netid=%s mark=%s", CLATD_VERSION,
-         uplink_interface, net_id_str ? net_id_str : "(none)", mark_str ? mark_str : "(none)");
+  logmsg(ANDROID_LOG_INFO, "Starting clat version %s on %s netid=%s mark=%s plat=%s v4=%s v6=%s",
+         CLATD_VERSION, uplink_interface, net_id_str ? net_id_str : "(none)",
+         mark_str ? mark_str : "(none)", plat_prefix ? plat_prefix : "(none)",
+         v4_addr ? v4_addr : "(none)", v6_addr ? v6_addr : "(none)");
 
   // run under a regular user but keep needed capabilities
   drop_root_but_keep_caps();
@@ -125,7 +136,7 @@ int main(int argc, char **argv) {
   // following line causes XLAT failure in permissive mode.
   unsetenv("ANDROID_DNS_MODE");
 
-  configure_interface(uplink_interface, plat_prefix, &tunnel, net_id);
+  configure_interface(uplink_interface, plat_prefix, v4_addr, v6_addr, &tunnel, net_id);
 
   // Drop all remaining capabilities.
   set_capability(0);
