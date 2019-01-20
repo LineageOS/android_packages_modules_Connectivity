@@ -41,7 +41,7 @@
 #include <time.h>
 #include <unistd.h>
 
-#include "checksum.h"
+#include "netutils/checksum.h"
 #include "tun.h"
 
 #define DEVICENAME "clat4"

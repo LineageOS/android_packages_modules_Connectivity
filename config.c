@@ -25,9 +25,9 @@
 #include <unistd.h>
 
 #include <cutils/config_utils.h>
+#include <netutils/checksum.h>
 #include <netutils/ifc.h>
 
-#include "checksum.h"
 #include "clatd.h"
 #include "config.h"
 #include "dns64.h"
