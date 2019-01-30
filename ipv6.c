@@ -19,7 +19,8 @@
 
 #include <arpa/inet.h>
 
-#include "checksum.h"
+#include "netutils/checksum.h"
+
 #include "config.h"
 #include "debug.h"
 #include "dump.h"

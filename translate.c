@@ -17,7 +17,8 @@
  */
 #include <string.h>
 
-#include "checksum.h"
+#include "netutils/checksum.h"
+
 #include "clatd.h"
 #include "common.h"
 #include "config.h"
