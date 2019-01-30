@@ -29,7 +29,8 @@
 #include <netinet/tcp.h>
 #include <netinet/udp.h>
 
-#include "checksum.h"
+#include "netutils/checksum.h"
+
 #include "clatd.h"
 #include "debug.h"
 #include "logging.h"

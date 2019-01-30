@@ -21,7 +21,6 @@ cc_defaults {
 filegroup {
     name: "clatd_common",
     srcs: [
-        "checksum.c",
         "config.c",
         "clatd.c",
         "dns64.c",
@@ -90,7 +89,9 @@ cc_test {
     defaults: ["clatd_defaults"],
     srcs: [
         "clatd_microbenchmark.c",
-        "checksum.c",
         "tun.c",
+    ],
+    shared_libs: [
+        "libnetutils",
     ],
 }
