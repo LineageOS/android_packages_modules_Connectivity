@@ -337,10 +337,10 @@ final class EthernetTracker {
      * @param clearDefaultCapabilities Indicates whether or not to clear any default capabilities
      * @param commaSeparatedCapabilities A comma separated string list of integer encoded
      *                                   NetworkCapability.NET_CAPABILITY_* values
-     * @param overrideTransport A string representing a single override transport type, must be one
-     *                                 of the NetworkCapability.TRANSPORT_* values. TRANSPORT_VPN is
-     *                                 not supported. Errors with input will cause the override to
-     *                                 be ignored.
+     * @param overrideTransport A string representing a single integer encoded override transport
+     *                          type. Must be one of the NetworkCapability.TRANSPORT_*
+     *                          values. TRANSPORT_VPN is not supported. Errors with input
+     *                          will cause the override to be ignored.
      */
     @VisibleForTesting
     static NetworkCapabilities createNetworkCapabilities(
@@ -363,14 +363,14 @@ final class EthernetTracker {
                 if (parsedTransport == NetworkCapabilities.TRANSPORT_VPN
                         || parsedTransport == NetworkCapabilities.TRANSPORT_WIFI_AWARE
                         || parsedTransport == NetworkCapabilities.TRANSPORT_LOWPAN) {
-                    Log.e(TAG, "Override transport '" + parsedTransport + "' is not supported -- "
+                    Log.e(TAG, "Override transport '" + parsedTransport + "' is not supported. "
                             + "Defaulting to TRANSPORT_ETHERNET");
                 } else {
                     transport = parsedTransport;
                 }
             } catch (NumberFormatException nfe) {
-                Log.e(TAG, "Override transport type '" + overrideTransport + "' could not be parsed"
-                        + "-- Defaulting to TRANSPORT_ETHERNET");
+                Log.e(TAG, "Override transport type '" + overrideTransport + "' "
+                        + "could not be parsed. Defaulting to TRANSPORT_ETHERNET");
             }
         }
 
@@ -379,8 +379,8 @@ final class EthernetTracker {
         try {
             nc.addTransportType(transport);
         } catch (IllegalArgumentException iae) {
-            Log.e(TAG, transport + " is not a valid NetworkCapability.TRANSPORT_* value"
-                    + " -- Defaulting to TRANSPORT_ETHERNET");
+            Log.e(TAG, transport + " is not a valid NetworkCapability.TRANSPORT_* value. "
+                    + "Defaulting to TRANSPORT_ETHERNET");
             nc.addTransportType(NetworkCapabilities.TRANSPORT_ETHERNET);
         }
 
