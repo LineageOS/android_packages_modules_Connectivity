@@ -44,6 +44,7 @@ import android.os.ConditionVariable;
 import android.os.Handler;
 import android.os.RemoteException;
 import android.text.TextUtils;
+import android.util.AndroidRuntimeException;
 import android.util.Log;
 import android.util.SparseArray;
 
@@ -70,6 +71,12 @@ public class EthernetNetworkFactory extends NetworkFactory {
             new ConcurrentHashMap<>();
     private final Handler mHandler;
     private final Context mContext;
+
+    public static class ConfigurationException extends AndroidRuntimeException {
+        public ConfigurationException(String msg) {
+            super(msg);
+        }
+    }
 
     public EthernetNetworkFactory(Handler handler, Context context, NetworkCapabilities filter) {
         super(handler.getLooper(), context, NETWORK_TYPE, filter);
@@ -358,8 +365,8 @@ public class EthernetNetworkFactory extends NetworkFactory {
                 legacyType = getLegacyType(transportTypes[0]);
             } else {
                 // Should never happen as transport is always one of ETHERNET or a valid override
-                Log.w(TAG, "There is no transport type associated with network interface '"
-                        + mLinkProperties.getInterfaceName() + "' -- Legacy type set to TYPE_NONE");
+                throw new ConfigurationException("Network Capabilities do not have an associated "
+                        + "transport type.");
             }
 
             mHwAddress = hwAddress;
@@ -410,8 +417,8 @@ public class EthernetNetworkFactory extends NetworkFactory {
 
             int[] transportTypes = mCapabilities.getTransportTypes();
             if (transportTypes.length < 1) {
-                Log.w(TAG, "There is no transport type associated with network interface '"
-                        + mLinkProperties.getInterfaceName() + "' -- Score set to zero");
+                Log.w(TAG, "Network interface '" + mLinkProperties.getInterfaceName() + "' has no "
+                        + "transport type associated with it. Score set to zero");
                 return 0;
             }
             TransportInfo transportInfo = sTransports.get(transportTypes[0], /* if dne */ null);
@@ -532,7 +539,7 @@ public class EthernetNetworkFactory extends NetworkFactory {
             mNetworkAgent.sendLinkProperties(mLinkProperties);
 
             // As a note, getNetworkScore() is fairly expensive to calculate. This is fine for now
-            // since the agent isn't update frequently. Consider caching the score in the future if
+            // since the agent isn't updated frequently. Consider caching the score in the future if
             // agent updating is required more often
             mNetworkAgent.sendNetworkScore(getNetworkScore());
         }
