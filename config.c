@@ -227,7 +227,7 @@ void gen_random_iid(struct in6_addr *myaddr, struct in_addr *ipv4_local_subnet,
 
 // Factored out to a separate function for testability.
 int connect_is_ipv4_address_free(in_addr_t addr) {
-  int s = socket(AF_INET, SOCK_DGRAM, 0);
+  int s = socket(AF_INET, SOCK_DGRAM | SOCK_CLOEXEC, 0);
   if (s == -1) {
     return 0;
   }
