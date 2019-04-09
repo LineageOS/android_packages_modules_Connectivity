@@ -355,7 +355,6 @@ int configure_clat_ipv6_address(const struct tun_data *tunnel, const char *inter
  */
 void configure_interface(const char *uplink_interface, const char *plat_prefix, const char *v4_addr,
                          const char *v6_addr, struct tun_data *tunnel, unsigned net_id) {
-  int error;
 
   if (!read_config("/system/etc/clatd.conf", uplink_interface, plat_prefix, net_id)) {
     logmsg(ANDROID_LOG_FATAL, "read_config failed");
@@ -379,18 +378,6 @@ void configure_interface(const char *uplink_interface, const char *plat_prefix, 
       Global_Clatd_Config.ipv4mtu > Global_Clatd_Config.mtu - MTU_DELTA) {
     Global_Clatd_Config.ipv4mtu = Global_Clatd_Config.mtu - MTU_DELTA;
     logmsg(ANDROID_LOG_WARN, "ipv4mtu now set to = %d", Global_Clatd_Config.ipv4mtu);
-  }
-
-  error = tun_alloc(tunnel->device4, tunnel->fd4, sizeof(tunnel->device4));
-  if (error < 0) {
-    logmsg(ANDROID_LOG_FATAL, "tun_alloc/4 failed: %s", strerror(errno));
-    exit(1);
-  }
-
-  error = set_nonblocking(tunnel->fd4);
-  if (error < 0) {
-    logmsg(ANDROID_LOG_FATAL, "set_nonblocking failed: %s", strerror(errno));
-    exit(1);
   }
 
   configure_tun_ip(tunnel, v4_addr);
@@ -496,15 +483,4 @@ void event_loop(struct tun_data *tunnel) {
       }
     }
   }
-}
-
-/* function: parse_unsigned
- * parses a string as a decimal/hex/octal unsigned integer
- *   str - the string to parse
- *   out - the unsigned integer to write to, gets clobbered on failure
- */
-int parse_unsigned(const char *str, unsigned *out) {
-  char *end_ptr;
-  *out = strtoul(str, &end_ptr, 0);
-  return *str && !*end_ptr;
 }
