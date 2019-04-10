@@ -231,7 +231,7 @@ void drop_root_but_keep_caps() {
  *   mark - the socket mark to use for the sending raw socket
  */
 void open_sockets(struct tun_data *tunnel, uint32_t mark) {
-  int rawsock = socket(AF_INET6, SOCK_RAW | SOCK_NONBLOCK, IPPROTO_RAW);
+  int rawsock = socket(AF_INET6, SOCK_RAW | SOCK_NONBLOCK | SOCK_CLOEXEC, IPPROTO_RAW);
   if (rawsock < 0) {
     logmsg(ANDROID_LOG_FATAL, "raw socket failed: %s", strerror(errno));
     exit(1);
