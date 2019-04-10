@@ -381,7 +381,7 @@ void configure_interface(const char *uplink_interface, const char *plat_prefix, 
     logmsg(ANDROID_LOG_WARN, "ipv4mtu now set to = %d", Global_Clatd_Config.ipv4mtu);
   }
 
-  error = tun_alloc(tunnel->device4, tunnel->fd4);
+  error = tun_alloc(tunnel->device4, tunnel->fd4, sizeof(tunnel->device4));
   if (error < 0) {
     logmsg(ANDROID_LOG_FATAL, "tun_alloc/4 failed: %s", strerror(errno));
     exit(1);
