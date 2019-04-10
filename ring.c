@@ -30,7 +30,7 @@
 #include "tun.h"
 
 int ring_create(struct tun_data *tunnel) {
-  int packetsock = socket(AF_PACKET, SOCK_DGRAM, htons(ETH_P_IPV6));
+  int packetsock = socket(AF_PACKET, SOCK_DGRAM | SOCK_CLOEXEC, htons(ETH_P_IPV6));
   if (packetsock < 0) {
     logmsg(ANDROID_LOG_FATAL, "packet socket failed: %s", strerror(errno));
     return -1;
