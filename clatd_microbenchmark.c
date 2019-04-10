@@ -67,7 +67,7 @@ int setup_tun() {
   if (fd == -1) die("tun_open");
 
   char dev[IFNAMSIZ] = DEVICENAME;
-  int ret            = tun_alloc(dev, fd);
+  int ret            = tun_alloc(dev, fd, sizeof(dev));
   if (ret == -1) die("tun_alloc");
   struct ifreq ifr = {
     .ifr_name = DEVICENAME,

@@ -30,7 +30,7 @@ struct tun_data {
 };
 
 int tun_open();
-int tun_alloc(char *dev, int fd);
+int tun_alloc(char *dev, int fd, size_t len);
 int send_tun(int fd, clat_packet out, int iov_len);
 int set_nonblocking(int fd);
 
