@@ -32,9 +32,9 @@
 int tun_open() {
   int fd;
 
-  fd = open("/dev/tun", O_RDWR);
+  fd = open("/dev/tun", O_RDWR | O_CLOEXEC);
   if (fd < 0) {
-    fd = open("/dev/net/tun", O_RDWR);
+    fd = open("/dev/net/tun", O_RDWR | O_CLOEXEC);
   }
 
   return fd;
@@ -43,8 +43,10 @@ int tun_open() {
 /* function: tun_alloc
  * creates a tun interface and names it
  * dev - the name for the new tun device
+ * fd - an open fd to the tun device node
+ * len - the length of the buffer pointed to by dev
  */
-int tun_alloc(char *dev, int fd) {
+int tun_alloc(char *dev, int fd, size_t len) {
   struct ifreq ifr;
   int err;
 
@@ -60,7 +62,7 @@ int tun_alloc(char *dev, int fd) {
     close(fd);
     return err;
   }
-  strcpy(dev, ifr.ifr_name);
+  strlcpy(dev, ifr.ifr_name, len);
   return 0;
 }
 
