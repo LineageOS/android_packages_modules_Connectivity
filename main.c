@@ -46,6 +46,7 @@ void print_help() {
   printf("-6 [IPv6 address]\n");
   printf("-n [NetId]\n");
   printf("-m [socket mark]\n");
+  printf("-t [tun file descriptor number]\n");
 }
 
 /* function: main
@@ -55,12 +56,12 @@ int main(int argc, char **argv) {
   struct tun_data tunnel;
   int opt;
   char *uplink_interface = NULL, *plat_prefix = NULL, *net_id_str = NULL, *mark_str = NULL;
-  char *v4_addr = NULL, *v6_addr = NULL;
+  char *v4_addr = NULL, *v6_addr = NULL, *tunfd_str = NULL;
   unsigned net_id = NETID_UNSET;
   uint32_t mark   = MARK_UNSET;
   unsigned len;
 
-  while ((opt = getopt(argc, argv, "i:p:4:6:n:m:h")) != -1) {
+  while ((opt = getopt(argc, argv, "i:p:4:6:n:m:t:h")) != -1) {
     switch (opt) {
       case 'i':
         uplink_interface = optarg;
@@ -79,6 +80,9 @@ int main(int argc, char **argv) {
         break;
       case 'm':
         mark_str = optarg;
+        break;
+      case 't':
+        tunfd_str = optarg;
         break;
       case 'h':
         print_help();
@@ -104,6 +108,15 @@ int main(int argc, char **argv) {
     exit(1);
   }
 
+  if (tunfd_str != NULL && !parse_int(tunfd_str, &tunnel.fd4)) {
+    logmsg(ANDROID_LOG_FATAL, "invalid tunfd %s", tunfd_str);
+    exit(1);
+  }
+  if (!tunnel.fd4) {
+    logmsg(ANDROID_LOG_FATAL, "no tunfd specified on commandline.");
+    exit(1);
+  }
+
   len = snprintf(tunnel.device4, sizeof(tunnel.device4), "%s%s", DEVICEPREFIX, uplink_interface);
   if (len >= sizeof(tunnel.device4)) {
     logmsg(ANDROID_LOG_FATAL, "interface name too long '%s'", tunnel.device4);
@@ -123,13 +136,6 @@ int main(int argc, char **argv) {
 
   // keeps only admin capability
   set_capability(1 << CAP_NET_ADMIN);
-
-  // we can create tun devices as non-root because we're in the VPN group.
-  tunnel.fd4 = tun_open();
-  if (tunnel.fd4 < 0) {
-    logmsg(ANDROID_LOG_FATAL, "tun_open4 failed: %s", strerror(errno));
-    exit(1);
-  }
 
   // When run from netd, the environment variable ANDROID_DNS_MODE is set to
   // "local", but that only works for the netd process itself. Removing the
