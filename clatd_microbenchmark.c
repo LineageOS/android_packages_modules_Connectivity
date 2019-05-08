@@ -200,12 +200,10 @@ int main() {
   close(fd);
 
   fd = setup_tun();
-  set_nonblocking(fd);
   benchmark("No read", fd, sock, NUMPACKETS, 0, payload, sizeof(payload), payload_sum);
   close(fd);
 
   fd = setup_tun();
-  set_nonblocking(fd);
   benchmark("Nonblocking", fd, sock, NUMPACKETS, 1, payload, sizeof(payload), payload_sum);
   close(fd);
 

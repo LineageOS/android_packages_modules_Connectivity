@@ -18,6 +18,7 @@
 #ifndef __CLATD_H__
 #define __CLATD_H__
 
+#include <stdlib.h>
 #include <sys/uio.h>
 
 struct tun_data;
@@ -45,6 +46,27 @@ int configure_clat_ipv6_address(const struct tun_data *tunnel, const char *inter
 void configure_interface(const char *uplink_interface, const char *plat_prefix, const char *v4_addr,
                          const char *v6, struct tun_data *tunnel, unsigned net_id);
 void event_loop(struct tun_data *tunnel);
-int parse_unsigned(const char *str, unsigned *out);
+
+/* function: parse_int
+ * parses a string as a decimal/hex/octal signed integer
+ *   str - the string to parse
+ *   out - the signed integer to write to, gets clobbered on failure
+ */
+static inline int parse_int(const char *str, int *out) {
+  char *end_ptr;
+  *out = strtol(str, &end_ptr, 0);
+  return *str && !*end_ptr;
+}
+
+/* function: parse_unsigned
+ * parses a string as a decimal/hex/octal unsigned integer
+ *   str - the string to parse
+ *   out - the unsigned integer to write to, gets clobbered on failure
+ */
+static inline int parse_unsigned(const char *str, unsigned *out) {
+  char *end_ptr;
+  *out = strtoul(str, &end_ptr, 0);
+  return *str && !*end_ptr;
+}
 
 #endif /* __CLATD_H__ */
