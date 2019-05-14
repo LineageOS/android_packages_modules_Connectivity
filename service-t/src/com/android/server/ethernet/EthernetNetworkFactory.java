@@ -376,7 +376,14 @@ public class EthernetNetworkFactory extends NetworkFactory {
         }
 
         void setIpConfig(IpConfiguration ipConfig) {
+            if (this.mIpConfig.equals(ipConfig)) {
+                if (DBG) Log.d(TAG, "ipConfig have not changed,so ignore setIpConfig");
+                return;
+            }
             this.mIpConfig = ipConfig;
+            if (mNetworkInfo.getDetailedState() != DetailedState.DISCONNECTED) {
+                restart();
+            }
         }
 
         boolean statisified(NetworkCapabilities requestedCapabilities) {
@@ -585,6 +592,12 @@ public class EthernetNetworkFactory extends NetworkFactory {
             } catch (RemoteException e) {
                 e.rethrowFromSystemServer();
             }
+        }
+
+        void restart(){
+            if (DBG) Log.d(TAG, "reconnecting Etherent");
+            stop();
+            start();
         }
 
         @Override
