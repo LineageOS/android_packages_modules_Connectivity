@@ -21,6 +21,7 @@ import static android.net.shared.LinkPropertiesParcelableUtil.toStableParcelable
 import static com.android.internal.util.Preconditions.checkNotNull;
 
 import android.annotation.NonNull;
+import android.annotation.Nullable;
 import android.content.Context;
 import android.net.ConnectivityManager;
 import android.net.IpConfiguration;
@@ -53,6 +54,7 @@ import com.android.internal.util.IndentingPrintWriter;
 import java.io.FileDescriptor;
 import java.lang.Math;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.Objects;
 
 /**
  * {@link NetworkFactory} that represents Ethernet networks.
@@ -252,10 +254,10 @@ public class EthernetNetworkFactory extends NetworkFactory {
         private boolean mLinkUp;
         private LinkProperties mLinkProperties = new LinkProperties();
 
-        private volatile IIpClient mIpClient;
-        private IpClientCallbacksImpl mIpClientCallback;
-        private NetworkAgent mNetworkAgent;
-        private IpConfiguration mIpConfig;
+        private volatile @Nullable IIpClient mIpClient;
+        private @Nullable IpClientCallbacksImpl mIpClientCallback;
+        private @Nullable NetworkAgent mNetworkAgent;
+        private @Nullable IpConfiguration mIpConfig;
 
         /**
          * An object to contain all transport type information, including base network score and
@@ -376,7 +378,7 @@ public class EthernetNetworkFactory extends NetworkFactory {
         }
 
         void setIpConfig(IpConfiguration ipConfig) {
-            if (this.mIpConfig.equals(ipConfig)) {
+            if (Objects.equals(this.mIpConfig, ipConfig)) {
                 if (DBG) Log.d(TAG, "ipConfig have not changed,so ignore setIpConfig");
                 return;
             }
