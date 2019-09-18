@@ -157,7 +157,7 @@ public class EthernetNetworkFactory extends NetworkFactory {
         }
 
         NetworkInterfaceState iface = new NetworkInterfaceState(
-                ifaceName, hwAddress, mHandler, mContext, capabilities);
+                ifaceName, hwAddress, mHandler, mContext, capabilities, this);
         iface.setIpConfig(ipConfiguration);
         mTrackingInterfaces.put(ifaceName, iface);
 
@@ -248,6 +248,7 @@ public class EthernetNetworkFactory extends NetworkFactory {
         private final Handler mHandler;
         private final Context mContext;
         private final NetworkInfo mNetworkInfo;
+        private final NetworkFactory mNetworkFactory;
 
         private static String sTcpBufferSizes = null;  // Lazy initialized.
 
@@ -356,13 +357,15 @@ public class EthernetNetworkFactory extends NetworkFactory {
         }
 
         NetworkInterfaceState(String ifaceName, String hwAddress, Handler handler, Context context,
-                @NonNull NetworkCapabilities capabilities) {
+                @NonNull NetworkCapabilities capabilities, NetworkFactory networkFactory) {
             name = ifaceName;
             mCapabilities = checkNotNull(capabilities);
             mHandler = handler;
             mContext = context;
+            mNetworkFactory = networkFactory;
             int legacyType = ConnectivityManager.TYPE_NONE;
             int[] transportTypes = mCapabilities.getTransportTypes();
+
             if (transportTypes.length > 0) {
                 legacyType = getLegacyType(transportTypes[0]);
             } else {
@@ -471,7 +474,7 @@ public class EthernetNetworkFactory extends NetworkFactory {
             // Create our NetworkAgent.
             mNetworkAgent = new NetworkAgent(mHandler.getLooper(), mContext,
                     NETWORK_TYPE, mNetworkInfo, mCapabilities, mLinkProperties,
-                    getNetworkScore()) {
+                    getNetworkScore(), mNetworkFactory.getSerialNumber()) {
                 public void unwanted() {
                     if (this == mNetworkAgent) {
                         stop();
