@@ -94,6 +94,7 @@ cc_test {
         "libnetutils",
     ],
     test_suites: ["device-tests"],
+    require_root: true,
 }
 
 // Microbenchmark.
