@@ -903,8 +903,10 @@ TEST_F(ClatdTest, TransportChecksum) {
   uint32_t ipv6_pseudo_sum =
     ipv6_pseudo_header_checksum((struct ip6_hdr *)ip6, UDP_LEN, IPPROTO_UDP);
 
-  EXPECT_EQ(0x3ad0U, ipv4_pseudo_sum) << "IPv4 pseudo-checksum sanity check\n";
-  EXPECT_EQ(0x2644bU, ipv6_pseudo_sum) << "IPv6 pseudo-checksum sanity check\n";
+  EXPECT_NE(0, ipv4_pseudo_sum);
+  EXPECT_NE(0, ipv6_pseudo_sum);
+  EXPECT_EQ(0x3ad0U, ipv4_pseudo_sum % 0xFFFF) << "IPv4 pseudo-checksum sanity check\n";
+  EXPECT_EQ(0x644dU, ipv6_pseudo_sum % 0xFFFF) << "IPv6 pseudo-checksum sanity check\n";
   EXPECT_EQ(
       kUdpV4Checksum,
       ip_checksum_finish(ipv4_pseudo_sum + kUdpPartialChecksum + kPayloadPartialChecksum))
