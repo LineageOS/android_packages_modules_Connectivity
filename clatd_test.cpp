@@ -563,8 +563,8 @@ int get_transport_checksum(const uint8_t *packet) {
 static tun_data makeTunData() {
   // Create some fake but realistic-looking sockets so update_clat_ipv6_address doesn't balk.
   return {
-    .write_fd6 = socket(AF_INET6, SOCK_RAW | SOCK_NONBLOCK, IPPROTO_RAW),
     .read_fd6  = socket(AF_PACKET, SOCK_DGRAM, htons(ETH_P_IPV6)),
+    .write_fd6 = socket(AF_INET6, SOCK_RAW | SOCK_NONBLOCK, IPPROTO_RAW),
     .fd4       = socket(AF_UNIX, SOCK_DGRAM, 0),
   };
 }
@@ -1092,8 +1092,8 @@ TEST_F(ClatdTest, ConfigureIpv6AddressCommandLine) {
 TEST_F(ClatdTest, Ipv6AddressChanged) {
   // Configure the clat IPv6 address.
   struct tun_data tunnel = {
-    .write_fd6 = socket(AF_INET6, SOCK_RAW | SOCK_NONBLOCK, IPPROTO_RAW),
     .read_fd6  = socket(AF_PACKET, SOCK_DGRAM, htons(ETH_P_IPV6)),
+    .write_fd6 = socket(AF_INET6, SOCK_RAW | SOCK_NONBLOCK, IPPROTO_RAW),
   };
   const char *ifname = sTun.name().c_str();
   ASSERT_EQ(1, configure_clat_ipv6_address(&tunnel, ifname, nullptr));
