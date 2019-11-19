@@ -23,7 +23,7 @@
 
 #define DEFAULT_IPV4_LOCAL_SUBNET "192.0.0.4"
 #define DEFAULT_IPV4_LOCAL_PREFIXLEN "29"
-#define DEFAULT_DNS64_DETECTION_HOSTNAME "ipv4only.arpa"
+#define DNS64_DETECTION_HOSTNAME "ipv4only.arpa"
 
 struct clat_config {
   int16_t mtu, ipv4mtu;
@@ -33,7 +33,6 @@ struct clat_config {
   int16_t ipv4_local_prefixlen;
   struct in6_addr plat_subnet;
   char *default_pdp_interface;
-  char *plat_from_dns64_hostname;
   int use_dynamic_iid;
 };
 
