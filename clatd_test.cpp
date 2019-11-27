@@ -1047,26 +1047,6 @@ void expectSocketBound(int ifindex, int sock) {
 TEST_F(ClatdTest, ConfigureIpv6Address) {
   struct tun_data tunnel = makeTunData();
 
-  // Run configure_clat_ipv6_address.
-  ASSERT_TRUE(IN6_IS_ADDR_UNSPECIFIED(&Global_Clatd_Config.ipv6_local_subnet));
-  ASSERT_EQ(1, configure_clat_ipv6_address(&tunnel, sTun.name().c_str(), nullptr /* v6_addr */));
-
-  // Check that it generated an IID in the same prefix as the address assigned to the interface,
-  // and that the IID is not the default IID.
-  in6_addr addr = sTun.srcAddr();
-  EXPECT_TRUE(ipv6_prefix_equal(&Global_Clatd_Config.ipv6_local_subnet, &addr));
-  EXPECT_FALSE(IN6_ARE_ADDR_EQUAL(&Global_Clatd_Config.ipv6_local_subnet, &addr));
-  EXPECT_NE(htonl((uint32_t)0x00000464), Global_Clatd_Config.ipv6_local_subnet.s6_addr32[3]);
-  EXPECT_NE((uint32_t)0, Global_Clatd_Config.ipv6_local_subnet.s6_addr32[3]);
-
-  expectSocketBound(sTun.ifindex(), tunnel.read_fd6);
-
-  freeTunData(&tunnel);
-}
-
-TEST_F(ClatdTest, ConfigureIpv6AddressCommandLine) {
-  struct tun_data tunnel = makeTunData();
-
   ASSERT_TRUE(IN6_IS_ADDR_UNSPECIFIED(&Global_Clatd_Config.ipv6_local_subnet));
 
   const char *addrStr = "2001:db8::f00";
