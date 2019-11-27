@@ -32,10 +32,6 @@ struct tun_data {
   struct packet_ring ring;
 };
 
-// tun_open and tun_alloc are defined in tun.c and only used by clatd_microbenchmark.c
-int tun_open();
-int tun_alloc(char *dev, int fd, size_t len);
-
 /* function: send_tun
  * sends a clat_packet to a tun interface
  * fd      - the tun filedescriptor
