@@ -328,7 +328,7 @@ int read_config(const char *file, const char *uplink_interface, const char *plat
   Global_Clatd_Config.default_pdp_interface = strdup(uplink_interface);
   if (!Global_Clatd_Config.default_pdp_interface) goto failed;
 
-  if (!config_item_int16_t(root, "mtu", "-1", &Global_Clatd_Config.mtu)) goto failed;
+  Global_Clatd_Config.mtu = -1;
 
   Global_Clatd_Config.ipv4mtu = -1;
 
