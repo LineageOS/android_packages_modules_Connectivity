@@ -330,7 +330,7 @@ int read_config(const char *file, const char *uplink_interface, const char *plat
 
   if (!config_item_int16_t(root, "mtu", "-1", &Global_Clatd_Config.mtu)) goto failed;
 
-  if (!config_item_int16_t(root, "ipv4mtu", "-1", &Global_Clatd_Config.ipv4mtu)) goto failed;
+  Global_Clatd_Config.ipv4mtu = -1;
 
   if (!config_item_ip(root, "ipv4_local_subnet", DEFAULT_IPV4_LOCAL_SUBNET,
                       &Global_Clatd_Config.ipv4_local_subnet))
