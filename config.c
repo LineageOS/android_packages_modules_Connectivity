@@ -150,16 +150,6 @@ struct in6_addr *config_item_ip6(cnode *root, const char *item_name, const char 
   return ret_val_ptr;
 }
 
-/* function: free_config
- * frees the memory used by the global config variable
- */
-void free_config() {
-  if (Global_Clatd_Config.plat_from_dns64_hostname) {
-    free(Global_Clatd_Config.plat_from_dns64_hostname);
-    Global_Clatd_Config.plat_from_dns64_hostname = NULL;
-  }
-}
-
 /* function: ipv6_prefix_equal
  * compares the prefixes two ipv6 addresses. assumes the prefix lengths are both /64.
  *   a1 - first address
@@ -180,7 +170,7 @@ void dns64_detection(unsigned net_id) {
   backoff_sleep = 1;
 
   while (1) {
-    status = plat_prefix(Global_Clatd_Config.plat_from_dns64_hostname, net_id, &tmp_ptr);
+    status = plat_prefix(DNS64_DETECTION_HOSTNAME, net_id, &tmp_ptr);
     if (status > 0) {
       memcpy(&Global_Clatd_Config.plat_subnet, &tmp_ptr, sizeof(struct in6_addr));
       return;
@@ -357,9 +347,6 @@ int read_config(const char *file, const char *uplink_interface, const char *plat
     } else {
       free(tmp_ptr);
 
-      if (!(Global_Clatd_Config.plat_from_dns64_hostname =
-              config_item_str(root, "plat_from_dns64_hostname", DEFAULT_DNS64_DETECTION_HOSTNAME)))
-        goto failed;
       dns64_detection(net_id);
     }
   }
@@ -381,7 +368,6 @@ int read_config(const char *file, const char *uplink_interface, const char *plat
 
 failed:
   free(root);
-  free_config();
   return 0;
 }
 
