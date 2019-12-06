@@ -1,0 +1,1 @@
+rule android.net.util.** com.android.net.module.util.@1

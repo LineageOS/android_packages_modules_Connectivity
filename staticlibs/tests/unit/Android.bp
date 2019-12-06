@@ -1,0 +1,18 @@
+//########################################################################
+// Build NetworkStaticLibTests package
+//########################################################################
+
+android_test {
+    name: "NetworkStaticLibTests",
+    certificate: "platform",
+    srcs: ["src/**/*.java","src/**/*.kt"],
+    test_suites: ["device-tests"],
+    static_libs: [
+        "androidx.test.rules",
+    ],
+    libs: [
+        "android.test.runner",
+        "android.test.base",
+    ],
+}
+
