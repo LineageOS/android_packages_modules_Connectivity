@@ -120,11 +120,11 @@ public class EthernetNetworkFactory extends NetworkFactory {
     protected void releaseNetworkFor(NetworkRequest networkRequest) {
         NetworkInterfaceState network = networkForRequest(networkRequest);
         if (network == null) {
-            Log.e(TAG, "needNetworkFor, failed to get a network for " + networkRequest);
+            Log.e(TAG, "releaseNetworkFor, failed to get a network for " + networkRequest);
             return;
         }
 
-        if (--network.refCount == 1) {
+        if (--network.refCount == 0) {
             network.stop();
         }
     }
