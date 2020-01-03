@@ -12,9 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// File group "net-utils-framework-common-srcs" is also compiled into android framework.
-// Add jarjar rules here so that anything outside of framework could use this library
-// directly.
+// 1. The "net-utils-framework-common" library is also compiled into the framework and placed on the
+//    boot classpath. It uses jarjar rules so that anything outside the framework can use this
+//    library directly.
+// 2. The "net-utils-services-common" library is for use by modules and frameworks/base/services.
+//    It does not need to be jarjared because it is not placed on the bootclasspath.
 
 filegroup {
     name: "net-utils-framework-common-srcs",
@@ -34,4 +36,17 @@ java_library {
         "//packages/modules/NetworkStack",
         "//packages/modules/CaptivePortalLogin",
     ]
+}
+
+java_library {
+    name: "net-utils-services-common",
+    srcs: ["src_servicescommon/**/*.java"],
+    visibility: [
+        "//frameworks/base/services",
+        "//frameworks/base/packages/Tethering",
+        "//frameworks/opt/net/wifi/service",
+        "//frameworks/opt/net/ike",
+        "//packages/modules/NetworkStack",
+        "//packages/modules/CaptivePortalLogin",
+    ],
 }
