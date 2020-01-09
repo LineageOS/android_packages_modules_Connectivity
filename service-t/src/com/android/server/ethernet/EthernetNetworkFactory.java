@@ -226,7 +226,7 @@ public class EthernetNetworkFactory extends NetworkFactory {
             }
         } else {
             for (NetworkInterfaceState n : mTrackingInterfaces.values()) {
-                if (n.statisified(request.networkCapabilities)) {
+                if (n.statisified(request.networkCapabilities) && n.mLinkUp) {
                     network = n;
                     break;
                 }
