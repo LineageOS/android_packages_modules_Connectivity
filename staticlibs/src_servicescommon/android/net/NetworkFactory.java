@@ -18,21 +18,19 @@ package android.net;
 
 import android.annotation.NonNull;
 import android.content.Context;
-import android.os.Build;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.Message;
 import android.os.Messenger;
 import android.util.Log;
-import android.util.SparseArray;
 
 import com.android.internal.annotations.VisibleForTesting;
-import com.android.internal.util.IndentingPrintWriter;
-import com.android.internal.util.Protocol;
 
 import java.io.FileDescriptor;
 import java.io.PrintWriter;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -67,8 +65,6 @@ public class NetworkFactory extends Handler {
 
     private static final boolean DBG = true;
     private static final boolean VDBG = false;
-
-    private static final int BASE = Protocol.BASE_NETWORK_FACTORY;
     /**
      * Pass a network request to the bearer.  If the bearer believes it can
      * satisfy the request it should connect to the network and create a
@@ -93,33 +89,33 @@ public class NetworkFactory extends Handler {
      * msg.arg2 = the ID of the NetworkProvider currently responsible for the
      *            NetworkAgent handling this request, or NetworkProvider.ID_NONE if none.
      */
-    public static final int CMD_REQUEST_NETWORK = BASE;
+    public static final int CMD_REQUEST_NETWORK = 1;
 
     /**
      * Cancel a network request
      * msg.obj = NetworkRequest
      */
-    public static final int CMD_CANCEL_REQUEST = BASE + 1;
+    public static final int CMD_CANCEL_REQUEST = 2;
 
     /**
      * Internally used to set our best-guess score.
      * msg.arg1 = new score
      */
-    private static final int CMD_SET_SCORE = BASE + 2;
+    private static final int CMD_SET_SCORE = 3;
 
     /**
      * Internally used to set our current filter for coarse bandwidth changes with
      * technology changes.
      * msg.obj = new filter
      */
-    private static final int CMD_SET_FILTER = BASE + 3;
+    private static final int CMD_SET_FILTER = 4;
 
     private final Context mContext;
     private final ArrayList<Message> mPreConnectedQueue = new ArrayList<Message>();
     private final String LOG_TAG;
 
-    private final SparseArray<NetworkRequestInfo> mNetworkRequests =
-            new SparseArray<NetworkRequestInfo>();
+    private final Map<NetworkRequest, NetworkRequestInfo> mNetworkRequests =
+            new HashMap<>();
 
     private int mScore;
     private NetworkCapabilities mCapabilityFilter;
@@ -158,7 +154,8 @@ public class NetworkFactory extends Handler {
         };
 
         mMessenger = new Messenger(this);
-        mProviderId = ConnectivityManager.from(mContext).registerNetworkProvider(mProvider);
+        mProviderId = ((ConnectivityManager) mContext.getSystemService(
+            Context.CONNECTIVITY_SERVICE)).registerNetworkProvider(mProvider);
     }
 
     public void unregister() {
@@ -168,7 +165,8 @@ public class NetworkFactory extends Handler {
         }
         if (DBG) log("Unregistering NetworkFactory");
 
-        ConnectivityManager.from(mContext).unregisterNetworkProvider(mProvider);
+        ((ConnectivityManager) mContext.getSystemService(Context.CONNECTIVITY_SERVICE))
+            .unregisterNetworkProvider(mProvider);
         mProvider = null;
     }
 
@@ -240,14 +238,14 @@ public class NetworkFactory extends Handler {
      */
     @VisibleForTesting
     protected void handleAddRequest(NetworkRequest request, int score, int servingProviderId) {
-        NetworkRequestInfo n = mNetworkRequests.get(request.requestId);
+        NetworkRequestInfo n = mNetworkRequests.get(request);
         if (n == null) {
             if (DBG) {
                 log("got request " + request + " with score " + score
                         + " and providerId " + servingProviderId);
             }
             n = new NetworkRequestInfo(request, score, servingProviderId);
-            mNetworkRequests.put(n.request.requestId, n);
+            mNetworkRequests.put(n.request, n);
         } else {
             if (VDBG) {
                 log("new score " + score + " for existing request " + request
@@ -263,9 +261,9 @@ public class NetworkFactory extends Handler {
 
     @VisibleForTesting
     protected void handleRemoveRequest(NetworkRequest request) {
-        NetworkRequestInfo n = mNetworkRequests.get(request.requestId);
+        NetworkRequestInfo n = mNetworkRequests.get(request);
         if (n != null) {
-            mNetworkRequests.remove(request.requestId);
+            mNetworkRequests.remove(request);
             if (n.requested) releaseNetworkFor(n.request);
         }
     }
@@ -334,7 +332,7 @@ public class NetworkFactory extends Handler {
             && (n.score < mScore || n.providerId == mProviderId)
             // If this factory can't satisfy the capability needs of this request, then it
             // should not be tracked.
-            && n.request.networkCapabilities.satisfiedByNetworkCapabilities(mCapabilityFilter)
+            && n.request.satisfiedBy(mCapabilityFilter)
             // Finally if the concrete implementation of the factory rejects the request, then
             // don't track it.
             && acceptRequest(n.request, n.score);
@@ -350,14 +348,12 @@ public class NetworkFactory extends Handler {
             // - This factory can't satisfy the capability needs of the request
             // - The concrete implementation of the factory rejects the request
             && ((n.score > mScore && n.providerId != mProviderId)
-                    || !n.request.networkCapabilities.satisfiedByNetworkCapabilities(
-                            mCapabilityFilter)
+                    || !n.request.satisfiedBy(mCapabilityFilter)
                     || !acceptRequest(n.request, n.score));
     }
 
     private void evalRequests() {
-        for (int i = 0; i < mNetworkRequests.size(); i++) {
-            NetworkRequestInfo n = mNetworkRequests.valueAt(i);
+        for (NetworkRequestInfo n : mNetworkRequests.values()) {
             evalRequest(n);
         }
     }
@@ -384,7 +380,12 @@ public class NetworkFactory extends Handler {
     protected void releaseRequestAsUnfulfillableByAnyFactory(NetworkRequest r) {
         post(() -> {
             if (DBG) log("releaseRequestAsUnfulfillableByAnyFactory: " + r);
-            ConnectivityManager.from(mContext).declareNetworkRequestUnfulfillable(r);
+            final NetworkProvider provider = mProvider;
+            if (provider == null) {
+                Log.e(LOG_TAG, "Ignoring attempt to release unregistered request as unfulfillable");
+                return;
+            }
+            provider.declareNetworkRequestUnfulfillable(r);
         });
     }
 
@@ -428,13 +429,10 @@ public class NetworkFactory extends Handler {
     }
 
     public void dump(FileDescriptor fd, PrintWriter writer, String[] args) {
-        final IndentingPrintWriter pw = new IndentingPrintWriter(writer, "  ");
-        pw.println(toString());
-        pw.increaseIndent();
-        for (int i = 0; i < mNetworkRequests.size(); i++) {
-            pw.println(mNetworkRequests.valueAt(i));
+        writer.println(toString());
+        for (NetworkRequestInfo n : mNetworkRequests.values()) {
+            writer.println("  " + n);
         }
-        pw.decreaseIndent();
     }
 
     @Override

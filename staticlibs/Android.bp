@@ -31,7 +31,13 @@ filegroup {
 
 java_library {
     name: "net-utils-framework-common",
-    srcs: [":net-utils-framework-common-srcs"],
+    srcs: [
+        ":net-utils-framework-common-srcs",
+        // TODO: avoid including all framework annotations as they end up in library users jars
+        // and need jarjaring
+        ":framework-annotations",
+    ],
+    sdk_version: "system_current",
     jarjar_rules: "jarjar-rules-shared.txt",
     visibility: [
         "//frameworks/base/packages/Tethering",
@@ -45,7 +51,11 @@ java_library {
 
 java_library {
     name: "net-utils-services-common",
-    srcs: ["src_servicescommon/**/*.java"],
+    srcs: [
+        "src_servicescommon/**/*.java",
+        ":framework-annotations",
+    ],
+    sdk_version: "system_current",
     visibility: [
         "//frameworks/base/services",
         "//frameworks/base/packages/Tethering",

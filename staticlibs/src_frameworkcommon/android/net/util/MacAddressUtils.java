@@ -20,11 +20,9 @@ import android.annotation.NonNull;
 import android.annotation.Nullable;
 import android.net.MacAddress;
 
-import com.android.internal.util.BitUtils;
-import com.android.internal.util.Preconditions;
-
 import java.security.SecureRandom;
 import java.util.Arrays;
+import java.util.Objects;
 import java.util.Random;
 
 /**
@@ -98,14 +96,15 @@ public final class MacAddressUtils {
      * Convert a byte address to long address.
      */
     public static long longAddrFromByteAddr(byte[] addr) {
-        Preconditions.checkNotNull(addr);
+        Objects.requireNonNull(addr);
         if (!isMacAddress(addr)) {
             throw new IllegalArgumentException(
                     Arrays.toString(addr) + " was not a valid MAC address");
         }
         long longAddr = 0;
         for (byte b : addr) {
-            longAddr = (longAddr << 8) + BitUtils.uint8(b);
+            final int uint8Byte = b & 255;
+            longAddr = (longAddr << 8) + uint8Byte;
         }
         return longAddr;
     }
