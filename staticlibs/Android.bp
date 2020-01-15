@@ -41,7 +41,7 @@ java_library {
     jarjar_rules: "jarjar-rules-shared.txt",
     visibility: [
         "//frameworks/base/packages/Tethering",
-        "//frameworks/opt/net/wifi",
+        "//frameworks/opt/net/wifi/service",
         "//frameworks/opt/net/ike",
         "//frameworks/opt/telephony",
         "//packages/modules/NetworkStack",
