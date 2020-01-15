@@ -57,7 +57,7 @@ java_library {
     ],
     sdk_version: "system_current",
     visibility: [
-        "//frameworks/base/services",
+        "//frameworks/base/services/net",
         "//frameworks/base/packages/Tethering",
         "//frameworks/opt/net/wifi/service",
         "//frameworks/opt/net/ike",
