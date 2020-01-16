@@ -108,7 +108,6 @@ public class NetworkFactory extends Handler {
     private int mRefCount = 0;
     private Messenger mMessenger = null;
     private NetworkProvider mProvider = null;
-    private int mProviderId;
 
     public NetworkFactory(Looper looper, Context context, String logTag,
             NetworkCapabilities filter) {
@@ -139,7 +138,7 @@ public class NetworkFactory extends Handler {
         };
 
         mMessenger = new Messenger(this);
-        mProviderId = ((ConnectivityManager) mContext.getSystemService(
+        ((ConnectivityManager) mContext.getSystemService(
             Context.CONNECTIVITY_SERVICE)).registerNetworkProvider(mProvider);
     }
 
@@ -292,8 +291,8 @@ public class NetworkFactory extends Handler {
             log(" n.requests = " + n.requested);
             log(" n.score = " + n.score);
             log(" mScore = " + mScore);
-            log(" n.providerId = " + n.providerId);
-            log(" mProviderId = " + mProviderId);
+            log(" request.providerId = " + n.providerId);
+            log(" mProvider.id = " + mProvider.getProviderId());
         }
         if (shouldNeedNetworkFor(n)) {
             if (VDBG) log("  needNetworkFor");
@@ -314,7 +313,7 @@ public class NetworkFactory extends Handler {
             // If the score of this request is higher or equal to that of this factory and some
             // other factory is responsible for it, then this factory should not track the request
             // because it has no hope of satisfying it.
-            && (n.score < mScore || n.providerId == mProviderId)
+            && (n.score < mScore || n.providerId == mProvider.getProviderId())
             // If this factory can't satisfy the capability needs of this request, then it
             // should not be tracked.
             && n.request.satisfiedBy(mCapabilityFilter)
@@ -332,7 +331,7 @@ public class NetworkFactory extends Handler {
             //   assigned to the factory
             // - This factory can't satisfy the capability needs of the request
             // - The concrete implementation of the factory rejects the request
-            && ((n.score > mScore && n.providerId != mProviderId)
+            && ((n.score > mScore && n.providerId != mProvider.getProviderId())
                     || !n.request.satisfiedBy(mCapabilityFilter)
                     || !acceptRequest(n.request, n.score));
     }
@@ -402,11 +401,11 @@ public class NetworkFactory extends Handler {
 
     /* TODO: delete when all callers have migrated to NetworkProvider IDs. */
     public int getSerialNumber() {
-        return mProviderId;
+        return mProvider.getProviderId();
     }
 
-    public int getProviderId() {
-        return mProviderId;
+    public NetworkProvider getProvider() {
+        return mProvider;
     }
 
     protected void log(String s) {
@@ -422,8 +421,8 @@ public class NetworkFactory extends Handler {
 
     @Override
     public String toString() {
-        StringBuilder sb = new StringBuilder("{").append(LOG_TAG).append(" - mProviderId=")
-                .append(mProviderId).append(", ScoreFilter=")
+        StringBuilder sb = new StringBuilder("{").append(LOG_TAG).append(" - providerId=")
+                .append(mProvider.getProviderId()).append(", ScoreFilter=")
                 .append(mScore).append(", Filter=").append(mCapabilityFilter).append(", requests=")
                 .append(mNetworkRequests.size()).append(", refCount=").append(mRefCount)
                 .append("}");
