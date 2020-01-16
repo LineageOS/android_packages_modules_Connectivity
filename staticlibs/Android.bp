@@ -41,7 +41,6 @@ java_library {
     jarjar_rules: "jarjar-rules-shared.txt",
     visibility: [
         "//frameworks/base/packages/Tethering",
-        "//frameworks/opt/net/wifi",
         "//frameworks/opt/net/ike",
         "//frameworks/opt/telephony",
         "//packages/modules/NetworkStack",
@@ -59,7 +58,6 @@ java_library {
     visibility: [
         "//frameworks/base/services/net",
         "//frameworks/base/packages/Tethering",
-        "//frameworks/opt/net/wifi/service",
         "//frameworks/opt/net/ike",
         "//packages/modules/NetworkStack",
         "//packages/modules/CaptivePortalLogin",
@@ -76,5 +74,32 @@ filegroup {
     ],
     visibility: [
         "//frameworks/opt/telephony",
+    ],
+}
+
+// Use a filegroup and not a library for wifi sources, as this needs corresponding jar-jar
+// rules on the wifi side.
+// Any class here *must* have a corresponding jarjar rule in the wifi build rules.
+filegroup {
+    name: "net-utils-framework-wifi-common-srcs",
+    srcs: [
+        "src_frameworkcommon/android/net/util/MacAddressUtils.java",
+    ],
+    visibility: [
+        "//frameworks/base",
+    ],
+}
+
+// Use a filegroup and not a library for wifi sources, as this needs corresponding jar-jar
+// rules on the wifi side.
+// Any class here *must* have a corresponding jarjar rule in the wifi build rules.
+filegroup {
+    name: "net-utils-wifi-service-common-srcs",
+    srcs: [
+        "src_frameworkcommon/android/net/util/NetUtils.java",
+        "src_servicescommon/android/net/NetworkFactory.java",
+    ],
+    visibility: [
+        "//frameworks/opt/net/wifi/service",
     ],
 }
