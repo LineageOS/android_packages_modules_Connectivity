@@ -29,9 +29,8 @@ import com.android.internal.annotations.VisibleForTesting;
 import java.io.FileDescriptor;
 import java.io.PrintWriter;
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * A NetworkFactory is an entity that creates NetworkAgent objects.
@@ -49,20 +48,6 @@ import java.util.concurrent.atomic.AtomicInteger;
  * @hide
  **/
 public class NetworkFactory extends Handler {
-    /* TODO: delete when all callers have migrated to NetworkProvider IDs. */
-    public static class SerialNumber {
-        // Guard used by no network factory.
-        public static final int NONE = -1;
-        // A hardcoded serial number for NetworkAgents representing VPNs. These agents are
-        // not created by any factory, so they use this constant for clarity instead of NONE.
-        public static final int VPN = -2;
-        private static final AtomicInteger sNetworkFactorySerialNumber = new AtomicInteger(1);
-        /** Returns a unique serial number for a factory. */
-        public static final int nextSerialNumber() {
-            return sNetworkFactorySerialNumber.getAndIncrement();
-        }
-    }
-
     private static final boolean DBG = true;
     private static final boolean VDBG = false;
     /**
@@ -115,7 +100,7 @@ public class NetworkFactory extends Handler {
     private final String LOG_TAG;
 
     private final Map<NetworkRequest, NetworkRequestInfo> mNetworkRequests =
-            new HashMap<>();
+            new LinkedHashMap<>();
 
     private int mScore;
     private NetworkCapabilities mCapabilityFilter;
