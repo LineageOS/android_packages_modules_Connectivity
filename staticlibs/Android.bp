@@ -83,6 +83,7 @@ filegroup {
 filegroup {
     name: "net-utils-framework-wifi-common-srcs",
     srcs: [
+        "src_frameworkcommon/android/net/util/nsd/DnsSdTxtRecord.java",
         "src_frameworkcommon/android/net/util/MacAddressUtils.java",
     ],
     visibility: [
