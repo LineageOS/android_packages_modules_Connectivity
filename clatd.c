@@ -46,7 +46,6 @@
 #include "dump.h"
 #include "getaddr.h"
 #include "logging.h"
-#include "mtu.h"
 #include "resolv_netid.h"
 #include "ring.h"
 #include "setif.h"
@@ -149,8 +148,9 @@ static in_addr_t ipv4_address_from_cmdline(const char *v4_addr) {
 /* function: configure_tun_ip
  * configures the ipv4 and ipv6 addresses on the tunnel interface
  *   tunnel - tun device data
+ *   mtu    - mtu of tun device
  */
-void configure_tun_ip(const struct tun_data *tunnel, const char *v4_addr) {
+void configure_tun_ip(const struct tun_data *tunnel, const char *v4_addr, int mtu) {
   if (v4_addr) {
     Global_Clatd_Config.ipv4_local_subnet.s_addr = ipv4_address_from_cmdline(v4_addr);
   } else {
@@ -170,7 +170,7 @@ void configure_tun_ip(const struct tun_data *tunnel, const char *v4_addr) {
     exit(1);
   }
 
-  status = if_up(tunnel->device4, Global_Clatd_Config.ipv4mtu);
+  status = if_up(tunnel->device4, mtu);
   if (status < 0) {
     logmsg(ANDROID_LOG_FATAL, "configure_tun_ip/if_up(4) failed: %s", strerror(-status));
     exit(1);
@@ -346,41 +346,74 @@ int configure_clat_ipv6_address(const struct tun_data *tunnel, const char *inter
   return 1;
 }
 
+int detect_mtu(const struct in6_addr *plat_subnet, uint32_t plat_suffix, uint32_t mark) {
+  // Create an IPv6 UDP socket.
+  int s = socket(AF_INET6, SOCK_DGRAM | SOCK_CLOEXEC, 0);
+  if (s < 0) {
+    logmsg(ANDROID_LOG_FATAL, "socket(AF_INET6, SOCK_DGRAM, 0) failed");
+    exit(1);
+  }
+
+  // Socket's mark affects routing decisions (network selection)
+  if ((mark != MARK_UNSET) && setsockopt(s, SOL_SOCKET, SO_MARK, &mark, sizeof(mark))) {
+    logmsg(ANDROID_LOG_FATAL, "setsockopt(SOL_SOCKET, SO_MARK) failed: %s", strerror(errno));
+    exit(1);
+  }
+
+  // Try to connect udp socket to plat_subnet(96 bits):plat_suffix(32 bits)
+  struct sockaddr_in6 dst = {
+    .sin6_family = AF_INET6,
+    .sin6_addr   = *plat_subnet,
+  };
+  dst.sin6_addr.s6_addr32[3] = plat_suffix;
+  if (connect(s, (struct sockaddr *)&dst, sizeof(dst))) {
+    logmsg(ANDROID_LOG_FATAL, "connect() failed: %s", strerror(errno));
+    exit(1);
+  }
+
+  // Fetch the socket's IPv6 mtu - this is effectively fetching mtu from routing table
+  int mtu;
+  socklen_t sz_mtu = sizeof(mtu);
+  if (getsockopt(s, SOL_IPV6, IPV6_MTU, &mtu, &sz_mtu)) {
+    logmsg(ANDROID_LOG_FATAL, "getsockopt(SOL_IPV6, IPV6_MTU) failed: %s", strerror(errno));
+    exit(1);
+  }
+  if (sz_mtu != sizeof(mtu)) {
+    logmsg(ANDROID_LOG_FATAL, "getsockopt(SOL_IPV6, IPV6_MTU) returned unexpected size: %d",
+           sz_mtu);
+    exit(1);
+  }
+  close(s);
+
+  return mtu;
+}
+
 /* function: configure_interface
  * reads the configuration and applies it to the interface
  *   uplink_interface - network interface to use to reach the ipv6 internet
  *   plat_prefix      - PLAT prefix to use
  *   tunnel           - tun device data
  *   net_id           - NetID to use, NETID_UNSET indicates use of default network
+ *   mark             - the socket mark to use for the sending raw socket
  */
 void configure_interface(const char *uplink_interface, const char *plat_prefix, const char *v4_addr,
-                         const char *v6_addr, struct tun_data *tunnel, unsigned net_id) {
-
+                         const char *v6_addr, struct tun_data *tunnel, unsigned net_id,
+                         uint32_t mark) {
   if (!read_config("/system/etc/clatd.conf", uplink_interface, plat_prefix, net_id)) {
     logmsg(ANDROID_LOG_FATAL, "read_config failed");
     exit(1);
   }
 
-  if (Global_Clatd_Config.mtu > MAXMTU) {
-    logmsg(ANDROID_LOG_WARN, "Max MTU is %d, requested %d", MAXMTU, Global_Clatd_Config.mtu);
-    Global_Clatd_Config.mtu = MAXMTU;
-  }
-  if (Global_Clatd_Config.mtu <= 0) {
-    Global_Clatd_Config.mtu = getifmtu(Global_Clatd_Config.default_pdp_interface);
-    logmsg(ANDROID_LOG_WARN, "ifmtu=%d", Global_Clatd_Config.mtu);
-  }
-  if (Global_Clatd_Config.mtu < 1280) {
-    logmsg(ANDROID_LOG_WARN, "mtu too small = %d", Global_Clatd_Config.mtu);
-    Global_Clatd_Config.mtu = 1280;
-  }
+  int mtu = detect_mtu(&Global_Clatd_Config.plat_subnet, htonl(0x08080808), mark);
+  // clamp to minimum ipv6 mtu - this probably cannot ever trigger
+  if (mtu < 1280) mtu = 1280;
+  // clamp to buffer size
+  if (mtu > MAXMTU) mtu = MAXMTU;
+  // decrease by ipv6(40) + ipv6 fragmentation header(8) vs ipv4(20) overhead of 28 bytes
+  mtu -= MTU_DELTA;
+  logmsg(ANDROID_LOG_WARN, "ipv4 mtu is %d", mtu);
 
-  if (Global_Clatd_Config.ipv4mtu <= 0 ||
-      Global_Clatd_Config.ipv4mtu > Global_Clatd_Config.mtu - MTU_DELTA) {
-    Global_Clatd_Config.ipv4mtu = Global_Clatd_Config.mtu - MTU_DELTA;
-    logmsg(ANDROID_LOG_WARN, "ipv4mtu now set to = %d", Global_Clatd_Config.ipv4mtu);
-  }
-
-  configure_tun_ip(tunnel, v4_addr);
+  configure_tun_ip(tunnel, v4_addr, mtu);
 
   if (!configure_clat_ipv6_address(tunnel, uplink_interface, v6_addr)) {
     exit(1);

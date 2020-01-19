@@ -318,10 +318,6 @@ int read_config(const char *file, const char *uplink_interface, const char *plat
   Global_Clatd_Config.default_pdp_interface = strdup(uplink_interface);
   if (!Global_Clatd_Config.default_pdp_interface) goto failed;
 
-  Global_Clatd_Config.mtu = -1;
-
-  Global_Clatd_Config.ipv4mtu = -1;
-
   if (!config_item_ip(root, "ipv4_local_subnet", DEFAULT_IPV4_LOCAL_SUBNET,
                       &Global_Clatd_Config.ipv4_local_subnet))
     goto failed;
@@ -377,8 +373,6 @@ failed:
 void dump_config() {
   char charbuffer[INET6_ADDRSTRLEN];
 
-  logmsg(ANDROID_LOG_DEBUG, "mtu = %d", Global_Clatd_Config.mtu);
-  logmsg(ANDROID_LOG_DEBUG, "ipv4mtu = %d", Global_Clatd_Config.ipv4mtu);
   logmsg(
     ANDROID_LOG_DEBUG, "ipv6_local_subnet = %s",
     inet_ntop(AF_INET6, &Global_Clatd_Config.ipv6_local_subnet, charbuffer, sizeof(charbuffer)));
