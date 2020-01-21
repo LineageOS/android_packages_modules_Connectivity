@@ -26,6 +26,7 @@ import android.net.LinkAddress;
 import android.net.LinkProperties;
 import android.net.ProxyInfo;
 import android.net.RouteInfo;
+import android.net.util.LinkPropertiesUtils.CompareOrUpdateResult;
 import android.net.util.LinkPropertiesUtils.CompareResult;
 
 import androidx.test.runner.AndroidJUnit4;
@@ -34,6 +35,11 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 
 import java.net.InetAddress;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.List;
+import java.util.function.Function;
 
 @RunWith(AndroidJUnit4.class)
 public final class LinkPropertiesUtilsTest {
@@ -184,5 +190,59 @@ public final class LinkPropertiesUtilsTest {
         results = LinkPropertiesUtils.compareAddresses(source, target);
         assertEquals(linkAddr1, results.removed.get(0));
         assertEquals(linkAddr2, results.added.get(0));
+    }
+
+    private void assertSameElements(List<String> expected, List<String> actual) {
+        HashSet<String> expectedSet = new HashSet(expected);
+        assertEquals("expected list contains duplicates", expectedSet.size(), expected.size());
+        HashSet<String> actualSet = new HashSet(actual);
+        assertEquals("actual list contains duplicates", actualSet.size(), actual.size());
+        assertEquals(expectedSet, actualSet);
+    }
+
+    private void assertCompareOrUpdateResult(CompareOrUpdateResult result,
+            List<String> expectedAdded, List<String> expectedRemoved,
+            List<String> expectedUpdated) {
+        assertSameElements(expectedAdded, result.added);
+        assertSameElements(expectedRemoved, result.removed);
+        assertSameElements(expectedUpdated, result.updated);
+    }
+
+    private List<String> strArray(String... strs) {
+        return Arrays.asList(strs);
+    }
+
+    @Test
+    public void testCompareOrUpdateResult() {
+        // As the item type, use a simple string. An item is defined to be an update of another item
+        // if the string starts with the same alphabetical characters.
+        // Extracting the key from the object is just a regexp.
+        Function<String, String> extractPrefix = (s) -> s.replaceFirst("^([a-z]+).*", "$1");
+        assertEquals("goodbye", extractPrefix.apply("goodbye1234"));
+
+        List<String> oldItems = strArray("hello123", "goodbye5678", "howareyou669");
+        List<String> newItems = strArray("hello123", "goodbye000", "verywell");
+
+        final List<String> emptyList = new ArrayList<>();
+
+        // Items -> empty: everything removed.
+        CompareOrUpdateResult<String, String> result =
+                new CompareOrUpdateResult<String, String>(oldItems, emptyList, extractPrefix);
+        assertCompareOrUpdateResult(result,
+                emptyList,  strArray("hello123", "howareyou669", "goodbye5678"), emptyList);
+
+        // Empty -> items: everything added.
+        result = new CompareOrUpdateResult<String, String>(emptyList, newItems, extractPrefix);
+        assertCompareOrUpdateResult(result,
+                strArray("hello123", "goodbye000", "verywell"), emptyList,  emptyList);
+
+        // Empty -> empty: no change.
+        result = new CompareOrUpdateResult<String, String>(newItems, newItems, extractPrefix);
+        assertCompareOrUpdateResult(result,  emptyList,  emptyList, emptyList);
+
+        // Added, removed, updated at the same time.
+        result =  new CompareOrUpdateResult<>(oldItems, newItems, extractPrefix);
+        assertCompareOrUpdateResult(result,
+                strArray("verywell"), strArray("howareyou669"), strArray("goodbye000"));
     }
 }

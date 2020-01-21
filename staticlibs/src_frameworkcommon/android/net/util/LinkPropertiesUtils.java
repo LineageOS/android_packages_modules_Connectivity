@@ -26,8 +26,10 @@ import android.text.TextUtils;
 import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Objects;
+import java.util.function.Function;
 
 /**
  * Collection of link properties utilities.
@@ -60,6 +62,60 @@ public final class LinkPropertiesUtils {
         public String toString() {
             return "removed=[" + TextUtils.join(",", removed)
                     + "] added=[" + TextUtils.join(",", added)
+                    + "]";
+        }
+    }
+
+    /**
+     * Generic class to compare two lists of items of type {@code T} whose properties can change.
+     * The items to be compared must provide a way to calculate a corresponding key of type
+     * {@code K} such that if (and only if) an old and a new item have the same key, then the new
+     * item is an update of the old item. Both the old list and the new list may not contain more
+     * than one item with the same key, and may not contain any null items.
+     *
+     * @param <K> A class that represents the key of the items to be compared.
+     * @param <T> The class that represents the object to be compared.
+     */
+    public static class CompareOrUpdateResult<K, T> {
+        public final List<T> added = new ArrayList<>();
+        public final List<T> removed = new ArrayList<>();
+        public final List<T> updated = new ArrayList<>();
+
+        /**
+         * Compares two lists of items.
+         * @param oldItems the old list of items.
+         * @param newItems the new list of items.
+         * @param keyCalculator a {@link Function} that calculates an item's key.
+         */
+        public CompareOrUpdateResult(Collection<T> oldItems, Collection<T> newItems,
+                Function<T, K> keyCalculator) {
+            HashMap<K, T> updateTracker = new HashMap<>();
+
+            for (T oldItem : oldItems) {
+                updateTracker.put(keyCalculator.apply(oldItem), oldItem);
+            }
+
+            for (T newItem : newItems) {
+                T oldItem = updateTracker.remove(keyCalculator.apply(newItem));
+                if (oldItem != null) {
+                    if (!oldItem.equals(newItem)) {
+                        // Update of existing item.
+                        updated.add(newItem);
+                    }
+                } else {
+                    // New item.
+                    added.add(newItem);
+                }
+            }
+
+            removed.addAll(updateTracker.values());
+        }
+
+        @Override
+        public String toString() {
+            return "removed=[" + TextUtils.join(",", removed)
+                    + "] added=[" + TextUtils.join(",", added)
+                    + "] updated=[" + TextUtils.join(",", updated)
                     + "]";
         }
     }
