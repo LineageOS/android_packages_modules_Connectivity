@@ -6,9 +6,12 @@ android_test {
     name: "NetworkStaticLibTests",
     certificate: "platform",
     srcs: ["src/**/*.java","src/**/*.kt"],
+    jarjar_rules: "jarjar-rules.txt",
     test_suites: ["device-tests"],
     static_libs: [
         "androidx.test.rules",
+        "net-utils-framework-common",
+        "net-utils-services-common",
     ],
     libs: [
         "android.test.runner",

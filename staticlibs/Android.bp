@@ -40,6 +40,7 @@ java_library {
         "//frameworks/opt/telephony",
         "//packages/modules/NetworkStack",
         "//packages/modules/CaptivePortalLogin",
+        "//frameworks/libs/net/common/tests:__subpackages__",
     ]
 }
 
@@ -53,6 +54,7 @@ java_library {
         "//frameworks/opt/net/ike",
         "//packages/modules/NetworkStack",
         "//packages/modules/CaptivePortalLogin",
+        "//frameworks/libs/net/common/tests:__subpackages__",
     ],
 }
 
