@@ -16,7 +16,6 @@
 
 package com.android.server.ethernet;
 
-import static android.net.ConnectivityManager.TYPE_ETHERNET;
 import static android.net.shared.LinkPropertiesParcelableUtil.toStableParcelable;
 import static com.android.internal.util.Preconditions.checkNotNull;
 
@@ -29,11 +28,11 @@ import android.net.IpConfiguration.IpAssignment;
 import android.net.IpConfiguration.ProxySettings;
 import android.net.LinkProperties;
 import android.net.NetworkAgent;
+import android.net.NetworkAgentConfig;
 import android.net.NetworkCapabilities;
 import android.net.NetworkFactory;
-import android.net.NetworkInfo;
-import android.net.NetworkInfo.DetailedState;
 import android.net.NetworkRequest;
+import android.net.NetworkScore;
 import android.net.NetworkSpecifier;
 import android.net.StringNetworkSpecifier;
 import android.net.ip.IIpClient;
@@ -52,7 +51,6 @@ import android.util.SparseArray;
 import com.android.internal.util.IndentingPrintWriter;
 
 import java.io.FileDescriptor;
-import java.lang.Math;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.Objects;
 
@@ -68,6 +66,9 @@ public class EthernetNetworkFactory extends NetworkFactory {
 
     private final static int NETWORK_SCORE = 70;
     private static final String NETWORK_TYPE = "Ethernet";
+    private final static NetworkScore NULL_SCORE = new NetworkScore.Builder()
+            .setRange(NetworkScore.RANGE_CLOSE)
+            .build();
 
     private final ConcurrentHashMap<String, NetworkInterfaceState> mTrackingInterfaces =
             new ConcurrentHashMap<>();
@@ -221,12 +222,12 @@ public class EthernetNetworkFactory extends NetworkFactory {
         NetworkInterfaceState network = null;
         if (!TextUtils.isEmpty(requestedIface)) {
             NetworkInterfaceState n = mTrackingInterfaces.get(requestedIface);
-            if (n != null && n.statisified(request.networkCapabilities)) {
+            if (n != null && n.satisfied(request.networkCapabilities)) {
                 network = n;
             }
         } else {
             for (NetworkInterfaceState n : mTrackingInterfaces.values()) {
-                if (n.statisified(request.networkCapabilities) && n.mLinkUp) {
+                if (n.satisfied(request.networkCapabilities) && n.mLinkUp) {
                     network = n;
                     break;
                 }
@@ -247,8 +248,8 @@ public class EthernetNetworkFactory extends NetworkFactory {
         private final NetworkCapabilities mCapabilities;
         private final Handler mHandler;
         private final Context mContext;
-        private final NetworkInfo mNetworkInfo;
         private final NetworkFactory mNetworkFactory;
+        private final int mLegacyType;
 
         private static String sTcpBufferSizes = null;  // Lazy initialized.
 
@@ -375,9 +376,7 @@ public class EthernetNetworkFactory extends NetworkFactory {
             }
 
             mHwAddress = hwAddress;
-            mNetworkInfo = new NetworkInfo(legacyType, 0, NETWORK_TYPE, "");
-            mNetworkInfo.setExtraInfo(mHwAddress);
-            mNetworkInfo.setIsAvailable(true);
+            mLegacyType = legacyType;
         }
 
         void setIpConfig(IpConfiguration ipConfig) {
@@ -386,12 +385,12 @@ public class EthernetNetworkFactory extends NetworkFactory {
                 return;
             }
             this.mIpConfig = ipConfig;
-            if (mNetworkInfo.getDetailedState() != DetailedState.DISCONNECTED) {
+            if (mNetworkAgent != null) {
                 restart();
             }
         }
 
-        boolean statisified(NetworkCapabilities requestedCapabilities) {
+        boolean satisfied(NetworkCapabilities requestedCapabilities) {
             return requestedCapabilities.satisfiedByNetworkCapabilities(mCapabilities);
         }
 
@@ -421,23 +420,23 @@ public class EthernetNetworkFactory extends NetworkFactory {
          * This function is called with the purpose of assigning and updating the network score of
          * the member NetworkAgent.
          */
-        private int getNetworkScore() {
+        private NetworkScore getNetworkScore() {
             // never set the network score below 0.
             if (!mLinkUp) {
-                return 0;
+                return NULL_SCORE;
             }
 
             int[] transportTypes = mCapabilities.getTransportTypes();
             if (transportTypes.length < 1) {
                 Log.w(TAG, "Network interface '" + mLinkProperties.getInterfaceName() + "' has no "
                         + "transport type associated with it. Score set to zero");
-                return 0;
+                return NULL_SCORE;
             }
             TransportInfo transportInfo = sTransports.get(transportTypes[0], /* if dne */ null);
             if (transportInfo != null) {
-                return transportInfo.mScore;
+                return new NetworkScore.Builder().setLegacyScore(transportInfo.mScore).build();
             }
-            return 0;
+            return NULL_SCORE;
         }
 
         private void start() {
@@ -446,11 +445,9 @@ public class EthernetNetworkFactory extends NetworkFactory {
                 return;
             }
             if (DBG) {
-                Log.d(TAG, String.format("starting IpClient(%s): mNetworkInfo=%s", name,
-                        mNetworkInfo));
+                Log.d(TAG, String.format("Starting Ethernet IpClient(%s)", name));
             }
 
-            mNetworkInfo.setDetailedState(DetailedState.OBTAINING_IPADDR, null, mHwAddress);
             mIpClientCallback = new IpClientCallbacksImpl();
             IpClientUtil.makeIpClient(mContext, name, mIpClientCallback);
             mIpClientCallback.awaitIpClientStart();
@@ -468,13 +465,16 @@ public class EthernetNetworkFactory extends NetworkFactory {
                 return;
             }
             mLinkProperties = linkProperties;
-            mNetworkInfo.setDetailedState(DetailedState.CONNECTED, null, mHwAddress);
-            mNetworkInfo.setIsAvailable(true);
 
             // Create our NetworkAgent.
-            mNetworkAgent = new NetworkAgent(mHandler.getLooper(), mContext,
-                    NETWORK_TYPE, mNetworkInfo, mCapabilities, mLinkProperties,
-                    getNetworkScore(), mNetworkFactory.getSerialNumber()) {
+            // STOPSHIP : use the new constructor for NetworkAgent that takes a NetworkScore
+            final NetworkAgentConfig config = new NetworkAgentConfig.Builder()
+                    .setLegacyType(mLegacyType)
+                    .setLegacyTypeName(NETWORK_TYPE)
+                    .build();
+            mNetworkAgent = new NetworkAgent(mContext, mHandler.getLooper(),
+                    NETWORK_TYPE, mCapabilities, mLinkProperties,
+                    getNetworkScore(), config, mNetworkFactory.getProvider()) {
                 public void unwanted() {
                     if (this == mNetworkAgent) {
                         stop();
@@ -484,6 +484,9 @@ public class EthernetNetworkFactory extends NetworkFactory {
                     }  // Otherwise, we've already called stop.
                 }
             };
+            mNetworkAgent.register();
+            mNetworkAgent.setLegacyExtraInfo(mHwAddress);
+            mNetworkAgent.setConnected();
         }
 
         void onIpLayerStopped(LinkProperties linkProperties) {
@@ -526,16 +529,11 @@ public class EthernetNetworkFactory extends NetworkFactory {
             }
             mIpClientCallback = null;
 
-            // ConnectivityService will only forget our NetworkAgent if we send it a NetworkInfo object
-            // with a state of DISCONNECTED or SUSPENDED. So we can't simply clear our NetworkInfo here:
-            // that sets the state to IDLE, and ConnectivityService will still think we're connected.
-            //
-            mNetworkInfo.setDetailedState(DetailedState.DISCONNECTED, null, mHwAddress);
             if (mNetworkAgent != null) {
-                updateAgent();
+                mNetworkAgent.unregister();
                 mNetworkAgent = null;
             }
-            clear();
+            mLinkProperties.clear();
         }
 
         private void updateAgent() {
@@ -543,23 +541,15 @@ public class EthernetNetworkFactory extends NetworkFactory {
             if (DBG) {
                 Log.i(TAG, "Updating mNetworkAgent with: " +
                         mCapabilities + ", " +
-                        mNetworkInfo + ", " +
                         mLinkProperties);
             }
             mNetworkAgent.sendNetworkCapabilities(mCapabilities);
-            mNetworkAgent.sendNetworkInfo(mNetworkInfo);
             mNetworkAgent.sendLinkProperties(mLinkProperties);
 
             // As a note, getNetworkScore() is fairly expensive to calculate. This is fine for now
             // since the agent isn't updated frequently. Consider caching the score in the future if
             // agent updating is required more often
             mNetworkAgent.sendNetworkScore(getNetworkScore());
-        }
-
-        private void clear() {
-            mLinkProperties.clear();
-            mNetworkInfo.setDetailedState(DetailedState.IDLE, null, null);
-            mNetworkInfo.setIsAvailable(false);
         }
 
         private static void provisionIpClient(IIpClient ipClient, IpConfiguration config,
@@ -612,7 +602,6 @@ public class EthernetNetworkFactory extends NetworkFactory {
                     + "iface: " + name + ", "
                     + "up: " + mLinkUp + ", "
                     + "hwAddress: " + mHwAddress + ", "
-                    + "networkInfo: " + mNetworkInfo + ", "
                     + "networkCapabilities: " + mCapabilities + ", "
                     + "networkAgent: " + mNetworkAgent + ", "
                     + "score: " + getNetworkScore() + ", "
