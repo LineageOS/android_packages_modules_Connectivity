@@ -26,7 +26,6 @@
 #define DNS64_DETECTION_HOSTNAME "ipv4only.arpa"
 
 struct clat_config {
-  int16_t mtu, ipv4mtu;
   struct in6_addr ipv6_local_subnet;
   struct in6_addr ipv6_host_id;
   struct in_addr ipv4_local_subnet;

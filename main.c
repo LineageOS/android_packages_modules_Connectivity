@@ -142,7 +142,7 @@ int main(int argc, char **argv) {
   // following line causes XLAT failure in permissive mode.
   unsetenv("ANDROID_DNS_MODE");
 
-  configure_interface(uplink_interface, plat_prefix, v4_addr, v6_addr, &tunnel, net_id);
+  configure_interface(uplink_interface, plat_prefix, v4_addr, v6_addr, &tunnel, net_id, mark);
 
   // Drop all remaining capabilities.
   set_capability(0);
