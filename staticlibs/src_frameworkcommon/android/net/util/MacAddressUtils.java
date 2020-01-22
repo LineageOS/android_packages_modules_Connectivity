@@ -103,7 +103,7 @@ public final class MacAddressUtils {
         }
         long longAddr = 0;
         for (byte b : addr) {
-            final int uint8Byte = b & 255;
+            final int uint8Byte = b & 0xff;
             longAddr = (longAddr << 8) + uint8Byte;
         }
         return longAddr;
