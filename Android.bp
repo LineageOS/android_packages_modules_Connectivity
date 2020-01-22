@@ -30,7 +30,6 @@ filegroup {
         "ipv4.c",
         "ipv6.c",
         "logging.c",
-        "mtu.c",
         "netlink_callbacks.c",
         "netlink_msg.c",
         "ring.c",
