@@ -19,6 +19,7 @@ package com.android.server.ethernet;
 import android.annotation.Nullable;
 import android.content.Context;
 import android.net.IEthernetServiceListener;
+import android.net.ITetheredInterfaceCallback;
 import android.net.InterfaceConfiguration;
 import android.net.IpConfiguration;
 import android.net.IpConfiguration.IpAssignment;
@@ -61,6 +62,9 @@ import java.util.concurrent.ConcurrentHashMap;
  * <p>All public or package private methods must be thread-safe unless stated otherwise.
  */
 final class EthernetTracker {
+    private static final int INTERFACE_MODE_CLIENT = 1;
+    private static final int INTERFACE_MODE_SERVER = 2;
+
     private final static String TAG = EthernetTracker.class.getSimpleName();
     private final static boolean DBG = EthernetNetworkFactory.DBG;
 
@@ -73,6 +77,7 @@ final class EthernetTracker {
     private final ConcurrentHashMap<String, IpConfiguration> mIpConfigurations =
             new ConcurrentHashMap<>();
 
+    private final Context mContext;
     private final INetworkManagementService mNMService;
     private final Handler mHandler;
     private final EthernetNetworkFactory mFactory;
@@ -80,10 +85,25 @@ final class EthernetTracker {
 
     private final RemoteCallbackList<IEthernetServiceListener> mListeners =
             new RemoteCallbackList<>();
+    private final TetheredInterfaceRequestList mTetheredInterfaceRequests =
+            new TetheredInterfaceRequestList();
 
+    // Used only on the handler thread
+    private String mDefaultInterface;
+    private int mDefaultInterfaceMode;
+    // Tracks whether clients were notified that the tethered interface is available
+    private boolean mTetheredInterfaceWasAvailable = false;
     private volatile IpConfiguration mIpConfigForDefaultInterface;
 
+    private class TetheredInterfaceRequestList extends RemoteCallbackList<ITetheredInterfaceCallback> {
+        @Override
+        public void onCallbackDied(ITetheredInterfaceCallback cb, Object cookie) {
+            mHandler.post(EthernetTracker.this::maybeUntetherDefaultInterface);
+        }
+    }
+
     EthernetTracker(Context context, Handler handler) {
+        mContext = context;
         mHandler = handler;
 
         // The services we use.
@@ -167,6 +187,68 @@ final class EthernetTracker {
         mListeners.unregister(listener);
     }
 
+    public void requestTetheredInterface(ITetheredInterfaceCallback callback) {
+        mHandler.post(() -> {
+            if (!mTetheredInterfaceRequests.register(callback)) {
+                // Remote process has already died
+                return;
+            }
+            if (mDefaultInterfaceMode == INTERFACE_MODE_SERVER) {
+                if (mTetheredInterfaceWasAvailable) {
+                    notifyTetheredInterfaceAvailable(callback, mDefaultInterface);
+                }
+                return;
+            }
+
+            setDefaultInterfaceMode(INTERFACE_MODE_SERVER);
+        });
+    }
+
+    public void releaseTetheredInterface(ITetheredInterfaceCallback callback) {
+        mHandler.post(() -> {
+            mTetheredInterfaceRequests.unregister(callback);
+            maybeUntetherDefaultInterface();
+        });
+    }
+
+    private void notifyTetheredInterfaceAvailable(ITetheredInterfaceCallback cb, String iface) {
+        try {
+            cb.onAvailable(iface);
+        } catch (RemoteException e) {
+            Log.e(TAG, "Error sending tethered interface available callback", e);
+        }
+    }
+
+    private void notifyTetheredInterfaceUnavailable(ITetheredInterfaceCallback cb) {
+        try {
+            cb.onUnavailable();
+        } catch (RemoteException e) {
+            Log.e(TAG, "Error sending tethered interface available callback", e);
+        }
+    }
+
+    private void maybeUntetherDefaultInterface() {
+        if (mTetheredInterfaceRequests.getRegisteredCallbackCount() > 0) return;
+        // mDefaultInterface null means that there never was a default interface (it is never set
+        // to null).
+        if (mDefaultInterfaceMode == INTERFACE_MODE_CLIENT || mDefaultInterface == null) return;
+
+        setDefaultInterfaceMode(INTERFACE_MODE_CLIENT);
+    }
+
+    private void setDefaultInterfaceMode(int mode) {
+        mDefaultInterfaceMode = mode;
+        removeInterface(mDefaultInterface);
+        addInterface(mDefaultInterface);
+    }
+
+    private int getInterfaceMode(final String iface) {
+        if (iface.equals(mDefaultInterface)) {
+            return mDefaultInterfaceMode;
+        }
+        return INTERFACE_MODE_CLIENT;
+    }
+
     private void removeInterface(String iface) {
         mFactory.removeInterface(iface);
     }
@@ -198,13 +280,17 @@ final class EthernetTracker {
                 nc = createDefaultNetworkCapabilities();
             }
         }
-        IpConfiguration ipConfiguration = mIpConfigurations.get(iface);
-        if (ipConfiguration == null) {
-            ipConfiguration = createDefaultIpConfiguration();
-        }
 
-        Log.d(TAG, "Started tracking interface " + iface);
-        mFactory.addInterface(iface, hwAddress, nc, ipConfiguration);
+        final int mode = getInterfaceMode(iface);
+        if (mode == INTERFACE_MODE_CLIENT) {
+            IpConfiguration ipConfiguration = mIpConfigurations.get(iface);
+            if (ipConfiguration == null) {
+                ipConfiguration = createDefaultIpConfiguration();
+            }
+
+            Log.d(TAG, "Started tracking interface " + iface);
+            mFactory.addInterface(iface, hwAddress, nc, ipConfiguration);
+        }
 
         // Note: if the interface already has link (e.g., if we crashed and got
         // restarted while it was running), we need to fake a link up notification so we
@@ -215,8 +301,11 @@ final class EthernetTracker {
     }
 
     private void updateInterfaceState(String iface, boolean up) {
-        boolean modified = mFactory.updateInterfaceLinkState(iface, up);
-        if (modified) {
+        final int mode = getInterfaceMode(iface);
+        final boolean factoryLinkStateUpdated = (mode == INTERFACE_MODE_CLIENT)
+                && mFactory.updateInterfaceLinkState(iface, up);
+
+        if (factoryLinkStateUpdated) {
             boolean restricted = isRestrictedInterface(iface);
             int n = mListeners.beginBroadcast();
             for (int i = 0; i < n; i++) {
@@ -234,6 +323,25 @@ final class EthernetTracker {
             }
             mListeners.finishBroadcast();
         }
+
+        updateServerModeInterfaceState(iface, up, mode);
+    }
+
+    private void updateServerModeInterfaceState(String iface, boolean up, int mode) {
+        final boolean available = up && (mode == INTERFACE_MODE_SERVER);
+        if (available == mTetheredInterfaceWasAvailable || !iface.equals(mDefaultInterface)) return;
+
+        final int pendingCbs = mTetheredInterfaceRequests.beginBroadcast();
+        for (int i = 0; i < pendingCbs; i++) {
+            ITetheredInterfaceCallback item = mTetheredInterfaceRequests.getBroadcastItem(i);
+            if (available) {
+                notifyTetheredInterfaceAvailable(item, iface);
+            } else {
+                notifyTetheredInterfaceUnavailable(item);
+            }
+        }
+        mTetheredInterfaceRequests.finishBroadcast();
+        mTetheredInterfaceWasAvailable = available;
     }
 
     private void maybeTrackInterface(String iface) {
@@ -242,6 +350,11 @@ final class EthernetTracker {
         // our regex, start tracking it.
         if (!iface.matches(mIfaceMatch) || mFactory.hasInterface(iface)) {
             return;
+        }
+
+        // TODO: avoid making an interface default if it has configured NetworkCapabilities.
+        if (mDefaultInterface == null) {
+            mDefaultInterface = iface;
         }
 
         if (mIpConfigForDefaultInterface != null) {
@@ -467,6 +580,8 @@ final class EthernetTracker {
         postAndWaitForRunnable(() -> {
             pw.println(getClass().getSimpleName());
             pw.println("Ethernet interface name filter: " + mIfaceMatch);
+            pw.println("Default interface: " + mDefaultInterface);
+            pw.println("Default interface mode: " + mDefaultInterfaceMode);
             pw.println("Listeners: " + mListeners.getRegisteredCallbackCount());
             pw.println("IP Configurations:");
             pw.increaseIndent();
