@@ -229,7 +229,7 @@ public final class LinkPropertiesUtilsTest {
         CompareOrUpdateResult<String, String> result =
                 new CompareOrUpdateResult<String, String>(oldItems, emptyList, extractPrefix);
         assertCompareOrUpdateResult(result,
-                emptyList,  strArray("hello123", "howareyou669", "goodbye5678"), emptyList);
+                emptyList, strArray("hello123", "howareyou669", "goodbye5678"), emptyList);
 
         // Empty -> items: everything added.
         result = new CompareOrUpdateResult<String, String>(emptyList, newItems, extractPrefix);
@@ -244,5 +244,15 @@ public final class LinkPropertiesUtilsTest {
         result =  new CompareOrUpdateResult<>(oldItems, newItems, extractPrefix);
         assertCompareOrUpdateResult(result,
                 strArray("verywell"), strArray("howareyou669"), strArray("goodbye000"));
+
+        // Null -> items: everything added.
+        result = new CompareOrUpdateResult<String, String>(null, newItems, extractPrefix);
+        assertCompareOrUpdateResult(result,
+                strArray("hello123", "goodbye000", "verywell"), emptyList,  emptyList);
+
+        // Items -> null: everything removed.
+        result = new CompareOrUpdateResult<String, String>(oldItems, null, extractPrefix);
+        assertCompareOrUpdateResult(result,
+                emptyList, strArray("hello123", "howareyou669", "goodbye5678"), emptyList);
     }
 }
