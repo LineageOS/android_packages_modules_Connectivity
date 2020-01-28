@@ -20,12 +20,14 @@ import android.content.Context;
 import android.content.pm.PackageManager;
 import android.net.IEthernetManager;
 import android.net.IEthernetServiceListener;
+import android.net.ITetheredInterfaceCallback;
 import android.net.IpConfiguration;
 import android.net.NetworkStack;
 import android.os.Binder;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.RemoteException;
+import android.provider.Settings;
 import android.util.Log;
 import android.util.PrintWriterPrinter;
 
@@ -159,6 +161,18 @@ public class EthernetServiceImpl extends IEthernetManager.Stub {
         }
         enforceAccessPermission();
         mTracker.removeListener(listener);
+    }
+
+    @Override
+    public void requestTetheredInterface(ITetheredInterfaceCallback callback) {
+        NetworkStack.checkNetworkStackPermission(mContext);
+        mTracker.requestTetheredInterface(callback);
+    }
+
+    @Override
+    public void releaseTetheredInterface(ITetheredInterfaceCallback callback) {
+        NetworkStack.checkNetworkStackPermission(mContext);
+        mTracker.releaseTetheredInterface(callback);
     }
 
     @Override
