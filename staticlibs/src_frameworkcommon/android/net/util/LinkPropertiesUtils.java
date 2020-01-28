@@ -91,23 +91,26 @@ public final class LinkPropertiesUtils {
                 Function<T, K> keyCalculator) {
             HashMap<K, T> updateTracker = new HashMap<>();
 
-            for (T oldItem : oldItems) {
-                updateTracker.put(keyCalculator.apply(oldItem), oldItem);
-            }
-
-            for (T newItem : newItems) {
-                T oldItem = updateTracker.remove(keyCalculator.apply(newItem));
-                if (oldItem != null) {
-                    if (!oldItem.equals(newItem)) {
-                        // Update of existing item.
-                        updated.add(newItem);
-                    }
-                } else {
-                    // New item.
-                    added.add(newItem);
+            if (oldItems != null) {
+                for (T oldItem : oldItems) {
+                    updateTracker.put(keyCalculator.apply(oldItem), oldItem);
                 }
             }
 
+            if (newItems != null) {
+                for (T newItem : newItems) {
+                    T oldItem = updateTracker.remove(keyCalculator.apply(newItem));
+                    if (oldItem != null) {
+                        if (!oldItem.equals(newItem)) {
+                            // Update of existing item.
+                            updated.add(newItem);
+                        }
+                    } else {
+                        // New item.
+                        added.add(newItem);
+                    }
+                }
+            }
             removed.addAll(updateTracker.values());
         }
 
