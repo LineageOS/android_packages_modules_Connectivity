@@ -254,5 +254,9 @@ public final class LinkPropertiesUtilsTest {
         result = new CompareOrUpdateResult<String, String>(oldItems, null, extractPrefix);
         assertCompareOrUpdateResult(result,
                 emptyList, strArray("hello123", "howareyou669", "goodbye5678"), emptyList);
+
+        // Null -> null: all lists empty.
+        result = new CompareOrUpdateResult<String, String>(null, null, extractPrefix);
+        assertCompareOrUpdateResult(result, emptyList, emptyList, emptyList);
     }
 }

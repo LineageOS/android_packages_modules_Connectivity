@@ -111,6 +111,7 @@ public final class LinkPropertiesUtils {
                     }
                 }
             }
+
             removed.addAll(updateTracker.values());
         }
 
