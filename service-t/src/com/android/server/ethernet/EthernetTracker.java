@@ -90,7 +90,7 @@ final class EthernetTracker {
 
     // Used only on the handler thread
     private String mDefaultInterface;
-    private int mDefaultInterfaceMode;
+    private int mDefaultInterfaceMode = INTERFACE_MODE_CLIENT;
     // Tracks whether clients were notified that the tethered interface is available
     private boolean mTetheredInterfaceWasAvailable = false;
     private volatile IpConfiguration mIpConfigForDefaultInterface;
