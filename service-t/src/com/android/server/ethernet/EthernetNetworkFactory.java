@@ -32,7 +32,6 @@ import android.net.NetworkAgentConfig;
 import android.net.NetworkCapabilities;
 import android.net.NetworkFactory;
 import android.net.NetworkRequest;
-import android.net.NetworkScore;
 import android.net.NetworkSpecifier;
 import android.net.StringNetworkSpecifier;
 import android.net.ip.IIpClient;
@@ -66,9 +65,6 @@ public class EthernetNetworkFactory extends NetworkFactory {
 
     private final static int NETWORK_SCORE = 70;
     private static final String NETWORK_TYPE = "Ethernet";
-    private final static NetworkScore NULL_SCORE = new NetworkScore.Builder()
-            .setRange(NetworkScore.RANGE_CLOSE)
-            .build();
 
     private final ConcurrentHashMap<String, NetworkInterfaceState> mTrackingInterfaces =
             new ConcurrentHashMap<>();
@@ -420,23 +416,23 @@ public class EthernetNetworkFactory extends NetworkFactory {
          * This function is called with the purpose of assigning and updating the network score of
          * the member NetworkAgent.
          */
-        private NetworkScore getNetworkScore() {
+        private int getNetworkScore() {
             // never set the network score below 0.
             if (!mLinkUp) {
-                return NULL_SCORE;
+                return 0;
             }
 
             int[] transportTypes = mCapabilities.getTransportTypes();
             if (transportTypes.length < 1) {
                 Log.w(TAG, "Network interface '" + mLinkProperties.getInterfaceName() + "' has no "
                         + "transport type associated with it. Score set to zero");
-                return NULL_SCORE;
+                return 0;
             }
             TransportInfo transportInfo = sTransports.get(transportTypes[0], /* if dne */ null);
             if (transportInfo != null) {
-                return new NetworkScore.Builder().setLegacyScore(transportInfo.mScore).build();
+                return transportInfo.mScore;
             }
-            return NULL_SCORE;
+            return 0;
         }
 
         private void start() {
@@ -467,7 +463,6 @@ public class EthernetNetworkFactory extends NetworkFactory {
             mLinkProperties = linkProperties;
 
             // Create our NetworkAgent.
-            // STOPSHIP : use the new constructor for NetworkAgent that takes a NetworkScore
             final NetworkAgentConfig config = new NetworkAgentConfig.Builder()
                     .setLegacyType(mLegacyType)
                     .setLegacyTypeName(NETWORK_TYPE)
