@@ -240,17 +240,17 @@ final class EthernetTracker {
 
     private void maybeUntetherDefaultInterface() {
         if (mTetheredInterfaceRequests.getRegisteredCallbackCount() > 0) return;
-        // mDefaultInterface null means that there never was a default interface (it is never set
-        // to null).
-        if (mDefaultInterfaceMode == INTERFACE_MODE_CLIENT || mDefaultInterface == null) return;
-
+        if (mDefaultInterfaceMode == INTERFACE_MODE_CLIENT) return;
         setDefaultInterfaceMode(INTERFACE_MODE_CLIENT);
     }
 
     private void setDefaultInterfaceMode(int mode) {
+        Log.d(TAG, "Setting default interface mode to " + mode);
         mDefaultInterfaceMode = mode;
-        removeInterface(mDefaultInterface);
-        addInterface(mDefaultInterface);
+        if (mDefaultInterface != null) {
+            removeInterface(mDefaultInterface);
+            addInterface(mDefaultInterface);
+        }
     }
 
     private int getInterfaceMode(final String iface) {
@@ -262,6 +262,13 @@ final class EthernetTracker {
 
     private void removeInterface(String iface) {
         mFactory.removeInterface(iface);
+    }
+
+    private void stopTrackingInterface(String iface) {
+        removeInterface(iface);
+        if (iface.equals(mDefaultInterface)) {
+            mDefaultInterface = null;
+        }
     }
 
     private void addInterface(String iface) {
@@ -406,7 +413,7 @@ final class EthernetTracker {
 
         @Override
         public void interfaceRemoved(String iface) {
-            mHandler.post(() -> removeInterface(iface));
+            mHandler.post(() -> stopTrackingInterface(iface));
         }
     }
 
@@ -585,7 +592,6 @@ final class EthernetTracker {
     }
 
     private void updateIfaceMatchRegexp() {
-        final String testInterfaceMatch = TEST_TAP_PREFIX + ".*";
         final String match = mContext.getResources().getString(
                 com.android.internal.R.string.config_ethernet_iface_regex);
         mIfaceMatch = mIncludeTestInterfaces
@@ -604,6 +610,8 @@ final class EthernetTracker {
             pw.println("Ethernet interface name filter: " + mIfaceMatch);
             pw.println("Default interface: " + mDefaultInterface);
             pw.println("Default interface mode: " + mDefaultInterfaceMode);
+            pw.println("Tethered interface requests: "
+                    + mTetheredInterfaceRequests.getRegisteredCallbackCount());
             pw.println("Listeners: " + mListeners.getRegisteredCallbackCount());
             pw.println("IP Configurations:");
             pw.increaseIndent();
