@@ -16,6 +16,8 @@
 
 package com.android.server.ethernet;
 
+import static android.net.TestNetworkManager.TEST_TAP_PREFIX;
+
 import android.annotation.Nullable;
 import android.content.Context;
 import android.net.IEthernetServiceListener;
@@ -68,8 +70,12 @@ final class EthernetTracker {
     private final static String TAG = EthernetTracker.class.getSimpleName();
     private final static boolean DBG = EthernetNetworkFactory.DBG;
 
-    /** Product-dependent regular expression of interface names we track. */
-    private final String mIfaceMatch;
+    /**
+     * Interface names we track. This is a product-dependent regular expression, plus,
+     * if setIncludeTestInterfaces is true, any test interfaces.
+     */
+    private String mIfaceMatch;
+    private boolean mIncludeTestInterfaces = false;
 
     /** Mapping between {iface name | mac address} -> {NetworkCapabilities} */
     private final ConcurrentHashMap<String, NetworkCapabilities> mNetworkCapabilities =
@@ -111,8 +117,7 @@ final class EthernetTracker {
         mNMService = INetworkManagementService.Stub.asInterface(b);
 
         // Interface match regex.
-        mIfaceMatch = context.getResources().getString(
-                com.android.internal.R.string.config_ethernet_iface_regex);
+        updateIfaceMatchRegexp();
 
         // Read default Ethernet interface configuration from resources
         final String[] interfaceConfigs = context.getResources().getStringArray(
@@ -185,6 +190,12 @@ final class EthernetTracker {
 
     void removeListener(IEthernetServiceListener listener) {
         mListeners.unregister(listener);
+    }
+
+    public void setIncludeTestInterfaces(boolean include) {
+        mIncludeTestInterfaces = include;
+        updateIfaceMatchRegexp();
+        trackAvailableInterfaces();
     }
 
     public void requestTetheredInterface(ITetheredInterfaceCallback callback) {
@@ -348,7 +359,8 @@ final class EthernetTracker {
         if (DBG) Log.i(TAG, "maybeTrackInterface " + iface);
         // If we don't already track this interface, and if this interface matches
         // our regex, start tracking it.
-        if (!iface.matches(mIfaceMatch) || mFactory.hasInterface(iface)) {
+        if (!iface.matches(mIfaceMatch) || mFactory.hasInterface(iface)
+                || iface.equals(mDefaultInterface)) {
             return;
         }
 
@@ -570,6 +582,16 @@ final class EthernetTracker {
 
     private static IpConfiguration createDefaultIpConfiguration() {
         return new IpConfiguration(IpAssignment.DHCP, ProxySettings.NONE, null, null);
+    }
+
+    private void updateIfaceMatchRegexp() {
+        final String testInterfaceMatch = TEST_TAP_PREFIX + ".*";
+        final String match = mContext.getResources().getString(
+                com.android.internal.R.string.config_ethernet_iface_regex);
+        mIfaceMatch = mIncludeTestInterfaces
+                ? "(" + match + "|" + TEST_TAP_PREFIX + "\\d+)"
+                : match;
+        Log.d(TAG, "Interface match regexp set to '" + mIfaceMatch + "'");
     }
 
     private void postAndWaitForRunnable(Runnable r) {

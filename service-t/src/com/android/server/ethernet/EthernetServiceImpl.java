@@ -164,14 +164,23 @@ public class EthernetServiceImpl extends IEthernetManager.Stub {
     }
 
     @Override
+    public void setIncludeTestInterfaces(boolean include) {
+        NetworkStack.checkNetworkStackPermissionOr(mContext,
+                android.Manifest.permission.NETWORK_SETTINGS);
+        mTracker.setIncludeTestInterfaces(include);
+    }
+
+    @Override
     public void requestTetheredInterface(ITetheredInterfaceCallback callback) {
-        NetworkStack.checkNetworkStackPermission(mContext);
+        NetworkStack.checkNetworkStackPermissionOr(mContext,
+                android.Manifest.permission.NETWORK_SETTINGS);
         mTracker.requestTetheredInterface(callback);
     }
 
     @Override
     public void releaseTetheredInterface(ITetheredInterfaceCallback callback) {
-        NetworkStack.checkNetworkStackPermission(mContext);
+        NetworkStack.checkNetworkStackPermissionOr(mContext,
+                android.Manifest.permission.NETWORK_SETTINGS);
         mTracker.releaseTetheredInterface(callback);
     }
 
