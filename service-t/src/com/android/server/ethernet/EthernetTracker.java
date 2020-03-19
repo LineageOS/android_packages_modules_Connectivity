@@ -262,6 +262,7 @@ final class EthernetTracker {
 
     private void removeInterface(String iface) {
         mFactory.removeInterface(iface);
+        maybeUpdateServerModeInterfaceState(iface, false);
     }
 
     private void stopTrackingInterface(String iface) {
@@ -308,6 +309,8 @@ final class EthernetTracker {
 
             Log.d(TAG, "Started tracking interface " + iface);
             mFactory.addInterface(iface, hwAddress, nc, ipConfiguration);
+        } else {
+            maybeUpdateServerModeInterfaceState(iface, true);
         }
 
         // Note: if the interface already has link (e.g., if we crashed and got
@@ -341,12 +344,9 @@ final class EthernetTracker {
             }
             mListeners.finishBroadcast();
         }
-
-        updateServerModeInterfaceState(iface, up, mode);
     }
 
-    private void updateServerModeInterfaceState(String iface, boolean up, int mode) {
-        final boolean available = up && (mode == INTERFACE_MODE_SERVER);
+    private void maybeUpdateServerModeInterfaceState(String iface, boolean available) {
         if (available == mTetheredInterfaceWasAvailable || !iface.equals(mDefaultInterface)) return;
 
         final int pendingCbs = mTetheredInterfaceRequests.beginBroadcast();
