@@ -33,6 +33,7 @@ import java.util.function.Function;
 
 /**
  * Collection of link properties utilities.
+ * @hide
  */
 public final class LinkPropertiesUtils {
 
