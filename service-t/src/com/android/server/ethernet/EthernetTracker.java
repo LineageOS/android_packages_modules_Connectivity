@@ -193,9 +193,11 @@ final class EthernetTracker {
     }
 
     public void setIncludeTestInterfaces(boolean include) {
-        mIncludeTestInterfaces = include;
-        updateIfaceMatchRegexp();
-        trackAvailableInterfaces();
+        mHandler.post(() -> {
+            mIncludeTestInterfaces = include;
+            updateIfaceMatchRegexp();
+            mHandler.post(() -> trackAvailableInterfaces());
+        });
     }
 
     public void requestTetheredInterface(ITetheredInterfaceCallback callback) {
@@ -307,7 +309,7 @@ final class EthernetTracker {
                 ipConfiguration = createDefaultIpConfiguration();
             }
 
-            Log.d(TAG, "Started tracking interface " + iface);
+            Log.d(TAG, "Tracking interface in client mode: " + iface);
             mFactory.addInterface(iface, hwAddress, nc, ipConfiguration);
         } else {
             maybeUpdateServerModeInterfaceState(iface, true);
@@ -349,6 +351,9 @@ final class EthernetTracker {
     private void maybeUpdateServerModeInterfaceState(String iface, boolean available) {
         if (available == mTetheredInterfaceWasAvailable || !iface.equals(mDefaultInterface)) return;
 
+        Log.d(TAG, (available ? "Tracking" : "No longer tracking")
+                + " interface in server mode: " + iface);
+
         final int pendingCbs = mTetheredInterfaceRequests.beginBroadcast();
         for (int i = 0; i < pendingCbs; i++) {
             ITetheredInterfaceCallback item = mTetheredInterfaceRequests.getBroadcastItem(i);
@@ -363,13 +368,17 @@ final class EthernetTracker {
     }
 
     private void maybeTrackInterface(String iface) {
-        if (DBG) Log.i(TAG, "maybeTrackInterface " + iface);
-        // If we don't already track this interface, and if this interface matches
-        // our regex, start tracking it.
-        if (!iface.matches(mIfaceMatch) || mFactory.hasInterface(iface)
-                || iface.equals(mDefaultInterface)) {
+        if (!iface.matches(mIfaceMatch)) {
             return;
         }
+
+        // If we don't already track this interface, and if this interface matches
+        // our regex, start tracking it.
+        if (mFactory.hasInterface(iface) || iface.equals(mDefaultInterface)) {
+            if (DBG) Log.w(TAG, "Ignoring already-tracked interface " + iface);
+            return;
+        }
+        if (DBG) Log.i(TAG, "maybeTrackInterface: " + iface);
 
         // TODO: avoid making an interface default if it has configured NetworkCapabilities.
         if (mDefaultInterface == null) {
