@@ -391,7 +391,7 @@ public class EthernetNetworkFactory extends NetworkFactory {
         }
 
         boolean isRestricted() {
-            return mCapabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_RESTRICTED);
+            return !mCapabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_RESTRICTED);
         }
 
         /**
