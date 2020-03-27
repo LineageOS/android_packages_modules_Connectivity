@@ -481,7 +481,7 @@ public class EthernetNetworkFactory extends NetworkFactory {
             };
             mNetworkAgent.register();
             mNetworkAgent.setLegacyExtraInfo(mHwAddress);
-            mNetworkAgent.setConnected();
+            mNetworkAgent.markConnected();
         }
 
         void onIpLayerStopped(LinkProperties linkProperties) {
