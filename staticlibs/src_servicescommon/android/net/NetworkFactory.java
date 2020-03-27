@@ -319,7 +319,7 @@ public class NetworkFactory extends Handler {
             && (n.score < mScore || n.providerId == mProvider.getProviderId())
             // If this factory can't satisfy the capability needs of this request, then it
             // should not be tracked.
-            && n.request.satisfiedBy(mCapabilityFilter)
+            && n.request.canBeSatisfiedBy(mCapabilityFilter)
             // Finally if the concrete implementation of the factory rejects the request, then
             // don't track it.
             && acceptRequest(n.request, n.score);
@@ -335,7 +335,7 @@ public class NetworkFactory extends Handler {
             // - This factory can't satisfy the capability needs of the request
             // - The concrete implementation of the factory rejects the request
             && ((n.score > mScore && n.providerId != mProvider.getProviderId())
-                    || !n.request.satisfiedBy(mCapabilityFilter)
+                    || !n.request.canBeSatisfiedBy(mCapabilityFilter)
                     || !acceptRequest(n.request, n.score));
     }
 
