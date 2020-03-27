@@ -132,7 +132,7 @@ public class NetworkFactory extends Handler {
             }
 
             @Override
-            public void onRequestWithdrawn(@NonNull NetworkRequest request) {
+            public void onNetworkRequestWithdrawn(@NonNull NetworkRequest request) {
                 handleRemoveRequest(request);
             }
         };
