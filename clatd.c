@@ -237,10 +237,6 @@ void open_sockets(struct tun_data *tunnel, uint32_t mark) {
     exit(1);
   }
 
-  int off = 0;
-  if (setsockopt(rawsock, SOL_IPV6, IPV6_CHECKSUM, &off, sizeof(off)) < 0) {
-    logmsg(ANDROID_LOG_WARN, "could not disable checksum on raw socket: %s", strerror(errno));
-  }
   if (mark != MARK_UNSET && setsockopt(rawsock, SOL_SOCKET, SO_MARK, &mark, sizeof(mark)) < 0) {
     logmsg(ANDROID_LOG_ERROR, "could not set mark on raw socket: %s", strerror(errno));
   }
