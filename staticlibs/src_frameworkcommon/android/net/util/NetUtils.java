@@ -27,6 +27,7 @@ import java.util.Collection;
 
 /**
  * Collection of network common utilities.
+ * @hide
  */
 public final class NetUtils {
 

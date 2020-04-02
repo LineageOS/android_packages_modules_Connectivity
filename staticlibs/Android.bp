@@ -23,9 +23,14 @@
 //    rules file. Otherwise, it will end up on the boot classpath and other modules will not be able
 //    to provide their own copy.
 
+// Note: all filegroups here must have the right path attribute because otherwise, if they are
+// included in the bootclasspath, they could incorrectly be included in the SDK documentation even
+// though they are not in the current.txt files.
+
 filegroup {
     name: "net-utils-framework-common-srcs",
     srcs: ["src_frameworkcommon/**/*.java"],
+    path: "src_frameworkcommon",
     visibility: ["//frameworks/base"],
 }
 
@@ -74,6 +79,7 @@ filegroup {
         // Any class here *must* have a corresponding jarjar rule in the telephony build rules.
         "src_servicescommon/android/net/NetworkFactory.java",
     ],
+    path: "src_servicescommon",
     visibility: [
         "//frameworks/opt/telephony",
     ],
@@ -88,6 +94,7 @@ filegroup {
         "src_frameworkcommon/android/net/util/nsd/DnsSdTxtRecord.java",
         "src_frameworkcommon/android/net/util/MacAddressUtils.java",
     ],
+    path: "src_frameworkcommon",
     visibility: [
         "//frameworks/base",
     ],

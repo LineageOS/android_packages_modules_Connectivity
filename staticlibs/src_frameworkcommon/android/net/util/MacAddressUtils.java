@@ -27,6 +27,7 @@ import java.util.Random;
 
 /**
  * Collection of MAC address utilities.
+ * @hide
  */
 public final class MacAddressUtils {
 
