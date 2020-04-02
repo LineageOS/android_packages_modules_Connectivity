@@ -39,6 +39,8 @@ import java.util.Queue;
  *
  * <p>Conversion to prefixes are deterministic, and will always return the same set of {@link
  * IpPrefix}(es). Ordering of IpPrefix instances is not guaranteed.
+ *
+ * @hide
  */
 public final class IpRange {
     private static final int SIGNUM_POSITIVE = 1;
