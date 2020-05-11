@@ -464,6 +464,7 @@ final class EthernetTracker {
         nc.addCapability(NetworkCapabilities.NET_CAPABILITY_NOT_METERED);
         nc.addCapability(NetworkCapabilities.NET_CAPABILITY_NOT_ROAMING);
         nc.addCapability(NetworkCapabilities.NET_CAPABILITY_NOT_CONGESTED);
+        nc.addCapability(NetworkCapabilities.NET_CAPABILITY_NOT_SUSPENDED);
 
         return nc;
     }
@@ -542,6 +543,11 @@ final class EthernetTracker {
                 }
             }
         }
+        // Ethernet networks have no way to update the following capabilities, so they always
+        // have them.
+        nc.addCapability(NetworkCapabilities.NET_CAPABILITY_NOT_ROAMING);
+        nc.addCapability(NetworkCapabilities.NET_CAPABILITY_NOT_CONGESTED);
+        nc.addCapability(NetworkCapabilities.NET_CAPABILITY_NOT_SUSPENDED);
 
         return nc;
     }
