@@ -21,14 +21,12 @@ import android.content.Context;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.Message;
-import android.os.Messenger;
 import android.util.Log;
 
 import com.android.internal.annotations.VisibleForTesting;
 
 import java.io.FileDescriptor;
 import java.io.PrintWriter;
-import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -96,7 +94,6 @@ public class NetworkFactory extends Handler {
     private static final int CMD_SET_FILTER = 4;
 
     private final Context mContext;
-    private final ArrayList<Message> mPreConnectedQueue = new ArrayList<Message>();
     private final String LOG_TAG;
 
     private final Map<NetworkRequest, NetworkRequestInfo> mNetworkRequests =
@@ -106,7 +103,6 @@ public class NetworkFactory extends Handler {
     private NetworkCapabilities mCapabilityFilter;
 
     private int mRefCount = 0;
-    private Messenger mMessenger = null;
     private NetworkProvider mProvider = null;
 
     public NetworkFactory(Looper looper, Context context, String logTag,
@@ -128,7 +124,7 @@ public class NetworkFactory extends Handler {
             @Override
             public void onNetworkRequested(@NonNull NetworkRequest request, int score,
                     int servingProviderId) {
-                handleAddRequest((NetworkRequest) request, score, servingProviderId);
+                handleAddRequest(request, score, servingProviderId);
             }
 
             @Override
@@ -137,7 +133,6 @@ public class NetworkFactory extends Handler {
             }
         };
 
-        mMessenger = new Messenger(this);
         ((ConnectivityManager) mContext.getSystemService(
             Context.CONNECTIVITY_SERVICE)).registerNetworkProvider(mProvider);
     }
@@ -179,7 +174,7 @@ public class NetworkFactory extends Handler {
         }
     }
 
-    private class NetworkRequestInfo {
+    private static class NetworkRequestInfo {
         public final NetworkRequest request;
         public int score;
         public boolean requested; // do we have a request outstanding, limited by score
@@ -196,22 +191,6 @@ public class NetworkFactory extends Handler {
         public String toString() {
             return "{" + request + ", score=" + score + ", requested=" + requested + "}";
         }
-    }
-
-    /**
-     * Add a NetworkRequest that the bearer may want to attempt to satisfy.
-     * @see #CMD_REQUEST_NETWORK
-     *
-     * @param request the request to handle.
-     * @param score the score of the NetworkAgent currently satisfying this request.
-     */
-    // TODO : remove this method. It is a stopgap measure to help sheperding a number
-    // of dependent changes that would conflict throughout the automerger graph. Having this
-    // temporarily helps with the process of going through with all these dependent changes across
-    // the entire tree.
-    @VisibleForTesting
-    protected void handleAddRequest(NetworkRequest request, int score) {
-        handleAddRequest(request, score, NetworkProvider.ID_NONE);
     }
 
     /**
@@ -350,9 +329,7 @@ public class NetworkFactory extends Handler {
      * outstanding requests. Can be called from a factory implementation.
      */
     protected void reevaluateAllRequests() {
-        post(() -> {
-            evalRequests();
-        });
+        post(this::evalRequests);
     }
 
     /**
@@ -424,11 +401,10 @@ public class NetworkFactory extends Handler {
 
     @Override
     public String toString() {
-        StringBuilder sb = new StringBuilder("{").append(LOG_TAG).append(" - providerId=")
-                .append(mProvider.getProviderId()).append(", ScoreFilter=")
-                .append(mScore).append(", Filter=").append(mCapabilityFilter).append(", requests=")
-                .append(mNetworkRequests.size()).append(", refCount=").append(mRefCount)
-                .append("}");
-        return sb.toString();
+        return "{" + LOG_TAG + " - providerId="
+                + mProvider.getProviderId() + ", ScoreFilter="
+                + mScore + ", Filter=" + mCapabilityFilter + ", requests="
+                + mNetworkRequests.size() + ", refCount=" + mRefCount
+                + "}";
     }
 }
