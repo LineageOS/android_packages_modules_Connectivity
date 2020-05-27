@@ -70,6 +70,8 @@ final class EthernetTracker {
     private final static String TAG = EthernetTracker.class.getSimpleName();
     private final static boolean DBG = EthernetNetworkFactory.DBG;
 
+    private static final String TEST_IFACE_REGEXP = TEST_TAP_PREFIX + "\\d+";
+
     /**
      * Interface names we track. This is a product-dependent regular expression, plus,
      * if setIncludeTestInterfaces is true, any test interfaces.
@@ -298,7 +300,8 @@ final class EthernetTracker {
             // Try to resolve using mac address
             nc = mNetworkCapabilities.get(hwAddress);
             if (nc == null) {
-                nc = createDefaultNetworkCapabilities();
+                final boolean isTestIface = iface.matches(TEST_IFACE_REGEXP);
+                nc = createDefaultNetworkCapabilities(isTestIface);
             }
         }
 
@@ -457,14 +460,19 @@ final class EthernetTracker {
         }
     }
 
-    private static NetworkCapabilities createDefaultNetworkCapabilities() {
+    private static NetworkCapabilities createDefaultNetworkCapabilities(boolean isTestIface) {
         NetworkCapabilities nc = createNetworkCapabilities(false /* clear default capabilities */);
-        nc.addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET);
         nc.addCapability(NetworkCapabilities.NET_CAPABILITY_NOT_RESTRICTED);
         nc.addCapability(NetworkCapabilities.NET_CAPABILITY_NOT_METERED);
         nc.addCapability(NetworkCapabilities.NET_CAPABILITY_NOT_ROAMING);
         nc.addCapability(NetworkCapabilities.NET_CAPABILITY_NOT_CONGESTED);
         nc.addCapability(NetworkCapabilities.NET_CAPABILITY_NOT_SUSPENDED);
+
+        if (isTestIface) {
+            nc.addTransportType(NetworkCapabilities.TRANSPORT_TEST);
+        } else {
+            nc.addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET);
+        }
 
         return nc;
     }
@@ -610,7 +618,7 @@ final class EthernetTracker {
         final String match = mContext.getResources().getString(
                 com.android.internal.R.string.config_ethernet_iface_regex);
         mIfaceMatch = mIncludeTestInterfaces
-                ? "(" + match + "|" + TEST_TAP_PREFIX + "\\d+)"
+                ? "(" + match + "|" + TEST_IFACE_REGEXP + ")"
                 : match;
         Log.d(TAG, "Interface match regexp set to '" + mIfaceMatch + "'");
     }
