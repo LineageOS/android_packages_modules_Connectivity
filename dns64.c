@@ -25,7 +25,7 @@
 #include <sys/socket.h>
 #include <unistd.h>
 
-#include "NetdClient.h"
+#include <DnsProxydProtocol.h>  // NETID_USE_LOCAL_NAMESERVERS
 #include "dns64.h"
 #include "logging.h"
 #include "resolv_netid.h"

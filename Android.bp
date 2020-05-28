@@ -14,7 +14,7 @@ cc_defaults {
     include_dirs: ["bionic/libc/dns/include"],
 
     // For NETID_USE_LOCAL_NAMESERVERS.
-    header_libs: ["libnetd_client_headers"],
+    header_libs: ["dnsproxyd_protocol_headers"],
 }
 
 // Code used both by the daemon and by unit tests.
