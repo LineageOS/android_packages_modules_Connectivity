@@ -45,7 +45,7 @@ int configure_clat_ipv6_address(const struct tun_data *tunnel, const char *inter
                                 const char *src_addr);
 int detect_mtu(const struct in6_addr *plat_subnet, uint32_t plat_suffix, uint32_t mark);
 void configure_interface(const char *uplink_interface, const char *plat_prefix, const char *v4_addr,
-                         const char *v6, struct tun_data *tunnel, unsigned net_id, uint32_t mark);
+                         const char *v6, struct tun_data *tunnel, uint32_t mark);
 void event_loop(struct tun_data *tunnel);
 
 /* function: parse_int
