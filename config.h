@@ -37,10 +37,6 @@ struct clat_config {
 extern struct clat_config Global_Clatd_Config;
 
 int read_config(const char *file, const char *uplink_interface);
-void config_generate_local_ipv6_subnet(struct in6_addr *interface_ip);
-in_addr_t config_select_ipv4_address(const struct in_addr *ip, int16_t prefixlen);
 int ipv6_prefix_equal(struct in6_addr *a1, struct in6_addr *a2);
-
-typedef int (*addr_free_func)(in_addr_t addr);
 
 #endif /* __CONFIG_H__ */
