@@ -30,7 +30,6 @@
 
 #include "clatd.h"
 #include "config.h"
-#include "dns64.h"
 #include "getaddr.h"
 #include "logging.h"
 
@@ -158,35 +157,6 @@ struct in6_addr *config_item_ip6(cnode *root, const char *item_name, const char 
  */
 int ipv6_prefix_equal(struct in6_addr *a1, struct in6_addr *a2) { return !memcmp(a1, a2, 8); }
 
-/* function: dns64_detection
- * does dns lookups to set the plat subnet or exits on failure, waits forever for a dns response
- * with a query backoff timer
- *   net_id - (optional) netId to use, NETID_UNSET indicates use of default network
- */
-void dns64_detection(unsigned net_id) {
-  int backoff_sleep, status;
-  struct in6_addr tmp_ptr;
-
-  backoff_sleep = 1;
-
-  while (1) {
-    status = plat_prefix(DNS64_DETECTION_HOSTNAME, net_id, &tmp_ptr);
-    if (status > 0) {
-      memcpy(&Global_Clatd_Config.plat_subnet, &tmp_ptr, sizeof(struct in6_addr));
-      return;
-    }
-    logmsg(ANDROID_LOG_WARN, "dns64_detection -- error, sleeping for %d seconds", backoff_sleep);
-    sleep(backoff_sleep);
-    backoff_sleep *= 2;
-    if (backoff_sleep >= 1800) {
-      // Scale down to one DNS query per half hour. Unnecessary DNS queries waste power, and the
-      // benefit is minimal (basically, only limited to the case where a network goes from IPv6-only
-      // to IPv6 with NAT64).
-      backoff_sleep = 1800;
-    }
-  }
-}
-
 /* function: gen_random_iid
  * picks a random interface ID that is checksum neutral with the IPv4 address and the NAT64 prefix
  *   myaddr            - IPv6 address to write to
@@ -293,13 +263,9 @@ void config_generate_local_ipv6_subnet(struct in6_addr *interface_ip) {
  * failure, 1 on success
  *   file             - filename to parse
  *   uplink_interface - interface to use to reach the internet and supplier of address space
- *   plat_prefix      - (optional) plat prefix to use, otherwise follow config file
- *   net_id           - (optional) netId to use, NETID_UNSET indicates use of default network
  */
-int read_config(const char *file, const char *uplink_interface, const char *plat_prefix,
-                unsigned net_id) {
+int read_config(const char *file, const char *uplink_interface) {
   cnode *root   = config_node("", "");
-  void *tmp_ptr = NULL;
   unsigned flags;
 
   if (!root) {
@@ -325,27 +291,6 @@ int read_config(const char *file, const char *uplink_interface, const char *plat
   if (!config_item_int16_t(root, "ipv4_local_prefixlen", DEFAULT_IPV4_LOCAL_PREFIXLEN,
                            &Global_Clatd_Config.ipv4_local_prefixlen))
     goto failed;
-
-  if (plat_prefix) {  // plat subnet is coming from the command line
-    if (inet_pton(AF_INET6, plat_prefix, &Global_Clatd_Config.plat_subnet) <= 0) {
-      logmsg(ANDROID_LOG_FATAL, "invalid IPv6 address specified for plat prefix: %s", plat_prefix);
-      goto failed;
-    }
-  } else {
-    tmp_ptr = (void *)config_item_str(root, "plat_from_dns64", "yes");
-    if (!tmp_ptr || strcmp(tmp_ptr, "no") == 0) {
-      free(tmp_ptr);
-
-      if (!config_item_ip6(root, "plat_subnet", NULL, &Global_Clatd_Config.plat_subnet)) {
-        logmsg(ANDROID_LOG_FATAL, "plat_from_dns64 disabled, but no plat_subnet specified");
-        goto failed;
-      }
-    } else {
-      free(tmp_ptr);
-
-      dns64_detection(net_id);
-    }
-  }
 
   if (!config_item_ip6(root, "ipv6_host_id", "::", &Global_Clatd_Config.ipv6_host_id)) goto failed;
 
