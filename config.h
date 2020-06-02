@@ -22,7 +22,6 @@
 #include <netinet/in.h>
 
 #define DEFAULT_IPV4_LOCAL_SUBNET "192.0.0.4"
-#define DEFAULT_IPV4_LOCAL_PREFIXLEN "29"
 
 struct clat_config {
   struct in6_addr ipv6_local_subnet;
