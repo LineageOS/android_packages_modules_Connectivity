@@ -585,8 +585,6 @@ class ClatdTest : public ::testing::Test {
     inet_pton(AF_INET, kIPv4LocalAddr, &Global_Clatd_Config.ipv4_local_subnet);
     inet_pton(AF_INET6, kIPv6PlatSubnet, &Global_Clatd_Config.plat_subnet);
     memset(&Global_Clatd_Config.ipv6_local_subnet, 0, sizeof(in6_addr));
-    Global_Clatd_Config.ipv6_host_id    = in6addr_any;
-    Global_Clatd_Config.use_dynamic_iid = 1;
     Global_Clatd_Config.default_pdp_interface = const_cast<char *>(sTun.name().c_str());
   }
 
@@ -854,7 +852,6 @@ void check_translate_checksum_neutral(const uint8_t *original, size_t original_l
 
 TEST_F(ClatdTest, TranslateChecksumNeutral) {
   // Generate a random clat IPv6 address and check that translation is checksum-neutral.
-  Global_Clatd_Config.ipv6_host_id = in6addr_any;
   ASSERT_TRUE(inet_pton(AF_INET6, "2001:db8:1:2:f076:ae99:124e:aa54",
                         &Global_Clatd_Config.ipv6_local_subnet));
 
