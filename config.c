@@ -210,22 +210,3 @@ failed:
   free(root);
   return 0;
 }
-
-/* function; dump_config
- * prints the current config
- */
-void dump_config() {
-  char charbuffer[INET6_ADDRSTRLEN];
-
-  logmsg(
-    ANDROID_LOG_DEBUG, "ipv6_local_subnet = %s",
-    inet_ntop(AF_INET6, &Global_Clatd_Config.ipv6_local_subnet, charbuffer, sizeof(charbuffer)));
-  logmsg(
-    ANDROID_LOG_DEBUG, "ipv4_local_subnet = %s",
-    inet_ntop(AF_INET, &Global_Clatd_Config.ipv4_local_subnet, charbuffer, sizeof(charbuffer)));
-  logmsg(ANDROID_LOG_DEBUG, "ipv4_local_prefixlen = %d", Global_Clatd_Config.ipv4_local_prefixlen);
-  logmsg(ANDROID_LOG_DEBUG, "plat_subnet = %s",
-         inet_ntop(AF_INET6, &Global_Clatd_Config.plat_subnet, charbuffer, sizeof(charbuffer)));
-  logmsg(ANDROID_LOG_DEBUG, "default_pdp_interface = %s",
-         Global_Clatd_Config.default_pdp_interface);
-}
