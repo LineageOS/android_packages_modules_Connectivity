@@ -35,23 +35,6 @@
 
 struct clat_config Global_Clatd_Config;
 
-/* function: config_item_str
- * locates the config item and returns the pointer to a string, or NULL on failure.  Caller frees
- * pointer
- *   root       - parsed configuration
- *   item_name  - name of config item to locate
- *   defaultvar - value to use if config item isn't present
- */
-char *config_item_str(cnode *root, const char *item_name, const char *defaultvar) {
-  const char *tmp;
-
-  if (!(tmp = config_str(root, item_name, defaultvar))) {
-    logmsg(ANDROID_LOG_FATAL, "%s config item needed", item_name);
-    return NULL;
-  }
-  return strdup(tmp);
-}
-
 /* function: config_item_int16_t
  * locates the config item, parses the integer, and returns the pointer ret_val_ptr, or NULL on
  * failure
