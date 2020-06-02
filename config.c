@@ -35,49 +35,6 @@
 
 struct clat_config Global_Clatd_Config;
 
-/* function: config_item_int16_t
- * locates the config item, parses the integer, and returns the pointer ret_val_ptr, or NULL on
- * failure
- *   root        - parsed configuration
- *   item_name   - name of config item to locate
- *   defaultvar  - value to use if config item isn't present
- *   ret_val_ptr - pointer for return value storage
- */
-int16_t *config_item_int16_t(cnode *root, const char *item_name, const char *defaultvar,
-                             int16_t *ret_val_ptr) {
-  const char *tmp;
-  char *endptr;
-  long int conf_int;
-
-  if (!(tmp = config_str(root, item_name, defaultvar))) {
-    logmsg(ANDROID_LOG_FATAL, "%s config item needed", item_name);
-    return NULL;
-  }
-
-  errno    = 0;
-  conf_int = strtol(tmp, &endptr, 10);
-  if (errno > 0) {
-    logmsg(ANDROID_LOG_FATAL, "%s config item is not numeric: %s (error=%s)", item_name, tmp,
-           strerror(errno));
-    return NULL;
-  }
-  if (endptr == tmp || *tmp == '\0') {
-    logmsg(ANDROID_LOG_FATAL, "%s config item is not numeric: %s", item_name, tmp);
-    return NULL;
-  }
-  if (*endptr != '\0') {
-    logmsg(ANDROID_LOG_FATAL, "%s config item contains non-numeric characters: %s", item_name,
-           endptr);
-    return NULL;
-  }
-  if (conf_int > INT16_MAX || conf_int < INT16_MIN) {
-    logmsg(ANDROID_LOG_FATAL, "%s config item is too big/small: %d", item_name, conf_int);
-    return NULL;
-  }
-  *ret_val_ptr = conf_int;
-  return ret_val_ptr;
-}
-
 /* function: config_item_ip
  * locates the config item, parses the ipv4 address, and returns the pointer ret_val_ptr, or NULL on
  * failure
@@ -169,9 +126,7 @@ int read_config(const char *file, const char *uplink_interface) {
                       &Global_Clatd_Config.ipv4_local_subnet))
     goto failed;
 
-  if (!config_item_int16_t(root, "ipv4_local_prefixlen", DEFAULT_IPV4_LOCAL_PREFIXLEN,
-                           &Global_Clatd_Config.ipv4_local_prefixlen))
-    goto failed;
+  Global_Clatd_Config.ipv4_local_prefixlen = 29;
 
   return 1;
 
