@@ -52,7 +52,6 @@ filegroup {
         "logging.c",
         "netlink_callbacks.c",
         "netlink_msg.c",
-        "ring.c",
         "setif.c",
         "translate.c",
     ],

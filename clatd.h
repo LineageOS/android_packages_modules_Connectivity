@@ -24,9 +24,9 @@
 
 struct tun_data;
 
-#define MAXMTU 1500
+#define MAXMTU 65536
 #define PACKETLEN (MAXMTU + sizeof(struct tun_pi))
-#define CLATD_VERSION "1.4"
+#define CLATD_VERSION "1.5"
 
 #define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
 
