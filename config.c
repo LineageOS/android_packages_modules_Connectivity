@@ -62,33 +62,6 @@ struct in_addr *config_item_ip(cnode *root, const char *item_name, const char *d
   return ret_val_ptr;
 }
 
-/* function: config_item_ip6
- * locates the config item, parses the ipv6 address, and returns the pointer ret_val_ptr, or NULL on
- * failure
- *   root        - parsed configuration
- *   item_name   - name of config item to locate
- *   defaultvar  - value to use if config item isn't present
- *   ret_val_ptr - pointer for return value storage
- */
-struct in6_addr *config_item_ip6(cnode *root, const char *item_name, const char *defaultvar,
-                                 struct in6_addr *ret_val_ptr) {
-  const char *tmp;
-  int status;
-
-  if (!(tmp = config_str(root, item_name, defaultvar))) {
-    logmsg(ANDROID_LOG_FATAL, "%s config item needed", item_name);
-    return NULL;
-  }
-
-  status = inet_pton(AF_INET6, tmp, ret_val_ptr);
-  if (status <= 0) {
-    logmsg(ANDROID_LOG_FATAL, "invalid IPv6 address specified for %s: %s", item_name, tmp);
-    return NULL;
-  }
-
-  return ret_val_ptr;
-}
-
 /* function: ipv6_prefix_equal
  * compares the prefixes two ipv6 addresses. assumes the prefix lengths are both /64.
  *   a1 - first address
