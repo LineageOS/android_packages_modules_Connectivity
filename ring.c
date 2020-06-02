@@ -24,10 +24,10 @@
 #include <sys/mman.h>
 #include <sys/socket.h>
 
+#include "config.h"
 #include "logging.h"
 #include "ring.h"
 #include "translate.h"
-#include "tun.h"
 
 int ring_create(struct tun_data *tunnel) {
   // Will eventually be bound to htons(ETH_P_IPV6) protocol,
