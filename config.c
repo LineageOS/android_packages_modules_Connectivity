@@ -165,7 +165,6 @@ int ipv6_prefix_equal(struct in6_addr *a1, struct in6_addr *a2) { return !memcmp
  */
 int read_config(const char *file, const char *uplink_interface) {
   cnode *root   = config_node("", "");
-  unsigned flags;
 
   if (!root) {
     logmsg(ANDROID_LOG_FATAL, "out of memory");
@@ -190,19 +189,6 @@ int read_config(const char *file, const char *uplink_interface) {
   if (!config_item_int16_t(root, "ipv4_local_prefixlen", DEFAULT_IPV4_LOCAL_PREFIXLEN,
                            &Global_Clatd_Config.ipv4_local_prefixlen))
     goto failed;
-
-  if (!config_item_ip6(root, "ipv6_host_id", "::", &Global_Clatd_Config.ipv6_host_id)) goto failed;
-
-  /* In order to prevent multiple devices attempting to use the same clat address, never use a
-     statically-configured interface ID on a broadcast interface such as wifi. */
-  if (!IN6_IS_ADDR_UNSPECIFIED(&Global_Clatd_Config.ipv6_host_id)) {
-    ifc_init();
-    ifc_get_info(Global_Clatd_Config.default_pdp_interface, NULL, NULL, &flags);
-    ifc_close();
-    Global_Clatd_Config.use_dynamic_iid = (flags & IFF_BROADCAST) != 0;
-  } else {
-    Global_Clatd_Config.use_dynamic_iid = 1;
-  }
 
   return 1;
 
