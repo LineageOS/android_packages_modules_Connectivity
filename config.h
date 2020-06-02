@@ -26,12 +26,10 @@
 
 struct clat_config {
   struct in6_addr ipv6_local_subnet;
-  struct in6_addr ipv6_host_id;
   struct in_addr ipv4_local_subnet;
   int16_t ipv4_local_prefixlen;
   struct in6_addr plat_subnet;
   char *default_pdp_interface;
-  int use_dynamic_iid;
 };
 
 extern struct clat_config Global_Clatd_Config;
