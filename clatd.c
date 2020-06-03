@@ -51,6 +51,8 @@
 #include "setif.h"
 #include "translate.h"
 
+struct clat_config Global_Clatd_Config;
+
 /* 40 bytes IPv6 header - 20 bytes IPv4 header + 8 bytes fragment header */
 #define MTU_DELTA 28
 
