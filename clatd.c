@@ -50,7 +50,6 @@
 #include "ring.h"
 #include "setif.h"
 #include "translate.h"
-#include "tun.h"
 
 /* 40 bytes IPv6 header - 20 bytes IPv4 header + 8 bytes fragment header */
 #define MTU_DELTA 28
