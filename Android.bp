@@ -20,7 +20,6 @@ cc_defaults {
 filegroup {
     name: "clatd_common",
     srcs: [
-        "config.c",
         "clatd.c",
         "dump.c",
         "getaddr.c",
