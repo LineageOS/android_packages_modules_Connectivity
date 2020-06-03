@@ -98,7 +98,7 @@ int configure_packet_socket(int sock) {
   struct sockaddr_ll sll = {
     .sll_family   = AF_PACKET,
     .sll_protocol = htons(ETH_P_IPV6),
-    .sll_ifindex  = if_nametoindex(Global_Clatd_Config.default_pdp_interface),
+    .sll_ifindex  = if_nametoindex(Global_Clatd_Config.native_ipv6_interface),
     .sll_pkttype  = PACKET_OTHERHOST,  // The 464xlat IPv6 address is not assigned to the kernel.
   };
   if (bind(sock, (struct sockaddr *)&sll, sizeof(sll))) {
@@ -318,11 +318,7 @@ int detect_mtu(const struct in6_addr *plat_subnet, uint32_t plat_suffix, uint32_
  */
 void configure_interface(const char *uplink_interface, const char *plat_prefix, const char *v4_addr,
                          const char *v6_addr, struct tun_data *tunnel, uint32_t mark) {
-  if (!read_config("/system/etc/clatd.conf", uplink_interface)) {
-    logmsg(ANDROID_LOG_FATAL, "read_config failed");
-    exit(1);
-  }
-
+  Global_Clatd_Config.native_ipv6_interface = uplink_interface;
   if (!plat_prefix || inet_pton(AF_INET6, plat_prefix, &Global_Clatd_Config.plat_subnet) <= 0) {
     logmsg(ANDROID_LOG_FATAL, "invalid IPv6 address specified for plat prefix: %s", plat_prefix);
     exit(1);
@@ -430,7 +426,7 @@ void event_loop(struct tun_data *tunnel) {
 
     time_t now = time(NULL);
     if (last_interface_poll < (now - INTERFACE_POLL_FREQUENCY)) {
-      if (ipv6_address_changed(Global_Clatd_Config.default_pdp_interface)) {
+      if (ipv6_address_changed(Global_Clatd_Config.native_ipv6_interface)) {
         break;
       }
     }
