@@ -21,6 +21,14 @@
 #include <linux/if.h>
 #include <netinet/in.h>
 
+#include "ring.h"
+
+struct tun_data {
+  char device4[IFNAMSIZ];
+  int read_fd6, write_fd6, fd4;
+  struct packet_ring ring;
+};
+
 struct clat_config {
   struct in6_addr ipv6_local_subnet;
   struct in_addr ipv4_local_subnet;
