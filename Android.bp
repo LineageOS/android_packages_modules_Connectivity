@@ -66,12 +66,6 @@ cc_binary {
     ],
 }
 
-// The configuration file.
-prebuilt_etc {
-    name: "clatd.conf",
-    src: "clatd.conf",
-}
-
 // Unit tests.
 cc_test {
     name: "clatd_test",
