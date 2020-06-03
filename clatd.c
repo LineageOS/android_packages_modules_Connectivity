@@ -39,14 +39,14 @@
 #include <sys/capability.h>
 #include <sys/uio.h>
 
-#include <private/android_filesystem_config.h>
+#include <netid_client.h>                       // For MARK_UNSET.
+#include <private/android_filesystem_config.h>  // For AID_CLAT.
 
 #include "clatd.h"
 #include "config.h"
 #include "dump.h"
 #include "getaddr.h"
 #include "logging.h"
-#include "resolv_netid.h"
 #include "ring.h"
 #include "setif.h"
 #include "translate.h"
@@ -388,15 +388,20 @@ int detect_mtu(const struct in6_addr *plat_subnet, uint32_t plat_suffix, uint32_
  * reads the configuration and applies it to the interface
  *   uplink_interface - network interface to use to reach the ipv6 internet
  *   plat_prefix      - PLAT prefix to use
+ *   v4_addr          - the v4 address to use on the tunnel interface
+ *   v6_addr          - the v6 address to use on the native interface
  *   tunnel           - tun device data
- *   net_id           - NetID to use, NETID_UNSET indicates use of default network
  *   mark             - the socket mark to use for the sending raw socket
  */
 void configure_interface(const char *uplink_interface, const char *plat_prefix, const char *v4_addr,
-                         const char *v6_addr, struct tun_data *tunnel, unsigned net_id,
-                         uint32_t mark) {
-  if (!read_config("/system/etc/clatd.conf", uplink_interface, plat_prefix, net_id)) {
+                         const char *v6_addr, struct tun_data *tunnel, uint32_t mark) {
+  if (!read_config("/system/etc/clatd.conf", uplink_interface)) {
     logmsg(ANDROID_LOG_FATAL, "read_config failed");
+    exit(1);
+  }
+
+  if (!plat_prefix || inet_pton(AF_INET6, plat_prefix, &Global_Clatd_Config.plat_subnet) <= 0) {
+    logmsg(ANDROID_LOG_FATAL, "invalid IPv6 address specified for plat prefix: %s", plat_prefix);
     exit(1);
   }
 
