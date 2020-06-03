@@ -26,7 +26,6 @@
 #include "icmp.h"
 #include "logging.h"
 #include "translate.h"
-#include "tun.h"
 
 /* function: packet_checksum
  * calculates the checksum over all the packet components starting from pos
