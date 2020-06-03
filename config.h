@@ -24,14 +24,12 @@
 struct clat_config {
   struct in6_addr ipv6_local_subnet;
   struct in_addr ipv4_local_subnet;
-  int16_t ipv4_local_prefixlen;
   struct in6_addr plat_subnet;
-  char *default_pdp_interface;
+  const char *native_ipv6_interface;
 };
 
 extern struct clat_config Global_Clatd_Config;
 
-int read_config(const char *file, const char *uplink_interface);
 int ipv6_prefix_equal(struct in6_addr *a1, struct in6_addr *a2);
 
 #endif /* __CONFIG_H__ */
