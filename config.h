@@ -38,6 +38,14 @@ struct clat_config {
 
 extern struct clat_config Global_Clatd_Config;
 
-int ipv6_prefix_equal(struct in6_addr *a1, struct in6_addr *a2);
+/* function: ipv6_prefix_equal
+ * compares the /64 prefixes of two ipv6 addresses.
+ *   a1 - first address
+ *   a2 - second address
+ *   returns: 0 if the subnets are different, 1 if they are the same.
+ */
+static inline int ipv6_prefix_equal(struct in6_addr *a1, struct in6_addr *a2) {
+  return !memcmp(a1, a2, 8);
+}
 
 #endif /* __CONFIG_H__ */
