@@ -35,33 +35,6 @@
 
 struct clat_config Global_Clatd_Config;
 
-/* function: config_item_ip
- * locates the config item, parses the ipv4 address, and returns the pointer ret_val_ptr, or NULL on
- * failure
- *   root        - parsed configuration
- *   item_name   - name of config item to locate
- *   defaultvar  - value to use if config item isn't present
- *   ret_val_ptr - pointer for return value storage
- */
-struct in_addr *config_item_ip(cnode *root, const char *item_name, const char *defaultvar,
-                               struct in_addr *ret_val_ptr) {
-  const char *tmp;
-  int status;
-
-  if (!(tmp = config_str(root, item_name, defaultvar))) {
-    logmsg(ANDROID_LOG_FATAL, "%s config item needed", item_name);
-    return NULL;
-  }
-
-  status = inet_pton(AF_INET, tmp, ret_val_ptr);
-  if (status <= 0) {
-    logmsg(ANDROID_LOG_FATAL, "invalid IPv4 address specified for %s: %s", item_name, tmp);
-    return NULL;
-  }
-
-  return ret_val_ptr;
-}
-
 /* function: ipv6_prefix_equal
  * compares the prefixes two ipv6 addresses. assumes the prefix lengths are both /64.
  *   a1 - first address
@@ -94,10 +67,6 @@ int read_config(const char *file, const char *uplink_interface) {
 
   Global_Clatd_Config.default_pdp_interface = strdup(uplink_interface);
   if (!Global_Clatd_Config.default_pdp_interface) goto failed;
-
-  if (!config_item_ip(root, "ipv4_local_subnet", DEFAULT_IPV4_LOCAL_SUBNET,
-                      &Global_Clatd_Config.ipv4_local_subnet))
-    goto failed;
 
   Global_Clatd_Config.ipv4_local_prefixlen = 29;
 
