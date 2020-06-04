@@ -32,15 +32,4 @@ struct tun_data {
   struct packet_ring ring;
 };
 
-/* function: send_tun
- * sends a clat_packet to a tun interface
- * fd      - the tun filedescriptor
- * out     - the packet to send
- * iov_len - the number of entries in the clat_packet
- * returns: number of bytes read on success, -1 on failure
- */
-static inline int send_tun(int fd, clat_packet out, int iov_len) {
-  return writev(fd, out, iov_len);
-}
-
 #endif
