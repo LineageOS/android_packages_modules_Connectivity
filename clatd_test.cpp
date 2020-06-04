@@ -585,7 +585,7 @@ class ClatdTest : public ::testing::Test {
     inet_pton(AF_INET, kIPv4LocalAddr, &Global_Clatd_Config.ipv4_local_subnet);
     inet_pton(AF_INET6, kIPv6PlatSubnet, &Global_Clatd_Config.plat_subnet);
     memset(&Global_Clatd_Config.ipv6_local_subnet, 0, sizeof(in6_addr));
-    Global_Clatd_Config.default_pdp_interface = const_cast<char *>(sTun.name().c_str());
+    Global_Clatd_Config.native_ipv6_interface = const_cast<char *>(sTun.name().c_str());
   }
 
   // Static because setting up the tun interface takes about 40ms.
@@ -631,8 +631,6 @@ TEST_F(ClatdTest, DetectMtu) {
 }
 
 TEST_F(ClatdTest, ConfigureTunIpManual) {
-  Global_Clatd_Config.ipv4_local_prefixlen = 29;
-
   // Create an interface for configure_tun_ip to configure and bring up.
   TunInterface v4Iface;
   ASSERT_EQ(0, v4Iface.init());
