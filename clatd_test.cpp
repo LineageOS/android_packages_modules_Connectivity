@@ -34,7 +34,6 @@ extern "C" {
 #include "getaddr.h"
 #include "netutils/checksum.h"
 #include "translate.h"
-#include "tun.h"
 }
 
 // For convenience.
