@@ -21,8 +21,6 @@
 #include <linux/if.h>
 #include <netinet/in.h>
 
-#define DEFAULT_IPV4_LOCAL_SUBNET "192.0.0.4"
-
 struct clat_config {
   struct in6_addr ipv6_local_subnet;
   struct in_addr ipv4_local_subnet;
