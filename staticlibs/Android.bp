@@ -93,6 +93,7 @@ filegroup {
     srcs: [
         "src_frameworkcommon/android/net/util/nsd/DnsSdTxtRecord.java",
         "src_frameworkcommon/android/net/util/MacAddressUtils.java",
+        "src_frameworkcommon/com/android/net/module/util/**/*.java",
     ],
     path: "src_frameworkcommon",
     visibility: [
