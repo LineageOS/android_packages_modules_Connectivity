@@ -45,6 +45,7 @@ java_library {
     sdk_version: "system_current",
     jarjar_rules: "jarjar-rules-shared.txt",
     visibility: [
+        "//cts/tests/tests/net",
         "//frameworks/base/packages/Tethering",
         "//frameworks/opt/net/ike",
         "//frameworks/opt/telephony",
