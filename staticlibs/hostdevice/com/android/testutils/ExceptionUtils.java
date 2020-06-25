@@ -18,6 +18,9 @@ package com.android.testutils;
 
 import java.util.function.Supplier;
 
+/**
+ * A class grouping some utilities to deal with exceptions.
+ */
 public class ExceptionUtils {
     /**
      * Like a Consumer, but declared to throw an exception.
@@ -25,6 +28,7 @@ public class ExceptionUtils {
      */
     @FunctionalInterface
     public interface ThrowingConsumer<T> {
+        /** @see java.util.function.Consumer */
         void accept(T t) throws Exception;
     }
 
@@ -34,6 +38,7 @@ public class ExceptionUtils {
      */
     @FunctionalInterface
     public interface ThrowingSupplier<T> {
+        /** @see java.util.function.Supplier */
         T get() throws Exception;
     }
 
@@ -42,10 +47,15 @@ public class ExceptionUtils {
      */
     @FunctionalInterface
     public interface ThrowingRunnable {
+        /** @see java.lang.Runnable */
         void run() throws Exception;
     }
 
-
+    /**
+     * Convert a supplier that throws into one that doesn't.
+     *
+     * The returned supplier returns null in cases where the source throws.
+     */
     public static <T> Supplier<T> ignoreExceptions(ThrowingSupplier<T> func) {
         return () -> {
             try {
@@ -56,6 +66,11 @@ public class ExceptionUtils {
         };
     }
 
+    /**
+     * Convert a runnable that throws into one that doesn't.
+     *
+     * All exceptions are ignored by the returned Runnable.
+     */
     public static Runnable ignoreExceptions(ThrowingRunnable r) {
         return () -> {
             try {

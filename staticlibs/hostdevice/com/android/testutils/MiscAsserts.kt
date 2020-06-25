@@ -34,7 +34,7 @@ fun <T> assertLength(expected: Int, got: Array<T>) = got.size.let { len ->
     assertEquals(expected, len, "Expected array of length $expected, but was $len for $got")
 }
 
-// Bridge method to help write this in Java. If you're writing Kotlin, consider using native
+// Bridge method to help write this in Java. If you're writing Kotlin, consider using
 // kotlin.test.assertFailsWith instead, as that method is reified and inlined.
 fun <T : Exception> assertThrows(expected: Class<T>, block: ThrowingRunnable): T {
     return assertFailsWith(expected.kotlin) { block.run() }
