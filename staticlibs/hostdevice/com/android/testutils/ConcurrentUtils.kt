@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+@file:JvmName("ConcurrentUtils")
+
 package com.android.testutils
 
 import java.util.concurrent.CountDownLatch
