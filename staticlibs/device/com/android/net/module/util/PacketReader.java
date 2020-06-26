@@ -14,8 +14,7 @@
  * limitations under the License.
  */
 
-// TODO : move this and FdEventsReader to com.android.net.module.util.
-package android.net.util;
+package com.android.net.module.util;
 
 import static java.lang.Math.max;
 
