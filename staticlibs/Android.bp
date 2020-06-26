@@ -124,6 +124,7 @@ java_library {
     jarjar_rules: "jarjar-rules-shared.txt",
     visibility: [
         "//cts/tests/tests/net",
+        "//cts/tests/tests/wifi",
         "//packages/modules/Connectivity/tests/cts/net",
         "//frameworks/base/packages/Tethering",
         "//packages/modules/Connectivity/Tethering",
@@ -179,8 +180,6 @@ filegroup {
 filegroup {
     name: "net-utils-framework-wifi-common-srcs",
     srcs: [
-        "framework/android/net/util/nsd/DnsSdTxtRecord.java",
-        "framework/android/net/util/MacAddressUtils.java",
         "framework/com/android/net/module/util/**/*.java",
     ],
     path: "framework",
@@ -196,7 +195,7 @@ filegroup {
     name: "net-utils-wifi-service-common-srcs",
     srcs: [
        "device/android/net/NetworkFactory.java",
-       "framework/android/net/util/NetUtils.java",
+       "framework/com/android/net/module/util/NetUtils.java",
     ],
     visibility: [
         "//frameworks/opt/net/wifi/service",
