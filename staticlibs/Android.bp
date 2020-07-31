@@ -27,10 +27,86 @@
 // included in the bootclasspath, they could incorrectly be included in the SDK documentation even
 // though they are not in the current.txt files.
 
+java_library {
+  name: "net-utils-device-common",
+  srcs: [
+      "device/**/*.java",
+      // This library is used by system modules, for which the system health impact of Kotlin
+      // has not yet been evaluated.
+      // "src_devicecommon/**/*.kt",
+      ":framework-annotations",
+  ],
+  sdk_version: "system_current",
+  min_sdk_version: "29",
+  target_sdk_version: "30",
+  apex_available: [
+      "//apex_available:anyapex",
+      "//apex_available:platform",
+  ],
+  visibility: [
+        "//frameworks/base/packages/Tethering",
+        "//frameworks/opt/net/ike",
+        "//frameworks/opt/net/wifi/service",
+        "//frameworks/opt/net/telephony",
+        "//packages/modules/NetworkStack",
+        "//packages/modules/CaptivePortalLogin",
+        "//frameworks/libs/net/common/tests:__subpackages__",
+  ],
+  libs: [
+      "androidx.annotation_annotation",
+  ],
+}
+
+java_library {
+  // Consider using net-tests-utils instead if writing device code.
+  // That library has a lot more useful tools into it for users that
+  // work on Android and includes this lib.
+  name: "net-tests-utils-host-device-common",
+  srcs: [
+      "hostdevice/**/*.java",
+      "hostdevice/**/*.kt",
+  ],
+  host_supported: true,
+  visibility: [
+      "//frameworks/libs/net/common/tests:__subpackages__",
+  ],
+  static_libs: [
+      "kotlin-test"
+  ]
+}
+
+java_defaults {
+    name: "lib_mockito_extended",
+    static_libs: [
+        "mockito-target-extended-minus-junit4"
+    ],
+    jni_libs: [
+        "libdexmakerjvmtiagent",
+        "libstaticjvmtiagent",
+    ],
+}
+
+java_library {
+    name: "net-tests-utils",
+    srcs: [
+        "devicetests/**/*.java",
+        "devicetests/**/*.kt",
+    ],
+    defaults: ["lib_mockito_extended"],
+    libs: [
+        "androidx.annotation_annotation",
+    ],
+    static_libs: [
+        "androidx.test.ext.junit",
+        "net-tests-utils-host-device-common",
+        "net-utils-device-common",
+    ],
+}
+
 filegroup {
     name: "net-utils-framework-common-srcs",
-    srcs: ["src_frameworkcommon/**/*.java"],
-    path: "src_frameworkcommon",
+    srcs: ["framework/**/*.java"],
+    path: "framework",
     visibility: ["//frameworks/base"],
 }
 
@@ -49,7 +125,7 @@ java_library {
         "//frameworks/base/packages/Tethering",
         "//frameworks/opt/net/ike",
         "//frameworks/opt/telephony",
-        "//packages/modules/NetworkStack",
+        "//packages/modules/NetworkStack:__subpackages__",
         "//packages/modules/CaptivePortalLogin",
         "//frameworks/libs/net/common/tests:__subpackages__",
     ]
@@ -58,17 +134,12 @@ java_library {
 java_library {
     name: "net-utils-services-common",
     srcs: [
-        "src_servicescommon/**/*.java",
+        "device/android/net/NetworkFactory.java",
         ":framework-annotations",
     ],
     sdk_version: "system_current",
     visibility: [
         "//frameworks/base/services/net",
-        "//frameworks/base/packages/Tethering",
-        "//frameworks/opt/net/ike",
-        "//packages/modules/NetworkStack",
-        "//packages/modules/CaptivePortalLogin",
-        "//frameworks/libs/net/common/tests:__subpackages__",
     ],
 }
 
@@ -78,9 +149,9 @@ filegroup {
     name: "net-utils-telephony-common-srcs",
     srcs: [
         // Any class here *must* have a corresponding jarjar rule in the telephony build rules.
-        "src_servicescommon/android/net/NetworkFactory.java",
+        "device/android/net/NetworkFactory.java",
     ],
-    path: "src_servicescommon",
+    path: "device",
     visibility: [
         "//frameworks/opt/telephony",
     ],
@@ -92,11 +163,11 @@ filegroup {
 filegroup {
     name: "net-utils-framework-wifi-common-srcs",
     srcs: [
-        "src_frameworkcommon/android/net/util/nsd/DnsSdTxtRecord.java",
-        "src_frameworkcommon/android/net/util/MacAddressUtils.java",
-        "src_frameworkcommon/com/android/net/module/util/**/*.java",
+        "framework/android/net/util/nsd/DnsSdTxtRecord.java",
+        "framework/android/net/util/MacAddressUtils.java",
+        "framework/com/android/net/module/util/**/*.java",
     ],
-    path: "src_frameworkcommon",
+    path: "framework",
     visibility: [
         "//frameworks/base",
     ],
@@ -108,8 +179,8 @@ filegroup {
 filegroup {
     name: "net-utils-wifi-service-common-srcs",
     srcs: [
-        "src_frameworkcommon/android/net/util/NetUtils.java",
-        "src_servicescommon/android/net/NetworkFactory.java",
+       "device/android/net/NetworkFactory.java",
+       "framework/android/net/util/NetUtils.java",
     ],
     visibility: [
         "//frameworks/opt/net/wifi/service",
