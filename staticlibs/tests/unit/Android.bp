@@ -10,6 +10,8 @@ android_library {
     static_libs: [
         "net-utils-framework-common",
         "androidx.test.rules",
+        "net-utils-device-common",
+        "net-tests-utils-host-device-common",
     ],
     libs: [
         "android.test.runner",
