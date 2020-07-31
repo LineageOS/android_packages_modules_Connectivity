@@ -34,6 +34,11 @@ import java.util.function.Predicate;
 import kotlin.Lazy;
 import kotlin.LazyKt;
 
+/**
+ * A packet reader that runs on a TAP interface.
+ *
+ * It also implements facilities to reply to received packets.
+ */
 public class TapPacketReader extends PacketReader {
     private final FileDescriptor mTapFd;
     private final ArrayTrackRecord<byte[]> mReceivedPackets = new ArrayTrackRecord<>();
@@ -82,6 +87,14 @@ public class TapPacketReader extends PacketReader {
         return mReceivedPackets;
     }
 
+    /*
+     * Send a response on the TAP interface.
+     *
+     * The passed ByteBuffer is flipped after use.
+     *
+     * @param packet The packet to send.
+     * @throws IOException if the interface can't be written to.
+     */
     public void sendResponse(final ByteBuffer packet) throws IOException {
         try (FileOutputStream out = new FileOutputStream(mTapFd)) {
             byte[] packetBytes = new byte[packet.limit()];
