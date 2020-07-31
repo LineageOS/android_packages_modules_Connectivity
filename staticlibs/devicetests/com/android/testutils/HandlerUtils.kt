@@ -20,7 +20,6 @@ import android.os.ConditionVariable
 import android.os.Handler
 import android.os.HandlerThread
 import java.util.concurrent.Executor
-import kotlin.system.measureTimeMillis
 import kotlin.test.fail
 
 /**
