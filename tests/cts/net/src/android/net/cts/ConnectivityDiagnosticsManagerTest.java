@@ -22,6 +22,7 @@ import static android.net.ConnectivityDiagnosticsManager.ConnectivityReport;
 import static android.net.ConnectivityDiagnosticsManager.ConnectivityReport.KEY_NETWORK_PROBES_ATTEMPTED_BITMASK;
 import static android.net.ConnectivityDiagnosticsManager.ConnectivityReport.KEY_NETWORK_PROBES_SUCCEEDED_BITMASK;
 import static android.net.ConnectivityDiagnosticsManager.ConnectivityReport.KEY_NETWORK_VALIDATION_RESULT;
+import static android.net.ConnectivityDiagnosticsManager.ConnectivityReport.NETWORK_VALIDATION_RESULT_SKIPPED;
 import static android.net.ConnectivityDiagnosticsManager.ConnectivityReport.NETWORK_VALIDATION_RESULT_VALID;
 import static android.net.ConnectivityDiagnosticsManager.DataStallReport;
 import static android.net.ConnectivityDiagnosticsManager.DataStallReport.DETECTION_METHOD_DNS_EVENTS;
@@ -78,6 +79,7 @@ import androidx.test.InstrumentationRegistry;
 
 import com.android.internal.telephony.uicc.IccUtils;
 import com.android.internal.util.ArrayUtils;
+import com.android.modules.utils.build.SdkLevel;
 import com.android.net.module.util.ArrayTrackRecord;
 import com.android.testutils.DevSdkIgnoreRule.IgnoreUpTo;
 import com.android.testutils.DevSdkIgnoreRunner;
@@ -427,6 +429,12 @@ public class ConnectivityDiagnosticsManagerTest {
         // revalidated which will trigger another onConnectivityReportAvailable callback.
         if (!hasConnectivity) {
             cb.expectOnConnectivityReportAvailable(mTestNetwork, interfaceName);
+        } else if (SdkLevel.isAtLeastS()) {
+            // All calls to #onNetworkConnectivityReported are expected to be accompanied by a call
+            // to #onConnectivityReportAvailable after a mainline update in the S timeframe.
+            // Optionally validate this, but do not fail if it does not exist.
+            cb.maybeVerifyOnConnectivityReportAvailable(mTestNetwork, interfaceName, TRANSPORT_TEST,
+                    false /* requireCallbackFired */);
         }
 
         cb.assertNoCallback();
@@ -479,13 +487,25 @@ public class ConnectivityDiagnosticsManagerTest {
 
         public void expectOnConnectivityReportAvailable(
                 @NonNull Network network, @NonNull String interfaceName) {
-            expectOnConnectivityReportAvailable(network, interfaceName, TRANSPORT_TEST);
+            expectOnConnectivityReportAvailable(
+                    network, interfaceName, TRANSPORT_TEST);
         }
 
-        public void expectOnConnectivityReportAvailable(
-                @NonNull Network network, @NonNull String interfaceName, int transportType) {
+        public void expectOnConnectivityReportAvailable(@NonNull Network network,
+                @NonNull String interfaceName, int transportType) {
+            maybeVerifyOnConnectivityReportAvailable(network, interfaceName, transportType,
+                    true /* requireCallbackFired */);
+        }
+
+        public void maybeVerifyOnConnectivityReportAvailable(@NonNull Network network,
+                @NonNull String interfaceName, int transportType, boolean requireCallbackFired) {
             final ConnectivityReport result =
                     (ConnectivityReport) mHistory.poll(CALLBACK_TIMEOUT_MILLIS, x -> true);
+
+            // If callback is not required and there is no report, exit early.
+            if (!requireCallbackFired && result == null) {
+                return;
+            }
             assertEquals(network, result.getNetwork());
 
             final NetworkCapabilities nc = result.getNetworkCapabilities();
@@ -496,9 +516,16 @@ public class ConnectivityDiagnosticsManagerTest {
 
             final PersistableBundle extras = result.getAdditionalInfo();
             assertTrue(extras.containsKey(KEY_NETWORK_VALIDATION_RESULT));
-            final int validationResult = extras.getInt(KEY_NETWORK_VALIDATION_RESULT);
-            assertEquals("Network validation result is not 'valid'",
-                    NETWORK_VALIDATION_RESULT_VALID, validationResult);
+            final int actualValidationResult = extras.getInt(KEY_NETWORK_VALIDATION_RESULT);
+
+            // Allow RESULT_VALID for networks that are expected to be skipped. Android S shipped
+            // with validation results being reported as VALID, but the behavior will be updated via
+            // mainline update. Allow both behaviors, and let MTS enforce stricter behavior
+            if (actualValidationResult != NETWORK_VALIDATION_RESULT_SKIPPED
+                    && actualValidationResult != NETWORK_VALIDATION_RESULT_VALID) {
+                fail("Network validation result was incorrect; expected skipped or valid, but "
+                        + "got " + actualValidationResult);
+            }
 
             assertTrue(extras.containsKey(KEY_NETWORK_PROBES_SUCCEEDED_BITMASK));
             final int probesSucceeded = extras.getInt(KEY_NETWORK_VALIDATION_RESULT);
