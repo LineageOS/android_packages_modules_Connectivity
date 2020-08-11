@@ -16,6 +16,14 @@
 
 package android.net.cts;
 
+import static android.net.IpSecAlgorithm.AUTH_CRYPT_AES_GCM;
+import static android.net.IpSecAlgorithm.AUTH_HMAC_MD5;
+import static android.net.IpSecAlgorithm.AUTH_HMAC_SHA1;
+import static android.net.IpSecAlgorithm.AUTH_HMAC_SHA256;
+import static android.net.IpSecAlgorithm.AUTH_HMAC_SHA384;
+import static android.net.IpSecAlgorithm.AUTH_HMAC_SHA512;
+import static android.net.IpSecAlgorithm.CRYPT_AES_CBC;
+
 import static org.junit.Assert.assertArrayEquals;
 
 import android.content.Context;
@@ -31,6 +39,12 @@ import android.util.Log;
 import androidx.test.InstrumentationRegistry;
 import androidx.test.runner.AndroidJUnit4;
 
+import com.android.modules.utils.build.SdkLevel;
+
+import org.junit.Before;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+
 import java.io.FileDescriptor;
 import java.io.IOException;
 import java.net.DatagramPacket;
@@ -42,11 +56,9 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketException;
 import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
-
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
 
 @RunWith(AndroidJUnit4.class)
 public class IpSecBaseTest {
@@ -71,6 +83,18 @@ public class IpSecBaseTest {
         0x20, 0x21, 0x22, 0x23
     };
 
+    private static final Set<String> MANDATORY_IPSEC_ALGOS_SINCE_P = new HashSet<>();
+
+    static {
+        MANDATORY_IPSEC_ALGOS_SINCE_P.add(CRYPT_AES_CBC);
+        MANDATORY_IPSEC_ALGOS_SINCE_P.add(AUTH_HMAC_MD5);
+        MANDATORY_IPSEC_ALGOS_SINCE_P.add(AUTH_HMAC_SHA1);
+        MANDATORY_IPSEC_ALGOS_SINCE_P.add(AUTH_HMAC_SHA256);
+        MANDATORY_IPSEC_ALGOS_SINCE_P.add(AUTH_HMAC_SHA384);
+        MANDATORY_IPSEC_ALGOS_SINCE_P.add(AUTH_HMAC_SHA512);
+        MANDATORY_IPSEC_ALGOS_SINCE_P.add(AUTH_CRYPT_AES_GCM);
+    }
+
     protected static final byte[] AUTH_KEY = getKey(256);
     protected static final byte[] CRYPT_KEY = getKey(256);
 
@@ -89,8 +113,24 @@ public class IpSecBaseTest {
                                 .getSystemService(Context.CONNECTIVITY_SERVICE);
     }
 
+    /** Checks if an IPsec algorithm is enabled on the device */
+    protected static boolean hasIpSecAlgorithm(String algorithm) {
+        if (SdkLevel.isAtLeastS()) {
+            return IpSecAlgorithm.getSupportedAlgorithms().contains(algorithm);
+        } else {
+            return MANDATORY_IPSEC_ALGOS_SINCE_P.contains(algorithm);
+        }
+    }
+
+    protected static byte[] getKeyBytes(int byteLength) {
+        return Arrays.copyOf(KEY_DATA, byteLength);
+    }
+
     protected static byte[] getKey(int bitLength) {
-        return Arrays.copyOf(KEY_DATA, bitLength / 8);
+        if (bitLength % 8 != 0) {
+            throw new IllegalArgumentException("Invalid key length in bits" + bitLength);
+        }
+        return getKeyBytes(bitLength / 8);
     }
 
     protected static int getDomain(InetAddress address) {

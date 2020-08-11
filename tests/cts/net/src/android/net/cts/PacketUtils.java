@@ -43,16 +43,32 @@ public class PacketUtils {
     static final int UDP_HDRLEN = 8;
     static final int TCP_HDRLEN = 20;
     static final int TCP_HDRLEN_WITH_TIMESTAMP_OPT = TCP_HDRLEN + 12;
+    static final int ESP_BLK_SIZE = 4; // ESP has to be 4-byte aligned
 
     // Not defined in OsConstants
     static final int IPPROTO_IPV4 = 4;
     static final int IPPROTO_ESP = 50;
 
     // Encryption parameters
-    static final int AES_GCM_IV_LEN = 8;
     static final int AES_CBC_IV_LEN = 16;
-    static final int AES_GCM_BLK_SIZE = 4;
     static final int AES_CBC_BLK_SIZE = 16;
+
+    static final int AES_CTR_KEY_LEN = 20;
+    static final int AES_CTR_BLK_SIZE = ESP_BLK_SIZE;
+    static final int AES_CTR_IV_LEN = 8;
+
+    // AEAD parameters
+    static final int AES_GCM_IV_LEN = 8;
+    static final int AES_GCM_BLK_SIZE = 4;
+    static final int CHACHA20_POLY1305_BLK_SIZE = ESP_BLK_SIZE;
+    static final int CHACHA20_POLY1305_IV_LEN = 8;
+    static final int CHACHA20_POLY1305_ICV_LEN = 16;
+
+    // Authentication parameters
+    static final int HMAC_SHA512_KEY_LEN = 64;
+    static final int HMAC_SHA512_ICV_LEN = 32;
+    static final int AES_XCBC_KEY_LEN = 16;
+    static final int AES_XCBC_ICV_LEN = 12;
 
     // Encryption algorithms
     static final String AES = "AES";

@@ -16,10 +16,30 @@
 
 package android.net.cts;
 
+import static android.net.IpSecAlgorithm.AUTH_AES_XCBC;
+import static android.net.IpSecAlgorithm.AUTH_CRYPT_AES_GCM;
+import static android.net.IpSecAlgorithm.AUTH_CRYPT_CHACHA20_POLY1305;
+import static android.net.IpSecAlgorithm.AUTH_HMAC_MD5;
+import static android.net.IpSecAlgorithm.AUTH_HMAC_SHA1;
+import static android.net.IpSecAlgorithm.AUTH_HMAC_SHA256;
+import static android.net.IpSecAlgorithm.AUTH_HMAC_SHA384;
+import static android.net.IpSecAlgorithm.AUTH_HMAC_SHA512;
+import static android.net.IpSecAlgorithm.CRYPT_AES_CBC;
+import static android.net.IpSecAlgorithm.CRYPT_AES_CTR;
 import static android.net.cts.PacketUtils.AES_CBC_BLK_SIZE;
 import static android.net.cts.PacketUtils.AES_CBC_IV_LEN;
+import static android.net.cts.PacketUtils.AES_CTR_BLK_SIZE;
+import static android.net.cts.PacketUtils.AES_CTR_IV_LEN;
+import static android.net.cts.PacketUtils.AES_CTR_KEY_LEN;
 import static android.net.cts.PacketUtils.AES_GCM_BLK_SIZE;
 import static android.net.cts.PacketUtils.AES_GCM_IV_LEN;
+import static android.net.cts.PacketUtils.AES_XCBC_ICV_LEN;
+import static android.net.cts.PacketUtils.AES_XCBC_KEY_LEN;
+import static android.net.cts.PacketUtils.CHACHA20_POLY1305_BLK_SIZE;
+import static android.net.cts.PacketUtils.CHACHA20_POLY1305_ICV_LEN;
+import static android.net.cts.PacketUtils.CHACHA20_POLY1305_IV_LEN;
+import static android.net.cts.PacketUtils.HMAC_SHA512_ICV_LEN;
+import static android.net.cts.PacketUtils.HMAC_SHA512_KEY_LEN;
 import static android.net.cts.PacketUtils.IP4_HDRLEN;
 import static android.net.cts.PacketUtils.IP6_HDRLEN;
 import static android.net.cts.PacketUtils.TCP_HDRLEN_WITH_TIMESTAMP_OPT;
@@ -27,15 +47,20 @@ import static android.net.cts.PacketUtils.UDP_HDRLEN;
 import static android.system.OsConstants.IPPROTO_TCP;
 import static android.system.OsConstants.IPPROTO_UDP;
 
+import static com.android.compatibility.common.util.PropertyUtil.getFirstApiLevel;
+import static com.android.compatibility.common.util.PropertyUtil.getVendorApiLevel;
+
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.junit.Assume.assumeTrue;
 
 import android.net.IpSecAlgorithm;
 import android.net.IpSecManager;
 import android.net.IpSecTransform;
 import android.net.TrafficStats;
+import android.os.Build;
 import android.platform.test.annotations.AppModeFull;
 import android.system.ErrnoException;
 import android.system.Os;
@@ -44,8 +69,11 @@ import android.system.OsConstants;
 import androidx.test.InstrumentationRegistry;
 import androidx.test.runner.AndroidJUnit4;
 
+import com.android.testutils.DevSdkIgnoreRule;
+import com.android.testutils.DevSdkIgnoreRule.IgnoreUpTo;
 import com.android.testutils.SkipPresubmit;
 
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
@@ -56,10 +84,15 @@ import java.net.DatagramSocket;
 import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Set;
 
 @RunWith(AndroidJUnit4.class)
 @AppModeFull(reason = "Socket cannot bind in instant app mode")
 public class IpSecManagerTest extends IpSecBaseTest {
+    @Rule public final DevSdkIgnoreRule ignoreRule = new DevSdkIgnoreRule();
 
     private static final String TAG = IpSecManagerTest.class.getSimpleName();
 
@@ -417,8 +450,12 @@ public class IpSecManagerTest extends IpSecBaseTest {
         switch (cryptOrAead.getName()) {
             case IpSecAlgorithm.CRYPT_AES_CBC:
                 return AES_CBC_IV_LEN;
+            case IpSecAlgorithm.CRYPT_AES_CTR:
+                return AES_CTR_IV_LEN;
             case IpSecAlgorithm.AUTH_CRYPT_AES_GCM:
                 return AES_GCM_IV_LEN;
+            case IpSecAlgorithm.AUTH_CRYPT_CHACHA20_POLY1305:
+                return CHACHA20_POLY1305_IV_LEN;
             default:
                 throw new IllegalArgumentException(
                         "IV length unknown for algorithm" + cryptOrAead.getName());
@@ -433,8 +470,12 @@ public class IpSecManagerTest extends IpSecBaseTest {
         switch (cryptOrAead.getName()) {
             case IpSecAlgorithm.CRYPT_AES_CBC:
                 return AES_CBC_BLK_SIZE;
+            case IpSecAlgorithm.CRYPT_AES_CTR:
+                return AES_CTR_BLK_SIZE;
             case IpSecAlgorithm.AUTH_CRYPT_AES_GCM:
                 return AES_GCM_BLK_SIZE;
+            case IpSecAlgorithm.AUTH_CRYPT_CHACHA20_POLY1305:
+                return CHACHA20_POLY1305_BLK_SIZE;
             default:
                 throw new IllegalArgumentException(
                         "Blk size unknown for algorithm" + cryptOrAead.getName());
@@ -516,7 +557,6 @@ public class IpSecManagerTest extends IpSecBaseTest {
             int blkSize,
             int truncLenBits)
             throws Exception {
-
         int innerPacketSize = TEST_DATA.length + transportHdrLen + ipHdrLen;
         int outerPacketSize =
                 PacketUtils.calculateEspPacketSize(
@@ -662,6 +702,40 @@ public class IpSecManagerTest extends IpSecBaseTest {
     //             new IpSecAlgorithm(IpSecAlgorithm.AUTH_HMAC_MD5, getKey(128), 96);
     //     checkTransform(IPPROTO_TCP, IPV4_LOOPBACK, crypt, auth, true, 1000);
     // }
+
+    @IgnoreUpTo(Build.VERSION_CODES.R)
+    @Test
+    public void testGetSupportedAlgorithms() throws Exception {
+        final Map<String, Integer> algoToRequiredMinSdk = new HashMap<>();
+        algoToRequiredMinSdk.put(CRYPT_AES_CBC, Build.VERSION_CODES.P);
+        algoToRequiredMinSdk.put(AUTH_HMAC_MD5, Build.VERSION_CODES.P);
+        algoToRequiredMinSdk.put(AUTH_HMAC_SHA1, Build.VERSION_CODES.P);
+        algoToRequiredMinSdk.put(AUTH_HMAC_SHA256, Build.VERSION_CODES.P);
+        algoToRequiredMinSdk.put(AUTH_HMAC_SHA384, Build.VERSION_CODES.P);
+        algoToRequiredMinSdk.put(AUTH_HMAC_SHA512, Build.VERSION_CODES.P);
+        algoToRequiredMinSdk.put(AUTH_CRYPT_AES_GCM, Build.VERSION_CODES.P);
+
+        // TODO: b/170424293 Use Build.VERSION_CODES.S when is finalized
+        algoToRequiredMinSdk.put(CRYPT_AES_CTR, Build.VERSION_CODES.R + 1);
+        algoToRequiredMinSdk.put(AUTH_AES_XCBC, Build.VERSION_CODES.R + 1);
+        algoToRequiredMinSdk.put(AUTH_CRYPT_CHACHA20_POLY1305, Build.VERSION_CODES.R + 1);
+
+        final Set<String> supportedAlgos = IpSecAlgorithm.getSupportedAlgorithms();
+
+        // Verify all supported algorithms are valid
+        for (String algo : supportedAlgos) {
+            assertTrue("Found invalid algo " + algo, algoToRequiredMinSdk.keySet().contains(algo));
+        }
+
+        // Verify all mandatory algorithms are supported
+        for (Entry<String, Integer> entry : algoToRequiredMinSdk.entrySet()) {
+            if (Math.min(getFirstApiLevel(), getVendorApiLevel()) >= entry.getValue()) {
+                assertTrue(
+                        "Fail to support " + entry.getKey(),
+                        supportedAlgos.contains(entry.getKey()));
+            }
+        }
+    }
 
     @Test
     public void testInterfaceCountersUdp4() throws Exception {
@@ -849,6 +923,106 @@ public class IpSecManagerTest extends IpSecBaseTest {
         checkTransform(IPPROTO_UDP, IPV6_LOOPBACK, crypt, auth, null, false, 1, true);
     }
 
+    private static IpSecAlgorithm buildCryptAesCtr() throws Exception {
+        return new IpSecAlgorithm(CRYPT_AES_CTR, getKeyBytes(AES_CTR_KEY_LEN));
+    }
+
+    private static IpSecAlgorithm buildAuthHmacSha512() throws Exception {
+        return new IpSecAlgorithm(
+                AUTH_HMAC_SHA512, getKeyBytes(HMAC_SHA512_KEY_LEN), HMAC_SHA512_ICV_LEN * 8);
+    }
+
+    @Test
+    public void testAesCtrHmacSha512Tcp4() throws Exception {
+        assumeTrue(hasIpSecAlgorithm(CRYPT_AES_CTR));
+
+        final IpSecAlgorithm crypt = buildCryptAesCtr();
+        final IpSecAlgorithm auth = buildAuthHmacSha512();
+        checkTransform(IPPROTO_TCP, IPV4_LOOPBACK, crypt, auth, null, false, 1, false);
+        checkTransform(IPPROTO_TCP, IPV4_LOOPBACK, crypt, auth, null, false, 1, true);
+    }
+
+    @Test
+    @SkipPresubmit(reason = "b/186608065 - kernel 5.10 regression in TrafficStats with ipsec")
+    public void testAesCtrHmacSha512Tcp6() throws Exception {
+        assumeTrue(hasIpSecAlgorithm(CRYPT_AES_CTR));
+
+        final IpSecAlgorithm crypt = buildCryptAesCtr();
+        final IpSecAlgorithm auth = buildAuthHmacSha512();
+        checkTransform(IPPROTO_TCP, IPV6_LOOPBACK, crypt, auth, null, false, 1, false);
+        checkTransform(IPPROTO_TCP, IPV6_LOOPBACK, crypt, auth, null, false, 1, true);
+    }
+
+    @Test
+    public void testAesCtrHmacSha512Udp4() throws Exception {
+        assumeTrue(hasIpSecAlgorithm(CRYPT_AES_CTR));
+
+        final IpSecAlgorithm crypt = buildCryptAesCtr();
+        final IpSecAlgorithm auth = buildAuthHmacSha512();
+        checkTransform(IPPROTO_UDP, IPV4_LOOPBACK, crypt, auth, null, false, 1, false);
+        checkTransform(IPPROTO_UDP, IPV4_LOOPBACK, crypt, auth, null, false, 1, true);
+    }
+
+    @Test
+    public void testAesCtrHmacSha512Udp6() throws Exception {
+        assumeTrue(hasIpSecAlgorithm(CRYPT_AES_CTR));
+
+        final IpSecAlgorithm crypt = buildCryptAesCtr();
+        final IpSecAlgorithm auth = buildAuthHmacSha512();
+        checkTransform(IPPROTO_UDP, IPV6_LOOPBACK, crypt, auth, null, false, 1, false);
+        checkTransform(IPPROTO_UDP, IPV6_LOOPBACK, crypt, auth, null, false, 1, true);
+    }
+
+    private static IpSecAlgorithm buildCryptAesCbc() throws Exception {
+        return new IpSecAlgorithm(CRYPT_AES_CBC, CRYPT_KEY);
+    }
+
+    private static IpSecAlgorithm buildAuthAesXcbc() throws Exception {
+        return new IpSecAlgorithm(
+                AUTH_AES_XCBC, getKeyBytes(AES_XCBC_KEY_LEN), AES_XCBC_ICV_LEN * 8);
+    }
+
+    @Test
+    public void testAesCbcAesXCbcTcp4() throws Exception {
+        assumeTrue(hasIpSecAlgorithm(AUTH_AES_XCBC));
+
+        final IpSecAlgorithm crypt = buildCryptAesCbc();
+        final IpSecAlgorithm auth = buildAuthAesXcbc();
+        checkTransform(IPPROTO_TCP, IPV4_LOOPBACK, crypt, auth, null, false, 1, false);
+        checkTransform(IPPROTO_TCP, IPV4_LOOPBACK, crypt, auth, null, false, 1, true);
+    }
+
+    @Test
+    @SkipPresubmit(reason = "b/186608065 - kernel 5.10 regression in TrafficStats with ipsec")
+    public void testAesCbcAesXCbcTcp6() throws Exception {
+        assumeTrue(hasIpSecAlgorithm(AUTH_AES_XCBC));
+
+        final IpSecAlgorithm crypt = buildCryptAesCbc();
+        final IpSecAlgorithm auth = buildAuthAesXcbc();
+        checkTransform(IPPROTO_TCP, IPV6_LOOPBACK, crypt, auth, null, false, 1, false);
+        checkTransform(IPPROTO_TCP, IPV6_LOOPBACK, crypt, auth, null, false, 1, true);
+    }
+
+    @Test
+    public void testAesCbcAesXCbcUdp4() throws Exception {
+        assumeTrue(hasIpSecAlgorithm(AUTH_AES_XCBC));
+
+        final IpSecAlgorithm crypt = buildCryptAesCbc();
+        final IpSecAlgorithm auth = buildAuthAesXcbc();
+        checkTransform(IPPROTO_UDP, IPV4_LOOPBACK, crypt, auth, null, false, 1, false);
+        checkTransform(IPPROTO_UDP, IPV4_LOOPBACK, crypt, auth, null, false, 1, true);
+    }
+
+    @Test
+    public void testAesCbcAesXCbcUdp6() throws Exception {
+        assumeTrue(hasIpSecAlgorithm(AUTH_AES_XCBC));
+
+        final IpSecAlgorithm crypt = buildCryptAesCbc();
+        final IpSecAlgorithm auth = buildAuthAesXcbc();
+        checkTransform(IPPROTO_UDP, IPV6_LOOPBACK, crypt, auth, null, false, 1, false);
+        checkTransform(IPPROTO_UDP, IPV6_LOOPBACK, crypt, auth, null, false, 1, true);
+    }
+
     @Test
     public void testAesGcm64Tcp4() throws Exception {
         IpSecAlgorithm authCrypt =
@@ -948,6 +1122,48 @@ public class IpSecManagerTest extends IpSecBaseTest {
         checkTransform(IPPROTO_UDP, IPV6_LOOPBACK, null, null, authCrypt, false, 1, true);
     }
 
+    private static IpSecAlgorithm buildAuthCryptChaCha20Poly1305() throws Exception {
+        return new IpSecAlgorithm(
+                AUTH_CRYPT_CHACHA20_POLY1305, AEAD_KEY, CHACHA20_POLY1305_ICV_LEN * 8);
+    }
+
+    @Test
+    public void testChaCha20Poly1305Tcp4() throws Exception {
+        assumeTrue(hasIpSecAlgorithm(AUTH_CRYPT_CHACHA20_POLY1305));
+
+        final IpSecAlgorithm authCrypt = buildAuthCryptChaCha20Poly1305();
+        checkTransform(IPPROTO_TCP, IPV4_LOOPBACK, null, null, authCrypt, false, 1, false);
+        checkTransform(IPPROTO_TCP, IPV4_LOOPBACK, null, null, authCrypt, false, 1, true);
+    }
+
+    @Test
+    @SkipPresubmit(reason = "b/186608065 - kernel 5.10 regression in TrafficStats with ipsec")
+    public void testChaCha20Poly1305Tcp6() throws Exception {
+        assumeTrue(hasIpSecAlgorithm(AUTH_CRYPT_CHACHA20_POLY1305));
+
+        final IpSecAlgorithm authCrypt = buildAuthCryptChaCha20Poly1305();
+        checkTransform(IPPROTO_TCP, IPV6_LOOPBACK, null, null, authCrypt, false, 1, false);
+        checkTransform(IPPROTO_TCP, IPV6_LOOPBACK, null, null, authCrypt, false, 1, true);
+    }
+
+    @Test
+    public void testChaCha20Poly1305Udp4() throws Exception {
+        assumeTrue(hasIpSecAlgorithm(AUTH_CRYPT_CHACHA20_POLY1305));
+
+        final IpSecAlgorithm authCrypt = buildAuthCryptChaCha20Poly1305();
+        checkTransform(IPPROTO_UDP, IPV4_LOOPBACK, null, null, authCrypt, false, 1, false);
+        checkTransform(IPPROTO_UDP, IPV4_LOOPBACK, null, null, authCrypt, false, 1, true);
+    }
+
+    @Test
+    public void testChaCha20Poly1305Udp6() throws Exception {
+        assumeTrue(hasIpSecAlgorithm(AUTH_CRYPT_CHACHA20_POLY1305));
+
+        final IpSecAlgorithm authCrypt = buildAuthCryptChaCha20Poly1305();
+        checkTransform(IPPROTO_UDP, IPV6_LOOPBACK, null, null, authCrypt, false, 1, false);
+        checkTransform(IPPROTO_UDP, IPV6_LOOPBACK, null, null, authCrypt, false, 1, true);
+    }
+
     @Test
     public void testAesCbcHmacMd5Tcp4UdpEncap() throws Exception {
         IpSecAlgorithm crypt = new IpSecAlgorithm(IpSecAlgorithm.CRYPT_AES_CBC, CRYPT_KEY);
@@ -1029,6 +1245,46 @@ public class IpSecManagerTest extends IpSecBaseTest {
     }
 
     @Test
+    public void testAesCtrHmacSha512Tcp4UdpEncap() throws Exception {
+        assumeTrue(hasIpSecAlgorithm(CRYPT_AES_CTR));
+
+        final IpSecAlgorithm crypt = buildCryptAesCtr();
+        final IpSecAlgorithm auth = buildAuthHmacSha512();
+        checkTransform(IPPROTO_TCP, IPV4_LOOPBACK, crypt, auth, null, true, 1, false);
+        checkTransform(IPPROTO_TCP, IPV4_LOOPBACK, crypt, auth, null, true, 1, true);
+    }
+
+    @Test
+    public void testAesCtrHmacSha512Udp4UdpEncap() throws Exception {
+        assumeTrue(hasIpSecAlgorithm(CRYPT_AES_CTR));
+
+        final IpSecAlgorithm crypt = buildCryptAesCtr();
+        final IpSecAlgorithm auth = buildAuthHmacSha512();
+        checkTransform(IPPROTO_UDP, IPV4_LOOPBACK, crypt, auth, null, true, 1, false);
+        checkTransform(IPPROTO_UDP, IPV4_LOOPBACK, crypt, auth, null, true, 1, true);
+    }
+
+    @Test
+    public void testAesCbcAesXCbcTcp4UdpEncap() throws Exception {
+        assumeTrue(hasIpSecAlgorithm(AUTH_AES_XCBC));
+
+        final IpSecAlgorithm crypt = new IpSecAlgorithm(CRYPT_AES_CBC, CRYPT_KEY);
+        final IpSecAlgorithm auth = new IpSecAlgorithm(AUTH_AES_XCBC, getKey(128), 96);
+        checkTransform(IPPROTO_TCP, IPV4_LOOPBACK, crypt, auth, null, true, 1, false);
+        checkTransform(IPPROTO_TCP, IPV4_LOOPBACK, crypt, auth, null, true, 1, true);
+    }
+
+    @Test
+    public void testAesCbcAesXCbcUdp4UdpEncap() throws Exception {
+        assumeTrue(hasIpSecAlgorithm(AUTH_AES_XCBC));
+
+        final IpSecAlgorithm crypt = new IpSecAlgorithm(CRYPT_AES_CBC, CRYPT_KEY);
+        final IpSecAlgorithm auth = new IpSecAlgorithm(AUTH_AES_XCBC, getKey(128), 96);
+        checkTransform(IPPROTO_UDP, IPV4_LOOPBACK, crypt, auth, null, true, 1, false);
+        checkTransform(IPPROTO_UDP, IPV4_LOOPBACK, crypt, auth, null, true, 1, true);
+    }
+
+    @Test
     public void testAesGcm64Tcp4UdpEncap() throws Exception {
         IpSecAlgorithm authCrypt =
                 new IpSecAlgorithm(IpSecAlgorithm.AUTH_CRYPT_AES_GCM, AEAD_KEY, 64);
@@ -1072,6 +1328,24 @@ public class IpSecManagerTest extends IpSecBaseTest {
     public void testAesGcm128Udp4UdpEncap() throws Exception {
         IpSecAlgorithm authCrypt =
                 new IpSecAlgorithm(IpSecAlgorithm.AUTH_CRYPT_AES_GCM, AEAD_KEY, 128);
+        checkTransform(IPPROTO_UDP, IPV4_LOOPBACK, null, null, authCrypt, true, 1, false);
+        checkTransform(IPPROTO_UDP, IPV4_LOOPBACK, null, null, authCrypt, true, 1, true);
+    }
+
+    @Test
+    public void testChaCha20Poly1305Tcp4UdpEncap() throws Exception {
+        assumeTrue(hasIpSecAlgorithm(AUTH_CRYPT_CHACHA20_POLY1305));
+
+        final IpSecAlgorithm authCrypt = buildAuthCryptChaCha20Poly1305();
+        checkTransform(IPPROTO_TCP, IPV4_LOOPBACK, null, null, authCrypt, true, 1, false);
+        checkTransform(IPPROTO_TCP, IPV4_LOOPBACK, null, null, authCrypt, true, 1, true);
+    }
+
+    @Test
+    public void testChaCha20Poly1305Udp4UdpEncap() throws Exception {
+        assumeTrue(hasIpSecAlgorithm(AUTH_CRYPT_CHACHA20_POLY1305));
+
+        final IpSecAlgorithm authCrypt = buildAuthCryptChaCha20Poly1305();
         checkTransform(IPPROTO_UDP, IPV4_LOOPBACK, null, null, authCrypt, true, 1, false);
         checkTransform(IPPROTO_UDP, IPV4_LOOPBACK, null, null, authCrypt, true, 1, true);
     }
