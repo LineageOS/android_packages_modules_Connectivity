@@ -33,7 +33,7 @@ import static android.net.cts.PacketUtils.AES_CMAC_ICV_LEN;
 import static android.net.cts.PacketUtils.AES_CMAC_KEY_LEN;
 import static android.net.cts.PacketUtils.AES_CTR_BLK_SIZE;
 import static android.net.cts.PacketUtils.AES_CTR_IV_LEN;
-import static android.net.cts.PacketUtils.AES_CTR_KEY_LEN;
+import static android.net.cts.PacketUtils.AES_CTR_KEY_LEN_20;
 import static android.net.cts.PacketUtils.AES_GCM_BLK_SIZE;
 import static android.net.cts.PacketUtils.AES_GCM_IV_LEN;
 import static android.net.cts.PacketUtils.AES_XCBC_ICV_LEN;
@@ -928,7 +928,7 @@ public class IpSecManagerTest extends IpSecBaseTest {
     }
 
     private static IpSecAlgorithm buildCryptAesCtr() throws Exception {
-        return new IpSecAlgorithm(CRYPT_AES_CTR, getKeyBytes(AES_CTR_KEY_LEN));
+        return new IpSecAlgorithm(CRYPT_AES_CTR, getKeyBytes(AES_CTR_KEY_LEN_20));
     }
 
     private static IpSecAlgorithm buildAuthHmacSha512() throws Exception {
