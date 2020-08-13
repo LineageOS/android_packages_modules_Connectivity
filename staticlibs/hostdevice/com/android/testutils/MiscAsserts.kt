@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+@file:JvmName("MiscAsserts")
+
 package com.android.testutils
 
 import com.android.testutils.ExceptionUtils.ThrowingRunnable

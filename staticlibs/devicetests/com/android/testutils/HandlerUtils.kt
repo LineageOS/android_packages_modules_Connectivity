@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+@file:JvmName("HandlerUtils")
+
 package com.android.testutils
 
 import android.os.ConditionVariable

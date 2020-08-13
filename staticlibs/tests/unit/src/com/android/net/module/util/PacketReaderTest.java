@@ -24,7 +24,7 @@ import static android.system.OsConstants.SOCK_NONBLOCK;
 import static android.system.OsConstants.SOL_SOCKET;
 import static android.system.OsConstants.SO_SNDTIMEO;
 
-import static com.android.testutils.MiscAssertsKt.assertThrows;
+import static com.android.testutils.MiscAsserts.assertThrows;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
