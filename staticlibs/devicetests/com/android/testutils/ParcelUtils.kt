@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+@file:JvmName("ParcelUtils")
+
 package com.android.testutils
 
 import android.os.Parcel
