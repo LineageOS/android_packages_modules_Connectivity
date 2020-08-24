@@ -98,6 +98,7 @@ java_library {
     ],
     static_libs: [
         "androidx.test.ext.junit",
+        "libnanohttpd",
         "net-tests-utils-host-device-common",
         "net-utils-device-common",
     ],
