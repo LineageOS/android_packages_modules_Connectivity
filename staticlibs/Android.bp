@@ -102,6 +102,9 @@ java_library {
         "net-tests-utils-host-device-common",
         "net-utils-device-common",
     ],
+    kotlincflags: [
+        "-XXLanguage:-GenerateJvmOverloadsAsFinal"
+    ]
 }
 
 filegroup {
