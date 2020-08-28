@@ -170,8 +170,11 @@ open class TestableNetworkCallback private constructor(
     }
 
     // Make open for use in ConnectivityServiceTest which is the only one knowing its handlers.
-    @JvmOverloads
-    open fun assertNoCallback(timeoutMs: Long = defaultTimeoutMs) {
+    // TODO : remove the necessity to overload this, remove the open qualifier, and give a
+    // default argument to assertNoCallback instead, possibly with @JvmOverloads if necessary.
+    open fun assertNoCallback() = assertNoCallback(defaultTimeoutMs)
+
+    fun assertNoCallback(timeoutMs: Long) {
         val cb = history.poll(timeoutMs)
         if (null != cb) fail("Expected no callback but got $cb")
     }
