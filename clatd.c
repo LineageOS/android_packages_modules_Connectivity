@@ -426,7 +426,8 @@ void event_loop(struct tun_data *tunnel) {
     }
 
     time_t now = time(NULL);
-    if (last_interface_poll < (now - INTERFACE_POLL_FREQUENCY)) {
+    if (now >= (last_interface_poll + INTERFACE_POLL_FREQUENCY)) {
+      last_interface_poll = now;
       if (ipv6_address_changed(Global_Clatd_Config.native_ipv6_interface)) {
         break;
       }
