@@ -50,6 +50,17 @@ public class TapPacketReader extends PacketReader {
         mTapFd = tapFd;
     }
 
+
+    /**
+     * Attempt to start the FdEventsReader on its handler thread.
+     *
+     * As opposed to {@link android.net.util.FdEventsReader#start()}, this method will not report
+     * failure to start, so it is only appropriate in tests that will fail later if that happens.
+     */
+    public void startAsyncForTest() {
+        getHandler().post(this::start);
+    }
+
     @Override
     protected FileDescriptor createFd() {
         return mTapFd;
@@ -64,10 +75,30 @@ public class TapPacketReader extends PacketReader {
     }
 
     /**
+     * @deprecated This method does not actually "pop" (which generally means the last packet).
+     * Use {@link #poll(long)}, which has the same behavior, instead.
+     */
+    @Nullable
+    @Deprecated
+    public byte[] popPacket(long timeoutMs) {
+        return poll(timeoutMs);
+    }
+
+    /**
+     * @deprecated This method does not actually "pop" (which generally means the last packet).
+     * Use {@link #poll(long, Predicate)}, which has the same behavior, instead.
+     */
+    @Nullable
+    @Deprecated
+    public byte[] popPacket(long timeoutMs, @NonNull Predicate<byte[]> filter) {
+        return poll(timeoutMs, filter);
+    }
+
+    /**
      * Get the next packet that was received on the interface.
      */
     @Nullable
-    public byte[] popPacket(long timeoutMs) {
+    public byte[] poll(long timeoutMs) {
         return mReadHead.getValue().poll(timeoutMs, packet -> true);
     }
 
@@ -75,7 +106,7 @@ public class TapPacketReader extends PacketReader {
      * Get the next packet that was received on the interface and matches the specified filter.
      */
     @Nullable
-    public byte[] popPacket(long timeoutMs, @NonNull Predicate<byte[]> filter) {
+    public byte[] poll(long timeoutMs, @NonNull Predicate<byte[]> filter) {
         return mReadHead.getValue().poll(timeoutMs, filter::test);
     }
 
