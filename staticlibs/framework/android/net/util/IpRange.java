@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.android.net.module.util;
+package android.net.util;
 
 import static com.android.internal.annotations.VisibleForTesting.Visibility;
 

@@ -14,20 +14,21 @@
  * limitations under the License.
  */
 
-package com.android.net.module.util;
+// TODO : move this and PacketReader to com.android.net.module.util.
+package android.net.util;
 
 import static android.os.MessageQueue.OnFileDescriptorEventListener.EVENT_ERROR;
 import static android.os.MessageQueue.OnFileDescriptorEventListener.EVENT_INPUT;
 
-import android.annotation.NonNull;
-import android.annotation.Nullable;
-import android.net.util.SocketUtils;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.MessageQueue;
 import android.system.ErrnoException;
 import android.system.OsConstants;
 import android.util.Log;
+
+import android.annotation.NonNull;
+import android.annotation.Nullable;
 
 import com.android.internal.annotations.VisibleForTesting;
 

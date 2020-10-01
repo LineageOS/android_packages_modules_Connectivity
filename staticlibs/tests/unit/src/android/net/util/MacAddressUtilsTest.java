@@ -24,8 +24,6 @@ import android.net.MacAddress;
 
 import androidx.test.runner.AndroidJUnit4;
 
-import com.android.net.module.util.MacAddressUtils;
-
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
