@@ -86,13 +86,6 @@ java_defaults {
     ],
 }
 
-// Rules for moving classes part of the lib that haven't been
-// renamed yet for lack of time
-java_defaults {
-    name: "net-utils-jarjar-shared",
-    jarjar_rules: "jarjar-rules-shared.txt",
-}
-
 java_library {
     name: "net-tests-utils",
     srcs: [
@@ -172,6 +165,8 @@ filegroup {
 filegroup {
     name: "net-utils-framework-wifi-common-srcs",
     srcs: [
+        "framework/android/net/util/nsd/DnsSdTxtRecord.java",
+        "framework/android/net/util/MacAddressUtils.java",
         "framework/com/android/net/module/util/**/*.java",
     ],
     path: "framework",
@@ -187,7 +182,7 @@ filegroup {
     name: "net-utils-wifi-service-common-srcs",
     srcs: [
        "device/android/net/NetworkFactory.java",
-       "framework/com/android/net/module/util/NetUtils.java",
+       "framework/android/net/util/NetUtils.java",
     ],
     visibility: [
         "//frameworks/opt/net/wifi/service",

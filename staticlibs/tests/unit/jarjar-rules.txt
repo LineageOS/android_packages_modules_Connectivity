@@ -4,5 +4,3 @@ rule android.net.util.MacAddressUtils* com.android.net.module.util.MacAddressUti
 rule android.net.util.LinkPropertiesUtils* com.android.net.module.util.LinkPropertiesUtils@1
 rule android.net.util.NetUtils* com.android.net.module.util.NetUtils@1
 rule android.net.util.nsd.** com.android.net.module.util.nsd.@1
-rule android.annotation.** com.android.net.module.annotation.@1
-rule com.android.internal.annotations.** com.android.net.module.annotation.@1

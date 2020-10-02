@@ -19,7 +19,7 @@
  - fix set() to replace existing values
  */
 
-package com.android.net.module.util;
+package android.net.util.nsd;
 
 import android.os.Parcelable;
 import android.os.Parcel;

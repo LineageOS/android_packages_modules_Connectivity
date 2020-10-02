@@ -16,13 +16,13 @@
 
 package com.android.testutils;
 
+import android.net.util.PacketReader;
 import android.os.Handler;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import com.android.net.module.util.ArrayTrackRecord;
-import com.android.net.module.util.PacketReader;
 
 import java.io.FileDescriptor;
 import java.io.FileOutputStream;

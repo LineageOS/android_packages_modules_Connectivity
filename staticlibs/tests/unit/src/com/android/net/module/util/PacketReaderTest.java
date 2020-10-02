@@ -16,6 +16,7 @@
 
 package com.android.net.module.util;
 
+import static android.net.util.PacketReader.DEFAULT_RECV_BUF_SIZE;
 import static android.system.OsConstants.AF_INET6;
 import static android.system.OsConstants.IPPROTO_UDP;
 import static android.system.OsConstants.SOCK_DGRAM;
@@ -23,13 +24,14 @@ import static android.system.OsConstants.SOCK_NONBLOCK;
 import static android.system.OsConstants.SOL_SOCKET;
 import static android.system.OsConstants.SO_SNDTIMEO;
 
-import static com.android.net.module.util.PacketReader.DEFAULT_RECV_BUF_SIZE;
 import static com.android.testutils.MiscAsserts.assertThrows;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
+import android.net.util.PacketReader;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.system.ErrnoException;
@@ -91,7 +93,8 @@ public class PacketReaderTest {
                 Os.setsockoptTimeval(s, SOL_SOCKET, SO_SNDTIMEO, TIMEO);
             } catch (ErrnoException | SocketException e) {
                 closeFd(s);
-                throw new RuntimeException("Failed to create FD", e);
+                fail();
+                return null;
             }
 
             mLocalSocket = s;
