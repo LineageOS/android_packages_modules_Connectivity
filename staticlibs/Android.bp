@@ -48,7 +48,7 @@ java_library {
         "//frameworks/opt/net/ike",
         "//frameworks/opt/net/wifi/service",
         "//frameworks/opt/net/telephony",
-        "//packages/modules/NetworkStack",
+        "//packages/modules/NetworkStack:__subpackages__",
         "//packages/modules/CaptivePortalLogin",
         "//frameworks/libs/net/common/tests:__subpackages__",
   ],
