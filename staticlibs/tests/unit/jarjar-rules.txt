@@ -1,6 +1,7 @@
 # TODO: move the classes to the target package in java
-rule android.net.util.IpRange* com.android.net.module.util.IpRange@1
-rule android.net.util.MacAddressUtils* com.android.net.module.util.MacAddressUtils@1
-rule android.net.util.LinkPropertiesUtils* com.android.net.module.util.LinkPropertiesUtils@1
-rule android.net.util.NetUtils* com.android.net.module.util.NetUtils@1
-rule android.net.util.nsd.** com.android.net.module.util.nsd.@1
+rule android.net.util.IpRange* com.android.net.moduletests.util.IpRange@1
+rule android.net.util.MacAddressUtils* com.android.net.moduletests.util.MacAddressUtils@1
+rule android.net.util.LinkPropertiesUtils* com.android.net.moduletests.util.LinkPropertiesUtils@1
+rule android.net.util.NetUtils* com.android.net.moduletests.util.NetUtils@1
+rule android.net.util.nsd.** com.android.net.moduletests.util.nsd.@1
+rule com.android.net.module.util.** com.android.net.moduletests.util.@1
