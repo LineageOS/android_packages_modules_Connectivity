@@ -57,9 +57,10 @@ public class StructTest {
     private static final String SIGNED_NEGATIVE_DATA = "81" + "0180" + "01000080"
             + "0100000000000080";
 
-    // U8: 0xff, U16: 0xffff, U32: 0xffffffff, U64: 0xffffffffffffffff, U63: 0x7fffffffffffffff;
+    // U8: 0xff, U16: 0xffff, U32: 0xffffffff, U64: 0xffffffffffffffff, U63: 0x7fffffffffffffff,
+    // U63: 0xffffffffffffffff(-1L)
     private static final String UNSIGNED_DATA = "ff" + "ffff" + "ffffffff" + "ffffffffffffffff"
-            + "ffffffffffffff7f";
+            + "ffffffffffffff7f" + "ffffffffffffffff";
 
     // PREF64 option, 2001:db8:3:4:5:6::/96, lifetime: 10064
     private static final String OPT_PREF64 = "2750" + "20010db80003000400050006";
@@ -149,8 +150,7 @@ public class StructTest {
     @Test
     public void testInvalidClass_NotSubClass() {
         final ByteBuffer buf = toByteBuffer(HDR_EMPTY);
-        assertThrows(IllegalArgumentException.class,
-                () -> Struct.parse(HeaderMessage.class, buf));
+        assertThrows(IllegalArgumentException.class, () -> Struct.parse(HeaderMessage.class, buf));
     }
 
     static class HeaderMessageMissingAnnotation extends Struct {
@@ -209,17 +209,20 @@ public class StructTest {
         @Field(order = 2, type = Type.U32)
         final long mU32;
         @Field(order = 3, type = Type.U64)
-        final BigInteger mU64;
+        final BigInteger mU64; // represent U64 with BigInteger.
         @Field(order = 4, type = Type.U64)
-        final long mU63;
+        final long mU63;  // represent U63 with long primitive.
+        @Field(order = 5, type = Type.U64)
+        final long mLU64; // represent U64 with long primitive.
 
         UnsignedDataMessage(final short u8, final int u16, final long u32, final BigInteger u64,
-                final long u63) {
+                final long u63, final long lu64) {
             mU8 = u8;
             mU16 = u16;
             mU32 = u32;
             mU64 = u64;
             mU63 = u63;
+            mLU64 = lu64;
         }
     }
 
@@ -232,6 +235,7 @@ public class StructTest {
         assertEquals(4294967295L, msg.mU32);
         assertEquals(new BigInteger("18446744073709551615"), msg.mU64);
         assertEquals(9223372036854775807L, msg.mU63);
+        assertEquals(-1L, msg.mLU64);
     }
 
     static class SignedDataMessage extends Struct {
@@ -243,41 +247,32 @@ public class StructTest {
         final int mS32;
         @Field(order = 3, type = Type.S64)
         final long mS64;
-        @Field(order = 4, type = Type.S8)
-        final byte mNS8;
-        @Field(order = 5, type = Type.S16)
-        final short mNS16;
-        @Field(order = 6, type = Type.S32)
-        final int mNS32;
-        @Field(order = 7, type = Type.S64)
-        final long mNS64;
 
-        SignedDataMessage(final byte s8, final short s16, final int s32, final long s64,
-                final byte nS8, final short nS16, final int nS32, final long nS64) {
+        SignedDataMessage(final byte s8, final short s16, final int s32, final long s64) {
             mS8 = s8;
             mS16 = s16;
             mS32 = s32;
             mS64 = s64;
-            mNS8 = nS8;
-            mNS16 = nS16;
-            mNS32 = nS32;
-            mNS64 = nS64;
         }
     }
 
     @Test
-    public void testSignedData() {
-        final SignedDataMessage msg = doParsingMessageTest(SIGNED_DATA + SIGNED_NEGATIVE_DATA,
-                SignedDataMessage.class);
+    public void testSignedPositiveData() {
+        final SignedDataMessage msg = doParsingMessageTest(SIGNED_DATA, SignedDataMessage.class);
         assertEquals(127, msg.mS8);
         assertEquals(32767, msg.mS16);
         assertEquals(2147483647, msg.mS32);
         assertEquals(9223372036854775807L, msg.mS64);
+    }
 
-        assertEquals(-127, msg.mNS8);
-        assertEquals(-32767, msg.mNS16);
-        assertEquals(-2147483647, msg.mNS32);
-        assertEquals(-9223372036854775807L, msg.mNS64);
+    @Test
+    public void testSignedNegativeData() {
+        final SignedDataMessage msg = doParsingMessageTest(SIGNED_NEGATIVE_DATA,
+                SignedDataMessage.class);
+        assertEquals(-127, msg.mS8);
+        assertEquals(-32767, msg.mS16);
+        assertEquals(-2147483647, msg.mS32);
+        assertEquals(-9223372036854775807L, msg.mS64);
     }
 
     static class HeaderMessageWithDuplicateOrder extends Struct {
