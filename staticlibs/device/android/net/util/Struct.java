@@ -203,7 +203,7 @@ public class Struct {
     private static boolean matchConstructor(final Constructor cons, final FieldInfo[] fields) {
         final Class[] paramTypes = cons.getParameterTypes();
         if (paramTypes.length != fields.length) return false;
-        for (int i = 0; i < cons.getParameterTypes().length; i++) {
+        for (int i = 0; i < paramTypes.length; i++) {
             if (!paramTypes[i].equals(fields[i].field.getType())) return false;
         }
         return true;
@@ -295,6 +295,11 @@ public class Struct {
     }
 
     private static FieldInfo[] getClassFieldInfo(final Class clazz) {
+        if (!isStructSubclass(clazz)) {
+            throw new IllegalArgumentException(clazz.getName() + " is not a subclass of "
+                    + Struct.class.getName());
+        }
+
         final FieldInfo[] annotationFields = new FieldInfo[getAnnotationFieldCount(clazz)];
 
         // Since array returned from Class#getDeclaredFields doesn't guarantee the actual order
@@ -332,11 +337,6 @@ public class Struct {
      */
     public static <T> T parse(final Class<T> clazz, final ByteBuffer buf) {
         try {
-            if (!isStructSubclass(clazz)) {
-                throw new IllegalArgumentException(clazz.getName() + " is not a subclass of "
-                        + Struct.class.getName());
-            }
-
             final FieldInfo[] foundFields = getClassFieldInfo(clazz);
             if (hasBothMutableAndImmutableFields(foundFields)) {
                 throw new IllegalArgumentException("Class has both immutable and mutable fields");
@@ -354,7 +354,7 @@ public class Struct {
                 throw new IllegalArgumentException("Fail to find available constructor");
             }
             if (constructor != null) {
-                final Object[] args = new Object[constructor.getParameterTypes().length];
+                final Object[] args = new Object[foundFields.length];
                 for (int i = 0; i < args.length; i++) {
                     args[i] = getFieldValue(buf, foundFields[i]);
                 }
