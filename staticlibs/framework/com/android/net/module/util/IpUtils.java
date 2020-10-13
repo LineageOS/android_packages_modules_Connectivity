@@ -16,15 +16,14 @@
 
 package com.android.net.module.util;
 
-import java.net.Inet6Address;
-import java.net.InetAddress;
-import java.nio.BufferOverflowException;
-import java.nio.BufferUnderflowException;
-import java.nio.ByteBuffer;
-import java.nio.ShortBuffer;
-
+import static android.system.OsConstants.IPPROTO_ICMPV6;
 import static android.system.OsConstants.IPPROTO_TCP;
 import static android.system.OsConstants.IPPROTO_UDP;
+
+import java.net.Inet6Address;
+import java.net.InetAddress;
+import java.nio.ByteBuffer;
+import java.nio.ShortBuffer;
 
 /**
  * @hide
@@ -129,14 +128,28 @@ public class IpUtils {
         return (short) sum;
     }
 
+    /**
+     * Calculate the UDP checksum for an UDP packet.
+     */
     public static short udpChecksum(ByteBuffer buf, int ipOffset, int transportOffset) {
         int transportLen = intAbs(buf.getShort(transportOffset + 4));
         return transportChecksum(buf, IPPROTO_UDP, ipOffset, transportOffset, transportLen);
     }
 
+    /**
+     * Calculate the TCP checksum for a TCP packet.
+     */
     public static short tcpChecksum(ByteBuffer buf, int ipOffset, int transportOffset,
             int transportLen) {
         return transportChecksum(buf, IPPROTO_TCP, ipOffset, transportOffset, transportLen);
+    }
+
+    /**
+     * Calculate the ICMPv6 checksum for an ICMPv6 packet.
+     */
+    public static short icmpv6Checksum(ByteBuffer buf, int ipOffset, int transportOffset,
+            int transportLen) {
+        return transportChecksum(buf, IPPROTO_ICMPV6, ipOffset, transportOffset, transportLen);
     }
 
     public static String addressAndPortToString(InetAddress address, int port) {
