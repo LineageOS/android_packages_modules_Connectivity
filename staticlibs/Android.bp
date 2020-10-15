@@ -124,6 +124,7 @@ java_library {
     visibility: [
         "//cts/tests/tests/net",
         "//frameworks/base/packages/Tethering",
+        "//frameworks/base/tests:__subpackages__",
         "//frameworks/opt/net/ike",
         "//frameworks/opt/telephony",
         "//frameworks/base/wifi:__subpackages__",
