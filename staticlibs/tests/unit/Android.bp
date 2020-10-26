@@ -6,7 +6,6 @@ android_library {
     name: "NetworkStaticLibTestsLib",
     srcs: ["src/**/*.java","src/**/*.kt"],
     min_sdk_version: "29",
-    jarjar_rules: "jarjar-rules.txt",
     static_libs: [
         "net-utils-framework-common",
         "androidx.test.rules",
@@ -17,6 +16,7 @@ android_library {
         "android.test.runner",
         "android.test.base",
     ],
+    jarjar_rules: "jarjar-rules-sharedlib.txt",
     visibility: [
         "//frameworks/base/packages/Tethering/tests/integration",
         "//packages/modules/NetworkStack/tests/integration",
@@ -29,6 +29,7 @@ android_test {
     static_libs: [
         "NetworkStaticLibTestsLib",
     ],
+    jarjar_rules: "jarjar-rules.txt",
     test_suites: ["device-tests"],
 }
 
