@@ -19,6 +19,7 @@ android_library {
     jarjar_rules: "jarjar-rules-sharedlib.txt",
     visibility: [
         "//frameworks/base/packages/Tethering/tests/integration",
+        "//packages/modules/Connectivity/Tethering/tests/integration",
         "//packages/modules/NetworkStack/tests/integration",
     ]
 }
