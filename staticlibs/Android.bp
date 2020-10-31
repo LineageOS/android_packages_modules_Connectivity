@@ -124,6 +124,7 @@ java_library {
     jarjar_rules: "jarjar-rules-shared.txt",
     visibility: [
         "//cts/tests/tests/net",
+        "//packages/modules/Connectivity/tests/cts/net",
         "//frameworks/base/packages/Tethering",
         "//packages/modules/Connectivity/Tethering",
         "//frameworks/base/tests:__subpackages__",
