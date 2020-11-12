@@ -138,10 +138,20 @@ java_library {
     ]
 }
 
+filegroup {
+    name: "net-utils-services-common-srcs",
+    srcs: [
+        "device/android/net/NetworkFactory.java",
+    ],
+    visibility: [
+        "//frameworks/base/services/net",
+    ],
+}
+
 java_library {
     name: "net-utils-services-common",
     srcs: [
-        "device/android/net/NetworkFactory.java",
+        ":net-utils-services-common-srcs",
         ":framework-annotations",
     ],
     sdk_version: "system_current",
