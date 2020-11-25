@@ -29,6 +29,7 @@ import java.math.BigInteger;
 import java.nio.BufferUnderflowException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Define a generic class that helps to parse the structured message.
@@ -142,6 +143,7 @@ public class Struct {
             this.field = field;
         }
     }
+    private static ConcurrentHashMap<Class, FieldInfo[]> sFieldCache = new ConcurrentHashMap();
 
     private static void checkAnnotationType(final Type type, final Class fieldType) {
         switch (type) {
@@ -300,11 +302,15 @@ public class Struct {
                     + Struct.class.getName());
         }
 
-        final FieldInfo[] annotationFields = new FieldInfo[getAnnotationFieldCount(clazz)];
+        final FieldInfo[] cachedAnnotationFields = sFieldCache.get(clazz);
+        if (cachedAnnotationFields != null) {
+            return cachedAnnotationFields;
+        }
 
         // Since array returned from Class#getDeclaredFields doesn't guarantee the actual order
         // of field appeared in the class, that is a problem when parsing raw data read from
         // ByteBuffer. Store the fields appeared by the order() defined in the Field annotation.
+        final FieldInfo[] annotationFields = new FieldInfo[getAnnotationFieldCount(clazz)];
         for (java.lang.reflect.Field field : clazz.getDeclaredFields()) {
             if (Modifier.isStatic(field.getModifiers())) continue;
 
@@ -324,6 +330,7 @@ public class Struct {
             }
             annotationFields[annotation.order()] = new FieldInfo(annotation, field);
         }
+        sFieldCache.putIfAbsent(clazz, annotationFields);
         return annotationFields;
     }
 

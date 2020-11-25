@@ -96,15 +96,19 @@ public class StructTest {
         }
     }
 
-    @Test
-    public void testClassWithExplicitConstructor() {
-        final HeaderMsgWithConstructor msg = doParsingMessageTest(HDR_EMPTY,
-                HeaderMsgWithConstructor.class);
+    private void verifyHeaderParsing(final HeaderMsgWithConstructor msg) {
         assertEquals(10, msg.mFamily);
         assertEquals(0, msg.mLen);
         assertEquals(15715755, msg.mIfindex);
         assertEquals(134, msg.mIcmpType);
         assertEquals(0, msg.mIcmpCode);
+    }
+
+    @Test
+    public void testClassWithExplicitConstructor() {
+        final HeaderMsgWithConstructor msg = doParsingMessageTest(HDR_EMPTY,
+                HeaderMsgWithConstructor.class);
+        verifyHeaderParsing(msg);
     }
 
     static class HeaderMsgWithoutConstructor extends Struct {
@@ -367,19 +371,20 @@ public class StructTest {
         }
     }
 
-    @Test
-    public void testPrefixArrayField() throws Exception {
-        final ByteBuffer buf = toByteBuffer(OPT_PREF64);
-        buf.order(ByteOrder.LITTLE_ENDIAN);
-
+    private void verifyPrefixByteArrayParsing(final PrefixMessage msg) throws Exception {
         // The original PREF64 option message has just 12 bytes for prefix byte array
         // (Highest 96 bits of the Prefix), copyOf pads the 128-bits IPv6 address with
         // prefix and 4-bytes zeros.
-        final PrefixMessage msg = Struct.parse(PrefixMessage.class, buf);
         final InetAddress addr = InetAddress.getByAddress(Arrays.copyOf(msg.mPrefix, 16));
         final IpPrefix prefix = new IpPrefix(addr, 96);
         assertEquals(10064, msg.mLifetime);
         assertTrue(prefix.equals(new IpPrefix("2001:db8:3:4:5:6::/96")));
+    }
+
+    @Test
+    public void testPrefixArrayField() throws Exception {
+        final PrefixMessage msg = doParsingMessageTest(OPT_PREF64, PrefixMessage.class);
+        verifyPrefixByteArrayParsing(msg);
     }
 
     static class HeaderMessageWithMutableField extends Struct {
@@ -479,6 +484,18 @@ public class StructTest {
                 ClassWithTwoConstructors.class);
         assertEquals(13330 /* 0x3412 */, msg.mInt1);
         assertEquals(30806 /* 0x7856 */, msg.mInt2);
+    }
+
+    @Test
+    public void testClassesParsedFromCache() throws Exception {
+        for (int i = 0; i < 100; i++) {
+            final HeaderMsgWithConstructor msg1 =
+                    doParsingMessageTest(HDR_EMPTY, HeaderMsgWithConstructor.class);
+            verifyHeaderParsing(msg1);
+
+            final PrefixMessage msg2 = doParsingMessageTest(OPT_PREF64, PrefixMessage.class);
+            verifyPrefixByteArrayParsing(msg2);
+        }
     }
 
     private ByteBuffer toByteBuffer(final String hexString) {
