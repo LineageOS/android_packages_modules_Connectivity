@@ -22,6 +22,7 @@ import java.net.UnknownHostException;
 
 /**
  * Network constants used by the network stack.
+ * @hide
  */
 public final class NetworkStackConstants {
 
