@@ -16,7 +16,6 @@ android_library {
         "android.test.runner",
         "android.test.base",
     ],
-    jarjar_rules: "jarjar-rules-sharedlib.txt",
     visibility: [
         "//frameworks/base/packages/Tethering/tests/integration",
         "//packages/modules/Connectivity/Tethering/tests/integration",
