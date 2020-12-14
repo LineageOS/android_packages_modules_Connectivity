@@ -21,6 +21,7 @@ import android.net.LinkProperties
 import android.net.Network
 import android.net.NetworkCapabilities
 import android.net.NetworkCapabilities.NET_CAPABILITY_VALIDATED
+import android.util.Log
 import com.android.net.module.util.ArrayTrackRecord
 import com.android.testutils.RecorderCallback.CallbackEntry.Available
 import com.android.testutils.RecorderCallback.CallbackEntry.BlockedStatus
@@ -47,6 +48,8 @@ open class RecorderCallback private constructor(
 ) : NetworkCallback() {
     public constructor() : this(ArrayTrackRecord())
     protected constructor(src: RecorderCallback?): this(src?.backingRecord ?: ArrayTrackRecord())
+
+    private val TAG = this::class.simpleName
 
     sealed class CallbackEntry {
         // To get equals(), hashcode(), componentN() etc for free, the child classes of
@@ -114,34 +117,42 @@ open class RecorderCallback private constructor(
     // expect the callbacks not to record this, do not listen to PreCheck here.
 
     override fun onCapabilitiesChanged(network: Network, caps: NetworkCapabilities) {
+        Log.d(TAG, "onCapabilitiesChanged $network $caps")
         history.add(CapabilitiesChanged(network, caps))
     }
 
     override fun onLinkPropertiesChanged(network: Network, lp: LinkProperties) {
+        Log.d(TAG, "onLinkPropertiesChanged $network $lp")
         history.add(LinkPropertiesChanged(network, lp))
     }
 
     override fun onBlockedStatusChanged(network: Network, blocked: Boolean) {
+        Log.d(TAG, "onBlockedStatusChanged $network $blocked")
         history.add(BlockedStatus(network, blocked))
     }
 
     override fun onNetworkSuspended(network: Network) {
+        Log.d(TAG, "onNetworkSuspended $network $network")
         history.add(Suspended(network))
     }
 
     override fun onNetworkResumed(network: Network) {
+        Log.d(TAG, "$network onNetworkResumed $network")
         history.add(Resumed(network))
     }
 
     override fun onLosing(network: Network, maxMsToLive: Int) {
+        Log.d(TAG, "onLosing $network $maxMsToLive")
         history.add(Losing(network, maxMsToLive))
     }
 
     override fun onLost(network: Network) {
+        Log.d(TAG, "onLost $network")
         history.add(Lost(network))
     }
 
     override fun onUnavailable() {
+        Log.d(TAG, "onUnavailable")
         history.add(Unavailable())
     }
 }
