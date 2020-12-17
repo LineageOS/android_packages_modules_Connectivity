@@ -99,14 +99,16 @@ public class Struct {
         U8,        // unsigned byte,  size = 1 byte
         U16,       // unsigned short, size = 2 bytes
         U32,       // unsigned int,   size = 4 bytes
+        U63,       // unsigned long(MSB: 0), size = 8 bytes
         U64,       // unsigned long,  size = 8 bytes
         S8,        // signed byte,    size = 1 byte
         S16,       // signed short,   size = 2 bytes
         S32,       // signed int,     size = 4 bytes
         S64,       // signed long,    size = 8 bytes
-        BE16,      // unsigned short in network order, size = 2 bytes
-        BE32,      // unsigned int in network order,   size = 4 bytes
-        BE64,      // unsigned long in network order,  size = 8 bytes
+        UBE16,     // unsigned short in network order, size = 2 bytes
+        UBE32,     // unsigned int in network order,   size = 4 bytes
+        UBE63,     // unsigned long(MSB: 0) in network order, size = 8 bytes
+        UBE64,     // unsigned long in network order,  size = 8 bytes
         ByteArray, // byte array with predefined length
     }
 
@@ -120,7 +122,7 @@ public class Struct {
      * arraysize: The length of byte array.
      *
      * Annotation associated with field MUST have order and type properties at least, padding
-     * and arraysize properties depend on the specific usage, if these properties are absence,
+     * and arraysize properties depend on the specific usage, if these properties are absent,
      * then default value 0 will be applied.
      */
     @Retention(RetentionPolicy.RUNTIME)
@@ -145,37 +147,76 @@ public class Struct {
     }
     private static ConcurrentHashMap<Class, FieldInfo[]> sFieldCache = new ConcurrentHashMap();
 
-    private static void checkAnnotationType(final Type type, final Class fieldType) {
-        switch (type) {
+    private static void checkAnnotationType(final Field annotation, final Class fieldType) {
+        switch (annotation.type()) {
             case U8:
             case S16:
                 if (fieldType == Short.TYPE) return;
                 break;
             case U16:
             case S32:
-            case BE16:
+            case UBE16:
                 if (fieldType == Integer.TYPE) return;
                 break;
             case U32:
+            case U63:
             case S64:
-            case BE32:
+            case UBE32:
+            case UBE63:
                 if (fieldType == Long.TYPE) return;
                 break;
             case U64:
-            case BE64:
-                if (fieldType == BigInteger.class || fieldType == Long.TYPE) return;
+            case UBE64:
+                if (fieldType == BigInteger.class) return;
                 break;
             case S8:
                 if (fieldType == Byte.TYPE) return;
                 break;
             case ByteArray:
-                if (fieldType == byte[].class) return;
-                break;
+                if (fieldType != byte[].class) break;
+                if (annotation.arraysize() <= 0) {
+                    throw new IllegalArgumentException("Invalid ByteArray size: "
+                            + annotation.arraysize());
+                }
+                return;
             default:
-                throw new IllegalArgumentException("Unknown type" + type);
+                throw new IllegalArgumentException("Unknown type" + annotation.type());
         }
         throw new IllegalArgumentException("Invalid primitive data type: " + fieldType
-                + "for annotation type: " + type);
+                + " for annotation type: " + annotation.type());
+    }
+
+    private static int getFieldLength(final Field annotation) {
+        int length = 0;
+        switch (annotation.type()) {
+            case U8:
+            case S8:
+                length = 1;
+                break;
+            case U16:
+            case S16:
+            case UBE16:
+                length = 2;
+                break;
+            case U32:
+            case S32:
+            case UBE32:
+                length = 4;
+                break;
+            case U63:
+            case U64:
+            case S64:
+            case UBE63:
+            case UBE64:
+                length = 8;
+                break;
+            case ByteArray:
+                length = annotation.arraysize();
+                break;
+            default:
+                throw new IllegalArgumentException("Unknown type" + annotation.type());
+        }
+        return length + annotation.padding();
     }
 
     private static boolean isStructSubclass(final Class clazz) {
@@ -190,7 +231,7 @@ public class Struct {
         return count;
     }
 
-    private static boolean matchModifier(final FieldInfo[] fields, boolean immutable) {
+    private static boolean allFieldsFinal(final FieldInfo[] fields, boolean immutable) {
         for (FieldInfo fi : fields) {
             if (Modifier.isFinal(fi.field.getModifiers()) != immutable) return false;
         }
@@ -198,8 +239,8 @@ public class Struct {
     }
 
     private static boolean hasBothMutableAndImmutableFields(final FieldInfo[] fields) {
-        return !matchModifier(fields, true /* immutable */)
-                && !matchModifier(fields, false /* mutable */);
+        return !allFieldsFinal(fields, true /* immutable */)
+                && !allFieldsFinal(fields, false /* mutable */);
     }
 
     private static boolean matchConstructor(final Constructor cons, final FieldInfo[] fields) {
@@ -211,21 +252,72 @@ public class Struct {
         return true;
     }
 
-    private static BigInteger readBigInteger(final ByteBuffer buf) {
-        // The magnitude argument of BigInteger constructor is a byte array in big-endian order.
-        // If ByteBuffer is read in little-endian, reverse the order of the bytes is required;
-        // if ByteBuffer is read in big-endian, then just keep it as-is.
+    /**
+     * Read U64/UBE64 type data from ByteBuffer and output a BigInteger instance.
+     *
+     * @param buf The byte buffer to read.
+     * @param type The annotation type.
+     *
+     * The magnitude argument of BigInteger constructor is a byte array in big-endian order.
+     * If BigInteger data is read from the byte buffer in little-endian, reverse the order of
+     * the bytes is required; if BigInteger data is read from the byte buffer in big-endian,
+     * then just keep it as-is.
+     */
+    private static BigInteger readBigInteger(final ByteBuffer buf, final Type type) {
         final byte[] input = new byte[8];
+        boolean reverseBytes = (type == Type.U64 && buf.order() == ByteOrder.LITTLE_ENDIAN);
         for (int i = 0; i < 8; i++) {
-            input[(buf.order() == ByteOrder.LITTLE_ENDIAN ? input.length - 1 - i : i)] = buf.get();
+            input[reverseBytes ? input.length - 1 - i : i] = buf.get();
         }
         return new BigInteger(1, input);
+    }
+
+    /**
+     * Get the last 8 bytes of a byte array. If there are less than 8 bytes,
+     * the first bytes are replaced with zeroes.
+     */
+    private static byte[] getLast8Bytes(final byte[] input) {
+        final byte[] tmp = new byte[8];
+        System.arraycopy(
+                input,
+                Math.max(0, input.length - 8), // srcPos: read at most last 8 bytes
+                tmp,
+                Math.max(0, 8 - input.length), // dstPos: pad output with that many zeroes
+                Math.min(8, input.length));    // length
+        return tmp;
+    }
+
+    /**
+     * Convert U64/UBE64 type data interpreted by BigInteger class to bytes array, output are
+     * always 8 bytes.
+     *
+     * @param bigInteger The number to convert.
+     * @param order Indicate ByteBuffer is read as little-endian or big-endian.
+     * @param type The annotation type.
+     *
+     * BigInteger#toByteArray returns a byte array containing the 2's complement representation
+     * of this BigInteger, in big-endian. If annotation type is U64 and ByteBuffer is read as
+     * little-endian, then reversing the order of the bytes is required.
+     */
+    private static byte[] bigIntegerToU64Bytes(final BigInteger bigInteger, final ByteOrder order,
+            final Type type) {
+        final byte[] bigIntegerBytes = bigInteger.toByteArray();
+        final byte[] output = getLast8Bytes(bigIntegerBytes);
+
+        if (type == Type.U64 && order == ByteOrder.LITTLE_ENDIAN) {
+            for (int i = 0; i < 4; i++) {
+                byte tmp = output[i];
+                output[i] = output[7 - i];
+                output[7 - i] = tmp;
+            }
+        }
+        return output;
     }
 
     private static Object getFieldValue(final ByteBuffer buf, final FieldInfo fieldInfo)
             throws BufferUnderflowException {
         final Object value;
-        checkAnnotationType(fieldInfo.annotation.type(), fieldInfo.field.getType());
+        checkAnnotationType(fieldInfo.annotation, fieldInfo.field.getType());
         switch (fieldInfo.annotation.type()) {
             case U8:
                 value = (short) (buf.get() & 0xFF);
@@ -237,11 +329,7 @@ public class Struct {
                 value = (long) (buf.getInt() & 0xFFFFFFFFL);
                 break;
             case U64:
-                if (fieldInfo.field.getType() == BigInteger.class) {
-                    value = readBigInteger(buf);
-                } else {
-                    value = buf.getLong();
-                }
+                value = readBigInteger(buf, Type.U64);
                 break;
             case S8:
                 value = buf.get();
@@ -252,33 +340,33 @@ public class Struct {
             case S32:
                 value = buf.getInt();
                 break;
+            case U63:
             case S64:
                 value = buf.getLong();
                 break;
-            case BE16:
+            case UBE16:
                 if (buf.order() == ByteOrder.LITTLE_ENDIAN) {
                     value = (int) (Short.reverseBytes(buf.getShort()) & 0xFFFF);
                 } else {
                     value = (int) (buf.getShort() & 0xFFFF);
                 }
                 break;
-            case BE32:
+            case UBE32:
                 if (buf.order() == ByteOrder.LITTLE_ENDIAN) {
                     value = (long) (Integer.reverseBytes(buf.getInt()) & 0xFFFFFFFFL);
                 } else {
                     value = (long) (buf.getInt() & 0xFFFFFFFFL);
                 }
                 break;
-            case BE64:
-                if (fieldInfo.field.getType() == BigInteger.class) {
-                    value = readBigInteger(buf);
+            case UBE63:
+                if (buf.order() == ByteOrder.LITTLE_ENDIAN) {
+                    value = Long.reverseBytes(buf.getLong());
                 } else {
-                    if (buf.order() == ByteOrder.LITTLE_ENDIAN) {
-                        value = Long.reverseBytes(buf.getLong());
-                    } else {
-                        value = buf.getLong();
-                    }
+                    value = buf.getLong();
                 }
+                break;
+            case UBE64:
+                value = readBigInteger(buf, Type.UBE64);
                 break;
             case ByteArray:
                 final byte[] array = new byte[fieldInfo.annotation.arraysize()];
@@ -294,6 +382,72 @@ public class Struct {
             buf.position(buf.position() + fieldInfo.annotation.padding());
         }
         return value;
+    }
+
+    private static void putFieldValue(final ByteBuffer output, final FieldInfo fieldInfo,
+            final Object value) throws BufferUnderflowException {
+        switch (fieldInfo.annotation.type()) {
+            case U8:
+                output.put((byte) (((short) value) & 0xFF));
+                break;
+            case U16:
+                output.putShort((short) (((int) value) & 0xFFFF));
+                break;
+            case U32:
+                output.putInt((int) (((long) value) & 0xFFFFFFFFL));
+                break;
+            case U63:
+                output.putLong((long) value);
+                break;
+            case U64:
+                output.put(bigIntegerToU64Bytes((BigInteger) value, output.order(), Type.U64));
+                break;
+            case S8:
+                output.put((byte) value);
+                break;
+            case S16:
+                output.putShort((short) value);
+                break;
+            case S32:
+                output.putInt((int) value);
+                break;
+            case S64:
+                output.putLong((long) value);
+                break;
+            case UBE16:
+                if (output.order() == ByteOrder.LITTLE_ENDIAN) {
+                    output.putShort(Short.reverseBytes((short) (((int) value) & 0xFFFF)));
+                } else {
+                    output.putShort((short) (((int) value) & 0xFFFF));
+                }
+                break;
+            case UBE32:
+                if (output.order() == ByteOrder.LITTLE_ENDIAN) {
+                    output.putInt(Integer.reverseBytes(
+                            (int) (((long) value) & 0xFFFFFFFFL)));
+                } else {
+                    output.putInt((int) (((long) value) & 0xFFFFFFFFL));
+                }
+                break;
+            case UBE63:
+                if (output.order() == ByteOrder.LITTLE_ENDIAN) {
+                    output.putLong(Long.reverseBytes((long) value));
+                } else {
+                    output.putLong((long) value);
+                }
+                break;
+            case UBE64:
+                output.put(bigIntegerToU64Bytes((BigInteger) value, output.order(), Type.UBE64));
+                break;
+            case ByteArray:
+                output.put((byte[]) value);
+                break;
+            default:
+                throw new IllegalArgumentException("Unknown type:" + fieldInfo.annotation.type());
+        }
+
+        // padding zero after field value for alignment.
+        for (int i = 0; i < fieldInfo.annotation.padding(); i++) output.put((byte) 0);
     }
 
     private static FieldInfo[] getClassFieldInfo(final Class clazz) {
@@ -346,7 +500,7 @@ public class Struct {
         try {
             final FieldInfo[] foundFields = getClassFieldInfo(clazz);
             if (hasBothMutableAndImmutableFields(foundFields)) {
-                throw new IllegalArgumentException("Class has both immutable and mutable fields");
+                throw new IllegalArgumentException("Class has both final and non-final fields");
             }
 
             Constructor<?> constructor = null;
@@ -373,12 +527,62 @@ public class Struct {
                 fi.field.set(instance, getFieldValue(buf, fi));
             }
             return (T) instance;
-        } catch (IllegalAccessException
-                | InvocationTargetException
-                | InstantiationException e) {
+        } catch (IllegalAccessException | InvocationTargetException | InstantiationException e) {
             throw new IllegalArgumentException("Fail to create a instance from constructor", e);
         } catch (BufferUnderflowException e) {
             throw new IllegalArgumentException("Fail to read raw data from ByteBuffer", e);
         }
+    }
+
+    private static int getSizeInternal(final FieldInfo[] fieldInfos) {
+        int size = 0;
+        for (FieldInfo fi : fieldInfos) {
+            size += getFieldLength(fi.annotation);
+        }
+        return size;
+    }
+
+    private void writeToByteBufferInternal(final ByteBuffer output, final FieldInfo[] fieldInfos) {
+        for (FieldInfo fi : fieldInfos) {
+            try {
+                putFieldValue(output, fi, fi.field.get(this));
+            } catch (IllegalAccessException e) {
+                throw new IllegalArgumentException("Fail to get the field value from instance", e);
+            } catch (BufferUnderflowException e) {
+                throw new IllegalArgumentException("Fail to fill raw data to ByteBuffer", e);
+            }
+        }
+    }
+
+    /**
+     * Get the size of Struct subclass object.
+     */
+    public static <T extends Struct> int getSize(final Class<T> clazz) {
+        final FieldInfo[] fieldInfos = getClassFieldInfo(clazz);
+        return getSizeInternal(fieldInfos);
+    }
+
+    /**
+     * Convert the parsed Struct subclass object to ByteBuffer.
+     *
+     * @param output ByteBuffer passed-in from the caller.
+     */
+    public final void writeToByteBuffer(final ByteBuffer output) {
+        final FieldInfo[] fieldInfos = getClassFieldInfo(this.getClass());
+        writeToByteBufferInternal(output, fieldInfos);
+    }
+
+    /**
+     * Convert the parsed Struct subclass object to byte array.
+     *
+     * @param order indicate ByteBuffer is outputted as little-endian or big-endian.
+     */
+    public final byte[] writeToBytes(final ByteOrder order) {
+        final FieldInfo[] fieldInfos = getClassFieldInfo(this.getClass());
+        final byte[] output = new byte[getSizeInternal(fieldInfos)];
+        final ByteBuffer buffer = ByteBuffer.wrap(output);
+        buffer.order(order);
+        writeToByteBufferInternal(buffer, fieldInfos);
+        return output;
     }
 }
