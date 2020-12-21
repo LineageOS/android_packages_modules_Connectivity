@@ -26,11 +26,13 @@ import android.net.LinkAddress;
 import android.net.LinkProperties;
 import android.net.ProxyInfo;
 import android.net.RouteInfo;
-import android.net.util.LinkPropertiesUtils.CompareOrUpdateResult;
-import android.net.util.LinkPropertiesUtils.CompareResult;
 import android.util.ArraySet;
 
 import androidx.test.runner.AndroidJUnit4;
+
+import com.android.net.module.util.LinkPropertiesUtils;
+import com.android.net.module.util.LinkPropertiesUtils.CompareOrUpdateResult;
+import com.android.net.module.util.LinkPropertiesUtils.CompareResult;
 
 import org.junit.Test;
 import org.junit.runner.RunWith;
