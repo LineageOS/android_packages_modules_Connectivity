@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package android.net.util;
+package com.android.net.module.util;
 
 import static com.android.testutils.MiscAsserts.assertThrows;
 
@@ -23,13 +23,13 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import android.net.IpPrefix;
-import android.net.util.Struct.Field;
-import android.net.util.Struct.Type;
 
 import androidx.test.filters.SmallTest;
 import androidx.test.runner.AndroidJUnit4;
 
 import com.android.internal.util.HexDump;
+import com.android.net.module.util.Struct.Field;
+import com.android.net.module.util.Struct.Type;
 
 import org.junit.Test;
 import org.junit.runner.RunWith;

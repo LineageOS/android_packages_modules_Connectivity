@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package android.net.util;
+package com.android.net.module.util;
 
 import android.annotation.NonNull;
 
@@ -293,7 +293,7 @@ public class Struct {
      *
      * @param bigInteger The number to convert.
      * @param order Indicate ByteBuffer is read as little-endian or big-endian.
-     * @param type The annotation type.
+     * @param type The annotation U64 type.
      *
      * BigInteger#toByteArray returns a byte array containing the 2's complement representation
      * of this BigInteger, in big-endian. If annotation type is U64 and ByteBuffer is read as
