@@ -126,16 +126,17 @@ java_library {
     visibility: [
         "//cts/tests/tests/net",
         "//cts/tests/tests/wifi",
-        "//packages/modules/Connectivity/tests/cts/net",
         "//frameworks/base/packages/Tethering",
-        "//packages/modules/Connectivity/Tethering",
         "//frameworks/base/tests:__subpackages__",
+        "//frameworks/base/wifi:__subpackages__",
+        "//frameworks/libs/net/common/tests:__subpackages__",
         "//frameworks/opt/net/ike",
         "//frameworks/opt/telephony",
-        "//frameworks/base/wifi:__subpackages__",
-        "//packages/modules/NetworkStack:__subpackages__",
         "//packages/modules/CaptivePortalLogin",
-        "//frameworks/libs/net/common/tests:__subpackages__",
+        "//packages/modules/Connectivity/tests/cts/net",
+        "//packages/modules/Connectivity/Tethering",
+        "//packages/modules/NetworkStack:__subpackages__",
+        "//packages/modules/Wifi/framework/tests:__subpackages__",
     ]
 }
 
