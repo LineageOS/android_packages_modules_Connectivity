@@ -140,6 +140,7 @@ java_library {
         "//packages/modules/NetworkStack:__subpackages__",
         "//packages/modules/CaptivePortalLogin",
         "//frameworks/libs/net/common/tests:__subpackages__",
+        "//packages/modules/Wifi/framework/tests:__subpackages__",
     ]
 }
 
