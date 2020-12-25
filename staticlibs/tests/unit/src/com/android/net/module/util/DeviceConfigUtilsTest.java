@@ -26,6 +26,8 @@ import static org.mockito.Mockito.anyInt;
 import static org.mockito.Mockito.anyString;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.eq;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 
 import android.content.Context;
 import android.content.pm.PackageInfo;
@@ -86,6 +88,7 @@ public class DeviceConfigUtilsTest {
     @After
     public void tearDown() {
         mSession.finishMocking();
+        DeviceConfigUtils.sPackageVersion = -1L;
     }
 
     @Test
@@ -137,10 +140,30 @@ public class DeviceConfigUtilsTest {
     }
 
     @Test
+    public void testGetDeviceConfigPropertyInt_EqualsMaximumValue() {
+        doReturn(Integer.toString(TEST_MAX_FLAG_VALUE)).when(() -> DeviceConfig.getProperty(
+                eq(TEST_NAME_SPACE), eq(TEST_EXPERIMENT_FLAG)));
+        assertEquals(TEST_MAX_FLAG_VALUE, DeviceConfigUtils.getDeviceConfigPropertyInt(
+                TEST_NAME_SPACE, TEST_EXPERIMENT_FLAG, TEST_MIN_FLAG_VALUE /* minimum value */,
+                TEST_MAX_FLAG_VALUE /* maximum value */,
+                TEST_DEFAULT_FLAG_VALUE /* default value */));
+    }
+
+    @Test
     public void testGetDeviceConfigPropertyInt_BelowMinimumValue() {
         doReturn(Integer.toString(TEST_MIN_FLAG_VALUE - 10)).when(() -> DeviceConfig.getProperty(
                 eq(TEST_NAME_SPACE), eq(TEST_EXPERIMENT_FLAG)));
         assertEquals(TEST_DEFAULT_FLAG_VALUE, DeviceConfigUtils.getDeviceConfigPropertyInt(
+                TEST_NAME_SPACE, TEST_EXPERIMENT_FLAG, TEST_MIN_FLAG_VALUE /* minimum value */,
+                TEST_MAX_FLAG_VALUE /* maximum value */,
+                TEST_DEFAULT_FLAG_VALUE /* default value */));
+    }
+
+    @Test
+    public void testGetDeviceConfigPropertyInt_EqualsMinimumValue() {
+        doReturn(Integer.toString(TEST_MIN_FLAG_VALUE)).when(() -> DeviceConfig.getProperty(
+                eq(TEST_NAME_SPACE), eq(TEST_EXPERIMENT_FLAG)));
+        assertEquals(TEST_MIN_FLAG_VALUE, DeviceConfigUtils.getDeviceConfigPropertyInt(
                 TEST_NAME_SPACE, TEST_EXPERIMENT_FLAG, TEST_MIN_FLAG_VALUE /* minimum value */,
                 TEST_MAX_FLAG_VALUE /* maximum value */,
                 TEST_DEFAULT_FLAG_VALUE /* default value */));
@@ -165,7 +188,7 @@ public class DeviceConfigUtilsTest {
     }
 
     @Test
-    public void testFeatureIsEnabledWithExceptionsEnabled() {
+    public void testFeatureIsEnabled() {
         doReturn(TEST_FLAG_VALUE_STRING).when(() -> DeviceConfig.getProperty(eq(TEST_NAME_SPACE),
                 eq(TEST_EXPERIMENT_FLAG)));
         assertTrue(DeviceConfigUtils.isFeatureEnabled(mContext, TEST_NAME_SPACE,
@@ -187,6 +210,21 @@ public class DeviceConfigUtilsTest {
         doThrow(NameNotFoundException.class).when(mPm).getPackageInfo(anyString(), anyInt());
         assertFalse(DeviceConfigUtils.isFeatureEnabled(mContext, TEST_NAME_SPACE,
                 TEST_EXPERIMENT_FLAG));
+    }
+
+    @Test
+    public void testFeatureIsEnabledCaching() throws Exception {
+        doReturn(TEST_FLAG_VALUE_STRING).when(() -> DeviceConfig.getProperty(eq(TEST_NAME_SPACE),
+                eq(TEST_EXPERIMENT_FLAG)));
+        assertTrue(DeviceConfigUtils.isFeatureEnabled(mContext, TEST_NAME_SPACE,
+                TEST_EXPERIMENT_FLAG));
+        assertTrue(DeviceConfigUtils.isFeatureEnabled(mContext, TEST_NAME_SPACE,
+                TEST_EXPERIMENT_FLAG));
+
+        // Package info is only queried once
+        verify(mContext, times(1)).getPackageManager();
+        verify(mContext, times(1)).getPackageName();
+        verify(mPm, times(1)).getPackageInfo(anyString(), anyInt());
     }
 
     @Test

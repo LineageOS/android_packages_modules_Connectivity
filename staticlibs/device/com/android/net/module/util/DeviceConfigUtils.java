@@ -25,6 +25,7 @@ import android.util.Log;
 import androidx.annotation.BoolRes;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.annotation.VisibleForTesting;
 
 /**
  * Utilities for modules to query {@link DeviceConfig} and flags.
@@ -33,6 +34,21 @@ public final class DeviceConfigUtils {
     private DeviceConfigUtils() {}
 
     private static final String TAG = DeviceConfigUtils.class.getSimpleName();
+
+    @VisibleForTesting
+    protected static volatile long sPackageVersion = -1;
+    private static long getPackageVersion(@NonNull final Context context)
+            throws PackageManager.NameNotFoundException {
+        // sPackageVersion may be set by another thread just after this check, but querying the
+        // package version several times on rare occasions is fine.
+        if (sPackageVersion >= 0) {
+            return sPackageVersion;
+        }
+        final long version = context.getPackageManager().getPackageInfo(
+                context.getPackageName(), 0).getLongVersionCode();
+        sPackageVersion = version;
+        return version;
+    }
 
     /**
      * Look up the value of a property for a particular namespace from {@link DeviceConfig}.
@@ -137,8 +153,7 @@ public final class DeviceConfigUtils {
         try {
             final int propertyVersion = getDeviceConfigPropertyInt(namespace, name,
                     0 /* default value */);
-            final long packageVersion = context.getPackageManager().getPackageInfo(
-                    context.getPackageName(), 0).getLongVersionCode();
+            final long packageVersion = getPackageVersion(context);
             return (propertyVersion == 0 && defaultEnabled)
                     || (propertyVersion != 0 && packageVersion >= (long) propertyVersion);
         } catch (PackageManager.NameNotFoundException e) {
