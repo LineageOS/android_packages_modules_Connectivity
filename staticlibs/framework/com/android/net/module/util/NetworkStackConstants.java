@@ -46,6 +46,12 @@ public final class NetworkStackConstants {
     public static final int ETHER_TYPE_IPV6 = 0x86dd;
     public static final int ETHER_HEADER_LEN = 14;
     public static final int ETHER_MTU = 1500;
+    public static final byte[] ETHER_BROADCAST = new byte[] {
+            (byte) 0xff, (byte) 0xff, (byte) 0xff,
+            (byte) 0xff, (byte) 0xff, (byte) 0xff,
+    };
+
+    public static final int DEFAULT_LINK_MTU = 1500;
 
     /**
      * ARP constants.
