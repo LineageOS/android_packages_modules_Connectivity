@@ -106,9 +106,7 @@ public class TetheringService extends Service {
                 IIntResultListener listener) {
             if (checkAndNotifyCommonError(callerPkg, callingAttributionTag, listener)) return;
 
-            try {
-                listener.onResult(mTethering.tether(iface));
-            } catch (RemoteException e) { }
+            mTethering.tether(iface, listener);
         }
 
         @Override
@@ -116,9 +114,7 @@ public class TetheringService extends Service {
                 IIntResultListener listener) {
             if (checkAndNotifyCommonError(callerPkg, callingAttributionTag, listener)) return;
 
-            try {
-                listener.onResult(mTethering.untether(iface));
-            } catch (RemoteException e) { }
+            mTethering.untether(iface, listener);
         }
 
         @Override

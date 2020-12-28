@@ -156,11 +156,9 @@ public final class TetheringServiceTest {
     }
 
     private void runTether(final TestTetheringResult result) throws Exception {
-        when(mTethering.tether(TEST_IFACE_NAME)).thenReturn(TETHER_ERROR_NO_ERROR);
         mTetheringConnector.tether(TEST_IFACE_NAME, TEST_CALLER_PKG, TEST_ATTRIBUTION_TAG, result);
         verify(mTethering).isTetheringSupported();
-        verify(mTethering).tether(TEST_IFACE_NAME);
-        result.assertResult(TETHER_ERROR_NO_ERROR);
+        verify(mTethering).tether(eq(TEST_IFACE_NAME), eq(result));
     }
 
     @Test
@@ -186,12 +184,10 @@ public final class TetheringServiceTest {
     }
 
     private void runUnTether(final TestTetheringResult result) throws Exception {
-        when(mTethering.untether(TEST_IFACE_NAME)).thenReturn(TETHER_ERROR_NO_ERROR);
         mTetheringConnector.untether(TEST_IFACE_NAME, TEST_CALLER_PKG, TEST_ATTRIBUTION_TAG,
                 result);
         verify(mTethering).isTetheringSupported();
-        verify(mTethering).untether(TEST_IFACE_NAME);
-        result.assertResult(TETHER_ERROR_NO_ERROR);
+        verify(mTethering).untether(eq(TEST_IFACE_NAME), eq(result));
     }
 
     @Test
