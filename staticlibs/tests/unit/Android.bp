@@ -9,6 +9,7 @@ android_library {
     static_libs: [
         "net-utils-framework-common",
         "androidx.test.rules",
+        "mockito-target-extended-minus-junit4",
         "net-utils-device-common",
         "net-tests-utils-host-device-common",
     ],
@@ -28,6 +29,11 @@ android_test {
     certificate: "platform",
     static_libs: [
         "NetworkStaticLibTestsLib",
+    ],
+    jni_libs: [
+        // For mockito extended
+        "libdexmakerjvmtiagent",
+        "libstaticjvmtiagent",
     ],
     jarjar_rules: "jarjar-rules.txt",
     test_suites: ["device-tests"],
