@@ -23,6 +23,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import android.net.IpPrefix;
+import android.net.MacAddress;
 
 import androidx.test.filters.SmallTest;
 import androidx.test.runner.AndroidJUnit4;
@@ -662,5 +663,38 @@ public class StructTest {
 
     private ByteBuffer toByteBuffer(final String hexString) {
         return ByteBuffer.wrap(HexDump.hexStringToByteArray(hexString));
+    }
+
+    static class MacAddressMessage extends Struct {
+        @Field(order = 0, type = Type.EUI48) final MacAddress mMac1;
+        @Field(order = 1, type = Type.EUI48) final MacAddress mMac2;
+
+        MacAddressMessage(final MacAddress mac1, final MacAddress mac2) {
+            this.mMac1 = mac1;
+            this.mMac2 = mac2;
+        }
+    }
+
+    @Test
+    public void testMacAddressType() {
+        final MacAddressMessage msg = doParsingMessageTest("001122334455" + "ffffffffffff",
+                MacAddressMessage.class, ByteOrder.BIG_ENDIAN);
+
+        assertEquals(MacAddress.fromString("00:11:22:33:44:55"), msg.mMac1);
+        assertEquals(MacAddress.fromString("ff:ff:ff:ff:ff:ff"), msg.mMac2);
+
+        assertEquals(12, Struct.getSize(MacAddressMessage.class));
+        assertArrayEquals(toByteBuffer("001122334455" + "ffffffffffff").array(),
+                msg.writeToBytes(ByteOrder.BIG_ENDIAN));
+    }
+
+    static class BadMacAddressType extends Struct {
+        @Field(order = 0, type = Type.EUI48) byte[] mMac;
+    }
+
+    @Test
+    public void testIncorrectType_EUI48WithByteArray() {
+        assertThrows(IllegalArgumentException.class,
+                () -> Struct.parse(BadMacAddressType.class, toByteBuffer("ffffffffffff")));
     }
 }
