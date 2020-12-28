@@ -17,6 +17,7 @@
 package com.android.net.module.util;
 
 import android.annotation.NonNull;
+import android.net.MacAddress;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
@@ -110,6 +111,7 @@ public class Struct {
         UBE63,     // unsigned long(MSB: 0) in network order, size = 8 bytes
         UBE64,     // unsigned long in network order,  size = 8 bytes
         ByteArray, // byte array with predefined length
+        EUI48,     // a 48-bits long MAC address
     }
 
     /**
@@ -179,6 +181,9 @@ public class Struct {
                             + annotation.arraysize());
                 }
                 return;
+            case EUI48:
+                if (fieldType == MacAddress.class) return;
+                break;
             default:
                 throw new IllegalArgumentException("Unknown type" + annotation.type());
         }
@@ -212,6 +217,9 @@ public class Struct {
                 break;
             case ByteArray:
                 length = annotation.arraysize();
+                break;
+            case EUI48:
+                length = 6;
                 break;
             default:
                 throw new IllegalArgumentException("Unknown type" + annotation.type());
@@ -373,6 +381,11 @@ public class Struct {
                 buf.get(array);
                 value = array;
                 break;
+            case EUI48:
+                final byte[] macAddress = new byte[6];
+                buf.get(macAddress);
+                value = MacAddress.fromBytes(macAddress);
+                break;
             default:
                 throw new IllegalArgumentException("Unknown type:" + fieldInfo.annotation.type());
         }
@@ -441,6 +454,10 @@ public class Struct {
                 break;
             case ByteArray:
                 output.put((byte[]) value);
+                break;
+            case EUI48:
+                final byte[] macAddress = ((MacAddress) value).toByteArray();
+                output.put(macAddress);
                 break;
             default:
                 throw new IllegalArgumentException("Unknown type:" + fieldInfo.annotation.type());
