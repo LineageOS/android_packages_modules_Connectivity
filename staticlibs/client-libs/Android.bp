@@ -1,0 +1,19 @@
+java_library {
+    name: "netd-client",
+    srcs: ["netd/**/*"],
+    sdk_version: "system_current",
+    min_sdk_version: "29",
+    apex_available: [
+        "//apex_available:platform",
+        "com.android.tethering"
+    ],
+    visibility: [
+        "//packages/modules/Connectivity/Tethering",
+        "//frameworks/base/services:__subpackages__"
+    ],
+    libs: ["androidx.annotation_annotation"],
+    static_libs: [
+        "netd_aidl_interface-java",
+        "netd_event_listener_interface-java"
+    ]
+}
