@@ -149,7 +149,6 @@ filegroup {
     name: "net-utils-services-common-srcs",
     srcs: [
         "device/android/net/NetworkFactory.java",
-        "device/com/android/net/module/util/CollectionUtils.java",
     ],
     visibility: [
         "//frameworks/base/services/net",
