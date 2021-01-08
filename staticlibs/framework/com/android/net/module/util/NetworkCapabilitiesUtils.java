@@ -23,7 +23,8 @@ import static android.net.NetworkCapabilities.TRANSPORT_VPN;
 import static android.net.NetworkCapabilities.TRANSPORT_WIFI;
 import static android.net.NetworkCapabilities.TRANSPORT_WIFI_AWARE;
 
-import androidx.annotation.NonNull;
+import android.annotation.NonNull;
+
 
 /**
  * Utilities to examine {@link android.net.NetworkCapabilities}.
