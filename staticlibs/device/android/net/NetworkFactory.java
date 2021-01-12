@@ -244,6 +244,12 @@ public class NetworkFactory extends Handler {
         evalRequests();
     }
 
+    /** @deprecated None of the implementors use the score, remove this method */
+    @Deprecated
+    public boolean acceptRequest(NetworkRequest request, int score) {
+        return true;
+    }
+
     /**
      * Overridable function to provide complex filtering.
      * Called for every request every time a new NetworkRequest is seen
@@ -263,7 +269,7 @@ public class NetworkFactory extends Handler {
      *
      * @return {@code true} to accept the request.
      */
-    public boolean acceptRequest(NetworkRequest request, int score) {
+    public boolean acceptRequest(NetworkRequest request) {
         return true;
     }
 
@@ -357,9 +363,15 @@ public class NetworkFactory extends Handler {
     protected void startNetwork() { }
     protected void stopNetwork() { }
 
-    // override to do fancier stuff
+    /** @deprecated none of the implementors use the score : migrate them */
+    @Deprecated
     protected void needNetworkFor(NetworkRequest networkRequest, int score) {
         if (++mRefCount == 1) startNetwork();
+    }
+
+    // override to do fancier stuff
+    protected void needNetworkFor(NetworkRequest networkRequest) {
+        needNetworkFor(networkRequest, 0);
     }
 
     protected void releaseNetworkFor(NetworkRequest networkRequest) {
