@@ -602,4 +602,9 @@ public class Struct {
         writeToByteBufferInternal(buffer, fieldInfos);
         return output;
     }
+
+    /** Convert the parsed Struct subclass object to byte array with native order. */
+    public final byte[] writeToBytes() {
+        return writeToBytes(ByteOrder.nativeOrder());
+    }
 }
