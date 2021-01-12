@@ -87,20 +87,20 @@ public class EthernetNetworkFactory extends NetworkFactory {
     }
 
     @Override
-    public boolean acceptRequest(NetworkRequest request, int score) {
+    public boolean acceptRequest(NetworkRequest request) {
         if (request.type == NetworkRequest.Type.TRACK_DEFAULT) {
             return false;
         }
 
         if (DBG) {
-            Log.d(TAG, "acceptRequest, request: " + request + ", score: " + score);
+            Log.d(TAG, "acceptRequest, request: " + request);
         }
 
         return networkForRequest(request) != null;
     }
 
     @Override
-    protected void needNetworkFor(NetworkRequest networkRequest, int score) {
+    protected void needNetworkFor(NetworkRequest networkRequest) {
         NetworkInterfaceState network = networkForRequest(networkRequest);
 
         if (network == null) {
