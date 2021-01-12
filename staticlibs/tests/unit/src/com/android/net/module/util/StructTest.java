@@ -697,4 +697,23 @@ public class StructTest {
         assertThrows(IllegalArgumentException.class,
                 () -> Struct.parse(BadMacAddressType.class, toByteBuffer("ffffffffffff")));
     }
+
+    @Test
+    public void testStructToByteArray() {
+        final SignedDataMessage littleEndianMsg = doParsingMessageTest(SIGNED_DATA,
+                SignedDataMessage.class, ByteOrder.LITTLE_ENDIAN);
+        assertArrayEquals(toByteBuffer(SIGNED_DATA).array(),
+                littleEndianMsg.writeToBytes(ByteOrder.LITTLE_ENDIAN));
+
+        final SignedDataMessage bigEndianMsg = doParsingMessageTest(SIGNED_DATA,
+                SignedDataMessage.class, ByteOrder.BIG_ENDIAN);
+        assertArrayEquals(toByteBuffer(SIGNED_DATA).array(),
+                bigEndianMsg.writeToBytes(ByteOrder.BIG_ENDIAN));
+
+        final SignedDataMessage nativeOrderMsg = ByteOrder.nativeOrder().equals(
+                ByteOrder.LITTLE_ENDIAN) ? littleEndianMsg : bigEndianMsg;
+        assertArrayEquals(toByteBuffer(SIGNED_DATA).array(),
+                nativeOrderMsg.writeToBytes());
+
+    }
 }
