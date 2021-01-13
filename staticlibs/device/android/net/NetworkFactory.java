@@ -366,12 +366,12 @@ public class NetworkFactory extends Handler {
     /** @deprecated none of the implementors use the score : migrate them */
     @Deprecated
     protected void needNetworkFor(NetworkRequest networkRequest, int score) {
-        if (++mRefCount == 1) startNetwork();
+        needNetworkFor(networkRequest);
     }
 
     // override to do fancier stuff
     protected void needNetworkFor(NetworkRequest networkRequest) {
-        needNetworkFor(networkRequest, 0);
+        if (++mRefCount == 1) startNetwork();
     }
 
     protected void releaseNetworkFor(NetworkRequest networkRequest) {
