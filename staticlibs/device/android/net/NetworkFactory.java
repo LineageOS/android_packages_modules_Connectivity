@@ -247,7 +247,7 @@ public class NetworkFactory extends Handler {
     /** @deprecated None of the implementors use the score, remove this method */
     @Deprecated
     public boolean acceptRequest(NetworkRequest request, int score) {
-        return true;
+        return acceptRequest(request);
     }
 
     /**
