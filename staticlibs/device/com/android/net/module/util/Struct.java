@@ -30,6 +30,8 @@ import java.math.BigInteger;
 import java.nio.BufferUnderflowException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.util.Arrays;
+import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -111,7 +113,7 @@ public class Struct {
         UBE63,     // unsigned long(MSB: 0) in network order, size = 8 bytes
         UBE64,     // unsigned long in network order,  size = 8 bytes
         ByteArray, // byte array with predefined length
-        EUI48,     // a 48-bits long MAC address
+        EUI48,     // IEEE Extended Unique Identifier, a 48-bits long MAC address in network order
     }
 
     /**
@@ -606,5 +608,76 @@ public class Struct {
     /** Convert the parsed Struct subclass object to byte array with native order. */
     public final byte[] writeToBytes() {
         return writeToBytes(ByteOrder.nativeOrder());
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (obj == null || this.getClass() != obj.getClass()) return false;
+
+        final FieldInfo[] fieldInfos = getClassFieldInfo(this.getClass());
+        for (int i = 0; i < fieldInfos.length; i++) {
+            try {
+                final Object value = fieldInfos[i].field.get(this);
+                final Object otherValue = fieldInfos[i].field.get(obj);
+
+                // Use Objects#deepEquals because the equals method on arrays does not check the
+                // contents of the array. The only difference between Objects#deepEquals and
+                // Objects#equals is that the former will call Arrays#deepEquals when comparing
+                // arrays. In turn, the only difference between Arrays#deepEquals is that it
+                // supports nested arrays. Struct does not currently support these, and if it did,
+                // Objects#deepEquals might be more correct.
+                if (!Objects.deepEquals(value, otherValue)) return false;
+            } catch (IllegalAccessException e) {
+                throw new IllegalStateException("Cannot access field: " + fieldInfos[i].field, e);
+            }
+        }
+        return true;
+    }
+
+    @Override
+    public int hashCode() {
+        final FieldInfo[] fieldInfos = getClassFieldInfo(this.getClass());
+        final Object[] values = new Object[fieldInfos.length];
+        for (int i = 0; i < fieldInfos.length; i++) {
+            final Object value;
+            try {
+                value = fieldInfos[i].field.get(this);
+            } catch (IllegalAccessException e) {
+                throw new IllegalStateException("Cannot access field: " + fieldInfos[i].field, e);
+            }
+            // For byte array field, put the hash code generated based on the array content into
+            // the Object array instead of the reference to byte array, which might change and cause
+            // to get a different hash code even with the exact same elements.
+            if (fieldInfos[i].field.getType() == byte[].class) {
+                values[i] = Arrays.hashCode((byte[]) value);
+            } else {
+                values[i] = value;
+            }
+        }
+        return Objects.hash(values);
+    }
+
+    @Override
+    public String toString() {
+        final StringBuilder sb = new StringBuilder();
+        final FieldInfo[] fieldInfos = getClassFieldInfo(this.getClass());
+        for (int i = 0; i < fieldInfos.length; i++) {
+            sb.append(fieldInfos[i].field.getName()).append(": ");
+            final Object value;
+            try {
+                value = fieldInfos[i].field.get(this);
+            } catch (IllegalAccessException e) {
+                throw new IllegalStateException("Cannot access field: " + fieldInfos[i].field, e);
+            }
+            if (value == null) {
+                sb.append("null");
+            } else if (fieldInfos[i].field.getType() == byte[].class) {
+                sb.append("0x").append(HexDump.toHexString((byte[]) value));
+            } else {
+                sb.append(value.toString());
+            }
+            if (i != fieldInfos.length - 1) sb.append(", ");
+        }
+        return sb.toString();
     }
 }
