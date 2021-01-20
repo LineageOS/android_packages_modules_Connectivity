@@ -55,6 +55,8 @@
                 <action android:name="com.android.cts.net.hostside.app2.action.SHOW_TOAST"/>
                 </intent-filter>
         </receiver>
+        <service android:name=".MyJobService"
+            android:permission="android.permission.BIND_JOB_SERVICE" />
     </application>
 
 </manifest>
