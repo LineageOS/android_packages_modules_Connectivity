@@ -21,6 +21,7 @@ import static android.net.TestNetworkManager.TEST_TAP_PREFIX;
 import android.annotation.Nullable;
 import android.content.Context;
 import android.net.IEthernetServiceListener;
+import android.net.INetd;
 import android.net.ITetheredInterfaceCallback;
 import android.net.InterfaceConfiguration;
 import android.net.IpConfiguration;
@@ -28,6 +29,7 @@ import android.net.IpConfiguration.IpAssignment;
 import android.net.IpConfiguration.ProxySettings;
 import android.net.LinkAddress;
 import android.net.NetworkCapabilities;
+import android.net.NetworkStack;
 import android.net.StaticIpConfiguration;
 import android.os.Handler;
 import android.os.IBinder;
@@ -38,14 +40,17 @@ import android.os.ServiceManager;
 import android.text.TextUtils;
 import android.util.ArrayMap;
 import android.util.Log;
+import android.net.util.NetdService;
 
 import com.android.internal.annotations.VisibleForTesting;
 import com.android.internal.util.IndentingPrintWriter;
+import com.android.net.module.util.NetdUtils;
 import com.android.server.net.BaseNetworkObserver;
 
 import java.io.FileDescriptor;
 import java.net.InetAddress;
 import java.util.ArrayList;
+import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -87,6 +92,7 @@ final class EthernetTracker {
 
     private final Context mContext;
     private final INetworkManagementService mNMService;
+    private final INetd mNetd;
     private final Handler mHandler;
     private final EthernetNetworkFactory mFactory;
     private final EthernetConfigStore mConfigStore;
@@ -117,6 +123,7 @@ final class EthernetTracker {
         // The services we use.
         IBinder b = ServiceManager.getService(Context.NETWORKMANAGEMENT_SERVICE);
         mNMService = INetworkManagementService.Stub.asInterface(b);
+        mNetd = Objects.requireNonNull(NetdService.getInstance(), "could not get netd instance");
 
         // Interface match regex.
         updateIfaceMatchRegexp();
@@ -280,7 +287,8 @@ final class EthernetTracker {
         InterfaceConfiguration config = null;
         // Bring up the interface so we get link status indications.
         try {
-            mNMService.setInterfaceUp(iface);
+            NetworkStack.checkNetworkStackPermission(mContext);
+            NetdUtils.setInterfaceUp(mNetd, iface);
             config = mNMService.getInterfaceConfig(iface);
         } catch (RemoteException | IllegalStateException e) {
             // Either the system is crashing or the interface has disappeared. Just ignore the
