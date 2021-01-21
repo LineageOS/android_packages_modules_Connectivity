@@ -16,10 +16,14 @@
 
 package com.android.networkstack.tethering.apishim.common;
 
+import android.util.SparseArray;
+
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 import com.android.networkstack.tethering.BpfCoordinator.Dependencies;
 import com.android.networkstack.tethering.BpfCoordinator.Ipv6ForwardingRule;
+import com.android.networkstack.tethering.TetherStatsValue;
 
 /**
  * Bpf coordinator class for API shims.
@@ -54,5 +58,55 @@ public abstract class BpfCoordinatorShim {
      * @param rule The rule to add or update.
      */
     public abstract boolean tetherOffloadRuleAdd(@NonNull Ipv6ForwardingRule rule);
+
+    /**
+     * Deletes a tethering offload rule from the BPF map.
+     *
+     * Currently, only downstream /128 IPv6 entries are supported. An existing rule will be deleted
+     * if the destination IP address and the source interface match. It is not an error if there is
+     * no matching rule to delete.
+     *
+     * @param rule The rule to delete.
+     */
+    public abstract boolean tetherOffloadRuleRemove(@NonNull Ipv6ForwardingRule rule);
+
+    /**
+     * Return BPF tethering offload statistics.
+     *
+     * @return an array of TetherStatsValue's, where each entry contains the upstream interface
+     *         index and its tethering statistics since tethering was first started.
+     *         There will only ever be one entry for a given interface index.
+     */
+    @Nullable
+    public abstract SparseArray<TetherStatsValue> tetherOffloadGetStats();
+
+   /**
+    * Set a per-interface quota for tethering offload.
+    *
+    * @param ifIndex Index of upstream interface
+    * @param quotaBytes The quota defined as the number of bytes, starting from zero and counting
+    *       from *now*. A value of QUOTA_UNLIMITED (-1) indicates there is no limit.
+    */
+    @Nullable
+    public abstract boolean tetherOffloadSetInterfaceQuota(int ifIndex, long quotaBytes);
+
+    /**
+     * Return BPF tethering offload statistics and clear the stats for a given upstream.
+     *
+     * Must only be called once all offload rules have already been deleted for the given upstream
+     * interface. The existing stats will be fetched and returned. The stats and the limit for the
+     * given upstream interface will be deleted as well.
+     *
+     * The stats and limit for a given upstream interface must be initialized (using
+     * tetherOffloadSetInterfaceQuota) before any offload will occur on that interface.
+     *
+     * Note that this can be only called while the BPF maps were initialized.
+     *
+     * @param ifIndex Index of upstream interface.
+     * @return TetherStatsValue, which contains the given upstream interface's tethering statistics
+     *         since tethering was first started on that upstream interface.
+     */
+    @Nullable
+    public abstract TetherStatsValue tetherOffloadGetAndClearStats(int ifIndex);
 }
 

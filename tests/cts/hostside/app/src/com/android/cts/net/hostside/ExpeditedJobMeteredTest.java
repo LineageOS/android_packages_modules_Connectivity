@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 The Android Open Source Project
+ * Copyright (C) 2021 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,17 +16,8 @@
 
 package com.android.cts.net.hostside;
 
-import android.app.job.JobInfo;
+import static com.android.cts.net.hostside.Property.METERED_NETWORK;
 
-import com.android.cts.net.hostside.INetworkCallback;
-
-interface IMyService {
-    void registerBroadcastReceiver();
-    int getCounters(String receiverName, String action);
-    String checkNetworkStatus();
-    String getRestrictBackgroundStatus();
-    void sendNotification(int notificationId, String notificationType);
-    void registerNetworkCallback(in INetworkCallback cb);
-    void unregisterNetworkCallback();
-    void scheduleJob(in JobInfo jobInfo);
+@RequiredProperties({METERED_NETWORK})
+public class ExpeditedJobMeteredTest extends AbstractExpeditedJobTest {
 }
