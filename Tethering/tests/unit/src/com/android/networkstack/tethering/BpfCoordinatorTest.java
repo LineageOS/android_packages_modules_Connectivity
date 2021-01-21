@@ -126,13 +126,35 @@ public class BpfCoordinatorTest {
         public void updateEntry(K key, V value) throws ErrnoException {
             mMap.put(key, value);
         }
+
+        @Override
+        public void insertEntry(K key, V value) throws ErrnoException,
+                IllegalArgumentException {
+            // The entry is created if and only if it doesn't exist. See BpfMap#insertEntry.
+            if (mMap.get(key) != null) {
+                throw new IllegalArgumentException(key + " already exist");
+            }
+            mMap.put(key, value);
+        }
+
+        @Override
+        public boolean deleteEntry(Struct key) throws ErrnoException {
+            return mMap.remove(key) != null;
+        }
+
+        @Override
+        public V getValue(@NonNull K key) throws ErrnoException {
+            // Return value for a given key. Otherwise, return null without an error ENOENT.
+            // BpfMap#getValue treats that the entry is not found as no error.
+            return mMap.get(key);
+        }
     };
 
     @Mock private NetworkStatsManager mStatsManager;
     @Mock private INetd mNetd;
     @Mock private IpServer mIpServer;
     @Mock private TetheringConfiguration mTetherConfig;
-    @Mock private BpfMap<TetherIngressKey, TetherIngressValue> mBpfIngressMap;
+    @Mock private BpfMap<TetherDownstream6Key, TetherDownstream6Value> mBpfDownstream6Map;
 
     // Late init since methods must be called by the thread that created this object.
     private TestableNetworkStatsProviderCbBinder mTetherStatsProviderCb;
@@ -142,6 +164,8 @@ public class BpfCoordinatorTest {
     private final TestLooper mTestLooper = new TestLooper();
     private final TestBpfMap<TetherStatsKey, TetherStatsValue> mBpfStatsMap =
             spy(new TestBpfMap<>(TetherStatsKey.class, TetherStatsValue.class));
+    private final TestBpfMap<TetherLimitKey, TetherLimitValue> mBpfLimitMap =
+            spy(new TestBpfMap<>(TetherLimitKey.class, TetherLimitValue.class));
     private BpfCoordinator.Dependencies mDeps =
             spy(new BpfCoordinator.Dependencies() {
                     @NonNull
@@ -170,13 +194,19 @@ public class BpfCoordinatorTest {
                     }
 
                     @Nullable
-                    public BpfMap<TetherIngressKey, TetherIngressValue> getBpfIngressMap() {
-                        return mBpfIngressMap;
+                    public BpfMap<TetherDownstream6Key, TetherDownstream6Value>
+                            getBpfDownstream6Map() {
+                        return mBpfDownstream6Map;
                     }
 
                     @Nullable
                     public BpfMap<TetherStatsKey, TetherStatsValue> getBpfStatsMap() {
                         return mBpfStatsMap;
+                    }
+
+                    @Nullable
+                    public BpfMap<TetherLimitKey, TetherLimitValue> getBpfLimitMap() {
+                        return mBpfLimitMap;
                     }
             });
 
@@ -229,12 +259,16 @@ public class BpfCoordinatorTest {
     }
 
     // Update a stats entry or create if not exists.
+    private void updateStatsEntryToStatsMap(@NonNull TetherStatsParcel stats) throws Exception {
+        final TetherStatsKey key = new TetherStatsKey(stats.ifIndex);
+        final TetherStatsValue value = new TetherStatsValue(stats.rxPackets, stats.rxBytes,
+                0L /* rxErrors */, stats.txPackets, stats.txBytes, 0L /* txErrors */);
+        mBpfStatsMap.updateEntry(key, value);
+    }
+
     private void updateStatsEntry(@NonNull TetherStatsParcel stats) throws Exception {
         if (mDeps.isAtLeastS()) {
-            final TetherStatsKey key = new TetherStatsKey(stats.ifIndex);
-            final TetherStatsValue value = new TetherStatsValue(stats.rxPackets, stats.rxBytes,
-                    0L /* rxErrors */, stats.txPackets, stats.txBytes, 0L /* txErrors */);
-            mBpfStatsMap.updateEntry(key, value);
+            updateStatsEntryToStatsMap(stats);
         } else {
             when(mNetd.tetherOffloadGetStats()).thenReturn(new TetherStatsParcel[] {stats});
         }
@@ -256,6 +290,21 @@ public class BpfCoordinatorTest {
 
         mTestLooper.moveTimeForward(DEFAULT_TETHER_OFFLOAD_POLL_INTERVAL_MS);
         waitForIdle();
+    }
+
+    // In tests, the stats need to be set before deleting the last rule.
+    // The reason is that BpfCoordinator#tetherOffloadRuleRemove reads the stats
+    // of the deleting interface after the last rule deleted. #tetherOffloadRuleRemove
+    // does the interface cleanup failed if there is no stats for the deleting interface.
+    // Note that the mocked tetherOffloadGetAndClearStats of netd replaces all stats entries
+    // because it doesn't store the previous entries.
+    private void updateStatsEntryForTetherOffloadGetAndClearStats(TetherStatsParcel stats)
+            throws Exception {
+        if (mDeps.isAtLeastS()) {
+            updateStatsEntryToStatsMap(stats);
+        } else {
+            when(mNetd.tetherOffloadGetAndClearStats(stats.ifIndex)).thenReturn(stats);
+        }
     }
 
     private void clearStatsInvocations() {
@@ -293,8 +342,8 @@ public class BpfCoordinatorTest {
     private void verifyTetherOffloadRuleAdd(@Nullable InOrder inOrder,
             @NonNull Ipv6ForwardingRule rule) throws Exception {
         if (mDeps.isAtLeastS()) {
-            verifyWithOrder(inOrder, mBpfIngressMap).updateEntry(
-                    rule.makeTetherIngressKey(), rule.makeTetherIngressValue());
+            verifyWithOrder(inOrder, mBpfDownstream6Map).updateEntry(
+                    rule.makeTetherDownstream6Key(), rule.makeTetherDownstream6Value());
         } else {
             verifyWithOrder(inOrder, mNetd).tetherOffloadRuleAdd(matches(rule));
         }
@@ -302,7 +351,7 @@ public class BpfCoordinatorTest {
 
     private void verifyNeverTetherOffloadRuleAdd() throws Exception {
         if (mDeps.isAtLeastS()) {
-            verify(mBpfIngressMap, never()).updateEntry(any(), any());
+            verify(mBpfDownstream6Map, never()).updateEntry(any(), any());
         } else {
             verify(mNetd, never()).tetherOffloadRuleAdd(any());
         }
@@ -311,7 +360,8 @@ public class BpfCoordinatorTest {
     private void verifyTetherOffloadRuleRemove(@Nullable InOrder inOrder,
             @NonNull final Ipv6ForwardingRule rule) throws Exception {
         if (mDeps.isAtLeastS()) {
-            verifyWithOrder(inOrder, mBpfIngressMap).deleteEntry(rule.makeTetherIngressKey());
+            verifyWithOrder(inOrder, mBpfDownstream6Map).deleteEntry(
+                    rule.makeTetherDownstream6Key());
         } else {
             verifyWithOrder(inOrder, mNetd).tetherOffloadRuleRemove(matches(rule));
         }
@@ -319,9 +369,48 @@ public class BpfCoordinatorTest {
 
     private void verifyNeverTetherOffloadRuleRemove() throws Exception {
         if (mDeps.isAtLeastS()) {
-            verify(mBpfIngressMap, never()).deleteEntry(any());
+            verify(mBpfDownstream6Map, never()).deleteEntry(any());
         } else {
             verify(mNetd, never()).tetherOffloadRuleRemove(any());
+        }
+    }
+
+    private void verifyTetherOffloadSetInterfaceQuota(@Nullable InOrder inOrder, int ifIndex,
+            long quotaBytes, boolean isInit) throws Exception {
+        if (mDeps.isAtLeastS()) {
+            final TetherStatsKey key = new TetherStatsKey(ifIndex);
+            verifyWithOrder(inOrder, mBpfStatsMap).getValue(key);
+            if (isInit) {
+                verifyWithOrder(inOrder, mBpfStatsMap).insertEntry(key, new TetherStatsValue(
+                        0L /* rxPackets */, 0L /* rxBytes */, 0L /* rxErrors */,
+                        0L /* txPackets */, 0L /* txBytes */, 0L /* txErrors */));
+            }
+            verifyWithOrder(inOrder, mBpfLimitMap).updateEntry(new TetherLimitKey(ifIndex),
+                    new TetherLimitValue(quotaBytes));
+        } else {
+            verifyWithOrder(inOrder, mNetd).tetherOffloadSetInterfaceQuota(ifIndex, quotaBytes);
+        }
+    }
+
+    private void verifyNeverTetherOffloadSetInterfaceQuota(@Nullable InOrder inOrder)
+            throws Exception {
+        if (mDeps.isAtLeastS()) {
+            inOrder.verify(mBpfStatsMap, never()).getValue(any());
+            inOrder.verify(mBpfStatsMap, never()).insertEntry(any(), any());
+            inOrder.verify(mBpfLimitMap, never()).updateEntry(any(), any());
+        } else {
+            inOrder.verify(mNetd, never()).tetherOffloadSetInterfaceQuota(anyInt(), anyLong());
+        }
+    }
+
+    private void verifyTetherOffloadGetAndClearStats(@Nullable InOrder inOrder, int ifIndex)
+            throws Exception {
+        if (mDeps.isAtLeastS()) {
+            inOrder.verify(mBpfStatsMap).getValue(new TetherStatsKey(ifIndex));
+            inOrder.verify(mBpfStatsMap).deleteEntry(new TetherStatsKey(ifIndex));
+            inOrder.verify(mBpfLimitMap).deleteEntry(new TetherLimitKey(ifIndex));
+        } else {
+            inOrder.verify(mNetd).tetherOffloadGetAndClearStats(ifIndex);
         }
     }
 
@@ -344,15 +433,23 @@ public class BpfCoordinatorTest {
         final Integer mobileIfIndex = 100;
         coordinator.addUpstreamNameToLookupTable(mobileIfIndex, mobileIface);
 
+        // InOrder is required because mBpfStatsMap may be accessed by both
+        // BpfCoordinator#tetherOffloadRuleAdd and BpfCoordinator#tetherOffloadGetAndClearStats.
+        // The #verifyTetherOffloadGetAndClearStats can't distinguish who has ever called
+        // mBpfStatsMap#getValue and get a wrong calling count which counts all.
+        final InOrder inOrder = inOrder(mNetd, mBpfDownstream6Map, mBpfLimitMap, mBpfStatsMap);
         final Ipv6ForwardingRule rule = buildTestForwardingRule(mobileIfIndex, NEIGH_A, MAC_A);
         coordinator.tetherOffloadRuleAdd(mIpServer, rule);
-        verifyTetherOffloadRuleAdd(null, rule);
+        verifyTetherOffloadRuleAdd(inOrder, rule);
+        verifyTetherOffloadSetInterfaceQuota(inOrder, mobileIfIndex, QUOTA_UNLIMITED,
+                true /* isInit */);
 
         // Removing the last rule on current upstream immediately sends the cleanup stuff to netd.
-        when(mNetd.tetherOffloadGetAndClearStats(mobileIfIndex))
-                .thenReturn(buildTestTetherStatsParcel(mobileIfIndex, 0, 0, 0, 0));
+        updateStatsEntryForTetherOffloadGetAndClearStats(
+                buildTestTetherStatsParcel(mobileIfIndex, 0, 0, 0, 0));
         coordinator.tetherOffloadRuleRemove(mIpServer, rule);
-        verifyTetherOffloadRuleRemove(null, rule);
+        verifyTetherOffloadRuleRemove(inOrder, rule);
+        verifyTetherOffloadGetAndClearStats(inOrder, mobileIfIndex);
     }
 
     // TODO: remove once presubmit tests on R even the code is submitted on S.
@@ -556,11 +653,11 @@ public class BpfCoordinatorTest {
     }
 
     @Test
-    public void testRuleMakeTetherIngressKey() throws Exception {
+    public void testRuleMakeTetherDownstream6Key() throws Exception {
         final Integer mobileIfIndex = 100;
         final Ipv6ForwardingRule rule = buildTestForwardingRule(mobileIfIndex, NEIGH_A, MAC_A);
 
-        final TetherIngressKey key = rule.makeTetherIngressKey();
+        final TetherDownstream6Key key = rule.makeTetherDownstream6Key();
         assertEquals(key.iif, (long) mobileIfIndex);
         assertTrue(Arrays.equals(key.neigh6, NEIGH_A.getAddress()));
         // iif (4) + neigh6 (16) = 20.
@@ -568,11 +665,11 @@ public class BpfCoordinatorTest {
     }
 
     @Test
-    public void testRuleMakeTetherIngressValue() throws Exception {
+    public void testRuleMakeTetherDownstream6Value() throws Exception {
         final Integer mobileIfIndex = 100;
         final Ipv6ForwardingRule rule = buildTestForwardingRule(mobileIfIndex, NEIGH_A, MAC_A);
 
-        final TetherIngressValue value = rule.makeTetherIngressValue();
+        final TetherDownstream6Value value = rule.makeTetherDownstream6Value();
         assertEquals(value.oif, DOWNSTREAM_IFINDEX);
         assertEquals(value.ethDstMac, MAC_A);
         assertEquals(value.ethSrcMac, DOWNSTREAM_MAC);
@@ -596,10 +693,11 @@ public class BpfCoordinatorTest {
         // Set the unlimited quota as default if the service has never applied a data limit for a
         // given upstream. Note that the data limit only be applied on an upstream which has rules.
         final Ipv6ForwardingRule rule = buildTestForwardingRule(mobileIfIndex, NEIGH_A, MAC_A);
-        final InOrder inOrder = inOrder(mNetd, mBpfIngressMap);
+        final InOrder inOrder = inOrder(mNetd, mBpfDownstream6Map, mBpfLimitMap, mBpfStatsMap);
         coordinator.tetherOffloadRuleAdd(mIpServer, rule);
         verifyTetherOffloadRuleAdd(inOrder, rule);
-        inOrder.verify(mNetd).tetherOffloadSetInterfaceQuota(mobileIfIndex, QUOTA_UNLIMITED);
+        verifyTetherOffloadSetInterfaceQuota(inOrder, mobileIfIndex, QUOTA_UNLIMITED,
+                true /* isInit */);
         inOrder.verifyNoMoreInteractions();
 
         // [2] Specific limit.
@@ -607,7 +705,8 @@ public class BpfCoordinatorTest {
         for (final long quota : new long[] {0, 1048576000, Long.MAX_VALUE, QUOTA_UNLIMITED}) {
             mTetherStatsProvider.onSetLimit(mobileIface, quota);
             waitForIdle();
-            inOrder.verify(mNetd).tetherOffloadSetInterfaceQuota(mobileIfIndex, quota);
+            verifyTetherOffloadSetInterfaceQuota(inOrder, mobileIfIndex, quota,
+                    false /* isInit */);
             inOrder.verifyNoMoreInteractions();
         }
 
@@ -637,35 +736,35 @@ public class BpfCoordinatorTest {
         // Applying a data limit to the current upstream does not take any immediate action.
         // The data limit could be only set on an upstream which has rules.
         final long limit = 12345;
-        final InOrder inOrder = inOrder(mNetd, mBpfIngressMap);
+        final InOrder inOrder = inOrder(mNetd, mBpfDownstream6Map, mBpfLimitMap, mBpfStatsMap);
         mTetherStatsProvider.onSetLimit(mobileIface, limit);
         waitForIdle();
-        inOrder.verify(mNetd, never()).tetherOffloadSetInterfaceQuota(anyInt(), anyLong());
+        verifyNeverTetherOffloadSetInterfaceQuota(inOrder);
 
         // Adding the first rule on current upstream immediately sends the quota to netd.
         final Ipv6ForwardingRule ruleA = buildTestForwardingRule(mobileIfIndex, NEIGH_A, MAC_A);
         coordinator.tetherOffloadRuleAdd(mIpServer, ruleA);
         verifyTetherOffloadRuleAdd(inOrder, ruleA);
-        inOrder.verify(mNetd).tetherOffloadSetInterfaceQuota(mobileIfIndex, limit);
+        verifyTetherOffloadSetInterfaceQuota(inOrder, mobileIfIndex, limit, true /* isInit */);
         inOrder.verifyNoMoreInteractions();
 
         // Adding the second rule on current upstream does not send the quota to netd.
         final Ipv6ForwardingRule ruleB = buildTestForwardingRule(mobileIfIndex, NEIGH_B, MAC_B);
         coordinator.tetherOffloadRuleAdd(mIpServer, ruleB);
         verifyTetherOffloadRuleAdd(inOrder, ruleB);
-        inOrder.verify(mNetd, never()).tetherOffloadSetInterfaceQuota(anyInt(), anyLong());
+        verifyNeverTetherOffloadSetInterfaceQuota(inOrder);
 
         // Removing the second rule on current upstream does not send the quota to netd.
         coordinator.tetherOffloadRuleRemove(mIpServer, ruleB);
         verifyTetherOffloadRuleRemove(inOrder, ruleB);
-        inOrder.verify(mNetd, never()).tetherOffloadSetInterfaceQuota(anyInt(), anyLong());
+        verifyNeverTetherOffloadSetInterfaceQuota(inOrder);
 
         // Removing the last rule on current upstream immediately sends the cleanup stuff to netd.
-        when(mNetd.tetherOffloadGetAndClearStats(mobileIfIndex))
-                .thenReturn(buildTestTetherStatsParcel(mobileIfIndex, 0, 0, 0, 0));
+        updateStatsEntryForTetherOffloadGetAndClearStats(
+                buildTestTetherStatsParcel(mobileIfIndex, 0, 0, 0, 0));
         coordinator.tetherOffloadRuleRemove(mIpServer, ruleA);
         verifyTetherOffloadRuleRemove(inOrder, ruleA);
-        inOrder.verify(mNetd).tetherOffloadGetAndClearStats(mobileIfIndex);
+        verifyTetherOffloadGetAndClearStats(inOrder, mobileIfIndex);
         inOrder.verifyNoMoreInteractions();
     }
 
@@ -682,7 +781,7 @@ public class BpfCoordinatorTest {
         coordinator.addUpstreamNameToLookupTable(ethIfIndex, ethIface);
         coordinator.addUpstreamNameToLookupTable(mobileIfIndex, mobileIface);
 
-        final InOrder inOrder = inOrder(mNetd, mBpfIngressMap);
+        final InOrder inOrder = inOrder(mNetd, mBpfDownstream6Map, mBpfLimitMap, mBpfStatsMap);
 
         // Before the rule test, here are the additional actions while the rules are changed.
         // - After adding the first rule on a given upstream, the coordinator adds a data limit.
@@ -700,7 +799,8 @@ public class BpfCoordinatorTest {
 
         coordinator.tetherOffloadRuleAdd(mIpServer, ethernetRuleA);
         verifyTetherOffloadRuleAdd(inOrder, ethernetRuleA);
-        inOrder.verify(mNetd).tetherOffloadSetInterfaceQuota(ethIfIndex, QUOTA_UNLIMITED);
+        verifyTetherOffloadSetInterfaceQuota(inOrder, ethIfIndex, QUOTA_UNLIMITED,
+                true /* isInit */);
 
         coordinator.tetherOffloadRuleAdd(mIpServer, ethernetRuleB);
         verifyTetherOffloadRuleAdd(inOrder, ethernetRuleB);
@@ -710,26 +810,27 @@ public class BpfCoordinatorTest {
                 mobileIfIndex, NEIGH_A, MAC_A);
         final Ipv6ForwardingRule mobileRuleB = buildTestForwardingRule(
                 mobileIfIndex, NEIGH_B, MAC_B);
-        when(mNetd.tetherOffloadGetAndClearStats(ethIfIndex))
-                .thenReturn(buildTestTetherStatsParcel(ethIfIndex, 10, 20, 30, 40));
+        updateStatsEntryForTetherOffloadGetAndClearStats(
+                buildTestTetherStatsParcel(ethIfIndex, 10, 20, 30, 40));
 
         // Update the existing rules for upstream changes. The rules are removed and re-added one
         // by one for updating upstream interface index by #tetherOffloadRuleUpdate.
         coordinator.tetherOffloadRuleUpdate(mIpServer, mobileIfIndex);
         verifyTetherOffloadRuleRemove(inOrder, ethernetRuleA);
         verifyTetherOffloadRuleAdd(inOrder, mobileRuleA);
-        inOrder.verify(mNetd).tetherOffloadSetInterfaceQuota(mobileIfIndex, QUOTA_UNLIMITED);
+        verifyTetherOffloadSetInterfaceQuota(inOrder, mobileIfIndex, QUOTA_UNLIMITED,
+                true /* isInit */);
         verifyTetherOffloadRuleRemove(inOrder, ethernetRuleB);
-        inOrder.verify(mNetd).tetherOffloadGetAndClearStats(ethIfIndex);
+        verifyTetherOffloadGetAndClearStats(inOrder, ethIfIndex);
         verifyTetherOffloadRuleAdd(inOrder, mobileRuleB);
 
         // [3] Clear all rules for a given IpServer.
-        when(mNetd.tetherOffloadGetAndClearStats(mobileIfIndex))
-                .thenReturn(buildTestTetherStatsParcel(mobileIfIndex, 50, 60, 70, 80));
+        updateStatsEntryForTetherOffloadGetAndClearStats(
+                buildTestTetherStatsParcel(mobileIfIndex, 50, 60, 70, 80));
         coordinator.tetherOffloadRuleClear(mIpServer);
         verifyTetherOffloadRuleRemove(inOrder, mobileRuleA);
         verifyTetherOffloadRuleRemove(inOrder, mobileRuleB);
-        inOrder.verify(mNetd).tetherOffloadGetAndClearStats(mobileIfIndex);
+        verifyTetherOffloadGetAndClearStats(inOrder, mobileIfIndex);
 
         // [4] Force pushing stats update to verify that the last diff of stats is reported on all
         // upstreams.
@@ -746,7 +847,7 @@ public class BpfCoordinatorTest {
     private void checkBpfDisabled() throws Exception {
         // The caller may mock the global dependencies |mDeps| which is used in
         // #makeBpfCoordinator for testing.
-        // See #testBpfDisabledbyNoBpfIngressMap.
+        // See #testBpfDisabledbyNoBpfDownstream6Map.
         final BpfCoordinator coordinator = makeBpfCoordinator();
         coordinator.startPolling();
 
@@ -809,9 +910,9 @@ public class BpfCoordinatorTest {
 
     @Test
     @IgnoreUpTo(Build.VERSION_CODES.R)
-    public void testBpfDisabledbyNoBpfIngressMap() throws Exception {
+    public void testBpfDisabledbyNoBpfDownstream6Map() throws Exception {
         setupFunctioningNetdInterface();
-        doReturn(null).when(mDeps).getBpfIngressMap();
+        doReturn(null).when(mDeps).getBpfDownstream6Map();
 
         checkBpfDisabled();
     }
@@ -821,6 +922,15 @@ public class BpfCoordinatorTest {
     public void testBpfDisabledbyNoBpfStatsMap() throws Exception {
         setupFunctioningNetdInterface();
         doReturn(null).when(mDeps).getBpfStatsMap();
+
+        checkBpfDisabled();
+    }
+
+    @Test
+    @IgnoreUpTo(Build.VERSION_CODES.R)
+    public void testBpfDisabledbyNoBpfLimitMap() throws Exception {
+        setupFunctioningNetdInterface();
+        doReturn(null).when(mDeps).getBpfLimitMap();
 
         checkBpfDisabled();
     }

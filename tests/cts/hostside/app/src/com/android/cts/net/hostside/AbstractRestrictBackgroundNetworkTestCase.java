@@ -27,6 +27,7 @@ import static com.android.cts.net.hostside.NetworkPolicyTestUtils.getContext;
 import static com.android.cts.net.hostside.NetworkPolicyTestUtils.getInstrumentation;
 import static com.android.cts.net.hostside.NetworkPolicyTestUtils.isDozeModeSupported;
 import static com.android.cts.net.hostside.NetworkPolicyTestUtils.restrictBackgroundValueToString;
+import static com.android.cts.net.hostside.NetworkPolicyTestUtils.runSatisfiedJob;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -37,6 +38,7 @@ import static org.junit.Assert.fail;
 import android.app.ActivityManager;
 import android.app.Instrumentation;
 import android.app.NotificationManager;
+import android.app.job.JobInfo;
 import android.content.BroadcastReceiver;
 import android.content.ComponentName;
 import android.content.Context;
@@ -75,6 +77,12 @@ public abstract class AbstractRestrictBackgroundNetworkTestCase {
 
     private static final String TEST_APP2_ACTIVITY_CLASS = TEST_APP2_PKG + ".MyActivity";
     private static final String TEST_APP2_SERVICE_CLASS = TEST_APP2_PKG + ".MyForegroundService";
+    private static final String TEST_APP2_JOB_SERVICE_CLASS = TEST_APP2_PKG + ".MyJobService";
+
+    private static final ComponentName TEST_JOB_COMPONENT = new ComponentName(
+            TEST_APP2_PKG, TEST_APP2_JOB_SERVICE_CLASS);
+
+    private static final int TEST_JOB_ID = 7357437;
 
     private static final int SLEEP_TIME_SEC = 1;
 
@@ -102,17 +110,21 @@ public abstract class AbstractRestrictBackgroundNetworkTestCase {
     private static final String NETWORK_STATUS_SEPARATOR = "\\|";
     private static final int SECOND_IN_MS = 1000;
     static final int NETWORK_TIMEOUT_MS = 15 * SECOND_IN_MS;
+
     private static int PROCESS_STATE_FOREGROUND_SERVICE;
+    private static int PROCESS_STATE_IMPORTANT_FOREGROUND;
 
     private static final String KEY_NETWORK_STATE_OBSERVER = TEST_PKG + ".observer";
 
     protected static final int TYPE_COMPONENT_ACTIVTIY = 0;
     protected static final int TYPE_COMPONENT_FOREGROUND_SERVICE = 1;
+    protected static final int TYPE_EXPEDITED_JOB = 2;
 
     private static final int BATTERY_STATE_TIMEOUT_MS = 5000;
     private static final int BATTERY_STATE_CHECK_INTERVAL_MS = 500;
 
-    private static final int FOREGROUND_PROC_NETWORK_TIMEOUT_MS = 6000;
+    private static final int ACTIVITY_NETWORK_STATE_TIMEOUT_MS = 6_000;
+    private static final int JOB_NETWORK_STATE_TIMEOUT_MS = 10_000;
 
     // Must be higher than NETWORK_TIMEOUT_MS
     private static final int ORDERED_BROADCAST_TIMEOUT_MS = NETWORK_TIMEOUT_MS * 4;
@@ -137,8 +149,11 @@ public abstract class AbstractRestrictBackgroundNetworkTestCase {
             .around(new MeterednessConfigurationRule());
 
     protected void setUp() throws Exception {
+        // TODO: Annotate these constants with @TestApi instead of obtaining them using reflection
         PROCESS_STATE_FOREGROUND_SERVICE = (Integer) ActivityManager.class
                 .getDeclaredField("PROCESS_STATE_FOREGROUND_SERVICE").get(null);
+        PROCESS_STATE_IMPORTANT_FOREGROUND = (Integer) ActivityManager.class
+                .getDeclaredField("PROCESS_STATE_IMPORTANT_FOREGROUND").get(null);
         mInstrumentation = getInstrumentation();
         mContext = getContext();
         mCm = getConnectivityManager();
@@ -252,10 +267,11 @@ public abstract class AbstractRestrictBackgroundNetworkTestCase {
     }
 
     /**
-     * Asserts that an app always have access while on foreground or running a foreground service.
+     * Asserts that an app always have access while on foreground or running a foreground service
+     * or an expedited job.
      *
-     * <p>This method will launch an activity and a foreground service to make the assertion, but
-     * will finish the activity / stop the service afterwards.
+     * <p>This method will launch an activity, a foreground service, and an expedited job to make
+     * the assertion, but will finish the activity / stop the service / finish the job afterwards.
      */
     protected void assertsForegroundAlwaysHasNetworkAccess() throws Exception{
         // Checks foreground first.
@@ -265,6 +281,9 @@ public abstract class AbstractRestrictBackgroundNetworkTestCase {
         // Then foreground service
         launchComponentAndAssertNetworkAccess(TYPE_COMPONENT_FOREGROUND_SERVICE);
         stopForegroundService();
+
+        launchComponentAndAssertNetworkAccess(TYPE_EXPEDITED_JOB);
+        finishExpeditedJob();
     }
 
     protected final void assertBackgroundState() throws Exception {
@@ -323,7 +342,7 @@ public abstract class AbstractRestrictBackgroundNetworkTestCase {
      * Returns whether an app state should be considered "background" for restriction purposes.
      */
     protected boolean isBackground(int state) {
-        return state > PROCESS_STATE_FOREGROUND_SERVICE;
+        return state > PROCESS_STATE_IMPORTANT_FOREGROUND;
     }
 
     /**
@@ -750,17 +769,40 @@ public abstract class AbstractRestrictBackgroundNetworkTestCase {
             extras.putBinder(KEY_NETWORK_STATE_OBSERVER, getNewNetworkStateObserver(latch, errors));
             launchIntent.putExtras(extras);
             mContext.startActivity(launchIntent);
-            if (latch.await(FOREGROUND_PROC_NETWORK_TIMEOUT_MS, TimeUnit.MILLISECONDS)) {
+            if (latch.await(ACTIVITY_NETWORK_STATE_TIMEOUT_MS, TimeUnit.MILLISECONDS)) {
                 if (!errors[0].isEmpty()) {
                     if (errors[0] == APP_NOT_FOREGROUND_ERROR) {
                         // App didn't come to foreground when the activity is started, so try again.
                         assertForegroundNetworkAccess();
                     } else {
-                        fail("Network is not available for app2 (" + mUid + "): " + errors[0]);
+                        fail("Network is not available for activity in app2 (" + mUid
+                                + "): " + errors[0]);
                     }
                 }
             } else {
-                fail("Timed out waiting for network availability status from app2 (" + mUid + ")");
+                fail("Timed out waiting for network availability status from app2's activity ("
+                        + mUid + ")");
+            }
+        } else if (type == TYPE_EXPEDITED_JOB) {
+            final Bundle extras = new Bundle();
+            final String[] errors = new String[]{null};
+            final CountDownLatch latch = new CountDownLatch(1);
+            extras.putBinder(KEY_NETWORK_STATE_OBSERVER, getNewNetworkStateObserver(latch, errors));
+            final JobInfo jobInfo = new JobInfo.Builder(TEST_JOB_ID, TEST_JOB_COMPONENT)
+                    .setExpedited(true)
+                    .setRequiredNetworkType(JobInfo.NETWORK_TYPE_ANY)
+                    .setTransientExtras(extras)
+                    .build();
+            mServiceClient.scheduleJob(jobInfo);
+            runSatisfiedJob(TEST_APP2_PKG, TEST_JOB_ID);
+            if (latch.await(JOB_NETWORK_STATE_TIMEOUT_MS, TimeUnit.MILLISECONDS)) {
+                if (!errors[0].isEmpty()) {
+                    fail("Network is not available for expedited job in app2 (" + mUid
+                            + "): " + errors[0]);
+                }
+            } else {
+                fail("Timed out waiting for network availability status from app2's expedited job ("
+                        + mUid + ")");
             }
         } else {
             throw new IllegalArgumentException("Unknown type: " + type);
@@ -818,11 +860,20 @@ public abstract class AbstractRestrictBackgroundNetworkTestCase {
     }
 
     /**
-     * Finishes an activity on app2 so its process is demoted fromforeground status.
+     * Finishes an activity on app2 so its process is demoted from foreground status.
      */
     protected void finishActivity() throws Exception {
         executeShellCommand("am broadcast -a "
                 + " com.android.cts.net.hostside.app2.action.FINISH_ACTIVITY "
+                + "--receiver-foreground --receiver-registered-only");
+    }
+
+    /**
+     * Finishes the expedited job on app2 so its process is demoted from foreground status.
+     */
+    private void finishExpeditedJob() throws Exception {
+        executeShellCommand("am broadcast -a "
+                + " com.android.cts.net.hostside.app2.action.FINISH_JOB "
                 + "--receiver-foreground --receiver-registered-only");
     }
 
