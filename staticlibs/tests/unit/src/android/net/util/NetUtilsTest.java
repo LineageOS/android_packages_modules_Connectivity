@@ -71,18 +71,18 @@ public final class NetUtilsTest {
         route = NetUtils.selectBestRoute(routes, v4_dest);
         assertEquals(null, route);
 
-        final RouteInfo v4_expected = new RouteInfo(new IpPrefix("75.208.8.10/24"),
+        final RouteInfo v4_expected = new RouteInfo(new IpPrefix("75.208.8.0/24"),
                 V4_GATEWAY, "wlan0");
         routes.add(v4_expected);
-        // "75.208.8.10/16" is not an expected result since it is not the longest prefix.
-        routes.add(new RouteInfo(new IpPrefix("75.208.8.10/16"), V4_GATEWAY, "wlan0"));
-        routes.add(new RouteInfo(new IpPrefix("75.208.7.32/24"), V4_GATEWAY, "wlan0"));
+        // "75.208.0.0/16" is not an expected result since it is not the longest prefix.
+        routes.add(new RouteInfo(new IpPrefix("75.208.0.0/16"), V4_GATEWAY, "wlan0"));
+        routes.add(new RouteInfo(new IpPrefix("75.208.7.0/24"), V4_GATEWAY, "wlan0"));
 
         final RouteInfo v6_expected = new RouteInfo(new IpPrefix("2001:db8:cafe::/64"),
                 V6_GATEWAY, "wlan0");
         routes.add(v6_expected);
-        // "2001:db8:cafe::123/32" is not an expected result since it is not the longest prefix.
-        routes.add(new RouteInfo(new IpPrefix("2001:db8:cafe::123/32"), V6_GATEWAY, "wlan0"));
+        // "2001:db8::/32" is not an expected result since it is not the longest prefix.
+        routes.add(new RouteInfo(new IpPrefix("2001:db8::/32"), V6_GATEWAY, "wlan0"));
         routes.add(new RouteInfo(new IpPrefix("2001:db8:beef::/64"), V6_GATEWAY, "wlan0"));
 
         // Verify expected v4 route is selected
