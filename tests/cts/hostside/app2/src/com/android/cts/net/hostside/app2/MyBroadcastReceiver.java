@@ -201,7 +201,7 @@ public class MyBroadcastReceiver extends BroadcastReceiver {
         Log.d(TAG, "sendNotification: id=" + notificationId + ", type=" + notificationType);
         final Intent serviceIntent = new Intent(context, MyService.class);
         final PendingIntent pendingIntent = PendingIntent.getService(context, 0, serviceIntent,
-                notificationId);
+                PendingIntent.FLAG_MUTABLE);
         final Bundle bundle = new Bundle();
         bundle.putCharSequence("parcelable", "I am not");
 
