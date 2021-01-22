@@ -318,9 +318,21 @@ public class HostsideRestrictBackgroundNetworkTests extends HostsideNetworkTestC
     /**************************
      * Restricted mode tests. *
      **************************/
-    public void testRestrictedMode_networkAccess() throws Exception {
+    public void testNetworkAccess_restrictedMode() throws Exception {
         runDeviceTests(TEST_PKG, TEST_PKG + ".RestrictedModeTest",
                 "testNetworkAccess");
+    }
+
+    /************************
+     * Expedited job tests. *
+     ************************/
+
+    public void testMeteredNetworkAccess_expeditedJob() throws Exception {
+        runDeviceTests(TEST_PKG, TEST_PKG + ".ExpeditedJobMeteredTest");
+    }
+
+    public void testNonMeteredNetworkAccess_expeditedJob() throws Exception {
+        runDeviceTests(TEST_PKG, TEST_PKG + ".ExpeditedJobNonMeteredTest");
     }
 
     /*******************

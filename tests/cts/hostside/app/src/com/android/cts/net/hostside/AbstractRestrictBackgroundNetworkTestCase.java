@@ -55,6 +55,7 @@ import android.provider.DeviceConfig;
 import android.service.notification.NotificationListenerService;
 import android.util.Log;
 
+import com.android.compatibility.common.util.BatteryUtils;
 import com.android.compatibility.common.util.DeviceConfigStateHelper;
 
 import org.junit.Rule;
@@ -267,11 +268,10 @@ public abstract class AbstractRestrictBackgroundNetworkTestCase {
     }
 
     /**
-     * Asserts that an app always have access while on foreground or running a foreground service
-     * or an expedited job.
+     * Asserts that an app always have access while on foreground or running a foreground service.
      *
-     * <p>This method will launch an activity, a foreground service, and an expedited job to make
-     * the assertion, but will finish the activity / stop the service / finish the job afterwards.
+     * <p>This method will launch an activity, a foreground service to make
+     * the assertion, but will finish the activity / stop the service afterwards.
      */
     protected void assertsForegroundAlwaysHasNetworkAccess() throws Exception{
         // Checks foreground first.
@@ -281,7 +281,9 @@ public abstract class AbstractRestrictBackgroundNetworkTestCase {
         // Then foreground service
         launchComponentAndAssertNetworkAccess(TYPE_COMPONENT_FOREGROUND_SERVICE);
         stopForegroundService();
+    }
 
+    protected void assertExpeditedJobHasNetworkAccess() throws Exception {
         launchComponentAndAssertNetworkAccess(TYPE_EXPEDITED_JOB);
         finishExpeditedJob();
     }
@@ -619,6 +621,10 @@ public abstract class AbstractRestrictBackgroundNetworkTestCase {
         executeSilentShellCommand("cmd battery set status "
                 + BatteryManager.BATTERY_STATUS_CHARGING);
         assertBatteryState(true);
+    }
+
+    protected void resetBatteryState() {
+        BatteryUtils.runDumpsysBatteryReset();
     }
 
     private void assertBatteryState(boolean pluggedIn) throws Exception {
