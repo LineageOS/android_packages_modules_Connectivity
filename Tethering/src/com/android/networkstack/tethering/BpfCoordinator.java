@@ -30,12 +30,16 @@ import static com.android.networkstack.tethering.TetheringConfiguration.DEFAULT_
 
 import android.app.usage.NetworkStatsManager;
 import android.net.INetd;
+import android.net.LinkProperties;
 import android.net.MacAddress;
 import android.net.NetworkStats;
 import android.net.NetworkStats.Entry;
 import android.net.TetherOffloadRuleParcel;
+import android.net.ip.ConntrackMonitor;
+import android.net.ip.ConntrackMonitor.ConntrackEventConsumer;
 import android.net.ip.IpServer;
 import android.net.netstats.provider.NetworkStatsProvider;
+import android.net.util.InterfaceParams;
 import android.net.util.SharedLog;
 import android.net.util.TetheringUtils.ForwardedStats;
 import android.os.ConditionVariable;
@@ -54,12 +58,17 @@ import com.android.modules.utils.build.SdkLevel;
 import com.android.net.module.util.NetworkStackConstants;
 import com.android.networkstack.tethering.apishim.common.BpfCoordinatorShim;
 
+import java.net.Inet4Address;
 import java.net.Inet6Address;
+import java.net.InetAddress;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 
 /**
  *  This coordinator is responsible for providing BPF offload relevant functionality.
@@ -74,11 +83,11 @@ public class BpfCoordinator {
     private static final String TAG = BpfCoordinator.class.getSimpleName();
     private static final int DUMP_TIMEOUT_MS = 10_000;
     private static final String TETHER_DOWNSTREAM6_FS_PATH =
-            "/sys/fs/bpf/map_offload_tether_downstream6_map";
+            "/sys/fs/bpf/tethering/map_offload_tether_downstream6_map";
     private static final String TETHER_STATS_MAP_PATH =
-            "/sys/fs/bpf/map_offload_tether_stats_map";
+            "/sys/fs/bpf/tethering/map_offload_tether_stats_map";
     private static final String TETHER_LIMIT_MAP_PATH =
-            "/sys/fs/bpf/map_offload_tether_limit_map";
+            "/sys/fs/bpf/tethering/map_offload_tether_limit_map";
 
     @VisibleForTesting
     enum StatsType {
@@ -94,6 +103,8 @@ public class BpfCoordinator {
     private final SharedLog mLog;
     @NonNull
     private final Dependencies mDeps;
+    @NonNull
+    private final ConntrackMonitor mConntrackMonitor;
     @Nullable
     private final BpfTetherStatsProvider mStatsProvider;
     @NonNull
@@ -156,6 +167,24 @@ public class BpfCoordinator {
     private final HashMap<IpServer, LinkedHashMap<Inet6Address, Ipv6ForwardingRule>>
             mIpv6ForwardingRules = new LinkedHashMap<>();
 
+    // Map of downstream client maps. Each of these maps represents the IPv4 clients for a given
+    // downstream. Needed to build IPv4 forwarding rules when conntrack events are received.
+    // Each map:
+    // - Is owned by the IpServer that is responsible for that downstream.
+    // - Must only be modified by that IpServer.
+    // - Is created when the IpServer adds its first client, and deleted when the IpServer deletes
+    //   its last client.
+    private final HashMap<IpServer, HashMap<Inet4Address, ClientInfo>>
+            mTetherClients = new HashMap<>();
+
+    // Set for which downstream is monitoring the conntrack netlink message.
+    private final Set<IpServer> mMonitoringIpServers = new HashSet<>();
+
+    // Map of upstream interface IPv4 address to interface index.
+    // TODO: consider making the key to be unique because the upstream address is not unique. It
+    // is okay for now because there have only one upstream generally.
+    private final HashMap<Inet4Address, Integer> mIpv4UpstreamIndices = new HashMap<>();
+
     // Runnable that used by scheduling next polling of stats.
     private final Runnable mScheduledPollingTask = () -> {
         updateForwardedStats();
@@ -178,6 +207,11 @@ public class BpfCoordinator {
 
         /** Get tethering configuration. */
         @Nullable public abstract TetheringConfiguration getTetherConfig();
+
+        /** Get conntrack monitor. */
+        @NonNull public ConntrackMonitor getConntrackMonitor(ConntrackEventConsumer consumer) {
+            return new ConntrackMonitor(getHandler(), getSharedLog(), consumer);
+        }
 
         /**
          * Check OS Build at least S.
@@ -232,6 +266,7 @@ public class BpfCoordinator {
         mNetd = mDeps.getNetd();
         mLog = mDeps.getSharedLog().forSubComponent(TAG);
         mIsBpfEnabled = isBpfEnabled();
+        mConntrackMonitor = mDeps.getConntrackMonitor(new BpfConntrackEventConsumer());
         BpfTetherStatsProvider provider = new BpfTetherStatsProvider();
         try {
             mDeps.getNetworkStatsManager().registerNetworkStatsProvider(
@@ -293,6 +328,58 @@ public class BpfCoordinator {
 
     private boolean isUsingBpf() {
         return mIsBpfEnabled && mBpfCoordinatorShim.isInitialized();
+    }
+
+    /**
+     * Start conntrack message monitoring.
+     * Note that this can be only called on handler thread.
+     *
+     * TODO: figure out a better logging for non-interesting conntrack message.
+     * For example, the following logging is an IPCTNL_MSG_CT_GET message but looks scary.
+     * +---------------------------------------------------------------------------+
+     * | ERROR unparsable netlink msg: 1400000001010103000000000000000002000000    |
+     * +------------------+--------------------------------------------------------+
+     * |                  | struct nlmsghdr                                        |
+     * | 14000000         | length = 20                                            |
+     * | 0101             | type = NFNL_SUBSYS_CTNETLINK << 8 | IPCTNL_MSG_CT_GET  |
+     * | 0103             | flags                                                  |
+     * | 00000000         | seqno = 0                                              |
+     * | 00000000         | pid = 0                                                |
+     * |                  | struct nfgenmsg                                        |
+     * | 02               | nfgen_family  = AF_INET                                |
+     * | 00               | version = NFNETLINK_V0                                 |
+     * | 0000             | res_id                                                 |
+     * +------------------+--------------------------------------------------------+
+     * See NetlinkMonitor#handlePacket, NetlinkMessage#parseNfMessage.
+     */
+    public void startMonitoring(@NonNull final IpServer ipServer) {
+        if (!isUsingBpf()) return;
+
+        if (mMonitoringIpServers.contains(ipServer)) {
+            Log.wtf(TAG, "The same downstream " + ipServer.interfaceName()
+                    + " should not start monitoring twice.");
+            return;
+        }
+
+        if (mMonitoringIpServers.isEmpty()) {
+            mConntrackMonitor.start();
+            mLog.i("Monitoring started");
+        }
+
+        mMonitoringIpServers.add(ipServer);
+    }
+
+    /**
+     * Stop conntrack event monitoring.
+     * Note that this can be only called on handler thread.
+     */
+    public void stopMonitoring(@NonNull final IpServer ipServer) {
+        mMonitoringIpServers.remove(ipServer);
+
+        if (!mMonitoringIpServers.isEmpty()) return;
+
+        mConntrackMonitor.stop();
+        mLog.i("Monitoring stopped");
     }
 
     /**
@@ -438,6 +525,74 @@ public class BpfCoordinator {
     }
 
     /**
+     * Add downstream client.
+     */
+    public void tetherOffloadClientAdd(@NonNull final IpServer ipServer,
+            @NonNull final ClientInfo client) {
+        if (!isUsingBpf()) return;
+
+        if (!mTetherClients.containsKey(ipServer)) {
+            mTetherClients.put(ipServer, new HashMap<Inet4Address, ClientInfo>());
+        }
+
+        HashMap<Inet4Address, ClientInfo> clients = mTetherClients.get(ipServer);
+        clients.put(client.clientAddress, client);
+    }
+
+    /**
+     * Remove downstream client.
+     */
+    public void tetherOffloadClientRemove(@NonNull final IpServer ipServer,
+            @NonNull final ClientInfo client) {
+        if (!isUsingBpf()) return;
+
+        HashMap<Inet4Address, ClientInfo> clients = mTetherClients.get(ipServer);
+        if (clients == null) return;
+
+        // If no rule is removed, return early. Avoid unnecessary work on a non-existent rule
+        // which may have never been added or removed already.
+        if (clients.remove(client.clientAddress) == null) return;
+
+        // Remove the downstream entry if it has no more rule.
+        if (clients.isEmpty()) {
+            mTetherClients.remove(ipServer);
+        }
+    }
+
+    /**
+     * Call when UpstreamNetworkState may be changed.
+     * If upstream has ipv4 for tethering, update this new UpstreamNetworkState to map. The
+     * upstream interface index and its address mapping is prepared for building IPv4
+     * offload rule.
+     *
+     * TODO: Delete the unused upstream interface mapping.
+     * TODO: Support ether ip upstream interface.
+     */
+    public void addUpstreamIfindexToMap(LinkProperties lp) {
+        if (!mPollingStarted) return;
+
+        // This will not work on a network that is using 464xlat because hasIpv4Address will not be
+        // true.
+        // TODO: need to consider 464xlat.
+        if (lp == null || !lp.hasIpv4Address()) return;
+
+        // Support raw ip upstream interface only.
+        final InterfaceParams params = InterfaceParams.getByName(lp.getInterfaceName());
+        if (params == null || params.hasMacAddress) return;
+
+        Collection<InetAddress> addresses = lp.getAddresses();
+        for (InetAddress addr: addresses) {
+            if (addr instanceof Inet4Address) {
+                Inet4Address i4addr = (Inet4Address) addr;
+                if (!i4addr.isAnyLocalAddress() && !i4addr.isLinkLocalAddress()
+                        && !i4addr.isLoopbackAddress() && !i4addr.isMulticastAddress()) {
+                    mIpv4UpstreamIndices.put(i4addr, params.index);
+                }
+            }
+        }
+    }
+
+    /**
      * Dump information.
      * Block the function until all the data are dumped on the handler thread or timed-out. The
      * reason is that dumpsys invokes this function on the thread of caller and the data may only
@@ -514,6 +669,7 @@ public class BpfCoordinator {
         public final int upstreamIfindex;
         public final int downstreamIfindex;
 
+        // TODO: store a ClientInfo object instead of storing address, srcMac, and dstMac directly.
         @NonNull
         public final Inet6Address address;
         @NonNull
@@ -590,6 +746,48 @@ public class BpfCoordinator {
         }
     }
 
+    /** Tethering client information class. */
+    public static class ClientInfo {
+        public final int downstreamIfindex;
+
+        @NonNull
+        public final MacAddress downstreamMac;
+        @NonNull
+        public final Inet4Address clientAddress;
+        @NonNull
+        public final MacAddress clientMac;
+
+        public ClientInfo(int downstreamIfindex,
+                @NonNull MacAddress downstreamMac, @NonNull Inet4Address clientAddress,
+                @NonNull MacAddress clientMac) {
+            this.downstreamIfindex = downstreamIfindex;
+            this.downstreamMac = downstreamMac;
+            this.clientAddress = clientAddress;
+            this.clientMac = clientMac;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (!(o instanceof ClientInfo)) return false;
+            ClientInfo that = (ClientInfo) o;
+            return this.downstreamIfindex == that.downstreamIfindex
+                    && Objects.equals(this.downstreamMac, that.downstreamMac)
+                    && Objects.equals(this.clientAddress, that.clientAddress)
+                    && Objects.equals(this.clientMac, that.clientMac);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(downstreamIfindex, downstreamMac, clientAddress, clientMac);
+        }
+
+        @Override
+        public String toString() {
+            return String.format("downstream: %d (%s), client: %s (%s)",
+                    downstreamIfindex, downstreamMac, clientAddress, clientMac);
+        }
+    }
+
     /**
      * A BPF tethering stats provider to provide network statistics to the system.
      * Note that this class' data may only be accessed on the handler thread.
@@ -654,6 +852,10 @@ public class BpfCoordinator {
             mIfaceStats = mIfaceStats.add(ifaceDiff);
             mUidStats = mUidStats.add(uidDiff);
         }
+    }
+
+    private class BpfConntrackEventConsumer implements ConntrackEventConsumer {
+        public void accept(ConntrackMonitor.ConntrackEvent e) { /* TODO */ }
     }
 
     private boolean isBpfEnabled() {
