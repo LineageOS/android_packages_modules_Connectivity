@@ -315,6 +315,26 @@ public class HostsideRestrictBackgroundNetworkTests extends HostsideNetworkTestC
                 "testAppIdleAndBatterySaver_tempPowerSaveAndAppIdleWhitelists");
     }
 
+    /**************************
+     * Restricted mode tests. *
+     **************************/
+    public void testNetworkAccess_restrictedMode() throws Exception {
+        runDeviceTests(TEST_PKG, TEST_PKG + ".RestrictedModeTest",
+                "testNetworkAccess");
+    }
+
+    /************************
+     * Expedited job tests. *
+     ************************/
+
+    public void testMeteredNetworkAccess_expeditedJob() throws Exception {
+        runDeviceTests(TEST_PKG, TEST_PKG + ".ExpeditedJobMeteredTest");
+    }
+
+    public void testNonMeteredNetworkAccess_expeditedJob() throws Exception {
+        runDeviceTests(TEST_PKG, TEST_PKG + ".ExpeditedJobNonMeteredTest");
+    }
+
     /*******************
      * Helper methods. *
      *******************/

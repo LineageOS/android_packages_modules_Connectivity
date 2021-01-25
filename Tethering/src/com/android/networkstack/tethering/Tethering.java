@@ -93,7 +93,6 @@ import android.net.TetheringConfigurationParcel;
 import android.net.TetheringRequestParcel;
 import android.net.ip.IpServer;
 import android.net.shared.NetdUtils;
-import android.net.util.BaseNetdUnsolicitedEventListener;
 import android.net.util.InterfaceSet;
 import android.net.util.PrefixUtils;
 import android.net.util.SharedLog;
@@ -132,6 +131,7 @@ import com.android.internal.util.IndentingPrintWriter;
 import com.android.internal.util.MessageUtils;
 import com.android.internal.util.State;
 import com.android.internal.util.StateMachine;
+import com.android.net.module.util.BaseNetdUnsolicitedEventListener;
 
 import java.io.FileDescriptor;
 import java.io.PrintWriter;
@@ -1636,6 +1636,13 @@ public class Tethering {
         protected void handleNewUpstreamNetworkState(UpstreamNetworkState ns) {
             mIPv6TetheringCoordinator.updateUpstreamNetworkState(ns);
             mOffload.updateUpstreamNetworkState(ns);
+
+            // TODO: Delete all related offload rules which are using this upstream.
+            if (ns != null) {
+                // Add upstream index to the map. The upstream interface index is required while
+                // the conntrack event builds the offload rules.
+                mBpfCoordinator.addUpstreamIfindexToMap(ns.linkProperties);
+            }
         }
 
         private void handleInterfaceServingStateActive(int mode, IpServer who) {

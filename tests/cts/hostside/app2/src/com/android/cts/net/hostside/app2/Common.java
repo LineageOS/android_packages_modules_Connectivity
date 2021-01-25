@@ -38,6 +38,8 @@ public final class Common {
             "com.android.cts.net.hostside.app2.action.RECEIVER_READY";
     static final String ACTION_FINISH_ACTIVITY =
             "com.android.cts.net.hostside.app2.action.FINISH_ACTIVITY";
+    static final String ACTION_FINISH_JOB =
+            "com.android.cts.net.hostside.app2.action.FINISH_JOB";
     static final String ACTION_SHOW_TOAST =
             "com.android.cts.net.hostside.app2.action.SHOW_TOAST";
 
@@ -66,6 +68,10 @@ public final class Common {
             return;
         }
         final Bundle extras = intent.getExtras();
+        notifyNetworkStateObserver(context, extras);
+    }
+
+    static void notifyNetworkStateObserver(Context context, Bundle extras) {
         if (extras == null) {
             return;
         }
