@@ -104,6 +104,8 @@ import com.android.networkstack.tethering.BpfCoordinator;
 import com.android.networkstack.tethering.BpfCoordinator.Ipv6ForwardingRule;
 import com.android.networkstack.tethering.BpfMap;
 import com.android.networkstack.tethering.PrivateAddressCoordinator;
+import com.android.networkstack.tethering.Tether4Key;
+import com.android.networkstack.tethering.Tether4Value;
 import com.android.networkstack.tethering.TetherDownstream6Key;
 import com.android.networkstack.tethering.TetherDownstream6Value;
 import com.android.networkstack.tethering.TetherLimitKey;
@@ -173,6 +175,8 @@ public class IpServerTest {
     @Mock private NetworkStatsManager mStatsManager;
     @Mock private TetheringConfiguration mTetherConfig;
     @Mock private ConntrackMonitor mConntrackMonitor;
+    @Mock private BpfMap<Tether4Key, Tether4Value> mBpfDownstream4Map;
+    @Mock private BpfMap<Tether4Key, Tether4Value> mBpfUpstream4Map;
     @Mock private BpfMap<TetherDownstream6Key, TetherDownstream6Value> mBpfDownstream6Map;
     @Mock private BpfMap<TetherStatsKey, TetherStatsValue> mBpfStatsMap;
     @Mock private BpfMap<TetherLimitKey, TetherLimitValue> mBpfLimitMap;
@@ -300,6 +304,18 @@ public class IpServerTest {
                     public ConntrackMonitor getConntrackMonitor(
                             ConntrackMonitor.ConntrackEventConsumer consumer) {
                         return mConntrackMonitor;
+                    }
+
+                    @Nullable
+                    public BpfMap<Tether4Key, Tether4Value>
+                            getBpfDownstream4Map() {
+                        return mBpfDownstream4Map;
+                    }
+
+                    @Nullable
+                    public BpfMap<Tether4Key, Tether4Value>
+                            getBpfUpstream4Map() {
+                        return mBpfUpstream4Map;
                     }
 
                     @Nullable
@@ -863,6 +879,11 @@ public class IpServerTest {
                 .thenReturn(buildEmptyTetherStatsParcel(UPSTREAM_IFINDEX));
         when(mNetd.tetherOffloadGetAndClearStats(UPSTREAM_IFINDEX2))
                 .thenReturn(buildEmptyTetherStatsParcel(UPSTREAM_IFINDEX2));
+        // When the last rule is removed, tetherOffloadGetAndClearStats will log a WTF (and
+        // potentially crash the test) if the stats map is empty.
+        final TetherStatsValue allZeros = new TetherStatsValue(0, 0, 0, 0, 0, 0);
+        when(mBpfStatsMap.getValue(new TetherStatsKey(UPSTREAM_IFINDEX))).thenReturn(allZeros);
+        when(mBpfStatsMap.getValue(new TetherStatsKey(UPSTREAM_IFINDEX2))).thenReturn(allZeros);
     }
 
     @Test
