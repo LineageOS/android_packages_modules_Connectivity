@@ -28,6 +28,8 @@ import androidx.annotation.Nullable;
 
 import com.android.networkstack.tethering.BpfCoordinator.Dependencies;
 import com.android.networkstack.tethering.BpfCoordinator.Ipv6ForwardingRule;
+import com.android.networkstack.tethering.Tether4Key;
+import com.android.networkstack.tethering.Tether4Value;
 import com.android.networkstack.tethering.TetherStatsValue;
 
 /**
@@ -129,6 +131,19 @@ public class BpfCoordinatorShimImpl
                     + ifIndex + ": ", e);
             return null;
         }
+    }
+
+    @Override
+    public boolean tetherOffloadRuleAdd(boolean downstream, @NonNull Tether4Key key,
+            @NonNull Tether4Value value) {
+        /* no op */
+        return true;
+    }
+
+    @Override
+    public boolean tetherOffloadRuleRemove(boolean downstream, @NonNull Tether4Key key) {
+        /* no op */
+        return true;
     }
 
     @Override
