@@ -133,6 +133,15 @@ public class EthernetTrackerTest {
         }
     }
 
+    private NetworkCapabilitiesBuilder makeEthernetCapabilitiesBuilder(boolean clearAll) {
+        final NetworkCapabilitiesBuilder result =
+                clearAll ? new NetworkCapabilitiesBuilder().clearAll()
+                        : new NetworkCapabilitiesBuilder();
+        return result.addCapability(NetworkCapabilities.NET_CAPABILITY_NOT_ROAMING)
+                .addCapability(NetworkCapabilities.NET_CAPABILITY_NOT_CONGESTED)
+                .addCapability(NetworkCapabilities.NET_CAPABILITY_NOT_SUSPENDED);
+    }
+
     /**
      * Test: Attempt to create a capabilties with various valid sets of capabilities/transports
      */
@@ -140,23 +149,23 @@ public class EthernetTrackerTest {
     public void createNetworkCapabilities() {
 
         // Particularly common expected results
-        NetworkCapabilities defaultEthernetCleared = new NetworkCapabilitiesBuilder()
-                .clearAll()
-                .setLinkUpstreamBandwidthKbps(100000)
-                .setLinkDownstreamBandwidthKbps(100000)
-                .addTransport(NetworkCapabilities.TRANSPORT_ETHERNET)
-                .build();
+        NetworkCapabilities defaultEthernetCleared =
+                makeEthernetCapabilitiesBuilder(true /* clearAll */)
+                        .setLinkUpstreamBandwidthKbps(100000)
+                        .setLinkDownstreamBandwidthKbps(100000)
+                        .addTransport(NetworkCapabilities.TRANSPORT_ETHERNET)
+                        .build();
 
-        NetworkCapabilities ethernetClearedWithCommonCaps = new NetworkCapabilitiesBuilder()
-                .clearAll()
-                .setLinkUpstreamBandwidthKbps(100000)
-                .setLinkDownstreamBandwidthKbps(100000)
-                .addTransport(NetworkCapabilities.TRANSPORT_ETHERNET)
-                .addCapability(12)
-                .addCapability(13)
-                .addCapability(14)
-                .addCapability(15)
-                .build();
+        NetworkCapabilities ethernetClearedWithCommonCaps =
+                makeEthernetCapabilitiesBuilder(true /* clearAll */)
+                        .setLinkUpstreamBandwidthKbps(100000)
+                        .setLinkDownstreamBandwidthKbps(100000)
+                        .addTransport(NetworkCapabilities.TRANSPORT_ETHERNET)
+                        .addCapability(12)
+                        .addCapability(13)
+                        .addCapability(14)
+                        .addCapability(15)
+                        .build();
 
         // Empty capabilities and transports lists with a "please clear defaults" should
         // yield an empty capabilities set with TRANPORT_ETHERNET
@@ -165,7 +174,7 @@ public class EthernetTrackerTest {
         // Empty capabilities and transports without the clear defaults flag should return the
         // default capabilities set with TRANSPORT_ETHERNET
         assertParsedNetworkCapabilities(
-                new NetworkCapabilitiesBuilder()
+                makeEthernetCapabilitiesBuilder(false /* clearAll */)
                         .setLinkUpstreamBandwidthKbps(100000)
                         .setLinkDownstreamBandwidthKbps(100000)
                         .addTransport(NetworkCapabilities.TRANSPORT_ETHERNET)
@@ -175,7 +184,7 @@ public class EthernetTrackerTest {
         // A list of capabilities without the clear defaults flag should return the default
         // capabilities, mixed with the desired capabilities, and TRANSPORT_ETHERNET
         assertParsedNetworkCapabilities(
-                new NetworkCapabilitiesBuilder()
+                makeEthernetCapabilitiesBuilder(false /* clearAll */)
                         .setLinkUpstreamBandwidthKbps(100000)
                         .setLinkDownstreamBandwidthKbps(100000)
                         .addTransport(NetworkCapabilities.TRANSPORT_ETHERNET)
@@ -195,32 +204,28 @@ public class EthernetTrackerTest {
         // Adding a valid override transport will remove the default TRANSPORT_ETHERNET transport
         // and apply only the override to the capabiltities object
         assertParsedNetworkCapabilities(
-                new NetworkCapabilitiesBuilder()
-                        .clearAll()
+                makeEthernetCapabilitiesBuilder(true /* clearAll */)
                         .setLinkUpstreamBandwidthKbps(100000)
                         .setLinkDownstreamBandwidthKbps(100000)
                         .addTransport(0)
                         .build(),
                 true, "", "0");
         assertParsedNetworkCapabilities(
-                new NetworkCapabilitiesBuilder()
-                        .clearAll()
+                makeEthernetCapabilitiesBuilder(true /* clearAll */)
                         .setLinkUpstreamBandwidthKbps(100000)
                         .setLinkDownstreamBandwidthKbps(100000)
                         .addTransport(1)
                         .build(),
                 true, "", "1");
         assertParsedNetworkCapabilities(
-                new NetworkCapabilitiesBuilder()
-                        .clearAll()
+                makeEthernetCapabilitiesBuilder(true /* clearAll */)
                         .setLinkUpstreamBandwidthKbps(100000)
                         .setLinkDownstreamBandwidthKbps(100000)
                         .addTransport(2)
                         .build(),
                 true, "", "2");
         assertParsedNetworkCapabilities(
-                new NetworkCapabilitiesBuilder()
-                        .clearAll()
+                makeEthernetCapabilitiesBuilder(true /* clearAll */)
                         .setLinkUpstreamBandwidthKbps(100000)
                         .setLinkDownstreamBandwidthKbps(100000)
                         .addTransport(3)
@@ -244,8 +249,7 @@ public class EthernetTrackerTest {
 
         // Ensure the adding of both capabilities and transports work
         assertParsedNetworkCapabilities(
-                new NetworkCapabilitiesBuilder()
-                        .clearAll()
+                makeEthernetCapabilitiesBuilder(true /* clearAll */)
                         .setLinkUpstreamBandwidthKbps(100000)
                         .setLinkDownstreamBandwidthKbps(100000)
                         .addCapability(12)
