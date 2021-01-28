@@ -42,7 +42,7 @@ public class HexDumpTest {
     }
 
     @Test
-    public void testHexStringToBytes() {
+    public void testHexStringToByteArray() {
         assertArrayEquals(new byte[]{(byte) 0xab, (byte) 0xcd, (byte) 0xef},
                 HexDump.hexStringToByteArray("abcdef"));
         assertArrayEquals(new byte[]{(byte) 0xAB, (byte) 0xCD, (byte) 0xEF},
@@ -50,13 +50,13 @@ public class HexDumpTest {
     }
 
     @Test
-    public void testIntegerToBytes() {
+    public void testIntegerToByteArray() {
         assertArrayEquals(new byte[]{(byte) 0xff, (byte) 0x00, (byte) 0x00, (byte) 0x04},
                 HexDump.toByteArray((int) 0xff000004));
     }
 
     @Test
-    public void testByteToBytes() {
+    public void testByteToByteArray() {
         assertArrayEquals(new byte[]{(byte) 0x7f}, HexDump.toByteArray((byte) 0x7f));
     }
 
