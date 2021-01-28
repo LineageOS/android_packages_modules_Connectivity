@@ -20,9 +20,6 @@ import android.annotation.Nullable;
 
 /**
  * Hex utility functions.
- *
- * A copy from frameworks/base/core/java/com/android/internal/util/HexDump.java, to be shared
- * by multiple modules.
  */
 public class HexDump {
     private static final char[] HEX_DIGITS = { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
