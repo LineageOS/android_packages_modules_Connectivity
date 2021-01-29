@@ -73,6 +73,7 @@ java_library {
   host_supported: true,
   visibility: [
       "//frameworks/libs/net/common/tests:__subpackages__",
+      "//frameworks/libs/net/client-libs/tests:__subpackages__",
   ],
   static_libs: [
       "kotlin-test"
