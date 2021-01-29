@@ -467,6 +467,7 @@ final class EthernetTracker {
         nc.addCapability(NetworkCapabilities.NET_CAPABILITY_NOT_ROAMING);
         nc.addCapability(NetworkCapabilities.NET_CAPABILITY_NOT_CONGESTED);
         nc.addCapability(NetworkCapabilities.NET_CAPABILITY_NOT_SUSPENDED);
+        nc.addCapability(NetworkCapabilities.NET_CAPABILITY_NOT_VCN_MANAGED);
 
         if (isTestIface) {
             nc.addTransportType(NetworkCapabilities.TRANSPORT_TEST);
