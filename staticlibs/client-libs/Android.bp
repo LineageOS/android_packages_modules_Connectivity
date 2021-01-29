@@ -9,7 +9,9 @@ java_library {
     ],
     visibility: [
         "//packages/modules/Connectivity/Tethering",
-        "//frameworks/base/services:__subpackages__"
+        "//frameworks/base/services:__subpackages__",
+        "//frameworks/base/packages:__subpackages__",
+        "//frameworks/libs/net/client-libs/tests:__subpackages__",
     ],
     libs: ["androidx.annotation_annotation"],
     static_libs: [
