@@ -16,6 +16,7 @@
 
 package com.android.networkstack.tethering.apishim.common;
 
+import android.net.MacAddress;
 import android.util.SparseArray;
 
 import androidx.annotation.NonNull;
@@ -23,6 +24,8 @@ import androidx.annotation.Nullable;
 
 import com.android.networkstack.tethering.BpfCoordinator.Dependencies;
 import com.android.networkstack.tethering.BpfCoordinator.Ipv6ForwardingRule;
+import com.android.networkstack.tethering.Tether4Key;
+import com.android.networkstack.tethering.Tether4Value;
 import com.android.networkstack.tethering.TetherStatsValue;
 
 /**
@@ -71,6 +74,27 @@ public abstract class BpfCoordinatorShim {
     public abstract boolean tetherOffloadRuleRemove(@NonNull Ipv6ForwardingRule rule);
 
     /**
+     * Starts IPv6 forwarding between the specified interfaces.
+
+     * @param downstreamIfindex the downstream interface index
+     * @param upstreamIfindex the upstream interface index
+     * @param srcMac the source MAC address to use for packets
+     * @oaram dstMac the destination MAC address to use for packets
+     * @return true if operation succeeded or was a no-op, false otherwise
+     */
+    public abstract boolean startUpstreamIpv6Forwarding(int downstreamIfindex, int upstreamIfindex,
+            MacAddress srcMac, MacAddress dstMac, int mtu);
+
+    /**
+     * Stops IPv6 forwarding between the specified interfaces.
+
+     * @param downstreamIfindex the downstream interface index
+     * @param upstreamIfindex the upstream interface index
+     * @return true if operation succeeded or was a no-op, false otherwise
+     */
+    public abstract boolean stopUpstreamIpv6Forwarding(int downstreamIfindex, int upstreamIfindex);
+
+    /**
      * Return BPF tethering offload statistics.
      *
      * @return an array of TetherStatsValue's, where each entry contains the upstream interface
@@ -108,5 +132,16 @@ public abstract class BpfCoordinatorShim {
      */
     @Nullable
     public abstract TetherStatsValue tetherOffloadGetAndClearStats(int ifIndex);
+
+    /**
+     * Adds a tethering IPv4 offload rule to appropriate BPF map.
+     */
+    public abstract boolean tetherOffloadRuleAdd(boolean downstream, @NonNull Tether4Key key,
+            @NonNull Tether4Value value);
+
+    /**
+     * Deletes a tethering IPv4 offload rule from the appropriate BPF map.
+     */
+    public abstract boolean tetherOffloadRuleRemove(boolean downstream, @NonNull Tether4Key key);
 }
 

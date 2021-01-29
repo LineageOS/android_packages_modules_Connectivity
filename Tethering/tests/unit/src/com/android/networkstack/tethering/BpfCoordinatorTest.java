@@ -158,7 +158,10 @@ public class BpfCoordinatorTest {
     @Mock private IpServer mIpServer2;
     @Mock private TetheringConfiguration mTetherConfig;
     @Mock private ConntrackMonitor mConntrackMonitor;
-    @Mock private BpfMap<TetherDownstream6Key, TetherDownstream6Value> mBpfDownstream6Map;
+    @Mock private BpfMap<Tether4Key, Tether4Value> mBpfDownstream4Map;
+    @Mock private BpfMap<Tether4Key, Tether4Value> mBpfUpstream4Map;
+    @Mock private BpfMap<TetherDownstream6Key, Tether6Value> mBpfDownstream6Map;
+    @Mock private BpfMap<TetherUpstream6Key, Tether6Value> mBpfUpstream6Map;
 
     // Late init since methods must be called by the thread that created this object.
     private TestableNetworkStatsProviderCbBinder mTetherStatsProviderCb;
@@ -203,9 +206,23 @@ public class BpfCoordinatorTest {
                     }
 
                     @Nullable
-                    public BpfMap<TetherDownstream6Key, TetherDownstream6Value>
-                            getBpfDownstream6Map() {
+                    public BpfMap<Tether4Key, Tether4Value> getBpfDownstream4Map() {
+                        return mBpfDownstream4Map;
+                    }
+
+                    @Nullable
+                    public BpfMap<Tether4Key, Tether4Value> getBpfUpstream4Map() {
+                        return mBpfUpstream4Map;
+                    }
+
+                    @Nullable
+                    public BpfMap<TetherDownstream6Key, Tether6Value> getBpfDownstream6Map() {
                         return mBpfDownstream6Map;
+                    }
+
+                    @Nullable
+                    public BpfMap<TetherUpstream6Key, Tether6Value> getBpfUpstream6Map() {
+                        return mBpfUpstream6Map;
                     }
 
                     @Nullable
@@ -348,11 +365,41 @@ public class BpfCoordinatorTest {
         }
     }
 
+    private void verifyStartUpstreamIpv6Forwarding(@Nullable InOrder inOrder, int downstreamIfIndex,
+            int upstreamIfindex) throws Exception {
+        if (!mDeps.isAtLeastS()) return;
+        final TetherUpstream6Key key = new TetherUpstream6Key(downstreamIfIndex);
+        final Tether6Value value = new Tether6Value(upstreamIfindex,
+                MacAddress.ALL_ZEROS_ADDRESS, MacAddress.ALL_ZEROS_ADDRESS,
+                ETH_P_IPV6, NetworkStackConstants.ETHER_MTU);
+        verifyWithOrder(inOrder, mBpfUpstream6Map).insertEntry(key, value);
+    }
+
+    private void verifyStopUpstreamIpv6Forwarding(@Nullable InOrder inOrder, int downstreamIfIndex)
+            throws Exception {
+        if (!mDeps.isAtLeastS()) return;
+        final TetherUpstream6Key key = new TetherUpstream6Key(downstreamIfIndex);
+        verifyWithOrder(inOrder, mBpfUpstream6Map).deleteEntry(key);
+    }
+
+    private void verifyNoUpstreamIpv6ForwardingChange(@Nullable InOrder inOrder) throws Exception {
+        if (!mDeps.isAtLeastS()) return;
+        if (inOrder != null) {
+            inOrder.verify(mBpfUpstream6Map, never()).deleteEntry(any());
+            inOrder.verify(mBpfUpstream6Map, never()).insertEntry(any(), any());
+            inOrder.verify(mBpfUpstream6Map, never()).updateEntry(any(), any());
+        } else {
+            verify(mBpfUpstream6Map, never()).deleteEntry(any());
+            verify(mBpfUpstream6Map, never()).insertEntry(any(), any());
+            verify(mBpfUpstream6Map, never()).updateEntry(any(), any());
+        }
+    }
+
     private void verifyTetherOffloadRuleAdd(@Nullable InOrder inOrder,
             @NonNull Ipv6ForwardingRule rule) throws Exception {
         if (mDeps.isAtLeastS()) {
             verifyWithOrder(inOrder, mBpfDownstream6Map).updateEntry(
-                    rule.makeTetherDownstream6Key(), rule.makeTetherDownstream6Value());
+                    rule.makeTetherDownstream6Key(), rule.makeTether6Value());
         } else {
             verifyWithOrder(inOrder, mNetd).tetherOffloadRuleAdd(matches(rule));
         }
@@ -674,11 +721,11 @@ public class BpfCoordinatorTest {
     }
 
     @Test
-    public void testRuleMakeTetherDownstream6Value() throws Exception {
+    public void testRuleMakeTether6Value() throws Exception {
         final Integer mobileIfIndex = 100;
         final Ipv6ForwardingRule rule = buildTestForwardingRule(mobileIfIndex, NEIGH_A, MAC_A);
 
-        final TetherDownstream6Value value = rule.makeTetherDownstream6Value();
+        final Tether6Value value = rule.makeTether6Value();
         assertEquals(value.oif, DOWNSTREAM_IFINDEX);
         assertEquals(value.ethDstMac, MAC_A);
         assertEquals(value.ethSrcMac, DOWNSTREAM_MAC);
@@ -790,7 +837,8 @@ public class BpfCoordinatorTest {
         coordinator.addUpstreamNameToLookupTable(ethIfIndex, ethIface);
         coordinator.addUpstreamNameToLookupTable(mobileIfIndex, mobileIface);
 
-        final InOrder inOrder = inOrder(mNetd, mBpfDownstream6Map, mBpfLimitMap, mBpfStatsMap);
+        final InOrder inOrder = inOrder(mNetd, mBpfDownstream6Map, mBpfUpstream6Map, mBpfLimitMap,
+                mBpfStatsMap);
 
         // Before the rule test, here are the additional actions while the rules are changed.
         // - After adding the first rule on a given upstream, the coordinator adds a data limit.
@@ -810,7 +858,7 @@ public class BpfCoordinatorTest {
         verifyTetherOffloadRuleAdd(inOrder, ethernetRuleA);
         verifyTetherOffloadSetInterfaceQuota(inOrder, ethIfIndex, QUOTA_UNLIMITED,
                 true /* isInit */);
-
+        verifyStartUpstreamIpv6Forwarding(inOrder, DOWNSTREAM_IFINDEX, ethIfIndex);
         coordinator.tetherOffloadRuleAdd(mIpServer, ethernetRuleB);
         verifyTetherOffloadRuleAdd(inOrder, ethernetRuleB);
 
@@ -826,11 +874,13 @@ public class BpfCoordinatorTest {
         // by one for updating upstream interface index by #tetherOffloadRuleUpdate.
         coordinator.tetherOffloadRuleUpdate(mIpServer, mobileIfIndex);
         verifyTetherOffloadRuleRemove(inOrder, ethernetRuleA);
+        verifyTetherOffloadRuleRemove(inOrder, ethernetRuleB);
+        verifyStopUpstreamIpv6Forwarding(inOrder, DOWNSTREAM_IFINDEX);
+        verifyTetherOffloadGetAndClearStats(inOrder, ethIfIndex);
         verifyTetherOffloadRuleAdd(inOrder, mobileRuleA);
         verifyTetherOffloadSetInterfaceQuota(inOrder, mobileIfIndex, QUOTA_UNLIMITED,
                 true /* isInit */);
-        verifyTetherOffloadRuleRemove(inOrder, ethernetRuleB);
-        verifyTetherOffloadGetAndClearStats(inOrder, ethIfIndex);
+        verifyStartUpstreamIpv6Forwarding(inOrder, DOWNSTREAM_IFINDEX, mobileIfIndex);
         verifyTetherOffloadRuleAdd(inOrder, mobileRuleB);
 
         // [3] Clear all rules for a given IpServer.
@@ -839,6 +889,7 @@ public class BpfCoordinatorTest {
         coordinator.tetherOffloadRuleClear(mIpServer);
         verifyTetherOffloadRuleRemove(inOrder, mobileRuleA);
         verifyTetherOffloadRuleRemove(inOrder, mobileRuleB);
+        verifyStopUpstreamIpv6Forwarding(inOrder, DOWNSTREAM_IFINDEX);
         verifyTetherOffloadGetAndClearStats(inOrder, mobileIfIndex);
 
         // [4] Force pushing stats update to verify that the last diff of stats is reported on all
@@ -922,6 +973,15 @@ public class BpfCoordinatorTest {
     public void testBpfDisabledbyNoBpfDownstream6Map() throws Exception {
         setupFunctioningNetdInterface();
         doReturn(null).when(mDeps).getBpfDownstream6Map();
+
+        checkBpfDisabled();
+    }
+
+    @Test
+    @IgnoreUpTo(Build.VERSION_CODES.R)
+    public void testBpfDisabledbyNoBpfUpstream6Map() throws Exception {
+        setupFunctioningNetdInterface();
+        doReturn(null).when(mDeps).getBpfUpstream6Map();
 
         checkBpfDisabled();
     }
