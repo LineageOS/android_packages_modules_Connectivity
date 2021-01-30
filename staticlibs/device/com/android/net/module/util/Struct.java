@@ -17,6 +17,7 @@
 package com.android.net.module.util;
 
 import android.annotation.NonNull;
+import android.annotation.Nullable;
 import android.net.MacAddress;
 
 import java.lang.annotation.ElementType;
@@ -428,6 +429,15 @@ public class Struct {
         return value;
     }
 
+    @Nullable
+    private Object getFieldValue(@NonNull java.lang.reflect.Field field) {
+        try {
+            return field.get(this);
+        } catch (IllegalAccessException e) {
+            throw new IllegalStateException("Cannot access field: " + field, e);
+        }
+    }
+
     private static void putFieldValue(final ByteBuffer output, final FieldInfo fieldInfo,
             final Object value) throws BufferUnderflowException {
         switch (fieldInfo.annotation.type()) {
@@ -484,6 +494,7 @@ public class Struct {
                 output.put(bigIntegerToU64Bytes((BigInteger) value, output.order(), Type.UBE64));
                 break;
             case ByteArray:
+                checkByteArraySize((byte[]) value, fieldInfo);
                 output.put((byte[]) value);
                 break;
             case EUI48:
@@ -595,12 +606,23 @@ public class Struct {
         return size;
     }
 
+    // Check whether the actual size of byte array matches the array size declared in
+    // annotation. For other annotation types, the actual length of field could be always
+    // deduced from annotation correctly.
+    private static void checkByteArraySize(@Nullable final byte[] array,
+            @NonNull final FieldInfo fieldInfo) {
+        Objects.requireNonNull(array, "null byte array for field " + fieldInfo.field.getName());
+        int annotationArraySize = fieldInfo.annotation.arraysize();
+        if (array.length == annotationArraySize) return;
+        throw new IllegalStateException("byte array actual length: "
+                + array.length + " doesn't match the declared array size: " + annotationArraySize);
+    }
+
     private void writeToByteBufferInternal(final ByteBuffer output, final FieldInfo[] fieldInfos) {
         for (FieldInfo fi : fieldInfos) {
+            final Object value = getFieldValue(fi.field);
             try {
-                putFieldValue(output, fi, fi.field.get(this));
-            } catch (IllegalAccessException e) {
-                throw new IllegalArgumentException("Fail to get the field value from instance", e);
+                putFieldValue(output, fi, value);
             } catch (BufferUnderflowException e) {
                 throw new IllegalArgumentException("Fail to fill raw data to ByteBuffer", e);
             }
@@ -673,12 +695,7 @@ public class Struct {
         final FieldInfo[] fieldInfos = getClassFieldInfo(this.getClass());
         final Object[] values = new Object[fieldInfos.length];
         for (int i = 0; i < fieldInfos.length; i++) {
-            final Object value;
-            try {
-                value = fieldInfos[i].field.get(this);
-            } catch (IllegalAccessException e) {
-                throw new IllegalStateException("Cannot access field: " + fieldInfos[i].field, e);
-            }
+            final Object value = getFieldValue(fieldInfos[i].field);
             // For byte array field, put the hash code generated based on the array content into
             // the Object array instead of the reference to byte array, which might change and cause
             // to get a different hash code even with the exact same elements.
@@ -697,12 +714,7 @@ public class Struct {
         final FieldInfo[] fieldInfos = getClassFieldInfo(this.getClass());
         for (int i = 0; i < fieldInfos.length; i++) {
             sb.append(fieldInfos[i].field.getName()).append(": ");
-            final Object value;
-            try {
-                value = fieldInfos[i].field.get(this);
-            } catch (IllegalAccessException e) {
-                throw new IllegalStateException("Cannot access field: " + fieldInfos[i].field, e);
-            }
+            final Object value = getFieldValue(fieldInfos[i].field);
             if (value == null) {
                 sb.append("null");
             } else if (fieldInfos[i].annotation.type() == Type.ByteArray) {
