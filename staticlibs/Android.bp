@@ -162,6 +162,7 @@ java_library {
         ":framework-annotations",
     ],
     sdk_version: "system_current",
+    min_sdk_version: "30",
     visibility: [
         "//frameworks/base/services/net",
     ],
