@@ -66,6 +66,28 @@ public final class CollectionUtils {
     }
 
     /**
+     * @return True if all elements satisfy the predicate, false otherwise.
+     *   Note that means this always returns true for empty collections.
+     */
+    public static <T> boolean all(@NonNull Collection<T> elem, @NonNull Predicate<T> predicate) {
+        for (final T e : elem) {
+            if (!predicate.test(e)) return false;
+        }
+        return true;
+
+    }
+    /**
+     * @return True if any element satisfies the predicate, false otherwise.
+     *   Note that means this always returns false for empty collections.
+     */
+    public static <T> boolean any(@NonNull Collection<T> elem, @NonNull Predicate<T> predicate) {
+        for (final T e : elem) {
+            if (predicate.test(e)) return true;
+        }
+        return false;
+    }
+
+    /**
      * @return True if there exists at least one element in the sparse array for which
      * condition {@code predicate}
      */
