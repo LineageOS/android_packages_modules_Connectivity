@@ -23,7 +23,6 @@ import android.net.LinkAddress
 import android.net.Network
 import android.net.NetworkCapabilities
 import android.net.NetworkRequest
-import android.net.StringNetworkSpecifier
 import android.net.TestNetworkInterface
 import android.net.TestNetworkManager
 import android.os.Binder
@@ -68,7 +67,7 @@ class TestNetworkTracker internal constructor(
                 // Test networks do not have NOT_VPN or TRUSTED capabilities by default
                 .removeCapability(NetworkCapabilities.NET_CAPABILITY_NOT_VPN)
                 .removeCapability(NetworkCapabilities.NET_CAPABILITY_TRUSTED)
-                .setNetworkSpecifier(StringNetworkSpecifier(iface.interfaceName))
+                .setNetworkSpecifier(CompatUtil.makeTestNetworkSpecifier(iface.interfaceName))
                 .build()
         networkCallback = object : NetworkCallback() {
             override fun onAvailable(network: Network) {
