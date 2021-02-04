@@ -58,11 +58,6 @@ struct clat_config Global_Clatd_Config;
 
 volatile sig_atomic_t running = 1;
 
-/* function: stop_loop
- * signal handler: stop the event loop
- */
-void stop_loop() { running = 0; }
-
 /* function: configure_packet_socket
  * Binds the packet socket and attaches the receive filter to it.
  *   sock - the socket to configure
