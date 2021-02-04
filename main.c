@@ -35,6 +35,11 @@
 
 #define DEVICEPREFIX "v4-"
 
+/* function: stop_loop
+ * signal handler: stop the event loop
+ */
+static void stop_loop() { running = 0; };
+
 /* function: print_help
  * in case the user is running this on the command line
  */
