@@ -17,6 +17,7 @@
 package com.android.net.module.util;
 
 import java.net.Inet4Address;
+import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 
@@ -98,7 +99,11 @@ public final class NetworkStackConstants {
             (byte) 0xff, (byte) 0xff, (byte) 0xff, (byte) 0xff);
     public static final Inet4Address IPV4_ADDR_ANY = makeInet4Address(
             (byte) 0, (byte) 0, (byte) 0, (byte) 0);
-
+    public static final Inet6Address IPV6_ADDR_ANY = makeInet6Address(new byte[]{
+            (byte) 0, (byte) 0, (byte) 0, (byte) 0,
+            (byte) 0, (byte) 0, (byte) 0, (byte) 0,
+            (byte) 0, (byte) 0, (byte) 0, (byte) 0,
+            (byte) 0, (byte) 0, (byte) 0, (byte) 0 });
     /**
      * IPv6 constants.
      *
@@ -182,6 +187,16 @@ public final class NetworkStackConstants {
         }
     }
 
+    /**
+     * Make an Inet6Address from 16 bytes in network byte order.
+     */
+    private static Inet6Address makeInet6Address(byte[] bytes) {
+        try {
+            return (Inet6Address) InetAddress.getByAddress(bytes);
+        } catch (UnknownHostException e) {
+            throw new IllegalArgumentException("addr must be 16 bytes: this should never happen");
+        }
+    }
     private NetworkStackConstants() {
         throw new UnsupportedOperationException("This class is not to be instantiated");
     }
