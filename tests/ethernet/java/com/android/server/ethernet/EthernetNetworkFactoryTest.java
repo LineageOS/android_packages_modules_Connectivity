@@ -434,4 +434,20 @@ public class EthernetNetworkFactoryTest {
                 ConnectivityManager.TYPE_NONE);
         mNetFactory.removeInterface(iface);
     }
+
+    @Test
+    public void testReachabilityLoss() throws Exception {
+        String iface = "eth0";
+        createAndVerifyProvisionedInterface(iface);
+
+        mIpClientCallbacks.onReachabilityLost("ReachabilityLost");
+        mLooper.dispatchAll();
+
+        // Reachability loss should trigger a stop and start, since the interface is still there
+        verify(mIpClient).shutdown();
+        verify(mNetworkAgent).unregister();
+
+        verify(mDeps).makeIpClient(any(Context.class), anyString(), any());
+        verify(mIpClient).startProvisioning(any());
+    }
 }
