@@ -69,6 +69,8 @@ public class PacketUtils {
     static final int HMAC_SHA512_ICV_LEN = 32;
     static final int AES_XCBC_KEY_LEN = 16;
     static final int AES_XCBC_ICV_LEN = 12;
+    static final int AES_CMAC_KEY_LEN = 16;
+    static final int AES_CMAC_ICV_LEN = 12;
 
     // Encryption algorithms
     static final String AES = "AES";
