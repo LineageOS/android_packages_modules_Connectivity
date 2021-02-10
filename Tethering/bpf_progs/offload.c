@@ -26,10 +26,49 @@
 
 #include "bpf_helpers.h"
 #include "bpf_net_helpers.h"
+#include "bpf_tethering.h"
 #include "netdbpf/bpf_shared.h"
 
 // From kernel:include/net/ip.h
 #define IP_DF 0x4000  // Flag: "Don't Fragment"
+
+// ----- Helper functions for offsets to fields -----
+
+// They all assume simple IP packets:
+//   - no VLAN ethernet tags
+//   - no IPv4 options (see IPV4_HLEN/TCP4_OFFSET/UDP4_OFFSET)
+//   - no IPv6 extension headers
+//   - no TCP options (see TCP_HLEN)
+
+//#define ETH_HLEN sizeof(struct ethhdr)
+#define IP4_HLEN sizeof(struct iphdr)
+#define IP6_HLEN sizeof(struct ipv6hdr)
+#define TCP_HLEN sizeof(struct tcphdr)
+#define UDP_HLEN sizeof(struct udphdr)
+
+// Offsets from beginning of L4 (TCP/UDP) header
+#define TCP_OFFSET(field) offsetof(struct tcphdr, field)
+#define UDP_OFFSET(field) offsetof(struct udphdr, field)
+
+// Offsets from beginning of L3 (IPv4) header
+#define IP4_OFFSET(field) offsetof(struct iphdr, field)
+#define IP4_TCP_OFFSET(field) (IP4_HLEN + TCP_OFFSET(field))
+#define IP4_UDP_OFFSET(field) (IP4_HLEN + UDP_OFFSET(field))
+
+// Offsets from beginning of L3 (IPv6) header
+#define IP6_OFFSET(field) offsetof(struct ipv6hdr, field)
+#define IP6_TCP_OFFSET(field) (IP6_HLEN + TCP_OFFSET(field))
+#define IP6_UDP_OFFSET(field) (IP6_HLEN + UDP_OFFSET(field))
+
+// Offsets from beginning of L2 (ie. Ethernet) header (which must be present)
+#define ETH_IP4_OFFSET(field) (ETH_HLEN + IP4_OFFSET(field))
+#define ETH_IP4_TCP_OFFSET(field) (ETH_HLEN + IP4_TCP_OFFSET(field))
+#define ETH_IP4_UDP_OFFSET(field) (ETH_HLEN + IP4_UDP_OFFSET(field))
+#define ETH_IP6_OFFSET(field) (ETH_HLEN + IP6_OFFSET(field))
+#define ETH_IP6_TCP_OFFSET(field) (ETH_HLEN + IP6_TCP_OFFSET(field))
+#define ETH_IP6_UDP_OFFSET(field) (ETH_HLEN + IP6_UDP_OFFSET(field))
+
+// ----- Tethering stats and data limits -----
 
 // Tethering stats, indexed by upstream interface.
 DEFINE_BPF_MAP_GRW(tether_stats_map, HASH, TetherStatsKey, TetherStatsValue, 16, AID_NETWORK_STACK)
@@ -48,6 +87,19 @@ DEFINE_BPF_MAP_GRW(tether_downstream64_map, HASH, TetherDownstream64Key, TetherD
 
 DEFINE_BPF_MAP_GRW(tether_upstream6_map, HASH, TetherUpstream6Key, Tether6Value, 64,
                    AID_NETWORK_STACK)
+
+DEFINE_BPF_MAP_GRW(tether_error_map, ARRAY, __u32, __u32, BPF_TETHER_ERR__MAX,
+                   AID_NETWORK_STACK)
+
+#define COUNT_AND_RETURN(counter, ret) do {                    \
+    __u32 code = BPF_TETHER_ERR_ ## counter;                 \
+    __u32 *count = bpf_tether_error_map_lookup_elem(&code);  \
+    if (count) __sync_fetch_and_add(count, 1);               \
+    return ret;                                              \
+} while(0)
+
+#define DROP(counter) COUNT_AND_RETURN(counter, TC_ACT_SHOT)
+#define PUNT(counter) COUNT_AND_RETURN(counter, TC_ACT_OK)
 
 static inline __always_inline int do_forward6(struct __sk_buff* skb, const bool is_ethernet,
         const bool downstream) {
@@ -70,11 +122,11 @@ static inline __always_inline int do_forward6(struct __sk_buff* skb, const bool 
     if (is_ethernet && (eth->h_proto != htons(ETH_P_IPV6))) return TC_ACT_OK;
 
     // IP version must be 6
-    if (ip6->version != 6) return TC_ACT_OK;
+    if (ip6->version != 6) PUNT(INVALID_IP_VERSION);
 
     // Cannot decrement during forward if already zero or would be zero,
     // Let the kernel's stack handle these cases and generate appropriate ICMP errors.
-    if (ip6->hop_limit <= 1) return TC_ACT_OK;
+    if (ip6->hop_limit <= 1) PUNT(LOW_TTL);
 
     // If hardware offload is running and programming flows based on conntrack entries,
     // try not to interfere with it.
@@ -82,27 +134,28 @@ static inline __always_inline int do_forward6(struct __sk_buff* skb, const bool 
         struct tcphdr* tcph = (void*)(ip6 + 1);
 
         // Make sure we can get at the tcp header
-        if (data + l2_header_size + sizeof(*ip6) + sizeof(*tcph) > data_end) return TC_ACT_OK;
+        if (data + l2_header_size + sizeof(*ip6) + sizeof(*tcph) > data_end)
+            PUNT(INVALID_TCP_HEADER);
 
         // Do not offload TCP packets with any one of the SYN/FIN/RST flags
-        if (tcph->syn || tcph->fin || tcph->rst) return TC_ACT_OK;
+        if (tcph->syn || tcph->fin || tcph->rst) PUNT(TCP_CONTROL_PACKET);
     }
 
     // Protect against forwarding packets sourced from ::1 or fe80::/64 or other weirdness.
     __be32 src32 = ip6->saddr.s6_addr32[0];
     if (src32 != htonl(0x0064ff9b) &&                        // 64:ff9b:/32 incl. XLAT464 WKP
         (src32 & htonl(0xe0000000)) != htonl(0x20000000))    // 2000::/3 Global Unicast
-        return TC_ACT_OK;
+        PUNT(NON_GLOBAL_SRC);
 
     // Protect against forwarding packets destined to ::1 or fe80::/64 or other weirdness.
     __be32 dst32 = ip6->daddr.s6_addr32[0];
     if (dst32 != htonl(0x0064ff9b) &&                        // 64:ff9b:/32 incl. XLAT464 WKP
         (dst32 & htonl(0xe0000000)) != htonl(0x20000000))    // 2000::/3 Global Unicast
-        return TC_ACT_OK;
+        PUNT(NON_GLOBAL_DST);
 
     // In the upstream direction do not forward traffic within the same /64 subnet.
     if (!downstream && (src32 == dst32) && (ip6->saddr.s6_addr32[1] == ip6->daddr.s6_addr32[1]))
-        return TC_ACT_OK;
+        PUNT(LOCAL_SRC_DST);
 
     TetherDownstream6Key kd = {
             .iif = skb->ifindex,
@@ -124,15 +177,15 @@ static inline __always_inline int do_forward6(struct __sk_buff* skb, const bool 
     TetherStatsValue* stat_v = bpf_tether_stats_map_lookup_elem(&stat_and_limit_k);
 
     // If we don't have anywhere to put stats, then abort...
-    if (!stat_v) return TC_ACT_OK;
+    if (!stat_v) PUNT(NO_STATS_ENTRY);
 
     uint64_t* limit_v = bpf_tether_limit_map_lookup_elem(&stat_and_limit_k);
 
     // If we don't have a limit, then abort...
-    if (!limit_v) return TC_ACT_OK;
+    if (!limit_v) PUNT(NO_LIMIT_ENTRY);
 
     // Required IPv6 minimum mtu is 1280, below that not clear what we should do, abort...
-    if (v->pmtu < IPV6_MIN_MTU) return TC_ACT_OK;
+    if (v->pmtu < IPV6_MIN_MTU) PUNT(BELOW_IPV6_MTU);
 
     // Approximate handling of TCP/IPv6 overhead for incoming LRO/GRO packets: default
     // outbound path mtu of 1500 is not necessarily correct, but worst case we simply
@@ -157,7 +210,7 @@ static inline __always_inline int do_forward6(struct __sk_buff* skb, const bool 
     // a packet we let the core stack deal with things.
     // (The core stack needs to handle limits correctly anyway,
     // since we don't offload all traffic in both directions)
-    if (stat_v->rxBytes + stat_v->txBytes + bytes > *limit_v) return TC_ACT_OK;
+    if (stat_v->rxBytes + stat_v->txBytes + bytes > *limit_v) PUNT(LIMIT_REACHED);
 
     if (!is_ethernet) {
         // Try to inject an ethernet header, and simply return if we fail.
@@ -165,7 +218,7 @@ static inline __always_inline int do_forward6(struct __sk_buff* skb, const bool 
         // because this is easier and the kernel will strip extraneous ethernet header.
         if (bpf_skb_change_head(skb, sizeof(struct ethhdr), /*flags*/ 0)) {
             __sync_fetch_and_add(downstream ? &stat_v->rxErrors : &stat_v->txErrors, 1);
-            return TC_ACT_OK;
+            PUNT(CHANGE_HEAD_FAILED);
         }
 
         // bpf_skb_change_head() invalidates all pointers - reload them
@@ -177,7 +230,7 @@ static inline __always_inline int do_forward6(struct __sk_buff* skb, const bool 
         // I do not believe this can ever happen, but keep the verifier happy...
         if (data + sizeof(struct ethhdr) + sizeof(*ip6) > data_end) {
             __sync_fetch_and_add(downstream ? &stat_v->rxErrors : &stat_v->txErrors, 1);
-            return TC_ACT_SHOT;
+            DROP(TOO_SHORT);
         }
     };
 
@@ -410,12 +463,76 @@ static inline __always_inline int do_forward4(struct __sk_buff* skb, const bool 
     // since we don't offload all traffic in both directions)
     if (stat_v->rxBytes + stat_v->txBytes + bytes > *limit_v) return TC_ACT_OK;
 
-    // TODO: replace Errors with Packets once implemented
-    __sync_fetch_and_add(downstream ? &stat_v->rxErrors : &stat_v->txErrors, packets);
+
+if (!is_tcp) return TC_ACT_OK; // HACK
+
+    if (!is_ethernet) {
+        // Try to inject an ethernet header, and simply return if we fail.
+        // We do this even if TX interface is RAWIP and thus does not need an ethernet header,
+        // because this is easier and the kernel will strip extraneous ethernet header.
+        if (bpf_skb_change_head(skb, sizeof(struct ethhdr), /*flags*/ 0)) {
+            __sync_fetch_and_add(downstream ? &stat_v->rxErrors : &stat_v->txErrors, 1);
+            return TC_ACT_OK;
+        }
+
+        // bpf_skb_change_head() invalidates all pointers - reload them
+        data = (void*)(long)skb->data;
+        data_end = (void*)(long)skb->data_end;
+        eth = data;
+        ip = (void*)(eth + 1);
+        tcph = is_tcp ? (void*)(ip + 1) : NULL;
+        udph = is_tcp ? NULL : (void*)(ip + 1);
+
+        // I do not believe this can ever happen, but keep the verifier happy...
+        if (data + sizeof(struct ethhdr) + sizeof(*ip) + (is_tcp ? sizeof(*tcph) : sizeof(*udph)) > data_end) {
+            __sync_fetch_and_add(downstream ? &stat_v->rxErrors : &stat_v->txErrors, 1);
+            return TC_ACT_SHOT;
+        }
+    };
+
+    // At this point we always have an ethernet header - which will get stripped by the
+    // kernel during transmit through a rawip interface.  ie. 'eth' pointer is valid.
+    // Additionally note that 'is_ethernet' and 'l2_header_size' are no longer correct.
+
+    // Overwrite any mac header with the new one
+    // For a rawip tx interface it will simply be a bunch of zeroes and later stripped.
+    *eth = v->macHeader;
+
+    const int sz4 = sizeof(__be32);
+    const __be32 old_daddr = k.dst4.s_addr;
+    const __be32 old_saddr = k.src4.s_addr;
+    const __be32 new_daddr = v->dst46.s6_addr32[3];
+    const __be32 new_saddr = v->src46.s6_addr32[3];
+
+    bpf_l4_csum_replace(skb, ETH_IP4_TCP_OFFSET(check), old_daddr, new_daddr, sz4 | BPF_F_PSEUDO_HDR);
+    bpf_l3_csum_replace(skb, ETH_IP4_OFFSET(check), old_daddr, new_daddr, sz4);
+    bpf_skb_store_bytes(skb, ETH_IP4_OFFSET(daddr), &new_daddr, sz4, 0);
+
+    bpf_l4_csum_replace(skb, ETH_IP4_TCP_OFFSET(check), old_saddr, new_saddr, sz4 | BPF_F_PSEUDO_HDR);
+    bpf_l3_csum_replace(skb, ETH_IP4_OFFSET(check), old_saddr, new_saddr, sz4);
+    bpf_skb_store_bytes(skb, ETH_IP4_OFFSET(saddr), &new_saddr, sz4, 0);
+
+    const int sz2 = sizeof(__be16);
+    bpf_l4_csum_replace(skb, ETH_IP4_TCP_OFFSET(check), k.srcPort, v->srcPort, sz2);
+    bpf_skb_store_bytes(skb, ETH_IP4_TCP_OFFSET(source), &v->srcPort, sz2, 0);
+
+    bpf_l4_csum_replace(skb, ETH_IP4_TCP_OFFSET(check), k.dstPort, v->dstPort, sz2);
+    bpf_skb_store_bytes(skb, ETH_IP4_TCP_OFFSET(dest), &v->dstPort, sz2, 0);
+
+// TTL dec
+
+// v->last_used = bpf_ktime_get_boot_ns();
+
+    __sync_fetch_and_add(downstream ? &stat_v->rxPackets : &stat_v->txPackets, packets);
     __sync_fetch_and_add(downstream ? &stat_v->rxBytes : &stat_v->txBytes, bytes);
 
-    // TODO: not actually implemented yet
-    return TC_ACT_OK;
+    // Redirect to forwarded interface.
+    //
+    // Note that bpf_redirect() cannot fail unless you pass invalid flags.
+    // The redirect actually happens after the ebpf program has already terminated,
+    // and can fail for example for mtu reasons at that point in time, but there's nothing
+    // we can do about it here.
+    return bpf_redirect(v->oif, 0 /* this is effectively BPF_F_EGRESS */);
 }
 
 // Real implementations for 5.9+ kernels
