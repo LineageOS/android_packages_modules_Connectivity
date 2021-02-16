@@ -161,12 +161,20 @@ public class EthernetNetworkFactory extends NetworkFactory {
         updateCapabilityFilter();
     }
 
+    private static NetworkCapabilities mixInCapabilities(NetworkCapabilities nc,
+            NetworkCapabilities addedNc) {
+       final NetworkCapabilities.Builder builder = new NetworkCapabilities.Builder(nc);
+       for (int transport : addedNc.getTransportTypes()) builder.addTransportType(transport);
+       for (int capability : addedNc.getCapabilities()) builder.addCapability(capability);
+       return builder.build();
+    }
+
     private void updateCapabilityFilter() {
         NetworkCapabilities capabilitiesFilter = new NetworkCapabilities();
         capabilitiesFilter.clearAll();
 
         for (NetworkInterfaceState iface:  mTrackingInterfaces.values()) {
-            capabilitiesFilter.combineCapabilities(iface.mCapabilities);
+            capabilitiesFilter = mixInCapabilities(capabilitiesFilter, iface.mCapabilities);
         }
 
         if (DBG) Log.d(TAG, "updateCapabilityFilter: " + capabilitiesFilter);
@@ -210,7 +218,7 @@ public class EthernetNetworkFactory extends NetworkFactory {
     private NetworkInterfaceState networkForRequest(NetworkRequest request) {
         String requestedIface = null;
 
-        NetworkSpecifier specifier = request.networkCapabilities.getNetworkSpecifier();
+        NetworkSpecifier specifier = request.getNetworkSpecifier();
         if (specifier instanceof StringNetworkSpecifier) {
             requestedIface = ((StringNetworkSpecifier) specifier).specifier;
         }
