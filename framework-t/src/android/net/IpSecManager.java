@@ -37,6 +37,7 @@ import android.util.AndroidException;
 import android.util.Log;
 
 import com.android.internal.annotations.VisibleForTesting;
+import com.android.modules.utils.build.SdkLevel;
 
 import dalvik.system.CloseGuard;
 
@@ -982,6 +983,60 @@ public class IpSecManager {
                     transform.getResourceId(), mContext.getOpPackageName());
         } catch (ServiceSpecificException e) {
             throw rethrowCheckedExceptionFromServiceSpecificException(e);
+        } catch (RemoteException e) {
+            throw e.rethrowFromSystemServer();
+        }
+    }
+
+    /**
+     * Migrate an active Tunnel Mode IPsec Transform to new source/destination addresses.
+     *
+     * <p>Begins the process of migrating a transform and cache the new addresses. To complete the
+     * migration once started, callers MUST apply the same transform to the appropriate tunnel using
+     * {@link IpSecManager#applyTunnelModeTransform}. Otherwise, the address update will not be
+     * committed and the transform will still only process traffic between the current source and
+     * destination address. One common use case is that the control plane will start the migration
+     * process and then hand off the transform to the IPsec caller to perform the actual migration
+     * when the tunnel is ready.
+     *
+     * <p>If this method is called multiple times before {@link
+     * IpSecManager#applyTunnelModeTransform} is called, when the transform is applied, it will be
+     * migrated to the addresses from the last call.
+     *
+     * <p>The provided source and destination addresses MUST share the same address family, but they
+     * can have a different family from the current addresses.
+     *
+     * <p>Transform migration is only supported for tunnel mode transforms. Calling this method on
+     * other types of transforms will throw an {@code UnsupportedOperationException}.
+     *
+     * @see IpSecTunnelInterface#setUnderlyingNetwork
+     * @param transform a tunnel mode {@link IpSecTransform}
+     * @param newSourceAddress the new source address
+     * @param newDestinationAddress the new destination address
+     * @hide
+     */
+    // TODO: b/169169973 Require FEATURE_IPSEC_MIGRATE
+    @RequiresFeature(PackageManager.FEATURE_IPSEC_TUNNELS)
+    @RequiresPermission(android.Manifest.permission.MANAGE_IPSEC_TUNNELS)
+    public void startMigration(
+            @NonNull IpSecTransform transform,
+            @NonNull InetAddress newSourceAddress,
+            @NonNull InetAddress newDestinationAddress) {
+        if (!SdkLevel.isAtLeastU()) {
+            throw new UnsupportedOperationException(
+                    "Transform migration only supported for Android 14+");
+        }
+
+        Objects.requireNonNull(transform, "transform was null");
+        Objects.requireNonNull(newSourceAddress, "newSourceAddress was null");
+        Objects.requireNonNull(newDestinationAddress, "newDestinationAddress was null");
+
+        try {
+            mService.migrateTransform(
+                    transform.getResourceId(),
+                    newSourceAddress.getHostAddress(),
+                    newDestinationAddress.getHostAddress(),
+                    mContext.getOpPackageName());
         } catch (RemoteException e) {
             throw e.rethrowFromSystemServer();
         }

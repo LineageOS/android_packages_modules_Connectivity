@@ -30,11 +30,16 @@ import static android.system.OsConstants.AF_INET6;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.fail;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Matchers.anyInt;
 import static org.mockito.Matchers.anyString;
 import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -49,6 +54,7 @@ import android.net.InterfaceConfigurationParcel;
 import android.net.IpSecAlgorithm;
 import android.net.IpSecConfig;
 import android.net.IpSecManager;
+import android.net.IpSecMigrateInfoParcel;
 import android.net.IpSecSpiResponse;
 import android.net.IpSecTransform;
 import android.net.IpSecTransformResponse;
@@ -129,6 +135,9 @@ public class IpSecServiceParameterizedTest {
         0x7A, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x7F
     };
+
+    private static final String NEW_SRC_ADDRESS = "2001:db8:2::1";
+    private static final String NEW_DST_ADDRESS = "2001:db8:2::2";
 
     AppOpsManager mMockAppOps = mock(AppOpsManager.class);
     ConnectivityManager mMockConnectivityMgr = mock(ConnectivityManager.class);
@@ -369,8 +378,8 @@ public class IpSecServiceParameterizedTest {
                 .ipSecAddSecurityAssociation(
                         eq(mUid),
                         eq(config.getMode()),
-                        eq(config.getSourceAddress()),
-                        eq(config.getDestinationAddress()),
+                        eq(mSourceAddr),
+                        eq(mDestinationAddr),
                         eq((config.getNetwork() != null) ? config.getNetwork().netId : 0),
                         eq(TEST_SPI),
                         eq(0),
@@ -910,9 +919,60 @@ public class IpSecServiceParameterizedTest {
         }
     }
 
+    @Test
+    @DevSdkIgnoreRule.IgnoreUpTo(Build.VERSION_CODES.TIRAMISU)
+    public void testApplyAndMigrateTunnelModeTransformOutbound() throws Exception {
+        verifyApplyAndMigrateTunnelModeTransformCommon(false, DIRECTION_OUT);
+    }
+
+    @Test
+    @DevSdkIgnoreRule.IgnoreUpTo(Build.VERSION_CODES.TIRAMISU)
+    public void testApplyAndMigrateTunnelModeTransformOutboundReleasedSpi() throws Exception {
+        verifyApplyAndMigrateTunnelModeTransformCommon(true, DIRECTION_OUT);
+    }
+
+    @Test
+    @DevSdkIgnoreRule.IgnoreUpTo(Build.VERSION_CODES.TIRAMISU)
+    public void testApplyAndMigrateTunnelModeTransformInbound() throws Exception {
+        verifyApplyAndMigrateTunnelModeTransformCommon(false, DIRECTION_IN);
+    }
+
+    @Test
+    @DevSdkIgnoreRule.IgnoreUpTo(Build.VERSION_CODES.TIRAMISU)
+    public void testApplyAndMigrateTunnelModeTransformInboundReleasedSpi() throws Exception {
+        verifyApplyAndMigrateTunnelModeTransformCommon(true, DIRECTION_IN);
+    }
+
+    @Test
+    @DevSdkIgnoreRule.IgnoreUpTo(Build.VERSION_CODES.TIRAMISU)
+    public void testApplyAndMigrateTunnelModeTransformForward() throws Exception {
+        verifyApplyAndMigrateTunnelModeTransformCommon(false, DIRECTION_FWD);
+    }
+
+    @Test
+    @DevSdkIgnoreRule.IgnoreUpTo(Build.VERSION_CODES.TIRAMISU)
+    public void testApplyAndMigrateTunnelModeTransformForwardReleasedSpi() throws Exception {
+        verifyApplyAndMigrateTunnelModeTransformCommon(true, DIRECTION_FWD);
+    }
+
     public void verifyApplyTunnelModeTransformCommon(boolean closeSpiBeforeApply, int direction)
             throws Exception {
-        IpSecConfig ipSecConfig = new IpSecConfig();
+        verifyApplyTunnelModeTransformCommon(
+                new IpSecConfig(), closeSpiBeforeApply, false /* isMigrating */, direction);
+    }
+
+    public void verifyApplyAndMigrateTunnelModeTransformCommon(
+            boolean closeSpiBeforeApply, int direction) throws Exception {
+        verifyApplyTunnelModeTransformCommon(
+                new IpSecConfig(), closeSpiBeforeApply, true /* isMigrating */, direction);
+    }
+
+    public int verifyApplyTunnelModeTransformCommon(
+            IpSecConfig ipSecConfig,
+            boolean closeSpiBeforeApply,
+            boolean isMigrating,
+            int direction)
+            throws Exception {
         ipSecConfig.setMode(IpSecTransform.MODE_TUNNEL);
         addDefaultSpisAndRemoteAddrToIpSecConfig(ipSecConfig);
         addAuthAndCryptToIpSecConfig(ipSecConfig);
@@ -928,6 +988,12 @@ public class IpSecServiceParameterizedTest {
 
         int transformResourceId = createTransformResp.resourceId;
         int tunnelResourceId = createTunnelResp.resourceId;
+
+        if (isMigrating) {
+            mIpSecService.migrateTransform(
+                    transformResourceId, NEW_SRC_ADDRESS, NEW_DST_ADDRESS, BLESSED_PACKAGE);
+        }
+
         mIpSecService.applyTunnelModeTransform(
                 tunnelResourceId, direction, transformResourceId, BLESSED_PACKAGE);
 
@@ -947,8 +1013,16 @@ public class IpSecServiceParameterizedTest {
 
         ipSecConfig.setXfrmInterfaceId(tunnelResourceId);
         verifyTransformNetdCalledForCreatingSA(ipSecConfig, createTransformResp);
-    }
 
+        if (isMigrating) {
+            verify(mMockNetd, times(ADDRESS_FAMILIES.length))
+                    .ipSecMigrate(any(IpSecMigrateInfoParcel.class));
+        } else {
+            verify(mMockNetd, never()).ipSecMigrate(any());
+        }
+
+        return tunnelResourceId;
+    }
 
     @Test
     public void testApplyTunnelModeTransformWithClosedSpi() throws Exception {
