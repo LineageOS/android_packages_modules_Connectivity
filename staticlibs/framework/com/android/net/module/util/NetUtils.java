@@ -23,6 +23,7 @@ import android.net.RouteInfo;
 import java.net.Inet4Address;
 import java.net.Inet6Address;
 import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.util.Collection;
 
 /**
@@ -66,5 +67,45 @@ public final class NetUtils {
             }
         }
         return bestRoute;
+    }
+
+    /**
+     * Get InetAddress masked with prefixLength.  Will never return null.
+     * @param address the IP address to mask with
+     * @param prefixLength the prefixLength used to mask the IP
+     */
+    public static InetAddress getNetworkPart(InetAddress address, int prefixLength) {
+        byte[] array = address.getAddress();
+        maskRawAddress(array, prefixLength);
+
+        InetAddress netPart = null;
+        try {
+            netPart = InetAddress.getByAddress(array);
+        } catch (UnknownHostException e) {
+            throw new RuntimeException("getNetworkPart error - " + e.toString());
+        }
+        return netPart;
+    }
+
+    /**
+     *  Masks a raw IP address byte array with the specified prefix length.
+     */
+    public static void maskRawAddress(byte[] array, int prefixLength) {
+        if (prefixLength < 0 || prefixLength > array.length * 8) {
+            throw new RuntimeException("IP address with " + array.length
+                    + " bytes has invalid prefix length " + prefixLength);
+        }
+
+        int offset = prefixLength / 8;
+        int remainder = prefixLength % 8;
+        byte mask = (byte) (0xFF << (8 - remainder));
+
+        if (offset < array.length) array[offset] = (byte) (array[offset] & mask);
+
+        offset++;
+
+        for (; offset < array.length; offset++) {
+            array[offset] = 0;
+        }
     }
 }
