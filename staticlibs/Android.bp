@@ -27,6 +27,10 @@
 // included in the bootclasspath, they could incorrectly be included in the SDK documentation even
 // though they are not in the current.txt files.
 
+package {
+    default_applicable_licenses: ["Android-Apache-2.0"],
+}
+
 java_library {
   name: "net-utils-device-common",
   srcs: [
