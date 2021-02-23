@@ -117,12 +117,17 @@ public final class CollectionUtils {
      * @return true if the array contains the specified value.
      */
     public static <T> boolean contains(@Nullable T[] array, @Nullable T value) {
-        if (array == null) return false;
-        for (T element : array) {
-            if (Objects.equals(element, value)) {
-                return true;
-            }
+        return indexOf(array, value) != -1;
+    }
+
+    /**
+     * Return first index of value in given array, or -1 if not found.
+     */
+    public static <T> int indexOf(@Nullable T[] array, @Nullable T value) {
+        if (array == null) return -1;
+        for (int i = 0; i < array.length; i++) {
+            if (Objects.equals(array[i], value)) return i;
         }
-        return false;
+        return -1;
     }
 }
