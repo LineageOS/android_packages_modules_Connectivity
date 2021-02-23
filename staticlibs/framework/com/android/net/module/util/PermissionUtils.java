@@ -16,10 +16,15 @@
 
 package com.android.net.module.util;
 
+import static android.Manifest.permission.NETWORK_STACK;
 import static android.content.pm.PackageManager.PERMISSION_GRANTED;
+import static android.net.NetworkStack.PERMISSION_MAINLINE_NETWORK_STACK;
 
 import android.annotation.NonNull;
 import android.content.Context;
+
+import java.util.ArrayList;
+import java.util.Arrays;
 
 /**
  * Collection of permission utilities.
@@ -48,5 +53,31 @@ public final class PermissionUtils {
             throw new SecurityException("Requires one of the following permissions: "
                     + String.join(", ", permissions) + ".");
         }
+    }
+
+    /**
+     * If the NetworkStack, MAINLINE_NETWORK_STACK are not allowed for a particular process, throw a
+     * {@link SecurityException}.
+     *
+     * @param context {@link android.content.Context} for the process.
+     */
+    public static void enforceNetworkStackPermission(final @NonNull Context context) {
+        enforceNetworkStackPermissionOr(context);
+    }
+
+    /**
+     * If the NetworkStack, MAINLINE_NETWORK_STACK or other specified permissions are not allowed
+     * for a particular process, throw a {@link SecurityException}.
+     *
+     * @param context {@link android.content.Context} for the process.
+     * @param otherPermissions The set of permissions that could be the candidate permissions , or
+     *                         empty string if none of other permissions needed.
+     */
+    public static void enforceNetworkStackPermissionOr(final @NonNull Context context,
+            final @NonNull String... otherPermissions) {
+        ArrayList<String> permissions = new ArrayList<String>(Arrays.asList(otherPermissions));
+        permissions.add(NETWORK_STACK);
+        permissions.add(PERMISSION_MAINLINE_NETWORK_STACK);
+        enforceAnyPermissionOf(context, permissions.toArray(new String[0]));
     }
 }
