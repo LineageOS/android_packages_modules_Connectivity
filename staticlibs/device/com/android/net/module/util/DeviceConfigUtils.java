@@ -36,7 +36,11 @@ public final class DeviceConfigUtils {
     private static final String TAG = DeviceConfigUtils.class.getSimpleName();
 
     @VisibleForTesting
-    protected static volatile long sPackageVersion = -1;
+    public static void resetPackageVersionCacheForTest() {
+        sPackageVersion = -1;
+    }
+
+    private static volatile long sPackageVersion = -1;
     private static long getPackageVersion(@NonNull final Context context)
             throws PackageManager.NameNotFoundException {
         // sPackageVersion may be set by another thread just after this check, but querying the

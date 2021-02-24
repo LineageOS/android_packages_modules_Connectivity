@@ -88,7 +88,7 @@ public class DeviceConfigUtilsTest {
     @After
     public void tearDown() {
         mSession.finishMocking();
-        DeviceConfigUtils.sPackageVersion = -1L;
+        DeviceConfigUtils.resetPackageVersionCacheForTest();
     }
 
     @Test
