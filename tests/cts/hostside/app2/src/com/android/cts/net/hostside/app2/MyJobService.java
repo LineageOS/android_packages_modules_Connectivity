@@ -17,6 +17,7 @@ package com.android.cts.net.hostside.app2;
 
 import static com.android.cts.net.hostside.app2.Common.ACTION_FINISH_JOB;
 import static com.android.cts.net.hostside.app2.Common.TAG;
+import static com.android.cts.net.hostside.app2.Common.TYPE_COMPONENT_EXPEDITED_JOB;
 
 import android.app.job.JobParameters;
 import android.app.job.JobService;
@@ -39,7 +40,8 @@ public class MyJobService extends JobService {
     @Override
     public boolean onStartJob(JobParameters params) {
         Log.v(TAG, "MyJobService.onStartJob()");
-        Common.notifyNetworkStateObserver(this, params.getTransientExtras());
+        Common.notifyNetworkStateObserver(this, params.getTransientExtras(),
+                TYPE_COMPONENT_EXPEDITED_JOB);
         mFinishCommandReceiver = new BroadcastReceiver() {
             @Override
             public void onReceive(Context context, Intent intent) {

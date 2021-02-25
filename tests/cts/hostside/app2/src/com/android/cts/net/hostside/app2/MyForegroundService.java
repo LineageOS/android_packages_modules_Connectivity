@@ -17,6 +17,7 @@ package com.android.cts.net.hostside.app2;
 
 import static com.android.cts.net.hostside.app2.Common.TAG;
 import static com.android.cts.net.hostside.app2.Common.TEST_PKG;
+import static com.android.cts.net.hostside.app2.Common.TYPE_COMPONENT_FOREGROUND_SERVICE;
 
 import android.R;
 import android.app.Notification;
@@ -58,7 +59,7 @@ public class MyForegroundService extends Service {
                 startForeground(42, new Notification.Builder(this, NOTIFICATION_CHANNEL_ID)
                         .setSmallIcon(R.drawable.ic_dialog_alert) // any icon is fine
                         .build());
-                Common.notifyNetworkStateObserver(this, intent);
+                Common.notifyNetworkStateObserver(this, intent, TYPE_COMPONENT_FOREGROUND_SERVICE);
                 break;
             case FLAG_STOP_FOREGROUND:
                 Log.d(TAG, "Stopping foreground");
