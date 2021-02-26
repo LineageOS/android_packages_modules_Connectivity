@@ -80,7 +80,7 @@ abstract class HostsideNetworkTestCase extends DeviceTestCase implements IAbiRec
             DeviceNotAvailableException {
         CompatibilityBuildHelper buildHelper = new CompatibilityBuildHelper(mCtsBuild);
         assertNull(getDevice().installPackage(buildHelper.getTestFile(apk),
-                false /* reinstall */, true /* grantPermissions */));
+                false /* reinstall */, true /* grantPermissions */, "-t"));
     }
 
     protected void uninstallPackage(String packageName, boolean shouldSucceed)
