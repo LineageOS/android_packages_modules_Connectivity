@@ -67,7 +67,7 @@ public class AbstractExpeditedJobTest extends AbstractRestrictBackgroundNetworkT
 
         setRestrictBackground(true);
         assertBackgroundNetworkAccess(false);
-        assertExpeditedJobHasNetworkAccess();
+        assertExpeditedJobHasNoNetworkAccess();
     }
 
     @Test
@@ -102,7 +102,7 @@ public class AbstractExpeditedJobTest extends AbstractRestrictBackgroundNetworkT
         setRestrictBackground(true);
         setBatterySaverMode(true);
         assertBackgroundNetworkAccess(false);
-        assertExpeditedJobHasNetworkAccess();
+        assertExpeditedJobHasNoNetworkAccess();
     }
 
     @Test
@@ -114,7 +114,7 @@ public class AbstractExpeditedJobTest extends AbstractRestrictBackgroundNetworkT
         setRestrictBackground(true);
         setDozeMode(true);
         assertBackgroundNetworkAccess(false);
-        assertExpeditedJobHasNetworkAccess();
+        assertExpeditedJobHasNoNetworkAccess();
     }
 
     @Test
@@ -129,6 +129,6 @@ public class AbstractExpeditedJobTest extends AbstractRestrictBackgroundNetworkT
         setAppIdle(true);
         setDozeMode(true);
         assertBackgroundNetworkAccess(false);
-        assertExpeditedJobHasNetworkAccess();
+        assertExpeditedJobHasNoNetworkAccess();
     }
 }
