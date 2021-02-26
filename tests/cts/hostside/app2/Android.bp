@@ -21,7 +21,7 @@ package {
 android_test_helper_app {
     name: "CtsHostsideNetworkTestsApp2",
     defaults: ["cts_support_defaults"],
-    sdk_version: "current",
+    sdk_version: "test_current",
     static_libs: ["CtsHostsideNetworkTestsAidl"],
     srcs: ["src/**/*.java"],
     // Tag this module as a cts test artifact

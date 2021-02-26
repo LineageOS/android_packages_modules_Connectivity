@@ -130,9 +130,9 @@ public class NetworkPolicyTestUtils {
         return am.isLowRamDevice();
     }
 
-    /** Asks (not forces) JobScheduler to run the job if constraints are met. */
-    public static void runSatisfiedJob(String pkg, int jobId) {
-        executeShellCommand("cmd jobscheduler run -s -u " + UserHandle.myUserId()
+    /** Forces JobScheduler to run the job if constraints are met. */
+    public static void forceRunJob(String pkg, int jobId) {
+        executeShellCommand("cmd jobscheduler run -f -u " + UserHandle.myUserId()
                 + " " + pkg + " " + jobId);
     }
 
