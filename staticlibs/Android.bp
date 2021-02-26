@@ -60,9 +60,6 @@ java_library {
         "//packages/modules/CaptivePortalLogin",
         "//frameworks/libs/net/common/tests:__subpackages__",
   ],
-  static_libs: [
-      "net-utils-framework-common",
-  ],
   libs: [
       "androidx.annotation_annotation",
   ],
@@ -149,7 +146,6 @@ java_library {
         "//packages/modules/NetworkStack:__subpackages__",
         "//packages/modules/CaptivePortalLogin",
         "//frameworks/libs/net/common/tests:__subpackages__",
-        "//frameworks/libs/net/common/device",
         "//packages/modules/Wifi/framework/tests:__subpackages__",
     ]
 }
