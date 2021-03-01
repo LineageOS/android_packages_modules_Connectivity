@@ -94,6 +94,10 @@ public abstract class AbstractRestrictBackgroundNetworkTestCase {
     // Constants below must match values defined on app2's Common.java
     private static final String MANIFEST_RECEIVER = "ManifestReceiver";
     private static final String DYNAMIC_RECEIVER = "DynamicReceiver";
+    private static final String ACTION_FINISH_ACTIVITY =
+            "com.android.cts.net.hostside.app2.action.FINISH_ACTIVITY";
+    private static final String ACTION_FINISH_JOB =
+            "com.android.cts.net.hostside.app2.action.FINISH_JOB";
 
     private static final String ACTION_RECEIVER_READY =
             "com.android.cts.net.hostside.app2.action.RECEIVER_READY";
@@ -898,18 +902,20 @@ public abstract class AbstractRestrictBackgroundNetworkTestCase {
      * Finishes an activity on app2 so its process is demoted from foreground status.
      */
     protected void finishActivity() throws Exception {
-        executeShellCommand("am broadcast -a "
-                + " com.android.cts.net.hostside.app2.action.FINISH_ACTIVITY "
-                + "--receiver-foreground --receiver-registered-only");
+        final Intent intent = new Intent(ACTION_FINISH_ACTIVITY)
+                .setPackage(TEST_APP2_PKG)
+                .setFlags(Intent.FLAG_RECEIVER_FOREGROUND | Intent.FLAG_RECEIVER_REGISTERED_ONLY);
+        sendOrderedBroadcast(intent);
     }
 
     /**
      * Finishes the expedited job on app2 so its process is demoted from foreground status.
      */
     private void finishExpeditedJob() throws Exception {
-        executeShellCommand("am broadcast -a "
-                + " com.android.cts.net.hostside.app2.action.FINISH_JOB "
-                + "--receiver-foreground --receiver-registered-only");
+        final Intent intent = new Intent(ACTION_FINISH_JOB)
+                .setPackage(TEST_APP2_PKG)
+                .setFlags(Intent.FLAG_RECEIVER_FOREGROUND | Intent.FLAG_RECEIVER_REGISTERED_ONLY);
+        sendOrderedBroadcast(intent);
     }
 
     protected void sendNotification(int notificationId, String notificationType) throws Exception {
