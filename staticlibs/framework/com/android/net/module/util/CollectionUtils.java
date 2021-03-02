@@ -76,15 +76,26 @@ public final class CollectionUtils {
         return true;
 
     }
+
     /**
      * @return True if any element satisfies the predicate, false otherwise.
      *   Note that means this always returns false for empty collections.
      */
     public static <T> boolean any(@NonNull Collection<T> elem, @NonNull Predicate<T> predicate) {
+        return indexOf(elem, predicate) >= 0;
+    }
+
+    /**
+     * @return The index of the first element that matches the predicate, or -1 if none.
+     */
+    @Nullable
+    public static <T> int indexOf(@NonNull Collection<T> elem, @NonNull Predicate<T> predicate) {
+        int idx = 0;
         for (final T e : elem) {
-            if (predicate.test(e)) return true;
+            if (predicate.test(e)) return idx;
+            idx++;
         }
-        return false;
+        return -1;
     }
 
     /**
