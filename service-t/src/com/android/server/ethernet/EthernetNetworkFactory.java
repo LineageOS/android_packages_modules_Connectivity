@@ -88,10 +88,6 @@ public class EthernetNetworkFactory extends NetworkFactory {
 
     @Override
     public boolean acceptRequest(NetworkRequest request) {
-        if (request.type == NetworkRequest.Type.TRACK_DEFAULT) {
-            return false;
-        }
-
         if (DBG) {
             Log.d(TAG, "acceptRequest, request: " + request);
         }
