@@ -112,11 +112,10 @@ fun <T> assertFieldCountEquals(count: Int, clazz: Class<T>) {
     }.size)
 }
 
-fun assertSameElements(expected: List<String?>, actual: List<String?>) {
-    val expectedSet: HashSet<String?> = HashSet<String?>(expected)
-    assertEquals(expectedSet.size.toLong(), expected.size.toLong(),
-            "expected list contains duplicates")
-    val actualSet: HashSet<String?> = HashSet<String?>(actual)
-    assertEquals(actualSet.size.toLong(), actual.size.toLong(), "actual list contains duplicates")
+fun <T> assertSameElements(expected: List<T>, actual: List<T>) {
+    val expectedSet: HashSet<T> = HashSet(expected)
+    assertEquals(expectedSet.size, expected.size, "expected list contains duplicates")
+    val actualSet: HashSet<T> = HashSet(actual)
+    assertEquals(actualSet.size, actual.size, "actual list contains duplicates")
     assertEquals(expectedSet, actualSet)
 }
