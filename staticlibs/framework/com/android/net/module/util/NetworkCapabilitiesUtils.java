@@ -78,4 +78,31 @@ public final class NetworkCapabilitiesUtils {
         }
         return transports[0];
     }
+
+    /**
+     * Unpacks long value into an array of bits.
+     */
+    public static int[] unpackBits(long val) {
+        int size = Long.bitCount(val);
+        int[] result = new int[size];
+        int index = 0;
+        int bitPos = 0;
+        while (val != 0) {
+            if ((val & 1) == 1) result[index++] = bitPos;
+            val = val >>> 1;
+            bitPos++;
+        }
+        return result;
+    }
+
+    /**
+     * Packs array of bits into a long value.
+     */
+    public static long packBits(int[] bits) {
+        long packed = 0;
+        for (int b : bits) {
+            packed |= (1L << b);
+        }
+        return packed;
+    }
 }
