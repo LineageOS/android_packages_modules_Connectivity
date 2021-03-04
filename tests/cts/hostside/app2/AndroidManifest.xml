@@ -36,7 +36,8 @@
      use to open sockets to remote hosts as a different user ID.
     -->
     <application android:usesCleartextTraffic="true"
-            android:testOnly="true">
+            android:testOnly="true"
+            android:debuggable="true">
 
         <activity android:name=".MyActivity"
              android:exported="true"/>
