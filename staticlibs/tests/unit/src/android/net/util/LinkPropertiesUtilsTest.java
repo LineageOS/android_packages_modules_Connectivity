@@ -16,6 +16,8 @@
 
 package android.net.util;
 
+import static com.android.testutils.MiscAsserts.assertSameElements;
+
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -40,7 +42,6 @@ import org.junit.runner.RunWith;
 import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashSet;
 import java.util.List;
 import java.util.function.Function;
 
@@ -245,14 +246,6 @@ public final class LinkPropertiesUtilsTest {
         results = LinkPropertiesUtils.compareAddresses(source, target);
         assertEquals(linkAddr1, results.removed.get(0));
         assertEquals(linkAddr2, results.added.get(0));
-    }
-
-    private void assertSameElements(List<String> expected, List<String> actual) {
-        HashSet<String> expectedSet = new HashSet(expected);
-        assertEquals("expected list contains duplicates", expectedSet.size(), expected.size());
-        HashSet<String> actualSet = new HashSet(actual);
-        assertEquals("actual list contains duplicates", actualSet.size(), actual.size());
-        assertEquals(expectedSet, actualSet);
     }
 
     private void assertCompareOrUpdateResult(CompareOrUpdateResult result,
