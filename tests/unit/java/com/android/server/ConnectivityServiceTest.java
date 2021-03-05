@@ -9832,7 +9832,8 @@ public class ConnectivityServiceTest {
         return new NetworkAgentInfo(null, new Network(NET_ID), networkInfo, new LinkProperties(),
                 nc, new NetworkScore.Builder().setLegacyInt(0).build(),
                 mServiceContext, null, new NetworkAgentConfig(), mService, null, null, 0,
-                INVALID_UID, mQosCallbackTracker, new ConnectivityService.Dependencies());
+                INVALID_UID, TEST_LINGER_DELAY_MS, mQosCallbackTracker,
+                new ConnectivityService.Dependencies());
     }
 
     @Test
