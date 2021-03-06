@@ -133,11 +133,11 @@ public class EthernetTrackerTest {
         }
     }
 
-    private NetworkCapabilitiesBuilder makeEthernetCapabilitiesBuilder(boolean clearAll) {
-        final NetworkCapabilitiesBuilder result =
-                clearAll ? new NetworkCapabilitiesBuilder().clearAll()
-                        : new NetworkCapabilitiesBuilder();
-        return result.addCapability(NetworkCapabilities.NET_CAPABILITY_NOT_ROAMING)
+    private NetworkCapabilities.Builder makeEthernetCapabilitiesBuilder(boolean clearAll) {
+        final NetworkCapabilities.Builder builder =
+                clearAll ? new NetworkCapabilities.Builder().clearAll()
+                        : new NetworkCapabilities.Builder();
+        return builder.addCapability(NetworkCapabilities.NET_CAPABILITY_NOT_ROAMING)
                 .addCapability(NetworkCapabilities.NET_CAPABILITY_NOT_CONGESTED)
                 .addCapability(NetworkCapabilities.NET_CAPABILITY_NOT_SUSPENDED);
     }
@@ -153,14 +153,14 @@ public class EthernetTrackerTest {
                 makeEthernetCapabilitiesBuilder(true /* clearAll */)
                         .setLinkUpstreamBandwidthKbps(100000)
                         .setLinkDownstreamBandwidthKbps(100000)
-                        .addTransport(NetworkCapabilities.TRANSPORT_ETHERNET)
+                        .addTransportType(NetworkCapabilities.TRANSPORT_ETHERNET)
                         .build();
 
         NetworkCapabilities ethernetClearedWithCommonCaps =
                 makeEthernetCapabilitiesBuilder(true /* clearAll */)
                         .setLinkUpstreamBandwidthKbps(100000)
                         .setLinkDownstreamBandwidthKbps(100000)
-                        .addTransport(NetworkCapabilities.TRANSPORT_ETHERNET)
+                        .addTransportType(NetworkCapabilities.TRANSPORT_ETHERNET)
                         .addCapability(12)
                         .addCapability(13)
                         .addCapability(14)
@@ -177,7 +177,7 @@ public class EthernetTrackerTest {
                 makeEthernetCapabilitiesBuilder(false /* clearAll */)
                         .setLinkUpstreamBandwidthKbps(100000)
                         .setLinkDownstreamBandwidthKbps(100000)
-                        .addTransport(NetworkCapabilities.TRANSPORT_ETHERNET)
+                        .addTransportType(NetworkCapabilities.TRANSPORT_ETHERNET)
                         .build(),
                 false, "", "");
 
@@ -187,7 +187,7 @@ public class EthernetTrackerTest {
                 makeEthernetCapabilitiesBuilder(false /* clearAll */)
                         .setLinkUpstreamBandwidthKbps(100000)
                         .setLinkDownstreamBandwidthKbps(100000)
-                        .addTransport(NetworkCapabilities.TRANSPORT_ETHERNET)
+                        .addTransportType(NetworkCapabilities.TRANSPORT_ETHERNET)
                         .addCapability(11)
                         .addCapability(12)
                         .build(),
@@ -207,28 +207,28 @@ public class EthernetTrackerTest {
                 makeEthernetCapabilitiesBuilder(true /* clearAll */)
                         .setLinkUpstreamBandwidthKbps(100000)
                         .setLinkDownstreamBandwidthKbps(100000)
-                        .addTransport(0)
+                        .addTransportType(0)
                         .build(),
                 true, "", "0");
         assertParsedNetworkCapabilities(
                 makeEthernetCapabilitiesBuilder(true /* clearAll */)
                         .setLinkUpstreamBandwidthKbps(100000)
                         .setLinkDownstreamBandwidthKbps(100000)
-                        .addTransport(1)
+                        .addTransportType(1)
                         .build(),
                 true, "", "1");
         assertParsedNetworkCapabilities(
                 makeEthernetCapabilitiesBuilder(true /* clearAll */)
                         .setLinkUpstreamBandwidthKbps(100000)
                         .setLinkDownstreamBandwidthKbps(100000)
-                        .addTransport(2)
+                        .addTransportType(2)
                         .build(),
                 true, "", "2");
         assertParsedNetworkCapabilities(
                 makeEthernetCapabilitiesBuilder(true /* clearAll */)
                         .setLinkUpstreamBandwidthKbps(100000)
                         .setLinkDownstreamBandwidthKbps(100000)
-                        .addTransport(3)
+                        .addTransportType(3)
                         .build(),
                 true, "", "3");
 
@@ -256,7 +256,7 @@ public class EthernetTrackerTest {
                         .addCapability(13)
                         .addCapability(14)
                         .addCapability(15)
-                        .addTransport(3)
+                        .addTransportType(3)
                         .build(),
                 true, "12,13,14,15", "3");
 
@@ -268,42 +268,6 @@ public class EthernetTrackerTest {
             boolean clearCapabilties, String configCapabiltiies,String configTransports) {
         assertEquals(expectedNetworkCapabilities,
                 EthernetTracker.createNetworkCapabilities(clearCapabilties, configCapabiltiies,
-                        configTransports));
-    }
-
-    private static class NetworkCapabilitiesBuilder {
-        private final NetworkCapabilities nc = new NetworkCapabilities();
-
-        NetworkCapabilitiesBuilder clearAll(){
-            // This is THE ONLY one that doesn't return a reference to the object so I wrapped
-            // everything in a builder to keep things consistent and clean above. Fix if this
-            // ever changes
-            nc.clearAll();
-            return this;
-        }
-
-        NetworkCapabilitiesBuilder addCapability(int capability) {
-            nc.addCapability(capability);
-            return this;
-        }
-
-        NetworkCapabilitiesBuilder addTransport(int transport) {
-            nc.addTransportType(transport);
-            return this;
-        }
-
-        NetworkCapabilitiesBuilder setLinkUpstreamBandwidthKbps(int upKbps) {
-            nc.setLinkUpstreamBandwidthKbps(upKbps);
-            return this;
-        }
-
-        NetworkCapabilitiesBuilder setLinkDownstreamBandwidthKbps(int downKbps) {
-            nc.setLinkDownstreamBandwidthKbps(downKbps);
-            return this;
-        }
-
-        NetworkCapabilities build() {
-            return new NetworkCapabilities(nc);
-        }
+                        configTransports).build());
     }
 }
