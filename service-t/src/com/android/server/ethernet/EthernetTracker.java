@@ -459,7 +459,7 @@ final class EthernetTracker {
         String transport = tokens.length > 3 ? tokens[3] : null;
         NetworkCapabilities nc = createNetworkCapabilities(
                 !TextUtils.isEmpty(capabilities)  /* clear default capabilities */, capabilities,
-                transport);
+                transport).build();
         mNetworkCapabilities.put(name, nc);
 
         if (tokens.length > 2 && !TextUtils.isEmpty(tokens[2])) {
@@ -469,25 +469,26 @@ final class EthernetTracker {
     }
 
     private static NetworkCapabilities createDefaultNetworkCapabilities(boolean isTestIface) {
-        NetworkCapabilities nc = createNetworkCapabilities(false /* clear default capabilities */);
-        nc.addCapability(NetworkCapabilities.NET_CAPABILITY_NOT_RESTRICTED);
-        nc.addCapability(NetworkCapabilities.NET_CAPABILITY_NOT_METERED);
-        nc.addCapability(NetworkCapabilities.NET_CAPABILITY_NOT_ROAMING);
-        nc.addCapability(NetworkCapabilities.NET_CAPABILITY_NOT_CONGESTED);
-        nc.addCapability(NetworkCapabilities.NET_CAPABILITY_NOT_SUSPENDED);
-        nc.addCapability(NetworkCapabilities.NET_CAPABILITY_NOT_VCN_MANAGED);
+        NetworkCapabilities.Builder builder = createNetworkCapabilities(
+                false /* clear default capabilities */, null, null)
+                .addCapability(NetworkCapabilities.NET_CAPABILITY_NOT_RESTRICTED)
+                .addCapability(NetworkCapabilities.NET_CAPABILITY_NOT_METERED)
+                .addCapability(NetworkCapabilities.NET_CAPABILITY_NOT_ROAMING)
+                .addCapability(NetworkCapabilities.NET_CAPABILITY_NOT_CONGESTED)
+                .addCapability(NetworkCapabilities.NET_CAPABILITY_NOT_SUSPENDED)
+                .addCapability(NetworkCapabilities.NET_CAPABILITY_NOT_VCN_MANAGED);
 
         if (isTestIface) {
-            nc.addTransportType(NetworkCapabilities.TRANSPORT_TEST);
+                builder.addTransportType(NetworkCapabilities.TRANSPORT_TEST);
         } else {
-            nc.addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET);
+                builder.addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET);
         }
 
-        return nc;
+        return builder.build();
     }
 
     private static NetworkCapabilities createNetworkCapabilities(boolean clearDefaultCapabilities) {
-        return createNetworkCapabilities(clearDefaultCapabilities, null, null);
+        return createNetworkCapabilities(clearDefaultCapabilities, null, null).build();
     }
 
     /**
@@ -502,7 +503,7 @@ final class EthernetTracker {
      *                          will cause the override to be ignored.
      */
     @VisibleForTesting
-    static NetworkCapabilities createNetworkCapabilities(
+    static NetworkCapabilities.Builder createNetworkCapabilities(
             boolean clearDefaultCapabilities, @Nullable String commaSeparatedCapabilities,
             @Nullable String overrideTransport) {
 
@@ -566,7 +567,7 @@ final class EthernetTracker {
         builder.addCapability(NetworkCapabilities.NET_CAPABILITY_NOT_CONGESTED);
         builder.addCapability(NetworkCapabilities.NET_CAPABILITY_NOT_SUSPENDED);
 
-        return builder.build();
+        return builder;
     }
 
     /**
