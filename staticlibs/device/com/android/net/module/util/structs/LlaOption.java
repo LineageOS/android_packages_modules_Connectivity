@@ -36,14 +36,16 @@ import java.nio.ByteOrder;
  */
 public class LlaOption extends Struct {
     @Field(order = 0, type = Type.S8)
-    // 1 for Source Link-layer Address; 2 for Target Link-layer Address.
     public final byte type;
     @Field(order = 1, type = Type.S8)
     public final byte length; // Length in 8-byte units
     @Field(order = 2, type = Type.EUI48)
+    // Link layer address length and format varies on different link layers, which is not
+    // guaranteed to be a 6-byte MAC address. However, Struct only supports 6-byte MAC
+    // addresses type(EUI-48) for now.
     public final MacAddress linkLayerAddress;
 
-    public LlaOption(final byte type, final byte length, final MacAddress linkLayerAddress) {
+    LlaOption(final byte type, final byte length, final MacAddress linkLayerAddress) {
         this.type = type;
         this.length = length;
         this.linkLayerAddress = linkLayerAddress;
@@ -54,6 +56,6 @@ public class LlaOption extends Struct {
      */
     public static ByteBuffer build(final byte type, final MacAddress linkLayerAddress) {
         final LlaOption option = new LlaOption(type, (byte) 1 /* option len */, linkLayerAddress);
-        return ByteBuffer.wrap(option.writeToBytes(ByteOrder.nativeOrder()));
+        return ByteBuffer.wrap(option.writeToBytes(ByteOrder.BIG_ENDIAN));
     }
 }

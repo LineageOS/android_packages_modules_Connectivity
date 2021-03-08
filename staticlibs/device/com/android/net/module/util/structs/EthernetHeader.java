@@ -40,7 +40,7 @@ import com.android.net.module.util.Struct.Type;
  * +-                             -+
  * |            Address            |
  * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- * |1 0 0 0 0 1 1 0 1 1 0 1 1 1 0 1|
+ * |            EtherType          |
  * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  */
 public class EthernetHeader extends Struct {

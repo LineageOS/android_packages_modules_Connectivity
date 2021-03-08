@@ -46,7 +46,7 @@ public class MtuOption extends Struct {
     @Field(order = 3, type = Type.U32)
     public final long mtu;
 
-    public MtuOption(final byte type, final byte length, final short reserved,
+    MtuOption(final byte type, final byte length, final short reserved,
             final long mtu) {
         this.type = type;
         this.length = length;
@@ -60,6 +60,6 @@ public class MtuOption extends Struct {
     public static ByteBuffer build(final long mtu) {
         final MtuOption option = new MtuOption((byte) ICMPV6_ND_OPTION_MTU,
                 (byte) 1 /* option len */, (short) 0 /* reserved */, mtu);
-        return ByteBuffer.wrap(option.writeToBytes(ByteOrder.nativeOrder()));
+        return ByteBuffer.wrap(option.writeToBytes(ByteOrder.BIG_ENDIAN));
     }
 }
