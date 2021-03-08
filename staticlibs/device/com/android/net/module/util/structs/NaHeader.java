@@ -23,7 +23,7 @@ import com.android.net.module.util.Struct.Type;
 import java.net.Inet6Address;
 
 /**
- * ICMPv6 Neighbor Advertisement header, follow [Icmpv6Header], as per
+ * ICMPv6 Neighbor Advertisement header, follow {@link Icmpv6Header}, as per
  * https://tools.ietf.org/html/rfc4861. This does not contain any option.
  *
  * 0                   1                   2                   3

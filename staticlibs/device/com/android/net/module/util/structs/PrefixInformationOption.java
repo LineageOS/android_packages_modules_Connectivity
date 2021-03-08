@@ -70,7 +70,7 @@ public class PrefixInformationOption extends Struct {
     @Field(order = 7, type = Type.ByteArray, arraysize = 16)
     public final byte[] prefix;
 
-    public PrefixInformationOption(final byte type, final byte length, final byte prefixLen,
+    PrefixInformationOption(final byte type, final byte length, final byte prefixLen,
             final byte flags, final long validLifetime, final long preferredLifetime,
             final int reserved, @NonNull final byte[] prefix) {
         this.type = type;
@@ -92,6 +92,6 @@ public class PrefixInformationOption extends Struct {
                 (byte) ICMPV6_ND_OPTION_PIO, (byte) 4 /* option len */,
                 (byte) prefix.getPrefixLength(), flags, validLifetime, preferredLifetime,
                 (int) 0, prefix.getRawAddress());
-        return ByteBuffer.wrap(option.writeToBytes(ByteOrder.nativeOrder()));
+        return ByteBuffer.wrap(option.writeToBytes(ByteOrder.BIG_ENDIAN));
     }
 }

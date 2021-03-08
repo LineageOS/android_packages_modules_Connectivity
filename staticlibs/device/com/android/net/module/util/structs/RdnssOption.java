@@ -53,8 +53,7 @@ public class RdnssOption extends Struct {
     @Field(order = 3, type = Type.U32)
     public final long lifetime;
 
-    public RdnssOption(final byte type, final byte length, final short reserved,
-            final long lifetime) {
+    RdnssOption(final byte type, final byte length, final short reserved, final long lifetime) {
         this.type = type;
         this.length = length;
         this.reserved = reserved;
@@ -79,6 +78,8 @@ public class RdnssOption extends Struct {
 
     /**
      * Build a RDNSS option from the required specified String parameters.
+     *
+     * @throws IllegalArgumentException if {@code servers} does not contain only numeric addresses.
      */
     public static ByteBuffer build(final long lifetime, final String... servers) {
         final Inet6Address[] serverArray = new Inet6Address[servers.length];
