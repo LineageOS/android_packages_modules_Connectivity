@@ -1027,4 +1027,48 @@ public class StructTest {
         assertTrue(msg.equals(msg1));
         assertEquals(msg.hashCode(), msg1.hashCode());
     }
+
+    static class InvalidByteArray extends Struct {
+        @Field(order = 0, type = Type.ByteArray, arraysize = 12) public byte[] bytes;
+    }
+
+    @Test
+    public void testStructClass_WrongByteArraySize() {
+        final InvalidByteArray msg = doParsingMessageTest("20010db80003000400050006",
+                InvalidByteArray.class, ByteOrder.BIG_ENDIAN);
+
+        // Actual byte array size doesn't match the size declared in the annotation.
+        msg.bytes = new byte[16];
+        assertThrows(IllegalStateException.class, () -> msg.writeToBytes());
+
+        final ByteBuffer output = ByteBuffer.allocate(Struct.getSize(InvalidByteArray.class));
+        output.order(ByteOrder.LITTLE_ENDIAN);
+        assertThrows(IllegalStateException.class, () -> msg.writeToByteBuffer(output));
+    }
+
+    @Test
+    public void testStructClass_NullByteArray() {
+        final InvalidByteArray msg = doParsingMessageTest("20010db80003000400050006",
+                InvalidByteArray.class, ByteOrder.BIG_ENDIAN);
+
+        msg.bytes = null;
+        assertThrows(NullPointerException.class, () -> msg.writeToBytes());
+
+        final ByteBuffer output = ByteBuffer.allocate(Struct.getSize(InvalidByteArray.class));
+        output.order(ByteOrder.LITTLE_ENDIAN);
+        assertThrows(NullPointerException.class, () -> msg.writeToByteBuffer(output));
+    }
+
+    @Test
+    public void testStructClass_ParsingByteArrayAfterInitialization() {
+        InvalidByteArray msg = new InvalidByteArray();
+        msg.bytes = new byte[]{(byte) 0x00, (byte) 0x01, (byte) 0x02, (byte) 0x03};
+
+        // Although bytes member has been initialized with the length different with
+        // annotation size, parsing from ByteBuffer will get bytes member have the
+        // reference to byte array with correct size.
+        msg = doParsingMessageTest("20010db80003000400050006", InvalidByteArray.class,
+                ByteOrder.BIG_ENDIAN);
+        assertArrayEquals(TEST_PREFIX64, msg.bytes);
+    }
 }
