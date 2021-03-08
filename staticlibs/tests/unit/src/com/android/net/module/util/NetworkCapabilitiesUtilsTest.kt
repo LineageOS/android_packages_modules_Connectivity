@@ -26,11 +26,14 @@ import android.net.NetworkCapabilities.TRANSPORT_WIFI_AWARE
 import androidx.test.filters.SmallTest
 import androidx.test.runner.AndroidJUnit4
 import com.android.net.module.util.NetworkCapabilitiesUtils.getDisplayTransport
+import com.android.net.module.util.NetworkCapabilitiesUtils.packBits
+import com.android.net.module.util.NetworkCapabilitiesUtils.unpackBits
 import org.junit.Test
 import org.junit.runner.RunWith
 import java.lang.IllegalArgumentException
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertTrue
 
 @RunWith(AndroidJUnit4::class)
 @SmallTest
@@ -57,5 +60,22 @@ class NetworkCapabilitiesUtilsTest {
         assertFailsWith(IllegalArgumentException::class) {
             getDisplayTransport(intArrayOf())
         }
+    }
+
+    @Test
+    fun testBitPackingTestCase() {
+        runBitPackingTestCase(0, intArrayOf())
+        runBitPackingTestCase(1, intArrayOf(0))
+        runBitPackingTestCase(3, intArrayOf(0, 1))
+        runBitPackingTestCase(4, intArrayOf(2))
+        runBitPackingTestCase(63, intArrayOf(0, 1, 2, 3, 4, 5))
+        runBitPackingTestCase(Long.MAX_VALUE.inv(), intArrayOf(63))
+        runBitPackingTestCase(Long.MAX_VALUE.inv() + 1, intArrayOf(0, 63))
+        runBitPackingTestCase(Long.MAX_VALUE.inv() + 2, intArrayOf(1, 63))
+    }
+
+    fun runBitPackingTestCase(packedBits: Long, bits: IntArray) {
+        assertEquals(packedBits, packBits(bits))
+        assertTrue(bits contentEquals unpackBits(packedBits))
     }
 }
