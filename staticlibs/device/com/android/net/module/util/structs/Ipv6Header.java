@@ -53,7 +53,7 @@ public class Ipv6Header extends Struct {
     @Field(order = 0, type = Type.S32)
     public int vtf;
     @Field(order = 1, type = Type.U16)
-    public int length;
+    public int payloadLength;
     @Field(order = 2, type = Type.S8)
     public byte nextHeader;
     @Field(order = 3, type = Type.U8)
@@ -63,10 +63,10 @@ public class Ipv6Header extends Struct {
     @Field(order = 5, type = Type.Ipv6Address)
     public Inet6Address dstIp;
 
-    public Ipv6Header(final int vtf, final int length, final byte nextHeader, final short hopLimit,
-            final Inet6Address srcIp, final Inet6Address dstIp) {
+    public Ipv6Header(final int vtf, final int payloadLength, final byte nextHeader,
+            final short hopLimit, final Inet6Address srcIp, final Inet6Address dstIp) {
         this.vtf = vtf;
-        this.length = length;
+        this.payloadLength = payloadLength;
         this.nextHeader = nextHeader;
         this.hopLimit = hopLimit;
         this.srcIp = srcIp;
