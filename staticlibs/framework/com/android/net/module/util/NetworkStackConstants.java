@@ -148,8 +148,17 @@ public final class NetworkStackConstants {
     public static final int ICMPV6_ND_OPTION_RDNSS = 25;
     public static final int ICMPV6_ND_OPTION_PREF64 = 38;
 
-
     public static final int ICMPV6_RA_HEADER_LEN = 16;
+
+    public static final int NEIGHBOR_ADVERTISEMENT_FLAG_ROUTER    = 1 << 31;
+    public static final int NEIGHBOR_ADVERTISEMENT_FLAG_SOLICITED = 1 << 30;
+    public static final int NEIGHBOR_ADVERTISEMENT_FLAG_OVERRIDE  = 1 << 29;
+
+    public static final byte ROUTER_ADVERTISEMENT_FLAG_MANAGED_ADDRESS = (byte) (1 << 7);
+    public static final byte ROUTER_ADVERTISEMENT_FLAG_OTHER = (byte) (1 << 6);
+
+    public static final byte PIO_FLAG_ON_LINK = (byte) (1 << 7);
+    public static final byte PIO_FLAG_AUTONOMOUS = (byte) (1 << 6);
 
     /**
      * UDP constants.
