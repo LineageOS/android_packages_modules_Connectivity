@@ -86,6 +86,10 @@ cc_binary {
     tidy_flags: [
         "-warnings-as-errors=clang-analyzer-security*,cert-*,android-*",
     ],
+    // Actually not required for clatd itself. See comments in the rc file.
+    init_rc: [
+        "vendor-464xlat.rc",
+    ],
 }
 
 // Unit tests.
