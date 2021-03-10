@@ -114,11 +114,42 @@ public class OffloadController {
     private ConcurrentHashMap<String, ForwardedStats> mForwardedStats =
             new ConcurrentHashMap<>(16, 0.75F, 1);
 
+    private static class InterfaceQuota {
+        public final long warningBytes;
+        public final long limitBytes;
+
+        public static InterfaceQuota MAX_VALUE = new InterfaceQuota(Long.MAX_VALUE, Long.MAX_VALUE);
+
+        InterfaceQuota(long warningBytes, long limitBytes) {
+            this.warningBytes = warningBytes;
+            this.limitBytes = limitBytes;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (!(o instanceof InterfaceQuota)) return false;
+            InterfaceQuota that = (InterfaceQuota) o;
+            return warningBytes == that.warningBytes
+                    && limitBytes == that.limitBytes;
+        }
+
+        @Override
+        public int hashCode() {
+            return (int) (warningBytes * 3 + limitBytes * 5);
+        }
+
+        @Override
+        public String toString() {
+            return "InterfaceQuota{" + "warning=" + warningBytes + ", limit=" + limitBytes + '}';
+        }
+    }
+
     // Maps upstream interface names to interface quotas.
     // Always contains the latest value received from the framework for each interface, regardless
     // of whether offload is currently running (or is even supported) on that interface. Only
     // includes upstream interfaces that have a quota set.
-    private HashMap<String, Long> mInterfaceQuotas = new HashMap<>();
+    private HashMap<String, InterfaceQuota> mInterfaceQuotas = new HashMap<>();
 
     // Tracking remaining alert quota. Unlike limit quota is subject to interface, the alert
     // quota is interface independent and global for tether offload. Note that this is only
@@ -263,7 +294,8 @@ public class OffloadController {
             mLog.i("tethering offload control not supported");
             stop();
         } else {
-            mLog.log("tethering offload started");
+            mLog.log("tethering offload started, version: "
+                    + OffloadHardwareInterface.halVerToString(mControlHalVersion));
             mNatUpdateCallbacksReceived = 0;
             mNatUpdateNetlinkErrors = 0;
             maybeSchedulePollingStats();
@@ -322,24 +354,35 @@ public class OffloadController {
 
         @Override
         public void onSetLimit(String iface, long quotaBytes) {
+            onSetWarningAndLimit(iface, QUOTA_UNLIMITED, quotaBytes);
+        }
+
+        @Override
+        public void onSetWarningAndLimit(@NonNull String iface,
+                long warningBytes, long limitBytes) {
             // Listen for all iface is necessary since upstream might be changed after limit
             // is set.
             mHandler.post(() -> {
-                final Long curIfaceQuota = mInterfaceQuotas.get(iface);
+                final InterfaceQuota curIfaceQuota = mInterfaceQuotas.get(iface);
+                final InterfaceQuota newIfaceQuota = new InterfaceQuota(
+                        warningBytes == QUOTA_UNLIMITED ? Long.MAX_VALUE : warningBytes,
+                        limitBytes == QUOTA_UNLIMITED ? Long.MAX_VALUE : limitBytes);
 
                 // If the quota is set to unlimited, the value set to HAL is Long.MAX_VALUE,
                 // which is ~8.4 x 10^6 TiB, no one can actually reach it. Thus, it is not
                 // useful to set it multiple times.
                 // Otherwise, the quota needs to be updated to tell HAL to re-count from now even
                 // if the quota is the same as the existing one.
-                if (null == curIfaceQuota && QUOTA_UNLIMITED == quotaBytes) return;
+                if (null == curIfaceQuota && InterfaceQuota.MAX_VALUE.equals(newIfaceQuota)) {
+                    return;
+                }
 
-                if (quotaBytes == QUOTA_UNLIMITED) {
+                if (InterfaceQuota.MAX_VALUE.equals(newIfaceQuota)) {
                     mInterfaceQuotas.remove(iface);
                 } else {
-                    mInterfaceQuotas.put(iface, quotaBytes);
+                    mInterfaceQuotas.put(iface, newIfaceQuota);
                 }
-                maybeUpdateDataLimit(iface);
+                maybeUpdateDataWarningAndLimit(iface);
             });
         }
 
@@ -465,18 +508,15 @@ public class OffloadController {
                 >= DEFAULT_TETHER_OFFLOAD_POLL_INTERVAL_MS;
     }
 
-    private boolean maybeUpdateDataLimit(String iface) {
-        // setDataLimit may only be called while offload is occurring on this upstream.
+    private boolean maybeUpdateDataWarningAndLimit(String iface) {
+        // setDataLimit or setDataWarningAndLimit may only be called while offload is occurring
+        // on this upstream.
         if (!started() || !TextUtils.equals(iface, currentUpstreamInterface())) {
             return true;
         }
 
-        Long limit = mInterfaceQuotas.get(iface);
-        if (limit == null) {
-            limit = Long.MAX_VALUE;
-        }
-
-        return mHwInterface.setDataLimit(iface, limit);
+        final InterfaceQuota quota = mInterfaceQuotas.getOrDefault(iface, InterfaceQuota.MAX_VALUE);
+        return mHwInterface.setDataLimit(iface, quota.limitBytes);
     }
 
     private void updateStatsForCurrentUpstream() {
@@ -630,7 +670,7 @@ public class OffloadController {
         maybeUpdateStats(prevUpstream);
 
         // Data limits can only be set once offload is running on the upstream.
-        success = maybeUpdateDataLimit(iface);
+        success = maybeUpdateDataWarningAndLimit(iface);
         if (!success) {
             // If we failed to set a data limit, don't use this upstream, because we don't want to
             // blow through the data limit that we were told to apply.
