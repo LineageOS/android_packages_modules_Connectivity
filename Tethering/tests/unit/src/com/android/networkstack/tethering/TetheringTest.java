@@ -60,6 +60,8 @@ import static android.telephony.SubscriptionManager.INVALID_SUBSCRIPTION_ID;
 
 import static com.android.net.module.util.Inet4AddressUtils.inet4AddressToIntHTH;
 import static com.android.net.module.util.Inet4AddressUtils.intToInet4AddressHTH;
+import static com.android.networkstack.tethering.OffloadHardwareInterface.OFFLOAD_HAL_VERSION_1_0;
+import static com.android.networkstack.tethering.OffloadHardwareInterface.OFFLOAD_HAL_VERSION_NONE;
 import static com.android.networkstack.tethering.TestConnectivityManager.BROADCAST_FIRST;
 import static com.android.networkstack.tethering.TestConnectivityManager.CALLBACKS_FIRST;
 import static com.android.networkstack.tethering.Tethering.UserRestrictionActionListener;
@@ -622,7 +624,7 @@ public class TetheringTest {
         mInterfaceConfiguration.flags = new String[0];
         when(mRouterAdvertisementDaemon.start())
                 .thenReturn(true);
-        initOffloadConfiguration(true /* offloadConfig */, true /* offloadControl */,
+        initOffloadConfiguration(true /* offloadConfig */, OFFLOAD_HAL_VERSION_1_0,
                 0 /* defaultDisabled */);
         when(mOffloadHardwareInterface.getForwardedStats(any())).thenReturn(mForwardedStats);
 
@@ -1711,7 +1713,7 @@ public class TetheringTest {
         callback.expectOffloadStatusChanged(TETHER_HARDWARE_OFFLOAD_STOPPED);
 
         // 1. Offload fail if no OffloadConfig.
-        initOffloadConfiguration(false /* offloadConfig */, true /* offloadControl */,
+        initOffloadConfiguration(false /* offloadConfig */, OFFLOAD_HAL_VERSION_1_0,
                 0 /* defaultDisabled */);
         runUsbTethering(upstreamState);
         callback.expectOffloadStatusChanged(TETHER_HARDWARE_OFFLOAD_FAILED);
@@ -1719,7 +1721,7 @@ public class TetheringTest {
         callback.expectOffloadStatusChanged(TETHER_HARDWARE_OFFLOAD_STOPPED);
         reset(mUsbManager);
         // 2. Offload fail if no OffloadControl.
-        initOffloadConfiguration(true /* offloadConfig */, false /* offloadControl */,
+        initOffloadConfiguration(true /* offloadConfig */, OFFLOAD_HAL_VERSION_NONE,
                 0 /* defaultDisabled */);
         runUsbTethering(upstreamState);
         callback.expectOffloadStatusChanged(TETHER_HARDWARE_OFFLOAD_FAILED);
@@ -1727,7 +1729,7 @@ public class TetheringTest {
         callback.expectOffloadStatusChanged(TETHER_HARDWARE_OFFLOAD_STOPPED);
         reset(mUsbManager);
         // 3. Offload fail if disabled by settings.
-        initOffloadConfiguration(true /* offloadConfig */, true /* offloadControl */,
+        initOffloadConfiguration(true /* offloadConfig */, OFFLOAD_HAL_VERSION_1_0,
                 1 /* defaultDisabled */);
         runUsbTethering(upstreamState);
         callback.expectOffloadStatusChanged(TETHER_HARDWARE_OFFLOAD_FAILED);
@@ -1743,9 +1745,10 @@ public class TetheringTest {
     }
 
     private void initOffloadConfiguration(final boolean offloadConfig,
-            final boolean offloadControl, final int defaultDisabled) {
+            @OffloadHardwareInterface.OffloadHalVersion final int offloadControlVersion,
+            final int defaultDisabled) {
         when(mOffloadHardwareInterface.initOffloadConfig()).thenReturn(offloadConfig);
-        when(mOffloadHardwareInterface.initOffloadControl(any())).thenReturn(offloadControl);
+        when(mOffloadHardwareInterface.initOffloadControl(any())).thenReturn(offloadControlVersion);
         when(mOffloadHardwareInterface.getDefaultTetherOffloadDisabled()).thenReturn(
                 defaultDisabled);
     }
