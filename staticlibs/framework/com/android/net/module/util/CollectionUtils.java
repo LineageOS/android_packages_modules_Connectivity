@@ -38,6 +38,13 @@ public final class CollectionUtils {
     }
 
     /**
+     * @return True if the collection is null or 0-length.
+     */
+    public static <T> boolean isEmpty(@Nullable Collection<T> collection) {
+        return collection == null || collection.isEmpty();
+    }
+
+    /**
      * Returns an int array from the given Integer list.
      */
     @NonNull
