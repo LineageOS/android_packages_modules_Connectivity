@@ -32,8 +32,8 @@ fun <T> assertEmpty(ts: Array<T>) = ts.size.let { len ->
     assertEquals(0, len, "Expected empty array, but length was $len")
 }
 
-fun <T> assertEmpty(ts: List<T>) = ts.size.let { len ->
-    assertEquals(0, len, "Expected empty list, but length was $len")
+fun <T> assertEmpty(ts: Collection<T>) = ts.size.let { len ->
+    assertEquals(0, len, "Expected empty collection, but length was $len")
 }
 
 fun <T> assertLength(expected: Int, got: Array<T>) = got.size.let { len ->
