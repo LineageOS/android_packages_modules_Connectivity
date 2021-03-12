@@ -27,7 +27,7 @@ object CompatUtil {
     fun makeTestNetworkSpecifier(ifName: String): NetworkSpecifier {
         // Until R, there was no TestNetworkSpecifier, StringNetworkSpecifier was used instead
         if (isDevSdkInRange(minExclusive = null, maxInclusive = Build.VERSION_CODES.R)) {
-            makeNetworkSpecifierInternal("android.net.StringNetworkSpecifier", ifName)
+            return makeNetworkSpecifierInternal("android.net.StringNetworkSpecifier", ifName)
         }
         // TestNetworkSpecifier is not part of the SDK in some branches using this utility
         // TODO: replace with a direct call to the constructor
@@ -38,7 +38,7 @@ object CompatUtil {
     fun makeEthernetNetworkSpecifier(ifName: String): NetworkSpecifier {
         // Until R, there was no EthernetNetworkSpecifier, StringNetworkSpecifier was used instead
         if (isDevSdkInRange(minExclusive = null, maxInclusive = Build.VERSION_CODES.R)) {
-            makeNetworkSpecifierInternal("android.net.StringNetworkSpecifier", ifName)
+            return makeNetworkSpecifierInternal("android.net.StringNetworkSpecifier", ifName)
         }
         // EthernetNetworkSpecifier is not part of the SDK in some branches using this utility
         // TODO: replace with a direct call to the constructor
