@@ -23,7 +23,7 @@ import com.android.net.module.util.Struct.Type;
 import java.net.Inet6Address;
 
 /**
- * ICMPv6 Neighbor Advertisement header, follow {@link Icmpv6Header}, as per
+ * ICMPv6 Neighbor Solicitation header, follow {@link Icmpv6Header}, as per
  * https://tools.ietf.org/html/rfc4861. This does not contain any option.
  *
  *  0                   1                   2                   3
@@ -31,7 +31,7 @@ import java.net.Inet6Address;
  * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  * |     Type      |     Code      |          Checksum             |
  * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- * |R|S|O|                     Reserved                            |
+ * |                           Reserved                            |
  * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  * |                                                               |
  * +                                                               +
@@ -44,14 +44,14 @@ import java.net.Inet6Address;
  * |   Options ...
  * +-+-+-+-+-+-+-+-+-+-+-+-
  */
-public class NaHeader extends Struct {
+public class NsHeader extends Struct {
     @Field(order = 0, type = Type.S32)
-    public int flags; // Router flag, Solicited flag, Override flag and 29 Reserved bits.
+    public int reserved; // 32 Reserved bits.
     @Field(order = 1, type = Type.Ipv6Address)
     public Inet6Address target;
 
-    public NaHeader(final int flags, final Inet6Address target) {
-        this.flags = flags;
+    public NsHeader(final Inet6Address target) {
+        this.reserved = 0;
         this.target = target;
     }
 }
