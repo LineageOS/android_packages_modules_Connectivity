@@ -119,11 +119,16 @@ public class LocationPermissionCheckerTest {
                     + " to application bound to user " + mUid))
                     .when(mMockAppOps).checkPackage(mUid, TEST_PKG_NAME);
         }
-        when(mMockContext.getSystemService(Context.APP_OPS_SERVICE))
-                .thenReturn(mMockAppOps);
-        when(mMockContext.getSystemService(Context.USER_SERVICE))
-                .thenReturn(mMockUserManager);
-        when(mMockContext.getSystemService(Context.LOCATION_SERVICE)).thenReturn(mLocationManager);
+        mockSystemService(Context.APP_OPS_SERVICE, AppOpsManager.class, mMockAppOps);
+        mockSystemService(Context.USER_SERVICE, UserManager.class, mMockUserManager);
+        mockSystemService(Context.LOCATION_SERVICE, LocationManager.class, mLocationManager);
+    }
+
+    private <T> void mockSystemService(String name, Class<T> clazz, T service) {
+        when(mMockContext.getSystemService(name)).thenReturn(service);
+        when(mMockContext.getSystemServiceName(clazz)).thenReturn(name);
+        // Do not use mockito extended final method mocking
+        when(mMockContext.getSystemService(clazz)).thenCallRealMethod();
     }
 
     private void setupTestCase() throws Exception {
