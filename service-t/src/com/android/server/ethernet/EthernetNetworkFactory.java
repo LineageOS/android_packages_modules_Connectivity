@@ -473,6 +473,7 @@ public class EthernetNetworkFactory extends NetworkFactory {
             final NetworkAgentConfig config = new NetworkAgentConfig.Builder()
                     .setLegacyType(mLegacyType)
                     .setLegacyTypeName(NETWORK_TYPE)
+                    .setLegacyExtraInfo(mHwAddress)
                     .build();
             mNetworkAgent = new NetworkAgent(mContext, mHandler.getLooper(),
                     NETWORK_TYPE, mCapabilities, mLinkProperties,
@@ -487,7 +488,6 @@ public class EthernetNetworkFactory extends NetworkFactory {
                 }
             };
             mNetworkAgent.register();
-            mNetworkAgent.setLegacyExtraInfo(mHwAddress);
             mNetworkAgent.markConnected();
         }
 
