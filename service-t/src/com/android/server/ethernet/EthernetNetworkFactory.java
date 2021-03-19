@@ -166,8 +166,9 @@ public class EthernetNetworkFactory extends NetworkFactory {
     }
 
     private void updateCapabilityFilter() {
-        NetworkCapabilities capabilitiesFilter = new NetworkCapabilities();
-        capabilitiesFilter.clearAll();
+        NetworkCapabilities capabilitiesFilter = new NetworkCapabilities.Builder()
+                .clearAll()
+                .build();
 
         for (NetworkInterfaceState iface:  mTrackingInterfaces.values()) {
             capabilitiesFilter = mixInCapabilities(capabilitiesFilter, iface.mCapabilities);
