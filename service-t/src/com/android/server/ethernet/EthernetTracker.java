@@ -579,7 +579,8 @@ final class EthernetTracker {
      */
     @VisibleForTesting
     static IpConfiguration parseStaticIpConfiguration(String staticIpConfig) {
-        StaticIpConfiguration ipConfig = new StaticIpConfiguration();
+        final StaticIpConfiguration.Builder staticIpConfigBuilder =
+                new StaticIpConfiguration.Builder();
 
         for (String keyValueAsString : staticIpConfig.trim().split(" ")) {
             if (TextUtils.isEmpty(keyValueAsString)) continue;
@@ -595,20 +596,20 @@ final class EthernetTracker {
 
             switch (key) {
                 case "ip":
-                    ipConfig.ipAddress = new LinkAddress(value);
+                    staticIpConfigBuilder.setIpAddress(new LinkAddress(value));
                     break;
                 case "domains":
-                    ipConfig.domains = value;
+                    staticIpConfigBuilder.setDomains(value);
                     break;
                 case "gateway":
-                    ipConfig.gateway = InetAddress.parseNumericAddress(value);
+                    staticIpConfigBuilder.setGateway(InetAddress.parseNumericAddress(value));
                     break;
                 case "dns": {
                     ArrayList<InetAddress> dnsAddresses = new ArrayList<>();
                     for (String address: value.split(",")) {
                         dnsAddresses.add(InetAddress.parseNumericAddress(address));
                     }
-                    ipConfig.dnsServers.addAll(dnsAddresses);
+                    staticIpConfigBuilder.setDnsServers(dnsAddresses);
                     break;
                 }
                 default : {
@@ -617,11 +618,18 @@ final class EthernetTracker {
                 }
             }
         }
-        return new IpConfiguration(IpAssignment.STATIC, ProxySettings.NONE, ipConfig, null);
+        final IpConfiguration ret = new IpConfiguration();
+        ret.setIpAssignment(IpAssignment.STATIC);
+        ret.setProxySettings(ProxySettings.NONE);
+        ret.setStaticIpConfiguration(staticIpConfigBuilder.build());
+        return ret;
     }
 
     private static IpConfiguration createDefaultIpConfiguration() {
-        return new IpConfiguration(IpAssignment.DHCP, ProxySettings.NONE, null, null);
+        final IpConfiguration ret = new IpConfiguration();
+        ret.setIpAssignment(IpAssignment.DHCP);
+        ret.setProxySettings(ProxySettings.NONE);
+        return ret;
     }
 
     private void updateIfaceMatchRegexp() {
