@@ -16,6 +16,23 @@
 
 package com.android.net.module.util;
 
+import static android.net.NetworkCapabilities.NET_CAPABILITY_CBS;
+import static android.net.NetworkCapabilities.NET_CAPABILITY_DUN;
+import static android.net.NetworkCapabilities.NET_CAPABILITY_EIMS;
+import static android.net.NetworkCapabilities.NET_CAPABILITY_ENTERPRISE;
+import static android.net.NetworkCapabilities.NET_CAPABILITY_FOTA;
+import static android.net.NetworkCapabilities.NET_CAPABILITY_IA;
+import static android.net.NetworkCapabilities.NET_CAPABILITY_IMS;
+import static android.net.NetworkCapabilities.NET_CAPABILITY_INTERNET;
+import static android.net.NetworkCapabilities.NET_CAPABILITY_MCX;
+import static android.net.NetworkCapabilities.NET_CAPABILITY_MMS;
+import static android.net.NetworkCapabilities.NET_CAPABILITY_OEM_PAID;
+import static android.net.NetworkCapabilities.NET_CAPABILITY_OEM_PRIVATE;
+import static android.net.NetworkCapabilities.NET_CAPABILITY_RCS;
+import static android.net.NetworkCapabilities.NET_CAPABILITY_SUPL;
+import static android.net.NetworkCapabilities.NET_CAPABILITY_VEHICLE_INTERNAL;
+import static android.net.NetworkCapabilities.NET_CAPABILITY_WIFI_P2P;
+import static android.net.NetworkCapabilities.NET_CAPABILITY_XCAP;
 import static android.net.NetworkCapabilities.TRANSPORT_BLUETOOTH;
 import static android.net.NetworkCapabilities.TRANSPORT_CELLULAR;
 import static android.net.NetworkCapabilities.TRANSPORT_ETHERNET;
@@ -24,7 +41,9 @@ import static android.net.NetworkCapabilities.TRANSPORT_WIFI;
 import static android.net.NetworkCapabilities.TRANSPORT_WIFI_AWARE;
 
 import android.annotation.NonNull;
+import android.net.NetworkCapabilities;
 
+import com.android.internal.annotations.VisibleForTesting;
 
 /**
  * Utilities to examine {@link android.net.NetworkCapabilities}.
@@ -55,6 +74,44 @@ public final class NetworkCapabilitiesUtils {
     };
 
     /**
+     * Capabilities that suggest that a network is restricted.
+     * See {@code NetworkCapabilities#maybeMarkCapabilitiesRestricted},
+      * and {@code FORCE_RESTRICTED_CAPABILITIES}.
+     */
+    @VisibleForTesting
+    static final long RESTRICTED_CAPABILITIES =
+            (1 << NET_CAPABILITY_CBS)
+            | (1 << NET_CAPABILITY_DUN)
+            | (1 << NET_CAPABILITY_EIMS)
+            | (1 << NET_CAPABILITY_FOTA)
+            | (1 << NET_CAPABILITY_IA)
+            | (1 << NET_CAPABILITY_IMS)
+            | (1 << NET_CAPABILITY_MCX)
+            | (1 << NET_CAPABILITY_RCS)
+            | (1 << NET_CAPABILITY_VEHICLE_INTERNAL)
+            | (1 << NET_CAPABILITY_XCAP)
+            | (1 << NET_CAPABILITY_ENTERPRISE);
+
+    /**
+     * Capabilities that force network to be restricted.
+     * See {@code NetworkCapabilities#maybeMarkCapabilitiesRestricted}.
+     */
+    private static final long FORCE_RESTRICTED_CAPABILITIES =
+            (1 << NET_CAPABILITY_OEM_PAID)
+            | (1 << NET_CAPABILITY_OEM_PRIVATE);
+
+    /**
+     * Capabilities that suggest that a network is unrestricted.
+     * See {@code NetworkCapabilities#maybeMarkCapabilitiesRestricted}.
+     */
+    @VisibleForTesting
+    static final long UNRESTRICTED_CAPABILITIES =
+            (1 << NET_CAPABILITY_INTERNET)
+            | (1 << NET_CAPABILITY_MMS)
+            | (1 << NET_CAPABILITY_SUPL)
+            | (1 << NET_CAPABILITY_WIFI_P2P);
+
+    /**
      * Get a transport that can be used to classify a network when displaying its info to users.
      *
      * While networks can have multiple transports, users generally think of them as "wifi",
@@ -77,6 +134,33 @@ public final class NetworkCapabilitiesUtils {
             throw new IllegalArgumentException("No transport in the provided array");
         }
         return transports[0];
+    }
+
+
+    /**
+     * Infers that all the capabilities it provides are typically provided by restricted networks
+     * or not.
+     *
+     * @param nc the {@link NetworkCapabilities} to infer the restricted capabilities.
+     *
+     * @return {@code true} if the network should be restricted.
+     */
+    public static boolean inferRestrictedCapability(NetworkCapabilities nc) {
+        final long capabilities = packBits(nc.getCapabilities());
+        // Check if we have any capability that forces the network to be restricted.
+        final boolean forceRestrictedCapability =
+                (capabilities & FORCE_RESTRICTED_CAPABILITIES) != 0;
+
+        // Verify there aren't any unrestricted capabilities.  If there are we say
+        // the whole thing is unrestricted unless it is forced to be restricted.
+        final boolean hasUnrestrictedCapabilities =
+                (capabilities & UNRESTRICTED_CAPABILITIES) != 0;
+
+        // Must have at least some restricted capabilities.
+        final boolean hasRestrictedCapabilities = (capabilities & RESTRICTED_CAPABILITIES) != 0;
+
+        return forceRestrictedCapability
+                || (hasRestrictedCapabilities && !hasUnrestrictedCapabilities);
     }
 
     /**
