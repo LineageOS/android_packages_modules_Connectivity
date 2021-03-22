@@ -6237,11 +6237,11 @@ public class ConnectivityService extends IConnectivityManager.Stub
     }
 
     @Override
-    public void offerNetwork(@NonNull final Messenger providerMessenger,
+    public void offerNetwork(final int providerId,
             @NonNull final NetworkScore score, @NonNull final NetworkCapabilities caps,
             @NonNull final INetworkOfferCallback callback) {
         final NetworkOffer offer = new NetworkOffer(
-                FullScore.makeProspectiveScore(score, caps), caps, callback, providerMessenger);
+                FullScore.makeProspectiveScore(score, caps), caps, callback, providerId);
         mHandler.sendMessage(mHandler.obtainMessage(EVENT_REGISTER_NETWORK_OFFER, offer));
     }
 
@@ -6259,7 +6259,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
         // Unregister all the offers from this provider
         final ArrayList<NetworkOfferInfo> toRemove = new ArrayList<>();
         for (final NetworkOfferInfo noi : mNetworkOffers) {
-            if (noi.offer.provider == messenger) {
+            if (noi.offer.providerId == npi.providerId) {
                 // Can't call handleUnregisterNetworkOffer here because iteration is in progress
                 toRemove.add(noi);
             }
@@ -6651,13 +6651,6 @@ public class ConnectivityService extends IConnectivityManager.Stub
      */
     private void handleRegisterNetworkOffer(@NonNull final NetworkOffer newOffer) {
         ensureRunningOnConnectivityServiceThread();
-        if (null == mNetworkProviderInfos.get(newOffer.provider)) {
-            // This may actually happen if a provider updates its score or registers and then
-            // immediately unregisters. The offer would still be in the handler queue, but the
-            // provider would have been removed.
-            if (DBG) log("Received offer from an unregistered provider");
-            return;
-        }
 
         final NetworkOfferInfo existingOffer = findNetworkOfferInfoByCallback(newOffer.callback);
         if (null != existingOffer) {
@@ -6666,7 +6659,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
         }
         final NetworkOfferInfo noi = new NetworkOfferInfo(newOffer);
         try {
-            noi.offer.provider.getBinder().linkToDeath(noi, 0 /* flags */);
+            noi.offer.callback.asBinder().linkToDeath(noi, 0 /* flags */);
         } catch (RemoteException e) {
             noi.binderDied();
             return;
@@ -6678,7 +6671,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
     private void handleUnregisterNetworkOffer(@NonNull final NetworkOfferInfo noi) {
         ensureRunningOnConnectivityServiceThread();
         mNetworkOffers.remove(noi);
-        noi.offer.provider.getBinder().unlinkToDeath(noi, 0 /* flags */);
+        noi.offer.callback.asBinder().unlinkToDeath(noi, 0 /* flags */);
     }
 
     @Nullable private NetworkOfferInfo findNetworkOfferInfoByCallback(
