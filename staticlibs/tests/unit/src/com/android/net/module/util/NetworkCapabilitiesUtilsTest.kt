@@ -16,6 +16,12 @@
 
 package com.android.net.module.util
 
+import android.net.NetworkCapabilities
+import android.net.NetworkCapabilities.NET_CAPABILITY_CBS
+import android.net.NetworkCapabilities.NET_CAPABILITY_EIMS
+import android.net.NetworkCapabilities.NET_CAPABILITY_INTERNET
+import android.net.NetworkCapabilities.NET_CAPABILITY_INTERNET
+import android.net.NetworkCapabilities.NET_CAPABILITY_OEM_PAID
 import android.net.NetworkCapabilities.TRANSPORT_BLUETOOTH
 import android.net.NetworkCapabilities.TRANSPORT_CELLULAR
 import android.net.NetworkCapabilities.TRANSPORT_ETHERNET
@@ -25,6 +31,8 @@ import android.net.NetworkCapabilities.TRANSPORT_WIFI
 import android.net.NetworkCapabilities.TRANSPORT_WIFI_AWARE
 import androidx.test.filters.SmallTest
 import androidx.test.runner.AndroidJUnit4
+import com.android.net.module.util.NetworkCapabilitiesUtils.RESTRICTED_CAPABILITIES
+import com.android.net.module.util.NetworkCapabilitiesUtils.UNRESTRICTED_CAPABILITIES
 import com.android.net.module.util.NetworkCapabilitiesUtils.getDisplayTransport
 import com.android.net.module.util.NetworkCapabilitiesUtils.packBits
 import com.android.net.module.util.NetworkCapabilitiesUtils.unpackBits
@@ -33,6 +41,7 @@ import org.junit.runner.RunWith
 import java.lang.IllegalArgumentException
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 @RunWith(AndroidJUnit4::class)
@@ -77,5 +86,42 @@ class NetworkCapabilitiesUtilsTest {
     fun runBitPackingTestCase(packedBits: Long, bits: IntArray) {
         assertEquals(packedBits, packBits(bits))
         assertTrue(bits contentEquals unpackBits(packedBits))
+    }
+
+    @Test
+    fun testInferRestrictedCapability() {
+        val nc = NetworkCapabilities()
+        // Default capabilities don't have restricted capability.
+        assertFalse(NetworkCapabilitiesUtils.inferRestrictedCapability(nc))
+        // If there is a force restricted capability, then the network capabilities is restricted.
+        nc.addCapability(NET_CAPABILITY_OEM_PAID)
+        nc.addCapability(NET_CAPABILITY_INTERNET)
+        assertTrue(NetworkCapabilitiesUtils.inferRestrictedCapability(nc))
+        // Except for the force restricted capability, if there is any unrestricted capability in
+        // capabilities, then the network capabilities is not restricted.
+        nc.removeCapability(NET_CAPABILITY_OEM_PAID)
+        nc.addCapability(NET_CAPABILITY_CBS)
+        assertFalse(NetworkCapabilitiesUtils.inferRestrictedCapability(nc))
+        // Except for the force restricted capability, the network capabilities will only be treated
+        // as restricted when there is no any unrestricted capability.
+        nc.removeCapability(NET_CAPABILITY_INTERNET)
+        assertTrue(NetworkCapabilitiesUtils.inferRestrictedCapability(nc))
+    }
+
+    @Test
+    fun testRestrictedUnrestrictedCapabilities() {
+        // verify EIMS is restricted
+        assertEquals((1 shl NET_CAPABILITY_EIMS).toLong() and RESTRICTED_CAPABILITIES,
+                (1 shl NET_CAPABILITY_EIMS).toLong())
+
+        // verify CBS is also restricted
+        assertEquals((1 shl NET_CAPABILITY_CBS).toLong() and RESTRICTED_CAPABILITIES,
+                (1 shl NET_CAPABILITY_CBS).toLong())
+
+        // verify default is not restricted
+        assertEquals((1 shl NET_CAPABILITY_INTERNET).toLong() and RESTRICTED_CAPABILITIES, 0)
+
+        // just to see
+        assertEquals(RESTRICTED_CAPABILITIES and UNRESTRICTED_CAPABILITIES, 0)
     }
 }
