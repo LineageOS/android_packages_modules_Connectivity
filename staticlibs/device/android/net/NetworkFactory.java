@@ -244,12 +244,6 @@ public class NetworkFactory extends Handler {
         evalRequests();
     }
 
-    /** @deprecated None of the implementors use the score, remove this method */
-    @Deprecated
-    public boolean acceptRequest(NetworkRequest request, int score) {
-        return acceptRequest(request);
-    }
-
     /**
      * Overridable function to provide complex filtering.
      * Called for every request every time a new NetworkRequest is seen
@@ -284,7 +278,7 @@ public class NetworkFactory extends Handler {
         }
         if (shouldNeedNetworkFor(n)) {
             if (VDBG) log("  needNetworkFor");
-            needNetworkFor(n.request, n.score);
+            needNetworkFor(n.request);
             n.requested = true;
         } else if (shouldReleaseNetworkFor(n)) {
             if (VDBG) log("  releaseNetworkFor");
@@ -307,7 +301,7 @@ public class NetworkFactory extends Handler {
             && n.request.canBeSatisfiedBy(mCapabilityFilter)
             // Finally if the concrete implementation of the factory rejects the request, then
             // don't track it.
-            && acceptRequest(n.request, n.score);
+            && acceptRequest(n.request);
     }
 
     private boolean shouldReleaseNetworkFor(NetworkRequestInfo n) {
@@ -321,7 +315,7 @@ public class NetworkFactory extends Handler {
             // - The concrete implementation of the factory rejects the request
             && ((n.score > mScore && n.providerId != mProvider.getProviderId())
                     || !n.request.canBeSatisfiedBy(mCapabilityFilter)
-                    || !acceptRequest(n.request, n.score));
+                    || !acceptRequest(n.request));
     }
 
     private void evalRequests() {
@@ -362,12 +356,6 @@ public class NetworkFactory extends Handler {
     // override to do simple mode (request independent)
     protected void startNetwork() { }
     protected void stopNetwork() { }
-
-    /** @deprecated none of the implementors use the score : migrate them */
-    @Deprecated
-    protected void needNetworkFor(NetworkRequest networkRequest, int score) {
-        needNetworkFor(networkRequest);
-    }
 
     // override to do fancier stuff
     protected void needNetworkFor(NetworkRequest networkRequest) {
