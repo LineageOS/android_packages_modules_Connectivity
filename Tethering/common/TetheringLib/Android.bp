@@ -25,8 +25,8 @@ java_sdk_library {
     ],
 
     srcs: [":framework-tethering-srcs"],
-    libs: ["framework-connectivity"],
-    stub_only_libs: ["framework-connectivity"],
+    libs: ["framework-connectivity.stubs.module_lib"],
+    stub_only_libs: ["framework-connectivity.stubs.module_lib"],
     aidl: {
         include_dirs: [
             "packages/modules/Connectivity/framework/aidl-export",
