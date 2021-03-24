@@ -79,7 +79,6 @@ java_library {
         "service-connectivity-protos",
     ],
     apex_available: [
-        "//apex_available:platform",
         "com.android.tethering",
     ],
 }
@@ -96,7 +95,6 @@ java_library {
     ],
     libs: ["libprotobuf-java-nano"],
     apex_available: [
-        "//apex_available:platform",
         "com.android.tethering",
     ],
 }
@@ -111,7 +109,6 @@ java_library {
     ],
     jarjar_rules: "jarjar-rules.txt",
     apex_available: [
-        "//apex_available:platform",
         "com.android.tethering",
     ],
 }
