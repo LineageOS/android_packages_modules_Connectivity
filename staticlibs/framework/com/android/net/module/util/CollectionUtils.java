@@ -27,6 +27,7 @@ import java.util.function.Predicate;
 
 /**
  * Utilities for {@link Collection} and arrays.
+ * @hide
  */
 public final class CollectionUtils {
     private CollectionUtils() {}
