@@ -21,6 +21,7 @@ import android.annotation.Nullable;
 
 /**
  * Utilities to examine {@link android.net.NetworkIdentity}.
+ * @hide
  */
 public class NetworkIdentityUtils {
     /**
