@@ -25,6 +25,7 @@ import android.util.Log
 import com.android.net.module.util.ArrayTrackRecord
 import com.android.testutils.RecorderCallback.CallbackEntry.Available
 import com.android.testutils.RecorderCallback.CallbackEntry.BlockedStatus
+import com.android.testutils.RecorderCallback.CallbackEntry.BlockedStatusInt
 import com.android.testutils.RecorderCallback.CallbackEntry.CapabilitiesChanged
 import com.android.testutils.RecorderCallback.CallbackEntry.LinkPropertiesChanged
 import com.android.testutils.RecorderCallback.CallbackEntry.Losing
@@ -82,7 +83,10 @@ open class RecorderCallback private constructor(
             override val network: Network,
             val blocked: Boolean
         ) : CallbackEntry()
-
+        data class BlockedStatusInt(
+            override val network: Network,
+            val blocked: Int
+        ) : CallbackEntry()
         // Convenience constants for expecting a type
         companion object {
             @JvmField
@@ -103,6 +107,8 @@ open class RecorderCallback private constructor(
             val UNAVAILABLE = Unavailable::class
             @JvmField
             val BLOCKED_STATUS = BlockedStatus::class
+            @JvmField
+            val BLOCKED_STATUS_INT = BlockedStatusInt::class
         }
     }
 
@@ -131,6 +137,9 @@ open class RecorderCallback private constructor(
         history.add(BlockedStatus(network, blocked))
     }
 
+    // Cannot do:
+    // fun onBlockedStatusChanged(network: Network, blocked: Int) {
+    // because on S, that needs to be "override fun", and on R, that cannot be "override fun".
     override fun onNetworkSuspended(network: Network) {
         Log.d(TAG, "onNetworkSuspended $network $network")
         history.add(Suspended(network))
@@ -272,13 +281,33 @@ open class TestableNetworkCallback private constructor(
         blocked: Boolean = false,
         tmt: Long = defaultTimeoutMs
     ) {
+        expectAvailableCallbacksCommon(net, suspended, validated, tmt)
+        expectBlockedStatusCallback(blocked, net, tmt)
+    }
+
+    fun expectAvailableCallbacks(
+        net: Network,
+        suspended: Boolean,
+        validated: Boolean,
+        blockedStatus: Int,
+        tmt: Long
+    ) {
+        expectAvailableCallbacksCommon(net, suspended, validated, tmt)
+        expectBlockedStatusCallback(blockedStatus, net)
+    }
+
+    private fun expectAvailableCallbacksCommon(
+        net: Network,
+        suspended: Boolean,
+        validated: Boolean,
+        tmt: Long
+    ) {
         expectCallback<Available>(net, tmt)
         if (suspended) {
             expectCallback<Suspended>(net, tmt)
         }
         expectCapabilitiesThat(net, tmt) { validated == it.hasCapability(NET_CAPABILITY_VALIDATED) }
         expectCallback<LinkPropertiesChanged>(net, tmt)
-        expectBlockedStatusCallback(blocked, net)
     }
 
     // Backward compatibility for existing Java code. Use named arguments instead and remove all
@@ -291,6 +320,12 @@ open class TestableNetworkCallback private constructor(
 
     fun expectBlockedStatusCallback(blocked: Boolean, net: Network, tmt: Long = defaultTimeoutMs) {
         expectCallback<BlockedStatus>(net, tmt).also {
+            assertEquals(it.blocked, blocked, "Unexpected blocked status ${it.blocked}")
+        }
+    }
+
+    fun expectBlockedStatusCallback(blocked: Int, net: Network, tmt: Long = defaultTimeoutMs) {
+        expectCallback<BlockedStatusInt>(net, tmt).also {
             assertEquals(it.blocked, blocked, "Unexpected blocked status ${it.blocked}")
         }
     }
@@ -311,6 +346,16 @@ open class TestableNetworkCallback private constructor(
     // when a network connects and satisfies a callback, and then immediately validates.
     fun expectAvailableThenValidatedCallbacks(net: Network, tmt: Long = defaultTimeoutMs) {
         expectAvailableCallbacks(net, validated = false, tmt = tmt)
+        expectCapabilitiesThat(net, tmt) { it.hasCapability(NET_CAPABILITY_VALIDATED) }
+    }
+
+    fun expectAvailableThenValidatedCallbacks(
+        net: Network,
+        blockedStatus: Int,
+        tmt: Long = defaultTimeoutMs
+    ) {
+        expectAvailableCallbacks(net, validated = false, suspended = false,
+                blockedStatus = blockedStatus, tmt = tmt)
         expectCapabilitiesThat(net, tmt) { it.hasCapability(NET_CAPABILITY_VALIDATED) }
     }
 
