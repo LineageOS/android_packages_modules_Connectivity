@@ -17,7 +17,6 @@
 package com.android.testutils
 
 import android.net.NetworkStats
-import android.net.netstats.provider.INetworkStatsProviderCallback
 import com.android.net.module.util.ArrayTrackRecord
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -25,7 +24,7 @@ import kotlin.test.fail
 
 private const val DEFAULT_TIMEOUT_MS = 3000L
 
-open class TestableNetworkStatsProviderCbBinder : INetworkStatsProviderCallback.Stub() {
+open class TestableNetworkStatsProviderCbBinder : NetworkStatsProviderCbStubCompat() {
     sealed class CallbackType {
         data class NotifyStatsUpdated(
             val token: Int,
