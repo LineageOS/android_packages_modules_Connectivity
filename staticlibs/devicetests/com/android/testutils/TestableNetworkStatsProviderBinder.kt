@@ -16,14 +16,13 @@
 
 package com.android.testutils
 
-import android.net.netstats.provider.INetworkStatsProvider
 import com.android.net.module.util.ArrayTrackRecord
 import kotlin.test.assertEquals
 import kotlin.test.fail
 
 private const val DEFAULT_TIMEOUT_MS = 200L
 
-open class TestableNetworkStatsProviderBinder : INetworkStatsProvider.Stub() {
+open class TestableNetworkStatsProviderBinder : NetworkStatsProviderStubCompat() {
     sealed class CallbackType {
         data class OnRequestStatsUpdate(val token: Int) : CallbackType()
         data class OnSetLimit(val iface: String?, val quotaBytes: Long) : CallbackType()
