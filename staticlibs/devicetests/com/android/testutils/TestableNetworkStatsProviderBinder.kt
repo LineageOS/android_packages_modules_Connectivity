@@ -25,8 +25,12 @@ private const val DEFAULT_TIMEOUT_MS = 200L
 open class TestableNetworkStatsProviderBinder : NetworkStatsProviderStubCompat() {
     sealed class CallbackType {
         data class OnRequestStatsUpdate(val token: Int) : CallbackType()
-        data class OnSetLimit(val iface: String?, val quotaBytes: Long) : CallbackType()
         data class OnSetAlert(val quotaBytes: Long) : CallbackType()
+        data class OnSetWarningAndLimit(
+            val iface: String,
+            val warningBytes: Long,
+            val limitBytes: Long
+        ) : CallbackType()
     }
 
     private val history = ArrayTrackRecord<CallbackType>().ReadHead()
@@ -35,20 +39,21 @@ open class TestableNetworkStatsProviderBinder : NetworkStatsProviderStubCompat()
         history.add(CallbackType.OnRequestStatsUpdate(token))
     }
 
-    override fun onSetLimit(iface: String?, quotaBytes: Long) {
-        history.add(CallbackType.OnSetLimit(iface, quotaBytes))
-    }
-
     override fun onSetAlert(quotaBytes: Long) {
         history.add(CallbackType.OnSetAlert(quotaBytes))
+    }
+
+    override fun onSetWarningAndLimit(iface: String, warningBytes: Long, limitBytes: Long) {
+        history.add(CallbackType.OnSetWarningAndLimit(iface, warningBytes, limitBytes))
     }
 
     fun expectOnRequestStatsUpdate(token: Int) {
         assertEquals(CallbackType.OnRequestStatsUpdate(token), history.poll(DEFAULT_TIMEOUT_MS))
     }
 
-    fun expectOnSetLimit(iface: String?, quotaBytes: Long) {
-        assertEquals(CallbackType.OnSetLimit(iface, quotaBytes), history.poll(DEFAULT_TIMEOUT_MS))
+    fun expectOnSetWarningAndLimit(iface: String, warningBytes: Long, limitBytes: Long) {
+        assertEquals(CallbackType.OnSetWarningAndLimit(iface, warningBytes, limitBytes),
+                history.poll(DEFAULT_TIMEOUT_MS))
     }
 
     fun expectOnSetAlert(quotaBytes: Long) {
