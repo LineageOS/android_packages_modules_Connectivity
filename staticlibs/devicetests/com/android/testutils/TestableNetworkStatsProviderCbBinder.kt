@@ -31,7 +31,7 @@ open class TestableNetworkStatsProviderCbBinder : NetworkStatsProviderCbStubComp
             val ifaceStats: NetworkStats,
             val uidStats: NetworkStats
         ) : CallbackType()
-        object NotifyLimitReached : CallbackType()
+        object NotifyWarningOrLimitReached : CallbackType()
         object NotifyAlertReached : CallbackType()
         object Unregister : CallbackType()
     }
@@ -42,8 +42,8 @@ open class TestableNetworkStatsProviderCbBinder : NetworkStatsProviderCbStubComp
         history.add(CallbackType.NotifyStatsUpdated(token, ifaceStats, uidStats))
     }
 
-    override fun notifyLimitReached() {
-        history.add(CallbackType.NotifyLimitReached)
+    override fun notifyWarningOrLimitReached() {
+        history.add(CallbackType.NotifyWarningOrLimitReached)
     }
 
     override fun notifyAlertReached() {
@@ -69,8 +69,8 @@ open class TestableNetworkStatsProviderCbBinder : NetworkStatsProviderCbStubComp
         assertNetworkStatsEquals(uidStats, event.uidStats)
     }
 
-    fun expectNotifyLimitReached() =
-            assertEquals(CallbackType.NotifyLimitReached, history.poll(DEFAULT_TIMEOUT_MS))
+    fun expectNotifyWarningOrLimitReached() =
+            assertEquals(CallbackType.NotifyWarningOrLimitReached, history.poll(DEFAULT_TIMEOUT_MS))
 
     fun expectNotifyAlertReached() =
             assertEquals(CallbackType.NotifyAlertReached, history.poll(DEFAULT_TIMEOUT_MS))
