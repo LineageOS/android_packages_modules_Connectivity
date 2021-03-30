@@ -89,7 +89,7 @@ public final class NetworkCapabilitiesUtils {
     public static final int NET_CAPABILITY_NOT_VCN_MANAGED = 28;
 
     /**
-     * @See android.net.NetworkCapabilities.NET_CAPABILITY_NOT_VCN_MANAGED
+     * @See android.net.NetworkCapabilities.NET_CAPABILITY_ENTERPRISE
      * TODO: Use API constant when all downstream branches are S-based
      */
     public static final int NET_CAPABILITY_ENTERPRISE = 29;
@@ -181,22 +181,30 @@ public final class NetworkCapabilitiesUtils {
      *
      * @return {@code true} if the network should be restricted.
      */
+    // TODO: Use packBits(nc.getCapabilities()) to check more easily using bit masks.
     public static boolean inferRestrictedCapability(NetworkCapabilities nc) {
-        final long capabilities = packBits(nc.getCapabilities());
         // Check if we have any capability that forces the network to be restricted.
-        final boolean forceRestrictedCapability =
-                (capabilities & FORCE_RESTRICTED_CAPABILITIES) != 0;
+        for (int capability : unpackBits(FORCE_RESTRICTED_CAPABILITIES)) {
+            if (nc.hasCapability(capability)) {
+                return true;
+            }
+        }
 
         // Verify there aren't any unrestricted capabilities.  If there are we say
         // the whole thing is unrestricted unless it is forced to be restricted.
-        final boolean hasUnrestrictedCapabilities =
-                (capabilities & UNRESTRICTED_CAPABILITIES) != 0;
+        for (int capability : unpackBits(UNRESTRICTED_CAPABILITIES)) {
+            if (nc.hasCapability(capability)) {
+                return false;
+            }
+        }
 
         // Must have at least some restricted capabilities.
-        final boolean hasRestrictedCapabilities = (capabilities & RESTRICTED_CAPABILITIES) != 0;
-
-        return forceRestrictedCapability
-                || (hasRestrictedCapabilities && !hasUnrestrictedCapabilities);
+        for (int capability : unpackBits(RESTRICTED_CAPABILITIES)) {
+            if (nc.hasCapability(capability)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**
