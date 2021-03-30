@@ -18,7 +18,10 @@ package {
 
 java_defaults {
     name: "CtsNetTestCasesDefaults",
-    defaults: ["cts_defaults"],
+    defaults: [
+        "cts_defaults",
+        "framework-connectivity-test-defaults",
+    ],
 
     // Include both the 32 and 64 bit versions
     compile_multilib: "both",
