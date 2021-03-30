@@ -169,6 +169,7 @@ public class EthernetNetworkFactory extends NetworkFactory {
     private void updateCapabilityFilter() {
         NetworkCapabilities capabilitiesFilter = new NetworkCapabilities.Builder()
                 .clearAll()
+                .addTransportType(NetworkCapabilities.TRANSPORT_ETHERNET)
                 .build();
 
         for (NetworkInterfaceState iface:  mTrackingInterfaces.values()) {
