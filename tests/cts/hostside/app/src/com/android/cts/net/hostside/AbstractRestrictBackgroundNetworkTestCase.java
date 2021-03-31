@@ -121,7 +121,6 @@ public abstract class AbstractRestrictBackgroundNetworkTestCase {
     static final int NETWORK_TIMEOUT_MS = 15 * SECOND_IN_MS;
 
     private static int PROCESS_STATE_FOREGROUND_SERVICE;
-    private static int PROCESS_STATE_IMPORTANT_FOREGROUND;
 
     private static final String KEY_NETWORK_STATE_OBSERVER = TEST_PKG + ".observer";
     private static final String KEY_SKIP_VALIDATION_CHECKS = TEST_PKG + ".skip_validation_checks";
@@ -162,8 +161,6 @@ public abstract class AbstractRestrictBackgroundNetworkTestCase {
         // TODO: Annotate these constants with @TestApi instead of obtaining them using reflection
         PROCESS_STATE_FOREGROUND_SERVICE = (Integer) ActivityManager.class
                 .getDeclaredField("PROCESS_STATE_FOREGROUND_SERVICE").get(null);
-        PROCESS_STATE_IMPORTANT_FOREGROUND = (Integer) ActivityManager.class
-                .getDeclaredField("PROCESS_STATE_IMPORTANT_FOREGROUND").get(null);
         mInstrumentation = getInstrumentation();
         mContext = getContext();
         mCm = getConnectivityManager();
@@ -358,7 +355,7 @@ public abstract class AbstractRestrictBackgroundNetworkTestCase {
      * Returns whether an app state should be considered "background" for restriction purposes.
      */
     protected boolean isBackground(int state) {
-        return state > PROCESS_STATE_IMPORTANT_FOREGROUND;
+        return state > PROCESS_STATE_FOREGROUND_SERVICE;
     }
 
     /**
