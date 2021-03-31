@@ -59,6 +59,7 @@ java_library {
         "//packages/modules/NetworkStack:__subpackages__",
         "//packages/modules/CaptivePortalLogin",
         "//frameworks/libs/net/common/tests:__subpackages__",
+        "//frameworks/libs/net/common/testutils:__subpackages__",
   ],
   static_libs: [
       "net-utils-framework-common",
@@ -66,25 +67,6 @@ java_library {
   libs: [
       "androidx.annotation_annotation",
   ],
-}
-
-java_library {
-  // Consider using net-tests-utils instead if writing device code.
-  // That library has a lot more useful tools into it for users that
-  // work on Android and includes this lib.
-  name: "net-tests-utils-host-device-common",
-  srcs: [
-      "hostdevice/**/*.java",
-      "hostdevice/**/*.kt",
-  ],
-  host_supported: true,
-  visibility: [
-      "//frameworks/libs/net/common/tests:__subpackages__",
-      "//frameworks/libs/net/client-libs/tests:__subpackages__",
-  ],
-  static_libs: [
-      "kotlin-test"
-  ]
 }
 
 java_defaults {
@@ -95,25 +77,6 @@ java_defaults {
     jni_libs: [
         "libdexmakerjvmtiagent",
         "libstaticjvmtiagent",
-    ],
-}
-
-java_library {
-    name: "net-tests-utils",
-    srcs: [
-        "devicetests/**/*.java",
-        "devicetests/**/*.kt",
-    ],
-    defaults: ["lib_mockito_extended"],
-    libs: [
-        "androidx.annotation_annotation",
-    ],
-    static_libs: [
-        "androidx.test.ext.junit",
-        "kotlin-reflect",
-        "libnanohttpd",
-        "net-tests-utils-host-device-common",
-        "net-utils-device-common",
     ],
 }
 
