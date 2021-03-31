@@ -20,6 +20,7 @@ import android.annotation.NonNull;
 import android.annotation.Nullable;
 import android.util.SparseArray;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Objects;
 import java.util.function.Predicate;
@@ -147,5 +148,22 @@ public final class CollectionUtils {
             if (Objects.equals(array[i], value)) return i;
         }
         return -1;
+    }
+
+    /**
+     * Returns a new collection of elements that match the passed predicate.
+     * @param source the elements to filter.
+     * @param test the predicate to test for.
+     * @return a new collection containing only the source elements that satisfy the predicate.
+     */
+    @NonNull private static <T> ArrayList<T> filter(@NonNull final Collection<T> source,
+            @NonNull final Predicate<T> test) {
+        final ArrayList<T> matches = new ArrayList<>();
+        for (final T e : source) {
+            if (test.test(e)) {
+                matches.add(e);
+            }
+        }
+        return matches;
     }
 }
