@@ -16,6 +16,7 @@
 
 package com.android.net.module.util;
 
+import static android.net.NetworkCapabilities.NET_CAPABILITY_BIP;
 import static android.net.NetworkCapabilities.NET_CAPABILITY_CBS;
 import static android.net.NetworkCapabilities.NET_CAPABILITY_DUN;
 import static android.net.NetworkCapabilities.NET_CAPABILITY_EIMS;
@@ -31,6 +32,7 @@ import static android.net.NetworkCapabilities.NET_CAPABILITY_OEM_PRIVATE;
 import static android.net.NetworkCapabilities.NET_CAPABILITY_RCS;
 import static android.net.NetworkCapabilities.NET_CAPABILITY_SUPL;
 import static android.net.NetworkCapabilities.NET_CAPABILITY_VEHICLE_INTERNAL;
+import static android.net.NetworkCapabilities.NET_CAPABILITY_VSIM;
 import static android.net.NetworkCapabilities.NET_CAPABILITY_WIFI_P2P;
 import static android.net.NetworkCapabilities.NET_CAPABILITY_XCAP;
 import static android.net.NetworkCapabilities.TRANSPORT_BLUETOOTH;
@@ -80,17 +82,19 @@ public final class NetworkCapabilitiesUtils {
      */
     @VisibleForTesting
     static final long RESTRICTED_CAPABILITIES =
-            (1 << NET_CAPABILITY_CBS)
+            (1 << NET_CAPABILITY_BIP)
+            | (1 << NET_CAPABILITY_CBS)
             | (1 << NET_CAPABILITY_DUN)
             | (1 << NET_CAPABILITY_EIMS)
+            | (1 << NET_CAPABILITY_ENTERPRISE)
             | (1 << NET_CAPABILITY_FOTA)
             | (1 << NET_CAPABILITY_IA)
             | (1 << NET_CAPABILITY_IMS)
             | (1 << NET_CAPABILITY_MCX)
             | (1 << NET_CAPABILITY_RCS)
             | (1 << NET_CAPABILITY_VEHICLE_INTERNAL)
-            | (1 << NET_CAPABILITY_XCAP)
-            | (1 << NET_CAPABILITY_ENTERPRISE);
+            | (1 << NET_CAPABILITY_VSIM)
+            | (1 << NET_CAPABILITY_XCAP);
 
     /**
      * Capabilities that force network to be restricted.
