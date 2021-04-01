@@ -72,37 +72,37 @@ public final class NetworkCapabilitiesUtils {
     };
 
     /**
-     * @See android.net.NetworkCapabilities.NET_CAPABILITY_OEM_PRIVATE
+     * See android.net.NetworkCapabilities.NET_CAPABILITY_OEM_PRIVATE
      * TODO: Use API constant when all downstream branches are S-based
      */
     public static final int NET_CAPABILITY_OEM_PRIVATE = 26;
 
     /**
-     * @See android.net.NetworkCapabilities.NET_CAPABILITY_VEHICLE_INTERNAL
+     * See android.net.NetworkCapabilities.NET_CAPABILITY_VEHICLE_INTERNAL
      * TODO: Use API constant when all downstream branches are S-based
      */
     public static final int NET_CAPABILITY_VEHICLE_INTERNAL = 27;
 
     /**
-     * @See android.net.NetworkCapabilities.NET_CAPABILITY_NOT_VCN_MANAGED
+     * See android.net.NetworkCapabilities.NET_CAPABILITY_NOT_VCN_MANAGED
      * TODO: Use API constant when all downstream branches are S-based
      */
     public static final int NET_CAPABILITY_NOT_VCN_MANAGED = 28;
 
     /**
-     * @See android.net.NetworkCapabilities.NET_CAPABILITY_ENTERPRISE
+     * See android.net.NetworkCapabilities.NET_CAPABILITY_ENTERPRISE
      * TODO: Use API constant when all downstream branches are S-based
      */
     public static final int NET_CAPABILITY_ENTERPRISE = 29;
 
     /**
-     * @See android.net.NetworkCapabilities.NET_CAPABILITY_VSIM
+     * See android.net.NetworkCapabilities.NET_CAPABILITY_VSIM
      * TODO: Use API constant when all downstream branches are S-based
      */
     public static final int NET_CAPABILITY_VSIM = 30;
 
     /**
-     * @See android.net.NetworkCapabilities.NET_CAPABILITY_BIP
+     * See android.net.NetworkCapabilities.NET_CAPABILITY_BIP
      * TODO: Use API constant when all downstream branches are S-based
      */
     public static final int NET_CAPABILITY_BIP = 31;
