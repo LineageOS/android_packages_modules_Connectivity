@@ -16,11 +16,9 @@
 
 package com.android.net.module.util;
 
-import static android.net.NetworkCapabilities.NET_CAPABILITY_BIP;
 import static android.net.NetworkCapabilities.NET_CAPABILITY_CBS;
 import static android.net.NetworkCapabilities.NET_CAPABILITY_DUN;
 import static android.net.NetworkCapabilities.NET_CAPABILITY_EIMS;
-import static android.net.NetworkCapabilities.NET_CAPABILITY_ENTERPRISE;
 import static android.net.NetworkCapabilities.NET_CAPABILITY_FOTA;
 import static android.net.NetworkCapabilities.NET_CAPABILITY_IA;
 import static android.net.NetworkCapabilities.NET_CAPABILITY_IMS;
@@ -28,11 +26,8 @@ import static android.net.NetworkCapabilities.NET_CAPABILITY_INTERNET;
 import static android.net.NetworkCapabilities.NET_CAPABILITY_MCX;
 import static android.net.NetworkCapabilities.NET_CAPABILITY_MMS;
 import static android.net.NetworkCapabilities.NET_CAPABILITY_OEM_PAID;
-import static android.net.NetworkCapabilities.NET_CAPABILITY_OEM_PRIVATE;
 import static android.net.NetworkCapabilities.NET_CAPABILITY_RCS;
 import static android.net.NetworkCapabilities.NET_CAPABILITY_SUPL;
-import static android.net.NetworkCapabilities.NET_CAPABILITY_VEHICLE_INTERNAL;
-import static android.net.NetworkCapabilities.NET_CAPABILITY_VSIM;
 import static android.net.NetworkCapabilities.NET_CAPABILITY_WIFI_P2P;
 import static android.net.NetworkCapabilities.NET_CAPABILITY_XCAP;
 import static android.net.NetworkCapabilities.TRANSPORT_BLUETOOTH;
@@ -74,6 +69,43 @@ public final class NetworkCapabilitiesUtils {
         // one of the above transports should be counted as that transport, to keep tests as
         // realistic as possible.
     };
+
+    /**
+     * @See android.net.NetworkCapabilities.NET_CAPABILITY_OEM_PRIVATE
+     * TODO: Use API constant when all downstream branches are S-based
+     */
+    public static final int NET_CAPABILITY_OEM_PRIVATE = 26;
+
+    /**
+     * @See android.net.NetworkCapabilities.NET_CAPABILITY_VEHICLE_INTERNAL
+     * TODO: Use API constant when all downstream branches are S-based
+     */
+    public static final int NET_CAPABILITY_VEHICLE_INTERNAL = 27;
+
+    /**
+     * @See android.net.NetworkCapabilities.NET_CAPABILITY_NOT_VCN_MANAGED
+     * TODO: Use API constant when all downstream branches are S-based
+     */
+    public static final int NET_CAPABILITY_NOT_VCN_MANAGED = 28;
+
+    /**
+     * @See android.net.NetworkCapabilities.NET_CAPABILITY_NOT_VCN_MANAGED
+     * TODO: Use API constant when all downstream branches are S-based
+     */
+    public static final int NET_CAPABILITY_ENTERPRISE = 29;
+
+    /**
+     * @See android.net.NetworkCapabilities.NET_CAPABILITY_VSIM
+     * TODO: Use API constant when all downstream branches are S-based
+     */
+    public static final int NET_CAPABILITY_VSIM = 30;
+
+    /**
+     * @See android.net.NetworkCapabilities.NET_CAPABILITY_BIP
+     * TODO: Use API constant when all downstream branches are S-based
+     */
+    public static final int NET_CAPABILITY_BIP = 31;
+
 
     /**
      * Capabilities that suggest that a network is restricted.
