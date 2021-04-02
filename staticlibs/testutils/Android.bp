@@ -22,7 +22,10 @@ java_library {
         "devicetests/**/*.java",
         "devicetests/**/*.kt",
     ],
-    defaults: ["lib_mockito_extended"],
+    defaults: [
+        "framework-connectivity-test-defaults",
+        "lib_mockito_extended"
+    ],
     libs: [
         "androidx.annotation_annotation",
     ],
