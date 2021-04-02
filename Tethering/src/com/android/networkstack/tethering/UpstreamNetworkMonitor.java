@@ -60,7 +60,7 @@ import java.util.Set;
  * Calling #startObserveAllNetworks() to observe all networks. Listening all
  * networks is necessary while the expression of preferred upstreams remains
  * a list of legacy connectivity types.  In future, this can be revisited.
- * Calling #registerMobileNetworkRequest() to bring up mobile DUN/HIPRI network.
+ * Calling #setTryCell() to request bringing up mobile DUN or HIPRI.
  *
  * The methods and data members of this class are only to be accessed and
  * modified from the tethering main state machine thread. Any other
@@ -114,7 +114,14 @@ public class UpstreamNetworkMonitor {
     private NetworkCallback mListenAllCallback;
     private NetworkCallback mDefaultNetworkCallback;
     private NetworkCallback mMobileNetworkCallback;
+
+    /** Whether Tethering has requested a cellular upstream. */
+    private boolean mTryCell;
+    /** Whether the carrier requires DUN. */
     private boolean mDunRequired;
+    /** Whether automatic upstream selection is enabled. */
+    private boolean mAutoUpstream;
+
     // Whether the current default upstream is mobile or not.
     private boolean mIsDefaultCellularUpstream;
     // The current system default network (not really used yet).
@@ -190,14 +197,40 @@ public class UpstreamNetworkMonitor {
         mNetworkMap.clear();
     }
 
-    /** Setup or teardown DUN connection according to |dunRequired|. */
-    public void updateMobileRequiresDun(boolean dunRequired) {
-        final boolean valueChanged = (mDunRequired != dunRequired);
+    private void reevaluateUpstreamRequirements(boolean tryCell, boolean autoUpstream,
+            boolean dunRequired) {
+        final boolean mobileRequestRequired = tryCell && (dunRequired || !autoUpstream);
+        final boolean dunRequiredChanged = (mDunRequired != dunRequired);
+
+        mTryCell = tryCell;
         mDunRequired = dunRequired;
-        if (valueChanged && mobileNetworkRequested()) {
-            releaseMobileNetworkRequest();
+        mAutoUpstream = autoUpstream;
+
+        if (mobileRequestRequired && !mobileNetworkRequested()) {
             registerMobileNetworkRequest();
+        } else if (mobileNetworkRequested() && !mobileRequestRequired) {
+            releaseMobileNetworkRequest();
+        } else if (mobileNetworkRequested() && dunRequiredChanged) {
+            releaseMobileNetworkRequest();
+            if (mobileRequestRequired) {
+                registerMobileNetworkRequest();
+            }
         }
+    }
+
+    /**
+     * Informs UpstreamNetworkMonitor that a cellular upstream is desired.
+     *
+     * This may result in filing a NetworkRequest for DUN if it is required, or for MOBILE_HIPRI if
+     * automatic upstream selection is disabled and MOBILE_HIPRI is the preferred upstream.
+     */
+    public void setTryCell(boolean tryCell) {
+        reevaluateUpstreamRequirements(tryCell, mAutoUpstream, mDunRequired);
+    }
+
+    /** Informs UpstreamNetworkMonitor of upstream configuration parameters. */
+    public void setUpstreamConfig(boolean autoUpstream, boolean dunRequired) {
+        reevaluateUpstreamRequirements(mTryCell, autoUpstream, dunRequired);
     }
 
     /** Whether mobile network is requested. */
@@ -206,7 +239,7 @@ public class UpstreamNetworkMonitor {
     }
 
     /** Request mobile network if mobile upstream is permitted. */
-    public void registerMobileNetworkRequest() {
+    private void registerMobileNetworkRequest() {
         if (!isCellularUpstreamPermitted()) {
             mLog.i("registerMobileNetworkRequest() is not permitted");
             releaseMobileNetworkRequest();
@@ -241,14 +274,16 @@ public class UpstreamNetworkMonitor {
         // TODO: Change the timeout from 0 (no onUnavailable callback) to some
         // moderate callback timeout. This might be useful for updating some UI.
         // Additionally, we log a message to aid in any subsequent debugging.
-        mLog.i("requesting mobile upstream network: " + mobileUpstreamRequest);
+        mLog.i("requesting mobile upstream network: " + mobileUpstreamRequest
+                + " mTryCell=" + mTryCell + " mAutoUpstream=" + mAutoUpstream
+                + " mDunRequired=" + mDunRequired);
 
         cm().requestNetwork(mobileUpstreamRequest, 0, legacyType, mHandler,
                 mMobileNetworkCallback);
     }
 
     /** Release mobile network request. */
-    public void releaseMobileNetworkRequest() {
+    private void releaseMobileNetworkRequest() {
         if (mMobileNetworkCallback == null) return;
 
         cm().unregisterNetworkCallback(mMobileNetworkCallback);
