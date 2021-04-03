@@ -33,7 +33,7 @@ java_library {
     sdk_version: "core_platform",
     libs: [
         "framework-minus-apex",
-        "framework-connectivity.stubs.module_lib",
+        "framework-connectivity.impl",
         "framework-tethering.impl",
     ],
     visibility: [
