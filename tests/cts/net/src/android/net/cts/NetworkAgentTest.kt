@@ -300,6 +300,11 @@ class NetworkAgentTest {
             return foundCallback
         }
 
+        inline fun <reified T : CallbackEntry> eventuallyExpect() =
+                history.poll(DEFAULT_TIMEOUT_MS) { it is T }.also {
+                    assertNotNull(it, "Callback ${T::class} not received")
+        } as T
+
         fun assertNoCallback() {
             assertTrue(waitForIdle(DEFAULT_TIMEOUT_MS),
                     "Handler didn't became idle after ${DEFAULT_TIMEOUT_MS}ms")
@@ -376,13 +381,12 @@ class NetworkAgentTest {
         callback.expectAvailableThenValidatedCallbacks(agent.network)
         agent.expectEmptySignalStrengths()
         agent.expectNoInternetValidationStatus()
-        agent.unregister()
+
+        unregister(agent)
         callback.expectCallback<Lost>(agent.network)
-        agent.expectCallback<OnNetworkUnwanted>()
         assertFailsWith<IllegalStateException>("Must not be able to register an agent twice") {
             agent.register()
         }
-        agent.expectCallback<OnNetworkDestroyed>()
     }
 
     @Test
@@ -393,7 +397,7 @@ class NetworkAgentTest {
         agent.expectNoInternetValidationStatus()
         mCM.requestBandwidthUpdate(agent.network)
         agent.expectCallback<OnBandwidthUpdateRequested>()
-        agent.unregister()
+        unregister(agent)
     }
 
     @Test
@@ -635,8 +639,14 @@ class NetworkAgentTest {
             }
         }
 
-        agent.unregister()
+        unregister(agent)
         callback.expectCallback<Lost>(agent.network)
+    }
+
+    private fun unregister(agent: TestableNetworkAgent) {
+        agent.unregister()
+        agent.eventuallyExpect<OnNetworkUnwanted>()
+        agent.eventuallyExpect<OnNetworkDestroyed>()
     }
 
     @Test
