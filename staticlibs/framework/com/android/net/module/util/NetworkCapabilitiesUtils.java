@@ -47,6 +47,12 @@ import com.android.internal.annotations.VisibleForTesting;
  * @hide
  */
 public final class NetworkCapabilitiesUtils {
+    /**
+     * See android.net.NetworkCapabilities.TRANSPORT_USB
+     * TODO: Use API constant when all downstream branches are S-based
+     */
+    public static final int TRANSPORT_USB = 8;
+
     // Transports considered to classify networks in UI, in order of which transport should be
     // surfaced when there are multiple transports. Transports not in this list do not have
     // an ordering preference (in practice they will have a deterministic order based on the
@@ -64,7 +70,8 @@ public final class NetworkCapabilitiesUtils {
         TRANSPORT_WIFI_AWARE,
         TRANSPORT_BLUETOOTH,
         TRANSPORT_WIFI,
-        TRANSPORT_ETHERNET
+        TRANSPORT_ETHERNET,
+        TRANSPORT_USB
 
         // Notably, TRANSPORT_TEST is not in this list as any network that has TRANSPORT_TEST and
         // one of the above transports should be counted as that transport, to keep tests as
