@@ -156,7 +156,7 @@ public final class CollectionUtils {
      * @param test the predicate to test for.
      * @return a new collection containing only the source elements that satisfy the predicate.
      */
-    @NonNull private static <T> ArrayList<T> filter(@NonNull final Collection<T> source,
+    @NonNull public static <T> ArrayList<T> filter(@NonNull final Collection<T> source,
             @NonNull final Predicate<T> test) {
         final ArrayList<T> matches = new ArrayList<>();
         for (final T e : source) {
