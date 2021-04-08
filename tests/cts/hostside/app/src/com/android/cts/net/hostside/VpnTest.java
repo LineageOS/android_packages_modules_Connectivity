@@ -704,11 +704,15 @@ public class VpnTest extends InstrumentationTestCase {
 
     public void testDefault() throws Exception {
         if (!supportedHardware()) return;
-        // If adb TCP port opened, this test may running by adb over network.
-        // All of socket would be destroyed in this test. So this test don't
-        // support adb over network, see b/119382723.
-        if (SystemProperties.getInt("persist.adb.tcp.port", -1) > -1
-                || SystemProperties.getInt("service.adb.tcp.port", -1) > -1) {
+        if (!SdkLevel.isAtLeastS() && (
+                SystemProperties.getInt("persist.adb.tcp.port", -1) > -1
+                        || SystemProperties.getInt("service.adb.tcp.port", -1) > -1)) {
+            // If adb TCP port opened, this test may running by adb over network.
+            // All of socket would be destroyed in this test. So this test don't
+            // support adb over network, see b/119382723.
+            // This is fixed in S, but still affects previous Android versions,
+            // and this test must be backwards compatible.
+            // TODO: Delete this code entirely when R is no longer supported.
             Log.i(TAG, "adb is running over the network, so skip this test");
             return;
         }
@@ -808,11 +812,16 @@ public class VpnTest extends InstrumentationTestCase {
         FileDescriptor remoteFd = openSocketFdInOtherApp(TEST_HOST, 80, TIMEOUT_MS);
 
         String disallowedApps = mRemoteSocketFactoryClient.getPackageName() + "," + mPackageName;
-        // If adb TCP port opened, this test may running by adb over TCP.
-        // Add com.android.shell appllication into blacklist to exclude adb socket for VPN test,
-        // see b/119382723.
-        // Note: The test don't support running adb over network for root device
-        disallowedApps = disallowedApps + ",com.android.shell";
+        if (!SdkLevel.isAtLeastS()) {
+            // If adb TCP port opened, this test may running by adb over TCP.
+            // Add com.android.shell application into disallowedApps to exclude adb socket for VPN
+            // test, see b/119382723 (the test doesn't support adb over TCP when adb runs as root).
+            //
+            // This is fixed in S, but still affects previous Android versions,
+            // and this test must be backwards compatible.
+            // TODO: Delete this code entirely when R is no longer supported.
+            disallowedApps = disallowedApps + ",com.android.shell";
+        }
         Log.i(TAG, "Append shell app to disallowedApps: " + disallowedApps);
         startVpn(new String[] {"192.0.2.2/32", "2001:db8:1:2::ffe/128"},
                  new String[] {"192.0.2.0/24", "2001:db8::/32"},
@@ -893,11 +902,17 @@ public class VpnTest extends InstrumentationTestCase {
         if (!supportedHardware()) return;
         ProxyInfo initialProxy = mCM.getDefaultProxy();
 
-        // If adb TCP port opened, this test may running by adb over TCP.
-        // Add com.android.shell appllication into blacklist to exclude adb socket for VPN test,
-        // see b/119382723.
-        // Note: The test don't support running adb over network for root device
-        String disallowedApps = mPackageName + ",com.android.shell";
+        String disallowedApps = mPackageName;
+        if (!SdkLevel.isAtLeastS()) {
+            // If adb TCP port opened, this test may running by adb over TCP.
+            // Add com.android.shell application into disallowedApps to exclude adb socket for VPN
+            // test, see b/119382723 (the test doesn't support adb over TCP when adb runs as root).
+            //
+            // This is fixed in S, but still affects previous Android versions,
+            // and this test must be backwards compatible.
+            // TODO: Delete this code entirely when R is no longer supported.
+            disallowedApps += ",com.android.shell";
+        }
         ProxyInfo testProxyInfo = ProxyInfo.buildDirectProxy("10.0.0.1", 8888);
         startVpn(new String[] {"192.0.2.2/32", "2001:db8:1:2::ffe/128"},
                 new String[] {"0.0.0.0/0", "::/0"}, "", disallowedApps,
