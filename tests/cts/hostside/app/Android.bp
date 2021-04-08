@@ -20,9 +20,10 @@ package {
 
 android_test_helper_app {
     name: "CtsHostsideNetworkTestsApp",
-    defaults: ["cts_support_defaults"],
-    //sdk_version: "current",
-    platform_apis: true,
+    defaults: [
+        "cts_support_defaults",
+        "framework-connectivity-test-defaults",
+    ],
     static_libs: [
         "androidx.test.rules",
         "androidx.test.ext.junit",
