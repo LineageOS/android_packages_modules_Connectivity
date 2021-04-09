@@ -20,6 +20,7 @@ import static android.system.OsConstants.IPPROTO_ICMPV6;
 
 import static com.android.net.module.util.IpUtils.icmpv6Checksum;
 import static com.android.net.module.util.NetworkStackConstants.ETHER_TYPE_IPV6;
+import static com.android.net.module.util.NetworkStackConstants.ICMPV6_ECHO_REQUEST_TYPE;
 import static com.android.net.module.util.NetworkStackConstants.ICMPV6_NEIGHBOR_ADVERTISEMENT;
 import static com.android.net.module.util.NetworkStackConstants.ICMPV6_NEIGHBOR_SOLICITATION;
 import static com.android.net.module.util.NetworkStackConstants.ICMPV6_ROUTER_ADVERTISEMENT;
@@ -147,5 +148,15 @@ public class Ipv6Utils {
                 ByteBuffer.wrap(rsHeader.writeToBytes(ByteOrder.BIG_ENDIAN)), options);
         return buildIcmpv6Packet(srcMac, dstMac, srcIp, dstIp,
                 (byte) ICMPV6_ROUTER_SOLICITATION /* type */, (byte) 0 /* code */, payload);
+    }
+
+    /**
+     * Build an ICMPv6 Echo Request packet from the required specified parameters.
+     */
+    public static ByteBuffer buildEchoRequestPacket(final MacAddress srcMac,
+            final MacAddress dstMac, final Inet6Address srcIp, final Inet6Address dstIp) {
+        final ByteBuffer payload = ByteBuffer.allocate(4); // ID and Sequence number may be zero.
+        return buildIcmpv6Packet(srcMac, dstMac, srcIp, dstIp,
+                (byte) ICMPV6_ECHO_REQUEST_TYPE /* type */, (byte) 0 /* code */, payload);
     }
 }

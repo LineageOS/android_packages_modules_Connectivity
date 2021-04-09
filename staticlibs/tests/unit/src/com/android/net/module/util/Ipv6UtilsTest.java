@@ -112,6 +112,25 @@ public class Ipv6UtilsTest {
         assertPioEquals(pio, "fdcd:a17f:6502:1::/64", pioFlags, 86400, 86400);
     }
 
+    @Test
+    public void testBuildEchoRequestPacket() {
+        final ByteBuffer b = Ipv6Utils.buildEchoRequestPacket(MAC2, MAC1, LINK_LOCAL, ALL_NODES);
+
+        EthernetHeader eth = Struct.parse(EthernetHeader.class, b);
+        assertEquals(MAC2, eth.srcMac);
+        assertEquals(MAC1, eth.dstMac);
+
+        Ipv6Header ipv6 = Struct.parse(Ipv6Header.class, b);
+        assertEquals(255, ipv6.hopLimit);
+        assertEquals(OsConstants.IPPROTO_ICMPV6, ipv6.nextHeader);
+        assertEquals(LINK_LOCAL, ipv6.srcIp);
+        assertEquals(ALL_NODES, ipv6.dstIp);
+
+        Icmpv6Header icmpv6 = Struct.parse(Icmpv6Header.class, b);
+        assertEquals(NetworkStackConstants.ICMPV6_ECHO_REQUEST_TYPE, icmpv6.type);
+        assertEquals(0, icmpv6.code);
+    }
+
     private void assertPioEquals(PrefixInformationOption pio, String prefix, byte flags,
             long valid, long preferred) {
         assertEquals(NetworkStackConstants.ICMPV6_ND_OPTION_PIO, pio.type);
