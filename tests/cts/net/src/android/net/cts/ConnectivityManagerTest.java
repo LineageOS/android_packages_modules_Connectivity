@@ -1697,7 +1697,7 @@ public class ConnectivityManagerTest {
             return;
         }
 
-        final int firstSdk = Build.VERSION.FIRST_SDK_INT;
+        final int firstSdk = Build.VERSION.DEVICE_INITIAL_SDK_INT;
         if (firstSdk < Build.VERSION_CODES.Q) {
             Log.i(TAG, "testSocketKeepaliveLimitTelephony: skip test for devices launching"
                     + " before Q: " + firstSdk);
