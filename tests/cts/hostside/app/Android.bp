@@ -24,10 +24,12 @@ android_test_helper_app {
         "cts_support_defaults",
         "framework-connectivity-test-defaults",
     ],
+    platform_apis: true,
     static_libs: [
         "androidx.test.rules",
         "androidx.test.ext.junit",
         "compatibility-device-util-axt",
+        "cts-net-utils",
         "ctstestrunner-axt",
         "ub-uiautomator",
         "CtsHostsideNetworkTestsAidl",
