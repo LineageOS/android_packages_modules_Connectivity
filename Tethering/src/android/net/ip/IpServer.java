@@ -1426,7 +1426,7 @@ public class IpServer extends StateMachine {
                     break;
                 case CMD_INTERFACE_DOWN:
                     transitionTo(mUnavailableState);
-                    mLog.i("Untethered (interface down) and restarting" + mIfaceName);
+                    mLog.i("Untethered (interface down) and restarting " + mIfaceName);
                     mCallback.requestEnableTethering(mInterfaceType, true /* enabled */);
                     break;
                 default:
