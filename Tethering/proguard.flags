@@ -9,7 +9,7 @@
 }
 
 -keepclassmembers public class * extends com.android.networkstack.tethering.util.Struct {
-    public <init>(...);
+    *;
 }
 
 -keepclassmembers class android.net.ip.IpServer {
