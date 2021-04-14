@@ -95,7 +95,7 @@ public class MyService extends Service {
                 Log.d(TAG, "unregister previous network callback: " + mNetworkCallback);
                 unregisterNetworkCallback();
             }
-            Log.d(TAG, "registering network callback");
+            Log.d(TAG, "registering network callback for " + request);
 
             mNetworkCallback = new ConnectivityManager.NetworkCallback() {
                 @Override
