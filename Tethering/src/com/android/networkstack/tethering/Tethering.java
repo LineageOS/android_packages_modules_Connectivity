@@ -748,8 +748,12 @@ public class Tethering {
         }
     }
 
-    int tether(String iface) {
-        return tether(iface, IpServer.STATE_TETHERED);
+    void tether(String iface, final IIntResultListener listener) {
+        mHandler.post(() -> {
+            try {
+                listener.onResult(tether(iface, IpServer.STATE_TETHERED));
+            } catch (RemoteException e) { }
+        });
     }
 
     private int tether(String iface, int requestedState) {
@@ -780,6 +784,14 @@ public class Tethering {
                     request);
             return TETHER_ERROR_NO_ERROR;
         }
+    }
+
+    void untether(String iface, final IIntResultListener listener) {
+        mHandler.post(() -> {
+            try {
+                listener.onResult(untether(iface));
+            } catch (RemoteException e) { }
+        });
     }
 
     int untether(String iface) {
