@@ -137,7 +137,6 @@ import com.android.networkstack.apishim.ConstantsShim;
 import com.android.networkstack.apishim.common.ConnectivityManagerShim;
 import com.android.testutils.CompatUtil;
 import com.android.testutils.DevSdkIgnoreRule;
-import com.android.testutils.DevSdkIgnoreRule.IgnoreUpTo;
 import com.android.testutils.DevSdkIgnoreRuleKt;
 import com.android.testutils.RecorderCallback.CallbackEntry;
 import com.android.testutils.SkipPresubmit;
@@ -1719,8 +1718,11 @@ public class ConnectivityManagerTest {
      * {@link android.Manifest.permission.NETWORK_SETTINGS}.
      */
     @Test
-    @IgnoreUpTo(Build.VERSION_CODES.R)
     public void testRequestBackgroundNetwork() {
+        // Cannot use @IgnoreUpTo(Build.VERSION_CODES.R) because this test also requires API 31
+        // shims, and @IgnoreUpTo does not check that.
+        assumeTrue(shouldTestSApis());
+
         // Create a tun interface. Use the returned interface name as the specifier to create
         // a test network request.
         final TestNetworkManager tnm = runWithShellPermissionIdentity(() ->
@@ -1861,8 +1863,10 @@ public class ConnectivityManagerTest {
     }
 
     @Test
-    @IgnoreUpTo(Build.VERSION_CODES.R)
     public void testBlockedStatusCallback() {
+        // Cannot use @IgnoreUpTo(Build.VERSION_CODES.R) because this test also requires API 31
+        // shims, and @IgnoreUpTo does not check that.
+        assumeTrue(shouldTestSApis());
         runWithShellPermissionIdentity(() -> doTestBlockedStatusCallback(), NETWORK_SETTINGS);
     }
 
@@ -1893,8 +1897,10 @@ public class ConnectivityManagerTest {
     }
 
     @Test
-    @IgnoreUpTo(Build.VERSION_CODES.R)
     public void testLegacyLockdownEnabled() {
+        // Cannot use @IgnoreUpTo(Build.VERSION_CODES.R) because this test also requires API 31
+        // shims, and @IgnoreUpTo does not check that.
+        assumeTrue(shouldTestSApis());
         runWithShellPermissionIdentity(() -> doTestLegacyLockdownEnabled(), NETWORK_SETTINGS);
     }
 
