@@ -28,6 +28,8 @@ import static android.content.pm.PackageManager.FEATURE_WIFI;
 import static android.content.pm.PackageManager.FEATURE_WIFI_DIRECT;
 import static android.content.pm.PackageManager.GET_PERMISSIONS;
 import static android.content.pm.PackageManager.PERMISSION_GRANTED;
+import static android.net.ConnectivityManager.BLOCKED_REASON_LOCKDOWN_VPN;
+import static android.net.ConnectivityManager.BLOCKED_REASON_NONE;
 import static android.net.ConnectivityManager.TYPE_BLUETOOTH;
 import static android.net.ConnectivityManager.TYPE_ETHERNET;
 import static android.net.ConnectivityManager.TYPE_MOBILE_CBS;
@@ -114,6 +116,7 @@ import android.os.MessageQueue;
 import android.os.Process;
 import android.os.SystemClock;
 import android.os.SystemProperties;
+import android.os.UserHandle;
 import android.os.VintfRuntimeInfo;
 import android.platform.test.annotations.AppModeFull;
 import android.provider.Settings;
@@ -122,6 +125,7 @@ import android.text.TextUtils;
 import android.util.ArraySet;
 import android.util.Log;
 import android.util.Pair;
+import android.util.Range;
 
 import androidx.test.InstrumentationRegistry;
 import androidx.test.runner.AndroidJUnit4;
@@ -166,6 +170,7 @@ import java.net.UnknownHostException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
@@ -192,6 +197,7 @@ public class ConnectivityManagerTest {
     private static final int MIN_KEEPALIVE_INTERVAL = 10;
 
     private static final int NETWORK_CALLBACK_TIMEOUT_MS = 30_000;
+    private static final int NO_CALLBACK_TIMEOUT_MS = 100;
     private static final int NUM_TRIES_MULTIPATH_PREF_CHECK = 20;
     private static final long INTERVAL_MULTIPATH_PREF_CHECK_MS = 500;
     // device could have only one interface: data, wifi.
@@ -223,6 +229,9 @@ public class ConnectivityManagerTest {
     private final ArraySet<Integer> mNetworkTypes = new ArraySet<>();
     private UiAutomation mUiAutomation;
     private CtsNetUtils mCtsNetUtils;
+
+    // Used for cleanup purposes.
+    private final List<Range<Integer>> mVpnRequiredUidRanges = new ArrayList<>();
 
     @Before
     public void setUp() throws Exception {
@@ -302,6 +311,12 @@ public class ConnectivityManagerTest {
         // Release any NetworkRequests filed to connect mobile data.
         if (mCtsNetUtils.cellConnectAttempted()) {
             mCtsNetUtils.disconnectFromCell();
+        }
+
+        if (shouldTestSApis()) {
+            runWithShellPermissionIdentity(
+                    () -> mCmShim.setRequireVpnForUids(false, mVpnRequiredUidRanges),
+                    NETWORK_SETTINGS);
         }
 
         // All tests in this class require a working Internet connection as they start. Make
@@ -1705,7 +1720,7 @@ public class ConnectivityManagerTest {
      */
     @Test
     @IgnoreUpTo(Build.VERSION_CODES.R)
-    public void testRequestBackgroundNetwork() throws Exception {
+    public void testRequestBackgroundNetwork() {
         // Create a tun interface. Use the returned interface name as the specifier to create
         // a test network request.
         final TestNetworkManager tnm = runWithShellPermissionIdentity(() ->
@@ -1776,6 +1791,111 @@ public class ConnectivityManagerTest {
             }, new String[] { android.Manifest.permission.MANAGE_TEST_NETWORKS });
             mCm.unregisterNetworkCallback(callback);
         }
+    }
+
+    private class DetailedBlockedStatusCallback extends TestableNetworkCallback {
+        public void expectAvailableCallbacks(Network network) {
+            super.expectAvailableCallbacks(network, false /* suspended */, true /* validated */,
+                    BLOCKED_REASON_NONE, NETWORK_CALLBACK_TIMEOUT_MS);
+        }
+        public void expectBlockedStatusCallback(Network network, int blockedStatus) {
+            super.expectBlockedStatusCallback(blockedStatus, network, NETWORK_CALLBACK_TIMEOUT_MS);
+        }
+        public void onBlockedStatusChanged(Network network, int blockedReasons) {
+            getHistory().add(new CallbackEntry.BlockedStatusInt(network, blockedReasons));
+        }
+    }
+
+    private void setRequireVpnForUids(boolean requireVpn, Collection<Range<Integer>> ranges)
+            throws Exception {
+        mCmShim.setRequireVpnForUids(requireVpn, ranges);
+        for (Range<Integer> range : ranges) {
+            if (requireVpn) {
+                mVpnRequiredUidRanges.add(range);
+            } else {
+                assertTrue(mVpnRequiredUidRanges.remove(range));
+            }
+        }
+    }
+
+    private void doTestBlockedStatusCallback() throws Exception {
+        final DetailedBlockedStatusCallback myUidCallback = new DetailedBlockedStatusCallback();
+        final DetailedBlockedStatusCallback otherUidCallback = new DetailedBlockedStatusCallback();
+
+        final int myUid = Process.myUid();
+        final int otherUid = UserHandle.of(5).getUid(Process.FIRST_APPLICATION_UID);
+        final Handler handler = new Handler(Looper.getMainLooper());
+        mCm.registerDefaultNetworkCallback(myUidCallback, handler);
+        mCmShim.registerDefaultNetworkCallbackAsUid(otherUid, otherUidCallback, handler);
+
+        final Network defaultNetwork = mCm.getActiveNetwork();
+        final List<DetailedBlockedStatusCallback> allCallbacks =
+                List.of(myUidCallback, otherUidCallback);
+        for (DetailedBlockedStatusCallback callback : allCallbacks) {
+            callback.expectAvailableCallbacks(defaultNetwork);
+        }
+
+        final Range<Integer> myUidRange = new Range<>(myUid, myUid);
+        final Range<Integer> otherUidRange = new Range<>(otherUid, otherUid);
+
+        setRequireVpnForUids(true, List.of(myUidRange));
+        myUidCallback.expectBlockedStatusCallback(defaultNetwork, BLOCKED_REASON_LOCKDOWN_VPN);
+        otherUidCallback.assertNoCallback(NO_CALLBACK_TIMEOUT_MS);
+
+        setRequireVpnForUids(true, List.of(myUidRange, otherUidRange));
+        myUidCallback.assertNoCallback(NO_CALLBACK_TIMEOUT_MS);
+        otherUidCallback.expectBlockedStatusCallback(defaultNetwork, BLOCKED_REASON_LOCKDOWN_VPN);
+
+        // setRequireVpnForUids does no deduplication or refcounting. Removing myUidRange does not
+        // unblock myUid because it was added to the blocked ranges twice.
+        setRequireVpnForUids(false, List.of(myUidRange));
+        myUidCallback.assertNoCallback(NO_CALLBACK_TIMEOUT_MS);
+        otherUidCallback.assertNoCallback(NO_CALLBACK_TIMEOUT_MS);
+
+        setRequireVpnForUids(false, List.of(myUidRange, otherUidRange));
+        myUidCallback.expectBlockedStatusCallback(defaultNetwork, BLOCKED_REASON_NONE);
+        otherUidCallback.expectBlockedStatusCallback(defaultNetwork, BLOCKED_REASON_NONE);
+
+        myUidCallback.assertNoCallback(NO_CALLBACK_TIMEOUT_MS);
+        otherUidCallback.assertNoCallback(NO_CALLBACK_TIMEOUT_MS);
+    }
+
+    @Test
+    @IgnoreUpTo(Build.VERSION_CODES.R)
+    public void testBlockedStatusCallback() {
+        runWithShellPermissionIdentity(() -> doTestBlockedStatusCallback(), NETWORK_SETTINGS);
+    }
+
+    private void doTestLegacyLockdownEnabled() throws Exception {
+        NetworkInfo info = mCm.getActiveNetworkInfo();
+        assertNotNull(info);
+        assertEquals(DetailedState.CONNECTED, info.getDetailedState());
+
+        try {
+            mCmShim.setLegacyLockdownVpnEnabled(true);
+
+            // setLegacyLockdownVpnEnabled is asynchronous and only takes effect when the
+            // ConnectivityService handler thread processes it. Ensure it has taken effect by doing
+            // something that blocks until the handler thread is idle.
+            final TestableNetworkCallback callback = new TestableNetworkCallback();
+            mCm.registerDefaultNetworkCallback(callback);
+            waitForAvailable(callback);
+            mCm.unregisterNetworkCallback(callback);
+
+            // Test one of the effects of setLegacyLockdownVpnEnabled: the fact that any NetworkInfo
+            // in state CONNECTED is degraded to CONNECTING if the legacy VPN is not connected.
+            info = mCm.getActiveNetworkInfo();
+            assertNotNull(info);
+            assertEquals(DetailedState.CONNECTING, info.getDetailedState());
+        } finally {
+            mCmShim.setLegacyLockdownVpnEnabled(false);
+        }
+    }
+
+    @Test
+    @IgnoreUpTo(Build.VERSION_CODES.R)
+    public void testLegacyLockdownEnabled() {
+        runWithShellPermissionIdentity(() -> doTestLegacyLockdownEnabled(), NETWORK_SETTINGS);
     }
 
     /**
