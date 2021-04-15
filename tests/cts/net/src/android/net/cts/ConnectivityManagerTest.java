@@ -28,8 +28,6 @@ import static android.content.pm.PackageManager.FEATURE_WIFI;
 import static android.content.pm.PackageManager.FEATURE_WIFI_DIRECT;
 import static android.content.pm.PackageManager.GET_PERMISSIONS;
 import static android.content.pm.PackageManager.PERMISSION_GRANTED;
-import static android.net.ConnectivityManager.BLOCKED_REASON_LOCKDOWN_VPN;
-import static android.net.ConnectivityManager.BLOCKED_REASON_NONE;
 import static android.net.ConnectivityManager.TYPE_BLUETOOTH;
 import static android.net.ConnectivityManager.TYPE_ETHERNET;
 import static android.net.ConnectivityManager.TYPE_MOBILE_CBS;
@@ -64,6 +62,8 @@ import static android.system.OsConstants.AF_UNSPEC;
 
 import static com.android.compatibility.common.util.SystemUtil.runShellCommand;
 import static com.android.compatibility.common.util.SystemUtil.runWithShellPermissionIdentity;
+import static com.android.networkstack.apishim.ConstantsShim.BLOCKED_REASON_LOCKDOWN_VPN;
+import static com.android.networkstack.apishim.ConstantsShim.BLOCKED_REASON_NONE;
 import static com.android.testutils.MiscAsserts.assertThrows;
 import static com.android.testutils.TestPermissionUtil.runAsShell;
 
