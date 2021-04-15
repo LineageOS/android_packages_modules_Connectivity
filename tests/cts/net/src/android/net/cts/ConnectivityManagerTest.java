@@ -1823,7 +1823,7 @@ public class ConnectivityManagerTest {
         final DetailedBlockedStatusCallback otherUidCallback = new DetailedBlockedStatusCallback();
 
         final int myUid = Process.myUid();
-        final int otherUid = UserHandle.of(5).getUid(Process.FIRST_APPLICATION_UID);
+        final int otherUid = UserHandle.getUid(5, Process.FIRST_APPLICATION_UID);
         final Handler handler = new Handler(Looper.getMainLooper());
         mCm.registerDefaultNetworkCallback(myUidCallback, handler);
         mCmShim.registerDefaultNetworkCallbackAsUid(otherUid, otherUidCallback, handler);
