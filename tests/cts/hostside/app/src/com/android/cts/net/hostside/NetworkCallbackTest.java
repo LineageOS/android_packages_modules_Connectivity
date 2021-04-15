@@ -17,6 +17,7 @@
 package com.android.cts.net.hostside;
 
 import static android.net.NetworkCapabilities.NET_CAPABILITY_NOT_METERED;
+import static android.net.NetworkCapabilities.SIGNAL_STRENGTH_UNSPECIFIED;
 
 import static com.android.cts.net.hostside.NetworkPolicyTestUtils.canChangeActiveNetworkMeteredness;
 import static com.android.cts.net.hostside.NetworkPolicyTestUtils.getActiveNetworkCapabilities;
@@ -204,9 +205,12 @@ public class NetworkCallbackTest extends AbstractRestrictBackgroundNetworkTestCa
         // Mark network as metered.
         mMeterednessConfiguration.configureNetworkMeteredness(true);
 
-        // Register callback
+        // Register callback, copy the capabilities from the active network to expect the "original"
+        // network before disconnecting, but null out some fields to prevent over-specified.
         registerNetworkCallback(new NetworkRequest.Builder()
-                        .setCapabilities(networkCapabilities).build(), mTestNetworkCallback);
+                .setCapabilities(networkCapabilities.setTransportInfo(null))
+                .removeCapability(NET_CAPABILITY_NOT_METERED)
+                .setSignalStrength(SIGNAL_STRENGTH_UNSPECIFIED).build(), mTestNetworkCallback);
         // Wait for onAvailable() callback to ensure network is available before the test
         // and store the default network.
         mNetwork = mTestNetworkCallback.expectAvailableCallbackAndGetNetwork();
