@@ -36,6 +36,7 @@ import static android.net.TetheringManager.ACTION_TETHER_STATE_CHANGED;
 import static android.net.TetheringManager.EXTRA_ACTIVE_LOCAL_ONLY;
 import static android.net.TetheringManager.EXTRA_ACTIVE_TETHER;
 import static android.net.TetheringManager.EXTRA_AVAILABLE_TETHER;
+import static android.net.TetheringManager.TETHERING_BLUETOOTH;
 import static android.net.TetheringManager.TETHERING_ETHERNET;
 import static android.net.TetheringManager.TETHERING_NCM;
 import static android.net.TetheringManager.TETHERING_USB;
@@ -93,6 +94,9 @@ import static org.mockito.Mockito.when;
 
 import android.app.usage.NetworkStatsManager;
 import android.bluetooth.BluetoothAdapter;
+import android.bluetooth.BluetoothPan;
+import android.bluetooth.BluetoothProfile;
+import android.bluetooth.BluetoothProfile.ServiceListener;
 import android.content.BroadcastReceiver;
 import android.content.ContentResolver;
 import android.content.Context;
@@ -238,6 +242,8 @@ public class TetheringTest {
     @Mock private TetheringNotificationUpdater mNotificationUpdater;
     @Mock private BpfCoordinator mBpfCoordinator;
     @Mock private PackageManager mPackageManager;
+    @Mock private BluetoothAdapter mBluetoothAdapter;
+    @Mock private BluetoothPan mBluetoothPan;
 
     private final MockIpServerDependencies mIpServerDependencies =
             spy(new MockIpServerDependencies());
@@ -338,7 +344,8 @@ public class TetheringTest {
                             || ifName.equals(TEST_MOBILE_IFNAME)
                             || ifName.equals(TEST_P2P_IFNAME)
                             || ifName.equals(TEST_NCM_IFNAME)
-                            || ifName.equals(TEST_ETH_IFNAME));
+                            || ifName.equals(TEST_ETH_IFNAME)
+                            || ifName.equals(TEST_BT_IFNAME));
             final String[] ifaces = new String[] {
                     TEST_USB_IFNAME, TEST_WLAN_IFNAME, TEST_WIFI_IFNAME, TEST_MOBILE_IFNAME,
                     TEST_P2P_IFNAME, TEST_NCM_IFNAME, TEST_ETH_IFNAME};
@@ -478,8 +485,7 @@ public class TetheringTest {
 
         @Override
         public BluetoothAdapter getBluetoothAdapter() {
-            // TODO: add test for bluetooth tethering.
-            return null;
+            return mBluetoothAdapter;
         }
 
         @Override
@@ -610,7 +616,7 @@ public class TetheringTest {
         when(mNetd.interfaceGetList())
                 .thenReturn(new String[] {
                         TEST_MOBILE_IFNAME, TEST_WLAN_IFNAME, TEST_USB_IFNAME, TEST_P2P_IFNAME,
-                        TEST_NCM_IFNAME, TEST_ETH_IFNAME});
+                        TEST_NCM_IFNAME, TEST_ETH_IFNAME, TEST_BT_IFNAME});
         when(mResources.getString(R.string.config_wifi_tether_enable)).thenReturn("");
         mInterfaceConfiguration = new InterfaceConfigurationParcel();
         mInterfaceConfiguration.flags = new String[0];
@@ -674,11 +680,11 @@ public class TetheringTest {
         when(mResources.getStringArray(R.array.config_tether_usb_regexs))
                 .thenReturn(new String[] { "test_rndis\\d" });
         when(mResources.getStringArray(R.array.config_tether_wifi_regexs))
-                .thenReturn(new String[]{ "test_wlan\\d" });
+                .thenReturn(new String[] { "test_wlan\\d" });
         when(mResources.getStringArray(R.array.config_tether_wifi_p2p_regexs))
-                .thenReturn(new String[]{ "test_p2p-p2p\\d-.*" });
+                .thenReturn(new String[] { "test_p2p-p2p\\d-.*" });
         when(mResources.getStringArray(R.array.config_tether_bluetooth_regexs))
-                .thenReturn(new String[0]);
+                .thenReturn(new String[] { "test_pan\\d" });
         when(mResources.getStringArray(R.array.config_tether_ncm_regexs))
                 .thenReturn(new String[] { "test_ncm\\d" });
         when(mResources.getIntArray(R.array.config_tether_upstream_types)).thenReturn(new int[0]);
@@ -2363,6 +2369,70 @@ public class TetheringTest {
         lease.hostname = hostname;
 
         return lease;
+    }
+
+    @Test
+    public void testBluetoothTethering() throws Exception {
+        final ResultListener result = new ResultListener(TETHER_ERROR_NO_ERROR);
+        when(mBluetoothAdapter.isEnabled()).thenReturn(true);
+        mTethering.startTethering(createTetheringRequestParcel(TETHERING_BLUETOOTH), result);
+        mLooper.dispatchAll();
+        verifySetBluetoothTethering(true);
+        result.assertHasResult();
+
+        mTethering.interfaceAdded(TEST_BT_IFNAME);
+        mLooper.dispatchAll();
+
+        mTethering.interfaceStatusChanged(TEST_BT_IFNAME, false);
+        mTethering.interfaceStatusChanged(TEST_BT_IFNAME, true);
+        final ResultListener tetherResult = new ResultListener(TETHER_ERROR_NO_ERROR);
+        mTethering.tether(TEST_BT_IFNAME, tetherResult);
+        mLooper.dispatchAll();
+        tetherResult.assertHasResult();
+
+        verify(mNetd).tetherInterfaceAdd(TEST_BT_IFNAME);
+        verify(mNetd).networkAddInterface(INetd.LOCAL_NET_ID, TEST_BT_IFNAME);
+        verify(mNetd, times(2)).networkAddRoute(eq(INetd.LOCAL_NET_ID), eq(TEST_BT_IFNAME),
+                anyString(), anyString());
+        verify(mNetd).ipfwdEnableForwarding(TETHERING_NAME);
+        verify(mNetd).tetherStartWithConfiguration(any());
+        verify(mNetd, times(2)).networkAddRoute(eq(INetd.LOCAL_NET_ID), eq(TEST_BT_IFNAME),
+                anyString(), anyString());
+        verifyNoMoreInteractions(mNetd);
+        reset(mNetd);
+
+        when(mBluetoothAdapter.isEnabled()).thenReturn(true);
+        mTethering.stopTethering(TETHERING_BLUETOOTH);
+        mLooper.dispatchAll();
+        final ResultListener untetherResult = new ResultListener(TETHER_ERROR_NO_ERROR);
+        mTethering.untether(TEST_BT_IFNAME, untetherResult);
+        mLooper.dispatchAll();
+        untetherResult.assertHasResult();
+        verifySetBluetoothTethering(false);
+
+        verify(mNetd).tetherApplyDnsInterfaces();
+        verify(mNetd).tetherInterfaceRemove(TEST_BT_IFNAME);
+        verify(mNetd).networkRemoveInterface(INetd.LOCAL_NET_ID, TEST_BT_IFNAME);
+        verify(mNetd).interfaceSetCfg(any(InterfaceConfigurationParcel.class));
+        verify(mNetd).tetherStop();
+        verify(mNetd).ipfwdDisableForwarding(TETHERING_NAME);
+        verifyNoMoreInteractions(mNetd);
+    }
+
+    private void verifySetBluetoothTethering(final boolean enable) {
+        final ArgumentCaptor<ServiceListener> listenerCaptor =
+                ArgumentCaptor.forClass(ServiceListener.class);
+        verify(mBluetoothAdapter).isEnabled();
+        verify(mBluetoothAdapter).getProfileProxy(eq(mServiceContext), listenerCaptor.capture(),
+                eq(BluetoothProfile.PAN));
+        final ServiceListener listener = listenerCaptor.getValue();
+        when(mBluetoothPan.isTetheringOn()).thenReturn(enable);
+        listener.onServiceConnected(BluetoothProfile.PAN, mBluetoothPan);
+        verify(mBluetoothPan).setBluetoothTethering(enable);
+        verify(mBluetoothPan).isTetheringOn();
+        verify(mBluetoothAdapter).closeProfileProxy(eq(BluetoothProfile.PAN), eq(mBluetoothPan));
+        verifyNoMoreInteractions(mBluetoothAdapter, mBluetoothPan);
+        reset(mBluetoothAdapter, mBluetoothPan);
     }
 
     // TODO: Test that a request for hotspot mode doesn't interfere with an
