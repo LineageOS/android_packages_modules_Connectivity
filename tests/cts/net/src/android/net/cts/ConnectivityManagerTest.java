@@ -1747,14 +1747,14 @@ public class ConnectivityManagerTest {
         final TestableNetworkCallback callback = new TestableNetworkCallback();
         final Handler handler = new Handler(Looper.getMainLooper());
         assertThrows(SecurityException.class,
-                () -> mCmShim.requestBackgroundNetwork(testRequest, handler, callback));
+                () -> mCmShim.requestBackgroundNetwork(testRequest, callback, handler));
 
         Network testNetwork = null;
         try {
             // Request background test network via Shell identity which has NETWORK_SETTINGS
             // permission granted.
             runWithShellPermissionIdentity(
-                    () -> mCmShim.requestBackgroundNetwork(testRequest, handler, callback),
+                    () -> mCmShim.requestBackgroundNetwork(testRequest, callback, handler),
                     new String[] { android.Manifest.permission.NETWORK_SETTINGS });
 
             // Register the test network agent which has no foreground request associated to it.
