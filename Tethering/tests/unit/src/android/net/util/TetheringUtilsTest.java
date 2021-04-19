@@ -15,6 +15,7 @@
  */
 package android.net.util;
 
+import static android.net.TetheringManager.CONNECTIVITY_SCOPE_LOCAL;
 import static android.net.TetheringManager.TETHERING_USB;
 import static android.net.TetheringManager.TETHERING_WIFI;
 import static android.system.OsConstants.AF_UNIX;
@@ -78,7 +79,7 @@ public class TetheringUtilsTest {
     }
 
     @Test
-    public void testIsTetheringRequestEquals() throws Exception {
+    public void testIsTetheringRequestEquals() {
         TetheringRequestParcel request = makeTetheringRequestParcel();
 
         assertTrue(TetheringUtils.isTetheringRequestEquals(mTetheringRequest, mTetheringRequest));
@@ -104,7 +105,11 @@ public class TetheringUtilsTest {
         request.showProvisioningUi = false;
         assertFalse(TetheringUtils.isTetheringRequestEquals(mTetheringRequest, request));
 
-        MiscAsserts.assertFieldCountEquals(5, TetheringRequestParcel.class);
+        request = makeTetheringRequestParcel();
+        request.connectivityScope = CONNECTIVITY_SCOPE_LOCAL;
+        assertFalse(TetheringUtils.isTetheringRequestEquals(mTetheringRequest, request));
+
+        MiscAsserts.assertFieldCountEquals(6, TetheringRequestParcel.class);
     }
 
     // Writes the specified packet to a filedescriptor, skipping the Ethernet header.
