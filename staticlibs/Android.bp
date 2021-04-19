@@ -34,9 +34,9 @@ package {
 java_library {
   name: "net-utils-device-common",
   srcs: [
-      "device/**/*.java",
+      "device/com/android/net/module/util/**/*.java",
       // This library is used by system modules, for which the system health impact of Kotlin
-      // has not yet been evaluated.
+      // has not yet been evaluated. Annotations may need jarjar'ing.
       // "src_devicecommon/**/*.kt",
       ":framework-annotations",
   ],
@@ -117,13 +117,15 @@ java_library {
         "//frameworks/libs/net/common/tests:__subpackages__",
         "//frameworks/libs/net/common/device",
         "//packages/modules/Wifi/framework/tests:__subpackages__",
-    ]
+    ],
 }
-
 filegroup {
     name: "net-utils-services-common-srcs",
     srcs: [
         "device/android/net/NetworkFactory.java",
+        "device/android/net/NetworkFactoryImpl.java",
+        "device/android/net/NetworkFactoryLegacyImpl.java",
+        "device/android/net/NetworkFactoryShim.java",
     ],
     visibility: [
         "//frameworks/base/services/net",
@@ -138,6 +140,9 @@ java_library {
     ],
     sdk_version: "system_current",
     min_sdk_version: "30",
+    static_libs: [
+        "modules-utils-build_system",
+    ],
     visibility: [
         "//frameworks/base/services/net",
     ],
@@ -150,6 +155,9 @@ filegroup {
     srcs: [
         // Any class here *must* have a corresponding jarjar rule in the telephony build rules.
         "device/android/net/NetworkFactory.java",
+        "device/android/net/NetworkFactoryImpl.java",
+        "device/android/net/NetworkFactoryLegacyImpl.java",
+        "device/android/net/NetworkFactoryShim.java",
     ],
     path: "device",
     visibility: [
@@ -178,6 +186,9 @@ filegroup {
     name: "net-utils-wifi-service-common-srcs",
     srcs: [
        "device/android/net/NetworkFactory.java",
+       "device/android/net/NetworkFactoryImpl.java",
+       "device/android/net/NetworkFactoryLegacyImpl.java",
+       "device/android/net/NetworkFactoryShim.java",
        "framework/com/android/net/module/util/NetUtils.java",
     ],
     visibility: [
