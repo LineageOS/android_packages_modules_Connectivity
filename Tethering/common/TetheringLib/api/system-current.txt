@@ -27,6 +27,8 @@ package android.net {
     method @RequiresPermission(anyOf={android.Manifest.permission.TETHER_PRIVILEGED, android.Manifest.permission.WRITE_SETTINGS}) public void stopTethering(int);
     method @RequiresPermission(anyOf={android.Manifest.permission.TETHER_PRIVILEGED, android.Manifest.permission.ACCESS_NETWORK_STATE}) public void unregisterTetheringEventCallback(@NonNull android.net.TetheringManager.TetheringEventCallback);
     field public static final String ACTION_TETHER_STATE_CHANGED = "android.net.conn.TETHER_STATE_CHANGED";
+    field public static final int CONNECTIVITY_SCOPE_GLOBAL = 1; // 0x1
+    field public static final int CONNECTIVITY_SCOPE_LOCAL = 2; // 0x2
     field public static final String EXTRA_ACTIVE_LOCAL_ONLY = "android.net.extra.ACTIVE_LOCAL_ONLY";
     field public static final String EXTRA_ACTIVE_TETHER = "tetherArray";
     field public static final String EXTRA_AVAILABLE_TETHER = "availableArray";
@@ -72,6 +74,7 @@ package android.net {
   public static interface TetheringManager.TetheringEventCallback {
     method public default void onClientsChanged(@NonNull java.util.Collection<android.net.TetheredClient>);
     method public default void onError(@NonNull String, int);
+    method public default void onLocalOnlyInterfacesChanged(@NonNull java.util.List<java.lang.String>);
     method public default void onOffloadStatusChanged(int);
     method public default void onTetherableInterfacesChanged(@NonNull java.util.List<java.lang.String>);
     method public default void onTetheredInterfacesChanged(@NonNull java.util.List<java.lang.String>);
@@ -81,6 +84,7 @@ package android.net {
 
   public static class TetheringManager.TetheringRequest {
     method @Nullable public android.net.LinkAddress getClientStaticIpv4Address();
+    method public int getConnectivityScope();
     method @Nullable public android.net.LinkAddress getLocalIpv4Address();
     method public boolean getShouldShowEntitlementUi();
     method public int getTetheringType();
@@ -90,6 +94,7 @@ package android.net {
   public static class TetheringManager.TetheringRequest.Builder {
     ctor public TetheringManager.TetheringRequest.Builder(int);
     method @NonNull public android.net.TetheringManager.TetheringRequest build();
+    method @NonNull @RequiresPermission(android.Manifest.permission.TETHER_PRIVILEGED) public android.net.TetheringManager.TetheringRequest.Builder setConnectivityScope(int);
     method @NonNull @RequiresPermission(android.Manifest.permission.TETHER_PRIVILEGED) public android.net.TetheringManager.TetheringRequest.Builder setExemptFromEntitlementCheck(boolean);
     method @NonNull @RequiresPermission(android.Manifest.permission.TETHER_PRIVILEGED) public android.net.TetheringManager.TetheringRequest.Builder setShouldShowEntitlementUi(boolean);
     method @NonNull @RequiresPermission(android.Manifest.permission.TETHER_PRIVILEGED) public android.net.TetheringManager.TetheringRequest.Builder setStaticIpv4Addresses(@NonNull android.net.LinkAddress, @NonNull android.net.LinkAddress);
