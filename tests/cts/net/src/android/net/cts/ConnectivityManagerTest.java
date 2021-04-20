@@ -608,7 +608,7 @@ public class ConnectivityManagerTest {
         if (shouldTestSApis()) {
             runWithShellPermissionIdentity(() -> {
                 mCmShim.registerSystemDefaultNetworkCallback(systemDefaultCallback, h);
-                mCmShim.registerDefaultNetworkCallbackAsUid(Process.myUid(), perUidCallback, h);
+                mCmShim.registerDefaultNetworkCallbackForUid(Process.myUid(), perUidCallback, h);
             }, NETWORK_SETTINGS);
         }
 
@@ -1828,7 +1828,7 @@ public class ConnectivityManagerTest {
         final int otherUid = UserHandle.getUid(5, Process.FIRST_APPLICATION_UID);
         final Handler handler = new Handler(Looper.getMainLooper());
         mCm.registerDefaultNetworkCallback(myUidCallback, handler);
-        mCmShim.registerDefaultNetworkCallbackAsUid(otherUid, otherUidCallback, handler);
+        mCmShim.registerDefaultNetworkCallbackForUid(otherUid, otherUidCallback, handler);
 
         final Network defaultNetwork = mCm.getActiveNetwork();
         final List<DetailedBlockedStatusCallback> allCallbacks =
