@@ -33,6 +33,7 @@ import static android.net.NetworkCapabilities.TRANSPORT_CELLULAR;
 import static android.net.NetworkCapabilities.TRANSPORT_WIFI;
 import static android.net.RouteInfo.RTN_UNICAST;
 import static android.net.TetheringManager.ACTION_TETHER_STATE_CHANGED;
+import static android.net.TetheringManager.CONNECTIVITY_SCOPE_GLOBAL;
 import static android.net.TetheringManager.EXTRA_ACTIVE_LOCAL_ONLY;
 import static android.net.TetheringManager.EXTRA_ACTIVE_TETHER;
 import static android.net.TetheringManager.EXTRA_AVAILABLE_TETHER;
@@ -702,17 +703,19 @@ public class TetheringTest {
     }
 
     private TetheringRequestParcel createTetheringRequestParcel(final int type) {
-        return createTetheringRequestParcel(type, null, null, false);
+        return createTetheringRequestParcel(type, null, null, false, CONNECTIVITY_SCOPE_GLOBAL);
     }
 
     private TetheringRequestParcel createTetheringRequestParcel(final int type,
-            final LinkAddress serverAddr, final LinkAddress clientAddr, final boolean exempt) {
+            final LinkAddress serverAddr, final LinkAddress clientAddr, final boolean exempt,
+            final int scope) {
         final TetheringRequestParcel request = new TetheringRequestParcel();
         request.tetheringType = type;
         request.localIPv4Address = serverAddr;
         request.staticClientAddress = clientAddr;
         request.exemptFromEntitlementCheck = exempt;
         request.showProvisioningUi = false;
+        request.connectivityScope = scope;
 
         return request;
     }
@@ -1973,16 +1976,14 @@ public class TetheringTest {
         final ResultListener thirdResult = new ResultListener(TETHER_ERROR_NO_ERROR);
 
         // Enable USB tethering and check that Tethering starts USB.
-        mTethering.startTethering(createTetheringRequestParcel(TETHERING_USB,
-                  null, null, false), firstResult);
+        mTethering.startTethering(createTetheringRequestParcel(TETHERING_USB), firstResult);
         mLooper.dispatchAll();
         firstResult.assertHasResult();
         verify(mUsbManager, times(1)).setCurrentFunctions(UsbManager.FUNCTION_RNDIS);
         verifyNoMoreInteractions(mUsbManager);
 
         // Enable USB tethering again with the same request and expect no change to USB.
-        mTethering.startTethering(createTetheringRequestParcel(TETHERING_USB,
-                  null, null, false), secondResult);
+        mTethering.startTethering(createTetheringRequestParcel(TETHERING_USB), secondResult);
         mLooper.dispatchAll();
         secondResult.assertHasResult();
         verify(mUsbManager, never()).setCurrentFunctions(UsbManager.FUNCTION_NONE);
@@ -1991,7 +1992,7 @@ public class TetheringTest {
         // Enable USB tethering with a different request and expect that USB is stopped and
         // started.
         mTethering.startTethering(createTetheringRequestParcel(TETHERING_USB,
-                  serverLinkAddr, clientLinkAddr, false), thirdResult);
+                  serverLinkAddr, clientLinkAddr, false, CONNECTIVITY_SCOPE_GLOBAL), thirdResult);
         mLooper.dispatchAll();
         thirdResult.assertHasResult();
         verify(mUsbManager, times(1)).setCurrentFunctions(UsbManager.FUNCTION_NONE);
@@ -2014,7 +2015,7 @@ public class TetheringTest {
         final ArgumentCaptor<DhcpServingParamsParcel> dhcpParamsCaptor =
                 ArgumentCaptor.forClass(DhcpServingParamsParcel.class);
         mTethering.startTethering(createTetheringRequestParcel(TETHERING_USB,
-                  serverLinkAddr, clientLinkAddr, false), null);
+                  serverLinkAddr, clientLinkAddr, false, CONNECTIVITY_SCOPE_GLOBAL), null);
         mLooper.dispatchAll();
         verify(mUsbManager, times(1)).setCurrentFunctions(UsbManager.FUNCTION_RNDIS);
         mTethering.interfaceStatusChanged(TEST_USB_IFNAME, true);
@@ -2080,7 +2081,8 @@ public class TetheringTest {
     public void testExemptFromEntitlementCheck() throws Exception {
         setupForRequiredProvisioning();
         final TetheringRequestParcel wifiNotExemptRequest =
-                createTetheringRequestParcel(TETHERING_WIFI, null, null, false);
+                createTetheringRequestParcel(TETHERING_WIFI, null, null, false,
+                        CONNECTIVITY_SCOPE_GLOBAL);
         mTethering.startTethering(wifiNotExemptRequest, null);
         mLooper.dispatchAll();
         verify(mEntitleMgr).startProvisioningIfNeeded(TETHERING_WIFI, false);
@@ -2093,7 +2095,8 @@ public class TetheringTest {
 
         setupForRequiredProvisioning();
         final TetheringRequestParcel wifiExemptRequest =
-                createTetheringRequestParcel(TETHERING_WIFI, null, null, true);
+                createTetheringRequestParcel(TETHERING_WIFI, null, null, true,
+                        CONNECTIVITY_SCOPE_GLOBAL);
         mTethering.startTethering(wifiExemptRequest, null);
         mLooper.dispatchAll();
         verify(mEntitleMgr, never()).startProvisioningIfNeeded(TETHERING_WIFI, false);
@@ -2386,7 +2389,7 @@ public class TetheringTest {
         mTethering.interfaceStatusChanged(TEST_BT_IFNAME, false);
         mTethering.interfaceStatusChanged(TEST_BT_IFNAME, true);
         final ResultListener tetherResult = new ResultListener(TETHER_ERROR_NO_ERROR);
-        mTethering.tether(TEST_BT_IFNAME, tetherResult);
+        mTethering.tether(TEST_BT_IFNAME, IpServer.STATE_TETHERED, tetherResult);
         mLooper.dispatchAll();
         tetherResult.assertHasResult();
 
