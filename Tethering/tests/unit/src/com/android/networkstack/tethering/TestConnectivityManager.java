@@ -203,9 +203,11 @@ public class TestConnectivityManager extends ConnectivityManager {
     public void requestNetwork(NetworkRequest req,
             int timeoutMs, int legacyType, Handler h, NetworkCallback cb) {
         assertFalse(mAllCallbacks.containsKey(cb));
-        mAllCallbacks.put(cb, new NetworkRequestInfo(req, h));
+        NetworkRequest newReq = new NetworkRequest(req.networkCapabilities, legacyType,
+                -1 /** testId */, req.type);
+        mAllCallbacks.put(cb, new NetworkRequestInfo(newReq, h));
         assertFalse(mRequested.containsKey(cb));
-        mRequested.put(cb, new NetworkRequestInfo(req, h));
+        mRequested.put(cb, new NetworkRequestInfo(newReq, h));
         assertFalse(mLegacyTypeMap.containsKey(cb));
         if (legacyType != ConnectivityManager.TYPE_NONE) {
             mLegacyTypeMap.put(cb, legacyType);
@@ -313,14 +315,26 @@ public class TestConnectivityManager extends ConnectivityManager {
             return matchesLegacyType(networkCapabilities, legacyType);
         }
 
-        public void fakeConnect() {
-            for (NetworkRequestInfo nri : cm.mRequested.values()) {
-                if (matchesLegacyType(nri.request.legacyType)) {
-                    cm.sendConnectivityAction(legacyType, true /* connected */);
+        private void maybeSendConnectivityBroadcast(boolean connected) {
+            for (Integer requestedLegacyType : cm.mLegacyTypeMap.values()) {
+                if (requestedLegacyType.intValue() == legacyType) {
+                    cm.sendConnectivityAction(legacyType, connected /* connected */);
                     // In practice, a given network can match only one legacy type.
                     break;
                 }
             }
+        }
+
+        public void fakeConnect() {
+            fakeConnect(BROADCAST_FIRST, null);
+        }
+
+        public void fakeConnect(boolean order, @Nullable Runnable inBetween) {
+            if (order == BROADCAST_FIRST) {
+                maybeSendConnectivityBroadcast(true /* connected */);
+                if (inBetween != null) inBetween.run();
+            }
+
             for (NetworkCallback cb : cm.mListening.keySet()) {
                 final NetworkRequestInfo nri = cm.mListening.get(cb);
                 nri.handler.post(() -> cb.onAvailable(networkId));
@@ -328,18 +342,31 @@ public class TestConnectivityManager extends ConnectivityManager {
                         networkId, copy(networkCapabilities)));
                 nri.handler.post(() -> cb.onLinkPropertiesChanged(networkId, copy(linkProperties)));
             }
+
+            if (order == CALLBACKS_FIRST) {
+                if (inBetween != null) inBetween.run();
+                maybeSendConnectivityBroadcast(true /* connected */);
+            }
             // mTrackingDefault will be updated if/when the caller calls makeDefaultNetwork
         }
 
         public void fakeDisconnect() {
-            for (NetworkRequestInfo nri : cm.mRequested.values()) {
-                if (matchesLegacyType(nri.request.legacyType)) {
-                    cm.sendConnectivityAction(legacyType, false /* connected */);
-                    break;
-                }
+            fakeDisconnect(BROADCAST_FIRST, null);
+        }
+
+        public void fakeDisconnect(boolean order, @Nullable Runnable inBetween) {
+            if (order == BROADCAST_FIRST) {
+                maybeSendConnectivityBroadcast(false /* connected */);
+                if (inBetween != null) inBetween.run();
             }
+
             for (NetworkCallback cb : cm.mListening.keySet()) {
                 cb.onLost(networkId);
+            }
+
+            if (order == CALLBACKS_FIRST) {
+                if (inBetween != null) inBetween.run();
+                maybeSendConnectivityBroadcast(false /* connected */);
             }
             // mTrackingDefault will be updated if/when the caller calls makeDefaultNetwork
         }

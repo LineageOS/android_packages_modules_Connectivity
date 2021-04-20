@@ -325,16 +325,9 @@ public class UpstreamNetworkMonitorTest {
         mUNM.setUpstreamConfig(false /* autoUpstream */, false /* dunRequired */);
         assertSatisfiesLegacyType(TYPE_MOBILE_HIPRI,
                 mUNM.selectPreferredUpstreamType(preferredTypes));
-        // Check to see we filed an explicit request.
-        assertEquals(1, mCM.mRequested.size());
-        NetworkRequest netReq = ((NetworkRequestInfo) mCM.mRequested.values().toArray()[0]).request;
-        assertTrue(netReq.networkCapabilities.hasTransport(TRANSPORT_CELLULAR));
-        assertFalse(netReq.networkCapabilities.hasCapability(NET_CAPABILITY_DUN));
         // mobile is not permitted, we should not use HIPRI.
         when(mEntitleMgr.isCellularUpstreamPermitted()).thenReturn(false);
         assertSatisfiesLegacyType(TYPE_NONE, mUNM.selectPreferredUpstreamType(preferredTypes));
-        assertEquals(0, mCM.mRequested.size());
-        // mobile change back to permitted, HIRPI should come back
         when(mEntitleMgr.isCellularUpstreamPermitted()).thenReturn(true);
         assertSatisfiesLegacyType(TYPE_MOBILE_HIPRI,
                 mUNM.selectPreferredUpstreamType(preferredTypes));
@@ -343,7 +336,6 @@ public class UpstreamNetworkMonitorTest {
         mLooper.dispatchAll();
         // WiFi is up, and we should prefer it over cell.
         assertSatisfiesLegacyType(TYPE_WIFI, mUNM.selectPreferredUpstreamType(preferredTypes));
-        assertEquals(0, mCM.mRequested.size());
 
         preferredTypes.remove(TYPE_MOBILE_HIPRI);
         preferredTypes.add(TYPE_MOBILE_DUN);
@@ -363,15 +355,9 @@ public class UpstreamNetworkMonitorTest {
         mLooper.dispatchAll();
         assertSatisfiesLegacyType(TYPE_MOBILE_DUN,
                 mUNM.selectPreferredUpstreamType(preferredTypes));
-        // Check to see we filed an explicit request.
-        assertEquals(1, mCM.mRequested.size());
-        netReq = ((NetworkRequestInfo) mCM.mRequested.values().toArray()[0]).request;
-        assertTrue(netReq.networkCapabilities.hasTransport(TRANSPORT_CELLULAR));
-        assertTrue(netReq.networkCapabilities.hasCapability(NET_CAPABILITY_DUN));
         // mobile is not permitted, we should not use DUN.
         when(mEntitleMgr.isCellularUpstreamPermitted()).thenReturn(false);
         assertSatisfiesLegacyType(TYPE_NONE, mUNM.selectPreferredUpstreamType(preferredTypes));
-        assertEquals(0, mCM.mRequested.size());
         // mobile change back to permitted, DUN should come back
         when(mEntitleMgr.isCellularUpstreamPermitted()).thenReturn(true);
         assertSatisfiesLegacyType(TYPE_MOBILE_DUN,
