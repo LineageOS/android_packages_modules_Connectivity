@@ -22,8 +22,8 @@ import com.android.modules.utils.build.SdkLevel;
 import com.android.networkstack.apishim.ConstantsShim;
 
 /**
- * Utils class to provide common shared test helper methods or constants that behave different
- * against compiled sdk.
+ * Utils class to provide common shared test helper methods or constants that behave differently
+ * depending on the SDK against which they are compiled.
  */
 public class TestUtils {
     /**
