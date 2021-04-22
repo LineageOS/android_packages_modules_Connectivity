@@ -546,16 +546,23 @@ class NetworkAgentTest {
         // Connect the first Network
         createConnectedNetworkAgent(name = name1).let { (agent1, _) ->
             callback.expectAvailableThenValidatedCallbacks(agent1.network)
-            // Upgrade agent1 to a better score so that there is no ambiguity when
-            // agent2 connects that agent1 is still better
-            agent1.sendNetworkScore(BETTER_NETWORK_SCORE - 1)
+            // If using the int ranking, agent1 must be upgraded to a better score so that there is
+            // no ambiguity when agent2 connects that agent1 is still better. If using policy
+            // ranking, this is not necessary.
+            agent1.sendNetworkScore(NetworkScore.Builder().setLegacyInt(BETTER_NETWORK_SCORE)
+                    .build())
             // Connect the second agent
             createConnectedNetworkAgent(name = name2).let { (agent2, _) ->
                 agent2.markConnected()
-                // The callback should not see anything yet
+                // The callback should not see anything yet. With int ranking, agent1 was upgraded
+                // to a stronger score beforehand. With policy ranking, agent1 is preferred by
+                // virtue of already satisfying the request.
                 callback.assertNoCallback(NO_CALLBACK_TIMEOUT)
-                // Now update the score and expect the callback now prefers agent2
-                agent2.sendNetworkScore(BETTER_NETWORK_SCORE)
+                // Now downgrade the score and expect the callback now prefers agent2
+                agent1.sendNetworkScore(NetworkScore.Builder()
+                        .setLegacyInt(WORSE_NETWORK_SCORE)
+                        .setExiting(true)
+                        .build())
                 callback.expectCallback<Available>(agent2.network)
             }
         }
