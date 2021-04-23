@@ -36,6 +36,9 @@
     <uses-permission android:name="android.permission.WRITE_SECURE_SETTINGS" />
     <uses-permission android:name="android.permission.CHANGE_WIFI_MULTICAST_STATE" />
 
+    <!-- TODO (b/186093901): remove after fixing resource querying -->
+    <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES" />
+
     <!-- This test also uses signature permissions through adopting the shell identity.
          The permissions acquired that way include (probably not exhaustive) :
              android.permission.MANAGE_TEST_NETWORKS
