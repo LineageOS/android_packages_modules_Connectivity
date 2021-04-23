@@ -64,6 +64,7 @@ import static android.telephony.CarrierConfigManager.ACTION_CARRIER_CONFIG_CHANG
 import static android.telephony.SubscriptionManager.INVALID_SUBSCRIPTION_ID;
 
 import static com.android.networkstack.tethering.TetheringNotificationUpdater.DOWNSTREAM_NONE;
+import static com.android.networkstack.tethering.UpstreamNetworkMonitor.isCellular;
 
 import android.app.usage.NetworkStatsManager;
 import android.bluetooth.BluetoothAdapter;
@@ -1590,6 +1591,7 @@ public class Tethering {
                     ? mUpstreamNetworkMonitor.getCurrentPreferredUpstream()
                     : mUpstreamNetworkMonitor.selectPreferredUpstreamType(
                             config.preferredUpstreamIfaceTypes);
+
             if (ns == null) {
                 if (tryCell) {
                     mUpstreamNetworkMonitor.setTryCell(true);
@@ -1597,7 +1599,10 @@ public class Tethering {
                 } else {
                     sendMessageDelayed(CMD_RETRY_UPSTREAM, UPSTREAM_SETTLE_TIME_MS);
                 }
+            } else if (!isCellular(ns)) {
+                mUpstreamNetworkMonitor.setTryCell(false);
             }
+
             setUpstreamNetwork(ns);
             final Network newUpstream = (ns != null) ? ns.network : null;
             if (mTetherUpstream != newUpstream) {
