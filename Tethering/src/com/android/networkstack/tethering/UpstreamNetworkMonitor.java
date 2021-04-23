@@ -318,18 +318,6 @@ public class UpstreamNetworkMonitor {
                 if (!mIsDefaultCellularUpstream) {
                     mEntitlementMgr.maybeRunProvisioning();
                 }
-                // If we're on DUN, put our own grab on it.
-                registerMobileNetworkRequest();
-                break;
-            case TYPE_NONE:
-                // If we found NONE and mobile upstream is permitted we don't want to do this
-                // as we want any previous requests to keep trying to bring up something we can use.
-                if (!isCellularUpstreamPermitted()) releaseMobileNetworkRequest();
-                break;
-            default:
-                // If we've found an active upstream connection that's not DUN/HIPRI
-                // we should stop any outstanding DUN/HIPRI requests.
-                releaseMobileNetworkRequest();
                 break;
         }
 
@@ -647,7 +635,8 @@ public class UpstreamNetworkMonitor {
         return prefixSet;
     }
 
-    private static boolean isCellular(UpstreamNetworkState ns) {
+    /** Check whether upstream is cellular. */
+    static boolean isCellular(UpstreamNetworkState ns) {
         return (ns != null) && isCellular(ns.networkCapabilities);
     }
 
