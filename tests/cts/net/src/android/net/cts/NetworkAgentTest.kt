@@ -362,7 +362,7 @@ class NetworkAgentTest {
         val callback = TestableNetworkCallback(timeoutMs = DEFAULT_TIMEOUT_MS)
         requestNetwork(request, callback)
         val agent = createNetworkAgent(context, name)
-        agent.setTeardownDelayMs(0)
+        agent.setTeardownDelayMillis(0)
         agent.register()
         agent.markConnected()
         agent.expectCallback<OnNetworkCreated>()
