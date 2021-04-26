@@ -727,8 +727,8 @@ public class VpnTest extends InstrumentationTestCase {
             final Handler h = new Handler(Looper.getMainLooper());
             runWithShellPermissionIdentity(() -> {
                 mCM.registerSystemDefaultNetworkCallback(systemDefaultCallback, h);
-                mCM.registerDefaultNetworkCallbackAsUid(otherUid, otherUidCallback, h);
-                mCM.registerDefaultNetworkCallbackAsUid(Process.myUid(), myUidCallback, h);
+                mCM.registerDefaultNetworkCallbackForUid(otherUid, otherUidCallback, h);
+                mCM.registerDefaultNetworkCallbackForUid(Process.myUid(), myUidCallback, h);
             }, NETWORK_SETTINGS);
             for (TestableNetworkCallback callback :
                     List.of(systemDefaultCallback, otherUidCallback, myUidCallback)) {
@@ -1149,7 +1149,7 @@ public class VpnTest extends InstrumentationTestCase {
         assertTrue(vpnNc.hasTransport(TRANSPORT_VPN));
         final TransportInfo ti = vpnNc.getTransportInfo();
         assertTrue(ti instanceof VpnTransportInfo);
-        assertEquals(VpnManager.TYPE_VPN_SERVICE, ((VpnTransportInfo) ti).type);
+        assertEquals(VpnManager.TYPE_VPN_SERVICE, ((VpnTransportInfo) ti).getType());
     }
 
     private void assertDefaultProxy(ProxyInfo expected) {
