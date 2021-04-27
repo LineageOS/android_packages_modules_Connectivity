@@ -74,6 +74,7 @@ android_test {
     test_config: "AndroidTest_Coverage.xml",
     defaults: ["libnetworkstackutilsjni_deps"],
     static_libs: [
+        "modules-utils-native-coverage-listener",
         "NetdStaticLibTestsLib",
         "NetworkStaticLibTestsLib",
         "NetworkStackTestsLib",
