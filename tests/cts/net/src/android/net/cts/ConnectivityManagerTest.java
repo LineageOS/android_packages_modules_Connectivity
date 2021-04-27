@@ -132,6 +132,8 @@ import androidx.test.runner.AndroidJUnit4;
 
 import com.android.internal.util.ArrayUtils;
 import com.android.networkstack.apishim.ConnectivityManagerShimImpl;
+import com.android.networkstack.apishim.ConstantsShim;
+import com.android.networkstack.apishim.NetworkInformationShimImpl;
 import com.android.networkstack.apishim.common.ConnectivityManagerShim;
 import com.android.testutils.CompatUtil;
 import com.android.testutils.DevSdkIgnoreRule;
@@ -1900,5 +1902,14 @@ public class ConnectivityManagerTest {
         // shims, and @IgnoreUpTo does not check that.
         assumeTrue(TestUtils.shouldTestSApis());
         runWithShellPermissionIdentity(() -> doTestLegacyLockdownEnabled(), NETWORK_SETTINGS);
+    }
+
+    @Test
+    public void testGetCapabilityCarrierName() {
+        assumeTrue(TestUtils.shouldTestSApis());
+        assertEquals("ENTERPRISE", NetworkInformationShimImpl.newInstance()
+                .getCapabilityCarrierName(ConstantsShim.NET_CAPABILITY_ENTERPRISE));
+        assertNull(NetworkInformationShimImpl.newInstance()
+                .getCapabilityCarrierName(ConstantsShim.NET_CAPABILITY_NOT_VCN_MANAGED));
     }
 }
