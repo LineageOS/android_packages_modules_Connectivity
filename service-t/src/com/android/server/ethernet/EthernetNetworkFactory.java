@@ -146,6 +146,10 @@ public class EthernetNetworkFactory extends NetworkFactory {
             return;
         }
 
+        capabilities = new NetworkCapabilities.Builder(capabilities)
+                .setNetworkSpecifier(new EthernetNetworkSpecifier(ifaceName))
+                .build();
+
         if (DBG) {
             Log.d(TAG, "addInterface, iface: " + ifaceName + ", capabilities: " + capabilities);
         }
