@@ -176,12 +176,16 @@ public class EthernetNetworkFactory extends NetworkFactory {
             return;
         }
 
+        final NetworkCapabilities nc = new NetworkCapabilities.Builder(capabilities)
+                .setNetworkSpecifier(new EthernetNetworkSpecifier(ifaceName))
+                .build();
+
         if (DBG) {
-            Log.d(TAG, "addInterface, iface: " + ifaceName + ", capabilities: " + capabilities);
+            Log.d(TAG, "addInterface, iface: " + ifaceName + ", capabilities: " + nc);
         }
 
         final NetworkInterfaceState iface = new NetworkInterfaceState(
-                ifaceName, hwAddress, mHandler, mContext, ipConfig, capabilities, this, mDeps);
+                ifaceName, hwAddress, mHandler, mContext, ipConfig, nc, this, mDeps);
         mTrackingInterfaces.put(ifaceName, iface);
         updateCapabilityFilter();
     }
