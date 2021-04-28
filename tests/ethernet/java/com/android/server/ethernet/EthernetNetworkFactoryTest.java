@@ -71,6 +71,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
@@ -265,8 +266,12 @@ public class EthernetNetworkFactoryTest {
         triggerOnProvisioningSuccess();
         // provisioning succeeded, verify that the network agent is created, registered, marked
         // as connected and legacy type are correctly set.
-        verify(mDeps).makeEthernetNetworkAgent(any(), any(), any(), any(),
+        final ArgumentCaptor<NetworkCapabilities> ncCaptor = ArgumentCaptor.forClass(
+                NetworkCapabilities.class);
+        verify(mDeps).makeEthernetNetworkAgent(any(), any(), ncCaptor.capture(), any(),
                 argThat(x -> x.getLegacyType() == expectedLegacyType), any(), any());
+        assertEquals(
+                new EthernetNetworkSpecifier(iface), ncCaptor.getValue().getNetworkSpecifier());
         verifyNetworkAgentRegistersAndConnects();
         clearInvocations(mDeps);
         clearInvocations(mNetworkAgent);
