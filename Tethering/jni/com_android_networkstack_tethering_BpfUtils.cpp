@@ -36,6 +36,9 @@
 // The maximum length of TCA_BPF_NAME. Sync from net/sched/cls_bpf.c.
 #define CLS_BPF_NAME_LEN 256
 
+// Classifier name. See cls_bpf_ops in net/sched/cls_bpf.c.
+#define CLS_BPF_KIND_NAME "bpf"
+
 namespace android {
 // Sync from system/netd/server/NetlinkCommands.h
 const uint16_t NETLINK_REQUEST_FLAGS = NLM_F_REQUEST | NLM_F_ACK;
@@ -205,9 +208,9 @@ static void com_android_networkstack_tethering_BpfUtils_tcFilterAddDevBpf(
         tcmsg t;
         struct {
             nlattr attr;
-            // The maximum classifier name length is defined as IFNAMSIZ.
-            // See tcf_proto_ops in include/net/sch_generic.h.
-            char str[NLMSG_ALIGN(IFNAMSIZ)];
+            // The maximum classifier name length is defined in
+            // tcf_proto_ops in include/net/sch_generic.h.
+            char str[NLMSG_ALIGN(sizeof(CLS_BPF_KIND_NAME))];
         } kind;
         struct {
             nlattr attr;
@@ -248,8 +251,7 @@ static void com_android_networkstack_tethering_BpfUtils_tcFilterAddDevBpf(
                                             .nla_len = sizeof(req.kind),
                                             .nla_type = TCA_KIND,
                                     },
-                            // Classifier name. See cls_bpf_ops in net/sched/cls_bpf.c.
-                            .str = "bpf",
+                            .str = CLS_BPF_KIND_NAME,
                     },
             .options =
                     {
