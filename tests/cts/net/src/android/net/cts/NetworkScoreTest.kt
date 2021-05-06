@@ -192,6 +192,25 @@ class NetworkScoreTest {
         cb.expectAvailableCallbacksValidated(agentEth)
     }
 
+    @Test
+    fun testTransportPrimary() {
+        val cb = makeTestNetworkCallback()
+        val agent1 = createTestNetworkAgent()
+        cb.expectAvailableThenValidatedCallbacks(agent1)
+        val agent2 = createTestNetworkAgent()
+        // Because the existing network must win, the callback stays on agent1.
+        cb.assertNoCallback(NO_CALLBACK_TIMEOUT)
+        agent2.sendNetworkScore(score(primary = true))
+        // Now that agent2 is primary, the callback is satisfied by agent2.
+        cb.expectAvailableCallbacks(agent2.network)
+        agent1.sendNetworkScore(score(primary = true))
+        // Agent1 is primary too, but agent2 is the current satisfier
+        cb.assertNoCallback(NO_CALLBACK_TIMEOUT)
+        agent2.sendNetworkScore(score(primary = false))
+        // Now agent1 is primary and agent2 isn't
+        cb.expectAvailableCallbacks(agent1.network)
+    }
+
     // TODO (b/187929636) : add a test making sure that validated networks win over unvalidated
     // ones. Right now this is not possible because this CTS can't directly manipulate the
     // validation state of a network.
