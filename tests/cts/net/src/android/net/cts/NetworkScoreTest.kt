@@ -25,6 +25,8 @@ import android.net.NetworkCapabilities
 import android.net.NetworkProvider
 import android.net.NetworkRequest
 import android.net.NetworkScore
+import android.net.VpnManager
+import android.net.VpnTransportInfo
 import android.os.Build
 import android.os.Handler
 import android.os.HandlerThread
@@ -116,6 +118,7 @@ class NetworkScoreTest {
             if (optionalTransports.contains(NetworkCapabilities.TRANSPORT_VPN)) {
                 addTransportType(NetworkCapabilities.TRANSPORT_VPN)
                 removeCapability(NetworkCapabilities.NET_CAPABILITY_NOT_VPN)
+                setTransportInfo(VpnTransportInfo(VpnManager.TYPE_VPN_SERVICE, null))
             }
             addCapability(NetworkCapabilities.NET_CAPABILITY_NOT_VCN_MANAGED)
         }.build()
@@ -151,4 +154,45 @@ class NetworkScoreTest {
         // Agent1 is no longer exiting, but agent2 is the current satisfier.
         cb.assertNoCallback(NO_CALLBACK_TIMEOUT)
     }
+
+    @Test
+    fun testVpnWins() {
+        val cb = makeTestNetworkCallback()
+        val agent1 = createTestNetworkAgent()
+        cb.expectAvailableThenValidatedCallbacks(agent1.network)
+        val agent2 = createTestNetworkAgent(intArrayOf(NetworkCapabilities.TRANSPORT_VPN))
+        // VPN wins out against agent1 even before it's validated (hence the "then validated",
+        // because it becomes the best network for this callback before it validates)
+        cb.expectAvailableThenValidatedCallbacks(agent2.network)
+    }
+
+    @Test
+    fun testEverUserSelectedAcceptUnvalidatedWins() {
+        val cb = makeTestNetworkCallback()
+        val agent1 = createTestNetworkAgent()
+        cb.expectAvailableThenValidatedCallbacks(agent1.network)
+        val agent2 = createTestNetworkAgent(everUserSelected = true, acceptUnvalidated = true)
+        // agent2 wins out against agent1 even before it's validated, because user-selected and
+        // accept unvalidated networks should win against even networks that are validated.
+        cb.expectAvailableThenValidatedCallbacks(agent2.network)
+    }
+
+    @Test
+    fun testPreferredTransportOrder() {
+        val cb = makeTestNetworkCallback()
+        val agentCell = createTestNetworkAgent(intArrayOf(NetworkCapabilities.TRANSPORT_CELLULAR))
+        cb.expectAvailableThenValidatedCallbacks(agentCell.network)
+        val agentWifi = createTestNetworkAgent(intArrayOf(NetworkCapabilities.TRANSPORT_WIFI))
+        // In the absence of other discriminating factors, agentWifi wins against agentCell because
+        // of its better transport, but only after it validates.
+        cb.expectAvailableDoubleValidatedCallbacks(agentWifi)
+        val agentEth = createTestNetworkAgent(intArrayOf(NetworkCapabilities.TRANSPORT_ETHERNET))
+        // Likewise, agentEth wins against agentWifi after validation because of its better
+        // transport.
+        cb.expectAvailableCallbacksValidated(agentEth)
+    }
+
+    // TODO (b/187929636) : add a test making sure that validated networks win over unvalidated
+    // ones. Right now this is not possible because this CTS can't directly manipulate the
+    // validation state of a network.
 }
