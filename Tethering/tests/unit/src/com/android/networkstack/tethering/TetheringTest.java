@@ -941,7 +941,7 @@ public class TetheringTest {
         verifyNoMoreInteractions(mWifiManager);
         // Asking for the last error after the per-interface state machine
         // has been reaped yields an unknown interface error.
-        assertEquals(TETHER_ERROR_UNKNOWN_IFACE, mTethering.getLastTetherError(TEST_WLAN_IFNAME));
+        assertEquals(TETHER_ERROR_UNKNOWN_IFACE, mTethering.getLastErrorForTest(TEST_WLAN_IFNAME));
     }
 
     /**
@@ -1474,7 +1474,7 @@ public class TetheringTest {
         verifyNoMoreInteractions(mWifiManager);
         // Asking for the last error after the per-interface state machine
         // has been reaped yields an unknown interface error.
-        assertEquals(TETHER_ERROR_UNKNOWN_IFACE, mTethering.getLastTetherError(TEST_WLAN_IFNAME));
+        assertEquals(TETHER_ERROR_UNKNOWN_IFACE, mTethering.getLastErrorForTest(TEST_WLAN_IFNAME));
     }
 
     // TODO: Test with and without interfaceStatusChanged().
@@ -1942,7 +1942,7 @@ public class TetheringTest {
         // There are 2 IpServer state change events: STATE_AVAILABLE -> STATE_LOCAL_ONLY
         verify(mNotificationUpdater, times(2)).onDownstreamChanged(DOWNSTREAM_NONE);
 
-        assertEquals(TETHER_ERROR_NO_ERROR, mTethering.getLastTetherError(TEST_P2P_IFNAME));
+        assertEquals(TETHER_ERROR_NO_ERROR, mTethering.getLastErrorForTest(TEST_P2P_IFNAME));
 
         // Emulate externally-visible WifiP2pManager effects, when wifi p2p group
         // is being removed.
@@ -1961,7 +1961,7 @@ public class TetheringTest {
         verifyNoMoreInteractions(mNetd);
         // Asking for the last error after the per-interface state machine
         // has been reaped yields an unknown interface error.
-        assertEquals(TETHER_ERROR_UNKNOWN_IFACE, mTethering.getLastTetherError(TEST_P2P_IFNAME));
+        assertEquals(TETHER_ERROR_UNKNOWN_IFACE, mTethering.getLastErrorForTest(TEST_P2P_IFNAME));
     }
 
     private void workingWifiP2pGroupClient(
@@ -1991,7 +1991,7 @@ public class TetheringTest {
         verifyNoMoreInteractions(mNetd);
         // Asking for the last error after the per-interface state machine
         // has been reaped yields an unknown interface error.
-        assertEquals(TETHER_ERROR_UNKNOWN_IFACE, mTethering.getLastTetherError(TEST_P2P_IFNAME));
+        assertEquals(TETHER_ERROR_UNKNOWN_IFACE, mTethering.getLastErrorForTest(TEST_P2P_IFNAME));
     }
 
     @Test
@@ -2022,7 +2022,7 @@ public class TetheringTest {
         verify(mNetd, never()).networkAddInterface(INetd.LOCAL_NET_ID, TEST_P2P_IFNAME);
         verify(mNetd, never()).ipfwdEnableForwarding(TETHERING_NAME);
         verify(mNetd, never()).tetherStartWithConfiguration(any());
-        assertEquals(TETHER_ERROR_UNKNOWN_IFACE, mTethering.getLastTetherError(TEST_P2P_IFNAME));
+        assertEquals(TETHER_ERROR_UNKNOWN_IFACE, mTethering.getLastErrorForTest(TEST_P2P_IFNAME));
     }
     @Test
     public void workingWifiP2pGroupOwnerLegacyModeWithIfaceChanged() throws Exception {
@@ -2387,10 +2387,10 @@ public class TetheringTest {
 
         mTethering.interfaceStatusChanged(TEST_USB_IFNAME, true);
         sendUsbBroadcast(true, true, true, TETHERING_USB);
-        assertContains(Arrays.asList(mTethering.getTetherableIfaces()), TEST_USB_IFNAME);
-        assertContains(Arrays.asList(mTethering.getTetherableIfaces()), TEST_ETH_IFNAME);
-        assertEquals(TETHER_ERROR_IFACE_CFG_ERROR, mTethering.getLastTetherError(TEST_USB_IFNAME));
-        assertEquals(TETHER_ERROR_IFACE_CFG_ERROR, mTethering.getLastTetherError(TEST_ETH_IFNAME));
+        assertContains(Arrays.asList(mTethering.getTetherableIfacesForTest()), TEST_USB_IFNAME);
+        assertContains(Arrays.asList(mTethering.getTetherableIfacesForTest()), TEST_ETH_IFNAME);
+        assertEquals(TETHER_ERROR_IFACE_CFG_ERROR, mTethering.getLastErrorForTest(TEST_USB_IFNAME));
+        assertEquals(TETHER_ERROR_IFACE_CFG_ERROR, mTethering.getLastErrorForTest(TEST_ETH_IFNAME));
     }
 
     @Test
