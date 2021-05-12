@@ -147,8 +147,11 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
 import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  *
@@ -166,6 +169,9 @@ public class Tethering {
     };
     private static final SparseArray<String> sMagicDecoderRing =
             MessageUtils.findMessageNames(sMessageClasses);
+
+    private static final int DUMP_TIMEOUT_MS = 10_000;
+
     // Keep in sync with NETID_UNSET in system/netd/include/netid_client.h
     private static final int NETID_UNSET = 0;
 
@@ -2278,15 +2284,10 @@ public class Tethering {
         pw.decreaseIndent();
     }
 
-    void dump(@NonNull FileDescriptor fd, @NonNull PrintWriter writer, @Nullable String[] args) {
+    void doDump(@NonNull FileDescriptor fd, @NonNull PrintWriter writer, @Nullable String[] args) {
         // Binder.java closes the resource for us.
-        @SuppressWarnings("resource")
-        final IndentingPrintWriter pw = new IndentingPrintWriter(writer, "  ");
-        if (mContext.checkCallingOrSelfPermission(android.Manifest.permission.DUMP)
-                != PERMISSION_GRANTED) {
-            pw.println("Permission Denial: can't dump.");
-            return;
-        }
+        @SuppressWarnings("resource") final IndentingPrintWriter pw = new IndentingPrintWriter(
+                writer, "  ");
 
         if (argsContain(args, "bpf")) {
             dumpBpf(pw);
@@ -2361,6 +2362,40 @@ public class Tethering {
         pw.decreaseIndent();
 
         pw.decreaseIndent();
+    }
+
+    void dump(@NonNull FileDescriptor fd, @NonNull PrintWriter writer, @Nullable String[] args) {
+        if (mContext.checkCallingOrSelfPermission(android.Manifest.permission.DUMP)
+                != PERMISSION_GRANTED) {
+            writer.println("Permission Denial: can't dump.");
+            return;
+        }
+
+        final CountDownLatch latch = new CountDownLatch(1);
+
+        // Don't crash the system if something in doDump throws an exception, but try to propagate
+        // the exception to the caller.
+        AtomicReference<RuntimeException> exceptionRef = new AtomicReference<>();
+        mHandler.post(() -> {
+            try {
+                doDump(fd, writer, args);
+            } catch (RuntimeException e) {
+                exceptionRef.set(e);
+            }
+            latch.countDown();
+        });
+
+        try {
+            if (!latch.await(DUMP_TIMEOUT_MS, TimeUnit.MILLISECONDS)) {
+                writer.println("Dump timeout after " + DUMP_TIMEOUT_MS + "ms");
+                return;
+            }
+        } catch (InterruptedException e) {
+            exceptionRef.compareAndSet(null, new IllegalStateException("Dump interrupted", e));
+        }
+
+        final RuntimeException e = exceptionRef.get();
+        if (e != null) throw e;
     }
 
     private static boolean argsContain(String[] args, String target) {
