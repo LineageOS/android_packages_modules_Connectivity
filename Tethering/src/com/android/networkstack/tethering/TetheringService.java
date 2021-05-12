@@ -121,9 +121,7 @@ public class TetheringService extends Service {
                 IIntResultListener listener) {
             if (checkAndNotifyCommonError(callerPkg, callingAttributionTag, listener)) return;
 
-            try {
-                listener.onResult(mTethering.setUsbTethering(enable));
-            } catch (RemoteException e) { }
+            mTethering.setUsbTethering(enable, listener);
         }
 
         @Override
