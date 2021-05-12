@@ -1280,20 +1280,6 @@ public class Tethering {
         return hasDownstreamConfiguration && hasUpstreamConfiguration;
     }
 
-    // TODO - update callers to use getTetheringConfiguration(),
-    // which has only final members.
-    String[] getTetherableUsbRegexs() {
-        return copy(mConfig.tetherableUsbRegexs);
-    }
-
-    String[] getTetherableWifiRegexs() {
-        return copy(mConfig.tetherableWifiRegexs);
-    }
-
-    String[] getTetherableBluetoothRegexs() {
-        return copy(mConfig.tetherableBluetoothRegexs);
-    }
-
     void setUsbTethering(boolean enable, IIntResultListener listener) {
         mHandler.post(() -> {
             try {
@@ -1342,12 +1328,6 @@ public class Tethering {
             }
         }
         return list.toArray(new String[list.size()]);
-    }
-
-    String[] getTetheredDhcpRanges() {
-        // TODO: this is only valid for the old DHCP server. Latest search suggests it is only used
-        // by WifiP2pServiceImpl to start dnsmasq: remove/deprecate after migrating callers.
-        return mConfig.legacyDhcpRanges;
     }
 
     private void logMessage(State state, int what) {
