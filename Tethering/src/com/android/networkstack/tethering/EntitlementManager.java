@@ -41,7 +41,6 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.net.util.SharedLog;
 import android.os.Bundle;
-import android.os.ConditionVariable;
 import android.os.Handler;
 import android.os.Parcel;
 import android.os.PersistableBundle;
@@ -516,25 +515,18 @@ public class EntitlementManager {
      * @param pw {@link PrintWriter} is used to print formatted
      */
     public void dump(PrintWriter pw) {
-        final ConditionVariable mWaiting = new ConditionVariable();
-        mHandler.post(() -> {
-            pw.print("isCellularUpstreamPermitted: ");
-            pw.println(isCellularUpstreamPermitted());
-            for (int type = mCurrentDownstreams.nextSetBit(0); type >= 0;
-                    type = mCurrentDownstreams.nextSetBit(type + 1)) {
-                pw.print("Type: ");
-                pw.print(typeString(type));
-                if (mCurrentEntitlementResults.indexOfKey(type) > -1) {
-                    pw.print(", Value: ");
-                    pw.println(errorString(mCurrentEntitlementResults.get(type)));
-                } else {
-                    pw.println(", Value: empty");
-                }
+        pw.print("isCellularUpstreamPermitted: ");
+        pw.println(isCellularUpstreamPermitted());
+        for (int type = mCurrentDownstreams.nextSetBit(0); type >= 0;
+                type = mCurrentDownstreams.nextSetBit(type + 1)) {
+            pw.print("Type: ");
+            pw.print(typeString(type));
+            if (mCurrentEntitlementResults.indexOfKey(type) > -1) {
+                pw.print(", Value: ");
+                pw.println(errorString(mCurrentEntitlementResults.get(type)));
+            } else {
+                pw.println(", Value: empty");
             }
-            mWaiting.open();
-        });
-        if (!mWaiting.block(DUMP_TIMEOUT)) {
-            pw.println("... dump timed out after " + DUMP_TIMEOUT + "ms");
         }
         pw.print("Exempted: [");
         for (int type = mExemptedDownstreams.nextSetBit(0); type >= 0;
