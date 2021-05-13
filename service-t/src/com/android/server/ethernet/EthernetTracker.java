@@ -507,10 +507,9 @@ final class EthernetTracker {
             boolean clearDefaultCapabilities, @Nullable String commaSeparatedCapabilities,
             @Nullable String overrideTransport) {
 
-        final NetworkCapabilities.Builder builder = new NetworkCapabilities.Builder();
-        if (clearDefaultCapabilities) {
-            builder.clearAll();  // Remove default capabilities and transports
-        }
+        final NetworkCapabilities.Builder builder = clearDefaultCapabilities
+                ? NetworkCapabilities.Builder.withoutDefaultCapabilities()
+                : new NetworkCapabilities.Builder();
 
         // Determine the transport type. If someone has tried to define an override transport then
         // attempt to add it. Since we can only have one override, all errors with it will
