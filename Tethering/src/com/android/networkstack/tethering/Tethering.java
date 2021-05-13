@@ -2040,8 +2040,7 @@ public class Tethering {
     }
 
     private void startTrackDefaultNetwork() {
-        mUpstreamNetworkMonitor.startTrackDefaultNetwork(mDeps.getDefaultNetworkRequest(),
-                mEntitlementMgr);
+        mUpstreamNetworkMonitor.startTrackDefaultNetwork(mEntitlementMgr);
     }
 
     /** Get the latest value of the tethering entitlement check. */
