@@ -47,7 +47,6 @@ import android.net.netstats.provider.NetworkStatsProvider;
 import android.net.util.InterfaceParams;
 import android.net.util.SharedLog;
 import android.net.util.TetheringUtils.ForwardedStats;
-import android.os.ConditionVariable;
 import android.os.Handler;
 import android.system.ErrnoException;
 import android.text.TextUtils;
@@ -735,43 +734,35 @@ public class BpfCoordinator {
      * be allowed to be accessed on the handler thread.
      */
     public void dump(@NonNull IndentingPrintWriter pw) {
-        final ConditionVariable dumpDone = new ConditionVariable();
-        mHandler.post(() -> {
-            pw.println("mIsBpfEnabled: " + mIsBpfEnabled);
-            pw.println("Polling " + (mPollingStarted ? "started" : "not started"));
-            pw.println("Stats provider " + (mStatsProvider != null
-                    ? "registered" : "not registered"));
-            pw.println("Upstream quota: " + mInterfaceQuotas.toString());
-            pw.println("Polling interval: " + getPollingInterval() + " ms");
-            pw.println("Bpf shim: " + mBpfCoordinatorShim.toString());
+        pw.println("mIsBpfEnabled: " + mIsBpfEnabled);
+        pw.println("Polling " + (mPollingStarted ? "started" : "not started"));
+        pw.println("Stats provider " + (mStatsProvider != null
+                ? "registered" : "not registered"));
+        pw.println("Upstream quota: " + mInterfaceQuotas.toString());
+        pw.println("Polling interval: " + getPollingInterval() + " ms");
+        pw.println("Bpf shim: " + mBpfCoordinatorShim.toString());
 
-            pw.println("Forwarding stats:");
-            pw.increaseIndent();
-            if (mStats.size() == 0) {
-                pw.println("<empty>");
-            } else {
-                dumpStats(pw);
-            }
-            pw.decreaseIndent();
-
-            pw.println("Forwarding rules:");
-            pw.increaseIndent();
-            dumpIpv6UpstreamRules(pw);
-            dumpIpv6ForwardingRules(pw);
-            dumpIpv4ForwardingRules(pw);
-            pw.decreaseIndent();
-
-            pw.println();
-            pw.println("Forwarding counters:");
-            pw.increaseIndent();
-            dumpCounters(pw);
-            pw.decreaseIndent();
-
-            dumpDone.open();
-        });
-        if (!dumpDone.block(DUMP_TIMEOUT_MS)) {
-            pw.println("... dump timed-out after " + DUMP_TIMEOUT_MS + "ms");
+        pw.println("Forwarding stats:");
+        pw.increaseIndent();
+        if (mStats.size() == 0) {
+            pw.println("<empty>");
+        } else {
+            dumpStats(pw);
         }
+        pw.decreaseIndent();
+
+        pw.println("Forwarding rules:");
+        pw.increaseIndent();
+        dumpIpv6UpstreamRules(pw);
+        dumpIpv6ForwardingRules(pw);
+        dumpIpv4ForwardingRules(pw);
+        pw.decreaseIndent();
+
+        pw.println();
+        pw.println("Forwarding counters:");
+        pw.increaseIndent();
+        dumpCounters(pw);
+        pw.decreaseIndent();
     }
 
     private void dumpStats(@NonNull IndentingPrintWriter pw) {
