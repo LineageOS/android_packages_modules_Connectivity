@@ -25,7 +25,10 @@ import static android.net.TetheringManager.TETHER_ERROR_NO_CHANGE_TETHERING_PERM
 import static android.net.TetheringManager.TETHER_ERROR_NO_ERROR;
 
 import static org.junit.Assert.assertEquals;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
@@ -214,11 +217,15 @@ public final class TetheringServiceTest {
     }
 
     private void runSetUsbTethering(final TestTetheringResult result) throws Exception {
-        when(mTethering.setUsbTethering(true /* enable */)).thenReturn(TETHER_ERROR_NO_ERROR);
+        doAnswer((invocation) -> {
+            final IIntResultListener listener = invocation.getArgument(1);
+            listener.onResult(TETHER_ERROR_NO_ERROR);
+            return null;
+        }).when(mTethering).setUsbTethering(anyBoolean(), any(IIntResultListener.class));
         mTetheringConnector.setUsbTethering(true /* enable */, TEST_CALLER_PKG,
                 TEST_ATTRIBUTION_TAG, result);
         verify(mTethering).isTetheringSupported();
-        verify(mTethering).setUsbTethering(true /* enable */);
+        verify(mTethering).setUsbTethering(eq(true) /* enable */, any(IIntResultListener.class));
         result.assertResult(TETHER_ERROR_NO_ERROR);
     }
 
