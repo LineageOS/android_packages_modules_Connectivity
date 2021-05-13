@@ -30,6 +30,7 @@ java_defaults {
         ":services-tethering-shared-srcs",
     ],
     static_libs: [
+        "NetworkStackApiStableShims",
         "androidx.annotation_annotation",
         "modules-utils-build",
         "netlink-client",
