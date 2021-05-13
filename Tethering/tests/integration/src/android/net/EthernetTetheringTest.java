@@ -16,6 +16,7 @@
 
 package android.net;
 
+import static android.Manifest.permission.ACCESS_NETWORK_STATE;
 import static android.Manifest.permission.MANAGE_TEST_NETWORKS;
 import static android.Manifest.permission.NETWORK_SETTINGS;
 import static android.Manifest.permission.TETHER_PRIVILEGED;
@@ -121,7 +122,7 @@ public class EthernetTetheringTest {
         // Needed to create a TestNetworkInterface, to call requestTetheredInterface, and to receive
         // tethered client callbacks.
         mUiAutomation.adoptShellPermissionIdentity(
-                MANAGE_TEST_NETWORKS, NETWORK_SETTINGS, TETHER_PRIVILEGED);
+                MANAGE_TEST_NETWORKS, NETWORK_SETTINGS, TETHER_PRIVILEGED, ACCESS_NETWORK_STATE);
         mRunTests = mTm.isTetheringSupported() && mEm != null;
         assumeTrue(mRunTests);
 
