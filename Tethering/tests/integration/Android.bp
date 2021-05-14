@@ -23,6 +23,7 @@ java_defaults {
         "src/**/*.java",
         "src/**/*.kt",
     ],
+    min_sdk_version: "30",
     static_libs: [
         "NetworkStackApiStableLib",
         "androidx.test.rules",
@@ -44,12 +45,24 @@ java_defaults {
 }
 
 android_library {
-    name: "TetheringIntegrationTestsLib",
+    name: "TetheringIntegrationTestsLatestSdkLib",
+    target_sdk_version: "30",
     platform_apis: true,
     defaults: ["TetheringIntegrationTestsDefaults"],
     visibility: [
-        "//cts/tests/tests/tethering",
         "//packages/modules/Connectivity/tests/cts/tethering",
+        "//packages/modules/Connectivity/Tethering/tests/mts",
+    ]
+}
+
+android_library {
+    name: "TetheringIntegrationTestsLib",
+    target_sdk_version: "current",
+    platform_apis: true,
+    defaults: ["TetheringIntegrationTestsDefaults"],
+    visibility: [
+        "//packages/modules/Connectivity/tests/cts/tethering",
+        "//packages/modules/Connectivity/Tethering/tests/mts",
     ]
 }
 
@@ -70,6 +83,8 @@ android_test {
 android_test {
     name: "TetheringCoverageTests",
     platform_apis: true,
+    min_sdk_version: "30",
+    target_sdk_version: "30",
     test_suites: ["device-tests", "mts"],
     test_config: "AndroidTest_Coverage.xml",
     defaults: ["libnetworkstackutilsjni_deps"],
@@ -78,8 +93,8 @@ android_test {
         "NetdStaticLibTestsLib",
         "NetworkStaticLibTestsLib",
         "NetworkStackTestsLib",
-        "TetheringTestsLib",
-        "TetheringIntegrationTestsLib",
+        "TetheringTestsLatestSdkLib",
+        "TetheringIntegrationTestsLatestSdkLib",
     ],
     jni_libs: [
         // For mockito extended
