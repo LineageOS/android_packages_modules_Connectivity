@@ -16,8 +16,8 @@ package {
     default_applicable_licenses: ["Android-Apache-2.0"],
 }
 
-android_test {
-    name: "CtsTetheringTest",
+java_defaults {
+    name: "CtsTetheringTestDefaults",
     defaults: ["cts_defaults"],
 
     libs: [
@@ -30,7 +30,6 @@ android_test {
 
     static_libs: [
         "TetheringCommonTests",
-        "TetheringIntegrationTestsLib",
         "compatibility-device-util-axt",
         "cts-net-utils",
         "net-tests-utils",
@@ -47,13 +46,52 @@ android_test {
 
     // Change to system current when TetheringManager move to bootclass path.
     platform_apis: true,
+}
+
+// Tethering CTS tests that target the latest released SDK. These tests can be installed on release
+// devices which has equal or lowner sdk version than target sdk and are useful for qualifying
+// mainline modules on release devices.
+android_test {
+    name: "CtsTetheringTestLatestSdk",
+    defaults: ["CtsTetheringTestDefaults"],
+
+    min_sdk_version: "30",
+    target_sdk_version: "30",
+
+    static_libs: [
+        "TetheringIntegrationTestsLatestSdkLib",
+    ],
+
+    test_suites: [
+        "general-tests",
+        "mts-tethering",
+    ],
+
+    test_config_template: "AndroidTestTemplate.xml",
+
+    // Include both the 32 and 64 bit versions
+    compile_multilib: "both",
+}
+
+// Tethering CTS tests for development and release. These tests always target the platform SDK
+// version, and are subject to all the restrictions appropriate to that version. Before SDK
+// finalization, these tests have a min_sdk_version of 10000, and cannot be installed on release
+// devices.
+android_test {
+    name: "CtsTetheringTest",
+    defaults: ["CtsTetheringTestDefaults"],
+
+    static_libs: [
+        "TetheringIntegrationTestsLib",
+    ],
 
     // Tag this module as a cts test artifact
     test_suites: [
         "cts",
         "general-tests",
-        "mts-tethering",
     ],
+
+    test_config_template: "AndroidTestTemplate.xml",
 
     // Include both the 32 and 64 bit versions
     compile_multilib: "both",
