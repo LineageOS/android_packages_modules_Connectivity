@@ -49,6 +49,8 @@ android_test {
 
     defaults: ["framework-connectivity-test-defaults"],
 
+    platform_apis: true,
+
     // Tag this module as a mts test artifact
     test_suites: [
         "general-tests",
