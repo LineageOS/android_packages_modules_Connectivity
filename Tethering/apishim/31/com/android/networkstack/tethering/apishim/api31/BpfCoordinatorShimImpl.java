@@ -36,6 +36,8 @@ import com.android.networkstack.tethering.BpfUtils;
 import com.android.networkstack.tethering.Tether4Key;
 import com.android.networkstack.tethering.Tether4Value;
 import com.android.networkstack.tethering.Tether6Value;
+import com.android.networkstack.tethering.TetherDevKey;
+import com.android.networkstack.tethering.TetherDevValue;
 import com.android.networkstack.tethering.TetherDownstream6Key;
 import com.android.networkstack.tethering.TetherLimitKey;
 import com.android.networkstack.tethering.TetherLimitValue;
@@ -85,6 +87,10 @@ public class BpfCoordinatorShimImpl
     @Nullable
     private final BpfMap<TetherLimitKey, TetherLimitValue> mBpfLimitMap;
 
+    // BPF map of interface index mapping for XDP.
+    @Nullable
+    private final BpfMap<TetherDevKey, TetherDevValue> mBpfDevMap;
+
     // Tracking IPv4 rule count while any rule is using the given upstream interfaces. Used for
     // reducing the BPF map iteration query. The count is increased or decreased when the rule is
     // added or removed successfully on mBpfDownstream4Map. Counting the rules on downstream4 map
@@ -108,6 +114,7 @@ public class BpfCoordinatorShimImpl
         mBpfUpstream6Map = deps.getBpfUpstream6Map();
         mBpfStatsMap = deps.getBpfStatsMap();
         mBpfLimitMap = deps.getBpfLimitMap();
+        mBpfDevMap = deps.getBpfDevMap();
 
         // Clear the stubs of the maps for handling the system service crash if any.
         // Doesn't throw the exception and clear the stubs as many as possible.
@@ -141,12 +148,18 @@ public class BpfCoordinatorShimImpl
         } catch (ErrnoException e) {
             mLog.e("Could not clear mBpfLimitMap: " + e);
         }
+        try {
+            if (mBpfDevMap != null) mBpfDevMap.clear();
+        } catch (ErrnoException e) {
+            mLog.e("Could not clear mBpfDevMap: " + e);
+        }
     }
 
     @Override
     public boolean isInitialized() {
         return mBpfDownstream4Map != null && mBpfUpstream4Map != null && mBpfDownstream6Map != null
-                && mBpfUpstream6Map != null && mBpfStatsMap != null && mBpfLimitMap != null;
+                && mBpfUpstream6Map != null && mBpfStatsMap != null && mBpfLimitMap != null
+                && mBpfDevMap != null;
     }
 
     @Override
@@ -432,6 +445,32 @@ public class BpfCoordinatorShimImpl
         return mRule4CountOnUpstream.get(ifIndex) != null;
     }
 
+    @Override
+    public boolean addDevMap(int ifIndex) {
+        if (!isInitialized()) return false;
+
+        try {
+            mBpfDevMap.updateEntry(new TetherDevKey(ifIndex), new TetherDevValue(ifIndex));
+        } catch (ErrnoException e) {
+            mLog.e("Could not add interface " + ifIndex + ": " + e);
+            return false;
+        }
+        return true;
+    }
+
+    @Override
+    public boolean removeDevMap(int ifIndex) {
+        if (!isInitialized()) return false;
+
+        try {
+            mBpfDevMap.deleteEntry(new TetherDevKey(ifIndex));
+        } catch (ErrnoException e) {
+            mLog.e("Could not delete interface " + ifIndex + ": " + e);
+            return false;
+        }
+        return true;
+    }
+
     private String mapStatus(BpfMap m, String name) {
         return name + "{" + (m != null ? "OK" : "ERROR") + "}";
     }
@@ -444,7 +483,8 @@ public class BpfCoordinatorShimImpl
                 mapStatus(mBpfDownstream4Map, "mBpfDownstream4Map"),
                 mapStatus(mBpfUpstream4Map, "mBpfUpstream4Map"),
                 mapStatus(mBpfStatsMap, "mBpfStatsMap"),
-                mapStatus(mBpfLimitMap, "mBpfLimitMap")
+                mapStatus(mBpfLimitMap, "mBpfLimitMap"),
+                mapStatus(mBpfDevMap, "mBpfDevMap")
         });
     }
 
