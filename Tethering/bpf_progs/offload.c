@@ -767,8 +767,7 @@ DEFINE_BPF_PROG_KVER_RANGE("schedcls/tether_upstream4_ether$stub", AID_ROOT, AID
 
 // ----- XDP Support -----
 
-DEFINE_BPF_MAP_GRW(tether_xdp_devmap, DEVMAP_HASH, uint32_t, uint32_t, 64,
-                   AID_NETWORK_STACK)
+DEFINE_BPF_MAP_GRW(tether_dev_map, DEVMAP_HASH, uint32_t, uint32_t, 64, AID_NETWORK_STACK)
 
 static inline __always_inline int do_xdp_forward6(struct xdp_md *ctx, const bool is_ethernet,
         const bool downstream) {
