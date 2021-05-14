@@ -166,5 +166,15 @@ public abstract class BpfCoordinatorShim {
      * TODO: consider using InterfaceParams to replace interface name.
      */
     public abstract boolean detachProgram(@NonNull String iface);
+
+    /**
+     * Add interface index mapping.
+     */
+    public abstract boolean addDevMap(int ifIndex);
+
+    /**
+     * Remove interface index mapping.
+     */
+    public abstract boolean removeDevMap(int ifIndex);
 }
 

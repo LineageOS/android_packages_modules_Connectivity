@@ -207,6 +207,7 @@ public class BpfCoordinatorTest {
     @Mock private BpfMap<Tether4Key, Tether4Value> mBpfUpstream4Map;
     @Mock private BpfMap<TetherDownstream6Key, Tether6Value> mBpfDownstream6Map;
     @Mock private BpfMap<TetherUpstream6Key, Tether6Value> mBpfUpstream6Map;
+    @Mock private BpfMap<TetherDevKey, TetherDevValue> mBpfDevMap;
 
     // Late init since methods must be called by the thread that created this object.
     private TestableNetworkStatsProviderCbBinder mTetherStatsProviderCb;
@@ -283,6 +284,11 @@ public class BpfCoordinatorTest {
                     @Nullable
                     public BpfMap<TetherLimitKey, TetherLimitValue> getBpfLimitMap() {
                         return mBpfLimitMap;
+                    }
+
+                    @Nullable
+                    public BpfMap<TetherDevKey, TetherDevValue> getBpfDevMap() {
+                        return mBpfDevMap;
                     }
             });
 
@@ -1368,12 +1374,9 @@ public class BpfCoordinatorTest {
         coordinator.tetherOffloadClientAdd(mIpServer, clientInfo);
     }
 
-    // TODO: Test the IPv4 and IPv6 exist concurrently.
-    // TODO: Test the IPv4 rule delete failed.
-    @Test
-    @IgnoreUpTo(Build.VERSION_CODES.R)
-    public void testSetDataLimitOnRule4Change() throws Exception {
-        final BpfCoordinator coordinator = makeBpfCoordinator();
+    private void initBpfCoordinatorForRule4(final BpfCoordinator coordinator) throws Exception {
+        // Needed because addUpstreamIfindexToMap only updates upstream information when polling
+        // was started.
         coordinator.startPolling();
 
         // Needed because tetherOffloadRuleRemove of api31.BpfCoordinatorShimImpl only decreases
@@ -1387,6 +1390,15 @@ public class BpfCoordinatorTest {
         coordinator.addUpstreamNameToLookupTable(UPSTREAM_IFINDEX, UPSTREAM_IFACE);
         setUpstreamInformationTo(coordinator);
         setDownstreamAndClientInformationTo(coordinator);
+    }
+
+    // TODO: Test the IPv4 and IPv6 exist concurrently.
+    // TODO: Test the IPv4 rule delete failed.
+    @Test
+    @IgnoreUpTo(Build.VERSION_CODES.R)
+    public void testSetDataLimitOnRule4Change() throws Exception {
+        final BpfCoordinator coordinator = makeBpfCoordinator();
+        initBpfCoordinatorForRule4(coordinator);
 
         // Applying a data limit to the current upstream does not take any immediate action.
         // The data limit could be only set on an upstream which has rules.
@@ -1444,5 +1456,42 @@ public class BpfCoordinatorTest {
         inOrder.verify(mBpfDownstream4Map).deleteEntry(eq(expectedDownstream4KeyTcp));
         verifyTetherOffloadGetAndClearStats(inOrder, UPSTREAM_IFINDEX);
         inOrder.verifyNoMoreInteractions();
+    }
+
+    @Test
+    @IgnoreUpTo(Build.VERSION_CODES.R)
+    public void testAddDevMapRule6() throws Exception {
+        final BpfCoordinator coordinator = makeBpfCoordinator();
+
+        coordinator.addUpstreamNameToLookupTable(UPSTREAM_IFINDEX, UPSTREAM_IFACE);
+        final Ipv6ForwardingRule ruleA = buildTestForwardingRule(UPSTREAM_IFINDEX, NEIGH_A, MAC_A);
+        final Ipv6ForwardingRule ruleB = buildTestForwardingRule(UPSTREAM_IFINDEX, NEIGH_B, MAC_B);
+
+        coordinator.tetherOffloadRuleAdd(mIpServer, ruleA);
+        verify(mBpfDevMap).updateEntry(eq(new TetherDevKey(UPSTREAM_IFINDEX)),
+                eq(new TetherDevValue(UPSTREAM_IFINDEX)));
+        verify(mBpfDevMap).updateEntry(eq(new TetherDevKey(DOWNSTREAM_IFINDEX)),
+                eq(new TetherDevValue(DOWNSTREAM_IFINDEX)));
+        clearInvocations(mBpfDevMap);
+
+        coordinator.tetherOffloadRuleAdd(mIpServer, ruleB);
+        verify(mBpfDevMap, never()).updateEntry(any(), any());
+    }
+
+    @Test
+    @IgnoreUpTo(Build.VERSION_CODES.R)
+    public void testAddDevMapRule4() throws Exception {
+        final BpfCoordinator coordinator = makeBpfCoordinator();
+        initBpfCoordinatorForRule4(coordinator);
+
+        mConsumer.accept(makeTestConntrackEvent(IPCTNL_MSG_CT_NEW, IPPROTO_TCP));
+        verify(mBpfDevMap).updateEntry(eq(new TetherDevKey(UPSTREAM_IFINDEX)),
+                eq(new TetherDevValue(UPSTREAM_IFINDEX)));
+        verify(mBpfDevMap).updateEntry(eq(new TetherDevKey(DOWNSTREAM_IFINDEX)),
+                eq(new TetherDevValue(DOWNSTREAM_IFINDEX)));
+        clearInvocations(mBpfDevMap);
+
+        mConsumer.accept(makeTestConntrackEvent(IPCTNL_MSG_CT_NEW, IPPROTO_UDP));
+        verify(mBpfDevMap, never()).updateEntry(any(), any());
     }
 }
