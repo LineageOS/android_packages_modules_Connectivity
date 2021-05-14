@@ -20,7 +20,6 @@ import android.app.usage.NetworkStatsManager;
 import android.bluetooth.BluetoothAdapter;
 import android.content.Context;
 import android.net.INetd;
-import android.net.NetworkRequest;
 import android.net.ip.IpServer;
 import android.net.util.SharedLog;
 import android.os.Handler;
@@ -97,11 +96,6 @@ public abstract class TetheringDependencies {
     public boolean isTetheringSupported() {
         return true;
     }
-
-    /**
-     * Get the NetworkRequest that should be fulfilled by the default network.
-     */
-    public abstract NetworkRequest getDefaultNetworkRequest();
 
     /**
      * Get a reference to the EntitlementManager to be used by tethering.

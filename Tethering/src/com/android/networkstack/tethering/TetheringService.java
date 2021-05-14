@@ -35,8 +35,6 @@ import android.net.IIntResultListener;
 import android.net.INetworkStackConnector;
 import android.net.ITetheringConnector;
 import android.net.ITetheringEventCallback;
-import android.net.NetworkCapabilities;
-import android.net.NetworkRequest;
 import android.net.NetworkStack;
 import android.net.TetheringRequestParcel;
 import android.net.dhcp.DhcpServerCallbacks;
@@ -306,19 +304,6 @@ public class TetheringService extends Service {
     @VisibleForTesting
     public TetheringDependencies makeTetheringDependencies() {
         return new TetheringDependencies() {
-            @Override
-            public NetworkRequest getDefaultNetworkRequest() {
-                // TODO: b/147280869, add a proper system API to replace this.
-                final NetworkRequest trackDefaultRequest = new NetworkRequest.Builder()
-                        .clearCapabilities()
-                        .addCapability(NetworkCapabilities.NET_CAPABILITY_NOT_RESTRICTED)
-                        .addCapability(NetworkCapabilities.NET_CAPABILITY_TRUSTED)
-                        .addCapability(NetworkCapabilities.NET_CAPABILITY_NOT_VPN)
-                        .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
-                        .build();
-                return trackDefaultRequest;
-            }
-
             @Override
             public Looper getTetheringLooper() {
                 final HandlerThread tetherThread = new HandlerThread("android.tethering");
