@@ -36,13 +36,13 @@ java_library {
         "framework-tethering.impl",
     ],
     visibility: [
-        "//cts/tests/tests/tethering",
         "//packages/modules/Connectivity/tests/cts/tethering",
     ],
 }
 
 java_defaults {
     name: "TetheringTestsDefaults",
+    min_sdk_version: "30",
     srcs: [
         "src/**/*.java",
         "src/**/*.kt",
@@ -81,10 +81,10 @@ java_defaults {
 // unit test code. It is not currently used by the tests themselves because all the build
 // configuration needed by the tests is in the TetheringTestsDefaults rule.
 android_library {
-    name: "TetheringTestsLib",
+    name: "TetheringTestsLatestSdkLib",
     defaults: ["TetheringTestsDefaults"],
+    target_sdk_version: "30",
     visibility: [
-        "//frameworks/base/packages/Tethering/tests/integration",
         "//packages/modules/Connectivity/Tethering/tests/integration",
     ]
 }
