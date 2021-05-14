@@ -58,7 +58,6 @@ import android.annotation.NonNull;
 import android.app.usage.NetworkStatsManager;
 import android.content.Context;
 import android.content.pm.ApplicationInfo;
-import android.net.ITetheringStatsProvider;
 import android.net.IpPrefix;
 import android.net.LinkAddress;
 import android.net.LinkProperties;
@@ -150,6 +149,7 @@ public class OffloadControllerTest {
         when(mHardware.setUpstreamParameters(anyString(), any(), any(), any())).thenReturn(true);
         when(mHardware.getForwardedStats(any())).thenReturn(new ForwardedStats());
         when(mHardware.setDataLimit(anyString(), anyLong())).thenReturn(true);
+        when(mHardware.setDataWarningAndLimit(anyString(), anyLong(), anyLong())).thenReturn(true);
     }
 
     private void enableOffload() {
@@ -503,77 +503,167 @@ public class OffloadControllerTest {
                 expectedUidStatsDiff);
     }
 
+    /**
+     * Test OffloadController with different combinations of HAL and framework versions can set
+     * data warning and/or limit correctly.
+     */
     @Test
-    public void testSetInterfaceQuota() throws Exception {
+    public void testSetDataWarningAndLimit() throws Exception {
+        // Verify the OffloadController is called by R framework, where the framework doesn't send
+        // warning.
+        checkSetDataWarningAndLimit(false, OFFLOAD_HAL_VERSION_1_0);
+        checkSetDataWarningAndLimit(false, OFFLOAD_HAL_VERSION_1_1);
+        // Verify the OffloadController is called by S+ framework, where the framework sends
+        // warning along with limit.
+        checkSetDataWarningAndLimit(true, OFFLOAD_HAL_VERSION_1_0);
+        checkSetDataWarningAndLimit(true, OFFLOAD_HAL_VERSION_1_1);
+    }
+
+    private void checkSetDataWarningAndLimit(boolean isProviderSetWarning, int controlVersion)
+            throws Exception {
         enableOffload();
         final OffloadController offload =
-                startOffloadController(OFFLOAD_HAL_VERSION_1_0, true /*expectStart*/);
+                startOffloadController(controlVersion, true /*expectStart*/);
 
         final String ethernetIface = "eth1";
         final String mobileIface = "rmnet_data0";
         final long ethernetLimit = 12345;
+        final long mobileWarning = 123456;
         final long mobileLimit = 12345678;
 
         final LinkProperties lp = new LinkProperties();
         lp.setInterfaceName(ethernetIface);
-        offload.setUpstreamLinkProperties(lp);
 
         final InOrder inOrder = inOrder(mHardware);
-        when(mHardware.setUpstreamParameters(any(), any(), any(), any())).thenReturn(true);
+        when(mHardware.setUpstreamParameters(
+                any(), any(), any(), any())).thenReturn(true);
         when(mHardware.setDataLimit(anyString(), anyLong())).thenReturn(true);
+        when(mHardware.setDataWarningAndLimit(anyString(), anyLong(), anyLong())).thenReturn(true);
+        offload.setUpstreamLinkProperties(lp);
+        // Applying an interface sends the initial quota to the hardware.
+        if (controlVersion >= OFFLOAD_HAL_VERSION_1_1) {
+            inOrder.verify(mHardware).setDataWarningAndLimit(ethernetIface, Long.MAX_VALUE,
+                    Long.MAX_VALUE);
+        } else {
+            inOrder.verify(mHardware).setDataLimit(ethernetIface, Long.MAX_VALUE);
+        }
+        inOrder.verifyNoMoreInteractions();
+
+        // Verify that set to unlimited again won't cause duplicated calls to the hardware.
+        if (isProviderSetWarning) {
+            mTetherStatsProvider.onSetWarningAndLimit(ethernetIface,
+                    NetworkStatsProvider.QUOTA_UNLIMITED, NetworkStatsProvider.QUOTA_UNLIMITED);
+        } else {
+            mTetherStatsProvider.onSetLimit(ethernetIface, NetworkStatsProvider.QUOTA_UNLIMITED);
+        }
+        waitForIdle();
+        inOrder.verifyNoMoreInteractions();
 
         // Applying an interface quota to the current upstream immediately sends it to the hardware.
-        mTetherStatsProvider.onSetLimit(ethernetIface, ethernetLimit);
+        if (isProviderSetWarning) {
+            mTetherStatsProvider.onSetWarningAndLimit(ethernetIface,
+                    NetworkStatsProvider.QUOTA_UNLIMITED, ethernetLimit);
+        } else {
+            mTetherStatsProvider.onSetLimit(ethernetIface, ethernetLimit);
+        }
         waitForIdle();
-        inOrder.verify(mHardware).setDataLimit(ethernetIface, ethernetLimit);
+        if (controlVersion >= OFFLOAD_HAL_VERSION_1_1) {
+            inOrder.verify(mHardware).setDataWarningAndLimit(ethernetIface, Long.MAX_VALUE,
+                    ethernetLimit);
+        } else {
+            inOrder.verify(mHardware).setDataLimit(ethernetIface, ethernetLimit);
+        }
         inOrder.verifyNoMoreInteractions();
 
         // Applying an interface quota to another upstream does not take any immediate action.
-        mTetherStatsProvider.onSetLimit(mobileIface, mobileLimit);
+        if (isProviderSetWarning) {
+            mTetherStatsProvider.onSetWarningAndLimit(mobileIface, mobileWarning, mobileLimit);
+        } else {
+            mTetherStatsProvider.onSetLimit(mobileIface, mobileLimit);
+        }
         waitForIdle();
-        inOrder.verify(mHardware, never()).setDataLimit(anyString(), anyLong());
+        if (controlVersion >= OFFLOAD_HAL_VERSION_1_1) {
+            inOrder.verify(mHardware, never()).setDataWarningAndLimit(anyString(), anyLong(),
+                    anyLong());
+        } else {
+            inOrder.verify(mHardware, never()).setDataLimit(anyString(), anyLong());
+        }
 
         // Switching to that upstream causes the quota to be applied if the parameters were applied
         // correctly.
         lp.setInterfaceName(mobileIface);
         offload.setUpstreamLinkProperties(lp);
         waitForIdle();
-        inOrder.verify(mHardware).setDataLimit(mobileIface, mobileLimit);
+        if (controlVersion >= OFFLOAD_HAL_VERSION_1_1) {
+            inOrder.verify(mHardware).setDataWarningAndLimit(mobileIface,
+                    isProviderSetWarning ? mobileWarning : Long.MAX_VALUE,
+                    mobileLimit);
+        } else {
+            inOrder.verify(mHardware).setDataLimit(mobileIface, mobileLimit);
+        }
 
-        // Setting a limit of ITetheringStatsProvider.QUOTA_UNLIMITED causes the limit to be set
+        // Setting a limit of NetworkStatsProvider.QUOTA_UNLIMITED causes the limit to be set
         // to Long.MAX_VALUE.
-        mTetherStatsProvider.onSetLimit(mobileIface, ITetheringStatsProvider.QUOTA_UNLIMITED);
+        if (isProviderSetWarning) {
+            mTetherStatsProvider.onSetWarningAndLimit(mobileIface,
+                    NetworkStatsProvider.QUOTA_UNLIMITED, NetworkStatsProvider.QUOTA_UNLIMITED);
+        } else {
+            mTetherStatsProvider.onSetLimit(mobileIface, NetworkStatsProvider.QUOTA_UNLIMITED);
+        }
         waitForIdle();
-        inOrder.verify(mHardware).setDataLimit(mobileIface, Long.MAX_VALUE);
+        if (controlVersion >= OFFLOAD_HAL_VERSION_1_1) {
+            inOrder.verify(mHardware).setDataWarningAndLimit(mobileIface, Long.MAX_VALUE,
+                    Long.MAX_VALUE);
+        } else {
+            inOrder.verify(mHardware).setDataLimit(mobileIface, Long.MAX_VALUE);
+        }
 
-        // If setting upstream parameters fails, then the data limit is not set.
+        // If setting upstream parameters fails, then the data warning and limit is not set.
         when(mHardware.setUpstreamParameters(any(), any(), any(), any())).thenReturn(false);
         lp.setInterfaceName(ethernetIface);
         offload.setUpstreamLinkProperties(lp);
-        mTetherStatsProvider.onSetLimit(mobileIface, mobileLimit);
+        if (isProviderSetWarning) {
+            mTetherStatsProvider.onSetWarningAndLimit(mobileIface, mobileWarning, mobileLimit);
+        } else {
+            mTetherStatsProvider.onSetLimit(mobileIface, mobileLimit);
+        }
         waitForIdle();
         inOrder.verify(mHardware, never()).setDataLimit(anyString(), anyLong());
+        inOrder.verify(mHardware, never()).setDataWarningAndLimit(anyString(), anyLong(),
+                anyLong());
 
-        // If setting the data limit fails while changing upstreams, offload is stopped.
+        // If setting the data warning and/or limit fails while changing upstreams, offload is
+        // stopped.
         when(mHardware.setUpstreamParameters(any(), any(), any(), any())).thenReturn(true);
         when(mHardware.setDataLimit(anyString(), anyLong())).thenReturn(false);
+        when(mHardware.setDataWarningAndLimit(anyString(), anyLong(), anyLong())).thenReturn(false);
         lp.setInterfaceName(mobileIface);
         offload.setUpstreamLinkProperties(lp);
-        mTetherStatsProvider.onSetLimit(mobileIface, mobileLimit);
+        if (isProviderSetWarning) {
+            mTetherStatsProvider.onSetWarningAndLimit(mobileIface, mobileWarning, mobileLimit);
+        } else {
+            mTetherStatsProvider.onSetLimit(mobileIface, mobileLimit);
+        }
         waitForIdle();
         inOrder.verify(mHardware).getForwardedStats(ethernetIface);
         inOrder.verify(mHardware).stopOffloadControl();
     }
 
     @Test
-    public void testDataLimitCallback() throws Exception {
+    public void testDataWarningAndLimitCallback() throws Exception {
         enableOffload();
-        final OffloadController offload =
-                startOffloadController(OFFLOAD_HAL_VERSION_1_0, true /*expectStart*/);
+        startOffloadController(OFFLOAD_HAL_VERSION_1_0, true /*expectStart*/);
 
         OffloadHardwareInterface.ControlCallback callback = mControlCallbackCaptor.getValue();
         callback.onStoppedLimitReached();
         mTetherStatsProviderCb.expectNotifyStatsUpdated();
+        mTetherStatsProviderCb.expectNotifyWarningOrLimitReached();
+
+        startOffloadController(OFFLOAD_HAL_VERSION_1_1, true /*expectStart*/);
+        callback = mControlCallbackCaptor.getValue();
+        callback.onWarningReached();
+        mTetherStatsProviderCb.expectNotifyStatsUpdated();
+        mTetherStatsProviderCb.expectNotifyWarningOrLimitReached();
     }
 
     @Test
@@ -761,9 +851,7 @@ public class OffloadControllerTest {
         // Initialize with fake eth upstream.
         final String ethernetIface = "eth1";
         InOrder inOrder = inOrder(mHardware);
-        final LinkProperties lp = new LinkProperties();
-        lp.setInterfaceName(ethernetIface);
-        offload.setUpstreamLinkProperties(lp);
+        offload.setUpstreamLinkProperties(makeEthernetLinkProperties());
         // Previous upstream was null, so no stats are fetched.
         inOrder.verify(mHardware, never()).getForwardedStats(any());
 
@@ -795,5 +883,34 @@ public class OffloadControllerTest {
         waitForIdle();
         mTetherStatsProviderCb.assertNoCallback();
         verify(mHardware, never()).getForwardedStats(any());
+    }
+
+    private static LinkProperties makeEthernetLinkProperties() {
+        final String ethernetIface = "eth1";
+        final LinkProperties lp = new LinkProperties();
+        lp.setInterfaceName(ethernetIface);
+        return lp;
+    }
+
+    private void checkSoftwarePollingUsed(int controlVersion) throws Exception {
+        enableOffload();
+        setOffloadPollInterval(DEFAULT_TETHER_OFFLOAD_POLL_INTERVAL_MS);
+        OffloadController offload =
+                startOffloadController(controlVersion, true /*expectStart*/);
+        offload.setUpstreamLinkProperties(makeEthernetLinkProperties());
+        mTetherStatsProvider.onSetAlert(0);
+        waitForIdle();
+        if (controlVersion >= OFFLOAD_HAL_VERSION_1_1) {
+            mTetherStatsProviderCb.assertNoCallback();
+        } else {
+            mTetherStatsProviderCb.expectNotifyAlertReached();
+        }
+        verify(mHardware, never()).getForwardedStats(any());
+    }
+
+    @Test
+    public void testSoftwarePollingUsed() throws Exception {
+        checkSoftwarePollingUsed(OFFLOAD_HAL_VERSION_1_0);
+        checkSoftwarePollingUsed(OFFLOAD_HAL_VERSION_1_1);
     }
 }
