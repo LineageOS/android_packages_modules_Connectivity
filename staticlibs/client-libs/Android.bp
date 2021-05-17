@@ -12,7 +12,7 @@ java_library {
         "com.android.tethering"
     ],
     visibility: [
-        "//packages/modules/Connectivity/Tethering",
+        "//packages/modules/Connectivity:__subpackages__",
         "//frameworks/base/services:__subpackages__",
         "//frameworks/base/packages:__subpackages__",
         "//frameworks/libs/net/client-libs/tests:__subpackages__",
