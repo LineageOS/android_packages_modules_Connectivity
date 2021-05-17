@@ -28,13 +28,13 @@ package android.net {
   }
 
   public static interface TetheringManager.TetheringEventCallback {
-    method public default void onTetherableInterfaceRegexpsChanged(@NonNull android.net.TetheringManager.TetheringInterfaceRegexps);
+    method @Deprecated public default void onTetherableInterfaceRegexpsChanged(@NonNull android.net.TetheringManager.TetheringInterfaceRegexps);
   }
 
-  public static class TetheringManager.TetheringInterfaceRegexps {
-    method @NonNull public java.util.List<java.lang.String> getTetherableBluetoothRegexs();
-    method @NonNull public java.util.List<java.lang.String> getTetherableUsbRegexs();
-    method @NonNull public java.util.List<java.lang.String> getTetherableWifiRegexs();
+  @Deprecated public static class TetheringManager.TetheringInterfaceRegexps {
+    method @Deprecated @NonNull public java.util.List<java.lang.String> getTetherableBluetoothRegexs();
+    method @Deprecated @NonNull public java.util.List<java.lang.String> getTetherableUsbRegexs();
+    method @Deprecated @NonNull public java.util.List<java.lang.String> getTetherableWifiRegexs();
   }
 
 }
