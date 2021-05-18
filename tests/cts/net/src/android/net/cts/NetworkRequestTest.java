@@ -327,7 +327,7 @@ public class NetworkRequestTest {
     // TODO: 1. Refactor test cases with helper method.
     //       2. Test capability that does not yet exist.
     @Test @IgnoreUpTo(Build.VERSION_CODES.R)
-    public void testBypassingVcnForNonInternetRequest() {
+    public void testBypassingVcn() {
         // Make an empty request. Verify the NOT_VCN_MANAGED is added.
         final NetworkRequest emptyRequest = new NetworkRequest.Builder().build();
         assertTrue(emptyRequest.hasCapability(ConstantsShim.NET_CAPABILITY_NOT_VCN_MANAGED));
@@ -360,12 +360,12 @@ public class NetworkRequestTest {
                 .addCapability(NET_CAPABILITY_NOT_ROAMING).build();
         assertTrue(notRoamRequest.hasCapability(ConstantsShim.NET_CAPABILITY_NOT_VCN_MANAGED));
 
-        // Make a internet request. Verify the NOT_VCN_MANAGED is added.
+        // Make an internet request. Verify the NOT_VCN_MANAGED is added.
         final NetworkRequest internetRequest = new NetworkRequest.Builder()
                 .addCapability(NET_CAPABILITY_INTERNET).build();
         assertTrue(internetRequest.hasCapability(ConstantsShim.NET_CAPABILITY_NOT_VCN_MANAGED));
 
-        // Make a internet request which explicitly removed NOT_VCN_MANAGED.
+        // Make an internet request which explicitly removed NOT_VCN_MANAGED.
         // Verify the NOT_VCN_MANAGED is removed.
         final NetworkRequest internetRemoveNotVcnRequest = new NetworkRequest.Builder()
                 .addCapability(NET_CAPABILITY_INTERNET)
@@ -398,6 +398,14 @@ public class NetworkRequestTest {
         final NetworkRequest dunRequest = new NetworkRequest.Builder()
                 .addCapability(NET_CAPABILITY_DUN).build();
         assertTrue(dunRequest.hasCapability(ConstantsShim.NET_CAPABILITY_NOT_VCN_MANAGED));
+
+        // Make an internet request but with NetworkSpecifier. Verify the NOT_VCN_MANAGED is not
+        // added.
+        final NetworkRequest internetWithSpecifierRequest = new NetworkRequest.Builder()
+                .addTransportType(TRANSPORT_WIFI).addCapability(NET_CAPABILITY_INTERNET)
+                .setNetworkSpecifier(makeTestWifiSpecifier()).build();
+        assertFalse(internetWithSpecifierRequest.hasCapability(
+                ConstantsShim.NET_CAPABILITY_NOT_VCN_MANAGED));
     }
 
     private void verifyEqualRequestBuilt(NetworkRequest orig) {
@@ -424,17 +432,20 @@ public class NetworkRequestTest {
                 .setSignalStrength(-99).build();
         verifyEqualRequestBuilt(requestCellMms);
 
-        final WifiNetworkSpecifier specifier = new WifiNetworkSpecifier.Builder()
-                .setSsidPattern(new PatternMatcher(TEST_SSID, PatternMatcher.PATTERN_LITERAL))
-                .setBssidPattern(ARBITRARY_ADDRESS, ARBITRARY_ADDRESS)
-                .build();
         final NetworkRequest requestWifi = builder
                 .addTransportType(TRANSPORT_WIFI)
                 .removeTransportType(TRANSPORT_CELLULAR)
                 .addCapability(NET_CAPABILITY_INTERNET)
                 .removeCapability(NET_CAPABILITY_MMS)
-                .setNetworkSpecifier(specifier)
+                .setNetworkSpecifier(makeTestWifiSpecifier())
                 .setSignalStrength(-33).build();
         verifyEqualRequestBuilt(requestWifi);
+    }
+
+    private WifiNetworkSpecifier makeTestWifiSpecifier() {
+        return new WifiNetworkSpecifier.Builder()
+                .setSsidPattern(new PatternMatcher(TEST_SSID, PatternMatcher.PATTERN_LITERAL))
+                .setBssidPattern(ARBITRARY_ADDRESS, ARBITRARY_ADDRESS)
+                .build();
     }
 }
