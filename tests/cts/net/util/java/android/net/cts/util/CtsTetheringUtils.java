@@ -22,7 +22,7 @@ import static android.net.TetheringManager.TETHER_HARDWARE_OFFLOAD_FAILED;
 import static android.net.TetheringManager.TETHER_HARDWARE_OFFLOAD_STARTED;
 import static android.net.TetheringManager.TETHER_HARDWARE_OFFLOAD_STOPPED;
 
-import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -35,6 +35,7 @@ import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.net.Network;
 import android.net.TetheredClient;
+import android.net.TetheringInterface;
 import android.net.TetheringManager;
 import android.net.TetheringManager.TetheringEventCallback;
 import android.net.TetheringManager.TetheringInterfaceRegexps;
@@ -51,6 +52,7 @@ import com.android.net.module.util.ArrayTrackRecord;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.Set;
 
 public final class CtsTetheringUtils {
     private TetheringManager mTm;
@@ -116,23 +118,38 @@ public final class CtsTetheringUtils {
         }
     }
 
-    public static boolean isIfaceMatch(final List<String> ifaceRegexs, final List<String> ifaces) {
-        return isIfaceMatch(ifaceRegexs.toArray(new String[0]), ifaces);
-    }
-
-    public static boolean isIfaceMatch(final String[] ifaceRegexs, final List<String> ifaces) {
+    private static boolean isRegexMatch(final String[] ifaceRegexs, String iface) {
         if (ifaceRegexs == null) fail("ifaceRegexs should not be null");
 
+        for (String regex : ifaceRegexs) {
+            if (iface.matches(regex)) return true;
+        }
+
+        return false;
+    }
+
+    public static boolean isAnyIfaceMatch(final String[] ifaceRegexs, final List<String> ifaces) {
         if (ifaces == null) return false;
 
         for (String s : ifaces) {
-            for (String regex : ifaceRegexs) {
-                if (s.matches(regex)) {
-                    return true;
-                }
+            if (isRegexMatch(ifaceRegexs, s)) return true;
+        }
+
+        return false;
+    }
+
+    private static TetheringInterface getFirstMatchingTetheringInterface(final List<String> regexs,
+            final int type, final Set<TetheringInterface> ifaces) {
+        if (ifaces == null || regexs == null) return null;
+
+        final String[] regexArray = regexs.toArray(new String[0]);
+        for (TetheringInterface iface : ifaces) {
+            if (isRegexMatch(regexArray, iface.getInterface()) && type == iface.getType()) {
+                return iface;
             }
         }
-        return false;
+
+        return null;
     }
 
     // Must poll the callback before looking at the member.
@@ -171,6 +188,8 @@ public final class CtsTetheringUtils {
         private TetheringInterfaceRegexps mTetherableRegex;
         private List<String> mTetherableIfaces;
         private List<String> mTetheredIfaces;
+        private String mErrorIface;
+        private int mErrorCode;
 
         @Override
         public void onTetheringSupported(boolean supported) {
@@ -191,17 +210,41 @@ public final class CtsTetheringUtils {
         @Override
         public void onTetherableInterfacesChanged(List<String> interfaces) {
             mTetherableIfaces = interfaces;
+        }
+        // Call the interface default implementation, which will call
+        // onTetherableInterfacesChanged(List<String>). This ensures that the default implementation
+        // of the new callback method calls the old callback method and avoids the need to convert
+        // Set<TetheringInterface> to List<String> in this code.
+        @Override
+        public void onTetherableInterfacesChanged(Set<TetheringInterface> interfaces) {
+            TetheringEventCallback.super.onTetherableInterfacesChanged(interfaces);
+            assertHasAllTetheringInterfaces(interfaces, mTetherableIfaces);
             mHistory.add(new CallbackValue(CallbackType.ON_TETHERABLE_IFACES, interfaces, 0));
         }
 
         @Override
         public void onTetheredInterfacesChanged(List<String> interfaces) {
             mTetheredIfaces = interfaces;
+        }
+
+        @Override
+        public void onTetheredInterfacesChanged(Set<TetheringInterface> interfaces) {
+            TetheringEventCallback.super.onTetheredInterfacesChanged(interfaces);
+            assertHasAllTetheringInterfaces(interfaces, mTetheredIfaces);
             mHistory.add(new CallbackValue(CallbackType.ON_TETHERED_IFACES, interfaces, 0));
         }
 
         @Override
         public void onError(String ifName, int error) {
+            mErrorIface = ifName;
+            mErrorCode = error;
+        }
+
+        @Override
+        public void onError(TetheringInterface ifName, int error) {
+            TetheringEventCallback.super.onError(ifName, error);
+            assertEquals(ifName.getInterface(), mErrorIface);
+            assertEquals(error, mErrorCode);
             mHistory.add(new CallbackValue(CallbackType.ON_ERROR, ifName, error));
         }
 
@@ -215,30 +258,66 @@ public final class CtsTetheringUtils {
             mHistory.add(new CallbackValue(CallbackType.ON_OFFLOAD_STATUS, status, 0));
         }
 
-        public void expectTetherableInterfacesChanged(@NonNull List<String> regexs) {
+        private void assertHasAllTetheringInterfaces(Set<TetheringInterface> tetheringIfaces,
+                List<String> ifaces) {
+            // This does not check that the interfaces are the same. This checks that the
+            // List<String> has all the interface names contained by the Set<TetheringInterface>.
+            assertEquals(tetheringIfaces.size(), ifaces.size());
+            for (TetheringInterface tether : tetheringIfaces) {
+                assertTrue("iface " + tether.getInterface()
+                        + " seen by new callback but not old callback",
+                        ifaces.contains(tether.getInterface()));
+            }
+        }
+
+        public void expectTetherableInterfacesChanged(@NonNull final List<String> regexs,
+                final int type) {
             assertNotNull("No expected tetherable ifaces callback", mCurrent.poll(TIMEOUT_MS,
                 (cv) -> {
                     if (cv.callbackType != CallbackType.ON_TETHERABLE_IFACES) return false;
-                    final List<String> interfaces = (List<String>) cv.callbackParam;
-                    return isIfaceMatch(regexs, interfaces);
+                    final Set<TetheringInterface> interfaces =
+                            (Set<TetheringInterface>) cv.callbackParam;
+                    return getFirstMatchingTetheringInterface(regexs, type, interfaces) != null;
                 }));
         }
 
-        public void expectTetheredInterfacesChanged(@NonNull List<String> regexs) {
-            assertNotNull("No expected tethered ifaces callback", mCurrent.poll(TIMEOUT_MS,
-                (cv) -> {
-                    if (cv.callbackType != CallbackType.ON_TETHERED_IFACES) return false;
+        public void expectNoTetheringActive() {
+            assertNotNull("At least one tethering type unexpectedly active",
+                    mCurrent.poll(TIMEOUT_MS, (cv) -> {
+                        if (cv.callbackType != CallbackType.ON_TETHERED_IFACES) return false;
 
-                    final List<String> interfaces = (List<String>) cv.callbackParam;
+                        return ((Set<TetheringInterface>) cv.callbackParam).isEmpty();
+                    }));
+        }
 
-                    // Null regexs means no active tethering.
-                    if (regexs == null) return interfaces.isEmpty();
+        public TetheringInterface expectTetheredInterfacesChanged(
+                @NonNull final List<String> regexs, final int type) {
+            while (true) {
+                final CallbackValue cv = mCurrent.poll(TIMEOUT_MS, c -> true);
+                if (cv == null) {
+                    fail("No expected tethered ifaces callback, expected type: " + type);
+                }
 
-                    return isIfaceMatch(regexs, interfaces);
-                }));
+                if (cv.callbackType != CallbackType.ON_TETHERED_IFACES) continue;
+
+                final Set<TetheringInterface> interfaces =
+                        (Set<TetheringInterface>) cv.callbackParam;
+
+                final TetheringInterface iface =
+                        getFirstMatchingTetheringInterface(regexs, type, interfaces);
+
+                if (iface != null) return iface;
+            }
         }
 
         public void expectCallbackStarted() {
+            // This method uses its own readhead because it just check whether last tethering status
+            // is updated after TetheringEventCallback get registered but do not check content
+            // of received callbacks. Using shared readhead (mCurrent) only when the callbacks the
+            // method polled is also not necessary for other methods which using shared readhead.
+            // All of methods using mCurrent is order mattered.
+            final ArrayTrackRecord<CallbackValue>.ReadHead history =
+                    mHistory.newReadHead();
             int receivedBitMap = 0;
             // The each bit represent a type from CallbackType.ON_*.
             // Expect all of callbacks except for ON_ERROR.
@@ -246,7 +325,7 @@ public final class CtsTetheringUtils {
             // Receive ON_ERROR on started callback is not matter. It just means tethering is
             // failed last time, should able to continue the test this time.
             while ((receivedBitMap & expectedBitMap) != expectedBitMap) {
-                final CallbackValue cv = mCurrent.poll(TIMEOUT_MS, c -> true);
+                final CallbackValue cv = history.poll(TIMEOUT_MS, c -> true);
                 if (cv == null) {
                     fail("No expected callbacks, " + "expected bitmap: "
                             + expectedBitMap + ", actual: " + receivedBitMap);
@@ -269,14 +348,14 @@ public final class CtsTetheringUtils {
             }));
         }
 
-        public void expectErrorOrTethered(final String iface) {
+        public void expectErrorOrTethered(final TetheringInterface iface) {
             assertNotNull("No expected callback", mCurrent.poll(TIMEOUT_MS, (cv) -> {
                 if (cv.callbackType == CallbackType.ON_ERROR
-                        && iface.equals((String) cv.callbackParam)) {
+                        && iface.equals((TetheringInterface) cv.callbackParam)) {
                     return true;
                 }
                 if (cv.callbackType == CallbackType.ON_TETHERED_IFACES
-                        && ((List<String>) cv.callbackParam).contains(iface)) {
+                        && ((Set<TetheringInterface>) cv.callbackParam).contains(iface)) {
                     return true;
                 }
 
@@ -328,14 +407,6 @@ public final class CtsTetheringUtils {
         public TetheringInterfaceRegexps getTetheringInterfaceRegexps() {
             return mTetherableRegex;
         }
-
-        public List<String> getTetherableInterfaces() {
-            return mTetherableIfaces;
-        }
-
-        public List<String> getTetheredInterfaces() {
-            return mTetheredIfaces;
-        }
     }
 
     private static void waitForWifiEnabled(final Context ctx) throws Exception {
@@ -386,10 +457,9 @@ public final class CtsTetheringUtils {
         return !getWifiTetherableInterfaceRegexps(callback).isEmpty();
     }
 
-    public void startWifiTethering(final TestTetheringEventCallback callback)
+    public TetheringInterface startWifiTethering(final TestTetheringEventCallback callback)
             throws InterruptedException {
         final List<String> wifiRegexs = getWifiTetherableInterfaceRegexps(callback);
-        assertFalse(isIfaceMatch(wifiRegexs, callback.getTetheredInterfaces()));
 
         final StartTetheringCallback startTetheringCallback = new StartTetheringCallback();
         final TetheringRequest request = new TetheringRequest.Builder(TETHERING_WIFI)
@@ -397,11 +467,14 @@ public final class CtsTetheringUtils {
         mTm.startTethering(request, c -> c.run() /* executor */, startTetheringCallback);
         startTetheringCallback.verifyTetheringStarted();
 
-        callback.expectTetheredInterfacesChanged(wifiRegexs);
+        final TetheringInterface iface =
+                callback.expectTetheredInterfacesChanged(wifiRegexs, TETHERING_WIFI);
 
         callback.expectOneOfOffloadStatusChanged(
                 TETHER_HARDWARE_OFFLOAD_STARTED,
                 TETHER_HARDWARE_OFFLOAD_FAILED);
+
+        return iface;
     }
 
     private static class StopSoftApCallback implements SoftApCallback {
@@ -441,7 +514,7 @@ public final class CtsTetheringUtils {
     public void stopWifiTethering(final TestTetheringEventCallback callback) {
         mTm.stopTethering(TETHERING_WIFI);
         expectSoftApDisabled();
-        callback.expectTetheredInterfacesChanged(null);
+        callback.expectNoTetheringActive();
         callback.expectOneOfOffloadStatusChanged(TETHER_HARDWARE_OFFLOAD_STOPPED);
     }
 }
