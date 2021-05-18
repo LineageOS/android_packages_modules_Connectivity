@@ -23,9 +23,10 @@ apex {
     compile_multilib: "both",
     updatable: true,
     min_sdk_version: "30",
+    bootclasspath_fragments: [
+        "com.android.tethering-bootclasspath-fragment",
+    ],
     java_libs: [
-        "framework-connectivity",
-        "framework-tethering",
         "service-connectivity",
     ],
     multilib: {
@@ -59,6 +60,16 @@ apex_key {
 android_app_certificate {
     name: "com.android.tethering.certificate",
     certificate: "com.android.tethering",
+}
+
+// Encapsulate the contributions made by the com.android.tethering to the bootclasspath.
+bootclasspath_fragment {
+    name: "com.android.tethering-bootclasspath-fragment",
+    contents: [
+        "framework-connectivity",
+        "framework-tethering",
+    ],
+    apex_available: ["com.android.tethering"],
 }
 
 override_apex {
