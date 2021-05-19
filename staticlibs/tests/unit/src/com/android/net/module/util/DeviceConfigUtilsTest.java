@@ -18,6 +18,7 @@ package com.android.net.module.util;
 
 import static com.android.dx.mockito.inline.extended.ExtendedMockito.doReturn;
 import static com.android.dx.mockito.inline.extended.ExtendedMockito.mockitoSession;
+import static com.android.net.module.util.DeviceConfigUtils.FIXED_PACKAGE_VERSION;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -30,6 +31,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
 import android.content.Context;
+import android.content.pm.ModuleInfo;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.content.pm.PackageManager.NameNotFoundException;
@@ -64,10 +66,13 @@ public class DeviceConfigUtilsTest {
     private static final int TEST_MIN_FLAG_VALUE = 100;
     private static final long TEST_PACKAGE_VERSION = 290000000;
     private static final String TEST_PACKAGE_NAME = "test.package.name";
+    private static final String TETHERING_AOSP_PACKAGE_NAME = "com.android.networkstack.tethering";
+    private static final String TEST_APEX_NAME = "test.apex.name";
     private MockitoSession mSession;
 
     @Mock private Context mContext;
     @Mock private PackageManager mPm;
+    @Mock private ModuleInfo mMi;
     @Mock private PackageInfo mPi;
     @Mock private Resources mResources;
 
@@ -81,6 +86,8 @@ public class DeviceConfigUtilsTest {
 
         doReturn(mPm).when(mContext).getPackageManager();
         doReturn(TEST_PACKAGE_NAME).when(mContext).getPackageName();
+        doReturn(mMi).when(mPm).getModuleInfo(eq(TEST_APEX_NAME), anyInt());
+        doReturn(TEST_PACKAGE_NAME).when(mMi).getPackageName();
         doReturn(pi).when(mPm).getPackageInfo(anyString(), anyInt());
         doReturn(mResources).when(mContext).getResources();
     }
@@ -193,23 +200,54 @@ public class DeviceConfigUtilsTest {
                 eq(TEST_EXPERIMENT_FLAG)));
         assertTrue(DeviceConfigUtils.isFeatureEnabled(mContext, TEST_NAME_SPACE,
                 TEST_EXPERIMENT_FLAG));
+        assertTrue(DeviceConfigUtils.isFeatureEnabled(mContext, TEST_NAME_SPACE,
+                TEST_EXPERIMENT_FLAG, TEST_APEX_NAME, false /* defaultEnabled */));
     }
 
     @Test
-    public void testFeatureIsNotEnabled() {
+    public void testFeatureDefaultEnabled() {
         doReturn(null).when(() -> DeviceConfig.getProperty(eq(TEST_NAME_SPACE),
                 eq(TEST_EXPERIMENT_FLAG)));
         assertFalse(DeviceConfigUtils.isFeatureEnabled(mContext, TEST_NAME_SPACE,
                 TEST_EXPERIMENT_FLAG));
+        assertFalse(DeviceConfigUtils.isFeatureEnabled(mContext, TEST_NAME_SPACE,
+                TEST_EXPERIMENT_FLAG, TEST_APEX_NAME, false /* defaultEnabled */));
+        assertTrue(DeviceConfigUtils.isFeatureEnabled(mContext, TEST_NAME_SPACE,
+                TEST_EXPERIMENT_FLAG, TEST_APEX_NAME, true /* defaultEnabled */));
     }
 
     @Test
     public void testFeatureIsEnabledWithException() throws Exception {
-        doReturn(TEST_FLAG_VALUE_STRING).when(() -> DeviceConfig.getProperty(eq(TEST_NAME_SPACE),
-                eq(TEST_EXPERIMENT_FLAG)));
         doThrow(NameNotFoundException.class).when(mPm).getPackageInfo(anyString(), anyInt());
         assertFalse(DeviceConfigUtils.isFeatureEnabled(mContext, TEST_NAME_SPACE,
                 TEST_EXPERIMENT_FLAG));
+        assertFalse(DeviceConfigUtils.isFeatureEnabled(mContext, TEST_NAME_SPACE,
+                TEST_EXPERIMENT_FLAG, TEST_APEX_NAME, false /* defaultEnabled */));
+        doThrow(NameNotFoundException.class).when(mPm).getModuleInfo(anyString(), anyInt());
+        assertFalse(DeviceConfigUtils.isFeatureEnabled(mContext, TEST_NAME_SPACE,
+                TEST_EXPERIMENT_FLAG, TEST_APEX_NAME, false /* defaultEnabled */));
+    }
+
+
+    @Test
+    public void testFeatureIsEnabledUsingFixedVersion() throws Exception {
+        doReturn(TETHERING_AOSP_PACKAGE_NAME).when(mContext).getPackageName();
+        doThrow(NameNotFoundException.class).when(mPm).getModuleInfo(anyString(), anyInt());
+
+        doReturn(Long.toString(FIXED_PACKAGE_VERSION)).when(() -> DeviceConfig.getProperty(
+                eq(TEST_NAME_SPACE), eq(TEST_EXPERIMENT_FLAG)));
+        assertTrue(DeviceConfigUtils.isFeatureEnabled(mContext, TEST_NAME_SPACE,
+                TEST_EXPERIMENT_FLAG, TEST_APEX_NAME, false /* defaultEnabled */));
+
+        doReturn(Long.toString(FIXED_PACKAGE_VERSION + 1)).when(() -> DeviceConfig.getProperty(
+                eq(TEST_NAME_SPACE), eq(TEST_EXPERIMENT_FLAG)));
+        assertFalse(DeviceConfigUtils.isFeatureEnabled(mContext, TEST_NAME_SPACE,
+                TEST_EXPERIMENT_FLAG, TEST_APEX_NAME, false /* defaultEnabled */));
+
+        doReturn(Long.toString(FIXED_PACKAGE_VERSION - 1)).when(() -> DeviceConfig.getProperty(
+                eq(TEST_NAME_SPACE), eq(TEST_EXPERIMENT_FLAG)));
+        assertTrue(DeviceConfigUtils.isFeatureEnabled(mContext, TEST_NAME_SPACE,
+                TEST_EXPERIMENT_FLAG, TEST_APEX_NAME, false /* defaultEnabled */));
     }
 
     @Test
@@ -225,6 +263,14 @@ public class DeviceConfigUtilsTest {
         verify(mContext, times(1)).getPackageManager();
         verify(mContext, times(1)).getPackageName();
         verify(mPm, times(1)).getPackageInfo(anyString(), anyInt());
+
+        assertTrue(DeviceConfigUtils.isFeatureEnabled(mContext, TEST_NAME_SPACE,
+                TEST_EXPERIMENT_FLAG, TEST_APEX_NAME, false /* defaultEnabled */));
+        assertTrue(DeviceConfigUtils.isFeatureEnabled(mContext, TEST_NAME_SPACE,
+                TEST_EXPERIMENT_FLAG, TEST_APEX_NAME, false /* defaultEnabled */));
+
+        // Module info is only queried once
+        verify(mPm, times(1)).getModuleInfo(anyString(), anyInt());
     }
 
     @Test
