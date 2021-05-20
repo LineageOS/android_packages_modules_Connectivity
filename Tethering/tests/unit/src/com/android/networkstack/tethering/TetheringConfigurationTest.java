@@ -35,6 +35,7 @@ import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.when;
 
 import android.content.Context;
+import android.content.pm.ModuleInfo;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.content.res.Resources;
@@ -75,12 +76,14 @@ public class TetheringConfigurationTest {
     private static final String PROVISIONING_NO_UI_APP_NAME = "no_ui_app";
     private static final String PROVISIONING_APP_RESPONSE = "app_response";
     private static final String TEST_PACKAGE_NAME = "com.android.tethering.test";
+    private static final String APEX_NAME = "com.android.tethering";
     private static final long TEST_PACKAGE_VERSION = 1234L;
     @Mock private Context mContext;
     @Mock private TelephonyManager mTelephonyManager;
     @Mock private Resources mResources;
     @Mock private Resources mResourcesForSubId;
     @Mock private PackageManager mPackageManager;
+    @Mock private ModuleInfo mMi;
     private Context mMockContext;
     private boolean mHasTelephonyManager;
     private boolean mEnableLegacyDhcpServer;
@@ -143,6 +146,8 @@ public class TetheringConfigurationTest {
         final PackageInfo pi = new PackageInfo();
         pi.setLongVersionCode(TEST_PACKAGE_VERSION);
         doReturn(pi).when(mPackageManager).getPackageInfo(eq(TEST_PACKAGE_NAME), anyInt());
+        doReturn(mMi).when(mPackageManager).getModuleInfo(eq(APEX_NAME), anyInt());
+        doReturn(TEST_PACKAGE_NAME).when(mMi).getPackageName();
 
         when(mResources.getStringArray(R.array.config_tether_dhcp_range)).thenReturn(
                 new String[0]);
@@ -505,7 +510,7 @@ public class TetheringConfigurationTest {
                 .thenReturn(false);
         setTetherForceUpstreamAutomaticFlagVersion(TEST_PACKAGE_VERSION - 1);
         assertTrue(DeviceConfigUtils.isFeatureEnabled(mMockContext, NAMESPACE_CONNECTIVITY,
-                TetheringConfiguration.TETHER_FORCE_UPSTREAM_AUTOMATIC_VERSION));
+                TetheringConfiguration.TETHER_FORCE_UPSTREAM_AUTOMATIC_VERSION, APEX_NAME, false));
 
         assertChooseUpstreamAutomaticallyIs(true);
 
