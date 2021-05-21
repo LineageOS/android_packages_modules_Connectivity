@@ -782,8 +782,6 @@ public class TetheringTest {
         assertTrue(TestConnectivityManager.looksLikeDefaultRequest(reqCaptor.getValue()));
         // The default network request is only ever filed once.
         verifyNoMoreInteractions(mCm);
-        mUpstreamNetworkMonitor.startTrackDefaultNetwork(mEntitleMgr);
-        verifyNoMoreInteractions(mCm);
     }
 
     private void verifyInterfaceServingModeStarted(String ifname) throws Exception {
