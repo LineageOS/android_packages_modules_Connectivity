@@ -648,6 +648,18 @@ public class ConnectivityManagerTest {
         mCm.getBackgroundDataSetting();
     }
 
+    private NetworkRequest makeDefaultRequest() {
+        // Make a request that is similar to the way framework tracks the system
+        // default network.
+        return new NetworkRequest.Builder()
+                .clearCapabilities()
+                .addCapability(NetworkCapabilities.NET_CAPABILITY_NOT_RESTRICTED)
+                .addCapability(NetworkCapabilities.NET_CAPABILITY_TRUSTED)
+                .addCapability(NetworkCapabilities.NET_CAPABILITY_NOT_VPN)
+                .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+                .build();
+    }
+
     private NetworkRequest makeWifiNetworkRequest() {
         return new NetworkRequest.Builder()
                 .addTransportType(NetworkCapabilities.TRANSPORT_WIFI)
@@ -686,12 +698,14 @@ public class ConnectivityManagerTest {
 
         final TestNetworkCallback systemDefaultCallback = new TestNetworkCallback();
         final TestNetworkCallback perUidCallback = new TestNetworkCallback();
+        final TestNetworkCallback bestMatchingCallback = new TestNetworkCallback();
         final Handler h = new Handler(Looper.getMainLooper());
         if (TestUtils.shouldTestSApis()) {
             runWithShellPermissionIdentity(() -> {
                 mCmShim.registerSystemDefaultNetworkCallback(systemDefaultCallback, h);
                 mCmShim.registerDefaultNetworkCallbackForUid(Process.myUid(), perUidCallback, h);
             }, NETWORK_SETTINGS);
+            mCm.registerBestMatchingNetworkCallback(makeDefaultRequest(), bestMatchingCallback, h);
         }
 
         Network wifiNetwork = null;
@@ -717,6 +731,10 @@ public class ConnectivityManagerTest {
                 assertNotNull("Did not receive onAvailable on per-UID default network callback",
                         perUidNetwork);
                 assertEquals(defaultNetwork, perUidNetwork);
+                final Network bestMatchingNetwork = bestMatchingCallback.waitForAvailable();
+                assertNotNull("Did not receive onAvailable on best matching network callback",
+                        bestMatchingNetwork);
+                assertEquals(defaultNetwork, bestMatchingNetwork);
             }
 
         } catch (InterruptedException e) {
@@ -727,6 +745,7 @@ public class ConnectivityManagerTest {
             if (TestUtils.shouldTestSApis()) {
                 mCm.unregisterNetworkCallback(systemDefaultCallback);
                 mCm.unregisterNetworkCallback(perUidCallback);
+                mCm.unregisterNetworkCallback(bestMatchingCallback);
             }
         }
     }
