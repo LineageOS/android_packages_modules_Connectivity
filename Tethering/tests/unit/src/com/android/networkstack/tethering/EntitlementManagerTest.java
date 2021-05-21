@@ -53,6 +53,7 @@ import static org.mockito.Mockito.when;
 
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.ModuleInfo;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.content.res.Resources;
@@ -203,6 +204,7 @@ public final class EntitlementManagerTest {
         doReturn(mPm).when(mContext).getPackageManager();
         doReturn(TEST_PACKAGE_NAME).when(mContext).getPackageName();
         doReturn(new PackageInfo()).when(mPm).getPackageInfo(anyString(), anyInt());
+        doReturn(new ModuleInfo()).when(mPm).getModuleInfo(anyString(), anyInt());
 
         when(mResources.getStringArray(R.array.config_tether_dhcp_range))
                 .thenReturn(new String[0]);
