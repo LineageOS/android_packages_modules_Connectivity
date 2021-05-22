@@ -85,6 +85,7 @@ filegroup {
     path: "framework",
     visibility: [
         "//frameworks/base",
+        "//packages/modules/Connectivity:__subpackages__",
         "//frameworks/base/packages/Connectivity/framework",
     ],
 }
