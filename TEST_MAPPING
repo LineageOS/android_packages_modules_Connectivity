@@ -43,5 +43,22 @@
     {
       "path": "packages/modules/NetworkStack"
     }
+  ],
+  "imports": [
+    {
+      "path": "frameworks/base/core/java/android/net"
+    },
+    {
+      "path": "packages/modules/NetworkStack"
+    },
+    {
+      "path": "packages/modules/CaptivePortalLogin"
+    },
+    {
+      "path": "packages/modules/Connectivity"
+    },
+    {
+      "path": "packages/modules/Connectivity/Tethering"
+    }
   ]
 }
