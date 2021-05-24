@@ -31,5 +31,22 @@
       "name": "CtsNetTestCasesLatestSdk[CaptivePortalLoginGoogle.apk+NetworkStackGoogle.apk+com.google.android.resolv.apex]",
       "keywords": ["sim"]
     }
+  ],
+  "imports": [
+    {
+      "path": "frameworks/base/core/java/android/net"
+    },
+    {
+      "path": "packages/modules/NetworkStack"
+    },
+    {
+      "path": "packages/modules/CaptivePortalLogin"
+    },
+    {
+      "path": "packages/modules/Connectivity"
+    },
+    {
+      "path": "packages/modules/Connectivity/Tethering"
+    }
   ]
 }
