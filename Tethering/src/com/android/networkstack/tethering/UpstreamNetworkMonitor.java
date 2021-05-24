@@ -191,7 +191,7 @@ public class UpstreamNetworkMonitor {
      * check even tethering is not active yet.
      */
     public void stop() {
-        releaseMobileNetworkRequest();
+        setTryCell(false);
 
         releaseCallback(mListenAllCallback);
         mListenAllCallback = null;
