@@ -40,6 +40,8 @@ import android.compat.annotation.UnsupportedAppUsage;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
+import android.net.ConnectivityAnnotations.MultipathPreference;
+import android.net.ConnectivityAnnotations.RestrictBackgroundStatus;
 import android.net.ConnectivityDiagnosticsManager.DataStallReport.DetectionMethod;
 import android.net.IpSecManager.UdpEncapsulationSocket;
 import android.net.SocketKeepalive.Callback;
@@ -1177,7 +1179,8 @@ public class ConnectivityManager {
      *
      * @return a {@link Network} object for the current default network for the
      *         given UID or {@code null} if no default network is currently active
-     * TODO: b/183465229 Cleanup getActiveNetworkForUid once b/165835257 is fixed
+     *
+     * @hide
      */
     @RequiresPermission(android.Manifest.permission.NETWORK_STACK)
     @Nullable
@@ -1430,10 +1433,18 @@ public class ConnectivityManager {
      * Returns an array of all {@link Network} currently tracked by the
      * framework.
      *
+     * @deprecated This method does not provide any notification of network state changes, forcing
+     *             apps to call it repeatedly. This is inefficient and prone to race conditions.
+     *             Apps should use methods such as
+     *             {@link #registerNetworkCallback(NetworkRequest, NetworkCallback)} instead.
+     *             Apps that desire to obtain information about networks that do not apply to them
+     *             can use {@link NetworkRequest.Builder#setIncludeOtherUidNetworks}.
+     *
      * @return an array of {@link Network} objects.
      */
     @RequiresPermission(android.Manifest.permission.ACCESS_NETWORK_STATE)
     @NonNull
+    @Deprecated
     public Network[] getAllNetworks() {
         try {
             return mService.getAllNetworks();
@@ -2417,7 +2428,7 @@ public class ConnectivityManager {
             @NonNull String callingPackage, @Nullable String callingAttributionTag,
             boolean throwException) {
         return Settings.checkAndNoteWriteSettingsOperation(context, uid, callingPackage,
-                throwException);
+                callingAttributionTag, throwException);
     }
 
     /**
@@ -3341,9 +3352,10 @@ public class ConnectivityManager {
      * Register or update a network offer with ConnectivityService.
      *
      * ConnectivityService keeps track of offers made by the various providers and matches
-     * them to networking requests made by apps or the system. The provider supplies a score
-     * and the capabilities of the network it might be able to bring up ; these act as filters
-     * used by ConnectivityService to only send those requests that can be fulfilled by the
+     * them to networking requests made by apps or the system. A callback identifies an offer
+     * uniquely, and later calls with the same callback update the offer. The provider supplies a
+     * score and the capabilities of the network it might be able to bring up ; these act as
+     * filters used by ConnectivityService to only send those requests that can be fulfilled by the
      * provider.
      *
      * The provider is under no obligation to be able to bring up the network it offers at any
@@ -3359,16 +3371,16 @@ public class ConnectivityManager {
      * @param score The prospective score of the network.
      * @param caps The prospective capabilities of the network.
      * @param callback The callback to call when this offer is needed or unneeded.
-     * @hide
+     * @hide exposed via the NetworkProvider class.
      */
     @RequiresPermission(anyOf = {
             NetworkStack.PERMISSION_MAINLINE_NETWORK_STACK,
             android.Manifest.permission.NETWORK_FACTORY})
-    public void offerNetwork(@NonNull final NetworkProvider provider,
+    public void offerNetwork(@NonNull final int providerId,
             @NonNull final NetworkScore score, @NonNull final NetworkCapabilities caps,
             @NonNull final INetworkOfferCallback callback) {
         try {
-            mService.offerNetwork(Objects.requireNonNull(provider.getMessenger(), "null messenger"),
+            mService.offerNetwork(providerId,
                     Objects.requireNonNull(score, "null score"),
                     Objects.requireNonNull(caps, "null caps"),
                     Objects.requireNonNull(callback, "null callback"));
@@ -3382,7 +3394,7 @@ public class ConnectivityManager {
      *
      * @param callback The callback passed at registration time. This must be the same object
      *                 that was passed to {@link #offerNetwork}
-     * @hide
+     * @hide exposed via the NetworkProvider class.
      */
     public void unofferNetwork(@NonNull final INetworkOfferCallback callback) {
         try {
@@ -4797,16 +4809,6 @@ public class ConnectivityManager {
             MULTIPATH_PREFERENCE_RELIABILITY |
             MULTIPATH_PREFERENCE_PERFORMANCE;
 
-    /** @hide */
-    @Retention(RetentionPolicy.SOURCE)
-    @IntDef(flag = true, value = {
-            MULTIPATH_PREFERENCE_HANDOVER,
-            MULTIPATH_PREFERENCE_RELIABILITY,
-            MULTIPATH_PREFERENCE_PERFORMANCE,
-    })
-    public @interface MultipathPreference {
-    }
-
     /**
      * Provides a hint to the calling application on whether it is desirable to use the
      * multinetwork APIs (e.g., {@link Network#openConnection}, {@link Network#bindSocket}, etc.)
@@ -5027,16 +5029,6 @@ public class ConnectivityManager {
     @SdkConstant(SdkConstantType.BROADCAST_INTENT_ACTION)
     public static final String ACTION_RESTRICT_BACKGROUND_CHANGED =
             "android.net.conn.RESTRICT_BACKGROUND_CHANGED";
-
-    /** @hide */
-    @Retention(RetentionPolicy.SOURCE)
-    @IntDef(flag = false, value = {
-            RESTRICT_BACKGROUND_STATUS_DISABLED,
-            RESTRICT_BACKGROUND_STATUS_WHITELISTED,
-            RESTRICT_BACKGROUND_STATUS_ENABLED,
-    })
-    public @interface RestrictBackgroundStatus {
-    }
 
     /**
      * Determines if the calling application is subject to metered network restrictions while

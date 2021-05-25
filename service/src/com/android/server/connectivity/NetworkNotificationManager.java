@@ -84,7 +84,7 @@ public class NetworkNotificationManager {
 
     // The context is for the current user (system server)
     private final Context mContext;
-    private final Resources mResources;
+    private final ConnectivityResources mResources;
     private final TelephonyManager mTelephonyManager;
     // The notification manager is created from a context for User.ALL, so notifications
     // will be sent to all users.
@@ -99,7 +99,7 @@ public class NetworkNotificationManager {
                 (NotificationManager) c.createContextAsUser(UserHandle.ALL, 0 /* flags */)
                         .getSystemService(Context.NOTIFICATION_SERVICE);
         mNotificationTypeMap = new SparseIntArray();
-        mResources = new ConnectivityResources(mContext).get();
+        mResources = new ConnectivityResources(mContext);
     }
 
     @VisibleForTesting
@@ -118,11 +118,11 @@ public class NetworkNotificationManager {
     }
 
     private String getTransportName(final int transportType) {
-        String[] networkTypes = mResources.getStringArray(R.array.network_switch_type_name);
+        String[] networkTypes = mResources.get().getStringArray(R.array.network_switch_type_name);
         try {
             return networkTypes[transportType];
         } catch (IndexOutOfBoundsException e) {
-            return mResources.getString(R.string.network_switch_type_name_unknown);
+            return mResources.get().getString(R.string.network_switch_type_name_unknown);
         }
     }
 
@@ -197,10 +197,11 @@ public class NetworkNotificationManager {
                     tag, nameOf(eventId), getTransportName(transportType), name, highPriority));
         }
 
-        final Resources r = mResources;
+        final Resources r = mResources.get();
         final CharSequence title;
         final CharSequence details;
-        Icon icon = Icon.createWithResource(r, getIcon(transportType));
+        Icon icon = Icon.createWithResource(
+                mResources.getResourcesContext(), getIcon(transportType));
         if (notifyType == NotificationType.NO_INTERNET && transportType == TRANSPORT_WIFI) {
             title = r.getString(R.string.wifi_no_internet, name);
             details = r.getString(R.string.wifi_no_internet_detailed);
@@ -279,7 +280,11 @@ public class NetworkNotificationManager {
                 .setContentTitle(title)
                 .setContentIntent(intent)
                 .setLocalOnly(true)
-                .setOnlyAlertOnce(true);
+                .setOnlyAlertOnce(true)
+                // TODO: consider having action buttons to disconnect on the sign-in notification
+                // especially if it is ongoing
+                .setOngoing(notifyType == NotificationType.SIGN_IN
+                        && r.getBoolean(R.bool.config_ongoingSignInNotification));
 
         if (notifyType == NotificationType.NETWORK_SWITCH) {
             builder.setStyle(new Notification.BigTextStyle().bigText(details));
@@ -355,7 +360,7 @@ public class NetworkNotificationManager {
     public void showToast(NetworkAgentInfo fromNai, NetworkAgentInfo toNai) {
         String fromTransport = getTransportName(approximateTransportType(fromNai));
         String toTransport = getTransportName(approximateTransportType(toNai));
-        String text = mResources.getString(
+        String text = mResources.get().getString(
                 R.string.network_switch_metered_toast, fromTransport, toTransport);
         Toast.makeText(mContext, text, Toast.LENGTH_LONG).show();
     }

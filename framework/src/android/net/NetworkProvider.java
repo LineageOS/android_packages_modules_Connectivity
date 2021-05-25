@@ -167,13 +167,26 @@ public class NetworkProvider {
         ConnectivityManager.from(mContext).declareNetworkRequestUnfulfillable(request);
     }
 
-    /** @hide */
-    // TODO : make @SystemApi when the impl is complete
+    /**
+     * A callback for parties registering a NetworkOffer.
+     *
+     * This is used with {@link ConnectivityManager#offerNetwork}. When offering a network,
+     * the system will use this callback to inform the caller that a network corresponding to
+     * this offer is needed or unneeded.
+     *
+     * @hide
+     */
+    @SystemApi
     public interface NetworkOfferCallback {
-        /** Called by the system when this offer is needed to satisfy some networking request. */
-        void onOfferNeeded(@NonNull NetworkRequest request, int providerId);
-        /** Called by the system when this offer is no longer needed. */
-        void onOfferUnneeded(@NonNull NetworkRequest request);
+        /**
+         * Called by the system when a network for this offer is needed to satisfy some
+         * networking request.
+         */
+        void onNetworkNeeded(@NonNull NetworkRequest request);
+        /**
+         * Called by the system when this offer is no longer valuable for this request.
+         */
+        void onNetworkUnneeded(@NonNull NetworkRequest request);
     }
 
     private class NetworkOfferCallbackProxy extends INetworkOfferCallback.Stub {
@@ -187,14 +200,13 @@ public class NetworkProvider {
         }
 
         @Override
-        public void onOfferNeeded(final @NonNull NetworkRequest request,
-                final int providerId) {
-            mExecutor.execute(() -> callback.onOfferNeeded(request, providerId));
+        public void onNetworkNeeded(final @NonNull NetworkRequest request) {
+            mExecutor.execute(() -> callback.onNetworkNeeded(request));
         }
 
         @Override
-        public void onOfferUnneeded(final @NonNull NetworkRequest request) {
-            mExecutor.execute(() -> callback.onOfferUnneeded(request));
+        public void onNetworkUnneeded(final @NonNull NetworkRequest request) {
+            mExecutor.execute(() -> callback.onNetworkUnneeded(request));
         }
     }
 
@@ -213,48 +225,51 @@ public class NetworkProvider {
     }
 
     /**
-     * Register or update an offer for network with the passed caps and score.
+     * Register or update an offer for network with the passed capabilities and score.
      *
-     * A NetworkProvider's job is to provide networks. This function is how a provider tells the
+     * A NetworkProvider's role is to provide networks. This method is how a provider tells the
      * connectivity stack what kind of network it may provide. The score and caps arguments act
-     * as filters that the connectivity stack uses to tell when the offer is necessary. When an
-     * offer might be advantageous over existing networks, the provider will receive a call to
-     * the associated callback's {@link NetworkOfferCallback#onOfferNeeded} method. The provider
-     * should then try to bring up this network. When an offer is no longer needed, the stack
-     * will inform the provider by calling {@link NetworkOfferCallback#onOfferUnneeded}. The
+     * as filters that the connectivity stack uses to tell when the offer is valuable. When an
+     * offer might be preferred over existing networks, the provider will receive a call to
+     * the associated callback's {@link NetworkOfferCallback#onNetworkNeeded} method. The provider
+     * should then try to bring up this network. When an offer is no longer useful, the stack
+     * will inform the provider by calling {@link NetworkOfferCallback#onNetworkUnneeded}. The
      * provider should stop trying to bring up such a network, or disconnect it if it already has
      * one.
      *
-     * The stack determines what offers are needed according to what networks are currently
+     * The stack determines what offers are valuable according to what networks are currently
      * available to the system, and what networking requests are made by applications. If an
-     * offer looks like it could be a better choice than any existing network for any particular
-     * request, that's when the stack decides the offer is needed. If the current networking
-     * requests are all satisfied by networks that this offer can't possibly be a better match
-     * for, that's when the offer is unneeded. An offer starts off as unneeded ; the provider
-     * should not try to bring up the network until {@link NetworkOfferCallback#onOfferNeeded}
-     * is called.
+     * offer looks like it could connect a better network than any existing network for any
+     * particular request, that's when the stack decides the network is needed. If the current
+     * networking requests are all satisfied by networks that this offer couldn't possibly be a
+     * better match for, that's when the offer is no longer valuable. An offer starts out as
+     * unneeded ; the provider should not try to bring up the network until
+     * {@link NetworkOfferCallback#onNetworkNeeded} is called.
      *
      * Note that the offers are non-binding to the providers, in particular because providers
      * often don't know if they will be able to bring up such a network at any given time. For
-     * example, no wireless network may be in range when the offer is needed. This is fine and
-     * expected ; the provider should simply continue to try to bring up the network and do so
+     * example, no wireless network may be in range when the offer would be valuable. This is fine
+     * and expected ; the provider should simply continue to try to bring up the network and do so
      * if/when it becomes possible. In the mean time, the stack will continue to satisfy requests
      * with the best network currently available, or if none, keep the apps informed that no
      * network can currently satisfy this request. When/if the provider can bring up the network,
      * the connectivity stack will match it against requests, and inform interested apps of the
      * availability of this network. This may, in turn, render the offer of some other provider
-     * unneeded if all requests it used to satisfy are now better served by this network.
+     * low-value if all requests it used to satisfy are now better served by this network.
      *
      * A network can become unneeded for a reason like the above : whether the provider managed
      * to bring up the offered network after it became needed or not, some other provider may
-     * bring up a better network than this one, making this offer unneeded. A network may also
+     * bring up a better network than this one, making this network unneeded. A network may also
      * become unneeded if the application making the request withdrew it (for example, after it
      * is done transferring data, or if the user canceled an operation).
      *
      * The capabilities and score act as filters as to what requests the provider will see.
      * They are not promises, but for best performance, the providers should strive to put
-     * as much known information as possible in the offer. For capabilities in particular, it
-     * should put all NetworkAgent-managed capabilities a network may have, even if it doesn't
+     * as much known information as possible in the offer. For the score, it should put as
+     * strong a score as the networks will have, since this will filter what requests the
+     * provider sees – it's not a promise, it only serves to avoid sending requests that
+     * the provider can't ever hope to satisfy better than any current network. For capabilities,
+     * it should put all NetworkAgent-managed capabilities a network may have, even if it doesn't
      * have them at first. This applies to INTERNET, for example ; if a provider thinks the
      * network it can bring up for this offer may offer Internet access it should include the
      * INTERNET bit. It's fine if the brought up network ends up not actually having INTERNET.
@@ -267,11 +282,14 @@ public class NetworkProvider {
      *
      * @hide
      */
-    // TODO : make @SystemApi when the impl is complete
+    @SystemApi
     @RequiresPermission(android.Manifest.permission.NETWORK_FACTORY)
-    public void offerNetwork(@NonNull final NetworkScore score,
+    public void registerNetworkOffer(@NonNull final NetworkScore score,
             @NonNull final NetworkCapabilities caps, @NonNull final Executor executor,
             @NonNull final NetworkOfferCallback callback) {
+        // Can't offer a network with a provider that is not yet registered or already unregistered.
+        final int providerId = mProviderId;
+        if (providerId == ID_NONE) return;
         NetworkOfferCallbackProxy proxy = null;
         synchronized (mProxies) {
             for (final NetworkOfferCallbackProxy existingProxy : mProxies) {
@@ -285,7 +303,8 @@ public class NetworkProvider {
                 mProxies.add(proxy);
             }
         }
-        mContext.getSystemService(ConnectivityManager.class).offerNetwork(this, score, caps, proxy);
+        mContext.getSystemService(ConnectivityManager.class)
+                .offerNetwork(providerId, score, caps, proxy);
     }
 
     /**
@@ -302,9 +321,9 @@ public class NetworkProvider {
      *
      * @hide
      */
-    // TODO : make @SystemApi when the impl is complete
+    @SystemApi
     @RequiresPermission(android.Manifest.permission.NETWORK_FACTORY)
-    public void unofferNetwork(final @NonNull NetworkOfferCallback callback) {
+    public void unregisterNetworkOffer(final @NonNull NetworkOfferCallback callback) {
         final NetworkOfferCallbackProxy proxy = findProxyForCallback(callback);
         if (null == proxy) return;
         mProxies.remove(proxy);

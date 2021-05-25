@@ -11,12 +11,6 @@
           "exclude-annotation": "com.android.testutils.SkipPresubmit"
         }
       ]
-    },
-    {
-      "name": "TetheringTests"
-    },
-    {
-      "name": "TetheringIntegrationTests"
     }
   ],
   "mainline-presubmit": [
@@ -30,20 +24,12 @@
       ]
     }
   ],
+  // Tests on physical devices with SIM cards: postsubmit only for capacity constraints
   "mainline-postsubmit": [
-    // Tests on physical devices with SIM cards: postsubmit only for capacity constraints
     {
       // TODO: add back the tethering module when updatable in this branch
       "name": "CtsNetTestCasesLatestSdk[CaptivePortalLoginGoogle.apk+NetworkStackGoogle.apk+com.google.android.resolv.apex]",
       "keywords": ["sim"]
-    },
-    {
-      "name": "TetheringCoverageTests[CaptivePortalLoginGoogle.apk+NetworkStackGoogle.apk+com.google.android.resolv.apex+com.google.android.tethering.apex]"
-    }
-  ],
-  "imports": [
-    {
-      "path": "packages/modules/NetworkStack"
     }
   ],
   "imports": [

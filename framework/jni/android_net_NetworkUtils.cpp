@@ -16,33 +16,18 @@
 
 #define LOG_TAG "NetworkUtils"
 
-#include <vector>
-
 #include <android/file_descriptor_jni.h>
-#include <arpa/inet.h>
+#include <android/multinetwork.h>
 #include <linux/filter.h>
-#include <linux/if_arp.h>
 #include <linux/tcp.h>
-#include <net/if.h>
-#include <netinet/ether.h>
-#include <netinet/ip.h>
-#include <netinet/udp.h>
+#include <netinet/in.h>
+#include <string.h>
 
 #include <DnsProxydProtocol.h> // NETID_USE_LOCAL_NAMESERVERS
-#include <cutils/properties.h>
-#include <nativehelper/JNIHelp.h>
 #include <nativehelper/JNIPlatformHelp.h>
-#include <nativehelper/ScopedLocalRef.h>
 #include <utils/Log.h>
-#include <utils/misc.h>
 
-#include "NetdClient.h"
 #include "jni.h"
-
-extern "C" {
-int ifc_enable(const char *ifname);
-int ifc_disable(const char *ifname);
-}
 
 #define NETUTILS_PKG_NAME "android/net/NetworkUtils"
 
@@ -51,6 +36,9 @@ namespace android {
 constexpr int MAXPACKETSIZE = 8 * 1024;
 // FrameworkListener limits the size of commands to 4096 bytes.
 constexpr int MAXCMDSIZE = 4096;
+
+static volatile jclass class_Network = 0;
+static volatile jmethodID method_fromNetworkHandle = 0;
 
 static inline jclass FindClassOrDie(JNIEnv* env, const char* class_name) {
     jclass clazz = env->FindClass(class_name);
@@ -94,25 +82,32 @@ static void android_net_utils_detachBPFFilter(JNIEnv *env, jobject clazz, jobjec
     }
 }
 
-static jboolean android_net_utils_bindProcessToNetwork(JNIEnv *env, jobject thiz, jint netId)
+static jboolean android_net_utils_bindProcessToNetworkHandle(JNIEnv *env, jobject thiz,
+        jlong netHandle)
 {
-    return (jboolean) !setNetworkForProcess(netId);
+    return (jboolean) !android_setprocnetwork(netHandle);
 }
 
-static jint android_net_utils_getBoundNetworkForProcess(JNIEnv *env, jobject thiz)
+static jlong android_net_utils_getBoundNetworkHandleForProcess(JNIEnv *env, jobject thiz)
 {
-    return getNetworkForProcess();
+    net_handle_t network;
+    if (android_getprocnetwork(&network) != 0) {
+        jniThrowExceptionFmt(env, "java/lang/IllegalStateException",
+                "android_getprocnetwork(): %s", strerror(errno));
+        return NETWORK_UNSPECIFIED;
+    }
+    return (jlong) network;
 }
 
 static jboolean android_net_utils_bindProcessToNetworkForHostResolution(JNIEnv *env, jobject thiz,
-        jint netId)
+        jint netId, jlong netHandle)
 {
-    return (jboolean) !setNetworkForResolv(netId);
+    return (jboolean) !android_setprocdns(netHandle);
 }
 
-static jint android_net_utils_bindSocketToNetwork(JNIEnv *env, jobject thiz, jobject javaFd,
-                                                  jint netId) {
-    return setNetworkForSocket(netId, AFileDescriptor_getFd(env, javaFd));
+static jint android_net_utils_bindSocketToNetworkHandle(JNIEnv *env, jobject thiz, jobject javaFd,
+                                                  jlong netHandle) {
+    return android_setsocknetwork(netHandle, AFileDescriptor_getFd(env, javaFd));
 }
 
 static bool checkLenAndCopy(JNIEnv* env, const jbyteArray& addr, int len, void* dst)
@@ -124,17 +119,18 @@ static bool checkLenAndCopy(JNIEnv* env, const jbyteArray& addr, int len, void* 
     return true;
 }
 
-static jobject android_net_utils_resNetworkQuery(JNIEnv *env, jobject thiz, jint netId,
+static jobject android_net_utils_resNetworkQuery(JNIEnv *env, jobject thiz, jlong netHandle,
         jstring dname, jint ns_class, jint ns_type, jint flags) {
     const jsize javaCharsCount = env->GetStringLength(dname);
     const jsize byteCountUTF8 = env->GetStringUTFLength(dname);
 
     // Only allow dname which could be simply formatted to UTF8.
     // In native layer, res_mkquery would re-format the input char array to packet.
-    std::vector<char> queryname(byteCountUTF8 + 1, 0);
+    char queryname[byteCountUTF8 + 1];
+    memset(queryname, 0, (byteCountUTF8 + 1) * sizeof(char));
 
-    env->GetStringUTFRegion(dname, 0, javaCharsCount, queryname.data());
-    int fd = resNetworkQuery(netId, queryname.data(), ns_class, ns_type, flags);
+    env->GetStringUTFRegion(dname, 0, javaCharsCount, queryname);
+    int fd = android_res_nquery(netHandle, queryname, ns_class, ns_type, flags);
 
     if (fd < 0) {
         jniThrowErrnoException(env, "resNetworkQuery", -fd);
@@ -144,12 +140,12 @@ static jobject android_net_utils_resNetworkQuery(JNIEnv *env, jobject thiz, jint
     return jniCreateFileDescriptor(env, fd);
 }
 
-static jobject android_net_utils_resNetworkSend(JNIEnv *env, jobject thiz, jint netId,
+static jobject android_net_utils_resNetworkSend(JNIEnv *env, jobject thiz, jlong netHandle,
         jbyteArray msg, jint msgLen, jint flags) {
     uint8_t data[MAXCMDSIZE];
 
     checkLenAndCopy(env, msg, msgLen, data);
-    int fd = resNetworkSend(netId, data, msgLen, flags);
+    int fd = android_res_nsend(netHandle, data, msgLen, flags);
 
     if (fd < 0) {
         jniThrowErrnoException(env, "resNetworkSend", -fd);
@@ -162,9 +158,9 @@ static jobject android_net_utils_resNetworkSend(JNIEnv *env, jobject thiz, jint 
 static jobject android_net_utils_resNetworkResult(JNIEnv *env, jobject thiz, jobject javaFd) {
     int fd = AFileDescriptor_getFd(env, javaFd);
     int rcode;
-    std::vector<uint8_t> buf(MAXPACKETSIZE, 0);
+    uint8_t buf[MAXPACKETSIZE] = {0};
 
-    int res = resNetworkResult(fd, &rcode, buf.data(), MAXPACKETSIZE);
+    int res = android_res_nresult(fd, &rcode, buf, MAXPACKETSIZE);
     jniSetFileDescriptorOfFD(env, javaFd, -1);
     if (res < 0) {
         jniThrowErrnoException(env, "resNetworkResult", -res);
@@ -176,8 +172,7 @@ static jobject android_net_utils_resNetworkResult(JNIEnv *env, jobject thiz, job
         jniThrowErrnoException(env, "resNetworkResult", ENOMEM);
         return nullptr;
     } else {
-        env->SetByteArrayRegion(answer, 0, res,
-                reinterpret_cast<jbyte*>(buf.data()));
+        env->SetByteArrayRegion(answer, 0, res, reinterpret_cast<jbyte*>(buf));
     }
 
     jclass class_DnsResponse = env->FindClass("android/net/DnsResolver$DnsResponse");
@@ -188,23 +183,25 @@ static jobject android_net_utils_resNetworkResult(JNIEnv *env, jobject thiz, job
 
 static void android_net_utils_resNetworkCancel(JNIEnv *env, jobject thiz, jobject javaFd) {
     int fd = AFileDescriptor_getFd(env, javaFd);
-    resNetworkCancel(fd);
+    android_res_cancel(fd);
     jniSetFileDescriptorOfFD(env, javaFd, -1);
 }
 
 static jobject android_net_utils_getDnsNetwork(JNIEnv *env, jobject thiz) {
-    unsigned dnsNetId = 0;
-    if (int res = getNetworkForDns(&dnsNetId) < 0) {
-        jniThrowErrnoException(env, "getDnsNetId", -res);
+    net_handle_t dnsNetHandle = NETWORK_UNSPECIFIED;
+    if (int res = android_getprocdns(&dnsNetHandle) < 0) {
+        jniThrowErrnoException(env, "getDnsNetwork", -res);
         return nullptr;
     }
-    bool privateDnsBypass = dnsNetId & NETID_USE_LOCAL_NAMESERVERS;
 
-    static jclass class_Network = MakeGlobalRefOrDie(
-            env, FindClassOrDie(env, "android/net/Network"));
-    static jmethodID ctor = env->GetMethodID(class_Network, "<init>", "(IZ)V");
-    return env->NewObject(
-            class_Network, ctor, dnsNetId & ~NETID_USE_LOCAL_NAMESERVERS, privateDnsBypass);
+    if (method_fromNetworkHandle == 0) {
+        // This may be called multiple times concurrently but that is fine
+        class_Network = MakeGlobalRefOrDie(env, FindClassOrDie(env, "android/net/Network"));
+        method_fromNetworkHandle = env->GetStaticMethodID(class_Network, "fromNetworkHandle",
+                "(J)Landroid/net/Network;");
+    }
+    return env->CallStaticObjectMethod(class_Network, method_fromNetworkHandle,
+            static_cast<jlong>(dnsNetHandle));
 }
 
 static jobject android_net_utils_getTcpRepairWindow(JNIEnv *env, jobject thiz, jobject javaFd) {
@@ -250,15 +247,15 @@ static jobject android_net_utils_getTcpRepairWindow(JNIEnv *env, jobject thiz, j
 // clang-format off
 static const JNINativeMethod gNetworkUtilMethods[] = {
     /* name, signature, funcPtr */
-    { "bindProcessToNetwork", "(I)Z", (void*) android_net_utils_bindProcessToNetwork },
-    { "getBoundNetworkForProcess", "()I", (void*) android_net_utils_getBoundNetworkForProcess },
+    { "bindProcessToNetworkHandle", "(J)Z", (void*) android_net_utils_bindProcessToNetworkHandle },
+    { "getBoundNetworkHandleForProcess", "()J", (void*) android_net_utils_getBoundNetworkHandleForProcess },
     { "bindProcessToNetworkForHostResolution", "(I)Z", (void*) android_net_utils_bindProcessToNetworkForHostResolution },
-    { "bindSocketToNetwork", "(Ljava/io/FileDescriptor;I)I", (void*) android_net_utils_bindSocketToNetwork },
+    { "bindSocketToNetworkHandle", "(Ljava/io/FileDescriptor;J)I", (void*) android_net_utils_bindSocketToNetworkHandle },
     { "attachDropAllBPFFilter", "(Ljava/io/FileDescriptor;)V", (void*) android_net_utils_attachDropAllBPFFilter },
     { "detachBPFFilter", "(Ljava/io/FileDescriptor;)V", (void*) android_net_utils_detachBPFFilter },
     { "getTcpRepairWindow", "(Ljava/io/FileDescriptor;)Landroid/net/TcpRepairWindow;", (void*) android_net_utils_getTcpRepairWindow },
-    { "resNetworkSend", "(I[BII)Ljava/io/FileDescriptor;", (void*) android_net_utils_resNetworkSend },
-    { "resNetworkQuery", "(ILjava/lang/String;III)Ljava/io/FileDescriptor;", (void*) android_net_utils_resNetworkQuery },
+    { "resNetworkSend", "(J[BII)Ljava/io/FileDescriptor;", (void*) android_net_utils_resNetworkSend },
+    { "resNetworkQuery", "(JLjava/lang/String;III)Ljava/io/FileDescriptor;", (void*) android_net_utils_resNetworkQuery },
     { "resNetworkResult", "(Ljava/io/FileDescriptor;)Landroid/net/DnsResolver$DnsResponse;", (void*) android_net_utils_resNetworkResult },
     { "resNetworkCancel", "(Ljava/io/FileDescriptor;)V", (void*) android_net_utils_resNetworkCancel },
     { "getDnsNetwork", "()Landroid/net/Network;", (void*) android_net_utils_getDnsNetwork },
