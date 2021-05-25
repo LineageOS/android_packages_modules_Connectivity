@@ -618,6 +618,11 @@ public class ConnectivityService extends IConnectivityManager.Stub
     private static final int EVENT_UNREGISTER_NETWORK_OFFER = 53;
 
     /**
+     * Used internally when MOBILE_DATA_PREFERRED_UIDS setting changed.
+     */
+    private static final int EVENT_MOBILE_DATA_PREFERRED_UIDS_CHANGED = 54;
+
+    /**
      * Argument for {@link #EVENT_PROVISIONING_NOTIFICATION} to indicate that the notification
      * should be shown.
      */
@@ -1461,6 +1466,11 @@ public class ConnectivityService extends IConnectivityManager.Stub
         mHandler.sendEmptyMessage(EVENT_PRIVATE_DNS_SETTINGS_CHANGED);
     }
 
+    @VisibleForTesting
+    void updateMobileDataPreferredUids() {
+        mHandler.sendEmptyMessage(EVENT_MOBILE_DATA_PREFERRED_UIDS_CHANGED);
+    }
+
     private void handleAlwaysOnNetworkRequest(NetworkRequest networkRequest, int id) {
         final boolean enable = mContext.getResources().getBoolean(id);
         handleAlwaysOnNetworkRequest(networkRequest, enable);
@@ -1500,6 +1510,8 @@ public class ConnectivityService extends IConnectivityManager.Stub
         handleAlwaysOnNetworkRequest(mDefaultVehicleRequest, vehicleAlwaysRequested);
     }
 
+    // Note that registering observer for setting do not get initial callback when registering,
+    // callers might have self-initialization to update status if need.
     private void registerSettingsCallbacks() {
         // Watch for global HTTP proxy changes.
         mSettingsObserver.observe(
@@ -1515,6 +1527,11 @@ public class ConnectivityService extends IConnectivityManager.Stub
         mSettingsObserver.observe(
                 Settings.Global.getUriFor(ConnectivitySettingsManager.WIFI_ALWAYS_REQUESTED),
                 EVENT_CONFIGURE_ALWAYS_ON_NETWORKS);
+
+        // Watch for mobile data preferred uids changes.
+        mSettingsObserver.observe(
+                Settings.Secure.getUriFor(ConnectivitySettingsManager.MOBILE_DATA_PREFERRED_UIDS),
+                EVENT_MOBILE_DATA_PREFERRED_UIDS_CHANGED);
     }
 
     private void registerPrivateDnsSettingsCallbacks() {
@@ -2725,6 +2742,13 @@ public class ConnectivityService extends IConnectivityManager.Stub
 
         // Create network requests for always-on networks.
         mHandler.sendMessage(mHandler.obtainMessage(EVENT_CONFIGURE_ALWAYS_ON_NETWORKS));
+
+        // Update mobile data preference if necessary.
+        // Note that empty uid list can be skip here only because no uid rules applied before system
+        // ready. Normally, the empty uid list means to clear the uids rules on netd.
+        if (!ConnectivitySettingsManager.getMobileDataPreferredUids(mContext).isEmpty()) {
+            updateMobileDataPreferredUids();
+        }
     }
 
     /**
@@ -4806,6 +4830,9 @@ public class ConnectivityService extends IConnectivityManager.Stub
                 case EVENT_REPORT_NETWORK_ACTIVITY:
                     mNetworkActivityTracker.handleReportNetworkActivity();
                     break;
+                case EVENT_MOBILE_DATA_PREFERRED_UIDS_CHANGED:
+                    handleMobileDataPreferredUidsChanged();
+                    break;
             }
         }
     }
@@ -5592,7 +5619,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
          * Get the list of UIDs this nri applies to.
          */
         @NonNull
-        private Set<UidRange> getUids() {
+        Set<UidRange> getUids() {
             // networkCapabilities.getUids() returns a defensive copy.
             // multilayer requests will all have the same uids so return the first one.
             final Set<UidRange> uids = mRequests.get(0).networkCapabilities.getUidRanges();
@@ -6307,6 +6334,11 @@ public class ConnectivityService extends IConnectivityManager.Stub
     // the OEM network preferences above.
     @NonNull
     private ProfileNetworkPreferences mProfileNetworkPreferences = new ProfileNetworkPreferences();
+
+    // A set of UIDs that should use mobile data preferentially if available. This object follows
+    // the same threading rules as the OEM network preferences above.
+    @NonNull
+    private Set<Integer> mMobileDataPreferredUids = new ArraySet<>();
 
     // OemNetworkPreferences activity String log entries.
     private static final int MAX_OEM_NETWORK_PREFERENCE_LOGS = 20;
@@ -9670,7 +9702,8 @@ public class ConnectivityService extends IConnectivityManager.Stub
         // safe - it's just possible the value is slightly outdated. For the final check,
         // see #handleSetProfileNetworkPreference. But if this can be caught here it is a
         // lot easier to understand, so opportunistically check it.
-        if (!mOemNetworkPreferences.isEmpty()) {
+        // TODO: Have a priority for each preference.
+        if (!mOemNetworkPreferences.isEmpty() || !mMobileDataPreferredUids.isEmpty()) {
             throwConcurrentPreferenceException();
         }
         final NetworkCapabilities nc;
@@ -9729,7 +9762,8 @@ public class ConnectivityService extends IConnectivityManager.Stub
         // The binder call has already checked this, but as mOemNetworkPreferences is only
         // touched on the handler thread, it's theoretically not impossible that it has changed
         // since.
-        if (!mOemNetworkPreferences.isEmpty()) {
+        // TODO: Have a priority for each preference.
+        if (!mOemNetworkPreferences.isEmpty() || !mMobileDataPreferredUids.isEmpty()) {
             // This may happen on a device with an OEM preference set when a user is removed.
             // In this case, it's safe to ignore. In particular this happens in the tests.
             loge("handleSetProfileNetworkPreference, but OEM network preferences not empty");
@@ -9756,6 +9790,56 @@ public class ConnectivityService extends IConnectivityManager.Stub
                 loge("Listener for setProfileNetworkPreference has died");
             }
         }
+    }
+
+    @VisibleForTesting
+    @NonNull
+    ArraySet<NetworkRequestInfo> createNrisFromMobileDataPreferredUids(
+            @NonNull final Set<Integer> uids) {
+        final ArraySet<NetworkRequestInfo> nris = new ArraySet<>();
+        if (uids.size() == 0) {
+            // Should not create NetworkRequestInfo if no preferences. Without uid range in
+            // NetworkRequestInfo, makeDefaultForApps() would treat it as a illegal NRI.
+            if (DBG) log("Don't create NetworkRequestInfo because no preferences");
+            return nris;
+        }
+
+        final List<NetworkRequest> requests = new ArrayList<>();
+        // The NRI should be comprised of two layers:
+        // - The request for the mobile network preferred.
+        // - The request for the default network, for fallback.
+        requests.add(createDefaultInternetRequestForTransport(
+                TRANSPORT_CELLULAR, NetworkRequest.Type.LISTEN));
+        requests.add(createDefaultInternetRequestForTransport(
+                TYPE_NONE, NetworkRequest.Type.TRACK_DEFAULT));
+        final Set<UidRange> ranges = new ArraySet<>();
+        for (final int uid : uids) {
+            ranges.add(new UidRange(uid, uid));
+        }
+        setNetworkRequestUids(requests, ranges);
+        nris.add(new NetworkRequestInfo(Process.myUid(), requests));
+        return nris;
+    }
+
+    private void handleMobileDataPreferredUidsChanged() {
+        // Ignore update preference because it's not clear what preference should win in case both
+        // apply to the same app.
+        // TODO: Have a priority for each preference.
+        if (!mOemNetworkPreferences.isEmpty() || !mProfileNetworkPreferences.isEmpty()) {
+            loge("Ignore mobile data preference change because other preferences are not empty");
+            return;
+        }
+
+        mMobileDataPreferredUids = ConnectivitySettingsManager.getMobileDataPreferredUids(mContext);
+        mSystemNetworkRequestCounter.transact(
+                mDeps.getCallingUid(), 1 /* numOfNewRequests */,
+                () -> {
+                    final ArraySet<NetworkRequestInfo> nris =
+                            createNrisFromMobileDataPreferredUids(mMobileDataPreferredUids);
+                    replaceDefaultNetworkRequestsForPreference(nris);
+                });
+        // Finally, rematch.
+        rematchAllNetworksAndRequests();
     }
 
     private void enforceAutomotiveDevice() {
@@ -9787,7 +9871,8 @@ public class ConnectivityService extends IConnectivityManager.Stub
         enforceAutomotiveDevice();
         enforceOemNetworkPreferencesPermission();
 
-        if (!mProfileNetworkPreferences.isEmpty()) {
+        // TODO: Have a priority for each preference.
+        if (!mProfileNetworkPreferences.isEmpty() || !mMobileDataPreferredUids.isEmpty()) {
             // Strictly speaking, mProfileNetworkPreferences should only be touched on the
             // handler thread. However it is an immutable object, so reading the reference is
             // safe - it's just possible the value is slightly outdated. For the final check,
@@ -9825,7 +9910,8 @@ public class ConnectivityService extends IConnectivityManager.Stub
         // The binder call has already checked this, but as mOemNetworkPreferences is only
         // touched on the handler thread, it's theoretically not impossible that it has changed
         // since.
-        if (!mProfileNetworkPreferences.isEmpty()) {
+        // TODO: Have a priority for each preference.
+        if (!mProfileNetworkPreferences.isEmpty() || !mMobileDataPreferredUids.isEmpty()) {
             logwtf("handleSetOemPreference, but per-profile network preferences not empty");
             return;
         }
