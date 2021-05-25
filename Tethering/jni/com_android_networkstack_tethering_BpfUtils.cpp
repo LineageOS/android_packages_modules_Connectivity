@@ -183,7 +183,7 @@ static jboolean com_android_networkstack_tethering_BpfUtils_isEthernet(JNIEnv* e
             return false;
         default:
             jniThrowExceptionFmt(env, "java/io/IOException",
-                                 "Unknown hardware address type %s on interface %s", rv,
+                                 "Unknown hardware address type %d on interface %s", rv,
                                  interface.c_str());
             return false;
     }
