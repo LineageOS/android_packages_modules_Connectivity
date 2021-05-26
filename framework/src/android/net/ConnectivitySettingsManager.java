@@ -374,12 +374,12 @@ public class ConnectivitySettingsManager {
     private static final String PRIVATE_DNS_MODE_PROVIDER_HOSTNAME_STRING = "hostname";
 
     /**
-     * A list of apps that is allowed on restricted networks.
+     * A list of uids that is allowed to use restricted networks.
      *
      * @hide
      */
-    public static final String APPS_ALLOWED_ON_RESTRICTED_NETWORKS =
-            "apps_allowed_on_restricted_networks";
+    public static final String UIDS_ALLOWED_ON_RESTRICTED_NETWORKS =
+            "uids_allowed_on_restricted_networks";
 
     /**
      * Get mobile data activity timeout from {@link Settings}.
@@ -1003,6 +1003,28 @@ public class ConnectivitySettingsManager {
                 context.getContentResolver(), NETWORK_METERED_MULTIPATH_PREFERENCE, preference);
     }
 
+    private static Set<Integer> getUidSetFromString(@Nullable String uidList) {
+        final Set<Integer> uids = new ArraySet<>();
+        if (TextUtils.isEmpty(uidList)) {
+            return uids;
+        }
+        for (String uid : uidList.split(";")) {
+            uids.add(Integer.valueOf(uid));
+        }
+        return uids;
+    }
+
+    private static String getUidStringFromSet(@NonNull Set<Integer> uidList) {
+        final StringJoiner joiner = new StringJoiner(";");
+        for (Integer uid : uidList) {
+            if (uid < 0 || UserHandle.getAppId(uid) > Process.LAST_APPLICATION_UID) {
+                throw new IllegalArgumentException("Invalid uid");
+            }
+            joiner.add(uid.toString());
+        }
+        return joiner.toString();
+    }
+
     /**
      * Get the list of uids(from {@link Settings}) that should go on cellular networks in preference
      * even when higher-priority networks are connected.
@@ -1015,14 +1037,7 @@ public class ConnectivitySettingsManager {
     public static Set<Integer> getMobileDataPreferredUids(@NonNull Context context) {
         final String uidList = Settings.Secure.getString(
                 context.getContentResolver(), MOBILE_DATA_PREFERRED_UIDS);
-        final Set<Integer> uids = new ArraySet<>();
-        if (TextUtils.isEmpty(uidList)) {
-            return uids;
-        }
-        for (String uid : uidList.split(";")) {
-            uids.add(Integer.valueOf(uid));
-        }
-        return uids;
+        return getUidSetFromString(uidList);
     }
 
     /**
@@ -1035,53 +1050,41 @@ public class ConnectivitySettingsManager {
      */
     public static void setMobileDataPreferredUids(@NonNull Context context,
             @NonNull Set<Integer> uidList) {
-        final StringJoiner joiner = new StringJoiner(";");
-        for (Integer uid : uidList) {
-            if (uid < 0 || UserHandle.getAppId(uid) > Process.LAST_APPLICATION_UID) {
-                throw new IllegalArgumentException("Invalid uid");
-            }
-            joiner.add(uid.toString());
-        }
-        Settings.Secure.putString(
-                context.getContentResolver(), MOBILE_DATA_PREFERRED_UIDS, joiner.toString());
+        final String uids = getUidStringFromSet(uidList);
+        Settings.Secure.putString(context.getContentResolver(), MOBILE_DATA_PREFERRED_UIDS, uids);
     }
 
     /**
-     * Get the list of apps(from {@link Settings}) that is allowed on restricted networks.
+     * Get the list of uids (from {@link Settings}) allowed to use restricted networks.
+     *
+     * Access to restricted networks is controlled by the (preinstalled-only)
+     * CONNECTIVITY_USE_RESTRICTED_NETWORKS permission, but highly privileged
+     * callers can also set a list of uids that can access restricted networks.
+     *
+     * This is useful for example in some jurisdictions where government apps,
+     * that can't be preinstalled, must still have access to emergency services.
      *
      * @param context The {@link Context} to query the setting.
-     * @return A list of apps that is allowed on restricted networks or null if no setting
+     * @return A list of uids that is allowed to use restricted networks or null if no setting
      *         value.
      */
     @NonNull
-    public static Set<String> getAppsAllowedOnRestrictedNetworks(@NonNull Context context) {
-        final String appList = Settings.Secure.getString(
-                context.getContentResolver(), APPS_ALLOWED_ON_RESTRICTED_NETWORKS);
-        if (TextUtils.isEmpty(appList)) {
-            return new ArraySet<>();
-        }
-        return new ArraySet<>(appList.split(";"));
+    public static Set<Integer> getUidsAllowedOnRestrictedNetworks(@NonNull Context context) {
+        final String uidList = Settings.Secure.getString(
+                context.getContentResolver(), UIDS_ALLOWED_ON_RESTRICTED_NETWORKS);
+        return getUidSetFromString(uidList);
     }
 
     /**
-     * Set the list of apps(from {@link Settings}) that is allowed on restricted networks.
-     *
-     * Note: Please refer to android developer guidelines for valid app(package name).
-     * https://developer.android.com/guide/topics/manifest/manifest-element.html#package
+     * Set the list of uids(from {@link Settings}) that is allowed to use restricted networks.
      *
      * @param context The {@link Context} to set the setting.
-     * @param list A list of apps that is allowed on restricted networks.
+     * @param uidList A list of uids that is allowed to use restricted networks.
      */
-    public static void setAppsAllowedOnRestrictedNetworks(@NonNull Context context,
-            @NonNull Set<String> list) {
-        final StringJoiner joiner = new StringJoiner(";");
-        for (String app : list) {
-            if (app == null || app.contains(";")) {
-                throw new IllegalArgumentException("Invalid app(package name)");
-            }
-            joiner.add(app);
-        }
-        Settings.Secure.putString(context.getContentResolver(), APPS_ALLOWED_ON_RESTRICTED_NETWORKS,
-                joiner.toString());
+    public static void setUidsAllowedOnRestrictedNetworks(@NonNull Context context,
+            @NonNull Set<Integer> uidList) {
+        final String uids = getUidStringFromSet(uidList);
+        Settings.Secure.putString(context.getContentResolver(), UIDS_ALLOWED_ON_RESTRICTED_NETWORKS,
+                uids);
     }
 }
