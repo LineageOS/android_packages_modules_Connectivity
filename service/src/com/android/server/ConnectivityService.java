@@ -8322,13 +8322,13 @@ public class ConnectivityService extends IConnectivityManager.Stub
         // Second phase : deal with the active request (if any)
         if (null != activeRequest && activeRequest.isRequest()) {
             final boolean oldNeeded = offer.neededFor(activeRequest);
-            // An offer is needed if it is currently served by this provider or if this offer
-            // can beat the current satisfier.
+            // If an offer can satisfy the request, it is considered needed if it is currently
+            // served by this provider or if this offer can beat the current satisfier.
             final boolean currentlyServing = satisfier != null
-                    && satisfier.factorySerialNumber == offer.providerId;
-            final boolean newNeeded = (currentlyServing
-                    || (activeRequest.canBeSatisfiedBy(offer.caps)
-                            && networkRanker.mightBeat(activeRequest, satisfier, offer)));
+                    && satisfier.factorySerialNumber == offer.providerId
+                    && activeRequest.canBeSatisfiedBy(offer.caps);
+            final boolean newNeeded = currentlyServing
+                    || networkRanker.mightBeat(activeRequest, satisfier, offer);
             if (newNeeded != oldNeeded) {
                 if (newNeeded) {
                     offer.onNetworkNeeded(activeRequest);
