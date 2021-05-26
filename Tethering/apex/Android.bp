@@ -45,6 +45,7 @@ apex {
         "ServiceConnectivityResources",
         "Tethering",
     ],
+    prebuilts: ["current_sdkinfo"],
     manifest: "manifest.json",
     key: "com.android.tethering.key",
 
