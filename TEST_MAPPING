@@ -1,4 +1,51 @@
 {
+  "presubmit": [
+    // Run in addition to mainline-presubmit as mainline-presubmit is not
+    // supported in every branch.
+    // CtsNetTestCasesLatestSdk uses stable API shims, so does not exercise
+    // some latest APIs. Run CtsNetTestCases to get coverage of newer APIs.
+    {
+      "name": "CtsNetTestCases",
+      "options": [
+        {
+          "exclude-annotation": "com.android.testutils.SkipPresubmit"
+        }
+      ]
+    },
+    {
+      "name": "TetheringTests"
+    },
+    {
+      "name": "TetheringIntegrationTests"
+    }
+  ],
+  "mainline-presubmit": [
+    {
+      // TODO: add back the tethering modules when updatable in this branch
+      "name": "CtsNetTestCasesLatestSdk[CaptivePortalLoginGoogle.apk+NetworkStackGoogle.apk+com.google.android.resolv.apex]",
+      "options": [
+        {
+          "exclude-annotation": "com.android.testutils.SkipPresubmit"
+        }
+      ]
+    }
+  ],
+  "mainline-postsubmit": [
+    // Tests on physical devices with SIM cards: postsubmit only for capacity constraints
+    {
+      // TODO: add back the tethering module when updatable in this branch
+      "name": "CtsNetTestCasesLatestSdk[CaptivePortalLoginGoogle.apk+NetworkStackGoogle.apk+com.google.android.resolv.apex]",
+      "keywords": ["sim"]
+    },
+    {
+      "name": "TetheringCoverageTests[CaptivePortalLoginGoogle.apk+NetworkStackGoogle.apk+com.google.android.resolv.apex+com.google.android.tethering.apex]"
+    }
+  ],
+  "imports": [
+    {
+      "path": "packages/modules/NetworkStack"
+    }
+  ],
   "imports": [
     {
       "path": "frameworks/base/core/java/android/net"

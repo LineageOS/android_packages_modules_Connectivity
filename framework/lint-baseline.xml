@@ -7,7 +7,7 @@
         errorLine1="                ParseException pe = new ParseException(e.reason, e.getCause());"
         errorLine2="                                    ~~~~~~~~~~~~~~~~~~">
         <location
-            file="frameworks/base/packages/Connectivity/framework/src/android/net/DnsResolver.java"
+            file="packages/modules/Connectivity/framework/src/android/net/DnsResolver.java"
             line="301"
             column="37"/>
     </issue>
@@ -18,7 +18,7 @@
         errorLine1="    protected class ActiveDataSubscriptionIdListener extends TelephonyCallback"
         errorLine2="                                                             ~~~~~~~~~~~~~~~~~">
         <location
-            file="frameworks/base/packages/Connectivity/framework/src/android/net/util/MultinetworkPolicyTracker.java"
+            file="packages/modules/Connectivity/framework/src/android/net/util/MultinetworkPolicyTracker.java"
             line="96"
             column="62"/>
     </issue>
@@ -29,7 +29,7 @@
         errorLine1="            implements TelephonyCallback.ActiveDataSubscriptionIdListener {"
         errorLine2="                       ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
-            file="frameworks/base/packages/Connectivity/framework/src/android/net/util/MultinetworkPolicyTracker.java"
+            file="packages/modules/Connectivity/framework/src/android/net/util/MultinetworkPolicyTracker.java"
             line="97"
             column="24"/>
     </issue>
@@ -40,7 +40,7 @@
         errorLine1="        ctx.getSystemService(TelephonyManager.class).registerTelephonyCallback("
         errorLine2="                                                     ~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
-            file="frameworks/base/packages/Connectivity/framework/src/android/net/util/MultinetworkPolicyTracker.java"
+            file="packages/modules/Connectivity/framework/src/android/net/util/MultinetworkPolicyTracker.java"
             line="126"
             column="54"/>
     </issue>
