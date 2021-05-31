@@ -197,7 +197,7 @@ public class PermissionMonitor {
         // Register UIDS_ALLOWED_ON_RESTRICTED_NETWORKS setting observer
         mDeps.registerContentObserver(
                 userAllContext,
-                Settings.Secure.getUriFor(UIDS_ALLOWED_ON_RESTRICTED_NETWORKS),
+                Settings.Global.getUriFor(UIDS_ALLOWED_ON_RESTRICTED_NETWORKS),
                 false /* notifyForDescendants */,
                 new ContentObserver(null) {
                     @Override
