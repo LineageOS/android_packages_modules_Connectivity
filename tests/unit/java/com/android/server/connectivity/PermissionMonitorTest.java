@@ -920,7 +920,7 @@ public class PermissionMonitorTest {
     public void testUidsAllowedOnRestrictedNetworksChanged() throws Exception {
         final NetdMonitor netdMonitor = new NetdMonitor(mNetdService);
         final ContentObserver contentObserver = expectRegisterContentObserver(
-                Settings.Secure.getUriFor(UIDS_ALLOWED_ON_RESTRICTED_NETWORKS));
+                Settings.Global.getUriFor(UIDS_ALLOWED_ON_RESTRICTED_NETWORKS));
 
         mPermissionMonitor.onUserAdded(MOCK_USER1);
         // Prepare PackageInfo for MOCK_PACKAGE1 and MOCK_PACKAGE2
@@ -954,7 +954,7 @@ public class PermissionMonitorTest {
     public void testUidsAllowedOnRestrictedNetworksChangedWithSharedUid() throws Exception {
         final NetdMonitor netdMonitor = new NetdMonitor(mNetdService);
         final ContentObserver contentObserver = expectRegisterContentObserver(
-                Settings.Secure.getUriFor(UIDS_ALLOWED_ON_RESTRICTED_NETWORKS));
+                Settings.Global.getUriFor(UIDS_ALLOWED_ON_RESTRICTED_NETWORKS));
 
         mPermissionMonitor.onUserAdded(MOCK_USER1);
         buildAndMockPackageInfoWithPermissions(MOCK_PACKAGE1, MOCK_UID1, CHANGE_NETWORK_STATE);
@@ -988,7 +988,7 @@ public class PermissionMonitorTest {
     public void testUidsAllowedOnRestrictedNetworksChangedWithMultipleUsers() throws Exception {
         final NetdMonitor netdMonitor = new NetdMonitor(mNetdService);
         final ContentObserver contentObserver = expectRegisterContentObserver(
-                Settings.Secure.getUriFor(UIDS_ALLOWED_ON_RESTRICTED_NETWORKS));
+                Settings.Global.getUriFor(UIDS_ALLOWED_ON_RESTRICTED_NETWORKS));
 
         // One user MOCK_USER1
         mPermissionMonitor.onUserAdded(MOCK_USER1);
