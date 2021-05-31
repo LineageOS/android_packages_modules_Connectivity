@@ -1,5 +1,2 @@
-# include platform/packages/modules/NetworkStack/:/OWNERS
-
-# Owners block: ongoing migration
-# markchien@google.com
-reminv@google.com
+include platform/packages/modules/NetworkStack/:/OWNERS
+markchien@google.com
