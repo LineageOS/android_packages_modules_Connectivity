@@ -56,6 +56,8 @@ filegroup {
         "src/android/net/TetheringConfigurationParcel.aidl",
         "src/android/net/TetheringRequestParcel.aidl",
         "src/android/net/TetherStatesParcel.aidl",
+        "src/android/net/TetheringInterface.aidl",
+        "src/android/net/TetheringInterface.java",
     ],
     path: "src"
 }
