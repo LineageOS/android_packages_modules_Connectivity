@@ -193,4 +193,8 @@
          state. -->
     <!-- Config for showing upstream roaming notification. -->
     <bool name="config_upstream_roaming_notification">false</bool>
+
+    <!-- Which USB function should be enabled when TETHERING_USB is requested. 0: RNDIS, 1: NCM.
+         -->
+    <integer translatable="false" name="config_tether_usb_functions">0</integer>
 </resources>
