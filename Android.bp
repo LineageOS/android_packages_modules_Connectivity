@@ -90,6 +90,9 @@ cc_binary {
     init_rc: [
         "vendor-464xlat.rc",
     ],
+    sanitize: {
+        memtag_heap: true,
+    },
 }
 
 // Unit tests.
