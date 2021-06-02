@@ -10077,7 +10077,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
 
         private SparseArray<Set<Integer>> createUidsFromOemNetworkPreferences(
                 @NonNull final OemNetworkPreferences preference) {
-            final SparseArray<Set<Integer>> uids = new SparseArray<>();
+            final SparseArray<Set<Integer>> prefToUids = new SparseArray<>();
             final PackageManager pm = mContext.getPackageManager();
             final List<UserHandle> users =
                     mContext.getSystemService(UserManager.class).getUserHandles(true);
@@ -10085,29 +10085,29 @@ public class ConnectivityService extends IConnectivityManager.Stub
                 if (VDBG || DDBG) {
                     log("No users currently available for setting the OEM network preference.");
                 }
-                return uids;
+                return prefToUids;
             }
             for (final Map.Entry<String, Integer> entry :
                     preference.getNetworkPreferences().entrySet()) {
                 @OemNetworkPreferences.OemNetworkPreference final int pref = entry.getValue();
-                try {
-                    final int uid = pm.getApplicationInfo(entry.getKey(), 0).uid;
-                    if (!uids.contains(pref)) {
-                        uids.put(pref, new ArraySet<>());
+                // Add the rules for all users as this policy is device wide.
+                for (final UserHandle user : users) {
+                    try {
+                        final int uid = pm.getApplicationInfoAsUser(entry.getKey(), 0, user).uid;
+                        if (!prefToUids.contains(pref)) {
+                            prefToUids.put(pref, new ArraySet<>());
+                        }
+                        prefToUids.get(pref).add(uid);
+                    } catch (PackageManager.NameNotFoundException e) {
+                        // Although this may seem like an error scenario, it is ok that uninstalled
+                        // packages are sent on a network preference as the system will watch for
+                        // package installations associated with this network preference and update
+                        // accordingly. This is done to minimize race conditions on app install.
+                        continue;
                     }
-                    for (final UserHandle ui : users) {
-                        // Add the rules for all users as this policy is device wide.
-                        uids.get(pref).add(ui.getUid(uid));
-                    }
-                } catch (PackageManager.NameNotFoundException e) {
-                    // Although this may seem like an error scenario, it is ok that uninstalled
-                    // packages are sent on a network preference as the system will watch for
-                    // package installations associated with this network preference and update
-                    // accordingly. This is done so as to minimize race conditions on app install.
-                    continue;
                 }
             }
-            return uids;
+            return prefToUids;
         }
 
         private NetworkRequestInfo createNriFromOemNetworkPreferences(
