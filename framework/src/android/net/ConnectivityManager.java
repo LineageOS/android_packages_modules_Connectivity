@@ -4918,7 +4918,7 @@ public class ConnectivityManager {
             InetAddressCompat.clearDnsCache();
             // Must flush socket pool as idle sockets will be bound to previous network and may
             // cause subsequent fetches to be performed on old network.
-            NetworkEventDispatcher.getInstance().onNetworkConfigurationChanged();
+            NetworkEventDispatcher.getInstance().dispatchNetworkConfigurationChange();
         }
 
         return true;

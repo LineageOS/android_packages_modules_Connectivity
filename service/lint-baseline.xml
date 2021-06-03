@@ -7,7 +7,7 @@
         errorLine1="            if (tm.isDataCapable()) {"
         errorLine2="                   ~~~~~~~~~~~~~">
         <location
-            file="frameworks/base/packages/Connectivity/service/src/com/android/server/ConnectivityService.java"
+            file="packages/modules/Connectivity/service/src/com/android/server/ConnectivityService.java"
             line="787"
             column="20"/>
     </issue>
@@ -18,7 +18,7 @@
         errorLine1="                mUserAllContext.sendStickyBroadcast(intent, options);"
         errorLine2="                                ~~~~~~~~~~~~~~~~~~~">
         <location
-            file="frameworks/base/packages/Connectivity/service/src/com/android/server/ConnectivityService.java"
+            file="packages/modules/Connectivity/service/src/com/android/server/ConnectivityService.java"
             line="2681"
             column="33"/>
     </issue>
@@ -29,7 +29,7 @@
         errorLine1="            final int callingVersion = pm.getTargetSdkVersion(callingPackageName);"
         errorLine2="                                          ~~~~~~~~~~~~~~~~~~~">
         <location
-            file="frameworks/base/packages/Connectivity/service/src/com/android/server/ConnectivityService.java"
+            file="packages/modules/Connectivity/service/src/com/android/server/ConnectivityService.java"
             line="5851"
             column="43"/>
     </issue>
