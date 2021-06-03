@@ -374,6 +374,10 @@ public class NetworkPolicyTestUtils {
         }
     }
 
+    public static void clearSnoozeTimestamps() {
+        executeShellCommand("dumpsys netpolicy --unsnooze");
+    }
+
     public static String executeShellCommand(String command) {
         final String result = runShellCommand(command).trim();
         Log.d(TAG, "Output of '" + command + "': '" + result + "'");
