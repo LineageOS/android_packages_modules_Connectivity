@@ -49,11 +49,16 @@ import static android.net.NetworkCapabilities.NET_CAPABILITY_NOT_METERED;
 import static android.net.NetworkCapabilities.NET_CAPABILITY_NOT_RESTRICTED;
 import static android.net.NetworkCapabilities.TRANSPORT_TEST;
 import static android.net.NetworkCapabilities.TRANSPORT_WIFI;
+import static android.net.TetheringManager.TETHERING_WIFI;
+import static android.net.TetheringManager.TetheringRequest;
 import static android.net.cts.util.CtsNetUtils.ConnectivityActionReceiver;
 import static android.net.cts.util.CtsNetUtils.HTTP_PORT;
 import static android.net.cts.util.CtsNetUtils.NETWORK_CALLBACK_ACTION;
 import static android.net.cts.util.CtsNetUtils.TEST_HOST;
 import static android.net.cts.util.CtsNetUtils.TestNetworkCallback;
+import static android.net.cts.util.CtsTetheringUtils.StartTetheringCallback;
+import static android.net.cts.util.CtsTetheringUtils.TestTetheringEventCallback;
+import static android.net.cts.util.CtsTetheringUtils.isWifiTetheringSupported;
 import static android.os.MessageQueue.OnFileDescriptorEventListener.EVENT_INPUT;
 import static android.provider.Settings.Global.NETWORK_METERED_MULTIPATH_PREFERENCE;
 import static android.system.OsConstants.AF_INET;
@@ -90,6 +95,7 @@ import android.content.pm.PackageManager;
 import android.content.res.Resources;
 import android.net.ConnectivityManager;
 import android.net.ConnectivityManager.NetworkCallback;
+import android.net.ConnectivitySettingsManager;
 import android.net.InetAddresses;
 import android.net.IpSecManager;
 import android.net.IpSecManager.UdpEncapsulationSocket;
@@ -106,6 +112,7 @@ import android.net.ProxyInfo;
 import android.net.SocketKeepalive;
 import android.net.TestNetworkInterface;
 import android.net.TestNetworkManager;
+import android.net.TetheringManager;
 import android.net.cts.util.CtsNetUtils;
 import android.net.util.KeepaliveUtils;
 import android.net.wifi.WifiManager;
@@ -220,6 +227,9 @@ public class ConnectivityManagerTest {
     private static final LinkAddress TEST_LINKADDR = new LinkAddress(
             InetAddresses.parseNumericAddress("2001:db8::8"), 64);
 
+    private static final int AIRPLANE_MODE_OFF = 0;
+    private static final int AIRPLANE_MODE_ON = 1;
+
     private Context mContext;
     private Instrumentation mInstrumentation;
     private ConnectivityManager mCm;
@@ -229,6 +239,7 @@ public class ConnectivityManagerTest {
     private final ArraySet<Integer> mNetworkTypes = new ArraySet<>();
     private UiAutomation mUiAutomation;
     private CtsNetUtils mCtsNetUtils;
+    private TetheringManager mTm;
 
     // Used for cleanup purposes.
     private final List<Range<Integer>> mVpnRequiredUidRanges = new ArrayList<>();
@@ -242,6 +253,7 @@ public class ConnectivityManagerTest {
         mWifiManager = (WifiManager) mContext.getSystemService(Context.WIFI_SERVICE);
         mPackageManager = mContext.getPackageManager();
         mCtsNetUtils = new CtsNetUtils(mContext);
+        mTm = mContext.getSystemService(TetheringManager.class);
 
         if (DevSdkIgnoreRuleKt.isDevSdkInRange(null /* minExclusive */,
                 Build.VERSION_CODES.R /* maxInclusive */)) {
@@ -1921,5 +1933,77 @@ public class ConnectivityManagerTest {
         // Behavior is verified in gts. Verify exception thrown w/o permission.
         assertThrows(SecurityException.class, () -> mCm.setGlobalProxy(
                 ProxyInfo.buildDirectProxy("example.com" /* host */, 8080 /* port */)));
+    }
+
+    @Test
+    public void testFactoryResetWithoutPermission() {
+        assumeTrue(TestUtils.shouldTestSApis());
+        assertThrows(SecurityException.class, () -> mCm.factoryReset());
+    }
+
+    @Test
+    public void testFactoryReset() throws Exception {
+        assumeTrue(TestUtils.shouldTestSApis());
+
+        // Store current settings.
+        final int curAvoidBadWifi =
+                ConnectivitySettingsManager.getNetworkAvoidBadWifi(mContext);
+        final int curPrivateDnsMode = ConnectivitySettingsManager.getPrivateDnsMode(mContext);
+
+        final TestTetheringEventCallback tetherEventCallback = new TestTetheringEventCallback();
+        try {
+            mTm.registerTetheringEventCallback(c -> c.run() /* executor */, tetherEventCallback);
+            // Adopt for NETWORK_SETTINGS permission.
+            mUiAutomation.adoptShellPermissionIdentity();
+            // start tethering
+            tetherEventCallback.assumeWifiTetheringSupported(mContext);
+            startWifiTethering(tetherEventCallback);
+            // Update setting to verify the behavior.
+            mCm.setAirplaneMode(true);
+            ConnectivitySettingsManager.setPrivateDnsMode(mContext,
+                    ConnectivitySettingsManager.PRIVATE_DNS_MODE_OFF);
+            ConnectivitySettingsManager.setNetworkAvoidBadWifi(mContext,
+                    ConnectivitySettingsManager.NETWORK_AVOID_BAD_WIFI_IGNORE);
+            assertEquals(AIRPLANE_MODE_ON, Settings.Global.getInt(
+                    mContext.getContentResolver(), Settings.Global.AIRPLANE_MODE_ON));
+            // Verify factoryReset
+            mCm.factoryReset();
+            verifySettings(AIRPLANE_MODE_OFF,
+                    ConnectivitySettingsManager.PRIVATE_DNS_MODE_OPPORTUNISTIC,
+                    ConnectivitySettingsManager.NETWORK_AVOID_BAD_WIFI_PROMPT);
+
+            tetherEventCallback.expectNoTetheringActive();
+        } finally {
+            // Restore settings.
+            mCm.setAirplaneMode(false);
+            ConnectivitySettingsManager.setNetworkAvoidBadWifi(mContext, curAvoidBadWifi);
+            ConnectivitySettingsManager.setPrivateDnsMode(mContext, curPrivateDnsMode);
+            mTm.unregisterTetheringEventCallback(tetherEventCallback);
+            mTm.stopAllTethering();
+            mUiAutomation.dropShellPermissionIdentity();
+        }
+    }
+
+    private void verifySettings(int expectedAirplaneMode, int expectedPrivateDnsMode,
+            int expectedAvoidBadWifi) throws Exception {
+        assertEquals(expectedAirplaneMode, Settings.Global.getInt(
+                mContext.getContentResolver(), Settings.Global.AIRPLANE_MODE_ON));
+        assertEquals(expectedPrivateDnsMode,
+                ConnectivitySettingsManager.getPrivateDnsMode(mContext));
+        assertEquals(expectedAvoidBadWifi,
+                ConnectivitySettingsManager.getNetworkAvoidBadWifi(mContext));
+    }
+
+    private void startWifiTethering(final TestTetheringEventCallback callback) throws Exception {
+        if (!isWifiTetheringSupported(mContext, callback)) return;
+
+        final List<String> wifiRegexs =
+                callback.getTetheringInterfaceRegexps().getTetherableWifiRegexs();
+        final StartTetheringCallback startTetheringCallback = new StartTetheringCallback();
+        final TetheringRequest request = new TetheringRequest.Builder(TETHERING_WIFI)
+                .setShouldShowEntitlementUi(false).build();
+        mTm.startTethering(request, c -> c.run() /* executor */, startTetheringCallback);
+        startTetheringCallback.verifyTetheringStarted();
+        callback.expectTetheredInterfacesChanged(wifiRegexs, TETHERING_WIFI);
     }
 }
