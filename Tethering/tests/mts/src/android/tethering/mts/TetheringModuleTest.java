@@ -15,6 +15,7 @@
  */
 package android.tethering.mts;
 
+import static android.Manifest.permission.ACCESS_WIFI_STATE;
 import static android.Manifest.permission.MANAGE_TEST_NETWORKS;
 import static android.Manifest.permission.NETWORK_SETTINGS;
 import static android.Manifest.permission.READ_DEVICE_CONFIG;
@@ -70,7 +71,7 @@ public class TetheringModuleTest {
     @Before
     public void setUp() throws Exception {
         mUiAutomation.adoptShellPermissionIdentity(MANAGE_TEST_NETWORKS, NETWORK_SETTINGS,
-                WRITE_SETTINGS, READ_DEVICE_CONFIG, TETHER_PRIVILEGED);
+                WRITE_SETTINGS, READ_DEVICE_CONFIG, TETHER_PRIVILEGED, ACCESS_WIFI_STATE);
         mContext = InstrumentationRegistry.getContext();
         mTm = mContext.getSystemService(TetheringManager.class);
         mCtsTetheringUtils = new CtsTetheringUtils(mContext);
@@ -102,7 +103,7 @@ public class TetheringModuleTest {
         TestNetworkTracker tnt = null;
         try {
             tetherEventCallback.assumeTetheringSupported();
-            assumeTrue(isWifiTetheringSupported(tetherEventCallback));
+            assumeTrue(isWifiTetheringSupported(mContext, tetherEventCallback));
             tetherEventCallback.expectNoTetheringActive();
 
             final TetheringInterface tetheredIface =
