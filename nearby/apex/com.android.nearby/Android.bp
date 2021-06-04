@@ -26,7 +26,28 @@ apex {
     name: "com.android.nearby",
     manifest: "manifest.json",
     // TODO(b/189890387): change the SDK version to T when T release is available.
-    min_sdk_version: "S",
+    min_sdk_version: "current",
+    updatable: true,
     file_contexts: ":apex.test-file_contexts",  // Default, please edit, see go/android-apex-howto
     key: "com.android.nearby.key",
+    certificate: ":com.android.nearby.certificate",
+
+    bootclasspath_fragments: ["com.android.nearby-bootclasspath-fragment"],
+    java_libs: [
+        "service-nearby",
+    ],
+}
+
+sdk {
+    name: "nearby-module-sdk",
+    java_sdk_libs: [
+        "framework-nearby",
+    ],
+}
+
+// Encapsulate the contributions made by the com.android.nearby to the bootclasspath.
+bootclasspath_fragment {
+    name: "com.android.nearby-bootclasspath-fragment",
+    contents: ["framework-nearby"],
+    apex_available: ["com.android.nearby"],
 }
