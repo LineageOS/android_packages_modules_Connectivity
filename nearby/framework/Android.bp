@@ -81,4 +81,5 @@ java_sdk_library {
     permitted_packages: [
         "android.nearby",
     ],
+    unsafe_ignore_missing_latest_api: true
 }
