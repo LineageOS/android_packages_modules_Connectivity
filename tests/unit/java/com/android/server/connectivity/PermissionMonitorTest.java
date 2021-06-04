@@ -30,7 +30,7 @@ import static android.content.pm.PackageInfo.REQUESTED_PERMISSION_GRANTED;
 import static android.content.pm.PackageInfo.REQUESTED_PERMISSION_REQUIRED;
 import static android.content.pm.PackageManager.GET_PERMISSIONS;
 import static android.content.pm.PackageManager.MATCH_ANY_USER;
-import static android.net.ConnectivitySettingsManager.APPS_ALLOWED_ON_RESTRICTED_NETWORKS;
+import static android.net.ConnectivitySettingsManager.UIDS_ALLOWED_ON_RESTRICTED_NETWORKS;
 import static android.net.NetworkStack.PERMISSION_MAINLINE_NETWORK_STACK;
 import static android.os.Process.SYSTEM_UID;
 
@@ -142,7 +142,7 @@ public class PermissionMonitorTest {
         final Context asUserCtx = mock(Context.class, AdditionalAnswers.delegatesTo(mContext));
         doReturn(UserHandle.ALL).when(asUserCtx).getUser();
         when(mContext.createContextAsUser(eq(UserHandle.ALL), anyInt())).thenReturn(asUserCtx);
-        when(mDeps.getAppsAllowedOnRestrictedNetworks(any())).thenReturn(new ArraySet<>());
+        when(mDeps.getUidsAllowedOnRestrictedNetworks(any())).thenReturn(new ArraySet<>());
 
         mPermissionMonitor = spy(new PermissionMonitor(mContext, mNetdService, mDeps));
 
@@ -341,9 +341,9 @@ public class PermissionMonitorTest {
     }
 
     @Test
-    public void testHasRestrictedNetworkPermissionAppAllowedOnRestrictedNetworks() {
-        mPermissionMonitor.updateAppsAllowedOnRestrictedNetworks(
-                new ArraySet<>(new String[] { MOCK_PACKAGE1 }));
+    public void testHasRestrictedNetworkPermissionUidAllowedOnRestrictedNetworks() {
+        mPermissionMonitor.updateUidsAllowedOnRestrictedNetworks(
+                new ArraySet<>(new Integer[] { MOCK_UID1 }));
         assertTrue(hasRestrictedNetworkPermission(
                 PARTITION_VENDOR, VERSION_Q, MOCK_PACKAGE1, MOCK_UID1));
         assertTrue(hasRestrictedNetworkPermission(
@@ -352,11 +352,11 @@ public class PermissionMonitorTest {
                 PARTITION_VENDOR, VERSION_Q, MOCK_PACKAGE1, MOCK_UID1, CONNECTIVITY_INTERNAL));
 
         assertFalse(hasRestrictedNetworkPermission(
-                PARTITION_VENDOR, VERSION_Q, MOCK_PACKAGE2, MOCK_UID1));
+                PARTITION_VENDOR, VERSION_Q, MOCK_PACKAGE2, MOCK_UID2));
         assertFalse(hasRestrictedNetworkPermission(
-                PARTITION_VENDOR, VERSION_Q, MOCK_PACKAGE2, MOCK_UID1, CHANGE_NETWORK_STATE));
+                PARTITION_VENDOR, VERSION_Q, MOCK_PACKAGE2, MOCK_UID2, CHANGE_NETWORK_STATE));
         assertFalse(hasRestrictedNetworkPermission(
-                PARTITION_VENDOR, VERSION_Q, MOCK_PACKAGE2, MOCK_UID1, CONNECTIVITY_INTERNAL));
+                PARTITION_VENDOR, VERSION_Q, MOCK_PACKAGE2, MOCK_UID2, CONNECTIVITY_INTERNAL));
 
     }
 
@@ -396,32 +396,32 @@ public class PermissionMonitorTest {
         assertFalse(wouldBeCarryoverPackage(PARTITION_PRODUCT, VERSION_Q, MOCK_UID1));
     }
 
-    private boolean wouldBeAppAllowedOnRestrictedNetworks(String packageName) {
-        final PackageInfo packageInfo = new PackageInfo();
-        packageInfo.packageName = packageName;
-        return mPermissionMonitor.isAppAllowedOnRestrictedNetworks(packageInfo);
+    private boolean wouldBeUidAllowedOnRestrictedNetworks(int uid) {
+        final ApplicationInfo applicationInfo = new ApplicationInfo();
+        applicationInfo.uid = uid;
+        return mPermissionMonitor.isUidAllowedOnRestrictedNetworks(applicationInfo);
     }
 
     @Test
     public void testIsAppAllowedOnRestrictedNetworks() {
-        mPermissionMonitor.updateAppsAllowedOnRestrictedNetworks(new ArraySet<>());
-        assertFalse(wouldBeAppAllowedOnRestrictedNetworks(MOCK_PACKAGE1));
-        assertFalse(wouldBeAppAllowedOnRestrictedNetworks(MOCK_PACKAGE2));
+        mPermissionMonitor.updateUidsAllowedOnRestrictedNetworks(new ArraySet<>());
+        assertFalse(wouldBeUidAllowedOnRestrictedNetworks(MOCK_UID1));
+        assertFalse(wouldBeUidAllowedOnRestrictedNetworks(MOCK_UID2));
 
-        mPermissionMonitor.updateAppsAllowedOnRestrictedNetworks(
-                new ArraySet<>(new String[] { MOCK_PACKAGE1 }));
-        assertTrue(wouldBeAppAllowedOnRestrictedNetworks(MOCK_PACKAGE1));
-        assertFalse(wouldBeAppAllowedOnRestrictedNetworks(MOCK_PACKAGE2));
+        mPermissionMonitor.updateUidsAllowedOnRestrictedNetworks(
+                new ArraySet<>(new Integer[] { MOCK_UID1 }));
+        assertTrue(wouldBeUidAllowedOnRestrictedNetworks(MOCK_UID1));
+        assertFalse(wouldBeUidAllowedOnRestrictedNetworks(MOCK_UID2));
 
-        mPermissionMonitor.updateAppsAllowedOnRestrictedNetworks(
-                new ArraySet<>(new String[] { MOCK_PACKAGE2 }));
-        assertFalse(wouldBeAppAllowedOnRestrictedNetworks(MOCK_PACKAGE1));
-        assertTrue(wouldBeAppAllowedOnRestrictedNetworks(MOCK_PACKAGE2));
+        mPermissionMonitor.updateUidsAllowedOnRestrictedNetworks(
+                new ArraySet<>(new Integer[] { MOCK_UID2 }));
+        assertFalse(wouldBeUidAllowedOnRestrictedNetworks(MOCK_UID1));
+        assertTrue(wouldBeUidAllowedOnRestrictedNetworks(MOCK_UID2));
 
-        mPermissionMonitor.updateAppsAllowedOnRestrictedNetworks(
-                new ArraySet<>(new String[] { "com.android.test" }));
-        assertFalse(wouldBeAppAllowedOnRestrictedNetworks(MOCK_PACKAGE1));
-        assertFalse(wouldBeAppAllowedOnRestrictedNetworks(MOCK_PACKAGE2));
+        mPermissionMonitor.updateUidsAllowedOnRestrictedNetworks(
+                new ArraySet<>(new Integer[] { 123 }));
+        assertFalse(wouldBeUidAllowedOnRestrictedNetworks(MOCK_UID1));
+        assertFalse(wouldBeUidAllowedOnRestrictedNetworks(MOCK_UID2));
     }
 
     private void assertBackgroundPermission(boolean hasPermission, String name, int uid,
@@ -901,12 +901,12 @@ public class PermissionMonitorTest {
     }
 
     @Test
-    public void testAppsAllowedOnRestrictedNetworksChanged() throws Exception {
+    public void testUidsAllowedOnRestrictedNetworksChanged() throws Exception {
         final NetdMonitor mNetdMonitor = new NetdMonitor(mNetdService);
         final ArgumentCaptor<ContentObserver> captor =
                 ArgumentCaptor.forClass(ContentObserver.class);
         verify(mDeps, times(1)).registerContentObserver(any(),
-                argThat(uri -> uri.getEncodedPath().contains(APPS_ALLOWED_ON_RESTRICTED_NETWORKS)),
+                argThat(uri -> uri.getEncodedPath().contains(UIDS_ALLOWED_ON_RESTRICTED_NETWORKS)),
                 anyBoolean(), captor.capture());
         final ContentObserver contentObserver = captor.getValue();
 
@@ -924,24 +924,24 @@ public class PermissionMonitorTest {
         when(mPackageManager.getPackageInfo(eq(MOCK_PACKAGE2), anyInt())).thenReturn(packageInfo2);
         when(mPackageManager.getPackagesForUid(MOCK_UID2)).thenReturn(new String[]{MOCK_PACKAGE2});
 
-        // MOCK_PACKAGE1 is listed in setting that allow to use restricted networks, MOCK_UID1
+        // MOCK_UID1 is listed in setting that allow to use restricted networks, MOCK_UID1
         // should have SYSTEM permission.
-        when(mDeps.getAppsAllowedOnRestrictedNetworks(any())).thenReturn(
-                new ArraySet<>(new String[] { MOCK_PACKAGE1 }));
+        when(mDeps.getUidsAllowedOnRestrictedNetworks(any())).thenReturn(
+                new ArraySet<>(new Integer[] { MOCK_UID1 }));
         contentObserver.onChange(true /* selfChange */);
         mNetdMonitor.expectPermission(SYSTEM, new UserHandle[]{MOCK_USER1}, new int[]{MOCK_UID1});
         mNetdMonitor.expectNoPermission(new UserHandle[]{MOCK_USER1}, new int[]{MOCK_UID2});
 
-        // MOCK_PACKAGE2 is listed in setting that allow to use restricted networks, MOCK_UID2
+        // MOCK_UID2 is listed in setting that allow to use restricted networks, MOCK_UID2
         // should have SYSTEM permission but MOCK_UID1 should revoke permission.
-        when(mDeps.getAppsAllowedOnRestrictedNetworks(any())).thenReturn(
-                new ArraySet<>(new String[] { MOCK_PACKAGE2 }));
+        when(mDeps.getUidsAllowedOnRestrictedNetworks(any())).thenReturn(
+                new ArraySet<>(new Integer[] { MOCK_UID2 }));
         contentObserver.onChange(true /* selfChange */);
         mNetdMonitor.expectPermission(SYSTEM, new UserHandle[]{MOCK_USER1}, new int[]{MOCK_UID2});
         mNetdMonitor.expectNoPermission(new UserHandle[]{MOCK_USER1}, new int[]{MOCK_UID1});
 
-        // No app lists in setting, should revoke permission from all uids.
-        when(mDeps.getAppsAllowedOnRestrictedNetworks(any())).thenReturn(new ArraySet<>());
+        // No uid lists in setting, should revoke permission from all uids.
+        when(mDeps.getUidsAllowedOnRestrictedNetworks(any())).thenReturn(new ArraySet<>());
         contentObserver.onChange(true /* selfChange */);
         mNetdMonitor.expectNoPermission(
                 new UserHandle[]{MOCK_USER1}, new int[]{MOCK_UID1, MOCK_UID2});
@@ -953,7 +953,7 @@ public class PermissionMonitorTest {
         final ArgumentCaptor<ContentObserver> captor =
                 ArgumentCaptor.forClass(ContentObserver.class);
         verify(mDeps, times(1)).registerContentObserver(any(),
-                argThat(uri -> uri.getEncodedPath().contains(APPS_ALLOWED_ON_RESTRICTED_NETWORKS)),
+                argThat(uri -> uri.getEncodedPath().contains(UIDS_ALLOWED_ON_RESTRICTED_NETWORKS)),
                 anyBoolean(), captor.capture());
         final ContentObserver contentObserver = captor.getValue();
 
@@ -974,22 +974,15 @@ public class PermissionMonitorTest {
         addPackageForUsers(new UserHandle[]{MOCK_USER1}, MOCK_PACKAGE1, MOCK_UID1);
         mNetdMonitor.expectPermission(NETWORK, new UserHandle[]{MOCK_USER1}, new int[]{MOCK_UID1});
 
-        // MOCK_PACKAGE2 is listed in setting that allow to use restricted networks, MOCK_UID1
+        // MOCK_UID1 is listed in setting that allow to use restricted networks, MOCK_UID1
         // should upgrade to SYSTEM permission.
-        when(mDeps.getAppsAllowedOnRestrictedNetworks(any())).thenReturn(
-                new ArraySet<>(new String[] { MOCK_PACKAGE2 }));
-        contentObserver.onChange(true /* selfChange */);
-        mNetdMonitor.expectPermission(SYSTEM, new UserHandle[]{MOCK_USER1}, new int[]{MOCK_UID1});
-
-        // MOCK_PACKAGE1 is listed in setting that allow to use restricted networks, MOCK_UID1
-        // should still have SYSTEM permission.
-        when(mDeps.getAppsAllowedOnRestrictedNetworks(any())).thenReturn(
-                new ArraySet<>(new String[] { MOCK_PACKAGE1 }));
+        when(mDeps.getUidsAllowedOnRestrictedNetworks(any())).thenReturn(
+                new ArraySet<>(new Integer[] { MOCK_UID1 }));
         contentObserver.onChange(true /* selfChange */);
         mNetdMonitor.expectPermission(SYSTEM, new UserHandle[]{MOCK_USER1}, new int[]{MOCK_UID1});
 
         // No app lists in setting, MOCK_UID1 should downgrade to NETWORK permission.
-        when(mDeps.getAppsAllowedOnRestrictedNetworks(any())).thenReturn(new ArraySet<>());
+        when(mDeps.getUidsAllowedOnRestrictedNetworks(any())).thenReturn(new ArraySet<>());
         contentObserver.onChange(true /* selfChange */);
         mNetdMonitor.expectPermission(NETWORK, new UserHandle[]{MOCK_USER1}, new int[]{MOCK_UID1});
 
