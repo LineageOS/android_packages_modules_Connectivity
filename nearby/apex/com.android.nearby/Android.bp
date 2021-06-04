@@ -25,7 +25,7 @@ android_app_certificate {
 apex {
     name: "com.android.nearby",
     manifest: "manifest.json",
-    // TODO(b/189890387): change the SDK version to T when T release is available.
+    // TODO(b/189890387): change the SDK version to "32" when T release is finalized.
     min_sdk_version: "current",
     updatable: true,
     file_contexts: ":apex.test-file_contexts",  // Default, please edit, see go/android-apex-howto
