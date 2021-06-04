@@ -3341,9 +3341,10 @@ public class ConnectivityManager {
      * Register or update a network offer with ConnectivityService.
      *
      * ConnectivityService keeps track of offers made by the various providers and matches
-     * them to networking requests made by apps or the system. The provider supplies a score
-     * and the capabilities of the network it might be able to bring up ; these act as filters
-     * used by ConnectivityService to only send those requests that can be fulfilled by the
+     * them to networking requests made by apps or the system. A callback identifies an offer
+     * uniquely, and later calls with the same callback update the offer. The provider supplies a
+     * score and the capabilities of the network it might be able to bring up ; these act as
+     * filters used by ConnectivityService to only send those requests that can be fulfilled by the
      * provider.
      *
      * The provider is under no obligation to be able to bring up the network it offers at any
@@ -3364,11 +3365,11 @@ public class ConnectivityManager {
     @RequiresPermission(anyOf = {
             NetworkStack.PERMISSION_MAINLINE_NETWORK_STACK,
             android.Manifest.permission.NETWORK_FACTORY})
-    public void offerNetwork(@NonNull final NetworkProvider provider,
+    public void offerNetwork(@NonNull final int providerId,
             @NonNull final NetworkScore score, @NonNull final NetworkCapabilities caps,
             @NonNull final INetworkOfferCallback callback) {
         try {
-            mService.offerNetwork(Objects.requireNonNull(provider.getMessenger(), "null messenger"),
+            mService.offerNetwork(providerId,
                     Objects.requireNonNull(score, "null score"),
                     Objects.requireNonNull(caps, "null caps"),
                     Objects.requireNonNull(callback, "null callback"));
