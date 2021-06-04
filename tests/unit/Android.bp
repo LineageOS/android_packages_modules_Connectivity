@@ -54,7 +54,6 @@ android_test {
     ],
     platform_apis: true,
     test_suites: ["device-tests"],
-    certificate: "platform",
     jarjar_rules: "jarjar-rules.txt",
     static_libs: [
         "androidx.test.rules",
