@@ -17,7 +17,9 @@
 package android.net;
 
 import android.annotation.NonNull;
+import android.annotation.Nullable;
 import android.content.Context;
+import android.net.NetworkProvider.NetworkOfferCallback;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.Message;
@@ -29,6 +31,7 @@ import java.io.FileDescriptor;
 import java.io.PrintWriter;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.concurrent.Executor;
 
 /**
  * A NetworkFactory is an entity that creates NetworkAgent objects.
@@ -48,6 +51,14 @@ import java.util.Map;
 public class NetworkFactory extends Handler {
     private static final boolean DBG = true;
     private static final boolean VDBG = false;
+
+    // A score that will win against everything, so that score filtering will let all requests
+    // through
+    // TODO : remove this and replace with an API to listen to all requests.
+    @NonNull
+    private static final NetworkScore INVINCIBLE_SCORE =
+            new NetworkScore.Builder().setLegacyInt(1000).build();
+
     /**
      * Pass a network request to the bearer.  If the bearer believes it can
      * satisfy the request it should connect to the network and create a
@@ -59,19 +70,9 @@ public class NetworkFactory extends Handler {
      * disregard any that it will never be able to service, for example
      * those requiring a different bearer.
      * msg.obj = NetworkRequest
-     * msg.arg1 = score - the score of the network currently satisfying this
-     *            request.  If this bearer knows in advance it cannot
-     *            exceed this score it should not try to connect, holding the request
-     *            for the future.
-     *            Note that subsequent events may give a different (lower
-     *            or higher) score for this request, transmitted to each
-     *            NetworkFactory through additional CMD_REQUEST_NETWORK msgs
-     *            with the same NetworkRequest but an updated score.
-     *            Also, network conditions may change for this bearer
-     *            allowing for a better score in the future.
-     * msg.arg2 = the ID of the NetworkProvider currently responsible for the
-     *            NetworkAgent handling this request, or NetworkProvider.ID_NONE if none.
      */
+    // TODO : this and CANCEL_REQUEST are only used by telephony tests. Replace it in the tests
+    // and remove them and the associated code.
     public static final int CMD_REQUEST_NETWORK = 1;
 
     /**
@@ -82,7 +83,7 @@ public class NetworkFactory extends Handler {
 
     /**
      * Internally used to set our best-guess score.
-     * msg.arg1 = new score
+     * msg.obj = new score
      */
     private static final int CMD_SET_SCORE = 3;
 
@@ -93,28 +94,73 @@ public class NetworkFactory extends Handler {
      */
     private static final int CMD_SET_FILTER = 4;
 
+    /**
+     * Internally used to send the network offer associated with this factory.
+     * No arguments, will read from members
+     */
+    private static final int CMD_OFFER_NETWORK = 5;
+
+    /**
+     * Internally used to send the request to listen to all requests.
+     * No arguments, will read from members
+     */
+    private static final int CMD_LISTEN_TO_ALL_REQUESTS = 6;
+
     private final Context mContext;
     private final String LOG_TAG;
 
     private final Map<NetworkRequest, NetworkRequestInfo> mNetworkRequests =
             new LinkedHashMap<>();
 
-    private int mScore;
-    private NetworkCapabilities mCapabilityFilter;
+    @NonNull private NetworkScore mScore = new NetworkScore.Builder().setLegacyInt(0).build();
+    @NonNull private NetworkCapabilities mCapabilityFilter;
 
     private int mRefCount = 0;
     private NetworkProvider mProvider = null;
 
+    private final NetworkOfferCallback mRequestCallback = new NetworkOfferCallback() {
+        @Override
+        public void onNetworkNeeded(@NonNull final NetworkRequest request) {
+            handleAddRequest(request);
+        }
+
+        @Override
+        public void onNetworkUnneeded(@NonNull final NetworkRequest request) {
+            handleRemoveRequest(request);
+        }
+    };
+    @NonNull private final Executor mExecutor = command -> post(command);
+
+    // Ideally the filter argument would be non-null, but null has historically meant to see
+    // no requests and telephony passes null.
     public NetworkFactory(Looper looper, Context context, String logTag,
-            NetworkCapabilities filter) {
+            @Nullable final NetworkCapabilities filter) {
         super(looper);
         LOG_TAG = logTag;
         mContext = context;
-        mCapabilityFilter = filter;
+        if (null != filter) {
+            mCapabilityFilter = filter;
+        } else {
+            mCapabilityFilter = new NetworkCapabilities.Builder()
+                    .withoutDefaultCapabilities().build();
+        }
     }
 
     /* Registers this NetworkFactory with the system. May only be called once per factory. */
     public void register() {
+        register(false);
+    }
+
+    /**
+     * Registers this NetworkFactory with the system ignoring the score filter. This will let
+     * the factory always see all network requests matching its capabilities filter.
+     * May only be called once per factory.
+     */
+    public void registerIgnoringScore() {
+        register(true);
+    }
+
+    private void register(final boolean listenToAllRequests) {
         if (mProvider != null) {
             throw new IllegalStateException("A NetworkFactory must only be registered once");
         }
@@ -124,7 +170,7 @@ public class NetworkFactory extends Handler {
             @Override
             public void onNetworkRequested(@NonNull NetworkRequest request, int score,
                     int servingProviderId) {
-                handleAddRequest(request, score, servingProviderId);
+                handleAddRequest(request);
             }
 
             @Override
@@ -134,7 +180,19 @@ public class NetworkFactory extends Handler {
         };
 
         ((ConnectivityManager) mContext.getSystemService(
-            Context.CONNECTIVITY_SERVICE)).registerNetworkProvider(mProvider);
+                Context.CONNECTIVITY_SERVICE)).registerNetworkProvider(mProvider);
+
+        // The mScore and mCapabilityFilter members can only be accessed on the handler thread.
+        // TODO : offer a separate API to listen to all requests instead
+        if (listenToAllRequests) {
+            sendMessage(obtainMessage(CMD_LISTEN_TO_ALL_REQUESTS));
+        } else {
+            sendMessage(obtainMessage(CMD_OFFER_NETWORK));
+        }
+    }
+
+    private void handleOfferNetwork(@NonNull final NetworkScore score) {
+        mProvider.registerNetworkOffer(score, mCapabilityFilter, mExecutor, mRequestCallback);
     }
 
     /** Unregisters this NetworkFactory. After this call, the object can no longer be used. */
@@ -156,7 +214,7 @@ public class NetworkFactory extends Handler {
     public void handleMessage(Message msg) {
         switch (msg.what) {
             case CMD_REQUEST_NETWORK: {
-                handleAddRequest((NetworkRequest) msg.obj, msg.arg1, msg.arg2);
+                handleAddRequest((NetworkRequest) msg.obj);
                 break;
             }
             case CMD_CANCEL_REQUEST: {
@@ -164,32 +222,36 @@ public class NetworkFactory extends Handler {
                 break;
             }
             case CMD_SET_SCORE: {
-                handleSetScore(msg.arg1);
+                handleSetScore((NetworkScore) msg.obj);
                 break;
             }
             case CMD_SET_FILTER: {
                 handleSetFilter((NetworkCapabilities) msg.obj);
                 break;
             }
+            case CMD_OFFER_NETWORK: {
+                handleOfferNetwork(mScore);
+                break;
+            }
+            case CMD_LISTEN_TO_ALL_REQUESTS: {
+                handleOfferNetwork(INVINCIBLE_SCORE);
+                break;
+            }
         }
     }
 
     private static class NetworkRequestInfo {
-        public final NetworkRequest request;
-        public int score;
+        @NonNull public final NetworkRequest request;
         public boolean requested; // do we have a request outstanding, limited by score
-        public int providerId;
 
-        NetworkRequestInfo(NetworkRequest request, int score, int providerId) {
+        NetworkRequestInfo(@NonNull final NetworkRequest request) {
             this.request = request;
-            this.score = score;
             this.requested = false;
-            this.providerId = providerId;
         }
 
         @Override
         public String toString() {
-            return "{" + request + ", score=" + score + ", requested=" + requested + "}";
+            return "{" + request + ", requested=" + requested + "}";
         }
     }
 
@@ -198,35 +260,27 @@ public class NetworkFactory extends Handler {
      * @see #CMD_REQUEST_NETWORK
      *
      * @param request the request to handle.
-     * @param score the score of the NetworkAgent currently satisfying this request.
-     * @param servingProviderId the ID of the NetworkProvider that created the NetworkAgent
-     *        currently satisfying this request.
      */
-    @VisibleForTesting
-    protected void handleAddRequest(NetworkRequest request, int score, int servingProviderId) {
+    private void handleAddRequest(@NonNull final NetworkRequest request) {
         NetworkRequestInfo n = mNetworkRequests.get(request);
         if (n == null) {
-            if (DBG) {
-                log("got request " + request + " with score " + score
-                        + " and providerId " + servingProviderId);
-            }
-            n = new NetworkRequestInfo(request, score, servingProviderId);
+            if (DBG) log("got request " + request);
+            n = new NetworkRequestInfo(request);
             mNetworkRequests.put(n.request, n);
         } else {
             if (VDBG) {
-                log("new score " + score + " for existing request " + request
-                        + " and providerId " + servingProviderId);
+                log("handle existing request " + request);
             }
-            n.score = score;
-            n.providerId = servingProviderId;
         }
         if (VDBG) log("  my score=" + mScore + ", my filter=" + mCapabilityFilter);
 
-        evalRequest(n);
+        if (acceptRequest(request)) {
+            n.requested = true;
+            needNetworkFor(request);
+        }
     }
 
-    @VisibleForTesting
-    protected void handleRemoveRequest(NetworkRequest request) {
+    private void handleRemoveRequest(NetworkRequest request) {
         NetworkRequestInfo n = mNetworkRequests.get(request);
         if (n != null) {
             mNetworkRequests.remove(request);
@@ -234,14 +288,21 @@ public class NetworkFactory extends Handler {
         }
     }
 
-    private void handleSetScore(int score) {
+    private void handleSetScore(@NonNull final NetworkScore score) {
+        if (mScore.equals(score)) return;
         mScore = score;
-        evalRequests();
+        reevaluateAllRequests();
     }
 
-    private void handleSetFilter(NetworkCapabilities netCap) {
+    private void handleSetFilter(@NonNull final NetworkCapabilities netCap) {
+        if (netCap.equals(mCapabilityFilter)) return;
         mCapabilityFilter = netCap;
-        evalRequests();
+        reevaluateAllRequests();
+    }
+
+    protected final void reevaluateAllRequests() {
+        if (mProvider == null) return;
+        mProvider.registerNetworkOffer(mScore, mCapabilityFilter, mExecutor, mRequestCallback);
     }
 
     /**
@@ -263,75 +324,9 @@ public class NetworkFactory extends Handler {
      *
      * @return {@code true} to accept the request.
      */
-    public boolean acceptRequest(NetworkRequest request) {
+    public boolean acceptRequest(@NonNull final NetworkRequest request) {
         return true;
     }
-
-    private void evalRequest(NetworkRequestInfo n) {
-        if (VDBG) {
-            log("evalRequest");
-            log(" n.requests = " + n.requested);
-            log(" n.score = " + n.score);
-            log(" mScore = " + mScore);
-            log(" request.providerId = " + n.providerId);
-            log(" mProvider.id = " + mProvider.getProviderId());
-        }
-        if (shouldNeedNetworkFor(n)) {
-            if (VDBG) log("  needNetworkFor");
-            needNetworkFor(n.request);
-            n.requested = true;
-        } else if (shouldReleaseNetworkFor(n)) {
-            if (VDBG) log("  releaseNetworkFor");
-            releaseNetworkFor(n.request);
-            n.requested = false;
-        } else {
-            if (VDBG) log("  done");
-        }
-    }
-
-    private boolean shouldNeedNetworkFor(NetworkRequestInfo n) {
-        // If this request is already tracked, it doesn't qualify for need
-        return !n.requested
-            // If the score of this request is higher or equal to that of this factory and some
-            // other factory is responsible for it, then this factory should not track the request
-            // because it has no hope of satisfying it.
-            && (n.score < mScore || n.providerId == mProvider.getProviderId())
-            // If this factory can't satisfy the capability needs of this request, then it
-            // should not be tracked.
-            && n.request.canBeSatisfiedBy(mCapabilityFilter)
-            // Finally if the concrete implementation of the factory rejects the request, then
-            // don't track it.
-            && acceptRequest(n.request);
-    }
-
-    private boolean shouldReleaseNetworkFor(NetworkRequestInfo n) {
-        // Don't release a request that's not tracked.
-        return n.requested
-            // The request should be released if it can't be satisfied by this factory. That
-            // means either of the following conditions are met :
-            // - Its score is too high to be satisfied by this factory and it's not already
-            //   assigned to the factory
-            // - This factory can't satisfy the capability needs of the request
-            // - The concrete implementation of the factory rejects the request
-            && ((n.score > mScore && n.providerId != mProvider.getProviderId())
-                    || !n.request.canBeSatisfiedBy(mCapabilityFilter)
-                    || !acceptRequest(n.request));
-    }
-
-    private void evalRequests() {
-        for (NetworkRequestInfo n : mNetworkRequests.values()) {
-            evalRequest(n);
-        }
-    }
-
-    /**
-     * Post a command, on this NetworkFactory Handler, to re-evaluate all
-     * outstanding requests. Can be called from a factory implementation.
-     */
-    protected void reevaluateAllRequests() {
-        post(this::evalRequests);
-    }
-
     /**
      * Can be called by a factory to release a request as unfulfillable: the request will be
      * removed, and the caller will get a
@@ -358,16 +353,35 @@ public class NetworkFactory extends Handler {
     protected void stopNetwork() { }
 
     // override to do fancier stuff
-    protected void needNetworkFor(NetworkRequest networkRequest) {
+    protected void needNetworkFor(@NonNull final NetworkRequest networkRequest) {
         if (++mRefCount == 1) startNetwork();
     }
 
-    protected void releaseNetworkFor(NetworkRequest networkRequest) {
+    protected void releaseNetworkFor(@NonNull final NetworkRequest networkRequest) {
         if (--mRefCount == 0) stopNetwork();
     }
 
-    public void setScoreFilter(int score) {
-        sendMessage(obtainMessage(CMD_SET_SCORE, score, 0));
+    /**
+     * @deprecated this method was never part of the API (system or public) and is only added
+     *   for migration of existing clients. It will be removed before S ships.
+     */
+    @Deprecated
+    public void setScoreFilter(final int score) {
+        setScoreFilter(new NetworkScore.Builder().setLegacyInt(score).build());
+    }
+
+    /**
+     * Set a score filter for this factory.
+     *
+     * This should include the transports the factory knows its networks will have, and
+     * an optimistic view of the attributes it may have. This does not commit the factory
+     * to being able to bring up such a network ; it only lets it avoid hearing about
+     * requests that it has no chance of fulfilling.
+     *
+     * @param score the filter
+     */
+    public void setScoreFilter(@NonNull final NetworkScore score) {
+        sendMessage(obtainMessage(CMD_SET_SCORE, score));
     }
 
     public void setCapabilityFilter(NetworkCapabilities netCap) {
