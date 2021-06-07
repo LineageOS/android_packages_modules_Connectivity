@@ -6294,8 +6294,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
     // there may not be a strict 1:1 correlation between the two.
     private final NetIdManager mNetIdManager;
 
-    // NetworkAgentInfo keyed off its connecting messenger
-    // TODO - eval if we can reduce the number of lists/hashmaps/sparsearrays
+    // Tracks all NetworkAgents that are currently registered.
     // NOTE: Only should be accessed on ConnectivityServiceThread, except dump().
     private final ArraySet<NetworkAgentInfo> mNetworkAgentInfos = new ArraySet<>();
 
@@ -7433,7 +7432,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
     public void handleUpdateLinkProperties(NetworkAgentInfo nai, LinkProperties newLp) {
         ensureRunningOnConnectivityServiceThread();
 
-        if (getNetworkAgentInfoForNetId(nai.network.getNetId()) != nai) {
+        if (!mNetworkAgentInfos.contains(nai)) {
             // Ignore updates for disconnected networks
             return;
         }
