@@ -35,6 +35,8 @@
 
 #include <log/log.h>
 
+#include "netutils/ifc.h"
+
 #include "jni.h"
 #include <android-base/stringprintf.h>
 #include <android-base/unique_fd.h>
@@ -46,8 +48,9 @@ namespace android {
 //------------------------------------------------------------------------------
 
 static void throwException(JNIEnv* env, int error, const char* action, const char* iface) {
-    const std::string& msg = "Error: " + std::string(action) + " " + std::string(iface) +  ": "
-                + std::string(strerror(error));
+    const std::string& msg =
+        android::base::StringPrintf("Error %s %s: %s", action, iface, strerror(error));
+
     jniThrowException(env, "java/lang/IllegalStateException", msg.c_str());
 }
 
