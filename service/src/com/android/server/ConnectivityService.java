@@ -77,6 +77,7 @@ import static android.net.NetworkCapabilities.REDACT_FOR_NETWORK_SETTINGS;
 import static android.net.NetworkCapabilities.TRANSPORT_CELLULAR;
 import static android.net.NetworkCapabilities.TRANSPORT_TEST;
 import static android.net.NetworkCapabilities.TRANSPORT_VPN;
+import static android.net.NetworkCapabilities.TRANSPORT_WIFI;
 import static android.net.NetworkRequest.Type.LISTEN_FOR_BEST;
 import static android.net.shared.NetworkMonitorUtils.isPrivateDnsValidationRequired;
 import static android.os.Process.INVALID_UID;
@@ -9186,6 +9187,12 @@ public class ConnectivityService extends IConnectivityManager.Stub
         return results;
     }
 
+    private boolean isLocationPermissionRequiredForConnectivityDiagnostics(
+            @NonNull NetworkAgentInfo nai) {
+        // TODO(b/188483916): replace with a transport-agnostic location-aware check
+        return nai.networkCapabilities.hasTransport(TRANSPORT_WIFI);
+    }
+
     private boolean hasLocationPermission(String packageName, int uid) {
         // LocationPermissionChecker#checkLocationPermission can throw SecurityException if the uid
         // and package name don't match. Throwing on the CS thread is not acceptable, so wrap the
@@ -9228,7 +9235,8 @@ public class ConnectivityService extends IConnectivityManager.Stub
             return false;
         }
 
-        return hasLocationPermission(callbackPackageName, callbackUid);
+        return !isLocationPermissionRequiredForConnectivityDiagnostics(nai)
+                || hasLocationPermission(callbackPackageName, callbackUid);
     }
 
     @Override
