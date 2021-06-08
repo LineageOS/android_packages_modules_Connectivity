@@ -83,7 +83,11 @@ filegroup {
     name: "net-utils-framework-common-srcs",
     srcs: ["framework/**/*.java"],
     path: "framework",
-    visibility: ["//frameworks/base"],
+    visibility: [
+        "//frameworks/base",
+        "//packages/modules/Connectivity:__subpackages__",
+        "//frameworks/base/packages/Connectivity/framework",
+    ],
 }
 
 java_library {

@@ -44,6 +44,7 @@ import com.android.internal.annotations.VisibleForTesting;
 
 /**
  * Utilities to examine {@link android.net.NetworkCapabilities}.
+ * @hide
  */
 public final class NetworkCapabilitiesUtils {
     // Transports considered to classify networks in UI, in order of which transport should be
