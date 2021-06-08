@@ -1070,7 +1070,7 @@ public class ConnectivitySettingsManager {
      */
     @NonNull
     public static Set<Integer> getUidsAllowedOnRestrictedNetworks(@NonNull Context context) {
-        final String uidList = Settings.Secure.getString(
+        final String uidList = Settings.Global.getString(
                 context.getContentResolver(), UIDS_ALLOWED_ON_RESTRICTED_NETWORKS);
         return getUidSetFromString(uidList);
     }
@@ -1084,7 +1084,7 @@ public class ConnectivitySettingsManager {
     public static void setUidsAllowedOnRestrictedNetworks(@NonNull Context context,
             @NonNull Set<Integer> uidList) {
         final String uids = getUidStringFromSet(uidList);
-        Settings.Secure.putString(context.getContentResolver(), UIDS_ALLOWED_ON_RESTRICTED_NETWORKS,
+        Settings.Global.putString(context.getContentResolver(), UIDS_ALLOWED_ON_RESTRICTED_NETWORKS,
                 uids);
     }
 }
