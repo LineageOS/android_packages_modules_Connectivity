@@ -68,6 +68,7 @@ import android.os.Build
 import android.os.HandlerThread
 import android.os.Looper
 import android.os.Message
+import android.os.SystemClock
 import android.util.DebugUtils.valueToString
 import androidx.test.InstrumentationRegistry
 import com.android.modules.utils.build.SdkLevel
@@ -76,6 +77,7 @@ import com.android.testutils.CompatUtil
 import com.android.testutils.DevSdkIgnoreRule.IgnoreUpTo
 import com.android.testutils.DevSdkIgnoreRunner
 import com.android.testutils.RecorderCallback.CallbackEntry.Available
+import com.android.testutils.RecorderCallback.CallbackEntry.Losing
 import com.android.testutils.RecorderCallback.CallbackEntry.Lost
 import com.android.testutils.TestableNetworkCallback
 import org.junit.After
@@ -114,6 +116,7 @@ private const val NO_CALLBACK_TIMEOUT = 200L
 // requests filed by the test and should never match normal internet requests. 70 is the default
 // score of Ethernet networks, it's as good a value as any other.
 private const val TEST_NETWORK_SCORE = 70
+private const val WORSE_NETWORK_SCORE = 65
 private const val BETTER_NETWORK_SCORE = 75
 private const val FAKE_NET_ID = 1098
 private val instrumentation: Instrumentation
@@ -543,16 +546,23 @@ class NetworkAgentTest {
         // Connect the first Network
         createConnectedNetworkAgent(name = name1).let { (agent1, _) ->
             callback.expectAvailableThenValidatedCallbacks(agent1.network)
-            // Upgrade agent1 to a better score so that there is no ambiguity when
-            // agent2 connects that agent1 is still better
-            agent1.sendNetworkScore(BETTER_NETWORK_SCORE - 1)
+            // If using the int ranking, agent1 must be upgraded to a better score so that there is
+            // no ambiguity when agent2 connects that agent1 is still better. If using policy
+            // ranking, this is not necessary.
+            agent1.sendNetworkScore(NetworkScore.Builder().setLegacyInt(BETTER_NETWORK_SCORE)
+                    .build())
             // Connect the second agent
             createConnectedNetworkAgent(name = name2).let { (agent2, _) ->
                 agent2.markConnected()
-                // The callback should not see anything yet
+                // The callback should not see anything yet. With int ranking, agent1 was upgraded
+                // to a stronger score beforehand. With policy ranking, agent1 is preferred by
+                // virtue of already satisfying the request.
                 callback.assertNoCallback(NO_CALLBACK_TIMEOUT)
-                // Now update the score and expect the callback now prefers agent2
-                agent2.sendNetworkScore(BETTER_NETWORK_SCORE)
+                // Now downgrade the score and expect the callback now prefers agent2
+                agent1.sendNetworkScore(NetworkScore.Builder()
+                        .setLegacyInt(WORSE_NETWORK_SCORE)
+                        .setExiting(true)
+                        .build())
                 callback.expectCallback<Available>(agent2.network)
             }
         }
@@ -767,5 +777,72 @@ class NetworkAgentTest {
         }
 
         // tearDown() will unregister the requests and agents
+    }
+
+    @Test
+    @IgnoreUpTo(Build.VERSION_CODES.R)
+    fun testSetLingerDuration() {
+        // This test will create two networks and check that the one with the stronger
+        // score wins out for a request that matches them both. And the weaker agent will
+        // be disconnected after customized linger duration.
+
+        // Connect the first Network
+        val name1 = UUID.randomUUID().toString()
+        val name2 = UUID.randomUUID().toString()
+        val (agent1, callback) = createConnectedNetworkAgent(name = name1)
+        callback.expectAvailableThenValidatedCallbacks(agent1.network!!)
+        // Downgrade agent1 to a worse score so that there is no ambiguity when
+        // agent2 connects.
+        agent1.sendNetworkScore(NetworkScore.Builder().setLegacyInt(WORSE_NETWORK_SCORE)
+                .setExiting(true).build())
+
+        // Verify invalid linger duration cannot be set.
+        assertFailsWith<IllegalArgumentException> {
+            agent1.setLingerDuration(Duration.ofMillis(-1))
+        }
+        assertFailsWith<IllegalArgumentException> { agent1.setLingerDuration(Duration.ZERO) }
+        assertFailsWith<IllegalArgumentException> {
+            agent1.setLingerDuration(Duration.ofMillis(Integer.MIN_VALUE.toLong()))
+        }
+        assertFailsWith<IllegalArgumentException> {
+            agent1.setLingerDuration(Duration.ofMillis(Integer.MAX_VALUE.toLong() + 1))
+        }
+        assertFailsWith<IllegalArgumentException> {
+            agent1.setLingerDuration(Duration.ofMillis(
+                    NetworkAgent.MIN_LINGER_TIMER_MS.toLong() - 1))
+        }
+        // Verify valid linger timer can be set, but it should not take effect since the network
+        // is still needed.
+        agent1.setLingerDuration(Duration.ofMillis(Integer.MAX_VALUE.toLong()))
+        callback.assertNoCallback(NO_CALLBACK_TIMEOUT)
+        // Set to the value we want to verify the functionality.
+        agent1.setLingerDuration(Duration.ofMillis(NetworkAgent.MIN_LINGER_TIMER_MS.toLong()))
+        // Make a listener which can observe agent1 lost later.
+        val callbackWeaker = TestableNetworkCallback(timeoutMs = DEFAULT_TIMEOUT_MS)
+        registerNetworkCallback(NetworkRequest.Builder()
+                .clearCapabilities()
+                .addTransportType(TRANSPORT_TEST)
+                .setNetworkSpecifier(CompatUtil.makeEthernetNetworkSpecifier(name1))
+                .build(), callbackWeaker)
+        callbackWeaker.expectAvailableCallbacks(agent1.network!!)
+
+        // Connect the second agent with a score better than agent1. Verify the callback for
+        // agent1 sees the linger expiry while the callback for both sees the winner.
+        // Record linger start timestamp prior to send score to prevent possible race, the actual
+        // timestamp should be slightly late than this since the service handles update
+        // network score asynchronously.
+        val lingerStart = SystemClock.elapsedRealtime()
+        val agent2 = createNetworkAgent(name = name2)
+        agent2.register()
+        agent2.markConnected()
+        callback.expectAvailableCallbacks(agent2.network!!)
+        callbackWeaker.expectCallback<Losing>(agent1.network!!)
+        val expectedRemainingLingerDuration = lingerStart +
+                NetworkAgent.MIN_LINGER_TIMER_MS.toLong() - SystemClock.elapsedRealtime()
+        // If the available callback is too late. The remaining duration will be reduced.
+        assertTrue(expectedRemainingLingerDuration > 0,
+                "expected remaining linger duration is $expectedRemainingLingerDuration")
+        callbackWeaker.assertNoCallback(expectedRemainingLingerDuration)
+        callbackWeaker.expectCallback<Lost>(agent1.network!!)
     }
 }

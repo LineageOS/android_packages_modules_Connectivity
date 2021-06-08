@@ -48,7 +48,14 @@ public final class NetworkScore implements Parcelable {
     })
     public @interface KeepConnectedReason { }
 
+    /**
+     * Do not keep this network connected if there is no outstanding request for it.
+     */
     public static final int KEEP_CONNECTED_NONE = 0;
+    /**
+     * Keep this network connected even if there is no outstanding request for it, because it
+     * is being considered for handover.
+     */
     public static final int KEEP_CONNECTED_FOR_HANDOVER = 1;
 
     // Agent-managed policies
@@ -93,6 +100,10 @@ public final class NetworkScore implements Parcelable {
         mKeepConnectedReason = in.readInt();
     }
 
+    /**
+     * Get the legacy int score embedded in this NetworkScore.
+     * @see Builder#setLegacyInt(int)
+     */
     public int getLegacyInt() {
         return mLegacyInt;
     }
@@ -212,7 +223,9 @@ public final class NetworkScore implements Parcelable {
         /**
          * Sets the legacy int for this score.
          *
-         * Do not rely on this. It will be gone by the time S is released.
+         * This will be used for measurements and logs, but will no longer be used for ranking
+         * networks against each other. Callers that existed before Android S should send what
+         * they used to send as the int score.
          *
          * @param score the legacy int
          * @return this

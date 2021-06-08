@@ -232,12 +232,14 @@ package android.net {
     method @NonNull public android.net.Network register();
     method public final void sendLinkProperties(@NonNull android.net.LinkProperties);
     method public final void sendNetworkCapabilities(@NonNull android.net.NetworkCapabilities);
+    method public final void sendNetworkScore(@NonNull android.net.NetworkScore);
     method public final void sendNetworkScore(@IntRange(from=0, to=99) int);
     method public final void sendQosCallbackError(int, int);
     method public final void sendQosSessionAvailable(int, int, @NonNull android.net.QosSessionAttributes);
     method public final void sendQosSessionLost(int, int, int);
     method public final void sendSocketKeepaliveEvent(int, int);
     method @Deprecated public void setLegacySubtype(int, @NonNull String);
+    method public void setLingerDuration(@NonNull java.time.Duration);
     method public void setTeardownDelayMillis(@IntRange(from=0, to=0x1388) int);
     method public final void setUnderlyingNetworks(@Nullable java.util.List<android.net.Network>);
     method public void unregister();

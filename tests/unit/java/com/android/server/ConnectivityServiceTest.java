@@ -2683,25 +2683,6 @@ public class ConnectivityServiceTest {
         assertEquals(mCellNetworkAgent.getNetwork(), mCm.getActiveNetwork());
         assertEquals(defaultCallback.getLastAvailableNetwork(), mCm.getActiveNetwork());
 
-        // Bring up wifi with a score of 70.
-        // Cell is lingered because it would not satisfy any request, even if it validated.
-        mWiFiNetworkAgent = new TestNetworkAgentWrapper(TRANSPORT_WIFI);
-        mWiFiNetworkAgent.adjustScore(50);
-        mWiFiNetworkAgent.connect(false);   // Score: 70
-        callback.expectAvailableCallbacksUnvalidated(mWiFiNetworkAgent);
-        callback.expectCallback(CallbackEntry.LOSING, mCellNetworkAgent);
-        defaultCallback.expectAvailableCallbacksUnvalidated(mWiFiNetworkAgent);
-        assertEquals(mWiFiNetworkAgent.getNetwork(), mCm.getActiveNetwork());
-        assertEquals(defaultCallback.getLastAvailableNetwork(), mCm.getActiveNetwork());
-
-        // Tear down wifi.
-        mWiFiNetworkAgent.disconnect();
-        callback.expectCallback(CallbackEntry.LOST, mWiFiNetworkAgent);
-        defaultCallback.expectCallback(CallbackEntry.LOST, mWiFiNetworkAgent);
-        defaultCallback.expectAvailableCallbacksUnvalidated(mCellNetworkAgent);
-        assertEquals(mCellNetworkAgent.getNetwork(), mCm.getActiveNetwork());
-        assertEquals(defaultCallback.getLastAvailableNetwork(), mCm.getActiveNetwork());
-
         // Bring up wifi, then validate it. Previous versions would immediately tear down cell, but
         // it's arguably correct to linger it, since it was the default network before it validated.
         mWiFiNetworkAgent = new TestNetworkAgentWrapper(TRANSPORT_WIFI);
@@ -3017,11 +2998,11 @@ public class ConnectivityServiceTest {
         callback.expectCapabilitiesWith(NET_CAPABILITY_VALIDATED, mWiFiNetworkAgent);
         assertEquals(mWiFiNetworkAgent.getNetwork(), mCm.getActiveNetwork());
 
-        // BUG: the network will no longer linger, even though it's validated and outscored.
-        // TODO: fix this.
         mEthernetNetworkAgent = new TestNetworkAgentWrapper(TRANSPORT_ETHERNET);
         mEthernetNetworkAgent.connect(true);
-        callback.expectAvailableThenValidatedCallbacks(mEthernetNetworkAgent);
+        callback.expectAvailableCallbacksUnvalidated(mEthernetNetworkAgent);
+        callback.expectCallback(CallbackEntry.LOSING, mWiFiNetworkAgent);
+        callback.expectCapabilitiesWith(NET_CAPABILITY_VALIDATED, mEthernetNetworkAgent);
         assertEquals(mEthernetNetworkAgent.getNetwork(), mCm.getActiveNetwork());
         callback.assertNoCallback();
 
@@ -4580,9 +4561,8 @@ public class ConnectivityServiceTest {
             expectNoRequestChanged(testFactory);
             testFactory.assertRequestCountEquals(0);
             assertFalse(testFactory.getMyStartRequested());
-            // ...  and cell data to be torn down after nascent network timeout.
-            cellNetworkCallback.expectCallback(CallbackEntry.LOST, mCellNetworkAgent,
-                    mService.mNascentDelayMs + TEST_CALLBACK_TIMEOUT_MS);
+            // ...  and cell data to be torn down immediately since it is no longer nascent.
+            cellNetworkCallback.expectCallback(CallbackEntry.LOST, mCellNetworkAgent);
             waitForIdle();
             assertLength(1, mCm.getAllNetworks());
         } finally {
@@ -9846,7 +9826,8 @@ public class ConnectivityServiceTest {
         return new NetworkAgentInfo(null, new Network(NET_ID), networkInfo, new LinkProperties(),
                 nc, new NetworkScore.Builder().setLegacyInt(0).build(),
                 mServiceContext, null, new NetworkAgentConfig(), mService, null, null, 0,
-                INVALID_UID, mQosCallbackTracker, new ConnectivityService.Dependencies());
+                INVALID_UID, TEST_LINGER_DELAY_MS, mQosCallbackTracker,
+                new ConnectivityService.Dependencies());
     }
 
     @Test
@@ -11887,6 +11868,11 @@ public class ConnectivityServiceTest {
         internetFactory.expectRequestRemove();
         internetFactory.assertRequestCountEquals(0);
 
+        // Create a request that holds the upcoming wifi network.
+        final TestNetworkCallback wifiCallback = new TestNetworkCallback();
+        mCm.requestNetwork(new NetworkRequest.Builder().addTransportType(TRANSPORT_WIFI).build(),
+                wifiCallback);
+
         // Now WiFi connects and it's unmetered, but it's weaker than cell.
         mWiFiNetworkAgent = new TestNetworkAgentWrapper(TRANSPORT_WIFI);
         mWiFiNetworkAgent.addCapability(NET_CAPABILITY_NOT_METERED);
@@ -11895,7 +11881,7 @@ public class ConnectivityServiceTest {
         mWiFiNetworkAgent.connect(true);
 
         // The OEM_PAID preference prefers an unmetered network to an OEM_PAID network, so
-        // the oemPaidFactory can't beat this no matter how high its score.
+        // the oemPaidFactory can't beat wifi no matter how high its score.
         oemPaidFactory.expectRequestRemove();
         expectNoRequestChanged(internetFactory);
 
@@ -11906,6 +11892,7 @@ public class ConnectivityServiceTest {
         // unmetered network, so the oemPaidNetworkFactory still can't beat this.
         expectNoRequestChanged(oemPaidFactory);
         internetFactory.expectRequestAdd();
+        mCm.unregisterNetworkCallback(wifiCallback);
     }
 
     /**

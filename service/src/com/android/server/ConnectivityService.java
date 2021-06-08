@@ -1400,8 +1400,8 @@ public class ConnectivityService extends IConnectivityManager.Stub
                 new NetworkInfo(TYPE_NONE, 0, "", ""),
                 new LinkProperties(), new NetworkCapabilities(),
                 new NetworkScore.Builder().setLegacyInt(0).build(), mContext, null,
-                new NetworkAgentConfig(), this, null, null, 0, INVALID_UID, mQosCallbackTracker,
-                mDeps);
+                new NetworkAgentConfig(), this, null, null, 0, INVALID_UID,
+                mLingerDelayMs, mQosCallbackTracker, mDeps);
     }
 
     private static NetworkCapabilities createDefaultNetworkCapabilitiesForUid(int uid) {
@@ -3234,6 +3234,11 @@ public class ConnectivityService extends IConnectivityManager.Stub
                     } else {
                         logwtf(nai.toShortString() + " set invalid teardown delay " + msg.arg1);
                     }
+                    break;
+                }
+                case NetworkAgent.EVENT_LINGER_DURATION_CHANGED: {
+                    nai.setLingerDuration((int) arg.second);
+                    break;
                 }
             }
         }
@@ -4038,17 +4043,16 @@ public class ConnectivityService extends IConnectivityManager.Stub
                 // multilayer requests, returning as soon as a NetworkAgentInfo satisfies a request
                 // is important so as to not evaluate lower priority requests further in
                 // nri.mRequests.
-                final boolean isNetworkNeeded = candidate.isSatisfyingRequest(req.requestId)
-                        // Note that this catches two important cases:
-                        // 1. Unvalidated cellular will not be reaped when unvalidated WiFi
-                        //    is currently satisfying the request.  This is desirable when
-                        //    cellular ends up validating but WiFi does not.
-                        // 2. Unvalidated WiFi will not be reaped when validated cellular
-                        //    is currently satisfying the request.  This is desirable when
-                        //    WiFi ends up validating and out scoring cellular.
-                        || nri.getSatisfier().getCurrentScore()
-                        < candidate.getCurrentScoreAsValidated();
-                return isNetworkNeeded;
+                final NetworkAgentInfo champion = req.equals(nri.getActiveRequest())
+                        ? nri.getSatisfier() : null;
+                // Note that this catches two important cases:
+                // 1. Unvalidated cellular will not be reaped when unvalidated WiFi
+                //    is currently satisfying the request.  This is desirable when
+                //    cellular ends up validating but WiFi does not.
+                // 2. Unvalidated WiFi will not be reaped when validated cellular
+                //    is currently satisfying the request.  This is desirable when
+                //    WiFi ends up validating and out scoring cellular.
+                return mNetworkRanker.mightBeat(req, champion, candidate.getValidatedScoreable());
             }
         }
 
@@ -4305,7 +4309,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
             // network, we should respect the user's option and don't need to popup the
             // PARTIAL_CONNECTIVITY notification to user again.
             nai.networkAgentConfig.acceptPartialConnectivity = accept;
-            nai.updateScoreForNetworkAgentConfigUpdate();
+            nai.updateScoreForNetworkAgentUpdate();
             rematchAllNetworksAndRequests();
         }
 
@@ -4373,6 +4377,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
         }
         if (!nai.avoidUnvalidated) {
             nai.avoidUnvalidated = true;
+            nai.updateScoreForNetworkAgentUpdate();
             rematchAllNetworksAndRequests();
         }
     }
@@ -4480,7 +4485,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
 
     private void updateAvoidBadWifi() {
         for (final NetworkAgentInfo nai : mNetworkAgentInfos) {
-            nai.updateScoreForNetworkAgentConfigUpdate();
+            nai.updateScoreForNetworkAgentUpdate();
         }
         rematchAllNetworksAndRequests();
     }
@@ -6597,7 +6602,8 @@ public class ConnectivityService extends IConnectivityManager.Stub
         final NetworkAgentInfo nai = new NetworkAgentInfo(na,
                 new Network(mNetIdManager.reserveNetId()), new NetworkInfo(networkInfo), lp, nc,
                 currentScore, mContext, mTrackerHandler, new NetworkAgentConfig(networkAgentConfig),
-                this, mNetd, mDnsResolver, providerId, uid, mQosCallbackTracker, mDeps);
+                this, mNetd, mDnsResolver, providerId, uid, mLingerDelayMs,
+                mQosCallbackTracker, mDeps);
 
         // Make sure the LinkProperties and NetworkCapabilities reflect what the agent info says.
         processCapabilitiesFromAgent(nai, nc);
@@ -6697,7 +6703,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
             @NonNull final INetworkOfferCallback callback) {
         ensureRunningOnConnectivityServiceThread();
         for (final NetworkOfferInfo noi : mNetworkOffers) {
-            if (noi.offer.callback.equals(callback)) return noi;
+            if (noi.offer.callback.asBinder().equals(callback.asBinder())) return noi;
         }
         return null;
     }
@@ -7255,6 +7261,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
         final NetworkCapabilities prevNc = nai.getAndSetNetworkCapabilities(newNc);
 
         updateUids(nai, prevNc, newNc);
+        nai.updateScoreForNetworkAgentUpdate();
 
         if (nai.getCurrentScore() == oldScore && newNc.equalRequestableCapabilities(prevNc)) {
             // If the requestable capabilities haven't changed, and the score hasn't changed, then
@@ -7840,7 +7847,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
                     log("   accepting network in place of " + previousSatisfier.toShortString());
                 }
                 previousSatisfier.removeRequest(previousRequest.requestId);
-                previousSatisfier.lingerRequest(previousRequest.requestId, now, mLingerDelayMs);
+                previousSatisfier.lingerRequest(previousRequest.requestId, now);
             } else {
                 if (VDBG || DDBG) log("   accepting network in place of null");
             }
@@ -7850,6 +7857,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
             // all networks except in the case of an underlying network for a VCN.
             if (newSatisfier.isNascent()) {
                 newSatisfier.unlingerRequest(NetworkRequest.REQUEST_ID_NONE);
+                newSatisfier.unsetInactive();
             }
 
             // if newSatisfier is not null, then newRequest may not be null.
@@ -7885,7 +7893,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
             @NonNull final Collection<NetworkRequestInfo> networkRequests) {
         final NetworkReassignment changes = new NetworkReassignment();
 
-        // Gather the list of all relevant agents and sort them by score.
+        // Gather the list of all relevant agents.
         final ArrayList<NetworkAgentInfo> nais = new ArrayList<>();
         for (final NetworkAgentInfo nai : mNetworkAgentInfos) {
             if (!nai.everConnected) {
@@ -8354,6 +8362,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
             // But it will be removed as soon as the network satisfies a request for the first time.
             networkAgent.lingerRequest(NetworkRequest.REQUEST_ID_NONE,
                     SystemClock.elapsedRealtime(), mNascentDelayMs);
+            networkAgent.setInactive();
 
             // Consider network even though it is not yet validated.
             rematchAllNetworksAndRequests();
