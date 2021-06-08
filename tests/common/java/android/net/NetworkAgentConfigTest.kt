@@ -59,6 +59,7 @@ class NetworkAgentConfigTest {
 
     @Test @IgnoreUpTo(Build.VERSION_CODES.Q)
     fun testBuilder() {
+        val testExtraInfo = "mylegacyExtraInfo"
         val config = NetworkAgentConfig.Builder().apply {
             setExplicitlySelected(true)
             setLegacyType(ConnectivityManager.TYPE_ETHERNET)
@@ -67,6 +68,7 @@ class NetworkAgentConfigTest {
             setUnvalidatedConnectivityAcceptable(true)
             setLegacyTypeName("TEST_NETWORK")
             if (isAtLeastS()) {
+                setLegacyExtraInfo(testExtraInfo)
                 setNat64DetectionEnabled(false)
                 setProvisioningNotificationEnabled(false)
                 setBypassableVpn(true)
@@ -80,6 +82,7 @@ class NetworkAgentConfigTest {
         assertTrue(config.isUnvalidatedConnectivityAcceptable())
         assertEquals("TEST_NETWORK", config.getLegacyTypeName())
         if (isAtLeastS()) {
+            assertEquals(testExtraInfo, config.getLegacyExtraInfo())
             assertFalse(config.isNat64DetectionEnabled())
             assertFalse(config.isProvisioningNotificationEnabled())
             assertTrue(config.isBypassableVpn())
