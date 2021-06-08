@@ -73,6 +73,7 @@ import android.os.Build;
 import android.os.SystemConfigManager;
 import android.os.UserHandle;
 import android.os.UserManager;
+import android.provider.Settings;
 import android.util.ArraySet;
 import android.util.SparseIntArray;
 
@@ -515,7 +516,7 @@ public class PermissionMonitorTest {
 
     @Test
     public void testUserAndPackageAddRemove() throws Exception {
-        final NetdMonitor mNetdMonitor = new NetdMonitor(mNetdService);
+        final NetdMonitor netdMonitor = new NetdMonitor(mNetdService);
 
         // MOCK_UID1: MOCK_PACKAGE1 only has network permission.
         // SYSTEM_UID: SYSTEM_PACKAGE1 has system permission.
@@ -531,47 +532,47 @@ public class PermissionMonitorTest {
         // Add SYSTEM_PACKAGE2, expect only have network permission.
         mPermissionMonitor.onUserAdded(MOCK_USER1);
         addPackageForUsers(new UserHandle[]{MOCK_USER1}, SYSTEM_PACKAGE2, SYSTEM_UID);
-        mNetdMonitor.expectPermission(NETWORK, new UserHandle[]{MOCK_USER1}, new int[]{SYSTEM_UID});
+        netdMonitor.expectPermission(NETWORK, new UserHandle[]{MOCK_USER1}, new int[]{SYSTEM_UID});
 
         // Add SYSTEM_PACKAGE1, expect permission escalate.
         addPackageForUsers(new UserHandle[]{MOCK_USER1}, SYSTEM_PACKAGE1, SYSTEM_UID);
-        mNetdMonitor.expectPermission(SYSTEM, new UserHandle[]{MOCK_USER1}, new int[]{SYSTEM_UID});
+        netdMonitor.expectPermission(SYSTEM, new UserHandle[]{MOCK_USER1}, new int[]{SYSTEM_UID});
 
         mPermissionMonitor.onUserAdded(MOCK_USER2);
-        mNetdMonitor.expectPermission(SYSTEM, new UserHandle[]{MOCK_USER1, MOCK_USER2},
+        netdMonitor.expectPermission(SYSTEM, new UserHandle[]{MOCK_USER1, MOCK_USER2},
                 new int[]{SYSTEM_UID});
 
         addPackageForUsers(new UserHandle[]{MOCK_USER1, MOCK_USER2}, MOCK_PACKAGE1, MOCK_UID1);
-        mNetdMonitor.expectPermission(SYSTEM, new UserHandle[]{MOCK_USER1, MOCK_USER2},
+        netdMonitor.expectPermission(SYSTEM, new UserHandle[]{MOCK_USER1, MOCK_USER2},
                 new int[]{SYSTEM_UID});
-        mNetdMonitor.expectPermission(NETWORK, new UserHandle[]{MOCK_USER1, MOCK_USER2},
+        netdMonitor.expectPermission(NETWORK, new UserHandle[]{MOCK_USER1, MOCK_USER2},
                 new int[]{MOCK_UID1});
 
         // Remove MOCK_UID1, expect no permission left for all user.
         mPermissionMonitor.onPackageRemoved(MOCK_PACKAGE1, MOCK_UID1);
         removePackageForUsers(new UserHandle[]{MOCK_USER1, MOCK_USER2}, MOCK_PACKAGE1, MOCK_UID1);
-        mNetdMonitor.expectNoPermission(new UserHandle[]{MOCK_USER1, MOCK_USER2},
+        netdMonitor.expectNoPermission(new UserHandle[]{MOCK_USER1, MOCK_USER2},
                 new int[]{MOCK_UID1});
 
         // Remove SYSTEM_PACKAGE1, expect permission downgrade.
         when(mPackageManager.getPackagesForUid(anyInt())).thenReturn(new String[]{SYSTEM_PACKAGE2});
         removePackageForUsers(new UserHandle[]{MOCK_USER1, MOCK_USER2},
                 SYSTEM_PACKAGE1, SYSTEM_UID);
-        mNetdMonitor.expectPermission(NETWORK, new UserHandle[]{MOCK_USER1, MOCK_USER2},
+        netdMonitor.expectPermission(NETWORK, new UserHandle[]{MOCK_USER1, MOCK_USER2},
                 new int[]{SYSTEM_UID});
 
         mPermissionMonitor.onUserRemoved(MOCK_USER1);
-        mNetdMonitor.expectPermission(NETWORK, new UserHandle[]{MOCK_USER2}, new int[]{SYSTEM_UID});
+        netdMonitor.expectPermission(NETWORK, new UserHandle[]{MOCK_USER2}, new int[]{SYSTEM_UID});
 
         // Remove all packages, expect no permission left.
         when(mPackageManager.getPackagesForUid(anyInt())).thenReturn(new String[]{});
         removePackageForUsers(new UserHandle[]{MOCK_USER2}, SYSTEM_PACKAGE2, SYSTEM_UID);
-        mNetdMonitor.expectNoPermission(new UserHandle[]{MOCK_USER1, MOCK_USER2},
+        netdMonitor.expectNoPermission(new UserHandle[]{MOCK_USER1, MOCK_USER2},
                 new int[]{SYSTEM_UID, MOCK_UID1});
 
         // Remove last user, expect no redundant clearPermission is invoked.
         mPermissionMonitor.onUserRemoved(MOCK_USER2);
-        mNetdMonitor.expectNoPermission(new UserHandle[]{MOCK_USER1, MOCK_USER2},
+        netdMonitor.expectNoPermission(new UserHandle[]{MOCK_USER1, MOCK_USER2},
                 new int[]{SYSTEM_UID, MOCK_UID1});
     }
 
@@ -698,7 +699,7 @@ public class PermissionMonitorTest {
 
     @Test
     public void testPackagePermissionUpdate() throws Exception {
-        final NetdServiceMonitor mNetdServiceMonitor = new NetdServiceMonitor(mNetdService);
+        final NetdServiceMonitor netdServiceMonitor = new NetdServiceMonitor(mNetdService);
         // MOCK_UID1: MOCK_PACKAGE1 only has internet permission.
         // MOCK_UID2: MOCK_PACKAGE2 does not have any permission.
         // SYSTEM_UID1: SYSTEM_PACKAGE1 has internet permission and update device stats permission.
@@ -714,29 +715,29 @@ public class PermissionMonitorTest {
         // Send the permission information to netd, expect permission updated.
         mPermissionMonitor.sendPackagePermissionsToNetd(netdPermissionsAppIds);
 
-        mNetdServiceMonitor.expectPermission(INetd.PERMISSION_INTERNET,
+        netdServiceMonitor.expectPermission(INetd.PERMISSION_INTERNET,
                 new int[]{MOCK_UID1});
-        mNetdServiceMonitor.expectPermission(INetd.PERMISSION_NONE, new int[]{MOCK_UID2});
-        mNetdServiceMonitor.expectPermission(INetd.PERMISSION_INTERNET
+        netdServiceMonitor.expectPermission(INetd.PERMISSION_NONE, new int[]{MOCK_UID2});
+        netdServiceMonitor.expectPermission(INetd.PERMISSION_INTERNET
                 | INetd.PERMISSION_UPDATE_DEVICE_STATS, new int[]{SYSTEM_UID1});
-        mNetdServiceMonitor.expectPermission(INetd.PERMISSION_UPDATE_DEVICE_STATS,
+        netdServiceMonitor.expectPermission(INetd.PERMISSION_UPDATE_DEVICE_STATS,
                 new int[]{SYSTEM_UID2});
 
         // Update permission of MOCK_UID1, expect new permission show up.
         mPermissionMonitor.sendPackagePermissionsForUid(MOCK_UID1,
                 INetd.PERMISSION_INTERNET | INetd.PERMISSION_UPDATE_DEVICE_STATS);
-        mNetdServiceMonitor.expectPermission(INetd.PERMISSION_INTERNET
+        netdServiceMonitor.expectPermission(INetd.PERMISSION_INTERNET
                 | INetd.PERMISSION_UPDATE_DEVICE_STATS, new int[]{MOCK_UID1});
 
         // Change permissions of SYSTEM_UID2, expect new permission show up and old permission
         // revoked.
         mPermissionMonitor.sendPackagePermissionsForUid(SYSTEM_UID2,
                 INetd.PERMISSION_INTERNET);
-        mNetdServiceMonitor.expectPermission(INetd.PERMISSION_INTERNET, new int[]{SYSTEM_UID2});
+        netdServiceMonitor.expectPermission(INetd.PERMISSION_INTERNET, new int[]{SYSTEM_UID2});
 
         // Revoke permission from SYSTEM_UID1, expect no permission stored.
         mPermissionMonitor.sendPackagePermissionsForUid(SYSTEM_UID1, INetd.PERMISSION_NONE);
-        mNetdServiceMonitor.expectPermission(INetd.PERMISSION_NONE, new int[]{SYSTEM_UID1});
+        netdServiceMonitor.expectPermission(INetd.PERMISSION_NONE, new int[]{SYSTEM_UID1});
     }
 
     private PackageInfo setPackagePermissions(String packageName, int uid, String[] permissions)
@@ -757,23 +758,23 @@ public class PermissionMonitorTest {
 
     @Test
     public void testPackageInstall() throws Exception {
-        final NetdServiceMonitor mNetdServiceMonitor = new NetdServiceMonitor(mNetdService);
+        final NetdServiceMonitor netdServiceMonitor = new NetdServiceMonitor(mNetdService);
 
         addPackage(MOCK_PACKAGE1, MOCK_UID1, new String[] {INTERNET, UPDATE_DEVICE_STATS});
-        mNetdServiceMonitor.expectPermission(INetd.PERMISSION_INTERNET
+        netdServiceMonitor.expectPermission(INetd.PERMISSION_INTERNET
                 | INetd.PERMISSION_UPDATE_DEVICE_STATS, new int[]{MOCK_UID1});
 
         addPackage(MOCK_PACKAGE2, MOCK_UID2, new String[] {INTERNET});
-        mNetdServiceMonitor.expectPermission(INetd.PERMISSION_INTERNET, new int[]{MOCK_UID2});
+        netdServiceMonitor.expectPermission(INetd.PERMISSION_INTERNET, new int[]{MOCK_UID2});
     }
 
     @Test
     public void testPackageInstallSharedUid() throws Exception {
-        final NetdServiceMonitor mNetdServiceMonitor = new NetdServiceMonitor(mNetdService);
+        final NetdServiceMonitor netdServiceMonitor = new NetdServiceMonitor(mNetdService);
 
         PackageInfo packageInfo1 = addPackage(MOCK_PACKAGE1, MOCK_UID1,
                 new String[] {INTERNET, UPDATE_DEVICE_STATS});
-        mNetdServiceMonitor.expectPermission(INetd.PERMISSION_INTERNET
+        netdServiceMonitor.expectPermission(INetd.PERMISSION_INTERNET
                 | INetd.PERMISSION_UPDATE_DEVICE_STATS, new int[]{MOCK_UID1});
 
         // Install another package with the same uid and no permissions should not cause the UID to
@@ -783,56 +784,56 @@ public class PermissionMonitorTest {
         when(mPackageManager.getPackagesForUid(MOCK_UID1))
               .thenReturn(new String[]{MOCK_PACKAGE1, MOCK_PACKAGE2});
         mPermissionMonitor.onPackageAdded(MOCK_PACKAGE2, MOCK_UID1);
-        mNetdServiceMonitor.expectPermission(INetd.PERMISSION_INTERNET
+        netdServiceMonitor.expectPermission(INetd.PERMISSION_INTERNET
                 | INetd.PERMISSION_UPDATE_DEVICE_STATS, new int[]{MOCK_UID1});
     }
 
     @Test
     public void testPackageUninstallBasic() throws Exception {
-        final NetdServiceMonitor mNetdServiceMonitor = new NetdServiceMonitor(mNetdService);
+        final NetdServiceMonitor netdServiceMonitor = new NetdServiceMonitor(mNetdService);
 
         addPackage(MOCK_PACKAGE1, MOCK_UID1, new String[] {INTERNET, UPDATE_DEVICE_STATS});
-        mNetdServiceMonitor.expectPermission(INetd.PERMISSION_INTERNET
+        netdServiceMonitor.expectPermission(INetd.PERMISSION_INTERNET
                 | INetd.PERMISSION_UPDATE_DEVICE_STATS, new int[]{MOCK_UID1});
 
         when(mPackageManager.getPackagesForUid(MOCK_UID1)).thenReturn(new String[]{});
         mPermissionMonitor.onPackageRemoved(MOCK_PACKAGE1, MOCK_UID1);
-        mNetdServiceMonitor.expectPermission(INetd.PERMISSION_UNINSTALLED, new int[]{MOCK_UID1});
+        netdServiceMonitor.expectPermission(INetd.PERMISSION_UNINSTALLED, new int[]{MOCK_UID1});
     }
 
     @Test
     public void testPackageRemoveThenAdd() throws Exception {
-        final NetdServiceMonitor mNetdServiceMonitor = new NetdServiceMonitor(mNetdService);
+        final NetdServiceMonitor netdServiceMonitor = new NetdServiceMonitor(mNetdService);
 
         addPackage(MOCK_PACKAGE1, MOCK_UID1, new String[] {INTERNET, UPDATE_DEVICE_STATS});
-        mNetdServiceMonitor.expectPermission(INetd.PERMISSION_INTERNET
+        netdServiceMonitor.expectPermission(INetd.PERMISSION_INTERNET
                 | INetd.PERMISSION_UPDATE_DEVICE_STATS, new int[]{MOCK_UID1});
 
         when(mPackageManager.getPackagesForUid(MOCK_UID1)).thenReturn(new String[]{});
         mPermissionMonitor.onPackageRemoved(MOCK_PACKAGE1, MOCK_UID1);
-        mNetdServiceMonitor.expectPermission(INetd.PERMISSION_UNINSTALLED, new int[]{MOCK_UID1});
+        netdServiceMonitor.expectPermission(INetd.PERMISSION_UNINSTALLED, new int[]{MOCK_UID1});
 
         addPackage(MOCK_PACKAGE1, MOCK_UID1, new String[] {INTERNET});
-        mNetdServiceMonitor.expectPermission(INetd.PERMISSION_INTERNET, new int[]{MOCK_UID1});
+        netdServiceMonitor.expectPermission(INetd.PERMISSION_INTERNET, new int[]{MOCK_UID1});
     }
 
     @Test
     public void testPackageUpdate() throws Exception {
-        final NetdServiceMonitor mNetdServiceMonitor = new NetdServiceMonitor(mNetdService);
+        final NetdServiceMonitor netdServiceMonitor = new NetdServiceMonitor(mNetdService);
 
         addPackage(MOCK_PACKAGE1, MOCK_UID1, new String[] {});
-        mNetdServiceMonitor.expectPermission(INetd.PERMISSION_NONE, new int[]{MOCK_UID1});
+        netdServiceMonitor.expectPermission(INetd.PERMISSION_NONE, new int[]{MOCK_UID1});
 
         addPackage(MOCK_PACKAGE1, MOCK_UID1, new String[] {INTERNET});
-        mNetdServiceMonitor.expectPermission(INetd.PERMISSION_INTERNET, new int[]{MOCK_UID1});
+        netdServiceMonitor.expectPermission(INetd.PERMISSION_INTERNET, new int[]{MOCK_UID1});
     }
 
     @Test
     public void testPackageUninstallWithMultiplePackages() throws Exception {
-        final NetdServiceMonitor mNetdServiceMonitor = new NetdServiceMonitor(mNetdService);
+        final NetdServiceMonitor netdServiceMonitor = new NetdServiceMonitor(mNetdService);
 
         addPackage(MOCK_PACKAGE1, MOCK_UID1, new String[] {INTERNET, UPDATE_DEVICE_STATS});
-        mNetdServiceMonitor.expectPermission(INetd.PERMISSION_INTERNET
+        netdServiceMonitor.expectPermission(INetd.PERMISSION_INTERNET
                 | INetd.PERMISSION_UPDATE_DEVICE_STATS, new int[]{MOCK_UID1});
 
         // Mock another package with the same uid but different permissions.
@@ -842,7 +843,7 @@ public class PermissionMonitorTest {
                 MOCK_PACKAGE2});
 
         mPermissionMonitor.onPackageRemoved(MOCK_PACKAGE1, MOCK_UID1);
-        mNetdServiceMonitor.expectPermission(INetd.PERMISSION_INTERNET, new int[]{MOCK_UID1});
+        netdServiceMonitor.expectPermission(INetd.PERMISSION_INTERNET, new int[]{MOCK_UID1});
     }
 
     @Test
@@ -859,7 +860,7 @@ public class PermissionMonitorTest {
 
     @Test
     public void testUpdateUidPermissionsFromSystemConfig() throws Exception {
-        final NetdServiceMonitor mNetdServiceMonitor = new NetdServiceMonitor(mNetdService);
+        final NetdServiceMonitor netdServiceMonitor = new NetdServiceMonitor(mNetdService);
         when(mPackageManager.getInstalledPackages(anyInt())).thenReturn(new ArrayList<>());
         when(mSystemConfigManager.getSystemPermissionUids(eq(INTERNET)))
                 .thenReturn(new int[]{ MOCK_UID1, MOCK_UID2 });
@@ -867,15 +868,15 @@ public class PermissionMonitorTest {
                 .thenReturn(new int[]{ MOCK_UID2 });
 
         mPermissionMonitor.startMonitoring();
-        mNetdServiceMonitor.expectPermission(INetd.PERMISSION_INTERNET, new int[]{ MOCK_UID1 });
-        mNetdServiceMonitor.expectPermission(
+        netdServiceMonitor.expectPermission(INetd.PERMISSION_INTERNET, new int[]{ MOCK_UID1 });
+        netdServiceMonitor.expectPermission(
                 INetd.PERMISSION_INTERNET | INetd.PERMISSION_UPDATE_DEVICE_STATS,
                 new int[]{ MOCK_UID2 });
     }
 
     @Test
     public void testIntentReceiver() throws Exception {
-        final NetdServiceMonitor mNetdServiceMonitor = new NetdServiceMonitor(mNetdService);
+        final NetdServiceMonitor netdServiceMonitor = new NetdServiceMonitor(mNetdService);
         final ArgumentCaptor<BroadcastReceiver> receiverCaptor =
                 ArgumentCaptor.forClass(BroadcastReceiver.class);
         verify(mContext, times(1)).registerReceiver(receiverCaptor.capture(), any(), any(), any());
@@ -888,7 +889,7 @@ public class PermissionMonitorTest {
         setPackagePermissions(MOCK_PACKAGE1, MOCK_UID1,
                 new String[] { INTERNET, UPDATE_DEVICE_STATS });
         receiver.onReceive(mContext, addedIntent);
-        mNetdServiceMonitor.expectPermission(INetd.PERMISSION_INTERNET
+        netdServiceMonitor.expectPermission(INetd.PERMISSION_INTERNET
                 | INetd.PERMISSION_UPDATE_DEVICE_STATS, new int[] { MOCK_UID1 });
 
         // Verify receiving PACKAGE_REMOVED intent.
@@ -897,98 +898,140 @@ public class PermissionMonitorTest {
                 Uri.fromParts("package", MOCK_PACKAGE1, null /* fragment */));
         removedIntent.putExtra(Intent.EXTRA_UID, MOCK_UID1);
         receiver.onReceive(mContext, removedIntent);
-        mNetdServiceMonitor.expectPermission(INetd.PERMISSION_UNINSTALLED, new int[] { MOCK_UID1 });
+        netdServiceMonitor.expectPermission(INetd.PERMISSION_UNINSTALLED, new int[] { MOCK_UID1 });
+    }
+
+    private ContentObserver expectRegisterContentObserver(Uri expectedUri) {
+        final ArgumentCaptor<ContentObserver> captor =
+                ArgumentCaptor.forClass(ContentObserver.class);
+        verify(mDeps).registerContentObserver(any(),
+                argThat(uri -> uri.equals(expectedUri)), anyBoolean(), captor.capture());
+        return captor.getValue();
+    }
+
+    private void buildAndMockPackageInfoWithPermissions(String packageName, int uid,
+            String... permissions) throws Exception {
+        final PackageInfo packageInfo = setPackagePermissions(packageName, uid, permissions);
+        packageInfo.packageName = packageName;
+        packageInfo.applicationInfo.uid = uid;
     }
 
     @Test
     public void testUidsAllowedOnRestrictedNetworksChanged() throws Exception {
-        final NetdMonitor mNetdMonitor = new NetdMonitor(mNetdService);
-        final ArgumentCaptor<ContentObserver> captor =
-                ArgumentCaptor.forClass(ContentObserver.class);
-        verify(mDeps, times(1)).registerContentObserver(any(),
-                argThat(uri -> uri.getEncodedPath().contains(UIDS_ALLOWED_ON_RESTRICTED_NETWORKS)),
-                anyBoolean(), captor.capture());
-        final ContentObserver contentObserver = captor.getValue();
+        final NetdMonitor netdMonitor = new NetdMonitor(mNetdService);
+        final ContentObserver contentObserver = expectRegisterContentObserver(
+                Settings.Global.getUriFor(UIDS_ALLOWED_ON_RESTRICTED_NETWORKS));
 
         mPermissionMonitor.onUserAdded(MOCK_USER1);
-        // Prepare PackageInfo for MOCK_PACKAGE1
-        final PackageInfo packageInfo = buildPackageInfo(
-                false /* hasSystemPermission */, MOCK_UID1, MOCK_USER1);
-        packageInfo.packageName = MOCK_PACKAGE1;
-        when(mPackageManager.getPackageInfo(eq(MOCK_PACKAGE1), anyInt())).thenReturn(packageInfo);
-        when(mPackageManager.getPackagesForUid(MOCK_UID1)).thenReturn(new String[]{MOCK_PACKAGE1});
-        // Prepare PackageInfo for MOCK_PACKAGE2
-        final PackageInfo packageInfo2 = buildPackageInfo(
-                false /* hasSystemPermission */, MOCK_UID2, MOCK_USER1);
-        packageInfo2.packageName = MOCK_PACKAGE2;
-        when(mPackageManager.getPackageInfo(eq(MOCK_PACKAGE2), anyInt())).thenReturn(packageInfo2);
-        when(mPackageManager.getPackagesForUid(MOCK_UID2)).thenReturn(new String[]{MOCK_PACKAGE2});
+        // Prepare PackageInfo for MOCK_PACKAGE1 and MOCK_PACKAGE2
+        buildAndMockPackageInfoWithPermissions(MOCK_PACKAGE1, MOCK_UID1);
+        buildAndMockPackageInfoWithPermissions(MOCK_PACKAGE2, MOCK_UID2);
 
         // MOCK_UID1 is listed in setting that allow to use restricted networks, MOCK_UID1
         // should have SYSTEM permission.
         when(mDeps.getUidsAllowedOnRestrictedNetworks(any())).thenReturn(
                 new ArraySet<>(new Integer[] { MOCK_UID1 }));
         contentObserver.onChange(true /* selfChange */);
-        mNetdMonitor.expectPermission(SYSTEM, new UserHandle[]{MOCK_USER1}, new int[]{MOCK_UID1});
-        mNetdMonitor.expectNoPermission(new UserHandle[]{MOCK_USER1}, new int[]{MOCK_UID2});
+        netdMonitor.expectPermission(SYSTEM, new UserHandle[]{MOCK_USER1}, new int[]{MOCK_UID1});
+        netdMonitor.expectNoPermission(new UserHandle[]{MOCK_USER1}, new int[]{MOCK_UID2});
 
         // MOCK_UID2 is listed in setting that allow to use restricted networks, MOCK_UID2
         // should have SYSTEM permission but MOCK_UID1 should revoke permission.
         when(mDeps.getUidsAllowedOnRestrictedNetworks(any())).thenReturn(
                 new ArraySet<>(new Integer[] { MOCK_UID2 }));
         contentObserver.onChange(true /* selfChange */);
-        mNetdMonitor.expectPermission(SYSTEM, new UserHandle[]{MOCK_USER1}, new int[]{MOCK_UID2});
-        mNetdMonitor.expectNoPermission(new UserHandle[]{MOCK_USER1}, new int[]{MOCK_UID1});
+        netdMonitor.expectPermission(SYSTEM, new UserHandle[]{MOCK_USER1}, new int[]{MOCK_UID2});
+        netdMonitor.expectNoPermission(new UserHandle[]{MOCK_USER1}, new int[]{MOCK_UID1});
 
         // No uid lists in setting, should revoke permission from all uids.
         when(mDeps.getUidsAllowedOnRestrictedNetworks(any())).thenReturn(new ArraySet<>());
         contentObserver.onChange(true /* selfChange */);
-        mNetdMonitor.expectNoPermission(
+        netdMonitor.expectNoPermission(
                 new UserHandle[]{MOCK_USER1}, new int[]{MOCK_UID1, MOCK_UID2});
     }
 
     @Test
-    public void testAppsAllowedOnRestrictedNetworksChangedWithSharedUid() throws Exception {
-        final NetdMonitor mNetdMonitor = new NetdMonitor(mNetdService);
-        final ArgumentCaptor<ContentObserver> captor =
-                ArgumentCaptor.forClass(ContentObserver.class);
-        verify(mDeps, times(1)).registerContentObserver(any(),
-                argThat(uri -> uri.getEncodedPath().contains(UIDS_ALLOWED_ON_RESTRICTED_NETWORKS)),
-                anyBoolean(), captor.capture());
-        final ContentObserver contentObserver = captor.getValue();
+    public void testUidsAllowedOnRestrictedNetworksChangedWithSharedUid() throws Exception {
+        final NetdMonitor netdMonitor = new NetdMonitor(mNetdService);
+        final ContentObserver contentObserver = expectRegisterContentObserver(
+                Settings.Global.getUriFor(UIDS_ALLOWED_ON_RESTRICTED_NETWORKS));
 
         mPermissionMonitor.onUserAdded(MOCK_USER1);
-        // Prepare PackageInfo for MOCK_PACKAGE1 and MOCK_PACKAGE2 with shared uid MOCK_UID1.
-        final PackageInfo packageInfo = systemPackageInfoWithPermissions(CHANGE_NETWORK_STATE);
-        packageInfo.applicationInfo.uid = MOCK_USER1.getUid(MOCK_UID1);
-        packageInfo.packageName = MOCK_PACKAGE1;
-        final PackageInfo packageInfo2 = buildPackageInfo(
-                false /* hasSystemPermission */, MOCK_UID1, MOCK_USER1);
-        packageInfo2.packageName = MOCK_PACKAGE2;
-        when(mPackageManager.getPackageInfo(eq(MOCK_PACKAGE1), anyInt())).thenReturn(packageInfo);
-        when(mPackageManager.getPackageInfo(eq(MOCK_PACKAGE2), anyInt())).thenReturn(packageInfo2);
+        buildAndMockPackageInfoWithPermissions(MOCK_PACKAGE1, MOCK_UID1, CHANGE_NETWORK_STATE);
+        buildAndMockPackageInfoWithPermissions(MOCK_PACKAGE2, MOCK_UID1);
         when(mPackageManager.getPackagesForUid(MOCK_UID1))
                 .thenReturn(new String[]{MOCK_PACKAGE1, MOCK_PACKAGE2});
 
         // MOCK_PACKAGE1 have CHANGE_NETWORK_STATE, MOCK_UID1 should have NETWORK permission.
         addPackageForUsers(new UserHandle[]{MOCK_USER1}, MOCK_PACKAGE1, MOCK_UID1);
-        mNetdMonitor.expectPermission(NETWORK, new UserHandle[]{MOCK_USER1}, new int[]{MOCK_UID1});
+        netdMonitor.expectPermission(NETWORK, new UserHandle[]{MOCK_USER1}, new int[]{MOCK_UID1});
 
         // MOCK_UID1 is listed in setting that allow to use restricted networks, MOCK_UID1
         // should upgrade to SYSTEM permission.
         when(mDeps.getUidsAllowedOnRestrictedNetworks(any())).thenReturn(
                 new ArraySet<>(new Integer[] { MOCK_UID1 }));
         contentObserver.onChange(true /* selfChange */);
-        mNetdMonitor.expectPermission(SYSTEM, new UserHandle[]{MOCK_USER1}, new int[]{MOCK_UID1});
+        netdMonitor.expectPermission(SYSTEM, new UserHandle[]{MOCK_USER1}, new int[]{MOCK_UID1});
 
         // No app lists in setting, MOCK_UID1 should downgrade to NETWORK permission.
         when(mDeps.getUidsAllowedOnRestrictedNetworks(any())).thenReturn(new ArraySet<>());
         contentObserver.onChange(true /* selfChange */);
-        mNetdMonitor.expectPermission(NETWORK, new UserHandle[]{MOCK_USER1}, new int[]{MOCK_UID1});
+        netdMonitor.expectPermission(NETWORK, new UserHandle[]{MOCK_USER1}, new int[]{MOCK_UID1});
 
         // MOCK_PACKAGE1 removed, should revoke permission from MOCK_UID1.
         when(mPackageManager.getPackagesForUid(MOCK_UID1)).thenReturn(new String[]{MOCK_PACKAGE2});
         removePackageForUsers(new UserHandle[]{MOCK_USER1}, MOCK_PACKAGE1, MOCK_UID1);
-        mNetdMonitor.expectNoPermission(new UserHandle[]{MOCK_USER1}, new int[]{MOCK_UID1});
+        netdMonitor.expectNoPermission(new UserHandle[]{MOCK_USER1}, new int[]{MOCK_UID1});
+    }
+
+    @Test
+    public void testUidsAllowedOnRestrictedNetworksChangedWithMultipleUsers() throws Exception {
+        final NetdMonitor netdMonitor = new NetdMonitor(mNetdService);
+        final ContentObserver contentObserver = expectRegisterContentObserver(
+                Settings.Global.getUriFor(UIDS_ALLOWED_ON_RESTRICTED_NETWORKS));
+
+        // One user MOCK_USER1
+        mPermissionMonitor.onUserAdded(MOCK_USER1);
+        // Prepare PackageInfo for MOCK_PACKAGE1 and MOCK_PACKAGE2.
+        buildAndMockPackageInfoWithPermissions(MOCK_PACKAGE1, MOCK_UID1);
+        buildAndMockPackageInfoWithPermissions(MOCK_PACKAGE2, MOCK_UID2);
+
+        // MOCK_UID1 is listed in setting that allow to use restricted networks, MOCK_UID1
+        // in MOCK_USER1 should have SYSTEM permission and MOCK_UID2 has no permissions.
+        when(mDeps.getUidsAllowedOnRestrictedNetworks(any())).thenReturn(
+                new ArraySet<>(new Integer[] { MOCK_UID1 }));
+        contentObserver.onChange(true /* selfChange */);
+        netdMonitor.expectPermission(SYSTEM, new UserHandle[]{MOCK_USER1}, new int[]{MOCK_UID1});
+        netdMonitor.expectNoPermission(new UserHandle[]{MOCK_USER1}, new int[]{MOCK_UID2});
+
+        // Add user MOCK_USER2.
+        mPermissionMonitor.onUserAdded(MOCK_USER2);
+        // MOCK_UID1 in both users should all have SYSTEM permission and MOCK_UID2 has no
+        // permissions in either user.
+        netdMonitor.expectPermission(
+                SYSTEM, new UserHandle[] { MOCK_USER1, MOCK_USER2 }, new int[]{MOCK_UID1});
+        netdMonitor.expectNoPermission(
+                new UserHandle[] { MOCK_USER1, MOCK_USER2 }, new int[]{MOCK_UID2});
+
+        // MOCK_UID2 is listed in setting that allow to use restricted networks, MOCK_UID2
+        // in both users should have SYSTEM permission and MOCK_UID1 has no permissions.
+        when(mDeps.getUidsAllowedOnRestrictedNetworks(any())).thenReturn(
+                new ArraySet<>(new Integer[] { MOCK_UID2 }));
+        contentObserver.onChange(true /* selfChange */);
+        netdMonitor.expectPermission(
+                SYSTEM, new UserHandle[] { MOCK_USER1, MOCK_USER2 }, new int[]{MOCK_UID2});
+        netdMonitor.expectNoPermission(
+                new UserHandle[] { MOCK_USER1, MOCK_USER2 }, new int[]{MOCK_UID1});
+
+        // Remove user MOCK_USER1
+        mPermissionMonitor.onUserRemoved(MOCK_USER1);
+        netdMonitor.expectPermission(SYSTEM, new UserHandle[] {MOCK_USER2}, new int[]{MOCK_UID2});
+        netdMonitor.expectNoPermission(new UserHandle[] {MOCK_USER2}, new int[]{MOCK_UID1});
+
+        // No uid lists in setting, should revoke permission from all uids.
+        when(mDeps.getUidsAllowedOnRestrictedNetworks(any())).thenReturn(new ArraySet<>());
+        contentObserver.onChange(true /* selfChange */);
+        netdMonitor.expectNoPermission(
+                new UserHandle[]{MOCK_USER2}, new int[]{ MOCK_UID1, MOCK_UID2 });
     }
 }
