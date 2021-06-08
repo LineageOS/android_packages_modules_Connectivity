@@ -265,7 +265,7 @@ public class PermissionMonitor {
     }
 
     @VisibleForTesting
-    void updateUidsAllowedOnRestrictedNetworks(final Set<Integer> uids) {
+    synchronized void updateUidsAllowedOnRestrictedNetworks(final Set<Integer> uids) {
         mUidsAllowedOnRestrictedNetworks.clear();
         mUidsAllowedOnRestrictedNetworks.addAll(uids);
     }
@@ -285,7 +285,7 @@ public class PermissionMonitor {
     }
 
     @VisibleForTesting
-    boolean isUidAllowedOnRestrictedNetworks(final ApplicationInfo appInfo) {
+    synchronized boolean isUidAllowedOnRestrictedNetworks(final ApplicationInfo appInfo) {
         if (appInfo == null) return false;
         // Check whether package's uid is in allowed on restricted networks uid list. If so, this
         // uid can have netd system permission.
@@ -389,6 +389,14 @@ public class PermissionMonitor {
         update(users, mApps, false);
     }
 
+    /**
+     * Compare the current network permission and the given package's permission to find out highest
+     * permission for the uid.
+     *
+     * @param currentPermission Current uid network permission
+     * @param name The package has same uid that need compare its permission to update uid network
+     *             permission.
+     */
     @VisibleForTesting
     protected Boolean highestPermissionForUid(Boolean currentPermission, String name) {
         if (currentPermission == SYSTEM) {
@@ -472,6 +480,8 @@ public class PermissionMonitor {
         final String[] packages = mPackageManager.getPackagesForUid(uid);
         if (!CollectionUtils.isEmpty(packages)) {
             for (String name : packages) {
+                // If multiple packages have the same UID, give the UID all permissions that
+                // any package in that UID has.
                 permission = highestPermissionForUid(permission, name);
                 if (permission == SYSTEM) {
                     break;
