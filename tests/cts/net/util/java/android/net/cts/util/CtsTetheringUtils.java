@@ -388,20 +388,7 @@ public final class CtsTetheringUtils {
             assumeTetheringSupported();
 
             assumeTrue(!getTetheringInterfaceRegexps().getTetherableWifiRegexs().isEmpty());
-
-            final PackageManager pm = ctx.getPackageManager();
-            assumeTrue(pm.hasSystemFeature(PackageManager.FEATURE_WIFI));
-
-            WifiManager wm = ctx.getSystemService(WifiManager.class);
-            // Wifi feature flags only work when wifi is on.
-            final boolean previousWifiEnabledState = wm.isWifiEnabled();
-            try {
-                if (!previousWifiEnabledState) SystemUtil.runShellCommand("svc wifi enable");
-                waitForWifiEnabled(ctx);
-                assumeTrue(wm.isPortableHotspotSupported());
-            } finally {
-                if (!previousWifiEnabledState) SystemUtil.runShellCommand("svc wifi disable");
-            }
+            assumeTrue(isPortableHotspotSupported(ctx));
         }
 
         public TetheringInterfaceRegexps getTetheringInterfaceRegexps() {
@@ -453,8 +440,26 @@ public final class CtsTetheringUtils {
         return callback.getTetheringInterfaceRegexps().getTetherableWifiRegexs();
     }
 
-    public static boolean isWifiTetheringSupported(final TestTetheringEventCallback callback) {
-        return !getWifiTetherableInterfaceRegexps(callback).isEmpty();
+    public static boolean isWifiTetheringSupported(final Context ctx,
+            final TestTetheringEventCallback callback) throws Exception {
+        return !getWifiTetherableInterfaceRegexps(callback).isEmpty()
+                && isPortableHotspotSupported(ctx);
+    }
+
+    /* Returns if wifi supports hotspot. */
+    private static boolean isPortableHotspotSupported(final Context ctx) throws Exception {
+        final PackageManager pm = ctx.getPackageManager();
+        if (!pm.hasSystemFeature(PackageManager.FEATURE_WIFI)) return false;
+        final WifiManager wm = ctx.getSystemService(WifiManager.class);
+        // Wifi feature flags only work when wifi is on.
+        final boolean previousWifiEnabledState = wm.isWifiEnabled();
+        try {
+            if (!previousWifiEnabledState) SystemUtil.runShellCommand("svc wifi enable");
+            waitForWifiEnabled(ctx);
+            return wm.isPortableHotspotSupported();
+        } finally {
+            if (!previousWifiEnabledState) SystemUtil.runShellCommand("svc wifi disable");
+        }
     }
 
     public TetheringInterface startWifiTethering(final TestTetheringEventCallback callback)
