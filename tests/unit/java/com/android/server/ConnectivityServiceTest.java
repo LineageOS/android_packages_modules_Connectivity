@@ -9924,10 +9924,24 @@ public class ConnectivityServiceTest {
     }
 
     public NetworkAgentInfo fakeMobileNai(NetworkCapabilities nc) {
+        final NetworkCapabilities cellNc = new NetworkCapabilities.Builder(nc)
+                .addTransportType(TRANSPORT_CELLULAR).build();
         final NetworkInfo info = new NetworkInfo(TYPE_MOBILE, TelephonyManager.NETWORK_TYPE_LTE,
                 ConnectivityManager.getNetworkTypeName(TYPE_MOBILE),
                 TelephonyManager.getNetworkTypeName(TelephonyManager.NETWORK_TYPE_LTE));
-        return new NetworkAgentInfo(null, new Network(NET_ID), info, new LinkProperties(),
+        return fakeNai(cellNc, info);
+    }
+
+    private NetworkAgentInfo fakeWifiNai(NetworkCapabilities nc) {
+        final NetworkCapabilities wifiNc = new NetworkCapabilities.Builder(nc)
+                .addTransportType(TRANSPORT_WIFI).build();
+        final NetworkInfo info = new NetworkInfo(TYPE_WIFI, 0 /* subtype */,
+                ConnectivityManager.getNetworkTypeName(TYPE_WIFI), "" /* subtypeName */);
+        return fakeNai(wifiNc, info);
+    }
+
+    private NetworkAgentInfo fakeNai(NetworkCapabilities nc, NetworkInfo networkInfo) {
+        return new NetworkAgentInfo(null, new Network(NET_ID), networkInfo, new LinkProperties(),
                 nc, new NetworkScore.Builder().setLegacyInt(0).build(),
                 mServiceContext, null, new NetworkAgentConfig(), mService, null, null, 0,
                 INVALID_UID, TEST_LINGER_DELAY_MS, mQosCallbackTracker,
@@ -9953,7 +9967,7 @@ public class ConnectivityServiceTest {
 
         final NetworkCapabilities nc = new NetworkCapabilities();
         nc.setAdministratorUids(new int[] {wrongUid});
-        final NetworkAgentInfo naiWithUid = fakeMobileNai(nc);
+        final NetworkAgentInfo naiWithUid = fakeWifiNai(nc);
 
         mServiceContext.setPermission(android.Manifest.permission.NETWORK_STACK, PERMISSION_DENIED);
 
@@ -9963,18 +9977,37 @@ public class ConnectivityServiceTest {
                         Process.myPid() + 1, wrongUid, naiWithUid, mContext.getOpPackageName()));
     }
 
+    private void verifyConnectivityDiagnosticsPermissionsWithNetworkAgentInfo(
+            NetworkAgentInfo info, boolean expectPermission) {
+        mServiceContext.setPermission(android.Manifest.permission.NETWORK_STACK, PERMISSION_DENIED);
+
+        assertEquals(
+                "Unexpected ConnDiags permission",
+                expectPermission,
+                mService.checkConnectivityDiagnosticsPermissions(
+                        Process.myPid(), Process.myUid(), info, mContext.getOpPackageName()));
+    }
+
     @Test
-    public void testCheckConnectivityDiagnosticsPermissionsNoLocationPermission() throws Exception {
+    public void testCheckConnectivityDiagnosticsPermissionsCellularNoLocationPermission()
+            throws Exception {
         final NetworkCapabilities nc = new NetworkCapabilities();
         nc.setAdministratorUids(new int[] {Process.myUid()});
         final NetworkAgentInfo naiWithUid = fakeMobileNai(nc);
 
-        mServiceContext.setPermission(android.Manifest.permission.NETWORK_STACK, PERMISSION_DENIED);
+        verifyConnectivityDiagnosticsPermissionsWithNetworkAgentInfo(naiWithUid,
+                true /* expectPermission */);
+    }
 
-        assertFalse(
-                "ACCESS_FINE_LOCATION permission necessary for Connectivity Diagnostics",
-                mService.checkConnectivityDiagnosticsPermissions(
-                        Process.myPid(), Process.myUid(), naiWithUid, mContext.getOpPackageName()));
+    @Test
+    public void testCheckConnectivityDiagnosticsPermissionsWifiNoLocationPermission()
+            throws Exception {
+        final NetworkCapabilities nc = new NetworkCapabilities();
+        nc.setAdministratorUids(new int[] {Process.myUid()});
+        final NetworkAgentInfo naiWithUid = fakeWifiNai(nc);
+
+        verifyConnectivityDiagnosticsPermissionsWithNetworkAgentInfo(naiWithUid,
+                false /* expectPermission */);
     }
 
     @Test
