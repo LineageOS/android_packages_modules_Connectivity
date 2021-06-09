@@ -8749,13 +8749,8 @@ public class ConnectivityServiceTest {
         // Disconnect the network. clat is stopped and the network is destroyed.
         mCellNetworkAgent.disconnect();
         networkCallback.expectCallback(CallbackEntry.LOST, mCellNetworkAgent);
-        // TODO: delete this spurious onLinkPropertiesChanged callback.
-        networkCallback.expectLinkPropertiesThat(mCellNetworkAgent,
-                lp -> lp.getStackedLinks().isEmpty());
         networkCallback.assertNoCallback();
         verify(mMockNetd).clatdStop(MOBILE_IFNAME);
-        verify(mMockNetd).networkRemoveInterface(cellNetId, CLAT_MOBILE_IFNAME);
-        assertRoutesRemoved(cellNetId, stackedDefault);
         verify(mMockNetd).idletimerRemoveInterface(eq(MOBILE_IFNAME), anyInt(),
                 eq(Integer.toString(TRANSPORT_CELLULAR)));
         verify(mMockNetd).networkDestroy(cellNetId);
