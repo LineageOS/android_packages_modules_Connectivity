@@ -178,6 +178,7 @@ import android.net.VpnManager;
 import android.net.VpnTransportInfo;
 import android.net.metrics.IpConnectivityLog;
 import android.net.metrics.NetworkEvent;
+import android.net.netd.aidl.NativeUidRangeConfig;
 import android.net.netlink.InetDiagMessage;
 import android.net.networkstack.ModuleNetworkStackClient;
 import android.net.networkstack.NetworkStackClientBase;
@@ -4213,10 +4214,10 @@ public class ConnectivityService extends IConnectivityManager.Stub
             final NetworkAgentInfo satisfier = nri.getSatisfier();
             if (null != satisfier) {
                 try {
-                    // TODO: Passing default network priority to netd.
-                    mNetd.networkRemoveUidRanges(satisfier.network.getNetId(),
-                            toUidRangeStableParcels(nri.getUids())
-                            /* nri.getDefaultNetworkPriority() */);
+                    mNetd.networkRemoveUidRangesParcel(new NativeUidRangeConfig(
+                            satisfier.network.getNetId(),
+                            toUidRangeStableParcels(nri.getUids()),
+                            nri.getDefaultNetworkPriority()));
                 } catch (RemoteException e) {
                     loge("Exception setting network preference default network", e);
                 }
@@ -7472,13 +7473,11 @@ public class ConnectivityService extends IConnectivityManager.Stub
         maybeCloseSockets(nai, ranges, exemptUids);
         try {
             if (add) {
-                // TODO: Passing default network priority to netd.
-                mNetd.networkAddUidRanges(nai.network.netId, ranges
-                        /* DEFAULT_NETWORK_PRIORITY_NONE */);
+                mNetd.networkAddUidRangesParcel(new NativeUidRangeConfig(
+                        nai.network.netId, ranges, DEFAULT_NETWORK_PRIORITY_NONE));
             } else {
-                // TODO: Passing default network priority to netd.
-                mNetd.networkRemoveUidRanges(nai.network.netId, ranges
-                        /* DEFAULT_NETWORK_PRIORITY_NONE */);
+                mNetd.networkRemoveUidRangesParcel(new NativeUidRangeConfig(
+                        nai.network.netId, ranges, DEFAULT_NETWORK_PRIORITY_NONE));
             }
         } catch (Exception e) {
             loge("Exception while " + (add ? "adding" : "removing") + " uid ranges " + uidRanges +
@@ -7813,18 +7812,16 @@ public class ConnectivityService extends IConnectivityManager.Stub
                         + " any applications to set as the default." + nri);
             }
             if (null != newDefaultNetwork) {
-                // TODO: Passing default network priority to netd.
-                mNetd.networkAddUidRanges(
+                mNetd.networkAddUidRangesParcel(new NativeUidRangeConfig(
                         newDefaultNetwork.network.getNetId(),
-                        toUidRangeStableParcels(nri.getUids())
-                        /* nri.getDefaultNetworkPriority() */);
+                        toUidRangeStableParcels(nri.getUids()),
+                        nri.getDefaultNetworkPriority()));
             }
             if (null != oldDefaultNetwork) {
-                // TODO: Passing default network priority to netd.
-                mNetd.networkRemoveUidRanges(
+                mNetd.networkRemoveUidRangesParcel(new NativeUidRangeConfig(
                         oldDefaultNetwork.network.getNetId(),
-                        toUidRangeStableParcels(nri.getUids())
-                        /* nri.getDefaultNetworkPriority() */);
+                        toUidRangeStableParcels(nri.getUids()),
+                        nri.getDefaultNetworkPriority()));
             }
         } catch (RemoteException | ServiceSpecificException e) {
             loge("Exception setting app default network", e);
