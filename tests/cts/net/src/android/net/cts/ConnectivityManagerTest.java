@@ -19,6 +19,7 @@ package android.net.cts;
 import static android.Manifest.permission.CONNECTIVITY_INTERNAL;
 import static android.Manifest.permission.CONNECTIVITY_USE_RESTRICTED_NETWORKS;
 import static android.Manifest.permission.NETWORK_SETTINGS;
+import static android.Manifest.permission.READ_DEVICE_CONFIG;
 import static android.content.pm.PackageManager.FEATURE_BLUETOOTH;
 import static android.content.pm.PackageManager.FEATURE_ETHERNET;
 import static android.content.pm.PackageManager.FEATURE_TELEPHONY;
@@ -47,6 +48,8 @@ import static android.net.NetworkCapabilities.NET_CAPABILITY_IMS;
 import static android.net.NetworkCapabilities.NET_CAPABILITY_INTERNET;
 import static android.net.NetworkCapabilities.NET_CAPABILITY_NOT_METERED;
 import static android.net.NetworkCapabilities.NET_CAPABILITY_NOT_RESTRICTED;
+import static android.net.NetworkCapabilities.NET_CAPABILITY_PARTIAL_CONNECTIVITY;
+import static android.net.NetworkCapabilities.NET_CAPABILITY_VALIDATED;
 import static android.net.NetworkCapabilities.TRANSPORT_TEST;
 import static android.net.NetworkCapabilities.TRANSPORT_WIFI;
 import static android.net.TetheringManager.TETHERING_WIFI;
@@ -59,6 +62,8 @@ import static android.net.cts.util.CtsNetUtils.TestNetworkCallback;
 import static android.net.cts.util.CtsTetheringUtils.StartTetheringCallback;
 import static android.net.cts.util.CtsTetheringUtils.TestTetheringEventCallback;
 import static android.net.cts.util.CtsTetheringUtils.isWifiTetheringSupported;
+import static android.net.util.NetworkStackUtils.TEST_CAPTIVE_PORTAL_HTTPS_URL;
+import static android.net.util.NetworkStackUtils.TEST_CAPTIVE_PORTAL_HTTP_URL;
 import static android.os.MessageQueue.OnFileDescriptorEventListener.EVENT_INPUT;
 import static android.provider.Settings.Global.NETWORK_METERED_MULTIPATH_PREFERENCE;
 import static android.system.OsConstants.AF_INET;
@@ -80,7 +85,6 @@ import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNotSame;
 import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.junit.Assume.assumeTrue;
@@ -121,6 +125,7 @@ import android.net.TelephonyNetworkSpecifier;
 import android.net.TestNetworkInterface;
 import android.net.TestNetworkManager;
 import android.net.TetheringManager;
+import android.net.Uri;
 import android.net.cts.util.CtsNetUtils;
 import android.net.util.KeepaliveUtils;
 import android.net.wifi.WifiManager;
@@ -135,6 +140,7 @@ import android.os.SystemProperties;
 import android.os.UserHandle;
 import android.os.VintfRuntimeInfo;
 import android.platform.test.annotations.AppModeFull;
+import android.provider.DeviceConfig;
 import android.provider.Settings;
 import android.telephony.SubscriptionManager;
 import android.telephony.TelephonyManager;
@@ -158,6 +164,7 @@ import com.android.testutils.DevSdkIgnoreRule.IgnoreUpTo;
 import com.android.testutils.DevSdkIgnoreRuleKt;
 import com.android.testutils.RecorderCallback.CallbackEntry;
 import com.android.testutils.SkipPresubmit;
+import com.android.testutils.TestHttpServer;
 import com.android.testutils.TestNetworkTracker;
 import com.android.testutils.TestableNetworkCallback;
 
@@ -199,6 +206,10 @@ import java.util.concurrent.TimeoutException;
 import java.util.function.Supplier;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
+import fi.iki.elonen.NanoHTTPD.Method;
+import fi.iki.elonen.NanoHTTPD.Response.IStatus;
+import fi.iki.elonen.NanoHTTPD.Response.Status;
 
 @RunWith(AndroidJUnit4.class)
 public class ConnectivityManagerTest {
@@ -243,6 +254,12 @@ public class ConnectivityManagerTest {
     private static final int AIRPLANE_MODE_OFF = 0;
     private static final int AIRPLANE_MODE_ON = 1;
 
+    private static final String TEST_HTTPS_URL_PATH = "/https_path";
+    private static final String TEST_HTTP_URL_PATH = "/http_path";
+    private static final String LOCALHOST_HOSTNAME = "localhost";
+    // Re-connecting to the AP, obtaining an IP address, revalidating can take a long time
+    private static final long WIFI_CONNECT_TIMEOUT_MS = 60_000L;
+
     private Context mContext;
     private Instrumentation mInstrumentation;
     private ConnectivityManager mCm;
@@ -256,6 +273,8 @@ public class ConnectivityManagerTest {
 
     // Used for cleanup purposes.
     private final List<Range<Integer>> mVpnRequiredUidRanges = new ArrayList<>();
+
+    private final TestHttpServer mHttpServer = new TestHttpServer(LOCALHOST_HOSTNAME);
 
     @Before
     public void setUp() throws Exception {
@@ -2285,5 +2304,140 @@ public class ConnectivityManagerTest {
             mUiAutomation.dropShellPermissionIdentity();
         }
         oemPrefListener.expectOnComplete();
+    }
+
+    @Test
+    public void testSetAcceptPartialConnectivity_NoPermission_GetException() {
+        assumeTrue(TestUtils.shouldTestSApis());
+        assertThrows(SecurityException.class, () -> mCm.setAcceptPartialConnectivity(
+                mCm.getActiveNetwork(), false /* accept */ , false /* always */));
+    }
+
+    @AppModeFull(reason = "WRITE_DEVICE_CONFIG permission can't be granted to instant apps")
+    @Test
+    public void testAcceptPartialConnectivity_validatedNetwork() throws Exception {
+        assumeTrue(TestUtils.shouldTestSApis());
+        assumeTrue("testAcceptPartialConnectivity_validatedNetwork cannot execute"
+                        + " unless device supports WiFi",
+                mPackageManager.hasSystemFeature(FEATURE_WIFI));
+
+        try {
+            // Wait for partial connectivity to be detected on the network
+            final Network network = preparePartialConnectivity();
+
+            runAsShell(NETWORK_SETTINGS, () -> {
+                // The always bit is verified in NetworkAgentTest
+                mCm.setAcceptPartialConnectivity(network, true /* accept */, false /* always */);
+            });
+
+            // Accept partial connectivity network should result in a validated network
+            expectNetworkHasCapability(network, NET_CAPABILITY_VALIDATED, WIFI_CONNECT_TIMEOUT_MS);
+        } finally {
+            resetValidationConfig();
+            // Reconnect wifi to reset the wifi status
+            mCtsNetUtils.ensureWifiDisconnected(null /* wifiNetworkToCheck */);
+            mCtsNetUtils.ensureWifiConnected();
+        }
+    }
+
+    @AppModeFull(reason = "WRITE_DEVICE_CONFIG permission can't be granted to instant apps")
+    @Test
+    public void testRejectPartialConnectivity_TearDownNetwork() throws Exception {
+        assumeTrue(TestUtils.shouldTestSApis());
+        assumeTrue("testAcceptPartialConnectivity_validatedNetwork cannot execute"
+                        + " unless device supports WiFi",
+                mPackageManager.hasSystemFeature(FEATURE_WIFI));
+
+        final TestNetworkCallback cb = new TestNetworkCallback();
+        try {
+            // Wait for partial connectivity to be detected on the network
+            final Network network = preparePartialConnectivity();
+
+            mCm.requestNetwork(makeWifiNetworkRequest(), cb);
+            runAsShell(NETWORK_SETTINGS, () -> {
+                // The always bit is verified in NetworkAgentTest
+                mCm.setAcceptPartialConnectivity(network, false /* accept */, false /* always */);
+            });
+            // Reject partial connectivity network should cause the network being torn down
+            assertEquals(network, cb.waitForLost());
+        } finally {
+            mCm.unregisterNetworkCallback(cb);
+            resetValidationConfig();
+            // Wifi will not automatically reconnect to the network. ensureWifiDisconnected cannot
+            // apply here. Thus, turn off wifi first and restart to restore.
+            runShellCommand("svc wifi disable");
+            mCtsNetUtils.ensureWifiConnected();
+        }
+    }
+
+    private Network expectNetworkHasCapability(Network network, int expectedNetCap, long timeout)
+            throws Exception {
+        final CompletableFuture<Network> future = new CompletableFuture();
+        final NetworkCallback cb = new NetworkCallback() {
+            @Override
+            public void onCapabilitiesChanged(Network n, NetworkCapabilities nc) {
+                if (n.equals(network) && nc.hasCapability(expectedNetCap)) {
+                    future.complete(network);
+                }
+            }
+        };
+
+        try {
+            mCm.registerNetworkCallback(new NetworkRequest.Builder().build(), cb);
+            return future.get(timeout, TimeUnit.MILLISECONDS);
+        } finally {
+            mCm.unregisterNetworkCallback(cb);
+        }
+    }
+
+    private void resetValidationConfig() {
+        NetworkValidationTestUtil.clearValidationTestUrlsDeviceConfig();
+        mHttpServer.stop();
+    }
+
+    private Network preparePartialConnectivity() throws Exception {
+        runAsShell(READ_DEVICE_CONFIG, () -> {
+            // Verify that the test URLs are not normally set on the device, but do not fail if the
+            // test URLs are set to what this test uses (URLs on localhost), in case the test was
+            // interrupted manually and rerun.
+            assertEmptyOrLocalhostUrl(TEST_CAPTIVE_PORTAL_HTTPS_URL);
+            assertEmptyOrLocalhostUrl(TEST_CAPTIVE_PORTAL_HTTP_URL);
+        });
+
+        NetworkValidationTestUtil.clearValidationTestUrlsDeviceConfig();
+
+        mHttpServer.start();
+        // Configure response code for partial connectivity
+        configTestServer(Status.INTERNAL_ERROR  /* httpsStatusCode */,
+                Status.NO_CONTENT  /* httpStatusCode */);
+        // Disconnect wifi first then start wifi network with configuration.
+        mCtsNetUtils.ensureWifiDisconnected(null /* wifiNetworkToCheck */);
+        final Network network = mCtsNetUtils.ensureWifiConnected();
+
+        return expectNetworkHasCapability(network, NET_CAPABILITY_PARTIAL_CONNECTIVITY,
+                WIFI_CONNECT_TIMEOUT_MS);
+    }
+
+    private String makeUrl(String path) {
+        return "http://localhost:" + mHttpServer.getListeningPort() + path;
+    }
+
+    private void assertEmptyOrLocalhostUrl(String urlKey) {
+        final String url = DeviceConfig.getProperty(DeviceConfig.NAMESPACE_CONNECTIVITY, urlKey);
+        assertTrue(urlKey + " must not be set in production scenarios, current value= " + url,
+                TextUtils.isEmpty(url) || LOCALHOST_HOSTNAME.equals(Uri.parse(url).getHost()));
+    }
+
+    private void configTestServer(IStatus httpsStatusCode, IStatus httpStatusCode) {
+        mHttpServer.addResponse(new TestHttpServer.Request(
+                TEST_HTTPS_URL_PATH, Method.GET, "" /* queryParameters */),
+                httpsStatusCode, null /* locationHeader */, "" /* content */);
+        mHttpServer.addResponse(new TestHttpServer.Request(
+                TEST_HTTP_URL_PATH, Method.GET, "" /* queryParameters */),
+                httpStatusCode, null /* locationHeader */, "" /* content */);
+        NetworkValidationTestUtil.setHttpsUrlDeviceConfig(makeUrl(TEST_HTTPS_URL_PATH));
+        NetworkValidationTestUtil.setHttpUrlDeviceConfig(makeUrl(TEST_HTTP_URL_PATH));
+        NetworkValidationTestUtil.setUrlExpirationDeviceConfig(
+                System.currentTimeMillis() + WIFI_CONNECT_TIMEOUT_MS);
     }
 }
