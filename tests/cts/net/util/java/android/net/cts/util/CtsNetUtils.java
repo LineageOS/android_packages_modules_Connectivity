@@ -530,12 +530,14 @@ public final class CtsNetUtils {
         }
         // restore private DNS setting
         if (PRIVATE_DNS_MODE_STRICT.equals(mOldPrivateDnsMode)) {
-            setPrivateDnsStrictMode(mOldPrivateDnsSpecifier);
-
-            // In case of invalid setting, still restore it but fail the test
+            // In case of invalid setting, set to opportunistic to avoid a bad state and fail
             if (mOldPrivateDnsSpecifier == null) {
+                Settings.Global.putString(mCR, Settings.Global.PRIVATE_DNS_MODE,
+                        PRIVATE_DNS_MODE_OPPORTUNISTIC);
                 fail("Invalid private DNS setting: no hostname specified in strict mode");
             }
+            setPrivateDnsStrictMode(mOldPrivateDnsSpecifier);
+
             awaitPrivateDnsSetting("restorePrivateDnsSetting timeout",
                     mCm.getActiveNetwork(),
                     mOldPrivateDnsSpecifier, true);
