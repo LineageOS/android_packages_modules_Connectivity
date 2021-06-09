@@ -70,6 +70,7 @@ import android.os.HandlerThread
 import android.os.Looper
 import android.os.Message
 import android.os.SystemClock
+import android.telephony.TelephonyManager
 import android.util.DebugUtils.valueToString
 import androidx.test.InstrumentationRegistry
 import com.android.compatibility.common.util.SystemUtil.runWithShellPermissionIdentity
@@ -362,15 +363,19 @@ class NetworkAgentTest {
         }
     }
 
-    private fun createConnectedNetworkAgent(context: Context = realContext, name: String? = null):
-            Pair<TestableNetworkAgent, TestableNetworkCallback> {
+    private fun createConnectedNetworkAgent(
+        context: Context = realContext,
+        name: String? = null,
+        initialConfig: NetworkAgentConfig? = null
+    ): Pair<TestableNetworkAgent, TestableNetworkCallback> {
         val request: NetworkRequest = NetworkRequest.Builder()
                 .clearCapabilities()
                 .addTransportType(TRANSPORT_TEST)
                 .build()
         val callback = TestableNetworkCallback(timeoutMs = DEFAULT_TIMEOUT_MS)
         requestNetwork(request, callback)
-        val agent = createNetworkAgent(context, name)
+        val config = initialConfig ?: NetworkAgentConfig.Builder().build()
+        val agent = createNetworkAgent(context, name, initialConfig = config)
         agent.setTeardownDelayMillis(0)
         agent.register()
         agent.markConnected()
@@ -380,6 +385,49 @@ class NetworkAgentTest {
 
     private fun createNetworkAgentWithFakeCS() = createNetworkAgent().also {
         mFakeConnectivityService.connect(it.registerForTest(Network(FAKE_NET_ID)))
+    }
+
+    @Test
+    fun testSetSubtypeNameAndExtraInfoByAgentConfig() {
+        val subtypeLTE = TelephonyManager.NETWORK_TYPE_LTE
+        val subtypeNameLTE = "LTE"
+        val legacyExtraInfo = "mylegacyExtraInfo"
+        val config = NetworkAgentConfig.Builder()
+                .setLegacySubType(subtypeLTE)
+                .setLegacySubTypeName(subtypeNameLTE)
+                .setLegacyExtraInfo(legacyExtraInfo).build()
+        val (agent, callback) = createConnectedNetworkAgent(initialConfig = config)
+        val networkInfo = mCM.getNetworkInfo(agent.network)
+        assertEquals(subtypeLTE, networkInfo.getSubtype())
+        assertEquals(subtypeNameLTE, networkInfo.getSubtypeName())
+        assertEquals(legacyExtraInfo, config.getLegacyExtraInfo())
+    }
+
+    @Test
+    fun testSetLegacySubtypeInNetworkAgent() {
+        val subtypeLTE = TelephonyManager.NETWORK_TYPE_LTE
+        val subtypeUMTS = TelephonyManager.NETWORK_TYPE_UMTS
+        val subtypeNameLTE = "LTE"
+        val subtypeNameUMTS = "UMTS"
+        val config = NetworkAgentConfig.Builder()
+                .setLegacySubType(subtypeLTE)
+                .setLegacySubTypeName(subtypeNameLTE).build()
+        val (agent, callback) = createConnectedNetworkAgent(initialConfig = config)
+            callback.expectAvailableThenValidatedCallbacks(agent.network)
+            agent.setLegacySubtype(subtypeUMTS, subtypeNameUMTS)
+
+            // There is no callback when networkInfo changes,
+            // so use the NetworkCapabilities callback to ensure
+            // that networkInfo is ready for verification.
+            val nc = NetworkCapabilities(agent.nc)
+            nc.addCapability(NET_CAPABILITY_NOT_METERED)
+            agent.sendNetworkCapabilities(nc)
+            callback.expectCapabilitiesThat(agent.network) {
+                it.hasCapability(NET_CAPABILITY_NOT_METERED)
+            }
+            val networkInfo = mCM.getNetworkInfo(agent.network)
+            assertEquals(subtypeUMTS, networkInfo.getSubtype())
+            assertEquals(subtypeNameUMTS, networkInfo.getSubtypeName())
     }
 
     @Test
