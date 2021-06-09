@@ -139,6 +139,7 @@ public class PermissionMonitorTest {
                 .thenReturn(Context.SYSTEM_CONFIG_SERVICE);
         when(mContext.getSystemService(Context.SYSTEM_CONFIG_SERVICE))
                 .thenReturn(mSystemConfigManager);
+        when(mContext.getSystemService(SystemConfigManager.class)).thenReturn(mSystemConfigManager);
         when(mSystemConfigManager.getSystemPermissionUids(anyString())).thenReturn(new int[0]);
         final Context asUserCtx = mock(Context.class, AdditionalAnswers.delegatesTo(mContext));
         doReturn(UserHandle.ALL).when(asUserCtx).getUser();
