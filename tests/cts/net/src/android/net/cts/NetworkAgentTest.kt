@@ -15,6 +15,7 @@
  */
 package android.net.cts
 
+import android.Manifest.permission.NETWORK_SETTINGS
 import android.app.Instrumentation
 import android.content.Context
 import android.net.ConnectivityManager
@@ -71,6 +72,8 @@ import android.os.Message
 import android.os.SystemClock
 import android.util.DebugUtils.valueToString
 import androidx.test.InstrumentationRegistry
+import com.android.compatibility.common.util.SystemUtil.runWithShellPermissionIdentity
+import com.android.compatibility.common.util.ThrowingSupplier
 import com.android.modules.utils.build.SdkLevel
 import com.android.net.module.util.ArrayTrackRecord
 import com.android.testutils.CompatUtil
@@ -332,7 +335,8 @@ class NetworkAgentTest {
         context: Context = realContext,
         name: String? = null,
         initialNc: NetworkCapabilities? = null,
-        initialLp: LinkProperties? = null
+        initialLp: LinkProperties? = null,
+        initialConfig: NetworkAgentConfig? = null
     ): TestableNetworkAgent {
         val nc = initialNc ?: NetworkCapabilities().apply {
             addTransportType(TRANSPORT_TEST)
@@ -352,7 +356,7 @@ class NetworkAgentTest {
             addLinkAddress(LinkAddress(LOCAL_IPV4_ADDRESS, 32))
             addRoute(RouteInfo(IpPrefix("0.0.0.0/0"), null, null))
         }
-        val config = NetworkAgentConfig.Builder().build()
+        val config = initialConfig ?: NetworkAgentConfig.Builder().build()
         return TestableNetworkAgent(context, mHandlerThread.looper, nc, lp, config).also {
             agentsToCleanUp.add(it)
         }
@@ -844,5 +848,30 @@ class NetworkAgentTest {
                 "expected remaining linger duration is $expectedRemainingLingerDuration")
         callbackWeaker.assertNoCallback(expectedRemainingLingerDuration)
         callbackWeaker.expectCallback<Lost>(agent1.network!!)
+    }
+
+    @Test
+    @IgnoreUpTo(Build.VERSION_CODES.R)
+    fun testSetSubscriberId() {
+        val name = "TEST-AGENT"
+        val imsi = UUID.randomUUID().toString()
+        val config = NetworkAgentConfig.Builder().setSubscriberId(imsi).build()
+
+        val request: NetworkRequest = NetworkRequest.Builder()
+                .clearCapabilities()
+                .addTransportType(TRANSPORT_TEST)
+                .setNetworkSpecifier(CompatUtil.makeEthernetNetworkSpecifier(name))
+                .build()
+        val callback = TestableNetworkCallback(timeoutMs = DEFAULT_TIMEOUT_MS)
+        requestNetwork(request, callback)
+
+        val agent = createNetworkAgent(name = name, initialConfig = config)
+        agent.register()
+        agent.markConnected()
+        callback.expectAvailableThenValidatedCallbacks(agent.network!!)
+        val snapshots = runWithShellPermissionIdentity(ThrowingSupplier {
+                mCM!!.allNetworkStateSnapshots }, NETWORK_SETTINGS)
+        val testNetworkSnapshot = snapshots.findLast { it.network == agent.network }
+        assertEquals(imsi, testNetworkSnapshot!!.subscriberId)
     }
 }
