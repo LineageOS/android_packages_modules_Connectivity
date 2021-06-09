@@ -74,6 +74,7 @@ class MultinetworkPolicyTrackerTest {
         doReturn(Context.TELEPHONY_SERVICE).`when`(it)
                 .getSystemServiceName(TelephonyManager::class.java)
         doReturn(telephonyManager).`when`(it).getSystemService(Context.TELEPHONY_SERVICE)
+        doReturn(telephonyManager).`when`(it).getSystemService(TelephonyManager::class.java)
         doReturn(subscriptionManager).`when`(it)
                 .getSystemService(Context.TELEPHONY_SUBSCRIPTION_SERVICE)
         doReturn(resolver).`when`(it).contentResolver

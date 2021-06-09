@@ -20,12 +20,12 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.fail;
 import static org.mockito.Mockito.any;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
 
 import android.content.Context;
 import android.os.Handler;
@@ -66,7 +66,7 @@ public class NsdManagerTest {
         MockitoAnnotations.initMocks(this);
 
         mServiceHandler = spy(MockServiceHandler.create(mContext));
-        when(mService.getMessenger()).thenReturn(new Messenger(mServiceHandler));
+        doReturn(new Messenger(mServiceHandler)).when(mService).getMessenger();
 
         mManager = makeManager();
     }
