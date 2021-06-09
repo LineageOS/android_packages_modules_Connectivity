@@ -23,7 +23,11 @@ package {
 
 java_library {
     name: "FrameworksNetCommonTests",
-    srcs: ["java/**/*.java", "java/**/*.kt"],
+    defaults: ["framework-connectivity-test-defaults"],
+    srcs: [
+        "java/**/*.java",
+        "java/**/*.kt",
+    ],
     static_libs: [
         "androidx.core_core",
         "androidx.test.rules",
@@ -36,5 +40,24 @@ java_library {
     ],
     libs: [
         "android.test.base.stubs",
+    ],
+}
+
+// defaults for tests that need to build against framework-connectivity's @hide APIs
+// Only usable from targets that have visibility on framework-connectivity.impl.
+// Instead of using this, consider avoiding to depend on hidden connectivity APIs in
+// tests.
+java_defaults {
+    name: "framework-connectivity-test-defaults",
+    sdk_version: "core_platform", // tests can use @CorePlatformApi's
+    libs: [
+        // order matters: classes in framework-connectivity are resolved before framework,
+        // meaning @hide APIs in framework-connectivity are resolved before @SystemApi
+        // stubs in framework
+        "framework-connectivity.impl",
+        "framework",
+
+        // if sdk_version="" this gets automatically included, but here we need to add manually.
+        "framework-res",
     ],
 }
