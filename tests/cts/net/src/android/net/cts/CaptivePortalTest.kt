@@ -20,6 +20,7 @@ import android.Manifest.permission.CONNECTIVITY_INTERNAL
 import android.Manifest.permission.NETWORK_SETTINGS
 import android.Manifest.permission.READ_DEVICE_CONFIG
 import android.content.pm.PackageManager.FEATURE_TELEPHONY
+import android.content.pm.PackageManager.FEATURE_WATCH
 import android.content.pm.PackageManager.FEATURE_WIFI
 import android.net.ConnectivityManager
 import android.net.ConnectivityManager.NetworkCallback
@@ -57,6 +58,7 @@ import fi.iki.elonen.NanoHTTPD.Response.Status
 import junit.framework.AssertionFailedError
 import org.junit.After
 import org.junit.Assume.assumeTrue
+import org.junit.Assume.assumeFalse
 import org.junit.Before
 import org.junit.runner.RunWith
 import java.util.concurrent.CompletableFuture
@@ -128,6 +130,7 @@ class CaptivePortalTest {
     fun testCaptivePortalIsNotDefaultNetwork() {
         assumeTrue(pm.hasSystemFeature(FEATURE_TELEPHONY))
         assumeTrue(pm.hasSystemFeature(FEATURE_WIFI))
+        assumeFalse(pm.hasSystemFeature(FEATURE_WATCH))
         utils.ensureWifiConnected()
         val cellNetwork = utils.connectToCell()
 
