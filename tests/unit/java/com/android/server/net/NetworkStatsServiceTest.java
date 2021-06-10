@@ -16,16 +16,12 @@
 
 package com.android.server.net;
 
-import static android.Manifest.permission.READ_NETWORK_USAGE_HISTORY;
-import static android.Manifest.permission.UPDATE_DEVICE_STATS;
 import static android.content.Intent.ACTION_UID_REMOVED;
 import static android.content.Intent.EXTRA_UID;
-import static android.content.pm.PackageManager.PERMISSION_GRANTED;
 import static android.net.ConnectivityManager.TYPE_MOBILE;
 import static android.net.ConnectivityManager.TYPE_WIFI;
 import static android.net.NetworkIdentity.OEM_PAID;
 import static android.net.NetworkIdentity.OEM_PRIVATE;
-import static android.net.NetworkStack.PERMISSION_MAINLINE_NETWORK_STACK;
 import static android.net.NetworkStats.DEFAULT_NETWORK_ALL;
 import static android.net.NetworkStats.DEFAULT_NETWORK_NO;
 import static android.net.NetworkStats.DEFAULT_NETWORK_YES;
@@ -110,7 +106,6 @@ import android.os.SimpleClock;
 import android.provider.Settings;
 import android.telephony.TelephonyManager;
 
-import androidx.annotation.Nullable;
 import androidx.test.InstrumentationRegistry;
 import androidx.test.filters.SmallTest;
 import androidx.test.runner.AndroidJUnit4;
@@ -203,26 +198,6 @@ public class NetworkStatsServiceTest extends NetworkStatsBaseTest {
         public Object getSystemService(String name) {
             if (Context.TELEPHONY_SERVICE.equals(name)) return mTelephonyManager;
             return mBaseContext.getSystemService(name);
-        }
-
-        @Override
-        public void enforceCallingOrSelfPermission(String permission, @Nullable String message) {
-            if (checkCallingOrSelfPermission(permission) != PERMISSION_GRANTED) {
-                super.enforceCallingOrSelfPermission(permission, message);
-            }
-        }
-
-        @Override
-        public int checkCallingOrSelfPermission(String permission) {
-            switch (permission) {
-                case PERMISSION_MAINLINE_NETWORK_STACK:
-                case READ_NETWORK_USAGE_HISTORY:
-                case UPDATE_DEVICE_STATS:
-                    return PERMISSION_GRANTED;
-                default:
-                    return super.checkCallingOrSelfPermission(permission);
-            }
-
         }
     }
 

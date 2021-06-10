@@ -59,17 +59,16 @@ android_test {
     static_libs: [
         "androidx.test.rules",
         "bouncycastle-repackaged-unbundled",
+        "FrameworksNetCommonTests",
         "frameworks-base-testutils",
         "frameworks-net-integration-testutils",
         "framework-protos",
-        "mockito-target-extended-minus-junit4",
+        "mockito-target-minus-junit4",
         "net-tests-utils",
         "platform-test-annotations",
         "service-connectivity-pre-jarjar",
         "services.core",
         "services.net",
-        // At the bottom to prefer test libraries above instead of those in the common tests
-        "FrameworksNetCommonTests",
     ],
     libs: [
         "android.net.ipsec.ike.stubs.module_lib",
@@ -79,9 +78,6 @@ android_test {
         "ServiceConnectivityResources",
     ],
     jni_libs: [
-        // For mockito extended
-        "libdexmakerjvmtiagent",
-        "libstaticjvmtiagent",
         "libservice-connectivity",
     ],
 }
