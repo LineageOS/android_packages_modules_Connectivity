@@ -23,6 +23,7 @@ import static android.net.NetworkCapabilities.TRANSPORT_CELLULAR;
 import static android.net.NetworkCapabilities.TRANSPORT_TEST;
 import static android.net.wifi.WifiManager.SCAN_RESULTS_AVAILABLE_ACTION;
 
+import static com.android.compatibility.common.util.PropertyUtil.getFirstApiLevel;
 import static com.android.testutils.TestPermissionUtil.runAsShell;
 
 import static org.junit.Assert.assertEquals;
@@ -55,7 +56,6 @@ import android.net.wifi.WifiManager;
 import android.os.Binder;
 import android.os.Build;
 import android.os.IBinder;
-import android.os.SystemProperties;
 import android.provider.Settings;
 import android.system.Os;
 import android.system.OsConstants;
@@ -117,8 +117,7 @@ public final class CtsNetUtils {
     /** Checks if FEATURE_IPSEC_TUNNELS is enabled on the device */
     public boolean hasIpsecTunnelsFeature() {
         return mContext.getPackageManager().hasSystemFeature(PackageManager.FEATURE_IPSEC_TUNNELS)
-                || SystemProperties.getInt("ro.product.first_api_level", 0)
-                        >= Build.VERSION_CODES.Q;
+                || getFirstApiLevel() >= Build.VERSION_CODES.Q;
     }
 
     /**
