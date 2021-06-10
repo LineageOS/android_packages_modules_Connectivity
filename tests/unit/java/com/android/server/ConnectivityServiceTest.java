@@ -18,14 +18,10 @@ package com.android.server;
 
 import static android.Manifest.permission.CHANGE_NETWORK_STATE;
 import static android.Manifest.permission.CONNECTIVITY_USE_RESTRICTED_NETWORKS;
-import static android.Manifest.permission.CONTROL_OEM_PAID_NETWORK_PREFERENCE;
 import static android.Manifest.permission.DUMP;
-import static android.Manifest.permission.GET_INTENT_SENDER_INTENT;
 import static android.Manifest.permission.LOCAL_MAC_ADDRESS;
 import static android.Manifest.permission.NETWORK_FACTORY;
 import static android.Manifest.permission.NETWORK_SETTINGS;
-import static android.Manifest.permission.NETWORK_STACK;
-import static android.Manifest.permission.PACKET_KEEPALIVE_OFFLOAD;
 import static android.app.PendingIntent.FLAG_IMMUTABLE;
 import static android.content.Intent.ACTION_PACKAGE_ADDED;
 import static android.content.Intent.ACTION_PACKAGE_REMOVED;
@@ -134,7 +130,6 @@ import static com.android.testutils.MiscAsserts.assertLength;
 import static com.android.testutils.MiscAsserts.assertRunsInAtMost;
 import static com.android.testutils.MiscAsserts.assertSameElements;
 import static com.android.testutils.MiscAsserts.assertThrows;
-import static com.android.testutils.TestPermissionUtil.runAsShell;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -260,7 +255,6 @@ import android.net.shared.NetworkMonitorUtils;
 import android.net.shared.PrivateDnsConfig;
 import android.net.util.MultinetworkPolicyTracker;
 import android.os.BadParcelableException;
-import android.os.BatteryStatsManager;
 import android.os.Binder;
 import android.os.Build;
 import android.os.Bundle;
@@ -469,7 +463,6 @@ public class ConnectivityServiceTest {
     @Mock DeviceIdleInternal mDeviceIdleInternal;
     @Mock INetworkManagementService mNetworkManagementService;
     @Mock NetworkStatsManager mStatsManager;
-    @Mock BatteryStatsManager mBatteryStatsManager;
     @Mock IDnsResolver mMockDnsResolver;
     @Mock INetd mMockNetd;
     @Mock NetworkStackClientBase mNetworkStack;
@@ -580,7 +573,6 @@ public class ConnectivityServiceTest {
             if (Context.NETWORK_POLICY_SERVICE.equals(name)) return mNetworkPolicyManager;
             if (Context.SYSTEM_CONFIG_SERVICE.equals(name)) return mSystemConfigManager;
             if (Context.NETWORK_STATS_SERVICE.equals(name)) return mStatsManager;
-            if (Context.BATTERY_STATS_SERVICE.equals(name)) return mBatteryStatsManager;
             return super.getSystemService(name);
         }
 
@@ -660,13 +652,6 @@ public class ConnectivityServiceTest {
          */
         public void setPermission(String permission, Integer granted) {
             mMockedPermissions.put(permission, granted);
-        }
-
-        @Override
-        public Intent registerReceiverForAllUsers(@Nullable BroadcastReceiver receiver,
-                @NonNull IntentFilter filter, @Nullable String broadcastPermission,
-                @Nullable Handler scheduler) {
-            return null;
         }
     }
 
@@ -1217,22 +1202,7 @@ public class ConnectivityServiceTest {
                             return mDeviceIdleInternal;
                         }
                     },
-                    mNetworkManagementService, mMockNetd, userId, mVpnProfileStore,
-                    new SystemServices(mServiceContext) {
-                        @Override
-                        public String settingsSecureGetStringForUser(String key, int userId) {
-                            switch (key) {
-                                // Settings keys not marked as @Readable are not readable from
-                                // non-privileged apps, unless marked as testOnly=true
-                                // (atest refuses to install testOnly=true apps), even if mocked
-                                // in the content provider.
-                                case Settings.Secure.ALWAYS_ON_VPN_APP:
-                                    return null;
-                                default:
-                                    return super.settingsSecureGetStringForUser(key, userId);
-                            }
-                        }
-                    }, new Ikev2SessionCreator());
+                    mNetworkManagementService, mMockNetd, userId, mVpnProfileStore);
         }
 
         public void setUids(Set<UidRange> uids) {
@@ -1610,11 +1580,6 @@ public class ConnectivityServiceTest {
         mServiceContext = new MockContext(InstrumentationRegistry.getContext(),
                 new FakeSettingsProvider());
         mServiceContext.setUseRegisteredHandlers(true);
-        mServiceContext.setPermission(NETWORK_FACTORY, PERMISSION_GRANTED);
-        mServiceContext.setPermission(NETWORK_STACK, PERMISSION_GRANTED);
-        mServiceContext.setPermission(CONTROL_OEM_PAID_NETWORK_PREFERENCE, PERMISSION_GRANTED);
-        mServiceContext.setPermission(PACKET_KEEPALIVE_OFFLOAD, PERMISSION_GRANTED);
-        mServiceContext.setPermission(CONNECTIVITY_USE_RESTRICTED_NETWORKS, PERMISSION_GRANTED);
 
         mAlarmManagerThread = new HandlerThread("TestAlarmManager");
         mAlarmManagerThread.start();
@@ -1843,16 +1808,6 @@ public class ConnectivityServiceTest {
         // Test getAllNetworks()
         assertEmpty(mCm.getAllNetworks());
         assertEmpty(mCm.getAllNetworkStateSnapshots());
-    }
-
-    private static PendingIntent wrapPendingIntent(final PendingIntent intent) {
-        final PendingIntent ret = spy(intent);
-        // intentFilterEquals requires GET_INTENT_SENDER_INTENT permission
-        doAnswer(inv -> {
-            final PendingIntent other = inv.getArgument(0);
-            return runAsShell(GET_INTENT_SENDER_INTENT, () -> intent.intentFilterEquals(other));
-        }).when(ret).intentFilterEquals(any());
-        return ret;
     }
 
     /**
@@ -3303,8 +3258,8 @@ public class ConnectivityServiceTest {
 
     @Test
     public void testNoMutableNetworkRequests() throws Exception {
-        final PendingIntent pendingIntent = wrapPendingIntent(PendingIntent.getBroadcast(
-                mContext, 0 /* requestCode */, new Intent("a"), FLAG_IMMUTABLE));
+        final PendingIntent pendingIntent = PendingIntent.getBroadcast(
+                mContext, 0 /* requestCode */, new Intent("a"), FLAG_IMMUTABLE);
         NetworkRequest request1 = new NetworkRequest.Builder()
                 .addCapability(NET_CAPABILITY_VALIDATED)
                 .build();
@@ -4148,16 +4103,16 @@ public class ConnectivityServiceTest {
                 mCm.registerNetworkCallback(r, new NetworkCallback()));
 
         assertThrows(SecurityException.class, () ->
-                mCm.registerNetworkCallback(r, wrapPendingIntent(PendingIntent.getService(
-                        mServiceContext, 0 /* requestCode */, new Intent(), FLAG_IMMUTABLE))));
+                mCm.registerNetworkCallback(r, PendingIntent.getService(
+                        mServiceContext, 0 /* requestCode */, new Intent(), FLAG_IMMUTABLE)));
 
         // Requesting a Network with signal strength should get IllegalArgumentException.
         assertThrows(IllegalArgumentException.class, () ->
                 mCm.requestNetwork(r, new NetworkCallback()));
 
         assertThrows(IllegalArgumentException.class, () ->
-                mCm.requestNetwork(r, wrapPendingIntent(PendingIntent.getService(
-                        mServiceContext, 0 /* requestCode */, new Intent(), FLAG_IMMUTABLE))));
+                mCm.requestNetwork(r, PendingIntent.getService(
+                        mServiceContext, 0 /* requestCode */, new Intent(), FLAG_IMMUTABLE)));
     }
 
     @Test
@@ -5713,14 +5668,14 @@ public class ConnectivityServiceTest {
         }
         j = 0;
         while (j++ < INTENTS / 2) {
-            final PendingIntent pi = wrapPendingIntent(PendingIntent.getBroadcast(mContext,
-                    0 /* requestCode */, new Intent("a" + j), FLAG_IMMUTABLE));
+            final PendingIntent pi = PendingIntent.getBroadcast(mContext, 0 /* requestCode */,
+                    new Intent("a" + j), FLAG_IMMUTABLE);
             mCm.requestNetwork(networkRequest, pi);
             registered.add(pi);
         }
         while (j++ < INTENTS) {
-            final PendingIntent pi = wrapPendingIntent(PendingIntent.getBroadcast(mContext,
-                    0 /* requestCode */, new Intent("b" + j), FLAG_IMMUTABLE));
+            final PendingIntent pi = PendingIntent.getBroadcast(mContext, 0 /* requestCode */,
+                    new Intent("b" + j), FLAG_IMMUTABLE);
             mCm.registerNetworkCallback(networkRequest, pi);
             registered.add(pi);
         }
@@ -5734,13 +5689,13 @@ public class ConnectivityServiceTest {
         );
         assertThrows(TooManyRequestsException.class, () ->
                 mCm.requestNetwork(networkRequest,
-                        wrapPendingIntent(PendingIntent.getBroadcast(mContext, 0 /* requestCode */,
-                                new Intent("c"), FLAG_IMMUTABLE)))
+                        PendingIntent.getBroadcast(mContext, 0 /* requestCode */,
+                                new Intent("c"), FLAG_IMMUTABLE))
         );
         assertThrows(TooManyRequestsException.class, () ->
                 mCm.registerNetworkCallback(networkRequest,
-                        wrapPendingIntent(PendingIntent.getBroadcast(mContext, 0 /* requestCode */,
-                                new Intent("d"), FLAG_IMMUTABLE)))
+                        PendingIntent.getBroadcast(mContext, 0 /* requestCode */,
+                                new Intent("d"), FLAG_IMMUTABLE))
         );
 
         // The system gets another SYSTEM_ONLY_MAX_REQUESTS slots.
@@ -5820,16 +5775,16 @@ public class ConnectivityServiceTest {
         waitForIdle();
 
         for (int i = 0; i < MAX_REQUESTS; i++) {
-            final PendingIntent pendingIntent = wrapPendingIntent(PendingIntent.getBroadcast(
-                    mContext, 0 /* requestCode */, new Intent("e" + i), FLAG_IMMUTABLE));
+            final PendingIntent pendingIntent = PendingIntent.getBroadcast(
+                    mContext, 0 /* requestCode */, new Intent("e" + i), FLAG_IMMUTABLE);
             mCm.requestNetwork(networkRequest, pendingIntent);
             mCm.unregisterNetworkCallback(pendingIntent);
         }
         waitForIdle();
 
         for (int i = 0; i < MAX_REQUESTS; i++) {
-            final PendingIntent pendingIntent = wrapPendingIntent(PendingIntent.getBroadcast(
-                    mContext, 0 /* requestCode */, new Intent("f" + i), FLAG_IMMUTABLE));
+            final PendingIntent pendingIntent = PendingIntent.getBroadcast(
+                    mContext, 0 /* requestCode */, new Intent("f" + i), FLAG_IMMUTABLE);
             mCm.registerNetworkCallback(networkRequest, pendingIntent);
             mCm.unregisterNetworkCallback(pendingIntent);
         }
@@ -9272,7 +9227,8 @@ public class ConnectivityServiceTest {
         mServiceContext.setPermission(NetworkStack.PERMISSION_MAINLINE_NETWORK_STACK,
                 PERMISSION_DENIED);
         mServiceContext.setPermission(NETWORK_SETTINGS, PERMISSION_DENIED);
-        mServiceContext.setPermission(NETWORK_STACK, PERMISSION_DENIED);
+        mServiceContext.setPermission(Manifest.permission.NETWORK_STACK,
+                PERMISSION_DENIED);
         mServiceContext.setPermission(Manifest.permission.NETWORK_SETUP_WIZARD,
                 PERMISSION_DENIED);
     }
@@ -9713,7 +9669,7 @@ public class ConnectivityServiceTest {
         setupConnectionOwnerUid(vpnOwnerUid, vpnType);
 
         // Test as VPN app
-        mServiceContext.setPermission(NETWORK_STACK, PERMISSION_DENIED);
+        mServiceContext.setPermission(android.Manifest.permission.NETWORK_STACK, PERMISSION_DENIED);
         mServiceContext.setPermission(
                 NetworkStack.PERMISSION_MAINLINE_NETWORK_STACK, PERMISSION_DENIED);
     }
@@ -9753,7 +9709,8 @@ public class ConnectivityServiceTest {
     public void testGetConnectionOwnerUidVpnServiceNetworkStackDoesNotThrow() throws Exception {
         final int myUid = Process.myUid();
         setupConnectionOwnerUid(myUid, VpnManager.TYPE_VPN_SERVICE);
-        mServiceContext.setPermission(NETWORK_STACK, PERMISSION_GRANTED);
+        mServiceContext.setPermission(
+                android.Manifest.permission.NETWORK_STACK, PERMISSION_GRANTED);
 
         assertEquals(42, mService.getConnectionOwnerUid(getTestConnectionInfo()));
     }
@@ -9921,7 +9878,8 @@ public class ConnectivityServiceTest {
     public void testCheckConnectivityDiagnosticsPermissionsNetworkStack() throws Exception {
         final NetworkAgentInfo naiWithoutUid = fakeMobileNai(new NetworkCapabilities());
 
-        mServiceContext.setPermission(NETWORK_STACK, PERMISSION_GRANTED);
+        mServiceContext.setPermission(
+                android.Manifest.permission.NETWORK_STACK, PERMISSION_GRANTED);
         assertTrue(
                 "NetworkStack permission not applied",
                 mService.checkConnectivityDiagnosticsPermissions(
@@ -9937,7 +9895,7 @@ public class ConnectivityServiceTest {
         nc.setAdministratorUids(new int[] {wrongUid});
         final NetworkAgentInfo naiWithUid = fakeWifiNai(nc);
 
-        mServiceContext.setPermission(NETWORK_STACK, PERMISSION_DENIED);
+        mServiceContext.setPermission(android.Manifest.permission.NETWORK_STACK, PERMISSION_DENIED);
 
         assertFalse(
                 "Mismatched uid/package name should not pass the location permission check",
@@ -9947,7 +9905,7 @@ public class ConnectivityServiceTest {
 
     private void verifyConnectivityDiagnosticsPermissionsWithNetworkAgentInfo(
             NetworkAgentInfo info, boolean expectPermission) {
-        mServiceContext.setPermission(NETWORK_STACK, PERMISSION_DENIED);
+        mServiceContext.setPermission(android.Manifest.permission.NETWORK_STACK, PERMISSION_DENIED);
 
         assertEquals(
                 "Unexpected ConnDiags permission",
@@ -10015,7 +9973,7 @@ public class ConnectivityServiceTest {
 
         setupLocationPermissions(Build.VERSION_CODES.Q, true, AppOpsManager.OPSTR_FINE_LOCATION,
                 Manifest.permission.ACCESS_FINE_LOCATION);
-        mServiceContext.setPermission(NETWORK_STACK, PERMISSION_DENIED);
+        mServiceContext.setPermission(android.Manifest.permission.NETWORK_STACK, PERMISSION_DENIED);
 
         assertTrue(
                 "NetworkCapabilities administrator uid permission not applied",
@@ -10032,7 +9990,7 @@ public class ConnectivityServiceTest {
 
         setupLocationPermissions(Build.VERSION_CODES.Q, true, AppOpsManager.OPSTR_FINE_LOCATION,
                 Manifest.permission.ACCESS_FINE_LOCATION);
-        mServiceContext.setPermission(NETWORK_STACK, PERMISSION_DENIED);
+        mServiceContext.setPermission(android.Manifest.permission.NETWORK_STACK, PERMISSION_DENIED);
 
         // Use wrong pid and uid
         assertFalse(
@@ -10058,7 +10016,8 @@ public class ConnectivityServiceTest {
         final NetworkRequest request = new NetworkRequest.Builder().build();
         when(mConnectivityDiagnosticsCallback.asBinder()).thenReturn(mIBinder);
 
-        mServiceContext.setPermission(NETWORK_STACK, PERMISSION_GRANTED);
+        mServiceContext.setPermission(
+                android.Manifest.permission.NETWORK_STACK, PERMISSION_GRANTED);
 
         mService.registerConnectivityDiagnosticsCallback(
                 mConnectivityDiagnosticsCallback, request, mContext.getPackageName());
@@ -10077,7 +10036,8 @@ public class ConnectivityServiceTest {
         final NetworkRequest request = new NetworkRequest.Builder().build();
         when(mConnectivityDiagnosticsCallback.asBinder()).thenReturn(mIBinder);
 
-        mServiceContext.setPermission(NETWORK_STACK, PERMISSION_GRANTED);
+        mServiceContext.setPermission(
+                android.Manifest.permission.NETWORK_STACK, PERMISSION_GRANTED);
 
         mService.registerConnectivityDiagnosticsCallback(
                 mConnectivityDiagnosticsCallback, request, mContext.getPackageName());
@@ -12808,8 +12768,8 @@ public class ConnectivityServiceTest {
     @Test
     public void testNetworkRequestWithSubIdsWithNetworkFactoryPermission() throws Exception {
         mServiceContext.setPermission(NETWORK_FACTORY, PERMISSION_GRANTED);
-        final PendingIntent pendingIntent = wrapPendingIntent(PendingIntent.getBroadcast(
-                mContext, 0 /* requestCode */, new Intent("a"), FLAG_IMMUTABLE));
+        final PendingIntent pendingIntent = PendingIntent.getBroadcast(
+                mContext, 0 /* requestCode */, new Intent("a"), FLAG_IMMUTABLE);
         final NetworkCallback networkCallback1 = new NetworkCallback();
         final NetworkCallback networkCallback2 = new NetworkCallback();
 
@@ -12825,8 +12785,8 @@ public class ConnectivityServiceTest {
     @Test
     public void testNetworkRequestWithSubIdsWithoutNetworkFactoryPermission() throws Exception {
         mServiceContext.setPermission(NETWORK_FACTORY, PERMISSION_DENIED);
-        final PendingIntent pendingIntent = wrapPendingIntent(PendingIntent.getBroadcast(
-                mContext, 0 /* requestCode */, new Intent("a"), FLAG_IMMUTABLE));
+        final PendingIntent pendingIntent = PendingIntent.getBroadcast(
+                mContext, 0 /* requestCode */, new Intent("a"), FLAG_IMMUTABLE);
 
         final Class<SecurityException> expected = SecurityException.class;
         assertThrows(
