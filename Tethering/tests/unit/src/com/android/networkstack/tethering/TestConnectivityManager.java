@@ -36,6 +36,7 @@ import android.os.Handler;
 import android.os.UserHandle;
 import android.util.ArrayMap;
 
+import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import java.util.Map;
@@ -67,10 +68,10 @@ public class TestConnectivityManager extends ConnectivityManager {
     public static final boolean BROADCAST_FIRST = false;
     public static final boolean CALLBACKS_FIRST = true;
 
-    final Map<NetworkCallback, NetworkRequestInfo> mAllCallbacks = new ArrayMap<>();
+    final Map<NetworkCallback, NetworkCallbackInfo> mAllCallbacks = new ArrayMap<>();
     // This contains the callbacks tracking the system default network, whether it's registered
     // with registerSystemDefaultNetworkCallback (S+) or with a custom request (R-).
-    final Map<NetworkCallback, NetworkRequestInfo> mTrackingDefault = new ArrayMap<>();
+    final Map<NetworkCallback, NetworkCallbackInfo> mTrackingDefault = new ArrayMap<>();
     final Map<NetworkCallback, NetworkRequestInfo> mListening = new ArrayMap<>();
     final Map<NetworkCallback, NetworkRequestInfo> mRequested = new ArrayMap<>();
     final Map<NetworkCallback, Integer> mLegacyTypeMap = new ArrayMap<>();
@@ -91,12 +92,18 @@ public class TestConnectivityManager extends ConnectivityManager {
         mContext = ctx;
     }
 
-    class NetworkRequestInfo {
-        public final NetworkRequest request;
+    static class NetworkCallbackInfo {
         public final Handler handler;
-        NetworkRequestInfo(NetworkRequest r, Handler h) {
-            request = r;
+        NetworkCallbackInfo(Handler h) {
             handler = h;
+        }
+    }
+
+    static class NetworkRequestInfo extends NetworkCallbackInfo {
+        public final NetworkRequest request;
+        NetworkRequestInfo(NetworkRequest r, Handler h) {
+            super(h);
+            request = r;
         }
     }
 
@@ -145,7 +152,7 @@ public class TestConnectivityManager extends ConnectivityManager {
     private void sendDefaultNetworkCallbacks(TestNetworkAgent formerDefault,
             TestNetworkAgent defaultNetwork) {
         for (NetworkCallback cb : mTrackingDefault.keySet()) {
-            final NetworkRequestInfo nri = mTrackingDefault.get(cb);
+            final NetworkCallbackInfo nri = mTrackingDefault.get(cb);
             if (defaultNetwork != null) {
                 nri.handler.post(() -> cb.onAvailable(defaultNetwork.networkId));
                 nri.handler.post(() -> cb.onCapabilitiesChanged(
@@ -191,17 +198,25 @@ public class TestConnectivityManager extends ConnectivityManager {
 
     @Override
     public void requestNetwork(NetworkRequest req, NetworkCallback cb, Handler h) {
-        assertFalse(mAllCallbacks.containsKey(cb));
-        mAllCallbacks.put(cb, new NetworkRequestInfo(req, h));
         // For R- devices, Tethering will invoke this function in 2 cases, one is to request mobile
         // network, the other is to track system default network.
         if (looksLikeDefaultRequest(req)) {
-            assertFalse(mTrackingDefault.containsKey(cb));
-            mTrackingDefault.put(cb, new NetworkRequestInfo(req, h));
+            registerSystemDefaultNetworkCallback(cb, h);
         } else {
+            assertFalse(mAllCallbacks.containsKey(cb));
+            mAllCallbacks.put(cb, new NetworkRequestInfo(req, h));
             assertFalse(mRequested.containsKey(cb));
             mRequested.put(cb, new NetworkRequestInfo(req, h));
         }
+    }
+
+    @Override
+    public void registerSystemDefaultNetworkCallback(
+            @NonNull NetworkCallback cb, @NonNull Handler h) {
+        assertFalse(mAllCallbacks.containsKey(cb));
+        mAllCallbacks.put(cb, new NetworkCallbackInfo(h));
+        assertFalse(mTrackingDefault.containsKey(cb));
+        mTrackingDefault.put(cb, new NetworkCallbackInfo(h));
     }
 
     @Override
