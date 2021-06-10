@@ -116,6 +116,7 @@ public class MultipathPolicyTrackerTest {
     private <T> void mockService(String serviceName, Class<T> serviceClass, T service) {
         when(mContext.getSystemServiceName(serviceClass)).thenReturn(serviceName);
         when(mContext.getSystemService(serviceName)).thenReturn(service);
+        when(mContext.getSystemService(serviceClass)).thenReturn(service);
     }
 
     @Before
