@@ -19,7 +19,6 @@ package com.android.server;
 import static android.Manifest.permission.CHANGE_NETWORK_STATE;
 import static android.Manifest.permission.CONNECTIVITY_USE_RESTRICTED_NETWORKS;
 import static android.Manifest.permission.CONTROL_OEM_PAID_NETWORK_PREFERENCE;
-import static android.Manifest.permission.CREATE_USERS;
 import static android.Manifest.permission.DUMP;
 import static android.Manifest.permission.GET_INTENT_SENDER_INTENT;
 import static android.Manifest.permission.LOCAL_MAC_ADDRESS;
@@ -308,7 +307,6 @@ import com.android.internal.util.test.BroadcastInterceptingContext;
 import com.android.internal.util.test.FakeSettingsProvider;
 import com.android.net.module.util.ArrayTrackRecord;
 import com.android.net.module.util.CollectionUtils;
-import com.android.net.module.util.LocationPermissionChecker;
 import com.android.server.ConnectivityService.ConnectivityDiagnosticsCallbackInfo;
 import com.android.server.ConnectivityService.NetworkRequestInfo;
 import com.android.server.connectivity.MockableSystemProperties;
@@ -1676,13 +1674,6 @@ public class ConnectivityServiceTest {
             return mPolicyTracker;
         }).when(deps).makeMultinetworkPolicyTracker(any(), any(), any());
         doReturn(true).when(deps).getCellular464XlatEnabled();
-        doAnswer(inv ->
-            new LocationPermissionChecker(inv.getArgument(0)) {
-                @Override
-                protected int getCurrentUser() {
-                    return runAsShell(CREATE_USERS, super::getCurrentUser);
-                }
-            }).when(deps).makeLocationPermissionChecker(any());
 
         doReturn(60000).when(mResources).getInteger(R.integer.config_networkTransitionTimeout);
         doReturn("").when(mResources).getString(R.string.config_networkCaptivePortalServerUrl);
