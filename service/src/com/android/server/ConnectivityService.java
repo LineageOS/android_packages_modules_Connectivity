@@ -1247,13 +1247,6 @@ public class ConnectivityService extends IConnectivityManager.Stub
         public boolean getCellular464XlatEnabled() {
             return NetworkProperties.isCellular464XlatEnabled().orElse(true);
         }
-
-        /**
-         * Create a {@link LocationPermissionChecker}.
-         */
-        public LocationPermissionChecker makeLocationPermissionChecker(Context context) {
-            return new LocationPermissionChecker(context);
-        }
     }
 
     public ConnectivityService(Context context) {
@@ -1321,7 +1314,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
         mNetd = netd;
         mTelephonyManager = (TelephonyManager) mContext.getSystemService(Context.TELEPHONY_SERVICE);
         mAppOpsManager = (AppOpsManager) mContext.getSystemService(Context.APP_OPS_SERVICE);
-        mLocationPermissionChecker = mDeps.makeLocationPermissionChecker(mContext);
+        mLocationPermissionChecker = new LocationPermissionChecker(mContext);
 
         // To ensure uid state is synchronized with Network Policy, register for
         // NetworkPolicyManagerService events must happen prior to NetworkPolicyManagerService
