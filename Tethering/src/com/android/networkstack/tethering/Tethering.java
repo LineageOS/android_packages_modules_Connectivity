@@ -495,11 +495,11 @@ public class Tethering {
         // See NetlinkHandler.cpp: notifyInterfaceChanged.
         if (VDBG) Log.d(TAG, "interfaceStatusChanged " + iface + ", " + up);
         if (up) {
-            maybeTrackNewInterfaceLocked(iface);
+            maybeTrackNewInterface(iface);
         } else {
             if (ifaceNameToType(iface) == TETHERING_BLUETOOTH
                     || ifaceNameToType(iface) == TETHERING_WIGIG) {
-                stopTrackingInterfaceLocked(iface);
+                stopTrackingInterface(iface);
             } else {
                 // Ignore usb0 down after enabling RNDIS.
                 // We will handle disconnect in interfaceRemoved.
@@ -535,12 +535,12 @@ public class Tethering {
 
     void interfaceAdded(String iface) {
         if (VDBG) Log.d(TAG, "interfaceAdded " + iface);
-        maybeTrackNewInterfaceLocked(iface);
+        maybeTrackNewInterface(iface);
     }
 
     void interfaceRemoved(String iface) {
         if (VDBG) Log.d(TAG, "interfaceRemoved " + iface);
-        stopTrackingInterfaceLocked(iface);
+        stopTrackingInterface(iface);
     }
 
     void startTethering(final TetheringRequestParcel request, final IIntResultListener listener) {
@@ -694,14 +694,14 @@ public class Tethering {
             mEthernetCallback = new EthernetCallback();
             mEthernetIfaceRequest = em.requestTetheredInterface(mExecutor, mEthernetCallback);
         } else {
-            stopEthernetTetheringLocked();
+            stopEthernetTethering();
         }
         return TETHER_ERROR_NO_ERROR;
     }
 
-    private void stopEthernetTetheringLocked() {
+    private void stopEthernetTethering() {
         if (mConfiguredEthernetIface != null) {
-            stopTrackingInterfaceLocked(mConfiguredEthernetIface);
+            stopTrackingInterface(mConfiguredEthernetIface);
             mConfiguredEthernetIface = null;
         }
         if (mEthernetCallback != null) {
@@ -718,7 +718,7 @@ public class Tethering {
                 // Ethernet callback arrived after Ethernet tethering stopped. Ignore.
                 return;
             }
-            maybeTrackNewInterfaceLocked(iface, TETHERING_ETHERNET);
+            maybeTrackNewInterface(iface, TETHERING_ETHERNET);
             changeInterfaceState(iface, getRequestedState(TETHERING_ETHERNET));
             mConfiguredEthernetIface = iface;
         }
@@ -729,7 +729,7 @@ public class Tethering {
                 // onAvailable called after stopping Ethernet tethering.
                 return;
             }
-            stopEthernetTetheringLocked();
+            stopEthernetTethering();
         }
     }
 
@@ -1030,7 +1030,7 @@ public class Tethering {
                     // We can see this state on the way to both enabled and failure states.
                     break;
                 case WifiManager.WIFI_AP_STATE_ENABLED:
-                    enableWifiIpServingLocked(ifname, ipmode);
+                    enableWifiIpServing(ifname, ipmode);
                     break;
                 case WifiManager.WIFI_AP_STATE_DISABLING:
                     // We can see this state on the way to disabled.
@@ -1038,7 +1038,7 @@ public class Tethering {
                 case WifiManager.WIFI_AP_STATE_DISABLED:
                 case WifiManager.WIFI_AP_STATE_FAILED:
                 default:
-                    disableWifiIpServingLocked(ifname, curState);
+                    disableWifiIpServing(ifname, curState);
                     break;
             }
         }
@@ -1062,7 +1062,7 @@ public class Tethering {
 
             // if no group is formed, bring it down if needed.
             if (p2pInfo == null || !p2pInfo.groupFormed) {
-                disableWifiP2pIpServingLockedIfNeeded(mWifiP2pTetherInterface);
+                disableWifiP2pIpServingIfNeeded(mWifiP2pTetherInterface);
                 mWifiP2pTetherInterface = null;
                 return;
             }
@@ -1078,12 +1078,12 @@ public class Tethering {
                 mLog.w("P2P tethered interface " + mWifiP2pTetherInterface
                         + "is different from current interface "
                         + group.getInterface() + ", re-tether it");
-                disableWifiP2pIpServingLockedIfNeeded(mWifiP2pTetherInterface);
+                disableWifiP2pIpServingIfNeeded(mWifiP2pTetherInterface);
             }
 
             // Finally bring up serving on the new interface
             mWifiP2pTetherInterface = group.getInterface();
-            enableWifiIpServingLocked(mWifiP2pTetherInterface, IFACE_IP_MODE_LOCAL_ONLY);
+            enableWifiIpServing(mWifiP2pTetherInterface, IFACE_IP_MODE_LOCAL_ONLY);
         }
 
         private void handleUserRestrictionAction() {
@@ -1164,7 +1164,7 @@ public class Tethering {
         }
     }
 
-    private void disableWifiIpServingLockedCommon(int tetheringType, String ifname, int apState) {
+    private void disableWifiIpServingCommon(int tetheringType, String ifname, int apState) {
         mLog.log("Canceling WiFi tethering request -"
                 + " type=" + tetheringType
                 + " interface=" + ifname
@@ -1191,23 +1191,23 @@ public class Tethering {
                                            : "specified interface: " + ifname));
     }
 
-    private void disableWifiIpServingLocked(String ifname, int apState) {
+    private void disableWifiIpServing(String ifname, int apState) {
         // Regardless of whether we requested this transition, the AP has gone
         // down.  Don't try to tether again unless we're requested to do so.
         // TODO: Remove this altogether, once Wi-Fi reliably gives us an
         // interface name with every broadcast.
         mWifiTetherRequested = false;
 
-        disableWifiIpServingLockedCommon(TETHERING_WIFI, ifname, apState);
+        disableWifiIpServingCommon(TETHERING_WIFI, ifname, apState);
     }
 
-    private void disableWifiP2pIpServingLockedIfNeeded(String ifname) {
+    private void disableWifiP2pIpServingIfNeeded(String ifname) {
         if (TextUtils.isEmpty(ifname)) return;
 
-        disableWifiIpServingLockedCommon(TETHERING_WIFI_P2P, ifname, /* fake */ 0);
+        disableWifiIpServingCommon(TETHERING_WIFI_P2P, ifname, /* fake */ 0);
     }
 
-    private void enableWifiIpServingLocked(String ifname, int wifiIpMode) {
+    private void enableWifiIpServing(String ifname, int wifiIpMode) {
         // Map wifiIpMode values to IpServer.Callback serving states, inferring
         // from mWifiTetherRequested as a final "best guess".
         final int ipServingMode;
@@ -1224,7 +1224,7 @@ public class Tethering {
         }
 
         if (!TextUtils.isEmpty(ifname)) {
-            maybeTrackNewInterfaceLocked(ifname);
+            maybeTrackNewInterface(ifname);
             changeInterfaceState(ifname, ipServingMode);
         } else {
             mLog.e(String.format(
@@ -2437,7 +2437,7 @@ public class Tethering {
         mTetherMainSM.sendMessage(which, state, 0, newLp);
     }
 
-    private void maybeTrackNewInterfaceLocked(final String iface) {
+    private void maybeTrackNewInterface(final String iface) {
         // If we don't care about this type of interface, ignore.
         final int interfaceType = ifaceNameToType(iface);
         if (interfaceType == TETHERING_INVALID) {
@@ -2457,10 +2457,10 @@ public class Tethering {
             return;
         }
 
-        maybeTrackNewInterfaceLocked(iface, interfaceType);
+        maybeTrackNewInterface(iface, interfaceType);
     }
 
-    private void maybeTrackNewInterfaceLocked(final String iface, int interfaceType) {
+    private void maybeTrackNewInterface(final String iface, int interfaceType) {
         // If we have already started a TISM for this interface, skip.
         if (mTetherStates.containsKey(iface)) {
             mLog.log("active iface (" + iface + ") reported as added, ignoring");
@@ -2477,7 +2477,7 @@ public class Tethering {
         tetherState.ipServer.start();
     }
 
-    private void stopTrackingInterfaceLocked(final String iface) {
+    private void stopTrackingInterface(final String iface) {
         final TetherState tetherState = mTetherStates.get(iface);
         if (tetherState == null) {
             mLog.log("attempting to remove unknown iface (" + iface + "), ignoring");
