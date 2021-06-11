@@ -23,6 +23,7 @@ import static android.net.NetworkCapabilities.TRANSPORT_CELLULAR;
 import static android.net.NetworkCapabilities.TRANSPORT_TEST;
 import static android.net.wifi.WifiManager.SCAN_RESULTS_AVAILABLE_ACTION;
 
+import static com.android.compatibility.common.util.PropertyUtil.getFirstApiLevel;
 import static com.android.testutils.TestPermissionUtil.runAsShell;
 
 import static org.junit.Assert.assertEquals;
@@ -55,7 +56,6 @@ import android.net.wifi.WifiManager;
 import android.os.Binder;
 import android.os.Build;
 import android.os.IBinder;
-import android.os.SystemProperties;
 import android.provider.Settings;
 import android.system.Os;
 import android.system.OsConstants;
@@ -87,6 +87,7 @@ public final class CtsNetUtils {
     private static final int PRIVATE_DNS_SETTING_TIMEOUT_MS = 10_000;
     private static final int CONNECTIVITY_CHANGE_TIMEOUT_SECS = 30;
     private static final String PRIVATE_DNS_MODE_OPPORTUNISTIC = "opportunistic";
+    private static final String PRIVATE_DNS_MODE_STRICT = "hostname";
     public static final int HTTP_PORT = 80;
     public static final String TEST_HOST = "connectivitycheck.gstatic.com";
     public static final String HTTP_REQUEST =
@@ -116,8 +117,7 @@ public final class CtsNetUtils {
     /** Checks if FEATURE_IPSEC_TUNNELS is enabled on the device */
     public boolean hasIpsecTunnelsFeature() {
         return mContext.getPackageManager().hasSystemFeature(PackageManager.FEATURE_IPSEC_TUNNELS)
-                || SystemProperties.getInt("ro.product.first_api_level", 0)
-                        >= Build.VERSION_CODES.Q;
+                || getFirstApiLevel() >= Build.VERSION_CODES.Q;
     }
 
     /**
@@ -524,12 +524,17 @@ public final class CtsNetUtils {
     }
 
     public void restorePrivateDnsSetting() throws InterruptedException {
-        if (mOldPrivateDnsMode == null || mOldPrivateDnsSpecifier == null) {
-            return;
+        if (mOldPrivateDnsMode == null) {
+            fail("restorePrivateDnsSetting without storing settings first");
         }
         // restore private DNS setting
-        if ("hostname".equals(mOldPrivateDnsMode)) {
+        if (PRIVATE_DNS_MODE_STRICT.equals(mOldPrivateDnsMode)) {
             setPrivateDnsStrictMode(mOldPrivateDnsSpecifier);
+
+            // In case of invalid setting, still restore it but fail the test
+            if (mOldPrivateDnsSpecifier == null) {
+                fail("Invalid private DNS setting: no hostname specified in strict mode");
+            }
             awaitPrivateDnsSetting("restorePrivateDnsSetting timeout",
                     mCm.getActiveNetwork(),
                     mOldPrivateDnsSpecifier, true);
@@ -540,13 +545,14 @@ public final class CtsNetUtils {
 
     public void setPrivateDnsStrictMode(String server) {
         // To reduce flake rate, set PRIVATE_DNS_SPECIFIER before PRIVATE_DNS_MODE. This ensures
-        // that if the previous private DNS mode was not "hostname", the system only sees one
+        // that if the previous private DNS mode was not strict, the system only sees one
         // EVENT_PRIVATE_DNS_SETTINGS_CHANGED event instead of two.
         Settings.Global.putString(mCR, Settings.Global.PRIVATE_DNS_SPECIFIER, server);
         final String mode = Settings.Global.getString(mCR, Settings.Global.PRIVATE_DNS_MODE);
-        // If current private DNS mode is "hostname", we only need to set PRIVATE_DNS_SPECIFIER.
-        if (!"hostname".equals(mode)) {
-            Settings.Global.putString(mCR, Settings.Global.PRIVATE_DNS_MODE, "hostname");
+        // If current private DNS mode is strict, we only need to set PRIVATE_DNS_SPECIFIER.
+        if (!PRIVATE_DNS_MODE_STRICT.equals(mode)) {
+            Settings.Global.putString(mCR, Settings.Global.PRIVATE_DNS_MODE,
+                    PRIVATE_DNS_MODE_STRICT);
         }
     }
 
