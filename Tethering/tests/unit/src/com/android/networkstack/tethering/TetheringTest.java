@@ -60,6 +60,7 @@ import static android.net.wifi.WifiManager.WIFI_AP_STATE_ENABLED;
 import static android.system.OsConstants.RT_SCOPE_UNIVERSE;
 import static android.telephony.SubscriptionManager.INVALID_SUBSCRIPTION_ID;
 
+import static com.android.modules.utils.build.SdkLevel.isAtLeastS;
 import static com.android.net.module.util.Inet4AddressUtils.inet4AddressToIntHTH;
 import static com.android.net.module.util.Inet4AddressUtils.intToInet4AddressHTH;
 import static com.android.networkstack.tethering.OffloadHardwareInterface.OFFLOAD_HAL_VERSION_1_0;
@@ -773,10 +774,17 @@ public class TetheringTest {
     }
 
     private void verifyDefaultNetworkRequestFiled() {
-        ArgumentCaptor<NetworkRequest> reqCaptor = ArgumentCaptor.forClass(NetworkRequest.class);
-        verify(mCm, times(1)).requestNetwork(reqCaptor.capture(),
-                any(NetworkCallback.class), any(Handler.class));
-        assertTrue(TestConnectivityManager.looksLikeDefaultRequest(reqCaptor.getValue()));
+        if (isAtLeastS()) {
+            verify(mCm, times(1)).registerSystemDefaultNetworkCallback(
+                    any(NetworkCallback.class), any(Handler.class));
+        } else {
+            ArgumentCaptor<NetworkRequest> reqCaptor = ArgumentCaptor.forClass(
+                    NetworkRequest.class);
+            verify(mCm, times(1)).requestNetwork(reqCaptor.capture(),
+                    any(NetworkCallback.class), any(Handler.class));
+            assertTrue(TestConnectivityManager.looksLikeDefaultRequest(reqCaptor.getValue()));
+        }
+
         // The default network request is only ever filed once.
         verifyNoMoreInteractions(mCm);
     }
