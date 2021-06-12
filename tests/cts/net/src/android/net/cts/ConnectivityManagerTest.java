@@ -2010,6 +2010,7 @@ public class ConnectivityManagerTest {
         assertThrows(SecurityException.class, () -> mCm.factoryReset());
     }
 
+    @AppModeFull(reason = "Cannot get WifiManager in instant app mode")
     @Test
     public void testFactoryReset() throws Exception {
         assumeTrue(TestUtils.shouldTestSApis());
