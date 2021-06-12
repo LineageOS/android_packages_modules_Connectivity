@@ -151,6 +151,7 @@ import com.android.networkstack.apishim.NetworkInformationShimImpl;
 import com.android.networkstack.apishim.common.ConnectivityManagerShim;
 import com.android.testutils.CompatUtil;
 import com.android.testutils.DevSdkIgnoreRule;
+import com.android.testutils.DevSdkIgnoreRule.IgnoreUpTo;
 import com.android.testutils.DevSdkIgnoreRuleKt;
 import com.android.testutils.RecorderCallback.CallbackEntry;
 import com.android.testutils.SkipPresubmit;
@@ -658,6 +659,31 @@ public class ConnectivityManagerTest {
         return new NetworkRequest.Builder()
                 .addTransportType(NetworkCapabilities.TRANSPORT_CELLULAR)
                 .build();
+    }
+
+    @Test @IgnoreUpTo(Build.VERSION_CODES.Q)
+    public void testIsPrivateDnsBroken() throws InterruptedException {
+        final String invalidPrivateDnsServer = "invalidhostname.example.com";
+        final String goodPrivateDnsServer = "dns.google";
+        mCtsNetUtils.storePrivateDnsSetting();
+        final TestableNetworkCallback cb = new TestableNetworkCallback();
+        mCm.registerNetworkCallback(makeWifiNetworkRequest(), cb);
+        try {
+            // Verifying the good private DNS sever
+            mCtsNetUtils.setPrivateDnsStrictMode(goodPrivateDnsServer);
+            final Network networkForPrivateDns =  mCtsNetUtils.ensureWifiConnected();
+            cb.eventuallyExpect(CallbackEntry.NETWORK_CAPS_UPDATED, NETWORK_CALLBACK_TIMEOUT_MS,
+                    entry -> (!((CallbackEntry.CapabilitiesChanged) entry).getCaps()
+                    .isPrivateDnsBroken()) && networkForPrivateDns.equals(entry.getNetwork()));
+
+            // Verifying the broken private DNS sever
+            mCtsNetUtils.setPrivateDnsStrictMode(invalidPrivateDnsServer);
+            cb.eventuallyExpect(CallbackEntry.NETWORK_CAPS_UPDATED, NETWORK_CALLBACK_TIMEOUT_MS,
+                    entry -> (((CallbackEntry.CapabilitiesChanged) entry).getCaps()
+                    .isPrivateDnsBroken()) && networkForPrivateDns.equals(entry.getNetwork()));
+        } finally {
+            mCtsNetUtils.restorePrivateDnsSetting();
+        }
     }
 
     /**
