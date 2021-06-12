@@ -48,10 +48,6 @@ bpf {
         "-Wall",
         "-Werror",
     ],
-    include_dirs: [
-        // TODO: get rid of system/netd.
-        "system/netd/bpf_progs",             // for bpf_net_helpers.h
-    ],
 }
 
 bpf {
@@ -60,9 +56,5 @@ bpf {
     cflags: [
         "-Wall",
         "-Werror",
-    ],
-    include_dirs: [
-        // TODO: get rid of system/netd.
-        "system/netd/bpf_progs",             // for bpf_net_helpers.h
     ],
 }
