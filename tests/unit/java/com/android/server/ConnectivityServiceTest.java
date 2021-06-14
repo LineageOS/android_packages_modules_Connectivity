@@ -412,6 +412,7 @@ public class ConnectivityServiceTest {
             UserHandle.getUid(TEST_WORK_PROFILE_USER_ID, TEST_APP_ID);
     private static final String CLAT_PREFIX = "v4-";
     private static final String MOBILE_IFNAME = "test_rmnet_data0";
+    private static final String CLAT_MOBILE_IFNAME = CLAT_PREFIX + MOBILE_IFNAME;
     private static final String WIFI_IFNAME = "test_wlan0";
     private static final String WIFI_WOL_IFNAME = "test_wlan_wol";
     private static final String VPN_IFNAME = "tun10042";
@@ -8477,10 +8478,10 @@ public class ConnectivityServiceTest {
     private LinkProperties makeClatLinkProperties(LinkAddress la) {
         LinkAddress clatAddress = la;
         LinkProperties stacked = new LinkProperties();
-        stacked.setInterfaceName(CLAT_PREFIX + MOBILE_IFNAME);
+        stacked.setInterfaceName(CLAT_MOBILE_IFNAME);
         RouteInfo ipv4Default = new RouteInfo(
                 new LinkAddress(Inet4Address.ANY, 0),
-                clatAddress.getAddress(), CLAT_PREFIX + MOBILE_IFNAME);
+                clatAddress.getAddress(), CLAT_MOBILE_IFNAME);
         stacked.addRoute(ipv4Default);
         stacked.addLinkAddress(clatAddress);
         return stacked;
@@ -8505,12 +8506,12 @@ public class ConnectivityServiceTest {
         final String kOtherNat64PrefixString = "64:ff9b::";
         final IpPrefix kOtherNat64Prefix = new IpPrefix(
                 InetAddress.getByName(kOtherNat64PrefixString), 96);
-        final RouteInfo defaultRoute = new RouteInfo((IpPrefix) null, myIpv6.getAddress(),
-                                                     MOBILE_IFNAME);
+        final RouteInfo ipv6Default =
+                new RouteInfo((IpPrefix) null, myIpv6.getAddress(), MOBILE_IFNAME);
         final RouteInfo ipv6Subnet = new RouteInfo(myIpv6, null, MOBILE_IFNAME);
         final RouteInfo ipv4Subnet = new RouteInfo(myIpv4, null, MOBILE_IFNAME);
-        final RouteInfo stackedDefault = new RouteInfo((IpPrefix) null, myIpv4.getAddress(),
-                                                       CLAT_PREFIX + MOBILE_IFNAME);
+        final RouteInfo stackedDefault =
+                new RouteInfo((IpPrefix) null, myIpv4.getAddress(), CLAT_MOBILE_IFNAME);
 
         final NetworkRequest networkRequest = new NetworkRequest.Builder()
                 .addTransportType(TRANSPORT_CELLULAR)
@@ -8523,7 +8524,7 @@ public class ConnectivityServiceTest {
         final LinkProperties cellLp = new LinkProperties();
         cellLp.setInterfaceName(MOBILE_IFNAME);
         cellLp.addLinkAddress(myIpv6);
-        cellLp.addRoute(defaultRoute);
+        cellLp.addRoute(ipv6Default);
         cellLp.addRoute(ipv6Subnet);
         mCellNetworkAgent = new TestNetworkAgentWrapper(TRANSPORT_CELLULAR, cellLp);
         reset(mMockDnsResolver);
@@ -8531,12 +8532,12 @@ public class ConnectivityServiceTest {
 
         // Connect with ipv6 link properties. Expect prefix discovery to be started.
         mCellNetworkAgent.connect(true);
-        final int cellNetId = mCellNetworkAgent.getNetwork().netId;
+        int cellNetId = mCellNetworkAgent.getNetwork().netId;
         waitForIdle();
 
         verify(mMockNetd, times(1)).networkCreate(nativeNetworkConfigPhysical(cellNetId,
                 INetd.PERMISSION_NONE));
-        assertRoutesAdded(cellNetId, ipv6Subnet, defaultRoute);
+        assertRoutesAdded(cellNetId, ipv6Subnet, ipv6Default);
         verify(mMockDnsResolver, times(1)).createNetworkCache(eq(cellNetId));
         verify(mMockNetd, times(1)).networkAddInterface(cellNetId, MOBILE_IFNAME);
         verify(mDeps).reportNetworkInterfaceForTransports(mServiceContext,
@@ -8567,7 +8568,7 @@ public class ConnectivityServiceTest {
         verifyNoMoreInteractions(mMockDnsResolver);
         reset(mMockNetd);
         reset(mMockDnsResolver);
-        when(mMockNetd.interfaceGetCfg(CLAT_PREFIX + MOBILE_IFNAME))
+        when(mMockNetd.interfaceGetCfg(CLAT_MOBILE_IFNAME))
                 .thenReturn(getClatInterfaceConfigParcel(myIpv4));
 
         // Remove IPv4 address. Expect prefix discovery to be started again.
@@ -8589,13 +8590,13 @@ public class ConnectivityServiceTest {
         verify(mMockNetd, times(1)).clatdStart(MOBILE_IFNAME, kNat64Prefix.toString());
 
         // Clat iface comes up. Expect stacked link to be added.
-        clat.interfaceLinkStateChanged(CLAT_PREFIX + MOBILE_IFNAME, true);
+        clat.interfaceLinkStateChanged(CLAT_MOBILE_IFNAME, true);
         networkCallback.expectCallback(CallbackEntry.LINK_PROPERTIES_CHANGED, mCellNetworkAgent);
         List<LinkProperties> stackedLps = mCm.getLinkProperties(mCellNetworkAgent.getNetwork())
                 .getStackedLinks();
         assertEquals(makeClatLinkProperties(myIpv4), stackedLps.get(0));
         assertRoutesAdded(cellNetId, stackedDefault);
-        verify(mMockNetd, times(1)).networkAddInterface(cellNetId, CLAT_PREFIX + MOBILE_IFNAME);
+        verify(mMockNetd, times(1)).networkAddInterface(cellNetId, CLAT_MOBILE_IFNAME);
         // Change trivial linkproperties and see if stacked link is preserved.
         cellLp.addDnsServer(InetAddress.getByName("8.8.8.8"));
         mCellNetworkAgent.sendLinkProperties(cellLp);
@@ -8618,7 +8619,7 @@ public class ConnectivityServiceTest {
                     new int[] { TRANSPORT_CELLULAR });
         }
         reset(mMockNetd);
-        when(mMockNetd.interfaceGetCfg(CLAT_PREFIX + MOBILE_IFNAME))
+        when(mMockNetd.interfaceGetCfg(CLAT_MOBILE_IFNAME))
                 .thenReturn(getClatInterfaceConfigParcel(myIpv4));
         // Change the NAT64 prefix without first removing it.
         // Expect clatd to be stopped and started with the new prefix.
@@ -8628,16 +8629,16 @@ public class ConnectivityServiceTest {
                 (lp) -> lp.getStackedLinks().size() == 0);
         verify(mMockNetd, times(1)).clatdStop(MOBILE_IFNAME);
         assertRoutesRemoved(cellNetId, stackedDefault);
-        verify(mMockNetd, times(1)).networkRemoveInterface(cellNetId, CLAT_PREFIX + MOBILE_IFNAME);
+        verify(mMockNetd, times(1)).networkRemoveInterface(cellNetId, CLAT_MOBILE_IFNAME);
 
         verify(mMockNetd, times(1)).clatdStart(MOBILE_IFNAME, kOtherNat64Prefix.toString());
         networkCallback.expectLinkPropertiesThat(mCellNetworkAgent,
                 (lp) -> lp.getNat64Prefix().equals(kOtherNat64Prefix));
-        clat.interfaceLinkStateChanged(CLAT_PREFIX + MOBILE_IFNAME, true);
+        clat.interfaceLinkStateChanged(CLAT_MOBILE_IFNAME, true);
         networkCallback.expectLinkPropertiesThat(mCellNetworkAgent,
                 (lp) -> lp.getStackedLinks().size() == 1);
         assertRoutesAdded(cellNetId, stackedDefault);
-        verify(mMockNetd, times(1)).networkAddInterface(cellNetId, CLAT_PREFIX + MOBILE_IFNAME);
+        verify(mMockNetd, times(1)).networkAddInterface(cellNetId, CLAT_MOBILE_IFNAME);
         reset(mMockNetd);
 
         // Add ipv4 address, expect that clatd and prefix discovery are stopped and stacked
@@ -8660,14 +8661,14 @@ public class ConnectivityServiceTest {
         assertRoutesRemoved(cellNetId, stackedDefault);
 
         // The interface removed callback happens but has no effect after stop is called.
-        clat.interfaceRemoved(CLAT_PREFIX + MOBILE_IFNAME);
+        clat.interfaceRemoved(CLAT_MOBILE_IFNAME);
         networkCallback.assertNoCallback();
-        verify(mMockNetd, times(1)).networkRemoveInterface(cellNetId, CLAT_PREFIX + MOBILE_IFNAME);
+        verify(mMockNetd, times(1)).networkRemoveInterface(cellNetId, CLAT_MOBILE_IFNAME);
         verifyNoMoreInteractions(mMockNetd);
         verifyNoMoreInteractions(mMockDnsResolver);
         reset(mMockNetd);
         reset(mMockDnsResolver);
-        when(mMockNetd.interfaceGetCfg(CLAT_PREFIX + MOBILE_IFNAME))
+        when(mMockNetd.interfaceGetCfg(CLAT_MOBILE_IFNAME))
                 .thenReturn(getClatInterfaceConfigParcel(myIpv4));
 
         // Stopping prefix discovery causes netd to tell us that the NAT64 prefix is gone.
@@ -8690,11 +8691,11 @@ public class ConnectivityServiceTest {
         verify(mMockNetd, times(1)).clatdStart(MOBILE_IFNAME, kNat64Prefix.toString());
 
         // Clat iface comes up. Expect stacked link to be added.
-        clat.interfaceLinkStateChanged(CLAT_PREFIX + MOBILE_IFNAME, true);
+        clat.interfaceLinkStateChanged(CLAT_MOBILE_IFNAME, true);
         networkCallback.expectLinkPropertiesThat(mCellNetworkAgent,
                 (lp) -> lp.getStackedLinks().size() == 1 && lp.getNat64Prefix() != null);
         assertRoutesAdded(cellNetId, stackedDefault);
-        verify(mMockNetd, times(1)).networkAddInterface(cellNetId, CLAT_PREFIX + MOBILE_IFNAME);
+        verify(mMockNetd, times(1)).networkAddInterface(cellNetId, CLAT_MOBILE_IFNAME);
 
         // NAT64 prefix is removed. Expect that clat is stopped.
         mService.mResolverUnsolEventCallback.onNat64PrefixEvent(makeNat64PrefixEvent(
@@ -8707,13 +8708,54 @@ public class ConnectivityServiceTest {
         verify(mMockNetd, times(1)).clatdStop(MOBILE_IFNAME);
         networkCallback.expectLinkPropertiesThat(mCellNetworkAgent,
                 (lp) -> lp.getStackedLinks().size() == 0);
-        verify(mMockNetd, times(1)).networkRemoveInterface(cellNetId, CLAT_PREFIX + MOBILE_IFNAME);
-        verify(mMockNetd, times(1)).interfaceGetCfg(CLAT_PREFIX + MOBILE_IFNAME);
-        verifyNoMoreInteractions(mMockNetd);
+        verify(mMockNetd, times(1)).networkRemoveInterface(cellNetId, CLAT_MOBILE_IFNAME);
+        verify(mMockNetd, times(1)).interfaceGetCfg(CLAT_MOBILE_IFNAME);
         // Clean up.
         mCellNetworkAgent.disconnect();
         networkCallback.expectCallback(CallbackEntry.LOST, mCellNetworkAgent);
         networkCallback.assertNoCallback();
+        verify(mMockNetd, times(1)).idletimerRemoveInterface(eq(MOBILE_IFNAME), anyInt(),
+                eq(Integer.toString(TRANSPORT_CELLULAR)));
+        verify(mMockNetd).networkDestroy(cellNetId);
+        verifyNoMoreInteractions(mMockNetd);
+        reset(mMockNetd);
+
+        // Test disconnecting a network that is running 464xlat.
+
+        // Connect a network with a NAT64 prefix.
+        when(mMockNetd.interfaceGetCfg(CLAT_MOBILE_IFNAME))
+                .thenReturn(getClatInterfaceConfigParcel(myIpv4));
+        cellLp.setNat64Prefix(kNat64Prefix);
+        mCellNetworkAgent = new TestNetworkAgentWrapper(TRANSPORT_CELLULAR, cellLp);
+        mCellNetworkAgent.connect(false /* validated */);
+        networkCallback.expectAvailableCallbacksUnvalidated(mCellNetworkAgent);
+        cellNetId = mCellNetworkAgent.getNetwork().netId;
+        verify(mMockNetd, times(1)).networkCreate(nativeNetworkConfigPhysical(cellNetId,
+                INetd.PERMISSION_NONE));
+        assertRoutesAdded(cellNetId, ipv6Subnet, ipv6Default);
+
+        // Clatd is started and clat iface comes up. Expect stacked link to be added.
+        verify(mMockNetd).clatdStart(MOBILE_IFNAME, kNat64Prefix.toString());
+        clat = getNat464Xlat(mCellNetworkAgent);
+        clat.interfaceLinkStateChanged(CLAT_MOBILE_IFNAME, true /* up */);
+        networkCallback.expectLinkPropertiesThat(mCellNetworkAgent,
+                (lp) -> lp.getStackedLinks().size() == 1
+                        && lp.getNat64Prefix().equals(kNat64Prefix));
+        verify(mMockNetd).networkAddInterface(cellNetId, CLAT_MOBILE_IFNAME);
+        // assertRoutesAdded sees all calls since last mMockNetd reset, so expect IPv6 routes again.
+        assertRoutesAdded(cellNetId, ipv6Subnet, ipv6Default, stackedDefault);
+        reset(mMockNetd);
+
+        // Disconnect the network. clat is stopped and the network is destroyed.
+        mCellNetworkAgent.disconnect();
+        networkCallback.expectCallback(CallbackEntry.LOST, mCellNetworkAgent);
+        networkCallback.assertNoCallback();
+        verify(mMockNetd).clatdStop(MOBILE_IFNAME);
+        verify(mMockNetd).idletimerRemoveInterface(eq(MOBILE_IFNAME), anyInt(),
+                eq(Integer.toString(TRANSPORT_CELLULAR)));
+        verify(mMockNetd).networkDestroy(cellNetId);
+        verifyNoMoreInteractions(mMockNetd);
+
         mCm.unregisterNetworkCallback(networkCallback);
     }
 
@@ -9858,6 +9900,8 @@ public class ConnectivityServiceTest {
     }
 
     private void assertRoutesAdded(int netId, RouteInfo... routes) throws Exception {
+        // TODO: add @JavaDerive(equals=true) to RouteInfoParcel, use eq() directly, and delete
+        // assertRouteInfoParcelMatches above.
         ArgumentCaptor<RouteInfoParcel> captor = ArgumentCaptor.forClass(RouteInfoParcel.class);
         verify(mMockNetd, times(routes.length)).networkAddRouteParcel(eq(netId), captor.capture());
         for (int i = 0; i < routes.length; i++) {
