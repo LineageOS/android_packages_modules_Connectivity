@@ -118,6 +118,8 @@ import static android.net.resolv.aidl.IDnsResolverUnsolicitedEventListener.VALID
 import static android.os.Process.INVALID_UID;
 import static android.system.OsConstants.IPPROTO_TCP;
 
+import static com.android.server.ConnectivityService.DEFAULT_NETWORK_PRIORITY_MOBILE_DATA_PREFERRED;
+import static com.android.server.ConnectivityService.DEFAULT_NETWORK_PRIORITY_OEM;
 import static com.android.server.ConnectivityServiceTestUtils.transportToLegacyType;
 import static com.android.testutils.ConcurrentUtils.await;
 import static com.android.testutils.ConcurrentUtils.durationOf;
@@ -10740,8 +10742,9 @@ public class ConnectivityServiceTest {
                 mService.new OemNetworkRequestFactory()
                         .createNrisFromOemNetworkPreferences(
                                 createDefaultOemNetworkPreferences(prefToTest));
-
-        final List<NetworkRequest> mRequests = nris.iterator().next().mRequests;
+        final NetworkRequestInfo nri = nris.iterator().next();
+        assertEquals(DEFAULT_NETWORK_PRIORITY_OEM, nri.getDefaultNetworkPriority());
+        final List<NetworkRequest> mRequests = nri.mRequests;
         assertEquals(expectedNumOfNris, nris.size());
         assertEquals(expectedNumOfRequests, mRequests.size());
         assertTrue(mRequests.get(0).isListen());
@@ -10769,8 +10772,9 @@ public class ConnectivityServiceTest {
                 mService.new OemNetworkRequestFactory()
                         .createNrisFromOemNetworkPreferences(
                                 createDefaultOemNetworkPreferences(prefToTest));
-
-        final List<NetworkRequest> mRequests = nris.iterator().next().mRequests;
+        final NetworkRequestInfo nri = nris.iterator().next();
+        assertEquals(DEFAULT_NETWORK_PRIORITY_OEM, nri.getDefaultNetworkPriority());
+        final List<NetworkRequest> mRequests = nri.mRequests;
         assertEquals(expectedNumOfNris, nris.size());
         assertEquals(expectedNumOfRequests, mRequests.size());
         assertTrue(mRequests.get(0).isListen());
@@ -10795,8 +10799,9 @@ public class ConnectivityServiceTest {
                 mService.new OemNetworkRequestFactory()
                         .createNrisFromOemNetworkPreferences(
                                 createDefaultOemNetworkPreferences(prefToTest));
-
-        final List<NetworkRequest> mRequests = nris.iterator().next().mRequests;
+        final NetworkRequestInfo nri = nris.iterator().next();
+        assertEquals(DEFAULT_NETWORK_PRIORITY_OEM, nri.getDefaultNetworkPriority());
+        final List<NetworkRequest> mRequests = nri.mRequests;
         assertEquals(expectedNumOfNris, nris.size());
         assertEquals(expectedNumOfRequests, mRequests.size());
         assertTrue(mRequests.get(0).isRequest());
@@ -10818,8 +10823,9 @@ public class ConnectivityServiceTest {
                 mService.new OemNetworkRequestFactory()
                         .createNrisFromOemNetworkPreferences(
                                 createDefaultOemNetworkPreferences(prefToTest));
-
-        final List<NetworkRequest> mRequests = nris.iterator().next().mRequests;
+        final NetworkRequestInfo nri = nris.iterator().next();
+        assertEquals(DEFAULT_NETWORK_PRIORITY_OEM, nri.getDefaultNetworkPriority());
+        final List<NetworkRequest> mRequests = nri.mRequests;
         assertEquals(expectedNumOfNris, nris.size());
         assertEquals(expectedNumOfRequests, mRequests.size());
         assertTrue(mRequests.get(0).isRequest());
@@ -13010,6 +13016,8 @@ public class ConnectivityServiceTest {
         assertEquals(1, nris.size());
         assertTrue(nri.isMultilayerRequest());
         assertEquals(nri.getUids(), uidRangesForUids(uids));
+        assertEquals(DEFAULT_NETWORK_PRIORITY_MOBILE_DATA_PREFERRED,
+                nri.getDefaultNetworkPriority());
     }
 
     /**
