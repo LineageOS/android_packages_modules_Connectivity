@@ -1512,7 +1512,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
     }
 
     // Note that registering observer for setting do not get initial callback when registering,
-    // callers might have self-initialization to update status if need.
+    // callers must fetch the initial value of the setting themselves if needed.
     private void registerSettingsCallbacks() {
         // Watch for global HTTP proxy changes.
         mSettingsObserver.observe(
