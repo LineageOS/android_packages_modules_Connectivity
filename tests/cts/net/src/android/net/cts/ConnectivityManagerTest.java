@@ -462,6 +462,7 @@ public class ConnectivityManagerTest {
                 android.Manifest.permission.READ_PRIVILEGED_PHONE_STATE);
     }
 
+    @AppModeFull(reason = "Cannot request network in instant app mode")
     @DevSdkIgnoreRule.IgnoreUpTo(Build.VERSION_CODES.R)
     @Test
     public void testGetAllNetworkStateSnapshots()
