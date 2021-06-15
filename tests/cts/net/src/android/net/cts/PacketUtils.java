@@ -19,6 +19,8 @@ package android.net.cts;
 import static android.system.OsConstants.IPPROTO_IPV6;
 import static android.system.OsConstants.IPPROTO_UDP;
 
+import android.util.ArraySet;
+
 import com.android.internal.net.ipsec.ike.crypto.AesXCbcImpl;
 
 import java.net.Inet4Address;
@@ -29,7 +31,6 @@ import java.nio.ShortBuffer;
 import java.security.GeneralSecurityException;
 import java.security.SecureRandom;
 import java.util.Arrays;
-import java.util.HashSet;
 import java.util.Set;
 
 import javax.crypto.Cipher;
@@ -502,7 +503,7 @@ public class PacketUtils {
         public final byte[] key;
         public final int ivLen;
         public final int saltLen;
-        protected byte[] iv;
+        protected byte[] mIv;
 
         public EspCipher(String algoName, int blockSize, byte[] key, int ivLen, int saltLen) {
             this.algoName = algoName;
@@ -510,11 +511,11 @@ public class PacketUtils {
             this.key = key;
             this.ivLen = ivLen;
             this.saltLen = saltLen;
-            this.iv = getIv(ivLen);
+            this.mIv = getIv(ivLen);
         }
 
         public void updateIv(byte[] iv) {
-            this.iv = iv;
+            this.mIv = iv;
         }
 
         public static byte[] getPaddedPayload(int nextHeader, byte[] payload, int blockSize) {
@@ -545,19 +546,19 @@ public class PacketUtils {
                 throws GeneralSecurityException;
     }
 
-    public static class EspCipherNull extends EspCipher {
+    public static final class EspCipherNull extends EspCipher {
         private static final String CRYPT_NULL = "CRYPT_NULL";
         private static final int IV_LEN_UNUSED = 0;
         private static final byte[] KEY_UNUSED = new byte[0];
 
-        private static final EspCipherNull INSTANCE = new EspCipherNull();
+        private static final EspCipherNull sInstance = new EspCipherNull();
 
         private EspCipherNull() {
             super(CRYPT_NULL, ESP_BLK_SIZE, KEY_UNUSED, IV_LEN_UNUSED, SALT_LEN_UNUSED);
         }
 
         public static EspCipherNull getInstance() {
-            return INSTANCE;
+            return sInstance;
         }
 
         @Override
@@ -567,7 +568,7 @@ public class PacketUtils {
         }
     }
 
-    public static class EspCryptCipher extends EspCipher {
+    public static final class EspCryptCipher extends EspCipher {
         public EspCryptCipher(String algoName, int blockSize, byte[] key, int ivLen) {
             this(algoName, blockSize, key, ivLen, SALT_LEN_UNUSED);
         }
@@ -583,7 +584,7 @@ public class PacketUtils {
             final SecretKeySpec secretKeySpec;
 
             if (AES_CBC.equals(algoName)) {
-                ivParameterSpec = new IvParameterSpec(iv);
+                ivParameterSpec = new IvParameterSpec(mIv);
                 secretKeySpec = new SecretKeySpec(key, algoName);
             } else if (AES_CTR.equals(algoName)) {
                 // Provided key consists of encryption/decryption key plus 4-byte salt. Salt is used
@@ -593,9 +594,9 @@ public class PacketUtils {
                 secretKeySpec = new SecretKeySpec(secretKey, algoName);
 
                 final ByteBuffer ivParameterBuffer =
-                        ByteBuffer.allocate(iv.length + saltLen + AES_CTR_INITIAL_COUNTER.length);
+                        ByteBuffer.allocate(mIv.length + saltLen + AES_CTR_INITIAL_COUNTER.length);
                 ivParameterBuffer.put(salt);
-                ivParameterBuffer.put(iv);
+                ivParameterBuffer.put(mIv);
                 ivParameterBuffer.put(AES_CTR_INITIAL_COUNTER);
                 ivParameterSpec = new IvParameterSpec(ivParameterBuffer.array());
             } else {
@@ -609,15 +610,15 @@ public class PacketUtils {
                     cipher.doFinal(getPaddedPayload(nextHeader, payload, blockSize));
 
             // Build ciphertext
-            final ByteBuffer cipherText = ByteBuffer.allocate(iv.length + encrypted.length);
-            cipherText.put(iv);
+            final ByteBuffer cipherText = ByteBuffer.allocate(mIv.length + encrypted.length);
+            cipherText.put(mIv);
             cipherText.put(encrypted);
 
             return getByteArrayFromBuffer(cipherText);
         }
     }
 
-    public static class EspAeadCipher extends EspCipher {
+    public static final class EspAeadCipher extends EspCipher {
         public final int icvLen;
 
         public EspAeadCipher(
@@ -636,9 +637,9 @@ public class PacketUtils {
 
             final SecretKeySpec secretKeySpec = new SecretKeySpec(secretKey, algoName);
 
-            final ByteBuffer ivParameterBuffer = ByteBuffer.allocate(saltLen + iv.length);
+            final ByteBuffer ivParameterBuffer = ByteBuffer.allocate(saltLen + mIv.length);
             ivParameterBuffer.put(salt);
-            ivParameterBuffer.put(iv);
+            ivParameterBuffer.put(mIv);
             final IvParameterSpec ivParameterSpec = new IvParameterSpec(ivParameterBuffer.array());
 
             final ByteBuffer aadBuffer = ByteBuffer.allocate(ESP_HDRLEN);
@@ -654,8 +655,8 @@ public class PacketUtils {
 
             // Build ciphertext
             final ByteBuffer cipherText =
-                    ByteBuffer.allocate(iv.length + encryptedTextAndIcv.length);
-            cipherText.put(iv);
+                    ByteBuffer.allocate(mIv.length + encryptedTextAndIcv.length);
+            cipherText.put(mIv);
             cipherText.put(encryptedTextAndIcv);
 
             return getByteArrayFromBuffer(cipherText);
@@ -667,7 +668,7 @@ public class PacketUtils {
         public final byte[] key;
         public final int icvLen;
 
-        private static final Set<String> JCE_SUPPORTED_MACS = new HashSet<>();
+        private static final Set<String> JCE_SUPPORTED_MACS = new ArraySet<>();
 
         static {
             JCE_SUPPORTED_MACS.add(HMAC_MD5);
@@ -703,20 +704,20 @@ public class PacketUtils {
         }
     }
 
-    public static class EspAuthNull extends EspAuth {
+    public static final class EspAuthNull extends EspAuth {
         private static final String AUTH_NULL = "AUTH_NULL";
         private static final int ICV_LEN_UNUSED = 0;
         private static final byte[] KEY_UNUSED = new byte[0];
         private static final byte[] ICV_EMPTY = new byte[0];
 
-        private static final EspAuthNull INSTANCE = new EspAuthNull();
+        private static final EspAuthNull sInstance = new EspAuthNull();
 
         private EspAuthNull() {
             super(AUTH_NULL, KEY_UNUSED, ICV_LEN_UNUSED);
         }
 
         public static EspAuthNull getInstance() {
-            return INSTANCE;
+            return sInstance;
         }
 
         @Override
