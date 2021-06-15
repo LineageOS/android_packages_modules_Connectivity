@@ -86,7 +86,7 @@ public class IpSecAlgorithmImplTest extends IpSecBaseTest {
             InetAddress.parseNumericAddress("2001:db8:1::2");
 
     private static final int REMOTE_PORT = 12345;
-    private static final IpSecManager IPSEC_MANAGER =
+    private static final IpSecManager sIpSecManager =
             InstrumentationRegistry.getContext().getSystemService(IpSecManager.class);
 
     private static class CheckCryptoImplTest implements TestNetworkRunnable.Test {
@@ -96,7 +96,7 @@ public class IpSecAlgorithmImplTest extends IpSecBaseTest {
         private final EspCipher mEspCipher;
         private final EspAuth mEspAuth;
 
-        public CheckCryptoImplTest(
+        CheckCryptoImplTest(
                 IpSecAlgorithm ipsecEncryptAlgo,
                 IpSecAlgorithm ipsecAuthAlgo,
                 IpSecAlgorithm ipsecAeadAlgo,
@@ -149,19 +149,19 @@ public class IpSecAlgorithmImplTest extends IpSecBaseTest {
                 }
             }
 
-            try (final IpSecManager.SecurityParameterIndex outSpi =
-                            IPSEC_MANAGER.allocateSecurityParameterIndex(REMOTE_ADDRESS);
-                    final IpSecManager.SecurityParameterIndex inSpi =
-                            IPSEC_MANAGER.allocateSecurityParameterIndex(LOCAL_ADDRESS);
-                    final IpSecTransform outTransform =
+            try (IpSecManager.SecurityParameterIndex outSpi =
+                            sIpSecManager.allocateSecurityParameterIndex(REMOTE_ADDRESS);
+                    IpSecManager.SecurityParameterIndex inSpi =
+                            sIpSecManager.allocateSecurityParameterIndex(LOCAL_ADDRESS);
+                    IpSecTransform outTransform =
                             transformBuilder.buildTransportModeTransform(LOCAL_ADDRESS, outSpi);
-                    final IpSecTransform inTransform =
+                    IpSecTransform inTransform =
                             transformBuilder.buildTransportModeTransform(REMOTE_ADDRESS, inSpi);
                     // Bind localSocket to a random available port.
-                    final DatagramSocket localSocket = new DatagramSocket(0)) {
-                IPSEC_MANAGER.applyTransportModeTransform(
+                    DatagramSocket localSocket = new DatagramSocket(0)) {
+                sIpSecManager.applyTransportModeTransform(
                         localSocket, IpSecManager.DIRECTION_IN, inTransform);
-                IPSEC_MANAGER.applyTransportModeTransform(
+                sIpSecManager.applyTransportModeTransform(
                         localSocket, IpSecManager.DIRECTION_OUT, outTransform);
 
                 // Send ESP packet
@@ -174,7 +174,7 @@ public class IpSecAlgorithmImplTest extends IpSecBaseTest {
                         tunUtils.awaitEspPacket(outSpi.getSpi(), false /* useEncap */);
 
                 // Remove transform for good hygiene
-                IPSEC_MANAGER.removeTransportModeTransforms(localSocket);
+                sIpSecManager.removeTransportModeTransforms(localSocket);
 
                 // Get the kernel-generated ESP payload
                 final byte[] outEspPayload = new byte[outEspPacket.length - IP6_HDRLEN];
