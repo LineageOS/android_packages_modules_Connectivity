@@ -101,6 +101,7 @@ public class PacketUtils {
     static final String HMAC_SHA_256 = "HmacSHA256";
     static final String HMAC_SHA_384 = "HmacSHA384";
     static final String HMAC_SHA_512 = "HmacSHA512";
+    static final String AES_CMAC = "AESCMAC";
     static final String AES_XCBC = "AesXCbc";
 
     public interface Payload {
@@ -666,14 +667,15 @@ public class PacketUtils {
         public final byte[] key;
         public final int icvLen;
 
-        private static final Set<String> SUPPORTED_HMAC_ALGOS = new HashSet<>();
+        private static final Set<String> JCE_SUPPORTED_MACS = new HashSet<>();
 
         static {
-            SUPPORTED_HMAC_ALGOS.add(HMAC_MD5);
-            SUPPORTED_HMAC_ALGOS.add(HMAC_SHA1);
-            SUPPORTED_HMAC_ALGOS.add(HMAC_SHA_256);
-            SUPPORTED_HMAC_ALGOS.add(HMAC_SHA_384);
-            SUPPORTED_HMAC_ALGOS.add(HMAC_SHA_512);
+            JCE_SUPPORTED_MACS.add(HMAC_MD5);
+            JCE_SUPPORTED_MACS.add(HMAC_SHA1);
+            JCE_SUPPORTED_MACS.add(HMAC_SHA_256);
+            JCE_SUPPORTED_MACS.add(HMAC_SHA_384);
+            JCE_SUPPORTED_MACS.add(HMAC_SHA_512);
+            JCE_SUPPORTED_MACS.add(AES_CMAC);
         }
 
         public EspAuth(String algoName, byte[] key, int icvLen) {
@@ -686,7 +688,7 @@ public class PacketUtils {
             if (AES_XCBC.equals(algoName)) {
                 final Cipher aesCipher = Cipher.getInstance(AES_CBC);
                 return new AesXCbcImpl().mac(key, authenticatedSection, true /* needTruncation */);
-            } else if (SUPPORTED_HMAC_ALGOS.contains(algoName)) {
+            } else if (JCE_SUPPORTED_MACS.contains(algoName)) {
                 final Mac mac = Mac.getInstance(algoName);
                 final SecretKeySpec authKey = new SecretKeySpec(key, algoName);
                 mac.init(authKey);
