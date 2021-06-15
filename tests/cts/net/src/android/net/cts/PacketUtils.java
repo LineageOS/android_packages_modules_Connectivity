@@ -43,6 +43,7 @@ public class PacketUtils {
     static final int UDP_HDRLEN = 8;
     static final int TCP_HDRLEN = 20;
     static final int TCP_HDRLEN_WITH_TIMESTAMP_OPT = TCP_HDRLEN + 12;
+    static final int ESP_HDRLEN = 8;
     static final int ESP_BLK_SIZE = 4; // ESP has to be 4-byte aligned
     static final int ESP_TRAILER_LEN = 2;
 
@@ -61,8 +62,10 @@ public class PacketUtils {
     // AEAD parameters
     static final int AES_GCM_IV_LEN = 8;
     static final int AES_GCM_BLK_SIZE = 4;
+    static final int CHACHA20_POLY1305_KEY_LEN = 36;
     static final int CHACHA20_POLY1305_BLK_SIZE = ESP_BLK_SIZE;
     static final int CHACHA20_POLY1305_IV_LEN = 8;
+    static final int CHACHA20_POLY1305_SALT_LEN = 4;
     static final int CHACHA20_POLY1305_ICV_LEN = 16;
 
     // Authentication parameters
@@ -77,6 +80,11 @@ public class PacketUtils {
     // Encryption algorithms
     static final String AES = "AES";
     static final String AES_CBC = "AES/CBC/NoPadding";
+
+    // AEAD algorithms
+    static final String CHACHA20_POLY1305 = "ChaCha20/Poly1305/NoPadding";
+
+    // Authentication algorithms
     static final String HMAC_SHA_256 = "HmacSHA256";
 
     public interface Payload {
@@ -372,6 +380,11 @@ public class PacketUtils {
             if (cipher instanceof EspCipherNull && auth instanceof EspAuthNull) {
                 throw new IllegalArgumentException("No algorithm is provided");
             }
+
+            if (cipher instanceof EspAeadCipher && !(auth instanceof EspAuthNull)) {
+                throw new IllegalArgumentException(
+                        "AEAD is provided with an authentication" + " algorithm.");
+            }
         }
 
         private static EspCipher getDefaultCipher(byte[] key) {
@@ -387,8 +400,10 @@ public class PacketUtils {
         }
 
         public short length() {
+            final int icvLen =
+                    cipher instanceof EspAeadCipher ? ((EspAeadCipher) cipher).icvLen : auth.icvLen;
             return calculateEspPacketSize(
-                    payload.length, cipher.ivLen, cipher.blockSize, auth.icvLen * 8);
+                    payload.length, cipher.ivLen, cipher.blockSize, icvLen * 8);
         }
 
         public byte[] getPacketBytes(IpHeader header) throws Exception {
@@ -426,12 +441,11 @@ public class PacketUtils {
 
     public static short calculateEspPacketSize(
             int payloadLen, int cryptIvLength, int cryptBlockSize, int authTruncLen) {
-        final int ESP_HDRLEN = 4 + 4; // SPI + Seq#
         final int ICV_LEN = authTruncLen / 8; // Auth trailer; based on truncation length
-        payloadLen += cryptIvLength; // Initialization Vector
 
         // Align to block size of encryption algorithm
         payloadLen = calculateEspEncryptedLength(payloadLen, cryptBlockSize);
+        payloadLen += cryptIvLength; // Initialization Vector
         return (short) (payloadLen + ESP_HDRLEN + ICV_LEN);
     }
 
@@ -464,18 +478,26 @@ public class PacketUtils {
     }
 
     public abstract static class EspCipher {
+        protected static final int SALT_LEN_UNUSED = 0;
+
         public final String algoName;
         public final int blockSize;
         public final byte[] key;
         public final int ivLen;
+        public final int saltLen;
         protected byte[] iv;
 
-        public EspCipher(String algoName, int blockSize, byte[] key, int ivLen) {
+        public EspCipher(String algoName, int blockSize, byte[] key, int ivLen, int saltLen) {
             this.algoName = algoName;
             this.blockSize = blockSize;
             this.key = key;
             this.ivLen = ivLen;
+            this.saltLen = saltLen;
             this.iv = getIv(ivLen);
+        }
+
+        public void updateIv(byte[] iv) {
+            this.iv = iv;
         }
 
         public static byte[] getPaddedPayload(int nextHeader, byte[] payload, int blockSize) {
@@ -514,7 +536,7 @@ public class PacketUtils {
         private static final EspCipherNull INSTANCE = new EspCipherNull();
 
         private EspCipherNull() {
-            super(CRYPT_NULL, ESP_BLK_SIZE, KEY_UNUSED, IV_LEN_UNUSED);
+            super(CRYPT_NULL, ESP_BLK_SIZE, KEY_UNUSED, IV_LEN_UNUSED, SALT_LEN_UNUSED);
         }
 
         public static EspCipherNull getInstance() {
@@ -530,7 +552,7 @@ public class PacketUtils {
 
     public static class EspCryptCipher extends EspCipher {
         public EspCryptCipher(String algoName, int blockSize, byte[] key, int ivLen) {
-            super(algoName, blockSize, key, ivLen);
+            super(algoName, blockSize, key, ivLen, SALT_LEN_UNUSED);
         }
 
         @Override
@@ -554,7 +576,50 @@ public class PacketUtils {
         }
     }
 
-    // TODO: Implement EspAeadCipher in the following CL
+    public static class EspAeadCipher extends EspCipher {
+        public final int icvLen;
+
+        public EspAeadCipher(
+                String algoName, int blockSize, byte[] key, int ivLen, int icvLen, int saltLen) {
+            super(algoName, blockSize, key, ivLen, saltLen);
+            this.icvLen = icvLen;
+        }
+
+        @Override
+        public byte[] getCipherText(int nextHeader, byte[] payload, int spi, int seqNum)
+                throws GeneralSecurityException {
+            // Provided key consists of encryption/decryption key plus salt. Salt is used
+            // with ESP payload IV to build IvParameterSpec.
+            final byte[] secretKey = Arrays.copyOfRange(key, 0, key.length - saltLen);
+            final byte[] salt = Arrays.copyOfRange(key, secretKey.length, key.length);
+
+            final SecretKeySpec secretKeySpec = new SecretKeySpec(secretKey, algoName);
+
+            final ByteBuffer ivParameterBuffer = ByteBuffer.allocate(saltLen + iv.length);
+            ivParameterBuffer.put(salt);
+            ivParameterBuffer.put(iv);
+            final IvParameterSpec ivParameterSpec = new IvParameterSpec(ivParameterBuffer.array());
+
+            final ByteBuffer aadBuffer = ByteBuffer.allocate(ESP_HDRLEN);
+            aadBuffer.putInt(spi);
+            aadBuffer.putInt(seqNum);
+
+            // Encrypt payload
+            final Cipher cipher = Cipher.getInstance(algoName);
+            cipher.init(Cipher.ENCRYPT_MODE, secretKeySpec, ivParameterSpec);
+            cipher.updateAAD(aadBuffer.array());
+            final byte[] encryptedTextAndIcv =
+                    cipher.doFinal(getPaddedPayload(nextHeader, payload, blockSize));
+
+            // Build ciphertext
+            final ByteBuffer cipherText =
+                    ByteBuffer.allocate(iv.length + encryptedTextAndIcv.length);
+            cipherText.put(iv);
+            cipherText.put(encryptedTextAndIcv);
+
+            return getByteArrayFromBuffer(cipherText);
+        }
+    }
 
     public static class EspAuth {
         public final String algoName;
