@@ -54,8 +54,11 @@ public class PacketUtils {
     // Encryption parameters
     static final int AES_CBC_IV_LEN = 16;
     static final int AES_CBC_BLK_SIZE = 16;
+    static final int AES_CTR_SALT_LEN = 4;
 
-    static final int AES_CTR_KEY_LEN = 20;
+    static final int AES_CTR_KEY_LEN_20 = 20;
+    static final int AES_CTR_KEY_LEN_28 = 28;
+    static final int AES_CTR_KEY_LEN_36 = 36;
     static final int AES_CTR_BLK_SIZE = ESP_BLK_SIZE;
     static final int AES_CTR_IV_LEN = 8;
 
@@ -77,9 +80,13 @@ public class PacketUtils {
     static final int AES_CMAC_KEY_LEN = 16;
     static final int AES_CMAC_ICV_LEN = 12;
 
+    // Block counter field should be 32 bits and starts from value one as per RFC 3686
+    static final byte[] AES_CTR_INITIAL_COUNTER = new byte[] {0x00, 0x00, 0x00, 0x01};
+
     // Encryption algorithms
     static final String AES = "AES";
     static final String AES_CBC = "AES/CBC/NoPadding";
+    static final String AES_CTR = "AES/CTR/NoPadding";
 
     // AEAD algorithms
     static final String CHACHA20_POLY1305 = "ChaCha20/Poly1305/NoPadding";
@@ -552,14 +559,38 @@ public class PacketUtils {
 
     public static class EspCryptCipher extends EspCipher {
         public EspCryptCipher(String algoName, int blockSize, byte[] key, int ivLen) {
-            super(algoName, blockSize, key, ivLen, SALT_LEN_UNUSED);
+            this(algoName, blockSize, key, ivLen, SALT_LEN_UNUSED);
+        }
+
+        public EspCryptCipher(String algoName, int blockSize, byte[] key, int ivLen, int saltLen) {
+            super(algoName, blockSize, key, ivLen, saltLen);
         }
 
         @Override
         public byte[] getCipherText(int nextHeader, byte[] payload, int spi, int seqNum)
                 throws GeneralSecurityException {
-            final IvParameterSpec ivParameterSpec = new IvParameterSpec(iv);
-            final SecretKeySpec secretKeySpec = new SecretKeySpec(key, algoName);
+            final IvParameterSpec ivParameterSpec;
+            final SecretKeySpec secretKeySpec;
+
+            if (AES_CBC.equals(algoName)) {
+                ivParameterSpec = new IvParameterSpec(iv);
+                secretKeySpec = new SecretKeySpec(key, algoName);
+            } else if (AES_CTR.equals(algoName)) {
+                // Provided key consists of encryption/decryption key plus 4-byte salt. Salt is used
+                // with ESP payload IV and initial block counter value to build IvParameterSpec.
+                final byte[] secretKey = Arrays.copyOfRange(key, 0, key.length - saltLen);
+                final byte[] salt = Arrays.copyOfRange(key, secretKey.length, key.length);
+                secretKeySpec = new SecretKeySpec(secretKey, algoName);
+
+                final ByteBuffer ivParameterBuffer =
+                        ByteBuffer.allocate(iv.length + saltLen + AES_CTR_INITIAL_COUNTER.length);
+                ivParameterBuffer.put(salt);
+                ivParameterBuffer.put(iv);
+                ivParameterBuffer.put(AES_CTR_INITIAL_COUNTER);
+                ivParameterSpec = new IvParameterSpec(ivParameterBuffer.array());
+            } else {
+                throw new IllegalArgumentException("Invalid algorithm " + algoName);
+            }
 
             // Encrypt payload
             final Cipher cipher = Cipher.getInstance(algoName);
