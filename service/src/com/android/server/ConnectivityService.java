@@ -7341,6 +7341,8 @@ public class ConnectivityService extends IConnectivityManager.Stub
             mDnsManager.updateTransportsForNetwork(
                     nai.network.getNetId(), newNc.getTransportTypes());
         }
+
+        maybeSendProxyBroadcast(nai, prevNc, newNc);
     }
 
     /** Convenience method to update the capabilities for a given network. */
@@ -7431,6 +7433,30 @@ public class ConnectivityService extends IConnectivityManager.Stub
                     " on netId " + nai.network.netId + ". " + e);
         }
         maybeCloseSockets(nai, ranges, exemptUids);
+    }
+
+    private boolean isProxySetOnAnyDefaultNetwork() {
+        ensureRunningOnConnectivityServiceThread();
+        for (final NetworkRequestInfo nri : mDefaultNetworkRequests) {
+            final NetworkAgentInfo nai = nri.getSatisfier();
+            if (nai != null && nai.linkProperties.getHttpProxy() != null) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private void maybeSendProxyBroadcast(NetworkAgentInfo nai, NetworkCapabilities prevNc,
+            NetworkCapabilities newNc) {
+        // When the apps moved from/to a VPN, a proxy broadcast is needed to inform the apps that
+        // the proxy might be changed since the default network satisfied by the apps might also
+        // changed.
+        // TODO: Try to track the default network that apps use and only send a proxy broadcast when
+        //  that happens to prevent false alarms.
+        if (nai.isVPN() && nai.everConnected && !NetworkCapabilities.hasSameUids(prevNc, newNc)
+                && (nai.linkProperties.getHttpProxy() != null || isProxySetOnAnyDefaultNetwork())) {
+            mProxyTracker.sendProxyBroadcast();
+        }
     }
 
     private void updateUids(NetworkAgentInfo nai, NetworkCapabilities prevNc,
