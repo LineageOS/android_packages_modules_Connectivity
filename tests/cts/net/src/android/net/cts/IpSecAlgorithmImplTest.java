@@ -17,6 +17,14 @@
 package android.net.cts;
 
 import static android.net.IpSecAlgorithm.AUTH_CRYPT_CHACHA20_POLY1305;
+import static android.net.IpSecAlgorithm.CRYPT_AES_CTR;
+import static android.net.cts.PacketUtils.AES_CTR;
+import static android.net.cts.PacketUtils.AES_CTR_BLK_SIZE;
+import static android.net.cts.PacketUtils.AES_CTR_IV_LEN;
+import static android.net.cts.PacketUtils.AES_CTR_KEY_LEN_20;
+import static android.net.cts.PacketUtils.AES_CTR_KEY_LEN_28;
+import static android.net.cts.PacketUtils.AES_CTR_KEY_LEN_36;
+import static android.net.cts.PacketUtils.AES_CTR_SALT_LEN;
 import static android.net.cts.PacketUtils.CHACHA20_POLY1305;
 import static android.net.cts.PacketUtils.CHACHA20_POLY1305_BLK_SIZE;
 import static android.net.cts.PacketUtils.CHACHA20_POLY1305_ICV_LEN;
@@ -43,6 +51,7 @@ import android.net.cts.PacketUtils.EspAeadCipher;
 import android.net.cts.PacketUtils.EspAuth;
 import android.net.cts.PacketUtils.EspAuthNull;
 import android.net.cts.PacketUtils.EspCipher;
+import android.net.cts.PacketUtils.EspCryptCipher;
 import android.net.cts.PacketUtils.EspHeader;
 import android.net.cts.PacketUtils.IpHeader;
 import android.net.cts.PacketUtils.UdpHeader;
@@ -192,6 +201,41 @@ public class IpSecAlgorithmImplTest extends IpSecBaseTest {
         public InetAddress[] getTestNetworkAddresses() {
             return new InetAddress[] {LOCAL_ADDRESS};
         }
+    }
+
+    private void checkAesCtr(int keyLen) throws Exception {
+        final byte[] cryptKey = getKeyBytes(keyLen);
+
+        final IpSecAlgorithm ipsecEncryptAlgo =
+                new IpSecAlgorithm(IpSecAlgorithm.CRYPT_AES_CTR, cryptKey);
+        final EspCipher espCipher =
+                new EspCryptCipher(
+                        AES_CTR, AES_CTR_BLK_SIZE, cryptKey, AES_CTR_IV_LEN, AES_CTR_SALT_LEN);
+
+        runWithShellPermissionIdentity(new TestNetworkRunnable(new CheckCryptoImplTest(
+                ipsecEncryptAlgo, null /* ipsecAuthAlgo */, null /* ipsecAeadAlgo */,
+                espCipher, EspAuthNull.getInstance())));
+    }
+
+    @Test
+    public void testAesCtr160() throws Exception {
+        assumeTrue(hasIpSecAlgorithm(CRYPT_AES_CTR));
+
+        checkAesCtr(AES_CTR_KEY_LEN_20);
+    }
+
+    @Test
+    public void testAesCtr224() throws Exception {
+        assumeTrue(hasIpSecAlgorithm(CRYPT_AES_CTR));
+
+        checkAesCtr(AES_CTR_KEY_LEN_28);
+    }
+
+    @Test
+    public void testAesCtr288() throws Exception {
+        assumeTrue(hasIpSecAlgorithm(CRYPT_AES_CTR));
+
+        checkAesCtr(AES_CTR_KEY_LEN_36);
     }
 
     @Test
