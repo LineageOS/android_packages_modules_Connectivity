@@ -1569,6 +1569,28 @@ public final class NetworkCapabilities implements Parcelable {
     }
 
     /**
+     * Compare if the given NetworkCapabilities have the same UIDs.
+     *
+     * @hide
+     */
+    public static boolean hasSameUids(@Nullable NetworkCapabilities nc1,
+            @Nullable NetworkCapabilities nc2) {
+        final Set<UidRange> uids1 = (nc1 == null) ? null : nc1.mUids;
+        final Set<UidRange> uids2 = (nc2 == null) ? null : nc2.mUids;
+        if (null == uids1) return null == uids2;
+        if (null == uids2) return false;
+        // Make a copy so it can be mutated to check that all ranges in uids2 also are in uids.
+        final Set<UidRange> uids = new ArraySet<>(uids2);
+        for (UidRange range : uids1) {
+            if (!uids.contains(range)) {
+                return false;
+            }
+            uids.remove(range);
+        }
+        return uids.isEmpty();
+    }
+
+    /**
      * Tests if the set of UIDs that this network applies to is the same as the passed network.
      * <p>
      * This test only checks whether equal range objects are in both sets. It will
@@ -1584,19 +1606,7 @@ public final class NetworkCapabilities implements Parcelable {
      */
     @VisibleForTesting
     public boolean equalsUids(@NonNull NetworkCapabilities nc) {
-        Set<UidRange> comparedUids = nc.mUids;
-        if (null == comparedUids) return null == mUids;
-        if (null == mUids) return false;
-        // Make a copy so it can be mutated to check that all ranges in mUids
-        // also are in uids.
-        final Set<UidRange> uids = new ArraySet<>(mUids);
-        for (UidRange range : comparedUids) {
-            if (!uids.contains(range)) {
-                return false;
-            }
-            uids.remove(range);
-        }
-        return uids.isEmpty();
+        return hasSameUids(nc, this);
     }
 
     /**
