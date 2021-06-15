@@ -19,6 +19,8 @@ package android.net.cts;
 import static android.system.OsConstants.IPPROTO_IPV6;
 import static android.system.OsConstants.IPPROTO_UDP;
 
+import com.android.internal.net.ipsec.ike.crypto.AesXCbcImpl;
+
 import java.net.Inet4Address;
 import java.net.Inet6Address;
 import java.net.InetAddress;
@@ -27,6 +29,8 @@ import java.nio.ShortBuffer;
 import java.security.GeneralSecurityException;
 import java.security.SecureRandom;
 import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Set;
 
 import javax.crypto.Cipher;
 import javax.crypto.Mac;
@@ -92,7 +96,12 @@ public class PacketUtils {
     static final String CHACHA20_POLY1305 = "ChaCha20/Poly1305/NoPadding";
 
     // Authentication algorithms
+    static final String HMAC_MD5 = "HmacMD5";
+    static final String HMAC_SHA1 = "HmacSHA1";
     static final String HMAC_SHA_256 = "HmacSHA256";
+    static final String HMAC_SHA_384 = "HmacSHA384";
+    static final String HMAC_SHA_512 = "HmacSHA512";
+    static final String AES_XCBC = "AesXCbc";
 
     public interface Payload {
         byte[] getPacketBytes(IpHeader header) throws Exception;
@@ -657,6 +666,16 @@ public class PacketUtils {
         public final byte[] key;
         public final int icvLen;
 
+        private static final Set<String> SUPPORTED_HMAC_ALGOS = new HashSet<>();
+
+        static {
+            SUPPORTED_HMAC_ALGOS.add(HMAC_MD5);
+            SUPPORTED_HMAC_ALGOS.add(HMAC_SHA1);
+            SUPPORTED_HMAC_ALGOS.add(HMAC_SHA_256);
+            SUPPORTED_HMAC_ALGOS.add(HMAC_SHA_384);
+            SUPPORTED_HMAC_ALGOS.add(HMAC_SHA_512);
+        }
+
         public EspAuth(String algoName, byte[] key, int icvLen) {
             this.algoName = algoName;
             this.key = key;
@@ -664,14 +683,21 @@ public class PacketUtils {
         }
 
         public byte[] getIcv(byte[] authenticatedSection) throws GeneralSecurityException {
-            final Mac mac = Mac.getInstance(algoName);
-            final SecretKeySpec authKey = new SecretKeySpec(key, HMAC_SHA_256);
-            mac.init(authKey);
+            if (AES_XCBC.equals(algoName)) {
+                final Cipher aesCipher = Cipher.getInstance(AES_CBC);
+                return new AesXCbcImpl().mac(key, authenticatedSection, true /* needTruncation */);
+            } else if (SUPPORTED_HMAC_ALGOS.contains(algoName)) {
+                final Mac mac = Mac.getInstance(algoName);
+                final SecretKeySpec authKey = new SecretKeySpec(key, algoName);
+                mac.init(authKey);
 
-            final ByteBuffer buffer = ByteBuffer.wrap(mac.doFinal(authenticatedSection));
-            final byte[] icv = new byte[icvLen];
-            buffer.get(icv);
-            return icv;
+                final ByteBuffer buffer = ByteBuffer.wrap(mac.doFinal(authenticatedSection));
+                final byte[] icv = new byte[icvLen];
+                buffer.get(icv);
+                return icv;
+            } else {
+                throw new IllegalArgumentException("Invalid algorithm: " + algoName);
+            }
         }
     }
 

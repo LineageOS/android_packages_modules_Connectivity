@@ -38,6 +38,7 @@ java_defaults {
     srcs: [
         "src/**/*.java",
         "src/**/*.kt",
+        ":ike-aes-xcbc",
     ],
     jarjar_rules: "jarjar-rules-shared.txt",
     static_libs: [

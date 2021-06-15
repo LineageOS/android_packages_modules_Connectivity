@@ -16,6 +16,7 @@
 
 package android.net.cts;
 
+import static android.net.IpSecAlgorithm.AUTH_AES_XCBC;
 import static android.net.IpSecAlgorithm.AUTH_CRYPT_CHACHA20_POLY1305;
 import static android.net.IpSecAlgorithm.CRYPT_AES_CTR;
 import static android.net.cts.PacketUtils.AES_CTR;
@@ -25,6 +26,9 @@ import static android.net.cts.PacketUtils.AES_CTR_KEY_LEN_20;
 import static android.net.cts.PacketUtils.AES_CTR_KEY_LEN_28;
 import static android.net.cts.PacketUtils.AES_CTR_KEY_LEN_36;
 import static android.net.cts.PacketUtils.AES_CTR_SALT_LEN;
+import static android.net.cts.PacketUtils.AES_XCBC;
+import static android.net.cts.PacketUtils.AES_XCBC_ICV_LEN;
+import static android.net.cts.PacketUtils.AES_XCBC_KEY_LEN;
 import static android.net.cts.PacketUtils.CHACHA20_POLY1305;
 import static android.net.cts.PacketUtils.CHACHA20_POLY1305_BLK_SIZE;
 import static android.net.cts.PacketUtils.CHACHA20_POLY1305_ICV_LEN;
@@ -51,6 +55,7 @@ import android.net.cts.PacketUtils.EspAeadCipher;
 import android.net.cts.PacketUtils.EspAuth;
 import android.net.cts.PacketUtils.EspAuthNull;
 import android.net.cts.PacketUtils.EspCipher;
+import android.net.cts.PacketUtils.EspCipherNull;
 import android.net.cts.PacketUtils.EspCryptCipher;
 import android.net.cts.PacketUtils.EspHeader;
 import android.net.cts.PacketUtils.IpHeader;
@@ -236,6 +241,20 @@ public class IpSecAlgorithmImplTest extends IpSecBaseTest {
         assumeTrue(hasIpSecAlgorithm(CRYPT_AES_CTR));
 
         checkAesCtr(AES_CTR_KEY_LEN_36);
+    }
+
+    @Test
+    public void testAesXcbc() throws Exception {
+        assumeTrue(hasIpSecAlgorithm(AUTH_AES_XCBC));
+
+        final byte[] authKey = getKeyBytes(AES_XCBC_KEY_LEN);
+        final IpSecAlgorithm ipsecAuthAlgo =
+                new IpSecAlgorithm(IpSecAlgorithm.AUTH_AES_XCBC, authKey, AES_XCBC_ICV_LEN * 8);
+        final EspAuth espAuth = new EspAuth(AES_XCBC, authKey, AES_XCBC_ICV_LEN);
+
+        runWithShellPermissionIdentity(new TestNetworkRunnable(new CheckCryptoImplTest(
+                null /* ipsecEncryptAlgo */, ipsecAuthAlgo, null /* ipsecAeadAlgo */,
+                EspCipherNull.getInstance(), espAuth)));
     }
 
     @Test
