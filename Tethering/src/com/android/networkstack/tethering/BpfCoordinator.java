@@ -773,6 +773,12 @@ public class BpfCoordinator {
         }
         pw.decreaseIndent();
 
+        pw.println("BPF stats:");
+        pw.increaseIndent();
+        dumpBpfStats(pw);
+        pw.decreaseIndent();
+        pw.println();
+
         pw.println("Forwarding rules:");
         pw.increaseIndent();
         dumpIpv6UpstreamRules(pw);
@@ -798,6 +804,22 @@ public class BpfCoordinator {
             final ForwardedStats stats = mStats.get(upstreamIfindex);
             pw.println(String.format("%d(%s) - %s", upstreamIfindex, mInterfaceNames.get(
                     upstreamIfindex), stats.toString()));
+        }
+    }
+    private void dumpBpfStats(@NonNull IndentingPrintWriter pw) {
+        try (BpfMap<TetherStatsKey, TetherStatsValue> map = mDeps.getBpfStatsMap()) {
+            if (map == null) {
+                pw.println("No BPF stats map");
+                return;
+            }
+            if (map.isEmpty()) {
+                pw.println("<empty>");
+            }
+            map.forEach((k, v) -> {
+                pw.println(String.format("%s: %s", k, v));
+            });
+        } catch (ErrnoException e) {
+            pw.println("Error dumping BPF stats map: " + e);
         }
     }
 
