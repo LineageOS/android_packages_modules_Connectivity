@@ -35,5 +35,6 @@ cc_library_headers {
     visibility: [
         "//packages/modules/Connectivity/Tethering",
         "//system/bpf/libbpf_android",
+        "//system/memory/lmkd",
     ],
 }
