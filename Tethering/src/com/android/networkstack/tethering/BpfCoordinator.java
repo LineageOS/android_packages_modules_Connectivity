@@ -786,6 +786,7 @@ public class BpfCoordinator {
         dumpIpv6ForwardingRules(pw);
         dumpIpv4ForwardingRules(pw);
         pw.decreaseIndent();
+        pw.println();
 
         pw.println("Device map:");
         pw.increaseIndent();
@@ -872,24 +873,33 @@ public class BpfCoordinator {
         }
     }
 
-    private String ipv4RuleToString(long now, Tether4Key key, Tether4Value value) {
-        final String private4, public4, dst4;
+    private String ipv4RuleToString(long now, boolean downstream,
+            Tether4Key key, Tether4Value value) {
+        final String src4, public4, dst4;
+        final int publicPort;
         try {
-            private4 = InetAddress.getByAddress(key.src4).getHostAddress();
-            dst4 = InetAddress.getByAddress(key.dst4).getHostAddress();
-            public4 = InetAddress.getByAddress(value.src46).getHostAddress();
+            src4 = InetAddress.getByAddress(key.src4).getHostAddress();
+            if (downstream) {
+                public4 = InetAddress.getByAddress(key.dst4).getHostAddress();
+                publicPort = key.dstPort;
+            } else {
+                public4 = InetAddress.getByAddress(value.src46).getHostAddress();
+                publicPort = value.srcPort;
+            }
+            dst4 = InetAddress.getByAddress(value.dst46).getHostAddress();
         } catch (UnknownHostException impossible) {
-            throw new AssertionError("4-byte array not valid IPv4 address!");
+            throw new AssertionError("IP address array not valid IPv4 address!");
         }
-        long ageMs = (now - value.lastUsed) / 1_000_000;
-        return String.format("[%s] %d(%s) %s:%d -> %d(%s) %s:%d -> %s:%d %dms",
-                key.dstMac, key.iif, getIfName(key.iif), private4, key.srcPort,
+
+        final long ageMs = (now - value.lastUsed) / 1_000_000;
+        return String.format("[%s] %d(%s) %s:%d -> %d(%s) %s:%d -> %s:%d [%s] %dms",
+                key.dstMac, key.iif, getIfName(key.iif), src4, key.srcPort,
                 value.oif, getIfName(value.oif),
-                public4, value.srcPort, dst4, key.dstPort, ageMs);
+                public4, publicPort, dst4, value.dstPort, value.ethDstMac, ageMs);
     }
 
-    private void dumpIpv4ForwardingRuleMap(long now, BpfMap<Tether4Key, Tether4Value> map,
-            IndentingPrintWriter pw) throws ErrnoException {
+    private void dumpIpv4ForwardingRuleMap(long now, boolean downstream,
+            BpfMap<Tether4Key, Tether4Value> map, IndentingPrintWriter pw) throws ErrnoException {
         if (map == null) {
             pw.println("No IPv4 support");
             return;
@@ -898,7 +908,7 @@ public class BpfCoordinator {
             pw.println("No rules");
             return;
         }
-        map.forEach((k, v) -> pw.println(ipv4RuleToString(now, k, v)));
+        map.forEach((k, v) -> pw.println(ipv4RuleToString(now, downstream, k, v)));
     }
 
     private void dumpIpv4ForwardingRules(IndentingPrintWriter pw) {
@@ -906,14 +916,14 @@ public class BpfCoordinator {
 
         try (BpfMap<Tether4Key, Tether4Value> upstreamMap = mDeps.getBpfUpstream4Map();
                 BpfMap<Tether4Key, Tether4Value> downstreamMap = mDeps.getBpfDownstream4Map()) {
-            pw.println("IPv4 Upstream: [inDstMac] iif(iface) src -> nat -> dst");
+            pw.println("IPv4 Upstream: [inDstMac] iif(iface) src -> nat -> dst [outDstMac] age");
             pw.increaseIndent();
-            dumpIpv4ForwardingRuleMap(now, upstreamMap, pw);
+            dumpIpv4ForwardingRuleMap(now, UPSTREAM, upstreamMap, pw);
             pw.decreaseIndent();
 
-            pw.println("IPv4 Downstream: [inDstMac] iif(iface) src -> nat -> dst");
+            pw.println("IPv4 Downstream: [inDstMac] iif(iface) src -> nat -> dst [outDstMac] age");
             pw.increaseIndent();
-            dumpIpv4ForwardingRuleMap(now, downstreamMap, pw);
+            dumpIpv4ForwardingRuleMap(now, DOWNSTREAM, downstreamMap, pw);
             pw.decreaseIndent();
         } catch (ErrnoException e) {
             pw.println("Error dumping IPv4 map: " + e);
