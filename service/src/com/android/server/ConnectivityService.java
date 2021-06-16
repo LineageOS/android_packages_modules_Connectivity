@@ -1276,6 +1276,20 @@ public class ConnectivityService extends IConnectivityManager.Stub
         public boolean getCellular464XlatEnabled() {
             return NetworkProperties.isCellular464XlatEnabled().orElse(true);
         }
+
+        /**
+         * @see PendingIntent#intentFilterEquals
+         */
+        public boolean intentFilterEquals(PendingIntent a, PendingIntent b) {
+            return a.intentFilterEquals(b);
+        }
+
+        /**
+         * @see LocationPermissionChecker
+         */
+        public LocationPermissionChecker makeLocationPermissionChecker(Context context) {
+            return new LocationPermissionChecker(context);
+        }
     }
 
     public ConnectivityService(Context context) {
@@ -1343,7 +1357,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
         mNetd = netd;
         mTelephonyManager = (TelephonyManager) mContext.getSystemService(Context.TELEPHONY_SERVICE);
         mAppOpsManager = (AppOpsManager) mContext.getSystemService(Context.APP_OPS_SERVICE);
-        mLocationPermissionChecker = new LocationPermissionChecker(mContext);
+        mLocationPermissionChecker = mDeps.makeLocationPermissionChecker(mContext);
 
         // To ensure uid state is synchronized with Network Policy, register for
         // NetworkPolicyManagerService events must happen prior to NetworkPolicyManagerService
@@ -3934,7 +3948,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
         for (Map.Entry<NetworkRequest, NetworkRequestInfo> entry : mNetworkRequests.entrySet()) {
             PendingIntent existingPendingIntent = entry.getValue().mPendingIntent;
             if (existingPendingIntent != null &&
-                    existingPendingIntent.intentFilterEquals(pendingIntent)) {
+                    mDeps.intentFilterEquals(existingPendingIntent, pendingIntent)) {
                 return entry.getValue();
             }
         }
