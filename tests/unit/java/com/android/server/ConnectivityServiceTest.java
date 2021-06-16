@@ -109,6 +109,8 @@ import static android.net.OemNetworkPreferences.OEM_NETWORK_PREFERENCE_OEM_PAID;
 import static android.net.OemNetworkPreferences.OEM_NETWORK_PREFERENCE_OEM_PAID_NO_FALLBACK;
 import static android.net.OemNetworkPreferences.OEM_NETWORK_PREFERENCE_OEM_PAID_ONLY;
 import static android.net.OemNetworkPreferences.OEM_NETWORK_PREFERENCE_OEM_PRIVATE_ONLY;
+import static android.net.OemNetworkPreferences.OEM_NETWORK_PREFERENCE_TEST;
+import static android.net.OemNetworkPreferences.OEM_NETWORK_PREFERENCE_TEST_ONLY;
 import static android.net.OemNetworkPreferences.OEM_NETWORK_PREFERENCE_UNINITIALIZED;
 import static android.net.RouteInfo.RTN_UNREACHABLE;
 import static android.net.resolv.aidl.IDnsResolverUnsolicitedEventListener.PREFIX_OPERATION_ADDED;
@@ -10822,8 +10824,7 @@ public class ConnectivityServiceTest {
     }
 
     @Test
-    public void testOemNetworkRequestFactoryPreferenceUninitializedThrowsError()
-            throws PackageManager.NameNotFoundException {
+    public void testOemNetworkRequestFactoryPreferenceUninitializedThrowsError() {
         @OemNetworkPreferences.OemNetworkPreference final int prefToTest =
                 OEM_NETWORK_PREFERENCE_UNINITIALIZED;
 
@@ -11090,7 +11091,48 @@ public class ConnectivityServiceTest {
         assertThrows(UnsupportedOperationException.class,
                 () -> mService.setOemNetworkPreference(
                         createDefaultOemNetworkPreferences(networkPref),
-                        new TestOemListenerCallback()));
+                        null));
+    }
+
+    @Test
+    public void testSetOemNetworkPreferenceFailsForTestRequestWithoutPermission() {
+        // Calling setOemNetworkPreference() with a test pref requires the permission
+        // MANAGE_TEST_NETWORKS.
+        mockHasSystemFeature(PackageManager.FEATURE_AUTOMOTIVE, false);
+        @OemNetworkPreferences.OemNetworkPreference final int networkPref =
+                OEM_NETWORK_PREFERENCE_TEST;
+
+        // Act on ConnectivityService.setOemNetworkPreference()
+        assertThrows(SecurityException.class,
+                () -> mService.setOemNetworkPreference(
+                        createDefaultOemNetworkPreferences(networkPref),
+                        null));
+    }
+
+    @Test
+    public void testSetOemNetworkPreferenceFailsForInvalidTestRequest() {
+        assertSetOemNetworkPreferenceFailsForInvalidTestRequest(OEM_NETWORK_PREFERENCE_TEST);
+    }
+
+    @Test
+    public void testSetOemNetworkPreferenceFailsForInvalidTestOnlyRequest() {
+        assertSetOemNetworkPreferenceFailsForInvalidTestRequest(OEM_NETWORK_PREFERENCE_TEST_ONLY);
+    }
+
+    private void assertSetOemNetworkPreferenceFailsForInvalidTestRequest(
+            @OemNetworkPreferences.OemNetworkPreference final int oemNetworkPreferenceForTest) {
+        mockHasSystemFeature(PackageManager.FEATURE_AUTOMOTIVE, true);
+        final String secondPackage = "does.not.matter";
+
+        // A valid test request would only have a single mapping.
+        final OemNetworkPreferences pref = new OemNetworkPreferences.Builder()
+                .addNetworkPreference(TEST_PACKAGE_NAME, oemNetworkPreferenceForTest)
+                .addNetworkPreference(secondPackage, oemNetworkPreferenceForTest)
+                .build();
+
+        // Act on ConnectivityService.setOemNetworkPreference()
+        assertThrows(IllegalArgumentException.class,
+                () -> mService.setOemNetworkPreference(pref, null));
     }
 
     private void setOemNetworkPreferenceAgentConnected(final int transportType,
@@ -11267,8 +11309,18 @@ public class ConnectivityServiceTest {
     private void setupSetOemNetworkPreferenceForPreferenceTest(
             @OemNetworkPreferences.OemNetworkPreference final int networkPrefToSetup,
             @NonNull final UidRangeParcel[] uidRanges,
-            @NonNull final String testPackageName)
-            throws Exception {
+            @NonNull final String testPackageName) throws Exception {
+        setupSetOemNetworkPreferenceForPreferenceTest(
+                networkPrefToSetup, uidRanges, testPackageName, true);
+    }
+
+    private void setupSetOemNetworkPreferenceForPreferenceTest(
+            @OemNetworkPreferences.OemNetworkPreference final int networkPrefToSetup,
+            @NonNull final UidRangeParcel[] uidRanges,
+            @NonNull final String testPackageName,
+            final boolean hasAutomotiveFeature) throws Exception {
+        mockHasSystemFeature(PackageManager.FEATURE_AUTOMOTIVE, hasAutomotiveFeature);
+
         // These tests work off a single UID therefore using 'start' is valid.
         mockGetApplicationInfo(testPackageName, uidRanges[0].start);
 
@@ -11573,6 +11625,55 @@ public class ConnectivityServiceTest {
     }
 
     /**
+     * Test the tracked default requests allows test requests without standard setup.
+     */
+    @Test
+    public void testSetOemNetworkPreferenceAllowsValidTestRequestWithoutChecks() throws Exception {
+        @OemNetworkPreferences.OemNetworkPreference int networkPref =
+                OEM_NETWORK_PREFERENCE_TEST;
+        validateSetOemNetworkPreferenceAllowsValidTestPrefRequest(networkPref);
+    }
+
+    /**
+     * Test the tracked default requests allows test only requests without standard setup.
+     */
+    @Test
+    public void testSetOemNetworkPreferenceAllowsValidTestOnlyRequestWithoutChecks()
+            throws Exception {
+        @OemNetworkPreferences.OemNetworkPreference int networkPref =
+                OEM_NETWORK_PREFERENCE_TEST_ONLY;
+        validateSetOemNetworkPreferenceAllowsValidTestPrefRequest(networkPref);
+    }
+
+    private void validateSetOemNetworkPreferenceAllowsValidTestPrefRequest(int networkPref)
+            throws Exception {
+        // The caller must have the MANAGE_TEST_NETWORKS permission.
+        final int testPackageUid = 123;
+        final String validTestPackageName = "does.not.matter";
+        final UidRangeParcel[] uidRanges =
+                toUidRangeStableParcels(uidRangesForUids(testPackageUid));
+        mServiceContext.setPermission(
+                Manifest.permission.MANAGE_TEST_NETWORKS, PERMISSION_GRANTED);
+
+        // Put the system into a state in which setOemNetworkPreference() would normally fail. This
+        // will confirm that a valid test request can bypass these checks.
+        mockHasSystemFeature(PackageManager.FEATURE_AUTOMOTIVE, false);
+        mServiceContext.setPermission(
+                Manifest.permission.CONTROL_OEM_PAID_NETWORK_PREFERENCE, PERMISSION_DENIED);
+
+        // Validate the starting requests only includes the system default request.
+        assertEquals(1, mService.mDefaultNetworkRequests.size());
+
+        // Add an OEM default network request to track.
+        setupSetOemNetworkPreferenceForPreferenceTest(
+                networkPref, uidRanges, validTestPackageName,
+                false /* hasAutomotiveFeature */);
+
+        // Two requests should now exist; the system default and the test request.
+        assertEquals(2, mService.mDefaultNetworkRequests.size());
+    }
+
+    /**
      * Test the tracked default requests clear previous OEM requests on setOemNetworkPreference().
      */
     @Test
@@ -11584,7 +11685,7 @@ public class ConnectivityServiceTest {
         final UidRangeParcel[] uidRanges =
                 toUidRangeStableParcels(uidRangesForUids(testPackageUid));
 
-        // Validate the starting requests only includes the fallback request.
+        // Validate the starting requests only includes the system default request.
         assertEquals(1, mService.mDefaultNetworkRequests.size());
 
         // Add an OEM default network request to track.
