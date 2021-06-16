@@ -48,6 +48,7 @@ import android.net.util.InterfaceParams;
 import android.net.util.SharedLog;
 import android.net.util.TetheringUtils.ForwardedStats;
 import android.os.Handler;
+import android.os.SystemClock;
 import android.system.ErrnoException;
 import android.text.TextUtils;
 import android.util.Log;
@@ -773,6 +774,12 @@ public class BpfCoordinator {
         }
         pw.decreaseIndent();
 
+        pw.println("BPF stats:");
+        pw.increaseIndent();
+        dumpBpfStats(pw);
+        pw.decreaseIndent();
+        pw.println();
+
         pw.println("Forwarding rules:");
         pw.increaseIndent();
         dumpIpv6UpstreamRules(pw);
@@ -798,6 +805,22 @@ public class BpfCoordinator {
             final ForwardedStats stats = mStats.get(upstreamIfindex);
             pw.println(String.format("%d(%s) - %s", upstreamIfindex, mInterfaceNames.get(
                     upstreamIfindex), stats.toString()));
+        }
+    }
+    private void dumpBpfStats(@NonNull IndentingPrintWriter pw) {
+        try (BpfMap<TetherStatsKey, TetherStatsValue> map = mDeps.getBpfStatsMap()) {
+            if (map == null) {
+                pw.println("No BPF stats map");
+                return;
+            }
+            if (map.isEmpty()) {
+                pw.println("<empty>");
+            }
+            map.forEach((k, v) -> {
+                pw.println(String.format("%s: %s", k, v));
+            });
+        } catch (ErrnoException e) {
+            pw.println("Error dumping BPF stats map: " + e);
         }
     }
 
@@ -849,7 +872,7 @@ public class BpfCoordinator {
         }
     }
 
-    private String ipv4RuleToString(Tether4Key key, Tether4Value value) {
+    private String ipv4RuleToString(long now, Tether4Key key, Tether4Value value) {
         final String private4, public4, dst4;
         try {
             private4 = InetAddress.getByAddress(key.src4).getHostAddress();
@@ -858,29 +881,43 @@ public class BpfCoordinator {
         } catch (UnknownHostException impossible) {
             throw new AssertionError("4-byte array not valid IPv4 address!");
         }
-        return String.format("[%s] %d(%s) %s:%d -> %d(%s) %s:%d -> %s:%d",
+        long ageMs = (now - value.lastUsed) / 1_000_000;
+        return String.format("[%s] %d(%s) %s:%d -> %d(%s) %s:%d -> %s:%d %dms",
                 key.dstMac, key.iif, getIfName(key.iif), private4, key.srcPort,
                 value.oif, getIfName(value.oif),
-                public4, value.srcPort, dst4, key.dstPort);
+                public4, value.srcPort, dst4, key.dstPort, ageMs);
+    }
+
+    private void dumpIpv4ForwardingRuleMap(long now, BpfMap<Tether4Key, Tether4Value> map,
+            IndentingPrintWriter pw) throws ErrnoException {
+        if (map == null) {
+            pw.println("No IPv4 support");
+            return;
+        }
+        if (map.isEmpty()) {
+            pw.println("No rules");
+            return;
+        }
+        map.forEach((k, v) -> pw.println(ipv4RuleToString(now, k, v)));
     }
 
     private void dumpIpv4ForwardingRules(IndentingPrintWriter pw) {
-        try (BpfMap<Tether4Key, Tether4Value> map = mDeps.getBpfUpstream4Map()) {
-            if (map == null) {
-                pw.println("No IPv4 support");
-                return;
-            }
-            if (map.isEmpty()) {
-                pw.println("No IPv4 rules");
-                return;
-            }
-            pw.println("IPv4: [inDstMac] iif(iface) src -> nat -> dst");
+        final long now = SystemClock.elapsedRealtimeNanos();
+
+        try (BpfMap<Tether4Key, Tether4Value> upstreamMap = mDeps.getBpfUpstream4Map();
+                BpfMap<Tether4Key, Tether4Value> downstreamMap = mDeps.getBpfDownstream4Map()) {
+            pw.println("IPv4 Upstream: [inDstMac] iif(iface) src -> nat -> dst");
             pw.increaseIndent();
-            map.forEach((k, v) -> pw.println(ipv4RuleToString(k, v)));
+            dumpIpv4ForwardingRuleMap(now, upstreamMap, pw);
+            pw.decreaseIndent();
+
+            pw.println("IPv4 Downstream: [inDstMac] iif(iface) src -> nat -> dst");
+            pw.increaseIndent();
+            dumpIpv4ForwardingRuleMap(now, downstreamMap, pw);
+            pw.decreaseIndent();
         } catch (ErrnoException e) {
             pw.println("Error dumping IPv4 map: " + e);
         }
-        pw.decreaseIndent();
     }
 
     /**

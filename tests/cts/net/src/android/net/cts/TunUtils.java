@@ -147,6 +147,10 @@ public class TunUtils {
         return espPkt; // We've found the packet we're looking for.
     }
 
+    public byte[] awaitEspPacket(int spi, boolean useEncap) throws Exception {
+        return awaitPacket((pkt) -> isEsp(pkt, spi, useEncap));
+    }
+
     private static boolean isSpiEqual(byte[] pkt, int espOffset, int spi) {
         // Check SPI byte by byte.
         return pkt[espOffset] == (byte) ((spi >>> 24) & 0xff)

@@ -24,7 +24,9 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import android.net.util.KeepalivePacketDataUtil;
+import android.util.Log;
 
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -38,8 +40,19 @@ public final class KeepalivePacketDataUtilTest {
     private static final byte[] IPV4_KEEPALIVE_SRC_ADDR = {10, 0, 0, 1};
     private static final byte[] IPV4_KEEPALIVE_DST_ADDR = {10, 0, 0, 5};
 
+    private Log.TerribleFailureHandler mOriginalHandler;
+
     @Before
-    public void setUp() {}
+    public void setUp() {
+        // Terrible failures are logged when using deprecated methods on newer platforms
+        mOriginalHandler = Log.setWtfHandler((tag, what, sys) ->
+                Log.e(tag, "Terrible failure in test", what));
+    }
+
+    @After
+    public void tearDown() {
+        Log.setWtfHandler(mOriginalHandler);
+    }
 
     @Test
     public void testFromTcpKeepaliveStableParcelable() throws Exception {

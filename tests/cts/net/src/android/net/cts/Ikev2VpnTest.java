@@ -39,13 +39,11 @@ import android.content.Intent;
 import android.net.ConnectivityManager;
 import android.net.Ikev2VpnProfile;
 import android.net.IpSecAlgorithm;
-import android.net.LinkAddress;
 import android.net.Network;
 import android.net.NetworkCapabilities;
 import android.net.NetworkRequest;
 import android.net.ProxyInfo;
 import android.net.TestNetworkInterface;
-import android.net.TestNetworkManager;
 import android.net.VpnManager;
 import android.net.cts.util.CtsNetUtils;
 import android.os.Build;
@@ -439,41 +437,37 @@ public class Ikev2VpnTest {
         assertEquals(vpnNetwork, cb.lastLostNetwork);
     }
 
-    private void doTestStartStopVpnProfile(boolean testIpv6) throws Exception {
-        // Non-final; these variables ensure we clean up properly after our test if we have
-        // allocated test network resources
-        final TestNetworkManager tnm = sContext.getSystemService(TestNetworkManager.class);
-        TestNetworkInterface testIface = null;
-        TestNetworkCallback tunNetworkCallback = null;
+    private class VerifyStartStopVpnProfileTest implements TestNetworkRunnable.Test {
+        private final boolean mTestIpv6Only;
 
-        try {
-            // Build underlying test network
-            testIface = tnm.createTunInterface(
-                    new LinkAddress[] {
-                            new LinkAddress(LOCAL_OUTER_4, IP4_PREFIX_LEN),
-                            new LinkAddress(LOCAL_OUTER_6, IP6_PREFIX_LEN)});
+        /**
+         * Constructs the test
+         *
+         * @param testIpv6Only if true, builds a IPv6-only test; otherwise builds a IPv4-only test
+         */
+        VerifyStartStopVpnProfileTest(boolean testIpv6Only) {
+            mTestIpv6Only = testIpv6Only;
+        }
 
-            // Hold on to this callback to ensure network does not get reaped.
-            tunNetworkCallback = mCtsNetUtils.setupAndGetTestNetwork(
-                    testIface.getInterfaceName());
+        @Override
+        public void runTest(TestNetworkInterface testIface, TestNetworkCallback tunNetworkCallback)
+                throws Exception {
             final IkeTunUtils tunUtils = new IkeTunUtils(testIface.getFileDescriptor());
 
-            checkStartStopVpnProfileBuildsNetworks(tunUtils, testIpv6);
-        } finally {
-            // Make sure to stop the VPN profile. This is safe to call multiple times.
+            checkStartStopVpnProfileBuildsNetworks(tunUtils, mTestIpv6Only);
+        }
+
+        @Override
+        public void cleanupTest() {
             sVpnMgr.stopProvisionedVpnProfile();
+        }
 
-            if (testIface != null) {
-                testIface.getFileDescriptor().close();
-            }
-
-            if (tunNetworkCallback != null) {
-                sCM.unregisterNetworkCallback(tunNetworkCallback);
-            }
-
-            final Network testNetwork = tunNetworkCallback.currentNetwork;
-            if (testNetwork != null) {
-                tnm.teardownTestNetwork(testNetwork);
+        @Override
+        public InetAddress[] getTestNetworkAddresses() {
+            if (mTestIpv6Only) {
+                return new InetAddress[] {LOCAL_OUTER_6};
+            } else {
+                return new InetAddress[] {LOCAL_OUTER_4};
             }
         }
     }
@@ -483,9 +477,8 @@ public class Ikev2VpnTest {
         assumeTrue(mCtsNetUtils.hasIpsecTunnelsFeature());
 
         // Requires shell permission to update appops.
-        runWithShellPermissionIdentity(() -> {
-            doTestStartStopVpnProfile(false);
-        });
+        runWithShellPermissionIdentity(
+                new TestNetworkRunnable(new VerifyStartStopVpnProfileTest(false)));
     }
 
     @Test
@@ -493,9 +486,8 @@ public class Ikev2VpnTest {
         assumeTrue(mCtsNetUtils.hasIpsecTunnelsFeature());
 
         // Requires shell permission to update appops.
-        runWithShellPermissionIdentity(() -> {
-            doTestStartStopVpnProfile(true);
-        });
+        runWithShellPermissionIdentity(
+                new TestNetworkRunnable(new VerifyStartStopVpnProfileTest(true)));
     }
 
     private static class CertificateAndKey {

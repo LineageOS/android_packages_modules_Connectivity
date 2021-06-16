@@ -33,7 +33,7 @@ import static android.net.cts.PacketUtils.AES_CMAC_ICV_LEN;
 import static android.net.cts.PacketUtils.AES_CMAC_KEY_LEN;
 import static android.net.cts.PacketUtils.AES_CTR_BLK_SIZE;
 import static android.net.cts.PacketUtils.AES_CTR_IV_LEN;
-import static android.net.cts.PacketUtils.AES_CTR_KEY_LEN;
+import static android.net.cts.PacketUtils.AES_CTR_KEY_LEN_20;
 import static android.net.cts.PacketUtils.AES_GCM_BLK_SIZE;
 import static android.net.cts.PacketUtils.AES_GCM_IV_LEN;
 import static android.net.cts.PacketUtils.AES_XCBC_ICV_LEN;
@@ -74,7 +74,6 @@ import androidx.test.runner.AndroidJUnit4;
 
 import com.android.testutils.DevSdkIgnoreRule;
 import com.android.testutils.DevSdkIgnoreRule.IgnoreUpTo;
-import com.android.testutils.SkipPresubmit;
 
 import org.junit.Rule;
 import org.junit.Test;
@@ -771,7 +770,6 @@ public class IpSecManagerTest extends IpSecBaseTest {
     }
 
     @Test
-    @SkipPresubmit(reason = "b/186608065 - kernel 5.10 regression in TrafficStats with ipsec")
     public void testAesCbcHmacMd5Tcp6() throws Exception {
         IpSecAlgorithm crypt = new IpSecAlgorithm(IpSecAlgorithm.CRYPT_AES_CBC, CRYPT_KEY);
         IpSecAlgorithm auth = new IpSecAlgorithm(IpSecAlgorithm.AUTH_HMAC_MD5, getKey(128), 96);
@@ -804,7 +802,6 @@ public class IpSecManagerTest extends IpSecBaseTest {
     }
 
     @Test
-    @SkipPresubmit(reason = "b/186608065 - kernel 5.10 regression in TrafficStats with ipsec")
     public void testAesCbcHmacSha1Tcp6() throws Exception {
         IpSecAlgorithm crypt = new IpSecAlgorithm(IpSecAlgorithm.CRYPT_AES_CBC, CRYPT_KEY);
         IpSecAlgorithm auth = new IpSecAlgorithm(IpSecAlgorithm.AUTH_HMAC_SHA1, getKey(160), 96);
@@ -837,7 +834,6 @@ public class IpSecManagerTest extends IpSecBaseTest {
     }
 
     @Test
-    @SkipPresubmit(reason = "b/186608065 - kernel 5.10 regression in TrafficStats with ipsec")
     public void testAesCbcHmacSha256Tcp6() throws Exception {
         IpSecAlgorithm crypt = new IpSecAlgorithm(IpSecAlgorithm.CRYPT_AES_CBC, CRYPT_KEY);
         IpSecAlgorithm auth = new IpSecAlgorithm(IpSecAlgorithm.AUTH_HMAC_SHA256, getKey(256), 128);
@@ -870,7 +866,6 @@ public class IpSecManagerTest extends IpSecBaseTest {
     }
 
     @Test
-    @SkipPresubmit(reason = "b/186608065 - kernel 5.10 regression in TrafficStats with ipsec")
     public void testAesCbcHmacSha384Tcp6() throws Exception {
         IpSecAlgorithm crypt = new IpSecAlgorithm(IpSecAlgorithm.CRYPT_AES_CBC, CRYPT_KEY);
         IpSecAlgorithm auth = new IpSecAlgorithm(IpSecAlgorithm.AUTH_HMAC_SHA384, getKey(384), 192);
@@ -903,7 +898,6 @@ public class IpSecManagerTest extends IpSecBaseTest {
     }
 
     @Test
-    @SkipPresubmit(reason = "b/186608065 - kernel 5.10 regression in TrafficStats with ipsec")
     public void testAesCbcHmacSha512Tcp6() throws Exception {
         IpSecAlgorithm crypt = new IpSecAlgorithm(IpSecAlgorithm.CRYPT_AES_CBC, CRYPT_KEY);
         IpSecAlgorithm auth = new IpSecAlgorithm(IpSecAlgorithm.AUTH_HMAC_SHA512, getKey(512), 256);
@@ -928,7 +922,7 @@ public class IpSecManagerTest extends IpSecBaseTest {
     }
 
     private static IpSecAlgorithm buildCryptAesCtr() throws Exception {
-        return new IpSecAlgorithm(CRYPT_AES_CTR, getKeyBytes(AES_CTR_KEY_LEN));
+        return new IpSecAlgorithm(CRYPT_AES_CTR, getKeyBytes(AES_CTR_KEY_LEN_20));
     }
 
     private static IpSecAlgorithm buildAuthHmacSha512() throws Exception {
@@ -947,7 +941,6 @@ public class IpSecManagerTest extends IpSecBaseTest {
     }
 
     @Test
-    @SkipPresubmit(reason = "b/186608065 - kernel 5.10 regression in TrafficStats with ipsec")
     public void testAesCtrHmacSha512Tcp6() throws Exception {
         assumeTrue(hasIpSecAlgorithm(CRYPT_AES_CTR));
 
@@ -1002,7 +995,6 @@ public class IpSecManagerTest extends IpSecBaseTest {
     }
 
     @Test
-    @SkipPresubmit(reason = "b/186608065 - kernel 5.10 regression in TrafficStats with ipsec")
     public void testAesCbcAesXCbcTcp6() throws Exception {
         assumeTrue(hasIpSecAlgorithm(AUTH_AES_XCBC));
 
@@ -1043,7 +1035,6 @@ public class IpSecManagerTest extends IpSecBaseTest {
     }
 
     @Test
-    @SkipPresubmit(reason = "b/186608065 - kernel 5.10 regression in TrafficStats with ipsec")
     public void testAesCbcAesCmacTcp6() throws Exception {
         assumeTrue(hasIpSecAlgorithm(AUTH_AES_CMAC));
 
@@ -1082,7 +1073,6 @@ public class IpSecManagerTest extends IpSecBaseTest {
     }
 
     @Test
-    @SkipPresubmit(reason = "b/186608065 - kernel 5.10 regression in TrafficStats with ipsec")
     public void testAesGcm64Tcp6() throws Exception {
         IpSecAlgorithm authCrypt =
                 new IpSecAlgorithm(IpSecAlgorithm.AUTH_CRYPT_AES_GCM, AEAD_KEY, 64);
@@ -1115,7 +1105,6 @@ public class IpSecManagerTest extends IpSecBaseTest {
     }
 
     @Test
-    @SkipPresubmit(reason = "b/186608065 - kernel 5.10 regression in TrafficStats with ipsec")
     public void testAesGcm96Tcp6() throws Exception {
         IpSecAlgorithm authCrypt =
                 new IpSecAlgorithm(IpSecAlgorithm.AUTH_CRYPT_AES_GCM, AEAD_KEY, 96);
@@ -1148,7 +1137,6 @@ public class IpSecManagerTest extends IpSecBaseTest {
     }
 
     @Test
-    @SkipPresubmit(reason = "b/186608065 - kernel 5.10 regression in TrafficStats with ipsec")
     public void testAesGcm128Tcp6() throws Exception {
         IpSecAlgorithm authCrypt =
                 new IpSecAlgorithm(IpSecAlgorithm.AUTH_CRYPT_AES_GCM, AEAD_KEY, 128);
@@ -1187,7 +1175,6 @@ public class IpSecManagerTest extends IpSecBaseTest {
     }
 
     @Test
-    @SkipPresubmit(reason = "b/186608065 - kernel 5.10 regression in TrafficStats with ipsec")
     public void testChaCha20Poly1305Tcp6() throws Exception {
         assumeTrue(hasIpSecAlgorithm(AUTH_CRYPT_CHACHA20_POLY1305));
 
@@ -1463,7 +1450,6 @@ public class IpSecManagerTest extends IpSecBaseTest {
     }
 
     @Test
-    @SkipPresubmit(reason = "b/186608065 - kernel 5.10 regression in TrafficStats with ipsec")
     public void testCryptTcp6() throws Exception {
         IpSecAlgorithm crypt = new IpSecAlgorithm(IpSecAlgorithm.CRYPT_AES_CBC, CRYPT_KEY);
         checkTransform(IPPROTO_TCP, IPV6_LOOPBACK, crypt, null, null, false, 1, false);
@@ -1471,7 +1457,6 @@ public class IpSecManagerTest extends IpSecBaseTest {
     }
 
     @Test
-    @SkipPresubmit(reason = "b/186608065 - kernel 5.10 regression in TrafficStats with ipsec")
     public void testAuthTcp6() throws Exception {
         IpSecAlgorithm auth = new IpSecAlgorithm(IpSecAlgorithm.AUTH_HMAC_SHA256, getKey(256), 128);
         checkTransform(IPPROTO_TCP, IPV6_LOOPBACK, null, auth, null, false, 1, false);
