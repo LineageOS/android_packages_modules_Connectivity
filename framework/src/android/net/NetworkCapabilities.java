@@ -826,6 +826,7 @@ public final class NetworkCapabilities implements Parcelable {
         final int originalOwnerUid = getOwnerUid();
         final int[] originalAdministratorUids = getAdministratorUids();
         final TransportInfo originalTransportInfo = getTransportInfo();
+        final Set<Integer> originalSubIds = getSubscriptionIds();
         clearAll();
         if (0 != (originalCapabilities & NET_CAPABILITY_NOT_RESTRICTED)) {
             // If the test network is not restricted, then it is only allowed to declare some
@@ -834,6 +835,9 @@ public final class NetworkCapabilities implements Parcelable {
             mTransportTypes =
                     (originalTransportTypes & UNRESTRICTED_TEST_NETWORKS_ALLOWED_TRANSPORTS)
                             | (1 << TRANSPORT_TEST);
+
+            // SubIds are only allowed for Test Networks that only declare TRANSPORT_TEST.
+            setSubscriptionIds(originalSubIds);
         } else {
             // If the test transport is restricted, then it may declare any transport.
             mTransportTypes = (originalTransportTypes | (1 << TRANSPORT_TEST));
