@@ -39,6 +39,7 @@ import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doCallRealMethod;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.inOrder;
@@ -219,19 +220,11 @@ public class VpnTest {
 
         when(mContext.getPackageName()).thenReturn(TEST_VPN_PKG);
         when(mContext.getOpPackageName()).thenReturn(TEST_VPN_PKG);
-        when(mContext.getSystemServiceName(UserManager.class))
-                .thenReturn(Context.USER_SERVICE);
-        when(mContext.getSystemService(eq(Context.USER_SERVICE))).thenReturn(mUserManager);
-        when(mContext.getSystemService(eq(Context.APP_OPS_SERVICE))).thenReturn(mAppOps);
-        when(mContext.getSystemServiceName(NotificationManager.class))
-                .thenReturn(Context.NOTIFICATION_SERVICE);
-        when(mContext.getSystemService(eq(Context.NOTIFICATION_SERVICE)))
-                .thenReturn(mNotificationManager);
-        when(mContext.getSystemService(eq(Context.CONNECTIVITY_SERVICE)))
-                .thenReturn(mConnectivityManager);
-        when(mContext.getSystemServiceName(eq(ConnectivityManager.class)))
-                .thenReturn(Context.CONNECTIVITY_SERVICE);
-        when(mContext.getSystemService(eq(Context.IPSEC_SERVICE))).thenReturn(mIpSecManager);
+        mockService(UserManager.class, Context.USER_SERVICE, mUserManager);
+        mockService(AppOpsManager.class, Context.APP_OPS_SERVICE, mAppOps);
+        mockService(NotificationManager.class, Context.NOTIFICATION_SERVICE, mNotificationManager);
+        mockService(ConnectivityManager.class, Context.CONNECTIVITY_SERVICE, mConnectivityManager);
+        mockService(IpSecManager.class, Context.IPSEC_SERVICE, mIpSecManager);
         when(mContext.getString(R.string.config_customVpnAlwaysOnDisconnectedDialogComponent))
                 .thenReturn(Resources.getSystem().getString(
                         R.string.config_customVpnAlwaysOnDisconnectedDialogComponent));
@@ -257,6 +250,16 @@ public class VpnTest {
                         IpSecManager.Status.OK, TEST_TUNNEL_RESOURCE_ID, TEST_IFACE_NAME);
         when(mIpSecService.createTunnelInterface(any(), any(), any(), any(), any()))
                 .thenReturn(tunnelResp);
+    }
+
+    private <T> void mockService(Class<T> clazz, String name, T service) {
+        doReturn(service).when(mContext).getSystemService(name);
+        doReturn(name).when(mContext).getSystemServiceName(clazz);
+        if (mContext.getSystemService(clazz).getClass().equals(Object.class)) {
+            // Test is using mockito-extended (mContext uses Answers.RETURNS_DEEP_STUBS and returned
+            // a mock object on a final method)
+            doCallRealMethod().when(mContext).getSystemService(clazz);
+        }
     }
 
     private Set<Range<Integer>> rangeSet(Range<Integer> ... ranges) {
