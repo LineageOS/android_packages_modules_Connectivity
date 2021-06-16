@@ -44,6 +44,7 @@ import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.nullable;
+import static org.mockito.Mockito.CALLS_REAL_METHODS;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.anyInt;
 import static org.mockito.Mockito.mock;
@@ -215,7 +216,8 @@ public class ConnectivityManagerTest {
     public void testCallbackRelease() throws Exception {
         ConnectivityManager manager = new ConnectivityManager(mCtx, mService);
         NetworkRequest request = makeRequest(1);
-        NetworkCallback callback = mock(ConnectivityManager.NetworkCallback.class);
+        NetworkCallback callback = mock(ConnectivityManager.NetworkCallback.class,
+                CALLS_REAL_METHODS);
         Handler handler = new Handler(Looper.getMainLooper());
         ArgumentCaptor<Messenger> captor = ArgumentCaptor.forClass(Messenger.class);
 
@@ -243,7 +245,8 @@ public class ConnectivityManagerTest {
         ConnectivityManager manager = new ConnectivityManager(mCtx, mService);
         NetworkRequest req1 = makeRequest(1);
         NetworkRequest req2 = makeRequest(2);
-        NetworkCallback callback = mock(ConnectivityManager.NetworkCallback.class);
+        NetworkCallback callback = mock(ConnectivityManager.NetworkCallback.class,
+                CALLS_REAL_METHODS);
         Handler handler = new Handler(Looper.getMainLooper());
         ArgumentCaptor<Messenger> captor = ArgumentCaptor.forClass(Messenger.class);
 
