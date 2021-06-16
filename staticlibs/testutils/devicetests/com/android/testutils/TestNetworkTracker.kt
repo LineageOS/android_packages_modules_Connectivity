@@ -51,7 +51,7 @@ fun initTestNetwork(context: Context, interfaceAddr: LinkAddress, setupTimeoutMs
 class TestNetworkTracker internal constructor(
     val context: Context,
     val iface: TestNetworkInterface,
-    tnm: TestNetworkManager,
+    val tnm: TestNetworkManager,
     setupTimeoutMs: Long
 ) {
     private val cm = context.getSystemService(ConnectivityManager::class.java)
@@ -87,5 +87,6 @@ class TestNetworkTracker internal constructor(
 
     fun teardown() {
         cm.unregisterNetworkCallback(networkCallback)
+        tnm.teardownTestNetwork(network)
     }
 }
