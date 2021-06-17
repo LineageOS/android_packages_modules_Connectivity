@@ -66,6 +66,7 @@ import android.net.cts.NetworkAgentTest.TestableNetworkAgent.CallbackEntry.OnSta
 import android.net.cts.NetworkAgentTest.TestableNetworkAgent.CallbackEntry.OnStopSocketKeepalive
 import android.net.cts.NetworkAgentTest.TestableNetworkAgent.CallbackEntry.OnValidationStatus
 import android.os.Build
+import android.os.Handler
 import android.os.HandlerThread
 import android.os.Looper
 import android.os.Message
@@ -328,6 +329,15 @@ class NetworkAgentTest {
         callback: TestableNetworkCallback
     ) {
         mCM.registerNetworkCallback(request, callback)
+        callbacksToCleanUp.add(callback)
+    }
+
+    private fun registerBestMatchingNetworkCallback(
+        request: NetworkRequest,
+        callback: TestableNetworkCallback,
+        handler: Handler
+    ) {
+        mCM!!.registerBestMatchingNetworkCallback(request, callback, handler)
         callbacksToCleanUp.add(callback)
     }
 
@@ -867,5 +877,61 @@ class NetworkAgentTest {
                 mCM!!.allNetworkStateSnapshots }, NETWORK_SETTINGS)
         val testNetworkSnapshot = snapshots.findLast { it.network == agent.network }
         assertEquals(imsi, testNetworkSnapshot!!.subscriberId)
+    }
+
+    @Test
+    @IgnoreUpTo(Build.VERSION_CODES.R)
+    // TODO: Refactor helper functions to util class and move this test case to
+    //  {@link android.net.cts.ConnectivityManagerTest}.
+    fun testRegisterBestMatchingNetworkCallback() {
+        // Register best matching network callback with additional condition that will be
+        // exercised later. This assumes the test network agent has NOT_VCN_MANAGED in it and
+        // does not have NET_CAPABILITY_TEMPORARILY_NOT_METERED.
+        val bestMatchingCb = TestableNetworkCallback(timeoutMs = DEFAULT_TIMEOUT_MS)
+        registerBestMatchingNetworkCallback(NetworkRequest.Builder()
+                .clearCapabilities()
+                .addTransportType(TRANSPORT_TEST)
+                .addCapability(NET_CAPABILITY_NOT_VCN_MANAGED)
+                .build(), bestMatchingCb, mHandlerThread.threadHandler)
+
+        val (agent1, _) = createConnectedNetworkAgent(specifier = "AGENT-1")
+        bestMatchingCb.expectAvailableThenValidatedCallbacks(agent1.network!!)
+        // Make agent1 worse so when agent2 shows up, the callback will see that.
+        agent1.sendNetworkScore(NetworkScore.Builder().setExiting(true).build())
+        bestMatchingCb.assertNoCallback(NO_CALLBACK_TIMEOUT)
+
+        val (agent2, _) = createConnectedNetworkAgent(specifier = "AGENT-2")
+        bestMatchingCb.expectAvailableDoubleValidatedCallbacks(agent2.network!!)
+
+        // Change something on agent1 to trigger capabilities changed, since the callback
+        // only cares about the best network, verify it received nothing from agent1.
+        val ncAgent1 = agent1.nc
+        ncAgent1.addCapability(NET_CAPABILITY_TEMPORARILY_NOT_METERED)
+        agent1.sendNetworkCapabilities(ncAgent1)
+        bestMatchingCb.assertNoCallback(NO_CALLBACK_TIMEOUT)
+
+        // Make agent1 the best network again, verify the callback now tracks agent1.
+        agent1.sendNetworkScore(NetworkScore.Builder()
+                .setExiting(false).setTransportPrimary(true).build())
+        bestMatchingCb.expectAvailableCallbacks(agent1.network!!)
+
+        // Make agent1 temporary vcn managed, which will not satisfying the request.
+        // Verify the callback switch from/to the other network accordingly.
+        ncAgent1.removeCapability(NET_CAPABILITY_NOT_VCN_MANAGED)
+        agent1.sendNetworkCapabilities(ncAgent1)
+        bestMatchingCb.expectAvailableCallbacks(agent2.network!!)
+        ncAgent1.addCapability(NET_CAPABILITY_NOT_VCN_MANAGED)
+        agent1.sendNetworkCapabilities(ncAgent1)
+        bestMatchingCb.expectAvailableDoubleValidatedCallbacks(agent1.network!!)
+
+        // Verify the callback doesn't care about agent2 disconnect.
+        agent2.unregister()
+        agentsToCleanUp.remove(agent2)
+        bestMatchingCb.assertNoCallback()
+        agent1.unregister()
+        agentsToCleanUp.remove(agent1)
+        bestMatchingCb.expectCallback<Lost>(agent1.network!!)
+
+        // tearDown() will unregister the requests and agents
     }
 }
