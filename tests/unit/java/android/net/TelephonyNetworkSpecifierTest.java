@@ -23,8 +23,10 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import android.net.wifi.WifiNetworkSpecifier;
+import android.os.Build;
 import android.telephony.SubscriptionManager;
 
+import androidx.test.filters.SdkSuppress;
 import androidx.test.filters.SmallTest;
 
 import org.junit.Test;
@@ -33,6 +35,7 @@ import org.junit.Test;
  * Unit test for {@link android.net.TelephonyNetworkSpecifier}.
  */
 @SmallTest
+@SdkSuppress(minSdkVersion = Build.VERSION_CODES.S, codeName = "S")
 public class TelephonyNetworkSpecifierTest {
     private static final int TEST_SUBID = 5;
     private static final String TEST_SSID = "Test123";

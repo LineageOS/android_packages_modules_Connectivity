@@ -36,8 +36,10 @@ import android.net.ipmemorystore.NetworkAttributes;
 import android.net.ipmemorystore.NetworkAttributesParcelable;
 import android.net.ipmemorystore.Status;
 import android.net.networkstack.ModuleNetworkStackClient;
+import android.os.Build;
 import android.os.RemoteException;
 
+import androidx.test.filters.SdkSuppress;
 import androidx.test.filters.SmallTest;
 import androidx.test.runner.AndroidJUnit4;
 
@@ -55,6 +57,7 @@ import java.util.Arrays;
 
 @RunWith(AndroidJUnit4.class)
 @SmallTest
+@SdkSuppress(minSdkVersion = Build.VERSION_CODES.S, codeName = "S")
 public class IpMemoryStoreTest {
     private static final String TAG = IpMemoryStoreTest.class.getSimpleName();
     private static final String TEST_CLIENT_ID = "testClientId";
