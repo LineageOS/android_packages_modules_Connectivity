@@ -19,6 +19,11 @@
       "name": "TetheringIntegrationTests"
     }
   ],
+  "postsubmit": [
+    {
+      "name": "ConnectivityCoverageTests"
+    }
+  ],
   "mainline-presubmit": [
     {
       "name": "CtsNetTestCasesLatestSdk[CaptivePortalLoginGoogle.apk+NetworkStackGoogle.apk+com.google.android.resolv.apex+com.google.android.tethering.apex]",
@@ -37,6 +42,9 @@
     },
     {
       "name": "TetheringCoverageTests[CaptivePortalLoginGoogle.apk+NetworkStackGoogle.apk+com.google.android.resolv.apex+com.google.android.tethering.apex]"
+    },
+    {
+      "name": "ConnectivityCoverageTests[CaptivePortalLoginGoogle.apk+NetworkStackGoogle.apk+com.google.android.resolv.apex+com.google.android.tethering.apex]"
     }
   ],
   "imports": [
