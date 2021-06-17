@@ -45,6 +45,7 @@ import org.mockito.ArgumentMatchers.anyInt
 import org.mockito.ArgumentMatchers.argThat
 import org.mockito.ArgumentMatchers.eq
 import org.mockito.Mockito.any
+import org.mockito.Mockito.doCallRealMethod
 import org.mockito.Mockito.doReturn
 import org.mockito.Mockito.mock
 import org.mockito.Mockito.times
@@ -74,6 +75,10 @@ class MultinetworkPolicyTrackerTest {
         doReturn(Context.TELEPHONY_SERVICE).`when`(it)
                 .getSystemServiceName(TelephonyManager::class.java)
         doReturn(telephonyManager).`when`(it).getSystemService(Context.TELEPHONY_SERVICE)
+        if (it.getSystemService(TelephonyManager::class.java) == null) {
+            // Test is using mockito extended
+            doCallRealMethod().`when`(it).getSystemService(TelephonyManager::class.java)
+        }
         doReturn(subscriptionManager).`when`(it)
                 .getSystemService(Context.TELEPHONY_SUBSCRIPTION_SERVICE)
         doReturn(resolver).`when`(it).contentResolver
