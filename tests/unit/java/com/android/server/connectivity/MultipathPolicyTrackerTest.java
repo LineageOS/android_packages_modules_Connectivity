@@ -34,6 +34,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doCallRealMethod;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -114,8 +115,12 @@ public class MultipathPolicyTrackerTest {
     private boolean mRecurrenceRuleClockMocked;
 
     private <T> void mockService(String serviceName, Class<T> serviceClass, T service) {
-        when(mContext.getSystemServiceName(serviceClass)).thenReturn(serviceName);
-        when(mContext.getSystemService(serviceName)).thenReturn(service);
+        doReturn(serviceName).when(mContext).getSystemServiceName(serviceClass);
+        doReturn(service).when(mContext).getSystemService(serviceName);
+        if (mContext.getSystemService(serviceClass) == null) {
+            // Test is using mockito-extended
+            doCallRealMethod().when(mContext).getSystemService(serviceClass);
+        }
     }
 
     @Before
