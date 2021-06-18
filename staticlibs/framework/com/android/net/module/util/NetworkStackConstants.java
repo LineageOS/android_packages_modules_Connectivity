@@ -148,7 +148,10 @@ public final class NetworkStackConstants {
     public static final int ICMPV6_ND_OPTION_RDNSS = 25;
     public static final int ICMPV6_ND_OPTION_PREF64 = 38;
 
+    public static final int ICMPV6_RS_HEADER_LEN = 8;
     public static final int ICMPV6_RA_HEADER_LEN = 16;
+    public static final int ICMPV6_NS_HEADER_LEN = 24;
+    public static final int ICMPV6_NA_HEADER_LEN = 24;
 
     public static final int NEIGHBOR_ADVERTISEMENT_FLAG_ROUTER    = 1 << 31;
     public static final int NEIGHBOR_ADVERTISEMENT_FLAG_SOLICITED = 1 << 30;
