@@ -4206,13 +4206,16 @@ public class ConnectivityService extends IConnectivityManager.Stub
 
     private void handleRemoveNetworkRequest(@NonNull final NetworkRequestInfo nri) {
         ensureRunningOnConnectivityServiceThread();
-        nri.unlinkDeathRecipient();
         for (final NetworkRequest req : nri.mRequests) {
-            mNetworkRequests.remove(req);
+            if (null == mNetworkRequests.remove(req)) {
+                logw("Attempted removal of untracked request " + req + " for nri " + nri);
+                continue;
+            }
             if (req.isListen()) {
                 removeListenRequestFromNetworks(req);
             }
         }
+        nri.unlinkDeathRecipient();
         if (mDefaultNetworkRequests.remove(nri)) {
             // If this request was one of the defaults, then the UID rules need to be updated
             // WARNING : if the app(s) for which this network request is the default are doing
@@ -5881,8 +5884,8 @@ public class ConnectivityService extends IConnectivityManager.Stub
         @Override
         public void binderDied() {
             log("ConnectivityService NetworkRequestInfo binderDied(" +
-                    mRequests + ", " + mBinder + ")");
-            releaseNetworkRequests(mRequests);
+                    "uid/pid:" + mUid + "/" + mPid + ", " + mBinder + ")");
+            mHandler.post(() -> handleRemoveNetworkRequest(this));
         }
 
         @Override
@@ -6310,12 +6313,6 @@ public class ConnectivityService extends IConnectivityManager.Stub
     /** Returns the next Network provider ID. */
     public final int nextNetworkProviderId() {
         return mNextNetworkProviderId.getAndIncrement();
-    }
-
-    private void releaseNetworkRequests(List<NetworkRequest> networkRequests) {
-        for (int i = 0; i < networkRequests.size(); i++) {
-            releaseNetworkRequest(networkRequests.get(i));
-        }
     }
 
     @Override
