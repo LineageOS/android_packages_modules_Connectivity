@@ -46,6 +46,7 @@ import static android.net.TetheringManager.TETHERING_WIFI;
 import static android.net.TetheringManager.TETHERING_WIFI_P2P;
 import static android.net.TetheringManager.TETHER_ERROR_IFACE_CFG_ERROR;
 import static android.net.TetheringManager.TETHER_ERROR_NO_ERROR;
+import static android.net.TetheringManager.TETHER_ERROR_SERVICE_UNAVAIL;
 import static android.net.TetheringManager.TETHER_ERROR_UNKNOWN_IFACE;
 import static android.net.TetheringManager.TETHER_HARDWARE_OFFLOAD_FAILED;
 import static android.net.TetheringManager.TETHER_HARDWARE_OFFLOAD_STARTED;
@@ -68,6 +69,9 @@ import static com.android.networkstack.tethering.OffloadHardwareInterface.OFFLOA
 import static com.android.networkstack.tethering.TestConnectivityManager.BROADCAST_FIRST;
 import static com.android.networkstack.tethering.TestConnectivityManager.CALLBACKS_FIRST;
 import static com.android.networkstack.tethering.Tethering.UserRestrictionActionListener;
+import static com.android.networkstack.tethering.TetheringConfiguration.TETHER_FORCE_USB_FUNCTIONS;
+import static com.android.networkstack.tethering.TetheringConfiguration.TETHER_USB_NCM_FUNCTION;
+import static com.android.networkstack.tethering.TetheringConfiguration.TETHER_USB_RNDIS_FUNCTION;
 import static com.android.networkstack.tethering.TetheringNotificationUpdater.DOWNSTREAM_NONE;
 import static com.android.networkstack.tethering.UpstreamNetworkMonitor.EVENT_ON_CAPABILITIES;
 import static com.android.testutils.TestPermissionUtil.runAsShell;
@@ -109,6 +113,7 @@ import android.content.IntentFilter;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.content.res.Resources;
+import android.database.ContentObserver;
 import android.hardware.usb.UsbManager;
 import android.net.ConnectivityManager.NetworkCallback;
 import android.net.EthernetManager;
@@ -181,7 +186,6 @@ import com.android.networkstack.tethering.TestConnectivityManager.TestNetworkAge
 import com.android.testutils.MiscAsserts;
 
 import org.junit.After;
-import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -210,7 +214,7 @@ public class TetheringTest {
     private static final String TEST_MOBILE_IFNAME = "test_rmnet_data0";
     private static final String TEST_DUN_IFNAME = "test_dun0";
     private static final String TEST_XLAT_MOBILE_IFNAME = "v4-test_rmnet_data0";
-    private static final String TEST_USB_IFNAME = "test_rndis0";
+    private static final String TEST_RNDIS_IFNAME = "test_rndis0";
     private static final String TEST_WIFI_IFNAME = "test_wlan0";
     private static final String TEST_WLAN_IFNAME = "test_wlan1";
     private static final String TEST_P2P_IFNAME = "test_p2p-p2p0-0";
@@ -220,6 +224,11 @@ public class TetheringTest {
     private static final String TETHERING_NAME = "Tethering";
     private static final String[] PROVISIONING_APP_NAME = {"some", "app"};
     private static final String PROVISIONING_NO_UI_APP_NAME = "no_ui_app";
+    private static final String TEST_RNDIS_REGEX = "test_rndis\\d";
+    private static final String TEST_NCM_REGEX = "test_ncm\\d";
+    private static final String TEST_WIFI_REGEX = "test_wlan\\d";
+    private static final String TEST_P2P_REGEX = "test_p2p-p2p\\d-.*";
+    private static final String TEST_BT_REGEX = "test_pan\\d";
 
     private static final int CELLULAR_NETID = 100;
     private static final int WIFI_NETID = 101;
@@ -342,7 +351,7 @@ public class TetheringTest {
         @Override
         public InterfaceParams getInterfaceParams(String ifName) {
             assertTrue("Non-mocked interface " + ifName,
-                    ifName.equals(TEST_USB_IFNAME)
+                    ifName.equals(TEST_RNDIS_IFNAME)
                             || ifName.equals(TEST_WLAN_IFNAME)
                             || ifName.equals(TEST_WIFI_IFNAME)
                             || ifName.equals(TEST_MOBILE_IFNAME)
@@ -352,7 +361,7 @@ public class TetheringTest {
                             || ifName.equals(TEST_ETH_IFNAME)
                             || ifName.equals(TEST_BT_IFNAME));
             final String[] ifaces = new String[] {
-                    TEST_USB_IFNAME, TEST_WLAN_IFNAME, TEST_WIFI_IFNAME, TEST_MOBILE_IFNAME,
+                    TEST_RNDIS_IFNAME, TEST_WLAN_IFNAME, TEST_WIFI_IFNAME, TEST_MOBILE_IFNAME,
                     TEST_DUN_IFNAME, TEST_P2P_IFNAME, TEST_NCM_IFNAME, TEST_ETH_IFNAME};
             return new InterfaceParams(ifName, ArrayUtils.indexOf(ifaces, ifName) + IFINDEX_OFFSET,
                     MacAddress.ALL_ZEROS_ADDRESS);
@@ -373,28 +382,6 @@ public class TetheringTest {
         public IpNeighborMonitor getIpNeighborMonitor(Handler h, SharedLog l,
                 IpNeighborMonitor.NeighborEventConsumer c) {
             return mIpNeighborMonitor;
-        }
-    }
-
-    // MyTetheringConfiguration is used to override static method for testing.
-    private class MyTetheringConfiguration extends TetheringConfiguration {
-        MyTetheringConfiguration(Context ctx, SharedLog log, int id) {
-            super(ctx, log, id);
-        }
-
-        @Override
-        protected String getDeviceConfigProperty(final String name) {
-            return null;
-        }
-
-        @Override
-        protected boolean isFeatureEnabled(Context ctx, String featureVersionFlag) {
-            return false;
-        }
-
-        @Override
-        protected Resources getResourcesForSubIdWrapper(Context ctx, int subId) {
-            return mResources;
         }
     }
 
@@ -459,7 +446,7 @@ public class TetheringTest {
         @Override
         public TetheringConfiguration generateTetheringConfiguration(Context ctx, SharedLog log,
                 int subId) {
-            mConfig = spy(new MyTetheringConfiguration(ctx, log, subId));
+            mConfig = spy(new FakeTetheringConfiguration(ctx, log, subId));
             return mConfig;
         }
 
@@ -588,15 +575,10 @@ public class TetheringTest {
                 new Network(DUN_NETID));
     }
 
-    // See FakeSettingsProvider#clearSettingsProvider() that this needs to be called before and
-    // after use.
+    // See FakeSettingsProvider#clearSettingsProvider() that this also needs to be called before
+    // use.
     @BeforeClass
     public static void setupOnce() {
-        FakeSettingsProvider.clearSettingsProvider();
-    }
-
-    @AfterClass
-    public static void tearDownOnce() {
         FakeSettingsProvider.clearSettingsProvider();
     }
 
@@ -609,7 +591,7 @@ public class TetheringTest {
                 false);
         when(mNetd.interfaceGetList())
                 .thenReturn(new String[] {
-                        TEST_MOBILE_IFNAME, TEST_WLAN_IFNAME, TEST_USB_IFNAME, TEST_P2P_IFNAME,
+                        TEST_MOBILE_IFNAME, TEST_WLAN_IFNAME, TEST_RNDIS_IFNAME, TEST_P2P_IFNAME,
                         TEST_NCM_IFNAME, TEST_ETH_IFNAME, TEST_BT_IFNAME});
         when(mResources.getString(R.string.config_wifi_tether_enable)).thenReturn("");
         mInterfaceConfiguration = new InterfaceConfigurationParcel();
@@ -662,17 +644,19 @@ public class TetheringTest {
                 supported ? 1 : 0);
         when(mUserManager.hasUserRestriction(
                 UserManager.DISALLOW_CONFIG_TETHERING)).thenReturn(!supported);
+        when(mResources.getInteger(R.integer.config_tether_usb_functions)).thenReturn(
+                TetheringConfiguration.TETHER_USB_RNDIS_FUNCTION);
         // Setup tetherable configuration.
         when(mResources.getStringArray(R.array.config_tether_usb_regexs))
-                .thenReturn(new String[] { "test_rndis\\d" });
+                .thenReturn(new String[] { TEST_RNDIS_REGEX});
         when(mResources.getStringArray(R.array.config_tether_wifi_regexs))
-                .thenReturn(new String[] { "test_wlan\\d" });
+                .thenReturn(new String[] { TEST_WIFI_REGEX });
         when(mResources.getStringArray(R.array.config_tether_wifi_p2p_regexs))
-                .thenReturn(new String[] { "test_p2p-p2p\\d-.*" });
+                .thenReturn(new String[] { TEST_P2P_REGEX });
         when(mResources.getStringArray(R.array.config_tether_bluetooth_regexs))
-                .thenReturn(new String[] { "test_pan\\d" });
+                .thenReturn(new String[] { TEST_BT_REGEX });
         when(mResources.getStringArray(R.array.config_tether_ncm_regexs))
-                .thenReturn(new String[] { "test_ncm\\d" });
+                .thenReturn(new String[] { TEST_NCM_REGEX });
         when(mResources.getIntArray(R.array.config_tether_upstream_types)).thenReturn(
                 new int[] { TYPE_WIFI, TYPE_MOBILE_DUN });
         when(mResources.getBoolean(R.bool.config_tether_upstream_automatic)).thenReturn(true);
@@ -708,6 +692,7 @@ public class TetheringTest {
     @After
     public void tearDown() {
         mServiceContext.unregisterReceiver(mBroadcastReceiver);
+        FakeSettingsProvider.clearSettingsProvider();
     }
 
     private void sendWifiApStateChanged(int state) {
@@ -753,16 +738,18 @@ public class TetheringTest {
         mLooper.dispatchAll();
     }
 
-    private void sendUsbBroadcast(boolean connected, boolean configured, boolean function,
-            int type) {
+    private boolean tetherUsbFunctionMatches(int function, int enabledType) {
+        return function == enabledType;
+    }
+
+    private void sendUsbBroadcast(boolean connected, boolean configured, int function) {
         final Intent intent = new Intent(UsbManager.ACTION_USB_STATE);
         intent.putExtra(USB_CONNECTED, connected);
         intent.putExtra(USB_CONFIGURED, configured);
-        if (type == TETHERING_USB) {
-            intent.putExtra(USB_FUNCTION_RNDIS, function);
-        } else {
-            intent.putExtra(USB_FUNCTION_NCM, function);
-        }
+        intent.putExtra(USB_FUNCTION_RNDIS,
+                tetherUsbFunctionMatches(TETHER_USB_RNDIS_FUNCTION, function));
+        intent.putExtra(USB_FUNCTION_NCM,
+                tetherUsbFunctionMatches(TETHER_USB_NCM_FUNCTION, function));
         mServiceContext.sendStickyBroadcastAsUser(intent, UserHandle.ALL);
         mLooper.dispatchAll();
     }
@@ -844,11 +831,18 @@ public class TetheringTest {
         final TetheringRequestParcel request = createTetheringRequestParcel(TETHERING_USB);
         mTethering.startTethering(request, null);
         mLooper.dispatchAll();
-        verify(mUsbManager, times(1)).setCurrentFunctions(UsbManager.FUNCTION_RNDIS);
+
         assertEquals(1, mTethering.getActiveTetheringRequests().size());
         assertEquals(request, mTethering.getActiveTetheringRequests().get(TETHERING_USB));
 
-        mTethering.interfaceStatusChanged(TEST_USB_IFNAME, true);
+        if (mTethering.getTetheringConfiguration().isUsingNcm()) {
+            verify(mUsbManager).setCurrentFunctions(UsbManager.FUNCTION_NCM);
+            mTethering.interfaceStatusChanged(TEST_NCM_IFNAME, true);
+        } else {
+            verify(mUsbManager).setCurrentFunctions(UsbManager.FUNCTION_RNDIS);
+            mTethering.interfaceStatusChanged(TEST_RNDIS_IFNAME, true);
+        }
+
     }
 
     @Test
@@ -861,7 +855,7 @@ public class TetheringTest {
         verifyNoMoreInteractions(mNetd);
 
         // Pretend we then receive USB configured broadcast.
-        sendUsbBroadcast(true, true, true, TETHERING_USB);
+        sendUsbBroadcast(true, true, TETHER_USB_RNDIS_FUNCTION);
         // Now we should see the start of tethering mechanics (in this case:
         // tetherMatchingInterfaces() which starts by fetching all interfaces).
         verify(mNetd, times(1)).interfaceGetList();
@@ -933,16 +927,13 @@ public class TetheringTest {
      */
     private void sendIPv6TetherUpdates(UpstreamNetworkState upstreamState) {
         // IPv6TetheringCoordinator must have been notified of downstream
-        verify(mIPv6TetheringCoordinator, times(1)).addActiveDownstream(
-                argThat(sm -> sm.linkProperties().getInterfaceName().equals(TEST_USB_IFNAME)),
-                eq(IpServer.STATE_TETHERED));
-
         for (IpServer ipSrv : mTetheringDependencies.mIpv6CoordinatorNotifyList) {
             UpstreamNetworkState ipv6OnlyState = buildMobileUpstreamState(false, true, false);
             ipSrv.sendMessage(IpServer.CMD_IPV6_TETHER_UPDATE, 0, 0,
                     upstreamState.linkProperties.isIpv6Provisioned()
                             ? ipv6OnlyState.linkProperties
                             : null);
+            break;
         }
         mLooper.dispatchAll();
     }
@@ -950,7 +941,18 @@ public class TetheringTest {
     private void runUsbTethering(UpstreamNetworkState upstreamState) {
         initTetheringUpstream(upstreamState);
         prepareUsbTethering();
-        sendUsbBroadcast(true, true, true, TETHERING_USB);
+        if (mTethering.getTetheringConfiguration().isUsingNcm()) {
+            sendUsbBroadcast(true, true, TETHER_USB_NCM_FUNCTION);
+            verify(mIPv6TetheringCoordinator).addActiveDownstream(
+                    argThat(sm -> sm.linkProperties().getInterfaceName().equals(TEST_NCM_IFNAME)),
+                    eq(IpServer.STATE_TETHERED));
+        } else {
+            sendUsbBroadcast(true, true, TETHER_USB_RNDIS_FUNCTION);
+            verify(mIPv6TetheringCoordinator).addActiveDownstream(
+                    argThat(sm -> sm.linkProperties().getInterfaceName().equals(TEST_RNDIS_IFNAME)),
+                    eq(IpServer.STATE_TETHERED));
+        }
+
     }
 
     private void assertSetIfaceToDadProxy(final int numOfCalls, final String ifaceName) {
@@ -966,8 +968,8 @@ public class TetheringTest {
         UpstreamNetworkState upstreamState = buildMobileIPv4UpstreamState();
         runUsbTethering(upstreamState);
 
-        verify(mNetd, times(1)).tetherAddForward(TEST_USB_IFNAME, TEST_MOBILE_IFNAME);
-        verify(mNetd, times(1)).ipfwdAddInterfaceForward(TEST_USB_IFNAME, TEST_MOBILE_IFNAME);
+        verify(mNetd, times(1)).tetherAddForward(TEST_RNDIS_IFNAME, TEST_MOBILE_IFNAME);
+        verify(mNetd, times(1)).ipfwdAddInterfaceForward(TEST_RNDIS_IFNAME, TEST_MOBILE_IFNAME);
 
         sendIPv6TetherUpdates(upstreamState);
         assertSetIfaceToDadProxy(0 /* numOfCalls */, "" /* ifaceName */);
@@ -993,8 +995,8 @@ public class TetheringTest {
         UpstreamNetworkState upstreamState = buildMobileIPv6UpstreamState();
         runUsbTethering(upstreamState);
 
-        verify(mNetd, times(1)).tetherAddForward(TEST_USB_IFNAME, TEST_MOBILE_IFNAME);
-        verify(mNetd, times(1)).ipfwdAddInterfaceForward(TEST_USB_IFNAME, TEST_MOBILE_IFNAME);
+        verify(mNetd, times(1)).tetherAddForward(TEST_RNDIS_IFNAME, TEST_MOBILE_IFNAME);
+        verify(mNetd, times(1)).ipfwdAddInterfaceForward(TEST_RNDIS_IFNAME, TEST_MOBILE_IFNAME);
 
         sendIPv6TetherUpdates(upstreamState);
         // TODO: add interfaceParams to compare in verify.
@@ -1008,8 +1010,8 @@ public class TetheringTest {
         UpstreamNetworkState upstreamState = buildMobileDualStackUpstreamState();
         runUsbTethering(upstreamState);
 
-        verify(mNetd, times(1)).tetherAddForward(TEST_USB_IFNAME, TEST_MOBILE_IFNAME);
-        verify(mNetd, times(1)).ipfwdAddInterfaceForward(TEST_USB_IFNAME, TEST_MOBILE_IFNAME);
+        verify(mNetd, times(1)).tetherAddForward(TEST_RNDIS_IFNAME, TEST_MOBILE_IFNAME);
+        verify(mNetd, times(1)).ipfwdAddInterfaceForward(TEST_RNDIS_IFNAME, TEST_MOBILE_IFNAME);
         verify(mRouterAdvertisementDaemon, times(1)).start();
         verify(mDhcpServer, timeout(DHCPSERVER_START_TIMEOUT_MS).times(1)).startWithCallbacks(
                 any(), any());
@@ -1025,12 +1027,13 @@ public class TetheringTest {
         UpstreamNetworkState upstreamState = buildMobile464xlatUpstreamState();
         runUsbTethering(upstreamState);
 
-        verify(mNetd, times(1)).tetherAddForward(TEST_USB_IFNAME, TEST_XLAT_MOBILE_IFNAME);
-        verify(mNetd, times(1)).tetherAddForward(TEST_USB_IFNAME, TEST_MOBILE_IFNAME);
+        verify(mNetd, times(1)).tetherAddForward(TEST_RNDIS_IFNAME, TEST_XLAT_MOBILE_IFNAME);
+        verify(mNetd, times(1)).tetherAddForward(TEST_RNDIS_IFNAME, TEST_MOBILE_IFNAME);
         verify(mDhcpServer, timeout(DHCPSERVER_START_TIMEOUT_MS).times(1)).startWithCallbacks(
                 any(), any());
-        verify(mNetd, times(1)).ipfwdAddInterfaceForward(TEST_USB_IFNAME, TEST_XLAT_MOBILE_IFNAME);
-        verify(mNetd, times(1)).ipfwdAddInterfaceForward(TEST_USB_IFNAME, TEST_MOBILE_IFNAME);
+        verify(mNetd, times(1)).ipfwdAddInterfaceForward(TEST_RNDIS_IFNAME,
+                TEST_XLAT_MOBILE_IFNAME);
+        verify(mNetd, times(1)).ipfwdAddInterfaceForward(TEST_RNDIS_IFNAME, TEST_MOBILE_IFNAME);
 
         sendIPv6TetherUpdates(upstreamState);
         assertSetIfaceToDadProxy(1 /* numOfCalls */, TEST_MOBILE_IFNAME /* ifaceName */);
@@ -1040,14 +1043,20 @@ public class TetheringTest {
 
     @Test
     public void workingMobileUsbTethering_v6Then464xlat() throws Exception {
+        when(mResources.getInteger(R.integer.config_tether_usb_functions)).thenReturn(
+                TetheringConfiguration.TETHER_USB_NCM_FUNCTION);
+        when(mResources.getStringArray(R.array.config_tether_usb_regexs))
+                .thenReturn(new String[] {TEST_NCM_REGEX});
+        sendConfigurationChanged();
+
         // Setup IPv6
         UpstreamNetworkState upstreamState = buildMobileIPv6UpstreamState();
         runUsbTethering(upstreamState);
 
-        verify(mNetd, times(1)).tetherAddForward(TEST_USB_IFNAME, TEST_MOBILE_IFNAME);
+        verify(mNetd, times(1)).tetherAddForward(TEST_NCM_IFNAME, TEST_MOBILE_IFNAME);
         verify(mDhcpServer, timeout(DHCPSERVER_START_TIMEOUT_MS).times(1)).startWithCallbacks(
                 any(), any());
-        verify(mNetd, times(1)).ipfwdAddInterfaceForward(TEST_USB_IFNAME, TEST_MOBILE_IFNAME);
+        verify(mNetd, times(1)).ipfwdAddInterfaceForward(TEST_NCM_IFNAME, TEST_MOBILE_IFNAME);
 
         // Then 464xlat comes up
         upstreamState = buildMobile464xlatUpstreamState();
@@ -1062,11 +1071,12 @@ public class TetheringTest {
         mLooper.dispatchAll();
 
         // Forwarding is added for 464xlat
-        verify(mNetd, times(1)).tetherAddForward(TEST_USB_IFNAME, TEST_XLAT_MOBILE_IFNAME);
-        verify(mNetd, times(1)).ipfwdAddInterfaceForward(TEST_USB_IFNAME, TEST_XLAT_MOBILE_IFNAME);
+        verify(mNetd, times(1)).tetherAddForward(TEST_NCM_IFNAME, TEST_XLAT_MOBILE_IFNAME);
+        verify(mNetd, times(1)).ipfwdAddInterfaceForward(TEST_NCM_IFNAME,
+                TEST_XLAT_MOBILE_IFNAME);
         // Forwarding was not re-added for v6 (still times(1))
-        verify(mNetd, times(1)).tetherAddForward(TEST_USB_IFNAME, TEST_MOBILE_IFNAME);
-        verify(mNetd, times(1)).ipfwdAddInterfaceForward(TEST_USB_IFNAME, TEST_MOBILE_IFNAME);
+        verify(mNetd, times(1)).tetherAddForward(TEST_NCM_IFNAME, TEST_MOBILE_IFNAME);
+        verify(mNetd, times(1)).ipfwdAddInterfaceForward(TEST_NCM_IFNAME, TEST_MOBILE_IFNAME);
         // DHCP not restarted on downstream (still times(1))
         verify(mDhcpServer, timeout(DHCPSERVER_START_TIMEOUT_MS).times(1)).startWithCallbacks(
                 any(), any());
@@ -1103,7 +1113,7 @@ public class TetheringTest {
 
         // Start USB tethering with no current upstream.
         prepareUsbTethering();
-        sendUsbBroadcast(true, true, true, TETHERING_USB);
+        sendUsbBroadcast(true, true, TETHER_USB_RNDIS_FUNCTION);
         inOrder.verify(mUpstreamNetworkMonitor).startObserveAllNetworks();
         inOrder.verify(mUpstreamNetworkMonitor).setTryCell(true);
 
@@ -1318,7 +1328,7 @@ public class TetheringTest {
 
         // Start USB tethering with no current upstream.
         prepareUsbTethering();
-        sendUsbBroadcast(true, true, true, TETHERING_USB);
+        sendUsbBroadcast(true, true, TETHER_USB_RNDIS_FUNCTION);
         inOrder.verify(mUpstreamNetworkMonitor).startObserveAllNetworks();
         inOrder.verify(mUpstreamNetworkMonitor).setTryCell(true);
         ArgumentCaptor<NetworkCallback> captor = ArgumentCaptor.forClass(NetworkCallback.class);
@@ -1352,7 +1362,7 @@ public class TetheringTest {
 
     private void runNcmTethering() {
         prepareNcmTethering();
-        sendUsbBroadcast(true, true, true, TETHERING_NCM);
+        sendUsbBroadcast(true, true, TETHER_USB_NCM_FUNCTION);
     }
 
     @Test
@@ -1632,7 +1642,7 @@ public class TetheringTest {
         // Start usb tethering and check that usb interface is tethered.
         final UpstreamNetworkState upstreamState = buildMobileIPv4UpstreamState();
         runUsbTethering(upstreamState);
-        assertContains(Arrays.asList(mTethering.getTetheredIfaces()), TEST_USB_IFNAME);
+        assertContains(Arrays.asList(mTethering.getTetheredIfaces()), TEST_RNDIS_IFNAME);
         assertTrue(mTethering.isTetheringActive());
         assertEquals(0, mTethering.getActiveTetheringRequests().size());
 
@@ -1872,7 +1882,7 @@ public class TetheringTest {
         callback.expectOffloadStatusChanged(TETHER_HARDWARE_OFFLOAD_FAILED);
         runStopUSBTethering();
         callback.expectOffloadStatusChanged(TETHER_HARDWARE_OFFLOAD_STOPPED);
-        reset(mUsbManager);
+        reset(mUsbManager, mIPv6TetheringCoordinator);
         // 2. Offload fail if no OffloadControl.
         initOffloadConfiguration(true /* offloadConfig */, OFFLOAD_HAL_VERSION_NONE,
                 0 /* defaultDisabled */);
@@ -1880,7 +1890,7 @@ public class TetheringTest {
         callback.expectOffloadStatusChanged(TETHER_HARDWARE_OFFLOAD_FAILED);
         runStopUSBTethering();
         callback.expectOffloadStatusChanged(TETHER_HARDWARE_OFFLOAD_STOPPED);
-        reset(mUsbManager);
+        reset(mUsbManager, mIPv6TetheringCoordinator);
         // 3. Offload fail if disabled by settings.
         initOffloadConfiguration(true /* offloadConfig */, OFFLOAD_HAL_VERSION_1_0,
                 1 /* defaultDisabled */);
@@ -1893,8 +1903,10 @@ public class TetheringTest {
     private void runStopUSBTethering() {
         mTethering.stopTethering(TETHERING_USB);
         mLooper.dispatchAll();
-        mTethering.interfaceRemoved(TEST_USB_IFNAME);
+        mTethering.interfaceRemoved(TEST_RNDIS_IFNAME);
+        sendUsbBroadcast(true, true, -1 /* function */);
         mLooper.dispatchAll();
+        verify(mUsbManager).setCurrentFunctions(UsbManager.FUNCTION_NONE);
     }
 
     private void initOffloadConfiguration(final boolean offloadConfig,
@@ -2070,29 +2082,29 @@ public class TetheringTest {
         // Start Tethering.
         final UpstreamNetworkState upstreamState = buildMobileIPv4UpstreamState();
         runUsbTethering(upstreamState);
-        assertContains(Arrays.asList(mTethering.getTetheredIfaces()), TEST_USB_IFNAME);
+        assertContains(Arrays.asList(mTethering.getTetheredIfaces()), TEST_RNDIS_IFNAME);
         // Data saver is ON.
         setDataSaverEnabled(true);
         // Verify that tethering should be disabled.
         verify(mUsbManager, times(1)).setCurrentFunctions(UsbManager.FUNCTION_NONE);
-        mTethering.interfaceRemoved(TEST_USB_IFNAME);
+        mTethering.interfaceRemoved(TEST_RNDIS_IFNAME);
         mLooper.dispatchAll();
         assertEquals(mTethering.getTetheredIfaces(), new String[0]);
-        reset(mUsbManager);
+        reset(mUsbManager, mIPv6TetheringCoordinator);
 
         runUsbTethering(upstreamState);
         // Verify that user can start tethering again without turning OFF data saver.
-        assertContains(Arrays.asList(mTethering.getTetheredIfaces()), TEST_USB_IFNAME);
+        assertContains(Arrays.asList(mTethering.getTetheredIfaces()), TEST_RNDIS_IFNAME);
 
         // If data saver is keep ON with change event, tethering should not be OFF this time.
         setDataSaverEnabled(true);
         verify(mUsbManager, times(0)).setCurrentFunctions(UsbManager.FUNCTION_NONE);
-        assertContains(Arrays.asList(mTethering.getTetheredIfaces()), TEST_USB_IFNAME);
+        assertContains(Arrays.asList(mTethering.getTetheredIfaces()), TEST_RNDIS_IFNAME);
 
         // If data saver is turned OFF, it should not change tethering.
         setDataSaverEnabled(false);
         verify(mUsbManager, times(0)).setCurrentFunctions(UsbManager.FUNCTION_NONE);
-        assertContains(Arrays.asList(mTethering.getTetheredIfaces()), TEST_USB_IFNAME);
+        assertContains(Arrays.asList(mTethering.getTetheredIfaces()), TEST_RNDIS_IFNAME);
     }
 
     private static <T> void assertContains(Collection<T> collection, T element) {
@@ -2152,8 +2164,8 @@ public class TetheringTest {
         verify(mUsbManager, times(1)).setCurrentFunctions(UsbManager.FUNCTION_RNDIS);
 
         // Expect that when USB comes up, the DHCP server is configured with the requested address.
-        mTethering.interfaceStatusChanged(TEST_USB_IFNAME, true);
-        sendUsbBroadcast(true, true, true, TETHERING_USB);
+        mTethering.interfaceStatusChanged(TEST_RNDIS_IFNAME, true);
+        sendUsbBroadcast(true, true, TETHER_USB_RNDIS_FUNCTION);
         verify(mDhcpServer, timeout(DHCPSERVER_START_TIMEOUT_MS).times(1)).startWithCallbacks(
                 any(), any());
         verify(mNetd).interfaceSetCfg(argThat(cfg -> serverAddr.equals(cfg.ipv4Addr)));
@@ -2161,6 +2173,12 @@ public class TetheringTest {
 
     @Test
     public void testRequestStaticIp() throws Exception {
+        when(mResources.getInteger(R.integer.config_tether_usb_functions)).thenReturn(
+                TetheringConfiguration.TETHER_USB_NCM_FUNCTION);
+        when(mResources.getStringArray(R.array.config_tether_usb_regexs))
+                .thenReturn(new String[] {TEST_NCM_REGEX});
+        sendConfigurationChanged();
+
         final LinkAddress serverLinkAddr = new LinkAddress("192.168.0.123/24");
         final LinkAddress clientLinkAddr = new LinkAddress("192.168.0.42/24");
         final String serverAddr = "192.168.0.123";
@@ -2170,9 +2188,9 @@ public class TetheringTest {
         mTethering.startTethering(createTetheringRequestParcel(TETHERING_USB,
                   serverLinkAddr, clientLinkAddr, false, CONNECTIVITY_SCOPE_GLOBAL), null);
         mLooper.dispatchAll();
-        verify(mUsbManager, times(1)).setCurrentFunctions(UsbManager.FUNCTION_RNDIS);
-        mTethering.interfaceStatusChanged(TEST_USB_IFNAME, true);
-        sendUsbBroadcast(true, true, true, TETHERING_USB);
+        verify(mUsbManager, times(1)).setCurrentFunctions(UsbManager.FUNCTION_NCM);
+        mTethering.interfaceStatusChanged(TEST_NCM_IFNAME, true);
+        sendUsbBroadcast(true, true, TETHER_USB_NCM_FUNCTION);
         verify(mNetd).interfaceSetCfg(argThat(cfg -> serverAddr.equals(cfg.ipv4Addr)));
         verify(mIpServerDependencies, times(1)).makeDhcpServer(any(), dhcpParamsCaptor.capture(),
                 any());
@@ -2339,7 +2357,7 @@ public class TetheringTest {
                 wifiNetwork, TEST_WIFI_IFNAME, TRANSPORT_WIFI);
         // verify turn off usb tethering
         verify(mUsbManager).setCurrentFunctions(UsbManager.FUNCTION_NONE);
-        mTethering.interfaceRemoved(TEST_USB_IFNAME);
+        mTethering.interfaceRemoved(TEST_RNDIS_IFNAME);
         mLooper.dispatchAll();
         // verify restart usb tethering
         verify(mUsbManager).setCurrentFunctions(UsbManager.FUNCTION_RNDIS);
@@ -2380,7 +2398,7 @@ public class TetheringTest {
         verify(mUsbManager).setCurrentFunctions(UsbManager.FUNCTION_NONE);
         // verify turn off ethernet tethering
         verify(mockRequest).release();
-        mTethering.interfaceRemoved(TEST_USB_IFNAME);
+        mTethering.interfaceRemoved(TEST_RNDIS_IFNAME);
         ethCallback.onUnavailable();
         mLooper.dispatchAll();
         // verify restart usb tethering
@@ -2393,14 +2411,15 @@ public class TetheringTest {
         reset(mUsbManager, mEm);
         when(mNetd.interfaceGetList())
                 .thenReturn(new String[] {
-                        TEST_MOBILE_IFNAME, TEST_WLAN_IFNAME, TEST_USB_IFNAME, TEST_P2P_IFNAME,
+                        TEST_MOBILE_IFNAME, TEST_WLAN_IFNAME, TEST_RNDIS_IFNAME, TEST_P2P_IFNAME,
                         TEST_NCM_IFNAME, TEST_ETH_IFNAME});
 
-        mTethering.interfaceStatusChanged(TEST_USB_IFNAME, true);
-        sendUsbBroadcast(true, true, true, TETHERING_USB);
-        assertContains(Arrays.asList(mTethering.getTetherableIfacesForTest()), TEST_USB_IFNAME);
+        mTethering.interfaceStatusChanged(TEST_RNDIS_IFNAME, true);
+        sendUsbBroadcast(true, true, TETHER_USB_RNDIS_FUNCTION);
+        assertContains(Arrays.asList(mTethering.getTetherableIfacesForTest()), TEST_RNDIS_IFNAME);
         assertContains(Arrays.asList(mTethering.getTetherableIfacesForTest()), TEST_ETH_IFNAME);
-        assertEquals(TETHER_ERROR_IFACE_CFG_ERROR, mTethering.getLastErrorForTest(TEST_USB_IFNAME));
+        assertEquals(TETHER_ERROR_IFACE_CFG_ERROR, mTethering.getLastErrorForTest(
+                TEST_RNDIS_IFNAME));
         assertEquals(TETHER_ERROR_IFACE_CFG_ERROR, mTethering.getLastErrorForTest(TEST_ETH_IFNAME));
     }
 
@@ -2591,6 +2610,46 @@ public class TetheringTest {
         reset(mBluetoothAdapter, mBluetoothPan);
     }
 
+    @Test
+    public void testUsbTetheringWithNcmFunction() throws Exception {
+        when(mResources.getInteger(R.integer.config_tether_usb_functions)).thenReturn(
+                TetheringConfiguration.TETHER_USB_NCM_FUNCTION);
+        when(mResources.getStringArray(R.array.config_tether_usb_regexs))
+                .thenReturn(new String[] {TEST_NCM_REGEX});
+        sendConfigurationChanged();
+
+        // If TETHERING_USB is forced to use ncm function, TETHERING_NCM would no longer be
+        // available.
+        final ResultListener ncmResult = new ResultListener(TETHER_ERROR_SERVICE_UNAVAIL);
+        mTethering.startTethering(createTetheringRequestParcel(TETHERING_NCM), ncmResult);
+        mLooper.dispatchAll();
+        ncmResult.assertHasResult();
+
+        final UpstreamNetworkState upstreamState = buildMobileDualStackUpstreamState();
+        runUsbTethering(upstreamState);
+
+        verify(mNetd).interfaceGetList();
+        verify(mNetd).tetherAddForward(TEST_NCM_IFNAME, TEST_MOBILE_IFNAME);
+        verify(mNetd).ipfwdAddInterfaceForward(TEST_NCM_IFNAME, TEST_MOBILE_IFNAME);
+
+        verify(mRouterAdvertisementDaemon).start();
+        verify(mDhcpServer, timeout(DHCPSERVER_START_TIMEOUT_MS)).startWithCallbacks(
+                any(), any());
+        sendIPv6TetherUpdates(upstreamState);
+        assertSetIfaceToDadProxy(1 /* numOfCalls */, TEST_MOBILE_IFNAME /* ifaceName */);
+        verify(mRouterAdvertisementDaemon).buildNewRa(any(), notNull());
+        verify(mNetd).tetherApplyDnsInterfaces();
+
+        Settings.Global.putInt(mContentResolver, TETHER_FORCE_USB_FUNCTIONS,
+                TETHER_USB_RNDIS_FUNCTION);
+        final ContentObserver observer = mTethering.getSettingsObserverForTest();
+        observer.onChange(false /* selfChange */);
+        mLooper.dispatchAll();
+        // stop TETHERING_USB and TETHERING_NCM
+        verify(mUsbManager, times(2)).setCurrentFunctions(UsbManager.FUNCTION_NONE);
+        mTethering.interfaceRemoved(TEST_NCM_IFNAME);
+        sendUsbBroadcast(true, true, -1 /* function */);
+    }
     // TODO: Test that a request for hotspot mode doesn't interfere with an
     // already operating tethering mode interface.
 }
