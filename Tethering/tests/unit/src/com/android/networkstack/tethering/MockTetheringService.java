@@ -25,12 +25,14 @@ import android.content.Intent;
 import android.net.ITetheringConnector;
 import android.os.Binder;
 import android.os.IBinder;
+import android.util.ArrayMap;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 public class MockTetheringService extends TetheringService {
     private final Tethering mTethering = mock(Tethering.class);
+    private final ArrayMap<String, Integer> mMockedPermissions = new ArrayMap<>();
 
     @Override
     public IBinder onBind(Intent intent) {
@@ -51,6 +53,15 @@ public class MockTetheringService extends TetheringService {
         return context.checkCallingOrSelfPermission(WRITE_SETTINGS) == PERMISSION_GRANTED;
     }
 
+    @Override
+    public int checkCallingOrSelfPermission(String permission) {
+        final Integer mocked = mMockedPermissions.getOrDefault(permission, null);
+        if (mocked != null) {
+            return mocked;
+        }
+        return super.checkCallingOrSelfPermission(permission);
+    }
+
     public Tethering getTethering() {
         return mTethering;
     }
@@ -67,6 +78,19 @@ public class MockTetheringService extends TetheringService {
 
         public MockTetheringService getService() {
             return MockTetheringService.this;
+        }
+
+        /**
+         * Mock a permission
+         * @param permission Permission to mock
+         * @param granted One of PackageManager.PERMISSION_*, or null to reset to default behavior
+         */
+        public void setPermission(String permission, Integer granted) {
+            if (granted == null) {
+                mMockedPermissions.remove(permission);
+            } else {
+                mMockedPermissions.put(permission, granted);
+            }
         }
     }
 }
