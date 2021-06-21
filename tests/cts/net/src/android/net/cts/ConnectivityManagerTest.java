@@ -29,6 +29,7 @@ import static android.content.pm.PackageManager.FEATURE_WIFI;
 import static android.content.pm.PackageManager.FEATURE_WIFI_DIRECT;
 import static android.content.pm.PackageManager.GET_PERMISSIONS;
 import static android.content.pm.PackageManager.PERMISSION_GRANTED;
+import static android.net.ConnectivityManager.PROFILE_NETWORK_PREFERENCE_ENTERPRISE;
 import static android.net.ConnectivityManager.TYPE_BLUETOOTH;
 import static android.net.ConnectivityManager.TYPE_ETHERNET;
 import static android.net.ConnectivityManager.TYPE_MOBILE_CBS;
@@ -2134,6 +2135,20 @@ public class ConnectivityManagerTest {
             mTm.stopAllTethering();
             mUiAutomation.dropShellPermissionIdentity();
         }
+    }
+
+    /**
+     * Verify that {@link ConnectivityManager#setProfileNetworkPreference} cannot be called
+     * without required NETWORK_STACK permissions.
+     */
+    @Test
+    public void testSetProfileNetworkPreference_NoPermission() {
+        // Cannot use @IgnoreUpTo(Build.VERSION_CODES.R) because this test also requires API 31
+        // shims, and @IgnoreUpTo does not check that.
+        assumeTrue(TestUtils.shouldTestSApis());
+        assertThrows(SecurityException.class, () -> mCm.setProfileNetworkPreference(
+                UserHandle.of(0), PROFILE_NETWORK_PREFERENCE_ENTERPRISE, null /* executor */,
+                null /* listener */));
     }
 
     private void verifySettings(int expectedAirplaneMode, int expectedPrivateDnsMode,
