@@ -32,6 +32,7 @@ java_library {
         "libnanohttpd",
         "net-tests-utils-host-device-common",
         "net-utils-device-common",
+        "modules-utils-build_system",
     ],
 }
 
