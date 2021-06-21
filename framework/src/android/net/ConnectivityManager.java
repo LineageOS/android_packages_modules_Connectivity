@@ -936,7 +936,17 @@ public class ConnectivityManager {
 
     private final Context mContext;
 
-    private final TetheringManager mTetheringManager;
+    @GuardedBy("mTetheringEventCallbacks")
+    private TetheringManager mTetheringManager;
+
+    private TetheringManager getTetheringManager() {
+        synchronized (mTetheringEventCallbacks) {
+            if (mTetheringManager == null) {
+                mTetheringManager = mContext.getSystemService(TetheringManager.class);
+            }
+            return mTetheringManager;
+        }
+    }
 
     /**
      * Tests if a given integer represents a valid network type.
@@ -2386,7 +2396,6 @@ public class ConnectivityManager {
     public ConnectivityManager(Context context, IConnectivityManager service) {
         mContext = Objects.requireNonNull(context, "missing context");
         mService = Objects.requireNonNull(service, "missing IConnectivityManager");
-        mTetheringManager = (TetheringManager) mContext.getSystemService(Context.TETHERING_SERVICE);
         sInstance = this;
     }
 
@@ -2457,7 +2466,7 @@ public class ConnectivityManager {
     @UnsupportedAppUsage
     @Deprecated
     public String[] getTetherableIfaces() {
-        return mTetheringManager.getTetherableIfaces();
+        return getTetheringManager().getTetherableIfaces();
     }
 
     /**
@@ -2472,7 +2481,7 @@ public class ConnectivityManager {
     @UnsupportedAppUsage
     @Deprecated
     public String[] getTetheredIfaces() {
-        return mTetheringManager.getTetheredIfaces();
+        return getTetheringManager().getTetheredIfaces();
     }
 
     /**
@@ -2493,7 +2502,7 @@ public class ConnectivityManager {
     @UnsupportedAppUsage
     @Deprecated
     public String[] getTetheringErroredIfaces() {
-        return mTetheringManager.getTetheringErroredIfaces();
+        return getTetheringManager().getTetheringErroredIfaces();
     }
 
     /**
@@ -2537,7 +2546,7 @@ public class ConnectivityManager {
     @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
     @Deprecated
     public int tether(String iface) {
-        return mTetheringManager.tether(iface);
+        return getTetheringManager().tether(iface);
     }
 
     /**
@@ -2561,7 +2570,7 @@ public class ConnectivityManager {
     @UnsupportedAppUsage
     @Deprecated
     public int untether(String iface) {
-        return mTetheringManager.untether(iface);
+        return getTetheringManager().untether(iface);
     }
 
     /**
@@ -2587,7 +2596,7 @@ public class ConnectivityManager {
     @RequiresPermission(anyOf = {android.Manifest.permission.TETHER_PRIVILEGED,
             android.Manifest.permission.WRITE_SETTINGS})
     public boolean isTetheringSupported() {
-        return mTetheringManager.isTetheringSupported();
+        return getTetheringManager().isTetheringSupported();
     }
 
     /**
@@ -2680,7 +2689,7 @@ public class ConnectivityManager {
         final TetheringRequest request = new TetheringRequest.Builder(type)
                 .setShouldShowEntitlementUi(showProvisioningUi).build();
 
-        mTetheringManager.startTethering(request, executor, tetheringCallback);
+        getTetheringManager().startTethering(request, executor, tetheringCallback);
     }
 
     /**
@@ -2699,7 +2708,7 @@ public class ConnectivityManager {
     @Deprecated
     @RequiresPermission(android.Manifest.permission.TETHER_PRIVILEGED)
     public void stopTethering(int type) {
-        mTetheringManager.stopTethering(type);
+        getTetheringManager().stopTethering(type);
     }
 
     /**
@@ -2757,7 +2766,7 @@ public class ConnectivityManager {
 
         synchronized (mTetheringEventCallbacks) {
             mTetheringEventCallbacks.put(callback, tetherCallback);
-            mTetheringManager.registerTetheringEventCallback(executor, tetherCallback);
+            getTetheringManager().registerTetheringEventCallback(executor, tetherCallback);
         }
     }
 
@@ -2779,7 +2788,7 @@ public class ConnectivityManager {
         synchronized (mTetheringEventCallbacks) {
             final TetheringEventCallback tetherCallback =
                     mTetheringEventCallbacks.remove(callback);
-            mTetheringManager.unregisterTetheringEventCallback(tetherCallback);
+            getTetheringManager().unregisterTetheringEventCallback(tetherCallback);
         }
     }
 
@@ -2799,7 +2808,7 @@ public class ConnectivityManager {
     @UnsupportedAppUsage
     @Deprecated
     public String[] getTetherableUsbRegexs() {
-        return mTetheringManager.getTetherableUsbRegexs();
+        return getTetheringManager().getTetherableUsbRegexs();
     }
 
     /**
@@ -2817,7 +2826,7 @@ public class ConnectivityManager {
     @UnsupportedAppUsage
     @Deprecated
     public String[] getTetherableWifiRegexs() {
-        return mTetheringManager.getTetherableWifiRegexs();
+        return getTetheringManager().getTetherableWifiRegexs();
     }
 
     /**
@@ -2836,7 +2845,7 @@ public class ConnectivityManager {
     @UnsupportedAppUsage
     @Deprecated
     public String[] getTetherableBluetoothRegexs() {
-        return mTetheringManager.getTetherableBluetoothRegexs();
+        return getTetheringManager().getTetherableBluetoothRegexs();
     }
 
     /**
@@ -2860,7 +2869,7 @@ public class ConnectivityManager {
     @UnsupportedAppUsage
     @Deprecated
     public int setUsbTethering(boolean enable) {
-        return mTetheringManager.setUsbTethering(enable);
+        return getTetheringManager().setUsbTethering(enable);
     }
 
     /**
@@ -2976,7 +2985,7 @@ public class ConnectivityManager {
     @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
     @Deprecated
     public int getLastTetherError(String iface) {
-        int error = mTetheringManager.getLastTetherError(iface);
+        int error = getTetheringManager().getLastTetherError(iface);
         if (error == TetheringManager.TETHER_ERROR_UNKNOWN_TYPE) {
             // TETHER_ERROR_UNKNOWN_TYPE was introduced with TetheringManager and has never been
             // returned by ConnectivityManager. Convert it to the legacy TETHER_ERROR_UNKNOWN_IFACE
@@ -3058,7 +3067,7 @@ public class ConnectivityManager {
             }
         };
 
-        mTetheringManager.requestLatestTetheringEntitlementResult(type, wrappedListener,
+        getTetheringManager().requestLatestTetheringEntitlementResult(type, wrappedListener,
                     showEntitlementUi);
     }
 
@@ -4840,7 +4849,7 @@ public class ConnectivityManager {
     public void factoryReset() {
         try {
             mService.factoryReset();
-            mTetheringManager.stopAllTethering();
+            getTetheringManager().stopAllTethering();
         } catch (RemoteException e) {
             throw e.rethrowFromSystemServer();
         }
