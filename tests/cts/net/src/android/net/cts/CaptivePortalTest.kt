@@ -151,8 +151,8 @@ class CaptivePortalTest {
         server.addResponse(Request(TEST_PORTAL_URL_PATH), Status.OK,
                 content = "Test captive portal content")
         server.addResponse(Request(TEST_HTTPS_URL_PATH), Status.INTERNAL_ERROR)
-        server.addResponse(Request(TEST_HTTP_URL_PATH), Status.REDIRECT,
-                locationHeader = makeUrl(TEST_PORTAL_URL_PATH))
+        val headers = mapOf("Location" to makeUrl(TEST_PORTAL_URL_PATH))
+        server.addResponse(Request(TEST_HTTP_URL_PATH), Status.REDIRECT, headers)
         setHttpsUrlDeviceConfig(makeUrl(TEST_HTTPS_URL_PATH))
         setHttpUrlDeviceConfig(makeUrl(TEST_HTTP_URL_PATH))
         // URL expiration needs to be in the next 10 minutes
