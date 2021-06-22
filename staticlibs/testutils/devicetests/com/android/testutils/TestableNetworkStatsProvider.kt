@@ -23,7 +23,6 @@ import kotlin.test.assertTrue
 import kotlin.test.fail
 
 private const val DEFAULT_TIMEOUT_MS = 200L
-const val TOKEN_ANY = -1
 
 open class TestableNetworkStatsProvider(
     val defaultTimeoutMs: Long = DEFAULT_TIMEOUT_MS
@@ -50,13 +49,8 @@ open class TestableNetworkStatsProvider(
         history.add(CallbackType.OnSetAlert(quotaBytes))
     }
 
-    fun expectOnRequestStatsUpdate(token: Int, timeout: Long = defaultTimeoutMs): Int {
-        val event = history.poll(timeout)
-        assertTrue(event is CallbackType.OnRequestStatsUpdate)
-        if (token != TOKEN_ANY) {
-            assertEquals(token, event.token)
-        }
-        return token
+    fun expectOnRequestStatsUpdate(token: Int, timeout: Long = defaultTimeoutMs) {
+        assertEquals(CallbackType.OnRequestStatsUpdate(token), history.poll(timeout))
     }
 
     fun expectOnSetLimit(iface: String?, quotaBytes: Long, timeout: Long = defaultTimeoutMs) {
