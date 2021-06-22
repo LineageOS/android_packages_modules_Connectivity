@@ -697,6 +697,7 @@ public class ConnectivityManagerTest {
                 .build();
     }
 
+    @AppModeFull(reason = "WRITE_SECURE_SETTINGS permission can't be granted to instant apps")
     @Test @IgnoreUpTo(Build.VERSION_CODES.Q)
     public void testIsPrivateDnsBroken() throws InterruptedException {
         final String invalidPrivateDnsServer = "invalidhostname.example.com";
@@ -2198,7 +2199,7 @@ public class ConnectivityManagerTest {
      * For specified apps, validate networks are prioritized in order: unmetered, TEST transport,
      * default network.
      */
-    @AppModeFull(reason = "Cannot get WifiManager in instant app mode")
+    @AppModeFull(reason = "Instant apps cannot create test networks")
     @Test
     public void testSetOemNetworkPreferenceForTestPref() throws Exception {
         // Cannot use @IgnoreUpTo(Build.VERSION_CODES.R) because this test also requires API 31
@@ -2258,6 +2259,7 @@ public class ConnectivityManagerTest {
      * Verify that per-app OEM network preference functions as expected for network pref TEST_ONLY.
      * For specified apps, validate that only TEST transport type networks are used.
      */
+    @AppModeFull(reason = "Instant apps cannot create test networks")
     @Test
     public void testSetOemNetworkPreferenceForTestOnlyPref() throws Exception {
         // Cannot use @IgnoreUpTo(Build.VERSION_CODES.R) because this test also requires API 31
