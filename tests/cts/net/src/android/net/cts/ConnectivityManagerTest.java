@@ -2195,7 +2195,8 @@ public class ConnectivityManagerTest {
             // Validate when setting unmetered to metered, unmetered is lost and replaced by the
             // network with the TEST transport.
             setWifiMeteredStatusAndWait(ssid, true /* isMetered */);
-            defaultCallback.expectCallback(CallbackEntry.LOST, wifiNetwork);
+            defaultCallback.expectCallback(CallbackEntry.LOST, wifiNetwork,
+                    NETWORK_CALLBACK_TIMEOUT_MS);
             waitForAvailable(defaultCallback, tnt.getNetwork());
             // Depending on if this device has cellular connectivity or not, multiple available
             // callbacks may be received. Eventually, metered Wi-Fi should be the final available
@@ -2205,7 +2206,8 @@ public class ConnectivityManagerTest {
         } finally {
             // Validate that removing the test network will fallback to the default network.
             runWithShellPermissionIdentity(tnt::teardown);
-            defaultCallback.expectCallback(CallbackEntry.LOST, tnt.getNetwork());
+            defaultCallback.expectCallback(CallbackEntry.LOST, tnt.getNetwork(),
+                    NETWORK_CALLBACK_TIMEOUT_MS);
             waitForAvailable(defaultCallback);
 
             setWifiMeteredStatusAndWait(ssid, oldMeteredValue);
@@ -2241,7 +2243,8 @@ public class ConnectivityManagerTest {
             waitForAvailable(systemDefaultCallback, wifiNetwork);
         } finally {
             runWithShellPermissionIdentity(tnt::teardown);
-            defaultCallback.expectCallback(CallbackEntry.LOST, tnt.getNetwork());
+            defaultCallback.expectCallback(CallbackEntry.LOST, tnt.getNetwork(),
+                    NETWORK_CALLBACK_TIMEOUT_MS);
 
             // This network preference should only ever use the test network therefore available
             // should not trigger when the test network goes down (e.g. switch to cellular).
