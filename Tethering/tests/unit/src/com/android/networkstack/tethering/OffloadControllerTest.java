@@ -29,6 +29,8 @@ import static android.provider.Settings.Global.TETHER_OFFLOAD_DISABLED;
 import static com.android.networkstack.tethering.OffloadController.StatsType.STATS_PER_IFACE;
 import static com.android.networkstack.tethering.OffloadController.StatsType.STATS_PER_UID;
 import static com.android.networkstack.tethering.OffloadHardwareInterface.ForwardedStats;
+import static com.android.networkstack.tethering.OffloadHardwareInterface.OFFLOAD_HAL_VERSION_1_0;
+import static com.android.networkstack.tethering.OffloadHardwareInterface.OFFLOAD_HAL_VERSION_1_1;
 import static com.android.networkstack.tethering.TetheringConfiguration.DEFAULT_TETHER_OFFLOAD_POLL_INTERVAL_MS;
 import static com.android.testutils.MiscAsserts.assertContainsAll;
 import static com.android.testutils.MiscAsserts.assertThrows;
@@ -141,10 +143,10 @@ public class OffloadControllerTest {
         FakeSettingsProvider.clearSettingsProvider();
     }
 
-    private void setupFunctioningHardwareInterface() {
+    private void setupFunctioningHardwareInterface(int controlVersion) {
         when(mHardware.initOffloadConfig()).thenReturn(true);
         when(mHardware.initOffloadControl(mControlCallbackCaptor.capture()))
-                .thenReturn(true);
+                .thenReturn(controlVersion);
         when(mHardware.setUpstreamParameters(anyString(), any(), any(), any())).thenReturn(true);
         when(mHardware.getForwardedStats(any())).thenReturn(new ForwardedStats());
         when(mHardware.setDataLimit(anyString(), anyLong())).thenReturn(true);
@@ -170,6 +172,7 @@ public class OffloadControllerTest {
                 ArgumentCaptor.forClass(OffloadController.OffloadTetheringStatsProvider.class);
         verify(mStatsManager).registerNetworkStatsProvider(anyString(),
                 tetherStatsProviderCaptor.capture());
+        reset(mStatsManager);
         mTetherStatsProvider = tetherStatsProviderCaptor.getValue();
         assertNotNull(mTetherStatsProvider);
         mTetherStatsProviderCb = new TestableNetworkStatsProviderCbBinder();
@@ -177,10 +180,18 @@ public class OffloadControllerTest {
         return offload;
     }
 
+    @Test
+    public void testStartStop() throws Exception {
+        stopOffloadController(
+                startOffloadController(OFFLOAD_HAL_VERSION_1_0, true /*expectStart*/));
+        stopOffloadController(
+                startOffloadController(OFFLOAD_HAL_VERSION_1_1, true /*expectStart*/));
+    }
+
     @NonNull
-    private OffloadController startOffloadController(boolean expectStart)
+    private OffloadController startOffloadController(int controlVersion, boolean expectStart)
             throws Exception {
-        setupFunctioningHardwareInterface();
+        setupFunctioningHardwareInterface(controlVersion);
         final OffloadController offload = makeOffloadController();
         offload.start();
 
@@ -208,7 +219,7 @@ public class OffloadControllerTest {
         when(mHardware.getDefaultTetherOffloadDisabled()).thenReturn(1);
         assertThrows(SettingNotFoundException.class, () ->
                 Settings.Global.getInt(mContentResolver, TETHER_OFFLOAD_DISABLED));
-        startOffloadController(false /*expectStart*/);
+        startOffloadController(OFFLOAD_HAL_VERSION_1_0, false /*expectStart*/);
     }
 
     @Test
@@ -216,26 +227,26 @@ public class OffloadControllerTest {
         when(mHardware.getDefaultTetherOffloadDisabled()).thenReturn(0);
         assertThrows(SettingNotFoundException.class, () ->
                 Settings.Global.getInt(mContentResolver, TETHER_OFFLOAD_DISABLED));
-        startOffloadController(true /*expectStart*/);
+        startOffloadController(OFFLOAD_HAL_VERSION_1_0, true /*expectStart*/);
     }
 
     @Test
     public void testSettingsAllowsStart() throws Exception {
         Settings.Global.putInt(mContentResolver, TETHER_OFFLOAD_DISABLED, 0);
-        startOffloadController(true /*expectStart*/);
+        startOffloadController(OFFLOAD_HAL_VERSION_1_0, true /*expectStart*/);
     }
 
     @Test
     public void testSettingsDisablesStart() throws Exception {
         Settings.Global.putInt(mContentResolver, TETHER_OFFLOAD_DISABLED, 1);
-        startOffloadController(false /*expectStart*/);
+        startOffloadController(OFFLOAD_HAL_VERSION_1_0, false /*expectStart*/);
     }
 
     @Test
     public void testSetUpstreamLinkPropertiesWorking() throws Exception {
         enableOffload();
         final OffloadController offload =
-                startOffloadController(true /*expectStart*/);
+                startOffloadController(OFFLOAD_HAL_VERSION_1_0, true /*expectStart*/);
 
         // In reality, the UpstreamNetworkMonitor would have passed down to us
         // a covering set of local prefixes representing a minimum essential
@@ -406,7 +417,7 @@ public class OffloadControllerTest {
     public void testGetForwardedStats() throws Exception {
         enableOffload();
         final OffloadController offload =
-                startOffloadController(true /*expectStart*/);
+                startOffloadController(OFFLOAD_HAL_VERSION_1_0, true /*expectStart*/);
 
         final String ethernetIface = "eth1";
         final String mobileIface = "rmnet_data0";
@@ -496,7 +507,7 @@ public class OffloadControllerTest {
     public void testSetInterfaceQuota() throws Exception {
         enableOffload();
         final OffloadController offload =
-                startOffloadController(true /*expectStart*/);
+                startOffloadController(OFFLOAD_HAL_VERSION_1_0, true /*expectStart*/);
 
         final String ethernetIface = "eth1";
         final String mobileIface = "rmnet_data0";
@@ -558,7 +569,7 @@ public class OffloadControllerTest {
     public void testDataLimitCallback() throws Exception {
         enableOffload();
         final OffloadController offload =
-                startOffloadController(true /*expectStart*/);
+                startOffloadController(OFFLOAD_HAL_VERSION_1_0, true /*expectStart*/);
 
         OffloadHardwareInterface.ControlCallback callback = mControlCallbackCaptor.getValue();
         callback.onStoppedLimitReached();
@@ -569,7 +580,7 @@ public class OffloadControllerTest {
     public void testAddRemoveDownstreams() throws Exception {
         enableOffload();
         final OffloadController offload =
-                startOffloadController(true /*expectStart*/);
+                startOffloadController(OFFLOAD_HAL_VERSION_1_0, true /*expectStart*/);
         final InOrder inOrder = inOrder(mHardware);
 
         // Tethering makes several calls to setLocalPrefixes() before add/remove
@@ -636,7 +647,7 @@ public class OffloadControllerTest {
     public void testControlCallbackOnStoppedUnsupportedFetchesAllStats() throws Exception {
         enableOffload();
         final OffloadController offload =
-                startOffloadController(true /*expectStart*/);
+                startOffloadController(OFFLOAD_HAL_VERSION_1_0, true /*expectStart*/);
 
         // Pretend to set a few different upstreams (only the interface name
         // matters for this test; we're ignoring IP and route information).
@@ -667,7 +678,7 @@ public class OffloadControllerTest {
             throws Exception {
         enableOffload();
         final OffloadController offload =
-                startOffloadController(true /*expectStart*/);
+                startOffloadController(OFFLOAD_HAL_VERSION_1_0, true /*expectStart*/);
 
         // Pretend to set a few different upstreams (only the interface name
         // matters for this test; we're ignoring IP and route information).
@@ -745,7 +756,7 @@ public class OffloadControllerTest {
         enableOffload();
         setOffloadPollInterval(DEFAULT_TETHER_OFFLOAD_POLL_INTERVAL_MS);
         final OffloadController offload =
-                startOffloadController(true /*expectStart*/);
+                startOffloadController(OFFLOAD_HAL_VERSION_1_0, true /*expectStart*/);
 
         // Initialize with fake eth upstream.
         final String ethernetIface = "eth1";
