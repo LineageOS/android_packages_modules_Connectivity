@@ -118,11 +118,12 @@ import androidx.test.runner.AndroidJUnit4;
 
 import com.android.internal.util.ArrayUtils;
 import com.android.internal.util.test.BroadcastInterceptingContext;
-import com.android.internal.util.test.FsUtil;
 import com.android.server.net.NetworkStatsService.NetworkStatsSettings;
 import com.android.server.net.NetworkStatsService.NetworkStatsSettings.Config;
 import com.android.testutils.HandlerUtils;
 import com.android.testutils.TestableNetworkStatsProviderBinder;
+
+import libcore.testing.io.TestIoUtils;
 
 import org.junit.After;
 import org.junit.Before;
@@ -238,10 +239,7 @@ public class NetworkStatsServiceTest extends NetworkStatsBaseTest {
         MockitoAnnotations.initMocks(this);
         final Context context = InstrumentationRegistry.getContext();
         mServiceContext = new MockContext(context);
-        mStatsDir = context.getFilesDir();
-        if (mStatsDir.exists()) {
-            FsUtil.deleteContents(mStatsDir);
-        }
+        mStatsDir = TestIoUtils.createTemporaryDirectory(getClass().getSimpleName());
 
         PowerManager powerManager = (PowerManager) mServiceContext.getSystemService(
                 Context.POWER_SERVICE);
@@ -310,8 +308,6 @@ public class NetworkStatsServiceTest extends NetworkStatsBaseTest {
 
     @After
     public void tearDown() throws Exception {
-        FsUtil.deleteContents(mStatsDir);
-
         mServiceContext = null;
         mStatsDir = null;
 

@@ -29,6 +29,7 @@ import static android.content.pm.PackageManager.FEATURE_WIFI;
 import static android.content.pm.PackageManager.FEATURE_WIFI_DIRECT;
 import static android.content.pm.PackageManager.GET_PERMISSIONS;
 import static android.content.pm.PackageManager.PERMISSION_GRANTED;
+import static android.net.ConnectivityManager.PROFILE_NETWORK_PREFERENCE_ENTERPRISE;
 import static android.net.ConnectivityManager.TYPE_BLUETOOTH;
 import static android.net.ConnectivityManager.TYPE_ETHERNET;
 import static android.net.ConnectivityManager.TYPE_MOBILE_CBS;
@@ -2140,6 +2141,20 @@ public class ConnectivityManagerTest {
         }
     }
 
+    /**
+     * Verify that {@link ConnectivityManager#setProfileNetworkPreference} cannot be called
+     * without required NETWORK_STACK permissions.
+     */
+    @Test
+    public void testSetProfileNetworkPreference_NoPermission() {
+        // Cannot use @IgnoreUpTo(Build.VERSION_CODES.R) because this test also requires API 31
+        // shims, and @IgnoreUpTo does not check that.
+        assumeTrue(TestUtils.shouldTestSApis());
+        assertThrows(SecurityException.class, () -> mCm.setProfileNetworkPreference(
+                UserHandle.of(0), PROFILE_NETWORK_PREFERENCE_ENTERPRISE, null /* executor */,
+                null /* listener */));
+    }
+
     private void verifySettings(int expectedAirplaneMode, int expectedPrivateDnsMode,
             int expectedAvoidBadWifi) throws Exception {
         assertEquals(expectedAirplaneMode, Settings.Global.getInt(
@@ -2201,7 +2216,8 @@ public class ConnectivityManagerTest {
             // Validate when setting unmetered to metered, unmetered is lost and replaced by the
             // network with the TEST transport.
             setWifiMeteredStatusAndWait(ssid, true /* isMetered */);
-            defaultCallback.expectCallback(CallbackEntry.LOST, wifiNetwork);
+            defaultCallback.expectCallback(CallbackEntry.LOST, wifiNetwork,
+                    NETWORK_CALLBACK_TIMEOUT_MS);
             waitForAvailable(defaultCallback, tnt.getNetwork());
             // Depending on if this device has cellular connectivity or not, multiple available
             // callbacks may be received. Eventually, metered Wi-Fi should be the final available
@@ -2211,7 +2227,8 @@ public class ConnectivityManagerTest {
         } finally {
             // Validate that removing the test network will fallback to the default network.
             runWithShellPermissionIdentity(tnt::teardown);
-            defaultCallback.expectCallback(CallbackEntry.LOST, tnt.getNetwork());
+            defaultCallback.expectCallback(CallbackEntry.LOST, tnt.getNetwork(),
+                    NETWORK_CALLBACK_TIMEOUT_MS);
             waitForAvailable(defaultCallback);
 
             setWifiMeteredStatusAndWait(ssid, oldMeteredValue);
@@ -2247,7 +2264,8 @@ public class ConnectivityManagerTest {
             waitForAvailable(systemDefaultCallback, wifiNetwork);
         } finally {
             runWithShellPermissionIdentity(tnt::teardown);
-            defaultCallback.expectCallback(CallbackEntry.LOST, tnt.getNetwork());
+            defaultCallback.expectCallback(CallbackEntry.LOST, tnt.getNetwork(),
+                    NETWORK_CALLBACK_TIMEOUT_MS);
 
             // This network preference should only ever use the test network therefore available
             // should not trigger when the test network goes down (e.g. switch to cellular).
