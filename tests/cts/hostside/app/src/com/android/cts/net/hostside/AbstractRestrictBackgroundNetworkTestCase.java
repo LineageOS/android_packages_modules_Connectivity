@@ -975,4 +975,15 @@ public abstract class AbstractRestrictBackgroundNetworkTestCase {
          */
         String getExpected();
     }
+
+    protected void setRestrictedNetworkingMode(boolean enabled) throws Exception {
+        executeSilentShellCommand(
+                "settings put global restricted_networking_mode " + (enabled ? 1 : 0));
+        assertRestrictedNetworkingModeState(enabled);
+    }
+
+    protected void assertRestrictedNetworkingModeState(boolean enabled) throws Exception {
+        assertDelayedShellCommand("cmd netpolicy get restricted-mode",
+                "Restricted mode status: " + (enabled ? "enabled" : "disabled"));
+    }
 }
