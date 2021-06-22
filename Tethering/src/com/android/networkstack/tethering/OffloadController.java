@@ -26,6 +26,7 @@ import static android.net.NetworkStats.UID_TETHERING;
 import static android.net.netstats.provider.NetworkStatsProvider.QUOTA_UNLIMITED;
 import static android.provider.Settings.Global.TETHER_OFFLOAD_DISABLED;
 
+import static com.android.networkstack.tethering.OffloadHardwareInterface.OFFLOAD_HAL_VERSION_NONE;
 import static com.android.networkstack.tethering.TetheringConfiguration.DEFAULT_TETHER_OFFLOAD_POLL_INTERVAL_MS;
 
 import android.annotation.NonNull;
@@ -96,7 +97,8 @@ public class OffloadController {
     private final SharedLog mLog;
     private final HashMap<String, LinkProperties> mDownstreams;
     private boolean mConfigInitialized;
-    private boolean mControlInitialized;
+    @OffloadHardwareInterface.OffloadHalVersion
+    private int mControlHalVersion;
     private LinkProperties mUpstreamLinkProperties;
     // The complete set of offload-exempt prefixes passed in via Tethering from
     // all upstream and downstream sources.
@@ -179,7 +181,7 @@ public class OffloadController {
             }
         }
 
-        mControlInitialized = mHwInterface.initOffloadControl(
+        mControlHalVersion = mHwInterface.initOffloadControl(
                 // OffloadHardwareInterface guarantees that these callback
                 // methods are called on the handler passed to it, which is the
                 // same as mHandler, as coordinated by the setup in Tethering.
@@ -278,7 +280,7 @@ public class OffloadController {
         updateStatsForCurrentUpstream();
         mUpstreamLinkProperties = null;
         mHwInterface.stopOffloadControl();
-        mControlInitialized = false;
+        mControlHalVersion = OFFLOAD_HAL_VERSION_NONE;
         mConfigInitialized = false;
         if (mHandler.hasCallbacks(mScheduledPollingTask)) {
             mHandler.removeCallbacks(mScheduledPollingTask);
@@ -287,7 +289,7 @@ public class OffloadController {
     }
 
     private boolean started() {
-        return mConfigInitialized && mControlInitialized;
+        return mConfigInitialized && mControlHalVersion != OFFLOAD_HAL_VERSION_NONE;
     }
 
     @VisibleForTesting
@@ -696,6 +698,8 @@ public class OffloadController {
         }
         final boolean isStarted = started();
         pw.println("Offload HALs " + (isStarted ? "started" : "not started"));
+        pw.println("Offload Control HAL version: "
+                + OffloadHardwareInterface.halVerToString(mControlHalVersion));
         LinkProperties lp = mUpstreamLinkProperties;
         String upstream = (lp != null) ? lp.getInterfaceName() : null;
         pw.println("Current upstream: " + upstream);
