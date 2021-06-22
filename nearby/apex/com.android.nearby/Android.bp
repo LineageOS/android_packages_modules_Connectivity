@@ -31,8 +31,7 @@ apex {
     manifest: "manifest.json",
     // TODO(b/189890387): change the SDK version to "32" when T release is finalized.
     min_sdk_version: "current",
-    // TODO(weiwa): mark updatable true, once bootclasspath-fragment generates the config proto
-    updatable: false,
+    updatable: true,
     file_contexts: ":apex.test-file_contexts",  // Default, please edit, see go/android-apex-howto
     key: "com.android.nearby.key",
     certificate: ":com.android.nearby.certificate",
@@ -53,9 +52,6 @@ sdk {
 // Encapsulate the contributions made by the com.android.nearby to the bootclasspath.
 bootclasspath_fragment {
     name: "com.android.nearby-bootclasspath-fragment",
-    // TODO(weiwa): remove generate_classpaths_proto property once boot jar is listed in
-    // default_art_config.mk and the apex comes pre-installed on the device.
-    generate_classpaths_proto: false,
     contents: ["framework-nearby"],
     apex_available: ["com.android.nearby"],
 }
