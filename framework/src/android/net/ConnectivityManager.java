@@ -4713,6 +4713,22 @@ public class ConnectivityManager {
     }
 
     /**
+     * Temporarily allow bad wifi to override {@code config_networkAvoidBadWifi} configuration.
+     *
+     * @param timeMs The expired current time. The value should be set within a limited time from
+     *               now.
+     *
+     * @hide
+     */
+    public void setTestAllowBadWifiUntil(long timeMs) {
+        try {
+            mService.setTestAllowBadWifiUntil(timeMs);
+        } catch (RemoteException e) {
+            throw e.rethrowFromSystemServer();
+        }
+    }
+
+    /**
      * Requests that the system open the captive portal app on the specified network.
      *
      * <p>This is to be used on networks where a captive portal was detected, as per
