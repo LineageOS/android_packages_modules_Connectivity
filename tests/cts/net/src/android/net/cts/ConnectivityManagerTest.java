@@ -29,6 +29,8 @@ import static android.content.pm.PackageManager.FEATURE_WIFI;
 import static android.content.pm.PackageManager.FEATURE_WIFI_DIRECT;
 import static android.content.pm.PackageManager.GET_PERMISSIONS;
 import static android.content.pm.PackageManager.PERMISSION_GRANTED;
+import static android.net.ConnectivityManager.EXTRA_NETWORK;
+import static android.net.ConnectivityManager.EXTRA_NETWORK_REQUEST;
 import static android.net.ConnectivityManager.PROFILE_NETWORK_PREFERENCE_ENTERPRISE;
 import static android.net.ConnectivityManager.TYPE_BLUETOOTH;
 import static android.net.ConnectivityManager.TYPE_ETHERNET;
@@ -74,12 +76,14 @@ import static android.system.OsConstants.AF_UNSPEC;
 import static com.android.compatibility.common.util.SystemUtil.callWithShellPermissionIdentity;
 import static com.android.compatibility.common.util.SystemUtil.runShellCommand;
 import static com.android.compatibility.common.util.SystemUtil.runWithShellPermissionIdentity;
+import static com.android.modules.utils.build.SdkLevel.isAtLeastS;
 import static com.android.networkstack.apishim.ConstantsShim.BLOCKED_REASON_LOCKDOWN_VPN;
 import static com.android.networkstack.apishim.ConstantsShim.BLOCKED_REASON_NONE;
 import static com.android.testutils.MiscAsserts.assertThrows;
 import static com.android.testutils.TestNetworkTrackerKt.initTestNetwork;
 import static com.android.testutils.TestPermissionUtil.runAsShell;
 
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
@@ -206,6 +210,7 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Supplier;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -846,6 +851,119 @@ public class ConnectivityManagerTest {
             pendingIntent.cancel();
             mContext.unregisterReceiver(receiver);
         }
+    }
+
+    private void runIdenticalPendingIntentsRequestTest(boolean useListen) throws Exception {
+        assumeTrue(mPackageManager.hasSystemFeature(FEATURE_WIFI));
+
+        // Disconnect before registering callbacks, reconnect later to fire them
+        mCtsNetUtils.ensureWifiDisconnected(null);
+
+        final NetworkRequest firstRequest = makeWifiNetworkRequest();
+        final NetworkRequest secondRequest = new NetworkRequest(firstRequest);
+        // Will match wifi or test, since transports are ORed; but there should only be wifi
+        secondRequest.networkCapabilities.addTransportType(TRANSPORT_TEST);
+
+        PendingIntent firstIntent = null;
+        PendingIntent secondIntent = null;
+        BroadcastReceiver receiver = null;
+
+        // Avoid receiving broadcasts from other runs by appending a timestamp
+        final String broadcastAction = NETWORK_CALLBACK_ACTION + System.currentTimeMillis();
+        try {
+            // TODO: replace with PendingIntent.FLAG_MUTABLE when this code compiles against S+
+            // Intent is mutable to receive EXTRA_NETWORK_REQUEST from ConnectivityService
+            final int pendingIntentFlagMutable = 1 << 25;
+            final String extraBoolKey = "extra_bool";
+            firstIntent = PendingIntent.getBroadcast(mContext,
+                    0 /* requestCode */,
+                    new Intent(broadcastAction).putExtra(extraBoolKey, false),
+                    PendingIntent.FLAG_UPDATE_CURRENT | pendingIntentFlagMutable);
+
+            if (useListen) {
+                mCm.registerNetworkCallback(firstRequest, firstIntent);
+            } else {
+                mCm.requestNetwork(firstRequest, firstIntent);
+            }
+
+            // Second intent equals the first as per filterEquals (extras don't count), so first
+            // intent will be updated with the new extras
+            secondIntent = PendingIntent.getBroadcast(mContext,
+                    0 /* requestCode */,
+                    new Intent(broadcastAction).putExtra(extraBoolKey, true),
+                    PendingIntent.FLAG_UPDATE_CURRENT | pendingIntentFlagMutable);
+
+            // Because secondIntent.intentFilterEquals the first, the request should be replaced
+            if (useListen) {
+                mCm.registerNetworkCallback(secondRequest, secondIntent);
+            } else {
+                mCm.requestNetwork(secondRequest, secondIntent);
+            }
+
+            final IntentFilter filter = new IntentFilter();
+            filter.addAction(broadcastAction);
+
+            final CompletableFuture<Network> networkFuture = new CompletableFuture<>();
+            final AtomicInteger receivedCount = new AtomicInteger(0);
+            receiver = new BroadcastReceiver() {
+                @Override
+                public void onReceive(Context context, Intent intent) {
+                    final NetworkRequest request = intent.getParcelableExtra(EXTRA_NETWORK_REQUEST);
+                    assertPendingIntentRequestMatches(request, secondRequest, useListen);
+                    receivedCount.incrementAndGet();
+                    networkFuture.complete(intent.getParcelableExtra(EXTRA_NETWORK));
+                }
+            };
+            mContext.registerReceiver(receiver, filter);
+
+            final Network wifiNetwork = mCtsNetUtils.ensureWifiConnected();
+            try {
+                assertEquals(wifiNetwork, networkFuture.get(
+                        NETWORK_CALLBACK_TIMEOUT_MS, TimeUnit.MILLISECONDS));
+            } catch (TimeoutException e) {
+                throw new AssertionError("PendingIntent not received for " + secondRequest, e);
+            }
+
+            // Sleep for a small amount of time to try to check that only one callback is ever
+            // received (so the first callback was really unregistered). This does not guarantee
+            // that the test will fail if it runs very slowly, but it should at least be very
+            // noticeably flaky.
+            Thread.sleep(NO_CALLBACK_TIMEOUT_MS);
+
+            // TODO: BUG (b/189868426): this should also apply to listens
+            if (!useListen) {
+                assertEquals("PendingIntent should only be received once", 1, receivedCount.get());
+            }
+        } finally {
+            if (firstIntent != null) mCm.unregisterNetworkCallback(firstIntent);
+            if (secondIntent != null) mCm.unregisterNetworkCallback(secondIntent);
+            if (receiver != null) mContext.unregisterReceiver(receiver);
+            mCtsNetUtils.ensureWifiConnected();
+        }
+    }
+
+    private void assertPendingIntentRequestMatches(NetworkRequest broadcasted, NetworkRequest filed,
+            boolean useListen) {
+        // TODO: BUG (b/191713869): on S the request extra is null on listens
+        if (isAtLeastS() && useListen && broadcasted == null) return;
+        assertArrayEquals(filed.networkCapabilities.getCapabilities(),
+                broadcasted.networkCapabilities.getCapabilities());
+        // TODO: BUG (b/189868426): this should also apply to listens
+        if (useListen) return;
+        assertArrayEquals(filed.networkCapabilities.getTransportTypes(),
+                broadcasted.networkCapabilities.getTransportTypes());
+    }
+
+    @AppModeFull(reason = "Cannot get WifiManager in instant app mode")
+    @Test
+    public void testRegisterNetworkRequest_identicalPendingIntents() throws Exception {
+        runIdenticalPendingIntentsRequestTest(false /* useListen */);
+    }
+
+    @AppModeFull(reason = "Cannot get WifiManager in instant app mode")
+    @Test
+    public void testRegisterNetworkCallback_identicalPendingIntents() throws Exception {
+        runIdenticalPendingIntentsRequestTest(true /* useListen */);
     }
 
     /**
