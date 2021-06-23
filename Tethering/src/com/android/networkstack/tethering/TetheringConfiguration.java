@@ -23,11 +23,13 @@ import static android.net.ConnectivityManager.TYPE_MOBILE_DUN;
 import static android.net.ConnectivityManager.TYPE_MOBILE_HIPRI;
 import static android.provider.DeviceConfig.NAMESPACE_CONNECTIVITY;
 
+import android.content.ContentResolver;
 import android.content.Context;
 import android.content.res.Resources;
 import android.net.TetheringConfigurationParcel;
 import android.net.util.SharedLog;
 import android.provider.DeviceConfig;
+import android.provider.Settings;
 import android.telephony.SubscriptionManager;
 import android.telephony.TelephonyManager;
 import android.text.TextUtils;
@@ -75,6 +77,12 @@ public class TetheringConfiguration {
 
     private static final String[] DEFAULT_IPV4_DNS = {"8.8.4.4", "8.8.8.8"};
 
+    @VisibleForTesting
+    public static final int TETHER_USB_RNDIS_FUNCTION = 0;
+
+    @VisibleForTesting
+    public static final int TETHER_USB_NCM_FUNCTION   = 1;
+
     /**
      * Override enabling BPF offload configuration for tethering.
      */
@@ -104,13 +112,20 @@ public class TetheringConfiguration {
      * via resource overlays, and later noticed issues. To that end, it overrides
      * config_tether_upstream_automatic when set to true.
      *
-     * This flag is enabled if !=0 and less than the module APK version: see
+     * This flag is enabled if !=0 and less than the module APEX version: see
      * {@link DeviceConfigUtils#isFeatureEnabled}. It is also ignored after R, as later devices
      * should just set config_tether_upstream_automatic to true instead.
      */
     public static final String TETHER_FORCE_UPSTREAM_AUTOMATIC_VERSION =
             "tether_force_upstream_automatic_version";
 
+    /**
+     * Settings key to foce choosing usb functions for usb tethering.
+     *
+     * TODO: Remove this hard code string and make Settings#TETHER_FORCE_USB_FUNCTIONS as API.
+     */
+    public static final String TETHER_FORCE_USB_FUNCTIONS =
+            "tether_force_usb_functions";
     /**
      * Default value that used to periodic polls tether offload stats from tethering offload HAL
      * to make the data warnings work.
@@ -143,12 +158,17 @@ public class TetheringConfiguration {
     private final boolean mEnableWifiP2pDedicatedIp;
 
     private final boolean mEnableSelectAllPrefixRange;
+    private final int mUsbTetheringFunction;
+    protected final ContentResolver mContentResolver;
 
     public TetheringConfiguration(Context ctx, SharedLog log, int id) {
         final SharedLog configLog = log.forSubComponent("config");
 
         activeDataSubId = id;
         Resources res = getResources(ctx, activeDataSubId);
+        mContentResolver = ctx.getContentResolver();
+
+        mUsbTetheringFunction = getUsbTetheringFunction(res);
 
         tetherableUsbRegexs = getResourceStringArray(res, R.array.config_tether_usb_regexs);
         tetherableNcmRegexs = getResourceStringArray(res, R.array.config_tether_ncm_regexs);
@@ -198,6 +218,11 @@ public class TetheringConfiguration {
                 TETHER_ENABLE_SELECT_ALL_PREFIX_RANGES, true /* defaultValue */);
 
         configLog.log(toString());
+    }
+
+    /** Check whether using ncm for usb tethering */
+    public boolean isUsingNcm() {
+        return mUsbTetheringFunction == TETHER_USB_NCM_FUNCTION;
     }
 
     /** Check whether input interface belong to usb.*/
@@ -285,6 +310,9 @@ public class TetheringConfiguration {
 
         pw.print("mEnableSelectAllPrefixRange: ");
         pw.println(mEnableSelectAllPrefixRange);
+
+        pw.print("mUsbTetheringFunction: ");
+        pw.println(isUsingNcm() ? "NCM" : "RNDIS");
     }
 
     /** Returns the string representation of this object.*/
@@ -348,6 +376,26 @@ public class TetheringConfiguration {
 
     public boolean isSelectAllPrefixRangeEnabled() {
         return mEnableSelectAllPrefixRange;
+    }
+
+    private int getUsbTetheringFunction(Resources res) {
+        final int valueFromRes = getResourceInteger(res, R.integer.config_tether_usb_functions,
+                TETHER_USB_RNDIS_FUNCTION /* defaultValue */);
+        return getSettingsIntValue(TETHER_FORCE_USB_FUNCTIONS, valueFromRes);
+    }
+
+    private int getSettingsIntValue(final String name, final int defaultValue) {
+        final String value = getSettingsValue(name);
+        try {
+            return value != null ? Integer.parseInt(value) : defaultValue;
+        } catch (NumberFormatException e) {
+            return defaultValue;
+        }
+    }
+
+    @VisibleForTesting
+    protected String getSettingsValue(final String name) {
+        return Settings.Global.getString(mContentResolver, name);
     }
 
     private static Collection<Integer> getUpstreamIfaceTypes(Resources res, boolean dunRequired) {

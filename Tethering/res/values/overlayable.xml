@@ -24,6 +24,7 @@
             <item type="array" name="config_tether_wifi_p2p_regexs"/>
             <item type="array" name="config_tether_bluetooth_regexs"/>
             <item type="array" name="config_tether_dhcp_range"/>
+            <item type="integer" name="config_tether_usb_functions"/>
             <!-- Use the BPF offload for tethering when the kernel has support. True by default.
                  If the device doesn't want to support tether BPF offload, this should be false.
                  Note that this setting could be overridden by device config.
