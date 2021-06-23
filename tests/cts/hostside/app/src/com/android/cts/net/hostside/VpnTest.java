@@ -760,7 +760,7 @@ public class VpnTest extends InstrumentationTestCase {
         assertEquals(vpnNetwork, mCM.getActiveNetwork());
         assertNotEqual(defaultNetwork, vpnNetwork);
         maybeExpectVpnTransportInfo(vpnNetwork);
-        assertTrue(mCM.getNetworkInfo(vpnNetwork).getType() == TYPE_VPN);
+        assertEquals(TYPE_VPN, mCM.getNetworkInfo(vpnNetwork).getType());
 
         if (SdkLevel.isAtLeastS()) {
             // Check that system default network callback has not seen any network changes, even
