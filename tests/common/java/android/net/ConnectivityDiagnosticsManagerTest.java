@@ -36,9 +36,11 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 
 import android.content.Context;
+import android.os.Build;
 import android.os.PersistableBundle;
 
 import androidx.test.InstrumentationRegistry;
+import androidx.test.filters.SdkSuppress;
 
 import org.junit.After;
 import org.junit.Before;
@@ -50,6 +52,7 @@ import org.mockito.Mock;
 import java.util.concurrent.Executor;
 
 @RunWith(JUnit4.class)
+@SdkSuppress(minSdkVersion = Build.VERSION_CODES.S, codeName = "S")
 public class ConnectivityDiagnosticsManagerTest {
     private static final int NET_ID = 1;
     private static final int DETECTION_METHOD = 2;
