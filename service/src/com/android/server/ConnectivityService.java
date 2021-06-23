@@ -651,6 +651,12 @@ public class ConnectivityService extends IConnectivityManager.Stub
     private static final int EVENT_MOBILE_DATA_PREFERRED_UIDS_CHANGED = 54;
 
     /**
+     * Event to set temporary allow bad wifi within a limited time to override
+     * {@code config_networkAvoidBadWifi}.
+     */
+    private static final int EVENT_SET_TEST_ALLOW_BAD_WIFI_UNTIL = 55;
+
+    /**
      * Argument for {@link #EVENT_PROVISIONING_NOTIFICATION} to indicate that the notification
      * should be shown.
      */
@@ -661,6 +667,11 @@ public class ConnectivityService extends IConnectivityManager.Stub
      * should be hidden.
      */
     private static final int PROVISIONING_NOTIFICATION_HIDE = 0;
+
+    /**
+     * The maximum alive time to allow bad wifi configuration for testing.
+     */
+    private static final long MAX_TEST_ALLOW_BAD_WIFI_UNTIL_MS = 5 * 60 * 1000L;
 
     private static String eventName(int what) {
         return sMagicDecoderRing.get(what, Integer.toString(what));
@@ -4334,6 +4345,22 @@ public class ConnectivityService extends IConnectivityManager.Stub
         mHandler.sendMessage(mHandler.obtainMessage(EVENT_SET_AVOID_UNVALIDATED, network));
     }
 
+    @Override
+    public void setTestAllowBadWifiUntil(long timeMs) {
+        enforceSettingsPermission();
+        if (!Build.isDebuggable()) {
+            throw new IllegalStateException("Does not support in non-debuggable build");
+        }
+
+        if (timeMs > System.currentTimeMillis() + MAX_TEST_ALLOW_BAD_WIFI_UNTIL_MS) {
+            throw new IllegalArgumentException("It should not exceed "
+                    + MAX_TEST_ALLOW_BAD_WIFI_UNTIL_MS + "ms from now");
+        }
+
+        mHandler.sendMessage(
+                mHandler.obtainMessage(EVENT_SET_TEST_ALLOW_BAD_WIFI_UNTIL, timeMs));
+    }
+
     private void handleSetAcceptUnvalidated(Network network, boolean accept, boolean always) {
         if (DBG) log("handleSetAcceptUnvalidated network=" + network +
                 " accept=" + accept + " always=" + always);
@@ -4875,6 +4902,10 @@ public class ConnectivityService extends IConnectivityManager.Stub
                     break;
                 case EVENT_MOBILE_DATA_PREFERRED_UIDS_CHANGED:
                     handleMobileDataPreferredUidsChanged();
+                    break;
+                case EVENT_SET_TEST_ALLOW_BAD_WIFI_UNTIL:
+                    final long timeMs = ((Long) msg.obj).longValue();
+                    mMultinetworkPolicyTracker.setTestAllowBadWifiUntil(timeMs);
                     break;
             }
         }
