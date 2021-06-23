@@ -29,6 +29,7 @@ import static android.content.pm.PackageManager.FEATURE_WIFI;
 import static android.content.pm.PackageManager.FEATURE_WIFI_DIRECT;
 import static android.content.pm.PackageManager.GET_PERMISSIONS;
 import static android.content.pm.PackageManager.PERMISSION_GRANTED;
+import static android.net.ConnectivityManager.PROFILE_NETWORK_PREFERENCE_ENTERPRISE;
 import static android.net.ConnectivityManager.TYPE_BLUETOOTH;
 import static android.net.ConnectivityManager.TYPE_ETHERNET;
 import static android.net.ConnectivityManager.TYPE_MOBILE_CBS;
@@ -198,6 +199,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
@@ -2140,6 +2142,38 @@ public class ConnectivityManagerTest {
         }
     }
 
+    /**
+     * Verify that {@link ConnectivityManager#setProfileNetworkPreference} cannot be called
+     * without required NETWORK_STACK permissions.
+     */
+    @Test
+    public void testSetProfileNetworkPreference_NoPermission() {
+        // Cannot use @IgnoreUpTo(Build.VERSION_CODES.R) because this test also requires API 31
+        // shims, and @IgnoreUpTo does not check that.
+        assumeTrue(TestUtils.shouldTestSApis());
+        assertThrows(SecurityException.class, () -> mCm.setProfileNetworkPreference(
+                UserHandle.of(0), PROFILE_NETWORK_PREFERENCE_ENTERPRISE, null /* executor */,
+                null /* listener */));
+    }
+
+    @Test
+    public void testSystemReady() {
+        assumeTrue(TestUtils.shouldTestSApis());
+        assertThrows(SecurityException.class, () -> mCm.systemReady());
+    }
+
+    @Test
+    public void testGetIpSecNetIdRange() {
+        assumeTrue(TestUtils.shouldTestSApis());
+        // The lower refers to ConnectivityManager.TUN_INTF_NETID_START.
+        final long lower = 64512;
+        // The upper refers to ConnectivityManager.TUN_INTF_NETID_START
+        // + ConnectivityManager.TUN_INTF_NETID_RANGE - 1
+        final long upper = 65535;
+        assertEquals(lower, (long) ConnectivityManager.getIpSecNetIdRange().getLower());
+        assertEquals(upper, (long) ConnectivityManager.getIpSecNetIdRange().getUpper());
+    }
+
     private void verifySettings(int expectedAirplaneMode, int expectedPrivateDnsMode,
             int expectedAvoidBadWifi) throws Exception {
         assertEquals(expectedAirplaneMode, Settings.Global.getInt(
@@ -2201,7 +2235,8 @@ public class ConnectivityManagerTest {
             // Validate when setting unmetered to metered, unmetered is lost and replaced by the
             // network with the TEST transport.
             setWifiMeteredStatusAndWait(ssid, true /* isMetered */);
-            defaultCallback.expectCallback(CallbackEntry.LOST, wifiNetwork);
+            defaultCallback.expectCallback(CallbackEntry.LOST, wifiNetwork,
+                    NETWORK_CALLBACK_TIMEOUT_MS);
             waitForAvailable(defaultCallback, tnt.getNetwork());
             // Depending on if this device has cellular connectivity or not, multiple available
             // callbacks may be received. Eventually, metered Wi-Fi should be the final available
@@ -2211,7 +2246,8 @@ public class ConnectivityManagerTest {
         } finally {
             // Validate that removing the test network will fallback to the default network.
             runWithShellPermissionIdentity(tnt::teardown);
-            defaultCallback.expectCallback(CallbackEntry.LOST, tnt.getNetwork());
+            defaultCallback.expectCallback(CallbackEntry.LOST, tnt.getNetwork(),
+                    NETWORK_CALLBACK_TIMEOUT_MS);
             waitForAvailable(defaultCallback);
 
             setWifiMeteredStatusAndWait(ssid, oldMeteredValue);
@@ -2247,7 +2283,8 @@ public class ConnectivityManagerTest {
             waitForAvailable(systemDefaultCallback, wifiNetwork);
         } finally {
             runWithShellPermissionIdentity(tnt::teardown);
-            defaultCallback.expectCallback(CallbackEntry.LOST, tnt.getNetwork());
+            defaultCallback.expectCallback(CallbackEntry.LOST, tnt.getNetwork(),
+                    NETWORK_CALLBACK_TIMEOUT_MS);
 
             // This network preference should only ever use the test network therefore available
             // should not trigger when the test network goes down (e.g. switch to cellular).
@@ -2522,5 +2559,76 @@ public class ConnectivityManagerTest {
         NetworkValidationTestUtil.setHttpUrlDeviceConfig(makeUrl(TEST_HTTP_URL_PATH));
         NetworkValidationTestUtil.setUrlExpirationDeviceConfig(
                 System.currentTimeMillis() + WIFI_CONNECT_TIMEOUT_MS);
+    }
+
+    @AppModeFull(reason = "Cannot get WifiManager in instant app mode")
+    @Test
+    public void testMobileDataPreferredUids() throws Exception {
+        assumeTrue(TestUtils.shouldTestSApis());
+        final boolean canRunTest = mPackageManager.hasSystemFeature(FEATURE_WIFI)
+                && mPackageManager.hasSystemFeature(FEATURE_TELEPHONY);
+        assumeTrue("testMobileDataPreferredUidsWithCallback cannot execute"
+                + " unless device supports both WiFi and telephony", canRunTest);
+
+        final int uid = mPackageManager.getPackageUid(mContext.getPackageName(), 0 /* flag */);
+        final Set<Integer> mobileDataPreferredUids =
+                ConnectivitySettingsManager.getMobileDataPreferredUids(mContext);
+        // CtsNetTestCases uid should not list in MOBILE_DATA_PREFERRED_UIDS setting because it just
+        // installs to device. In case the uid is existed in setting mistakenly, try to remove the
+        // uid and set correct uids to setting.
+        mobileDataPreferredUids.remove(uid);
+        ConnectivitySettingsManager.setMobileDataPreferredUids(mContext, mobileDataPreferredUids);
+
+        // For testing mobile data preferred uids feature, it needs both wifi and cell network.
+        final Network wifiNetwork = mCtsNetUtils.ensureWifiConnected();
+        final Network cellNetwork = mCtsNetUtils.connectToCell();
+        final TestableNetworkCallback defaultTrackingCb = new TestableNetworkCallback();
+        final TestableNetworkCallback systemDefaultCb = new TestableNetworkCallback();
+        final Handler h = new Handler(Looper.getMainLooper());
+        runWithShellPermissionIdentity(() -> mCm.registerSystemDefaultNetworkCallback(
+                systemDefaultCb, h), NETWORK_SETTINGS);
+        mCm.registerDefaultNetworkCallback(defaultTrackingCb);
+
+        try {
+            // CtsNetTestCases uid is not listed in MOBILE_DATA_PREFERRED_UIDS setting, so the
+            // per-app default network should be same as system default network.
+            waitForAvailable(systemDefaultCb, wifiNetwork);
+            defaultTrackingCb.eventuallyExpect(CallbackEntry.AVAILABLE, NETWORK_CALLBACK_TIMEOUT_MS,
+                    entry -> wifiNetwork.equals(entry.getNetwork()));
+            // Active network for CtsNetTestCases uid should be wifi now.
+            assertEquals(wifiNetwork, mCm.getActiveNetwork());
+
+            // Add CtsNetTestCases uid to MOBILE_DATA_PREFERRED_UIDS setting, then available per-app
+            // default network callback should be received with cell network.
+            final Set<Integer> newMobileDataPreferredUids = new ArraySet<>(mobileDataPreferredUids);
+            newMobileDataPreferredUids.add(uid);
+            ConnectivitySettingsManager.setMobileDataPreferredUids(
+                    mContext, newMobileDataPreferredUids);
+            defaultTrackingCb.eventuallyExpect(CallbackEntry.AVAILABLE, NETWORK_CALLBACK_TIMEOUT_MS,
+                    entry -> cellNetwork.equals(entry.getNetwork()));
+            // System default network doesn't change.
+            systemDefaultCb.assertNoCallback();
+            // Active network for CtsNetTestCases uid should change to cell, too.
+            assertEquals(cellNetwork, mCm.getActiveNetwork());
+
+            // Remove CtsNetTestCases uid from MOBILE_DATA_PREFERRED_UIDS setting, then available
+            // per-app default network callback should be received again with system default network
+            newMobileDataPreferredUids.remove(uid);
+            ConnectivitySettingsManager.setMobileDataPreferredUids(
+                    mContext, newMobileDataPreferredUids);
+            defaultTrackingCb.eventuallyExpect(CallbackEntry.AVAILABLE, NETWORK_CALLBACK_TIMEOUT_MS,
+                    entry -> wifiNetwork.equals(entry.getNetwork()));
+            // System default network still doesn't change.
+            systemDefaultCb.assertNoCallback();
+            // Active network for CtsNetTestCases uid should change back to wifi.
+            assertEquals(wifiNetwork, mCm.getActiveNetwork());
+        } finally {
+            mCm.unregisterNetworkCallback(systemDefaultCb);
+            mCm.unregisterNetworkCallback(defaultTrackingCb);
+
+            // Restore setting.
+            ConnectivitySettingsManager.setMobileDataPreferredUids(
+                    mContext, mobileDataPreferredUids);
+        }
     }
 }

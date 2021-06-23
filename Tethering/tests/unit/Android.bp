@@ -77,6 +77,7 @@ java_defaults {
         "libstaticjvmtiagent",
         "libtetherutilsjni",
     ],
+    jarjar_rules: ":TetheringTestsJarJarRules",
 }
 
 // Library containing the unit tests. This is used by the coverage test target to pull in the
@@ -87,7 +88,8 @@ android_library {
     defaults: ["TetheringTestsDefaults"],
     target_sdk_version: "30",
     visibility: [
-        "//packages/modules/Connectivity/Tethering/tests/integration",
+        "//packages/modules/Connectivity/tests:__subpackages__",
+        "//packages/modules/Connectivity/Tethering/tests:__subpackages__",
     ]
 }
 
@@ -98,7 +100,6 @@ android_test {
         "device-tests",
         "mts",
     ],
-    jarjar_rules: ":TetheringTestsJarJarRules",
     defaults: ["TetheringTestsDefaults"],
     compile_multilib: "both",
 }

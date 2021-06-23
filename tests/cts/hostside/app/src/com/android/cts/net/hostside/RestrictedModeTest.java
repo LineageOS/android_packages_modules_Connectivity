@@ -28,28 +28,17 @@ public final class RestrictedModeTest extends AbstractRestrictBackgroundNetworkT
 
     @After
     public void tearDown() throws Exception {
-        setRestrictedMode(false);
+        setRestrictedNetworkingMode(false);
         super.tearDown();
-    }
-
-    private void setRestrictedMode(boolean enabled) throws Exception {
-        executeSilentShellCommand(
-                "settings put global restricted_networking_mode " + (enabled ? 1 : 0));
-        assertRestrictedModeState(enabled);
-    }
-
-    private void assertRestrictedModeState(boolean enabled) throws Exception {
-        assertDelayedShellCommand("cmd netpolicy get restricted-mode",
-                "Restricted mode status: " + (enabled ? "enabled" : "disabled"));
     }
 
     @Test
     public void testNetworkAccess() throws Exception {
-        setRestrictedMode(false);
+        setRestrictedNetworkingMode(false);
 
         // go to foreground state and enable restricted mode
         launchComponentAndAssertNetworkAccess(TYPE_COMPONENT_ACTIVTIY);
-        setRestrictedMode(true);
+        setRestrictedNetworkingMode(true);
         assertForegroundNetworkAccess(false);
 
         // go to background state
@@ -57,7 +46,7 @@ public final class RestrictedModeTest extends AbstractRestrictBackgroundNetworkT
         assertBackgroundNetworkAccess(false);
 
         // disable restricted mode and assert network access in foreground and background states
-        setRestrictedMode(false);
+        setRestrictedNetworkingMode(false);
         launchComponentAndAssertNetworkAccess(TYPE_COMPONENT_ACTIVTIY);
         assertForegroundNetworkAccess(true);
 
