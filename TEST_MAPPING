@@ -43,11 +43,6 @@
   ],
   "imports": [
     {
-      "path": "packages/modules/NetworkStack"
-    }
-  ],
-  "imports": [
-    {
       "path": "frameworks/base/core/java/android/net"
     },
     {
