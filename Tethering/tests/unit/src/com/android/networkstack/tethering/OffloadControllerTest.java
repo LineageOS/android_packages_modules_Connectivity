@@ -58,7 +58,6 @@ import android.annotation.NonNull;
 import android.app.usage.NetworkStatsManager;
 import android.content.Context;
 import android.content.pm.ApplicationInfo;
-import android.net.ITetheringStatsProvider;
 import android.net.IpPrefix;
 import android.net.LinkAddress;
 import android.net.LinkProperties;
@@ -503,8 +502,12 @@ public class OffloadControllerTest {
                 expectedUidStatsDiff);
     }
 
+    /**
+     * Test OffloadController that uses V1.0 HAL setDataLimit with NetworkStatsProvider#onSetLimit
+     * which is called by R framework.
+     */
     @Test
-    public void testSetInterfaceQuota() throws Exception {
+    public void testSetDataLimit() throws Exception {
         enableOffload();
         final OffloadController offload =
                 startOffloadController(OFFLOAD_HAL_VERSION_1_0, true /*expectStart*/);
@@ -540,9 +543,9 @@ public class OffloadControllerTest {
         waitForIdle();
         inOrder.verify(mHardware).setDataLimit(mobileIface, mobileLimit);
 
-        // Setting a limit of ITetheringStatsProvider.QUOTA_UNLIMITED causes the limit to be set
+        // Setting a limit of NetworkStatsProvider.QUOTA_UNLIMITED causes the limit to be set
         // to Long.MAX_VALUE.
-        mTetherStatsProvider.onSetLimit(mobileIface, ITetheringStatsProvider.QUOTA_UNLIMITED);
+        mTetherStatsProvider.onSetLimit(mobileIface, NetworkStatsProvider.QUOTA_UNLIMITED);
         waitForIdle();
         inOrder.verify(mHardware).setDataLimit(mobileIface, Long.MAX_VALUE);
 
