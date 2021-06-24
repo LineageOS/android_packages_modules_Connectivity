@@ -29,7 +29,7 @@ internal object NetworkValidationTestUtil {
     /**
      * Clear the test network validation URLs.
      */
-    fun clearValidationTestUrlsDeviceConfig() {
+    @JvmStatic fun clearValidationTestUrlsDeviceConfig() {
         setHttpsUrlDeviceConfig(null)
         setHttpUrlDeviceConfig(null)
         setUrlExpirationDeviceConfig(null)
@@ -40,7 +40,7 @@ internal object NetworkValidationTestUtil {
      *
      * @see NetworkStackUtils.TEST_CAPTIVE_PORTAL_HTTPS_URL
      */
-    fun setHttpsUrlDeviceConfig(url: String?) =
+    @JvmStatic fun setHttpsUrlDeviceConfig(url: String?) =
             setConfig(NetworkStackUtils.TEST_CAPTIVE_PORTAL_HTTPS_URL, url)
 
     /**
@@ -48,7 +48,7 @@ internal object NetworkValidationTestUtil {
      *
      * @see NetworkStackUtils.TEST_CAPTIVE_PORTAL_HTTP_URL
      */
-    fun setHttpUrlDeviceConfig(url: String?) =
+    @JvmStatic fun setHttpUrlDeviceConfig(url: String?) =
             setConfig(NetworkStackUtils.TEST_CAPTIVE_PORTAL_HTTP_URL, url)
 
     /**
@@ -56,7 +56,7 @@ internal object NetworkValidationTestUtil {
      *
      * @see NetworkStackUtils.TEST_URL_EXPIRATION_TIME
      */
-    fun setUrlExpirationDeviceConfig(timestamp: Long?) =
+    @JvmStatic fun setUrlExpirationDeviceConfig(timestamp: Long?) =
             setConfig(NetworkStackUtils.TEST_URL_EXPIRATION_TIME, timestamp?.toString())
 
     private fun setConfig(configKey: String, value: String?) {
