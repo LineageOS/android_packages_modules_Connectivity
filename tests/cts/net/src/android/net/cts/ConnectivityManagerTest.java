@@ -19,6 +19,7 @@ package android.net.cts;
 import static android.Manifest.permission.CONNECTIVITY_INTERNAL;
 import static android.Manifest.permission.CONNECTIVITY_USE_RESTRICTED_NETWORKS;
 import static android.Manifest.permission.NETWORK_SETTINGS;
+import static android.Manifest.permission.READ_DEVICE_CONFIG;
 import static android.content.pm.PackageManager.FEATURE_BLUETOOTH;
 import static android.content.pm.PackageManager.FEATURE_ETHERNET;
 import static android.content.pm.PackageManager.FEATURE_TELEPHONY;
@@ -28,6 +29,8 @@ import static android.content.pm.PackageManager.FEATURE_WIFI;
 import static android.content.pm.PackageManager.FEATURE_WIFI_DIRECT;
 import static android.content.pm.PackageManager.GET_PERMISSIONS;
 import static android.content.pm.PackageManager.PERMISSION_GRANTED;
+import static android.net.ConnectivityManager.EXTRA_NETWORK;
+import static android.net.ConnectivityManager.EXTRA_NETWORK_REQUEST;
 import static android.net.ConnectivityManager.PROFILE_NETWORK_PREFERENCE_ENTERPRISE;
 import static android.net.ConnectivityManager.TYPE_BLUETOOTH;
 import static android.net.ConnectivityManager.TYPE_ETHERNET;
@@ -48,6 +51,8 @@ import static android.net.NetworkCapabilities.NET_CAPABILITY_IMS;
 import static android.net.NetworkCapabilities.NET_CAPABILITY_INTERNET;
 import static android.net.NetworkCapabilities.NET_CAPABILITY_NOT_METERED;
 import static android.net.NetworkCapabilities.NET_CAPABILITY_NOT_RESTRICTED;
+import static android.net.NetworkCapabilities.NET_CAPABILITY_PARTIAL_CONNECTIVITY;
+import static android.net.NetworkCapabilities.NET_CAPABILITY_VALIDATED;
 import static android.net.NetworkCapabilities.TRANSPORT_TEST;
 import static android.net.NetworkCapabilities.TRANSPORT_WIFI;
 import static android.net.TetheringManager.TETHERING_WIFI;
@@ -60,6 +65,8 @@ import static android.net.cts.util.CtsNetUtils.TestNetworkCallback;
 import static android.net.cts.util.CtsTetheringUtils.StartTetheringCallback;
 import static android.net.cts.util.CtsTetheringUtils.TestTetheringEventCallback;
 import static android.net.cts.util.CtsTetheringUtils.isWifiTetheringSupported;
+import static android.net.util.NetworkStackUtils.TEST_CAPTIVE_PORTAL_HTTPS_URL;
+import static android.net.util.NetworkStackUtils.TEST_CAPTIVE_PORTAL_HTTP_URL;
 import static android.os.MessageQueue.OnFileDescriptorEventListener.EVENT_INPUT;
 import static android.provider.Settings.Global.NETWORK_METERED_MULTIPATH_PREFERENCE;
 import static android.system.OsConstants.AF_INET;
@@ -69,19 +76,20 @@ import static android.system.OsConstants.AF_UNSPEC;
 import static com.android.compatibility.common.util.SystemUtil.callWithShellPermissionIdentity;
 import static com.android.compatibility.common.util.SystemUtil.runShellCommand;
 import static com.android.compatibility.common.util.SystemUtil.runWithShellPermissionIdentity;
+import static com.android.modules.utils.build.SdkLevel.isAtLeastS;
 import static com.android.networkstack.apishim.ConstantsShim.BLOCKED_REASON_LOCKDOWN_VPN;
 import static com.android.networkstack.apishim.ConstantsShim.BLOCKED_REASON_NONE;
 import static com.android.testutils.MiscAsserts.assertThrows;
 import static com.android.testutils.TestNetworkTrackerKt.initTestNetwork;
 import static com.android.testutils.TestPermissionUtil.runAsShell;
 
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNotSame;
 import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.junit.Assume.assumeTrue;
@@ -107,11 +115,15 @@ import android.net.IpSecManager.UdpEncapsulationSocket;
 import android.net.LinkAddress;
 import android.net.LinkProperties;
 import android.net.Network;
+import android.net.NetworkAgent;
+import android.net.NetworkAgentConfig;
 import android.net.NetworkCapabilities;
 import android.net.NetworkInfo;
 import android.net.NetworkInfo.DetailedState;
 import android.net.NetworkInfo.State;
+import android.net.NetworkProvider;
 import android.net.NetworkRequest;
+import android.net.NetworkScore;
 import android.net.NetworkSpecifier;
 import android.net.NetworkStateSnapshot;
 import android.net.NetworkUtils;
@@ -122,6 +134,7 @@ import android.net.TelephonyNetworkSpecifier;
 import android.net.TestNetworkInterface;
 import android.net.TestNetworkManager;
 import android.net.TetheringManager;
+import android.net.Uri;
 import android.net.cts.util.CtsNetUtils;
 import android.net.util.KeepaliveUtils;
 import android.net.wifi.WifiManager;
@@ -136,6 +149,7 @@ import android.os.SystemProperties;
 import android.os.UserHandle;
 import android.os.VintfRuntimeInfo;
 import android.platform.test.annotations.AppModeFull;
+import android.provider.DeviceConfig;
 import android.provider.Settings;
 import android.telephony.SubscriptionManager;
 import android.telephony.TelephonyManager;
@@ -160,6 +174,7 @@ import com.android.testutils.DevSdkIgnoreRule.IgnoreUpTo;
 import com.android.testutils.DevSdkIgnoreRuleKt;
 import com.android.testutils.RecorderCallback.CallbackEntry;
 import com.android.testutils.SkipPresubmit;
+import com.android.testutils.TestHttpServer;
 import com.android.testutils.TestNetworkTracker;
 import com.android.testutils.TestableNetworkCallback;
 
@@ -192,15 +207,23 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Supplier;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
+import fi.iki.elonen.NanoHTTPD.Method;
+import fi.iki.elonen.NanoHTTPD.Response.IStatus;
+import fi.iki.elonen.NanoHTTPD.Response.Status;
 
 @RunWith(AndroidJUnit4.class)
 public class ConnectivityManagerTest {
@@ -228,6 +251,9 @@ public class ConnectivityManagerTest {
     // Airplane Mode BroadcastReceiver Timeout
     private static final long AIRPLANE_MODE_CHANGE_TIMEOUT_MS = 10_000L;
 
+    // Timeout for applying uids allowed on restricted networks
+    private static final long APPLYING_UIDS_ALLOWED_ON_RESTRICTED_NETWORKS_TIMEOUT_MS = 3_000L;
+
     // Minimum supported keepalive counts for wifi and cellular.
     public static final int MIN_SUPPORTED_CELLULAR_KEEPALIVE_COUNT = 1;
     public static final int MIN_SUPPORTED_WIFI_KEEPALIVE_COUNT = 3;
@@ -245,6 +271,12 @@ public class ConnectivityManagerTest {
     private static final int AIRPLANE_MODE_OFF = 0;
     private static final int AIRPLANE_MODE_ON = 1;
 
+    private static final String TEST_HTTPS_URL_PATH = "/https_path";
+    private static final String TEST_HTTP_URL_PATH = "/http_path";
+    private static final String LOCALHOST_HOSTNAME = "localhost";
+    // Re-connecting to the AP, obtaining an IP address, revalidating can take a long time
+    private static final long WIFI_CONNECT_TIMEOUT_MS = 60_000L;
+
     private Context mContext;
     private Instrumentation mInstrumentation;
     private ConnectivityManager mCm;
@@ -258,6 +290,8 @@ public class ConnectivityManagerTest {
 
     // Used for cleanup purposes.
     private final List<Range<Integer>> mVpnRequiredUidRanges = new ArrayList<>();
+
+    private final TestHttpServer mHttpServer = new TestHttpServer(LOCALHOST_HOSTNAME);
 
     @Before
     public void setUp() throws Exception {
@@ -667,15 +701,18 @@ public class ConnectivityManagerTest {
     private NetworkRequest makeWifiNetworkRequest() {
         return new NetworkRequest.Builder()
                 .addTransportType(NetworkCapabilities.TRANSPORT_WIFI)
+                .addCapability(NET_CAPABILITY_INTERNET)
                 .build();
     }
 
     private NetworkRequest makeCellNetworkRequest() {
         return new NetworkRequest.Builder()
                 .addTransportType(NetworkCapabilities.TRANSPORT_CELLULAR)
+                .addCapability(NET_CAPABILITY_INTERNET)
                 .build();
     }
 
+    @AppModeFull(reason = "WRITE_SECURE_SETTINGS permission can't be granted to instant apps")
     @Test @IgnoreUpTo(Build.VERSION_CODES.Q)
     public void testIsPrivateDnsBroken() throws InterruptedException {
         final String invalidPrivateDnsServer = "invalidhostname.example.com";
@@ -824,6 +861,119 @@ public class ConnectivityManagerTest {
             pendingIntent.cancel();
             mContext.unregisterReceiver(receiver);
         }
+    }
+
+    private void runIdenticalPendingIntentsRequestTest(boolean useListen) throws Exception {
+        assumeTrue(mPackageManager.hasSystemFeature(FEATURE_WIFI));
+
+        // Disconnect before registering callbacks, reconnect later to fire them
+        mCtsNetUtils.ensureWifiDisconnected(null);
+
+        final NetworkRequest firstRequest = makeWifiNetworkRequest();
+        final NetworkRequest secondRequest = new NetworkRequest(firstRequest);
+        // Will match wifi or test, since transports are ORed; but there should only be wifi
+        secondRequest.networkCapabilities.addTransportType(TRANSPORT_TEST);
+
+        PendingIntent firstIntent = null;
+        PendingIntent secondIntent = null;
+        BroadcastReceiver receiver = null;
+
+        // Avoid receiving broadcasts from other runs by appending a timestamp
+        final String broadcastAction = NETWORK_CALLBACK_ACTION + System.currentTimeMillis();
+        try {
+            // TODO: replace with PendingIntent.FLAG_MUTABLE when this code compiles against S+
+            // Intent is mutable to receive EXTRA_NETWORK_REQUEST from ConnectivityService
+            final int pendingIntentFlagMutable = 1 << 25;
+            final String extraBoolKey = "extra_bool";
+            firstIntent = PendingIntent.getBroadcast(mContext,
+                    0 /* requestCode */,
+                    new Intent(broadcastAction).putExtra(extraBoolKey, false),
+                    PendingIntent.FLAG_UPDATE_CURRENT | pendingIntentFlagMutable);
+
+            if (useListen) {
+                mCm.registerNetworkCallback(firstRequest, firstIntent);
+            } else {
+                mCm.requestNetwork(firstRequest, firstIntent);
+            }
+
+            // Second intent equals the first as per filterEquals (extras don't count), so first
+            // intent will be updated with the new extras
+            secondIntent = PendingIntent.getBroadcast(mContext,
+                    0 /* requestCode */,
+                    new Intent(broadcastAction).putExtra(extraBoolKey, true),
+                    PendingIntent.FLAG_UPDATE_CURRENT | pendingIntentFlagMutable);
+
+            // Because secondIntent.intentFilterEquals the first, the request should be replaced
+            if (useListen) {
+                mCm.registerNetworkCallback(secondRequest, secondIntent);
+            } else {
+                mCm.requestNetwork(secondRequest, secondIntent);
+            }
+
+            final IntentFilter filter = new IntentFilter();
+            filter.addAction(broadcastAction);
+
+            final CompletableFuture<Network> networkFuture = new CompletableFuture<>();
+            final AtomicInteger receivedCount = new AtomicInteger(0);
+            receiver = new BroadcastReceiver() {
+                @Override
+                public void onReceive(Context context, Intent intent) {
+                    final NetworkRequest request = intent.getParcelableExtra(EXTRA_NETWORK_REQUEST);
+                    assertPendingIntentRequestMatches(request, secondRequest, useListen);
+                    receivedCount.incrementAndGet();
+                    networkFuture.complete(intent.getParcelableExtra(EXTRA_NETWORK));
+                }
+            };
+            mContext.registerReceiver(receiver, filter);
+
+            final Network wifiNetwork = mCtsNetUtils.ensureWifiConnected();
+            try {
+                assertEquals(wifiNetwork, networkFuture.get(
+                        NETWORK_CALLBACK_TIMEOUT_MS, TimeUnit.MILLISECONDS));
+            } catch (TimeoutException e) {
+                throw new AssertionError("PendingIntent not received for " + secondRequest, e);
+            }
+
+            // Sleep for a small amount of time to try to check that only one callback is ever
+            // received (so the first callback was really unregistered). This does not guarantee
+            // that the test will fail if it runs very slowly, but it should at least be very
+            // noticeably flaky.
+            Thread.sleep(NO_CALLBACK_TIMEOUT_MS);
+
+            // TODO: BUG (b/189868426): this should also apply to listens
+            if (!useListen) {
+                assertEquals("PendingIntent should only be received once", 1, receivedCount.get());
+            }
+        } finally {
+            if (firstIntent != null) mCm.unregisterNetworkCallback(firstIntent);
+            if (secondIntent != null) mCm.unregisterNetworkCallback(secondIntent);
+            if (receiver != null) mContext.unregisterReceiver(receiver);
+            mCtsNetUtils.ensureWifiConnected();
+        }
+    }
+
+    private void assertPendingIntentRequestMatches(NetworkRequest broadcasted, NetworkRequest filed,
+            boolean useListen) {
+        // TODO: BUG (b/191713869): on S the request extra is null on listens
+        if (isAtLeastS() && useListen && broadcasted == null) return;
+        assertArrayEquals(filed.networkCapabilities.getCapabilities(),
+                broadcasted.networkCapabilities.getCapabilities());
+        // TODO: BUG (b/189868426): this should also apply to listens
+        if (useListen) return;
+        assertArrayEquals(filed.networkCapabilities.getTransportTypes(),
+                broadcasted.networkCapabilities.getTransportTypes());
+    }
+
+    @AppModeFull(reason = "Cannot get WifiManager in instant app mode")
+    @Test
+    public void testRegisterNetworkRequest_identicalPendingIntents() throws Exception {
+        runIdenticalPendingIntentsRequestTest(false /* useListen */);
+    }
+
+    @AppModeFull(reason = "Cannot get WifiManager in instant app mode")
+    @Test
+    public void testRegisterNetworkCallback_identicalPendingIntents() throws Exception {
+        runIdenticalPendingIntentsRequestTest(true /* useListen */);
     }
 
     /**
@@ -2134,6 +2284,24 @@ public class ConnectivityManagerTest {
                 null /* listener */));
     }
 
+    @Test
+    public void testSystemReady() {
+        assumeTrue(TestUtils.shouldTestSApis());
+        assertThrows(SecurityException.class, () -> mCm.systemReady());
+    }
+
+    @Test
+    public void testGetIpSecNetIdRange() {
+        assumeTrue(TestUtils.shouldTestSApis());
+        // The lower refers to ConnectivityManager.TUN_INTF_NETID_START.
+        final long lower = 64512;
+        // The upper refers to ConnectivityManager.TUN_INTF_NETID_START
+        // + ConnectivityManager.TUN_INTF_NETID_RANGE - 1
+        final long upper = 65535;
+        assertEquals(lower, (long) ConnectivityManager.getIpSecNetIdRange().getLower());
+        assertEquals(upper, (long) ConnectivityManager.getIpSecNetIdRange().getUpper());
+    }
+
     private void verifySettings(int expectedAirplaneMode, int expectedPrivateDnsMode,
             int expectedAvoidBadWifi) throws Exception {
         assertEquals(expectedAirplaneMode, Settings.Global.getInt(
@@ -2162,7 +2330,7 @@ public class ConnectivityManagerTest {
      * For specified apps, validate networks are prioritized in order: unmetered, TEST transport,
      * default network.
      */
-    @AppModeFull(reason = "Cannot get WifiManager in instant app mode")
+    @AppModeFull(reason = "Instant apps cannot create test networks")
     @Test
     public void testSetOemNetworkPreferenceForTestPref() throws Exception {
         // Cannot use @IgnoreUpTo(Build.VERSION_CODES.R) because this test also requires API 31
@@ -2222,6 +2390,7 @@ public class ConnectivityManagerTest {
      * Verify that per-app OEM network preference functions as expected for network pref TEST_ONLY.
      * For specified apps, validate that only TEST transport type networks are used.
      */
+    @AppModeFull(reason = "Instant apps cannot create test networks")
     @Test
     public void testSetOemNetworkPreferenceForTestOnlyPref() throws Exception {
         // Cannot use @IgnoreUpTo(Build.VERSION_CODES.R) because this test also requires API 31
@@ -2326,5 +2495,471 @@ public class ConnectivityManagerTest {
             mUiAutomation.dropShellPermissionIdentity();
         }
         oemPrefListener.expectOnComplete();
+    }
+
+    @Test
+    public void testSetAcceptPartialConnectivity_NoPermission_GetException() {
+        assumeTrue(TestUtils.shouldTestSApis());
+        assertThrows(SecurityException.class, () -> mCm.setAcceptPartialConnectivity(
+                mCm.getActiveNetwork(), false /* accept */ , false /* always */));
+    }
+
+    @AppModeFull(reason = "WRITE_DEVICE_CONFIG permission can't be granted to instant apps")
+    @Test
+    public void testAcceptPartialConnectivity_validatedNetwork() throws Exception {
+        assumeTrue(TestUtils.shouldTestSApis());
+        assumeTrue("testAcceptPartialConnectivity_validatedNetwork cannot execute"
+                        + " unless device supports WiFi",
+                mPackageManager.hasSystemFeature(FEATURE_WIFI));
+
+        try {
+            // Wait for partial connectivity to be detected on the network
+            final Network network = preparePartialConnectivity();
+
+            runAsShell(NETWORK_SETTINGS, () -> {
+                // The always bit is verified in NetworkAgentTest
+                mCm.setAcceptPartialConnectivity(network, true /* accept */, false /* always */);
+            });
+
+            // Accept partial connectivity network should result in a validated network
+            expectNetworkHasCapability(network, NET_CAPABILITY_VALIDATED, WIFI_CONNECT_TIMEOUT_MS);
+        } finally {
+            resetValidationConfig();
+            // Reconnect wifi to reset the wifi status
+            reconnectWifi();
+        }
+    }
+
+    @AppModeFull(reason = "WRITE_DEVICE_CONFIG permission can't be granted to instant apps")
+    @Test
+    public void testRejectPartialConnectivity_TearDownNetwork() throws Exception {
+        assumeTrue(TestUtils.shouldTestSApis());
+        assumeTrue("testAcceptPartialConnectivity_validatedNetwork cannot execute"
+                        + " unless device supports WiFi",
+                mPackageManager.hasSystemFeature(FEATURE_WIFI));
+
+        final TestNetworkCallback cb = new TestNetworkCallback();
+        try {
+            // Wait for partial connectivity to be detected on the network
+            final Network network = preparePartialConnectivity();
+
+            mCm.requestNetwork(makeWifiNetworkRequest(), cb);
+            runAsShell(NETWORK_SETTINGS, () -> {
+                // The always bit is verified in NetworkAgentTest
+                mCm.setAcceptPartialConnectivity(network, false /* accept */, false /* always */);
+            });
+            // Reject partial connectivity network should cause the network being torn down
+            assertEquals(network, cb.waitForLost());
+        } finally {
+            mCm.unregisterNetworkCallback(cb);
+            resetValidationConfig();
+            // Wifi will not automatically reconnect to the network. ensureWifiDisconnected cannot
+            // apply here. Thus, turn off wifi first and restart to restore.
+            runShellCommand("svc wifi disable");
+            mCtsNetUtils.ensureWifiConnected();
+        }
+    }
+
+    @Test
+    public void testSetAcceptUnvalidated_NoPermission_GetException() {
+        assumeTrue(TestUtils.shouldTestSApis());
+        assertThrows(SecurityException.class, () -> mCm.setAcceptUnvalidated(
+                mCm.getActiveNetwork(), false /* accept */ , false /* always */));
+    }
+
+    @AppModeFull(reason = "WRITE_DEVICE_CONFIG permission can't be granted to instant apps")
+    @Test
+    public void testRejectUnvalidated_TearDownNetwork() throws Exception {
+        assumeTrue(TestUtils.shouldTestSApis());
+        final boolean canRunTest = mPackageManager.hasSystemFeature(FEATURE_WIFI)
+                && mPackageManager.hasSystemFeature(FEATURE_TELEPHONY);
+        assumeTrue("testAcceptPartialConnectivity_validatedNetwork cannot execute"
+                        + " unless device supports WiFi and telephony", canRunTest);
+
+        final TestableNetworkCallback wifiCb = new TestableNetworkCallback();
+        try {
+            // Ensure at least one default network candidate connected.
+            mCtsNetUtils.connectToCell();
+
+            final Network wifiNetwork = prepareUnvalidatedNetwork();
+            // Default network should not be wifi ,but checking that wifi is not the default doesn't
+            // guarantee that it won't become the default in the future.
+            assertNotEquals(wifiNetwork, mCm.getActiveNetwork());
+
+            mCm.registerNetworkCallback(makeWifiNetworkRequest(), wifiCb);
+            runAsShell(NETWORK_SETTINGS, () -> {
+                mCm.setAcceptUnvalidated(wifiNetwork, false /* accept */, false /* always */);
+            });
+            waitForLost(wifiCb);
+        } finally {
+            mCm.unregisterNetworkCallback(wifiCb);
+            resetValidationConfig();
+            /// Wifi will not automatically reconnect to the network. ensureWifiDisconnected cannot
+            // apply here. Thus, turn off wifi first and restart to restore.
+            runShellCommand("svc wifi disable");
+            mCtsNetUtils.ensureWifiConnected();
+        }
+    }
+
+    @AppModeFull(reason = "WRITE_DEVICE_CONFIG permission can't be granted to instant apps")
+    @Test
+    public void testSetAvoidUnvalidated() throws Exception {
+        assumeTrue(TestUtils.shouldTestSApis());
+        // TODO: Allow in debuggable ROM only. To be replaced by FabricatedOverlay
+        assumeTrue(Build.isDebuggable());
+        final boolean canRunTest = mPackageManager.hasSystemFeature(FEATURE_WIFI)
+                && mPackageManager.hasSystemFeature(FEATURE_TELEPHONY);
+        assumeTrue("testSetAvoidUnvalidated cannot execute"
+                + " unless device supports WiFi and telephony", canRunTest);
+
+        final TestableNetworkCallback wifiCb = new TestableNetworkCallback();
+        final TestableNetworkCallback defaultCb = new TestableNetworkCallback();
+        final int previousAvoidBadWifi =
+                ConnectivitySettingsManager.getNetworkAvoidBadWifi(mContext);
+
+        allowBadWifi();
+
+        final Network cellNetwork = mCtsNetUtils.connectToCell();
+        final Network wifiNetwork = prepareValidatedNetwork();
+
+        mCm.registerDefaultNetworkCallback(defaultCb);
+        mCm.registerNetworkCallback(makeWifiNetworkRequest(), wifiCb);
+
+        try {
+            // Verify wifi is the default network.
+            defaultCb.eventuallyExpect(CallbackEntry.AVAILABLE, NETWORK_CALLBACK_TIMEOUT_MS,
+                    entry -> wifiNetwork.equals(entry.getNetwork()));
+            wifiCb.eventuallyExpect(CallbackEntry.AVAILABLE, NETWORK_CALLBACK_TIMEOUT_MS,
+                    entry -> wifiNetwork.equals(entry.getNetwork()));
+            assertTrue(mCm.getNetworkCapabilities(wifiNetwork).hasCapability(
+                    NET_CAPABILITY_VALIDATED));
+
+            // Configure response code for unvalidated network
+            configTestServer(Status.INTERNAL_ERROR, Status.INTERNAL_ERROR);
+            mCm.reportNetworkConnectivity(wifiNetwork, false);
+            // Default network should stay on unvalidated wifi because avoid bad wifi is disabled.
+            defaultCb.eventuallyExpect(CallbackEntry.NETWORK_CAPS_UPDATED,
+                    NETWORK_CALLBACK_TIMEOUT_MS,
+                    entry -> !((CallbackEntry.CapabilitiesChanged) entry).getCaps()
+                            .hasCapability(NET_CAPABILITY_VALIDATED));
+            wifiCb.eventuallyExpect(CallbackEntry.NETWORK_CAPS_UPDATED,
+                    NETWORK_CALLBACK_TIMEOUT_MS,
+                    entry -> !((CallbackEntry.CapabilitiesChanged) entry).getCaps()
+                            .hasCapability(NET_CAPABILITY_VALIDATED));
+
+            runAsShell(NETWORK_SETTINGS, () -> {
+                mCm.setAvoidUnvalidated(wifiNetwork);
+            });
+            // Default network should be updated to validated cellular network.
+            defaultCb.eventuallyExpect(CallbackEntry.AVAILABLE, NETWORK_CALLBACK_TIMEOUT_MS,
+                    entry -> cellNetwork.equals(entry.getNetwork()));
+            // No update on wifi callback.
+            wifiCb.assertNoCallback();
+        } finally {
+            mCm.unregisterNetworkCallback(wifiCb);
+            mCm.unregisterNetworkCallback(defaultCb);
+            resetAvoidBadWifi(previousAvoidBadWifi);
+            resetValidationConfig();
+            // Reconnect wifi to reset the wifi status
+            reconnectWifi();
+        }
+    }
+
+    private void resetAvoidBadWifi(int settingValue) {
+        setTestAllowBadWifiResource(0 /* timeMs */);
+        ConnectivitySettingsManager.setNetworkAvoidBadWifi(mContext, settingValue);
+    }
+
+    private void allowBadWifi() {
+        setTestAllowBadWifiResource(
+                System.currentTimeMillis() + WIFI_CONNECT_TIMEOUT_MS /* timeMs */);
+        ConnectivitySettingsManager.setNetworkAvoidBadWifi(mContext,
+                ConnectivitySettingsManager.NETWORK_AVOID_BAD_WIFI_IGNORE);
+    }
+
+    private void setTestAllowBadWifiResource(long timeMs) {
+        runAsShell(NETWORK_SETTINGS, () -> {
+            mCm.setTestAllowBadWifiUntil(timeMs);
+        });
+    }
+
+    private Network expectNetworkHasCapability(Network network, int expectedNetCap, long timeout)
+            throws Exception {
+        final CompletableFuture<Network> future = new CompletableFuture();
+        final NetworkCallback cb = new NetworkCallback() {
+            @Override
+            public void onCapabilitiesChanged(Network n, NetworkCapabilities nc) {
+                if (n.equals(network) && nc.hasCapability(expectedNetCap)) {
+                    future.complete(network);
+                }
+            }
+        };
+
+        try {
+            mCm.registerNetworkCallback(new NetworkRequest.Builder().build(), cb);
+            return future.get(timeout, TimeUnit.MILLISECONDS);
+        } finally {
+            mCm.unregisterNetworkCallback(cb);
+        }
+    }
+
+    private void resetValidationConfig() {
+        NetworkValidationTestUtil.clearValidationTestUrlsDeviceConfig();
+        mHttpServer.stop();
+    }
+
+    private void prepareHttpServer() throws Exception {
+        runAsShell(READ_DEVICE_CONFIG, () -> {
+            // Verify that the test URLs are not normally set on the device, but do not fail if the
+            // test URLs are set to what this test uses (URLs on localhost), in case the test was
+            // interrupted manually and rerun.
+            assertEmptyOrLocalhostUrl(TEST_CAPTIVE_PORTAL_HTTPS_URL);
+            assertEmptyOrLocalhostUrl(TEST_CAPTIVE_PORTAL_HTTP_URL);
+        });
+
+        NetworkValidationTestUtil.clearValidationTestUrlsDeviceConfig();
+
+        mHttpServer.start();
+    }
+
+    private Network reconnectWifi() {
+        mCtsNetUtils.ensureWifiDisconnected(null /* wifiNetworkToCheck */);
+        return mCtsNetUtils.ensureWifiConnected();
+    }
+
+    private Network prepareValidatedNetwork() throws Exception {
+        prepareHttpServer();
+        configTestServer(Status.NO_CONTENT, Status.NO_CONTENT);
+        // Disconnect wifi first then start wifi network with configuration.
+        final Network wifiNetwork = reconnectWifi();
+
+        return expectNetworkHasCapability(wifiNetwork, NET_CAPABILITY_VALIDATED,
+                WIFI_CONNECT_TIMEOUT_MS);
+    }
+
+    private Network preparePartialConnectivity() throws Exception {
+        prepareHttpServer();
+        // Configure response code for partial connectivity
+        configTestServer(Status.INTERNAL_ERROR  /* httpsStatusCode */,
+                Status.NO_CONTENT  /* httpStatusCode */);
+        // Disconnect wifi first then start wifi network with configuration.
+        mCtsNetUtils.ensureWifiDisconnected(null /* wifiNetworkToCheck */);
+        final Network network = mCtsNetUtils.ensureWifiConnected();
+
+        return expectNetworkHasCapability(network, NET_CAPABILITY_PARTIAL_CONNECTIVITY,
+                WIFI_CONNECT_TIMEOUT_MS);
+    }
+
+    private Network prepareUnvalidatedNetwork() throws Exception {
+        prepareHttpServer();
+        // Configure response code for unvalidated network
+        configTestServer(Status.INTERNAL_ERROR /* httpsStatusCode */,
+                Status.INTERNAL_ERROR /* httpStatusCode */);
+
+        // Disconnect wifi first then start wifi network with configuration.
+        mCtsNetUtils.ensureWifiDisconnected(null /* wifiNetworkToCheck */);
+        final Network wifiNetwork = mCtsNetUtils.ensureWifiConnected();
+        return expectNetworkHasCapability(wifiNetwork, NET_CAPABILITY_INTERNET,
+                WIFI_CONNECT_TIMEOUT_MS);
+    }
+
+    private String makeUrl(String path) {
+        return "http://localhost:" + mHttpServer.getListeningPort() + path;
+    }
+
+    private void assertEmptyOrLocalhostUrl(String urlKey) {
+        final String url = DeviceConfig.getProperty(DeviceConfig.NAMESPACE_CONNECTIVITY, urlKey);
+        assertTrue(urlKey + " must not be set in production scenarios, current value= " + url,
+                TextUtils.isEmpty(url) || LOCALHOST_HOSTNAME.equals(Uri.parse(url).getHost()));
+    }
+
+    private void configTestServer(IStatus httpsStatusCode, IStatus httpStatusCode) {
+        mHttpServer.addResponse(new TestHttpServer.Request(
+                TEST_HTTPS_URL_PATH, Method.GET, "" /* queryParameters */),
+                httpsStatusCode, null /* locationHeader */, "" /* content */);
+        mHttpServer.addResponse(new TestHttpServer.Request(
+                TEST_HTTP_URL_PATH, Method.GET, "" /* queryParameters */),
+                httpStatusCode, null /* locationHeader */, "" /* content */);
+        NetworkValidationTestUtil.setHttpsUrlDeviceConfig(makeUrl(TEST_HTTPS_URL_PATH));
+        NetworkValidationTestUtil.setHttpUrlDeviceConfig(makeUrl(TEST_HTTP_URL_PATH));
+        NetworkValidationTestUtil.setUrlExpirationDeviceConfig(
+                System.currentTimeMillis() + WIFI_CONNECT_TIMEOUT_MS);
+    }
+
+    @AppModeFull(reason = "Cannot get WifiManager in instant app mode")
+    @Test
+    public void testMobileDataPreferredUids() throws Exception {
+        assumeTrue(TestUtils.shouldTestSApis());
+        final boolean canRunTest = mPackageManager.hasSystemFeature(FEATURE_WIFI)
+                && mPackageManager.hasSystemFeature(FEATURE_TELEPHONY);
+        assumeTrue("testMobileDataPreferredUidsWithCallback cannot execute"
+                + " unless device supports both WiFi and telephony", canRunTest);
+
+        final int uid = mPackageManager.getPackageUid(mContext.getPackageName(), 0 /* flag */);
+        final Set<Integer> mobileDataPreferredUids =
+                ConnectivitySettingsManager.getMobileDataPreferredUids(mContext);
+        // CtsNetTestCases uid should not list in MOBILE_DATA_PREFERRED_UIDS setting because it just
+        // installs to device. In case the uid is existed in setting mistakenly, try to remove the
+        // uid and set correct uids to setting.
+        mobileDataPreferredUids.remove(uid);
+        ConnectivitySettingsManager.setMobileDataPreferredUids(mContext, mobileDataPreferredUids);
+
+        // For testing mobile data preferred uids feature, it needs both wifi and cell network.
+        final Network wifiNetwork = mCtsNetUtils.ensureWifiConnected();
+        final Network cellNetwork = mCtsNetUtils.connectToCell();
+        final TestableNetworkCallback defaultTrackingCb = new TestableNetworkCallback();
+        final TestableNetworkCallback systemDefaultCb = new TestableNetworkCallback();
+        final Handler h = new Handler(Looper.getMainLooper());
+        runWithShellPermissionIdentity(() -> mCm.registerSystemDefaultNetworkCallback(
+                systemDefaultCb, h), NETWORK_SETTINGS);
+        mCm.registerDefaultNetworkCallback(defaultTrackingCb);
+
+        try {
+            // CtsNetTestCases uid is not listed in MOBILE_DATA_PREFERRED_UIDS setting, so the
+            // per-app default network should be same as system default network.
+            waitForAvailable(systemDefaultCb, wifiNetwork);
+            defaultTrackingCb.eventuallyExpect(CallbackEntry.AVAILABLE, NETWORK_CALLBACK_TIMEOUT_MS,
+                    entry -> wifiNetwork.equals(entry.getNetwork()));
+            // Active network for CtsNetTestCases uid should be wifi now.
+            assertEquals(wifiNetwork, mCm.getActiveNetwork());
+
+            // Add CtsNetTestCases uid to MOBILE_DATA_PREFERRED_UIDS setting, then available per-app
+            // default network callback should be received with cell network.
+            final Set<Integer> newMobileDataPreferredUids = new ArraySet<>(mobileDataPreferredUids);
+            newMobileDataPreferredUids.add(uid);
+            ConnectivitySettingsManager.setMobileDataPreferredUids(
+                    mContext, newMobileDataPreferredUids);
+            defaultTrackingCb.eventuallyExpect(CallbackEntry.AVAILABLE, NETWORK_CALLBACK_TIMEOUT_MS,
+                    entry -> cellNetwork.equals(entry.getNetwork()));
+            // System default network doesn't change.
+            systemDefaultCb.assertNoCallback();
+            // Active network for CtsNetTestCases uid should change to cell, too.
+            assertEquals(cellNetwork, mCm.getActiveNetwork());
+
+            // Remove CtsNetTestCases uid from MOBILE_DATA_PREFERRED_UIDS setting, then available
+            // per-app default network callback should be received again with system default network
+            newMobileDataPreferredUids.remove(uid);
+            ConnectivitySettingsManager.setMobileDataPreferredUids(
+                    mContext, newMobileDataPreferredUids);
+            defaultTrackingCb.eventuallyExpect(CallbackEntry.AVAILABLE, NETWORK_CALLBACK_TIMEOUT_MS,
+                    entry -> wifiNetwork.equals(entry.getNetwork()));
+            // System default network still doesn't change.
+            systemDefaultCb.assertNoCallback();
+            // Active network for CtsNetTestCases uid should change back to wifi.
+            assertEquals(wifiNetwork, mCm.getActiveNetwork());
+        } finally {
+            mCm.unregisterNetworkCallback(systemDefaultCb);
+            mCm.unregisterNetworkCallback(defaultTrackingCb);
+
+            // Restore setting.
+            ConnectivitySettingsManager.setMobileDataPreferredUids(
+                    mContext, mobileDataPreferredUids);
+        }
+    }
+
+    /** Wait for assigned time. */
+    private void waitForMs(long ms) {
+        try {
+            Thread.sleep(ms);
+        } catch (InterruptedException e) {
+            fail("Thread was interrupted");
+        }
+    }
+
+    private void assertBindSocketToNetworkSuccess(final Network network) throws Exception {
+        final CompletableFuture<Boolean> future = new CompletableFuture<>();
+        final ExecutorService executor = Executors.newSingleThreadExecutor();
+        try {
+            executor.execute(() -> {
+                for (int i = 0; i < 30; i++) {
+                    waitForMs(100);
+
+                    try (Socket socket = new Socket()) {
+                        network.bindSocket(socket);
+                        future.complete(true);
+                        return;
+                    } catch (IOException e) { }
+                }
+            });
+            assertTrue(future.get(APPLYING_UIDS_ALLOWED_ON_RESTRICTED_NETWORKS_TIMEOUT_MS,
+                    TimeUnit.MILLISECONDS));
+        } finally {
+            executor.shutdown();
+        }
+    }
+
+    @AppModeFull(reason = "WRITE_SECURE_SETTINGS permission can't be granted to instant apps")
+    @Test
+    public void testUidsAllowedOnRestrictedNetworks() throws Exception {
+        assumeTrue(TestUtils.shouldTestSApis());
+
+        final int uid = mPackageManager.getPackageUid(mContext.getPackageName(), 0 /* flag */);
+        final Set<Integer> originalUidsAllowedOnRestrictedNetworks =
+                ConnectivitySettingsManager.getUidsAllowedOnRestrictedNetworks(mContext);
+        // CtsNetTestCases uid should not list in UIDS_ALLOWED_ON_RESTRICTED_NETWORKS setting
+        // because it has been just installed to device. In case the uid is existed in setting
+        // mistakenly, try to remove the uid and set correct uids to setting.
+        originalUidsAllowedOnRestrictedNetworks.remove(uid);
+        ConnectivitySettingsManager.setUidsAllowedOnRestrictedNetworks(mContext,
+                originalUidsAllowedOnRestrictedNetworks);
+
+        final Handler h = new Handler(Looper.getMainLooper());
+        final TestableNetworkCallback testNetworkCb = new TestableNetworkCallback();
+        mCm.registerBestMatchingNetworkCallback(new NetworkRequest.Builder().clearCapabilities()
+                .addTransportType(NetworkCapabilities.TRANSPORT_TEST).build(), testNetworkCb, h);
+
+        // Create test network agent with restricted network.
+        final NetworkCapabilities nc = new NetworkCapabilities.Builder()
+                .addTransportType(NetworkCapabilities.TRANSPORT_TEST)
+                .addCapability(NetworkCapabilities.NET_CAPABILITY_NOT_SUSPENDED)
+                .addCapability(NetworkCapabilities.NET_CAPABILITY_NOT_ROAMING)
+                .addCapability(NetworkCapabilities.NET_CAPABILITY_NOT_VCN_MANAGED)
+                .removeCapability(NetworkCapabilities.NET_CAPABILITY_TRUSTED)
+                .removeCapability(NetworkCapabilities.NET_CAPABILITY_NOT_RESTRICTED)
+                .build();
+        final NetworkScore score = new NetworkScore.Builder()
+                .setExiting(false)
+                .setTransportPrimary(false)
+                .setKeepConnectedReason(NetworkScore.KEEP_CONNECTED_FOR_HANDOVER)
+                .build();
+        final NetworkAgent agent = new NetworkAgent(mContext, Looper.getMainLooper(),
+                TAG, nc, new LinkProperties(), score, new NetworkAgentConfig.Builder().build(),
+                new NetworkProvider(mContext, Looper.getMainLooper(), TAG)) {};
+        runWithShellPermissionIdentity(() -> agent.register(),
+                android.Manifest.permission.MANAGE_TEST_NETWORKS);
+        agent.markConnected();
+
+        final Network network = agent.getNetwork();
+
+        try (Socket socket = new Socket()) {
+            testNetworkCb.eventuallyExpect(CallbackEntry.AVAILABLE, NETWORK_CALLBACK_TIMEOUT_MS,
+                    entry -> network.equals(entry.getNetwork()));
+            // Verify that the network is restricted.
+            final NetworkCapabilities testNetworkNc = mCm.getNetworkCapabilities(network);
+            assertNotNull(testNetworkNc);
+            assertFalse(testNetworkNc.hasCapability(
+                    NetworkCapabilities.NET_CAPABILITY_NOT_RESTRICTED));
+            // CtsNetTestCases package doesn't hold CONNECTIVITY_USE_RESTRICTED_NETWORKS, so it
+            // does not allow to bind socket to restricted network.
+            assertThrows(IOException.class, () -> network.bindSocket(socket));
+
+            // Add CtsNetTestCases uid to UIDS_ALLOWED_ON_RESTRICTED_NETWORKS setting, then it can
+            // bind socket to restricted network normally.
+            final Set<Integer> newUidsAllowedOnRestrictedNetworks =
+                    new ArraySet<>(originalUidsAllowedOnRestrictedNetworks);
+            newUidsAllowedOnRestrictedNetworks.add(uid);
+            ConnectivitySettingsManager.setUidsAllowedOnRestrictedNetworks(mContext,
+                    newUidsAllowedOnRestrictedNetworks);
+            // Wait a while for sending allowed uids on the restricted network to netd.
+            // TODD: Have a significant signal to know the uids has been send to netd.
+            assertBindSocketToNetworkSuccess(network);
+        } finally {
+            mCm.unregisterNetworkCallback(testNetworkCb);
+            agent.unregister();
+
+            // Restore setting.
+            ConnectivitySettingsManager.setUidsAllowedOnRestrictedNetworks(mContext,
+                    originalUidsAllowedOnRestrictedNetworks);
+        }
     }
 }

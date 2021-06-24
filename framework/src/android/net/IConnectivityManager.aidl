@@ -226,4 +226,6 @@ interface IConnectivityManager
     void offerNetwork(int providerId, in NetworkScore score,
             in NetworkCapabilities caps, in INetworkOfferCallback callback);
     void unofferNetwork(in INetworkOfferCallback callback);
+
+    void setTestAllowBadWifiUntil(long timeMs);
 }

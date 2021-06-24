@@ -43,6 +43,7 @@ import android.net.ConnectivityManager;
 import android.net.ConnectivityManager.NetworkCallback;
 import android.net.Network;
 import android.net.NetworkCapabilities;
+import android.net.NetworkPolicyManager;
 import android.net.wifi.WifiConfiguration;
 import android.net.wifi.WifiManager;
 import android.net.wifi.WifiManager.ActionListener;
@@ -58,6 +59,7 @@ import androidx.test.platform.app.InstrumentationRegistry;
 
 import com.android.compatibility.common.util.AppStandbyUtils;
 import com.android.compatibility.common.util.BatteryUtils;
+import com.android.compatibility.common.util.PollingCheck;
 import com.android.compatibility.common.util.ShellIdentityUtils;
 import com.android.compatibility.common.util.ThrowingRunnable;
 
@@ -81,6 +83,7 @@ public class NetworkPolicyTestUtils {
     private static ConnectivityManager mCm;
     private static WifiManager mWm;
     private static CarrierConfigManager mCarrierConfigManager;
+    private static NetworkPolicyManager sNpm;
 
     private static Boolean mBatterySaverSupported;
     private static Boolean mDataSaverSupported;
@@ -408,11 +411,47 @@ public class NetworkPolicyTestUtils {
         return mCarrierConfigManager;
     }
 
+    public static NetworkPolicyManager getNetworkPolicyManager() {
+        if (sNpm == null) {
+            sNpm = getContext().getSystemService(NetworkPolicyManager.class);
+        }
+        return sNpm;
+    }
+
     public static Context getContext() {
         return getInstrumentation().getContext();
     }
 
     public static Instrumentation getInstrumentation() {
         return InstrumentationRegistry.getInstrumentation();
+    }
+
+    // When power saver mode or restrict background enabled or adding any white/black list into
+    // those modes, NetworkPolicy may need to take some time to update the rules of uids. So having
+    // this function and using PollingCheck to try to make sure the uid has updated and reduce the
+    // flaky rate.
+    public static void assertNetworkingBlockedStatusForUid(int uid, boolean metered,
+            boolean expectedResult) throws Exception {
+        PollingCheck.waitFor(() -> (expectedResult == isUidNetworkingBlocked(uid, metered)));
+    }
+
+    public static boolean isUidNetworkingBlocked(int uid, boolean meteredNetwork) {
+        final UiAutomation uiAutomation = getInstrumentation().getUiAutomation();
+        try {
+            uiAutomation.adoptShellPermissionIdentity();
+            return getNetworkPolicyManager().isUidNetworkingBlocked(uid, meteredNetwork);
+        } finally {
+            uiAutomation.dropShellPermissionIdentity();
+        }
+    }
+
+    public static boolean isUidRestrictedOnMeteredNetworks(int uid) {
+        final UiAutomation uiAutomation = getInstrumentation().getUiAutomation();
+        try {
+            uiAutomation.adoptShellPermissionIdentity();
+            return getNetworkPolicyManager().isUidRestrictedOnMeteredNetworks(uid);
+        } finally {
+            uiAutomation.dropShellPermissionIdentity();
+        }
     }
 }
