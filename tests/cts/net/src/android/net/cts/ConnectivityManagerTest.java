@@ -29,6 +29,8 @@ import static android.content.pm.PackageManager.FEATURE_WIFI;
 import static android.content.pm.PackageManager.FEATURE_WIFI_DIRECT;
 import static android.content.pm.PackageManager.GET_PERMISSIONS;
 import static android.content.pm.PackageManager.PERMISSION_GRANTED;
+import static android.net.ConnectivityManager.EXTRA_NETWORK;
+import static android.net.ConnectivityManager.EXTRA_NETWORK_REQUEST;
 import static android.net.ConnectivityManager.PROFILE_NETWORK_PREFERENCE_ENTERPRISE;
 import static android.net.ConnectivityManager.TYPE_BLUETOOTH;
 import static android.net.ConnectivityManager.TYPE_ETHERNET;
@@ -74,12 +76,14 @@ import static android.system.OsConstants.AF_UNSPEC;
 import static com.android.compatibility.common.util.SystemUtil.callWithShellPermissionIdentity;
 import static com.android.compatibility.common.util.SystemUtil.runShellCommand;
 import static com.android.compatibility.common.util.SystemUtil.runWithShellPermissionIdentity;
+import static com.android.modules.utils.build.SdkLevel.isAtLeastS;
 import static com.android.networkstack.apishim.ConstantsShim.BLOCKED_REASON_LOCKDOWN_VPN;
 import static com.android.networkstack.apishim.ConstantsShim.BLOCKED_REASON_NONE;
 import static com.android.testutils.MiscAsserts.assertThrows;
 import static com.android.testutils.TestNetworkTrackerKt.initTestNetwork;
 import static com.android.testutils.TestPermissionUtil.runAsShell;
 
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
@@ -206,6 +210,7 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Supplier;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -698,6 +703,7 @@ public class ConnectivityManagerTest {
                 .build();
     }
 
+    @AppModeFull(reason = "WRITE_SECURE_SETTINGS permission can't be granted to instant apps")
     @Test @IgnoreUpTo(Build.VERSION_CODES.Q)
     public void testIsPrivateDnsBroken() throws InterruptedException {
         final String invalidPrivateDnsServer = "invalidhostname.example.com";
@@ -846,6 +852,119 @@ public class ConnectivityManagerTest {
             pendingIntent.cancel();
             mContext.unregisterReceiver(receiver);
         }
+    }
+
+    private void runIdenticalPendingIntentsRequestTest(boolean useListen) throws Exception {
+        assumeTrue(mPackageManager.hasSystemFeature(FEATURE_WIFI));
+
+        // Disconnect before registering callbacks, reconnect later to fire them
+        mCtsNetUtils.ensureWifiDisconnected(null);
+
+        final NetworkRequest firstRequest = makeWifiNetworkRequest();
+        final NetworkRequest secondRequest = new NetworkRequest(firstRequest);
+        // Will match wifi or test, since transports are ORed; but there should only be wifi
+        secondRequest.networkCapabilities.addTransportType(TRANSPORT_TEST);
+
+        PendingIntent firstIntent = null;
+        PendingIntent secondIntent = null;
+        BroadcastReceiver receiver = null;
+
+        // Avoid receiving broadcasts from other runs by appending a timestamp
+        final String broadcastAction = NETWORK_CALLBACK_ACTION + System.currentTimeMillis();
+        try {
+            // TODO: replace with PendingIntent.FLAG_MUTABLE when this code compiles against S+
+            // Intent is mutable to receive EXTRA_NETWORK_REQUEST from ConnectivityService
+            final int pendingIntentFlagMutable = 1 << 25;
+            final String extraBoolKey = "extra_bool";
+            firstIntent = PendingIntent.getBroadcast(mContext,
+                    0 /* requestCode */,
+                    new Intent(broadcastAction).putExtra(extraBoolKey, false),
+                    PendingIntent.FLAG_UPDATE_CURRENT | pendingIntentFlagMutable);
+
+            if (useListen) {
+                mCm.registerNetworkCallback(firstRequest, firstIntent);
+            } else {
+                mCm.requestNetwork(firstRequest, firstIntent);
+            }
+
+            // Second intent equals the first as per filterEquals (extras don't count), so first
+            // intent will be updated with the new extras
+            secondIntent = PendingIntent.getBroadcast(mContext,
+                    0 /* requestCode */,
+                    new Intent(broadcastAction).putExtra(extraBoolKey, true),
+                    PendingIntent.FLAG_UPDATE_CURRENT | pendingIntentFlagMutable);
+
+            // Because secondIntent.intentFilterEquals the first, the request should be replaced
+            if (useListen) {
+                mCm.registerNetworkCallback(secondRequest, secondIntent);
+            } else {
+                mCm.requestNetwork(secondRequest, secondIntent);
+            }
+
+            final IntentFilter filter = new IntentFilter();
+            filter.addAction(broadcastAction);
+
+            final CompletableFuture<Network> networkFuture = new CompletableFuture<>();
+            final AtomicInteger receivedCount = new AtomicInteger(0);
+            receiver = new BroadcastReceiver() {
+                @Override
+                public void onReceive(Context context, Intent intent) {
+                    final NetworkRequest request = intent.getParcelableExtra(EXTRA_NETWORK_REQUEST);
+                    assertPendingIntentRequestMatches(request, secondRequest, useListen);
+                    receivedCount.incrementAndGet();
+                    networkFuture.complete(intent.getParcelableExtra(EXTRA_NETWORK));
+                }
+            };
+            mContext.registerReceiver(receiver, filter);
+
+            final Network wifiNetwork = mCtsNetUtils.ensureWifiConnected();
+            try {
+                assertEquals(wifiNetwork, networkFuture.get(
+                        NETWORK_CALLBACK_TIMEOUT_MS, TimeUnit.MILLISECONDS));
+            } catch (TimeoutException e) {
+                throw new AssertionError("PendingIntent not received for " + secondRequest, e);
+            }
+
+            // Sleep for a small amount of time to try to check that only one callback is ever
+            // received (so the first callback was really unregistered). This does not guarantee
+            // that the test will fail if it runs very slowly, but it should at least be very
+            // noticeably flaky.
+            Thread.sleep(NO_CALLBACK_TIMEOUT_MS);
+
+            // TODO: BUG (b/189868426): this should also apply to listens
+            if (!useListen) {
+                assertEquals("PendingIntent should only be received once", 1, receivedCount.get());
+            }
+        } finally {
+            if (firstIntent != null) mCm.unregisterNetworkCallback(firstIntent);
+            if (secondIntent != null) mCm.unregisterNetworkCallback(secondIntent);
+            if (receiver != null) mContext.unregisterReceiver(receiver);
+            mCtsNetUtils.ensureWifiConnected();
+        }
+    }
+
+    private void assertPendingIntentRequestMatches(NetworkRequest broadcasted, NetworkRequest filed,
+            boolean useListen) {
+        // TODO: BUG (b/191713869): on S the request extra is null on listens
+        if (isAtLeastS() && useListen && broadcasted == null) return;
+        assertArrayEquals(filed.networkCapabilities.getCapabilities(),
+                broadcasted.networkCapabilities.getCapabilities());
+        // TODO: BUG (b/189868426): this should also apply to listens
+        if (useListen) return;
+        assertArrayEquals(filed.networkCapabilities.getTransportTypes(),
+                broadcasted.networkCapabilities.getTransportTypes());
+    }
+
+    @AppModeFull(reason = "Cannot get WifiManager in instant app mode")
+    @Test
+    public void testRegisterNetworkRequest_identicalPendingIntents() throws Exception {
+        runIdenticalPendingIntentsRequestTest(false /* useListen */);
+    }
+
+    @AppModeFull(reason = "Cannot get WifiManager in instant app mode")
+    @Test
+    public void testRegisterNetworkCallback_identicalPendingIntents() throws Exception {
+        runIdenticalPendingIntentsRequestTest(true /* useListen */);
     }
 
     /**
@@ -2202,7 +2321,7 @@ public class ConnectivityManagerTest {
      * For specified apps, validate networks are prioritized in order: unmetered, TEST transport,
      * default network.
      */
-    @AppModeFull(reason = "Cannot get WifiManager in instant app mode")
+    @AppModeFull(reason = "Instant apps cannot create test networks")
     @Test
     public void testSetOemNetworkPreferenceForTestPref() throws Exception {
         // Cannot use @IgnoreUpTo(Build.VERSION_CODES.R) because this test also requires API 31
@@ -2262,6 +2381,7 @@ public class ConnectivityManagerTest {
      * Verify that per-app OEM network preference functions as expected for network pref TEST_ONLY.
      * For specified apps, validate that only TEST transport type networks are used.
      */
+    @AppModeFull(reason = "Instant apps cannot create test networks")
     @Test
     public void testSetOemNetworkPreferenceForTestOnlyPref() throws Exception {
         // Cannot use @IgnoreUpTo(Build.VERSION_CODES.R) because this test also requires API 31
@@ -2397,8 +2517,7 @@ public class ConnectivityManagerTest {
         } finally {
             resetValidationConfig();
             // Reconnect wifi to reset the wifi status
-            mCtsNetUtils.ensureWifiDisconnected(null /* wifiNetworkToCheck */);
-            mCtsNetUtils.ensureWifiConnected();
+            reconnectWifi();
         }
     }
 
@@ -2473,6 +2592,88 @@ public class ConnectivityManagerTest {
         }
     }
 
+    @AppModeFull(reason = "WRITE_DEVICE_CONFIG permission can't be granted to instant apps")
+    @Test
+    public void testSetAvoidUnvalidated() throws Exception {
+        assumeTrue(TestUtils.shouldTestSApis());
+        // TODO: Allow in debuggable ROM only. To be replaced by FabricatedOverlay
+        assumeTrue(Build.isDebuggable());
+        final boolean canRunTest = mPackageManager.hasSystemFeature(FEATURE_WIFI)
+                && mPackageManager.hasSystemFeature(FEATURE_TELEPHONY);
+        assumeTrue("testSetAvoidUnvalidated cannot execute"
+                + " unless device supports WiFi and telephony", canRunTest);
+
+        final TestableNetworkCallback wifiCb = new TestableNetworkCallback();
+        final TestableNetworkCallback defaultCb = new TestableNetworkCallback();
+        final int previousAvoidBadWifi =
+                ConnectivitySettingsManager.getNetworkAvoidBadWifi(mContext);
+
+        allowBadWifi();
+
+        final Network cellNetwork = mCtsNetUtils.connectToCell();
+        final Network wifiNetwork = prepareValidatedNetwork();
+
+        mCm.registerDefaultNetworkCallback(defaultCb);
+        mCm.registerNetworkCallback(makeWifiNetworkRequest(), wifiCb);
+
+        try {
+            // Verify wifi is the default network.
+            defaultCb.eventuallyExpect(CallbackEntry.AVAILABLE, NETWORK_CALLBACK_TIMEOUT_MS,
+                    entry -> wifiNetwork.equals(entry.getNetwork()));
+            wifiCb.eventuallyExpect(CallbackEntry.AVAILABLE, NETWORK_CALLBACK_TIMEOUT_MS,
+                    entry -> wifiNetwork.equals(entry.getNetwork()));
+            assertTrue(mCm.getNetworkCapabilities(wifiNetwork).hasCapability(
+                    NET_CAPABILITY_VALIDATED));
+
+            // Configure response code for unvalidated network
+            configTestServer(Status.INTERNAL_ERROR, Status.INTERNAL_ERROR);
+            mCm.reportNetworkConnectivity(wifiNetwork, false);
+            // Default network should stay on unvalidated wifi because avoid bad wifi is disabled.
+            defaultCb.eventuallyExpect(CallbackEntry.NETWORK_CAPS_UPDATED,
+                    NETWORK_CALLBACK_TIMEOUT_MS,
+                    entry -> !((CallbackEntry.CapabilitiesChanged) entry).getCaps()
+                            .hasCapability(NET_CAPABILITY_VALIDATED));
+            wifiCb.eventuallyExpect(CallbackEntry.NETWORK_CAPS_UPDATED,
+                    NETWORK_CALLBACK_TIMEOUT_MS,
+                    entry -> !((CallbackEntry.CapabilitiesChanged) entry).getCaps()
+                            .hasCapability(NET_CAPABILITY_VALIDATED));
+
+            runAsShell(NETWORK_SETTINGS, () -> {
+                mCm.setAvoidUnvalidated(wifiNetwork);
+            });
+            // Default network should be updated to validated cellular network.
+            defaultCb.eventuallyExpect(CallbackEntry.AVAILABLE, NETWORK_CALLBACK_TIMEOUT_MS,
+                    entry -> cellNetwork.equals(entry.getNetwork()));
+            // No update on wifi callback.
+            wifiCb.assertNoCallback();
+        } finally {
+            mCm.unregisterNetworkCallback(wifiCb);
+            mCm.unregisterNetworkCallback(defaultCb);
+            resetAvoidBadWifi(previousAvoidBadWifi);
+            resetValidationConfig();
+            // Reconnect wifi to reset the wifi status
+            reconnectWifi();
+        }
+    }
+
+    private void resetAvoidBadWifi(int settingValue) {
+        setTestAllowBadWifiResource(0 /* timeMs */);
+        ConnectivitySettingsManager.setNetworkAvoidBadWifi(mContext, settingValue);
+    }
+
+    private void allowBadWifi() {
+        setTestAllowBadWifiResource(
+                System.currentTimeMillis() + WIFI_CONNECT_TIMEOUT_MS /* timeMs */);
+        ConnectivitySettingsManager.setNetworkAvoidBadWifi(mContext,
+                ConnectivitySettingsManager.NETWORK_AVOID_BAD_WIFI_IGNORE);
+    }
+
+    private void setTestAllowBadWifiResource(long timeMs) {
+        runAsShell(NETWORK_SETTINGS, () -> {
+            mCm.setTestAllowBadWifiUntil(timeMs);
+        });
+    }
+
     private Network expectNetworkHasCapability(Network network, int expectedNetCap, long timeout)
             throws Exception {
         final CompletableFuture<Network> future = new CompletableFuture();
@@ -2510,6 +2711,21 @@ public class ConnectivityManagerTest {
         NetworkValidationTestUtil.clearValidationTestUrlsDeviceConfig();
 
         mHttpServer.start();
+    }
+
+    private Network reconnectWifi() {
+        mCtsNetUtils.ensureWifiDisconnected(null /* wifiNetworkToCheck */);
+        return mCtsNetUtils.ensureWifiConnected();
+    }
+
+    private Network prepareValidatedNetwork() throws Exception {
+        prepareHttpServer();
+        configTestServer(Status.NO_CONTENT, Status.NO_CONTENT);
+        // Disconnect wifi first then start wifi network with configuration.
+        final Network wifiNetwork = reconnectWifi();
+
+        return expectNetworkHasCapability(wifiNetwork, NET_CAPABILITY_VALIDATED,
+                WIFI_CONNECT_TIMEOUT_MS);
     }
 
     private Network preparePartialConnectivity() throws Exception {
