@@ -23,6 +23,7 @@ import static android.net.IpSecAlgorithm.AUTH_HMAC_SHA256;
 import static android.net.IpSecAlgorithm.AUTH_HMAC_SHA384;
 import static android.net.IpSecAlgorithm.AUTH_HMAC_SHA512;
 import static android.net.IpSecAlgorithm.CRYPT_AES_CBC;
+import static android.system.OsConstants.FIONREAD;
 
 import static org.junit.Assert.assertArrayEquals;
 
@@ -32,8 +33,10 @@ import android.net.IpSecAlgorithm;
 import android.net.IpSecManager;
 import android.net.IpSecTransform;
 import android.platform.test.annotations.AppModeFull;
+import android.system.ErrnoException;
 import android.system.Os;
 import android.system.OsConstants;
+import android.system.StructTimeval;
 import android.util.Log;
 
 import androidx.test.InstrumentationRegistry;
@@ -46,15 +49,21 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 
 import java.io.FileDescriptor;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
-import java.net.ServerSocket;
 import java.net.Socket;
+import java.net.SocketAddress;
 import java.net.SocketException;
+import java.net.SocketImpl;
+import java.net.SocketOptions;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
@@ -232,6 +241,12 @@ public class IpSecBaseTest {
         public NativeTcpSocket(FileDescriptor fd) {
             super(fd);
         }
+
+        public JavaTcpSocket acceptToJavaSocket() throws Exception {
+            InetSocketAddress peer = new InetSocketAddress(0);
+            FileDescriptor newFd = Os.accept(mFd, peer);
+            return new JavaTcpSocket(new AcceptedTcpFileDescriptorSocket(newFd, peer, getPort()));
+        }
     }
 
     public static class NativeUdpSocket extends NativeSocket implements GenericUdpSocket {
@@ -357,6 +372,137 @@ public class IpSecBaseTest {
         }
     }
 
+    private static class AcceptedTcpFileDescriptorSocket extends Socket {
+
+        AcceptedTcpFileDescriptorSocket(FileDescriptor fd, InetSocketAddress remote,
+                int localPort) throws IOException {
+            super(new FileDescriptorSocketImpl(fd, remote, localPort));
+            connect(remote);
+        }
+
+        private static class FileDescriptorSocketImpl extends SocketImpl {
+
+            private FileDescriptorSocketImpl(FileDescriptor fd, InetSocketAddress remote,
+                    int localPort) {
+                this.fd = fd;
+                this.address = remote.getAddress();
+                this.port = remote.getPort();
+                this.localport = localPort;
+            }
+
+            @Override
+            protected void create(boolean stream) throws IOException {
+                // The socket has been created.
+            }
+
+            @Override
+            protected void connect(String host, int port) throws IOException {
+                // The socket has connected.
+            }
+
+            @Override
+            protected void connect(InetAddress address, int port) throws IOException {
+                // The socket has connected.
+            }
+
+            @Override
+            protected void connect(SocketAddress address, int timeout) throws IOException {
+                // The socket has connected.
+            }
+
+            @Override
+            protected void bind(InetAddress host, int port) throws IOException {
+                // The socket is bounded.
+            }
+
+            @Override
+            protected void listen(int backlog) throws IOException {
+                throw new UnsupportedOperationException("listen");
+            }
+
+            @Override
+            protected void accept(SocketImpl s) throws IOException {
+                throw new UnsupportedOperationException("accept");
+            }
+
+            @Override
+            protected InputStream getInputStream() throws IOException {
+                return new FileInputStream(fd);
+            }
+
+            @Override
+            protected OutputStream getOutputStream() throws IOException {
+                return new FileOutputStream(fd);
+            }
+
+            @Override
+            protected int available() throws IOException {
+                try {
+                    return Os.ioctlInt(fd, FIONREAD);
+                } catch (ErrnoException e) {
+                    throw new IOException(e);
+                }
+            }
+
+            @Override
+            protected void close() throws IOException {
+                try {
+                    Os.close(fd);
+                } catch (ErrnoException e) {
+                    throw new IOException(e);
+                }
+            }
+
+            @Override
+            protected void sendUrgentData(int data) throws IOException {
+                throw new UnsupportedOperationException("sendUrgentData");
+            }
+
+            @Override
+            public void setOption(int optID, Object value) throws SocketException {
+                try {
+                    setOptionInternal(optID, value);
+                } catch (ErrnoException e) {
+                    throw new SocketException(e.getMessage());
+                }
+            }
+
+            private void setOptionInternal(int optID, Object value) throws ErrnoException,
+                    SocketException {
+                switch(optID) {
+                    case SocketOptions.SO_TIMEOUT:
+                        int millis = (Integer) value;
+                        StructTimeval tv = StructTimeval.fromMillis(millis);
+                        Os.setsockoptTimeval(fd, OsConstants.SOL_SOCKET, OsConstants.SO_RCVTIMEO,
+                                tv);
+                        return;
+                    default:
+                        throw new SocketException("Unknown socket option: " + optID);
+                }
+            }
+
+            @Override
+            public Object getOption(int optID) throws SocketException {
+                try {
+                    return getOptionInternal(optID);
+                } catch (ErrnoException e) {
+                    throw new SocketException(e.getMessage());
+                }
+            }
+
+            private Object getOptionInternal(int optID) throws ErrnoException, SocketException {
+                switch (optID) {
+                    case SocketOptions.SO_LINGER:
+                        // Returns an arbitrary value because IpSecManager doesn't actually
+                        // use this value.
+                        return 10;
+                    default:
+                        throw new SocketException("Unknown socket option: " + optID);
+                }
+            }
+        }
+    }
+
     public static class SocketPair<T> {
         public final T mLeftSock;
         public final T mRightSock;
@@ -441,8 +587,6 @@ public class IpSecBaseTest {
     public static SocketPair<JavaTcpSocket> getJavaTcpSocketPair(
             InetAddress localAddr, IpSecManager ism, IpSecTransform transform) throws Exception {
         JavaTcpSocket clientSock = new JavaTcpSocket(new Socket());
-        ServerSocket serverSocket = new ServerSocket();
-        serverSocket.bind(new InetSocketAddress(localAddr, 0));
 
         // While technically the client socket does not need to be bound, the OpenJDK implementation
         // of Socket only allocates an FD when bind() or connect() or other similar methods are
@@ -451,16 +595,19 @@ public class IpSecBaseTest {
         clientSock.mSocket.bind(new InetSocketAddress(localAddr, 0));
 
         // IpSecService doesn't support serverSockets at the moment; workaround using FD
-        FileDescriptor serverFd = serverSocket.getImpl().getFD$();
+        NativeTcpSocket server = new NativeTcpSocket(
+                Os.socket(getDomain(localAddr), OsConstants.SOCK_STREAM, OsConstants.IPPROTO_TCP));
+        Os.bind(server.mFd, localAddr, 0);
 
-        applyTransformBidirectionally(ism, transform, new NativeTcpSocket(serverFd));
+        applyTransformBidirectionally(ism, transform, server);
         applyTransformBidirectionally(ism, transform, clientSock);
 
-        clientSock.mSocket.connect(new InetSocketAddress(localAddr, serverSocket.getLocalPort()));
-        JavaTcpSocket acceptedSock = new JavaTcpSocket(serverSocket.accept());
+        Os.listen(server.mFd, 10 /* backlog */);
+        clientSock.mSocket.connect(new InetSocketAddress(localAddr, server.getPort()));
+        JavaTcpSocket acceptedSock = server.acceptToJavaSocket();
 
         applyTransformBidirectionally(ism, transform, acceptedSock);
-        serverSocket.close();
+        server.close();
 
         return new SocketPair<>(clientSock, acceptedSock);
     }
