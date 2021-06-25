@@ -76,7 +76,6 @@ import static android.system.OsConstants.AF_UNSPEC;
 import static com.android.compatibility.common.util.SystemUtil.callWithShellPermissionIdentity;
 import static com.android.compatibility.common.util.SystemUtil.runShellCommand;
 import static com.android.compatibility.common.util.SystemUtil.runWithShellPermissionIdentity;
-import static com.android.modules.utils.build.SdkLevel.isAtLeastS;
 import static com.android.networkstack.apishim.ConstantsShim.BLOCKED_REASON_LOCKDOWN_VPN;
 import static com.android.networkstack.apishim.ConstantsShim.BLOCKED_REASON_NONE;
 import static com.android.testutils.MiscAsserts.assertThrows;
@@ -953,8 +952,6 @@ public class ConnectivityManagerTest {
 
     private void assertPendingIntentRequestMatches(NetworkRequest broadcasted, NetworkRequest filed,
             boolean useListen) {
-        // TODO: BUG (b/191713869): on S the request extra is null on listens
-        if (isAtLeastS() && useListen && broadcasted == null) return;
         assertArrayEquals(filed.networkCapabilities.getCapabilities(),
                 broadcasted.networkCapabilities.getCapabilities());
         // TODO: BUG (b/189868426): this should also apply to listens
