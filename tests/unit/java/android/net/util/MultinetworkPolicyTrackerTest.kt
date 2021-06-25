@@ -25,11 +25,13 @@ import android.net.ConnectivityResources
 import android.net.ConnectivitySettingsManager.NETWORK_AVOID_BAD_WIFI
 import android.net.ConnectivitySettingsManager.NETWORK_METERED_MULTIPATH_PREFERENCE
 import android.net.util.MultinetworkPolicyTracker.ActiveDataSubscriptionIdListener
+import android.os.Build
 import android.provider.Settings
 import android.telephony.SubscriptionInfo
 import android.telephony.SubscriptionManager
 import android.telephony.TelephonyManager
 import android.test.mock.MockContentResolver
+import androidx.test.filters.SdkSuppress
 import androidx.test.filters.SmallTest
 import androidx.test.runner.AndroidJUnit4
 import com.android.connectivity.resources.R
@@ -59,6 +61,7 @@ import org.mockito.Mockito.verify
  */
 @RunWith(AndroidJUnit4::class)
 @SmallTest
+@SdkSuppress(minSdkVersion = Build.VERSION_CODES.S, codeName = "S")
 class MultinetworkPolicyTrackerTest {
     private val resources = mock(Resources::class.java).also {
         doReturn(R.integer.config_networkAvoidBadWifi).`when`(it).getIdentifier(

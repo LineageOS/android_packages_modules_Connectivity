@@ -42,6 +42,7 @@ import android.net.NetworkIdentity;
 import android.net.NetworkStats;
 import android.net.NetworkStatsHistory;
 import android.net.NetworkTemplate;
+import android.os.Build;
 import android.os.Process;
 import android.os.UserHandle;
 import android.telephony.SubscriptionPlan;
@@ -50,6 +51,7 @@ import android.text.format.DateUtils;
 import android.util.RecurrenceRule;
 
 import androidx.test.InstrumentationRegistry;
+import androidx.test.filters.SdkSuppress;
 import androidx.test.filters.SmallTest;
 import androidx.test.runner.AndroidJUnit4;
 
@@ -81,6 +83,7 @@ import java.util.List;
  */
 @RunWith(AndroidJUnit4.class)
 @SmallTest
+@SdkSuppress(minSdkVersion = Build.VERSION_CODES.S, codeName = "S")
 public class NetworkStatsCollectionTest {
 
     private static final String TEST_FILE = "test.bin";
