@@ -27,9 +27,11 @@ import static org.mockito.Mockito.when;
 
 import android.content.ComponentName;
 import android.content.Intent;
+import android.os.Build;
 import android.test.mock.MockContext;
 import android.util.SparseArray;
 
+import androidx.test.filters.SdkSuppress;
 import androidx.test.filters.SmallTest;
 import androidx.test.runner.AndroidJUnit4;
 
@@ -43,6 +45,7 @@ import org.junit.runner.RunWith;
 /** Unit tests for {@link VpnManager}. */
 @SmallTest
 @RunWith(AndroidJUnit4.class)
+@SdkSuppress(minSdkVersion = Build.VERSION_CODES.S, codeName = "S")
 public class VpnManagerTest {
     private static final String PKG_NAME = "fooPackage";
 

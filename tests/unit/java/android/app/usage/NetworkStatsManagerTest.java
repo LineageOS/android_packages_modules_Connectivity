@@ -36,9 +36,11 @@ import android.net.INetworkStatsSession;
 import android.net.NetworkStats.Entry;
 import android.net.NetworkStatsHistory;
 import android.net.NetworkTemplate;
+import android.os.Build;
 import android.os.RemoteException;
 
 import androidx.test.InstrumentationRegistry;
+import androidx.test.filters.SdkSuppress;
 import androidx.test.filters.SmallTest;
 import androidx.test.runner.AndroidJUnit4;
 
@@ -51,6 +53,7 @@ import org.mockito.invocation.InvocationOnMock;
 
 @RunWith(AndroidJUnit4.class)
 @SmallTest
+@SdkSuppress(minSdkVersion = Build.VERSION_CODES.S, codeName = "S")
 public class NetworkStatsManagerTest {
     private static final String TEST_SUBSCRIBER_ID = "subid";
 

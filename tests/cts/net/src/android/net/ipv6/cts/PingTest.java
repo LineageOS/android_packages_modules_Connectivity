@@ -115,7 +115,7 @@ public class PingTest extends AndroidTestCase {
 
         // Receive the response.
         if (useRecvfrom) {
-            InetSocketAddress from = new InetSocketAddress();
+            InetSocketAddress from = new InetSocketAddress(0);
             bytesRead = Os.recvfrom(s, responseBuffer, 0, from);
 
             // Check the source address and scope ID.

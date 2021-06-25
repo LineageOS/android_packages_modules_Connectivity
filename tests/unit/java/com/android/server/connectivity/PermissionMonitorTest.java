@@ -79,6 +79,7 @@ import android.util.ArraySet;
 import android.util.SparseIntArray;
 
 import androidx.test.InstrumentationRegistry;
+import androidx.test.filters.SdkSuppress;
 import androidx.test.filters.SmallTest;
 import androidx.test.runner.AndroidJUnit4;
 
@@ -100,6 +101,7 @@ import java.util.Set;
 
 @RunWith(AndroidJUnit4.class)
 @SmallTest
+@SdkSuppress(minSdkVersion = Build.VERSION_CODES.S, codeName = "S")
 public class PermissionMonitorTest {
     private static final UserHandle MOCK_USER1 = UserHandle.of(0);
     private static final UserHandle MOCK_USER2 = UserHandle.of(1);

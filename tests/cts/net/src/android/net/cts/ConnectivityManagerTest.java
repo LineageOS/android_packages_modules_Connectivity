@@ -537,8 +537,10 @@ public class ConnectivityManagerTest {
                     Objects.requireNonNull(mCm.getNetworkCapabilities(network));
             // Redact specifier of the capabilities of the snapshot before comparing since
             // the result returned from getNetworkCapabilities always get redacted.
+            final NetworkSpecifier snapshotCapSpecifier =
+                    snapshot.getNetworkCapabilities().getNetworkSpecifier();
             final NetworkSpecifier redactedSnapshotCapSpecifier =
-                    snapshot.getNetworkCapabilities().getNetworkSpecifier().redact();
+                    snapshotCapSpecifier == null ? null : snapshotCapSpecifier.redact();
             assertEquals("", caps.describeImmutableDifferences(
                     snapshot.getNetworkCapabilities()
                             .setNetworkSpecifier(redactedSnapshotCapSpecifier)));
