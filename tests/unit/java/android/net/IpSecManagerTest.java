@@ -31,9 +31,11 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import android.os.Build;
 import android.system.Os;
 import android.test.mock.MockContext;
 
+import androidx.test.filters.SdkSuppress;
 import androidx.test.filters.SmallTest;
 import androidx.test.runner.AndroidJUnit4;
 
@@ -50,6 +52,7 @@ import java.net.UnknownHostException;
 /** Unit tests for {@link IpSecManager}. */
 @SmallTest
 @RunWith(AndroidJUnit4.class)
+@SdkSuppress(minSdkVersion = Build.VERSION_CODES.S, codeName = "S")
 public class IpSecManagerTest {
 
     private static final int TEST_UDP_ENCAP_PORT = 34567;

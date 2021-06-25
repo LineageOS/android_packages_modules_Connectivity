@@ -16,6 +16,8 @@
 
 package com.android.server
 
+import android.os.Build
+import androidx.test.filters.SdkSuppress
 import androidx.test.filters.SmallTest
 import androidx.test.runner.AndroidJUnit4
 import com.android.server.NetIdManager.MIN_NET_ID
@@ -27,6 +29,7 @@ import kotlin.test.assertEquals
 
 @RunWith(AndroidJUnit4::class)
 @SmallTest
+@SdkSuppress(minSdkVersion = Build.VERSION_CODES.S, codeName = "S")
 class NetIdManagerTest {
     @Test
     fun testReserveReleaseNetId() {

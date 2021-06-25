@@ -58,11 +58,13 @@ import android.net.LinkAddress;
 import android.net.LinkProperties;
 import android.net.Network;
 import android.os.Binder;
+import android.os.Build;
 import android.os.ParcelFileDescriptor;
 import android.system.Os;
 import android.test.mock.MockContext;
 import android.util.ArraySet;
 
+import androidx.test.filters.SdkSuppress;
 import androidx.test.filters.SmallTest;
 
 import com.android.server.IpSecService.TunnelInterfaceRecord;
@@ -82,6 +84,7 @@ import java.util.Set;
 /** Unit tests for {@link IpSecService}. */
 @SmallTest
 @RunWith(Parameterized.class)
+@SdkSuppress(minSdkVersion = Build.VERSION_CODES.S, codeName = "S")
 public class IpSecServiceParameterizedTest {
 
     private static final int TEST_SPI = 0xD1201D;

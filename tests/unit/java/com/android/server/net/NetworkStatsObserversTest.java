@@ -39,6 +39,7 @@ import android.net.DataUsageRequest;
 import android.net.NetworkIdentity;
 import android.net.NetworkStats;
 import android.net.NetworkTemplate;
+import android.os.Build;
 import android.os.ConditionVariable;
 import android.os.Handler;
 import android.os.HandlerThread;
@@ -50,6 +51,7 @@ import android.os.UserHandle;
 import android.telephony.TelephonyManager;
 import android.util.ArrayMap;
 
+import androidx.test.filters.SdkSuppress;
 import androidx.test.filters.SmallTest;
 import androidx.test.runner.AndroidJUnit4;
 
@@ -70,6 +72,7 @@ import java.util.Objects;
  */
 @RunWith(AndroidJUnit4.class)
 @SmallTest
+@SdkSuppress(minSdkVersion = Build.VERSION_CODES.S, codeName = "S")
 public class NetworkStatsObserversTest {
     private static final String TEST_IFACE = "test0";
     private static final String TEST_IFACE2 = "test1";
