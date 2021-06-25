@@ -41,7 +41,9 @@ import android.net.TetherOffloadRuleParcel;
 import android.net.ip.ConntrackMonitor;
 import android.net.ip.ConntrackMonitor.ConntrackEventConsumer;
 import android.net.ip.IpServer;
+import android.net.netlink.ConntrackMessage;
 import android.net.netlink.NetlinkConstants;
+import android.net.netlink.NetlinkSocket;
 import android.net.netstats.provider.NetworkStatsProvider;
 import android.net.util.InterfaceParams;
 import android.net.util.SharedLog;
@@ -49,6 +51,7 @@ import android.net.util.TetheringUtils.ForwardedStats;
 import android.os.Handler;
 import android.os.SystemClock;
 import android.system.ErrnoException;
+import android.system.OsConstants;
 import android.text.TextUtils;
 import android.util.ArraySet;
 import android.util.Log;
@@ -119,6 +122,13 @@ public class BpfCoordinator {
     private static String makeMapPath(boolean downstream, int ipVersion) {
         return makeMapPath((downstream ? "downstream" : "upstream") + ipVersion);
     }
+
+    @VisibleForTesting
+    static final int POLLING_CONNTRACK_TIMEOUT_MS = 60_000;
+    @VisibleForTesting
+    static final int NF_CONNTRACK_TCP_TIMEOUT_ESTABLISHED = 432000;
+    @VisibleForTesting
+    static final int NF_CONNTRACK_UDP_TIMEOUT_STREAM = 180;
 
     @VisibleForTesting
     enum StatsType {
@@ -234,9 +244,15 @@ public class BpfCoordinator {
     private int mLastIPv4UpstreamIfindex = 0;
 
     // Runnable that used by scheduling next polling of stats.
-    private final Runnable mScheduledPollingTask = () -> {
+    private final Runnable mScheduledPollingStats = () -> {
         updateForwardedStats();
         maybeSchedulePollingStats();
+    };
+
+    // Runnable that used by scheduling next polling of conntrack timeout.
+    private final Runnable mScheduledPollingConntrackTimeout = () -> {
+        maybeRefreshConntrackTimeout();
+        maybeSchedulePollingConntrackTimeout();
     };
 
     // TODO: add BpfMap<TetherDownstream64Key, TetherDownstream64Value> retrieving function.
@@ -268,13 +284,19 @@ public class BpfCoordinator {
         }
 
         /**
+         * Represents an estimate of elapsed time since boot in nanoseconds.
+         */
+        public long elapsedRealtimeNanos() {
+            return SystemClock.elapsedRealtimeNanos();
+        }
+
+        /**
          * Check OS Build at least S.
          *
          * TODO: move to BpfCoordinatorShim once the test doesn't need the mocked OS build for
          * testing different code flows concurrently.
          */
         public boolean isAtLeastS() {
-            // TODO: consider using ShimUtils.isAtLeastS.
             return SdkLevel.isAtLeastS();
         }
 
@@ -412,6 +434,7 @@ public class BpfCoordinator {
 
         mPollingStarted = true;
         maybeSchedulePollingStats();
+        maybeSchedulePollingConntrackTimeout();
 
         mLog.i("Polling started");
     }
@@ -427,9 +450,13 @@ public class BpfCoordinator {
     public void stopPolling() {
         if (!mPollingStarted) return;
 
-        // Stop scheduled polling tasks and poll the latest stats from BPF maps.
-        if (mHandler.hasCallbacks(mScheduledPollingTask)) {
-            mHandler.removeCallbacks(mScheduledPollingTask);
+        // Stop scheduled polling conntrack timeout.
+        if (mHandler.hasCallbacks(mScheduledPollingConntrackTimeout)) {
+            mHandler.removeCallbacks(mScheduledPollingConntrackTimeout);
+        }
+        // Stop scheduled polling stats and poll the latest stats from BPF maps.
+        if (mHandler.hasCallbacks(mScheduledPollingStats)) {
+            mHandler.removeCallbacks(mScheduledPollingStats);
         }
         updateForwardedStats();
         mPollingStarted = false;
@@ -1412,12 +1439,86 @@ public class BpfCoordinator {
         return addr6;
     }
 
-    // Support raw ip only.
-    // TODO: add ether ip support.
+    @Nullable
+    private Inet4Address ipv4MappedAddressBytesToIpv4Address(final byte[] addr46) {
+        if (addr46.length != 16) return null;
+        if (addr46[0] != 0 || addr46[1] != 0 || addr46[2] != 0 || addr46[3] != 0
+                || addr46[4] != 0 || addr46[5] != 0 || addr46[6] != 0 || addr46[7] != 0
+                || addr46[8] != 0 && addr46[9] != 0 || (addr46[10] & 0xff) != 0xff
+                || (addr46[11] & 0xff) != 0xff) {
+            return null;
+        }
+
+        final byte[] addr4 = new byte[4];
+        addr4[0] = addr46[12];
+        addr4[1] = addr46[13];
+        addr4[2] = addr46[14];
+        addr4[3] = addr46[15];
+
+        return parseIPv4Address(addr4);
+    }
+
     // TODO: parse CTA_PROTOINFO of conntrack event in ConntrackMonitor. For TCP, only add rules
     // while TCP status is established.
     @VisibleForTesting
     class BpfConntrackEventConsumer implements ConntrackEventConsumer {
+        // The upstream4 and downstream4 rules are built as the following tables. Only raw ip
+        // upstream interface is supported. Note that the field "lastUsed" is only updated by
+        // BPF program which records the last used time for a given rule.
+        // TODO: support ether ip upstream interface.
+        //
+        // NAT network topology:
+        //
+        //         public network (rawip)                 private network
+        //                   |                 UE                |
+        // +------------+    V    +------------+------------+    V    +------------+
+        // |   Sever    +---------+  Upstream  | Downstream +---------+   Client   |
+        // +------------+         +------------+------------+         +------------+
+        //
+        // upstream4 key and value:
+        //
+        // +------+------------------------------------------------+
+        // |      |      TetherUpstream4Key                        |
+        // +------+------+------+------+------+------+------+------+
+        // |field |iif   |dstMac|l4prot|src4  |dst4  |srcPor|dstPor|
+        // |      |      |      |o     |      |      |t     |t     |
+        // +------+------+------+------+------+------+------+------+
+        // |value |downst|downst|tcp/  |client|server|client|server|
+        // |      |ream  |ream  |udp   |      |      |      |      |
+        // +------+------+------+------+------+------+------+------+
+        //
+        // +------+---------------------------------------------------------------------+
+        // |      |      TetherUpstream4Value                                           |
+        // +------+------+------+------+------+------+------+------+------+------+------+
+        // |field |oif   |ethDst|ethSrc|ethPro|pmtu  |src46 |dst46 |srcPor|dstPor|lastUs|
+        // |      |      |mac   |mac   |to    |      |      |      |t     |t     |ed    |
+        // +------+------+------+------+------+------+------+------+------+------+------+
+        // |value |upstre|--    |--    |ETH_P_|1500  |upstre|server|upstre|server|--    |
+        // |      |am    |      |      |IP    |      |am    |      |am    |      |      |
+        // +------+------+------+------+------+------+------+------+------+------+------+
+        //
+        // downstream4 key and value:
+        //
+        // +------+------------------------------------------------+
+        // |      |      TetherDownstream4Key                      |
+        // +------+------+------+------+------+------+------+------+
+        // |field |iif   |dstMac|l4prot|src4  |dst4  |srcPor|dstPor|
+        // |      |      |      |o     |      |      |t     |t     |
+        // +------+------+------+------+------+------+------+------+
+        // |value |upstre|--    |tcp/  |server|upstre|server|upstre|
+        // |      |am    |      |udp   |      |am    |      |am    |
+        // +------+------+------+------+------+------+------+------+
+        //
+        // +------+---------------------------------------------------------------------+
+        // |      |      TetherDownstream4Value                                         |
+        // +------+------+------+------+------+------+------+------+------+------+------+
+        // |field |oif   |ethDst|ethSrc|ethPro|pmtu  |src46 |dst46 |srcPor|dstPor|lastUs|
+        // |      |      |mac   |mac   |to    |      |      |      |t     |t     |ed    |
+        // +------+------+------+------+------+------+------+------+------+------+------+
+        // |value |downst|client|downst|ETH_P_|1500  |server|client|server|client|--    |
+        // |      |ream  |      |ream  |IP    |      |      |      |      |      |      |
+        // +------+------+------+------+------+------+------+------+------+------+------+
+        //
         @NonNull
         private Tether4Key makeTetherUpstream4Key(
                 @NonNull ConntrackEvent e, @NonNull ClientInfo c) {
@@ -1751,14 +1852,89 @@ public class BpfCoordinator {
         return Math.max(DEFAULT_TETHER_OFFLOAD_POLL_INTERVAL_MS, configInterval);
     }
 
+    @Nullable
+    private Inet4Address parseIPv4Address(byte[] addrBytes) {
+        try {
+            final InetAddress ia = Inet4Address.getByAddress(addrBytes);
+            if (ia instanceof Inet4Address) return (Inet4Address) ia;
+        } catch (UnknownHostException | IllegalArgumentException e) {
+            mLog.e("Failed to parse IPv4 address: " + e);
+        }
+        return null;
+    }
+
+    // Update CTA_TUPLE_ORIG timeout for a given conntrack entry. Note that there will also be
+    // coming a conntrack event to notify updated timeout.
+    private void updateConntrackTimeout(byte proto, Inet4Address src4, short srcPort,
+            Inet4Address dst4, short dstPort) {
+        if (src4 == null || dst4 == null) return;
+
+        // TODO: consider acquiring the timeout setting from nf_conntrack_* variables.
+        // - proc/sys/net/netfilter/nf_conntrack_tcp_timeout_established
+        // - proc/sys/net/netfilter/nf_conntrack_udp_timeout_stream
+        // See kernel document nf_conntrack-sysctl.txt.
+        final int timeoutSec = (proto == OsConstants.IPPROTO_TCP)
+                ? NF_CONNTRACK_TCP_TIMEOUT_ESTABLISHED
+                : NF_CONNTRACK_UDP_TIMEOUT_STREAM;
+        final byte[] msg = ConntrackMessage.newIPv4TimeoutUpdateRequest(
+                proto, src4, (int) srcPort, dst4, (int) dstPort, timeoutSec);
+        try {
+            NetlinkSocket.sendOneShotKernelMessage(OsConstants.NETLINK_NETFILTER, msg);
+        } catch (ErrnoException e) {
+            mLog.e("Error updating conntrack entry ("
+                    + "proto: " + proto + ", "
+                    + "src4: " + src4 + ", "
+                    + "srcPort: " + Short.toUnsignedInt(srcPort) + ", "
+                    + "dst4: " + dst4 + ", "
+                    + "dstPort: " + Short.toUnsignedInt(dstPort) + "), "
+                    + "msg: " + NetlinkConstants.hexify(msg) + ", "
+                    + "e: " + e);
+        }
+    }
+
+    private void maybeRefreshConntrackTimeout() {
+        final long now = mDeps.elapsedRealtimeNanos();
+
+        // Reverse the source and destination {address, port} from downstream value because
+        // #updateConntrackTimeout refresh the timeout of netlink attribute CTA_TUPLE_ORIG
+        // which is opposite direction for downstream map value.
+        mBpfCoordinatorShim.tetherOffloadRuleForEach(DOWNSTREAM, (k, v) -> {
+            if ((now - v.lastUsed) / 1_000_000 < POLLING_CONNTRACK_TIMEOUT_MS) {
+                updateConntrackTimeout((byte) k.l4proto,
+                        ipv4MappedAddressBytesToIpv4Address(v.dst46), (short) v.dstPort,
+                        ipv4MappedAddressBytesToIpv4Address(v.src46), (short) v.srcPort);
+            }
+        });
+
+        // TODO: Consider ignoring TCP traffic on upstream and monitor on downstream only
+        // because TCP is a bidirectional traffic. Probably don't need to extend timeout by
+        // both directions for TCP.
+        mBpfCoordinatorShim.tetherOffloadRuleForEach(UPSTREAM, (k, v) -> {
+            if ((now - v.lastUsed) / 1_000_000 < POLLING_CONNTRACK_TIMEOUT_MS) {
+                updateConntrackTimeout((byte) k.l4proto, parseIPv4Address(k.src4),
+                        (short) k.srcPort, parseIPv4Address(k.dst4), (short) k.dstPort);
+            }
+        });
+    }
+
     private void maybeSchedulePollingStats() {
         if (!mPollingStarted) return;
 
-        if (mHandler.hasCallbacks(mScheduledPollingTask)) {
-            mHandler.removeCallbacks(mScheduledPollingTask);
+        if (mHandler.hasCallbacks(mScheduledPollingStats)) {
+            mHandler.removeCallbacks(mScheduledPollingStats);
         }
 
-        mHandler.postDelayed(mScheduledPollingTask, getPollingInterval());
+        mHandler.postDelayed(mScheduledPollingStats, getPollingInterval());
+    }
+
+    private void maybeSchedulePollingConntrackTimeout() {
+        if (!mPollingStarted) return;
+
+        if (mHandler.hasCallbacks(mScheduledPollingConntrackTimeout)) {
+            mHandler.removeCallbacks(mScheduledPollingConntrackTimeout);
+        }
+
+        mHandler.postDelayed(mScheduledPollingConntrackTimeout, POLLING_CONNTRACK_TIMEOUT_MS);
     }
 
     // Return forwarding rule map. This is used for testing only.
