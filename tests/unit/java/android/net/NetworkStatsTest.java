@@ -39,9 +39,11 @@ import static android.net.NetworkStats.UID_ALL;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
+import android.os.Build;
 import android.os.Process;
 import android.util.ArrayMap;
 
+import androidx.test.filters.SdkSuppress;
 import androidx.test.filters.SmallTest;
 import androidx.test.runner.AndroidJUnit4;
 
@@ -55,6 +57,7 @@ import java.util.HashSet;
 
 @RunWith(AndroidJUnit4.class)
 @SmallTest
+@SdkSuppress(minSdkVersion = Build.VERSION_CODES.S, codeName = "S")
 public class NetworkStatsTest {
 
     private static final String TEST_IFACE = "test0";
