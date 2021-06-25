@@ -19,6 +19,9 @@ package android.net;
 import static junit.framework.Assert.assertFalse;
 import static junit.framework.Assert.assertTrue;
 
+import android.os.Build;
+
+import androidx.test.filters.SdkSuppress;
 import androidx.test.runner.AndroidJUnit4;
 
 import org.junit.Test;
@@ -29,6 +32,7 @@ import java.net.InetSocketAddress;
 
 @RunWith(AndroidJUnit4.class)
 @androidx.test.filters.SmallTest
+@SdkSuppress(minSdkVersion = Build.VERSION_CODES.S, codeName = "S")
 public class QosSocketFilterTest {
 
     @Test

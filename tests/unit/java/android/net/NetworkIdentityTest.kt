@@ -20,12 +20,15 @@ import android.net.NetworkIdentity.OEM_NONE
 import android.net.NetworkIdentity.OEM_PAID
 import android.net.NetworkIdentity.OEM_PRIVATE
 import android.net.NetworkIdentity.getOemBitfield
+import android.os.Build
+import androidx.test.filters.SdkSuppress
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.JUnit4
 import kotlin.test.assertEquals
 
 @RunWith(JUnit4::class)
+@SdkSuppress(minSdkVersion = Build.VERSION_CODES.S, codeName = "S")
 class NetworkIdentityTest {
     @Test
     fun testGetOemBitfield() {

@@ -23,6 +23,9 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotSame;
 import static org.junit.Assert.assertNull;
 
+import android.os.Build;
+
+import androidx.test.filters.SdkSuppress;
 import androidx.test.filters.SmallTest;
 
 import org.junit.Test;
@@ -32,6 +35,7 @@ import org.junit.runners.JUnit4;
 /** Unit tests for {@link IpSecConfig}. */
 @SmallTest
 @RunWith(JUnit4.class)
+@SdkSuppress(minSdkVersion = Build.VERSION_CODES.S, codeName = "S")
 public class IpSecConfigTest {
 
     @Test
