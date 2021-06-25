@@ -47,6 +47,7 @@ import com.android.networkstack.tethering.TetherUpstream6Key;
 
 import java.io.FileDescriptor;
 import java.io.IOException;
+import java.util.function.BiConsumer;
 
 /**
  * Bpf coordinator class for API shims.
@@ -380,10 +381,7 @@ public class BpfCoordinatorShimImpl
 
         try {
             if (downstream) {
-                if (!mBpfDownstream4Map.deleteEntry(key)) {
-                    mLog.e("Could not delete entry (key: " + key + ")");
-                    return false;
-                }
+                if (!mBpfDownstream4Map.deleteEntry(key)) return false;  // Rule did not exist
 
                 // Decrease the rule count while a deleting rule is not using a given upstream
                 // interface anymore.
@@ -401,16 +399,29 @@ public class BpfCoordinatorShimImpl
                     mRule4CountOnUpstream.put(upstreamIfindex, count);
                 }
             } else {
-                mBpfUpstream4Map.deleteEntry(key);
+                if (!mBpfUpstream4Map.deleteEntry(key)) return false;  // Rule did not exist
             }
         } catch (ErrnoException e) {
-            // Silent if the rule did not exist.
-            if (e.errno != OsConstants.ENOENT) {
-                mLog.e("Could not delete entry: ", e);
-                return false;
-            }
+            mLog.e("Could not delete entry (key: " + key + ")", e);
+            return false;
         }
         return true;
+    }
+
+    @Override
+    public void tetherOffloadRuleForEach(boolean downstream,
+            @NonNull BiConsumer<Tether4Key, Tether4Value> action) {
+        if (!isInitialized()) return;
+
+        try {
+            if (downstream) {
+                mBpfDownstream4Map.forEach(action);
+            } else {
+                mBpfUpstream4Map.forEach(action);
+            }
+        } catch (ErrnoException e) {
+            mLog.e("Could not iterate map: ", e);
+        }
     }
 
     @Override
