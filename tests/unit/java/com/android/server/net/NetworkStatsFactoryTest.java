@@ -37,8 +37,10 @@ import android.content.res.Resources;
 import android.net.NetworkStats;
 import android.net.TrafficStats;
 import android.net.UnderlyingNetworkInfo;
+import android.os.Build;
 
 import androidx.test.InstrumentationRegistry;
+import androidx.test.filters.SdkSuppress;
 import androidx.test.filters.SmallTest;
 import androidx.test.runner.AndroidJUnit4;
 
@@ -62,6 +64,7 @@ import java.io.OutputStream;
 /** Tests for {@link NetworkStatsFactory}. */
 @RunWith(AndroidJUnit4.class)
 @SmallTest
+@SdkSuppress(minSdkVersion = Build.VERSION_CODES.S, codeName = "S")
 public class NetworkStatsFactoryTest extends NetworkStatsBaseTest {
     private static final String CLAT_PREFIX = "v4-";
 

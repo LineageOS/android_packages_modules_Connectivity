@@ -25,7 +25,9 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 import android.net.IpSecAlgorithm;
+import android.os.Build;
 
+import androidx.test.filters.SdkSuppress;
 import androidx.test.filters.SmallTest;
 
 import org.junit.Test;
@@ -39,6 +41,7 @@ import java.util.List;
 /** Unit tests for {@link VpnProfile}. */
 @SmallTest
 @RunWith(JUnit4.class)
+@SdkSuppress(minSdkVersion = Build.VERSION_CODES.S, codeName = "S")
 public class VpnProfileTest {
     private static final String DUMMY_PROFILE_KEY = "Test";
 

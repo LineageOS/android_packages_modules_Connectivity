@@ -25,8 +25,10 @@ import android.app.AppOpsManager;
 import android.app.admin.DevicePolicyManagerInternal;
 import android.content.Context;
 import android.content.pm.PackageManager;
+import android.os.Build;
 import android.telephony.TelephonyManager;
 
+import androidx.test.filters.SdkSuppress;
 import androidx.test.filters.SmallTest;
 import androidx.test.runner.AndroidJUnit4;
 
@@ -41,6 +43,7 @@ import org.mockito.MockitoAnnotations;
 
 @RunWith(AndroidJUnit4.class)
 @SmallTest
+@SdkSuppress(minSdkVersion = Build.VERSION_CODES.S, codeName = "S")
 public class NetworkStatsAccessTest {
     private static final String TEST_PKG = "com.example.test";
     private static final int TEST_UID = 12345;
