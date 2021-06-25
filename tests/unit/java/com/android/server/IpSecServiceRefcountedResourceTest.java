@@ -30,9 +30,11 @@ import static org.mockito.Mockito.verify;
 
 import android.content.Context;
 import android.os.Binder;
+import android.os.Build;
 import android.os.IBinder;
 import android.os.RemoteException;
 
+import androidx.test.filters.SdkSuppress;
 import androidx.test.filters.SmallTest;
 import androidx.test.runner.AndroidJUnit4;
 
@@ -52,6 +54,7 @@ import java.util.concurrent.ThreadLocalRandom;
 /** Unit tests for {@link IpSecService.RefcountedResource}. */
 @SmallTest
 @RunWith(AndroidJUnit4.class)
+@SdkSuppress(minSdkVersion = Build.VERSION_CODES.S, codeName = "S")
 public class IpSecServiceRefcountedResourceTest {
     Context mMockContext;
     IpSecService.IpSecServiceConfiguration mMockIpSecSrvConfig;
