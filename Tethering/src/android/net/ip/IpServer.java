@@ -596,6 +596,7 @@ public class IpServer extends StateMachine {
         // into calls to InterfaceController, shared with startIPv4().
         mInterfaceCtrl.clearIPv4Address();
         mPrivateAddressCoordinator.releaseDownstream(this);
+        mBpfCoordinator.tetherOffloadClientClear(this);
         mIpv4Address = null;
         mStaticIpv4ServerAddr = null;
         mStaticIpv4ClientAddr = null;
@@ -949,7 +950,6 @@ public class IpServer extends StateMachine {
         if (e.isValid()) {
             mBpfCoordinator.tetherOffloadClientAdd(this, clientInfo);
         } else {
-            // TODO: Delete all related offload rules which are using this client.
             mBpfCoordinator.tetherOffloadClientRemove(this, clientInfo);
         }
     }
@@ -1283,6 +1283,16 @@ public class IpServer extends StateMachine {
             super.exit();
         }
 
+        // Note that IPv4 offload rules cleanup is implemented in BpfCoordinator while upstream
+        // state is null or changed because IPv4 and IPv6 tethering have different code flow
+        // and behaviour. While upstream is switching from offload supported interface to
+        // offload non-supportted interface, event CMD_TETHER_CONNECTION_CHANGED calls
+        // #cleanupUpstreamInterface but #cleanupUpstream because new UpstreamIfaceSet is not null.
+        // This case won't happen in IPv6 tethering because IPv6 tethering upstream state is
+        // reported by IPv6TetheringCoordinator. #cleanupUpstream is also called by unwirding
+        // adding NAT failure. In that case, the IPv4 offload rules are removed by #stopIPv4
+        // in the state machine. Once there is any case out whish is not covered by previous cases,
+        // probably consider clearing rules in #cleanupUpstream as well.
         private void cleanupUpstream() {
             if (mUpstreamIfaceSet == null) return;
 
