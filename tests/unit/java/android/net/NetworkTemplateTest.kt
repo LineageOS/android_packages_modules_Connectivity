@@ -42,7 +42,9 @@ import android.net.NetworkTemplate.buildTemplateWifi
 import android.net.NetworkTemplate.buildTemplateWifiWildcard
 import android.net.NetworkTemplate.buildTemplateCarrierMetered
 import android.net.NetworkTemplate.buildTemplateMobileWithRatType
+import android.os.Build
 import android.telephony.TelephonyManager
+import androidx.test.filters.SdkSuppress
 import com.android.testutils.assertParcelSane
 import org.junit.Before
 import org.junit.Test
@@ -61,6 +63,7 @@ private const val TEST_SSID1 = "ssid1"
 private const val TEST_SSID2 = "ssid2"
 
 @RunWith(JUnit4::class)
+@SdkSuppress(minSdkVersion = Build.VERSION_CODES.S, codeName = "S")
 class NetworkTemplateTest {
     private val mockContext = mock(Context::class.java)
 

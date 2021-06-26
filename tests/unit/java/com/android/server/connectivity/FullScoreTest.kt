@@ -19,8 +19,10 @@ package com.android.server.connectivity
 import android.net.NetworkAgentConfig
 import android.net.NetworkCapabilities
 import android.net.NetworkScore.KEEP_CONNECTED_NONE
+import android.os.Build
 import android.text.TextUtils
 import android.util.ArraySet
+import androidx.test.filters.SdkSuppress
 import androidx.test.filters.SmallTest
 import androidx.test.runner.AndroidJUnit4
 import com.android.server.connectivity.FullScore.MAX_CS_MANAGED_POLICY
@@ -40,6 +42,7 @@ import kotlin.test.assertTrue
 
 @RunWith(AndroidJUnit4::class)
 @SmallTest
+@SdkSuppress(minSdkVersion = Build.VERSION_CODES.S, codeName = "S")
 class FullScoreTest {
     // Convenience methods
     fun FullScore.withPolicies(

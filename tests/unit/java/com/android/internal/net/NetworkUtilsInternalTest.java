@@ -27,9 +27,11 @@ import static junit.framework.Assert.assertEquals;
 
 import static org.junit.Assert.fail;
 
+import android.os.Build;
 import android.system.ErrnoException;
 import android.system.Os;
 
+import androidx.test.filters.SdkSuppress;
 import androidx.test.runner.AndroidJUnit4;
 
 import libcore.io.IoUtils;
@@ -39,6 +41,7 @@ import org.junit.runner.RunWith;
 
 @RunWith(AndroidJUnit4.class)
 @androidx.test.filters.SmallTest
+@SdkSuppress(minSdkVersion = Build.VERSION_CODES.S, codeName = "S")
 public class NetworkUtilsInternalTest {
 
     private static void expectSocketSuccess(String msg, int domain, int type) {

@@ -584,6 +584,7 @@ public class IpServerTest {
         inOrder.verify(mNetd).networkRemoveInterface(INetd.LOCAL_NET_ID, IFACE_NAME);
         inOrder.verify(mNetd).interfaceSetCfg(argThat(cfg -> IFACE_NAME.equals(cfg.ifName)));
         inOrder.verify(mAddressCoordinator).releaseDownstream(any());
+        inOrder.verify(mBpfCoordinator).tetherOffloadClientClear(mIpServer);
         inOrder.verify(mBpfCoordinator).stopMonitoring(mIpServer);
         inOrder.verify(mCallback).updateInterfaceState(
                 mIpServer, STATE_AVAILABLE, TETHER_ERROR_NO_ERROR);
