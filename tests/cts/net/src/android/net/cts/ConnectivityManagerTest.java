@@ -730,6 +730,8 @@ public class ConnectivityManagerTest {
                     .isPrivateDnsBroken()) && networkForPrivateDns.equals(entry.getNetwork()));
         } finally {
             mCtsNetUtils.restorePrivateDnsSetting();
+            // Toggle wifi to make sure it is re-validated
+            reconnectWifi();
         }
     }
 
