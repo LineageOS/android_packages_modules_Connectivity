@@ -112,3 +112,9 @@ java_library {
         "com.android.tethering",
     ],
 }
+
+filegroup {
+    name: "connectivity-jarjar-rules",
+    srcs: ["jarjar-rules.txt"],
+    visibility: ["//packages/modules/Connectivity:__subpackages__"],
+}
