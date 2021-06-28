@@ -440,12 +440,6 @@ public final class CtsTetheringUtils {
         return callback.getTetheringInterfaceRegexps().getTetherableWifiRegexs();
     }
 
-    public static boolean isWifiTetheringSupported(final Context ctx,
-            final TestTetheringEventCallback callback) throws Exception {
-        return !getWifiTetherableInterfaceRegexps(callback).isEmpty()
-                && isPortableHotspotSupported(ctx);
-    }
-
     /* Returns if wifi supports hotspot. */
     private static boolean isPortableHotspotSupported(final Context ctx) throws Exception {
         final PackageManager pm = ctx.getPackageManager();
@@ -521,5 +515,9 @@ public final class CtsTetheringUtils {
         expectSoftApDisabled();
         callback.expectNoTetheringActive();
         callback.expectOneOfOffloadStatusChanged(TETHER_HARDWARE_OFFLOAD_STOPPED);
+    }
+
+    public void stopAllTethering() {
+        mTm.stopAllTethering();
     }
 }
