@@ -45,13 +45,11 @@ import android.net.metrics.IpManagerEvent;
 import android.net.metrics.IpReachabilityEvent;
 import android.net.metrics.RaEvent;
 import android.net.metrics.ValidationProbeEvent;
-import android.os.Build;
 import android.os.Parcelable;
 import android.system.OsConstants;
 import android.test.suitebuilder.annotation.SmallTest;
 import android.util.Base64;
 
-import androidx.test.filters.SdkSuppress;
 import androidx.test.runner.AndroidJUnit4;
 
 import com.android.internal.util.BitUtils;
@@ -69,7 +67,6 @@ import java.io.StringWriter;
 
 @RunWith(AndroidJUnit4.class)
 @SmallTest
-@SdkSuppress(minSdkVersion = Build.VERSION_CODES.S, codeName = "S")
 public class IpConnectivityMetricsTest {
     static final IpReachabilityEvent FAKE_EV =
             new IpReachabilityEvent(IpReachabilityEvent.NUD_FAILED);
