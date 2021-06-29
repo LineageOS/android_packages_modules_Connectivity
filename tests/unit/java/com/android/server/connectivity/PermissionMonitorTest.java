@@ -528,13 +528,13 @@ public class PermissionMonitorTest {
         // MOCK_UID1: MOCK_PACKAGE1 only has network permission.
         // SYSTEM_UID: SYSTEM_PACKAGE1 has system permission.
         // SYSTEM_UID: SYSTEM_PACKAGE2 only has network permission.
-        doReturn(SYSTEM).when(mPermissionMonitor).highestPermissionForUid(eq(SYSTEM), anyString());
         doReturn(SYSTEM).when(mPermissionMonitor).highestPermissionForUid(any(),
                 eq(SYSTEM_PACKAGE1));
         doReturn(NETWORK).when(mPermissionMonitor).highestPermissionForUid(any(),
                 eq(SYSTEM_PACKAGE2));
         doReturn(NETWORK).when(mPermissionMonitor).highestPermissionForUid(any(),
                 eq(MOCK_PACKAGE1));
+        doReturn(SYSTEM).when(mPermissionMonitor).highestPermissionForUid(eq(SYSTEM), anyString());
 
         // Add SYSTEM_PACKAGE2, expect only have network permission.
         mPermissionMonitor.onUserAdded(MOCK_USER1);
@@ -549,6 +549,21 @@ public class PermissionMonitorTest {
         netdMonitor.expectPermission(SYSTEM, new UserHandle[]{MOCK_USER1, MOCK_USER2},
                 new int[]{SYSTEM_UID});
 
+        // Remove SYSTEM_PACKAGE2, expect keep system permission.
+        when(mPackageManager.getPackagesForUid(MOCK_USER1.getUid(SYSTEM_UID)))
+                .thenReturn(new String[]{SYSTEM_PACKAGE1});
+        when(mPackageManager.getPackagesForUid(MOCK_USER2.getUid(SYSTEM_UID)))
+                .thenReturn(new String[]{SYSTEM_PACKAGE1});
+        removePackageForUsers(new UserHandle[]{MOCK_USER1, MOCK_USER2},
+                SYSTEM_PACKAGE2, SYSTEM_UID);
+        netdMonitor.expectPermission(SYSTEM, new UserHandle[]{MOCK_USER1, MOCK_USER2},
+                new int[]{SYSTEM_UID});
+
+        // Add SYSTEM_PACKAGE2, expect keep system permission.
+        addPackageForUsers(new UserHandle[]{MOCK_USER1, MOCK_USER2}, SYSTEM_PACKAGE2, SYSTEM_UID);
+        netdMonitor.expectPermission(SYSTEM, new UserHandle[]{MOCK_USER1, MOCK_USER2},
+                new int[]{SYSTEM_UID});
+
         addPackageForUsers(new UserHandle[]{MOCK_USER1, MOCK_USER2}, MOCK_PACKAGE1, MOCK_UID1);
         netdMonitor.expectPermission(SYSTEM, new UserHandle[]{MOCK_USER1, MOCK_USER2},
                 new int[]{SYSTEM_UID});
@@ -556,6 +571,10 @@ public class PermissionMonitorTest {
                 new int[]{MOCK_UID1});
 
         // Remove MOCK_UID1, expect no permission left for all user.
+        when(mPackageManager.getPackagesForUid(MOCK_USER1.getUid(MOCK_UID1)))
+                .thenReturn(new String[]{});
+        when(mPackageManager.getPackagesForUid(MOCK_USER2.getUid(MOCK_UID1)))
+                .thenReturn(new String[]{});
         mPermissionMonitor.onPackageRemoved(MOCK_PACKAGE1, MOCK_UID1);
         removePackageForUsers(new UserHandle[]{MOCK_USER1, MOCK_USER2}, MOCK_PACKAGE1, MOCK_UID1);
         netdMonitor.expectNoPermission(new UserHandle[]{MOCK_USER1, MOCK_USER2},

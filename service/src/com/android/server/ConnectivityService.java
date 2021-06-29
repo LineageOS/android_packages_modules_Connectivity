@@ -7596,9 +7596,16 @@ public class ConnectivityService extends IConnectivityManager.Stub
             // If apps could file multi-layer requests with PendingIntents, they'd need to know
             // which of the layer is satisfied alongside with some ID for the request. Hence, if
             // such an API is ever implemented, there is no doubt the right request to send in
-            // EXTRA_NETWORK_REQUEST is mActiveRequest, and whatever ID would be added would need to
-            // be sent as a separate extra.
-            intent.putExtra(ConnectivityManager.EXTRA_NETWORK_REQUEST, nri.getActiveRequest());
+            // EXTRA_NETWORK_REQUEST is the active request, and whatever ID would be added would
+            // need to be sent as a separate extra.
+            final NetworkRequest req = nri.isMultilayerRequest()
+                    ? nri.getActiveRequest()
+                    // Non-multilayer listen requests do not have an active request
+                    : nri.mRequests.get(0);
+            if (req == null) {
+                Log.wtf(TAG, "No request in NRI " + nri);
+            }
+            intent.putExtra(ConnectivityManager.EXTRA_NETWORK_REQUEST, req);
             nri.mPendingIntentSent = true;
             sendIntent(nri.mPendingIntent, intent);
         }

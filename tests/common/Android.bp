@@ -49,10 +49,7 @@ android_test {
     min_sdk_version: "30",
     // TODO: change to 31 as soon as it is available
     target_sdk_version: "30",
-    test_suites: ["device-tests", "mts"],
-    test_mainline_modules: [
-        "CaptivePortalLoginGoogle.apk+NetworkStackGoogle.apk+com.google.android.resolv.apex+com.google.android.tethering.apex",
-    ],
+    test_suites: ["general-tests", "mts"],
     defaults: [
         "framework-connectivity-test-defaults",
         "FrameworksNetTests-jni-defaults",
