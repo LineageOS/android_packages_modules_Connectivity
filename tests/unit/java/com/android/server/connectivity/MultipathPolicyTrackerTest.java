@@ -54,7 +54,6 @@ import android.net.NetworkPolicy;
 import android.net.NetworkPolicyManager;
 import android.net.NetworkTemplate;
 import android.net.TelephonyNetworkSpecifier;
-import android.os.Build;
 import android.os.Handler;
 import android.os.UserHandle;
 import android.provider.Settings;
@@ -63,7 +62,6 @@ import android.test.mock.MockContentResolver;
 import android.util.DataUnit;
 import android.util.RecurrenceRule;
 
-import androidx.test.filters.SdkSuppress;
 import androidx.test.filters.SmallTest;
 import androidx.test.runner.AndroidJUnit4;
 
@@ -91,7 +89,6 @@ import java.time.temporal.ChronoUnit;
 
 @RunWith(AndroidJUnit4.class)
 @SmallTest
-@SdkSuppress(minSdkVersion = Build.VERSION_CODES.S, codeName = "S")
 public class MultipathPolicyTrackerTest {
     private static final Network TEST_NETWORK = new Network(123);
     private static final int POLICY_SNOOZED = -100;

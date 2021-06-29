@@ -25,9 +25,7 @@ import static org.junit.Assert.assertEquals;
 import android.annotation.NonNull;
 import android.annotation.Nullable;
 import android.net.InetAddresses;
-import android.os.Build;
 
-import androidx.test.filters.SdkSuppress;
 import androidx.test.filters.SmallTest;
 import androidx.test.runner.AndroidJUnit4;
 
@@ -41,7 +39,6 @@ import java.util.List;
 
 @RunWith(AndroidJUnit4.class)
 @SmallTest
-@SdkSuppress(minSdkVersion = Build.VERSION_CODES.S, codeName = "S")
 public class DnsUtilsTest {
     private InetAddress stringToAddress(@NonNull String addr) {
         return InetAddresses.parseNumericAddress(addr);
