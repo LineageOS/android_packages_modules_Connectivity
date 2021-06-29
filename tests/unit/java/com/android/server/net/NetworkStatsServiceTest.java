@@ -123,7 +123,7 @@ import com.android.server.net.NetworkStatsService.NetworkStatsSettings.Config;
 import com.android.testutils.HandlerUtils;
 import com.android.testutils.TestableNetworkStatsProviderBinder;
 
-import libcore.io.IoUtils;
+import libcore.testing.io.TestIoUtils;
 
 import org.junit.After;
 import org.junit.Before;
@@ -239,10 +239,7 @@ public class NetworkStatsServiceTest extends NetworkStatsBaseTest {
         MockitoAnnotations.initMocks(this);
         final Context context = InstrumentationRegistry.getContext();
         mServiceContext = new MockContext(context);
-        mStatsDir = context.getFilesDir();
-        if (mStatsDir.exists()) {
-            IoUtils.deleteContents(mStatsDir);
-        }
+        mStatsDir = TestIoUtils.createTemporaryDirectory(getClass().getSimpleName());
 
         PowerManager powerManager = (PowerManager) mServiceContext.getSystemService(
                 Context.POWER_SERVICE);
@@ -311,8 +308,6 @@ public class NetworkStatsServiceTest extends NetworkStatsBaseTest {
 
     @After
     public void tearDown() throws Exception {
-        IoUtils.deleteContents(mStatsDir);
-
         mServiceContext = null;
         mStatsDir = null;
 
