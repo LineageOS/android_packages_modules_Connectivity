@@ -43,10 +43,8 @@ import android.net.NetworkInfo;
 import android.net.NetworkProvider;
 import android.net.NetworkScore;
 import android.os.Binder;
-import android.os.Build;
 import android.text.format.DateUtils;
 
-import androidx.test.filters.SdkSuppress;
 import androidx.test.filters.SmallTest;
 import androidx.test.runner.AndroidJUnit4;
 
@@ -63,7 +61,6 @@ import org.mockito.MockitoAnnotations;
 
 @RunWith(AndroidJUnit4.class)
 @SmallTest
-@SdkSuppress(minSdkVersion = Build.VERSION_CODES.S, codeName = "S")
 public class LingerMonitorTest {
     static final String CELLULAR = "CELLULAR";
     static final String WIFI     = "WIFI";
