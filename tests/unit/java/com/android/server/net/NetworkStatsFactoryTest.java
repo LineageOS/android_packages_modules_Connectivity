@@ -46,6 +46,7 @@ import com.android.frameworks.tests.net.R;
 
 import libcore.io.IoUtils;
 import libcore.io.Streams;
+import libcore.testing.io.TestIoUtils;
 
 import org.junit.After;
 import org.junit.Before;
@@ -69,10 +70,7 @@ public class NetworkStatsFactoryTest extends NetworkStatsBaseTest {
 
     @Before
     public void setUp() throws Exception {
-        mTestProc = new File(InstrumentationRegistry.getContext().getFilesDir(), "proc");
-        if (mTestProc.exists()) {
-            IoUtils.deleteContents(mTestProc);
-        }
+        mTestProc = TestIoUtils.createTemporaryDirectory("proc");
 
         // The libandroid_servers which have the native method is not available to
         // applications. So in order to have a test support native library, the native code
@@ -85,10 +83,6 @@ public class NetworkStatsFactoryTest extends NetworkStatsBaseTest {
     @After
     public void tearDown() throws Exception {
         mFactory = null;
-
-        if (mTestProc.exists()) {
-            IoUtils.deleteContents(mTestProc);
-        }
     }
 
     @Test
