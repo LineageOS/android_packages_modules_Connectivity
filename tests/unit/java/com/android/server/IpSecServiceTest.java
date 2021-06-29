@@ -43,7 +43,6 @@ import android.net.IpSecManager;
 import android.net.IpSecSpiResponse;
 import android.net.IpSecUdpEncapResponse;
 import android.os.Binder;
-import android.os.Build;
 import android.os.ParcelFileDescriptor;
 import android.os.Process;
 import android.system.ErrnoException;
@@ -51,7 +50,6 @@ import android.system.Os;
 import android.system.StructStat;
 import android.util.Range;
 
-import androidx.test.filters.SdkSuppress;
 import androidx.test.filters.SmallTest;
 import androidx.test.runner.AndroidJUnit4;
 
@@ -73,7 +71,6 @@ import java.util.List;
 /** Unit tests for {@link IpSecService}. */
 @SmallTest
 @RunWith(AndroidJUnit4.class)
-@SdkSuppress(minSdkVersion = Build.VERSION_CODES.S, codeName = "S")
 public class IpSecServiceTest {
 
     private static final int DROID_SPI = 0xD1201D;

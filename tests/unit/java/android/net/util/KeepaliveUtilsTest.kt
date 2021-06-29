@@ -25,8 +25,6 @@ import android.net.NetworkCapabilities.TRANSPORT_CELLULAR
 import android.net.NetworkCapabilities.TRANSPORT_ETHERNET
 import android.net.NetworkCapabilities.TRANSPORT_VPN
 import android.net.NetworkCapabilities.TRANSPORT_WIFI
-import android.os.Build
-import androidx.test.filters.SdkSuppress
 import androidx.test.filters.SmallTest
 import com.android.internal.R
 import org.junit.After
@@ -49,7 +47,6 @@ import org.mockito.Mockito.mock
  */
 @RunWith(JUnit4::class)
 @SmallTest
-@SdkSuppress(minSdkVersion = Build.VERSION_CODES.S, codeName = "S")
 class KeepaliveUtilsTest {
 
     // Prepare mocked context with given resource strings.
