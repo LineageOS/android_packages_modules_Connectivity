@@ -1069,11 +1069,12 @@ public class BpfCoordinator {
             throw new AssertionError("IP address array not valid IPv4 address!");
         }
 
-        final long ageMs = (now - value.lastUsed) / 1_000_000;
-        return String.format("[%s] %d(%s) %s:%d -> %d(%s) %s:%d -> %s:%d [%s] %dms",
+        final String ageStr = (value.lastUsed == 0) ? "-"
+                : String.format("%dms", (now - value.lastUsed) / 1_000_000);
+        return String.format("[%s] %d(%s) %s:%d -> %d(%s) %s:%d -> %s:%d [%s] %s",
                 key.dstMac, key.iif, getIfName(key.iif), src4, key.srcPort,
                 value.oif, getIfName(value.oif),
-                public4, publicPort, dst4, value.dstPort, value.ethDstMac, ageMs);
+                public4, publicPort, dst4, value.dstPort, value.ethDstMac, ageStr);
     }
 
     private void dumpIpv4ForwardingRuleMap(long now, boolean downstream,
