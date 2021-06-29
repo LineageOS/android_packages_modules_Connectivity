@@ -80,7 +80,9 @@ import android.util.SparseIntArray;
 
 import androidx.test.InstrumentationRegistry;
 import androidx.test.filters.SmallTest;
-import androidx.test.runner.AndroidJUnit4;
+
+import com.android.testutils.DevSdkIgnoreRule;
+import com.android.testutils.DevSdkIgnoreRunner;
 
 import org.junit.Before;
 import org.junit.Test;
@@ -98,8 +100,9 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Set;
 
-@RunWith(AndroidJUnit4.class)
+@RunWith(DevSdkIgnoreRunner.class)
 @SmallTest
+@DevSdkIgnoreRule.IgnoreUpTo(Build.VERSION_CODES.R)
 public class PermissionMonitorTest {
     private static final UserHandle MOCK_USER1 = UserHandle.of(0);
     private static final UserHandle MOCK_USER2 = UserHandle.of(1);
