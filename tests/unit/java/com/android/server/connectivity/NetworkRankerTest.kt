@@ -24,11 +24,11 @@ import android.net.NetworkScore.POLICY_EXITING
 import android.net.NetworkScore.POLICY_TRANSPORT_PRIMARY
 import android.net.NetworkScore.POLICY_YIELD_TO_BAD_WIFI
 import android.os.Build
-import androidx.test.filters.SdkSuppress
 import androidx.test.filters.SmallTest
-import androidx.test.runner.AndroidJUnit4
 import com.android.server.connectivity.FullScore.POLICY_EVER_VALIDATED_NOT_AVOIDED_WHEN_BAD
 import com.android.server.connectivity.FullScore.POLICY_IS_VALIDATED
+import com.android.testutils.DevSdkIgnoreRule
+import com.android.testutils.DevSdkIgnoreRunner
 import org.junit.Test
 import org.junit.runner.RunWith
 import kotlin.test.assertEquals
@@ -38,8 +38,8 @@ private fun score(vararg policies: Int) = FullScore(0,
 private fun caps(transport: Int) = NetworkCapabilities.Builder().addTransportType(transport).build()
 
 @SmallTest
-@RunWith(AndroidJUnit4::class)
-@SdkSuppress(minSdkVersion = Build.VERSION_CODES.S, codeName = "S")
+@RunWith(DevSdkIgnoreRunner::class)
+@DevSdkIgnoreRule.IgnoreUpTo(Build.VERSION_CODES.R)
 class NetworkRankerTest {
     private val mRanker = NetworkRanker()
 

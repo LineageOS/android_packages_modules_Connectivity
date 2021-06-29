@@ -21,11 +21,9 @@ import static org.junit.Assert.assertTrue;
 
 import android.net.networkstack.aidl.quirks.IPv6ProvisioningLossQuirk;
 import android.net.networkstack.aidl.quirks.IPv6ProvisioningLossQuirkParcelable;
-import android.os.Build;
 import android.os.Parcel;
 import android.os.Parcelable;
 
-import androidx.test.filters.SdkSuppress;
 import androidx.test.filters.SmallTest;
 import androidx.test.runner.AndroidJUnit4;
 
@@ -40,7 +38,6 @@ import java.util.Collections;
 
 @RunWith(AndroidJUnit4.class)
 @SmallTest
-@SdkSuppress(minSdkVersion = Build.VERSION_CODES.S, codeName = "S")
 public class ParcelableTests {
     @Test
     public void testNetworkAttributesParceling() throws Exception {

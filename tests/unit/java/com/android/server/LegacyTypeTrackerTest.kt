@@ -43,9 +43,7 @@ import android.net.ConnectivityManager.TYPE_WIMAX
 import android.net.EthernetManager
 import android.net.NetworkInfo.DetailedState.CONNECTED
 import android.net.NetworkInfo.DetailedState.DISCONNECTED
-import android.os.Build
 import android.telephony.TelephonyManager
-import androidx.test.filters.SdkSuppress
 import androidx.test.filters.SmallTest
 import androidx.test.runner.AndroidJUnit4
 import com.android.server.ConnectivityService.LegacyTypeTracker
@@ -68,7 +66,6 @@ const val UNSUPPORTED_TYPE = TYPE_WIMAX
 
 @RunWith(AndroidJUnit4::class)
 @SmallTest
-@SdkSuppress(minSdkVersion = Build.VERSION_CODES.S, codeName = "S")
 class LegacyTypeTrackerTest {
     private val supportedTypes = arrayOf(TYPE_WIFI, TYPE_WIFI_P2P, TYPE_ETHERNET, TYPE_MOBILE,
             TYPE_MOBILE_SUPL, TYPE_MOBILE_MMS, TYPE_MOBILE_SUPL, TYPE_MOBILE_DUN, TYPE_MOBILE_HIPRI,
