@@ -19,9 +19,6 @@ package android.net;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
 
-import android.os.Build;
-
-import androidx.test.filters.SdkSuppress;
 import androidx.test.filters.SmallTest;
 
 import org.junit.Test;
@@ -31,7 +28,6 @@ import org.junit.runners.JUnit4;
 /** Unit tests for {@link IpSecTransform}. */
 @SmallTest
 @RunWith(JUnit4.class)
-@SdkSuppress(minSdkVersion = Build.VERSION_CODES.S, codeName = "S")
 public class IpSecTransformTest {
 
     @Test

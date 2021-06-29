@@ -20,9 +20,7 @@ import static org.junit.Assert.assertEquals;
 
 import android.net.ipmemorystore.NetworkAttributes;
 import android.net.networkstack.aidl.quirks.IPv6ProvisioningLossQuirk;
-import android.os.Build;
 
-import androidx.test.filters.SdkSuppress;
 import androidx.test.filters.SmallTest;
 import androidx.test.runner.AndroidJUnit4;
 
@@ -37,7 +35,6 @@ import java.util.Arrays;
 /** Unit tests for {@link NetworkAttributes}. */
 @SmallTest
 @RunWith(AndroidJUnit4.class)
-@SdkSuppress(minSdkVersion = Build.VERSION_CODES.S, codeName = "S")
 public class NetworkAttributesTest {
     private static final String WEIGHT_FIELD_NAME_PREFIX = "WEIGHT_";
     private static final float EPSILON = 0.0001f;
