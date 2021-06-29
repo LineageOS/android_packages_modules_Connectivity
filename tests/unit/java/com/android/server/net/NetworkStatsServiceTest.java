@@ -98,7 +98,6 @@ import android.net.NetworkTemplate;
 import android.net.TelephonyNetworkSpecifier;
 import android.net.UnderlyingNetworkInfo;
 import android.net.netstats.provider.INetworkStatsProviderCallback;
-import android.os.Build;
 import android.os.ConditionVariable;
 import android.os.Handler;
 import android.os.HandlerThread;
@@ -114,7 +113,6 @@ import android.telephony.TelephonyManager;
 
 import androidx.annotation.Nullable;
 import androidx.test.InstrumentationRegistry;
-import androidx.test.filters.SdkSuppress;
 import androidx.test.filters.SmallTest;
 import androidx.test.runner.AndroidJUnit4;
 
@@ -150,7 +148,6 @@ import java.util.concurrent.Executor;
  */
 @RunWith(AndroidJUnit4.class)
 @SmallTest
-@SdkSuppress(minSdkVersion = Build.VERSION_CODES.S, codeName = "S")
 public class NetworkStatsServiceTest extends NetworkStatsBaseTest {
     private static final String TAG = "NetworkStatsServiceTest";
 

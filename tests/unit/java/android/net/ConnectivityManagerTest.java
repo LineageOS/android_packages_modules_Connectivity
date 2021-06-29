@@ -59,7 +59,6 @@ import android.app.PendingIntent;
 import android.content.Context;
 import android.content.pm.ApplicationInfo;
 import android.net.ConnectivityManager.NetworkCallback;
-import android.os.Build;
 import android.os.Build.VERSION_CODES;
 import android.os.Bundle;
 import android.os.Handler;
@@ -68,7 +67,6 @@ import android.os.Message;
 import android.os.Messenger;
 import android.os.Process;
 
-import androidx.test.filters.SdkSuppress;
 import androidx.test.filters.SmallTest;
 import androidx.test.runner.AndroidJUnit4;
 
@@ -81,7 +79,6 @@ import org.mockito.MockitoAnnotations;
 
 @RunWith(AndroidJUnit4.class)
 @SmallTest
-@SdkSuppress(minSdkVersion = Build.VERSION_CODES.S, codeName = "S")
 public class ConnectivityManagerTest {
 
     @Mock Context mCtx;

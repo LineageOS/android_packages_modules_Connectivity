@@ -82,7 +82,6 @@ import android.net.VpnService;
 import android.net.VpnTransportInfo;
 import android.net.ipsec.ike.IkeSessionCallback;
 import android.net.ipsec.ike.exceptions.IkeProtocolException;
-import android.os.Build;
 import android.os.Build.VERSION_CODES;
 import android.os.Bundle;
 import android.os.ConditionVariable;
@@ -97,7 +96,6 @@ import android.util.ArrayMap;
 import android.util.ArraySet;
 import android.util.Range;
 
-import androidx.test.filters.SdkSuppress;
 import androidx.test.filters.SmallTest;
 import androidx.test.runner.AndroidJUnit4;
 
@@ -142,7 +140,6 @@ import java.util.stream.Stream;
  */
 @RunWith(AndroidJUnit4.class)
 @SmallTest
-@SdkSuppress(minSdkVersion = Build.VERSION_CODES.S, codeName = "S")
 public class VpnTest {
     private static final String TAG = "VpnTest";
 
