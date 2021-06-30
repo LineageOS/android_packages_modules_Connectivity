@@ -25,15 +25,17 @@ import android.net.NetworkCapabilities.TRANSPORT_CELLULAR
 import android.net.NetworkCapabilities.TRANSPORT_ETHERNET
 import android.net.NetworkCapabilities.TRANSPORT_VPN
 import android.net.NetworkCapabilities.TRANSPORT_WIFI
+import android.os.Build
 import androidx.test.filters.SmallTest
 import com.android.internal.R
+import com.android.testutils.DevSdkIgnoreRule
+import com.android.testutils.DevSdkIgnoreRunner
 import org.junit.After
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.fail
 import org.junit.Test
 import org.junit.runner.RunWith
-import org.junit.runners.JUnit4
 import org.mockito.ArgumentMatchers.eq
 import org.mockito.Mockito.any
 import org.mockito.Mockito.doReturn
@@ -45,8 +47,9 @@ import org.mockito.Mockito.mock
  * Build, install and run with:
  * atest android.net.util.KeepaliveUtilsTest
  */
-@RunWith(JUnit4::class)
+@RunWith(DevSdkIgnoreRunner::class)
 @SmallTest
+@DevSdkIgnoreRule.IgnoreUpTo(Build.VERSION_CODES.R)
 class KeepaliveUtilsTest {
 
     // Prepare mocked context with given resource strings.
