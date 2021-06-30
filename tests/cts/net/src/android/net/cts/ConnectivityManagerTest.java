@@ -72,6 +72,7 @@ import static android.system.OsConstants.AF_UNSPEC;
 import static com.android.compatibility.common.util.SystemUtil.callWithShellPermissionIdentity;
 import static com.android.compatibility.common.util.SystemUtil.runShellCommand;
 import static com.android.compatibility.common.util.SystemUtil.runWithShellPermissionIdentity;
+import static com.android.modules.utils.build.SdkLevel.isAtLeastS;
 import static com.android.networkstack.apishim.ConstantsShim.BLOCKED_REASON_LOCKDOWN_VPN;
 import static com.android.networkstack.apishim.ConstantsShim.BLOCKED_REASON_NONE;
 import static com.android.testutils.MiscAsserts.assertThrows;
@@ -937,8 +938,8 @@ public class ConnectivityManagerTest {
             // noticeably flaky.
             Thread.sleep(NO_CALLBACK_TIMEOUT_MS);
 
-            // TODO: BUG (b/189868426): this should also apply to listens
-            if (!useListen) {
+            // For R- frameworks, listens will receive duplicated callbacks. See b/189868426.
+            if (isAtLeastS() || !useListen) {
                 assertEquals("PendingIntent should only be received once", 1, receivedCount.get());
             }
         } finally {
@@ -953,8 +954,8 @@ public class ConnectivityManagerTest {
             boolean useListen) {
         assertArrayEquals(filed.networkCapabilities.getCapabilities(),
                 broadcasted.networkCapabilities.getCapabilities());
-        // TODO: BUG (b/189868426): this should also apply to listens
-        if (useListen) return;
+        // For R- frameworks, listens will receive duplicated callbacks. See b/189868426.
+        if (!isAtLeastS() && useListen) return;
         assertArrayEquals(filed.networkCapabilities.getTransportTypes(),
                 broadcasted.networkCapabilities.getTransportTypes());
     }
