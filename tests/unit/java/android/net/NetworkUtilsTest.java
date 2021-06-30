@@ -18,9 +18,6 @@ package android.net;
 
 import static junit.framework.Assert.assertEquals;
 
-import android.os.Build;
-
-import androidx.test.filters.SdkSuppress;
 import androidx.test.runner.AndroidJUnit4;
 
 import org.junit.Test;
@@ -31,7 +28,6 @@ import java.util.TreeSet;
 
 @RunWith(AndroidJUnit4.class)
 @androidx.test.filters.SmallTest
-@SdkSuppress(minSdkVersion = Build.VERSION_CODES.S, codeName = "S")
 public class NetworkUtilsTest {
     @Test
     public void testRoutedIPv4AddressCount() {

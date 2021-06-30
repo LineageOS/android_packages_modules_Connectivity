@@ -300,7 +300,6 @@ import android.util.Range;
 import android.util.SparseArray;
 
 import androidx.test.InstrumentationRegistry;
-import androidx.test.filters.SdkSuppress;
 import androidx.test.filters.SmallTest;
 import androidx.test.runner.AndroidJUnit4;
 
@@ -391,7 +390,6 @@ import kotlin.reflect.KClass;
  */
 @RunWith(AndroidJUnit4.class)
 @SmallTest
-@SdkSuppress(minSdkVersion = Build.VERSION_CODES.S, codeName = "S")
 public class ConnectivityServiceTest {
     private static final String TAG = "ConnectivityServiceTest";
 
