@@ -55,15 +55,17 @@ import android.net.ResolverOptionsParcel;
 import android.net.ResolverParamsParcel;
 import android.net.RouteInfo;
 import android.net.shared.PrivateDnsConfig;
+import android.os.Build;
 import android.provider.Settings;
 import android.test.mock.MockContentResolver;
 import android.util.SparseArray;
 
 import androidx.test.filters.SmallTest;
-import androidx.test.runner.AndroidJUnit4;
 
 import com.android.internal.util.MessageUtils;
 import com.android.internal.util.test.FakeSettingsProvider;
+import com.android.testutils.DevSdkIgnoreRule;
+import com.android.testutils.DevSdkIgnoreRunner;
 
 import libcore.net.InetAddressUtils;
 
@@ -83,8 +85,9 @@ import java.util.Arrays;
  * Build, install and run with:
  *  runtest frameworks-net -c com.android.server.connectivity.DnsManagerTest
  */
-@RunWith(AndroidJUnit4.class)
+@RunWith(DevSdkIgnoreRunner.class)
 @SmallTest
+@DevSdkIgnoreRule.IgnoreUpTo(Build.VERSION_CODES.R)
 public class DnsManagerTest {
     static final String TEST_IFACENAME = "test_wlan0";
     static final int TEST_NETID = 100;
