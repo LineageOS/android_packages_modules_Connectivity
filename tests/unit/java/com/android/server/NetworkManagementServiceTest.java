@@ -38,14 +38,12 @@ import android.net.LinkAddress;
 import android.net.NetworkPolicyManager;
 import android.os.BatteryStats;
 import android.os.Binder;
-import android.os.Build;
 import android.os.IBinder;
 import android.os.Process;
 import android.os.RemoteException;
 import android.test.suitebuilder.annotation.SmallTest;
 import android.util.ArrayMap;
 
-import androidx.test.filters.SdkSuppress;
 import androidx.test.runner.AndroidJUnit4;
 
 import com.android.internal.app.IBatteryStats;
@@ -68,7 +66,6 @@ import java.util.function.BiFunction;
  */
 @RunWith(AndroidJUnit4.class)
 @SmallTest
-@SdkSuppress(minSdkVersion = Build.VERSION_CODES.S, codeName = "S")
 public class NetworkManagementServiceTest {
     private NetworkManagementService mNMService;
     @Mock private Context mContext;

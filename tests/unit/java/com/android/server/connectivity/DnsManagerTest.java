@@ -55,12 +55,10 @@ import android.net.ResolverOptionsParcel;
 import android.net.ResolverParamsParcel;
 import android.net.RouteInfo;
 import android.net.shared.PrivateDnsConfig;
-import android.os.Build;
 import android.provider.Settings;
 import android.test.mock.MockContentResolver;
 import android.util.SparseArray;
 
-import androidx.test.filters.SdkSuppress;
 import androidx.test.filters.SmallTest;
 import androidx.test.runner.AndroidJUnit4;
 
@@ -87,7 +85,6 @@ import java.util.Arrays;
  */
 @RunWith(AndroidJUnit4.class)
 @SmallTest
-@SdkSuppress(minSdkVersion = Build.VERSION_CODES.S, codeName = "S")
 public class DnsManagerTest {
     static final String TEST_IFACENAME = "test_wlan0";
     static final int TEST_NETID = 100;
