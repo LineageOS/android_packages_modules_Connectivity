@@ -47,15 +47,17 @@ import android.content.res.Resources;
 import android.net.ConnectivityResources;
 import android.net.NetworkCapabilities;
 import android.net.NetworkInfo;
+import android.os.Build;
 import android.os.UserHandle;
 import android.telephony.TelephonyManager;
 import android.util.DisplayMetrics;
 
 import androidx.test.filters.SmallTest;
-import androidx.test.runner.AndroidJUnit4;
 
 import com.android.connectivity.resources.R;
 import com.android.server.connectivity.NetworkNotificationManager.NotificationType;
+import com.android.testutils.DevSdkIgnoreRule;
+import com.android.testutils.DevSdkIgnoreRunner;
 
 import org.junit.After;
 import org.junit.Before;
@@ -72,8 +74,9 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
-@RunWith(AndroidJUnit4.class)
+@RunWith(DevSdkIgnoreRunner.class)
 @SmallTest
+@DevSdkIgnoreRule.IgnoreUpTo(Build.VERSION_CODES.R)
 public class NetworkNotificationManagerTest {
 
     private static final String TEST_SSID = "Test SSID";

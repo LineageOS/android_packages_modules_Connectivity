@@ -25,12 +25,15 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 import android.net.IpSecAlgorithm;
+import android.os.Build;
 
 import androidx.test.filters.SmallTest;
 
+import com.android.testutils.DevSdkIgnoreRule;
+import com.android.testutils.DevSdkIgnoreRunner;
+
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.junit.runners.JUnit4;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -38,7 +41,8 @@ import java.util.List;
 
 /** Unit tests for {@link VpnProfile}. */
 @SmallTest
-@RunWith(JUnit4.class)
+@RunWith(DevSdkIgnoreRunner.class)
+@DevSdkIgnoreRule.IgnoreUpTo(Build.VERSION_CODES.R)
 public class VpnProfileTest {
     private static final String DUMMY_PROFILE_KEY = "Test";
 

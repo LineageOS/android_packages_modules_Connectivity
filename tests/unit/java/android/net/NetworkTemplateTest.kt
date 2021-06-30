@@ -19,10 +19,10 @@ package android.net
 import android.content.Context
 import android.net.ConnectivityManager.TYPE_MOBILE
 import android.net.ConnectivityManager.TYPE_WIFI
-import android.net.NetworkIdentity.SUBTYPE_COMBINED
 import android.net.NetworkIdentity.OEM_NONE
 import android.net.NetworkIdentity.OEM_PAID
 import android.net.NetworkIdentity.OEM_PRIVATE
+import android.net.NetworkIdentity.SUBTYPE_COMBINED
 import android.net.NetworkIdentity.buildNetworkIdentity
 import android.net.NetworkStats.DEFAULT_NETWORK_ALL
 import android.net.NetworkStats.METERED_ALL
@@ -31,23 +31,25 @@ import android.net.NetworkTemplate.MATCH_MOBILE
 import android.net.NetworkTemplate.MATCH_MOBILE_WILDCARD
 import android.net.NetworkTemplate.MATCH_WIFI
 import android.net.NetworkTemplate.MATCH_WIFI_WILDCARD
-import android.net.NetworkTemplate.WIFI_NETWORKID_ALL
 import android.net.NetworkTemplate.NETWORK_TYPE_5G_NSA
 import android.net.NetworkTemplate.NETWORK_TYPE_ALL
 import android.net.NetworkTemplate.OEM_MANAGED_ALL
 import android.net.NetworkTemplate.OEM_MANAGED_NO
 import android.net.NetworkTemplate.OEM_MANAGED_YES
 import android.net.NetworkTemplate.SUBSCRIBER_ID_MATCH_RULE_EXACT
-import android.net.NetworkTemplate.buildTemplateWifi
-import android.net.NetworkTemplate.buildTemplateWifiWildcard
+import android.net.NetworkTemplate.WIFI_NETWORKID_ALL
 import android.net.NetworkTemplate.buildTemplateCarrierMetered
 import android.net.NetworkTemplate.buildTemplateMobileWithRatType
+import android.net.NetworkTemplate.buildTemplateWifi
+import android.net.NetworkTemplate.buildTemplateWifiWildcard
+import android.os.Build
 import android.telephony.TelephonyManager
+import com.android.testutils.DevSdkIgnoreRule
+import com.android.testutils.DevSdkIgnoreRunner
 import com.android.testutils.assertParcelSane
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
-import org.junit.runners.JUnit4
 import org.mockito.Mockito.mock
 import org.mockito.MockitoAnnotations
 import kotlin.test.assertEquals
@@ -60,7 +62,8 @@ private const val TEST_IMSI2 = "imsi2"
 private const val TEST_SSID1 = "ssid1"
 private const val TEST_SSID2 = "ssid2"
 
-@RunWith(JUnit4::class)
+@RunWith(DevSdkIgnoreRunner::class)
+@DevSdkIgnoreRule.IgnoreUpTo(Build.VERSION_CODES.R)
 class NetworkTemplateTest {
     private val mockContext = mock(Context::class.java)
 

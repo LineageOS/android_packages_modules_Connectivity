@@ -31,17 +31,19 @@ import android.content.ContentResolver;
 import android.content.Context;
 import android.net.nsd.NsdManager;
 import android.net.nsd.NsdServiceInfo;
+import android.os.Build;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.Looper;
 import android.os.Message;
 
 import androidx.test.filters.SmallTest;
-import androidx.test.runner.AndroidJUnit4;
 
 import com.android.server.NsdService.DaemonConnection;
 import com.android.server.NsdService.DaemonConnectionSupplier;
 import com.android.server.NsdService.NativeCallbackReceiver;
+import com.android.testutils.DevSdkIgnoreRule;
+import com.android.testutils.DevSdkIgnoreRunner;
 import com.android.testutils.HandlerUtils;
 
 import org.junit.After;
@@ -56,8 +58,9 @@ import org.mockito.Spy;
 // TODOs:
 //  - test client can send requests and receive replies
 //  - test NSD_ON ENABLE/DISABLED listening
-@RunWith(AndroidJUnit4.class)
+@RunWith(DevSdkIgnoreRunner.class)
 @SmallTest
+@DevSdkIgnoreRule.IgnoreUpTo(Build.VERSION_CODES.R)
 public class NsdServiceTest {
 
     static final int PROTOCOL = NsdManager.PROTOCOL_DNS_SD;
