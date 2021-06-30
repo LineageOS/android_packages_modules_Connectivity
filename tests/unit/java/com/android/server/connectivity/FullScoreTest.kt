@@ -19,27 +19,28 @@ package com.android.server.connectivity
 import android.net.NetworkAgentConfig
 import android.net.NetworkCapabilities
 import android.net.NetworkScore.KEEP_CONNECTED_NONE
+import android.os.Build
 import android.text.TextUtils
 import android.util.ArraySet
 import androidx.test.filters.SmallTest
-import androidx.test.runner.AndroidJUnit4
 import com.android.server.connectivity.FullScore.MAX_CS_MANAGED_POLICY
 import com.android.server.connectivity.FullScore.POLICY_ACCEPT_UNVALIDATED
 import com.android.server.connectivity.FullScore.POLICY_EVER_USER_SELECTED
 import com.android.server.connectivity.FullScore.POLICY_IS_VALIDATED
 import com.android.server.connectivity.FullScore.POLICY_IS_VPN
+import com.android.testutils.DevSdkIgnoreRule
+import com.android.testutils.DevSdkIgnoreRunner
 import org.junit.Test
 import org.junit.runner.RunWith
-import kotlin.collections.minOfOrNull
-import kotlin.collections.maxOfOrNull
 import kotlin.reflect.full.staticProperties
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
-@RunWith(AndroidJUnit4::class)
+@RunWith(DevSdkIgnoreRunner::class)
 @SmallTest
+@DevSdkIgnoreRule.IgnoreUpTo(Build.VERSION_CODES.R)
 class FullScoreTest {
     // Convenience methods
     fun FullScore.withPolicies(
