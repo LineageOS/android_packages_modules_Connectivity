@@ -5450,6 +5450,8 @@ public class ConnectivityServiceTest {
             // the follow-up network disconnection will be processed first.
             mWiFiNetworkAgent.setKeepaliveResponseDelay(3 * TIMEOUT_MS);
             ka.stop();
+            // Call stop() twice shouldn't result in crash, b/182586681.
+            ka.stop();
 
             // Make sure the stop has been processed. Wait for executor idle is needed to prevent
             // flaky since the actual stop call to the service is delegated to executor thread.
