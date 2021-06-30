@@ -121,15 +121,23 @@ public class PermissionMonitor {
         @Override
         public void onReceive(Context context, Intent intent) {
             final String action = intent.getAction();
-            final int uid = intent.getIntExtra(Intent.EXTRA_UID, -1);
-            final Uri packageData = intent.getData();
-            final String packageName =
-                    packageData != null ? packageData.getSchemeSpecificPart() : null;
 
             if (Intent.ACTION_PACKAGE_ADDED.equals(action)) {
+                final int uid = intent.getIntExtra(Intent.EXTRA_UID, -1);
+                final Uri packageData = intent.getData();
+                final String packageName =
+                        packageData != null ? packageData.getSchemeSpecificPart() : null;
                 onPackageAdded(packageName, uid);
             } else if (Intent.ACTION_PACKAGE_REMOVED.equals(action)) {
+                final int uid = intent.getIntExtra(Intent.EXTRA_UID, -1);
+                final Uri packageData = intent.getData();
+                final String packageName =
+                        packageData != null ? packageData.getSchemeSpecificPart() : null;
                 onPackageRemoved(packageName, uid);
+            } else if (Intent.ACTION_EXTERNAL_APPLICATIONS_AVAILABLE.equals(action)) {
+                final String[] pkgList =
+                        intent.getStringArrayExtra(Intent.EXTRA_CHANGED_PACKAGE_LIST);
+                onExternalApplicationsAvailable(pkgList);
             } else {
                 Log.wtf(TAG, "received unexpected intent: " + action);
             }
@@ -192,6 +200,12 @@ public class PermissionMonitor {
         intentFilter.addDataScheme("package");
         userAllContext.registerReceiver(
                 mIntentReceiver, intentFilter, null /* broadcastPermission */,
+                null /* scheduler */);
+
+        final IntentFilter externalIntentFilter =
+                new IntentFilter(Intent.ACTION_EXTERNAL_APPLICATIONS_AVAILABLE);
+        userAllContext.registerReceiver(
+                mIntentReceiver, externalIntentFilter, null /* broadcastPermission */,
                 null /* scheduler */);
 
         // Register UIDS_ALLOWED_ON_RESTRICTED_NETWORKS setting observer
@@ -807,6 +821,21 @@ public class PermissionMonitor {
         // Step3. Update or revoke permission for uids with netd.
         update(mUsers, updatedUids, true /* add */);
         update(mUsers, removedUids, false /* add */);
+    }
+
+    private synchronized void onExternalApplicationsAvailable(String[] pkgList) {
+        if (CollectionUtils.isEmpty(pkgList)) {
+            Log.e(TAG, "No available external application.");
+            return;
+        }
+
+        for (String app : pkgList) {
+            final PackageInfo info = getPackageInfo(app);
+            if (info == null || info.applicationInfo == null) continue;
+
+            final int appId = info.applicationInfo.uid;
+            onPackageAdded(app, appId); // Use onPackageAdded to add package one by one.
+        }
     }
 
     /** Dump info to dumpsys */
