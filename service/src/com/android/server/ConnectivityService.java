@@ -6288,7 +6288,8 @@ public class ConnectivityService extends IConnectivityManager.Stub
                 callingAttributionTag);
         if (VDBG) log("pendingListenForNetwork for " + nri);
 
-        mHandler.sendMessage(mHandler.obtainMessage(EVENT_REGISTER_NETWORK_LISTENER, nri));
+        mHandler.sendMessage(mHandler.obtainMessage(
+                    EVENT_REGISTER_NETWORK_LISTENER_WITH_INTENT, nri));
     }
 
     /** Returns the next Network provider ID. */
