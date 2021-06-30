@@ -182,7 +182,7 @@ public class MultinetworkPolicyTracker {
     public void setTestAllowBadWifiUntil(long timeMs) {
         Log.d(TAG, "setTestAllowBadWifiUntil: " + mTestAllowBadWifiUntilMs);
         mTestAllowBadWifiUntilMs = timeMs;
-        updateAvoidBadWifi();
+        reevaluateInternal();
     }
 
     @VisibleForTesting
