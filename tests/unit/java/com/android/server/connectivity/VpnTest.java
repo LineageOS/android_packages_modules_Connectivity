@@ -97,13 +97,14 @@ import android.util.ArraySet;
 import android.util.Range;
 
 import androidx.test.filters.SmallTest;
-import androidx.test.runner.AndroidJUnit4;
 
 import com.android.internal.R;
 import com.android.internal.net.LegacyVpnInfo;
 import com.android.internal.net.VpnConfig;
 import com.android.internal.net.VpnProfile;
 import com.android.server.IpSecService;
+import com.android.testutils.DevSdkIgnoreRule;
+import com.android.testutils.DevSdkIgnoreRunner;
 
 import org.junit.Before;
 import org.junit.Test;
@@ -138,8 +139,9 @@ import java.util.stream.Stream;
  * Build, install and run with:
  *  runtest frameworks-net -c com.android.server.connectivity.VpnTest
  */
-@RunWith(AndroidJUnit4.class)
+@RunWith(DevSdkIgnoreRunner.class)
 @SmallTest
+@DevSdkIgnoreRule.IgnoreUpTo(VERSION_CODES.R)
 public class VpnTest {
     private static final String TAG = "VpnTest";
 

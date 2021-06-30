@@ -23,15 +23,20 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotSame;
 import static org.junit.Assert.assertNull;
 
+import android.os.Build;
+
 import androidx.test.filters.SmallTest;
+
+import com.android.testutils.DevSdkIgnoreRule;
+import com.android.testutils.DevSdkIgnoreRunner;
 
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.junit.runners.JUnit4;
 
 /** Unit tests for {@link IpSecConfig}. */
 @SmallTest
-@RunWith(JUnit4.class)
+@RunWith(DevSdkIgnoreRunner.class)
+@DevSdkIgnoreRule.IgnoreUpTo(Build.VERSION_CODES.R)
 public class IpSecConfigTest {
 
     @Test
