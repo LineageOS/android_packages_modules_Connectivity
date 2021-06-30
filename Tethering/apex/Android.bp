@@ -31,11 +31,11 @@ apex {
     ],
     multilib: {
         first: {
-            jni_libs: ["libservice-connectivity"]
+            jni_libs: ["libservice-connectivity"],
         },
         both: {
             jni_libs: ["libframework-connectivity-jni"],
-        }
+        },
     },
     bpfs: [
         "offload.o",
@@ -74,6 +74,27 @@ bootclasspath_fragment {
         "framework-tethering",
     ],
     apex_available: ["com.android.tethering"],
+
+    // The bootclasspath_fragments that provide APIs on which this depends.
+    fragments: [
+        {
+            apex: "com.android.art",
+            module: "art-bootclasspath-fragment",
+        },
+    ],
+
+    // Additional stubs libraries that this fragment's contents use which are
+    // not provided by another bootclasspath_fragment.
+    additional_stubs: [
+        "android-non-updatable",
+    ],
+
+    // Additional hidden API flag files to override the defaults. This must only be
+    // modified by the Soong or platform compat team.
+    hidden_api: {
+        max_target_o_low_priority: ["hiddenapi/hiddenapi-max-target-o-low-priority.txt"],
+        unsupported: ["hiddenapi/hiddenapi-unsupported.txt"],
+    },
 }
 
 override_apex {

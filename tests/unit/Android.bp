@@ -64,6 +64,7 @@ android_test {
     static_libs: [
         "androidx.test.rules",
         "bouncycastle-repackaged-unbundled",
+        "core-tests-support",
         "FrameworksNetCommonTests",
         "frameworks-base-testutils",
         "frameworks-net-integration-testutils",
