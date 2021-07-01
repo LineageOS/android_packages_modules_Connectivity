@@ -366,12 +366,10 @@ public class KeepaliveTracker {
                     Log.e(TAG, "Cannot stop unowned keepalive " + mSlot + " on " + mNai.network);
                 }
             }
-            // Ignore the case when the network disconnects immediately after stop() has been
-            // called and the keepalive code is waiting for the response from the modem. This
-            // might happen when the caller listens for a lower-layer network disconnect
-            // callback and stop the keepalive at that time. But the stop() races with the
-            // stop() generated in ConnectivityService network disconnection code path.
-            if (mStartedState == STOPPING && reason == ERROR_INVALID_NETWORK) return;
+            // To prevent races from re-entrance of stop(), return if the state is already stopping.
+            // This might happen if multiple event sources stop keepalive in a short time. Such as
+            // network disconnect after user calls stop(), or tear down socket after binder died.
+            if (mStartedState == STOPPING) return;
 
             // Store the reason of stopping, and report it after the keepalive is fully stopped.
             if (mStopReason != ERROR_STOP_REASON_UNINITIALIZED) {
