@@ -23,6 +23,8 @@ import static com.android.cts.net.hostside.NetworkPolicyTestUtils.canChangeActiv
 import static com.android.cts.net.hostside.NetworkPolicyTestUtils.isUidNetworkingBlocked;
 import static com.android.cts.net.hostside.NetworkPolicyTestUtils.isUidRestrictedOnMeteredNetworks;
 import static com.android.cts.net.hostside.NetworkPolicyTestUtils.setRestrictBackground;
+import static com.android.cts.net.hostside.Property.BATTERY_SAVER_MODE;
+import static com.android.cts.net.hostside.Property.DATA_SAVER_MODE;
 
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -79,6 +81,7 @@ public class NetworkPolicyManagerTest extends AbstractRestrictBackgroundNetworkT
         assertFalse(isUidNetworkingBlocked(mUid, NON_METERED)); // Match NTWK_ALLOWED_NON_METERED
     }
 
+    @RequiredProperties({DATA_SAVER_MODE, BATTERY_SAVER_MODE})
     @Test
     public void testIsUidNetworkingBlocked_withSystemUid() throws Exception {
         // Refer to NetworkPolicyManagerService#isUidNetworkingBlockedInternal(), this test is to
@@ -103,6 +106,7 @@ public class NetworkPolicyManagerTest extends AbstractRestrictBackgroundNetworkT
         }
     }
 
+    @RequiredProperties({DATA_SAVER_MODE})
     @Test
     public void testIsUidNetworkingBlocked_withDataSaverMode() throws Exception {
         // Refer to NetworkPolicyManagerService#isUidNetworkingBlockedInternal(), this test is to
@@ -182,6 +186,7 @@ public class NetworkPolicyManagerTest extends AbstractRestrictBackgroundNetworkT
         }
     }
 
+    @RequiredProperties({BATTERY_SAVER_MODE})
     @Test
     public void testIsUidNetworkingBlocked_withPowerSaverMode() throws Exception {
         // Refer to NetworkPolicyManagerService#isUidNetworkingBlockedInternal(), this test is to
@@ -209,6 +214,7 @@ public class NetworkPolicyManagerTest extends AbstractRestrictBackgroundNetworkT
         }
     }
 
+    @RequiredProperties({DATA_SAVER_MODE})
     @Test
     public void testIsUidRestrictedOnMeteredNetworks() throws Exception {
         try {
