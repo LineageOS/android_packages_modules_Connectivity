@@ -5863,37 +5863,59 @@ public class ConnectivityServiceTest {
     @Test
     public void testNetworkCallbackMaximum() throws Exception {
         final int MAX_REQUESTS = 100;
-        final int CALLBACKS = 89;
-        final int INTENTS = 11;
+        final int CALLBACKS = 87;
+        final int DIFF_INTENTS = 10;
+        final int SAME_INTENTS = 10;
         final int SYSTEM_ONLY_MAX_REQUESTS = 250;
-        assertEquals(MAX_REQUESTS, CALLBACKS + INTENTS);
+        // Assert 1 (Default request filed before testing) + CALLBACKS + DIFF_INTENTS +
+        // 1 (same intent) = MAX_REQUESTS - 1, since the capacity is MAX_REQUEST - 1.
+        assertEquals(MAX_REQUESTS - 1, 1 + CALLBACKS + DIFF_INTENTS + 1);
 
         NetworkRequest networkRequest = new NetworkRequest.Builder().build();
         ArrayList<Object> registered = new ArrayList<>();
 
-        int j = 0;
-        while (j++ < CALLBACKS / 2) {
-            NetworkCallback cb = new NetworkCallback();
-            mCm.requestNetwork(networkRequest, cb);
+        for (int j = 0; j < CALLBACKS; j++) {
+            final NetworkCallback cb = new NetworkCallback();
+            if (j < CALLBACKS / 2) {
+                mCm.requestNetwork(networkRequest, cb);
+            } else {
+                mCm.registerNetworkCallback(networkRequest, cb);
+            }
             registered.add(cb);
         }
-        while (j++ < CALLBACKS) {
-            NetworkCallback cb = new NetworkCallback();
-            mCm.registerNetworkCallback(networkRequest, cb);
-            registered.add(cb);
+
+        // Since ConnectivityService will de-duplicate the request with the same intent,
+        // register multiple times does not really increase multiple requests.
+        final PendingIntent same_pi = PendingIntent.getBroadcast(mContext, 0 /* requestCode */,
+                new Intent("same"), FLAG_IMMUTABLE);
+        for (int j = 0; j < SAME_INTENTS; j++) {
+            mCm.registerNetworkCallback(networkRequest, same_pi);
+            // Wait for the requests with the same intent to be de-duplicated. Because
+            // ConnectivityService side incrementCountOrThrow in binder, decrementCount in handler
+            // thread, waitForIdle is needed to ensure decrementCount being invoked for same intent
+            // requests before doing further tests.
+            waitForIdle();
         }
-        j = 0;
-        while (j++ < INTENTS / 2) {
-            final PendingIntent pi = PendingIntent.getBroadcast(mContext, 0 /* requestCode */,
-                    new Intent("a" + j), FLAG_IMMUTABLE);
-            mCm.requestNetwork(networkRequest, pi);
-            registered.add(pi);
+        for (int j = 0; j < SAME_INTENTS; j++) {
+            mCm.requestNetwork(networkRequest, same_pi);
+            // Wait for the requests with the same intent to be de-duplicated.
+            // Refer to the reason above.
+            waitForIdle();
         }
-        while (j++ < INTENTS) {
-            final PendingIntent pi = PendingIntent.getBroadcast(mContext, 0 /* requestCode */,
-                    new Intent("b" + j), FLAG_IMMUTABLE);
-            mCm.registerNetworkCallback(networkRequest, pi);
-            registered.add(pi);
+        registered.add(same_pi);
+
+        for (int j = 0; j < DIFF_INTENTS; j++) {
+            if (j < DIFF_INTENTS / 2) {
+                final PendingIntent pi = PendingIntent.getBroadcast(mContext, 0 /* requestCode */,
+                        new Intent("a" + j), FLAG_IMMUTABLE);
+                mCm.requestNetwork(networkRequest, pi);
+                registered.add(pi);
+            } else {
+                final PendingIntent pi = PendingIntent.getBroadcast(mContext, 0 /* requestCode */,
+                        new Intent("b" + j), FLAG_IMMUTABLE);
+                mCm.registerNetworkCallback(networkRequest, pi);
+                registered.add(pi);
+            }
         }
 
         // Test that the limit is enforced when MAX_REQUESTS simultaneous requests are added.
@@ -5943,10 +5965,10 @@ public class ConnectivityServiceTest {
 
         for (Object o : registered) {
             if (o instanceof NetworkCallback) {
-                mCm.unregisterNetworkCallback((NetworkCallback)o);
+                mCm.unregisterNetworkCallback((NetworkCallback) o);
             }
             if (o instanceof PendingIntent) {
-                mCm.unregisterNetworkCallback((PendingIntent)o);
+                mCm.unregisterNetworkCallback((PendingIntent) o);
             }
         }
         waitForIdle();
