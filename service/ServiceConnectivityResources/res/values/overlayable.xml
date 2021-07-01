@@ -31,7 +31,9 @@
             <item type="integer" name="config_networkNotifySwitchType"/>
             <item type="array" name="config_networkNotifySwitches"/>
             <item type="bool" name="config_ongoingSignInNotification"/>
-
+            <item type="bool" name="config_autoCancelNetworkNotifications"/>
+            <item type="drawable" name="stat_notify_wifi_in_range"/>
+            <item type="drawable" name="stat_notify_rssi_in_range"/>
         </policy>
     </overlayable>
 </resources>
