@@ -43,6 +43,23 @@ java_library {
     ],
 }
 
+// Connectivity coverage tests combines Tethering and Connectivity tests, each with their
+// respective jarjar rules applied.
+// Some tests may be duplicated (in particular static lib tests), as they need to be run under both
+// jarjared packages to cover both usages.
+android_library {
+    name: "ConnectivityCoverageTestsLib",
+    min_sdk_version: "30",
+    static_libs: [
+        "FrameworksNetTestsLib",
+        "NetdStaticLibTestsLib",
+        "NetworkStaticLibTestsLib",
+    ],
+    jarjar_rules: ":connectivity-jarjar-rules",
+    manifest: "AndroidManifest_coverage.xml",
+    visibility: ["//visibility:private"],
+}
+
 android_test {
     name: "ConnectivityCoverageTests",
     // Tethering started on SDK 30
@@ -62,13 +79,9 @@ android_test {
         // (some tests would fail).
         // TODO: consider removing extended mockito usage in tests that use it, for performance
         "mockito-target-extended-minus-junit4",
-        "FrameworksNetTestsLib",
         "modules-utils-native-coverage-listener",
-        "NetdStaticLibTestsLib",
-        "NetworkStaticLibTestsLib",
-        "NetworkStackTestsLib",
-        "TetheringTestsLatestSdkLib",
-        "TetheringIntegrationTestsLatestSdkLib",
+        "ConnectivityCoverageTestsLib",
+        "TetheringCoverageTestsLib",
     ],
     jni_libs: [
         // For mockito extended
