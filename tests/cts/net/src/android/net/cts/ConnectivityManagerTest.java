@@ -506,6 +506,7 @@ public class ConnectivityManagerTest {
     @Test
     public void testGetAllNetworkStateSnapshots()
             throws InterruptedException {
+        assumeTrue(mPackageManager.hasSystemFeature(FEATURE_TELEPHONY));
         // Make sure cell is active to retrieve IMSI for verification in later step.
         final Network cellNetwork = mCtsNetUtils.connectToCell();
         final String subscriberId = getSubscriberIdForCellNetwork(cellNetwork);
