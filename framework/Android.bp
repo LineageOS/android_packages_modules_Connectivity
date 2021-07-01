@@ -97,8 +97,6 @@ java_sdk_library {
         ],
     },
     impl_only_libs: [
-        // TODO (b/183097033) remove once module_current includes core_platform
-        "stable.core.platform.api.stubs",
         "framework-tethering.stubs.module_lib",
         "framework-wifi.stubs.module_lib",
         "net-utils-device-common",
