@@ -23,14 +23,16 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
+import android.os.Build;
 import android.test.mock.MockContext;
 
 import androidx.test.filters.SmallTest;
-import androidx.test.runner.AndroidJUnit4;
 
 import com.android.internal.net.VpnProfile;
 import com.android.internal.org.bouncycastle.x509.X509V1CertificateGenerator;
 import com.android.net.module.util.ProxyUtils;
+import com.android.testutils.DevSdkIgnoreRule;
+import com.android.testutils.DevSdkIgnoreRunner;
 
 import org.junit.Before;
 import org.junit.Test;
@@ -51,7 +53,8 @@ import javax.security.auth.x500.X500Principal;
 
 /** Unit tests for {@link Ikev2VpnProfile.Builder}. */
 @SmallTest
-@RunWith(AndroidJUnit4.class)
+@RunWith(DevSdkIgnoreRunner.class)
+@DevSdkIgnoreRule.IgnoreUpTo(Build.VERSION_CODES.R)
 public class Ikev2VpnProfileTest {
     private static final String SERVER_ADDR_STRING = "1.2.3.4";
     private static final String IDENTITY_STRING = "Identity";
