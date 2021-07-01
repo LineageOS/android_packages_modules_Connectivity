@@ -16,6 +16,7 @@
 
 package com.android.server.connectivity;
 
+import static android.app.Notification.FLAG_AUTO_CANCEL;
 import static android.app.Notification.FLAG_ONGOING_EVENT;
 
 import static com.android.server.connectivity.NetworkNotificationManager.NotificationType.LOST_INTERNET;
@@ -80,6 +81,8 @@ public class NetworkNotificationManagerTest {
 
     private static final String TEST_SSID = "Test SSID";
     private static final String TEST_EXTRA_INFO = "extra";
+    private static final int TEST_NOTIF_ID = 101;
+    private static final String TEST_NOTIF_TAG = NetworkNotificationManager.tagFor(TEST_NOTIF_ID);
     static final NetworkCapabilities CELL_CAPABILITIES = new NetworkCapabilities();
     static final NetworkCapabilities WIFI_CAPABILITIES = new NetworkCapabilities();
     static final NetworkCapabilities VPN_CAPABILITIES = new NetworkCapabilities();
@@ -141,6 +144,7 @@ public class NetworkNotificationManagerTest {
         }
         when(mResources.getStringArray(R.array.network_switch_type_name))
             .thenReturn(transportNames);
+        when(mResources.getBoolean(R.bool.config_autoCancelNetworkNotifications)).thenReturn(true);
 
         mManager = new NetworkNotificationManager(mCtx, mTelephonyManager);
     }
@@ -237,57 +241,65 @@ public class NetworkNotificationManagerTest {
         verify(mNotificationManager, never()).notify(any(), anyInt(), any());
     }
 
-    private void assertNotification(NotificationType type, boolean ongoing) {
-        final int id = 101;
-        final String tag = NetworkNotificationManager.tagFor(id);
+    private void assertNotification(NotificationType type, boolean ongoing, boolean autoCancel) {
         final ArgumentCaptor<Notification> noteCaptor = ArgumentCaptor.forClass(Notification.class);
-        mManager.showNotification(id, type, mWifiNai, mCellNai, null, false);
-        verify(mNotificationManager, times(1)).notify(eq(tag), eq(type.eventId),
+        mManager.showNotification(TEST_NOTIF_ID, type, mWifiNai, mCellNai, null, false);
+        verify(mNotificationManager, times(1)).notify(eq(TEST_NOTIF_TAG), eq(type.eventId),
                 noteCaptor.capture());
 
         assertEquals("Notification ongoing flag should be " + (ongoing ? "set" : "unset"),
                 ongoing, (noteCaptor.getValue().flags & FLAG_ONGOING_EVENT) != 0);
+        assertEquals("Notification autocancel flag should be " + (autoCancel ? "set" : "unset"),
+                autoCancel, (noteCaptor.getValue().flags & FLAG_AUTO_CANCEL) != 0);
     }
 
     @Test
     public void testDuplicatedNotificationsNoInternetThenSignIn() {
-        final int id = 101;
-        final String tag = NetworkNotificationManager.tagFor(id);
-
         // Show first NO_INTERNET
-        assertNotification(NO_INTERNET, false /* ongoing */);
+        assertNotification(NO_INTERNET, false /* ongoing */, true /* autoCancel */);
 
         // Captive portal detection triggers SIGN_IN a bit later, clearing the previous NO_INTERNET
-        assertNotification(SIGN_IN, false /* ongoing */);
-        verify(mNotificationManager, times(1)).cancel(eq(tag), eq(NO_INTERNET.eventId));
+        assertNotification(SIGN_IN, false /* ongoing */, true /* autoCancel */);
+        verify(mNotificationManager, times(1)).cancel(eq(TEST_NOTIF_TAG), eq(NO_INTERNET.eventId));
 
         // Network disconnects
-        mManager.clearNotification(id);
-        verify(mNotificationManager, times(1)).cancel(eq(tag), eq(SIGN_IN.eventId));
+        mManager.clearNotification(TEST_NOTIF_ID);
+        verify(mNotificationManager, times(1)).cancel(eq(TEST_NOTIF_TAG), eq(SIGN_IN.eventId));
     }
 
     @Test
     public void testOngoingSignInNotification() {
         doReturn(true).when(mResources).getBoolean(R.bool.config_ongoingSignInNotification);
-        final int id = 101;
-        final String tag = NetworkNotificationManager.tagFor(id);
 
         // Show first NO_INTERNET
-        assertNotification(NO_INTERNET, false /* ongoing */);
+        assertNotification(NO_INTERNET, false /* ongoing */, true /* autoCancel */);
 
         // Captive portal detection triggers SIGN_IN a bit later, clearing the previous NO_INTERNET
-        assertNotification(SIGN_IN, true /* ongoing */);
-        verify(mNotificationManager, times(1)).cancel(eq(tag), eq(NO_INTERNET.eventId));
+        assertNotification(SIGN_IN, true /* ongoing */, true /* autoCancel */);
+        verify(mNotificationManager, times(1)).cancel(eq(TEST_NOTIF_TAG), eq(NO_INTERNET.eventId));
 
         // Network disconnects
-        mManager.clearNotification(id);
-        verify(mNotificationManager, times(1)).cancel(eq(tag), eq(SIGN_IN.eventId));
+        mManager.clearNotification(TEST_NOTIF_ID);
+        verify(mNotificationManager, times(1)).cancel(eq(TEST_NOTIF_TAG), eq(SIGN_IN.eventId));
+    }
+
+    @Test
+    public void testNoAutoCancelNotification() {
+        doReturn(false).when(mResources).getBoolean(R.bool.config_autoCancelNetworkNotifications);
+
+        // Show NO_INTERNET, then SIGN_IN
+        assertNotification(NO_INTERNET, false /* ongoing */, false /* autoCancel */);
+        assertNotification(SIGN_IN, false /* ongoing */, false /* autoCancel */);
+        verify(mNotificationManager, times(1)).cancel(eq(TEST_NOTIF_TAG), eq(NO_INTERNET.eventId));
+
+        mManager.clearNotification(TEST_NOTIF_ID);
+        verify(mNotificationManager, times(1)).cancel(eq(TEST_NOTIF_TAG), eq(SIGN_IN.eventId));
     }
 
     @Test
     public void testDuplicatedNotificationsSignInThenNoInternet() {
-        final int id = 101;
-        final String tag = NetworkNotificationManager.tagFor(id);
+        final int id = TEST_NOTIF_ID;
+        final String tag = TEST_NOTIF_TAG;
 
         // Show first SIGN_IN
         mManager.showNotification(id, SIGN_IN, mWifiNai, mCellNai, null, false);
@@ -306,8 +318,8 @@ public class NetworkNotificationManagerTest {
 
     @Test
     public void testClearNotificationByType() {
-        final int id = 101;
-        final String tag = NetworkNotificationManager.tagFor(id);
+        final int id = TEST_NOTIF_ID;
+        final String tag = TEST_NOTIF_TAG;
 
         // clearNotification(int id, NotificationType notifyType) will check if given type is equal
         // to previous type or not. If they are equal then clear the notification; if they are not
