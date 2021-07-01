@@ -1085,7 +1085,7 @@ public class ConnectivityManagerTest {
         final Matcher m = Pattern.compile("^" + ssid + ";(true|false|none)$",
                 Pattern.MULTILINE | Pattern.UNIX_LINES).matcher(policyString);
         if (!m.find()) {
-            fail("Unexpected format from cmd netpolicy");
+            fail("Unexpected format from cmd netpolicy, policyString = " + policyString);
         }
         return m.group(1);
     }
