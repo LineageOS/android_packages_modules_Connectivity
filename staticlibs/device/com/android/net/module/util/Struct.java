@@ -16,9 +16,10 @@
 
 package com.android.net.module.util;
 
-import android.annotation.NonNull;
-import android.annotation.Nullable;
 import android.net.MacAddress;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
