@@ -57,8 +57,6 @@ java_library {
         ":net-module-utils-srcs",
     ],
     libs: [
-        // TODO (b/183097033) remove once system_server_current includes core_current
-        "stable.core.platform.api.stubs",
         "android_system_server_stubs_current",
         "framework-annotations-lib",
         "framework-connectivity.impl",
