@@ -22,6 +22,7 @@ import static android.net.ConnectivityDiagnosticsManager.ConnectivityReport;
 import static android.net.ConnectivityDiagnosticsManager.ConnectivityReport.KEY_NETWORK_PROBES_ATTEMPTED_BITMASK;
 import static android.net.ConnectivityDiagnosticsManager.ConnectivityReport.KEY_NETWORK_PROBES_SUCCEEDED_BITMASK;
 import static android.net.ConnectivityDiagnosticsManager.ConnectivityReport.KEY_NETWORK_VALIDATION_RESULT;
+import static android.net.ConnectivityDiagnosticsManager.ConnectivityReport.NETWORK_VALIDATION_RESULT_SKIPPED;
 import static android.net.ConnectivityDiagnosticsManager.ConnectivityReport.NETWORK_VALIDATION_RESULT_VALID;
 import static android.net.ConnectivityDiagnosticsManager.DataStallReport;
 import static android.net.ConnectivityDiagnosticsManager.DataStallReport.DETECTION_METHOD_DNS_EVENTS;
@@ -78,6 +79,7 @@ import androidx.test.InstrumentationRegistry;
 
 import com.android.internal.telephony.uicc.IccUtils;
 import com.android.internal.util.ArrayUtils;
+import com.android.modules.utils.build.SdkLevel;
 import com.android.net.module.util.ArrayTrackRecord;
 import com.android.testutils.DevSdkIgnoreRule.IgnoreUpTo;
 import com.android.testutils.DevSdkIgnoreRunner;
@@ -292,7 +294,7 @@ public class ConnectivityDiagnosticsManagerTest {
         final String interfaceName =
                 mConnectivityManager.getLinkProperties(network).getInterfaceName();
         connDiagsCallback.expectOnConnectivityReportAvailable(
-                network, interfaceName, TRANSPORT_CELLULAR);
+                network, interfaceName, TRANSPORT_CELLULAR, NETWORK_VALIDATION_RESULT_VALID);
         connDiagsCallback.assertNoCallback();
     }
 
@@ -423,9 +425,10 @@ public class ConnectivityDiagnosticsManagerTest {
 
         cb.expectOnNetworkConnectivityReported(mTestNetwork, hasConnectivity);
 
-        // if hasConnectivity does not match the network's known connectivity, it will be
-        // revalidated which will trigger another onConnectivityReportAvailable callback.
-        if (!hasConnectivity) {
+        // All calls to #onNetworkConnectivityReported are expected to be accompanied by a call to
+        // #onConnectivityReportAvailable for S+ (for R, ConnectivityReports were only sent when the
+        // Network was re-validated - when reported connectivity != known connectivity).
+        if (SdkLevel.isAtLeastS() || !hasConnectivity) {
             cb.expectOnConnectivityReportAvailable(mTestNetwork, interfaceName);
         }
 
@@ -479,11 +482,19 @@ public class ConnectivityDiagnosticsManagerTest {
 
         public void expectOnConnectivityReportAvailable(
                 @NonNull Network network, @NonNull String interfaceName) {
-            expectOnConnectivityReportAvailable(network, interfaceName, TRANSPORT_TEST);
+            // Test Networks both do not require validation and are not tested for validation. This
+            // results in the validation result being reported as SKIPPED for S+ (for R, the
+            // platform marked these Networks as VALID).
+            final int expectedNetworkValidationResult =
+                    SdkLevel.isAtLeastS()
+                            ? NETWORK_VALIDATION_RESULT_SKIPPED
+                            : NETWORK_VALIDATION_RESULT_VALID;
+            expectOnConnectivityReportAvailable(
+                    network, interfaceName, TRANSPORT_TEST, expectedNetworkValidationResult);
         }
 
-        public void expectOnConnectivityReportAvailable(
-                @NonNull Network network, @NonNull String interfaceName, int transportType) {
+        public void expectOnConnectivityReportAvailable(@NonNull Network network,
+                @NonNull String interfaceName, int transportType, int expectedValidationResult) {
             final ConnectivityReport result =
                     (ConnectivityReport) mHistory.poll(CALLBACK_TIMEOUT_MILLIS, x -> true);
             assertEquals(network, result.getNetwork());
@@ -496,9 +507,9 @@ public class ConnectivityDiagnosticsManagerTest {
 
             final PersistableBundle extras = result.getAdditionalInfo();
             assertTrue(extras.containsKey(KEY_NETWORK_VALIDATION_RESULT));
-            final int validationResult = extras.getInt(KEY_NETWORK_VALIDATION_RESULT);
-            assertEquals("Network validation result is not 'valid'",
-                    NETWORK_VALIDATION_RESULT_VALID, validationResult);
+            final int actualValidationResult = extras.getInt(KEY_NETWORK_VALIDATION_RESULT);
+            assertEquals("Network validation result is incorrect",
+                    expectedValidationResult, actualValidationResult);
 
             assertTrue(extras.containsKey(KEY_NETWORK_PROBES_SUCCEEDED_BITMASK));
             final int probesSucceeded = extras.getInt(KEY_NETWORK_VALIDATION_RESULT);
