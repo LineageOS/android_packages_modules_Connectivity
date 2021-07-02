@@ -9953,7 +9953,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
         // - The request for the mobile network preferred.
         // - The request for the default network, for fallback.
         requests.add(createDefaultInternetRequestForTransport(
-                TRANSPORT_CELLULAR, NetworkRequest.Type.LISTEN));
+                TRANSPORT_CELLULAR, NetworkRequest.Type.REQUEST));
         requests.add(createDefaultInternetRequestForTransport(
                 TYPE_NONE, NetworkRequest.Type.TRACK_DEFAULT));
         final Set<UidRange> ranges = new ArraySet<>();
