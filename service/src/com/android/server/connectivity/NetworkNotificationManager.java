@@ -274,7 +274,7 @@ public class NetworkNotificationManager {
                 .setWhen(System.currentTimeMillis())
                 .setShowWhen(notifyType == NotificationType.NETWORK_SWITCH)
                 .setSmallIcon(icon)
-                .setAutoCancel(true)
+                .setAutoCancel(r.getBoolean(R.bool.config_autoCancelNetworkNotifications))
                 .setTicker(title)
                 .setColor(mContext.getColor(android.R.color.system_notification_accent_color))
                 .setContentTitle(title)

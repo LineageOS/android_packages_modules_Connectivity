@@ -501,6 +501,7 @@ public class ConnectivityManagerTest {
     @Test
     public void testGetAllNetworkStateSnapshots()
             throws InterruptedException {
+        assumeTrue(mPackageManager.hasSystemFeature(FEATURE_TELEPHONY));
         // Make sure cell is active to retrieve IMSI for verification in later step.
         final Network cellNetwork = mCtsNetUtils.connectToCell();
         final String subscriberId = getSubscriberIdForCellNetwork(cellNetwork);
@@ -1079,7 +1080,7 @@ public class ConnectivityManagerTest {
         final Matcher m = Pattern.compile("^" + ssid + ";(true|false|none)$",
                 Pattern.MULTILINE | Pattern.UNIX_LINES).matcher(policyString);
         if (!m.find()) {
-            fail("Unexpected format from cmd netpolicy");
+            fail("Unexpected format from cmd netpolicy, policyString = " + policyString);
         }
         return m.group(1);
     }
