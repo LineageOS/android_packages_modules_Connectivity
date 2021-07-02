@@ -3261,11 +3261,6 @@ public class ConnectivityService extends IConnectivityManager.Stub
                 }
                 case NetworkAgent.EVENT_UNDERLYING_NETWORKS_CHANGED: {
                     // TODO: prevent loops, e.g., if a network declares itself as underlying.
-                    if (!nai.supportsUnderlyingNetworks()) {
-                        Log.wtf(TAG, "Non-virtual networks cannot have underlying networks");
-                        break;
-                    }
-
                     final List<Network> underlying = (List<Network>) arg.second;
 
                     if (isLegacyLockdownNai(nai)
@@ -5304,12 +5299,12 @@ public class ConnectivityService extends IConnectivityManager.Stub
      *         information, e.g underlying ifaces.
      */
     private UnderlyingNetworkInfo createVpnInfo(NetworkAgentInfo nai) {
-        if (!nai.isVPN()) return null;
-
         Network[] underlyingNetworks = nai.declaredUnderlyingNetworks;
         // see VpnService.setUnderlyingNetworks()'s javadoc about how to interpret
         // the underlyingNetworks list.
-        if (underlyingNetworks == null) {
+        // TODO: stop using propagateUnderlyingCapabilities here, for example, by always
+        // initializing NetworkAgentInfo#declaredUnderlyingNetworks to an empty array.
+        if (underlyingNetworks == null && nai.propagateUnderlyingCapabilities()) {
             final NetworkAgentInfo defaultNai = getDefaultNetworkForUid(
                     nai.networkCapabilities.getOwnerUid());
             if (defaultNai != null) {
@@ -5358,7 +5353,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
     private boolean hasUnderlyingNetwork(NetworkAgentInfo nai, Network network) {
         // TODO: support more than one level of underlying networks, either via a fixed-depth search
         // (e.g., 2 levels of underlying networks), or via loop detection, or....
-        if (!nai.supportsUnderlyingNetworks()) return false;
+        if (!nai.propagateUnderlyingCapabilities()) return false;
         final Network[] underlying = underlyingNetworksOrDefault(
                 nai.networkCapabilities.getOwnerUid(), nai.declaredUnderlyingNetworks);
         return CollectionUtils.contains(underlying, network);
@@ -7331,7 +7326,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
             newNc.addCapability(NET_CAPABILITY_NOT_ROAMING);
         }
 
-        if (nai.supportsUnderlyingNetworks()) {
+        if (nai.propagateUnderlyingCapabilities()) {
             applyUnderlyingCapabilities(nai.declaredUnderlyingNetworks, nai.declaredCapabilities,
                     newNc);
         }
@@ -8473,7 +8468,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
             networkAgent.networkCapabilities.addCapability(NET_CAPABILITY_FOREGROUND);
 
             if (!createNativeNetwork(networkAgent)) return;
-            if (networkAgent.supportsUnderlyingNetworks()) {
+            if (networkAgent.propagateUnderlyingCapabilities()) {
                 // Initialize the network's capabilities to their starting values according to the
                 // underlying networks. This ensures that the capabilities are correct before
                 // anything happens to the network.
@@ -9446,7 +9441,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
 
     private boolean ownsVpnRunningOverNetwork(int uid, Network network) {
         for (NetworkAgentInfo virtual : mNetworkAgentInfos) {
-            if (virtual.supportsUnderlyingNetworks()
+            if (virtual.propagateUnderlyingCapabilities()
                     && virtual.networkCapabilities.getOwnerUid() == uid
                     && CollectionUtils.contains(virtual.declaredUnderlyingNetworks, network)) {
                 return true;
