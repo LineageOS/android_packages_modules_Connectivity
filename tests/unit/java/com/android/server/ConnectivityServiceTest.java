@@ -6150,7 +6150,7 @@ public class ConnectivityServiceTest {
         verify(mStatsManager, atLeastOnce()).notifyNetworkStatus(networksCaptor.capture(),
                 any(List.class), eq(defaultIface), vpnInfosCaptor.capture());
 
-        assertSameElements(networksCaptor.getValue(), networks);
+        assertSameElements(networks, networksCaptor.getValue());
 
         List<UnderlyingNetworkInfo> infos = vpnInfosCaptor.getValue();
         if (vpnUid != null) {
@@ -6352,6 +6352,77 @@ public class ConnectivityServiceTest {
         expectNotifyNetworkStatus(wifiAndVpn, WIFI_IFNAME, Process.myUid(), VPN_IFNAME,
                 List.of(WIFI_IFNAME));
         reset(mStatsManager);
+    }
+
+    @Test
+    public void testNonVpnUnderlyingNetworks() throws Exception {
+        // Ensure wifi and cellular are not torn down.
+        for (int transport : new int[]{TRANSPORT_CELLULAR, TRANSPORT_WIFI}) {
+            final NetworkRequest request = new NetworkRequest.Builder()
+                    .addTransportType(transport)
+                    .removeCapability(NET_CAPABILITY_NOT_VCN_MANAGED)
+                    .build();
+            mCm.requestNetwork(request, new NetworkCallback());
+        }
+
+        // Connect a VCN-managed wifi network.
+        final LinkProperties wifiLp = new LinkProperties();
+        wifiLp.setInterfaceName(WIFI_IFNAME);
+        mWiFiNetworkAgent = new TestNetworkAgentWrapper(TRANSPORT_WIFI, wifiLp);
+        mWiFiNetworkAgent.removeCapability(NET_CAPABILITY_NOT_VCN_MANAGED);
+        mWiFiNetworkAgent.addCapability(NET_CAPABILITY_NOT_METERED);
+        mWiFiNetworkAgent.connect(true /* validated */);
+
+        final List<Network> none = List.of();
+        expectNotifyNetworkStatus(none, null);  // Wifi is not the default network
+
+        // Create a virtual network based on the wifi network.
+        final int ownerUid = 10042;
+        NetworkCapabilities nc = new NetworkCapabilities.Builder()
+                .setOwnerUid(ownerUid)
+                .setAdministratorUids(new int[]{ownerUid})
+                .build();
+        final String vcnIface = "ipsec42";
+        final LinkProperties lp = new LinkProperties();
+        lp.setInterfaceName(vcnIface);
+        final TestNetworkAgentWrapper vcn = new TestNetworkAgentWrapper(TRANSPORT_CELLULAR, lp, nc);
+        vcn.setUnderlyingNetworks(List.of(mWiFiNetworkAgent.getNetwork()));
+        vcn.connect(false /* validated */);
+
+        final TestNetworkCallback callback = new TestNetworkCallback();
+        mCm.registerDefaultNetworkCallback(callback);
+        callback.expectAvailableCallbacksUnvalidated(vcn);
+
+        // The underlying wifi network's capabilities are not propagated to the virtual network,
+        // but NetworkStatsService is informed of the underlying interface.
+        nc = mCm.getNetworkCapabilities(vcn.getNetwork());
+        assertFalse(nc.hasTransport(TRANSPORT_WIFI));
+        assertFalse(nc.hasCapability(NET_CAPABILITY_NOT_METERED));
+        final List<Network> onlyVcn = List.of(vcn.getNetwork());
+        expectNotifyNetworkStatus(onlyVcn, vcnIface, ownerUid, vcnIface, List.of(WIFI_IFNAME));
+
+        // Add NOT_METERED to the underlying network, check that it is not propagated.
+        mWiFiNetworkAgent.addCapability(NET_CAPABILITY_NOT_METERED);
+        callback.assertNoCallback();
+        nc = mCm.getNetworkCapabilities(vcn.getNetwork());
+        assertFalse(nc.hasCapability(NET_CAPABILITY_NOT_METERED));
+
+        // Switch underlying networks.
+        final LinkProperties cellLp = new LinkProperties();
+        cellLp.setInterfaceName(MOBILE_IFNAME);
+        mCellNetworkAgent = new TestNetworkAgentWrapper(TRANSPORT_CELLULAR, cellLp);
+        mCellNetworkAgent.removeCapability(NET_CAPABILITY_NOT_VCN_MANAGED);
+        mCellNetworkAgent.addCapability(NET_CAPABILITY_NOT_ROAMING);
+        mCellNetworkAgent.connect(false /* validated */);
+        vcn.setUnderlyingNetworks(List.of(mCellNetworkAgent.getNetwork()));
+
+        // The underlying capability changes do not propagate to the virtual network, but
+        // NetworkStatsService is informed of the new underlying interface.
+        callback.assertNoCallback();
+        nc = mCm.getNetworkCapabilities(vcn.getNetwork());
+        assertFalse(nc.hasTransport(TRANSPORT_WIFI));
+        assertFalse(nc.hasCapability(NET_CAPABILITY_NOT_ROAMING));
+        expectNotifyNetworkStatus(onlyVcn, vcnIface, ownerUid, vcnIface, List.of(MOBILE_IFNAME));
     }
 
     @Test
