@@ -361,6 +361,7 @@ public class TetheringManagerTest {
     @Test
     public void testRequestLatestEntitlementResult() throws Exception {
         assumeTrue(mTM.isTetheringSupported());
+        assumeTrue(mPm.hasSystemFeature(FEATURE_TELEPHONY));
         // Verify that requestLatestTetheringEntitlementResult() can get entitlement
         // result(TETHER_ERROR_ENTITLEMENT_UNKNOWN due to invalid downstream type) via listener.
         assertEntitlementResult(listener -> mTM.requestLatestTetheringEntitlementResult(
