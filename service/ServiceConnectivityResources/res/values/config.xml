@@ -111,4 +111,7 @@
          notification that can be dismissed. -->
     <bool name="config_ongoingSignInNotification">false</bool>
 
+    <!-- Whether to cancel network notifications automatically when tapped -->
+    <bool name="config_autoCancelNetworkNotifications">true</bool>
+
 </resources>

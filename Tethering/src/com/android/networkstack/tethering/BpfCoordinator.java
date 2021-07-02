@@ -1069,11 +1069,13 @@ public class BpfCoordinator {
             throw new AssertionError("IP address array not valid IPv4 address!");
         }
 
-        final long ageMs = (now - value.lastUsed) / 1_000_000;
-        return String.format("[%s] %d(%s) %s:%d -> %d(%s) %s:%d -> %s:%d [%s] %dms",
-                key.dstMac, key.iif, getIfName(key.iif), src4, key.srcPort,
+        final String protoStr = (key.l4proto == OsConstants.IPPROTO_TCP) ? "tcp" : "udp";
+        final String ageStr = (value.lastUsed == 0) ? "-"
+                : String.format("%dms", (now - value.lastUsed) / 1_000_000);
+        return String.format("%s [%s] %d(%s) %s:%d -> %d(%s) %s:%d -> %s:%d [%s] %s",
+                protoStr, key.dstMac, key.iif, getIfName(key.iif), src4, key.srcPort,
                 value.oif, getIfName(value.oif),
-                public4, publicPort, dst4, value.dstPort, value.ethDstMac, ageMs);
+                public4, publicPort, dst4, value.dstPort, value.ethDstMac, ageStr);
     }
 
     private void dumpIpv4ForwardingRuleMap(long now, boolean downstream,
@@ -1094,12 +1096,14 @@ public class BpfCoordinator {
 
         try (BpfMap<Tether4Key, Tether4Value> upstreamMap = mDeps.getBpfUpstream4Map();
                 BpfMap<Tether4Key, Tether4Value> downstreamMap = mDeps.getBpfDownstream4Map()) {
-            pw.println("IPv4 Upstream: [inDstMac] iif(iface) src -> nat -> dst [outDstMac] age");
+            pw.println("IPv4 Upstream: proto [inDstMac] iif(iface) src -> nat -> "
+                    + "dst [outDstMac] age");
             pw.increaseIndent();
             dumpIpv4ForwardingRuleMap(now, UPSTREAM, upstreamMap, pw);
             pw.decreaseIndent();
 
-            pw.println("IPv4 Downstream: [inDstMac] iif(iface) src -> nat -> dst [outDstMac] age");
+            pw.println("IPv4 Downstream: proto [inDstMac] iif(iface) src -> nat -> "
+                    + "dst [outDstMac] age");
             pw.increaseIndent();
             dumpIpv4ForwardingRuleMap(now, DOWNSTREAM, downstreamMap, pw);
             pw.decreaseIndent();

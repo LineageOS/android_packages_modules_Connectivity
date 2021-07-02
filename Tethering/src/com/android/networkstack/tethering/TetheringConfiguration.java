@@ -176,7 +176,9 @@ public class TetheringConfiguration {
         // us an interface name. Careful consideration needs to be given to
         // implications for Settings and for provisioning checks.
         tetherableWifiRegexs = getResourceStringArray(res, R.array.config_tether_wifi_regexs);
-        tetherableWigigRegexs = getResourceStringArray(res, R.array.config_tether_wigig_regexs);
+        // TODO: Remove entire wigig code once tethering module no longer support R devices.
+        tetherableWigigRegexs = SdkLevel.isAtLeastS()
+                ? new String[0] : getResourceStringArray(res, R.array.config_tether_wigig_regexs);
         tetherableWifiP2pRegexs = getResourceStringArray(
                 res, R.array.config_tether_wifi_p2p_regexs);
         tetherableBluetoothRegexs = getResourceStringArray(
