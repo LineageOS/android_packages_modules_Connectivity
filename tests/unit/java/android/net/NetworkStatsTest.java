@@ -734,6 +734,56 @@ public class NetworkStatsTest {
                 ROAMING_ALL, DEFAULT_NETWORK_ALL, 50500L, 27L, 100200L, 55, 0);
     }
 
+    // Tests a case where an PlatformVpn is used, where the entire datapath is in the kernel,
+    // including all encapsulation/decapsulation.
+    @Test
+    public void testMigrateTun_platformVpn() {
+        final int ownerUid = Process.SYSTEM_UID;
+        final String tunIface = "ipsec1";
+        final String underlyingIface = "wlan0";
+        NetworkStats delta = new NetworkStats(TEST_START, 9)
+                // 2 different apps sent/receive data via ipsec1.
+                .insertEntry(tunIface, 10100, SET_DEFAULT, TAG_NONE, METERED_NO, ROAMING_NO,
+                        DEFAULT_NETWORK_NO, 50000L, 25L, 100000L, 50L, 0L)
+                .insertEntry(tunIface, 20100, SET_DEFAULT, TAG_NONE, METERED_NO, ROAMING_NO,
+                        DEFAULT_NETWORK_NO, 500L, 2L, 200L, 5L, 0L)
+                // Owner (system) sends data through the tunnel
+                .insertEntry(tunIface, ownerUid, SET_DEFAULT, TAG_NONE, METERED_NO, ROAMING_NO,
+                        DEFAULT_NETWORK_NO, 2000L, 20L, 3000L, 30L, 0L)
+                // 1 app already has some traffic on the underlying interface, the other doesn't yet
+                .insertEntry(underlyingIface, 10100, SET_DEFAULT, TAG_NONE, METERED_NO, ROAMING_NO,
+                        DEFAULT_NETWORK_NO, 1000L, 10L, 2000L, 20L, 0L);
+
+        delta.migrateTun(ownerUid, tunIface, Arrays.asList(underlyingIface));
+        assertEquals(9, delta.size()); // 3 DBG entries + 1 entry per app per interface
+
+        // tunIface entries should not be changed.
+        assertValues(delta, 0, tunIface, 10100, SET_DEFAULT, TAG_NONE, METERED_NO, ROAMING_NO,
+                DEFAULT_NETWORK_NO, 50000L, 25L, 100000L, 50L, 0L);
+        assertValues(delta, 1, tunIface, 20100, SET_DEFAULT, TAG_NONE, METERED_NO, ROAMING_NO,
+                DEFAULT_NETWORK_NO, 500L, 2L, 200L, 5L, 0L);
+        assertValues(delta, 2, tunIface, ownerUid, SET_DEFAULT, TAG_NONE, METERED_NO, ROAMING_NO,
+                DEFAULT_NETWORK_NO, 2000L, 20L, 3000L, 30L, 0L);
+
+        // Existing underlying Iface entries are updated to include usage over ipsec1
+        assertValues(delta, 3, underlyingIface, 10100, SET_DEFAULT, TAG_NONE, METERED_NO,
+                ROAMING_NO, DEFAULT_NETWORK_NO, 51000L, 35L, 102000L, 70L, 0L);
+
+        // New entries are added on underlying Iface traffic
+        assertContains(delta, underlyingIface, ownerUid, SET_DEFAULT, TAG_NONE, METERED_NO,
+                ROAMING_NO, DEFAULT_NETWORK_NO, 2000L, 20L, 3000L, 30L, 0L);
+        assertContains(delta, underlyingIface, 20100, SET_DEFAULT, TAG_NONE, METERED_NO,
+                ROAMING_NO, DEFAULT_NETWORK_NO, 500L, 2L, 200L, 5L, 0L);
+
+        // New entries are added for debug purpose
+        assertContains(delta, underlyingIface, 10100, SET_DBG_VPN_IN, TAG_NONE, METERED_NO,
+                ROAMING_NO, DEFAULT_NETWORK_NO, 50000L, 25L, 100000L, 50L, 0L);
+        assertContains(delta, underlyingIface, 20100, SET_DBG_VPN_IN, TAG_NONE, METERED_NO,
+                ROAMING_NO, DEFAULT_NETWORK_NO, 500, 2L, 200L, 5L, 0L);
+        assertContains(delta, underlyingIface, ownerUid, SET_DBG_VPN_IN, TAG_NONE, METERED_NO,
+                ROAMING_NO, DEFAULT_NETWORK_NO, 2000L, 20L, 3000L, 30L, 0L);
+    }
+
     @Test
     public void testFilter_NoFilter() {
         NetworkStats.Entry entry1 = new NetworkStats.Entry(
