@@ -10221,6 +10221,9 @@ public class ConnectivityServiceTest {
     public void testConnectivityDiagnosticsCallbackOnConnectivityReported() throws Exception {
         setUpConnectivityDiagnosticsCallback();
 
+        // reset to ignore callbacks from setup
+        reset(mConnectivityDiagnosticsCallback);
+
         final Network n = mCellNetworkAgent.getNetwork();
         final boolean hasConnectivity = true;
         mService.reportNetworkConnectivity(n, hasConnectivity);
@@ -10231,6 +10234,8 @@ public class ConnectivityServiceTest {
         // Verify onNetworkConnectivityReported fired
         verify(mConnectivityDiagnosticsCallback)
                 .onNetworkConnectivityReported(eq(n), eq(hasConnectivity));
+        verify(mConnectivityDiagnosticsCallback).onConnectivityReportAvailable(
+                argThat(report -> areConnDiagCapsRedacted(report.getNetworkCapabilities())));
 
         final boolean noConnectivity = false;
         mService.reportNetworkConnectivity(n, noConnectivity);
@@ -10241,6 +10246,54 @@ public class ConnectivityServiceTest {
         // Wait for onNetworkConnectivityReported to fire
         verify(mConnectivityDiagnosticsCallback)
                 .onNetworkConnectivityReported(eq(n), eq(noConnectivity));
+
+        // Also expect a ConnectivityReport after NetworkMonitor asynchronously re-validates
+        verify(mConnectivityDiagnosticsCallback, timeout(TIMEOUT_MS).times(2))
+                .onConnectivityReportAvailable(
+                        argThat(report ->
+                                areConnDiagCapsRedacted(report.getNetworkCapabilities())));
+    }
+
+    @Test
+    public void testConnectivityDiagnosticsCallbackOnConnectivityReportedSeparateUid()
+            throws Exception {
+        setUpConnectivityDiagnosticsCallback();
+
+        // reset to ignore callbacks from setup
+        reset(mConnectivityDiagnosticsCallback);
+
+        // report known Connectivity from a different uid. Verify that network is not re-validated
+        // and this callback is not notified.
+        final Network n = mCellNetworkAgent.getNetwork();
+        final boolean hasConnectivity = true;
+        doAsUid(Process.myUid() + 1, () -> mService.reportNetworkConnectivity(n, hasConnectivity));
+
+        // Block until all other events are done processing.
+        HandlerUtils.waitForIdle(mCsHandlerThread, TIMEOUT_MS);
+
+        // Verify onNetworkConnectivityReported did not fire
+        verify(mConnectivityDiagnosticsCallback, never())
+                .onNetworkConnectivityReported(any(), anyBoolean());
+        verify(mConnectivityDiagnosticsCallback, never())
+                .onConnectivityReportAvailable(any());
+
+        // report different Connectivity from a different uid. Verify that network is re-validated
+        // and that this callback is notified.
+        final boolean noConnectivity = false;
+        doAsUid(Process.myUid() + 1, () -> mService.reportNetworkConnectivity(n, noConnectivity));
+
+        // Block until all other events are done processing.
+        HandlerUtils.waitForIdle(mCsHandlerThread, TIMEOUT_MS);
+
+        // Wait for onNetworkConnectivityReported to fire
+        verify(mConnectivityDiagnosticsCallback, timeout(TIMEOUT_MS))
+                .onNetworkConnectivityReported(eq(n), eq(noConnectivity));
+
+        // Also expect a ConnectivityReport after NetworkMonitor asynchronously re-validates
+        verify(mConnectivityDiagnosticsCallback, timeout(TIMEOUT_MS))
+                .onConnectivityReportAvailable(
+                        argThat(report ->
+                                areConnDiagCapsRedacted(report.getNetworkCapabilities())));
     }
 
     @Test
