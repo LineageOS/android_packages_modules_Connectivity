@@ -13503,43 +13503,43 @@ public class ConnectivityServiceTest {
     }
 
     @Test
-    public void testSetMobileDataPreferredUids_noIssueToFactory() throws Exception {
-        // First set mobile data preferred uid to create a multi-layer requests: 1. listen for
+    public void testMultilayerRequestsOfSetMobileDataPreferredUids() throws Exception {
+        // First set mobile data preferred uid to create a multi-layer requests: 1. request for
         // cellular, 2. track the default network for fallback.
         setAndUpdateMobileDataPreferredUids(
                 Set.of(PRIMARY_USER_HANDLE.getUid(TEST_PACKAGE_UID)));
 
         final HandlerThread handlerThread = new HandlerThread("MockFactory");
         handlerThread.start();
-        NetworkCapabilities internetFilter = new NetworkCapabilities()
+        final NetworkCapabilities cellFilter = new NetworkCapabilities()
+                .addTransportType(TRANSPORT_CELLULAR)
                 .addCapability(NET_CAPABILITY_INTERNET)
                 .addCapability(NET_CAPABILITY_NOT_VCN_MANAGED);
-        final MockNetworkFactory internetFactory = new MockNetworkFactory(handlerThread.getLooper(),
-                mServiceContext, "internetFactory", internetFilter, mCsHandlerThread);
-        internetFactory.setScoreFilter(40);
+        final MockNetworkFactory cellFactory = new MockNetworkFactory(handlerThread.getLooper(),
+                mServiceContext, "cellFactory", cellFilter, mCsHandlerThread);
+        cellFactory.setScoreFilter(40);
 
         try {
-            internetFactory.register();
-            // Default internet request only. The first request is listen for cellular network,
-            // which is never sent to factories (it's a LISTEN, not requestable). The second
-            // fallback request is TRACK_DEFAULT which is also not sent to factories.
-            internetFactory.expectRequestAdds(1);
-            internetFactory.assertRequestCountEquals(1);
+            cellFactory.register();
+            // Default internet request and the mobile data preferred request.
+            cellFactory.expectRequestAdds(2);
+            cellFactory.assertRequestCountEquals(2);
 
-            mCellNetworkAgent = new TestNetworkAgentWrapper(TRANSPORT_CELLULAR);
-            mCellNetworkAgent.connect(true);
+            mWiFiNetworkAgent = new TestNetworkAgentWrapper(TRANSPORT_WIFI);
+            mWiFiNetworkAgent.connect(true);
 
-            // The internet factory however is outscored, and should lose its requests.
-            internetFactory.expectRequestRemove();
-            internetFactory.assertRequestCountEquals(0);
+            // The cellFactory however is outscored, and should lose default internet request.
+            // But it should still see mobile data preferred request.
+            cellFactory.expectRequestRemove();
+            cellFactory.assertRequestCountEquals(1);
 
-            mCellNetworkAgent.disconnect();
+            mWiFiNetworkAgent.disconnect();
             // The network satisfying the default internet request has disconnected, so the
-            // internetFactory sees the default request again.
-            internetFactory.expectRequestAdds(1);
-            internetFactory.assertRequestCountEquals(1);
+            // cellFactory sees the default internet requests again.
+            cellFactory.expectRequestAdd();
+            cellFactory.assertRequestCountEquals(2);
         } finally {
-            internetFactory.terminate();
+            cellFactory.terminate();
             handlerThread.quitSafely();
         }
     }
