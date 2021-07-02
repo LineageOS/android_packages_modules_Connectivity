@@ -57,7 +57,6 @@ java_library {
         ":net-module-utils-srcs",
     ],
     libs: [
-        "android_system_server_stubs_current",
         "framework-annotations-lib",
         "framework-connectivity.impl",
         "framework-tethering.stubs.module_lib",
