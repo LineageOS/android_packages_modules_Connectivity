@@ -101,6 +101,7 @@ import com.android.testutils.RecorderCallback.CallbackEntry.Lost
 import com.android.testutils.TestableNetworkCallback
 import org.junit.After
 import org.junit.Assert.assertArrayEquals
+import org.junit.Assume.assumeFalse
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -1034,6 +1035,9 @@ class NetworkAgentTest {
 
     @Test
     fun testQosCallbackRegisterWithUnregister() {
+        // Instant apps can't bind sockets to localhost
+        // TODO: use @AppModeFull when supported by DevSdkIgnoreRunner
+        assumeFalse(realContext.packageManager.isInstantApp())
         val (agent, socket) = setupForQosCallbackTesting()
 
         val qosCallback = TestableQosCallback()
@@ -1060,6 +1064,9 @@ class NetworkAgentTest {
 
     @Test
     fun testQosCallbackOnQosSession() {
+        // Instant apps can't bind sockets to localhost
+        // TODO: use @AppModeFull when supported by DevSdkIgnoreRunner
+        assumeFalse(realContext.packageManager.isInstantApp())
         val (agent, socket) = setupForQosCallbackTesting()
         val qosCallback = TestableQosCallback()
         Executors.newSingleThreadExecutor().let { executor ->
@@ -1104,6 +1111,9 @@ class NetworkAgentTest {
 
     @Test
     fun testQosCallbackOnError() {
+        // Instant apps can't bind sockets to localhost
+        // TODO: use @AppModeFull when supported by DevSdkIgnoreRunner
+        assumeFalse(realContext.packageManager.isInstantApp())
         val (agent, socket) = setupForQosCallbackTesting()
         val qosCallback = TestableQosCallback()
         Executors.newSingleThreadExecutor().let { executor ->
@@ -1142,6 +1152,9 @@ class NetworkAgentTest {
 
     @Test
     fun testQosCallbackIdsAreMappedCorrectly() {
+        // Instant apps can't bind sockets to localhost
+        // TODO: use @AppModeFull when supported by DevSdkIgnoreRunner
+        assumeFalse(realContext.packageManager.isInstantApp())
         val (agent, socket) = setupForQosCallbackTesting()
         val qosCallback1 = TestableQosCallback()
         val qosCallback2 = TestableQosCallback()
@@ -1182,6 +1195,9 @@ class NetworkAgentTest {
 
     @Test
     fun testQosCallbackWhenNetworkReleased() {
+        // Instant apps can't bind sockets to localhost
+        // TODO: use @AppModeFull when supported by DevSdkIgnoreRunner
+        assumeFalse(realContext.packageManager.isInstantApp())
         val (agent, socket) = setupForQosCallbackTesting()
         Executors.newSingleThreadExecutor().let { executor ->
             try {
