@@ -157,8 +157,8 @@ public class NetworkAgentInfo implements Comparable<NetworkAgentInfo>, NetworkRa
     @NonNull public NetworkCapabilities networkCapabilities;
     @NonNull public final NetworkAgentConfig networkAgentConfig;
 
-    // Underlying networks declared by the agent. Only set if supportsUnderlyingNetworks is true.
-    // The networks in this list might be declared by a VPN app using setUnderlyingNetworks and are
+    // Underlying networks declared by the agent.
+    // The networks in this list might be declared by a VPN using setUnderlyingNetworks and are
     // not guaranteed to be current or correct, or even to exist.
     //
     // This array is read and iterated on multiple threads with no locking so its contents must
@@ -168,7 +168,7 @@ public class NetworkAgentInfo implements Comparable<NetworkAgentInfo>, NetworkRa
 
     // The capabilities originally announced by the NetworkAgent, regardless of any capabilities
     // that were added or removed due to this network's underlying networks.
-    // Only set if #supportsUnderlyingNetworks is true.
+    // Only set if #propagateUnderlyingCapabilities is true.
     public @Nullable NetworkCapabilities declaredCapabilities;
 
     // Indicates if netd has been told to create this Network. From this point on the appropriate
@@ -898,8 +898,11 @@ public class NetworkAgentInfo implements Comparable<NetworkAgentInfo>, NetworkRa
         return networkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_VPN);
     }
 
-    /** Whether this network might have underlying networks. Currently only true for VPNs. */
-    public boolean supportsUnderlyingNetworks() {
+    /**
+     * Whether this network should propagate the capabilities from its underlying networks.
+     * Currently only true for VPNs.
+     */
+    public boolean propagateUnderlyingCapabilities() {
         return isVPN();
     }
 
