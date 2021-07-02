@@ -2880,6 +2880,10 @@ public class ConnectivityManagerTest {
     public void testUidsAllowedOnRestrictedNetworks() throws Exception {
         assumeTrue(TestUtils.shouldTestSApis());
 
+        // TODO (b/175199465): figure out a reasonable permission check for
+        //  setUidsAllowedOnRestrictedNetworks that allows tests but not system-external callers.
+        assumeTrue(Build.isDebuggable());
+
         final int uid = mPackageManager.getPackageUid(mContext.getPackageName(), 0 /* flag */);
         final Set<Integer> originalUidsAllowedOnRestrictedNetworks =
                 ConnectivitySettingsManager.getUidsAllowedOnRestrictedNetworks(mContext);
@@ -2887,8 +2891,9 @@ public class ConnectivityManagerTest {
         // because it has been just installed to device. In case the uid is existed in setting
         // mistakenly, try to remove the uid and set correct uids to setting.
         originalUidsAllowedOnRestrictedNetworks.remove(uid);
-        ConnectivitySettingsManager.setUidsAllowedOnRestrictedNetworks(mContext,
-                originalUidsAllowedOnRestrictedNetworks);
+        runWithShellPermissionIdentity(() ->
+                ConnectivitySettingsManager.setUidsAllowedOnRestrictedNetworks(
+                        mContext, originalUidsAllowedOnRestrictedNetworks), NETWORK_SETTINGS);
 
         final Handler h = new Handler(Looper.getMainLooper());
         final TestableNetworkCallback testNetworkCb = new TestableNetworkCallback();
@@ -2935,8 +2940,9 @@ public class ConnectivityManagerTest {
             final Set<Integer> newUidsAllowedOnRestrictedNetworks =
                     new ArraySet<>(originalUidsAllowedOnRestrictedNetworks);
             newUidsAllowedOnRestrictedNetworks.add(uid);
-            ConnectivitySettingsManager.setUidsAllowedOnRestrictedNetworks(mContext,
-                    newUidsAllowedOnRestrictedNetworks);
+            runWithShellPermissionIdentity(() ->
+                    ConnectivitySettingsManager.setUidsAllowedOnRestrictedNetworks(
+                            mContext, newUidsAllowedOnRestrictedNetworks), NETWORK_SETTINGS);
             // Wait a while for sending allowed uids on the restricted network to netd.
             // TODD: Have a significant signal to know the uids has been send to netd.
             assertBindSocketToNetworkSuccess(network);
@@ -2945,8 +2951,9 @@ public class ConnectivityManagerTest {
             agent.unregister();
 
             // Restore setting.
-            ConnectivitySettingsManager.setUidsAllowedOnRestrictedNetworks(mContext,
-                    originalUidsAllowedOnRestrictedNetworks);
+            runWithShellPermissionIdentity(() ->
+                    ConnectivitySettingsManager.setUidsAllowedOnRestrictedNetworks(
+                            mContext, originalUidsAllowedOnRestrictedNetworks), NETWORK_SETTINGS);
         }
     }
 }

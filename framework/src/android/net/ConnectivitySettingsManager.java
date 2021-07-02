@@ -29,6 +29,8 @@ import android.annotation.Nullable;
 import android.annotation.SystemApi;
 import android.content.Context;
 import android.net.ConnectivityManager.MultipathPreference;
+import android.os.Binder;
+import android.os.Build;
 import android.os.Process;
 import android.os.UserHandle;
 import android.provider.Settings;
@@ -1039,6 +1041,15 @@ public class ConnectivitySettingsManager {
         return getUidSetFromString(uidList);
     }
 
+    private static boolean isCallingFromSystem() {
+        final int uid = Binder.getCallingUid();
+        final int pid = Binder.getCallingPid();
+        if (uid == Process.SYSTEM_UID && pid == Process.myPid()) {
+            return true;
+        }
+        return false;
+    }
+
     /**
      * Set the list of uids(from {@link Settings}) that is allowed to use restricted networks.
      *
@@ -1047,6 +1058,15 @@ public class ConnectivitySettingsManager {
      */
     public static void setUidsAllowedOnRestrictedNetworks(@NonNull Context context,
             @NonNull Set<Integer> uidList) {
+        final boolean calledFromSystem = isCallingFromSystem();
+        if (!calledFromSystem) {
+            // Enforce NETWORK_SETTINGS check if it's debug build. This is for MTS test only.
+            if (!Build.isDebuggable()) {
+                throw new SecurityException("Only system can set this setting.");
+            }
+            context.enforceCallingOrSelfPermission(android.Manifest.permission.NETWORK_SETTINGS,
+                    "Requires NETWORK_SETTINGS permission");
+        }
         final String uids = getUidStringFromSet(uidList);
         Settings.Global.putString(context.getContentResolver(), UIDS_ALLOWED_ON_RESTRICTED_NETWORKS,
                 uids);
