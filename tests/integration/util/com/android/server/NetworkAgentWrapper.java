@@ -55,6 +55,7 @@ import com.android.net.module.util.ArrayTrackRecord;
 import com.android.testutils.HandlerUtils;
 import com.android.testutils.TestableNetworkCallback;
 
+import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -253,6 +254,15 @@ public class NetworkAgentWrapper implements TestableNetworkCallback.HasNetwork {
         if (sendToConnectivityService) {
             mNetworkAgent.sendNetworkCapabilities(mNetworkCapabilities);
         }
+    }
+
+    public void setUnderlyingNetworks(List<Network> underlyingNetworks) {
+        mNetworkAgent.setUnderlyingNetworks(underlyingNetworks);
+    }
+
+    public void setOwnerUid(int uid) {
+        mNetworkCapabilities.setOwnerUid(uid);
+        mNetworkAgent.sendNetworkCapabilities(mNetworkCapabilities);
     }
 
     public void connect() {
