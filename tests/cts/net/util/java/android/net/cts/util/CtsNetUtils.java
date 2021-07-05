@@ -73,11 +73,13 @@ import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.stream.Collectors;
 
 public final class CtsNetUtils {
     private static final String TAG = CtsNetUtils.class.getSimpleName();
@@ -211,32 +213,27 @@ public final class CtsNetUtils {
         filter.addAction(ConnectivityManager.CONNECTIVITY_ACTION);
         mContext.registerReceiver(receiver, filter);
 
-        boolean connected = false;
-        final String err = "Wifi must be configured to connect to an access point for this test";
         try {
-            clearWifiBlacklist();
+            // Clear the wifi config blocklist (not the BSSID blocklist)
+            clearWifiBlocklist();
             SystemUtil.runShellCommand("svc wifi enable");
-            final WifiConfiguration config = maybeAddVirtualWifiConfiguration();
-            if (config == null) {
-                // TODO: this may not clear the BSSID blacklist, as opposed to
-                // mWifiManager.connect(config)
-                assertTrue("Error reconnecting wifi", runAsShell(NETWORK_SETTINGS,
-                        mWifiManager::reconnect));
-            } else {
-                // When running CTS, devices are expected to have wifi networks pre-configured.
-                // This condition is only hit on virtual devices.
-                final Integer error = runAsShell(NETWORK_SETTINGS, () -> {
-                    final ConnectWifiListener listener = new ConnectWifiListener();
-                    mWifiManager.connect(config, listener);
-                    return listener.connectFuture.get(
-                            CONNECTIVITY_CHANGE_TIMEOUT_SECS, TimeUnit.SECONDS);
-                });
-                assertNull("Error connecting to wifi: " + error, error);
-            }
+            final WifiConfiguration config = getOrCreateWifiConfiguration();
+
+            final Integer error = runAsShell(NETWORK_SETTINGS, () -> {
+                final ConnectWifiListener listener = new ConnectWifiListener();
+                mWifiManager.connect(config, listener);
+                return listener.connectFuture.get(
+                        CONNECTIVITY_CHANGE_TIMEOUT_SECS, TimeUnit.SECONDS);
+            });
+            assertNull("Error connecting to wifi: " + error, error);
+
             // Ensure we get an onAvailable callback and possibly a CONNECTIVITY_ACTION.
             wifiNetwork = callback.waitForAvailable();
-            assertNotNull(err + ": onAvailable callback not received", wifiNetwork);
-            connected = !expectLegacyBroadcast || receiver.waitForState();
+            assertNotNull("onAvailable callback not received after connecting to " + config.SSID,
+                    wifiNetwork);
+            final boolean connected = !expectLegacyBroadcast || receiver.waitForState();
+            assertTrue("CONNECTIVITY_ACTION not received after connecting to " + config.SSID,
+                    connected);
         } catch (InterruptedException ex) {
             fail("connectToWifi was interrupted");
         } finally {
@@ -244,7 +241,6 @@ public final class CtsNetUtils {
             mContext.unregisterReceiver(receiver);
         }
 
-        assertTrue(err + ": CONNECTIVITY_ACTION not received", connected);
         return wifiNetwork;
     }
 
@@ -264,7 +260,7 @@ public final class CtsNetUtils {
         }
     }
 
-    private WifiConfiguration maybeAddVirtualWifiConfiguration() {
+    private WifiConfiguration getOrCreateWifiConfiguration() {
         final List<WifiConfiguration> configs = runAsShell(NETWORK_SETTINGS,
                 mWifiManager::getConfiguredNetworks);
         // If no network is configured, add a config for virtual access points if applicable
@@ -275,8 +271,21 @@ public final class CtsNetUtils {
 
             return virtualConfig;
         }
-        // No need to add a configuration: there is already one
-        return null;
+        // No need to add a configuration: there is already one.
+        if (configs.size() > 1) {
+            // For convenience in case of local testing on devices with multiple saved configs,
+            // prefer the first configuration that is in range.
+            // In actual tests, there should only be one configuration, and it should be usable as
+            // assumed by WifiManagerTest.testConnect.
+            Log.w(TAG, "Multiple wifi configurations found: "
+                    + configs.stream().map(c -> c.SSID).collect(Collectors.joining(", ")));
+            final Set<String> scanResults = getWifiScanResults().stream().map(
+                    s -> "\"" + s.SSID + "\"").collect(Collectors.toSet());
+            Log.i(TAG, "Scan results: " + scanResults);
+            return configs.stream().filter(c -> scanResults.contains(c.SSID))
+                    .findFirst().orElse(configs.get(0));
+        }
+        return configs.get(0);
     }
 
     private List<ScanResult> getWifiScanResults() {
@@ -327,11 +336,11 @@ public final class CtsNetUtils {
     }
 
     /**
-     * Re-enable wifi networks that were blacklisted, typically because no internet connection was
+     * Re-enable wifi networks that were blocklisted, typically because no internet connection was
      * detected the last time they were connected. This is necessary to make sure wifi can reconnect
      * to them.
      */
-    private void clearWifiBlacklist() {
+    private void clearWifiBlocklist() {
         runAsShell(NETWORK_SETTINGS, ACCESS_WIFI_STATE, () -> {
             for (WifiConfiguration cfg : mWifiManager.getConfiguredNetworks()) {
                 assertTrue(mWifiManager.enableNetwork(cfg.networkId, false /* attemptConnect */));
