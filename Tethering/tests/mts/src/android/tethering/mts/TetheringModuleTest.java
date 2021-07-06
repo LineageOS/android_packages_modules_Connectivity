@@ -22,7 +22,6 @@ import static android.Manifest.permission.READ_DEVICE_CONFIG;
 import static android.Manifest.permission.TETHER_PRIVILEGED;
 import static android.Manifest.permission.WRITE_SETTINGS;
 import static android.net.TetheringManager.TETHERING_WIFI;
-import static android.net.cts.util.CtsTetheringUtils.isWifiTetheringSupported;
 import static android.provider.DeviceConfig.NAMESPACE_CONNECTIVITY;
 
 import static com.android.testutils.TestNetworkTrackerKt.initTestNetwork;
@@ -102,8 +101,7 @@ public class TetheringModuleTest {
 
         TestNetworkTracker tnt = null;
         try {
-            tetherEventCallback.assumeTetheringSupported();
-            assumeTrue(isWifiTetheringSupported(mContext, tetherEventCallback));
+            tetherEventCallback.assumeWifiTetheringSupported(mContext);
             tetherEventCallback.expectNoTetheringActive();
 
             final TetheringInterface tetheredIface =
