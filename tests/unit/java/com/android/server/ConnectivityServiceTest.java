@@ -396,7 +396,7 @@ import kotlin.reflect.KClass;
 public class ConnectivityServiceTest {
     private static final String TAG = "ConnectivityServiceTest";
 
-    private static final int TIMEOUT_MS = 500;
+    private static final int TIMEOUT_MS = 2_000;
     // Broadcasts can take a long time to be delivered. The test will not wait for that long unless
     // there is a failure, so use a long timeout.
     private static final int BROADCAST_TIMEOUT_MS = 30_000;

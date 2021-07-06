@@ -51,6 +51,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doCallRealMethod;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.reset;
@@ -140,6 +141,10 @@ public class PermissionMonitorTest {
                 .thenReturn(Context.SYSTEM_CONFIG_SERVICE);
         when(mContext.getSystemService(Context.SYSTEM_CONFIG_SERVICE))
                 .thenReturn(mSystemConfigManager);
+        if (mContext.getSystemService(SystemConfigManager.class) == null) {
+            // Test is using mockito-extended
+            doCallRealMethod().when(mContext).getSystemService(SystemConfigManager.class);
+        }
         when(mSystemConfigManager.getSystemPermissionUids(anyString())).thenReturn(new int[0]);
         final Context asUserCtx = mock(Context.class, AdditionalAnswers.delegatesTo(mContext));
         doReturn(UserHandle.ALL).when(asUserCtx).getUser();
