@@ -42,11 +42,12 @@ import android.net.metrics.NetworkEvent;
 import android.net.metrics.RaEvent;
 import android.net.metrics.ValidationProbeEvent;
 import android.net.metrics.WakeupStats;
+import android.os.Build;
 import android.test.suitebuilder.annotation.SmallTest;
 
-import androidx.test.runner.AndroidJUnit4;
-
 import com.android.server.connectivity.metrics.nano.IpConnectivityLogClass.IpConnectivityEvent;
+import com.android.testutils.DevSdkIgnoreRule;
+import com.android.testutils.DevSdkIgnoreRunner;
 
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -55,8 +56,9 @@ import java.util.Arrays;
 import java.util.List;
 
 // TODO: instead of comparing textpb to textpb, parse textpb and compare proto to proto.
-@RunWith(AndroidJUnit4.class)
+@RunWith(DevSdkIgnoreRunner.class)
 @SmallTest
+@DevSdkIgnoreRule.IgnoreUpTo(Build.VERSION_CODES.R)
 public class IpConnectivityEventBuilderTest {
 
     @Test
