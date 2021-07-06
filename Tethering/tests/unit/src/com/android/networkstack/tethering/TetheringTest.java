@@ -2665,12 +2665,6 @@ public class TetheringTest {
         forceUsbTetheringUse(TETHER_USB_NCM_FUNCTION);
         verifyUsbTetheringStopDueToSettingChange(TEST_NCM_IFNAME);
 
-        // TODO: move this into setup after allowing configure TEST_NCM_REGEX into
-        // config_tether_usb_regexs and config_tether_ncm_regexs at the same time.
-        when(mResources.getStringArray(R.array.config_tether_usb_regexs))
-                .thenReturn(new String[] {TEST_RNDIS_REGEX, TEST_NCM_REGEX});
-        sendConfigurationChanged();
-
         // If TETHERING_USB is forced to use ncm function, TETHERING_NCM would no longer be
         // available.
         final ResultListener ncmResult = new ResultListener(TETHER_ERROR_SERVICE_UNAVAIL);
