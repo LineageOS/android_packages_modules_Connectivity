@@ -45,15 +45,16 @@ import android.net.metrics.IpManagerEvent;
 import android.net.metrics.IpReachabilityEvent;
 import android.net.metrics.RaEvent;
 import android.net.metrics.ValidationProbeEvent;
+import android.os.Build;
 import android.os.Parcelable;
 import android.system.OsConstants;
 import android.test.suitebuilder.annotation.SmallTest;
 import android.util.Base64;
 
-import androidx.test.runner.AndroidJUnit4;
-
 import com.android.internal.util.BitUtils;
 import com.android.server.connectivity.metrics.nano.IpConnectivityLogClass;
+import com.android.testutils.DevSdkIgnoreRule;
+import com.android.testutils.DevSdkIgnoreRunner;
 
 import org.junit.Before;
 import org.junit.Test;
@@ -65,8 +66,9 @@ import org.mockito.MockitoAnnotations;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 
-@RunWith(AndroidJUnit4.class)
+@RunWith(DevSdkIgnoreRunner.class)
 @SmallTest
+@DevSdkIgnoreRule.IgnoreUpTo(Build.VERSION_CODES.R)
 public class IpConnectivityMetricsTest {
     static final IpReachabilityEvent FAKE_EV =
             new IpReachabilityEvent(IpReachabilityEvent.NUD_FAILED);

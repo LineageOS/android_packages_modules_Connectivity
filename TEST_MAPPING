@@ -11,6 +11,17 @@
           "exclude-annotation": "com.android.testutils.SkipPresubmit"
         }
       ]
+    },
+    {
+      "name": "TetheringTests"
+    },
+    {
+      "name": "TetheringIntegrationTests"
+    }
+  ],
+  "postsubmit": [
+    {
+      "name": "ConnectivityCoverageTests"
     }
   ],
   "mainline-presubmit": [
@@ -24,11 +35,22 @@
       ]
     }
   ],
-  // Tests on physical devices with SIM cards: postsubmit only for capacity constraints
   "mainline-postsubmit": [
+    // Tests on physical devices with SIM cards: postsubmit only for capacity constraints
     {
       "name": "CtsNetTestCasesLatestSdk[CaptivePortalLoginGoogle.apk+NetworkStackGoogle.apk+com.google.android.resolv.apex+com.google.android.tethering.apex]",
       "keywords": ["sim"]
+    },
+    {
+      "name": "TetheringCoverageTests[CaptivePortalLoginGoogle.apk+NetworkStackGoogle.apk+com.google.android.resolv.apex+com.google.android.tethering.apex]"
+    },
+    {
+      "name": "ConnectivityCoverageTests[CaptivePortalLoginGoogle.apk+NetworkStackGoogle.apk+com.google.android.resolv.apex+com.google.android.tethering.apex]"
+    }
+  ],
+  "imports": [
+    {
+      "path": "packages/modules/NetworkStack"
     }
   ],
   "imports": [
