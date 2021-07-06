@@ -43,6 +43,53 @@ java_library {
     ],
 }
 
+android_test {
+    name: "ConnectivityCoverageTests",
+    // Tethering started on SDK 30
+    min_sdk_version: "30",
+    // TODO: change to 31 as soon as it is available
+    target_sdk_version: "30",
+    test_suites: ["device-tests", "mts"],
+    defaults: [
+        "framework-connectivity-test-defaults",
+        "FrameworksNetTests-jni-defaults",
+        "libnetworkstackutilsjni_deps",
+    ],
+    manifest: "AndroidManifest_coverage.xml",
+    test_config: "AndroidTest_Coverage.xml",
+    static_libs: [
+        // Added first so all tests use extended mockito, instead of all tests using regular mockito
+        // (some tests would fail).
+        // TODO: consider removing extended mockito usage in tests that use it, for performance
+        "mockito-target-extended-minus-junit4",
+        "FrameworksNetTestsLib",
+        "modules-utils-native-coverage-listener",
+        "NetdStaticLibTestsLib",
+        "NetworkStaticLibTestsLib",
+        "NetworkStackTestsLib",
+        "TetheringTestsLatestSdkLib",
+        "TetheringIntegrationTestsLatestSdkLib",
+    ],
+    jni_libs: [
+        // For mockito extended
+        "libdexmakerjvmtiagent",
+        "libstaticjvmtiagent",
+        // For NetworkStackUtils included in NetworkStackBase
+        "libnetworkstackutilsjni",
+        "libtetherutilsjni",
+        // For framework tests
+        "libservice-connectivity",
+    ],
+    libs: [
+        // Although not required to compile the static libs together, the "libs" used to build each
+        // of the common static test libs are necessary for R8 to avoid "Missing class" warnings and
+        // incorrect optimizations
+        "framework-tethering.impl",
+        "framework-wifi.stubs.module_lib",
+    ],
+    compile_multilib: "both",
+}
+
 // defaults for tests that need to build against framework-connectivity's @hide APIs
 // Only usable from targets that have visibility on framework-connectivity.impl.
 // Instead of using this, consider avoiding to depend on hidden connectivity APIs in
