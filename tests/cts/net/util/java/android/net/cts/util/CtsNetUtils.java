@@ -28,7 +28,6 @@ import static com.android.testutils.TestPermissionUtil.runAsShell;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -56,6 +55,7 @@ import android.net.wifi.WifiManager;
 import android.os.Binder;
 import android.os.Build;
 import android.os.IBinder;
+import android.os.SystemClock;
 import android.system.Os;
 import android.system.OsConstants;
 import android.text.TextUtils;
@@ -88,6 +88,13 @@ public final class CtsNetUtils {
 
     private static final int PRIVATE_DNS_SETTING_TIMEOUT_MS = 10_000;
     private static final int CONNECTIVITY_CHANGE_TIMEOUT_SECS = 30;
+    private static final int MAX_WIFI_CONNECT_RETRIES = 10;
+    private static final int WIFI_CONNECT_INTERVAL_MS = 500;
+
+    // Constants used by WifiManager.ActionListener#onFailure. Although onFailure is SystemApi,
+    // the error code constants are not (they probably should be ?)
+    private static final int WIFI_ERROR_IN_PROGRESS = 1;
+    private static final int WIFI_ERROR_BUSY = 2;
     private static final String PRIVATE_DNS_MODE_OPPORTUNISTIC = "opportunistic";
     private static final String PRIVATE_DNS_MODE_STRICT = "hostname";
     public static final int HTTP_PORT = 80;
@@ -218,22 +225,16 @@ public final class CtsNetUtils {
             clearWifiBlocklist();
             SystemUtil.runShellCommand("svc wifi enable");
             final WifiConfiguration config = getOrCreateWifiConfiguration();
-
-            final Integer error = runAsShell(NETWORK_SETTINGS, () -> {
-                final ConnectWifiListener listener = new ConnectWifiListener();
-                mWifiManager.connect(config, listener);
-                return listener.connectFuture.get(
-                        CONNECTIVITY_CHANGE_TIMEOUT_SECS, TimeUnit.SECONDS);
-            });
-            assertNull("Error connecting to wifi: " + error, error);
+            connectToWifiConfig(config);
 
             // Ensure we get an onAvailable callback and possibly a CONNECTIVITY_ACTION.
             wifiNetwork = callback.waitForAvailable();
             assertNotNull("onAvailable callback not received after connecting to " + config.SSID,
                     wifiNetwork);
-            final boolean connected = !expectLegacyBroadcast || receiver.waitForState();
-            assertTrue("CONNECTIVITY_ACTION not received after connecting to " + config.SSID,
-                    connected);
+            if (expectLegacyBroadcast) {
+                assertTrue("CONNECTIVITY_ACTION not received after connecting to " + config.SSID,
+                        receiver.waitForState());
+            }
         } catch (InterruptedException ex) {
             fail("connectToWifi was interrupted");
         } finally {
@@ -242,6 +243,27 @@ public final class CtsNetUtils {
         }
 
         return wifiNetwork;
+    }
+
+    private void connectToWifiConfig(WifiConfiguration config) {
+        for (int i = 0; i < MAX_WIFI_CONNECT_RETRIES; i++) {
+            final Integer error = runAsShell(NETWORK_SETTINGS, () -> {
+                final ConnectWifiListener listener = new ConnectWifiListener();
+                mWifiManager.connect(config, listener);
+                return listener.connectFuture.get(
+                        CONNECTIVITY_CHANGE_TIMEOUT_SECS, TimeUnit.SECONDS);
+            });
+
+            if (error == null) return;
+
+            // Only retry for IN_PROGRESS and BUSY
+            if (error != WIFI_ERROR_IN_PROGRESS && error != WIFI_ERROR_BUSY) {
+                fail("Failed to connect to " + config.SSID + ": " + error);
+            }
+
+            Log.w(TAG, "connect failed with " + error + "; waiting before retry");
+            SystemClock.sleep(WIFI_CONNECT_INTERVAL_MS);
+        }
     }
 
     private static class ConnectWifiListener implements WifiManager.ActionListener {
@@ -279,9 +301,12 @@ public final class CtsNetUtils {
             // assumed by WifiManagerTest.testConnect.
             Log.w(TAG, "Multiple wifi configurations found: "
                     + configs.stream().map(c -> c.SSID).collect(Collectors.joining(", ")));
-            final Set<String> scanResults = getWifiScanResults().stream().map(
+            final List<ScanResult> scanResultsList = getWifiScanResults();
+            Log.i(TAG, "Scan results: " + scanResultsList.stream().map(c ->
+                    c.SSID + " (" + c.level + ")").collect(Collectors.joining(", ")));
+            final Set<String> scanResults = scanResultsList.stream().map(
                     s -> "\"" + s.SSID + "\"").collect(Collectors.toSet());
-            Log.i(TAG, "Scan results: " + scanResults);
+
             return configs.stream().filter(c -> scanResults.contains(c.SSID))
                     .findFirst().orElse(configs.get(0));
         }
