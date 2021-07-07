@@ -850,8 +850,10 @@ public abstract class AbstractRestrictBackgroundNetworkTestCase {
                     final String error = checkForAvailabilityInResultData(
                             resultData, expectAvailable);
                     if (error != null) {
-                        fail("Network is not available for expedited job in app2 (" + mUid + "): "
-                                + error);
+                        Log.d(TAG, "Network state is unexpected, checking again. " + error);
+                        // Right now we could end up in an unexpected state if expedited job
+                        // doesn't have network access immediately after starting, so check again.
+                        assertNetworkAccess(expectAvailable, false /* needScreenOn */);
                     }
                 } else {
                     fail("Unexpected resultCode=" + resultCode + "; received=[" + resultData + "]");
