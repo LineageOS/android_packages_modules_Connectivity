@@ -1170,20 +1170,14 @@ public class ConnectivityServiceTest {
             assertEquals(count, getMyRequestCount());
         }
 
-        @Override
-        public void terminate() {
-            super.terminate();
-            // Make sure there are no remaining requests unaccounted for.
-            HandlerUtils.waitForIdle(mHandlerSendingRequests, TIMEOUT_MS);
-            assertNull(mRequestHistory.poll(0, r -> true));
-        }
-
         // Trigger releasing the request as unfulfillable
         public void triggerUnfulfillable(NetworkRequest r) {
             super.releaseRequestAsUnfulfillableByAnyFactory(r);
         }
 
         public void assertNoRequestChanged() {
+            // Make sure there are no remaining requests unaccounted for.
+            HandlerUtils.waitForIdle(mHandlerSendingRequests, TIMEOUT_MS);
             assertNull(mRequestHistory.poll(0, r -> true));
         }
     }
@@ -3239,6 +3233,7 @@ public class ConnectivityServiceTest {
         assertTrue(testFactory.getMyStartRequested());
 
         testFactory.terminate();
+        testFactory.assertNoRequestChanged();
         if (networkCallback != null) mCm.unregisterNetworkCallback(networkCallback);
         handlerThread.quit();
     }
@@ -3323,6 +3318,7 @@ public class ConnectivityServiceTest {
 
             testFactory.setScoreFilter(42);
             testFactory.terminate();
+            testFactory.assertNoRequestChanged();
 
             if (i % 2 == 0) {
                 try {
@@ -4624,6 +4620,9 @@ public class ConnectivityServiceTest {
             // and the test factory should see it now that it isn't hopelessly outscored.
             mCellNetworkAgent.disconnect();
             cellNetworkCallback.expectCallback(CallbackEntry.LOST, mCellNetworkAgent);
+            // Wait for the network to be removed from internal structures before
+            // calling synchronous getter
+            waitForIdle();
             assertLength(1, mCm.getAllNetworks());
             testFactory.expectRequestAdd();
             testFactory.assertRequestCountEquals(1);
@@ -4634,6 +4633,7 @@ public class ConnectivityServiceTest {
             mCellNetworkAgent = new TestNetworkAgentWrapper(TRANSPORT_CELLULAR);
             mCellNetworkAgent.connect(true);
             cellNetworkCallback.expectAvailableThenValidatedCallbacks(mCellNetworkAgent);
+            waitForIdle();
             assertLength(2, mCm.getAllNetworks());
             testFactory.expectRequestRemove();
             testFactory.assertRequestCountEquals(0);
@@ -4645,8 +4645,9 @@ public class ConnectivityServiceTest {
             cellNetworkCallback.expectCallback(CallbackEntry.LOST, mCellNetworkAgent);
             waitForIdle();
             assertLength(1, mCm.getAllNetworks());
-        } finally {
             testFactory.terminate();
+            testFactory.assertNoRequestChanged();
+        } finally {
             mCm.unregisterNetworkCallback(cellNetworkCallback);
             handlerThread.quit();
         }
