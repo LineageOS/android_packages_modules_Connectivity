@@ -30,6 +30,7 @@ import static com.android.networkstack.tethering.TetheringConfiguration.TETHER_F
 import static com.android.networkstack.tethering.TetheringConfiguration.TETHER_USB_NCM_FUNCTION;
 import static com.android.networkstack.tethering.TetheringConfiguration.TETHER_USB_RNDIS_FUNCTION;
 
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -600,4 +601,48 @@ public class TetheringConfigurationTest {
     private void setTetherForceUsbFunctions(final int value) {
         setTetherForceUsbFunctions(Integer.toString(value));
     }
+
+    @Test
+    public void testNcmRegexs() throws Exception {
+        final String[] rndisRegexs = {"test_rndis\\d"};
+        final String[] ncmRegexs   = {"test_ncm\\d"};
+        final String[] rndisNcmRegexs   = {"test_rndis\\d", "test_ncm\\d"};
+
+        // cfg.isUsingNcm = false.
+        when(mResources.getInteger(R.integer.config_tether_usb_functions)).thenReturn(
+                TETHER_USB_RNDIS_FUNCTION);
+        setUsbAndNcmRegexs(rndisRegexs, ncmRegexs);
+        assertUsbAndNcmRegexs(rndisRegexs, ncmRegexs);
+
+        setUsbAndNcmRegexs(rndisNcmRegexs, new String[0]);
+        assertUsbAndNcmRegexs(rndisNcmRegexs, new String[0]);
+
+        // cfg.isUsingNcm = true.
+        when(mResources.getInteger(R.integer.config_tether_usb_functions)).thenReturn(
+                TETHER_USB_NCM_FUNCTION);
+        setUsbAndNcmRegexs(rndisRegexs, ncmRegexs);
+        assertUsbAndNcmRegexs(ncmRegexs, new String[0]);
+
+        setUsbAndNcmRegexs(rndisNcmRegexs, new String[0]);
+        assertUsbAndNcmRegexs(rndisNcmRegexs, new String[0]);
+
+        // Check USB regex is not overwritten by the NCM regex after force to use rndis from
+        // Settings.
+        setUsbAndNcmRegexs(rndisRegexs, ncmRegexs);
+        setTetherForceUsbFunctions(TETHER_USB_RNDIS_FUNCTION);
+        assertUsbAndNcmRegexs(rndisRegexs, ncmRegexs);
+    }
+
+    private void setUsbAndNcmRegexs(final String[] usbRegexs, final String[] ncmRegexs) {
+        when(mResources.getStringArray(R.array.config_tether_usb_regexs)).thenReturn(usbRegexs);
+        when(mResources.getStringArray(R.array.config_tether_ncm_regexs)).thenReturn(ncmRegexs);
+    }
+
+    private void assertUsbAndNcmRegexs(final String[] usbRegexs, final String[] ncmRegexs) {
+        final TetheringConfiguration cfg =
+                new TetheringConfiguration(mMockContext, mLog, INVALID_SUBSCRIPTION_ID);
+        assertArrayEquals(usbRegexs, cfg.tetherableUsbRegexs);
+        assertArrayEquals(ncmRegexs, cfg.tetherableNcmRegexs);
+    }
+
 }
