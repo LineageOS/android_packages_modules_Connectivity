@@ -33,19 +33,16 @@ cc_test {
 
     srcs: [
         "src/BpfCompatTest.cpp",
-        "src/NativeQtaguidTest.cpp",
     ],
 
     shared_libs: [
         "libbase",
         "liblog",
-        "libutils",
     ],
 
     static_libs: [
         "libbpf_android",
         "libgtest",
-        "libqtaguid",
     ],
 
     // Tag this module as a cts test artifact

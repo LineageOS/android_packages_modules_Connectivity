@@ -25,8 +25,6 @@
 
 using namespace android::bpf;
 
-namespace android {
-
 void doBpfStructSizeTest(const char *elfPath) {
   std::ifstream elfFile(elfPath, std::ios::in | std::ios::binary);
   ASSERT_TRUE(elfFile.is_open());
@@ -40,4 +38,7 @@ TEST(BpfTest, bpfStructSizeTest) {
   doBpfStructSizeTest("/system/etc/bpf/clatd.o");
 }
 
-}  // namespace android
+int main(int argc, char **argv) {
+  testing::InitGoogleTest(&argc, argv);
+  return RUN_ALL_TESTS();
+}
