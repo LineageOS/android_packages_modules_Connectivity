@@ -402,30 +402,45 @@ public class ConnectivityService extends IConnectivityManager.Stub
     }
 
     /**
-     * The priority value is used when issue uid ranges rules to netd. Netd will use the priority
-     * value and uid ranges to generate corresponding ip rules specific to the given preference.
-     * Thus, any device originated data traffic of the applied uids can be routed to the altered
-     * default network which has highest priority.
+     * For per-app preferences, requests contain an int to signify which request
+     * should have priority. The priority is passed to netd which will use it
+     * together with UID ranges to generate the corresponding IP rule. This serves
+     * to direct device-originated data traffic of the specific UIDs to the correct
+     * default network for each app.
+     * Priorities passed to netd must be in the 0~999 range. Larger values code for
+     * a lower priority, {@see NativeUidRangeConfig}
      *
-     * Note: The priority value should be in 0~1000. Larger value means lower priority, see
-     *       {@link NativeUidRangeConfig}.
+     * Requests that don't code for a per-app preference use PREFERENCE_PRIORITY_INVALID.
+     * The default request uses PREFERENCE_PRIORITY_DEFAULT.
      */
-    // This is default priority value for those NetworkRequests which doesn't have preference to
-    // alter default network and use the global one.
+    // Bound for the lowest valid priority.
+    static final int PREFERENCE_PRIORITY_LOWEST = 999;
+    // Used when sending to netd to code for "no priority".
+    static final int PREFERENCE_PRIORITY_NONE = 0;
+    // Priority for requests that don't code for a per-app preference. As it is
+    // out of the valid range, the corresponding priority should be
+    // PREFERENCE_PRIORITY_NONE when sending to netd.
     @VisibleForTesting
-    static final int DEFAULT_NETWORK_PRIORITY_NONE = 0;
-    // Used by automotive devices to set the network preferences used to direct traffic at an
-    // application level. See {@link #setOemNetworkPreference}.
+    static final int PREFERENCE_PRIORITY_INVALID = Integer.MAX_VALUE;
+    // Priority for the default internet request. Since this must always have the
+    // lowest priority, its value is larger than the largest acceptable value. As
+    // it is out of the valid range, the corresponding priority should be
+    // PREFERENCE_PRIORITY_NONE when sending to netd.
+    static final int PREFERENCE_PRIORITY_DEFAULT = 1000;
+    // As a security feature, VPNs have the top priority.
+    static final int PREFERENCE_PRIORITY_VPN = 1;
+    // Priority of per-app OEM preference. See {@link #setOemNetworkPreference}.
     @VisibleForTesting
-    static final int DEFAULT_NETWORK_PRIORITY_OEM = 10;
-    // Request that a user profile is put by default on a network matching a given preference.
+    static final int PREFERENCE_PRIORITY_OEM = 10;
+    // Priority of per-profile preference, such as used by enterprise networks.
     // See {@link #setProfileNetworkPreference}.
     @VisibleForTesting
-    static final int DEFAULT_NETWORK_PRIORITY_PROFILE = 20;
-    // Set by MOBILE_DATA_PREFERRED_UIDS setting. Use mobile data in preference even when
-    // higher-priority networks are connected.
+    static final int PREFERENCE_PRIORITY_PROFILE = 20;
+    // Priority of user setting to prefer mobile data even when networks with
+    // better scores are connected.
+    // See {@link ConnectivitySettingsManager#setMobileDataPreferredUids}
     @VisibleForTesting
-    static final int DEFAULT_NETWORK_PRIORITY_MOBILE_DATA_PREFERRED = 30;
+    static final int PREFERENCE_PRIORITY_MOBILE_DATA_PREFERERRED = 30;
 
     /**
      * used internally to clear a wakelock when transitioning
@@ -4212,7 +4227,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
                     mNetd.networkRemoveUidRangesParcel(new NativeUidRangeConfig(
                             satisfier.network.getNetId(),
                             toUidRangeStableParcels(nri.getUids()),
-                            nri.getDefaultNetworkPriority()));
+                            nri.getPriorityForNetd()));
                 } catch (RemoteException e) {
                     loge("Exception setting network preference default network", e);
                 }
@@ -5678,11 +5693,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
         final int mAsUid;
 
         // Default network priority of this request.
-        private final int mDefaultNetworkPriority;
-
-        int getDefaultNetworkPriority() {
-            return mDefaultNetworkPriority;
-        }
+        final int mPreferencePriority;
 
         // In order to preserve the mapping of NetworkRequest-to-callback when apps register
         // callbacks using a returned NetworkRequest, the original NetworkRequest needs to be
@@ -5714,12 +5725,12 @@ public class ConnectivityService extends IConnectivityManager.Stub
         NetworkRequestInfo(int asUid, @NonNull final NetworkRequest r,
                 @Nullable final PendingIntent pi, @Nullable String callingAttributionTag) {
             this(asUid, Collections.singletonList(r), r, pi, callingAttributionTag,
-                    DEFAULT_NETWORK_PRIORITY_NONE);
+                    PREFERENCE_PRIORITY_INVALID);
         }
 
         NetworkRequestInfo(int asUid, @NonNull final List<NetworkRequest> r,
                 @NonNull final NetworkRequest requestForCallback, @Nullable final PendingIntent pi,
-                @Nullable String callingAttributionTag, final int defaultNetworkPriority) {
+                @Nullable String callingAttributionTag, final int preferencePriority) {
             ensureAllNetworkRequestsHaveType(r);
             mRequests = initializeRequests(r);
             mNetworkRequestForCallback = requestForCallback;
@@ -5737,7 +5748,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
              */
             mCallbackFlags = NetworkCallback.FLAG_NONE;
             mCallingAttributionTag = callingAttributionTag;
-            mDefaultNetworkPriority = defaultNetworkPriority;
+            mPreferencePriority = preferencePriority;
         }
 
         NetworkRequestInfo(int asUid, @NonNull final NetworkRequest r, @Nullable final Messenger m,
@@ -5767,7 +5778,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
             mPerUidCounter.incrementCountOrThrow(mUid);
             mCallbackFlags = callbackFlags;
             mCallingAttributionTag = callingAttributionTag;
-            mDefaultNetworkPriority = DEFAULT_NETWORK_PRIORITY_NONE;
+            mPreferencePriority = PREFERENCE_PRIORITY_INVALID;
             linkDeathRecipient();
         }
 
@@ -5807,18 +5818,18 @@ public class ConnectivityService extends IConnectivityManager.Stub
             mPerUidCounter.incrementCountOrThrow(mUid);
             mCallbackFlags = nri.mCallbackFlags;
             mCallingAttributionTag = nri.mCallingAttributionTag;
-            mDefaultNetworkPriority = DEFAULT_NETWORK_PRIORITY_NONE;
+            mPreferencePriority = PREFERENCE_PRIORITY_INVALID;
             linkDeathRecipient();
         }
 
         NetworkRequestInfo(int asUid, @NonNull final NetworkRequest r) {
-            this(asUid, Collections.singletonList(r), DEFAULT_NETWORK_PRIORITY_NONE);
+            this(asUid, Collections.singletonList(r), PREFERENCE_PRIORITY_INVALID);
         }
 
         NetworkRequestInfo(int asUid, @NonNull final List<NetworkRequest> r,
-                final int defaultNetworkPriority) {
+                final int preferencePriority) {
             this(asUid, r, r.get(0), null /* pi */, null /* callingAttributionTag */,
-                    defaultNetworkPriority);
+                    preferencePriority);
         }
 
         // True if this NRI is being satisfied. It also accounts for if the nri has its satisifer
@@ -5859,6 +5870,19 @@ public class ConnectivityService extends IConnectivityManager.Stub
             }
         }
 
+        boolean hasHigherPriorityThan(@NonNull final NetworkRequestInfo target) {
+            // Compare two priorities, larger value means lower priority.
+            return mPreferencePriority < target.mPreferencePriority;
+        }
+
+        int getPriorityForNetd() {
+            if (mPreferencePriority >= PREFERENCE_PRIORITY_NONE
+                    && mPreferencePriority <= PREFERENCE_PRIORITY_LOWEST) {
+                return mPreferencePriority;
+            }
+            return PREFERENCE_PRIORITY_NONE;
+        }
+
         @Override
         public void binderDied() {
             log("ConnectivityService NetworkRequestInfo binderDied(" +
@@ -5875,7 +5899,8 @@ public class ConnectivityService extends IConnectivityManager.Stub
                     + mNetworkRequestForCallback.requestId
                     + " " + mRequests
                     + (mPendingIntent == null ? "" : " to trigger " + mPendingIntent)
-                    + " callback flags: " + mCallbackFlags;
+                    + " callback flags: " + mCallbackFlags
+                    + " priority: " + mPreferencePriority;
         }
     }
 
@@ -6467,17 +6492,18 @@ public class ConnectivityService extends IConnectivityManager.Stub
      */
     @NonNull
     private NetworkRequestInfo getDefaultRequestTrackingUid(final int uid) {
+        NetworkRequestInfo highestPriorityNri = mDefaultRequest;
         for (final NetworkRequestInfo nri : mDefaultNetworkRequests) {
-            if (nri == mDefaultRequest) {
-                continue;
-            }
             // Checking the first request is sufficient as only multilayer requests will have more
             // than one request and for multilayer, all requests will track the same uids.
             if (nri.mRequests.get(0).networkCapabilities.appliesToUid(uid)) {
-                return nri;
+                // Find out the highest priority request.
+                if (nri.hasHigherPriorityThan(highestPriorityNri)) {
+                    highestPriorityNri = nri;
+                }
             }
         }
-        return mDefaultRequest;
+        return highestPriorityNri;
     }
 
     /**
@@ -6607,6 +6633,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
     }
 
     private NetworkAgentInfo getDefaultNetworkForUid(final int uid) {
+        NetworkRequestInfo highestPriorityNri = mDefaultRequest;
         for (final NetworkRequestInfo nri : mDefaultNetworkRequests) {
             // Currently, all network requests will have the same uids therefore checking the first
             // one is sufficient. If/when uids are tracked at the nri level, this can change.
@@ -6616,11 +6643,13 @@ public class ConnectivityService extends IConnectivityManager.Stub
             }
             for (final UidRange range : uids) {
                 if (range.contains(uid)) {
-                    return nri.getSatisfier();
+                    if (nri.hasHigherPriorityThan(highestPriorityNri)) {
+                        highestPriorityNri = nri;
+                    }
                 }
             }
         }
-        return getDefaultNetwork();
+        return highestPriorityNri.getSatisfier();
     }
 
     @Nullable
@@ -7457,7 +7486,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
         }
     }
 
-    private void updateUidRanges(boolean add, NetworkAgentInfo nai, Set<UidRange> uidRanges) {
+    private void updateVpnUidRanges(boolean add, NetworkAgentInfo nai, Set<UidRange> uidRanges) {
         int[] exemptUids = new int[2];
         // TODO: Excluding VPN_UID is necessary in order to not to kill the TCP connection used
         // by PPTP. Fix this by making Vpn set the owner UID to VPN_UID instead of system when
@@ -7470,10 +7499,10 @@ public class ConnectivityService extends IConnectivityManager.Stub
         try {
             if (add) {
                 mNetd.networkAddUidRangesParcel(new NativeUidRangeConfig(
-                        nai.network.netId, ranges, DEFAULT_NETWORK_PRIORITY_NONE));
+                        nai.network.netId, ranges, PREFERENCE_PRIORITY_VPN));
             } else {
                 mNetd.networkRemoveUidRangesParcel(new NativeUidRangeConfig(
-                        nai.network.netId, ranges, DEFAULT_NETWORK_PRIORITY_NONE));
+                        nai.network.netId, ranges, PREFERENCE_PRIORITY_VPN));
             }
         } catch (Exception e) {
             loge("Exception while " + (add ? "adding" : "removing") + " uid ranges " + uidRanges +
@@ -7535,10 +7564,10 @@ public class ConnectivityService extends IConnectivityManager.Stub
             // This can prevent the sockets of uid 1-2, 4-5 from being closed. It also reduce the
             // number of binder calls from 6 to 4.
             if (!newRanges.isEmpty()) {
-                updateUidRanges(true, nai, newRanges);
+                updateVpnUidRanges(true, nai, newRanges);
             }
             if (!prevRanges.isEmpty()) {
-                updateUidRanges(false, nai, prevRanges);
+                updateVpnUidRanges(false, nai, prevRanges);
             }
             final boolean wasFiltering = requiresVpnIsolation(nai, prevNc, nai.linkProperties);
             final boolean shouldFilter = requiresVpnIsolation(nai, newNc, nai.linkProperties);
@@ -7818,13 +7847,13 @@ public class ConnectivityService extends IConnectivityManager.Stub
                 mNetd.networkAddUidRangesParcel(new NativeUidRangeConfig(
                         newDefaultNetwork.network.getNetId(),
                         toUidRangeStableParcels(nri.getUids()),
-                        nri.getDefaultNetworkPriority()));
+                        nri.getPriorityForNetd()));
             }
             if (null != oldDefaultNetwork) {
                 mNetd.networkRemoveUidRangesParcel(new NativeUidRangeConfig(
                         oldDefaultNetwork.network.getNetId(),
                         toUidRangeStableParcels(nri.getUids()),
-                        nri.getDefaultNetworkPriority()));
+                        nri.getPriorityForNetd()));
             }
         } catch (RemoteException | ServiceSpecificException e) {
             loge("Exception setting app default network", e);
@@ -9789,21 +9818,6 @@ public class ConnectivityService extends IConnectivityManager.Stub
         mQosCallbackTracker.unregisterCallback(callback);
     }
 
-    // Network preference per-profile and OEM network preferences can't be set at the same
-    // time, because it is unclear what should happen if both preferences are active for
-    // one given UID. To make it possible, the stack would have to clarify what would happen
-    // in case both are active at the same time. The implementation may have to be adjusted
-    // to implement the resulting rules. For example, a priority could be defined between them,
-    // where the OEM preference would be considered less or more important than the enterprise
-    // preference ; this would entail implementing the priorities somehow, e.g. by doing
-    // UID arithmetic with UID ranges or passing a priority to netd so that the routing rules
-    // are set at the right level. Other solutions are possible, e.g. merging of the
-    // preferences for the relevant UIDs.
-    private static void throwConcurrentPreferenceException() {
-        throw new IllegalStateException("Can't set NetworkPreferenceForUser and "
-                + "set OemNetworkPreference at the same time");
-    }
-
     /**
      * Request that a user profile is put by default on a network matching a given preference.
      *
@@ -9832,15 +9846,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
         if (!um.isManagedProfile(profile.getIdentifier())) {
             throw new IllegalArgumentException("Profile must be a managed profile");
         }
-        // Strictly speaking, mOemNetworkPreferences should only be touched on the
-        // handler thread. However it is an immutable object, so reading the reference is
-        // safe - it's just possible the value is slightly outdated. For the final check,
-        // see #handleSetProfileNetworkPreference. But if this can be caught here it is a
-        // lot easier to understand, so opportunistically check it.
-        // TODO: Have a priority for each preference.
-        if (!mOemNetworkPreferences.isEmpty() || !mMobileDataPreferredUids.isEmpty()) {
-            throwConcurrentPreferenceException();
-        }
+
         final NetworkCapabilities nc;
         switch (preference) {
             case ConnectivityManager.PROFILE_NETWORK_PREFERENCE_DEFAULT:
@@ -9883,7 +9889,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
                     TYPE_NONE, NetworkRequest.Type.TRACK_DEFAULT));
             setNetworkRequestUids(nrs, UidRange.fromIntRanges(pref.capabilities.getUids()));
             final NetworkRequestInfo nri = new NetworkRequestInfo(Process.myUid(), nrs,
-                    DEFAULT_NETWORK_PRIORITY_PROFILE);
+                    PREFERENCE_PRIORITY_PROFILE);
             result.add(nri);
         }
         return result;
@@ -9892,20 +9898,6 @@ public class ConnectivityService extends IConnectivityManager.Stub
     private void handleSetProfileNetworkPreference(
             @NonNull final ProfileNetworkPreferences.Preference preference,
             @Nullable final IOnCompleteListener listener) {
-        // setProfileNetworkPreference and setOemNetworkPreference are mutually exclusive, in
-        // particular because it's not clear what preference should win in case both apply
-        // to the same app.
-        // The binder call has already checked this, but as mOemNetworkPreferences is only
-        // touched on the handler thread, it's theoretically not impossible that it has changed
-        // since.
-        // TODO: Have a priority for each preference.
-        if (!mOemNetworkPreferences.isEmpty() || !mMobileDataPreferredUids.isEmpty()) {
-            // This may happen on a device with an OEM preference set when a user is removed.
-            // In this case, it's safe to ignore. In particular this happens in the tests.
-            loge("handleSetProfileNetworkPreference, but OEM network preferences not empty");
-            return;
-        }
-
         validateNetworkCapabilitiesOfProfileNetworkPreference(preference.capabilities);
 
         mProfileNetworkPreferences = mProfileNetworkPreferences.plus(preference);
@@ -9914,7 +9906,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
                 () -> {
                     final ArraySet<NetworkRequestInfo> nris =
                             createNrisFromProfileNetworkPreferences(mProfileNetworkPreferences);
-                    replaceDefaultNetworkRequestsForPreference(nris);
+                    replaceDefaultNetworkRequestsForPreference(nris, PREFERENCE_PRIORITY_PROFILE);
                 });
         // Finally, rematch.
         rematchAllNetworksAndRequests();
@@ -9954,26 +9946,19 @@ public class ConnectivityService extends IConnectivityManager.Stub
         }
         setNetworkRequestUids(requests, ranges);
         nris.add(new NetworkRequestInfo(Process.myUid(), requests,
-                DEFAULT_NETWORK_PRIORITY_MOBILE_DATA_PREFERRED));
+                PREFERENCE_PRIORITY_MOBILE_DATA_PREFERERRED));
         return nris;
     }
 
     private void handleMobileDataPreferredUidsChanged() {
-        // Ignore update preference because it's not clear what preference should win in case both
-        // apply to the same app.
-        // TODO: Have a priority for each preference.
-        if (!mOemNetworkPreferences.isEmpty() || !mProfileNetworkPreferences.isEmpty()) {
-            loge("Ignore mobile data preference change because other preferences are not empty");
-            return;
-        }
-
         mMobileDataPreferredUids = ConnectivitySettingsManager.getMobileDataPreferredUids(mContext);
         mSystemNetworkRequestCounter.transact(
                 mDeps.getCallingUid(), 1 /* numOfNewRequests */,
                 () -> {
                     final ArraySet<NetworkRequestInfo> nris =
                             createNrisFromMobileDataPreferredUids(mMobileDataPreferredUids);
-                    replaceDefaultNetworkRequestsForPreference(nris);
+                    replaceDefaultNetworkRequestsForPreference(nris,
+                            PREFERENCE_PRIORITY_MOBILE_DATA_PREFERERRED);
                 });
         // Finally, rematch.
         rematchAllNetworksAndRequests();
@@ -10013,16 +9998,6 @@ public class ConnectivityService extends IConnectivityManager.Stub
             enforceAutomotiveDevice();
             enforceOemNetworkPreferencesPermission();
             validateOemNetworkPreferences(preference);
-        }
-
-        // TODO: Have a priority for each preference.
-        if (!mProfileNetworkPreferences.isEmpty() || !mMobileDataPreferredUids.isEmpty()) {
-            // Strictly speaking, mProfileNetworkPreferences should only be touched on the
-            // handler thread. However it is an immutable object, so reading the reference is
-            // safe - it's just possible the value is slightly outdated. For the final check,
-            // see #handleSetOemPreference. But if this can be caught here it is a
-            // lot easier to understand, so opportunistically check it.
-            throwConcurrentPreferenceException();
         }
 
         mHandler.sendMessage(mHandler.obtainMessage(EVENT_SET_OEM_NETWORK_PREFERENCE,
@@ -10071,17 +10046,6 @@ public class ConnectivityService extends IConnectivityManager.Stub
         if (DBG) {
             log("set OEM network preferences :" + preference.toString());
         }
-        // setProfileNetworkPreference and setOemNetworkPreference are mutually exclusive, in
-        // particular because it's not clear what preference should win in case both apply
-        // to the same app.
-        // The binder call has already checked this, but as mOemNetworkPreferences is only
-        // touched on the handler thread, it's theoretically not impossible that it has changed
-        // since.
-        // TODO: Have a priority for each preference.
-        if (!mProfileNetworkPreferences.isEmpty() || !mMobileDataPreferredUids.isEmpty()) {
-            logwtf("handleSetOemPreference, but per-profile network preferences not empty");
-            return;
-        }
 
         mOemNetworkPreferencesLogs.log("UPDATE INITIATED: " + preference);
         final int uniquePreferenceCount = new ArraySet<>(
@@ -10092,7 +10056,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
                     final ArraySet<NetworkRequestInfo> nris =
                             new OemNetworkRequestFactory()
                                     .createNrisFromOemNetworkPreferences(preference);
-                    replaceDefaultNetworkRequestsForPreference(nris);
+                    replaceDefaultNetworkRequestsForPreference(nris, PREFERENCE_PRIORITY_OEM);
                 });
         mOemNetworkPreferences = preference;
 
@@ -10106,9 +10070,12 @@ public class ConnectivityService extends IConnectivityManager.Stub
     }
 
     private void replaceDefaultNetworkRequestsForPreference(
-            @NonNull final Set<NetworkRequestInfo> nris) {
-        // Pass in a defensive copy as this collection will be updated on remove.
-        handleRemoveNetworkRequests(new ArraySet<>(mDefaultNetworkRequests));
+            @NonNull final Set<NetworkRequestInfo> nris, final int preferencePriority) {
+        // Skip the requests which are set by other network preference. Because the uid range rules
+        // should stay in netd.
+        final Set<NetworkRequestInfo> requests = new ArraySet<>(mDefaultNetworkRequests);
+        requests.removeIf(request -> request.mPreferencePriority != preferencePriority);
+        handleRemoveNetworkRequests(requests);
         addPerAppDefaultNetworkRequests(nris);
     }
 
@@ -10302,8 +10269,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
                 ranges.add(new UidRange(uid, uid));
             }
             setNetworkRequestUids(requests, ranges);
-            return new NetworkRequestInfo(
-                    Process.myUid(), requests, DEFAULT_NETWORK_PRIORITY_OEM);
+            return new NetworkRequestInfo(Process.myUid(), requests, PREFERENCE_PRIORITY_OEM);
         }
 
         private NetworkRequest createUnmeteredNetworkRequest() {
