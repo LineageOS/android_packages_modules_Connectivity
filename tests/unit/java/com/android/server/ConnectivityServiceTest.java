@@ -10219,10 +10219,7 @@ public class ConnectivityServiceTest {
         mService.registerConnectivityDiagnosticsCallback(
                 mConnectivityDiagnosticsCallback, request, mContext.getPackageName());
 
-        // Block until all other events are done processing.
-        HandlerUtils.waitForIdle(mCsHandlerThread, TIMEOUT_MS);
-
-        verify(mConnectivityDiagnosticsCallback)
+        verify(mConnectivityDiagnosticsCallback, timeout(TIMEOUT_MS))
                 .onConnectivityReportAvailable(argThat(report -> {
                     return INTERFACE_NAME.equals(report.getLinkProperties().getInterfaceName())
                             && report.getNetworkCapabilities().hasTransport(TRANSPORT_CELLULAR);
@@ -10270,12 +10267,10 @@ public class ConnectivityServiceTest {
             throws Exception {
         setUpConnectivityDiagnosticsCallback();
 
-        // Block until all other events are done processing.
-        HandlerUtils.waitForIdle(mCsHandlerThread, TIMEOUT_MS);
-
         // Verify onConnectivityReport fired
-        verify(mConnectivityDiagnosticsCallback).onConnectivityReportAvailable(
-                argThat(report -> areConnDiagCapsRedacted(report.getNetworkCapabilities())));
+        verify(mConnectivityDiagnosticsCallback, timeout(TIMEOUT_MS))
+                .onConnectivityReportAvailable(argThat(report ->
+                        areConnDiagCapsRedacted(report.getNetworkCapabilities())));
     }
 
     @Test
@@ -10286,11 +10281,8 @@ public class ConnectivityServiceTest {
         // cellular network agent
         mCellNetworkAgent.notifyDataStallSuspected();
 
-        // Block until all other events are done processing.
-        HandlerUtils.waitForIdle(mCsHandlerThread, TIMEOUT_MS);
-
         // Verify onDataStallSuspected fired
-        verify(mConnectivityDiagnosticsCallback).onDataStallSuspected(
+        verify(mConnectivityDiagnosticsCallback, timeout(TIMEOUT_MS)).onDataStallSuspected(
                 argThat(report -> areConnDiagCapsRedacted(report.getNetworkCapabilities())));
     }
 
@@ -10305,23 +10297,19 @@ public class ConnectivityServiceTest {
         final boolean hasConnectivity = true;
         mService.reportNetworkConnectivity(n, hasConnectivity);
 
-        // Block until all other events are done processing.
-        HandlerUtils.waitForIdle(mCsHandlerThread, TIMEOUT_MS);
-
         // Verify onNetworkConnectivityReported fired
-        verify(mConnectivityDiagnosticsCallback)
+        verify(mConnectivityDiagnosticsCallback, timeout(TIMEOUT_MS))
                 .onNetworkConnectivityReported(eq(n), eq(hasConnectivity));
-        verify(mConnectivityDiagnosticsCallback).onConnectivityReportAvailable(
-                argThat(report -> areConnDiagCapsRedacted(report.getNetworkCapabilities())));
+        verify(mConnectivityDiagnosticsCallback, timeout(TIMEOUT_MS))
+                .onConnectivityReportAvailable(
+                        argThat(report ->
+                                areConnDiagCapsRedacted(report.getNetworkCapabilities())));
 
         final boolean noConnectivity = false;
         mService.reportNetworkConnectivity(n, noConnectivity);
 
-        // Block until all other events are done processing.
-        HandlerUtils.waitForIdle(mCsHandlerThread, TIMEOUT_MS);
-
         // Wait for onNetworkConnectivityReported to fire
-        verify(mConnectivityDiagnosticsCallback)
+        verify(mConnectivityDiagnosticsCallback, timeout(TIMEOUT_MS))
                 .onNetworkConnectivityReported(eq(n), eq(noConnectivity));
 
         // Also expect a ConnectivityReport after NetworkMonitor asynchronously re-validates
@@ -10358,9 +10346,6 @@ public class ConnectivityServiceTest {
         // and that this callback is notified.
         final boolean noConnectivity = false;
         doAsUid(Process.myUid() + 1, () -> mService.reportNetworkConnectivity(n, noConnectivity));
-
-        // Block until all other events are done processing.
-        HandlerUtils.waitForIdle(mCsHandlerThread, TIMEOUT_MS);
 
         // Wait for onNetworkConnectivityReported to fire
         verify(mConnectivityDiagnosticsCallback, timeout(TIMEOUT_MS))
