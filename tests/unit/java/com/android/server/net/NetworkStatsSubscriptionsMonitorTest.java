@@ -34,6 +34,7 @@ import android.annotation.NonNull;
 import android.annotation.Nullable;
 import android.content.Context;
 import android.net.NetworkTemplate;
+import android.os.Build;
 import android.os.test.TestLooper;
 import android.telephony.NetworkRegistrationInfo;
 import android.telephony.PhoneStateListener;
@@ -43,11 +44,12 @@ import android.telephony.TelephonyManager;
 
 import com.android.internal.util.CollectionUtils;
 import com.android.server.net.NetworkStatsSubscriptionsMonitor.RatTypeListener;
+import com.android.testutils.DevSdkIgnoreRule;
+import com.android.testutils.DevSdkIgnoreRunner;
 
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.junit.runners.JUnit4;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
@@ -57,7 +59,8 @@ import java.util.List;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 
-@RunWith(JUnit4.class)
+@RunWith(DevSdkIgnoreRunner.class)
+@DevSdkIgnoreRule.IgnoreUpTo(Build.VERSION_CODES.R)
 public final class NetworkStatsSubscriptionsMonitorTest {
     private static final int TEST_SUBID1 = 3;
     private static final int TEST_SUBID2 = 5;

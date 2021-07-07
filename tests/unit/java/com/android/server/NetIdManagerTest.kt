@@ -16,17 +16,20 @@
 
 package com.android.server
 
+import android.os.Build
 import androidx.test.filters.SmallTest
-import androidx.test.runner.AndroidJUnit4
 import com.android.server.NetIdManager.MIN_NET_ID
-import com.android.testutils.assertThrows
+import com.android.testutils.DevSdkIgnoreRule
+import com.android.testutils.DevSdkIgnoreRunner
 import com.android.testutils.ExceptionUtils.ThrowingRunnable
+import com.android.testutils.assertThrows
 import org.junit.Test
 import org.junit.runner.RunWith
 import kotlin.test.assertEquals
 
-@RunWith(AndroidJUnit4::class)
+@RunWith(DevSdkIgnoreRunner::class)
 @SmallTest
+@DevSdkIgnoreRule.IgnoreUpTo(Build.VERSION_CODES.R)
 class NetIdManagerTest {
     @Test
     fun testReserveReleaseNetId() {

@@ -38,13 +38,15 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import android.content.Context;
+import android.os.Build;
 import android.util.Log;
 
 import androidx.test.InstrumentationRegistry;
 import androidx.test.filters.SmallTest;
-import androidx.test.runner.AndroidJUnit4;
 
 import com.android.frameworks.tests.net.R;
+import com.android.testutils.DevSdkIgnoreRule;
+import com.android.testutils.DevSdkIgnoreRunner;
 
 import org.junit.After;
 import org.junit.Test;
@@ -56,8 +58,9 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.util.Random;
 
-@RunWith(AndroidJUnit4.class)
+@RunWith(DevSdkIgnoreRunner.class)
 @SmallTest
+@DevSdkIgnoreRule.IgnoreUpTo(Build.VERSION_CODES.R)
 public class NetworkStatsHistoryTest {
     private static final String TAG = "NetworkStatsHistoryTest";
 

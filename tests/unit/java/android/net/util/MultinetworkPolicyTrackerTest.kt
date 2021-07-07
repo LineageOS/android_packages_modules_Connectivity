@@ -25,15 +25,17 @@ import android.net.ConnectivityResources
 import android.net.ConnectivitySettingsManager.NETWORK_AVOID_BAD_WIFI
 import android.net.ConnectivitySettingsManager.NETWORK_METERED_MULTIPATH_PREFERENCE
 import android.net.util.MultinetworkPolicyTracker.ActiveDataSubscriptionIdListener
+import android.os.Build
 import android.provider.Settings
 import android.telephony.SubscriptionInfo
 import android.telephony.SubscriptionManager
 import android.telephony.TelephonyManager
 import android.test.mock.MockContentResolver
 import androidx.test.filters.SmallTest
-import androidx.test.runner.AndroidJUnit4
 import com.android.connectivity.resources.R
 import com.android.internal.util.test.FakeSettingsProvider
+import com.android.testutils.DevSdkIgnoreRule
+import com.android.testutils.DevSdkIgnoreRunner
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -45,6 +47,7 @@ import org.mockito.ArgumentMatchers.anyInt
 import org.mockito.ArgumentMatchers.argThat
 import org.mockito.ArgumentMatchers.eq
 import org.mockito.Mockito.any
+import org.mockito.Mockito.doCallRealMethod
 import org.mockito.Mockito.doReturn
 import org.mockito.Mockito.mock
 import org.mockito.Mockito.times
@@ -56,8 +59,9 @@ import org.mockito.Mockito.verify
  * Build, install and run with:
  * atest android.net.util.MultinetworkPolicyTrackerTest
  */
-@RunWith(AndroidJUnit4::class)
+@RunWith(DevSdkIgnoreRunner::class)
 @SmallTest
+@DevSdkIgnoreRule.IgnoreUpTo(Build.VERSION_CODES.R)
 class MultinetworkPolicyTrackerTest {
     private val resources = mock(Resources::class.java).also {
         doReturn(R.integer.config_networkAvoidBadWifi).`when`(it).getIdentifier(
@@ -74,6 +78,10 @@ class MultinetworkPolicyTrackerTest {
         doReturn(Context.TELEPHONY_SERVICE).`when`(it)
                 .getSystemServiceName(TelephonyManager::class.java)
         doReturn(telephonyManager).`when`(it).getSystemService(Context.TELEPHONY_SERVICE)
+        if (it.getSystemService(TelephonyManager::class.java) == null) {
+            // Test is using mockito extended
+            doCallRealMethod().`when`(it).getSystemService(TelephonyManager::class.java)
+        }
         doReturn(subscriptionManager).`when`(it)
                 .getSystemService(Context.TELEPHONY_SUBSCRIPTION_SERVICE)
         doReturn(resolver).`when`(it).contentResolver

@@ -36,11 +36,14 @@ import android.net.INetworkStatsSession;
 import android.net.NetworkStats.Entry;
 import android.net.NetworkStatsHistory;
 import android.net.NetworkTemplate;
+import android.os.Build;
 import android.os.RemoteException;
 
 import androidx.test.InstrumentationRegistry;
 import androidx.test.filters.SmallTest;
-import androidx.test.runner.AndroidJUnit4;
+
+import com.android.testutils.DevSdkIgnoreRule;
+import com.android.testutils.DevSdkIgnoreRunner;
 
 import org.junit.Before;
 import org.junit.Test;
@@ -49,8 +52,9 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.mockito.invocation.InvocationOnMock;
 
-@RunWith(AndroidJUnit4.class)
+@RunWith(DevSdkIgnoreRunner.class)
 @SmallTest
+@DevSdkIgnoreRule.IgnoreUpTo(Build.VERSION_CODES.R)
 public class NetworkStatsManagerTest {
     private static final String TEST_SUBSCRIBER_ID = "subid";
 
