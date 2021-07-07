@@ -165,8 +165,6 @@ import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
-import lineageos.providers.LineageSettings;
-
 /**
  *
  * This class holds much of the business logic to allow Android devices
@@ -177,6 +175,9 @@ public class Tethering {
     private static final String TAG = Tethering.class.getSimpleName();
     private static final boolean DBG = false;
     private static final boolean VDBG = false;
+
+    // Copied from core/java/android/provider/Settings.java
+    private static final String TETHERING_ALLOW_VPN_UPSTREAMS = "tethering_allow_vpn_upstreams";
 
     private static final Class[] sMessageClasses = {
             Tethering.class, TetherMainSM.class, IpServer.class
@@ -504,8 +505,8 @@ public class Tethering {
                 mTetherMainSM.sendMessage(TetherMainSM.CMD_UPSTREAM_CHANGED);
             }
         };
-        mContext.getContentResolver().registerContentObserver(LineageSettings.Secure.getUriFor(
-                LineageSettings.Secure.TETHERING_ALLOW_VPN_UPSTREAMS), false, vpnSettingObserver);
+        mContext.getContentResolver().registerContentObserver(Settings.Secure.getUriFor(
+                TETHERING_ALLOW_VPN_UPSTREAMS), false, vpnSettingObserver);
     }
 
     private class TetheringThreadExecutor implements Executor {
