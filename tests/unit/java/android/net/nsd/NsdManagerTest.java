@@ -20,14 +20,15 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.fail;
 import static org.mockito.Mockito.any;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
 
 import android.content.Context;
+import android.os.Build;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.Looper;
@@ -35,9 +36,10 @@ import android.os.Message;
 import android.os.Messenger;
 
 import androidx.test.filters.SmallTest;
-import androidx.test.runner.AndroidJUnit4;
 
 import com.android.internal.util.AsyncChannel;
+import com.android.testutils.DevSdkIgnoreRule;
+import com.android.testutils.DevSdkIgnoreRunner;
 import com.android.testutils.HandlerUtils;
 
 import org.junit.After;
@@ -47,8 +49,9 @@ import org.junit.runner.RunWith;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
-@RunWith(AndroidJUnit4.class)
+@RunWith(DevSdkIgnoreRunner.class)
 @SmallTest
+@DevSdkIgnoreRule.IgnoreUpTo(Build.VERSION_CODES.R)
 public class NsdManagerTest {
 
     static final int PROTOCOL = NsdManager.PROTOCOL_DNS_SD;
@@ -66,7 +69,7 @@ public class NsdManagerTest {
         MockitoAnnotations.initMocks(this);
 
         mServiceHandler = spy(MockServiceHandler.create(mContext));
-        when(mService.getMessenger()).thenReturn(new Messenger(mServiceHandler));
+        doReturn(new Messenger(mServiceHandler)).when(mService).getMessenger();
 
         mManager = makeManager();
     }

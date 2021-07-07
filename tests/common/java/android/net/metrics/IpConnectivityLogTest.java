@@ -19,6 +19,8 @@ package android.net.metrics;
 import static android.net.NetworkCapabilities.TRANSPORT_CELLULAR;
 import static android.net.NetworkCapabilities.TRANSPORT_WIFI;
 
+import static com.android.net.module.util.NetworkCapabilitiesUtils.unpackBits;
+
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.timeout;
@@ -30,8 +32,6 @@ import android.net.Network;
 
 import androidx.test.filters.SmallTest;
 import androidx.test.runner.AndroidJUnit4;
-
-import com.android.internal.util.BitUtils;
 
 import org.junit.Before;
 import org.junit.Test;
@@ -49,7 +49,7 @@ import java.util.List;
 @SmallTest
 public class IpConnectivityLogTest {
     private static final int FAKE_NET_ID = 100;
-    private static final int[] FAKE_TRANSPORT_TYPES = BitUtils.unpackBits(TRANSPORT_WIFI);
+    private static final int[] FAKE_TRANSPORT_TYPES = unpackBits(TRANSPORT_WIFI);
     private static final long FAKE_TIME_STAMP = System.currentTimeMillis();
     private static final String FAKE_INTERFACE_NAME = "test";
     private static final IpReachabilityEvent FAKE_EV =

@@ -87,7 +87,8 @@ android_library {
     defaults: ["TetheringTestsDefaults"],
     target_sdk_version: "30",
     visibility: [
-        "//packages/modules/Connectivity/Tethering/tests/integration",
+        "//packages/modules/Connectivity/tests:__subpackages__",
+        "//packages/modules/Connectivity/Tethering/tests:__subpackages__",
     ]
 }
 
@@ -98,7 +99,7 @@ android_test {
         "device-tests",
         "mts",
     ],
-    jarjar_rules: ":TetheringTestsJarJarRules",
     defaults: ["TetheringTestsDefaults"],
     compile_multilib: "both",
+    jarjar_rules: ":TetheringTestsJarJarRules",
 }
