@@ -1101,10 +1101,10 @@ public class ConnectivityManagerTest {
         }
     }
 
-    private void waitForActiveNetworkMetered(final int targetTransportType,
+    private Network waitForActiveNetworkMetered(final int targetTransportType,
             final boolean requestedMeteredness, final boolean useSystemDefault)
             throws Exception {
-        final CountDownLatch latch = new CountDownLatch(1);
+        final CompletableFuture<Network> networkFuture = new CompletableFuture<>();
         final NetworkCallback networkCallback = new NetworkCallback() {
             @Override
             public void onCapabilitiesChanged(Network network, NetworkCapabilities nc) {
@@ -1112,7 +1112,7 @@ public class ConnectivityManagerTest {
 
                 final boolean metered = !nc.hasCapability(NET_CAPABILITY_NOT_METERED);
                 if (metered == requestedMeteredness) {
-                    latch.countDown();
+                    networkFuture.complete(network);
                 }
             }
         };
@@ -1132,18 +1132,20 @@ public class ConnectivityManagerTest {
 
             // Changing meteredness on wifi involves reconnecting, which can take several seconds
             // (involves re-associating, DHCP...).
-            if (!latch.await(NETWORK_CALLBACK_TIMEOUT_MS, TimeUnit.MILLISECONDS)) {
-                fail("Timed out waiting for active network metered status to change to "
-                        + requestedMeteredness + " ; network = " + mCm.getActiveNetwork());
-            }
+            return networkFuture.get(NETWORK_CALLBACK_TIMEOUT_MS, TimeUnit.MILLISECONDS);
+        } catch (TimeoutException e) {
+            throw new AssertionError("Timed out waiting for active network metered status to "
+                    + "change to " + requestedMeteredness + " ; network = "
+                    + mCm.getActiveNetwork(), e);
         } finally {
             mCm.unregisterNetworkCallback(networkCallback);
         }
     }
 
-    private void setWifiMeteredStatusAndWait(String ssid, boolean isMetered) throws Exception {
+    private Network setWifiMeteredStatusAndWait(String ssid, boolean isMetered) throws Exception {
         setWifiMeteredStatus(ssid, Boolean.toString(isMetered) /* metered */);
-        waitForActiveNetworkMetered(TRANSPORT_WIFI,
+        mCtsNetUtils.ensureWifiConnected();
+        return waitForActiveNetworkMetered(TRANSPORT_WIFI,
                 isMetered /* requestedMeteredness */,
                 true /* useSystemDefault */);
     }
@@ -1209,8 +1211,7 @@ public class ConnectivityManagerTest {
                     Integer.toString(newMeteredPreference));
             // Wifi meterness changes from unmetered to metered will disconnect and reconnect since
             // R.
-            setWifiMeteredStatusAndWait(ssid, true);
-            final Network network = mCtsNetUtils.ensureWifiConnected();
+            final Network network = setWifiMeteredStatusAndWait(ssid, true);
             assertEquals(ssid, unquoteSSID(mWifiManager.getConnectionInfo().getSSID()));
             assertEquals(mCm.getNetworkCapabilities(network).hasCapability(
                     NET_CAPABILITY_NOT_METERED), false);
