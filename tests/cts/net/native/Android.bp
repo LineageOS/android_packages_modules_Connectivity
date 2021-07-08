@@ -31,16 +31,18 @@ cc_test {
         },
     },
 
-    srcs: ["src/NativeQtaguidTest.cpp"],
+    srcs: [
+        "src/BpfCompatTest.cpp",
+    ],
 
     shared_libs: [
-        "libutils",
+        "libbase",
         "liblog",
     ],
 
     static_libs: [
+        "libbpf_android",
         "libgtest",
-        "libqtaguid",
     ],
 
     // Tag this module as a cts test artifact
