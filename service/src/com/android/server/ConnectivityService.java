@@ -9497,6 +9497,10 @@ public class ConnectivityService extends IConnectivityManager.Stub
             @NonNull IConnectivityDiagnosticsCallback callback,
             @NonNull NetworkRequest request,
             @NonNull String callingPackageName) {
+        Objects.requireNonNull(callback, "callback must not be null");
+        Objects.requireNonNull(request, "request must not be null");
+        Objects.requireNonNull(callingPackageName, "callingPackageName must not be null");
+
         if (request.legacyType != TYPE_NONE) {
             throw new IllegalArgumentException("ConnectivityManager.TYPE_* are deprecated."
                     + " Please use NetworkCapabilities instead.");
@@ -9545,6 +9549,9 @@ public class ConnectivityService extends IConnectivityManager.Stub
     @Override
     public void simulateDataStall(int detectionMethod, long timestampMillis,
             @NonNull Network network, @NonNull PersistableBundle extras) {
+        Objects.requireNonNull(network, "network must not be null");
+        Objects.requireNonNull(extras, "extras must not be null");
+
         enforceAnyPermissionOf(android.Manifest.permission.MANAGE_TEST_NETWORKS,
                 android.Manifest.permission.NETWORK_STACK);
         final NetworkCapabilities nc = getNetworkCapabilitiesInternal(network);
