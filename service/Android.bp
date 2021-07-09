@@ -53,8 +53,8 @@ java_library {
         "src/**/*.java",
         ":framework-connectivity-shared-srcs",
         ":services-connectivity-shared-srcs",
-        // TODO: move to net-utils-device-common, enable shrink optimization to avoid extra classes
-        ":net-module-utils-srcs",
+        // TODO: move to net-utils-device-common
+        ":connectivity-module-utils-srcs",
     ],
     libs: [
         "framework-annotations-lib",
@@ -66,6 +66,7 @@ java_library {
     ],
     static_libs: [
         "dnsresolver_aidl_interface-V8-java",
+        "modules-utils-build",
         "modules-utils-os",
         "net-utils-device-common",
         "net-utils-framework-common",
