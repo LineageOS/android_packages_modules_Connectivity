@@ -176,6 +176,8 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
+import static java.util.Arrays.asList;
+
 import android.Manifest;
 import android.annotation.NonNull;
 import android.annotation.Nullable;
@@ -309,7 +311,6 @@ import com.android.connectivity.resources.R;
 import com.android.internal.app.IBatteryStats;
 import com.android.internal.net.VpnConfig;
 import com.android.internal.net.VpnProfile;
-import com.android.internal.util.ArrayUtils;
 import com.android.internal.util.WakeupMessage;
 import com.android.internal.util.test.BroadcastInterceptingContext;
 import com.android.internal.util.test.FakeSettingsProvider;
@@ -1602,9 +1603,8 @@ public class ConnectivityServiceTest {
 
         MockitoAnnotations.initMocks(this);
 
-        when(mUserManager.getAliveUsers()).thenReturn(Arrays.asList(PRIMARY_USER_INFO));
-        when(mUserManager.getUserHandles(anyBoolean())).thenReturn(
-                Arrays.asList(PRIMARY_USER_HANDLE));
+        when(mUserManager.getAliveUsers()).thenReturn(asList(PRIMARY_USER_INFO));
+        when(mUserManager.getUserHandles(anyBoolean())).thenReturn(asList(PRIMARY_USER_HANDLE));
         when(mUserManager.getUserInfo(PRIMARY_USER)).thenReturn(PRIMARY_USER_INFO);
         // canHaveRestrictedProfile does not take a userId. It applies to the userId of the context
         // it was started from, i.e., PRIMARY_USER.
@@ -1812,7 +1812,7 @@ public class ConnectivityServiceTest {
                 eq(UserHandle.getCallingUserId()))).thenReturn(myPackageInfo);
 
         when(mPackageManager.getInstalledPackages(eq(GET_PERMISSIONS | MATCH_ANY_USER))).thenReturn(
-                Arrays.asList(new PackageInfo[] {
+                asList(new PackageInfo[] {
                         buildPackageInfo(/* SYSTEM */ false, APP1_UID),
                         buildPackageInfo(/* SYSTEM */ false, APP2_UID),
                         buildPackageInfo(/* SYSTEM */ false, VPN_UID)
@@ -1829,7 +1829,7 @@ public class ConnectivityServiceTest {
         ResolveInfo rInfo = new ResolveInfo();
         rInfo.serviceInfo = new ServiceInfo();
         rInfo.serviceInfo.metaData = new Bundle();
-        final List<ResolveInfo> services = Arrays.asList(new ResolveInfo[]{rInfo});
+        final List<ResolveInfo> services = asList(new ResolveInfo[]{rInfo});
         when(mPackageManager.queryIntentServicesAsUser(any(), eq(PackageManager.GET_META_DATA),
                 eq(userId))).thenReturn(services);
         when(mPackageManager.getPackageUidAsUser(TEST_PACKAGE_NAME, userId))
@@ -4846,8 +4846,8 @@ public class ConnectivityServiceTest {
         final ContentResolver cr = mServiceContext.getContentResolver();
         final String settingName = ConnectivitySettingsManager.NETWORK_METERED_MULTIPATH_PREFERENCE;
 
-        for (int config : Arrays.asList(0, 3, 2)) {
-            for (String setting: Arrays.asList(null, "0", "2", "1")) {
+        for (int config : asList(0, 3, 2)) {
+            for (String setting: asList(null, "0", "2", "1")) {
                 mPolicyTracker.mConfigMeteredMultipathPreference = config;
                 Settings.Global.putString(cr, settingName, setting);
                 mPolicyTracker.reevaluate();
@@ -6006,10 +6006,10 @@ public class ConnectivityServiceTest {
         networkCallback.expectCallback(CallbackEntry.BLOCKED_STATUS, networkAgent);
         networkCallback.expectCapabilitiesWith(NET_CAPABILITY_VALIDATED, networkAgent);
         networkCallback.assertNoCallback();
-        checkDirectlyConnectedRoutes(cbi.getLp(), Arrays.asList(myIpv4Address),
-                Arrays.asList(myIpv4DefaultRoute));
+        checkDirectlyConnectedRoutes(cbi.getLp(), asList(myIpv4Address),
+                asList(myIpv4DefaultRoute));
         checkDirectlyConnectedRoutes(mCm.getLinkProperties(networkAgent.getNetwork()),
-                Arrays.asList(myIpv4Address), Arrays.asList(myIpv4DefaultRoute));
+                asList(myIpv4Address), asList(myIpv4DefaultRoute));
 
         // Verify direct routes are added during subsequent link properties updates.
         LinkProperties newLp = new LinkProperties(lp);
@@ -6021,8 +6021,8 @@ public class ConnectivityServiceTest {
         cbi = networkCallback.expectCallback(CallbackEntry.LINK_PROPERTIES_CHANGED, networkAgent);
         networkCallback.assertNoCallback();
         checkDirectlyConnectedRoutes(cbi.getLp(),
-                Arrays.asList(myIpv4Address, myIpv6Address1, myIpv6Address2),
-                Arrays.asList(myIpv4DefaultRoute));
+                asList(myIpv4Address, myIpv6Address1, myIpv6Address2),
+                asList(myIpv4DefaultRoute));
         mCm.unregisterNetworkCallback(networkCallback);
     }
 
@@ -6350,9 +6350,9 @@ public class ConnectivityServiceTest {
                 mResolverParamsParcelCaptor.capture());
         ResolverParamsParcel resolvrParams = mResolverParamsParcelCaptor.getValue();
         assertEquals(1, resolvrParams.servers.length);
-        assertTrue(ArrayUtils.contains(resolvrParams.servers, "2001:db8::1"));
+        assertTrue(CollectionUtils.contains(resolvrParams.servers, "2001:db8::1"));
         // Opportunistic mode.
-        assertTrue(ArrayUtils.contains(resolvrParams.tlsServers, "2001:db8::1"));
+        assertTrue(CollectionUtils.contains(resolvrParams.tlsServers, "2001:db8::1"));
         reset(mMockDnsResolver);
 
         cellLp.addDnsServer(InetAddress.getByName("192.0.2.1"));
@@ -6362,12 +6362,12 @@ public class ConnectivityServiceTest {
                 mResolverParamsParcelCaptor.capture());
         resolvrParams = mResolverParamsParcelCaptor.getValue();
         assertEquals(2, resolvrParams.servers.length);
-        assertTrue(ArrayUtils.containsAll(resolvrParams.servers,
-                new String[]{"2001:db8::1", "192.0.2.1"}));
+        assertTrue(new ArraySet<>(resolvrParams.servers).containsAll(
+                asList("2001:db8::1", "192.0.2.1")));
         // Opportunistic mode.
         assertEquals(2, resolvrParams.tlsServers.length);
-        assertTrue(ArrayUtils.containsAll(resolvrParams.tlsServers,
-                new String[]{"2001:db8::1", "192.0.2.1"}));
+        assertTrue(new ArraySet<>(resolvrParams.tlsServers).containsAll(
+                asList("2001:db8::1", "192.0.2.1")));
         reset(mMockDnsResolver);
 
         final String TLS_SPECIFIER = "tls.example.com";
@@ -6382,8 +6382,8 @@ public class ConnectivityServiceTest {
                 mResolverParamsParcelCaptor.capture());
         resolvrParams = mResolverParamsParcelCaptor.getValue();
         assertEquals(2, resolvrParams.servers.length);
-        assertTrue(ArrayUtils.containsAll(resolvrParams.servers,
-                new String[]{"2001:db8::1", "192.0.2.1"}));
+        assertTrue(new ArraySet<>(resolvrParams.servers).containsAll(
+                asList("2001:db8::1", "192.0.2.1")));
         reset(mMockDnsResolver);
     }
 
@@ -6490,12 +6490,12 @@ public class ConnectivityServiceTest {
                 mResolverParamsParcelCaptor.capture());
         ResolverParamsParcel resolvrParams = mResolverParamsParcelCaptor.getValue();
         assertEquals(2, resolvrParams.tlsServers.length);
-        assertTrue(ArrayUtils.containsAll(resolvrParams.tlsServers,
-                new String[] { "2001:db8::1", "192.0.2.1" }));
+        assertTrue(new ArraySet<>(resolvrParams.tlsServers).containsAll(
+                asList("2001:db8::1", "192.0.2.1")));
         // Opportunistic mode.
         assertEquals(2, resolvrParams.tlsServers.length);
-        assertTrue(ArrayUtils.containsAll(resolvrParams.tlsServers,
-                new String[] { "2001:db8::1", "192.0.2.1" }));
+        assertTrue(new ArraySet<>(resolvrParams.tlsServers).containsAll(
+                asList("2001:db8::1", "192.0.2.1")));
         reset(mMockDnsResolver);
         cellNetworkCallback.expectCallback(CallbackEntry.AVAILABLE, mCellNetworkAgent);
         cellNetworkCallback.expectCallback(CallbackEntry.NETWORK_CAPS_UPDATED,
@@ -6512,8 +6512,8 @@ public class ConnectivityServiceTest {
                 mResolverParamsParcelCaptor.capture());
         resolvrParams = mResolverParamsParcelCaptor.getValue();
         assertEquals(2, resolvrParams.servers.length);
-        assertTrue(ArrayUtils.containsAll(resolvrParams.servers,
-                new String[] { "2001:db8::1", "192.0.2.1" }));
+        assertTrue(new ArraySet<>(resolvrParams.servers).containsAll(
+                asList("2001:db8::1", "192.0.2.1")));
         reset(mMockDnsResolver);
         cellNetworkCallback.assertNoCallback();
 
@@ -6522,11 +6522,11 @@ public class ConnectivityServiceTest {
                 mResolverParamsParcelCaptor.capture());
         resolvrParams = mResolverParamsParcelCaptor.getValue();
         assertEquals(2, resolvrParams.servers.length);
-        assertTrue(ArrayUtils.containsAll(resolvrParams.servers,
-                new String[] { "2001:db8::1", "192.0.2.1" }));
+        assertTrue(new ArraySet<>(resolvrParams.servers).containsAll(
+                asList("2001:db8::1", "192.0.2.1")));
         assertEquals(2, resolvrParams.tlsServers.length);
-        assertTrue(ArrayUtils.containsAll(resolvrParams.tlsServers,
-                new String[] { "2001:db8::1", "192.0.2.1" }));
+        assertTrue(new ArraySet<>(resolvrParams.tlsServers).containsAll(
+                asList("2001:db8::1", "192.0.2.1")));
         reset(mMockDnsResolver);
         cellNetworkCallback.assertNoCallback();
 
@@ -7562,7 +7562,7 @@ public class ConnectivityServiceTest {
         // Start the restricted profile, and check that the UID within it loses network access.
         when(mPackageManager.getPackageUidAsUser(ALWAYS_ON_PACKAGE, RESTRICTED_USER))
                 .thenReturn(UserHandle.getUid(RESTRICTED_USER, VPN_UID));
-        when(mUserManager.getAliveUsers()).thenReturn(Arrays.asList(PRIMARY_USER_INFO,
+        when(mUserManager.getAliveUsers()).thenReturn(asList(PRIMARY_USER_INFO,
                 RESTRICTED_USER_INFO));
         // TODO: check that VPN app within restricted profile still has access, etc.
         final Intent addedIntent = new Intent(ACTION_USER_ADDED);
@@ -7573,7 +7573,7 @@ public class ConnectivityServiceTest {
         assertNull(mCm.getActiveNetworkForUid(restrictedUid));
 
         // Stop the restricted profile, and check that the UID within it has network access again.
-        when(mUserManager.getAliveUsers()).thenReturn(Arrays.asList(PRIMARY_USER_INFO));
+        when(mUserManager.getAliveUsers()).thenReturn(asList(PRIMARY_USER_INFO));
 
         // Send a USER_REMOVED broadcast and expect to lose the UID range for the restricted user.
         final Intent removedIntent = new Intent(ACTION_USER_REMOVED);
@@ -7998,7 +7998,7 @@ public class ConnectivityServiceTest {
     // networks, ConnectivityService does not guarantee the order in which callbacks are fired.
     private void assertBlockedCallbackInAnyOrder(TestNetworkCallback callback, boolean blocked,
             TestNetworkAgentWrapper... agents) {
-        final List<Network> expectedNetworks = Arrays.asList(agents).stream()
+        final List<Network> expectedNetworks = asList(agents).stream()
                 .map((agent) -> agent.getNetwork())
                 .collect(Collectors.toList());
 
@@ -8694,7 +8694,7 @@ public class ConnectivityServiceTest {
                 mResolverParamsParcelCaptor.capture());
         ResolverParamsParcel resolvrParams = mResolverParamsParcelCaptor.getValue();
         assertEquals(1, resolvrParams.servers.length);
-        assertTrue(ArrayUtils.contains(resolvrParams.servers, "8.8.8.8"));
+        assertTrue(CollectionUtils.contains(resolvrParams.servers, "8.8.8.8"));
 
         for (final LinkProperties stackedLp : stackedLpsAfterChange) {
             verify(mDeps).reportNetworkInterfaceForTransports(
@@ -9367,7 +9367,7 @@ public class ConnectivityServiceTest {
         InOrder inOrder = inOrder(mMockNetd);
 
         // Update to new range which is old range minus APP1, i.e. only APP2
-        final Set<UidRange> newRanges = new HashSet<>(Arrays.asList(
+        final Set<UidRange> newRanges = new HashSet<>(asList(
                 new UidRange(vpnRange.start, APP1_UID - 1),
                 new UidRange(APP1_UID + 1, vpnRange.stop)));
         mMockVpn.setUids(newRanges);
@@ -10509,7 +10509,7 @@ public class ConnectivityServiceTest {
         verify(mProxyTracker, never()).sendProxyBroadcast();
 
         // Update to new range which is old range minus APP1, i.e. only APP2
-        final Set<UidRange> newRanges = new HashSet<>(Arrays.asList(
+        final Set<UidRange> newRanges = new HashSet<>(asList(
                 new UidRange(vpnRange.start, APP1_UID - 1),
                 new UidRange(APP1_UID + 1, vpnRange.stop)));
         mMockVpn.setUids(newRanges);
@@ -11110,7 +11110,7 @@ public class ConnectivityServiceTest {
         final int secondUserTestPackageUid = UserHandle.getUid(SECONDARY_USER, TEST_PACKAGE_UID);
         final int thirdUserTestPackageUid = UserHandle.getUid(TERTIARY_USER, TEST_PACKAGE_UID);
         when(mUserManager.getUserHandles(anyBoolean())).thenReturn(
-                Arrays.asList(PRIMARY_USER_HANDLE, SECONDARY_USER_HANDLE, TERTIARY_USER_HANDLE));
+                asList(PRIMARY_USER_HANDLE, SECONDARY_USER_HANDLE, TERTIARY_USER_HANDLE));
 
         // Arrange PackageManager mocks testing for users who have and don't have a package.
         mockGetApplicationInfoThrowsNameNotFound(TEST_PACKAGE_NAME, PRIMARY_USER_HANDLE);
@@ -12047,7 +12047,7 @@ public class ConnectivityServiceTest {
         final int secondUser = 10;
         final UserHandle secondUserHandle = new UserHandle(secondUser);
         when(mUserManager.getUserHandles(anyBoolean())).thenReturn(
-                Arrays.asList(PRIMARY_USER_HANDLE, secondUserHandle));
+                asList(PRIMARY_USER_HANDLE, secondUserHandle));
 
         // Arrange PackageManager mocks
         final int secondUserTestPackageUid = UserHandle.getUid(secondUser, TEST_PACKAGE_UID);
@@ -12088,7 +12088,7 @@ public class ConnectivityServiceTest {
         final int secondUser = 10;
         final UserHandle secondUserHandle = new UserHandle(secondUser);
         when(mUserManager.getUserHandles(anyBoolean())).thenReturn(
-                Arrays.asList(PRIMARY_USER_HANDLE));
+                asList(PRIMARY_USER_HANDLE));
 
         // Arrange PackageManager mocks
         final int secondUserTestPackageUid = UserHandle.getUid(secondUser, TEST_PACKAGE_UID);
@@ -12116,7 +12116,7 @@ public class ConnectivityServiceTest {
 
         // Send a broadcast indicating a user was added.
         when(mUserManager.getUserHandles(anyBoolean())).thenReturn(
-                Arrays.asList(PRIMARY_USER_HANDLE, secondUserHandle));
+                asList(PRIMARY_USER_HANDLE, secondUserHandle));
         final Intent addedIntent = new Intent(ACTION_USER_ADDED);
         addedIntent.putExtra(Intent.EXTRA_USER, UserHandle.of(secondUser));
         processBroadcast(addedIntent);
@@ -12129,7 +12129,7 @@ public class ConnectivityServiceTest {
 
         // Send a broadcast indicating a user was removed.
         when(mUserManager.getUserHandles(anyBoolean())).thenReturn(
-                Arrays.asList(PRIMARY_USER_HANDLE));
+                asList(PRIMARY_USER_HANDLE));
         final Intent removedIntent = new Intent(ACTION_USER_REMOVED);
         removedIntent.putExtra(Intent.EXTRA_USER, UserHandle.of(secondUser));
         processBroadcast(removedIntent);
