@@ -40,9 +40,9 @@ import static android.system.OsConstants.NETLINK_NETFILTER;
 
 import static com.android.dx.mockito.inline.extended.ExtendedMockito.doReturn;
 import static com.android.dx.mockito.inline.extended.ExtendedMockito.staticMockMarker;
+import static com.android.networkstack.tethering.BpfCoordinator.CONNTRACK_TIMEOUT_UPDATE_INTERVAL_MS;
 import static com.android.networkstack.tethering.BpfCoordinator.NF_CONNTRACK_TCP_TIMEOUT_ESTABLISHED;
 import static com.android.networkstack.tethering.BpfCoordinator.NF_CONNTRACK_UDP_TIMEOUT_STREAM;
-import static com.android.networkstack.tethering.BpfCoordinator.POLLING_CONNTRACK_TIMEOUT_MS;
 import static com.android.networkstack.tethering.BpfCoordinator.StatsType;
 import static com.android.networkstack.tethering.BpfCoordinator.StatsType.STATS_PER_IFACE;
 import static com.android.networkstack.tethering.BpfCoordinator.StatsType.STATS_PER_UID;
@@ -1535,14 +1535,14 @@ public class BpfCoordinatorTest {
         // Timeline:
         // 0                                       60 (seconds)
         // +---+---+---+---+--...--+---+---+---+---+---+- ..
-        // |      POLLING_CONNTRACK_TIMEOUT_MS     |
+        // | CONNTRACK_TIMEOUT_UPDATE_INTERVAL_MS  |
         // +---+---+---+---+--...--+---+---+---+---+---+- ..
         // |<-          valid diff           ->|
         // |<-          expired diff                 ->|
         // ^                                   ^       ^
         // last used time      elapsed time (valid)    elapsed time (expired)
-        final long validTime = (POLLING_CONNTRACK_TIMEOUT_MS - 1) * 1_000_000L;
-        final long expiredTime = (POLLING_CONNTRACK_TIMEOUT_MS + 1) * 1_000_000L;
+        final long validTime = (CONNTRACK_TIMEOUT_UPDATE_INTERVAL_MS - 1) * 1_000_000L;
+        final long expiredTime = (CONNTRACK_TIMEOUT_UPDATE_INTERVAL_MS + 1) * 1_000_000L;
 
         // Static mocking for NetlinkSocket.
         MockitoSession mockSession = ExtendedMockito.mockitoSession()
@@ -1556,14 +1556,14 @@ public class BpfCoordinatorTest {
 
             // [1] Don't refresh contrack timeout.
             setElapsedRealtimeNanos(expiredTime);
-            mTestLooper.moveTimeForward(POLLING_CONNTRACK_TIMEOUT_MS);
+            mTestLooper.moveTimeForward(CONNTRACK_TIMEOUT_UPDATE_INTERVAL_MS);
             waitForIdle();
             ExtendedMockito.verifyNoMoreInteractions(staticMockMarker(NetlinkSocket.class));
             ExtendedMockito.clearInvocations(staticMockMarker(NetlinkSocket.class));
 
             // [2] Refresh contrack timeout.
             setElapsedRealtimeNanos(validTime);
-            mTestLooper.moveTimeForward(POLLING_CONNTRACK_TIMEOUT_MS);
+            mTestLooper.moveTimeForward(CONNTRACK_TIMEOUT_UPDATE_INTERVAL_MS);
             waitForIdle();
             final byte[] expectedNetlinkTcp = ConntrackMessage.newIPv4TimeoutUpdateRequest(
                     IPPROTO_TCP, PRIVATE_ADDR, (int) PRIVATE_PORT, REMOTE_ADDR,
@@ -1580,7 +1580,7 @@ public class BpfCoordinatorTest {
 
             // [3] Don't refresh contrack timeout if polling stopped.
             coordinator.stopPolling();
-            mTestLooper.moveTimeForward(POLLING_CONNTRACK_TIMEOUT_MS);
+            mTestLooper.moveTimeForward(CONNTRACK_TIMEOUT_UPDATE_INTERVAL_MS);
             waitForIdle();
             ExtendedMockito.verifyNoMoreInteractions(staticMockMarker(NetlinkSocket.class));
             ExtendedMockito.clearInvocations(staticMockMarker(NetlinkSocket.class));
