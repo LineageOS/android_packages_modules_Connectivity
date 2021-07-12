@@ -429,7 +429,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
     // PREFERENCE_PRIORITY_NONE when sending to netd.
     static final int PREFERENCE_PRIORITY_DEFAULT = 1000;
     // As a security feature, VPNs have the top priority.
-    static final int PREFERENCE_PRIORITY_VPN = 1;
+    static final int PREFERENCE_PRIORITY_VPN = 0; // Netd supports only 0 for VPN.
     // Priority of per-app OEM preference. See {@link #setOemNetworkPreference}.
     @VisibleForTesting
     static final int PREFERENCE_PRIORITY_OEM = 10;
