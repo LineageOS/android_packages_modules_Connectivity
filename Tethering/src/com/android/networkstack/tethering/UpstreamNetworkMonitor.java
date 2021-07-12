@@ -49,7 +49,6 @@ import com.android.internal.annotations.VisibleForTesting;
 import com.android.internal.util.StateMachine;
 import com.android.networkstack.apishim.ConnectivityManagerShimImpl;
 import com.android.networkstack.apishim.common.ConnectivityManagerShim;
-import com.android.networkstack.apishim.common.UnsupportedApiLevelException;
 
 import java.util.HashMap;
 import java.util.HashSet;
@@ -162,12 +161,7 @@ public class UpstreamNetworkMonitor {
         }
         ConnectivityManagerShim mCmShim = ConnectivityManagerShimImpl.newInstance(mContext);
         mDefaultNetworkCallback = new UpstreamNetworkCallback(CALLBACK_DEFAULT_INTERNET);
-        try {
-            mCmShim.registerSystemDefaultNetworkCallback(mDefaultNetworkCallback, mHandler);
-        } catch (UnsupportedApiLevelException e) {
-            Log.wtf(TAG, "registerSystemDefaultNetworkCallback is not supported");
-            return;
-        }
+        mCmShim.registerSystemDefaultNetworkCallback(mDefaultNetworkCallback, mHandler);
         if (mEntitlementMgr == null) {
             mEntitlementMgr = entitle;
         }
