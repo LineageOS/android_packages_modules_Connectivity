@@ -33,6 +33,9 @@ java_defaults {
     srcs: [
         ":nearby-java-sources",
     ],
+    static_libs: [
+        "modules-utils-preconditions",
+    ],
 }
 
 // Defaults for SDK versions.
@@ -41,7 +44,6 @@ java_defaults {
     min_sdk_version: "current",
     target_sdk_version: "current",
 }
-
 
 // Nearby-service needs pre-jarjared version of framework-nearby so it can reference copied utility
 // classes before they are renamed.
@@ -55,6 +57,7 @@ java_library {
     installable: false,
     visibility: [
         "//packages/modules/Nearby/service",
+        "//packages/modules/Nearby/tests",
     ],
 }
 
@@ -66,6 +69,7 @@ java_sdk_library {
         "framework-nearby-defaults",
     ],
 
+    jarjar_rules: ":nearby-jarjar-rules",
     apex_available: [
         "com.android.nearby",
     ],
@@ -80,5 +84,6 @@ java_sdk_library {
     ],
     permitted_packages: [
         "android.nearby",
+        "com.android.nearby",
     ],
 }

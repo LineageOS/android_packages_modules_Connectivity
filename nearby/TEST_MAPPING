@@ -1,0 +1,17 @@
+{
+  "presubmit": [
+    {
+      "name": "NearbyUnitTests"
+    }
+  ],
+  "postsubmit": [
+    {
+      "name": "NearbyUnitTests"
+    }
+  ],
+  "mainline-presubmit": [
+    {
+      "name": "NearbyUnitTests[com.google.android.nearby.apex]"
+    }
+  ]
+}

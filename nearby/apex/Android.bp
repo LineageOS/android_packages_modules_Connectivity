@@ -42,6 +42,11 @@ apex {
     ],
 }
 
+filegroup {
+    name: "nearby-jarjar-rules",
+    srcs: ["jarjar-rules.txt"],
+}
+
 sdk {
     name: "nearby-module-sdk",
     java_sdk_libs: [
