@@ -1051,6 +1051,15 @@ public class BpfCoordinator {
         }
     }
 
+    private String l4protoToString(int proto) {
+        if (proto == OsConstants.IPPROTO_TCP) {
+            return "tcp";
+        } else if (proto == OsConstants.IPPROTO_UDP) {
+            return "udp";
+        }
+        return String.format("unknown(%d)", proto);
+    }
+
     private String ipv4RuleToString(long now, boolean downstream,
             Tether4Key key, Tether4Value value) {
         final String src4, public4, dst4;
@@ -1069,12 +1078,11 @@ public class BpfCoordinator {
             throw new AssertionError("IP address array not valid IPv4 address!");
         }
 
-        final String protoStr = (key.l4proto == OsConstants.IPPROTO_TCP) ? "tcp" : "udp";
         final String ageStr = (value.lastUsed == 0) ? "-"
                 : String.format("%dms", (now - value.lastUsed) / 1_000_000);
         return String.format("%s [%s] %d(%s) %s:%d -> %d(%s) %s:%d -> %s:%d [%s] %s",
-                protoStr, key.dstMac, key.iif, getIfName(key.iif), src4, key.srcPort,
-                value.oif, getIfName(value.oif),
+                l4protoToString(key.l4proto), key.dstMac, key.iif, getIfName(key.iif),
+                src4, key.srcPort, value.oif, getIfName(value.oif),
                 public4, publicPort, dst4, value.dstPort, value.ethDstMac, ageStr);
     }
 
