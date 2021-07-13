@@ -123,8 +123,13 @@ public class BpfCoordinator {
         return makeMapPath((downstream ? "downstream" : "upstream") + ipVersion);
     }
 
+    // TODO: probably to remember what the timeout updated things to last is. But that requires
+    // either r/w map entries (which seems bad/racy) or a separate map to keep track of all flows
+    // and remember when they were updated and with what timeout.
     @VisibleForTesting
     static final int CONNTRACK_TIMEOUT_UPDATE_INTERVAL_MS = 60_000;
+    @VisibleForTesting
+    static final int CONNTRACK_TIMEOUT_UPDATE_SLACK_MS = 20_000;
     @VisibleForTesting
     static final int NF_CONNTRACK_TCP_TIMEOUT_ESTABLISHED = 432_000;
     @VisibleForTesting
@@ -1904,6 +1909,23 @@ public class BpfCoordinator {
         }
     }
 
+    boolean requireConntrackTimeoutUpdate(long nowNs, long lastUsedNs, int proto) {
+        // Refreshing tcp timeout without checking tcp state may make the conntrack entry live
+        // 5 days (432000s) even while the session is being closed. Its BPF rule may not be
+        // deleted for 5 days because the tcp state gets stuck and conntrack delete message is
+        // not sent. Note that both the conntrack monitor and refreshing timeout updater are
+        // in the same thread. Beware while the tcp status may be changed running in refreshing
+        // timeout updater and may read out-of-date tcp stats.
+        // See nf_conntrack_tcp_timeout_established in kernel document.
+        // TODO: support refreshing TCP conntrack timeout.
+        if (proto == OsConstants.IPPROTO_TCP) return false;
+
+        // The timeout requirement check needs the slack time because the scheduled timer may
+        // be not precise. The timeout update has a chance to be missed.
+        return (nowNs - lastUsedNs) < (long) (CONNTRACK_TIMEOUT_UPDATE_INTERVAL_MS
+                + CONNTRACK_TIMEOUT_UPDATE_SLACK_MS) * 1_000_000;
+    }
+
     private void refreshAllConntrackTimeouts() {
         final long now = mDeps.elapsedRealtimeNanos();
 
@@ -1911,7 +1933,7 @@ public class BpfCoordinator {
         // because TCP is a bidirectional traffic. Probably don't need to extend timeout by
         // both directions for TCP.
         mBpfCoordinatorShim.tetherOffloadRuleForEach(UPSTREAM, (k, v) -> {
-            if ((now - v.lastUsed) / 1_000_000 < CONNTRACK_TIMEOUT_UPDATE_INTERVAL_MS) {
+            if (requireConntrackTimeoutUpdate(now, v.lastUsed, k.l4proto)) {
                 updateConntrackTimeout((byte) k.l4proto,
                         parseIPv4Address(k.src4), (short) k.srcPort,
                         parseIPv4Address(k.dst4), (short) k.dstPort);
@@ -1919,10 +1941,10 @@ public class BpfCoordinator {
         });
 
         // Reverse the source and destination {address, port} from downstream value because
-        // #updateConntrackTimeout refresh the timeout of netlink attribute CTA_TUPLE_ORIG
+        // #updateConntrackTimeout refreshes the timeout of netlink attribute CTA_TUPLE_ORIG
         // which is opposite direction for downstream map value.
         mBpfCoordinatorShim.tetherOffloadRuleForEach(DOWNSTREAM, (k, v) -> {
-            if ((now - v.lastUsed) / 1_000_000 < CONNTRACK_TIMEOUT_UPDATE_INTERVAL_MS) {
+            if (requireConntrackTimeoutUpdate(now, v.lastUsed, k.l4proto)) {
                 updateConntrackTimeout((byte) k.l4proto,
                         parseIPv4Address(v.dst46), (short) v.dstPort,
                         parseIPv4Address(v.src46), (short) v.srcPort);
