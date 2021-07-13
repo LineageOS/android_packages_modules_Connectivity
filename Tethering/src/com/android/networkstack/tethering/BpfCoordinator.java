@@ -1860,7 +1860,15 @@ public class BpfCoordinator {
     // coming a conntrack event to notify updated timeout.
     private void updateConntrackTimeout(byte proto, Inet4Address src4, short srcPort,
             Inet4Address dst4, short dstPort) {
-        if (src4 == null || dst4 == null) return;
+        if (src4 == null || dst4 == null) {
+            mLog.e("Either source or destination IPv4 address is invalid ("
+                    + "proto: " + proto + ", "
+                    + "src4: " + src4 + ", "
+                    + "srcPort: " + Short.toUnsignedInt(srcPort) + ", "
+                    + "dst4: " + dst4 + ", "
+                    + "dstPort: " + Short.toUnsignedInt(dstPort) + ")");
+            return;
+        }
 
         // TODO: consider acquiring the timeout setting from nf_conntrack_* variables.
         // - proc/sys/net/netfilter/nf_conntrack_tcp_timeout_established
@@ -1874,14 +1882,25 @@ public class BpfCoordinator {
         try {
             NetlinkSocket.sendOneShotKernelMessage(OsConstants.NETLINK_NETFILTER, msg);
         } catch (ErrnoException e) {
-            mLog.e("Error updating conntrack entry ("
+            // Lower the log level for the entry not existing. The conntrack entry may have been
+            // deleted and not handled by the conntrack event monitor yet. In other words, the
+            // rule has not been deleted from the BPF map yet. Deleting a non-existent entry may
+            // happen during the conntrack timeout refreshing iteration. Note that ENOENT may be
+            // a real error but is hard to distinguish.
+            // TODO: Figure out a better way to handle this.
+            final String errMsg = "Failed to update conntrack entry ("
                     + "proto: " + proto + ", "
                     + "src4: " + src4 + ", "
                     + "srcPort: " + Short.toUnsignedInt(srcPort) + ", "
                     + "dst4: " + dst4 + ", "
                     + "dstPort: " + Short.toUnsignedInt(dstPort) + "), "
                     + "msg: " + NetlinkConstants.hexify(msg) + ", "
-                    + "e: " + e);
+                    + "e: " + e;
+            if (OsConstants.ENOENT == e.errno) {
+                mLog.w(errMsg);
+            } else {
+                mLog.e(errMsg);
+            }
         }
     }
 
