@@ -1042,7 +1042,7 @@ public class ConnectivityManagerTest {
      */
     @AppModeFull(reason = "Cannot get WifiManager in instant app mode")
     @Test
-    public void testToggleWifiConnectivityAction() {
+    public void testToggleWifiConnectivityAction() throws Exception {
         // toggleWifi calls connectToWifi and disconnectFromWifi, which both wait for
         // CONNECTIVITY_ACTION broadcasts.
         mCtsNetUtils.toggleWifi();

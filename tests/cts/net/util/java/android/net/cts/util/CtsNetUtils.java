@@ -168,15 +168,41 @@ public final class CtsNetUtils {
     }
 
     // Toggle WiFi twice, leaving it in the state it started in
-    public void toggleWifi() {
+    public void toggleWifi() throws Exception {
         if (mWifiManager.isWifiEnabled()) {
             Network wifiNetwork = getWifiNetwork();
+            // Ensure system default network is WIFI because it's expected in disconnectFromWifi()
+            expectNetworkIsSystemDefault(wifiNetwork);
             disconnectFromWifi(wifiNetwork);
             connectToWifi();
         } else {
             connectToWifi();
             Network wifiNetwork = getWifiNetwork();
+            // Ensure system default network is WIFI because it's expected in disconnectFromWifi()
+            expectNetworkIsSystemDefault(wifiNetwork);
             disconnectFromWifi(wifiNetwork);
+        }
+    }
+
+    private Network expectNetworkIsSystemDefault(Network network)
+            throws Exception {
+        final CompletableFuture<Network> future = new CompletableFuture();
+        final NetworkCallback cb = new NetworkCallback() {
+            @Override
+            public void onAvailable(Network n) {
+                if (n.equals(network)) future.complete(network);
+            }
+        };
+
+        try {
+            mCm.registerDefaultNetworkCallback(cb);
+            return future.get(CONNECTIVITY_CHANGE_TIMEOUT_SECS, TimeUnit.SECONDS);
+        } catch (TimeoutException e) {
+            throw new AssertionError("Timed out waiting for system default network to switch"
+                    + " to network " + network + ". Current default network is network "
+                    + mCm.getActiveNetwork(), e);
+        } finally {
+            mCm.unregisterNetworkCallback(cb);
         }
     }
 
