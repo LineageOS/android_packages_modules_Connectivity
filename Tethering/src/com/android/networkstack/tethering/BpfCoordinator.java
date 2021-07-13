@@ -1443,25 +1443,6 @@ public class BpfCoordinator {
         return addr6;
     }
 
-    @Nullable
-    private Inet4Address ipv4MappedAddressBytesToIpv4Address(final byte[] addr46) {
-        if (addr46.length != 16) return null;
-        if (addr46[0] != 0 || addr46[1] != 0 || addr46[2] != 0 || addr46[3] != 0
-                || addr46[4] != 0 || addr46[5] != 0 || addr46[6] != 0 || addr46[7] != 0
-                || addr46[8] != 0 && addr46[9] != 0 || (addr46[10] & 0xff) != 0xff
-                || (addr46[11] & 0xff) != 0xff) {
-            return null;
-        }
-
-        final byte[] addr4 = new byte[4];
-        addr4[0] = addr46[12];
-        addr4[1] = addr46[13];
-        addr4[2] = addr46[14];
-        addr4[3] = addr46[15];
-
-        return parseIPv4Address(addr4);
-    }
-
     // TODO: parse CTA_PROTOINFO of conntrack event in ConntrackMonitor. For TCP, only add rules
     // while TCP status is established.
     @VisibleForTesting
@@ -1861,7 +1842,7 @@ public class BpfCoordinator {
         try {
             final InetAddress ia = Inet4Address.getByAddress(addrBytes);
             if (ia instanceof Inet4Address) return (Inet4Address) ia;
-        } catch (UnknownHostException | IllegalArgumentException e) {
+        } catch (UnknownHostException e) {
             mLog.e("Failed to parse IPv4 address: " + e);
         }
         return null;
@@ -1899,24 +1880,25 @@ public class BpfCoordinator {
     private void refreshAllConntrackTimeouts() {
         final long now = mDeps.elapsedRealtimeNanos();
 
+        // TODO: Consider ignoring TCP traffic on upstream and monitor on downstream only
+        // because TCP is a bidirectional traffic. Probably don't need to extend timeout by
+        // both directions for TCP.
+        mBpfCoordinatorShim.tetherOffloadRuleForEach(UPSTREAM, (k, v) -> {
+            if ((now - v.lastUsed) / 1_000_000 < CONNTRACK_TIMEOUT_UPDATE_INTERVAL_MS) {
+                updateConntrackTimeout((byte) k.l4proto,
+                        parseIPv4Address(k.src4), (short) k.srcPort,
+                        parseIPv4Address(k.dst4), (short) k.dstPort);
+            }
+        });
+
         // Reverse the source and destination {address, port} from downstream value because
         // #updateConntrackTimeout refresh the timeout of netlink attribute CTA_TUPLE_ORIG
         // which is opposite direction for downstream map value.
         mBpfCoordinatorShim.tetherOffloadRuleForEach(DOWNSTREAM, (k, v) -> {
             if ((now - v.lastUsed) / 1_000_000 < CONNTRACK_TIMEOUT_UPDATE_INTERVAL_MS) {
                 updateConntrackTimeout((byte) k.l4proto,
-                        ipv4MappedAddressBytesToIpv4Address(v.dst46), (short) v.dstPort,
-                        ipv4MappedAddressBytesToIpv4Address(v.src46), (short) v.srcPort);
-            }
-        });
-
-        // TODO: Consider ignoring TCP traffic on upstream and monitor on downstream only
-        // because TCP is a bidirectional traffic. Probably don't need to extend timeout by
-        // both directions for TCP.
-        mBpfCoordinatorShim.tetherOffloadRuleForEach(UPSTREAM, (k, v) -> {
-            if ((now - v.lastUsed) / 1_000_000 < CONNTRACK_TIMEOUT_UPDATE_INTERVAL_MS) {
-                updateConntrackTimeout((byte) k.l4proto, parseIPv4Address(k.src4),
-                        (short) k.srcPort, parseIPv4Address(k.dst4), (short) k.dstPort);
+                        parseIPv4Address(v.dst46), (short) v.dstPort,
+                        parseIPv4Address(v.src46), (short) v.srcPort);
             }
         });
     }
