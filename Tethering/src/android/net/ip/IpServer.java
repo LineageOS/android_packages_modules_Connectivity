@@ -26,6 +26,7 @@ import static android.net.util.TetheringMessageBase.BASE_IPSERVER;
 import static android.system.OsConstants.RT_SCOPE_UNIVERSE;
 
 import static com.android.net.module.util.Inet4AddressUtils.intToInet4AddressHTH;
+import static com.android.networkstack.tethering.UpstreamNetworkState.isVcnInterface;
 
 import android.net.INetd;
 import android.net.INetworkStackStatusCallback;
@@ -755,6 +756,9 @@ public class IpServer extends StateMachine {
         // deprecation of any existing RA data.
 
         setRaParams(params);
+        // Be aware that updateIpv6ForwardingRules use mLastIPv6LinkProperties, so this line should
+        // be eariler than updateIpv6ForwardingRules.
+        // TODO: avoid this dependencies and move this logic into BpfCoordinator.
         mLastIPv6LinkProperties = v6only;
 
         updateIpv6ForwardingRules(mLastIPv6UpstreamIfindex, upstreamIfIndex, null);
@@ -892,12 +896,20 @@ public class IpServer extends StateMachine {
         mBpfCoordinator.tetherOffloadRuleUpdate(this, newIfindex);
     }
 
+    private boolean isIpv6VcnNetworkInterface() {
+        if (mLastIPv6LinkProperties == null) return false;
+
+        return isVcnInterface(mLastIPv6LinkProperties.getInterfaceName());
+    }
+
     // Handles all updates to IPv6 forwarding rules. These can currently change only if the upstream
     // changes or if a neighbor event is received.
     private void updateIpv6ForwardingRules(int prevUpstreamIfindex, int upstreamIfindex,
             NeighborEvent e) {
-        // If we no longer have an upstream, clear forwarding rules and do nothing else.
-        if (upstreamIfindex == 0) {
+        // If no longer have an upstream or it is virtual network, clear forwarding rules and do
+        // nothing else.
+        // TODO: Rather than always clear rules, ensure whether ipv6 ever enable first.
+        if (upstreamIfindex == 0 || isIpv6VcnNetworkInterface()) {
             clearIpv6ForwardingRules();
             return;
         }
