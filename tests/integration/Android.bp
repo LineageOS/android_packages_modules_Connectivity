@@ -38,7 +38,7 @@ android_test {
         "kotlin-reflect",
         "mockito-target-extended-minus-junit4",
         "net-tests-utils",
-        "service-connectivity",
+        "service-connectivity-pre-jarjar",
         "services.core",
         "services.net",
         "testables",
@@ -53,6 +53,7 @@ android_test {
         "libnativehelper_compat_libc++",
         "libnetworkstackutilsjni",
     ],
+    jarjar_rules: ":connectivity-jarjar-rules",
 }
 
 // Utilities for testing framework code both in integration and unit tests.
