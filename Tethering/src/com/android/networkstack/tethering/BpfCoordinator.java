@@ -1572,6 +1572,10 @@ public class BpfCoordinator {
             final Tether4Key downstream4Key = makeTetherDownstream4Key(e, tetherClient,
                     upstreamIndex);
 
+            final boolean isConntrackEventDelete =
+                    e.msgType == (NetlinkConstants.NFNL_SUBSYS_CTNETLINK << 8
+                    | NetlinkConstants.IPCTNL_MSG_CT_DELETE);
+
             // Using the timeout to distinguish tcp state is not a decent way. Need to fix.
             // The received IPCTNL_MSG_CT_NEW must pass ConntrackMonitor#isEstablishedNatSession
             // which checks CTA_STATUS. It implies that this entry has at least reached tcp
@@ -1584,8 +1588,18 @@ public class BpfCoordinator {
                     && e.tupleOrig.protoNum == OsConstants.IPPROTO_TCP
                     && (e.timeoutSec >= NF_CONNTRACK_TCP_TIMEOUT_UNACKNOWLEDGED);
 
-            if (e.msgType == (NetlinkConstants.NFNL_SUBSYS_CTNETLINK << 8
-                    | NetlinkConstants.IPCTNL_MSG_CT_DELETE)) {
+            final boolean isTcpNonEstablished =
+                    e.msgType == (NetlinkConstants.NFNL_SUBSYS_CTNETLINK << 8
+                    | NetlinkConstants.IPCTNL_MSG_CT_NEW)
+                    && e.tupleOrig.protoNum == OsConstants.IPPROTO_TCP
+                    && (e.timeoutSec < NF_CONNTRACK_TCP_TIMEOUT_UNACKNOWLEDGED);
+
+            // Delete the BPF rules:
+            // 1. Contrack event IPCTNL_MSG_CT_DELETE received.
+            // 2. For TCP conntrack entry, the tcp state has left "established" and going to be
+            // closed.
+            // TODO: continue to offload half-closed tcp connections.
+            if (isConntrackEventDelete || isTcpNonEstablished) {
                 final boolean deletedUpstream = mBpfCoordinatorShim.tetherOffloadRuleRemove(
                         UPSTREAM, upstream4Key);
                 final boolean deletedDownstream = mBpfCoordinatorShim.tetherOffloadRuleRemove(
@@ -1600,6 +1614,7 @@ public class BpfCoordinator {
                     Log.wtf(TAG, "The bidirectional rules should be removed concurrently ("
                             + "upstream: " + deletedUpstream
                             + ", downstream: " + deletedDownstream + ")");
+                    // TODO: consider better error handling for the stubs {rule, limit, ..}.
                     return;
                 }
 
