@@ -124,9 +124,9 @@ public class BpfCoordinator {
     }
 
     @VisibleForTesting
-    static final int POLLING_CONNTRACK_TIMEOUT_MS = 60_000;
+    static final int CONNTRACK_TIMEOUT_UPDATE_INTERVAL_MS = 60_000;
     @VisibleForTesting
-    static final int NF_CONNTRACK_TCP_TIMEOUT_ESTABLISHED = 432000;
+    static final int NF_CONNTRACK_TCP_TIMEOUT_ESTABLISHED = 432_000;
     @VisibleForTesting
     static final int NF_CONNTRACK_UDP_TIMEOUT_STREAM = 180;
 
@@ -249,10 +249,10 @@ public class BpfCoordinator {
         maybeSchedulePollingStats();
     };
 
-    // Runnable that used by scheduling next polling of conntrack timeout.
-    private final Runnable mScheduledPollingConntrackTimeout = () -> {
-        maybeRefreshConntrackTimeout();
-        maybeSchedulePollingConntrackTimeout();
+    // Runnable that used by scheduling next refreshing of conntrack timeout.
+    private final Runnable mScheduledConntrackTimeoutUpdate = () -> {
+        refreshAllConntrackTimeouts();
+        maybeScheduleConntrackTimeoutUpdate();
     };
 
     // TODO: add BpfMap<TetherDownstream64Key, TetherDownstream64Value> retrieving function.
@@ -434,7 +434,7 @@ public class BpfCoordinator {
 
         mPollingStarted = true;
         maybeSchedulePollingStats();
-        maybeSchedulePollingConntrackTimeout();
+        maybeScheduleConntrackTimeoutUpdate();
 
         mLog.i("Polling started");
     }
@@ -451,8 +451,8 @@ public class BpfCoordinator {
         if (!mPollingStarted) return;
 
         // Stop scheduled polling conntrack timeout.
-        if (mHandler.hasCallbacks(mScheduledPollingConntrackTimeout)) {
-            mHandler.removeCallbacks(mScheduledPollingConntrackTimeout);
+        if (mHandler.hasCallbacks(mScheduledConntrackTimeoutUpdate)) {
+            mHandler.removeCallbacks(mScheduledConntrackTimeoutUpdate);
         }
         // Stop scheduled polling stats and poll the latest stats from BPF maps.
         if (mHandler.hasCallbacks(mScheduledPollingStats)) {
@@ -1896,14 +1896,14 @@ public class BpfCoordinator {
         }
     }
 
-    private void maybeRefreshConntrackTimeout() {
+    private void refreshAllConntrackTimeouts() {
         final long now = mDeps.elapsedRealtimeNanos();
 
         // Reverse the source and destination {address, port} from downstream value because
         // #updateConntrackTimeout refresh the timeout of netlink attribute CTA_TUPLE_ORIG
         // which is opposite direction for downstream map value.
         mBpfCoordinatorShim.tetherOffloadRuleForEach(DOWNSTREAM, (k, v) -> {
-            if ((now - v.lastUsed) / 1_000_000 < POLLING_CONNTRACK_TIMEOUT_MS) {
+            if ((now - v.lastUsed) / 1_000_000 < CONNTRACK_TIMEOUT_UPDATE_INTERVAL_MS) {
                 updateConntrackTimeout((byte) k.l4proto,
                         ipv4MappedAddressBytesToIpv4Address(v.dst46), (short) v.dstPort,
                         ipv4MappedAddressBytesToIpv4Address(v.src46), (short) v.srcPort);
@@ -1914,7 +1914,7 @@ public class BpfCoordinator {
         // because TCP is a bidirectional traffic. Probably don't need to extend timeout by
         // both directions for TCP.
         mBpfCoordinatorShim.tetherOffloadRuleForEach(UPSTREAM, (k, v) -> {
-            if ((now - v.lastUsed) / 1_000_000 < POLLING_CONNTRACK_TIMEOUT_MS) {
+            if ((now - v.lastUsed) / 1_000_000 < CONNTRACK_TIMEOUT_UPDATE_INTERVAL_MS) {
                 updateConntrackTimeout((byte) k.l4proto, parseIPv4Address(k.src4),
                         (short) k.srcPort, parseIPv4Address(k.dst4), (short) k.dstPort);
             }
@@ -1931,14 +1931,15 @@ public class BpfCoordinator {
         mHandler.postDelayed(mScheduledPollingStats, getPollingInterval());
     }
 
-    private void maybeSchedulePollingConntrackTimeout() {
+    private void maybeScheduleConntrackTimeoutUpdate() {
         if (!mPollingStarted) return;
 
-        if (mHandler.hasCallbacks(mScheduledPollingConntrackTimeout)) {
-            mHandler.removeCallbacks(mScheduledPollingConntrackTimeout);
+        if (mHandler.hasCallbacks(mScheduledConntrackTimeoutUpdate)) {
+            mHandler.removeCallbacks(mScheduledConntrackTimeoutUpdate);
         }
 
-        mHandler.postDelayed(mScheduledPollingConntrackTimeout, POLLING_CONNTRACK_TIMEOUT_MS);
+        mHandler.postDelayed(mScheduledConntrackTimeoutUpdate,
+                CONNTRACK_TIMEOUT_UPDATE_INTERVAL_MS);
     }
 
     // Return forwarding rule map. This is used for testing only.
