@@ -42,6 +42,7 @@ import static com.android.dx.mockito.inline.extended.ExtendedMockito.doReturn;
 import static com.android.dx.mockito.inline.extended.ExtendedMockito.staticMockMarker;
 import static com.android.networkstack.tethering.BpfCoordinator.CONNTRACK_TIMEOUT_UPDATE_INTERVAL_MS;
 import static com.android.networkstack.tethering.BpfCoordinator.CONNTRACK_TIMEOUT_UPDATE_SLACK_MS;
+import static com.android.networkstack.tethering.BpfCoordinator.NF_CONNTRACK_TCP_TIMEOUT_ESTABLISHED;
 import static com.android.networkstack.tethering.BpfCoordinator.NF_CONNTRACK_UDP_TIMEOUT_STREAM;
 import static com.android.networkstack.tethering.BpfCoordinator.StatsType;
 import static com.android.networkstack.tethering.BpfCoordinator.StatsType.STATS_PER_IFACE;
@@ -1369,8 +1370,14 @@ public class BpfCoordinatorTest {
         }
 
         final int status = (msgType == IPCTNL_MSG_CT_NEW) ? ESTABLISHED_MASK : DYING_MASK;
-        final int timeoutSec = (msgType == IPCTNL_MSG_CT_NEW) ? 100 /* nonzero, new */
-                : 0 /* unused, delete */;
+        int timeoutSec;
+        if (msgType == IPCTNL_MSG_CT_NEW) {
+            timeoutSec = (proto == IPPROTO_TCP)
+                    ? NF_CONNTRACK_TCP_TIMEOUT_ESTABLISHED
+                    : NF_CONNTRACK_UDP_TIMEOUT_STREAM;
+        } else {
+            timeoutSec = 0; /* unused, CT_DELETE */
+        }
         return new ConntrackEvent(
                 (short) (NetlinkConstants.NFNL_SUBSYS_CTNETLINK << 8 | msgType),
                 new Tuple(new TupleIpv4(PRIVATE_ADDR, REMOTE_ADDR),

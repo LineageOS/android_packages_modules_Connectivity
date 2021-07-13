@@ -371,6 +371,7 @@ public class BpfCoordinatorShimImpl
         } catch (IllegalStateException e) {
             // Silent if the rule already exists. Note that the errno EEXIST was rethrown as
             // IllegalStateException. See BpfMap#insertEntry.
+            return false;
         }
         return true;
     }
