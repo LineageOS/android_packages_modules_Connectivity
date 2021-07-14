@@ -31,6 +31,7 @@ import static android.system.OsConstants.ETH_P_IPV6;
 import static com.android.networkstack.tethering.BpfUtils.DOWNSTREAM;
 import static com.android.networkstack.tethering.BpfUtils.UPSTREAM;
 import static com.android.networkstack.tethering.TetheringConfiguration.DEFAULT_TETHER_OFFLOAD_POLL_INTERVAL_MS;
+import static com.android.networkstack.tethering.UpstreamNetworkState.isVcnInterface;
 
 import android.app.usage.NetworkStatsManager;
 import android.net.INetd;
@@ -666,6 +667,8 @@ public class BpfCoordinator {
 
         if (upstreamIfindex == 0 || TextUtils.isEmpty(upstreamIface)) return;
 
+        if (isVcnInterface(upstreamIface)) return;
+
         // The same interface index to name mapping may be added by different IpServer objects or
         // re-added by reconnection on the same upstream interface. Ignore the duplicate one.
         final String iface = mInterfaceNames.get(upstreamIfindex);
@@ -833,9 +836,10 @@ public class BpfCoordinator {
         // TODO: need to consider 464xlat.
         if (ns != null && ns.linkProperties != null && ns.linkProperties.hasIpv4Address()) {
             // TODO: support ether ip upstream interface.
-            final InterfaceParams params = mDeps.getInterfaceParams(
-                    ns.linkProperties.getInterfaceName());
-            if (params != null && !params.hasMacAddress /* raw ip upstream only */) {
+            final String ifaceName = ns.linkProperties.getInterfaceName();
+            final InterfaceParams params = mDeps.getInterfaceParams(ifaceName);
+            final boolean isVcn = isVcnInterface(ifaceName);
+            if (!isVcn && params != null && !params.hasMacAddress /* raw ip upstream only */) {
                 upstreamIndex = params.index;
             }
         }
@@ -879,6 +883,8 @@ public class BpfCoordinator {
      * TODO: consider error handling if the attach program failed.
      */
     public void maybeAttachProgram(@NonNull String intIface, @NonNull String extIface) {
+        if (isVcnInterface(extIface)) return;
+
         if (forwardingPairExists(intIface, extIface)) return;
 
         boolean firstDownstreamForThisUpstream = !isAnyForwardingPairOnUpstream(extIface);
