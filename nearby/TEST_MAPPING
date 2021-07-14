@@ -8,10 +8,11 @@
     {
       "name": "NearbyUnitTests"
     }
-  ],
-  "mainline-presubmit": [
-    {
-      "name": "NearbyUnitTests[com.google.android.nearby.apex]"
-    }
   ]
+  // TODO(b/193602229): uncomment once it's supported.
+  //"mainline-presubmit": [
+  //  {
+  //    "name": "NearbyUnitTests[com.google.android.nearby.apex]"
+  //  }
+  //]
 }
