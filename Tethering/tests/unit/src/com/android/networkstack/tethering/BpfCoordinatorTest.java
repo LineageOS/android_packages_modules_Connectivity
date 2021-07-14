@@ -1129,6 +1129,7 @@ public class BpfCoordinatorTest {
             final String intIface1 = "wlan1";
             final String intIface2 = "rndis0";
             final String extIface = "rmnet_data0";
+            final String virtualIface = "ipsec0";
             final BpfUtils mockMarkerBpfUtils = staticMockMarker(BpfUtils.class);
             final BpfCoordinator coordinator = makeBpfCoordinator();
 
@@ -1164,6 +1165,14 @@ public class BpfCoordinatorTest {
             ExtendedMockito.verify(() -> BpfUtils.detachProgram(intIface1));
             ExtendedMockito.verifyNoMoreInteractions(mockMarkerBpfUtils);
             ExtendedMockito.clearInvocations(mockMarkerBpfUtils);
+
+            // [6] Skip attaching if upstream is virtual interface.
+            coordinator.maybeAttachProgram(intIface1, virtualIface);
+            ExtendedMockito.verify(() -> BpfUtils.attachProgram(extIface, DOWNSTREAM), never());
+            ExtendedMockito.verify(() -> BpfUtils.attachProgram(intIface1, UPSTREAM), never());
+            ExtendedMockito.verifyNoMoreInteractions(mockMarkerBpfUtils);
+            ExtendedMockito.clearInvocations(mockMarkerBpfUtils);
+
         } finally {
             mockSession.finishMocking();
         }
