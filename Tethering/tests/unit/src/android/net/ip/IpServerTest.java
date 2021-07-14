@@ -146,8 +146,10 @@ public class IpServerTest {
     private static final String IFACE_NAME = "testnet1";
     private static final String UPSTREAM_IFACE = "upstream0";
     private static final String UPSTREAM_IFACE2 = "upstream1";
+    private static final String IPSEC_IFACE = "ipsec0";
     private static final int UPSTREAM_IFINDEX = 101;
     private static final int UPSTREAM_IFINDEX2 = 102;
+    private static final int IPSEC_IFINDEX = 103;
     private static final String BLUETOOTH_IFACE_ADDR = "192.168.44.1";
     private static final int BLUETOOTH_DHCP_PREFIX_LENGTH = 24;
     private static final int DHCP_LEASE_TIME_SECS = 3600;
@@ -160,6 +162,8 @@ public class IpServerTest {
     private static final InterfaceParams UPSTREAM_IFACE_PARAMS2 = new InterfaceParams(
             UPSTREAM_IFACE2, UPSTREAM_IFINDEX2, MacAddress.ALL_ZEROS_ADDRESS,
             1500 /* defaultMtu */);
+    private static final InterfaceParams IPSEC_IFACE_PARAMS = new InterfaceParams(
+            IPSEC_IFACE, IPSEC_IFINDEX, MacAddress.ALL_ZEROS_ADDRESS, 1500 /* defaultMtu */);
 
     private static final int MAKE_DHCPSERVER_TIMEOUT_MS = 1000;
 
@@ -208,6 +212,7 @@ public class IpServerTest {
         when(mDependencies.getInterfaceParams(IFACE_NAME)).thenReturn(TEST_IFACE_PARAMS);
         when(mDependencies.getInterfaceParams(UPSTREAM_IFACE)).thenReturn(UPSTREAM_IFACE_PARAMS);
         when(mDependencies.getInterfaceParams(UPSTREAM_IFACE2)).thenReturn(UPSTREAM_IFACE_PARAMS2);
+        when(mDependencies.getInterfaceParams(IPSEC_IFACE)).thenReturn(IPSEC_IFACE_PARAMS);
 
         mInterfaceConfiguration = new InterfaceConfigurationParcel();
         mInterfaceConfiguration.flags = new String[0];
@@ -1452,5 +1457,24 @@ public class IpServerTest {
     @Test @IgnoreUpTo(Build.VERSION_CODES.R)
     public void testDadProxyUpdates_EnabledAfterR() throws Exception {
         checkDadProxyEnabled(true);
+    }
+
+    @Test
+    public void testSkipVirtualNetworkInBpf() throws Exception {
+        initTetheredStateMachine(TETHERING_BLUETOOTH, null);
+        final LinkProperties v6Only = new LinkProperties();
+        v6Only.setInterfaceName(IPSEC_IFACE);
+        dispatchTetherConnectionChanged(IPSEC_IFACE, v6Only, 0);
+
+        verify(mBpfCoordinator).maybeAttachProgram(IFACE_NAME, IPSEC_IFACE);
+        verify(mNetd).tetherAddForward(IFACE_NAME, IPSEC_IFACE);
+        verify(mNetd).ipfwdAddInterfaceForward(IFACE_NAME, IPSEC_IFACE);
+
+        final int myIfindex = TEST_IFACE_PARAMS.index;
+        final InetAddress neigh = InetAddresses.parseNumericAddress("2001:db8::1");
+        final MacAddress mac = MacAddress.fromString("00:00:00:00:00:0a");
+        recvNewNeigh(myIfindex, neigh, NUD_REACHABLE, mac);
+        verify(mBpfCoordinator, never()).tetherOffloadRuleAdd(
+                mIpServer, makeForwardingRule(IPSEC_IFINDEX, neigh, mac));
     }
 }
