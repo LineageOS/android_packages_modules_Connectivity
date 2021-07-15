@@ -2,12 +2,17 @@ rule android.sysprop.** com.android.connectivity.@0
 rule com.android.net.module.util.** com.android.connectivity.@0
 rule com.android.modules.utils.** com.android.connectivity.@0
 
-# internal util classes
+# internal util classes from framework-connectivity-shared-srcs
 rule android.util.LocalLog* com.android.connectivity.@0
 # android.util.IndentingPrintWriter* should use a different package name from
 # the one in com.android.internal.util
 rule android.util.IndentingPrintWriter* com.android.connectivity.@0
-rule com.android.internal.util.** com.android.connectivity.@0
+rule com.android.internal.util.IndentingPrintWriter* com.android.connectivity.@0
+rule com.android.internal.util.IState* com.android.connectivity.@0
+rule com.android.internal.util.MessageUtils* com.android.connectivity.@0
+rule com.android.internal.util.State* com.android.connectivity.@0
+rule com.android.internal.util.StateMachine* com.android.connectivity.@0
+rule com.android.internal.util.WakeupMessage* com.android.connectivity.@0
 
 rule com.android.internal.messages.** com.android.connectivity.@0
 rule com.google.protobuf.** com.android.connectivity.@0
@@ -26,7 +31,10 @@ rule android.net.NetworkFactory* com.android.connectivity.@0
 
 # From netd-client (newer AIDLs should go to android.net.netd.aidl)
 rule android.net.netd.aidl.** com.android.connectivity.@0
-rule android.net.INetd* com.android.connectivity.@0
+# Avoid including android.net.INetdEventCallback, used in tests but not part of the module
+rule android.net.INetd com.android.connectivity.@0
+rule android.net.INetd$* com.android.connectivity.@0
+rule android.net.INetdUnsolicitedEventListener* com.android.connectivity.@0
 rule android.net.InterfaceConfigurationParcel* com.android.connectivity.@0
 rule android.net.MarkMaskParcel* com.android.connectivity.@0
 rule android.net.NativeNetworkConfig* com.android.connectivity.@0
