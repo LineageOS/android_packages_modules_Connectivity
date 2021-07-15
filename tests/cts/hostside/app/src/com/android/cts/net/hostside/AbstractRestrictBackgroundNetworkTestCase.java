@@ -53,6 +53,7 @@ import android.net.NetworkRequest;
 import android.os.BatteryManager;
 import android.os.Binder;
 import android.os.Bundle;
+import android.os.RemoteCallback;
 import android.os.SystemClock;
 import android.provider.DeviceConfig;
 import android.service.notification.NotificationListenerService;
@@ -137,6 +138,7 @@ public abstract class AbstractRestrictBackgroundNetworkTestCase {
 
     private static final int ACTIVITY_NETWORK_STATE_TIMEOUT_MS = 6_000;
     private static final int JOB_NETWORK_STATE_TIMEOUT_MS = 10_000;
+    private static final int LAUNCH_ACTIVITY_TIMEOUT_MS = 10_000;
 
     // Must be higher than NETWORK_TIMEOUT_MS
     private static final int ORDERED_BROADCAST_TIMEOUT_MS = NETWORK_TIMEOUT_MS * 4;
@@ -785,6 +787,22 @@ public abstract class AbstractRestrictBackgroundNetworkTestCase {
 
     protected void resetDeviceIdleSettings() {
         mDeviceIdleDeviceConfigStateHelper.restoreOriginalValues();
+    }
+
+    protected void launchActivity() throws Exception {
+        turnScreenOn();
+        final CountDownLatch latch = new CountDownLatch(1);
+        final Intent launchIntent = getIntentForComponent(TYPE_COMPONENT_ACTIVTIY);
+        final RemoteCallback callback = new RemoteCallback(result -> latch.countDown());
+        launchIntent.putExtra(Intent.EXTRA_REMOTE_CALLBACK, callback);
+        mContext.startActivity(launchIntent);
+        // There might be a race when app2 is launched but ACTION_FINISH_ACTIVITY has not registered
+        // before test calls finishActivity(). When the issue is happened, there is no way to fix
+        // it, so have a callback design to make sure that the app is launched completely and
+        // ACTION_FINISH_ACTIVITY will be registered before leaving this method.
+        if (!latch.await(LAUNCH_ACTIVITY_TIMEOUT_MS, TimeUnit.MILLISECONDS)) {
+            fail("Timed out waiting for launching activity");
+        }
     }
 
     protected void launchComponentAndAssertNetworkAccess(int type) throws Exception {
