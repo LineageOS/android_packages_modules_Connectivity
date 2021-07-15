@@ -33,6 +33,7 @@ import static android.net.NetworkCapabilities.NET_CAPABILITY_XCAP;
 import static android.net.NetworkCapabilities.TRANSPORT_BLUETOOTH;
 import static android.net.NetworkCapabilities.TRANSPORT_CELLULAR;
 import static android.net.NetworkCapabilities.TRANSPORT_ETHERNET;
+import static android.net.NetworkCapabilities.TRANSPORT_USB;
 import static android.net.NetworkCapabilities.TRANSPORT_VPN;
 import static android.net.NetworkCapabilities.TRANSPORT_WIFI;
 import static android.net.NetworkCapabilities.TRANSPORT_WIFI_AWARE;
@@ -47,12 +48,6 @@ import com.android.internal.annotations.VisibleForTesting;
  * @hide
  */
 public final class NetworkCapabilitiesUtils {
-    /**
-     * See android.net.NetworkCapabilities.TRANSPORT_USB
-     * TODO: Use API constant when all downstream branches are S-based
-     */
-    public static final int TRANSPORT_USB = 8;
-
     // Transports considered to classify networks in UI, in order of which transport should be
     // surfaced when there are multiple transports. Transports not in this list do not have
     // an ordering preference (in practice they will have a deterministic order based on the
