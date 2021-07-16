@@ -1,5 +1,8 @@
 {
   "presubmit": [
+    {
+      "name": "ConnectivityCoverageTests"
+    },
     // Run in addition to mainline-presubmit as mainline-presubmit is not
     // supported in every branch.
     // CtsNetTestCasesLatestSdk uses stable API shims, so does not exercise
@@ -17,11 +20,6 @@
     },
     {
       "name": "TetheringIntegrationTests"
-    }
-  ],
-  "postsubmit": [
-    {
-      "name": "ConnectivityCoverageTests"
     }
   ],
   "mainline-presubmit": [
