@@ -10254,13 +10254,13 @@ public class ConnectivityServiceTest {
     }
 
     private boolean areConnDiagCapsRedacted(NetworkCapabilities nc) {
-        TestTransportInfo ti = (TestTransportInfo) nc.getTransportInfo();
+        TestTransportInfo ti = getTestTransportInfo(nc);
         return nc.getUids() == null
                 && nc.getAdministratorUids().length == 0
                 && nc.getOwnerUid() == Process.INVALID_UID
-                && getTestTransportInfo(nc).locationRedacted
-                && getTestTransportInfo(nc).localMacAddressRedacted
-                && getTestTransportInfo(nc).settingsRedacted;
+                && ti.locationRedacted
+                && ti.localMacAddressRedacted
+                && ti.settingsRedacted;
     }
 
     @Test
