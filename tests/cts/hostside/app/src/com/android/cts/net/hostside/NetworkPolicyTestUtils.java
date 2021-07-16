@@ -435,6 +435,11 @@ public class NetworkPolicyTestUtils {
         PollingCheck.waitFor(() -> (expectedResult == isUidNetworkingBlocked(uid, metered)));
     }
 
+    public static void assertIsUidRestrictedOnMeteredNetworks(int uid, boolean expectedResult)
+            throws Exception {
+        PollingCheck.waitFor(() -> (expectedResult == isUidRestrictedOnMeteredNetworks(uid)));
+    }
+
     public static boolean isUidNetworkingBlocked(int uid, boolean meteredNetwork) {
         final UiAutomation uiAutomation = getInstrumentation().getUiAutomation();
         try {
