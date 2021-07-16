@@ -17,7 +17,6 @@ package com.android.cts.net.hostside.app2;
 
 import static com.android.cts.net.hostside.app2.Common.ACTION_FINISH_ACTIVITY;
 import static com.android.cts.net.hostside.app2.Common.TAG;
-import static com.android.cts.net.hostside.app2.Common.TEST_PKG;
 import static com.android.cts.net.hostside.app2.Common.TYPE_COMPONENT_ACTIVTY;
 
 import android.app.Activity;
@@ -25,12 +24,9 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.os.AsyncTask;
 import android.os.Bundle;
-import android.os.RemoteException;
+import android.os.RemoteCallback;
 import android.util.Log;
-
-import com.android.cts.net.hostside.INetworkStateObserver;
 
 /**
  * Activity used to bring process to foreground.
@@ -52,6 +48,11 @@ public class MyActivity extends Activity {
             }
         };
         registerReceiver(finishCommandReceiver, new IntentFilter(ACTION_FINISH_ACTIVITY));
+        final RemoteCallback callback = getIntent().getParcelableExtra(
+                Intent.EXTRA_REMOTE_CALLBACK);
+        if (callback != null) {
+            callback.sendResult(null);
+        }
     }
 
     @Override
