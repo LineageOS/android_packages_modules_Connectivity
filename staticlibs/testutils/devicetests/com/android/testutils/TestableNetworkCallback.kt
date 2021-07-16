@@ -116,6 +116,7 @@ open class RecorderCallback private constructor(
     val mark get() = history.mark
 
     override fun onAvailable(network: Network) {
+        Log.d(TAG, "onAvailable $network")
         history.add(Available(network))
     }
 
@@ -197,6 +198,15 @@ open class TestableNetworkCallback private constructor(
     fun assertNoCallback(timeoutMs: Long) {
         val cb = history.poll(timeoutMs)
         if (null != cb) fail("Expected no callback but got $cb")
+    }
+
+    fun assertNoCallbackThat(
+        timeoutMs: Long = defaultTimeoutMs,
+        valid: (CallbackEntry) -> Boolean
+    ) {
+        val cb = history.poll(timeoutMs) { valid(it) }.let {
+            if (null != it) fail("Expected no callback but got $it")
+        }
     }
 
     // Expects a callback of the specified type on the specified network within the timeout.
