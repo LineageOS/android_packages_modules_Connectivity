@@ -280,6 +280,7 @@ import android.os.HandlerThread;
 import android.os.IBinder;
 import android.os.INetworkManagementService;
 import android.os.Looper;
+import android.os.Messenger;
 import android.os.Parcel;
 import android.os.ParcelFileDescriptor;
 import android.os.Parcelable;
@@ -2166,6 +2167,45 @@ public class ConnectivityServiceTest {
         mCm.unregisterNetworkCallback(wifiListenCallback);
         mCm.unregisterNetworkCallback(bgMobileListenCallback);
         mCm.unregisterNetworkCallback(fgMobileListenCallback);
+    }
+
+    @Test
+    public void testBinderDeathAfterUnregister() throws Exception {
+        final NetworkCapabilities caps = new NetworkCapabilities.Builder()
+                .addTransportType(TRANSPORT_WIFI)
+                .build();
+        final Handler handler = new Handler(ConnectivityThread.getInstanceLooper());
+        final Messenger messenger = new Messenger(handler);
+        final CompletableFuture<Binder.DeathRecipient> deathRecipient = new CompletableFuture<>();
+        final Binder binder = new Binder() {
+            private DeathRecipient mDeathRecipient;
+            @Override
+            public void linkToDeath(@NonNull final DeathRecipient recipient, final int flags) {
+                synchronized (this) {
+                    mDeathRecipient = recipient;
+                }
+                super.linkToDeath(recipient, flags);
+                deathRecipient.complete(recipient);
+            }
+
+            @Override
+            public boolean unlinkToDeath(@NonNull final DeathRecipient recipient, final int flags) {
+                synchronized (this) {
+                    if (null == mDeathRecipient) {
+                        throw new IllegalStateException();
+                    }
+                    mDeathRecipient = null;
+                }
+                return super.unlinkToDeath(recipient, flags);
+            }
+        };
+        final NetworkRequest request = mService.listenForNetwork(caps, messenger, binder,
+                NetworkCallback.FLAG_NONE, mContext.getOpPackageName(),
+                mContext.getAttributionTag());
+        mService.releaseNetworkRequest(request);
+        deathRecipient.get().binderDied();
+        // Wait for the release message to be processed.
+        waitForIdle();
     }
 
     @Test
