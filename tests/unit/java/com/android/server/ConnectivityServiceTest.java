@@ -1529,7 +1529,7 @@ public class ConnectivityServiceTest {
     }
 
     private <T> T doAsUid(final int uid, @NonNull final Supplier<T> what) {
-        when(mDeps.getCallingUid()).thenReturn(uid);
+        doReturn(uid).when(mDeps).getCallingUid();
         try {
             return what.get();
         } finally {
@@ -9860,9 +9860,9 @@ public class ConnectivityServiceTest {
         assertVpnUidRangesUpdated(true, vpnRange, vpnOwnerUid);
 
         final UnderlyingNetworkInfo underlyingNetworkInfo =
-                new UnderlyingNetworkInfo(vpnOwnerUid, VPN_IFNAME, new ArrayList<String>());
+                new UnderlyingNetworkInfo(vpnOwnerUid, VPN_IFNAME, new ArrayList<>());
         mMockVpn.setUnderlyingNetworkInfo(underlyingNetworkInfo);
-        when(mDeps.getConnectionOwnerUid(anyInt(), any(), any())).thenReturn(42);
+        doReturn(42).when(mDeps).getConnectionOwnerUid(anyInt(), any(), any());
     }
 
     private void setupConnectionOwnerUidAsVpnApp(int vpnOwnerUid, @VpnManager.VpnType int vpnType)
