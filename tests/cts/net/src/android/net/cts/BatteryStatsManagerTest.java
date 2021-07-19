@@ -38,6 +38,7 @@ import android.os.connectivity.WifiBatteryStats;
 import android.platform.test.annotations.AppModeFull;
 import android.util.Log;
 
+import androidx.test.filters.SdkSuppress;
 import androidx.test.runner.AndroidJUnit4;
 
 import com.android.testutils.DevSdkIgnoreRule;
@@ -58,6 +59,7 @@ import java.util.function.Supplier;
  * Test for BatteryStatsManager.
  */
 @RunWith(AndroidJUnit4.class)
+@SdkSuppress(minSdkVersion = Build.VERSION_CODES.R) // BatteryStatsManager did not exist on Q
 public class BatteryStatsManagerTest{
     @Rule
     public final DevSdkIgnoreRule ignoreRule = new DevSdkIgnoreRule();
