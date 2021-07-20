@@ -124,21 +124,10 @@ public class BpfCoordinator {
         return makeMapPath((downstream ? "downstream" : "upstream") + ipVersion);
     }
 
-    // TODO: probably to remember what the timeout updated things to last is. But that requires
-    // either r/w map entries (which seems bad/racy) or a separate map to keep track of all flows
-    // and remember when they were updated and with what timeout.
     @VisibleForTesting
     static final int CONNTRACK_TIMEOUT_UPDATE_INTERVAL_MS = 60_000;
     @VisibleForTesting
-    static final int CONNTRACK_TIMEOUT_UPDATE_SLACK_MS = 20_000;
-
-    // Default timeouts sync from /proc/sys/net/netfilter/nf_conntrack_*
-    // See also kernel document nf_conntrack-sysctl.txt.
-    @VisibleForTesting
     static final int NF_CONNTRACK_TCP_TIMEOUT_ESTABLISHED = 432_000;
-    static final int NF_CONNTRACK_TCP_TIMEOUT_UNACKNOWLEDGED = 300;
-    // The default value is 120 for 5.10 and that thus the periodicity of the updates of 60s is
-    // low enough to support all ACK kernels.
     @VisibleForTesting
     static final int NF_CONNTRACK_UDP_TIMEOUT_STREAM = 180;
 
@@ -1578,34 +1567,8 @@ public class BpfCoordinator {
             final Tether4Key downstream4Key = makeTetherDownstream4Key(e, tetherClient,
                     upstreamIndex);
 
-            final boolean isConntrackEventDelete =
-                    e.msgType == (NetlinkConstants.NFNL_SUBSYS_CTNETLINK << 8
-                    | NetlinkConstants.IPCTNL_MSG_CT_DELETE);
-
-            // Using the timeout to distinguish tcp state is not a decent way. Need to fix.
-            // The received IPCTNL_MSG_CT_NEW must pass ConntrackMonitor#isEstablishedNatSession
-            // which checks CTA_STATUS. It implies that this entry has at least reached tcp
-            // state "established". For safety, treat any timeout which is equal or larger than 300
-            // seconds (UNACKNOWLEDGED, ESTABLISHED, ..) to be "established".
-            // TODO: parse tcp state in conntrack monitor.
-            final boolean isTcpEstablished =
-                    e.msgType == (NetlinkConstants.NFNL_SUBSYS_CTNETLINK << 8
-                    | NetlinkConstants.IPCTNL_MSG_CT_NEW)
-                    && e.tupleOrig.protoNum == OsConstants.IPPROTO_TCP
-                    && (e.timeoutSec >= NF_CONNTRACK_TCP_TIMEOUT_UNACKNOWLEDGED);
-
-            final boolean isTcpNonEstablished =
-                    e.msgType == (NetlinkConstants.NFNL_SUBSYS_CTNETLINK << 8
-                    | NetlinkConstants.IPCTNL_MSG_CT_NEW)
-                    && e.tupleOrig.protoNum == OsConstants.IPPROTO_TCP
-                    && (e.timeoutSec < NF_CONNTRACK_TCP_TIMEOUT_UNACKNOWLEDGED);
-
-            // Delete the BPF rules:
-            // 1. Contrack event IPCTNL_MSG_CT_DELETE received.
-            // 2. For TCP conntrack entry, the tcp state has left "established" and going to be
-            // closed.
-            // TODO: continue to offload half-closed tcp connections.
-            if (isConntrackEventDelete || isTcpNonEstablished) {
+            if (e.msgType == (NetlinkConstants.NFNL_SUBSYS_CTNETLINK << 8
+                    | NetlinkConstants.IPCTNL_MSG_CT_DELETE)) {
                 final boolean deletedUpstream = mBpfCoordinatorShim.tetherOffloadRuleRemove(
                         UPSTREAM, upstream4Key);
                 final boolean deletedDownstream = mBpfCoordinatorShim.tetherOffloadRuleRemove(
@@ -1620,7 +1583,6 @@ public class BpfCoordinator {
                     Log.wtf(TAG, "The bidirectional rules should be removed concurrently ("
                             + "upstream: " + deletedUpstream
                             + ", downstream: " + deletedDownstream + ")");
-                    // TODO: consider better error handling for the stubs {rule, limit, ..}.
                     return;
                 }
 
@@ -1631,41 +1593,11 @@ public class BpfCoordinator {
             final Tether4Value upstream4Value = makeTetherUpstream4Value(e, upstreamIndex);
             final Tether4Value downstream4Value = makeTetherDownstream4Value(e, tetherClient,
                     upstreamIndex);
+
             maybeAddDevMap(upstreamIndex, tetherClient.downstreamIfindex);
             maybeSetLimit(upstreamIndex);
-
-            final boolean upstreamAdded = mBpfCoordinatorShim.tetherOffloadRuleAdd(UPSTREAM,
-                    upstream4Key, upstream4Value);
-            final boolean downstreamAdded = mBpfCoordinatorShim.tetherOffloadRuleAdd(DOWNSTREAM,
-                    downstream4Key, downstream4Value);
-
-            if (upstreamAdded != downstreamAdded) {
-                mLog.e("The bidirectional rules should be added or not added concurrently ("
-                        + "upstream: " + upstreamAdded
-                        + ", downstream: " + downstreamAdded + "). "
-                        + "Remove the added rules.");
-                if (upstreamAdded) {
-                    mBpfCoordinatorShim.tetherOffloadRuleRemove(UPSTREAM, upstream4Key);
-                }
-                if (downstreamAdded) {
-                    mBpfCoordinatorShim.tetherOffloadRuleRemove(DOWNSTREAM, downstream4Key);
-                }
-                return;
-            }
-
-            // Update TCP timeout iif it is first time we're adding the rules. Needed because a
-            // payload data packet may have gone through non-offload path, before we added offload
-            // rules, and that this may result in in-kernel conntrack state being in ESTABLISHED
-            // but pending ACK (ie. UNACKED) state. But the in-kernel conntrack might never see the
-            // ACK because we just added offload rules. As such after adding the rules we need to
-            // force the timeout back to the normal ESTABLISHED timeout of 5 days. Note that
-            // updating the timeout will trigger another netlink event with the updated timeout.
-            // TODO: Remove this once the tcp state is parsed.
-            if (isTcpEstablished && upstreamAdded && downstreamAdded) {
-                updateConntrackTimeout((byte) upstream4Key.l4proto,
-                        parseIPv4Address(upstream4Key.src4), (short) upstream4Key.srcPort,
-                        parseIPv4Address(upstream4Key.dst4), (short) upstream4Key.dstPort);
-            }
+            mBpfCoordinatorShim.tetherOffloadRuleAdd(UPSTREAM, upstream4Key, upstream4Value);
+            mBpfCoordinatorShim.tetherOffloadRuleAdd(DOWNSTREAM, downstream4Key, downstream4Value);
         }
     }
 
@@ -1948,7 +1880,6 @@ public class BpfCoordinator {
         // - proc/sys/net/netfilter/nf_conntrack_tcp_timeout_established
         // - proc/sys/net/netfilter/nf_conntrack_udp_timeout_stream
         // See kernel document nf_conntrack-sysctl.txt.
-        // TODO: we should account for the fact that lastUsed is in the past and not exactly now.
         final int timeoutSec = (proto == OsConstants.IPPROTO_TCP)
                 ? NF_CONNTRACK_TCP_TIMEOUT_ESTABLISHED
                 : NF_CONNTRACK_UDP_TIMEOUT_STREAM;
@@ -1979,23 +1910,6 @@ public class BpfCoordinator {
         }
     }
 
-    boolean requireConntrackTimeoutUpdate(long nowNs, long lastUsedNs, int proto) {
-        // Refreshing tcp timeout without checking tcp state may make the conntrack entry live
-        // 5 days (432000s) even while the session is being closed. Its BPF rule may not be
-        // deleted for 5 days because the tcp state gets stuck and conntrack delete message is
-        // not sent. Note that both the conntrack monitor and refreshing timeout updater are
-        // in the same thread. Beware while the tcp status may be changed running in refreshing
-        // timeout updater and may read out-of-date tcp stats.
-        // See nf_conntrack_tcp_timeout_established in kernel document.
-        // TODO: support refreshing TCP conntrack timeout.
-        if (proto == OsConstants.IPPROTO_TCP) return false;
-
-        // The timeout requirement check needs the slack time because the scheduled timer may
-        // be not precise. The timeout update has a chance to be missed.
-        return (nowNs - lastUsedNs) < (long) (CONNTRACK_TIMEOUT_UPDATE_INTERVAL_MS
-                + CONNTRACK_TIMEOUT_UPDATE_SLACK_MS) * 1_000_000;
-    }
-
     private void refreshAllConntrackTimeouts() {
         final long now = mDeps.elapsedRealtimeNanos();
 
@@ -2003,7 +1917,7 @@ public class BpfCoordinator {
         // because TCP is a bidirectional traffic. Probably don't need to extend timeout by
         // both directions for TCP.
         mBpfCoordinatorShim.tetherOffloadRuleForEach(UPSTREAM, (k, v) -> {
-            if (requireConntrackTimeoutUpdate(now, v.lastUsed, k.l4proto)) {
+            if ((now - v.lastUsed) / 1_000_000 < CONNTRACK_TIMEOUT_UPDATE_INTERVAL_MS) {
                 updateConntrackTimeout((byte) k.l4proto,
                         parseIPv4Address(k.src4), (short) k.srcPort,
                         parseIPv4Address(k.dst4), (short) k.dstPort);
@@ -2011,10 +1925,10 @@ public class BpfCoordinator {
         });
 
         // Reverse the source and destination {address, port} from downstream value because
-        // #updateConntrackTimeout refreshes the timeout of netlink attribute CTA_TUPLE_ORIG
+        // #updateConntrackTimeout refresh the timeout of netlink attribute CTA_TUPLE_ORIG
         // which is opposite direction for downstream map value.
         mBpfCoordinatorShim.tetherOffloadRuleForEach(DOWNSTREAM, (k, v) -> {
-            if (requireConntrackTimeoutUpdate(now, v.lastUsed, k.l4proto)) {
+            if ((now - v.lastUsed) / 1_000_000 < CONNTRACK_TIMEOUT_UPDATE_INTERVAL_MS) {
                 updateConntrackTimeout((byte) k.l4proto,
                         parseIPv4Address(v.dst46), (short) v.dstPort,
                         parseIPv4Address(v.src46), (short) v.srcPort);
