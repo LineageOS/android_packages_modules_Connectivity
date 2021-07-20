@@ -141,11 +141,6 @@ public abstract class BpfCoordinatorShim {
 
     /**
      * Adds a tethering IPv4 offload rule to appropriate BPF map.
-     *
-     * @param downstream true if downstream, false if upstream.
-     * @param key the key to add.
-     * @param value the value to add.
-     * @return true iff the map was modified, false if the key exists or there was an error.
      */
     public abstract boolean tetherOffloadRuleAdd(boolean downstream, @NonNull Tether4Key key,
             @NonNull Tether4Value value);
