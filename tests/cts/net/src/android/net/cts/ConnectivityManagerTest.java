@@ -2103,6 +2103,10 @@ public class ConnectivityManagerTest {
         public void onBlockedStatusChanged(Network network, int blockedReasons) {
             getHistory().add(new CallbackEntry.BlockedStatusInt(network, blockedReasons));
         }
+        private void assertNoBlockedStatusCallback() {
+            super.assertNoCallbackThat(NO_CALLBACK_TIMEOUT_MS,
+                    c -> c instanceof CallbackEntry.BlockedStatus);
+        }
     }
 
     private void setRequireVpnForUids(boolean requireVpn, Collection<Range<Integer>> ranges)
@@ -2139,24 +2143,24 @@ public class ConnectivityManagerTest {
 
         setRequireVpnForUids(true, List.of(myUidRange));
         myUidCallback.expectBlockedStatusCallback(defaultNetwork, BLOCKED_REASON_LOCKDOWN_VPN);
-        otherUidCallback.assertNoCallback(NO_CALLBACK_TIMEOUT_MS);
+        otherUidCallback.assertNoBlockedStatusCallback();
 
         setRequireVpnForUids(true, List.of(myUidRange, otherUidRange));
-        myUidCallback.assertNoCallback(NO_CALLBACK_TIMEOUT_MS);
+        myUidCallback.assertNoBlockedStatusCallback();
         otherUidCallback.expectBlockedStatusCallback(defaultNetwork, BLOCKED_REASON_LOCKDOWN_VPN);
 
         // setRequireVpnForUids does no deduplication or refcounting. Removing myUidRange does not
         // unblock myUid because it was added to the blocked ranges twice.
         setRequireVpnForUids(false, List.of(myUidRange));
-        myUidCallback.assertNoCallback(NO_CALLBACK_TIMEOUT_MS);
-        otherUidCallback.assertNoCallback(NO_CALLBACK_TIMEOUT_MS);
+        myUidCallback.assertNoBlockedStatusCallback();
+        otherUidCallback.assertNoBlockedStatusCallback();
 
         setRequireVpnForUids(false, List.of(myUidRange, otherUidRange));
         myUidCallback.expectBlockedStatusCallback(defaultNetwork, BLOCKED_REASON_NONE);
         otherUidCallback.expectBlockedStatusCallback(defaultNetwork, BLOCKED_REASON_NONE);
 
-        myUidCallback.assertNoCallback(NO_CALLBACK_TIMEOUT_MS);
-        otherUidCallback.assertNoCallback(NO_CALLBACK_TIMEOUT_MS);
+        myUidCallback.assertNoBlockedStatusCallback();
+        otherUidCallback.assertNoBlockedStatusCallback();
     }
 
     @Test
@@ -2641,8 +2645,9 @@ public class ConnectivityManagerTest {
             // Default network should be updated to validated cellular network.
             defaultCb.eventuallyExpect(CallbackEntry.AVAILABLE, NETWORK_CALLBACK_TIMEOUT_MS,
                     entry -> cellNetwork.equals(entry.getNetwork()));
-            // No update on wifi callback.
-            wifiCb.assertNoCallback();
+            // No callback except LinkPropertiesChanged which may be triggered randomly from network
+            wifiCb.assertNoCallbackThat(NO_CALLBACK_TIMEOUT_MS,
+                    c -> !(c instanceof CallbackEntry.LinkPropertiesChanged));
         } finally {
             mCm.unregisterNetworkCallback(wifiCb);
             mCm.unregisterNetworkCallback(defaultCb);
