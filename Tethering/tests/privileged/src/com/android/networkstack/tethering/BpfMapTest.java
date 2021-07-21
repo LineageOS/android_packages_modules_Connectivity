@@ -388,4 +388,15 @@ public final class BpfMapTest {
             assertEquals(OsConstants.E2BIG, expected.errno);
         }
     }
+
+    @Test
+    public void testOpenNonexistentMap() throws Exception {
+        try {
+            final BpfMap<TetherDownstream6Key, Tether6Value> nonexistentMap = new BpfMap<>(
+                    "/sys/fs/bpf/tethering/nonexistent", BpfMap.BPF_F_RDWR,
+                    TetherDownstream6Key.class, Tether6Value.class);
+        } catch (ErrnoException expected) {
+            assertEquals(OsConstants.ENOENT, expected.errno);
+        }
+    }
 }
