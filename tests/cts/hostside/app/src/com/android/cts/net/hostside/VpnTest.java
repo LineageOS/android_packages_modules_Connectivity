@@ -1213,7 +1213,8 @@ public class VpnTest extends InstrumentationTestCase {
                     new IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE));
 
             // Enqueue a request and check only one download.
-            final long id = dm.enqueue(new Request(Uri.parse("https://www.google.com")));
+            final long id = dm.enqueue(new Request(
+                    Uri.parse("https://google-ipv6test.appspot.com/ip.js?fmt=text")));
             assertEquals(1, getTotalNumberDownloads(dm, new Query()));
             assertEquals(1, getTotalNumberDownloads(dm, new Query().setFilterById(id)));
 
