@@ -54,6 +54,7 @@ import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
 import android.os.Binder;
 import android.os.Build;
+import android.os.ConditionVariable;
 import android.os.IBinder;
 import android.os.SystemClock;
 import android.system.Os;
@@ -168,15 +169,41 @@ public final class CtsNetUtils {
     }
 
     // Toggle WiFi twice, leaving it in the state it started in
-    public void toggleWifi() {
+    public void toggleWifi() throws Exception {
         if (mWifiManager.isWifiEnabled()) {
             Network wifiNetwork = getWifiNetwork();
+            // Ensure system default network is WIFI because it's expected in disconnectFromWifi()
+            expectNetworkIsSystemDefault(wifiNetwork);
             disconnectFromWifi(wifiNetwork);
             connectToWifi();
         } else {
             connectToWifi();
             Network wifiNetwork = getWifiNetwork();
+            // Ensure system default network is WIFI because it's expected in disconnectFromWifi()
+            expectNetworkIsSystemDefault(wifiNetwork);
             disconnectFromWifi(wifiNetwork);
+        }
+    }
+
+    private Network expectNetworkIsSystemDefault(Network network)
+            throws Exception {
+        final CompletableFuture<Network> future = new CompletableFuture();
+        final NetworkCallback cb = new NetworkCallback() {
+            @Override
+            public void onAvailable(Network n) {
+                if (n.equals(network)) future.complete(network);
+            }
+        };
+
+        try {
+            mCm.registerDefaultNetworkCallback(cb);
+            return future.get(CONNECTIVITY_CHANGE_TIMEOUT_SECS, TimeUnit.SECONDS);
+        } catch (TimeoutException e) {
+            throw new AssertionError("Timed out waiting for system default network to switch"
+                    + " to network " + network + ". Current default network is network "
+                    + mCm.getActiveNetwork(), e);
+        } finally {
+            mCm.unregisterNetworkCallback(cb);
         }
     }
 
@@ -264,6 +291,9 @@ public final class CtsNetUtils {
             Log.w(TAG, "connect failed with " + error + "; waiting before retry");
             SystemClock.sleep(WIFI_CONNECT_INTERVAL_MS);
         }
+
+        fail("Failed to connect to " + config.SSID
+                + " after " + MAX_WIFI_CONNECT_RETRIES + "retries");
     }
 
     private static class ConnectWifiListener implements WifiManager.ActionListener {
@@ -696,16 +726,28 @@ public final class CtsNetUtils {
      * {@code onAvailable}.
      */
     public static class TestNetworkCallback extends ConnectivityManager.NetworkCallback {
-        private final CountDownLatch mAvailableLatch = new CountDownLatch(1);
+        private final ConditionVariable mAvailableCv = new ConditionVariable(false);
         private final CountDownLatch mLostLatch = new CountDownLatch(1);
         private final CountDownLatch mUnavailableLatch = new CountDownLatch(1);
 
         public Network currentNetwork;
         public Network lastLostNetwork;
 
+        /**
+         * Wait for a network to be available.
+         *
+         * If onAvailable was previously called but was followed by onLost, this will wait for the
+         * next available network.
+         */
         public Network waitForAvailable() throws InterruptedException {
-            return mAvailableLatch.await(CONNECTIVITY_CHANGE_TIMEOUT_SECS, TimeUnit.SECONDS)
-                    ? currentNetwork : null;
+            final long timeoutMs = TimeUnit.SECONDS.toMillis(CONNECTIVITY_CHANGE_TIMEOUT_SECS);
+            while (mAvailableCv.block(timeoutMs)) {
+                final Network n = currentNetwork;
+                if (n != null) return n;
+                Log.w(TAG, "onAvailable called but network was lost before it could be returned."
+                        + " Waiting for the next call to onAvailable.");
+            }
+            return null;
         }
 
         public Network waitForLost() throws InterruptedException {
@@ -717,17 +759,17 @@ public final class CtsNetUtils {
             return mUnavailableLatch.await(2, TimeUnit.SECONDS);
         }
 
-
         @Override
         public void onAvailable(Network network) {
             currentNetwork = network;
-            mAvailableLatch.countDown();
+            mAvailableCv.open();
         }
 
         @Override
         public void onLost(Network network) {
             lastLostNetwork = network;
             if (network.equals(currentNetwork)) {
+                mAvailableCv.close();
                 currentNetwork = null;
             }
             mLostLatch.countDown();
