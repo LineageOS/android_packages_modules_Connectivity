@@ -44,37 +44,36 @@ namespace android {
 const uint16_t NETLINK_REQUEST_FLAGS = NLM_F_REQUEST | NLM_F_ACK;
 const sockaddr_nl KERNEL_NLADDR = {AF_NETLINK, 0, 0, 0};
 
+static void throwIOException(JNIEnv *env, const char* msg, int error) {
+    jniThrowExceptionFmt(env, "java/io/IOException", "%s: %s", msg, strerror(error));
+}
+
 // TODO: move to frameworks/libs/net/common/native for sharing with
 // system/netd/server/OffloadUtils.{c, h}.
 static void sendAndProcessNetlinkResponse(JNIEnv* env, const void* req, int len) {
     int fd = socket(AF_NETLINK, SOCK_RAW | SOCK_CLOEXEC, NETLINK_ROUTE);  // TODO: use unique_fd
     if (fd == -1) {
-        jniThrowExceptionFmt(env, "java/io/IOException",
-                             "socket(AF_NETLINK, SOCK_RAW | SOCK_CLOEXEC, NETLINK_ROUTE): %s",
-                             strerror(errno));
+        throwIOException(env, "socket(AF_NETLINK, SOCK_RAW | SOCK_CLOEXEC, NETLINK_ROUTE)", errno);
         return;
     }
 
     static constexpr int on = 1;
     if (setsockopt(fd, SOL_NETLINK, NETLINK_CAP_ACK, &on, sizeof(on))) {
-        jniThrowExceptionFmt(env, "java/io/IOException",
-                             "setsockopt(fd, SOL_NETLINK, NETLINK_CAP_ACK, %d)", on);
+        throwIOException(env, "setsockopt(fd, SOL_NETLINK, NETLINK_CAP_ACK, 1)", errno);
         close(fd);
         return;
     }
 
     // this is needed to get valid strace netlink parsing, it allocates the pid
     if (bind(fd, (const struct sockaddr*)&KERNEL_NLADDR, sizeof(KERNEL_NLADDR))) {
-        jniThrowExceptionFmt(env, "java/io/IOException", "bind(fd, {AF_NETLINK, 0, 0}): %s",
-                             strerror(errno));
+        throwIOException(env, "bind(fd, {AF_NETLINK, 0, 0})", errno);
         close(fd);
         return;
     }
 
     // we do not want to receive messages from anyone besides the kernel
     if (connect(fd, (const struct sockaddr*)&KERNEL_NLADDR, sizeof(KERNEL_NLADDR))) {
-        jniThrowExceptionFmt(env, "java/io/IOException", "connect(fd, {AF_NETLINK, 0, 0}): %s",
-                             strerror(errno));
+        throwIOException(env, "connect(fd, {AF_NETLINK, 0, 0})", errno);
         close(fd);
         return;
     }
@@ -82,15 +81,13 @@ static void sendAndProcessNetlinkResponse(JNIEnv* env, const void* req, int len)
     int rv = send(fd, req, len, 0);
 
     if (rv == -1) {
-        jniThrowExceptionFmt(env, "java/io/IOException", "send(fd, req, len, 0): %s",
-                             strerror(errno));
+        throwIOException(env, "send(fd, req, len, 0)", errno);
         close(fd);
         return;
     }
 
     if (rv != len) {
-        jniThrowExceptionFmt(env, "java/io/IOException", "send(fd, req, len, 0): %s",
-                             strerror(EMSGSIZE));
+        throwIOException(env, "send(fd, req, len, 0)", EMSGSIZE);
         close(fd);
         return;
     }
@@ -104,7 +101,7 @@ static void sendAndProcessNetlinkResponse(JNIEnv* env, const void* req, int len)
     rv = recv(fd, &resp, sizeof(resp), MSG_TRUNC);
 
     if (rv == -1) {
-        jniThrowExceptionFmt(env, "java/io/IOException", "recv() failed: %s", strerror(errno));
+        throwIOException(env, "recv() failed", errno);
         close(fd);
         return;
     }
@@ -131,8 +128,7 @@ static void sendAndProcessNetlinkResponse(JNIEnv* env, const void* req, int len)
     }
 
     if (resp.e.error) {  // returns 0 on success
-        jniThrowExceptionFmt(env, "java/io/IOException", "NLMSG_ERROR message return error: %s",
-                             strerror(-resp.e.error));
+        throwIOException(env, "NLMSG_ERROR message return error", -resp.e.error);
     }
     close(fd);
     return;
@@ -198,8 +194,7 @@ static void com_android_networkstack_tethering_BpfUtils_tcFilterAddDevBpf(
 
     const int bpfFd = bpf::retrieveProgram(pathname.c_str());
     if (bpfFd == -1) {
-        jniThrowExceptionFmt(env, "java/io/IOException", "retrieveProgram failed %s",
-                             strerror(errno));
+        throwIOException(env, "retrieveProgram failed", errno);
         return;
     }
 
