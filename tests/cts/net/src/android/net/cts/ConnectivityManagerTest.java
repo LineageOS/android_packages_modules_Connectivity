@@ -2850,22 +2850,13 @@ public class ConnectivityManagerTest {
         }
     }
 
-    /** Wait for assigned time. */
-    private void waitForMs(long ms) {
-        try {
-            Thread.sleep(ms);
-        } catch (InterruptedException e) {
-            fail("Thread was interrupted");
-        }
-    }
-
     private void assertBindSocketToNetworkSuccess(final Network network) throws Exception {
         final CompletableFuture<Boolean> future = new CompletableFuture<>();
         final ExecutorService executor = Executors.newSingleThreadExecutor();
         try {
             executor.execute(() -> {
-                for (int i = 0; i < 30; i++) {
-                    waitForMs(100);
+                for (int i = 0; i < 300; i++) {
+                    SystemClock.sleep(10);
 
                     try (Socket socket = new Socket()) {
                         network.bindSocket(socket);
