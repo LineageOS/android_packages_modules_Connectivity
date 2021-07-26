@@ -5083,10 +5083,8 @@ public class ConnectivityService extends IConnectivityManager.Stub
 
     private void handleReportNetworkConnectivity(
             @Nullable NetworkAgentInfo nai, int uid, boolean hasConnectivity) {
-        // TODO(b/192611346): remove NetworkInfo.State.DISCONNECTING as it's not used
         if (nai == null
                 || nai != getNetworkAgentInfoForNetwork(nai.network)
-                || nai.networkInfo.getState() == NetworkInfo.State.DISCONNECTING
                 || nai.networkInfo.getState() == NetworkInfo.State.DISCONNECTED) {
             return;
         }
