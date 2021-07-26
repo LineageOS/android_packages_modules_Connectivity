@@ -135,7 +135,7 @@ public class StructNdOptPref64 extends NdOption {
      *         (for example, if it was truncated, or if the prefix length code was wrong).
      */
     public static StructNdOptPref64 parse(@NonNull ByteBuffer buf) {
-        if (buf == null || buf.remaining() < STRUCT_SIZE) return null;
+        if (buf.remaining() < STRUCT_SIZE) return null;
         try {
             return new StructNdOptPref64(buf);
         } catch (IllegalArgumentException e) {
