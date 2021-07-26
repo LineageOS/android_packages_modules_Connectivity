@@ -403,44 +403,44 @@ public class ConnectivityService extends IConnectivityManager.Stub
 
     /**
      * For per-app preferences, requests contain an int to signify which request
-     * should have priority. The priority is passed to netd which will use it
-     * together with UID ranges to generate the corresponding IP rule. This serves
-     * to direct device-originated data traffic of the specific UIDs to the correct
+     * should have priority. The order is passed to netd which will use it together
+     * with UID ranges to generate the corresponding IP rule. This serves to
+     * direct device-originated data traffic of the specific UIDs to the correct
      * default network for each app.
-     * Priorities passed to netd must be in the 0~999 range. Larger values code for
+     * Order ints passed to netd must be in the 0~999 range. Larger values code for
      * a lower priority, {@see NativeUidRangeConfig}
      *
-     * Requests that don't code for a per-app preference use PREFERENCE_PRIORITY_INVALID.
-     * The default request uses PREFERENCE_PRIORITY_DEFAULT.
+     * Requests that don't code for a per-app preference use PREFERENCE_ORDER_INVALID.
+     * The default request uses PREFERENCE_ORDER_DEFAULT.
      */
-    // Bound for the lowest valid priority.
-    static final int PREFERENCE_PRIORITY_LOWEST = 999;
-    // Used when sending to netd to code for "no priority".
-    static final int PREFERENCE_PRIORITY_NONE = 0;
-    // Priority for requests that don't code for a per-app preference. As it is
-    // out of the valid range, the corresponding priority should be
-    // PREFERENCE_PRIORITY_NONE when sending to netd.
+    // Bound for the lowest valid preference order.
+    static final int PREFERENCE_ORDER_LOWEST = 999;
+    // Used when sending to netd to code for "no order".
+    static final int PREFERENCE_ORDER_NONE = 0;
+    // Order for requests that don't code for a per-app preference. As it is
+    // out of the valid range, the corresponding order should be
+    // PREFERENCE_ORDER_NONE when sending to netd.
     @VisibleForTesting
-    static final int PREFERENCE_PRIORITY_INVALID = Integer.MAX_VALUE;
-    // Priority for the default internet request. Since this must always have the
+    static final int PREFERENCE_ORDER_INVALID = Integer.MAX_VALUE;
+    // Order for the default internet request. Since this must always have the
     // lowest priority, its value is larger than the largest acceptable value. As
-    // it is out of the valid range, the corresponding priority should be
-    // PREFERENCE_PRIORITY_NONE when sending to netd.
-    static final int PREFERENCE_PRIORITY_DEFAULT = 1000;
+    // it is out of the valid range, the corresponding order should be
+    // PREFERENCE_ORDER_NONE when sending to netd.
+    static final int PREFERENCE_ORDER_DEFAULT = 1000;
     // As a security feature, VPNs have the top priority.
-    static final int PREFERENCE_PRIORITY_VPN = 0; // Netd supports only 0 for VPN.
-    // Priority of per-app OEM preference. See {@link #setOemNetworkPreference}.
+    static final int PREFERENCE_ORDER_VPN = 0; // Netd supports only 0 for VPN.
+    // Order of per-app OEM preference. See {@link #setOemNetworkPreference}.
     @VisibleForTesting
-    static final int PREFERENCE_PRIORITY_OEM = 10;
-    // Priority of per-profile preference, such as used by enterprise networks.
+    static final int PREFERENCE_ORDER_OEM = 10;
+    // Order of per-profile preference, such as used by enterprise networks.
     // See {@link #setProfileNetworkPreference}.
     @VisibleForTesting
-    static final int PREFERENCE_PRIORITY_PROFILE = 20;
-    // Priority of user setting to prefer mobile data even when networks with
+    static final int PREFERENCE_ORDER_PROFILE = 20;
+    // Order of user setting to prefer mobile data even when networks with
     // better scores are connected.
     // See {@link ConnectivitySettingsManager#setMobileDataPreferredUids}
     @VisibleForTesting
-    static final int PREFERENCE_PRIORITY_MOBILE_DATA_PREFERERRED = 30;
+    static final int PREFERENCE_ORDER_MOBILE_DATA_PREFERERRED = 30;
 
     /**
      * used internally to clear a wakelock when transitioning
@@ -4245,7 +4245,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
                     mNetd.networkRemoveUidRangesParcel(new NativeUidRangeConfig(
                             satisfier.network.getNetId(),
                             toUidRangeStableParcels(nri.getUids()),
-                            nri.getPriorityForNetd()));
+                            nri.getPreferenceOrderForNetd()));
                 } catch (RemoteException e) {
                     loge("Exception setting network preference default network", e);
                 }
@@ -5714,8 +5714,8 @@ public class ConnectivityService extends IConnectivityManager.Stub
         // maximum limit of registered callbacks per UID.
         final int mAsUid;
 
-        // Default network priority of this request.
-        final int mPreferencePriority;
+        // Preference order of this request.
+        final int mPreferenceOrder;
 
         // In order to preserve the mapping of NetworkRequest-to-callback when apps register
         // callbacks using a returned NetworkRequest, the original NetworkRequest needs to be
@@ -5747,12 +5747,12 @@ public class ConnectivityService extends IConnectivityManager.Stub
         NetworkRequestInfo(int asUid, @NonNull final NetworkRequest r,
                 @Nullable final PendingIntent pi, @Nullable String callingAttributionTag) {
             this(asUid, Collections.singletonList(r), r, pi, callingAttributionTag,
-                    PREFERENCE_PRIORITY_INVALID);
+                    PREFERENCE_ORDER_INVALID);
         }
 
         NetworkRequestInfo(int asUid, @NonNull final List<NetworkRequest> r,
                 @NonNull final NetworkRequest requestForCallback, @Nullable final PendingIntent pi,
-                @Nullable String callingAttributionTag, final int preferencePriority) {
+                @Nullable String callingAttributionTag, final int preferenceOrder) {
             ensureAllNetworkRequestsHaveType(r);
             mRequests = initializeRequests(r);
             mNetworkRequestForCallback = requestForCallback;
@@ -5770,7 +5770,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
              */
             mCallbackFlags = NetworkCallback.FLAG_NONE;
             mCallingAttributionTag = callingAttributionTag;
-            mPreferencePriority = preferencePriority;
+            mPreferenceOrder = preferenceOrder;
         }
 
         NetworkRequestInfo(int asUid, @NonNull final NetworkRequest r, @Nullable final Messenger m,
@@ -5800,7 +5800,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
             mPerUidCounter.incrementCountOrThrow(mUid);
             mCallbackFlags = callbackFlags;
             mCallingAttributionTag = callingAttributionTag;
-            mPreferencePriority = PREFERENCE_PRIORITY_INVALID;
+            mPreferenceOrder = PREFERENCE_ORDER_INVALID;
             linkDeathRecipient();
         }
 
@@ -5840,18 +5840,18 @@ public class ConnectivityService extends IConnectivityManager.Stub
             mPerUidCounter.incrementCountOrThrow(mUid);
             mCallbackFlags = nri.mCallbackFlags;
             mCallingAttributionTag = nri.mCallingAttributionTag;
-            mPreferencePriority = PREFERENCE_PRIORITY_INVALID;
+            mPreferenceOrder = PREFERENCE_ORDER_INVALID;
             linkDeathRecipient();
         }
 
         NetworkRequestInfo(int asUid, @NonNull final NetworkRequest r) {
-            this(asUid, Collections.singletonList(r), PREFERENCE_PRIORITY_INVALID);
+            this(asUid, Collections.singletonList(r), PREFERENCE_ORDER_INVALID);
         }
 
         NetworkRequestInfo(int asUid, @NonNull final List<NetworkRequest> r,
-                final int preferencePriority) {
+                final int preferenceOrder) {
             this(asUid, r, r.get(0), null /* pi */, null /* callingAttributionTag */,
-                    preferencePriority);
+                    preferenceOrder);
         }
 
         // True if this NRI is being satisfied. It also accounts for if the nri has its satisifer
@@ -5892,17 +5892,17 @@ public class ConnectivityService extends IConnectivityManager.Stub
             }
         }
 
-        boolean hasHigherPriorityThan(@NonNull final NetworkRequestInfo target) {
-            // Compare two priorities, larger value means lower priority.
-            return mPreferencePriority < target.mPreferencePriority;
+        boolean hasHigherOrderThan(@NonNull final NetworkRequestInfo target) {
+            // Compare two preference orders.
+            return mPreferenceOrder < target.mPreferenceOrder;
         }
 
-        int getPriorityForNetd() {
-            if (mPreferencePriority >= PREFERENCE_PRIORITY_NONE
-                    && mPreferencePriority <= PREFERENCE_PRIORITY_LOWEST) {
-                return mPreferencePriority;
+        int getPreferenceOrderForNetd() {
+            if (mPreferenceOrder >= PREFERENCE_ORDER_NONE
+                    && mPreferenceOrder <= PREFERENCE_ORDER_LOWEST) {
+                return mPreferenceOrder;
             }
-            return PREFERENCE_PRIORITY_NONE;
+            return PREFERENCE_ORDER_NONE;
         }
 
         @Override
@@ -5922,7 +5922,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
                     + " " + mRequests
                     + (mPendingIntent == null ? "" : " to trigger " + mPendingIntent)
                     + " callback flags: " + mCallbackFlags
-                    + " priority: " + mPreferencePriority;
+                    + " order: " + mPreferenceOrder;
         }
     }
 
@@ -6514,7 +6514,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
             // than one request and for multilayer, all requests will track the same uids.
             if (nri.mRequests.get(0).networkCapabilities.appliesToUid(uid)) {
                 // Find out the highest priority request.
-                if (nri.hasHigherPriorityThan(highestPriorityNri)) {
+                if (nri.hasHigherOrderThan(highestPriorityNri)) {
                     highestPriorityNri = nri;
                 }
             }
@@ -6659,7 +6659,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
             }
             for (final UidRange range : uids) {
                 if (range.contains(uid)) {
-                    if (nri.hasHigherPriorityThan(highestPriorityNri)) {
+                    if (nri.hasHigherOrderThan(highestPriorityNri)) {
                         highestPriorityNri = nri;
                     }
                 }
@@ -7524,10 +7524,10 @@ public class ConnectivityService extends IConnectivityManager.Stub
         try {
             if (add) {
                 mNetd.networkAddUidRangesParcel(new NativeUidRangeConfig(
-                        nai.network.netId, ranges, PREFERENCE_PRIORITY_VPN));
+                        nai.network.netId, ranges, PREFERENCE_ORDER_VPN));
             } else {
                 mNetd.networkRemoveUidRangesParcel(new NativeUidRangeConfig(
-                        nai.network.netId, ranges, PREFERENCE_PRIORITY_VPN));
+                        nai.network.netId, ranges, PREFERENCE_ORDER_VPN));
             }
         } catch (Exception e) {
             loge("Exception while " + (add ? "adding" : "removing") + " uid ranges " + uidRanges +
@@ -7872,13 +7872,13 @@ public class ConnectivityService extends IConnectivityManager.Stub
                 mNetd.networkAddUidRangesParcel(new NativeUidRangeConfig(
                         newDefaultNetwork.network.getNetId(),
                         toUidRangeStableParcels(nri.getUids()),
-                        nri.getPriorityForNetd()));
+                        nri.getPreferenceOrderForNetd()));
             }
             if (null != oldDefaultNetwork) {
                 mNetd.networkRemoveUidRangesParcel(new NativeUidRangeConfig(
                         oldDefaultNetwork.network.getNetId(),
                         toUidRangeStableParcels(nri.getUids()),
-                        nri.getPriorityForNetd()));
+                        nri.getPreferenceOrderForNetd()));
             }
         } catch (RemoteException | ServiceSpecificException e) {
             loge("Exception setting app default network", e);
@@ -9978,7 +9978,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
                     TYPE_NONE, NetworkRequest.Type.TRACK_DEFAULT));
             setNetworkRequestUids(nrs, UidRange.fromIntRanges(pref.capabilities.getUids()));
             final NetworkRequestInfo nri = new NetworkRequestInfo(Process.myUid(), nrs,
-                    PREFERENCE_PRIORITY_PROFILE);
+                    PREFERENCE_ORDER_PROFILE);
             result.add(nri);
         }
         return result;
@@ -9995,7 +9995,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
                 () -> {
                     final ArraySet<NetworkRequestInfo> nris =
                             createNrisFromProfileNetworkPreferences(mProfileNetworkPreferences);
-                    replaceDefaultNetworkRequestsForPreference(nris, PREFERENCE_PRIORITY_PROFILE);
+                    replaceDefaultNetworkRequestsForPreference(nris, PREFERENCE_ORDER_PROFILE);
                 });
         // Finally, rematch.
         rematchAllNetworksAndRequests();
@@ -10035,7 +10035,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
         }
         setNetworkRequestUids(requests, ranges);
         nris.add(new NetworkRequestInfo(Process.myUid(), requests,
-                PREFERENCE_PRIORITY_MOBILE_DATA_PREFERERRED));
+                PREFERENCE_ORDER_MOBILE_DATA_PREFERERRED));
         return nris;
     }
 
@@ -10047,7 +10047,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
                     final ArraySet<NetworkRequestInfo> nris =
                             createNrisFromMobileDataPreferredUids(mMobileDataPreferredUids);
                     replaceDefaultNetworkRequestsForPreference(nris,
-                            PREFERENCE_PRIORITY_MOBILE_DATA_PREFERERRED);
+                            PREFERENCE_ORDER_MOBILE_DATA_PREFERERRED);
                 });
         // Finally, rematch.
         rematchAllNetworksAndRequests();
@@ -10145,7 +10145,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
                     final ArraySet<NetworkRequestInfo> nris =
                             new OemNetworkRequestFactory()
                                     .createNrisFromOemNetworkPreferences(preference);
-                    replaceDefaultNetworkRequestsForPreference(nris, PREFERENCE_PRIORITY_OEM);
+                    replaceDefaultNetworkRequestsForPreference(nris, PREFERENCE_ORDER_OEM);
                 });
         mOemNetworkPreferences = preference;
 
@@ -10159,11 +10159,11 @@ public class ConnectivityService extends IConnectivityManager.Stub
     }
 
     private void replaceDefaultNetworkRequestsForPreference(
-            @NonNull final Set<NetworkRequestInfo> nris, final int preferencePriority) {
+            @NonNull final Set<NetworkRequestInfo> nris, final int preferenceOrder) {
         // Skip the requests which are set by other network preference. Because the uid range rules
         // should stay in netd.
         final Set<NetworkRequestInfo> requests = new ArraySet<>(mDefaultNetworkRequests);
-        requests.removeIf(request -> request.mPreferencePriority != preferencePriority);
+        requests.removeIf(request -> request.mPreferenceOrder != preferenceOrder);
         handleRemoveNetworkRequests(requests);
         addPerAppDefaultNetworkRequests(nris);
     }
@@ -10358,7 +10358,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
                 ranges.add(new UidRange(uid, uid));
             }
             setNetworkRequestUids(requests, ranges);
-            return new NetworkRequestInfo(Process.myUid(), requests, PREFERENCE_PRIORITY_OEM);
+            return new NetworkRequestInfo(Process.myUid(), requests, PREFERENCE_ORDER_OEM);
         }
 
         private NetworkRequest createUnmeteredNetworkRequest() {
