@@ -22,6 +22,11 @@
       "name": "TetheringIntegrationTests"
     }
   ],
+  "postsubmit": [
+    {
+      "name": "TetheringPrivilegedTests"
+    }
+  ],
   "mainline-presubmit": [
     {
       "name": "CtsNetTestCasesLatestSdk[CaptivePortalLoginGoogle.apk+NetworkStackGoogle.apk+com.google.android.resolv.apex+com.google.android.tethering.apex]",
