@@ -5907,7 +5907,13 @@ public class ConnectivityService extends IConnectivityManager.Stub
         public void binderDied() {
             log("ConnectivityService NetworkRequestInfo binderDied(" +
                     "uid/pid:" + mUid + "/" + mPid + ", " + mBinder + ")");
-            mHandler.post(() -> handleRemoveNetworkRequest(this));
+            // As an immutable collection, mRequests cannot change by the time the
+            // lambda is evaluated on the handler thread so calling .get() from a binder thread
+            // is acceptable. Use handleReleaseNetworkRequest and not directly
+            // handleRemoveNetworkRequest so as to force a lookup in the requests map, in case
+            // the app already unregistered the request.
+            mHandler.post(() -> handleReleaseNetworkRequest(mRequests.get(0),
+                    mUid, false /* callOnUnavailable */));
         }
 
         @Override
