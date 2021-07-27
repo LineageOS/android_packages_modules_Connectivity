@@ -26,14 +26,15 @@ android_test_helper_app {
     ],
     platform_apis: true,
     static_libs: [
-        "androidx.test.rules",
+        "CtsHostsideNetworkTestsAidl",
         "androidx.test.ext.junit",
+        "androidx.test.rules",
+        "androidx.test.uiautomator_uiautomator",
         "compatibility-device-util-axt",
         "cts-net-utils",
         "ctstestrunner-axt",
-        "ub-uiautomator",
-        "CtsHostsideNetworkTestsAidl",
         "modules-utils-build",
+        "ub-uiautomator",
     ],
     libs: [
         "android.test.runner",
