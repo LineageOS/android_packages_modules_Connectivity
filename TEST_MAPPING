@@ -22,6 +22,11 @@
       "name": "TetheringIntegrationTests"
     }
   ],
+  "postsubmit": [
+    {
+      "name": "TetheringPrivilegedTests"
+    }
+  ],
   "mainline-presubmit": [
     {
       // TODO: add back the tethering modules when updatable in this branch

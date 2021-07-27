@@ -31,9 +31,8 @@ import android.system.ErrnoException;
 import android.system.OsConstants;
 import android.util.ArrayMap;
 
-import androidx.test.runner.AndroidJUnit4;
-
 import com.android.testutils.DevSdkIgnoreRule.IgnoreUpTo;
+import com.android.testutils.DevSdkIgnoreRunner;
 
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -45,7 +44,7 @@ import java.util.NoSuchElementException;
 import java.util.concurrent.atomic.AtomicInteger;
 
 
-@RunWith(AndroidJUnit4.class)
+@RunWith(DevSdkIgnoreRunner.class)
 @IgnoreUpTo(Build.VERSION_CODES.R)
 public final class BpfMapTest {
     // Sync from packages/modules/Connectivity/Tethering/bpf_progs/offload.c.
