@@ -44,6 +44,9 @@ public final class Common {
             "com.android.cts.net.hostside.app2.action.FINISH_JOB";
     static final String ACTION_SHOW_TOAST =
             "com.android.cts.net.hostside.app2.action.SHOW_TOAST";
+    // Copied from com.android.server.net.NetworkPolicyManagerService class
+    static final String ACTION_SNOOZE_WARNING =
+            "com.android.server.net.action.SNOOZE_WARNING";
 
     static final String NOTIFICATION_TYPE_CONTENT = "CONTENT";
     static final String NOTIFICATION_TYPE_DELETE = "DELETE";
