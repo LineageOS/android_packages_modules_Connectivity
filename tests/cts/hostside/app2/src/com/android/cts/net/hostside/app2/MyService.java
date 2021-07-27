@@ -18,6 +18,7 @@ package com.android.cts.net.hostside.app2;
 import static android.net.ConnectivityManager.ACTION_RESTRICT_BACKGROUND_CHANGED;
 
 import static com.android.cts.net.hostside.app2.Common.ACTION_RECEIVER_READY;
+import static com.android.cts.net.hostside.app2.Common.ACTION_SNOOZE_WARNING;
 import static com.android.cts.net.hostside.app2.Common.DYNAMIC_RECEIVER;
 import static com.android.cts.net.hostside.app2.Common.TAG;
 
@@ -67,6 +68,7 @@ public class MyService extends Service {
             context.registerReceiver(mReceiver, new IntentFilter(ACTION_RECEIVER_READY));
             context.registerReceiver(mReceiver,
                     new IntentFilter(ACTION_RESTRICT_BACKGROUND_CHANGED));
+            context.registerReceiver(mReceiver, new IntentFilter(ACTION_SNOOZE_WARNING));
             Log.d(TAG, "receiver registered");
         }
 
