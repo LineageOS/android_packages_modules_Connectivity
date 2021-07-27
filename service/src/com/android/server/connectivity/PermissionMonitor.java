@@ -281,7 +281,14 @@ public class PermissionMonitor {
     @VisibleForTesting
     synchronized void updateUidsAllowedOnRestrictedNetworks(final Set<Integer> uids) {
         mUidsAllowedOnRestrictedNetworks.clear();
-        mUidsAllowedOnRestrictedNetworks.addAll(uids);
+        // This is necessary for the app id to match in isUidAllowedOnRestrictedNetworks, and will
+        // grant the permission to all uids associated with the app ID. This is safe even if the app
+        // is only installed on some users because the uid cannot match some other app – this uid is
+        // in effect not installed and can't be run.
+        // TODO (b/192431153): Change appIds back to uids.
+        for (int uid : uids) {
+            mUidsAllowedOnRestrictedNetworks.add(UserHandle.getAppId(uid));
+        }
     }
 
     @VisibleForTesting
@@ -303,7 +310,7 @@ public class PermissionMonitor {
         if (appInfo == null) return false;
         // Check whether package's uid is in allowed on restricted networks uid list. If so, this
         // uid can have netd system permission.
-        return mUidsAllowedOnRestrictedNetworks.contains(appInfo.uid);
+        return mUidsAllowedOnRestrictedNetworks.contains(UserHandle.getAppId(appInfo.uid));
     }
 
     @VisibleForTesting
