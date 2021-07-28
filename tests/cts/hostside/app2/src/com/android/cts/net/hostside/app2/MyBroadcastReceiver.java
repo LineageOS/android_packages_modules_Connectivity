@@ -20,6 +20,7 @@ import static android.net.ConnectivityManager.ACTION_RESTRICT_BACKGROUND_CHANGED
 
 import static com.android.cts.net.hostside.app2.Common.ACTION_RECEIVER_READY;
 import static com.android.cts.net.hostside.app2.Common.ACTION_SHOW_TOAST;
+import static com.android.cts.net.hostside.app2.Common.ACTION_SNOOZE_WARNING;
 import static com.android.cts.net.hostside.app2.Common.MANIFEST_RECEIVER;
 import static com.android.cts.net.hostside.app2.Common.NOTIFICATION_TYPE_ACTION;
 import static com.android.cts.net.hostside.app2.Common.NOTIFICATION_TYPE_ACTION_BUNDLE;
@@ -76,6 +77,9 @@ public class MyBroadcastReceiver extends BroadcastReceiver {
         Log.d(TAG, "onReceive() for " + mName + ": " + intent);
         final String action = intent.getAction();
         switch (action) {
+            case ACTION_SNOOZE_WARNING:
+                increaseCounter(context, action);
+                break;
             case ACTION_RESTRICT_BACKGROUND_CHANGED:
                 increaseCounter(context, action);
                 break;
