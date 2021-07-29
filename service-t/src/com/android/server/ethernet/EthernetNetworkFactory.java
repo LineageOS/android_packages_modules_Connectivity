@@ -423,10 +423,6 @@ public class EthernetNetworkFactory extends NetworkFactory {
             }
         }
 
-        boolean satisfied(NetworkCapabilities requestedCapabilities) {
-            return requestedCapabilities.satisfiedByNetworkCapabilities(mCapabilities);
-        }
-
         boolean isRestricted() {
             return !mCapabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_RESTRICTED);
         }
@@ -567,22 +563,6 @@ public class EthernetNetworkFactory extends NetworkFactory {
                 mNetworkAgent = null;
             }
             mLinkProperties.clear();
-        }
-
-        private void updateAgent() {
-            if (mNetworkAgent == null) return;
-            if (DBG) {
-                Log.i(TAG, "Updating mNetworkAgent with: " +
-                        mCapabilities + ", " +
-                        mLinkProperties);
-            }
-            mNetworkAgent.sendNetworkCapabilities(mCapabilities);
-            mNetworkAgent.sendLinkPropertiesImpl(mLinkProperties);
-
-            // As a note, getNetworkScore() is fairly expensive to calculate. This is fine for now
-            // since the agent isn't updated frequently. Consider caching the score in the future if
-            // agent updating is required more often
-            mNetworkAgent.sendNetworkScore(getNetworkScore());
         }
 
         private static void provisionIpClient(IIpClient ipClient, IpConfiguration config,
