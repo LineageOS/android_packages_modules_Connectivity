@@ -58,6 +58,7 @@ android_library {
     jarjar_rules: "jarjar-rules.txt",
     static_libs: [
         "androidx.test.rules",
+        "androidx.test.uiautomator",
         "bouncycastle-repackaged-unbundled",
         "core-tests-support",
         "FrameworksNetCommonTests",
