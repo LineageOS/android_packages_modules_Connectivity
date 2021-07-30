@@ -1825,8 +1825,15 @@ public class ConnectivityManagerTest {
         // Verify that networks are available as expected if wifi or cell is supported. Continue the
         // test if none of them are supported since test should still able to verify the permission
         // mechanism.
-        if (supportWifi) requestAndWaitForAvailable(makeWifiNetworkRequest(), wifiCb);
-        if (supportTelephony) requestAndWaitForAvailable(makeCellNetworkRequest(), telephonyCb);
+        if (supportWifi) {
+            mCtsNetUtils.ensureWifiConnected();
+            registerCallbackAndWaitForAvailable(makeWifiNetworkRequest(), wifiCb);
+        }
+        if (supportTelephony) {
+            // connectToCell needs to be followed by disconnectFromCell, which is called in tearDown
+            mCtsNetUtils.connectToCell();
+            registerCallbackAndWaitForAvailable(makeCellNetworkRequest(), telephonyCb);
+        }
 
         try {
             // Verify we cannot set Airplane Mode without correct permission:
@@ -1863,6 +1870,8 @@ public class ConnectivityManagerTest {
                         + "called whilst holding the NETWORK_AIRPLANE_MODE permission.");
             }
             // Verify that turning airplane mode off takes effect as expected.
+            // connectToCell only registers a request, it cannot / does not need to be called twice
+            mCtsNetUtils.ensureWifiConnected();
             if (supportWifi) waitForAvailable(wifiCb);
             if (supportTelephony) waitForAvailable(telephonyCb);
         } finally {
@@ -1875,7 +1884,7 @@ public class ConnectivityManagerTest {
         }
     }
 
-    private void requestAndWaitForAvailable(@NonNull final NetworkRequest request,
+    private void registerCallbackAndWaitForAvailable(@NonNull final NetworkRequest request,
             @NonNull final TestableNetworkCallback cb) {
         mCm.registerNetworkCallback(request, cb);
         waitForAvailable(cb);
