@@ -120,6 +120,9 @@ public class NetlinkMessage {
     private static NetlinkMessage parseRtMessage(@NonNull StructNlMsgHdr nlmsghdr,
             @NonNull ByteBuffer byteBuffer) {
         switch (nlmsghdr.nlmsg_type) {
+            case NetlinkConstants.RTM_NEWLINK:
+            case NetlinkConstants.RTM_DELLINK:
+                return (NetlinkMessage) RtNetlinkLinkMessage.parse(nlmsghdr, byteBuffer);
             case NetlinkConstants.RTM_NEWNEIGH:
             case NetlinkConstants.RTM_DELNEIGH:
             case NetlinkConstants.RTM_GETNEIGH:
