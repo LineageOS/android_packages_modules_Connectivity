@@ -90,6 +90,8 @@ apex {
     compressible: true,
 
     androidManifest: "AndroidManifest.xml",
+
+    compat_configs: ["connectivity-platform-compat-config"],
 }
 
 apex_key {
