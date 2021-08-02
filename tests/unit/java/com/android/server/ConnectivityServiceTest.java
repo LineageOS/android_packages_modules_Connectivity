@@ -327,6 +327,7 @@ import com.android.net.module.util.LocationPermissionChecker;
 import com.android.server.ConnectivityService.ConnectivityDiagnosticsCallbackInfo;
 import com.android.server.ConnectivityService.NetworkRequestInfo;
 import com.android.server.ConnectivityServiceTest.ConnectivityServiceDependencies.ReportedInterfaces;
+import com.android.server.connectivity.ConnectivityFlags;
 import com.android.server.connectivity.MockableSystemProperties;
 import com.android.server.connectivity.Nat464Xlat;
 import com.android.server.connectivity.NetworkAgentInfo;
@@ -1915,6 +1916,16 @@ public class ConnectivityServiceTest {
                 final int[] transportTypes) {
             mReportedInterfaceHistory.add(new ReportedInterfaces(context, iface, transportTypes));
             super.reportNetworkInterfaceForTransports(context, iface, transportTypes);
+        }
+
+        @Override
+        public boolean isFeatureEnabled(Context context, String name, boolean defaultEnabled) {
+            switch (name) {
+                case ConnectivityFlags.NO_REMATCH_ALL_REQUESTS_ON_REGISTER:
+                    return true;
+                default:
+                    return super.isFeatureEnabled(context, name, defaultEnabled);
+            }
         }
     }
 

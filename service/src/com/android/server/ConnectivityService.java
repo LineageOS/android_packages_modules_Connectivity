@@ -87,8 +87,11 @@ import static android.net.OemNetworkPreferences.OEM_NETWORK_PREFERENCE_TEST_ONLY
 import static android.net.shared.NetworkMonitorUtils.isPrivateDnsValidationRequired;
 import static android.os.Process.INVALID_UID;
 import static android.os.Process.VPN_UID;
+import static android.provider.DeviceConfig.NAMESPACE_CONNECTIVITY;
 import static android.system.OsConstants.IPPROTO_TCP;
 import static android.system.OsConstants.IPPROTO_UDP;
+
+import static com.android.net.module.util.DeviceConfigUtils.TETHERING_MODULE_NAME;
 
 import static java.util.Map.Entry;
 
@@ -232,6 +235,7 @@ import com.android.modules.utils.BasicShellCommandHandler;
 import com.android.modules.utils.build.SdkLevel;
 import com.android.net.module.util.BaseNetdUnsolicitedEventListener;
 import com.android.net.module.util.CollectionUtils;
+import com.android.net.module.util.DeviceConfigUtils;
 import com.android.net.module.util.LinkPropertiesUtils.CompareOrUpdateResult;
 import com.android.net.module.util.LinkPropertiesUtils.CompareResult;
 import com.android.net.module.util.LocationPermissionChecker;
@@ -239,6 +243,7 @@ import com.android.net.module.util.NetworkCapabilitiesUtils;
 import com.android.net.module.util.PermissionUtils;
 import com.android.net.module.util.netlink.InetDiagMessage;
 import com.android.server.connectivity.AutodestructReference;
+import com.android.server.connectivity.ConnectivityFlags;
 import com.android.server.connectivity.DnsManager;
 import com.android.server.connectivity.DnsManager.PrivateDnsValidationUpdate;
 import com.android.server.connectivity.FullScore;
@@ -371,6 +376,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
     // The Context is created for UserHandle.ALL.
     private final Context mUserAllContext;
     private final Dependencies mDeps;
+    private final ConnectivityFlags mFlags;
     // 0 is full bad, 100 is full good
     private int mDefaultInetConditionPublished = 0;
 
@@ -1309,6 +1315,14 @@ public class ConnectivityService extends IConnectivityManager.Stub
         public LocationPermissionChecker makeLocationPermissionChecker(Context context) {
             return new LocationPermissionChecker(context);
         }
+
+        /**
+         * @see DeviceConfigUtils#isFeatureEnabled
+         */
+        public boolean isFeatureEnabled(Context context, String name, boolean defaultEnabled) {
+            return DeviceConfigUtils.isFeatureEnabled(context, NAMESPACE_CONNECTIVITY, name,
+                    TETHERING_MODULE_NAME, defaultEnabled);
+        }
     }
 
     public ConnectivityService(Context context) {
@@ -1323,6 +1337,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
         if (DBG) log("ConnectivityService starting up");
 
         mDeps = Objects.requireNonNull(deps, "missing Dependencies");
+        mFlags = new ConnectivityFlags();
         mSystemProperties = mDeps.getSystemProperties();
         mNetIdManager = mDeps.makeNetIdManager();
         mContext = Objects.requireNonNull(context, "missing Context");
@@ -2790,6 +2805,9 @@ public class ConnectivityService extends IConnectivityManager.Stub
      */
     @VisibleForTesting
     public void systemReadyInternal() {
+        // Load flags after PackageManager is ready to query module version
+        mFlags.loadFlags(mDeps, mContext);
+
         // Since mApps in PermissionMonitor needs to be populated first to ensure that
         // listening network request which is sent by MultipathPolicyTracker won't be added
         // NET_CAPABILITY_FOREGROUND capability. Thus, MultipathPolicyTracker.start() must
@@ -4101,7 +4119,11 @@ public class ConnectivityService extends IConnectivityManager.Stub
             }
         }
 
-        rematchAllNetworksAndRequests();
+        if (mFlags.noRematchAllRequestsOnRegister()) {
+            rematchNetworksAndRequests(nris);
+        } else {
+            rematchAllNetworksAndRequests();
+        }
 
         // Requests that have not been matched to a network will not have been sent to the
         // providers, because the old satisfier and the new satisfier are the same (null in this
