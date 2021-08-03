@@ -41,9 +41,10 @@ java_defaults {
         "libdexmakerjvmtiagent",
         "libstaticjvmtiagent",
     ],
-    jarjar_rules: ":NetworkStackJarJarRules",
 }
 
+// Library including tethering integration tests targeting the latest stable SDK.
+// Use with NetworkStackJarJarRules.
 android_library {
     name: "TetheringIntegrationTestsLatestSdkLib",
     target_sdk_version: "30",
@@ -56,6 +57,8 @@ android_library {
     ]
 }
 
+// Library including tethering integration tests targeting current development SDK.
+// Use with NetworkStackJarJarRules.
 android_library {
     name: "TetheringIntegrationTestsLib",
     target_sdk_version: "current",
@@ -76,6 +79,7 @@ android_test {
         "mts",
     ],
     compile_multilib: "both",
+    jarjar_rules: ":NetworkStackJarJarRules",
 }
 
 android_library {
@@ -88,11 +92,31 @@ android_library {
         "TetheringTestsLatestSdkLib",
         "TetheringIntegrationTestsLatestSdkLib",
     ],
-    jarjar_rules: ":TetheringTestsJarJarRules",
+    // Jarjar rules should normally be applied on final artifacts and not intermediate libraries as
+    // applying different rules on intermediate libraries can cause conflicts when combining them
+    // (the resulting artifact can end up with multiple incompatible implementations of the same
+    // classes). But this library is used to combine tethering coverage tests with connectivity
+    // coverage tests into a single coverage target. The tests need to use the same jarjar rules as
+    // covered production code for coverage to be calculated properly, so jarjar is applied
+    // separately on each set of tests.
+    jarjar_rules: ":TetheringCoverageJarJarRules",
     manifest: "AndroidManifest_coverage.xml",
     visibility: [
         "//packages/modules/Connectivity/tests:__subpackages__"
     ],
+}
+
+// Combine NetworkStack and Tethering jarjar rules for coverage target. The jarjar files are
+// simply concatenated in the order specified in srcs.
+genrule {
+    name: "TetheringCoverageJarJarRules",
+    srcs: [
+        ":TetheringTestsJarJarRules",
+        ":NetworkStackJarJarRules",
+    ],
+    out: ["jarjar-rules-tethering-coverage.txt"],
+    cmd: "cat $(in) > $(out)",
+    visibility: ["//visibility:private"],
 }
 
 // Special version of the tethering tests that includes all tests necessary for code coverage
