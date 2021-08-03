@@ -2206,6 +2206,7 @@ public class ConnectivityServiceTest {
         deathRecipient.get().binderDied();
         // Wait for the release message to be processed.
         waitForIdle();
+        // After waitForIdle(), the message was processed and the service didn't crash.
     }
 
     @Test
