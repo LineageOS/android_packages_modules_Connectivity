@@ -51,6 +51,7 @@ import android.net.NetworkInfo;
 import android.os.Build;
 import android.os.UserHandle;
 import android.telephony.TelephonyManager;
+import android.util.DisplayMetrics;
 
 import androidx.test.filters.SmallTest;
 
@@ -103,6 +104,7 @@ public class NetworkNotificationManagerTest {
 
     @Mock Context mCtx;
     @Mock Resources mResources;
+    @Mock DisplayMetrics mDisplayMetrics;
     @Mock PackageManager mPm;
     @Mock TelephonyManager mTelephonyManager;
     @Mock NotificationManager mNotificationManager;
@@ -124,6 +126,7 @@ public class NetworkNotificationManagerTest {
         mCellNai.networkInfo = mNetworkInfo;
         mVpnNai.networkCapabilities = VPN_CAPABILITIES;
         mVpnNai.networkInfo = mNetworkInfo;
+        mDisplayMetrics.density = 2.275f;
         doReturn(true).when(mVpnNai).isVPN();
         when(mCtx.getResources()).thenReturn(mResources);
         when(mCtx.getPackageManager()).thenReturn(mPm);
@@ -136,6 +139,7 @@ public class NetworkNotificationManagerTest {
         when(mNetworkInfo.getExtraInfo()).thenReturn(TEST_EXTRA_INFO);
         ConnectivityResources.setResourcesContextForTest(mCtx);
         when(mResources.getColor(anyInt(), any())).thenReturn(0xFF607D8B);
+        when(mResources.getDisplayMetrics()).thenReturn(mDisplayMetrics);
 
         // Come up with some credible-looking transport names. The actual values do not matter.
         String[] transportNames = new String[NetworkCapabilities.MAX_TRANSPORT + 1];
