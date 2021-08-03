@@ -42,6 +42,8 @@ static jint com_android_networkstack_tethering_BpfMap_bpfFdGet(JNIEnv *env, jobj
 
     jint fd = bpf::bpfFdGet(pathname.c_str(), static_cast<unsigned>(mode));
 
+    if (fd < 0) jniThrowErrnoException(env, "bpfFdGet", errno);
+
     return fd;
 }
 
