@@ -17,3 +17,8 @@ rule com.android.net.module.util.** com.android.networkstack.tethering.util.@1
 # TestableLooper from "testables" can be used instead of TestLooper from frameworks-base-testutils.
 zap android.os.test.TestLooperTest*
 zap com.android.test.filters.SelectTestTests*
+
+# When used in combined test suites like ConnectivityCoverageTests, these test jarjar rules are
+# combined with the jarjar-rules.txt of other included modules (like NetworkStack jarjar rules).
+# They will effectively be added after the following line break. Note that jarjar stops at the first
+# matching rule, so any rule in this file takes precedence over rules in the following ones.
