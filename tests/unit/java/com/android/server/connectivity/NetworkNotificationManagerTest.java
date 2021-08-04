@@ -27,6 +27,7 @@ import static com.android.server.connectivity.NetworkNotificationManager.Notific
 import static com.android.server.connectivity.NetworkNotificationManager.NotificationType.SIGN_IN;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.anyInt;
 import static org.mockito.Mockito.clearInvocations;
@@ -39,9 +40,14 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import android.app.Activity;
+import android.app.Instrumentation;
+import android.app.KeyguardManager;
 import android.app.Notification;
 import android.app.NotificationManager;
+import android.app.PendingIntent;
 import android.content.Context;
+import android.content.Intent;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.content.res.Resources;
@@ -49,11 +55,19 @@ import android.net.ConnectivityResources;
 import android.net.NetworkCapabilities;
 import android.net.NetworkInfo;
 import android.os.Build;
+import android.os.Bundle;
 import android.os.UserHandle;
 import android.telephony.TelephonyManager;
 import android.util.DisplayMetrics;
+import android.widget.TextView;
 
+import androidx.annotation.Nullable;
+import androidx.annotation.StringRes;
 import androidx.test.filters.SmallTest;
+import androidx.test.platform.app.InstrumentationRegistry;
+import androidx.test.uiautomator.UiDevice;
+import androidx.test.uiautomator.UiObject;
+import androidx.test.uiautomator.UiSelector;
 
 import com.android.connectivity.resources.R;
 import com.android.server.connectivity.NetworkNotificationManager.NotificationType;
@@ -84,6 +98,7 @@ public class NetworkNotificationManagerTest {
     private static final String TEST_EXTRA_INFO = "extra";
     private static final int TEST_NOTIF_ID = 101;
     private static final String TEST_NOTIF_TAG = NetworkNotificationManager.tagFor(TEST_NOTIF_ID);
+    private static final long TEST_TIMEOUT_MS = 10_000L;
     static final NetworkCapabilities CELL_CAPABILITIES = new NetworkCapabilities();
     static final NetworkCapabilities WIFI_CAPABILITIES = new NetworkCapabilities();
     static final NetworkCapabilities VPN_CAPABILITIES = new NetworkCapabilities();
@@ -100,6 +115,25 @@ public class NetworkNotificationManagerTest {
         VPN_CAPABILITIES.addTransportType(NetworkCapabilities.TRANSPORT_VPN);
         VPN_CAPABILITIES.addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET);
         VPN_CAPABILITIES.removeCapability(NetworkCapabilities.NET_CAPABILITY_NOT_VPN);
+    }
+
+    /**
+     * Test activity that shows the action it was started with on screen, and dismisses when the
+     * text is tapped.
+     */
+    public static class TestDialogActivity extends Activity {
+        @Override
+        protected void onCreate(@Nullable Bundle savedInstanceState) {
+            super.onCreate(savedInstanceState);
+            setTurnScreenOn(true);
+            getSystemService(KeyguardManager.class).requestDismissKeyguard(
+                    this, null /* callback */);
+
+            final TextView txt = new TextView(this);
+            txt.setText(getIntent().getAction());
+            txt.setOnClickListener(e -> finish());
+            setContentView(txt);
+        }
     }
 
     @Mock Context mCtx;
@@ -344,5 +378,83 @@ public class NetworkNotificationManagerTest {
         // cleared.
         mManager.clearNotification(id, PARTIAL_CONNECTIVITY);
         verify(mNotificationManager, never()).cancel(eq(tag), eq(PARTIAL_CONNECTIVITY.eventId));
+    }
+
+    @Test
+    public void testNotifyNoInternetAsDialogWhenHighPriority() throws Exception {
+        doReturn(true).when(mResources).getBoolean(
+                R.bool.config_notifyNoInternetAsDialogWhenHighPriority);
+
+        mManager.showNotification(TEST_NOTIF_ID, NETWORK_SWITCH, mWifiNai, mCellNai, null, false);
+        // Non-"no internet" notifications are not affected
+        verify(mNotificationManager).notify(eq(TEST_NOTIF_TAG), eq(NETWORK_SWITCH.eventId), any());
+
+        final Instrumentation instr = InstrumentationRegistry.getInstrumentation();
+        final Context ctx = instr.getContext();
+        final String testAction = "com.android.connectivity.coverage.TEST_DIALOG";
+        final Intent intent = new Intent(testAction)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                .setClassName(ctx.getPackageName(), TestDialogActivity.class.getName());
+        final PendingIntent pendingIntent = PendingIntent.getActivity(ctx, 0 /* requestCode */,
+                intent, PendingIntent.FLAG_CANCEL_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+
+        mManager.showNotification(TEST_NOTIF_ID, NO_INTERNET, mWifiNai, null /* switchToNai */,
+                pendingIntent, true /* highPriority */);
+
+        // Previous notifications are still dismissed
+        verify(mNotificationManager).cancel(TEST_NOTIF_TAG, NETWORK_SWITCH.eventId);
+
+        // Verify that the activity is shown (the activity shows the action on screen)
+        final UiObject actionText = UiDevice.getInstance(instr).findObject(
+                new UiSelector().text(testAction));
+        assertTrue("Activity not shown", actionText.waitForExists(TEST_TIMEOUT_MS));
+
+        // Tapping the text should dismiss the dialog
+        actionText.click();
+        assertTrue("Activity not dismissed", actionText.waitUntilGone(TEST_TIMEOUT_MS));
+
+        // Verify no NO_INTERNET notification was posted
+        verify(mNotificationManager, never()).notify(any(), eq(NO_INTERNET.eventId), any());
+    }
+
+    private void doNotificationTextTest(NotificationType type, @StringRes int expectedTitleRes,
+            String expectedTitleArg, @StringRes int expectedContentRes) {
+        final String expectedTitle = "title " + expectedTitleArg;
+        final String expectedContent = "expected content";
+        doReturn(expectedTitle).when(mResources).getString(expectedTitleRes, expectedTitleArg);
+        doReturn(expectedContent).when(mResources).getString(expectedContentRes);
+
+        mManager.showNotification(TEST_NOTIF_ID, type, mWifiNai, mCellNai, null, false);
+        final ArgumentCaptor<Notification> notifCap = ArgumentCaptor.forClass(Notification.class);
+
+        verify(mNotificationManager).notify(eq(TEST_NOTIF_TAG), eq(type.eventId),
+                notifCap.capture());
+        final Notification notif = notifCap.getValue();
+
+        assertEquals(expectedTitle, notif.extras.getString(Notification.EXTRA_TITLE));
+        assertEquals(expectedContent, notif.extras.getString(Notification.EXTRA_TEXT));
+    }
+
+    @Test
+    public void testNotificationText_NoInternet() {
+        doNotificationTextTest(NO_INTERNET,
+                R.string.wifi_no_internet, TEST_EXTRA_INFO,
+                R.string.wifi_no_internet_detailed);
+    }
+
+    @Test
+    public void testNotificationText_Partial() {
+        doNotificationTextTest(PARTIAL_CONNECTIVITY,
+                R.string.network_partial_connectivity, TEST_EXTRA_INFO,
+                R.string.network_partial_connectivity_detailed);
+    }
+
+    @Test
+    public void testNotificationText_PartialAsNoInternet() {
+        doReturn(true).when(mResources).getBoolean(
+                R.bool.config_partialConnectivityNotifiedAsNoInternet);
+        doNotificationTextTest(PARTIAL_CONNECTIVITY,
+                R.string.wifi_no_internet, TEST_EXTRA_INFO,
+                R.string.wifi_no_internet_detailed);
     }
 }
