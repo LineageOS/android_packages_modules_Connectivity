@@ -34,7 +34,10 @@ package {
 java_library {
   name: "net-utils-device-common",
   srcs: [
-      "device/com/android/net/module/util/**/*.java",
+      "device/com/android/net/module/util/DeviceConfigUtils.java",
+      "device/com/android/net/module/util/FdEventsReader.java",
+      "device/com/android/net/module/util/HexDump.java",
+      "device/com/android/net/module/util/PacketReader.java",
       // This library is used by system modules, for which the system health impact of Kotlin
       // has not yet been evaluated. Annotations may need jarjar'ing.
       // "src_devicecommon/**/*.kt",
@@ -87,6 +90,37 @@ filegroup {
         "//frameworks/base",
         "//packages/modules/Connectivity:__subpackages__",
         "//frameworks/base/packages/Connectivity/framework",
+    ],
+}
+
+java_library {
+    name: "net-utils-device-common-netlink",
+    // TODO: Ipv6Utils and Struct stuff could be separated out of th netlink library into
+    // an individual Struct library, and remove the net-utils-framework-common lib dependency.
+    // But there is no need doing this at the moment.
+    srcs: [
+        "device/com/android/net/module/util/HexDump.java",
+        "device/com/android/net/module/util/Ipv6Utils.java",
+        "device/com/android/net/module/util/Struct.java",
+        "device/com/android/net/module/util/netlink/*.java",
+        "device/com/android/net/module/util/structs/*.java",
+    ],
+    sdk_version: "system_current",
+    min_sdk_version: "29",
+    visibility: [
+        "//frameworks/libs/net/common/testutils:__subpackages__",
+        "//packages/modules/Connectivity:__subpackages__",
+        "//packages/modules/NetworkStack:__subpackages__",
+    ],
+    static_libs: [
+        "net-utils-framework-common",
+    ],
+    libs: [
+        "androidx.annotation_annotation",
+    ],
+    apex_available: [
+        "com.android.tethering",
+        "//apex_available:platform",
     ],
 }
 
