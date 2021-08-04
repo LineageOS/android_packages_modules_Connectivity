@@ -198,11 +198,22 @@ public class NetworkNotificationManager {
         }
 
         final Resources r = mResources.get();
+        if (highPriority && maybeNotifyViaDialog(r, notifyType, intent)) {
+            Log.d(TAG, "Notified via dialog for event " + nameOf(eventId));
+            return;
+        }
+
         final CharSequence title;
         final CharSequence details;
         Icon icon = Icon.createWithResource(
                 mResources.getResourcesContext(), getIcon(transportType));
-        if (notifyType == NotificationType.NO_INTERNET && transportType == TRANSPORT_WIFI) {
+        final boolean showAsNoInternet = notifyType == NotificationType.PARTIAL_CONNECTIVITY
+                && r.getBoolean(R.bool.config_partialConnectivityNotifiedAsNoInternet);
+        if (showAsNoInternet) {
+            Log.d(TAG, "Showing partial connectivity as NO_INTERNET");
+        }
+        if ((notifyType == NotificationType.NO_INTERNET || showAsNoInternet)
+                && transportType == TRANSPORT_WIFI) {
             title = r.getString(R.string.wifi_no_internet, name);
             details = r.getString(R.string.wifi_no_internet_detailed);
         } else if (notifyType == NotificationType.PRIVATE_DNS_BROKEN) {
@@ -304,6 +315,24 @@ public class NetworkNotificationManager {
         } catch (NullPointerException npe) {
             Log.d(TAG, "setNotificationVisible: visible notificationManager error", npe);
         }
+    }
+
+    private boolean maybeNotifyViaDialog(Resources res, NotificationType notifyType,
+            PendingIntent intent) {
+        if (notifyType != NotificationType.NO_INTERNET
+                && notifyType != NotificationType.PARTIAL_CONNECTIVITY) {
+            return false;
+        }
+        if (!res.getBoolean(R.bool.config_notifyNoInternetAsDialogWhenHighPriority)) {
+            return false;
+        }
+
+        try {
+            intent.send();
+        } catch (PendingIntent.CanceledException e) {
+            Log.e(TAG, "Error sending dialog PendingIntent", e);
+        }
+        return true;
     }
 
     /**
