@@ -31,14 +31,14 @@ import static android.net.ip.IpServer.STATE_AVAILABLE;
 import static android.net.ip.IpServer.STATE_LOCAL_ONLY;
 import static android.net.ip.IpServer.STATE_TETHERED;
 import static android.net.ip.IpServer.STATE_UNAVAILABLE;
-import static android.net.netlink.NetlinkConstants.RTM_DELNEIGH;
-import static android.net.netlink.NetlinkConstants.RTM_NEWNEIGH;
-import static android.net.netlink.StructNdMsg.NUD_FAILED;
-import static android.net.netlink.StructNdMsg.NUD_REACHABLE;
-import static android.net.netlink.StructNdMsg.NUD_STALE;
 import static android.system.OsConstants.ETH_P_IPV6;
 
 import static com.android.net.module.util.Inet4AddressUtils.intToInet4AddressHTH;
+import static com.android.net.module.util.netlink.NetlinkConstants.RTM_DELNEIGH;
+import static com.android.net.module.util.netlink.NetlinkConstants.RTM_NEWNEIGH;
+import static com.android.net.module.util.netlink.StructNdMsg.NUD_FAILED;
+import static com.android.net.module.util.netlink.StructNdMsg.NUD_REACHABLE;
+import static com.android.net.module.util.netlink.StructNdMsg.NUD_STALE;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
