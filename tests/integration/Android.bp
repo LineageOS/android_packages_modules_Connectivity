@@ -30,6 +30,7 @@ android_test {
     ],
     libs: [
         "android.test.mock",
+        "ServiceConnectivityResources",
     ],
     static_libs: [
         "NetworkStackApiStableLib",
