@@ -282,7 +282,8 @@ public class ConnectivityManagerTest {
     private final ArraySet<Integer> mNetworkTypes = new ArraySet<>();
     private UiAutomation mUiAutomation;
     private CtsNetUtils mCtsNetUtils;
-
+    // The registered callbacks.
+    private List<NetworkCallback> mRegisteredCallbacks = new ArrayList<>();
     // Used for cleanup purposes.
     private final List<Range<Integer>> mVpnRequiredUidRanges = new ArrayList<>();
 
@@ -377,11 +378,12 @@ public class ConnectivityManagerTest {
         // All tests in this class require a working Internet connection as they start. Make
         // sure there is still one as they end that's ready to use for the next test to use.
         final TestNetworkCallback callback = new TestNetworkCallback();
-        mCm.registerDefaultNetworkCallback(callback);
+        registerDefaultNetworkCallback(callback);
         try {
             assertNotNull("Couldn't restore Internet connectivity", callback.waitForAvailable());
         } finally {
-            mCm.unregisterNetworkCallback(callback);
+            // Unregister all registered callbacks.
+            unregisterRegisteredCallbacks();
         }
     }
 
@@ -716,7 +718,7 @@ public class ConnectivityManagerTest {
         final String goodPrivateDnsServer = "dns.google";
         mCtsNetUtils.storePrivateDnsSetting();
         final TestableNetworkCallback cb = new TestableNetworkCallback();
-        mCm.registerNetworkCallback(makeWifiNetworkRequest(), cb);
+        registerNetworkCallback(makeWifiNetworkRequest(), cb);
         try {
             // Verifying the good private DNS sever
             mCtsNetUtils.setPrivateDnsStrictMode(goodPrivateDnsServer);
@@ -748,15 +750,15 @@ public class ConnectivityManagerTest {
      */
     @AppModeFull(reason = "Cannot get WifiManager in instant app mode")
     @Test
-    public void testRegisterNetworkCallback() {
+    public void testRegisterNetworkCallback() throws Exception {
         assumeTrue(mPackageManager.hasSystemFeature(FEATURE_WIFI));
 
         // We will register for a WIFI network being available or lost.
         final TestNetworkCallback callback = new TestNetworkCallback();
-        mCm.registerNetworkCallback(makeWifiNetworkRequest(), callback);
+        registerNetworkCallback(makeWifiNetworkRequest(), callback);
 
         final TestNetworkCallback defaultTrackingCallback = new TestNetworkCallback();
-        mCm.registerDefaultNetworkCallback(defaultTrackingCallback);
+        registerDefaultNetworkCallback(defaultTrackingCallback);
 
         final TestNetworkCallback systemDefaultCallback = new TestNetworkCallback();
         final TestNetworkCallback perUidCallback = new TestNetworkCallback();
@@ -764,51 +766,37 @@ public class ConnectivityManagerTest {
         final Handler h = new Handler(Looper.getMainLooper());
         if (TestUtils.shouldTestSApis()) {
             runWithShellPermissionIdentity(() -> {
-                mCmShim.registerSystemDefaultNetworkCallback(systemDefaultCallback, h);
-                mCmShim.registerDefaultNetworkCallbackForUid(Process.myUid(), perUidCallback, h);
+                registerSystemDefaultNetworkCallback(systemDefaultCallback, h);
+                registerDefaultNetworkCallbackForUid(Process.myUid(), perUidCallback, h);
             }, NETWORK_SETTINGS);
-            mCm.registerBestMatchingNetworkCallback(makeDefaultRequest(), bestMatchingCallback, h);
+            registerBestMatchingNetworkCallback(makeDefaultRequest(), bestMatchingCallback, h);
         }
 
         Network wifiNetwork = null;
+        mCtsNetUtils.ensureWifiConnected();
 
-        try {
-            mCtsNetUtils.ensureWifiConnected();
+        // Now we should expect to get a network callback about availability of the wifi
+        // network even if it was already connected as a state-based action when the callback
+        // is registered.
+        wifiNetwork = callback.waitForAvailable();
+        assertNotNull("Did not receive onAvailable for TRANSPORT_WIFI request",
+                wifiNetwork);
 
-            // Now we should expect to get a network callback about availability of the wifi
-            // network even if it was already connected as a state-based action when the callback
-            // is registered.
-            wifiNetwork = callback.waitForAvailable();
-            assertNotNull("Did not receive onAvailable for TRANSPORT_WIFI request",
-                    wifiNetwork);
+        final Network defaultNetwork = defaultTrackingCallback.waitForAvailable();
+        assertNotNull("Did not receive onAvailable on default network callback",
+                defaultNetwork);
 
-            final Network defaultNetwork = defaultTrackingCallback.waitForAvailable();
-            assertNotNull("Did not receive onAvailable on default network callback",
-                    defaultNetwork);
-
-            if (TestUtils.shouldTestSApis()) {
-                assertNotNull("Did not receive onAvailable on system default network callback",
-                        systemDefaultCallback.waitForAvailable());
-                final Network perUidNetwork = perUidCallback.waitForAvailable();
-                assertNotNull("Did not receive onAvailable on per-UID default network callback",
-                        perUidNetwork);
-                assertEquals(defaultNetwork, perUidNetwork);
-                final Network bestMatchingNetwork = bestMatchingCallback.waitForAvailable();
-                assertNotNull("Did not receive onAvailable on best matching network callback",
-                        bestMatchingNetwork);
-                assertEquals(defaultNetwork, bestMatchingNetwork);
-            }
-
-        } catch (InterruptedException e) {
-            fail("Broadcast receiver or NetworkCallback wait was interrupted.");
-        } finally {
-            mCm.unregisterNetworkCallback(callback);
-            mCm.unregisterNetworkCallback(defaultTrackingCallback);
-            if (TestUtils.shouldTestSApis()) {
-                mCm.unregisterNetworkCallback(systemDefaultCallback);
-                mCm.unregisterNetworkCallback(perUidCallback);
-                mCm.unregisterNetworkCallback(bestMatchingCallback);
-            }
+        if (TestUtils.shouldTestSApis()) {
+            assertNotNull("Did not receive onAvailable on system default network callback",
+                    systemDefaultCallback.waitForAvailable());
+            final Network perUidNetwork = perUidCallback.waitForAvailable();
+            assertNotNull("Did not receive onAvailable on per-UID default network callback",
+                    perUidNetwork);
+            assertEquals(defaultNetwork, perUidNetwork);
+            final Network bestMatchingNetwork = bestMatchingCallback.waitForAvailable();
+            assertNotNull("Did not receive onAvailable on best matching network callback",
+                    bestMatchingNetwork);
+            assertEquals(defaultNetwork, bestMatchingNetwork);
         }
     }
 
@@ -979,22 +967,15 @@ public class ConnectivityManagerTest {
      */
     @AppModeFull(reason = "CHANGE_NETWORK_STATE permission can't be granted to instant apps")
     @Test
-    public void testRequestNetworkCallback() {
+    public void testRequestNetworkCallback() throws Exception {
         final TestNetworkCallback callback = new TestNetworkCallback();
-        mCm.requestNetwork(new NetworkRequest.Builder()
+        requestNetwork(new NetworkRequest.Builder()
                 .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
                 .build(), callback);
 
-        try {
-            // Wait to get callback for availability of internet
-            Network internetNetwork = callback.waitForAvailable();
-            assertNotNull("Did not receive NetworkCallback#onAvailable for INTERNET",
-                    internetNetwork);
-        } catch (InterruptedException e) {
-            fail("NetworkCallback wait was interrupted.");
-        } finally {
-            mCm.unregisterNetworkCallback(callback);
-        }
+        // Wait to get callback for availability of internet
+        Network internetNetwork = callback.waitForAvailable();
+        assertNotNull("Did not receive NetworkCallback#onAvailable for INTERNET", internetNetwork);
     }
 
     /**
@@ -1010,9 +991,8 @@ public class ConnectivityManagerTest {
         }
 
         final TestNetworkCallback callback = new TestNetworkCallback();
-        mCm.requestNetwork(new NetworkRequest.Builder()
-                .addTransportType(TRANSPORT_WIFI)
-                .build(), callback, 100);
+        requestNetwork(new NetworkRequest.Builder().addTransportType(TRANSPORT_WIFI).build(),
+                callback, 100);
 
         try {
             // Wait to get callback for unavailability of requested network
@@ -1021,7 +1001,6 @@ public class ConnectivityManagerTest {
         } catch (InterruptedException e) {
             fail("NetworkCallback wait was interrupted.");
         } finally {
-            mCm.unregisterNetworkCallback(callback);
             if (previousWifiEnabledState) {
                 mCtsNetUtils.connectToWifi();
             }
@@ -1124,11 +1103,11 @@ public class ConnectivityManagerTest {
             // this method will return right away, and if not, it'll wait for the setting to change.
             if (useSystemDefault) {
                 runWithShellPermissionIdentity(() ->
-                                mCmShim.registerSystemDefaultNetworkCallback(networkCallback,
+                                registerSystemDefaultNetworkCallback(networkCallback,
                                         new Handler(Looper.getMainLooper())),
                         NETWORK_SETTINGS);
             } else {
-                mCm.registerDefaultNetworkCallback(networkCallback);
+                registerDefaultNetworkCallback(networkCallback);
             }
 
             // Changing meteredness on wifi involves reconnecting, which can take several seconds
@@ -1138,8 +1117,6 @@ public class ConnectivityManagerTest {
             throw new AssertionError("Timed out waiting for active network metered status to "
                     + "change to " + requestedMeteredness + " ; network = "
                     + mCm.getActiveNetwork(), e);
-        } finally {
-            mCm.unregisterNetworkCallback(networkCallback);
         }
     }
 
@@ -1875,8 +1852,6 @@ public class ConnectivityManagerTest {
             if (supportWifi) waitForAvailable(wifiCb);
             if (supportTelephony) waitForAvailable(telephonyCb);
         } finally {
-            if (supportWifi) mCm.unregisterNetworkCallback(wifiCb);
-            if (supportTelephony) mCm.unregisterNetworkCallback(telephonyCb);
             // Restore the previous state of airplane mode and permissions:
             runShellCommand("cmd connectivity airplane-mode "
                     + (isAirplaneModeEnabled ? "enable" : "disable"));
@@ -1886,7 +1861,7 @@ public class ConnectivityManagerTest {
 
     private void registerCallbackAndWaitForAvailable(@NonNull final NetworkRequest request,
             @NonNull final TestableNetworkCallback cb) {
-        mCm.registerNetworkCallback(request, cb);
+        registerNetworkCallback(request, cb);
         waitForAvailable(cb);
     }
 
@@ -2004,18 +1979,15 @@ public class ConnectivityManagerTest {
                 foundNc.complete(nc);
             }
         };
-        try {
-            mCm.registerNetworkCallback(makeWifiNetworkRequest(), callback);
-            // Registering a callback here guarantees onCapabilitiesChanged is called immediately
-            // because WiFi network should be connected.
-            final NetworkCapabilities nc =
-                    foundNc.get(NETWORK_CALLBACK_TIMEOUT_MS, TimeUnit.MILLISECONDS);
-            // Verify if ssid is contained in the NetworkCapabilities received from callback.
-            assertNotNull("NetworkCapabilities of the network is null", nc);
-            assertEquals(hasSsid, Pattern.compile(ssid).matcher(nc.toString()).find());
-        } finally {
-            mCm.unregisterNetworkCallback(callback);
-        }
+
+        registerNetworkCallback(makeWifiNetworkRequest(), callback);
+        // Registering a callback here guarantees onCapabilitiesChanged is called immediately
+        // because WiFi network should be connected.
+        final NetworkCapabilities nc =
+                foundNc.get(NETWORK_CALLBACK_TIMEOUT_MS, TimeUnit.MILLISECONDS);
+        // Verify if ssid is contained in the NetworkCapabilities received from callback.
+        assertNotNull("NetworkCapabilities of the network is null", nc);
+        assertEquals(hasSsid, Pattern.compile(ssid).matcher(nc.toString()).find());
     }
 
     /**
@@ -2053,14 +2025,14 @@ public class ConnectivityManagerTest {
         final TestableNetworkCallback callback = new TestableNetworkCallback();
         final Handler handler = new Handler(Looper.getMainLooper());
         assertThrows(SecurityException.class,
-                () -> mCmShim.requestBackgroundNetwork(testRequest, callback, handler));
+                () -> requestBackgroundNetwork(testRequest, callback, handler));
 
         Network testNetwork = null;
         try {
             // Request background test network via Shell identity which has NETWORK_SETTINGS
             // permission granted.
             runWithShellPermissionIdentity(
-                    () -> mCmShim.requestBackgroundNetwork(testRequest, callback, handler),
+                    () -> requestBackgroundNetwork(testRequest, callback, handler),
                     new String[] { android.Manifest.permission.NETWORK_SETTINGS });
 
             // Register the test network agent which has no foreground request associated to it.
@@ -2097,7 +2069,6 @@ public class ConnectivityManagerTest {
                 }
                 testNetworkInterface.getFileDescriptor().close();
             }, new String[] { android.Manifest.permission.MANAGE_TEST_NETWORKS });
-            mCm.unregisterNetworkCallback(callback);
         }
     }
 
@@ -2137,8 +2108,9 @@ public class ConnectivityManagerTest {
         final int myUid = Process.myUid();
         final int otherUid = UserHandle.getUid(5, Process.FIRST_APPLICATION_UID);
         final Handler handler = new Handler(Looper.getMainLooper());
-        mCm.registerDefaultNetworkCallback(myUidCallback, handler);
-        mCmShim.registerDefaultNetworkCallbackForUid(otherUid, otherUidCallback, handler);
+
+        registerDefaultNetworkCallback(myUidCallback, handler);
+        registerDefaultNetworkCallbackForUid(otherUid, otherUidCallback, handler);
 
         final Network defaultNetwork = mCm.getActiveNetwork();
         final List<DetailedBlockedStatusCallback> allCallbacks =
@@ -2185,16 +2157,15 @@ public class ConnectivityManagerTest {
         assertNotNull(info);
         assertEquals(DetailedState.CONNECTED, info.getDetailedState());
 
+        final TestableNetworkCallback callback = new TestableNetworkCallback();
         try {
             mCmShim.setLegacyLockdownVpnEnabled(true);
 
             // setLegacyLockdownVpnEnabled is asynchronous and only takes effect when the
             // ConnectivityService handler thread processes it. Ensure it has taken effect by doing
             // something that blocks until the handler thread is idle.
-            final TestableNetworkCallback callback = new TestableNetworkCallback();
-            mCm.registerDefaultNetworkCallback(callback);
+            registerDefaultNetworkCallback(callback);
             waitForAvailable(callback);
-            mCm.unregisterNetworkCallback(callback);
 
             // Test one of the effects of setLegacyLockdownVpnEnabled: the fact that any NetworkInfo
             // in state CONNECTED is degraded to CONNECTING if the legacy VPN is not connected.
@@ -2383,7 +2354,6 @@ public class ConnectivityManagerTest {
 
             // Cleanup any prior test state from setOemNetworkPreference
             clearOemNetworkPreference();
-            unregisterTestOemNetworkPreferenceCallbacks(defaultCallback, systemDefaultCallback);
         }
     }
 
@@ -2427,23 +2397,15 @@ public class ConnectivityManagerTest {
 
             // The default (non-test) network should be available as the network pref was cleared.
             waitForAvailable(defaultCallback);
-            unregisterTestOemNetworkPreferenceCallbacks(defaultCallback, systemDefaultCallback);
         }
-    }
-
-    private void unregisterTestOemNetworkPreferenceCallbacks(
-            @NonNull final TestableNetworkCallback defaultCallback,
-            @NonNull final TestableNetworkCallback systemDefaultCallback) {
-        mCm.unregisterNetworkCallback(defaultCallback);
-        mCm.unregisterNetworkCallback(systemDefaultCallback);
     }
 
     private void registerTestOemNetworkPreferenceCallbacks(
             @NonNull final TestableNetworkCallback defaultCallback,
             @NonNull final TestableNetworkCallback systemDefaultCallback) {
-        mCm.registerDefaultNetworkCallback(defaultCallback);
+        registerDefaultNetworkCallback(defaultCallback);
         runWithShellPermissionIdentity(() ->
-                mCmShim.registerSystemDefaultNetworkCallback(systemDefaultCallback,
+                registerSystemDefaultNetworkCallback(systemDefaultCallback,
                         new Handler(Looper.getMainLooper())), NETWORK_SETTINGS);
     }
 
@@ -2544,7 +2506,7 @@ public class ConnectivityManagerTest {
             // Wait for partial connectivity to be detected on the network
             final Network network = preparePartialConnectivity();
 
-            mCm.requestNetwork(makeWifiNetworkRequest(), cb);
+            requestNetwork(makeWifiNetworkRequest(), cb);
             runAsShell(NETWORK_SETTINGS, () -> {
                 // The always bit is verified in NetworkAgentTest
                 mCm.setAcceptPartialConnectivity(network, false /* accept */, false /* always */);
@@ -2552,7 +2514,6 @@ public class ConnectivityManagerTest {
             // Reject partial connectivity network should cause the network being torn down
             assertEquals(network, cb.waitForLost());
         } finally {
-            mCm.unregisterNetworkCallback(cb);
             resetValidationConfig();
             // Wifi will not automatically reconnect to the network. ensureWifiDisconnected cannot
             // apply here. Thus, turn off wifi first and restart to restore.
@@ -2587,13 +2548,12 @@ public class ConnectivityManagerTest {
             // guarantee that it won't become the default in the future.
             assertNotEquals(wifiNetwork, mCm.getActiveNetwork());
 
-            mCm.registerNetworkCallback(makeWifiNetworkRequest(), wifiCb);
+            registerNetworkCallback(makeWifiNetworkRequest(), wifiCb);
             runAsShell(NETWORK_SETTINGS, () -> {
                 mCm.setAcceptUnvalidated(wifiNetwork, false /* accept */, false /* always */);
             });
             waitForLost(wifiCb);
         } finally {
-            mCm.unregisterNetworkCallback(wifiCb);
             resetValidationConfig();
             /// Wifi will not automatically reconnect to the network. ensureWifiDisconnected cannot
             // apply here. Thus, turn off wifi first and restart to restore.
@@ -2623,8 +2583,8 @@ public class ConnectivityManagerTest {
         final Network cellNetwork = mCtsNetUtils.connectToCell();
         final Network wifiNetwork = prepareValidatedNetwork();
 
-        mCm.registerDefaultNetworkCallback(defaultCb);
-        mCm.registerNetworkCallback(makeWifiNetworkRequest(), wifiCb);
+        registerDefaultNetworkCallback(defaultCb);
+        registerNetworkCallback(makeWifiNetworkRequest(), wifiCb);
 
         try {
             // Verify wifi is the default network.
@@ -2658,8 +2618,6 @@ public class ConnectivityManagerTest {
             wifiCb.assertNoCallbackThat(NO_CALLBACK_TIMEOUT_MS,
                     c -> !(c instanceof CallbackEntry.LinkPropertiesChanged));
         } finally {
-            mCm.unregisterNetworkCallback(wifiCb);
-            mCm.unregisterNetworkCallback(defaultCb);
             resetAvoidBadWifi(previousAvoidBadWifi);
             resetValidationConfig();
             // Reconnect wifi to reset the wifi status
@@ -2697,12 +2655,8 @@ public class ConnectivityManagerTest {
             }
         };
 
-        try {
-            mCm.registerNetworkCallback(new NetworkRequest.Builder().build(), cb);
-            return future.get(timeout, TimeUnit.MILLISECONDS);
-        } finally {
-            mCm.unregisterNetworkCallback(cb);
-        }
+        registerNetworkCallback(new NetworkRequest.Builder().build(), cb);
+        return future.get(timeout, TimeUnit.MILLISECONDS);
     }
 
     private void resetValidationConfig() {
@@ -2812,9 +2766,9 @@ public class ConnectivityManagerTest {
         final TestableNetworkCallback defaultTrackingCb = new TestableNetworkCallback();
         final TestableNetworkCallback systemDefaultCb = new TestableNetworkCallback();
         final Handler h = new Handler(Looper.getMainLooper());
-        runWithShellPermissionIdentity(() -> mCm.registerSystemDefaultNetworkCallback(
+        runWithShellPermissionIdentity(() -> registerSystemDefaultNetworkCallback(
                 systemDefaultCb, h), NETWORK_SETTINGS);
-        mCm.registerDefaultNetworkCallback(defaultTrackingCb);
+        registerDefaultNetworkCallback(defaultTrackingCb);
 
         try {
             // CtsNetTestCases uid is not listed in MOBILE_DATA_PREFERRED_UIDS setting, so the
@@ -2850,9 +2804,6 @@ public class ConnectivityManagerTest {
             // Active network for CtsNetTestCases uid should change back to wifi.
             assertEquals(wifiNetwork, mCm.getActiveNetwork());
         } finally {
-            mCm.unregisterNetworkCallback(systemDefaultCb);
-            mCm.unregisterNetworkCallback(defaultTrackingCb);
-
             // Restore setting.
             ConnectivitySettingsManager.setMobileDataPreferredUids(
                     mContext, mobileDataPreferredUids);
@@ -2903,7 +2854,7 @@ public class ConnectivityManagerTest {
 
         final Handler h = new Handler(Looper.getMainLooper());
         final TestableNetworkCallback testNetworkCb = new TestableNetworkCallback();
-        mCm.registerBestMatchingNetworkCallback(new NetworkRequest.Builder().clearCapabilities()
+        registerBestMatchingNetworkCallback(new NetworkRequest.Builder().clearCapabilities()
                 .addTransportType(NetworkCapabilities.TRANSPORT_TEST).build(), testNetworkCb, h);
 
         // Create test network agent with restricted network.
@@ -2953,7 +2904,6 @@ public class ConnectivityManagerTest {
             // TODD: Have a significant signal to know the uids has been send to netd.
             assertBindSocketToNetworkSuccess(network);
         } finally {
-            mCm.unregisterNetworkCallback(testNetworkCb);
             agent.unregister();
 
             // Restore setting.
@@ -2961,5 +2911,59 @@ public class ConnectivityManagerTest {
                     ConnectivitySettingsManager.setUidsAllowedOnRestrictedNetworks(
                             mContext, originalUidsAllowedOnRestrictedNetworks), NETWORK_SETTINGS);
         }
+    }
+
+    private void unregisterRegisteredCallbacks() {
+        for (NetworkCallback callback: mRegisteredCallbacks) {
+            mCm.unregisterNetworkCallback(callback);
+        }
+    }
+
+    private void registerDefaultNetworkCallback(NetworkCallback callback) {
+        mCm.registerDefaultNetworkCallback(callback);
+        mRegisteredCallbacks.add(callback);
+    }
+
+    private void registerDefaultNetworkCallback(NetworkCallback callback, Handler handler) {
+        mCm.registerDefaultNetworkCallback(callback, handler);
+        mRegisteredCallbacks.add(callback);
+    }
+
+    private void registerNetworkCallback(NetworkRequest request, NetworkCallback callback) {
+        mCm.registerNetworkCallback(request, callback);
+        mRegisteredCallbacks.add(callback);
+    }
+
+    private void registerSystemDefaultNetworkCallback(NetworkCallback callback, Handler handler) {
+        mCmShim.registerSystemDefaultNetworkCallback(callback, handler);
+        mRegisteredCallbacks.add(callback);
+    }
+
+    private void registerDefaultNetworkCallbackForUid(int uid, NetworkCallback callback,
+            Handler handler) throws Exception {
+        mCmShim.registerDefaultNetworkCallbackForUid(uid, callback, handler);
+        mRegisteredCallbacks.add(callback);
+    }
+
+    private void requestNetwork(NetworkRequest request, NetworkCallback callback) {
+        mCm.requestNetwork(request, callback);
+        mRegisteredCallbacks.add(callback);
+    }
+
+    private void requestNetwork(NetworkRequest request, NetworkCallback callback, int timeoutSec) {
+        mCm.requestNetwork(request, callback, timeoutSec);
+        mRegisteredCallbacks.add(callback);
+    }
+
+    private void registerBestMatchingNetworkCallback(NetworkRequest request,
+            NetworkCallback callback, Handler handler) {
+        mCm.registerBestMatchingNetworkCallback(request, callback, handler);
+        mRegisteredCallbacks.add(callback);
+    }
+
+    private void requestBackgroundNetwork(NetworkRequest request, NetworkCallback callback,
+            Handler handler) throws Exception {
+        mCmShim.requestBackgroundNetwork(request, callback, handler);
+        mRegisteredCallbacks.add(callback);
     }
 }
