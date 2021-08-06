@@ -114,4 +114,15 @@
     <!-- Whether to cancel network notifications automatically when tapped -->
     <bool name="config_autoCancelNetworkNotifications">true</bool>
 
+    <!-- When no internet or partial connectivity is detected on a network, and a high priority
+         (heads up) notification would be shown due to the network being explicitly selected,
+         directly show the dialog that would normally be shown when tapping the notification
+         instead of showing the notification. -->
+    <bool name="config_notifyNoInternetAsDialogWhenHighPriority">false</bool>
+
+    <!-- When showing notifications indicating partial connectivity, display the same notifications
+         as no connectivity instead. This may be easier to understand for users but offers less
+         details on what is happening. -->
+    <bool name="config_partialConnectivityNotifiedAsNoInternet">false</bool>
+
 </resources>
