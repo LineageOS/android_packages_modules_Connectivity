@@ -38,7 +38,6 @@ import android.net.IDnsResolver;
 import android.net.InetAddresses;
 import android.net.LinkProperties;
 import android.net.Network;
-import android.net.ResolverOptionsParcel;
 import android.net.ResolverParamsParcel;
 import android.net.Uri;
 import android.net.shared.PrivateDnsConfig;
@@ -384,7 +383,6 @@ public class DnsManager {
                               .collect(Collectors.toList()))
                 : useTls ? paramsParcel.servers  // Opportunistic
                 : new String[0];            // Off
-        paramsParcel.resolverOptions = new ResolverOptionsParcel();
         paramsParcel.transportTypes = transportTypes;
         // Prepare to track the validation status of the DNS servers in the
         // resolver config when private DNS is in opportunistic or strict mode.
