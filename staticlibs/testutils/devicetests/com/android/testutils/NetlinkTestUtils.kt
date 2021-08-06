@@ -25,16 +25,21 @@ import libcore.util.HexEncoding.encodeToString
 import java.net.Inet6Address
 import java.net.InetAddress
 
+private const val VRRP_MAC_ADDR = "00005e000164"
+
 /**
  * Make a RTM_NEWNEIGH netlink message.
  */
+@JvmOverloads
 fun makeNewNeighMessage(
     neighAddr: InetAddress,
-    nudState: Short
+    nudState: Short,
+    linkLayerAddr: String = VRRP_MAC_ADDR
 ) = makeNeighborMessage(
         neighAddr = neighAddr,
         type = RTM_NEWNEIGH,
-        nudState = nudState
+        nudState = nudState,
+        linkLayerAddr = linkLayerAddr
 )
 
 /**
@@ -52,7 +57,8 @@ fun makeDelNeighMessage(
 private fun makeNeighborMessage(
     neighAddr: InetAddress,
     type: Short,
-    nudState: Short
+    nudState: Short,
+    linkLayerAddr: String = VRRP_MAC_ADDR
 ) = HexEncoding.decode(
     /* ktlint-disable indent */
     // -- struct nlmsghdr --
@@ -80,7 +86,7 @@ private fun makeNeighborMessage(
     // -- struct nlattr: NDA_LLADDR --
     "0a00" +             // length = 10
     "0200" +             // type (2 == NDA_LLADDR, for neighbor messages)
-    "00005e000164" +     // MAC Address (== 00:00:5e:00:01:64)
+    linkLayerAddr +      // MAC Address(default == 00:00:5e:00:01:64)
     "0000" +             // padding, for 4 byte alignment
     // -- struct nlattr: NDA_PROBES --
     "0800" +             // length = 8
