@@ -43,6 +43,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import android.annotation.NonNull;
+import android.annotation.Nullable;
 import android.content.Context;
 import android.net.ConnectivitySettingsManager;
 import android.net.IDnsResolver;
@@ -106,8 +107,14 @@ public class DnsManagerTest {
     @Mock IDnsResolver mMockDnsResolver;
 
     private void assertResolverOptionsEquals(
-            @NonNull ResolverOptionsParcel actual,
-            @NonNull ResolverOptionsParcel expected) {
+            @Nullable ResolverOptionsParcel actual,
+            @Nullable ResolverOptionsParcel expected) {
+        if (actual == null) {
+            assertNull(expected);
+            return;
+        } else {
+            assertNotNull(expected);
+        }
         assertEquals(actual.hosts, expected.hosts);
         assertEquals(actual.tcMode, expected.tcMode);
         assertEquals(actual.enforceDnsUid, expected.enforceDnsUid);
@@ -365,7 +372,7 @@ public class DnsManagerTest {
         expectedParams.tlsName = "";
         expectedParams.tlsServers = new String[]{"3.3.3.3", "4.4.4.4"};
         expectedParams.transportTypes = TEST_TRANSPORT_TYPES;
-        expectedParams.resolverOptions = new ResolverOptionsParcel();
+        expectedParams.resolverOptions = null;
         assertResolverParamsEquals(actualParams, expectedParams);
     }
 
