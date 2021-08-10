@@ -9549,6 +9549,19 @@ public class ConnectivityServiceTest {
     }
 
     @Test
+    public void testStartVpnProfileFromDiffPackage() throws Exception {
+        final String notMyVpnPkg = "com.not.my.vpn";
+        assertThrows(
+                SecurityException.class, () -> mVpnManagerService.startVpnProfile(notMyVpnPkg));
+    }
+
+    @Test
+    public void testStopVpnProfileFromDiffPackage() throws Exception {
+        final String notMyVpnPkg = "com.not.my.vpn";
+        assertThrows(SecurityException.class, () -> mVpnManagerService.stopVpnProfile(notMyVpnPkg));
+    }
+
+    @Test
     public void testUidUpdateChangesInterfaceFilteringRule() throws Exception {
         LinkProperties lp = new LinkProperties();
         lp.setInterfaceName("tun0");
