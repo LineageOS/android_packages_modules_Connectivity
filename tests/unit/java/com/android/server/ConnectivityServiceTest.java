@@ -4913,7 +4913,6 @@ public class ConnectivityServiceTest {
         testAvoidBadWifiConfig_controlledBySettings();
     }
 
-    @Ignore("Refactoring in progress b/178071397")
     @Test
     public void testAvoidBadWifi() throws Exception {
         final ContentResolver cr = mServiceContext.getContentResolver();
