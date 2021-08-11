@@ -4913,7 +4913,6 @@ public class ConnectivityServiceTest {
         testAvoidBadWifiConfig_controlledBySettings();
     }
 
-    @Ignore("Refactoring in progress b/178071397")
     @Test
     public void testAvoidBadWifi() throws Exception {
         final ContentResolver cr = mServiceContext.getContentResolver();
@@ -9546,6 +9545,19 @@ public class ConnectivityServiceTest {
         // Back to routing all IPv6 traffic should have filtering rules
         verify(mMockNetd).firewallAddUidInterfaceRules(eq("tun1"), uidCaptor.capture());
         assertContainsExactly(uidCaptor.getValue(), APP1_UID, APP2_UID);
+    }
+
+    @Test
+    public void testStartVpnProfileFromDiffPackage() throws Exception {
+        final String notMyVpnPkg = "com.not.my.vpn";
+        assertThrows(
+                SecurityException.class, () -> mVpnManagerService.startVpnProfile(notMyVpnPkg));
+    }
+
+    @Test
+    public void testStopVpnProfileFromDiffPackage() throws Exception {
+        final String notMyVpnPkg = "com.not.my.vpn";
+        assertThrows(SecurityException.class, () -> mVpnManagerService.stopVpnProfile(notMyVpnPkg));
     }
 
     @Test
