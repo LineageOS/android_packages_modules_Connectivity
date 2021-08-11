@@ -31,6 +31,7 @@ import android.content.Context;
 import android.net.ConnectivityManager;
 import android.net.Network;
 import android.net.cts.util.CtsNetUtils;
+import android.net.wifi.WifiManager;
 import android.os.BatteryStatsManager;
 import android.os.Build;
 import android.os.connectivity.CellularBatteryStats;
@@ -72,6 +73,7 @@ public class BatteryStatsManagerTest{
     private Context mContext;
     private BatteryStatsManager mBsm;
     private ConnectivityManager mCm;
+    private WifiManager mWm;
     private CtsNetUtils mCtsNetUtils;
 
     @Before
@@ -79,6 +81,7 @@ public class BatteryStatsManagerTest{
         mContext = getContext();
         mBsm = mContext.getSystemService(BatteryStatsManager.class);
         mCm = mContext.getSystemService(ConnectivityManager.class);
+        mWm = mContext.getSystemService(WifiManager.class);
         mCtsNetUtils = new CtsNetUtils(mContext);
     }
 
@@ -129,6 +132,11 @@ public class BatteryStatsManagerTest{
                     () -> assertStatsEventually(mBsm::getCellularBatteryStats,
                         cellularStatsAfter -> cellularBatteryStatsIncreased(
                         cellularStatsBefore, cellularStatsAfter)));
+
+            if (!mWm.isEnhancedPowerReportingSupported()) {
+                Log.d(TAG, "Skip wifi stats test because wifi does not support link layer stats.");
+                return;
+            }
 
             WifiBatteryStats wifiStatsBefore = runAsShell(UPDATE_DEVICE_STATS,
                     mBsm::getWifiBatteryStats);
