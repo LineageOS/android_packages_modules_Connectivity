@@ -52,7 +52,6 @@ import android.net.util.InterfaceParams;
 import android.net.util.InterfaceSet;
 import android.net.util.PrefixUtils;
 import android.net.util.SharedLog;
-import android.os.Build;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.Message;
@@ -67,6 +66,7 @@ import androidx.annotation.Nullable;
 import com.android.internal.util.MessageUtils;
 import com.android.internal.util.State;
 import com.android.internal.util.StateMachine;
+import com.android.modules.utils.build.SdkLevel;
 import com.android.networkstack.tethering.BpfCoordinator;
 import com.android.networkstack.tethering.BpfCoordinator.ClientInfo;
 import com.android.networkstack.tethering.BpfCoordinator.Ipv6ForwardingRule;
@@ -676,9 +676,7 @@ public class IpServer extends StateMachine {
             return false;
         }
 
-        // TODO: use ShimUtils instead of explicitly checking the version here.
-        if (Build.VERSION.SDK_INT > Build.VERSION_CODES.R || "S".equals(Build.VERSION.CODENAME)
-                    || "T".equals(Build.VERSION.CODENAME)) {
+        if (SdkLevel.isAtLeastS()) {
             // DAD Proxy starts forwarding packets after IPv6 upstream is present.
             mDadProxy = mDeps.getDadProxy(getHandler(), mInterfaceParams);
         }
