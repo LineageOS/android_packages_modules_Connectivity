@@ -1167,4 +1167,48 @@ public class NetworkCapabilitiesTest {
         // Ensure test case fails if new net cap is added into default cap but no update here.
         assertEquals(0, nc.getCapabilities().length);
     }
+
+    @Test @IgnoreUpTo(Build.VERSION_CODES.R)
+    public void testRestrictCapabilitiesForTestNetwork() {
+        final int ownerUid = 1234;
+        final int[] administratorUids = {1001, ownerUid};
+        final NetworkCapabilities nonRestrictedNc = new NetworkCapabilities.Builder()
+                .addTransportType(TRANSPORT_CELLULAR)
+                .addTransportType(TRANSPORT_VPN)
+                .addCapability(NET_CAPABILITY_MMS)
+                .addCapability(NET_CAPABILITY_NOT_METERED)
+                .setAdministratorUids(administratorUids)
+                .setOwnerUid(ownerUid)
+                .setSubscriptionIds(Set.of(TEST_SUBID1)).build();
+
+        nonRestrictedNc.restrictCapabilitiesForTestNetwork(ownerUid);
+        // TRANSPORT_TEST will be appended
+        assertTrue(nonRestrictedNc.hasTransport(TRANSPORT_TEST));
+        assertEquals(Set.of(TEST_SUBID1), nonRestrictedNc.getSubscriptionIds());
+        // Non-UNRESTRICTED_TEST_NETWORKS_ALLOWED_TRANSPORTS will be removed
+        assertFalse(nonRestrictedNc.hasTransport(TRANSPORT_CELLULAR));
+        assertTrue(nonRestrictedNc.hasTransport(TRANSPORT_VPN));
+        // Only TEST_NETWORKS_ALLOWED_CAPABILITIES will be kept
+        assertFalse(nonRestrictedNc.hasCapability(NET_CAPABILITY_MMS));
+        assertTrue(nonRestrictedNc.hasCapability(NET_CAPABILITY_NOT_METERED));
+
+        final NetworkCapabilities restrictedNc = new NetworkCapabilities.Builder(nonRestrictedNc)
+                .removeCapability(NET_CAPABILITY_NOT_RESTRICTED)
+                .addTransportType(TRANSPORT_CELLULAR)
+                .addCapability(NET_CAPABILITY_MMS).build();
+        restrictedNc.restrictCapabilitiesForTestNetwork(ownerUid);
+        // It may declare any transport if the net cap is restricted
+        assertTrue(restrictedNc.hasTransport(TRANSPORT_CELLULAR));
+        // SubIds will be cleared.
+        assertEquals(new ArraySet<>(), restrictedNc.getSubscriptionIds());
+        // Only retain the owner and administrator UIDs if they match the app registering the remote
+        // caller that registered the network.
+        assertEquals(ownerUid, restrictedNc.getOwnerUid());
+        assertArrayEquals(new int[] {ownerUid}, restrictedNc.getAdministratorUids());
+        // The creator UID does not match the owner and administrator UIDs will clear the owner and
+        // administrator UIDs.
+        restrictedNc.restrictCapabilitiesForTestNetwork(5678);
+        assertEquals(INVALID_UID, restrictedNc.getOwnerUid());
+        assertArrayEquals(new int[0], restrictedNc.getAdministratorUids());
+    }
 }
