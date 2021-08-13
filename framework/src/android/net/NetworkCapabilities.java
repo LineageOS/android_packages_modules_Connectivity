@@ -818,7 +818,7 @@ public final class NetworkCapabilities implements Parcelable {
      * restrictions.
      * @hide
      */
-    public void restrictCapabilitesForTestNetwork(int creatorUid) {
+    public void restrictCapabilitiesForTestNetwork(int creatorUid) {
         final long originalCapabilities = mNetworkCapabilities;
         final long originalTransportTypes = mTransportTypes;
         final NetworkSpecifier originalSpecifier = mNetworkSpecifier;
@@ -828,7 +828,7 @@ public final class NetworkCapabilities implements Parcelable {
         final TransportInfo originalTransportInfo = getTransportInfo();
         final Set<Integer> originalSubIds = getSubscriptionIds();
         clearAll();
-        if (0 != (originalCapabilities & NET_CAPABILITY_NOT_RESTRICTED)) {
+        if (0 != (originalCapabilities & (1 << NET_CAPABILITY_NOT_RESTRICTED))) {
             // If the test network is not restricted, then it is only allowed to declare some
             // specific transports. This is to minimize impact on running apps in case an app
             // run from the shell creates a test a network.
