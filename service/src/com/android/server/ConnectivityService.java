@@ -324,7 +324,8 @@ public class ConnectivityService extends IConnectivityManager.Stub
     private static final int DEFAULT_NASCENT_DELAY_MS = 5_000;
 
     // The maximum number of network request allowed per uid before an exception is thrown.
-    private static final int MAX_NETWORK_REQUESTS_PER_UID = 100;
+    @VisibleForTesting
+    static final int MAX_NETWORK_REQUESTS_PER_UID = 100;
 
     // The maximum number of network request allowed for system UIDs before an exception is thrown.
     @VisibleForTesting
@@ -344,7 +345,8 @@ public class ConnectivityService extends IConnectivityManager.Stub
     @VisibleForTesting
     protected final PermissionMonitor mPermissionMonitor;
 
-    private final PerUidCounter mNetworkRequestCounter;
+    @VisibleForTesting
+    final PerUidCounter mNetworkRequestCounter;
     @VisibleForTesting
     final PerUidCounter mSystemNetworkRequestCounter;
 
@@ -1154,9 +1156,20 @@ public class ConnectivityService extends IConnectivityManager.Stub
         private void incrementCountOrThrow(final int uid, final int numToIncrement) {
             final int newRequestCount =
                     mUidToNetworkRequestCount.get(uid, 0) + numToIncrement;
-            if (newRequestCount >= mMaxCountPerUid) {
+            if (newRequestCount >= mMaxCountPerUid
+                    // HACK : the system server is allowed to go over the request count limit
+                    // when it is creating requests on behalf of another app (but not itself,
+                    // so it can still detect its own request leaks). This only happens in the
+                    // per-app API flows in which case the old requests for that particular
+                    // UID will be removed soon.
+                    // TODO : instead of this hack, addPerAppDefaultNetworkRequests and other
+                    // users of transact() should unregister the requests to decrease the count
+                    // before they increase it again by creating a new NRI. Then remove the
+                    // transact() method.
+                    && (Process.myUid() == uid || Process.myUid() != Binder.getCallingUid())) {
                 throw new ServiceSpecificException(
-                        ConnectivityManager.Errors.TOO_MANY_REQUESTS);
+                        ConnectivityManager.Errors.TOO_MANY_REQUESTS,
+                        "Uid " + uid + " exceeded its allotted requests limit");
             }
             mUidToNetworkRequestCount.put(uid, newRequestCount);
         }
@@ -5817,7 +5830,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
             mUid = nri.mUid;
             mAsUid = nri.mAsUid;
             mPendingIntent = nri.mPendingIntent;
-            mPerUidCounter = getRequestCounter(this);
+            mPerUidCounter = nri.mPerUidCounter;
             mPerUidCounter.incrementCountOrThrow(mUid);
             mCallbackFlags = nri.mCallbackFlags;
             mCallingAttributionTag = nri.mCallingAttributionTag;
@@ -10147,7 +10160,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
             final NetworkRequestInfo trackingNri =
                     getDefaultRequestTrackingUid(callbackRequest.mAsUid);
 
-            // If this nri is not being tracked, the change it back to an untracked nri.
+            // If this nri is not being tracked, then change it back to an untracked nri.
             if (trackingNri == mDefaultRequest) {
                 callbackRequestsToRegister.add(new NetworkRequestInfo(
                         callbackRequest,
