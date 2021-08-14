@@ -16,6 +16,9 @@
 
 package android.net.nsd;
 
+import static libcore.junit.util.compat.CoreCompatChangeRule.DisableCompatChanges;
+import static libcore.junit.util.compat.CoreCompatChangeRule.EnableCompatChanges;
+
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.fail;
@@ -27,6 +30,7 @@ import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.verify;
 
+import android.compat.testing.PlatformCompatChangeRule;
 import android.content.Context;
 import android.os.Build;
 import android.os.Handler;
@@ -44,7 +48,9 @@ import com.android.testutils.HandlerUtils;
 
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TestRule;
 import org.junit.runner.RunWith;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
@@ -55,6 +61,9 @@ import org.mockito.MockitoAnnotations;
 public class NsdManagerTest {
 
     static final int PROTOCOL = NsdManager.PROTOCOL_DNS_SD;
+
+    @Rule
+    public TestRule compatChangeRule = new PlatformCompatChangeRule();
 
     @Mock Context mContext;
     @Mock INsdManager mService;
@@ -70,8 +79,6 @@ public class NsdManagerTest {
 
         mServiceHandler = spy(MockServiceHandler.create(mContext));
         doReturn(new Messenger(mServiceHandler)).when(mService).getMessenger();
-
-        mManager = makeManager();
     }
 
     @After
@@ -85,7 +92,76 @@ public class NsdManagerTest {
     }
 
     @Test
-    public void testResolveService() {
+    @EnableCompatChanges(NsdManager.RUN_NATIVE_NSD_ONLY_IF_LEGACY_APPS)
+    public void testResolveServiceS() {
+        mManager = makeNsdManagerS();
+        doTestResolveService();
+    }
+
+    @Test
+    @DisableCompatChanges(NsdManager.RUN_NATIVE_NSD_ONLY_IF_LEGACY_APPS)
+    public void testResolveServicePreS() {
+        mManager = makeNsdManagerPreS();
+        doTestResolveService();
+    }
+
+    @Test
+    @EnableCompatChanges(NsdManager.RUN_NATIVE_NSD_ONLY_IF_LEGACY_APPS)
+    public void testDiscoverServiceS() {
+        mManager = makeNsdManagerS();
+        doTestDiscoverService();
+    }
+
+    @Test
+    @DisableCompatChanges(NsdManager.RUN_NATIVE_NSD_ONLY_IF_LEGACY_APPS)
+    public void testDiscoverServicePreS() {
+        mManager = makeNsdManagerPreS();
+        doTestDiscoverService();
+    }
+
+    @Test
+    @EnableCompatChanges(NsdManager.RUN_NATIVE_NSD_ONLY_IF_LEGACY_APPS)
+    public void testParallelResolveServiceS() {
+        mManager = makeNsdManagerS();
+        doTestParallelResolveService();
+    }
+
+    @Test
+    @DisableCompatChanges(NsdManager.RUN_NATIVE_NSD_ONLY_IF_LEGACY_APPS)
+    public void testParallelResolveServicePreS() {
+        mManager = makeNsdManagerPreS();
+        doTestParallelResolveService();
+    }
+
+    @Test
+    @EnableCompatChanges(NsdManager.RUN_NATIVE_NSD_ONLY_IF_LEGACY_APPS)
+    public void testInvalidCallsS() {
+        mManager = makeNsdManagerS();
+        doTestInvalidCalls();
+    }
+
+    @Test
+    @DisableCompatChanges(NsdManager.RUN_NATIVE_NSD_ONLY_IF_LEGACY_APPS)
+    public void testInvalidCallsPreS() {
+        mManager = makeNsdManagerPreS();
+        doTestInvalidCalls();
+    }
+
+    @Test
+    @EnableCompatChanges(NsdManager.RUN_NATIVE_NSD_ONLY_IF_LEGACY_APPS)
+    public void testRegisterServiceS() {
+        mManager = makeNsdManagerS();
+        doTestRegisterService();
+    }
+
+    @Test
+    @DisableCompatChanges(NsdManager.RUN_NATIVE_NSD_ONLY_IF_LEGACY_APPS)
+    public void testRegisterServicePreS() {
+        mManager = makeNsdManagerPreS();
+        doTestRegisterService();
+    }
+
+    public void doTestResolveService() {
         NsdManager manager = mManager;
 
         NsdServiceInfo request = new NsdServiceInfo("a_name", "a_type");
@@ -104,8 +180,7 @@ public class NsdManagerTest {
         verify(listener, timeout(mTimeoutMs).times(1)).onServiceResolved(reply);
     }
 
-    @Test
-    public void testParallelResolveService() {
+    public void doTestParallelResolveService() {
         NsdManager manager = mManager;
 
         NsdServiceInfo request = new NsdServiceInfo("a_name", "a_type");
@@ -127,8 +202,7 @@ public class NsdManagerTest {
         verify(listener2, timeout(mTimeoutMs).times(1)).onServiceResolved(reply);
     }
 
-    @Test
-    public void testRegisterService() {
+    public void doTestRegisterService() {
         NsdManager manager = mManager;
 
         NsdServiceInfo request1 = new NsdServiceInfo("a_name", "a_type");
@@ -186,8 +260,7 @@ public class NsdManagerTest {
         //verify(listener2, timeout(mTimeoutMs).times(1)).onServiceUnregistered(request2);
     }
 
-    @Test
-    public void testDiscoverService() {
+    public void doTestDiscoverService() {
         NsdManager manager = mManager;
 
         NsdServiceInfo reply1 = new NsdServiceInfo("a_name", "a_type");
@@ -264,8 +337,7 @@ public class NsdManagerTest {
         verify(listener, timeout(mTimeoutMs).times(0)).onServiceFound(reply1);
     }
 
-    @Test
-    public void testInvalidCalls() {
+    public void doTestInvalidCalls() {
         NsdManager manager = mManager;
 
         NsdManager.RegistrationListener listener1 = mock(NsdManager.RegistrationListener.class);
@@ -326,10 +398,21 @@ public class NsdManagerTest {
         }
     }
 
-    NsdManager makeManager() {
+    NsdManager makeNsdManagerS() {
+        // Expect we'll get 2 AsyncChannel related msgs.
+        return makeManager(2);
+    }
+
+    NsdManager makeNsdManagerPreS() {
+        // Expect we'll get 3 msgs. 2 AsyncChannel related msgs + 1 additional daemon startup msg.
+        return makeManager(3);
+    }
+
+    NsdManager makeManager(int expectedMsgCount) {
         NsdManager manager = new NsdManager(mContext, mService);
         // Acknowledge first two messages connecting the AsyncChannel.
-        verify(mServiceHandler, timeout(mTimeoutMs).times(2)).handleMessage(any());
+        verify(mServiceHandler, timeout(mTimeoutMs).times(expectedMsgCount)).handleMessage(any());
+
         reset(mServiceHandler);
         assertNotNull(mServiceHandler.chan);
         return manager;

@@ -16,6 +16,9 @@
 
 package com.android.server;
 
+import static libcore.junit.util.compat.CoreCompatChangeRule.DisableCompatChanges;
+import static libcore.junit.util.compat.CoreCompatChangeRule.EnableCompatChanges;
+
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.doReturn;
@@ -27,6 +30,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import android.compat.testing.PlatformCompatChangeRule;
 import android.content.ContentResolver;
 import android.content.Context;
 import android.net.nsd.NsdManager;
@@ -48,7 +52,9 @@ import com.android.testutils.HandlerUtils;
 
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TestRule;
 import org.junit.runner.RunWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
@@ -67,6 +73,8 @@ public class NsdServiceTest {
     private static final long CLEANUP_DELAY_MS = 500;
     private static final long TIMEOUT_MS = 500;
 
+    @Rule
+    public TestRule compatChangeRule = new PlatformCompatChangeRule();
     @Mock Context mContext;
     @Mock ContentResolver mResolver;
     @Mock NsdService.NsdSettings mSettings;
@@ -94,6 +102,34 @@ public class NsdServiceTest {
     }
 
     @Test
+    @DisableCompatChanges(NsdManager.RUN_NATIVE_NSD_ONLY_IF_LEGACY_APPS)
+    public void testPreSClients() {
+        when(mSettings.isEnabled()).thenReturn(true);
+        NsdService service = makeService();
+
+        // Pre S client connected, the daemon should be started.
+        NsdManager client1 = connectClient(service);
+        waitForIdle();
+        verify(mDaemon, times(1)).maybeStart();
+        verifyDaemonCommands("start-service");
+
+        NsdManager client2 = connectClient(service);
+        waitForIdle();
+        verify(mDaemon, times(1)).maybeStart();
+
+        client1.disconnect();
+        // Still 1 client remains, daemon shouldn't be stopped.
+        waitForIdle();
+        verify(mDaemon, never()).maybeStop();
+
+        client2.disconnect();
+        // All clients are disconnected, the daemon should be stopped.
+        verifyDelayMaybeStopDaemon(CLEANUP_DELAY_MS);
+        verifyDaemonCommands("stop-service");
+    }
+
+    @Test
+    @EnableCompatChanges(NsdManager.RUN_NATIVE_NSD_ONLY_IF_LEGACY_APPS)
     public void testNoDaemonStartedWhenClientsConnect() {
         when(mSettings.isEnabled()).thenReturn(true);
 
@@ -110,13 +146,12 @@ public class NsdServiceTest {
         waitForIdle();
         verify(mDaemon, never()).execute(any());
 
+        // If there is no active request, try to clean up the daemon
+        // every time the client disconnects.
         client1.disconnect();
-        // Still 1 client remains, daemon shouldn't be stopped.
-        waitForIdle();
-        verify(mDaemon, never()).maybeStop();
-
+        verifyDelayMaybeStopDaemon(CLEANUP_DELAY_MS);
+        reset(mDaemon);
         client2.disconnect();
-        // All clients are disconnected, stop the daemon after CLEANUP_DELAY_MS.
         verifyDelayMaybeStopDaemon(CLEANUP_DELAY_MS);
 
         client1.disconnect();
@@ -124,6 +159,7 @@ public class NsdServiceTest {
     }
 
     @Test
+    @EnableCompatChanges(NsdManager.RUN_NATIVE_NSD_ONLY_IF_LEGACY_APPS)
     public void testClientRequestsAreGCedAtDisconnection() {
         when(mSettings.isEnabled()).thenReturn(true);
 
@@ -169,6 +205,7 @@ public class NsdServiceTest {
     }
 
     @Test
+    @EnableCompatChanges(NsdManager.RUN_NATIVE_NSD_ONLY_IF_LEGACY_APPS)
     public void testCleanupDelayNoRequestActive() {
         when(mSettings.isEnabled()).thenReturn(true);
 

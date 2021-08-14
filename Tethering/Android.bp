@@ -41,6 +41,7 @@ java_defaults {
         "net-utils-device-common",
         "net-utils-device-common-netlink",
         "netd-client",
+        "NetworkStackApiCurrentShims",
     ],
     libs: [
         "framework-connectivity",
