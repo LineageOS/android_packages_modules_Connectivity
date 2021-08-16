@@ -10490,6 +10490,12 @@ public class ConnectivityServiceTest {
         mCellNetworkAgent.connect(true);
         callback.expectAvailableThenValidatedCallbacks(mCellNetworkAgent);
         callback.assertNoCallback();
+
+        // Make sure a report is sent and that the caps are suitably redacted.
+        verify(mConnectivityDiagnosticsCallback, timeout(TIMEOUT_MS))
+                .onConnectivityReportAvailable(argThat(report ->
+                        areConnDiagCapsRedacted(report.getNetworkCapabilities())));
+        reset(mConnectivityDiagnosticsCallback);
     }
 
     private boolean areConnDiagCapsRedacted(NetworkCapabilities nc) {
@@ -10500,17 +10506,6 @@ public class ConnectivityServiceTest {
                 && ti.locationRedacted
                 && ti.localMacAddressRedacted
                 && ti.settingsRedacted;
-    }
-
-    @Test
-    public void testConnectivityDiagnosticsCallbackOnConnectivityReportAvailable()
-            throws Exception {
-        setUpConnectivityDiagnosticsCallback();
-
-        // Verify onConnectivityReport fired
-        verify(mConnectivityDiagnosticsCallback, timeout(TIMEOUT_MS))
-                .onConnectivityReportAvailable(argThat(report ->
-                        areConnDiagCapsRedacted(report.getNetworkCapabilities())));
     }
 
     @Test
@@ -10529,9 +10524,6 @@ public class ConnectivityServiceTest {
     @Test
     public void testConnectivityDiagnosticsCallbackOnConnectivityReported() throws Exception {
         setUpConnectivityDiagnosticsCallback();
-
-        // reset to ignore callbacks from setup
-        reset(mConnectivityDiagnosticsCallback);
 
         final Network n = mCellNetworkAgent.getNetwork();
         final boolean hasConnectivity = true;
@@ -10563,9 +10555,6 @@ public class ConnectivityServiceTest {
     public void testConnectivityDiagnosticsCallbackOnConnectivityReportedSeparateUid()
             throws Exception {
         setUpConnectivityDiagnosticsCallback();
-
-        // reset to ignore callbacks from setup
-        reset(mConnectivityDiagnosticsCallback);
 
         // report known Connectivity from a different uid. Verify that network is not re-validated
         // and this callback is not notified.
