@@ -75,6 +75,7 @@ import android.util.Range;
 import androidx.test.runner.AndroidJUnit4;
 
 import com.android.testutils.CompatUtil;
+import com.android.testutils.ConnectivityModuleTest;
 import com.android.testutils.DevSdkIgnoreRule;
 import com.android.testutils.DevSdkIgnoreRule.IgnoreUpTo;
 
@@ -1168,7 +1169,7 @@ public class NetworkCapabilitiesTest {
         assertEquals(0, nc.getCapabilities().length);
     }
 
-    @Test @IgnoreUpTo(Build.VERSION_CODES.R)
+    @Test @IgnoreUpTo(Build.VERSION_CODES.R) @ConnectivityModuleTest
     public void testRestrictCapabilitiesForTestNetwork() {
         final int ownerUid = 1234;
         final int[] administratorUids = {1001, ownerUid};
