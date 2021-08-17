@@ -17,27 +17,27 @@
 
 <resources xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
-    <string name="connectivityResourcesAppLabel" msgid="2476261877900882974">"Sistēmas savienojamības resursi"</string>
-    <string name="wifi_available_sign_in" msgid="8041178343789805553">"Pierakstieties Wi-Fi tīklā"</string>
-    <string name="network_available_sign_in" msgid="2622520134876355561">"Pierakstīšanās tīklā"</string>
-    <!-- no translation found for network_available_sign_in_detailed (8439369644697866359) -->
+    <string name="connectivityResourcesAppLabel" msgid="8294935652079168395">"Sistēmas savienojamības resursi"</string>
+    <string name="wifi_available_sign_in" msgid="5254156478006453593">"Pierakstieties Wi-Fi tīklā"</string>
+    <string name="network_available_sign_in" msgid="7794369329839408792">"Pierakstīšanās tīklā"</string>
+    <!-- no translation found for network_available_sign_in_detailed (3643910593681893097) -->
     <skip />
-    <string name="wifi_no_internet" msgid="1326348603404555475">"Tīklā <xliff:g id="NETWORK_SSID">%1$s</xliff:g> nav piekļuves internetam"</string>
-    <string name="wifi_no_internet_detailed" msgid="1746921096565304090">"Pieskarieties, lai skatītu iespējas."</string>
-    <string name="mobile_no_internet" msgid="4087718456753201450">"Mobilajā tīklā nav piekļuves internetam."</string>
-    <string name="other_networks_no_internet" msgid="5693932964749676542">"Tīklā nav piekļuves internetam."</string>
-    <string name="private_dns_broken_detailed" msgid="2677123850463207823">"Nevar piekļūt privātam DNS serverim."</string>
-    <string name="network_partial_connectivity" msgid="5549503845834993258">"Tīklā <xliff:g id="NETWORK_SSID">%1$s</xliff:g> ir ierobežota savienojamība"</string>
-    <string name="network_partial_connectivity_detailed" msgid="4732435946300249845">"Lai tik un tā izveidotu savienojumu, pieskarieties"</string>
-    <string name="network_switch_metered" msgid="5016937523571166319">"Pārslēdzās uz tīklu <xliff:g id="NETWORK_TYPE">%1$s</xliff:g>"</string>
-    <string name="network_switch_metered_detail" msgid="1257300152739542096">"Kad vienā tīklā (<xliff:g id="PREVIOUS_NETWORK">%2$s</xliff:g>) nav piekļuves internetam, ierīcē tiek izmantots cits tīkls (<xliff:g id="NEW_NETWORK">%1$s</xliff:g>). Var tikt piemērota maksa."</string>
-    <string name="network_switch_metered_toast" msgid="70691146054130335">"Pārslēdzās no tīkla <xliff:g id="PREVIOUS_NETWORK">%1$s</xliff:g> uz tīklu <xliff:g id="NEW_NETWORK">%2$s</xliff:g>"</string>
+    <string name="wifi_no_internet" msgid="3961697321010262514">"Tīklā <xliff:g id="NETWORK_SSID">%1$s</xliff:g> nav piekļuves internetam"</string>
+    <string name="wifi_no_internet_detailed" msgid="1229067002306296104">"Pieskarieties, lai skatītu iespējas."</string>
+    <string name="mobile_no_internet" msgid="2262524005014119639">"Mobilajā tīklā nav piekļuves internetam."</string>
+    <string name="other_networks_no_internet" msgid="8226004998719563755">"Tīklā nav piekļuves internetam."</string>
+    <string name="private_dns_broken_detailed" msgid="3537567373166991809">"Nevar piekļūt privātam DNS serverim."</string>
+    <string name="network_partial_connectivity" msgid="5957065286265771273">"Tīklā <xliff:g id="NETWORK_SSID">%1$s</xliff:g> ir ierobežota savienojamība"</string>
+    <string name="network_partial_connectivity_detailed" msgid="6975752539442533034">"Lai tik un tā izveidotu savienojumu, pieskarieties"</string>
+    <string name="network_switch_metered" msgid="2814798852883117872">"Pārslēdzās uz tīklu <xliff:g id="NETWORK_TYPE">%1$s</xliff:g>"</string>
+    <string name="network_switch_metered_detail" msgid="605546931076348229">"Kad vienā tīklā (<xliff:g id="PREVIOUS_NETWORK">%2$s</xliff:g>) nav piekļuves internetam, ierīcē tiek izmantots cits tīkls (<xliff:g id="NEW_NETWORK">%1$s</xliff:g>). Var tikt piemērota maksa."</string>
+    <string name="network_switch_metered_toast" msgid="8831325515040986641">"Pārslēdzās no tīkla <xliff:g id="PREVIOUS_NETWORK">%1$s</xliff:g> uz tīklu <xliff:g id="NEW_NETWORK">%2$s</xliff:g>"</string>
   <string-array name="network_switch_type_name">
-    <item msgid="3004933964374161223">"mobilie dati"</item>
-    <item msgid="5624324321165953608">"Wi-Fi"</item>
-    <item msgid="5667906231066981731">"Bluetooth"</item>
-    <item msgid="346574747471703768">"Ethernet"</item>
-    <item msgid="5734728378097476003">"VPN"</item>
+    <item msgid="5454013645032700715">"mobilie dati"</item>
+    <item msgid="6341719431034774569">"Wi-Fi"</item>
+    <item msgid="5081440868800877512">"Bluetooth"</item>
+    <item msgid="1160736166977503463">"Ethernet"</item>
+    <item msgid="7347618872551558605">"VPN"</item>
   </string-array>
-    <string name="network_switch_type_name_unknown" msgid="5116448402191972082">"nezināms tīkla veids"</string>
+    <string name="network_switch_type_name_unknown" msgid="7826330274368951740">"nezināms tīkla veids"</string>
 </resources>
