@@ -20,19 +20,23 @@ package {
 
 apex {
     name: "com.android.tethering",
-    // TODO: make updatable again once this contains only updatable artifacts (in particular, this
-    // cannot build as updatable unless service-connectivity builds against stable API).
-    updatable: false,
-    // min_sdk_version: "30",
+    compile_multilib: "both",
+    updatable: true,
+    min_sdk_version: "30",
     bootclasspath_fragments: [
         "com.android.tethering-bootclasspath-fragment",
     ],
     java_libs: [
         "service-connectivity",
     ],
-    jni_libs: [
-        "libservice-connectivity",
-    ],
+    multilib: {
+        first: {
+            jni_libs: ["libservice-connectivity"],
+        },
+        both: {
+            jni_libs: ["libframework-connectivity-jni"],
+        },
+    },
     bpfs: [
         "offload.o",
         "test.o",
@@ -65,7 +69,10 @@ android_app_certificate {
 // Encapsulate the contributions made by the com.android.tethering to the bootclasspath.
 bootclasspath_fragment {
     name: "com.android.tethering-bootclasspath-fragment",
-    contents: ["framework-tethering"],
+    contents: [
+        "framework-connectivity",
+        "framework-tethering",
+    ],
     apex_available: ["com.android.tethering"],
 
     // The bootclasspath_fragments that provide APIs on which this depends.
@@ -81,6 +88,13 @@ bootclasspath_fragment {
     additional_stubs: [
         "android-non-updatable",
     ],
+
+    // Additional hidden API flag files to override the defaults. This must only be
+    // modified by the Soong or platform compat team.
+    hidden_api: {
+        max_target_o_low_priority: ["hiddenapi/hiddenapi-max-target-o-low-priority.txt"],
+        unsupported: ["hiddenapi/hiddenapi-unsupported.txt"],
+    },
 }
 
 override_apex {

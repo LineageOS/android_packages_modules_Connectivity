@@ -8,7 +8,7 @@
         errorLine2="                   ~~~~~~~~~~~~~">
         <location
             file="packages/modules/Connectivity/service/src/com/android/server/ConnectivityService.java"
-            line="791"
+            line="787"
             column="20"/>
     </issue>
 
@@ -19,7 +19,7 @@
         errorLine2="                                ~~~~~~~~~~~~~~~~~~~">
         <location
             file="packages/modules/Connectivity/service/src/com/android/server/ConnectivityService.java"
-            line="2693"
+            line="2681"
             column="33"/>
     </issue>
 
@@ -30,7 +30,7 @@
         errorLine2="                                          ~~~~~~~~~~~~~~~~~~~">
         <location
             file="packages/modules/Connectivity/service/src/com/android/server/ConnectivityService.java"
-            line="5894"
+            line="5851"
             column="43"/>
     </issue>
 

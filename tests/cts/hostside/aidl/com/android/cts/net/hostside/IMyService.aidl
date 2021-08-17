@@ -16,6 +16,8 @@
 
 package com.android.cts.net.hostside;
 
+import android.app.job.JobInfo;
+
 import com.android.cts.net.hostside.INetworkCallback;
 
 interface IMyService {
@@ -26,4 +28,5 @@ interface IMyService {
     void sendNotification(int notificationId, String notificationType);
     void registerNetworkCallback(in NetworkRequest request, in INetworkCallback cb);
     void unregisterNetworkCallback();
+    void scheduleJob(in JobInfo jobInfo);
 }

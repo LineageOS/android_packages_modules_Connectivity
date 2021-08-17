@@ -50,6 +50,8 @@ android_test {
         "libstaticjvmtiagent",
     ],
 
+    defaults: ["framework-connectivity-test-defaults"],
+
     platform_apis: true,
 
     // Tag this module as a mts test artifact

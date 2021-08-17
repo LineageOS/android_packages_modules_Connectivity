@@ -15,6 +15,7 @@
  */
 
 package com.android.server;
+
 import static android.Manifest.permission.RECEIVE_DATA_ACTIVITY_CHANGE;
 import static android.content.pm.PackageManager.FEATURE_BLUETOOTH;
 import static android.content.pm.PackageManager.FEATURE_WATCH;
@@ -1590,12 +1591,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
                 ConnectivitySettingsManager.WIFI_ALWAYS_REQUESTED, false /* defaultValue */);
         final boolean vehicleAlwaysRequested = mResources.get().getBoolean(
                 R.bool.config_vehicleInternalNetworkAlwaysRequested);
-        // TODO (b/183076074): remove legacy fallback after migrating overlays
-        final boolean legacyAlwaysRequested = mContext.getResources().getBoolean(
-                mContext.getResources().getIdentifier(
-                        "config_vehicleInternalNetworkAlwaysRequested", "bool", "android"));
-        handleAlwaysOnNetworkRequest(mDefaultVehicleRequest,
-                vehicleAlwaysRequested || legacyAlwaysRequested);
+        handleAlwaysOnNetworkRequest(mDefaultVehicleRequest, vehicleAlwaysRequested);
     }
 
     // Note that registering observer for setting do not get initial callback when registering,
@@ -2252,10 +2248,22 @@ public class ConnectivityService extends IConnectivityManager.Stub
 
     private void restrictRequestUidsForCallerAndSetRequestorInfo(NetworkCapabilities nc,
             int callerUid, String callerPackageName) {
+        // There is no need to track the effective UID of the request here. If the caller
+        // lacks the settings permission, the effective UID is the same as the calling ID.
         if (!checkSettingsPermission()) {
-            // There is no need to track the effective UID of the request here. If the caller lacks
-            // the settings permission, the effective UID is the same as the calling ID.
-            nc.setSingleUid(callerUid);
+            // Unprivileged apps can only pass in null or their own UID.
+            if (nc.getUids() == null) {
+                // If the caller passes in null, the callback will also match networks that do not
+                // apply to its UID, similarly to what it would see if it called getAllNetworks.
+                // In this case, redact everything in the request immediately. This ensures that the
+                // app is not able to get any redacted information by filing an unredacted request
+                // and observing whether the request matches something.
+                if (nc.getNetworkSpecifier() != null) {
+                    nc.setNetworkSpecifier(nc.getNetworkSpecifier().redact());
+                }
+            } else {
+                nc.setSingleUid(callerUid);
+            }
         }
         nc.setRequestorUidAndPackageName(callerUid, callerPackageName);
         nc.setAdministratorUids(new int[0]);
@@ -6847,7 +6855,6 @@ public class ConnectivityService extends IConnectivityManager.Stub
             if (DBG) log("Received offer from an unregistered provider");
             return;
         }
-
         final NetworkOfferInfo existingOffer = findNetworkOfferInfoByCallback(newOffer.callback);
         if (null != existingOffer) {
             handleUnregisterNetworkOffer(existingOffer);
@@ -7014,14 +7021,6 @@ public class ConnectivityService extends IConnectivityManager.Stub
 
         int mark = mResources.get().getInteger(R.integer.config_networkWakeupPacketMark);
         int mask = mResources.get().getInteger(R.integer.config_networkWakeupPacketMask);
-
-        // TODO (b/183076074): remove legacy fallback after migrating overlays
-        final int legacyMark = mContext.getResources().getInteger(mContext.getResources()
-                .getIdentifier("config_networkWakeupPacketMark", "integer", "android"));
-        final int legacyMask = mContext.getResources().getInteger(mContext.getResources()
-                .getIdentifier("config_networkWakeupPacketMask", "integer", "android"));
-        mark = mark == 0 ? legacyMark : mark;
-        mask = mask == 0 ? legacyMask : mask;
 
         // Mask/mark of zero will not detect anything interesting.
         // Don't install rules unless both values are nonzero.
