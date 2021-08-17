@@ -814,6 +814,19 @@ public final class NetworkCapabilities implements Parcelable {
     }
 
     /**
+     * @see #restrictCapabilitiesForTestNetwork(int)
+     * @deprecated Use {@link #restrictCapabilitiesForTestNetwork(int)} (without the typo) instead.
+     * @hide
+     */
+    @Deprecated
+    public void restrictCapabilitesForTestNetwork(int creatorUid) {
+        // Do not remove without careful consideration: this method has a typo in its name but is
+        // called by the first S CTS releases, therefore it cannot be removed from the connectivity
+        // module as long as such CTS releases are valid for testing S devices.
+        restrictCapabilitiesForTestNetwork(creatorUid);
+    }
+
+    /**
      * Test networks have strong restrictions on what capabilities they can have. Enforce these
      * restrictions.
      * @hide
