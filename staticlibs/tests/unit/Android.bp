@@ -10,6 +10,7 @@ android_library {
     name: "NetworkStaticLibTestsLib",
     srcs: ["src/**/*.java","src/**/*.kt"],
     min_sdk_version: "29",
+    defaults: ["framework-connectivity-test-defaults"],
     static_libs: [
         "net-utils-framework-common",
         "androidx.test.rules",

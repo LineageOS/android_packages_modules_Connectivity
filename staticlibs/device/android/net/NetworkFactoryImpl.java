@@ -131,7 +131,7 @@ class NetworkFactoryImpl extends NetworkFactoryLegacyImpl {
             @Nullable final NetworkCapabilities filter) {
         super(parent, looper, context,
                 null != filter ? filter :
-                        new NetworkCapabilities.Builder().withoutDefaultCapabilities().build());
+                        NetworkCapabilities.Builder.withoutDefaultCapabilities().build());
     }
 
     /* Registers this NetworkFactory with the system. May only be called once per factory. */
