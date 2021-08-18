@@ -6901,7 +6901,11 @@ public class ConnectivityService extends IConnectivityManager.Stub
         if (DBG) {
             log("unregister offer from providerId " + noi.offer.providerId + " : " + noi.offer);
         }
-        mNetworkOffers.remove(noi);
+
+        // If the provider removes the offer and dies immediately afterwards this
+        // function may be called twice in a row, but the array will no longer contain
+        // the offer.
+        if (!mNetworkOffers.remove(noi)) return;
         noi.offer.callback.asBinder().unlinkToDeath(noi, 0 /* flags */);
     }
 
