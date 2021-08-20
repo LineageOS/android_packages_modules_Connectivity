@@ -241,6 +241,7 @@ import android.net.NetworkInfo;
 import android.net.NetworkInfo.DetailedState;
 import android.net.NetworkPolicyManager;
 import android.net.NetworkPolicyManager.NetworkPolicyCallback;
+import android.net.NetworkProvider;
 import android.net.NetworkRequest;
 import android.net.NetworkScore;
 import android.net.NetworkSpecifier;
@@ -338,6 +339,7 @@ import com.android.testutils.ExceptionUtils;
 import com.android.testutils.HandlerUtils;
 import com.android.testutils.RecorderCallback.CallbackEntry;
 import com.android.testutils.TestableNetworkCallback;
+import com.android.testutils.TestableNetworkOfferCallback;
 
 import org.junit.After;
 import org.junit.Before;
@@ -816,17 +818,22 @@ public class ConnectivityServiceTest {
         private String mRedirectUrl;
 
         TestNetworkAgentWrapper(int transport) throws Exception {
-            this(transport, new LinkProperties(), null);
+            this(transport, new LinkProperties(), null /* ncTemplate */, null /* provider */);
         }
 
         TestNetworkAgentWrapper(int transport, LinkProperties linkProperties)
                 throws Exception {
-            this(transport, linkProperties, null);
+            this(transport, linkProperties, null /* ncTemplate */, null /* provider */);
         }
 
         private TestNetworkAgentWrapper(int transport, LinkProperties linkProperties,
                 NetworkCapabilities ncTemplate) throws Exception {
-            super(transport, linkProperties, ncTemplate, mServiceContext);
+            this(transport, linkProperties, ncTemplate, null /* provider */);
+        }
+
+        private TestNetworkAgentWrapper(int transport, LinkProperties linkProperties,
+                NetworkCapabilities ncTemplate, NetworkProvider provider) throws Exception {
+            super(transport, linkProperties, ncTemplate, provider, mServiceContext);
 
             // Waits for the NetworkAgent to be registered, which includes the creation of the
             // NetworkMonitor.
@@ -835,9 +842,40 @@ public class ConnectivityServiceTest {
             HandlerUtils.waitForIdle(ConnectivityThread.get(), TIMEOUT_MS);
         }
 
+        class TestInstrumentedNetworkAgent extends InstrumentedNetworkAgent {
+            TestInstrumentedNetworkAgent(NetworkAgentWrapper wrapper, LinkProperties lp,
+                    NetworkAgentConfig nac, NetworkProvider provider) {
+                super(wrapper, lp, nac, provider);
+            }
+
+            @Override
+            public void networkStatus(int status, String redirectUrl) {
+                mRedirectUrl = redirectUrl;
+                mNetworkStatusReceived.open();
+            }
+
+            @Override
+            public void onNetworkCreated() {
+                super.onNetworkCreated();
+                if (mCreatedCallback != null) mCreatedCallback.run();
+            }
+
+            @Override
+            public void onNetworkUnwanted() {
+                super.onNetworkUnwanted();
+                if (mUnwantedCallback != null) mUnwantedCallback.run();
+            }
+
+            @Override
+            public void onNetworkDestroyed() {
+                super.onNetworkDestroyed();
+                if (mDisconnectedCallback != null) mDisconnectedCallback.run();
+            }
+        }
+
         @Override
         protected InstrumentedNetworkAgent makeNetworkAgent(LinkProperties linkProperties,
-                NetworkAgentConfig nac) throws Exception {
+                NetworkAgentConfig nac, NetworkProvider provider) throws Exception {
             mNetworkMonitor = mock(INetworkMonitor.class);
 
             final Answer validateAnswer = inv -> {
@@ -857,31 +895,7 @@ public class ConnectivityServiceTest {
                     nmCbCaptor.capture());
 
             final InstrumentedNetworkAgent na =
-                    new InstrumentedNetworkAgent(this, linkProperties, nac) {
-                @Override
-                public void networkStatus(int status, String redirectUrl) {
-                    mRedirectUrl = redirectUrl;
-                    mNetworkStatusReceived.open();
-                }
-
-                @Override
-                public void onNetworkCreated() {
-                    super.onNetworkCreated();
-                    if (mCreatedCallback != null) mCreatedCallback.run();
-                }
-
-                @Override
-                public void onNetworkUnwanted() {
-                    super.onNetworkUnwanted();
-                    if (mUnwantedCallback != null) mUnwantedCallback.run();
-                }
-
-                @Override
-                public void onNetworkDestroyed() {
-                    super.onNetworkDestroyed();
-                    if (mDisconnectedCallback != null) mDisconnectedCallback.run();
-                }
-            };
+                    new TestInstrumentedNetworkAgent(this, linkProperties, nac, provider);
 
             assertEquals(na.getNetwork().netId, nmNetworkCaptor.getValue().netId);
             mNmCallbacks = nmCbCaptor.getValue();
@@ -4795,6 +4809,124 @@ public class ConnectivityServiceTest {
 
         doReturn(0).when(mResources).getInteger(R.integer.config_networkAvoidBadWifi);
         testAvoidBadWifiConfig_controlledBySettings();
+    }
+
+    @Test
+    public void testOffersAvoidsBadWifi() throws Exception {
+        // Normal mode : the carrier doesn't restrict moving away from bad wifi.
+        // This has getAvoidBadWifi return true.
+        doReturn(1).when(mResources).getInteger(R.integer.config_networkAvoidBadWifi);
+        // Don't request cell separately for the purposes of this test.
+        setAlwaysOnNetworks(false);
+
+        final NetworkProvider cellProvider = new NetworkProvider(mServiceContext,
+                mCsHandlerThread.getLooper(), "Cell provider");
+        final NetworkProvider wifiProvider = new NetworkProvider(mServiceContext,
+                mCsHandlerThread.getLooper(), "Wifi provider");
+
+        mCm.registerNetworkProvider(cellProvider);
+        mCm.registerNetworkProvider(wifiProvider);
+
+        final NetworkScore cellScore = new NetworkScore.Builder().build();
+        final NetworkScore wifiScore = new NetworkScore.Builder().build();
+        final NetworkCapabilities defaultCaps = new NetworkCapabilities.Builder()
+                .addCapability(NET_CAPABILITY_INTERNET)
+                .addCapability(NET_CAPABILITY_NOT_VCN_MANAGED)
+                .build();
+        final NetworkCapabilities cellCaps = new NetworkCapabilities.Builder()
+                .addTransportType(TRANSPORT_CELLULAR)
+                .addCapability(NET_CAPABILITY_INTERNET)
+                .addCapability(NET_CAPABILITY_NOT_VCN_MANAGED)
+                .build();
+        final NetworkCapabilities wifiCaps = new NetworkCapabilities.Builder()
+                .addTransportType(TRANSPORT_WIFI)
+                .addCapability(NET_CAPABILITY_INTERNET)
+                .addCapability(NET_CAPABILITY_NOT_VCN_MANAGED)
+                .build();
+        final TestableNetworkOfferCallback cellCallback = new TestableNetworkOfferCallback(
+                TIMEOUT_MS /* timeout */, TEST_CALLBACK_TIMEOUT_MS /* noCallbackTimeout */);
+        final TestableNetworkOfferCallback wifiCallback = new TestableNetworkOfferCallback(
+                TIMEOUT_MS /* timeout */, TEST_CALLBACK_TIMEOUT_MS /* noCallbackTimeout */);
+
+        Log.e("ConnectivityService", "test registering " + cellProvider);
+        // Offer callbacks will run on the CS handler thread in this test.
+        cellProvider.registerNetworkOffer(cellScore, cellCaps, r -> r.run(), cellCallback);
+        wifiProvider.registerNetworkOffer(wifiScore, wifiCaps, r -> r.run(), wifiCallback);
+
+        // Both providers see the default request.
+        cellCallback.expectOnNetworkNeeded(defaultCaps);
+        wifiCallback.expectOnNetworkNeeded(defaultCaps);
+
+        // Listen to cell and wifi to know when agents are finished processing
+        final TestNetworkCallback cellNetworkCallback = new TestNetworkCallback();
+        final NetworkRequest cellRequest = new NetworkRequest.Builder()
+                .addTransportType(TRANSPORT_CELLULAR).build();
+        mCm.registerNetworkCallback(cellRequest, cellNetworkCallback);
+        final TestNetworkCallback wifiNetworkCallback = new TestNetworkCallback();
+        final NetworkRequest wifiRequest = new NetworkRequest.Builder()
+                .addTransportType(TRANSPORT_WIFI).build();
+        mCm.registerNetworkCallback(wifiRequest, wifiNetworkCallback);
+
+        // Cell connects and validates.
+        mCellNetworkAgent = new TestNetworkAgentWrapper(TRANSPORT_CELLULAR,
+                new LinkProperties(), null /* ncTemplate */, cellProvider);
+        mCellNetworkAgent.connect(true);
+        cellNetworkCallback.expectAvailableThenValidatedCallbacks(mCellNetworkAgent);
+        cellCallback.assertNoCallback();
+        wifiCallback.assertNoCallback();
+
+        // Bring up wifi. At first it's invalidated, so cell is still needed.
+        mWiFiNetworkAgent = new TestNetworkAgentWrapper(TRANSPORT_WIFI,
+                new LinkProperties(), null /* ncTemplate */, wifiProvider);
+        mWiFiNetworkAgent.connect(false);
+        wifiNetworkCallback.expectAvailableCallbacksUnvalidated(mWiFiNetworkAgent);
+        cellCallback.assertNoCallback();
+        wifiCallback.assertNoCallback();
+
+        // Wifi validates. Cell is no longer needed, because it's outscored.
+        mWiFiNetworkAgent.setNetworkValid(true /* isStrictMode */);
+        // Have CS reconsider the network (see testPartialConnectivity)
+        mCm.reportNetworkConnectivity(mWiFiNetworkAgent.getNetwork(), true);
+        wifiNetworkCallback.expectCapabilitiesWith(NET_CAPABILITY_VALIDATED, mWiFiNetworkAgent);
+        cellCallback.expectOnNetworkUnneeded(defaultCaps);
+        wifiCallback.assertNoCallback();
+
+        // Wifi is no longer validated. Cell is needed again.
+        mWiFiNetworkAgent.setNetworkInvalid(true /* isStrictMode */);
+        mCm.reportNetworkConnectivity(mWiFiNetworkAgent.getNetwork(), false);
+        wifiNetworkCallback.expectCapabilitiesWithout(NET_CAPABILITY_VALIDATED, mWiFiNetworkAgent);
+        cellCallback.expectOnNetworkNeeded(defaultCaps);
+        wifiCallback.assertNoCallback();
+
+        // Disconnect wifi and pretend the carrier restricts moving away from bad wifi.
+        mWiFiNetworkAgent.disconnect();
+        wifiNetworkCallback.expectCallback(CallbackEntry.LOST, mWiFiNetworkAgent);
+        // This has getAvoidBadWifi return false. This test doesn't change the value of the
+        // associated setting.
+        doReturn(0).when(mResources).getInteger(R.integer.config_networkAvoidBadWifi);
+        mPolicyTracker.reevaluate();
+        waitForIdle();
+
+        // Connect wifi again, cell is needed until wifi validates.
+        mWiFiNetworkAgent = new TestNetworkAgentWrapper(TRANSPORT_WIFI,
+                new LinkProperties(), null /* ncTemplate */, wifiProvider);
+        mWiFiNetworkAgent.connect(false);
+        wifiNetworkCallback.expectAvailableCallbacksUnvalidated(mWiFiNetworkAgent);
+        cellCallback.assertNoCallback();
+        wifiCallback.assertNoCallback();
+        mWiFiNetworkAgent.setNetworkValid(true /* isStrictMode */);
+        mCm.reportNetworkConnectivity(mWiFiNetworkAgent.getNetwork(), true);
+        wifiNetworkCallback.expectCapabilitiesWith(NET_CAPABILITY_VALIDATED, mWiFiNetworkAgent);
+        cellCallback.expectOnNetworkUnneeded(defaultCaps);
+        wifiCallback.assertNoCallback();
+
+        // Wifi loses validation. Because the device doesn't avoid bad wifis, cell is
+        // not needed.
+        mWiFiNetworkAgent.setNetworkInvalid(true /* isStrictMode */);
+        mCm.reportNetworkConnectivity(mWiFiNetworkAgent.getNetwork(), false);
+        wifiNetworkCallback.expectCapabilitiesWithout(NET_CAPABILITY_VALIDATED, mWiFiNetworkAgent);
+        cellCallback.assertNoCallback();
+        wifiCallback.assertNoCallback();
     }
 
     @Test
