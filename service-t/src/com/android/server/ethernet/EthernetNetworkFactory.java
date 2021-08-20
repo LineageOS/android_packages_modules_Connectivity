@@ -506,12 +506,15 @@ public class EthernetNetworkFactory extends NetworkFactory {
                     mNetworkFactory.getProvider(), new EthernetNetworkAgent.Callbacks() {
                         @Override
                         public void onNetworkUnwanted() {
+                            // if mNetworkAgent is null, we have already called stop.
+                            if (mNetworkAgent == null) return;
+
                             if (this == mNetworkAgent.getCallbacks()) {
                                 stop();
-                            } else if (mNetworkAgent != null) {
+                            } else {
                                 Log.d(TAG, "Ignoring unwanted as we have a more modern " +
                                         "instance");
-                            }  // Otherwise, we've already called stop.
+                            }
                         }
                     });
             mNetworkAgent.register();
