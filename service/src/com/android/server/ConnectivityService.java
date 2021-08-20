@@ -4630,8 +4630,15 @@ public class ConnectivityService extends IConnectivityManager.Stub
     }
 
     private void updateAvoidBadWifi() {
+        ensureRunningOnConnectivityServiceThread();
+        // Agent info scores and offer scores depend on whether cells yields to bad wifi.
         for (final NetworkAgentInfo nai : mNetworkAgentInfos) {
             nai.updateScoreForNetworkAgentUpdate();
+        }
+        // UpdateOfferScore will update mNetworkOffers inline, so make a copy first.
+        final ArrayList<NetworkOfferInfo> offersToUpdate = new ArrayList<>(mNetworkOffers);
+        for (final NetworkOfferInfo noi : offersToUpdate) {
+            updateOfferScore(noi.offer);
         }
         rematchAllNetworksAndRequests();
     }
@@ -6421,9 +6428,21 @@ public class ConnectivityService extends IConnectivityManager.Stub
         Objects.requireNonNull(score);
         Objects.requireNonNull(caps);
         Objects.requireNonNull(callback);
+        final boolean yieldToBadWiFi = caps.hasTransport(TRANSPORT_CELLULAR) && !avoidBadWifi();
         final NetworkOffer offer = new NetworkOffer(
-                FullScore.makeProspectiveScore(score, caps), caps, callback, providerId);
+                FullScore.makeProspectiveScore(score, caps, yieldToBadWiFi),
+                caps, callback, providerId);
         mHandler.sendMessage(mHandler.obtainMessage(EVENT_REGISTER_NETWORK_OFFER, offer));
+    }
+
+    private void updateOfferScore(final NetworkOffer offer) {
+        final boolean yieldToBadWiFi =
+                offer.caps.hasTransport(TRANSPORT_CELLULAR) && !avoidBadWifi();
+        final NetworkOffer newOffer = new NetworkOffer(
+                offer.score.withYieldToBadWiFi(yieldToBadWiFi),
+                        offer.caps, offer.callback, offer.providerId);
+        if (offer.equals(newOffer)) return;
+        handleRegisterNetworkOffer(newOffer);
     }
 
     @Override
@@ -6846,6 +6865,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
      * @param newOffer The new offer. If the callback member is the same as an existing
      *                 offer, it is an update of that offer.
      */
+    // TODO : rename this to handleRegisterOrUpdateNetworkOffer
     private void handleRegisterNetworkOffer(@NonNull final NetworkOffer newOffer) {
         ensureRunningOnConnectivityServiceThread();
         if (!isNetworkProviderWithIdRegistered(newOffer.providerId)) {
@@ -6859,6 +6879,14 @@ public class ConnectivityService extends IConnectivityManager.Stub
         if (null != existingOffer) {
             handleUnregisterNetworkOffer(existingOffer);
             newOffer.migrateFrom(existingOffer.offer);
+            if (DBG) {
+                // handleUnregisterNetworkOffer has already logged the old offer
+                log("update offer from providerId " + newOffer.providerId + " new : " + newOffer);
+            }
+        } else {
+            if (DBG) {
+                log("register offer from providerId " + newOffer.providerId + " : " + newOffer);
+            }
         }
         final NetworkOfferInfo noi = new NetworkOfferInfo(newOffer);
         try {
@@ -6873,6 +6901,9 @@ public class ConnectivityService extends IConnectivityManager.Stub
 
     private void handleUnregisterNetworkOffer(@NonNull final NetworkOfferInfo noi) {
         ensureRunningOnConnectivityServiceThread();
+        if (DBG) {
+            log("unregister offer from providerId " + noi.offer.providerId + " : " + noi.offer);
+        }
         mNetworkOffers.remove(noi);
         noi.offer.callback.asBinder().unlinkToDeath(noi, 0 /* flags */);
     }
