@@ -35,6 +35,7 @@ import com.android.internal.util.IndentingPrintWriter;
 
 import java.io.FileDescriptor;
 import java.io.PrintWriter;
+import java.util.Objects;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
@@ -174,6 +175,7 @@ public class EthernetServiceImpl extends IEthernetManager.Stub {
 
     @Override
     public void requestTetheredInterface(ITetheredInterfaceCallback callback) {
+        Objects.requireNonNull(callback, "callback must not be null");
         NetworkStack.checkNetworkStackPermissionOr(mContext,
                 android.Manifest.permission.NETWORK_SETTINGS);
         mTracker.requestTetheredInterface(callback);
@@ -181,6 +183,7 @@ public class EthernetServiceImpl extends IEthernetManager.Stub {
 
     @Override
     public void releaseTetheredInterface(ITetheredInterfaceCallback callback) {
+        Objects.requireNonNull(callback, "callback must not be null");
         NetworkStack.checkNetworkStackPermissionOr(mContext,
                 android.Manifest.permission.NETWORK_SETTINGS);
         mTracker.releaseTetheredInterface(callback);
