@@ -131,6 +131,11 @@ public class BpfCoordinator {
     @VisibleForTesting
     static final int NF_CONNTRACK_UDP_TIMEOUT_STREAM = 180;
 
+    // List of TCP port numbers which aren't offloaded because the packets require the netfilter
+    // conntrack helper. See also TetherController::setForwardRules in netd.
+    static final short [] NON_OFFLOADED_UPSTREAM_IPV4_TCP_PORTS = new short [] {
+            21 /* ftp */, 1723 /* pptp */};
+
     @VisibleForTesting
     enum StatsType {
         STATS_PER_IFACE,
@@ -1556,7 +1561,18 @@ public class BpfCoordinator {
                     0 /* lastUsed, filled by bpf prog only */);
         }
 
+        private boolean requireOffload(ConntrackEvent e) {
+            if (e.tupleOrig.protoNum != OsConstants.IPPROTO_TCP) return true;
+
+            for (final short port : NON_OFFLOADED_UPSTREAM_IPV4_TCP_PORTS) {
+                if (port == e.tupleOrig.dstPort) return false;
+            }
+            return true;
+        }
+
         public void accept(ConntrackEvent e) {
+            if (!requireOffload(e)) return;
+
             final ClientInfo tetherClient = getClientInfo(e.tupleOrig.srcIp);
             if (tetherClient == null) return;
 
