@@ -80,7 +80,7 @@ DEFINE_BPF_MAP_GRW(tether_error_map, ARRAY, uint32_t, uint32_t, BPF_TETHER_ERR__
 } while(0)
 
 #define TC_DROP(counter) COUNT_AND_RETURN(counter, TC_ACT_SHOT)
-#define TC_PUNT(counter) COUNT_AND_RETURN(counter, TC_ACT_OK)
+#define TC_PUNT(counter) COUNT_AND_RETURN(counter, TC_ACT_PIPE)
 
 #define XDP_DROP(counter) COUNT_AND_RETURN(counter, XDP_DROP)
 #define XDP_PUNT(counter) COUNT_AND_RETURN(counter, XDP_PASS)
@@ -108,10 +108,10 @@ DEFINE_BPF_MAP_GRW(tether_upstream6_map, HASH, TetherUpstream6Key, Tether6Value,
 static inline __always_inline int do_forward6(struct __sk_buff* skb, const bool is_ethernet,
         const bool downstream) {
     // Must be meta-ethernet IPv6 frame
-    if (skb->protocol != htons(ETH_P_IPV6)) return TC_ACT_OK;
+    if (skb->protocol != htons(ETH_P_IPV6)) return TC_ACT_PIPE;
 
     // Require ethernet dst mac address to be our unicast address.
-    if (is_ethernet && (skb->pkt_type != PACKET_HOST)) return TC_ACT_OK;
+    if (is_ethernet && (skb->pkt_type != PACKET_HOST)) return TC_ACT_PIPE;
 
     const int l2_header_size = is_ethernet ? sizeof(struct ethhdr) : 0;
 
@@ -127,10 +127,10 @@ static inline __always_inline int do_forward6(struct __sk_buff* skb, const bool 
     struct ipv6hdr* ip6 = is_ethernet ? (void*)(eth + 1) : data;
 
     // Must have (ethernet and) ipv6 header
-    if (data + l2_header_size + sizeof(*ip6) > data_end) return TC_ACT_OK;
+    if (data + l2_header_size + sizeof(*ip6) > data_end) return TC_ACT_PIPE;
 
     // Ethertype - if present - must be IPv6
-    if (is_ethernet && (eth->h_proto != htons(ETH_P_IPV6))) return TC_ACT_OK;
+    if (is_ethernet && (eth->h_proto != htons(ETH_P_IPV6))) return TC_ACT_PIPE;
 
     // IP version must be 6
     if (ip6->version != 6) TC_PUNT(INVALID_IP_VERSION);
@@ -182,7 +182,7 @@ static inline __always_inline int do_forward6(struct __sk_buff* skb, const bool 
                                  : bpf_tether_upstream6_map_lookup_elem(&ku);
 
     // If we don't find any offload information then simply let the core stack handle it...
-    if (!v) return TC_ACT_OK;
+    if (!v) return TC_ACT_PIPE;
 
     uint32_t stat_and_limit_k = downstream ? skb->ifindex : v->oif;
 
@@ -337,13 +337,13 @@ DEFINE_OPTIONAL_BPF_PROG_KVER_RANGE("schedcls/tether_upstream6_rawip$4_14",
 DEFINE_BPF_PROG_KVER_RANGE("schedcls/tether_downstream6_rawip$stub", AID_ROOT, AID_NETWORK_STACK,
                            sched_cls_tether_downstream6_rawip_stub, KVER_NONE, KVER(5, 4, 0))
 (struct __sk_buff* skb) {
-    return TC_ACT_OK;
+    return TC_ACT_PIPE;
 }
 
 DEFINE_BPF_PROG_KVER_RANGE("schedcls/tether_upstream6_rawip$stub", AID_ROOT, AID_NETWORK_STACK,
                            sched_cls_tether_upstream6_rawip_stub, KVER_NONE, KVER(5, 4, 0))
 (struct __sk_buff* skb) {
-    return TC_ACT_OK;
+    return TC_ACT_PIPE;
 }
 
 // ----- IPv4 Support -----
@@ -355,10 +355,10 @@ DEFINE_BPF_MAP_GRW(tether_upstream4_map, HASH, Tether4Key, Tether4Value, 1024, A
 static inline __always_inline int do_forward4(struct __sk_buff* skb, const bool is_ethernet,
         const bool downstream, const bool updatetime) {
     // Require ethernet dst mac address to be our unicast address.
-    if (is_ethernet && (skb->pkt_type != PACKET_HOST)) return TC_ACT_OK;
+    if (is_ethernet && (skb->pkt_type != PACKET_HOST)) return TC_ACT_PIPE;
 
     // Must be meta-ethernet IPv4 frame
-    if (skb->protocol != htons(ETH_P_IP)) return TC_ACT_OK;
+    if (skb->protocol != htons(ETH_P_IP)) return TC_ACT_PIPE;
 
     const int l2_header_size = is_ethernet ? sizeof(struct ethhdr) : 0;
 
@@ -374,10 +374,10 @@ static inline __always_inline int do_forward4(struct __sk_buff* skb, const bool 
     struct iphdr* ip = is_ethernet ? (void*)(eth + 1) : data;
 
     // Must have (ethernet and) ipv4 header
-    if (data + l2_header_size + sizeof(*ip) > data_end) return TC_ACT_OK;
+    if (data + l2_header_size + sizeof(*ip) > data_end) return TC_ACT_PIPE;
 
     // Ethertype - if present - must be IPv4
-    if (is_ethernet && (eth->h_proto != htons(ETH_P_IP))) return TC_ACT_OK;
+    if (is_ethernet && (eth->h_proto != htons(ETH_P_IP))) return TC_ACT_PIPE;
 
     // IP version must be 4
     if (ip->version != 4) TC_PUNT(INVALID_IP_VERSION);
@@ -495,7 +495,7 @@ static inline __always_inline int do_forward4(struct __sk_buff* skb, const bool 
                                  : bpf_tether_upstream4_map_lookup_elem(&k);
 
     // If we don't find any offload information then simply let the core stack handle it...
-    if (!v) return TC_ACT_OK;
+    if (!v) return TC_ACT_PIPE;
 
     uint32_t stat_and_limit_k = downstream ? skb->ifindex : v->oif;
 
@@ -749,13 +749,13 @@ DEFINE_BPF_PROG_KVER_RANGE("schedcls/tether_upstream4_ether$4_14", AID_ROOT, AID
 DEFINE_BPF_PROG_KVER_RANGE("schedcls/tether_downstream4_rawip$stub", AID_ROOT, AID_NETWORK_STACK,
                            sched_cls_tether_downstream4_rawip_stub, KVER_NONE, KVER(5, 4, 0))
 (struct __sk_buff* skb) {
-    return TC_ACT_OK;
+    return TC_ACT_PIPE;
 }
 
 DEFINE_BPF_PROG_KVER_RANGE("schedcls/tether_upstream4_rawip$stub", AID_ROOT, AID_NETWORK_STACK,
                            sched_cls_tether_upstream4_rawip_stub, KVER_NONE, KVER(5, 4, 0))
 (struct __sk_buff* skb) {
-    return TC_ACT_OK;
+    return TC_ACT_PIPE;
 }
 
 // ETHER: 4.9-P/Q kernel
@@ -763,13 +763,13 @@ DEFINE_BPF_PROG_KVER_RANGE("schedcls/tether_upstream4_rawip$stub", AID_ROOT, AID
 DEFINE_BPF_PROG_KVER_RANGE("schedcls/tether_downstream4_ether$stub", AID_ROOT, AID_NETWORK_STACK,
                            sched_cls_tether_downstream4_ether_stub, KVER_NONE, KVER(4, 14, 0))
 (struct __sk_buff* skb) {
-    return TC_ACT_OK;
+    return TC_ACT_PIPE;
 }
 
 DEFINE_BPF_PROG_KVER_RANGE("schedcls/tether_upstream4_ether$stub", AID_ROOT, AID_NETWORK_STACK,
                            sched_cls_tether_upstream4_ether_stub, KVER_NONE, KVER(4, 14, 0))
 (struct __sk_buff* skb) {
-    return TC_ACT_OK;
+    return TC_ACT_PIPE;
 }
 
 // ----- XDP Support -----
