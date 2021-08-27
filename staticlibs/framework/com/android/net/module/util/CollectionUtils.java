@@ -123,6 +123,19 @@ public final class CollectionUtils {
     /**
      * @return true if the array contains the specified value.
      */
+    public static boolean contains(@Nullable short[] array, short value) {
+        if (array == null) return false;
+        for (int i = 0; i < array.length; i++) {
+            if (array[i] == value) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * @return true if the array contains the specified value.
+     */
     public static boolean contains(@Nullable int[] array, int value) {
         if (array == null) return false;
         for (int element : array) {
