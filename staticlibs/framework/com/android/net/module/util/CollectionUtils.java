@@ -125,8 +125,8 @@ public final class CollectionUtils {
      */
     public static boolean contains(@Nullable short[] array, short value) {
         if (array == null) return false;
-        for (int i = 0; i < array.length; i++) {
-            if (array[i] == value) {
+        for (int element : array) {
+            if (element == value) {
                 return true;
             }
         }
