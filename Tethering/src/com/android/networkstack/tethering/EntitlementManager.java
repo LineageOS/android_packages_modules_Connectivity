@@ -70,7 +70,8 @@ public class EntitlementManager {
 
     @VisibleForTesting
     protected static final String DISABLE_PROVISIONING_SYSPROP_KEY = "net.tethering.noprovisioning";
-    private static final String ACTION_PROVISIONING_ALARM =
+    @VisibleForTesting
+    protected static final String ACTION_PROVISIONING_ALARM =
             "com.android.networkstack.tethering.PROVISIONING_RECHECK_ALARM";
 
     private final ComponentName mSilentProvisioningService;
@@ -410,20 +411,23 @@ public class EntitlementManager {
         return intent;
     }
 
+    @VisibleForTesting
+    PendingIntent createRecheckAlarmIntent() {
+        final Intent intent = new Intent(ACTION_PROVISIONING_ALARM);
+        return PendingIntent.getBroadcast(mContext, 0, intent, PendingIntent.FLAG_IMMUTABLE);
+    }
+
     // Not needed to check if this don't run on the handler thread because it's private.
-    private void scheduleProvisioningRechecks(final TetheringConfiguration config) {
+    private void scheduleProvisioningRecheck(final TetheringConfiguration config) {
         if (mProvisioningRecheckAlarm == null) {
             final int period = config.provisioningCheckPeriod;
             if (period <= 0) return;
 
-            Intent intent = new Intent(ACTION_PROVISIONING_ALARM);
-            mProvisioningRecheckAlarm = PendingIntent.getBroadcast(mContext, 0, intent,
-                    PendingIntent.FLAG_IMMUTABLE);
+            mProvisioningRecheckAlarm = createRecheckAlarmIntent();
             AlarmManager alarmManager = (AlarmManager) mContext.getSystemService(
                     Context.ALARM_SERVICE);
-            long periodMs = period * MS_PER_HOUR;
-            long firstAlarmTime = SystemClock.elapsedRealtime() + periodMs;
-            alarmManager.setRepeating(AlarmManager.ELAPSED_REALTIME, firstAlarmTime, periodMs,
+            long triggerAtMillis = SystemClock.elapsedRealtime() + (period * MS_PER_HOUR);
+            alarmManager.setExact(AlarmManager.ELAPSED_REALTIME_WAKEUP, triggerAtMillis,
                     mProvisioningRecheckAlarm);
         }
     }
@@ -435,6 +439,11 @@ public class EntitlementManager {
             alarmManager.cancel(mProvisioningRecheckAlarm);
             mProvisioningRecheckAlarm = null;
         }
+    }
+
+    private void rescheduleProvisioningRecheck(final TetheringConfiguration config) {
+        cancelTetherProvisioningRechecks();
+        scheduleProvisioningRecheck(config);
     }
 
     private void evaluateCellularPermission(final TetheringConfiguration config) {
@@ -452,7 +461,7 @@ public class EntitlementManager {
         // Only schedule periodic re-check when tether is provisioned
         // and the result is ok.
         if (permitted && mCurrentEntitlementResults.size() > 0) {
-            scheduleProvisioningRechecks(config);
+            scheduleProvisioningRecheck(config);
         } else {
             cancelTetherProvisioningRechecks();
         }
@@ -493,6 +502,7 @@ public class EntitlementManager {
             if (ACTION_PROVISIONING_ALARM.equals(intent.getAction())) {
                 mLog.log("Received provisioning alarm");
                 final TetheringConfiguration config = mFetcher.fetchTetheringConfiguration();
+                rescheduleProvisioningRecheck(config);
                 reevaluateSimCardProvisioning(config);
             }
         }
