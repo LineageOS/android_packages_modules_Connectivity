@@ -10,7 +10,6 @@ java_defaults {
     name: "FrameworksNetTests-jni-defaults",
     jni_libs: [
         "ld-android",
-        "libbacktrace",
         "libbase",
         "libbinder",
         "libbpf",
