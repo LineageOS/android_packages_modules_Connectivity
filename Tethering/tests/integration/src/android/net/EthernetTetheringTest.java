@@ -27,6 +27,7 @@ import static android.net.TetheringManager.CONNECTIVITY_SCOPE_GLOBAL;
 import static android.net.TetheringManager.CONNECTIVITY_SCOPE_LOCAL;
 import static android.net.TetheringManager.TETHERING_ETHERNET;
 import static android.net.TetheringTester.RemoteResponder;
+import static android.net.TetheringTester.isIcmpv6Type;
 import static android.system.OsConstants.IPPROTO_ICMPV6;
 import static android.system.OsConstants.IPPROTO_IP;
 import static android.system.OsConstants.IPPROTO_UDP;
@@ -35,6 +36,8 @@ import static com.android.net.module.util.ConnectivityUtils.isIPv6ULA;
 import static com.android.net.module.util.HexDump.dumpHexString;
 import static com.android.net.module.util.NetworkStackConstants.ETHER_TYPE_IPV4;
 import static com.android.net.module.util.NetworkStackConstants.ETHER_TYPE_IPV6;
+import static com.android.net.module.util.NetworkStackConstants.ICMPV6_ECHO_REPLY_TYPE;
+import static com.android.net.module.util.NetworkStackConstants.ICMPV6_ECHO_REQUEST_TYPE;
 import static com.android.net.module.util.NetworkStackConstants.ICMPV6_ROUTER_ADVERTISEMENT;
 import static com.android.testutils.TestNetworkTrackerKt.initTestNetwork;
 
@@ -71,6 +74,7 @@ import androidx.test.InstrumentationRegistry;
 import androidx.test.filters.MediumTest;
 import androidx.test.runner.AndroidJUnit4;
 
+import com.android.net.module.util.Ipv6Utils;
 import com.android.net.module.util.PacketBuilder;
 import com.android.net.module.util.Struct;
 import com.android.net.module.util.bpf.Tether4Key;
@@ -99,6 +103,7 @@ import org.junit.runner.RunWith;
 
 import java.io.FileDescriptor;
 import java.net.Inet4Address;
+import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.net.InterfaceAddress;
 import java.net.NetworkInterface;
@@ -779,21 +784,26 @@ public class EthernetTetheringTest {
         }
     }
 
-    private TestNetworkTracker createTestUpstream(final List<LinkAddress> addresses)
-            throws Exception {
+    private TestNetworkTracker createTestUpstream(final List<LinkAddress> addresses,
+            final List<InetAddress> dnses) throws Exception {
         mTm.setPreferTestNetworks(true);
 
-        return initTestNetwork(mContext, addresses, TIMEOUT_MS);
+        final LinkProperties lp = new LinkProperties();
+        lp.setLinkAddresses(addresses);
+        lp.setDnsServers(dnses);
+
+        return initTestNetwork(mContext, lp, TIMEOUT_MS);
     }
 
     @Test
-    public void testTestNetworkUpstream() throws Exception {
+    public void testIcmpv6Echo() throws Exception {
         assumeFalse(mEm.isAvailable());
 
         // MyTetheringEventCallback currently only support await first available upstream. Tethering
         // may select internet network as upstream if test network is not available and not be
         // preferred yet. Create test upstream network before enable tethering.
-        mUpstreamTracker = createTestUpstream(toList(TEST_IP4_ADDR, TEST_IP6_ADDR));
+        mUpstreamTracker = createTestUpstream(toList(TEST_IP4_ADDR, TEST_IP6_ADDR),
+                toList(TEST_IP4_DNS, TEST_IP6_DNS));
 
         mDownstreamIface = createTestInterface();
         mEm.setIncludeTestInterfaces(true);
@@ -808,7 +818,39 @@ public class EthernetTetheringTest {
                 mTetheringEventCallback.awaitUpstreamChanged());
 
         mDownstreamReader = makePacketReader(mDownstreamIface);
-        // TODO: do basic forwarding test here.
+        mUpstreamReader = makePacketReader(mUpstreamTracker.getTestIface());
+
+        runPing6Test(new TetheringTester(mDownstreamReader), new RemoteResponder(mUpstreamReader));
+    }
+
+    private void runPing6Test(TetheringTester tester, RemoteResponder remote) throws Exception {
+        // Currently tethering don't have API to tell when ipv6 tethering is available. Thus, let
+        // TetheringTester test ipv6 tethering connectivity before testing ipv6.
+        tester.waitForIpv6TetherConnectivityVerified();
+
+        TetheredDevice tethered = tester.createTetheredDevice(MacAddress.fromString("1:2:3:4:5:6"),
+                true /* hasIpv6 */);
+        Inet6Address remoteIp6Addr = (Inet6Address) parseNumericAddress("2400:222:222::222");
+        ByteBuffer request = Ipv6Utils.buildEchoRequestPacket(tethered.macAddr,
+                tethered.routerMacAddr, tethered.ipv6Addr, remoteIp6Addr);
+        tester.sendPacket(request);
+
+        final byte[] echoRequest = remote.getNextMatchedPacket((p) -> {
+            Log.d(TAG, "Packet in upstream: " + dumpHexString(p));
+
+            return isIcmpv6Type(p, false /* hasEth */, ICMPV6_ECHO_REQUEST_TYPE);
+        });
+        assertNotNull("No icmpv6 echo request in upstream", echoRequest);
+
+        ByteBuffer reply = Ipv6Utils.buildEchoReplyPacket(remoteIp6Addr, tethered.ipv6Addr);
+        remote.sendPacket(reply);
+
+        final byte[] echoReply = tester.getNextMatchedPacket((p) -> {
+            Log.d(TAG, "Packet in downstream: " + dumpHexString(p));
+
+            return isIcmpv6Type(p, true /* hasEth */, ICMPV6_ECHO_REPLY_TYPE);
+        });
+        assertNotNull("No icmpv6 echo reply in downstream", echoReply);
     }
 
     // Test network topology:
@@ -920,7 +962,7 @@ public class EthernetTetheringTest {
     private void runUdp4Test(TetheringTester tester, RemoteResponder remote, boolean usingBpf)
             throws Exception {
         final TetheredDevice tethered = tester.createTetheredDevice(MacAddress.fromString(
-                "1:2:3:4:5:6"));
+                "1:2:3:4:5:6"), false /* hasIpv6 */);
 
         // TODO: remove the connectivity verification for upstream connected notification race.
         // Because async upstream connected notification can't guarantee the tethering routing is
@@ -1041,7 +1083,7 @@ public class EthernetTetheringTest {
         // MyTetheringEventCallback currently only support await first available upstream. Tethering
         // may select internet network as upstream if test network is not available and not be
         // preferred yet. Create test upstream network before enable tethering.
-        mUpstreamTracker = createTestUpstream(toList(TEST_IP4_ADDR));
+        mUpstreamTracker = createTestUpstream(toList(TEST_IP4_ADDR), toList(TEST_IP4_DNS));
 
         mDownstreamIface = createTestInterface();
         mEm.setIncludeTestInterfaces(true);
