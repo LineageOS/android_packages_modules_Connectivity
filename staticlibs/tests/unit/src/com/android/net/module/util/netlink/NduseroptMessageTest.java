@@ -20,11 +20,13 @@ import static android.net.InetAddresses.parseNumericAddress;
 import static android.system.OsConstants.AF_INET6;
 import static android.system.OsConstants.NETLINK_ROUTE;
 
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
+import android.net.InetAddresses;
 import android.net.IpPrefix;
 
 import androidx.test.filters.SmallTest;
@@ -35,6 +37,7 @@ import libcore.util.HexEncoding;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
+import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -113,11 +116,34 @@ public class NduseroptMessageTest {
     }
 
     @Test
+    public void testParseRdnssOptionWithinNetlinkMessage() throws Exception {
+        final String hexBytes =
+                "4C000000440000000000000000000000"
+                + "0A0018001E0000008600000000000000"
+                + "1903000000001770FD123456789000000000000000000001"  // RDNSS option
+                + "14000100FE800000000000000250B6FFFEB7C499";
+
+        ByteBuffer buf = toBuffer(hexBytes);
+        assertEquals(76, buf.limit());
+        buf.order(ByteOrder.nativeOrder());
+
+        NetlinkMessage nlMsg = NetlinkMessage.parse(buf, NETLINK_ROUTE);
+        assertNotNull(nlMsg);
+        assertTrue(nlMsg instanceof NduseroptMessage);
+
+        NduseroptMessage msg = (NduseroptMessage) nlMsg;
+        InetAddress srcaddr = InetAddress.getByName("fe80::250:b6ff:feb7:c499%30");
+        assertMatches(AF_INET6, 24, 30, ICMP_TYPE_RA, (byte) 0, srcaddr, msg);
+        assertRdnssOption(msg.option, 6000 /* lifetime */,
+                (Inet6Address) InetAddresses.parseNumericAddress("fd12:3456:7890::1"));
+    }
+
+    @Test
     public void testParseUnknownOptionWithinNetlinkMessage() throws Exception {
         final String hexBytes =
-                "4C0000004400000000000000000000000"
-                + "A0018001E0000008600000000000000"
-                + "1903000000001770FD123456789000000000000000000001"  // RDNSS option
+                "4C000000440000000000000000000000"
+                + "0A0018001E0000008600000000000000"
+                + "310300000000177006676F6F676C652E03636F6D00000000"  // DNSSL option: "google.com"
                 + "14000100FE800000000000000250B6FFFEB7C499";
 
         ByteBuffer buf = toBuffer(hexBytes);
@@ -242,5 +268,15 @@ public class NduseroptMessageTest {
         assertTrue(opt instanceof StructNdOptPref64);
         StructNdOptPref64 pref64Opt = (StructNdOptPref64) opt;
         assertEquals(new IpPrefix(prefix), pref64Opt.prefix);
+    }
+
+    private void assertRdnssOption(NdOption opt, long lifetime, Inet6Address... servers) {
+        assertNotNull(opt);
+        assertTrue(opt instanceof StructNdOptRdnss);
+        StructNdOptRdnss rdnss = (StructNdOptRdnss) opt;
+        assertEquals(StructNdOptRdnss.TYPE, rdnss.type);
+        assertEquals((byte) (servers.length * 2 + 1), rdnss.header.length);
+        assertEquals(lifetime, rdnss.header.lifetime);
+        assertArrayEquals(servers, rdnss.servers);
     }
 }
