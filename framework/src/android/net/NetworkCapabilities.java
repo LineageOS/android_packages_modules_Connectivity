@@ -852,7 +852,7 @@ public final class NetworkCapabilities implements Parcelable {
             // SubIds are only allowed for Test Networks that only declare TRANSPORT_TEST.
             setSubscriptionIds(originalSubIds);
         } else {
-            // If the test transport is restricted, then it may declare any transport.
+            // If the test network is restricted, then it may declare any transport.
             mTransportTypes = (originalTransportTypes | (1 << TRANSPORT_TEST));
         }
         mNetworkCapabilities = originalCapabilities & TEST_NETWORKS_ALLOWED_CAPABILITIES;
