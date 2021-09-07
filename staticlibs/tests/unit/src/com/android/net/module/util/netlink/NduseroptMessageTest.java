@@ -139,6 +139,19 @@ public class NduseroptMessageTest {
     }
 
     @Test
+    public void testParseTruncatedRdnssOptionWithinNetlinkMessage() throws Exception {
+        final String truncatedHexBytes =
+                "38000000440000000000000000000000"
+                + "0A0018001E0000008600000000000000"
+                + "1903000000001770FD123456789000000000000000000001";  // RDNSS option
+
+        ByteBuffer buf = toBuffer(truncatedHexBytes);
+        buf.order(ByteOrder.nativeOrder());
+        NetlinkMessage nlMsg = NetlinkMessage.parse(buf, NETLINK_ROUTE);
+        assertNull(nlMsg);
+    }
+
+    @Test
     public void testParseUnknownOptionWithinNetlinkMessage() throws Exception {
         final String hexBytes =
                 "4C000000440000000000000000000000"
