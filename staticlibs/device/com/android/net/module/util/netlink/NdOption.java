@@ -16,6 +16,8 @@
 
 package com.android.net.module.util.netlink;
 
+import androidx.annotation.NonNull;
+
 import java.nio.ByteBuffer;
 
 /**
@@ -50,8 +52,8 @@ public class NdOption {
      * @param buf the buffer to parse.
      * @return a subclass of {@link NdOption}, or {@code null} for an unknown or malformed option.
      */
-    public static NdOption parse(ByteBuffer buf) {
-        if (buf == null || buf.remaining() < STRUCT_SIZE) return null;
+    public static NdOption parse(@NonNull ByteBuffer buf) {
+        if (buf.remaining() < STRUCT_SIZE) return null;
 
         // Peek the type without advancing the buffer.
         byte type = buf.get(buf.position());
