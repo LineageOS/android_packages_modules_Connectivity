@@ -46,6 +46,7 @@ import android.platform.test.annotations.AppModeFull
 import android.provider.DeviceConfig
 import android.provider.DeviceConfig.NAMESPACE_CONNECTIVITY
 import android.text.TextUtils
+import android.util.Log
 import androidx.test.platform.app.InstrumentationRegistry.getInstrumentation
 import androidx.test.runner.AndroidJUnit4
 import com.android.testutils.RecorderCallback
@@ -78,6 +79,8 @@ private const val LOCALHOST_HOSTNAME = "localhost"
 // Re-connecting to the AP, obtaining an IP address, revalidating can take a long time
 private const val WIFI_CONNECT_TIMEOUT_MS = 120_000L
 private const val TEST_TIMEOUT_MS = 10_000L
+
+private const val TAG = "CaptivePortalTest"
 
 private fun <T> CompletableFuture<T>.assertGet(timeoutMs: Long, message: String): T {
     try {
@@ -155,6 +158,7 @@ class CaptivePortalTest {
         server.addResponse(Request(TEST_HTTP_URL_PATH), Status.REDIRECT, headers)
         setHttpsUrlDeviceConfig(makeUrl(TEST_HTTPS_URL_PATH))
         setHttpUrlDeviceConfig(makeUrl(TEST_HTTP_URL_PATH))
+        Log.d(TAG, "Set portal URLs to $TEST_HTTPS_URL_PATH and $TEST_HTTP_URL_PATH")
         // URL expiration needs to be in the next 10 minutes
         assertTrue(WIFI_CONNECT_TIMEOUT_MS < TimeUnit.MINUTES.toMillis(10))
         setUrlExpirationDeviceConfig(System.currentTimeMillis() + WIFI_CONNECT_TIMEOUT_MS)
