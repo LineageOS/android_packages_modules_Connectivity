@@ -4848,7 +4848,6 @@ public class ConnectivityServiceTest {
         final TestableNetworkOfferCallback wifiCallback = new TestableNetworkOfferCallback(
                 TIMEOUT_MS /* timeout */, TEST_CALLBACK_TIMEOUT_MS /* noCallbackTimeout */);
 
-        Log.e("ConnectivityService", "test registering " + cellProvider);
         // Offer callbacks will run on the CS handler thread in this test.
         cellProvider.registerNetworkOffer(cellScore, cellCaps, r -> r.run(), cellCallback);
         wifiProvider.registerNetworkOffer(wifiScore, wifiCaps, r -> r.run(), wifiCallback);
