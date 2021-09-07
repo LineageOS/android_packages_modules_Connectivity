@@ -19,6 +19,7 @@ package com.android.net.module.util.netlink;
 import static android.system.OsConstants.AF_INET6;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 import java.net.Inet6Address;
 import java.net.InetAddress;
@@ -56,6 +57,7 @@ public class NduseroptMessage extends NetlinkMessage {
      * But if it does, we can simply update this code, since userspace is typically newer than the
      * kernel.
      */
+    @Nullable
     public final NdOption option;
 
     /** The IP address that sent the packet containing the option. */
@@ -80,22 +82,26 @@ public class NduseroptMessage extends NetlinkMessage {
         // Ensure we don't read past opts_len even if the option length is invalid.
         // Note that this check is not really necessary since if the option length is not valid,
         // this struct won't be very useful to the caller.
+        //
+        // It's safer to pass the slice of original ByteBuffer to just parse the ND option field,
+        // although parsing ND option might throw exception or return null, it won't break the
+        // original ByteBuffer position.
         buf.order(ByteOrder.BIG_ENDIAN);
-        int oldLimit = buf.limit();
-        buf.limit(start + STRUCT_SIZE + opts_len);
         try {
-            option = NdOption.parse(buf);
+            final ByteBuffer slice = buf.slice();
+            slice.limit(opts_len);
+            option = NdOption.parse(slice);
         } finally {
-            buf.limit(oldLimit);
+            // Advance buffer position according to opts_len in the header. ND option length might
+            // be incorrect in the malformed packet.
+            int newPosition = start + STRUCT_SIZE + opts_len;
+            if (newPosition >= buf.limit()) {
+                throw new IllegalArgumentException("ND option extends past end of buffer");
+            }
+            buf.position(newPosition);
         }
 
-        // The source address.
-        int newPosition = start + STRUCT_SIZE + opts_len;
-        if (newPosition >= buf.limit()) {
-            throw new IllegalArgumentException("ND options extend past end of buffer");
-        }
-        buf.position(newPosition);
-
+        // The source address attribute.
         StructNlAttr nla = StructNlAttr.parse(buf);
         if (nla == null || nla.nla_type != NDUSEROPT_SRCADDR || nla.nla_value == null) {
             throw new IllegalArgumentException("Invalid source address in ND useropt");
