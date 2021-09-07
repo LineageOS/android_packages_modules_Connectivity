@@ -163,11 +163,6 @@ public class StructNdOptRdnssTest {
     }
 
     @Test
-    public void testParsing_nullByteBuffer() {
-        assertNull(StructNdOptRdnss.parse(null));
-    }
-
-    @Test
     public void testParsing_invalidByteBufferLength() throws Exception {
         final ByteBuffer buf = makeRdnssOption((byte) ICMPV6_ND_OPTION_RDNSS,
                 (byte) 5 /* length */, 3600 /* lifetime */, DNS_SERVER1, DNS_SERVER2);
