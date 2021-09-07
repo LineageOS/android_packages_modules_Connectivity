@@ -78,7 +78,7 @@ import java.util.Map.Entry;
 import java.util.Set;
 
 /**
- * A utility class to inform Netd of UID permisisons.
+ * A utility class to inform Netd of UID permissions.
  * Does a mass update at boot and then monitors for app install/remove.
  *
  * @hide
@@ -100,7 +100,7 @@ public class PermissionMonitor {
     @GuardedBy("this")
     private final Set<UserHandle> mUsers = new HashSet<>();
 
-    // Keys are app uids. Values are true for SYSTEM permission and false for NETWORK permission.
+    // Keys are appIds. Values are true for SYSTEM permission and false for NETWORK permission.
     @GuardedBy("this")
     private final Map<Integer, Boolean> mApps = new HashMap<>();
 
@@ -237,31 +237,32 @@ public class PermissionMonitor {
             return;
         }
 
-        SparseIntArray netdPermsUids = new SparseIntArray();
+        final SparseIntArray netdPermsAppIds = new SparseIntArray();
 
         for (PackageInfo app : apps) {
             int uid = app.applicationInfo != null ? app.applicationInfo.uid : INVALID_UID;
             if (uid < 0) {
                 continue;
             }
-            mAllApps.add(UserHandle.getAppId(uid));
+            final int appId = UserHandle.getAppId(uid);
+            mAllApps.add(appId);
 
-            boolean isNetwork = hasNetworkPermission(app);
+            boolean hasNetworkPermission = hasNetworkPermission(app);
             boolean hasRestrictedPermission = hasRestrictedNetworkPermission(app);
 
-            if (isNetwork || hasRestrictedPermission) {
-                Boolean permission = mApps.get(UserHandle.getAppId(uid));
+            if (hasNetworkPermission || hasRestrictedPermission) {
+                final Boolean permission = mApps.get(appId);
                 // If multiple packages share a UID (cf: android:sharedUserId) and ask for different
                 // permissions, don't downgrade (i.e., if it's already SYSTEM, leave it as is).
                 if (permission == null || permission == NETWORK) {
-                    mApps.put(UserHandle.getAppId(uid), hasRestrictedPermission);
+                    mApps.put(appId, hasRestrictedPermission);
                 }
             }
 
             //TODO: unify the management of the permissions into one codepath.
             int otherNetdPerms = getNetdPermissionMask(app.requestedPermissions,
                     app.requestedPermissionsFlags);
-            netdPermsUids.put(uid, netdPermsUids.get(uid) | otherNetdPerms);
+            netdPermsAppIds.put(appId, netdPermsAppIds.get(appId) | otherNetdPerms);
         }
 
         mUsers.addAll(mUserManager.getUserHandles(true /* excludeDying */));
@@ -275,13 +276,13 @@ public class PermissionMonitor {
             final int[] hasPermissionUids =
                     mSystemConfigManager.getSystemPermissionUids(systemPermission);
             for (int j = 0; j < hasPermissionUids.length; j++) {
-                final int uid = hasPermissionUids[j];
-                netdPermsUids.put(uid, netdPermsUids.get(uid) | netdPermission);
+                final int appId = UserHandle.getAppId(hasPermissionUids[j]);
+                netdPermsAppIds.put(appId, netdPermsAppIds.get(appId) | netdPermission);
             }
         }
         log("Users: " + mUsers.size() + ", Apps: " + mApps.size());
         update(mUsers, mApps, true);
-        sendPackagePermissionsToNetd(netdPermsUids);
+        sendPackagePermissionsToNetd(netdPermsAppIds);
     }
 
     @VisibleForTesting
@@ -473,13 +474,11 @@ public class PermissionMonitor {
      * @hide
      */
     public synchronized void onPackageAdded(@NonNull final String packageName, final int uid) {
-        // TODO: Netd is using appId for checking traffic permission. Correct the methods that are
-        //  using appId instead of uid actually
-        sendPackagePermissionsForUid(UserHandle.getAppId(uid), getPermissionForUid(uid));
+        final int appId = UserHandle.getAppId(uid);
+        sendPackagePermissionsForAppId(appId, getPermissionForUid(uid));
 
         // If multiple packages share a UID (cf: android:sharedUserId) and ask for different
         // permissions, don't downgrade (i.e., if it's already SYSTEM, leave it as is).
-        final int appId = UserHandle.getAppId(uid);
         final Boolean permission = highestPermissionForUid(mApps.get(appId), packageName);
         if (permission != mApps.get(appId)) {
             mApps.put(appId, permission);
@@ -528,9 +527,8 @@ public class PermissionMonitor {
      * @hide
      */
     public synchronized void onPackageRemoved(@NonNull final String packageName, final int uid) {
-        // TODO: Netd is using appId for checking traffic permission. Correct the methods that are
-        //  using appId instead of uid actually
-        sendPackagePermissionsForUid(UserHandle.getAppId(uid), getPermissionForUid(uid));
+        final int appId = UserHandle.getAppId(uid);
+        sendPackagePermissionsForAppId(appId, getPermissionForUid(uid));
 
         // If the newly-removed package falls within some VPN's uid range, update Netd with it.
         // This needs to happen before the mApps update below, since removeBypassingUids() depends
@@ -545,7 +543,7 @@ public class PermissionMonitor {
         }
         // If the package has been removed from all users on the device, clear it form mAllApps.
         if (mPackageManager.getNameForUid(uid) == null) {
-            mAllApps.remove(UserHandle.getAppId(uid));
+            mAllApps.remove(appId);
         }
 
         Map<Integer, Boolean> apps = new HashMap<>();
@@ -557,7 +555,6 @@ public class PermissionMonitor {
             return;
         }
 
-        final int appId = UserHandle.getAppId(uid);
         if (permission == mApps.get(appId)) {
             // The permissions of this UID have not changed. Nothing to do.
             return;
@@ -718,27 +715,25 @@ public class PermissionMonitor {
     }
 
     /**
-     * Called by PackageListObserver when a package is installed/uninstalled. Send the updated
-     * permission information to netd.
+     * Send the updated permission information to netd. Called upon package install/uninstall.
      *
-     * @param uid the app uid of the package installed
+     * @param appId the appId of the package installed
      * @param permissions the permissions the app requested and netd cares about.
      *
      * @hide
      */
     @VisibleForTesting
-    void sendPackagePermissionsForUid(int uid, int permissions) {
+    void sendPackagePermissionsForAppId(int appId, int permissions) {
         SparseIntArray netdPermissionsAppIds = new SparseIntArray();
-        netdPermissionsAppIds.put(uid, permissions);
+        netdPermissionsAppIds.put(appId, permissions);
         sendPackagePermissionsToNetd(netdPermissionsAppIds);
     }
 
     /**
-     * Called by packageManagerService to send IPC to netd. Grant or revoke the INTERNET
-     * and/or UPDATE_DEVICE_STATS permission of the uids in array.
+     * Grant or revoke the INTERNET and/or UPDATE_DEVICE_STATS permission of the appIds in array.
      *
-     * @param netdPermissionsAppIds integer pairs of uids and the permission granted to it. If the
-     * permission is 0, revoke all permissions of that uid.
+     * @param netdPermissionsAppIds integer pairs of appIds and the permission granted to it. If the
+     * permission is 0, revoke all permissions of that appId.
      *
      * @hide
      */
