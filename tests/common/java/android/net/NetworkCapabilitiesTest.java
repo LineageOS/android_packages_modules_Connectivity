@@ -1170,46 +1170,104 @@ public class NetworkCapabilitiesTest {
     }
 
     @Test @IgnoreUpTo(Build.VERSION_CODES.R) @ConnectivityModuleTest
-    public void testRestrictCapabilitiesForTestNetwork() {
+    public void testRestrictCapabilitiesForTestNetworkByNotOwnerWithNonRestrictedNc() {
+        testRestrictCapabilitiesForTestNetworkWithNonRestrictedNc(false /* isOwner */);
+    }
+
+    @Test @IgnoreUpTo(Build.VERSION_CODES.R) @ConnectivityModuleTest
+    public void testRestrictCapabilitiesForTestNetworkByOwnerWithNonRestrictedNc() {
+        testRestrictCapabilitiesForTestNetworkWithNonRestrictedNc(true /* isOwner */);
+    }
+
+    private void testRestrictCapabilitiesForTestNetworkWithNonRestrictedNc(boolean isOwner) {
         final int ownerUid = 1234;
+        final int signalStrength = -80;
         final int[] administratorUids = {1001, ownerUid};
+        final TelephonyNetworkSpecifier specifier = new TelephonyNetworkSpecifier(TEST_SUBID1);
+        final TransportInfo transportInfo = new TransportInfo() {};
         final NetworkCapabilities nonRestrictedNc = new NetworkCapabilities.Builder()
                 .addTransportType(TRANSPORT_CELLULAR)
-                .addTransportType(TRANSPORT_VPN)
                 .addCapability(NET_CAPABILITY_MMS)
                 .addCapability(NET_CAPABILITY_NOT_METERED)
                 .setAdministratorUids(administratorUids)
                 .setOwnerUid(ownerUid)
+                .setNetworkSpecifier(specifier)
+                .setSignalStrength(signalStrength)
+                .setTransportInfo(transportInfo)
                 .setSubscriptionIds(Set.of(TEST_SUBID1)).build();
+        final int creatorUid = isOwner ? ownerUid : INVALID_UID;
+        nonRestrictedNc.restrictCapabilitiesForTestNetwork(creatorUid);
 
-        nonRestrictedNc.restrictCapabilitiesForTestNetwork(ownerUid);
-        // TRANSPORT_TEST will be appended
-        assertTrue(nonRestrictedNc.hasTransport(TRANSPORT_TEST));
-        assertEquals(Set.of(TEST_SUBID1), nonRestrictedNc.getSubscriptionIds());
-        // Non-UNRESTRICTED_TEST_NETWORKS_ALLOWED_TRANSPORTS will be removed
-        assertFalse(nonRestrictedNc.hasTransport(TRANSPORT_CELLULAR));
-        assertTrue(nonRestrictedNc.hasTransport(TRANSPORT_VPN));
-        // Only TEST_NETWORKS_ALLOWED_CAPABILITIES will be kept
-        assertFalse(nonRestrictedNc.hasCapability(NET_CAPABILITY_MMS));
-        assertTrue(nonRestrictedNc.hasCapability(NET_CAPABILITY_NOT_METERED));
+        final NetworkCapabilities.Builder expectedNcBuilder = new NetworkCapabilities.Builder();
+        // Non-UNRESTRICTED_TEST_NETWORKS_ALLOWED_TRANSPORTS will be removed and TRANSPORT_TEST will
+        // be appended for non-restricted net cap.
+        expectedNcBuilder.addTransportType(TRANSPORT_TEST);
+        // Only TEST_NETWORKS_ALLOWED_CAPABILITIES will be kept. SubIds are only allowed for Test
+        // Networks that only declare TRANSPORT_TEST.
+        expectedNcBuilder.addCapability(NET_CAPABILITY_NOT_METERED)
+                .removeCapability(NET_CAPABILITY_TRUSTED)
+                .setSubscriptionIds(Set.of(TEST_SUBID1));
 
-        final NetworkCapabilities restrictedNc = new NetworkCapabilities.Builder(nonRestrictedNc)
+        expectedNcBuilder.setNetworkSpecifier(specifier)
+                .setSignalStrength(signalStrength).setTransportInfo(transportInfo);
+        if (creatorUid == ownerUid) {
+            // Only retain the owner and administrator UIDs if they match the app registering the
+            // remote caller that registered the network.
+            expectedNcBuilder.setAdministratorUids(new int[]{ownerUid}).setOwnerUid(ownerUid);
+        }
+
+        assertEquals(expectedNcBuilder.build(), nonRestrictedNc);
+    }
+
+    @Test @IgnoreUpTo(Build.VERSION_CODES.R) @ConnectivityModuleTest
+    public void testRestrictCapabilitiesForTestNetworkByNotOwnerWithRestrictedNc() {
+        testRestrictCapabilitiesForTestNetworkWithRestrictedNc(false /* isOwner */);
+    }
+
+    @Test @IgnoreUpTo(Build.VERSION_CODES.R) @ConnectivityModuleTest
+    public void testRestrictCapabilitiesForTestNetworkByOwnerWithRestrictedNc() {
+        testRestrictCapabilitiesForTestNetworkWithRestrictedNc(true /* isOwner */);
+    }
+
+    private void testRestrictCapabilitiesForTestNetworkWithRestrictedNc(boolean isOwner) {
+        final int ownerUid = 1234;
+        final int signalStrength = -80;
+        final int[] administratorUids = {1001, ownerUid};
+        final TransportInfo transportInfo = new TransportInfo() {};
+        // No NetworkSpecifier is set because after performing restrictCapabilitiesForTestNetwork
+        // the networkCapabilities will contain more than one transport type. However,
+        // networkCapabilities must have a single transport specified to use NetworkSpecifier. Thus,
+        // do not verify this part since it's verified in other tests.
+        final NetworkCapabilities restrictedNc = new NetworkCapabilities.Builder()
                 .removeCapability(NET_CAPABILITY_NOT_RESTRICTED)
                 .addTransportType(TRANSPORT_CELLULAR)
-                .addCapability(NET_CAPABILITY_MMS).build();
-        restrictedNc.restrictCapabilitiesForTestNetwork(ownerUid);
-        // It may declare any transport if the net cap is restricted
-        assertTrue(restrictedNc.hasTransport(TRANSPORT_CELLULAR));
-        // SubIds will be cleared.
-        assertEquals(new ArraySet<>(), restrictedNc.getSubscriptionIds());
-        // Only retain the owner and administrator UIDs if they match the app registering the remote
-        // caller that registered the network.
-        assertEquals(ownerUid, restrictedNc.getOwnerUid());
-        assertArrayEquals(new int[] {ownerUid}, restrictedNc.getAdministratorUids());
-        // The creator UID does not match the owner and administrator UIDs will clear the owner and
-        // administrator UIDs.
-        restrictedNc.restrictCapabilitiesForTestNetwork(5678);
-        assertEquals(INVALID_UID, restrictedNc.getOwnerUid());
-        assertArrayEquals(new int[0], restrictedNc.getAdministratorUids());
+                .addCapability(NET_CAPABILITY_MMS)
+                .addCapability(NET_CAPABILITY_NOT_METERED)
+                .setAdministratorUids(administratorUids)
+                .setOwnerUid(ownerUid)
+                .setSignalStrength(signalStrength)
+                .setTransportInfo(transportInfo)
+                .setSubscriptionIds(Set.of(TEST_SUBID1)).build();
+        final int creatorUid = isOwner ? ownerUid : INVALID_UID;
+        restrictedNc.restrictCapabilitiesForTestNetwork(creatorUid);
+
+        final NetworkCapabilities.Builder expectedNcBuilder = new NetworkCapabilities.Builder()
+                .removeCapability(NET_CAPABILITY_NOT_RESTRICTED);
+        // If the test network is restricted, then the network may declare any transport, and
+        // appended with TRANSPORT_TEST.
+        expectedNcBuilder.addTransportType(TRANSPORT_CELLULAR);
+        expectedNcBuilder.addTransportType(TRANSPORT_TEST);
+        // Only TEST_NETWORKS_ALLOWED_CAPABILITIES will be kept.
+        expectedNcBuilder.addCapability(NET_CAPABILITY_NOT_METERED);
+        expectedNcBuilder.removeCapability(NET_CAPABILITY_TRUSTED);
+
+        expectedNcBuilder.setSignalStrength(signalStrength).setTransportInfo(transportInfo);
+        if (creatorUid == ownerUid) {
+            // Only retain the owner and administrator UIDs if they match the app registering the
+            // remote caller that registered the network.
+            expectedNcBuilder.setAdministratorUids(new int[]{ownerUid}).setOwnerUid(ownerUid);
+        }
+
+        assertEquals(expectedNcBuilder.build(), restrictedNc);
     }
 }
