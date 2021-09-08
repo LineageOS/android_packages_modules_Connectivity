@@ -51,6 +51,9 @@ java_library {
       "//frameworks/libs/net/common/tests:__subpackages__",
       "//frameworks/libs/net/client-libs/tests:__subpackages__",
   ],
+  libs: [
+      "jsr305",
+  ],
   static_libs: [
       "kotlin-test"
   ]
