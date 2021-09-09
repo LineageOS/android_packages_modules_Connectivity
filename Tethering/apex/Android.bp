@@ -66,6 +66,7 @@ apex {
     bpfs: [
         "clatd.o_mainline",
         "netd.o_mainline",
+        "dscp_policy.o",
         "offload.o",
         "test.o",
     ],
