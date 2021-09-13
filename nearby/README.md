@@ -26,7 +26,7 @@ This directory contains code for the AOSP Nearby mainline module.
 ```sh
 $ source build/envsetup.sh && lunch <TARGE>
 $ cd packages/modules/Nearby
-$ aidegen
+$ aidegen .
 # This will launch Intellij project for Nearby module.
 ```
 
@@ -34,6 +34,6 @@ $ aidegen
 
 ```sh
 $ source build/envsetup.sh && lunch <TARGE>
-$mmm -j packages/modules/Nearby/
-$adb install -r {ANDROID_PRODUCT_OUT}/system/apex/com.android.nearby.apex
+$ mmm -j packages/modules/Nearby/
+$ adb install -r {ANDROID_PRODUCT_OUT}/system/apex/com.android.nearby.apex
 ```

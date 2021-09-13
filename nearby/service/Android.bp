@@ -43,6 +43,7 @@ java_library {
     optimize: {
         enabled: true,
         shrink: true,
+        proguard_flags_files: ["proguard.flags"],
     },
     dex_preopt: {
         enabled: false,

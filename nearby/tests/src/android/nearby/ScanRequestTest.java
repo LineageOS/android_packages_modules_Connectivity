@@ -25,13 +25,18 @@ import static com.google.common.truth.Truth.assertThat;
 
 import android.os.Parcel;
 import android.os.WorkSource;
+import android.platform.test.annotations.Presubmit;
 
 import androidx.test.filters.SmallTest;
+import androidx.test.runner.AndroidJUnit4;
 
 import org.junit.Test;
+import org.junit.runner.RunWith;
 
 /** Units tests for {@link ScanRequest}. */
+@Presubmit
 @SmallTest
+@RunWith(AndroidJUnit4.class)
 public class ScanRequestTest {
 
     /** Test creating a scan request. */

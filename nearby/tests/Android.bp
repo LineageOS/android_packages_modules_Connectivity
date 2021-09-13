@@ -33,8 +33,9 @@ android_test {
 
     static_libs: [
         "androidx.test.rules",
-        "truth-prebuilt",
         "framework-nearby-pre-jarjar",
+        "platform-test-annotations",
+        "truth-prebuilt",
     ],
     test_suites: [
         "general-tests",

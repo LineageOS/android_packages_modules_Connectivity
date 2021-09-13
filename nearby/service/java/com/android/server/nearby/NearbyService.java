@@ -17,15 +17,19 @@
 package com.android.server.nearby;
 
 import android.content.Context;
+import android.util.Log;
 
 import com.android.server.SystemService;
 
 /**
  * Service implementing nearby functionality. The actual implementation is delegated to
- * {@link NearbyDeviceScanServiceImpl}.
+ * {@link NearbyServiceImpl}.
  */
 // TODO(189954300): Implement nearby service.
 public class NearbyService extends SystemService {
+    private static final String TAG = "NearbyService";
+    private static final boolean DBG = true;
+
     private final NearbyServiceImpl mImpl;
 
     public NearbyService(Context contextBase) {
@@ -35,6 +39,10 @@ public class NearbyService extends SystemService {
 
     @Override
     public void onStart() {
+        if (DBG) {
+            Log.d(TAG, "Publishing NearbyService");
+        }
+
     }
 
     @Override
