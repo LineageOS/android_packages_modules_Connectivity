@@ -350,8 +350,11 @@ import org.mockito.AdditionalAnswers;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InOrder;
 import org.mockito.Mock;
+import org.mockito.MockingDetails;
+import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 import org.mockito.Spy;
+import org.mockito.exceptions.misusing.UnfinishedStubbingException;
 import org.mockito.stubbing.Answer;
 
 import java.io.FileDescriptor;
@@ -1734,7 +1737,15 @@ public class ConnectivityServiceTest {
     }
 
     private void returnRealCallingUid() {
-        doAnswer((invocationOnMock) -> Binder.getCallingUid()).when(mDeps).getCallingUid();
+        try {
+            doAnswer((invocationOnMock) -> Binder.getCallingUid()).when(mDeps).getCallingUid();
+        } catch (UnfinishedStubbingException e) {
+            final MockingDetails details = Mockito.mockingDetails(mDeps);
+            Log.e("ConnectivityServiceTest", "UnfinishedStubbingException,"
+                    + " Stubbings: " + TextUtils.join(", ", details.getStubbings())
+                    + " Invocations: " + details.printInvocations(), e);
+            throw e;
+        }
     }
 
     private ConnectivityService.Dependencies makeDependencies() {
