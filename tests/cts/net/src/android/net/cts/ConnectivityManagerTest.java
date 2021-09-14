@@ -1793,6 +1793,7 @@ public class ConnectivityManagerTest {
      */
     @AppModeFull(reason = "Cannot get WifiManager in instant app mode")
     @Test
+    @IgnoreUpTo(Build.VERSION_CODES.Q)
     public void testRestrictedNetworkPermission() throws Exception {
         // Ensure that CONNECTIVITY_USE_RESTRICTED_NETWORKS isn't granted to this package.
         final PackageInfo app = mPackageManager.getPackageInfo(mContext.getPackageName(),
