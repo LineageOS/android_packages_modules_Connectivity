@@ -139,6 +139,7 @@ java_library {
     srcs: [
         "device/com/android/net/module/util/HexDump.java",
         "device/com/android/net/module/util/Ipv6Utils.java",
+        "device/com/android/net/module/util/PacketBuilder.java",
         "device/com/android/net/module/util/Struct.java",
         "device/com/android/net/module/util/structs/*.java",
     ],
