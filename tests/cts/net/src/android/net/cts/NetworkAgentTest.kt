@@ -1072,6 +1072,7 @@ class NetworkAgentTest {
         Executors.newSingleThreadExecutor().let { executor ->
             try {
                 val info = QosSocketInfo(agent.network!!, socket)
+                assertEquals(agent.network, info.getNetwork())
                 mCM.registerQosCallback(info, executor, qosCallback)
                 val callbackId = agent.expectCallback<OnRegisterQosCallback>().callbackId
 
