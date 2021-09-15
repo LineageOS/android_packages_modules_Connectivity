@@ -18,12 +18,16 @@ package com.android.net.module.util;
 
 import static android.system.OsConstants.IPPROTO_IP;
 import static android.system.OsConstants.IPPROTO_TCP;
+import static android.system.OsConstants.IPPROTO_UDP;
 
 import static com.android.net.module.util.IpUtils.ipChecksum;
 import static com.android.net.module.util.IpUtils.tcpChecksum;
+import static com.android.net.module.util.IpUtils.udpChecksum;
 import static com.android.net.module.util.NetworkStackConstants.IPV4_CHECKSUM_OFFSET;
 import static com.android.net.module.util.NetworkStackConstants.IPV4_LENGTH_OFFSET;
 import static com.android.net.module.util.NetworkStackConstants.TCP_CHECKSUM_OFFSET;
+import static com.android.net.module.util.NetworkStackConstants.UDP_CHECKSUM_OFFSET;
+import static com.android.net.module.util.NetworkStackConstants.UDP_LENGTH_OFFSET;
 
 import android.net.MacAddress;
 
@@ -32,6 +36,7 @@ import androidx.annotation.NonNull;
 import com.android.net.module.util.structs.EthernetHeader;
 import com.android.net.module.util.structs.Ipv4Header;
 import com.android.net.module.util.structs.TcpHeader;
+import com.android.net.module.util.structs.UdpHeader;
 
 import java.io.IOException;
 import java.net.Inet4Address;
@@ -46,7 +51,7 @@ import java.nio.ByteBuffer;
  * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  * |                  Layer 3 header (Ipv4Header)                  |
  * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- * |                  Layer 4 header (TcpHeader)                   |
+ * |           Layer 4 header (TcpHeader, UdpHeader)               |
  * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  * |                           Payload                             | (optional)
  * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
@@ -73,6 +78,7 @@ public class PacketBuilder {
 
     private int mIpv4HeaderOffset = -1;
     private int mTcpHeaderOffset = -1;
+    private int mUdpHeaderOffset = -1;
 
     public PacketBuilder(@NonNull ByteBuffer buffer) {
         mBuffer = buffer;
@@ -152,6 +158,26 @@ public class PacketBuilder {
     }
 
     /**
+     * Write a UDP header.
+     * The UDP header length and checksum are calculated and written back in #finalizePacket.
+     *
+     * @param srcPort source port
+     * @param dstPort destination port
+     */
+    public void writeUdpHeader(short srcPort, short dstPort) throws IOException {
+        mUdpHeaderOffset = mBuffer.position();
+        final UdpHeader udpHeader = new UdpHeader(srcPort, dstPort,
+                (short) 0 /* length, calculate in #finalizePacket */,
+                (short) 0 /* checksum, calculate in #finalizePacket */);
+
+        try {
+            udpHeader.writeToByteBuffer(mBuffer);
+        } catch (IllegalArgumentException | BufferOverflowException e) {
+            throw new IOException("Error writing to buffer: ", e);
+        }
+    }
+
+    /**
      * Finalize the packet.
      *
      * Call after writing L4 header (no payload) or payload to the buffer used by the builder.
@@ -173,13 +199,21 @@ public class PacketBuilder {
         mBuffer.putShort(mIpv4HeaderOffset + IPV4_CHECKSUM_OFFSET,
                 ipChecksum(mBuffer, mIpv4HeaderOffset /* headerOffset */));
 
-        // Populate the TCP header checksum field.
         if (mTcpHeaderOffset > 0) {
+            // Populate the TCP header checksum field.
             mBuffer.putShort(mTcpHeaderOffset + TCP_CHECKSUM_OFFSET, tcpChecksum(mBuffer,
                     mIpv4HeaderOffset /* ipOffset */, mTcpHeaderOffset /* transportOffset */,
                     mBuffer.position() - mTcpHeaderOffset /* transportLen */));
-        } else {  // TODO: add support for UDP
-            throw new IOException("Packet is missing TCP header");
+        } else if (mUdpHeaderOffset > 0) {
+            // Populate the UDP header length field.
+            mBuffer.putShort(mUdpHeaderOffset + UDP_LENGTH_OFFSET,
+                    (short) (mBuffer.position() - mUdpHeaderOffset));
+
+            // Populate the UDP header checksum field.
+            mBuffer.putShort(mUdpHeaderOffset + UDP_CHECKSUM_OFFSET, udpChecksum(mBuffer,
+                    mIpv4HeaderOffset /* ipOffset */, mUdpHeaderOffset /* transportOffset */));
+        } else {
+            throw new IOException("Packet is missing neither TCP nor UDP header");
         }
 
         mBuffer.flip();
@@ -192,7 +226,8 @@ public class PacketBuilder {
      * @param hasEther has ethernet header. Set this flag to indicate that the packet has an
      *        ethernet header.
      * @param l3proto the layer 3 protocol. Only {@code IPPROTO_IP} currently supported.
-     * @param l4proto the layer 4 protocol. Only {@code IPPROTO_TCP} currently supported.
+     * @param l4proto the layer 4 protocol. Only {@code IPPROTO_TCP} and {@code IPPROTO_UDP}
+     *        currently supported.
      * @param payloadLen length of the payload.
      */
     @NonNull
@@ -202,8 +237,7 @@ public class PacketBuilder {
             throw new IllegalArgumentException("Unsupported layer 3 protocol " + l3proto);
         }
 
-        if (l4proto != IPPROTO_TCP) {
-            // TODO: add support for UDP
+        if (l4proto != IPPROTO_TCP && l4proto != IPPROTO_UDP) {
             throw new IllegalArgumentException("Unsupported layer 4 protocol " + l4proto);
         }
 
@@ -214,7 +248,8 @@ public class PacketBuilder {
         int packetLen = 0;
         if (hasEther) packetLen += Struct.getSize(EthernetHeader.class);
         packetLen += Struct.getSize(Ipv4Header.class);
-        packetLen += Struct.getSize(TcpHeader.class);
+        packetLen += (l4proto == IPPROTO_TCP) ? Struct.getSize(TcpHeader.class)
+                : Struct.getSize(UdpHeader.class);
         packetLen += payloadLen;
 
         return ByteBuffer.allocate(packetLen);
