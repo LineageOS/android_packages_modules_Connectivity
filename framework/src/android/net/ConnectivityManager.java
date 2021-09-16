@@ -2369,7 +2369,7 @@ public class ConnectivityManager {
             throw new IllegalArgumentException("Listener was not registered.");
         }
         try {
-            mService.registerNetworkActivityListener(rl);
+            mService.unregisterNetworkActivityListener(rl);
         } catch (RemoteException e) {
             throw e.rethrowFromSystemServer();
         }
