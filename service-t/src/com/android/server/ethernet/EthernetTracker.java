@@ -29,7 +29,6 @@ import android.net.IpConfiguration.IpAssignment;
 import android.net.IpConfiguration.ProxySettings;
 import android.net.LinkAddress;
 import android.net.NetworkCapabilities;
-import android.net.NetworkStack;
 import android.net.StaticIpConfiguration;
 import android.os.Handler;
 import android.os.IBinder;
@@ -45,6 +44,7 @@ import android.net.util.NetdService;
 import com.android.internal.annotations.VisibleForTesting;
 import com.android.internal.util.IndentingPrintWriter;
 import com.android.net.module.util.NetdUtils;
+import com.android.net.module.util.PermissionUtils;
 import com.android.server.net.BaseNetworkObserver;
 
 import java.io.FileDescriptor;
@@ -287,7 +287,7 @@ final class EthernetTracker {
         InterfaceConfiguration config = null;
         // Bring up the interface so we get link status indications.
         try {
-            NetworkStack.checkNetworkStackPermission(mContext);
+            PermissionUtils.enforceNetworkStackPermission(mContext);
             NetdUtils.setInterfaceUp(mNetd, iface);
             config = mNMService.getInterfaceConfig(iface);
         } catch (RemoteException | IllegalStateException e) {
