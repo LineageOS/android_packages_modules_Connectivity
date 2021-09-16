@@ -22,16 +22,15 @@ import android.net.IEthernetManager;
 import android.net.IEthernetServiceListener;
 import android.net.ITetheredInterfaceCallback;
 import android.net.IpConfiguration;
-import android.net.NetworkStack;
 import android.os.Binder;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.RemoteException;
-import android.provider.Settings;
 import android.util.Log;
 import android.util.PrintWriterPrinter;
 
 import com.android.internal.util.IndentingPrintWriter;
+import com.android.net.module.util.PermissionUtils;
 
 import java.io.FileDescriptor;
 import java.io.PrintWriter;
@@ -117,7 +116,7 @@ public class EthernetServiceImpl extends IEthernetManager.Stub {
             Log.w(TAG, "System isn't ready enough to change ethernet configuration");
         }
 
-        NetworkStack.checkNetworkStackPermission(mContext);
+        PermissionUtils.enforceNetworkStackPermission(mContext);
 
         if (mTracker.isRestrictedInterface(iface)) {
             enforceUseRestrictedNetworksPermission();
@@ -168,7 +167,7 @@ public class EthernetServiceImpl extends IEthernetManager.Stub {
 
     @Override
     public void setIncludeTestInterfaces(boolean include) {
-        NetworkStack.checkNetworkStackPermissionOr(mContext,
+        PermissionUtils.enforceNetworkStackPermissionOr(mContext,
                 android.Manifest.permission.NETWORK_SETTINGS);
         mTracker.setIncludeTestInterfaces(include);
     }
@@ -176,7 +175,7 @@ public class EthernetServiceImpl extends IEthernetManager.Stub {
     @Override
     public void requestTetheredInterface(ITetheredInterfaceCallback callback) {
         Objects.requireNonNull(callback, "callback must not be null");
-        NetworkStack.checkNetworkStackPermissionOr(mContext,
+        PermissionUtils.enforceNetworkStackPermissionOr(mContext,
                 android.Manifest.permission.NETWORK_SETTINGS);
         mTracker.requestTetheredInterface(callback);
     }
@@ -184,7 +183,7 @@ public class EthernetServiceImpl extends IEthernetManager.Stub {
     @Override
     public void releaseTetheredInterface(ITetheredInterfaceCallback callback) {
         Objects.requireNonNull(callback, "callback must not be null");
-        NetworkStack.checkNetworkStackPermissionOr(mContext,
+        PermissionUtils.enforceNetworkStackPermissionOr(mContext,
                 android.Manifest.permission.NETWORK_SETTINGS);
         mTracker.releaseTetheredInterface(callback);
     }
