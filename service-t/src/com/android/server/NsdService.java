@@ -21,7 +21,6 @@ import static android.net.nsd.NsdManager.MDNS_SERVICE_EVENT;
 
 import android.content.Context;
 import android.content.Intent;
-import android.content.pm.PackageManager;
 import android.net.ConnectivityManager;
 import android.net.INetd;
 import android.net.LinkProperties;
@@ -51,6 +50,7 @@ import android.util.SparseIntArray;
 import com.android.internal.annotations.VisibleForTesting;
 import com.android.internal.util.State;
 import com.android.internal.util.StateMachine;
+import com.android.net.module.util.PermissionUtils;
 
 import java.io.FileDescriptor;
 import java.io.PrintWriter;
@@ -861,12 +861,7 @@ public class NsdService extends INsdManager.Stub {
 
     @Override
     public void dump(FileDescriptor fd, PrintWriter pw, String[] args) {
-        if (mContext.checkCallingOrSelfPermission(android.Manifest.permission.DUMP)
-                != PackageManager.PERMISSION_GRANTED) {
-            pw.println("Permission Denial: can't dump " + TAG
-                    + " due to missing android.permission.DUMP permission");
-            return;
-        }
+        if (!PermissionUtils.checkDumpPermission(mContext, TAG, pw)) return;
 
         for (ClientInfo client : mClients.values()) {
             pw.println("Client Info");
