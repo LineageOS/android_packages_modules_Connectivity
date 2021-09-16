@@ -37,6 +37,8 @@ import static android.net.NetworkRequest.Type.REQUEST;
 import static android.net.NetworkRequest.Type.TRACK_DEFAULT;
 import static android.net.NetworkRequest.Type.TRACK_SYSTEM_DEFAULT;
 
+import static com.android.testutils.MiscAsserts.assertThrows;
+
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
@@ -311,6 +313,19 @@ public class ConnectivityManagerTest {
 
         // unregistering the callback should make it registrable again.
         manager.requestNetwork(request, callback);
+    }
+
+    @Test
+    public void testDefaultNetworkActiveListener() throws Exception {
+        final ConnectivityManager manager = new ConnectivityManager(mCtx, mService);
+        final ConnectivityManager.OnNetworkActiveListener listener =
+                mock(ConnectivityManager.OnNetworkActiveListener.class);
+        assertThrows(IllegalArgumentException.class,
+                () -> manager.removeDefaultNetworkActiveListener(listener));
+        manager.addDefaultNetworkActiveListener(listener);
+        verify(mService, times(1)).registerNetworkActivityListener(any());
+        manager.removeDefaultNetworkActiveListener(listener);
+        verify(mService, times(1)).unregisterNetworkActivityListener(any());
     }
 
     @Test
