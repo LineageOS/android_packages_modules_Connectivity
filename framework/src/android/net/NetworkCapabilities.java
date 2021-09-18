@@ -1055,6 +1055,14 @@ public final class NetworkCapabilities implements Parcelable {
         return isValidTransport(transportType) && ((mTransportTypes & (1 << transportType)) != 0);
     }
 
+    /**
+     * Returns true iff this NetworkCapabilities has the specified transport and no other.
+     * @hide
+     */
+    public boolean hasSingleTransport(@Transport int transportType) {
+        return mTransportTypes == (1 << transportType);
+    }
+
     private void combineTransportTypes(NetworkCapabilities nc) {
         this.mTransportTypes |= nc.mTransportTypes;
     }
