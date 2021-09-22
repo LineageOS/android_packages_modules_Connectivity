@@ -35,6 +35,7 @@ android_test {
         "androidx.test.rules",
         "framework-nearby-pre-jarjar",
         "platform-test-annotations",
+        "service-nearby",
         "truth-prebuilt",
     ],
     test_suites: [
