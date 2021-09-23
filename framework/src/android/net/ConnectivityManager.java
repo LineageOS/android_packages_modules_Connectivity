@@ -2326,6 +2326,7 @@ public class ConnectivityManager {
         void onNetworkActive();
     }
 
+    @GuardedBy("mNetworkActivityListeners")
     private final ArrayMap<OnNetworkActiveListener, INetworkActivityListener>
             mNetworkActivityListeners = new ArrayMap<>();
 
@@ -2342,18 +2343,20 @@ public class ConnectivityManager {
      * @param l The listener to be told when the network is active.
      */
     public void addDefaultNetworkActiveListener(final OnNetworkActiveListener l) {
-        INetworkActivityListener rl = new INetworkActivityListener.Stub() {
+        final INetworkActivityListener rl = new INetworkActivityListener.Stub() {
             @Override
             public void onNetworkActive() throws RemoteException {
                 l.onNetworkActive();
             }
         };
 
-        try {
-            mService.registerNetworkActivityListener(rl);
-            mNetworkActivityListeners.put(l, rl);
-        } catch (RemoteException e) {
-            throw e.rethrowFromSystemServer();
+        synchronized (mNetworkActivityListeners) {
+            try {
+                mService.registerNetworkActivityListener(rl);
+                mNetworkActivityListeners.put(l, rl);
+            } catch (RemoteException e) {
+                throw e.rethrowFromSystemServer();
+            }
         }
     }
 
@@ -2364,14 +2367,17 @@ public class ConnectivityManager {
      * @param l Previously registered listener.
      */
     public void removeDefaultNetworkActiveListener(@NonNull OnNetworkActiveListener l) {
-        INetworkActivityListener rl = mNetworkActivityListeners.get(l);
-        if (rl == null) {
-            throw new IllegalArgumentException("Listener was not registered.");
-        }
-        try {
-            mService.unregisterNetworkActivityListener(rl);
-        } catch (RemoteException e) {
-            throw e.rethrowFromSystemServer();
+        synchronized (mNetworkActivityListeners) {
+            final INetworkActivityListener rl = mNetworkActivityListeners.get(l);
+            if (rl == null) {
+                throw new IllegalArgumentException("Listener was not registered.");
+            }
+            try {
+                mService.unregisterNetworkActivityListener(rl);
+                mNetworkActivityListeners.remove(l);
+            } catch (RemoteException e) {
+                throw e.rethrowFromSystemServer();
+            }
         }
     }
 
