@@ -582,6 +582,9 @@ public final class CtsNetUtils {
         }
 
         if (mOldPrivateDnsMode != ConnectivitySettingsUtils.PRIVATE_DNS_MODE_PROVIDER_HOSTNAME) {
+            // Also restore hostname even if the value is not used since private dns is not in
+            // the strict mode to prevent setting being changed after test.
+            ConnectivitySettingsUtils.setPrivateDnsHostname(mContext, mOldPrivateDnsSpecifier);
             ConnectivitySettingsUtils.setPrivateDnsMode(mContext, mOldPrivateDnsMode);
             return;
         }
