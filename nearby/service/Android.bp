@@ -36,6 +36,11 @@ java_library {
         // pre-jarjar symbols are needed so that nearby-service can reference the original class
         // names at compile time
         "framework-nearby-pre-jarjar",
+        "error_prone_annotations",
+    ],
+    static_libs: [
+        "guava",
+        "androidx.annotation_annotation",
     ],
     sdk_version: "system_server_current",
 
