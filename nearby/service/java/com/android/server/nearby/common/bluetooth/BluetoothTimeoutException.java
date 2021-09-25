@@ -17,16 +17,17 @@
 package com.android.server.nearby.common.bluetooth;
 
 /**
- * {@link Exception} thrown during a Bluetooth operation.
+ * {@link Exception} thrown during a Bluetooth operation when a timeout occurs.
  */
-public class BluetoothException extends Exception {
+public class BluetoothTimeoutException extends BluetoothException {
+
     /** Constructor. */
-    public BluetoothException(String message) {
+    public BluetoothTimeoutException(String message) {
         super(message);
     }
 
     /** Constructor. */
-    public BluetoothException(String message, Throwable throwable) {
+    public BluetoothTimeoutException(String message, Throwable throwable) {
         super(message, throwable);
     }
 }
