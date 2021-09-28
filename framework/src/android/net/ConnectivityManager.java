@@ -1163,10 +1163,11 @@ public class ConnectivityManager {
      * default data network.  In the event that the current active default data
      * network disconnects, the returned {@code Network} object will no longer
      * be usable.  This will return {@code null} when there is no default
-     * network.
+     * network, or when the default network is blocked.
      *
      * @return a {@link Network} object for the current default network or
-     *        {@code null} if no default network is currently active
+     *        {@code null} if no default network is currently active or if
+     *        the default network is blocked for the caller
      */
     @RequiresPermission(android.Manifest.permission.ACCESS_NETWORK_STATE)
     @Nullable
