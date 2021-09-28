@@ -1793,4 +1793,194 @@ public class BpfCoordinatorTest {
             clearInvocations(mBpfUpstream4Map, mBpfDownstream4Map);
         }
     }
+
+    // Test network topology:
+    //
+    //            public network                UE                private network
+    //                  |                     /     \                    |
+    // +------------+   V  +-------------+             +--------------+  V  +------------+
+    // |   Sever    +------+  Upstream   |+------+-----+ Downstream 1 +-----+  Client A  |
+    // +------------+      +-------------+|      |     +--------------+     +------------+
+    // remote ip            +-------------+      |                          private ip
+    // 140.112.8.116:443   public ip             |                          192.168.80.12:62449
+    //                     (upstream 1, rawip)   |
+    //                     1.0.0.1:62449         |
+    //                     1.0.0.1:62450         |     +--------------+     +------------+
+    //                            - or -         +-----+ Downstream 2 +-----+  Client B  |
+    //                     (upstream 2, ether)         +--------------+     +------------+
+    //                                                                      private ip
+    //                                                                      192.168.90.12:62450
+    //
+    // Build two test rule sets which include BPF upstream and downstream rules.
+    //
+    // Rule set A: a socket connection from client A to remote server via the first upstream
+    //             (UPSTREAM_IFINDEX).
+    //             192.168.80.12:62449 -> 1.0.0.1:62449 -> 140.112.8.116:443
+    // Rule set B: a socket connection from client B to remote server via the first upstream
+    //             (UPSTREAM_IFINDEX).
+    //             192.168.80.12:62450 -> 1.0.0.1:62450 -> 140.112.8.116:443
+    //
+    // The second upstream (UPSTREAM_IFINDEX2) is an ethernet interface which is not supported by
+    // BPF. Used for testing the rule adding and removing on an unsupported upstream interface.
+    //
+    private static final Tether4Key UPSTREAM4_RULE_KEY_A = makeUpstream4Key(
+            DOWNSTREAM_IFINDEX, DOWNSTREAM_MAC, PRIVATE_ADDR, PRIVATE_PORT);
+    private static final Tether4Value UPSTREAM4_RULE_VALUE_A = makeUpstream4Value(PUBLIC_PORT);
+    private static final Tether4Key DOWNSTREAM4_RULE_KEY_A = makeDownstream4Key(PUBLIC_PORT);
+    private static final Tether4Value DOWNSTREAM4_RULE_VALUE_A = makeDownstream4Value(
+            DOWNSTREAM_IFINDEX, MAC_A, DOWNSTREAM_MAC, PRIVATE_ADDR, PRIVATE_PORT);
+
+    private static final Tether4Key UPSTREAM4_RULE_KEY_B = makeUpstream4Key(
+            DOWNSTREAM_IFINDEX2, DOWNSTREAM_MAC2, PRIVATE_ADDR2, PRIVATE_PORT2);
+    private static final Tether4Value UPSTREAM4_RULE_VALUE_B = makeUpstream4Value(PUBLIC_PORT2);
+    private static final Tether4Key DOWNSTREAM4_RULE_KEY_B = makeDownstream4Key(PUBLIC_PORT2);
+    private static final Tether4Value DOWNSTREAM4_RULE_VALUE_B = makeDownstream4Value(
+            DOWNSTREAM_IFINDEX2, MAC_B, DOWNSTREAM_MAC2, PRIVATE_ADDR2, PRIVATE_PORT2);
+
+    private static final ConntrackEvent CONNTRACK_EVENT_A = makeTestConntrackEvent(
+            PUBLIC_PORT, PRIVATE_ADDR, PRIVATE_PORT);
+
+    private static final ConntrackEvent CONNTRACK_EVENT_B = makeTestConntrackEvent(
+            PUBLIC_PORT2, PRIVATE_ADDR2, PRIVATE_PORT2);
+
+    @NonNull
+    private static Tether4Key makeUpstream4Key(final int downstreamIfindex,
+            @NonNull final MacAddress downstreamMac, @NonNull final Inet4Address privateAddr,
+            final short privatePort) {
+        return new Tether4Key(downstreamIfindex, downstreamMac, (short) IPPROTO_TCP,
+            privateAddr.getAddress(), REMOTE_ADDR.getAddress(), privatePort, REMOTE_PORT);
+    }
+
+    @NonNull
+    private static Tether4Key makeDownstream4Key(final short publicPort) {
+        return new Tether4Key(UPSTREAM_IFINDEX, MacAddress.ALL_ZEROS_ADDRESS /* dstMac (rawip) */,
+                (short) IPPROTO_TCP, REMOTE_ADDR.getAddress(), PUBLIC_ADDR.getAddress(),
+                REMOTE_PORT, publicPort);
+    }
+
+    @NonNull
+    private static Tether4Value makeUpstream4Value(final short publicPort) {
+        return new Tether4Value(UPSTREAM_IFINDEX,
+                MacAddress.ALL_ZEROS_ADDRESS /* ethDstMac (rawip) */,
+                MacAddress.ALL_ZEROS_ADDRESS /* ethSrcMac (rawip) */, ETH_P_IP,
+                NetworkStackConstants.ETHER_MTU, toIpv4MappedAddressBytes(PUBLIC_ADDR),
+                toIpv4MappedAddressBytes(REMOTE_ADDR), publicPort, REMOTE_PORT,
+                0 /* lastUsed */);
+    }
+
+    @NonNull
+    private static Tether4Value makeDownstream4Value(final int downstreamIfindex,
+            @NonNull final MacAddress clientMac, @NonNull final MacAddress downstreamMac,
+            @NonNull final Inet4Address privateAddr, final short privatePort) {
+        return new Tether4Value(downstreamIfindex, clientMac, downstreamMac,
+                ETH_P_IP, NetworkStackConstants.ETHER_MTU, toIpv4MappedAddressBytes(REMOTE_ADDR),
+                toIpv4MappedAddressBytes(privateAddr), REMOTE_PORT, privatePort, 0 /* lastUsed */);
+    }
+
+    @NonNull
+    private static ConntrackEvent makeTestConntrackEvent(final short publicPort,
+                @NonNull final Inet4Address privateAddr, final short privatePort) {
+        return new ConntrackEvent(
+                (short) (NetlinkConstants.NFNL_SUBSYS_CTNETLINK << 8 | IPCTNL_MSG_CT_NEW),
+                new Tuple(new TupleIpv4(privateAddr, REMOTE_ADDR),
+                        new TupleProto((byte) IPPROTO_TCP, privatePort, REMOTE_PORT)),
+                new Tuple(new TupleIpv4(REMOTE_ADDR, PUBLIC_ADDR),
+                        new TupleProto((byte) IPPROTO_TCP, REMOTE_PORT, publicPort)),
+                ESTABLISHED_MASK,
+                100 /* nonzero, CT_NEW */);
+    }
+
+    void checkRule4ExistInUpstreamDownstreamMap() throws Exception {
+        assertEquals(UPSTREAM4_RULE_VALUE_A, mBpfUpstream4Map.getValue(UPSTREAM4_RULE_KEY_A));
+        assertEquals(DOWNSTREAM4_RULE_VALUE_A, mBpfDownstream4Map.getValue(
+                DOWNSTREAM4_RULE_KEY_A));
+        assertEquals(UPSTREAM4_RULE_VALUE_B, mBpfUpstream4Map.getValue(UPSTREAM4_RULE_KEY_B));
+        assertEquals(DOWNSTREAM4_RULE_VALUE_B, mBpfDownstream4Map.getValue(
+                DOWNSTREAM4_RULE_KEY_B));
+    }
+
+    void checkRule4NotExistInUpstreamDownstreamMap() throws Exception {
+        assertNull(mBpfUpstream4Map.getValue(UPSTREAM4_RULE_KEY_A));
+        assertNull(mBpfDownstream4Map.getValue(DOWNSTREAM4_RULE_KEY_A));
+        assertNull(mBpfUpstream4Map.getValue(UPSTREAM4_RULE_KEY_B));
+        assertNull(mBpfDownstream4Map.getValue(DOWNSTREAM4_RULE_KEY_B));
+    }
+
+    // Both #addDownstreamAndClientInformationTo and #setUpstreamInformationTo need to be called
+    // before this function because upstream and downstream information are required to build
+    // the rules while conntrack event is received.
+    void addAndCheckRule4ForDownstreams() throws Exception {
+        // Add rule set A which is on the first downstream and rule set B which is on the second
+        // downstream.
+        mConsumer.accept(CONNTRACK_EVENT_A);
+        mConsumer.accept(CONNTRACK_EVENT_B);
+
+        // Check that both rule set A and B were added.
+        checkRule4ExistInUpstreamDownstreamMap();
+    }
+
+    @Test
+    @IgnoreUpTo(Build.VERSION_CODES.R)
+    public void testTetherOffloadRule4Clear_RemoveDownstream() throws Exception {
+        final BpfCoordinator coordinator = makeBpfCoordinator();
+
+        // Initialize upstream and downstream information manually but calling the setup helper
+        // #initBpfCoordinatorForRule4 because this test needs to {update, remove} upstream and
+        // downstream manually for testing.
+        addDownstreamAndClientInformationTo(coordinator, DOWNSTREAM_IFINDEX);
+        addDownstreamAndClientInformationTo(coordinator, DOWNSTREAM_IFINDEX2);
+
+        setUpstreamInformationTo(coordinator, UPSTREAM_IFINDEX);
+        addAndCheckRule4ForDownstreams();
+
+        // [1] Remove the first downstream. Remove only the rule set A which is on the first
+        // downstream.
+        coordinator.tetherOffloadClientClear(mIpServer);
+        assertNull(mBpfUpstream4Map.getValue(UPSTREAM4_RULE_KEY_A));
+        assertNull(mBpfDownstream4Map.getValue(DOWNSTREAM4_RULE_KEY_A));
+        assertEquals(UPSTREAM4_RULE_VALUE_B, mBpfUpstream4Map.getValue(
+                UPSTREAM4_RULE_KEY_B));
+        assertEquals(DOWNSTREAM4_RULE_VALUE_B, mBpfDownstream4Map.getValue(
+                DOWNSTREAM4_RULE_KEY_B));
+
+        // [2] Remove the second downstream. Remove the rule set B which is on the second
+        // downstream.
+        coordinator.tetherOffloadClientClear(mIpServer2);
+        assertNull(mBpfUpstream4Map.getValue(UPSTREAM4_RULE_KEY_B));
+        assertNull(mBpfDownstream4Map.getValue(DOWNSTREAM4_RULE_KEY_B));
+    }
+
+    // TODO: check the client information is not removed.
+    @Test
+    @IgnoreUpTo(Build.VERSION_CODES.R)
+    public void testTetherOffloadRule4Clear_ChangeOrRemoveUpstream() throws Exception {
+        final BpfCoordinator coordinator = makeBpfCoordinator();
+
+        // Initialize upstream and downstream information manually but calling the helper
+        // #initBpfCoordinatorForRule4 because this test needs to {update, remove} upstream and
+        // downstream.
+        addDownstreamAndClientInformationTo(coordinator, DOWNSTREAM_IFINDEX);
+        addDownstreamAndClientInformationTo(coordinator, DOWNSTREAM_IFINDEX2);
+
+        setUpstreamInformationTo(coordinator, UPSTREAM_IFINDEX);
+        addAndCheckRule4ForDownstreams();
+
+        // [1] Update the same upstream state. Nothing happens.
+        setUpstreamInformationTo(coordinator, UPSTREAM_IFINDEX);
+        checkRule4ExistInUpstreamDownstreamMap();
+
+        // [2] Switch upstream interface from the first upstream (rawip, bpf supported) to
+        // the second upstream (ethernet, bpf not supported). Clear all rules.
+        setUpstreamInformationTo(coordinator, UPSTREAM_IFINDEX2);
+        checkRule4NotExistInUpstreamDownstreamMap();
+
+        // Setup the upstream interface information and the rules for next test.
+        setUpstreamInformationTo(coordinator, UPSTREAM_IFINDEX);
+        addAndCheckRule4ForDownstreams();
+
+        // [3] Switch upstream from the first upstream (rawip, bpf supported) to no upstream. Clear
+        // all rules.
+        setUpstreamInformationTo(coordinator, INVALID_IFINDEX);
+        checkRule4NotExistInUpstreamDownstreamMap();
+    }
 }
