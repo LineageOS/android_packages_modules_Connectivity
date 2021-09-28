@@ -6,6 +6,15 @@ package {
     default_applicable_licenses: ["Android-Apache-2.0"],
 }
 
+// Whether to enable the FrameworksNetTests. Set to false in the branches that might have older
+// frameworks/base since FrameworksNetTests includes the test for classes that are not in
+// connectivity module.
+enable_frameworks_net_tests = true
+// Placeholder
+// This is a placeholder comment to minimize merge conflicts, as enable_frameworks_net_tests
+// may have different values depending on the branch
+// Placeholder
+
 java_defaults {
     name: "FrameworksNetTests-jni-defaults",
     jni_libs: [
@@ -44,6 +53,42 @@ java_defaults {
     ],
 }
 
+filegroup {
+    name: "non-connectivity-module-test",
+    srcs: [
+        "java/android/app/usage/*.java",
+        "java/android/net/Ikev2VpnProfileTest.java",
+        "java/android/net/IpMemoryStoreTest.java",
+        "java/android/net/IpSecAlgorithmTest.java",
+        "java/android/net/IpSecConfigTest.java",
+        "java/android/net/IpSecManagerTest.java",
+        "java/android/net/IpSecTransformTest.java",
+        "java/android/net/KeepalivePacketDataUtilTest.java",
+        "java/android/net/NetworkIdentityTest.kt",
+        "java/android/net/NetworkStatsTest.java",
+        "java/android/net/NetworkStatsHistoryTest.java",
+        "java/android/net/NetworkTemplateTest.kt",
+        "java/android/net/TelephonyNetworkSpecifierTest.java",
+        "java/android/net/VpnManagerTest.java",
+        "java/android/net/ipmemorystore/*.java",
+        "java/android/net/nsd/*.java",
+        "java/com/android/internal/net/NetworkUtilsInternalTest.java",
+        "java/com/android/internal/net/VpnProfileTest.java",
+        "java/com/android/server/IpSecServiceParameterizedTest.java",
+        "java/com/android/server/IpSecServiceRefcountedResourceTest.java",
+        "java/com/android/server/IpSecServiceTest.java",
+        "java/com/android/server/NetworkManagementServiceTest.java",
+        "java/com/android/server/NsdServiceTest.java",
+        "java/com/android/server/connectivity/IpConnectivityEventBuilderTest.java",
+        "java/com/android/server/connectivity/IpConnectivityMetricsTest.java",
+        "java/com/android/server/connectivity/MultipathPolicyTrackerTest.java",
+        "java/com/android/server/connectivity/NetdEventListenerServiceTest.java",
+        "java/com/android/server/connectivity/VpnTest.java",
+        "java/com/android/server/net/ipmemorystore/*.java",
+        "java/com/android/server/net/NetworkStats*.java",
+    ]
+}
+
 android_library {
     name: "FrameworksNetTestsLib",
     min_sdk_version: "30",
@@ -54,6 +99,7 @@ android_library {
         "java/**/*.java",
         "java/**/*.kt",
     ],
+    exclude_srcs: [":non-connectivity-module-test"],
     jarjar_rules: "jarjar-rules.txt",
     static_libs: [
         "androidx.test.rules",
@@ -83,14 +129,21 @@ android_library {
 
 android_test {
     name: "FrameworksNetTests",
+    enabled: enable_frameworks_net_tests,
     min_sdk_version: "30",
     defaults: [
         "framework-connectivity-test-defaults",
         "FrameworksNetTests-jni-defaults",
     ],
+    // this is in addition to FrameworksNetTestsLib.
+    srcs: [":non-connectivity-module-test"],
     test_suites: ["device-tests"],
     static_libs: [
         "FrameworksNetTestsLib",
+    ],
+    libs: [
+        "android.test.mock",
+        "android.test.base",
     ],
     jni_libs: [
         "libservice-connectivity",
