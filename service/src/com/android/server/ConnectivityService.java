@@ -3848,9 +3848,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
 
     private void handleNetworkAgentDisconnected(Message msg) {
         NetworkAgentInfo nai = (NetworkAgentInfo) msg.obj;
-        if (mNetworkAgentInfos.contains(nai)) {
-            disconnectAndDestroyNetwork(nai);
-        }
+        disconnectAndDestroyNetwork(nai);
     }
 
     // Destroys a network, remove references to it from the internal state managed by
@@ -3858,6 +3856,9 @@ public class ConnectivityService extends IConnectivityManager.Stub
     // Must be called on the Handler thread.
     private void disconnectAndDestroyNetwork(NetworkAgentInfo nai) {
         ensureRunningOnConnectivityServiceThread();
+
+        if (!mNetworkAgentInfos.contains(nai)) return;
+
         if (DBG) {
             log(nai.toShortString() + " disconnected, was satisfying " + nai.numNetworkRequests());
         }
@@ -3943,7 +3944,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
         try {
             mNetd.networkSetPermissionForNetwork(nai.network.netId, INetd.PERMISSION_SYSTEM);
         } catch (RemoteException e) {
-            Log.d(TAG, "Error marking network restricted during teardown: " + e);
+            Log.d(TAG, "Error marking network restricted during teardown: ", e);
         }
         mHandler.postDelayed(() -> destroyNetwork(nai), nai.teardownDelayMs);
     }
