@@ -75,6 +75,7 @@ import static com.android.compatibility.common.util.SystemUtil.runWithShellPermi
 import static com.android.modules.utils.build.SdkLevel.isAtLeastS;
 import static com.android.networkstack.apishim.ConstantsShim.BLOCKED_REASON_LOCKDOWN_VPN;
 import static com.android.networkstack.apishim.ConstantsShim.BLOCKED_REASON_NONE;
+import static com.android.testutils.Cleanup.testAndCleanup;
 import static com.android.testutils.MiscAsserts.assertThrows;
 import static com.android.testutils.TestNetworkTrackerKt.initTestNetwork;
 import static com.android.testutils.TestPermissionUtil.runAsShell;
@@ -236,6 +237,7 @@ public class ConnectivityManagerTest {
     private static final int MIN_KEEPALIVE_INTERVAL = 10;
 
     private static final int NETWORK_CALLBACK_TIMEOUT_MS = 30_000;
+    private static final int LISTEN_ACTIVITY_TIMEOUT_MS = 5_000;
     private static final int NO_CALLBACK_TIMEOUT_MS = 100;
     private static final int NUM_TRIES_MULTIPATH_PREF_CHECK = 20;
     private static final long INTERVAL_MULTIPATH_PREF_CHECK_MS = 500;
@@ -278,6 +280,7 @@ public class ConnectivityManagerTest {
     private ConnectivityManagerShim mCmShim;
     private WifiManager mWifiManager;
     private PackageManager mPackageManager;
+    private TelephonyManager mTm;
     private final ArraySet<Integer> mNetworkTypes = new ArraySet<>();
     private UiAutomation mUiAutomation;
     private CtsNetUtils mCtsNetUtils;
@@ -297,6 +300,7 @@ public class ConnectivityManagerTest {
         mWifiManager = (WifiManager) mContext.getSystemService(Context.WIFI_SERVICE);
         mPackageManager = mContext.getPackageManager();
         mCtsNetUtils = new CtsNetUtils(mContext);
+        mTm = mContext.getSystemService(TelephonyManager.class);
 
         if (DevSdkIgnoreRuleKt.isDevSdkInRange(null /* minExclusive */,
                 Build.VERSION_CODES.R /* maxInclusive */)) {
@@ -2791,6 +2795,36 @@ public class ConnectivityManagerTest {
         NetworkValidationTestUtil.setHttpUrlDeviceConfig(makeUrl(TEST_HTTP_URL_PATH));
         NetworkValidationTestUtil.setUrlExpirationDeviceConfig(
                 System.currentTimeMillis() + WIFI_CONNECT_TIMEOUT_MS);
+    }
+
+    @AppModeFull(reason = "Need WiFi support to test the default active network")
+    @Test
+    public void testDefaultNetworkActiveListener() throws Exception {
+        final boolean supportWifi = mPackageManager.hasSystemFeature(FEATURE_WIFI);
+        final boolean supportTelephony = mPackageManager.hasSystemFeature(FEATURE_TELEPHONY);
+        assumeTrue("testDefaultNetworkActiveListener cannot execute"
+                + " unless device supports WiFi or telephony", (supportWifi || supportTelephony));
+
+        if (supportWifi) {
+            mCtsNetUtils.ensureWifiDisconnected(null /* wifiNetworkToCheck */);
+        } else {
+            mCtsNetUtils.disconnectFromCell();
+        }
+
+        final CompletableFuture<Boolean> future = new CompletableFuture<>();
+        final ConnectivityManager.OnNetworkActiveListener listener = () -> future.complete(true);
+        mCm.addDefaultNetworkActiveListener(listener);
+        testAndCleanup(() -> {
+            // New default network connected will trigger a network activity notification.
+            if (supportWifi) {
+                mCtsNetUtils.ensureWifiConnected();
+            } else {
+                mCtsNetUtils.connectToCell();
+            }
+            assertTrue(future.get(LISTEN_ACTIVITY_TIMEOUT_MS, TimeUnit.MILLISECONDS));
+        }, () -> {
+                mCm.removeDefaultNetworkActiveListener(listener);
+            });
     }
 
     @AppModeFull(reason = "Cannot get WifiManager in instant app mode")
