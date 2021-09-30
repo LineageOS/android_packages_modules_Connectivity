@@ -40,9 +40,12 @@ java_library {
     ],
     static_libs: [
         "androidx.annotation_annotation",
+        "androidx.core_core",
+        "auto_value_annotations",
         "guava",
     ],
     sdk_version: "system_server_current",
+    plugins: ["auto_value_plugin"],
 
     installable: true,
     optimize: {
