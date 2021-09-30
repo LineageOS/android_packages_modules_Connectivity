@@ -23,7 +23,19 @@ java_sdk_library {
     impl_library_visibility: [
         "//frameworks/base/packages/Tethering:__subpackages__",
         "//packages/modules/Connectivity/Tethering:__subpackages__",
+
+        // Using for test only
+        "//cts/tests/netlegacy22.api",
+        "//external/sl4a:__subpackages__",
+        "//frameworks/base/packages/Connectivity/tests:__subpackages__",
+        "//frameworks/libs/net/common/testutils",
+        "//frameworks/libs/net/common/tests:__subpackages__",
+        "//frameworks/opt/telephony/tests/telephonytests",
+        "//packages/modules/CaptivePortalLogin/tests",
+        "//packages/modules/Connectivity/Tethering/tests:__subpackages__",
         "//packages/modules/Connectivity/tests:__subpackages__",
+        "//packages/modules/NetworkStack/tests:__subpackages__",
+        "//packages/modules/Wifi/service/tests/wifitests",
     ],
 
     srcs: [":framework-tethering-srcs"],
