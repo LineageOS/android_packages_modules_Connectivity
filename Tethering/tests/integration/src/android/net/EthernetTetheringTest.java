@@ -118,7 +118,7 @@ public class EthernetTetheringTest {
     private TestNetworkInterface mDownstreamIface;
     private HandlerThread mHandlerThread;
     private Handler mHandler;
-    private TapPacketReader mTapPacketReader;
+    private TapPacketReader mDownstreamReader;
 
     private TetheredInterfaceRequester mTetheredInterfaceRequester;
     private MyTetheringEventCallback mTetheringEventCallback;
@@ -161,10 +161,10 @@ public class EthernetTetheringTest {
             mTetheringEventCallback.unregister();
             mTetheringEventCallback = null;
         }
-        if (mTapPacketReader != null) {
-            TapPacketReader reader = mTapPacketReader;
+        if (mDownstreamReader != null) {
+            TapPacketReader reader = mDownstreamReader;
             mHandler.post(() -> reader.stop());
-            mTapPacketReader = null;
+            mDownstreamReader = null;
         }
         mHandlerThread.quitSafely();
         mTetheredInterfaceRequester.release();
@@ -253,7 +253,7 @@ public class EthernetTetheringTest {
         byte[] client2 = MacAddress.fromString("a:b:c:d:e:f").toByteArray();
 
         FileDescriptor fd = mDownstreamIface.getFileDescriptor().getFileDescriptor();
-        mTapPacketReader = makePacketReader(fd, getMTU(mDownstreamIface));
+        mDownstreamReader = makePacketReader(fd, getMTU(mDownstreamIface));
         DhcpResults dhcpResults = runDhcp(fd, client1);
         assertEquals(new LinkAddress(clientAddr), dhcpResults.ipAddress);
 
@@ -333,9 +333,9 @@ public class EthernetTetheringTest {
         // does not have an IP address, and unprivileged apps cannot see interfaces without IP
         // addresses. This shouldn't be flaky because the TAP interface will buffer all packets even
         // before the reader is started.
-        mTapPacketReader = makePacketReader(mDownstreamIface);
+        mDownstreamReader = makePacketReader(mDownstreamIface);
 
-        expectRouterAdvertisement(mTapPacketReader, iface, 2000 /* timeoutMs */);
+        expectRouterAdvertisement(mDownstreamReader, iface, 2000 /* timeoutMs */);
         expectLocalOnlyAddresses(iface);
     }
 
@@ -556,7 +556,7 @@ public class EthernetTetheringTest {
 
     private void checkVirtualEthernet(TestNetworkInterface iface, int mtu) throws Exception {
         FileDescriptor fd = iface.getFileDescriptor().getFileDescriptor();
-        mTapPacketReader = makePacketReader(fd, mtu);
+        mDownstreamReader = makePacketReader(fd, mtu);
         mTetheringEventCallback = enableEthernetTethering(iface.getInterfaceName());
         checkTetheredClientCallbacks(fd);
     }
@@ -617,7 +617,7 @@ public class EthernetTetheringTest {
 
     private DhcpPacket getNextDhcpPacket() throws ParseException {
         byte[] packet;
-        while ((packet = mTapPacketReader.popPacket(PACKET_READ_TIMEOUT_MS)) != null) {
+        while ((packet = mDownstreamReader.popPacket(PACKET_READ_TIMEOUT_MS)) != null) {
             try {
                 return DhcpPacket.decodeFullPacket(packet, packet.length, DhcpPacket.ENCAP_L2);
             } catch (DhcpPacket.ParseException e) {
@@ -774,7 +774,7 @@ public class EthernetTetheringTest {
         assertEquals("onUpstreamChanged for unexpected network", mUpstreamTracker.getNetwork(),
                 mTetheringEventCallback.awaitFirstUpstreamConnected());
 
-        mTapPacketReader = makePacketReader(mDownstreamIface);
+        mDownstreamReader = makePacketReader(mDownstreamIface);
         // TODO: do basic forwarding test here.
     }
 
