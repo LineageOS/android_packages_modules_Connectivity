@@ -23,4 +23,7 @@ java_library {
     sdk_version: "system_current",
     min_sdk_version: "30",
     srcs: ["src/fast_pair_enums.proto", "src/nearby_event_codes.proto"],
+    apex_available: [
+        "com.android.nearby",
+    ],
 }
