@@ -28,11 +28,13 @@ android_test {
     libs: [
         "android.test.runner",
         "android.test.base",
+        "android.test.mock",
     ],
     compile_multilib: "both",
 
     static_libs: [
         "androidx.test.rules",
+        "mockito-target",
         "framework-nearby-pre-jarjar",
         "guava",
         "libprotobuf-java-lite",

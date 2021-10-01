@@ -40,7 +40,7 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.util.UUID;
 
-/** Unit tests for {@link BluetoothAddress}. */
+/** Unit tests for {@link BluetoothGattUtils}. */
 @Presubmit
 @SmallTest
 @RunWith(AndroidJUnit4.class)
