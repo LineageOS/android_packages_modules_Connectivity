@@ -19,6 +19,7 @@ package {
 
 java_defaults {
     name: "TetheringIntegrationTestsDefaults",
+    defaults: ["framework-connectivity-test-defaults"],
     srcs: [
         "src/**/*.java",
         "src/**/*.kt",
