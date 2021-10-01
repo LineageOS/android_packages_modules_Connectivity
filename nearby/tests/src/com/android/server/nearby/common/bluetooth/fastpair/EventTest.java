@@ -32,7 +32,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 
 /**
- * Unit tests for {@link EventTest}.
+ * Unit tests for {@link Event}.
  */
 @Presubmit
 @SmallTest
