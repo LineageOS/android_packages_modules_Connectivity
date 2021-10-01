@@ -23,6 +23,9 @@ import static com.android.net.module.util.netlink.StructNlMsgHdr.NLM_F_REQUEST;
 
 import android.system.OsConstants;
 
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+
 import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.nio.ByteBuffer;
@@ -53,7 +56,9 @@ public class RtNetlinkNeighborMessage extends NetlinkMessage {
      * @param header netlink message header.
      * @param byteBuffer the ByteBuffer instance that wraps the raw netlink message bytes.
      */
-    public static RtNetlinkNeighborMessage parse(StructNlMsgHdr header, ByteBuffer byteBuffer) {
+    @Nullable
+    public static RtNetlinkNeighborMessage parse(@NonNull StructNlMsgHdr header,
+            @NonNull ByteBuffer byteBuffer) {
         final RtNetlinkNeighborMessage neighMsg = new RtNetlinkNeighborMessage(header);
 
         neighMsg.mNdmsg = StructNdMsg.parse(byteBuffer);
@@ -154,7 +159,7 @@ public class RtNetlinkNeighborMessage extends NetlinkMessage {
     private int mNumProbes;
     private StructNdaCacheInfo mCacheInfo;
 
-    private RtNetlinkNeighborMessage(StructNlMsgHdr header) {
+    private RtNetlinkNeighborMessage(@NonNull StructNlMsgHdr header) {
         super(header);
         mNdmsg = null;
         mDestination = null;

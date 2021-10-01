@@ -16,6 +16,9 @@
 
 package com.android.net.module.util.netlink;
 
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+
 import java.nio.ByteBuffer;
 
 /**
@@ -32,7 +35,9 @@ public class NetlinkErrorMessage extends NetlinkMessage {
      * @return the parsed netlink error message, or {@code null} if the netlink error message
      *         could not be parsed successfully (for example, if it was truncated).
      */
-    public static NetlinkErrorMessage parse(StructNlMsgHdr header, ByteBuffer byteBuffer) {
+    @Nullable
+    public static NetlinkErrorMessage parse(@NonNull StructNlMsgHdr header,
+            @NonNull ByteBuffer byteBuffer) {
         final NetlinkErrorMessage errorMsg = new NetlinkErrorMessage(header);
 
         errorMsg.mNlMsgErr = StructNlMsgErr.parse(byteBuffer);
@@ -45,7 +50,7 @@ public class NetlinkErrorMessage extends NetlinkMessage {
 
     private StructNlMsgErr mNlMsgErr;
 
-    NetlinkErrorMessage(StructNlMsgHdr header) {
+    NetlinkErrorMessage(@NonNull StructNlMsgHdr header) {
         super(header);
         mNlMsgErr = null;
     }

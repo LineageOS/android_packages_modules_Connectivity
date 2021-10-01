@@ -123,6 +123,7 @@ public class NduseroptMessage extends NetlinkMessage {
      * @return the parsed option, or {@code null} if the option could not be parsed successfully
      *         (for example, if it was truncated, or if the prefix length code was wrong).
      */
+    @Nullable
     public static NduseroptMessage parse(@NonNull StructNlMsgHdr header, @NonNull ByteBuffer buf) {
         if (buf == null || buf.remaining() < STRUCT_SIZE) return null;
         ByteOrder oldOrder = buf.order();
