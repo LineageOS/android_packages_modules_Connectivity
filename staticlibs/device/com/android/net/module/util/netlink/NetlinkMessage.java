@@ -79,12 +79,14 @@ public class NetlinkMessage {
         return null;
     }
 
-    protected StructNlMsgHdr mHeader;
+    @NonNull
+    protected final StructNlMsgHdr mHeader;
 
-    public NetlinkMessage(StructNlMsgHdr nlmsghdr) {
+    public NetlinkMessage(@NonNull StructNlMsgHdr nlmsghdr) {
         mHeader = nlmsghdr;
     }
 
+    @NonNull
     public StructNlMsgHdr getHeader() {
         return mHeader;
     }
@@ -96,7 +98,7 @@ public class NetlinkMessage {
         // a string by StructNlMsgHdr#toString and just keep as an integer. The specific message
         // which inherits NetlinkMessage could override NetlinkMessage#toString and provide the
         // specific netlink family to StructNlMsgHdr#toString.
-        return "NetlinkMessage{" + (mHeader == null ? "" : mHeader.toString()) + "}";
+        return "NetlinkMessage{" + mHeader.toString() + "}";
     }
 
     @NonNull

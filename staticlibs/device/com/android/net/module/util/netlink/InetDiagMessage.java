@@ -31,6 +31,7 @@ import android.net.util.SocketUtils;
 import android.system.ErrnoException;
 import android.util.Log;
 
+import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import java.io.FileDescriptor;
@@ -107,7 +108,7 @@ public class InetDiagMessage extends NetlinkMessage {
 
     public StructInetDiagMsg mStructInetDiagMsg;
 
-    private InetDiagMessage(StructNlMsgHdr header) {
+    private InetDiagMessage(@NonNull StructNlMsgHdr header) {
         super(header);
         mStructInetDiagMsg = new StructInetDiagMsg();
     }
@@ -115,7 +116,9 @@ public class InetDiagMessage extends NetlinkMessage {
     /**
      * Parse an inet_diag_req_v2 message from buffer.
      */
-    public static InetDiagMessage parse(StructNlMsgHdr header, ByteBuffer byteBuffer) {
+    @NonNull
+    public static InetDiagMessage parse(@NonNull StructNlMsgHdr header,
+            @NonNull ByteBuffer byteBuffer) {
         final InetDiagMessage msg = new InetDiagMessage(header);
         msg.mStructInetDiagMsg = StructInetDiagMsg.parse(byteBuffer);
         return msg;
