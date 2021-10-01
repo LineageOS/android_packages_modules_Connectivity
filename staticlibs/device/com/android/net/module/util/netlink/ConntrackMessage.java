@@ -228,7 +228,9 @@ public class ConntrackMessage extends NetlinkMessage {
      * @return the parsed netfilter conntrack message, or {@code null} if the netfilter conntrack
      *         message could not be parsed successfully (for example, if it was truncated).
      */
-    public static ConntrackMessage parse(StructNlMsgHdr header, ByteBuffer byteBuffer) {
+    @Nullable
+    public static ConntrackMessage parse(@NonNull StructNlMsgHdr header,
+            @NonNull ByteBuffer byteBuffer) {
         // Just build the netlink header and netfilter header for now and pretend the whole message
         // was consumed.
         // TODO: Parse the conntrack attributes.
