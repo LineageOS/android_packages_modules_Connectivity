@@ -34,10 +34,11 @@ android_test {
 
     static_libs: [
         "androidx.test.rules",
-        "mockito-target",
+        "fast-pair-lite-protos",
         "framework-nearby-pre-jarjar",
         "guava",
         "libprotobuf-java-lite",
+        "mockito-target",
         "platform-test-annotations",
         "service-nearby",
         "truth-prebuilt",
