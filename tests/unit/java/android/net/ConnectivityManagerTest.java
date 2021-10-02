@@ -326,6 +326,8 @@ public class ConnectivityManagerTest {
         verify(mService, times(1)).registerNetworkActivityListener(any());
         manager.removeDefaultNetworkActiveListener(listener);
         verify(mService, times(1)).unregisterNetworkActivityListener(any());
+        assertThrows(IllegalArgumentException.class,
+                () -> manager.removeDefaultNetworkActiveListener(listener));
     }
 
     @Test

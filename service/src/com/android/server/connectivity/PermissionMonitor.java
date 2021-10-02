@@ -222,6 +222,10 @@ public class PermissionMonitor {
                 mIntentReceiver, intentFilter, null /* broadcastPermission */,
                 null /* scheduler */);
 
+        // Listen to EXTERNAL_APPLICATIONS_AVAILABLE is that an app becoming available means it may
+        // need to gain a permission. But an app that becomes unavailable can neither gain nor lose
+        // permissions on that account, it just can no longer run. Thus, doesn't need to listen to
+        // EXTERNAL_APPLICATIONS_UNAVAILABLE.
         final IntentFilter externalIntentFilter =
                 new IntentFilter(Intent.ACTION_EXTERNAL_APPLICATIONS_AVAILABLE);
         userAllContext.registerReceiver(
