@@ -21,7 +21,7 @@ package {
 
 // FrameworksNetDeflakeTest depends on FrameworksNetTests so it should be disabled
 // if FrameworksNetTests is disabled.
-enable_frameworks_net_deflake_test = true
+enable_frameworks_net_deflake_test = false
 // Placeholder
 // This is a placeholder comment to minimize merge conflicts, as enable_frameworks_net_deflake_test
 // may have different values depending on the branch
