@@ -204,6 +204,7 @@ public class TetheringService extends Service {
             } catch (RemoteException e) { }
         }
 
+        @Override
         public void setPreferTestNetworks(boolean prefer, IIntResultListener listener) {
             if (!checkCallingOrSelfPermission(NETWORK_SETTINGS)) {
                 try {
