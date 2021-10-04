@@ -557,13 +557,13 @@ public class ConnectivityServiceTest {
             super(base);
 
             mInternalResources = spy(base.getResources());
-            when(mInternalResources.getStringArray(com.android.internal.R.array.networkAttributes))
-                    .thenReturn(new String[] {
-                            "wifi,1,1,1,-1,true",
-                            "mobile,0,0,0,-1,true",
-                            "mobile_mms,2,0,2,60000,true",
-                            "mobile_supl,3,0,2,60000,true",
-                    });
+            doReturn(new String[] {
+                    "wifi,1,1,1,-1,true",
+                    "mobile,0,0,0,-1,true",
+                    "mobile_mms,2,0,2,60000,true",
+                    "mobile_supl,3,0,2,60000,true",
+            }).when(mInternalResources)
+                    .getStringArray(com.android.internal.R.array.networkAttributes);
 
             mContentResolver = new MockContentResolver();
             mContentResolver.addProvider(Settings.AUTHORITY, settingsProvider);
@@ -1661,21 +1661,21 @@ public class ConnectivityServiceTest {
 
         MockitoAnnotations.initMocks(this);
 
-        when(mUserManager.getAliveUsers()).thenReturn(asList(PRIMARY_USER_INFO));
-        when(mUserManager.getUserHandles(anyBoolean())).thenReturn(asList(PRIMARY_USER_HANDLE));
-        when(mUserManager.getUserInfo(PRIMARY_USER)).thenReturn(PRIMARY_USER_INFO);
+        doReturn(asList(PRIMARY_USER_INFO)).when(mUserManager).getAliveUsers();
+        doReturn(asList(PRIMARY_USER_HANDLE)).when(mUserManager).getUserHandles(anyBoolean());
+        doReturn(PRIMARY_USER_INFO).when(mUserManager).getUserInfo(PRIMARY_USER);
         // canHaveRestrictedProfile does not take a userId. It applies to the userId of the context
         // it was started from, i.e., PRIMARY_USER.
-        when(mUserManager.canHaveRestrictedProfile()).thenReturn(true);
-        when(mUserManager.getUserInfo(RESTRICTED_USER)).thenReturn(RESTRICTED_USER_INFO);
+        doReturn(true).when(mUserManager).canHaveRestrictedProfile();
+        doReturn(RESTRICTED_USER_INFO).when(mUserManager).getUserInfo(RESTRICTED_USER);
 
         final ApplicationInfo applicationInfo = new ApplicationInfo();
         applicationInfo.targetSdkVersion = Build.VERSION_CODES.Q;
-        when(mPackageManager.getApplicationInfoAsUser(anyString(), anyInt(), any()))
-                .thenReturn(applicationInfo);
-        when(mPackageManager.getTargetSdkVersion(anyString()))
-                .thenReturn(applicationInfo.targetSdkVersion);
-        when(mSystemConfigManager.getSystemPermissionUids(anyString())).thenReturn(new int[0]);
+        doReturn(applicationInfo).when(mPackageManager)
+                .getApplicationInfoAsUser(anyString(), anyInt(), any());
+        doReturn(applicationInfo.targetSdkVersion).when(mPackageManager)
+                .getTargetSdkVersion(anyString());
+        doReturn(new int[0]).when(mSystemConfigManager).getSystemPermissionUids(anyString());
 
         // InstrumentationTestRunner prepares a looper, but AndroidJUnitRunner does not.
         // http://b/25897652 .
@@ -1874,36 +1874,34 @@ public class ConnectivityServiceTest {
         final String myPackageName = mContext.getPackageName();
         final PackageInfo myPackageInfo = mContext.getPackageManager().getPackageInfo(
                 myPackageName, PackageManager.GET_PERMISSIONS);
-        when(mPackageManager.getPackagesForUid(Binder.getCallingUid())).thenReturn(
-                new String[] {myPackageName});
-        when(mPackageManager.getPackageInfoAsUser(eq(myPackageName), anyInt(),
-                eq(UserHandle.getCallingUserId()))).thenReturn(myPackageInfo);
+        doReturn(new String[] {myPackageName}).when(mPackageManager)
+                .getPackagesForUid(Binder.getCallingUid());
+        doReturn(myPackageInfo).when(mPackageManager).getPackageInfoAsUser(
+                eq(myPackageName), anyInt(), eq(UserHandle.getCallingUserId()));
 
-        when(mPackageManager.getInstalledPackages(eq(GET_PERMISSIONS | MATCH_ANY_USER))).thenReturn(
-                asList(new PackageInfo[] {
-                        buildPackageInfo(/* SYSTEM */ false, APP1_UID),
-                        buildPackageInfo(/* SYSTEM */ false, APP2_UID),
-                        buildPackageInfo(/* SYSTEM */ false, VPN_UID)
-                }));
+        doReturn(asList(new PackageInfo[] {
+                buildPackageInfo(/* SYSTEM */ false, APP1_UID),
+                buildPackageInfo(/* SYSTEM */ false, APP2_UID),
+                buildPackageInfo(/* SYSTEM */ false, VPN_UID)
+        })).when(mPackageManager).getInstalledPackages(eq(GET_PERMISSIONS | MATCH_ANY_USER));
 
         // Create a fake always-on VPN package.
         final int userId = UserHandle.getCallingUserId();
         final ApplicationInfo applicationInfo = new ApplicationInfo();
         applicationInfo.targetSdkVersion = Build.VERSION_CODES.R;  // Always-on supported in N+.
-        when(mPackageManager.getApplicationInfoAsUser(eq(ALWAYS_ON_PACKAGE), anyInt(),
-                eq(userId))).thenReturn(applicationInfo);
+        doReturn(applicationInfo).when(mPackageManager).getApplicationInfoAsUser(
+                eq(ALWAYS_ON_PACKAGE), anyInt(), eq(userId));
 
         // Minimal mocking to keep Vpn#isAlwaysOnPackageSupported happy.
         ResolveInfo rInfo = new ResolveInfo();
         rInfo.serviceInfo = new ServiceInfo();
         rInfo.serviceInfo.metaData = new Bundle();
         final List<ResolveInfo> services = asList(new ResolveInfo[]{rInfo});
-        when(mPackageManager.queryIntentServicesAsUser(any(), eq(PackageManager.GET_META_DATA),
-                eq(userId))).thenReturn(services);
-        when(mPackageManager.getPackageUidAsUser(TEST_PACKAGE_NAME, userId))
-                .thenReturn(Process.myUid());
-        when(mPackageManager.getPackageUidAsUser(ALWAYS_ON_PACKAGE, userId))
-                .thenReturn(VPN_UID);
+        doReturn(services).when(mPackageManager).queryIntentServicesAsUser(
+                any(), eq(PackageManager.GET_META_DATA), eq(userId));
+        doReturn(Process.myUid()).when(mPackageManager).getPackageUidAsUser(
+                TEST_PACKAGE_NAME, userId);
+        doReturn(VPN_UID).when(mPackageManager).getPackageUidAsUser(ALWAYS_ON_PACKAGE, userId);
     }
 
     private void verifyActiveNetwork(int transport) {
@@ -3179,9 +3177,8 @@ public class ConnectivityServiceTest {
 
     private void grantUsingBackgroundNetworksPermissionForUid(
             final int uid, final String packageName) throws Exception {
-        when(mPackageManager.getPackageInfo(
-                eq(packageName), eq(GET_PERMISSIONS | MATCH_ANY_USER)))
-                .thenReturn(buildPackageInfo(true /* hasSystemPermission */, uid));
+        doReturn(buildPackageInfo(true /* hasSystemPermission */, uid)).when(mPackageManager)
+                .getPackageInfo(eq(packageName), eq(GET_PERMISSIONS | MATCH_ANY_USER));
         mService.mPermissionMonitor.onPackageAdded(packageName, uid);
     }
 
@@ -7904,8 +7901,8 @@ public class ConnectivityServiceTest {
         callback.expectCapabilitiesThat(mWiFiNetworkAgent, (caps)
                 -> caps.hasCapability(NET_CAPABILITY_VALIDATED));
 
-        when(mPackageManager.getPackageUidAsUser(ALWAYS_ON_PACKAGE, RESTRICTED_USER))
-                .thenReturn(UserHandle.getUid(RESTRICTED_USER, VPN_UID));
+        doReturn(UserHandle.getUid(RESTRICTED_USER, VPN_UID)).when(mPackageManager)
+                .getPackageUidAsUser(ALWAYS_ON_PACKAGE, RESTRICTED_USER);
 
         final Intent addedIntent = new Intent(ACTION_USER_ADDED);
         addedIntent.putExtra(Intent.EXTRA_USER, UserHandle.of(RESTRICTED_USER));
@@ -7989,10 +7986,10 @@ public class ConnectivityServiceTest {
         assertNotNull(mCm.getActiveNetworkForUid(restrictedUid));
 
         // Start the restricted profile, and check that the UID within it loses network access.
-        when(mPackageManager.getPackageUidAsUser(ALWAYS_ON_PACKAGE, RESTRICTED_USER))
-                .thenReturn(UserHandle.getUid(RESTRICTED_USER, VPN_UID));
-        when(mUserManager.getAliveUsers()).thenReturn(asList(PRIMARY_USER_INFO,
-                RESTRICTED_USER_INFO));
+        doReturn(UserHandle.getUid(RESTRICTED_USER, VPN_UID)).when(mPackageManager)
+                .getPackageUidAsUser(ALWAYS_ON_PACKAGE, RESTRICTED_USER);
+        doReturn(asList(PRIMARY_USER_INFO, RESTRICTED_USER_INFO)).when(mUserManager)
+                .getAliveUsers();
         // TODO: check that VPN app within restricted profile still has access, etc.
         final Intent addedIntent = new Intent(ACTION_USER_ADDED);
         addedIntent.putExtra(Intent.EXTRA_USER, UserHandle.of(RESTRICTED_USER));
@@ -8002,7 +7999,7 @@ public class ConnectivityServiceTest {
         assertNull(mCm.getActiveNetworkForUid(restrictedUid));
 
         // Stop the restricted profile, and check that the UID within it has network access again.
-        when(mUserManager.getAliveUsers()).thenReturn(asList(PRIMARY_USER_INFO));
+        doReturn(asList(PRIMARY_USER_INFO)).when(mUserManager).getAliveUsers();
 
         // Send a USER_REMOVED broadcast and expect to lose the UID range for the restricted user.
         final Intent removedIntent = new Intent(ACTION_USER_REMOVED);
@@ -8703,7 +8700,7 @@ public class ConnectivityServiceTest {
     private void setupLegacyLockdownVpn() {
         final String profileName = "testVpnProfile";
         final byte[] profileTag = profileName.getBytes(StandardCharsets.UTF_8);
-        when(mVpnProfileStore.get(Credentials.LOCKDOWN_VPN)).thenReturn(profileTag);
+        doReturn(profileTag).when(mVpnProfileStore).get(Credentials.LOCKDOWN_VPN);
 
         final VpnProfile profile = new VpnProfile(profileName);
         profile.name = "My VPN";
@@ -8711,7 +8708,7 @@ public class ConnectivityServiceTest {
         profile.dnsServers = "8.8.8.8";
         profile.type = VpnProfile.TYPE_IPSEC_XAUTH_PSK;
         final byte[] encodedProfile = profile.encode();
-        when(mVpnProfileStore.get(Credentials.VPN + profileName)).thenReturn(encodedProfile);
+        doReturn(encodedProfile).when(mVpnProfileStore).get(Credentials.VPN + profileName);
     }
 
     private void establishLegacyLockdownVpn(Network underlying) throws Exception {
@@ -9126,8 +9123,8 @@ public class ConnectivityServiceTest {
         verifyNoMoreInteractions(mMockDnsResolver);
         reset(mMockNetd);
         reset(mMockDnsResolver);
-        when(mMockNetd.interfaceGetCfg(CLAT_MOBILE_IFNAME))
-                .thenReturn(getClatInterfaceConfigParcel(myIpv4));
+        doReturn(getClatInterfaceConfigParcel(myIpv4)).when(mMockNetd)
+                .interfaceGetCfg(CLAT_MOBILE_IFNAME);
 
         // Remove IPv4 address. Expect prefix discovery to be started again.
         cellLp.removeLinkAddress(myIpv4);
@@ -9177,8 +9174,8 @@ public class ConnectivityServiceTest {
                     new int[] { TRANSPORT_CELLULAR });
         }
         reset(mMockNetd);
-        when(mMockNetd.interfaceGetCfg(CLAT_MOBILE_IFNAME))
-                .thenReturn(getClatInterfaceConfigParcel(myIpv4));
+        doReturn(getClatInterfaceConfigParcel(myIpv4)).when(mMockNetd)
+                .interfaceGetCfg(CLAT_MOBILE_IFNAME);
         // Change the NAT64 prefix without first removing it.
         // Expect clatd to be stopped and started with the new prefix.
         mService.mResolverUnsolEventCallback.onNat64PrefixEvent(makeNat64PrefixEvent(
@@ -9226,8 +9223,8 @@ public class ConnectivityServiceTest {
         verifyNoMoreInteractions(mMockDnsResolver);
         reset(mMockNetd);
         reset(mMockDnsResolver);
-        when(mMockNetd.interfaceGetCfg(CLAT_MOBILE_IFNAME))
-                .thenReturn(getClatInterfaceConfigParcel(myIpv4));
+        doReturn(getClatInterfaceConfigParcel(myIpv4)).when(mMockNetd)
+                .interfaceGetCfg(CLAT_MOBILE_IFNAME);
 
         // Stopping prefix discovery causes netd to tell us that the NAT64 prefix is gone.
         mService.mResolverUnsolEventCallback.onNat64PrefixEvent(makeNat64PrefixEvent(
@@ -9281,8 +9278,8 @@ public class ConnectivityServiceTest {
         // Test disconnecting a network that is running 464xlat.
 
         // Connect a network with a NAT64 prefix.
-        when(mMockNetd.interfaceGetCfg(CLAT_MOBILE_IFNAME))
-                .thenReturn(getClatInterfaceConfigParcel(myIpv4));
+        doReturn(getClatInterfaceConfigParcel(myIpv4)).when(mMockNetd)
+                .interfaceGetCfg(CLAT_MOBILE_IFNAME);
         cellLp.setNat64Prefix(kNat64Prefix);
         mCellNetworkAgent = new TestNetworkAgentWrapper(TRANSPORT_CELLULAR, cellLp);
         mCellNetworkAgent.connect(false /* validated */);
@@ -9651,7 +9648,7 @@ public class ConnectivityServiceTest {
         final ProxyInfo testProxyInfo = ProxyInfo.buildDirectProxy("test", 8888);
         mWiFiNetworkAgent = new TestNetworkAgentWrapper(TRANSPORT_WIFI);
         final Network wifiNetwork = mWiFiNetworkAgent.getNetwork();
-        when(mService.mProxyTracker.getGlobalProxy()).thenReturn(testProxyInfo);
+        doReturn(testProxyInfo).when(mService.mProxyTracker).getGlobalProxy();
         assertEquals(testProxyInfo, mService.getProxyForNetwork(wifiNetwork));
     }
 
@@ -9914,16 +9911,16 @@ public class ConnectivityServiceTest {
 
         final ApplicationInfo applicationInfo = new ApplicationInfo();
         applicationInfo.targetSdkVersion = targetSdk;
-        when(mPackageManager.getApplicationInfoAsUser(anyString(), anyInt(), any()))
-                .thenReturn(applicationInfo);
-        when(mPackageManager.getTargetSdkVersion(any())).thenReturn(targetSdk);
+        doReturn(applicationInfo).when(mPackageManager)
+                .getApplicationInfoAsUser(anyString(), anyInt(), any());
+        doReturn(targetSdk).when(mPackageManager).getTargetSdkVersion(any());
 
-        when(mLocationManager.isLocationEnabledForUser(any())).thenReturn(locationToggle);
+        doReturn(locationToggle).when(mLocationManager).isLocationEnabledForUser(any());
 
         if (op != null) {
-            when(mAppOpsManager.noteOp(eq(op), eq(Process.myUid()),
-                    eq(mContext.getPackageName()), eq(getAttributionTag()), anyString()))
-                .thenReturn(AppOpsManager.MODE_ALLOWED);
+            doReturn(AppOpsManager.MODE_ALLOWED).when(mAppOpsManager).noteOp(
+                    eq(op), eq(Process.myUid()), eq(mContext.getPackageName()),
+                    eq(getAttributionTag()), anyString());
         }
 
         if (perm != null) {
@@ -9945,7 +9942,7 @@ public class ConnectivityServiceTest {
             int callerUid, boolean includeLocationSensitiveInfo,
             boolean shouldMakeCopyWithLocationSensitiveFieldsParcelable) {
         final TransportInfo transportInfo = mock(TransportInfo.class);
-        when(transportInfo.getApplicableRedactions()).thenReturn(REDACT_FOR_ACCESS_FINE_LOCATION);
+        doReturn(REDACT_FOR_ACCESS_FINE_LOCATION).when(transportInfo).getApplicableRedactions();
         final NetworkCapabilities netCap =
                 new NetworkCapabilities().setTransportInfo(transportInfo);
 
@@ -10102,8 +10099,8 @@ public class ConnectivityServiceTest {
         mServiceContext.setPermission(Manifest.permission.LOCAL_MAC_ADDRESS, PERMISSION_GRANTED);
 
         final TransportInfo transportInfo = mock(TransportInfo.class);
-        when(transportInfo.getApplicableRedactions())
-                .thenReturn(REDACT_FOR_ACCESS_FINE_LOCATION | REDACT_FOR_LOCAL_MAC_ADDRESS);
+        doReturn(REDACT_FOR_ACCESS_FINE_LOCATION | REDACT_FOR_LOCAL_MAC_ADDRESS)
+                .when(transportInfo).getApplicableRedactions();
         final NetworkCapabilities netCap =
                 new NetworkCapabilities().setTransportInfo(transportInfo);
 
@@ -10121,8 +10118,8 @@ public class ConnectivityServiceTest {
         mServiceContext.setPermission(Manifest.permission.LOCAL_MAC_ADDRESS, PERMISSION_DENIED);
 
         final TransportInfo transportInfo = mock(TransportInfo.class);
-        when(transportInfo.getApplicableRedactions())
-                .thenReturn(REDACT_FOR_ACCESS_FINE_LOCATION | REDACT_FOR_LOCAL_MAC_ADDRESS);
+        doReturn(REDACT_FOR_ACCESS_FINE_LOCATION | REDACT_FOR_LOCAL_MAC_ADDRESS)
+                .when(transportInfo).getApplicableRedactions();
         final NetworkCapabilities netCap =
                 new NetworkCapabilities().setTransportInfo(transportInfo);
 
@@ -10141,8 +10138,8 @@ public class ConnectivityServiceTest {
         mServiceContext.setPermission(NETWORK_SETTINGS, PERMISSION_GRANTED);
 
         final TransportInfo transportInfo = mock(TransportInfo.class);
-        when(transportInfo.getApplicableRedactions())
-                .thenReturn(REDACT_FOR_ACCESS_FINE_LOCATION | REDACT_FOR_NETWORK_SETTINGS);
+        doReturn(REDACT_FOR_ACCESS_FINE_LOCATION | REDACT_FOR_NETWORK_SETTINGS)
+                .when(transportInfo).getApplicableRedactions();
         final NetworkCapabilities netCap =
                 new NetworkCapabilities().setTransportInfo(transportInfo);
 
@@ -10160,8 +10157,8 @@ public class ConnectivityServiceTest {
         mServiceContext.setPermission(Manifest.permission.LOCAL_MAC_ADDRESS, PERMISSION_DENIED);
 
         final TransportInfo transportInfo = mock(TransportInfo.class);
-        when(transportInfo.getApplicableRedactions())
-                .thenReturn(REDACT_FOR_ACCESS_FINE_LOCATION | REDACT_FOR_NETWORK_SETTINGS);
+        doReturn(REDACT_FOR_ACCESS_FINE_LOCATION | REDACT_FOR_NETWORK_SETTINGS)
+                .when(transportInfo).getApplicableRedactions();
         final NetworkCapabilities netCap =
                 new NetworkCapabilities().setTransportInfo(transportInfo);
 
@@ -10248,7 +10245,7 @@ public class ConnectivityServiceTest {
             @NonNull TestNetworkCallback wifiNetworkCallback, int actualOwnerUid,
             @NonNull TransportInfo actualTransportInfo, int expectedOwnerUid,
             @NonNull TransportInfo expectedTransportInfo) throws Exception {
-        when(mPackageManager.getTargetSdkVersion(anyString())).thenReturn(Build.VERSION_CODES.S);
+        doReturn(Build.VERSION_CODES.S).when(mPackageManager).getTargetSdkVersion(anyString());
         final NetworkCapabilities ncTemplate =
                 new NetworkCapabilities()
                         .addTransportType(TRANSPORT_WIFI)
@@ -10478,7 +10475,7 @@ public class ConnectivityServiceTest {
     public void testRegisterUnregisterConnectivityDiagnosticsCallback() throws Exception {
         final NetworkRequest wifiRequest =
                 new NetworkRequest.Builder().addTransportType(TRANSPORT_WIFI).build();
-        when(mConnectivityDiagnosticsCallback.asBinder()).thenReturn(mIBinder);
+        doReturn(mIBinder).when(mConnectivityDiagnosticsCallback).asBinder();
 
         mService.registerConnectivityDiagnosticsCallback(
                 mConnectivityDiagnosticsCallback, wifiRequest, mContext.getPackageName());
@@ -10501,7 +10498,7 @@ public class ConnectivityServiceTest {
     public void testRegisterDuplicateConnectivityDiagnosticsCallback() throws Exception {
         final NetworkRequest wifiRequest =
                 new NetworkRequest.Builder().addTransportType(TRANSPORT_WIFI).build();
-        when(mConnectivityDiagnosticsCallback.asBinder()).thenReturn(mIBinder);
+        doReturn(mIBinder).when(mConnectivityDiagnosticsCallback).asBinder();
 
         mService.registerConnectivityDiagnosticsCallback(
                 mConnectivityDiagnosticsCallback, wifiRequest, mContext.getPackageName());
@@ -10716,7 +10713,7 @@ public class ConnectivityServiceTest {
         callback.assertNoCallback();
 
         final NetworkRequest request = new NetworkRequest.Builder().build();
-        when(mConnectivityDiagnosticsCallback.asBinder()).thenReturn(mIBinder);
+        doReturn(mIBinder).when(mConnectivityDiagnosticsCallback).asBinder();
 
         mServiceContext.setPermission(NETWORK_STACK, PERMISSION_GRANTED);
 
@@ -10732,7 +10729,7 @@ public class ConnectivityServiceTest {
 
     private void setUpConnectivityDiagnosticsCallback() throws Exception {
         final NetworkRequest request = new NetworkRequest.Builder().build();
-        when(mConnectivityDiagnosticsCallback.asBinder()).thenReturn(mIBinder);
+        doReturn(mIBinder).when(mConnectivityDiagnosticsCallback).asBinder();
 
         mServiceContext.setPermission(NETWORK_STACK, PERMISSION_GRANTED);
 
@@ -11241,8 +11238,8 @@ public class ConnectivityServiceTest {
             final Pair<IQosCallback, IBinder> pair = createQosCallback();
             mCallback = pair.first;
 
-            when(mFilter.getNetwork()).thenReturn(network);
-            when(mFilter.validate()).thenReturn(QosCallbackException.EX_TYPE_FILTER_NONE);
+            doReturn(network).when(mFilter).getNetwork();
+            doReturn(QosCallbackException.EX_TYPE_FILTER_NONE).when(mFilter).validate();
             mAgentWrapper = mCellNetworkAgent;
         }
 
@@ -11264,8 +11261,8 @@ public class ConnectivityServiceTest {
     private Pair<IQosCallback, IBinder> createQosCallback() {
         final IQosCallback callback = mock(IQosCallback.class);
         final IBinder binder = mock(Binder.class);
-        when(callback.asBinder()).thenReturn(binder);
-        when(binder.isBinderAlive()).thenReturn(true);
+        doReturn(binder).when(callback).asBinder();
+        doReturn(true).when(binder).isBinderAlive();
         return new Pair<>(callback, binder);
     }
 
@@ -11275,8 +11272,8 @@ public class ConnectivityServiceTest {
         mQosCallbackMockHelper = new QosCallbackMockHelper();
         final NetworkAgentWrapper wrapper = mQosCallbackMockHelper.mAgentWrapper;
 
-        when(mQosCallbackMockHelper.mFilter.validate())
-                .thenReturn(QosCallbackException.EX_TYPE_FILTER_NONE);
+        doReturn(QosCallbackException.EX_TYPE_FILTER_NONE)
+                .when(mQosCallbackMockHelper.mFilter).validate();
         mQosCallbackMockHelper.registerQosCallback(
                 mQosCallbackMockHelper.mFilter, mQosCallbackMockHelper.mCallback);
 
@@ -11299,8 +11296,8 @@ public class ConnectivityServiceTest {
     public void testQosCallbackNoRegistrationOnValidationError() throws Exception {
         mQosCallbackMockHelper = new QosCallbackMockHelper();
 
-        when(mQosCallbackMockHelper.mFilter.validate())
-                .thenReturn(QosCallbackException.EX_TYPE_FILTER_NETWORK_RELEASED);
+        doReturn(QosCallbackException.EX_TYPE_FILTER_NETWORK_RELEASED)
+                .when(mQosCallbackMockHelper.mFilter).validate();
         mQosCallbackMockHelper.registerQosCallback(
                 mQosCallbackMockHelper.mFilter, mQosCallbackMockHelper.mCallback);
         waitForIdle();
@@ -11314,8 +11311,8 @@ public class ConnectivityServiceTest {
         final int sessionId = 10;
         final int qosCallbackId = 1;
 
-        when(mQosCallbackMockHelper.mFilter.validate())
-                .thenReturn(QosCallbackException.EX_TYPE_FILTER_NONE);
+        doReturn(QosCallbackException.EX_TYPE_FILTER_NONE)
+                .when(mQosCallbackMockHelper.mFilter).validate();
         mQosCallbackMockHelper.registerQosCallback(
                 mQosCallbackMockHelper.mFilter, mQosCallbackMockHelper.mCallback);
         waitForIdle();
@@ -11344,8 +11341,8 @@ public class ConnectivityServiceTest {
         final int sessionId = 10;
         final int qosCallbackId = 1;
 
-        when(mQosCallbackMockHelper.mFilter.validate())
-                .thenReturn(QosCallbackException.EX_TYPE_FILTER_NONE);
+        doReturn(QosCallbackException.EX_TYPE_FILTER_NONE)
+                .when(mQosCallbackMockHelper.mFilter).validate();
         mQosCallbackMockHelper.registerQosCallback(
                 mQosCallbackMockHelper.mFilter, mQosCallbackMockHelper.mCallback);
         waitForIdle();
@@ -11372,8 +11369,8 @@ public class ConnectivityServiceTest {
     public void testQosCallbackTooManyRequests() throws Exception {
         mQosCallbackMockHelper = new QosCallbackMockHelper();
 
-        when(mQosCallbackMockHelper.mFilter.validate())
-                .thenReturn(QosCallbackException.EX_TYPE_FILTER_NONE);
+        doReturn(QosCallbackException.EX_TYPE_FILTER_NONE)
+                .when(mQosCallbackMockHelper.mFilter).validate();
         for (int i = 0; i < 100; i++) {
             final Pair<IQosCallback, IBinder> pair = createQosCallback();
 
@@ -11404,8 +11401,8 @@ public class ConnectivityServiceTest {
         final ApplicationInfo applicationInfo = new ApplicationInfo();
         applicationInfo.uid = uid;
         try {
-            when(mPackageManager.getApplicationInfoAsUser(eq(packageName), anyInt(), eq(user)))
-                    .thenReturn(applicationInfo);
+            doReturn(applicationInfo).when(mPackageManager).getApplicationInfoAsUser(
+                    eq(packageName), anyInt(), eq(user));
         } catch (Exception e) {
             fail(e.getMessage());
         }
@@ -11414,13 +11411,12 @@ public class ConnectivityServiceTest {
     private void mockGetApplicationInfoThrowsNameNotFound(@NonNull final String packageName,
             @NonNull final UserHandle user)
             throws Exception {
-        when(mPackageManager.getApplicationInfoAsUser(eq(packageName), anyInt(), eq(user)))
-                .thenThrow(new PackageManager.NameNotFoundException(packageName));
+        doThrow(new PackageManager.NameNotFoundException(packageName)).when(
+                mPackageManager).getApplicationInfoAsUser(eq(packageName), anyInt(), eq(user));
     }
 
     private void mockHasSystemFeature(@NonNull final String featureName, final boolean hasFeature) {
-        when(mPackageManager.hasSystemFeature(eq(featureName)))
-                .thenReturn(hasFeature);
+        doReturn(hasFeature).when(mPackageManager).hasSystemFeature(eq(featureName));
     }
 
     private Range<Integer> getNriFirstUidRange(@NonNull final NetworkRequestInfo nri) {
@@ -11620,8 +11616,8 @@ public class ConnectivityServiceTest {
         // Arrange users
         final int secondUserTestPackageUid = UserHandle.getUid(SECONDARY_USER, TEST_PACKAGE_UID);
         final int thirdUserTestPackageUid = UserHandle.getUid(TERTIARY_USER, TEST_PACKAGE_UID);
-        when(mUserManager.getUserHandles(anyBoolean())).thenReturn(
-                asList(PRIMARY_USER_HANDLE, SECONDARY_USER_HANDLE, TERTIARY_USER_HANDLE));
+        doReturn(asList(PRIMARY_USER_HANDLE, SECONDARY_USER_HANDLE, TERTIARY_USER_HANDLE))
+                .when(mUserManager).getUserHandles(anyBoolean());
 
         // Arrange PackageManager mocks testing for users who have and don't have a package.
         mockGetApplicationInfoThrowsNameNotFound(TEST_PACKAGE_NAME, PRIMARY_USER_HANDLE);
@@ -12567,8 +12563,8 @@ public class ConnectivityServiceTest {
         // Arrange users
         final int secondUser = 10;
         final UserHandle secondUserHandle = new UserHandle(secondUser);
-        when(mUserManager.getUserHandles(anyBoolean())).thenReturn(
-                asList(PRIMARY_USER_HANDLE, secondUserHandle));
+        doReturn(asList(PRIMARY_USER_HANDLE, secondUserHandle)).when(mUserManager)
+                .getUserHandles(anyBoolean());
 
         // Arrange PackageManager mocks
         final int secondUserTestPackageUid = UserHandle.getUid(secondUser, TEST_PACKAGE_UID);
@@ -12608,8 +12604,7 @@ public class ConnectivityServiceTest {
         // Arrange users
         final int secondUser = 10;
         final UserHandle secondUserHandle = new UserHandle(secondUser);
-        when(mUserManager.getUserHandles(anyBoolean())).thenReturn(
-                asList(PRIMARY_USER_HANDLE));
+        doReturn(asList(PRIMARY_USER_HANDLE)).when(mUserManager).getUserHandles(anyBoolean());
 
         // Arrange PackageManager mocks
         final int secondUserTestPackageUid = UserHandle.getUid(secondUser, TEST_PACKAGE_UID);
@@ -12636,8 +12631,8 @@ public class ConnectivityServiceTest {
                 false /* shouldDestroyNetwork */);
 
         // Send a broadcast indicating a user was added.
-        when(mUserManager.getUserHandles(anyBoolean())).thenReturn(
-                asList(PRIMARY_USER_HANDLE, secondUserHandle));
+        doReturn(asList(PRIMARY_USER_HANDLE, secondUserHandle)).when(mUserManager)
+                .getUserHandles(anyBoolean());
         final Intent addedIntent = new Intent(ACTION_USER_ADDED);
         addedIntent.putExtra(Intent.EXTRA_USER, UserHandle.of(secondUser));
         processBroadcast(addedIntent);
@@ -12649,8 +12644,7 @@ public class ConnectivityServiceTest {
                 false /* shouldDestroyNetwork */);
 
         // Send a broadcast indicating a user was removed.
-        when(mUserManager.getUserHandles(anyBoolean())).thenReturn(
-                asList(PRIMARY_USER_HANDLE));
+        doReturn(asList(PRIMARY_USER_HANDLE)).when(mUserManager).getUserHandles(anyBoolean());
         final Intent removedIntent = new Intent(ACTION_USER_REMOVED);
         removedIntent.putExtra(Intent.EXTRA_USER, UserHandle.of(secondUser));
         processBroadcast(removedIntent);
@@ -14242,7 +14236,7 @@ public class ConnectivityServiceTest {
         // callback.
         final int[] uids2 = new int[] { TEST_WORK_PROFILE_APP_UID };
         final UidRangeParcel[] uidRanges2 = toUidRangeStableParcels(uidRangesForUids(uids2));
-        when(mUserManager.getUserHandles(anyBoolean())).thenReturn(Arrays.asList(testHandle));
+        doReturn(Arrays.asList(testHandle)).when(mUserManager).getUserHandles(anyBoolean());
         setupSetOemNetworkPreferenceForPreferenceTest(
                 networkPref, uidRanges2, "com.android.test", testHandle);
         mDefaultNetworkCallback.assertNoCallback();
