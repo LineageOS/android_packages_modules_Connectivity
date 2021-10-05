@@ -144,6 +144,11 @@ public class ConnectivityManager {
      * <p/>
      * For a disconnect event, the boolean extra EXTRA_NO_CONNECTIVITY
      * is set to {@code true} if there are no connected networks at all.
+     * <p />
+     * Note that this broadcast is deprecated and generally tries to implement backwards
+     * compatibility with older versions of Android. As such, it may not reflect new
+     * capabilities of the system, like multiple networks being connected at the same
+     * time, the details of newer technology, or changes in tethering state.
      *
      * @deprecated apps should use the more versatile {@link #requestNetwork},
      *             {@link #registerNetworkCallback} or {@link #registerDefaultNetworkCallback}
