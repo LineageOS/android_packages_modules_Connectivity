@@ -31,11 +31,15 @@ open class TestableNetworkStatsProvider(
     sealed class CallbackType {
         data class OnRequestStatsUpdate(val token: Int) : CallbackType()
         data class OnSetWarningAndLimit(
-            val iface: String?,
+            val iface: String,
             val warningBytes: Long,
             val limitBytes: Long
         ) : CallbackType()
-        data class OnSetLimit(val iface: String?, val limitBytes: Long) : CallbackType()
+        data class OnSetLimit(val iface: String, val limitBytes: Long) : CallbackType() {
+            // Add getter for backward compatibility since old tests do not recognize limitBytes.
+            val quotaBytes: Long
+                get() = limitBytes
+        }
         data class OnSetAlert(val quotaBytes: Long) : CallbackType()
     }
 
@@ -68,7 +72,7 @@ open class TestableNetworkStatsProvider(
         return event.token
     }
 
-    fun expectOnSetLimit(iface: String?, quotaBytes: Long, timeout: Long = defaultTimeoutMs) {
+    fun expectOnSetLimit(iface: String, quotaBytes: Long, timeout: Long = defaultTimeoutMs) {
         assertEquals(CallbackType.OnSetLimit(iface, quotaBytes), history.poll(timeout))
     }
 
