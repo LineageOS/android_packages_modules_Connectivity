@@ -18,6 +18,7 @@ package com.android.cts.net.hostside.app2;
 import static com.android.cts.net.hostside.app2.Common.ACTION_FINISH_ACTIVITY;
 import static com.android.cts.net.hostside.app2.Common.TAG;
 import static com.android.cts.net.hostside.app2.Common.TEST_PKG;
+import static com.android.cts.net.hostside.app2.Common.TYPE_COMPONENT_ACTIVTY;
 
 import android.app.Activity;
 import android.content.BroadcastReceiver;
@@ -42,7 +43,7 @@ public class MyActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         Log.d(TAG, "MyActivity.onCreate()");
-        Common.notifyNetworkStateObserver(this, getIntent());
+        Common.notifyNetworkStateObserver(this, getIntent(), TYPE_COMPONENT_ACTIVTY);
         finishCommandReceiver = new BroadcastReceiver() {
             @Override
             public void onReceive(Context context, Intent intent) {

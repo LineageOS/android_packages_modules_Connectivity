@@ -22,11 +22,17 @@ import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
+import android.os.Build;
 import android.platform.test.annotations.AppModeFull;
 
 import androidx.test.filters.SmallTest;
 import androidx.test.runner.AndroidJUnit4;
 
+import com.android.testutils.DevSdkIgnoreRule;
+import com.android.testutils.DevSdkIgnoreRule.IgnoreAfter;
+import com.android.testutils.DevSdkIgnoreRule.IgnoreUpTo;
+
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
@@ -42,6 +48,9 @@ import java.net.SocketException;
 @SmallTest
 public class NetworkTest {
     final Network mNetwork = new Network(99);
+
+    @Rule
+    public final DevSdkIgnoreRule mIgnoreRule = new DevSdkIgnoreRule();
 
     @Test
     public void testBindSocketOfInvalidFdThrows() throws Exception {
@@ -148,6 +157,39 @@ public class NetworkTest {
         assertEquals(7700664333L, one.getNetworkHandle());
         assertEquals(11995631629L, two.getNetworkHandle());
         assertEquals(16290598925L, three.getNetworkHandle());
+    }
+
+    // getNetId() did not exist in Q
+    @Test @IgnoreUpTo(Build.VERSION_CODES.Q)
+    public void testGetNetId() {
+        assertEquals(1234, new Network(1234).getNetId());
+        assertEquals(2345, new Network(2345, true).getNetId());
+    }
+
+    @Test
+    public void testFromNetworkHandle() {
+        final Network network = new Network(1234);
+        assertEquals(network.netId, Network.fromNetworkHandle(network.getNetworkHandle()).netId);
+    }
+
+    // Parsing private DNS bypassing handle was not supported until S
+    @Test @IgnoreUpTo(Build.VERSION_CODES.R)
+    public void testFromNetworkHandlePrivateDnsBypass_S() {
+        final Network network = new Network(1234, true);
+
+        final Network recreatedNetwork = Network.fromNetworkHandle(network.getNetworkHandle());
+        assertEquals(network.netId, recreatedNetwork.netId);
+        assertEquals(network.getNetIdForResolv(), recreatedNetwork.getNetIdForResolv());
+    }
+
+    @Test @IgnoreAfter(Build.VERSION_CODES.R)
+    public void testFromNetworkHandlePrivateDnsBypass_R() {
+        final Network network = new Network(1234, true);
+
+        final Network recreatedNetwork = Network.fromNetworkHandle(network.getNetworkHandle());
+        assertEquals(network.netId, recreatedNetwork.netId);
+        // Until R included, fromNetworkHandle would not parse the private DNS bypass flag
+        assertEquals(network.netId, recreatedNetwork.getNetIdForResolv());
     }
 
     @Test

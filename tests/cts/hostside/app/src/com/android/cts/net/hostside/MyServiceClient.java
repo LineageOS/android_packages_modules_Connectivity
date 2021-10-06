@@ -16,6 +16,7 @@
 
 package com.android.cts.net.hostside;
 
+import android.app.job.JobInfo;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
@@ -104,5 +105,9 @@ public class MyServiceClient {
 
     public void unregisterNetworkCallback() throws RemoteException {
         mService.unregisterNetworkCallback();
+    }
+
+    public void scheduleJob(JobInfo jobInfo) throws RemoteException {
+        mService.scheduleJob(jobInfo);
     }
 }

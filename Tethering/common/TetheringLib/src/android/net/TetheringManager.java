@@ -505,7 +505,7 @@ public class TetheringManager {
      * @return the context's attribution tag
      */
     private @Nullable String getAttributionTag() {
-        return null;
+        return mContext.getAttributionTag();
     }
 
     /**

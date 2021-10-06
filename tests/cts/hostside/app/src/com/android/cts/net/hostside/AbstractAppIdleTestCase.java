@@ -50,7 +50,7 @@ abstract class AbstractAppIdleTestCase extends AbstractRestrictBackgroundNetwork
     public final void tearDown() throws Exception {
         super.tearDown();
 
-        executeSilentShellCommand("cmd battery reset");
+        resetBatteryState();
         setAppIdle(false);
     }
 
