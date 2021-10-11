@@ -27,9 +27,9 @@ import com.google.common.base.Ascii;
 /**
  * Supports Fast Pair pairing with certain Bluetooth headphones, Auto, etc.
  *
- * <p>Based on go/fast-pair-2-spec, the pairing is constructed by both BLE and BREDR connections.
- * Example state transitions for Fast Pair 2, ie a pairing key is included in the request (note:
- * timeouts and retries are governed by flags, may change):
+ * <p>Based on https://developers.google.com/nearby/fast-pair/spec, the pairing is constructed by
+ * both BLE and BREDR connections. Example state transitions for Fast Pair 2, ie a pairing key is
+ * included in the request (note: timeouts and retries are governed by flags, may change):
  *
  * <pre>
  * {@code
