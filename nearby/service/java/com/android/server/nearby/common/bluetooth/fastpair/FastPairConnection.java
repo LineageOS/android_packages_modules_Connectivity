@@ -29,7 +29,6 @@ import com.android.server.nearby.common.bluetooth.BluetoothException;
 import com.google.auto.value.AutoValue;
 
 import java.security.GeneralSecurityException;
-import java.security.NoSuchAlgorithmException;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
@@ -110,7 +109,7 @@ public abstract class FastPairConnection {
     @Nullable
     public abstract SharedSecret pair()
             throws BluetoothException, InterruptedException, TimeoutException, ExecutionException,
-            PairingException;
+            PairingException, ReflectionException;
 
     /**
      * Pairs with Provider. Synchronous: Blocks until paired and connected. Throws on any error.
@@ -124,12 +123,13 @@ public abstract class FastPairConnection {
     @Nullable
     public abstract SharedSecret pair(@Nullable byte[] key)
             throws BluetoothException, InterruptedException, TimeoutException, ExecutionException,
-            PairingException, GeneralSecurityException;
+            PairingException, GeneralSecurityException, ReflectionException;
 
     /** Unpairs with Provider. Synchronous: Blocks until unpaired. Throws on any error. */
     @WorkerThread
     public abstract void unpair(BluetoothDevice device)
-            throws InterruptedException, TimeoutException, ExecutionException, PairingException;
+            throws InterruptedException, TimeoutException, ExecutionException, PairingException,
+            ReflectionException;
 
     /** Gets the public address of the Provider. */
     @Nullable
@@ -179,11 +179,6 @@ public abstract class FastPairConnection {
     public boolean getPasskeyIsGotten() {
         return mPasskeyIsGotten;
     }
-
-    /** Check if connected device is provisioned by spot or not. */
-    public abstract boolean shouldCallSpotProvision(byte[] accountKey)
-            throws InterruptedException, ExecutionException, TimeoutException, BluetoothException,
-            NoSuchAlgorithmException;
 
     /** Interface to get latest address of ModelId. */
     public interface FastPairSignalChecker {

@@ -70,7 +70,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 /**
  * Pairs to Bluetooth audio devices.
  */
-// Try-with-resources and ReflectiveOperationException are only available on KitKat+.
 public class BluetoothAudioPairer {
 
     private static final String TAG = BluetoothAudioPairer.class.getSimpleName();
@@ -78,21 +77,25 @@ public class BluetoothAudioPairer {
     /**
      * Hidden, see {@link BluetoothDevice}.
      */
+    // TODO(b/202549655): remove Hidden usage.
     private static final String EXTRA_REASON = "android.bluetooth.device.extra.REASON";
 
     /**
      * Hidden, see {@link BluetoothDevice}.
      */
+    // TODO(b/202549655): remove Hidden usage.
     private static final int ACCESS_REJECTED = 2;
 
     /**
      * Hidden, see {@link BluetoothDevice}.
      */
+    // TODO(b/202549655): remove Hidden usage.
     private static final int PAIRING_VARIANT_CONSENT = 3;
 
     /**
      * Hidden, see {@link BluetoothDevice}.
      */
+    // TODO(b/202549655): remove Hidden usage.
     public static final int PAIRING_VARIANT_DISPLAY_PASSKEY = 4;
 
     private static final int DISCOVERY_STATE_CHANGE_TIMEOUT_MS = 3000;
@@ -146,6 +149,7 @@ public class BluetoothAudioPairer {
         this.mPasskeyConfirmationHandler = passkeyConfirmationHandler;
         this.mTimingLogger = timingLogger;
 
+        // TODO(b/203455314): follow up with the following comments.
         // The OS should give the user some UI to choose if they want to allow access, but there
         // seems to be a bug where if we don't reject access, it's auto-granted in some cases
         // (Plantronics headset gets contacts access when pairing with my Taimen via Bluetooth
@@ -227,9 +231,6 @@ public class BluetoothAudioPairer {
         // This seems to improve the probability that createBond will succeed after removeBond.
         SystemClock.sleep(mPreferences.getRemoveBondSleepMillis());
         mEventLogger.logCurrentEventSucceeded();
-
-        // TODO(b/111075567): Unpairing disconnects us from the gatt connection we had previously
-        // opened. Find the right way to reconnect so that we can do the exchange later on.
     }
 
     /**
@@ -470,21 +471,6 @@ public class BluetoothAudioPairer {
                     ? "(none)" : String.valueOf(passkey)));
             if (mPreferences.getMoreEventLogForQuality()) {
                 mEventLogger.setCurrentEvent(EventCode.HANDLE_PAIRING_REQUEST);
-            }
-            if (!hasPermission(permission.BLUETOOTH_PRIVILEGED)) {
-                // AGSA doesn't have this permission. Attempting to accept/deny a request will
-                // crash, so let the platform Bluetooth UX appear instead. We (almost) never get
-                // here because there's no pairing request when we initiate Just Works, which is
-                // what Apollo uses. (But there is if the remote device initiates JW. In that case
-                // the user gets a platform notification.)
-                Log.v(TAG, "No BLUETOOTH_PRIVILEGED permission, ignoring pairing request.");
-                if (mPreferences.getMoreEventLogForQuality()) {
-                    mEventLogger.logCurrentEventFailed(
-                            new CreateBondException(
-                                    CreateBondErrorCode.NO_PERMISSION, 0,
-                                    "No BLUETOOTH_PRIVILEGED permission"));
-                }
-                return;
             }
 
             if (mPreferences.getSupportHidDevice() && variant == PAIRING_VARIANT_DISPLAY_PASSKEY) {
