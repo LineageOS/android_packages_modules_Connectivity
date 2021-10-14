@@ -3938,10 +3938,12 @@ public class ConnectivityService extends IConnectivityManager.Stub
         }
 
         // Delayed teardown.
-        try {
-            mNetd.networkSetPermissionForNetwork(nai.network.netId, INetd.PERMISSION_SYSTEM);
-        } catch (RemoteException e) {
-            Log.d(TAG, "Error marking network restricted during teardown: ", e);
+        if (nai.created) {
+            try {
+                mNetd.networkSetPermissionForNetwork(nai.network.netId, INetd.PERMISSION_SYSTEM);
+            } catch (RemoteException e) {
+                Log.d(TAG, "Error marking network restricted during teardown: ", e);
+            }
         }
         mHandler.postDelayed(() -> destroyNetwork(nai), nai.teardownDelayMs);
     }
