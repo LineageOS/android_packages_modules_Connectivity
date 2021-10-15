@@ -16,12 +16,17 @@
 
 package com.android.net.module.util.netlink;
 
+import android.net.MacAddress;
+
+import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
+import java.io.UnsupportedEncodingException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.util.Arrays;
 
 /**
  * struct nlattr
@@ -173,9 +178,33 @@ public class StructNlAttr {
         }
     }
 
-    public StructNlAttr(short type, InetAddress ip) {
+    public StructNlAttr(short type, @NonNull final byte[] value) {
+        nla_type = type;
+        setValue(value);
+    }
+
+    public StructNlAttr(short type, @NonNull final InetAddress ip) {
         nla_type = type;
         setValue(ip.getAddress());
+    }
+
+    public StructNlAttr(short type, @NonNull final MacAddress mac) {
+        nla_type = type;
+        setValue(mac.toByteArray());
+    }
+
+    public StructNlAttr(short type, @NonNull final String string) {
+        nla_type = type;
+        byte[] value = null;
+        try {
+            final byte[] stringBytes = string.getBytes("UTF-8");
+            // Append '\0' at the end of interface name string bytes.
+            value = Arrays.copyOf(stringBytes, stringBytes.length + 1);
+        } catch (UnsupportedEncodingException ignored) {
+            // Do nothing.
+        } finally {
+            setValue(value);
+        }
     }
 
     public StructNlAttr(short type, StructNlAttr... nested) {
@@ -270,13 +299,54 @@ public class StructNlAttr {
 
     /**
      * Get attribute value as InetAddress.
+     *
+     * @return the InetAddress instance representation of attribute value or null if IP address
+     *         is of illegal length.
      */
+    @Nullable
     public InetAddress getValueAsInetAddress() {
         if (nla_value == null) return null;
 
         try {
             return InetAddress.getByAddress(nla_value);
         } catch (UnknownHostException ignored) {
+            return null;
+        }
+    }
+
+    /**
+     * Get attribute value as MacAddress.
+     *
+     * @return the MacAddress instance representation of attribute value or null if the given byte
+     *         array is not a valid representation(e.g, not all link layers have 6-byte link-layer
+     *         addresses)
+     */
+    @Nullable
+    public MacAddress getValueAsMacAddress() {
+        if (nla_value == null) return null;
+
+        try {
+            return MacAddress.fromBytes(nla_value);
+        } catch (IllegalArgumentException ignored) {
+            return null;
+        }
+    }
+
+    /**
+     * Get attribute value as a unicode string.
+     *
+     * @return a unicode string or null if UTF-8 charset is not supported.
+     */
+    @Nullable
+    public String getValueAsString() {
+        if (nla_value == null) return null;
+        // Check the attribute value length after removing string termination flag '\0'.
+        if (nla_value.length < (nla_len - NLA_HEADERLEN - 1)) return null;
+
+        try {
+            final byte[] array = Arrays.copyOf(nla_value, nla_len - NLA_HEADERLEN - 1);
+            return new String(array, "UTF-8");
+        } catch (UnsupportedEncodingException | NegativeArraySizeException ignored) {
             return null;
         }
     }
