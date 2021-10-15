@@ -422,7 +422,7 @@ public class ConntrackMessageTest {
         final String expected = ""
                 + "ConntrackMessage{"
                 + "nlmsghdr{StructNlMsgHdr{ nlmsg_len{140}, nlmsg_type{256(IPCTNL_MSG_CT_NEW)}, "
-                + "nlmsg_flags{1536(NLM_F_MATCH))}, nlmsg_seq{0}, nlmsg_pid{0} }}, "
+                + "nlmsg_flags{1536(NLM_F_MATCH)}, nlmsg_seq{0}, nlmsg_pid{0} }}, "
                 + "nfgenmsg{NfGenMsg{ nfgen_family{AF_INET}, version{0}, res_id{4660} }}, "
                 + "tuple_orig{Tuple{IPPROTO_TCP: 192.168.80.12:62449 -> 140.112.8.116:443}}, "
                 + "tuple_reply{Tuple{IPPROTO_TCP: 140.112.8.116:443 -> 100.81.179.1:62449}}, "
