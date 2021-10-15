@@ -166,7 +166,7 @@ public class StructNlMsgHdr {
         return "StructNlMsgHdr{ "
                 + "nlmsg_len{" + nlmsg_len + "}, "
                 + "nlmsg_type{" + typeStr + "}, "
-                + "nlmsg_flags{" + flagsStr + ")}, "
+                + "nlmsg_flags{" + flagsStr + "}, "
                 + "nlmsg_seq{" + nlmsg_seq + "}, "
                 + "nlmsg_pid{" + nlmsg_pid + "} "
                 + "}";

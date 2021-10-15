@@ -70,6 +70,7 @@ public class NetlinkConstants {
         if (family == OsConstants.AF_INET) return "AF_INET";
         if (family == OsConstants.AF_INET6) return "AF_INET6";
         if (family == OsConstants.AF_NETLINK) return "AF_NETLINK";
+        if (family == OsConstants.AF_UNSPEC) return "AF_UNSPEC";
         return String.valueOf(family);
     }
 
@@ -142,8 +143,12 @@ public class NetlinkConstants {
     public static final short SOCK_DIAG_BY_FAMILY = 20;
 
     // Netlink groups.
+    public static final int RTMGRP_LINK = 1;
     public static final int RTNLGRP_ND_USEROPT = 20;
     public static final int RTMGRP_ND_USEROPT = 1 << (RTNLGRP_ND_USEROPT - 1);
+
+    // Device flags.
+    public static final int IFF_LOWER_UP = 1 << 16;
 
     /**
      * Convert a netlink message type to a string for control message.
