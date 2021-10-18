@@ -279,6 +279,7 @@ package android.net {
     method @Nullable public String getSsid();
     method @NonNull public java.util.Set<java.lang.Integer> getSubscriptionIds();
     method @NonNull public int[] getTransportTypes();
+    method @Nullable public java.util.List<android.net.Network> getUnderlyingNetworks();
     method public boolean isPrivateDnsBroken();
     method public boolean satisfiedByNetworkCapabilities(@Nullable android.net.NetworkCapabilities);
     field public static final int NET_CAPABILITY_BIP = 31; // 0x1f
@@ -309,6 +310,7 @@ package android.net {
     method @NonNull @RequiresPermission(android.Manifest.permission.NETWORK_FACTORY) public android.net.NetworkCapabilities.Builder setSsid(@Nullable String);
     method @NonNull public android.net.NetworkCapabilities.Builder setSubscriptionIds(@NonNull java.util.Set<java.lang.Integer>);
     method @NonNull public android.net.NetworkCapabilities.Builder setTransportInfo(@Nullable android.net.TransportInfo);
+    method @NonNull public android.net.NetworkCapabilities.Builder setUnderlyingNetworks(@Nullable java.util.List<android.net.Network>);
     method @NonNull public static android.net.NetworkCapabilities.Builder withoutDefaultCapabilities();
   }
 
