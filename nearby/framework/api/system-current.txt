@@ -1,1 +1,37 @@
 // Signature format: 2.0
+package android.nearby {
+
+  public abstract class FastPairDataProviderBase {
+    ctor public FastPairDataProviderBase(@NonNull String);
+    method @Nullable public final android.os.IBinder getBinder();
+    method public abstract void onLoadFastPairDeviceMetadata(@NonNull android.nearby.FastPairDataProviderBase.FastPairDeviceMetadataRequest, @NonNull android.nearby.FastPairDataProviderBase.FastPairDeviceMetadataCallback);
+  }
+
+  public static class FastPairDataProviderBase.FastPairDeviceMetadata {
+  }
+
+  public static final class FastPairDataProviderBase.FastPairDeviceMetadata.Builder {
+    ctor public FastPairDataProviderBase.FastPairDeviceMetadata.Builder();
+    method @NonNull public android.nearby.FastPairDataProviderBase.FastPairDeviceMetadata build();
+    method @NonNull public android.nearby.FastPairDataProviderBase.FastPairDeviceMetadata.Builder setAntiSpoofPublicKey(@NonNull byte[]);
+    method @NonNull public android.nearby.FastPairDataProviderBase.FastPairDeviceMetadata.Builder setBleTxPower(int);
+    method @NonNull public android.nearby.FastPairDataProviderBase.FastPairDeviceMetadata.Builder setDeviceType(int);
+    method @NonNull public android.nearby.FastPairDataProviderBase.FastPairDeviceMetadata.Builder setImage(@NonNull byte[]);
+    method @NonNull public android.nearby.FastPairDataProviderBase.FastPairDeviceMetadata.Builder setImageUrl(@NonNull String);
+    method @NonNull public android.nearby.FastPairDataProviderBase.FastPairDeviceMetadata.Builder setIntentUri(@NonNull String);
+    method @NonNull public android.nearby.FastPairDataProviderBase.FastPairDeviceMetadata.Builder setTriggerDistance(float);
+    method @NonNull public android.nearby.FastPairDataProviderBase.FastPairDeviceMetadata.Builder setTrueWirelessImageUriLeftBud(@NonNull byte[]);
+    method @NonNull public android.nearby.FastPairDataProviderBase.FastPairDeviceMetadata.Builder setTrueWirelessImageUrlCase(@NonNull byte[]);
+    method @NonNull public android.nearby.FastPairDataProviderBase.FastPairDeviceMetadata.Builder setTrueWirelessImageUrlRightBud(@NonNull byte[]);
+  }
+
+  public static interface FastPairDataProviderBase.FastPairDeviceMetadataCallback {
+    method public void onFastPairDeviceMetadataReceived(@NonNull android.nearby.FastPairDataProviderBase.FastPairDeviceMetadata);
+  }
+
+  public static class FastPairDataProviderBase.FastPairDeviceMetadataRequest {
+    method @Nullable public byte[] getModelId();
+  }
+
+}
+
