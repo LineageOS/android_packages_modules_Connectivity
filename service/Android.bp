@@ -67,7 +67,8 @@ java_library {
     static_libs: [
         "dnsresolver_aidl_interface-V9-java",
         "modules-utils-build",
-        "modules-utils-os",
+        "modules-utils-shell-command-handler",
+        "modules-utils-statemachine",
         "net-utils-device-common",
         "net-utils-device-common-netlink",
         "net-utils-framework-common",
