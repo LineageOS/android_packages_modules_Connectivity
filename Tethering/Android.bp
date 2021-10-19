@@ -33,6 +33,7 @@ java_defaults {
         "NetworkStackApiStableShims",
         "androidx.annotation_annotation",
         "modules-utils-build",
+        "modules-utils-statemachine",
         "networkstack-client",
         "android.hardware.tetheroffload.config-V1.0-java",
         "android.hardware.tetheroffload.control-V1.0-java",
