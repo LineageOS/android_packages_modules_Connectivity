@@ -109,8 +109,8 @@ public class Nat464XlatTest {
 
         mNai.linkProperties = new LinkProperties();
         mNai.linkProperties.setInterfaceName(BASE_IFACE);
-        mNai.networkInfo = new NetworkInfo(null);
-        mNai.networkInfo.setType(ConnectivityManager.TYPE_WIFI);
+        mNai.networkInfo = new NetworkInfo(ConnectivityManager.TYPE_WIFI, 0 /* subtype */,
+                null /* typeName */, null /* subtypeName */);
         mNai.networkCapabilities = new NetworkCapabilities();
         markNetworkConnected();
         when(mNai.connService()).thenReturn(mConnectivity);
