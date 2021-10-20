@@ -33,6 +33,7 @@ cc_library_headers {
         "com.android.tethering",
     ],
     visibility: [
+        "//packages/modules/Connectivity/service",
         "//packages/modules/Connectivity/Tethering",
         "//system/bpf/libbpf_android",
         "//system/memory/lmkd",
