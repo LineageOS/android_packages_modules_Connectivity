@@ -577,8 +577,7 @@ public final class TetheringServiceTest {
             assertNull("TetheringManager weak reference still not null after " + attempts
                     + " attempts", weakTm.get());
 
-            // BUG: internal callback do not be unregistered after TetheringManager is GCed.
-            assertEquals(1, callbacks.size());
+            assertEquals("Internal callback is not unregistered", 0, callbacks.size());
         });
     }
 }
