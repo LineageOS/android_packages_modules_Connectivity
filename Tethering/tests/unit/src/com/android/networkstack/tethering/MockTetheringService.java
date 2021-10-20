@@ -22,7 +22,6 @@ import static org.mockito.Mockito.mock;
 
 import android.content.Context;
 import android.content.Intent;
-import android.net.ITetheringConnector;
 import android.os.Binder;
 import android.os.IBinder;
 import android.util.ArrayMap;
@@ -72,8 +71,8 @@ public class MockTetheringService extends TetheringService {
             mBase = base;
         }
 
-        public ITetheringConnector getTetheringConnector() {
-            return ITetheringConnector.Stub.asInterface(mBase);
+        public IBinder getIBinder() {
+            return mBase;
         }
 
         public MockTetheringService getService() {
