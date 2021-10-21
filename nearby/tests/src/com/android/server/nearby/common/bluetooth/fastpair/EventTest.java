@@ -26,7 +26,7 @@ import android.platform.test.annotations.Presubmit;
 import androidx.test.filters.SmallTest;
 import androidx.test.runner.AndroidJUnit4;
 
-import com.android.server.nearby.proto.NearbyEventCodes.NearbyEvent.EventCode;
+import com.android.server.nearby.intdefs.NearbyEventIntDefs.EventCode;
 
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -41,7 +41,7 @@ public class EventTest {
 
     private static final String EXCEPTION_MESSAGE = "Test exception";
     private static final long TIMESTAMP = 1234L;
-    private static final EventCode EVENT_CODE = EventCode.CREATE_BOND;
+    private static final @EventCode int EVENT_CODE = EventCode.CREATE_BOND;
     private static final BluetoothDevice BLUETOOTH_DEVICE = BluetoothAdapter.getDefaultAdapter()
             .getRemoteDevice("11:22:33:44:55:66");
     private static final Short PROFILE = (short) 1;

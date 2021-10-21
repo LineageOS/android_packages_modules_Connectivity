@@ -20,7 +20,7 @@ import android.bluetooth.BluetoothDevice;
 import android.content.Context;
 
 import com.android.server.nearby.common.bluetooth.fastpair.Preferences.ExtraLoggingInformation;
-import com.android.server.nearby.proto.NearbyEventCodes.NearbyEvent.EventCode;
+import com.android.server.nearby.intdefs.NearbyEventIntDefs.EventCode;
 
 import javax.annotation.Nullable;
 
@@ -49,7 +49,7 @@ class EventLoggerWrapper {
     void unbind(Context context) {
     }
 
-    void setCurrentEvent(EventCode code) {
+    void setCurrentEvent(@EventCode int code) {
     }
 
     void setCurrentProfile(short profile) {

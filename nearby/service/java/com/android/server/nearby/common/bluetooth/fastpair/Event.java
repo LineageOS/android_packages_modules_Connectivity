@@ -20,7 +20,7 @@ import android.bluetooth.BluetoothDevice;
 import android.os.Parcel;
 import android.os.Parcelable;
 
-import com.android.server.nearby.proto.NearbyEventCodes.NearbyEvent.EventCode;
+import com.android.server.nearby.intdefs.NearbyEventIntDefs.EventCode;
 
 import com.google.auto.value.AutoValue;
 
@@ -36,7 +36,7 @@ public abstract class Event implements Parcelable {
     /**
      * Returns event code.
      */
-    public abstract EventCode getEventCode();
+    public abstract @EventCode int getEventCode();
 
     /**
      * Returns timestamp.
@@ -98,7 +98,7 @@ public abstract class Event implements Parcelable {
         /**
          * Set event code.
          */
-        public abstract Builder setEventCode(EventCode eventCode);
+        public abstract Builder setEventCode(@EventCode int eventCode);
 
         /**
          * Set timestamp.
@@ -128,7 +128,7 @@ public abstract class Event implements Parcelable {
 
     @Override
     public final void writeToParcel(Parcel dest, int flags) {
-        dest.writeInt(getEventCode().getNumber());
+        dest.writeInt(getEventCode());
         dest.writeLong(getTimestamp());
         dest.writeValue(getProfile());
         dest.writeParcelable(getBluetoothDevice(), 0);
@@ -149,7 +149,7 @@ public abstract class Event implements Parcelable {
                 /** Creates Event from Parcel. */
                 public Event createFromParcel(Parcel in) {
                     return Event.builder()
-                            .setEventCode(EventCode.forNumber(in.readInt()))
+                            .setEventCode(in.readInt())
                             .setTimestamp(in.readLong())
                             .setProfile((Short) in.readValue(Short.class.getClassLoader()))
                             .setBluetoothDevice(

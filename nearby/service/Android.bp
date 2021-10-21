@@ -42,7 +42,6 @@ java_library {
         "androidx.annotation_annotation",
         "androidx.core_core",
         "auto_value_annotations",
-        "fast-pair-lite-protos",
         "guava",
         "libprotobuf-java-lite",
     ],

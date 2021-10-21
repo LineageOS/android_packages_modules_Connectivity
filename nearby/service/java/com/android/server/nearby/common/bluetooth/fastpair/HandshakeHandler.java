@@ -63,8 +63,8 @@ import com.android.server.nearby.common.bluetooth.fastpair.FastPairConnection.Sh
 import com.android.server.nearby.common.bluetooth.gatt.BluetoothGattConnection;
 import com.android.server.nearby.common.bluetooth.gatt.BluetoothGattConnection.ChangeObserver;
 import com.android.server.nearby.common.bluetooth.util.BluetoothOperationExecutor.BluetoothOperationTimeoutException;
-import com.android.server.nearby.proto.FastPairEnums.FastPairEvent.ErrorCode;
-import com.android.server.nearby.proto.NearbyEventCodes.NearbyEvent.EventCode;
+import com.android.server.nearby.intdefs.FastPairEventIntDefs.ErrorCode;
+import com.android.server.nearby.intdefs.NearbyEventIntDefs.EventCode;
 
 import java.security.GeneralSecurityException;
 import java.security.SecureRandom;
@@ -144,7 +144,7 @@ public class HandshakeHandler {
      * FastPair signal check if fails.
      */
     public SharedSecret doHandshakeWithRetryAndSignalLostCheck(
-            byte[] key, HandshakeMessage message, @Nullable Consumer<ErrorCode> rescueFromError)
+            byte[] key, HandshakeMessage message, @Nullable Consumer<Integer> rescueFromError)
             throws GeneralSecurityException, InterruptedException, ExecutionException,
             TimeoutException, BluetoothException, PairingException {
         Keys keys = createKey(key);

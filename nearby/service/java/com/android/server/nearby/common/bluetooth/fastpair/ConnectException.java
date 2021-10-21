@@ -16,19 +16,20 @@
 
 package com.android.server.nearby.common.bluetooth.fastpair;
 
-import com.android.server.nearby.proto.FastPairEnums.FastPairEvent;
+import com.android.server.nearby.intdefs.FastPairEventIntDefs.ConnectErrorCode;
+
 
 /** Thrown when connecting to a bluetooth device fails. */
 public class ConnectException extends PairingException {
-    final FastPairEvent.ConnectErrorCode mErrorCode;
+    final @ConnectErrorCode int mErrorCode;
 
-    ConnectException(FastPairEvent.ConnectErrorCode errorCode, String format, Object... objects) {
+    ConnectException(@ConnectErrorCode int errorCode, String format, Object... objects) {
         super(format, objects);
         this.mErrorCode = errorCode;
     }
 
     /** Returns error code. */
-    public FastPairEvent.ConnectErrorCode getErrorCode() {
+    public @ConnectErrorCode int getErrorCode() {
         return mErrorCode;
     }
 }

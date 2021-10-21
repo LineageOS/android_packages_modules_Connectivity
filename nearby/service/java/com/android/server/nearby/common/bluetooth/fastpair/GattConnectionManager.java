@@ -39,8 +39,8 @@ import com.android.server.nearby.common.bluetooth.gatt.BluetoothGattHelper;
 import com.android.server.nearby.common.bluetooth.gatt.BluetoothGattHelper.ConnectionOptions;
 import com.android.server.nearby.common.bluetooth.testability.android.bluetooth.BluetoothAdapter;
 import com.android.server.nearby.common.bluetooth.util.BluetoothOperationExecutor.BluetoothOperationTimeoutException;
-import com.android.server.nearby.proto.FastPairEnums.FastPairEvent.ErrorCode;
-import com.android.server.nearby.proto.NearbyEventCodes.NearbyEvent.EventCode;
+import com.android.server.nearby.intdefs.FastPairEventIntDefs.ErrorCode;
+import com.android.server.nearby.intdefs.NearbyEventIntDefs.EventCode;
 
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -111,7 +111,7 @@ final class GattConnectionManager {
     }
 
     BluetoothGattConnection getConnectionWithSignalLostCheck(
-            @Nullable Consumer<ErrorCode> rescueFromError)
+            @Nullable Consumer<Integer> rescueFromError)
             throws InterruptedException, ExecutionException, TimeoutException, BluetoothException,
             SignalLostException, SignalRotatedException {
         if (mGattConnection == null) {
@@ -135,7 +135,7 @@ final class GattConnectionManager {
 
     private BluetoothGattConnection connect(
             String address, boolean checkSignalWhenFail,
-            @Nullable Consumer<ErrorCode> rescueFromError)
+            @Nullable Consumer<Integer> rescueFromError)
             throws InterruptedException, ExecutionException, TimeoutException, BluetoothException,
             SignalLostException, SignalRotatedException {
         int i = 1;

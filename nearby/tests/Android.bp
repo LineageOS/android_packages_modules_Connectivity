@@ -34,7 +34,6 @@ android_test {
 
     static_libs: [
         "androidx.test.rules",
-        "fast-pair-lite-protos",
         "framework-nearby-pre-jarjar",
         "guava",
         "libprotobuf-java-lite",

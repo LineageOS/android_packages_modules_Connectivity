@@ -25,7 +25,6 @@ import androidx.core.util.Consumer;
 
 import com.android.internal.annotations.VisibleForTesting;
 import com.android.server.nearby.common.bluetooth.BluetoothException;
-import com.android.server.nearby.proto.FastPairEnums.FastPairEvent;
 
 import com.google.auto.value.AutoValue;
 
@@ -41,7 +40,7 @@ public abstract class FastPairConnection {
     @Nullable protected OnGetBluetoothAddressCallback mOnGetBluetoothAddressCallback;
     @Nullable protected PasskeyConfirmationHandler mPasskeyConfirmationHandler;
     @Nullable protected FastPairSignalChecker mFastPairSignalChecker;
-    @Nullable protected Consumer<FastPairEvent.ErrorCode> mRescueFromError;
+    @Nullable protected Consumer<Integer> mRescueFromError;
     @Nullable protected Runnable mPrepareCreateBondCallback;
     protected boolean mPasskeyIsGotten;
 
@@ -65,7 +64,7 @@ public abstract class FastPairConnection {
         this.mFastPairSignalChecker = fastPairSignalChecker;
     }
 
-    public void setRescueFromError(Consumer<FastPairEvent.ErrorCode> rescueFromError) {
+    public void setRescueFromError(Consumer<Integer> rescueFromError) {
         this.mRescueFromError = rescueFromError;
     }
 

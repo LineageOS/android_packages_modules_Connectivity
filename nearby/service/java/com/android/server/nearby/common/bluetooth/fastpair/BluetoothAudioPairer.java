@@ -52,9 +52,9 @@ import com.android.server.nearby.common.bluetooth.fastpair.Constants.Profile;
 import com.android.server.nearby.common.bluetooth.fastpair.TimingLogger.ScopedTiming;
 import com.android.server.nearby.common.bluetooth.gatt.BluetoothGattConnection;
 import com.android.server.nearby.common.bluetooth.gatt.BluetoothGattConnection.ChangeObserver;
-import com.android.server.nearby.proto.FastPairEnums.FastPairEvent.ConnectErrorCode;
-import com.android.server.nearby.proto.FastPairEnums.FastPairEvent.CreateBondErrorCode;
-import com.android.server.nearby.proto.NearbyEventCodes.NearbyEvent.EventCode;
+import com.android.server.nearby.intdefs.FastPairEventIntDefs.ConnectErrorCode;
+import com.android.server.nearby.intdefs.FastPairEventIntDefs.CreateBondErrorCode;
+import com.android.server.nearby.intdefs.NearbyEventIntDefs.EventCode;
 
 import com.google.common.base.Preconditions;
 import com.google.common.util.concurrent.SettableFuture;

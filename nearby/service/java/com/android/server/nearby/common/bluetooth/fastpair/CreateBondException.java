@@ -16,14 +16,14 @@
 
 package com.android.server.nearby.common.bluetooth.fastpair;
 
-import com.android.server.nearby.proto.FastPairEnums.FastPairEvent;
+import com.android.server.nearby.intdefs.FastPairEventIntDefs.CreateBondErrorCode;
 
 /** Thrown when binding (pairing) with a bluetooth device fails. */
 public class CreateBondException extends PairingException {
-    final FastPairEvent.CreateBondErrorCode mErrorCode;
+    final @CreateBondErrorCode int mErrorCode;
     int mReason;
 
-    CreateBondException(FastPairEvent.CreateBondErrorCode errorCode, int reason, String format,
+    CreateBondException(@CreateBondErrorCode int errorCode, int reason, String format,
             Object... objects) {
         super(format, objects);
         this.mErrorCode = errorCode;
@@ -31,7 +31,7 @@ public class CreateBondException extends PairingException {
     }
 
     /** Returns error code. */
-    public FastPairEvent.CreateBondErrorCode getErrorCode() {
+    public @CreateBondErrorCode int getErrorCode() {
         return mErrorCode;
     }
 

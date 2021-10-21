@@ -16,7 +16,7 @@
 
 package com.android.server.nearby.common.bluetooth.fastpair;
 
-import com.android.server.nearby.proto.FastPairEnums.FastPairEvent.BrEdrHandoverErrorCode;
+import com.android.server.nearby.intdefs.FastPairEventIntDefs.BrEdrHandoverErrorCode;
 
 import com.google.errorprone.annotations.FormatMethod;
 
@@ -25,16 +25,16 @@ import com.google.errorprone.annotations.FormatMethod;
  */
 public class TdsException extends Exception {
 
-    final BrEdrHandoverErrorCode mErrorCode;
+    final @BrEdrHandoverErrorCode int mErrorCode;
 
     @FormatMethod
-    TdsException(BrEdrHandoverErrorCode errorCode, String format, Object... objects) {
+    TdsException(@BrEdrHandoverErrorCode int errorCode, String format, Object... objects) {
         super(String.format(format, objects));
         this.mErrorCode = errorCode;
     }
 
     /** Returns error code. */
-    public BrEdrHandoverErrorCode getErrorCode() {
+    public @BrEdrHandoverErrorCode int getErrorCode() {
         return mErrorCode;
     }
 }

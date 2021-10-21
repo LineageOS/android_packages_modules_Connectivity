@@ -20,7 +20,7 @@ import android.text.TextUtils;
 
 import androidx.annotation.Nullable;
 
-import com.android.server.nearby.proto.NearbyEventCodes.NearbyEvent.EventCode;
+import com.android.server.nearby.intdefs.NearbyEventIntDefs.EventCode;
 
 import com.google.common.base.Ascii;
 
@@ -111,7 +111,7 @@ import com.google.common.base.Ascii;
 public abstract class FastPairDualConnection extends FastPairConnection {
 
     static void logRetrySuccessEvent(
-            EventCode eventCode,
+            @EventCode int eventCode,
             @Nullable Exception recoverFromException,
             EventLoggerWrapper eventLogger) {
         if (recoverFromException == null) {
