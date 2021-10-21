@@ -179,21 +179,19 @@ public class NetworkInfo implements Parcelable {
 
     /** {@hide} */
     @UnsupportedAppUsage
-    public NetworkInfo(NetworkInfo source) {
-        if (source != null) {
-            synchronized (source) {
-                mNetworkType = source.mNetworkType;
-                mSubtype = source.mSubtype;
-                mTypeName = source.mTypeName;
-                mSubtypeName = source.mSubtypeName;
-                mState = source.mState;
-                mDetailedState = source.mDetailedState;
-                mReason = source.mReason;
-                mExtraInfo = source.mExtraInfo;
-                mIsFailover = source.mIsFailover;
-                mIsAvailable = source.mIsAvailable;
-                mIsRoaming = source.mIsRoaming;
-            }
+    public NetworkInfo(@NonNull NetworkInfo source) {
+        synchronized (source) {
+            mNetworkType = source.mNetworkType;
+            mSubtype = source.mSubtype;
+            mTypeName = source.mTypeName;
+            mSubtypeName = source.mSubtypeName;
+            mState = source.mState;
+            mDetailedState = source.mDetailedState;
+            mReason = source.mReason;
+            mExtraInfo = source.mExtraInfo;
+            mIsFailover = source.mIsFailover;
+            mIsAvailable = source.mIsAvailable;
+            mIsRoaming = source.mIsRoaming;
         }
     }
 
@@ -479,7 +477,7 @@ public class NetworkInfo implements Parcelable {
      * @param detailedState the {@link DetailedState}.
      * @param reason a {@code String} indicating the reason for the state change,
      * if one was supplied. May be {@code null}.
-     * @param extraInfo an optional {@code String} providing addditional network state
+     * @param extraInfo an optional {@code String} providing additional network state
      * information passed up from the lower networking layers.
      * @deprecated Use {@link NetworkCapabilities} instead.
      */
@@ -491,6 +489,11 @@ public class NetworkInfo implements Parcelable {
             this.mState = stateMap.get(detailedState);
             this.mReason = reason;
             this.mExtraInfo = extraInfo;
+            // Catch both the case where detailedState is null and the case where it's some
+            // unknown value
+            if (null == mState) {
+                throw new NullPointerException("Unknown DetailedState : " + detailedState);
+            }
         }
     }
 

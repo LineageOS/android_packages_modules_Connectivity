@@ -37,6 +37,7 @@ import com.android.internal.annotations.GuardedBy;
 
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
+import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -265,7 +266,7 @@ public class TetheringManager {
     public TetheringManager(@NonNull final Context context,
             @NonNull Supplier<IBinder> connectorSupplier) {
         mContext = context;
-        mCallback = new TetheringCallbackInternal();
+        mCallback = new TetheringCallbackInternal(this);
         mConnectorSupplier = connectorSupplier;
 
         final String pkgName = mContext.getOpPackageName();
@@ -287,6 +288,23 @@ public class TetheringManager {
 
         Log.i(TAG, "registerTetheringEventCallback:" + pkgName);
         getConnector(c -> c.registerTetheringEventCallback(mCallback, pkgName));
+    }
+
+    /** @hide */
+    @Override
+    protected void finalize() throws Throwable {
+        final String pkgName = mContext.getOpPackageName();
+        Log.i(TAG, "unregisterTetheringEventCallback:" + pkgName);
+        // 1. It's generally not recommended to perform long operations in finalize, but while
+        // unregisterTetheringEventCallback does an IPC, it's a oneway IPC so should not block.
+        // 2. If the connector is not yet connected, TetheringManager is impossible to finalize
+        // because the connector polling thread strong reference the TetheringManager object. So
+        // it's guaranteed that registerTetheringEventCallback was already called before calling
+        // unregisterTetheringEventCallback in finalize.
+        if (mConnector == null) Log.wtf(TAG, "null connector in finalize!");
+        getConnector(c -> c.unregisterTetheringEventCallback(mCallback, pkgName));
+
+        super.finalize();
     }
 
     private void startPollingForConnector() {
@@ -415,7 +433,7 @@ public class TetheringManager {
         }
     }
 
-    private void throwIfPermissionFailure(final int errorCode) {
+    private static void throwIfPermissionFailure(final int errorCode) {
         switch (errorCode) {
             case TETHER_ERROR_NO_CHANGE_TETHERING_PERMISSION:
                 throw new SecurityException("No android.permission.TETHER_PRIVILEGED"
@@ -426,21 +444,40 @@ public class TetheringManager {
         }
     }
 
-    private class TetheringCallbackInternal extends ITetheringEventCallback.Stub {
+    private static class TetheringCallbackInternal extends ITetheringEventCallback.Stub {
         private volatile int mError = TETHER_ERROR_NO_ERROR;
         private final ConditionVariable mWaitForCallback = new ConditionVariable();
+        // This object is never garbage collected because the Tethering code running in
+        // the system server always maintains a reference to it for as long as
+        // mCallback is registered.
+        //
+        // Don't keep a strong reference to TetheringManager because otherwise
+        // TetheringManager cannot be garbage collected, and because TetheringManager
+        // stores the Context that it was created from, this will prevent the calling
+        // Activity from being garbage collected as well.
+        private final WeakReference<TetheringManager> mTetheringMgrRef;
+
+        TetheringCallbackInternal(final TetheringManager tm) {
+            mTetheringMgrRef = new WeakReference<>(tm);
+        }
 
         @Override
         public void onCallbackStarted(TetheringCallbackStartedParcel parcel) {
-            mTetheringConfiguration = parcel.config;
-            mTetherStatesParcel = parcel.states;
-            mWaitForCallback.open();
+            TetheringManager tetheringMgr = mTetheringMgrRef.get();
+            if (tetheringMgr != null) {
+                tetheringMgr.mTetheringConfiguration = parcel.config;
+                tetheringMgr.mTetherStatesParcel = parcel.states;
+                mWaitForCallback.open();
+            }
         }
 
         @Override
         public void onCallbackStopped(int errorCode) {
-            mError = errorCode;
-            mWaitForCallback.open();
+            TetheringManager tetheringMgr = mTetheringMgrRef.get();
+            if (tetheringMgr != null) {
+                mError = errorCode;
+                mWaitForCallback.open();
+            }
         }
 
         @Override
@@ -448,12 +485,14 @@ public class TetheringManager {
 
         @Override
         public void onConfigurationChanged(TetheringConfigurationParcel config) {
-            mTetheringConfiguration = config;
+            TetheringManager tetheringMgr = mTetheringMgrRef.get();
+            if (tetheringMgr != null) tetheringMgr.mTetheringConfiguration = config;
         }
 
         @Override
         public void onTetherStatesChanged(TetherStatesParcel states) {
-            mTetherStatesParcel = states;
+            TetheringManager tetheringMgr = mTetheringMgrRef.get();
+            if (tetheringMgr != null) tetheringMgr.mTetherStatesParcel = states;
         }
 
         @Override
