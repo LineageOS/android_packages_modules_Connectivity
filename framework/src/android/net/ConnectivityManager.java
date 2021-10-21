@@ -46,7 +46,6 @@ import android.net.SocketKeepalive.Callback;
 import android.net.TetheringManager.StartTetheringCallback;
 import android.net.TetheringManager.TetheringEventCallback;
 import android.net.TetheringManager.TetheringRequest;
-import android.net.wifi.WifiNetworkSuggestion;
 import android.os.Binder;
 import android.os.Build;
 import android.os.Build.VERSION_CODES;
@@ -3479,7 +3478,8 @@ public class ConnectivityManager {
          * {@link NetworkCapabilities#getTransportInfo()}) like {@link android.net.wifi.WifiInfo}
          * contain location sensitive information.
          * <li> OwnerUid (retrieved via {@link NetworkCapabilities#getOwnerUid()} is location
-         * sensitive for wifi suggestor apps (i.e using {@link WifiNetworkSuggestion}).</li>
+         * sensitive for wifi suggestor apps (i.e using
+         * {@link android.net.wifi.WifiNetworkSuggestion WifiNetworkSuggestion}).</li>
          * </p>
          * <p>
          * Note:
