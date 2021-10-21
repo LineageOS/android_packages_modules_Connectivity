@@ -84,12 +84,6 @@ public class BluetoothAudioPairer {
      * Hidden, see {@link BluetoothDevice}.
      */
     // TODO(b/202549655): remove Hidden usage.
-    private static final int ACCESS_REJECTED = 2;
-
-    /**
-     * Hidden, see {@link BluetoothDevice}.
-     */
-    // TODO(b/202549655): remove Hidden usage.
     private static final int PAIRING_VARIANT_CONSENT = 3;
 
     /**
@@ -140,7 +134,7 @@ public class BluetoothAudioPairer {
             @Nullable KeyBasedPairingInfo keyBasedPairingInfo,
             @Nullable PasskeyConfirmationHandler passkeyConfirmationHandler,
             TimingLogger timingLogger)
-            throws ReflectionException, PairingException {
+            throws PairingException {
         this.mContext = context;
         this.mDevice = device;
         this.mPreferences = preferences;
@@ -158,24 +152,15 @@ public class BluetoothAudioPairer {
         // If that OS bug doesn't get fixed, we can flip these flags to force-reject the
         // permissions.
         if (preferences.getRejectPhonebookAccess()
-                && !(Boolean)
-                Reflect.on(device)
-                        .withMethod("setPhonebookAccessPermission", int.class)
-                        .get(ACCESS_REJECTED)) {
+                && !device.setPhonebookAccessPermission(BluetoothDevice.ACCESS_REJECTED)) {
             throw new PairingException("Failed to deny contacts (phonebook) access.");
         }
         if (preferences.getRejectMessageAccess()
-                && !(Boolean)
-                Reflect.on(device)
-                        .withMethod("setMessageAccessPermission", int.class)
-                        .get(ACCESS_REJECTED)) {
+                && !device.setMessageAccessPermission(BluetoothDevice.ACCESS_REJECTED)) {
             throw new PairingException("Failed to deny message access.");
         }
         if (preferences.getRejectSimAccess()
-                && !(Boolean)
-                Reflect.on(device)
-                        .withMethod("setSimAccessPermission", int.class)
-                        .get(ACCESS_REJECTED)) {
+                && !device.setSimAccessPermission(BluetoothDevice.ACCESS_REJECTED)) {
             throw new PairingException("Failed to deny SIM access.");
         }
     }
@@ -189,41 +174,30 @@ public class BluetoothAudioPairer {
      */
     @WorkerThread
     void unpair()
-            throws ReflectionException, InterruptedException, ExecutionException, TimeoutException,
-            PairingException {
-        // Unbond methods are public, but hidden.
-        String methodName;
-        switch (mDevice.getBondState()) {
-            case BOND_BONDED:
-                mEventLogger.setCurrentEvent(EventCode.REMOVE_BOND);
-                methodName = "removeBond";
-                break;
-            case BOND_BONDING:
-                mEventLogger.setCurrentEvent(EventCode.CANCEL_BOND);
-                methodName = "cancelBondProcess";
-                break;
-            case BOND_NONE:
-            default:
-                return;
-        }
-
+            throws InterruptedException, ExecutionException, TimeoutException, PairingException {
+        int bondState =  mDevice.getBondState();
         try (UnbondedReceiver unbondedReceiver = new UnbondedReceiver();
                 ScopedTiming scopedTiming = new ScopedTiming(mTimingLogger,
-                        "Unpair: " + methodName)) {
-            Log.i(TAG, methodName + " with " + maskBluetoothAddress(mDevice));
+                        "Unpair for state: " + bondState)) {
             // We'll only get a state change broadcast if we're actually unbonding (method returns
             // true).
-            if ((Boolean) Reflect.on(mDevice).withMethod(methodName).get()) {
-                unbondedReceiver
-                        .await(mPreferences.getRemoveBondTimeoutSeconds(), TimeUnit.SECONDS);
+            if (bondState == BluetoothDevice.BOND_BONDED) {
+                mEventLogger.setCurrentEvent(EventCode.REMOVE_BOND);
+                Log.i(TAG,  "removeBond with " + maskBluetoothAddress(mDevice));
+                mDevice.removeBond();
+                unbondedReceiver.await(
+                        mPreferences.getRemoveBondTimeoutSeconds(), TimeUnit.SECONDS);
+            } else if (bondState == BluetoothDevice.BOND_BONDING) {
+                mEventLogger.setCurrentEvent(EventCode.CANCEL_BOND);
+                Log.i(TAG,  "cancelBondProcess with " + maskBluetoothAddress(mDevice));
+                mDevice.cancelBondProcess();
+                unbondedReceiver.await(
+                        mPreferences.getRemoveBondTimeoutSeconds(), TimeUnit.SECONDS);
             } else {
-                int bondState = mDevice.getBondState();
-                Log.w(TAG, methodName + " returned false, state=" + bondState);
                 // The OS may have beaten us in a race, unbonding before we called the method. So if
                 // we're (somehow) in the desired state then we're happy, if not then bail.
-                if (bondState != BOND_NONE) {
-                    throw new PairingException("%s failed, returned false, state=%s", methodName,
-                            bondState);
+                if (bondState != BluetoothDevice.BOND_NONE) {
+                    throw new PairingException("returned false, state=%s", bondState);
                 }
             }
         }
@@ -238,8 +212,7 @@ public class BluetoothAudioPairer {
      */
     @WorkerThread
     void pair()
-            throws InterruptedException, ExecutionException, TimeoutException, PairingException,
-            ReflectionException {
+            throws InterruptedException, ExecutionException, TimeoutException, PairingException {
         // Unpair first, because if we have a bond, but the other device has forgotten its bond,
         // it can send us a pairing request that we're not ready for (which can pop up a dialog).
         // Or, if we're in the middle of a (too-long) bonding attempt, we want to cancel.
@@ -253,9 +226,7 @@ public class BluetoothAudioPairer {
                 Log.i(TAG, "createBond with " + maskBluetoothAddress(mDevice) + ", type="
                         + mDevice.getType());
                 if (mPreferences.getSpecifyCreateBondTransportType()) {
-                    Reflect.on(mDevice)
-                            .withMethod("createBond", int.class)
-                            .invoke(mPreferences.getCreateBondTransportType());
+                    mDevice.createBond(mPreferences.getCreateBondTransportType());
                 } else {
                     mDevice.createBond();
                 }
@@ -438,7 +409,7 @@ public class BluetoothAudioPairer {
         @Override
         protected void onReceiveDeviceIntent(Intent intent)
                 throws PairingException, InterruptedException, ExecutionException, TimeoutException,
-                BluetoothException, GeneralSecurityException, ReflectionException {
+                BluetoothException, GeneralSecurityException {
             switch (intent.getAction()) {
                 case BluetoothDevice.ACTION_PAIRING_REQUEST:
                     int variant = intent.getIntExtra(BluetoothDevice.EXTRA_PAIRING_VARIANT, ERROR);
@@ -690,7 +661,7 @@ public class BluetoothAudioPairer {
 
         private void handleBondStateChanged(int bondState, int reason)
                 throws PairingException, InterruptedException, ExecutionException,
-                ReflectionException, TimeoutException {
+                TimeoutException {
             Log.i(TAG, "Bond state changed to " + bondState + ", reason=" + reason);
             switch (bondState) {
                 case BOND_BONDED:
