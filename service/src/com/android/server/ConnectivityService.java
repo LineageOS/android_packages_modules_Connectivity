@@ -2032,6 +2032,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
         if (!checkSettingsPermission(callerPid, callerUid)) {
             newNc.setUids(null);
             newNc.setSSID(null);
+            newNc.setUnderlyingNetworks(null);
         }
         if (newNc.getNetworkSpecifier() != null) {
             newNc.setNetworkSpecifier(newNc.getNetworkSpecifier().redact());
@@ -7326,7 +7327,9 @@ public class ConnectivityService extends IConnectivityManager.Stub
         boolean suspended = true; // suspended if all underlying are suspended
 
         boolean hadUnderlyingNetworks = false;
+        ArrayList<Network> newUnderlyingNetworks = null;
         if (null != underlyingNetworks) {
+            newUnderlyingNetworks = new ArrayList<>();
             for (Network underlyingNetwork : underlyingNetworks) {
                 final NetworkAgentInfo underlying =
                         getNetworkAgentInfoForNetwork(underlyingNetwork);
@@ -7356,6 +7359,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
                 // If this network is not suspended, the VPN is not suspended (the VPN
                 // is able to transfer some data).
                 suspended &= !underlyingCaps.hasCapability(NET_CAPABILITY_NOT_SUSPENDED);
+                newUnderlyingNetworks.add(underlyingNetwork);
             }
         }
         if (!hadUnderlyingNetworks) {
@@ -7373,6 +7377,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
         newNc.setCapability(NET_CAPABILITY_NOT_ROAMING, !roaming);
         newNc.setCapability(NET_CAPABILITY_NOT_CONGESTED, !congested);
         newNc.setCapability(NET_CAPABILITY_NOT_SUSPENDED, !suspended);
+        newNc.setUnderlyingNetworks(newUnderlyingNetworks);
     }
 
     /**
