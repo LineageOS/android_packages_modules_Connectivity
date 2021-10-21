@@ -42,7 +42,6 @@ public class NearbyService extends SystemService {
         if (DBG) {
             Log.d(TAG, "Publishing NearbyService");
         }
-
     }
 
     @Override

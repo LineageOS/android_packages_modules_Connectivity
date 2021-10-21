@@ -42,7 +42,7 @@ public class EventLoopTest {
         mEventLoop.removeRunnable(runnableToAddAndRemove);
         mEventLoop.postRunnable(new NumberedRunnable(2));
 
-        assertThat(mExecutedRunnables).containsExactly(0, 1);
+        assertThat(mExecutedRunnables).containsExactly(0, 2);
     }
 
     @Test
