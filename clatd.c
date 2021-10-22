@@ -159,8 +159,8 @@ void set_capability(uint64_t target_cap) {
  * drops root privs but keeps the needed capabilities
  */
 void drop_root_but_keep_caps() {
-  gid_t groups[] = { AID_INET, AID_VPN };
-  if (setgroups(sizeof(groups) / sizeof(groups[0]), groups) < 0) {
+  // see man setgroups: this drops all supplementary groups
+  if (setgroups(0, NULL) < 0) {
     logmsg(ANDROID_LOG_FATAL, "setgroups failed: %s", strerror(errno));
     exit(1);
   }
