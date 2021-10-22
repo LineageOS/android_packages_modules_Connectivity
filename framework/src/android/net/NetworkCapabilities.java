@@ -27,7 +27,6 @@ import android.annotation.SuppressLint;
 import android.annotation.SystemApi;
 import android.compat.annotation.UnsupportedAppUsage;
 import android.net.ConnectivityManager.NetworkCallback;
-import android.net.wifi.WifiNetworkSuggestion;
 import android.os.Build;
 import android.os.Parcel;
 import android.os.Parcelable;
@@ -1192,14 +1191,14 @@ public final class NetworkCapabilities implements Parcelable {
      *
      * <p>
      * This field will only be populated for VPN and wifi network suggestor apps (i.e using
-     * {@link WifiNetworkSuggestion}), and only for the network they own.
-     * In the case of wifi network suggestors apps, this field is also location sensitive, so the
-     * app needs to hold {@link android.Manifest.permission#ACCESS_FINE_LOCATION} permission. If the
-     * app targets SDK version greater than or equal to {@link Build.VERSION_CODES#S}, then they
-     * also need to use {@link NetworkCallback#FLAG_INCLUDE_LOCATION_INFO} to get the info in their
-     * callback. If the apps targets SDK version equal to {{@link Build.VERSION_CODES#R}, this field
-     * will always be included. The app will be blamed for location access if this field is
-     * included.
+     * {@link android.net.wifi.WifiNetworkSuggestion WifiNetworkSuggestion}), and only for the
+     * network they own. In the case of wifi network suggestors apps, this field is also location
+     * sensitive, so the app needs to hold {@link android.Manifest.permission#ACCESS_FINE_LOCATION}
+     * permission. If the app targets SDK version greater than or equal to
+     * {@link Build.VERSION_CODES#S}, then they also need to use
+     * {@link NetworkCallback#FLAG_INCLUDE_LOCATION_INFO} to get the info in their callback. If the
+     * apps targets SDK version equal to {{@link Build.VERSION_CODES#R}, this field will always be
+     * included. The app will be blamed for location access if this field is included.
      * </p>
      */
     public int getOwnerUid() {
@@ -2129,14 +2128,17 @@ public final class NetworkCapabilities implements Parcelable {
             sb.append(" SubscriptionIds: ").append(mSubIds);
         }
 
-        if (mUnderlyingNetworks != null && mUnderlyingNetworks.size() > 0) {
-            sb.append(" Underlying networks: [");
+        sb.append(" UnderlyingNetworks: ");
+        if (mUnderlyingNetworks != null) {
+            sb.append("[");
             final StringJoiner joiner = new StringJoiner(",");
             for (int i = 0; i < mUnderlyingNetworks.size(); i++) {
                 joiner.add(mUnderlyingNetworks.get(i).toString());
             }
             sb.append(joiner.toString());
             sb.append("]");
+        } else {
+            sb.append("Null");
         }
 
         sb.append("]");
