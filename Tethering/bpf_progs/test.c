@@ -18,6 +18,9 @@
 #include <linux/in.h>
 #include <linux/ip.h>
 
+// The resulting .o needs to load on the Android S bpfloader v0.2
+#define BPFLOADER_MIN_VER 2u
+
 #include "bpf_helpers.h"
 #include "bpf_net_helpers.h"
 #include "bpf_tethering.h"
