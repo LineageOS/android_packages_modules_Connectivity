@@ -26,54 +26,51 @@ import com.android.net.module.util.Struct.Type;
 import java.nio.ByteBuffer;
 
 /**
- * struct ifinfomsg
+ * struct ifa_cacheinfo
  *
  * see also:
  *
- *     include/uapi/linux/rtnetlink.h
+ *     include/uapi/linux/if_addr.h
  *
  * @hide
  */
-public class StructIfinfoMsg extends Struct {
+public class StructIfacacheInfo extends Struct {
     // Already aligned.
     public static final int STRUCT_SIZE = 16;
 
-    @Field(order = 0, type = Type.U8, padding = 1)
-    public final short family;
-    @Field(order = 1, type = Type.U16)
-    public final int type;
-    @Field(order = 2, type = Type.S32)
-    public final int index;
+    @Field(order = 0, type = Type.U32)
+    public final long preferred;
+    @Field(order = 1, type = Type.U32)
+    public final long valid;
+    @Field(order = 2, type = Type.U32)
+    public final long cstamp; // created timestamp, hundredths of seconds.
     @Field(order = 3, type = Type.U32)
-    public final long flags;
-    @Field(order = 4, type = Type.U32)
-    public final long change;
+    public final long tstamp; // updated timestamp, hundredths of seconds.
 
-    StructIfinfoMsg(short family, int type, int index, long flags, long change) {
-        this.family = family;
-        this.type = type;
-        this.index = index;
-        this.flags = flags;
-        this.change = change;
+    StructIfacacheInfo(long preferred, long valid, long cstamp, long tstamp) {
+        this.preferred = preferred;
+        this.valid = valid;
+        this.cstamp = cstamp;
+        this.tstamp = tstamp;
     }
 
     /**
-     * Parse an ifinfomsg struct from a {@link ByteBuffer}.
+     * Parse an ifa_cacheinfo struct from a {@link ByteBuffer}.
      *
-     * @param byteBuffer The buffer from which to parse the ifinfomsg.
-     * @return the parsed ifinfomsg struct, or {@code null} if the ifinfomsg struct
+     * @param byteBuffer The buffer from which to parse the ifa_cacheinfo.
+     * @return the parsed ifa_cacheinfo struct, or {@code null} if the ifa_cacheinfo struct
      *         could not be parsed successfully (for example, if it was truncated).
      */
     @Nullable
-    public static StructIfinfoMsg parse(@NonNull final ByteBuffer byteBuffer) {
+    public static StructIfacacheInfo parse(@NonNull final ByteBuffer byteBuffer) {
         if (byteBuffer.remaining() < STRUCT_SIZE) return null;
 
         // The ByteOrder must already have been set to native order.
-        return Struct.parse(StructIfinfoMsg.class, byteBuffer);
+        return Struct.parse(StructIfacacheInfo.class, byteBuffer);
     }
 
     /**
-     * Write an ifinfomsg struct to {@link ByteBuffer}.
+     * Write an ifa_cacheinfo struct to {@link ByteBuffer}.
      */
     public void pack(@NonNull final ByteBuffer byteBuffer) {
         // The ByteOrder must already have been set to native order.
