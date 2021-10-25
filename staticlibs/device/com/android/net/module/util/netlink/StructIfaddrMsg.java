@@ -26,54 +26,54 @@ import com.android.net.module.util.Struct.Type;
 import java.nio.ByteBuffer;
 
 /**
- * struct ifinfomsg
+ * struct ifaddrmsg
  *
  * see also:
  *
- *     include/uapi/linux/rtnetlink.h
+ *     include/uapi/linux/if_addr.h
  *
  * @hide
  */
-public class StructIfinfoMsg extends Struct {
+public class StructIfaddrMsg extends Struct {
     // Already aligned.
-    public static final int STRUCT_SIZE = 16;
+    public static final int STRUCT_SIZE = 8;
 
-    @Field(order = 0, type = Type.U8, padding = 1)
+    @Field(order = 0, type = Type.U8)
     public final short family;
-    @Field(order = 1, type = Type.U16)
-    public final int type;
-    @Field(order = 2, type = Type.S32)
+    @Field(order = 1, type = Type.U8)
+    public final short prefixLen;
+    @Field(order = 2, type = Type.U8)
+    public final short flags;
+    @Field(order = 3, type = Type.U8)
+    public final short scope;
+    @Field(order = 4, type = Type.S32)
     public final int index;
-    @Field(order = 3, type = Type.U32)
-    public final long flags;
-    @Field(order = 4, type = Type.U32)
-    public final long change;
 
-    StructIfinfoMsg(short family, int type, int index, long flags, long change) {
+    StructIfaddrMsg(short family, short prefixLen, short flags, short scope, int index) {
         this.family = family;
-        this.type = type;
-        this.index = index;
+        this.prefixLen = prefixLen;
         this.flags = flags;
-        this.change = change;
+        this.scope = scope;
+        this.index = index;
     }
 
     /**
-     * Parse an ifinfomsg struct from a {@link ByteBuffer}.
+     * Parse an ifaddrmsg struct from a {@link ByteBuffer}.
      *
-     * @param byteBuffer The buffer from which to parse the ifinfomsg.
-     * @return the parsed ifinfomsg struct, or {@code null} if the ifinfomsg struct
+     * @param byteBuffer The buffer from which to parse the ifaddrmsg.
+     * @return the parsed ifaddrmsg struct, or {@code null} if the ifaddrmsg struct
      *         could not be parsed successfully (for example, if it was truncated).
      */
     @Nullable
-    public static StructIfinfoMsg parse(@NonNull final ByteBuffer byteBuffer) {
+    public static StructIfaddrMsg parse(@NonNull final ByteBuffer byteBuffer) {
         if (byteBuffer.remaining() < STRUCT_SIZE) return null;
 
         // The ByteOrder must already have been set to native order.
-        return Struct.parse(StructIfinfoMsg.class, byteBuffer);
+        return Struct.parse(StructIfaddrMsg.class, byteBuffer);
     }
 
     /**
-     * Write an ifinfomsg struct to {@link ByteBuffer}.
+     * Write an ifaddrmsg struct to {@link ByteBuffer}.
      */
     public void pack(@NonNull final ByteBuffer byteBuffer) {
         // The ByteOrder must already have been set to native order.

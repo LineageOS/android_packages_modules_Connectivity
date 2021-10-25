@@ -42,7 +42,6 @@ import java.nio.ByteOrder;
 @RunWith(AndroidJUnit4.class)
 @SmallTest
 public class RtNetlinkLinkMessageTest {
-    private static final String TAG = "RtNetlinkLinkMessageTest";
 
     // An example of the full RTM_NEWLINK message.
     private static final String RTM_NEWLINK_HEX =
