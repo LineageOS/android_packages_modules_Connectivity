@@ -1332,7 +1332,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
         final NetworkRequest defaultInternetRequest = createDefaultRequest();
         mDefaultRequest = new NetworkRequestInfo(
                 Process.myUid(), defaultInternetRequest, null,
-                new Binder(), NetworkCallback.FLAG_INCLUDE_LOCATION_INFO,
+                null /* binder */, NetworkCallback.FLAG_INCLUDE_LOCATION_INFO,
                 null /* attributionTags */);
         mNetworkRequests.put(defaultInternetRequest, mDefaultRequest);
         mDefaultNetworkRequests.add(mDefaultRequest);
@@ -1552,7 +1552,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
 
         if (enable) {
             handleRegisterNetworkRequest(new NetworkRequestInfo(
-                    Process.myUid(), networkRequest, null, new Binder(),
+                    Process.myUid(), networkRequest, null /* messenger */, null /* binder */,
                     NetworkCallback.FLAG_INCLUDE_LOCATION_INFO,
                     null /* attributionTags */));
         } else {
@@ -6060,7 +6060,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
 
     @Override
     public NetworkRequest requestNetwork(int asUid, NetworkCapabilities networkCapabilities,
-            int reqTypeInt, Messenger messenger, int timeoutMs, IBinder binder,
+            int reqTypeInt, Messenger messenger, int timeoutMs, final IBinder binder,
             int legacyType, int callbackFlags, @NonNull String callingPackageName,
             @Nullable String callingAttributionTag) {
         if (legacyType != TYPE_NONE && !checkNetworkStackPermission()) {
