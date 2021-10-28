@@ -4068,7 +4068,8 @@ public class ConnectivityService extends IConnectivityManager.Stub
                     // Temporary help to debug b/194394697 ; TODO : remove this function when the
                     // bug is fixed.
                     dumpAllRequestInfoLogsToLogcat();
-                    throw new IllegalStateException("This NRI is already registered. " + nri);
+                    throw new IllegalStateException("This NRI is already registered. New : " + nri
+                            + ", existing : " + n);
                 }
             }
         }
