@@ -42,9 +42,8 @@ java_library {
       // This library is used by system modules, for which the system health impact of Kotlin
       // has not yet been evaluated. Annotations may need jarjar'ing.
       // "src_devicecommon/**/*.kt",
-      ":framework-annotations",
   ],
-  sdk_version: "system_current",
+  sdk_version: "module_current",
   min_sdk_version: "29",
   target_sdk_version: "30",
   apex_available: [
@@ -69,6 +68,7 @@ java_library {
   ],
   libs: [
       "androidx.annotation_annotation",
+      "framework-annotations-lib",
   ],
 }
 
@@ -201,12 +201,15 @@ java_library {
     name: "net-utils-services-common",
     srcs: [
         ":net-utils-services-common-srcs",
-        ":framework-annotations",
     ],
-    sdk_version: "system_current",
+    sdk_version: "module_current",
     min_sdk_version: "30",
     static_libs: [
         "modules-utils-build_system",
+    ],
+    libs: [
+        "framework-annotations-lib",
+        "framework-connectivity",
     ],
     visibility: [
         "//frameworks/base/services/net",
