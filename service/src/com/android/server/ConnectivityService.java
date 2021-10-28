@@ -75,6 +75,7 @@ import static android.net.NetworkCapabilities.NET_CAPABILITY_NOT_VPN;
 import static android.net.NetworkCapabilities.NET_CAPABILITY_OEM_PAID;
 import static android.net.NetworkCapabilities.NET_CAPABILITY_OEM_PRIVATE;
 import static android.net.NetworkCapabilities.NET_CAPABILITY_PARTIAL_CONNECTIVITY;
+import static android.net.NetworkCapabilities.NET_CAPABILITY_TEMPORARILY_NOT_METERED;
 import static android.net.NetworkCapabilities.NET_CAPABILITY_VALIDATED;
 import static android.net.NetworkCapabilities.NET_ENTERPRISE_ID_1;
 import static android.net.NetworkCapabilities.NET_ENTERPRISE_ID_5;
@@ -8049,6 +8050,10 @@ public class ConnectivityService extends IConnectivityManager.Stub
         final boolean oldMetered = prevNc.isMetered();
         final boolean newMetered = newNc.isMetered();
         final boolean meteredChanged = oldMetered != newMetered;
+        final boolean oldTempMetered = prevNc.hasCapability(NET_CAPABILITY_TEMPORARILY_NOT_METERED);
+        final boolean newTempMetered = newNc.hasCapability(NET_CAPABILITY_TEMPORARILY_NOT_METERED);
+        final boolean tempMeteredChanged = oldTempMetered != newTempMetered;
+
 
         if (meteredChanged) {
             maybeNotifyNetworkBlocked(nai, oldMetered, newMetered,
@@ -8059,7 +8064,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
                 != newNc.hasCapability(NET_CAPABILITY_NOT_ROAMING);
 
         // Report changes that are interesting for network statistics tracking.
-        if (meteredChanged || roamingChanged) {
+        if (meteredChanged || roamingChanged || tempMeteredChanged) {
             notifyIfacesChangedForNetworkStats();
         }
 
