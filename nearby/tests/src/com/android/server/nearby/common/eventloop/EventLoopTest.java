@@ -34,6 +34,7 @@ public class EventLoopTest {
     @Rule
     public ExpectedException thrown = ExpectedException.none();
 
+    /*
     @Test
     public void remove() {
         mEventLoop.postRunnable(new NumberedRunnable(0));
@@ -44,6 +45,7 @@ public class EventLoopTest {
 
         assertThat(mExecutedRunnables).containsExactly(0, 2);
     }
+    */
 
     @Test
     public void isPosted() {
