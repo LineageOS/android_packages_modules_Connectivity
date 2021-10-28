@@ -16,15 +16,31 @@
 
 package com.android.net.module.util;
 
+import static android.net.INetd.LOCAL_NET_ID;
+import static android.system.OsConstants.EBUSY;
+
 import static com.android.testutils.MiscAsserts.assertThrows;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.reset;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
 import android.net.INetd;
 import android.net.InterfaceConfigurationParcel;
+import android.net.IpPrefix;
+import android.os.RemoteException;
+import android.os.ServiceSpecificException;
 
 import androidx.test.filters.SmallTest;
 import androidx.test.runner.AndroidJUnit4;
@@ -43,6 +59,7 @@ public class NetdUtilsTest {
     @Mock private INetd mNetd;
 
     private static final String IFACE = "TEST_IFACE";
+    private static final IpPrefix TEST_IPPREFIX = new IpPrefix("192.168.42.1/24");
 
     @Before
     public void setUp() throws Exception {
@@ -99,5 +116,106 @@ public class NetdUtilsTest {
         assertThrows(IllegalStateException.class,
                 () -> NetdUtils.removeAndAddFlags(flags, "down" /* remove */, "u p" /* add */));
     }
-}
 
+    private void setNetworkAddInterfaceOutcome(final Exception cause, int numLoops)
+            throws Exception {
+        // This cannot be an int because local variables referenced from a lambda expression must
+        // be final or effectively final.
+        final Counter myCounter = new Counter();
+        doAnswer((invocation) -> {
+            myCounter.count();
+            if (myCounter.isCounterReached(numLoops)) {
+                if (cause == null) return null;
+
+                throw cause;
+            }
+
+            throw new ServiceSpecificException(EBUSY);
+        }).when(mNetd).networkAddInterface(LOCAL_NET_ID, IFACE);
+    }
+
+    class Counter {
+        private int mValue = 0;
+
+        private void count() {
+            mValue++;
+        }
+
+        private boolean isCounterReached(int target) {
+            return mValue >= target;
+        }
+    }
+
+    @Test
+    public void testTetherInterfaceSuccessful() throws Exception {
+        // Expect #networkAddInterface successful at first tries.
+        verifyTetherInterfaceSucceeds(1);
+
+        // Expect #networkAddInterface successful after 10 tries.
+        verifyTetherInterfaceSucceeds(10);
+    }
+
+    private void runTetherInterfaceWithServiceSpecificException(int expectedTries,
+            int expectedCode) throws Exception {
+        setNetworkAddInterfaceOutcome(new ServiceSpecificException(expectedCode), expectedTries);
+
+        try {
+            NetdUtils.tetherInterface(mNetd, IFACE, TEST_IPPREFIX, 20, 0);
+            fail("Expect throw ServiceSpecificException");
+        } catch (ServiceSpecificException e) {
+            assertEquals(e.errorCode, expectedCode);
+        }
+
+        verifyNetworkAddInterfaceFails(expectedTries);
+        reset(mNetd);
+    }
+
+    private void runTetherInterfaceWithRemoteException(int expectedTries) throws Exception {
+        setNetworkAddInterfaceOutcome(new RemoteException(), expectedTries);
+
+        try {
+            NetdUtils.tetherInterface(mNetd, IFACE, TEST_IPPREFIX, 20, 0);
+            fail("Expect throw RemoteException");
+        } catch (RemoteException e) { }
+
+        verifyNetworkAddInterfaceFails(expectedTries);
+        reset(mNetd);
+    }
+
+    private void verifyNetworkAddInterfaceFails(int expectedTries) throws Exception {
+        verify(mNetd).tetherInterfaceAdd(IFACE);
+        verify(mNetd, times(expectedTries)).networkAddInterface(LOCAL_NET_ID, IFACE);
+        verify(mNetd, never()).networkAddRoute(anyInt(), anyString(), any(), any());
+        verifyNoMoreInteractions(mNetd);
+    }
+
+    private void verifyTetherInterfaceSucceeds(int expectedTries) throws Exception {
+        setNetworkAddInterfaceOutcome(null, expectedTries);
+
+        NetdUtils.tetherInterface(mNetd, IFACE, TEST_IPPREFIX);
+        verify(mNetd).tetherInterfaceAdd(IFACE);
+        verify(mNetd, times(expectedTries)).networkAddInterface(LOCAL_NET_ID, IFACE);
+        verify(mNetd, times(2)).networkAddRoute(eq(LOCAL_NET_ID), eq(IFACE), any(), any());
+        verifyNoMoreInteractions(mNetd);
+        reset(mNetd);
+    }
+
+    @Test
+    public void testTetherInterfaceFailOnNetworkAddInterface() throws Exception {
+        // Test throwing ServiceSpecificException with EBUSY failure.
+        runTetherInterfaceWithServiceSpecificException(20, EBUSY);
+
+        // Test throwing ServiceSpecificException with unexpectedError.
+        final int unexpectedError = 999;
+        runTetherInterfaceWithServiceSpecificException(1, unexpectedError);
+
+        // Test throwing ServiceSpecificException with unexpectedError after 7 tries.
+        runTetherInterfaceWithServiceSpecificException(7, unexpectedError);
+
+        // Test throwing RemoteException.
+        runTetherInterfaceWithRemoteException(1);
+
+        // Test throwing RemoteException after 3 tries.
+        runTetherInterfaceWithRemoteException(3);
+    }
+}
