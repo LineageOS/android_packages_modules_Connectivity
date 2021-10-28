@@ -229,6 +229,7 @@ import com.android.internal.annotations.VisibleForTesting;
 import com.android.internal.util.IndentingPrintWriter;
 import com.android.internal.util.MessageUtils;
 import com.android.modules.utils.BasicShellCommandHandler;
+import com.android.modules.utils.build.SdkLevel;
 import com.android.net.module.util.BaseNetdUnsolicitedEventListener;
 import com.android.net.module.util.CollectionUtils;
 import com.android.net.module.util.LinkPropertiesUtils.CompareOrUpdateResult;
@@ -259,6 +260,7 @@ import libcore.io.IoUtils;
 
 import java.io.FileDescriptor;
 import java.io.PrintWriter;
+import java.io.Writer;
 import java.net.Inet4Address;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -273,6 +275,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.Set;
 import java.util.SortedSet;
@@ -3214,6 +3217,22 @@ public class ConnectivityService extends IConnectivityManager.Stub
         }
     }
 
+    private void dumpAllRequestInfoLogsToLogcat() {
+        try (PrintWriter logPw = new PrintWriter(new Writer() {
+            @Override
+            public void write(final char[] cbuf, final int off, final int len) {
+                // This method is called with 0-length and 1-length arrays for empty strings
+                // or strings containing only the DEL character.
+                if (len <= 1) return;
+                Log.e(TAG, new String(cbuf, off, len));
+            }
+            @Override public void flush() {}
+            @Override public void close() {}
+        })) {
+            mNetworkRequestInfoLogs.dump(logPw);
+        }
+    }
+
     /**
      * Return an array of all current NetworkAgentInfos sorted by network id.
      */
@@ -4042,6 +4061,19 @@ public class ConnectivityService extends IConnectivityManager.Stub
         return null;
     }
 
+    private void checkNrisConsistency(final NetworkRequestInfo nri) {
+        if (SdkLevel.isAtLeastT()) {
+            for (final NetworkRequestInfo n : mNetworkRequests.values()) {
+                if (n.mBinder != null && n.mBinder == nri.mBinder) {
+                    // Temporary help to debug b/194394697 ; TODO : remove this function when the
+                    // bug is fixed.
+                    dumpAllRequestInfoLogsToLogcat();
+                    throw new IllegalStateException("This NRI is already registered. " + nri);
+                }
+            }
+        }
+    }
+
     private void handleRegisterNetworkRequestWithIntent(@NonNull final Message msg) {
         final NetworkRequestInfo nri = (NetworkRequestInfo) (msg.obj);
         // handleRegisterNetworkRequestWithIntent() doesn't apply to multilayer requests.
@@ -4067,6 +4099,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
         ensureRunningOnConnectivityServiceThread();
         for (final NetworkRequestInfo nri : nris) {
             mNetworkRequestInfoLogs.log("REGISTER " + nri);
+            checkNrisConsistency(nri);
             for (final NetworkRequest req : nri.mRequests) {
                 mNetworkRequests.put(req, nri);
                 // TODO: Consider update signal strength for other types.
@@ -4303,6 +4336,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
         }
         nri.decrementRequestCount();
         mNetworkRequestInfoLogs.log("RELEASE " + nri);
+        checkNrisConsistency(nri);
 
         if (null != nri.getActiveRequest()) {
             if (!nri.getActiveRequest().isListen()) {
@@ -5940,7 +5974,12 @@ public class ConnectivityService extends IConnectivityManager.Stub
 
         void unlinkDeathRecipient() {
             if (null != mBinder) {
-                mBinder.unlinkToDeath(this, 0);
+                try {
+                    mBinder.unlinkToDeath(this, 0);
+                } catch (NoSuchElementException e) {
+                    // Temporary workaround for b/194394697 pending analysis of additional logs
+                    Log.wtf(TAG, "unlinkToDeath for already unlinked NRI " + this);
+                }
             }
         }
 
@@ -5960,7 +5999,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
         @Override
         public void binderDied() {
             log("ConnectivityService NetworkRequestInfo binderDied(" +
-                    "uid/pid:" + mUid + "/" + mPid + ", " + mBinder + ")");
+                    "uid/pid:" + mUid + "/" + mPid + ", " + mRequests + ", " + mBinder + ")");
             // As an immutable collection, mRequests cannot change by the time the
             // lambda is evaluated on the handler thread so calling .get() from a binder thread
             // is acceptable. Use handleReleaseNetworkRequest and not directly
