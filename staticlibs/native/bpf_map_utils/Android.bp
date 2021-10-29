@@ -25,6 +25,7 @@ cc_library_headers {
     min_sdk_version: "30",
     apex_available: [
         "//apex_available:platform",
+        "com.android.tethering",
         "com.android.art.debug",
     ],
     visibility: [
@@ -35,6 +36,7 @@ cc_library_headers {
         "//frameworks/native/services/gpuservice/gpumem",
         "//frameworks/native/services/gpuservice/tests/unittests",
         "//frameworks/native/services/gpuservice/tracing",
+        "//packages/modules/Connectivity/netd",
         "//packages/modules/Connectivity/tests/unit/jni",
         "//packages/modules/DnsResolver/tests",
         "//system/bpf/bpfloader",
