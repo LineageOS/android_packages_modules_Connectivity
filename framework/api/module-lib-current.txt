@@ -99,6 +99,15 @@ package android.net {
     field public static final int PRIVATE_DNS_MODE_PROVIDER_HOSTNAME = 3; // 0x3
   }
 
+  public final class DhcpOption implements android.os.Parcelable {
+    ctor public DhcpOption(byte, @Nullable byte[]);
+    method public int describeContents();
+    method public byte getType();
+    method @Nullable public byte[] getValue();
+    method public void writeToParcel(@NonNull android.os.Parcel, int);
+    field @NonNull public static final android.os.Parcelable.Creator<android.net.DhcpOption> CREATOR;
+  }
+
   public final class NetworkAgentConfig implements android.os.Parcelable {
     method @Nullable public String getSubscriberId();
     method public boolean isBypassableVpn();
