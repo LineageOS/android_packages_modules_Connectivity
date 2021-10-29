@@ -46,8 +46,6 @@ import android.net.dhcp.IDhcpEventCallbacks;
 import android.net.dhcp.IDhcpServer;
 import android.net.ip.IpNeighborMonitor.NeighborEvent;
 import android.net.ip.RouterAdvertisementDaemon.RaParams;
-import android.net.shared.NetdUtils;
-import android.net.shared.RouteUtils;
 import android.net.util.InterfaceParams;
 import android.net.util.InterfaceSet;
 import android.net.util.PrefixUtils;
@@ -67,6 +65,7 @@ import com.android.internal.util.MessageUtils;
 import com.android.internal.util.State;
 import com.android.internal.util.StateMachine;
 import com.android.modules.utils.build.SdkLevel;
+import com.android.net.module.util.NetdUtils;
 import com.android.networkstack.tethering.BpfCoordinator;
 import com.android.networkstack.tethering.BpfCoordinator.ClientInfo;
 import com.android.networkstack.tethering.BpfCoordinator.Ipv6ForwardingRule;
@@ -767,7 +766,7 @@ public class IpServer extends StateMachine {
     }
 
     private void removeRoutesFromLocalNetwork(@NonNull final List<RouteInfo> toBeRemoved) {
-        final int removalFailures = RouteUtils.removeRoutesFromLocalNetwork(
+        final int removalFailures = NetdUtils.removeRoutesFromLocalNetwork(
                 mNetd, toBeRemoved);
         if (removalFailures > 0) {
             mLog.e(String.format("Failed to remove %d IPv6 routes from local table.",
@@ -785,7 +784,7 @@ public class IpServer extends StateMachine {
             try {
                 // Add routes from local network. Note that adding routes that
                 // already exist does not cause an error (EEXIST is silently ignored).
-                RouteUtils.addRoutesToLocalNetwork(mNetd, mIfaceName, toBeAdded);
+                NetdUtils.addRoutesToLocalNetwork(mNetd, mIfaceName, toBeAdded);
             } catch (IllegalStateException e) {
                 mLog.e("Failed to add IPv4/v6 routes to local table: " + e);
                 return;
