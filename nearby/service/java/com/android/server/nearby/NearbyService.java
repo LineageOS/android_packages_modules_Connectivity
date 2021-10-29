@@ -20,6 +20,7 @@ import android.content.Context;
 import android.util.Log;
 
 import com.android.server.SystemService;
+import com.android.server.nearby.fastpair.FastPairManager;
 
 /**
  * Service implementing nearby functionality. The actual implementation is delegated to
@@ -29,12 +30,16 @@ import com.android.server.SystemService;
 public class NearbyService extends SystemService {
     private static final String TAG = "NearbyService";
     private static final boolean DBG = true;
+    private Context mContext;
 
     private final NearbyServiceImpl mImpl;
+    private final FastPairManager mFastPairManager;
 
     public NearbyService(Context contextBase) {
         super(contextBase);
+        mContext = contextBase;
         mImpl = new NearbyServiceImpl(contextBase);
+        mFastPairManager = new FastPairManager(contextBase);
     }
 
     @Override
@@ -42,9 +47,12 @@ public class NearbyService extends SystemService {
         if (DBG) {
             Log.d(TAG, "Publishing NearbyService");
         }
+        mFastPairManager.initiate();
     }
 
     @Override
     public void onBootPhase(int phase) {
     }
+
+
 }
