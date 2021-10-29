@@ -25,9 +25,11 @@ import android.content.ContextWrapper;
  */
 public class LocatorContextWrapper extends ContextWrapper implements LocatorContext {
     private final Locator mLocator;
+    private final Context mContext;
     /** Constructs a context wrapper with a Locator linked to the passed locator. */
     public LocatorContextWrapper(Context context, @Nullable Locator parentLocator) {
         super(context);
+        mContext = context;
         // Assigning under initialization object, but it's safe, since locator is used lazily.
         this.mLocator = new Locator(this, parentLocator);
     }
@@ -39,6 +41,13 @@ public class LocatorContextWrapper extends ContextWrapper implements LocatorCont
      */
     public LocatorContextWrapper(Context context) {
         this(context, Locator.findLocator(context));
+    }
+
+    /**
+     * Get the context of the context wrapper.
+     */
+    public Context getContext() {
+        return mContext;
     }
 
     @Override

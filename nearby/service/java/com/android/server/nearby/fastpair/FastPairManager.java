@@ -22,27 +22,38 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.util.Log;
 
+import com.android.server.nearby.common.locator.Locator;
+import com.android.server.nearby.common.locator.LocatorContextWrapper;
+import com.android.server.nearby.fastpair.cache.FastPairCacheManager;
+
 /**
  * FastPairManager is the class initiated in nearby service to handle Fast Pair related
  * work.
  */
 public class FastPairManager {
-    Context mContext;
+    LocatorContextWrapper mLocatorContextWrapper;
     IntentFilter mIntentFilter;
+    Locator mLocator;
     private BroadcastReceiver mScreenBroadcastReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
             if (intent.getAction().equals(Intent.ACTION_SCREEN_ON)) {
                 Log.d("FastPairService", " screen on");
+                // STOPSHIP(b/202335820): Remove this logic in prod.
+                Locator.getFromContextWrapper(mLocatorContextWrapper, FastPairCacheManager.class)
+                        .printLog();
             } else {
                 Log.d("FastPairService", " screen off");
             }
         }
     };
 
-    public FastPairManager(Context context) {
-        mContext = context;
+
+    public FastPairManager(LocatorContextWrapper contextWrapper) {
+        mLocatorContextWrapper = contextWrapper;
         mIntentFilter = new IntentFilter();
+        mLocator = mLocatorContextWrapper.getLocator();
+        mLocator.bind(new FastPairModule());
     }
 
     /**
@@ -51,13 +62,16 @@ public class FastPairManager {
     public void initiate() {
         mIntentFilter.addAction(Intent.ACTION_SCREEN_ON);
         mIntentFilter.addAction(Intent.ACTION_SCREEN_OFF);
-        mContext.registerReceiver(mScreenBroadcastReceiver, mIntentFilter);
+        mLocatorContextWrapper.getContext()
+                .registerReceiver(mScreenBroadcastReceiver, mIntentFilter);
+
+        Locator.getFromContextWrapper(mLocatorContextWrapper, FastPairCacheManager.class);
     }
 
     /**
      * Function to free up fast pair resource.
      */
     public void cleanUp() {
-        mContext.unregisterReceiver(mScreenBroadcastReceiver);
+        mLocatorContextWrapper.getContext().unregisterReceiver(mScreenBroadcastReceiver);
     }
 }

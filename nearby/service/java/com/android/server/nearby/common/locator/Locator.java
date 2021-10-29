@@ -135,7 +135,6 @@ public class Locator {
     public <T> T getOptional(Class<T> type) {
         Locator locator = this;
         do {
-
             T instance = locator.getInstance(type);
             if (instance != null) {
                 return instance;
@@ -222,6 +221,17 @@ public class Locator {
         Locator locator = findLocator(context);
         if (locator == null) {
             throw new IllegalStateException("No locator found in context " + context);
+        }
+        return locator.get(type);
+    }
+
+    /**
+     * Find the first locator from the context wrapper.
+     */
+    public static <T> T getFromContextWrapper(LocatorContextWrapper wrapper, Class<T> type) {
+        Locator locator = wrapper.getLocator();
+        if (locator == null) {
+            throw new IllegalStateException("No locator found in context wrapper");
         }
         return locator.get(type);
     }

@@ -20,6 +20,7 @@ import android.content.Context;
 import android.util.Log;
 
 import com.android.server.SystemService;
+import com.android.server.nearby.common.locator.LocatorContextWrapper;
 import com.android.server.nearby.fastpair.FastPairManager;
 
 /**
@@ -30,16 +31,19 @@ import com.android.server.nearby.fastpair.FastPairManager;
 public class NearbyService extends SystemService {
     private static final String TAG = "NearbyService";
     private static final boolean DBG = true;
-    private Context mContext;
-
     private final NearbyServiceImpl mImpl;
     private final FastPairManager mFastPairManager;
 
+    private LocatorContextWrapper mLocatorContextWrapper;
+
+
+
     public NearbyService(Context contextBase) {
         super(contextBase);
-        mContext = contextBase;
         mImpl = new NearbyServiceImpl(contextBase);
-        mFastPairManager = new FastPairManager(contextBase);
+        mLocatorContextWrapper = new LocatorContextWrapper(contextBase, null);
+        mFastPairManager = new FastPairManager(mLocatorContextWrapper);
+
     }
 
     @Override

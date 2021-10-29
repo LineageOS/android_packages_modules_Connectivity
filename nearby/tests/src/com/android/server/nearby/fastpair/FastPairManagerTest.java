@@ -22,6 +22,8 @@ import static org.mockito.Mockito.verify;
 
 import android.content.Context;
 
+import com.android.server.nearby.common.locator.LocatorContextWrapper;
+
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mock;
@@ -31,11 +33,13 @@ import org.mockito.MockitoAnnotations;
 public class FastPairManagerTest {
     private FastPairManager mFastPairManager;
     @Mock private Context mContext;
+    private LocatorContextWrapper mLocatorContextWrapper;
 
     @Before
     public void setup() {
         MockitoAnnotations.initMocks(this);
-        mFastPairManager = new FastPairManager(mContext);
+        mLocatorContextWrapper = new LocatorContextWrapper(mContext);
+        mFastPairManager = new FastPairManager(mLocatorContextWrapper);
     }
 
     @Test
