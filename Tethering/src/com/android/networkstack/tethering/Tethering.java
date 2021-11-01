@@ -1140,9 +1140,7 @@ public class Tethering {
             final WifiP2pGroup group =
                     (WifiP2pGroup) intent.getParcelableExtra(WifiP2pManager.EXTRA_WIFI_P2P_GROUP);
 
-            if (VDBG) {
-                Log.d(TAG, "WifiP2pAction: P2pInfo: " + p2pInfo + " Group: " + group);
-            }
+            mLog.i("WifiP2pAction: P2pInfo: " + p2pInfo + " Group: " + group);
 
             // if no group is formed, bring it down if needed.
             if (p2pInfo == null || !p2pInfo.groupFormed) {
