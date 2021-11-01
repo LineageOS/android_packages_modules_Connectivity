@@ -38,12 +38,12 @@ import com.android.server.nearby.common.bluetooth.util.BluetoothOperationExecuto
 import com.android.server.nearby.common.bluetooth.util.BluetoothOperationExecutor.BluetoothOperationTimeoutException;
 import com.android.server.nearby.common.bluetooth.util.BluetoothOperationExecutor.Operation;
 
-import com.google.auto.value.AutoValue;
-import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 
 import java.util.Arrays;
 import java.util.Locale;
+import java.util.Objects;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -543,22 +543,67 @@ public class BluetoothGattHelper {
     /**
      * Options for {@link #connect}.
      */
-    @AutoValue
-    public abstract static class ConnectionOptions {
+    public static class ConnectionOptions {
 
-        abstract boolean autoConnect();
+        private boolean mAutoConnect;
+        private long mConnectionTimeoutMillis;
+        private Optional<Integer> mConnectionPriority;
+        private Optional<Integer> mMtu;
 
-        abstract long connectionTimeoutMillis();
+        private ConnectionOptions(boolean autoConnect, long connectionTimeoutMillis,
+                Optional<Integer> connectionPriority,
+                Optional<Integer> mtu) {
+            this.mAutoConnect = autoConnect;
+            this.mConnectionTimeoutMillis = connectionTimeoutMillis;
+            this.mConnectionPriority = connectionPriority;
+            this.mMtu = mtu;
+        }
 
-        abstract Optional<Integer> connectionPriority();
+        boolean autoConnect() {
+            return mAutoConnect;
+        }
 
-        abstract Optional<Integer> mtu();
+        long connectionTimeoutMillis() {
+            return mConnectionTimeoutMillis;
+        }
+
+        Optional<Integer> connectionPriority() {
+            return mConnectionPriority;
+        }
+
+        Optional<Integer> mtu() {
+            return mMtu;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) {
+                return true;
+            }
+            if (o == null) {
+                return false;
+            }
+            if (!(o instanceof ConnectionOptions)) {
+                return false;
+            }
+            ConnectionOptions oc = (ConnectionOptions) o;
+
+            return (this.autoConnect() == oc.autoConnect()
+                    && this.connectionTimeoutMillis() == oc.connectionTimeoutMillis()
+                    && this.connectionPriority().equals(oc.connectionPriority())
+                    && this.mtu().equals(oc.mtu()));
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(mAutoConnect, mConnectionTimeoutMillis, mConnectionPriority, mMtu);
+        }
 
         /**
          * Creates a builder of ConnectionOptions.
          */
         public static Builder builder() {
-            return new AutoValue_BluetoothGattHelper_ConnectionOptions.Builder()
+            return new ConnectionOptions.Builder()
                     .setAutoConnect(false)
                     .setConnectionTimeoutMillis(TimeUnit.SECONDS.toMillis(5));
         }
@@ -566,33 +611,52 @@ public class BluetoothGattHelper {
         /**
          * Builder for {@link ConnectionOptions}.
          */
-        @AutoValue.Builder
-        public abstract static class Builder {
+        public static class Builder {
+
+            private boolean mAutoConnect;
+            private long mConnectionTimeoutMillis;
+            private Optional<Integer> mConnectionPriority = Optional.empty();
+            private Optional<Integer> mMtu = Optional.empty();
 
             /**
              * See {@link android.bluetooth.BluetoothDevice#connectGatt}.
              */
-            public abstract Builder setAutoConnect(boolean autoConnect);
+            public Builder setAutoConnect(boolean autoConnect) {
+                this.mAutoConnect = autoConnect;
+                return this;
+            }
 
             /**
              * See {@link android.bluetooth.BluetoothGatt#requestConnectionPriority(int)}.
              */
-            public abstract Builder setConnectionPriority(int connectionPriority);
+            public Builder setConnectionPriority(int connectionPriority) {
+                this.mConnectionPriority = Optional.of(connectionPriority);
+                return this;
+            }
 
             /**
              * See {@link android.bluetooth.BluetoothGatt#requestMtu(int)}.
              */
-            public abstract Builder setMtu(int mtu);
+            public Builder setMtu(int mtu) {
+                this.mMtu = Optional.of(mtu);
+                return this;
+            }
 
             /**
              * Sets the timeout for the GATT connection.
              */
-            public abstract Builder setConnectionTimeoutMillis(long connectionTimeoutMillis);
+            public Builder setConnectionTimeoutMillis(long connectionTimeoutMillis) {
+                this.mConnectionTimeoutMillis = connectionTimeoutMillis;
+                return this;
+            }
 
             /**
              * Builds ConnectionOptions.
              */
-            public abstract ConnectionOptions build();
+            public ConnectionOptions build() {
+                return new ConnectionOptions(mAutoConnect, mConnectionTimeoutMillis,
+                        mConnectionPriority, mMtu);
+            }
         }
     }
 }
