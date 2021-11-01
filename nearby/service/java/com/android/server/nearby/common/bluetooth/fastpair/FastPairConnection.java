@@ -26,8 +26,6 @@ import androidx.core.util.Consumer;
 import com.android.internal.annotations.VisibleForTesting;
 import com.android.server.nearby.common.bluetooth.BluetoothException;
 
-import com.google.auto.value.AutoValue;
-
 import java.security.GeneralSecurityException;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
@@ -156,17 +154,27 @@ public abstract class FastPairConnection {
     }
 
     /** Holds the exchanged secret key and the public mac address of the device. */
-    @AutoValue
-    public abstract static class SharedSecret {
-        /** Gets Shared Secret Key. */
-        @SuppressWarnings("mutable")
-        public abstract byte[] getKey();
-        /** Gets Shared Secret Address. */
-        public abstract String getAddress();
+    public static class SharedSecret {
+        private final byte[] mKey;
+        private final String mAddress;
+        private SharedSecret(byte[] key, String address) {
+            mKey = key;
+            mAddress = address;
+        }
 
         /** Creates Shared Secret. */
         public static SharedSecret create(byte[] key, String address) {
-            return new AutoValue_FastPairConnection_SharedSecret(key, address);
+            return new SharedSecret(key, address);
+        }
+
+        /** Gets Shared Secret Key. */
+        public byte[] getKey() {
+            return mKey;
+        }
+
+        /** Gets Shared Secret Address. */
+        public String getAddress() {
+            return mAddress;
         }
     }
 
