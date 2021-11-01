@@ -9402,7 +9402,7 @@ public class ConnectivityServiceTest {
         // Make sure BatteryStats was not told about any v4- interfaces, as none should have
         // come online yet.
         waitForIdle();
-        assertNull(readHead.poll(TIMEOUT_MS, ri -> mServiceContext.equals(ri.context)
+        assertNull(readHead.poll(0 /* timeout */, ri -> mServiceContext.equals(ri.context)
                 && ri.iface != null && ri.iface.startsWith("v4-")));
 
         verifyNoMoreInteractions(mMockNetd);
