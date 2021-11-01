@@ -18,7 +18,6 @@ package com.android.server.nearby.common.bluetooth.fastpair;
 
 import static com.google.common.primitives.Bytes.concat;
 
-import com.google.auto.value.AutoValue;
 import com.google.common.hash.Hashing;
 import com.google.protobuf.ByteString;
 
@@ -30,31 +29,43 @@ import java.util.Arrays;
  * identify the headset, but Fast Pair can't identify the headset in initial pairing, there is no
  * account key data advertising from headset.
  */
-@AutoValue
-public abstract class FastPairHistoryItem {
+public class FastPairHistoryItem {
 
-    /** Creates an instance of {@link FastPairHistoryItem}.
+    private final ByteString mAccountKey;
+    private final ByteString mSha256AccountKeyPublicAddress;
+
+    FastPairHistoryItem(ByteString accountkey, ByteString sha256AccountKeyPublicAddress) {
+        mAccountKey = accountkey;
+        mSha256AccountKeyPublicAddress = sha256AccountKeyPublicAddress;
+    }
+
+    /**
+     * Creates an instance of {@link FastPairHistoryItem}.
      *
      * @param accountKey key of an account that has paired with the headset.
      * @param sha256AccountKeyPublicAddress hash value of account key and headset's public address.
      */
     public static FastPairHistoryItem create(
             ByteString accountKey, ByteString sha256AccountKeyPublicAddress) {
-        return new AutoValue_FastPairHistoryItem(accountKey, sha256AccountKeyPublicAddress);
+        return new FastPairHistoryItem(accountKey, sha256AccountKeyPublicAddress);
     }
 
-    abstract ByteString accountKey();
+    ByteString accountKey() {
+        return mAccountKey;
+    }
 
-    abstract ByteString sha256AccountKeyPublicAddress();
+    ByteString sha256AccountKeyPublicAddress() {
+        return mSha256AccountKeyPublicAddress;
+    }
 
     // Return true if the input public address is considered the same as this history item. Because
     // of privacy concern, Fast Pair does not really store the public address, it is identified by
     // the SHA256 of the account key and the public key.
     final boolean isMatched(byte[] publicAddress) {
         return Arrays.equals(
-            sha256AccountKeyPublicAddress().toByteArray(),
-            Hashing.sha256().hashBytes(concat(accountKey().toByteArray(), publicAddress))
-                .asBytes());
+                sha256AccountKeyPublicAddress().toByteArray(),
+                Hashing.sha256().hashBytes(concat(accountKey().toByteArray(), publicAddress))
+                        .asBytes());
     }
 }
 
