@@ -27,6 +27,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.primitives.Shorts;
 
 import java.nio.ByteOrder;
+import java.util.Objects;
 
 /**
  * Preferences that tweak the Fast Pairing process: timeouts, number of retries... All preferences
@@ -749,31 +750,72 @@ public abstract class Preferences {
     /**
      * Information that will be used for logging.
      */
-    @AutoValue
-    public abstract static class ExtraLoggingInformation {
+    public static class ExtraLoggingInformation {
+        private final String mModelId;
+
+        private ExtraLoggingInformation(String modelId) {
+            this.mModelId = modelId;
+        }
 
         /** Returns model Id. */
-        public abstract String getModelId();
+        public String getModelId() {
+            return mModelId;
+        }
 
         /** Converts an instance to a builder. */
-        public abstract Builder toBuilder();
+        public Builder toBuilder() {
+            return new Builder(this);
+        }
 
         /** Creates a builder for ExtraLoggingInformation. */
         public static Builder builder() {
-            return new AutoValue_Preferences_ExtraLoggingInformation.Builder();
+            return new ExtraLoggingInformation.Builder();
+        }
+
+        @Override
+        public String toString() {
+            return "ExtraLoggingInformation{" + "modelId=" + mModelId + "}";
+        }
+
+        @Override
+        public boolean equals(@Nullable Object o) {
+            if (o == this) {
+                return true;
+            }
+            if (o instanceof ExtraLoggingInformation) {
+                Preferences.ExtraLoggingInformation that = (Preferences.ExtraLoggingInformation) o;
+                return this.mModelId.equals(that.getModelId());
+            }
+            return false;
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(mModelId);
         }
 
         /**
          * Extra logging information builder.
          */
-        @AutoValue.Builder
-        public abstract static class Builder {
+        public static class Builder {
+            private String mModelId;
+
+            private Builder() {}
+
+            private Builder(ExtraLoggingInformation source) {
+                this.mModelId = source.getModelId();
+            }
 
             /** Set model ID. */
-            public abstract Builder setModelId(String modelId);
+            private Builder setModelId(String modelId) {
+                this.mModelId = modelId;
+                return this;
+            }
 
             /** Builds extra logging information. */
-            public abstract ExtraLoggingInformation build();
+            public ExtraLoggingInformation build() {
+                return new ExtraLoggingInformation(mModelId);
+            }
         }
     }
 }
