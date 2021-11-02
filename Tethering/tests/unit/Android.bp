@@ -97,7 +97,7 @@ android_test {
     platform_apis: true,
     test_suites: [
         "device-tests",
-        "mts",
+        "mts-tethering",
     ],
     defaults: ["TetheringTestsDefaults"],
     compile_multilib: "both",
