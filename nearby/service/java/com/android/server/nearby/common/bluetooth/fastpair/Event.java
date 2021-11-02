@@ -22,44 +22,66 @@ import android.os.Parcelable;
 
 import com.android.server.nearby.intdefs.NearbyEventIntDefs.EventCode;
 
-import com.google.auto.value.AutoValue;
-
 import javax.annotation.Nullable;
 
 /**
  * Describes events that are happening during fast pairing. EventCode is required, everything else
  * is optional.
  */
-@AutoValue
-public abstract class Event implements Parcelable {
+public class Event implements Parcelable {
+
+    private final @EventCode int mEventCode;
+    private final long mTimeStamp;
+    private final Short mProfile;
+    private final BluetoothDevice mBluetoothDevice;
+    private final Exception mException;
+
+    private Event(@EventCode int eventCode, long timeStamp, Short profile,
+            BluetoothDevice bluetoothDevice, Exception exception) {
+        mEventCode = eventCode;
+        mTimeStamp = timeStamp;
+        mProfile = profile;
+        mBluetoothDevice = bluetoothDevice;
+        mException = exception;
+    }
 
     /**
      * Returns event code.
      */
-    public abstract @EventCode int getEventCode();
+    public @EventCode int getEventCode() {
+        return mEventCode;
+    }
 
     /**
      * Returns timestamp.
      */
-    public abstract long getTimestamp();
+    public long getTimestamp() {
+        return mTimeStamp;
+    }
 
     /**
      * Returns profile.
      */
     @Nullable
-    public abstract Short getProfile();
+    public Short getProfile() {
+        return mProfile;
+    }
 
     /**
      * Returns Bluetooth device.
      */
     @Nullable
-    public abstract BluetoothDevice getBluetoothDevice();
+    public BluetoothDevice getBluetoothDevice() {
+        return mBluetoothDevice;
+    }
 
     /**
      * Returns exception.
      */
     @Nullable
-    public abstract Exception getException();
+    public Exception getException() {
+        return mException;
+    }
 
     /**
      * Returns whether profile is not null.
@@ -79,7 +101,7 @@ public abstract class Event implements Parcelable {
      * Returns a builder.
      */
     public static Builder builder() {
-        return new AutoValue_Event.Builder();
+        return new Event.Builder();
     }
 
     /**
@@ -92,38 +114,59 @@ public abstract class Event implements Parcelable {
     /**
      * Builder
      */
-    @AutoValue.Builder
-    public abstract static class Builder {
+    public static class Builder {
+        private @EventCode int mEventCode;
+        private long mTimeStamp;
+        private Short mProfile;
+        private BluetoothDevice mBluetoothDevice;
+        private Exception mException;
 
         /**
          * Set event code.
          */
-        public abstract Builder setEventCode(@EventCode int eventCode);
+        public Builder setEventCode(@EventCode int eventCode) {
+            this.mEventCode = eventCode;
+            return this;
+        }
 
         /**
          * Set timestamp.
          */
-        public abstract Builder setTimestamp(long startTimestamp);
+        public Builder setTimestamp(long timestamp) {
+            this.mTimeStamp = timestamp;
+            return this;
+        }
 
         /**
          * Set profile.
          */
-        public abstract Builder setProfile(@Nullable Short profile);
+        public Builder setProfile(@Nullable Short profile) {
+            this.mProfile = profile;
+            return this;
+        }
 
         /**
          * Set Bluetooth device.
          */
-        public abstract Builder setBluetoothDevice(@Nullable BluetoothDevice device);
+        public Builder setBluetoothDevice(@Nullable BluetoothDevice device) {
+            this.mBluetoothDevice = device;
+            return this;
+        }
 
         /**
          * Set exception.
          */
-        public abstract Builder setException(@Nullable Exception exception);
+        public Builder setException(@Nullable Exception exception) {
+            this.mException = exception;
+            return this;
+        }
 
         /**
          * Builds event.
          */
-        public abstract Event build();
+        public Event build() {
+            return new Event(mEventCode, mTimeStamp, mProfile, mBluetoothDevice, mException);
+        }
     }
 
     @Override
