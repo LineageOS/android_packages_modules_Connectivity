@@ -576,22 +576,28 @@ public class BluetoothGattHelper {
         }
 
         @Override
+        public String toString() {
+            return "ConnectionOptions{"
+                    + "autoConnect=" + mAutoConnect + ", "
+                    + "connectionTimeoutMillis=" + mConnectionTimeoutMillis + ", "
+                    + "connectionPriority=" + mConnectionPriority + ", "
+                    + "mtu=" + mMtu
+                    + "}";
+        }
+
+        @Override
         public boolean equals(Object o) {
             if (this == o) {
                 return true;
             }
-            if (o == null) {
-                return false;
+            if (o instanceof ConnectionOptions) {
+                ConnectionOptions that = (ConnectionOptions) o;
+                return this.mAutoConnect == that.autoConnect()
+                        && this.mConnectionTimeoutMillis == that.connectionTimeoutMillis()
+                        && this.mConnectionPriority.equals(that.connectionPriority())
+                        && this.mMtu.equals(that.mtu());
             }
-            if (!(o instanceof ConnectionOptions)) {
-                return false;
-            }
-            ConnectionOptions oc = (ConnectionOptions) o;
-
-            return (this.autoConnect() == oc.autoConnect()
-                    && this.connectionTimeoutMillis() == oc.connectionTimeoutMillis()
-                    && this.connectionPriority().equals(oc.connectionPriority())
-                    && this.mtu().equals(oc.mtu()));
+            return false;
         }
 
         @Override

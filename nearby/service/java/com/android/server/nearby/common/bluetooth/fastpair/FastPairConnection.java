@@ -27,7 +27,9 @@ import com.android.internal.annotations.VisibleForTesting;
 import com.android.server.nearby.common.bluetooth.BluetoothException;
 
 import java.security.GeneralSecurityException;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 
@@ -175,6 +177,32 @@ public abstract class FastPairConnection {
         /** Gets Shared Secret Address. */
         public String getAddress() {
             return mAddress;
+        }
+
+        @Override
+        public String toString() {
+            return "SharedSecret{"
+                    + "key=" + Arrays.toString(mKey) + ", "
+                    + "address=" + mAddress
+                    + "}";
+        }
+
+        @Override
+        public boolean equals(@Nullable Object o) {
+            if (o == this) {
+                return true;
+            }
+            if (o instanceof SharedSecret) {
+                SharedSecret that = (SharedSecret) o;
+                return Arrays.equals(this.mKey, that.getKey())
+                        && this.mAddress.equals(that.getAddress());
+            }
+            return false;
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(Arrays.hashCode(mKey), mAddress);
         }
     }
 
