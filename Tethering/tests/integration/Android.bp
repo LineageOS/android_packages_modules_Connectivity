@@ -77,7 +77,7 @@ android_test {
     defaults: ["TetheringIntegrationTestsDefaults"],
     test_suites: [
         "device-tests",
-        "mts",
+        "mts-tethering",
     ],
     compile_multilib: "both",
     jarjar_rules: ":NetworkStackJarJarRules",
@@ -129,7 +129,7 @@ android_test {
     platform_apis: true,
     min_sdk_version: "30",
     target_sdk_version: "30",
-    test_suites: ["device-tests", "mts"],
+    test_suites: ["device-tests", "mts-tethering"],
     test_config: "AndroidTest_Coverage.xml",
     defaults: ["libnetworkstackutilsjni_deps"],
     static_libs: [
