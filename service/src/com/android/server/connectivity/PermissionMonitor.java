@@ -51,6 +51,7 @@ import android.net.ConnectivitySettingsManager;
 import android.net.INetd;
 import android.net.UidRange;
 import android.net.Uri;
+import android.net.util.SharedLog;
 import android.os.Build;
 import android.os.RemoteException;
 import android.os.ServiceSpecificException;
@@ -119,6 +120,9 @@ public class PermissionMonitor {
     // netd system permission to these uids which is listed in UIDS_ALLOWED_ON_RESTRICTED_NETWORKS.
     @GuardedBy("this")
     private final Set<Integer> mUidsAllowedOnRestrictedNetworks = new ArraySet<>();
+
+    private static final int MAX_PERMISSION_UPDATE_LOGS = 40;
+    private final SharedLog mPermissionUpdateLogs = new SharedLog(MAX_PERMISSION_UPDATE_LOGS, TAG);
 
     private BroadcastReceiver mIntentReceiver = new BroadcastReceiver() {
         @Override
@@ -485,6 +489,32 @@ public class PermissionMonitor {
     }
 
     /**
+     * This handles both network and traffic permission, because there is no overlap in actual
+     * values, where network permission is NETWORK or SYSTEM, and traffic permission is INTERNET
+     * or UPDATE_DEVICE_STATS
+     */
+    private String permissionToString(int permission) {
+        switch (permission) {
+            case PERMISSION_NONE:
+                return "NONE";
+            case PERMISSION_NETWORK:
+                return "NETWORK";
+            case PERMISSION_SYSTEM:
+                return "SYSTEM";
+            case PERMISSION_INTERNET:
+                return "INTERNET";
+            case PERMISSION_UPDATE_DEVICE_STATS:
+                return "UPDATE_DEVICE_STATS";
+            case (PERMISSION_INTERNET | PERMISSION_UPDATE_DEVICE_STATS):
+                return "ALL";
+            case PERMISSION_UNINSTALLED:
+                return "UNINSTALLED";
+            default:
+                return "UNKNOWN";
+        }
+    }
+
+    /**
      * Called when a package is added.
      *
      * @param packageName The name of the new package.
@@ -494,7 +524,8 @@ public class PermissionMonitor {
      */
     public synchronized void onPackageAdded(@NonNull final String packageName, final int uid) {
         final int appId = UserHandle.getAppId(uid);
-        sendPackagePermissionsForAppId(appId, getPermissionForUid(uid));
+        final int trafficPerm = getPermissionForUid(uid);
+        sendPackagePermissionsForAppId(appId, trafficPerm);
 
         // If multiple packages share a UID (cf: android:sharedUserId) and ask for different
         // permissions, don't downgrade (i.e., if it's already SYSTEM, leave it as is).
@@ -513,6 +544,10 @@ public class PermissionMonitor {
         // updateVpnUid() depends on mApps to check if the package can bypass VPN.
         updateVpnUid(uid, true /* add */);
         mAllApps.add(appId);
+        mPermissionUpdateLogs.log("Package add: name=" + packageName + ", uid=" + uid
+                + ", nPerm=(" + permissionToString(permission) + "/"
+                + permissionToString(currentPermission) + ")"
+                + ", tPerm=" + permissionToString(trafficPerm));
     }
 
     private int highestUidNetworkPermission(int uid) {
@@ -541,7 +576,8 @@ public class PermissionMonitor {
      */
     public synchronized void onPackageRemoved(@NonNull final String packageName, final int uid) {
         final int appId = UserHandle.getAppId(uid);
-        sendPackagePermissionsForAppId(appId, getPermissionForUid(uid));
+        final int trafficPerm = getPermissionForUid(uid);
+        sendPackagePermissionsForAppId(appId, trafficPerm);
 
         // If the newly-removed package falls within some VPN's uid range, update Netd with it.
         // This needs to happen before the mApps update below, since removeBypassingUids() in
@@ -552,7 +588,12 @@ public class PermissionMonitor {
             mAllApps.remove(appId);
         }
 
+        final int currentPermission = mApps.get(appId, PERMISSION_NONE);
         final int permission = highestUidNetworkPermission(uid);
+        mPermissionUpdateLogs.log("Package remove: name=" + packageName + ", uid=" + uid
+                + ", nPerm=(" + permissionToString(permission) + "/"
+                + permissionToString(currentPermission) + ")"
+                + ", tPerm=" + permissionToString(trafficPerm));
         if (permission == PERMISSION_SYSTEM) {
             // An app with this UID still has the SYSTEM permission.
             // Therefore, this UID must already have the SYSTEM permission.
@@ -560,7 +601,7 @@ public class PermissionMonitor {
             return;
         }
         // If the permissions of this UID have not changed, do nothing.
-        if (permission == mApps.get(appId, PERMISSION_NONE)) return;
+        if (permission == currentPermission) return;
 
         final SparseIntArray apps = new SparseIntArray();
         if (permission != PERMISSION_NONE) {
@@ -838,6 +879,8 @@ public class PermissionMonitor {
         // Step3. Update or revoke permission for uids with netd.
         update(mUsers, updatedUids, true /* add */);
         update(mUsers, removedUids, false /* add */);
+        mPermissionUpdateLogs.log("Setting change: update=" + updatedUids
+                + ", remove=" + removedUids);
     }
 
     private synchronized void onExternalApplicationsAvailable(String[] pkgList) {
@@ -864,6 +907,12 @@ public class PermissionMonitor {
             pw.println("UIDs: " + vpn.getValue().toString());
             pw.println();
         }
+        pw.decreaseIndent();
+
+        pw.println();
+        pw.println("Update logs:");
+        pw.increaseIndent();
+        mPermissionUpdateLogs.reverseDump(pw);
         pw.decreaseIndent();
     }
 
