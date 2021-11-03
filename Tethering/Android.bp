@@ -21,6 +21,7 @@ package {
 java_defaults {
     name: "TetheringApiLevel",
     sdk_version: "module_current",
+    target_sdk_version: "31",
     min_sdk_version: "30",
 }
 
