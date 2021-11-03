@@ -17,7 +17,7 @@ package {
 }
 
 filegroup {
-    name: "nearby-java-sources",
+    name: "framework-nearby-java-sources",
     srcs: [
         "java/**/*.java",
         "java/**/*.aidl",
@@ -26,12 +26,20 @@ filegroup {
     visibility: ["//visibility:private"],
 }
 
+filegroup {
+    name: "framework-nearby-sources",
+    srcs: [
+        ":framework-nearby-java-sources",
+    ],
+    visibility: ["//frameworks/base"],
+}
+
 // Defaults shared between `framework-nearby` & `framework-nearby-pre-jarjar`
 java_defaults {
     name: "framework-nearby-defaults",
     defaults: ["nearby-module-sdk-version-defaults"],
     srcs: [
-        ":nearby-java-sources",
+        ":framework-nearby-java-sources",
     ],
     static_libs: [
         "modules-utils-preconditions",
