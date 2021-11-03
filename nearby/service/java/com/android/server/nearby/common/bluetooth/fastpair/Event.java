@@ -22,6 +22,8 @@ import android.os.Parcelable;
 
 import com.android.server.nearby.intdefs.NearbyEventIntDefs.EventCode;
 
+import java.util.Objects;
+
 import javax.annotation.Nullable;
 
 /**
@@ -31,15 +33,15 @@ import javax.annotation.Nullable;
 public class Event implements Parcelable {
 
     private final @EventCode int mEventCode;
-    private final long mTimeStamp;
+    private final long mTimestamp;
     private final Short mProfile;
     private final BluetoothDevice mBluetoothDevice;
     private final Exception mException;
 
-    private Event(@EventCode int eventCode, long timeStamp, Short profile,
-            BluetoothDevice bluetoothDevice, Exception exception) {
+    private Event(@EventCode int eventCode, long timestamp, @Nullable Short profile,
+            @Nullable BluetoothDevice bluetoothDevice, @Nullable Exception exception) {
         mEventCode = eventCode;
-        mTimeStamp = timeStamp;
+        mTimestamp = timestamp;
         mProfile = profile;
         mBluetoothDevice = bluetoothDevice;
         mException = exception;
@@ -56,7 +58,7 @@ public class Event implements Parcelable {
      * Returns timestamp.
      */
     public long getTimestamp() {
-        return mTimeStamp;
+        return mTimestamp;
     }
 
     /**
@@ -111,12 +113,50 @@ public class Event implements Parcelable {
         return getException() != null;
     }
 
+    @Override
+    public String toString() {
+        return "Event{"
+                + "eventCode=" + mEventCode + ", "
+                + "timestamp=" + mTimestamp + ", "
+                + "profile=" + mProfile + ", "
+                + "bluetoothDevice=" + mBluetoothDevice + ", "
+                + "exception=" + mException
+                + "}";
+    }
+
+    @Override
+    public boolean equals(@Nullable Object o) {
+        if (o == this) {
+            return true;
+        }
+        if (o instanceof Event) {
+            Event that = (Event) o;
+            return this.mEventCode == that.getEventCode()
+                    && this.mTimestamp == that.getTimestamp()
+                    && (this.mProfile == null
+                        ? that.getProfile() == null : this.mProfile.equals(that.getProfile()))
+                    && (this.mBluetoothDevice == null
+                        ? that.getBluetoothDevice() == null :
+                            this.mBluetoothDevice.equals(that.getBluetoothDevice()))
+                    && (this.mException == null
+                        ?  that.getException() == null :
+                            this.mException.equals(that.getException()));
+        }
+        return false;
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(mEventCode, mTimestamp, mProfile, mBluetoothDevice, mException);
+    }
+
+
     /**
      * Builder
      */
     public static class Builder {
         private @EventCode int mEventCode;
-        private long mTimeStamp;
+        private long mTimestamp;
         private Short mProfile;
         private BluetoothDevice mBluetoothDevice;
         private Exception mException;
@@ -133,7 +173,7 @@ public class Event implements Parcelable {
          * Set timestamp.
          */
         public Builder setTimestamp(long timestamp) {
-            this.mTimeStamp = timestamp;
+            this.mTimestamp = timestamp;
             return this;
         }
 
@@ -165,7 +205,7 @@ public class Event implements Parcelable {
          * Builds event.
          */
         public Event build() {
-            return new Event(mEventCode, mTimeStamp, mProfile, mBluetoothDevice, mException);
+            return new Event(mEventCode, mTimestamp, mProfile, mBluetoothDevice, mException);
         }
     }
 
