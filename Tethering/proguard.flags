@@ -4,7 +4,7 @@
     static final int EVENT_*;
 }
 
--keep class com.android.networkstack.tethering.BpfMap {
+-keep class com.android.networkstack.tethering.util.BpfMap {
     native <methods>;
 }
 

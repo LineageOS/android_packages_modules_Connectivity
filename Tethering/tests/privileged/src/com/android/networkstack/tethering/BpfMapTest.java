@@ -31,6 +31,7 @@ import android.system.ErrnoException;
 import android.system.OsConstants;
 import android.util.ArrayMap;
 
+import com.android.net.module.util.BpfMap;
 import com.android.testutils.DevSdkIgnoreRule.IgnoreUpTo;
 import com.android.testutils.DevSdkIgnoreRunner;
 
