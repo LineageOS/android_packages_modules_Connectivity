@@ -26,6 +26,7 @@ java_defaults {
         "libtetherutilsjni",
     ],
     jni_uses_sdk_apis: true,
+    jarjar_rules: ":TetheringTestsJarJarRules",
     visibility: ["//visibility:private"],
 }
 
