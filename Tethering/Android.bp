@@ -81,6 +81,7 @@ cc_library {
         "libnativehelper_compat_libc++",
     ],
     static_libs: [
+        "libbpfmapjni",
         "libnetjniutils",
     ],
 
