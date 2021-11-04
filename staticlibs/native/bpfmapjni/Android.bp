@@ -16,27 +16,29 @@ package {
     default_applicable_licenses: ["Android-Apache-2.0"],
 }
 
-cc_library_headers {
-    name: "bpf_syscall_wrappers",
-    vendor_available: false,
-    host_supported: false,
-    native_bridge_supported: true,
-    export_include_dirs: ["include"],
+cc_library_static {
+    name: "libbpfmapjni",
+    srcs: ["com_android_net_module_util_BpfMap.cpp"],
+    header_libs: [
+        "bpf_syscall_wrappers",
+        "jni_headers",
+    ],
+    shared_libs: [
+        "liblog",
+        "libnativehelper_compat_libc++",
+    ],
     cflags: [
         "-Wall",
         "-Werror",
+        "-Wno-unused-parameter",
     ],
     sdk_version: "30",
     min_sdk_version: "30",
     apex_available: [
-        "//apex_available:platform",
         "com.android.tethering",
+        "//apex_available:platform",
     ],
     visibility: [
-        "//frameworks/libs/net/common/native/bpfmapjni",
-        "//packages/modules/Connectivity/service",
         "//packages/modules/Connectivity/Tethering",
-        "//system/bpf/libbpf_android",
-        "//system/memory/lmkd",
     ],
 }
