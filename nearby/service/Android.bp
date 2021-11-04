@@ -43,6 +43,7 @@ java_library {
         "androidx.core_core",
         "guava",
         "libprotobuf-java-lite",
+        "fast-pair-lite-protos",
     ],
     sdk_version: "system_server_current",
 

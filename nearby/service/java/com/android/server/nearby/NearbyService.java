@@ -23,6 +23,7 @@ import com.android.server.SystemService;
 import com.android.server.nearby.common.locator.LocatorContextWrapper;
 import com.android.server.nearby.fastpair.FastPairManager;
 
+
 /**
  * Service implementing nearby functionality. The actual implementation is delegated to
  * {@link NearbyServiceImpl}.
@@ -43,7 +44,6 @@ public class NearbyService extends SystemService {
         mImpl = new NearbyServiceImpl(contextBase);
         mLocatorContextWrapper = new LocatorContextWrapper(contextBase, null);
         mFastPairManager = new FastPairManager(mLocatorContextWrapper);
-
     }
 
     @Override

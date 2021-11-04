@@ -16,14 +16,52 @@
 
 package com.android.server.nearby.fastpair.cache;
 
+import android.bluetooth.le.ScanResult;
 import android.content.Context;
 import android.util.Log;
+
+
+import com.android.server.nearby.common.eventloop.Annotations;
+
+import service.proto.Cache;
+import service.proto.Rpcs;
+
 
 /**
  * Save FastPair device info to database to avoid multiple requesting.
  */
 public class FastPairCacheManager {
+
+    private static final String FAST_PAIR_SERVER_CACHE = "FAST_PAIR_SERVER_CACHE";
+
     public FastPairCacheManager(Context context) {
+
+    }
+
+    /**
+     * Saves the response to the db
+     */
+    private void saveDevice() {
+
+    }
+
+    Cache.ServerResponseDbItem getDeviceFromScanResult(ScanResult scanResult) {
+        return Cache.ServerResponseDbItem.newBuilder().build();
+    }
+
+    /**
+     * Checks if the entry can be auto deleted from the cache
+     */
+    public boolean isDeletable(Cache.ServerResponseDbItem entry) {
+        if (!entry.getExpirable()) {
+            return false;
+        }
+        return true;
+    }
+
+    @Annotations.EventThread
+    private Rpcs.GetObservedDeviceResponse getObservedDeviceInfo(ScanResult scanResult) {
+        return Rpcs.GetObservedDeviceResponse.getDefaultInstance();
     }
 
     /**
@@ -32,4 +70,5 @@ public class FastPairCacheManager {
     public void printLog() {
         Log.d("FastPairCacheManager", "print log");
     }
+
 }

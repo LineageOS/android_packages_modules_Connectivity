@@ -1,0 +1,21 @@
+syntax = "proto3";
+package service.proto;
+import "src/fastpair/rpcs.proto";
+
+// db information for Fast Pair that gets from server.
+message ServerResponseDbItem {
+  // Device's model id.
+  string model_id = 1;
+
+  // Response was received from the server. Contains data needed to display
+  // FastPair notification such as device name, txPower of device, image used
+  // in the notification, etc.
+  GetObservedDeviceResponse get_observed_device_response = 2;
+
+  // The timestamp that make the server fetch.
+  int64 last_fetch_info_timestamp_millis = 3;
+
+  // Whether the item in the cache is expirable or not (when offline mode this
+  // will be false).
+   bool expirable = 4;
+}

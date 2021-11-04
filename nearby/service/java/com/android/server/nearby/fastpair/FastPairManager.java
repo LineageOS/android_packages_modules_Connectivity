@@ -26,6 +26,8 @@ import com.android.server.nearby.common.locator.Locator;
 import com.android.server.nearby.common.locator.LocatorContextWrapper;
 import com.android.server.nearby.fastpair.cache.FastPairCacheManager;
 
+import service.proto.Rpcs;
+
 /**
  * FastPairManager is the class initiated in nearby service to handle Fast Pair related
  * work.
@@ -54,6 +56,8 @@ public class FastPairManager {
         mIntentFilter = new IntentFilter();
         mLocator = mLocatorContextWrapper.getLocator();
         mLocator.bind(new FastPairModule());
+        Rpcs.GetObservedDeviceResponse getObservedDeviceResponse =
+                Rpcs.GetObservedDeviceResponse.newBuilder().build();
     }
 
     /**
