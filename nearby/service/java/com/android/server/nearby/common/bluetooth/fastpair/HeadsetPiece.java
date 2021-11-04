@@ -16,16 +16,12 @@
 
 package com.android.server.nearby.common.bluetooth.fastpair;
 
-import android.annotation.TargetApi;
 import android.net.Uri;
-import android.os.Build.VERSION_CODES;
 import android.os.Parcel;
 import android.os.Parcelable;
 
 import androidx.annotation.Nullable;
 import androidx.core.content.FileProvider;
-
-import com.google.auto.value.AutoValue;
 
 import java.util.Arrays;
 import java.util.Objects;
@@ -34,46 +30,68 @@ import java.util.Objects;
  * This class is subclass of real headset. It contains image url, battery value and charging
  * status.
  */
-// Objects.equals is only available after KitKat.
-@TargetApi(VERSION_CODES.KITKAT)
-@AutoValue
-public abstract class HeadsetPiece implements Parcelable {
+public class HeadsetPiece implements Parcelable {
+    private int mLowLevelThreshold;
+    private int mBatteryLevel;
+    private String mImageUrl;
+    private boolean mCharging;
+    private Uri mImageContentUri;
+
+    private HeadsetPiece(
+            int lowLevelThreshold,
+            int batteryLevel,
+            String imageUrl,
+            boolean charging,
+            @Nullable Uri imageContentUri) {
+        this.mLowLevelThreshold = lowLevelThreshold;
+        this.mBatteryLevel = batteryLevel;
+        this.mImageUrl = imageUrl;
+        this.mCharging = charging;
+        this.mImageContentUri = imageContentUri;
+    }
+
+    /**
+     * Returns a builder of HeadsetPiece.
+     */
+    public static HeadsetPiece.Builder builder() {
+        return new HeadsetPiece.Builder();
+    }
 
     /**
      * The low level threshold.
      */
-    public abstract int lowLevelThreshold();
+    public int lowLevelThreshold() {
+        return mLowLevelThreshold;
+    }
 
     /**
      * The battery level.
      */
-    public abstract int batteryLevel();
+    public int batteryLevel() {
+        return mBatteryLevel;
+    }
 
     /**
      * The web URL of the image.
      */
-    public abstract String imageUrl();
+    public String imageUrl() {
+        return mImageUrl;
+    }
 
     /**
      * Whether the headset is charging.
      */
-    public abstract boolean charging();
+    public boolean charging() {
+        return mCharging;
+    }
 
     /**
      * The content Uri of the image if it could be downloaded from the web URL and generated through
      * {@link FileProvider#getUriForFile} successfully, otherwise null.
      */
     @Nullable
-    public abstract Uri imageContentUri();
-
-    /**
-     * Returns a builder of HeadsetPiece.
-     */
-    public static HeadsetPiece.Builder builder() {
-        return new AutoValue_HeadsetPiece.Builder();
-    }
-
-    HeadsetPiece() {
+    public Uri imageContentUri() {
+        return mImageContentUri;
     }
 
     /**
@@ -83,41 +101,74 @@ public abstract class HeadsetPiece implements Parcelable {
         return batteryLevel() <= lowLevelThreshold() && batteryLevel() >= 0 && !charging();
     }
 
+    @Override
+    public String toString() {
+        return "HeadsetPiece{"
+                + "lowLevelThreshold=" + mLowLevelThreshold + ", "
+                + "batteryLevel=" + mBatteryLevel + ", "
+                + "imageUrl=" + mImageUrl + ", "
+                + "charging=" + mCharging + ", "
+                + "imageContentUri=" + mImageContentUri
+                + "}";
+    }
+
     /**
      * Builder function for headset piece.
      */
-    @AutoValue.Builder
-    public abstract static class Builder {
+    public static class Builder {
+        private int mLowLevelThreshold;
+        private int mBatteryLevel;
+        private String mImageUrl;
+        private boolean mCharging;
+        private Uri mImageContentUri;
 
         /**
          * Set low level threshold.
          */
-        public abstract HeadsetPiece.Builder setLowLevelThreshold(int lowLevelThreshold);
+        public HeadsetPiece.Builder setLowLevelThreshold(int lowLevelThreshold) {
+            this.mLowLevelThreshold = lowLevelThreshold;
+            return this;
+        }
 
         /**
          * Set battery level.
          */
-        public abstract HeadsetPiece.Builder setBatteryLevel(int level);
+        public HeadsetPiece.Builder setBatteryLevel(int level) {
+            this.mBatteryLevel = level;
+            return this;
+        }
 
         /**
          * Set image url.
          */
-        public abstract HeadsetPiece.Builder setImageUrl(String url);
+        public HeadsetPiece.Builder setImageUrl(String url) {
+            this.mImageUrl = url;
+            return this;
+        }
 
         /**
          * Set charging.
          */
-        public abstract HeadsetPiece.Builder setCharging(boolean charging);
+        public HeadsetPiece.Builder setCharging(boolean charging) {
+            this.mCharging = charging;
+            return this;
+        }
 
         /**
          * Set image content Uri.
          */
-        public abstract HeadsetPiece.Builder setImageContentUri(Uri uri);
+        public HeadsetPiece.Builder setImageContentUri(Uri uri) {
+            this.mImageContentUri = uri;
+            return this;
+        }
 
         /**
          * Builds HeadSetPiece.
          */
-        public abstract HeadsetPiece build();
+        public HeadsetPiece build() {
+            return new HeadsetPiece(mLowLevelThreshold, mBatteryLevel, mImageUrl, mCharging,
+                    mImageContentUri);
+        }
     }
 
     @Override
