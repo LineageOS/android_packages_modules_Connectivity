@@ -18,11 +18,11 @@ package com.android.networkstack.tethering;
 import static android.net.NetworkCapabilities.TRANSPORT_VPN;
 import static android.net.TetheringManager.TETHERING_BLUETOOTH;
 import static android.net.TetheringManager.TETHERING_WIFI_P2P;
-import static android.net.util.PrefixUtils.asIpPrefix;
 
 import static com.android.net.module.util.Inet4AddressUtils.inet4AddressToIntHTH;
 import static com.android.net.module.util.Inet4AddressUtils.intToInet4AddressHTH;
 import static com.android.net.module.util.Inet4AddressUtils.prefixLengthToV4NetmaskIntHTH;
+import static com.android.networkstack.tethering.util.PrefixUtils.asIpPrefix;
 
 import static java.util.Arrays.asList;
 
