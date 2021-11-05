@@ -146,11 +146,25 @@ public class NetlinkConstants {
     public static final int RTMGRP_LINK = 1;
     public static final int RTMGRP_IPV4_IFADDR = 0x10;
     public static final int RTMGRP_IPV6_IFADDR = 0x100;
+    public static final int RTMGRP_IPV6_ROUTE  = 0x400;
     public static final int RTNLGRP_ND_USEROPT = 20;
     public static final int RTMGRP_ND_USEROPT = 1 << (RTNLGRP_ND_USEROPT - 1);
 
     // Device flags.
     public static final int IFF_LOWER_UP = 1 << 16;
+
+    // Known values for struct rtmsg rtm_protocol.
+    public static final short RTPROT_KERNEL     = 2;
+    public static final short RTPROT_RA         = 9;
+
+    // Known values for struct rtmsg rtm_scope.
+    public static final short RT_SCOPE_UNIVERSE = 0;
+
+    // Known values for struct rtmsg rtm_type.
+    public static final short RTN_UNICAST       = 1;
+
+    // Known values for struct rtmsg rtm_flags.
+    public static final int RTM_F_CLONED        = 0x200;
 
     /**
      * Convert a netlink message type to a string for control message.
