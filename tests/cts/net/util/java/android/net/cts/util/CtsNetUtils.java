@@ -16,15 +16,11 @@
 
 package android.net.cts.util;
 
-import static android.Manifest.permission.ACCESS_WIFI_STATE;
-import static android.Manifest.permission.NETWORK_SETTINGS;
 import static android.net.NetworkCapabilities.NET_CAPABILITY_INTERNET;
 import static android.net.NetworkCapabilities.TRANSPORT_CELLULAR;
 import static android.net.NetworkCapabilities.TRANSPORT_TEST;
-import static android.net.wifi.WifiManager.SCAN_RESULTS_AVAILABLE_ACTION;
 
 import static com.android.compatibility.common.util.PropertyUtil.getFirstApiLevel;
-import static com.android.testutils.TestPermissionUtil.runAsShell;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
@@ -48,15 +44,12 @@ import android.net.NetworkInfo;
 import android.net.NetworkInfo.State;
 import android.net.NetworkRequest;
 import android.net.TestNetworkManager;
-import android.net.wifi.ScanResult;
-import android.net.wifi.WifiConfiguration;
 import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
 import android.os.Binder;
 import android.os.Build;
 import android.os.ConditionVariable;
 import android.os.IBinder;
-import android.os.SystemClock;
 import android.system.Os;
 import android.system.OsConstants;
 import android.text.TextUtils;
@@ -64,23 +57,17 @@ import android.util.Log;
 
 import com.android.compatibility.common.util.SystemUtil;
 import com.android.net.module.util.ConnectivitySettingsUtils;
-
-import junit.framework.AssertionFailedError;
+import com.android.testutils.ConnectUtil;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.net.Socket;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
-import java.util.stream.Collectors;
 
 public final class CtsNetUtils {
     private static final String TAG = CtsNetUtils.class.getSimpleName();
@@ -89,13 +76,7 @@ public final class CtsNetUtils {
 
     private static final int PRIVATE_DNS_SETTING_TIMEOUT_MS = 10_000;
     private static final int CONNECTIVITY_CHANGE_TIMEOUT_SECS = 30;
-    private static final int MAX_WIFI_CONNECT_RETRIES = 10;
-    private static final int WIFI_CONNECT_INTERVAL_MS = 500;
 
-    // Constants used by WifiManager.ActionListener#onFailure. Although onFailure is SystemApi,
-    // the error code constants are not (they probably should be ?)
-    private static final int WIFI_ERROR_IN_PROGRESS = 1;
-    private static final int WIFI_ERROR_BUSY = 2;
     private static final String PRIVATE_DNS_MODE_OPPORTUNISTIC = "opportunistic";
     private static final String PRIVATE_DNS_MODE_STRICT = "hostname";
     public static final int HTTP_PORT = 80;
@@ -237,10 +218,6 @@ public final class CtsNetUtils {
      * @return The network that was newly connected.
      */
     private Network connectToWifi(boolean expectLegacyBroadcast) {
-        final TestNetworkCallback callback = new TestNetworkCallback();
-        mCm.registerNetworkCallback(makeWifiNetworkRequest(), callback);
-        Network wifiNetwork = null;
-
         ConnectivityActionReceiver receiver = new ConnectivityActionReceiver(
                 mCm, ConnectivityManager.TYPE_WIFI, NetworkInfo.State.CONNECTED);
         IntentFilter filter = new IntentFilter();
@@ -248,159 +225,17 @@ public final class CtsNetUtils {
         mContext.registerReceiver(receiver, filter);
 
         try {
-            // Clear the wifi config blocklist (not the BSSID blocklist)
-            clearWifiBlocklist();
-            SystemUtil.runShellCommand("svc wifi enable");
-            final WifiConfiguration config = getOrCreateWifiConfiguration();
-            connectToWifiConfig(config);
-
-            // Ensure we get an onAvailable callback and possibly a CONNECTIVITY_ACTION.
-            wifiNetwork = callback.waitForAvailable();
-            assertNotNull("onAvailable callback not received after connecting to " + config.SSID,
-                    wifiNetwork);
+            final Network network = new ConnectUtil(mContext).ensureWifiConnected();
             if (expectLegacyBroadcast) {
-                assertTrue("CONNECTIVITY_ACTION not received after connecting to " + config.SSID,
+                assertTrue("CONNECTIVITY_ACTION not received after connecting to " + network,
                         receiver.waitForState());
             }
+            return network;
         } catch (InterruptedException ex) {
-            fail("connectToWifi was interrupted");
+            throw new AssertionError("connectToWifi was interrupted", ex);
         } finally {
-            mCm.unregisterNetworkCallback(callback);
             mContext.unregisterReceiver(receiver);
         }
-
-        return wifiNetwork;
-    }
-
-    private void connectToWifiConfig(WifiConfiguration config) {
-        for (int i = 0; i < MAX_WIFI_CONNECT_RETRIES; i++) {
-            final Integer error = runAsShell(NETWORK_SETTINGS, () -> {
-                final ConnectWifiListener listener = new ConnectWifiListener();
-                mWifiManager.connect(config, listener);
-                return listener.connectFuture.get(
-                        CONNECTIVITY_CHANGE_TIMEOUT_SECS, TimeUnit.SECONDS);
-            });
-
-            if (error == null) return;
-
-            // Only retry for IN_PROGRESS and BUSY
-            if (error != WIFI_ERROR_IN_PROGRESS && error != WIFI_ERROR_BUSY) {
-                fail("Failed to connect to " + config.SSID + ": " + error);
-            }
-
-            Log.w(TAG, "connect failed with " + error + "; waiting before retry");
-            SystemClock.sleep(WIFI_CONNECT_INTERVAL_MS);
-        }
-
-        fail("Failed to connect to " + config.SSID
-                + " after " + MAX_WIFI_CONNECT_RETRIES + "retries");
-    }
-
-    private static class ConnectWifiListener implements WifiManager.ActionListener {
-        /**
-         * Future completed when the connect process ends. Provides the error code or null if none.
-         */
-        final CompletableFuture<Integer> connectFuture = new CompletableFuture<>();
-        @Override
-        public void onSuccess() {
-            connectFuture.complete(null);
-        }
-
-        @Override
-        public void onFailure(int reason) {
-            connectFuture.complete(reason);
-        }
-    }
-
-    private WifiConfiguration getOrCreateWifiConfiguration() {
-        final List<WifiConfiguration> configs = runAsShell(NETWORK_SETTINGS,
-                mWifiManager::getConfiguredNetworks);
-        // If no network is configured, add a config for virtual access points if applicable
-        if (configs.size() == 0) {
-            final List<ScanResult> scanResults = getWifiScanResults();
-            final WifiConfiguration virtualConfig = maybeConfigureVirtualNetwork(scanResults);
-            assertNotNull("The device has no configured wifi network", virtualConfig);
-
-            return virtualConfig;
-        }
-        // No need to add a configuration: there is already one.
-        if (configs.size() > 1) {
-            // For convenience in case of local testing on devices with multiple saved configs,
-            // prefer the first configuration that is in range.
-            // In actual tests, there should only be one configuration, and it should be usable as
-            // assumed by WifiManagerTest.testConnect.
-            Log.w(TAG, "Multiple wifi configurations found: "
-                    + configs.stream().map(c -> c.SSID).collect(Collectors.joining(", ")));
-            final List<ScanResult> scanResultsList = getWifiScanResults();
-            Log.i(TAG, "Scan results: " + scanResultsList.stream().map(c ->
-                    c.SSID + " (" + c.level + ")").collect(Collectors.joining(", ")));
-            final Set<String> scanResults = scanResultsList.stream().map(
-                    s -> "\"" + s.SSID + "\"").collect(Collectors.toSet());
-
-            return configs.stream().filter(c -> scanResults.contains(c.SSID))
-                    .findFirst().orElse(configs.get(0));
-        }
-        return configs.get(0);
-    }
-
-    private List<ScanResult> getWifiScanResults() {
-        final CompletableFuture<List<ScanResult>> scanResultsFuture = new CompletableFuture<>();
-        runAsShell(NETWORK_SETTINGS, () -> {
-            final BroadcastReceiver receiver = new BroadcastReceiver() {
-                @Override
-                public void onReceive(Context context, Intent intent) {
-                    scanResultsFuture.complete(mWifiManager.getScanResults());
-                }
-            };
-            mContext.registerReceiver(receiver, new IntentFilter(SCAN_RESULTS_AVAILABLE_ACTION));
-            mWifiManager.startScan();
-        });
-
-        try {
-            return scanResultsFuture.get(CONNECTIVITY_CHANGE_TIMEOUT_SECS, TimeUnit.SECONDS);
-        } catch (ExecutionException | InterruptedException | TimeoutException e) {
-            throw new AssertionFailedError("Wifi scan results not received within timeout");
-        }
-    }
-
-    /**
-     * If a virtual wifi network is detected, add a configuration for that network.
-     * TODO(b/158150376): have the test infrastructure add virtual wifi networks when appropriate.
-     */
-    private WifiConfiguration maybeConfigureVirtualNetwork(List<ScanResult> scanResults) {
-        // Virtual wifi networks used on the emulator and cloud testing infrastructure
-        final List<String> virtualSsids = Arrays.asList("VirtWifi", "AndroidWifi");
-        Log.d(TAG, "Wifi scan results: " + scanResults);
-        final ScanResult virtualScanResult = scanResults.stream().filter(
-                s -> virtualSsids.contains(s.SSID)).findFirst().orElse(null);
-
-        // Only add the virtual configuration if the virtual AP is detected in scans
-        if (virtualScanResult == null) return null;
-
-        final WifiConfiguration virtualConfig = new WifiConfiguration();
-        // ASCII SSIDs need to be surrounded by double quotes
-        virtualConfig.SSID = "\"" + virtualScanResult.SSID + "\"";
-        virtualConfig.allowedKeyManagement.set(WifiConfiguration.KeyMgmt.NONE);
-
-        runAsShell(NETWORK_SETTINGS, () -> {
-            final int networkId = mWifiManager.addNetwork(virtualConfig);
-            assertTrue(networkId >= 0);
-            assertTrue(mWifiManager.enableNetwork(networkId, false /* attemptConnect */));
-        });
-        return virtualConfig;
-    }
-
-    /**
-     * Re-enable wifi networks that were blocklisted, typically because no internet connection was
-     * detected the last time they were connected. This is necessary to make sure wifi can reconnect
-     * to them.
-     */
-    private void clearWifiBlocklist() {
-        runAsShell(NETWORK_SETTINGS, ACCESS_WIFI_STATE, () -> {
-            for (WifiConfiguration cfg : mWifiManager.getConfiguredNetworks()) {
-                assertTrue(mWifiManager.enableNetwork(cfg.networkId, false /* attemptConnect */));
-            }
-        });
     }
 
     /**

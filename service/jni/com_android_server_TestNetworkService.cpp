@@ -66,6 +66,8 @@ static int createTunTapInterface(JNIEnv* env, bool isTun, const char* iface) {
     // Activate interface using an unconnected datagram socket.
     base::unique_fd inet6CtrlSock(socket(AF_INET6, SOCK_DGRAM, 0));
     ifr.ifr_flags = IFF_UP;
+    // Mark TAP interfaces as supporting multicast
+    if (!isTun) ifr.ifr_flags |= IFF_MULTICAST;
 
     if (ioctl(inet6CtrlSock.get(), SIOCSIFFLAGS, &ifr)) {
         throwException(env, errno, "activating", ifr.ifr_name);
