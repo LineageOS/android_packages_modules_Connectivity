@@ -27,6 +27,7 @@ import static android.hardware.usb.UsbManager.USB_FUNCTION_RNDIS;
 import static android.net.ConnectivityManager.ACTION_RESTRICT_BACKGROUND_CHANGED;
 import static android.net.ConnectivityManager.CONNECTIVITY_ACTION;
 import static android.net.ConnectivityManager.EXTRA_NETWORK_INFO;
+import static android.net.NetworkCapabilities.NET_CAPABILITY_NOT_VPN;
 import static android.net.NetworkStack.PERMISSION_MAINLINE_NETWORK_STACK;
 import static android.net.TetheringManager.ACTION_TETHER_STATE_CHANGED;
 import static android.net.TetheringManager.CONNECTIVITY_SCOPE_LOCAL;
@@ -154,6 +155,8 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
+
+import lineageos.providers.LineageSettings;
 
 /**
  *
@@ -428,6 +431,17 @@ public class Tethering {
         }
 
         startTrackDefaultNetwork();
+
+        // Listen for allowing tethering upstream via VPN settings changes
+        final ContentObserver vpnSettingObserver = new ContentObserver(mHandler) {
+            @Override
+            public void onChange(boolean self) {
+                // Reconsider tethering upstream
+                mTetherMainSM.sendMessage(TetherMainSM.CMD_UPSTREAM_CHANGED);
+            }
+        };
+        mContext.getContentResolver().registerContentObserver(LineageSettings.Secure.getUriFor(
+                LineageSettings.Secure.TETHERING_ALLOW_VPN_UPSTREAMS), false, vpnSettingObserver);
     }
 
     private class TetheringThreadExecutor implements Executor {
@@ -2106,6 +2120,12 @@ public class Tethering {
             }
 
             public void updateUpstreamNetworkState(UpstreamNetworkState ns) {
+                // Disable hw offload on vpn upstream interfaces.
+                // setUpstreamLinkProperties() interprets null as disable.
+                if (ns != null && ns.networkCapabilities != null
+                        && !ns.networkCapabilities.hasCapability(NET_CAPABILITY_NOT_VPN)) {
+                    ns = null;
+                }
                 mOffloadController.setUpstreamLinkProperties(
                         (ns != null) ? ns.linkProperties : null);
             }
