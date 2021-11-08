@@ -45,6 +45,7 @@ import android.text.TextUtils;
 import android.util.Log;
 
 import androidx.annotation.GuardedBy;
+import androidx.annotation.IntDef;
 import androidx.annotation.Nullable;
 import androidx.annotation.VisibleForTesting;
 import androidx.annotation.WorkerThread;
@@ -80,6 +81,8 @@ import com.google.common.base.Ascii;
 import com.google.common.base.Preconditions;
 import com.google.common.primitives.Shorts;
 
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
 import java.nio.ByteOrder;
 import java.security.GeneralSecurityException;
 import java.security.NoSuchAlgorithmException;
@@ -216,32 +219,46 @@ public class FastPairDualConnection extends FastPairConnection {
                     },
                     REQUESTED_SERVICES_LTV);
 
-    // TODO(b/201673262): remove Java enum usage.
-    private enum ResultCode {
-        UNKNOWN((byte) 0xFF),
-        SUCCESS((byte) 0x00),
-        OP_CODE_NOT_SUPPORTED((byte) 0x01),
-        INVALID_PARAMETER((byte) 0x02),
-        UNSUPPORTED_ORGANIZATION_ID((byte) 0x03),
-        OPERATION_FAILED((byte) 0x04);
+    /**
+     * Operation Result Code.
+     */
+    @Retention(RetentionPolicy.SOURCE)
+    @IntDef(
+            value = {
+                    ResultCode.UNKNOWN,
+                    ResultCode.SUCCESS,
+                    ResultCode.OP_CODE_NOT_SUPPORTED,
+                    ResultCode.INVALID_PARAMETER,
+                    ResultCode.UNSUPPORTED_ORGANIZATION_ID,
+                    ResultCode.OPERATION_FAILED,
+            })
 
-        private final byte mByteValue;
+    public @interface ResultCode {
 
-        ResultCode(byte byteValue) {
-            this.mByteValue = byteValue;
-        }
+        int UNKNOWN = (byte) 0xFF;
+        int SUCCESS = (byte) 0x00;
+        int OP_CODE_NOT_SUPPORTED = (byte) 0x01;
+        int INVALID_PARAMETER = (byte) 0x02;
+        int UNSUPPORTED_ORGANIZATION_ID = (byte) 0x03;
+        int OPERATION_FAILED = (byte) 0x04;
+    }
 
-        private static ResultCode fromTdsControlPointIndication(byte[] response) {
-            return response == null || response.length < 2 ? UNKNOWN : from(response[1]);
-        }
 
-        private static ResultCode from(byte byteValue) {
-            for (ResultCode resultCode : ResultCode.values()) {
-                if (resultCode.mByteValue == byteValue) {
-                    return resultCode;
-                }
-            }
-            return UNKNOWN;
+    private static @ResultCode int fromTdsControlPointIndication(byte[] response) {
+        return response == null || response.length < 2 ? ResultCode.UNKNOWN : from(response[1]);
+    }
+
+    private static @ResultCode int from(byte byteValue) {
+        switch (byteValue) {
+            case ResultCode.UNKNOWN:
+            case ResultCode.SUCCESS:
+            case ResultCode.OP_CODE_NOT_SUPPORTED:
+            case ResultCode.INVALID_PARAMETER:
+            case ResultCode.UNSUPPORTED_ORGANIZATION_ID:
+            case ResultCode.OPERATION_FAILED:
+                return byteValue;
+            default:
+                return ResultCode.UNKNOWN;
         }
     }
 
@@ -1717,7 +1734,7 @@ public class FastPairDualConnection extends FastPairConnection {
         byte[] response =
                 changeObserver.waitForUpdate(
                         TimeUnit.SECONDS.toMillis(mPreferences.getGattOperationTimeoutSeconds()));
-        ResultCode resultCode = ResultCode.fromTdsControlPointIndication(response);
+        @ResultCode int resultCode = fromTdsControlPointIndication(response);
         if (resultCode != ResultCode.SUCCESS) {
             throw new TdsException(
                     BrEdrHandoverErrorCode.CONTROL_POINT_RESULT_CODE_NOT_SUCCESS,
