@@ -28,6 +28,8 @@ import android.bluetooth.BluetoothA2dp;
 import android.bluetooth.BluetoothHeadset;
 import android.util.Log;
 
+import androidx.annotation.IntDef;
+
 import com.android.server.nearby.common.bluetooth.BluetoothException;
 import com.android.server.nearby.common.bluetooth.gatt.BluetoothGattConnection;
 
@@ -35,6 +37,8 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.primitives.Shorts;
 
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
 import java.nio.ByteBuffer;
 import java.security.GeneralSecurityException;
 import java.util.Random;
@@ -199,66 +203,56 @@ public final class Constants {
             /**
              * Enumerates all flags of key-based pairing request.
              */
-            // TODO(b/201673262): Convert enum to byte.
-            public enum KeyBasedPairingRequestFlag {
+            @Retention(RetentionPolicy.SOURCE)
+            @IntDef(
+                    value = {
+                            KeyBasedPairingRequestFlag.REQUEST_DISCOVERABLE,
+                            KeyBasedPairingRequestFlag.PROVIDER_INITIATES_BONDING,
+                            KeyBasedPairingRequestFlag.REQUEST_DEVICE_NAME,
+                            KeyBasedPairingRequestFlag.REQUEST_RETROACTIVE_PAIR,
+                    })
+            public @interface KeyBasedPairingRequestFlag {
                 /**
                  * The bit indicating that the Fast Pair device should temporarily become
                  * discoverable.
                  */
-                REQUEST_DISCOVERABLE((byte) (1 << 7)),
+                int REQUEST_DISCOVERABLE = (byte) (1 << 7);
                 /**
                  * The bit indicating that the requester (Seeker) has included their public address
                  * in bytes [7,12] of the request, and the Provider should initiate bonding to that
                  * address.
                  */
-                PROVIDER_INITIATES_BONDING((byte) (1 << 6)),
+                int PROVIDER_INITIATES_BONDING = (byte) (1 << 6);
                 /**
                  * The bit indicating that Seeker requests Provider shall return the existing name.
                  */
-                REQUEST_DEVICE_NAME((byte) (1 << 5)),
+                int REQUEST_DEVICE_NAME = (byte) (1 << 5);
                 /**
                  * The bit indicating that the Seeker request retroactive pairing.
                  */
-                REQUEST_RETROACTIVE_PAIR((byte) (1 << 4));
-
-                private final byte mValue;
-
-                KeyBasedPairingRequestFlag(byte flag) {
-                    this.mValue = flag;
-                }
-
-                /** Returns value. */
-                public byte getValue() {
-                    return mValue;
-                }
+                int REQUEST_RETROACTIVE_PAIR = (byte) (1 << 4);
             }
 
             /**
              * Enumerates all flags of action over BLE request, see Fast Pair spec for details.
              */
-            // TODO(b/201673262): Convert enum to byte.
-            public enum ActionOverBleFlag {
+            @IntDef(
+                    value = {
+                            ActionOverBleFlag.DEVICE_ACTION,
+                            ActionOverBleFlag.ADDITIONAL_DATA_CHARACTERISTIC,
+                    })
+            public @interface ActionOverBleFlag {
                 /**
                  * The bit indicating that the handshaking is for Device Action.
                  */
-                DEVICE_ACTION((byte) (1 << 7)),
+                int DEVICE_ACTION = (byte) (1 << 7);
                 /**
                  * The bit indicating that this handshake will be followed by Additional Data
                  * characteristic.
                  */
-                ADDITIONAL_DATA_CHARACTERISTIC((byte) (1 << 6));
-
-                private final byte mValue;
-
-                ActionOverBleFlag(byte value) {
-                    this.mValue = value;
-                }
-
-                /** Retunns value. */
-                public byte getValue() {
-                    return mValue;
-                }
+                int ADDITIONAL_DATA_CHARACTERISTIC = (byte) (1 << 6);
             }
+
 
             /**
              * Constants related to the decrypted response sent back in a notify.
@@ -308,28 +302,26 @@ public final class Constants {
             /**
              * The type of the Passkey Block message.
              */
-            // TODO(b/201673262): Convert enum to byte.
-            public enum Type {
+            @IntDef(
+                    value = {
+                            Type.SEEKER,
+                            Type.PROVIDER,
+                    })
+            public @interface Type {
                 /**
                  * Seeker's Passkey.
                  */
-                SEEKER((byte) 0x02),
+                int SEEKER = (byte) 0x02;
                 /**
                  * Provider's Passkey.
                  */
-                PROVIDER((byte) 0x03);
-
-                private final byte mValue;
-
-                Type(byte value) {
-                    this.mValue = value;
-                }
+                int PROVIDER = (byte) 0x03;
             }
 
             /**
              * Constructs the encrypted value to write to the characteristic.
              */
-            public static byte[] encrypt(Type type, byte[] secret, int passkey)
+            public static byte[] encrypt(@Type int type, byte[] secret, int passkey)
                     throws GeneralSecurityException {
                 Preconditions.checkArgument(
                         0 < passkey && passkey < /*2^24=*/ 16777216,
@@ -342,19 +334,20 @@ public final class Constants {
                                 - passkeyBytes.length];
                 new Random().nextBytes(salt);
                 return AesEcbSingleBlockEncryption.encrypt(
-                        secret, concat(new byte[]{type.mValue}, passkeyBytes, salt));
+                        secret, concat(new byte[]{(byte) type}, passkeyBytes, salt));
             }
 
             /**
              * Extracts the passkey from the encrypted characteristic value.
              */
-            public static int decrypt(Type type, byte[] secret, byte[] passkeyCharacteristicValue)
+            public static int decrypt(@Type int type, byte[] secret,
+                    byte[] passkeyCharacteristicValue)
                     throws GeneralSecurityException {
                 byte[] decrypted = AesEcbSingleBlockEncryption
                         .decrypt(secret, passkeyCharacteristicValue);
-                if (decrypted[0] != type.mValue) {
+                if (decrypted[0] != (byte) type) {
                     throw new GeneralSecurityException(
-                            "Wrong Passkey Block type (expected " + type.mValue + ", got "
+                            "Wrong Passkey Block type (expected " + type + ", got "
                                     + decrypted[0] + ")");
                 }
                 return ByteBuffer.allocate(4)
@@ -470,36 +463,18 @@ public final class Constants {
             /**
              * Enumerates all types of additional data.
              */
-            // TODO(b/201673262): Convert enum to byte.
-            public enum AdditionalDataType {
+            @Retention(RetentionPolicy.SOURCE)
+            @IntDef(
+                    value = {
+                            AdditionalDataType.PERSONALIZED_NAME,
+                            AdditionalDataType.UNKNOWN,
+                    })
+            public @interface AdditionalDataType {
                 /**
                  * The value indicating that the type is for personalized name.
                  */
-                PERSONALIZED_NAME((byte) 0x01),
-                UNKNOWN((byte) 0x00); // and all others.
-
-                private final byte mValue;
-
-                AdditionalDataType(byte value) {
-                    this.mValue = value;
-                }
-
-                public byte getValue() {
-                    return mValue;
-                }
-
-                /** Converts byte to enum. */
-                public static AdditionalDataType valueOf(byte value) {
-                    for (AdditionalDataType type : AdditionalDataType.values()) {
-                        if (type.getValue() == value) {
-                            return type;
-                        }
-                    }
-                    return UNKNOWN;
-                }
-            }
-
-            private AdditionalDataCharacteristic() {
+                int PERSONALIZED_NAME = (byte) 0x01;
+                int UNKNOWN = (byte) 0x00; // and all others.
             }
         }
 
@@ -533,44 +508,48 @@ public final class Constants {
             /**
              * Enumerates all types of beacon actions.
              */
-            // TODO(b/201673262): Convert enum to byte.
-            public enum BeaconActionType {
-                /**
-                 * The value indicating that the type is for personalized name.
-                 */
-                READ_BEACON_PARAMETERS((byte) 0x00),
-                READ_PROVISIONING_STATE((byte) 0x01),
-                SET_EPHEMERAL_IDENTITY_KEY((byte) 0x02),
-                CLEAR_EPHEMERAL_IDENTITY_KEY((byte) 0x03),
-                READ_EPHEMERAL_IDENTITY_KEY((byte) 0x04),
-                RING((byte) 0x05),
-                READ_RINGING_STATE((byte) 0x06),
-                UNKNOWN((byte) 0xFF); // and all others.
-
-                private final byte mValue;
-
-                BeaconActionType(byte value) {
-                    this.mValue = value;
-                }
-
-                public byte getValue() {
-                    return mValue;
-                }
-
-                /** Converts value to enum. */
-                public static BeaconActionType valueOf(byte value) {
-                    for (BeaconActionType type : BeaconActionType.values()) {
-                        if (type.getValue() == value) {
-                            return type;
-                        }
-                    }
-                    return UNKNOWN;
-                }
+            /** Fast Pair Bond State. */
+            @Retention(RetentionPolicy.SOURCE)
+            @IntDef(
+                    value = {
+                            BeaconActionType.READ_BEACON_PARAMETERS,
+                            BeaconActionType.READ_PROVISIONING_STATE,
+                            BeaconActionType.SET_EPHEMERAL_IDENTITY_KEY,
+                            BeaconActionType.CLEAR_EPHEMERAL_IDENTITY_KEY,
+                            BeaconActionType.READ_EPHEMERAL_IDENTITY_KEY,
+                            BeaconActionType.RING,
+                            BeaconActionType.READ_RINGING_STATE,
+                            BeaconActionType.UNKNOWN,
+                    })
+            public @interface BeaconActionType {
+                int READ_BEACON_PARAMETERS = (byte) 0x00;
+                int READ_PROVISIONING_STATE = (byte) 0x01;
+                int SET_EPHEMERAL_IDENTITY_KEY = (byte) 0x02;
+                int CLEAR_EPHEMERAL_IDENTITY_KEY = (byte) 0x03;
+                int READ_EPHEMERAL_IDENTITY_KEY = (byte) 0x04;
+                int RING = (byte) 0x05;
+                int READ_RINGING_STATE = (byte) 0x06;
+                int UNKNOWN = (byte) 0xFF; // and all others
             }
 
-            private BeaconActionsCharacteristic() {
+            /** Converts value to enum. */
+            public static @BeaconActionType int valueOf(byte value) {
+                switch(value) {
+                    case BeaconActionType.READ_BEACON_PARAMETERS:
+                    case BeaconActionType.READ_PROVISIONING_STATE:
+                    case BeaconActionType.SET_EPHEMERAL_IDENTITY_KEY:
+                    case BeaconActionType.CLEAR_EPHEMERAL_IDENTITY_KEY:
+                    case BeaconActionType.READ_EPHEMERAL_IDENTITY_KEY:
+                    case BeaconActionType.RING:
+                    case BeaconActionType.READ_RINGING_STATE:
+                    case BeaconActionType.UNKNOWN:
+                        return value;
+                    default:
+                        return BeaconActionType.UNKNOWN;
+                }
             }
         }
+
 
         /**
          * Characteristic to read for checking firmware version. 0X2A26 is assigned number from

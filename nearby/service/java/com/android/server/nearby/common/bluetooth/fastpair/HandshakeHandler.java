@@ -393,8 +393,8 @@ public class HandshakeHandler {
             /**
              * Adds flags without changing other flags.
              */
-            public Builder addFlag(KeyBasedPairingRequestFlag flag) {
-                this.mFlags |= flag.getValue();
+            public Builder addFlag(@KeyBasedPairingRequestFlag int flag) {
+                this.mFlags |= (byte) flag;
                 return this;
             }
 
@@ -448,7 +448,7 @@ public class HandshakeHandler {
                             String.format(
                                     "type (%02X), flag (%02X)", rawMessage[TYPE_INDEX],
                                     rawMessage[FLAGS_INDEX]));
-            if ((mFlags & DEVICE_ACTION.getValue()) != 0) {
+            if ((mFlags & (byte) DEVICE_ACTION) != 0) {
                 rawMessage[EVENT_GROUP_INDEX] = mEventGroup;
                 rawMessage[EVENT_CODE_INDEX] = mEventCode;
 
@@ -470,7 +470,7 @@ public class HandshakeHandler {
                                 rawMessage[EVENT_CODE_INDEX],
                                 rawMessage[EVENT_ADDITIONAL_DATA_LENGTH_INDEX]));
             }
-            if ((mFlags & ADDITIONAL_DATA_CHARACTERISTIC.getValue()) != 0) {
+            if ((mFlags & (byte) ADDITIONAL_DATA_CHARACTERISTIC) != 0) {
                 rawMessage[ADDITIONAL_DATA_TYPE_INDEX] = mAdditionalDataType;
                 stringBuilder.append(
                         String.format(", data id(%02X)", rawMessage[ADDITIONAL_DATA_TYPE_INDEX]));
@@ -496,8 +496,8 @@ public class HandshakeHandler {
             /**
              * Adds flag without changing other flags.
              */
-            public Builder addFlag(ActionOverBleFlag flag) {
-                this.mFlags |= flag.getValue();
+            public Builder addFlag(@ActionOverBleFlag int flag) {
+                this.mFlags |= (byte) flag;
                 return this;
             }
 
@@ -505,7 +505,7 @@ public class HandshakeHandler {
              * Set event group and event code.
              */
             public Builder setEvent(int eventGroup, int eventCode) {
-                this.mFlags |= DEVICE_ACTION.getValue();
+                this.mFlags |= (byte) DEVICE_ACTION;
                 this.mEventGroup = (byte) (eventGroup & 0xFF);
                 this.mEventCode = (byte) (eventCode & 0xFF);
                 return this;
@@ -522,9 +522,9 @@ public class HandshakeHandler {
             /**
              * Set event additional data type.
              */
-            public Builder setAdditionalDataType(AdditionalDataType additionalDataType) {
-                this.mFlags |= ADDITIONAL_DATA_CHARACTERISTIC.getValue();
-                this.mAdditionalDataType = additionalDataType.getValue();
+            public Builder setAdditionalDataType(@AdditionalDataType int additionalDataType) {
+                this.mFlags |= (byte) ADDITIONAL_DATA_CHARACTERISTIC;
+                this.mAdditionalDataType = (byte) additionalDataType;
                 return this;
             }
 

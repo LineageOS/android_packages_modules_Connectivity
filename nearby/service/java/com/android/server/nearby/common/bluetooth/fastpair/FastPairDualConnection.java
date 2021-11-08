@@ -1492,7 +1492,7 @@ public class FastPairDualConnection extends FastPairConnection {
      * secret. The given key should be the account key.
      */
     private SharedSecret handshakeForActionOverBle(byte[] key,
-            AdditionalDataType additionalDataType)
+            @AdditionalDataType int additionalDataType)
             throws InterruptedException, ExecutionException, TimeoutException, BluetoothException,
             GeneralSecurityException, PairingException {
         HandshakeHandler handshakeHandler = prepareForHandshake();
