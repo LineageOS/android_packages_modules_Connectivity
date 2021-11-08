@@ -22,6 +22,7 @@ import android.annotation.IntDef;
 import android.annotation.NonNull;
 import android.annotation.Nullable;
 import android.annotation.RequiresPermission;
+import android.annotation.SuppressLint;
 import android.annotation.SystemApi;
 import android.content.Context;
 import android.os.Bundle;
@@ -442,6 +443,44 @@ public class TetheringManager {
                 throw new SecurityException(
                         "No android.permission.ACCESS_NETWORK_STATE permission");
         }
+    }
+
+    /**
+     * A request for a tethered interface.
+     *
+     * There are two reasons why this doesn't implement CLoseable:
+     * 1. To consistency with the existing EthernetManager.TetheredInterfaceRequest, which is
+     * already released.
+     * 2. This is not synchronous, so it's not useful to use try-with-resources.
+     *
+     * {@hide}
+     */
+    @SystemApi(client = MODULE_LIBRARIES)
+    @SuppressLint("NotCloseable")
+    public interface TetheredInterfaceRequest {
+        /**
+         * Release the request to tear down tethered interface.
+         */
+        void release();
+    }
+
+    /**
+     * Callback for requestTetheredInterface.
+     *
+     * {@hide}
+     */
+    @SystemApi(client = MODULE_LIBRARIES)
+    public interface TetheredInterfaceCallback {
+        /**
+         * Called when the tethered interface is available.
+         * @param iface The name of the interface.
+         */
+        void onAvailable(@NonNull String iface);
+
+        /**
+         * Called when the tethered interface is now unavailable.
+         */
+        void onUnavailable();
     }
 
     private static class TetheringCallbackInternal extends ITetheringEventCallback.Stub {
