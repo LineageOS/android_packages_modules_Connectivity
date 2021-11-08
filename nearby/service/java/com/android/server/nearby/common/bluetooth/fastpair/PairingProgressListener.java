@@ -16,24 +16,46 @@
 
 package com.android.server.nearby.common.bluetooth.fastpair;
 
+import androidx.annotation.IntDef;
+
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+
 /** Callback interface for pairing progress. */
 public interface PairingProgressListener {
-    /** Enum for pairing events. */
-    enum PairingEvent {
-        START,
-        SUCCESS,
-        FAILED,
-        UNKNOWN;
 
-        public static PairingEvent fromOrdinal(int ordinal) {
-            PairingEvent[] values = PairingEvent.values();
-            if (ordinal < 0 || ordinal >= values.length) {
-                return UNKNOWN;
-            }
-            return values[ordinal];
+    /** Fast Pair Bond State. */
+    @Retention(RetentionPolicy.SOURCE)
+    @IntDef(
+            value = {
+                    PairingEvent.START,
+                    PairingEvent.SUCCESS,
+                    PairingEvent.FAILED,
+                    PairingEvent.UNKNOWN,
+            })
+    public @interface PairingEvent {
+        int START = 0;
+        int SUCCESS = 1;
+        int FAILED = 2;
+        int UNKNOWN = 3;
+    }
+
+    /** Returns enum based on the ordinal index. */
+    static @PairingEvent int fromOrdinal(int ordinal) {
+        switch (ordinal) {
+            case 0:
+                return PairingEvent.START;
+            case 1:
+                return PairingEvent.SUCCESS;
+            case 2:
+                return PairingEvent.FAILED;
+            case 3:
+                return PairingEvent.UNKNOWN;
+            default:
+                return PairingEvent.UNKNOWN;
         }
     }
 
     /** Callback function upon pairing progress update. */
-    void onPairingProgressUpdating(PairingEvent event, String message);
+    void onPairingProgressUpdating(@PairingEvent int event, String message);
 }
