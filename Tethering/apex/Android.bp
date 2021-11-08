@@ -43,7 +43,7 @@ apex {
     ],
     apps: [
         "ServiceConnectivityResources",
-        "Tethering",
+        "TetheringNext",
     ],
     prebuilts: ["current_sdkinfo"],
     manifest: "manifest.json",
