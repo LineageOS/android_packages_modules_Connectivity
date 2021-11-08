@@ -38,7 +38,10 @@ import android.net.Network;
 import android.net.NetworkCapabilities;
 import android.net.NetworkRequest;
 import android.os.Handler;
+import android.os.Process;
+import android.provider.Settings;
 import android.util.Log;
+import android.util.Range;
 import android.util.SparseIntArray;
 
 import androidx.annotation.NonNull;
@@ -84,6 +87,9 @@ public class UpstreamNetworkMonitor {
     private static final String TAG = UpstreamNetworkMonitor.class.getSimpleName();
     private static final boolean DBG = false;
     private static final boolean VDBG = false;
+
+    // Copied from frameworks/base/core/java/android/provider/Settings.java
+    private static final String TETHERING_ALLOW_VPN_UPSTREAMS = "tethering_allow_vpn_upstreams";
 
     public static final int EVENT_ON_CAPABILITIES   = 1;
     public static final int EVENT_ON_LINKPROPERTIES = 2;
@@ -133,6 +139,8 @@ public class UpstreamNetworkMonitor {
     // The current system default network (not really used yet).
     private Network mDefaultInternetNetwork;
     private boolean mPreferTestNetworks;
+    // Set if the Internet is considered reachable via the main user's VPN network
+    private Network mTetheringUpstreamVpn;
 
     public UpstreamNetworkMonitor(Context ctx, Handler h, SharedLog log, EventListener listener) {
         mContext = ctx;
@@ -156,11 +164,7 @@ public class UpstreamNetworkMonitor {
             Log.wtf(TAG, "default network callback is already registered");
             return;
         }
-        mDefaultNetworkCallback = new UpstreamNetworkCallback(CALLBACK_DEFAULT_INTERNET);
-        // TODO (b/382413665): By definition, a local network cannot be the system default,
-        //  because it does not provide internet capability. Figure out whether this
-        //  is enforced in ConnectivityService. Or what will happen for tethering if it happens.
-        cm().registerSystemDefaultNetworkCallback(mDefaultNetworkCallback, mHandler);
+        registerAppropriateDefaultNetworkCallback();
         if (mEntitlementMgr == null) {
             mEntitlementMgr = entitle;
         }
@@ -195,7 +199,34 @@ public class UpstreamNetworkMonitor {
         releaseCallback(mListenUpstreamCallback);
         mListenUpstreamCallback = null;
 
+        mTetheringUpstreamVpn = null;
         mNetworkMap.clear();
+    }
+
+    public void maybeUpdateDefaultNetworkCallback() {
+        final NetworkCallback prevNetworkCallback = mDefaultNetworkCallback;
+        if (prevNetworkCallback != null) {
+            registerAppropriateDefaultNetworkCallback();
+            cm().unregisterNetworkCallback(prevNetworkCallback);
+        }
+    }
+
+    private void registerAppropriateDefaultNetworkCallback() {
+        mDefaultNetworkCallback = new UpstreamNetworkCallback(CALLBACK_DEFAULT_INTERNET);
+        // TODO (b/382413665): By definition, a local network cannot be the system default,
+        //  because it does not provide internet capability. Figure out whether this
+        //  is enforced in ConnectivityService. Or what will happen for tethering if it happens.
+        if (isAllowedToUseVpnUpstreams() && SdkLevel.isAtLeastU()) {
+            cm().registerDefaultNetworkCallbackForUid(Process.ROOT_UID, mDefaultNetworkCallback,
+                    mHandler);
+        } else {
+            cm().registerSystemDefaultNetworkCallback(mDefaultNetworkCallback, mHandler);
+        }
+    }
+
+    private boolean isAllowedToUseVpnUpstreams() {
+        return Settings.Secure.getInt(mContext.getContentResolver(),
+                TETHERING_ALLOW_VPN_UPSTREAMS, 0) == 1;
     }
 
     private void reevaluateUpstreamRequirements(boolean tryCell, boolean autoUpstream,
@@ -326,6 +357,10 @@ public class UpstreamNetworkMonitor {
      * Returns null if no current upstream is available.
      */
     public UpstreamNetworkState getCurrentPreferredUpstream() {
+        // Use VPN upstreams if hotspot settings allow.
+        if (mTetheringUpstreamVpn != null && isAllowedToUseVpnUpstreams()) {
+            return mNetworkMap.get(mTetheringUpstreamVpn);
+        }
         final UpstreamNetworkState dfltState = (mDefaultInternetNetwork != null)
                 ? mNetworkMap.get(mDefaultInternetNetwork)
                 : null;
@@ -367,6 +402,7 @@ public class UpstreamNetworkMonitor {
     }
 
     private void handleNetCap(Network network, NetworkCapabilities newNc) {
+        if (isSystemVpnUsable(newNc)) mTetheringUpstreamVpn = network;
         final UpstreamNetworkState prev = mNetworkMap.get(network);
         if (prev == null || newNc.equals(prev.networkCapabilities)) {
             // Ignore notifications about networks for which we have not yet
@@ -431,6 +467,10 @@ public class UpstreamNetworkMonitor {
         //       been lost (by any callback)
         //     - deletes the entry from the map only when the LISTEN_ALL
         //       callback gets notified.
+
+        if (network.equals(mTetheringUpstreamVpn)) {
+            mTetheringUpstreamVpn = null;
+        }
 
         if (!mNetworkMap.containsKey(network)) {
             // Ignore loss of networks about which we had not previously
@@ -644,6 +684,22 @@ public class UpstreamNetworkMonitor {
     private static boolean isNetworkUsableAndNotCellular(UpstreamNetworkState ns) {
         return (ns != null) && (ns.networkCapabilities != null) && (ns.linkProperties != null)
                && !isCellular(ns.networkCapabilities);
+    }
+
+    private static boolean isSystemVpnUsable(NetworkCapabilities nc) {
+        return (nc != null)
+                && appliesToRootUid(nc) // Only VPNs in system user apply to root UID
+                && !nc.hasCapability(NET_CAPABILITY_NOT_VPN)
+                && nc.hasCapability(NET_CAPABILITY_INTERNET);
+    }
+
+    private static boolean appliesToRootUid(NetworkCapabilities nc) {
+        final Set<Range<Integer>> uids = nc.getUids();
+        if (uids == null) return true;
+        for (final Range<Integer> range : uids) {
+            if (range.contains(Process.ROOT_UID)) return true;
+        }
+        return false;
     }
 
     private static UpstreamNetworkState findFirstDunNetwork(
