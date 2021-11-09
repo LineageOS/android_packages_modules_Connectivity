@@ -43,6 +43,7 @@ java_defaults {
         "android.hardware.tetheroffload.control-V1.1-java",
         "net-utils-framework-common",
         "net-utils-device-common",
+        "net-utils-device-common-bpf",
         "net-utils-device-common-netlink",
         "netd-client",
     ],
@@ -103,7 +104,7 @@ cc_library {
         "libnativehelper_compat_libc++",
     ],
     static_libs: [
-        "libbpfmapjni",
+        "libnet_utils_device_common_bpfjni",
         "libnetjniutils",
     ],
 
