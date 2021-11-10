@@ -16,10 +16,9 @@
 
 package com.android.networkstack.tethering;
 
-import static android.net.util.TetheringUtils.uint16;
-
 import static com.android.net.module.util.netlink.StructNlMsgHdr.NLM_F_DUMP;
 import static com.android.net.module.util.netlink.StructNlMsgHdr.NLM_F_REQUEST;
+import static com.android.networkstack.tethering.util.TetheringUtils.uint16;
 
 import android.annotation.IntDef;
 import android.annotation.NonNull;
