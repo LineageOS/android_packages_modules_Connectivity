@@ -47,7 +47,6 @@
 #include "dump.h"
 #include "getaddr.h"
 #include "logging.h"
-#include "ring.h"
 #include "setif.h"
 #include "translate.h"
 
@@ -177,11 +176,8 @@ void drop_root_but_keep_caps() {
     exit(1);
   }
 
-  // keep CAP_NET_RAW capability to open raw socket, and CAP_IPC_LOCK for mmap
-  // to lock memory.
-  set_capability((1 << CAP_NET_ADMIN) |
-                 (1 << CAP_NET_RAW) |
-                 (1 << CAP_IPC_LOCK));
+  // keep CAP_NET_RAW capability to open raw socket.
+  set_capability((1 << CAP_NET_ADMIN) | (1 << CAP_NET_RAW));
 }
 
 /* function: open_sockets
@@ -202,8 +198,11 @@ void open_sockets(struct tun_data *tunnel, uint32_t mark) {
 
   tunnel->write_fd6 = rawsock;
 
-  tunnel->read_fd6 = ring_create(tunnel);
+  // Will eventually be bound to htons(ETH_P_IPV6) protocol,
+  // but only after appropriate bpf filter is attached.
+  tunnel->read_fd6 = socket(AF_PACKET, SOCK_DGRAM | SOCK_CLOEXEC, 0);
   if (tunnel->read_fd6 < 0) {
+    logmsg(ANDROID_LOG_FATAL, "packet socket failed: %s", strerror(errno));
     exit(1);
   }
 }
@@ -343,10 +342,8 @@ void configure_interface(const char *uplink_interface, const char *plat_prefix, 
  *   to_ipv6  - whether the packet is to be translated to ipv6 or ipv4
  */
 void read_packet(int read_fd, int write_fd, int to_ipv6) {
-  ssize_t readlen;
-  uint8_t buf[PACKETLEN], *packet;
-
-  readlen = read(read_fd, buf, PACKETLEN);
+  uint8_t buf[PACKETLEN];
+  ssize_t readlen = read(read_fd, buf, PACKETLEN);
 
   if (readlen < 0) {
     if (errno != EAGAIN) {
@@ -356,6 +353,11 @@ void read_packet(int read_fd, int write_fd, int to_ipv6) {
   } else if (readlen == 0) {
     logmsg(ANDROID_LOG_WARN, "read_packet/tun interface removed");
     running = 0;
+    return;
+  }
+
+  if (!to_ipv6) {
+    translate_packet(write_fd, 0 /* to_ipv6 */, buf, readlen);
     return;
   }
 
@@ -375,9 +377,9 @@ void read_packet(int read_fd, int write_fd, int to_ipv6) {
     logmsg(ANDROID_LOG_WARN, "%s: unexpected flags = %d", __func__, tun_header->flags);
   }
 
-  packet = (uint8_t *)(tun_header + 1);
+  uint8_t *packet = (uint8_t *)(tun_header + 1);
   readlen -= sizeof(*tun_header);
-  translate_packet(write_fd, to_ipv6, packet, readlen);
+  translate_packet(write_fd, 1 /* to_ipv6 */, packet, readlen);
 }
 
 /* function: event_loop
@@ -400,24 +402,13 @@ void event_loop(struct tun_data *tunnel) {
         logmsg(ANDROID_LOG_WARN, "event_loop/poll returned an error: %s", strerror(errno));
       }
     } else {
-      if (wait_fd[0].revents & POLLIN) {
-        ring_read(&tunnel->ring, tunnel->fd4, 0 /* to_ipv6 */);
-      }
-      // If any other bit is set, assume it's due to an error (i.e. POLLERR).
-      if (wait_fd[0].revents & ~POLLIN) {
-        // ring_read doesn't clear the error indication on the socket.
-        recv(tunnel->read_fd6, NULL, 0, MSG_PEEK);
-        logmsg(ANDROID_LOG_WARN, "event_loop: clearing error on read_fd6: %s", strerror(errno));
-      }
-
       // Call read_packet if the socket has data to be read, but also if an
       // error is waiting. If we don't call read() after getting POLLERR, a
       // subsequent poll() will return immediately with POLLERR again,
       // causing this code to spin in a loop. Calling read() will clear the
       // socket error flag instead.
-      if (wait_fd[1].revents) {
-        read_packet(tunnel->fd4, tunnel->write_fd6, 1 /* to_ipv6 */);
-      }
+      if (wait_fd[0].revents) read_packet(tunnel->read_fd6, tunnel->fd4, 0 /* to_ipv6 */);
+      if (wait_fd[1].revents) read_packet(tunnel->fd4, tunnel->write_fd6, 1 /* to_ipv6 */);
     }
 
     time_t now = time(NULL);
