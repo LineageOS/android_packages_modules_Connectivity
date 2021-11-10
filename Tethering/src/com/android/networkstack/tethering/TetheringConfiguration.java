@@ -23,6 +23,8 @@ import static android.net.ConnectivityManager.TYPE_MOBILE_DUN;
 import static android.net.ConnectivityManager.TYPE_MOBILE_HIPRI;
 import static android.provider.DeviceConfig.NAMESPACE_CONNECTIVITY;
 
+import static com.android.net.module.util.DeviceConfigUtils.TETHERING_MODULE_NAME;
+
 import android.content.ContentResolver;
 import android.content.Context;
 import android.content.res.Resources;
@@ -59,8 +61,6 @@ public class TetheringConfiguration {
     private static final String TAG = TetheringConfiguration.class.getSimpleName();
 
     private static final String[] EMPTY_STRING_ARRAY = new String[0];
-
-    private static final String TETHERING_MODULE_NAME = "com.android.tethering";
 
     // Default ranges used for the legacy DHCP server.
     // USB is  192.168.42.1 and 255.255.255.0
