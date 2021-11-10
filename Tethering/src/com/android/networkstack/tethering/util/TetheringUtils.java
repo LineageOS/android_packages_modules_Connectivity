@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package android.net.util;
+package com.android.networkstack.tethering.util;
 
 import android.net.TetherStatsParcel;
 import android.net.TetheringRequestParcel;
