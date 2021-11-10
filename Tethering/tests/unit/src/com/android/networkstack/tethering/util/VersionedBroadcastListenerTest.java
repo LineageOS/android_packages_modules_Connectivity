@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package android.net.util;
+package com.android.networkstack.tethering.util;
 
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.reset;
