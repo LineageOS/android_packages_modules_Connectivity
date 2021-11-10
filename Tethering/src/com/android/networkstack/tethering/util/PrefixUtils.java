@@ -14,11 +14,12 @@
  * limitations under the License.
  */
 
-package android.net.util;
+package com.android.networkstack.tethering.util;
 
 import android.net.IpPrefix;
 import android.net.LinkAddress;
 import android.net.LinkProperties;
+import android.net.util.NetworkConstants;
 
 import java.net.Inet4Address;
 import java.net.InetAddress;

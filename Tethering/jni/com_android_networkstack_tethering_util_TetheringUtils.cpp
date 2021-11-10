@@ -38,7 +38,8 @@ static void throwSocketException(JNIEnv *env, const char* msg, int error) {
     jniThrowExceptionFmt(env, "java/net/SocketException", "%s: %s", msg, strerror(error));
 }
 
-static void android_net_util_setupIcmpFilter(JNIEnv *env, jobject javaFd, uint32_t type) {
+static void com_android_networkstack_tethering_util_setupIcmpFilter(JNIEnv *env, jobject javaFd,
+        uint32_t type) {
     sock_filter filter_code[] = {
         // Check header is ICMPv6.
         BPF_STMT(BPF_LD  | BPF_B   | BPF_ABS,  kIPv6NextHeaderOffset),
@@ -64,19 +65,18 @@ static void android_net_util_setupIcmpFilter(JNIEnv *env, jobject javaFd, uint32
     }
 }
 
-static void android_net_util_setupNaSocket(JNIEnv *env, jobject clazz, jobject javaFd)
-{
-    android_net_util_setupIcmpFilter(env, javaFd, ND_NEIGHBOR_ADVERT);
+static void com_android_networkstack_tethering_util_setupNaSocket(JNIEnv *env, jobject clazz,
+        jobject javaFd) {
+    com_android_networkstack_tethering_util_setupIcmpFilter(env, javaFd, ND_NEIGHBOR_ADVERT);
 }
 
-static void android_net_util_setupNsSocket(JNIEnv *env, jobject clazz, jobject javaFd)
-{
-    android_net_util_setupIcmpFilter(env, javaFd, ND_NEIGHBOR_SOLICIT);
+static void com_android_networkstack_tethering_util_setupNsSocket(JNIEnv *env, jobject clazz,
+        jobject javaFd) {
+    com_android_networkstack_tethering_util_setupIcmpFilter(env, javaFd, ND_NEIGHBOR_SOLICIT);
 }
 
-static void android_net_util_setupRaSocket(JNIEnv *env, jobject clazz, jobject javaFd,
-        jint ifIndex)
-{
+static void com_android_networkstack_tethering_util_setupRaSocket(JNIEnv *env, jobject clazz,
+        jobject javaFd, jint ifIndex) {
     static const int kLinkLocalHopLimit = 255;
 
     int fd = netjniutils::GetNativeFileDescriptor(env, javaFd);
@@ -164,16 +164,16 @@ static void android_net_util_setupRaSocket(JNIEnv *env, jobject clazz, jobject j
 static const JNINativeMethod gMethods[] = {
     /* name, signature, funcPtr */
     { "setupNaSocket", "(Ljava/io/FileDescriptor;)V",
-        (void*) android_net_util_setupNaSocket },
+        (void*) com_android_networkstack_tethering_util_setupNaSocket },
     { "setupNsSocket", "(Ljava/io/FileDescriptor;)V",
-        (void*) android_net_util_setupNsSocket },
+        (void*) com_android_networkstack_tethering_util_setupNsSocket },
     { "setupRaSocket", "(Ljava/io/FileDescriptor;I)V",
-        (void*) android_net_util_setupRaSocket },
+        (void*) com_android_networkstack_tethering_util_setupRaSocket },
 };
 
-int register_android_net_util_TetheringUtils(JNIEnv* env) {
+int register_com_android_networkstack_tethering_util_TetheringUtils(JNIEnv* env) {
     return jniRegisterNativeMethods(env,
-            "android/net/util/TetheringUtils",
+            "com/android/networkstack/tethering/util/TetheringUtils",
             gMethods, NELEM(gMethods));
 }
 
