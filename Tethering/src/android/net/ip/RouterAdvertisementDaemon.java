@@ -17,7 +17,6 @@
 package android.net.ip;
 
 import static android.net.util.NetworkConstants.RFC7421_PREFIX_LENGTH;
-import static android.net.util.TetheringUtils.getAllNodesForScopeId;
 import static android.system.OsConstants.AF_INET6;
 import static android.system.OsConstants.IPPROTO_ICMPV6;
 import static android.system.OsConstants.SOCK_RAW;
@@ -32,6 +31,7 @@ import static com.android.net.module.util.NetworkStackConstants.IPV6_MIN_MTU;
 import static com.android.net.module.util.NetworkStackConstants.PIO_FLAG_AUTONOMOUS;
 import static com.android.net.module.util.NetworkStackConstants.PIO_FLAG_ON_LINK;
 import static com.android.net.module.util.NetworkStackConstants.TAG_SYSTEM_NEIGHBOR;
+import static com.android.networkstack.tethering.util.TetheringUtils.getAllNodesForScopeId;
 
 import android.net.IpPrefix;
 import android.net.LinkAddress;
@@ -39,7 +39,6 @@ import android.net.MacAddress;
 import android.net.TrafficStats;
 import android.net.util.InterfaceParams;
 import android.net.util.SocketUtils;
-import android.net.util.TetheringUtils;
 import android.system.ErrnoException;
 import android.system.Os;
 import android.system.StructTimeval;
@@ -52,6 +51,7 @@ import com.android.net.module.util.structs.MtuOption;
 import com.android.net.module.util.structs.PrefixInformationOption;
 import com.android.net.module.util.structs.RaHeader;
 import com.android.net.module.util.structs.RdnssOption;
+import com.android.networkstack.tethering.util.TetheringUtils;
 
 import java.io.FileDescriptor;
 import java.io.IOException;
