@@ -19,6 +19,7 @@
 #include <iostream>
 
 #include <arpa/inet.h>
+#include <linux/if_packet.h>
 #include <netinet/in6.h>
 #include <stdio.h>
 #include <sys/uio.h>
