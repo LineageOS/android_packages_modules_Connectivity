@@ -89,7 +89,7 @@ android_test {
         "libstaticjvmtiagent",
         // For NetworkStackUtils included in NetworkStackBase
         "libnetworkstackutilsjni",
-        "libtetherutilsjni",
+        "libcom_android_networkstack_tethering_util_jni",
         // For framework tests
         "libservice-connectivity",
     ],

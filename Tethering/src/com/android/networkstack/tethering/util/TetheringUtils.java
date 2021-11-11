@@ -21,6 +21,7 @@ import android.util.Log;
 
 import androidx.annotation.NonNull;
 
+import com.android.net.module.util.JniUtil;
 import com.android.networkstack.tethering.TetherStatsValue;
 
 import java.io.FileDescriptor;
@@ -37,12 +38,17 @@ import java.util.Objects;
  */
 public class TetheringUtils {
     static {
-        System.loadLibrary("tetherutilsjni");
+        System.loadLibrary(getTetheringJniLibraryName());
     }
 
     public static final byte[] ALL_NODES = new byte[] {
         (byte) 0xff, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1
     };
+
+    /** The name should be com_android_networkstack_tethering_util_jni. */
+    public static String getTetheringJniLibraryName() {
+        return JniUtil.getJniLibraryName(TetheringUtils.class.getPackage());
+    }
 
     /**
      * Configures a socket for receiving and sending ICMPv6 neighbor advertisments.
