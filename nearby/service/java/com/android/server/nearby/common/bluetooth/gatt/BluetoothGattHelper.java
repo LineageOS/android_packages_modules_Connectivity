@@ -24,6 +24,7 @@ import android.content.Context;
 import android.os.ParcelUuid;
 import android.util.Log;
 
+import androidx.annotation.IntDef;
 import androidx.annotation.VisibleForTesting;
 
 import com.android.server.nearby.common.bluetooth.BluetoothException;
@@ -40,6 +41,8 @@ import com.android.server.nearby.common.bluetooth.util.BluetoothOperationExecuto
 
 import com.google.common.base.Preconditions;
 
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
 import java.util.Arrays;
 import java.util.Locale;
 import java.util.Objects;
@@ -67,20 +70,37 @@ public class BluetoothGattHelper {
     /**
      * BT operation types that can be in flight.
      */
-    public enum OperationType {
-        SCAN,
-        CONNECT,
-        DISCOVER_SERVICES,
-        DISCOVER_SERVICES_INTERNAL,
-        NOTIFICATION_CHANGE,
-        READ_CHARACTERISTIC,
-        WRITE_CHARACTERISTIC,
-        READ_DESCRIPTOR,
-        WRITE_DESCRIPTOR,
-        READ_RSSI,
-        WRITE_RELIABLE,
-        CHANGE_MTU,
-        DISCONNECT
+    @Retention(RetentionPolicy.SOURCE)
+    @IntDef(
+            value = {
+                    OperationType.SCAN,
+                    OperationType.CONNECT,
+                    OperationType.DISCOVER_SERVICES,
+                    OperationType.DISCOVER_SERVICES_INTERNAL,
+                    OperationType.NOTIFICATION_CHANGE,
+                    OperationType.READ_CHARACTERISTIC,
+                    OperationType.WRITE_CHARACTERISTIC,
+                    OperationType.READ_DESCRIPTOR,
+                    OperationType.WRITE_DESCRIPTOR,
+                    OperationType.READ_RSSI,
+                    OperationType.WRITE_RELIABLE,
+                    OperationType.CHANGE_MTU,
+                    OperationType.DISCONNECT,
+            })
+    public @interface OperationType {
+        int SCAN = 0;
+        int CONNECT = 1;
+        int DISCOVER_SERVICES = 2;
+        int DISCOVER_SERVICES_INTERNAL = 3;
+        int NOTIFICATION_CHANGE = 4;
+        int READ_CHARACTERISTIC = 5;
+        int WRITE_CHARACTERISTIC = 6;
+        int READ_DESCRIPTOR = 7;
+        int WRITE_DESCRIPTOR = 8;
+        int READ_RSSI = 9;
+        int WRITE_RELIABLE = 10;
+        int CHANGE_MTU = 11;
+        int DISCONNECT = 12;
     }
 
     @VisibleForTesting
