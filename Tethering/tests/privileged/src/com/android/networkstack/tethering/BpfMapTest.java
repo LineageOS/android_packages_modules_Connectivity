@@ -18,6 +18,8 @@ package com.android.networkstack.tethering;
 
 import static android.system.OsConstants.ETH_P_IPV6;
 
+import static com.android.networkstack.tethering.util.TetheringUtils.getTetheringJniLibraryName;
+
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
@@ -59,7 +61,7 @@ public final class BpfMapTest {
 
     @BeforeClass
     public static void setupOnce() {
-        System.loadLibrary("tetherutilsjni");
+        System.loadLibrary(getTetheringJniLibraryName());
     }
 
     @Before
