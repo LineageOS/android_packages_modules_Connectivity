@@ -42,7 +42,7 @@ import java.util.function.BiConsumer;
  */
 public class BpfMap<K extends Struct, V extends Struct> implements AutoCloseable {
     static {
-        System.loadLibrary("tetherutilsjni");
+        System.loadLibrary(JniUtil.getJniLibraryName(BpfMap.class.getPackage()));
     }
 
     // Following definitions from kernel include/uapi/linux/bpf.h
