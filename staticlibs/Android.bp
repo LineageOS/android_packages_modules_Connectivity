@@ -95,16 +95,37 @@ filegroup {
 }
 
 java_library {
-    name: "net-utils-device-common-netlink",
-    // TODO: Ipv6Utils and Struct stuff could be separated out of the netlink library into
-    // an individual Struct library, and remove the net-utils-framework-common lib dependency.
-    // But there is no need doing this at the moment.
+    name: "net-utils-device-common-bpf",
     srcs: [
         "device/com/android/net/module/util/BpfMap.java",
+        "device/com/android/net/module/util/JniUtil.java",
+    ],
+    sdk_version: "system_current",
+    min_sdk_version: "29",
+    visibility: [
+        "//frameworks/libs/net/common/tests:__subpackages__",
+        "//frameworks/libs/net/common/testutils:__subpackages__",
+        "//packages/modules/Connectivity:__subpackages__",
+        "//packages/modules/NetworkStack:__subpackages__",
+    ],
+    static_libs: [
+        "net-utils-device-common-struct",
+    ],
+    libs: [
+        "androidx.annotation_annotation",
+    ],
+    apex_available: [
+        "com.android.tethering",
+        "//apex_available:platform",
+    ],
+}
+
+java_library {
+    name: "net-utils-device-common-struct",
+    srcs: [
         "device/com/android/net/module/util/HexDump.java",
         "device/com/android/net/module/util/Ipv6Utils.java",
         "device/com/android/net/module/util/Struct.java",
-        "device/com/android/net/module/util/netlink/*.java",
         "device/com/android/net/module/util/structs/*.java",
     ],
     sdk_version: "system_current",
@@ -116,6 +137,30 @@ java_library {
     ],
     static_libs: [
         "net-utils-framework-common",
+    ],
+    libs: [
+        "androidx.annotation_annotation",
+    ],
+    apex_available: [
+        "com.android.tethering",
+        "//apex_available:platform",
+    ],
+}
+
+java_library {
+    name: "net-utils-device-common-netlink",
+    srcs: [
+        "device/com/android/net/module/util/netlink/*.java",
+    ],
+    sdk_version: "system_current",
+    min_sdk_version: "29",
+    visibility: [
+        "//frameworks/libs/net/common/testutils:__subpackages__",
+        "//packages/modules/Connectivity:__subpackages__",
+        "//packages/modules/NetworkStack:__subpackages__",
+    ],
+    static_libs: [
+        "net-utils-device-common-struct",
     ],
     libs: [
         "androidx.annotation_annotation",
