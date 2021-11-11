@@ -21,12 +21,12 @@ import static android.net.TetheringManager.TetheringRequest.checkStaticAddressCo
 import static android.net.dhcp.IDhcpServer.STATUS_SUCCESS;
 import static android.net.util.NetworkConstants.RFC7421_PREFIX_LENGTH;
 import static android.net.util.NetworkConstants.asByte;
-import static android.net.util.PrefixUtils.asIpPrefix;
-import static android.net.util.TetheringMessageBase.BASE_IPSERVER;
 import static android.system.OsConstants.RT_SCOPE_UNIVERSE;
 
 import static com.android.net.module.util.Inet4AddressUtils.intToInet4AddressHTH;
 import static com.android.networkstack.tethering.UpstreamNetworkState.isVcnInterface;
+import static com.android.networkstack.tethering.util.PrefixUtils.asIpPrefix;
+import static com.android.networkstack.tethering.util.TetheringMessageBase.BASE_IPSERVER;
 
 import android.net.INetd;
 import android.net.INetworkStackStatusCallback;
@@ -47,8 +47,6 @@ import android.net.dhcp.IDhcpServer;
 import android.net.ip.IpNeighborMonitor.NeighborEvent;
 import android.net.ip.RouterAdvertisementDaemon.RaParams;
 import android.net.util.InterfaceParams;
-import android.net.util.InterfaceSet;
-import android.net.util.PrefixUtils;
 import android.net.util.SharedLog;
 import android.os.Handler;
 import android.os.Looper;
@@ -70,6 +68,8 @@ import com.android.networkstack.tethering.BpfCoordinator;
 import com.android.networkstack.tethering.BpfCoordinator.ClientInfo;
 import com.android.networkstack.tethering.BpfCoordinator.Ipv6ForwardingRule;
 import com.android.networkstack.tethering.PrivateAddressCoordinator;
+import com.android.networkstack.tethering.util.InterfaceSet;
+import com.android.networkstack.tethering.util.PrefixUtils;
 
 import java.net.Inet4Address;
 import java.net.Inet6Address;
