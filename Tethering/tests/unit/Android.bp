@@ -75,7 +75,7 @@ java_defaults {
         // For mockito extended
         "libdexmakerjvmtiagent",
         "libstaticjvmtiagent",
-        "libtetherutilsjni",
+        "libcom_android_networkstack_tethering_util_jni",
     ],
 }
 
