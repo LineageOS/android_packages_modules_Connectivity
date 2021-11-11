@@ -103,6 +103,7 @@ java_library {
         "device/com/android/net/module/util/BpfMap.java",
         "device/com/android/net/module/util/HexDump.java",
         "device/com/android/net/module/util/Ipv6Utils.java",
+        "device/com/android/net/module/util/JniUtil.java",
         "device/com/android/net/module/util/Struct.java",
         "device/com/android/net/module/util/netlink/*.java",
         "device/com/android/net/module/util/structs/*.java",
