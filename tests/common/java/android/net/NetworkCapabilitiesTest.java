@@ -92,6 +92,7 @@ import java.util.Set;
 
 @RunWith(AndroidJUnit4.class)
 @SmallTest
+@ConnectivityModuleTest
 public class NetworkCapabilitiesTest {
     private static final String TEST_SSID = "TEST_SSID";
     private static final String DIFFERENT_TEST_SSID = "DIFFERENT_TEST_SSID";
@@ -345,10 +346,16 @@ public class NetworkCapabilitiesTest {
     }
 
     private void testParcelSane(NetworkCapabilities cap) {
-        if (isAtLeastT()) {
+        // This test can be run as unit test against the latest system image, as CTS to verify
+        // an Android release that is as recent as the test, or as MTS to verify the
+        // Connectivity module. In the first two cases NetworkCapabilities will be as recent
+        // as the test. In the last case, starting from S NetworkCapabilities is updated as part
+        // of Connectivity, so it is also as recent as the test. For MTS on Q and R,
+        // NetworkCapabilities is not updatable, so it may have a different number of fields.
+        if (isAtLeastS()) {
+            // When this test is run on S+, NetworkCapabilities is as recent as the test,
+            // so this should be the most recent known number of fields.
             assertParcelSane(cap, 17);
-        } else if (isAtLeastS()) {
-            assertParcelSane(cap, 16);
         } else if (isAtLeastR()) {
             assertParcelSane(cap, 15);
         } else {
@@ -1226,12 +1233,12 @@ public class NetworkCapabilitiesTest {
         assertEquals(0, nc.getCapabilities().length);
     }
 
-    @Test @IgnoreUpTo(Build.VERSION_CODES.R) @ConnectivityModuleTest
+    @Test @IgnoreUpTo(Build.VERSION_CODES.R)
     public void testRestrictCapabilitiesForTestNetworkByNotOwnerWithNonRestrictedNc() {
         testRestrictCapabilitiesForTestNetworkWithNonRestrictedNc(false /* isOwner */);
     }
 
-    @Test @IgnoreUpTo(Build.VERSION_CODES.R) @ConnectivityModuleTest
+    @Test @IgnoreUpTo(Build.VERSION_CODES.R)
     public void testRestrictCapabilitiesForTestNetworkByOwnerWithNonRestrictedNc() {
         testRestrictCapabilitiesForTestNetworkWithNonRestrictedNc(true /* isOwner */);
     }
@@ -1276,12 +1283,12 @@ public class NetworkCapabilitiesTest {
         assertEquals(expectedNcBuilder.build(), nonRestrictedNc);
     }
 
-    @Test @IgnoreUpTo(Build.VERSION_CODES.R) @ConnectivityModuleTest
+    @Test @IgnoreUpTo(Build.VERSION_CODES.R)
     public void testRestrictCapabilitiesForTestNetworkByNotOwnerWithRestrictedNc() {
         testRestrictCapabilitiesForTestNetworkWithRestrictedNc(false /* isOwner */);
     }
 
-    @Test @IgnoreUpTo(Build.VERSION_CODES.R) @ConnectivityModuleTest
+    @Test @IgnoreUpTo(Build.VERSION_CODES.R)
     public void testRestrictCapabilitiesForTestNetworkByOwnerWithRestrictedNc() {
         testRestrictCapabilitiesForTestNetworkWithRestrictedNc(true /* isOwner */);
     }
