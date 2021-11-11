@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package android.net.util;
+package com.android.networkstack.tethering.util;
 
 import java.util.Collections;
 import java.util.HashSet;

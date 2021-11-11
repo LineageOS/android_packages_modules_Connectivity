@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package android.net.util;
+package com.android.networkstack.tethering.util;
 
 import static junit.framework.Assert.assertEquals;
 import static junit.framework.Assert.assertFalse;
