@@ -723,11 +723,10 @@ public class IpSecManagerTest extends IpSecBaseTest {
         algoToRequiredMinSdk.put(AUTH_HMAC_SHA512, Build.VERSION_CODES.P);
         algoToRequiredMinSdk.put(AUTH_CRYPT_AES_GCM, Build.VERSION_CODES.P);
 
-        // TODO: b/170424293 Use Build.VERSION_CODES.S when is finalized
-        algoToRequiredMinSdk.put(CRYPT_AES_CTR, Build.VERSION_CODES.R + 1);
-        algoToRequiredMinSdk.put(AUTH_AES_CMAC, Build.VERSION_CODES.R + 1);
-        algoToRequiredMinSdk.put(AUTH_AES_XCBC, Build.VERSION_CODES.R + 1);
-        algoToRequiredMinSdk.put(AUTH_CRYPT_CHACHA20_POLY1305, Build.VERSION_CODES.R + 1);
+        algoToRequiredMinSdk.put(CRYPT_AES_CTR, Build.VERSION_CODES.S);
+        algoToRequiredMinSdk.put(AUTH_AES_CMAC, Build.VERSION_CODES.S);
+        algoToRequiredMinSdk.put(AUTH_AES_XCBC, Build.VERSION_CODES.S);
+        algoToRequiredMinSdk.put(AUTH_CRYPT_CHACHA20_POLY1305, Build.VERSION_CODES.S);
 
         final Set<String> supportedAlgos = IpSecAlgorithm.getSupportedAlgorithms();
 
