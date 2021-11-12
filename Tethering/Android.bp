@@ -43,6 +43,7 @@ java_defaults {
         "android.hardware.tetheroffload.control-V1.1-java",
         "net-utils-framework-common",
         "net-utils-device-common",
+        "net-utils-device-common-bpf",
         "net-utils-device-common-netlink",
         "netd-client",
     ],
@@ -84,7 +85,7 @@ android_library {
 
 // Due to b/143733063, APK can't access a jni lib that is in APEX (but not in the APK).
 cc_library {
-    name: "libtetherutilsjni",
+    name: "libcom_android_networkstack_tethering_util_jni",
     sdk_version: "30",
     apex_available: [
         "//apex_available:platform", // Used by InProcessTethering
@@ -103,7 +104,7 @@ cc_library {
         "libnativehelper_compat_libc++",
     ],
     static_libs: [
-        "libbpfmapjni",
+        "libnet_utils_device_common_bpfjni",
         "libnetjniutils",
     ],
 
@@ -133,7 +134,7 @@ java_defaults {
     name: "TetheringAppDefaults",
     privileged: true,
     jni_libs: [
-        "libtetherutilsjni",
+        "libcom_android_networkstack_tethering_util_jni",
     ],
     resource_dirs: [
         "res",

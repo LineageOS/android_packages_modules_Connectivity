@@ -32,6 +32,7 @@ import static com.android.networkstack.tethering.BpfUtils.DOWNSTREAM;
 import static com.android.networkstack.tethering.BpfUtils.UPSTREAM;
 import static com.android.networkstack.tethering.TetheringConfiguration.DEFAULT_TETHER_OFFLOAD_POLL_INTERVAL_MS;
 import static com.android.networkstack.tethering.UpstreamNetworkState.isVcnInterface;
+import static com.android.networkstack.tethering.util.TetheringUtils.getTetheringJniLibraryName;
 
 import android.app.usage.NetworkStatsManager;
 import android.net.INetd;
@@ -99,7 +100,7 @@ public class BpfCoordinator {
     // TetherService, but for tests it needs to be either loaded here or loaded by every test.
     // TODO: is there a better way?
     static {
-        System.loadLibrary("tetherutilsjni");
+        System.loadLibrary(getTetheringJniLibraryName());
     }
 
     private static final String TAG = BpfCoordinator.class.getSimpleName();
