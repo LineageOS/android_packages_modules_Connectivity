@@ -245,7 +245,7 @@ message ObservedDeviceStrings {
   string initial_notification_description_no_account = 3;
 
   // The notification description for once we have finished pairing and the
-  // companion app has been opened. For Bisto devices, this string will point
+  // companion app has been opened. For google assistant devices, this string will point
   // users to setting up the assistant.
   string open_companion_app_description = 4;
 

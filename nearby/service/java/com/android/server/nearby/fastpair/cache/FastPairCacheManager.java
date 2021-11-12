@@ -31,19 +31,16 @@ import service.proto.Rpcs;
  * Save FastPair device info to database to avoid multiple requesting.
  */
 public class FastPairCacheManager {
-
-    private static final String FAST_PAIR_SERVER_CACHE = "FAST_PAIR_SERVER_CACHE";
+    private final Context mContext;
 
     public FastPairCacheManager(Context context) {
-
+        mContext = context;
     }
 
     /**
      * Saves the response to the db
      */
-    private void saveDevice() {
-
-    }
+    private void saveDevice() {}
 
     Cache.ServerResponseDbItem getDeviceFromScanResult(ScanResult scanResult) {
         return Cache.ServerResponseDbItem.newBuilder().build();
@@ -59,9 +56,30 @@ public class FastPairCacheManager {
         return true;
     }
 
+    /**
+     * Save discovery item into database.
+     */
+    public boolean saveDiscoveryItem(DiscoveryItem item) {
+        return true;
+    }
+
     @Annotations.EventThread
     private Rpcs.GetObservedDeviceResponse getObservedDeviceInfo(ScanResult scanResult) {
         return Rpcs.GetObservedDeviceResponse.getDefaultInstance();
+    }
+
+    /**
+     * Get discovery item from item id.
+     */
+    public DiscoveryItem getDiscoveryItem(String itemId) {
+        return new DiscoveryItem(mContext, Cache.StoredDiscoveryItem.getDefaultInstance());
+    }
+
+    /**
+     * Get scan result from local database use model id
+     */
+    public Cache.StoredScanResult getStoredScanResult(String modelId) {
+        return Cache.StoredScanResult.getDefaultInstance();
     }
 
     /**
