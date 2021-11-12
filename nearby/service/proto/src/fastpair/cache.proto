@@ -1,6 +1,7 @@
 syntax = "proto3";
 package service.proto;
 import "src/fastpair/rpcs.proto";
+import "src/fastpair/fast_pair_string.proto";
 
 // db information for Fast Pair that gets from server.
 message ServerResponseDbItem {
@@ -17,5 +18,289 @@ message ServerResponseDbItem {
 
   // Whether the item in the cache is expirable or not (when offline mode this
   // will be false).
-   bool expirable = 4;
+  bool expirable = 4;
+}
+
+
+// Client side scan result.
+message StoredScanResult {
+  // REQUIRED
+  // Unique ID generated based on scan result
+  string id = 1;
+
+  // REQUIRED
+  NearbyType type = 2;
+
+  // REQUIRED
+  // The most recent all upper case mac associated with this item.
+  // (Mac-to-DiscoveryItem is a many-to-many relationship)
+  string mac_address = 4;
+
+  // Beacon's RSSI value
+  int32 rssi = 10;
+
+  // Beacon's tx power
+  int32 tx_power = 11;
+
+  // The mac address encoded in beacon advertisement. Currently only used by
+  // chromecast.
+  string device_setup_mac = 12;
+
+  // Uptime of the device in minutes. Stops incrementing at 255.
+  int32 uptime_minutes = 13;
+
+  // REQUIRED
+  // Client timestamp when the beacon was first observed in BLE scan.
+  int64 first_observation_timestamp_millis = 14;
+
+  // REQUIRED
+  // Client timestamp when the beacon was last observed in BLE scan.
+  int64 last_observation_timestamp_millis = 15;
+
+  // Deprecated fields.
+  reserved 3, 5, 6, 7, 8, 9;
+}
+
+
+// Data for a DiscoveryItem created from server response and client scan result.
+// Only caching original data from scan result, server response, timestamps
+// and user actions. Do not save generated data in this object.
+// Next ID: 50
+message StoredDiscoveryItem {
+  enum State {
+    // Default unknown state.
+    STATE_UNKNOWN = 0;
+
+    // The item is normal.
+    STATE_ENABLED = 1;
+
+    // The item has been muted by user.
+    STATE_MUTED = 2;
+
+    // The item has been disabled by us (likely temporarily).
+    STATE_DISABLED_BY_SYSTEM = 3;
+  }
+
+  // The status of the item.
+  // TODO(b/204409421) remove enum
+  enum DebugMessageCategory {
+    // Default unknown state.
+    STATUS_UNKNOWN = 0;
+
+    // The item is valid and visible in notification.
+    STATUS_VALID_NOTIFICATION = 1;
+
+    // The item made it to list but not to notification.
+    STATUS_VALID_LIST_VIEW = 2;
+
+    // The item is filtered out on client. Never made it to list view.
+    STATUS_DISABLED_BY_CLIENT = 3;
+
+    // The item is filtered out by server. Never made it to client.
+    STATUS_DISABLED_BY_SERVER = 4;
+  }
+
+  enum ExperienceType {
+    EXPERIENCE_UNKNOWN = 0;
+    EXPERIENCE_GOOD = 1;
+    EXPERIENCE_BAD = 2;
+  }
+
+  // REQUIRED
+  // Offline item: unique ID generated on client.
+  // Online item: unique ID generated on server.
+  string id = 1;
+
+  // REQUIRED
+  NearbyType type = 2;
+
+  // REQUIRED
+  // The most recent all upper case mac associated with this item.
+  // (Mac-to-DiscoveryItem is a many-to-many relationship)
+  string mac_address = 4;
+
+  // REQUIRED
+  string action_url = 5;
+
+  // The bluetooth device name from advertisment
+  string device_name = 6;
+
+  // REQUIRED
+  // Item's title
+  string title = 7;
+
+  // Item's description.
+  string description = 8;
+
+  // The URL for display
+  string display_url = 9;
+
+  // REQUIRED
+  // Client timestamp when the beacon was last observed in BLE scan.
+  int64 last_observation_timestamp_millis = 10;
+
+  // REQUIRED
+  // Client timestamp when the beacon was first observed in BLE scan.
+  int64 first_observation_timestamp_millis = 11;
+
+  // REQUIRED
+  // Item's current state. e.g. if the item is blocked.
+  State state = 17;
+
+  // The resolved url type for the action_url.
+  ResolvedUrlType action_url_type = 19;
+
+  // The timestamp when the user is redirected to Play Store after clicking on
+  // the item.
+  int64 pending_app_install_timestamp_millis = 20;
+
+  // Beacon's RSSI value
+  int32 rssi = 22;
+
+  // Beacon's tx power
+  int32 tx_power = 23;
+
+  // Human readable name of the app designated to open the uri
+  // Used in the second line of the notification, "Open in {} app"
+  string app_name = 25;
+
+  // ID used for associating several DiscoveryItems.  These items may be
+  // visually displayed together.
+  string group_id = 26;
+
+  // The timestamp when the attachment was created on PBS server. In case there
+  // are duplicate
+  // items with the same scanId/groupID, only show the one with the latest
+  // timestamp.
+  int64 attachment_creation_sec = 28;
+
+  // Whether the attachment is created in debug namespace
+  DiscoveryAttachmentType attachment_type = 29;
+
+  // Package name of the App that owns this item.
+  string package_name = 30;
+
+  // The average star rating of the app.
+  float star_rating = 31;
+
+  // The "feature" graphic image url used for large sized list view entries.
+  string feature_graphic_url = 32;
+
+  // TriggerId identifies the trigger/beacon that is attached with a message.
+  // It's generated from server for online messages to synchronize formatting
+  // across client versions.
+  // Example:
+  // * BLE_UID: 3||deadbeef
+  // * BLE_URL: http://trigger.id
+  // See go/discovery-store-message-and-trigger-id for more details.
+  string trigger_id = 34;
+
+  // Bytes of item icon in PNG format displayed in Discovery item list.
+  bytes icon_png = 36;
+
+  // A FIFE URL of the item icon displayed in Discovery item list.
+  string icon_fife_url = 49;
+
+  // Message written to bugreport for 3P developers.(No sensitive info)
+  // null if the item is valid
+  string debug_message = 37;
+
+  // Weather the item is filtered out on server.
+  DebugMessageCategory debug_category = 38;
+
+  // Client timestamp when the trigger (e.g. beacon) was last lost (e.g. when
+  // Messages told us the beacon's no longer nearby).
+  int64 lost_millis = 41;
+
+  // The kind of expereince the user last had with this (e.g. if they dismissed
+  // the notification, that's bad; but if they tapped it, that's good).
+  ExperienceType last_user_experience = 42;
+
+  // The most recent BLE advertisement related to this item.
+  bytes ble_record_bytes = 43;
+
+  // An ID generated on the server to uniquely identify content.
+  string entity_id = 44;
+
+  // See equivalent field in NearbyItem.
+  bytes authentication_public_key_secp256r1 = 45;
+
+  // See equivalent field in NearbyItem.
+  FastPairInformation fast_pair_information = 46;
+
+  // Companion app detail.
+  CompanionAppDetails companion_detail = 47;
+
+  // Fast pair strings
+  FastPairStrings fast_pair_strings = 48;
+
+  // Deprecated fields.
+  reserved 3, 12, 13, 14, 15, 16, 18, 21, 24, 27, 33, 35, 39, 40;
+}
+enum ResolvedUrlType {
+  RESOLVED_URL_TYPE_UNKNOWN = 0;
+
+  // The url is resolved to a web page that is not a play store app.
+  // This can be considered as the default resolved type when it's
+  // not the other specific types.
+  WEBPAGE = 1;
+
+  // The url is resolved to the Google Play store app
+  // ie. play.google.com/store
+  APP = 2;
+}
+enum DiscoveryAttachmentType {
+  DISCOVERY_ATTACHMENT_TYPE_UNKNOWN = 0;
+
+  // The attachment is posted in the prod namespace (without "-debug")
+  DISCOVERY_ATTACHMENT_TYPE_NORMAL = 1;
+
+  // The attachment is posted in the debug namespace (with "-debug")
+  DISCOVERY_ATTACHMENT_TYPE_DEBUG = 2;
+}
+// Additional information relevant only for Fast Pair devices.
+message FastPairInformation {
+  // When true, Fast Pair will only create a bond with the device and not
+  // attempt to connect any profiles (for example, A2DP or HFP).
+  bool data_only_connection = 1;
+
+  // Additional images that are attached specifically for true wireless Fast
+  // Pair devices.
+  TrueWirelessHeadsetImages true_wireless_images = 3;
+
+  // When true, this device can support assistant function.
+  bool assistant_supported = 4;
+
+  // Features supported by the Fast Pair device.
+  repeated FastPairFeature features = 5;
+
+  // Optional, the name of the company producing this Fast Pair device.
+  string company_name = 6;
+
+  // Optional, the type of device.
+  DeviceType device_type = 7;
+
+  reserved 2;
+}
+
+
+enum NearbyType {
+  NEARBY_TYPE_UNKNOWN = 0;
+  // Proximity Beacon Service (PBS). This is the only type of nearbyItems which
+  // can be customized by 3p and therefore the intents passed should not be
+  // completely trusted. Deprecated already.
+  NEARBY_PROXIMITY_BEACON = 1;
+  // Physical Web URL beacon. Deprecated already.
+  NEARBY_PHYSICAL_WEB = 2;
+  // Chromecast beacon. Used on client-side only.
+  NEARBY_CHROMECAST = 3;
+  // Wear beacon. Used on client-side only.
+  NEARBY_WEAR = 4;
+  // A device (e.g. a Magic Pair device that needs to be set up). The special-
+  // case devices above (e.g. ChromeCast, Wear) might migrate to this type.
+  NEARBY_DEVICE = 6;
+  // Popular apps/urls based on user's current geo-location.
+  NEARBY_POPULAR_HERE = 7;
+
+  reserved 5;
 }

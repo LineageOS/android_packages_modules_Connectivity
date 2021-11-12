@@ -64,8 +64,6 @@ message Device {
   TrueWirelessHeadsetImages true_wireless_images = 15;
 
   // Fast Pair only - When true, this device can support assistant function.
-  // Only Nearby admins can change this.
-  // TODO(b/128545971): Transition this to a feature.
   bool assistant_supported = 16;
 
   // Output only.
@@ -77,8 +75,6 @@ message Device {
 
   // Fast Pair only - When true, Fast Pair will only create a bond with the
   // device and not attempt to connect any profiles (for example, A2DP or HFP).
-  // Only Nearby admins can change this.
-  // TODO(b/128545971): Transition this to a feature.
   bool data_only_connection = 18;
 
   // Name of the company/brand that will be selling the product.
@@ -157,13 +153,13 @@ message CompanionAppDetails {
 // Additional images for True Wireless Fast Pair devices.
 message TrueWirelessHeadsetImages {
   // Image URL for the left bud.
-   string left_bud_url = 1;
+  string left_bud_url = 1;
 
   // Image URL for the right bud.
-   string right_bud_url = 2;
+  string right_bud_url = 2;
 
   // Image URL for the case.
-   string case_url = 3;
+  string case_url = 3;
 }
 
 // Represents the type of device that is being registered.
@@ -316,3 +312,4 @@ message ObservedDeviceStrings {
   // Description of the connect device action on TV, when user is not logged in.
   string fast_pair_tv_connect_device_no_account_description = 24;
 }
+
