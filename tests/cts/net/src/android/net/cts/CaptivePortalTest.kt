@@ -40,7 +40,6 @@ import android.net.cts.NetworkValidationTestUtil.setUrlExpirationDeviceConfig
 import android.net.cts.util.CtsNetUtils
 import android.net.util.NetworkStackUtils.TEST_CAPTIVE_PORTAL_HTTPS_URL
 import android.net.util.NetworkStackUtils.TEST_CAPTIVE_PORTAL_HTTP_URL
-import android.net.wifi.WifiManager
 import android.os.Build
 import android.platform.test.annotations.AppModeFull
 import android.provider.DeviceConfig
@@ -77,7 +76,7 @@ private const val TEST_PORTAL_URL_PATH = "/portal_path"
 private const val LOCALHOST_HOSTNAME = "localhost"
 
 // Re-connecting to the AP, obtaining an IP address, revalidating can take a long time
-private const val WIFI_CONNECT_TIMEOUT_MS = 120_000L
+private const val WIFI_CONNECT_TIMEOUT_MS = 40_000L
 private const val TEST_TIMEOUT_MS = 10_000L
 
 private const val TAG = "CaptivePortalTest"
@@ -94,7 +93,6 @@ private fun <T> CompletableFuture<T>.assertGet(timeoutMs: Long, message: String)
 @RunWith(AndroidJUnit4::class)
 class CaptivePortalTest {
     private val context: android.content.Context by lazy { getInstrumentation().context }
-    private val wm by lazy { context.getSystemService(WifiManager::class.java) }
     private val cm by lazy { context.getSystemService(ConnectivityManager::class.java) }
     private val pm by lazy { context.packageManager }
     private val utils by lazy { CtsNetUtils(context) }
