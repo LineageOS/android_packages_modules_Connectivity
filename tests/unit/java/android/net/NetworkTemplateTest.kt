@@ -46,7 +46,6 @@ import android.net.NetworkTemplate.buildTemplateMobileWildcard
 import android.net.NetworkTemplate.buildTemplateMobileWithRatType
 import android.net.NetworkTemplate.buildTemplateWifi
 import android.net.NetworkTemplate.buildTemplateWifiWildcard
-import android.net.NetworkTemplate.normalize
 import android.os.Build
 import android.telephony.TelephonyManager
 import com.android.testutils.DevSdkIgnoreRule
@@ -64,7 +63,6 @@ import kotlin.test.assertTrue
 
 private const val TEST_IMSI1 = "imsi1"
 private const val TEST_IMSI2 = "imsi2"
-private const val TEST_IMSI3 = "imsi3"
 private const val TEST_SSID1 = "ssid1"
 private const val TEST_SSID2 = "ssid2"
 
@@ -494,46 +492,5 @@ class NetworkTemplateTest {
         matchOemManagedIdent(TYPE_WIFI, MATCH_WIFI, templateSsid = TEST_SSID1,
                 identSsid = TEST_SSID1)
         matchOemManagedIdent(TYPE_WIFI, MATCH_WIFI_WILDCARD, identSsid = TEST_SSID1)
-    }
-
-    @Test
-    fun testNormalize() {
-        var mergedImsiList = listOf(arrayOf(TEST_IMSI1, TEST_IMSI2))
-        val identMobileImsi1 = buildNetworkIdentity(mockContext,
-                buildMobileNetworkState(TEST_IMSI1), false /* defaultNetwork */,
-                TelephonyManager.NETWORK_TYPE_UMTS)
-        val identMobileImsi2 = buildNetworkIdentity(mockContext,
-                buildMobileNetworkState(TEST_IMSI2), false /* defaultNetwork */,
-                TelephonyManager.NETWORK_TYPE_UMTS)
-        val identMobileImsi3 = buildNetworkIdentity(mockContext,
-                buildMobileNetworkState(TEST_IMSI3), false /* defaultNetwork */,
-                TelephonyManager.NETWORK_TYPE_UMTS)
-        val identWifiImsi1Ssid1 = buildNetworkIdentity(
-                mockContext, buildWifiNetworkState(TEST_IMSI1, TEST_SSID1), true, 0)
-        val identWifiImsi2Ssid1 = buildNetworkIdentity(
-                mockContext, buildWifiNetworkState(TEST_IMSI2, TEST_SSID1), true, 0)
-        val identWifiImsi3Ssid1 = buildNetworkIdentity(
-                mockContext, buildWifiNetworkState(TEST_IMSI3, TEST_SSID1), true, 0)
-
-        normalize(buildTemplateMobileAll(TEST_IMSI1), mergedImsiList).also {
-            it.assertMatches(identMobileImsi1)
-            it.assertMatches(identMobileImsi2)
-            it.assertDoesNotMatch(identMobileImsi3)
-        }
-        normalize(buildTemplateCarrierMetered(TEST_IMSI1), mergedImsiList).also {
-            it.assertMatches(identMobileImsi1)
-            it.assertMatches(identMobileImsi2)
-            it.assertDoesNotMatch(identMobileImsi3)
-        }
-        normalize(buildTemplateWifi(TEST_SSID1, TEST_IMSI1), mergedImsiList).also {
-            it.assertMatches(identWifiImsi1Ssid1)
-            it.assertMatches(identWifiImsi2Ssid1)
-            it.assertDoesNotMatch(identWifiImsi3Ssid1)
-        }
-        normalize(buildTemplateMobileWildcard(), mergedImsiList).also {
-            it.assertMatches(identMobileImsi1)
-            it.assertMatches(identMobileImsi2)
-            it.assertMatches(identMobileImsi3)
-        }
     }
 }
