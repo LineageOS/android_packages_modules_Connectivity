@@ -402,7 +402,7 @@ public class FastPairDualConnection extends FastPairConnection {
             Log.i(TAG, "getProviderDeviceName failed, pairingSecret == null.");
             return null;
         }
-        @Nullable String deviceName = mDeviceNameReceiver.getParsedResult(mPairingSecret);
+        String deviceName = mDeviceNameReceiver.getParsedResult(mPairingSecret);
         Log.i(TAG, "getProviderDeviceName = " + deviceName);
 
         return deviceName;

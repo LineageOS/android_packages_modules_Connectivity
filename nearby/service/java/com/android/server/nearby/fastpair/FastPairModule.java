@@ -22,6 +22,10 @@ import com.android.server.nearby.common.locator.Locator;
 import com.android.server.nearby.common.locator.Module;
 import com.android.server.nearby.fastpair.cache.FastPairCacheManager;
 
+import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneId;
+
 /**
  * Module that associates all of the fast pair related singleton class
  */
@@ -33,6 +37,27 @@ public class FastPairModule extends Module {
     public void configure(Context context, Class<?> type, Locator locator) {
         if (type.equals(FastPairCacheManager.class)) {
             locator.bind(FastPairCacheManager.class, new FastPairCacheManager(context));
+        } else if (type.equals(FastPairController.class)) {
+            locator.bind(FastPairController.class, new FastPairController(context));
+        } else if (type.equals(FastPairCacheManager.class)) {
+            locator.bind(FastPairCacheManager.class, new FastPairCacheManager(context));
+        } else if (type.equals(Clock.class)) {
+            locator.bind(Clock.class, new Clock() {
+                @Override
+                public ZoneId getZone() {
+                    return null;
+                }
+
+                @Override
+                public Clock withZone(ZoneId zone) {
+                    return null;
+                }
+
+                @Override
+                public Instant instant() {
+                    return null;
+                }
+            });
         }
 
     }
