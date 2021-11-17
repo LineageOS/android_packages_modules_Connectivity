@@ -42,6 +42,7 @@ package android.net {
   public class NetworkIdentity {
     method public int getOemManaged();
     method public int getRatType();
+    method public int getSubId();
     method @Nullable public String getSubscriberId();
     method public int getType();
     method @Nullable public String getWifiNetworkKey();
@@ -60,6 +61,7 @@ package android.net {
     method @NonNull public android.net.NetworkIdentity.Builder setOemManaged(int);
     method @NonNull public android.net.NetworkIdentity.Builder setRatType(int);
     method @NonNull public android.net.NetworkIdentity.Builder setRoaming(boolean);
+    method @NonNull public android.net.NetworkIdentity.Builder setSubId(int);
     method @NonNull public android.net.NetworkIdentity.Builder setSubscriberId(@Nullable String);
     method @NonNull public android.net.NetworkIdentity.Builder setType(int);
     method @NonNull public android.net.NetworkIdentity.Builder setWifiNetworkKey(@Nullable String);
@@ -72,7 +74,8 @@ package android.net {
     method @NonNull public android.net.LinkProperties getLinkProperties();
     method @NonNull public android.net.Network getNetwork();
     method @NonNull public android.net.NetworkCapabilities getNetworkCapabilities();
-    method @Nullable public String getSubscriberId();
+    method public int getSubId();
+    method @Deprecated @Nullable public String getSubscriberId();
     method public void writeToParcel(@NonNull android.os.Parcel, int);
     field @NonNull public static final android.os.Parcelable.Creator<android.net.NetworkStateSnapshot> CREATOR;
   }
