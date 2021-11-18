@@ -69,7 +69,7 @@ java_defaults {
 // devices.
 android_test {
     name: "CtsNetTestCases",
-    defaults: ["CtsNetTestCasesDefaults"],
+    defaults: ["CtsNetTestCasesDefaults", "NetworkStackNextEnableDefaults"],
     // TODO: CTS should not depend on the entirety of the networkstack code.
     static_libs: [
         "NetworkStackApiCurrentLib",
