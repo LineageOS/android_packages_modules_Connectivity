@@ -953,7 +953,6 @@ public class Preferences {
                 + "createBondTimeoutSeconds=" + mCreateBondTimeoutSeconds + ", "
                 + "hidCreateBondTimeoutSeconds=" + mHidCreateBondTimeoutSeconds + ", "
                 + "proxyTimeoutSeconds=" + mProxyTimeoutSeconds + ", "
-                + "proxyTimeoutSeconds=" + mProxyTimeoutSeconds + ", "
                 + "rejectPhonebookAccess=" + mRejectPhonebookAccess + ", "
                 + "rejectMessageAccess=" + mRejectMessageAccess + ", "
                 + "rejectSimAccess=" + mRejectSimAccess + ", "
@@ -1562,7 +1561,7 @@ public class Preferences {
          * Set number of attempts.
          */
         public Builder setNumAttempts(int value) {
-            this.mNumSdpAttempts = value;
+            this.mNumAttempts = value;
             return this;
         }
 
