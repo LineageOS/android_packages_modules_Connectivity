@@ -24,6 +24,7 @@ import android.os.Parcelable;
 import android.text.TextUtils;
 
 import com.android.internal.annotations.VisibleForTesting;
+import com.android.modules.utils.build.SdkLevel;
 
 import java.util.EnumMap;
 
@@ -180,6 +181,10 @@ public class NetworkInfo implements Parcelable {
     /** {@hide} */
     @UnsupportedAppUsage
     public NetworkInfo(@NonNull NetworkInfo source) {
+        // S- didn't use to crash when passing null. This plants a timebomb where mState and
+        // some other fields are null, but there may be existing code that relies on this behavior
+        // and doesn't trip the timebomb, so on SdkLevel < T, keep the old behavior. b/145972387
+        if (null == source && !SdkLevel.isAtLeastT()) return;
         synchronized (source) {
             mNetworkType = source.mNetworkType;
             mSubtype = source.mSubtype;
@@ -490,8 +495,9 @@ public class NetworkInfo implements Parcelable {
             this.mReason = reason;
             this.mExtraInfo = extraInfo;
             // Catch both the case where detailedState is null and the case where it's some
-            // unknown value
-            if (null == mState) {
+            // unknown value. This is clearly incorrect usage, but S- didn't use to crash (at
+            // least immediately) so keep the old behavior on older frameworks for safety.
+            if (null == mState && SdkLevel.isAtLeastT()) {
                 throw new NullPointerException("Unknown DetailedState : " + detailedState);
             }
         }

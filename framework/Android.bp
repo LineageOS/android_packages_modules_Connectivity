@@ -80,6 +80,9 @@ java_sdk_library {
         "framework-wifi.stubs.module_lib",
         "net-utils-device-common",
     ],
+    static_libs: [
+        "modules-utils-build",
+    ],
     libs: [
         "unsupportedappusage",
     ],
