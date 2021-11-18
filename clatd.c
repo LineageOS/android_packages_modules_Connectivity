@@ -155,17 +155,15 @@ void set_capability(uint64_t target_cap) {
   }
 }
 
-/* function: drop_root_but_keep_caps
- * drops root privs but keeps the needed capabilities
+/* function: drop_root_and_caps
+ * drops root privs and all capabilities
  */
-void drop_root_but_keep_caps() {
+void drop_root_and_caps() {
   // see man setgroups: this drops all supplementary groups
   if (setgroups(0, NULL) < 0) {
     logmsg(ANDROID_LOG_FATAL, "setgroups failed: %s", strerror(errno));
     exit(1);
   }
-
-  prctl(PR_SET_KEEPCAPS, 1);
 
   if (setresgid(AID_CLAT, AID_CLAT, AID_CLAT) < 0) {
     logmsg(ANDROID_LOG_FATAL, "setresgid failed: %s", strerror(errno));
@@ -176,8 +174,7 @@ void drop_root_but_keep_caps() {
     exit(1);
   }
 
-  // keep CAP_NET_RAW capability to open raw socket.
-  set_capability((1 << CAP_NET_ADMIN) | (1 << CAP_NET_RAW));
+  set_capability(0);
 }
 
 /* function: open_sockets
