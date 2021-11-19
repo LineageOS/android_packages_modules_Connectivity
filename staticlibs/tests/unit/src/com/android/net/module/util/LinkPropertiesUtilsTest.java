@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package android.net.util;
+package com.android.net.module.util;
 
 import static com.android.testutils.MiscAsserts.assertSameElements;
 
@@ -32,7 +32,6 @@ import android.util.ArraySet;
 
 import androidx.test.runner.AndroidJUnit4;
 
-import com.android.net.module.util.LinkPropertiesUtils;
 import com.android.net.module.util.LinkPropertiesUtils.CompareOrUpdateResult;
 import com.android.net.module.util.LinkPropertiesUtils.CompareResult;
 
