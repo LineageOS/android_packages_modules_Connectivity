@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package android.net.util;
+package com.android.net.module.util;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -26,8 +26,6 @@ import android.net.IpPrefix;
 import android.net.RouteInfo;
 
 import androidx.test.runner.AndroidJUnit4;
-
-import com.android.net.module.util.NetUtils;
 
 import org.junit.Test;
 import org.junit.runner.RunWith;
