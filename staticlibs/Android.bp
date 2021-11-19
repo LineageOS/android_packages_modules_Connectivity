@@ -259,6 +259,7 @@ java_library {
     ],
     visibility: [
         "//frameworks/base/services/net",
+        "//packages/modules/Connectivity/tests:__subpackages__",
     ],
 }
 
