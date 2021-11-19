@@ -89,6 +89,17 @@ filegroup {
     ]
 }
 
+// Subset of services-core used to by ConnectivityService tests to test VPN realistically.
+// This is stripped by jarjar (see rules below) from other unrelated classes, so tests do not
+// include most classes from services-core, which are unrelated and cause wrong code coverage
+// calculations.
+java_library {
+    name: "services.core-vpn",
+    static_libs: ["services.core"],
+    jarjar_rules: "vpn-jarjar-rules.txt",
+    visibility: ["//visibility:private"],
+}
+
 android_library {
     name: "FrameworksNetTestsLib",
     min_sdk_version: "30",
@@ -112,11 +123,11 @@ android_library {
         "framework-protos",
         "mockito-target-minus-junit4",
         "net-tests-utils",
+        "net-utils-services-common",
         "platform-compat-test-rules",
         "platform-test-annotations",
         "service-connectivity-pre-jarjar",
-        "services.core",
-        "services.net",
+        "services.core-vpn",
     ],
     libs: [
         "android.net.ipsec.ike.stubs.module_lib",
@@ -140,6 +151,8 @@ android_test {
     srcs: [":non-connectivity-module-test"],
     test_suites: ["device-tests"],
     static_libs: [
+        "services.core",
+        "services.net",
         "FrameworksNetTestsLib",
     ],
     libs: [
