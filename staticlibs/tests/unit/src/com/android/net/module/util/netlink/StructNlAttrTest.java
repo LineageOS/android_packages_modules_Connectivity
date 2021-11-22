@@ -16,6 +16,7 @@
 
 package com.android.net.module.util.netlink;
 
+import static com.android.net.module.util.netlink.RtNetlinkAddressMessage.IFA_FLAGS;
 import static com.android.net.module.util.netlink.RtNetlinkLinkMessage.IFLA_ADDRESS;
 import static com.android.net.module.util.netlink.RtNetlinkLinkMessage.IFLA_IFNAME;
 
@@ -35,6 +36,7 @@ import org.junit.runner.RunWith;
 public class StructNlAttrTest {
     private static final MacAddress TEST_MAC_ADDRESS = MacAddress.fromString("00:11:22:33:44:55");
     private static final String TEST_INTERFACE_NAME = "wlan0";
+    private static final int TEST_ADDR_FLAGS = 0x80;
 
     @Test
     public void testGetValueAsMacAddress() {
@@ -64,5 +66,30 @@ public class StructNlAttrTest {
         final StructNlAttr attr2 = new StructNlAttr(IFLA_IFNAME, array);
         final String str2 = attr2.getValueAsString();
         assertEquals(str2, TEST_INTERFACE_NAME);
+    }
+
+    @Test
+    public void testGetValueAsIntger() {
+        final StructNlAttr attr1 = new StructNlAttr(IFA_FLAGS, TEST_ADDR_FLAGS);
+        final Integer integer1 = attr1.getValueAsInteger();
+        final int int1 = attr1.getValueAsInt(0x08 /* default value */);
+        assertEquals(integer1, new Integer(TEST_ADDR_FLAGS));
+        assertEquals(int1, TEST_ADDR_FLAGS);
+
+        // Malformed attribute.
+        final byte[] malformed_int = new byte[] { (byte) 0x0, (byte) 0x0, (byte) 0x80, };
+        final StructNlAttr attr2 = new StructNlAttr(IFA_FLAGS, malformed_int);
+        final Integer integer2 = attr2.getValueAsInteger();
+        final int int2 = attr2.getValueAsInt(0x08 /* default value */);
+        assertNull(integer2);
+        assertEquals(int2, 0x08 /* default value */);
+
+        // Null attribute value.
+        final byte[] null_int = null;
+        final StructNlAttr attr3 = new StructNlAttr(IFA_FLAGS, null_int);
+        final Integer integer3 = attr3.getValueAsInteger();
+        final int int3 = attr3.getValueAsInt(0x08 /* default value */);
+        assertNull(integer3);
+        assertEquals(int3, 0x08 /* default value */);
     }
 }
