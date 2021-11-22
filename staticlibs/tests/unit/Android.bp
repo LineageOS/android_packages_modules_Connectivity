@@ -30,7 +30,8 @@ android_library {
         "//packages/modules/Connectivity/tests:__subpackages__",
         "//packages/modules/Connectivity/Tethering/tests:__subpackages__",
         "//packages/modules/NetworkStack/tests/integration",
-    ]
+    ],
+    lint: { strict_updatability_linting: true },
 }
 
 android_test {
@@ -46,4 +47,5 @@ android_test {
     ],
     jarjar_rules: "jarjar-rules.txt",
     test_suites: ["device-tests"],
+    lint: { strict_updatability_linting: true },
 }
