@@ -38,6 +38,7 @@ java_library {
         "net-utils-device-common-netlink",
         "modules-utils-build_system",
     ],
+    lint: { strict_updatability_linting: true },
 }
 
 java_library {
@@ -59,7 +60,8 @@ java_library {
   ],
   static_libs: [
       "kotlin-test"
-  ]
+  ],
+  lint: { strict_updatability_linting: true },
 }
 
 java_test_host {

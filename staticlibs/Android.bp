@@ -70,6 +70,7 @@ java_library {
       "androidx.annotation_annotation",
       "framework-annotations-lib",
   ],
+  lint: { strict_updatability_linting: true },
 }
 
 java_defaults {
@@ -118,6 +119,7 @@ java_library {
         "com.android.tethering",
         "//apex_available:platform",
     ],
+    lint: { strict_updatability_linting: true },
 }
 
 java_library {
@@ -145,6 +147,7 @@ java_library {
         "com.android.tethering",
         "//apex_available:platform",
     ],
+    lint: { strict_updatability_linting: true },
 }
 
 java_library {
@@ -169,6 +172,7 @@ java_library {
         "com.android.tethering",
         "//apex_available:platform",
     ],
+    lint: { strict_updatability_linting: true },
 }
 
 java_library {
@@ -199,6 +203,7 @@ java_library {
         "com.android.tethering",
         "//apex_available:platform",
     ],
+    lint: { strict_updatability_linting: true },
 }
 
 java_library {
@@ -229,6 +234,7 @@ java_library {
         "//frameworks/libs/net/common/device",
         "//packages/modules/Wifi/framework/tests:__subpackages__",
     ],
+    lint: { strict_updatability_linting: true },
 }
 filegroup {
     name: "net-utils-services-common-srcs",
@@ -261,6 +267,7 @@ java_library {
         "//frameworks/base/services/net",
         "//packages/modules/Connectivity/tests:__subpackages__",
     ],
+    lint: { strict_updatability_linting: true },
 }
 
 // Use a filegroup and not a library for telephony sources, as framework-annotations cannot be
@@ -340,4 +347,5 @@ java_library {
         "//apex_available:anyapex",
         "//apex_available:platform",
     ],
+    lint: { strict_updatability_linting: true },
 }
