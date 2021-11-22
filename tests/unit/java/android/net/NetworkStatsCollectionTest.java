@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 The Android Open Source Project
+ * Copyright (C) 2021 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.android.server.net;
+package android.net;
 
 import static android.net.ConnectivityManager.TYPE_MOBILE;
 import static android.net.NetworkIdentity.OEM_NONE;
@@ -37,11 +37,6 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.fail;
 
 import android.content.res.Resources;
-import android.net.ConnectivityManager;
-import android.net.NetworkIdentity;
-import android.net.NetworkStats;
-import android.net.NetworkStatsHistory;
-import android.net.NetworkTemplate;
 import android.os.Build;
 import android.os.Process;
 import android.os.UserHandle;
@@ -83,7 +78,7 @@ import java.util.List;
  */
 @RunWith(DevSdkIgnoreRunner.class)
 @SmallTest
-@DevSdkIgnoreRule.IgnoreUpTo(Build.VERSION_CODES.R)
+@DevSdkIgnoreRule.IgnoreUpTo(Build.VERSION_CODES.S)
 public class NetworkStatsCollectionTest {
 
     private static final String TEST_FILE = "test.bin";
@@ -250,8 +245,8 @@ public class NetworkStatsCollectionTest {
                 collection.getRelevantUids(NetworkStatsAccess.Level.DEVICE));
 
         // Verify security check in getHistory.
-        assertNotNull(collection.getHistory(buildTemplateMobileAll(TEST_IMSI), null, myUid, SET_DEFAULT,
-                TAG_NONE, 0, 0L, 0L, NetworkStatsAccess.Level.DEFAULT, myUid));
+        assertNotNull(collection.getHistory(buildTemplateMobileAll(TEST_IMSI), null,
+                myUid, SET_DEFAULT, TAG_NONE, 0, 0L, 0L, NetworkStatsAccess.Level.DEFAULT, myUid));
         try {
             collection.getHistory(buildTemplateMobileAll(TEST_IMSI), null, otherUidInSameUser,
                     SET_DEFAULT, TAG_NONE, 0, 0L, 0L, NetworkStatsAccess.Level.DEFAULT, myUid);
@@ -275,7 +270,8 @@ public class NetworkStatsCollectionTest {
                 new File(InstrumentationRegistry.getContext().getFilesDir(), TEST_FILE);
         stageFile(R.raw.netstats_v1, testFile);
 
-        final NetworkStatsCollection emptyCollection = new NetworkStatsCollection(30 * MINUTE_IN_MILLIS);
+        final NetworkStatsCollection emptyCollection =
+                new NetworkStatsCollection(30 * MINUTE_IN_MILLIS);
         final NetworkStatsCollection collection = new NetworkStatsCollection(30 * MINUTE_IN_MILLIS);
         collection.readLegacyNetwork(testFile);
 
@@ -313,7 +309,8 @@ public class NetworkStatsCollectionTest {
             assertEquals(0L, history.getTotalBytes());
 
             // Normal collection should be untouched
-            history = getHistory(collection, plan, TIME_A, TIME_C); i = 0;
+            history = getHistory(collection, plan, TIME_A, TIME_C);
+            i = 0;
             assertEntry(100647, 197, 23649, 185, history.getValues(i++, null));
             assertEntry(100647, 196, 23648, 185, history.getValues(i++, null));
             assertEntry(18323, 76, 15032, 76, history.getValues(i++, null));
@@ -342,7 +339,8 @@ public class NetworkStatsCollectionTest {
 
             // Slice from middle should be untouched
             history = getHistory(collection, plan, TIME_B - HOUR_IN_MILLIS,
-                    TIME_B + HOUR_IN_MILLIS); i = 0;
+                    TIME_B + HOUR_IN_MILLIS);
+            i = 0;
             assertEntry(3821, 23, 4525, 26, history.getValues(i++, null));
             assertEntry(3820, 21, 4524, 26, history.getValues(i++, null));
             assertEntry(91686, 159, 18576, 146, history.getValues(i++, null));
@@ -365,7 +363,8 @@ public class NetworkStatsCollectionTest {
             assertEquals(200000L, history.getTotalBytes());
 
             // Normal collection should be augmented
-            history = getHistory(collection, plan, TIME_A, TIME_C); i = 0;
+            history = getHistory(collection, plan, TIME_A, TIME_C);
+            i = 0;
             assertEntry(100647, 197, 23649, 185, history.getValues(i++, null));
             assertEntry(100647, 196, 23648, 185, history.getValues(i++, null));
             assertEntry(18323, 76, 15032, 76, history.getValues(i++, null));
@@ -397,7 +396,8 @@ public class NetworkStatsCollectionTest {
 
             // Slice from middle should be augmented
             history = getHistory(collection, plan, TIME_B - HOUR_IN_MILLIS,
-                    TIME_B + HOUR_IN_MILLIS); i = 0;
+                    TIME_B + HOUR_IN_MILLIS);
+            i = 0;
             assertEntry(2669, 0, 3161, 0, history.getValues(i++, null));
             assertEntry(2668, 0, 3160, 0, history.getValues(i++, null));
             assertEntry(91686, 159, 18576, 146, history.getValues(i++, null));
@@ -420,7 +420,8 @@ public class NetworkStatsCollectionTest {
             assertEquals(400000L, history.getTotalBytes());
 
             // Normal collection should be augmented
-            history = getHistory(collection, plan, TIME_A, TIME_C); i = 0;
+            history = getHistory(collection, plan, TIME_A, TIME_C);
+            i = 0;
             assertEntry(100647, 197, 23649, 185, history.getValues(i++, null));
             assertEntry(100647, 196, 23648, 185, history.getValues(i++, null));
             assertEntry(18323, 76, 15032, 76, history.getValues(i++, null));
@@ -451,7 +452,8 @@ public class NetworkStatsCollectionTest {
 
             // Slice from middle should be augmented
             history = getHistory(collection, plan, TIME_B - HOUR_IN_MILLIS,
-                    TIME_B + HOUR_IN_MILLIS); i = 0;
+                    TIME_B + HOUR_IN_MILLIS);
+            i = 0;
             assertEntry(5338, 0, 6322, 0, history.getValues(i++, null));
             assertEntry(5337, 0, 6320, 0, history.getValues(i++, null));
             assertEntry(91686, 159, 18576, 146, history.getValues(i++, null));
