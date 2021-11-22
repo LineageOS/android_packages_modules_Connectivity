@@ -306,14 +306,18 @@ public final class CtsNetUtils {
         }
 
         try {
+            if (wasWifiConnected) {
+                // Make sure the callback is registered before turning off WiFi.
+                callback.waitForAvailable();
+            }
             SystemUtil.runShellCommand("svc wifi disable");
             if (wasWifiConnected) {
                 // Ensure we get both an onLost callback and a CONNECTIVITY_ACTION.
                 assertNotNull("Did not receive onLost callback after disabling wifi",
                         callback.waitForLost());
-            }
-            if (wasWifiConnected && expectLegacyBroadcast) {
-                assertTrue("Wifi failed to reach DISCONNECTED state.", receiver.waitForState());
+                if (expectLegacyBroadcast) {
+                    assertTrue("Wifi failed to reach DISCONNECTED state.", receiver.waitForState());
+                }
             }
         } catch (InterruptedException ex) {
             fail("disconnectFromWifi was interrupted");
@@ -599,12 +603,14 @@ public final class CtsNetUtils {
 
         @Override
         public void onAvailable(Network network) {
+            Log.i(TAG, "CtsNetUtils TestNetworkCallback onAvailable " + network);
             currentNetwork = network;
             mAvailableCv.open();
         }
 
         @Override
         public void onLost(Network network) {
+            Log.i(TAG, "CtsNetUtils TestNetworkCallback onLost " + network);
             lastLostNetwork = network;
             if (network.equals(currentNetwork)) {
                 mAvailableCv.close();
