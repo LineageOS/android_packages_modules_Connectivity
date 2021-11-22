@@ -174,6 +174,7 @@ static jboolean com_android_networkstack_tethering_BpfUtils_isEthernet(JNIEnv* e
         case ARPHRD_ETHER:
             return true;
         case ARPHRD_NONE:
+        case ARPHRD_PPP:
         case ARPHRD_RAWIP:  // in Linux 4.14+ rmnet support was upstreamed and this is 519
         case 530:           // this is ARPHRD_RAWIP on some Android 4.9 kernels with rmnet
             return false;
