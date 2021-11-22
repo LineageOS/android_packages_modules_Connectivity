@@ -16,6 +16,7 @@
 
 package com.android.net.module.util
 
+import android.annotation.TargetApi
 import android.net.NetworkCapabilities
 import android.net.NetworkCapabilities.NET_CAPABILITY_CBS
 import android.net.NetworkCapabilities.NET_CAPABILITY_EIMS
@@ -29,6 +30,7 @@ import android.net.NetworkCapabilities.TRANSPORT_TEST
 import android.net.NetworkCapabilities.TRANSPORT_VPN
 import android.net.NetworkCapabilities.TRANSPORT_WIFI
 import android.net.NetworkCapabilities.TRANSPORT_WIFI_AWARE
+import android.os.Build
 import androidx.test.filters.SmallTest
 import androidx.test.runner.AndroidJUnit4
 import com.android.net.module.util.NetworkCapabilitiesUtils.RESTRICTED_CAPABILITIES
@@ -88,7 +90,9 @@ class NetworkCapabilitiesUtilsTest {
         assertTrue(bits contentEquals unpackBits(packedBits))
     }
 
-    @Test
+    // NetworkCapabilities constructor and Builder are not available until R. Mark TargetApi to
+    // ignore the linter error since it's used in only unit test.
+    @Test @TargetApi(Build.VERSION_CODES.R)
     fun testInferRestrictedCapability() {
         val nc = NetworkCapabilities()
         // Default capabilities don't have restricted capability.
