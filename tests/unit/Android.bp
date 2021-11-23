@@ -17,7 +17,7 @@ java_defaults {
         "libbacktrace",
         "libbase",
         "libbinder",
-        "libbpf",
+        "libbpf_bcc",
         "libbpf_android",
         "libc++",
         "libcgrouprc",
