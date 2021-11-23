@@ -34,6 +34,11 @@ android_test {
 
     static_libs: [
         "androidx.test.rules",
+        "compatibility-device-util-axt",
+        "service-appsearch",
+        "truth-prebuilt",
+        "androidx.test.ext.junit",
+        "junit",
         "framework-nearby-pre-jarjar",
         "guava",
         "robolectric_android-all-stub",

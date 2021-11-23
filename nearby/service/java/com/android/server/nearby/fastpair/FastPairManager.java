@@ -75,9 +75,6 @@ public class FastPairManager {
         public void onReceive(Context context, Intent intent) {
             if (intent.getAction().equals(Intent.ACTION_SCREEN_ON)) {
                 Log.d("FastPairService", " screen on");
-                // STOPSHIP(b/202335820): Remove this logic in prod.
-                Locator.getFromContextWrapper(mLocatorContextWrapper, FastPairCacheManager.class)
-                        .printLog();
             } else {
                 Log.d("FastPairService", " screen off");
             }

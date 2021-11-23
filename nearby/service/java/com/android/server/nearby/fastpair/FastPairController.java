@@ -116,10 +116,8 @@ public class FastPairController {
                             item = mFastPairCacheManager.getDiscoveryItem(itemId);
                         } else if (discoveryItem != null) {
                             try {
-                                item =
-                                        new DiscoveryItem(
-                                                mContext,
-                                                Cache.StoredDiscoveryItem.parseFrom(discoveryItem));
+                                item = new DiscoveryItem(mContext,
+                                        Cache.StoredDiscoveryItem.parseFrom(discoveryItem));
                             } catch (InvalidProtocolBufferException e) {
                                 Log.w("FastPairController",
                                         "Error parsing serialized discovery item with size "
