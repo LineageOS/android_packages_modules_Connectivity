@@ -84,6 +84,19 @@ java_defaults {
     ],
 }
 
+java_library {
+    name: "net-utils-dnspacket-common",
+    srcs: [
+    "framework/**/DnsPacket.java",
+    "framework/**/DnsPacketUtils.java",
+    ],
+    sdk_version: "module_current",
+    visibility: [
+        "//packages/services/Iwlan:__subpackages__",
+    ],
+    libs: ["framework-annotations-lib"],
+}
+
 filegroup {
     name: "net-utils-framework-common-srcs",
     srcs: ["framework/**/*.java"],
@@ -91,7 +104,6 @@ filegroup {
     visibility: [
         "//frameworks/base",
         "//packages/modules/Connectivity:__subpackages__",
-        "//frameworks/base/packages/Connectivity/framework",
     ],
 }
 
