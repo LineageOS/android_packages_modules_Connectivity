@@ -52,6 +52,12 @@ import javax.annotation.CheckReturnValue
  * } cleanup {
  *   cleanup code
  * }
+ * Catch blocks can be added with the following syntax :
+ * tryTest {
+ *   testing code
+ * }.catch<ExceptionType> { it ->
+ *   do something to it
+ * }
  *
  * Java doesn't allow this kind of syntax, so instead a function taking 2 lambdas is provided.
  * testAndCleanup(() -> {
@@ -60,10 +66,21 @@ import javax.annotation.CheckReturnValue
  *   cleanup code
  * });
  */
+
 // sc-mainline-prod has an older kotlin that doesn't know about value classes. TODO : Change this
 // to "value class" when aosp no longer merges into sc-mainline-prod.
 @Suppress("INLINE_CLASS_DEPRECATED")
 inline class ExceptionCleanupBlock<T>(val result: Result<T>) {
+    inline infix fun <reified E : Throwable> catch(block: (E) -> T): ExceptionCleanupBlock<T> {
+        val originalException = result.exceptionOrNull()
+        if (originalException !is E) return this
+        return ExceptionCleanupBlock(try {
+            Result.success(block(originalException))
+        } catch (e: Exception) {
+            Result.failure(e)
+        })
+    }
+
     inline infix fun cleanup(block: () -> Unit): T {
         try {
             block()
