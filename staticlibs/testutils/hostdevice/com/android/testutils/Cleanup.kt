@@ -76,7 +76,7 @@ class ExceptionCleanupBlock(val originalException: Exception?) {
 }
 
 @CheckReturnValue
-inline fun tryTest(block: () -> Unit): ExceptionCleanupBlock {
+fun tryTest(block: () -> Unit): ExceptionCleanupBlock {
     try {
         block()
     } catch (e: Exception) {
