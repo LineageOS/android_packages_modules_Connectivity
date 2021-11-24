@@ -18,14 +18,13 @@ package com.android.net.module.util
 
 import android.util.Log
 import com.android.testutils.tryTest
-import kotlin.test.assertFailsWith
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.JUnit4
+import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
-import kotlin.test.fail
 
-private val TAG = CleanupTest::class.toString()
+private val TAG = CleanupTest::class.simpleName
 
 @RunWith(JUnit4::class)
 class CleanupTest {
@@ -49,7 +48,7 @@ class CleanupTest {
     @Test
     fun testThrowTry() {
         var x = 1
-        assertFailsWith<TestException1> {
+        val thrown = assertFailsWith<TestException1> {
             tryTest {
                 x = 2
                 throw TestException1()
@@ -60,13 +59,14 @@ class CleanupTest {
                 Log.e(TAG, "Do nothing")
             }
         }
+        assertTrue(thrown.suppressedExceptions.isEmpty())
         assertTrue(x == 3)
     }
 
     @Test
     fun testThrowCleanup() {
         var x = 1
-        assertFailsWith<TestException2> {
+        val thrown = assertFailsWith<TestException2> {
             tryTest {
                 x = 2
                 Log.e(TAG, "Do nothing")
@@ -77,13 +77,14 @@ class CleanupTest {
                 x = 4
             }
         }
+        assertTrue(thrown.suppressedExceptions.isEmpty())
         assertTrue(x == 3)
     }
 
     @Test
     fun testThrowBoth() {
         var x = 1
-        try {
+        val thrown = assertFailsWith<TestException1> {
             tryTest {
                 x = 2
                 throw TestException1()
@@ -94,10 +95,8 @@ class CleanupTest {
                 throw TestException2()
                 x = 5
             }
-            fail("Expected failure with TestException1")
-        } catch (e: TestException1) {
-            assertTrue(e.suppressedExceptions[0] is TestException2)
         }
+        assertTrue(thrown.suppressedExceptions[0] is TestException2)
         assertTrue(x == 4)
     }
 }
