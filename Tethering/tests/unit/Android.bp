@@ -49,7 +49,6 @@ java_defaults {
         "src/**/*.kt",
     ],
     static_libs: [
-        "TetheringApiCurrentLib",
         "TetheringCommonTests",
         "androidx.test.rules",
         "frameworks-base-testutils",
@@ -85,6 +84,9 @@ java_defaults {
 android_library {
     name: "TetheringTestsLatestSdkLib",
     defaults: ["TetheringTestsDefaults"],
+    static_libs: [
+        "TetheringApiStableLib",
+    ],
     target_sdk_version: "30",
     visibility: [
         "//packages/modules/Connectivity/tests:__subpackages__",
@@ -99,7 +101,13 @@ android_test {
         "device-tests",
         "mts-tethering",
     ],
-    defaults: ["TetheringTestsDefaults"],
+    defaults: [
+        "TetheringTestsDefaults",
+        "ConnectivityNextEnableDefaults",
+    ],
+    static_libs: [
+        "TetheringApiCurrentLib",
+    ],
     compile_multilib: "both",
     jarjar_rules: ":TetheringTestsJarJarRules",
 }

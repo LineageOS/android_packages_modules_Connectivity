@@ -34,6 +34,7 @@ android_test {
     name: "TetheringPrivilegedTests",
     defaults: [
         "TetheringPrivilegedTestsJniDefaults",
+        "ConnectivityNextEnableDefaults",
     ],
     srcs: [
         "src/**/*.java",
