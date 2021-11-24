@@ -63,7 +63,6 @@ class ExceptionCleanupBlock(val originalException: Exception?) {
     inline infix fun cleanup(block: () -> Unit) {
         try {
             block()
-            if (null != originalException) throw originalException
         } catch (e: Exception) {
             if (null == originalException) {
                 throw e
@@ -72,6 +71,7 @@ class ExceptionCleanupBlock(val originalException: Exception?) {
                 throw originalException
             }
         }
+        if (null != originalException) throw originalException
     }
 }
 
