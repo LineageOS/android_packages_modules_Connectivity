@@ -22,6 +22,7 @@ import kotlin.test.assertFailsWith
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.JUnit4
+import kotlin.test.assertTrue
 import kotlin.test.fail
 
 private val TAG = CleanupTest::class.toString()
@@ -38,11 +39,11 @@ class CleanupTest {
             x = 2
             Log.e(TAG, "Do nothing")
         } cleanup {
-            assert(x == 2)
+            assertTrue(x == 2)
             x = 3
             Log.e(TAG, "Do nothing")
         }
-        assert(x == 3)
+        assertTrue(x == 3)
     }
 
     @Test
@@ -54,12 +55,12 @@ class CleanupTest {
                 throw TestException1()
                 x = 4
             } cleanup {
-                assert(x == 2)
+                assertTrue(x == 2)
                 x = 3
                 Log.e(TAG, "Do nothing")
             }
         }
-        assert(x == 3)
+        assertTrue(x == 3)
     }
 
     @Test
@@ -70,13 +71,13 @@ class CleanupTest {
                 x = 2
                 Log.e(TAG, "Do nothing")
             } cleanup {
-                assert(x == 2)
+                assertTrue(x == 2)
                 x = 3
                 throw TestException2()
                 x = 4
             }
         }
-        assert(x == 3)
+        assertTrue(x == 3)
     }
 
     @Test
@@ -88,15 +89,15 @@ class CleanupTest {
                 throw TestException1()
                 x = 3
             } cleanup {
-                assert(x == 2)
+                assertTrue(x == 2)
                 x = 4
                 throw TestException2()
                 x = 5
             }
             fail("Expected failure with TestException1")
         } catch (e: TestException1) {
-            assert(e.suppressedExceptions[0] is TestException2)
+            assertTrue(e.suppressedExceptions[0] is TestException2)
         }
-        assert(x == 4)
+        assertTrue(x == 4)
     }
 }
