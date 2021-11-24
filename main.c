@@ -51,6 +51,7 @@ void print_help() {
   printf("-6 [IPv6 address]\n");
   printf("-m [socket mark]\n");
   printf("-t [tun file descriptor number]\n");
+  printf("-r [read socket descriptor number]\n");
   printf("-w [write socket descriptor number]\n");
 }
 
@@ -61,11 +62,12 @@ int main(int argc, char **argv) {
   struct tun_data tunnel;
   int opt;
   char *uplink_interface = NULL, *plat_prefix = NULL, *mark_str = NULL;
-  char *v4_addr = NULL, *v6_addr = NULL, *tunfd_str = NULL, *write_sock_str = NULL;
+  char *v4_addr = NULL, *v6_addr = NULL, *tunfd_str = NULL, *read_sock_str = NULL,
+       *write_sock_str = NULL;
   uint32_t mark   = MARK_UNSET;
   unsigned len;
 
-  while ((opt = getopt(argc, argv, "i:p:4:6:m:t:w:h")) != -1) {
+  while ((opt = getopt(argc, argv, "i:p:4:6:m:t:r:w:h")) != -1) {
     switch (opt) {
       case 'i':
         uplink_interface = optarg;
@@ -84,6 +86,9 @@ int main(int argc, char **argv) {
         break;
       case 't':
         tunfd_str = optarg;
+        break;
+      case 'r':
+        read_sock_str = optarg;
         break;
       case 'w':
         write_sock_str = optarg;
@@ -116,6 +121,15 @@ int main(int argc, char **argv) {
     exit(1);
   }
 
+  if (read_sock_str != NULL && !parse_int(read_sock_str, &tunnel.read_fd6)) {
+    logmsg(ANDROID_LOG_FATAL, "invalid sock_write %s", read_sock_str);
+    exit(1);
+  }
+  if (!tunnel.read_fd6) {
+    logmsg(ANDROID_LOG_FATAL, "no read_fd6 specified on commandline.");
+    exit(1);
+  }
+
   if (write_sock_str != NULL && !parse_int(write_sock_str, &tunnel.write_fd6)) {
     logmsg(ANDROID_LOG_FATAL, "invalid sock_write %s", write_sock_str);
     exit(1);
@@ -135,9 +149,6 @@ int main(int argc, char **argv) {
          CLATD_VERSION, uplink_interface, mark_str ? mark_str : "(none)",
          plat_prefix ? plat_prefix : "(none)", v4_addr ? v4_addr : "(none)",
          v6_addr ? v6_addr : "(none)");
-
-  // open our raw sockets before dropping privs
-  open_sockets(&tunnel);
 
   configure_interface(uplink_interface, plat_prefix, v4_addr, v6_addr, &tunnel, mark);
 
