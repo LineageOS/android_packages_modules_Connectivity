@@ -179,7 +179,11 @@ android_app {
 
 android_app {
     name: "TetheringNext",
-    defaults: ["TetheringAppDefaults", "TetheringApiLevel"],
+    defaults: [
+        "TetheringAppDefaults",
+        "TetheringApiLevel",
+        "ConnectivityNextEnableDefaults",
+    ],
     static_libs: ["TetheringApiCurrentLib"],
     certificate: "networkstack",
     manifest: "AndroidManifest.xml",
