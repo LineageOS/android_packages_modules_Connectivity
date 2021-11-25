@@ -145,8 +145,19 @@ int main(int argc, char **argv) {
     exit(1);
   }
 
+  Global_Clatd_Config.native_ipv6_interface = uplink_interface;
+  if (!plat_prefix || inet_pton(AF_INET6, plat_prefix, &Global_Clatd_Config.plat_subnet) <= 0) {
+    logmsg(ANDROID_LOG_FATAL, "invalid IPv6 address specified for plat prefix: %s", plat_prefix);
+    exit(1);
+  }
+
   if (!v4_addr || !inet_pton(AF_INET, v4_addr, &Global_Clatd_Config.ipv4_local_subnet.s_addr)) {
     logmsg(ANDROID_LOG_FATAL, "Invalid IPv4 address %s", v4_addr);
+    exit(1);
+  }
+
+  if (!v6_addr || !inet_pton(AF_INET6, v6_addr, &Global_Clatd_Config.ipv6_local_subnet)) {
+    logmsg(ANDROID_LOG_FATAL, "Invalid source address %s", v6_addr);
     exit(1);
   }
 
@@ -154,8 +165,6 @@ int main(int argc, char **argv) {
          CLATD_VERSION, uplink_interface, mark_str ? mark_str : "(none)",
          plat_prefix ? plat_prefix : "(none)", v4_addr ? v4_addr : "(none)",
          v6_addr ? v6_addr : "(none)");
-
-  configure_interface(uplink_interface, plat_prefix, v6_addr, &tunnel);
 
   // run under a regular user with no capabilities
   drop_root_and_caps();
