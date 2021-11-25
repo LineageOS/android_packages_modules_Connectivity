@@ -84,7 +84,7 @@ inline class TryExpr<T>(val result: Result<T>) {
     inline infix fun cleanup(block: () -> Unit): T {
         try {
             block()
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             val originalException = result.exceptionOrNull()
             if (null == originalException) {
                 throw e
@@ -101,7 +101,7 @@ inline class TryExpr<T>(val result: Result<T>) {
 fun <T> tryTest(block: () -> T) = TryExpr(
         try {
             Result.success(block())
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Result.failure(e)
         })
 
