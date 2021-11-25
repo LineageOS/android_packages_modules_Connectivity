@@ -70,11 +70,11 @@ import javax.annotation.CheckReturnValue
 // sc-mainline-prod has an older kotlin that doesn't know about value classes. TODO : Change this
 // to "value class" when aosp no longer merges into sc-mainline-prod.
 @Suppress("INLINE_CLASS_DEPRECATED")
-inline class ExceptionCleanupBlock<T>(val result: Result<T>) {
-    inline infix fun <reified E : Throwable> catch(block: (E) -> T): ExceptionCleanupBlock<T> {
+inline class TryExpr<T>(val result: Result<T>) {
+    inline infix fun <reified E : Throwable> catch(block: (E) -> T): TryExpr<T> {
         val originalException = result.exceptionOrNull()
         if (originalException !is E) return this
-        return ExceptionCleanupBlock(try {
+        return TryExpr(try {
             Result.success(block(originalException))
         } catch (e: Exception) {
             Result.failure(e)
@@ -98,7 +98,7 @@ inline class ExceptionCleanupBlock<T>(val result: Result<T>) {
 }
 
 @CheckReturnValue
-fun <T> tryTest(block: () -> T) = ExceptionCleanupBlock(
+fun <T> tryTest(block: () -> T) = TryExpr(
         try {
             Result.success(block())
         } catch (e: Exception) {
