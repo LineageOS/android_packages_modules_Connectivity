@@ -47,7 +47,7 @@ public class RtNetlinkLinkMessageTest {
     private static final String RTM_NEWLINK_HEX =
             "64000000100000000000000000000000"   // struct nlmsghr
             + "000001001E0000000210000000000000" // struct ifinfo
-            + "0A000300776C616E30000000"         // IFLA_IFNAME
+            + "0A000300776C616E30000000"         // IFLA_IFNAME(wlan0)
             + "08000D00B80B0000"                 // IFLA_PROTINFO
             + "0500100002000000"                 // IFLA_OPERSTATE
             + "0500110001000000"                 // IFLA_LINKMODE
@@ -88,12 +88,47 @@ public class RtNetlinkLinkMessageTest {
         assertTrue(linkMsg.getInterfaceName().equals("wlan0"));
     }
 
+    /**
+     * Example:
+     * # adb shell ip tunnel add トン0 mode sit local any remote 8.8.8.8
+     * # adb shell ip link show | grep トン
+     * 33: トン0@NONE: <POINTOPOINT,NOARP> mtu 1480 qdisc noop state DOWN mode DEFAULT group
+     *     default qlen 1000
+     *
+     * IFLA_IFNAME attribute: \x0c\x00\x03\x00\xe3\x83\x88\xe3\x83\xb3\x30\x00
+     *     length: 0x000c
+     *     type: 0x0003
+     *     value: \xe3\x83\x88\xe3\x83\xb3\x30\x00
+     *            ト (\xe3\x83\x88)
+     *            ン (\xe3\x83\xb3)
+     *            0  (\x30)
+     *            null terminated (\x00)
+     */
+    private static final String RTM_NEWLINK_UTF8_HEX =
+            "34000000100000000000000000000000"   // struct nlmsghr
+            + "000001001E0000000210000000000000" // struct ifinfo
+            + "08000400DC050000"                 // IFLA_MTU
+            + "0A00010092C3E3C9374E0000"         // IFLA_ADDRESS
+            + "0C000300E38388E383B33000";        // IFLA_IFNAME(トン0)
+
+    @Test
+    public void testParseRtmNewLink_utf8Ifname() {
+        final ByteBuffer byteBuffer = toByteBuffer(RTM_NEWLINK_UTF8_HEX);
+        byteBuffer.order(ByteOrder.LITTLE_ENDIAN);  // For testing.
+        final NetlinkMessage msg = NetlinkMessage.parse(byteBuffer, NETLINK_ROUTE);
+        assertNotNull(msg);
+        assertTrue(msg instanceof RtNetlinkLinkMessage);
+        final RtNetlinkLinkMessage linkMsg = (RtNetlinkLinkMessage) msg;
+
+        assertTrue(linkMsg.getInterfaceName().equals("トン0"));
+    }
+
     private static final String RTM_NEWLINK_PACK_HEX =
             "34000000100000000000000000000000"   // struct nlmsghr
             + "000001001E0000000210000000000000" // struct ifinfo
             + "08000400DC050000"                 // IFLA_MTU
             + "0A00010092C3E3C9374E0000"         // IFLA_ADDRESS
-            + "0A000300776C616E30000000";        // IFLA_IFNAME
+            + "0A000300776C616E30000000";        // IFLA_IFNAME(wlan0)
 
     @Test
     public void testPackRtmNewLink() {
@@ -117,7 +152,7 @@ public class RtNetlinkLinkMessageTest {
             + "0500100002000000"                 // IFLA_OPERSTATE
             + "0800010092C3E3C9"                 // IFLA_ADDRESS(truncated)
             + "0500110001000000"                 // IFLA_LINKMODE
-            + "0A000300776C616E30000000"         // IFLA_IFNAME
+            + "0A000300776C616E30000000"         // IFLA_IFNAME(wlan0)
             + "08000400DC050000";                // IFLA_MTU
 
     @Test
