@@ -42,26 +42,34 @@ java_library {
 }
 
 java_library {
-  // Consider using net-tests-utils instead if writing device code.
-  // That library has a lot more useful tools into it for users that
-  // work on Android and includes this lib.
-  name: "net-tests-utils-host-device-common",
-  srcs: [
-      "hostdevice/**/*.java",
-      "hostdevice/**/*.kt",
-  ],
-  host_supported: true,
-  visibility: [
-      "//frameworks/libs/net/common/tests:__subpackages__",
-      "//frameworks/libs/net/client-libs/tests:__subpackages__",
-  ],
-  libs: [
-      "jsr305",
-  ],
-  static_libs: [
-      "kotlin-test"
-  ],
-  lint: { strict_updatability_linting: true },
+    // Consider using net-tests-utils instead if writing device code.
+    // That library has a lot more useful tools into it for users that
+    // work on Android and includes this lib.
+    name: "net-tests-utils-host-device-common",
+    srcs: [
+        "hostdevice/**/*.java",
+        "hostdevice/**/*.kt",
+    ],
+    host_supported: true,
+    visibility: [
+        "//frameworks/libs/net/common/tests:__subpackages__",
+        "//frameworks/libs/net/client-libs/tests:__subpackages__",
+    ],
+    // sc-mainline-prod uses an old version of Kotlin that used
+    // to reserve the right to make breaking changes to the
+    // Result type and disallowed returning an instance of it.
+    // Later versions allowed this and there was never a change,
+    // so no matter the version returning Result is always fine,
+    // but on sc-mainline-prod the compiler rejects it without
+    // the following flag.
+    kotlincflags: ["-Xallow-result-return-type"],
+    libs: [
+        "jsr305",
+    ],
+    static_libs: [
+        "kotlin-test"
+    ],
+    lint: { strict_updatability_linting: true },
 }
 
 java_test_host {

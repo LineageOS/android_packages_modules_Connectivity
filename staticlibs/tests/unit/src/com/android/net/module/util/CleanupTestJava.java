@@ -35,14 +35,16 @@ public class CleanupTestJava {
     @Test
     public void testNotThrow() {
         final AtomicInteger x = new AtomicInteger(1);
-        testAndCleanup(() -> {
+        final int a = testAndCleanup(() -> {
             x.compareAndSet(1, 2);
             Log.e(TAG, "Do nothing");
+            return 6;
         }, () -> {
                 x.compareAndSet(2, 3);
                 Log.e(TAG, "Do nothing");
             });
         assertEquals(3, x.get());
+        assertEquals(6, a);
     }
 
     @Test
