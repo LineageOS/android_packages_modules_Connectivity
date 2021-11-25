@@ -21,8 +21,10 @@ import com.android.testutils.tryTest
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.JUnit4
+import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
+import kotlin.test.fail
 
 private val TAG = CleanupTest::class.simpleName
 
@@ -104,6 +106,70 @@ class CleanupTest {
 
     @Test
     fun testReturn() {
+        val resultIfSuccess = 11
+        val resultIfException = 12
+        fun doTestReturn(crash: Boolean) = tryTest {
+            if (crash) throw RuntimeException() else resultIfSuccess
+        }.catch<RuntimeException> {
+            resultIfException
+        } cleanup {}
+
         assertTrue(6 == tryTest { 6 } cleanup { Log.e(TAG, "tested") })
+        assertEquals(resultIfSuccess, doTestReturn(crash = false))
+        assertEquals(resultIfException, doTestReturn(crash = true))
+    }
+
+    @Test
+    fun testCatch() {
+        var x = 1
+        tryTest {
+            x = 2
+            throw TestException1()
+            x = 3
+        }.catch<TestException1> {
+            x = 4
+        }.catch<TestException2> {
+            x = 5
+        } cleanup {
+            assertTrue(x == 4)
+            x = 6
+        }
+        assertTrue(x == 6)
+    }
+
+    @Test
+    fun testNotCatch() {
+        var x = 1
+        assertFailsWith<TestException1> {
+            tryTest {
+                x = 2
+                throw TestException1()
+            }.catch<TestException2> {
+                fail("Caught TestException2 instead of TestException1")
+            } cleanup {
+                assertTrue(x == 2)
+                x = 3
+            }
+        }
+        assertTrue(x == 3)
+    }
+
+    @Test
+    fun testThrowInCatch() {
+        var x = 1
+        val thrown = assertFailsWith<TestException2> {
+            tryTest {
+                x = 2
+                throw TestException1()
+            }.catch<TestException1> {
+                x = 3
+                throw TestException2()
+            } cleanup {
+                assertTrue(x == 3)
+                x = 4
+            }
+        }
+        assertTrue(x == 4)
+        assertTrue(thrown.suppressedExceptions.isEmpty())
     }
 }
