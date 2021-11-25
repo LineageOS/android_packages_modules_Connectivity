@@ -80,6 +80,7 @@ java_library {
     apex_available: [
         "com.android.tethering",
     ],
+    lint: { strict_updatability_linting: true },
 }
 
 java_library {
@@ -96,6 +97,7 @@ java_library {
     apex_available: [
         "com.android.tethering",
     ],
+    lint: { strict_updatability_linting: true },
 }
 
 java_library {
@@ -110,6 +112,7 @@ java_library {
     apex_available: [
         "com.android.tethering",
     ],
+    lint: { strict_updatability_linting: true },
 }
 
 filegroup {
