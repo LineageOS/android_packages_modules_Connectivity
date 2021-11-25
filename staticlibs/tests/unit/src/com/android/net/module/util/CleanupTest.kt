@@ -34,15 +34,17 @@ class CleanupTest {
     @Test
     fun testNotThrow() {
         var x = 1
-        tryTest {
+        val result = tryTest {
             x = 2
             Log.e(TAG, "Do nothing")
+            6
         } cleanup {
             assertTrue(x == 2)
             x = 3
             Log.e(TAG, "Do nothing")
         }
         assertTrue(x == 3)
+        assertTrue(result == 6)
     }
 
     @Test
@@ -98,5 +100,10 @@ class CleanupTest {
         }
         assertTrue(thrown.suppressedExceptions[0] is TestException2)
         assertTrue(x == 4)
+    }
+
+    @Test
+    fun testReturn() {
+        assertTrue(6 == tryTest { 6 } cleanup { Log.e(TAG, "tested") })
     }
 }
