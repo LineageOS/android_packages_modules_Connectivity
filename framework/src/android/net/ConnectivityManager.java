@@ -921,7 +921,7 @@ public class ConnectivityManager {
      * @hide
      */
     @SystemApi(client = SystemApi.Client.MODULE_LIBRARIES)
-    public static final int BLOCKED_METERED_REASON_MASK = 0xffff0000;
+    public static final int BLOCKED_METERED_REASON_MASK = 0xffff0008;
 
     @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.P, trackingBug = 130143562)
     private final IConnectivityManager mService;
