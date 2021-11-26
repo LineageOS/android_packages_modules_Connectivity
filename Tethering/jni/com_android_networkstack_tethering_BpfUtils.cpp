@@ -26,6 +26,7 @@
 #include <net/if.h>
 #include <stdio.h>
 #include <sys/socket.h>
+#include <sys/utsname.h>
 
 // TODO: use unique_fd.
 #define BPF_FD_JUST_USE_INT
@@ -158,6 +159,37 @@ static int hardwareAddressType(const char* interface) {
     return rv;
 }
 
+// -----------------------------------------------------------------------------
+// TODO - just use BpfUtils.h once that is available in sc-mainline-prod and has kernelVersion()
+//
+// In the mean time copying verbatim from:
+//   system/bpf/libbpf_android/include/bpf/BpfUtils.h
+// and
+//   system/bpf/libbpf_android/BpfUtils.cpp
+
+#define KVER(a, b, c) (((a) << 24) + ((b) << 16) + (c))
+
+static unsigned kernelVersion() {
+    struct utsname buf;
+    int ret = uname(&buf);
+    if (ret) return 0;
+
+    unsigned kver_major;
+    unsigned kver_minor;
+    unsigned kver_sub;
+    char discard;
+    ret = sscanf(buf.release, "%u.%u.%u%c", &kver_major, &kver_minor, &kver_sub, &discard);
+    // Check the device kernel version
+    if (ret < 3) return 0;
+
+    return KVER(kver_major, kver_minor, kver_sub);
+}
+
+static inline bool isAtLeastKernelVersion(unsigned major, unsigned minor, unsigned sub) {
+    return kernelVersion() >= KVER(major, minor, sub);
+}
+// -----------------------------------------------------------------------------
+
 static jboolean com_android_networkstack_tethering_BpfUtils_isEthernet(JNIEnv* env, jobject clazz,
                                                                        jstring iface) {
     ScopedUtfChars interface(env, iface);
@@ -170,13 +202,30 @@ static jboolean com_android_networkstack_tethering_BpfUtils_isEthernet(JNIEnv* e
         return false;
     }
 
+    // Backwards compatibility with pre-GKI kernels that use various custom
+    // ARPHRD_* for their cellular interface
+    switch (rv) {
+        // ARPHRD_PUREIP on at least some Mediatek Android kernels
+        // example: wembley with 4.19 kernel
+        case 520:
+        // in Linux 4.14+ rmnet support was upstreamed and ARHRD_RAWIP became 519,
+        // but it is 530 on at least some Qualcomm Android 4.9 kernels with rmnet
+        // example: Pixel 3 family
+        case 530:
+            // >5.4 kernels are GKI2.0 and thus upstream compatible, however 5.10
+            // shipped with Android S, so (for safety) let's limit ourselves to
+            // >5.10, ie. 5.11+ as a guarantee we're on Android T+ and thus no
+            // longer need this non-upstream compatibility logic
+            static bool is_pre_5_11_kernel = !isAtLeastKernelVersion(5, 11, 0);
+            if (is_pre_5_11_kernel) return false;
+    }
+
     switch (rv) {
         case ARPHRD_ETHER:
             return true;
         case ARPHRD_NONE:
         case ARPHRD_PPP:
-        case ARPHRD_RAWIP:  // in Linux 4.14+ rmnet support was upstreamed and this is 519
-        case 530:           // this is ARPHRD_RAWIP on some Android 4.9 kernels with rmnet
+        case ARPHRD_RAWIP:
             return false;
         default:
             jniThrowExceptionFmt(env, "java/io/IOException",
