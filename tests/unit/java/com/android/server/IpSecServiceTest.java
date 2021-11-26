@@ -122,18 +122,18 @@ public class IpSecServiceTest {
 
     Context mMockContext;
     INetd mMockNetd;
-    IpSecService.IpSecServiceConfiguration mMockIpSecSrvConfig;
+    IpSecService.Dependencies mMockDeps;
     IpSecService mIpSecService;
 
     @Before
     public void setUp() throws Exception {
         mMockContext = mock(Context.class);
         mMockNetd = mock(INetd.class);
-        mMockIpSecSrvConfig = mock(IpSecService.IpSecServiceConfiguration.class);
-        mIpSecService = new IpSecService(mMockContext, mMockIpSecSrvConfig);
+        mMockDeps = mock(IpSecService.Dependencies.class);
+        mIpSecService = new IpSecService(mMockContext, mMockDeps);
 
         // Injecting mock netd
-        when(mMockIpSecSrvConfig.getNetdInstance()).thenReturn(mMockNetd);
+        when(mMockDeps.getNetdInstance(mMockContext)).thenReturn(mMockNetd);
     }
 
     @Test
@@ -611,7 +611,7 @@ public class IpSecServiceTest {
     public void testOpenUdpEncapSocketTagsSocket() throws Exception {
         IpSecService.UidFdTagger mockTagger = mock(IpSecService.UidFdTagger.class);
         IpSecService testIpSecService = new IpSecService(
-                mMockContext, mMockIpSecSrvConfig, mockTagger);
+                mMockContext, mMockDeps, mockTagger);
 
         IpSecUdpEncapResponse udpEncapResp =
                 testIpSecService.openUdpEncapsulationSocket(0, new Binder());
