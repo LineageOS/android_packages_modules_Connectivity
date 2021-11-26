@@ -22,6 +22,14 @@ import com.android.testutils.ExceptionUtils.ThrowingRunnable
 import com.android.testutils.ExceptionUtils.ThrowingSupplier
 import javax.annotation.CheckReturnValue
 
+@CheckReturnValue
+fun <T> tryTest(block: () -> T) = TryExpr(
+        try {
+            Result.success(block())
+        } catch (e: Throwable) {
+            Result.failure(e)
+        })
+
 /**
  * Utility to do cleanup in tests without replacing exceptions with those from a finally block.
  *
@@ -67,8 +75,8 @@ import javax.annotation.CheckReturnValue
  * });
  */
 
-// sc-mainline-prod has an older kotlin that doesn't know about value classes. TODO : Change this
-// to "value class" when aosp no longer merges into sc-mainline-prod.
+// Some downstream branches have an older kotlin that doesn't know about value classes.
+// TODO : Change this to "value class" when aosp no longer merges into such branches.
 @Suppress("INLINE_CLASS_DEPRECATED")
 inline class TryExpr<T>(val result: Result<T>) {
     inline infix fun <reified E : Throwable> catch(block: (E) -> T): TryExpr<T> {
@@ -96,14 +104,6 @@ inline class TryExpr<T>(val result: Result<T>) {
         return result.getOrThrow()
     }
 }
-
-@CheckReturnValue
-fun <T> tryTest(block: () -> T) = TryExpr(
-        try {
-            Result.success(block())
-        } catch (e: Throwable) {
-            Result.failure(e)
-        })
 
 // Java support
 fun <T> testAndCleanup(tryBlock: ThrowingSupplier<T>, cleanupBlock: ThrowingRunnable): T {
