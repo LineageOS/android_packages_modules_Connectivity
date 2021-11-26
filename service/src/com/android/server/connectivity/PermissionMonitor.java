@@ -648,24 +648,17 @@ public class PermissionMonitor {
                 + ", nPerm=(" + permissionToString(permission) + "/"
                 + permissionToString(currentPermission) + ")"
                 + ", tPerm=" + permissionToString(trafficPerm));
-        if (permission == PERMISSION_SYSTEM) {
-            // An app with this UID still has the SYSTEM permission.
-            // Therefore, this UID must already have the SYSTEM permission.
-            // Nothing to do.
-            return;
-        }
-        // If the permissions of this UID have not changed, do nothing.
-        if (permission == currentPermission) return;
-
-        final SparseIntArray apps = new SparseIntArray();
-        if (permission != PERMISSION_NONE) {
-            mUidToNetworkPerm.put(uid, permission);
-            apps.put(uid, permission);
-            sendUidsNetworkPermission(apps, true);
-        } else {
-            mUidToNetworkPerm.delete(uid);
-            apps.put(uid, PERMISSION_NETWORK);  // doesn't matter which permission we pick here
-            sendUidsNetworkPermission(apps, false);
+        if (permission != currentPermission) {
+            final SparseIntArray apps = new SparseIntArray();
+            if (permission == PERMISSION_NONE) {
+                mUidToNetworkPerm.delete(uid);
+                apps.put(uid, PERMISSION_NETWORK);  // doesn't matter which permission we pick here
+                sendUidsNetworkPermission(apps, false);
+            } else {
+                mUidToNetworkPerm.put(uid, permission);
+                apps.put(uid, permission);
+                sendUidsNetworkPermission(apps, true);
+            }
         }
     }
 
