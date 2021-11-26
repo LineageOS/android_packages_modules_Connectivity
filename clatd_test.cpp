@@ -625,24 +625,6 @@ TEST_F(ClatdTest, TestIPv6PrefixEqual) {
   EXPECT_FALSE(ipv6_prefix_equal(&subnet2, &Global_Clatd_Config.ipv6_local_subnet));
 }
 
-TEST_F(ClatdTest, ConfigureTunIpManual) {
-  // Create an interface for configure_tun_ip to configure and bring up.
-  TunInterface v4Iface;
-  ASSERT_EQ(0, v4Iface.init());
-  struct tun_data tunnel = makeTunData();
-  strlcpy(tunnel.device4, v4Iface.name().c_str(), sizeof(tunnel.device4));
-
-  configure_tun_ip(&tunnel, "192.0.2.1" /* v4_addr */, 1472);
-  EXPECT_EQ(inet_addr("192.0.2.1"), Global_Clatd_Config.ipv4_local_subnet.s_addr);
-
-  union anyip *ip = getinterface_ip(v4Iface.name().c_str(), AF_INET);
-  ASSERT_NE(nullptr, ip);
-  EXPECT_EQ(inet_addr("192.0.2.1"), ip->ip4.s_addr);
-  free(ip);
-
-  v4Iface.destroy();
-}
-
 TEST_F(ClatdTest, DataSanitycheck) {
   // Sanity checks the data.
   uint8_t v4_header[] = { IPV4_UDP_HEADER };
