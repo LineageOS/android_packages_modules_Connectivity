@@ -55,8 +55,8 @@ java_library {
         "//frameworks/libs/net/common/tests:__subpackages__",
         "//frameworks/libs/net/client-libs/tests:__subpackages__",
     ],
-    // sc-mainline-prod uses an old version of Kotlin that used
-    // to reserve the right to make breaking changes to the
+    // There are downstream branches using an old version of Kotlin
+    // that used to reserve the right to make breaking changes to the
     // Result type and disallowed returning an instance of it.
     // Later versions allowed this and there was never a change,
     // so no matter the version returning Result is always fine,
