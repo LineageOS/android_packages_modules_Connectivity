@@ -38,7 +38,6 @@ import static android.content.pm.PackageInfo.REQUESTED_PERMISSION_GRANTED;
 import static android.content.pm.PackageManager.FEATURE_WIFI;
 import static android.content.pm.PackageManager.FEATURE_WIFI_DIRECT;
 import static android.content.pm.PackageManager.GET_PERMISSIONS;
-import static android.content.pm.PackageManager.MATCH_ANY_USER;
 import static android.content.pm.PackageManager.PERMISSION_DENIED;
 import static android.content.pm.PackageManager.PERMISSION_GRANTED;
 import static android.net.ConnectivityManager.ACTION_CAPTIVE_PORTAL_SIGN_IN;
@@ -2006,7 +2005,7 @@ public class ConnectivityServiceTest {
                 buildPackageInfo(/* SYSTEM */ false, APP1_UID),
                 buildPackageInfo(/* SYSTEM */ false, APP2_UID),
                 buildPackageInfo(/* SYSTEM */ false, VPN_UID)
-        })).when(mPackageManager).getInstalledPackages(eq(GET_PERMISSIONS | MATCH_ANY_USER));
+        })).when(mPackageManager).getInstalledPackagesAsUser(eq(GET_PERMISSIONS), anyInt());
 
         // Create a fake always-on VPN package.
         final int userId = UserHandle.getCallingUserId();
@@ -3334,7 +3333,7 @@ public class ConnectivityServiceTest {
     private void grantUsingBackgroundNetworksPermissionForUid(
             final int uid, final String packageName) throws Exception {
         doReturn(buildPackageInfo(true /* hasSystemPermission */, uid)).when(mPackageManager)
-                .getPackageInfo(eq(packageName), eq(GET_PERMISSIONS | MATCH_ANY_USER));
+                .getPackageInfo(eq(packageName), eq(GET_PERMISSIONS));
         mService.mPermissionMonitor.onPackageAdded(packageName, uid);
     }
 
