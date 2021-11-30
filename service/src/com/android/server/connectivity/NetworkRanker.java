@@ -63,8 +63,6 @@ public class NetworkRanker {
         NetworkCapabilities getCapsNoCopy();
     }
 
-    private static final boolean USE_POLICY_RANKING = true;
-
     public NetworkRanker() { }
 
     /**
@@ -77,11 +75,7 @@ public class NetworkRanker {
         final ArrayList<NetworkAgentInfo> candidates = filter(nais, nai -> nai.satisfies(request));
         if (candidates.size() == 1) return candidates.get(0); // Only one potential satisfier
         if (candidates.size() <= 0) return null; // No network can satisfy this request
-        if (USE_POLICY_RANKING) {
-            return getBestNetworkByPolicy(candidates, currentSatisfier);
-        } else {
-            return getBestNetworkByLegacyInt(candidates);
-        }
+        return getBestNetworkByPolicy(candidates, currentSatisfier);
     }
 
     // Transport preference order, if it comes down to that.
@@ -278,23 +272,6 @@ public class NetworkRanker {
         return candidates.get(0);
     }
 
-    // TODO : switch to the policy implementation and remove
-    // Almost equivalent to Collections.max(nais), but allows returning null if no network
-    // satisfies the request.
-    private NetworkAgentInfo getBestNetworkByLegacyInt(
-            @NonNull final Collection<NetworkAgentInfo> nais) {
-        NetworkAgentInfo bestNetwork = null;
-        int bestScore = Integer.MIN_VALUE;
-        for (final NetworkAgentInfo nai : nais) {
-            final int naiScore = nai.getCurrentScore();
-            if (naiScore > bestScore) {
-                bestNetwork = nai;
-                bestScore = naiScore;
-            }
-        }
-        return bestNetwork;
-    }
-
     /**
      * Returns whether a {@link Scoreable} has a chance to beat a champion network for a request.
      *
@@ -322,30 +299,11 @@ public class NetworkRanker {
         // If there is no satisfying network, then this network can beat, because some network
         // is always better than no network.
         if (null == champion) return true;
-        if (USE_POLICY_RANKING) {
-            // If there is no champion, the offer can always beat.
-            // Otherwise rank them.
-            final ArrayList<Scoreable> candidates = new ArrayList<>();
-            candidates.add(champion);
-            candidates.add(contestant);
-            return contestant == getBestNetworkByPolicy(candidates, champion);
-        } else {
-            return mightBeatByLegacyInt(champion.getScore(), contestant);
-        }
-    }
-
-    /**
-     * Returns whether a contestant might beat a champion according to the legacy int.
-     */
-    private boolean mightBeatByLegacyInt(@Nullable final FullScore championScore,
-            @NonNull final Scoreable contestant) {
-        final int offerIntScore;
-        if (contestant.getCapsNoCopy().hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)) {
-            // If the offer might have Internet access, then it might validate.
-            offerIntScore = contestant.getScore().getLegacyIntAsValidated();
-        } else {
-            offerIntScore = contestant.getScore().getLegacyInt();
-        }
-        return championScore.getLegacyInt() < offerIntScore;
+        // If there is no champion, the offer can always beat.
+        // Otherwise rank them.
+        final ArrayList<Scoreable> candidates = new ArrayList<>();
+        candidates.add(champion);
+        candidates.add(contestant);
+        return contestant == getBestNetworkByPolicy(candidates, champion);
     }
 }
