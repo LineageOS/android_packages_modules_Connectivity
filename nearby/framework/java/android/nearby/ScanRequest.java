@@ -38,12 +38,6 @@ import java.util.Objects;
  */
 public final class ScanRequest implements Parcelable {
 
-    /** @hide **/
-    @Retention(RetentionPolicy.SOURCE)
-    @IntDef({SCAN_TYPE_FAST_PAIR, SCAN_TYPE_NEARBY_SHARE, SCAN_TYPE_NEARBY_PRESENCE,
-            SCAN_TYPE_EXPOSURE_NOTIFICATION})
-    public @interface ScanType{}
-
     /** Scan type for scanning devices using fast pair protocol. */
     public static final int SCAN_TYPE_FAST_PAIR = 1;
     /** Scan type for scanning devices using nearby share protocol. */
@@ -52,13 +46,84 @@ public final class ScanRequest implements Parcelable {
     public static final int SCAN_TYPE_NEARBY_PRESENCE = 3;
     /** Scan type for scanning devices using exposure notification protocol. */
     public static final int SCAN_TYPE_EXPOSURE_NOTIFICATION = 4;
+    /** Scan mode uses highest duty cycle. */
+    public static final int SCAN_MODE_LOW_LATENCY = 2;
+    /** Scan in balanced power mode.
+     *  Scan results are returned at a rate that provides a good trade-off between scan
+     *  frequency and power consumption.
+     */
+    public static final int SCAN_MODE_BALANCED = 1;
+    /** Perform scan in low power mode. This is the default scan mode. */
+    public static final int SCAN_MODE_LOW_POWER = 0;
+    /**
+     * A special scan mode. Applications using this scan mode will passively listen for other scan
+     * results without starting BLE scans themselves.
+     */
+    public static final int SCAN_MODE_NO_POWER = -1;
+    public static final Creator<ScanRequest> CREATOR = new Creator<ScanRequest>() {
+        @Override
+        public ScanRequest createFromParcel(Parcel in) {
+            return new ScanRequest(
+                    /* scanType= */ in.readInt(),
+                    /* scanMode= */ in.readInt(),
+                    /* enableBle= */ in.readBoolean(),
+                    /* workSource= */ in.readTypedObject(WorkSource.CREATOR));
+        }
 
+        @Override
+        public ScanRequest[] newArray(int size) {
+            return new ScanRequest[size];
+        }
+    };
     private final @ScanType int mScanType;
-    private final @Nullable WorkSource mWorkSource;
+    private final @ScanMode int mScanMode;
+    private final boolean mEnableBle;
+    private final WorkSource mWorkSource;
 
-    private ScanRequest(@ScanType int scanType, @Nullable WorkSource workSource) {
+    private ScanRequest(@ScanType int scanType, @ScanMode int scanMode, boolean enableBle,
+            WorkSource workSource) {
         mScanType = scanType;
+        mScanMode = scanMode;
+        mEnableBle = enableBle;
         mWorkSource = workSource;
+    }
+
+    /**
+     * Convert scan mode to readable string.
+     */
+    public static String scanModeToString(@ScanMode int scanMode) {
+        switch (scanMode) {
+            case SCAN_MODE_LOW_LATENCY:
+                return "SCAN_MODE_LOW_LATENCY";
+            case SCAN_MODE_BALANCED:
+                return "SCAN_MODE_BALANCED";
+            case SCAN_MODE_LOW_POWER:
+                return "SCAN_MODE_LOW_POWER";
+            case SCAN_MODE_NO_POWER:
+                return "SCAN_MODE_NO_POWER";
+            default:
+                return "SCAN_MODE_INVALID";
+        }
+    }
+
+    /**
+     * Returns true if an integer is a defined scan type.
+     */
+    public static boolean isValidScanType(int scanType) {
+        return scanType == SCAN_TYPE_FAST_PAIR
+                || scanType == SCAN_TYPE_NEARBY_SHARE
+                || scanType == SCAN_TYPE_NEARBY_PRESENCE
+                || scanType == SCAN_TYPE_EXPOSURE_NOTIFICATION;
+    }
+
+    /**
+     * Returns true if an integer is a defined scan mode.
+     */
+    public static boolean isValidScanMode(int scanMode) {
+        return scanMode == SCAN_MODE_LOW_LATENCY
+                || scanMode == SCAN_MODE_BALANCED
+                || scanMode == SCAN_MODE_LOW_POWER
+                || scanMode == SCAN_MODE_NO_POWER;
     }
 
     /**
@@ -69,27 +134,27 @@ public final class ScanRequest implements Parcelable {
     }
 
     /**
+     * Returns the scan mode for this request.
+     */
+    public @ScanMode int getScanMode() {
+        return mScanMode;
+    }
+
+    /**
+     * Returns if Bluetooth Low Energy enabled for scanning.
+     */
+    public boolean isEnableBle() {
+        return mEnableBle;
+    }
+
+    /**
      * Returns the work source used for power attribution of this request.
      *
      * @hide
      */
-    public @Nullable WorkSource getWorkSource() {
+    public WorkSource getWorkSource() {
         return mWorkSource;
     }
-
-    public static final Creator<ScanRequest> CREATOR = new Creator<ScanRequest>() {
-        @Override
-        public ScanRequest createFromParcel(Parcel in) {
-            return new ScanRequest(
-                    /* scanType= */ in.readInt(),
-                    /* workSource= */ in.readTypedObject(WorkSource.CREATOR));
-        }
-
-        @Override
-        public ScanRequest[] newArray(int size) {
-            return new ScanRequest[size];
-        }
-    };
 
     @Override
     public int describeContents() {
@@ -101,9 +166,9 @@ public final class ScanRequest implements Parcelable {
         StringBuilder stringBuilder = new StringBuilder();
         stringBuilder.append("Request[")
                 .append("scanType=").append(mScanType);
-        if (mWorkSource != null && !mWorkSource.isEmpty()) {
-            stringBuilder.append(", workSource=").append(mWorkSource);
-        }
+        stringBuilder.append(", scanMode=").append(scanModeToString(mScanMode));
+        stringBuilder.append(", enableBle=").append(mEnableBle);
+        stringBuilder.append(", workSource=").append(mWorkSource);
         stringBuilder.append("]");
         return stringBuilder.toString();
     }
@@ -111,6 +176,8 @@ public final class ScanRequest implements Parcelable {
     @Override
     public void writeToParcel(@NonNull Parcel dest, int flags) {
         dest.writeInt(mScanType);
+        dest.writeInt(mScanMode);
+        dest.writeBoolean(mEnableBle);
         dest.writeTypedObject(mWorkSource, /* parcelableFlags= */0);
     }
 
@@ -119,26 +186,46 @@ public final class ScanRequest implements Parcelable {
         if (other instanceof ScanRequest) {
             ScanRequest otherRequest = (ScanRequest) other;
             return mScanType == otherRequest.mScanType
-                    && Objects.equals(mWorkSource, otherRequest.mWorkSource);
+                    && (mScanMode == otherRequest.mScanMode)
+                    && (mEnableBle == otherRequest.mEnableBle)
+                    && (Objects.equals(mWorkSource, otherRequest.mWorkSource));
         }
         return false;
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(mScanType, mWorkSource);
+        return Objects.hash(mScanType, mScanMode, mEnableBle, mWorkSource);
     }
+
+    /** @hide **/
+    @Retention(RetentionPolicy.SOURCE)
+    @IntDef({SCAN_TYPE_FAST_PAIR, SCAN_TYPE_NEARBY_SHARE, SCAN_TYPE_NEARBY_PRESENCE,
+            SCAN_TYPE_EXPOSURE_NOTIFICATION})
+    public @interface ScanType {
+    }
+
+    /** @hide **/
+    @Retention(RetentionPolicy.SOURCE)
+    @IntDef({SCAN_MODE_LOW_LATENCY, SCAN_MODE_BALANCED,
+            SCAN_MODE_LOW_POWER,
+            SCAN_MODE_NO_POWER})
+    public @interface ScanMode {}
 
     /** A builder class for {@link ScanRequest}. */
     public static final class Builder {
         private static final int INVALID_SCAN_TYPE = -1;
         private @ScanType int mScanType;
-        private @Nullable WorkSource mWorkSource;
+        private @ScanMode int mScanMode;
+
+        private boolean mEnableBle;
+        private WorkSource mWorkSource;
 
         /** Creates a new Builder with the given scan type. */
         public Builder() {
             mScanType = INVALID_SCAN_TYPE;
-            mWorkSource = null;
+            mEnableBle = true;
+            mWorkSource = new WorkSource();
         }
 
         /**
@@ -149,6 +236,25 @@ public final class ScanRequest implements Parcelable {
             mScanType = scanType;
             return this;
         }
+
+        /**
+         * Sets the scan mode for the request. The scan type must be one of the SCAN_MODE_ constants
+         * in {@link ScanRequest}.
+         */
+        public Builder setScanMode(@ScanMode int scanMode) {
+            mScanMode = scanMode;
+            return this;
+        }
+
+        /**
+         * Sets if the ble is enabled for scanning.
+         * in {@link ScanRequest}.
+         */
+        public Builder setEnableBle(boolean enableBle) {
+            mEnableBle = enableBle;
+            return this;
+        }
+
         /**
          * Sets the work source to use for power attribution for this scan request. Defaults to
          * empty work source, which implies the caller that sends the scan request will be used
@@ -160,30 +266,32 @@ public final class ScanRequest implements Parcelable {
          * @hide
          */
         @RequiresPermission(Manifest.permission.UPDATE_DEVICE_STATS)
-        public @NonNull Builder setWorkSource(@Nullable WorkSource workSource) {
-            this.mWorkSource = workSource;
+        @NonNull
+        public Builder setWorkSource(@Nullable WorkSource workSource) {
+            if (workSource == null) {
+                mWorkSource = new WorkSource();
+            } else {
+                mWorkSource = workSource;
+            }
             return this;
         }
 
         /**
          * Builds a scan request from this builder.
          *
-         * @throws IllegalStateException if the scanType is not one of the SCAN_TYPE_ constants in
-         *         {@link ScanRequest}.
          * @return a new nearby scan request.
+         * @throws IllegalStateException if the scanType is not one of the SCAN_TYPE_ constants in
+         *                               {@link ScanRequest}.
          */
-        public @NonNull ScanRequest build() {
+        @NonNull
+        public ScanRequest build() {
             Preconditions.checkState(isValidScanType(mScanType),
                     "invalid scan type : " + mScanType
                             + ", scan type must be one of ScanRequest#SCAN_TYPE_");
-            return new ScanRequest(mScanType, mWorkSource);
-        }
-
-        private static boolean isValidScanType(int scanType) {
-            return scanType == SCAN_TYPE_FAST_PAIR
-                    || scanType == SCAN_TYPE_NEARBY_SHARE
-                    || scanType == SCAN_TYPE_NEARBY_PRESENCE
-                    || scanType == SCAN_TYPE_EXPOSURE_NOTIFICATION;
+            Preconditions.checkState(isValidScanMode(mScanMode),
+                    "invalid scan mode : " + mScanMode
+                            + ", scan mode must be one of ScanMode#SCAN_MODE_");
+            return new ScanRequest(mScanType, mScanMode, mEnableBle, mWorkSource);
         }
     }
 }

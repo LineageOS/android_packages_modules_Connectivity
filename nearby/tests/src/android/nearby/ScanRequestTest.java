@@ -16,6 +16,8 @@
 
 package android.nearby;
 
+import static android.nearby.ScanRequest.SCAN_MODE_BALANCED;
+import static android.nearby.ScanRequest.SCAN_MODE_LOW_POWER;
 import static android.nearby.ScanRequest.SCAN_TYPE_EXPOSURE_NOTIFICATION;
 import static android.nearby.ScanRequest.SCAN_TYPE_FAST_PAIR;
 import static android.nearby.ScanRequest.SCAN_TYPE_NEARBY_PRESENCE;
@@ -39,6 +41,12 @@ import org.junit.runner.RunWith;
 @RunWith(AndroidJUnit4.class)
 public class ScanRequestTest {
 
+    private static WorkSource getWorkSource() {
+        final int uid = 1001;
+        final String appName = "android.nearby.tests";
+        return new WorkSource(uid, appName);
+    }
+
     /** Test creating a scan request. */
     @Test
     public void testScanRequestBuilder() {
@@ -46,17 +54,26 @@ public class ScanRequestTest {
         ScanRequest request = new ScanRequest.Builder().setScanType(scanType).build();
 
         assertThat(request.getScanType()).isEqualTo(scanType);
+        assertThat(request.getScanMode()).isEqualTo(SCAN_MODE_LOW_POWER);
         // Work source is null if not set.
-        assertThat(request.getWorkSource()).isNull();
+        assertThat(request.getWorkSource().isEmpty()).isTrue();
     }
 
     /** Verify RuntimeException is thrown when creating scan request with invalid scan type. */
     @Test(expected = RuntimeException.class)
     public void testScanRequestBuilder_invalidScanType() {
         final int invalidScanType = -1;
-        ScanRequest.Builder builder = new ScanRequest.Builder().setScanType(
-                invalidScanType);
+        ScanRequest.Builder builder = new ScanRequest.Builder().setScanType(invalidScanType);
 
+        builder.build();
+    }
+
+    /** Verify RuntimeException is thrown when creating scan mode with invalid scan mode. */
+    @Test(expected = RuntimeException.class)
+    public void testScanModeBuilder_invalidScanType() {
+        final int invalidScanMode = -5;
+        ScanRequest.Builder builder = new ScanRequest.Builder().setScanType(
+                SCAN_TYPE_FAST_PAIR).setScanMode(invalidScanMode);
         builder.build();
     }
 
@@ -81,7 +98,7 @@ public class ScanRequestTest {
                 .build();
 
         // Null work source is allowed.
-        assertThat(request.getWorkSource()).isNull();
+        assertThat(request.getWorkSource().isEmpty()).isTrue();
     }
 
     /** Verify toString returns expected string. */
@@ -90,20 +107,24 @@ public class ScanRequestTest {
         WorkSource workSource = getWorkSource();
         ScanRequest request = new ScanRequest.Builder()
                 .setScanType(SCAN_TYPE_NEARBY_SHARE)
+                .setScanMode(SCAN_MODE_BALANCED)
+                .setEnableBle(true)
                 .setWorkSource(workSource)
                 .build();
 
         assertThat(request.toString()).isEqualTo(
-                "Request[scanType=2, workSource=WorkSource{1001 android.nearby.tests}]");
+                "Request[scanType=2, scanMode=SCAN_MODE_BALANCED, "
+                        + "enableBle=true, workSource=WorkSource{1001 android.nearby.tests}]");
     }
 
     /** Verify toString works correctly with null WorkSource. */
     @Test
     public void testToString_nullWorkSource() {
         ScanRequest request = new ScanRequest.Builder().setScanType(
-                SCAN_TYPE_FAST_PAIR).build();
+                SCAN_TYPE_FAST_PAIR).setWorkSource(null).build();
 
-        assertThat(request.toString()).isEqualTo("Request[scanType=1]");
+        assertThat(request.toString()).isEqualTo("Request[scanType=1, "
+                + "scanMode=SCAN_MODE_LOW_POWER, enableBle=true, workSource=WorkSource{}]");
     }
 
     /** Verify writing and reading from parcel for scan request. */
@@ -113,6 +134,8 @@ public class ScanRequestTest {
         WorkSource workSource = getWorkSource();
         ScanRequest originalRequest = new ScanRequest.Builder()
                 .setScanType(scanType)
+                .setScanMode(SCAN_MODE_BALANCED)
+                .setEnableBle(true)
                 .setWorkSource(workSource)
                 .build();
 
@@ -140,11 +163,5 @@ public class ScanRequestTest {
         originalRequest.writeToParcel(parcel, 0);
         parcel.setDataPosition(0);
         return ScanRequest.CREATOR.createFromParcel(parcel);
-    }
-
-    private static WorkSource getWorkSource() {
-        final int uid = 1001;
-        final String appName = "android.nearby.tests";
-        return new WorkSource(uid, appName);
     }
 }

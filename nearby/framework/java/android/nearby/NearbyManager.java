@@ -16,6 +16,19 @@
 
 package android.nearby;
 
+import android.annotation.CallbackExecutor;
+import android.annotation.NonNull;
+import android.annotation.Nullable;
+import android.os.RemoteException;
+
+import com.android.internal.annotations.GuardedBy;
+import com.android.internal.util.Preconditions;
+
+import java.lang.ref.WeakReference;
+import java.util.Objects;
+import java.util.WeakHashMap;
+import java.util.concurrent.Executor;
+
 /**
  * This class provides a way to perform Nearby related operations such as scanning and connecting
  * to nearby devices.
@@ -25,6 +38,139 @@ package android.nearby;
  *
  * @hide
  */
-// TODO(b/189954300): implement NearyManager API and unhide it.
 public class NearbyManager {
+
+    private static final String TAG = "NearbyManager";
+    @GuardedBy("sScanListeners")
+    private static final WeakHashMap<ScanCallback, WeakReference<ScanListenerTransport>>
+            sScanListeners = new WeakHashMap<>();
+    private final INearbyManager mService;
+
+    public NearbyManager(@NonNull INearbyManager service) {
+        mService = service;
+    }
+
+    private static NearbyDevice toClientNearbyDevice(
+            NearbyDeviceParcelable nearbyDeviceParcelable,
+            @ScanRequest.ScanType int scanType) {
+        if (scanType == ScanRequest.SCAN_TYPE_FAST_PAIR) {
+            return new FastPairDevice.Builder()
+                    .setName(nearbyDeviceParcelable.getName())
+                    .setMedium(nearbyDeviceParcelable.getMedium())
+                    .setRssi(nearbyDeviceParcelable.getRssi())
+                    .setModelId(nearbyDeviceParcelable.getFastPairModelId())
+                    .setBluetoothAddress(nearbyDeviceParcelable.getBluetoothAddress())
+                    .setData(nearbyDeviceParcelable.getData()).build();
+        }
+        return null;
+    }
+
+    /**
+     * Start scan for nearby devices with given parameters. Devices matching {@link ScanRequest}
+     * will be delivered through the given callback.
+     *
+     * @param executor Executor where the listener method is called.
+     */
+    public void startScan(ScanRequest scanRequest, ScanCallback scanCallback, @CallbackExecutor
+            Executor executor) {
+        Objects.requireNonNull(scanRequest, "scanRequest must not be null");
+        Objects.requireNonNull(scanCallback, "scanCallback must not be null");
+        Objects.requireNonNull(executor, "executor must not be null");
+
+        try {
+            synchronized (sScanListeners) {
+                WeakReference<ScanListenerTransport> reference = sScanListeners.get(scanCallback);
+                ScanListenerTransport transport = reference != null ? reference.get() : null;
+                if (transport == null) {
+                    transport = new ScanListenerTransport(scanRequest.getScanType(), scanCallback,
+                            executor);
+                } else {
+                    Preconditions.checkState(transport.isRegistered());
+                    transport.setExecutor(executor);
+                }
+                mService.registerScanListener(scanRequest, transport);
+                sScanListeners.put(scanCallback, new WeakReference<>(transport));
+            }
+        } catch (RemoteException e) {
+            throw e.rethrowFromSystemServer();
+        }
+    }
+
+    /**
+     * Stops the nearby device scan for the specified callback. The given callback
+     * is guaranteed not to receive any invocations that happen after this method
+     * is invoked.
+     */
+    public void stopScan(@NonNull ScanCallback scanCallback) {
+        Preconditions.checkArgument(scanCallback != null,
+                "invalid null scanCallback");
+        try {
+            synchronized (sScanListeners) {
+                WeakReference<ScanListenerTransport> reference = sScanListeners.remove(
+                        scanCallback);
+                ScanListenerTransport transport = reference != null ? reference.get() : null;
+                if (transport != null) {
+                    transport.unregister();
+                    mService.unregisterScanListener(transport);
+                }
+            }
+        } catch (RemoteException e) {
+            throw e.rethrowFromSystemServer();
+        }
+    }
+
+    private static class ScanListenerTransport extends IScanListener.Stub {
+
+        private @ScanRequest.ScanType int mScanType;
+        private volatile @Nullable ScanCallback mScanCallback;
+        private Executor mExecutor;
+
+        ScanListenerTransport(@ScanRequest.ScanType int scanType, ScanCallback scanCallback,
+                @CallbackExecutor Executor executor) {
+            Preconditions.checkArgument(scanCallback != null,
+                    "invalid null callback");
+            Preconditions.checkState(ScanRequest.isValidScanType(mScanType),
+                    "invalid scan type : " + mScanType
+                            + ", scan type must be one of ScanRequest#SCAN_TYPE_");
+            mScanType = scanType;
+            mScanCallback = scanCallback;
+            mExecutor = executor;
+        }
+
+        void setExecutor(Executor executor) {
+            Preconditions.checkArgument(
+                    executor != null, "invalid null executor");
+            mExecutor = executor;
+        }
+
+        boolean isRegistered() {
+            return mScanCallback != null;
+        }
+
+        void unregister() {
+            mScanCallback = null;
+        }
+
+        @Override
+        public void onDiscovered(NearbyDeviceParcelable nearbyDeviceParcelable)
+                throws RemoteException {
+            mExecutor.execute(() -> mScanCallback.onDiscovered(
+                    toClientNearbyDevice(nearbyDeviceParcelable, mScanType)));
+        }
+
+        @Override
+        public void onUpdated(NearbyDeviceParcelable nearbyDeviceParcelable)
+                throws RemoteException {
+            mExecutor.execute(
+                    () -> mScanCallback.onUpdated(
+                            toClientNearbyDevice(nearbyDeviceParcelable, mScanType)));
+        }
+
+        @Override
+        public void onLost(NearbyDeviceParcelable nearbyDeviceParcelable) throws RemoteException {
+            mExecutor.execute(
+                    () -> mScanCallback.onLost(
+                            toClientNearbyDevice(nearbyDeviceParcelable, mScanType)));
+        }
+    }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007, The Android Open Source Project
+ * Copyright (C) 2012, The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,17 +16,5 @@
 
 package android.nearby;
 
-import android.nearby.IScanListener;
-import android.nearby.ScanRequest;
+parcelable NearbyDeviceParcelable;
 
-/**
- * Interface for communicating with the nearby services.
- *
- * @hide
- */
-interface INearbyManager {
-
-    void registerScanListener(in ScanRequest scanRequest, in IScanListener listener);
-
-    void unregisterScanListener(in IScanListener listener);
-}

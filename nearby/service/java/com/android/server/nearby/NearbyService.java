@@ -37,8 +37,6 @@ public class NearbyService extends SystemService {
 
     private LocatorContextWrapper mLocatorContextWrapper;
 
-
-
     public NearbyService(Context contextBase) {
         super(contextBase);
         mImpl = new NearbyServiceImpl(contextBase);

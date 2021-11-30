@@ -16,17 +16,20 @@
 
 package android.nearby;
 
-import android.nearby.IScanListener;
-import android.nearby.ScanRequest;
+import android.nearby.NearbyDeviceParcelable;
 
 /**
- * Interface for communicating with the nearby services.
+ * Binder callback for ScanCallback.
  *
- * @hide
+ * {@hide}
  */
-interface INearbyManager {
+oneway interface IScanListener {
+        /** Reports a {@link NearbyDevice} being discovered. */
+        void onDiscovered(in NearbyDeviceParcelable nearbyDeviceParcelable);
 
-    void registerScanListener(in ScanRequest scanRequest, in IScanListener listener);
+        /** Reports a {@link NearbyDevice} information(distance, packet, and etc) changed. */
+        void onUpdated(in NearbyDeviceParcelable nearbyDeviceParcelable);
 
-    void unregisterScanListener(in IScanListener listener);
+        /** Reports a {@link NearbyDevice} is no longer within range. */
+        void onLost(in NearbyDeviceParcelable nearbyDeviceParcelable);
 }

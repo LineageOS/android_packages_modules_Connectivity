@@ -18,6 +18,8 @@ package com.android.server.nearby;
 
 import android.content.Context;
 import android.nearby.INearbyManager;
+import android.nearby.IScanListener;
+import android.nearby.ScanRequest;
 
 /**
  * Implementation of {@link NearbyService}.
@@ -25,5 +27,13 @@ import android.nearby.INearbyManager;
 public class NearbyServiceImpl extends INearbyManager.Stub {
 
     public NearbyServiceImpl(Context context) {
+    }
+
+    @Override
+    public void registerScanListener(ScanRequest scanRequest, IScanListener listener) {
+    }
+
+    @Override
+    public void unregisterScanListener(IScanListener listener) {
     }
 }
