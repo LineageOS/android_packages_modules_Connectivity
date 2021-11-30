@@ -131,7 +131,8 @@ public abstract class DnsPacket {
          */
         DnsRecord(int recordType, @NonNull ByteBuffer buf)
                 throws BufferUnderflowException, ParseException {
-            dName = DnsRecordParser.parseName(buf, 0 /* Parse depth */);
+            dName = DnsRecordParser.parseName(buf, 0 /* Parse depth */,
+                    /* isNameCompressionSupported= */ true);
             if (dName.length() > MAXNAMESIZE) {
                 throw new ParseException(
                         "Parse name fail, name size is too long: " + dName.length());
