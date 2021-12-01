@@ -33,6 +33,7 @@ import static org.mockito.Mockito.verifyZeroInteractions;
 import static org.mockito.Mockito.when;
 import static org.mockito.MockitoAnnotations.initMocks;
 
+import android.bluetooth.BluetoothGatt;
 import android.bluetooth.BluetoothGattCharacteristic;
 import android.bluetooth.BluetoothGattDescriptor;
 import android.bluetooth.le.ScanFilter;
@@ -46,7 +47,7 @@ import com.android.server.nearby.common.bluetooth.gatt.BluetoothGattHelper.Conne
 import com.android.server.nearby.common.bluetooth.gatt.BluetoothGattHelper.OperationType;
 import com.android.server.nearby.common.bluetooth.testability.android.bluetooth.BluetoothAdapter;
 import com.android.server.nearby.common.bluetooth.testability.android.bluetooth.BluetoothDevice;
-import com.android.server.nearby.common.bluetooth.testability.android.bluetooth.BluetoothGatt;
+import com.android.server.nearby.common.bluetooth.testability.android.bluetooth.BluetoothGattWrapper;
 import com.android.server.nearby.common.bluetooth.testability.android.bluetooth.le.BluetoothLeScanner;
 import com.android.server.nearby.common.bluetooth.testability.android.bluetooth.le.ScanCallback;
 import com.android.server.nearby.common.bluetooth.testability.android.bluetooth.le.ScanResult;
@@ -90,7 +91,7 @@ public class BluetoothGattHelperTest extends TestCase {
     @Mock
     private BluetoothGattConnection mMockBluetoothGattConnection;
     @Mock
-    private BluetoothGatt mMockBluetoothGatt;
+    private BluetoothGattWrapper mMockBluetoothGattWrapper;
     @Mock
     private BluetoothGattCharacteristic mMockBluetoothGattCharacteristic;
     @Mock
@@ -132,12 +133,13 @@ public class BluetoothGattHelperTest extends TestCase {
         when(mMockBluetoothGattCharacteristic.getValue()).thenReturn(CHARACTERISTIC_VALUE);
         when(mMockBluetoothGattDescriptor.getValue()).thenReturn(DESCRIPTOR_VALUE);
         when(mMockScanResult.getDevice()).thenReturn(mMockBluetoothDevice);
-        when(mMockBluetoothGatt.getDevice()).thenReturn(mMockBluetoothDevice);
+        when(mMockBluetoothGattWrapper.getDevice()).thenReturn(mMockBluetoothDevice);
         when(mMockBluetoothDevice.connectGatt(eq(mMockApplicationContext), anyBoolean(),
-                eq(mBluetoothGattHelper.mBluetoothGattCallback))).thenReturn(mMockBluetoothGatt);
+                eq(mBluetoothGattHelper.mBluetoothGattCallback))).thenReturn(
+                mMockBluetoothGattWrapper);
         when(mMockBluetoothDevice.connectGatt(eq(mMockApplicationContext), anyBoolean(),
                 eq(mBluetoothGattHelper.mBluetoothGattCallback), anyInt()))
-                .thenReturn(mMockBluetoothGatt);
+                .thenReturn(mMockBluetoothGattWrapper);
         when(mMockBluetoothGattConnection.getConnectionOptions())
                 .thenReturn(ConnectionOptions.builder().build());
     }
@@ -245,7 +247,7 @@ public class BluetoothGattHelperTest extends TestCase {
         verify(mMockBluetoothDevice).connectGatt(mMockApplicationContext, false,
                 mBluetoothGattHelper.mBluetoothGattCallback,
                 android.bluetooth.BluetoothDevice.TRANSPORT_LE);
-        assertThat(mBluetoothGattHelper.mConnections.get(mMockBluetoothGatt).getDevice())
+        assertThat(mBluetoothGattHelper.mConnections.get(mMockBluetoothGattWrapper).getDevice())
                 .isEqualTo(mMockBluetoothDevice);
     }
 
@@ -263,7 +265,8 @@ public class BluetoothGattHelperTest extends TestCase {
         verify(mMockBluetoothDevice).connectGatt(mMockApplicationContext, true,
                 mBluetoothGattHelper.mBluetoothGattCallback,
                 android.bluetooth.BluetoothDevice.TRANSPORT_LE);
-        assertThat(mBluetoothGattHelper.mConnections.get(mMockBluetoothGatt).getConnectionOptions())
+        assertThat(mBluetoothGattHelper.mConnections.get(mMockBluetoothGattWrapper)
+                .getConnectionOptions())
                 .isEqualTo(ConnectionOptions.builder()
                         .setAutoConnect(true)
                         .build());
@@ -290,7 +293,8 @@ public class BluetoothGattHelperTest extends TestCase {
 
     public void test_connect_withOptionRequestConnectionPriority_success() throws Exception {
         // Operation succeeds on the 3rd try.
-        when(mMockBluetoothGatt.requestConnectionPriority(BluetoothGatt.CONNECTION_PRIORITY_HIGH))
+        when(mMockBluetoothGattWrapper
+                .requestConnectionPriority(BluetoothGatt.CONNECTION_PRIORITY_HIGH))
                 .thenReturn(false)
                 .thenReturn(false)
                 .thenReturn(true);
@@ -309,11 +313,12 @@ public class BluetoothGattHelperTest extends TestCase {
         verify(mMockBluetoothDevice).connectGatt(mMockApplicationContext, false,
                 mBluetoothGattHelper.mBluetoothGattCallback,
                 android.bluetooth.BluetoothDevice.TRANSPORT_LE);
-        assertThat(mBluetoothGattHelper.mConnections.get(mMockBluetoothGatt).getConnectionOptions())
+        assertThat(mBluetoothGattHelper.mConnections.get(mMockBluetoothGattWrapper)
+                .getConnectionOptions())
                 .isEqualTo(ConnectionOptions.builder()
                         .setConnectionPriority(BluetoothGatt.CONNECTION_PRIORITY_HIGH)
                         .build());
-        verify(mMockBluetoothGatt, times(3))
+        verify(mMockBluetoothGattWrapper, times(3))
                 .requestConnectionPriority(BluetoothGatt.CONNECTION_PRIORITY_HIGH);
     }
 
@@ -326,16 +331,18 @@ public class BluetoothGattHelperTest extends TestCase {
         operation.run();
         operation.cancel();
 
-        verify(mMockBluetoothGatt).disconnect();
-        verify(mMockBluetoothGatt).close();
-        assertThat(mBluetoothGattHelper.mConnections.get(mMockBluetoothGatt)).isNull();
+        verify(mMockBluetoothGattWrapper).disconnect();
+        verify(mMockBluetoothGattWrapper).close();
+        assertThat(mBluetoothGattHelper.mConnections.get(mMockBluetoothGattWrapper)).isNull();
     }
 
     public void test_BluetoothGattCallback_onConnectionStateChange_connected_success()
             throws Exception {
-        mBluetoothGattHelper.mConnections.put(mMockBluetoothGatt, mMockBluetoothGattConnection);
+        mBluetoothGattHelper.mConnections.put(mMockBluetoothGattWrapper,
+                mMockBluetoothGattConnection);
 
-        mBluetoothGattHelper.mBluetoothGattCallback.onConnectionStateChange(mMockBluetoothGatt,
+        mBluetoothGattHelper.mBluetoothGattCallback.onConnectionStateChange(
+                mMockBluetoothGattWrapper,
                 BluetoothGatt.GATT_SUCCESS, BluetoothGatt.STATE_CONNECTED);
 
         verify(mMockBluetoothOperationExecutor).notifyCompletion(
@@ -347,45 +354,50 @@ public class BluetoothGattHelperTest extends TestCase {
 
     public void test_BluetoothGattCallback_onConnectionStateChange_connected_success_withMtuOption()
             throws Exception {
-        mBluetoothGattHelper.mConnections.put(mMockBluetoothGatt, mMockBluetoothGattConnection);
+        mBluetoothGattHelper.mConnections.put(mMockBluetoothGattWrapper,
+                mMockBluetoothGattConnection);
         when(mMockBluetoothGattConnection.getConnectionOptions())
                 .thenReturn(BluetoothGattHelper.ConnectionOptions.builder()
                         .setMtu(MTU)
                         .build());
-        when(mMockBluetoothGatt.requestMtu(MTU)).thenReturn(true);
+        when(mMockBluetoothGattWrapper.requestMtu(MTU)).thenReturn(true);
 
-        mBluetoothGattHelper.mBluetoothGattCallback.onConnectionStateChange(mMockBluetoothGatt,
+        mBluetoothGattHelper.mBluetoothGattCallback.onConnectionStateChange(
+                mMockBluetoothGattWrapper,
                 BluetoothGatt.GATT_SUCCESS, BluetoothGatt.STATE_CONNECTED);
 
         verifyZeroInteractions(mMockBluetoothOperationExecutor);
         verify(mMockBluetoothGattConnection, never()).onConnected();
-        verify(mMockBluetoothGatt).requestMtu(MTU);
+        verify(mMockBluetoothGattWrapper).requestMtu(MTU);
     }
 
     public void test_BluetoothGattCallback_onConnectionStateChange_connected_success_failMtuOption()
             throws Exception {
-        mBluetoothGattHelper.mConnections.put(mMockBluetoothGatt, mMockBluetoothGattConnection);
+        mBluetoothGattHelper.mConnections.put(mMockBluetoothGattWrapper,
+                mMockBluetoothGattConnection);
         when(mMockBluetoothGattConnection.getConnectionOptions())
                 .thenReturn(BluetoothGattHelper.ConnectionOptions.builder()
                         .setMtu(MTU)
                         .build());
-        when(mMockBluetoothGatt.requestMtu(MTU)).thenReturn(false);
+        when(mMockBluetoothGattWrapper.requestMtu(MTU)).thenReturn(false);
 
-        mBluetoothGattHelper.mBluetoothGattCallback.onConnectionStateChange(mMockBluetoothGatt,
+        mBluetoothGattHelper.mBluetoothGattCallback.onConnectionStateChange(
+                mMockBluetoothGattWrapper,
                 BluetoothGatt.GATT_SUCCESS, BluetoothGatt.STATE_CONNECTED);
 
         verify(mMockBluetoothOperationExecutor).notifyFailure(
                 eq(new Operation<>(OperationType.CONNECT, mMockBluetoothDevice)),
                 any(BluetoothException.class));
         verify(mMockBluetoothGattConnection, never()).onConnected();
-        verify(mMockBluetoothGatt).disconnect();
-        verify(mMockBluetoothGatt).close();
-        assertThat(mBluetoothGattHelper.mConnections.get(mMockBluetoothGatt)).isNull();
+        verify(mMockBluetoothGattWrapper).disconnect();
+        verify(mMockBluetoothGattWrapper).close();
+        assertThat(mBluetoothGattHelper.mConnections.get(mMockBluetoothGattWrapper)).isNull();
     }
 
     public void test_BluetoothGattCallback_onConnectionStateChange_connected_unexpectedSuccess()
             throws Exception {
-        mBluetoothGattHelper.mBluetoothGattCallback.onConnectionStateChange(mMockBluetoothGatt,
+        mBluetoothGattHelper.mBluetoothGattCallback.onConnectionStateChange(
+                mMockBluetoothGattWrapper,
                 BluetoothGatt.GATT_SUCCESS, BluetoothGatt.STATE_CONNECTED);
 
         verifyZeroInteractions(mMockBluetoothOperationExecutor);
@@ -393,11 +405,12 @@ public class BluetoothGattHelperTest extends TestCase {
 
     public void test_BluetoothGattCallback_onConnectionStateChange_connected_failure()
             throws Exception {
-        mBluetoothGattHelper.mConnections.put(mMockBluetoothGatt, mMockBluetoothGattConnection);
+        mBluetoothGattHelper.mConnections.put(mMockBluetoothGattWrapper,
+                mMockBluetoothGattConnection);
 
         mBluetoothGattHelper.mBluetoothGattCallback
                 .onConnectionStateChange(
-                        mMockBluetoothGatt,
+                        mMockBluetoothGattWrapper,
                         BluetoothGatt.GATT_FAILURE,
                         BluetoothGatt.STATE_CONNECTED);
 
@@ -406,16 +419,16 @@ public class BluetoothGattHelperTest extends TestCase {
                         new Operation<>(OperationType.CONNECT, mMockBluetoothDevice),
                         BluetoothGatt.GATT_FAILURE,
                         null);
-        verify(mMockBluetoothGatt).disconnect();
-        verify(mMockBluetoothGatt).close();
-        assertThat(mBluetoothGattHelper.mConnections.get(mMockBluetoothGatt)).isNull();
+        verify(mMockBluetoothGattWrapper).disconnect();
+        verify(mMockBluetoothGattWrapper).close();
+        assertThat(mBluetoothGattHelper.mConnections.get(mMockBluetoothGattWrapper)).isNull();
     }
 
     public void test_BluetoothGattCallback_onConnectionStateChange_disconnected_unexpectedSuccess()
             throws Exception {
         mBluetoothGattHelper.mBluetoothGattCallback
                 .onConnectionStateChange(
-                        mMockBluetoothGatt,
+                        mMockBluetoothGattWrapper,
                         BluetoothGatt.GATT_SUCCESS,
                         BluetoothGatt.STATE_DISCONNECTED);
 
@@ -424,12 +437,13 @@ public class BluetoothGattHelperTest extends TestCase {
 
     public void test_BluetoothGattCallback_onConnectionStateChange_disconnected_notConnected()
             throws Exception {
-        mBluetoothGattHelper.mConnections.put(mMockBluetoothGatt, mMockBluetoothGattConnection);
+        mBluetoothGattHelper.mConnections.put(mMockBluetoothGattWrapper,
+                mMockBluetoothGattConnection);
         when(mMockBluetoothGattConnection.isConnected()).thenReturn(false);
 
         mBluetoothGattHelper.mBluetoothGattCallback
                 .onConnectionStateChange(
-                        mMockBluetoothGatt,
+                        mMockBluetoothGattWrapper,
                         GATT_STATUS,
                         BluetoothGatt.STATE_DISCONNECTED);
 
@@ -438,125 +452,135 @@ public class BluetoothGattHelperTest extends TestCase {
                         new Operation<>(OperationType.CONNECT, mMockBluetoothDevice),
                         GATT_STATUS,
                         null);
-        verify(mMockBluetoothGatt).disconnect();
-        verify(mMockBluetoothGatt).close();
-        assertThat(mBluetoothGattHelper.mConnections.get(mMockBluetoothGatt)).isNull();
+        verify(mMockBluetoothGattWrapper).disconnect();
+        verify(mMockBluetoothGattWrapper).close();
+        assertThat(mBluetoothGattHelper.mConnections.get(mMockBluetoothGattWrapper)).isNull();
     }
 
     public void test_BluetoothGattCallback_onConnectionStateChange_disconnected_success()
             throws Exception {
-        mBluetoothGattHelper.mConnections.put(mMockBluetoothGatt, mMockBluetoothGattConnection);
+        mBluetoothGattHelper.mConnections.put(mMockBluetoothGattWrapper,
+                mMockBluetoothGattConnection);
         when(mMockBluetoothGattConnection.isConnected()).thenReturn(true);
 
-        mBluetoothGattHelper.mBluetoothGattCallback.onConnectionStateChange(mMockBluetoothGatt,
+        mBluetoothGattHelper.mBluetoothGattCallback.onConnectionStateChange(
+                mMockBluetoothGattWrapper,
                 BluetoothGatt.GATT_SUCCESS, BluetoothGatt.STATE_DISCONNECTED);
 
         verify(mMockBluetoothOperationExecutor).notifyCompletion(
                 new Operation<>(OperationType.DISCONNECT, mMockBluetoothDevice),
                 BluetoothGatt.GATT_SUCCESS);
         verify(mMockBluetoothGattConnection).onClosed();
-        assertThat(mBluetoothGattHelper.mConnections.get(mMockBluetoothGatt)).isNull();
+        assertThat(mBluetoothGattHelper.mConnections.get(mMockBluetoothGattWrapper)).isNull();
     }
 
     public void test_BluetoothGattCallback_onConnectionStateChange_disconnected_failure()
             throws Exception {
-        mBluetoothGattHelper.mConnections.put(mMockBluetoothGatt, mMockBluetoothGattConnection);
+        mBluetoothGattHelper.mConnections.put(mMockBluetoothGattWrapper,
+                mMockBluetoothGattConnection);
         when(mMockBluetoothGattConnection.isConnected()).thenReturn(true);
 
-        mBluetoothGattHelper.mBluetoothGattCallback.onConnectionStateChange(mMockBluetoothGatt,
+        mBluetoothGattHelper.mBluetoothGattCallback.onConnectionStateChange(
+                mMockBluetoothGattWrapper,
                 BluetoothGatt.GATT_FAILURE, BluetoothGatt.STATE_DISCONNECTED);
 
         verify(mMockBluetoothOperationExecutor).notifyCompletion(
                 new Operation<>(OperationType.DISCONNECT, mMockBluetoothDevice),
                 BluetoothGatt.GATT_FAILURE);
         verify(mMockBluetoothGattConnection).onClosed();
-        assertThat(mBluetoothGattHelper.mConnections.get(mMockBluetoothGatt)).isNull();
+        assertThat(mBluetoothGattHelper.mConnections.get(mMockBluetoothGattWrapper)).isNull();
     }
 
     public void test_BluetoothGattCallback_onServicesDiscovered() throws Exception {
-        mBluetoothGattHelper.mBluetoothGattCallback.onServicesDiscovered(mMockBluetoothGatt,
+        mBluetoothGattHelper.mBluetoothGattCallback.onServicesDiscovered(mMockBluetoothGattWrapper,
                 GATT_STATUS);
 
         verify(mMockBluetoothOperationExecutor).notifyCompletion(
-                new Operation<Void>(OperationType.DISCOVER_SERVICES_INTERNAL, mMockBluetoothGatt),
+                new Operation<Void>(OperationType.DISCOVER_SERVICES_INTERNAL,
+                        mMockBluetoothGattWrapper),
                 GATT_STATUS);
     }
 
     public void test_BluetoothGattCallback_onCharacteristicRead() throws Exception {
-        mBluetoothGattHelper.mBluetoothGattCallback.onCharacteristicRead(mMockBluetoothGatt,
+        mBluetoothGattHelper.mBluetoothGattCallback.onCharacteristicRead(mMockBluetoothGattWrapper,
                 mMockBluetoothGattCharacteristic, GATT_STATUS);
 
         verify(mMockBluetoothOperationExecutor).notifyCompletion(new Operation<byte[]>(
-                        OperationType.READ_CHARACTERISTIC, mMockBluetoothGatt,
+                        OperationType.READ_CHARACTERISTIC, mMockBluetoothGattWrapper,
                         mMockBluetoothGattCharacteristic),
                 GATT_STATUS, CHARACTERISTIC_VALUE);
     }
 
     public void test_BluetoothGattCallback_onCharacteristicWrite() throws Exception {
-        mBluetoothGattHelper.mBluetoothGattCallback.onCharacteristicWrite(mMockBluetoothGatt,
+        mBluetoothGattHelper.mBluetoothGattCallback.onCharacteristicWrite(mMockBluetoothGattWrapper,
                 mMockBluetoothGattCharacteristic, GATT_STATUS);
 
         verify(mMockBluetoothOperationExecutor).notifyCompletion(new Operation<Void>(
-                        OperationType.WRITE_CHARACTERISTIC, mMockBluetoothGatt,
+                        OperationType.WRITE_CHARACTERISTIC, mMockBluetoothGattWrapper,
                         mMockBluetoothGattCharacteristic),
                 GATT_STATUS);
     }
 
     public void test_BluetoothGattCallback_onDescriptorRead() throws Exception {
-        mBluetoothGattHelper.mBluetoothGattCallback.onDescriptorRead(mMockBluetoothGatt,
+        mBluetoothGattHelper.mBluetoothGattCallback.onDescriptorRead(mMockBluetoothGattWrapper,
                 mMockBluetoothGattDescriptor, GATT_STATUS);
 
         verify(mMockBluetoothOperationExecutor).notifyCompletion(new Operation<byte[]>(
-                        OperationType.READ_DESCRIPTOR, mMockBluetoothGatt,
+                        OperationType.READ_DESCRIPTOR, mMockBluetoothGattWrapper,
                         mMockBluetoothGattDescriptor),
                 GATT_STATUS,
                 DESCRIPTOR_VALUE);
     }
 
     public void test_BluetoothGattCallback_onDescriptorWrite() throws Exception {
-        mBluetoothGattHelper.mBluetoothGattCallback.onDescriptorWrite(mMockBluetoothGatt,
+        mBluetoothGattHelper.mBluetoothGattCallback.onDescriptorWrite(mMockBluetoothGattWrapper,
                 mMockBluetoothGattDescriptor, GATT_STATUS);
 
         verify(mMockBluetoothOperationExecutor).notifyCompletion(new Operation<Void>(
-                        OperationType.WRITE_DESCRIPTOR, mMockBluetoothGatt,
+                        OperationType.WRITE_DESCRIPTOR, mMockBluetoothGattWrapper,
                         mMockBluetoothGattDescriptor),
                 GATT_STATUS);
     }
 
     public void test_BluetoothGattCallback_onReadRemoteRssi() throws Exception {
-        mBluetoothGattHelper.mBluetoothGattCallback.onReadRemoteRssi(mMockBluetoothGatt, RSSI,
-                GATT_STATUS);
+        mBluetoothGattHelper.mBluetoothGattCallback.onReadRemoteRssi(mMockBluetoothGattWrapper,
+                RSSI, GATT_STATUS);
 
         verify(mMockBluetoothOperationExecutor).notifyCompletion(
-                new Operation<Integer>(OperationType.READ_RSSI, mMockBluetoothGatt), GATT_STATUS,
-                RSSI);
+                new Operation<Integer>(OperationType.READ_RSSI, mMockBluetoothGattWrapper),
+                GATT_STATUS, RSSI);
     }
 
     public void test_BluetoothGattCallback_onReliableWriteCompleted() throws Exception {
-        mBluetoothGattHelper.mBluetoothGattCallback.onReliableWriteCompleted(mMockBluetoothGatt,
+        mBluetoothGattHelper.mBluetoothGattCallback.onReliableWriteCompleted(
+                mMockBluetoothGattWrapper,
                 GATT_STATUS);
 
         verify(mMockBluetoothOperationExecutor).notifyCompletion(
-                new Operation<Void>(OperationType.WRITE_RELIABLE, mMockBluetoothGatt), GATT_STATUS);
+                new Operation<Void>(OperationType.WRITE_RELIABLE, mMockBluetoothGattWrapper),
+                GATT_STATUS);
     }
 
     public void test_BluetoothGattCallback_onMtuChanged() throws Exception {
-        mBluetoothGattHelper.mConnections.put(mMockBluetoothGatt, mMockBluetoothGattConnection);
+        mBluetoothGattHelper.mConnections.put(mMockBluetoothGattWrapper,
+                mMockBluetoothGattConnection);
         when(mMockBluetoothGattConnection.isConnected()).thenReturn(true);
 
         mBluetoothGattHelper.mBluetoothGattCallback
-                .onMtuChanged(mMockBluetoothGatt, MTU, GATT_STATUS);
+                .onMtuChanged(mMockBluetoothGattWrapper, MTU, GATT_STATUS);
 
         verify(mMockBluetoothOperationExecutor).notifyCompletion(
-                new Operation<>(OperationType.CHANGE_MTU, mMockBluetoothGatt), GATT_STATUS, MTU);
+                new Operation<>(OperationType.CHANGE_MTU, mMockBluetoothGattWrapper), GATT_STATUS,
+                MTU);
     }
 
     public void testBluetoothGattCallback_onMtuChangedDuringConnection_success() throws Exception {
-        mBluetoothGattHelper.mConnections.put(mMockBluetoothGatt, mMockBluetoothGattConnection);
+        mBluetoothGattHelper.mConnections.put(mMockBluetoothGattWrapper,
+                mMockBluetoothGattConnection);
         when(mMockBluetoothGattConnection.isConnected()).thenReturn(false);
 
         mBluetoothGattHelper.mBluetoothGattCallback.onMtuChanged(
-                mMockBluetoothGatt, MTU, BluetoothGatt.GATT_SUCCESS);
+                mMockBluetoothGattWrapper, MTU, BluetoothGatt.GATT_SUCCESS);
 
         verify(mMockBluetoothGattConnection).onConnected();
         verify(mMockBluetoothOperationExecutor)
@@ -567,11 +591,12 @@ public class BluetoothGattHelperTest extends TestCase {
     }
 
     public void testBluetoothGattCallback_onMtuChangedDuringConnection_fail() throws Exception {
-        mBluetoothGattHelper.mConnections.put(mMockBluetoothGatt, mMockBluetoothGattConnection);
+        mBluetoothGattHelper.mConnections.put(mMockBluetoothGattWrapper,
+                mMockBluetoothGattConnection);
         when(mMockBluetoothGattConnection.isConnected()).thenReturn(false);
 
         mBluetoothGattHelper.mBluetoothGattCallback
-                .onMtuChanged(mMockBluetoothGatt, MTU, GATT_STATUS);
+                .onMtuChanged(mMockBluetoothGattWrapper, MTU, GATT_STATUS);
 
         verify(mMockBluetoothGattConnection).onConnected();
         verify(mMockBluetoothOperationExecutor)
@@ -579,15 +604,17 @@ public class BluetoothGattHelperTest extends TestCase {
                         new Operation<>(OperationType.CONNECT, mMockBluetoothDevice),
                         GATT_STATUS,
                         mMockBluetoothGattConnection);
-        verify(mMockBluetoothGatt).disconnect();
-        verify(mMockBluetoothGatt).close();
-        assertThat(mBluetoothGattHelper.mConnections.get(mMockBluetoothGatt)).isNull();
+        verify(mMockBluetoothGattWrapper).disconnect();
+        verify(mMockBluetoothGattWrapper).close();
+        assertThat(mBluetoothGattHelper.mConnections.get(mMockBluetoothGattWrapper)).isNull();
     }
 
     public void test_BluetoothGattCallback_onCharacteristicChanged() throws Exception {
-        mBluetoothGattHelper.mConnections.put(mMockBluetoothGatt, mMockBluetoothGattConnection);
+        mBluetoothGattHelper.mConnections.put(mMockBluetoothGattWrapper,
+                mMockBluetoothGattConnection);
 
-        mBluetoothGattHelper.mBluetoothGattCallback.onCharacteristicChanged(mMockBluetoothGatt,
+        mBluetoothGattHelper.mBluetoothGattCallback.onCharacteristicChanged(
+                mMockBluetoothGattWrapper,
                 mMockBluetoothGattCharacteristic);
 
         verify(mMockBluetoothGattConnection).onCharacteristicChanged(

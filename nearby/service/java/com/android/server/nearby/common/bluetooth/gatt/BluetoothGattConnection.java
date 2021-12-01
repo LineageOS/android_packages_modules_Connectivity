@@ -19,6 +19,7 @@ package com.android.server.nearby.common.bluetooth.gatt;
 import android.bluetooth.BluetoothGattCharacteristic;
 import android.bluetooth.BluetoothGattDescriptor;
 import android.bluetooth.BluetoothGattService;
+import android.bluetooth.BluetoothStatusCodes;
 import android.util.Log;
 
 import androidx.annotation.VisibleForTesting;
@@ -31,7 +32,7 @@ import com.android.server.nearby.common.bluetooth.ReservedUuids;
 import com.android.server.nearby.common.bluetooth.gatt.BluetoothGattHelper.ConnectionOptions;
 import com.android.server.nearby.common.bluetooth.gatt.BluetoothGattHelper.OperationType;
 import com.android.server.nearby.common.bluetooth.testability.android.bluetooth.BluetoothDevice;
-import com.android.server.nearby.common.bluetooth.testability.android.bluetooth.BluetoothGatt;
+import com.android.server.nearby.common.bluetooth.testability.android.bluetooth.BluetoothGattWrapper;
 import com.android.server.nearby.common.bluetooth.util.BluetoothGattUtils;
 import com.android.server.nearby.common.bluetooth.util.BluetoothOperationExecutor;
 import com.android.server.nearby.common.bluetooth.util.BluetoothOperationExecutor.Operation;
@@ -68,7 +69,7 @@ public class BluetoothGattConnection implements AutoCloseable {
     @VisibleForTesting
     static final int GATT_ERROR = 133;
 
-    private final BluetoothGatt mGatt;
+    private final BluetoothGattWrapper mGatt;
     private final BluetoothOperationExecutor mBluetoothOperationExecutor;
     private final ConnectionOptions mConnectionOptions;
 
@@ -86,7 +87,7 @@ public class BluetoothGattConnection implements AutoCloseable {
     private long mOperationTimeoutMillis = OPERATION_TIMEOUT_MILLIS;
 
     BluetoothGattConnection(
-            BluetoothGatt gatt,
+            BluetoothGattWrapper gatt,
             BluetoothOperationExecutor bluetoothOperationExecutor,
             ConnectionOptions connectionOptions) {
         mGatt = gatt;
@@ -400,13 +401,12 @@ public class BluetoothGattConnection implements AutoCloseable {
                     new Operation<Void>(OperationType.WRITE_CHARACTERISTIC, mGatt, characteristic) {
                         @Override
                         public void run() throws BluetoothException {
-                            BluetoothGattCharacteristic characteristiClone =
-                                    BluetoothGattUtils.clone(characteristic);
-                            characteristiClone.setValue(value);
-                            boolean success = mGatt.writeCharacteristic(characteristiClone);
-                            if (!success) {
+                            int writeCharacteristicResponseCode = mGatt.writeCharacteristic(
+                                    characteristic, value, characteristic.getWriteType());
+                            if (writeCharacteristicResponseCode != BluetoothStatusCodes.SUCCESS) {
                                 throw new BluetoothException(
-                                        "gatt.writeCharacteristic returned false.");
+                                        "gatt.writeCharacteristic returned "
+                                        + writeCharacteristicResponseCode);
                             }
                         }
                     },
@@ -478,13 +478,12 @@ public class BluetoothGattConnection implements AutoCloseable {
                     new Operation<Void>(OperationType.WRITE_DESCRIPTOR, mGatt, descriptor) {
                         @Override
                         public void run() throws BluetoothException {
-                            BluetoothGattDescriptor descriptorClone =
-                                    BluetoothGattUtils.clone(descriptor);
-                            descriptorClone.setValue(value);
-                            boolean success = mGatt.writeDescriptor(descriptorClone);
-                            if (!success) {
+                            int writeDescriptorResponseCode = mGatt.writeDescriptor(descriptor,
+                                    value);
+                            if (writeDescriptorResponseCode != BluetoothStatusCodes.SUCCESS) {
                                 throw new BluetoothException(
-                                        "gatt.writeDescriptor returned false.");
+                                        "gatt.writeDescriptor returned "
+                                        + writeDescriptorResponseCode);
                             }
                         }
                     },

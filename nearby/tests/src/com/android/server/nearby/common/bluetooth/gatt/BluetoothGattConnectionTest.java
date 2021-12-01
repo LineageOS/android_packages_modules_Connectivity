@@ -18,6 +18,8 @@ package com.android.server.nearby.common.bluetooth.gatt;
 
 import static com.google.common.truth.Truth.assertThat;
 
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isA;
@@ -33,6 +35,7 @@ import static org.mockito.MockitoAnnotations.initMocks;
 import android.bluetooth.BluetoothGattCharacteristic;
 import android.bluetooth.BluetoothGattDescriptor;
 import android.bluetooth.BluetoothGattService;
+import android.bluetooth.BluetoothStatusCodes;
 import android.os.Build.VERSION;
 import android.os.Build.VERSION_CODES;
 
@@ -43,7 +46,7 @@ import com.android.server.nearby.common.bluetooth.ReservedUuids;
 import com.android.server.nearby.common.bluetooth.gatt.BluetoothGattConnection.ChangeObserver;
 import com.android.server.nearby.common.bluetooth.gatt.BluetoothGattHelper.OperationType;
 import com.android.server.nearby.common.bluetooth.testability.android.bluetooth.BluetoothDevice;
-import com.android.server.nearby.common.bluetooth.testability.android.bluetooth.BluetoothGatt;
+import com.android.server.nearby.common.bluetooth.testability.android.bluetooth.BluetoothGattWrapper;
 import com.android.server.nearby.common.bluetooth.util.BluetoothOperationExecutor;
 import com.android.server.nearby.common.bluetooth.util.BluetoothOperationExecutor.Operation;
 import com.android.server.nearby.common.bluetooth.util.BluetoothOperationExecutor.SynchronousOperation;
@@ -75,7 +78,7 @@ public class BluetoothGattConnectionTest extends TestCase {
             BluetoothGattHelper.ConnectionOptions.builder().build();
 
     @Mock
-    private BluetoothGatt mMockBluetoothGatt;
+    private BluetoothGattWrapper mMockBluetoothGattWrapper;
     @Mock
     private BluetoothDevice mMockBluetoothDevice;
     @Mock
@@ -115,26 +118,31 @@ public class BluetoothGattConnectionTest extends TestCase {
         initMocks(this);
 
         mBluetoothGattConnection = new BluetoothGattConnection(
-                mMockBluetoothGatt,
+                mMockBluetoothGattWrapper,
                 mMockBluetoothOperationExecutor,
                 CONNECTION_OPTIONS);
         mBluetoothGattConnection.onConnected();
 
-        when(mMockBluetoothGatt.getDevice()).thenReturn(mMockBluetoothDevice);
-        when(mMockBluetoothGatt.discoverServices()).thenReturn(true);
-        when(mMockBluetoothGatt.refresh()).thenReturn(true);
-        when(mMockBluetoothGatt.readCharacteristic(mMockBluetoothGattCharacteristic))
+        when(mMockBluetoothGattWrapper.getDevice()).thenReturn(mMockBluetoothDevice);
+        when(mMockBluetoothGattWrapper.discoverServices()).thenReturn(true);
+        when(mMockBluetoothGattWrapper.refresh()).thenReturn(true);
+        when(mMockBluetoothGattWrapper.readCharacteristic(mMockBluetoothGattCharacteristic))
                 .thenReturn(true);
-        when(mMockBluetoothGatt
-                .writeCharacteristic(ArgumentMatchers.<BluetoothGattCharacteristic>any()))
+        when(mMockBluetoothGattWrapper
+                .writeCharacteristic(ArgumentMatchers.<BluetoothGattCharacteristic>any(), any(),
+                        anyInt()))
+                .thenReturn(BluetoothStatusCodes.SUCCESS);
+        when(mMockBluetoothGattWrapper.readDescriptor(mMockBluetoothGattDescriptor))
                 .thenReturn(true);
-        when(mMockBluetoothGatt.readDescriptor(mMockBluetoothGattDescriptor)).thenReturn(true);
-        when(mMockBluetoothGatt.writeDescriptor(ArgumentMatchers.<BluetoothGattDescriptor>any()))
+        when(mMockBluetoothGattWrapper.writeDescriptor(
+                ArgumentMatchers.<BluetoothGattDescriptor>any(), any()))
+                .thenReturn(BluetoothStatusCodes.SUCCESS);
+        when(mMockBluetoothGattWrapper.readRemoteRssi()).thenReturn(true);
+        when(mMockBluetoothGattWrapper.requestConnectionPriority(CONNECTION_PRIORITY))
                 .thenReturn(true);
-        when(mMockBluetoothGatt.readRemoteRssi()).thenReturn(true);
-        when(mMockBluetoothGatt.requestConnectionPriority(CONNECTION_PRIORITY)).thenReturn(true);
-        when(mMockBluetoothGatt.requestMtu(MTU_REQUEST)).thenReturn(true);
-        when(mMockBluetoothGatt.getServices()).thenReturn(Arrays.asList(mMockBluetoothGattService));
+        when(mMockBluetoothGattWrapper.requestMtu(MTU_REQUEST)).thenReturn(true);
+        when(mMockBluetoothGattWrapper.getServices())
+                .thenReturn(Arrays.asList(mMockBluetoothGattService));
         when(mMockBluetoothGattService.getUuid()).thenReturn(SERVICE_UUID);
         when(mMockBluetoothGattService.getCharacteristics())
                 .thenReturn(Arrays.asList(mMockBluetoothGattCharacteristic));
@@ -171,7 +179,7 @@ public class BluetoothGattConnectionTest extends TestCase {
 
     public void test_isConnected_false_beforeConnection() {
         mBluetoothGattConnection = new BluetoothGattConnection(
-                mMockBluetoothGatt,
+                mMockBluetoothGattWrapper,
                 mMockBluetoothOperationExecutor,
                 CONNECTION_OPTIONS);
 
@@ -205,7 +213,7 @@ public class BluetoothGattConnectionTest extends TestCase {
         mOperationCaptor.getValue().run();
 
         assertThat(result).isEqualTo(mMockBluetoothGattService);
-        verify(mMockBluetoothGatt).discoverServices();
+        verify(mMockBluetoothGattWrapper).discoverServices();
     }
 
     public void test_getService_alreadyDiscovered() throws Exception {
@@ -222,7 +230,8 @@ public class BluetoothGattConnectionTest extends TestCase {
     }
 
     public void test_getService_notFound() throws Exception {
-        when(mMockBluetoothGatt.getServices()).thenReturn(Arrays.<BluetoothGattService>asList());
+        when(mMockBluetoothGattWrapper.getServices()).thenReturn(
+                Arrays.<BluetoothGattService>asList());
 
         try {
             mBluetoothGattConnection.getService(SERVICE_UUID);
@@ -232,7 +241,7 @@ public class BluetoothGattConnectionTest extends TestCase {
     }
 
     public void test_getService_moreThanOne() throws Exception {
-        when(mMockBluetoothGatt.getServices())
+        when(mMockBluetoothGattWrapper.getServices())
                 .thenReturn(Arrays.asList(mMockBluetoothGattService, mMockBluetoothGattService));
 
         try {
@@ -276,7 +285,7 @@ public class BluetoothGattConnectionTest extends TestCase {
     public void test_getCharacteristic_moreThanOneService() throws Exception {
         // Add a new service with the same service UUID as our existing one, but add a different
         // characteristic inside of it.
-        when(mMockBluetoothGatt.getServices())
+        when(mMockBluetoothGattWrapper.getServices())
                 .thenReturn(Arrays.asList(mMockBluetoothGattService, mMockBluetoothGattService2));
         when(mMockBluetoothGattService2.getUuid()).thenReturn(SERVICE_UUID);
         when(mMockBluetoothGattService2.getCharacteristics())
@@ -345,12 +354,12 @@ public class BluetoothGattConnectionTest extends TestCase {
                         mOperationCaptor.capture(),
                         eq(BluetoothGattConnection.SLOW_OPERATION_TIMEOUT_MILLIS));
         mOperationCaptor.getValue().run();
-        verify(mMockBluetoothGatt).discoverServices();
-        verify(mMockBluetoothGatt, never()).refresh();
+        verify(mMockBluetoothGattWrapper).discoverServices();
+        verify(mMockBluetoothGattWrapper, never()).refresh();
     }
 
     public void test_discoverServices_serviceChange() throws Exception {
-        when(mMockBluetoothGatt.getService(ReservedUuids.Services.GENERIC_ATTRIBUTE))
+        when(mMockBluetoothGattWrapper.getService(ReservedUuids.Services.GENERIC_ATTRIBUTE))
                 .thenReturn(mMockBluetoothGattService);
         when(mMockBluetoothGattService
                 .getCharacteristic(ReservedUuids.Characteristics.SERVICE_CHANGE))
@@ -364,11 +373,11 @@ public class BluetoothGattConnectionTest extends TestCase {
                 .execute(
                         mOperationCaptor.capture(),
                         eq(BluetoothGattConnection.SLOW_OPERATION_TIMEOUT_MILLIS));
-        verify(mMockBluetoothGatt).refresh();
+        verify(mMockBluetoothGattWrapper).refresh();
     }
 
     public void test_discoverServices_SelfDefinedServiceDynamic() throws Exception {
-        when(mMockBluetoothGatt.getService(BluetoothConsts.SERVICE_DYNAMIC_SERVICE))
+        when(mMockBluetoothGattWrapper.getService(BluetoothConsts.SERVICE_DYNAMIC_SERVICE))
                 .thenReturn(mMockBluetoothGattService);
         when(mMockBluetoothGattService
                 .getCharacteristic(BluetoothConsts.SERVICE_DYNAMIC_CHARACTERISTIC))
@@ -382,7 +391,7 @@ public class BluetoothGattConnectionTest extends TestCase {
                 .execute(
                         mOperationCaptor.capture(),
                         eq(BluetoothGattConnection.SLOW_OPERATION_TIMEOUT_MILLIS));
-        verify(mMockBluetoothGatt).refresh();
+        verify(mMockBluetoothGattWrapper).refresh();
     }
 
     public void test_discoverServices_refreshWithGattErrorOnMncAbove() throws Exception {
@@ -402,7 +411,7 @@ public class BluetoothGattConnectionTest extends TestCase {
                 .execute(
                         mOperationCaptor.capture(),
                         eq(BluetoothGattConnection.SLOW_OPERATION_TIMEOUT_MILLIS));
-        verify(mMockBluetoothGatt).refresh();
+        verify(mMockBluetoothGattWrapper).refresh();
     }
 
     public void test_discoverServices_refreshWithGattInternalErrorOnMncAbove() throws Exception {
@@ -422,11 +431,11 @@ public class BluetoothGattConnectionTest extends TestCase {
                 .execute(
                         mOperationCaptor.capture(),
                         eq(BluetoothGattConnection.SLOW_OPERATION_TIMEOUT_MILLIS));
-        verify(mMockBluetoothGatt).refresh();
+        verify(mMockBluetoothGattWrapper).refresh();
     }
 
     public void test_discoverServices_dynamicServices_notBonded() throws Exception {
-        when(mMockBluetoothGatt.getService(ReservedUuids.Services.GENERIC_ATTRIBUTE))
+        when(mMockBluetoothGattWrapper.getService(ReservedUuids.Services.GENERIC_ATTRIBUTE))
                 .thenReturn(mMockBluetoothGattService);
         when(mMockBluetoothGattService
                 .getCharacteristic(ReservedUuids.Characteristics.SERVICE_CHANGE))
@@ -435,14 +444,14 @@ public class BluetoothGattConnectionTest extends TestCase {
 
         mBluetoothGattConnection.discoverServices();
 
-        verify(mMockBluetoothGatt, never()).refresh();
+        verify(mMockBluetoothGattWrapper, never()).refresh();
     }
 
     public void test_readCharacteristic() throws Exception {
         when(mMockBluetoothOperationExecutor.executeNonnull(
                 new Operation<byte[]>(
                         OperationType.READ_CHARACTERISTIC,
-                        mMockBluetoothGatt,
+                        mMockBluetoothGattWrapper,
                         mMockBluetoothGattCharacteristic),
                 BluetoothGattConnection.OPERATION_TIMEOUT_MILLIS))
                 .thenReturn(DATA);
@@ -454,14 +463,14 @@ public class BluetoothGattConnectionTest extends TestCase {
         verify(mMockBluetoothOperationExecutor)
                 .executeNonnull(mOperationCaptor.capture(), anyLong());
         mOperationCaptor.getValue().run();
-        verify(mMockBluetoothGatt).readCharacteristic(mMockBluetoothGattCharacteristic);
+        verify(mMockBluetoothGattWrapper).readCharacteristic(mMockBluetoothGattCharacteristic);
     }
 
     public void test_readCharacteristic_by_uuid() throws Exception {
         when(mMockBluetoothOperationExecutor.executeNonnull(
                 new Operation<byte[]>(
                         OperationType.READ_CHARACTERISTIC,
-                        mMockBluetoothGatt,
+                        mMockBluetoothGattWrapper,
                         mMockBluetoothGattCharacteristic),
                 BluetoothGattConnection.OPERATION_TIMEOUT_MILLIS))
                 .thenReturn(DATA);
@@ -473,7 +482,7 @@ public class BluetoothGattConnectionTest extends TestCase {
         verify(mMockBluetoothOperationExecutor)
                 .executeNonnull(mOperationCaptor.capture(), anyLong());
         mOperationCaptor.getValue().run();
-        verify(mMockBluetoothGatt).readCharacteristic(mMockBluetoothGattCharacteristic);
+        verify(mMockBluetoothGattWrapper).readCharacteristic(mMockBluetoothGattCharacteristic);
     }
 
     public void test_writeCharacteristic() throws Exception {
@@ -486,11 +495,11 @@ public class BluetoothGattConnectionTest extends TestCase {
                 .execute(mOperationCaptor.capture(),
                         eq(BluetoothGattConnection.OPERATION_TIMEOUT_MILLIS));
         mOperationCaptor.getValue().run();
-        verify(mMockBluetoothGatt).writeCharacteristic(mCharacteristicCaptor.capture());
+        verify(mMockBluetoothGattWrapper).writeCharacteristic(mCharacteristicCaptor.capture(),
+                eq(DATA), eq(characteristic.getWriteType()));
         BluetoothGattCharacteristic writtenCharacteristic = mCharacteristicCaptor.getValue();
-        assertThat(writtenCharacteristic.getValue()).isEqualTo(DATA);
         assertThat(writtenCharacteristic.getUuid()).isEqualTo(CHARACTERISTIC_UUID);
-        assertThat(writtenCharacteristic).isNotEqualTo(characteristic);
+        assertThat(writtenCharacteristic).isEqualTo(characteristic);
     }
 
     public void test_writeCharacteristic_by_uuid() throws Exception {
@@ -500,16 +509,16 @@ public class BluetoothGattConnectionTest extends TestCase {
                 .execute(mOperationCaptor.capture(),
                         eq(BluetoothGattConnection.OPERATION_TIMEOUT_MILLIS));
         mOperationCaptor.getValue().run();
-        verify(mMockBluetoothGatt).writeCharacteristic(mCharacteristicCaptor.capture());
+        verify(mMockBluetoothGattWrapper).writeCharacteristic(mCharacteristicCaptor.capture(),
+                eq(DATA), anyInt());
         BluetoothGattCharacteristic writtenCharacteristic = mCharacteristicCaptor.getValue();
-        assertThat(writtenCharacteristic.getValue()).isEqualTo(DATA);
         assertThat(writtenCharacteristic.getUuid()).isEqualTo(CHARACTERISTIC_UUID);
     }
 
     public void test_readDescriptor() throws Exception {
         when(mMockBluetoothOperationExecutor.executeNonnull(
                 new Operation<byte[]>(
-                        OperationType.READ_DESCRIPTOR, mMockBluetoothGatt,
+                        OperationType.READ_DESCRIPTOR, mMockBluetoothGattWrapper,
                         mMockBluetoothGattDescriptor),
                 BluetoothGattConnection.OPERATION_TIMEOUT_MILLIS))
                 .thenReturn(DATA);
@@ -520,13 +529,13 @@ public class BluetoothGattConnectionTest extends TestCase {
         verify(mMockBluetoothOperationExecutor)
                 .executeNonnull(mOperationCaptor.capture(), anyLong());
         mOperationCaptor.getValue().run();
-        verify(mMockBluetoothGatt).readDescriptor(mMockBluetoothGattDescriptor);
+        verify(mMockBluetoothGattWrapper).readDescriptor(mMockBluetoothGattDescriptor);
     }
 
     public void test_readDescriptor_by_uuid() throws Exception {
         when(mMockBluetoothOperationExecutor.executeNonnull(
                 new Operation<byte[]>(
-                        OperationType.READ_DESCRIPTOR, mMockBluetoothGatt,
+                        OperationType.READ_DESCRIPTOR, mMockBluetoothGattWrapper,
                         mMockBluetoothGattDescriptor),
                 BluetoothGattConnection.OPERATION_TIMEOUT_MILLIS))
                 .thenReturn(DATA);
@@ -539,7 +548,7 @@ public class BluetoothGattConnectionTest extends TestCase {
         verify(mMockBluetoothOperationExecutor)
                 .executeNonnull(mOperationCaptor.capture(), anyLong());
         mOperationCaptor.getValue().run();
-        verify(mMockBluetoothGatt).readDescriptor(mMockBluetoothGattDescriptor);
+        verify(mMockBluetoothGattWrapper).readDescriptor(mMockBluetoothGattDescriptor);
     }
 
     public void test_writeDescriptor() throws Exception {
@@ -550,11 +559,10 @@ public class BluetoothGattConnectionTest extends TestCase {
                 .execute(mOperationCaptor.capture(),
                         eq(BluetoothGattConnection.OPERATION_TIMEOUT_MILLIS));
         mOperationCaptor.getValue().run();
-        verify(mMockBluetoothGatt).writeDescriptor(mDescriptorCaptor.capture());
+        verify(mMockBluetoothGattWrapper).writeDescriptor(mDescriptorCaptor.capture(), eq(DATA));
         BluetoothGattDescriptor writtenDescriptor = mDescriptorCaptor.getValue();
-        assertThat(writtenDescriptor.getValue()).isEqualTo(DATA);
         assertThat(writtenDescriptor.getUuid()).isEqualTo(DESCRIPTOR_UUID);
-        assertThat(writtenDescriptor).isNotEqualTo(descriptor);
+        assertThat(writtenDescriptor).isEqualTo(descriptor);
     }
 
     public void test_writeDescriptor_by_uuid() throws Exception {
@@ -565,15 +573,14 @@ public class BluetoothGattConnectionTest extends TestCase {
                 .execute(mOperationCaptor.capture(),
                         eq(BluetoothGattConnection.OPERATION_TIMEOUT_MILLIS));
         mOperationCaptor.getValue().run();
-        verify(mMockBluetoothGatt).writeDescriptor(mDescriptorCaptor.capture());
+        verify(mMockBluetoothGattWrapper).writeDescriptor(mDescriptorCaptor.capture(), eq(DATA));
         BluetoothGattDescriptor writtenDescriptor = mDescriptorCaptor.getValue();
-        assertThat(writtenDescriptor.getValue()).isEqualTo(DATA);
         assertThat(writtenDescriptor.getUuid()).isEqualTo(DESCRIPTOR_UUID);
     }
 
     public void test_readRemoteRssi() throws Exception {
         when(mMockBluetoothOperationExecutor.executeNonnull(
-                new Operation<Integer>(OperationType.READ_RSSI, mMockBluetoothGatt),
+                new Operation<Integer>(OperationType.READ_RSSI, mMockBluetoothGattWrapper),
                 BluetoothGattConnection.OPERATION_TIMEOUT_MILLIS))
                 .thenReturn(RSSI);
 
@@ -585,7 +592,7 @@ public class BluetoothGattConnectionTest extends TestCase {
                         mOperationCaptor.capture(),
                         eq(BluetoothGattConnection.OPERATION_TIMEOUT_MILLIS));
         mOperationCaptor.getValue().run();
-        verify(mMockBluetoothGatt).readRemoteRssi();
+        verify(mMockBluetoothGattWrapper).readRemoteRssi();
     }
 
     public void test_getMaxDataPacketSize() throws Exception {
@@ -600,14 +607,13 @@ public class BluetoothGattConnectionTest extends TestCase {
 
         mBluetoothGattConnection.setNotificationEnabled(mMockBluetoothGattCharacteristic, true);
 
-        verify(mMockBluetoothGatt)
+        verify(mMockBluetoothGattWrapper)
                 .setCharacteristicNotification(mMockBluetoothGattCharacteristic, true);
         verify(mMockBluetoothOperationExecutor).execute(mOperationCaptor.capture(), anyLong());
         mOperationCaptor.getValue().run();
-        verify(mMockBluetoothGatt).writeDescriptor(mDescriptorCaptor.capture());
+        verify(mMockBluetoothGattWrapper).writeDescriptor(mDescriptorCaptor.capture(),
+                eq(BluetoothGattDescriptor.ENABLE_INDICATION_VALUE));
         BluetoothGattDescriptor writtenDescriptor = mDescriptorCaptor.getValue();
-        assertThat(writtenDescriptor.getValue())
-                .isEqualTo(BluetoothGattDescriptor.ENABLE_INDICATION_VALUE);
         assertThat(writtenDescriptor.getUuid())
                 .isEqualTo(ReservedUuids.Descriptors.CLIENT_CHARACTERISTIC_CONFIGURATION);
     }
@@ -615,14 +621,13 @@ public class BluetoothGattConnectionTest extends TestCase {
     public void test_getNotificationEnabled_notification_enable() throws Exception {
         mBluetoothGattConnection.setNotificationEnabled(mMockBluetoothGattCharacteristic, true);
 
-        verify(mMockBluetoothGatt)
+        verify(mMockBluetoothGattWrapper)
                 .setCharacteristicNotification(mMockBluetoothGattCharacteristic, true);
         verify(mMockBluetoothOperationExecutor).execute(mOperationCaptor.capture(), anyLong());
         mOperationCaptor.getValue().run();
-        verify(mMockBluetoothGatt).writeDescriptor(mDescriptorCaptor.capture());
+        verify(mMockBluetoothGattWrapper).writeDescriptor(mDescriptorCaptor.capture(),
+                eq(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE));
         BluetoothGattDescriptor writtenDescriptor = mDescriptorCaptor.getValue();
-        assertThat(writtenDescriptor.getValue())
-                .isEqualTo(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE);
         assertThat(writtenDescriptor.getUuid())
                 .isEqualTo(ReservedUuids.Descriptors.CLIENT_CHARACTERISTIC_CONFIGURATION);
     }
@@ -633,14 +638,13 @@ public class BluetoothGattConnectionTest extends TestCase {
 
         mBluetoothGattConnection.setNotificationEnabled(mMockBluetoothGattCharacteristic, false);
 
-        verify(mMockBluetoothGatt)
+        verify(mMockBluetoothGattWrapper)
                 .setCharacteristicNotification(mMockBluetoothGattCharacteristic, false);
         verify(mMockBluetoothOperationExecutor).execute(mOperationCaptor.capture(), anyLong());
         mOperationCaptor.getValue().run();
-        verify(mMockBluetoothGatt).writeDescriptor(mDescriptorCaptor.capture());
+        verify(mMockBluetoothGattWrapper).writeDescriptor(mDescriptorCaptor.capture(),
+                eq(BluetoothGattDescriptor.DISABLE_NOTIFICATION_VALUE));
         BluetoothGattDescriptor writtenDescriptor = mDescriptorCaptor.getValue();
-        assertThat(writtenDescriptor.getValue())
-                .isEqualTo(BluetoothGattDescriptor.DISABLE_NOTIFICATION_VALUE);
         assertThat(writtenDescriptor.getUuid())
                 .isEqualTo(ReservedUuids.Descriptors.CLIENT_CHARACTERISTIC_CONFIGURATION);
     }
@@ -648,14 +652,13 @@ public class BluetoothGattConnectionTest extends TestCase {
     public void test_setNotificationEnabled_notification_disable() throws Exception {
         mBluetoothGattConnection.setNotificationEnabled(mMockBluetoothGattCharacteristic, false);
 
-        verify(mMockBluetoothGatt)
+        verify(mMockBluetoothGattWrapper)
                 .setCharacteristicNotification(mMockBluetoothGattCharacteristic, false);
         verify(mMockBluetoothOperationExecutor).execute(mOperationCaptor.capture(), anyLong());
         mOperationCaptor.getValue().run();
-        verify(mMockBluetoothGatt).writeDescriptor(mDescriptorCaptor.capture());
+        verify(mMockBluetoothGattWrapper).writeDescriptor(mDescriptorCaptor.capture(),
+                eq(BluetoothGattDescriptor.DISABLE_NOTIFICATION_VALUE));
         BluetoothGattDescriptor writtenDescriptor = mDescriptorCaptor.getValue();
-        assertThat(writtenDescriptor.getValue())
-                .isEqualTo(BluetoothGattDescriptor.DISABLE_NOTIFICATION_VALUE);
         assertThat(writtenDescriptor.getUuid())
                 .isEqualTo(ReservedUuids.Descriptors.CLIENT_CHARACTERISTIC_CONFIGURATION);
     }
@@ -665,7 +668,8 @@ public class BluetoothGattConnectionTest extends TestCase {
                 .thenReturn(BluetoothGattCharacteristic.PROPERTY_READ);
 
         try {
-            mBluetoothGattConnection.setNotificationEnabled(mMockBluetoothGattCharacteristic, true);
+            mBluetoothGattConnection.setNotificationEnabled(mMockBluetoothGattCharacteristic,
+                    true);
             fail("BluetoothException was expected");
         } catch (BluetoothException expected) {
         }
@@ -782,8 +786,8 @@ public class BluetoothGattConnectionTest extends TestCase {
                 .execute(mOperationCaptor.capture(),
                         eq(BluetoothGattConnection.OPERATION_TIMEOUT_MILLIS));
         mOperationCaptor.getValue().run();
-        verify(mMockBluetoothGatt).disconnect();
-        verify(mMockBluetoothGatt).close();
+        verify(mMockBluetoothGattWrapper).disconnect();
+        verify(mMockBluetoothGattWrapper).close();
     }
 
     public void test_onClosed() throws Exception {
@@ -791,6 +795,6 @@ public class BluetoothGattConnectionTest extends TestCase {
 
         verify(mMockBluetoothOperationExecutor, never())
                 .execute(mOperationCaptor.capture(), anyLong());
-        verify(mMockBluetoothGatt).close();
+        verify(mMockBluetoothGattWrapper).close();
     }
 }

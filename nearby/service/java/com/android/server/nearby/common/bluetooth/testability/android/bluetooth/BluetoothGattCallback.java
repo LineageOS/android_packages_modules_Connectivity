@@ -31,26 +31,26 @@ public abstract class BluetoothGattCallback {
      * See {@link android.bluetooth.BluetoothGattCallback#onConnectionStateChange(
      * android.bluetooth.BluetoothGatt, int, int)}
      */
-    public void onConnectionStateChange(BluetoothGatt gatt, int status, int newState) {}
+    public void onConnectionStateChange(BluetoothGattWrapper gatt, int status, int newState) {}
 
     /**
      * See {@link android.bluetooth.BluetoothGattCallback#onServicesDiscovered(
      * android.bluetooth.BluetoothGatt,int)}
      */
-    public void onServicesDiscovered(BluetoothGatt gatt, int status) {}
+    public void onServicesDiscovered(BluetoothGattWrapper gatt, int status) {}
 
     /**
      * See {@link android.bluetooth.BluetoothGattCallback#onCharacteristicRead(
      * android.bluetooth.BluetoothGatt, BluetoothGattCharacteristic, int)}
      */
-    public void onCharacteristicRead(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic,
-            int status) {}
+    public void onCharacteristicRead(BluetoothGattWrapper gatt, BluetoothGattCharacteristic
+            characteristic, int status) {}
 
     /**
      * See {@link android.bluetooth.BluetoothGattCallback#onCharacteristicWrite(
      * android.bluetooth.BluetoothGatt, BluetoothGattCharacteristic, int)}
      */
-    public void onCharacteristicWrite(BluetoothGatt gatt,
+    public void onCharacteristicWrite(BluetoothGattWrapper gatt,
             BluetoothGattCharacteristic characteristic, int status) {}
 
     /**
@@ -58,40 +58,40 @@ public abstract class BluetoothGattCallback {
      * android.bluetooth.BluetoothGatt, BluetoothGattDescriptor, int)}
      */
     public void onDescriptorRead(
-            BluetoothGatt gatt, BluetoothGattDescriptor descriptor, int status) {}
+            BluetoothGattWrapper gatt, BluetoothGattDescriptor descriptor, int status) {}
 
     /**
      * See {@link android.bluetooth.BluetoothGattCallback#onDescriptorWrite(
      * android.bluetooth.BluetoothGatt, BluetoothGattDescriptor, int)}
      */
-    public void onDescriptorWrite(BluetoothGatt gatt, BluetoothGattDescriptor descriptor,
+    public void onDescriptorWrite(BluetoothGattWrapper gatt, BluetoothGattDescriptor descriptor,
             int status) {}
 
     /**
      * See {@link android.bluetooth.BluetoothGattCallback#onReadRemoteRssi(
      * android.bluetooth.BluetoothGatt, int, int)}
      */
-    public void onReadRemoteRssi(BluetoothGatt gatt, int rssi, int status) {}
+    public void onReadRemoteRssi(BluetoothGattWrapper gatt, int rssi, int status) {}
 
     /**
      * See {@link android.bluetooth.BluetoothGattCallback#onReliableWriteCompleted(
      * android.bluetooth.BluetoothGatt, int)}
      */
-    public void onReliableWriteCompleted(BluetoothGatt gatt, int status) {}
+    public void onReliableWriteCompleted(BluetoothGattWrapper gatt, int status) {}
 
     /**
      * See
      * {@link android.bluetooth.BluetoothGattCallback#onMtuChanged(android.bluetooth.BluetoothGatt,
      * int, int)}
      */
-    public void onMtuChanged(BluetoothGatt gatt, int mtu, int status) {}
+    public void onMtuChanged(BluetoothGattWrapper gatt, int mtu, int status) {}
 
     /**
      * See
      * {@link android.bluetooth.BluetoothGattCallback#onCharacteristicChanged(
      * android.bluetooth.BluetoothGatt, BluetoothGattCharacteristic)}
      */
-    public void onCharacteristicChanged(BluetoothGatt gatt,
+    public void onCharacteristicChanged(BluetoothGattWrapper gatt,
             BluetoothGattCharacteristic characteristic) {}
 
     /** Unwraps a Bluetooth Gatt callback. */
@@ -104,63 +104,66 @@ public abstract class BluetoothGattCallback {
         @Override
         public void onConnectionStateChange(android.bluetooth.BluetoothGatt gatt, int status,
                 int newState) {
-            BluetoothGattCallback.this.onConnectionStateChange(BluetoothGatt.wrap(gatt), status,
-                    newState);
+            BluetoothGattCallback.this.onConnectionStateChange(BluetoothGattWrapper.wrap(gatt),
+                    status, newState);
         }
 
         @Override
         public void onServicesDiscovered(android.bluetooth.BluetoothGatt gatt, int status) {
-            BluetoothGattCallback.this.onServicesDiscovered(BluetoothGatt.wrap(gatt), status);
+            BluetoothGattCallback.this.onServicesDiscovered(BluetoothGattWrapper.wrap(gatt),
+                    status);
         }
 
         @Override
         public void onCharacteristicRead(android.bluetooth.BluetoothGatt gatt,
                 BluetoothGattCharacteristic characteristic, int status) {
             BluetoothGattCallback.this.onCharacteristicRead(
-                    BluetoothGatt.wrap(gatt), characteristic, status);
+                    BluetoothGattWrapper.wrap(gatt), characteristic, status);
         }
 
         @Override
         public void onCharacteristicWrite(android.bluetooth.BluetoothGatt gatt,
                 BluetoothGattCharacteristic characteristic, int status) {
             BluetoothGattCallback.this.onCharacteristicWrite(
-                    BluetoothGatt.wrap(gatt), characteristic, status);
+                    BluetoothGattWrapper.wrap(gatt), characteristic, status);
         }
 
         @Override
         public void onDescriptorRead(android.bluetooth.BluetoothGatt gatt,
                 BluetoothGattDescriptor descriptor, int status) {
             BluetoothGattCallback.this.onDescriptorRead(
-                    BluetoothGatt.wrap(gatt), descriptor, status);
+                    BluetoothGattWrapper.wrap(gatt), descriptor, status);
         }
 
         @Override
         public void onDescriptorWrite(android.bluetooth.BluetoothGatt gatt,
                 BluetoothGattDescriptor descriptor, int status) {
             BluetoothGattCallback.this.onDescriptorWrite(
-                    BluetoothGatt.wrap(gatt), descriptor, status);
+                    BluetoothGattWrapper.wrap(gatt), descriptor, status);
         }
 
         @Override
         public void onReadRemoteRssi(android.bluetooth.BluetoothGatt gatt, int rssi, int status) {
-            BluetoothGattCallback.this.onReadRemoteRssi(BluetoothGatt.wrap(gatt), rssi, status);
+            BluetoothGattCallback.this.onReadRemoteRssi(BluetoothGattWrapper.wrap(gatt), rssi,
+                    status);
         }
 
         @Override
         public void onReliableWriteCompleted(android.bluetooth.BluetoothGatt gatt, int status) {
-            BluetoothGattCallback.this.onReliableWriteCompleted(BluetoothGatt.wrap(gatt), status);
+            BluetoothGattCallback.this.onReliableWriteCompleted(BluetoothGattWrapper.wrap(gatt),
+                    status);
         }
 
         @Override
         public void onMtuChanged(android.bluetooth.BluetoothGatt gatt, int mtu, int status) {
-            BluetoothGattCallback.this.onMtuChanged(BluetoothGatt.wrap(gatt), mtu, status);
+            BluetoothGattCallback.this.onMtuChanged(BluetoothGattWrapper.wrap(gatt), mtu, status);
         }
 
         @Override
         public void onCharacteristicChanged(android.bluetooth.BluetoothGatt gatt,
                 BluetoothGattCharacteristic characteristic) {
             BluetoothGattCallback.this.onCharacteristicChanged(
-                    BluetoothGatt.wrap(gatt), characteristic);
+                    BluetoothGattWrapper.wrap(gatt), characteristic);
         }
     }
 }
