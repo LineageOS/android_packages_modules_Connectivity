@@ -43,6 +43,7 @@ import android.net.NetworkCapabilities;
 import android.net.NetworkRequest;
 import android.net.ParseException;
 import android.net.cts.util.CtsNetUtils;
+import android.os.Build;
 import android.os.CancellationSignal;
 import android.os.Handler;
 import android.os.Looper;
@@ -54,10 +55,13 @@ import androidx.test.InstrumentationRegistry;
 import androidx.test.runner.AndroidJUnit4;
 
 import com.android.net.module.util.DnsPacket;
+import com.android.testutils.DevSdkIgnoreRule;
+import com.android.testutils.DevSdkIgnoreRule.IgnoreUpTo;
 import com.android.testutils.SkipPresubmit;
 
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
@@ -73,6 +77,9 @@ import java.util.concurrent.TimeUnit;
 @AppModeFull(reason = "WRITE_SECURE_SETTINGS permission can't be granted to instant apps")
 @RunWith(AndroidJUnit4.class)
 public class DnsResolverTest {
+    @Rule
+    public final DevSdkIgnoreRule ignoreRule = new DevSdkIgnoreRule();
+
     private static final String TAG = "DnsResolverTest";
     private static final char[] HEX_CHARS = {
             '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'
@@ -803,6 +810,21 @@ public class DnsResolverTest {
                 assertTrue(msg + " returned " + (queryV6 ? "Ipv4" : "Ipv6") + " results",
                         queryV6 ? !callback.hasIpv4Answer() : !callback.hasIpv6Answer());
             }
+        }
+    }
+
+    /** Verifies that DnsResolver.DnsException can be subclassed and its constructor re-used. */
+    @Test @IgnoreUpTo(Build.VERSION_CODES.R)
+    public void testDnsExceptionConstructor() throws InterruptedException {
+        class TestDnsException extends DnsResolver.DnsException {
+            TestDnsException(int code, @Nullable Throwable cause) {
+                super(code, cause);
+            }
+        }
+        try {
+            throw new TestDnsException(DnsResolver.ERROR_SYSTEM, null);
+        } catch (DnsResolver.DnsException e) {
+            assertEquals(DnsResolver.ERROR_SYSTEM, e.code);
         }
     }
 }
