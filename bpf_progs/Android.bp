@@ -22,7 +22,7 @@ package {
 }
 
 cc_library_headers {
-    name: "bpf_tethering_headers",
+    name: "bpf_connectivity_headers",
     vendor_available: false,
     host_supported: false,
     export_include_dirs: ["."],
