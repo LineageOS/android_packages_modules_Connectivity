@@ -2096,11 +2096,7 @@ public class FastPairDualConnection extends FastPairConnection {
     }
 
     private static void disableBle(android.bluetooth.BluetoothAdapter adapter) {
-        try {
-            Reflect.on(adapter).withMethod("disableBLE").invoke();
-        } catch (ReflectionException e) {
-            Log.i(TAG, "Can't call disableBLE", e);
-        }
+        adapter.disableBLE();
     }
 
     /**
