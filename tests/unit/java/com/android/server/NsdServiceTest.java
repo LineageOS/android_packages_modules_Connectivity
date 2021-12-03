@@ -92,7 +92,6 @@ public class NsdServiceTest {
     public TestRule compatChangeRule = new PlatformCompatChangeRule();
     @Mock Context mContext;
     @Mock ContentResolver mResolver;
-    @Mock NsdService.NsdSettings mSettings;
     NativeCallbackReceiver mDaemonCallback;
     @Spy DaemonConnection mDaemon = new DaemonConnection(mDaemonCallback);
     HandlerThread mThread;
@@ -129,7 +128,6 @@ public class NsdServiceTest {
     @Test
     @DisableCompatChanges(NsdManager.RUN_NATIVE_NSD_ONLY_IF_LEGACY_APPS)
     public void testPreSClients() throws Exception {
-        when(mSettings.isEnabled()).thenReturn(true);
         NsdService service = makeService();
 
         // Pre S client connected, the daemon should be started.
@@ -160,7 +158,6 @@ public class NsdServiceTest {
     @Test
     @EnableCompatChanges(NsdManager.RUN_NATIVE_NSD_ONLY_IF_LEGACY_APPS)
     public void testNoDaemonStartedWhenClientsConnect() throws Exception {
-        when(mSettings.isEnabled()).thenReturn(true);
         final NsdService service = makeService();
 
         // Creating an NsdManager will not cause any cmds executed, which means
@@ -197,7 +194,6 @@ public class NsdServiceTest {
     @Test
     @EnableCompatChanges(NsdManager.RUN_NATIVE_NSD_ONLY_IF_LEGACY_APPS)
     public void testClientRequestsAreGCedAtDisconnection() throws Exception {
-        when(mSettings.isEnabled()).thenReturn(true);
         NsdService service = makeService();
 
         NsdManager client = connectClient(service);
@@ -242,8 +238,6 @@ public class NsdServiceTest {
     @Test
     @EnableCompatChanges(NsdManager.RUN_NATIVE_NSD_ONLY_IF_LEGACY_APPS)
     public void testCleanupDelayNoRequestActive() throws Exception {
-        when(mSettings.isEnabled()).thenReturn(true);
-
         NsdService service = makeService();
         NsdManager client = connectClient(service);
 
@@ -277,8 +271,7 @@ public class NsdServiceTest {
             mDaemonCallback = callback;
             return mDaemon;
         };
-        final NsdService service = new NsdService(mContext, mSettings,
-                mHandler, supplier, CLEANUP_DELAY_MS) {
+        final NsdService service = new NsdService(mContext, mHandler, supplier, CLEANUP_DELAY_MS) {
             @Override
             public INsdServiceConnector connect(INsdManagerCallback baseCb) {
                 // Wrap the callback in a transparent mock, to mock asBinder returning a
