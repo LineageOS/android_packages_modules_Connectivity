@@ -151,6 +151,7 @@ public class NetlinkConstants {
     public static final int RTMGRP_ND_USEROPT = 1 << (RTNLGRP_ND_USEROPT - 1);
 
     // Device flags.
+    public static final int IFF_UP       = 1 << 0;
     public static final int IFF_LOWER_UP = 1 << 16;
 
     // Known values for struct rtmsg rtm_protocol.
