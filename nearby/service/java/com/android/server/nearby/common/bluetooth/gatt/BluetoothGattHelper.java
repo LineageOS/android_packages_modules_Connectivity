@@ -16,6 +16,7 @@
 
 package com.android.server.nearby.common.bluetooth.gatt;
 
+import android.bluetooth.BluetoothGatt;
 import android.bluetooth.BluetoothGattCharacteristic;
 import android.bluetooth.BluetoothGattDescriptor;
 import android.bluetooth.le.ScanFilter;
@@ -30,8 +31,8 @@ import androidx.annotation.VisibleForTesting;
 import com.android.server.nearby.common.bluetooth.BluetoothException;
 import com.android.server.nearby.common.bluetooth.testability.android.bluetooth.BluetoothAdapter;
 import com.android.server.nearby.common.bluetooth.testability.android.bluetooth.BluetoothDevice;
-import com.android.server.nearby.common.bluetooth.testability.android.bluetooth.BluetoothGatt;
 import com.android.server.nearby.common.bluetooth.testability.android.bluetooth.BluetoothGattCallback;
+import com.android.server.nearby.common.bluetooth.testability.android.bluetooth.BluetoothGattWrapper;
 import com.android.server.nearby.common.bluetooth.testability.android.bluetooth.le.BluetoothLeScanner;
 import com.android.server.nearby.common.bluetooth.testability.android.bluetooth.le.ScanCallback;
 import com.android.server.nearby.common.bluetooth.testability.android.bluetooth.le.ScanResult;
@@ -56,7 +57,8 @@ import javax.annotation.Nullable;
 import javax.annotation.concurrent.GuardedBy;
 
 /**
- * Wrapper of {@link BluetoothGatt} that provides blocking methods, errors and timeout handling.
+ * Wrapper of {@link BluetoothGattWrapper} that provides blocking methods, errors and timeout
+ * handling.
  */
 @SuppressWarnings("Guava") // java.util.Optional is not available until API 24
 public class BluetoothGattHelper {
@@ -109,7 +111,7 @@ public class BluetoothGattHelper {
     final BluetoothGattCallback mBluetoothGattCallback =
             new InternalBluetoothGattCallback();
     @VisibleForTesting
-    final ConcurrentMap<BluetoothGatt, BluetoothGattConnection> mConnections =
+    final ConcurrentMap<BluetoothGattWrapper, BluetoothGattConnection> mConnections =
             new ConcurrentHashMap<>();
 
     private final Context mApplicationContext;
@@ -233,7 +235,7 @@ public class BluetoothGattHelper {
 
                     @GuardedBy("mLock")
                     @Nullable(/* null before operation is executed */)
-                    private BluetoothGatt mBluetoothGatt;
+                    private BluetoothGattWrapper mBluetoothGatt;
 
                     @Override
                     public void run() throws BluetoothException {
@@ -241,15 +243,15 @@ public class BluetoothGattHelper {
                             if (mIsCanceled) {
                                 return;
                             }
-                            BluetoothGatt bluetoothGatt;
+                            BluetoothGattWrapper bluetoothGattWrapper;
                             Log.d(TAG, "Use LE transport");
-                            bluetoothGatt =
+                            bluetoothGattWrapper =
                                     bluetoothDevice.connectGatt(
                                             mApplicationContext,
                                             options.autoConnect(),
                                             mBluetoothGattCallback,
                                             android.bluetooth.BluetoothDevice.TRANSPORT_LE);
-                            if (bluetoothGatt == null) {
+                            if (bluetoothGattWrapper == null) {
                                 throw new BluetoothException("connectGatt() returned null.");
                             }
 
@@ -270,7 +272,7 @@ public class BluetoothGattHelper {
                                     // here until true is returned.
                                     int connectionPriority = connectionPriorityOption.get();
                                     long startTimeMillis = System.currentTimeMillis();
-                                    while (!bluetoothGatt.requestConnectionPriority(
+                                    while (!bluetoothGattWrapper.requestConnectionPriority(
                                             connectionPriority)) {
                                         if (System.currentTimeMillis() - startTimeMillis
                                                 > options.connectionTimeoutMillis()) {
@@ -292,15 +294,15 @@ public class BluetoothGattHelper {
                                 }
                             } catch (Exception e) {
                                 // Make sure to clean connection.
-                                bluetoothGatt.disconnect();
-                                bluetoothGatt.close();
+                                bluetoothGattWrapper.disconnect();
+                                bluetoothGattWrapper.close();
                                 throw e;
                             }
 
                             BluetoothGattConnection connection = new BluetoothGattConnection(
-                                    bluetoothGatt, mBluetoothOperationExecutor, options);
-                            mConnections.put(bluetoothGatt, connection);
-                            mBluetoothGatt = bluetoothGatt;
+                                    bluetoothGattWrapper, mBluetoothOperationExecutor, options);
+                            mConnections.put(bluetoothGattWrapper, connection);
+                            mBluetoothGatt = bluetoothGattWrapper;
                         }
                     }
 
@@ -312,13 +314,13 @@ public class BluetoothGattHelper {
                                 return;
                             }
                             mIsCanceled = true;
-                            BluetoothGatt bluetoothGatt = mBluetoothGatt;
-                            if (bluetoothGatt == null) {
+                            BluetoothGattWrapper bluetoothGattWrapper = mBluetoothGatt;
+                            if (bluetoothGattWrapper == null) {
                                 return;
                             }
-                            mConnections.remove(bluetoothGatt);
-                            bluetoothGatt.disconnect();
-                            bluetoothGatt.close();
+                            mConnections.remove(bluetoothGattWrapper);
+                            bluetoothGattWrapper.disconnect();
+                            bluetoothGattWrapper.close();
                         }
                     }
                 };
@@ -335,7 +337,7 @@ public class BluetoothGattHelper {
         return result;
     }
 
-    private BluetoothGattConnection getConnectionByGatt(BluetoothGatt gatt)
+    private BluetoothGattConnection getConnectionByGatt(BluetoothGattWrapper gatt)
             throws BluetoothException {
         BluetoothGattConnection connection = mConnections.get(gatt);
         if (connection == null) {
@@ -347,7 +349,7 @@ public class BluetoothGattHelper {
     private class InternalBluetoothGattCallback extends BluetoothGattCallback {
 
         @Override
-        public void onConnectionStateChange(BluetoothGatt gatt, int status, int newState) {
+        public void onConnectionStateChange(BluetoothGattWrapper gatt, int status, int newState) {
             BluetoothGattConnection connection;
             BluetoothDevice device = gatt.getDevice();
             switch (newState) {
@@ -430,7 +432,7 @@ public class BluetoothGattHelper {
         }
 
         @Override
-        public void onMtuChanged(BluetoothGatt gatt, int mtu, int status) {
+        public void onMtuChanged(BluetoothGattWrapper gatt, int mtu, int status) {
             BluetoothGattConnection connection = mConnections.get(gatt);
             BluetoothDevice device = gatt.getDevice();
             if (connection == null) {
@@ -460,13 +462,13 @@ public class BluetoothGattHelper {
         }
 
         @Override
-        public void onServicesDiscovered(BluetoothGatt gatt, int status) {
+        public void onServicesDiscovered(BluetoothGattWrapper gatt, int status) {
             mBluetoothOperationExecutor.notifyCompletion(
                     new Operation<Void>(OperationType.DISCOVER_SERVICES_INTERNAL, gatt), status);
         }
 
         @Override
-        public void onCharacteristicRead(BluetoothGatt gatt,
+        public void onCharacteristicRead(BluetoothGattWrapper gatt,
                 BluetoothGattCharacteristic characteristic, int status) {
             mBluetoothOperationExecutor.notifyCompletion(
                     new Operation<byte[]>(OperationType.READ_CHARACTERISTIC, gatt, characteristic),
@@ -474,14 +476,14 @@ public class BluetoothGattHelper {
         }
 
         @Override
-        public void onCharacteristicWrite(BluetoothGatt gatt,
+        public void onCharacteristicWrite(BluetoothGattWrapper gatt,
                 BluetoothGattCharacteristic characteristic, int status) {
             mBluetoothOperationExecutor.notifyCompletion(new Operation<Void>(
                     OperationType.WRITE_CHARACTERISTIC, gatt, characteristic), status);
         }
 
         @Override
-        public void onDescriptorRead(BluetoothGatt gatt, BluetoothGattDescriptor descriptor,
+        public void onDescriptorRead(BluetoothGattWrapper gatt, BluetoothGattDescriptor descriptor,
                 int status) {
             mBluetoothOperationExecutor.notifyCompletion(
                     new Operation<byte[]>(OperationType.READ_DESCRIPTOR, gatt, descriptor), status,
@@ -489,7 +491,7 @@ public class BluetoothGattHelper {
         }
 
         @Override
-        public void onDescriptorWrite(BluetoothGatt gatt, BluetoothGattDescriptor descriptor,
+        public void onDescriptorWrite(BluetoothGattWrapper gatt, BluetoothGattDescriptor descriptor,
                 int status) {
             Log.d(TAG, String.format("onDescriptorWrite %s, %s, %d",
                     gatt.getDevice(), descriptor.getUuid(), status));
@@ -498,19 +500,19 @@ public class BluetoothGattHelper {
         }
 
         @Override
-        public void onReadRemoteRssi(BluetoothGatt gatt, int rssi, int status) {
+        public void onReadRemoteRssi(BluetoothGattWrapper gatt, int rssi, int status) {
             mBluetoothOperationExecutor.notifyCompletion(
                     new Operation<Integer>(OperationType.READ_RSSI, gatt), status, rssi);
         }
 
         @Override
-        public void onReliableWriteCompleted(BluetoothGatt gatt, int status) {
+        public void onReliableWriteCompleted(BluetoothGattWrapper gatt, int status) {
             mBluetoothOperationExecutor.notifyCompletion(
                     new Operation<Void>(OperationType.WRITE_RELIABLE, gatt), status);
         }
 
         @Override
-        public void onCharacteristicChanged(BluetoothGatt gatt,
+        public void onCharacteristicChanged(BluetoothGattWrapper gatt,
                 BluetoothGattCharacteristic characteristic) {
             byte[] value = characteristic.getValue();
             if (value == null) {

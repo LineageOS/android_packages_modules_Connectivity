@@ -21,15 +21,10 @@ import static com.android.server.nearby.common.bluetooth.util.BluetoothGattUtils
 import static com.google.common.truth.Truth.assertThat;
 
 import android.bluetooth.BluetoothGatt;
-import android.bluetooth.BluetoothGattCharacteristic;
-import android.bluetooth.BluetoothGattDescriptor;
-import android.bluetooth.BluetoothGattService;
 import android.platform.test.annotations.Presubmit;
 
 import androidx.test.filters.SmallTest;
 import androidx.test.runner.AndroidJUnit4;
-
-import com.android.server.nearby.common.bluetooth.BluetoothException;
 
 import com.google.common.collect.ImmutableSet;
 
@@ -65,41 +60,4 @@ public class BluetoothGattUtilsTest {
             assertThat(getMessageForStatusCode(fieldValue)).isEqualTo(fieldName);
         }
     }
-
-    @Test
-    public void testCloneDescriptor() throws BluetoothException {
-        BluetoothGattCharacteristic characteristic = new BluetoothGattCharacteristic(TEST_UUID,
-                BluetoothGattCharacteristic.PROPERTY_INDICATE,
-                BluetoothGattCharacteristic.PERMISSION_READ_ENCRYPTED
-                        | BluetoothGattCharacteristic.PERMISSION_WRITE_SIGNED_MITM);
-        BluetoothGattDescriptor descriptor = new BluetoothGattDescriptor(TEST_UUID,
-                BluetoothGattDescriptor.PERMISSION_READ_ENCRYPTED
-                        | BluetoothGattDescriptor.PERMISSION_WRITE_SIGNED_MITM);
-        characteristic.addDescriptor(descriptor);
-
-        BluetoothGattDescriptor result = BluetoothGattUtils.clone(descriptor);
-
-        assertThat(result.getUuid()).isEqualTo(descriptor.getUuid());
-        assertThat(result.getPermissions()).isEqualTo(descriptor.getPermissions());
-        assertThat(result.getCharacteristic()).isEqualTo(descriptor.getCharacteristic());
-    }
-
-    @Test
-    public void testCloneCharacteristic() throws BluetoothException {
-        BluetoothGattService service =
-                new BluetoothGattService(TEST_UUID, BluetoothGattService.SERVICE_TYPE_PRIMARY);
-        BluetoothGattCharacteristic characteristic = new BluetoothGattCharacteristic(TEST_UUID,
-                BluetoothGattCharacteristic.PROPERTY_INDICATE,
-                BluetoothGattCharacteristic.PERMISSION_READ_ENCRYPTED
-                        | BluetoothGattCharacteristic.PERMISSION_WRITE_SIGNED_MITM);
-        characteristic.setWriteType(BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT);
-        service.addCharacteristic(characteristic);
-        BluetoothGattCharacteristic result = BluetoothGattUtils.clone(characteristic);
-
-        assertThat(result.getUuid()).isEqualTo(characteristic.getUuid());
-        assertThat(result.getPermissions()).isEqualTo(characteristic.getPermissions());
-        assertThat(result.getProperties()).isEqualTo(characteristic.getProperties());
-        assertThat(result.getService()).isEqualTo(characteristic.getService());
-        assertThat(result.getInstanceId()).isEqualTo(characteristic.getInstanceId());
-        assertThat(result.getWriteType()).isEqualTo(characteristic.getWriteType());    }
 }

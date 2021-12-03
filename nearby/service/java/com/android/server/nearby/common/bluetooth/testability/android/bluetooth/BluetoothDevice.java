@@ -144,14 +144,14 @@ public class BluetoothDevice {
      * android.bluetooth.BluetoothGattCallback)}.
      */
     @Nullable(/* when bt service is not available */)
-    public BluetoothGatt connectGatt(Context context, boolean autoConnect,
+    public BluetoothGattWrapper connectGatt(Context context, boolean autoConnect,
             BluetoothGattCallback callback) {
         android.bluetooth.BluetoothGatt gatt =
                 mWrappedBluetoothDevice.connectGatt(context, autoConnect, callback.unwrap());
         if (gatt == null) {
             return null;
         }
-        return BluetoothGatt.wrap(gatt);
+        return BluetoothGattWrapper.wrap(gatt);
     }
 
     /**
@@ -160,7 +160,7 @@ public class BluetoothDevice {
      */
     @TargetApi(23)
     @Nullable(/* when bt service is not available */)
-    public BluetoothGatt connectGatt(Context context, boolean autoConnect,
+    public BluetoothGattWrapper connectGatt(Context context, boolean autoConnect,
             BluetoothGattCallback callback, int transport) {
         android.bluetooth.BluetoothGatt gatt =
                 mWrappedBluetoothDevice.connectGatt(
@@ -168,7 +168,7 @@ public class BluetoothDevice {
         if (gatt == null) {
             return null;
         }
-        return BluetoothGatt.wrap(gatt);
+        return BluetoothGattWrapper.wrap(gatt);
     }
 
 

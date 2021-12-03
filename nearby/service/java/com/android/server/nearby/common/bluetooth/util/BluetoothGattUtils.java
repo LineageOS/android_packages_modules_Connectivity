@@ -21,11 +21,6 @@ import android.bluetooth.BluetoothGattCharacteristic;
 import android.bluetooth.BluetoothGattDescriptor;
 import android.bluetooth.BluetoothGattService;
 
-import com.android.server.nearby.common.bluetooth.BluetoothException;
-
-import java.lang.reflect.Field;
-import java.util.Arrays;
-
 import javax.annotation.Nullable;
 
 /**
@@ -63,76 +58,6 @@ public class BluetoothGattUtils {
             default:
                 return "Unknown error code";
         }
-    }
-
-    /** Clones a {@link BluetoothGattDescriptor} so the value can be changed thread-safely. */
-    public static BluetoothGattDescriptor clone(BluetoothGattDescriptor descriptor)
-            throws BluetoothException {
-        BluetoothGattDescriptor result =
-                new BluetoothGattDescriptor(descriptor.getUuid(), descriptor.getPermissions());
-        try {
-            try {
-                // TODO(b/201463121): remove usage of reflection.
-                Field instanceIdField = BluetoothGattDescriptor.class.getDeclaredField("mInstance");
-                instanceIdField.setAccessible(true);
-                instanceIdField.set(result, instanceIdField.get(descriptor));
-            } catch (NoSuchFieldException e) {
-                // This field doesn't seem to exist in early implementation so just ignore
-                // instanceId in this case.
-            }
-
-            // TODO(b/201463121): remove usage of reflection.
-            Field characteristicField =
-                    BluetoothGattDescriptor.class.getDeclaredField("mCharacteristic");
-            characteristicField.setAccessible(true);
-            characteristicField.set(result, characteristicField.get(descriptor));
-            byte[] value = descriptor.getValue();
-            if (value != null) {
-                result.setValue(Arrays.copyOf(value, value.length));
-            }
-        } catch (NoSuchFieldException e) {
-            throw new BluetoothException("Cannot clone descriptor.", e);
-        } catch (IllegalAccessException e) {
-            throw new BluetoothException("Cannot clone descriptor.", e);
-        } catch (IllegalArgumentException e) {
-            throw new BluetoothException("Cannot clone descriptor.", e);
-        }
-        return result;
-    }
-
-    /** Clones a {@link BluetoothGattCharacteristic} so the value can be changed thread-safely. */
-    public static BluetoothGattCharacteristic clone(BluetoothGattCharacteristic characteristic)
-            throws BluetoothException {
-        BluetoothGattCharacteristic result =
-                new BluetoothGattCharacteristic(characteristic.getUuid(),
-                        characteristic.getProperties(), characteristic.getPermissions());
-        try {
-            // TODO(b/201463121): remove usage of reflection.
-            Field instanceIdField = BluetoothGattCharacteristic.class.getDeclaredField("mInstance");
-            // TODO(b/201463121): remove usage of reflection.
-            Field serviceField = BluetoothGattCharacteristic.class.getDeclaredField("mService");
-            // TODO(b/201463121): remove usage of reflection.
-            Field descriptorField =
-                    BluetoothGattCharacteristic.class.getDeclaredField("mDescriptors");
-            instanceIdField.setAccessible(true);
-            serviceField.setAccessible(true);
-            descriptorField.setAccessible(true);
-            instanceIdField.set(result, instanceIdField.get(characteristic));
-            serviceField.set(result, serviceField.get(characteristic));
-            descriptorField.set(result, descriptorField.get(characteristic));
-            byte[] value = characteristic.getValue();
-            if (value != null) {
-                result.setValue(Arrays.copyOf(value, value.length));
-            }
-            result.setWriteType(characteristic.getWriteType());
-        } catch (NoSuchFieldException e) {
-            throw new BluetoothException("Cannot clone characteristic.", e);
-        } catch (IllegalAccessException e) {
-            throw new BluetoothException("Cannot clone characteristic.", e);
-        } catch (IllegalArgumentException e) {
-            throw new BluetoothException("Cannot clone characteristic.", e);
-        }
-        return result;
     }
 
     /** Creates a user-readable string from a {@link BluetoothGattDescriptor}. */

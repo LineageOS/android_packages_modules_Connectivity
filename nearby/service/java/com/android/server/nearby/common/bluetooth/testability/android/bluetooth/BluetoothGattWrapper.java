@@ -30,40 +30,11 @@ import java.util.UUID;
 import javax.annotation.Nullable;
 
 /** Mockable wrapper of {@link android.bluetooth.BluetoothGatt}. */
-@TargetApi(Build.VERSION_CODES.JELLY_BEAN_MR2)
-public class BluetoothGatt {
-
-    /** See {@link android.bluetooth.BluetoothGatt#STATE_CONNECTED}. */
-    public static final int STATE_CONNECTED = android.bluetooth.BluetoothGatt.STATE_CONNECTED;
-
-    /** See {@link android.bluetooth.BluetoothGatt#STATE_DISCONNECTED}. */
-    public static final int STATE_DISCONNECTED = android.bluetooth.BluetoothGatt.STATE_DISCONNECTED;
-
-    /** See {@link android.bluetooth.BluetoothGatt#GATT_REQUEST_NOT_SUPPORTED}. */
-    public static final int GATT_REQUEST_NOT_SUPPORTED =
-            android.bluetooth.BluetoothGatt.GATT_REQUEST_NOT_SUPPORTED;
-
-    /** See {@link android.bluetooth.BluetoothGatt#GATT_SUCCESS}. */
-    public static final int GATT_SUCCESS = android.bluetooth.BluetoothGatt.GATT_SUCCESS;
-
-    /** See {@link android.bluetooth.BluetoothGatt#GATT_FAILURE}. */
-    public static final int GATT_FAILURE = android.bluetooth.BluetoothGatt.GATT_FAILURE;
-
-    /** See {@link android.bluetooth.BluetoothGatt#CONNECTION_PRIORITY_BALANCED}. */
-    public static final int CONNECTION_PRIORITY_BALANCED =
-            android.bluetooth.BluetoothGatt.CONNECTION_PRIORITY_BALANCED;
-
-    /** See {@link android.bluetooth.BluetoothGatt#CONNECTION_PRIORITY_HIGH}. */
-    public static final int CONNECTION_PRIORITY_HIGH =
-            android.bluetooth.BluetoothGatt.CONNECTION_PRIORITY_HIGH;
-
-    /** See {@link android.bluetooth.BluetoothGatt#CONNECTION_PRIORITY_LOW_POWER}. */
-    public static final int CONNECTION_PRIORITY_LOW_POWER =
-            android.bluetooth.BluetoothGatt.CONNECTION_PRIORITY_LOW_POWER;
-
+@TargetApi(Build.VERSION_CODES.TIRAMISU)
+public class BluetoothGattWrapper {
     private final android.bluetooth.BluetoothGatt mWrappedBluetoothGatt;
 
-    private BluetoothGatt(android.bluetooth.BluetoothGatt bluetoothGatt) {
+    private BluetoothGattWrapper(android.bluetooth.BluetoothGatt bluetoothGatt) {
         mWrappedBluetoothGatt = bluetoothGatt;
     }
 
@@ -113,10 +84,12 @@ public class BluetoothGatt {
     }
 
     /**
-     * See {@link android.bluetooth.BluetoothGatt#writeCharacteristic(BluetoothGattCharacteristic)}.
+     * See {@link android.bluetooth.BluetoothGatt#writeCharacteristic(BluetoothGattCharacteristic,
+     * byte[], int)} .
      */
-    public boolean writeCharacteristic(BluetoothGattCharacteristic characteristic) {
-        return mWrappedBluetoothGatt.writeCharacteristic(characteristic);
+    public int writeCharacteristic(BluetoothGattCharacteristic characteristic, byte[] value,
+            int writeType) {
+        return mWrappedBluetoothGatt.writeCharacteristic(characteristic, value, writeType);
     }
 
     /** See {@link android.bluetooth.BluetoothGatt#readDescriptor(BluetoothGattDescriptor)}. */
@@ -124,9 +97,12 @@ public class BluetoothGatt {
         return mWrappedBluetoothGatt.readDescriptor(descriptor);
     }
 
-    /** See {@link android.bluetooth.BluetoothGatt#writeDescriptor(BluetoothGattDescriptor)}. */
-    public boolean writeDescriptor(BluetoothGattDescriptor descriptor) {
-        return mWrappedBluetoothGatt.writeDescriptor(descriptor);
+    /**
+     * See {@link android.bluetooth.BluetoothGatt#writeDescriptor(BluetoothGattDescriptor,
+     * byte[])}.
+     */
+    public int writeDescriptor(BluetoothGattDescriptor descriptor, byte[] value) {
+        return mWrappedBluetoothGatt.writeDescriptor(descriptor, value);
     }
 
     /** See {@link android.bluetooth.BluetoothGatt#readRemoteRssi()}. */
@@ -172,10 +148,10 @@ public class BluetoothGatt {
         if (o == this) {
             return true;
         }
-        if (!(o instanceof BluetoothGatt)) {
+        if (!(o instanceof BluetoothGattWrapper)) {
             return false;
         }
-        return mWrappedBluetoothGatt.equals(((BluetoothGatt) o).unwrap());
+        return mWrappedBluetoothGatt.equals(((BluetoothGattWrapper) o).unwrap());
     }
 
     /** Unwraps a Bluetooth Gatt instance. */
@@ -184,7 +160,7 @@ public class BluetoothGatt {
     }
 
     /** Wraps a Bluetooth Gatt instance. */
-    public static BluetoothGatt wrap(android.bluetooth.BluetoothGatt gatt) {
-        return new BluetoothGatt(gatt);
+    public static BluetoothGattWrapper wrap(android.bluetooth.BluetoothGatt gatt) {
+        return new BluetoothGattWrapper(gatt);
     }
 }
