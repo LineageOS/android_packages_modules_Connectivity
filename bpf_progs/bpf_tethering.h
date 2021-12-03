@@ -24,7 +24,7 @@
 // Common definitions for BPF code in the tethering mainline module.
 // These definitions are available to:
 // - The BPF programs in Tethering/bpf_progs/
-// - JNI code that depends on the bpf_tethering_headers library.
+// - JNI code that depends on the bpf_connectivity_headers library.
 
 #define BPF_TETHER_ERRORS    \
     ERR(INVALID_IP_VERSION)  \

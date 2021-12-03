@@ -50,7 +50,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 @RunWith(DevSdkIgnoreRunner.class)
 @IgnoreUpTo(Build.VERSION_CODES.R)
 public final class BpfMapTest {
-    // Sync from packages/modules/Connectivity/Tethering/bpf_progs/offload.c.
+    // Sync from packages/modules/Connectivity/bpf_progs/offload.c.
     private static final int TEST_MAP_SIZE = 16;
     private static final String TETHER_DOWNSTREAM6_FS_PATH =
             "/sys/fs/bpf/tethering/map_test_tether_downstream6_map";
