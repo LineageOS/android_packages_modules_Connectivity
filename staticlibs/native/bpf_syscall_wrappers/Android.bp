@@ -30,12 +30,14 @@ cc_library_headers {
     min_sdk_version: "30",
     apex_available: [
         "//apex_available:platform",
+        "com.android.mediaprovider",
         "com.android.tethering",
     ],
     visibility: [
         "//frameworks/libs/net/common/native/bpfmapjni",
         "//packages/modules/Connectivity/service",
         "//packages/modules/Connectivity/Tethering",
+        "//packages/providers/MediaProvider/jni",
         "//system/bpf/libbpf_android",
         "//system/memory/lmkd",
     ],
