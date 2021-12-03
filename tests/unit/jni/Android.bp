@@ -13,6 +13,8 @@ cc_library_shared {
         "-Wthread-safety",
     ],
 
+    header_libs: ["bpf_connectivity_headers"],
+
     srcs: [
         ":lib_networkStatsFactory_native",
         "test_onload.cpp",
