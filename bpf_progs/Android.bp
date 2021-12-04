@@ -32,9 +32,20 @@ cc_library_headers {
     ],
     sdk_version: "30",
     min_sdk_version: "30",
-    apex_available: ["com.android.tethering"],
+    apex_available: [
+        "//apex_available:platform",
+        "com.android.tethering",
+        ],
     visibility: [
+        // TODO: remove it when NetworkStatsService is moved into the mainline module and no more
+        // calls to JNI in libservices.core.
+        "//frameworks/base/services/core/jni",
         "//packages/modules/Connectivity/Tethering",
+        "//packages/modules/Connectivity/tests/unit/jni",
+        // TODO: remove system/netd/* when all BPF code is moved out of Netd.
+        "//system/netd/libnetdbpf",
+        "//system/netd/server",
+        "//system/netd/tests",
     ],
 }
 
