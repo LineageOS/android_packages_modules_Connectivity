@@ -86,9 +86,9 @@ public abstract class NearbyDevice {
     }
 
     /**
-     * The RSSI this device is away.
+     * Returns the received signal strength in dBm. The valid range is [-127, 126].
      */
-    public float getRssi() {
+    public int getRssi() {
         return mRssi;
     }
 

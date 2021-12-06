@@ -92,7 +92,7 @@ public class FastPairDevice extends NearbyDevice implements Parcelable {
     }
 
     @Override
-    public float getRssi() {
+    public int getRssi() {
         return mRssi;
     }
 
