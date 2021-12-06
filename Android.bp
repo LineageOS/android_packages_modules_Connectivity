@@ -50,9 +50,6 @@ filegroup {
         "ipv4.c",
         "ipv6.c",
         "logging.c",
-        "netlink_callbacks.c",
-        "netlink_msg.c",
-        "setif.c",
         "translate.c",
     ],
 }
@@ -67,7 +64,6 @@ cc_binary {
     ],
     static_libs: [
         "libip_checksum",
-        "libnl",
     ],
     shared_libs: [
         "libcutils",
@@ -108,7 +104,6 @@ cc_test {
         "libbase",
         "libip_checksum",
         "libnetd_test_tun_interface",
-        "libnl",
     ],
     shared_libs: [
         "libcutils",
