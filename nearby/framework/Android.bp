@@ -65,6 +65,7 @@ java_library {
     installable: false,
     visibility: [
         "//packages/modules/Nearby/service",
+        "//packages/modules/Nearby/halfsheet",
         "//packages/modules/Nearby/tests",
     ],
 }

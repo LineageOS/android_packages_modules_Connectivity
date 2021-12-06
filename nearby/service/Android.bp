@@ -23,6 +23,20 @@ filegroup {
     ],
 }
 
+filegroup {
+    name: "nearby-service-string-res",
+    srcs: [
+        "java/**/Constant.java",
+    ],
+}
+
+java_library {
+    name: "nearby-service-string",
+    srcs: [":nearby-service-string-res"],
+    sdk_version: "module_current",
+}
+
+
 // Main lib for nearby services.
 java_library {
     name: "service-nearby",
