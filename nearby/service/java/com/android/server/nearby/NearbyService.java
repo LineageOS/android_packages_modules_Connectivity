@@ -22,7 +22,7 @@ import android.util.Log;
 import com.android.server.SystemService;
 import com.android.server.nearby.common.locator.LocatorContextWrapper;
 import com.android.server.nearby.fastpair.FastPairManager;
-
+import com.android.server.nearby.provider.FastPairDataProvider;
 
 /**
  * Service implementing nearby functionality. The actual implementation is delegated to
@@ -30,9 +30,11 @@ import com.android.server.nearby.fastpair.FastPairManager;
  */
 // TODO(189954300): Implement nearby service.
 public class NearbyService extends SystemService {
+
     private static final String TAG = "NearbyService";
     private static final boolean DBG = true;
     private final NearbyServiceImpl mImpl;
+    private final Context mContext;
     private final FastPairManager mFastPairManager;
 
     private LocatorContextWrapper mLocatorContextWrapper;
@@ -40,6 +42,7 @@ public class NearbyService extends SystemService {
     public NearbyService(Context contextBase) {
         super(contextBase);
         mImpl = new NearbyServiceImpl(contextBase);
+        mContext = contextBase;
         mLocatorContextWrapper = new LocatorContextWrapper(contextBase, null);
         mFastPairManager = new FastPairManager(mLocatorContextWrapper);
     }
@@ -54,7 +57,13 @@ public class NearbyService extends SystemService {
 
     @Override
     public void onBootPhase(int phase) {
+        if (phase == PHASE_THIRD_PARTY_APPS_CAN_START) {
+            onSystemThirdPartyAppsCanStart();
+        }
     }
 
-
+    private void onSystemThirdPartyAppsCanStart() {
+        // Ensures that a fast pair data provider exists which will work in direct boot.
+        FastPairDataProvider.init(mContext);
+    }
 }
