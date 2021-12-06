@@ -476,6 +476,7 @@ public final class CtsNetUtils {
         NetworkCallback callback = new NetworkCallback() {
             @Override
             public void onLinkPropertiesChanged(Network n, LinkProperties lp) {
+                Log.i(TAG, "Link properties of network " + n + " changed to " + lp);
                 if (requiresValidatedServer && lp.getValidatedPrivateDnsServers().isEmpty()) {
                     return;
                 }
