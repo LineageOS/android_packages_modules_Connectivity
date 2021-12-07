@@ -32,6 +32,7 @@ private val TAG = CleanupTest::class.simpleName
 class CleanupTest {
     class TestException1 : Exception()
     class TestException2 : Exception()
+    class TestException3 : Exception()
 
     @Test
     fun testNotThrow() {
@@ -171,5 +172,33 @@ class CleanupTest {
         }
         assertTrue(x == 4)
         assertTrue(thrown.suppressedExceptions.isEmpty())
+    }
+
+    @Test
+    fun testMultipleCleanups() {
+        var x = 1
+        val thrown = assertFailsWith<TestException1> {
+            tryTest {
+                x = 2
+                throw TestException1()
+            } cleanupStep {
+                assertTrue(x == 2)
+                x = 3
+                throw TestException2()
+                x = 4
+            } cleanupStep {
+                assertTrue(x == 3)
+                x = 5
+                throw TestException3()
+                x = 6
+            } cleanup {
+                assertTrue(x == 5)
+                x = 7
+            }
+        }
+        assertEquals(2, thrown.suppressedExceptions.size)
+        assertTrue(thrown.suppressedExceptions[0] is TestException2)
+        assertTrue(thrown.suppressedExceptions[1] is TestException3)
+        assert(x == 7)
     }
 }

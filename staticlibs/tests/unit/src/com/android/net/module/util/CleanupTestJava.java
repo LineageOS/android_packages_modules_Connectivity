@@ -20,6 +20,7 @@ import static com.android.testutils.Cleanup.testAndCleanup;
 import static com.android.testutils.MiscAsserts.assertThrows;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 import android.util.Log;
 
@@ -31,6 +32,7 @@ public class CleanupTestJava {
     private static final String TAG = CleanupTestJava.class.getSimpleName();
     private static final class TestException1 extends Exception {}
     private static final class TestException2 extends Exception {}
+    private static final class TestException3 extends Exception {}
 
     @Test
     public void testNotThrow() {
@@ -92,5 +94,28 @@ public class CleanupTestJava {
                     })
         );
         assertEquals(3, x.get());
+    }
+
+    @Test
+    public void testMultipleCleanups() {
+        final AtomicInteger x = new AtomicInteger(1);
+        final TestException1 exception = assertThrows(TestException1.class, () ->
+                testAndCleanup(() -> {
+                    x.compareAndSet(1, 2);
+                    throw new TestException1();
+                }, () -> {
+                        x.compareAndSet(2, 3);
+                        throw new TestException2();
+                    }, () -> {
+                        x.compareAndSet(3, 4);
+                        throw new TestException3();
+                    }, () -> {
+                        x.compareAndSet(4, 5);
+                    })
+        );
+        assertEquals(2, exception.getSuppressed().length);
+        assertTrue(exception.getSuppressed()[0] instanceof TestException2);
+        assertTrue(exception.getSuppressed()[1] instanceof TestException3);
+        assertEquals(5, x.get());
     }
 }
