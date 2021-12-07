@@ -36,6 +36,7 @@ cc_library {
     apex_available: [
         "//apex_available:platform",
         "com.android.resolv",
+        "com.android.tethering",
     ],
     min_sdk_version: "29",
 }
