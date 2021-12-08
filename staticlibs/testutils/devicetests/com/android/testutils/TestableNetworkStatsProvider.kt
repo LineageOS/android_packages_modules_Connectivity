@@ -17,6 +17,7 @@
 package com.android.testutils
 
 import android.net.netstats.provider.NetworkStatsProvider
+import android.util.Log
 import com.android.net.module.util.ArrayTrackRecord
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -43,23 +44,28 @@ open class TestableNetworkStatsProvider(
         data class OnSetAlert(val quotaBytes: Long) : CallbackType()
     }
 
+    private val TAG = this::class.simpleName
     val history = ArrayTrackRecord<CallbackType>().newReadHead()
     // See ReadHead#mark
     val mark get() = history.mark
 
     override fun onRequestStatsUpdate(token: Int) {
+        Log.d(TAG, "onRequestStatsUpdate $token")
         history.add(CallbackType.OnRequestStatsUpdate(token))
     }
 
     override fun onSetWarningAndLimit(iface: String, warningBytes: Long, limitBytes: Long) {
+        Log.d(TAG, "onSetWarningAndLimit $iface $warningBytes $limitBytes")
         history.add(CallbackType.OnSetWarningAndLimit(iface, warningBytes, limitBytes))
     }
 
     override fun onSetLimit(iface: String, quotaBytes: Long) {
+        Log.d(TAG, "onSetLimit $iface $quotaBytes")
         history.add(CallbackType.OnSetLimit(iface, quotaBytes))
     }
 
     override fun onSetAlert(quotaBytes: Long) {
+        Log.d(TAG, "onSetAlert $quotaBytes")
         history.add(CallbackType.OnSetAlert(quotaBytes))
     }
 
