@@ -20,7 +20,6 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.same;
@@ -90,14 +89,13 @@ public class EthernetNetworkFactoryTest {
     }
 
     private void setupNetworkAgentMock() {
-        when(mDeps.makeEthernetNetworkAgent(any(), any(), any(), any(), anyInt(), any(), any(),
-                any())).thenAnswer(new AnswerWithArguments() {
+        when(mDeps.makeEthernetNetworkAgent(any(), any(), any(), any(), any(), any(), any()))
+                .thenAnswer(new AnswerWithArguments() {
                                        public EthernetNetworkAgent answer(
                                                Context context,
                                                Looper looper,
                                                NetworkCapabilities nc,
                                                LinkProperties lp,
-                                               int networkScore,
                                                NetworkAgentConfig config,
                                                NetworkProvider provider,
                                                EthernetNetworkAgent.Callbacks cb) {
@@ -190,8 +188,7 @@ public class EthernetNetworkFactoryTest {
         mLooper.dispatchAll();
         // provisioning succeeded, verify that the network agent is created, registered, and marked
         // as connected.
-        verify(mDeps).makeEthernetNetworkAgent(any(), any(), any(), any(), anyInt(), any(), any(),
-                any());
+        verify(mDeps).makeEthernetNetworkAgent(any(), any(), any(), any(), any(), any(), any());
         verify(mNetworkAgent).register();
         verify(mNetworkAgent).markConnected();
         clearInvocations(mDeps);
@@ -256,8 +253,8 @@ public class EthernetNetworkFactoryTest {
         assertTrue(mNetFactory.updateInterfaceLinkState(iface, false));
         // There should not be an active IPClient or NetworkAgent.
         verify(mDeps, never()).makeIpClient(any(), any(), any());
-        verify(mDeps, never()).makeEthernetNetworkAgent(any(), any(), any(), any(), anyInt(), any(),
-            any(), any());
+        verify(mDeps, never())
+                .makeEthernetNetworkAgent(any(), any(), any(), any(), any(), any(), any());
     }
 
     @Test
@@ -382,8 +379,7 @@ public class EthernetNetworkFactoryTest {
 
         mIpClientCallbacks.onProvisioningSuccess(new LinkProperties());
         mLooper.dispatchAll();
-        verify(mDeps).makeEthernetNetworkAgent(any(), any(), any(), any(), anyInt(), any(), any(),
-                any());
+        verify(mDeps).makeEthernetNetworkAgent(any(), any(), any(), any(), any(), any(), any());
 
         // verify that unwanted is ignored
         clearInvocations(mIpClient);
