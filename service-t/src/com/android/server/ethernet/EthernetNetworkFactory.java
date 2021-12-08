@@ -79,11 +79,9 @@ public class EthernetNetworkFactory extends NetworkFactory {
         }
 
         public EthernetNetworkAgent makeEthernetNetworkAgent(Context context, Looper looper,
-                NetworkCapabilities nc, LinkProperties lp, int networkScore,
-                NetworkAgentConfig config, NetworkProvider provider,
-                EthernetNetworkAgent.Callbacks cb) {
-            return new EthernetNetworkAgent(context, looper, nc, lp, networkScore, config, provider,
-                    cb);
+                NetworkCapabilities nc, LinkProperties lp, NetworkAgentConfig config,
+                NetworkProvider provider, EthernetNetworkAgent.Callbacks cb) {
+            return new EthernetNetworkAgent(context, looper, nc, lp, config, provider, cb);
         }
 
         public InterfaceParams getNetworkInterfaceByName(String name) {
@@ -293,49 +291,24 @@ public class EthernetNetworkFactory extends NetworkFactory {
         private @Nullable IpConfiguration mIpConfig;
 
         /**
-         * An object to contain all transport type information, including base network score and
-         * the legacy transport type it maps to (if any)
-         */
-        private static class TransportInfo {
-            final int mLegacyType;
-            final int mScore;
-
-            private TransportInfo(int legacyType, int score) {
-                mLegacyType = legacyType;
-                mScore = score;
-            }
-        }
-
-        /**
-         * A map of TRANSPORT_* types to TransportInfo, making scoring and legacy type information
-         * available for each type an ethernet interface could propagate.
+         * A map of TRANSPORT_* types to legacy transport types available for each type an ethernet
+         * interface could propagate.
          *
-         * Unfortunately, base scores for the various transports are not yet centrally located.
-         * They've been lifted from the corresponding NetworkFactory files in the meantime.
-         *
-         * Additionally, there are no legacy type equivalents to LOWPAN or WIFI_AWARE. These types
-         * are set to TYPE_NONE to match the behavior of their own network factories.
+         * There are no legacy type equivalents to LOWPAN or WIFI_AWARE. These types are set to
+         * TYPE_NONE to match the behavior of their own network factories.
          */
-        private static final SparseArray<TransportInfo> sTransports = new SparseArray();
+        private static final SparseArray<Integer> sTransports = new SparseArray();
         static {
-            // LowpanInterfaceTracker.NETWORK_SCORE
-            sTransports.put(NetworkCapabilities.TRANSPORT_LOWPAN,
-                    new TransportInfo(ConnectivityManager.TYPE_NONE, 30));
-            // WifiAwareDataPathStateManager.NETWORK_FACTORY_SCORE_AVAIL
-            sTransports.put(NetworkCapabilities.TRANSPORT_WIFI_AWARE,
-                    new TransportInfo(ConnectivityManager.TYPE_NONE, 1));
-            // EthernetNetworkFactory.NETWORK_SCORE
             sTransports.put(NetworkCapabilities.TRANSPORT_ETHERNET,
-                    new TransportInfo(ConnectivityManager.TYPE_ETHERNET, 70));
-            // BluetoothTetheringNetworkFactory.NETWORK_SCORE
+                    ConnectivityManager.TYPE_ETHERNET);
             sTransports.put(NetworkCapabilities.TRANSPORT_BLUETOOTH,
-                    new TransportInfo(ConnectivityManager.TYPE_BLUETOOTH, 69));
-            // WifiNetworkFactory.SCORE_FILTER / NetworkAgent.WIFI_BASE_SCORE
-            sTransports.put(NetworkCapabilities.TRANSPORT_WIFI,
-                    new TransportInfo(ConnectivityManager.TYPE_WIFI, 60));
-            // TelephonyNetworkFactory.TELEPHONY_NETWORK_SCORE
+                    ConnectivityManager.TYPE_BLUETOOTH);
+            sTransports.put(NetworkCapabilities.TRANSPORT_WIFI, ConnectivityManager.TYPE_WIFI);
             sTransports.put(NetworkCapabilities.TRANSPORT_CELLULAR,
-                    new TransportInfo(ConnectivityManager.TYPE_MOBILE, 50));
+                    ConnectivityManager.TYPE_MOBILE);
+            sTransports.put(NetworkCapabilities.TRANSPORT_LOWPAN, ConnectivityManager.TYPE_NONE);
+            sTransports.put(NetworkCapabilities.TRANSPORT_WIFI_AWARE,
+                    ConnectivityManager.TYPE_NONE);
         }
 
         long refCount = 0;
@@ -397,7 +370,7 @@ public class EthernetNetworkFactory extends NetworkFactory {
             mContext = context;
             mNetworkFactory = networkFactory;
             mDeps = deps;
-            int legacyType = ConnectivityManager.TYPE_NONE;
+            final int legacyType;
             int[] transportTypes = mCapabilities.getTransportTypes();
 
             if (transportTypes.length > 0) {
@@ -432,40 +405,7 @@ public class EthernetNetworkFactory extends NetworkFactory {
          * to legacy TYPE_NONE if there is no known conversion
          */
         private static int getLegacyType(int transport) {
-            TransportInfo transportInfo = sTransports.get(transport, /* if dne */ null);
-            if (transportInfo != null) {
-                return transportInfo.mLegacyType;
-            }
-            return ConnectivityManager.TYPE_NONE;
-        }
-
-        /**
-         * Determines the network score based on the transport associated with the interface.
-         * Ethernet interfaces could propagate a transport types forward. Since we can't
-         * get more information about the statuses of the interfaces on the other end of the local
-         * interface, we'll best-effort assign the score as the base score of the assigned transport
-         * when the link is up. When the link is down, the score is set to zero.
-         *
-         * This function is called with the purpose of assigning and updating the network score of
-         * the member NetworkAgent.
-         */
-        private int getNetworkScore() {
-            // never set the network score below 0.
-            if (!mLinkUp) {
-                return 0;
-            }
-
-            int[] transportTypes = mCapabilities.getTransportTypes();
-            if (transportTypes.length < 1) {
-                Log.w(TAG, "Network interface '" + mLinkProperties.getInterfaceName() + "' has no "
-                        + "transport type associated with it. Score set to zero");
-                return 0;
-            }
-            TransportInfo transportInfo = sTransports.get(transportTypes[0], /* if dne */ null);
-            if (transportInfo != null) {
-                return transportInfo.mScore;
-            }
-            return 0;
+            return sTransports.get(transport, ConnectivityManager.TYPE_NONE);
         }
 
         private void start() {
@@ -502,8 +442,8 @@ public class EthernetNetworkFactory extends NetworkFactory {
                     .setLegacyExtraInfo(mHwAddress)
                     .build();
             mNetworkAgent = mDeps.makeEthernetNetworkAgent(mContext, mHandler.getLooper(),
-                    mCapabilities, mLinkProperties, getNetworkScore(), config,
-                    mNetworkFactory.getProvider(), new EthernetNetworkAgent.Callbacks() {
+                    mCapabilities, mLinkProperties, config, mNetworkFactory.getProvider(),
+                    new EthernetNetworkAgent.Callbacks() {
                         @Override
                         public void onNetworkUnwanted() {
                             // if mNetworkAgent is null, we have already called stop.
@@ -620,7 +560,6 @@ public class EthernetNetworkFactory extends NetworkFactory {
                     + "hwAddress: " + mHwAddress + ", "
                     + "networkCapabilities: " + mCapabilities + ", "
                     + "networkAgent: " + mNetworkAgent + ", "
-                    + "score: " + getNetworkScore() + ", "
                     + "ipClient: " + mIpClient + ","
                     + "linkProperties: " + mLinkProperties
                     + "}";
