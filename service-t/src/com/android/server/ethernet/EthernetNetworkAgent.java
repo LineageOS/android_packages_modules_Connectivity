@@ -22,6 +22,7 @@ import android.net.NetworkAgent;
 import android.net.NetworkAgentConfig;
 import android.net.NetworkCapabilities;
 import android.net.NetworkProvider;
+import android.net.NetworkScore;
 import android.os.Looper;
 import android.annotation.NonNull;
 import android.annotation.Nullable;
@@ -41,11 +42,10 @@ public class EthernetNetworkAgent extends NetworkAgent {
             @NonNull Looper looper,
             @NonNull NetworkCapabilities nc,
             @NonNull LinkProperties lp,
-            int networkScore,
             @NonNull NetworkAgentConfig config,
             @Nullable NetworkProvider provider,
             @NonNull Callbacks cb) {
-        super(context, looper, TAG, nc, lp, networkScore, config, provider);
+        super(context, looper, TAG, nc, lp, new NetworkScore.Builder().build(), config, provider);
         mCallbacks = cb;
     }
 
