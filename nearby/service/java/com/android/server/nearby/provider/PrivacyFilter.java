@@ -14,19 +14,24 @@
  * limitations under the License.
  */
 
-package com.android.server.nearby.injector;
+package com.android.server.nearby.provider;
 
-import android.bluetooth.BluetoothAdapter;
+import android.annotation.Nullable;
+import android.nearby.NearbyDeviceParcelable;
+import android.nearby.ScanRequest;
 
 /**
- *  Nearby dependency injector. To be used for accessing various Nearby class instances and as a
- *  handle for mock injection.
+ * Class strips out privacy sensitive data before delivering the callbacks to client.
  */
-public interface Injector {
+public class PrivacyFilter {
 
     /**
-     * Get the BluetoothAdapter for BleDiscoveryProvider to scan.
+     * Strips sensitive data from {@link NearbyDeviceParcelable} according to
+     * different {@link android.nearby.ScanRequest.ScanType}s.
      */
-    BluetoothAdapter getBluetoothAdapter();
-
+    @Nullable
+    public static NearbyDeviceParcelable filter(@ScanRequest.ScanType int scanType,
+            NearbyDeviceParcelable scanResult) {
+        return scanResult;
+    }
 }
