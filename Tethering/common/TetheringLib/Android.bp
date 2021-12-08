@@ -54,6 +54,7 @@ java_sdk_library {
     apex_available: ["com.android.tethering"],
     permitted_packages: ["android.net"],
     min_sdk_version: "30",
+    lint: { strict_updatability_linting: true },
 }
 
 filegroup {
