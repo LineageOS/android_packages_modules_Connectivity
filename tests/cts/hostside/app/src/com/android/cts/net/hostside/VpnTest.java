@@ -893,7 +893,7 @@ public class VpnTest {
 
     @Test
     public void testDefault() throws Exception {
-        if (!supportedHardware()) return;
+        assumeTrue(supportedHardware());
         if (!SdkLevel.isAtLeastS() && (
                 SystemProperties.getInt("persist.adb.tcp.port", -1) > -1
                         || SystemProperties.getInt("service.adb.tcp.port", -1) > -1)) {
@@ -986,7 +986,7 @@ public class VpnTest {
 
     @Test
     public void testAppAllowed() throws Exception {
-        if (!supportedHardware()) return;
+        assumeTrue(supportedHardware());
 
         FileDescriptor fd = openSocketFdInOtherApp(TEST_HOST, 80, TIMEOUT_MS);
 
@@ -1007,7 +1007,7 @@ public class VpnTest {
 
     @Test
     public void testAppDisallowed() throws Exception {
-        if (!supportedHardware()) return;
+        assumeTrue(supportedHardware());
 
         FileDescriptor localFd = openSocketFd(TEST_HOST, 80, TIMEOUT_MS);
         FileDescriptor remoteFd = openSocketFdInOtherApp(TEST_HOST, 80, TIMEOUT_MS);
@@ -1041,8 +1041,8 @@ public class VpnTest {
 
     @Test
     public void testExcludedRoutes() throws Exception {
-        if (!supportedHardware()) return;
-        if (!SdkLevel.isAtLeastT()) return;
+        assumeTrue(supportedHardware());
+        assumeTrue(SdkLevel.isAtLeastT());
 
         // Shell app must not be put in here or it would kill the ADB-over-network use case
         String allowedApps = mRemoteSocketFactoryClient.getPackageName() + "," + mPackageName;
@@ -1062,7 +1062,7 @@ public class VpnTest {
 
     @Test
     public void testIncludedRoutes() throws Exception {
-        if (!supportedHardware()) return;
+        assumeTrue(supportedHardware());
 
         // Shell app must not be put in here or it would kill the ADB-over-network use case
         String allowedApps = mRemoteSocketFactoryClient.getPackageName() + "," + mPackageName;
@@ -1081,8 +1081,8 @@ public class VpnTest {
 
     @Test
     public void testInterleavedRoutes() throws Exception {
-        if (!supportedHardware()) return;
-        if (!SdkLevel.isAtLeastT()) return;
+        assumeTrue(supportedHardware());
+        assumeTrue(SdkLevel.isAtLeastT());
 
         // Shell app must not be put in here or it would kill the ADB-over-network use case
         String allowedApps = mRemoteSocketFactoryClient.getPackageName() + "," + mPackageName;
@@ -1109,7 +1109,7 @@ public class VpnTest {
 
     @Test
     public void testGetConnectionOwnerUidSecurity() throws Exception {
-        if (!supportedHardware()) return;
+        assumeTrue(supportedHardware());
 
         DatagramSocket s;
         InetAddress address = InetAddress.getByName("localhost");
@@ -1131,7 +1131,7 @@ public class VpnTest {
 
     @Test
     public void testSetProxy() throws  Exception {
-        if (!supportedHardware()) return;
+        assumeTrue(supportedHardware());
         ProxyInfo initialProxy = mCM.getDefaultProxy();
         // Receiver for the proxy change broadcast.
         BlockingBroadcastReceiver proxyBroadcastReceiver = new ProxyChangeBroadcastReceiver();
@@ -1171,7 +1171,7 @@ public class VpnTest {
 
     @Test
     public void testSetProxyDisallowedApps() throws Exception {
-        if (!supportedHardware()) return;
+        assumeTrue(supportedHardware());
         ProxyInfo initialProxy = mCM.getDefaultProxy();
 
         String disallowedApps = mPackageName;
@@ -1197,7 +1197,7 @@ public class VpnTest {
 
     @Test
     public void testNoProxy() throws Exception {
-        if (!supportedHardware()) return;
+        assumeTrue(supportedHardware());
         ProxyInfo initialProxy = mCM.getDefaultProxy();
         BlockingBroadcastReceiver proxyBroadcastReceiver = new ProxyChangeBroadcastReceiver();
         proxyBroadcastReceiver.register();
@@ -1232,7 +1232,7 @@ public class VpnTest {
 
     @Test
     public void testBindToNetworkWithProxy() throws Exception {
-        if (!supportedHardware()) return;
+        assumeTrue(supportedHardware());
         String allowedApps = mPackageName;
         Network initialNetwork = mCM.getActiveNetwork();
         ProxyInfo initialProxy = mCM.getDefaultProxy();
@@ -1474,7 +1474,7 @@ public class VpnTest {
     }
 
     private void maybeExpectVpnTransportInfo(Network network) {
-        if (!SdkLevel.isAtLeastS()) return;
+        assumeTrue(SdkLevel.isAtLeastS());
         final NetworkCapabilities vpnNc = mCM.getNetworkCapabilities(network);
         assertTrue(vpnNc.hasTransport(TRANSPORT_VPN));
         final TransportInfo ti = vpnNc.getTransportInfo();
@@ -1526,7 +1526,7 @@ public class VpnTest {
      */
     @Test
     public void testDownloadWithDownloadManagerDisallowed() throws Exception {
-        if (!supportedHardware()) return;
+        assumeTrue(supportedHardware());
 
         // Start a VPN with DownloadManager package in disallowed list.
         startVpn(new String[] {"192.0.2.2/32", "2001:db8:1:2::ffe/128"},
