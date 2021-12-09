@@ -98,6 +98,7 @@ import static java.util.Map.Entry;
 import android.Manifest;
 import android.annotation.NonNull;
 import android.annotation.Nullable;
+import android.annotation.TargetApi;
 import android.app.AppOpsManager;
 import android.app.BroadcastOptions;
 import android.app.PendingIntent;
@@ -853,6 +854,9 @@ public class ConnectivityService extends IConnectivityManager.Stub
             mTypeLists = new ArrayList[ConnectivityManager.MAX_NETWORK_TYPE + 1];
         }
 
+        // TODO: Set the mini sdk to 31 and remove @TargetApi annotation when b/205923322 is
+        //  addressed.
+        @TargetApi(Build.VERSION_CODES.S)
         public void loadSupportedTypes(@NonNull Context ctx, @NonNull TelephonyManager tm) {
             final PackageManager pm = ctx.getPackageManager();
             if (pm.hasSystemFeature(FEATURE_WIFI)) {
@@ -2781,6 +2785,8 @@ public class ConnectivityService extends IConnectivityManager.Stub
         sendStickyBroadcast(makeGeneralIntent(info, bcastType));
     }
 
+    // TODO: Set the mini sdk to 31 and remove @TargetApi annotation when b/205923322 is addressed.
+    @TargetApi(Build.VERSION_CODES.S)
     private void sendStickyBroadcast(Intent intent) {
         synchronized (this) {
             if (!mSystemReady
@@ -6130,6 +6136,8 @@ public class ConnectivityService extends IConnectivityManager.Stub
         }
     }
 
+    // TODO: Set the mini sdk to 31 and remove @TargetApi annotation when b/205923322 is addressed.
+    @TargetApi(Build.VERSION_CODES.S)
     private boolean isTargetSdkAtleast(int version, int callingUid,
             @NonNull String callingPackageName) {
         final UserHandle user = UserHandle.getUserHandleForUid(callingUid);
