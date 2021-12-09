@@ -65,11 +65,13 @@ cc_binary {
         ":clatd_common",
         "main.c"
     ],
-    static_libs: ["libnl"],
+    static_libs: [
+        "libipchecksum",
+        "libnl",
+    ],
     shared_libs: [
         "libcutils",
         "liblog",
-        "libnetutils",
     ],
 
     // Only enable clang-tidy for the daemon, not the tests, because enabling it for the
@@ -104,6 +106,7 @@ cc_test {
     ],
     static_libs: [
         "libbase",
+        "libipchecksum",
         "libnetd_test_tun_interface",
         "libnl",
     ],
