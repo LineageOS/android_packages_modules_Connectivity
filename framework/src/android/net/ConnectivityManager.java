@@ -5511,4 +5511,48 @@ public class ConnectivityManager {
     public static Range<Integer> getIpSecNetIdRange() {
         return new Range(TUN_INTF_NETID_START, TUN_INTF_NETID_START + TUN_INTF_NETID_RANGE - 1);
     }
+
+    /**
+     * Allow target application using metered network.
+     *
+     * @param uid uid of target app
+     * @hide
+     */
+    @SystemApi(client = MODULE_LIBRARIES)
+    @RequiresPermission(anyOf = {
+            android.Manifest.permission.NETWORK_SETTINGS,
+            android.Manifest.permission.NETWORK_STACK,
+            NetworkStack.PERMISSION_MAINLINE_NETWORK_STACK
+    })
+    public void updateMeteredNetworkAllowList(final int uid, final boolean add) {
+        try {
+            mService.updateMeteredNetworkAllowList(uid, add);
+        } catch (RemoteException e) {
+            throw e.rethrowFromSystemServer();
+        } catch (IllegalStateException ie) {
+            throw ie;
+        }
+    }
+
+    /**
+     * Disallow target application using metered network.
+     *
+     * @param uid uid of target app
+     * @hide
+     */
+    @SystemApi(client = MODULE_LIBRARIES)
+    @RequiresPermission(anyOf = {
+            android.Manifest.permission.NETWORK_SETTINGS,
+            android.Manifest.permission.NETWORK_STACK,
+            NetworkStack.PERMISSION_MAINLINE_NETWORK_STACK
+    })
+    public void updateMeteredNetworkDenyList(final int uid, final boolean add) {
+        try {
+            mService.updateMeteredNetworkDenyList(uid, add);
+        } catch (RemoteException e) {
+            throw e.rethrowFromSystemServer();
+        } catch (IllegalStateException ie) {
+            throw ie;
+        }
+    }
 }
