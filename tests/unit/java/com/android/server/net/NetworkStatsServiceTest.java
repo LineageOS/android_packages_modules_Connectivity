@@ -98,6 +98,7 @@ import android.net.NetworkTemplate;
 import android.net.TelephonyNetworkSpecifier;
 import android.net.UnderlyingNetworkInfo;
 import android.net.netstats.provider.INetworkStatsProviderCallback;
+import android.net.wifi.WifiInfo;
 import android.os.Build;
 import android.os.ConditionVariable;
 import android.os.Handler;
@@ -158,9 +159,9 @@ public class NetworkStatsServiceTest extends NetworkStatsBaseTest {
 
     private static final String IMSI_1 = "310004";
     private static final String IMSI_2 = "310260";
-    private static final String TEST_SSID = "AndroidAP";
+    private static final String TEST_WIFI_NETWORK_KEY = "WifiNetworkKey";
 
-    private static NetworkTemplate sTemplateWifi = buildTemplateWifi(TEST_SSID);
+    private static NetworkTemplate sTemplateWifi = buildTemplateWifi(TEST_WIFI_NETWORK_KEY);
     private static NetworkTemplate sTemplateCarrierWifi1 =
             buildTemplateWifi(NetworkTemplate.WIFI_NETWORKID_ALL, IMSI_1);
     private static NetworkTemplate sTemplateImsi1 = buildTemplateMobileAll(IMSI_1);
@@ -181,6 +182,7 @@ public class NetworkStatsServiceTest extends NetworkStatsBaseTest {
     private File mStatsDir;
     private MockContext mServiceContext;
     private @Mock TelephonyManager mTelephonyManager;
+    private static @Mock WifiInfo sWifiInfo;
     private @Mock INetworkManagementService mNetManager;
     private @Mock NetworkStatsFactory mStatsFactory;
     private @Mock NetworkStatsSettings mSettings;
@@ -242,6 +244,7 @@ public class NetworkStatsServiceTest extends NetworkStatsBaseTest {
         MockitoAnnotations.initMocks(this);
         final Context context = InstrumentationRegistry.getContext();
         mServiceContext = new MockContext(context);
+        when(sWifiInfo.getCurrentNetworkKey()).thenReturn(TEST_WIFI_NETWORK_KEY);
         mStatsDir = TestIoUtils.createTemporaryDirectory(getClass().getSimpleName());
 
         PowerManager powerManager = (PowerManager) mServiceContext.getSystemService(
@@ -358,7 +361,7 @@ public class NetworkStatsServiceTest extends NetworkStatsBaseTest {
         // verify service recorded history
         assertNetworkTotal(sTemplateCarrierWifi1, 1024L, 1L, 2048L, 2L, 0);
 
-        // verify service recorded history for wifi with SSID filter
+        // verify service recorded history for wifi with WiFi Network Key filter
         assertNetworkTotal(sTemplateWifi,  1024L, 1L, 2048L, 2L, 0);
 
 
@@ -368,7 +371,7 @@ public class NetworkStatsServiceTest extends NetworkStatsBaseTest {
 
         // verify service recorded history
         assertNetworkTotal(sTemplateCarrierWifi1, 4096L, 4L, 8192L, 8L, 0);
-        // verify service recorded history for wifi with SSID filter
+        // verify service recorded history for wifi with WiFi Network Key filter
         assertNetworkTotal(sTemplateWifi, 4096L, 4L, 8192L, 8L, 0);
     }
 
@@ -774,28 +777,31 @@ public class NetworkStatsServiceTest extends NetworkStatsBaseTest {
     @Test
     public void testMobileStatsOemManaged() throws Exception {
         final NetworkTemplate templateOemPaid = new NetworkTemplate(MATCH_MOBILE_WILDCARD,
-                /*subscriberId=*/null, /*matchSubscriberIds=*/null, /*networkId=*/null,
-                METERED_ALL, ROAMING_ALL, DEFAULT_NETWORK_ALL, NETWORK_TYPE_ALL, OEM_PAID,
-                SUBSCRIBER_ID_MATCH_RULE_EXACT);
+                /*subscriberId=*/null, /*matchSubscriberIds=*/null,
+                /*matchWifiNetworkKeys=*/new String[0], METERED_ALL, ROAMING_ALL,
+                DEFAULT_NETWORK_ALL, NETWORK_TYPE_ALL, OEM_PAID, SUBSCRIBER_ID_MATCH_RULE_EXACT);
 
         final NetworkTemplate templateOemPrivate = new NetworkTemplate(MATCH_MOBILE_WILDCARD,
-                /*subscriberId=*/null, /*matchSubscriberIds=*/null, /*networkId=*/null,
-                METERED_ALL, ROAMING_ALL, DEFAULT_NETWORK_ALL, NETWORK_TYPE_ALL, OEM_PRIVATE,
-                SUBSCRIBER_ID_MATCH_RULE_EXACT);
+                /*subscriberId=*/null, /*matchSubscriberIds=*/null,
+                /*matchWifiNetworkKeys=*/new String[0], METERED_ALL, ROAMING_ALL,
+                DEFAULT_NETWORK_ALL, NETWORK_TYPE_ALL, OEM_PRIVATE, SUBSCRIBER_ID_MATCH_RULE_EXACT);
 
         final NetworkTemplate templateOemAll = new NetworkTemplate(MATCH_MOBILE_WILDCARD,
-                /*subscriberId=*/null, /*matchSubscriberIds=*/null, /*networkId=*/null,
-                METERED_ALL, ROAMING_ALL, DEFAULT_NETWORK_ALL, NETWORK_TYPE_ALL,
-                OEM_PAID | OEM_PRIVATE, SUBSCRIBER_ID_MATCH_RULE_EXACT);
+                /*subscriberId=*/null, /*matchSubscriberIds=*/null,
+                /*matchWifiNetworkKeys=*/new String[0], METERED_ALL, ROAMING_ALL,
+                DEFAULT_NETWORK_ALL, NETWORK_TYPE_ALL, OEM_PAID | OEM_PRIVATE,
+                SUBSCRIBER_ID_MATCH_RULE_EXACT);
 
         final NetworkTemplate templateOemYes = new NetworkTemplate(MATCH_MOBILE_WILDCARD,
-                /*subscriberId=*/null, /*matchSubscriberIds=*/null, /*networkId=*/null,
-                METERED_ALL, ROAMING_ALL, DEFAULT_NETWORK_ALL, NETWORK_TYPE_ALL, OEM_MANAGED_YES,
+                /*subscriberId=*/null, /*matchSubscriberIds=*/null,
+                /*matchWifiNetworkKeys=*/new String[0], METERED_ALL, ROAMING_ALL,
+                DEFAULT_NETWORK_ALL, NETWORK_TYPE_ALL, OEM_MANAGED_YES,
                 SUBSCRIBER_ID_MATCH_RULE_EXACT);
 
         final NetworkTemplate templateOemNone = new NetworkTemplate(MATCH_MOBILE_WILDCARD,
-                /*subscriberId=*/null, /*matchSubscriberIds=*/null, /*networkId=*/null,
-                METERED_ALL, ROAMING_ALL, DEFAULT_NETWORK_ALL, NETWORK_TYPE_ALL, OEM_MANAGED_NO,
+                /*subscriberId=*/null, /*matchSubscriberIds=*/null,
+                /*matchWifiNetworkKeys=*/new String[0], METERED_ALL, ROAMING_ALL,
+                DEFAULT_NETWORK_ALL, NETWORK_TYPE_ALL, OEM_MANAGED_NO,
                 SUBSCRIBER_ID_MATCH_RULE_EXACT);
 
         // OEM_PAID network comes online.
@@ -1787,7 +1793,7 @@ public class NetworkStatsServiceTest extends NetworkStatsBaseTest {
         capabilities.setCapability(NetworkCapabilities.NET_CAPABILITY_NOT_METERED, !isMetered);
         capabilities.setCapability(NetworkCapabilities.NET_CAPABILITY_NOT_ROAMING, true);
         capabilities.addTransportType(NetworkCapabilities.TRANSPORT_WIFI);
-        capabilities.setSSID(TEST_SSID);
+        capabilities.setTransportInfo(sWifiInfo);
         return new NetworkStateSnapshot(WIFI_NETWORK, capabilities, prop, subscriberId, TYPE_WIFI);
     }
 
