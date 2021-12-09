@@ -25,6 +25,7 @@ package android.net {
     method @RequiresPermission(anyOf={android.Manifest.permission.MANAGE_TEST_NETWORKS, android.Manifest.permission.NETWORK_STACK}) public void simulateDataStall(int, long, @NonNull android.net.Network, @NonNull android.os.PersistableBundle);
     method @RequiresPermission(anyOf={android.Manifest.permission.NETWORK_SETTINGS, android.Manifest.permission.NETWORK_STACK, android.net.NetworkStack.PERMISSION_MAINLINE_NETWORK_STACK}) public void startCaptivePortalApp(@NonNull android.net.Network);
     method public void systemReady();
+    method @RequiresPermission(anyOf={android.Manifest.permission.NETWORK_SETTINGS, android.Manifest.permission.NETWORK_STACK, android.net.NetworkStack.PERMISSION_MAINLINE_NETWORK_STACK}) public void updateFirewallRule(int, int, boolean);
     method @RequiresPermission(anyOf={android.Manifest.permission.NETWORK_SETTINGS, android.Manifest.permission.NETWORK_STACK, android.net.NetworkStack.PERMISSION_MAINLINE_NETWORK_STACK}) public void updateMeteredNetworkAllowList(int, boolean);
     method @RequiresPermission(anyOf={android.Manifest.permission.NETWORK_SETTINGS, android.Manifest.permission.NETWORK_STACK, android.net.NetworkStack.PERMISSION_MAINLINE_NETWORK_STACK}) public void updateMeteredNetworkDenyList(int, boolean);
     field public static final String ACTION_CLEAR_DNS_CACHE = "android.net.action.CLEAR_DNS_CACHE";
@@ -41,6 +42,10 @@ package android.net {
     field public static final int BLOCKED_REASON_LOCKDOWN_VPN = 16; // 0x10
     field public static final int BLOCKED_REASON_NONE = 0; // 0x0
     field public static final int BLOCKED_REASON_RESTRICTED_MODE = 8; // 0x8
+    field public static final int FIREWALL_CHAIN_DOZABLE = 1; // 0x1
+    field public static final int FIREWALL_CHAIN_POWERSAVE = 3; // 0x3
+    field public static final int FIREWALL_CHAIN_RESTRICTED = 4; // 0x4
+    field public static final int FIREWALL_CHAIN_STANDBY = 2; // 0x2
     field public static final int PROFILE_NETWORK_PREFERENCE_DEFAULT = 0; // 0x0
     field public static final int PROFILE_NETWORK_PREFERENCE_ENTERPRISE = 1; // 0x1
   }
