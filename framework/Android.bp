@@ -112,6 +112,7 @@ java_sdk_library {
     apex_available: [
         "com.android.tethering",
     ],
+    lint: { strict_updatability_linting: true },
 }
 
 cc_library_shared {
