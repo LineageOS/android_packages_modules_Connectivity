@@ -37,7 +37,9 @@ import static org.mockito.Matchers.anyInt;
 import android.app.usage.NetworkStatsManager;
 import android.net.DataUsageRequest;
 import android.net.NetworkIdentity;
+import android.net.NetworkIdentitySet;
 import android.net.NetworkStats;
+import android.net.NetworkStatsAccess;
 import android.net.NetworkTemplate;
 import android.os.Build;
 import android.os.ConditionVariable;
@@ -72,7 +74,7 @@ import java.util.Objects;
  */
 @RunWith(DevSdkIgnoreRunner.class)
 @SmallTest
-@DevSdkIgnoreRule.IgnoreUpTo(Build.VERSION_CODES.R)
+@DevSdkIgnoreRule.IgnoreUpTo(Build.VERSION_CODES.S)
 public class NetworkStatsObserversTest {
     private static final String TEST_IFACE = "test0";
     private static final String TEST_IFACE2 = "test1";
