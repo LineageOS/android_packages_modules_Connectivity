@@ -17,6 +17,7 @@
 package com.android.server.ethernet;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.fail;
 
 import android.net.InetAddresses;
@@ -241,5 +242,28 @@ public class EthernetTrackerTest {
         assertEquals(expectedNetworkCapabilities,
                 EthernetTracker.createNetworkCapabilities(clearCapabilties, configCapabiltiies,
                         configTransports).build());
+    }
+
+    @Test
+    public void testCreateEthernetTrackerConfigReturnsCorrectValue() {
+        final String name = "1";
+        final String capabilities = "2";
+        final String ipConfig = "3";
+        final String transport = "4";
+        final String configString = String.join(";", name, capabilities, ipConfig, transport);
+
+        final EthernetTracker.EthernetTrackerConfig config =
+                EthernetTracker.createEthernetTrackerConfig(configString);
+
+        assertEquals(name, config.mName);
+        assertEquals(capabilities, config.mCapabilities);
+        assertEquals(ipConfig, config.mIpConfig);
+        assertEquals(transport, config.mTransport);
+    }
+
+    @Test
+    public void testCreateEthernetTrackerConfigThrowsNpeWithNullInput() {
+        assertThrows(NullPointerException.class,
+                () -> EthernetTracker.createEthernetTrackerConfig(null));
     }
 }
