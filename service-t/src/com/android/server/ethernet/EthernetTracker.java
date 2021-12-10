@@ -18,6 +18,7 @@ package com.android.server.ethernet;
 
 import static android.net.TestNetworkManager.TEST_TAP_PREFIX;
 
+import android.annotation.NonNull;
 import android.annotation.Nullable;
 import android.content.Context;
 import android.net.IEthernetServiceListener;
@@ -453,19 +454,22 @@ final class EthernetTracker {
      * <interface name|mac address>;[Network Capabilities];[IP config];[Override Transport]}
      */
     private void parseEthernetConfig(String configString) {
-        String[] tokens = configString.split(";", /* limit of tokens */ 4);
-        String name = tokens[0];
-        String capabilities = tokens.length > 1 ? tokens[1] : null;
-        String transport = tokens.length > 3 ? tokens[3] : null;
+        final EthernetTrackerConfig config = createEthernetTrackerConfig(configString);
         NetworkCapabilities nc = createNetworkCapabilities(
-                !TextUtils.isEmpty(capabilities)  /* clear default capabilities */, capabilities,
-                transport).build();
-        mNetworkCapabilities.put(name, nc);
+                !TextUtils.isEmpty(config.mCapabilities)  /* clear default capabilities */,
+                config.mCapabilities, config.mTransport).build();
+        mNetworkCapabilities.put(config.mName, nc);
 
-        if (tokens.length > 2 && !TextUtils.isEmpty(tokens[2])) {
-            IpConfiguration ipConfig = parseStaticIpConfiguration(tokens[2]);
-            mIpConfigurations.put(name, ipConfig);
+        if (null != config.mIpConfig) {
+            IpConfiguration ipConfig = parseStaticIpConfiguration(config.mIpConfig);
+            mIpConfigurations.put(config.mName, ipConfig);
         }
+    }
+
+    @VisibleForTesting
+    static EthernetTrackerConfig createEthernetTrackerConfig(@NonNull final String configString) {
+        Objects.requireNonNull(configString, "EthernetTrackerConfig requires non-null config");
+        return new EthernetTrackerConfig(configString.split(";", /* limit of tokens */ 4));
     }
 
     private static NetworkCapabilities createDefaultNetworkCapabilities(boolean isTestIface) {
@@ -671,5 +675,21 @@ final class EthernetTracker {
 
             mFactory.dump(fd, pw, args);
         });
+    }
+
+    @VisibleForTesting
+    static class EthernetTrackerConfig {
+        final String mName;
+        final String mCapabilities;
+        final String mIpConfig;
+        final String mTransport;
+
+        EthernetTrackerConfig(@NonNull final String[] tokens) {
+            Objects.requireNonNull(tokens, "EthernetTrackerConfig requires non-null tokens");
+            mName = tokens[0];
+            mCapabilities = tokens.length > 1 ? tokens[1] : null;
+            mIpConfig = tokens.length > 2 && !TextUtils.isEmpty(tokens[2]) ? tokens[2] : null;
+            mTransport = tokens.length > 3 ? tokens[3] : null;
+        }
     }
 }
