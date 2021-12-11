@@ -287,14 +287,22 @@ public class StructNlAttr {
     }
 
     /**
-     * Get attribute value as Integer.
+     * Get attribute value as Integer, or null if malformed (e.g., length is not 4 bytes).
      */
-    public int getValueAsInt(int defaultValue) {
+    public Integer getValueAsInteger() {
         final ByteBuffer byteBuffer = getValueAsByteBuffer();
         if (byteBuffer == null || byteBuffer.remaining() != Integer.BYTES) {
-            return defaultValue;
+            return null;
         }
-        return getValueAsByteBuffer().getInt();
+        return byteBuffer.getInt();
+    }
+
+    /**
+     * Get attribute value as Int, default value if malformed.
+     */
+    public int getValueAsInt(int defaultValue) {
+        final Integer value = getValueAsInteger();
+        return (value != null) ? value : defaultValue;
     }
 
     /**
@@ -341,6 +349,7 @@ public class StructNlAttr {
     public String getValueAsString() {
         if (nla_value == null) return null;
         // Check the attribute value length after removing string termination flag '\0'.
+        // This assumes that all netlink strings are null-terminated.
         if (nla_value.length < (nla_len - NLA_HEADERLEN - 1)) return null;
 
         try {
