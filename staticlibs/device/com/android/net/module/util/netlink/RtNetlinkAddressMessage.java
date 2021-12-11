@@ -114,9 +114,10 @@ public class RtNetlinkAddressMessage extends NetlinkMessage {
         // and will overwrite the flags set above.
         byteBuffer.position(baseOffset);
         nlAttr = StructNlAttr.findNextAttrOfType(IFA_FLAGS, byteBuffer);
-        if (nlAttr != null) {
-            addrMsg.mFlags = nlAttr.getValueAsInt(0 /* default value */);
-        }
+        if (nlAttr == null) return null;
+        final Integer value = nlAttr.getValueAsInteger();
+        if (value == null) return null;
+        addrMsg.mFlags = value;
 
         return addrMsg;
     }
