@@ -182,19 +182,7 @@ void drop_root_and_caps() {
  *   tunnel - tun device data
  *   mark - the socket mark to use for the sending raw socket
  */
-void open_sockets(struct tun_data *tunnel, uint32_t mark) {
-  int rawsock = socket(AF_INET6, SOCK_RAW | SOCK_NONBLOCK | SOCK_CLOEXEC, IPPROTO_RAW);
-  if (rawsock < 0) {
-    logmsg(ANDROID_LOG_FATAL, "raw socket failed: %s", strerror(errno));
-    exit(1);
-  }
-
-  if (mark != MARK_UNSET && setsockopt(rawsock, SOL_SOCKET, SO_MARK, &mark, sizeof(mark)) < 0) {
-    logmsg(ANDROID_LOG_ERROR, "could not set mark on raw socket: %s", strerror(errno));
-  }
-
-  tunnel->write_fd6 = rawsock;
-
+void open_sockets(struct tun_data *tunnel) {
   // Will eventually be bound to htons(ETH_P_IPV6) protocol,
   // but only after appropriate bpf filter is attached.
   tunnel->read_fd6 = socket(AF_PACKET, SOCK_DGRAM | SOCK_CLOEXEC, 0);
