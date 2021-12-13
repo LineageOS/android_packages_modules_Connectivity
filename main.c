@@ -51,7 +51,6 @@ void print_help() {
   printf("-6 [IPv6 address]\n");
   printf("-m [socket mark]\n");
   printf("-t [tun file descriptor number]\n");
-  printf("-w [write socket descriptor number]\n");
 }
 
 /* function: main
@@ -61,11 +60,11 @@ int main(int argc, char **argv) {
   struct tun_data tunnel;
   int opt;
   char *uplink_interface = NULL, *plat_prefix = NULL, *mark_str = NULL;
-  char *v4_addr = NULL, *v6_addr = NULL, *tunfd_str = NULL, *write_sock_str = NULL;
+  char *v4_addr = NULL, *v6_addr = NULL, *tunfd_str = NULL;
   uint32_t mark   = MARK_UNSET;
   unsigned len;
 
-  while ((opt = getopt(argc, argv, "i:p:4:6:m:t:w:h")) != -1) {
+  while ((opt = getopt(argc, argv, "i:p:4:6:m:t:h")) != -1) {
     switch (opt) {
       case 'i':
         uplink_interface = optarg;
@@ -84,9 +83,6 @@ int main(int argc, char **argv) {
         break;
       case 't':
         tunfd_str = optarg;
-        break;
-      case 'w':
-        write_sock_str = optarg;
         break;
       case 'h':
         print_help();
@@ -116,15 +112,6 @@ int main(int argc, char **argv) {
     exit(1);
   }
 
-  if (write_sock_str != NULL && !parse_int(write_sock_str, &tunnel.write_fd6)) {
-    logmsg(ANDROID_LOG_FATAL, "invalid sock_write %s", write_sock_str);
-    exit(1);
-  }
-  if (!tunnel.write_fd6) {
-    logmsg(ANDROID_LOG_FATAL, "no write_fd6 specified on commandline.");
-    exit(1);
-  }
-
   len = snprintf(tunnel.device4, sizeof(tunnel.device4), "%s%s", DEVICEPREFIX, uplink_interface);
   if (len >= sizeof(tunnel.device4)) {
     logmsg(ANDROID_LOG_FATAL, "interface name too long '%s'", tunnel.device4);
@@ -137,7 +124,7 @@ int main(int argc, char **argv) {
          v6_addr ? v6_addr : "(none)");
 
   // open our raw sockets before dropping privs
-  open_sockets(&tunnel);
+  open_sockets(&tunnel, mark);
 
   configure_interface(uplink_interface, plat_prefix, v4_addr, v6_addr, &tunnel, mark);
 
