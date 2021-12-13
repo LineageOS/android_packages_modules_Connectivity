@@ -2380,7 +2380,7 @@ public class ConnectivityManagerTest {
         final String ssid = unquoteSSID(wifiNetworkCapabilities.getSsid());
         final boolean oldMeteredValue = wifiNetworkCapabilities.isMetered();
 
-        try {
+        testAndCleanup(() -> {
             // This network will be used for unmetered. Wait for it to be validated because
             // OEM_NETWORK_PREFERENCE_TEST only prefers NOT_METERED&VALIDATED to a network with
             // TRANSPORT_TEST, like OEM_NETWORK_PREFERENCE_OEM_PAID.
@@ -2405,18 +2405,18 @@ public class ConnectivityManagerTest {
             // callback in any case therefore confirm its receipt before continuing to assure the
             // system is in the expected state.
             waitForAvailable(systemDefaultCallback, TRANSPORT_WIFI);
-        } finally {
+        }, /* cleanup */ () -> {
             // Validate that removing the test network will fallback to the default network.
             runWithShellPermissionIdentity(tnt::teardown);
             defaultCallback.expectCallback(CallbackEntry.LOST, tnt.getNetwork(),
                     NETWORK_CALLBACK_TIMEOUT_MS);
             waitForAvailable(defaultCallback);
-
-            setWifiMeteredStatusAndWait(ssid, oldMeteredValue, false /* waitForValidation */);
-
-            // Cleanup any prior test state from setOemNetworkPreference
-            clearOemNetworkPreference();
-        }
+            }, /* cleanup */ () -> {
+                setWifiMeteredStatusAndWait(ssid, oldMeteredValue, false /* waitForValidation */);
+            }, /* cleanup */ () -> {
+                // Cleanup any prior test state from setOemNetworkPreference
+                clearOemNetworkPreference();
+            });
     }
 
     /**
@@ -2437,29 +2437,30 @@ public class ConnectivityManagerTest {
 
         final Network wifiNetwork = mCtsNetUtils.ensureWifiConnected();
 
-        try {
+        testAndCleanup(() -> {
             setOemNetworkPreferenceForMyPackage(
                     OemNetworkPreferences.OEM_NETWORK_PREFERENCE_TEST_ONLY);
             registerTestOemNetworkPreferenceCallbacks(defaultCallback, systemDefaultCallback);
             waitForAvailable(defaultCallback, tnt.getNetwork());
             waitForAvailable(systemDefaultCallback, wifiNetwork);
-        } finally {
-            runWithShellPermissionIdentity(tnt::teardown);
-            defaultCallback.expectCallback(CallbackEntry.LOST, tnt.getNetwork(),
-                    NETWORK_CALLBACK_TIMEOUT_MS);
+        }, /* cleanup */ () -> {
+                runWithShellPermissionIdentity(tnt::teardown);
+                defaultCallback.expectCallback(CallbackEntry.LOST, tnt.getNetwork(),
+                        NETWORK_CALLBACK_TIMEOUT_MS);
 
-            // This network preference should only ever use the test network therefore available
-            // should not trigger when the test network goes down (e.g. switch to cellular).
-            defaultCallback.assertNoCallback();
-            // The system default should still be connected to Wi-fi
-            assertEquals(wifiNetwork, systemDefaultCallback.getLastAvailableNetwork());
+                // This network preference should only ever use the test network therefore available
+                // should not trigger when the test network goes down (e.g. switch to cellular).
+                defaultCallback.assertNoCallback();
+                // The system default should still be connected to Wi-fi
+                assertEquals(wifiNetwork, systemDefaultCallback.getLastAvailableNetwork());
+            }, /* cleanup */ () -> {
+                // Cleanup any prior test state from setOemNetworkPreference
+                clearOemNetworkPreference();
 
-            // Cleanup any prior test state from setOemNetworkPreference
-            clearOemNetworkPreference();
-
-            // The default (non-test) network should be available as the network pref was cleared.
-            waitForAvailable(defaultCallback);
-        }
+                // The default (non-test) network should be available as the network pref was
+                // cleared.
+                waitForAvailable(defaultCallback);
+            });
     }
 
     private void registerTestOemNetworkPreferenceCallbacks(
