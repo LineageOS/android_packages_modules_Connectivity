@@ -3813,18 +3813,48 @@ public class ConnectivityServiceTest {
     public void testNoMutableNetworkRequests() throws Exception {
         final PendingIntent pendingIntent = PendingIntent.getBroadcast(
                 mContext, 0 /* requestCode */, new Intent("a"), FLAG_IMMUTABLE);
-        NetworkRequest request1 = new NetworkRequest.Builder()
+        final NetworkRequest request1 = new NetworkRequest.Builder()
                 .addCapability(NET_CAPABILITY_VALIDATED)
                 .build();
-        NetworkRequest request2 = new NetworkRequest.Builder()
+        final NetworkRequest request2 = new NetworkRequest.Builder()
                 .addCapability(NET_CAPABILITY_CAPTIVE_PORTAL)
                 .build();
 
-        Class<IllegalArgumentException> expected = IllegalArgumentException.class;
+        final Class<IllegalArgumentException> expected = IllegalArgumentException.class;
         assertThrows(expected, () -> mCm.requestNetwork(request1, new NetworkCallback()));
         assertThrows(expected, () -> mCm.requestNetwork(request1, pendingIntent));
         assertThrows(expected, () -> mCm.requestNetwork(request2, new NetworkCallback()));
         assertThrows(expected, () -> mCm.requestNetwork(request2, pendingIntent));
+    }
+
+    @Test
+    public void testNoAccessUidsInNetworkRequests() throws Exception {
+        final PendingIntent pendingIntent = PendingIntent.getBroadcast(
+                mContext, 0 /* requestCode */, new Intent("a"), FLAG_IMMUTABLE);
+        final NetworkRequest r = new NetworkRequest.Builder().build();
+        final ArraySet<Integer> accessUids = new ArraySet<>();
+        accessUids.add(6);
+        accessUids.add(9);
+        r.networkCapabilities.setAccessUids(accessUids);
+
+        final Handler handler = new Handler(ConnectivityThread.getInstanceLooper());
+        final NetworkCallback cb = new NetworkCallback();
+
+        final Class<IllegalArgumentException> expected = IllegalArgumentException.class;
+        assertThrows(expected, () -> mCm.requestNetwork(r, cb));
+        assertThrows(expected, () -> mCm.requestNetwork(r, pendingIntent));
+        assertThrows(expected, () -> mCm.registerNetworkCallback(r, cb));
+        assertThrows(expected, () -> mCm.registerNetworkCallback(r, cb, handler));
+        assertThrows(expected, () -> mCm.registerNetworkCallback(r, pendingIntent));
+        assertThrows(expected, () -> mCm.registerBestMatchingNetworkCallback(r, cb, handler));
+
+        // Make sure that resetting the access UIDs to the empty set will allow calling
+        // requestNetwork and registerNetworkCallback.
+        r.networkCapabilities.setAccessUids(Collections.emptySet());
+        mCm.requestNetwork(r, cb);
+        mCm.unregisterNetworkCallback(cb);
+        mCm.registerNetworkCallback(r, cb);
+        mCm.unregisterNetworkCallback(cb);
     }
 
     @Test
