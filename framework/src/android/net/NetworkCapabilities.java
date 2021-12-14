@@ -1669,7 +1669,7 @@ public final class NetworkCapabilities implements Parcelable {
      * @hide
      */
     @VisibleForTesting
-    public boolean appliesToUidRange(@Nullable UidRange requiredRange) {
+    public boolean appliesToUidRange(@NonNull UidRange requiredRange) {
         if (null == mUids) return true;
         for (UidRange uidRange : mUids) {
             if (uidRange.containsRange(requiredRange)) {
