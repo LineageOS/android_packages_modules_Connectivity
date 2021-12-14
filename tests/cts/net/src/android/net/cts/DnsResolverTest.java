@@ -814,7 +814,7 @@ public class DnsResolverTest {
     }
 
     /** Verifies that DnsResolver.DnsException can be subclassed and its constructor re-used. */
-    @Test @IgnoreUpTo(Build.VERSION_CODES.R)
+    @Test @IgnoreUpTo(Build.VERSION_CODES.S)
     public void testDnsExceptionConstructor() throws InterruptedException {
         class TestDnsException extends DnsResolver.DnsException {
             TestDnsException(int code, @Nullable Throwable cause) {
