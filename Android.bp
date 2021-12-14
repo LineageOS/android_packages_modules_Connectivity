@@ -66,7 +66,7 @@ cc_binary {
         "main.c"
     ],
     static_libs: [
-        "libipchecksum",
+        "libip_checksum",
         "libnl",
     ],
     shared_libs: [
@@ -106,7 +106,7 @@ cc_test {
     ],
     static_libs: [
         "libbase",
-        "libipchecksum",
+        "libip_checksum",
         "libnetd_test_tun_interface",
         "libnl",
     ],
