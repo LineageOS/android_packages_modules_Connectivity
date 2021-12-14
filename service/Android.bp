@@ -80,6 +80,10 @@ java_library {
         "com.android.tethering",
     ],
     lint: { strict_updatability_linting: true },
+    visibility: [
+        "//packages/modules/Connectivity/service-t",
+        "//packages/modules/Connectivity/tests:__subpackages__",
+    ],
 }
 
 java_library {
@@ -104,8 +108,13 @@ java_library {
     sdk_version: "system_server_current",
     min_sdk_version: "30",
     installable: true,
+    // This library combines system server jars that have access to different bootclasspath jars.
+    // Lower SDK service jars must not depend on higher SDK jars as that would let them
+    // transitively depend on the wrong bootclasspath jars. Sources also cannot be added here as
+    // they would transitively depend on bootclasspath jars that may not be available.
     static_libs: [
         "service-connectivity-pre-jarjar",
+        "service-connectivity-tiramisu-pre-jarjar",
     ],
     jarjar_rules: "jarjar-rules.txt",
     apex_available: [
