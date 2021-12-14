@@ -17,11 +17,11 @@
 package com.android.cts.net.hostside;
 
 import android.content.Intent;
+import android.content.pm.PackageManager.NameNotFoundException;
 import android.net.Network;
 import android.net.ProxyInfo;
 import android.net.VpnService;
 import android.os.ParcelFileDescriptor;
-import android.content.pm.PackageManager.NameNotFoundException;
 import android.text.TextUtils;
 import android.util.Log;
 
@@ -38,6 +38,9 @@ public class MyVpnService extends VpnService {
     public static final String ACTION_ESTABLISHED = "com.android.cts.net.hostside.ESTABNLISHED";
     public static final String EXTRA_ALWAYS_ON = "is-always-on";
     public static final String EXTRA_LOCKDOWN_ENABLED = "is-lockdown-enabled";
+    public static final String CMD_CONNECT = "connect";
+    public static final String CMD_DISCONNECT = "disconnect";
+    public static final String CMD_UPDATE_UNDERLYING_NETWORKS = "update_underlying_networks";
 
     private ParcelFileDescriptor mFd = null;
     private PacketReflector mPacketReflector = null;
@@ -46,13 +49,22 @@ public class MyVpnService extends VpnService {
     public int onStartCommand(Intent intent, int flags, int startId) {
         String packageName = getPackageName();
         String cmd = intent.getStringExtra(packageName + ".cmd");
-        if ("disconnect".equals(cmd)) {
+        if (CMD_DISCONNECT.equals(cmd)) {
             stop();
-        } else if ("connect".equals(cmd)) {
+        } else if (CMD_CONNECT.equals(cmd)) {
             start(packageName, intent);
+        } else if (CMD_UPDATE_UNDERLYING_NETWORKS.equals(cmd)) {
+            updateUnderlyingNetworks(packageName, intent);
         }
 
         return START_NOT_STICKY;
+    }
+
+    private void updateUnderlyingNetworks(String packageName, Intent intent) {
+        final ArrayList<Network> underlyingNetworks =
+                intent.getParcelableArrayListExtra(packageName + ".underlyingNetworks");
+        setUnderlyingNetworks(
+                (underlyingNetworks != null) ? underlyingNetworks.toArray(new Network[0]) : null);
     }
 
     private void start(String packageName, Intent intent) {
