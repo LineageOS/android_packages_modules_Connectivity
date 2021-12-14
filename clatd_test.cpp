@@ -30,10 +30,10 @@
 #include "tun_interface.h"
 
 extern "C" {
+#include "checksum.h"
 #include "clatd.h"
 #include "config.h"
 #include "getaddr.h"
-#include "netutils/checksum.h"
 #include "translate.h"
 }
 
