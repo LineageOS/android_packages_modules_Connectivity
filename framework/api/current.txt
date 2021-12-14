@@ -196,6 +196,7 @@ package android.net {
   }
 
   public static class DnsResolver.DnsException extends java.lang.Exception {
+    ctor public DnsResolver.DnsException(int, @Nullable Throwable);
     field public final int code;
   }
 
