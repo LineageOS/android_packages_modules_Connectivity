@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 The Android Open Source Project
+ * Copyright (C) 2021 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,12 +14,13 @@
  * limitations under the License.
  */
 
-package android.nearby;
+package android.nearby.aidl;
 
 /**
- * Configuration details for requesting tethering.
- * @hide
+ * Request details for metadata of a Fast Pair device keyed by either
+ * antispoofkey or modelId.
+ * {@hide}
  */
-parcelable FastPairDeviceMetadataRequestParcel {
+parcelable FastPairAntispoofkeyDeviceMetadataRequestParcel {
     byte[] modelId;
 }

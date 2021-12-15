@@ -12,17 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package android.nearby;
-
-import android.nearby.FastPairDeviceMetadataRequestParcel;
-import android.nearby.IFastPairDataCallback;
+package android.nearby.aidl;
 
 /**
- * Interface for communicating with the fast pair providers.
- *
- * @hide
- */
-oneway interface IFastPairDataProvider {
-    void loadFastPairDeviceMetadata(in FastPairDeviceMetadataRequestParcel modelId,
-        in IFastPairDataCallback callback);
+  * Provides callback interface to send response for account management request.
+  *
+  * {@hide}
+  */
+interface IFastPairManageAccountCallback {
+     void onSuccess();
+     void onError(int code, String message);
 }

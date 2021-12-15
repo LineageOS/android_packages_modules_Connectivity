@@ -16,13 +16,31 @@
 
 package android.nearby;
 
+import android.accounts.Account;
+import android.annotation.IntDef;
 import android.annotation.NonNull;
 import android.annotation.Nullable;
-import android.annotation.SuppressLint;
 import android.annotation.SystemApi;
+import android.nearby.aidl.FastPairAccountDevicesMetadataRequestParcel;
+import android.nearby.aidl.FastPairAccountKeyDeviceMetadataParcel;
+import android.nearby.aidl.FastPairAntispoofkeyDeviceMetadataRequestParcel;
+import android.nearby.aidl.FastPairEligibleAccountParcel;
+import android.nearby.aidl.FastPairEligibleAccountsRequestParcel;
+import android.nearby.aidl.FastPairManageAccountDeviceRequestParcel;
+import android.nearby.aidl.FastPairManageAccountRequestParcel;
+import android.nearby.aidl.IFastPairAccountDevicesMetadataCallback;
+import android.nearby.aidl.IFastPairAntispoofkeyDeviceMetadataCallback;
+import android.nearby.aidl.IFastPairDataProvider;
+import android.nearby.aidl.IFastPairEligibleAccountsCallback;
+import android.nearby.aidl.IFastPairManageAccountCallback;
+import android.nearby.aidl.IFastPairManageAccountDeviceCallback;
 import android.os.IBinder;
 import android.os.RemoteException;
 import android.util.Log;
+
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.util.Collection;
 
 /**
  * Base class for fast pair providers outside the system server.
@@ -38,33 +56,145 @@ import android.util.Log;
  */
 @SystemApi
 public abstract class FastPairDataProviderBase {
+    /**
+     * The action the wrapping service should have in its intent filter to implement the
+     * {@link android.nearby.FastPairDataProviderBase}.
+     */
+    public static final String ACTION_FAST_PAIR_DATA_PROVIDER =
+            "android.nearby.action.FAST_PAIR_DATA_PROVIDER";
+
+    /**
+     * Manage request type to add, or opt-in.
+     */
+    public static final int MANAGE_REQUEST_ADD = 0;
+    /**
+     * Manage request type to remove, or opt-out.
+     */
+    public static final int MANAGE_REQUEST_REMOVE = 1;
+
+    /**
+     * @hide
+     */
+    @Retention(RetentionPolicy.SOURCE)
+    @IntDef(value = {
+            MANAGE_REQUEST_ADD,
+            MANAGE_REQUEST_REMOVE})
+    @interface ManageRequestType {}
+
+
+    public static final int ERROR_CODE_BAD_REQUEST = 0;
+    public static final int ERROR_CODE_INTERNAL_ERROR = 1;
+    /**
+     * @hide
+     */
+    @Retention(RetentionPolicy.SOURCE)
+    @IntDef(value = {
+            ERROR_CODE_BAD_REQUEST,
+            ERROR_CODE_INTERNAL_ERROR})
+    @interface ErrorCode {}
 
     private final IBinder mBinder;
     private final String mTag;
 
+    /**
+     * Constructor of FastPairDataProviderBase.
+     *
+     * @param tag TAG for on device logging.
+     */
     public FastPairDataProviderBase(@NonNull String tag) {
         mBinder = new Service();
         mTag = tag;
     }
 
     /**
-     * Callback to be invoked when a device metadata is loaded.
+     * Callback to be invoked when an antispoofkeyed device metadata is loaded.
      */
-    public interface FastPairDeviceMetadataCallback {
+    public interface FastPairAntispoofkeyDeviceMetadataCallback {
 
         /**
-         * Should be invoked once the meta data is loaded.
+         * Invoked once the meta data is loaded.
          */
-        void onFastPairDeviceMetadataReceived(@NonNull FastPairDeviceMetadata metadata);
+        void onFastPairAntispoofkeyDeviceMetadataReceived(
+                @NonNull FastPairAntispoofkeyDeviceMetadata metadata);
+        /** Invoked in case of error. */
+        void onError(@ErrorCode int code, @Nullable String message);
     }
 
     /**
-     * Fullfills the load device metadata request by using callback to send back the serialized
-     * device meta data of the given modelId.
+     * Callback to be invoked when Fast Pair devices of a given account is loaded.
      */
-    public abstract void onLoadFastPairDeviceMetadata(
-            @NonNull FastPairDeviceMetadataRequest request,
-            @NonNull FastPairDeviceMetadataCallback callback);
+    public interface FastPairAccountDevicesMetadataCallback {
+
+        /**
+         * Should be invoked once the metadatas are loaded.
+         */
+        void onFastPairAccountDevicesMetadataReceived(
+                @NonNull Collection<FastPairAccountKeyDeviceMetadata> metadatas);
+        /** Invoked in case of error. */
+        void onError(@ErrorCode int code, @Nullable String message);
+    }
+
+    /** Callback to be invoked when FastPair eligible accounts are loaded. */
+    public interface FastPairEligibleAccountsCallback {
+
+        /**
+         * Should be invoked once the eligible accounts are loaded.
+         */
+        void onFastPairEligibleAccountsReceived(
+                @NonNull Collection<FastPairEligibleAccount> accounts);
+        /** Invoked in case of error. */
+        void onError(@ErrorCode int code, @Nullable String message);
+    }
+
+    /**
+     * Callback to be invoked when a management action is finished.
+     */
+    public interface FastPairManageActionCallback {
+
+        /**
+         * Should be invoked once the manage action is successful.
+         */
+        void onSuccess();
+        /** Invoked in case of error. */
+        void onError(@ErrorCode int code, @Nullable String message);
+    }
+
+    /**
+     * Fulfills the Fast Pair device metadata request by using callback to send back the
+     * device meta data of a given modelId.
+     */
+    public abstract void onLoadFastPairAntispoofkeyDeviceMetadata(
+            @NonNull FastPairAntispoofkeyDeviceMetadataRequest request,
+            @NonNull FastPairAntispoofkeyDeviceMetadataCallback callback);
+
+    /**
+     * Fulfills the account tied Fast Pair devices metadata request by using callback to send back
+     * all Fast Pair device's metadata of a given account.
+     */
+    public abstract void onLoadFastPairAccountDevicesMetadata(
+            @NonNull FastPairAccountDevicesMetadataRequest request,
+            @NonNull FastPairAccountDevicesMetadataCallback callback);
+
+    /**
+     * Fulfills the Fast Pair eligible accounts request by using callback to send back Fast Pair
+     * eligible accounts */
+    public abstract void onLoadFastPairEligibleAccounts(
+            @NonNull FastPairEligibleAccountsRequest request,
+            @NonNull FastPairEligibleAccountsCallback callback);
+
+    /**
+     * Fulfills the Fast Pair account management request by using callback to send back result.
+     */
+    public abstract void onManageFastPairAccount(
+            @NonNull FastPairManageAccountRequest request,
+            @NonNull FastPairManageActionCallback callback);
+
+    /**
+     * Fulfills the request to manage device-account mapping by using callback to send back result.
+     */
+    public abstract void onManageFastPairAccountDevice(
+            @NonNull FastPairManageAccountDeviceRequest request,
+            @NonNull FastPairManageActionCallback callback);
 
     /**
      * Returns the IBinder instance that should be returned from the {@link
@@ -75,187 +205,304 @@ public abstract class FastPairDataProviderBase {
     }
 
     /**
-     * Class for building FastPairDeviceMetadata.
+     * Class for reading FastPairAntispoofkeyDeviceMetadataRequest.
      */
-    public static class FastPairDeviceMetadata {
+    public static class FastPairAntispoofkeyDeviceMetadataRequest {
 
-        private FastPairDeviceMetadataParcel mMetadataParcel;
+        private final FastPairAntispoofkeyDeviceMetadataRequestParcel mMetadataRequestParcel;
 
-        private FastPairDeviceMetadata(FastPairDeviceMetadataParcel metadataParcel) {
-            this.mMetadataParcel = metadataParcel;
-        }
-
-        /**
-         * Builder used to create FastPairDeviceMetadata.
-         */
-        public static final class Builder {
-
-            private final FastPairDeviceMetadataParcel mBuilderParcel;
-
-            /**
-             * Default constructor of Builder.
-             */
-            public Builder() {
-                mBuilderParcel = new FastPairDeviceMetadataParcel();
-                mBuilderParcel.imageUrl = null;
-                mBuilderParcel.intentUri = null;
-                mBuilderParcel.antiSpoofPublicKey = null;
-                mBuilderParcel.bleTxPower = 0;
-                mBuilderParcel.triggerDistance = 0;
-                mBuilderParcel.image = null;
-                mBuilderParcel.deviceType = 0;  // DEVICE_TYPE_UNSPECIFIED
-                mBuilderParcel.trueWirelessImageUrlLeftBud = null;
-                mBuilderParcel.trueWirelessImageUrlRightBud = null;
-                mBuilderParcel.trueWirelessImageUrlCase = null;
-            }
-
-            /**
-             * Set ImageUlr.
-             */
-            @SuppressLint("MissingGetterMatchingBuilder")
-            @NonNull
-            public Builder setImageUrl(@NonNull String imageUrl) {
-                mBuilderParcel.imageUrl = imageUrl;
-                return this;
-            }
-
-            /**
-             * Set IntentUri.
-             */
-            @SuppressLint("MissingGetterMatchingBuilder")
-            @NonNull
-            public Builder setIntentUri(@NonNull String intentUri) {
-                mBuilderParcel.intentUri = intentUri;
-                return this;
-            }
-
-            /**
-             * Set AntiSpoof public key.
-             */
-            @SuppressLint("MissingGetterMatchingBuilder")
-            @NonNull
-            public Builder setAntiSpoofPublicKey(@NonNull byte[] antiSpoofPublicKey) {
-                mBuilderParcel.antiSpoofPublicKey = antiSpoofPublicKey;
-                return this;
-            }
-
-            /**
-             * Set ble transmission power.
-             */
-            @SuppressLint("MissingGetterMatchingBuilder")
-            @NonNull
-            public Builder setBleTxPower(int bleTxPower) {
-                mBuilderParcel.bleTxPower = bleTxPower;
-                return this;
-            }
-
-            /**
-             * Set trigger distance.
-             */
-            @SuppressLint("MissingGetterMatchingBuilder")
-            @NonNull
-            public Builder setTriggerDistance(float triggerDistance) {
-                mBuilderParcel.triggerDistance = triggerDistance;
-                return this;
-            }
-
-            /**
-             * Set image.
-             */
-            @SuppressLint("MissingGetterMatchingBuilder")
-            @NonNull
-            public Builder setImage(@NonNull byte[] image) {
-                mBuilderParcel.image = image;
-                return this;
-            }
-
-            /**
-             * Set device type.
-             */
-            @SuppressLint("MissingGetterMatchingBuilder")
-            @NonNull
-            public Builder setDeviceType(int deviceType) {
-                mBuilderParcel.deviceType = deviceType;
-                return this;
-            }
-
-            /**
-             * Set true wireless image url for left bud.
-             */
-            @SuppressLint("MissingGetterMatchingBuilder")
-            @NonNull
-            public Builder setTrueWirelessImageUriLeftBud(
-                    @NonNull byte[] trueWirelessImageUrlLeftBud) {
-                mBuilderParcel.trueWirelessImageUrlLeftBud = trueWirelessImageUrlLeftBud;
-                return this;
-            }
-
-            /**
-             * Set true wireless image url for right bud.
-             */
-            @SuppressLint("MissingGetterMatchingBuilder")
-            @NonNull
-            public Builder setTrueWirelessImageUrlRightBud(
-                    @NonNull byte[] trueWirelessImageUrlRightBud) {
-                mBuilderParcel.trueWirelessImageUrlRightBud = trueWirelessImageUrlRightBud;
-                return this;
-            }
-
-            /**
-             * Set true wireless image url for right bud.
-             */
-            @SuppressLint("MissingGetterMatchingBuilder")
-            @NonNull
-            public Builder setTrueWirelessImageUrlCase(@NonNull byte[] trueWirelessImageUrlCase) {
-                mBuilderParcel.trueWirelessImageUrlCase = trueWirelessImageUrlCase;
-                return this;
-            }
-
-            /**
-             * Build {@link FastPairDeviceMetadataRequest} with the currently set configuration.
-             */
-            @NonNull
-            public FastPairDeviceMetadata build() {
-                return new FastPairDeviceMetadata(mBuilderParcel);
-            }
-        }
-    }
-
-    /**
-     * Class for reading FastPairDeviceMetadataRequest.
-     */
-    public static class FastPairDeviceMetadataRequest {
-
-        private final FastPairDeviceMetadataRequestParcel mMetadataRequestParcel;
-
-        private FastPairDeviceMetadataRequest(
-                final FastPairDeviceMetadataRequestParcel metaDataRequestParcel) {
+        private FastPairAntispoofkeyDeviceMetadataRequest(
+                final FastPairAntispoofkeyDeviceMetadataRequestParcel metaDataRequestParcel) {
             this.mMetadataRequestParcel = metaDataRequestParcel;
         }
 
-        public @Nullable byte[] getModelId() {
+        /** Get modelId, the key for FastPairAntispoofkeyDeviceMetadata. */
+        public @NonNull byte[] getModelId() {
             return this.mMetadataRequestParcel.modelId;
         }
     }
 
     /**
-     * Call back class that sends back data.
+     * Class for reading FastPairAccountDevicesMetadataRequest.
      */
-    private final class Callback implements FastPairDeviceMetadataCallback {
+    public static class FastPairAccountDevicesMetadataRequest {
 
-        private IFastPairDataCallback mCallback;
+        private final FastPairAccountDevicesMetadataRequestParcel mMetadataRequestParcel;
 
-        private Callback(IFastPairDataCallback callback) {
+        private FastPairAccountDevicesMetadataRequest(
+                final FastPairAccountDevicesMetadataRequestParcel metaDataRequestParcel) {
+            this.mMetadataRequestParcel = metaDataRequestParcel;
+        }
+        /** Get account. */
+        public @NonNull Account getAccount() {
+            return this.mMetadataRequestParcel.account;
+        }
+    }
+
+    /** Class for reading FastPairEligibleAccountsRequest. */
+    public static class FastPairEligibleAccountsRequest {
+        @SuppressWarnings("UnusedVariable")
+        private final FastPairEligibleAccountsRequestParcel mAccountsRequestParcel;
+
+        private FastPairEligibleAccountsRequest(
+                final FastPairEligibleAccountsRequestParcel accountsRequestParcel) {
+            this.mAccountsRequestParcel = accountsRequestParcel;
+        }
+    }
+
+    /** Class for reading FastPairManageAccountRequest. */
+    public static class FastPairManageAccountRequest {
+
+        private final FastPairManageAccountRequestParcel mAccountRequestParcel;
+
+        private FastPairManageAccountRequest(
+                final FastPairManageAccountRequestParcel accountRequestParcel) {
+            this.mAccountRequestParcel = accountRequestParcel;
+        }
+
+        /** Get request type: MANAGE_REQUEST_ADD, or MANAGE_REQUEST_REMOVE. */
+        public @ManageRequestType int getRequestType() {
+            return this.mAccountRequestParcel.requestType;
+        }
+        /** Get account. */
+        public @NonNull Account getAccount() {
+            return this.mAccountRequestParcel.account;
+        }
+    }
+
+    /** Class for reading FastPairManageAccountDeviceRequest. */
+    public static class FastPairManageAccountDeviceRequest {
+
+        private final FastPairManageAccountDeviceRequestParcel mRequestParcel;
+
+        private FastPairManageAccountDeviceRequest(
+                final FastPairManageAccountDeviceRequestParcel requestParcel) {
+            this.mRequestParcel = requestParcel;
+        }
+
+        /** Get request type: MANAGE_REQUEST_ADD, or MANAGE_REQUEST_REMOVE. */
+        public @ManageRequestType int getRequestType() {
+            return this.mRequestParcel.requestType;
+        }
+        /** Get account. */
+        public @NonNull Account getAccount() {
+            return this.mRequestParcel.account;
+        }
+        /** Get BleAddress. */
+        public @Nullable String getBleAddress() {
+            return this.mRequestParcel.bleAddress;
+        }
+        /** Get account key device metadata. */
+        public @NonNull FastPairAccountKeyDeviceMetadata getAccountKeyDeviceMetadata() {
+            return new FastPairAccountKeyDeviceMetadata(
+                    this.mRequestParcel.accountKeyDeviceMetadata);
+        }
+    }
+
+    /**
+     * Callback class that sends back FastPairAntispoofkeyDeviceMetadata.
+     */
+    private final class WrapperFastPairAntispoofkeyDeviceMetadataCallback implements
+            FastPairAntispoofkeyDeviceMetadataCallback {
+
+        private IFastPairAntispoofkeyDeviceMetadataCallback mCallback;
+
+        private WrapperFastPairAntispoofkeyDeviceMetadataCallback(
+                IFastPairAntispoofkeyDeviceMetadataCallback callback) {
             mCallback = callback;
         }
 
         /**
-         * Sends back the serialized device meta data.
+         * Sends back FastPairAntispoofkeyDeviceMetadata.
          */
         @Override
-        public void onFastPairDeviceMetadataReceived(@NonNull FastPairDeviceMetadata metadata) {
+        public void onFastPairAntispoofkeyDeviceMetadataReceived(
+                @NonNull FastPairAntispoofkeyDeviceMetadata metadata) {
             try {
-                mCallback.onFastPairDeviceMetadataReceived(metadata.mMetadataParcel);
+                mCallback.onFastPairAntispoofkeyDeviceMetadataReceived(metadata.mMetadataParcel);
+            } catch (RemoteException e) {
+                throw e.rethrowFromSystemServer();
+            } catch (RuntimeException e) {
+                Log.w(mTag, e);
+            }
+        }
+
+        @Override
+        public void onError(@ErrorCode int code, @Nullable String message) {
+            try {
+                mCallback.onError(code, message);
+            } catch (RemoteException e) {
+                throw e.rethrowFromSystemServer();
+            } catch (RuntimeException e) {
+                Log.w(mTag, e);
+            }
+        }
+    }
+
+    /**
+     * Callback class that sends back collection of FastPairAccountKeyDeviceMetadata.
+     */
+    private final class WrapperFastPairAccountDevicesMetadataCallback implements
+            FastPairAccountDevicesMetadataCallback {
+
+        private IFastPairAccountDevicesMetadataCallback mCallback;
+
+        private WrapperFastPairAccountDevicesMetadataCallback(
+                IFastPairAccountDevicesMetadataCallback callback) {
+            mCallback = callback;
+        }
+
+        /**
+         * Sends back collection of FastPairAccountKeyDeviceMetadata.
+         */
+        @Override
+        public void onFastPairAccountDevicesMetadataReceived(
+                @NonNull Collection<FastPairAccountKeyDeviceMetadata> metadatas) {
+            FastPairAccountKeyDeviceMetadataParcel[] metadataParcels =
+                    new FastPairAccountKeyDeviceMetadataParcel[metadatas.size()];
+            int i = 0;
+            for (FastPairAccountKeyDeviceMetadata metadata : metadatas) {
+                metadataParcels[i] = metadata.mMetadataParcel;
+                i = i + 1;
+            }
+            try {
+                mCallback.onFastPairAccountDevicesMetadataReceived(metadataParcels);
+            } catch (RemoteException e) {
+                throw e.rethrowFromSystemServer();
+            } catch (RuntimeException e) {
+                Log.w(mTag, e);
+            }
+        }
+
+        @Override
+        public void onError(@ErrorCode int code, @Nullable String message) {
+            try {
+                mCallback.onError(code, message);
+            } catch (RemoteException e) {
+                throw e.rethrowFromSystemServer();
+            } catch (RuntimeException e) {
+                Log.w(mTag, e);
+            }
+        }
+    }
+
+    /**
+     * Callback class that sends back eligible Fast Pair accounts.
+     */
+    private final class WrapperFastPairEligibleAccountsCallback implements
+            FastPairEligibleAccountsCallback {
+
+        private IFastPairEligibleAccountsCallback mCallback;
+
+        private WrapperFastPairEligibleAccountsCallback(
+                IFastPairEligibleAccountsCallback callback) {
+            mCallback = callback;
+        }
+
+        /**
+         * Sends back the eligble Fast Pair accounts.
+         */
+        @Override
+        public void onFastPairEligibleAccountsReceived(
+                @NonNull Collection<FastPairEligibleAccount> accounts) {
+            int i = 0;
+            FastPairEligibleAccountParcel[] accountParcels =
+                    new FastPairEligibleAccountParcel[accounts.size()];
+            for (FastPairEligibleAccount account: accounts) {
+                accountParcels[i] = account.mAccountParcel;
+                i = i + 1;
+            }
+            try {
+                mCallback.onFastPairEligibleAccountsReceived(accountParcels);
+            } catch (RemoteException e) {
+                throw e.rethrowFromSystemServer();
+            } catch (RuntimeException e) {
+                Log.w(mTag, e);
+            }
+        }
+
+        @Override
+        public void onError(@ErrorCode int code, @Nullable String message) {
+            try {
+                mCallback.onError(code, message);
+            } catch (RemoteException e) {
+                throw e.rethrowFromSystemServer();
+            } catch (RuntimeException e) {
+                Log.w(mTag, e);
+            }
+        }
+    }
+
+    /**
+     * Callback class that sends back Fast Pair account management result.
+     */
+    private final class WrapperFastPairManageAccountCallback implements
+            FastPairManageActionCallback {
+
+        private IFastPairManageAccountCallback mCallback;
+
+        private WrapperFastPairManageAccountCallback(
+                IFastPairManageAccountCallback callback) {
+            mCallback = callback;
+        }
+
+        /**
+         * Sends back Fast Pair account opt in result.
+         */
+        @Override
+        public void onSuccess() {
+            try {
+                mCallback.onSuccess();
+            } catch (RemoteException e) {
+                throw e.rethrowFromSystemServer();
+            } catch (RuntimeException e) {
+                Log.w(mTag, e);
+            }
+        }
+
+        @Override
+        public void onError(@ErrorCode int code, @Nullable String message) {
+            try {
+                mCallback.onError(code, message);
+            } catch (RemoteException e) {
+                throw e.rethrowFromSystemServer();
+            } catch (RuntimeException e) {
+                Log.w(mTag, e);
+            }
+        }
+    }
+
+    /**
+     * Call back class that sends back account-device mapping management result.
+     */
+    private final class WrapperFastPairManageAccountDeviceCallback implements
+            FastPairManageActionCallback {
+
+        private IFastPairManageAccountDeviceCallback mCallback;
+
+        private WrapperFastPairManageAccountDeviceCallback(
+                IFastPairManageAccountDeviceCallback callback) {
+            mCallback = callback;
+        }
+
+        /**
+         * Sends back the account-device mapping management result.
+         */
+        @Override
+        public void onSuccess() {
+            try {
+                mCallback.onSuccess();
+            } catch (RemoteException e) {
+                throw e.rethrowFromSystemServer();
+            } catch (RuntimeException e) {
+                Log.w(mTag, e);
+            }
+        }
+
+        @Override
+        public void onError(@ErrorCode int code, @Nullable String message) {
+            try {
+                mCallback.onError(code, message);
             } catch (RemoteException e) {
                 throw e.rethrowFromSystemServer();
             } catch (RuntimeException e) {
@@ -270,11 +517,45 @@ public abstract class FastPairDataProviderBase {
         }
 
         @Override
-        public void loadFastPairDeviceMetadata(
-                @NonNull FastPairDeviceMetadataRequestParcel requestParcel,
-                IFastPairDataCallback callback) {
-            onLoadFastPairDeviceMetadata(new FastPairDeviceMetadataRequest(requestParcel),
-                    new Callback(callback));
+        public void loadFastPairAntispoofkeyDeviceMetadata(
+                @NonNull FastPairAntispoofkeyDeviceMetadataRequestParcel requestParcel,
+                IFastPairAntispoofkeyDeviceMetadataCallback callback) {
+            onLoadFastPairAntispoofkeyDeviceMetadata(
+                    new FastPairAntispoofkeyDeviceMetadataRequest(requestParcel),
+                    new WrapperFastPairAntispoofkeyDeviceMetadataCallback(callback));
+        }
+
+        @Override
+        public void loadFastPairAccountDevicesMetadata(
+                @NonNull FastPairAccountDevicesMetadataRequestParcel requestParcel,
+                IFastPairAccountDevicesMetadataCallback callback) {
+            onLoadFastPairAccountDevicesMetadata(
+                    new FastPairAccountDevicesMetadataRequest(requestParcel),
+                    new WrapperFastPairAccountDevicesMetadataCallback(callback));
+        }
+
+        @Override
+        public void loadFastPairEligibleAccounts(
+                @NonNull FastPairEligibleAccountsRequestParcel requestParcel,
+                IFastPairEligibleAccountsCallback callback) {
+            onLoadFastPairEligibleAccounts(new FastPairEligibleAccountsRequest(requestParcel),
+                    new WrapperFastPairEligibleAccountsCallback(callback));
+        }
+
+        @Override
+        public void manageFastPairAccount(
+                @NonNull FastPairManageAccountRequestParcel requestParcel,
+                IFastPairManageAccountCallback callback) {
+            onManageFastPairAccount(new FastPairManageAccountRequest(requestParcel),
+                    new WrapperFastPairManageAccountCallback(callback));
+        }
+
+        @Override
+        public void manageFastPairAccountDevice(
+                @NonNull FastPairManageAccountDeviceRequestParcel requestParcel,
+                IFastPairManageAccountDeviceCallback callback) {
+            onManageFastPairAccountDevice(new FastPairManageAccountDeviceRequest(requestParcel),
+                    new WrapperFastPairManageAccountDeviceCallback(callback));
         }
     }
 }

@@ -18,6 +18,7 @@ package com.android.server.nearby.provider;
 
 import android.annotation.Nullable;
 import android.content.Context;
+import android.nearby.FastPairDataProviderBase;
 import android.util.Log;
 
 import androidx.annotation.WorkerThread;
@@ -28,9 +29,7 @@ import service.proto.Rpcs;
 public class FastPairDataProvider {
 
     private static final String TAG = "FastPairDataProvider";
-    // TODO(204780849): move this to system api.
-    private static final String ACTION_FAST_PAIR_DATA_PROVIDER =
-              "com.android.nearby.service.FastPairDataProvider";
+
     private static FastPairDataProvider sInstance;
 
     private ProxyFastPairDataProvider mProxyProvider;
@@ -54,7 +53,8 @@ public class FastPairDataProvider {
     }
 
     private FastPairDataProvider(Context context) {
-        mProxyProvider = ProxyFastPairDataProvider.create(context, ACTION_FAST_PAIR_DATA_PROVIDER);
+        mProxyProvider = ProxyFastPairDataProvider.create(
+                context, FastPairDataProviderBase.ACTION_FAST_PAIR_DATA_PROVIDER);
     }
 
     /** loadFastPairDeviceMetadata. */

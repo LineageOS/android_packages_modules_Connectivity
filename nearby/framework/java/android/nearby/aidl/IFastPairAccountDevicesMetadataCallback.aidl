@@ -12,15 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package android.nearby;
+package android.nearby.aidl;
 
-import android.nearby.FastPairDeviceMetadataParcel;
+import android.nearby.aidl.FastPairAccountKeyDeviceMetadataParcel;
 
 /**
-  * Provides callback interface for OEMs to send FastPair data back.
+  * Provides callback interface for OEMs to send back metadata of FastPair
+  * devices associated with an account.
   *
   * {@hide}
   */
-interface IFastPairDataCallback {
-     void onFastPairDeviceMetadataReceived(in FastPairDeviceMetadataParcel metadata);
- }
+interface IFastPairAccountDevicesMetadataCallback {
+     void onFastPairAccountDevicesMetadataReceived(in FastPairAccountKeyDeviceMetadataParcel[] accountDevicesMetadata);
+     void onError(int code, String message);
+}
