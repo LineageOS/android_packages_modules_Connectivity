@@ -190,7 +190,7 @@ public class IpSecServiceParameterizedTest {
 
     INetd mMockNetd;
     PackageManager mMockPkgMgr;
-    IpSecService.IpSecServiceConfiguration mMockIpSecSrvConfig;
+    IpSecService.Dependencies mMockDeps;
     IpSecService mIpSecService;
     Network fakeNetwork = new Network(0xAB);
     int mUid = Os.getuid();
@@ -219,11 +219,11 @@ public class IpSecServiceParameterizedTest {
     public void setUp() throws Exception {
         mMockNetd = mock(INetd.class);
         mMockPkgMgr = mock(PackageManager.class);
-        mMockIpSecSrvConfig = mock(IpSecService.IpSecServiceConfiguration.class);
-        mIpSecService = new IpSecService(mTestContext, mMockIpSecSrvConfig);
+        mMockDeps = mock(IpSecService.Dependencies.class);
+        mIpSecService = new IpSecService(mTestContext, mMockDeps);
 
         // Injecting mock netd
-        when(mMockIpSecSrvConfig.getNetdInstance()).thenReturn(mMockNetd);
+        when(mMockDeps.getNetdInstance(mTestContext)).thenReturn(mMockNetd);
 
         // PackageManager should always return true (feature flag tests in IpSecServiceTest)
         when(mMockPkgMgr.hasSystemFeature(anyString())).thenReturn(true);
