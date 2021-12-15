@@ -285,18 +285,10 @@ public class NetworkCapabilitiesTest {
             assertFalse(netCap2.satisfiedByUids(netCap));
             assertFalse(netCap.appliesToUid(650));
             assertTrue(netCap2.appliesToUid(650));
-            netCap.combineCapabilities(netCap2);
+            netCap.setUids(uids);
             assertTrue(netCap2.satisfiedByUids(netCap));
             assertTrue(netCap.appliesToUid(650));
             assertFalse(netCap.appliesToUid(500));
-
-            assertTrue(new NetworkCapabilities().satisfiedByUids(netCap));
-            netCap.combineCapabilities(new NetworkCapabilities());
-            assertTrue(netCap.appliesToUid(500));
-            assertTrue(netCap.appliesToUidRange(new UidRange(1, 100000)));
-            assertFalse(netCap2.appliesToUid(500));
-            assertFalse(netCap2.appliesToUidRange(new UidRange(1, 100000)));
-            assertTrue(new NetworkCapabilities().satisfiedByUids(netCap));
 
             // Null uids satisfies everything.
             netCap.setUids(null);
@@ -590,103 +582,6 @@ public class NetworkCapabilitiesTest {
     }
 
     @Test
-    public void testCombineCapabilities() {
-        NetworkCapabilities nc1 = new NetworkCapabilities();
-        NetworkCapabilities nc2 = new NetworkCapabilities();
-
-        if (isAtLeastS()) {
-            nc1.addForbiddenCapability(NET_CAPABILITY_CAPTIVE_PORTAL);
-        }
-        nc1.addCapability(NET_CAPABILITY_NOT_ROAMING);
-        assertNotEquals(nc1, nc2);
-        nc2.combineCapabilities(nc1);
-        assertEquals(nc1, nc2);
-        assertTrue(nc2.hasCapability(NET_CAPABILITY_NOT_ROAMING));
-        if (isAtLeastS()) {
-            assertTrue(nc2.hasForbiddenCapability(NET_CAPABILITY_CAPTIVE_PORTAL));
-        }
-
-        if (isAtLeastS()) {
-            // This will effectively move NOT_ROAMING capability from required to forbidden for nc1.
-            nc1.addForbiddenCapability(NET_CAPABILITY_NOT_ROAMING);
-            // It is not allowed to have the same capability in both wanted and forbidden list.
-            assertThrows(IllegalArgumentException.class, () -> nc2.combineCapabilities(nc1));
-            // Remove forbidden capability to continue other tests.
-            nc1.removeForbiddenCapability(NET_CAPABILITY_NOT_ROAMING);
-        }
-
-        nc1.setSSID(TEST_SSID);
-        nc2.combineCapabilities(nc1);
-        if (isAtLeastR()) {
-            assertTrue(TEST_SSID.equals(nc2.getSsid()));
-        }
-
-        // Because they now have the same SSID, the following call should not throw
-        nc2.combineCapabilities(nc1);
-
-        nc1.setSSID(DIFFERENT_TEST_SSID);
-        try {
-            nc2.combineCapabilities(nc1);
-            fail("Expected IllegalStateException: can't combine different SSIDs");
-        } catch (IllegalStateException expected) {}
-        nc1.setSSID(TEST_SSID);
-
-        if (isAtLeastS()) {
-            nc1.setUids(uidRanges(10, 13));
-            assertNotEquals(nc1, nc2);
-            nc2.combineCapabilities(nc1);  // Everything + 10~13 is still everything.
-            assertNotEquals(nc1, nc2);
-            nc1.combineCapabilities(nc2);  // 10~13 + everything is everything.
-            assertEquals(nc1, nc2);
-            nc1.setUids(uidRanges(10, 13));
-            nc2.setUids(uidRanges(20, 23));
-            assertNotEquals(nc1, nc2);
-            nc1.combineCapabilities(nc2);
-            assertTrue(nc1.appliesToUid(12));
-            assertFalse(nc2.appliesToUid(12));
-            assertTrue(nc1.appliesToUid(22));
-            assertTrue(nc2.appliesToUid(22));
-
-            // Verify the subscription id list can be combined only when they are equal.
-            nc1.setSubscriptionIds(Set.of(TEST_SUBID1, TEST_SUBID2));
-            nc2.setSubscriptionIds(Set.of(TEST_SUBID2));
-            assertThrows(IllegalStateException.class, () -> nc2.combineCapabilities(nc1));
-
-            nc2.setSubscriptionIds(Set.of());
-            assertThrows(IllegalStateException.class, () -> nc2.combineCapabilities(nc1));
-
-            nc2.setSubscriptionIds(Set.of(TEST_SUBID2, TEST_SUBID1));
-            nc2.combineCapabilities(nc1);
-            assertEquals(Set.of(TEST_SUBID2, TEST_SUBID1), nc2.getSubscriptionIds());
-        }
-    }
-
-    @Test @IgnoreUpTo(Build.VERSION_CODES.Q)
-    public void testCombineCapabilities_AdministratorUids() {
-        final NetworkCapabilities nc1 = new NetworkCapabilities();
-        final NetworkCapabilities nc2 = new NetworkCapabilities();
-
-        final int[] adminUids = {3, 6, 12};
-        nc1.setAdministratorUids(adminUids);
-        nc2.combineCapabilities(nc1);
-        assertTrue(nc2.equalsAdministratorUids(nc1));
-        assertArrayEquals(nc2.getAdministratorUids(), adminUids);
-
-        final int[] adminUidsOtherOrder = {3, 12, 6};
-        nc1.setAdministratorUids(adminUidsOtherOrder);
-        assertTrue(nc2.equalsAdministratorUids(nc1));
-
-        final int[] adminUids2 = {11, 1, 12, 3, 6};
-        nc1.setAdministratorUids(adminUids2);
-        assertFalse(nc2.equalsAdministratorUids(nc1));
-        assertFalse(Arrays.equals(nc2.getAdministratorUids(), adminUids2));
-        try {
-            nc2.combineCapabilities(nc1);
-            fail("Shouldn't be able to combine different lists of admin UIDs");
-        } catch (IllegalStateException expected) { }
-    }
-
-    @Test
     public void testSetCapabilities() {
         final int[] REQUIRED_CAPABILITIES = new int[] {
                 NET_CAPABILITY_INTERNET, NET_CAPABILITY_NOT_VPN };
@@ -799,29 +694,6 @@ public class NetworkCapabilitiesTest {
         NetworkCapabilities nc2 = new NetworkCapabilities();
         nc2.addTransportType(TRANSPORT_CELLULAR).setTransportInfo(new TestTransportInfo())
                 .addTransportType(TRANSPORT_WIFI);
-    }
-
-    @Test
-    public void testCombineTransportInfo() {
-        NetworkCapabilities nc1 = new NetworkCapabilities();
-        nc1.setTransportInfo(new TestTransportInfo());
-
-        NetworkCapabilities nc2 = new NetworkCapabilities();
-        // new TransportInfo so that object is not #equals to nc1's TransportInfo (that's where
-        // combine fails)
-        nc2.setTransportInfo(new TestTransportInfo());
-
-        try {
-            nc1.combineCapabilities(nc2);
-            fail("Should not be able to combine NetworkCabilities which contain TransportInfos");
-        } catch (IllegalStateException expected) {
-            // empty
-        }
-
-        // verify that can combine with identical TransportInfo objects
-        NetworkCapabilities nc3 = new NetworkCapabilities();
-        nc3.setTransportInfo(nc1.getTransportInfo());
-        nc1.combineCapabilities(nc3);
     }
 
     @Test
