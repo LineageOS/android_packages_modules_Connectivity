@@ -22,6 +22,9 @@ When you want to use JNI library from frameworks/lib/net:
 
 * Each module creates a native library in their directory, which statically links against the
   common native library (e.g. libnet_utils_device_common_bpf), and calls the native registered
-  function by hardcoding the post-jarjar class_name.
-
-
+  function by hardcoding the post-jarjar class_name. Linkage *MUST* be static because common
+  functions in the file (e.g., `register_com_android_net_module_util_BpfMap`) will appear in the
+  library (`.so`) file, and different versions of the library loaded in the same process by
+  different modules will in general have different versions. It's important that each of these
+  libraries loads the common function from its own library. Static linkage should guarantee this
+  because static linkage resolves symbols at build time, not runtime.
