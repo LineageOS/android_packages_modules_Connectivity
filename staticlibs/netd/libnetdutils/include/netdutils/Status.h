@@ -42,7 +42,7 @@ class [[nodiscard]] Status {
     Status(int code, std::string msg) : mCode(code), mMsg(std::move(msg)) { assert(!ok()); }
 
     Status(android::base::Result<void> result)
-        : mCode(result.ok() ? 0 : result.error().code()),
+        : mCode(result.ok() ? 0 : static_cast<int>(result.error().code())),
           mMsg(result.ok() ? "" : result.error().message()) {}
 
     int code() const { return mCode; }
