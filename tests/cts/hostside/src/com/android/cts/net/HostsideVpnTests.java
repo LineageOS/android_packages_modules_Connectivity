@@ -100,16 +100,4 @@ public class HostsideVpnTests extends HostsideNetworkTestCase {
         runDeviceTests(TEST_PKG, TEST_PKG + ".VpnTest",
                 "testDownloadWithDownloadManagerDisallowed");
     }
-
-    public void testExcludedRoutes() throws Exception {
-        runDeviceTests(TEST_PKG, TEST_PKG + ".VpnTest", "testExcludedRoutes");
-    }
-
-    public void testIncludedRoutes() throws Exception {
-        runDeviceTests(TEST_PKG, TEST_PKG + ".VpnTest", "testIncludedRoutes");
-    }
-
-    public void testInterleavedRoutes() throws Exception {
-        runDeviceTests(TEST_PKG, TEST_PKG + ".VpnTest", "testInterleavedRoutes");
-    }
 }
