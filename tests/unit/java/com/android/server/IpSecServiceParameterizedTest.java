@@ -60,6 +60,7 @@ import android.net.Network;
 import android.os.Binder;
 import android.os.Build;
 import android.os.ParcelFileDescriptor;
+import android.os.RemoteException;
 import android.system.Os;
 import android.test.mock.MockContext;
 import android.util.ArraySet;
@@ -188,9 +189,15 @@ public class IpSecServiceParameterizedTest {
         }
     }
 
+    private IpSecService.Dependencies makeDependencies() throws RemoteException {
+        final IpSecService.Dependencies deps = mock(IpSecService.Dependencies.class);
+        when(deps.getNetdInstance(mTestContext)).thenReturn(mMockNetd);
+        return deps;
+    }
+
     INetd mMockNetd;
     PackageManager mMockPkgMgr;
-    IpSecService.Dependencies mMockDeps;
+    IpSecService.Dependencies mDeps;
     IpSecService mIpSecService;
     Network fakeNetwork = new Network(0xAB);
     int mUid = Os.getuid();
@@ -219,11 +226,8 @@ public class IpSecServiceParameterizedTest {
     public void setUp() throws Exception {
         mMockNetd = mock(INetd.class);
         mMockPkgMgr = mock(PackageManager.class);
-        mMockDeps = mock(IpSecService.Dependencies.class);
-        mIpSecService = new IpSecService(mTestContext, mMockDeps);
-
-        // Injecting mock netd
-        when(mMockDeps.getNetdInstance(mTestContext)).thenReturn(mMockNetd);
+        mDeps = makeDependencies();
+        mIpSecService = new IpSecService(mTestContext, mDeps);
 
         // PackageManager should always return true (feature flag tests in IpSecServiceTest)
         when(mMockPkgMgr.hasSystemFeature(anyString())).thenReturn(true);
