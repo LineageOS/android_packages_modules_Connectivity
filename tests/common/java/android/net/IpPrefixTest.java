@@ -122,9 +122,6 @@ public class IpPrefixTest {
 
         p = new IpPrefix("[2001:db8::123]/64");
         assertEquals("2001:db8::/64", p.toString());
-
-        p = new IpPrefix(InetAddresses.parseNumericAddress("::128"), 64);
-        assertEquals("::/64", p.toString());
     }
 
     @Test

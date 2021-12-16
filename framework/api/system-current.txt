@@ -131,6 +131,7 @@ package android.net {
   }
 
   public final class IpPrefix implements android.os.Parcelable {
+    ctor public IpPrefix(@NonNull java.net.InetAddress, @IntRange(from=0, to=128) int);
     ctor public IpPrefix(@NonNull String);
   }
 
