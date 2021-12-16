@@ -21,7 +21,7 @@ package {
 
 java_defaults {
     name: "enable-framework-connectivity-t-targets",
-    enabled: true,
+    enabled: false,
 }
 // The above defaults can be used to disable framework-connectivity t
 // targets while minimizing merge conflicts in the build rules.
