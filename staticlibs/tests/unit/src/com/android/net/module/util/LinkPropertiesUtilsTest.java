@@ -22,6 +22,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
+import android.annotation.SuppressLint;
 import android.net.InetAddresses;
 import android.net.IpPrefix;
 import android.net.LinkAddress;
@@ -46,6 +47,7 @@ import java.util.function.Function;
 
 @RunWith(AndroidJUnit4.class)
 public final class LinkPropertiesUtilsTest {
+    @SuppressLint("NewApi")
     private static final IpPrefix PREFIX = new IpPrefix(toInetAddress("75.208.6.0"), 24);
     private static final InetAddress V4_ADDR = toInetAddress("75.208.6.1");
     private static final InetAddress V6_ADDR  = toInetAddress(
