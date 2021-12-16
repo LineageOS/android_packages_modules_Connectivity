@@ -22,6 +22,7 @@ import static android.system.OsConstants.AF_INET6;
 import static com.android.net.module.util.NetworkStackConstants.IPV4_ADDR_ANY;
 import static com.android.net.module.util.NetworkStackConstants.IPV6_ADDR_ANY;
 
+import android.annotation.SuppressLint;
 import android.net.IpPrefix;
 import android.system.OsConstants;
 
@@ -107,6 +108,7 @@ public class RtNetlinkRouteMessage extends NetlinkMessage {
      * @param header netlink message header.
      * @param byteBuffer the ByteBuffer instance that wraps the raw netlink message bytes.
      */
+    @SuppressLint("NewApi")
     @Nullable
     public static RtNetlinkRouteMessage parse(@NonNull final StructNlMsgHdr header,
             @NonNull final ByteBuffer byteBuffer) {
