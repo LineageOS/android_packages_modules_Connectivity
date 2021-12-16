@@ -23,6 +23,7 @@ import static android.net.RouteInfo.RTN_UNICAST;
 import static android.net.RouteInfo.RTN_UNREACHABLE;
 import static android.system.OsConstants.EBUSY;
 
+import android.annotation.SuppressLint;
 import android.net.INetd;
 import android.net.InterfaceConfigurationParcel;
 import android.net.IpPrefix;
@@ -213,6 +214,7 @@ public class NetdUtils {
         return failures;
     }
 
+    @SuppressLint("NewApi")
     private static String findNextHop(final RouteInfo route) {
         final String nextHop;
         switch (route.getType()) {
