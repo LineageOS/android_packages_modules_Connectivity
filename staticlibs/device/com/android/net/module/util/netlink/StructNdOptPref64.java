@@ -16,7 +16,6 @@
 
 package com.android.net.module.util.netlink;
 
-import android.annotation.SuppressLint;
 import android.net.IpPrefix;
 import android.util.Log;
 
@@ -108,7 +107,6 @@ public class StructNdOptPref64 extends NdOption {
         this.lifetime = lifetime & 0xfff8;
     }
 
-    @SuppressLint("NewApi")
     private StructNdOptPref64(@NonNull ByteBuffer buf) {
         super(buf.get(), Byte.toUnsignedInt(buf.get()));
         if (type != TYPE) throw new IllegalArgumentException("Invalid type " + type);
