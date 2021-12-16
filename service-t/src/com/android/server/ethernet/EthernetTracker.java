@@ -40,7 +40,6 @@ import android.os.ServiceManager;
 import android.text.TextUtils;
 import android.util.ArrayMap;
 import android.util.Log;
-import android.net.util.NetdService;
 
 import com.android.internal.annotations.VisibleForTesting;
 import com.android.internal.util.IndentingPrintWriter;
@@ -124,7 +123,9 @@ final class EthernetTracker {
         // The services we use.
         IBinder b = ServiceManager.getService(Context.NETWORKMANAGEMENT_SERVICE);
         mNMService = INetworkManagementService.Stub.asInterface(b);
-        mNetd = Objects.requireNonNull(NetdService.getInstance(), "could not get netd instance");
+        mNetd = INetd.Stub.asInterface(
+                (IBinder) context.getSystemService(Context.NETD_SERVICE));
+        Objects.requireNonNull(mNetd, "could not get netd instance");
 
         // Interface match regex.
         updateIfaceMatchRegexp();
