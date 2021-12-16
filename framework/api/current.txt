@@ -316,6 +316,7 @@ package android.net {
     field public static final int NET_CAPABILITY_INTERNET = 12; // 0xc
     field public static final int NET_CAPABILITY_MCX = 23; // 0x17
     field public static final int NET_CAPABILITY_MMS = 0; // 0x0
+    field public static final int NET_CAPABILITY_MMTEL = 33; // 0x21
     field public static final int NET_CAPABILITY_NOT_CONGESTED = 20; // 0x14
     field public static final int NET_CAPABILITY_NOT_METERED = 11; // 0xb
     field public static final int NET_CAPABILITY_NOT_RESTRICTED = 13; // 0xd
