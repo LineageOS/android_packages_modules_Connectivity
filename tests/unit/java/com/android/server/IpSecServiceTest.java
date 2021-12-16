@@ -46,6 +46,7 @@ import android.os.Binder;
 import android.os.Build;
 import android.os.ParcelFileDescriptor;
 import android.os.Process;
+import android.os.RemoteException;
 import android.system.ErrnoException;
 import android.system.Os;
 import android.system.StructStat;
@@ -122,24 +123,22 @@ public class IpSecServiceTest {
 
     Context mMockContext;
     INetd mMockNetd;
-    IpSecService.Dependencies mMockDeps;
+    IpSecService.Dependencies mDeps;
     IpSecService mIpSecService;
 
     @Before
     public void setUp() throws Exception {
         mMockContext = mock(Context.class);
         mMockNetd = mock(INetd.class);
-        mMockDeps = mock(IpSecService.Dependencies.class);
-        mIpSecService = new IpSecService(mMockContext, mMockDeps);
-
-        // Injecting mock netd
-        when(mMockDeps.getNetdInstance(mMockContext)).thenReturn(mMockNetd);
+        mDeps = makeDependencies();
+        mIpSecService = new IpSecService(mMockContext, mDeps);
+        assertNotNull(mIpSecService);
     }
 
-    @Test
-    public void testIpSecServiceCreate() throws InterruptedException {
-        IpSecService ipSecSrv = IpSecService.create(mMockContext);
-        assertNotNull(ipSecSrv);
+    private IpSecService.Dependencies makeDependencies() throws RemoteException {
+        final IpSecService.Dependencies deps = mock(IpSecService.Dependencies.class);
+        when(deps.getNetdInstance(mMockContext)).thenReturn(mMockNetd);
+        return deps;
     }
 
     @Test
@@ -611,7 +610,7 @@ public class IpSecServiceTest {
     public void testOpenUdpEncapSocketTagsSocket() throws Exception {
         IpSecService.UidFdTagger mockTagger = mock(IpSecService.UidFdTagger.class);
         IpSecService testIpSecService = new IpSecService(
-                mMockContext, mMockDeps, mockTagger);
+                mMockContext, mDeps, mockTagger);
 
         IpSecUdpEncapResponse udpEncapResp =
                 testIpSecService.openUdpEncapsulationSocket(0, new Binder());
