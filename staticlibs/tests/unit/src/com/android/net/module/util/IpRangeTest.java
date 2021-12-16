@@ -22,7 +22,6 @@ import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
-import android.annotation.SuppressLint;
 import android.net.InetAddresses;
 import android.net.IpPrefix;
 
@@ -93,7 +92,6 @@ public class IpRangeTest {
         }
     }
 
-    @SuppressLint("NewApi")
     @Test
     public void testConstructor() {
         IpRange r = new IpRange(new IpPrefix(IPV4_ADDR, 32));
@@ -121,7 +119,6 @@ public class IpRangeTest {
         assertEquals(IPV6_RANGE_END, r.getEndAddr());
     }
 
-    @SuppressLint("NewApi")
     @Test
     public void testContainsRangeEqualRanges() {
         final IpRange r1 = new IpRange(new IpPrefix(IPV6_ADDR, 35));
@@ -132,7 +129,6 @@ public class IpRangeTest {
         assertEquals(r1, r2);
     }
 
-    @SuppressLint("NewApi")
     @Test
     public void testContainsRangeSubset() {
         final IpRange r1 = new IpRange(new IpPrefix(IPV6_ADDR, 64));
@@ -143,7 +139,6 @@ public class IpRangeTest {
         assertNotEquals(r1, r2);
     }
 
-    @SuppressLint("NewApi")
     @Test
     public void testContainsRangeTruncatesLowerOrderBits() {
         final IpRange r1 = new IpRange(new IpPrefix(IPV6_ADDR, 100));
@@ -154,7 +149,6 @@ public class IpRangeTest {
         assertEquals(r1, r2);
     }
 
-    @SuppressLint("NewApi")
     @Test
     public void testContainsRangeSubsetSameStartAddr() {
         final IpRange r1 = new IpRange(new IpPrefix(IPV6_ADDR, 35));
@@ -165,7 +159,6 @@ public class IpRangeTest {
         assertNotEquals(r1, r2);
     }
 
-    @SuppressLint("NewApi")
     @Test
     public void testContainsRangeOverlapping() {
         final IpRange r1 = new IpRange(new IpPrefix(address("2001:db9::"), 32));
@@ -176,7 +169,6 @@ public class IpRangeTest {
         assertNotEquals(r1, r2);
     }
 
-    @SuppressLint("NewApi")
     @Test
     public void testOverlapsRangeEqualRanges() {
         final IpRange r1 = new IpRange(new IpPrefix(IPV6_ADDR, 35));
@@ -187,7 +179,6 @@ public class IpRangeTest {
         assertEquals(r1, r2);
     }
 
-    @SuppressLint("NewApi")
     @Test
     public void testOverlapsRangeSubset() {
         final IpRange r1 = new IpRange(new IpPrefix(IPV6_ADDR, 35));
@@ -198,7 +189,6 @@ public class IpRangeTest {
         assertNotEquals(r1, r2);
     }
 
-    @SuppressLint("NewApi")
     @Test
     public void testOverlapsRangeDisjoint() {
         final IpRange r1 = new IpRange(new IpPrefix(IPV6_ADDR, 32));
@@ -209,7 +199,6 @@ public class IpRangeTest {
         assertNotEquals(r1, r2);
     }
 
-    @SuppressLint("NewApi")
     @Test
     public void testOverlapsRangePartialOverlapLow() {
         final IpRange r1 = new IpRange(new IpPrefix(address("2001:db9::"), 32));
@@ -220,7 +209,6 @@ public class IpRangeTest {
         assertNotEquals(r1, r2);
     }
 
-    @SuppressLint("NewApi")
     @Test
     public void testOverlapsRangePartialOverlapHigh() {
         final IpRange r1 = new IpRange(new IpPrefix(address("2001:db7::"), 32));
