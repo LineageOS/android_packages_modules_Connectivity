@@ -39,7 +39,6 @@
 #include <sys/capability.h>
 #include <sys/uio.h>
 
-#include <netid_client.h>                       // For MARK_UNSET.
 #include <private/android_filesystem_config.h>  // For AID_CLAT.
 
 #include "clatd.h"
