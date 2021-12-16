@@ -206,7 +206,6 @@ package android.net {
   }
 
   public final class IpPrefix implements android.os.Parcelable {
-    ctor public IpPrefix(@NonNull java.net.InetAddress, @IntRange(from=0, to=128) int);
     method public boolean contains(@NonNull java.net.InetAddress);
     method public int describeContents();
     method @NonNull public java.net.InetAddress getAddress();
