@@ -439,15 +439,11 @@ package android.net {
     method @NonNull public android.net.IpPrefix getDestination();
     method @Nullable public java.net.InetAddress getGateway();
     method @Nullable public String getInterface();
-    method public int getType();
     method public boolean hasGateway();
     method public boolean isDefaultRoute();
     method public boolean matches(java.net.InetAddress);
     method public void writeToParcel(android.os.Parcel, int);
     field @NonNull public static final android.os.Parcelable.Creator<android.net.RouteInfo> CREATOR;
-    field public static final int RTN_THROW = 9; // 0x9
-    field public static final int RTN_UNICAST = 1; // 0x1
-    field public static final int RTN_UNREACHABLE = 7; // 0x7
   }
 
   public abstract class SocketKeepalive implements java.lang.AutoCloseable {
