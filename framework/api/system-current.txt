@@ -131,6 +131,7 @@ package android.net {
   }
 
   public final class IpPrefix implements android.os.Parcelable {
+    ctor public IpPrefix(@NonNull java.net.InetAddress, @IntRange(from=0, to=128) int);
     ctor public IpPrefix(@NonNull String);
   }
 
@@ -431,6 +432,10 @@ package android.net {
     ctor public RouteInfo(@Nullable android.net.IpPrefix, @Nullable java.net.InetAddress, @Nullable String, int);
     ctor public RouteInfo(@Nullable android.net.IpPrefix, @Nullable java.net.InetAddress, @Nullable String, int, int);
     method public int getMtu();
+    method public int getType();
+    field public static final int RTN_THROW = 9; // 0x9
+    field public static final int RTN_UNICAST = 1; // 0x1
+    field public static final int RTN_UNREACHABLE = 7; // 0x7
   }
 
   public abstract class SocketKeepalive implements java.lang.AutoCloseable {
