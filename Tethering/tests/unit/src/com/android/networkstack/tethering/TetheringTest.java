@@ -2558,10 +2558,10 @@ public class TetheringTest {
     @Test
     public void testBluetoothTethering() throws Exception {
         final ResultListener result = new ResultListener(TETHER_ERROR_NO_ERROR);
-        when(mBluetoothAdapter.isEnabled()).thenReturn(true);
+        mockBluetoothSettings(true /* bluetoothOn */, true /* tetheringOn */);
         mTethering.startTethering(createTetheringRequestParcel(TETHERING_BLUETOOTH), result);
         mLooper.dispatchAll();
-        verifySetBluetoothTethering(true);
+        verifySetBluetoothTethering(true /* enable */, true /* bindToPanService */);
         result.assertHasResult();
 
         mTethering.interfaceAdded(TEST_BT_IFNAME);
@@ -2574,6 +2574,64 @@ public class TetheringTest {
         mLooper.dispatchAll();
         tetherResult.assertHasResult();
 
+        verifyNetdCommandForBtSetup();
+
+        // Turning tethering on a second time does not bind to the PAN service again, since it's
+        // already bound.
+        mockBluetoothSettings(true /* bluetoothOn */, true /* tetheringOn */);
+        final ResultListener secondResult = new ResultListener(TETHER_ERROR_NO_ERROR);
+        mTethering.startTethering(createTetheringRequestParcel(TETHERING_BLUETOOTH), secondResult);
+        mLooper.dispatchAll();
+        verifySetBluetoothTethering(true /* enable */, false /* bindToPanService */);
+        secondResult.assertHasResult();
+
+        mockBluetoothSettings(true /* bluetoothOn */, false /* tetheringOn */);
+        mTethering.stopTethering(TETHERING_BLUETOOTH);
+        mLooper.dispatchAll();
+        final ResultListener untetherResult = new ResultListener(TETHER_ERROR_NO_ERROR);
+        mTethering.untether(TEST_BT_IFNAME, untetherResult);
+        mLooper.dispatchAll();
+        untetherResult.assertHasResult();
+        verifySetBluetoothTethering(false /* enable */, false /* bindToPanService */);
+
+        verifyNetdCommandForBtTearDown();
+    }
+
+    @Test
+    public void testBluetoothServiceDisconnects() throws Exception {
+        final ResultListener result = new ResultListener(TETHER_ERROR_NO_ERROR);
+        mockBluetoothSettings(true /* bluetoothOn */, true /* tetheringOn */);
+        mTethering.startTethering(createTetheringRequestParcel(TETHERING_BLUETOOTH), result);
+        mLooper.dispatchAll();
+        ServiceListener panListener = verifySetBluetoothTethering(true /* enable */,
+                true /* bindToPanService */);
+        result.assertHasResult();
+
+        mTethering.interfaceAdded(TEST_BT_IFNAME);
+        mLooper.dispatchAll();
+
+        mTethering.interfaceStatusChanged(TEST_BT_IFNAME, false);
+        mTethering.interfaceStatusChanged(TEST_BT_IFNAME, true);
+        final ResultListener tetherResult = new ResultListener(TETHER_ERROR_NO_ERROR);
+        mTethering.tether(TEST_BT_IFNAME, IpServer.STATE_TETHERED, tetherResult);
+        mLooper.dispatchAll();
+        tetherResult.assertHasResult();
+
+        verifyNetdCommandForBtSetup();
+
+        panListener.onServiceDisconnected(BluetoothProfile.PAN);
+        mTethering.interfaceStatusChanged(TEST_BT_IFNAME, false);
+        mLooper.dispatchAll();
+
+        verifyNetdCommandForBtTearDown();
+    }
+
+    private void mockBluetoothSettings(boolean bluetoothOn, boolean tetheringOn) {
+        when(mBluetoothAdapter.isEnabled()).thenReturn(bluetoothOn);
+        when(mBluetoothPan.isTetheringOn()).thenReturn(tetheringOn);
+    }
+
+    private void verifyNetdCommandForBtSetup() throws Exception {
         verify(mNetd).tetherInterfaceAdd(TEST_BT_IFNAME);
         verify(mNetd).networkAddInterface(INetd.LOCAL_NET_ID, TEST_BT_IFNAME);
         verify(mNetd, times(2)).networkAddRoute(eq(INetd.LOCAL_NET_ID), eq(TEST_BT_IFNAME),
@@ -2584,39 +2642,41 @@ public class TetheringTest {
                 anyString(), anyString());
         verifyNoMoreInteractions(mNetd);
         reset(mNetd);
+    }
 
-        when(mBluetoothAdapter.isEnabled()).thenReturn(true);
-        mTethering.stopTethering(TETHERING_BLUETOOTH);
-        mLooper.dispatchAll();
-        final ResultListener untetherResult = new ResultListener(TETHER_ERROR_NO_ERROR);
-        mTethering.untether(TEST_BT_IFNAME, untetherResult);
-        mLooper.dispatchAll();
-        untetherResult.assertHasResult();
-        verifySetBluetoothTethering(false);
-
+    private void verifyNetdCommandForBtTearDown() throws Exception {
         verify(mNetd).tetherApplyDnsInterfaces();
         verify(mNetd).tetherInterfaceRemove(TEST_BT_IFNAME);
         verify(mNetd).networkRemoveInterface(INetd.LOCAL_NET_ID, TEST_BT_IFNAME);
         verify(mNetd).interfaceSetCfg(any(InterfaceConfigurationParcel.class));
         verify(mNetd).tetherStop();
         verify(mNetd).ipfwdDisableForwarding(TETHERING_NAME);
-        verifyNoMoreInteractions(mNetd);
     }
 
-    private void verifySetBluetoothTethering(final boolean enable) {
-        final ArgumentCaptor<ServiceListener> listenerCaptor =
-                ArgumentCaptor.forClass(ServiceListener.class);
+    // If bindToPanService is true, this function would return ServiceListener which could notify
+    // PanService is connected or disconnected.
+    private ServiceListener verifySetBluetoothTethering(final boolean enable,
+            final boolean bindToPanService) {
+        ServiceListener listener = null;
         verify(mBluetoothAdapter).isEnabled();
-        verify(mBluetoothAdapter).getProfileProxy(eq(mServiceContext), listenerCaptor.capture(),
-                eq(BluetoothProfile.PAN));
-        final ServiceListener listener = listenerCaptor.getValue();
-        when(mBluetoothPan.isTetheringOn()).thenReturn(enable);
-        listener.onServiceConnected(BluetoothProfile.PAN, mBluetoothPan);
+        if (bindToPanService) {
+            final ArgumentCaptor<ServiceListener> listenerCaptor =
+                    ArgumentCaptor.forClass(ServiceListener.class);
+            verify(mBluetoothAdapter).getProfileProxy(eq(mServiceContext), listenerCaptor.capture(),
+                    eq(BluetoothProfile.PAN));
+            listener = listenerCaptor.getValue();
+            listener.onServiceConnected(BluetoothProfile.PAN, mBluetoothPan);
+            mLooper.dispatchAll();
+        } else {
+            verify(mBluetoothAdapter, never()).getProfileProxy(eq(mServiceContext), any(),
+                    anyInt());
+        }
         verify(mBluetoothPan).setBluetoothTethering(enable);
         verify(mBluetoothPan).isTetheringOn();
-        verify(mBluetoothAdapter).closeProfileProxy(eq(BluetoothProfile.PAN), eq(mBluetoothPan));
         verifyNoMoreInteractions(mBluetoothAdapter, mBluetoothPan);
         reset(mBluetoothAdapter, mBluetoothPan);
+
+        return listener;
     }
 
     private void runDualStackUsbTethering(final String expectedIface) throws Exception {
