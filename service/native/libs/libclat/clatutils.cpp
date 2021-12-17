@@ -27,6 +27,68 @@ namespace android {
 namespace net {
 namespace clat {
 
+bool isIpv4AddressFree(in_addr_t addr) {
+    int s = socket(AF_INET, SOCK_DGRAM | SOCK_CLOEXEC, 0);
+    if (s == -1) {
+        return 0;
+    }
+
+    // Attempt to connect to the address. If the connection succeeds and getsockname returns the
+    // same then the address is already assigned to the system and we can't use it.
+    struct sockaddr_in sin = {
+            .sin_family = AF_INET,
+            .sin_port = htons(53),
+            .sin_addr = {addr},
+    };
+    socklen_t len = sizeof(sin);
+    bool inuse = connect(s, (struct sockaddr*)&sin, sizeof(sin)) == 0 &&
+                 getsockname(s, (struct sockaddr*)&sin, &len) == 0 && (size_t)len >= sizeof(sin) &&
+                 sin.sin_addr.s_addr == addr;
+
+    close(s);
+    return !inuse;
+}
+
+// Picks a free IPv4 address, starting from ip and trying all addresses in the prefix in order.
+//   ip        - the IP address from the configuration file
+//   prefixlen - the length of the prefix from which addresses may be selected.
+//   returns: the IPv4 address, or INADDR_NONE if no addresses were available
+in_addr_t selectIpv4Address(const in_addr ip, int16_t prefixlen) {
+    return selectIpv4AddressInternal(ip, prefixlen, isIpv4AddressFree);
+}
+
+// Only allow testing to use this function directly. Otherwise call selectIpv4Address(ip, pfxlen)
+// which has applied valid isIpv4AddressFree function pointer.
+in_addr_t selectIpv4AddressInternal(const in_addr ip, int16_t prefixlen,
+                                    isIpv4AddrFreeFn isIpv4AddressFreeFunc) {
+    // Impossible! Only test allows to apply fn.
+    if (isIpv4AddressFreeFunc == nullptr) {
+        return INADDR_NONE;
+    }
+
+    // Don't accept prefixes that are too large because we scan addresses one by one.
+    if (prefixlen < 16 || prefixlen > 32) {
+        return INADDR_NONE;
+    }
+
+    // All these are in host byte order.
+    in_addr_t mask = 0xffffffff >> (32 - prefixlen) << (32 - prefixlen);
+    in_addr_t ipv4 = ntohl(ip.s_addr);
+    in_addr_t first_ipv4 = ipv4;
+    in_addr_t prefix = ipv4 & mask;
+
+    // Pick the first IPv4 address in the pool, wrapping around if necessary.
+    // So, for example, 192.0.0.4 -> 192.0.0.5 -> 192.0.0.6 -> 192.0.0.7 -> 192.0.0.0.
+    do {
+        if (isIpv4AddressFreeFunc(htonl(ipv4))) {
+            return htonl(ipv4);
+        }
+        ipv4 = prefix | ((ipv4 + 1) & ~mask);
+    } while (ipv4 != first_ipv4);
+
+    return INADDR_NONE;
+}
+
 // Alters the bits in the IPv6 address to make them checksum neutral with v4 and nat64Prefix.
 void makeChecksumNeutral(in6_addr* v6, const in_addr v4, const in6_addr& nat64Prefix) {
     // Fill last 8 bytes of IPv6 address with random bits.

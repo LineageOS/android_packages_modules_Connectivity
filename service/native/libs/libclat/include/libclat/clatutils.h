@@ -20,9 +20,15 @@ namespace android {
 namespace net {
 namespace clat {
 
+bool isIpv4AddressFree(in_addr_t addr);
+in_addr_t selectIpv4Address(const in_addr ip, int16_t prefixlen);
 void makeChecksumNeutral(in6_addr* v6, const in_addr v4, const in6_addr& nat64Prefix);
 int generateIpv6Address(const char* iface, const in_addr v4, const in6_addr& nat64Prefix,
                         in6_addr* v6);
+
+// For testing
+typedef bool (*isIpv4AddrFreeFn)(in_addr_t);
+in_addr_t selectIpv4AddressInternal(const in_addr ip, int16_t prefixlen, isIpv4AddrFreeFn fn);
 
 }  // namespace clat
 }  // namespace net

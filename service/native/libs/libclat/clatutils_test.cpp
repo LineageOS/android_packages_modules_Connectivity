@@ -33,6 +33,68 @@ using base::StringPrintf;
 
 class ClatUtils : public ::testing::Test {};
 
+// Mock functions for isIpv4AddressFree.
+bool neverFree(in_addr_t /* addr */) {
+    return 0;
+}
+bool alwaysFree(in_addr_t /* addr */) {
+    return 1;
+}
+bool only2Free(in_addr_t addr) {
+    return (ntohl(addr) & 0xff) == 2;
+}
+bool over6Free(in_addr_t addr) {
+    return (ntohl(addr) & 0xff) >= 6;
+}
+bool only10Free(in_addr_t addr) {
+    return (ntohl(addr) & 0xff) == 10;
+}
+
+// Apply mocked isIpv4AddressFree function for selectIpv4Address test.
+in_addr_t selectIpv4Address(const in_addr ip, int16_t prefixlen,
+                            isIpv4AddrFreeFn fn /* mocked function */) {
+    // Call internal function to replace isIpv4AddressFreeFn for testing.
+    return selectIpv4AddressInternal(ip, prefixlen, fn);
+}
+
+TEST_F(ClatUtils, SelectIpv4Address) {
+    struct in_addr addr;
+
+    inet_pton(AF_INET, kIPv4LocalAddr, &addr);
+
+    // If no addresses are free, return INADDR_NONE.
+    EXPECT_EQ(INADDR_NONE, selectIpv4Address(addr, 29, neverFree));
+    EXPECT_EQ(INADDR_NONE, selectIpv4Address(addr, 16, neverFree));
+
+    // If the configured address is free, pick that. But a prefix that's too big is invalid.
+    EXPECT_EQ(inet_addr(kIPv4LocalAddr), selectIpv4Address(addr, 29, alwaysFree));
+    EXPECT_EQ(inet_addr(kIPv4LocalAddr), selectIpv4Address(addr, 20, alwaysFree));
+    EXPECT_EQ(INADDR_NONE, selectIpv4Address(addr, 15, alwaysFree));
+
+    // A prefix length of 32 works, but anything above it is invalid.
+    EXPECT_EQ(inet_addr(kIPv4LocalAddr), selectIpv4Address(addr, 32, alwaysFree));
+    EXPECT_EQ(INADDR_NONE, selectIpv4Address(addr, 33, alwaysFree));
+
+    // If another address is free, pick it.
+    EXPECT_EQ(inet_addr("192.0.0.6"), selectIpv4Address(addr, 29, over6Free));
+
+    // Check that we wrap around to addresses that are lower than the first address.
+    EXPECT_EQ(inet_addr("192.0.0.2"), selectIpv4Address(addr, 29, only2Free));
+    EXPECT_EQ(INADDR_NONE, selectIpv4Address(addr, 30, only2Free));
+
+    // If a free address exists outside the prefix, we don't pick it.
+    EXPECT_EQ(INADDR_NONE, selectIpv4Address(addr, 29, only10Free));
+    EXPECT_EQ(inet_addr("192.0.0.10"), selectIpv4Address(addr, 24, only10Free));
+
+    // Now try using the real function which sees if IP addresses are free using bind().
+    // Assume that the machine running the test has the address 127.0.0.1, but not 8.8.8.8.
+    addr.s_addr = inet_addr("8.8.8.8");
+    EXPECT_EQ(inet_addr("8.8.8.8"), selectIpv4Address(addr, 29));
+
+    addr.s_addr = inet_addr("127.0.0.1");
+    EXPECT_EQ(inet_addr("127.0.0.2"), selectIpv4Address(addr, 29));
+}
+
 TEST_F(ClatUtils, MakeChecksumNeutral) {
     // We can't test generateIPv6Address here since it requires manipulating routing, which we can't
     // do without talking to the real netd on the system.
