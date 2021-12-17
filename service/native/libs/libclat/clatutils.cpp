@@ -17,6 +17,9 @@
 #include "libclat/clatutils.h"
 
 #include <errno.h>
+#include <linux/filter.h>
+#include <linux/if_packet.h>
+#include <linux/if_tun.h>
 #include <log/log.h>
 #include <stdlib.h>
 #include <string.h>
@@ -25,6 +28,10 @@
 extern "C" {
 #include "checksum.h"
 }
+
+// Sync from external/android-clat/clatd.h
+#define MAXMTU 65536
+#define PACKETLEN (MAXMTU + sizeof(struct tun_pi))
 
 // Sync from system/netd/include/netid_client.h.
 #define MARK_UNSET 0u
@@ -201,6 +208,59 @@ int detect_mtu(const struct in6_addr* plat_subnet, uint32_t plat_suffix, uint32_
     close(s);
 
     return mtu;
+}
+
+/* function: configure_packet_socket
+ * Binds the packet socket and attaches the receive filter to it.
+ *   sock    - the socket to configure
+ *   addr    - the IP address to filter
+ *   ifindex - index of interface to add the filter to
+ * returns: 0 on success, -errno on failure
+ */
+int configure_packet_socket(int sock, in6_addr* addr, int ifindex) {
+    uint32_t* ipv6 = addr->s6_addr32;
+
+    // clang-format off
+    struct sock_filter filter_code[] = {
+    // Load the first four bytes of the IPv6 destination address (starts 24 bytes in).
+    // Compare it against the first four bytes of our IPv6 address, in host byte order (BPF loads
+    // are always in host byte order). If it matches, continue with next instruction (JMP 0). If it
+    // doesn't match, jump ahead to statement that returns 0 (ignore packet). Repeat for the other
+    // three words of the IPv6 address, and if they all match, return PACKETLEN (accept packet).
+        BPF_STMT(BPF_LD  | BPF_W   | BPF_ABS,  24),
+        BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K,    htonl(ipv6[0]), 0, 7),
+        BPF_STMT(BPF_LD  | BPF_W   | BPF_ABS,  28),
+        BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K,    htonl(ipv6[1]), 0, 5),
+        BPF_STMT(BPF_LD  | BPF_W   | BPF_ABS,  32),
+        BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K,    htonl(ipv6[2]), 0, 3),
+        BPF_STMT(BPF_LD  | BPF_W   | BPF_ABS,  36),
+        BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K,    htonl(ipv6[3]), 0, 1),
+        BPF_STMT(BPF_RET | BPF_K,              PACKETLEN),
+        BPF_STMT(BPF_RET | BPF_K,              0),
+    };
+    // clang-format on
+    struct sock_fprog filter = {sizeof(filter_code) / sizeof(filter_code[0]), filter_code};
+
+    if (setsockopt(sock, SOL_SOCKET, SO_ATTACH_FILTER, &filter, sizeof(filter))) {
+        int res = errno;
+        ALOGE("attach packet filter failed: %s", strerror(errno));
+        return -res;
+    }
+
+    struct sockaddr_ll sll = {
+            .sll_family = AF_PACKET,
+            .sll_protocol = htons(ETH_P_IPV6),
+            .sll_ifindex = ifindex,
+            .sll_pkttype =
+                    PACKET_OTHERHOST,  // The 464xlat IPv6 address is not assigned to the kernel.
+    };
+    if (bind(sock, (struct sockaddr*)&sll, sizeof(sll))) {
+        int res = errno;
+        ALOGE("binding packet socket: %s", strerror(errno));
+        return -res;
+    }
+
+    return 0;
 }
 
 }  // namespace clat

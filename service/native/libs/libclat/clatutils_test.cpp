@@ -17,6 +17,9 @@
 #include <android-base/stringprintf.h>
 #include <arpa/inet.h>
 #include <gtest/gtest.h>
+#include <linux/if_packet.h>
+#include <linux/if_tun.h>
+#include "tun_interface.h"
 
 extern "C" {
 #include "checksum.h"
@@ -29,6 +32,7 @@ namespace android {
 namespace net {
 namespace clat {
 
+using android::net::TunInterface;
 using base::StringPrintf;
 
 class ClatUtils : public ::testing::Test {};
@@ -153,6 +157,29 @@ TEST_F(ClatUtils, MakeChecksumNeutral) {
 TEST_F(ClatUtils, DetectMtu) {
     // ::1 with bottom 32 bits set to 1 is still ::1 which routes via lo with mtu of 64KiB
     ASSERT_EQ(detect_mtu(&in6addr_loopback, htonl(1), 0 /*MARK_UNSET*/), 65536);
+}
+
+TEST_F(ClatUtils, ConfigurePacketSocket) {
+    // Create an interface for configure_packet_socket to attach socket filter to.
+    TunInterface v6Iface;
+    ASSERT_EQ(0, v6Iface.init());
+
+    int s = socket(AF_PACKET, SOCK_DGRAM | SOCK_CLOEXEC, htons(ETH_P_IPV6));
+    EXPECT_LE(0, s);
+    struct in6_addr addr6;
+    EXPECT_EQ(1, inet_pton(AF_INET6, "2001:db8::f00", &addr6));
+    EXPECT_EQ(0, configure_packet_socket(s, &addr6, v6Iface.ifindex()));
+
+    // Check that the packet socket is bound to the interface. We can't check the socket filter
+    // because there is no way to fetch it from the kernel.
+    sockaddr_ll sll;
+    socklen_t len = sizeof(sll);
+    ASSERT_EQ(0, getsockname(s, reinterpret_cast<sockaddr*>(&sll), &len));
+    EXPECT_EQ(htons(ETH_P_IPV6), sll.sll_protocol);
+    EXPECT_EQ(sll.sll_ifindex, v6Iface.ifindex());
+
+    close(s);
+    v6Iface.destroy();
 }
 
 }  // namespace clat

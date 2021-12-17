@@ -39,6 +39,11 @@ cc_test {
         "libbase",
         "libclat",
         "libip_checksum",
+        "libnetd_test_tun_interface",
     ],
-    shared_libs: ["liblog"],
+    shared_libs: [
+        "liblog",
+        "libnetutils",
+    ],
+    require_root: true,
 }
