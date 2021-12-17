@@ -12,9 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#define LOG_TAG "clatutils"
+
 #include "libclat/clatutils.h"
 
 #include <errno.h>
+#include <log/log.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
@@ -22,6 +25,9 @@
 extern "C" {
 #include "checksum.h"
 }
+
+// Sync from system/netd/include/netid_client.h.
+#define MARK_UNSET 0u
 
 namespace android {
 namespace net {
@@ -146,6 +152,55 @@ int generateIpv6Address(const char* iface, const in_addr v4, const in6_addr& nat
     close(s);
 
     return 0;
+}
+
+int detect_mtu(const struct in6_addr* plat_subnet, uint32_t plat_suffix, uint32_t mark) {
+    // Create an IPv6 UDP socket.
+    int s = socket(AF_INET6, SOCK_DGRAM | SOCK_CLOEXEC, 0);
+    if (s < 0) {
+        int ret = errno;
+        ALOGE("socket(AF_INET6, SOCK_DGRAM, 0) failed: %s", strerror(errno));
+        return -ret;
+    }
+
+    // Socket's mark affects routing decisions (network selection)
+    if ((mark != MARK_UNSET) && setsockopt(s, SOL_SOCKET, SO_MARK, &mark, sizeof(mark))) {
+        int ret = errno;
+        ALOGE("setsockopt(SOL_SOCKET, SO_MARK) failed: %s", strerror(errno));
+        close(s);
+        return -ret;
+    }
+
+    // Try to connect udp socket to plat_subnet(96 bits):plat_suffix(32 bits)
+    struct sockaddr_in6 dst = {
+            .sin6_family = AF_INET6,
+            .sin6_addr = *plat_subnet,
+    };
+    dst.sin6_addr.s6_addr32[3] = plat_suffix;
+    if (connect(s, (struct sockaddr*)&dst, sizeof(dst))) {
+        int ret = errno;
+        ALOGE("connect() failed: %s", strerror(errno));
+        close(s);
+        return -ret;
+    }
+
+    // Fetch the socket's IPv6 mtu - this is effectively fetching mtu from routing table
+    int mtu;
+    socklen_t sz_mtu = sizeof(mtu);
+    if (getsockopt(s, SOL_IPV6, IPV6_MTU, &mtu, &sz_mtu)) {
+        int ret = errno;
+        ALOGE("getsockopt(SOL_IPV6, IPV6_MTU) failed: %s", strerror(errno));
+        close(s);
+        return -ret;
+    }
+    if (sz_mtu != sizeof(mtu)) {
+        ALOGE("getsockopt(SOL_IPV6, IPV6_MTU) returned unexpected size: %d", sz_mtu);
+        close(s);
+        return -EFAULT;
+    }
+    close(s);
+
+    return mtu;
 }
 
 }  // namespace clat

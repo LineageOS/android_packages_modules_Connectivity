@@ -22,6 +22,7 @@ cc_library_static {
     srcs: ["clatutils.cpp"],
     stl: "libc++_static",
     static_libs: ["libip_checksum"],
+    shared_libs: ["liblog"],
     export_include_dirs: ["include"],
     min_sdk_version: "30",
     apex_available: ["com.android.tethering"],
@@ -39,4 +40,5 @@ cc_test {
         "libclat",
         "libip_checksum",
     ],
+    shared_libs: ["liblog"],
 }

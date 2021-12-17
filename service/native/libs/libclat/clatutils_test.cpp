@@ -150,6 +150,11 @@ TEST_F(ClatUtils, MakeChecksumNeutral) {
     EXPECT_GE(3210000, onebits);
 }
 
+TEST_F(ClatUtils, DetectMtu) {
+    // ::1 with bottom 32 bits set to 1 is still ::1 which routes via lo with mtu of 64KiB
+    ASSERT_EQ(detect_mtu(&in6addr_loopback, htonl(1), 0 /*MARK_UNSET*/), 65536);
+}
+
 }  // namespace clat
 }  // namespace net
 }  // namespace android
