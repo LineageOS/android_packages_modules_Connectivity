@@ -14,7 +14,10 @@
 
 #include "libclat/clatutils.h"
 
+#include <errno.h>
 #include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
 
 extern "C" {
 #include "checksum.h"
@@ -44,6 +47,43 @@ void makeChecksumNeutral(in6_addr* v6, const in_addr v4, const in6_addr& nat64Pr
     uint16_t delta = ip_checksum_adjust(middlebytes, c1, c2);
     v6->s6_addr[11] = delta >> 8;
     v6->s6_addr[12] = delta & 0xff;
+}
+
+// Picks a random interface ID that is checksum neutral with the IPv4 address and the NAT64 prefix.
+int generateIpv6Address(const char* iface, const in_addr v4, const in6_addr& nat64Prefix,
+                        in6_addr* v6) {
+    int s = socket(AF_INET6, SOCK_DGRAM | SOCK_CLOEXEC, 0);
+    if (s == -1) return -errno;
+
+    if (setsockopt(s, SOL_SOCKET, SO_BINDTODEVICE, iface, strlen(iface) + 1) == -1) {
+        close(s);
+        return -errno;
+    }
+
+    sockaddr_in6 sin6 = {.sin6_family = AF_INET6, .sin6_addr = nat64Prefix};
+    if (connect(s, reinterpret_cast<struct sockaddr*>(&sin6), sizeof(sin6)) == -1) {
+        close(s);
+        return -errno;
+    }
+
+    socklen_t len = sizeof(sin6);
+    if (getsockname(s, reinterpret_cast<struct sockaddr*>(&sin6), &len) == -1) {
+        close(s);
+        return -errno;
+    }
+
+    *v6 = sin6.sin6_addr;
+
+    if (IN6_IS_ADDR_UNSPECIFIED(v6) || IN6_IS_ADDR_LOOPBACK(v6) || IN6_IS_ADDR_LINKLOCAL(v6) ||
+        IN6_IS_ADDR_SITELOCAL(v6) || IN6_IS_ADDR_ULA(v6)) {
+        close(s);
+        return -ENETUNREACH;
+    }
+
+    makeChecksumNeutral(v6, v4, nat64Prefix);
+    close(s);
+
+    return 0;
 }
 
 }  // namespace clat

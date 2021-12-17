@@ -21,6 +21,9 @@ namespace net {
 namespace clat {
 
 void makeChecksumNeutral(in6_addr* v6, const in_addr v4, const in6_addr& nat64Prefix);
+int generateIpv6Address(const char* iface, const in_addr v4, const in6_addr& nat64Prefix,
+                        in6_addr* v6);
+
 }  // namespace clat
 }  // namespace net
 }  // namespace android
