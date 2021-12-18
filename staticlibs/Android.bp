@@ -116,6 +116,7 @@ java_library {
         "device/com/android/net/module/util/JniUtil.java",
         "device/com/android/net/module/util/Struct.java",
         "device/com/android/net/module/util/TcUtils.java",
+        "device/com/android/net/module/util/bpf/*.java",
     ],
     sdk_version: "module_current",
     min_sdk_version: "29",
