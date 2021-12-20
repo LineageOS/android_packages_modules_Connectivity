@@ -206,4 +206,5 @@ android_app {
 sdk {
     name: "tethering-module-sdk",
     bootclasspath_fragments: ["com.android.tethering-bootclasspath-fragment"],
+    systemserverclasspath_fragments: ["com.android.tethering-systemserverclasspath-fragment"],
 }
