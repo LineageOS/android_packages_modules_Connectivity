@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package java.com.android.server.nearby.injector;
+package com.android.server.nearby.injector;
 
 import android.bluetooth.BluetoothAdapter;
 

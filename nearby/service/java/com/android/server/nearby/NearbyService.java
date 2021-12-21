@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 The Android Open Source Project
+ * Copyright (C) 2021 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,21 +28,20 @@ import com.android.server.nearby.provider.FastPairDataProvider;
  * Service implementing nearby functionality. The actual implementation is delegated to
  * {@link NearbyServiceImpl}.
  */
-// TODO(189954300): Implement nearby service.
 public class NearbyService extends SystemService {
 
     public static final String TAG = "NearbyService";
     private static final boolean DBG = true;
-    private final NearbyServiceImpl mImpl;
-    private final Context mContext;
-    private final FastPairManager mFastPairManager;
 
+    private final Context mContext;
+    private final NearbyServiceImpl mImpl;
+    private final FastPairManager mFastPairManager;
     private LocatorContextWrapper mLocatorContextWrapper;
 
     public NearbyService(Context contextBase) {
         super(contextBase);
-        mImpl = new NearbyServiceImpl(contextBase);
         mContext = contextBase;
+        mImpl = new NearbyServiceImpl(contextBase);
         mLocatorContextWrapper = new LocatorContextWrapper(contextBase, null);
         mFastPairManager = new FastPairManager(mLocatorContextWrapper);
     }
@@ -60,6 +59,9 @@ public class NearbyService extends SystemService {
     public void onBootPhase(int phase) {
         if (phase == PHASE_THIRD_PARTY_APPS_CAN_START) {
             onSystemThirdPartyAppsCanStart();
+        } else if (phase == PHASE_BOOT_COMPLETED) {
+            // the nearby service must be functioning after this boot phase.
+            mImpl.onSystemReady();
         }
     }
 
