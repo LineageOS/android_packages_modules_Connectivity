@@ -25,7 +25,6 @@ import static android.net.NetworkCapabilities.NET_CAPABILITY_IMS;
 import static android.net.NetworkCapabilities.NET_CAPABILITY_INTERNET;
 import static android.net.NetworkCapabilities.NET_CAPABILITY_MCX;
 import static android.net.NetworkCapabilities.NET_CAPABILITY_MMS;
-import static android.net.NetworkCapabilities.NET_CAPABILITY_MMTEL;
 import static android.net.NetworkCapabilities.NET_CAPABILITY_OEM_PAID;
 import static android.net.NetworkCapabilities.NET_CAPABILITY_RCS;
 import static android.net.NetworkCapabilities.NET_CAPABILITY_SUPL;
@@ -130,8 +129,7 @@ public final class NetworkCapabilitiesUtils {
             | (1 << NET_CAPABILITY_RCS)
             | (1 << NET_CAPABILITY_VEHICLE_INTERNAL)
             | (1 << NET_CAPABILITY_VSIM)
-            | (1 << NET_CAPABILITY_XCAP)
-            | (1L << NET_CAPABILITY_MMTEL);
+            | (1 << NET_CAPABILITY_XCAP);
 
     /**
      * Capabilities that force network to be restricted.
