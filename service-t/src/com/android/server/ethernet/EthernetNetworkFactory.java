@@ -37,7 +37,6 @@ import android.net.ip.IIpClient;
 import android.net.ip.IpClientCallbacks;
 import android.net.ip.IpClientUtil;
 import android.net.shared.ProvisioningConfiguration;
-import android.net.util.InterfaceParams;
 import android.os.ConditionVariable;
 import android.os.Handler;
 import android.os.Looper;
@@ -49,6 +48,7 @@ import android.util.SparseArray;
 
 import com.android.internal.annotations.VisibleForTesting;
 import com.android.internal.util.IndentingPrintWriter;
+import com.android.net.module.util.InterfaceParams;
 
 import java.io.FileDescriptor;
 import java.util.Objects;
