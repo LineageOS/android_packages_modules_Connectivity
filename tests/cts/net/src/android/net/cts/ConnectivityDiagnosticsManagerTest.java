@@ -40,6 +40,7 @@ import static android.net.cts.util.CtsNetUtils.TestNetworkCallback;
 
 import static com.android.compatibility.common.util.SystemUtil.callWithShellPermissionIdentity;
 import static com.android.compatibility.common.util.SystemUtil.runWithShellPermissionIdentity;
+import static com.android.testutils.Cleanup.testAndCleanup;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
@@ -224,16 +225,16 @@ public class ConnectivityDiagnosticsManagerTest {
 
         final TestNetworkCallback testNetworkCallback = new TestNetworkCallback();
 
-        try {
+        testAndCleanup(() -> {
             doBroadcastCarrierConfigsAndVerifyOnConnectivityReportAvailable(
                     subId, carrierConfigReceiver, testNetworkCallback);
-        } finally {
+        }, () -> {
             runWithShellPermissionIdentity(
                     () -> mCarrierConfigManager.overrideConfig(subId, null),
                     android.Manifest.permission.MODIFY_PHONE_STATE);
             mConnectivityManager.unregisterNetworkCallback(testNetworkCallback);
             mContext.unregisterReceiver(carrierConfigReceiver);
-        }
+            });
     }
 
     private String getCertHashForThisPackage() throws Exception {
