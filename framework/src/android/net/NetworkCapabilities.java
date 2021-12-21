@@ -274,7 +274,6 @@ public final class NetworkCapabilities implements Parcelable {
             NET_CAPABILITY_VSIM,
             NET_CAPABILITY_BIP,
             NET_CAPABILITY_HEAD_UNIT,
-            NET_CAPABILITY_MMTEL,
     })
     public @interface NetCapability { }
 
@@ -513,13 +512,8 @@ public final class NetworkCapabilities implements Parcelable {
      */
     public static final int NET_CAPABILITY_HEAD_UNIT = 32;
 
-    /**
-     * Indicates that this network has ability to support MMTEL (Multimedia Telephony service).
-     */
-    public static final int NET_CAPABILITY_MMTEL = 33;
-
     private static final int MIN_NET_CAPABILITY = NET_CAPABILITY_MMS;
-    private static final int MAX_NET_CAPABILITY = NET_CAPABILITY_MMTEL;
+    private static final int MAX_NET_CAPABILITY = NET_CAPABILITY_HEAD_UNIT;
 
     /**
      * Network capabilities that are expected to be mutable, i.e., can change while a particular
@@ -2096,7 +2090,6 @@ public final class NetworkCapabilities implements Parcelable {
             case NET_CAPABILITY_VSIM:                 return "VSIM";
             case NET_CAPABILITY_BIP:                  return "BIP";
             case NET_CAPABILITY_HEAD_UNIT:            return "HEAD_UNIT";
-            case NET_CAPABILITY_MMTEL:                return "MMTEL";
             default:                                  return Integer.toString(capability);
         }
     }
