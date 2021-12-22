@@ -31,7 +31,7 @@ import com.android.server.nearby.provider.FastPairDataProvider;
 // TODO(189954300): Implement nearby service.
 public class NearbyService extends SystemService {
 
-    private static final String TAG = "NearbyService";
+    public static final String TAG = "NearbyService";
     private static final boolean DBG = true;
     private final NearbyServiceImpl mImpl;
     private final Context mContext;
