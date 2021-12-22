@@ -31,6 +31,7 @@ import static com.android.server.net.NetworkPolicyManagerService.OPPORTUNISTIC_Q
 import static org.junit.Assert.assertNotNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doCallRealMethod;
@@ -236,9 +237,7 @@ public class MultipathPolicyTrackerTest {
                 .thenReturn((int) defaultResSetting);
 
         when(mNetworkStatsManagerInternal.getNetworkTotalBytes(
-                any(),
-                eq(startOfDay.toInstant().toEpochMilli()),
-                eq(now.toInstant().toEpochMilli()))).thenReturn(usedBytesToday);
+                any(), anyLong(), anyLong())).thenReturn(usedBytesToday);
 
         ArgumentCaptor<ConnectivityManager.NetworkCallback> networkCallback =
                 ArgumentCaptor.forClass(ConnectivityManager.NetworkCallback.class);
@@ -291,8 +290,10 @@ public class MultipathPolicyTrackerTest {
         testGetMultipathPreference(
                 DataUnit.MEGABYTES.toBytes(7) /* usedBytesToday */,
                 OPPORTUNISTIC_QUOTA_UNKNOWN,
-                // 29 days from Apr. 2nd to May 1st
-                DataUnit.MEGABYTES.toBytes(15 * 29 * 20) /* policyWarning */,
+                // Remaining days are 29 days from Apr. 2nd to May 1st.
+                // Set limit so that 15MB * remaining days will be 5% of the remaining limit,
+                // so it will be 15 * 29 / 0.05 + used bytes.
+                DataUnit.MEGABYTES.toBytes(15 * 29 * 20 + 7) /* policyWarning */,
                 LIMIT_DISABLED,
                 DataUnit.MEGABYTES.toBytes(12) /* defaultGlobalSetting */,
                 2_500_000 /* defaultResSetting */,
@@ -308,9 +309,11 @@ public class MultipathPolicyTrackerTest {
         testGetMultipathPreference(
                 DataUnit.MEGABYTES.toBytes(7) /* usedBytesToday */,
                 OPPORTUNISTIC_QUOTA_UNKNOWN,
-                // 29 days from Apr. 2nd to May 1st
                 POLICY_SNOOZED /* policyWarning */,
-                DataUnit.MEGABYTES.toBytes(15 * 29 * 20) /* policyLimit */,
+                // Remaining days are 29 days from Apr. 2nd to May 1st.
+                // Set limit so that 15MB * remaining days will be 5% of the remaining limit,
+                // so it will be 15 * 29 / 0.05 + used bytes.
+                DataUnit.MEGABYTES.toBytes(15 * 29 * 20 + 7) /* policyLimit */,
                 DataUnit.MEGABYTES.toBytes(12) /* defaultGlobalSetting */,
                 2_500_000 /* defaultResSetting */,
                 false /* roaming */);
