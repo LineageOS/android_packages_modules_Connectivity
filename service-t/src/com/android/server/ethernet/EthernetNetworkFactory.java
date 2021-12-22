@@ -16,8 +16,6 @@
 
 package com.android.server.ethernet;
 
-import static com.android.internal.util.Preconditions.checkNotNull;
-
 import android.annotation.NonNull;
 import android.annotation.Nullable;
 import android.content.Context;
@@ -370,7 +368,7 @@ public class EthernetNetworkFactory extends NetworkFactory {
                 @NonNull NetworkCapabilities capabilities, NetworkFactory networkFactory,
                 Dependencies deps) {
             name = ifaceName;
-            mCapabilities = checkNotNull(capabilities);
+            mCapabilities = Objects.requireNonNull(capabilities);
             mHandler = handler;
             mContext = context;
             mNetworkFactory = networkFactory;
