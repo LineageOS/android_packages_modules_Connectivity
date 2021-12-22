@@ -17,8 +17,11 @@
 package android.nearby;
 
 
+import android.annotation.IntRange;
 import android.annotation.NonNull;
 import android.annotation.Nullable;
+import android.annotation.SystemApi;
+import android.bluetooth.le.ScanRecord;
 import android.os.Parcel;
 import android.os.Parcelable;
 
@@ -34,7 +37,13 @@ import android.os.Parcelable;
  *
  * @hide
  */
+@SystemApi
 public final class NearbyDeviceParcelable implements Parcelable {
+
+    /**
+     * Used to read a NearbyDeviceParcelable from a Parcel.
+     */
+    @NonNull
     public static final Creator<NearbyDeviceParcelable> CREATOR =
             new Creator<NearbyDeviceParcelable>() {
                 @Override
@@ -76,7 +85,8 @@ public final class NearbyDeviceParcelable implements Parcelable {
     private final byte[] mData;
 
     private NearbyDeviceParcelable(@Nullable String name, int medium, int rssi,
-            @Nullable String fastPairModelId, @Nullable String bluetoothAddress, byte[] data) {
+            @Nullable String fastPairModelId, @Nullable String bluetoothAddress,
+            @Nullable byte[] data) {
         mName = name;
         mMedium = medium;
         mRssi = rssi;
@@ -85,10 +95,20 @@ public final class NearbyDeviceParcelable implements Parcelable {
         mData = data;
     }
 
+    /**
+     * No special parcel contents.
+     */
     @Override
     public int describeContents() {
         return 0;
     }
+
+    /**
+     * Flatten this NearbyDeviceParcelable in to a Parcel.
+     *
+     * @param dest The Parcel in which the object should be written.
+     * @param flags Additional flags about how the object should be written.
+     */
 
     @Override
     public void writeToParcel(@NonNull Parcel dest, int flags) {
@@ -113,28 +133,53 @@ public final class NearbyDeviceParcelable implements Parcelable {
         }
     }
 
+    /**
+     * Gets the name of the NearbyDeviceParcelable. Returns {@code null} If there is no name.
+     */
+    @Nullable
     public String getName() {
         return mName;
     }
 
+    /**
+     * Gets the {@link android.nearby.NearbyDevice.Medium} of the NearbyDeviceParcelable over which
+     * it is discovered.
+     */
+    @NearbyDevice.Medium
     public int getMedium() {
         return mMedium;
     }
 
+    /**
+     * Gets the received signal strength in dBm.
+     */
+    @IntRange(from = -127, to = 126)
     public int getRssi() {
         return mRssi;
     }
 
+    /**
+     * Gets the Fast Pair identifier. Returns {@code null} if there is no Model ID or this is not a
+     * Fast Pair device.
+     */
     @Nullable
     public String getFastPairModelId() {
         return mFastPairModelId;
     }
 
+    /**
+     * Gets the Bluetooth device hardware address. Returns {@code null} if the device is not
+     * discovered by Bluetooth.
+     */
     @Nullable
     public String getBluetoothAddress() {
         return mBluetoothAddress;
     }
 
+    /**
+     * Gets the raw data from the scanning. Returns {@code null} if there is no extra data.
+     */
+    @Nullable
     public byte[] getData() {
         return mData;
     }
@@ -157,48 +202,67 @@ public final class NearbyDeviceParcelable implements Parcelable {
 
         /**
          * Sets the name of the scanned device.
+         *
+         * @param name The local name of the scanned device.
          */
-        public Builder setName(String name) {
+        @NonNull
+        public Builder setName(@Nullable String name) {
             mName = name;
             return this;
         }
 
         /**
          * Sets the medium over which the device is discovered.
+         *
+         * @param medium The {@link NearbyDevice.Medium} over which the device is discovered.
          */
-        public Builder setMedium(int medium) {
+        @NonNull
+        public Builder setMedium(@NearbyDevice.Medium int medium) {
             mMedium = medium;
             return this;
         }
 
         /**
          * Sets the RSSI between scanned device and the discovered device.
+         *
+         * @param rssi The received signal strength in dBm.
          */
+        @NonNull
         public Builder setRssi(int rssi) {
             mRssi = rssi;
             return this;
         }
 
         /**
-         * Sets the identifier of the device.
+         * Sets the Fast Pair model Id.
+         *
+         * @param fastPairModelId Fast Pair device identifier.
          */
-        public Builder setFastPairModelId(String fastPairModelId) {
+        @NonNull
+        public Builder setFastPairModelId(@Nullable String fastPairModelId) {
             mFastPairModelId = fastPairModelId;
             return this;
         }
 
         /**
-         * Sets the scanned Fast Pair data.
+         * Sets the bluetooth address.
+         *
+         * @param bluetoothAddress The hardware address of the bluetooth device.
          */
-        public Builder setBluetoothAddress(String bluetoothAddress) {
+        @NonNull
+        public Builder setBluetoothAddress(@Nullable String bluetoothAddress) {
             mBluetoothAddress = bluetoothAddress;
             return this;
         }
 
         /**
-         * Sets the raw data.
+         * Sets the scanned raw data.
+         *
+         * @param data Data the scan.
+         * For example, {@link ScanRecord#getServiceData()} if scanned by Bluetooth.
          */
-        public Builder setData(byte[] data) {
+        @NonNull
+        public Builder setData(@Nullable byte[] data) {
             mData = data;
             return this;
         }
@@ -206,6 +270,7 @@ public final class NearbyDeviceParcelable implements Parcelable {
         /**
          * Builds a ScanResult.
          */
+        @NonNull
         public NearbyDeviceParcelable build() {
             return new NearbyDeviceParcelable(mName, mMedium, mRssi, mFastPairModelId,
                     mBluetoothAddress, mData);

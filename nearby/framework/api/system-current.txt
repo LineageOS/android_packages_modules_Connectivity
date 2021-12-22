@@ -33,5 +33,79 @@ package android.nearby {
     method @Nullable public byte[] getModelId();
   }
 
+  public abstract class NearbyDevice {
+    method public int getMedium();
+    method @IntRange(from=0xffffff81, to=126) public int getRssi();
+    method public static boolean isValidMedium(int);
+  }
+
+  public final class NearbyDeviceParcelable implements android.os.Parcelable {
+    method public int describeContents();
+    method @Nullable public String getBluetoothAddress();
+    method @Nullable public byte[] getData();
+    method @Nullable public String getFastPairModelId();
+    method public int getMedium();
+    method @Nullable public String getName();
+    method @IntRange(from=0xffffff81, to=126) public int getRssi();
+    method public void writeToParcel(@NonNull android.os.Parcel, int);
+    field @NonNull public static final android.os.Parcelable.Creator<android.nearby.NearbyDeviceParcelable> CREATOR;
+  }
+
+  public static final class NearbyDeviceParcelable.Builder {
+    ctor public NearbyDeviceParcelable.Builder();
+    method @NonNull public android.nearby.NearbyDeviceParcelable build();
+    method @NonNull public android.nearby.NearbyDeviceParcelable.Builder setBluetoothAddress(@Nullable String);
+    method @NonNull public android.nearby.NearbyDeviceParcelable.Builder setData(@Nullable byte[]);
+    method @NonNull public android.nearby.NearbyDeviceParcelable.Builder setFastPairModelId(@Nullable String);
+    method @NonNull public android.nearby.NearbyDeviceParcelable.Builder setMedium(int);
+    method @NonNull public android.nearby.NearbyDeviceParcelable.Builder setName(@Nullable String);
+    method @NonNull public android.nearby.NearbyDeviceParcelable.Builder setRssi(int);
+  }
+
+  public final class NearbyFrameworkInitializer {
+    method public static void registerServiceWrappers();
+  }
+
+  public class NearbyManager {
+    method public void startScan(@NonNull android.nearby.ScanRequest, @NonNull java.util.concurrent.Executor, @NonNull android.nearby.ScanCallback);
+    method public void stopScan(@NonNull android.nearby.ScanCallback);
+  }
+
+  public interface ScanCallback {
+    method public void onDiscovered(@NonNull android.nearby.NearbyDevice);
+    method public void onLost(@NonNull android.nearby.NearbyDevice);
+    method public void onUpdated(@NonNull android.nearby.NearbyDevice);
+  }
+
+  public final class ScanRequest implements android.os.Parcelable {
+    method public int describeContents();
+    method public int getScanMode();
+    method public int getScanType();
+    method @NonNull public android.os.WorkSource getWorkSource();
+    method public boolean isEnableBle();
+    method public static boolean isValidScanMode(int);
+    method public static boolean isValidScanType(int);
+    method @NonNull public static String scanModeToString(int);
+    method public void writeToParcel(@NonNull android.os.Parcel, int);
+    field @NonNull public static final android.os.Parcelable.Creator<android.nearby.ScanRequest> CREATOR;
+    field public static final int SCAN_MODE_BALANCED = 1; // 0x1
+    field public static final int SCAN_MODE_LOW_LATENCY = 2; // 0x2
+    field public static final int SCAN_MODE_LOW_POWER = 0; // 0x0
+    field public static final int SCAN_MODE_NO_POWER = -1; // 0xffffffff
+    field public static final int SCAN_TYPE_EXPOSURE_NOTIFICATION = 4; // 0x4
+    field public static final int SCAN_TYPE_FAST_PAIR = 1; // 0x1
+    field public static final int SCAN_TYPE_NEARBY_PRESENCE = 3; // 0x3
+    field public static final int SCAN_TYPE_NEARBY_SHARE = 2; // 0x2
+  }
+
+  public static final class ScanRequest.Builder {
+    ctor public ScanRequest.Builder();
+    method @NonNull public android.nearby.ScanRequest build();
+    method @NonNull public android.nearby.ScanRequest.Builder setEnableBle(boolean);
+    method @NonNull public android.nearby.ScanRequest.Builder setScanMode(int);
+    method @NonNull public android.nearby.ScanRequest.Builder setScanType(int);
+    method @NonNull @RequiresPermission(android.Manifest.permission.UPDATE_DEVICE_STATS) public android.nearby.ScanRequest.Builder setWorkSource(@Nullable android.os.WorkSource);
+  }
+
 }
 

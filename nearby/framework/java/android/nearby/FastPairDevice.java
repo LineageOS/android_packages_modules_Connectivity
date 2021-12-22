@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007 The Android Open Source Project
+ * Copyright (C) 2021 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,7 @@
 
 package android.nearby;
 
-import android.annotation.Hide;
+import android.annotation.IntRange;
 import android.annotation.NonNull;
 import android.annotation.Nullable;
 import android.os.Parcel;
@@ -31,6 +31,9 @@ import java.util.Objects;
  * @hide
  */
 public class FastPairDevice extends NearbyDevice implements Parcelable {
+    /**
+     * Used to read a FastPairDevice from a Parcel.
+     */
     public static final Creator<FastPairDevice> CREATOR = new Creator<FastPairDevice>() {
         @Override
         public FastPairDevice createFromParcel(Parcel in) {
@@ -68,6 +71,17 @@ public class FastPairDevice extends NearbyDevice implements Parcelable {
     @Nullable
     private final byte[] mData;
 
+    /**
+     * Creates a new FastPairDevice.
+     *
+     * @param name Name of the FastPairDevice. Can be {@code null} if there is no name.
+     * @param medium The {@link Medium} over which the device is discovered.
+     * @param rssi The received signal strength in dBm.
+     * @param modelId The identifier of the Fast Pair device.
+     *                Can be {@code null} if there is no Model ID.
+     * @param bluetoothAddress The hardware address of this BluetoothDevice.
+     * @param data Extra data for a Fast Pair device.
+     */
     public FastPairDevice(@Nullable String name,
             @Medium int medium,
             int rssi,
@@ -80,44 +94,69 @@ public class FastPairDevice extends NearbyDevice implements Parcelable {
         this.mData = data;
     }
 
+    /**
+     * Gets the name of the device, or {@code null} if not available.
+     *
+     * @hide
+     */
     @Nullable
     @Override
     public String getName() {
         return mName;
     }
 
+    /** Gets the medium over which this device was discovered. */
     @Override
     public int getMedium() {
         return mMedium;
     }
 
+    /**
+     * Gets the received signal strength in dBm.
+     */
+    @IntRange(from = -127, to  = 126)
     @Override
     public int getRssi() {
         return mRssi;
     }
 
+    /**
+     * Gets the identifier of the Fast Pair device. Can be {@code null} if there is no Model ID.
+     */
     @Nullable
     public String getModelId() {
         return this.mModelId;
     }
 
+    /**
+     * Gets the hardware address of this BluetoothDevice.
+     */
     @NonNull
     public String getBluetoothAddress() {
         return mBluetoothAddress;
     }
 
-    // Only visible to system clients.
+    /**
+     * Gets the extra data for a Fast Pair device. Can be {@code null} if there is extra data.
+     *
+     * @hide
+     */
     @Nullable
-    @Hide
     public byte[] getData() {
         return mData;
     }
 
+    /**
+     * No special parcel contents.
+     */
     @Override
     public int describeContents() {
         return 0;
     }
 
+    /**
+     * Returns a string representation of this FastPairDevice.
+     */
     @Override
     public String toString() {
         StringBuilder stringBuilder = new StringBuilder();
@@ -178,7 +217,7 @@ public class FastPairDevice extends NearbyDevice implements Parcelable {
      *
      * @hide
      */
-    public static final class Builder extends NearbyDevice.Builder {
+    public static final class Builder {
 
         @Nullable private String mName;
         @Medium private int mMedium;
@@ -188,6 +227,8 @@ public class FastPairDevice extends NearbyDevice implements Parcelable {
         @Nullable private byte[] mData;
         /**
          * Sets the name of the Fast Pair device.
+         *
+         * @param name Name of the FastPairDevice. Can be {@code null} if there is no name.
          */
         @NonNull
         public Builder setName(@Nullable String name) {
@@ -197,6 +238,8 @@ public class FastPairDevice extends NearbyDevice implements Parcelable {
 
         /**
          * Sets the medium over which the Fast Pair device is discovered.
+         *
+         * @param medium The {@link Medium} over which the device is discovered.
          */
         @NonNull
         public Builder setMedium(@Medium int medium) {
@@ -206,6 +249,8 @@ public class FastPairDevice extends NearbyDevice implements Parcelable {
 
         /**
          * Sets the RSSI between the scan device and the discovered Fast Pair device.
+         *
+         * @param rssi The received signal strength in dBm.
          */
         @NonNull
         public Builder setRssi(int rssi) {
@@ -215,29 +260,35 @@ public class FastPairDevice extends NearbyDevice implements Parcelable {
 
         /**
          * Sets the model Id of this Fast Pair device.
+         *
+         * @param modelId The identifier of the Fast Pair device. Can be {@code null}
+         *                if there is no Model ID.
          */
         @NonNull
-        public Builder setModelId(String modelId) {
+        public Builder setModelId(@Nullable String modelId) {
             mModelId = modelId;
             return this;
         }
 
         /**
          * Sets the hardware address of this BluetoothDevice.
+         *
+         * @param bluetoothAddress The hardware address of this BluetoothDevice.
          */
         @NonNull
-        public Builder setBluetoothAddress(@NonNull String maskedBluetoothAddress) {
-            mBluetoothAddress = maskedBluetoothAddress;
+        public Builder setBluetoothAddress(@NonNull String bluetoothAddress) {
+            Objects.requireNonNull(bluetoothAddress);
+            mBluetoothAddress = bluetoothAddress;
             return this;
         }
 
         /**
-         * Sets the raw data. Only visible to system API.
+         * Sets the raw data for a FastPairDevice. Can be {@code null} if there is no extra data.
+         *
          * @hide
          */
-        @Hide
         @NonNull
-        public Builder setData(byte[] data) {
+        public Builder setData(@Nullable byte[] data) {
             mData = data;
             return this;
         }

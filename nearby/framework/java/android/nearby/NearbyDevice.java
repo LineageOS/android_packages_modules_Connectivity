@@ -17,7 +17,9 @@
 package android.nearby;
 
 import android.annotation.IntDef;
+import android.annotation.IntRange;
 import android.annotation.Nullable;
+import android.annotation.SystemApi;
 
 import com.android.internal.util.Preconditions;
 
@@ -28,6 +30,7 @@ import java.util.Objects;
  *
  * @hide
  */
+@SystemApi
 public abstract class NearbyDevice {
 
     @Nullable
@@ -39,6 +42,11 @@ public abstract class NearbyDevice {
     final int mRssi;
 
     /**
+     * Creates a new NearbyDevice.
+     *
+     * @param name Local device name. Can be {@code null} if there is no name.
+     * @param medium The {@link Medium} over which the device is discovered.
+     * @param rssi The received signal strength in dBm.
      * @hide
      */
     public NearbyDevice(@Nullable String name, @Medium int medium, int rssi) {
@@ -63,6 +71,8 @@ public abstract class NearbyDevice {
 
     /**
      * True if the medium is defined in {@link Medium}.
+     *
+     * @param medium Integer that may represent a medium type.
      */
     public static boolean isValidMedium(@Medium int medium) {
         return medium == Medium.BLE
@@ -86,8 +96,9 @@ public abstract class NearbyDevice {
     }
 
     /**
-     * Returns the received signal strength in dBm. The valid range is [-127, 126].
+     * Returns the received signal strength in dBm.
      */
+    @IntRange(from = -127, to = 126)
     public int getRssi() {
         return mRssi;
     }
@@ -130,32 +141,6 @@ public abstract class NearbyDevice {
     public @interface Medium {
         int BLE = 1;
         int BLUETOOTH = 2;
-    }
-
-    /**
-     * Builder for a NearbyDevice.
-     */
-    public abstract static class Builder {
-
-        /**
-         * Sets the name of Nearby Device.
-         */
-        public abstract Builder setName(String name);
-
-        /**
-         * Sets the medium over which the Nearby Device is discovered.
-         */
-        public abstract Builder setMedium(int medium);
-
-        /**
-         * Sets the RSSI between scanned device and the discovered device.
-         */
-        public abstract Builder setRssi(int rssi);
-
-        /**
-         * Builds the Nearby Device.
-         */
-        public abstract NearbyDevice build();
     }
 }
 

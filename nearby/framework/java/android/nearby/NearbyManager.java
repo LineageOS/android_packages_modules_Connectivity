@@ -19,6 +19,10 @@ package android.nearby;
 import android.annotation.CallbackExecutor;
 import android.annotation.NonNull;
 import android.annotation.Nullable;
+import android.annotation.SuppressLint;
+import android.annotation.SystemApi;
+import android.annotation.SystemService;
+import android.content.Context;
 import android.os.RemoteException;
 
 import com.android.internal.annotations.GuardedBy;
@@ -38,6 +42,8 @@ import java.util.concurrent.Executor;
  *
  * @hide
  */
+@SystemApi
+@SystemService(Context.NEARBY_SERVICE)
 public class NearbyManager {
 
     private static final String TAG = "NearbyManager";
@@ -46,7 +52,12 @@ public class NearbyManager {
             sScanListeners = new WeakHashMap<>();
     private final INearbyManager mService;
 
-    public NearbyManager(@NonNull INearbyManager service) {
+    /**
+     * Creates a new NearbyManager.
+     *
+     * @param service The service object.
+     */
+    NearbyManager(@NonNull INearbyManager service) {
         mService = service;
     }
 
@@ -69,10 +80,13 @@ public class NearbyManager {
      * Start scan for nearby devices with given parameters. Devices matching {@link ScanRequest}
      * will be delivered through the given callback.
      *
+     * @param scanRequest Various parameters clients send when requesting scanning.
      * @param executor Executor where the listener method is called.
+     * @param scanCallback The callback to notify clients when there is a scan result.
      */
-    public void startScan(ScanRequest scanRequest, ScanCallback scanCallback, @CallbackExecutor
-            Executor executor) {
+    public void startScan(@NonNull ScanRequest scanRequest,
+            @CallbackExecutor @NonNull Executor executor,
+            @NonNull ScanCallback scanCallback) {
         Objects.requireNonNull(scanRequest, "scanRequest must not be null");
         Objects.requireNonNull(scanCallback, "scanCallback must not be null");
         Objects.requireNonNull(executor, "executor must not be null");
@@ -100,7 +114,13 @@ public class NearbyManager {
      * Stops the nearby device scan for the specified callback. The given callback
      * is guaranteed not to receive any invocations that happen after this method
      * is invoked.
+     *
+     * Suppressed lint: Registration methods should have overload that accepts delivery Executor.
+     * Already have executor in startScan() method.
+     *
+     * @param scanCallback  The callback that was used to start the scan.
      */
+    @SuppressLint("ExecutorRegistration")
     public void stopScan(@NonNull ScanCallback scanCallback) {
         Preconditions.checkArgument(scanCallback != null,
                 "invalid null scanCallback");
