@@ -19,6 +19,33 @@ package {
     default_applicable_licenses: ["Android-Apache-2.0"],
 }
 
+// The library name match the service-connectivity jarjar rules that put the JNI utils in the
+// com.android.connectivity.com.android.net.module.util package.
+cc_library_shared {
+    name: "libcom_android_connectivity_com_android_net_module_util_jni",
+    min_sdk_version: "30",
+    cflags: [
+        "-Wall",
+        "-Werror",
+        "-Wno-unused-parameter",
+        "-Wthread-safety",
+    ],
+    srcs: [
+        "jni/com_android_net_module_util/onload.cpp",
+    ],
+    stl: "libc++_static",
+    static_libs: [
+        "libnet_utils_device_common_bpfjni",
+    ],
+    shared_libs: [
+        "liblog",
+        "libnativehelper",
+    ],
+    apex_available: [
+        "com.android.tethering",
+    ],
+}
+
 cc_library_shared {
     name: "libservice-connectivity",
     min_sdk_version: "30",
@@ -69,6 +96,7 @@ java_library {
         "modules-utils-build",
         "modules-utils-shell-command-handler",
         "net-utils-device-common",
+        "net-utils-device-common-bpf",
         "net-utils-device-common-netlink",
         "net-utils-framework-common",
         "netd-client",
