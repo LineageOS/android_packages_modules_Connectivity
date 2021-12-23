@@ -94,6 +94,7 @@ import java.time.temporal.ChronoUnit;
 public class MultipathPolicyTrackerTest {
     private static final Network TEST_NETWORK = new Network(123);
     private static final int POLICY_SNOOZED = -100;
+    private static final String TEST_IMSI1 = "TEST_IMSI1";
 
     @Mock private Context mContext;
     @Mock private Context mUserAllContext;
@@ -148,6 +149,7 @@ public class MultipathPolicyTrackerTest {
         when(mDeps.getClock()).thenReturn(mClock);
 
         when(mTelephonyManager.createForSubscriptionId(anyInt())).thenReturn(mTelephonyManager);
+        when(mTelephonyManager.getSubscriberId()).thenReturn(TEST_IMSI1);
 
         mContentResolver = Mockito.spy(new MockContentResolver(mContext));
         mContentResolver.addProvider(Settings.AUTHORITY, new FakeSettingsProvider());
