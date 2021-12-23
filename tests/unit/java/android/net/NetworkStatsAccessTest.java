@@ -22,7 +22,7 @@ import static org.mockito.Mockito.when;
 import android.Manifest;
 import android.Manifest.permission;
 import android.app.AppOpsManager;
-import android.app.admin.DevicePolicyManagerInternal;
+import android.app.admin.DevicePolicyManager;
 import android.content.Context;
 import android.content.pm.PackageManager;
 import android.os.Build;
@@ -30,7 +30,6 @@ import android.telephony.TelephonyManager;
 
 import androidx.test.filters.SmallTest;
 
-import com.android.server.LocalServices;
 import com.android.testutils.DevSdkIgnoreRule;
 import com.android.testutils.DevSdkIgnoreRunner;
 
@@ -49,29 +48,26 @@ public class NetworkStatsAccessTest {
     private static final int TEST_UID = 12345;
 
     @Mock private Context mContext;
-    @Mock private DevicePolicyManagerInternal mDpmi;
+    @Mock private DevicePolicyManager mDpm;
     @Mock private TelephonyManager mTm;
     @Mock private AppOpsManager mAppOps;
 
     // Hold the real service so we can restore it when tearing down the test.
-    private DevicePolicyManagerInternal mSystemDpmi;
+    private DevicePolicyManager mSystemDpm;
 
     @Before
     public void setUp() throws Exception {
         MockitoAnnotations.initMocks(this);
 
-        mSystemDpmi = LocalServices.getService(DevicePolicyManagerInternal.class);
-        LocalServices.removeServiceForTest(DevicePolicyManagerInternal.class);
-        LocalServices.addService(DevicePolicyManagerInternal.class, mDpmi);
-
         when(mContext.getSystemService(Context.TELEPHONY_SERVICE)).thenReturn(mTm);
         when(mContext.getSystemService(Context.APP_OPS_SERVICE)).thenReturn(mAppOps);
+        when(mContext.getSystemServiceName(DevicePolicyManager.class))
+                .thenReturn(Context.DEVICE_POLICY_SERVICE);
+        when(mContext.getSystemService(Context.DEVICE_POLICY_SERVICE)).thenReturn(mDpm);
     }
 
     @After
     public void tearDown() throws Exception {
-        LocalServices.removeServiceForTest(DevicePolicyManagerInternal.class);
-        LocalServices.addService(DevicePolicyManagerInternal.class, mSystemDpmi);
     }
 
     @Test
@@ -169,11 +165,11 @@ public class NetworkStatsAccessTest {
     }
 
     private void setIsDeviceOwner(boolean isOwner) {
-        when(mDpmi.isActiveDeviceOwner(TEST_UID)).thenReturn(isOwner);
+        when(mDpm.isDeviceOwnerApp(TEST_PKG)).thenReturn(isOwner);
     }
 
     private void setIsProfileOwner(boolean isOwner) {
-        when(mDpmi.isActiveProfileOwner(TEST_UID)).thenReturn(isOwner);
+        when(mDpm.isProfileOwnerApp(TEST_PKG)).thenReturn(isOwner);
     }
 
     private void setHasAppOpsPermission(int appOpsMode, boolean hasPermission) {
