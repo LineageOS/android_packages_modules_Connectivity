@@ -16,11 +16,15 @@
 
 package com.android.server.ethernet;
 
+import android.annotation.NonNull;
+import android.annotation.Nullable;
 import android.content.Context;
 import android.content.pm.PackageManager;
 import android.net.IEthernetManager;
 import android.net.IEthernetServiceListener;
+import android.net.IInternalNetworkManagementListener;
 import android.net.ITetheredInterfaceCallback;
+import android.net.InternalNetworkUpdateRequest;
 import android.net.IpConfiguration;
 import android.os.Binder;
 import android.os.Handler;
@@ -208,5 +212,25 @@ public class EthernetServiceImpl extends IEthernetManager.Stub {
         pw.increaseIndent();
         mHandler.dump(new PrintWriterPrinter(pw), "EthernetServiceImpl");
         pw.decreaseIndent();
+    }
+
+    @Override
+    public void updateConfiguration(@NonNull final String iface,
+            @NonNull final InternalNetworkUpdateRequest request,
+            @Nullable final IInternalNetworkManagementListener listener) {
+        Log.i(TAG, "updateConfiguration called with: iface=" + iface
+                + ", request=" + request + ", listener=" + listener);
+    }
+
+    @Override
+    public void connectNetwork(@NonNull final String iface,
+            @Nullable final IInternalNetworkManagementListener listener) {
+        Log.i(TAG, "connectNetwork called with: iface=" + iface + ", listener=" + listener);
+    }
+
+    @Override
+    public void disconnectNetwork(@NonNull final String iface,
+            @Nullable final IInternalNetworkManagementListener listener) {
+        Log.i(TAG, "disconnectNetwork called with: iface=" + iface + ", listener=" + listener);
     }
 }
