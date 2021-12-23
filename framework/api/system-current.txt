@@ -294,9 +294,11 @@ package android.net {
     ctor public NetworkCapabilities.Builder();
     ctor public NetworkCapabilities.Builder(@NonNull android.net.NetworkCapabilities);
     method @NonNull public android.net.NetworkCapabilities.Builder addCapability(int);
+    method @NonNull public android.net.NetworkCapabilities.Builder addEnterpriseCapabilitySubLevel(int);
     method @NonNull public android.net.NetworkCapabilities.Builder addTransportType(int);
     method @NonNull public android.net.NetworkCapabilities build();
     method @NonNull public android.net.NetworkCapabilities.Builder removeCapability(int);
+    method @NonNull public android.net.NetworkCapabilities.Builder removeEnterpriseCapabilitySubLevel(int);
     method @NonNull public android.net.NetworkCapabilities.Builder removeTransportType(int);
     method @NonNull @RequiresPermission(android.Manifest.permission.NETWORK_FACTORY) public android.net.NetworkCapabilities.Builder setAdministratorUids(@NonNull int[]);
     method @NonNull public android.net.NetworkCapabilities.Builder setLinkDownstreamBandwidthKbps(int);
