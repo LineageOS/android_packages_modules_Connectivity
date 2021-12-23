@@ -49,7 +49,10 @@ apex {
     ],
     multilib: {
         first: {
-            jni_libs: ["libservice-connectivity"],
+            jni_libs: [
+                "libservice-connectivity",
+                "libcom_android_connectivity_com_android_net_module_util_jni"
+            ],
         },
         both: {
             jni_libs: ["libframework-connectivity-jni"],
