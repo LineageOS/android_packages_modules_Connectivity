@@ -24,6 +24,7 @@ import static com.android.testutils.MiscAsserts.assertThrows;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 
+import android.annotation.SuppressLint;
 import android.net.IpPrefix;
 
 import androidx.test.filters.SmallTest;
@@ -51,6 +52,7 @@ public class StructNdOptPref64Test {
         return prefixBytes;
     }
 
+    @SuppressLint("NewApi")
     private static IpPrefix prefix(String addrString, int prefixLength) throws Exception {
         return new IpPrefix(InetAddress.getByName(addrString), prefixLength);
     }
