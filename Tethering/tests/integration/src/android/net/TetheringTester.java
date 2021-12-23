@@ -30,7 +30,7 @@ import java.net.Inet4Address;
 import java.nio.ByteBuffer;
 import java.util.Random;
 import java.util.concurrent.TimeoutException;
-import java.util.function.Function;
+import java.util.function.Predicate;
 
 /**
  * A class simulate tethered client. When caller create TetheringTester, it would connect to
@@ -129,27 +129,43 @@ public final class TetheringTester {
         mDownstreamReader.sendResponse(packet);
     }
 
-    private DhcpPacket getNextDhcpPacket() {
-        return getNextMatchedPacket((p) -> {
+    private DhcpPacket getNextDhcpPacket() throws Exception {
+        final byte[] packet = getNextMatchedPacket((p) -> {
+            // Test whether this is DHCP packet.
             try {
-                return DhcpPacket.decodeFullPacket(p, p.length, DhcpPacket.ENCAP_L2);
+                DhcpPacket.decodeFullPacket(p, p.length, DhcpPacket.ENCAP_L2);
             } catch (DhcpPacket.ParseException e) {
-                // Not a DHCP packet. Continue.
+                // Not a DHCP packet.
+                return false;
             }
 
-            return null;
+            return true;
         });
+
+        return packet == null ? null :
+                DhcpPacket.decodeFullPacket(packet, packet.length, DhcpPacket.ENCAP_L2);
     }
 
-    private <R> R getNextMatchedPacket(Function<byte[], R> match) {
-        byte[] packet;
-        R result;
-        while ((packet = mDownstreamReader.popPacket(PACKET_READ_TIMEOUT_MS)) != null) {
-            result = match.apply(packet);
+    public void sendPacket(ByteBuffer packet) throws Exception {
+        mDownstreamReader.sendResponse(packet);
+    }
 
-            if (result != null) return result;
+    public byte[] getNextMatchedPacket(Predicate<byte[]> filter) {
+        return mDownstreamReader.poll(PACKET_READ_TIMEOUT_MS, filter);
+    }
+
+    public static class RemoteResponder {
+        final TapPacketReader mUpstreamReader;
+        public RemoteResponder(TapPacketReader reader) {
+            mUpstreamReader = reader;
         }
 
-        return null;
+        public void sendPacket(ByteBuffer packet) throws Exception {
+            mUpstreamReader.sendResponse(packet);
+        }
+
+        public byte[] getNextMatchedPacket(Predicate<byte[]> filter) throws Exception {
+            return mUpstreamReader.poll(PACKET_READ_TIMEOUT_MS, filter);
+        }
     }
 }
