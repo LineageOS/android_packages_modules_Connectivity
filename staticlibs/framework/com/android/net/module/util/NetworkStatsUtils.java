@@ -52,4 +52,18 @@ public class NetworkStatsUtils {
         }
         return r / den;
     }
+
+    /**
+     * Value of the match rule of the subscriberId to match networks with specific subscriberId.
+     *
+     * @hide
+     */
+    public static final int SUBSCRIBER_ID_MATCH_RULE_EXACT = 0;
+    /**
+     * Value of the match rule of the subscriberId to match networks with any subscriberId which
+     * includes null and non-null.
+     *
+     * @hide
+     */
+    public static final int SUBSCRIBER_ID_MATCH_RULE_ALL = 1;
 }
