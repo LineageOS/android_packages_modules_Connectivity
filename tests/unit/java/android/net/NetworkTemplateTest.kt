@@ -42,8 +42,6 @@ import android.net.NetworkTemplate.NETWORK_TYPE_ALL
 import android.net.NetworkTemplate.OEM_MANAGED_ALL
 import android.net.NetworkTemplate.OEM_MANAGED_NO
 import android.net.NetworkTemplate.OEM_MANAGED_YES
-import android.net.NetworkTemplate.SUBSCRIBER_ID_MATCH_RULE_ALL
-import android.net.NetworkTemplate.SUBSCRIBER_ID_MATCH_RULE_EXACT
 import android.net.NetworkTemplate.WIFI_NETWORK_KEY_ALL
 import android.net.NetworkTemplate.buildTemplateCarrierMetered
 import android.net.NetworkTemplate.buildTemplateMobileAll
@@ -54,6 +52,8 @@ import android.net.NetworkTemplate.buildTemplateWifiWildcard
 import android.net.NetworkTemplate.normalize
 import android.os.Build
 import android.telephony.TelephonyManager
+import com.android.net.module.util.NetworkStatsUtils.SUBSCRIBER_ID_MATCH_RULE_ALL
+import com.android.net.module.util.NetworkStatsUtils.SUBSCRIBER_ID_MATCH_RULE_EXACT
 import com.android.testutils.DevSdkIgnoreRule
 import com.android.testutils.DevSdkIgnoreRunner
 import com.android.testutils.assertParcelSane
