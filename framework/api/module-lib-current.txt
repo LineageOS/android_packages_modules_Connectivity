@@ -121,6 +121,11 @@ package android.net {
   public final class NetworkCapabilities implements android.os.Parcelable {
     method @Nullable public java.util.Set<android.util.Range<java.lang.Integer>> getUids();
     method public boolean hasForbiddenCapability(int);
+    field public static final int NET_CAPABILITY_ENTERPRISE_SUB_LEVEL_1 = 1; // 0x1
+    field public static final int NET_CAPABILITY_ENTERPRISE_SUB_LEVEL_2 = 2; // 0x2
+    field public static final int NET_CAPABILITY_ENTERPRISE_SUB_LEVEL_3 = 3; // 0x3
+    field public static final int NET_CAPABILITY_ENTERPRISE_SUB_LEVEL_4 = 4; // 0x4
+    field public static final int NET_CAPABILITY_ENTERPRISE_SUB_LEVEL_5 = 5; // 0x5
     field public static final long REDACT_ALL = -1L; // 0xffffffffffffffffL
     field public static final long REDACT_FOR_ACCESS_FINE_LOCATION = 1L; // 0x1L
     field public static final long REDACT_FOR_LOCAL_MAC_ADDRESS = 2L; // 0x2L
