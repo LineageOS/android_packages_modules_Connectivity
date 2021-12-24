@@ -131,7 +131,6 @@ package android.net {
   }
 
   public final class IpPrefix implements android.os.Parcelable {
-    ctor public IpPrefix(@NonNull java.net.InetAddress, @IntRange(from=0, to=128) int);
     ctor public IpPrefix(@NonNull String);
   }
 
@@ -295,9 +294,11 @@ package android.net {
     ctor public NetworkCapabilities.Builder();
     ctor public NetworkCapabilities.Builder(@NonNull android.net.NetworkCapabilities);
     method @NonNull public android.net.NetworkCapabilities.Builder addCapability(int);
+    method @NonNull public android.net.NetworkCapabilities.Builder addEnterpriseCapabilitySubLevel(int);
     method @NonNull public android.net.NetworkCapabilities.Builder addTransportType(int);
     method @NonNull public android.net.NetworkCapabilities build();
     method @NonNull public android.net.NetworkCapabilities.Builder removeCapability(int);
+    method @NonNull public android.net.NetworkCapabilities.Builder removeEnterpriseCapabilitySubLevel(int);
     method @NonNull public android.net.NetworkCapabilities.Builder removeTransportType(int);
     method @NonNull @RequiresPermission(android.Manifest.permission.NETWORK_FACTORY) public android.net.NetworkCapabilities.Builder setAdministratorUids(@NonNull int[]);
     method @NonNull public android.net.NetworkCapabilities.Builder setLinkDownstreamBandwidthKbps(int);
@@ -432,10 +433,6 @@ package android.net {
     ctor public RouteInfo(@Nullable android.net.IpPrefix, @Nullable java.net.InetAddress, @Nullable String, int);
     ctor public RouteInfo(@Nullable android.net.IpPrefix, @Nullable java.net.InetAddress, @Nullable String, int, int);
     method public int getMtu();
-    method public int getType();
-    field public static final int RTN_THROW = 9; // 0x9
-    field public static final int RTN_UNICAST = 1; // 0x1
-    field public static final int RTN_UNREACHABLE = 7; // 0x7
   }
 
   public abstract class SocketKeepalive implements java.lang.AutoCloseable {
