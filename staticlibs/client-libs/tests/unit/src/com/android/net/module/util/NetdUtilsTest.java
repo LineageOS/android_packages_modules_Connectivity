@@ -22,6 +22,8 @@ import static android.system.OsConstants.EBUSY;
 import static com.android.testutils.MiscAsserts.assertThrows;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
@@ -48,6 +50,7 @@ import androidx.test.runner.AndroidJUnit4;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
@@ -217,5 +220,57 @@ public class NetdUtilsTest {
 
         // Test throwing RemoteException after 3 tries.
         runTetherInterfaceWithRemoteException(3);
+    }
+
+    @Test
+    public void testNetdUtilsHasFlag() throws Exception {
+        final String[] flags = new String[] {"up", "broadcast", "running", "multicast"};
+        setupFlagsForInterfaceConfiguration(flags);
+
+        // Set interface up.
+        NetdUtils.setInterfaceUp(mNetd, IFACE);
+        final ArgumentCaptor<InterfaceConfigurationParcel> arg =
+                ArgumentCaptor.forClass(InterfaceConfigurationParcel.class);
+        verify(mNetd, times(1)).interfaceSetCfg(arg.capture());
+
+        final InterfaceConfigurationParcel p = arg.getValue();
+        assertTrue(NetdUtils.hasFlag(p, "up"));
+        assertTrue(NetdUtils.hasFlag(p, "running"));
+        assertTrue(NetdUtils.hasFlag(p, "broadcast"));
+        assertTrue(NetdUtils.hasFlag(p, "multicast"));
+        assertFalse(NetdUtils.hasFlag(p, "down"));
+    }
+
+    @Test
+    public void testNetdUtilsHasFlag_flagContainsSpace() throws Exception {
+        final String[] flags = new String[] {"up", "broadcast", "running", "multicast"};
+        setupFlagsForInterfaceConfiguration(flags);
+
+        // Set interface up.
+        NetdUtils.setInterfaceUp(mNetd, IFACE);
+        final ArgumentCaptor<InterfaceConfigurationParcel> arg =
+                ArgumentCaptor.forClass(InterfaceConfigurationParcel.class);
+        verify(mNetd, times(1)).interfaceSetCfg(arg.capture());
+
+        final InterfaceConfigurationParcel p = arg.getValue();
+        assertThrows(IllegalArgumentException.class, () -> NetdUtils.hasFlag(p, "up "));
+    }
+
+    @Test
+    public void testNetdUtilsHasFlag_UppercaseString() throws Exception {
+        final String[] flags = new String[] {"up", "broadcast", "running", "multicast"};
+        setupFlagsForInterfaceConfiguration(flags);
+
+        // Set interface up.
+        NetdUtils.setInterfaceUp(mNetd, IFACE);
+        final ArgumentCaptor<InterfaceConfigurationParcel> arg =
+                ArgumentCaptor.forClass(InterfaceConfigurationParcel.class);
+        verify(mNetd, times(1)).interfaceSetCfg(arg.capture());
+
+        final InterfaceConfigurationParcel p = arg.getValue();
+        assertFalse(NetdUtils.hasFlag(p, "UP"));
+        assertFalse(NetdUtils.hasFlag(p, "BROADCAST"));
+        assertFalse(NetdUtils.hasFlag(p, "RUNNING"));
+        assertFalse(NetdUtils.hasFlag(p, "MULTICAST"));
     }
 }
