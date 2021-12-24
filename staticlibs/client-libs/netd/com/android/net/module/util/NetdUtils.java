@@ -38,7 +38,10 @@ import androidx.annotation.NonNull;
 import androidx.annotation.VisibleForTesting;
 
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 /**
  * Collection of utilities for netd.
@@ -68,6 +71,19 @@ public class NetdUtils {
         if (flag.indexOf(' ') >= 0) {
             throw new IllegalArgumentException("flag contains space: " + flag);
         }
+    }
+
+    /**
+     * Check whether the InterfaceConfigurationParcel contains the target flag or not.
+     *
+     * @param config The InterfaceConfigurationParcel instance.
+     * @param flag Target flag string to be checked.
+     */
+    public static boolean hasFlag(@NonNull final InterfaceConfigurationParcel config,
+            @NonNull final String flag) {
+        validateFlag(flag);
+        final Set<String> flagList = new HashSet<String>(Arrays.asList(config.flags));
+        return flagList.contains(flag);
     }
 
     @VisibleForTesting
