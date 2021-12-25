@@ -154,6 +154,14 @@ public class ClatCoordinator {
                 throws IOException {
             addAnycastSetsockopt(sock, v6, ifindex);
         }
+
+        /**
+         * Configure packet socket.
+         */
+        public void jniConfigurePacketSocket(@NonNull FileDescriptor sock, String v6, int ifindex)
+                throws IOException {
+            configurePacketSocket(sock, v6, ifindex);
+        }
     }
 
     @VisibleForTesting
@@ -289,6 +297,13 @@ public class ClatCoordinator {
             throw new IOException("add anycast sockopt failed: " + e);
         }
 
+        // Update our packet socket filter to reflect the new 464xlat IP address.
+        try {
+            mDeps.jniConfigurePacketSocket(readSock6.getFileDescriptor(), v6, ifaceIndex);
+        } catch (IOException e) {
+            throw new IOException("configure packet socket failed: " + e);
+        }
+
         // TODO: start clatd and returns local xlat464 v6 address.
         return null;
     }
@@ -303,5 +318,7 @@ public class ClatCoordinator {
     private static native int openPacketSocket() throws IOException;
     private static native int openRawSocket6(int mark) throws IOException;
     private static native void addAnycastSetsockopt(FileDescriptor sock, String v6, int ifindex)
+            throws IOException;
+    private static native void configurePacketSocket(FileDescriptor sock, String v6, int ifindex)
             throws IOException;
 }
