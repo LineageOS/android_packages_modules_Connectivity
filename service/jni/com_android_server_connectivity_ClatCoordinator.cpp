@@ -26,6 +26,9 @@
 #include "libclat/clatutils.h"
 #include "nativehelper/scoped_utf_chars.h"
 
+// Sync from system/netd/include/netid_client.h
+#define MARK_UNSET 0u
+
 namespace android {
 static void throwIOException(JNIEnv* env, const char* msg, int error) {
     jniThrowExceptionFmt(env, "java/io/IOException", "%s: %s", msg, strerror(error));
@@ -161,6 +164,25 @@ static jint com_android_server_connectivity_ClatCoordinator_openPacketSocket(JNI
     return sock;
 }
 
+static jint com_android_server_connectivity_ClatCoordinator_openRawSocket6(JNIEnv* env,
+                                                                           jobject clazz,
+                                                                           jint mark) {
+    int sock = socket(AF_INET6, SOCK_RAW | SOCK_NONBLOCK | SOCK_CLOEXEC, IPPROTO_RAW);
+    if (sock < 0) {
+        throwIOException(env, "raw socket failed", errno);
+        return -1;
+    }
+
+    // TODO: check the mark validation
+    if (mark != MARK_UNSET && setsockopt(sock, SOL_SOCKET, SO_MARK, &mark, sizeof(mark)) < 0) {
+        throwIOException(env, "could not set mark on raw socket", errno);
+        close(sock);
+        return -1;
+    }
+
+    return sock;
+}
+
 /*
  * JNI registration.
  */
@@ -177,6 +199,8 @@ static const JNINativeMethod gMethods[] = {
          (void*)com_android_server_connectivity_ClatCoordinator_detectMtu},
         {"openPacketSocket", "()I",
          (void*)com_android_server_connectivity_ClatCoordinator_openPacketSocket},
+        {"openRawSocket6", "(I)I",
+         (void*)com_android_server_connectivity_ClatCoordinator_openRawSocket6},
 };
 
 int register_android_server_connectivity_ClatCoordinator(JNIEnv* env) {

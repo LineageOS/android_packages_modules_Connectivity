@@ -128,6 +128,13 @@ public class ClatCoordinator {
         public int jniOpenPacketSocket() throws IOException {
             return openPacketSocket();
         }
+
+        /**
+         * Open IPv6 raw socket and set SO_MARK.
+         */
+        public int jniOpenRawSocket6(int mark) throws IOException {
+            return openRawSocket6(mark);
+        }
     }
 
     @VisibleForTesting
@@ -241,6 +248,16 @@ public class ClatCoordinator {
             throw new IOException("Open packet socket failed: " + e);
         }
 
+        // Opens a raw socket with a given fwmark to send IPv6 packets in clatd.
+        final ParcelFileDescriptor writeSock6;
+        try {
+            // Use a JNI call to get native file descriptor instead of Os.socket(). See above
+            // reason why we use jniOpenPacketSocket6().
+            writeSock6 = mDeps.adoptFd(mDeps.jniOpenRawSocket6(fwmark));
+        } catch (IOException e) {
+            throw new IOException("Open raw socket failed: " + e);
+        }
+
         // TODO: start clatd and returns local xlat464 v6 address.
         return null;
     }
@@ -253,4 +270,5 @@ public class ClatCoordinator {
     private static native int detectMtu(String platSubnet, int platSuffix, int mark)
             throws IOException;
     private static native int openPacketSocket() throws IOException;
+    private static native int openRawSocket6(int mark) throws IOException;
 }
