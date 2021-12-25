@@ -16,6 +16,7 @@
 
 package com.android.server.connectivity;
 
+import static android.net.INetd.IF_STATE_UP;
 import static android.net.INetd.PERMISSION_SYSTEM;
 
 import static com.android.net.module.util.NetworkStackConstants.IPV6_MIN_MTU;
@@ -23,6 +24,7 @@ import static com.android.net.module.util.NetworkStackConstants.IPV6_MIN_MTU;
 import android.annotation.NonNull;
 import android.annotation.Nullable;
 import android.net.INetd;
+import android.net.InterfaceConfigurationParcel;
 import android.net.IpPrefix;
 import android.os.ParcelFileDescriptor;
 import android.os.RemoteException;
@@ -197,6 +199,27 @@ public class ClatCoordinator {
                 ByteBuffer.wrap(GOOGLE_DNS_4.getAddress()).getInt(), fwmark);
         final int mtu = adjustMtu(detectedMtu);
         Log.i(TAG, "ipv4 mtu is " + mtu);
+
+        // TODO: add setIptablesDropRule
+
+        // Config tun interface mtu, address and bring up.
+        try {
+            mNetd.interfaceSetMtu(tunIface, mtu);
+        } catch (RemoteException | ServiceSpecificException e) {
+            throw new IOException("Set MTU " + mtu + " on " + tunIface + " failed: " + e);
+        }
+        final InterfaceConfigurationParcel ifConfig = new InterfaceConfigurationParcel();
+        ifConfig.ifName = tunIface;
+        ifConfig.ipv4Addr = v4;
+        ifConfig.prefixLength = 32;
+        ifConfig.hwAddr = "";
+        ifConfig.flags = new String[] {IF_STATE_UP};
+        try {
+            mNetd.interfaceSetCfg(ifConfig);
+        } catch (RemoteException | ServiceSpecificException e) {
+            throw new IOException("Setting IPv4 address to " + ifConfig.ipv4Addr + "/"
+                    + ifConfig.prefixLength + " failed on " + ifConfig.ifName + ": " + e);
+        }
 
         // TODO: start clatd and returns local xlat464 v6 address.
         return null;
