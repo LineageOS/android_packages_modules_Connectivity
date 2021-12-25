@@ -15,7 +15,11 @@
  */
 
 #include <arpa/inet.h>
+#include <fcntl.h>
+#include <linux/if_tun.h>
+#include <linux/ioctl.h>
 #include <nativehelper/JNIHelp.h>
+#include <net/if.h>
 
 #include <netjniutils/netjniutils.h>
 
@@ -92,6 +96,34 @@ jstring com_android_server_connectivity_ClatCoordinator_generateIpv6Address(
     return env->NewStringUTF(addrstr);
 }
 
+static jint com_android_server_connectivity_ClatCoordinator_createTunInterface(JNIEnv* env,
+                                                                               jobject clazz,
+                                                                               jstring tuniface) {
+    ScopedUtfChars v4interface(env, tuniface);
+
+    // open the tun device in non blocking mode as required by clatd
+    jint fd = open("/dev/net/tun", O_RDWR | O_NONBLOCK | O_CLOEXEC);
+    if (fd == -1) {
+        jniThrowExceptionFmt(env, "java/io/IOException", "open tun device failed (%s)",
+                             strerror(errno));
+        return -1;
+    }
+
+    struct ifreq ifr = {
+            .ifr_flags = IFF_TUN,
+    };
+    strlcpy(ifr.ifr_name, v4interface.c_str(), sizeof(ifr.ifr_name));
+
+    if (ioctl(fd, TUNSETIFF, &ifr, sizeof(ifr))) {
+        close(fd);
+        jniThrowExceptionFmt(env, "java/io/IOException", "ioctl(TUNSETIFF) failed (%s)",
+                             strerror(errno));
+        return -1;
+    }
+
+    return fd;
+}
+
 /*
  * JNI registration.
  */
@@ -102,6 +134,8 @@ static const JNINativeMethod gMethods[] = {
         {"generateIpv6Address",
          "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;",
          (void*)com_android_server_connectivity_ClatCoordinator_generateIpv6Address},
+        {"createTunInterface", "(Ljava/lang/String;)I",
+         (void*)com_android_server_connectivity_ClatCoordinator_createTunInterface},
 };
 
 int register_android_server_connectivity_ClatCoordinator(JNIEnv* env) {

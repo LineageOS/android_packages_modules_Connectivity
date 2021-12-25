@@ -20,6 +20,10 @@ import android.annotation.NonNull;
 import android.annotation.Nullable;
 import android.net.INetd;
 import android.net.IpPrefix;
+import android.os.ParcelFileDescriptor;
+import android.os.RemoteException;
+import android.os.ServiceSpecificException;
+import android.util.Log;
 
 import com.android.internal.annotations.VisibleForTesting;
 
@@ -32,6 +36,9 @@ import java.io.IOException;
  */
 public class ClatCoordinator {
     private static final String TAG = ClatCoordinator.class.getSimpleName();
+
+    // This must match the interface prefix in clatd.c.
+    private static final String CLAT_PREFIX = "v4-";
 
     // For historical reasons, start with 192.0.0.4, and after that, use all subsequent addresses
     // in 192.0.0.0/29 (RFC 7335).
@@ -57,6 +64,21 @@ public class ClatCoordinator {
           */
         @NonNull
         public abstract INetd getNetd();
+
+        /**
+         * @see ParcelFileDescriptor#adoptFd(int).
+         */
+        @NonNull
+        public ParcelFileDescriptor adoptFd(int fd) {
+            return ParcelFileDescriptor.adoptFd(fd);
+        }
+
+        /**
+         * Create tun interface for a given interface name.
+         */
+        public int jniCreateTunInterface(@NonNull String tuniface) throws IOException {
+            return createTunInterface(tuniface);
+        }
 
         /**
          * Pick an IPv4 address for clat.
@@ -109,6 +131,23 @@ public class ClatCoordinator {
             throw new IOException("no IPv6 addresses were available for clat: " + e);
         }
 
+        // [3] Open, configure and bring up the tun interface.
+        // Create the v4-... tun interface.
+        final String tunIface = CLAT_PREFIX + iface;
+        final ParcelFileDescriptor tunFd;
+        try {
+            tunFd = mDeps.adoptFd(mDeps.jniCreateTunInterface(tunIface));
+        } catch (IOException e) {
+            throw new IOException("Create tun interface " + tunIface + " failed: " + e);
+        }
+
+        // disable IPv6 on it - failing to do so is not a critical error
+        try {
+            mNetd.interfaceSetEnableIPv6(tunIface, false /* enabled */);
+        } catch (RemoteException | ServiceSpecificException e) {
+            Log.e(TAG, "Disable IPv6 on " + tunIface + " failed: " + e);
+        }
+
         // TODO: start clatd and returns local xlat464 v6 address.
         return null;
     }
@@ -117,4 +156,5 @@ public class ClatCoordinator {
             throws IOException;
     private static native String generateIpv6Address(String iface, String v4, String prefix64)
             throws IOException;
+    private static native int createTunInterface(String tuniface) throws IOException;
 }
