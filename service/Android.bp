@@ -57,11 +57,17 @@ cc_library_shared {
     ],
     srcs: [
         "jni/com_android_server_TestNetworkService.cpp",
+        "jni/com_android_server_connectivity_ClatCoordinator.cpp",
         "jni/onload.cpp",
     ],
     stl: "libc++_static",
     header_libs: [
         "libbase_headers",
+    ],
+    static_libs: [
+        "libclat",
+        "libip_checksum",
+        "libnetjniutils",
     ],
     shared_libs: [
         "liblog",
