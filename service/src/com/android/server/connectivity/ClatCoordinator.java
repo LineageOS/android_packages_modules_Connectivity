@@ -32,7 +32,9 @@ import android.os.ServiceSpecificException;
 import android.util.Log;
 
 import com.android.internal.annotations.VisibleForTesting;
+import com.android.net.module.util.InterfaceParams;
 
+import java.io.FileDescriptor;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.nio.ByteBuffer;
@@ -63,6 +65,7 @@ public class ClatCoordinator {
     static final int INIT_V4ADDR_PREFIX_LEN = 29;
     private static final InetAddress GOOGLE_DNS_4 = InetAddress.parseNumericAddress("8.8.8.8");
 
+    private static final int INVALID_IFINDEX = 0;
     private static final int INVALID_PID = 0;
 
     @NonNull
@@ -87,6 +90,14 @@ public class ClatCoordinator {
         @NonNull
         public ParcelFileDescriptor adoptFd(int fd) {
             return ParcelFileDescriptor.adoptFd(fd);
+        }
+
+        /**
+         * Get interface index for a given interface.
+         */
+        public int getInterfaceIndex(String ifName) {
+            final InterfaceParams params = InterfaceParams.getByName(ifName);
+            return params != null ? params.index : INVALID_IFINDEX;
         }
 
         /**
@@ -134,6 +145,14 @@ public class ClatCoordinator {
          */
         public int jniOpenRawSocket6(int mark) throws IOException {
             return openRawSocket6(mark);
+        }
+
+        /**
+         * Add anycast setsockopt.
+         */
+        public void jniAddAnycastSetsockopt(@NonNull FileDescriptor sock, String v6, int ifindex)
+                throws IOException {
+            addAnycastSetsockopt(sock, v6, ifindex);
         }
     }
 
@@ -258,6 +277,18 @@ public class ClatCoordinator {
             throw new IOException("Open raw socket failed: " + e);
         }
 
+        final int ifaceIndex = mDeps.getInterfaceIndex(iface);
+        if (ifaceIndex == INVALID_IFINDEX) {
+            throw new IOException("Fail to get interface index for interface " + iface);
+        }
+
+        // Start translating packets to the new prefix.
+        try {
+            mDeps.jniAddAnycastSetsockopt(writeSock6.getFileDescriptor(), v6, ifaceIndex);
+        } catch (IOException e) {
+            throw new IOException("add anycast sockopt failed: " + e);
+        }
+
         // TODO: start clatd and returns local xlat464 v6 address.
         return null;
     }
@@ -271,4 +302,6 @@ public class ClatCoordinator {
             throws IOException;
     private static native int openPacketSocket() throws IOException;
     private static native int openRawSocket6(int mark) throws IOException;
+    private static native void addAnycastSetsockopt(FileDescriptor sock, String v6, int ifindex)
+            throws IOException;
 }

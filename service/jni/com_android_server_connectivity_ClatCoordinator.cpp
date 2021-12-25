@@ -183,6 +183,32 @@ static jint com_android_server_connectivity_ClatCoordinator_openRawSocket6(JNIEn
     return sock;
 }
 
+static void com_android_server_connectivity_ClatCoordinator_addAnycastSetsockopt(
+        JNIEnv* env, jobject clazz, jobject javaFd, jstring addr6, jint ifindex) {
+    int sock = netjniutils::GetNativeFileDescriptor(env, javaFd);
+    if (sock < 0) {
+        jniThrowExceptionFmt(env, "java/io/IOException", "Invalid file descriptor");
+        return;
+    }
+
+    ScopedUtfChars addrStr(env, addr6);
+
+    in6_addr addr;
+    if (inet_pton(AF_INET6, addrStr.c_str(), &addr) != 1) {
+        jniThrowExceptionFmt(env, "java/io/IOException", "Invalid IPv6 address %s",
+                             addrStr.c_str());
+        return;
+    }
+
+    struct ipv6_mreq mreq = {addr, ifindex};
+    int ret = setsockopt(sock, SOL_IPV6, IPV6_JOIN_ANYCAST, &mreq, sizeof(mreq));
+    if (ret) {
+        jniThrowExceptionFmt(env, "java/io/IOException", "setsockopt IPV6_JOIN_ANYCAST failed: %s",
+                             strerror(errno));
+        return;
+    }
+}
+
 /*
  * JNI registration.
  */
@@ -201,6 +227,8 @@ static const JNINativeMethod gMethods[] = {
          (void*)com_android_server_connectivity_ClatCoordinator_openPacketSocket},
         {"openRawSocket6", "(I)I",
          (void*)com_android_server_connectivity_ClatCoordinator_openRawSocket6},
+        {"addAnycastSetsockopt", "(Ljava/io/FileDescriptor;Ljava/lang/String;I)V",
+         (void*)com_android_server_connectivity_ClatCoordinator_addAnycastSetsockopt},
 };
 
 int register_android_server_connectivity_ClatCoordinator(JNIEnv* env) {
