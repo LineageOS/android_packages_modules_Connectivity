@@ -124,6 +124,27 @@ static jint com_android_server_connectivity_ClatCoordinator_createTunInterface(J
     return fd;
 }
 
+static jint com_android_server_connectivity_ClatCoordinator_detectMtu(JNIEnv* env, jobject clazz,
+                                                                      jstring platSubnet,
+                                                                      jint plat_suffix, jint mark) {
+    ScopedUtfChars platSubnetStr(env, platSubnet);
+
+    in6_addr plat_subnet;
+    if (inet_pton(AF_INET6, platSubnetStr.c_str(), &plat_subnet) != 1) {
+        jniThrowExceptionFmt(env, "java/io/IOException", "Invalid plat prefix address %s",
+                             platSubnetStr.c_str());
+        return -1;
+    }
+
+    int ret = net::clat::detect_mtu(&plat_subnet, plat_suffix, mark);
+    if (ret < 0) {
+        jniThrowExceptionFmt(env, "java/io/IOException", "detect mtu failed: %s", strerror(-ret));
+        return -1;
+    }
+
+    return ret;
+}
+
 /*
  * JNI registration.
  */
@@ -136,6 +157,8 @@ static const JNINativeMethod gMethods[] = {
          (void*)com_android_server_connectivity_ClatCoordinator_generateIpv6Address},
         {"createTunInterface", "(Ljava/lang/String;)I",
          (void*)com_android_server_connectivity_ClatCoordinator_createTunInterface},
+        {"detectMtu", "(Ljava/lang/String;II)I",
+         (void*)com_android_server_connectivity_ClatCoordinator_detectMtu},
 };
 
 int register_android_server_connectivity_ClatCoordinator(JNIEnv* env) {

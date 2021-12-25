@@ -16,6 +16,10 @@
 
 package com.android.server.connectivity;
 
+import static android.net.INetd.PERMISSION_SYSTEM;
+
+import static com.android.net.module.util.NetworkStackConstants.IPV6_MIN_MTU;
+
 import android.annotation.NonNull;
 import android.annotation.Nullable;
 import android.net.INetd;
@@ -28,6 +32,8 @@ import android.util.Log;
 import com.android.internal.annotations.VisibleForTesting;
 
 import java.io.IOException;
+import java.net.InetAddress;
+import java.nio.ByteBuffer;
 
 /**
  * This coordinator is responsible for providing clat relevant functionality.
@@ -36,6 +42,13 @@ import java.io.IOException;
  */
 public class ClatCoordinator {
     private static final String TAG = ClatCoordinator.class.getSimpleName();
+
+    // Sync from external/android-clat/clatd.c
+    // 40 bytes IPv6 header - 20 bytes IPv4 header + 8 bytes fragment header.
+    @VisibleForTesting
+    static final int MTU_DELTA = 28;
+    @VisibleForTesting
+    static final int CLAT_MAX_MTU = 65536;
 
     // This must match the interface prefix in clatd.c.
     private static final String CLAT_PREFIX = "v4-";
@@ -46,6 +59,7 @@ public class ClatCoordinator {
     static final String INIT_V4ADDR_STRING = "192.0.0.4";
     @VisibleForTesting
     static final int INIT_V4ADDR_PREFIX_LEN = 29;
+    private static final InetAddress GOOGLE_DNS_4 = InetAddress.parseNumericAddress("8.8.8.8");
 
     private static final int INVALID_PID = 0;
 
@@ -97,6 +111,35 @@ public class ClatCoordinator {
                 @NonNull String prefix64) throws IOException {
             return generateIpv6Address(iface, v4, prefix64);
         }
+
+        /**
+         * Detect MTU.
+         */
+        public int jniDetectMtu(@NonNull String platSubnet, int platSuffix, int mark)
+                throws IOException {
+            return detectMtu(platSubnet, platSuffix, mark);
+        }
+    }
+
+    @VisibleForTesting
+    static int getFwmark(int netId) {
+        // See union Fwmark in system/netd/include/Fwmark.h
+        return (netId & 0xffff)
+                | 0x1 << 16  // protectedFromVpn: true
+                | 0x1 << 17  // explicitlySelected: true
+                | (PERMISSION_SYSTEM & 0x3) << 18;
+    }
+
+    @VisibleForTesting
+    static int adjustMtu(int mtu) {
+        // clamp to minimum ipv6 mtu - this probably cannot ever trigger
+        if (mtu < IPV6_MIN_MTU) mtu = IPV6_MIN_MTU;
+        // clamp to buffer size
+        if (mtu > CLAT_MAX_MTU) mtu = CLAT_MAX_MTU;
+        // decrease by ipv6(40) + ipv6 fragmentation header(8) vs ipv4(20) overhead of 28 bytes
+        mtu -= MTU_DELTA;
+
+        return mtu;
     }
 
     public ClatCoordinator(@NonNull Dependencies deps) {
@@ -148,6 +191,13 @@ public class ClatCoordinator {
             Log.e(TAG, "Disable IPv6 on " + tunIface + " failed: " + e);
         }
 
+        // Detect ipv4 mtu.
+        final Integer fwmark = getFwmark(netId);
+        final int detectedMtu = mDeps.jniDetectMtu(pfx96,
+                ByteBuffer.wrap(GOOGLE_DNS_4.getAddress()).getInt(), fwmark);
+        final int mtu = adjustMtu(detectedMtu);
+        Log.i(TAG, "ipv4 mtu is " + mtu);
+
         // TODO: start clatd and returns local xlat464 v6 address.
         return null;
     }
@@ -157,4 +207,6 @@ public class ClatCoordinator {
     private static native String generateIpv6Address(String iface, String v4, String prefix64)
             throws IOException;
     private static native int createTunInterface(String tuniface) throws IOException;
+    private static native int detectMtu(String platSubnet, int platSuffix, int mark)
+            throws IOException;
 }
