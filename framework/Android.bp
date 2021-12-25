@@ -93,6 +93,7 @@ java_sdk_library {
         // In preparation for future move
         "//packages/modules/Connectivity/apex",
         "//packages/modules/Connectivity/service",
+        "//packages/modules/Connectivity/service-t",
         "//frameworks/base/packages/Connectivity/service",
         "//frameworks/base",
 
