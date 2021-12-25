@@ -24,6 +24,7 @@
 #include <nativehelper/JNIHelp.h>
 #include <net/if.h>
 #include <spawn.h>
+#include <sys/wait.h>
 #include <string>
 
 #include <netjniutils/netjniutils.h>
@@ -425,15 +426,19 @@ static jint com_android_server_connectivity_ClatCoordinator_startClatd(
     return pid;
 }
 
-// TODO: stop clatd and rename to .._stopClatd.
-static void com_android_server_connectivity_ClatCoordinator_maybeStopBpf(JNIEnv* env, jobject clazz,
-                                                                       jstring iface, jstring pfx96,
-                                                                       jstring v4, jstring v6,
-                                                                       jint pid /* unused */) {
+static void com_android_server_connectivity_ClatCoordinator_stopClatd(JNIEnv* env, jobject clazz,
+                                                                      jstring iface, jstring pfx96,
+                                                                      jstring v4, jstring v6,
+                                                                      jint pid) {
     ScopedUtfChars ifaceStr(env, iface);
     ScopedUtfChars pfx96Str(env, pfx96);
     ScopedUtfChars v4Str(env, v4);
     ScopedUtfChars v6Str(env, v6);
+
+    if (pid <= 0) {
+        jniThrowExceptionFmt(env, "java/io/IOException", "Invalid pid");
+        return;
+    }
 
     if (!net::clat::initMaps()) {
         net::clat::ClatdTracker tracker = {};
@@ -442,6 +447,9 @@ static void com_android_server_connectivity_ClatCoordinator_maybeStopBpf(JNIEnv*
             net::clat::maybeStopBpf(tracker);
         }
     }
+
+    kill(pid, SIGTERM);
+    waitpid(pid, nullptr, 0);  // Should we block in JNI?
 }
 
 /*
@@ -470,9 +478,9 @@ static const JNINativeMethod gMethods[] = {
          "(Ljava/io/FileDescriptor;Ljava/io/FileDescriptor;Ljava/io/FileDescriptor;Ljava/lang/"
          "String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)I",
          (void*)com_android_server_connectivity_ClatCoordinator_startClatd},
-        {"native_maybeStopBpf",
+        {"native_stopClatd",
          "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;I)V",
-          (void*)com_android_server_connectivity_ClatCoordinator_maybeStopBpf},
+         (void*)com_android_server_connectivity_ClatCoordinator_stopClatd},
 };
 
 int register_android_server_connectivity_ClatCoordinator(JNIEnv* env) {

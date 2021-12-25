@@ -179,11 +179,11 @@ public class ClatCoordinator {
         }
 
         /**
-         * Maybe stop bpf.
+         * Stop clatd.
          */
-        public void maybeStopBpf(String iface, String pfx96, String v4, String v6, int pid)
+        public void stopClatd(String iface, String pfx96, String v4, String v6, int pid)
                 throws IOException {
-            native_maybeStopBpf(iface, pfx96, v4, v6, pid);
+            native_stopClatd(iface, pfx96, v4, v6, pid);
         }
     }
 
@@ -349,8 +349,12 @@ public class ClatCoordinator {
      * Stop clatd
      */
     public void clatStop() throws IOException {
-        mDeps.maybeStopBpf(mIface, mNat64Prefix, mXlatLocalAddress4, mXlatLocalAddress6,
-                mPid /* unused */);
+        if (mPid == INVALID_PID) {
+            throw new IOException("Clatd has not started");
+        }
+        Log.i(TAG, "Stopping clatd pid=" + mPid + " on " + mIface);
+
+        mDeps.stopClatd(mIface, mNat64Prefix, mXlatLocalAddress4, mXlatLocalAddress6, mPid);
         // TODO: remove setIptablesDropRule
 
         Log.i(TAG, "clatd on " + mIface + " stopped");
@@ -359,6 +363,7 @@ public class ClatCoordinator {
         mNat64Prefix = null;
         mXlatLocalAddress4 = null;
         mXlatLocalAddress6 = null;
+        mPid = INVALID_PID;
     }
 
     private static native String native_selectIpv4Address(String v4addr, int prefixlen)
@@ -377,6 +382,6 @@ public class ClatCoordinator {
     private static native int native_startClatd(FileDescriptor tunfd, FileDescriptor readsock6,
             FileDescriptor writesock6, String iface, String pfx96, String v4, String v6)
             throws IOException;
-    private static native void native_maybeStopBpf(String iface, String pfx96, String v4,
-            String v6, int pid) throws IOException;
+    private static native void native_stopClatd(String iface, String pfx96, String v4, String v6,
+            int pid) throws IOException;
 }
