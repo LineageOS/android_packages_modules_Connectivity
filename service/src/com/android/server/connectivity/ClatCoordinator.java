@@ -121,6 +121,13 @@ public class ClatCoordinator {
                 throws IOException {
             return detectMtu(platSubnet, platSuffix, mark);
         }
+
+        /**
+         * Open packet socket.
+         */
+        public int jniOpenPacketSocket() throws IOException {
+            return openPacketSocket();
+        }
     }
 
     @VisibleForTesting
@@ -221,6 +228,19 @@ public class ClatCoordinator {
                     + ifConfig.prefixLength + " failed on " + ifConfig.ifName + ": " + e);
         }
 
+        // [4] Open and configure local 464xlat read/write sockets.
+        // Opens a packet socket to receive IPv6 packets in clatd.
+        final ParcelFileDescriptor readSock6;
+        try {
+            // Use a JNI call to get native file descriptor instead of Os.socket() because we would
+            // like to use ParcelFileDescriptor to close file descriptor automatically. But ctor
+            // ParcelFileDescriptor(FileDescriptor fd) is a @hide function. Need to use native file
+            // descriptor to initialize ParcelFileDescriptor object instead.
+            readSock6 = mDeps.adoptFd(mDeps.jniOpenPacketSocket());
+        } catch (IOException e) {
+            throw new IOException("Open packet socket failed: " + e);
+        }
+
         // TODO: start clatd and returns local xlat464 v6 address.
         return null;
     }
@@ -232,4 +252,5 @@ public class ClatCoordinator {
     private static native int createTunInterface(String tuniface) throws IOException;
     private static native int detectMtu(String platSubnet, int platSuffix, int mark)
             throws IOException;
+    private static native int openPacketSocket() throws IOException;
 }

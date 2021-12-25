@@ -27,6 +27,10 @@
 #include "nativehelper/scoped_utf_chars.h"
 
 namespace android {
+static void throwIOException(JNIEnv* env, const char* msg, int error) {
+    jniThrowExceptionFmt(env, "java/io/IOException", "%s: %s", msg, strerror(error));
+}
+
 jstring com_android_server_connectivity_ClatCoordinator_selectIpv4Address(JNIEnv* env,
                                                                           jobject clazz,
                                                                           jstring v4addr,
@@ -145,6 +149,18 @@ static jint com_android_server_connectivity_ClatCoordinator_detectMtu(JNIEnv* en
     return ret;
 }
 
+static jint com_android_server_connectivity_ClatCoordinator_openPacketSocket(JNIEnv* env,
+                                                                              jobject clazz) {
+    // Will eventually be bound to htons(ETH_P_IPV6) protocol,
+    // but only after appropriate bpf filter is attached.
+    int sock = socket(AF_PACKET, SOCK_DGRAM | SOCK_CLOEXEC, 0);
+    if (sock < 0) {
+        throwIOException(env, "packet socket failed", errno);
+        return -1;
+    }
+    return sock;
+}
+
 /*
  * JNI registration.
  */
@@ -159,6 +175,8 @@ static const JNINativeMethod gMethods[] = {
          (void*)com_android_server_connectivity_ClatCoordinator_createTunInterface},
         {"detectMtu", "(Ljava/lang/String;II)I",
          (void*)com_android_server_connectivity_ClatCoordinator_detectMtu},
+        {"openPacketSocket", "()I",
+         (void*)com_android_server_connectivity_ClatCoordinator_openPacketSocket},
 };
 
 int register_android_server_connectivity_ClatCoordinator(JNIEnv* env) {
