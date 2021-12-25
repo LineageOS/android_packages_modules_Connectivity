@@ -66,6 +66,15 @@ public class ClatCoordinator {
                 throws IOException {
             return selectIpv4Address(v4addr, prefixlen);
         }
+
+        /**
+         * Generate a checksum-neutral IID.
+         */
+        @NonNull
+        public String jniGenerateIpv6Address(@NonNull String iface, @NonNull String v4,
+                @NonNull String prefix64) throws IOException {
+            return generateIpv6Address(iface, v4, prefix64);
+        }
     }
 
     public ClatCoordinator(@NonNull Dependencies deps) {
@@ -91,10 +100,21 @@ public class ClatCoordinator {
             throw new IOException("no IPv4 addresses were available for clat: " + e);
         }
 
+        // [2] Generate a checksum-neutral IID.
+        final String pfx96 = nat64Prefix.getAddress().getHostAddress();
+        final String v6;
+        try {
+            v6 = mDeps.jniGenerateIpv6Address(iface, v4, pfx96);
+        } catch (IOException e) {
+            throw new IOException("no IPv6 addresses were available for clat: " + e);
+        }
+
         // TODO: start clatd and returns local xlat464 v6 address.
         return null;
     }
 
     private static native String selectIpv4Address(String v4addr, int prefixlen)
+            throws IOException;
+    private static native String generateIpv6Address(String iface, String v4, String prefix64)
             throws IOException;
 }

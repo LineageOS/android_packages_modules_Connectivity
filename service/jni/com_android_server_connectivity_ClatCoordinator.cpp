@@ -52,6 +52,46 @@ jstring com_android_server_connectivity_ClatCoordinator_selectIpv4Address(JNIEnv
     return env->NewStringUTF(addrstr);
 }
 
+// Picks a random interface ID that is checksum neutral with the IPv4 address and the NAT64 prefix.
+jstring com_android_server_connectivity_ClatCoordinator_generateIpv6Address(
+        JNIEnv* env, jobject clazz, jstring ifaceStr, jstring v4Str, jstring prefix64Str) {
+    ScopedUtfChars iface(env, ifaceStr);
+    ScopedUtfChars addr4(env, v4Str);
+    ScopedUtfChars prefix64(env, prefix64Str);
+
+    if (iface.c_str() == nullptr) {
+        jniThrowExceptionFmt(env, "java/io/IOException", "Invalid null interface name");
+        return nullptr;
+    }
+
+    in_addr v4;
+    if (inet_pton(AF_INET, addr4.c_str(), &v4) != 1) {
+        jniThrowExceptionFmt(env, "java/io/IOException", "Invalid clat v4 address %s",
+                             addr4.c_str());
+        return nullptr;
+    }
+
+    in6_addr nat64Prefix;
+    if (inet_pton(AF_INET6, prefix64.c_str(), &nat64Prefix) != 1) {
+        jniThrowExceptionFmt(env, "java/io/IOException", "Invalid prefix %s", prefix64.c_str());
+        return nullptr;
+    }
+
+    in6_addr v6;
+    if (net::clat::generateIpv6Address(iface.c_str(), v4, nat64Prefix, &v6)) {
+        jniThrowExceptionFmt(env, "java/io/IOException",
+                             "Unable to find global source address on %s for %s", iface.c_str(),
+                             prefix64.c_str());
+        return nullptr;
+    }
+
+    char addrstr[INET6_ADDRSTRLEN];
+    if (!inet_ntop(AF_INET6, (void*)&v6, addrstr, sizeof(addrstr))) {
+        return nullptr;
+    }
+    return env->NewStringUTF(addrstr);
+}
+
 /*
  * JNI registration.
  */
@@ -59,6 +99,9 @@ static const JNINativeMethod gMethods[] = {
         /* name, signature, funcPtr */
         {"selectIpv4Address", "(Ljava/lang/String;I)Ljava/lang/String;",
          (void*)com_android_server_connectivity_ClatCoordinator_selectIpv4Address},
+        {"generateIpv6Address",
+         "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;",
+         (void*)com_android_server_connectivity_ClatCoordinator_generateIpv6Address},
 };
 
 int register_android_server_connectivity_ClatCoordinator(JNIEnv* env) {
