@@ -24,7 +24,7 @@ import android.content.Context;
 import android.net.IEthernetServiceListener;
 import android.net.INetd;
 import android.net.ITetheredInterfaceCallback;
-import android.net.InterfaceConfiguration;
+import android.net.InterfaceConfigurationParcel;
 import android.net.IpConfiguration;
 import android.net.IpConfiguration.IpAssignment;
 import android.net.IpConfiguration.ProxySettings;
@@ -33,19 +33,18 @@ import android.net.NetworkCapabilities;
 import android.net.StaticIpConfiguration;
 import android.os.Handler;
 import android.os.IBinder;
-import android.os.INetworkManagementService;
 import android.os.RemoteCallbackList;
 import android.os.RemoteException;
-import android.os.ServiceManager;
+import android.os.ServiceSpecificException;
 import android.text.TextUtils;
 import android.util.ArrayMap;
 import android.util.Log;
 
 import com.android.internal.annotations.VisibleForTesting;
 import com.android.internal.util.IndentingPrintWriter;
+import com.android.net.module.util.BaseNetdUnsolicitedEventListener;
 import com.android.net.module.util.NetdUtils;
 import com.android.net.module.util.PermissionUtils;
-import com.android.server.net.BaseNetworkObserver;
 
 import java.io.FileDescriptor;
 import java.net.InetAddress;
@@ -72,8 +71,8 @@ final class EthernetTracker {
     private static final int INTERFACE_MODE_CLIENT = 1;
     private static final int INTERFACE_MODE_SERVER = 2;
 
-    private final static String TAG = EthernetTracker.class.getSimpleName();
-    private final static boolean DBG = EthernetNetworkFactory.DBG;
+    private static final String TAG = EthernetTracker.class.getSimpleName();
+    private static final boolean DBG = EthernetNetworkFactory.DBG;
 
     private static final String TEST_IFACE_REGEXP = TEST_TAP_PREFIX + "\\d+";
 
@@ -91,7 +90,6 @@ final class EthernetTracker {
             new ConcurrentHashMap<>();
 
     private final Context mContext;
-    private final INetworkManagementService mNMService;
     private final INetd mNetd;
     private final Handler mHandler;
     private final EthernetNetworkFactory mFactory;
@@ -109,7 +107,8 @@ final class EthernetTracker {
     private boolean mTetheredInterfaceWasAvailable = false;
     private volatile IpConfiguration mIpConfigForDefaultInterface;
 
-    private class TetheredInterfaceRequestList extends RemoteCallbackList<ITetheredInterfaceCallback> {
+    private class TetheredInterfaceRequestList extends
+            RemoteCallbackList<ITetheredInterfaceCallback> {
         @Override
         public void onCallbackDied(ITetheredInterfaceCallback cb, Object cookie) {
             mHandler.post(EthernetTracker.this::maybeUntetherDefaultInterface);
@@ -121,8 +120,6 @@ final class EthernetTracker {
         mHandler = handler;
 
         // The services we use.
-        IBinder b = ServiceManager.getService(Context.NETWORKMANAGEMENT_SERVICE);
-        mNMService = INetworkManagementService.Stub.asInterface(b);
         mNetd = INetd.Stub.asInterface(
                 (IBinder) context.getSystemService(Context.NETD_SERVICE));
         Objects.requireNonNull(mNetd, "could not get netd instance");
@@ -155,8 +152,9 @@ final class EthernetTracker {
         }
 
         try {
-            mNMService.registerObserver(new InterfaceObserver());
-        } catch (RemoteException e) {
+            PermissionUtils.enforceNetworkStackPermission(mContext);
+            mNetd.registerUnsolicitedEventListener(new InterfaceObserver());
+        } catch (RemoteException | ServiceSpecificException e) {
             Log.e(TAG, "Could not register InterfaceObserver " + e);
         }
 
@@ -286,24 +284,24 @@ final class EthernetTracker {
     }
 
     private void addInterface(String iface) {
-        InterfaceConfiguration config = null;
+        InterfaceConfigurationParcel config = null;
         // Bring up the interface so we get link status indications.
         try {
             PermissionUtils.enforceNetworkStackPermission(mContext);
             NetdUtils.setInterfaceUp(mNetd, iface);
-            config = mNMService.getInterfaceConfig(iface);
-        } catch (RemoteException | IllegalStateException e) {
+            config = NetdUtils.getInterfaceConfigParcel(mNetd, iface);
+        } catch (IllegalStateException e) {
             // Either the system is crashing or the interface has disappeared. Just ignore the
             // error; we haven't modified any state because we only do that if our calls succeed.
             Log.e(TAG, "Error upping interface " + iface, e);
         }
 
         if (config == null) {
-            Log.e(TAG, "Null interface config for " + iface + ". Bailing out.");
+            Log.e(TAG, "Null interface config parcelable for " + iface + ". Bailing out.");
             return;
         }
 
-        final String hwAddress = config.getHardwareAddress();
+        final String hwAddress = config.hwAddr;
 
         NetworkCapabilities nc = mNetworkCapabilities.get(iface);
         if (nc == null) {
@@ -331,7 +329,7 @@ final class EthernetTracker {
         // Note: if the interface already has link (e.g., if we crashed and got
         // restarted while it was running), we need to fake a link up notification so we
         // start configuring it.
-        if (config.hasFlag("running")) {
+        if (NetdUtils.hasFlag(config, "running")) {
             updateInterfaceState(iface, true);
         }
     }
@@ -408,20 +406,19 @@ final class EthernetTracker {
 
     private void trackAvailableInterfaces() {
         try {
-            final String[] ifaces = mNMService.listInterfaces();
+            final String[] ifaces = mNetd.interfaceGetList();
             for (String iface : ifaces) {
                 maybeTrackInterface(iface);
             }
-        } catch (RemoteException | IllegalStateException e) {
+        } catch (RemoteException | ServiceSpecificException e) {
             Log.e(TAG, "Could not get list of interfaces " + e);
         }
     }
 
-
-    private class InterfaceObserver extends BaseNetworkObserver {
+    private class InterfaceObserver extends BaseNetdUnsolicitedEventListener {
 
         @Override
-        public void interfaceLinkStateChanged(String iface, boolean up) {
+        public void onInterfaceLinkStateChanged(String iface, boolean up) {
             if (DBG) {
                 Log.i(TAG, "interfaceLinkStateChanged, iface: " + iface + ", up: " + up);
             }
@@ -429,12 +426,12 @@ final class EthernetTracker {
         }
 
         @Override
-        public void interfaceAdded(String iface) {
+        public void onInterfaceAdded(String iface) {
             mHandler.post(() -> maybeTrackInterface(iface));
         }
 
         @Override
-        public void interfaceRemoved(String iface) {
+        public void onInterfaceRemoved(String iface) {
             mHandler.post(() -> stopTrackingInterface(iface));
         }
     }
@@ -484,9 +481,9 @@ final class EthernetTracker {
                 .addCapability(NetworkCapabilities.NET_CAPABILITY_NOT_VCN_MANAGED);
 
         if (isTestIface) {
-                builder.addTransportType(NetworkCapabilities.TRANSPORT_TEST);
+            builder.addTransportType(NetworkCapabilities.TRANSPORT_TEST);
         } else {
-                builder.addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET);
+            builder.addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET);
         }
 
         return builder.build();
