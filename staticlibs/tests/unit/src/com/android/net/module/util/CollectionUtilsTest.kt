@@ -77,4 +77,13 @@ class CollectionUtilsTest {
         assertFalse(CollectionUtils.contains(arrayOf("A", "B", "C"), "D"))
         assertFalse(CollectionUtils.contains(null, "A"))
     }
+
+    @Test
+    fun testTotal() {
+        assertEquals(10, CollectionUtils.total(longArrayOf(3, 6, 1)))
+        assertEquals(10, CollectionUtils.total(longArrayOf(6, 1, 3)))
+        assertEquals(10, CollectionUtils.total(longArrayOf(1, 3, 6)))
+        assertEquals(3, CollectionUtils.total(longArrayOf(1, 1, 1)))
+        assertEquals(0, CollectionUtils.total(null))
+    }
 }
