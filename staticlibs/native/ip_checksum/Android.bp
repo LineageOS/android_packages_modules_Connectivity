@@ -37,4 +37,10 @@ cc_library_static {
     //
     // TODO: delete libnetutils from the VNDK in T, and remove this.
     vendor_available: true,
+
+    min_sdk_version: "30",
+    apex_available: [
+        "com.android.tethering",
+        "//apex_available:platform",
+    ],
 }
