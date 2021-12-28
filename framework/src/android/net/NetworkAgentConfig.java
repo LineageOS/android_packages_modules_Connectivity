@@ -232,6 +232,20 @@ public final class NetworkAgentConfig implements Parcelable {
         return mLegacyExtraInfo;
     }
 
+    /**
+     * If the {@link Network} is a VPN, whether the local traffic is exempted from the VPN.
+     * @hide
+     */
+    public boolean excludeLocalRouteVpn = false;
+
+    /**
+     * @return whether local traffic is excluded from the VPN network.
+     * @hide
+     */
+    public boolean getExcludeLocalRouteVpn() {
+        return excludeLocalRouteVpn;
+    }
+
     /** @hide */
     public NetworkAgentConfig() {
     }
@@ -251,6 +265,7 @@ public final class NetworkAgentConfig implements Parcelable {
             legacySubType = nac.legacySubType;
             legacySubTypeName = nac.legacySubTypeName;
             mLegacyExtraInfo = nac.mLegacyExtraInfo;
+            excludeLocalRouteVpn = nac.excludeLocalRouteVpn;
         }
     }
 
@@ -407,6 +422,17 @@ public final class NetworkAgentConfig implements Parcelable {
         }
 
         /**
+         * Sets whether the local traffic is exempted from VPN.
+         *
+         * @return this builder, to facilitate chaining.
+         * @hide TODO(184750836): Unhide once the implementation is completed.
+         */
+        public Builder setExcludeLocalRoutesVpn(boolean excludeLocalRoutes) {
+            mConfig.excludeLocalRouteVpn = excludeLocalRoutes;
+            return this;
+        }
+
+        /**
          * Returns the constructed {@link NetworkAgentConfig} object.
          */
         @NonNull
@@ -429,14 +455,15 @@ public final class NetworkAgentConfig implements Parcelable {
                 && legacyType == that.legacyType
                 && Objects.equals(subscriberId, that.subscriberId)
                 && Objects.equals(legacyTypeName, that.legacyTypeName)
-                && Objects.equals(mLegacyExtraInfo, that.mLegacyExtraInfo);
+                && Objects.equals(mLegacyExtraInfo, that.mLegacyExtraInfo)
+                && excludeLocalRouteVpn == that.excludeLocalRouteVpn;
     }
 
     @Override
     public int hashCode() {
         return Objects.hash(allowBypass, explicitlySelected, acceptUnvalidated,
                 acceptPartialConnectivity, provisioningNotificationDisabled, subscriberId,
-                skip464xlat, legacyType, legacyTypeName, mLegacyExtraInfo);
+                skip464xlat, legacyType, legacyTypeName, mLegacyExtraInfo, excludeLocalRouteVpn);
     }
 
     @Override
@@ -453,6 +480,7 @@ public final class NetworkAgentConfig implements Parcelable {
                 + ", hasShownBroken = " + hasShownBroken
                 + ", legacyTypeName = '" + legacyTypeName + '\''
                 + ", legacyExtraInfo = '" + mLegacyExtraInfo + '\''
+                + ", excludeLocalRouteVpn = '" + excludeLocalRouteVpn + '\''
                 + "}";
     }
 
@@ -475,6 +503,7 @@ public final class NetworkAgentConfig implements Parcelable {
         out.writeInt(legacySubType);
         out.writeString(legacySubTypeName);
         out.writeString(mLegacyExtraInfo);
+        out.writeInt(excludeLocalRouteVpn ? 1 : 0);
     }
 
     public static final @NonNull Creator<NetworkAgentConfig> CREATOR =
@@ -494,6 +523,7 @@ public final class NetworkAgentConfig implements Parcelable {
             networkAgentConfig.legacySubType = in.readInt();
             networkAgentConfig.legacySubTypeName = in.readString();
             networkAgentConfig.mLegacyExtraInfo = in.readString();
+            networkAgentConfig.excludeLocalRouteVpn = in.readInt() != 0;
             return networkAgentConfig;
         }
 
