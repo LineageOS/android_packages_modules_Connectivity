@@ -17,17 +17,24 @@
 package com.android.server.ethernet;
 
 import android.content.Context;
+import android.os.Handler;
+import android.os.HandlerThread;
 import android.util.Log;
 import com.android.server.SystemService;
 
 public final class EthernetService extends SystemService {
 
     private static final String TAG = "EthernetService";
-    final EthernetServiceImpl mImpl;
+    private static final String THREAD_NAME = "EthernetServiceThread";
+    private final EthernetServiceImpl mImpl;
 
     public EthernetService(Context context) {
         super(context);
-        mImpl = new EthernetServiceImpl(context);
+        final HandlerThread handlerThread = new HandlerThread(THREAD_NAME);
+        handlerThread.start();
+        mImpl = new EthernetServiceImpl(
+                    context, handlerThread.getThreadHandler(),
+                    new EthernetTracker(context, handlerThread.getThreadHandler()));
     }
 
     @Override

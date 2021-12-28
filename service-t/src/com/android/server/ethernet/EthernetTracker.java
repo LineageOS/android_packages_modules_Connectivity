@@ -18,6 +18,8 @@ package com.android.server.ethernet;
 
 import static android.net.TestNetworkManager.TEST_TAP_PREFIX;
 
+import static com.android.internal.annotations.VisibleForTesting.Visibility.PACKAGE;
+
 import android.annotation.NonNull;
 import android.annotation.Nullable;
 import android.content.Context;
@@ -67,7 +69,8 @@ import java.util.concurrent.ConcurrentHashMap;
  *
  * <p>All public or package private methods must be thread-safe unless stated otherwise.
  */
-final class EthernetTracker {
+@VisibleForTesting(visibility = PACKAGE)
+public class EthernetTracker {
     private static final int INTERFACE_MODE_CLIENT = 1;
     private static final int INTERFACE_MODE_SERVER = 2;
 
@@ -138,10 +141,10 @@ final class EthernetTracker {
 
         NetworkCapabilities nc = createNetworkCapabilities(true /* clear default capabilities */);
         mFactory = new EthernetNetworkFactory(handler, context, nc);
-        mFactory.register();
     }
 
     void start() {
+        mFactory.register();
         mConfigStore.read();
 
         // Default interface is just the first one we want to track.
@@ -176,7 +179,8 @@ final class EthernetTracker {
         return mIpConfigurations.get(iface);
     }
 
-    boolean isTrackingInterface(String iface) {
+    @VisibleForTesting(visibility = PACKAGE)
+    protected boolean isTrackingInterface(String iface) {
         return mFactory.hasInterface(iface);
     }
 
