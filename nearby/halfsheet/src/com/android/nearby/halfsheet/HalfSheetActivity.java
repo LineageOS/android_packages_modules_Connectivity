@@ -16,33 +16,295 @@
 
 package com.android.nearby.halfsheet;
 
-import static com.android.server.nearby.fastpair.Constant.EXTRA_BINDER;
-import static com.android.server.nearby.fastpair.Constant.EXTRA_BUNDLE;
+import static com.android.nearby.halfsheet.fragment.DevicePairingFragment.APP_LAUNCH_FRAGMENT_TYPE;
+import static com.android.server.nearby.common.bluetooth.fastpair.FastPairConstants.EXTRA_MODEL_ID;
+import static com.android.server.nearby.common.fastpair.service.UserActionHandlerBase.EXTRA_MAC_ADDRESS;
+import static com.android.server.nearby.fastpair.Constant.ACTION_FAST_PAIR_HALF_SHEET_BAN_STATE_RESET;
+import static com.android.server.nearby.fastpair.Constant.ACTION_FAST_PAIR_HALF_SHEET_CANCEL;
+import static com.android.server.nearby.fastpair.Constant.DEVICE_PAIRING_FRAGMENT_TYPE;
+import static com.android.server.nearby.fastpair.Constant.EXTRA_HALF_SHEET_INFO;
+import static com.android.server.nearby.fastpair.Constant.EXTRA_HALF_SHEET_TYPE;
 
-import android.app.Activity;
-import android.nearby.IFastPairHalfSheetCallback;
+import android.content.Context;
+import android.content.Intent;
 import android.os.Bundle;
-import android.os.RemoteException;
+import android.util.DisplayMetrics;
 import android.util.Log;
+import android.widget.TextView;
 
+import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.annotation.VisibleForTesting;
+import androidx.fragment.app.FragmentActivity;
+
+import com.android.nearby.halfsheet.fragment.DevicePairingFragment;
+import com.android.nearby.halfsheet.fragment.HalfSheetModuleFragment;
+import com.android.nearby.halfsheet.utils.BroadcastUtils;
+
+import com.google.protobuf.InvalidProtocolBufferException;
+
+import java.util.Locale;
+
+import service.proto.Cache;
 
 /**
  * Half sheet activity to show pairing ux.
  */
-public class HalfSheetActivity extends Activity {
+public class HalfSheetActivity extends FragmentActivity {
+
+    public static final String EXTRA_HALF_SHEET_PENDING_INTENT_CALL_BACK =
+            "com.android.nearby.halfsheet.EXTRA_HALF_SHEET_PENDING_INTENT_CALL_BACK";
+    public static final String EXTRA_HALF_SHEET_PACKAGE_NAME =
+            "com.android.nearby.halfsheet.EXTRA_HALF_SHEET_PACKAGE_NAME";
+    public static final String EXTRA_HALF_SHEET_CONTENT =
+            "com.android.nearby.halfsheet.HALF_SHEET_CONTENT";
+    public static final String EXTRA_TITLE =
+            "com.android.nearby.halfsheet.HALF_SHEET_TITLE";
+    public static final String EXTRA_DESCRIPTION =
+            "com.android.nearby.halfsheet.HALF_SHEET_DESCRIPTION";
+    public static final String EXTRA_HALF_SHEET_ID =
+            "com.android.nearby.halfsheet.HALF_SHEET_ID";
+    public static final String EXTRA_HALF_SHEET_IS_RETROACTIVE =
+            "com.android.nearby.halfsheet.HALF_SHEET_IS_RETROACTIVE";
+    public static final String EXTRA_HALF_SHEET_IS_SUBSEQUENT_PAIR =
+            "com.android.nearby.halfsheet.HALF_SHEET_IS_SUBSEQUENT_PAIR";
+    public static final String EXTRA_HALF_SHEET_PAIRING_RESURFACE =
+            "com.android.nearby.halfsheet.EXTRA_HALF_SHEET_PAIRING_RESURFACE";
+    public static final String ACTION_HALF_SHEET_FOREGROUND_STATE =
+            "com.android.nearby.halfsheet.ACTION_HALF_SHEET_FOREGROUND_STATE";
+    public static final String ACTION_HALF_SHEET_BAN_ALL_ITEM =
+            "com.android.nearby.halfsheet.ACTION_HALF_SHEET_BAN_ALL_ITEM";
+    public static final String ACTION_HALF_SHEET_APP_LAUNCH_CLICKED =
+            "com.android.nearby.halfsheet.ACTION_HALF_SHEET_APP_LAUNCH_CLICKED";
+    public static final String ACTION_HALF_SHEET_WEAR_OS_CLICKED =
+            "com.android.nearby.halfsheet.ACTION_HALF_SHEET_WEAR_OS_CLICKED";
+    public static final String ACTION_HALF_SHEET_USER_COMPLETE_CONFIRMATION =
+            "com.android.nearby.halfsheet.ACTION_HALF_SHEET_USER_COMPLETE_CONFIRMATION";
+    public static final String ACTION_FAST_PAIR_HANDLE_CHIP_DEVICE =
+            "com.android.nearby.halfsheet.ACTION_FAST_PAIR_HANDLE_CHIP_DEVICE";
+    // Intent extra contains another intent that will trigger DiscoveryChimeraService to upload
+    // device
+    // information to the cloud.
+    public static final String EXTRA_HALF_SHEET_CLOUD_SYNC_INTENT =
+            "com.android.nearby.halfsheet.HALF_SHEET_CLOUD_SYNC_INTENT";
+    // Intent extra contains the user gmail name eg. testaccount@gmail.com.
+    public static final String EXTRA_HALF_SHEET_ACCOUNT_NAME =
+            "com.android.nearby.halfsheet.HALF_SHEET_ACCOUNT_NAME";
+    public static final String EXTRA_HALF_SHEET_FOREGROUND =
+            "com.android.nearby.halfsheet.EXTRA_HALF_SHEET_FOREGROUND";
+    public static final String EXTRA_USER_CONSENT_SYNC_CONTACTS =
+            "com.android.nearby.halfsheet.EXTRA_USER_CONSENT_SYNC_CONTACTS";
+    public static final String EXTRA_USER_CONSENT_SYNC_SMS =
+            "com.android.nearby.halfsheet.EXTRA_USER_CONSENT_SYNC_SMS";
+    public static final String EXTRA_USER_CONFIRM_PASSKEY =
+            "com.android.nearby.halfsheet.EXTRA_USER_CONFIRM_PASSKEY";
+    public static final String CLASS_NAME =
+            "com.android.nearby.halfsheet.HalfSheetActivity";
+    public static final String ACTION_HALF_SHEET_STATUS_CHANGE =
+            "com.android.nearby.halfsheet.ACTION_HALF_SHEET_STATUS_CHANGE";
+    public static final String FINISHED_STATE = "FINISHED_STATE";
+    public static final String EXTRA_CLASSIC_MAC_ADDRESS = "EXTRA_CLASSIC_MAC_ADDRESS";
+    public static final String ARG_FRAGMENT_STATE = "ARG_FRAGMENT_STATE";
+    @Nullable
+    private HalfSheetModuleFragment mHalfSheetModuleFragment;
+    @Nullable
+    private Cache.ScanFastPairStoreItem mScanFastPairStoreItem;
+
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_half_sheet);
-        Bundle bundle = getIntent().getBundleExtra(EXTRA_BUNDLE);
-        // Any app that has the component name can start the activity so the binder can't be
-        // trusted.
-        try {
-            IFastPairHalfSheetCallback.Stub.asInterface(bundle.getBinder(EXTRA_BINDER))
-                    .onHalfSheetConnectionConfirm();
-        } catch (RemoteException e) {
-            Log.d("FastPairHalfSheet", "invoke callback fall");
+        byte[] infoArray = getIntent().getByteArrayExtra(EXTRA_HALF_SHEET_INFO);
+        String fragmentType = getIntent().getStringExtra(EXTRA_HALF_SHEET_TYPE);
+        if (infoArray == null || fragmentType == null) {
+            Log.d(
+                    "HalfSheetActivity",
+                    "exit flag off or do not have enough half sheet information.");
+            finish();
+            return;
         }
+
+        switch (fragmentType) {
+            case DEVICE_PAIRING_FRAGMENT_TYPE:
+                mHalfSheetModuleFragment = DevicePairingFragment.newInstance(getIntent(),
+                        savedInstanceState);
+                if (mHalfSheetModuleFragment == null) {
+                    Log.d("HalfSheetActivity", "device pairing fragment has error.");
+                    finish();
+                    return;
+                }
+                break;
+            case APP_LAUNCH_FRAGMENT_TYPE:
+                // currentFragment = AppLaunchFragment.newInstance(getIntent());
+                if (mHalfSheetModuleFragment == null) {
+                    Log.v("HalfSheetActivity", "app launch fragment has error.");
+                    finish();
+                    return;
+                }
+                break;
+            default:
+                Log.w("HalfSheetActivity", "there is no valid type for half sheet");
+                finish();
+                return;
+        }
+        if (mHalfSheetModuleFragment != null) {
+            getSupportFragmentManager()
+                    .beginTransaction()
+                    .replace(R.id.fragment_container, mHalfSheetModuleFragment)
+                    .commit();
+        }
+        setContentView(R.layout.fast_pair_half_sheet);
+
+        // If the user taps on the background, then close the activity.
+        // Unless they tap on the card itself, then ignore the tap.
+        findViewById(R.id.background).setOnClickListener(v -> onCancelClicked());
+        findViewById(R.id.card)
+                .setOnClickListener(
+                        v -> Log.v("HalfSheetActivity", "card view is clicked noop"));
+        try {
+            mScanFastPairStoreItem =
+                    Cache.ScanFastPairStoreItem.parseFrom(infoArray);
+        } catch (InvalidProtocolBufferException e) {
+            Log.w(
+                    "HalfSheetActivity", "error happens when pass info to half sheet");
+        }
+    }
+
+    @Override
+    protected void onStart() {
+        super.onStart();
+        BroadcastUtils.sendBroadcast(
+                this,
+                new Intent(ACTION_HALF_SHEET_FOREGROUND_STATE)
+                        .putExtra(EXTRA_HALF_SHEET_FOREGROUND, true));
+    }
+
+    @Override
+    protected void onSaveInstanceState(@NonNull Bundle savedInstanceState) {
+        super.onSaveInstanceState(savedInstanceState);
+        if (mHalfSheetModuleFragment != null) {
+            mHalfSheetModuleFragment.onSaveInstanceState(savedInstanceState);
+        }
+    }
+
+    @Override
+    public void onBackPressed() {
+        super.onBackPressed();
+        sendHalfSheetCancelBroadcast();
+    }
+
+    @Override
+    protected void onUserLeaveHint() {
+        super.onUserLeaveHint();
+        sendHalfSheetCancelBroadcast();
+    }
+
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        String fragmentType = getIntent().getStringExtra(EXTRA_HALF_SHEET_TYPE);
+        if (fragmentType == null) {
+            return;
+        }
+        if (fragmentType.equals(DEVICE_PAIRING_FRAGMENT_TYPE)
+                && intent.getExtras() != null
+                && intent.getByteArrayExtra(EXTRA_HALF_SHEET_INFO) != null) {
+            try {
+                Cache.ScanFastPairStoreItem testScanFastPairStoreItem =
+                        Cache.ScanFastPairStoreItem.parseFrom(
+                                intent.getByteArrayExtra(EXTRA_HALF_SHEET_INFO));
+                if (mScanFastPairStoreItem != null
+                        && !testScanFastPairStoreItem.getAddress().equals(
+                        mScanFastPairStoreItem.getAddress())
+                        && testScanFastPairStoreItem.getModelId().equals(
+                        mScanFastPairStoreItem.getModelId())) {
+                    Log.d("HalfSheetActivity", "possible factory reset happens");
+                    halfSheetStateChange();
+                }
+            } catch (InvalidProtocolBufferException | NullPointerException e) {
+                Log.w("HalfSheetActivity", "error happens when pass info to half sheet");
+            }
+        }
+    }
+
+    /** This function should be called when user click empty area and cancel button. */
+    public void onCancelClicked() {
+        sendHalfSheetCancelBroadcast();
+        finish();
+    }
+
+    /** Changes the half sheet foreground state to false. */
+    public void halfSheetStateChange() {
+        BroadcastUtils.sendBroadcast(
+                this,
+                new Intent(ACTION_HALF_SHEET_FOREGROUND_STATE)
+                        .putExtra(EXTRA_HALF_SHEET_FOREGROUND, false));
+        finish();
+    }
+
+    /**
+     * Change the half sheet ban state to active sometimes users leave half sheet to go to fast pair
+     * info page we do not want the behavior to be counted as dismiss.
+     */
+    public void sendBanStateResetBroadcast() {
+        if (mScanFastPairStoreItem != null) {
+            BroadcastUtils.sendBroadcast(
+                    this,
+                    new Intent(ACTION_FAST_PAIR_HALF_SHEET_BAN_STATE_RESET)
+                            .putExtra(EXTRA_MODEL_ID,
+                                    mScanFastPairStoreItem.getModelId().toLowerCase(Locale.ROOT)));
+        }
+    }
+
+    private void sendHalfSheetCancelBroadcast() {
+        BroadcastUtils.sendBroadcast(
+                this,
+                new Intent(ACTION_HALF_SHEET_FOREGROUND_STATE)
+                        .putExtra(EXTRA_HALF_SHEET_FOREGROUND, false));
+        if (mScanFastPairStoreItem != null) {
+            BroadcastUtils.sendBroadcast(
+                    this,
+                    new Intent(ACTION_FAST_PAIR_HALF_SHEET_CANCEL)
+                            .putExtra(EXTRA_MODEL_ID,
+                                    mScanFastPairStoreItem.getModelId().toLowerCase(Locale.ROOT))
+                            .putExtra(EXTRA_HALF_SHEET_TYPE,
+                                    getIntent().getStringExtra(EXTRA_HALF_SHEET_TYPE))
+                            .putExtra(
+                                    EXTRA_HALF_SHEET_IS_SUBSEQUENT_PAIR,
+                                    getIntent().getBooleanExtra(EXTRA_HALF_SHEET_IS_SUBSEQUENT_PAIR,
+                                            false))
+                            .putExtra(
+                                    EXTRA_HALF_SHEET_IS_RETROACTIVE,
+                                    getIntent().getBooleanExtra(EXTRA_HALF_SHEET_IS_RETROACTIVE,
+                                            false))
+                            .putExtra(EXTRA_MAC_ADDRESS, mScanFastPairStoreItem.getAddress()));
+        }
+    }
+
+    @Nullable
+    @VisibleForTesting
+    public HalfSheetModuleFragment getFragmentModel() {
+        return mHalfSheetModuleFragment;
+    }
+
+    @Override
+    public void setTitle(CharSequence title) {
+        super.setTitle(title);
+        TextView toolbarTitle = findViewById(R.id.toolbar_title);
+        toolbarTitle.setText(title);
+    }
+
+
+    /**
+     * This method converts dp unit to equivalent pixels, depending on device density.
+     *
+     * @param dp      A value in dp (density independent pixels) unit, which we need to convert into
+     *                pixels
+     * @param context Context to get resources and device specific display metrics
+     * @return A float value to represent px equivalent to dp depending on device density
+     */
+    private float convertDpToPixel(float dp, Context context) {
+        return dp
+                * ((float) context.getResources().getDisplayMetrics().densityDpi
+                / DisplayMetrics.DENSITY_DEFAULT);
     }
 }

@@ -14,11 +14,12 @@
 
 package android.nearby;
 
+import android.content.Intent;
 /**
   * Provides callback interface for halfsheet to send FastPair call back.
   *
   * {@hide}
   */
 interface IFastPairHalfSheetCallback {
-     void onHalfSheetConnectionConfirm();
+     void onHalfSheetConnectionConfirm(in Intent intent);
  }

@@ -27,6 +27,9 @@ filegroup {
     name: "nearby-service-string-res",
     srcs: [
         "java/**/Constant.java",
+        "java/**/UserActionHandlerBase.java",
+        "java/**/UserActionHandler.java",
+        "java/**/FastPairConstants.java",
     ],
 }
 
@@ -55,6 +58,7 @@ java_library {
     static_libs: [
         "androidx.annotation_annotation",
         "androidx.core_core",
+        "androidx.localbroadcastmanager_localbroadcastmanager",
         "guava",
         "libprotobuf-java-lite",
         "fast-pair-lite-protos",

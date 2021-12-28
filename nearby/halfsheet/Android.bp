@@ -30,7 +30,11 @@ java_defaults {
         "nearby-service-string",
       ],
     static_libs: [
-        "androidx.annotation_annotation"
+        "androidx.annotation_annotation",
+        "androidx.fragment_fragment",
+        "androidx-constraintlayout_constraintlayout",
+        "androidx.localbroadcastmanager_localbroadcastmanager",
+        "fast-pair-lite-protos",
     ],
     lint: { strict_updatability_linting: true }
 }
@@ -41,6 +45,9 @@ android_app {
     resource_dirs: ["res"],
     certificate: ":com.android.nearby.halfsheetcertificate",
     updatable: true,
+    static_libs: [
+        "com.google.android.material_material",
+    ],
     apex_available: ["com.android.nearby",],
 }
 

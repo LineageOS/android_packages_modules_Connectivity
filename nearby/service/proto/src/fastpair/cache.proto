@@ -304,3 +304,158 @@ enum NearbyType {
 
   reserved 5;
 }
+
+// A locally cached Fast Pair device associating an account key with the
+// bluetooth address of the device.
+message StoredFastPairItem {
+  // The device's public mac address.
+  string mac_address = 1;
+
+  // The account key written to the device.
+  bytes account_key = 2;
+
+  // When user need to update provider name, enable this value to trigger
+  // writing new name to provider.
+  bool need_to_update_provider_name = 3;
+
+  // The retry times to update name into provider.
+  int32 update_name_retries = 4;
+
+  // Latest firmware version from the server.
+  string latest_firmware_version = 5;
+
+  // The firmware version that is on the device.
+  string device_firmware_version = 6;
+
+  // The timestamp from the last time we fetched the firmware version from the
+  // device.
+  int64 last_check_firmware_timestamp_millis = 7;
+
+  // The timestamp from the last time we fetched the firmware version from
+  // server.
+  int64 last_server_query_timestamp_millis = 8;
+
+  // Only allows one bloom filter check process to create gatt connection and
+  // try to read the firmware version value.
+  bool can_read_firmware = 9;
+
+  // Device's model id.
+  string model_id = 10;
+
+  // Features that this Fast Pair device supports.
+  repeated FastPairFeature features = 11;
+
+  // Keeps the stored discovery item in local cache, we can have most
+  // information of fast pair device locally without through footprints, i.e. we
+  // can have most fast pair features locally.
+  StoredDiscoveryItem discovery_item = 12;
+
+  // When true, the latest uploaded event to FMA is connected. We use
+  // it as the previous ACL state when getting the BluetoothAdapter STATE_OFF to
+  // determine if need to upload the disconnect event to FMA.
+  bool fma_state_is_connected = 13;
+
+  // Device's buffer size range.
+  repeated BufferSizeRange buffer_size_range = 18;
+
+  // The additional account key if this device could be associated with multiple
+  // accounts. Notes that for this device, the account_key field is the basic
+  // one which will not be associated with the accounts.
+  repeated bytes additional_account_key = 19;
+
+  // Deprecated fields.
+  reserved 14, 15, 16, 17;
+}
+
+// Contains information about Fast Pair devices stored through our scanner.
+// Next ID: 29
+message ScanFastPairStoreItem {
+  // Device's model id.
+  string model_id = 1;
+
+  // Device's RSSI value
+  int32 rssi = 2;
+
+  // Device's tx power
+  int32 tx_power = 3;
+
+  // Bytes of item icon in PNG format displayed in Discovery item list.
+  bytes icon_png = 4;
+
+  // A FIFE URL of the item icon displayed in Discovery item list.
+  string icon_fife_url = 28;
+
+  // Device name like "Bose QC 35".
+  string device_name = 5;
+
+  // Client timestamp when user last saw Fast Pair device.
+  int64 last_observation_timestamp_millis = 6;
+
+  // Action url after user click the notification.
+  string action_url = 7;
+
+  // Device's bluetooth address.
+  string address = 8;
+
+  // The computed threshold rssi value that would trigger FastPair notifications
+  int32 threshold_rssi = 9;
+
+  // Populated with the contents of the bloom filter in the event that
+  // the scanned device is advertising a bloom filter instead of a model id
+  bytes bloom_filter = 10;
+
+  // Device name from the BLE scan record
+  string ble_device_name = 11;
+
+  // Strings used for the FastPair UI
+  FastPairStrings fast_pair_strings = 12;
+
+  // A key used to authenticate advertising device.
+  // See NearbyItem.authentication_public_key_secp256r1 for more information.
+  bytes anti_spoofing_public_key = 13;
+
+  // When true, Fast Pair will only create a bond with the device and not
+  // attempt to connect any profiles (for example, A2DP or HFP).
+  bool data_only_connection = 14;
+
+  // The type of the manufacturer (first party, third party, etc).
+  int32 manufacturer_type_num = 15;
+
+  // Additional images that are attached specifically for true wireless Fast
+  // Pair devices.
+  TrueWirelessHeadsetImages true_wireless_images = 16;
+
+  // When true, this device can support assistant function.
+  bool assistant_supported = 17;
+
+  // Optional, the name of the company producing this Fast Pair device.
+  string company_name = 18;
+
+  // Features supported by the Fast Pair device.
+  FastPairFeature features = 19;
+
+  // The interaction type that this scan should trigger
+  InteractionType interaction_type = 20;
+
+  // The copy of the advertisement bytes, used to pass along to other
+  // apps that use Fast Pair as the discovery vehicle.
+  bytes full_ble_record = 21;
+
+  // Companion app related information
+  CompanionAppDetails companion_detail = 22;
+
+  // Client timestamp when user first saw Fast Pair device.
+  int64 first_observation_timestamp_millis = 23;
+
+  // The type of the device (wearable, headphones, etc).
+  int32 device_type_num = 24;
+
+  // The type of notification (app launch smart setup, etc).
+  NotificationType notification_type = 25;
+
+  // The customized title.
+  string customized_title = 26;
+
+  // The customized description.
+  string customized_description = 27;
+}

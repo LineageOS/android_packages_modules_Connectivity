@@ -16,4 +16,9 @@
 
 <resources>
     <string name="app_name">Nearby HalfSheet Dialog</string>
+    <string name="common_done" description="After pairing process finish button text to dismiss halfsheet">Done</string>
+    <string name="common_save">Save</string>
+    <string name="common_connect" description="Button text to start connecting process">Connect</string>
+    <string name="fast_pair_app_launch_button" description="String on app launch half sheet button.">Set up</string>
+
 </resources>

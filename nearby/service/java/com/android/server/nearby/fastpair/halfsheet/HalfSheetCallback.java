@@ -16,15 +16,37 @@
 
 package com.android.server.nearby.fastpair.halfsheet;
 
+import android.content.Intent;
 import android.nearby.IFastPairHalfSheetCallback;
 import android.util.Log;
+
+import com.android.server.nearby.fastpair.FastPairController;
+
 
 /**
  * Callback to send ux action back to nearby service.
  */
-public class HalfSheetCallback  extends IFastPairHalfSheetCallback.Stub {
+public class HalfSheetCallback extends IFastPairHalfSheetCallback.Stub {
+    private FastPairController mFastPairController;
+
+    public HalfSheetCallback() {
+    }
+
+    /**
+     * Set function for Fast Pair controller.
+     */
+    public void setmFastPairController(FastPairController fastPairController) {
+        mFastPairController = fastPairController;
+    }
+
+    /**
+     * Half Sheet connection button clicked.
+     */
     @Override
-    public void onHalfSheetConnectionConfirm() {
+    public void onHalfSheetConnectionConfirm(Intent intent) {
         Log.d("FastPairHalfSheet", "Call back receiver");
+        if (mFastPairController != null) {
+            mFastPairController.pair(intent);
+        }
     }
 }

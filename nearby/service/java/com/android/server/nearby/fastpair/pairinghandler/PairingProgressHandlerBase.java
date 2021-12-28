@@ -76,7 +76,8 @@ public abstract class PairingProgressHandlerBase {
 
 
         Log.v("PairingHandler",
-                "PairingProgressHandler:Create %s for pairing");
+                "PairingProgressHandler:Create "
+                        + item.getMacAddress() + " for pairing");
         return pairingProgressHandlerBase;
     }
 
@@ -134,7 +135,7 @@ public abstract class PairingProgressHandlerBase {
      * <li>1, optIn footprint for initial pairing.
      * <li>2, write the device name to provider
      * <li>2.1, generate default personalized name for initial pairing or get the personalized name
-     *     from footprint for subsequent pairing.
+     * from footprint for subsequent pairing.
      * <li>2.2, set alias name for the bluetooth device.
      * <li>2.3, update the device name for connection to write into provider for initial pair.
      * <li>3, suppress battery notifications until oobe finishes.
@@ -180,7 +181,7 @@ public abstract class PairingProgressHandlerBase {
      */
     public void onPairingSuccess(String address) {
         Log.v("PairingHandler", "PairingProgressHandler:onPairingSuccess with address: "
-                        + maskBluetoothAddress(address));
+                + maskBluetoothAddress(address));
     }
 
     private static void optInFootprintsForInitialPairing(

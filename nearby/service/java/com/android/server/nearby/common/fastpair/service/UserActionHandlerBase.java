@@ -23,6 +23,7 @@ public class UserActionHandlerBase {
 
     public static final String EXTRA_ITEM_ID = PREFIX + "EXTRA_ITEM_ID";
     public static final String EXTRA_COMPANION_APP = ACTION_PREFIX + "EXTRA_COMPANION_APP";
+    public static final String EXTRA_MAC_ADDRESS = PREFIX + "EXTRA_MAC_ADDRESS";
 
 }
 

@@ -313,3 +313,17 @@ message ObservedDeviceStrings {
   string fast_pair_tv_connect_device_no_account_description = 24;
 }
 
+// The buffer size range of a Fast Pair devices support dynamic buffer size.
+message BufferSizeRange {
+  // The max buffer size in ms.
+  int32 max_size = 1;
+
+  // The min buffer size in ms.
+  int32 min_size = 2;
+
+  // The default buffer size in ms.
+  int32 default_size = 3;
+
+  // The codec of this buffer size range.
+  int32 codec = 4;
+}

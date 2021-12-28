@@ -16,8 +16,12 @@
 
 package com.android.server.nearby.fastpair;
 
+
+import static com.android.server.nearby.fastpair.Constant.DEVICE_PAIRING_FRAGMENT_TYPE;
 import static com.android.server.nearby.fastpair.Constant.EXTRA_BINDER;
 import static com.android.server.nearby.fastpair.Constant.EXTRA_BUNDLE;
+import static com.android.server.nearby.fastpair.Constant.EXTRA_HALF_SHEET_INFO;
+import static com.android.server.nearby.fastpair.Constant.EXTRA_HALF_SHEET_TYPE;
 
 import android.annotation.Nullable;
 import android.annotation.WorkerThread;
@@ -35,6 +39,7 @@ import android.nearby.NearbyDevice;
 import android.nearby.ScanCallback;
 import android.os.Bundle;
 import android.os.UserHandle;
+import android.util.Base64;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
@@ -58,6 +63,8 @@ import com.android.server.nearby.fastpair.halfsheet.HalfSheetCallback;
 import com.android.server.nearby.fastpair.pairinghandler.PairingProgressHandlerBase;
 import com.android.server.nearby.util.Environment;
 
+import com.google.protobuf.ByteString;
+
 import java.security.GeneralSecurityException;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
@@ -69,6 +76,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 
+import service.proto.Cache;
 import service.proto.Rpcs;
 
 /**
@@ -80,9 +88,12 @@ public class FastPairManager {
     private static final String ACTION_PREFIX = UserActionHandler.PREFIX;
     private static final int WAIT_FOR_UNLOCK_MILLIS = 5000;
     private static final String ACTIVITY_INTENT_ACTION = "android.nearby.SHOW_HALFSHEET";
-    /** A notification ID which should be dismissed*/
+    /** A notification ID which should be dismissed */
     public static final String EXTRA_NOTIFICATION_ID = ACTION_PREFIX + "EXTRA_NOTIFICATION_ID";
     public static final String ACTION_RESOURCES_APK = "android.nearby.SHOW_HALFSHEET";
+    // Temp action deleted when the scanner is ready
+    public static final String ACTION_START_PAIRING = "NEARBY_START_PAIRING";
+    public static final String EXTRA_ADDRESS = "ADDRESS";
 
     private static Executor sFastPairExecutor;
 
@@ -96,6 +107,17 @@ public class FastPairManager {
         public void onReceive(Context context, Intent intent) {
             if (intent.getAction().equals(Intent.ACTION_SCREEN_ON)) {
                 Log.d("FastPairService", " screen on");
+            } else if (intent.getAction().equals(ACTION_START_PAIRING)) {
+                String address = intent.getStringExtra(EXTRA_ADDRESS);
+                String testPublicKey =
+                        "E4kxROcAj2SPlqrxHgXOm_yF-XIMSS91pFrfmeLcxULWyn0nK8i52PPkoC4r"
+                                + "LKRM2kZzNgT8bhDwK5njJAjiOg";
+                showHalfSheet(Cache.ScanFastPairStoreItem.newBuilder().setAddress(address)
+                        .setAntiSpoofingPublicKey(ByteString.copyFrom(
+                                Base64.decode(testPublicKey, Base64.URL_SAFE
+                                        | Base64.NO_WRAP | Base64.NO_PADDING)))
+                        .build());
+                Log.d("FastPairService", "start pair " + address);
             } else {
                 Log.d("FastPairService", " screen off");
             }
@@ -128,12 +150,14 @@ public class FastPairManager {
 
         }
     };
+
     /**
      * Function called when nearby service start.
      */
     public void initiate() {
         mIntentFilter.addAction(Intent.ACTION_SCREEN_ON);
         mIntentFilter.addAction(Intent.ACTION_SCREEN_OFF);
+        mIntentFilter.addAction("NEARBY_START_PAIRING");
 
         mLocatorContextWrapper.getContext()
                 .registerReceiver(mScreenBroadcastReceiver, mIntentFilter);
@@ -228,7 +252,9 @@ public class FastPairManager {
                         item.getFastPairInformation().getDataOnlyConnection());
             }
             FastPairConnection connection = new FastPairDualConnection(
-                    context, item.getMacAddress(), prefsBuilder.build(), null);
+                    context, item.getMacAddress(),
+                    // Change to prefsBuilder.build when the api integration complete
+                    Preferences.builderFromGmsLog().build(), null);
             pairingProgressHandlerBase.onPairingSetupCompleted();
 
             FastPairConnection.SharedSecret sharedSecret;
@@ -239,7 +265,7 @@ public class FastPairManager {
                                         : item.getAuthenticationPublicKeySecp256R1());
 
                 byte[] key = pairingProgressHandlerBase.getKeyForLocalCache(accountKey,
-                                connection, sharedSecret);
+                        connection, sharedSecret);
 
                 // We don't cache initial pairing case here but cache it when upload to footprints.
                 if (key != null) {
@@ -308,7 +334,8 @@ public class FastPairManager {
         return manager == null ? null : manager.getAdapter();
     }
 
-    /** Gets the package name of HalfSheet.apk
+    /**
+     * Gets the package name of HalfSheet.apk
      * getHalfSheetApkPkgName may invoke PackageManager multiple times and it does not have
      * race condition check. Since there is no lock for mHalfSheetApkPkgName.
      */
@@ -318,8 +345,8 @@ public class FastPairManager {
         }
         List<ResolveInfo> resolveInfos = mLocatorContextWrapper.getContext()
                 .getPackageManager().queryIntentActivities(
-                new Intent(ACTION_RESOURCES_APK),
-                PackageManager.MATCH_SYSTEM_ONLY);
+                        new Intent(ACTION_RESOURCES_APK),
+                        PackageManager.MATCH_SYSTEM_ONLY);
 
         // remove apps that don't live in the nearby apex
         resolveInfos.removeIf(info ->
@@ -352,14 +379,19 @@ public class FastPairManager {
      * Invokes half sheet in the other apk. This function can only be called in Nearby because other
      * app can't get the correct component name.
      */
-    void showHalfSheet() {
+    void showHalfSheet(Cache.ScanFastPairStoreItem scanFastPairStoreItem) {
         if (mLocatorContextWrapper != null) {
             String packageName = getHalfSheetApkPkgName();
             HalfSheetCallback callback = new HalfSheetCallback();
+            callback.setmFastPairController(Locator
+                    .getFromContextWrapper(mLocatorContextWrapper, FastPairController.class));
             Bundle bundle = new Bundle();
             bundle.putBinder(EXTRA_BINDER, callback);
             mLocatorContextWrapper.getContext()
                     .startActivityAsUser(new Intent(ACTIVITY_INTENT_ACTION)
+                                    .putExtra(EXTRA_HALF_SHEET_INFO,
+                                            scanFastPairStoreItem.toByteArray())
+                                    .putExtra(EXTRA_HALF_SHEET_TYPE, DEVICE_PAIRING_FRAGMENT_TYPE)
                                     .putExtra(EXTRA_BUNDLE, bundle)
                                     .setComponent(new ComponentName(packageName,
                                             packageName + ".HalfSheetActivity")),

@@ -17,6 +17,7 @@
 package com.android.server.nearby.fastpair.halfsheet;
 
 import android.bluetooth.BluetoothDevice;
+import android.util.Log;
 
 import com.android.server.nearby.fastpair.cache.DiscoveryItem;
 
@@ -29,7 +30,7 @@ public class FastPairHalfSheetManager {
      * Shows pairing fail half sheet.
      */
     public void showPairingFailed() {
-
+        Log.d("FastPairHalfSheetManager", "show fail half sheet");
     }
 
     /**
@@ -42,30 +43,38 @@ public class FastPairHalfSheetManager {
     /**
      * Show passkey confirmation info on half sheet
      */
-    public void showPasskeyConfirmation(BluetoothDevice device, int passkey) {}
+    public void showPasskeyConfirmation(BluetoothDevice device, int passkey) {
+    }
 
     /**
      * This function will handle pairing steps for half sheet.
      */
-    public void showPairingHalfSheet(DiscoveryItem item) {}
+    public void showPairingHalfSheet(DiscoveryItem item) {
+        Log.d("FastPairHalfSheetManager", "show pairing half sheet");
+    }
 
     /**
      * Shows pairing success info.
      */
-    public void showPairingSuccessHalfSheet(String address){}
+    public void showPairingSuccessHalfSheet(String address) {
+        Log.d("FastPairHalfSheetManager", "show success half sheet");
+    }
 
     /**
      * Removes dismiss runnable.
      */
-    public void disableDismissRunnable(){}
+    public void disableDismissRunnable() {
+    }
 
     /**
      * Destroys the bluetooth pairing controller.
      */
-    public void destroyBluetoothPairController(){}
+    public void destroyBluetoothPairController() {
+    }
 
     /**
      * Notify manager the pairing has finished.
      */
-    public void notifyPairingProcessDone(boolean success, String address, DiscoveryItem item) {}
+    public void notifyPairingProcessDone(boolean success, String address, DiscoveryItem item) {
+    }
 }

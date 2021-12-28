@@ -18,9 +18,12 @@ package com.android.server.nearby.fastpair;
 
 import android.content.Context;
 
+import com.android.server.nearby.common.eventloop.EventLoop;
 import com.android.server.nearby.common.locator.Locator;
 import com.android.server.nearby.common.locator.Module;
 import com.android.server.nearby.fastpair.cache.FastPairCacheManager;
+import com.android.server.nearby.fastpair.footprint.FootprintsDeviceManager;
+import com.android.server.nearby.fastpair.halfsheet.FastPairHalfSheetManager;
 
 import java.time.Clock;
 import java.time.Instant;
@@ -37,10 +40,16 @@ public class FastPairModule extends Module {
     public void configure(Context context, Class<?> type, Locator locator) {
         if (type.equals(FastPairCacheManager.class)) {
             locator.bind(FastPairCacheManager.class, new FastPairCacheManager(context));
+        } else if (type.equals(FootprintsDeviceManager.class)) {
+            locator.bind(FootprintsDeviceManager.class, new FootprintsDeviceManager());
+        } else if (type.equals(EventLoop.class)) {
+            locator.bind(EventLoop.class, EventLoop.newInstance("NearbyFastPair"));
         } else if (type.equals(FastPairController.class)) {
             locator.bind(FastPairController.class, new FastPairController(context));
         } else if (type.equals(FastPairCacheManager.class)) {
             locator.bind(FastPairCacheManager.class, new FastPairCacheManager(context));
+        } else if (type.equals(FastPairHalfSheetManager.class)) {
+            locator.bind(FastPairHalfSheetManager.class, new FastPairHalfSheetManager());
         } else if (type.equals(Clock.class)) {
             locator.bind(Clock.class, new Clock() {
                 @Override
