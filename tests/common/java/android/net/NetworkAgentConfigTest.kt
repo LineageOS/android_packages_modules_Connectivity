@@ -48,9 +48,16 @@ class NetworkAgentConfigTest {
                 setBypassableVpn(true)
             }
         }.build()
+        // This test can be run as unit test against the latest system image, as CTS to verify
+        // an Android release that is as recent as the test, or as MTS to verify the
+        // Connectivity module. In the first two cases NetworkAgentConfig will be as recent
+        // as the test. In the last case, starting from S NetworkAgentConfig is updated as part
+        // of Connectivity, so it is also as recent as the test. For MTS on Q and R,
+        // NetworkAgentConfig is not updatable, so it may have a different number of fields.
         if (isAtLeastS()) {
-            // From S, the config will have 12 items
-            assertParcelSane(config, 12)
+            // When this test is run on S+, NetworkAgentConfig is as recent as the test,
+            // so this should be the most recent known number of fields.
+            assertParcelSane(config, 13)
         } else {
             // For R or below, the config will have 10 items
             assertParcelSane(config, 10)
