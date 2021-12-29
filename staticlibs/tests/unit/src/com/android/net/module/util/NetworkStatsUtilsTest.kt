@@ -18,10 +18,10 @@ package com.android.net.module.util
 
 import androidx.test.filters.SmallTest
 import androidx.test.runner.AndroidJUnit4
-import com.android.testutils.assertThrows
 import org.junit.Test
 import org.junit.runner.RunWith
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 
 @RunWith(AndroidJUnit4::class)
 @SmallTest
@@ -37,10 +37,10 @@ class NetworkStatsUtilsTest {
         assertEquals(0 * 0 / 1, NetworkStatsUtils.multiplySafeByRational(0, 0, 1))
         assertEquals(0, NetworkStatsUtils.multiplySafeByRational(0, Long.MAX_VALUE, Long.MAX_VALUE))
         assertEquals(0, NetworkStatsUtils.multiplySafeByRational(Long.MAX_VALUE, 0, Long.MAX_VALUE))
-        assertThrows(ArithmeticException::class.java) {
+        assertFailsWith<ArithmeticException> {
             NetworkStatsUtils.multiplySafeByRational(7, 3, 0)
         }
-        assertThrows(ArithmeticException::class.java) {
+        assertFailsWith<ArithmeticException> {
             NetworkStatsUtils.multiplySafeByRational(0, 0, 0)
         }
 
@@ -51,8 +51,24 @@ class NetworkStatsUtilsTest {
                 Long.MAX_VALUE, 721, Long.MAX_VALUE))
         assertEquals(Long.MAX_VALUE, NetworkStatsUtils.multiplySafeByRational(
                 Long.MAX_VALUE, Long.MAX_VALUE, Long.MAX_VALUE))
-        assertThrows(ArithmeticException::class.java) {
+        assertFailsWith<ArithmeticException> {
             NetworkStatsUtils.multiplySafeByRational(Long.MAX_VALUE, Long.MAX_VALUE, 0)
         }
+    }
+
+    @Test
+    fun testConstrain() {
+        assertFailsWith<IllegalArgumentException> {
+            NetworkStatsUtils.constrain(5, 6, 3) // low > high
+        }
+        assertEquals(3, NetworkStatsUtils.constrain(5, 1, 3))
+        assertEquals(3, NetworkStatsUtils.constrain(3, 1, 3))
+        assertEquals(2, NetworkStatsUtils.constrain(2, 1, 3))
+        assertEquals(1, NetworkStatsUtils.constrain(1, 1, 3))
+        assertEquals(1, NetworkStatsUtils.constrain(0, 1, 3))
+
+        assertEquals(11, NetworkStatsUtils.constrain(15, 11, 11))
+        assertEquals(11, NetworkStatsUtils.constrain(11, 11, 11))
+        assertEquals(11, NetworkStatsUtils.constrain(1, 11, 11))
     }
 }

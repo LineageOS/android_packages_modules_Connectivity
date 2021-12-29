@@ -180,4 +180,17 @@ public final class CollectionUtils {
         }
         return matches;
     }
+
+    /**
+     * Return sum of the given long array.
+     */
+    public static long total(@Nullable long[] array) {
+        long total = 0;
+        if (array != null) {
+            for (long value : array) {
+                total += value;
+            }
+        }
+        return total;
+    }
 }
