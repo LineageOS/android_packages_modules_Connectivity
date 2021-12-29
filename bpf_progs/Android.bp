@@ -25,6 +25,8 @@ cc_library_headers {
     name: "bpf_connectivity_headers",
     vendor_available: false,
     host_supported: false,
+    header_libs: ["bpf_headers"],
+    export_header_lib_headers: ["bpf_headers"],
     export_include_dirs: ["."],
     cflags: [
         "-Wall",
