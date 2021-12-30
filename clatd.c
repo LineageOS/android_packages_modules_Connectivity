@@ -57,53 +57,6 @@ struct clat_config Global_Clatd_Config;
 
 volatile sig_atomic_t running = 1;
 
-/* function: configure_packet_socket
- * Binds the packet socket and attaches the receive filter to it.
- *   sock - the socket to configure
- */
-int configure_packet_socket(int sock) {
-  uint32_t *ipv6 = Global_Clatd_Config.ipv6_local_subnet.s6_addr32;
-
-  // clang-format off
-  struct sock_filter filter_code[] = {
-    // Load the first four bytes of the IPv6 destination address (starts 24 bytes in).
-    // Compare it against the first four bytes of our IPv6 address, in host byte order (BPF loads
-    // are always in host byte order). If it matches, continue with next instruction (JMP 0). If it
-    // doesn't match, jump ahead to statement that returns 0 (ignore packet). Repeat for the other
-    // three words of the IPv6 address, and if they all match, return PACKETLEN (accept packet).
-    BPF_STMT(BPF_LD  | BPF_W   | BPF_ABS,  24),
-    BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K,    htonl(ipv6[0]), 0, 7),
-    BPF_STMT(BPF_LD  | BPF_W   | BPF_ABS,  28),
-    BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K,    htonl(ipv6[1]), 0, 5),
-    BPF_STMT(BPF_LD  | BPF_W   | BPF_ABS,  32),
-    BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K,    htonl(ipv6[2]), 0, 3),
-    BPF_STMT(BPF_LD  | BPF_W   | BPF_ABS,  36),
-    BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K,    htonl(ipv6[3]), 0, 1),
-    BPF_STMT(BPF_RET | BPF_K,              PACKETLEN),
-    BPF_STMT(BPF_RET | BPF_K,              0),
-  };
-  // clang-format on
-  struct sock_fprog filter = { sizeof(filter_code) / sizeof(filter_code[0]), filter_code };
-
-  if (setsockopt(sock, SOL_SOCKET, SO_ATTACH_FILTER, &filter, sizeof(filter))) {
-    logmsg(ANDROID_LOG_FATAL, "attach packet filter failed: %s", strerror(errno));
-    return 0;
-  }
-
-  struct sockaddr_ll sll = {
-    .sll_family   = AF_PACKET,
-    .sll_protocol = htons(ETH_P_IPV6),
-    .sll_ifindex  = if_nametoindex(Global_Clatd_Config.native_ipv6_interface),
-    .sll_pkttype  = PACKET_OTHERHOST,  // The 464xlat IPv6 address is not assigned to the kernel.
-  };
-  if (bind(sock, (struct sockaddr *)&sll, sizeof(sll))) {
-    logmsg(ANDROID_LOG_FATAL, "binding packet socket: %s", strerror(errno));
-    return 0;
-  }
-
-  return 1;
-}
-
 /* function: set_capability
  * set the permitted, effective and inheritable capabilities of the current
  * thread
@@ -166,56 +119,6 @@ int ipv6_address_changed(const char *interface) {
   } else {
     free(interface_ip);
     return 0;
-  }
-}
-
-/* function: configure_clat_ipv6_address
- * picks the clat IPv6 address and configures packet translation to use it.
- *   tunnel - tun device data
- *   interface - uplink interface name
- *   returns: 1 on success, 0 on failure
- */
-int configure_clat_ipv6_address(const struct tun_data *tunnel, const char *interface,
-                                const char *v6_addr) {
-  if (!v6_addr || !inet_pton(AF_INET6, v6_addr, &Global_Clatd_Config.ipv6_local_subnet)) {
-    logmsg(ANDROID_LOG_FATAL, "Invalid source address %s", v6_addr);
-    return 0;
-  }
-
-  char addrstr[INET6_ADDRSTRLEN];
-  inet_ntop(AF_INET6, &Global_Clatd_Config.ipv6_local_subnet, addrstr, sizeof(addrstr));
-  logmsg(ANDROID_LOG_INFO, "Using IPv6 address %s on %s", addrstr, interface);
-
-  // Start translating packets to the new prefix.
-  add_anycast_address(tunnel->write_fd6, &Global_Clatd_Config.ipv6_local_subnet, interface);
-
-  // Update our packet socket filter to reflect the new 464xlat IP address.
-  if (!configure_packet_socket(tunnel->read_fd6)) {
-    // Things aren't going to work. Bail out and hope we have better luck next time.
-    // We don't log an error here because configure_packet_socket has already done so.
-    return 0;
-  }
-
-  return 1;
-}
-
-/* function: configure_interface
- * reads the configuration and applies it to the interface
- *   uplink_interface - network interface to use to reach the ipv6 internet
- *   plat_prefix      - PLAT prefix to use
- *   v6_addr          - the v6 address to use on the native interface
- *   tunnel           - tun device data
- */
-void configure_interface(const char *uplink_interface, const char *plat_prefix, const char *v6_addr,
-                         struct tun_data *tunnel) {
-  Global_Clatd_Config.native_ipv6_interface = uplink_interface;
-  if (!plat_prefix || inet_pton(AF_INET6, plat_prefix, &Global_Clatd_Config.plat_subnet) <= 0) {
-    logmsg(ANDROID_LOG_FATAL, "invalid IPv6 address specified for plat prefix: %s", plat_prefix);
-    exit(1);
-  }
-
-  if (!configure_clat_ipv6_address(tunnel, uplink_interface, v6_addr)) {
-    exit(1);
   }
 }
 
