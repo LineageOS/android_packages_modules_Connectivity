@@ -104,37 +104,6 @@ int configure_packet_socket(int sock) {
   return 1;
 }
 
-/* function: configure_tun_ip
- * configures the ipv4 and ipv6 addresses on the tunnel interface
- *   tunnel - tun device data
- *   mtu    - mtu of tun device
- */
-void configure_tun_ip(const struct tun_data *tunnel, const char *v4_addr, int mtu) {
-  if (!v4_addr || !inet_pton(AF_INET, v4_addr, &Global_Clatd_Config.ipv4_local_subnet.s_addr)) {
-    logmsg(ANDROID_LOG_FATAL, "Invalid IPv4 address %s", v4_addr);
-    exit(1);
-  }
-
-  char addrstr[INET_ADDRSTRLEN];
-  inet_ntop(AF_INET, &Global_Clatd_Config.ipv4_local_subnet, addrstr, sizeof(addrstr));
-  logmsg(ANDROID_LOG_INFO, "Using IPv4 address %s on %s", addrstr, tunnel->device4);
-
-  // Configure the interface before bringing it up. As soon as we bring the interface up, the
-  // framework will be notified and will assume the interface's configuration has been finalized.
-  int status = add_address(tunnel->device4, AF_INET, &Global_Clatd_Config.ipv4_local_subnet, 32,
-                           &Global_Clatd_Config.ipv4_local_subnet);
-  if (status < 0) {
-    logmsg(ANDROID_LOG_FATAL, "configure_tun_ip/if_address(4) failed: %s", strerror(-status));
-    exit(1);
-  }
-
-  status = if_up(tunnel->device4, mtu);
-  if (status < 0) {
-    logmsg(ANDROID_LOG_FATAL, "configure_tun_ip/if_up(4) failed: %s", strerror(-status));
-    exit(1);
-  }
-}
-
 /* function: set_capability
  * set the permitted, effective and inheritable capabilities of the current
  * thread
@@ -230,75 +199,20 @@ int configure_clat_ipv6_address(const struct tun_data *tunnel, const char *inter
   return 1;
 }
 
-int detect_mtu(const struct in6_addr *plat_subnet, uint32_t plat_suffix, uint32_t mark) {
-  // Create an IPv6 UDP socket.
-  int s = socket(AF_INET6, SOCK_DGRAM | SOCK_CLOEXEC, 0);
-  if (s < 0) {
-    logmsg(ANDROID_LOG_FATAL, "socket(AF_INET6, SOCK_DGRAM, 0) failed");
-    exit(1);
-  }
-
-  // Socket's mark affects routing decisions (network selection)
-  if ((mark != MARK_UNSET) && setsockopt(s, SOL_SOCKET, SO_MARK, &mark, sizeof(mark))) {
-    logmsg(ANDROID_LOG_FATAL, "setsockopt(SOL_SOCKET, SO_MARK) failed: %s", strerror(errno));
-    exit(1);
-  }
-
-  // Try to connect udp socket to plat_subnet(96 bits):plat_suffix(32 bits)
-  struct sockaddr_in6 dst = {
-    .sin6_family = AF_INET6,
-    .sin6_addr   = *plat_subnet,
-  };
-  dst.sin6_addr.s6_addr32[3] = plat_suffix;
-  if (connect(s, (struct sockaddr *)&dst, sizeof(dst))) {
-    logmsg(ANDROID_LOG_FATAL, "connect() failed: %s", strerror(errno));
-    exit(1);
-  }
-
-  // Fetch the socket's IPv6 mtu - this is effectively fetching mtu from routing table
-  int mtu;
-  socklen_t sz_mtu = sizeof(mtu);
-  if (getsockopt(s, SOL_IPV6, IPV6_MTU, &mtu, &sz_mtu)) {
-    logmsg(ANDROID_LOG_FATAL, "getsockopt(SOL_IPV6, IPV6_MTU) failed: %s", strerror(errno));
-    exit(1);
-  }
-  if (sz_mtu != sizeof(mtu)) {
-    logmsg(ANDROID_LOG_FATAL, "getsockopt(SOL_IPV6, IPV6_MTU) returned unexpected size: %d",
-           sz_mtu);
-    exit(1);
-  }
-  close(s);
-
-  return mtu;
-}
-
 /* function: configure_interface
  * reads the configuration and applies it to the interface
  *   uplink_interface - network interface to use to reach the ipv6 internet
  *   plat_prefix      - PLAT prefix to use
- *   v4_addr          - the v4 address to use on the tunnel interface
  *   v6_addr          - the v6 address to use on the native interface
  *   tunnel           - tun device data
- *   mark             - the socket mark to use for the sending raw socket
  */
-void configure_interface(const char *uplink_interface, const char *plat_prefix, const char *v4_addr,
-                         const char *v6_addr, struct tun_data *tunnel, uint32_t mark) {
+void configure_interface(const char *uplink_interface, const char *plat_prefix, const char *v6_addr,
+                         struct tun_data *tunnel) {
   Global_Clatd_Config.native_ipv6_interface = uplink_interface;
   if (!plat_prefix || inet_pton(AF_INET6, plat_prefix, &Global_Clatd_Config.plat_subnet) <= 0) {
     logmsg(ANDROID_LOG_FATAL, "invalid IPv6 address specified for plat prefix: %s", plat_prefix);
     exit(1);
   }
-
-  int mtu = detect_mtu(&Global_Clatd_Config.plat_subnet, htonl(0x08080808), mark);
-  // clamp to minimum ipv6 mtu - this probably cannot ever trigger
-  if (mtu < 1280) mtu = 1280;
-  // clamp to buffer size
-  if (mtu > MAXMTU) mtu = MAXMTU;
-  // decrease by ipv6(40) + ipv6 fragmentation header(8) vs ipv4(20) overhead of 28 bytes
-  mtu -= MTU_DELTA;
-  logmsg(ANDROID_LOG_WARN, "ipv4 mtu is %d", mtu);
-
-  configure_tun_ip(tunnel, v4_addr, mtu);
 
   if (!configure_clat_ipv6_address(tunnel, uplink_interface, v6_addr)) {
     exit(1);

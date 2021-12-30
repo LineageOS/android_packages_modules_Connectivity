@@ -145,12 +145,17 @@ int main(int argc, char **argv) {
     exit(1);
   }
 
+  if (!v4_addr || !inet_pton(AF_INET, v4_addr, &Global_Clatd_Config.ipv4_local_subnet.s_addr)) {
+    logmsg(ANDROID_LOG_FATAL, "Invalid IPv4 address %s", v4_addr);
+    exit(1);
+  }
+
   logmsg(ANDROID_LOG_INFO, "Starting clat version %s on %s mark=%s plat=%s v4=%s v6=%s",
          CLATD_VERSION, uplink_interface, mark_str ? mark_str : "(none)",
          plat_prefix ? plat_prefix : "(none)", v4_addr ? v4_addr : "(none)",
          v6_addr ? v6_addr : "(none)");
 
-  configure_interface(uplink_interface, plat_prefix, v4_addr, v6_addr, &tunnel, mark);
+  configure_interface(uplink_interface, plat_prefix, v6_addr, &tunnel);
 
   // run under a regular user with no capabilities
   drop_root_and_caps();
