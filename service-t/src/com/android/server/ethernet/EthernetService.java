@@ -17,10 +17,15 @@
 package com.android.server.ethernet;
 
 import android.content.Context;
+import android.net.INetd;
+import android.net.util.NetdService;
 import android.os.Handler;
 import android.os.HandlerThread;
+import android.os.IBinder;
 import android.util.Log;
 import com.android.server.SystemService;
+
+import java.util.Objects;
 
 public final class EthernetService extends SystemService {
 
@@ -32,9 +37,17 @@ public final class EthernetService extends SystemService {
         super(context);
         final HandlerThread handlerThread = new HandlerThread(THREAD_NAME);
         handlerThread.start();
+        final Handler handler = handlerThread.getThreadHandler();
+        final EthernetNetworkFactory factory = new EthernetNetworkFactory(handler, context);
         mImpl = new EthernetServiceImpl(
-                    context, handlerThread.getThreadHandler(),
-                    new EthernetTracker(context, handlerThread.getThreadHandler()));
+                context, handler,
+                new EthernetTracker(context, handler, factory, getNetd()));
+    }
+
+    private INetd getNetd() {
+        final INetd netd = NetdService.getInstance();
+        Objects.requireNonNull(netd, "could not get netd instance");
+        return netd;
     }
 
     @Override

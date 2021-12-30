@@ -24,6 +24,7 @@ import android.annotation.NonNull;
 import android.annotation.Nullable;
 import android.content.Context;
 import android.net.IEthernetServiceListener;
+import android.net.IInternalNetworkManagementListener;
 import android.net.INetd;
 import android.net.ITetheredInterfaceCallback;
 import android.net.InterfaceConfigurationParcel;
@@ -34,7 +35,6 @@ import android.net.LinkAddress;
 import android.net.NetworkCapabilities;
 import android.net.StaticIpConfiguration;
 import android.os.Handler;
-import android.os.IBinder;
 import android.os.RemoteCallbackList;
 import android.os.RemoteException;
 import android.os.ServiceSpecificException;
@@ -118,14 +118,12 @@ public class EthernetTracker {
         }
     }
 
-    EthernetTracker(Context context, Handler handler) {
+    EthernetTracker(@NonNull final Context context, @NonNull final Handler handler,
+            @NonNull final EthernetNetworkFactory factory, @NonNull final INetd netd) {
         mContext = context;
         mHandler = handler;
-
-        // The services we use.
-        mNetd = INetd.Stub.asInterface(
-                (IBinder) context.getSystemService(Context.NETD_SERVICE));
-        Objects.requireNonNull(mNetd, "could not get netd instance");
+        mFactory = factory;
+        mNetd = netd;
 
         // Interface match regex.
         updateIfaceMatchRegexp();
@@ -138,9 +136,6 @@ public class EthernetTracker {
         }
 
         mConfigStore = new EthernetConfigStore();
-
-        NetworkCapabilities nc = createNetworkCapabilities(true /* clear default capabilities */);
-        mFactory = new EthernetNetworkFactory(handler, context, nc);
     }
 
     void start() {
@@ -168,11 +163,30 @@ public class EthernetTracker {
         if (DBG) {
             Log.i(TAG, "updateIpConfiguration, iface: " + iface + ", cfg: " + ipConfiguration);
         }
+        writeIpConfiguration(iface, ipConfiguration);
+        mHandler.post(() -> mFactory.updateInterface(iface, ipConfiguration, null, null));
+    }
 
-        mConfigStore.write(iface, ipConfiguration);
-        mIpConfigurations.put(iface, ipConfiguration);
+    private void writeIpConfiguration(@NonNull final String iface,
+            @NonNull final IpConfiguration ipConfig) {
+        mConfigStore.write(iface, ipConfig);
+        mIpConfigurations.put(iface, ipConfig);
+    }
 
-        mHandler.post(() -> mFactory.updateIpConfiguration(iface, ipConfiguration));
+    @VisibleForTesting(visibility = PACKAGE)
+    protected void updateConfiguration(@NonNull final String iface,
+            @NonNull final StaticIpConfiguration staticIpConfig,
+            @NonNull final NetworkCapabilities capabilities,
+            @Nullable final IInternalNetworkManagementListener listener) {
+        if (DBG) {
+            Log.i(TAG, "updateConfiguration, iface: " + iface + ", capabilities: " + capabilities
+                    + ", staticIpConfig: " + staticIpConfig);
+        }
+        final IpConfiguration ipConfig = createIpConfiguration(staticIpConfig);
+        writeIpConfiguration(iface, ipConfig);
+        mNetworkCapabilities.put(iface, capabilities);
+        mHandler.post(() ->
+                mFactory.updateInterface(iface, ipConfig, capabilities, listener));
     }
 
     IpConfiguration getIpConfiguration(String iface) {
@@ -325,7 +339,7 @@ public class EthernetTracker {
             }
 
             Log.d(TAG, "Tracking interface in client mode: " + iface);
-            mFactory.addInterface(iface, hwAddress, nc, ipConfiguration);
+            mFactory.addInterface(iface, hwAddress, ipConfiguration, nc);
         } else {
             maybeUpdateServerModeInterfaceState(iface, true);
         }
@@ -460,11 +474,11 @@ public class EthernetTracker {
         NetworkCapabilities nc = createNetworkCapabilities(
                 !TextUtils.isEmpty(config.mCapabilities)  /* clear default capabilities */,
                 config.mCapabilities, config.mTransport).build();
-        mNetworkCapabilities.put(config.mName, nc);
+        mNetworkCapabilities.put(config.mIface, nc);
 
         if (null != config.mIpConfig) {
             IpConfiguration ipConfig = parseStaticIpConfiguration(config.mIpConfig);
-            mIpConfigurations.put(config.mName, ipConfig);
+            mIpConfigurations.put(config.mIface, ipConfig);
         }
     }
 
@@ -491,10 +505,6 @@ public class EthernetTracker {
         }
 
         return builder.build();
-    }
-
-    private static NetworkCapabilities createNetworkCapabilities(boolean clearDefaultCapabilities) {
-        return createNetworkCapabilities(clearDefaultCapabilities, null, null).build();
     }
 
     /**
@@ -623,10 +633,15 @@ public class EthernetTracker {
                 }
             }
         }
+        return createIpConfiguration(staticIpConfigBuilder.build());
+    }
+
+    static IpConfiguration createIpConfiguration(
+            @NonNull final StaticIpConfiguration staticIpConfig) {
         final IpConfiguration ret = new IpConfiguration();
         ret.setIpAssignment(IpAssignment.STATIC);
         ret.setProxySettings(ProxySettings.NONE);
-        ret.setStaticIpConfiguration(staticIpConfigBuilder.build());
+        ret.setStaticIpConfiguration(staticIpConfig);
         return ret;
     }
 
@@ -681,14 +696,14 @@ public class EthernetTracker {
 
     @VisibleForTesting
     static class EthernetTrackerConfig {
-        final String mName;
+        final String mIface;
         final String mCapabilities;
         final String mIpConfig;
         final String mTransport;
 
         EthernetTrackerConfig(@NonNull final String[] tokens) {
             Objects.requireNonNull(tokens, "EthernetTrackerConfig requires non-null tokens");
-            mName = tokens[0];
+            mIface = tokens[0];
             mCapabilities = tokens.length > 1 ? tokens[1] : null;
             mIpConfig = tokens.length > 2 && !TextUtils.isEmpty(tokens[2]) ? tokens[2] : null;
             mTransport = tokens.length > 3 ? tokens[3] : null;
