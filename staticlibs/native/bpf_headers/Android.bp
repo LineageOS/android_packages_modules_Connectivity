@@ -18,14 +18,17 @@ package {
 
 cc_library_headers {
     name: "bpf_headers",
-    vendor_available: true,
+    vendor_available: false,
     host_supported: true,
     native_bridge_supported: true,
+    header_libs: ["bpf_syscall_wrappers"],
+    export_header_lib_headers: ["bpf_syscall_wrappers"],
     export_include_dirs: ["include"],
     cflags: [
         "-Wall",
         "-Werror",
     ],
+    sdk_version: "30",
     min_sdk_version: "30",
     apex_available: [
         "//apex_available:platform",
@@ -40,6 +43,7 @@ cc_library_headers {
         "//frameworks/native/services/gpuservice/gpumem",
         "//frameworks/native/services/gpuservice/tests/unittests",
         "//frameworks/native/services/gpuservice/tracing",
+        "//packages/modules/Connectivity/bpf_progs",
         "//packages/modules/Connectivity/netd",
         "//packages/modules/Connectivity/tests/unit/jni",
         "//packages/modules/DnsResolver/tests",

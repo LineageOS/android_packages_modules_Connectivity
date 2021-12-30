@@ -19,7 +19,7 @@ package {
 cc_library_headers {
     name: "bpf_syscall_wrappers",
     vendor_available: false,
-    host_supported: false,
+    host_supported: true,
     native_bridge_supported: true,
     export_include_dirs: ["include"],
     cflags: [
@@ -34,6 +34,7 @@ cc_library_headers {
         "com.android.tethering",
     ],
     visibility: [
+        "//frameworks/libs/net/common/native/bpf_headers",
         "//frameworks/libs/net/common/native/bpfmapjni",
         "//packages/modules/Connectivity/netd",
         "//packages/modules/Connectivity/service",
