@@ -41,10 +41,6 @@ extern volatile sig_atomic_t running;
 void set_capability(uint64_t target_cap);
 void drop_root_and_caps();
 int ipv6_address_changed(const char *interface);
-int configure_clat_ipv6_address(const struct tun_data *tunnel, const char *interface,
-                                const char *src_addr);
-void configure_interface(const char *uplink_interface, const char *plat_prefix, const char *v6,
-                         struct tun_data *tunnel);
 void event_loop(struct tun_data *tunnel);
 
 /* function: parse_int
