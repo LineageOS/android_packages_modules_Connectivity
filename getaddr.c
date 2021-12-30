@@ -22,8 +22,7 @@
 #include <linux/rtnetlink.h>
 #include <net/if.h>
 #include <netinet/in.h>
-#include <netlink/handlers.h>
-#include <netlink/msg.h>
+#include <stdlib.h>
 #include <string.h>
 #include <strings.h>
 #include <unistd.h>

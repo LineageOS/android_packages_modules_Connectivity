@@ -47,7 +47,6 @@
 #include "dump.h"
 #include "getaddr.h"
 #include "logging.h"
-#include "setif.h"
 #include "translate.h"
 
 struct clat_config Global_Clatd_Config;
