@@ -177,21 +177,6 @@ void drop_root_and_caps() {
   set_capability(0);
 }
 
-/* function: open_sockets
- * opens a packet socket to receive IPv6 packets and a raw socket to send them
- *   tunnel - tun device data
- *   mark - the socket mark to use for the sending raw socket
- */
-void open_sockets(struct tun_data *tunnel) {
-  // Will eventually be bound to htons(ETH_P_IPV6) protocol,
-  // but only after appropriate bpf filter is attached.
-  tunnel->read_fd6 = socket(AF_PACKET, SOCK_DGRAM | SOCK_CLOEXEC, 0);
-  if (tunnel->read_fd6 < 0) {
-    logmsg(ANDROID_LOG_FATAL, "packet socket failed: %s", strerror(errno));
-    exit(1);
-  }
-}
-
 int ipv6_address_changed(const char *interface) {
   union anyip *interface_ip;
 
