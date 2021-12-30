@@ -25,14 +25,16 @@
 #include <sys/capability.h>
 #include <unistd.h>
 
-#include <netid_client.h>  // For MARK_UNSET.
-
 #include "clatd.h"
 #include "common.h"
 #include "config.h"
 #include "logging.h"
 
 #define DEVICEPREFIX "v4-"
+
+// Sync MARK_UNSET from netid_client.h
+// TODO: remove MARK_UNSET definition once argument "-m" is removed.
+#define MARK_UNSET 0u
 
 /* function: stop_loop
  * signal handler: stop the event loop
