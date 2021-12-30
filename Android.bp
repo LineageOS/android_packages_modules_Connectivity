@@ -85,6 +85,12 @@ cc_binary {
     sanitize: {
         memtag_heap: true,
     },
+
+    apex_available: [
+        "com.android.tethering",
+        "//apex_available:platform",
+    ],
+    min_sdk_version: "30",
 }
 
 // Unit tests.
