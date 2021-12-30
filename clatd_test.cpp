@@ -625,11 +625,6 @@ TEST_F(ClatdTest, TestIPv6PrefixEqual) {
   EXPECT_FALSE(ipv6_prefix_equal(&subnet2, &Global_Clatd_Config.ipv6_local_subnet));
 }
 
-TEST_F(ClatdTest, DetectMtu) {
-  // ::1 with bottom 32 bits set to 1 is still ::1 which routes via lo with mtu of 64KiB
-  ASSERT_EQ(detect_mtu(&in6addr_loopback, htonl(1), 0 /*MARK_UNSET*/), 65536);
-}
-
 TEST_F(ClatdTest, ConfigureTunIpManual) {
   // Create an interface for configure_tun_ip to configure and bring up.
   TunInterface v4Iface;
