@@ -31,7 +31,6 @@
 #include "common.h"
 #include "config.h"
 #include "logging.h"
-#include "setif.h"
 
 #define DEVICEPREFIX "v4-"
 
