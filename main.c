@@ -178,11 +178,6 @@ int main(int argc, char **argv) {
   event_loop(&tunnel);
 
   logmsg(ANDROID_LOG_INFO, "Shutting down clat on %s", uplink_interface);
-  del_anycast_address(tunnel.write_fd6, &Global_Clatd_Config.ipv6_local_subnet);
-
-  close(tunnel.write_fd6);
-  close(tunnel.read_fd6);
-  close(tunnel.fd4);
 
   if (running) {
     logmsg(ANDROID_LOG_INFO, "Clatd on %s waiting for SIGTERM", uplink_interface);
