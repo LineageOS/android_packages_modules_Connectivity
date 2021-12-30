@@ -21,6 +21,7 @@ import android.annotation.Nullable;
 import android.content.Context;
 import android.net.ConnectivityManager;
 import android.net.EthernetNetworkSpecifier;
+import android.net.IInternalNetworkManagementListener;
 import android.net.IpConfiguration;
 import android.net.IpConfiguration.IpAssignment;
 import android.net.IpConfiguration.ProxySettings;
@@ -98,14 +99,13 @@ public class EthernetNetworkFactory extends NetworkFactory {
         }
     }
 
-    public EthernetNetworkFactory(Handler handler, Context context, NetworkCapabilities filter) {
-        this(handler, context, filter, new Dependencies());
+    public EthernetNetworkFactory(Handler handler, Context context) {
+        this(handler, context, new Dependencies());
     }
 
     @VisibleForTesting
-    EthernetNetworkFactory(Handler handler, Context context, NetworkCapabilities filter,
-            Dependencies deps) {
-        super(handler.getLooper(), context, NETWORK_TYPE, filter);
+    EthernetNetworkFactory(Handler handler, Context context, Dependencies deps) {
+        super(handler.getLooper(), context, NETWORK_TYPE, createDefaultNetworkCapabilities());
 
         mHandler = handler;
         mContext = context;
@@ -166,8 +166,9 @@ public class EthernetNetworkFactory extends NetworkFactory {
                 .toArray(String[]::new);
     }
 
-    void addInterface(String ifaceName, String hwAddress, NetworkCapabilities capabilities,
-             IpConfiguration ipConfiguration) {
+    void addInterface(@NonNull final String ifaceName, @NonNull final String hwAddress,
+            @NonNull final IpConfiguration ipConfig,
+            @NonNull final NetworkCapabilities capabilities) {
         if (mTrackingInterfaces.containsKey(ifaceName)) {
             Log.e(TAG, "Interface with name " + ifaceName + " already exists.");
             return;
@@ -177,12 +178,46 @@ public class EthernetNetworkFactory extends NetworkFactory {
             Log.d(TAG, "addInterface, iface: " + ifaceName + ", capabilities: " + capabilities);
         }
 
-        NetworkInterfaceState iface = new NetworkInterfaceState(
-                ifaceName, hwAddress, mHandler, mContext, capabilities, this, mDeps);
-        iface.setIpConfig(ipConfiguration);
+        final NetworkInterfaceState iface = new NetworkInterfaceState(
+                ifaceName, hwAddress, mHandler, mContext, ipConfig, capabilities, this, mDeps);
         mTrackingInterfaces.put(ifaceName, iface);
-
         updateCapabilityFilter();
+    }
+
+    /**
+     * Update a network's configuration and restart it if necessary.
+     *
+     * @param ifaceName the interface name of the network to be updated.
+     * @param ipConfig the desired {@link IpConfiguration} for the given network.
+     * @param capabilities the desired {@link NetworkCapabilities} for the given network. If
+     *                     {@code null} is passed, then the network's current
+     *                     {@link NetworkCapabilities} will be used in support of existing APIs as
+     *                     the public API does not allow this.
+     * @param listener an optional {@link IInternalNetworkManagementListener} to notify callers of
+     *                 completion.
+     */
+    @VisibleForTesting(visibility = VisibleForTesting.Visibility.PACKAGE)
+    protected void updateInterface(@NonNull final String ifaceName,
+            @NonNull final IpConfiguration ipConfig,
+            @Nullable final NetworkCapabilities capabilities,
+            @Nullable final IInternalNetworkManagementListener listener) {
+        enforceInterfaceIsTracked(ifaceName);
+        final NetworkInterfaceState iface = mTrackingInterfaces.get(ifaceName);
+        // TODO: The listener will have issues if called in quick succession for the same interface
+        //  before the IP layer restarts. Update the listener logic to address multiple successive
+        //  calls for a particular interface.
+        iface.mNetworkManagementListener = listener;
+        if (iface.updateInterface(ipConfig, capabilities)) {
+            mTrackingInterfaces.put(ifaceName, iface);
+            updateCapabilityFilter();
+        }
+    }
+
+    private void enforceInterfaceIsTracked(@NonNull final String ifaceName) {
+        if (!hasInterface(ifaceName)) {
+            throw new UnsupportedOperationException(
+                    "Interface with name " + ifaceName + " is not being tracked.");
+        }
     }
 
     private static NetworkCapabilities mixInCapabilities(NetworkCapabilities nc,
@@ -194,17 +229,19 @@ public class EthernetNetworkFactory extends NetworkFactory {
     }
 
     private void updateCapabilityFilter() {
-        NetworkCapabilities capabilitiesFilter =
-                NetworkCapabilities.Builder.withoutDefaultCapabilities()
-                .addTransportType(NetworkCapabilities.TRANSPORT_ETHERNET)
-                .build();
-
+        NetworkCapabilities capabilitiesFilter = createDefaultNetworkCapabilities();
         for (NetworkInterfaceState iface:  mTrackingInterfaces.values()) {
             capabilitiesFilter = mixInCapabilities(capabilitiesFilter, iface.mCapabilities);
         }
 
         if (DBG) Log.d(TAG, "updateCapabilityFilter: " + capabilitiesFilter);
         setCapabilityFilter(capabilitiesFilter);
+    }
+
+    private static NetworkCapabilities createDefaultNetworkCapabilities() {
+        return NetworkCapabilities.Builder
+                .withoutDefaultCapabilities()
+                .addTransportType(NetworkCapabilities.TRANSPORT_ETHERNET).build();
     }
 
     void removeInterface(String interfaceName) {
@@ -230,15 +267,8 @@ public class EthernetNetworkFactory extends NetworkFactory {
         return iface.updateLinkState(up);
     }
 
-    boolean hasInterface(String interfacName) {
-        return mTrackingInterfaces.containsKey(interfacName);
-    }
-
-    void updateIpConfiguration(String iface, IpConfiguration ipConfiguration) {
-        NetworkInterfaceState network = mTrackingInterfaces.get(iface);
-        if (network != null) {
-            network.setIpConfig(ipConfiguration);
-        }
+    boolean hasInterface(String ifaceName) {
+        return mTrackingInterfaces.containsKey(ifaceName);
     }
 
     private NetworkInterfaceState networkForRequest(NetworkRequest request) {
@@ -272,24 +302,26 @@ public class EthernetNetworkFactory extends NetworkFactory {
         return network;
     }
 
-    private static class NetworkInterfaceState {
+    @VisibleForTesting
+    static class NetworkInterfaceState {
         final String name;
 
         private final String mHwAddress;
-        private final NetworkCapabilities mCapabilities;
         private final Handler mHandler;
         private final Context mContext;
         private final NetworkFactory mNetworkFactory;
         private final Dependencies mDeps;
-        private final int mLegacyType;
 
         private static String sTcpBufferSizes = null;  // Lazy initialized.
 
         private boolean mLinkUp;
+        private int mLegacyType;
         private LinkProperties mLinkProperties = new LinkProperties();
 
         private volatile @Nullable IpClientManager mIpClient;
+        private @NonNull NetworkCapabilities mCapabilities;
         private @Nullable IpClientCallbacksImpl mIpClientCallback;
+        private @Nullable IInternalNetworkManagementListener mNetworkManagementListener;
         private @Nullable EthernetNetworkAgent mNetworkAgent;
         private @Nullable IpConfiguration mIpConfig;
 
@@ -362,42 +394,17 @@ public class EthernetNetworkFactory extends NetworkFactory {
         }
 
         NetworkInterfaceState(String ifaceName, String hwAddress, Handler handler, Context context,
-                @NonNull NetworkCapabilities capabilities, NetworkFactory networkFactory,
-                Dependencies deps) {
+                @NonNull IpConfiguration ipConfig, @NonNull NetworkCapabilities capabilities,
+                NetworkFactory networkFactory, Dependencies deps) {
             name = ifaceName;
+            mIpConfig = Objects.requireNonNull(ipConfig);
             mCapabilities = Objects.requireNonNull(capabilities);
+            mLegacyType = getLegacyType(mCapabilities);
             mHandler = handler;
             mContext = context;
             mNetworkFactory = networkFactory;
             mDeps = deps;
-            final int legacyType;
-            int[] transportTypes = mCapabilities.getTransportTypes();
-
-            if (transportTypes.length > 0) {
-                legacyType = getLegacyType(transportTypes[0]);
-            } else {
-                // Should never happen as transport is always one of ETHERNET or a valid override
-                throw new ConfigurationException("Network Capabilities do not have an associated "
-                        + "transport type.");
-            }
-
             mHwAddress = hwAddress;
-            mLegacyType = legacyType;
-        }
-
-        void setIpConfig(IpConfiguration ipConfig) {
-            if (Objects.equals(this.mIpConfig, ipConfig)) {
-                if (DBG) Log.d(TAG, "ipConfig have not changed,so ignore setIpConfig");
-                return;
-            }
-            this.mIpConfig = ipConfig;
-            if (mNetworkAgent != null) {
-                restart();
-            }
-        }
-
-        boolean isRestricted() {
-            return !mCapabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_RESTRICTED);
         }
 
         /**
@@ -406,6 +413,52 @@ public class EthernetNetworkFactory extends NetworkFactory {
          */
         private static int getLegacyType(int transport) {
             return sTransports.get(transport, ConnectivityManager.TYPE_NONE);
+        }
+
+        private static int getLegacyType(@NonNull final NetworkCapabilities capabilities) {
+            final int[] transportTypes = capabilities.getTransportTypes();
+            if (transportTypes.length > 0) {
+                return getLegacyType(transportTypes[0]);
+            }
+
+            // Should never happen as transport is always one of ETHERNET or a valid override
+            throw new ConfigurationException("Network Capabilities do not have an associated "
+                    + "transport type.");
+        }
+
+        private void setCapabilities(@NonNull final NetworkCapabilities capabilities) {
+            mCapabilities = new NetworkCapabilities(capabilities);
+            mLegacyType = getLegacyType(mCapabilities);
+        }
+
+        boolean updateInterface(@NonNull final IpConfiguration ipConfig,
+                @Nullable final NetworkCapabilities capabilities) {
+            final boolean shouldUpdateIpConfig = !Objects.equals(mIpConfig, ipConfig);
+            final boolean shouldUpdateCapabilities = null != capabilities
+                    && !Objects.equals(mCapabilities, capabilities);
+            if (DBG) {
+                Log.d(TAG, "updateInterface, iface: " + name
+                        + ", shouldUpdateIpConfig: " + shouldUpdateIpConfig
+                        + ", shouldUpdateCapabilities: " + shouldUpdateCapabilities
+                        + ", ipConfig: " + ipConfig + ", old ipConfig: " + mIpConfig
+                        + ", capabilities: " + capabilities + ", old capabilities: " + mCapabilities
+                );
+            }
+
+            if (shouldUpdateIpConfig) { mIpConfig = ipConfig; };
+            if (shouldUpdateCapabilities) { setCapabilities(capabilities); };
+            if (shouldUpdateIpConfig || shouldUpdateCapabilities) {
+                // TODO: Update this logic to only do a restart if required. Although a restart may
+                //  be required due to the capabilities or ipConfiguration values, not all
+                //  capabilities changes require a restart.
+                restart();
+                return true;
+            }
+            return false;
+        }
+
+        boolean isRestricted() {
+            return !mCapabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_RESTRICTED);
         }
 
         private void start() {
@@ -459,6 +512,19 @@ public class EthernetNetworkFactory extends NetworkFactory {
                     });
             mNetworkAgent.register();
             mNetworkAgent.markConnected();
+            sendNetworkManagementCallback();
+        }
+
+        private void sendNetworkManagementCallback() {
+            if (null != mNetworkManagementListener) {
+                try {
+                    mNetworkManagementListener.onComplete(mNetworkAgent.getNetwork(), null);
+                } catch (RemoteException e) {
+                    Log.e(TAG, "Can't send onComplete for network management callback", e);
+                } finally {
+                    mNetworkManagementListener = null;
+                }
+            }
         }
 
         void onIpLayerStopped(LinkProperties linkProperties) {
@@ -546,7 +612,7 @@ public class EthernetNetworkFactory extends NetworkFactory {
         }
 
         void restart(){
-            if (DBG) Log.d(TAG, "reconnecting Etherent");
+            if (DBG) Log.d(TAG, "reconnecting Ethernet");
             stop();
             start();
         }
