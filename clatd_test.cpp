@@ -837,7 +837,20 @@ TEST_F(ClatdTest, TranslateChecksumNeutral) {
                                    "UDP/IPv4 -> UDP/IPv6 checksum neutral");
 }
 
-TEST_F(ClatdTest, GetInterfaceIp) {
+TEST_F(ClatdTest, GetInterfaceIpV4) {
+  TunInterface v4Iface;
+  ASSERT_EQ(0, v4Iface.init());
+  EXPECT_EQ(0, v4Iface.addAddress("192.0.2.1", 32));
+
+  union anyip *ip = getinterface_ip(v4Iface.name().c_str(), AF_INET);
+  ASSERT_NE(nullptr, ip);
+  EXPECT_EQ(inet_addr("192.0.2.1"), ip->ip4.s_addr);
+  free(ip);
+
+  v4Iface.destroy();
+}
+
+TEST_F(ClatdTest, GetInterfaceIpV6) {
   union anyip *ip = getinterface_ip(sTun.name().c_str(), AF_INET6);
   ASSERT_NE(nullptr, ip);
   in6_addr expected = sTun.srcAddr();
