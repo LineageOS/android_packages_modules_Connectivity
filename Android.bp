@@ -32,11 +32,6 @@ cc_defaults {
         // Bug: http://b/33566695
         "-Wno-address-of-packed-member",
     ],
-
-    // For MARK_UNSET.
-    header_libs: [
-        "libnetd_client_headers"
-    ],
 }
 
 // Code used both by the daemon and by unit tests.
