@@ -69,6 +69,7 @@ package android.net {
     method @NonNull public static java.time.Duration getDnsResolverSampleValidityDuration(@NonNull android.content.Context, @NonNull java.time.Duration);
     method public static int getDnsResolverSuccessThresholdPercent(@NonNull android.content.Context, int);
     method @Nullable public static android.net.ProxyInfo getGlobalProxy(@NonNull android.content.Context);
+    method public static long getIngressRateLimitInBytesPerSecond(@NonNull android.content.Context);
     method @NonNull public static java.time.Duration getMobileDataActivityTimeout(@NonNull android.content.Context, @NonNull java.time.Duration);
     method public static boolean getMobileDataAlwaysOn(@NonNull android.content.Context, boolean);
     method @NonNull public static java.util.Set<java.lang.Integer> getMobileDataPreferredUids(@NonNull android.content.Context);
@@ -89,6 +90,7 @@ package android.net {
     method public static void setDnsResolverSampleValidityDuration(@NonNull android.content.Context, @NonNull java.time.Duration);
     method public static void setDnsResolverSuccessThresholdPercent(@NonNull android.content.Context, @IntRange(from=0, to=100) int);
     method public static void setGlobalProxy(@NonNull android.content.Context, @NonNull android.net.ProxyInfo);
+    method public static void setIngressRateLimitInBytesPerSecond(@NonNull android.content.Context, @IntRange(from=0xffffffff, to=java.lang.Integer.MAX_VALUE) long);
     method public static void setMobileDataActivityTimeout(@NonNull android.content.Context, @NonNull java.time.Duration);
     method public static void setMobileDataAlwaysOn(@NonNull android.content.Context, boolean);
     method public static void setMobileDataPreferredUids(@NonNull android.content.Context, @NonNull java.util.Set<java.lang.Integer>);
