@@ -22,7 +22,9 @@ import static android.net.NetworkStack.PERMISSION_MAINLINE_NETWORK_STACK;
 
 import android.annotation.NonNull;
 import android.content.Context;
+import android.os.Binder;
 
+import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Arrays;
 
@@ -79,5 +81,20 @@ public final class PermissionUtils {
         permissions.add(NETWORK_STACK);
         permissions.add(PERMISSION_MAINLINE_NETWORK_STACK);
         enforceAnyPermissionOf(context, permissions.toArray(new String[0]));
+    }
+
+    /**
+     * Return true if the context has DUMP permission.
+     */
+    public static boolean checkDumpPermission(Context context, String tag, PrintWriter pw) {
+        if (context.checkCallingOrSelfPermission(android.Manifest.permission.DUMP)
+                != PERMISSION_GRANTED) {
+            pw.println("Permission Denial: can't dump " + tag + " from from pid="
+                    + Binder.getCallingPid() + ", uid=" + Binder.getCallingUid()
+                    + " due to missing android.permission.DUMP permission");
+            return false;
+        } else {
+            return true;
+        }
     }
 }
