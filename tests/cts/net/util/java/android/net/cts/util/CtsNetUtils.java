@@ -380,6 +380,12 @@ public final class CtsNetUtils {
         return mCellNetworkCallback != null;
     }
 
+    public void tearDown() {
+        if (cellConnectAttempted()) {
+            disconnectFromCell();
+        }
+    }
+
     private NetworkRequest makeWifiNetworkRequest() {
         return new NetworkRequest.Builder()
                 .addTransportType(NetworkCapabilities.TRANSPORT_WIFI)
