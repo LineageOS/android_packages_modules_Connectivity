@@ -52,6 +52,7 @@ public class NearbyService extends SystemService {
         if (DBG) {
             Log.d(TAG, "Publishing NearbyService");
         }
+        publishBinderService(Context.NEARBY_SERVICE, mImpl);
         mFastPairManager.initiate();
     }
 
