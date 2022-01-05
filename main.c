@@ -32,10 +32,6 @@
 
 #define DEVICEPREFIX "v4-"
 
-// Sync MARK_UNSET from netid_client.h
-// TODO: remove MARK_UNSET definition once argument "-m" is removed.
-#define MARK_UNSET 0u
-
 /* function: stop_loop
  * signal handler: stop the event loop
  */
@@ -50,7 +46,6 @@ void print_help() {
   printf("-p [plat prefix]\n");
   printf("-4 [IPv4 address]\n");
   printf("-6 [IPv6 address]\n");
-  printf("-m [socket mark]\n");
   printf("-t [tun file descriptor number]\n");
   printf("-r [read socket descriptor number]\n");
   printf("-w [write socket descriptor number]\n");
@@ -62,13 +57,12 @@ void print_help() {
 int main(int argc, char **argv) {
   struct tun_data tunnel;
   int opt;
-  char *uplink_interface = NULL, *plat_prefix = NULL, *mark_str = NULL;
+  char *uplink_interface = NULL, *plat_prefix = NULL;
   char *v4_addr = NULL, *v6_addr = NULL, *tunfd_str = NULL, *read_sock_str = NULL,
        *write_sock_str = NULL;
-  uint32_t mark   = MARK_UNSET;
   unsigned len;
 
-  while ((opt = getopt(argc, argv, "i:p:4:6:m:t:r:w:h")) != -1) {
+  while ((opt = getopt(argc, argv, "i:p:4:6:t:r:w:h")) != -1) {
     switch (opt) {
       case 'i':
         uplink_interface = optarg;
@@ -81,9 +75,6 @@ int main(int argc, char **argv) {
         break;
       case '6':
         v6_addr = optarg;
-        break;
-      case 'm':
-        mark_str = optarg;
         break;
       case 't':
         tunfd_str = optarg;
@@ -108,11 +99,6 @@ int main(int argc, char **argv) {
     exit(1);
   }
 
-  if (mark_str != NULL && !parse_unsigned(mark_str, &mark)) {
-    logmsg(ANDROID_LOG_FATAL, "invalid mark %s", mark_str);
-    exit(1);
-  }
-
   if (tunfd_str != NULL && !parse_int(tunfd_str, &tunnel.fd4)) {
     logmsg(ANDROID_LOG_FATAL, "invalid tunfd %s", tunfd_str);
     exit(1);
@@ -123,7 +109,7 @@ int main(int argc, char **argv) {
   }
 
   if (read_sock_str != NULL && !parse_int(read_sock_str, &tunnel.read_fd6)) {
-    logmsg(ANDROID_LOG_FATAL, "invalid sock_write %s", read_sock_str);
+    logmsg(ANDROID_LOG_FATAL, "invalid read socket %s", read_sock_str);
     exit(1);
   }
   if (!tunnel.read_fd6) {
@@ -132,7 +118,7 @@ int main(int argc, char **argv) {
   }
 
   if (write_sock_str != NULL && !parse_int(write_sock_str, &tunnel.write_fd6)) {
-    logmsg(ANDROID_LOG_FATAL, "invalid sock_write %s", write_sock_str);
+    logmsg(ANDROID_LOG_FATAL, "invalid write socket %s", write_sock_str);
     exit(1);
   }
   if (!tunnel.write_fd6) {
@@ -162,9 +148,8 @@ int main(int argc, char **argv) {
     exit(1);
   }
 
-  logmsg(ANDROID_LOG_INFO, "Starting clat version %s on %s mark=%s plat=%s v4=%s v6=%s",
-         CLATD_VERSION, uplink_interface, mark_str ? mark_str : "(none)",
-         plat_prefix ? plat_prefix : "(none)", v4_addr ? v4_addr : "(none)",
+  logmsg(ANDROID_LOG_INFO, "Starting clat version %s on %s plat=%s v4=%s v6=%s", CLATD_VERSION,
+         uplink_interface, plat_prefix ? plat_prefix : "(none)", v4_addr ? v4_addr : "(none)",
          v6_addr ? v6_addr : "(none)");
 
   // run under a regular user with no capabilities
