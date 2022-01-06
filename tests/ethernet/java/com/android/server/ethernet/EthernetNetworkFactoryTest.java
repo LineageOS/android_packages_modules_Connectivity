@@ -42,8 +42,8 @@ import android.net.NetworkAgentConfig;
 import android.net.NetworkCapabilities;
 import android.net.NetworkProvider;
 import android.net.NetworkRequest;
-import android.net.ip.IIpClient;
 import android.net.ip.IpClientCallbacks;
+import android.net.ip.IpClientManager;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.test.TestLooper;
@@ -72,7 +72,7 @@ public class EthernetNetworkFactoryTest {
     @Mock private Context mContext;
     @Mock private Resources mResources;
     @Mock private EthernetNetworkFactory.Dependencies mDeps;
-    @Mock private IIpClient mIpClient;
+    @Mock private IpClientManager mIpClient;
     @Mock private EthernetNetworkAgent mNetworkAgent;
     @Mock private InterfaceParams mInterfaceParams;
 
@@ -113,7 +113,7 @@ public class EthernetNetworkFactoryTest {
             assertNull("An IpClient has already been created.", mIpClientCallbacks);
 
             mIpClientCallbacks = inv.getArgument(2);
-            mIpClientCallbacks.onIpClientCreated(mIpClient);
+            mIpClientCallbacks.onIpClientCreated(null);
             mLooper.dispatchAll();
             return null;
         }).when(mDeps).makeIpClient(any(Context.class), anyString(), any());
@@ -124,6 +124,8 @@ public class EthernetNetworkFactoryTest {
             mIpClientCallbacks = null;
             return null;
         }).when(mIpClient).shutdown();
+
+        when(mDeps.makeIpClientManager(any())).thenReturn(mIpClient);
     }
 
     private void triggerOnProvisioningSuccess() {
@@ -185,13 +187,13 @@ public class EthernetNetworkFactoryTest {
 
     // creates an interface with provisioning in progress (since updating the interface link state
     // automatically starts the provisioning process)
-    private void createInterfaceUndergoingProvisioning(String iface) throws Exception {
+    private void createInterfaceUndergoingProvisioning(String iface) {
         // Default to the ethernet transport type.
         createInterfaceUndergoingProvisioning(iface, NetworkCapabilities.TRANSPORT_ETHERNET);
     }
 
     private void createInterfaceUndergoingProvisioning(
-            @NonNull final String iface, final int transportType) throws Exception {
+            @NonNull final String iface, final int transportType) {
         mNetFactory.addInterface(iface, iface, createInterfaceCapsBuilder(transportType).build(),
                 createDefaultIpConfig());
         assertTrue(mNetFactory.updateInterfaceLinkState(iface, true));
@@ -433,12 +435,12 @@ public class EthernetNetworkFactoryTest {
         verifyStart();
     }
 
-    private void verifyStart() throws Exception {
+    private void verifyStart() {
         verify(mDeps).makeIpClient(any(Context.class), anyString(), any());
         verify(mIpClient).startProvisioning(any());
     }
 
-    private void verifyStop() throws Exception {
+    private void verifyStop() {
         verify(mIpClient).shutdown();
         verify(mNetworkAgent).unregister();
     }
