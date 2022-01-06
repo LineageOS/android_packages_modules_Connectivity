@@ -33,6 +33,7 @@ import android.net.NetworkRequest;
 import android.net.NetworkSpecifier;
 import android.net.ip.IIpClient;
 import android.net.ip.IpClientCallbacks;
+import android.net.ip.IpClientManager;
 import android.net.ip.IpClientUtil;
 import android.net.shared.ProvisioningConfiguration;
 import android.os.ConditionVariable;
@@ -74,6 +75,10 @@ public class EthernetNetworkFactory extends NetworkFactory {
     public static class Dependencies {
         public void makeIpClient(Context context, String iface, IpClientCallbacks callbacks) {
             IpClientUtil.makeIpClient(context, iface, callbacks);
+        }
+
+        public IpClientManager makeIpClientManager(@NonNull final IIpClient ipClient) {
+            return new IpClientManager(ipClient, TAG);
         }
 
         public EthernetNetworkAgent makeEthernetNetworkAgent(Context context, Looper looper,
@@ -283,7 +288,7 @@ public class EthernetNetworkFactory extends NetworkFactory {
         private boolean mLinkUp;
         private LinkProperties mLinkProperties = new LinkProperties();
 
-        private volatile @Nullable IIpClient mIpClient;
+        private volatile @Nullable IpClientManager mIpClient;
         private @Nullable IpClientCallbacksImpl mIpClientCallback;
         private @Nullable EthernetNetworkAgent mNetworkAgent;
         private @Nullable IpConfiguration mIpConfig;
@@ -317,7 +322,7 @@ public class EthernetNetworkFactory extends NetworkFactory {
 
             @Override
             public void onIpClientCreated(IIpClient ipClient) {
-                mIpClient = ipClient;
+                mIpClient = mDeps.makeIpClientManager(ipClient);
                 mIpClientStartCv.open();
             }
 
@@ -353,14 +358,6 @@ public class EthernetNetworkFactory extends NetworkFactory {
             public void onQuit() {
                 mIpClient = null;
                 mIpClientShutdownCv.open();
-            }
-        }
-
-        private static void shutdownIpClient(IIpClient ipClient) {
-            try {
-                ipClient.shutdown();
-            } catch (RemoteException e) {
-                Log.e(TAG, "Error stopping IpClient", e);
             }
         }
 
@@ -509,7 +506,7 @@ public class EthernetNetworkFactory extends NetworkFactory {
         void stop() {
             // Invalidate all previous start requests
             if (mIpClient != null) {
-                shutdownIpClient(mIpClient);
+                mIpClient.shutdown();
                 mIpClientCallback.awaitIpClientShutdown();
                 mIpClient = null;
             }
@@ -522,41 +519,30 @@ public class EthernetNetworkFactory extends NetworkFactory {
             mLinkProperties.clear();
         }
 
-        private static void provisionIpClient(IIpClient ipClient, IpConfiguration config,
-                String tcpBufferSizes) {
+        private static void provisionIpClient(@NonNull final IpClientManager ipClient,
+                @NonNull final IpConfiguration config, @NonNull final String tcpBufferSizes) {
             if (config.getProxySettings() == ProxySettings.STATIC ||
                     config.getProxySettings() == ProxySettings.PAC) {
-                try {
-                    ipClient.setHttpProxy(config.getHttpProxy());
-                } catch (RemoteException e) {
-                    e.rethrowFromSystemServer();
-                }
+                ipClient.setHttpProxy(config.getHttpProxy());
             }
 
             if (!TextUtils.isEmpty(tcpBufferSizes)) {
-                try {
-                    ipClient.setTcpBufferSizes(tcpBufferSizes);
-                } catch (RemoteException e) {
-                    e.rethrowFromSystemServer();
-                }
+                ipClient.setTcpBufferSizes(tcpBufferSizes);
             }
 
-            final ProvisioningConfiguration provisioningConfiguration;
+            ipClient.startProvisioning(createProvisioningConfiguration(config));
+        }
+
+        private static ProvisioningConfiguration createProvisioningConfiguration(
+                @NonNull final IpConfiguration config) {
             if (config.getIpAssignment() == IpAssignment.STATIC) {
-                provisioningConfiguration = new ProvisioningConfiguration.Builder()
+                return new ProvisioningConfiguration.Builder()
                         .withStaticConfiguration(config.getStaticIpConfiguration())
                         .build();
-            } else {
-                provisioningConfiguration = new ProvisioningConfiguration.Builder()
+            }
+            return new ProvisioningConfiguration.Builder()
                         .withProvisioningTimeoutMs(0)
                         .build();
-            }
-
-            try {
-                ipClient.startProvisioning(provisioningConfiguration.toStableParcelable());
-            } catch (RemoteException e) {
-                e.rethrowFromSystemServer();
-            }
         }
 
         void restart(){
@@ -589,10 +575,7 @@ public class EthernetNetworkFactory extends NetworkFactory {
             NetworkInterfaceState ifaceState = mTrackingInterfaces.get(iface);
             pw.println(iface + ":" + ifaceState);
             pw.increaseIndent();
-            final IIpClient ipClient = ifaceState.mIpClient;
-            if (ipClient != null) {
-                IpClientUtil.dumpIpClient(ipClient, fd, pw, args);
-            } else {
+            if (null == ifaceState.mIpClient) {
                 pw.println("IpClient is null");
             }
             pw.decreaseIndent();
