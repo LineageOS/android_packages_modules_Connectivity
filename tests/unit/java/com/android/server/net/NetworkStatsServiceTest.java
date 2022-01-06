@@ -96,6 +96,7 @@ import android.net.NetworkStats;
 import android.net.NetworkStatsHistory;
 import android.net.NetworkTemplate;
 import android.net.TelephonyNetworkSpecifier;
+import android.net.TetheringManager;
 import android.net.UnderlyingNetworkInfo;
 import android.net.netstats.provider.INetworkStatsProviderCallback;
 import android.net.wifi.WifiInfo;
@@ -184,6 +185,7 @@ public class NetworkStatsServiceTest extends NetworkStatsBaseTest {
     private @Mock TelephonyManager mTelephonyManager;
     private static @Mock WifiInfo sWifiInfo;
     private @Mock INetworkManagementService mNetManager;
+    private @Mock TetheringManager mTetheringManager;
     private @Mock NetworkStatsFactory mStatsFactory;
     private @Mock NetworkStatsSettings mSettings;
     private @Mock IBinder mBinder;
@@ -197,6 +199,7 @@ public class NetworkStatsServiceTest extends NetworkStatsBaseTest {
     private INetworkManagementEventObserver mNetworkObserver;
     private ContentObserver mContentObserver;
     private Handler mHandler;
+    private TetheringManager.TetheringEventCallback mTetheringEventCallback;
 
     private class MockContext extends BroadcastInterceptingContext {
         private final Context mBaseContext;
@@ -209,6 +212,7 @@ public class NetworkStatsServiceTest extends NetworkStatsBaseTest {
         @Override
         public Object getSystemService(String name) {
             if (Context.TELEPHONY_SERVICE.equals(name)) return mTelephonyManager;
+            if (Context.TETHERING_SERVICE.equals(name)) return mTetheringManager;
             return mBaseContext.getSystemService(name);
         }
 
@@ -279,11 +283,18 @@ public class NetworkStatsServiceTest extends NetworkStatsBaseTest {
         mSession = mService.openSession();
         assertNotNull("openSession() failed", mSession);
 
-        // catch INetworkManagementEventObserver during systemReady()
+        // Catch INetworkManagementEventObserver during systemReady().
         ArgumentCaptor<INetworkManagementEventObserver> networkObserver =
                 ArgumentCaptor.forClass(INetworkManagementEventObserver.class);
         verify(mNetManager).registerObserver(networkObserver.capture());
         mNetworkObserver = networkObserver.getValue();
+
+        // Catch TetheringEventCallback during systemReady().
+        ArgumentCaptor<TetheringManager.TetheringEventCallback> tetheringEventCbCaptor =
+                ArgumentCaptor.forClass(TetheringManager.TetheringEventCallback.class);
+        verify(mTetheringManager).registerTetheringEventCallback(
+                any(), tetheringEventCbCaptor.capture());
+        mTetheringEventCallback = tetheringEventCbCaptor.getValue();
     }
 
     @NonNull
@@ -1647,6 +1658,21 @@ public class NetworkStatsServiceTest extends NetworkStatsBaseTest {
                 templateWifi, Long.MIN_VALUE, Long.MAX_VALUE, true);
         assertValues(statsWifi, IFACE_ALL, UID_RED, SET_ALL, 0xF00D, METERED_ALL, ROAMING_ALL,
                 DEFAULT_NETWORK_ALL, 0L, 0L, 0L, 0L, 2);
+    }
+
+    @Test
+    public void testTetheringEventCallback_onUpstreamChanged() throws Exception {
+        // Register custom provider and retrieve callback.
+        final TestableNetworkStatsProviderBinder provider =
+                new TestableNetworkStatsProviderBinder();
+        final INetworkStatsProviderCallback cb =
+                mService.registerNetworkStatsProvider("TEST-TETHERING-OFFLOAD", provider);
+        assertNotNull(cb);
+        provider.assertNoCallback();
+
+        // Post upstream changed event, verify the service will pull for stats.
+        mTetheringEventCallback.onUpstreamChanged(WIFI_NETWORK);
+        provider.expectOnRequestStatsUpdate(0 /* unused */);
     }
 
     private static File getBaseDir(File statsDir) {
