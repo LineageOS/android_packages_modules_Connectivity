@@ -33,6 +33,7 @@ import android.os.RemoteException;
 import android.util.Log;
 import android.util.PrintWriterPrinter;
 
+import com.android.internal.annotations.VisibleForTesting;
 import com.android.internal.util.IndentingPrintWriter;
 import com.android.net.module.util.PermissionUtils;
 
@@ -49,7 +50,8 @@ public class EthernetServiceImpl extends IEthernetManager.Stub {
     private static final String TAG = "EthernetServiceImpl";
 
     private final Context mContext;
-    private final AtomicBoolean mStarted = new AtomicBoolean(false);
+    @VisibleForTesting
+    final AtomicBoolean mStarted = new AtomicBoolean(false);
 
     private Handler mHandler;
     private EthernetTracker mTracker;
@@ -70,6 +72,17 @@ public class EthernetServiceImpl extends IEthernetManager.Stub {
                 "ConnectivityService");
     }
 
+    private void enforceAutomotiveDevice(final @NonNull String methodName) {
+        PermissionUtils.enforceSystemFeature(mContext, PackageManager.FEATURE_AUTOMOTIVE,
+                methodName + " is only available on automotive devices.");
+    }
+
+    private void enforceInterfaceIsTracked(final @NonNull String iface) {
+        if(!mTracker.isTrackingInterface(iface)) {
+            throw new UnsupportedOperationException("The given iface is not currently tracked.");
+        }
+    }
+
     private boolean checkUseRestrictedNetworksPermission() {
         return mContext.checkCallingOrSelfPermission(
                 android.Manifest.permission.CONNECTIVITY_USE_RESTRICTED_NETWORKS)
@@ -87,6 +100,12 @@ public class EthernetServiceImpl extends IEthernetManager.Stub {
         mTracker.start();
 
         mStarted.set(true);
+    }
+
+    private void logIfEthernetNotStarted() {
+        if (!mStarted.get()) {
+            throw new IllegalStateException("System isn't ready to change ethernet configurations");
+        }
     }
 
     @Override
@@ -116,9 +135,7 @@ public class EthernetServiceImpl extends IEthernetManager.Stub {
      */
     @Override
     public void setConfiguration(String iface, IpConfiguration config) {
-        if (!mStarted.get()) {
-            Log.w(TAG, "System isn't ready enough to change ethernet configuration");
-        }
+        logIfEthernetNotStarted();
 
         PermissionUtils.enforceNetworkStackPermission(mContext);
 
@@ -214,23 +231,44 @@ public class EthernetServiceImpl extends IEthernetManager.Stub {
         pw.decreaseIndent();
     }
 
+    /**
+     * Validate the state of ethernet for APIs tied to network management.
+     *
+     * @param iface the ethernet interface name to operate on.
+     * @param methodName the name of the calling method.
+     */
+    private void validateNetworkManagementState(@NonNull final String iface,
+            final @NonNull String methodName) {
+        logIfEthernetNotStarted();
+
+        // TODO: add permission check here for MANAGE_INTERNAL_NETWORKS when it's available.
+        Objects.requireNonNull(iface, "Pass a non-null iface.");
+        Objects.requireNonNull(methodName, "Pass a non-null methodName.");
+        enforceAutomotiveDevice(methodName);
+        enforceInterfaceIsTracked(iface);
+    }
+
     @Override
     public void updateConfiguration(@NonNull final String iface,
             @NonNull final InternalNetworkUpdateRequest request,
             @Nullable final IInternalNetworkManagementListener listener) {
         Log.i(TAG, "updateConfiguration called with: iface=" + iface
                 + ", request=" + request + ", listener=" + listener);
+        validateNetworkManagementState(iface, "updateConfiguration()");
+        // TODO: validate that iface is listed in overlay config_ethernet_interfaces
     }
 
     @Override
     public void connectNetwork(@NonNull final String iface,
             @Nullable final IInternalNetworkManagementListener listener) {
         Log.i(TAG, "connectNetwork called with: iface=" + iface + ", listener=" + listener);
+        validateNetworkManagementState(iface, "connectNetwork()");
     }
 
     @Override
     public void disconnectNetwork(@NonNull final String iface,
             @Nullable final IInternalNetworkManagementListener listener) {
         Log.i(TAG, "disconnectNetwork called with: iface=" + iface + ", listener=" + listener);
+        validateNetworkManagementState(iface, "disconnectNetwork()");
     }
 }
