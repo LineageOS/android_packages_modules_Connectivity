@@ -28,7 +28,6 @@ import android.net.InternalNetworkUpdateRequest;
 import android.net.IpConfiguration;
 import android.os.Binder;
 import android.os.Handler;
-import android.os.HandlerThread;
 import android.os.RemoteException;
 import android.util.Log;
 import android.util.PrintWriterPrinter;
@@ -49,15 +48,17 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public class EthernetServiceImpl extends IEthernetManager.Stub {
     private static final String TAG = "EthernetServiceImpl";
 
-    private final Context mContext;
     @VisibleForTesting
     final AtomicBoolean mStarted = new AtomicBoolean(false);
+    private final Context mContext;
+    private final Handler mHandler;
+    private final EthernetTracker mTracker;
 
-    private Handler mHandler;
-    private EthernetTracker mTracker;
-
-    public EthernetServiceImpl(Context context) {
+    EthernetServiceImpl(@NonNull final Context context, @NonNull final Handler handler,
+            @NonNull final EthernetTracker tracker) {
         mContext = context;
+        mHandler = handler;
+        mTracker = tracker;
     }
 
     private void enforceAccessPermission() {
@@ -91,14 +92,7 @@ public class EthernetServiceImpl extends IEthernetManager.Stub {
 
     public void start() {
         Log.i(TAG, "Starting Ethernet service");
-
-        HandlerThread handlerThread = new HandlerThread("EthernetServiceThread");
-        handlerThread.start();
-        mHandler = new Handler(handlerThread.getLooper());
-
-        mTracker = new EthernetTracker(mContext, mHandler);
         mTracker.start();
-
         mStarted.set(true);
     }
 
