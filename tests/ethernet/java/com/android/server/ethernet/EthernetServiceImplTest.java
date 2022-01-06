@@ -20,11 +20,13 @@ import static org.junit.Assert.assertThrows;
 
 import static org.mockito.Mockito.doReturn;
 
+import android.annotation.NonNull;
 import android.content.Context;
 import android.content.pm.PackageManager;
 import android.net.InternalNetworkUpdateRequest;
 import android.net.IpConfiguration;
 import android.net.StaticIpConfiguration;
+import android.os.Handler;
 
 import androidx.test.filters.SmallTest;
 import androidx.test.runner.AndroidJUnit4;
@@ -38,16 +40,21 @@ import org.mockito.MockitoAnnotations;
 @RunWith(AndroidJUnit4.class)
 @SmallTest
 public class EthernetServiceImplTest {
+    private static final String TEST_IFACE = "test123";
     private EthernetServiceImpl mEthernetServiceImpl;
     @Mock private Context mContext;
+    @Mock private Handler mHandler;
+    @Mock private EthernetTracker mEthernetTracker;
     @Mock private PackageManager mPackageManager;
 
     @Before
     public void setup() {
         MockitoAnnotations.initMocks(this);
         doReturn(mPackageManager).when(mContext).getPackageManager();
-        mEthernetServiceImpl = new EthernetServiceImpl(mContext);
+        mEthernetServiceImpl = new EthernetServiceImpl(mContext, mHandler, mEthernetTracker);
         mEthernetServiceImpl.mStarted.set(true);
+        toggleAutomotiveFeature(true);
+        shouldTrackIface(TEST_IFACE, true);
     }
 
     @Test
@@ -111,7 +118,7 @@ public class EthernetServiceImplTest {
 
     @Test
     public void testUpdateConfigurationRejectsWithoutAutomotiveFeature() {
-        disableAutomotiveFeature();
+        toggleAutomotiveFeature(false);
         assertThrows(UnsupportedOperationException.class, () -> {
             final InternalNetworkUpdateRequest r =
                     new InternalNetworkUpdateRequest(new StaticIpConfiguration(), null);
@@ -122,7 +129,7 @@ public class EthernetServiceImplTest {
 
     @Test
     public void testConnectNetworkRejectsWithoutAutomotiveFeature() {
-        disableAutomotiveFeature();
+        toggleAutomotiveFeature(false);
         assertThrows(UnsupportedOperationException.class, () -> {
             mEthernetServiceImpl.connectNetwork("" /* iface */, null /* listener */);
         });
@@ -130,13 +137,45 @@ public class EthernetServiceImplTest {
 
     @Test
     public void testDisconnectNetworkRejectsWithoutAutomotiveFeature() {
-        disableAutomotiveFeature();
+        toggleAutomotiveFeature(false);
         assertThrows(UnsupportedOperationException.class, () -> {
             mEthernetServiceImpl.disconnectNetwork("" /* iface */, null /* listener */);
         });
     }
 
-    private void disableAutomotiveFeature() {
-        doReturn(false).when(mPackageManager).hasSystemFeature(PackageManager.FEATURE_AUTOMOTIVE);
+    private void toggleAutomotiveFeature(final boolean isEnabled) {
+        doReturn(isEnabled)
+                .when(mPackageManager).hasSystemFeature(PackageManager.FEATURE_AUTOMOTIVE);
+    }
+
+    @Test
+    public void testUpdateConfigurationRejectsWithUntrackedIface() {
+        shouldTrackIface(TEST_IFACE, false);
+        assertThrows(UnsupportedOperationException.class, () -> {
+            final InternalNetworkUpdateRequest r =
+                    new InternalNetworkUpdateRequest(new StaticIpConfiguration(), null);
+
+            mEthernetServiceImpl.updateConfiguration(TEST_IFACE, r, null /* listener */);
+        });
+    }
+
+    @Test
+    public void testConnectNetworkRejectsWithUntrackedIface() {
+        shouldTrackIface(TEST_IFACE, false);
+        assertThrows(UnsupportedOperationException.class, () -> {
+            mEthernetServiceImpl.connectNetwork(TEST_IFACE, null /* listener */);
+        });
+    }
+
+    @Test
+    public void testDisconnectNetworkRejectsWithUntrackedIface() {
+        shouldTrackIface(TEST_IFACE, false);
+        assertThrows(UnsupportedOperationException.class, () -> {
+            mEthernetServiceImpl.disconnectNetwork(TEST_IFACE, null /* listener */);
+        });
+    }
+
+    private void shouldTrackIface(@NonNull final String iface, final boolean shouldTrack) {
+        doReturn(shouldTrack).when(mEthernetTracker).isTrackingInterface(iface);
     }
 }
