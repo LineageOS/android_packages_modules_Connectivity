@@ -64,11 +64,11 @@ import org.mockito.MockitoAnnotations;
 @RunWith(AndroidJUnit4.class)
 @SmallTest
 public class EthernetNetworkFactoryTest {
-    private TestLooper mLooper = new TestLooper();
+    private static final String TEST_IFACE = "test123";
+    private final TestLooper mLooper = new TestLooper();
     private Handler mHandler;
     private EthernetNetworkFactory mNetFactory = null;
     private IpClientCallbacks mIpClientCallbacks;
-    private int mNetworkRequestCount = 0;
     @Mock private Context mContext;
     @Mock private Resources mResources;
     @Mock private EthernetNetworkFactory.Dependencies mDeps;
@@ -79,10 +79,7 @@ public class EthernetNetworkFactoryTest {
     @Before
     public void setUp() throws Exception {
         MockitoAnnotations.initMocks(this);
-
         mHandler = new Handler(mLooper.getLooper());
-        mNetworkRequestCount = 0;
-
         mNetFactory = new EthernetNetworkFactory(mHandler, mContext, createDefaultFilterCaps(),
                 mDeps);
 
@@ -129,10 +126,24 @@ public class EthernetNetworkFactoryTest {
         }).when(mIpClient).shutdown();
     }
 
+    private void triggerOnProvisioningSuccess() {
+        mIpClientCallbacks.onProvisioningSuccess(new LinkProperties());
+        mLooper.dispatchAll();
+    }
+
+    private void triggerOnProvisioningFailure() {
+        mIpClientCallbacks.onProvisioningFailure(new LinkProperties());
+        mLooper.dispatchAll();
+    }
+
+    private void triggerOnReachabilityLost() {
+        mIpClientCallbacks.onReachabilityLost("ReachabilityLost");
+        mLooper.dispatchAll();
+    }
+
     private void setupContext() {
         when(mContext.getResources()).thenReturn(mResources);
-        when(mResources.getString(R.string.config_ethernet_tcp_buffers)).thenReturn(
-                "524288,1048576,3145728,524288,1048576,2097152");
+        when(mResources.getString(R.string.config_ethernet_tcp_buffers)).thenReturn("");
     }
 
     @After
@@ -184,8 +195,7 @@ public class EthernetNetworkFactoryTest {
         mNetFactory.addInterface(iface, iface, createInterfaceCapsBuilder(transportType).build(),
                 createDefaultIpConfig());
         assertTrue(mNetFactory.updateInterfaceLinkState(iface, true));
-        verify(mDeps).makeIpClient(any(Context.class), anyString(), any());
-        verify(mIpClient).startProvisioning(any());
+        verifyStart();
         clearInvocations(mDeps);
         clearInvocations(mIpClient);
     }
@@ -197,18 +207,23 @@ public class EthernetNetworkFactoryTest {
                 ConnectivityManager.TYPE_ETHERNET);
     }
 
+    private void createVerifyAndRemoveProvisionedInterface(final int transportType,
+            final int expectedLegacyType) throws Exception {
+        createAndVerifyProvisionedInterface(TEST_IFACE, transportType,
+                expectedLegacyType);
+        mNetFactory.removeInterface(TEST_IFACE);
+    }
+
     private void createAndVerifyProvisionedInterface(
             @NonNull final String iface, final int transportType, final int expectedLegacyType)
             throws Exception {
         createInterfaceUndergoingProvisioning(iface, transportType);
-        mIpClientCallbacks.onProvisioningSuccess(new LinkProperties());
-        mLooper.dispatchAll();
+        triggerOnProvisioningSuccess();
         // provisioning succeeded, verify that the network agent is created, registered, marked
         // as connected and legacy type are correctly set.
         verify(mDeps).makeEthernetNetworkAgent(any(), any(), any(), any(),
                 argThat(x -> x.getLegacyType() == expectedLegacyType), any(), any());
-        verify(mNetworkAgent).register();
-        verify(mNetworkAgent).markConnected();
+        verifyNetworkAgentRegistersAndConnects();
         clearInvocations(mDeps);
         clearInvocations(mNetworkAgent);
     }
@@ -228,8 +243,7 @@ public class EthernetNetworkFactoryTest {
         verify(mNetworkAgent, never()).register();
 
         mNetFactory.releaseNetworkFor(createDefaultRequest());
-        verify(mIpClient).shutdown();
-        verify(mNetworkAgent).unregister();
+        verifyStop();
 
         clearInvocations(mIpClient);
         clearInvocations(mNetworkAgent);
@@ -237,7 +251,7 @@ public class EthernetNetworkFactoryTest {
 
     @Test
     public void testAcceptRequest() throws Exception {
-        createInterfaceUndergoingProvisioning("eth0");
+        createInterfaceUndergoingProvisioning(TEST_IFACE);
         assertTrue(mNetFactory.acceptRequest(createDefaultRequest()));
 
         NetworkRequest wifiRequest = createDefaultRequestBuilder()
@@ -248,27 +262,23 @@ public class EthernetNetworkFactoryTest {
 
     @Test
     public void testUpdateInterfaceLinkStateForActiveProvisioningInterface() throws Exception {
-        String iface = "eth0";
-        createInterfaceUndergoingProvisioning(iface);
+        createInterfaceUndergoingProvisioning(TEST_IFACE);
         // verify that the IpClient gets shut down when interface state changes to down.
-        assertTrue(mNetFactory.updateInterfaceLinkState(iface, false));
+        assertTrue(mNetFactory.updateInterfaceLinkState(TEST_IFACE, false));
         verify(mIpClient).shutdown();
     }
 
     @Test
     public void testUpdateInterfaceLinkStateForProvisionedInterface() throws Exception {
-        String iface = "eth0";
-        createAndVerifyProvisionedInterface(iface);
-        assertTrue(mNetFactory.updateInterfaceLinkState(iface, false));
-        verify(mIpClient).shutdown();
-        verify(mNetworkAgent).unregister();
+        createAndVerifyProvisionedInterface(TEST_IFACE);
+        assertTrue(mNetFactory.updateInterfaceLinkState(TEST_IFACE, false));
+        verifyStop();
     }
 
     @Test
     public void testUpdateInterfaceLinkStateForUnprovisionedInterface() throws Exception {
-        String iface = "eth0";
-        createUnprovisionedInterface(iface);
-        assertTrue(mNetFactory.updateInterfaceLinkState(iface, false));
+        createUnprovisionedInterface(TEST_IFACE);
+        assertTrue(mNetFactory.updateInterfaceLinkState(TEST_IFACE, false));
         // There should not be an active IPClient or NetworkAgent.
         verify(mDeps, never()).makeIpClient(any(), any(), any());
         verify(mDeps, never())
@@ -284,75 +294,64 @@ public class EthernetNetworkFactoryTest {
 
     @Test
     public void testNeedNetworkForOnProvisionedInterface() throws Exception {
-        createAndVerifyProvisionedInterface("eth0");
+        createAndVerifyProvisionedInterface(TEST_IFACE);
         mNetFactory.needNetworkFor(createDefaultRequest());
         verify(mIpClient, never()).startProvisioning(any());
     }
 
     @Test
     public void testNeedNetworkForOnUnprovisionedInterface() throws Exception {
-        createUnprovisionedInterface("eth0");
+        createUnprovisionedInterface(TEST_IFACE);
         mNetFactory.needNetworkFor(createDefaultRequest());
         verify(mIpClient).startProvisioning(any());
 
-        mIpClientCallbacks.onProvisioningSuccess(new LinkProperties());
-        mLooper.dispatchAll();
-        verify(mNetworkAgent).register();
-        verify(mNetworkAgent).markConnected();
+        triggerOnProvisioningSuccess();
+        verifyNetworkAgentRegistersAndConnects();
     }
 
     @Test
     public void testNeedNetworkForOnInterfaceUndergoingProvisioning() throws Exception {
-        createInterfaceUndergoingProvisioning("eth0");
+        createInterfaceUndergoingProvisioning(TEST_IFACE);
         mNetFactory.needNetworkFor(createDefaultRequest());
         verify(mIpClient, never()).startProvisioning(any());
 
-        mIpClientCallbacks.onProvisioningSuccess(new LinkProperties());
-        mLooper.dispatchAll();
-        verify(mNetworkAgent).register();
-        verify(mNetworkAgent).markConnected();
+        triggerOnProvisioningSuccess();
+        verifyNetworkAgentRegistersAndConnects();
     }
 
     @Test
     public void testProvisioningLoss() throws Exception {
-        String iface = "eth0";
-        when(mDeps.getNetworkInterfaceByName(iface)).thenReturn(mInterfaceParams);
-        createAndVerifyProvisionedInterface(iface);
+        when(mDeps.getNetworkInterfaceByName(TEST_IFACE)).thenReturn(mInterfaceParams);
+        createAndVerifyProvisionedInterface(TEST_IFACE);
 
-        mIpClientCallbacks.onProvisioningFailure(new LinkProperties());
-        mLooper.dispatchAll();
-        verify(mIpClient).shutdown();
-        verify(mNetworkAgent).unregister();
+        triggerOnProvisioningFailure();
+        verifyStop();
         // provisioning loss should trigger a retry, since the interface is still there
         verify(mIpClient).startProvisioning(any());
     }
 
     @Test
     public void testProvisioningLossForDisappearedInterface() throws Exception {
-        String iface = "eth0";
         // mocked method returns null by default, but just to be explicit in the test:
-        when(mDeps.getNetworkInterfaceByName(eq(iface))).thenReturn(null);
+        when(mDeps.getNetworkInterfaceByName(eq(TEST_IFACE))).thenReturn(null);
 
-        createAndVerifyProvisionedInterface(iface);
-        mIpClientCallbacks.onProvisioningFailure(new LinkProperties());
-        mLooper.dispatchAll();
-        verify(mIpClient).shutdown();
-        verify(mNetworkAgent).unregister();
+        createAndVerifyProvisionedInterface(TEST_IFACE);
+        triggerOnProvisioningFailure();
+        verifyStop();
         // the interface disappeared and getNetworkInterfaceByName returns null, we should not retry
         verify(mIpClient, never()).startProvisioning(any());
     }
 
     @Test
     public void testIpClientIsNotStartedWhenLinkIsDown() throws Exception {
-        String iface = "eth0";
-        createUnprovisionedInterface(iface);
-        mNetFactory.updateInterfaceLinkState(iface, false);
+        createUnprovisionedInterface(TEST_IFACE);
+        mNetFactory.updateInterfaceLinkState(TEST_IFACE, false);
 
         mNetFactory.needNetworkFor(createDefaultRequest());
 
         NetworkRequest specificNetRequest = new NetworkRequest.Builder()
                 .addTransportType(NetworkCapabilities.TRANSPORT_ETHERNET)
-                .setNetworkSpecifier(new EthernetNetworkSpecifier(iface))
+                .setNetworkSpecifier(new EthernetNetworkSpecifier(TEST_IFACE))
                 .build();
         mNetFactory.needNetworkFor(specificNetRequest);
 
@@ -363,7 +362,7 @@ public class EthernetNetworkFactoryTest {
 
     @Test
     public void testLinkPropertiesChanged() throws Exception {
-        createAndVerifyProvisionedInterface("eth0");
+        createAndVerifyProvisionedInterface(TEST_IFACE);
 
         LinkProperties lp = new LinkProperties();
         mIpClientCallbacks.onLinkPropertiesChange(lp);
@@ -373,30 +372,26 @@ public class EthernetNetworkFactoryTest {
 
     @Test
     public void testNetworkUnwanted() throws Exception {
-        createAndVerifyProvisionedInterface("eth0");
+        createAndVerifyProvisionedInterface(TEST_IFACE);
 
         mNetworkAgent.getCallbacks().onNetworkUnwanted();
         mLooper.dispatchAll();
-        verify(mIpClient).shutdown();
-        verify(mNetworkAgent).unregister();
+        verifyStop();
     }
 
     @Test
     public void testNetworkUnwantedWithStaleNetworkAgent() throws Exception {
-        String iface = "eth0";
         // ensures provisioning is restarted after provisioning loss
-        when(mDeps.getNetworkInterfaceByName(iface)).thenReturn(mInterfaceParams);
-        createAndVerifyProvisionedInterface(iface);
+        when(mDeps.getNetworkInterfaceByName(TEST_IFACE)).thenReturn(mInterfaceParams);
+        createAndVerifyProvisionedInterface(TEST_IFACE);
 
         EthernetNetworkAgent.Callbacks oldCbs = mNetworkAgent.getCallbacks();
         // replace network agent in EthernetNetworkFactory
         // Loss of provisioning will restart the ip client and network agent.
-        mIpClientCallbacks.onProvisioningFailure(new LinkProperties());
-        mLooper.dispatchAll();
+        triggerOnProvisioningFailure();
         verify(mDeps).makeIpClient(any(), any(), any());
 
-        mIpClientCallbacks.onProvisioningSuccess(new LinkProperties());
-        mLooper.dispatchAll();
+        triggerOnProvisioningSuccess();
         verify(mDeps).makeEthernetNetworkAgent(any(), any(), any(), any(), any(), any(), any());
 
         // verify that unwanted is ignored
@@ -409,45 +404,47 @@ public class EthernetNetworkFactoryTest {
 
     @Test
     public void testTransportOverrideIsCorrectlySet() throws Exception {
-        final String iface = "eth0";
         // createProvisionedInterface() has verifications in place for transport override
         // functionality which for EthernetNetworkFactory is network score and legacy type mappings.
-        createAndVerifyProvisionedInterface(iface, NetworkCapabilities.TRANSPORT_ETHERNET,
+        createVerifyAndRemoveProvisionedInterface(NetworkCapabilities.TRANSPORT_ETHERNET,
                 ConnectivityManager.TYPE_ETHERNET);
-        mNetFactory.removeInterface(iface);
-        createAndVerifyProvisionedInterface(iface, NetworkCapabilities.TRANSPORT_BLUETOOTH,
+        createVerifyAndRemoveProvisionedInterface(NetworkCapabilities.TRANSPORT_BLUETOOTH,
                 ConnectivityManager.TYPE_BLUETOOTH);
-        mNetFactory.removeInterface(iface);
-        createAndVerifyProvisionedInterface(iface, NetworkCapabilities.TRANSPORT_WIFI,
+        createVerifyAndRemoveProvisionedInterface(NetworkCapabilities.TRANSPORT_WIFI,
                 ConnectivityManager.TYPE_WIFI);
-        mNetFactory.removeInterface(iface);
-        createAndVerifyProvisionedInterface(iface, NetworkCapabilities.TRANSPORT_CELLULAR,
+        createVerifyAndRemoveProvisionedInterface(NetworkCapabilities.TRANSPORT_CELLULAR,
                 ConnectivityManager.TYPE_MOBILE);
-        mNetFactory.removeInterface(iface);
-        createAndVerifyProvisionedInterface(iface, NetworkCapabilities.TRANSPORT_LOWPAN,
+        createVerifyAndRemoveProvisionedInterface(NetworkCapabilities.TRANSPORT_LOWPAN,
                 ConnectivityManager.TYPE_NONE);
-        mNetFactory.removeInterface(iface);
-        createAndVerifyProvisionedInterface(iface, NetworkCapabilities.TRANSPORT_WIFI_AWARE,
+        createVerifyAndRemoveProvisionedInterface(NetworkCapabilities.TRANSPORT_WIFI_AWARE,
                 ConnectivityManager.TYPE_NONE);
-        mNetFactory.removeInterface(iface);
-        createAndVerifyProvisionedInterface(iface, NetworkCapabilities.TRANSPORT_TEST,
+        createVerifyAndRemoveProvisionedInterface(NetworkCapabilities.TRANSPORT_TEST,
                 ConnectivityManager.TYPE_NONE);
-        mNetFactory.removeInterface(iface);
     }
 
     @Test
     public void testReachabilityLoss() throws Exception {
-        String iface = "eth0";
-        createAndVerifyProvisionedInterface(iface);
+        createAndVerifyProvisionedInterface(TEST_IFACE);
 
-        mIpClientCallbacks.onReachabilityLost("ReachabilityLost");
-        mLooper.dispatchAll();
+        triggerOnReachabilityLost();
 
         // Reachability loss should trigger a stop and start, since the interface is still there
-        verify(mIpClient).shutdown();
-        verify(mNetworkAgent).unregister();
+        verifyStop();
+        verifyStart();
+    }
 
+    private void verifyStart() throws Exception {
         verify(mDeps).makeIpClient(any(Context.class), anyString(), any());
         verify(mIpClient).startProvisioning(any());
+    }
+
+    private void verifyStop() throws Exception {
+        verify(mIpClient).shutdown();
+        verify(mNetworkAgent).unregister();
+    }
+
+    private void verifyNetworkAgentRegistersAndConnects() {
+        verify(mNetworkAgent).register();
+        verify(mNetworkAgent).markConnected();
     }
 }
