@@ -21,6 +21,7 @@ import static android.content.pm.PackageManager.PERMISSION_GRANTED;
 import static android.net.NetworkStack.PERMISSION_MAINLINE_NETWORK_STACK;
 
 import android.annotation.NonNull;
+import android.annotation.Nullable;
 import android.content.Context;
 import android.os.Binder;
 
@@ -95,6 +96,26 @@ public final class PermissionUtils {
             return false;
         } else {
             return true;
+        }
+    }
+
+    /**
+     * Enforce that a given feature is available and if not, throw an
+     * {@link UnsupportedOperationException}.
+     *
+     * @param context {@link android.content.Context} for the process.
+     * @param feature the feature name to enforce.
+     * @param errorMessage an optional error message to include.
+     */
+    public static void enforceSystemFeature(final @NonNull Context context,
+            final @NonNull String feature, final @Nullable String errorMessage) {
+        final boolean hasSystemFeature =
+                context.getPackageManager().hasSystemFeature(feature);
+        if (!hasSystemFeature) {
+            if (null == errorMessage) {
+                throw new UnsupportedOperationException();
+            }
+            throw new UnsupportedOperationException(errorMessage);
         }
     }
 }
