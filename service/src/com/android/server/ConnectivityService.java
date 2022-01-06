@@ -10235,12 +10235,8 @@ public class ConnectivityService extends IConnectivityManager.Stub
     }
 
     private void enforceAutomotiveDevice() {
-        final boolean isAutomotiveDevice =
-                mContext.getPackageManager().hasSystemFeature(PackageManager.FEATURE_AUTOMOTIVE);
-        if (!isAutomotiveDevice) {
-            throw new UnsupportedOperationException(
-                    "setOemNetworkPreference() is only available on automotive devices.");
-        }
+        PermissionUtils.enforceSystemFeature(mContext, PackageManager.FEATURE_AUTOMOTIVE,
+                "setOemNetworkPreference() is only available on automotive devices.");
     }
 
     /**
