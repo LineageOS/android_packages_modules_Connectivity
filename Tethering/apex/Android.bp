@@ -71,6 +71,7 @@ apex {
     ],
     apps: [
         "ServiceConnectivityResources",
+        "HalfSheetUX",
     ],
     prebuilts: ["current_sdkinfo"],
     manifest: "manifest.json",
