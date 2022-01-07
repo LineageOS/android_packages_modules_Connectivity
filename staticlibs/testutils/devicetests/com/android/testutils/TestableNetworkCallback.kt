@@ -330,13 +330,13 @@ open class TestableNetworkCallback private constructor(
 
     fun expectBlockedStatusCallback(blocked: Boolean, net: Network, tmt: Long = defaultTimeoutMs) {
         expectCallback<BlockedStatus>(net, tmt).also {
-            assertEquals(it.blocked, blocked, "Unexpected blocked status ${it.blocked}")
+            assertEquals(blocked, it.blocked, "Unexpected blocked status ${it.blocked}")
         }
     }
 
     fun expectBlockedStatusCallback(blocked: Int, net: Network, tmt: Long = defaultTimeoutMs) {
         expectCallback<BlockedStatusInt>(net, tmt).also {
-            assertEquals(it.blocked, blocked, "Unexpected blocked status ${it.blocked}")
+            assertEquals(blocked, it.blocked, "Unexpected blocked status ${it.blocked}")
         }
     }
 
