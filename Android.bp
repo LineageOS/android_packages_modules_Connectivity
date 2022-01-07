@@ -68,6 +68,10 @@ cc_binary {
         "liblog",
     ],
 
+    // Static libc++ for smaller apex size while shipping clatd in the mainline module.
+    // See b/213123047
+    stl: "libc++_static",
+
     // Only enable clang-tidy for the daemon, not the tests, because enabling it for the
     // tests substantially increases build/compile cycle times and doesn't really provide a
     // security benefit.
