@@ -25,7 +25,7 @@ java_library {
     min_sdk_version: "30",
     srcs: ["src/*/*.proto"],
     apex_available: [
-        "com.android.nearby",
+        "com.android.tethering",
     ],
 }
 

@@ -33,7 +33,10 @@ $ aidegen .
 ## Build and Install
 
 ```sh
-$ source build/envsetup.sh && lunch <TARGE>
-$ mmm -j packages/modules/Nearby/
-$ adb install -r {ANDROID_PRODUCT_OUT}/system/apex/com.android.nearby.apex
+$ source build/envsetup.sh && lunch <TARGET>
+$ m com.android.tethering deapexer
+$ $ANDROID_BUILD_TOP/out/host/linux-x86/bin/deapexer decompress --input \
+    {ANDROID_PRODUCT_OUT}/system/apex/com.android.tethering.capex --output \
+    /tmp/tethering.apex
+$ adb install -r /tmp/tethering.apex
 ```

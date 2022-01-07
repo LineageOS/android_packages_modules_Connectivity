@@ -25,11 +25,11 @@ android_test {
         "androidx.test.rules",
         "compatibility-device-util-axt",
         "ctstestrunner-axt",
-        "framework-nearby-pre-jarjar",
         "truth-prebuilt",
     ],
     libs: [
         "android.test.base",
+        "framework-connectivity-tiramisu.impl",
     ],
     srcs: ["src/**/*.java"],
     test_suites: [
