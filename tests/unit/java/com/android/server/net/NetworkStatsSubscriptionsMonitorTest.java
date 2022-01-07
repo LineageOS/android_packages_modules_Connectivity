@@ -35,7 +35,7 @@ import android.annotation.Nullable;
 import android.content.Context;
 import android.net.NetworkTemplate;
 import android.os.Build;
-import android.os.test.TestLooper;
+import android.os.Looper;
 import android.telephony.NetworkRegistrationInfo;
 import android.telephony.PhoneStateListener;
 import android.telephony.ServiceState;
@@ -79,19 +79,23 @@ public final class NetworkStatsSubscriptionsMonitorTest {
 
     private final Executor mExecutor = Executors.newSingleThreadExecutor();
     private NetworkStatsSubscriptionsMonitor mMonitor;
-    private TestLooper mTestLooper = new TestLooper();
 
     @Before
     public void setUp() {
         MockitoAnnotations.initMocks(this);
+
+        // TODO(b/213280079): Start a different thread and prepare the looper, create the monitor
+        //  on that thread instead of using the test main thread looper.
+        if (Looper.myLooper() == null) {
+            Looper.prepare();
+        }
 
         when(mContext.getSystemService(eq(Context.TELEPHONY_SUBSCRIPTION_SERVICE)))
                 .thenReturn(mSubscriptionManager);
         when(mContext.getSystemService(eq(Context.TELEPHONY_SERVICE)))
                 .thenReturn(mTelephonyManager);
 
-        mMonitor = new NetworkStatsSubscriptionsMonitor(mContext, mTestLooper.getLooper(),
-                mExecutor, mDelegate);
+        mMonitor = new NetworkStatsSubscriptionsMonitor(mContext, mExecutor, mDelegate);
     }
 
     @Test
