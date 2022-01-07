@@ -57,6 +57,7 @@ import static android.os.Process.INVALID_UID;
 import static com.android.modules.utils.build.SdkLevel.isAtLeastR;
 import static com.android.modules.utils.build.SdkLevel.isAtLeastS;
 import static com.android.modules.utils.build.SdkLevel.isAtLeastT;
+import static com.android.testutils.DevSdkIgnoreRuleKt.SC_V2;
 import static com.android.testutils.MiscAsserts.assertEmpty;
 import static com.android.testutils.MiscAsserts.assertThrows;
 import static com.android.testutils.ParcelUtils.assertParcelSane;
@@ -803,7 +804,7 @@ public class NetworkCapabilitiesTest {
         } catch (IllegalStateException expected) { }
     }
 
-    @Test @IgnoreUpTo(Build.VERSION_CODES.S)
+    @Test @IgnoreUpTo(SC_V2) // TODO: Use to Build.VERSION_CODES.SC_V2 when available
     public void testEnterpriseCapabilitySubLevel() {
         final NetworkCapabilities nc1 = new NetworkCapabilities.Builder()
                 .addCapability(NET_CAPABILITY_ENTERPRISE)
