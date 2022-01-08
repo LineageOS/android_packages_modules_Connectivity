@@ -66,6 +66,7 @@ java_sdk_library {
         ":net-utils-framework-common-srcs",
     ],
     aidl: {
+        generate_get_transaction_name: true,
         include_dirs: [
             // Include directories for parcelables that are part of the stable API, and need a
             // one-line "parcelable X" .aidl declaration to be used in AIDL interfaces.
