@@ -47,7 +47,6 @@ android_test {
         "mockito-target",
         "platform-test-annotations",
         "service-nearby",
-        "truth-prebuilt",
     ],
     test_suites: [
         "general-tests",
