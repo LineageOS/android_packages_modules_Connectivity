@@ -23,8 +23,8 @@ import android.bluetooth.BluetoothDevice;
 import android.os.Parcel;
 import android.platform.test.annotations.Presubmit;
 
+import androidx.test.ext.junit.runners.AndroidJUnit4;
 import androidx.test.filters.SmallTest;
-import androidx.test.runner.AndroidJUnit4;
 
 import com.android.server.nearby.intdefs.NearbyEventIntDefs.EventCode;
 

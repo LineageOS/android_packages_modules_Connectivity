@@ -21,8 +21,8 @@ import static com.google.common.truth.Truth.assertThat;
 import android.os.SystemClock;
 import android.platform.test.annotations.Presubmit;
 
+import androidx.test.ext.junit.runners.AndroidJUnit4;
 import androidx.test.filters.SmallTest;
-import androidx.test.runner.AndroidJUnit4;
 
 import com.android.server.nearby.common.bluetooth.fastpair.TimingLogger.ScopedTiming;
 import com.android.server.nearby.common.bluetooth.fastpair.TimingLogger.Timing;

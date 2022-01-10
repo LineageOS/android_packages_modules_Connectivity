@@ -23,8 +23,8 @@ import static com.google.common.truth.Truth.assertThat;
 import android.bluetooth.BluetoothGatt;
 import android.platform.test.annotations.Presubmit;
 
+import androidx.test.ext.junit.runners.AndroidJUnit4;
 import androidx.test.filters.SmallTest;
-import androidx.test.runner.AndroidJUnit4;
 
 import com.google.common.collect.ImmutableSet;
 
