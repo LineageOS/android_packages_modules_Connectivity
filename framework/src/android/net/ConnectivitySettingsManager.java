@@ -1042,7 +1042,7 @@ public class ConnectivitySettingsManager {
     }
 
     private static boolean isCallingFromSystem() {
-        final int uid = Binder.getCallingUid();
+        final int uid = UserHandle.getAppId(Binder.getCallingUid());
         final int pid = Binder.getCallingPid();
         if (uid == Process.SYSTEM_UID && pid == Process.myPid()) {
             return true;
