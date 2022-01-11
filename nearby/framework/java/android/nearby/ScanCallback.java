@@ -17,6 +17,7 @@
 package android.nearby;
 
 import android.annotation.NonNull;
+import android.annotation.SystemApi;
 
 /**
  * Reports newly discovered devices.
@@ -28,13 +29,26 @@ import android.annotation.NonNull;
  *
  * @hide
  */
+@SystemApi
 public interface ScanCallback {
-    /** Reports a {@link NearbyDevice} being discovered. */
+    /**
+     * Reports a {@link NearbyDevice} being discovered.
+     *
+     * @param device {@link NearbyDevice} that is found.
+     */
     void onDiscovered(@NonNull NearbyDevice device);
 
-    /** Reports a {@link NearbyDevice} information(distance, packet, and etc) changed. */
+    /**
+     * Reports a {@link NearbyDevice} information(distance, packet, and etc) changed.
+     *
+     * @param device {@link NearbyDevice} that has updates.
+     */
     void onUpdated(@NonNull NearbyDevice device);
 
-    /** Reports a {@link NearbyDevice} is no longer within range. */
+    /**
+     * Reports a {@link NearbyDevice} is no longer within range.
+     *
+     * @param device {@link NearbyDevice} that is lost.
+     */
     void onLost(@NonNull NearbyDevice device);
 }

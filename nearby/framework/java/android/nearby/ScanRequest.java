@@ -21,6 +21,7 @@ import android.annotation.IntDef;
 import android.annotation.NonNull;
 import android.annotation.Nullable;
 import android.annotation.RequiresPermission;
+import android.annotation.SystemApi;
 import android.os.Parcel;
 import android.os.Parcelable;
 import android.os.WorkSource;
@@ -36,6 +37,7 @@ import java.util.Objects;
  *
  * @hide
  */
+@SystemApi
 public final class ScanRequest implements Parcelable {
 
     /** Scan type for scanning devices using fast pair protocol. */
@@ -60,6 +62,10 @@ public final class ScanRequest implements Parcelable {
      * results without starting BLE scans themselves.
      */
     public static final int SCAN_MODE_NO_POWER = -1;
+    /**
+     * Used to read a ScanRequest from a Parcel.
+     */
+    @NonNull
     public static final Creator<ScanRequest> CREATOR = new Creator<ScanRequest>() {
         @Override
         public ScanRequest createFromParcel(Parcel in) {
@@ -78,10 +84,10 @@ public final class ScanRequest implements Parcelable {
     private final @ScanType int mScanType;
     private final @ScanMode int mScanMode;
     private final boolean mEnableBle;
-    private final WorkSource mWorkSource;
+    private final @NonNull WorkSource mWorkSource;
 
     private ScanRequest(@ScanType int scanType, @ScanMode int scanMode, boolean enableBle,
-            WorkSource workSource) {
+            @NonNull WorkSource workSource) {
         mScanType = scanType;
         mScanMode = scanMode;
         mEnableBle = enableBle;
@@ -90,7 +96,10 @@ public final class ScanRequest implements Parcelable {
 
     /**
      * Convert scan mode to readable string.
+     *
+     * @param scanMode Integer that may represent a{@link ScanMode}.
      */
+    @NonNull
     public static String scanModeToString(@ScanMode int scanMode) {
         switch (scanMode) {
             case SCAN_MODE_LOW_LATENCY:
@@ -152,15 +161,23 @@ public final class ScanRequest implements Parcelable {
      *
      * @hide
      */
+    @SystemApi
+    @NonNull
     public WorkSource getWorkSource() {
         return mWorkSource;
     }
 
+    /**
+     * No special parcel contents.
+     */
     @Override
     public int describeContents() {
         return 0;
     }
 
+    /**
+     * Returns a string representation of this ScanRequest.
+     */
     @Override
     public String toString() {
         StringBuilder stringBuilder = new StringBuilder();
@@ -231,7 +248,10 @@ public final class ScanRequest implements Parcelable {
         /**
          * Sets the scan type for the request. The scan type must be one of the SCAN_TYPE_ constants
          * in {@link ScanRequest}.
+         *
+         * @param scanType The scan type for the request
          */
+        @NonNull
         public Builder setScanType(@ScanType int scanType) {
             mScanType = scanType;
             return this;
@@ -240,7 +260,10 @@ public final class ScanRequest implements Parcelable {
         /**
          * Sets the scan mode for the request. The scan type must be one of the SCAN_MODE_ constants
          * in {@link ScanRequest}.
+         *
+         * @param scanMode The scan mode for the request
          */
+        @NonNull
         public Builder setScanMode(@ScanMode int scanMode) {
             mScanMode = scanMode;
             return this;
@@ -248,8 +271,10 @@ public final class ScanRequest implements Parcelable {
 
         /**
          * Sets if the ble is enabled for scanning.
-         * in {@link ScanRequest}.
+         *
+         * @param enableBle If the BluetoothLe is enabled in the device.
          */
+        @NonNull
         public Builder setEnableBle(boolean enableBle) {
             mEnableBle = enableBle;
             return this;
@@ -263,10 +288,12 @@ public final class ScanRequest implements Parcelable {
          * <p>Permission enforcement occurs when the resulting scan request is used, not when
          * this method is invoked.
          *
+         * @param workSource identifying the application(s) for which to blame for the scan.
          * @hide
          */
         @RequiresPermission(Manifest.permission.UPDATE_DEVICE_STATS)
         @NonNull
+        @SystemApi
         public Builder setWorkSource(@Nullable WorkSource workSource) {
             if (workSource == null) {
                 mWorkSource = new WorkSource();
