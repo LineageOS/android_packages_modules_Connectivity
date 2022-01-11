@@ -31,14 +31,11 @@
 // with such a backward incompatible change, it has a high risk of breaking
 // later when a module using the interface is updated, e.g., Mainline modules.
 
-package android.net;
+package android.net.netd.aidl;
 /* @hide */
 @JavaDerive(equals=true, toString=true) @JavaOnlyImmutable
-parcelable NativeNetworkConfig {
+parcelable NativeUidRangeConfig {
   int netId;
-  android.net.NativeNetworkType networkType = android.net.NativeNetworkType.PHYSICAL;
-  int permission;
-  boolean secure;
-  android.net.NativeVpnType vpnType = android.net.NativeVpnType.PLATFORM;
-  boolean excludeLocalRoutes = false;
+  android.net.UidRangeParcel[] uidRanges;
+  int subPriority;
 }
