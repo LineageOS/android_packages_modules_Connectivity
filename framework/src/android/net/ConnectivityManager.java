@@ -5706,4 +5706,27 @@ public class ConnectivityManager {
             throw e.rethrowFromSystemServer();
         }
     }
+
+    /**
+     * Request to change the current active network stats map.
+     * STOPSHIP: Remove this API before T sdk finalized, this API is temporary added for the
+     * NetworkStatsFactory which is platform code but will be moved into connectivity (tethering)
+     * mainline module.
+     *
+     * @throws IllegalStateException if swap active stats map failed.
+     * @hide
+     */
+    @SystemApi(client = MODULE_LIBRARIES)
+    @RequiresPermission(anyOf = {
+            android.Manifest.permission.NETWORK_SETTINGS,
+            android.Manifest.permission.NETWORK_STACK,
+            NetworkStack.PERMISSION_MAINLINE_NETWORK_STACK
+    })
+    public void swapActiveStatsMap() {
+        try {
+            mService.swapActiveStatsMap();
+        } catch (RemoteException e) {
+            throw e.rethrowFromSystemServer();
+        }
+    }
 }

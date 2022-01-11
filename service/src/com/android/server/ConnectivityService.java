@@ -10660,4 +10660,14 @@ public class ConnectivityService extends IConnectivityManager.Stub
             throw new IllegalStateException(e);
         }
     }
+
+    @Override
+    public void swapActiveStatsMap() {
+        enforceNetworkStackOrSettingsPermission();
+        try {
+            mNetd.trafficSwapActiveStatsMap();
+        } catch (RemoteException | ServiceSpecificException e) {
+            throw new IllegalStateException(e);
+        }
+    }
 }
