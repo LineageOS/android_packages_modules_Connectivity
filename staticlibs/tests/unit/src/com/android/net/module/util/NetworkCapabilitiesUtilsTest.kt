@@ -18,6 +18,7 @@ package com.android.net.module.util
 
 import android.annotation.TargetApi
 import android.net.NetworkCapabilities
+import android.net.NetworkCapabilities.NET_CAPABILITY_BIP
 import android.net.NetworkCapabilities.NET_CAPABILITY_CBS
 import android.net.NetworkCapabilities.NET_CAPABILITY_EIMS
 import android.net.NetworkCapabilities.NET_CAPABILITY_INTERNET
@@ -33,6 +34,7 @@ import android.net.NetworkCapabilities.TRANSPORT_WIFI_AWARE
 import android.os.Build
 import androidx.test.filters.SmallTest
 import androidx.test.runner.AndroidJUnit4
+import com.android.modules.utils.build.SdkLevel
 import com.android.net.module.util.NetworkCapabilitiesUtils.RESTRICTED_CAPABILITIES
 import com.android.net.module.util.NetworkCapabilitiesUtils.UNRESTRICTED_CAPABILITIES
 import com.android.net.module.util.NetworkCapabilitiesUtils.getDisplayTransport
@@ -110,6 +112,12 @@ class NetworkCapabilitiesUtilsTest {
         // as restricted when there is no any unrestricted capability.
         nc.removeCapability(NET_CAPABILITY_INTERNET)
         assertTrue(NetworkCapabilitiesUtils.inferRestrictedCapability(nc))
+        if (!SdkLevel.isAtLeastS()) return
+        // BIP deserves its specific test because it's the first capability over 30, meaning the
+        // shift will overflow
+        nc.removeCapability(NET_CAPABILITY_CBS)
+        nc.addCapability(NET_CAPABILITY_BIP)
+        assertTrue(NetworkCapabilitiesUtils.inferRestrictedCapability(nc))
     }
 
     @Test
@@ -122,8 +130,16 @@ class NetworkCapabilitiesUtilsTest {
         assertEquals((1 shl NET_CAPABILITY_CBS).toLong() and RESTRICTED_CAPABILITIES,
                 (1 shl NET_CAPABILITY_CBS).toLong())
 
+        // verify BIP is also restricted
+        // BIP is not available in R and before, but the BIP constant is inlined so
+        // this test can still run on R.
+        assertEquals((1L shl NET_CAPABILITY_BIP) and RESTRICTED_CAPABILITIES,
+                (1L shl NET_CAPABILITY_BIP))
+
         // verify default is not restricted
         assertEquals((1 shl NET_CAPABILITY_INTERNET).toLong() and RESTRICTED_CAPABILITIES, 0)
+
+        assertTrue(RESTRICTED_CAPABILITIES > 0)
 
         // just to see
         assertEquals(RESTRICTED_CAPABILITIES and UNRESTRICTED_CAPABILITIES, 0)
