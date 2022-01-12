@@ -36,6 +36,8 @@ android_test {
         "ethernet-service",
         "frameworks-base-testutils",
         "mockito-target-minus-junit4",
+        "net-tests-utils",
+        "services.core",
         "services.net",
     ],
 }
