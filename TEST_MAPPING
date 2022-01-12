@@ -61,6 +61,9 @@
       "path": "frameworks/base/core/java/android/net"
     },
     {
+      "path": "frameworks/opt/net/ethernet"
+    },
+    {
       "path": "packages/modules/NetworkStack"
     },
     {
