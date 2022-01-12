@@ -53,6 +53,7 @@ java_defaults {
         "framework-statsd.stubs.module_lib",
         "framework-tethering.impl",
         "framework-wifi",
+        "framework-bluetooth",
         "unsupportedappusage",
     ],
     plugins: ["java_api_finder"],
