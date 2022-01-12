@@ -39,7 +39,6 @@ import android.nearby.NearbyDevice;
 import android.nearby.ScanCallback;
 import android.os.Bundle;
 import android.os.UserHandle;
-import android.util.Base64;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
@@ -61,6 +60,7 @@ import com.android.server.nearby.fastpair.cache.FastPairCacheManager;
 import com.android.server.nearby.fastpair.footprint.FootprintsDeviceManager;
 import com.android.server.nearby.fastpair.halfsheet.HalfSheetCallback;
 import com.android.server.nearby.fastpair.pairinghandler.PairingProgressHandlerBase;
+import com.android.server.nearby.provider.FastPairDataProvider;
 import com.android.server.nearby.util.Environment;
 
 import com.google.protobuf.ByteString;
@@ -93,6 +93,7 @@ public class FastPairManager {
     public static final String ACTION_RESOURCES_APK = "android.nearby.SHOW_HALFSHEET";
     // Temp action deleted when the scanner is ready
     public static final String ACTION_START_PAIRING = "NEARBY_START_PAIRING";
+    public static final String EXTRA_MODEL_ID = "MODELID";
     public static final String EXTRA_ADDRESS = "ADDRESS";
 
     private static Executor sFastPairExecutor;
@@ -108,16 +109,15 @@ public class FastPairManager {
             if (intent.getAction().equals(Intent.ACTION_SCREEN_ON)) {
                 Log.d("FastPairService", " screen on");
             } else if (intent.getAction().equals(ACTION_START_PAIRING)) {
+                byte[] model = intent.getByteArrayExtra(EXTRA_MODEL_ID);
                 String address = intent.getStringExtra(EXTRA_ADDRESS);
-                String testPublicKey =
-                        "E4kxROcAj2SPlqrxHgXOm_yF-XIMSS91pFrfmeLcxULWyn0nK8i52PPkoC4r"
-                                + "LKRM2kZzNgT8bhDwK5njJAjiOg";
-                showHalfSheet(Cache.ScanFastPairStoreItem.newBuilder().setAddress(address)
-                        .setAntiSpoofingPublicKey(ByteString.copyFrom(
-                                Base64.decode(testPublicKey, Base64.URL_SAFE
-                                        | Base64.NO_WRAP | Base64.NO_PADDING)))
-                        .build());
                 Log.d("FastPairService", "start pair " + address);
+                Rpcs.GetObservedDeviceResponse response =
+                        FastPairDataProvider.getInstance().loadFastPairDeviceMetadata(model);
+                ByteString publicKey = response.getDevice().getAntiSpoofingKeyPair().getPublicKey();
+                showHalfSheet(Cache.ScanFastPairStoreItem.newBuilder().setAddress(address)
+                        .setAntiSpoofingPublicKey(publicKey)
+                        .build());
             } else {
                 Log.d("FastPairService", " screen off");
             }
@@ -243,7 +243,7 @@ public class FastPairManager {
 
             String modelId = item.getTriggerId();
             Preferences.Builder prefsBuilder =
-                    FlagUtils.getPreferencesBuilder()
+                    Preferences.builderFromGmsLog()
                             .setEnableBrEdrHandover(false)
                             .setIgnoreDiscoveryError(true);
             pairingProgressHandlerBase.onSetupPreferencesBuilder(prefsBuilder);
@@ -251,10 +251,15 @@ public class FastPairManager {
                 prefsBuilder.setSkipConnectingProfiles(
                         item.getFastPairInformation().getDataOnlyConnection());
             }
+            // When add watch and auto device needs to change the config
+            prefsBuilder.setRejectMessageAccess(true);
+            prefsBuilder.setRejectPhonebookAccess(true);
+            prefsBuilder.setHandlePasskeyConfirmationByUi(false);
+
             FastPairConnection connection = new FastPairDualConnection(
                     context, item.getMacAddress(),
-                    // Change to prefsBuilder.build when the api integration complete
-                    Preferences.builderFromGmsLog().build(), null);
+                    prefsBuilder.build(),
+                    null);
             pairingProgressHandlerBase.onPairingSetupCompleted();
 
             FastPairConnection.SharedSecret sharedSecret;
