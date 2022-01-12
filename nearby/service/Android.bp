@@ -36,6 +36,7 @@ filegroup {
 java_library {
     name: "nearby-service-string",
     srcs: [":nearby-service-string-res"],
+    libs: ["framework-bluetooth"],
     sdk_version: "module_current",
 }
 
@@ -53,6 +54,7 @@ java_library {
         // pre-jarjar symbols are needed so that nearby-service can reference the original class
         // names at compile time
         "framework-nearby-pre-jarjar",
+        "framework-bluetooth.stubs.module_lib", // TODO(b/215722418): Change to framework-bluetooth once fixed
         "error_prone_annotations",
     ],
     static_libs: [
