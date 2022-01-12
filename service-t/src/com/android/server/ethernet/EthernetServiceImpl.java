@@ -233,6 +233,9 @@ public class EthernetServiceImpl extends IEthernetManager.Stub {
                 + ", request=" + request + ", listener=" + listener);
         validateNetworkManagementState(iface, "updateConfiguration()");
         // TODO: validate that iface is listed in overlay config_ethernet_interfaces
+
+        mTracker.updateConfiguration(
+                iface, request.getIpConfig(), request.getNetworkCapabilities(), listener);
     }
 
     @Override
