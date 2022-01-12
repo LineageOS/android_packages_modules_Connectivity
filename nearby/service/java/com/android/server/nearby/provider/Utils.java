@@ -16,7 +16,7 @@
 
 package com.android.server.nearby.provider;
 
-import android.nearby.FastPairDeviceMetadataParcel;
+import android.nearby.aidl.FastPairAntispoofkeyDeviceMetadataParcel;
 
 import com.google.protobuf.ByteString;
 
@@ -24,21 +24,22 @@ import service.proto.Rpcs;
 
 class Utils {
 
-    static Rpcs.GetObservedDeviceResponse convert(FastPairDeviceMetadataParcel metadata) {
+    static Rpcs.GetObservedDeviceResponse convert(
+            FastPairAntispoofkeyDeviceMetadataParcel metadata) {
         return Rpcs.GetObservedDeviceResponse.newBuilder()
           .setDevice(
               Rpcs.Device.newBuilder()
-              .setImageUrl(metadata.imageUrl)
-              .setIntentUri(metadata.intentUri)
               .setAntiSpoofingKeyPair(
                   Rpcs.AntiSpoofingKeyPair.newBuilder()
                   .setPublicKey(ByteString.copyFrom(metadata.antiSpoofPublicKey))
                   .build())
-              .setBleTxPower(metadata.bleTxPower)
-              .setTriggerDistance(metadata.triggerDistance)
-              .setDeviceType(Rpcs.DeviceType.forNumber(metadata.deviceType))
+              .setImageUrl(metadata.deviceMetadata.imageUrl)
+              .setIntentUri(metadata.deviceMetadata.intentUri)
+              .setBleTxPower(metadata.deviceMetadata.bleTxPower)
+              .setTriggerDistance(metadata.deviceMetadata.triggerDistance)
+              .setDeviceType(Rpcs.DeviceType.forNumber(metadata.deviceMetadata.deviceType))
               .build())
-          .setImage(ByteString.copyFrom(metadata.image))
+          .setImage(ByteString.copyFrom(metadata.deviceMetadata.image))
           .build();
     }
 }

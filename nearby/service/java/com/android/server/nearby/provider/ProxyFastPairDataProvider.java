@@ -18,10 +18,10 @@ package com.android.server.nearby.provider;
 
 import android.annotation.Nullable;
 import android.content.Context;
-import android.nearby.FastPairDeviceMetadataParcel;
-import android.nearby.FastPairDeviceMetadataRequestParcel;
-import android.nearby.IFastPairDataCallback;
-import android.nearby.IFastPairDataProvider;
+import android.nearby.aidl.FastPairAntispoofkeyDeviceMetadataParcel;
+import android.nearby.aidl.FastPairAntispoofkeyDeviceMetadataRequestParcel;
+import android.nearby.aidl.IFastPairAntispoofkeyDeviceMetadataCallback;
+import android.nearby.aidl.IFastPairDataProvider;
 import android.os.IBinder;
 import android.os.RemoteException;
 
@@ -98,17 +98,20 @@ public class ProxyFastPairDataProvider implements ServiceListener<BoundServiceIn
             @Override
             public void run(IBinder binder) throws RemoteException {
                 IFastPairDataProvider provider = IFastPairDataProvider.Stub.asInterface(binder);
-                FastPairDeviceMetadataRequestParcel requestParcel =
-                        new FastPairDeviceMetadataRequestParcel();
+                FastPairAntispoofkeyDeviceMetadataRequestParcel requestParcel =
+                        new FastPairAntispoofkeyDeviceMetadataRequestParcel();
                 requestParcel.modelId = modelId;
-                IFastPairDataCallback callback = new IFastPairDataCallback.Stub() {
-                    public void onFastPairDeviceMetadataReceived(
-                            FastPairDeviceMetadataParcel metadata) {
+                IFastPairAntispoofkeyDeviceMetadataCallback callback =
+                        new IFastPairAntispoofkeyDeviceMetadataCallback.Stub() {
+                    public void onFastPairAntispoofkeyDeviceMetadataReceived(
+                            FastPairAntispoofkeyDeviceMetadataParcel metadata) {
                         response.set(Utils.convert(metadata));
                         waitForCompletionLatch.countDown();
                     }
+                    public void onError(int code, String message) {
+                    }
                 };
-                provider.loadFastPairDeviceMetadata(requestParcel, callback);
+                provider.loadFastPairAntispoofkeyDeviceMetadata(requestParcel, callback);
             }
 
             @Override
