@@ -18,13 +18,17 @@ package com.android.server.ethernet;
 
 import static org.junit.Assert.assertThrows;
 
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.verify;
 
 import android.annotation.NonNull;
 import android.content.Context;
 import android.content.pm.PackageManager;
+import android.net.IInternalNetworkManagementListener;
 import android.net.InternalNetworkUpdateRequest;
 import android.net.IpConfiguration;
+import android.net.NetworkCapabilities;
 import android.net.StaticIpConfiguration;
 import android.os.Handler;
 
@@ -41,6 +45,10 @@ import org.mockito.MockitoAnnotations;
 @SmallTest
 public class EthernetServiceImplTest {
     private static final String TEST_IFACE = "test123";
+    private static final InternalNetworkUpdateRequest UPDATE_REQUEST =
+            new InternalNetworkUpdateRequest(
+                    new StaticIpConfiguration(), new NetworkCapabilities.Builder().build());
+    private static final IInternalNetworkManagementListener NULL_LISTENER = null;
     private EthernetServiceImpl mEthernetServiceImpl;
     @Mock private Context mContext;
     @Mock private Handler mHandler;
@@ -69,10 +77,8 @@ public class EthernetServiceImplTest {
     public void testUpdateConfigurationRejectsWhenEthNotStarted() {
         mEthernetServiceImpl.mStarted.set(false);
         assertThrows(IllegalStateException.class, () -> {
-            final InternalNetworkUpdateRequest r =
-                    new InternalNetworkUpdateRequest(new StaticIpConfiguration(), null);
-
-            mEthernetServiceImpl.updateConfiguration("" /* iface */, r, null /* listener */);
+            mEthernetServiceImpl.updateConfiguration(
+                    "" /* iface */, UPDATE_REQUEST, null /* listener */);
         });
     }
 
@@ -95,24 +101,21 @@ public class EthernetServiceImplTest {
     @Test
     public void testUpdateConfigurationRejectsNullIface() {
         assertThrows(NullPointerException.class, () -> {
-            final InternalNetworkUpdateRequest r =
-                    new InternalNetworkUpdateRequest(new StaticIpConfiguration(), null);
-
-            mEthernetServiceImpl.updateConfiguration(null /* iface */, r, null /* listener */);
+            mEthernetServiceImpl.updateConfiguration(null, UPDATE_REQUEST, NULL_LISTENER);
         });
     }
 
     @Test
     public void testConnectNetworkRejectsNullIface() {
         assertThrows(NullPointerException.class, () -> {
-            mEthernetServiceImpl.connectNetwork(null /* iface */, null /* listener */);
+            mEthernetServiceImpl.connectNetwork(null /* iface */, NULL_LISTENER);
         });
     }
 
     @Test
     public void testDisconnectNetworkRejectsNullIface() {
         assertThrows(NullPointerException.class, () -> {
-            mEthernetServiceImpl.disconnectNetwork(null /* iface */, null /* listener */);
+            mEthernetServiceImpl.disconnectNetwork(null /* iface */, NULL_LISTENER);
         });
     }
 
@@ -120,10 +123,7 @@ public class EthernetServiceImplTest {
     public void testUpdateConfigurationRejectsWithoutAutomotiveFeature() {
         toggleAutomotiveFeature(false);
         assertThrows(UnsupportedOperationException.class, () -> {
-            final InternalNetworkUpdateRequest r =
-                    new InternalNetworkUpdateRequest(new StaticIpConfiguration(), null);
-
-            mEthernetServiceImpl.updateConfiguration("" /* iface */, r, null /* listener */);
+            mEthernetServiceImpl.updateConfiguration(TEST_IFACE, UPDATE_REQUEST, NULL_LISTENER);
         });
     }
 
@@ -131,7 +131,7 @@ public class EthernetServiceImplTest {
     public void testConnectNetworkRejectsWithoutAutomotiveFeature() {
         toggleAutomotiveFeature(false);
         assertThrows(UnsupportedOperationException.class, () -> {
-            mEthernetServiceImpl.connectNetwork("" /* iface */, null /* listener */);
+            mEthernetServiceImpl.connectNetwork("" /* iface */, NULL_LISTENER);
         });
     }
 
@@ -139,7 +139,7 @@ public class EthernetServiceImplTest {
     public void testDisconnectNetworkRejectsWithoutAutomotiveFeature() {
         toggleAutomotiveFeature(false);
         assertThrows(UnsupportedOperationException.class, () -> {
-            mEthernetServiceImpl.disconnectNetwork("" /* iface */, null /* listener */);
+            mEthernetServiceImpl.disconnectNetwork("" /* iface */, NULL_LISTENER);
         });
     }
 
@@ -152,10 +152,7 @@ public class EthernetServiceImplTest {
     public void testUpdateConfigurationRejectsWithUntrackedIface() {
         shouldTrackIface(TEST_IFACE, false);
         assertThrows(UnsupportedOperationException.class, () -> {
-            final InternalNetworkUpdateRequest r =
-                    new InternalNetworkUpdateRequest(new StaticIpConfiguration(), null);
-
-            mEthernetServiceImpl.updateConfiguration(TEST_IFACE, r, null /* listener */);
+            mEthernetServiceImpl.updateConfiguration(TEST_IFACE, UPDATE_REQUEST, NULL_LISTENER);
         });
     }
 
@@ -163,7 +160,7 @@ public class EthernetServiceImplTest {
     public void testConnectNetworkRejectsWithUntrackedIface() {
         shouldTrackIface(TEST_IFACE, false);
         assertThrows(UnsupportedOperationException.class, () -> {
-            mEthernetServiceImpl.connectNetwork(TEST_IFACE, null /* listener */);
+            mEthernetServiceImpl.connectNetwork(TEST_IFACE, NULL_LISTENER);
         });
     }
 
@@ -171,11 +168,20 @@ public class EthernetServiceImplTest {
     public void testDisconnectNetworkRejectsWithUntrackedIface() {
         shouldTrackIface(TEST_IFACE, false);
         assertThrows(UnsupportedOperationException.class, () -> {
-            mEthernetServiceImpl.disconnectNetwork(TEST_IFACE, null /* listener */);
+            mEthernetServiceImpl.disconnectNetwork(TEST_IFACE, NULL_LISTENER);
         });
     }
 
     private void shouldTrackIface(@NonNull final String iface, final boolean shouldTrack) {
         doReturn(shouldTrack).when(mEthernetTracker).isTrackingInterface(iface);
+    }
+
+    @Test
+    public void testUpdateConfiguration() {
+        mEthernetServiceImpl.updateConfiguration(TEST_IFACE, UPDATE_REQUEST, NULL_LISTENER);
+        verify(mEthernetTracker).updateConfiguration(
+                eq(TEST_IFACE),
+                eq(UPDATE_REQUEST.getIpConfig()),
+                eq(UPDATE_REQUEST.getNetworkCapabilities()), eq(NULL_LISTENER));
     }
 }
