@@ -27,6 +27,7 @@ import static android.net.NetworkCapabilities.NET_CAPABILITY_IMS;
 import static android.net.NetworkCapabilities.NET_CAPABILITY_INTERNET;
 import static android.net.NetworkCapabilities.NET_CAPABILITY_MCX;
 import static android.net.NetworkCapabilities.NET_CAPABILITY_MMS;
+import static android.net.NetworkCapabilities.NET_CAPABILITY_MMTEL;
 import static android.net.NetworkCapabilities.NET_CAPABILITY_OEM_PAID;
 import static android.net.NetworkCapabilities.NET_CAPABILITY_OEM_PRIVATE;
 import static android.net.NetworkCapabilities.NET_CAPABILITY_RCS;
@@ -84,40 +85,41 @@ public final class NetworkCapabilitiesUtils {
       * and {@code FORCE_RESTRICTED_CAPABILITIES}.
      */
     @VisibleForTesting
-    static final long RESTRICTED_CAPABILITIES =
-            (1 << NET_CAPABILITY_BIP)
-            | (1 << NET_CAPABILITY_CBS)
-            | (1 << NET_CAPABILITY_DUN)
-            | (1 << NET_CAPABILITY_EIMS)
-            | (1 << NET_CAPABILITY_ENTERPRISE)
-            | (1 << NET_CAPABILITY_FOTA)
-            | (1 << NET_CAPABILITY_IA)
-            | (1 << NET_CAPABILITY_IMS)
-            | (1 << NET_CAPABILITY_MCX)
-            | (1 << NET_CAPABILITY_RCS)
-            | (1 << NET_CAPABILITY_VEHICLE_INTERNAL)
-            | (1 << NET_CAPABILITY_VSIM)
-            | (1 << NET_CAPABILITY_XCAP);
+    static final long RESTRICTED_CAPABILITIES = packBitList(
+            NET_CAPABILITY_BIP,
+            NET_CAPABILITY_CBS,
+            NET_CAPABILITY_DUN,
+            NET_CAPABILITY_EIMS,
+            NET_CAPABILITY_ENTERPRISE,
+            NET_CAPABILITY_FOTA,
+            NET_CAPABILITY_IA,
+            NET_CAPABILITY_IMS,
+            NET_CAPABILITY_MCX,
+            NET_CAPABILITY_RCS,
+            NET_CAPABILITY_VEHICLE_INTERNAL,
+            NET_CAPABILITY_VSIM,
+            NET_CAPABILITY_XCAP,
+            NET_CAPABILITY_MMTEL);
 
     /**
      * Capabilities that force network to be restricted.
      * See {@code NetworkCapabilities#maybeMarkCapabilitiesRestricted}.
      */
-    private static final long FORCE_RESTRICTED_CAPABILITIES =
-            (1 << NET_CAPABILITY_ENTERPRISE)
-            | (1 << NET_CAPABILITY_OEM_PAID)
-            | (1 << NET_CAPABILITY_OEM_PRIVATE);
+    private static final long FORCE_RESTRICTED_CAPABILITIES = packBitList(
+            NET_CAPABILITY_ENTERPRISE,
+            NET_CAPABILITY_OEM_PAID,
+            NET_CAPABILITY_OEM_PRIVATE);
 
     /**
      * Capabilities that suggest that a network is unrestricted.
      * See {@code NetworkCapabilities#maybeMarkCapabilitiesRestricted}.
      */
     @VisibleForTesting
-    static final long UNRESTRICTED_CAPABILITIES =
-            (1 << NET_CAPABILITY_INTERNET)
-            | (1 << NET_CAPABILITY_MMS)
-            | (1 << NET_CAPABILITY_SUPL)
-            | (1 << NET_CAPABILITY_WIFI_P2P);
+    static final long UNRESTRICTED_CAPABILITIES = packBitList(
+            NET_CAPABILITY_INTERNET,
+            NET_CAPABILITY_MMS,
+            NET_CAPABILITY_SUPL,
+            NET_CAPABILITY_WIFI_P2P);
 
     /**
      * Get a transport that can be used to classify a network when displaying its info to users.
@@ -196,7 +198,26 @@ public final class NetworkCapabilitiesUtils {
     }
 
     /**
+     * Packs a list of ints in the same way as packBits()
+     *
+     * Each passed int is the rank of a bit that should be set in the returned long.
+     * Example : passing (1,3) will return in 0b00001010 and passing (5,6,0) will return 0b01100001
+     *
+     * @param bits bits to pack
+     * @return a long with the specified bits set.
+     */
+    public static long packBitList(int... bits) {
+        return packBits(bits);
+    }
+
+    /**
      * Packs array of bits into a long value.
+     *
+     * Each passed int is the rank of a bit that should be set in the returned long.
+     * Example : passing [1,3] will return in 0b00001010 and passing [5,6,0] will return 0b01100001
+     *
+     * @param bits bits to pack
+     * @return a long with the specified bits set.
      */
     public static long packBits(int[] bits) {
         long packed = 0;
