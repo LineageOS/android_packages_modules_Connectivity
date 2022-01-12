@@ -48,6 +48,7 @@ cc_library_static {
     ],
     apex_available: [
         "com.android.resolv",
+        "com.android.tethering",
     ],
     min_sdk_version: "29",
 }
@@ -97,6 +98,7 @@ aidl_interface {
         ndk: {
             apex_available: [
                 "//apex_available:platform",
+                "com.android.tethering",
             ],
             // This is necessary for the DnsResovler tests to run in Android Q.
             // Soong would recognize this value and produce the Q compatible aidl library.
