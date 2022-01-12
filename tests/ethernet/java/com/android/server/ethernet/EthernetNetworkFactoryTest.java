@@ -16,9 +16,11 @@
 
 package com.android.server.ethernet;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
@@ -36,17 +38,24 @@ import android.content.Context;
 import android.content.res.Resources;
 import android.net.ConnectivityManager;
 import android.net.EthernetNetworkSpecifier;
+import android.net.IInternalNetworkManagementListener;
+import android.net.InternalNetworkManagementException;
 import android.net.IpConfiguration;
+import android.net.LinkAddress;
 import android.net.LinkProperties;
+import android.net.Network;
 import android.net.NetworkAgentConfig;
 import android.net.NetworkCapabilities;
 import android.net.NetworkProvider;
 import android.net.NetworkRequest;
+import android.net.StaticIpConfiguration;
 import android.net.ip.IpClientCallbacks;
 import android.net.ip.IpClientManager;
 import android.os.Handler;
+import android.os.IBinder;
 import android.os.Looper;
 import android.os.test.TestLooper;
+import android.util.Pair;
 
 import androidx.test.filters.SmallTest;
 import androidx.test.runner.AndroidJUnit4;
@@ -61,10 +70,20 @@ import org.junit.runner.RunWith;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
+import java.util.Objects;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+
 @RunWith(AndroidJUnit4.class)
 @SmallTest
 public class EthernetNetworkFactoryTest {
+    private static final int TIMEOUT_MS = 2_000;
     private static final String TEST_IFACE = "test123";
+    private static final String IP_ADDR = "192.0.2.2/25";
+    private static final LinkAddress LINK_ADDR = new LinkAddress(IP_ADDR);
+    private static final String HW_ADDR = "01:02:03:04:05:06";
     private final TestLooper mLooper = new TestLooper();
     private Handler mHandler;
     private EthernetNetworkFactory mNetFactory = null;
@@ -75,13 +94,13 @@ public class EthernetNetworkFactoryTest {
     @Mock private IpClientManager mIpClient;
     @Mock private EthernetNetworkAgent mNetworkAgent;
     @Mock private InterfaceParams mInterfaceParams;
+    @Mock private Network mMockNetwork;
 
     @Before
     public void setUp() throws Exception {
         MockitoAnnotations.initMocks(this);
         mHandler = new Handler(mLooper.getLooper());
-        mNetFactory = new EthernetNetworkFactory(mHandler, mContext, createDefaultFilterCaps(),
-                mDeps);
+        mNetFactory = new EthernetNetworkFactory(mHandler, mContext, mDeps);
 
         setupNetworkAgentMock();
         setupIpClientMock();
@@ -100,6 +119,8 @@ public class EthernetNetworkFactoryTest {
                                                NetworkProvider provider,
                                                EthernetNetworkAgent.Callbacks cb) {
                                            when(mNetworkAgent.getCallbacks()).thenReturn(cb);
+                                           when(mNetworkAgent.getNetwork())
+                                                   .thenReturn(mMockNetwork);
                                            return mNetworkAgent;
                                        }
                                    }
@@ -185,6 +206,19 @@ public class EthernetNetworkFactoryTest {
         return ipConfig;
     }
 
+    /**
+     * Create an {@link IpConfiguration} with an associated {@link StaticIpConfiguration}.
+     *
+     * @return {@link IpConfiguration} with its {@link StaticIpConfiguration} set.
+     */
+    private IpConfiguration createStaticIpConfig() {
+        final IpConfiguration ipConfig = new IpConfiguration();
+        ipConfig.setIpAssignment(IpConfiguration.IpAssignment.STATIC);
+        ipConfig.setStaticIpConfiguration(
+                new StaticIpConfiguration.Builder().setIpAddress(LINK_ADDR).build());
+        return ipConfig;
+    }
+
     // creates an interface with provisioning in progress (since updating the interface link state
     // automatically starts the provisioning process)
     private void createInterfaceUndergoingProvisioning(String iface) {
@@ -194,10 +228,11 @@ public class EthernetNetworkFactoryTest {
 
     private void createInterfaceUndergoingProvisioning(
             @NonNull final String iface, final int transportType) {
-        mNetFactory.addInterface(iface, iface, createInterfaceCapsBuilder(transportType).build(),
-                createDefaultIpConfig());
+        final IpConfiguration ipConfig = createDefaultIpConfig();
+        mNetFactory.addInterface(iface, HW_ADDR, ipConfig,
+                createInterfaceCapsBuilder(transportType).build());
         assertTrue(mNetFactory.updateInterfaceLinkState(iface, true));
-        verifyStart();
+        verifyStart(ipConfig);
         clearInvocations(mDeps);
         clearInvocations(mIpClient);
     }
@@ -431,13 +466,19 @@ public class EthernetNetworkFactoryTest {
         triggerOnReachabilityLost();
 
         // Reachability loss should trigger a stop and start, since the interface is still there
-        verifyStop();
-        verifyStart();
+        verifyRestart(createDefaultIpConfig());
     }
 
-    private void verifyStart() {
+    private void verifyRestart(@NonNull final IpConfiguration ipConfig) {
+        verifyStop();
+        verifyStart(ipConfig);
+    }
+
+    private void verifyStart(@NonNull final IpConfiguration ipConfig) {
         verify(mDeps).makeIpClient(any(Context.class), anyString(), any());
-        verify(mIpClient).startProvisioning(any());
+        verify(mIpClient).startProvisioning(
+                argThat(x -> Objects.equals(x.mStaticIpConfig, ipConfig.getStaticIpConfiguration()))
+        );
     }
 
     private void verifyStop() {
@@ -448,5 +489,57 @@ public class EthernetNetworkFactoryTest {
     private void verifyNetworkAgentRegistersAndConnects() {
         verify(mNetworkAgent).register();
         verify(mNetworkAgent).markConnected();
+    }
+
+    private static final class TestNetworkManagementListener
+            implements IInternalNetworkManagementListener {
+        private final CompletableFuture<Pair<Network, InternalNetworkManagementException>> mDone
+                = new CompletableFuture<>();
+
+        @Override
+        public void onComplete(final Network network,
+                final InternalNetworkManagementException exception) {
+            mDone.complete(new Pair<>(network, exception));
+        }
+
+        Pair<Network, InternalNetworkManagementException> expectOnComplete() throws Exception {
+            return mDone.get(TIMEOUT_MS, TimeUnit.MILLISECONDS);
+        }
+
+        @Override
+        public IBinder asBinder() {
+            return null;
+        }
+    }
+
+    @Test
+    public void testUpdateInterfaceCallsListenerCorrectlyOnSuccess() throws Exception {
+        createAndVerifyProvisionedInterface(TEST_IFACE);
+        final NetworkCapabilities capabilities = createDefaultFilterCaps();
+        final IpConfiguration ipConfiguration = createStaticIpConfig();
+        final TestNetworkManagementListener listener = new TestNetworkManagementListener();
+
+        mNetFactory.updateInterface(TEST_IFACE, ipConfiguration, capabilities, listener);
+        triggerOnProvisioningSuccess();
+
+        final Pair<Network, InternalNetworkManagementException> ret = listener.expectOnComplete();
+        assertEquals(mMockNetwork, ret.first);
+        assertNull(ret.second);
+    }
+
+    @Test
+    public void testUpdateInterfaceRestartsAgentCorrectly() throws Exception {
+        createAndVerifyProvisionedInterface(TEST_IFACE);
+        final NetworkCapabilities capabilities = createDefaultFilterCaps();
+        final IpConfiguration ipConfiguration = createStaticIpConfig();
+        final TestNetworkManagementListener listener = new TestNetworkManagementListener();
+
+        mNetFactory.updateInterface(TEST_IFACE, ipConfiguration, capabilities, listener);
+        triggerOnProvisioningSuccess();
+
+        listener.expectOnComplete();
+        verify(mDeps).makeEthernetNetworkAgent(any(), any(),
+                eq(capabilities), any(), any(), any(), any());
+        verifyRestart(ipConfiguration);
     }
 }
