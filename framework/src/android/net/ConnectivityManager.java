@@ -1101,7 +1101,7 @@ public class ConnectivityManager {
             PROFILE_NETWORK_PREFERENCE_DEFAULT,
             PROFILE_NETWORK_PREFERENCE_ENTERPRISE
     })
-    public @interface ProfileNetworkPreference {
+    public @interface ProfileNetworkPreferencePolicy {
     }
 
     /**
@@ -5461,6 +5461,8 @@ public class ConnectivityManager {
      * @param listener an optional listener to listen for completion of the operation.
      * @throws IllegalArgumentException if {@code profile} is not a valid user profile.
      * @throws SecurityException if missing the appropriate permissions.
+     * @deprecated Use {@link #setProfileNetworkPreferences(UserHandle, List, Executor, Runnable)}
+     * instead as it provides a more flexible API with more options.
      * @hide
      */
     // This function is for establishing per-profile default networking and can only be called by
@@ -5470,8 +5472,45 @@ public class ConnectivityManager {
     @SuppressLint({"UserHandle"})
     @SystemApi(client = MODULE_LIBRARIES)
     @RequiresPermission(android.Manifest.permission.NETWORK_STACK)
+    @Deprecated
     public void setProfileNetworkPreference(@NonNull final UserHandle profile,
-            @ProfileNetworkPreference final int preference,
+            @ProfileNetworkPreferencePolicy final int preference,
+            @Nullable @CallbackExecutor final Executor executor,
+            @Nullable final Runnable listener) {
+
+        ProfileNetworkPreference.Builder preferenceBuilder =
+                new ProfileNetworkPreference.Builder();
+        preferenceBuilder.setPreference(preference);
+        setProfileNetworkPreferences(profile,
+                List.of(preferenceBuilder.build()), executor, listener);
+    }
+
+    /**
+     * Set a list of default network selection policies for a user profile.
+     *
+     * Calling this API with a user handle defines the entire policy for that user handle.
+     * It will overwrite any setting previously set for the same user profile,
+     * and not affect previously set settings for other handles.
+     *
+     * Call this API with an empty list to remove settings for this user profile.
+     *
+     * See {@link ProfileNetworkPreference} for more details on each preference
+     * parameter.
+     *
+     * @param profile the user profile for which the preference is being set.
+     * @param profileNetworkPreferences the list of profile network preferences for the
+     *        provided profile.
+     * @param executor an executor to execute the listener on. Optional if listener is null.
+     * @param listener an optional listener to listen for completion of the operation.
+     * @throws IllegalArgumentException if {@code profile} is not a valid user profile.
+     * @throws SecurityException if missing the appropriate permissions.
+     * @hide
+     */
+    @SystemApi(client = MODULE_LIBRARIES)
+    @RequiresPermission(android.Manifest.permission.NETWORK_STACK)
+    public void setProfileNetworkPreferences(
+            @NonNull final UserHandle profile,
+            @NonNull List<ProfileNetworkPreference>  profileNetworkPreferences,
             @Nullable @CallbackExecutor final Executor executor,
             @Nullable final Runnable listener) {
         if (null != listener) {
@@ -5489,7 +5528,7 @@ public class ConnectivityManager {
             };
         }
         try {
-            mService.setProfileNetworkPreference(profile, preference, proxy);
+            mService.setProfileNetworkPreferences(profile, profileNetworkPreferences, proxy);
         } catch (RemoteException e) {
             throw e.rethrowFromSystemServer();
         }
