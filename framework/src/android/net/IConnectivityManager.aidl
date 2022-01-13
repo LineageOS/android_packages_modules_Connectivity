@@ -230,4 +230,8 @@ interface IConnectivityManager
     void unofferNetwork(in INetworkOfferCallback callback);
 
     void setTestAllowBadWifiUntil(long timeMs);
+
+    void updateMeteredNetworkAllowList(int uid, boolean add);
+
+    void updateMeteredNetworkDenyList(int uid, boolean add);
 }
