@@ -298,28 +298,54 @@ public class VpnTest {
         mActivity.startService(intent);
     }
 
-    private void establishVpn(String[] addresses, String[] routes, String allowedApplications,
-            String disallowedApplications, @Nullable ProxyInfo proxyInfo,
-            @Nullable ArrayList<Network> underlyingNetworks, boolean isAlwaysMetered)
+    private void establishVpn(String[] addresses, String[] routes, String[] excludedRoutes,
+            String allowedApplications, String disallowedApplications,
+            @Nullable ProxyInfo proxyInfo, @Nullable ArrayList<Network> underlyingNetworks,
+            boolean isAlwaysMetered, boolean addRoutesByIpPrefix)
             throws Exception {
         final Intent intent = new Intent(mActivity, MyVpnService.class)
                 .putExtra(mPackageName + ".cmd", MyVpnService.CMD_CONNECT)
                 .putExtra(mPackageName + ".addresses", TextUtils.join(",", addresses))
                 .putExtra(mPackageName + ".routes", TextUtils.join(",", routes))
+                .putExtra(mPackageName + ".excludedRoutes", TextUtils.join(",", excludedRoutes))
                 .putExtra(mPackageName + ".allowedapplications", allowedApplications)
                 .putExtra(mPackageName + ".disallowedapplications", disallowedApplications)
                 .putExtra(mPackageName + ".httpProxy", proxyInfo)
                 .putParcelableArrayListExtra(
                         mPackageName + ".underlyingNetworks", underlyingNetworks)
-                .putExtra(mPackageName + ".isAlwaysMetered", isAlwaysMetered);
+                .putExtra(mPackageName + ".isAlwaysMetered", isAlwaysMetered)
+                .putExtra(mPackageName + ".addRoutesByIpPrefix", addRoutesByIpPrefix);
         mActivity.startService(intent);
     }
 
     // TODO: Consider replacing arguments with a Builder.
     private void startVpn(
-        String[] addresses, String[] routes, String allowedApplications,
-        String disallowedApplications, @Nullable ProxyInfo proxyInfo,
-        @Nullable ArrayList<Network> underlyingNetworks, boolean isAlwaysMetered) throws Exception {
+            String[] addresses, String[] routes, String allowedApplications,
+            String disallowedApplications, @Nullable ProxyInfo proxyInfo,
+            @Nullable ArrayList<Network> underlyingNetworks, boolean isAlwaysMetered)
+            throws Exception {
+        startVpn(addresses, routes, new String[0] /* excludedRoutes */, allowedApplications,
+                disallowedApplications, proxyInfo, underlyingNetworks, isAlwaysMetered);
+    }
+
+    private void startVpn(
+            String[] addresses, String[] routes, String[] excludedRoutes,
+            String allowedApplications, String disallowedApplications,
+            @Nullable ProxyInfo proxyInfo,
+            @Nullable ArrayList<Network> underlyingNetworks, boolean isAlwaysMetered)
+            throws Exception {
+        startVpn(addresses, routes, new String[0] /* excludedRoutes */, allowedApplications,
+                disallowedApplications, proxyInfo, underlyingNetworks, isAlwaysMetered,
+                false /* addRoutesByIpPrefix */);
+    }
+
+    private void startVpn(
+            String[] addresses, String[] routes, String[] excludedRoutes,
+            String allowedApplications, String disallowedApplications,
+            @Nullable ProxyInfo proxyInfo,
+            @Nullable ArrayList<Network> underlyingNetworks, boolean isAlwaysMetered,
+            boolean addRoutesByIpPrefix)
+            throws Exception {
         prepareVpn();
 
         // Register a callback so we will be notified when our VPN comes up.
@@ -340,8 +366,8 @@ public class VpnTest {
         mCM.registerNetworkCallback(request, mCallback);  // Unregistered in tearDown.
 
         // Start the service and wait up for TIMEOUT_MS ms for the VPN to come up.
-        establishVpn(addresses, routes, allowedApplications, disallowedApplications, proxyInfo,
-                underlyingNetworks, isAlwaysMetered);
+        establishVpn(addresses, routes, excludedRoutes, allowedApplications, disallowedApplications,
+                proxyInfo, underlyingNetworks, isAlwaysMetered, addRoutesByIpPrefix);
         synchronized (mLock) {
             if (mNetwork == null) {
                  Log.i(TAG, "bf mLock");
@@ -561,6 +587,12 @@ public class VpnTest {
     }
 
     private void checkUdpEcho(String to, String expectedFrom) throws IOException {
+        checkUdpEcho(to, expectedFrom, expectedFrom != null);
+    }
+
+    private void checkUdpEcho(String to, String expectedFrom,
+            boolean expectConnectionOwnerIsVisible)
+            throws IOException {
         DatagramSocket s;
         InetAddress address = InetAddress.getByName(to);
         if (address instanceof Inet6Address) {  // http://b/18094870
@@ -584,7 +616,7 @@ public class VpnTest {
         try {
             if (expectedFrom != null) {
                 s.send(p);
-                checkConnectionOwnerUidUdp(s, true);
+                checkConnectionOwnerUidUdp(s, expectConnectionOwnerIsVisible);
                 s.receive(p);
                 MoreAsserts.assertEquals(data, p.getData());
             } else {
@@ -593,7 +625,7 @@ public class VpnTest {
                     s.receive(p);
                     fail("Received unexpected reply");
                 } catch (IOException expected) {
-                    checkConnectionOwnerUidUdp(s, false);
+                    checkConnectionOwnerUidUdp(s, expectConnectionOwnerIsVisible);
                 }
             }
         } finally {
@@ -601,19 +633,38 @@ public class VpnTest {
         }
     }
 
+    private void checkTrafficOnVpn(String destination) throws Exception {
+        final InetAddress address = InetAddress.getByName(destination);
+
+        if (address instanceof Inet6Address) {
+            checkUdpEcho(destination, "2001:db8:1:2::ffe");
+            checkTcpReflection(destination, "2001:db8:1:2::ffe");
+            checkPing(destination);
+        } else {
+            checkUdpEcho(destination, "192.0.2.2");
+            checkTcpReflection(destination, "192.0.2.2");
+        }
+
+    }
+
+    private void checkNoTrafficOnVpn(String destination) throws IOException {
+        checkUdpEcho(destination, null);
+        checkTcpReflection(destination, null);
+    }
+
     private void checkTrafficOnVpn() throws Exception {
-        checkUdpEcho("192.0.2.251", "192.0.2.2");
-        checkUdpEcho("2001:db8:dead:beef::f00", "2001:db8:1:2::ffe");
-        checkPing("2001:db8:dead:beef::f00");
-        checkTcpReflection("192.0.2.252", "192.0.2.2");
-        checkTcpReflection("2001:db8:dead:beef::f00", "2001:db8:1:2::ffe");
+        checkTrafficOnVpn("192.0.2.251");
+        checkTrafficOnVpn("2001:db8:dead:beef::f00");
     }
 
     private void checkNoTrafficOnVpn() throws Exception {
-        checkUdpEcho("192.0.2.251", null);
-        checkUdpEcho("2001:db8:dead:beef::f00", null);
-        checkTcpReflection("192.0.2.252", null);
-        checkTcpReflection("2001:db8:dead:beef::f00", null);
+        checkNoTrafficOnVpn("192.0.2.251");
+        checkNoTrafficOnVpn("2001:db8:dead:beef::f00");
+    }
+
+    private void checkTrafficBypassesVpn(String destination) throws Exception {
+        checkUdpEcho(destination, null, true /* expectVpnOwnedConnection */);
+        checkTcpReflection(destination, null);
     }
 
     private FileDescriptor openSocketFd(String host, int port, int timeoutMs) throws Exception {
@@ -974,9 +1025,9 @@ public class VpnTest {
         }
         Log.i(TAG, "Append shell app to disallowedApps: " + disallowedApps);
         startVpn(new String[] {"192.0.2.2/32", "2001:db8:1:2::ffe/128"},
-                 new String[] {"192.0.2.0/24", "2001:db8::/32"},
-                 "", disallowedApps, null, null /* underlyingNetworks */,
-                 false /* isAlwaysMetered */);
+                new String[] {"192.0.2.0/24", "2001:db8::/32"},
+                "", disallowedApps, null, null /* underlyingNetworks */,
+                false /* isAlwaysMetered */);
 
         assertSocketStillOpen(localFd, TEST_HOST);
         assertSocketStillOpen(remoteFd, TEST_HOST);
@@ -986,6 +1037,74 @@ public class VpnTest {
         final Network network = mCM.getActiveNetwork();
         final NetworkCapabilities nc = mCM.getNetworkCapabilities(network);
         assertFalse(nc.hasTransport(TRANSPORT_VPN));
+    }
+
+    @Test
+    public void testExcludedRoutes() throws Exception {
+        if (!supportedHardware()) return;
+        if (!SdkLevel.isAtLeastT()) return;
+
+        // Shell app must not be put in here or it would kill the ADB-over-network use case
+        String allowedApps = mRemoteSocketFactoryClient.getPackageName() + "," + mPackageName;
+        startVpn(new String[]{"192.0.2.2/32", "2001:db8:1:2::ffe/128"} /* addresses */,
+                new String[]{"0.0.0.0/0", "::/0"} /* routes */,
+                new String[]{"192.0.2.0/24", "2001:db8::/32"} /* excludedRoutes */,
+                allowedApps, "" /* disallowedApplications */, null /* proxyInfo */,
+                null /* underlyingNetworks */, false /* isAlwaysMetered */);
+
+        // Excluded routes should bypass VPN.
+        checkTrafficBypassesVpn("192.0.2.1");
+        checkTrafficBypassesVpn("2001:db8:dead:beef::f00");
+        // Other routes should go through VPN, since default routes are included.
+        checkTrafficOnVpn("198.51.100.1");
+        checkTrafficOnVpn("2002:db8::1");
+    }
+
+    @Test
+    public void testIncludedRoutes() throws Exception {
+        if (!supportedHardware()) return;
+
+        // Shell app must not be put in here or it would kill the ADB-over-network use case
+        String allowedApps = mRemoteSocketFactoryClient.getPackageName() + "," + mPackageName;
+        startVpn(new String[]{"192.0.2.2/32", "2001:db8:1:2::ffe/128"} /* addresses */,
+                new String[]{"192.0.2.0/24", "2001:db8::/32"} /* routes */,
+                allowedApps, "" /* disallowedApplications */, null /* proxyInfo */,
+                null /* underlyingNetworks */, false /* isAlwaysMetered */);
+
+        // Included routes should go through VPN.
+        checkTrafficOnVpn("192.0.2.1");
+        checkTrafficOnVpn("2001:db8:dead:beef::f00");
+        // Other routes should bypass VPN, since default routes are not included.
+        checkTrafficBypassesVpn("198.51.100.1");
+        checkTrafficBypassesVpn("2002:db8::1");
+    }
+
+    @Test
+    public void testInterleavedRoutes() throws Exception {
+        if (!supportedHardware()) return;
+        if (!SdkLevel.isAtLeastT()) return;
+
+        // Shell app must not be put in here or it would kill the ADB-over-network use case
+        String allowedApps = mRemoteSocketFactoryClient.getPackageName() + "," + mPackageName;
+        startVpn(new String[]{"192.0.2.2/32", "2001:db8:1:2::ffe/128"} /* addresses */,
+                new String[]{"0.0.0.0/0", "192.0.2.0/32", "::/0", "2001:db8::/128"} /* routes */,
+                new String[]{"192.0.2.0/24", "2001:db8::/32"} /* excludedRoutes */,
+                allowedApps, "" /* disallowedApplications */, null /* proxyInfo */,
+                null /* underlyingNetworks */, false /* isAlwaysMetered */,
+                true /* addRoutesByIpPrefix */);
+
+        // Excluded routes should bypass VPN.
+        checkTrafficBypassesVpn("192.0.2.1");
+        checkTrafficBypassesVpn("2001:db8:dead:beef::f00");
+
+        // Included routes inside excluded routes should go through VPN, since the longest common
+        // prefix precedes.
+        checkTrafficOnVpn("192.0.2.0");
+        checkTrafficOnVpn("2001:db8::");
+
+        // Other routes should go through VPN, since default routes are included.
+        checkTrafficOnVpn("198.51.100.1");
+        checkTrafficOnVpn("2002:db8::1");
     }
 
     @Test
