@@ -63,7 +63,7 @@ public final class ProfileNetworkPreference implements Parcelable {
 
     @Override
     public int hashCode() {
-        return (mPreference);
+        return mPreference;
     }
 
     /**
@@ -91,6 +91,7 @@ public final class ProfileNetworkPreference implements Parcelable {
             mPreference = preference;
             return this;
         }
+
         /**
          * Returns an instance of {@link ProfileNetworkPreference} created from the
          * fields set on this builder.
