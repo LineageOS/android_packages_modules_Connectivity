@@ -220,6 +220,26 @@ public class NetworkStatsManagerTest {
                         TEST_SUBSCRIBER_ID));
     }
 
+    @Test
+    public void testQueryTaggedSummary() throws Exception {
+        final long startTime = 1;
+        final long endTime = 100;
+
+        reset(mStatsSession);
+        when(mService.openSessionForUsageStats(anyInt(), anyString())).thenReturn(mStatsSession);
+        when(mStatsSession.getTaggedSummaryForAllUid(any(NetworkTemplate.class),
+                anyLong(), anyLong()))
+                .thenReturn(new android.net.NetworkStats(0, 0));
+        final NetworkTemplate template = new NetworkTemplate.Builder(NetworkTemplate.MATCH_MOBILE)
+                .setMeteredness(NetworkStats.Bucket.METERED_YES).build();
+        NetworkStats stats = mManager.queryTaggedSummary(template, startTime, endTime);
+
+        verify(mStatsSession, times(1)).getTaggedSummaryForAllUid(
+                eq(template), eq(startTime), eq(endTime));
+
+        assertFalse(stats.hasNextBucket());
+    }
+
     private void assertBucketMatches(Entry expected, NetworkStats.Bucket actual) {
         assertEquals(expected.uid, actual.getUid());
         assertEquals(expected.rxBytes, actual.getRxBytes());
