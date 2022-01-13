@@ -38,16 +38,22 @@ public class ProfileNetworkPreferenceList {
         @NonNull public final UserHandle user;
         // Capabilities are only null when sending an object to remove the setting for a user
         @Nullable public final NetworkCapabilities capabilities;
+        public final boolean allowFallback;
 
         public Preference(@NonNull final UserHandle user,
-                @Nullable final NetworkCapabilities capabilities) {
+                @Nullable final NetworkCapabilities capabilities,
+                final boolean allowFallback) {
             this.user = user;
             this.capabilities = null == capabilities ? null : new NetworkCapabilities(capabilities);
+            this.allowFallback = allowFallback;
         }
 
         /** toString */
         public String toString() {
-            return "[ProfileNetworkPreference user=" + user + " caps=" + capabilities + "]";
+            return "[ProfileNetworkPreference user=" + user
+                    + " caps=" + capabilities
+                    + " allowFallback=" + allowFallback
+                    + "]";
         }
     }
 
