@@ -21,7 +21,7 @@ java_library {
     sdk_version: "system_current",
     min_sdk_version: "29",
     static_libs: [
-        "netd_aidl_interface-V7-java",
+        "netd_aidl_interface-V8-java",
     ],
     apex_available: [
         "//apex_available:platform", // used from services.net
@@ -44,7 +44,7 @@ cc_library_static {
 cc_library_static {
     name: "netd_aidl_interface-lateststable-ndk",
     whole_static_libs: [
-        "netd_aidl_interface-V7-ndk",
+        "netd_aidl_interface-V8-ndk",
     ],
     apex_available: [
         "com.android.resolv",
@@ -55,7 +55,7 @@ cc_library_static {
 cc_library_static {
     name: "netd_aidl_interface-lateststable-cpp",
     whole_static_libs: [
-        "netd_aidl_interface-V7-cpp",
+        "netd_aidl_interface-V8-cpp",
     ],
 }
 
@@ -111,6 +111,7 @@ aidl_interface {
         "5",
         "6",
         "7",
+        "8",
     ],
 }
 

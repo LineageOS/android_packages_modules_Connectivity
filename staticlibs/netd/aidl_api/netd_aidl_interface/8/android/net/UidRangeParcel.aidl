@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021 The Android Open Source Project
+ * Copyright (C) 2018 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -34,11 +34,7 @@
 package android.net;
 /* @hide */
 @JavaDerive(equals=true, toString=true) @JavaOnlyImmutable
-parcelable NativeNetworkConfig {
-  int netId;
-  android.net.NativeNetworkType networkType = android.net.NativeNetworkType.PHYSICAL;
-  int permission;
-  boolean secure;
-  android.net.NativeVpnType vpnType = android.net.NativeVpnType.PLATFORM;
-  boolean excludeLocalRoutes = false;
+parcelable UidRangeParcel {
+  int start;
+  int stop;
 }
