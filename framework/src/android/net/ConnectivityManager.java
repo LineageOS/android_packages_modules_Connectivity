@@ -5660,4 +5660,26 @@ public class ConnectivityManager {
             throw e.rethrowFromSystemServer();
         }
     }
+
+    /**
+     * Enables or disables the specified firewall chain.
+     *
+     * @param chain target chain.
+     * @param enable whether the chain should be enabled.
+     * @throws IllegalStateException if set firewall chain failed.
+     * @hide
+     */
+    @SystemApi(client = MODULE_LIBRARIES)
+    @RequiresPermission(anyOf = {
+            android.Manifest.permission.NETWORK_SETTINGS,
+            android.Manifest.permission.NETWORK_STACK,
+            NetworkStack.PERMISSION_MAINLINE_NETWORK_STACK
+    })
+    public void setFirewallChainEnabled(@FirewallChain final int chain, final boolean enable) {
+        try {
+            mService.setFirewallChainEnabled(chain, enable);
+        } catch (RemoteException e) {
+            throw e.rethrowFromSystemServer();
+        }
+    }
 }
