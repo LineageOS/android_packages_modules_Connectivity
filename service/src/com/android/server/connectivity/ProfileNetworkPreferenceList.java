@@ -30,7 +30,7 @@ import java.util.List;
  *
  * A given profile can only have one preference.
  */
-public class ProfileNetworkPreferences {
+public class ProfileNetworkPreferenceList {
     /**
      * A single preference, as it applies to a given user profile.
      */
@@ -53,11 +53,11 @@ public class ProfileNetworkPreferences {
 
     @NonNull public final List<Preference> preferences;
 
-    public ProfileNetworkPreferences() {
+    public ProfileNetworkPreferenceList() {
         preferences = Collections.EMPTY_LIST;
     }
 
-    private ProfileNetworkPreferences(@NonNull final List<Preference> list) {
+    private ProfileNetworkPreferenceList(@NonNull final List<Preference> list) {
         preferences = Collections.unmodifiableList(list);
     }
 
@@ -68,7 +68,7 @@ public class ProfileNetworkPreferences {
      * preference. Passing a Preference object containing a null capabilities object is equivalent
      * to (and indeed, implemented as) removing the preference for this user.
      */
-    public ProfileNetworkPreferences plus(@NonNull final Preference pref) {
+    public ProfileNetworkPreferenceList plus(@NonNull final Preference pref) {
         final ArrayList<Preference> newPrefs = new ArrayList<>();
         for (final Preference existingPref : preferences) {
             if (!existingPref.user.equals(pref.user)) {
@@ -78,7 +78,7 @@ public class ProfileNetworkPreferences {
         if (null != pref.capabilities) {
             newPrefs.add(pref);
         }
-        return new ProfileNetworkPreferences(newPrefs);
+        return new ProfileNetworkPreferenceList(newPrefs);
     }
 
     public boolean isEmpty() {
