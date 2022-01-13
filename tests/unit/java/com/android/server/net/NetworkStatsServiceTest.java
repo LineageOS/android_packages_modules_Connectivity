@@ -41,7 +41,6 @@ import static android.net.NetworkStats.ROAMING_YES;
 import static android.net.NetworkStats.SET_ALL;
 import static android.net.NetworkStats.SET_DEFAULT;
 import static android.net.NetworkStats.SET_FOREGROUND;
-import static android.net.NetworkStats.STATS_PER_UID;
 import static android.net.NetworkStats.TAG_ALL;
 import static android.net.NetworkStats.TAG_NONE;
 import static android.net.NetworkStats.UID_ALL;
@@ -86,7 +85,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.database.ContentObserver;
 import android.net.DataUsageRequest;
-import android.net.INetworkManagementEventObserver;
+import android.net.INetd;
 import android.net.INetworkStatsSession;
 import android.net.LinkProperties;
 import android.net.Network;
@@ -96,6 +95,7 @@ import android.net.NetworkStats;
 import android.net.NetworkStatsHistory;
 import android.net.NetworkTemplate;
 import android.net.TelephonyNetworkSpecifier;
+import android.net.TetherStatsParcel;
 import android.net.TetheringManager;
 import android.net.UnderlyingNetworkInfo;
 import android.net.netstats.provider.INetworkStatsProviderCallback;
@@ -105,7 +105,6 @@ import android.os.ConditionVariable;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.IBinder;
-import android.os.INetworkManagementService;
 import android.os.Looper;
 import android.os.Message;
 import android.os.Messenger;
@@ -120,6 +119,7 @@ import androidx.test.filters.SmallTest;
 
 import com.android.internal.util.ArrayUtils;
 import com.android.internal.util.test.BroadcastInterceptingContext;
+import com.android.server.net.NetworkStatsService.AlertObserver;
 import com.android.server.net.NetworkStatsService.NetworkStatsSettings;
 import com.android.server.net.NetworkStatsService.NetworkStatsSettings.Config;
 import com.android.testutils.DevSdkIgnoreRule;
@@ -184,7 +184,7 @@ public class NetworkStatsServiceTest extends NetworkStatsBaseTest {
     private MockContext mServiceContext;
     private @Mock TelephonyManager mTelephonyManager;
     private static @Mock WifiInfo sWifiInfo;
-    private @Mock INetworkManagementService mNetManager;
+    private @Mock INetd mNetd;
     private @Mock TetheringManager mTetheringManager;
     private @Mock NetworkStatsFactory mStatsFactory;
     private @Mock NetworkStatsSettings mSettings;
@@ -196,7 +196,7 @@ public class NetworkStatsServiceTest extends NetworkStatsBaseTest {
 
     private NetworkStatsService mService;
     private INetworkStatsSession mSession;
-    private INetworkManagementEventObserver mNetworkObserver;
+    private AlertObserver mAlertObserver;
     private ContentObserver mContentObserver;
     private Handler mHandler;
     private TetheringManager.TetheringEventCallback mTetheringEventCallback;
@@ -243,6 +243,20 @@ public class NetworkStatsServiceTest extends NetworkStatsBaseTest {
             return currentTimeMillis();
         }
     };
+
+    @NonNull
+    private static TetherStatsParcel buildTetherStatsParcel(String iface, long rxBytes,
+            long rxPackets, long txBytes, long txPackets, int ifIndex) {
+        TetherStatsParcel parcel = new TetherStatsParcel();
+        parcel.iface = iface;
+        parcel.rxBytes = rxBytes;
+        parcel.rxPackets = rxPackets;
+        parcel.txBytes = txBytes;
+        parcel.txPackets = txPackets;
+        parcel.ifIndex = ifIndex;
+        return parcel;
+    }
+
     @Before
     public void setUp() throws Exception {
         MockitoAnnotations.initMocks(this);
@@ -258,7 +272,7 @@ public class NetworkStatsServiceTest extends NetworkStatsBaseTest {
 
         mHandlerThread = new HandlerThread("HandlerThread");
         final NetworkStatsService.Dependencies deps = makeDependencies();
-        mService = new NetworkStatsService(mServiceContext, mNetManager, mAlarmManager, wakeLock,
+        mService = new NetworkStatsService(mServiceContext, mNetd, mAlarmManager, wakeLock,
                 mClock, mSettings, mStatsFactory, new NetworkStatsObservers(), mStatsDir,
                 getBaseDir(mStatsDir), deps);
 
@@ -283,11 +297,11 @@ public class NetworkStatsServiceTest extends NetworkStatsBaseTest {
         mSession = mService.openSession();
         assertNotNull("openSession() failed", mSession);
 
-        // Catch INetworkManagementEventObserver during systemReady().
-        ArgumentCaptor<INetworkManagementEventObserver> networkObserver =
-                ArgumentCaptor.forClass(INetworkManagementEventObserver.class);
-        verify(mNetManager).registerObserver(networkObserver.capture());
-        mNetworkObserver = networkObserver.getValue();
+        // Catch AlertObserver during systemReady().
+        final ArgumentCaptor<AlertObserver> alertObserver =
+                ArgumentCaptor.forClass(AlertObserver.class);
+        verify(mNetd).registerUnsolicitedEventListener(alertObserver.capture());
+        mAlertObserver = alertObserver.getValue();
 
         // Catch TetheringEventCallback during systemReady().
         ArgumentCaptor<TetheringManager.TetheringEventCallback> tetheringEventCbCaptor =
@@ -328,7 +342,7 @@ public class NetworkStatsServiceTest extends NetworkStatsBaseTest {
         mServiceContext = null;
         mStatsDir = null;
 
-        mNetManager = null;
+        mNetd = null;
         mSettings = null;
 
         mSession.close();
@@ -1026,13 +1040,15 @@ public class NetworkStatsServiceTest extends NetworkStatsBaseTest {
                 new UnderlyingNetworkInfo[0]);
 
         NetworkStats.Entry uidStats = new NetworkStats.Entry(
-                TEST_IFACE, UID_BLUE, SET_DEFAULT, 0xF00D, 1024L, 8L, 512L, 4L, 0L);
+                TEST_IFACE, UID_BLUE, SET_DEFAULT, TAG_NONE, 1024L, 8L, 512L, 4L, 0L);
         // Stacked on matching interface
         NetworkStats.Entry tetheredStats1 = new NetworkStats.Entry(
-                stackedIface, UID_BLUE, SET_DEFAULT, 0xF00D, 1024L, 8L, 512L, 4L, 0L);
+                stackedIface, UID_TETHERING, SET_DEFAULT, TAG_NONE, 1024L, 8L, 512L, 4L, 0L);
+        TetherStatsParcel tetherStatsParcel1 =
+                buildTetherStatsParcel(stackedIface, 1024L, 8L, 512L, 4L, 0);
         // Different interface
-        NetworkStats.Entry tetheredStats2 = new NetworkStats.Entry(
-                "otherif", UID_BLUE, SET_DEFAULT, 0xF00D, 1024L, 8L, 512L, 4L, 0L);
+        TetherStatsParcel tetherStatsParcel2 =
+                buildTetherStatsParcel("otherif", 1024L, 8L, 512L, 4L, 0);
 
         final String[] ifaceFilter = new String[] { TEST_IFACE };
         final String[] augmentedIfaceFilter = new String[] { stackedIface, TEST_IFACE };
@@ -1044,10 +1060,8 @@ public class NetworkStatsServiceTest extends NetworkStatsBaseTest {
         when(mStatsFactory.readNetworkStatsDetail(eq(UID_ALL), any(), eq(TAG_ALL)))
                 .thenReturn(new NetworkStats(getElapsedRealtime(), 1)
                         .insertEntry(uidStats));
-        when(mNetManager.getNetworkStatsTethering(STATS_PER_UID))
-                .thenReturn(new NetworkStats(getElapsedRealtime(), 2)
-                        .insertEntry(tetheredStats1)
-                        .insertEntry(tetheredStats2));
+        final TetherStatsParcel[] tetherStatsParcels =  {tetherStatsParcel1, tetherStatsParcel2};
+        when(mNetd.tetherGetStats()).thenReturn(tetherStatsParcels);
 
         NetworkStats stats = mService.getDetailedUidStats(ifaceFilter);
 
@@ -1249,12 +1263,11 @@ public class NetworkStatsServiceTest extends NetworkStatsBaseTest {
         final NetworkStats localUidStats = new NetworkStats(now, 1)
                 .insertEntry(TEST_IFACE, UID_RED, SET_DEFAULT, TAG_NONE, 128L, 2L, 128L, 2L, 0L);
         // Software per-uid tethering traffic.
-        final NetworkStats tetherSwUidStats = new NetworkStats(now, 1)
-                .insertEntry(TEST_IFACE, UID_TETHERING, SET_DEFAULT, TAG_NONE, 1408L, 10L, 256L, 1L,
-                        0L);
+        final TetherStatsParcel[] tetherStatsParcels =
+                {buildTetherStatsParcel(TEST_IFACE, 1408L, 10L, 256L, 1L, 0)};
 
         expectNetworkStatsSummary(swIfaceStats);
-        expectNetworkStatsUidDetail(localUidStats, tetherSwUidStats);
+        expectNetworkStatsUidDetail(localUidStats, tetherStatsParcels);
         forcePollAndWaitForIdle();
 
         // verify service recorded history
@@ -1748,16 +1761,17 @@ public class NetworkStatsServiceTest extends NetworkStatsBaseTest {
     }
 
     private void expectNetworkStatsUidDetail(NetworkStats detail) throws Exception {
-        expectNetworkStatsUidDetail(detail, new NetworkStats(0L, 0));
+        final TetherStatsParcel[] tetherStatsParcels = {};
+        expectNetworkStatsUidDetail(detail, tetherStatsParcels);
     }
 
-    private void expectNetworkStatsUidDetail(NetworkStats detail, NetworkStats tetherStats)
-            throws Exception {
+    private void expectNetworkStatsUidDetail(NetworkStats detail,
+            TetherStatsParcel[] tetherStatsParcels) throws Exception {
         when(mStatsFactory.readNetworkStatsDetail(UID_ALL, INTERFACES_ALL, TAG_ALL))
                 .thenReturn(detail);
 
         // also include tethering details, since they are folded into UID
-        when(mNetManager.getNetworkStatsTethering(STATS_PER_UID)).thenReturn(tetherStats);
+        when(mNetd.tetherGetStats()).thenReturn(tetherStatsParcels);
     }
 
     private void expectDefaultSettings() throws Exception {
