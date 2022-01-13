@@ -49,4 +49,9 @@ parcelable NativeNetworkConfig {
 
     /** For virtual networks. The type of VPN to create.  Ignored for all other network types. */
     NativeVpnType vpnType = NativeVpnType.PLATFORM;
+
+    /**
+     * For virtual networks. Whether local traffic is excluded from the VPN.
+     */
+    boolean excludeLocalRoutes = false;
 }
