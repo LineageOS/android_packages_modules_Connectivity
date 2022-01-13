@@ -3386,12 +3386,12 @@ public class ConnectivityServiceTest {
 
     private NativeNetworkConfig nativeNetworkConfigPhysical(int netId, int permission) {
         return new NativeNetworkConfig(netId, NativeNetworkType.PHYSICAL, permission,
-                /*secure=*/ false, VpnManager.TYPE_VPN_NONE);
+                /*secure=*/ false, VpnManager.TYPE_VPN_NONE, /*excludeLocalRoutes=*/ false);
     }
 
     private NativeNetworkConfig nativeNetworkConfigVpn(int netId, boolean secure, int vpnType) {
         return new NativeNetworkConfig(netId, NativeNetworkType.VIRTUAL, INetd.PERMISSION_NONE,
-                secure, vpnType);
+                secure, vpnType, /*excludeLocalRoutes=*/ false);
     }
 
     @Test
