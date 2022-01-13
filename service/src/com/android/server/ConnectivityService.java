@@ -10580,4 +10580,34 @@ public class ConnectivityService extends IConnectivityManager.Stub
             return createNetworkRequest(NetworkRequest.Type.REQUEST, netcap);
         }
     }
+
+    @Override
+    public void updateMeteredNetworkAllowList(final int uid, final boolean add) {
+        enforceNetworkStackOrSettingsPermission();
+
+        try {
+            if (add) {
+                mNetd.bandwidthAddNiceApp(uid);
+            } else {
+                mNetd.bandwidthRemoveNiceApp(uid);
+            }
+        } catch (RemoteException | ServiceSpecificException e) {
+            throw new IllegalStateException(e);
+        }
+    }
+
+    @Override
+    public void updateMeteredNetworkDenyList(final int uid, final boolean add) {
+        enforceNetworkStackOrSettingsPermission();
+
+        try {
+            if (add) {
+                mNetd.bandwidthAddNaughtyApp(uid);
+            } else {
+                mNetd.bandwidthRemoveNaughtyApp(uid);
+            }
+        } catch (RemoteException | ServiceSpecificException e) {
+            throw new IllegalStateException(e);
+        }
+    }
 }
