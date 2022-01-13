@@ -17,32 +17,37 @@
  */
 
 #include <cstdint>
+#include <set>
 #include <string>
-#include <vector>
 
-#include <android-base/strings.h>
+#include <android/api-level.h>
 #include <android-base/properties.h>
 #include <android-modules-utils/sdk_level.h>
 
 #include <gtest/gtest.h>
 
 using std::find;
+using std::set;
 using std::string;
-using std::vector;
 
 using android::modules::sdklevel::IsAtLeastR;
 using android::modules::sdklevel::IsAtLeastS;
 using android::modules::sdklevel::IsAtLeastT;
 
+// Mainline development branches lack the constant for the current development OS.
+#ifndef __ANDROID_API_T__
+#define __ANDROID_API_T__ 33
+#endif
+
 class BpfExistenceTest : public ::testing::Test {
 };
 
-static const vector<string> INTRODUCED_R = {
+static const set<string> INTRODUCED_R = {
     "/sys/fs/bpf/prog_offload_schedcls_ingress_tether_ether",
     "/sys/fs/bpf/prog_offload_schedcls_ingress_tether_rawip",
 };
 
-static const vector<string> INTRODUCED_S = {
+static const set<string> INTRODUCED_S = {
     "/sys/fs/bpf/tethering/prog_offload_schedcls_tether_downstream4_ether",
     "/sys/fs/bpf/tethering/prog_offload_schedcls_tether_downstream4_rawip",
     "/sys/fs/bpf/tethering/prog_offload_schedcls_tether_downstream6_ether",
@@ -53,32 +58,28 @@ static const vector<string> INTRODUCED_S = {
     "/sys/fs/bpf/tethering/prog_offload_schedcls_tether_upstream6_rawip",
 };
 
-static const vector<string> REMOVED_S = {
+static const set<string> REMOVED_S = {
     "/sys/fs/bpf/prog_offload_schedcls_ingress_tether_ether",
     "/sys/fs/bpf/prog_offload_schedcls_ingress_tether_rawip",
 };
 
-static const vector<string> INTRODUCED_T = {
+static const set<string> INTRODUCED_T = {
 };
 
-static const vector<string> REMOVED_T = {
+static const set<string> REMOVED_T = {
 };
 
-void addAll(vector<string>* a, const vector<string>& b) {
-    a->insert(a->end(), b.begin(), b.end());
+void addAll(set<string>* a, const set<string>& b) {
+    a->insert(b.begin(), b.end());
 }
 
-void removeAll(vector<string>* a, const vector<string> b) {
+void removeAll(set<string>* a, const set<string> b) {
     for (const auto& toRemove : b) {
-        auto iter = find(a->begin(), a->end(), toRemove);
-        while (iter != a->end()) {
-            a->erase(iter);
-            iter = find(a->begin(), a->end(), toRemove);
-        }
+        a->erase(toRemove);
     }
 }
 
-void getFileLists(vector<string>* expected, vector<string>* unexpected) {
+void getFileLists(set<string>* expected, set<string>* unexpected) {
     unexpected->clear();
     expected->clear();
 
@@ -112,8 +113,8 @@ void getFileLists(vector<string>* expected, vector<string>* unexpected) {
 }
 
 void checkFiles() {
-    vector<string> mustExist;
-    vector<string> mustNotExist;
+    set<string> mustExist;
+    set<string> mustNotExist;
 
     getFileLists(&mustExist, &mustNotExist);
 
@@ -132,9 +133,9 @@ void checkFiles() {
 
 TEST_F(BpfExistenceTest, TestPrograms) {
     // Pre-flight check to ensure test has been updated.
-    uint64_t buildVersionSdk = android::base::GetUintProperty<uint64_t>("ro.build.version.sdk", 0);
+    uint64_t buildVersionSdk = android_get_device_api_level();
     ASSERT_NE(0, buildVersionSdk) << "Unable to determine device SDK version";
-    if (buildVersionSdk > 33 && buildVersionSdk != 10000) {
+    if (buildVersionSdk > __ANDROID_API_T__ && buildVersionSdk != __ANDROID_API_FUTURE__) {
             FAIL() << "Unknown OS version " << buildVersionSdk << ", please update this test";
     }
 
