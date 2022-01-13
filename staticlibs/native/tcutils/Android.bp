@@ -1,4 +1,4 @@
-// Copyright (C) 2021 The Android Open Source Project
+// Copyright (C) 2022 The Android Open Source Project
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,32 +16,28 @@ package {
     default_applicable_licenses: ["Android-Apache-2.0"],
 }
 
-cc_library_headers {
-    name: "bpf_syscall_wrappers",
-    vendor_available: false,
-    host_supported: true,
-    native_bridge_supported: true,
+cc_library_static {
+    name: "libtcutils",
+    srcs: ["tcutils.cpp"],
     export_include_dirs: ["include"],
+    header_libs: ["bpf_syscall_wrappers"],
+    shared_libs: [
+        "liblog",
+    ],
+    stl: "libc++_static",
     cflags: [
         "-Wall",
         "-Werror",
+        "-Wno-unused-parameter",
     ],
     sdk_version: "30",
     min_sdk_version: "30",
     apex_available: [
-        "//apex_available:platform",
-        "com.android.mediaprovider",
         "com.android.tethering",
+        "//apex_available:platform",
     ],
     visibility: [
-        "//frameworks/libs/net/common/native/bpf_headers",
         "//frameworks/libs/net/common/native/bpfmapjni",
-        "//frameworks/libs/net/common/native/tcutils",
-        "//packages/modules/Connectivity/netd",
-        "//packages/modules/Connectivity/service",
-        "//packages/modules/Connectivity/Tethering",
-        "//packages/providers/MediaProvider/jni",
-        "//system/bpf/libbpf_android",
-        "//system/memory/lmkd",
+        "//system/netd/server",
     ],
 }
