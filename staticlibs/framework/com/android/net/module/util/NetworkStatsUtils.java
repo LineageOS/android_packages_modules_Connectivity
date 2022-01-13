@@ -68,6 +68,12 @@ public class NetworkStatsUtils {
     public static final int SUBSCRIBER_ID_MATCH_RULE_ALL = 1;
 
     /**
+     * Name representing {@link #bandwidthSetGlobalAlert(long)} limit when delivered to
+     * {@link AlertObserver#onQuotaLimitReached(String, String)}.
+     */
+    public static final String LIMIT_GLOBAL_ALERT = "globalAlert";
+
+    /**
      * Return the constrained value by given the lower and upper bounds.
      */
     public static int constrain(int amount, int low, int high) {
