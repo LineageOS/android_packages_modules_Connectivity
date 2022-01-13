@@ -52,7 +52,6 @@ public class NearbyService extends SystemService {
             Log.d(TAG, "Publishing NearbyService");
         }
         publishBinderService(Context.NEARBY_SERVICE, mImpl);
-        mFastPairManager.initiate();
     }
 
     @Override
@@ -62,6 +61,7 @@ public class NearbyService extends SystemService {
         } else if (phase == PHASE_BOOT_COMPLETED) {
             // the nearby service must be functioning after this boot phase.
             mImpl.onSystemReady();
+            mFastPairManager.initiate();
         }
     }
 

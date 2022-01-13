@@ -16,7 +16,6 @@
 
 package com.android.server.nearby.fastpair;
 
-
 import static com.android.server.nearby.fastpair.Constant.DEVICE_PAIRING_FRAGMENT_TYPE;
 import static com.android.server.nearby.fastpair.Constant.EXTRA_BINDER;
 import static com.android.server.nearby.fastpair.Constant.EXTRA_BUNDLE;

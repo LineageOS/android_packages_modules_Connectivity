@@ -149,8 +149,8 @@ public class NearbyManager {
                 @CallbackExecutor Executor executor) {
             Preconditions.checkArgument(scanCallback != null,
                     "invalid null callback");
-            Preconditions.checkState(ScanRequest.isValidScanType(mScanType),
-                    "invalid scan type : " + mScanType
+            Preconditions.checkState(ScanRequest.isValidScanType(scanType),
+                    "invalid scan type : " + scanType
                             + ", scan type must be one of ScanRequest#SCAN_TYPE_");
             mScanType = scanType;
             mScanCallback = scanCallback;
