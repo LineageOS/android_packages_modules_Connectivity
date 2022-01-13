@@ -4041,11 +4041,11 @@ public class ConnectivityService extends IConnectivityManager.Stub
                 config = new NativeNetworkConfig(nai.network.getNetId(), NativeNetworkType.VIRTUAL,
                         INetd.PERMISSION_NONE,
                         (nai.networkAgentConfig == null || !nai.networkAgentConfig.allowBypass),
-                        getVpnType(nai));
+                        getVpnType(nai), /*excludeLocalRoutes=*/ false);
             } else {
                 config = new NativeNetworkConfig(nai.network.getNetId(), NativeNetworkType.PHYSICAL,
                         getNetworkPermission(nai.networkCapabilities), /*secure=*/ false,
-                        VpnManager.TYPE_VPN_NONE);
+                        VpnManager.TYPE_VPN_NONE, /*excludeLocalRoutes=*/ false);
             }
             mNetd.networkCreate(config);
             mDnsResolver.createNetworkCache(nai.network.getNetId());
