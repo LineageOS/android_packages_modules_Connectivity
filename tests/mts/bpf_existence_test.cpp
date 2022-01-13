@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- * bpf_existence_test.cpp - checks that the device runs expected BPF programs
+ * bpf_existence_test.cpp - checks that the device has expected BPF programs and maps
  */
 
 #include <cstdint>
@@ -39,28 +39,47 @@ using android::modules::sdklevel::IsAtLeastT;
 #define __ANDROID_API_T__ 33
 #endif
 
+#define PLATFORM "/sys/fs/bpf/"
+#define TETHERING "/sys/fs/bpf/tethering/"
+
 class BpfExistenceTest : public ::testing::Test {
 };
 
 static const set<string> INTRODUCED_R = {
-    "/sys/fs/bpf/prog_offload_schedcls_ingress_tether_ether",
-    "/sys/fs/bpf/prog_offload_schedcls_ingress_tether_rawip",
+    PLATFORM "map_offload_tether_ingress_map",
+    PLATFORM "map_offload_tether_limit_map",
+    PLATFORM "map_offload_tether_stats_map",
+    PLATFORM "prog_offload_schedcls_ingress_tether_ether",
+    PLATFORM "prog_offload_schedcls_ingress_tether_rawip",
 };
 
 static const set<string> INTRODUCED_S = {
-    "/sys/fs/bpf/tethering/prog_offload_schedcls_tether_downstream4_ether",
-    "/sys/fs/bpf/tethering/prog_offload_schedcls_tether_downstream4_rawip",
-    "/sys/fs/bpf/tethering/prog_offload_schedcls_tether_downstream6_ether",
-    "/sys/fs/bpf/tethering/prog_offload_schedcls_tether_downstream6_rawip",
-    "/sys/fs/bpf/tethering/prog_offload_schedcls_tether_upstream4_ether",
-    "/sys/fs/bpf/tethering/prog_offload_schedcls_tether_upstream4_rawip",
-    "/sys/fs/bpf/tethering/prog_offload_schedcls_tether_upstream6_ether",
-    "/sys/fs/bpf/tethering/prog_offload_schedcls_tether_upstream6_rawip",
+    TETHERING "map_offload_tether_dev_map",
+    TETHERING "map_offload_tether_downstream4_map",
+    TETHERING "map_offload_tether_downstream64_map",
+    TETHERING "map_offload_tether_downstream6_map",
+    TETHERING "map_offload_tether_error_map",
+    TETHERING "map_offload_tether_limit_map",
+    TETHERING "map_offload_tether_stats_map",
+    TETHERING "map_offload_tether_upstream4_map",
+    TETHERING "map_offload_tether_upstream6_map",
+    TETHERING "map_test_tether_downstream6_map",
+    TETHERING "prog_offload_schedcls_tether_downstream4_ether",
+    TETHERING "prog_offload_schedcls_tether_downstream4_rawip",
+    TETHERING "prog_offload_schedcls_tether_downstream6_ether",
+    TETHERING "prog_offload_schedcls_tether_downstream6_rawip",
+    TETHERING "prog_offload_schedcls_tether_upstream4_ether",
+    TETHERING "prog_offload_schedcls_tether_upstream4_rawip",
+    TETHERING "prog_offload_schedcls_tether_upstream6_ether",
+    TETHERING "prog_offload_schedcls_tether_upstream6_rawip",
 };
 
 static const set<string> REMOVED_S = {
-    "/sys/fs/bpf/prog_offload_schedcls_ingress_tether_ether",
-    "/sys/fs/bpf/prog_offload_schedcls_ingress_tether_rawip",
+    PLATFORM "map_offload_tether_ingress_map",
+    PLATFORM "map_offload_tether_limit_map",
+    PLATFORM "map_offload_tether_stats_map",
+    PLATFORM "prog_offload_schedcls_ingress_tether_ether",
+    PLATFORM "prog_offload_schedcls_ingress_tether_rawip",
 };
 
 static const set<string> INTRODUCED_T = {
