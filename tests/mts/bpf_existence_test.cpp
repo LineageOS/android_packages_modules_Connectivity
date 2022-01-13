@@ -13,72 +13,92 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- * bpf_existence_test.cpp - checks that the device runs expected BPF programs
+ * bpf_existence_test.cpp - checks that the device has expected BPF programs and maps
  */
 
 #include <cstdint>
+#include <set>
 #include <string>
-#include <vector>
 
-#include <android-base/strings.h>
+#include <android/api-level.h>
 #include <android-base/properties.h>
 #include <android-modules-utils/sdk_level.h>
 
 #include <gtest/gtest.h>
 
 using std::find;
+using std::set;
 using std::string;
-using std::vector;
 
 using android::modules::sdklevel::IsAtLeastR;
 using android::modules::sdklevel::IsAtLeastS;
 using android::modules::sdklevel::IsAtLeastT;
 
+// Mainline development branches lack the constant for the current development OS.
+#ifndef __ANDROID_API_T__
+#define __ANDROID_API_T__ 33
+#endif
+
+#define PLATFORM "/sys/fs/bpf/"
+#define TETHERING "/sys/fs/bpf/tethering/"
+
 class BpfExistenceTest : public ::testing::Test {
 };
 
-static const vector<string> INTRODUCED_R = {
-    "/sys/fs/bpf/prog_offload_schedcls_ingress_tether_ether",
-    "/sys/fs/bpf/prog_offload_schedcls_ingress_tether_rawip",
+static const set<string> INTRODUCED_R = {
+    PLATFORM "map_offload_tether_ingress_map",
+    PLATFORM "map_offload_tether_limit_map",
+    PLATFORM "map_offload_tether_stats_map",
+    PLATFORM "prog_offload_schedcls_ingress_tether_ether",
+    PLATFORM "prog_offload_schedcls_ingress_tether_rawip",
 };
 
-static const vector<string> INTRODUCED_S = {
-    "/sys/fs/bpf/tethering/prog_offload_schedcls_tether_downstream4_ether",
-    "/sys/fs/bpf/tethering/prog_offload_schedcls_tether_downstream4_rawip",
-    "/sys/fs/bpf/tethering/prog_offload_schedcls_tether_downstream6_ether",
-    "/sys/fs/bpf/tethering/prog_offload_schedcls_tether_downstream6_rawip",
-    "/sys/fs/bpf/tethering/prog_offload_schedcls_tether_upstream4_ether",
-    "/sys/fs/bpf/tethering/prog_offload_schedcls_tether_upstream4_rawip",
-    "/sys/fs/bpf/tethering/prog_offload_schedcls_tether_upstream6_ether",
-    "/sys/fs/bpf/tethering/prog_offload_schedcls_tether_upstream6_rawip",
+static const set<string> INTRODUCED_S = {
+    TETHERING "map_offload_tether_dev_map",
+    TETHERING "map_offload_tether_downstream4_map",
+    TETHERING "map_offload_tether_downstream64_map",
+    TETHERING "map_offload_tether_downstream6_map",
+    TETHERING "map_offload_tether_error_map",
+    TETHERING "map_offload_tether_limit_map",
+    TETHERING "map_offload_tether_stats_map",
+    TETHERING "map_offload_tether_upstream4_map",
+    TETHERING "map_offload_tether_upstream6_map",
+    TETHERING "map_test_tether_downstream6_map",
+    TETHERING "prog_offload_schedcls_tether_downstream4_ether",
+    TETHERING "prog_offload_schedcls_tether_downstream4_rawip",
+    TETHERING "prog_offload_schedcls_tether_downstream6_ether",
+    TETHERING "prog_offload_schedcls_tether_downstream6_rawip",
+    TETHERING "prog_offload_schedcls_tether_upstream4_ether",
+    TETHERING "prog_offload_schedcls_tether_upstream4_rawip",
+    TETHERING "prog_offload_schedcls_tether_upstream6_ether",
+    TETHERING "prog_offload_schedcls_tether_upstream6_rawip",
 };
 
-static const vector<string> REMOVED_S = {
-    "/sys/fs/bpf/prog_offload_schedcls_ingress_tether_ether",
-    "/sys/fs/bpf/prog_offload_schedcls_ingress_tether_rawip",
+static const set<string> REMOVED_S = {
+    PLATFORM "map_offload_tether_ingress_map",
+    PLATFORM "map_offload_tether_limit_map",
+    PLATFORM "map_offload_tether_stats_map",
+    PLATFORM "prog_offload_schedcls_ingress_tether_ether",
+    PLATFORM "prog_offload_schedcls_ingress_tether_rawip",
 };
 
-static const vector<string> INTRODUCED_T = {
+static const set<string> INTRODUCED_T = {
 };
 
-static const vector<string> REMOVED_T = {
+static const set<string> REMOVED_T = {
 };
 
-void addAll(vector<string>* a, const vector<string>& b) {
-    a->insert(a->end(), b.begin(), b.end());
+void addAll(set<string>* a, const set<string>& b) {
+    a->insert(b.begin(), b.end());
 }
 
-void removeAll(vector<string>* a, const vector<string> b) {
+void removeAll(set<string>* a, const set<string> b) {
     for (const auto& toRemove : b) {
-        auto iter = find(a->begin(), a->end(), toRemove);
-        while (iter != a->end()) {
-            a->erase(iter);
-            iter = find(a->begin(), a->end(), toRemove);
-        }
+        a->erase(toRemove);
     }
 }
 
-void getFileLists(vector<string>* expected, vector<string>* unexpected) {
+void getFileLists(set<string>* expected, set<string>* unexpected) {
     unexpected->clear();
     expected->clear();
 
@@ -112,8 +132,8 @@ void getFileLists(vector<string>* expected, vector<string>* unexpected) {
 }
 
 void checkFiles() {
-    vector<string> mustExist;
-    vector<string> mustNotExist;
+    set<string> mustExist;
+    set<string> mustNotExist;
 
     getFileLists(&mustExist, &mustNotExist);
 
@@ -132,9 +152,9 @@ void checkFiles() {
 
 TEST_F(BpfExistenceTest, TestPrograms) {
     // Pre-flight check to ensure test has been updated.
-    uint64_t buildVersionSdk = android::base::GetUintProperty<uint64_t>("ro.build.version.sdk", 0);
+    uint64_t buildVersionSdk = android_get_device_api_level();
     ASSERT_NE(0, buildVersionSdk) << "Unable to determine device SDK version";
-    if (buildVersionSdk > 33 && buildVersionSdk != 10000) {
+    if (buildVersionSdk > __ANDROID_API_T__ && buildVersionSdk != __ANDROID_API_FUTURE__) {
             FAIL() << "Unknown OS version " << buildVersionSdk << ", please update this test";
     }
 
