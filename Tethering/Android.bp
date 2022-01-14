@@ -110,6 +110,7 @@ cc_library {
     static_libs: [
         "libnet_utils_device_common_bpfjni",
         "libnetjniutils",
+        "libtcutils",
     ],
 
     // We cannot use plain "libc++" here to link libc++ dynamically because it results in:
