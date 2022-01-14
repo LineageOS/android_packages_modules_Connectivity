@@ -1,0 +1,5 @@
+# Make sure proguard keeps all connectivity classes
+-keep class com.android.connectivity.** { *; }
+-keep class com.android.net.** { *; }
+-keep class com.android.server.** { *; }
+
