@@ -18,12 +18,12 @@
 
 #include "tcutils/tcutils.h"
 
+#include "kernelversion.h"
 #include "scopeguard.h"
 
 #include <android/log.h>
 #include <arpa/inet.h>
 #include <cerrno>
-#include <cstdio>
 #include <cstring>
 #include <libgen.h>
 #include <linux/if_arp.h>
@@ -35,7 +35,6 @@
 #include <net/if.h>
 #include <stdarg.h>
 #include <sys/socket.h>
-#include <sys/utsname.h>
 #include <unistd.h>
 #include <utility>
 
@@ -167,41 +166,6 @@ int hardwareAddressType(const char *interface) {
   }
   return ifr.ifr_hwaddr.sa_family;
 }
-
-// -----------------------------------------------------------------------------
-// TODO - just use BpfUtils.h once that is available in sc-mainline-prod and has
-// kernelVersion()
-//
-// In the mean time copying verbatim from:
-//   system/bpf/libbpf_android/include/bpf/BpfUtils.h
-// and
-//   system/bpf/libbpf_android/BpfUtils.cpp
-
-#define KVER(a, b, c) (((a) << 24) + ((b) << 16) + (c))
-
-unsigned kernelVersion() {
-  struct utsname buf;
-  int ret = uname(&buf);
-  if (ret)
-    return 0;
-
-  unsigned kver_major;
-  unsigned kver_minor;
-  unsigned kver_sub;
-  char discard;
-  ret = sscanf(buf.release, "%u.%u.%u%c", &kver_major, &kver_minor, &kver_sub,
-               &discard);
-  // Check the device kernel version
-  if (ret < 3)
-    return 0;
-
-  return KVER(kver_major, kver_minor, kver_sub);
-}
-
-bool isAtLeastKernelVersion(unsigned major, unsigned minor, unsigned sub) {
-  return kernelVersion() >= KVER(major, minor, sub);
-}
-// -----------------------------------------------------------------------------
 
 } // namespace
 
