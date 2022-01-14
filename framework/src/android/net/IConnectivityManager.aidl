@@ -36,6 +36,7 @@ import android.net.NetworkScore;
 import android.net.NetworkState;
 import android.net.NetworkStateSnapshot;
 import android.net.OemNetworkPreferences;
+import android.net.ProfileNetworkPreference;
 import android.net.ProxyInfo;
 import android.net.UidRange;
 import android.net.QosSocketInfo;
@@ -218,7 +219,8 @@ interface IConnectivityManager
     void setOemNetworkPreference(in OemNetworkPreferences preference,
             in IOnCompleteListener listener);
 
-    void setProfileNetworkPreference(in UserHandle profile, int preference,
+    void setProfileNetworkPreferences(in UserHandle profile,
+            in List<ProfileNetworkPreference>  preferences,
             in IOnCompleteListener listener);
 
     int getRestrictBackgroundStatusByCaller();
@@ -228,4 +230,8 @@ interface IConnectivityManager
     void unofferNetwork(in INetworkOfferCallback callback);
 
     void setTestAllowBadWifiUntil(long timeMs);
+
+    void updateMeteredNetworkAllowList(int uid, boolean add);
+
+    void updateMeteredNetworkDenyList(int uid, boolean add);
 }

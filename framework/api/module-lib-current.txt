@@ -19,11 +19,14 @@ package android.net {
     method @RequiresPermission(anyOf={android.Manifest.permission.NETWORK_SETTINGS, android.Manifest.permission.NETWORK_SETUP_WIZARD, android.Manifest.permission.NETWORK_STACK, android.net.NetworkStack.PERMISSION_MAINLINE_NETWORK_STACK}) public void setAvoidUnvalidated(@NonNull android.net.Network);
     method @RequiresPermission(android.Manifest.permission.NETWORK_STACK) public void setGlobalProxy(@Nullable android.net.ProxyInfo);
     method @RequiresPermission(anyOf={android.net.NetworkStack.PERMISSION_MAINLINE_NETWORK_STACK, android.Manifest.permission.NETWORK_STACK, android.Manifest.permission.NETWORK_SETTINGS}) public void setLegacyLockdownVpnEnabled(boolean);
-    method @RequiresPermission(android.Manifest.permission.NETWORK_STACK) public void setProfileNetworkPreference(@NonNull android.os.UserHandle, int, @Nullable java.util.concurrent.Executor, @Nullable Runnable);
+    method @Deprecated @RequiresPermission(android.Manifest.permission.NETWORK_STACK) public void setProfileNetworkPreference(@NonNull android.os.UserHandle, int, @Nullable java.util.concurrent.Executor, @Nullable Runnable);
+    method @RequiresPermission(android.Manifest.permission.NETWORK_STACK) public void setProfileNetworkPreferences(@NonNull android.os.UserHandle, @NonNull java.util.List<android.net.ProfileNetworkPreference>, @Nullable java.util.concurrent.Executor, @Nullable Runnable);
     method @RequiresPermission(anyOf={android.net.NetworkStack.PERMISSION_MAINLINE_NETWORK_STACK, android.Manifest.permission.NETWORK_STACK, android.Manifest.permission.NETWORK_SETTINGS}) public void setRequireVpnForUids(boolean, @NonNull java.util.Collection<android.util.Range<java.lang.Integer>>);
     method @RequiresPermission(anyOf={android.Manifest.permission.MANAGE_TEST_NETWORKS, android.Manifest.permission.NETWORK_STACK}) public void simulateDataStall(int, long, @NonNull android.net.Network, @NonNull android.os.PersistableBundle);
     method @RequiresPermission(anyOf={android.Manifest.permission.NETWORK_SETTINGS, android.Manifest.permission.NETWORK_STACK, android.net.NetworkStack.PERMISSION_MAINLINE_NETWORK_STACK}) public void startCaptivePortalApp(@NonNull android.net.Network);
     method public void systemReady();
+    method @RequiresPermission(anyOf={android.Manifest.permission.NETWORK_SETTINGS, android.Manifest.permission.NETWORK_STACK, android.net.NetworkStack.PERMISSION_MAINLINE_NETWORK_STACK}) public void updateMeteredNetworkAllowList(int, boolean);
+    method @RequiresPermission(anyOf={android.Manifest.permission.NETWORK_SETTINGS, android.Manifest.permission.NETWORK_STACK, android.net.NetworkStack.PERMISSION_MAINLINE_NETWORK_STACK}) public void updateMeteredNetworkDenyList(int, boolean);
     field public static final String ACTION_CLEAR_DNS_CACHE = "android.net.action.CLEAR_DNS_CACHE";
     field public static final String ACTION_PROMPT_LOST_VALIDATION = "android.net.action.PROMPT_LOST_VALIDATION";
     field public static final String ACTION_PROMPT_PARTIAL_CONNECTIVITY = "android.net.action.PROMPT_PARTIAL_CONNECTIVITY";
@@ -40,6 +43,7 @@ package android.net {
     field public static final int BLOCKED_REASON_RESTRICTED_MODE = 8; // 0x8
     field public static final int PROFILE_NETWORK_PREFERENCE_DEFAULT = 0; // 0x0
     field public static final int PROFILE_NETWORK_PREFERENCE_ENTERPRISE = 1; // 0x1
+    field public static final int PROFILE_NETWORK_PREFERENCE_ENTERPRISE_NO_FALLBACK = 2; // 0x2
   }
 
   public static class ConnectivityManager.NetworkCallback {
@@ -147,6 +151,19 @@ package android.net {
     method @NonNull public android.net.NetworkRequest.Builder addForbiddenCapability(int);
     method @NonNull public android.net.NetworkRequest.Builder removeForbiddenCapability(int);
     method @NonNull public android.net.NetworkRequest.Builder setUids(@Nullable java.util.Set<android.util.Range<java.lang.Integer>>);
+  }
+
+  public final class ProfileNetworkPreference implements android.os.Parcelable {
+    method public int describeContents();
+    method public int getPreference();
+    method public void writeToParcel(@NonNull android.os.Parcel, int);
+    field @NonNull public static final android.os.Parcelable.Creator<android.net.ProfileNetworkPreference> CREATOR;
+  }
+
+  public static final class ProfileNetworkPreference.Builder {
+    ctor public ProfileNetworkPreference.Builder();
+    method @NonNull public android.net.ProfileNetworkPreference build();
+    method @NonNull public android.net.ProfileNetworkPreference.Builder setPreference(int);
   }
 
   public final class TestNetworkInterface implements android.os.Parcelable {
