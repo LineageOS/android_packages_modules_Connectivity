@@ -92,7 +92,7 @@ void addAll(set<string>* a, const set<string>& b) {
     a->insert(b.begin(), b.end());
 }
 
-void removeAll(set<string>* a, const set<string> b) {
+void removeAll(set<string>* a, const set<string>& b) {
     for (const auto& toRemove : b) {
         a->erase(toRemove);
     }
