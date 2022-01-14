@@ -28,6 +28,10 @@
   "postsubmit": [
     {
       "name": "TetheringPrivilegedTests"
+    },
+    // TODO: move to presubmit when known green.
+    {
+      "name": "bpf_existence_test"
     }
   ],
   "mainline-presubmit": [
@@ -54,11 +58,18 @@
     },
     {
       "name": "TetheringCoverageTests[CaptivePortalLoginGoogle.apk+NetworkStackGoogle.apk+com.google.android.resolv.apex+com.google.android.tethering.apex]"
+    },
+    // TODO: move to mainline-presubmit when known green.
+    {
+      "name": "bpf_existence_test[CaptivePortalLoginGoogle.apk+NetworkStackGoogle.apk+com.google.android.resolv.apex+com.google.android.tethering.apex]"
     }
   ],
   "imports": [
     {
       "path": "frameworks/base/core/java/android/net"
+    },
+    {
+      "path": "frameworks/opt/net/ethernet"
     },
     {
       "path": "packages/modules/NetworkStack"

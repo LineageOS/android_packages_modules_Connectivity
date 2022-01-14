@@ -51,6 +51,7 @@ import static android.net.ConnectivityManager.EXTRA_NETWORK_INFO;
 import static android.net.ConnectivityManager.EXTRA_NETWORK_TYPE;
 import static android.net.ConnectivityManager.PROFILE_NETWORK_PREFERENCE_DEFAULT;
 import static android.net.ConnectivityManager.PROFILE_NETWORK_PREFERENCE_ENTERPRISE;
+import static android.net.ConnectivityManager.PROFILE_NETWORK_PREFERENCE_ENTERPRISE_NO_FALLBACK;
 import static android.net.ConnectivityManager.TYPE_ETHERNET;
 import static android.net.ConnectivityManager.TYPE_MOBILE;
 import static android.net.ConnectivityManager.TYPE_MOBILE_FOTA;
@@ -250,6 +251,7 @@ import android.net.NetworkStateSnapshot;
 import android.net.NetworkTestResultParcelable;
 import android.net.OemNetworkPreferences;
 import android.net.PacProxyManager;
+import android.net.ProfileNetworkPreference;
 import android.net.Proxy;
 import android.net.ProxyInfo;
 import android.net.QosCallbackException;
@@ -3386,12 +3388,12 @@ public class ConnectivityServiceTest {
 
     private NativeNetworkConfig nativeNetworkConfigPhysical(int netId, int permission) {
         return new NativeNetworkConfig(netId, NativeNetworkType.PHYSICAL, permission,
-                /*secure=*/ false, VpnManager.TYPE_VPN_NONE);
+                /*secure=*/ false, VpnManager.TYPE_VPN_NONE, /*excludeLocalRoutes=*/ false);
     }
 
     private NativeNetworkConfig nativeNetworkConfigVpn(int netId, boolean secure, int vpnType) {
         return new NativeNetworkConfig(netId, NativeNetworkType.VIRTUAL, INetd.PERMISSION_NONE,
-                secure, vpnType);
+                secure, vpnType, /*excludeLocalRoutes=*/ false);
     }
 
     @Test
@@ -13755,12 +13757,12 @@ public class ConnectivityServiceTest {
     }
 
     /**
-     * Make sure per-profile networking preference behaves as expected when the enterprise network
-     * goes up and down while the preference is active. Make sure they behave as expected whether
-     * there is a general default network or not.
+     * Make sure per profile network preferences behave as expected for a given
+     * profile network preference.
      */
-    @Test
-    public void testPreferenceForUserNetworkUpDown() throws Exception {
+    public void testPreferenceForUserNetworkUpDownForGivenPreference(
+            ProfileNetworkPreference profileNetworkPreference,
+            boolean connectWorkProfileAgentAhead) throws Exception {
         final InOrder inOrder = inOrder(mMockNetd);
         final UserHandle testHandle = setupEnterpriseNetwork();
         registerDefaultNetworkCallbacks();
@@ -13774,29 +13776,45 @@ public class ConnectivityServiceTest {
         inOrder.verify(mMockNetd).networkCreate(nativeNetworkConfigPhysical(
                 mCellNetworkAgent.getNetwork().netId, INetd.PERMISSION_NONE));
 
+        final TestNetworkAgentWrapper workAgent = makeEnterpriseNetworkAgent();
+        if (connectWorkProfileAgentAhead) {
+            workAgent.connect(false);
+        }
 
         final TestOnCompleteListener listener = new TestOnCompleteListener();
-        mCm.setProfileNetworkPreference(testHandle, PROFILE_NETWORK_PREFERENCE_ENTERPRISE,
+        mCm.setProfileNetworkPreferences(testHandle, List.of(profileNetworkPreference),
                 r -> r.run(), listener);
         listener.expectOnComplete();
-
-        // Setting a network preference for this user will create a new set of routing rules for
-        // the UID range that corresponds to this user, so as to define the default network
-        // for these apps separately. This is true because the multi-layer request relevant to
-        // this UID range contains a TRACK_DEFAULT, so the range will be moved through UID-specific
-        // rules to the correct network – in this case the system default network. The case where
-        // the default network for the profile happens to be the same as the system default
-        // is not handled specially, the rules are always active as long as a preference is set.
-        inOrder.verify(mMockNetd).networkAddUidRangesParcel(new NativeUidRangeConfig(
-                mCellNetworkAgent.getNetwork().netId, uidRangeFor(testHandle),
-                PREFERENCE_ORDER_PROFILE));
+        boolean allowFallback = true;
+        if (profileNetworkPreference.getPreference()
+                == PROFILE_NETWORK_PREFERENCE_ENTERPRISE_NO_FALLBACK) {
+            allowFallback = false;
+        }
+        if (allowFallback) {
+            // Setting a network preference for this user will create a new set of routing rules for
+            // the UID range that corresponds to this user, inorder to define the default network
+            // for these apps separately. This is true because the multi-layer request relevant to
+            // this UID range contains a TRACK_DEFAULT, so the range will be moved through
+            // UID-specific rules to the correct network – in this case the system default network.
+            // The case where the default network for the profile happens to be the same as the
+            // system default is not handled specially, the rules are always active as long as
+            // a preference is set.
+            inOrder.verify(mMockNetd).networkAddUidRangesParcel(new NativeUidRangeConfig(
+                    mCellNetworkAgent.getNetwork().netId, uidRangeFor(testHandle),
+                    PREFERENCE_ORDER_PROFILE));
+        }
 
         // The enterprise network is not ready yet.
-        assertNoCallbacks(mSystemDefaultNetworkCallback, mDefaultNetworkCallback,
-                mProfileDefaultNetworkCallback);
+        assertNoCallbacks(mSystemDefaultNetworkCallback, mDefaultNetworkCallback);
+        if (allowFallback) {
+            assertNoCallbacks(mProfileDefaultNetworkCallback);
+        } else if (!connectWorkProfileAgentAhead) {
+            mProfileDefaultNetworkCallback.expectCallback(CallbackEntry.LOST, mCellNetworkAgent);
+        }
 
-        final TestNetworkAgentWrapper workAgent = makeEnterpriseNetworkAgent();
-        workAgent.connect(false);
+        if (!connectWorkProfileAgentAhead) {
+            workAgent.connect(false);
+        }
 
         mProfileDefaultNetworkCallback.expectAvailableCallbacksUnvalidated(workAgent);
         mSystemDefaultNetworkCallback.assertNoCallback();
@@ -13805,9 +13823,12 @@ public class ConnectivityServiceTest {
                 nativeNetworkConfigPhysical(workAgent.getNetwork().netId, INetd.PERMISSION_SYSTEM));
         inOrder.verify(mMockNetd).networkAddUidRangesParcel(new NativeUidRangeConfig(
                 workAgent.getNetwork().netId, uidRangeFor(testHandle), PREFERENCE_ORDER_PROFILE));
-        inOrder.verify(mMockNetd).networkRemoveUidRangesParcel(new NativeUidRangeConfig(
-                mCellNetworkAgent.getNetwork().netId, uidRangeFor(testHandle),
-                PREFERENCE_ORDER_PROFILE));
+
+        if (allowFallback) {
+            inOrder.verify(mMockNetd).networkRemoveUidRangesParcel(new NativeUidRangeConfig(
+                    mCellNetworkAgent.getNetwork().netId, uidRangeFor(testHandle),
+                    PREFERENCE_ORDER_PROFILE));
+        }
 
         // Make sure changes to the work agent send callbacks to the app in the work profile, but
         // not to the other apps.
@@ -13853,17 +13874,23 @@ public class ConnectivityServiceTest {
         // default network.
         workAgent.disconnect();
         mProfileDefaultNetworkCallback.expectCallback(CallbackEntry.LOST, workAgent);
-        mProfileDefaultNetworkCallback.expectAvailableCallbacksValidated(mCellNetworkAgent);
+        if (allowFallback) {
+            mProfileDefaultNetworkCallback.expectAvailableCallbacksValidated(mCellNetworkAgent);
+        }
         assertNoCallbacks(mSystemDefaultNetworkCallback, mDefaultNetworkCallback);
-        inOrder.verify(mMockNetd).networkAddUidRangesParcel(new NativeUidRangeConfig(
-                mCellNetworkAgent.getNetwork().netId, uidRangeFor(testHandle),
-                PREFERENCE_ORDER_PROFILE));
+        if (allowFallback) {
+            inOrder.verify(mMockNetd).networkAddUidRangesParcel(new NativeUidRangeConfig(
+                    mCellNetworkAgent.getNetwork().netId, uidRangeFor(testHandle),
+                    PREFERENCE_ORDER_PROFILE));
+        }
         inOrder.verify(mMockNetd).networkDestroy(workAgent.getNetwork().netId);
 
         mCellNetworkAgent.disconnect();
         mSystemDefaultNetworkCallback.expectCallback(CallbackEntry.LOST, mCellNetworkAgent);
         mDefaultNetworkCallback.expectCallback(CallbackEntry.LOST, mCellNetworkAgent);
-        mProfileDefaultNetworkCallback.expectCallback(CallbackEntry.LOST, mCellNetworkAgent);
+        if (allowFallback) {
+            mProfileDefaultNetworkCallback.expectCallback(CallbackEntry.LOST, mCellNetworkAgent);
+        }
 
         // Waiting for the handler to be idle before checking for networkDestroy is necessary
         // here because ConnectivityService calls onLost before the network is fully torn down.
@@ -13891,7 +13918,7 @@ public class ConnectivityServiceTest {
         assertNoCallbacks(mSystemDefaultNetworkCallback, mDefaultNetworkCallback);
         inOrder.verify(mMockNetd, never()).networkAddUidRangesParcel(any());
 
-        // When the agent disconnects, test that the app on the work profile falls back to the
+        // When the agent disconnects, test that the app on the work profile fall back to the
         // default network.
         workAgent2.disconnect();
         mProfileDefaultNetworkCallback.expectCallback(CallbackEntry.LOST, workAgent2);
@@ -13902,6 +13929,52 @@ public class ConnectivityServiceTest {
                 mProfileDefaultNetworkCallback);
 
         // Callbacks will be unregistered by tearDown()
+    }
+
+    /**
+     * Make sure per-profile networking preference behaves as expected when the enterprise network
+     * goes up and down while the preference is active. Make sure they behave as expected whether
+     * there is a general default network or not.
+     */
+    @Test
+    public void testPreferenceForUserNetworkUpDown() throws Exception {
+        ProfileNetworkPreference.Builder profileNetworkPreferenceBuilder =
+                new ProfileNetworkPreference.Builder();
+        profileNetworkPreferenceBuilder.setPreference(PROFILE_NETWORK_PREFERENCE_ENTERPRISE);
+        testPreferenceForUserNetworkUpDownForGivenPreference(
+                profileNetworkPreferenceBuilder.build(), false);
+    }
+
+    /**
+     * Make sure per-profile networking preference behaves as expected when the enterprise network
+     * goes up and down while the preference is active. Make sure they behave as expected whether
+     * there is a general default network or not when configured to not fallback to default network.
+     */
+    @Test
+    public void testPreferenceForUserNetworkUpDownWithNoFallback() throws Exception {
+        ProfileNetworkPreference.Builder profileNetworkPreferenceBuilder =
+                new ProfileNetworkPreference.Builder();
+        profileNetworkPreferenceBuilder.setPreference(
+                PROFILE_NETWORK_PREFERENCE_ENTERPRISE_NO_FALLBACK);
+        testPreferenceForUserNetworkUpDownForGivenPreference(
+                profileNetworkPreferenceBuilder.build(), false);
+    }
+
+    /**
+     * Make sure per-profile networking preference behaves as expected when the enterprise network
+     * goes up and down while the preference is active. Make sure they behave as expected whether
+     * there is a general default network or not when configured to not fallback to default network
+     * along with already connected enterprise work agent
+     */
+    @Test
+    public void testPreferenceForUserNetworkUpDownWithNoFallbackWithAlreadyConnectedWorkAgent()
+            throws Exception {
+        ProfileNetworkPreference.Builder profileNetworkPreferenceBuilder =
+                new ProfileNetworkPreference.Builder();
+        profileNetworkPreferenceBuilder.setPreference(
+                PROFILE_NETWORK_PREFERENCE_ENTERPRISE_NO_FALLBACK);
+        testPreferenceForUserNetworkUpDownForGivenPreference(
+                profileNetworkPreferenceBuilder.build(), true);
     }
 
     /**
@@ -14057,7 +14130,8 @@ public class ConnectivityServiceTest {
         assertThrows("Should not be able to set an illegal preference",
                 IllegalArgumentException.class,
                 () -> mCm.setProfileNetworkPreference(testHandle,
-                        PROFILE_NETWORK_PREFERENCE_ENTERPRISE + 1, null, null));
+                        PROFILE_NETWORK_PREFERENCE_ENTERPRISE_NO_FALLBACK + 1,
+                        null, null));
     }
 
     /**
