@@ -18,7 +18,10 @@ package {
 
 cc_library_static {
     name: "libnet_utils_device_common_bpfjni",
-    srcs: ["com_android_net_module_util_BpfMap.cpp"],
+    srcs: [
+        "com_android_net_module_util_BpfMap.cpp",
+        "com_android_net_module_util_TcUtils.cpp",
+    ],
     header_libs: [
         "bpf_syscall_wrappers",
         "jni_headers",
@@ -26,6 +29,9 @@ cc_library_static {
     shared_libs: [
         "liblog",
         "libnativehelper_compat_libc++",
+    ],
+    static_libs: [
+        "libtcutils",
     ],
     cflags: [
         "-Wall",
