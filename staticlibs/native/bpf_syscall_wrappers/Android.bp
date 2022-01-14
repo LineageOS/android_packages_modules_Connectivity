@@ -39,6 +39,7 @@ cc_library_headers {
         "//frameworks/libs/net/common/native/tcutils",
         "//packages/modules/Connectivity/netd",
         "//packages/modules/Connectivity/service",
+        "//packages/modules/Connectivity/service/native",
         "//packages/modules/Connectivity/Tethering",
         "//packages/providers/MediaProvider/jni",
         "//system/bpf/libbpf_android",
