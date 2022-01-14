@@ -156,3 +156,21 @@ aidl_interface {
         },
     },
 }
+
+aidl_interface {
+    name: "mdns_aidl_interface",
+    local_include_dir: "binder",
+    srcs: [
+        "binder/android/net/mdns/aidl/**/*.aidl",
+    ],
+    backend: {
+        java: {
+            sdk_version: "module_current",
+            apex_available: [
+                "//apex_available:platform",
+                "com.android.tethering",
+            ],
+            min_sdk_version: "30",
+        },
+    },
+}
