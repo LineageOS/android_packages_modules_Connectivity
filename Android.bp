@@ -53,10 +53,6 @@ filegroup {
 cc_binary {
     name: "clatd",
     defaults: ["clatd_defaults"],
-    // TODO: remove once drop_root_and_caps() is removed.
-    header_libs: [
-        "libcutils_headers",  // for AID_CLAT
-    ],
     srcs: [
         ":clatd_common",
         "main.c"
