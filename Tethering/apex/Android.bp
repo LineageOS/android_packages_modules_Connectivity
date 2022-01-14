@@ -58,6 +58,9 @@ apex {
             jni_libs: ["libframework-connectivity-jni"],
         },
     },
+    binaries: [
+        "clatd",
+    ],
     bpfs: [
         "offload.o",
         "test.o",
