@@ -236,4 +236,6 @@ interface IConnectivityManager
     void updateMeteredNetworkDenyList(int uid, boolean add);
 
     void updateFirewallRule(int chain, int uid, boolean allow);
+
+    void setFirewallChainEnabled(int chain, boolean enable);
 }
