@@ -24,6 +24,8 @@ import android.net.util.InterfaceParams;
 
 import androidx.annotation.NonNull;
 
+import com.android.net.module.util.TcUtils;
+
 import java.io.IOException;
 
 /**
@@ -82,7 +84,7 @@ public class BpfUtils {
 
         boolean ether;
         try {
-            ether = isEthernet(iface);
+            ether = TcUtils.isEthernet(iface);
         } catch (IOException e) {
             throw new IOException("isEthernet(" + params.index + "[" + iface + "]) failure: " + e);
         }
@@ -90,7 +92,7 @@ public class BpfUtils {
         try {
             // tc filter add dev .. ingress prio 1 protocol ipv6 bpf object-pinned /sys/fs/bpf/...
             // direct-action
-            tcFilterAddDevBpf(params.index, INGRESS, PRIO_TETHER6, (short) ETH_P_IPV6,
+            TcUtils.tcFilterAddDevBpf(params.index, INGRESS, PRIO_TETHER6, (short) ETH_P_IPV6,
                     makeProgPath(downstream, 6, ether));
         } catch (IOException e) {
             throw new IOException("tc filter add dev (" + params.index + "[" + iface
@@ -100,7 +102,7 @@ public class BpfUtils {
         try {
             // tc filter add dev .. ingress prio 2 protocol ip bpf object-pinned /sys/fs/bpf/...
             // direct-action
-            tcFilterAddDevBpf(params.index, INGRESS, PRIO_TETHER4, (short) ETH_P_IP,
+            TcUtils.tcFilterAddDevBpf(params.index, INGRESS, PRIO_TETHER4, (short) ETH_P_IP,
                     makeProgPath(downstream, 4, ether));
         } catch (IOException e) {
             throw new IOException("tc filter add dev (" + params.index + "[" + iface
@@ -121,7 +123,7 @@ public class BpfUtils {
 
         try {
             // tc filter del dev .. ingress prio 1 protocol ipv6
-            tcFilterDelDev(params.index, INGRESS, PRIO_TETHER6, (short) ETH_P_IPV6);
+            TcUtils.tcFilterDelDev(params.index, INGRESS, PRIO_TETHER6, (short) ETH_P_IPV6);
         } catch (IOException e) {
             throw new IOException("tc filter del dev (" + params.index + "[" + iface
                     + "]) ingress prio PRIO_TETHER6 protocol ipv6 failure: " + e);
@@ -129,18 +131,10 @@ public class BpfUtils {
 
         try {
             // tc filter del dev .. ingress prio 2 protocol ip
-            tcFilterDelDev(params.index, INGRESS, PRIO_TETHER4, (short) ETH_P_IP);
+            TcUtils.tcFilterDelDev(params.index, INGRESS, PRIO_TETHER4, (short) ETH_P_IP);
         } catch (IOException e) {
             throw new IOException("tc filter del dev (" + params.index + "[" + iface
                     + "]) ingress prio PRIO_TETHER4 protocol ip failure: " + e);
         }
     }
-
-    private static native boolean isEthernet(String iface) throws IOException;
-
-    private static native void tcFilterAddDevBpf(int ifIndex, boolean ingress, short prio,
-            short proto, String bpfProgPath) throws IOException;
-
-    private static native void tcFilterDelDev(int ifIndex, boolean ingress, short prio,
-            short proto) throws IOException;
 }
