@@ -67,6 +67,7 @@ cc_binary {
     shared_libs: [
         "liblog",
     ],
+    relative_install_path: "for-system",
 
     // Static libc++ for smaller apex size while shipping clatd in the mainline module.
     // See b/213123047
