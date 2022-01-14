@@ -238,4 +238,6 @@ interface IConnectivityManager
     void updateFirewallRule(int chain, int uid, boolean allow);
 
     void setFirewallChainEnabled(int chain, boolean enable);
+
+    void replaceFirewallChain(int chain, in int[] uids);
 }
