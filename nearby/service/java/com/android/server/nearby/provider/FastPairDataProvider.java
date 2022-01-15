@@ -32,17 +32,18 @@ public class FastPairDataProvider {
 
     private static FastPairDataProvider sInstance;
 
-    private ProxyFastPairDataProvider mProxyProvider;
+    private ProxyFastPairDataProvider mProxyFastPairDataProvider;
 
     /** Initializes FastPairDataProvider singleton. */
     public static synchronized FastPairDataProvider init(Context context) {
+
         if (sInstance == null) {
             sInstance = new FastPairDataProvider(context);
         }
-        if (sInstance.mProxyProvider == null) {
+        if (sInstance.mProxyFastPairDataProvider == null) {
             Log.wtf(TAG, "no proxy fast pair data provider found");
         } else {
-            sInstance.mProxyProvider.register();
+            sInstance.mProxyFastPairDataProvider.register();
         }
         return sInstance;
     }
@@ -53,16 +54,18 @@ public class FastPairDataProvider {
     }
 
     private FastPairDataProvider(Context context) {
-        mProxyProvider = ProxyFastPairDataProvider.create(
+        mProxyFastPairDataProvider = ProxyFastPairDataProvider.create(
                 context, FastPairDataProviderBase.ACTION_FAST_PAIR_DATA_PROVIDER);
+        Log.d("FastPairService", "the fast pair proxy provider is init"
+                + (mProxyFastPairDataProvider == null));
     }
 
     /** loadFastPairDeviceMetadata. */
     @WorkerThread
     @Nullable
     public Rpcs.GetObservedDeviceResponse loadFastPairDeviceMetadata(byte[] modelId) {
-        if (mProxyProvider != null) {
-            return mProxyProvider.loadFastPairDeviceMetadata(modelId);
+        if (mProxyFastPairDataProvider != null) {
+            return mProxyFastPairDataProvider.loadFastPairDeviceMetadata(modelId);
         }
         throw new IllegalStateException("No ProxyFastPairDataProvider yet constructed");
     }

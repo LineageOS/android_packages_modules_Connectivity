@@ -49,7 +49,9 @@ public class FastPairModule extends Module {
         } else if (type.equals(FastPairCacheManager.class)) {
             locator.bind(FastPairCacheManager.class, new FastPairCacheManager(context));
         } else if (type.equals(FastPairHalfSheetManager.class)) {
-            locator.bind(FastPairHalfSheetManager.class, new FastPairHalfSheetManager());
+            locator.bind(FastPairHalfSheetManager.class, new FastPairHalfSheetManager(context));
+        } else if (type.equals(FastPairAdvHandler.class)) {
+            locator.bind(FastPairAdvHandler.class, new FastPairAdvHandler(context));
         } else if (type.equals(Clock.class)) {
             locator.bind(Clock.class, new Clock() {
                 @Override

@@ -16,28 +16,20 @@
 
 package com.android.server.nearby.fastpair;
 
-import static com.android.server.nearby.fastpair.Constant.DEVICE_PAIRING_FRAGMENT_TYPE;
-import static com.android.server.nearby.fastpair.Constant.EXTRA_BINDER;
-import static com.android.server.nearby.fastpair.Constant.EXTRA_BUNDLE;
-import static com.android.server.nearby.fastpair.Constant.EXTRA_HALF_SHEET_INFO;
-import static com.android.server.nearby.fastpair.Constant.EXTRA_HALF_SHEET_TYPE;
-
 import android.annotation.Nullable;
 import android.annotation.WorkerThread;
 import android.app.KeyguardManager;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothManager;
 import android.content.BroadcastReceiver;
-import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.content.pm.PackageManager;
-import android.content.pm.ResolveInfo;
+import android.nearby.FastPairDevice;
 import android.nearby.NearbyDevice;
+import android.nearby.NearbyManager;
 import android.nearby.ScanCallback;
-import android.os.Bundle;
-import android.os.UserHandle;
+import android.nearby.ScanRequest;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
@@ -57,15 +49,15 @@ import com.android.server.nearby.common.locator.LocatorContextWrapper;
 import com.android.server.nearby.fastpair.cache.DiscoveryItem;
 import com.android.server.nearby.fastpair.cache.FastPairCacheManager;
 import com.android.server.nearby.fastpair.footprint.FootprintsDeviceManager;
-import com.android.server.nearby.fastpair.halfsheet.HalfSheetCallback;
+import com.android.server.nearby.fastpair.halfsheet.FastPairHalfSheetManager;
 import com.android.server.nearby.fastpair.pairinghandler.PairingProgressHandlerBase;
-import com.android.server.nearby.provider.FastPairDataProvider;
-import com.android.server.nearby.util.Environment;
+import com.android.server.nearby.util.FastPairDecoder;
+import com.android.server.nearby.util.ForegroundThread;
+import com.android.server.nearby.util.Hex;
 
 import com.google.protobuf.ByteString;
 
 import java.security.GeneralSecurityException;
-import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
@@ -73,7 +65,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
-import java.util.stream.Collectors;
 
 import service.proto.Cache;
 import service.proto.Rpcs;
@@ -86,7 +77,6 @@ import service.proto.Rpcs;
 public class FastPairManager {
     private static final String ACTION_PREFIX = UserActionHandler.PREFIX;
     private static final int WAIT_FOR_UNLOCK_MILLIS = 5000;
-    private static final String ACTIVITY_INTENT_ACTION = "android.nearby.SHOW_HALFSHEET";
     /** A notification ID which should be dismissed */
     public static final String EXTRA_NOTIFICATION_ID = ACTION_PREFIX + "EXTRA_NOTIFICATION_ID";
     public static final String ACTION_RESOURCES_APK = "android.nearby.SHOW_HALFSHEET";
@@ -97,8 +87,6 @@ public class FastPairManager {
 
     private static Executor sFastPairExecutor;
 
-    private String mHalfSheetApkPkgName;
-
     final LocatorContextWrapper mLocatorContextWrapper;
     final IntentFilter mIntentFilter;
     final Locator mLocator;
@@ -107,16 +95,29 @@ public class FastPairManager {
         public void onReceive(Context context, Intent intent) {
             if (intent.getAction().equals(Intent.ACTION_SCREEN_ON)) {
                 Log.d("FastPairService", " screen on");
+                NearbyManager nearbyManager = (NearbyManager) mLocatorContextWrapper
+                        .getApplicationContext().getSystemService(Context.NEARBY_SERVICE);
+
+                Log.d("FastPairService", " the nearby manager is " + nearbyManager);
+
+                if (nearbyManager != null) {
+                    nearbyManager.startScan(
+                            new ScanRequest.Builder()
+                                    .setScanType(ScanRequest.SCAN_TYPE_FAST_PAIR).build(),
+                            ForegroundThread.getExecutor(),
+                            mScanCallback);
+                } else {
+                    Log.d("FastPairService", " the nearby manager is null");
+                }
+
             } else if (intent.getAction().equals(ACTION_START_PAIRING)) {
                 byte[] model = intent.getByteArrayExtra(EXTRA_MODEL_ID);
                 String address = intent.getStringExtra(EXTRA_ADDRESS);
                 Log.d("FastPairService", "start pair " + address);
-                Rpcs.GetObservedDeviceResponse response =
-                        FastPairDataProvider.getInstance().loadFastPairDeviceMetadata(model);
-                ByteString publicKey = response.getDevice().getAntiSpoofingKeyPair().getPublicKey();
-                showHalfSheet(Cache.ScanFastPairStoreItem.newBuilder().setAddress(address)
-                        .setAntiSpoofingPublicKey(publicKey)
-                        .build());
+                Locator.get(mLocatorContextWrapper, FastPairHalfSheetManager.class).showHalfSheet(
+                        Cache.ScanFastPairStoreItem.newBuilder().setAddress(address)
+                                .setAntiSpoofingPublicKey(ByteString.EMPTY)
+                                .build());
             } else {
                 Log.d("FastPairService", " screen off");
             }
@@ -136,17 +137,23 @@ public class FastPairManager {
     final ScanCallback mScanCallback = new ScanCallback() {
         @Override
         public void onDiscovered(@NonNull NearbyDevice device) {
-            Log.d("FastPair", "Ondiscovery " + device.getName());
+            Locator.get(mLocatorContextWrapper, FastPairAdvHandler.class).handleBroadcast(device);
         }
 
         @Override
         public void onUpdated(@NonNull NearbyDevice device) {
-
+            FastPairDevice fastPairDevice = (FastPairDevice) device;
+            byte[] modelArray = FastPairDecoder.getModelId(fastPairDevice.getData());
+            Log.d("FastPairService",
+                    "update model id" + Hex.bytesToStringLowercase(modelArray));
         }
 
         @Override
         public void onLost(@NonNull NearbyDevice device) {
-
+            FastPairDevice fastPairDevice = (FastPairDevice) device;
+            byte[] modelArray = FastPairDecoder.getModelId(fastPairDevice.getData());
+            Log.d("FastPairService",
+                    "lost model id" + Hex.bytesToStringLowercase(modelArray));
         }
     };
 
@@ -291,7 +298,7 @@ public class FastPairManager {
         }
     }
 
-    /** Check if the pairing is initial pairing with fast pair 2.0 design. */
+    /** Checks if the pairing is initial pairing with fast pair 2.0 design. */
     public static boolean isThroughFastPair2InitialPairing(
             DiscoveryItem item, @Nullable byte[] accountKey) {
         return accountKey == null && item.getAuthenticationPublicKeySecp256R1() != null;
@@ -338,69 +345,4 @@ public class FastPairManager {
         return manager == null ? null : manager.getAdapter();
     }
 
-    /**
-     * Gets the package name of HalfSheet.apk
-     * getHalfSheetApkPkgName may invoke PackageManager multiple times and it does not have
-     * race condition check. Since there is no lock for mHalfSheetApkPkgName.
-     */
-    String getHalfSheetApkPkgName() {
-        if (mHalfSheetApkPkgName != null) {
-            return mHalfSheetApkPkgName;
-        }
-        List<ResolveInfo> resolveInfos = mLocatorContextWrapper.getContext()
-                .getPackageManager().queryIntentActivities(
-                        new Intent(ACTION_RESOURCES_APK),
-                        PackageManager.MATCH_SYSTEM_ONLY);
-
-        // remove apps that don't live in the nearby apex
-        resolveInfos.removeIf(info ->
-                !Environment.isAppInNearbyApex(info.activityInfo.applicationInfo));
-
-        if (resolveInfos.isEmpty()) {
-            // Resource APK not loaded yet, print a stack trace to see where this is called from
-            Log.e("FastPairManager", "Attempted to fetch resources before halfsheet "
-                            + " APK is installed or package manager can't resolve correctly!",
-                    new IllegalStateException());
-            return null;
-        }
-
-        if (resolveInfos.size() > 1) {
-            // multiple apps found, log a warning, but continue
-            Log.w("FastPairManager", "Found > 1 APK that can resolve halfsheet APK intent: "
-                    + resolveInfos.stream()
-                    .map(info -> info.activityInfo.applicationInfo.packageName)
-                    .collect(Collectors.joining(", ")));
-        }
-
-        // Assume the first ResolveInfo is the one we're looking for
-        ResolveInfo info = resolveInfos.get(0);
-        mHalfSheetApkPkgName = info.activityInfo.applicationInfo.packageName;
-        Log.i("FastPairManager", "Found halfsheet APK at: " + mHalfSheetApkPkgName);
-        return mHalfSheetApkPkgName;
-    }
-
-    /**
-     * Invokes half sheet in the other apk. This function can only be called in Nearby because other
-     * app can't get the correct component name.
-     */
-    void showHalfSheet(Cache.ScanFastPairStoreItem scanFastPairStoreItem) {
-        if (mLocatorContextWrapper != null) {
-            String packageName = getHalfSheetApkPkgName();
-            HalfSheetCallback callback = new HalfSheetCallback();
-            callback.setmFastPairController(Locator
-                    .getFromContextWrapper(mLocatorContextWrapper, FastPairController.class));
-            Bundle bundle = new Bundle();
-            bundle.putBinder(EXTRA_BINDER, callback);
-            mLocatorContextWrapper.getContext()
-                    .startActivityAsUser(new Intent(ACTIVITY_INTENT_ACTION)
-                                    .putExtra(EXTRA_HALF_SHEET_INFO,
-                                            scanFastPairStoreItem.toByteArray())
-                                    .putExtra(EXTRA_HALF_SHEET_TYPE, DEVICE_PAIRING_FRAGMENT_TYPE)
-                                    .putExtra(EXTRA_BUNDLE, bundle)
-                                    .setComponent(new ComponentName(packageName,
-                                            packageName + ".HalfSheetActivity")),
-                            UserHandle.CURRENT);
-
-        }
-    }
 }
