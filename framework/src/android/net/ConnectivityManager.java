@@ -931,6 +931,48 @@ public class ConnectivityManager {
     private final IConnectivityManager mService;
 
     /**
+     * Firewall chain for device idle (doze mode).
+     * Allowlist of apps that have network access in device idle.
+     * @hide
+     */
+    @SystemApi(client = MODULE_LIBRARIES)
+    public static final int FIREWALL_CHAIN_DOZABLE = 1;
+
+    /**
+     * Firewall chain used for app standby.
+     * Denylist of apps that do not have network access.
+     * @hide
+     */
+    @SystemApi(client = MODULE_LIBRARIES)
+    public static final int FIREWALL_CHAIN_STANDBY = 2;
+
+    /**
+     * Firewall chain used for battery saver.
+     * Allowlist of apps that have network access when battery saver is on.
+     * @hide
+     */
+    @SystemApi(client = MODULE_LIBRARIES)
+    public static final int FIREWALL_CHAIN_POWERSAVE = 3;
+
+    /**
+     * Firewall chain used for restricted networking mode.
+     * Allowlist of apps that have access in restricted networking mode.
+     * @hide
+     */
+    @SystemApi(client = MODULE_LIBRARIES)
+    public static final int FIREWALL_CHAIN_RESTRICTED = 4;
+
+    /** @hide */
+    @Retention(RetentionPolicy.SOURCE)
+    @IntDef(flag = false, prefix = "FIREWALL_CHAIN_", value = {
+        FIREWALL_CHAIN_DOZABLE,
+        FIREWALL_CHAIN_STANDBY,
+        FIREWALL_CHAIN_POWERSAVE,
+        FIREWALL_CHAIN_RESTRICTED
+    })
+    public @interface FirewallChain {}
+
+    /**
      * A kludge to facilitate static access where a Context pointer isn't available, like in the
      * case of the static set/getProcessDefaultNetwork methods and from the Network class.
      * TODO: Remove this after deprecating the static methods in favor of non-static methods or
@@ -5566,9 +5608,11 @@ public class ConnectivityManager {
     }
 
     /**
-     * Allow target application using metered network.
+     * Sets whether the specified UID is allowed to use data on metered networks even when
+     * background data is restricted.
      *
      * @param uid uid of target app
+     * @throws IllegalStateException if update allow list failed.
      * @hide
      */
     @SystemApi(client = MODULE_LIBRARIES)
@@ -5582,15 +5626,15 @@ public class ConnectivityManager {
             mService.updateMeteredNetworkAllowList(uid, add);
         } catch (RemoteException e) {
             throw e.rethrowFromSystemServer();
-        } catch (IllegalStateException ie) {
-            throw ie;
         }
     }
 
     /**
-     * Disallow target application using metered network.
+     * Sets whether the specified UID is prevented from using background data on metered networks.
+     * Takes precedence over {@link #updateMeteredNetworkAllowList}.
      *
      * @param uid uid of target app
+     * @throws IllegalStateException if update deny list failed.
      * @hide
      */
     @SystemApi(client = MODULE_LIBRARIES)
@@ -5604,8 +5648,99 @@ public class ConnectivityManager {
             mService.updateMeteredNetworkDenyList(uid, add);
         } catch (RemoteException e) {
             throw e.rethrowFromSystemServer();
-        } catch (IllegalStateException ie) {
-            throw ie;
+        }
+    }
+
+    /**
+     * Sets a firewall rule for the specified UID on the specified chain.
+     *
+     * @param chain target chain.
+     * @param uid uid to allow/deny.
+     * @param allow either add or remove rule.
+     * @throws IllegalStateException if update firewall rule failed.
+     * @hide
+     */
+    @SystemApi(client = MODULE_LIBRARIES)
+    @RequiresPermission(anyOf = {
+            android.Manifest.permission.NETWORK_SETTINGS,
+            android.Manifest.permission.NETWORK_STACK,
+            NetworkStack.PERMISSION_MAINLINE_NETWORK_STACK
+    })
+    public void updateFirewallRule(@FirewallChain final int chain, final int uid,
+            final boolean allow) {
+        try {
+            mService.updateFirewallRule(chain, uid, allow);
+        } catch (RemoteException e) {
+            throw e.rethrowFromSystemServer();
+        }
+    }
+
+    /**
+     * Enables or disables the specified firewall chain.
+     *
+     * @param chain target chain.
+     * @param enable whether the chain should be enabled.
+     * @throws IllegalStateException if set firewall chain failed.
+     * @hide
+     */
+    @SystemApi(client = MODULE_LIBRARIES)
+    @RequiresPermission(anyOf = {
+            android.Manifest.permission.NETWORK_SETTINGS,
+            android.Manifest.permission.NETWORK_STACK,
+            NetworkStack.PERMISSION_MAINLINE_NETWORK_STACK
+    })
+    public void setFirewallChainEnabled(@FirewallChain final int chain, final boolean enable) {
+        try {
+            mService.setFirewallChainEnabled(chain, enable);
+        } catch (RemoteException e) {
+            throw e.rethrowFromSystemServer();
+        }
+    }
+
+    /**
+     * Replaces the contents of the specified UID-based firewall chain.
+     *
+     * @param chain target chain to replace.
+     * @param uids The list of UIDs to be placed into chain.
+     * @throws IllegalStateException if replace firewall chain failed.
+     * @throws IllegalArgumentException if {@code chain} is not a valid chain.
+     * @hide
+     */
+    @SystemApi(client = MODULE_LIBRARIES)
+    @RequiresPermission(anyOf = {
+            android.Manifest.permission.NETWORK_SETTINGS,
+            android.Manifest.permission.NETWORK_STACK,
+            NetworkStack.PERMISSION_MAINLINE_NETWORK_STACK
+    })
+    public void replaceFirewallChain(@FirewallChain final int chain, @NonNull final int[] uids) {
+        Objects.requireNonNull(uids);
+        try {
+            mService.replaceFirewallChain(chain, uids);
+        } catch (RemoteException e) {
+            throw e.rethrowFromSystemServer();
+        }
+    }
+
+    /**
+     * Request to change the current active network stats map.
+     * STOPSHIP: Remove this API before T sdk finalized, this API is temporary added for the
+     * NetworkStatsFactory which is platform code but will be moved into connectivity (tethering)
+     * mainline module.
+     *
+     * @throws IllegalStateException if swap active stats map failed.
+     * @hide
+     */
+    @SystemApi(client = MODULE_LIBRARIES)
+    @RequiresPermission(anyOf = {
+            android.Manifest.permission.NETWORK_SETTINGS,
+            android.Manifest.permission.NETWORK_STACK,
+            NetworkStack.PERMISSION_MAINLINE_NETWORK_STACK
+    })
+    public void swapActiveStatsMap() {
+        try {
+            mService.swapActiveStatsMap();
+        } catch (RemoteException e) {
+            throw e.rethrowFromSystemServer();
         }
     }
 }
