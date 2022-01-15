@@ -10614,4 +10614,64 @@ public class ConnectivityService extends IConnectivityManager.Stub
             throw new IllegalStateException(e);
         }
     }
+
+    @Override
+    public void updateFirewallRule(final int chain, final int uid, final boolean allow) {
+        enforceNetworkStackOrSettingsPermission();
+
+        try {
+            mNetd.firewallSetUidRule(chain, uid,
+                    allow ? INetd.FIREWALL_RULE_ALLOW : INetd.FIREWALL_RULE_DENY);
+        } catch (RemoteException | ServiceSpecificException e) {
+            throw new IllegalStateException(e);
+        }
+    }
+
+    @Override
+    public void setFirewallChainEnabled(final int chain, final boolean enable) {
+        enforceNetworkStackOrSettingsPermission();
+
+        try {
+            mNetd.firewallEnableChildChain(chain, enable);
+        } catch (RemoteException | ServiceSpecificException e) {
+            throw new IllegalStateException(e);
+        }
+    }
+
+    @Override
+    public void replaceFirewallChain(final int chain, final int[] uids) {
+        enforceNetworkStackOrSettingsPermission();
+
+        try {
+            switch (chain) {
+                case ConnectivityManager.FIREWALL_CHAIN_DOZABLE:
+                    mNetd.firewallReplaceUidChain("fw_dozable", true /* isAllowList */, uids);
+                    break;
+                case ConnectivityManager.FIREWALL_CHAIN_STANDBY:
+                    mNetd.firewallReplaceUidChain("fw_standby", false /* isAllowList */, uids);
+                    break;
+                case ConnectivityManager.FIREWALL_CHAIN_POWERSAVE:
+                    mNetd.firewallReplaceUidChain("fw_powersave", true /* isAllowList */, uids);
+                    break;
+                case ConnectivityManager.FIREWALL_CHAIN_RESTRICTED:
+                    mNetd.firewallReplaceUidChain("fw_restricted", true /* isAllowList */, uids);
+                    break;
+                default:
+                    throw new IllegalArgumentException("replaceFirewallChain with invalid chain: "
+                            + chain);
+            }
+        } catch (RemoteException | ServiceSpecificException e) {
+            throw new IllegalStateException(e);
+        }
+    }
+
+    @Override
+    public void swapActiveStatsMap() {
+        enforceNetworkStackOrSettingsPermission();
+        try {
+            mNetd.trafficSwapActiveStatsMap();
+        } catch (RemoteException | ServiceSpecificException e) {
+            throw new IllegalStateException(e);
+        }
+    }
 }
