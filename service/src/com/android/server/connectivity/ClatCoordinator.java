@@ -162,6 +162,15 @@ public class ClatCoordinator {
                 throws IOException {
             native_configurePacketSocket(sock, v6, ifindex);
         }
+
+        /**
+         * Maybe start bpf.
+         */
+        public int maybeStartBpf(@NonNull FileDescriptor tunfd, @NonNull FileDescriptor readsock6,
+                @NonNull FileDescriptor writesock6, @NonNull String iface, @NonNull String pfx96,
+                @NonNull String v4, @NonNull String v6) throws IOException {
+            return native_maybeStartBpf(tunfd, readsock6, writesock6, iface, pfx96, v4, v6);
+        }
     }
 
     @VisibleForTesting
@@ -304,6 +313,14 @@ public class ClatCoordinator {
             throw new IOException("configure packet socket failed: " + e);
         }
 
+        // [5] Maybe start bpf.
+        try {
+            mDeps.maybeStartBpf(tunFd.getFileDescriptor(), readSock6.getFileDescriptor(),
+                    writeSock6.getFileDescriptor(), iface, pfx96, v4, v6);
+        } catch (IOException e) {
+            throw new IOException("Error start bpf on " + iface + ": " + e);
+        }
+
         // TODO: start clatd and returns local xlat464 v6 address.
         return null;
     }
@@ -321,4 +338,7 @@ public class ClatCoordinator {
             int ifindex) throws IOException;
     private static native void native_configurePacketSocket(FileDescriptor sock, String v6,
             int ifindex) throws IOException;
+    private static native int native_maybeStartBpf(FileDescriptor tunfd, FileDescriptor readsock6,
+            FileDescriptor writesock6, String iface, String pfx96, String v4, String v6)
+            throws IOException;
 }
