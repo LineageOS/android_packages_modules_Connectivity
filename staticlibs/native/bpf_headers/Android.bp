@@ -37,6 +37,7 @@ cc_library_headers {
     ],
     visibility: [
         "//bootable/libbootloader/vts",
+        "//cts/tests/tests/net/native",
         "//frameworks/base/services/core/jni",
         "//frameworks/native/libs/cputimeinstate",
         "//frameworks/native/services/gpuservice",
