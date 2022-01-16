@@ -42,6 +42,7 @@ cc_library_headers {
         // TODO: remove it when NetworkStatsService is moved into the mainline module and no more
         // calls to JNI in libservices.core.
         "//frameworks/base/services/core/jni",
+        "//packages/modules/Connectivity/service/native/libs/libclat",
         "//packages/modules/Connectivity/Tethering",
         "//packages/modules/Connectivity/tests/unit/jni",
         // TODO: remove system/netd/* when all BPF code is moved out of Netd.
