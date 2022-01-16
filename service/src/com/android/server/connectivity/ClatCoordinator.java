@@ -122,8 +122,12 @@ public class ClatCoordinator {
     @Nullable
     private ClatdTracker mClatdTracker = null;
 
+    /**
+     * Dependencies of ClatCoordinator which makes ConnectivityService injection
+     * in tests.
+     */
     @VisibleForTesting
-    abstract static class Dependencies {
+    public abstract static class Dependencies {
         /**
           * Get netd.
           */
