@@ -469,6 +469,59 @@ public class EthernetNetworkFactoryTest {
         verifyRestart(createDefaultIpConfig());
     }
 
+    @Test
+    public void testIgnoreOnIpLayerStartedCallbackAfterIpClientHasStopped() throws Exception {
+        createAndVerifyProvisionedInterface(TEST_IFACE);
+        mIpClientCallbacks.onProvisioningFailure(new LinkProperties());
+        mIpClientCallbacks.onProvisioningSuccess(new LinkProperties());
+        mLooper.dispatchAll();
+        verifyStop();
+
+        // ipClient has been shut down first, we should not retry
+        verify(mIpClient, never()).startProvisioning(any());
+        verify(mNetworkAgent, never()).register();
+    }
+
+    @Test
+    public void testIgnoreOnIpLayerStoppedCallbackAfterIpClientHasStopped() throws Exception {
+        createAndVerifyProvisionedInterface(TEST_IFACE);
+        when(mDeps.getNetworkInterfaceByName(TEST_IFACE)).thenReturn(mInterfaceParams);
+        mIpClientCallbacks.onProvisioningFailure(new LinkProperties());
+        mIpClientCallbacks.onProvisioningFailure(new LinkProperties());
+        mLooper.dispatchAll();
+        verifyStop();
+
+        // ipClient has been shut down first, we should not retry
+        verify(mIpClient).startProvisioning(any());
+    }
+
+    @Test
+    public void testIgnoreLinkPropertiesCallbackAfterIpClientHasStopped() throws Exception {
+        createAndVerifyProvisionedInterface(TEST_IFACE);
+        LinkProperties lp = new LinkProperties();
+
+        mIpClientCallbacks.onProvisioningFailure(lp);
+        mIpClientCallbacks.onLinkPropertiesChange(lp);
+        mLooper.dispatchAll();
+        verifyStop();
+
+        // ipClient has been shut down first, we should not update
+        verify(mNetworkAgent, never()).sendLinkPropertiesImpl(same(lp));
+    }
+
+    @Test
+    public void testIgnoreNeighborLossCallbackAfterIpClientHasStopped() throws Exception {
+        createAndVerifyProvisionedInterface(TEST_IFACE);
+        mIpClientCallbacks.onProvisioningFailure(new LinkProperties());
+        mIpClientCallbacks.onReachabilityLost("Neighbor Lost");
+        mLooper.dispatchAll();
+        verifyStop();
+
+        // ipClient has been shut down first, we should not update
+        verify(mIpClient, never()).startProvisioning(any());
+        verify(mNetworkAgent, never()).register();
+    }
+
     private void verifyRestart(@NonNull final IpConfiguration ipConfig) {
         verifyStop();
         verifyStart(ipConfig);
