@@ -39,6 +39,9 @@ static inline int tcDeleteQdiscClsact(int ifIndex) {
 
 int tcAddBpfFilter(int ifIndex, bool ingress, uint16_t prio, uint16_t proto,
                    const char *bpfProgPath);
+int tcAddIngressPoliceFilter(int ifIndex, uint16_t prio, uint16_t proto,
+                             unsigned rateInBytesPerSec,
+                             const char *bpfProgPath);
 int tcDeleteFilter(int ifIndex, bool ingress, uint16_t prio, uint16_t proto);
 
 } // namespace android

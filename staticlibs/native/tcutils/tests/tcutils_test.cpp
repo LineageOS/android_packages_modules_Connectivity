@@ -110,4 +110,48 @@ TEST(LibTcUtilsTest, AddAndDeleteBpfFilter) {
   EXPECT_EQ(-EINVAL, tcDeleteFilter(LOOPBACK_IFINDEX, ingress, prio, proto));
 }
 
+TEST(LibTcUtilsTest, AddAndDeleteIngressPoliceFilter) {
+  // TODO: this should use bpf_shared.h rather than hardcoding the path
+  static constexpr char bpfProgPath[] =
+      "/sys/fs/bpf/prog_netd_schedact_ingress_account";
+  int fd = bpf::retrieveProgram(bpfProgPath);
+  if (fd == -1) {
+    // ingress policing is not supported.
+    return;
+  }
+  close(fd);
+
+  const int errNOENT = isAtLeastKernelVersion(4, 19, 0) ? ENOENT : EINVAL;
+
+  // static test values
+  static constexpr unsigned rateInBytesPerSec =
+      1024 * 1024; // 8mbit/s => 1mbyte/s => 1024*1024 bytes/s.
+  static constexpr uint16_t prio = 17;
+  static constexpr uint16_t proto = ETH_P_ALL;
+
+  // try to delete missing filter from missing qdisc
+  EXPECT_EQ(-EINVAL,
+            tcDeleteFilter(LOOPBACK_IFINDEX, true /*ingress*/, prio, proto));
+  // try to attach bpf filter to missing qdisc
+  EXPECT_EQ(-EINVAL, tcAddIngressPoliceFilter(LOOPBACK_IFINDEX, prio, proto,
+                                              rateInBytesPerSec, bpfProgPath));
+  // add the clsact qdisc
+  EXPECT_EQ(0, tcAddQdiscClsact(LOOPBACK_IFINDEX));
+  // try to delete missing filter when there is a qdisc attached
+  EXPECT_EQ(-errNOENT,
+            tcDeleteFilter(LOOPBACK_IFINDEX, true /*ingress*/, prio, proto));
+  // add and delete a bpf filter
+  EXPECT_EQ(0, tcAddIngressPoliceFilter(LOOPBACK_IFINDEX, prio, proto,
+                                        rateInBytesPerSec, bpfProgPath));
+  EXPECT_EQ(0, tcDeleteFilter(LOOPBACK_IFINDEX, true /*ingress*/, prio, proto));
+  // try to remove the same filter a second time
+  EXPECT_EQ(-errNOENT,
+            tcDeleteFilter(LOOPBACK_IFINDEX, true /*ingress*/, prio, proto));
+  // remove the clsact qdisc
+  EXPECT_EQ(0, tcDeleteQdiscClsact(LOOPBACK_IFINDEX));
+  // once again, try to delete missing filter from missing qdisc
+  EXPECT_EQ(-EINVAL,
+            tcDeleteFilter(LOOPBACK_IFINDEX, true /*ingress*/, prio, proto));
+}
+
 } // namespace android
