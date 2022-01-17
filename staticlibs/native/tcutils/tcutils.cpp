@@ -34,6 +34,7 @@
 #include <linux/rtnetlink.h>
 #include <net/if.h>
 #include <stdarg.h>
+#include <stdio.h>
 #include <sys/socket.h>
 #include <unistd.h>
 #include <utility>
