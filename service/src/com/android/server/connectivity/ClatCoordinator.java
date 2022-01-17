@@ -74,6 +74,12 @@ public class ClatCoordinator {
     private final Dependencies mDeps;
     @Nullable
     private String mIface = null;
+    @Nullable
+    private String mNat64Prefix = null;
+    @Nullable
+    private String mXlatLocalAddress4 = null;
+    @Nullable
+    private String mXlatLocalAddress6 = null;
     private int mPid = INVALID_PID;
 
     @VisibleForTesting
@@ -170,6 +176,14 @@ public class ClatCoordinator {
                 @NonNull FileDescriptor writesock6, @NonNull String iface, @NonNull String pfx96,
                 @NonNull String v4, @NonNull String v6) throws IOException {
             return native_maybeStartBpf(tunfd, readsock6, writesock6, iface, pfx96, v4, v6);
+        }
+
+        /**
+         * Maybe stop bpf.
+         */
+        public void maybeStopBpf(String iface, String pfx96, String v4, String v6, int pid)
+                throws IOException {
+            native_maybeStopBpf(iface, pfx96, v4, v6, pid);
         }
     }
 
@@ -317,12 +331,32 @@ public class ClatCoordinator {
         try {
             mDeps.maybeStartBpf(tunFd.getFileDescriptor(), readSock6.getFileDescriptor(),
                     writeSock6.getFileDescriptor(), iface, pfx96, v4, v6);
+            mIface = iface;
+            mNat64Prefix = pfx96;
+            mXlatLocalAddress4 = v4;
+            mXlatLocalAddress6 = v6;
         } catch (IOException e) {
             throw new IOException("Error start bpf on " + iface + ": " + e);
         }
 
         // TODO: start clatd and returns local xlat464 v6 address.
         return null;
+    }
+
+    /**
+     * Stop clatd
+     */
+    public void clatStop() throws IOException {
+        mDeps.maybeStopBpf(mIface, mNat64Prefix, mXlatLocalAddress4, mXlatLocalAddress6,
+                mPid /* unused */);
+        // TODO: remove setIptablesDropRule
+
+        Log.i(TAG, "clatd on " + mIface + " stopped");
+
+        mIface = null;
+        mNat64Prefix = null;
+        mXlatLocalAddress4 = null;
+        mXlatLocalAddress6 = null;
     }
 
     private static native String native_selectIpv4Address(String v4addr, int prefixlen)
@@ -341,4 +375,6 @@ public class ClatCoordinator {
     private static native int native_maybeStartBpf(FileDescriptor tunfd, FileDescriptor readsock6,
             FileDescriptor writesock6, String iface, String pfx96, String v4, String v6)
             throws IOException;
+    private static native void native_maybeStopBpf(String iface, String pfx96, String v4,
+            String v6, int pid) throws IOException;
 }
