@@ -30,8 +30,6 @@ java_library {
     min_sdk_version: "30",
     srcs: [
         "src/**/*.java",
-        // TODO: This is necessary just for LocalLog, remove after removing NativeDaemonConnector.
-        ":framework-connectivity-shared-srcs",
         ":services.connectivity-tiramisu-updatable-sources",
     ],
     libs: [
