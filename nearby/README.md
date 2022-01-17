@@ -24,7 +24,7 @@ This directory contains code for the AOSP Nearby mainline module.
 ## IDE setup
 
 ```sh
-$ source build/envsetup.sh && lunch <TARGE>
+$ source build/envsetup.sh && lunch <TARGET>
 $ cd packages/modules/Nearby
 $ aidegen .
 # This will launch Intellij project for Nearby module.

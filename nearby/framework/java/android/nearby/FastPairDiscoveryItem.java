@@ -600,7 +600,7 @@ public class FastPairDiscoveryItem {
         /**
          * Set LastUserExperience.
          *
-         * @param lastUserExperience The kind of expereince the user last had with this (e.g. if
+         * @param lastUserExperience The kind of experience the user last had with this (e.g. if
          *                           they dismissed the notification, that's bad; but if they tapped
          *                           it, that's good).
          * @return The builder, to facilitate chaining {@code builder.setXXX(..).setXXX(..)}.

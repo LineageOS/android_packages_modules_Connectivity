@@ -371,7 +371,7 @@ public class FastPairDeviceMetadata {
         /**
          * Set ble transmission power.
          *
-         * @param bleTxPower Ble transimmision power.
+         * @param bleTxPower Ble transmission power.
          * @return The builder, to facilitate chaining {@code builder.setXXX(..).setXXX(..)}.
 
          */
@@ -549,7 +549,7 @@ public class FastPairDeviceMetadata {
         /**
          * Set UnableToConnectDescription.
          *
-         * @param unableToConnectDescription Description when Fast Pair device is uanble to be
+         * @param unableToConnectDescription Description when Fast Pair device is unable to be
          *                                   connected to.
          * @return The builder, to facilitate chaining {@code builder.setXXX(..).setXXX(..)}.
          */

@@ -400,7 +400,7 @@ public abstract class FastPairDataProviderBase {
         }
 
         /**
-         * Sends back the eligble Fast Pair accounts.
+         * Sends back the eligible Fast Pair accounts.
          */
         @Override
         public void onFastPairEligibleAccountsReceived(

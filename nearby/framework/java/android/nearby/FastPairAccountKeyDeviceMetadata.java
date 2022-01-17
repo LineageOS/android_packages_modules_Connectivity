@@ -36,7 +36,7 @@ public class FastPairAccountKeyDeviceMetadata {
     }
 
     /**
-     * Get Account Key, which uniquely identfies a Fast Pair device associated with an account.
+     * Get Account Key, which uniquely identifies a Fast Pair device associated with an account.
      */
     @Nullable
     public byte[] getAccountKey() {
@@ -44,7 +44,7 @@ public class FastPairAccountKeyDeviceMetadata {
     }
 
     /**
-     * Get a hash value of account key and public bluetooh address without revealing the public
+     * Get a hash value of account key and public bluetooth address without revealing the public
      * bluetooth address.
      */
     @Nullable

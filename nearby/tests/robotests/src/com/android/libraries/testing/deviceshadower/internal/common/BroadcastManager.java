@@ -336,7 +336,7 @@ public class BroadcastManager {
                                             receiver, "setPendingResult",
                                             ClassParameter.from(PendingResult.class, result));
                                     Shadows.shadowOf(receiver).onReceive(context, intent, abort);
-                                    return BroadcastResult.transfrom(result);
+                                    return BroadcastResult.transform(result);
                                 }
                             },
                             MoreExecutors.directExecutor());
@@ -485,7 +485,7 @@ public class BroadcastManager {
             this.mExtras = extras;
         }
 
-        private static ListenableFuture<BroadcastResult> transfrom(PendingResult result) {
+        private static ListenableFuture<BroadcastResult> transform(PendingResult result) {
             return Futures.transform(
                     Shadows.shadowOf(result).getFuture(),
                     new Function<PendingResult, BroadcastResult>() {
