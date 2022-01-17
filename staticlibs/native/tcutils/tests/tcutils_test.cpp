@@ -63,4 +63,16 @@ TEST(LibTcUtilsTest, IsEthernetOfCellular) {
   ASSERT_FALSE(result);
 }
 
+// See Linux kernel source in include/net/flow.h
+static constexpr int LOOPBACK_IFINDEX = 1;
+
+TEST(LibTcUtilsTest, AttachReplaceDetachClsactLo) {
+  // This attaches and detaches a configuration-less and thus no-op clsact
+  // qdisc to loopback interface (and it takes fractions of a second)
+  EXPECT_EQ(0, tcAddQdiscClsact(LOOPBACK_IFINDEX));
+  EXPECT_EQ(0, tcReplaceQdiscClsact(LOOPBACK_IFINDEX));
+  EXPECT_EQ(0, tcDeleteQdiscClsact(LOOPBACK_IFINDEX));
+  EXPECT_EQ(-EINVAL, tcDeleteQdiscClsact(LOOPBACK_IFINDEX));
+}
+
 } // namespace android

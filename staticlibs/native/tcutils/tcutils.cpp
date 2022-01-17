@@ -212,6 +212,54 @@ int isEthernet(const char *iface, bool &isEthernet) {
   }
 }
 
+// ADD:     nlMsgType=RTM_NEWQDISC nlMsgFlags=NLM_F_EXCL|NLM_F_CREATE
+// REPLACE: nlMsgType=RTM_NEWQDISC nlMsgFlags=NLM_F_CREATE|NLM_F_REPLACE
+// DEL:     nlMsgType=RTM_DELQDISC nlMsgFlags=0
+int doTcQdiscClsact(int ifIndex, uint16_t nlMsgType, uint16_t nlMsgFlags) {
+  // This is the name of the qdisc we are attaching.
+  // Some hoop jumping to make this compile time constant with known size,
+  // so that the structure declaration is well defined at compile time.
+#define CLSACT "clsact"
+  // sizeof() includes the terminating NULL
+  static constexpr size_t ASCIIZ_LEN_CLSACT = sizeof(CLSACT);
+
+  const struct {
+    nlmsghdr n;
+    tcmsg t;
+    struct {
+      nlattr attr;
+      char str[NLMSG_ALIGN(ASCIIZ_LEN_CLSACT)];
+    } kind;
+  } req = {
+      .n =
+          {
+              .nlmsg_len = sizeof(req),
+              .nlmsg_type = nlMsgType,
+              .nlmsg_flags =
+                  static_cast<__u16>(NETLINK_REQUEST_FLAGS | nlMsgFlags),
+          },
+      .t =
+          {
+              .tcm_family = AF_UNSPEC,
+              .tcm_ifindex = ifIndex,
+              .tcm_handle = TC_H_MAKE(TC_H_CLSACT, 0),
+              .tcm_parent = TC_H_CLSACT,
+          },
+      .kind =
+          {
+              .attr =
+                  {
+                      .nla_len = NLA_HDRLEN + ASCIIZ_LEN_CLSACT,
+                      .nla_type = TCA_KIND,
+                  },
+              .str = CLSACT,
+          },
+  };
+#undef CLSACT
+
+  return sendAndProcessNetlinkResponse(&req, sizeof(req));
+}
+
 // tc filter add dev .. in/egress prio 1 protocol ipv6/ip bpf object-pinned
 // /sys/fs/bpf/... direct-action
 int tcAddBpfFilter(int ifIndex, bool ingress, uint16_t prio, uint16_t proto,
