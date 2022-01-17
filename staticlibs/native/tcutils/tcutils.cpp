@@ -175,7 +175,7 @@ int isEthernet(const char *iface, bool &isEthernet) {
   if (rv < 0) {
     logError("Get hardware address type of interface %s failed: %s", iface,
              strerror(-rv));
-    return -rv;
+    return rv;
   }
 
   // Backwards compatibility with pre-GKI kernels that use various custom
@@ -208,7 +208,7 @@ int isEthernet(const char *iface, bool &isEthernet) {
     return 0;
   default:
     logError("Unknown hardware address type %d on interface %s", rv, iface);
-    return -ENOENT;
+    return -EAFNOSUPPORT;
   }
 }
 
