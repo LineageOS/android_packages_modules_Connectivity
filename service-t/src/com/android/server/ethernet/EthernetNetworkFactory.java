@@ -481,6 +481,10 @@ public class EthernetNetworkFactory extends NetworkFactory {
         }
 
         void onIpLayerStarted(LinkProperties linkProperties) {
+            if(mIpClient == null) {
+                if (DBG) Log.d(TAG, "IpClient is not initialized.");
+                return;
+            }
             if (mNetworkAgent != null) {
                 Log.e(TAG, "Already have a NetworkAgent - aborting new request");
                 stop();
@@ -528,6 +532,10 @@ public class EthernetNetworkFactory extends NetworkFactory {
         }
 
         void onIpLayerStopped(LinkProperties linkProperties) {
+            if(mIpClient == null) {
+                if (DBG) Log.d(TAG, "IpClient is not initialized.");
+                return;
+            }
             // This cannot happen due to provisioning timeout, because our timeout is 0. It can only
             // happen if we're provisioned and we lose provisioning.
             stop();
@@ -539,6 +547,10 @@ public class EthernetNetworkFactory extends NetworkFactory {
         }
 
         void updateLinkProperties(LinkProperties linkProperties) {
+            if(mIpClient == null) {
+                if (DBG) Log.d(TAG, "IpClient is not initialized.");
+                return;
+            }
             mLinkProperties = linkProperties;
             if (mNetworkAgent != null) {
                 mNetworkAgent.sendLinkPropertiesImpl(linkProperties);
@@ -546,6 +558,10 @@ public class EthernetNetworkFactory extends NetworkFactory {
         }
 
         void updateNeighborLostEvent(String logMsg) {
+            if(mIpClient == null) {
+                if (DBG) Log.d(TAG, "IpClient is not initialized.");
+                return;
+            }
             Log.i(TAG, "updateNeighborLostEvent " + logMsg);
             // Reachability lost will be seen only if the gateway is not reachable.
             // Since ethernet FW doesn't have the mechanism to scan for new networks
