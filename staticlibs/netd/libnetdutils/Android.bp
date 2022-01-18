@@ -11,6 +11,7 @@ cc_library {
         "Log.cpp",
         "Netfilter.cpp",
         "Netlink.cpp",
+        "NetlinkListener.cpp",
         "Slice.cpp",
         "Socket.cpp",
         "SocketOption.cpp",
