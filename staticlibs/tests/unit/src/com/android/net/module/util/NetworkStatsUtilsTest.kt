@@ -16,12 +16,16 @@
 
 package com.android.net.module.util
 
+import android.net.NetworkStats
+import android.text.TextUtils
 import androidx.test.filters.SmallTest
 import androidx.test.runner.AndroidJUnit4
 import org.junit.Test
 import org.junit.runner.RunWith
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import org.mockito.Mockito.doReturn
+import org.mockito.Mockito.mock
 
 @RunWith(AndroidJUnit4::class)
 @SmallTest
@@ -70,5 +74,69 @@ class NetworkStatsUtilsTest {
         assertEquals(11, NetworkStatsUtils.constrain(15, 11, 11))
         assertEquals(11, NetworkStatsUtils.constrain(11, 11, 11))
         assertEquals(11, NetworkStatsUtils.constrain(1, 11, 11))
+    }
+
+    @Test
+    fun testBucketToEntry() {
+        val bucket = makeMockBucket(android.app.usage.NetworkStats.Bucket.UID_ALL,
+                android.app.usage.NetworkStats.Bucket.TAG_NONE,
+                android.app.usage.NetworkStats.Bucket.STATE_DEFAULT,
+                android.app.usage.NetworkStats.Bucket.METERED_YES,
+                android.app.usage.NetworkStats.Bucket.ROAMING_NO,
+                android.app.usage.NetworkStats.Bucket.DEFAULT_NETWORK_ALL, 1024, 8, 2048, 12)
+        val entry = NetworkStatsUtils.fromBucket(bucket)
+        val expectedEntry = NetworkStats.Entry(null /* IFACE_ALL */, NetworkStats.UID_ALL,
+            NetworkStats.SET_DEFAULT, NetworkStats.TAG_NONE, NetworkStats.METERED_YES,
+            NetworkStats.ROAMING_NO, NetworkStats.DEFAULT_NETWORK_ALL, 1024, 8, 2048, 12,
+            0 /* operations */)
+
+        // TODO: Use assertEquals once all downstreams accept null iface in
+        // NetworkStats.Entry#equals.
+        assertEntryEquals(expectedEntry, entry)
+    }
+
+    private fun makeMockBucket(
+        uid: Int,
+        tag: Int,
+        state: Int,
+        metered: Int,
+        roaming: Int,
+        defaultNetwork: Int,
+        rxBytes: Long,
+        rxPackets: Long,
+        txBytes: Long,
+        txPackets: Long
+    ): android.app.usage.NetworkStats.Bucket {
+        val ret: android.app.usage.NetworkStats.Bucket =
+                mock(android.app.usage.NetworkStats.Bucket::class.java)
+        doReturn(uid).`when`(ret).getUid()
+        doReturn(tag).`when`(ret).getTag()
+        doReturn(state).`when`(ret).getState()
+        doReturn(metered).`when`(ret).getMetered()
+        doReturn(roaming).`when`(ret).getRoaming()
+        doReturn(defaultNetwork).`when`(ret).getDefaultNetworkStatus()
+        doReturn(rxBytes).`when`(ret).getRxBytes()
+        doReturn(rxPackets).`when`(ret).getRxPackets()
+        doReturn(txBytes).`when`(ret).getTxBytes()
+        doReturn(txPackets).`when`(ret).getTxPackets()
+        return ret
+    }
+
+    /**
+     * Assert that the two {@link NetworkStats.Entry} are equals.
+     */
+    private fun assertEntryEquals(left: NetworkStats.Entry, right: NetworkStats.Entry) {
+        TextUtils.equals(left.iface, right.iface)
+        assertEquals(left.uid, right.uid)
+        assertEquals(left.set, right.set)
+        assertEquals(left.tag, right.tag)
+        assertEquals(left.metered, right.metered)
+        assertEquals(left.roaming, right.roaming)
+        assertEquals(left.defaultNetwork, right.defaultNetwork)
+        assertEquals(left.rxBytes, right.rxBytes)
+        assertEquals(left.rxPackets, right.rxPackets)
+        assertEquals(left.txBytes, right.txBytes)
+        assertEquals(left.txPackets, right.txPackets)
+        assertEquals(left.operations, right.operations)
     }
 }
