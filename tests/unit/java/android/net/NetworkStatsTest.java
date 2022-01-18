@@ -1057,22 +1057,22 @@ public class NetworkStatsTest {
     private static void assertValues(
             NetworkStats.Entry entry, String iface, int uid, int set, int tag, int metered,
             int roaming, int defaultNetwork) {
-        assertEquals(iface, entry.iface);
-        assertEquals(uid, entry.uid);
-        assertEquals(set, entry.set);
-        assertEquals(tag, entry.tag);
-        assertEquals(metered, entry.metered);
-        assertEquals(roaming, entry.roaming);
-        assertEquals(defaultNetwork, entry.defaultNetwork);
+        assertEquals(iface, entry.getIface());
+        assertEquals(uid, entry.getUid());
+        assertEquals(set, entry.getSet());
+        assertEquals(tag, entry.getTag());
+        assertEquals(metered, entry.getMetered());
+        assertEquals(roaming, entry.getRoaming());
+        assertEquals(defaultNetwork, entry.getDefaultNetwork());
     }
 
     private static void assertValues(NetworkStats.Entry entry, long rxBytes, long rxPackets,
             long txBytes, long txPackets, long operations) {
-        assertEquals(rxBytes, entry.rxBytes);
-        assertEquals(rxPackets, entry.rxPackets);
-        assertEquals(txBytes, entry.txBytes);
-        assertEquals(txPackets, entry.txPackets);
-        assertEquals(operations, entry.operations);
+        assertEquals(rxBytes, entry.getRxBytes());
+        assertEquals(rxPackets, entry.getRxPackets());
+        assertEquals(txBytes, entry.getTxBytes());
+        assertEquals(txPackets, entry.getTxPackets());
+        assertEquals(operations, entry.getOperations());
     }
 
 }
