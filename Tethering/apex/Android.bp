@@ -61,6 +61,7 @@ apex {
     binaries: [
         "clatd",
     ],
+    canned_fs_config: "canned_fs_config",
     bpfs: [
         "offload.o",
         "test.o",
