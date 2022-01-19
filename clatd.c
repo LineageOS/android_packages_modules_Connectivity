@@ -39,8 +39,6 @@
 #include <sys/capability.h>
 #include <sys/uio.h>
 
-#include <private/android_filesystem_config.h>  // For AID_CLAT.
-
 #include "clatd.h"
 #include "config.h"
 #include "dump.h"
@@ -54,48 +52,6 @@ struct clat_config Global_Clatd_Config;
 #define MTU_DELTA 28
 
 volatile sig_atomic_t running = 1;
-
-/* function: set_capability
- * set the permitted, effective and inheritable capabilities of the current
- * thread
- */
-void set_capability(uint64_t target_cap) {
-  struct __user_cap_header_struct header = {
-    .version = _LINUX_CAPABILITY_VERSION_3,
-    .pid     = 0  // 0 = change myself
-  };
-  struct __user_cap_data_struct cap[_LINUX_CAPABILITY_U32S_3] = {};
-
-  cap[0].permitted = cap[0].effective = cap[0].inheritable = target_cap;
-  cap[1].permitted = cap[1].effective = cap[1].inheritable = target_cap >> 32;
-
-  if (capset(&header, cap) < 0) {
-    logmsg(ANDROID_LOG_FATAL, "capset failed: %s", strerror(errno));
-    exit(1);
-  }
-}
-
-/* function: drop_root_and_caps
- * drops root privs and all capabilities
- */
-void drop_root_and_caps() {
-  // see man setgroups: this drops all supplementary groups
-  if (setgroups(0, NULL) < 0) {
-    logmsg(ANDROID_LOG_FATAL, "setgroups failed: %s", strerror(errno));
-    exit(1);
-  }
-
-  if (setresgid(AID_CLAT, AID_CLAT, AID_CLAT) < 0) {
-    logmsg(ANDROID_LOG_FATAL, "setresgid failed: %s", strerror(errno));
-    exit(1);
-  }
-  if (setresuid(AID_CLAT, AID_CLAT, AID_CLAT) < 0) {
-    logmsg(ANDROID_LOG_FATAL, "setresuid failed: %s", strerror(errno));
-    exit(1);
-  }
-
-  set_capability(0);
-}
 
 int ipv6_address_changed(const char *interface) {
   union anyip *interface_ip;
