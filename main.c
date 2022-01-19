@@ -152,9 +152,6 @@ int main(int argc, char **argv) {
          uplink_interface, plat_prefix ? plat_prefix : "(none)", v4_addr ? v4_addr : "(none)",
          v6_addr ? v6_addr : "(none)");
 
-  // run under a regular user with no capabilities
-  drop_root_and_caps();
-
   // Loop until someone sends us a signal or brings down the tun interface.
   if (signal(SIGTERM, stop_loop) == SIG_ERR) {
     logmsg(ANDROID_LOG_FATAL, "sigterm handler failed: %s", strerror(errno));
