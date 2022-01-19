@@ -38,8 +38,6 @@ struct tun_data;
 
 extern volatile sig_atomic_t running;
 
-void set_capability(uint64_t target_cap);
-void drop_root_and_caps();
 int ipv6_address_changed(const char *interface);
 void event_loop(struct tun_data *tunnel);
 
