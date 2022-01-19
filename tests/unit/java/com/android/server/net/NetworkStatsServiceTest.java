@@ -71,10 +71,8 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.reset;
-import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -117,7 +115,6 @@ import androidx.annotation.Nullable;
 import androidx.test.InstrumentationRegistry;
 import androidx.test.filters.SmallTest;
 
-import com.android.internal.util.ArrayUtils;
 import com.android.internal.util.test.BroadcastInterceptingContext;
 import com.android.server.net.NetworkStatsService.AlertObserver;
 import com.android.server.net.NetworkStatsService.NetworkStatsSettings;
@@ -985,7 +982,7 @@ public class NetworkStatsServiceTest extends NetworkStatsBaseTest {
     }
 
     @Test
-    public void testDetailedUidStats() throws Exception {
+    public void testUidStatsForTransport() throws Exception {
         // pretend that network comes online
         expectDefaultSettings();
         NetworkStateSnapshot[] states = new NetworkStateSnapshot[] {buildWifiState()};
@@ -1011,7 +1008,7 @@ public class NetworkStatsServiceTest extends NetworkStatsBaseTest {
                 .insertEntry(entry3));
         mService.incrementOperationCount(UID_RED, 0xF00D, 1);
 
-        NetworkStats stats = mService.getDetailedUidStats(INTERFACES_ALL);
+        NetworkStats stats = mService.getUidStatsForTransport(NetworkCapabilities.TRANSPORT_WIFI);
 
         assertEquals(3, stats.size());
         entry1.operations = 1;
@@ -1019,68 +1016,6 @@ public class NetworkStatsServiceTest extends NetworkStatsBaseTest {
         entry2.operations = 1;
         assertEquals(entry2, stats.getValues(1, null));
         assertEquals(entry3, stats.getValues(2, null));
-    }
-
-    @Test
-    public void testDetailedUidStats_Filtered() throws Exception {
-        // pretend that network comes online
-        expectDefaultSettings();
-
-        final String stackedIface = "stacked-test0";
-        final LinkProperties stackedProp = new LinkProperties();
-        stackedProp.setInterfaceName(stackedIface);
-        final NetworkStateSnapshot wifiState = buildWifiState();
-        wifiState.getLinkProperties().addStackedLink(stackedProp);
-        NetworkStateSnapshot[] states = new NetworkStateSnapshot[] {wifiState};
-
-        expectNetworkStatsSummary(buildEmptyStats());
-        expectNetworkStatsUidDetail(buildEmptyStats());
-
-        mService.notifyNetworkStatus(NETWORKS_WIFI, states, getActiveIface(states),
-                new UnderlyingNetworkInfo[0]);
-
-        NetworkStats.Entry uidStats = new NetworkStats.Entry(
-                TEST_IFACE, UID_BLUE, SET_DEFAULT, TAG_NONE, 1024L, 8L, 512L, 4L, 0L);
-        // Stacked on matching interface
-        NetworkStats.Entry tetheredStats1 = new NetworkStats.Entry(
-                stackedIface, UID_TETHERING, SET_DEFAULT, TAG_NONE, 1024L, 8L, 512L, 4L, 0L);
-        TetherStatsParcel tetherStatsParcel1 =
-                buildTetherStatsParcel(stackedIface, 1024L, 8L, 512L, 4L, 0);
-        // Different interface
-        TetherStatsParcel tetherStatsParcel2 =
-                buildTetherStatsParcel("otherif", 1024L, 8L, 512L, 4L, 0);
-
-        final String[] ifaceFilter = new String[] { TEST_IFACE };
-        final String[] augmentedIfaceFilter = new String[] { stackedIface, TEST_IFACE };
-        incrementCurrentTime(HOUR_IN_MILLIS);
-        expectDefaultSettings();
-        expectNetworkStatsSummary(buildEmptyStats());
-        when(mStatsFactory.augmentWithStackedInterfaces(eq(ifaceFilter)))
-                .thenReturn(augmentedIfaceFilter);
-        when(mStatsFactory.readNetworkStatsDetail(eq(UID_ALL), any(), eq(TAG_ALL)))
-                .thenReturn(new NetworkStats(getElapsedRealtime(), 1)
-                        .insertEntry(uidStats));
-        final TetherStatsParcel[] tetherStatsParcels =  {tetherStatsParcel1, tetherStatsParcel2};
-        when(mNetd.tetherGetStats()).thenReturn(tetherStatsParcels);
-
-        NetworkStats stats = mService.getDetailedUidStats(ifaceFilter);
-
-        // mStatsFactory#readNetworkStatsDetail() has the following invocations:
-        // 1) NetworkStatsService#systemReady from #setUp.
-        // 2) mService#notifyNetworkStatus in the test above.
-        //
-        // Additionally, we should have one call from the above call to mService#getDetailedUidStats
-        // with the augmented ifaceFilter.
-        verify(mStatsFactory, times(2)).readNetworkStatsDetail(UID_ALL, INTERFACES_ALL, TAG_ALL);
-        verify(mStatsFactory, times(1)).readNetworkStatsDetail(
-                eq(UID_ALL),
-                eq(augmentedIfaceFilter),
-                eq(TAG_ALL));
-        assertTrue(ArrayUtils.contains(stats.getUniqueIfaces(), TEST_IFACE));
-        assertTrue(ArrayUtils.contains(stats.getUniqueIfaces(), stackedIface));
-        assertEquals(2, stats.size());
-        assertEquals(uidStats, stats.getValues(0, null));
-        assertEquals(tetheredStats1, stats.getValues(1, null));
     }
 
     @Test
