@@ -32,6 +32,7 @@ import android.util.Log
 import androidx.test.InstrumentationRegistry
 import com.android.net.module.util.ArrayTrackRecord
 import com.android.testutils.CompatUtil
+import com.android.testutils.ConnectivityModuleTest
 import com.android.testutils.DevSdkIgnoreRule
 import com.android.testutils.DevSdkIgnoreRule.IgnoreAfter
 import com.android.testutils.DevSdkIgnoreRule.IgnoreUpTo
@@ -62,6 +63,7 @@ private val PROVIDER_NAME = "NetworkProviderTest"
 
 @RunWith(DevSdkIgnoreRunner::class)
 @IgnoreUpTo(Build.VERSION_CODES.Q)
+@ConnectivityModuleTest
 class NetworkProviderTest {
     @Rule @JvmField
     val mIgnoreRule = DevSdkIgnoreRule()
