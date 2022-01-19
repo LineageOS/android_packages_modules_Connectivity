@@ -18,10 +18,10 @@
 
 #include "tcutils/tcutils.h"
 
+#include "logging.h"
 #include "kernelversion.h"
 #include "scopeguard.h"
 
-#include <android/log.h>
 #include <arpa/inet.h>
 #include <cerrno>
 #include <cstring>
@@ -34,7 +34,6 @@
 #include <linux/rtnetlink.h>
 #include <linux/tc_act/tc_bpf.h>
 #include <net/if.h>
-#include <stdarg.h>
 #include <stdio.h>
 #include <sys/socket.h>
 #include <unistd.h>
@@ -52,13 +51,6 @@
 
 namespace android {
 namespace {
-
-void logError(const char *fmt...) {
-  va_list args;
-  va_start(args, fmt);
-  __android_log_vprint(ANDROID_LOG_ERROR, LOG_TAG, fmt, args);
-  va_end(args);
-}
 
 /**
  * IngressPoliceFilterBuilder builds a nlmsg request equivalent to the following
@@ -144,7 +136,7 @@ class IngressPoliceFilterBuilder final {
   static double getTickInUsec() {
     FILE *fp = fopen("/proc/net/psched", "re");
     if (!fp) {
-      logError("fopen(\"/proc/net/psched\"): %s", strerror(errno));
+      ALOGE("fopen(\"/proc/net/psched\"): %s", strerror(errno));
       return 0.0;
     }
     auto scopeGuard = base::make_scope_guard([fp] { fclose(fp); });
@@ -156,7 +148,7 @@ class IngressPoliceFilterBuilder final {
         fscanf(fp, "%08x%08x%08x", &t2us, &us2t, &clockRes) != 3;
 
     if (isError) {
-      logError("fscanf(/proc/net/psched, \"%%08x%%08x%%08x\"): %s",
+      ALOGE("fscanf(/proc/net/psched, \"%%08x%%08x%%08x\"): %s",
                strerror(errno));
       return 0.0;
     }
@@ -343,7 +335,7 @@ private:
     mBpfFd = bpf::retrieveProgram(mBpfProgPath);
     if (mBpfFd == -1) {
       int error = errno;
-      logError("retrieveProgram failed: %d", error);
+      ALOGE("retrieveProgram failed: %d", error);
       return -error;
     }
 
@@ -381,7 +373,7 @@ int sendAndProcessNetlinkResponse(const void *req, int len) {
   int fd = socket(AF_NETLINK, SOCK_RAW | SOCK_CLOEXEC, NETLINK_ROUTE);
   if (fd == -1) {
     int error = errno;
-    logError("socket(AF_NETLINK, SOCK_RAW | SOCK_CLOEXEC, NETLINK_ROUTE): %d",
+    ALOGE("socket(AF_NETLINK, SOCK_RAW | SOCK_CLOEXEC, NETLINK_ROUTE): %d",
              error);
     return -error;
   }
@@ -390,7 +382,7 @@ int sendAndProcessNetlinkResponse(const void *req, int len) {
   static constexpr int on = 1;
   if (setsockopt(fd, SOL_NETLINK, NETLINK_CAP_ACK, &on, sizeof(on))) {
     int error = errno;
-    logError("setsockopt(fd, SOL_NETLINK, NETLINK_CAP_ACK, 1): %d", error);
+    ALOGE("setsockopt(fd, SOL_NETLINK, NETLINK_CAP_ACK, 1): %d", error);
     return -error;
   }
 
@@ -398,7 +390,7 @@ int sendAndProcessNetlinkResponse(const void *req, int len) {
   if (bind(fd, (const struct sockaddr *)&KERNEL_NLADDR,
            sizeof(KERNEL_NLADDR))) {
     int error = errno;
-    logError("bind(fd, {AF_NETLINK, 0, 0}: %d)", error);
+    ALOGE("bind(fd, {AF_NETLINK, 0, 0}: %d)", error);
     return -error;
   }
 
@@ -406,7 +398,7 @@ int sendAndProcessNetlinkResponse(const void *req, int len) {
   if (connect(fd, (const struct sockaddr *)&KERNEL_NLADDR,
               sizeof(KERNEL_NLADDR))) {
     int error = errno;
-    logError("connect(fd, {AF_NETLINK, 0, 0}): %d", error);
+    ALOGE("connect(fd, {AF_NETLINK, 0, 0}): %d", error);
     return -error;
   }
 
@@ -414,12 +406,12 @@ int sendAndProcessNetlinkResponse(const void *req, int len) {
 
   if (rv == -1) {
     int error = errno;
-    logError("send(fd, req, len, 0) failed: %d", error);
+    ALOGE("send(fd, req, len, 0) failed: %d", error);
     return -error;
   }
 
   if (rv != len) {
-    logError("send(fd, req, len = %d, 0) returned invalid message size %d", len,
+    ALOGE("send(fd, req, len = %d, 0) returned invalid message size %d", len,
              rv);
     return -EMSGSIZE;
   }
@@ -434,29 +426,29 @@ int sendAndProcessNetlinkResponse(const void *req, int len) {
 
   if (rv == -1) {
     int error = errno;
-    logError("recv() failed: %d", error);
+    ALOGE("recv() failed: %d", error);
     return -error;
   }
 
   if (rv < (int)NLMSG_SPACE(sizeof(struct nlmsgerr))) {
-    logError("recv() returned short packet: %d", rv);
+    ALOGE("recv() returned short packet: %d", rv);
     return -EBADMSG;
   }
 
   if (resp.h.nlmsg_len != (unsigned)rv) {
-    logError("recv() returned invalid header length: %d != %d",
+    ALOGE("recv() returned invalid header length: %d != %d",
              resp.h.nlmsg_len, rv);
     return -EBADMSG;
   }
 
   if (resp.h.nlmsg_type != NLMSG_ERROR) {
-    logError("recv() did not return NLMSG_ERROR message: %d",
+    ALOGE("recv() did not return NLMSG_ERROR message: %d",
              resp.h.nlmsg_type);
     return -ENOMSG;
   }
 
   if (resp.e.error) {
-    logError("NLMSG_ERROR message return error: %d", resp.e.error);
+    ALOGE("NLMSG_ERROR message return error: %d", resp.e.error);
   }
   return resp.e.error; // returns 0 on success
 }
@@ -487,7 +479,7 @@ int hardwareAddressType(const char *interface) {
 int isEthernet(const char *iface, bool &isEthernet) {
   int rv = hardwareAddressType(iface);
   if (rv < 0) {
-    logError("Get hardware address type of interface %s failed: %s", iface,
+    ALOGE("Get hardware address type of interface %s failed: %s", iface,
              strerror(-rv));
     return rv;
   }
@@ -521,7 +513,7 @@ int isEthernet(const char *iface, bool &isEthernet) {
     isEthernet = false;
     return 0;
   default:
-    logError("Unknown hardware address type %d on interface %s", rv, iface);
+    ALOGE("Unknown hardware address type %d on interface %s", rv, iface);
     return -EAFNOSUPPORT;
   }
 }
@@ -580,7 +572,7 @@ int tcAddBpfFilter(int ifIndex, bool ingress, uint16_t prio, uint16_t proto,
                    const char *bpfProgPath) {
   const int bpfFd = bpf::retrieveProgram(bpfProgPath);
   if (bpfFd == -1) {
-    logError("retrieveProgram failed: %d", errno);
+    ALOGE("retrieveProgram failed: %d", errno);
     return -errno;
   }
   auto scopeGuard = base::make_scope_guard([bpfFd] { close(bpfFd); });
