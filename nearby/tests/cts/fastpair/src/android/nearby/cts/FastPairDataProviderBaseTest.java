@@ -16,19 +16,25 @@
 
 package android.nearby.cts;
 
+import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.MockitoAnnotations.initMocks;
 
 import android.nearby.FastPairAccountKeyDeviceMetadata;
 import android.nearby.FastPairAntispoofkeyDeviceMetadata;
 import android.nearby.FastPairDataProviderBase;
+import android.nearby.FastPairDeviceMetadata;
 import android.nearby.FastPairEligibleAccount;
 import android.nearby.aidl.FastPairAccountDevicesMetadataRequestParcel;
 import android.nearby.aidl.FastPairAccountKeyDeviceMetadataParcel;
 import android.nearby.aidl.FastPairAntispoofkeyDeviceMetadataParcel;
 import android.nearby.aidl.FastPairAntispoofkeyDeviceMetadataRequestParcel;
+import android.nearby.aidl.FastPairDeviceMetadataParcel;
 import android.nearby.aidl.FastPairEligibleAccountParcel;
 import android.nearby.aidl.FastPairEligibleAccountsRequestParcel;
 import android.nearby.aidl.FastPairManageAccountDeviceRequestParcel;
@@ -46,6 +52,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 
 import java.util.ArrayList;
@@ -54,7 +61,64 @@ import java.util.ArrayList;
 public class FastPairDataProviderBaseTest {
 
     private static final String TAG = "FastPairDataProviderBaseTest";
-    private static final String ERROR_STRING = "Error String";
+
+    private static final String ASSISTANT_SETUP_HALFSHEET = "ASSISTANT_SETUP_HALFSHEET";
+    private static final String ASSISTANT_SETUP_NOTIFICATION = "ASSISTANT_SETUP_NOTIFICATION";
+    private static final int BLE_TX_POWER  = 5;
+    private static final String CONFIRM_PIN_DESCRIPTION = "CONFIRM_PIN_DESCRIPTION";
+    private static final String CONFIRM_PIN_TITLE = "CONFIRM_PIN_TITLE";
+    private static final String CONNECT_SUCCESS_COMPANION_APP_INSTALLED =
+            "CONNECT_SUCCESS_COMPANION_APP_INSTALLED";
+    private static final String CONNECT_SUCCESS_COMPANION_APP_NOT_INSTALLED =
+            "CONNECT_SUCCESS_COMPANION_APP_NOT_INSTALLED";
+    private static final double DELTA = 0.000001;
+    private static final int DEVICE_TYPE = 7;
+    private static final String DOWNLOAD_COMPANION_APP_DESCRIPTION =
+            "DOWNLOAD_COMPANION_APP_DESCRIPTION";
+    private static final int ERROR_CODE_BAD_REQUEST =
+            FastPairDataProviderBase.ERROR_CODE_BAD_REQUEST;
+    private static final String ERROR_STRING = "ERROR_STRING";
+    private static final String FAIL_CONNECT_GOTO_SETTINGS_DESCRIPTION =
+            "FAIL_CONNECT_GOTO_SETTINGS_DESCRIPTION";
+    private static final String FAST_PAIR_TV_CONNECT_DEVICE_NO_ACCOUNT_DESCRIPTION =
+            "FAST_PAIR_TV_CONNECT_DEVICE_NO_ACCOUNT_DESCRIPTION";
+    private static final byte[] IMAGE = new byte[] {7, 9};
+    private static final String IMAGE_URL = "IMAGE_URL";
+    private static final String INITIAL_NOTIFICATION_DESCRIPTION =
+            "INITIAL_NOTIFICATION_DESCRIPTION";
+    private static final String INITIAL_NOTIFICATION_DESCRIPTION_NO_ACCOUNT =
+            "INITIAL_NOTIFICATION_DESCRIPTION_NO_ACCOUNT";
+    private static final String INITIAL_PAIRING_DESCRIPTION = "INITIAL_PAIRING_DESCRIPTION";
+    private static final String INTENT_URI = "INTENT_URI";
+    private static final String LOCALE = "LOCALE";
+    private static final String OPEN_COMPANION_APP_DESCRIPTION = "OPEN_COMPANION_APP_DESCRIPTION";
+    private static final String RETRO_ACTIVE_PAIRING_DESCRIPTION =
+            "RETRO_ACTIVE_PAIRING_DESCRIPTION";
+    private static final String SUBSEQUENT_PAIRING_DESCRIPTION = "SUBSEQUENT_PAIRING_DESCRIPTION";
+    private static final String SYNC_CONTACT_DESCRPTION = "SYNC_CONTACT_DESCRPTION";
+    private static final String SYNC_CONTACTS_TITLE = "SYNC_CONTACTS_TITLE";
+    private static final String SYNC_SMS_DESCRIPTION = "SYNC_SMS_DESCRIPTION";
+    private static final String SYNC_SMS_TITLE = "SYNC_SMS_TITLE";
+    private static final float TRIGGER_DISTANCE = 111;
+    private static final String TRUE_WIRELESS_IMAGE_URL_CASE = "TRUE_WIRELESS_IMAGE_URL_CASE";
+    private static final String TRUE_WIRELESS_IMAGE_URL_LEFT_BUD =
+            "TRUE_WIRELESS_IMAGE_URL_LEFT_BUD";
+    private static final String TRUE_WIRELESS_IMAGE_URL_RIGHT_BUD =
+            "TRUE_WIRELESS_IMAGE_URL_RIGHT_BUD";
+    private static final String UNABLE_TO_CONNECT_DESCRIPTION = "UNABLE_TO_CONNECT_DESCRIPTION";
+    private static final String UNABLE_TO_CONNECT_TITLE = "UNABLE_TO_CONNECT_TITLE";
+    private static final String UPDATE_COMPANION_APP_DESCRIPTION =
+            "UPDATE_COMPANION_APP_DESCRIPTION";
+    private static final String WAIT_LAUNCH_COMPANION_APP_DESCRIPTION =
+            "WAIT_LAUNCH_COMPANION_APP_DESCRIPTION";
+    private static final byte[] REQUEST_MODEL_ID = new byte[] {1, 2, 3};
+    private static final byte[] ANTI_SPOOFING_KEY = new byte[] {4, 5, 6};
+    private static final FastPairAntispoofkeyDeviceMetadataRequestParcel
+            FAST_PAIR_ANTI_SPOOF_KEY_DEVICE_METADATA_REQUEST_PARCEL =
+            genFastPairAntispoofkeyDeviceMetadataRequestParcel();
+    private static final FastPairAntispoofkeyDeviceMetadata
+            HAPPY_PATH_FAST_PAIR_ANTI_SPOOF_KEY_DEVICE_METADATA =
+            genHappyPathFastPairAntispoofkeyDeviceMetadata();
 
     private @Mock FastPairDataProviderBase mMockFastPairDataProviderBase;
     private @Mock IFastPairAntispoofkeyDeviceMetadataCallback.Stub
@@ -79,14 +143,28 @@ public class FastPairDataProviderBaseTest {
 
     @Test
     public void testHappyPathLoadFastPairAntispoofkeyDeviceMetadata() throws Exception {
+        // AOSP sends calls to OEM via Parcelable.
         mHappyPathFastPairDataProvider.asProvider().loadFastPairAntispoofkeyDeviceMetadata(
-                new FastPairAntispoofkeyDeviceMetadataRequestParcel(),
+                FAST_PAIR_ANTI_SPOOF_KEY_DEVICE_METADATA_REQUEST_PARCEL,
                 mAntispoofkeyDeviceMetadataCallback);
+
+        // OEM receives request and verifies that it is as expected.
+        final ArgumentCaptor<FastPairDataProviderBase.FastPairAntispoofkeyDeviceMetadataRequest>
+                mFastPairAntispoofkeyDeviceMetadataRequestCaptor =
+                ArgumentCaptor.forClass(
+                        FastPairDataProviderBase.FastPairAntispoofkeyDeviceMetadataRequest.class);
         verify(mMockFastPairDataProviderBase).onLoadFastPairAntispoofkeyDeviceMetadata(
-                any(FastPairDataProviderBase.FastPairAntispoofkeyDeviceMetadataRequest.class),
+                mFastPairAntispoofkeyDeviceMetadataRequestCaptor.capture(),
                 any(FastPairDataProviderBase.FastPairAntispoofkeyDeviceMetadataCallback.class));
+        ensureHappyPathAsExpected(mFastPairAntispoofkeyDeviceMetadataRequestCaptor.getValue());
+
+        // AOSP receives responses and verifies that it is as expected.
+        final ArgumentCaptor<FastPairAntispoofkeyDeviceMetadataParcel>
+                mFastPairAntispoofkeyDeviceMetadataParcelCaptor =
+                ArgumentCaptor.forClass(FastPairAntispoofkeyDeviceMetadataParcel.class);
         verify(mAntispoofkeyDeviceMetadataCallback).onFastPairAntispoofkeyDeviceMetadataReceived(
-                any(FastPairAntispoofkeyDeviceMetadataParcel.class));
+                mFastPairAntispoofkeyDeviceMetadataParcelCaptor.capture());
+        ensureHappyPathAsExpected(mFastPairAntispoofkeyDeviceMetadataParcelCaptor.getValue());
     }
 
     @Test
@@ -138,12 +216,13 @@ public class FastPairDataProviderBaseTest {
     @Test
     public void testErrorPathLoadFastPairAntispoofkeyDeviceMetadata() throws Exception {
         mErrorPathFastPairDataProvider.asProvider().loadFastPairAntispoofkeyDeviceMetadata(
-                new FastPairAntispoofkeyDeviceMetadataRequestParcel(),
+                FAST_PAIR_ANTI_SPOOF_KEY_DEVICE_METADATA_REQUEST_PARCEL,
                 mAntispoofkeyDeviceMetadataCallback);
         verify(mMockFastPairDataProviderBase).onLoadFastPairAntispoofkeyDeviceMetadata(
                 any(FastPairDataProviderBase.FastPairAntispoofkeyDeviceMetadataRequest.class),
                 any(FastPairDataProviderBase.FastPairAntispoofkeyDeviceMetadataCallback.class));
-        verify(mAntispoofkeyDeviceMetadataCallback).onError(anyInt(), any());
+        verify(mAntispoofkeyDeviceMetadataCallback).onError(
+                eq(ERROR_CODE_BAD_REQUEST), eq(ERROR_STRING));
     }
 
     @Test
@@ -210,7 +289,7 @@ public class FastPairDataProviderBaseTest {
             mMockFastPairDataProviderBase.onLoadFastPairAntispoofkeyDeviceMetadata(
                     request, callback);
             callback.onFastPairAntispoofkeyDeviceMetadataReceived(
-                    new FastPairAntispoofkeyDeviceMetadata.Builder().build());
+                    HAPPY_PATH_FAST_PAIR_ANTI_SPOOF_KEY_DEVICE_METADATA);
         }
 
         @Override
@@ -303,5 +382,132 @@ public class FastPairDataProviderBaseTest {
             mMockFastPairDataProviderBase.onManageFastPairAccountDevice(request, callback);
             callback.onError(ERROR_CODE_BAD_REQUEST, ERROR_STRING);
         }
+    }
+
+    /* Generates AntispoofkeyDeviceMetadataRequestParcel. */
+    private static FastPairAntispoofkeyDeviceMetadataRequestParcel
+            genFastPairAntispoofkeyDeviceMetadataRequestParcel() {
+        FastPairAntispoofkeyDeviceMetadataRequestParcel requestParcel =
+                new FastPairAntispoofkeyDeviceMetadataRequestParcel();
+        requestParcel.modelId = REQUEST_MODEL_ID;
+
+        return requestParcel;
+    }
+
+    /* Generates Happy Path AntispoofkeyDeviceMetadata. */
+    private static FastPairAntispoofkeyDeviceMetadata
+            genHappyPathFastPairAntispoofkeyDeviceMetadata() {
+        FastPairAntispoofkeyDeviceMetadata.Builder builder =
+                new FastPairAntispoofkeyDeviceMetadata.Builder();
+        builder.setAntiSpoofPublicKey(ANTI_SPOOFING_KEY);
+        builder.setFastPairDeviceMetadata(genHappyPathFastPairDeviceMetadata());
+
+        return builder.build();
+    }
+
+    /* Generates Happy Path DeviceMetadata. */
+    private static FastPairDeviceMetadata genHappyPathFastPairDeviceMetadata() {
+        FastPairDeviceMetadata.Builder builder = new FastPairDeviceMetadata.Builder();
+        builder.setAssistantSetupHalfSheet(ASSISTANT_SETUP_HALFSHEET);
+        builder.setAssistantSetupNotification(ASSISTANT_SETUP_NOTIFICATION);
+        builder.setBleTxPower(BLE_TX_POWER);
+        builder.setConfirmPinDescription(CONFIRM_PIN_DESCRIPTION);
+        builder.setConfirmPinTitle(CONFIRM_PIN_TITLE);
+        builder.setConnectSuccessCompanionAppInstalled(CONNECT_SUCCESS_COMPANION_APP_INSTALLED);
+        builder.setConnectSuccessCompanionAppNotInstalled(
+                CONNECT_SUCCESS_COMPANION_APP_NOT_INSTALLED);
+        builder.setDeviceType(DEVICE_TYPE);
+        builder.setDownloadCompanionAppDescription(DOWNLOAD_COMPANION_APP_DESCRIPTION);
+        builder.setFailConnectGoToSettingsDescription(FAIL_CONNECT_GOTO_SETTINGS_DESCRIPTION);
+        builder.setFastPairTvConnectDeviceNoAccountDescription(
+                FAST_PAIR_TV_CONNECT_DEVICE_NO_ACCOUNT_DESCRIPTION);
+        builder.setImage(IMAGE);
+        builder.setImageUrl(IMAGE_URL);
+        builder.setInitialNotificationDescription(INITIAL_NOTIFICATION_DESCRIPTION);
+        builder.setInitialNotificationDescriptionNoAccount(
+                INITIAL_NOTIFICATION_DESCRIPTION_NO_ACCOUNT);
+        builder.setInitialPairingDescription(INITIAL_PAIRING_DESCRIPTION);
+        builder.setIntentUri(INTENT_URI);
+        builder.setLocale(LOCALE);
+        builder.setOpenCompanionAppDescription(OPEN_COMPANION_APP_DESCRIPTION);
+        builder.setRetroactivePairingDescription(RETRO_ACTIVE_PAIRING_DESCRIPTION);
+        builder.setSubsequentPairingDescription(SUBSEQUENT_PAIRING_DESCRIPTION);
+        builder.setSyncContactsDescription(SYNC_CONTACT_DESCRPTION);
+        builder.setSyncContactsTitle(SYNC_CONTACTS_TITLE);
+        builder.setSyncSmsDescription(SYNC_SMS_DESCRIPTION);
+        builder.setSyncSmsTitle(SYNC_SMS_TITLE);
+        builder.setTriggerDistance(TRIGGER_DISTANCE);
+        builder.setTrueWirelessImageUrlCase(TRUE_WIRELESS_IMAGE_URL_CASE);
+        builder.setTrueWirelessImageUrlLeftBud(TRUE_WIRELESS_IMAGE_URL_LEFT_BUD);
+        builder.setTrueWirelessImageUrlRightBud(TRUE_WIRELESS_IMAGE_URL_RIGHT_BUD);
+        builder.setUnableToConnectDescription(UNABLE_TO_CONNECT_DESCRIPTION);
+        builder.setUnableToConnectTitle(UNABLE_TO_CONNECT_TITLE);
+        builder.setUpdateCompanionAppDescription(UPDATE_COMPANION_APP_DESCRIPTION);
+        builder.setWaitLaunchCompanionAppDescription(WAIT_LAUNCH_COMPANION_APP_DESCRIPTION);
+
+        return builder.build();
+    }
+
+    /* Verifies Happy Path AntispoofkeyDeviceMetadataRequest. */
+    private static void ensureHappyPathAsExpected(
+            FastPairDataProviderBase.FastPairAntispoofkeyDeviceMetadataRequest request) {
+        assertEquals(REQUEST_MODEL_ID, request.getModelId());
+    }
+
+    /* Verifies Happy Path AntispoofkeyDeviceMetadataParcel. */
+    private static void ensureHappyPathAsExpected(
+            FastPairAntispoofkeyDeviceMetadataParcel metadataParcel) {
+        assertNotNull(metadataParcel);
+        assertEquals(ANTI_SPOOFING_KEY, metadataParcel.antiSpoofPublicKey);
+        ensureHappyPathAsExpected(metadataParcel.deviceMetadata);
+    }
+
+    /* Verifies Happy Path DeviceMetadataParcel. */
+    private static void ensureHappyPathAsExpected(FastPairDeviceMetadataParcel metadataParcel) {
+        assertNotNull(metadataParcel);
+        assertEquals(ASSISTANT_SETUP_HALFSHEET, metadataParcel.assistantSetupHalfSheet);
+        assertEquals(ASSISTANT_SETUP_NOTIFICATION, metadataParcel.assistantSetupNotification);
+        assertEquals(BLE_TX_POWER, metadataParcel.bleTxPower);
+        assertEquals(CONFIRM_PIN_DESCRIPTION, metadataParcel.confirmPinDescription);
+        assertEquals(CONFIRM_PIN_TITLE, metadataParcel.confirmPinTitle);
+        assertEquals(CONNECT_SUCCESS_COMPANION_APP_INSTALLED,
+                metadataParcel.connectSuccessCompanionAppInstalled);
+        assertEquals(CONNECT_SUCCESS_COMPANION_APP_NOT_INSTALLED,
+                metadataParcel.connectSuccessCompanionAppNotInstalled);
+        assertEquals(DEVICE_TYPE, metadataParcel.deviceType);
+        assertEquals(DOWNLOAD_COMPANION_APP_DESCRIPTION,
+                metadataParcel.downloadCompanionAppDescription);
+        assertEquals(FAIL_CONNECT_GOTO_SETTINGS_DESCRIPTION,
+                metadataParcel.failConnectGoToSettingsDescription);
+        assertEquals(FAST_PAIR_TV_CONNECT_DEVICE_NO_ACCOUNT_DESCRIPTION,
+                metadataParcel.fastPairTvConnectDeviceNoAccountDescription);
+        assertArrayEquals(IMAGE, metadataParcel.image);
+        assertEquals(IMAGE_URL, metadataParcel.imageUrl);
+        assertEquals(INITIAL_NOTIFICATION_DESCRIPTION,
+                metadataParcel.initialNotificationDescription);
+        assertEquals(INITIAL_NOTIFICATION_DESCRIPTION_NO_ACCOUNT,
+                metadataParcel.initialNotificationDescriptionNoAccount);
+        assertEquals(INITIAL_PAIRING_DESCRIPTION, metadataParcel.initialPairingDescription);
+        assertEquals(INTENT_URI, metadataParcel.intentUri);
+        assertEquals(LOCALE, metadataParcel.locale);
+        assertEquals(OPEN_COMPANION_APP_DESCRIPTION, metadataParcel.openCompanionAppDescription);
+        assertEquals(RETRO_ACTIVE_PAIRING_DESCRIPTION,
+                metadataParcel.retroactivePairingDescription);
+        assertEquals(SUBSEQUENT_PAIRING_DESCRIPTION, metadataParcel.subsequentPairingDescription);
+        assertEquals(SYNC_CONTACT_DESCRPTION, metadataParcel.syncContactsDescription);
+        assertEquals(SYNC_CONTACTS_TITLE, metadataParcel.syncContactsTitle);
+        assertEquals(SYNC_SMS_DESCRIPTION, metadataParcel.syncSmsDescription);
+        assertEquals(SYNC_SMS_TITLE, metadataParcel.syncSmsTitle);
+        assertEquals(TRIGGER_DISTANCE, metadataParcel.triggerDistance, DELTA);
+        assertEquals(TRUE_WIRELESS_IMAGE_URL_CASE, metadataParcel.trueWirelessImageUrlCase);
+        assertEquals(TRUE_WIRELESS_IMAGE_URL_LEFT_BUD, metadataParcel.trueWirelessImageUrlLeftBud);
+        assertEquals(TRUE_WIRELESS_IMAGE_URL_RIGHT_BUD,
+                metadataParcel.trueWirelessImageUrlRightBud);
+        assertEquals(UNABLE_TO_CONNECT_DESCRIPTION, metadataParcel.unableToConnectDescription);
+        assertEquals(UNABLE_TO_CONNECT_TITLE, metadataParcel.unableToConnectTitle);
+        assertEquals(UPDATE_COMPANION_APP_DESCRIPTION,
+                metadataParcel.updateCompanionAppDescription);
+        assertEquals(WAIT_LAUNCH_COMPANION_APP_DESCRIPTION,
+                metadataParcel.waitLaunchCompanionAppDescription);
     }
 }
