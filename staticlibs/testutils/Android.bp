@@ -79,6 +79,6 @@ java_test_host {
         "host/**/*.kt",
     ],
     libs: ["tradefed"],
-    test_suites: ["device-tests", "general-tests", "cts", "mts"],
+    test_suites: ["device-tests", "general-tests", "cts", "mts-networking"],
     data: [":ConnectivityChecker"],
 }
