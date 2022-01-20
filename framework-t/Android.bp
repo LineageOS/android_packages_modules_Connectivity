@@ -19,11 +19,22 @@ package {
     default_applicable_licenses: ["Android-Apache-2.0"],
 }
 
+java_defaults {
+    name: "enable-framework-connectivity-t-targets",
+    enabled: true,
+}
+// The above defaults can be used to disable framework-connectivity t
+// targets while minimizing merge conflicts in the build rules.
+
+
 java_sdk_library {
     name: "framework-connectivity-tiramisu",
     sdk_version: "module_current",
     min_sdk_version: "Tiramisu",
-    defaults: ["framework-module-defaults"],
+    defaults: [
+        "framework-module-defaults",
+        "enable-framework-connectivity-t-targets",
+    ],
     srcs: [
         ":framework-connectivity-tiramisu-updatable-sources",
     ],
