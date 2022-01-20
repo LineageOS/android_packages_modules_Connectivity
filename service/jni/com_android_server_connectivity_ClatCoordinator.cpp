@@ -15,6 +15,7 @@
  */
 
 #include <arpa/inet.h>
+#include <errno.h>
 #include <fcntl.h>
 #include <linux/if_tun.h>
 #include <linux/ioctl.h>
@@ -41,6 +42,7 @@ jstring com_android_server_connectivity_ClatCoordinator_selectIpv4Address(JNIEnv
     ScopedUtfChars address(env, v4addr);
     in_addr ip;
     if (inet_pton(AF_INET, address.c_str(), &ip) != 1) {
+        throwIOException(env, "invalid address", EINVAL);
         return nullptr;
     }
 
@@ -58,6 +60,7 @@ jstring com_android_server_connectivity_ClatCoordinator_selectIpv4Address(JNIEnv
 
     char addrstr[INET_ADDRSTRLEN];
     if (!inet_ntop(AF_INET, (void*)&v4, addrstr, sizeof(addrstr))) {
+        throwIOException(env, "invalid address", EADDRNOTAVAIL);
         return nullptr;
     }
     return env->NewStringUTF(addrstr);
@@ -98,6 +101,7 @@ jstring com_android_server_connectivity_ClatCoordinator_generateIpv6Address(
 
     char addrstr[INET6_ADDRSTRLEN];
     if (!inet_ntop(AF_INET6, (void*)&v6, addrstr, sizeof(addrstr))) {
+        throwIOException(env, "invalid address", EADDRNOTAVAIL);
         return nullptr;
     }
     return env->NewStringUTF(addrstr);
@@ -238,22 +242,22 @@ static void com_android_server_connectivity_ClatCoordinator_configurePacketSocke
  */
 static const JNINativeMethod gMethods[] = {
         /* name, signature, funcPtr */
-        {"selectIpv4Address", "(Ljava/lang/String;I)Ljava/lang/String;",
+        {"native_selectIpv4Address", "(Ljava/lang/String;I)Ljava/lang/String;",
          (void*)com_android_server_connectivity_ClatCoordinator_selectIpv4Address},
-        {"generateIpv6Address",
+        {"native_generateIpv6Address",
          "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;",
          (void*)com_android_server_connectivity_ClatCoordinator_generateIpv6Address},
-        {"createTunInterface", "(Ljava/lang/String;)I",
+        {"native_createTunInterface", "(Ljava/lang/String;)I",
          (void*)com_android_server_connectivity_ClatCoordinator_createTunInterface},
-        {"detectMtu", "(Ljava/lang/String;II)I",
+        {"native_detectMtu", "(Ljava/lang/String;II)I",
          (void*)com_android_server_connectivity_ClatCoordinator_detectMtu},
-        {"openPacketSocket", "()I",
+        {"native_openPacketSocket", "()I",
          (void*)com_android_server_connectivity_ClatCoordinator_openPacketSocket},
-        {"openRawSocket6", "(I)I",
+        {"native_openRawSocket6", "(I)I",
          (void*)com_android_server_connectivity_ClatCoordinator_openRawSocket6},
-        {"addAnycastSetsockopt", "(Ljava/io/FileDescriptor;Ljava/lang/String;I)V",
+        {"native_addAnycastSetsockopt", "(Ljava/io/FileDescriptor;Ljava/lang/String;I)V",
          (void*)com_android_server_connectivity_ClatCoordinator_addAnycastSetsockopt},
-        {"configurePacketSocket", "(Ljava/io/FileDescriptor;Ljava/lang/String;I)V",
+        {"native_configurePacketSocket", "(Ljava/io/FileDescriptor;Ljava/lang/String;I)V",
          (void*)com_android_server_connectivity_ClatCoordinator_configurePacketSocket},
 };
 

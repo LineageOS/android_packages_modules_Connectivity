@@ -103,64 +103,64 @@ public class ClatCoordinator {
         /**
          * Create tun interface for a given interface name.
          */
-        public int jniCreateTunInterface(@NonNull String tuniface) throws IOException {
-            return createTunInterface(tuniface);
+        public int createTunInterface(@NonNull String tuniface) throws IOException {
+            return native_createTunInterface(tuniface);
         }
 
         /**
          * Pick an IPv4 address for clat.
          */
         @NonNull
-        public String jniSelectIpv4Address(@NonNull String v4addr, int prefixlen)
+        public String selectIpv4Address(@NonNull String v4addr, int prefixlen)
                 throws IOException {
-            return selectIpv4Address(v4addr, prefixlen);
+            return native_selectIpv4Address(v4addr, prefixlen);
         }
 
         /**
          * Generate a checksum-neutral IID.
          */
         @NonNull
-        public String jniGenerateIpv6Address(@NonNull String iface, @NonNull String v4,
+        public String generateIpv6Address(@NonNull String iface, @NonNull String v4,
                 @NonNull String prefix64) throws IOException {
-            return generateIpv6Address(iface, v4, prefix64);
+            return native_generateIpv6Address(iface, v4, prefix64);
         }
 
         /**
          * Detect MTU.
          */
-        public int jniDetectMtu(@NonNull String platSubnet, int platSuffix, int mark)
+        public int detectMtu(@NonNull String platSubnet, int platSuffix, int mark)
                 throws IOException {
-            return detectMtu(platSubnet, platSuffix, mark);
+            return native_detectMtu(platSubnet, platSuffix, mark);
         }
 
         /**
          * Open packet socket.
          */
-        public int jniOpenPacketSocket() throws IOException {
-            return openPacketSocket();
+        public int openPacketSocket() throws IOException {
+            return native_openPacketSocket();
         }
 
         /**
          * Open IPv6 raw socket and set SO_MARK.
          */
-        public int jniOpenRawSocket6(int mark) throws IOException {
-            return openRawSocket6(mark);
+        public int openRawSocket6(int mark) throws IOException {
+            return native_openRawSocket6(mark);
         }
 
         /**
          * Add anycast setsockopt.
          */
-        public void jniAddAnycastSetsockopt(@NonNull FileDescriptor sock, String v6, int ifindex)
+        public void addAnycastSetsockopt(@NonNull FileDescriptor sock, String v6, int ifindex)
                 throws IOException {
-            addAnycastSetsockopt(sock, v6, ifindex);
+            native_addAnycastSetsockopt(sock, v6, ifindex);
         }
 
         /**
          * Configure packet socket.
          */
-        public void jniConfigurePacketSocket(@NonNull FileDescriptor sock, String v6, int ifindex)
+        public void configurePacketSocket(@NonNull FileDescriptor sock, String v6, int ifindex)
                 throws IOException {
-            configurePacketSocket(sock, v6, ifindex);
+            native_configurePacketSocket(sock, v6, ifindex);
         }
     }
 
@@ -203,7 +203,7 @@ public class ClatCoordinator {
         // [1] Pick an IPv4 address from 192.0.0.4, 192.0.0.5, 192.0.0.6 ..
         final String v4;
         try {
-            v4 = mDeps.jniSelectIpv4Address(INIT_V4ADDR_STRING, INIT_V4ADDR_PREFIX_LEN);
+            v4 = mDeps.selectIpv4Address(INIT_V4ADDR_STRING, INIT_V4ADDR_PREFIX_LEN);
         } catch (IOException e) {
             throw new IOException("no IPv4 addresses were available for clat: " + e);
         }
@@ -212,7 +212,7 @@ public class ClatCoordinator {
         final String pfx96 = nat64Prefix.getAddress().getHostAddress();
         final String v6;
         try {
-            v6 = mDeps.jniGenerateIpv6Address(iface, v4, pfx96);
+            v6 = mDeps.generateIpv6Address(iface, v4, pfx96);
         } catch (IOException e) {
             throw new IOException("no IPv6 addresses were available for clat: " + e);
         }
@@ -222,7 +222,7 @@ public class ClatCoordinator {
         final String tunIface = CLAT_PREFIX + iface;
         final ParcelFileDescriptor tunFd;
         try {
-            tunFd = mDeps.adoptFd(mDeps.jniCreateTunInterface(tunIface));
+            tunFd = mDeps.adoptFd(mDeps.createTunInterface(tunIface));
         } catch (IOException e) {
             throw new IOException("Create tun interface " + tunIface + " failed: " + e);
         }
@@ -236,7 +236,7 @@ public class ClatCoordinator {
 
         // Detect ipv4 mtu.
         final Integer fwmark = getFwmark(netId);
-        final int detectedMtu = mDeps.jniDetectMtu(pfx96,
+        final int detectedMtu = mDeps.detectMtu(pfx96,
                 ByteBuffer.wrap(GOOGLE_DNS_4.getAddress()).getInt(), fwmark);
         final int mtu = adjustMtu(detectedMtu);
         Log.i(TAG, "ipv4 mtu is " + mtu);
@@ -270,7 +270,7 @@ public class ClatCoordinator {
             // like to use ParcelFileDescriptor to close file descriptor automatically. But ctor
             // ParcelFileDescriptor(FileDescriptor fd) is a @hide function. Need to use native file
             // descriptor to initialize ParcelFileDescriptor object instead.
-            readSock6 = mDeps.adoptFd(mDeps.jniOpenPacketSocket());
+            readSock6 = mDeps.adoptFd(mDeps.openPacketSocket());
         } catch (IOException e) {
             throw new IOException("Open packet socket failed: " + e);
         }
@@ -280,7 +280,7 @@ public class ClatCoordinator {
         try {
             // Use a JNI call to get native file descriptor instead of Os.socket(). See above
             // reason why we use jniOpenPacketSocket6().
-            writeSock6 = mDeps.adoptFd(mDeps.jniOpenRawSocket6(fwmark));
+            writeSock6 = mDeps.adoptFd(mDeps.openRawSocket6(fwmark));
         } catch (IOException e) {
             throw new IOException("Open raw socket failed: " + e);
         }
@@ -292,14 +292,14 @@ public class ClatCoordinator {
 
         // Start translating packets to the new prefix.
         try {
-            mDeps.jniAddAnycastSetsockopt(writeSock6.getFileDescriptor(), v6, ifaceIndex);
+            mDeps.addAnycastSetsockopt(writeSock6.getFileDescriptor(), v6, ifaceIndex);
         } catch (IOException e) {
             throw new IOException("add anycast sockopt failed: " + e);
         }
 
         // Update our packet socket filter to reflect the new 464xlat IP address.
         try {
-            mDeps.jniConfigurePacketSocket(readSock6.getFileDescriptor(), v6, ifaceIndex);
+            mDeps.configurePacketSocket(readSock6.getFileDescriptor(), v6, ifaceIndex);
         } catch (IOException e) {
             throw new IOException("configure packet socket failed: " + e);
         }
@@ -308,17 +308,17 @@ public class ClatCoordinator {
         return null;
     }
 
-    private static native String selectIpv4Address(String v4addr, int prefixlen)
+    private static native String native_selectIpv4Address(String v4addr, int prefixlen)
             throws IOException;
-    private static native String generateIpv6Address(String iface, String v4, String prefix64)
+    private static native String native_generateIpv6Address(String iface, String v4,
+            String prefix64) throws IOException;
+    private static native int native_createTunInterface(String tuniface) throws IOException;
+    private static native int native_detectMtu(String platSubnet, int platSuffix, int mark)
             throws IOException;
-    private static native int createTunInterface(String tuniface) throws IOException;
-    private static native int detectMtu(String platSubnet, int platSuffix, int mark)
-            throws IOException;
-    private static native int openPacketSocket() throws IOException;
-    private static native int openRawSocket6(int mark) throws IOException;
-    private static native void addAnycastSetsockopt(FileDescriptor sock, String v6, int ifindex)
-            throws IOException;
-    private static native void configurePacketSocket(FileDescriptor sock, String v6, int ifindex)
-            throws IOException;
+    private static native int native_openPacketSocket() throws IOException;
+    private static native int native_openRawSocket6(int mark) throws IOException;
+    private static native void native_addAnycastSetsockopt(FileDescriptor sock, String v6,
+            int ifindex) throws IOException;
+    private static native void native_configurePacketSocket(FileDescriptor sock, String v6,
+            int ifindex) throws IOException;
 }
