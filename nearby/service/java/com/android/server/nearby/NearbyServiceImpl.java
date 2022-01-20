@@ -16,7 +16,8 @@
 
 package com.android.server.nearby;
 
-import static com.android.server.nearby.NearbyService.TAG;
+import static com.android.server.SystemService.PHASE_BOOT_COMPLETED;
+import static com.android.server.SystemService.PHASE_THIRD_PARTY_APPS_CAN_START;
 
 import android.annotation.Nullable;
 import android.bluetooth.BluetoothAdapter;
@@ -30,16 +31,21 @@ import android.nearby.IScanListener;
 import android.nearby.ScanRequest;
 import android.util.Log;
 
+import com.android.server.nearby.common.locator.LocatorContextWrapper;
+import com.android.server.nearby.fastpair.FastPairManager;
 import com.android.server.nearby.injector.Injector;
 import com.android.server.nearby.provider.DiscoveryProviderManager;
+import com.android.server.nearby.provider.FastPairDataProvider;
 
 /**
- * Implementation of {@link com.android.server.nearby.NearbyService}.
+ * Service implementing nearby functionality.
  */
 public class NearbyServiceImpl extends INearbyManager.Stub {
+    public static final String TAG = "NearbyService";
 
     private final Context mContext;
     private final SystemInjector mSystemInjector;
+    private final FastPairManager mFastPairManager;
     private final BroadcastReceiver mBluetoothReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
@@ -61,6 +67,8 @@ public class NearbyServiceImpl extends INearbyManager.Stub {
         mContext = context;
         mSystemInjector = new SystemInjector(context);
         mProviderManager = new DiscoveryProviderManager(context, mSystemInjector);
+        final LocatorContextWrapper lcw = new LocatorContextWrapper(context, null);
+        mFastPairManager = new FastPairManager(lcw);
     }
 
     @Override
@@ -73,10 +81,25 @@ public class NearbyServiceImpl extends INearbyManager.Stub {
         mProviderManager.unregisterScanListener(listener);
     }
 
-    void onSystemReady() {
-        mSystemInjector.initializeBluetoothAdapter();
-        mContext.registerReceiver(mBluetoothReceiver,
-                new IntentFilter(BluetoothAdapter.ACTION_STATE_CHANGED));
+    /**
+     * Called by the service initializer.
+     *
+     * {@see com.android.server.SystemService#onBootPhase}.
+     */
+    public void onBootPhase(int phase) {
+        switch (phase) {
+            case PHASE_THIRD_PARTY_APPS_CAN_START:
+                // Ensures that a fast pair data provider exists which will work in direct boot.
+                FastPairDataProvider.init(mContext);
+                break;
+            case PHASE_BOOT_COMPLETED:
+                // The nearby service must be functioning after this boot phase.
+                mSystemInjector.initializeBluetoothAdapter();
+                mContext.registerReceiver(mBluetoothReceiver,
+                        new IntentFilter(BluetoothAdapter.ACTION_STATE_CHANGED));
+                mFastPairManager.initiate();
+                break;
+        }
     }
 
     private static final class SystemInjector implements Injector {
