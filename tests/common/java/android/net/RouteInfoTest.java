@@ -21,7 +21,6 @@ import static android.net.RouteInfo.RTN_UNICAST;
 import static android.net.RouteInfo.RTN_UNREACHABLE;
 
 import static com.android.testutils.MiscAsserts.assertEqualBothWays;
-import static com.android.testutils.MiscAsserts.assertFieldCountEquals;
 import static com.android.testutils.MiscAsserts.assertNotEqualEitherWay;
 import static com.android.testutils.ParcelUtils.assertParcelingIsLossless;
 
@@ -38,8 +37,8 @@ import androidx.core.os.BuildCompat;
 import androidx.test.filters.SmallTest;
 import androidx.test.runner.AndroidJUnit4;
 
+import com.android.testutils.ConnectivityModuleTest;
 import com.android.testutils.DevSdkIgnoreRule;
-import com.android.testutils.DevSdkIgnoreRule.IgnoreAfter;
 import com.android.testutils.DevSdkIgnoreRule.IgnoreUpTo;
 
 import org.junit.Rule;
@@ -52,6 +51,7 @@ import java.net.InetAddress;
 
 @RunWith(AndroidJUnit4.class)
 @SmallTest
+@ConnectivityModuleTest
 public class RouteInfoTest {
     @Rule
     public final DevSdkIgnoreRule ignoreRule = new DevSdkIgnoreRule();
@@ -381,17 +381,6 @@ public class RouteInfoTest {
         final RouteInfo r = new RouteInfo(Prefix("ff02::1/128"), Address("2001:db8::"), "testiface",
                 RTN_UNREACHABLE, 1450 /* mtu */);
         assertParcelingIsLossless(r);
-    }
-
-    @Test @IgnoreAfter(Build.VERSION_CODES.Q)
-    public void testFieldCount_Q() {
-        assertFieldCountEquals(6, RouteInfo.class);
-    }
-
-    @Test @IgnoreUpTo(Build.VERSION_CODES.Q)
-    public void testFieldCount() {
-        // Make sure any new field is covered by the above parceling tests when changing this number
-        assertFieldCountEquals(7, RouteInfo.class);
     }
 
     @Test @IgnoreUpTo(Build.VERSION_CODES.Q)

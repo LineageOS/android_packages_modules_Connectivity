@@ -20,9 +20,10 @@ import android.os.Build
 import androidx.test.filters.SmallTest
 import androidx.test.runner.AndroidJUnit4
 import com.android.modules.utils.build.SdkLevel.isAtLeastS
+import com.android.testutils.ConnectivityModuleTest
 import com.android.testutils.DevSdkIgnoreRule
 import com.android.testutils.DevSdkIgnoreRule.IgnoreUpTo
-import com.android.testutils.assertParcelSane
+import com.android.testutils.assertParcelingIsLossless
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -32,6 +33,7 @@ import org.junit.runner.RunWith
 
 @RunWith(AndroidJUnit4::class)
 @SmallTest
+@ConnectivityModuleTest
 class NetworkAgentConfigTest {
     @Rule @JvmField
     val ignoreRule = DevSdkIgnoreRule()
@@ -48,20 +50,7 @@ class NetworkAgentConfigTest {
                 setBypassableVpn(true)
             }
         }.build()
-        // This test can be run as unit test against the latest system image, as CTS to verify
-        // an Android release that is as recent as the test, or as MTS to verify the
-        // Connectivity module. In the first two cases NetworkAgentConfig will be as recent
-        // as the test. In the last case, starting from S NetworkAgentConfig is updated as part
-        // of Connectivity, so it is also as recent as the test. For MTS on Q and R,
-        // NetworkAgentConfig is not updatable, so it may have a different number of fields.
-        if (isAtLeastS()) {
-            // When this test is run on S+, NetworkAgentConfig is as recent as the test,
-            // so this should be the most recent known number of fields.
-            assertParcelSane(config, 13)
-        } else {
-            // For R or below, the config will have 10 items
-            assertParcelSane(config, 10)
-        }
+        assertParcelingIsLossless(config)
     }
 
     @Test @IgnoreUpTo(Build.VERSION_CODES.Q)

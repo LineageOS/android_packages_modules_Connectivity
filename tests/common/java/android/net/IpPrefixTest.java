@@ -17,7 +17,6 @@
 package android.net;
 
 import static com.android.testutils.MiscAsserts.assertEqualBothWays;
-import static com.android.testutils.MiscAsserts.assertFieldCountEquals;
 import static com.android.testutils.MiscAsserts.assertNotEqualEitherWay;
 import static com.android.testutils.ParcelUtils.assertParcelingIsLossless;
 
@@ -31,6 +30,8 @@ import static org.junit.Assert.fail;
 import androidx.test.filters.SmallTest;
 import androidx.test.runner.AndroidJUnit4;
 
+import com.android.testutils.ConnectivityModuleTest;
+
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
@@ -39,6 +40,7 @@ import java.util.Random;
 
 @RunWith(AndroidJUnit4.class)
 @SmallTest
+@ConnectivityModuleTest
 public class IpPrefixTest {
 
     private static InetAddress address(String addr) {
@@ -371,7 +373,5 @@ public class IpPrefixTest {
         p = new IpPrefix("192.0.2.0/25");
         assertParcelingIsLossless(p);
         assertTrue(p.isIPv4());
-
-        assertFieldCountEquals(2, IpPrefix.class);
     }
 }
