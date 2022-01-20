@@ -37,6 +37,7 @@ import static android.net.NetworkStats.TAG_NONE;
 import static android.net.NetworkStats.UID_ALL;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import android.os.Build;
@@ -53,8 +54,10 @@ import com.google.android.collect.Sets;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
+import java.util.Iterator;
 
 @RunWith(DevSdkIgnoreRunner.class)
 @SmallTest
@@ -1035,6 +1038,29 @@ public class NetworkStatsTest {
         assertEquals(2, stats.size());
         assertEquals(firstEntry, stats.getValues(0, null));
         assertEquals(secondEntry, stats.getValues(1, null));
+    }
+
+    @Test
+    public void testIterator() {
+        final NetworkStats emptyStats = new NetworkStats(0, 0);
+        final Iterator emptyIterator = emptyStats.iterator();
+        assertFalse(emptyIterator.hasNext());
+
+        final int numEntries = 10;
+        final ArrayList<NetworkStats.Entry> entries = new ArrayList<>();
+        final NetworkStats stats = new NetworkStats(TEST_START, 1);
+        for (int i = 0; i < numEntries; ++i) {
+            NetworkStats.Entry entry = new NetworkStats.Entry("test1", 10100, SET_DEFAULT,
+                    TAG_NONE, METERED_NO, ROAMING_NO, DEFAULT_NETWORK_NO,
+                    i * 10L /* rxBytes */, i * 3L /* rxPackets */,
+                    i * 15L /* txBytes */, i * 2L /* txPackets */, 0L /* operations */);
+            stats.insertEntry(entry);
+            entries.add(entry);
+        }
+
+        for (NetworkStats.Entry e : stats) {
+            assertEquals(e, entries.remove(0));
+        }
     }
 
     private static void assertContains(NetworkStats stats,  String iface, int uid, int set,
