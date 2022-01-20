@@ -269,7 +269,7 @@ public class NetworkStatsServiceTest extends NetworkStatsBaseTest {
         mServiceContext = new MockContext(context);
         when(mLocationPermissionChecker.checkCallersLocationPermission(
                 any(), any(), anyInt(), anyBoolean(), any())).thenReturn(true);
-        when(sWifiInfo.getCurrentNetworkKey()).thenReturn(TEST_WIFI_NETWORK_KEY);
+        when(sWifiInfo.getNetworkKey()).thenReturn(TEST_WIFI_NETWORK_KEY);
         mStatsDir = TestIoUtils.createTemporaryDirectory(getClass().getSimpleName());
 
         PowerManager powerManager = (PowerManager) mServiceContext.getSystemService(
