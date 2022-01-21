@@ -49,6 +49,30 @@ public class TcUtils {
             short proto, String bpfProgPath) throws IOException;
 
     /**
+     * Attach a tc police action.
+     *
+     * Attaches a matchall filter to the clsact qdisc with a tc police and tc bpf action attached.
+     * This causes the ingress rate to be limited and exceeding packets to be forwarded to a bpf
+     * program (specified in bpfProgPah) that accounts for the packets before dropping them.
+     *
+     * Equivalent to the following 'tc' command:
+     * tc filter add dev .. ingress prio .. protocol .. matchall \
+     *     action police rate .. burst .. conform-exceed pipe/continue \
+     *     action bpf object-pinned .. \
+     *     drop
+     *
+     * @param ifIndex the network interface index.
+     * @param prio the filter preference.
+     * @param proto protocol.
+     * @param rateInBytesPerSec rate limit in bytes/s.
+     * @param bpfProgPath bpg program that accounts for rate exceeding packets before they are
+     *                    dropped.
+     * @throws IOException
+     */
+    public static native void tcFilterAddDevIngressPolice(int ifIndex, short prio, short proto,
+            int rateInBytesPerSec, String bpfProgPath) throws IOException;
+
+    /**
      * Delete a tc filter.
      *
      * Equivalent to the following 'tc' command:
