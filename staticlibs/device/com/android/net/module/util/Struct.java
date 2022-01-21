@@ -730,4 +730,22 @@ public class Struct {
         }
         return sb.toString();
     }
+
+    public static class U32 extends Struct {
+        @Struct.Field(order = 0, type = Struct.Type.U32)
+        public final long val;
+
+        public U32(final long val) {
+            this.val = val;
+        }
+    }
+
+    public static class S64 extends Struct {
+        @Struct.Field(order = 0, type = Struct.Type.S64)
+        public final long val;
+
+        public S64(final long val) {
+            this.val = val;
+        }
+    }
 }
