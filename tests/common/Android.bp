@@ -123,16 +123,24 @@ java_defaults {
     ],
 }
 
-// Defaults for native tests that want to run in mainline-presubmit.
-// Not widely used (or present for Java) because many of our tests have AndroidTest.xml files and
+// Defaults for tests that want to run in mainline-presubmit.
+// Not widely used because many of our tests have AndroidTest.xml files and
 // use the mainline-param config-descriptor metadata in AndroidTest.xml.
+
+// test_mainline_modules is an array of strings. Each element in the array is a list of modules
+// separated by "+". The modules in this list must be in alphabetical order.
+// See SuiteModuleLoader.java.
+// TODO: why are the modules separated by + instead of being separate entries in the array?
+mainline_presubmit_modules = [
+        "CaptivePortalLoginGoogle.apk+NetworkStackGoogle.apk+com.google.android.resolv.apex+com.google.android.tethering.apex",
+]
+
 cc_defaults {
     name: "connectivity-mainline-presubmit-cc-defaults",
-    // test_mainline_modules is an array of strings. Each element in the array is a list of modules
-    // separated by "+". The modules in this list must be in alphabetical order.
-    // See SuiteModuleLoader.java.
-    // TODO: why are the modules separated by + instead of being separate entries in the array?
-    test_mainline_modules: [
-        "CaptivePortalLoginGoogle.apk+NetworkStackGoogle.apk+com.google.android.resolv.apex+com.google.android.tethering.apex",
-    ],
+    test_mainline_modules: mainline_presubmit_modules,
+}
+
+java_defaults {
+    name: "connectivity-mainline-presubmit-java-defaults",
+    test_mainline_modules: mainline_presubmit_modules,
 }
