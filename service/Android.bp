@@ -162,3 +162,11 @@ filegroup {
     srcs: ["jarjar-rules.txt"],
     visibility: ["//packages/modules/Connectivity:__subpackages__"],
 }
+
+// TODO: This filegroup temporary exposes for NetworkStats. It should be
+// removed right after NetworkStats moves into mainline module.
+filegroup {
+    name: "traffic-controller-utils",
+    srcs: ["src/com/android/server/BpfNetMaps.java"],
+    visibility: ["//packages/modules/Connectivity:__subpackages__"],
+}
