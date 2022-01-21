@@ -22,7 +22,6 @@ import android.net.ConnectivityManager.TYPE_WIFI
 import android.net.NetworkIdentity.OEM_NONE
 import android.net.NetworkIdentity.OEM_PAID
 import android.net.NetworkIdentity.OEM_PRIVATE
-import android.net.NetworkIdentity.SUBTYPE_COMBINED
 import android.net.NetworkIdentity.buildNetworkIdentity
 import android.net.NetworkStats.DEFAULT_NETWORK_ALL
 import android.net.NetworkStats.METERED_ALL
@@ -312,7 +311,7 @@ class NetworkTemplateTest {
         val identLteMetered = buildNetworkIdentity(
                 mockContext, stateMobileImsi1Metered, false, TelephonyManager.NETWORK_TYPE_LTE)
         val identCombinedMetered = buildNetworkIdentity(
-                mockContext, stateMobileImsi1Metered, false, SUBTYPE_COMBINED)
+                mockContext, stateMobileImsi1Metered, false, NetworkTemplate.NETWORK_TYPE_ALL)
         val identImsi2UmtsMetered = buildNetworkIdentity(mockContext,
                 buildMobileNetworkState(TEST_IMSI2), false, TelephonyManager.NETWORK_TYPE_UMTS)
         val identWifi = buildNetworkIdentity(
@@ -326,7 +325,7 @@ class NetworkTemplateTest {
         val identLteNonMetered = buildNetworkIdentity(
                 mockContext, stateMobileImsi1NonMetered, false, TelephonyManager.NETWORK_TYPE_LTE)
         val identCombinedNonMetered = buildNetworkIdentity(
-                mockContext, stateMobileImsi1NonMetered, false, SUBTYPE_COMBINED)
+                mockContext, stateMobileImsi1NonMetered, false, NetworkTemplate.NETWORK_TYPE_ALL)
         val identImsi2UmtsNonMetered = buildNetworkIdentity(mockContext,
                 stateMobileImsi2NonMetered, false, TelephonyManager.NETWORK_TYPE_UMTS)
 
