@@ -30,6 +30,7 @@ import com.android.net.module.util.ArrayTrackRecord
 import com.android.testutils.TestableNetworkAgent.CallbackEntry.OnAddKeepalivePacketFilter
 import com.android.testutils.TestableNetworkAgent.CallbackEntry.OnAutomaticReconnectDisabled
 import com.android.testutils.TestableNetworkAgent.CallbackEntry.OnBandwidthUpdateRequested
+import com.android.testutils.TestableNetworkAgent.CallbackEntry.OnDscpPolicyStatusUpdated
 import com.android.testutils.TestableNetworkAgent.CallbackEntry.OnNetworkCreated
 import com.android.testutils.TestableNetworkAgent.CallbackEntry.OnNetworkDestroyed
 import com.android.testutils.TestableNetworkAgent.CallbackEntry.OnNetworkUnwanted
@@ -89,6 +90,7 @@ public open class TestableNetworkAgent(
         data class OnSignalStrengthThresholdsUpdated(val thresholds: IntArray) : CallbackEntry()
         object OnNetworkCreated : CallbackEntry()
         object OnNetworkDestroyed : CallbackEntry()
+        data class OnDscpPolicyStatusUpdated(val policyId: Int, val status: Int) : CallbackEntry()
         data class OnRegisterQosCallback(
             val callbackId: Int,
             val filter: QosFilter
@@ -160,6 +162,10 @@ public open class TestableNetworkAgent(
 
     override fun onNetworkDestroyed() {
         history.add(OnNetworkDestroyed)
+    }
+
+    fun onDscpPolicyStatusUpdated(policyId: Int, status: Int) {
+        history.add(OnDscpPolicyStatusUpdated(policyId, status))
     }
 
     // Expects the initial validation event that always occurs immediately after registering
