@@ -42,3 +42,27 @@ cc_library_static {
         "//system/netd/server",
     ],
 }
+
+cc_test {
+    name: "libtcutils_test",
+    srcs: [
+        "tests/tcutils_test.cpp",
+    ],
+    cflags: [
+        "-Wall",
+        "-Werror",
+        "-Wno-error=unused-variable",
+    ],
+    header_libs: ["bpf_syscall_wrappers"],
+    static_libs: [
+        "libgmock",
+        "libtcutils",
+    ],
+    shared_libs: [
+        "libbase",
+        "liblog",
+    ],
+    min_sdk_version: "30",
+    require_root: true,
+    test_suites: ["general-tests"],
+}
