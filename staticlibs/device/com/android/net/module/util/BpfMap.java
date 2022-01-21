@@ -40,7 +40,7 @@ import java.util.function.BiConsumer;
  * @param <K> the key of the map.
  * @param <V> the value of the map.
  */
-public class BpfMap<K extends Struct, V extends Struct> implements AutoCloseable {
+public class BpfMap<K extends Struct, V extends Struct> implements IBpfMap<K, V>, AutoCloseable {
     static {
         System.loadLibrary(JniUtil.getJniLibraryName(BpfMap.class.getPackage()));
     }
@@ -100,6 +100,7 @@ public class BpfMap<K extends Struct, V extends Struct> implements AutoCloseable
      * Update an existing or create a new key -> value entry in an eBbpf map.
      * (use insertOrReplaceEntry() if you need to know whether insert or replace happened)
      */
+    @Override
     public void updateEntry(K key, V value) throws ErrnoException {
         writeToMapEntry(mMapFd, key.writeToBytes(), value.writeToBytes(), BPF_ANY);
     }
@@ -108,6 +109,7 @@ public class BpfMap<K extends Struct, V extends Struct> implements AutoCloseable
      * If the key does not exist in the map, insert key -> value entry into eBpf map.
      * Otherwise IllegalStateException will be thrown.
      */
+    @Override
     public void insertEntry(K key, V value)
             throws ErrnoException, IllegalStateException {
         try {
@@ -123,6 +125,7 @@ public class BpfMap<K extends Struct, V extends Struct> implements AutoCloseable
      * If the key already exists in the map, replace its value. Otherwise NoSuchElementException
      * will be thrown.
      */
+    @Override
     public void replaceEntry(K key, V value)
             throws ErrnoException, NoSuchElementException {
         try {
@@ -140,6 +143,7 @@ public class BpfMap<K extends Struct, V extends Struct> implements AutoCloseable
      * (use updateEntry() if you don't care whether insert or replace happened)
      * Note: see inline comment below if running concurrently with delete operations.
      */
+    @Override
     public boolean insertOrReplaceEntry(K key, V value)
             throws ErrnoException {
         try {
@@ -164,11 +168,13 @@ public class BpfMap<K extends Struct, V extends Struct> implements AutoCloseable
     }
 
     /** Remove existing key from eBpf map. Return false if map was not modified. */
+    @Override
     public boolean deleteEntry(K key) throws ErrnoException {
         return deleteMapEntry(mMapFd, key.writeToBytes());
     }
 
     /** Returns {@code true} if this map contains no elements. */
+    @Override
     public boolean isEmpty() throws ErrnoException {
         return getFirstKey() == null;
     }
@@ -189,6 +195,7 @@ public class BpfMap<K extends Struct, V extends Struct> implements AutoCloseable
      *
      * TODO: consider allowing null passed-in key.
      */
+    @Override
     public K getNextKey(@NonNull K key) throws ErrnoException {
         Objects.requireNonNull(key);
         return getNextKeyInternal(key);
@@ -202,11 +209,13 @@ public class BpfMap<K extends Struct, V extends Struct> implements AutoCloseable
     }
 
     /** Get the first key of eBpf map. */
+    @Override
     public K getFirstKey() throws ErrnoException {
         return getNextKeyInternal(null);
     }
 
     /** Check whether a key exists in the map. */
+    @Override
     public boolean containsKey(@NonNull K key) throws ErrnoException {
         Objects.requireNonNull(key);
 
@@ -215,6 +224,7 @@ public class BpfMap<K extends Struct, V extends Struct> implements AutoCloseable
     }
 
     /** Retrieve a value from the map. Return null if there is no such key. */
+    @Override
     public V getValue(@NonNull K key) throws ErrnoException {
         Objects.requireNonNull(key);
         final byte[] rawValue = getRawValue(key.writeToBytes());
@@ -239,6 +249,7 @@ public class BpfMap<K extends Struct, V extends Struct> implements AutoCloseable
      * other structural modifications to the map, such as adding entries or deleting other entries.
      * Otherwise, iteration will result in undefined behaviour.
      */
+    @Override
     public void forEach(BiConsumer<K, V> action) throws ErrnoException {
         @Nullable K nextKey = getFirstKey();
 
@@ -262,6 +273,7 @@ public class BpfMap<K extends Struct, V extends Struct> implements AutoCloseable
      * @throws ErrnoException if the map is already closed, if an error occurred during iteration,
      *                        or if a non-ENOENT error occurred when deleting a key.
      */
+    @Override
     public void clear() throws ErrnoException {
         K key = getFirstKey();
         while (key != null) {
