@@ -74,12 +74,12 @@ class NetworkIdentityTest {
     }
 
     @Test
-    fun testGetMetered() {
+    fun testIsMetered() {
         // Verify network is metered.
         val netIdent1 = NetworkIdentity.buildNetworkIdentity(mockContext,
                 buildMobileNetworkStateSnapshot(NetworkCapabilities(), TEST_IMSI),
                 false /* defaultNetwork */, TelephonyManager.NETWORK_TYPE_UMTS)
-        assertTrue(netIdent1.getMetered())
+        assertTrue(netIdent1.isMetered())
 
         // Verify network is not metered because it has NET_CAPABILITY_NOT_METERED capability.
         val capsNotMetered = NetworkCapabilities.Builder().apply {
@@ -88,7 +88,7 @@ class NetworkIdentityTest {
         val netIdent2 = NetworkIdentity.buildNetworkIdentity(mockContext,
                 buildMobileNetworkStateSnapshot(capsNotMetered, TEST_IMSI),
                 false /* defaultNetwork */, TelephonyManager.NETWORK_TYPE_UMTS)
-        assertFalse(netIdent2.getMetered())
+        assertFalse(netIdent2.isMetered())
 
         // Verify network is not metered because it has NET_CAPABILITY_TEMPORARILY_NOT_METERED
         // capability .
@@ -98,6 +98,34 @@ class NetworkIdentityTest {
         val netIdent3 = NetworkIdentity.buildNetworkIdentity(mockContext,
                 buildMobileNetworkStateSnapshot(capsTempNotMetered, TEST_IMSI),
                 false /* defaultNetwork */, TelephonyManager.NETWORK_TYPE_UMTS)
-        assertFalse(netIdent3.getMetered())
+        assertFalse(netIdent3.isMetered())
+    }
+
+    @Test
+    fun testBuilder() {
+        val oemPrivateRoamingNotMeteredCap = NetworkCapabilities().apply {
+            addCapability(NetworkCapabilities.NET_CAPABILITY_OEM_PRIVATE)
+            addCapability(NetworkCapabilities.NET_CAPABILITY_NOT_METERED)
+        }
+        val identFromSnapshot = NetworkIdentity.Builder().setNetworkStateSnapshot(
+                buildMobileNetworkStateSnapshot(oemPrivateRoamingNotMeteredCap, TEST_IMSI))
+                .setDefaultNetwork(true)
+                .setRatType(TelephonyManager.NETWORK_TYPE_UMTS)
+                .build()
+        val identFromLegacyBuild = NetworkIdentity.buildNetworkIdentity(mockContext,
+                buildMobileNetworkStateSnapshot(oemPrivateRoamingNotMeteredCap, TEST_IMSI),
+                true /* defaultNetwork */, TelephonyManager.NETWORK_TYPE_UMTS)
+        val identFromConstructor = NetworkIdentity(TYPE_MOBILE,
+                TelephonyManager.NETWORK_TYPE_UMTS,
+                TEST_IMSI,
+                null /* wifiNetworkKey */,
+                true /* roaming */,
+                false /* metered */,
+                true /* defaultNetwork */,
+                NetworkTemplate.OEM_MANAGED_PRIVATE)
+        assertEquals(identFromLegacyBuild, identFromSnapshot)
+        assertEquals(identFromConstructor, identFromSnapshot)
+
+        // TODO: Add test cases for wifiNetworkKey and ratType.
     }
 }
