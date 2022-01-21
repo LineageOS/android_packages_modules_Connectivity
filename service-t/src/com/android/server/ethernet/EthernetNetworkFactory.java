@@ -252,8 +252,13 @@ public class EthernetNetworkFactory extends NetworkFactory {
     }
 
     /** Returns true if state has been modified */
-    boolean updateInterfaceLinkState(String ifaceName, boolean up) {
+    @VisibleForTesting(visibility = VisibleForTesting.Visibility.PACKAGE)
+    protected boolean updateInterfaceLinkState(@NonNull final String ifaceName, final boolean up,
+            @Nullable final IInternalNetworkManagementListener listener) {
         if (!mTrackingInterfaces.containsKey(ifaceName)) {
+            maybeSendNetworkManagementCallback(listener, null,
+                    new InternalNetworkManagementException(
+                            ifaceName + " can't be updated as it is not available."));
             return false;
         }
 
@@ -262,7 +267,7 @@ public class EthernetNetworkFactory extends NetworkFactory {
         }
 
         NetworkInterfaceState iface = mTrackingInterfaces.get(ifaceName);
-        return iface.updateLinkState(up);
+        return iface.updateLinkState(up, listener);
     }
 
     boolean hasInterface(String ifaceName) {
@@ -615,16 +620,27 @@ public class EthernetNetworkFactory extends NetworkFactory {
         }
 
         /** Returns true if state has been modified */
-        boolean updateLinkState(boolean up) {
-            if (mLinkUp == up) return false;
+        boolean updateLinkState(final boolean up,
+                @Nullable final IInternalNetworkManagementListener listener) {
+            if (mLinkUp == up)  {
+                EthernetNetworkFactory.maybeSendNetworkManagementCallback(listener, null,
+                        new InternalNetworkManagementException(
+                                "No changes with requested link state " + up + " for " + name));
+                return false;
+            }
             mLinkUp = up;
 
             if (!up) { // was up, goes down
+                // Save an instance of the current network to use with the callback before stop().
+                final Network network = mNetworkAgent != null ? mNetworkAgent.getNetwork() : null;
+                // Send an abort on a provisioning request callback if necessary before stopping.
                 maybeSendNetworkManagementCallbackForAbort();
                 stop();
+                // If only setting the interface down, send a callback to signal completion.
+                EthernetNetworkFactory.maybeSendNetworkManagementCallback(listener, network, null);
             } else { // was down, goes up
                 stop();
-                start();
+                start(listener);
             }
 
             return true;

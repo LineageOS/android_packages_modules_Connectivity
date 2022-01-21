@@ -190,6 +190,18 @@ public class EthernetTracker {
                 mFactory.updateInterface(iface, ipConfig, capabilities, listener));
     }
 
+    @VisibleForTesting(visibility = PACKAGE)
+    protected void connectNetwork(@NonNull final String iface,
+            @Nullable final IInternalNetworkManagementListener listener) {
+        mHandler.post(() -> updateInterfaceState(iface, true, listener));
+    }
+
+    @VisibleForTesting(visibility = PACKAGE)
+    protected void disconnectNetwork(@NonNull final String iface,
+            @Nullable final IInternalNetworkManagementListener listener) {
+        mHandler.post(() -> updateInterfaceState(iface, false, listener));
+    }
+
     IpConfiguration getIpConfiguration(String iface) {
         return mIpConfigurations.get(iface);
     }
@@ -354,9 +366,14 @@ public class EthernetTracker {
     }
 
     private void updateInterfaceState(String iface, boolean up) {
+        updateInterfaceState(iface, up, null /* listener */);
+    }
+
+    private void updateInterfaceState(@NonNull final String iface, final boolean up,
+            @Nullable final IInternalNetworkManagementListener listener) {
         final int mode = getInterfaceMode(iface);
         final boolean factoryLinkStateUpdated = (mode == INTERFACE_MODE_CLIENT)
-                && mFactory.updateInterfaceLinkState(iface, up);
+                && mFactory.updateInterfaceLinkState(iface, up, listener);
 
         if (factoryLinkStateUpdated) {
             boolean restricted = isRestrictedInterface(iface);

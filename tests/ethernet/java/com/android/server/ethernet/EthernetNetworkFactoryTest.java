@@ -23,7 +23,6 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
@@ -84,6 +83,7 @@ import java.util.concurrent.TimeUnit;
 public class EthernetNetworkFactoryTest {
     private static final int TIMEOUT_MS = 2_000;
     private static final String TEST_IFACE = "test123";
+    private static final IInternalNetworkManagementListener NULL_LISTENER = null;
     private static final String IP_ADDR = "192.0.2.2/25";
     private static final LinkAddress LINK_ADDR = new LinkAddress(IP_ADDR);
     private static final String HW_ADDR = "01:02:03:04:05:06";
@@ -238,7 +238,7 @@ public class EthernetNetworkFactoryTest {
         final IpConfiguration ipConfig = createDefaultIpConfig();
         mNetFactory.addInterface(iface, HW_ADDR, ipConfig,
                 createInterfaceCapsBuilder(transportType).build());
-        assertTrue(mNetFactory.updateInterfaceLinkState(iface, true));
+        assertTrue(mNetFactory.updateInterfaceLinkState(iface, true, NULL_LISTENER));
         verifyStart(ipConfig);
         clearInvocations(mDeps);
         clearInvocations(mIpClient);
@@ -309,36 +309,74 @@ public class EthernetNetworkFactoryTest {
     public void testUpdateInterfaceLinkStateForActiveProvisioningInterface() throws Exception {
         initEthernetNetworkFactory();
         createInterfaceUndergoingProvisioning(TEST_IFACE);
+        final TestNetworkManagementListener listener = new TestNetworkManagementListener();
+
         // verify that the IpClient gets shut down when interface state changes to down.
-        assertTrue(mNetFactory.updateInterfaceLinkState(TEST_IFACE, false));
+        final boolean ret =
+                mNetFactory.updateInterfaceLinkState(TEST_IFACE, false /* up */, listener);
+
+        assertTrue(ret);
         verify(mIpClient).shutdown();
+        assertSuccessfulListener(listener, null);
     }
 
     @Test
     public void testUpdateInterfaceLinkStateForProvisionedInterface() throws Exception {
         initEthernetNetworkFactory();
         createAndVerifyProvisionedInterface(TEST_IFACE);
-        assertTrue(mNetFactory.updateInterfaceLinkState(TEST_IFACE, false));
+        final TestNetworkManagementListener listener = new TestNetworkManagementListener();
+
+        final boolean ret =
+                mNetFactory.updateInterfaceLinkState(TEST_IFACE, false /* up */, listener);
+
+        assertTrue(ret);
         verifyStop();
+        assertSuccessfulListener(listener, mMockNetwork);
     }
 
     @Test
     public void testUpdateInterfaceLinkStateForUnprovisionedInterface() throws Exception {
         initEthernetNetworkFactory();
         createUnprovisionedInterface(TEST_IFACE);
-        assertTrue(mNetFactory.updateInterfaceLinkState(TEST_IFACE, false));
+        final TestNetworkManagementListener listener = new TestNetworkManagementListener();
+
+        final boolean ret =
+                mNetFactory.updateInterfaceLinkState(TEST_IFACE, false /* up */, listener);
+
+        assertTrue(ret);
         // There should not be an active IPClient or NetworkAgent.
         verify(mDeps, never()).makeIpClient(any(), any(), any());
         verify(mDeps, never())
                 .makeEthernetNetworkAgent(any(), any(), any(), any(), any(), any(), any());
+        assertSuccessfulListener(listener, null);
     }
 
     @Test
     public void testUpdateInterfaceLinkStateForNonExistingInterface() throws Exception {
         initEthernetNetworkFactory();
+        final TestNetworkManagementListener listener = new TestNetworkManagementListener();
+
         // if interface was never added, link state cannot be updated.
-        assertFalse(mNetFactory.updateInterfaceLinkState("eth1", true));
-        verify(mDeps, never()).makeIpClient(any(), any(), any());
+        final boolean ret =
+                mNetFactory.updateInterfaceLinkState(TEST_IFACE, true /* up */, listener);
+
+        assertFalse(ret);
+        verifyNoStopOrStart();
+        assertFailedListener(listener, "can't be updated as it is not configured");
+    }
+
+    @Test
+    public void testUpdateInterfaceLinkStateWithNoChanges() throws Exception {
+        initEthernetNetworkFactory();
+        createAndVerifyProvisionedInterface(TEST_IFACE);
+        final TestNetworkManagementListener listener = new TestNetworkManagementListener();
+
+        final boolean ret =
+                mNetFactory.updateInterfaceLinkState(TEST_IFACE, true /* up */, listener);
+
+        assertFalse(ret);
+        verifyNoStopOrStart();
+        assertFailedListener(listener, "No changes");
     }
 
     @Test
@@ -394,6 +432,10 @@ public class EthernetNetworkFactoryTest {
 
         // the interface disappeared and getNetworkInterfaceByName returns null, we should not retry
         verify(mIpClient, never()).startProvisioning(any());
+        verifyNoStopOrStart();
+    }
+
+    private void verifyNoStopOrStart() {
         verify(mNetworkAgent, never()).register();
         verify(mIpClient, never()).shutdown();
         verify(mNetworkAgent, never()).unregister();
@@ -404,7 +446,7 @@ public class EthernetNetworkFactoryTest {
     public void testIpClientIsNotStartedWhenLinkIsDown() throws Exception {
         initEthernetNetworkFactory();
         createUnprovisionedInterface(TEST_IFACE);
-        mNetFactory.updateInterfaceLinkState(TEST_IFACE, false);
+        mNetFactory.updateInterfaceLinkState(TEST_IFACE, false, NULL_LISTENER);
 
         mNetFactory.needNetworkFor(createDefaultRequest());
 
@@ -534,7 +576,7 @@ public class EthernetNetworkFactoryTest {
         // verifies onLinkPropertiesChange doesn't complete execution for a downed interface.
         // Posting is necessary as updateInterfaceLinkState with false will set mIpClientCallbacks
         // to null which will throw an NPE in the test if executed synchronously.
-        mHandler.post(() -> mNetFactory.updateInterfaceLinkState(TEST_IFACE, false));
+        mHandler.post(() -> mNetFactory.updateInterfaceLinkState(TEST_IFACE, false, NULL_LISTENER));
         mIpClientCallbacks.onLinkPropertiesChange(lp);
         mLooper.dispatchAll();
 
@@ -552,7 +594,7 @@ public class EthernetNetworkFactoryTest {
         // verifies onReachabilityLost doesn't complete execution for a downed interface.
         // Posting is necessary as updateInterfaceLinkState with false will set mIpClientCallbacks
         // to null which will throw an NPE in the test if executed synchronously.
-        mHandler.post(() -> mNetFactory.updateInterfaceLinkState(TEST_IFACE, false));
+        mHandler.post(() -> mNetFactory.updateInterfaceLinkState(TEST_IFACE, false, NULL_LISTENER));
         mIpClientCallbacks.onReachabilityLost("Neighbor Lost");
         mLooper.dispatchAll();
 
@@ -616,9 +658,7 @@ public class EthernetNetworkFactoryTest {
         mNetFactory.updateInterface(TEST_IFACE, ipConfiguration, capabilities, listener);
         triggerOnProvisioningSuccess();
 
-        final Pair<Network, InternalNetworkManagementException> ret = listener.expectOnComplete();
-        assertEquals(mMockNetwork, ret.first);
-        assertNull(ret.second);
+        assertSuccessfulListener(listener, mMockNetwork);
     }
 
     @DevSdkIgnoreRule.IgnoreUpTo(SC_V2) // TODO: Use to Build.VERSION_CODES.SC_V2 when available
@@ -636,7 +676,7 @@ public class EthernetNetworkFactoryTest {
         initEthernetNetworkFactory();
         verifyNetworkManagementCallIsAbortedWhenInterrupted(
                 TEST_IFACE,
-                () -> mNetFactory.updateInterfaceLinkState(TEST_IFACE, false));
+                () -> mNetFactory.updateInterfaceLinkState(TEST_IFACE, false, NULL_LISTENER));
     }
 
     @DevSdkIgnoreRule.IgnoreUpTo(SC_V2) // TODO: Use to Build.VERSION_CODES.SC_V2 when available
@@ -658,10 +698,26 @@ public class EthernetNetworkFactoryTest {
                     triggerOnProvisioningSuccess();
                 });
 
+        assertSuccessfulListener(successfulListener, mMockNetwork);
+    }
+
+    private void assertSuccessfulListener(
+            @NonNull final TestNetworkManagementListener successfulListener,
+            @NonNull final Network expectedNetwork) throws Exception {
         final Pair<Network, InternalNetworkManagementException> successfulResult =
                 successfulListener.expectOnComplete();
-        assertEquals(mMockNetwork, successfulResult.first);
+        assertEquals(expectedNetwork, successfulResult.first);
         assertNull(successfulResult.second);
+    }
+
+    private void assertFailedListener(@NonNull final TestNetworkManagementListener failedListener,
+            @NonNull final String errMsg)
+            throws Exception {
+        final Pair<Network, InternalNetworkManagementException> failedResult =
+                failedListener.expectOnComplete();
+        assertNull(failedResult.first);
+        assertNotNull(failedResult.second);
+        assertTrue(failedResult.second.getMessage().contains(errMsg));
     }
 
     private void verifyNetworkManagementCallIsAbortedWhenInterrupted(
@@ -676,11 +732,7 @@ public class EthernetNetworkFactoryTest {
         mNetFactory.updateInterface(iface, ipConfiguration, capabilities, failedListener);
         interruptingRunnable.run();
 
-        final Pair<Network, InternalNetworkManagementException> failedResult =
-                failedListener.expectOnComplete();
-        assertNull(failedResult.first);
-        assertNotNull(failedResult.second);
-        assertTrue(failedResult.second.getMessage().contains("aborted"));
+        assertFailedListener(failedListener, "aborted");
     }
 
     @Test
