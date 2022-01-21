@@ -23,6 +23,9 @@ cc_test {
         "general-tests",
         "mts-tethering",
     ],
+    defaults: [
+        "connectivity-mainline-presubmit-cc-defaults",
+    ],
     require_root: true,
     static_libs: [
         "libbase",
