@@ -5612,7 +5612,7 @@ public class ConnectivityManager {
      * background data is restricted.
      *
      * @param uid uid of target app
-     * @throws IllegalStateException if update allow list failed.
+     * @throws IllegalStateException if updating allow list failed.
      * @hide
      */
     @SystemApi(client = MODULE_LIBRARIES)
@@ -5634,7 +5634,7 @@ public class ConnectivityManager {
      * Takes precedence over {@link #updateMeteredNetworkAllowList}.
      *
      * @param uid uid of target app
-     * @throws IllegalStateException if update deny list failed.
+     * @throws IllegalStateException if updating deny list failed.
      * @hide
      */
     @SystemApi(client = MODULE_LIBRARIES)
@@ -5656,8 +5656,8 @@ public class ConnectivityManager {
      *
      * @param chain target chain.
      * @param uid uid to allow/deny.
-     * @param allow either add or remove rule.
-     * @throws IllegalStateException if update firewall rule failed.
+     * @param allow whether networking is allowed or denied.
+     * @throws IllegalStateException if updating firewall rule failed.
      * @hide
      */
     @SystemApi(client = MODULE_LIBRARIES)
@@ -5680,7 +5680,7 @@ public class ConnectivityManager {
      *
      * @param chain target chain.
      * @param enable whether the chain should be enabled.
-     * @throws IllegalStateException if set firewall chain failed.
+     * @throws IllegalStateException if enabling or disabling the firewall chain failed.
      * @hide
      */
     @SystemApi(client = MODULE_LIBRARIES)
@@ -5702,7 +5702,7 @@ public class ConnectivityManager {
      *
      * @param chain target chain to replace.
      * @param uids The list of UIDs to be placed into chain.
-     * @throws IllegalStateException if replace firewall chain failed.
+     * @throws IllegalStateException if replacing the firewall chain failed.
      * @throws IllegalArgumentException if {@code chain} is not a valid chain.
      * @hide
      */
@@ -5727,7 +5727,7 @@ public class ConnectivityManager {
      * NetworkStatsFactory which is platform code but will be moved into connectivity (tethering)
      * mainline module.
      *
-     * @throws IllegalStateException if swap active stats map failed.
+     * @throws IllegalStateException if swapping active stats map failed.
      * @hide
      */
     @SystemApi(client = MODULE_LIBRARIES)
