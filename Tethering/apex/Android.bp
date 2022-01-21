@@ -63,6 +63,7 @@ apex {
     ],
     canned_fs_config: "canned_fs_config",
     bpfs: [
+        "netd.o_mainline",
         "offload.o",
         "test.o",
     ],
