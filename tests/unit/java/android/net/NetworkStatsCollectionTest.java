@@ -59,6 +59,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.mockito.Mockito;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -195,8 +196,8 @@ public class NetworkStatsCollectionTest {
         // record empty data straddling between buckets
         final NetworkStats.Entry entry = new NetworkStats.Entry();
         entry.rxBytes = 32;
-        collection.recordData(null, UID_ALL, SET_DEFAULT, TAG_NONE, 30 * MINUTE_IN_MILLIS,
-                90 * MINUTE_IN_MILLIS, entry);
+        collection.recordData(Mockito.mock(NetworkIdentitySet.class), UID_ALL, SET_DEFAULT,
+                TAG_NONE, 30 * MINUTE_IN_MILLIS, 90 * MINUTE_IN_MILLIS, entry);
 
         // assert that we report boundary in atomic buckets
         assertEquals(0, collection.getStartMillis());
