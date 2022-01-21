@@ -23,6 +23,8 @@
 // In the mean time copying verbatim from:
 //   frameworks/libs/net/common/native/bpf_headers
 
+#pragma once
+
 #include <stdio.h>
 #include <sys/utsname.h>
 
@@ -30,7 +32,7 @@
 
 namespace android {
 
-unsigned kernelVersion() {
+static inline unsigned kernelVersion() {
   struct utsname buf;
   int ret = uname(&buf);
   if (ret)
@@ -49,8 +51,9 @@ unsigned kernelVersion() {
   return KVER(kver_major, kver_minor, kver_sub);
 }
 
-bool isAtLeastKernelVersion(unsigned major, unsigned minor, unsigned sub) {
+static inline bool isAtLeastKernelVersion(unsigned major, unsigned minor,
+                                          unsigned sub) {
   return kernelVersion() >= KVER(major, minor, sub);
 }
 
-}
+} // namespace android
