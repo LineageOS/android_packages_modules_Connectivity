@@ -1197,6 +1197,8 @@ public class ConnectivityManager {
     }
 
     /** {@hide} */
+    @Nullable
+    @SystemApi(client = MODULE_LIBRARIES)
     public Network getActiveNetworkForUid(int uid, boolean ignoreBlocked) {
         try {
             return mService.getActiveNetworkForUid(uid, ignoreBlocked);
