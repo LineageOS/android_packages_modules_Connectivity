@@ -40,7 +40,7 @@ import com.android.server.nearby.provider.FastPairDataProvider;
 /**
  * Service implementing nearby functionality.
  */
-public class NearbyServiceImpl extends INearbyManager.Stub {
+public class NearbyService extends INearbyManager.Stub {
     public static final String TAG = "NearbyService";
 
     private final Context mContext;
@@ -63,7 +63,7 @@ public class NearbyServiceImpl extends INearbyManager.Stub {
     };
     private DiscoveryProviderManager mProviderManager;
 
-    public NearbyServiceImpl(Context context) {
+    public NearbyService(Context context) {
         mContext = context;
         mSystemInjector = new SystemInjector(context);
         mProviderManager = new DiscoveryProviderManager(context, mSystemInjector);
