@@ -65,6 +65,15 @@ public class EthernetServiceImplTest {
         shouldTrackIface(TEST_IFACE, true);
     }
 
+    private void toggleAutomotiveFeature(final boolean isEnabled) {
+        doReturn(isEnabled)
+                .when(mPackageManager).hasSystemFeature(PackageManager.FEATURE_AUTOMOTIVE);
+    }
+
+    private void shouldTrackIface(@NonNull final String iface, final boolean shouldTrack) {
+        doReturn(shouldTrack).when(mEthernetTracker).isTrackingInterface(iface);
+    }
+
     @Test
     public void testSetConfigurationRejectsWhenEthNotStarted() {
         mEthernetServiceImpl.mStarted.set(false);
@@ -143,11 +152,6 @@ public class EthernetServiceImplTest {
         });
     }
 
-    private void toggleAutomotiveFeature(final boolean isEnabled) {
-        doReturn(isEnabled)
-                .when(mPackageManager).hasSystemFeature(PackageManager.FEATURE_AUTOMOTIVE);
-    }
-
     @Test
     public void testUpdateConfigurationRejectsWithUntrackedIface() {
         shouldTrackIface(TEST_IFACE, false);
@@ -172,10 +176,6 @@ public class EthernetServiceImplTest {
         });
     }
 
-    private void shouldTrackIface(@NonNull final String iface, final boolean shouldTrack) {
-        doReturn(shouldTrack).when(mEthernetTracker).isTrackingInterface(iface);
-    }
-
     @Test
     public void testUpdateConfiguration() {
         mEthernetServiceImpl.updateConfiguration(TEST_IFACE, UPDATE_REQUEST, NULL_LISTENER);
@@ -183,5 +183,17 @@ public class EthernetServiceImplTest {
                 eq(TEST_IFACE),
                 eq(UPDATE_REQUEST.getIpConfig()),
                 eq(UPDATE_REQUEST.getNetworkCapabilities()), eq(NULL_LISTENER));
+    }
+
+    @Test
+    public void testConnectNetwork() {
+        mEthernetServiceImpl.connectNetwork(TEST_IFACE, NULL_LISTENER);
+        verify(mEthernetTracker).connectNetwork(eq(TEST_IFACE), eq(NULL_LISTENER));
+    }
+
+    @Test
+    public void testDisconnectNetwork() {
+        mEthernetServiceImpl.disconnectNetwork(TEST_IFACE, NULL_LISTENER);
+        verify(mEthernetTracker).disconnectNetwork(eq(TEST_IFACE), eq(NULL_LISTENER));
     }
 }
