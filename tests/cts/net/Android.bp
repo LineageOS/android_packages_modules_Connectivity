@@ -49,6 +49,7 @@ java_defaults {
         "FrameworksNetCommonTests",
         "core-tests-support",
         "cts-net-utils",
+        "CtsNetTestsNonUpdatableLib",
         "ctstestrunner-axt",
         "junit",
         "junit-params",
