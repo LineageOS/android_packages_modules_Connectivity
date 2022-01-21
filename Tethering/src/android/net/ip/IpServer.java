@@ -614,10 +614,8 @@ public class IpServer extends StateMachine {
             return false;
         }
 
-        if (mInterfaceType == TetheringManager.TETHERING_BLUETOOTH) {
-            // BT configures the interface elsewhere: only start DHCP.
-            // TODO: make all tethering types behave the same way, and delete the bluetooth
-            // code that calls into NetworkManagementService directly.
+        if (shouldNotConfigureBluetoothInterface()) {
+            // Interface was already configured elsewhere, only start DHCP.
             return configureDhcp(enabled, mIpv4Address, null /* clientAddress */);
         }
 
@@ -651,12 +649,15 @@ public class IpServer extends StateMachine {
         return configureDhcp(enabled, mIpv4Address, mStaticIpv4ClientAddr);
     }
 
+    private boolean shouldNotConfigureBluetoothInterface() {
+        // Before T, bluetooth tethering configures the interface elsewhere.
+        return (mInterfaceType == TetheringManager.TETHERING_BLUETOOTH) && !SdkLevel.isAtLeastT();
+    }
+
     private LinkAddress requestIpv4Address(final boolean useLastAddress) {
         if (mStaticIpv4ServerAddr != null) return mStaticIpv4ServerAddr;
 
-        if (mInterfaceType == TetheringManager.TETHERING_BLUETOOTH) {
-            return new LinkAddress(BLUETOOTH_IFACE_ADDR);
-        }
+        if (shouldNotConfigureBluetoothInterface()) return new LinkAddress(BLUETOOTH_IFACE_ADDR);
 
         return mPrivateAddressCoordinator.requestDownstreamAddress(this, useLastAddress);
     }
