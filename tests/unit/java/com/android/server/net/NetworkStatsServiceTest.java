@@ -66,8 +66,10 @@ import static com.android.server.net.NetworkStatsService.ACTION_NETWORK_STATS_PO
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -119,6 +121,7 @@ import androidx.test.filters.SmallTest;
 
 import com.android.internal.util.ArrayUtils;
 import com.android.internal.util.test.BroadcastInterceptingContext;
+import com.android.net.module.util.LocationPermissionChecker;
 import com.android.server.net.NetworkStatsService.AlertObserver;
 import com.android.server.net.NetworkStatsService.NetworkStatsSettings;
 import com.android.server.net.NetworkStatsService.NetworkStatsSettings.Config;
@@ -193,6 +196,8 @@ public class NetworkStatsServiceTest extends NetworkStatsBaseTest {
     @Mock
     private NetworkStatsSubscriptionsMonitor mNetworkStatsSubscriptionsMonitor;
     private HandlerThread mHandlerThread;
+    @Mock
+    private LocationPermissionChecker mLocationPermissionChecker;
 
     private NetworkStatsService mService;
     private INetworkStatsSession mSession;
@@ -262,6 +267,8 @@ public class NetworkStatsServiceTest extends NetworkStatsBaseTest {
         MockitoAnnotations.initMocks(this);
         final Context context = InstrumentationRegistry.getContext();
         mServiceContext = new MockContext(context);
+        when(mLocationPermissionChecker.checkCallersLocationPermission(
+                any(), any(), anyInt(), anyBoolean(), any())).thenReturn(true);
         when(sWifiInfo.getCurrentNetworkKey()).thenReturn(TEST_WIFI_NETWORK_KEY);
         mStatsDir = TestIoUtils.createTemporaryDirectory(getClass().getSimpleName());
 
@@ -334,6 +341,10 @@ public class NetworkStatsServiceTest extends NetworkStatsBaseTest {
                 return mContentObserver = super.makeContentObserver(handler, settings, monitor);
             }
 
+            @Override
+            public LocationPermissionChecker makeLocationPermissionChecker(final Context context) {
+                return mLocationPermissionChecker;
+            }
         };
     }
 
@@ -1688,6 +1699,28 @@ public class NetworkStatsServiceTest extends NetworkStatsBaseTest {
         provider.expectOnRequestStatsUpdate(0 /* unused */);
     }
 
+    /**
+     * Verify the service will throw exceptions if the template is location sensitive but
+     * the permission is not granted.
+     */
+    @Test
+    public void testEnforceTemplateLocationPermission() throws Exception {
+        when(mLocationPermissionChecker.checkCallersLocationPermission(
+                any(), any(), anyInt(), anyBoolean(), any())).thenReturn(false);
+        initWifiStats(buildWifiState(true, TEST_IFACE, IMSI_1));
+        assertThrows(SecurityException.class, () ->
+                assertNetworkTotal(sTemplateWifi, 0L, 0L, 0L, 0L, 0));
+        // Templates w/o wifi network keys can query stats as usual.
+        assertNetworkTotal(sTemplateCarrierWifi1, 0L, 0L, 0L, 0L, 0);
+        assertNetworkTotal(sTemplateImsi1, 0L, 0L, 0L, 0L, 0);
+
+        when(mLocationPermissionChecker.checkCallersLocationPermission(
+                any(), any(), anyInt(), anyBoolean(), any())).thenReturn(true);
+        assertNetworkTotal(sTemplateCarrierWifi1, 0L, 0L, 0L, 0L, 0);
+        assertNetworkTotal(sTemplateWifi, 0L, 0L, 0L, 0L, 0);
+        assertNetworkTotal(sTemplateImsi1, 0L, 0L, 0L, 0L, 0);
+    }
+
     private static File getBaseDir(File statsDir) {
         File baseDir = new File(statsDir, "netstats");
         baseDir.mkdirs();
@@ -1703,7 +1736,8 @@ public class NetworkStatsServiceTest extends NetworkStatsBaseTest {
     private void assertNetworkTotal(NetworkTemplate template, long start, long end, long rxBytes,
             long rxPackets, long txBytes, long txPackets, int operations) throws Exception {
         // verify history API
-        final NetworkStatsHistory history = mSession.getHistoryForNetwork(template, FIELD_ALL);
+        final NetworkStatsHistory history =
+                mSession.getHistoryIntervalForNetwork(template, FIELD_ALL, start, end);
         assertValues(history, start, end, rxBytes, rxPackets, txBytes, txPackets, operations);
 
         // verify summary API
