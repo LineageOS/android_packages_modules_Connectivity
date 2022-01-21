@@ -56,6 +56,7 @@ import com.android.net.module.util.NetworkStatsUtils.SUBSCRIBER_ID_MATCH_RULE_AL
 import com.android.net.module.util.NetworkStatsUtils.SUBSCRIBER_ID_MATCH_RULE_EXACT
 import com.android.testutils.DevSdkIgnoreRule
 import com.android.testutils.DevSdkIgnoreRunner
+import com.android.testutils.SC_V2
 import com.android.testutils.assertParcelSane
 import org.junit.Before
 import org.junit.Test
@@ -555,7 +556,7 @@ class NetworkTemplateTest {
         }
     }
 
-    @DevSdkIgnoreRule.IgnoreUpTo(Build.VERSION_CODES.S)
+    @DevSdkIgnoreRule.IgnoreUpTo(SC_V2) // TODO: Use to Build.VERSION_CODES.SC_V2 when available
     @Test
     fun testBuilderMatchRules() {
         // Verify unknown match rules cannot construct templates.
@@ -656,7 +657,7 @@ class NetworkTemplateTest {
         }
     }
 
-    @DevSdkIgnoreRule.IgnoreUpTo(Build.VERSION_CODES.S)
+    @DevSdkIgnoreRule.IgnoreUpTo(SC_V2) // TODO: Use to Build.VERSION_CODES.SC_V2 when available
     @Test
     fun testBuilderWifiNetworkKeys() {
         // Verify template builder which generates same template with the given different
