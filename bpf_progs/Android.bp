@@ -71,3 +71,16 @@ bpf {
         "-Werror",
     ],
 }
+
+bpf {
+    name: "netd.o_mainline",
+    srcs: ["netd.c"],
+    cflags: [
+        "-Wall",
+        "-Werror",
+    ],
+    include_dirs: [
+        "frameworks/libs/net/common/netd/libnetdutils/include",
+    ],
+    sub_dir: "net_shared",
+}
