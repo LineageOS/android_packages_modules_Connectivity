@@ -34,6 +34,7 @@ import android.net.IpConfiguration.ProxySettings;
 import android.net.LinkAddress;
 import android.net.NetworkCapabilities;
 import android.net.StaticIpConfiguration;
+import android.os.ConditionVariable;
 import android.os.Handler;
 import android.os.RemoteCallbackList;
 import android.os.RemoteException;
@@ -662,7 +663,13 @@ public class EthernetTracker {
     }
 
     private void postAndWaitForRunnable(Runnable r) {
-        mHandler.runWithScissors(r, 2000L /* timeout */);
+        final ConditionVariable cv = new ConditionVariable();
+        if (mHandler.post(() -> {
+            r.run();
+            cv.open();
+        })) {
+            cv.block(2000L);
+        }
     }
 
     void dump(FileDescriptor fd, IndentingPrintWriter pw, String[] args) {
