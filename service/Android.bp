@@ -57,11 +57,17 @@ cc_library_shared {
     ],
     srcs: [
         "jni/com_android_server_TestNetworkService.cpp",
+        "jni/com_android_server_connectivity_ClatCoordinator.cpp",
         "jni/onload.cpp",
     ],
     stl: "libc++_static",
     header_libs: [
         "libbase_headers",
+    ],
+    static_libs: [
+        "libclat",
+        "libip_checksum",
+        "libnetjniutils",
     ],
     shared_libs: [
         "liblog",
@@ -154,5 +160,13 @@ java_library {
 filegroup {
     name: "connectivity-jarjar-rules",
     srcs: ["jarjar-rules.txt"],
+    visibility: ["//packages/modules/Connectivity:__subpackages__"],
+}
+
+// TODO: This filegroup temporary exposes for NetworkStats. It should be
+// removed right after NetworkStats moves into mainline module.
+filegroup {
+    name: "traffic-controller-utils",
+    srcs: ["src/com/android/server/BpfNetMaps.java"],
     visibility: ["//packages/modules/Connectivity:__subpackages__"],
 }

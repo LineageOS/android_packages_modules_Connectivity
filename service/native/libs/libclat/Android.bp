@@ -11,29 +11,39 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-//
 
 package {
     default_applicable_licenses: ["Android-Apache-2.0"],
 }
 
+cc_library_static {
+    name: "libclat",
+    defaults: ["netd_defaults"],
+    srcs: ["clatutils.cpp"],
+    stl: "libc++_static",
+    static_libs: ["libip_checksum"],
+    shared_libs: ["liblog"],
+    export_include_dirs: ["include"],
+    min_sdk_version: "30",
+    apex_available: ["com.android.tethering"],
+}
+
 cc_test {
-    name: "bpf_existence_test",
-    test_suites: [
-        "general-tests",
-        "mts-tethering",
+    name: "libclat_test",
+    defaults: ["netd_defaults"],
+    test_suites: ["device-tests"],
+    srcs: [
+        "clatutils_test.cpp",
     ],
-    defaults: [
-        "connectivity-mainline-presubmit-cc-defaults",
-    ],
-    require_root: true,
     static_libs: [
         "libbase",
-        "libmodules-utils-build",
+        "libclat",
+        "libip_checksum",
+        "libnetd_test_tun_interface",
     ],
-    srcs: [
-        "bpf_existence_test.cpp",
+    shared_libs: [
+        "liblog",
+        "libnetutils",
     ],
-    compile_multilib: "first",
-    min_sdk_version: "29",  // Ensure test runs on Q and above.
+    require_root: true,
 }
