@@ -26,6 +26,7 @@ android_test {
         "androidx.test.ext.junit",
         "androidx.test.rules",
         "junit",
+        "kotlin-test",
         "truth-prebuilt",
     ],
     test_suites: ["device-tests"],
