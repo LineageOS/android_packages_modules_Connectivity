@@ -80,7 +80,6 @@ import static org.mockito.Mockito.when;
 
 import android.annotation.NonNull;
 import android.app.AlarmManager;
-import android.app.usage.NetworkStatsManager;
 import android.content.Context;
 import android.content.Intent;
 import android.database.ContentObserver;
@@ -101,13 +100,9 @@ import android.net.UnderlyingNetworkInfo;
 import android.net.netstats.provider.INetworkStatsProviderCallback;
 import android.net.wifi.WifiInfo;
 import android.os.Build;
-import android.os.ConditionVariable;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.IBinder;
-import android.os.Looper;
-import android.os.Message;
-import android.os.Messenger;
 import android.os.PowerManager;
 import android.os.SimpleClock;
 import android.provider.Settings;
@@ -188,7 +183,8 @@ public class NetworkStatsServiceTest extends NetworkStatsBaseTest {
     private @Mock TetheringManager mTetheringManager;
     private @Mock NetworkStatsFactory mStatsFactory;
     private @Mock NetworkStatsSettings mSettings;
-    private @Mock IBinder mBinder;
+    private @Mock IBinder mUsageCallbackBinder;
+    private TestableUsageCallback mUsageCallback;
     private @Mock AlarmManager mAlarmManager;
     @Mock
     private NetworkStatsSubscriptionsMonitor mNetworkStatsSubscriptionsMonitor;
@@ -313,6 +309,8 @@ public class NetworkStatsServiceTest extends NetworkStatsBaseTest {
         verify(mTetheringManager).registerTetheringEventCallback(
                 any(), tetheringEventCbCaptor.capture());
         mTetheringEventCallback = tetheringEventCbCaptor.getValue();
+
+        mUsageCallback = new TestableUsageCallback(mUsageCallbackBinder);
     }
 
     @NonNull
@@ -1240,20 +1238,14 @@ public class NetworkStatsServiceTest extends NetworkStatsBaseTest {
         DataUsageRequest inputRequest = new DataUsageRequest(
                 DataUsageRequest.REQUEST_ID_UNSET, sTemplateWifi, thresholdInBytes);
 
-        // Create a messenger that waits for callback activity
-        ConditionVariable cv = new ConditionVariable(false);
-        LatchedHandler latchedHandler = new LatchedHandler(Looper.getMainLooper(), cv);
-        Messenger messenger = new Messenger(latchedHandler);
-
         // Force poll
         expectDefaultSettings();
         expectNetworkStatsSummary(buildEmptyStats());
         expectNetworkStatsUidDetail(buildEmptyStats());
 
         // Register and verify request and that binder was called
-        DataUsageRequest request =
-                mService.registerUsageCallback(mServiceContext.getOpPackageName(), inputRequest,
-                        messenger, mBinder);
+        DataUsageRequest request = mService.registerUsageCallback(
+                mServiceContext.getOpPackageName(), inputRequest, mUsageCallback);
         assertTrue(request.requestId > 0);
         assertTrue(Objects.equals(sTemplateWifi, request.template));
         long minThresholdInBytes = 2 * 1024 * 1024; // 2 MB
@@ -1262,7 +1254,7 @@ public class NetworkStatsServiceTest extends NetworkStatsBaseTest {
         HandlerUtils.waitForIdle(mHandlerThread, WAIT_TIMEOUT);
 
         // Make sure that the caller binder gets connected
-        verify(mBinder).linkToDeath(any(IBinder.DeathRecipient.class), anyInt());
+        verify(mUsageCallbackBinder).linkToDeath(any(IBinder.DeathRecipient.class), anyInt());
 
         // modify some number on wifi, and trigger poll event
         // not enough traffic to call data usage callback
@@ -1277,7 +1269,7 @@ public class NetworkStatsServiceTest extends NetworkStatsBaseTest {
         assertNetworkTotal(sTemplateWifi, 1024L, 1L, 2048L, 2L, 0);
 
         // make sure callback has not being called
-        assertEquals(INVALID_TYPE, latchedHandler.lastMessageType);
+        mUsageCallback.assertNoCallback();
 
         // and bump forward again, with counters going higher. this is
         // important, since it will trigger the data usage callback
@@ -1292,23 +1284,21 @@ public class NetworkStatsServiceTest extends NetworkStatsBaseTest {
         assertNetworkTotal(sTemplateWifi, 4096000L, 4L, 8192000L, 8L, 0);
 
 
-        // Wait for the caller to ack receipt of CALLBACK_LIMIT_REACHED
-        assertTrue(cv.block(WAIT_TIMEOUT));
-        assertEquals(NetworkStatsManager.CALLBACK_LIMIT_REACHED, latchedHandler.lastMessageType);
-        cv.close();
+        // Wait for the caller to invoke expectOnThresholdReached.
+        mUsageCallback.expectOnThresholdReached();
 
         // Allow binder to disconnect
-        when(mBinder.unlinkToDeath(any(IBinder.DeathRecipient.class), anyInt())).thenReturn(true);
+        when(mUsageCallbackBinder.unlinkToDeath(any(IBinder.DeathRecipient.class), anyInt()))
+                .thenReturn(true);
 
         // Unregister request
         mService.unregisterUsageRequest(request);
 
-        // Wait for the caller to ack receipt of CALLBACK_RELEASED
-        assertTrue(cv.block(WAIT_TIMEOUT));
-        assertEquals(NetworkStatsManager.CALLBACK_RELEASED, latchedHandler.lastMessageType);
+        // Wait for the caller to invoke expectOnCallbackReleased.
+        mUsageCallback.expectOnCallbackReleased();
 
         // Make sure that the caller binder gets disconnected
-        verify(mBinder).unlinkToDeath(any(IBinder.DeathRecipient.class), anyInt());
+        verify(mUsageCallbackBinder).unlinkToDeath(any(IBinder.DeathRecipient.class), anyInt());
     }
 
     @Test
@@ -1883,22 +1873,5 @@ public class NetworkStatsServiceTest extends NetworkStatsBaseTest {
 
     private void waitForIdle() {
         HandlerUtils.waitForIdle(mHandlerThread, WAIT_TIMEOUT);
-    }
-
-    static class LatchedHandler extends Handler {
-        private final ConditionVariable mCv;
-        int lastMessageType = INVALID_TYPE;
-
-        LatchedHandler(Looper looper, ConditionVariable cv) {
-            super(looper);
-            mCv = cv;
-        }
-
-        @Override
-        public void handleMessage(Message msg) {
-            lastMessageType = msg.what;
-            mCv.open();
-            super.handleMessage(msg);
-        }
     }
 }
