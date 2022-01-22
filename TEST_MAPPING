@@ -32,6 +32,9 @@
     // TODO: move to presubmit when known green.
     {
       "name": "bpf_existence_test"
+    },
+    {
+      "name": "libclat_test"
     }
   ],
   "mainline-presubmit": [

@@ -22,7 +22,6 @@ import android.net.ConnectivityManager.TYPE_WIFI
 import android.net.NetworkIdentity.OEM_NONE
 import android.net.NetworkIdentity.OEM_PAID
 import android.net.NetworkIdentity.OEM_PRIVATE
-import android.net.NetworkIdentity.SUBTYPE_COMBINED
 import android.net.NetworkIdentity.buildNetworkIdentity
 import android.net.NetworkStats.DEFAULT_NETWORK_ALL
 import android.net.NetworkStats.METERED_ALL
@@ -57,6 +56,7 @@ import com.android.net.module.util.NetworkStatsUtils.SUBSCRIBER_ID_MATCH_RULE_AL
 import com.android.net.module.util.NetworkStatsUtils.SUBSCRIBER_ID_MATCH_RULE_EXACT
 import com.android.testutils.DevSdkIgnoreRule
 import com.android.testutils.DevSdkIgnoreRunner
+import com.android.testutils.SC_V2
 import com.android.testutils.assertParcelSane
 import org.junit.Before
 import org.junit.Test
@@ -312,7 +312,7 @@ class NetworkTemplateTest {
         val identLteMetered = buildNetworkIdentity(
                 mockContext, stateMobileImsi1Metered, false, TelephonyManager.NETWORK_TYPE_LTE)
         val identCombinedMetered = buildNetworkIdentity(
-                mockContext, stateMobileImsi1Metered, false, SUBTYPE_COMBINED)
+                mockContext, stateMobileImsi1Metered, false, NetworkTemplate.NETWORK_TYPE_ALL)
         val identImsi2UmtsMetered = buildNetworkIdentity(mockContext,
                 buildMobileNetworkState(TEST_IMSI2), false, TelephonyManager.NETWORK_TYPE_UMTS)
         val identWifi = buildNetworkIdentity(
@@ -326,7 +326,7 @@ class NetworkTemplateTest {
         val identLteNonMetered = buildNetworkIdentity(
                 mockContext, stateMobileImsi1NonMetered, false, TelephonyManager.NETWORK_TYPE_LTE)
         val identCombinedNonMetered = buildNetworkIdentity(
-                mockContext, stateMobileImsi1NonMetered, false, SUBTYPE_COMBINED)
+                mockContext, stateMobileImsi1NonMetered, false, NetworkTemplate.NETWORK_TYPE_ALL)
         val identImsi2UmtsNonMetered = buildNetworkIdentity(mockContext,
                 stateMobileImsi2NonMetered, false, TelephonyManager.NETWORK_TYPE_UMTS)
 
@@ -556,7 +556,7 @@ class NetworkTemplateTest {
         }
     }
 
-    @DevSdkIgnoreRule.IgnoreUpTo(Build.VERSION_CODES.S)
+    @DevSdkIgnoreRule.IgnoreUpTo(SC_V2) // TODO: Use to Build.VERSION_CODES.SC_V2 when available
     @Test
     fun testBuilderMatchRules() {
         // Verify unknown match rules cannot construct templates.
@@ -657,7 +657,7 @@ class NetworkTemplateTest {
         }
     }
 
-    @DevSdkIgnoreRule.IgnoreUpTo(Build.VERSION_CODES.S)
+    @DevSdkIgnoreRule.IgnoreUpTo(SC_V2) // TODO: Use to Build.VERSION_CODES.SC_V2 when available
     @Test
     fun testBuilderWifiNetworkKeys() {
         // Verify template builder which generates same template with the given different

@@ -29,6 +29,7 @@ import static android.text.format.DateUtils.HOUR_IN_MILLIS;
 import static android.text.format.DateUtils.MINUTE_IN_MILLIS;
 
 import static com.android.net.module.util.NetworkStatsUtils.multiplySafeByRational;
+import static com.android.testutils.DevSdkIgnoreRuleKt.SC_V2;
 import static com.android.testutils.MiscAsserts.assertThrows;
 
 import static org.junit.Assert.assertArrayEquals;
@@ -37,7 +38,6 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.fail;
 
 import android.content.res.Resources;
-import android.os.Build;
 import android.os.Process;
 import android.os.UserHandle;
 import android.telephony.SubscriptionPlan;
@@ -59,6 +59,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.mockito.Mockito;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -78,7 +79,7 @@ import java.util.List;
  */
 @RunWith(DevSdkIgnoreRunner.class)
 @SmallTest
-@DevSdkIgnoreRule.IgnoreUpTo(Build.VERSION_CODES.S)
+@DevSdkIgnoreRule.IgnoreUpTo(SC_V2) // TODO: Use to Build.VERSION_CODES.SC_V2 when available
 public class NetworkStatsCollectionTest {
 
     private static final String TEST_FILE = "test.bin";
@@ -195,8 +196,8 @@ public class NetworkStatsCollectionTest {
         // record empty data straddling between buckets
         final NetworkStats.Entry entry = new NetworkStats.Entry();
         entry.rxBytes = 32;
-        collection.recordData(null, UID_ALL, SET_DEFAULT, TAG_NONE, 30 * MINUTE_IN_MILLIS,
-                90 * MINUTE_IN_MILLIS, entry);
+        collection.recordData(Mockito.mock(NetworkIdentitySet.class), UID_ALL, SET_DEFAULT,
+                TAG_NONE, 30 * MINUTE_IN_MILLIS, 90 * MINUTE_IN_MILLIS, entry);
 
         // assert that we report boundary in atomic buckets
         assertEquals(0, collection.getStartMillis());
