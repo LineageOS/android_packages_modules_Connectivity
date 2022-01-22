@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 The Android Open Source Project
+ * Copyright (C) 2022 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,12 +14,11 @@
  * limitations under the License.
  */
 
-#ifndef NETD_SERVER_TRAFFIC_CONTROLLER_H
-#define NETD_SERVER_TRAFFIC_CONTROLLER_H
+#pragma once
 
-#include <linux/bpf.h>
+#include <set>
+#include <Common.h>
 
-#include "NetlinkListener.h"
 #include "android-base/thread_annotations.h"
 #include "bpf/BpfMap.h"
 #include "bpf_shared.h"
@@ -31,6 +30,8 @@
 namespace android {
 namespace net {
 
+using netdutils::StatusOr;
+
 class TrafficController {
   public:
     /*
@@ -38,9 +39,6 @@ class TrafficController {
      */
     netdutils::Status start();
 
-    /*
-     * Similiar as above, no external lock required.
-     */
     int setCounterSet(int counterSetNum, uid_t uid, uid_t callingUid) EXCLUDES(mMutex);
 
     /*
@@ -84,7 +82,7 @@ class TrafficController {
             EXCLUDES(mMutex);
     netdutils::Status removeUidInterfaceRules(const std::vector<int32_t>& uids) EXCLUDES(mMutex);
 
-    netdutils::Status updateUidOwnerMap(const std::vector<uint32_t>& appStrUids,
+    netdutils::Status updateUidOwnerMap(const uint32_t uid,
                                         UidOwnerMatchType matchType, IptOp op) EXCLUDES(mMutex);
     static const String16 DUMP_KEYWORD;
 
@@ -187,21 +185,6 @@ class TrafficController {
     netdutils::Status addRule(uint32_t uid, UidOwnerMatchType match, uint32_t iif = 0)
             REQUIRES(mMutex);
 
-    // mMutex guards all accesses to mConfigurationMap, mUidOwnerMap, mUidPermissionMap,
-    // mStatsMapA, mStatsMapB and mPrivilegedUser. It is designed to solve the following
-    // problems:
-    // 1. Prevent concurrent access and modification to mConfigurationMap, mUidOwnerMap,
-    //    mUidPermissionMap, and mPrivilegedUser. These data members are controlled by netd but can
-    //    be modified from different threads. TrafficController provides several APIs directly
-    //    called by the binder RPC, and different binder threads can concurrently access these data
-    //    members mentioned above. Some of the data members such as mUidPermissionMap and
-    //    mPrivilegedUsers are also accessed from a different thread when tagging sockets or
-    //    setting the counterSet through FwmarkServer
-    // 2. Coordinate the deletion of uid stats in mStatsMapA and mStatsMapB. The system server
-    //    always call into netd to ask for a live stats map change before it pull and clean up the
-    //    stats from the inactive map. The mMutex will block netd from accessing the stats map when
-    //    the mConfigurationMap is updating the current stats map so netd will not accidentally
-    //    read the map that system_server is cleaning up.
     std::mutex mMutex;
 
     netdutils::Status initMaps() EXCLUDES(mMutex);
@@ -218,5 +201,3 @@ class TrafficController {
 
 }  // namespace net
 }  // namespace android
-
-#endif  // NETD_SERVER_TRAFFIC_CONTROLLER_H
