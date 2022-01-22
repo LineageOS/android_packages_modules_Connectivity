@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 The Android Open Source Project
+ * Copyright (C) 2022 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,6 +30,7 @@
 #include <sys/types.h>
 #include <sys/utsname.h>
 #include <sys/wait.h>
+#include <map>
 #include <mutex>
 #include <unordered_set>
 #include <vector>
@@ -38,12 +39,12 @@
 #include <android-base/strings.h>
 #include <android-base/unique_fd.h>
 #include <netdutils/StatusOr.h>
-
 #include <netdutils/Syscalls.h>
 #include <netdutils/Utils.h>
+#include <private/android_filesystem_config.h>
+
 #include "TrafficController.h"
 #include "bpf/BpfMap.h"
-
 #include "netdutils/DumpWriter.h"
 
 namespace android {
@@ -186,18 +187,12 @@ Status TrafficController::initMaps() {
 }
 
 Status TrafficController::start() {
-    /* When netd restarts from a crash without total system reboot, the program
-     * is still attached to the cgroup, detach it so the program can be freed
-     * and we can load and attach new program into the target cgroup.
-     *
-     * TODO: Scrape existing socket when run-time restart and clean up the map
-     * if the socket no longer exist
-     */
-
     RETURN_IF_NOT_OK(initMaps());
 
     // Fetch the list of currently-existing interfaces. At this point NetlinkHandler is
     // already running, so it will call addInterface() when any new interface appears.
+    // TODO: Clean-up addInterface() after interface monitoring is in
+    // NetworkStatsService.
     std::map<std::string, uint32_t> ifacePairs;
     ASSIGN_OR_RETURN(ifacePairs, getIfaceList());
     for (const auto& ifacePair:ifacePairs) {
@@ -406,18 +401,16 @@ Status TrafficController::addRule(uint32_t uid, UidOwnerMatchType match, uint32_
     return netdutils::status::ok;
 }
 
-Status TrafficController::updateUidOwnerMap(const std::vector<uint32_t>& appUids,
+Status TrafficController::updateUidOwnerMap(const uint32_t uid,
                                             UidOwnerMatchType matchType, IptOp op) {
     std::lock_guard guard(mMutex);
-    for (uint32_t uid : appUids) {
-        if (op == IptOpDelete) {
-            RETURN_IF_NOT_OK(removeRule(uid, matchType));
-        } else if (op == IptOpInsert) {
-            RETURN_IF_NOT_OK(addRule(uid, matchType));
-        } else {
-            // Cannot happen.
-            return statusFromErrno(EINVAL, StringPrintf("invalid IptOp: %d, %d", op, matchType));
-        }
+    if (op == IptOpDelete) {
+        RETURN_IF_NOT_OK(removeRule(uid, matchType));
+    } else if (op == IptOpInsert) {
+        RETURN_IF_NOT_OK(addRule(uid, matchType));
+    } else {
+        // Cannot happen.
+        return statusFromErrno(EINVAL, StringPrintf("invalid IptOp: %d, %d", op, matchType));
     }
     return netdutils::status::ok;
 }
@@ -752,7 +745,7 @@ void TrafficController::dump(DumpWriter& dw, bool verbose) {
         dw.println("mCookieTagMap print end with error: %s", res.error().message().c_str());
     }
 
-    // Print UidCounterSetMap Content
+    // Print UidCounterSetMap content.
     dumpBpfMap("mUidCounterSetMap", dw, "");
     const auto printUidInfo = [&dw](const uint32_t& key, const uint8_t& value,
                                     const BpfMap<uint32_t, uint8_t>&) {
@@ -764,7 +757,7 @@ void TrafficController::dump(DumpWriter& dw, bool verbose) {
         dw.println("mUidCounterSetMap print end with error: %s", res.error().message().c_str());
     }
 
-    // Print AppUidStatsMap content
+    // Print AppUidStatsMap content.
     std::string appUidStatsHeader = StringPrintf("uid rxBytes rxPackets txBytes txPackets");
     dumpBpfMap("mAppUidStatsMap:", dw, appUidStatsHeader);
     auto printAppUidStatsInfo = [&dw](const uint32_t& key, const StatsValue& value,
@@ -778,7 +771,7 @@ void TrafficController::dump(DumpWriter& dw, bool verbose) {
         dw.println("mAppUidStatsMap print end with error: %s", res.error().message().c_str());
     }
 
-    // Print uidStatsMap content
+    // Print uidStatsMap content.
     std::string statsHeader = StringPrintf("ifaceIndex ifaceName tag_hex uid_int cnt_set rxBytes"
                                            " rxPackets txBytes txPackets");
     dumpBpfMap("mStatsMapA", dw, statsHeader);
