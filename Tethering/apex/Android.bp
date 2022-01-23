@@ -51,7 +51,8 @@ apex {
         first: {
             jni_libs: [
                 "libservice-connectivity",
-                "libcom_android_connectivity_com_android_net_module_util_jni"
+                "libcom_android_connectivity_com_android_net_module_util_jni",
+                "libtraffic_controller_jni",
             ],
         },
         both: {
