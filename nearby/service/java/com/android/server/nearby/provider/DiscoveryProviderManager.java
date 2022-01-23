@@ -22,6 +22,7 @@ import android.content.Context;
 import android.nearby.IScanListener;
 import android.nearby.NearbyDeviceParcelable;
 import android.nearby.ScanRequest;
+import android.os.IBinder;
 import android.os.RemoteException;
 import android.util.Log;
 
@@ -43,13 +44,13 @@ public class DiscoveryProviderManager implements AbstractDiscoveryProvider.Liste
     private @ScanRequest.ScanMode int mScanMode;
 
     @GuardedBy("mLock")
-    private Map<IScanListener, ScanListenerRecord> mScanTypeScanListenerRecordMap;
+    private Map<IBinder, ScanListenerRecord> mScanTypeScanListenerRecordMap;
 
     @Override
     public void onNearbyDeviceDiscovered(NearbyDeviceParcelable nearbyDevice) {
         synchronized (mLock) {
-            for (IScanListener listener : mScanTypeScanListenerRecordMap.keySet()) {
-                ScanListenerRecord record = mScanTypeScanListenerRecordMap.get(listener);
+            for (IBinder listenerBinder : mScanTypeScanListenerRecordMap.keySet()) {
+                ScanListenerRecord record = mScanTypeScanListenerRecordMap.get(listenerBinder);
                 if (record == null) {
                     Log.w(TAG, "DiscoveryProviderManager cannot find the scan record.");
                     continue;
@@ -76,9 +77,10 @@ public class DiscoveryProviderManager implements AbstractDiscoveryProvider.Liste
      */
     public void registerScanListener(ScanRequest scanRequest, IScanListener listener) {
         synchronized (mLock) {
-            if (mScanTypeScanListenerRecordMap.containsKey(listener)) {
-                ScanRequest savedScanRequest = mScanTypeScanListenerRecordMap.get(
-                        listener).getScanRequest();
+            IBinder listenerBinder = listener.asBinder();
+            if (mScanTypeScanListenerRecordMap.containsKey(listener.asBinder())) {
+                ScanRequest savedScanRequest = mScanTypeScanListenerRecordMap
+                        .get(listenerBinder).getScanRequest();
                 if (scanRequest.equals(savedScanRequest)) {
                     Log.d(TAG, "Already registered the scanRequest: " + scanRequest);
                     return;
@@ -87,7 +89,7 @@ public class DiscoveryProviderManager implements AbstractDiscoveryProvider.Liste
 
             startProviders(scanRequest);
 
-            mScanTypeScanListenerRecordMap.put(listener,
+            mScanTypeScanListenerRecordMap.put(listenerBinder,
                     new ScanListenerRecord(scanRequest, listener));
             if (mScanMode < scanRequest.getScanMode()) {
                 mScanMode = scanRequest.getScanMode();
@@ -100,15 +102,17 @@ public class DiscoveryProviderManager implements AbstractDiscoveryProvider.Liste
      * Unregisters the listener in the manager and adjusts the scan mode if necessary afterwards.
      */
     public void unregisterScanListener(IScanListener listener) {
+        IBinder listenerBinder = listener.asBinder();
         synchronized (mLock) {
-            if (!mScanTypeScanListenerRecordMap.containsKey(listener)) {
+            if (!mScanTypeScanListenerRecordMap.containsKey(listenerBinder)) {
                 Log.w(TAG,
-                        "Cannot unregister the scanRequest %s because the request is never "
+                        "Cannot unregister the scanRequest because the request is never "
                                 + "registered.");
                 return;
             }
 
-            ScanListenerRecord removedRecord = mScanTypeScanListenerRecordMap.remove(listener);
+            ScanListenerRecord removedRecord = mScanTypeScanListenerRecordMap
+                    .remove(listenerBinder);
             if (mScanTypeScanListenerRecordMap.isEmpty()) {
                 stopProviders();
                 return;
