@@ -28,6 +28,11 @@ import android.util.Log;
 public class BpfNetMaps {
     private static final String TAG = "BpfNetMaps";
 
+    static {
+        System.loadLibrary("traffic_controller_jni");
+        native_init();
+    }
+
    /**
     * Add naughty app bandwidth rule for specific app
     *
@@ -239,6 +244,7 @@ public class BpfNetMaps {
         return -err;
     }
 
+    private static native void native_init();
     private native int native_addNaughtyApp(int uid);
     private native int native_removeNaughtyApp(int uid);
     private native int native_addNiceApp(int uid);
