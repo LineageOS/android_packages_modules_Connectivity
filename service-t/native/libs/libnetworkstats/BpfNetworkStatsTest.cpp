@@ -58,7 +58,7 @@ constexpr uint64_t TEST_PACKET1 = 200;
 constexpr const char IFACE_NAME1[] = "lo";
 constexpr const char IFACE_NAME2[] = "wlan0";
 constexpr const char IFACE_NAME3[] = "rmnet_data0";
-// A iface name that the size is bigger then IFNAMSIZ
+// A iface name that the size is bigger than IFNAMSIZ
 constexpr const char LONG_IFACE_NAME[] = "wlanWithALongName";
 constexpr const char TRUNCATED_IFACE_NAME[] = "wlanWithALongNa";
 constexpr uint32_t IFACE_INDEX1 = 1;
@@ -351,7 +351,7 @@ TEST_F(BpfNetworkStatsHelperTest, TestGetStatsWithSkippedIface) {
     ASSERT_EQ((unsigned long)2, lines.size());
 }
 
-TEST_F(BpfNetworkStatsHelperTest, TestUnkownIfaceError) {
+TEST_F(BpfNetworkStatsHelperTest, TestUnknownIfaceError) {
     updateIfaceMap(IFACE_NAME1, IFACE_INDEX1);
     StatsValue value1 = {
             .rxPackets = TEST_PACKET0,
