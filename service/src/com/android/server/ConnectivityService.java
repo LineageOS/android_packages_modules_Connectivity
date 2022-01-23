@@ -936,7 +936,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
             }
             // Ethernet is often not specified in the configs, although many devices can use it via
             // USB host adapters. Add it as long as the ethernet service is here.
-            if (ctx.getSystemService(Context.ETHERNET_SERVICE) != null) {
+            if (deviceSupportsEthernet(ctx)) {
                 addSupportedType(TYPE_ETHERNET);
             }
 
@@ -1619,6 +1619,15 @@ public class ConnectivityService extends IConnectivityManager.Stub
 
         mIngressRateLimit = ConnectivitySettingsManager.getIngressRateLimitInBytesPerSecond(
                 mContext);
+    }
+
+    /**
+     * Check whether or not the device supports Ethernet transport.
+     */
+    public static boolean deviceSupportsEthernet(final Context context) {
+        final PackageManager pm = context.getPackageManager();
+        return pm.hasSystemFeature(PackageManager.FEATURE_ETHERNET)
+                || pm.hasSystemFeature(PackageManager.FEATURE_USB_HOST);
     }
 
     private static NetworkCapabilities createDefaultNetworkCapabilitiesForUid(int uid) {
