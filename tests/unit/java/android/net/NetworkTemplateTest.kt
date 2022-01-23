@@ -95,7 +95,7 @@ class NetworkTemplateTest {
         oemManaged: Int = OEM_NONE,
         metered: Boolean = true
     ): NetworkStateSnapshot {
-        `when`(mockWifiInfo.getCurrentNetworkKey()).thenReturn(wifiKey)
+        `when`(mockWifiInfo.getNetworkKey()).thenReturn(wifiKey)
         val lp = LinkProperties()
         val caps = NetworkCapabilities().apply {
             setCapability(NetworkCapabilities.NET_CAPABILITY_NOT_METERED, !metered)
