@@ -43,6 +43,7 @@ cc_library_headers {
         // calls to JNI in libservices.core.
         "//frameworks/base/services/core/jni",
         "//packages/modules/Connectivity/Tethering",
+        "//packages/modules/Connectivity/service/native",
         "//packages/modules/Connectivity/tests/unit/jni",
         // TODO: remove system/netd/* when all BPF code is moved out of Netd.
         "//system/netd/libnetdbpf",
