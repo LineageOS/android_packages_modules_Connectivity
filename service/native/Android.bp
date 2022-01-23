@@ -47,3 +47,25 @@ cc_library {
     ],
     min_sdk_version: "30",
 }
+
+cc_test {
+    name: "traffic_controller_unit_test",
+    test_suites: ["general-tests"],
+    require_root: true,
+    local_include_dirs: ["include"],
+    header_libs: [
+        "bpf_connectivity_headers",
+    ],
+    srcs: [
+        "TrafficControllerTest.cpp",
+    ],
+    static_libs: [
+        "libbase",
+        "libgmock",
+        "liblog",
+        "libnetdutils",
+        "libtraffic_controller",
+        "libutils",
+        "netd_aidl_interface-lateststable-ndk",
+    ],
+}
