@@ -61,6 +61,14 @@ package android.app.usage {
 
 package android.net {
 
+  public final class EthernetNetworkSpecifier extends android.net.NetworkSpecifier implements android.os.Parcelable {
+    ctor public EthernetNetworkSpecifier(@NonNull String);
+    method public int describeContents();
+    method @Nullable public String getInterfaceName();
+    method public void writeToParcel(@NonNull android.os.Parcel, int);
+    field @NonNull public static final android.os.Parcelable.Creator<android.net.EthernetNetworkSpecifier> CREATOR;
+  }
+
   public final class IpSecAlgorithm implements android.os.Parcelable {
     ctor public IpSecAlgorithm(@NonNull String, @NonNull byte[]);
     ctor public IpSecAlgorithm(@NonNull String, @NonNull byte[], int);
