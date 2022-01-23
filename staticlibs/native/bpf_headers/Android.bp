@@ -52,7 +52,6 @@ cc_library_headers {
         "//system/bpf/bpfloader",
         "//system/bpf/libbpf_android",
         "//system/memory/libmeminfo",
-        "//system/netd/libnetdbpf",
         "//system/netd/server",
         "//system/netd/tests",
         "//system/netd/tests/benchmarks",
