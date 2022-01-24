@@ -17,10 +17,17 @@ package {
     default_applicable_licenses: ["Android-Apache-2.0"],
 }
 
+// TODO: merge the tests into service-connectivity tests after
+// ethernet service migration completes. So far just import the
+// ethernet service source to fix the dependencies.
 android_test {
     name: "EthernetServiceTests",
 
-    srcs: ["java/**/*.java"],
+    srcs: [
+        ":ethernet-service-updatable-sources",
+        ":services.connectivity-ethernet-sources",
+        "java/**/*.java",
+    ],
 
     certificate: "platform",
     platform_apis: true,
@@ -29,11 +36,13 @@ android_test {
         "android.test.runner",
         "android.test.base",
         "android.test.mock",
+        "framework-connectivity.impl",
+        "framework-connectivity-t.impl",
+        "ServiceConnectivityResources",
     ],
 
     static_libs: [
         "androidx.test.rules",
-        "ethernet-service",
         "frameworks-base-testutils",
         "mockito-target-minus-junit4",
         "net-tests-utils",
