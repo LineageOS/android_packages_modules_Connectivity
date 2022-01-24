@@ -18,6 +18,8 @@ package android.net;
 
 import static android.annotation.SystemApi.Client.MODULE_LIBRARIES;
 import static android.net.ConnectivityManager.PROFILE_NETWORK_PREFERENCE_DEFAULT;
+import static android.net.NetworkCapabilities.NET_ENTERPRISE_ID_1;
+import static android.net.NetworkCapabilities.NET_ENTERPRISE_ID_5;
 
 import android.annotation.NonNull;
 import android.annotation.Nullable;
@@ -38,12 +40,15 @@ import java.util.Objects;
 @SystemApi(client = MODULE_LIBRARIES)
 public final class ProfileNetworkPreference implements Parcelable {
     private final @ProfileNetworkPreferencePolicy int mPreference;
+    private final @NetworkCapabilities.EnterpriseId int mPreferenceEnterpriseId;
     private final List<Integer> mIncludedUids;
     private final List<Integer> mExcludedUids;
 
     private ProfileNetworkPreference(int preference, List<Integer> includedUids,
-            List<Integer> excludedUids) {
+            List<Integer> excludedUids,
+            @NetworkCapabilities.EnterpriseId int preferenceEnterpriseId) {
         mPreference = preference;
+        mPreferenceEnterpriseId = preferenceEnterpriseId;
         if (includedUids != null) {
             mIncludedUids = new ArrayList<>(includedUids);
         } else {
@@ -61,6 +66,7 @@ public final class ProfileNetworkPreference implements Parcelable {
         mPreference = in.readInt();
         mIncludedUids = in.readArrayList(Integer.class.getClassLoader());
         mExcludedUids = in.readArrayList(Integer.class.getClassLoader());
+        mPreferenceEnterpriseId = in.readInt();
     }
 
     public int getPreference() {
@@ -95,12 +101,30 @@ public final class ProfileNetworkPreference implements Parcelable {
         return new ArrayList<>(mExcludedUids);
     }
 
+    /**
+     * Get preference enterprise identifier.
+     *
+     * Preference enterprise identifier will be used to create different network preferences
+     * within enterprise preference category.
+     * Valid values starts from PROFILE_NETWORK_PREFERENCE_ENTERPRISE_ID_1 to
+     * NetworkCapabilities.NET_ENTERPRISE_ID_5.
+     * Preference identifier is not applicable if preference is set as
+     * PROFILE_NETWORK_PREFERENCE_DEFAULT. Default value is
+     * NetworkCapabilities.NET_ENTERPRISE_ID_1.
+     * @return Preference enterprise identifier.
+     *
+     */
+    public @NetworkCapabilities.EnterpriseId int getPreferenceEnterpriseId() {
+        return mPreferenceEnterpriseId;
+    }
+
     @Override
     public String toString() {
         return "ProfileNetworkPreference{"
                 + "mPreference=" + getPreference()
                 + "mIncludedUids=" + mIncludedUids.toString()
                 + "mExcludedUids=" + mExcludedUids.toString()
+                + "mPreferenceEnterpriseId=" + mPreferenceEnterpriseId
                 + '}';
     }
 
@@ -111,12 +135,14 @@ public final class ProfileNetworkPreference implements Parcelable {
         final ProfileNetworkPreference that = (ProfileNetworkPreference) o;
         return mPreference == that.mPreference
                 && (Objects.equals(mIncludedUids, that.mIncludedUids))
-                && (Objects.equals(mExcludedUids, that.mExcludedUids));
+                && (Objects.equals(mExcludedUids, that.mExcludedUids))
+                && mPreferenceEnterpriseId == that.mPreferenceEnterpriseId;
     }
 
     @Override
     public int hashCode() {
         return mPreference
+                + mPreferenceEnterpriseId * 2
                 + (Objects.hashCode(mIncludedUids) * 11)
                 + (Objects.hashCode(mExcludedUids) * 13);
     }
@@ -130,6 +156,7 @@ public final class ProfileNetworkPreference implements Parcelable {
                 PROFILE_NETWORK_PREFERENCE_DEFAULT;
         private @NonNull List<Integer> mIncludedUids = new ArrayList<>();
         private @NonNull List<Integer> mExcludedUids = new ArrayList<>();
+        private int mPreferenceEnterpriseId;
 
         /**
          * Constructs an empty Builder with PROFILE_NETWORK_PREFERENCE_DEFAULT profile preference
@@ -191,7 +218,24 @@ public final class ProfileNetworkPreference implements Parcelable {
             return this;
         }
 
-         /**
+        /**
+         * Check if given preference enterprise identifier is valid
+         *
+         * Valid values starts from PROFILE_NETWORK_PREFERENCE_ENTERPRISE_ID_1 to
+         * NetworkCapabilities.NET_ENTERPRISE_ID_5.
+         * @return True if valid else false
+         * @hide
+         */
+        private boolean isEnterpriseIdentifierValid(
+                @NetworkCapabilities.EnterpriseId int identifier) {
+            if ((identifier >= NET_ENTERPRISE_ID_1)
+                    && (identifier <= NET_ENTERPRISE_ID_5)) {
+                return true;
+            }
+            return false;
+        }
+
+        /**
          * Returns an instance of {@link ProfileNetworkPreference} created from the
          * fields set on this builder.
          */
@@ -201,7 +245,35 @@ public final class ProfileNetworkPreference implements Parcelable {
                 throw new IllegalArgumentException("Both includedUids and excludedUids "
                         + "cannot be nonempty");
             }
-            return new ProfileNetworkPreference(mPreference, mIncludedUids, mExcludedUids);
+
+            if (((mPreference != PROFILE_NETWORK_PREFERENCE_DEFAULT)
+                    && (!isEnterpriseIdentifierValid(mPreferenceEnterpriseId)))
+                    || ((mPreference == PROFILE_NETWORK_PREFERENCE_DEFAULT)
+                    && (mPreferenceEnterpriseId != 0))) {
+                throw new IllegalStateException("Invalid preference enterprise identifier");
+            }
+            return new ProfileNetworkPreference(mPreference, mIncludedUids,
+                    mExcludedUids, mPreferenceEnterpriseId);
+        }
+
+        /**
+         * Set the preference enterprise identifier.
+         *
+         * Preference enterprise identifier will be used to create different network preferences
+         * within enterprise preference category.
+         * Valid values starts from NetworkCapabilities.NET_ENTERPRISE_ID_1 to
+         * NetworkCapabilities.NET_ENTERPRISE_ID_5.
+         * Preference identifier is not applicable if preference is set as
+         * PROFILE_NETWORK_PREFERENCE_DEFAULT. Default value is
+         * NetworkCapabilities.NET_ENTERPRISE_ID_1.
+         * @param preferenceId  preference sub level
+         * @return The builder to facilitate chaining.
+         */
+        @NonNull
+        public Builder setPreferenceEnterpriseId(
+                @NetworkCapabilities.EnterpriseId int preferenceId) {
+            mPreferenceEnterpriseId = preferenceId;
+            return this;
         }
     }
 
@@ -210,6 +282,7 @@ public final class ProfileNetworkPreference implements Parcelable {
         dest.writeInt(mPreference);
         dest.writeList(mIncludedUids);
         dest.writeList(mExcludedUids);
+        dest.writeInt(mPreferenceEnterpriseId);
     }
 
     @Override

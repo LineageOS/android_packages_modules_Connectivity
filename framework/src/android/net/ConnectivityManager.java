@@ -16,6 +16,7 @@
 package android.net;
 
 import static android.annotation.SystemApi.Client.MODULE_LIBRARIES;
+import static android.net.NetworkCapabilities.NET_ENTERPRISE_ID_1;
 import static android.net.NetworkRequest.Type.BACKGROUND_REQUEST;
 import static android.net.NetworkRequest.Type.LISTEN;
 import static android.net.NetworkRequest.Type.LISTEN_FOR_BEST;
@@ -5537,6 +5538,9 @@ public class ConnectivityManager {
         ProfileNetworkPreference.Builder preferenceBuilder =
                 new ProfileNetworkPreference.Builder();
         preferenceBuilder.setPreference(preference);
+        if (preference != PROFILE_NETWORK_PREFERENCE_DEFAULT) {
+            preferenceBuilder.setPreferenceEnterpriseId(NET_ENTERPRISE_ID_1);
+        }
         setProfileNetworkPreferences(profile,
                 List.of(preferenceBuilder.build()), executor, listener);
     }
