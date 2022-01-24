@@ -25,7 +25,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.MockitoAnnotations.initMocks;
 
-import android.nearby.FastPairAccountKeyDeviceMetadata;
+import android.accounts.Account;
 import android.nearby.FastPairAntispoofkeyDeviceMetadata;
 import android.nearby.FastPairDataProviderBase;
 import android.nearby.FastPairDeviceMetadata;
@@ -49,13 +49,14 @@ import android.nearby.aidl.IFastPairManageAccountDeviceCallback;
 import androidx.annotation.NonNull;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
 
+import com.google.common.collect.ImmutableList;
+
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.ArgumentCaptor;
+import org.mockito.Captor;
 import org.mockito.Mock;
-
-import java.util.ArrayList;
 
 @RunWith(AndroidJUnit4.class)
 public class FastPairDataProviderBaseTest {
@@ -75,6 +76,17 @@ public class FastPairDataProviderBaseTest {
     private static final int DEVICE_TYPE = 7;
     private static final String DOWNLOAD_COMPANION_APP_DESCRIPTION =
             "DOWNLOAD_COMPANION_APP_DESCRIPTION";
+    private static final int ELIGIBLE_ACCOUNTS_NUM = 2;
+    private static final Account ELIGIBLE_ACCOUNT_1 = new Account("abc@google.com", "type1");
+    private static final boolean ELIGIBLE_ACCOUNT_1_OPT_IN = true;
+    private static final Account ELIGIBLE_ACCOUNT_2 = new Account("def@gmail.com", "type2");
+    private static final boolean ELIGIBLE_ACCOUNT_2_OPT_IN = false;
+    private static final ImmutableList<FastPairEligibleAccount> ELIGIBLE_ACCOUNTS =
+            ImmutableList.of(
+                    genHappyPathFastPairEligibleAccount(ELIGIBLE_ACCOUNT_1,
+                            ELIGIBLE_ACCOUNT_1_OPT_IN),
+                    genHappyPathFastPairEligibleAccount(ELIGIBLE_ACCOUNT_2,
+                            ELIGIBLE_ACCOUNT_2_OPT_IN));
     private static final int ERROR_CODE_BAD_REQUEST =
             FastPairDataProviderBase.ERROR_CODE_BAD_REQUEST;
     private static final String ERROR_STRING = "ERROR_STRING";
@@ -116,9 +128,15 @@ public class FastPairDataProviderBaseTest {
     private static final FastPairAntispoofkeyDeviceMetadataRequestParcel
             FAST_PAIR_ANTI_SPOOF_KEY_DEVICE_METADATA_REQUEST_PARCEL =
             genFastPairAntispoofkeyDeviceMetadataRequestParcel();
+    private static final FastPairEligibleAccountsRequestParcel
+            FAST_PAIR_ELIGIBLE_ACCOUNTS_REQUEST_PARCEL =
+            genFastPairEligibleAccountsRequestParcel();
     private static final FastPairAntispoofkeyDeviceMetadata
             HAPPY_PATH_FAST_PAIR_ANTI_SPOOF_KEY_DEVICE_METADATA =
             genHappyPathFastPairAntispoofkeyDeviceMetadata();
+
+    private @Captor ArgumentCaptor<FastPairEligibleAccountParcel[]>
+            mFastPairEligibleAccountParcelsArgumentCaptor;
 
     private @Mock FastPairDataProviderBase mMockFastPairDataProviderBase;
     private @Mock IFastPairAntispoofkeyDeviceMetadataCallback.Stub
@@ -181,14 +199,25 @@ public class FastPairDataProviderBaseTest {
 
     @Test
     public void testHappyPathLoadFastPairEligibleAccounts() throws Exception {
+        // AOSP sends calls to OEM via Parcelable.
         mHappyPathFastPairDataProvider.asProvider().loadFastPairEligibleAccounts(
-                new FastPairEligibleAccountsRequestParcel(),
+                FAST_PAIR_ELIGIBLE_ACCOUNTS_REQUEST_PARCEL,
                 mEligibleAccountsCallback);
+
+        // OEM receives request and verifies that it is as expected.
+        final ArgumentCaptor<FastPairDataProviderBase.FastPairEligibleAccountsRequest>
+                mFastPairEligibleAccountsRequestCaptor =
+                ArgumentCaptor.forClass(
+                        FastPairDataProviderBase.FastPairEligibleAccountsRequest.class);
         verify(mMockFastPairDataProviderBase).onLoadFastPairEligibleAccounts(
-                any(FastPairDataProviderBase.FastPairEligibleAccountsRequest.class),
+                mFastPairEligibleAccountsRequestCaptor.capture(),
                 any(FastPairDataProviderBase.FastPairEligibleAccountsCallback.class));
+        ensureHappyPathAsExpected(mFastPairEligibleAccountsRequestCaptor.getValue());
+
+        // AOSP receives responses and verifies that it is as expected.
         verify(mEligibleAccountsCallback).onFastPairEligibleAccountsReceived(
-                any(FastPairEligibleAccountParcel[].class));
+                mFastPairEligibleAccountParcelsArgumentCaptor.capture());
+        ensureHappyPathAsExpected(mFastPairEligibleAccountParcelsArgumentCaptor.getValue());
     }
 
     @Test
@@ -239,12 +268,13 @@ public class FastPairDataProviderBaseTest {
     @Test
     public void testErrorPathLoadFastPairEligibleAccounts() throws Exception {
         mErrorPathFastPairDataProvider.asProvider().loadFastPairEligibleAccounts(
-                new FastPairEligibleAccountsRequestParcel(),
+                FAST_PAIR_ELIGIBLE_ACCOUNTS_REQUEST_PARCEL,
                 mEligibleAccountsCallback);
         verify(mMockFastPairDataProviderBase).onLoadFastPairEligibleAccounts(
                 any(FastPairDataProviderBase.FastPairEligibleAccountsRequest.class),
                 any(FastPairDataProviderBase.FastPairEligibleAccountsCallback.class));
-        verify(mEligibleAccountsCallback).onError(anyInt(), any());
+        verify(mEligibleAccountsCallback).onError(
+                eq(ERROR_CODE_BAD_REQUEST), eq(ERROR_STRING));
     }
 
     @Test
@@ -298,8 +328,7 @@ public class FastPairDataProviderBaseTest {
                 @NonNull FastPairAccountDevicesMetadataCallback callback) {
             mMockFastPairDataProviderBase.onLoadFastPairAccountDevicesMetadata(
                     request, callback);
-            callback.onFastPairAccountDevicesMetadataReceived(
-                    new ArrayList<FastPairAccountKeyDeviceMetadata>());
+            callback.onFastPairAccountDevicesMetadataReceived(ImmutableList.of());
         }
 
         @Override
@@ -308,8 +337,7 @@ public class FastPairDataProviderBaseTest {
                 @NonNull FastPairEligibleAccountsCallback callback) {
             mMockFastPairDataProviderBase.onLoadFastPairEligibleAccounts(
                     request, callback);
-            callback.onFastPairEligibleAccountsReceived(
-                    new ArrayList<FastPairEligibleAccount>());
+            callback.onFastPairEligibleAccountsReceived(ELIGIBLE_ACCOUNTS);
         }
 
         @Override
@@ -394,6 +422,15 @@ public class FastPairDataProviderBaseTest {
         return requestParcel;
     }
 
+    /* Generates FastPairEligibleAccountsRequestParcel. */
+    private static FastPairEligibleAccountsRequestParcel
+            genFastPairEligibleAccountsRequestParcel() {
+        FastPairEligibleAccountsRequestParcel requestParcel =
+                new FastPairEligibleAccountsRequestParcel();
+        // No fields since FastPairEligibleAccountsRequestParcel is just a place holder now.
+        return requestParcel;
+    }
+
     /* Generates Happy Path AntispoofkeyDeviceMetadata. */
     private static FastPairAntispoofkeyDeviceMetadata
             genHappyPathFastPairAntispoofkeyDeviceMetadata() {
@@ -448,10 +485,26 @@ public class FastPairDataProviderBaseTest {
         return builder.build();
     }
 
+    /* Generates Happy Path FastPairEligibleAccount. */
+    private static FastPairEligibleAccount genHappyPathFastPairEligibleAccount(
+            Account account, boolean optIn) {
+        FastPairEligibleAccount.Builder builder = new FastPairEligibleAccount.Builder();
+        builder.setAccount(account);
+        builder.setOptIn(optIn);
+
+        return builder.build();
+    }
+
     /* Verifies Happy Path AntispoofkeyDeviceMetadataRequest. */
     private static void ensureHappyPathAsExpected(
             FastPairDataProviderBase.FastPairAntispoofkeyDeviceMetadataRequest request) {
         assertEquals(REQUEST_MODEL_ID, request.getModelId());
+    }
+
+    @SuppressWarnings("UnusedVariable")
+    private static void ensureHappyPathAsExpected(
+            FastPairDataProviderBase.FastPairEligibleAccountsRequest request) {
+        // No fields since FastPairEligibleAccountsRequest is just a place holder now.
     }
 
     /* Verifies Happy Path AntispoofkeyDeviceMetadataParcel. */
@@ -509,5 +562,15 @@ public class FastPairDataProviderBaseTest {
                 metadataParcel.updateCompanionAppDescription);
         assertEquals(WAIT_LAUNCH_COMPANION_APP_DESCRIPTION,
                 metadataParcel.waitLaunchCompanionAppDescription);
+    }
+
+    /* Verifies Happy Path EligibleAccounts. */
+    private static void ensureHappyPathAsExpected(FastPairEligibleAccountParcel[] accountsParcel) {
+        assertEquals(ELIGIBLE_ACCOUNTS_NUM, accountsParcel.length);
+        assertEquals(ELIGIBLE_ACCOUNT_1, accountsParcel[0].account);
+        assertEquals(ELIGIBLE_ACCOUNT_1_OPT_IN, accountsParcel[0].optIn);
+
+        assertEquals(ELIGIBLE_ACCOUNT_2, accountsParcel[1].account);
+        assertEquals(ELIGIBLE_ACCOUNT_2_OPT_IN, accountsParcel[1].optIn);
     }
 }
