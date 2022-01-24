@@ -156,7 +156,7 @@ public class FastPairManager {
     public void initiate() {
         mIntentFilter.addAction(Intent.ACTION_SCREEN_ON);
         mIntentFilter.addAction(Intent.ACTION_SCREEN_OFF);
-        mIntentFilter.addAction("NEARBY_START_PAIRING");
+        mIntentFilter.addAction(ACTION_START_PAIRING);
 
         mLocatorContextWrapper.getContext()
                 .registerReceiver(mScreenBroadcastReceiver, mIntentFilter);
