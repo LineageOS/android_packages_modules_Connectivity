@@ -46,5 +46,7 @@ cc_library_static {
     ],
     visibility: [
         "//packages/modules/Connectivity:__subpackages__",
+        // TODO: remove after NetworkStatsService moves to the module.
+        "//frameworks/base/packages/ConnectivityT/service",
     ],
 }
