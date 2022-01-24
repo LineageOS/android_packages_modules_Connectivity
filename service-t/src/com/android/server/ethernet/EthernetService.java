@@ -18,7 +18,6 @@ package com.android.server.ethernet;
 
 import android.content.Context;
 import android.net.INetd;
-import android.net.util.NetdService;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.IBinder;
@@ -41,11 +40,12 @@ public final class EthernetService extends SystemService {
         final EthernetNetworkFactory factory = new EthernetNetworkFactory(handler, context);
         mImpl = new EthernetServiceImpl(
                 context, handler,
-                new EthernetTracker(context, handler, factory, getNetd()));
+                new EthernetTracker(context, handler, factory, getNetd(context)));
     }
 
-    private INetd getNetd() {
-        final INetd netd = NetdService.getInstance();
+    private INetd getNetd(Context context) {
+        final INetd netd =
+                INetd.Stub.asInterface((IBinder) context.getSystemService(Context.NETD_SERVICE));
         Objects.requireNonNull(netd, "could not get netd instance");
         return netd;
     }
