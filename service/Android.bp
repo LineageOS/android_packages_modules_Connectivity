@@ -65,6 +65,7 @@ cc_library_shared {
         "libbase_headers",
     ],
     static_libs: [
+        "libbase",
         "libclat",
         "libip_checksum",
         "libnetjniutils",

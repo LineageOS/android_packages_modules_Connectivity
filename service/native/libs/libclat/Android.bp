@@ -19,9 +19,22 @@ package {
 cc_library_static {
     name: "libclat",
     defaults: ["netd_defaults"],
-    srcs: ["clatutils.cpp"],
+    header_libs: [
+        "bpf_connectivity_headers",
+        "bpf_headers",
+        "bpf_syscall_wrappers",
+    ],
+    srcs: [
+        "TcUtils.cpp",  // TODO: move to frameworks/libs/net
+        "bpfhelper.cpp",
+        "clatutils.cpp",
+    ],
     stl: "libc++_static",
-    static_libs: ["libip_checksum"],
+    static_libs: [
+        "libbase",
+        "libip_checksum",
+        "libnetdutils",  // for netdutils/UidConstants.h in bpf_shared.h
+    ],
     shared_libs: ["liblog"],
     export_include_dirs: ["include"],
     min_sdk_version: "30",
@@ -32,7 +45,13 @@ cc_test {
     name: "libclat_test",
     defaults: ["netd_defaults"],
     test_suites: ["device-tests"],
+    header_libs: [
+        "bpf_connectivity_headers",
+        "bpf_headers",
+        "bpf_syscall_wrappers",
+    ],
     srcs: [
+        "TcUtilsTest.cpp",
         "clatutils_test.cpp",
     ],
     static_libs: [
@@ -40,6 +59,8 @@ cc_test {
         "libclat",
         "libip_checksum",
         "libnetd_test_tun_interface",
+        "libnetdutils",  // for netdutils/UidConstants.h in bpf_shared.h
+        "libtcutils",
     ],
     shared_libs: [
         "liblog",
