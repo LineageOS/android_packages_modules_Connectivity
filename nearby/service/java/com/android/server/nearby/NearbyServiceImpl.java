@@ -50,7 +50,7 @@ public class NearbyServiceImpl extends INearbyManager.Stub {
                     // Have to do this logic in listener. Even during PHASE_BOOT_COMPLETED
                     // phase, BluetoothAdapter is not null, the BleScanner is null.
                     Log.v(TAG, "Initiating BluetoothAdapter when Bluetooth is turned on.");
-                    mSystemInjector.onBluetoothReady();
+                    mSystemInjector.initializeBluetoothAdapter();
                 }
             }
         }
@@ -74,6 +74,7 @@ public class NearbyServiceImpl extends INearbyManager.Stub {
     }
 
     void onSystemReady() {
+        mSystemInjector.initializeBluetoothAdapter();
         mContext.registerReceiver(mBluetoothReceiver,
                 new IntentFilter(BluetoothAdapter.ACTION_STATE_CHANGED));
     }
@@ -93,7 +94,7 @@ public class NearbyServiceImpl extends INearbyManager.Stub {
             return mBluetoothAdapter;
         }
 
-        synchronized void onBluetoothReady() {
+        synchronized void initializeBluetoothAdapter() {
             if (mBluetoothAdapter != null) {
                 return;
             }
@@ -104,4 +105,5 @@ public class NearbyServiceImpl extends INearbyManager.Stub {
             mBluetoothAdapter = manager.getAdapter();
         }
     }
+
 }
