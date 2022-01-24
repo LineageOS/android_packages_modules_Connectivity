@@ -122,6 +122,7 @@ java_library {
         "//frameworks/libs/net/common/testutils:__subpackages__",
         "//packages/modules/Connectivity:__subpackages__",
         "//packages/modules/NetworkStack:__subpackages__",
+        "//frameworks/base/services/core",
     ],
     static_libs: [
         "net-utils-device-common-struct",
@@ -279,6 +280,7 @@ java_library {
         "framework-connectivity",
     ],
     visibility: [
+        // TODO: remove after NetworkStatsService moves to the module.
         "//frameworks/base/services/net",
         "//packages/modules/Connectivity/tests:__subpackages__",
     ],
