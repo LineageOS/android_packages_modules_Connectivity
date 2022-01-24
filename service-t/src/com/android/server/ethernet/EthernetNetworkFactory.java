@@ -19,7 +19,9 @@ package com.android.server.ethernet;
 import android.annotation.NonNull;
 import android.annotation.Nullable;
 import android.content.Context;
+import android.content.res.Resources;
 import android.net.ConnectivityManager;
+import android.net.ConnectivityResources;
 import android.net.EthernetManager;
 import android.net.EthernetNetworkSpecifier;
 import android.net.IEthernetNetworkManagementListener;
@@ -49,6 +51,7 @@ import android.util.AndroidRuntimeException;
 import android.util.Log;
 import android.util.SparseArray;
 
+import com.android.connectivity.resources.R;
 import com.android.internal.annotations.VisibleForTesting;
 import com.android.internal.util.IndentingPrintWriter;
 import com.android.net.module.util.InterfaceParams;
@@ -69,6 +72,8 @@ public class EthernetNetworkFactory extends NetworkFactory {
 
     private final static int NETWORK_SCORE = 70;
     private static final String NETWORK_TYPE = "Ethernet";
+    private static final String LEGACY_TCP_BUFFER_SIZES =
+            "524288,1048576,3145728,524288,1048576,2097152";
 
     private final ConcurrentHashMap<String, NetworkInterfaceState> mTrackingInterfaces =
             new ConcurrentHashMap<>();
@@ -93,6 +98,27 @@ public class EthernetNetworkFactory extends NetworkFactory {
 
         public InterfaceParams getNetworkInterfaceByName(String name) {
             return InterfaceParams.getByName(name);
+        }
+
+        // TODO: remove legacy resource fallback after migrating its overlays.
+        private String getPlatformTcpBufferSizes(Context context) {
+            final Resources r = context.getResources();
+            final int resId = r.getIdentifier("config_ethernet_tcp_buffers", "string",
+                    context.getPackageName());
+            return r.getString(resId);
+        }
+
+        public String getTcpBufferSizesFromResource(Context context) {
+            final String tcpBufferSizes;
+            final String platformTcpBufferSizes = getPlatformTcpBufferSizes(context);
+            if (!LEGACY_TCP_BUFFER_SIZES.equals(platformTcpBufferSizes)) {
+                // Platform resource is not the historical default: use the overlay.
+                tcpBufferSizes = platformTcpBufferSizes;
+            } else {
+                final ConnectivityResources resources = new ConnectivityResources(context);
+                tcpBufferSizes = resources.get().getString(R.string.config_ethernet_tcp_buffers);
+            }
+            return tcpBufferSizes;
         }
     }
 
@@ -518,8 +544,7 @@ public class EthernetNetworkFactory extends NetworkFactory {
             mIpClientCallback.awaitIpClientStart();
 
             if (sTcpBufferSizes == null) {
-                sTcpBufferSizes = mContext.getResources().getString(
-                        com.android.internal.R.string.config_ethernet_tcp_buffers);
+                sTcpBufferSizes = mDeps.getTcpBufferSizesFromResource(mContext);
             }
             provisionIpClient(mIpClient, mIpConfig, sTcpBufferSizes);
         }
