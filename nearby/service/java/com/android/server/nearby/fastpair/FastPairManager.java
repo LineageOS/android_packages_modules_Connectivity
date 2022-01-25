@@ -51,6 +51,7 @@ import com.android.server.nearby.fastpair.cache.FastPairCacheManager;
 import com.android.server.nearby.fastpair.footprint.FootprintsDeviceManager;
 import com.android.server.nearby.fastpair.halfsheet.FastPairHalfSheetManager;
 import com.android.server.nearby.fastpair.pairinghandler.PairingProgressHandlerBase;
+import com.android.server.nearby.provider.FastPairDataProvider;
 import com.android.server.nearby.util.FastPairDecoder;
 import com.android.server.nearby.util.ForegroundThread;
 import com.android.server.nearby.util.Hex;
@@ -114,9 +115,12 @@ public class FastPairManager {
                 byte[] model = intent.getByteArrayExtra(EXTRA_MODEL_ID);
                 String address = intent.getStringExtra(EXTRA_ADDRESS);
                 Log.d("FastPairService", "start pair " + address);
+                Rpcs.GetObservedDeviceResponse response =
+                        FastPairDataProvider.getInstance().loadFastPairDeviceMetadata(model);
+                ByteString publicKey = response.getDevice().getAntiSpoofingKeyPair().getPublicKey();
                 Locator.get(mLocatorContextWrapper, FastPairHalfSheetManager.class).showHalfSheet(
                         Cache.ScanFastPairStoreItem.newBuilder().setAddress(address)
-                                .setAntiSpoofingPublicKey(ByteString.EMPTY)
+                                .setAntiSpoofingPublicKey(publicKey)
                                 .build());
             } else {
                 Log.d("FastPairService", " screen off");
