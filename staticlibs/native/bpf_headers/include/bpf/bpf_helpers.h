@@ -116,6 +116,15 @@ static int (*bpf_map_update_elem_unsafe)(const struct bpf_map_def* map, const vo
 static int (*bpf_map_delete_elem_unsafe)(const struct bpf_map_def* map,
                                          const void* key) = (void*)BPF_FUNC_map_delete_elem;
 
+#define BPF_ANNOTATE_KV_PAIR(name, type_key, type_val)  \
+        struct ____btf_map_##name {                     \
+                type_key key;                           \
+                type_val value;                         \
+        };                                              \
+        struct ____btf_map_##name                       \
+        __attribute__ ((section(".maps." #name), used)) \
+                ____btf_map_##name = { }
+
 /* type safe macro to declare a map and related accessor functions */
 #define DEFINE_BPF_MAP_UGM(the_map, TYPE, TypeOfKey, TypeOfValue, num_entries, usr, grp, md)     \
     const struct bpf_map_def SECTION("maps") the_map = {                                         \
@@ -132,6 +141,7 @@ static int (*bpf_map_delete_elem_unsafe)(const struct bpf_map_def* map,
             .min_kver = KVER_NONE,                                                               \
             .max_kver = KVER_INF,                                                                \
     };                                                                                           \
+    BPF_ANNOTATE_KV_PAIR(the_map, TypeOfKey, TypeOfValue);                                       \
                                                                                                  \
     static inline __always_inline __unused TypeOfValue* bpf_##the_map##_lookup_elem(             \
             const TypeOfKey* k) {                                                                \
