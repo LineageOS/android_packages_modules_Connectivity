@@ -22,6 +22,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
@@ -32,6 +33,7 @@ import static org.mockito.Mockito.verifyNoMoreInteractions;
 
 import android.annotation.NonNull;
 import android.content.Context;
+import android.net.ConnectivityManager;
 import android.net.INetd;
 import android.net.INetdUnsolicitedEventListener;
 import android.net.LinkAddress;
@@ -71,6 +73,7 @@ import java.util.function.BiFunction;
 public class NetworkManagementServiceTest {
     private NetworkManagementService mNMService;
     @Mock private Context mContext;
+    @Mock private ConnectivityManager mCm;
     @Mock private IBatteryStats.Stub mBatteryStatsService;
     @Mock private INetd.Stub mNetdService;
 
@@ -113,6 +116,9 @@ public class NetworkManagementServiceTest {
         MockitoAnnotations.initMocks(this);
         doNothing().when(mNetdService)
                 .registerUnsolicitedEventListener(mUnsolListenerCaptor.capture());
+        doReturn(Context.CONNECTIVITY_SERVICE).when(mContext).getSystemServiceName(
+                eq(ConnectivityManager.class));
+        doReturn(mCm).when(mContext).getSystemService(eq(Context.CONNECTIVITY_SERVICE));
         // Start the service and wait until it connects to our socket.
         mNMService = NetworkManagementService.create(mContext, mDeps);
     }
@@ -239,6 +245,7 @@ public class NetworkManagementServiceTest {
         mNMService.setUidOnMeteredNetworkDenylist(TEST_UID, true);
         assertTrue("Should be true since mobile data usage is restricted",
                 mNMService.isNetworkRestricted(TEST_UID));
+        verify(mCm).updateMeteredNetworkDenyList(TEST_UID, true /* enabled */);
 
         mNMService.setDataSaverModeEnabled(true);
         verify(mNetdService).bandwidthEnableDataSaver(true);
@@ -246,13 +253,16 @@ public class NetworkManagementServiceTest {
         mNMService.setUidOnMeteredNetworkDenylist(TEST_UID, false);
         assertTrue("Should be true since data saver is on and the uid is not allowlisted",
                 mNMService.isNetworkRestricted(TEST_UID));
+        verify(mCm).updateMeteredNetworkDenyList(TEST_UID, true /* false */);
 
         mNMService.setUidOnMeteredNetworkAllowlist(TEST_UID, true);
         assertFalse("Should be false since data saver is on and the uid is allowlisted",
                 mNMService.isNetworkRestricted(TEST_UID));
+        verify(mCm).updateMeteredNetworkAllowList(TEST_UID, true /* enabled */);
 
         // remove uid from allowlist and turn datasaver off again
         mNMService.setUidOnMeteredNetworkAllowlist(TEST_UID, false);
+        verify(mCm).updateMeteredNetworkAllowList(TEST_UID, false /* enabled */);
         mNMService.setDataSaverModeEnabled(false);
         verify(mNetdService).bandwidthEnableDataSaver(false);
         assertFalse("Network should not be restricted when data saver is off",
@@ -306,12 +316,14 @@ public class NetworkManagementServiceTest {
         for (int chain : chains) {
             final ArrayMap<Integer, Boolean> expectedValues = expected.get(chain);
             mNMService.setFirewallChainEnabled(chain, true);
+            verify(mCm).setFirewallChainEnabled(chain, true /* enabled */);
             for (int state : states) {
                 mNMService.setFirewallUidRule(chain, TEST_UID, state);
                 assertEquals(errorMsg.apply(chain, state),
                         expectedValues.get(state), mNMService.isNetworkRestricted(TEST_UID));
             }
             mNMService.setFirewallChainEnabled(chain, false);
+            verify(mCm).setFirewallChainEnabled(chain, false /* enabled */);
         }
     }
 }
