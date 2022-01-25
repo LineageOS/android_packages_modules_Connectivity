@@ -90,5 +90,9 @@ rule android.net.shared.** com.android.connectivity.@0
 # From services-connectivity-shared-srcs
 rule android.net.util.NetworkConstants* com.android.connectivity.@0
 
+# From modules-utils-statemachine
+rule com.android.internal.util.IState* com.android.connectivity.@0
+rule com.android.internal.util.State* com.android.connectivity.@0
+
 # Remaining are connectivity sources in com.android.server and com.android.server.connectivity:
 # TODO: move to a subpackage of com.android.connectivity (such as com.android.connectivity.server)
