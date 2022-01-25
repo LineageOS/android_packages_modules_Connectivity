@@ -439,8 +439,6 @@ public class ConnectivityService extends IConnectivityManager.Stub
      * Requests that don't code for a per-app preference use PREFERENCE_ORDER_INVALID.
      * The default request uses PREFERENCE_ORDER_DEFAULT.
      */
-    // Bound for the lowest valid preference order.
-    static final int PREFERENCE_ORDER_LOWEST = 999;
     // Used when sending to netd to code for "no order".
     static final int PREFERENCE_ORDER_NONE = 0;
     // Order for requests that don't code for a per-app preference. As it is
@@ -448,11 +446,6 @@ public class ConnectivityService extends IConnectivityManager.Stub
     // PREFERENCE_ORDER_NONE when sending to netd.
     @VisibleForTesting
     static final int PREFERENCE_ORDER_INVALID = Integer.MAX_VALUE;
-    // Order for the default internet request. Since this must always have the
-    // lowest priority, its value is larger than the largest acceptable value. As
-    // it is out of the valid range, the corresponding order should be
-    // PREFERENCE_ORDER_NONE when sending to netd.
-    static final int PREFERENCE_ORDER_DEFAULT = 1000;
     // As a security feature, VPNs have the top priority.
     static final int PREFERENCE_ORDER_VPN = 0; // Netd supports only 0 for VPN.
     // Order of per-app OEM preference. See {@link #setOemNetworkPreference}.
@@ -467,6 +460,13 @@ public class ConnectivityService extends IConnectivityManager.Stub
     // See {@link ConnectivitySettingsManager#setMobileDataPreferredUids}
     @VisibleForTesting
     static final int PREFERENCE_ORDER_MOBILE_DATA_PREFERERRED = 30;
+    // Preference order that signifies the network shouldn't be set as a default network for
+    // the UIDs, only give them access to it. TODO : replace this with a boolean
+    // in NativeUidRangeConfig
+    @VisibleForTesting
+    static final int PREFERENCE_ORDER_IRRELEVANT_BECAUSE_NOT_DEFAULT = 999;
+    // Bound for the lowest valid preference order.
+    static final int PREFERENCE_ORDER_LOWEST = 999;
 
     /**
      * used internally to clear a wakelock when transitioning
@@ -7749,6 +7749,17 @@ public class ConnectivityService extends IConnectivityManager.Stub
         return stableRanges;
     }
 
+    private static UidRangeParcel[] intsToUidRangeStableParcels(
+            final @NonNull ArraySet<Integer> uids) {
+        final UidRangeParcel[] stableRanges = new UidRangeParcel[uids.size()];
+        int index = 0;
+        for (int uid : uids) {
+            stableRanges[index] = new UidRangeParcel(uid, uid);
+            index++;
+        }
+        return stableRanges;
+    }
+
     private static UidRangeParcel[] toUidRangeStableParcels(UidRange[] ranges) {
         final UidRangeParcel[] stableRanges = new UidRangeParcel[ranges.length];
         for (int i = 0; i < ranges.length; i++) {
@@ -7819,8 +7830,14 @@ public class ConnectivityService extends IConnectivityManager.Stub
         }
     }
 
-    private void updateUids(NetworkAgentInfo nai, NetworkCapabilities prevNc,
-            NetworkCapabilities newNc) {
+    private void updateUids(@NonNull NetworkAgentInfo nai, @Nullable NetworkCapabilities prevNc,
+            @Nullable NetworkCapabilities newNc) {
+        updateVpnUids(nai, prevNc, newNc);
+        updateAccessUids(nai, prevNc, newNc);
+    }
+
+    private void updateVpnUids(@NonNull NetworkAgentInfo nai, @Nullable NetworkCapabilities prevNc,
+            @Nullable NetworkCapabilities newNc) {
         Set<UidRange> prevRanges = null == prevNc ? null : prevNc.getUidRanges();
         Set<UidRange> newRanges = null == newNc ? null : newNc.getUidRanges();
         if (null == prevRanges) prevRanges = new ArraySet<>();
@@ -7876,6 +7893,46 @@ public class ConnectivityService extends IConnectivityManager.Stub
         } catch (Exception e) {
             // Never crash!
             loge("Exception in updateUids: ", e);
+        }
+    }
+
+    private void updateAccessUids(@NonNull NetworkAgentInfo nai,
+            @Nullable NetworkCapabilities prevNc, @Nullable NetworkCapabilities newNc) {
+        // In almost all cases both NC code for empty access UIDs. return as fast as possible.
+        final boolean prevEmpty = null == prevNc || prevNc.getAccessUidsNoCopy().isEmpty();
+        final boolean newEmpty = null == newNc || newNc.getAccessUidsNoCopy().isEmpty();
+        if (prevEmpty && newEmpty) return;
+
+        final ArraySet<Integer> prevUids =
+                null == prevNc ? new ArraySet<>() : prevNc.getAccessUidsNoCopy();
+        final ArraySet<Integer> newUids =
+                null == newNc ? new ArraySet<>() : newNc.getAccessUidsNoCopy();
+
+        if (prevUids.equals(newUids)) return;
+
+        // This implementation is very simple and vastly faster for sets of Integers than
+        // CompareOrUpdateResult, which is tuned for sets that need to be compared based on
+        // a key computed from the value and has storage for that.
+        final ArraySet<Integer> toRemove = new ArraySet<>(prevUids);
+        final ArraySet<Integer> toAdd = new ArraySet<>(newUids);
+        toRemove.removeAll(newUids);
+        toAdd.removeAll(prevUids);
+
+        try {
+            if (!toAdd.isEmpty()) {
+                mNetd.networkAddUidRangesParcel(new NativeUidRangeConfig(
+                        nai.network.netId,
+                        intsToUidRangeStableParcels(toAdd),
+                        PREFERENCE_ORDER_IRRELEVANT_BECAUSE_NOT_DEFAULT));
+            }
+            if (!toRemove.isEmpty()) {
+                mNetd.networkRemoveUidRangesParcel(new NativeUidRangeConfig(
+                        nai.network.netId,
+                        intsToUidRangeStableParcels(toRemove),
+                        PREFERENCE_ORDER_IRRELEVANT_BECAUSE_NOT_DEFAULT));
+            }
+        } catch (RemoteException e) {
+            // Netd died. This usually causes a runtime restart anyway.
         }
     }
 

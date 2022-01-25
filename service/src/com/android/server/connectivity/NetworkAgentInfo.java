@@ -17,6 +17,7 @@
 package com.android.server.connectivity;
 
 import static android.net.ConnectivityDiagnosticsManager.ConnectivityReport;
+import static android.net.NetworkCapabilities.NET_CAPABILITY_NOT_RESTRICTED;
 import static android.net.NetworkCapabilities.TRANSPORT_CELLULAR;
 import static android.net.NetworkCapabilities.TRANSPORT_TEST;
 import static android.net.NetworkCapabilities.transportNamesOf;
@@ -1208,12 +1209,18 @@ public class NetworkAgentInfo implements Comparable<NetworkAgentInfo>, NetworkRa
 
     private static boolean areAccessUidsAcceptableFromNetworkAgent(
             @NonNull final NetworkCapabilities nc) {
-        if (nc.hasAccessUids()) {
-            Log.w(TAG, "Capabilities from network agent must not contain access UIDs");
-            // TODO : accept the supported cases
-            return false;
-        }
-        return true;
+        // NCs without access UIDs are fine.
+        if (!nc.hasAccessUids()) return true;
+
+        // On a non-restricted network, access UIDs make no sense
+        if (nc.hasCapability(NET_CAPABILITY_NOT_RESTRICTED)) return false;
+
+        // If this network has TRANSPORT_TEST, then the caller can do whatever they want to
+        // access UIDs
+        if (nc.hasTransport(TRANSPORT_TEST)) return true;
+
+        // TODO : accept more supported cases
+        return false;
     }
 
     // TODO: Print shorter members first and only print the boolean variable which value is true

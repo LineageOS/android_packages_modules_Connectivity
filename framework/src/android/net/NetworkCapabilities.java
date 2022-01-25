@@ -1865,6 +1865,13 @@ public final class NetworkCapabilities implements Parcelable {
         return new ArraySet<>(mAccessUids);
     }
 
+    /** @hide */
+    // For internal clients that know what they are doing and need to avoid the performance hit
+    // of the defensive copy.
+    public @NonNull ArraySet<Integer> getAccessUidsNoCopy() {
+        return mAccessUids;
+    }
+
     /**
      * Test whether this UID has special permission to access this network, as per mAccessUids.
      * @hide
