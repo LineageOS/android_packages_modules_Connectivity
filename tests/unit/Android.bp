@@ -74,6 +74,7 @@ filegroup {
         "java/android/net/TelephonyNetworkSpecifierTest.java",
         "java/android/net/VpnManagerTest.java",
         "java/android/net/ipmemorystore/*.java",
+        "java/android/net/netstats/NetworkStatsDataMigrationUtilsTest.kt",
         "java/android/net/nsd/*.java",
         "java/com/android/internal/net/NetworkUtilsInternalTest.java",
         "java/com/android/internal/net/VpnProfileTest.java",
