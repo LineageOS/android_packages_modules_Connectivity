@@ -18,6 +18,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
           package="android.nearby.integration.privileged">
 
+    <uses-permission android:name="android.permission.WRITE_SECURE_SETTINGS" />
+
     <instrumentation
         android:name="androidx.test.runner.AndroidJUnitRunner"
         android:targetPackage="android.nearby.integration.privileged"
