@@ -326,6 +326,8 @@ package android.net {
     field public static final int NET_CAPABILITY_NOT_ROAMING = 18; // 0x12
     field public static final int NET_CAPABILITY_NOT_SUSPENDED = 21; // 0x15
     field public static final int NET_CAPABILITY_NOT_VPN = 15; // 0xf
+    field public static final int NET_CAPABILITY_PRIORITIZE_BANDWIDTH = 35; // 0x23
+    field public static final int NET_CAPABILITY_PRIORITIZE_LATENCY = 34; // 0x22
     field public static final int NET_CAPABILITY_RCS = 8; // 0x8
     field public static final int NET_CAPABILITY_SUPL = 1; // 0x1
     field public static final int NET_CAPABILITY_TEMPORARILY_NOT_METERED = 25; // 0x19
