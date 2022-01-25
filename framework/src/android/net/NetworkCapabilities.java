@@ -1853,13 +1853,13 @@ public final class NetworkCapabilities implements Parcelable {
      * the UID doesn't hold the USE_RESTRICTED_NETWORKS permission. This is defined by the
      * network agent in charge of creating the network.
      *
-     * Only network factories and the system server can see these UIDs, since the system
+     * The UIDs are only visible to network factories and the system server, since the system
      * server makes sure to redact them before sending a NetworkCapabilities to a process
      * that doesn't hold the permission.
      *
      * @hide
      */
-    // @SystemApi(client = SystemApi.Client.MODULE_LIBRARIES)
+    @SystemApi(client = SystemApi.Client.MODULE_LIBRARIES)
     @RequiresPermission(android.Manifest.permission.NETWORK_FACTORY)
     public @NonNull Set<Integer> getAccessUids() {
         return new ArraySet<>(mAccessUids);
@@ -3021,9 +3021,9 @@ public final class NetworkCapabilities implements Parcelable {
          * the associated subscription. Failure to comply with these rules will see this member
          * cleared.
          * <p>
-         * Only network factories and the system server can see these UIDs, since the system server
-         * makes sure to redact them before sending a {@link NetworkCapabilities} instance to a
-         * process that doesn't hold the {@link android.Manifest.permission.NETWORK_FACTORY}
+         * These UIDs are only visible to network factories and the system server, since the system
+         * server makes sure to redact them before sending a {@link NetworkCapabilities} instance
+         * to a process that doesn't hold the {@link android.Manifest.permission.NETWORK_FACTORY}
          * permission.
          * <p>
          * This list cannot be null, but it can be empty to mean that no UID without the
@@ -3035,7 +3035,7 @@ public final class NetworkCapabilities implements Parcelable {
          * @hide
          */
         @NonNull
-        // @SystemApi(client = SystemApi.Client.MODULE_LIBRARIES)
+        @SystemApi(client = SystemApi.Client.MODULE_LIBRARIES)
         @RequiresPermission(android.Manifest.permission.NETWORK_FACTORY)
         public Builder setAccessUids(@NonNull Set<Integer> uids) {
             Objects.requireNonNull(uids);
