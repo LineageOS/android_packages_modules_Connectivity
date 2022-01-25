@@ -40,7 +40,7 @@ cc_library_headers {
         "//packages/modules/Connectivity/netd",
         "//packages/modules/Connectivity/service",
         "//packages/modules/Connectivity/service/native",
-	"//packages/modules/Connectivity/service/native/libs/libclat",
+        "//packages/modules/Connectivity/service/native/libs/libclat",
         "//packages/modules/Connectivity/Tethering",
         "//packages/providers/MediaProvider/jni",
         "//system/bpf/libbpf_android",
