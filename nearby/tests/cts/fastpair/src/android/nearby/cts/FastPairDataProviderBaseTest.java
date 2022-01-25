@@ -81,6 +81,7 @@ public class FastPairDataProviderBaseTest {
     private static final boolean ELIGIBLE_ACCOUNT_1_OPT_IN = true;
     private static final Account ELIGIBLE_ACCOUNT_2 = new Account("def@gmail.com", "type2");
     private static final boolean ELIGIBLE_ACCOUNT_2_OPT_IN = false;
+    private static final Account MANAGE_ACCOUNT = new Account("ghi@gmail.com", "type3");
     private static final ImmutableList<FastPairEligibleAccount> ELIGIBLE_ACCOUNTS =
             ImmutableList.of(
                     genHappyPathFastPairEligibleAccount(ELIGIBLE_ACCOUNT_1,
@@ -89,6 +90,8 @@ public class FastPairDataProviderBaseTest {
                             ELIGIBLE_ACCOUNT_2_OPT_IN));
     private static final int ERROR_CODE_BAD_REQUEST =
             FastPairDataProviderBase.ERROR_CODE_BAD_REQUEST;
+    private static final int MANAGE_ACCOUNT_REQUEST_TYPE =
+            FastPairDataProviderBase.MANAGE_REQUEST_ADD;
     private static final String ERROR_STRING = "ERROR_STRING";
     private static final String FAIL_CONNECT_GOTO_SETTINGS_DESCRIPTION =
             "FAIL_CONNECT_GOTO_SETTINGS_DESCRIPTION";
@@ -131,6 +134,9 @@ public class FastPairDataProviderBaseTest {
     private static final FastPairEligibleAccountsRequestParcel
             FAST_PAIR_ELIGIBLE_ACCOUNTS_REQUEST_PARCEL =
             genFastPairEligibleAccountsRequestParcel();
+    private static final FastPairManageAccountRequestParcel
+            FAST_PAIR_MANAGE_ACCOUNT_REQUEST_PARCEL =
+            genFastPairManageAccountRequestParcel();
     private static final FastPairAntispoofkeyDeviceMetadata
             HAPPY_PATH_FAST_PAIR_ANTI_SPOOF_KEY_DEVICE_METADATA =
             genHappyPathFastPairAntispoofkeyDeviceMetadata();
@@ -222,12 +228,22 @@ public class FastPairDataProviderBaseTest {
 
     @Test
     public void testHappyPathManageFastPairAccount() throws Exception {
+        // AOSP sends calls to OEM via Parcelable.
         mHappyPathFastPairDataProvider.asProvider().manageFastPairAccount(
-                new FastPairManageAccountRequestParcel(),
+                FAST_PAIR_MANAGE_ACCOUNT_REQUEST_PARCEL,
                 mManageAccountCallback);
+
+        // OEM receives request and verifies that it is as expected.
+        final ArgumentCaptor<FastPairDataProviderBase.FastPairManageAccountRequest>
+                mFastPairManageAccountRequestCaptor =
+                ArgumentCaptor.forClass(
+                        FastPairDataProviderBase.FastPairManageAccountRequest.class);
         verify(mMockFastPairDataProviderBase).onManageFastPairAccount(
-                any(FastPairDataProviderBase.FastPairManageAccountRequest.class),
+                mFastPairManageAccountRequestCaptor.capture(),
                 any(FastPairDataProviderBase.FastPairManageActionCallback.class));
+        ensureHappyPathAsExpected(mFastPairManageAccountRequestCaptor.getValue());
+
+        // AOSP receives SUCCESS response.
         verify(mManageAccountCallback).onSuccess();
     }
 
@@ -280,12 +296,12 @@ public class FastPairDataProviderBaseTest {
     @Test
     public void testErrorPathManageFastPairAccount() throws Exception {
         mErrorPathFastPairDataProvider.asProvider().manageFastPairAccount(
-                new FastPairManageAccountRequestParcel(),
+                FAST_PAIR_MANAGE_ACCOUNT_REQUEST_PARCEL,
                 mManageAccountCallback);
         verify(mMockFastPairDataProviderBase).onManageFastPairAccount(
                 any(FastPairDataProviderBase.FastPairManageAccountRequest.class),
                 any(FastPairDataProviderBase.FastPairManageActionCallback.class));
-        verify(mManageAccountCallback).onError(anyInt(), any());
+        verify(mManageAccountCallback).onError(eq(ERROR_CODE_BAD_REQUEST), eq(ERROR_STRING));
     }
 
     @Test
@@ -431,6 +447,17 @@ public class FastPairDataProviderBaseTest {
         return requestParcel;
     }
 
+    /* Generates FastPairManageAccountRequestParcel. */
+    private static FastPairManageAccountRequestParcel
+            genFastPairManageAccountRequestParcel() {
+        FastPairManageAccountRequestParcel requestParcel =
+                new FastPairManageAccountRequestParcel();
+        requestParcel.account = MANAGE_ACCOUNT;
+        requestParcel.requestType = MANAGE_ACCOUNT_REQUEST_TYPE;
+
+        return requestParcel;
+    }
+
     /* Generates Happy Path AntispoofkeyDeviceMetadata. */
     private static FastPairAntispoofkeyDeviceMetadata
             genHappyPathFastPairAntispoofkeyDeviceMetadata() {
@@ -505,6 +532,12 @@ public class FastPairDataProviderBaseTest {
     private static void ensureHappyPathAsExpected(
             FastPairDataProviderBase.FastPairEligibleAccountsRequest request) {
         // No fields since FastPairEligibleAccountsRequest is just a place holder now.
+    }
+
+    private static void ensureHappyPathAsExpected(
+            FastPairDataProviderBase.FastPairManageAccountRequest request) {
+        assertEquals(MANAGE_ACCOUNT, request.getAccount());
+        assertEquals(MANAGE_ACCOUNT_REQUEST_TYPE, request.getRequestType());
     }
 
     /* Verifies Happy Path AntispoofkeyDeviceMetadataParcel. */
