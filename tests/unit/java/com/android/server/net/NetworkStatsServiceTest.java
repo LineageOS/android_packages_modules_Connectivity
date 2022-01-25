@@ -192,6 +192,7 @@ public class NetworkStatsServiceTest extends NetworkStatsBaseTest {
     private @Mock AlarmManager mAlarmManager;
     @Mock
     private NetworkStatsSubscriptionsMonitor mNetworkStatsSubscriptionsMonitor;
+    private @Mock BpfInterfaceMapUpdater mBpfInterfaceMapUpdater;
     private HandlerThread mHandlerThread;
     @Mock
     private LocationPermissionChecker mLocationPermissionChecker;
@@ -341,6 +342,12 @@ public class NetworkStatsServiceTest extends NetworkStatsBaseTest {
             @Override
             public LocationPermissionChecker makeLocationPermissionChecker(final Context context) {
                 return mLocationPermissionChecker;
+            }
+
+            @Override
+            public BpfInterfaceMapUpdater makeBpfInterfaceMapUpdater(
+                    @NonNull Context ctx, @NonNull Handler handler) {
+                return mBpfInterfaceMapUpdater;
             }
         };
     }
