@@ -86,6 +86,7 @@ filegroup {
         "java/com/android/server/net/ipmemorystore/*.java",
         "java/com/android/server/net/BpfInterfaceMapUpdaterTest.java",
         "java/com/android/server/net/NetworkStats*.java",
+        "java/com/android/server/net/TestableUsageCallback.kt",
     ]
 }
 

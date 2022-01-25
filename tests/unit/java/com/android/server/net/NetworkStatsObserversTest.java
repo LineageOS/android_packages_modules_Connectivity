@@ -36,19 +36,16 @@ import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyInt;
 
-import android.app.usage.NetworkStatsManager;
 import android.net.DataUsageRequest;
 import android.net.NetworkIdentity;
 import android.net.NetworkIdentitySet;
 import android.net.NetworkStats;
 import android.net.NetworkStatsAccess;
 import android.net.NetworkTemplate;
-import android.os.ConditionVariable;
-import android.os.Handler;
+import android.net.netstats.IUsageCallback;
 import android.os.HandlerThread;
 import android.os.IBinder;
 import android.os.Looper;
-import android.os.Messenger;
 import android.os.Process;
 import android.os.UserHandle;
 import android.telephony.TelephonyManager;
@@ -56,7 +53,6 @@ import android.util.ArrayMap;
 
 import androidx.test.filters.SmallTest;
 
-import com.android.server.net.NetworkStatsServiceTest.LatchedHandler;
 import com.android.testutils.DevSdkIgnoreRule;
 import com.android.testutils.DevSdkIgnoreRunner;
 import com.android.testutils.HandlerUtils;
@@ -97,21 +93,15 @@ public class NetworkStatsObserversTest {
     private static final long WAIT_TIMEOUT_MS = 500;
     private static final long THRESHOLD_BYTES = 2 * MB_IN_BYTES;
     private static final long BASE_BYTES = 7 * MB_IN_BYTES;
-    private static final int INVALID_TYPE = -1;
-
-    private long mElapsedRealtime;
 
     private HandlerThread mObserverHandlerThread;
-    private Handler mObserverNoopHandler;
-
-    private LatchedHandler mHandler;
 
     private NetworkStatsObservers mStatsObservers;
-    private Messenger mMessenger;
     private ArrayMap<String, NetworkIdentitySet> mActiveIfaces;
     private ArrayMap<String, NetworkIdentitySet> mActiveUidIfaces;
 
-    @Mock private IBinder mockBinder;
+    @Mock private IBinder mUsageCallbackBinder;
+    @Mock private IUsageCallback mUsageCallback;
 
     @Before
     public void setUp() throws Exception {
@@ -127,11 +117,9 @@ public class NetworkStatsObserversTest {
             }
         };
 
-        mHandler = new LatchedHandler(Looper.getMainLooper(), new ConditionVariable());
-        mMessenger = new Messenger(mHandler);
-
         mActiveIfaces = new ArrayMap<>();
         mActiveUidIfaces = new ArrayMap<>();
+        Mockito.when(mUsageCallback.asBinder()).thenReturn(mUsageCallbackBinder);
     }
 
     @Test
@@ -140,7 +128,7 @@ public class NetworkStatsObserversTest {
         DataUsageRequest inputRequest = new DataUsageRequest(
                 DataUsageRequest.REQUEST_ID_UNSET, sTemplateWifi, thresholdTooLowBytes);
 
-        DataUsageRequest request = mStatsObservers.register(inputRequest, mMessenger, mockBinder,
+        DataUsageRequest request = mStatsObservers.register(inputRequest, mUsageCallback,
                 Process.SYSTEM_UID, NetworkStatsAccess.Level.DEVICE);
         assertTrue(request.requestId > 0);
         assertTrue(Objects.equals(sTemplateWifi, request.template));
@@ -153,7 +141,7 @@ public class NetworkStatsObserversTest {
         DataUsageRequest inputRequest = new DataUsageRequest(
                 DataUsageRequest.REQUEST_ID_UNSET, sTemplateWifi, highThresholdBytes);
 
-        DataUsageRequest request = mStatsObservers.register(inputRequest, mMessenger, mockBinder,
+        DataUsageRequest request = mStatsObservers.register(inputRequest, mUsageCallback,
                 Process.SYSTEM_UID, NetworkStatsAccess.Level.DEVICE);
         assertTrue(request.requestId > 0);
         assertTrue(Objects.equals(sTemplateWifi, request.template));
@@ -165,13 +153,13 @@ public class NetworkStatsObserversTest {
         DataUsageRequest inputRequest = new DataUsageRequest(
                 DataUsageRequest.REQUEST_ID_UNSET, sTemplateWifi, THRESHOLD_BYTES);
 
-        DataUsageRequest request1 = mStatsObservers.register(inputRequest, mMessenger, mockBinder,
+        DataUsageRequest request1 = mStatsObservers.register(inputRequest, mUsageCallback,
                 Process.SYSTEM_UID, NetworkStatsAccess.Level.DEVICE);
         assertTrue(request1.requestId > 0);
         assertTrue(Objects.equals(sTemplateWifi, request1.template));
         assertEquals(THRESHOLD_BYTES, request1.thresholdInBytes);
 
-        DataUsageRequest request2 = mStatsObservers.register(inputRequest, mMessenger, mockBinder,
+        DataUsageRequest request2 = mStatsObservers.register(inputRequest, mUsageCallback,
                 Process.SYSTEM_UID, NetworkStatsAccess.Level.DEVICE);
         assertTrue(request2.requestId > request1.requestId);
         assertTrue(Objects.equals(sTemplateWifi, request2.template));
@@ -191,17 +179,19 @@ public class NetworkStatsObserversTest {
         DataUsageRequest inputRequest = new DataUsageRequest(
                 DataUsageRequest.REQUEST_ID_UNSET, sTemplateImsi1, THRESHOLD_BYTES);
 
-        DataUsageRequest request = mStatsObservers.register(inputRequest, mMessenger, mockBinder,
+        DataUsageRequest request = mStatsObservers.register(inputRequest, mUsageCallback,
                 Process.SYSTEM_UID, NetworkStatsAccess.Level.DEVICE);
         assertTrue(request.requestId > 0);
         assertTrue(Objects.equals(sTemplateImsi1, request.template));
         assertEquals(THRESHOLD_BYTES, request.thresholdInBytes);
-        Mockito.verify(mockBinder).linkToDeath(any(IBinder.DeathRecipient.class), anyInt());
+        Mockito.verify(mUsageCallbackBinder).linkToDeath(any(IBinder.DeathRecipient.class),
+                anyInt());
 
         mStatsObservers.unregister(request, Process.SYSTEM_UID);
         waitForObserverToIdle();
 
-        Mockito.verify(mockBinder).unlinkToDeath(any(IBinder.DeathRecipient.class), anyInt());
+        Mockito.verify(mUsageCallbackBinder).unlinkToDeath(any(IBinder.DeathRecipient.class),
+                anyInt());
     }
 
     @Test
@@ -209,17 +199,18 @@ public class NetworkStatsObserversTest {
         DataUsageRequest inputRequest = new DataUsageRequest(
                 DataUsageRequest.REQUEST_ID_UNSET, sTemplateImsi1, THRESHOLD_BYTES);
 
-        DataUsageRequest request = mStatsObservers.register(inputRequest, mMessenger, mockBinder,
+        DataUsageRequest request = mStatsObservers.register(inputRequest, mUsageCallback,
                 UID_RED, NetworkStatsAccess.Level.DEVICE);
         assertTrue(request.requestId > 0);
         assertTrue(Objects.equals(sTemplateImsi1, request.template));
         assertEquals(THRESHOLD_BYTES, request.thresholdInBytes);
-        Mockito.verify(mockBinder).linkToDeath(any(IBinder.DeathRecipient.class), anyInt());
+        Mockito.verify(mUsageCallbackBinder)
+                .linkToDeath(any(IBinder.DeathRecipient.class), anyInt());
 
         mStatsObservers.unregister(request, UID_BLUE);
         waitForObserverToIdle();
 
-        Mockito.verifyZeroInteractions(mockBinder);
+        Mockito.verifyZeroInteractions(mUsageCallbackBinder);
     }
 
     private NetworkIdentitySet makeTestIdentSet() {
@@ -236,7 +227,7 @@ public class NetworkStatsObserversTest {
         DataUsageRequest inputRequest = new DataUsageRequest(
                 DataUsageRequest.REQUEST_ID_UNSET, sTemplateImsi1, THRESHOLD_BYTES);
 
-        DataUsageRequest request = mStatsObservers.register(inputRequest, mMessenger, mockBinder,
+        DataUsageRequest request = mStatsObservers.register(inputRequest, mUsageCallback,
                 Process.SYSTEM_UID, NetworkStatsAccess.Level.DEVICE);
         assertTrue(request.requestId > 0);
         assertTrue(Objects.equals(sTemplateImsi1, request.template));
@@ -260,7 +251,7 @@ public class NetworkStatsObserversTest {
         DataUsageRequest inputRequest = new DataUsageRequest(
                 DataUsageRequest.REQUEST_ID_UNSET, sTemplateImsi1, THRESHOLD_BYTES);
 
-        DataUsageRequest request = mStatsObservers.register(inputRequest, mMessenger, mockBinder,
+        DataUsageRequest request = mStatsObservers.register(inputRequest, mUsageCallback,
                 Process.SYSTEM_UID, NetworkStatsAccess.Level.DEVICE);
         assertTrue(request.requestId > 0);
         assertTrue(Objects.equals(sTemplateImsi1, request.template));
@@ -290,7 +281,7 @@ public class NetworkStatsObserversTest {
         DataUsageRequest inputRequest = new DataUsageRequest(
                 DataUsageRequest.REQUEST_ID_UNSET, sTemplateImsi1, THRESHOLD_BYTES);
 
-        DataUsageRequest request = mStatsObservers.register(inputRequest, mMessenger, mockBinder,
+        DataUsageRequest request = mStatsObservers.register(inputRequest, mUsageCallback,
                 Process.SYSTEM_UID, NetworkStatsAccess.Level.DEVICE);
         assertTrue(request.requestId > 0);
         assertTrue(Objects.equals(sTemplateImsi1, request.template));
@@ -313,7 +304,7 @@ public class NetworkStatsObserversTest {
         mStatsObservers.updateStats(
                 xtSnapshot, uidSnapshot, mActiveIfaces, mActiveUidIfaces, TEST_START);
         waitForObserverToIdle();
-        assertEquals(NetworkStatsManager.CALLBACK_LIMIT_REACHED, mHandler.lastMessageType);
+        Mockito.verify(mUsageCallback).onThresholdReached(any());
     }
 
     @Test
@@ -321,7 +312,7 @@ public class NetworkStatsObserversTest {
         DataUsageRequest inputRequest = new DataUsageRequest(
                 DataUsageRequest.REQUEST_ID_UNSET, sTemplateImsi1, THRESHOLD_BYTES);
 
-        DataUsageRequest request = mStatsObservers.register(inputRequest, mMessenger, mockBinder,
+        DataUsageRequest request = mStatsObservers.register(inputRequest, mUsageCallback,
                 UID_RED, NetworkStatsAccess.Level.DEFAULT);
         assertTrue(request.requestId > 0);
         assertTrue(Objects.equals(sTemplateImsi1, request.template));
@@ -346,7 +337,7 @@ public class NetworkStatsObserversTest {
         mStatsObservers.updateStats(
                 xtSnapshot, uidSnapshot, mActiveIfaces, mActiveUidIfaces, TEST_START);
         waitForObserverToIdle();
-        assertEquals(NetworkStatsManager.CALLBACK_LIMIT_REACHED, mHandler.lastMessageType);
+        Mockito.verify(mUsageCallback).onThresholdReached(any());
     }
 
     @Test
@@ -354,7 +345,7 @@ public class NetworkStatsObserversTest {
         DataUsageRequest inputRequest = new DataUsageRequest(
                 DataUsageRequest.REQUEST_ID_UNSET, sTemplateImsi1, THRESHOLD_BYTES);
 
-        DataUsageRequest request = mStatsObservers.register(inputRequest, mMessenger, mockBinder,
+        DataUsageRequest request = mStatsObservers.register(inputRequest, mUsageCallback,
                 UID_BLUE, NetworkStatsAccess.Level.DEFAULT);
         assertTrue(request.requestId > 0);
         assertTrue(Objects.equals(sTemplateImsi1, request.template));
@@ -386,7 +377,7 @@ public class NetworkStatsObserversTest {
         DataUsageRequest inputRequest = new DataUsageRequest(
                 DataUsageRequest.REQUEST_ID_UNSET, sTemplateImsi1, THRESHOLD_BYTES);
 
-        DataUsageRequest request = mStatsObservers.register(inputRequest, mMessenger, mockBinder,
+        DataUsageRequest request = mStatsObservers.register(inputRequest, mUsageCallback,
                 UID_BLUE, NetworkStatsAccess.Level.USER);
         assertTrue(request.requestId > 0);
         assertTrue(Objects.equals(sTemplateImsi1, request.template));
@@ -411,7 +402,7 @@ public class NetworkStatsObserversTest {
         mStatsObservers.updateStats(
                 xtSnapshot, uidSnapshot, mActiveIfaces, mActiveUidIfaces, TEST_START);
         waitForObserverToIdle();
-        assertEquals(NetworkStatsManager.CALLBACK_LIMIT_REACHED, mHandler.lastMessageType);
+        Mockito.verify(mUsageCallback).onThresholdReached(any());
     }
 
     @Test
@@ -419,7 +410,7 @@ public class NetworkStatsObserversTest {
         DataUsageRequest inputRequest = new DataUsageRequest(
                 DataUsageRequest.REQUEST_ID_UNSET, sTemplateImsi1, THRESHOLD_BYTES);
 
-        DataUsageRequest request = mStatsObservers.register(inputRequest, mMessenger, mockBinder,
+        DataUsageRequest request = mStatsObservers.register(inputRequest, mUsageCallback,
                 UID_RED, NetworkStatsAccess.Level.USER);
         assertTrue(request.requestId > 0);
         assertTrue(Objects.equals(sTemplateImsi1, request.template));
@@ -448,6 +439,5 @@ public class NetworkStatsObserversTest {
 
     private void waitForObserverToIdle() {
         HandlerUtils.waitForIdle(mObserverHandlerThread, WAIT_TIMEOUT_MS);
-        HandlerUtils.waitForIdle(mHandler, WAIT_TIMEOUT_MS);
     }
 }
