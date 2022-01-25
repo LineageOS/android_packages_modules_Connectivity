@@ -3352,14 +3352,11 @@ public class ConnectivityService extends IConnectivityManager.Stub
                     if (networkCapabilities.hasConnectivityManagedCapability()) {
                         Log.wtf(TAG, "BUG: " + nai + " has CS-managed capability.");
                     }
-                    if (networkCapabilities.hasTransport(TRANSPORT_TEST)) {
-                        // Make sure the original object is not mutated. NetworkAgent normally
-                        // makes a copy of the capabilities when sending the message through
-                        // the Messenger, but if this ever changes, not making a defensive copy
-                        // here will give attack vectors to clients using this code path.
-                        networkCapabilities = new NetworkCapabilities(networkCapabilities);
-                        networkCapabilities.restrictCapabilitiesForTestNetwork(nai.creatorUid);
-                    }
+                    // Make sure the original object is not mutated. NetworkAgent normally
+                    // makes a copy of the capabilities when sending the message through
+                    // the Messenger, but if this ever changes, not making a defensive copy
+                    // here will give attack vectors to clients using this code path.
+                    networkCapabilities = new NetworkCapabilities(networkCapabilities);
                     processCapabilitiesFromAgent(nai, networkCapabilities);
                     updateCapabilities(nai.getCurrentScore(), nai, networkCapabilities);
                     break;
@@ -6976,27 +6973,17 @@ public class ConnectivityService extends IConnectivityManager.Stub
             LinkProperties linkProperties, NetworkCapabilities networkCapabilities,
             NetworkScore currentScore, NetworkAgentConfig networkAgentConfig, int providerId,
             int uid) {
-        if (networkCapabilities.hasTransport(TRANSPORT_TEST)) {
-            // Strictly, sanitizing here is unnecessary as the capabilities will be sanitized in
-            // the call to mixInCapabilities below anyway, but sanitizing here means the NAI never
-            // sees capabilities that may be malicious, which might prevent mistakes in the future.
-            networkCapabilities = new NetworkCapabilities(networkCapabilities);
-            networkCapabilities.restrictCapabilitiesForTestNetwork(uid);
-        }
 
-        LinkProperties lp = new LinkProperties(linkProperties);
-
-        final NetworkCapabilities nc = new NetworkCapabilities(networkCapabilities);
+        // At this point the capabilities/properties are untrusted and unverified, e.g. checks that
+        // the capabilities' access UID comply with security limitations. They will be sanitized
+        // as the NAI registration finishes, in handleRegisterNetworkAgent(). This is
+        // because some of the checks must happen on the handler thread.
         final NetworkAgentInfo nai = new NetworkAgentInfo(na,
-                new Network(mNetIdManager.reserveNetId()), new NetworkInfo(networkInfo), lp, nc,
+                new Network(mNetIdManager.reserveNetId()), new NetworkInfo(networkInfo),
+                linkProperties, networkCapabilities,
                 currentScore, mContext, mTrackerHandler, new NetworkAgentConfig(networkAgentConfig),
                 this, mNetd, mDnsResolver, providerId, uid, mLingerDelayMs,
                 mQosCallbackTracker, mDeps);
-
-        // Make sure the LinkProperties and NetworkCapabilities reflect what the agent info says.
-        processCapabilitiesFromAgent(nai, nc);
-        nai.getAndSetNetworkCapabilities(mixInCapabilities(nai, nc));
-        processLinkPropertiesFromAgent(nai, nai.linkProperties);
 
         final String extraInfo = networkInfo.getExtraInfo();
         final String name = TextUtils.isEmpty(extraInfo)
@@ -7012,8 +6999,20 @@ public class ConnectivityService extends IConnectivityManager.Stub
     }
 
     private void handleRegisterNetworkAgent(NetworkAgentInfo nai, INetworkMonitor networkMonitor) {
+        if (VDBG) log("Network Monitor created for " +  nai);
+        // nai.nc and nai.lp are the same object that was passed by the network agent if the agent
+        // lives in the same process as this code (e.g. wifi), so make sure this code doesn't
+        // mutate their object
+        final NetworkCapabilities nc = new NetworkCapabilities(nai.networkCapabilities);
+        final LinkProperties lp = new LinkProperties(nai.linkProperties);
+        // Make sure the LinkProperties and NetworkCapabilities reflect what the agent info says.
+        processCapabilitiesFromAgent(nai, nc);
+        nai.getAndSetNetworkCapabilities(mixInCapabilities(nai, nc));
+        processLinkPropertiesFromAgent(nai, lp);
+        nai.linkProperties = lp;
+
         nai.onNetworkMonitorCreated(networkMonitor);
-        if (VDBG) log("Got NetworkAgent Messenger");
+
         mNetworkAgentInfos.add(nai);
         synchronized (mNetworkForNetId) {
             mNetworkForNetId.put(nai.network.getNetId(), nai);
@@ -7024,6 +7023,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
         } catch (RemoteException e) {
             e.rethrowAsRuntimeException();
         }
+
         nai.notifyRegistered();
         NetworkInfo networkInfo = nai.networkInfo;
         updateNetworkInfo(nai, networkInfo);
@@ -7484,6 +7484,9 @@ public class ConnectivityService extends IConnectivityManager.Stub
             nc.setOwnerUid(nai.networkCapabilities.getOwnerUid());
         }
         nai.declaredCapabilities = new NetworkCapabilities(nc);
+        if (nc.hasTransport(TRANSPORT_TEST)) {
+            nc.restrictCapabilitiesForTestNetwork(nai.creatorUid);
+        }
     }
 
     /** Modifies |newNc| based on the capabilities of |underlyingNetworks| and |agentCaps|. */
