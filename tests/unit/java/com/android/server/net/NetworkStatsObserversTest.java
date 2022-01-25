@@ -42,7 +42,6 @@ import android.net.NetworkIdentitySet;
 import android.net.NetworkStats;
 import android.net.NetworkStatsAccess;
 import android.net.NetworkTemplate;
-import android.net.netstats.IUsageCallback;
 import android.os.HandlerThread;
 import android.os.IBinder;
 import android.os.Looper;
@@ -101,7 +100,7 @@ public class NetworkStatsObserversTest {
     private ArrayMap<String, NetworkIdentitySet> mActiveUidIfaces;
 
     @Mock private IBinder mUsageCallbackBinder;
-    @Mock private IUsageCallback mUsageCallback;
+    private TestableUsageCallback mUsageCallback;
 
     @Before
     public void setUp() throws Exception {
@@ -119,20 +118,27 @@ public class NetworkStatsObserversTest {
 
         mActiveIfaces = new ArrayMap<>();
         mActiveUidIfaces = new ArrayMap<>();
-        Mockito.when(mUsageCallback.asBinder()).thenReturn(mUsageCallbackBinder);
+        mUsageCallback = new TestableUsageCallback(mUsageCallbackBinder);
     }
 
     @Test
     public void testRegister_thresholdTooLow_setsDefaultThreshold() throws Exception {
-        long thresholdTooLowBytes = 1L;
-        DataUsageRequest inputRequest = new DataUsageRequest(
+        final long thresholdTooLowBytes = 1L;
+        final DataUsageRequest inputRequest = new DataUsageRequest(
                 DataUsageRequest.REQUEST_ID_UNSET, sTemplateWifi, thresholdTooLowBytes);
 
-        DataUsageRequest request = mStatsObservers.register(inputRequest, mUsageCallback,
-                Process.SYSTEM_UID, NetworkStatsAccess.Level.DEVICE);
-        assertTrue(request.requestId > 0);
-        assertTrue(Objects.equals(sTemplateWifi, request.template));
-        assertEquals(THRESHOLD_BYTES, request.thresholdInBytes);
+        final DataUsageRequest requestByApp = mStatsObservers.register(inputRequest, mUsageCallback,
+                UID_RED, NetworkStatsAccess.Level.DEVICE);
+        assertTrue(requestByApp.requestId > 0);
+        assertTrue(Objects.equals(sTemplateWifi, requestByApp.template));
+        assertEquals(THRESHOLD_BYTES, requestByApp.thresholdInBytes);
+
+        // Verify the threshold requested by system uid won't be overridden.
+        final DataUsageRequest requestBySystem = mStatsObservers.register(inputRequest,
+                mUsageCallback, Process.SYSTEM_UID, NetworkStatsAccess.Level.DEVICE);
+        assertTrue(requestBySystem.requestId > 0);
+        assertTrue(Objects.equals(sTemplateWifi, requestBySystem.template));
+        assertEquals(1, requestBySystem.thresholdInBytes);
     }
 
     @Test
@@ -304,7 +310,7 @@ public class NetworkStatsObserversTest {
         mStatsObservers.updateStats(
                 xtSnapshot, uidSnapshot, mActiveIfaces, mActiveUidIfaces, TEST_START);
         waitForObserverToIdle();
-        Mockito.verify(mUsageCallback).onThresholdReached(any());
+        mUsageCallback.expectOnThresholdReached(request);
     }
 
     @Test
@@ -337,7 +343,7 @@ public class NetworkStatsObserversTest {
         mStatsObservers.updateStats(
                 xtSnapshot, uidSnapshot, mActiveIfaces, mActiveUidIfaces, TEST_START);
         waitForObserverToIdle();
-        Mockito.verify(mUsageCallback).onThresholdReached(any());
+        mUsageCallback.expectOnThresholdReached(request);
     }
 
     @Test
@@ -402,7 +408,7 @@ public class NetworkStatsObserversTest {
         mStatsObservers.updateStats(
                 xtSnapshot, uidSnapshot, mActiveIfaces, mActiveUidIfaces, TEST_START);
         waitForObserverToIdle();
-        Mockito.verify(mUsageCallback).onThresholdReached(any());
+        mUsageCallback.expectOnThresholdReached(request);
     }
 
     @Test
