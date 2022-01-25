@@ -38,11 +38,13 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.fail;
 
 import android.content.res.Resources;
+import android.net.NetworkStatsCollection.Key;
 import android.os.Process;
 import android.os.UserHandle;
 import android.telephony.SubscriptionPlan;
 import android.telephony.TelephonyManager;
 import android.text.format.DateUtils;
+import android.util.ArrayMap;
 import android.util.RecurrenceRule;
 
 import androidx.test.InstrumentationRegistry;
@@ -73,6 +75,7 @@ import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Tests for {@link NetworkStatsCollection}.
@@ -530,6 +533,52 @@ public class NetworkStatsCollectionTest {
         assertThrows(ArithmeticException.class, () -> multiplySafeByRational(30, 3, 0));
     }
 
+    @Test
+    public void testBuilder() {
+        final Map<Key, NetworkStatsHistory> expectedEntries = new ArrayMap<>();
+        final NetworkStats.Entry entry = new NetworkStats.Entry();
+        final NetworkIdentitySet ident = new NetworkIdentitySet();
+        final Key key1 = new Key(ident, 0, 0, 0);
+        final Key key2 = new Key(ident, 1, 0, 0);
+        final long bucketDuration = 10;
+
+        final NetworkStatsHistory.Entry entry1 = new NetworkStatsHistory.Entry(10, 10, 40,
+                4, 50, 5, 60);
+        final NetworkStatsHistory.Entry entry2 = new NetworkStatsHistory.Entry(30, 10, 3,
+                41, 7, 1, 0);
+
+        NetworkStatsHistory history1 = new NetworkStatsHistory.Builder(10, 5)
+                .addEntry(entry1)
+                .addEntry(entry2)
+                .build();
+
+        NetworkStatsHistory history2 = new NetworkStatsHistory(10, 5);
+
+        NetworkStatsCollection actualCollection = new NetworkStatsCollection.Builder(bucketDuration)
+                .addEntry(key1, history1)
+                .addEntry(key2, history2)
+                .build();
+
+        // The builder will omit any entry with empty history. Thus, history2
+        // is not expected in the result collection.
+        expectedEntries.put(key1, history1);
+
+        final Map<Key, NetworkStatsHistory> actualEntries = actualCollection.getEntries();
+
+        assertEquals(expectedEntries.size(), actualEntries.size());
+        for (Key expectedKey : expectedEntries.keySet()) {
+            final NetworkStatsHistory expectedHistory = expectedEntries.get(expectedKey);
+
+            final NetworkStatsHistory actualHistory = actualEntries.get(expectedKey);
+            assertNotNull(actualHistory);
+
+            assertEquals(expectedHistory.getEntries(), actualHistory.getEntries());
+
+            actualEntries.remove(expectedKey);
+        }
+        assertEquals(0, actualEntries.size());
+    }
+
     /**
      * Copy a {@link Resources#openRawResource(int)} into {@link File} for
      * testing purposes.
@@ -584,6 +633,14 @@ public class NetworkStatsCollectionTest {
     private static void assertEntry(NetworkStats.Entry expected,
             NetworkStatsHistory.Entry actual) {
         assertEntry(expected, new NetworkStats.Entry(actual.rxBytes, actual.rxPackets,
+                actual.txBytes, actual.txPackets, 0L));
+    }
+
+    private static void assertEntry(NetworkStatsHistory.Entry expected,
+            NetworkStatsHistory.Entry actual) {
+        assertEntry(new NetworkStats.Entry(actual.rxBytes, actual.rxPackets,
+                actual.txBytes, actual.txPackets, 0L),
+                new NetworkStats.Entry(actual.rxBytes, actual.rxPackets,
                 actual.txBytes, actual.txPackets, 0L));
     }
 
