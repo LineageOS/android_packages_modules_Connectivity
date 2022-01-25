@@ -43,6 +43,7 @@ cc_test {
     static_libs: [
         "libbpf_android",
         "libgtest",
+        "libmodules-utils-build",
     ],
 
     // Tag this module as a cts test artifact
