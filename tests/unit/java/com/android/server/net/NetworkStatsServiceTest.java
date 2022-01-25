@@ -1292,7 +1292,7 @@ public class NetworkStatsServiceTest extends NetworkStatsBaseTest {
 
 
         // Wait for the caller to invoke expectOnThresholdReached.
-        mUsageCallback.expectOnThresholdReached();
+        mUsageCallback.expectOnThresholdReached(request);
 
         // Allow binder to disconnect
         when(mUsageCallbackBinder.unlinkToDeath(any(IBinder.DeathRecipient.class), anyInt()))
@@ -1302,7 +1302,7 @@ public class NetworkStatsServiceTest extends NetworkStatsBaseTest {
         mService.unregisterUsageRequest(request);
 
         // Wait for the caller to invoke expectOnCallbackReleased.
-        mUsageCallback.expectOnCallbackReleased();
+        mUsageCallback.expectOnCallbackReleased(request);
 
         // Make sure that the caller binder gets disconnected
         verify(mUsageCallbackBinder).unlinkToDeath(any(IBinder.DeathRecipient.class), anyInt());
