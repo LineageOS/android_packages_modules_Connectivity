@@ -17,6 +17,7 @@
 package com.android.libraries.testing.deviceshadower.shadows.bluetooth;
 
 import android.bluetooth.BluetoothAdapter;
+import android.content.AttributionSource;
 
 import com.android.libraries.testing.deviceshadower.internal.DeviceShadowEnvironmentImpl;
 import com.android.libraries.testing.deviceshadower.internal.bluetooth.BlueletImpl;
@@ -40,6 +41,18 @@ public class ShadowBluetoothAdapter {
 
     @Implementation
     public static synchronized BluetoothAdapter getDefaultAdapter() {
+        // Add a device and set local devicelet in case no local bluelet set
+        if (!DeviceShadowEnvironmentImpl.hasLocalDeviceletImpl()) {
+            String address = MacAddressGenerator.get().generateMacAddress();
+            DeviceShadowEnvironmentImpl.addDevice(address);
+            DeviceShadowEnvironmentImpl.setLocalDevice(address);
+        }
+        BlueletImpl localBluelet = DeviceShadowEnvironmentImpl.getLocalBlueletImpl();
+        return localBluelet.getAdapter();
+    }
+
+    @Implementation
+    public static BluetoothAdapter createAdapter(AttributionSource attributionSource) {
         // Add a device and set local devicelet in case no local bluelet set
         if (!DeviceShadowEnvironmentImpl.hasLocalDeviceletImpl()) {
             String address = MacAddressGenerator.get().generateMacAddress();
