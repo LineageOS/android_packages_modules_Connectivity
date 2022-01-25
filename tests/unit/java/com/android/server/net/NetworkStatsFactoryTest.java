@@ -32,9 +32,12 @@ import static com.android.server.NetworkManagementSocketTagger.kernelToTag;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
+import static org.mockito.Matchers.eq;
+import static org.mockito.Mockito.doReturn;
 
+import android.content.Context;
 import android.content.res.Resources;
-import android.net.INetd;
+import android.net.ConnectivityManager;
 import android.net.NetworkStats;
 import android.net.TrafficStats;
 import android.net.UnderlyingNetworkInfo;
@@ -73,8 +76,8 @@ public class NetworkStatsFactoryTest extends NetworkStatsBaseTest {
 
     private File mTestProc;
     private NetworkStatsFactory mFactory;
-    @Mock
-    private INetd mNetd;
+    @Mock private Context mContext;
+    @Mock private ConnectivityManager mCm;
 
     @Before
     public void setUp() throws Exception {
@@ -85,7 +88,10 @@ public class NetworkStatsFactoryTest extends NetworkStatsBaseTest {
         // applications. So in order to have a test support native library, the native code
         // related to networkStatsFactory is compiled to a minimal native library and loaded here.
         System.loadLibrary("networkstatsfactorytestjni");
-        mFactory = new NetworkStatsFactory(mTestProc, false, mNetd);
+        doReturn(Context.CONNECTIVITY_SERVICE).when(mContext).getSystemServiceName(
+                eq(ConnectivityManager.class));
+        doReturn(mCm).when(mContext).getSystemService(eq(Context.CONNECTIVITY_SERVICE));
+        mFactory = new NetworkStatsFactory(mContext, mTestProc, false);
         mFactory.updateUnderlyingNetworkInfos(new UnderlyingNetworkInfo[0]);
     }
 
