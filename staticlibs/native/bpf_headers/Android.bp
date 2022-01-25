@@ -47,7 +47,7 @@ cc_library_headers {
         "//packages/modules/Connectivity/bpf_progs",
         "//packages/modules/Connectivity/netd",
         "//packages/modules/Connectivity/service/native",
-	"//packages/modules/Connectivity/service/native/libs/libclat",
+        "//packages/modules/Connectivity/service/native/libs/libclat",
         "//packages/modules/Connectivity/tests/unit/jni",
         "//packages/modules/DnsResolver/tests",
         "//system/bpf/bpfloader",
