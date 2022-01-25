@@ -48,6 +48,37 @@ cc_library {
     min_sdk_version: "30",
 }
 
+cc_library_shared {
+    name: "libtraffic_controller_jni",
+    cflags: [
+        "-Wall",
+        "-Werror",
+        "-Wno-unused-parameter",
+        "-Wthread-safety",
+    ],
+    srcs: [
+        "jni/*.cpp",
+    ],
+    header_libs: [
+        "bpf_connectivity_headers",
+    ],
+    static_libs: [
+        "libnetdutils",
+        "libtraffic_controller",
+        "netd_aidl_interface-lateststable-ndk",
+    ],
+    shared_libs: [
+        "libbase",
+        "liblog",
+        "libutils",
+        "libnativehelper",
+    ],
+    apex_available: [
+        "com.android.tethering",
+    ],
+    min_sdk_version: "30",
+}
+
 cc_test {
     name: "traffic_controller_unit_test",
     test_suites: ["general-tests"],

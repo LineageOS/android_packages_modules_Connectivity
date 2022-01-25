@@ -73,6 +73,8 @@ import static android.net.NetworkCapabilities.NET_CAPABILITY_OEM_PAID;
 import static android.net.NetworkCapabilities.NET_CAPABILITY_OEM_PRIVATE;
 import static android.net.NetworkCapabilities.NET_CAPABILITY_PARTIAL_CONNECTIVITY;
 import static android.net.NetworkCapabilities.NET_CAPABILITY_VALIDATED;
+import static android.net.NetworkCapabilities.NET_ENTERPRISE_ID_1;
+import static android.net.NetworkCapabilities.NET_ENTERPRISE_ID_5;
 import static android.net.NetworkCapabilities.REDACT_FOR_ACCESS_FINE_LOCATION;
 import static android.net.NetworkCapabilities.REDACT_FOR_LOCAL_MAC_ADDRESS;
 import static android.net.NetworkCapabilities.REDACT_FOR_NETWORK_SETTINGS;
@@ -10147,11 +10149,19 @@ public class ConnectivityService extends IConnectivityManager.Stub
             switch (preference.getPreference()) {
                 case ConnectivityManager.PROFILE_NETWORK_PREFERENCE_DEFAULT:
                     nc = null;
+                    if (preference.getPreferenceEnterpriseId() != 0) {
+                        throw new IllegalArgumentException(
+                                "Invalid enterprise identifier in setProfileNetworkPreferences");
+                    }
                     break;
                 case ConnectivityManager.PROFILE_NETWORK_PREFERENCE_ENTERPRISE_NO_FALLBACK:
                     allowFallback = false;
                     // continue to process the enterprise preference.
                 case ConnectivityManager.PROFILE_NETWORK_PREFERENCE_ENTERPRISE:
+                    if (!isEnterpriseIdentifierValid(preference.getPreferenceEnterpriseId())) {
+                        throw new IllegalArgumentException(
+                                "Invalid enterprise identifier in setProfileNetworkPreferences");
+                    }
                     final Set<UidRange> uidRangeSet =
                             getUidListToBeAppliedForNetworkPreference(profile, preference);
                     if (!isRangeAlreadyInPreferenceList(preferenceList, uidRangeSet)) {
@@ -10161,6 +10171,8 @@ public class ConnectivityService extends IConnectivityManager.Stub
                                 "Overlapping uid range in setProfileNetworkPreferences");
                     }
                     nc.addCapability(NET_CAPABILITY_ENTERPRISE);
+                    nc.addEnterpriseId(
+                            preference.getPreferenceEnterpriseId());
                     nc.removeCapability(NET_CAPABILITY_NOT_RESTRICTED);
                     break;
                 default:
@@ -10201,6 +10213,15 @@ public class ConnectivityService extends IConnectivityManager.Stub
             }
         }
         return uidRangeSet;
+    }
+
+    private boolean isEnterpriseIdentifierValid(
+            @NetworkCapabilities.EnterpriseId int identifier) {
+        if ((identifier >= NET_ENTERPRISE_ID_1)
+                && (identifier <= NET_ENTERPRISE_ID_5)) {
+            return true;
+        }
+        return false;
     }
 
     private void validateNetworkCapabilitiesOfProfileNetworkPreference(
