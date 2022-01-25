@@ -168,6 +168,7 @@ import com.android.testutils.CompatUtil;
 import com.android.testutils.DevSdkIgnoreRule;
 import com.android.testutils.DevSdkIgnoreRule.IgnoreUpTo;
 import com.android.testutils.DevSdkIgnoreRuleKt;
+import com.android.testutils.DumpTestUtils;
 import com.android.testutils.RecorderCallback.CallbackEntry;
 import com.android.testutils.TestHttpServer;
 import com.android.testutils.TestNetworkTracker;
@@ -3019,6 +3020,13 @@ public class ConnectivityManagerTest {
                     ConnectivitySettingsManager.setUidsAllowedOnRestrictedNetworks(
                             mContext, originalUidsAllowedOnRestrictedNetworks), NETWORK_SETTINGS);
         }
+    }
+
+    @Test
+    public void testDump() throws Exception {
+        final String dumpOutput = DumpTestUtils.dumpServiceWithShellPermission(
+                Context.CONNECTIVITY_SERVICE, "--short");
+        assertTrue(dumpOutput, dumpOutput.contains("Active default network"));
     }
 
     private void unregisterRegisteredCallbacks() {
