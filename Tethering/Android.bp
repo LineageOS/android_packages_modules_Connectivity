@@ -64,6 +64,7 @@ java_defaults {
 android_library {
     name: "TetheringApiCurrentLib",
     defaults: [
+        "ConnectivityNextEnableDefaults",
         "TetheringAndroidLibraryDefaults",
         "TetheringApiLevel"
     ],
@@ -158,7 +159,7 @@ java_defaults {
 // Non-updatable tethering running in the system server process for devices not using the module
 android_app {
     name: "InProcessTethering",
-    defaults: ["TetheringAppDefaults", "TetheringApiLevel"],
+    defaults: ["TetheringAppDefaults", "TetheringApiLevel", "ConnectivityNextEnableDefaults"],
     static_libs: ["TetheringApiCurrentLib"],
     certificate: "platform",
     manifest: "AndroidManifest_InProcess.xml",
