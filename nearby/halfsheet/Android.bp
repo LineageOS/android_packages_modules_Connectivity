@@ -26,6 +26,7 @@ java_defaults {
     plugins: ["java_api_finder"],
     jarjar_rules: ":nearby-jarjar-rules",
     libs: [
+        "framework-bluetooth",
         "framework-nearby-pre-jarjar",
         "nearby-service-string",
       ],
