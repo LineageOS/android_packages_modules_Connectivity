@@ -40,6 +40,7 @@
 #include <android-base/unique_fd.h>
 #include <netdutils/StatusOr.h>
 #include <netdutils/Syscalls.h>
+#include <netdutils/UidConstants.h>
 #include <netdutils/Utils.h>
 #include <private/android_filesystem_config.h>
 
