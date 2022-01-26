@@ -20,7 +20,6 @@
 #include <linux/if_ether.h>
 #include <linux/in.h>
 #include <linux/in6.h>
-#include <netdutils/UidConstants.h>
 
 // This header file is shared by eBPF kernel programs (C) and netd (C++) and
 // some of the maps are also accessed directly from Java mainline module code.

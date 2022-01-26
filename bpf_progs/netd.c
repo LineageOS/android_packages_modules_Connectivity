@@ -25,6 +25,7 @@
 #include <linux/ipv6.h>
 #include <linux/pkt_cls.h>
 #include <linux/tcp.h>
+#include <netdutils/UidConstants.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include "bpf_net_helpers.h"
