@@ -29,7 +29,6 @@ import android.nearby.FastPairDevice;
 import android.nearby.NearbyDevice;
 import android.nearby.NearbyManager;
 import android.nearby.ScanCallback;
-import android.nearby.ScanRequest;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
@@ -53,7 +52,6 @@ import com.android.server.nearby.fastpair.halfsheet.FastPairHalfSheetManager;
 import com.android.server.nearby.fastpair.pairinghandler.PairingProgressHandlerBase;
 import com.android.server.nearby.provider.FastPairDataProvider;
 import com.android.server.nearby.util.FastPairDecoder;
-import com.android.server.nearby.util.ForegroundThread;
 import com.android.server.nearby.util.Hex;
 
 import com.google.protobuf.ByteString;
@@ -102,11 +100,12 @@ public class FastPairManager {
                 Log.d("FastPairService", " the nearby manager is " + nearbyManager);
 
                 if (nearbyManager != null) {
-                    nearbyManager.startScan(
-                            new ScanRequest.Builder()
-                                    .setScanType(ScanRequest.SCAN_TYPE_FAST_PAIR).build(),
-                            ForegroundThread.getExecutor(),
-                            mScanCallback);
+                    // Uncomment this if you want to get mainline half sheet
+//                    nearbyManager.startScan(
+//                            new ScanRequest.Builder()
+//                                    .setScanType(ScanRequest.SCAN_TYPE_FAST_PAIR).build(),
+//                            ForegroundThread.getExecutor(),
+//                            mScanCallback);
                 } else {
                     Log.d("FastPairService", " the nearby manager is null");
                 }
