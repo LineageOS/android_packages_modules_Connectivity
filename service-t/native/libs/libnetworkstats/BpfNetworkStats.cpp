@@ -40,7 +40,7 @@ namespace bpf {
 
 using base::Result;
 
-// The target map for stats reading should be the inactive map, which is oppsite
+// The target map for stats reading should be the inactive map, which is opposite
 // from the config value.
 static constexpr char const* STATS_MAP_PATH[] = {STATS_MAP_B_PATH, STATS_MAP_A_PATH};
 
@@ -311,7 +311,7 @@ bool operator==(const stats_line& lhs, const stats_line& rhs) {
             !strncmp(lhs.iface, rhs.iface, sizeof(lhs.iface)));
 }
 
-// True if lhs is smaller then rhs, only compare iface, uid, tag and set.
+// True if lhs is smaller than rhs, only compare iface, uid, tag and set.
 bool operator<(const stats_line& lhs, const stats_line& rhs) {
     int ret = strncmp(lhs.iface, rhs.iface, sizeof(lhs.iface));
     if (ret != 0) return ret < 0;
