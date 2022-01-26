@@ -731,6 +731,16 @@ public class Struct {
         return sb.toString();
     }
 
+    /** A simple Struct which only contains a u8 field. */
+    public static class U8 extends Struct {
+        @Struct.Field(order = 0, type = Struct.Type.U8)
+        public final short val;
+
+        public U8(final short val) {
+            this.val = val;
+        }
+    }
+
     public static class U32 extends Struct {
         @Struct.Field(order = 0, type = Struct.Type.U32)
         public final long val;
