@@ -296,7 +296,7 @@ public class MultipathPolicyTrackerTest {
                 false /* roaming */);
 
         verify(mStatsManager, times(1)).registerUsageCallback(
-                any(), anyInt(), eq(DataUnit.MEGABYTES.toBytes(12)), any(), any());
+                any(), eq(DataUnit.MEGABYTES.toBytes(12)), any(), any());
     }
 
     @Test
@@ -315,7 +315,7 @@ public class MultipathPolicyTrackerTest {
 
         // Daily budget should be 15MB (5% of daily quota), 7MB used today: callback set for 8MB
         verify(mStatsManager, times(1)).registerUsageCallback(
-                any(), anyInt(), eq(DataUnit.MEGABYTES.toBytes(8)), any(), any());
+                any(), eq(DataUnit.MEGABYTES.toBytes(8)), any(), any());
     }
 
     @Test
@@ -334,7 +334,7 @@ public class MultipathPolicyTrackerTest {
 
         // Daily budget should be 15MB (5% of daily quota), 7MB used today: callback set for 8MB
         verify(mStatsManager, times(1)).registerUsageCallback(
-                any(), anyInt(), eq(DataUnit.MEGABYTES.toBytes(8)), any(), any());
+                any(), eq(DataUnit.MEGABYTES.toBytes(8)), any(), any());
     }
 
     @Test
@@ -351,7 +351,7 @@ public class MultipathPolicyTrackerTest {
 
         // Default global setting should be used: 12 - 7 = 5
         verify(mStatsManager, times(1)).registerUsageCallback(
-                any(), anyInt(), eq(DataUnit.MEGABYTES.toBytes(5)), any(), any());
+                any(), eq(DataUnit.MEGABYTES.toBytes(5)), any(), any());
     }
 
     @Test
@@ -366,7 +366,7 @@ public class MultipathPolicyTrackerTest {
                 false /* roaming */);
 
         verify(mStatsManager, times(1)).registerUsageCallback(
-                any(), anyInt(), eq(DataUnit.MEGABYTES.toBytes(8)), any(), any());
+                any(), eq(DataUnit.MEGABYTES.toBytes(8)), any(), any());
 
         // Update setting
         setDefaultQuotaGlobalSetting(DataUnit.MEGABYTES.toBytes(14));
@@ -376,7 +376,7 @@ public class MultipathPolicyTrackerTest {
         // Callback must have been re-registered with new setting
         verify(mStatsManager, times(1)).unregisterUsageCallback(any());
         verify(mStatsManager, times(1)).registerUsageCallback(
-                any(), anyInt(), eq(DataUnit.MEGABYTES.toBytes(12)), any(), any());
+                any(), eq(DataUnit.MEGABYTES.toBytes(12)), any(), any());
     }
 
     @Test
@@ -391,7 +391,7 @@ public class MultipathPolicyTrackerTest {
                 false /* roaming */);
 
         verify(mStatsManager, times(1)).registerUsageCallback(
-                any(), anyInt(), eq(DataUnit.MEGABYTES.toBytes(12)), any(), any());
+                any(), eq(DataUnit.MEGABYTES.toBytes(12)), any(), any());
 
         when(mResources.getInteger(R.integer.config_networkDefaultDailyMultipathQuotaBytes))
                 .thenReturn((int) DataUnit.MEGABYTES.toBytes(16));
@@ -402,6 +402,6 @@ public class MultipathPolicyTrackerTest {
 
         // Uses the new setting (16 - 2 = 14MB)
         verify(mStatsManager, times(1)).registerUsageCallback(
-                any(), anyInt(), eq(DataUnit.MEGABYTES.toBytes(14)), any(), any());
+                any(), eq(DataUnit.MEGABYTES.toBytes(14)), any(), any());
     }
 }
