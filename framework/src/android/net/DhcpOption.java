@@ -18,6 +18,7 @@ package android.net;
 
 import android.annotation.NonNull;
 import android.annotation.Nullable;
+import android.annotation.SuppressLint;
 import android.annotation.SystemApi;
 import android.os.Parcel;
 import android.os.Parcelable;
@@ -35,12 +36,13 @@ public final class DhcpOption implements Parcelable {
     /**
      * Constructs a DhcpOption object.
      *
-     * @param type the type of this option
+     * @param type the type of this option. For more information, see
+     *           https://www.iana.org/assignments/bootp-dhcp-parameters/bootp-dhcp-parameters.xhtml.
      * @param value the value of this option. If {@code null}, DHCP packets containing this option
      *              will include the option type in the Parameter Request List. Otherwise, DHCP
      *              packets containing this option will include the option in the options section.
      */
-    public DhcpOption(byte type, @Nullable byte[] value) {
+    public DhcpOption(@SuppressLint("NoByteOrShort") byte type, @Nullable byte[] value) {
         mType = type;
         mValue = value;
     }
@@ -69,6 +71,7 @@ public final class DhcpOption implements Parcelable {
             };
 
     /** Get the type of DHCP option */
+    @SuppressLint("NoByteOrShort")
     public byte getType() {
         return mType;
     }
