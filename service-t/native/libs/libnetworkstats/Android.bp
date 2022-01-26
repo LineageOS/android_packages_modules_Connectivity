@@ -15,16 +15,11 @@
 //
 
 package {
-    // See: http://go/android-license-faq
-    // A large-scale-change added 'default_applicable_licenses' to import
-    // all of the 'license_kinds' from "system_netd_license"
-    // to get the below license kinds:
-    //   SPDX-license-identifier-Apache-2.0
-    default_applicable_licenses: ["system_netd_license"],
+    default_applicable_licenses: ["Android-Apache-2.0"],
 }
 
 cc_library {
-    name: "libnetdbpf",
+    name: "libnetworkstats",
     vendor_available: false,
     host_supported: false,
     header_libs: ["bpf_connectivity_headers"],
@@ -34,30 +29,43 @@ cc_library {
     shared_libs: [
         "libbase",
         "liblog",
-        "libnetdutils",
     ],
     export_include_dirs: ["include"],
-    defaults: ["netd_defaults"],
+    cflags: [
+        "-Wall",
+        "-Werror",
+        "-Wno-unused-parameter",
+        "-Wthread-safety",
+    ],
     sanitize: {
         cfi: true,
     },
+    apex_available: [
+        "//apex_available:platform",
+        "com.android.tethering",
+    ],
+    min_sdk_version: "30",
 }
 
 cc_test {
-    name: "libnetdbpf_test",
-    test_suites: ["device-tests"],
-    require_root: true,
+    name: "libnetworkstats_test",
+    test_suites: ["general-tests"],
+    require_root: true,  // required by setrlimitForTest()
     header_libs: ["bpf_connectivity_headers"],
     srcs: [
         "BpfNetworkStatsTest.cpp",
     ],
-    defaults: ["netd_defaults"],
+    cflags: [
+        "-Wall",
+        "-Werror",
+        "-Wno-unused-parameter",
+        "-Wthread-safety",
+    ],
     static_libs: ["libgmock"],
     shared_libs: [
         "libbase",
         "liblog",
-        "libnetdbpf",
-        "libnetdutils",
+        "libnetworkstats",
         "libutils",
     ],
 }
