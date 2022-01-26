@@ -340,7 +340,7 @@ public class ClatCoordinatorTest {
         inOrder.verifyNoMoreInteractions();
 
         // [2] Start clatd again failed.
-        assertThrows("java.io.IOException: Clatd has started on test0 (pid 10483)",
+        assertThrows("java.io.IOException: Clatd is already running on test0 (pid 10483)",
                 IOException.class,
                 () -> coordinator.clatStart(BASE_IFACE, NETID, NAT64_IP_PREFIX));
 

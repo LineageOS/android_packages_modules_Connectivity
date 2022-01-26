@@ -220,7 +220,7 @@ public class ClatCoordinator {
             @NonNull final IpPrefix nat64Prefix)
             throws IOException {
         if (mIface != null || mPid != INVALID_PID) {
-            throw new IOException("Clatd has started on " + mIface + " (pid " + mPid + ")");
+            throw new IOException("Clatd is already running on " + mIface + " (pid " + mPid + ")");
         }
         if (nat64Prefix.getPrefixLength() != 96) {
             throw new IOException("Prefix must be 96 bits long: " + nat64Prefix);
