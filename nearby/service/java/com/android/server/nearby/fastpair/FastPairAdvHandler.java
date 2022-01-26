@@ -54,14 +54,16 @@ public class FastPairAdvHandler {
             return;
         }
         mBleAddress = fastPairDevice.getBluetoothAddress();
-        byte[] model = FastPairDecoder.getModelId(fastPairDevice.getData());
-        Log.d("FastPairService",
-                "On discovery model id" + Hex.bytesToStringLowercase(model));
-        // Use api to get anti spoofing key from model id.
-        Locator.get(mContext, FastPairHalfSheetManager.class).showHalfSheet(
-                Cache.ScanFastPairStoreItem.newBuilder()
-                        .setAddress(mBleAddress)
-                        .setAntiSpoofingPublicKey(ByteString.EMPTY)
-                        .build());
+        if (FastPairDecoder.checkModelId(fastPairDevice.getData())) {
+            byte[] model = FastPairDecoder.getModelId(fastPairDevice.getData());
+            Log.d("FastPairService",
+                    "On discovery model id" + Hex.bytesToStringLowercase(model));
+            // Use api to get anti spoofing key from model id.
+            Locator.get(mContext, FastPairHalfSheetManager.class).showHalfSheet(
+                    Cache.ScanFastPairStoreItem.newBuilder()
+                            .setAddress(mBleAddress)
+                            .setAntiSpoofingPublicKey(ByteString.EMPTY)
+                            .build());
+        }
     }
 }
