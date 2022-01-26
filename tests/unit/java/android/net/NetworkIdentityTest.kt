@@ -171,7 +171,7 @@ class NetworkIdentityTest {
     fun testBuilder_ratType() {
         // Assert illegal ratTypes cannot make an identity.
         listOf(Integer.MIN_VALUE, NetworkTemplate.NETWORK_TYPE_ALL,
-                TelephonyManager.NETWORK_TYPE_UNKNOWN - 1, Integer.MAX_VALUE)
+                NetworkTemplate.NETWORK_TYPE_5G_NSA - 1, Integer.MAX_VALUE)
                 .forEach {
                     assertFailsWith<IllegalArgumentException> {
                         NetworkIdentity.Builder()
@@ -184,6 +184,7 @@ class NetworkIdentityTest {
         // Verify legitimate ratTypes can make an identity.
         TelephonyManager.getAllNetworkTypes().toMutableList().also {
             it.add(TelephonyManager.NETWORK_TYPE_UNKNOWN)
+            it.add(NetworkTemplate.NETWORK_TYPE_5G_NSA)
         }.forEach { rat ->
             NetworkIdentity.Builder()
                     .setType(TYPE_MOBILE)
@@ -199,11 +200,11 @@ class NetworkIdentityTest {
         // Assert illegal oemManage values cannot make an identity.
         listOf(Integer.MIN_VALUE, NetworkTemplate.OEM_MANAGED_ALL, NetworkTemplate.OEM_MANAGED_YES,
                 Integer.MAX_VALUE)
-                .forEach {
+                .forEach { oemManaged ->
                     assertFailsWith<IllegalArgumentException> {
                         NetworkIdentity.Builder()
                                 .setType(TYPE_MOBILE)
-                                .setRatType(it)
+                                .setOemManaged(oemManaged)
                                 .build()
                     }
                 }
