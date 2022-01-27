@@ -32,8 +32,8 @@ filegroup {
     srcs: ["stubs-src/**/*.java"],
 }
 
-// Empty replacement for framework-connectivity-tiramisu.impl, as
-// framework-connectivity is disabled in the branch
+// Empty replacement for framework-connectivity-tiramisu.impl and stubs,
+// as framework-connectivity is disabled in the branch
 java_library {
     name: "framework-connectivity-tiramisu.impl",
     min_sdk_version: "Tiramisu",
@@ -41,3 +41,9 @@ java_library {
     srcs: [],
 }
 
+java_library {
+    name: "framework-connectivity-tiramisu.stubs.module_lib",
+    min_sdk_version: "Tiramisu",
+    sdk_version: "module_current",
+    srcs: [],
+}
