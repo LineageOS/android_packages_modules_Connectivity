@@ -48,13 +48,9 @@ import com.android.server.nearby.common.locator.LocatorContextWrapper;
 import com.android.server.nearby.fastpair.cache.DiscoveryItem;
 import com.android.server.nearby.fastpair.cache.FastPairCacheManager;
 import com.android.server.nearby.fastpair.footprint.FootprintsDeviceManager;
-import com.android.server.nearby.fastpair.halfsheet.FastPairHalfSheetManager;
 import com.android.server.nearby.fastpair.pairinghandler.PairingProgressHandlerBase;
-import com.android.server.nearby.provider.FastPairDataProvider;
 import com.android.server.nearby.util.FastPairDecoder;
 import com.android.server.nearby.util.Hex;
-
-import com.google.protobuf.ByteString;
 
 import java.security.GeneralSecurityException;
 import java.util.concurrent.ExecutionException;
@@ -65,7 +61,6 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-import service.proto.Cache;
 import service.proto.Rpcs;
 
 /**
@@ -79,10 +74,6 @@ public class FastPairManager {
     /** A notification ID which should be dismissed */
     public static final String EXTRA_NOTIFICATION_ID = ACTION_PREFIX + "EXTRA_NOTIFICATION_ID";
     public static final String ACTION_RESOURCES_APK = "android.nearby.SHOW_HALFSHEET";
-    // Temp action deleted when the scanner is ready
-    public static final String ACTION_START_PAIRING = "NEARBY_START_PAIRING";
-    public static final String EXTRA_MODEL_ID = "MODELID";
-    public static final String EXTRA_ADDRESS = "ADDRESS";
 
     private static Executor sFastPairExecutor;
 
@@ -110,17 +101,6 @@ public class FastPairManager {
                     Log.d("FastPairService", " the nearby manager is null");
                 }
 
-            } else if (intent.getAction().equals(ACTION_START_PAIRING)) {
-                byte[] model = intent.getByteArrayExtra(EXTRA_MODEL_ID);
-                String address = intent.getStringExtra(EXTRA_ADDRESS);
-                Log.d("FastPairService", "start pair " + address);
-                Rpcs.GetObservedDeviceResponse response =
-                        FastPairDataProvider.getInstance().loadFastPairDeviceMetadata(model);
-                ByteString publicKey = response.getDevice().getAntiSpoofingKeyPair().getPublicKey();
-                Locator.get(mLocatorContextWrapper, FastPairHalfSheetManager.class).showHalfSheet(
-                        Cache.ScanFastPairStoreItem.newBuilder().setAddress(address)
-                                .setAntiSpoofingPublicKey(publicKey)
-                                .build());
             } else {
                 Log.d("FastPairService", " screen off");
             }
@@ -166,7 +146,6 @@ public class FastPairManager {
     public void initiate() {
         mIntentFilter.addAction(Intent.ACTION_SCREEN_ON);
         mIntentFilter.addAction(Intent.ACTION_SCREEN_OFF);
-        mIntentFilter.addAction(ACTION_START_PAIRING);
 
         mLocatorContextWrapper.getContext()
                 .registerReceiver(mScreenBroadcastReceiver, mIntentFilter);

@@ -23,12 +23,14 @@ import android.util.Log;
 
 import com.android.server.nearby.common.locator.Locator;
 import com.android.server.nearby.fastpair.halfsheet.FastPairHalfSheetManager;
+import com.android.server.nearby.provider.FastPairDataProvider;
 import com.android.server.nearby.util.FastPairDecoder;
 import com.android.server.nearby.util.Hex;
 
 import com.google.protobuf.ByteString;
 
 import service.proto.Cache;
+import service.proto.Rpcs;
 
 /**
  * Handler that handle fast pair related broadcast.
@@ -59,10 +61,12 @@ public class FastPairAdvHandler {
             Log.d("FastPairService",
                     "On discovery model id" + Hex.bytesToStringLowercase(model));
             // Use api to get anti spoofing key from model id.
+            Rpcs.GetObservedDeviceResponse response =
+                    FastPairDataProvider.getInstance().loadFastPairDeviceMetadata(model);
+            ByteString publicKey = response.getDevice().getAntiSpoofingKeyPair().getPublicKey();
             Locator.get(mContext, FastPairHalfSheetManager.class).showHalfSheet(
-                    Cache.ScanFastPairStoreItem.newBuilder()
-                            .setAddress(mBleAddress)
-                            .setAntiSpoofingPublicKey(ByteString.EMPTY)
+                    Cache.ScanFastPairStoreItem.newBuilder().setAddress(mBleAddress)
+                            .setAntiSpoofingPublicKey(publicKey)
                             .build());
         }
     }
