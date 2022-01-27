@@ -43,8 +43,8 @@ public class BpfNetMaps {
     public void addNaughtyApp(final int uid) {
         final int err = native_addNaughtyApp(uid);
         if (err != 0) {
-            throw new ServiceSpecificException(-err, "Unable to add naughty app: "
-                            + Os.strerror(-err));
+            throw new ServiceSpecificException(err, "Unable to add naughty app: "
+                            + Os.strerror(err));
         }
     }
 
@@ -58,8 +58,8 @@ public class BpfNetMaps {
     public void removeNaughtyApp(final int uid) {
         final int err = native_removeNaughtyApp(uid);
         if (err != 0) {
-            throw new ServiceSpecificException(-err, "Unable to remove naughty app: "
-                            + Os.strerror(-err));
+            throw new ServiceSpecificException(err, "Unable to remove naughty app: "
+                            + Os.strerror(err));
         }
     }
 
@@ -73,8 +73,8 @@ public class BpfNetMaps {
     public void addNiceApp(final int uid) {
         final int err = native_addNiceApp(uid);
         if (err != 0) {
-            throw new ServiceSpecificException(-err, "Unable to add nice app: "
-                            + Os.strerror(-err));
+            throw new ServiceSpecificException(err, "Unable to add nice app: "
+                            + Os.strerror(err));
         }
     }
 
@@ -88,8 +88,8 @@ public class BpfNetMaps {
     public void removeNiceApp(final int uid) {
         final int err = native_removeNiceApp(uid);
         if (err != 0) {
-            throw new ServiceSpecificException(-err, "Unable to remove nice app: "
-                            + Os.strerror(-err));
+            throw new ServiceSpecificException(err, "Unable to remove nice app: "
+                            + Os.strerror(err));
         }
     }
 
@@ -168,8 +168,8 @@ public class BpfNetMaps {
     public void addUidInterfaceRules(final String ifName, final int[] uids) {
         final int err = native_addUidInterfaceRules(ifName, uids);
         if (err != 0) {
-            throw new ServiceSpecificException(-err, "Unable to add uid interface rules: "
-                            + Os.strerror(-err));
+            throw new ServiceSpecificException(err, "Unable to add uid interface rules: "
+                            + Os.strerror(err));
         }
     }
 
@@ -186,8 +186,8 @@ public class BpfNetMaps {
     public void removeUidInterfaceRules(final int[] uids) {
         final int err = native_removeUidInterfaceRules(uids);
         if (err != 0) {
-            throw new ServiceSpecificException(-err, "Unable to remove uid interface rules: "
-                            + Os.strerror(-err));
+            throw new ServiceSpecificException(err, "Unable to remove uid interface rules: "
+                            + Os.strerror(err));
         }
     }
 
@@ -199,8 +199,8 @@ public class BpfNetMaps {
     public void swapActiveStatsMap() {
         final int err = native_swapActiveStatsMap();
         if (err != 0) {
-            throw new ServiceSpecificException(-err, "Unable to swap active stats map: "
-                            + Os.strerror(-err));
+            throw new ServiceSpecificException(err, "Unable to swap active stats map: "
+                            + Os.strerror(err));
         }
     }
 
