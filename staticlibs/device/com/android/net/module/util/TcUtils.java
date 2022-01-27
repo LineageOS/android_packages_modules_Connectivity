@@ -22,6 +22,10 @@ import java.io.IOException;
  * Contains mostly tc-related functionality.
  */
 public class TcUtils {
+    static {
+        System.loadLibrary(JniUtil.getJniLibraryName(TcUtils.class.getPackage()));
+    }
+
     /**
      * Checks if the network interface uses an ethernet L2 header.
      *
