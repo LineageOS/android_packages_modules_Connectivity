@@ -1495,7 +1495,14 @@ public class ConnectivityService extends IConnectivityManager.Stub
                 mLingerDelayMs, mQosCallbackTracker, mDeps);
 
         try {
-            mDscpPolicyTracker = new DscpPolicyTracker();
+            // DscpPolicyTracker cannot run on S because on S the tethering module can only load
+            // BPF programs/maps into /sys/fs/tethering/bpf, which the system server cannot access.
+            // Even if it could, running on S would at least require mocking out the BPF map,
+            // otherwise the unit tests will fail on pre-T devices where the seccomp filter blocks
+            // the bpf syscall. http://aosp/1907693
+            if (SdkLevel.isAtLeastT()) {
+                mDscpPolicyTracker = new DscpPolicyTracker();
+            }
         } catch (ErrnoException e) {
             loge("Unable to create DscpPolicyTracker");
         }
