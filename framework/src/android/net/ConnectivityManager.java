@@ -963,13 +963,22 @@ public class ConnectivityManager {
     @SystemApi(client = MODULE_LIBRARIES)
     public static final int FIREWALL_CHAIN_RESTRICTED = 4;
 
+    /**
+     * Firewall chain used for low power standby.
+     * Allowlist of apps that have access in low power standby.
+     * @hide
+     */
+    @SystemApi(client = MODULE_LIBRARIES)
+    public static final int FIREWALL_CHAIN_LOW_POWER_STANDBY = 5;
+
     /** @hide */
     @Retention(RetentionPolicy.SOURCE)
     @IntDef(flag = false, prefix = "FIREWALL_CHAIN_", value = {
         FIREWALL_CHAIN_DOZABLE,
         FIREWALL_CHAIN_STANDBY,
         FIREWALL_CHAIN_POWERSAVE,
-        FIREWALL_CHAIN_RESTRICTED
+        FIREWALL_CHAIN_RESTRICTED,
+        FIREWALL_CHAIN_LOW_POWER_STANDBY
     })
     public @interface FirewallChain {}
 
