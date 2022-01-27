@@ -146,7 +146,9 @@ package android.net {
   }
 
   public class NetworkRequest implements android.os.Parcelable {
+    method @NonNull public int[] getEnterpriseIds();
     method @NonNull public int[] getForbiddenCapabilities();
+    method public boolean hasEnterpriseId(int);
     method public boolean hasForbiddenCapability(int);
   }
 
