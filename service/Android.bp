@@ -36,6 +36,7 @@ cc_library_shared {
     stl: "libc++_static",
     static_libs: [
         "libnet_utils_device_common_bpfjni",
+        "libtcutils",
     ],
     shared_libs: [
         "liblog",
