@@ -45,10 +45,6 @@ import java.util.Set;
  * This guarantees that all code runs on the same thread and no locking is needed.
  */
 public class DscpPolicyTracker {
-    static {
-        System.loadLibrary("com_android_connectivity_com_android_net_module_util_jni");
-    }
-
     // After tethering and clat priorities.
     static final short PRIO_DSCP = 5;
 
