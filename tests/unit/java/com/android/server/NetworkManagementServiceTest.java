@@ -16,6 +16,11 @@
 
 package com.android.server;
 
+import static android.net.ConnectivityManager.FIREWALL_CHAIN_DOZABLE;
+import static android.net.ConnectivityManager.FIREWALL_CHAIN_LOW_POWER_STANDBY;
+import static android.net.ConnectivityManager.FIREWALL_CHAIN_POWERSAVE;
+import static android.net.ConnectivityManager.FIREWALL_CHAIN_RESTRICTED;
+import static android.net.ConnectivityManager.FIREWALL_CHAIN_STANDBY;
 import static android.util.DebugUtils.valueToString;
 
 import static org.junit.Assert.assertEquals;
@@ -277,31 +282,38 @@ public class NetworkManagementServiceTest {
         isRestrictedForDozable.put(NetworkPolicyManager.FIREWALL_RULE_DEFAULT, true);
         isRestrictedForDozable.put(INetd.FIREWALL_RULE_ALLOW, false);
         isRestrictedForDozable.put(INetd.FIREWALL_RULE_DENY, true);
-        expected.put(INetd.FIREWALL_CHAIN_DOZABLE, isRestrictedForDozable);
+        expected.put(FIREWALL_CHAIN_DOZABLE, isRestrictedForDozable);
         // Powersaver chain
         final ArrayMap<Integer, Boolean> isRestrictedForPowerSave = new ArrayMap<>();
         isRestrictedForPowerSave.put(NetworkPolicyManager.FIREWALL_RULE_DEFAULT, true);
         isRestrictedForPowerSave.put(INetd.FIREWALL_RULE_ALLOW, false);
         isRestrictedForPowerSave.put(INetd.FIREWALL_RULE_DENY, true);
-        expected.put(INetd.FIREWALL_CHAIN_POWERSAVE, isRestrictedForPowerSave);
+        expected.put(FIREWALL_CHAIN_POWERSAVE, isRestrictedForPowerSave);
         // Standby chain
         final ArrayMap<Integer, Boolean> isRestrictedForStandby = new ArrayMap<>();
         isRestrictedForStandby.put(NetworkPolicyManager.FIREWALL_RULE_DEFAULT, false);
         isRestrictedForStandby.put(INetd.FIREWALL_RULE_ALLOW, false);
         isRestrictedForStandby.put(INetd.FIREWALL_RULE_DENY, true);
-        expected.put(INetd.FIREWALL_CHAIN_STANDBY, isRestrictedForStandby);
+        expected.put(FIREWALL_CHAIN_STANDBY, isRestrictedForStandby);
         // Restricted mode chain
         final ArrayMap<Integer, Boolean> isRestrictedForRestrictedMode = new ArrayMap<>();
         isRestrictedForRestrictedMode.put(NetworkPolicyManager.FIREWALL_RULE_DEFAULT, true);
         isRestrictedForRestrictedMode.put(INetd.FIREWALL_RULE_ALLOW, false);
         isRestrictedForRestrictedMode.put(INetd.FIREWALL_RULE_DENY, true);
-        expected.put(INetd.FIREWALL_CHAIN_RESTRICTED, isRestrictedForRestrictedMode);
+        expected.put(FIREWALL_CHAIN_RESTRICTED, isRestrictedForRestrictedMode);
+        // Low Power Standby chain
+        final ArrayMap<Integer, Boolean> isRestrictedForLowPowerStandby = new ArrayMap<>();
+        isRestrictedForLowPowerStandby.put(NetworkPolicyManager.FIREWALL_RULE_DEFAULT, true);
+        isRestrictedForLowPowerStandby.put(INetd.FIREWALL_RULE_ALLOW, false);
+        isRestrictedForLowPowerStandby.put(INetd.FIREWALL_RULE_DENY, true);
+        expected.put(FIREWALL_CHAIN_LOW_POWER_STANDBY, isRestrictedForLowPowerStandby);
 
         final int[] chains = {
-                INetd.FIREWALL_CHAIN_STANDBY,
-                INetd.FIREWALL_CHAIN_POWERSAVE,
-                INetd.FIREWALL_CHAIN_DOZABLE,
-                INetd.FIREWALL_CHAIN_RESTRICTED
+                FIREWALL_CHAIN_STANDBY,
+                FIREWALL_CHAIN_POWERSAVE,
+                FIREWALL_CHAIN_DOZABLE,
+                FIREWALL_CHAIN_RESTRICTED,
+                FIREWALL_CHAIN_LOW_POWER_STANDBY
         };
         final int[] states = {
                 INetd.FIREWALL_RULE_ALLOW,
