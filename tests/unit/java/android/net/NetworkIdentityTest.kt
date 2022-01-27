@@ -26,6 +26,7 @@ import android.net.NetworkIdentity.OEM_NONE
 import android.net.NetworkIdentity.OEM_PAID
 import android.net.NetworkIdentity.OEM_PRIVATE
 import android.net.NetworkIdentity.getOemBitfield
+import android.app.usage.NetworkStatsManager
 import android.telephony.TelephonyManager
 import android.os.Build
 import com.android.testutils.DevSdkIgnoreRule
@@ -171,7 +172,7 @@ class NetworkIdentityTest {
     fun testBuilder_ratType() {
         // Assert illegal ratTypes cannot make an identity.
         listOf(Integer.MIN_VALUE, NetworkTemplate.NETWORK_TYPE_ALL,
-                NetworkTemplate.NETWORK_TYPE_5G_NSA - 1, Integer.MAX_VALUE)
+                NetworkStatsManager.NETWORK_TYPE_5G_NSA - 1, Integer.MAX_VALUE)
                 .forEach {
                     assertFailsWith<IllegalArgumentException> {
                         NetworkIdentity.Builder()
@@ -184,7 +185,7 @@ class NetworkIdentityTest {
         // Verify legitimate ratTypes can make an identity.
         TelephonyManager.getAllNetworkTypes().toMutableList().also {
             it.add(TelephonyManager.NETWORK_TYPE_UNKNOWN)
-            it.add(NetworkTemplate.NETWORK_TYPE_5G_NSA)
+            it.add(NetworkStatsManager.NETWORK_TYPE_5G_NSA)
         }.forEach { rat ->
             NetworkIdentity.Builder()
                     .setType(TYPE_MOBILE)
