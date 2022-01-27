@@ -42,6 +42,7 @@ cc_library_headers {
         // TODO: remove it when NetworkStatsService is moved into the mainline module and no more
         // calls to JNI in libservices.core.
         "//frameworks/base/services/core/jni",
+        "//packages/modules/Connectivity/service",
         "//packages/modules/Connectivity/service/native/libs/libclat",
         "//packages/modules/Connectivity/Tethering",
         "//packages/modules/Connectivity/service/native",
@@ -55,6 +56,16 @@ cc_library_headers {
 //
 // bpf kernel programs
 //
+bpf {
+    name: "dscp_policy.o",
+    srcs: ["dscp_policy.c"],
+    cflags: [
+        "-Wall",
+        "-Werror",
+    ],
+    sub_dir: "net_shared",
+}
+
 bpf {
     name: "offload.o",
     srcs: ["offload.c"],
