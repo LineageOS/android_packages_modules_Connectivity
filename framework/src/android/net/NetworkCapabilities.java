@@ -357,6 +357,8 @@ public final class NetworkCapabilities implements Parcelable {
             NET_CAPABILITY_BIP,
             NET_CAPABILITY_HEAD_UNIT,
             NET_CAPABILITY_MMTEL,
+            NET_CAPABILITY_PRIORITIZE_LATENCY,
+            NET_CAPABILITY_PRIORITIZE_BANDWIDTH,
     })
     public @interface NetCapability { }
 
@@ -600,8 +602,18 @@ public final class NetworkCapabilities implements Parcelable {
      */
     public static final int NET_CAPABILITY_MMTEL = 33;
 
+    /**
+     * Indicates that this network should be able to prioritize latency for the internet.
+     */
+    public static final int NET_CAPABILITY_PRIORITIZE_LATENCY = 34;
+
+    /**
+     * Indicates that this network should be able to prioritize bandwidth for the internet.
+     */
+    public static final int NET_CAPABILITY_PRIORITIZE_BANDWIDTH = 35;
+
     private static final int MIN_NET_CAPABILITY = NET_CAPABILITY_MMS;
-    private static final int MAX_NET_CAPABILITY = NET_CAPABILITY_MMTEL;
+    private static final int MAX_NET_CAPABILITY = NET_CAPABILITY_PRIORITIZE_BANDWIDTH;
 
     /**
      * Network capabilities that are expected to be mutable, i.e., can change while a particular
@@ -2241,6 +2253,8 @@ public final class NetworkCapabilities implements Parcelable {
             case NET_CAPABILITY_BIP:                  return "BIP";
             case NET_CAPABILITY_HEAD_UNIT:            return "HEAD_UNIT";
             case NET_CAPABILITY_MMTEL:                return "MMTEL";
+            case NET_CAPABILITY_PRIORITIZE_LATENCY:          return "PRIORITIZE_LATENCY";
+            case NET_CAPABILITY_PRIORITIZE_BANDWIDTH:        return "PRIORITIZE_BANDWIDTH";
             default:                                  return Integer.toString(capability);
         }
     }
