@@ -127,6 +127,7 @@ package android.net {
 
   public static final class NetworkAgentConfig.Builder {
     method @NonNull public android.net.NetworkAgentConfig.Builder setBypassableVpn(boolean);
+    method @NonNull public android.net.NetworkAgentConfig.Builder setExcludeLocalRoutesVpn(boolean);
     method @NonNull public android.net.NetworkAgentConfig.Builder setSubscriberId(@Nullable String);
   }
 
