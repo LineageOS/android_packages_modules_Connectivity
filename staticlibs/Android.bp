@@ -248,6 +248,7 @@ java_library {
         "//frameworks/libs/net/common/tests:__subpackages__",
         "//frameworks/libs/net/common/device",
         "//packages/modules/Wifi/framework/tests:__subpackages__",
+        "//packages/apps/Settings",
     ],
     lint: { strict_updatability_linting: true },
 }
