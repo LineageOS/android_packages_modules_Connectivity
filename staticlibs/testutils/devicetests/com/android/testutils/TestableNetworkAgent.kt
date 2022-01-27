@@ -164,7 +164,7 @@ public open class TestableNetworkAgent(
         history.add(OnNetworkDestroyed)
     }
 
-    fun onDscpPolicyStatusUpdated(policyId: Int, status: Int) {
+    override fun onDscpPolicyStatusUpdated(policyId: Int, status: Int) {
         history.add(OnDscpPolicyStatusUpdated(policyId, status))
     }
 
