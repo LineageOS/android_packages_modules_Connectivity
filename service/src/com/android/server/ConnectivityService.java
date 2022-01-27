@@ -4046,7 +4046,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
                 config = new NativeNetworkConfig(nai.network.getNetId(), NativeNetworkType.VIRTUAL,
                         INetd.PERMISSION_NONE,
                         (nai.networkAgentConfig == null || !nai.networkAgentConfig.allowBypass),
-                        getVpnType(nai), /*excludeLocalRoutes=*/ false);
+                        getVpnType(nai), nai.networkAgentConfig.excludeLocalRouteVpn);
             } else {
                 config = new NativeNetworkConfig(nai.network.getNetId(), NativeNetworkType.PHYSICAL,
                         getNetworkPermission(nai.networkCapabilities), /*secure=*/ false,
