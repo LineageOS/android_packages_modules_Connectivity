@@ -31,6 +31,7 @@ apex_defaults {
     // package names and keys, so that apex will be unused anyway.
     apps: ["Tethering"], // Replace to "Tethering" if ConnectivityNextEnableDefaults is false.
 }
+enable_tethering_next_apex = true
 // This is a placeholder comment to avoid merge conflicts
 // as the above target may have different "enabled" values
 // depending on the branch
@@ -137,6 +138,7 @@ override_apex {
     name: "com.android.tethering.inprocess",
     base: "com.android.tethering",
     package_name: "com.android.tethering.inprocess",
+    enabled: enable_tethering_next_apex,
     apps: [
         "ServiceConnectivityResources",
         "InProcessTethering",
