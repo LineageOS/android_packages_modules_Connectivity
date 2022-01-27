@@ -425,8 +425,10 @@ public final class NetworkAgentConfig implements Parcelable {
          * Sets whether the local traffic is exempted from VPN.
          *
          * @return this builder, to facilitate chaining.
-         * @hide TODO(184750836): Unhide once the implementation is completed.
+         * @hide
          */
+        @NonNull
+        @SystemApi(client = MODULE_LIBRARIES)
         public Builder setExcludeLocalRoutesVpn(boolean excludeLocalRoutes) {
             mConfig.excludeLocalRouteVpn = excludeLocalRoutes;
             return this;
