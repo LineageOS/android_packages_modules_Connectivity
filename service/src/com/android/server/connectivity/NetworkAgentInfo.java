@@ -24,6 +24,7 @@ import android.annotation.NonNull;
 import android.annotation.Nullable;
 import android.content.Context;
 import android.net.CaptivePortalData;
+import android.net.DscpPolicy;
 import android.net.IDnsResolver;
 import android.net.INetd;
 import android.net.INetworkAgent;
@@ -699,6 +700,24 @@ public class NetworkAgentInfo implements Comparable<NetworkAgentInfo>, NetworkRa
         public void sendLingerDuration(final int durationMs) {
             mHandler.obtainMessage(NetworkAgent.EVENT_LINGER_DURATION_CHANGED,
                     new Pair<>(NetworkAgentInfo.this, durationMs)).sendToTarget();
+        }
+
+        @Override
+        public void sendAddDscpPolicy(final DscpPolicy policy) {
+            mHandler.obtainMessage(NetworkAgent.EVENT_ADD_DSCP_POLICY,
+                    new Pair<>(NetworkAgentInfo.this, policy)).sendToTarget();
+        }
+
+        @Override
+        public void sendRemoveDscpPolicy(final int policyId) {
+            mHandler.obtainMessage(NetworkAgent.EVENT_REMOVE_DSCP_POLICY,
+                    new Pair<>(NetworkAgentInfo.this, policyId)).sendToTarget();
+        }
+
+        @Override
+        public void sendRemoveAllDscpPolicies() {
+            mHandler.obtainMessage(NetworkAgent.EVENT_REMOVE_ALL_DSCP_POLICIES,
+                    new Pair<>(NetworkAgentInfo.this, null)).sendToTarget();
         }
     }
 
