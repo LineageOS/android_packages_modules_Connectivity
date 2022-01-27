@@ -56,8 +56,11 @@ public class FastPairDataProvider {
     private FastPairDataProvider(Context context) {
         mProxyFastPairDataProvider = ProxyFastPairDataProvider.create(
                 context, FastPairDataProviderBase.ACTION_FAST_PAIR_DATA_PROVIDER);
-        Log.d("FastPairService", "the fast pair proxy provider is init"
-                + (mProxyFastPairDataProvider == null));
+        if (mProxyFastPairDataProvider == null) {
+            Log.d("FastPairService", "fail to initiate the fast pair proxy provider");
+        } else {
+            Log.d("FastPairService", "the fast pair proxy provider initiated");
+        }
     }
 
     /** loadFastPairDeviceMetadata. */
