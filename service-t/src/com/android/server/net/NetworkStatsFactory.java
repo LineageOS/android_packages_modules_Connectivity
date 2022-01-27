@@ -96,6 +96,48 @@ public class NetworkStatsFactory {
     @GuardedBy("mPersistentDataLock")
     private NetworkStats mTunAnd464xlatAdjustedStats;
 
+    private final Dependencies mDeps;
+    /**
+     * Dependencies of NetworkStatsFactory, for injection in tests.
+     */
+    @VisibleForTesting
+    public static class Dependencies {
+        /**
+         * Parse detailed statistics from bpf into given {@link NetworkStats} object. Values
+         * are expected to monotonically increase since device boot.
+         */
+        @NonNull
+        public NetworkStats getNetworkStatsDetail(@Nullable String path, int limitUid,
+                @Nullable String[] limitIfaces, int limitTag, boolean useBpfStats)
+                throws IOException {
+            final NetworkStats stats = new NetworkStats(SystemClock.elapsedRealtime(), 0);
+            final int ret = nativeReadNetworkStatsDetail(stats, path,
+                    limitUid, limitIfaces, limitTag, useBpfStats);
+            if (ret != 0) {
+                throw new IOException("Failed to parse network stats");
+            }
+            return stats;
+        }
+        /**
+         * Parse device summary statistics from bpf into given {@link NetworkStats} object. Values
+         * are expected to monotonically increase since device boot.
+         */
+        @NonNull
+        public NetworkStats getNetworkStatsDev() throws IOException {
+            final NetworkStats stats = new NetworkStats(SystemClock.elapsedRealtime(), 6);
+            final int ret = nativeReadNetworkStatsDev(stats);
+            if (ret != 0) {
+                throw new IOException("Failed to parse bpf iface stats");
+            }
+            return stats;
+        }
+
+        /** Create a new {@link BpfNetMaps}. */
+        public BpfNetMaps createBpfNetMaps(@NonNull Context ctx) {
+            return new BpfNetMaps(ctx);
+        }
+    }
+
     /**
      * (Stacked interface) -> (base interface) association for all connected ifaces since boot.
      *
@@ -164,30 +206,23 @@ public class NetworkStatsFactory {
     }
 
     public NetworkStatsFactory(@NonNull Context ctx) {
-        this(ctx, new File("/proc/"), true, new BpfNetMaps(ctx));
+        this(ctx, new File("/proc/"), true, new Dependencies());
     }
 
     @VisibleForTesting
     public NetworkStatsFactory(@NonNull Context ctx, File procRoot, boolean useBpfStats,
-            BpfNetMaps bpfNetMaps) {
+            Dependencies deps) {
         mStatsXtIfaceAll = new File(procRoot, "net/xt_qtaguid/iface_stat_all");
         mStatsXtIfaceFmt = new File(procRoot, "net/xt_qtaguid/iface_stat_fmt");
         mStatsXtUid = new File(procRoot, "net/xt_qtaguid/stats");
         mUseBpfStats = useBpfStats;
-        mBpfNetMaps = bpfNetMaps;
+        mBpfNetMaps = deps.createBpfNetMaps(ctx);
         synchronized (mPersistentDataLock) {
             mPersistSnapshot = new NetworkStats(SystemClock.elapsedRealtime(), -1);
             mTunAnd464xlatAdjustedStats = new NetworkStats(SystemClock.elapsedRealtime(), -1);
         }
         mContext = ctx;
-    }
-
-    public NetworkStats readBpfNetworkStatsDev() throws IOException {
-        final NetworkStats stats = new NetworkStats(SystemClock.elapsedRealtime(), 6);
-        if (nativeReadNetworkStatsDev(stats) != 0) {
-            throw new IOException("Failed to parse bpf iface stats");
-        }
-        return stats;
+        mDeps = deps;
     }
 
     /**
@@ -201,8 +236,7 @@ public class NetworkStatsFactory {
     public NetworkStats readNetworkStatsSummaryDev() throws IOException {
 
         // Return xt_bpf stats if switched to bpf module.
-        if (mUseBpfStats)
-            return readBpfNetworkStatsDev();
+        if (mUseBpfStats) return mDeps.getNetworkStatsDev();
 
         final StrictMode.ThreadPolicy savedPolicy = StrictMode.allowThreadDiskReads();
 
@@ -257,8 +291,7 @@ public class NetworkStatsFactory {
     public NetworkStats readNetworkStatsSummaryXt() throws IOException {
 
         // Return xt_bpf stats if qtaguid  module is replaced.
-        if (mUseBpfStats)
-            return readBpfNetworkStatsDev();
+        if (mUseBpfStats) return mDeps.getNetworkStatsDev();
 
         final StrictMode.ThreadPolicy savedPolicy = StrictMode.allowThreadDiskReads();
 
@@ -332,25 +365,20 @@ public class NetworkStatsFactory {
             final NetworkStats prev = mPersistSnapshot.clone();
 
             if (USE_NATIVE_PARSING) {
-                final NetworkStats stats =
-                        new NetworkStats(SystemClock.elapsedRealtime(), 0 /* initialSize */);
                 if (mUseBpfStats) {
                     requestSwapActiveStatsMapLocked();
                     // Stats are always read from the inactive map, so they must be read after the
                     // swap
-                    if (nativeReadNetworkStatsDetail(stats, mStatsXtUid.getAbsolutePath(), UID_ALL,
-                            INTERFACES_ALL, TAG_ALL, mUseBpfStats) != 0) {
-                        throw new IOException("Failed to parse network stats");
-                    }
+                    final NetworkStats stats = mDeps.getNetworkStatsDetail(null /* path */, UID_ALL,
+                            INTERFACES_ALL, TAG_ALL, true /* useBpfStats */);
 
                     // BPF stats are incremental; fold into mPersistSnapshot.
                     mPersistSnapshot.setElapsedRealtime(stats.getElapsedRealtime());
                     mPersistSnapshot.combineAllValues(stats);
                 } else {
-                    if (nativeReadNetworkStatsDetail(stats, mStatsXtUid.getAbsolutePath(), UID_ALL,
-                            INTERFACES_ALL, TAG_ALL, mUseBpfStats) != 0) {
-                        throw new IOException("Failed to parse network stats");
-                    }
+                    final NetworkStats stats = mDeps.getNetworkStatsDetail(
+                            mStatsXtUid.getAbsolutePath(), UID_ALL,
+                            INTERFACES_ALL, TAG_ALL, false /* useBpfStats */);
                     if (VALIDATE_NATIVE_STATS) {
                         final NetworkStats javaStats = javaReadNetworkStatsDetail(mStatsXtUid,
                                 UID_ALL, INTERFACES_ALL, TAG_ALL);
