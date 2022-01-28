@@ -25,8 +25,8 @@ import static org.mockito.Mockito.verify;
 import android.annotation.NonNull;
 import android.content.Context;
 import android.content.pm.PackageManager;
-import android.net.IInternalNetworkManagementListener;
-import android.net.InternalNetworkUpdateRequest;
+import android.net.IEthernetNetworkManagementListener;
+import android.net.EthernetNetworkUpdateRequest;
 import android.net.IpConfiguration;
 import android.net.NetworkCapabilities;
 import android.net.StaticIpConfiguration;
@@ -45,10 +45,10 @@ import org.mockito.MockitoAnnotations;
 @SmallTest
 public class EthernetServiceImplTest {
     private static final String TEST_IFACE = "test123";
-    private static final InternalNetworkUpdateRequest UPDATE_REQUEST =
-            new InternalNetworkUpdateRequest(
+    private static final EthernetNetworkUpdateRequest UPDATE_REQUEST =
+            new EthernetNetworkUpdateRequest(
                     new StaticIpConfiguration(), new NetworkCapabilities.Builder().build());
-    private static final IInternalNetworkManagementListener NULL_LISTENER = null;
+    private static final IEthernetNetworkManagementListener NULL_LISTENER = null;
     private EthernetServiceImpl mEthernetServiceImpl;
     @Mock private Context mContext;
     @Mock private Handler mHandler;
