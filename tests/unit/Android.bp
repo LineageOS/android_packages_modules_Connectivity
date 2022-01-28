@@ -19,6 +19,7 @@ java_defaults {
     name: "FrameworksNetTests-jni-defaults",
     jni_libs: [
         "ld-android",
+        "libandroid_net_frameworktests_util_jni",
         "libbase",
         "libbinder",
         "libbpf_bcc",

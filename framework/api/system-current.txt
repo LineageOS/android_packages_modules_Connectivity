@@ -93,6 +93,35 @@ package android.net {
     method @Deprecated public void onUpstreamChanged(@Nullable android.net.Network);
   }
 
+  public final class DscpPolicy implements android.os.Parcelable {
+    method @Nullable public java.net.InetAddress getDestinationAddress();
+    method @Nullable public android.util.Range<java.lang.Integer> getDestinationPortRange();
+    method public int getDscpValue();
+    method public int getPolicyId();
+    method public int getProtocol();
+    method @Nullable public java.net.InetAddress getSourceAddress();
+    method public int getSourcePort();
+    field @NonNull public static final android.os.Parcelable.Creator<android.net.DscpPolicy> CREATOR;
+    field public static final int PROTOCOL_ANY = -1; // 0xffffffff
+    field public static final int SOURCE_PORT_ANY = -1; // 0xffffffff
+    field public static final int STATUS_DELETED = 4; // 0x4
+    field public static final int STATUS_INSUFFICIENT_PROCESSING_RESOURCES = 3; // 0x3
+    field public static final int STATUS_POLICY_NOT_FOUND = 5; // 0x5
+    field public static final int STATUS_REQUESTED_CLASSIFIER_NOT_SUPPORTED = 2; // 0x2
+    field public static final int STATUS_REQUEST_DECLINED = 1; // 0x1
+    field public static final int STATUS_SUCCESS = 0; // 0x0
+  }
+
+  public static final class DscpPolicy.Builder {
+    ctor public DscpPolicy.Builder(int, int);
+    method @NonNull public android.net.DscpPolicy build();
+    method @NonNull public android.net.DscpPolicy.Builder setDestinationAddress(@NonNull java.net.InetAddress);
+    method @NonNull public android.net.DscpPolicy.Builder setDestinationPortRange(@NonNull android.util.Range<java.lang.Integer>);
+    method @NonNull public android.net.DscpPolicy.Builder setProtocol(int);
+    method @NonNull public android.net.DscpPolicy.Builder setSourceAddress(@NonNull java.net.InetAddress);
+    method @NonNull public android.net.DscpPolicy.Builder setSourcePort(int);
+  }
+
   public final class InvalidPacketException extends java.lang.Exception {
     ctor public InvalidPacketException(int);
     method public int getError();
@@ -217,6 +246,7 @@ package android.net {
     method public void onAddKeepalivePacketFilter(int, @NonNull android.net.KeepalivePacketData);
     method public void onAutomaticReconnectDisabled();
     method public void onBandwidthUpdateRequested();
+    method public void onDscpPolicyStatusUpdated(int, int);
     method public void onNetworkCreated();
     method public void onNetworkDestroyed();
     method public void onNetworkUnwanted();
@@ -229,6 +259,7 @@ package android.net {
     method public void onStopSocketKeepalive(int);
     method public void onValidationStatus(int, @Nullable android.net.Uri);
     method @NonNull public android.net.Network register();
+    method public void sendAddDscpPolicy(@NonNull android.net.DscpPolicy);
     method public final void sendLinkProperties(@NonNull android.net.LinkProperties);
     method public final void sendNetworkCapabilities(@NonNull android.net.NetworkCapabilities);
     method public final void sendNetworkScore(@NonNull android.net.NetworkScore);
@@ -236,6 +267,8 @@ package android.net {
     method public final void sendQosCallbackError(int, int);
     method public final void sendQosSessionAvailable(int, int, @NonNull android.net.QosSessionAttributes);
     method public final void sendQosSessionLost(int, int, int);
+    method public void sendRemoveAllDscpPolicies();
+    method public void sendRemoveDscpPolicy(int);
     method public final void sendSocketKeepaliveEvent(int, int);
     method @Deprecated public void setLegacySubtype(int, @NonNull String);
     method public void setLingerDuration(@NonNull java.time.Duration);
