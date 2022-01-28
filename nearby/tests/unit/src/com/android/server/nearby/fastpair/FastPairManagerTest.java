@@ -19,10 +19,12 @@ package com.android.server.nearby.fastpair;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import android.content.Context;
 
 import androidx.test.filters.SdkSuppress;
+import androidx.test.platform.app.InstrumentationRegistry;
 
 import com.android.server.nearby.common.locator.LocatorContextWrapper;
 
@@ -40,8 +42,11 @@ public class FastPairManagerTest {
     @Before
     public void setup() {
         MockitoAnnotations.initMocks(this);
+
         mLocatorContextWrapper = new LocatorContextWrapper(mContext);
         mFastPairManager = new FastPairManager(mLocatorContextWrapper);
+        when(mContext.getContentResolver()).thenReturn(
+                InstrumentationRegistry.getInstrumentation().getContext().getContentResolver());
     }
 
     @Test

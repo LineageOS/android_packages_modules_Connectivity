@@ -20,6 +20,17 @@ package com.android.server.nearby.fastpair;
  * String constant for half sheet.
  */
 public class Constant {
+
+    /**
+     * Value represents true for {@link android.provider.Settings.Secure}
+     */
+    public static final int SETTINGS_TRUE_VALUE = 1;
+
+    /**
+     * Tag for Fast Pair service related logs.
+     */
+    public static final String TAG = "FastPairService";
+
     public static final String EXTRA_BINDER = "com.android.server.nearby.fastpair.BINDER";
     public static final String EXTRA_BUNDLE = "com.android.server.nearby.fastpair.BUNDLE_EXTRA";
     public static final String SUCCESS_STATE = "SUCCESS";

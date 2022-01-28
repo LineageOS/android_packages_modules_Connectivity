@@ -16,20 +16,27 @@
 
 package com.android.server.nearby.fastpair;
 
+import static com.android.server.nearby.fastpair.Constant.SETTINGS_TRUE_VALUE;
+import static com.android.server.nearby.fastpair.Constant.TAG;
+
 import android.annotation.Nullable;
 import android.annotation.WorkerThread;
 import android.app.KeyguardManager;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothManager;
 import android.content.BroadcastReceiver;
+import android.content.ContentResolver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.database.ContentObserver;
 import android.nearby.FastPairDevice;
 import android.nearby.NearbyDevice;
 import android.nearby.NearbyManager;
 import android.nearby.ScanCallback;
 import android.nearby.ScanRequest;
+import android.net.Uri;
+import android.provider.Settings;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
@@ -71,46 +78,31 @@ import service.proto.Rpcs;
  */
 
 public class FastPairManager {
+
     private static final String ACTION_PREFIX = UserActionHandler.PREFIX;
     private static final int WAIT_FOR_UNLOCK_MILLIS = 5000;
+
     /** A notification ID which should be dismissed */
     public static final String EXTRA_NOTIFICATION_ID = ACTION_PREFIX + "EXTRA_NOTIFICATION_ID";
     public static final String ACTION_RESOURCES_APK = "android.nearby.SHOW_HALFSHEET";
 
     private static Executor sFastPairExecutor;
 
+    private ContentObserver mFastPairScanChangeContentObserver = null;
+
     final LocatorContextWrapper mLocatorContextWrapper;
     final IntentFilter mIntentFilter;
     final Locator mLocator;
-    private boolean mAllowScan = false;
+    private boolean mScanEnabled = false;
     private final BroadcastReceiver mScreenBroadcastReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
             if (intent.getAction().equals(Intent.ACTION_SCREEN_ON)) {
-                Log.d("FastPairService", " screen on");
-                NearbyManager nearbyManager = (NearbyManager) mLocatorContextWrapper
-                        .getApplicationContext().getSystemService(Context.NEARBY_SERVICE);
-
-                Log.d("FastPairService", " the nearby manager is " + nearbyManager);
-
-                if (nearbyManager != null) {
-                    if (mAllowScan) {
-                        nearbyManager.startScan(
-                                new ScanRequest.Builder()
-                                        .setScanType(ScanRequest.SCAN_TYPE_FAST_PAIR).build(),
-                                ForegroundThread.getExecutor(),
-                                mScanCallback);
-                    }
-                } else {
-                    Log.d("FastPairService", " the nearby manager is null");
-                }
-
-            } else {
-                Log.d("FastPairService", " screen off");
+                Log.d(TAG, "onReceive: ACTION_SCREEN_ON.");
+                invalidateScan();
             }
         }
     };
-
 
     public FastPairManager(LocatorContextWrapper contextWrapper) {
         mLocatorContextWrapper = contextWrapper;
@@ -131,16 +123,14 @@ public class FastPairManager {
         public void onUpdated(@NonNull NearbyDevice device) {
             FastPairDevice fastPairDevice = (FastPairDevice) device;
             byte[] modelArray = FastPairDecoder.getModelId(fastPairDevice.getData());
-            Log.d("FastPairService",
-                    "update model id" + Hex.bytesToStringLowercase(modelArray));
+            Log.d(TAG, "update model id" + Hex.bytesToStringLowercase(modelArray));
         }
 
         @Override
         public void onLost(@NonNull NearbyDevice device) {
             FastPairDevice fastPairDevice = (FastPairDevice) device;
             byte[] modelArray = FastPairDecoder.getModelId(fastPairDevice.getData());
-            Log.d("FastPairService",
-                    "lost model id" + Hex.bytesToStringLowercase(modelArray));
+            Log.d(TAG, "lost model id" + Hex.bytesToStringLowercase(modelArray));
         }
     };
 
@@ -155,6 +145,13 @@ public class FastPairManager {
                 .registerReceiver(mScreenBroadcastReceiver, mIntentFilter);
 
         Locator.getFromContextWrapper(mLocatorContextWrapper, FastPairCacheManager.class);
+        try {
+            mScanEnabled = getScanEnabledFromSettings();
+        } catch (Settings.SettingNotFoundException e) {
+            Log.w(TAG,
+                    "initiate: Failed to get initial scan enabled status from Settings.", e);
+        }
+        registerFastPairScanChangeContentObserver(mLocatorContextWrapper.getContentResolver());
     }
 
     /**
@@ -162,6 +159,10 @@ public class FastPairManager {
      */
     public void cleanUp() {
         mLocatorContextWrapper.getContext().unregisterReceiver(mScreenBroadcastReceiver);
+        if (mFastPairScanChangeContentObserver != null) {
+            mLocatorContextWrapper.getContentResolver().unregisterContentObserver(
+                    mFastPairScanChangeContentObserver);
+        }
     }
 
     /**
@@ -212,18 +213,17 @@ public class FastPairManager {
             boolean isBluetoothEnabled = bluetoothAdapter != null && bluetoothAdapter.isEnabled();
             if (!isBluetoothEnabled) {
                 if (bluetoothAdapter == null || !bluetoothAdapter.enable()) {
-                    Log.d("FastPairManager", "FastPair: Failed to enable bluetooth");
+                    Log.d(TAG, "FastPair: Failed to enable bluetooth");
                     return;
                 }
-                Log.v("FastPairManager", "FastPair: Enabling bluetooth for fast pair");
+                Log.v(TAG, "FastPair: Enabling bluetooth for fast pair");
 
                 Locator.get(context, EventLoop.class)
                         .postRunnable(
                                 new NamedRunnable("enableBluetoothToast") {
                                     @Override
                                     public void run() {
-                                        Log.d("FastPairManager",
-                                                "Enable bluetooth toast test");
+                                        Log.d(TAG, "Enable bluetooth toast test");
                                     }
                                 });
                 // Set up call back to call this function again once bluetooth has been
@@ -287,7 +287,7 @@ public class FastPairManager {
                 | ExecutionException
                 | PairingException
                 | GeneralSecurityException e) {
-            Log.e("FastPairManager", "FastPair: Error");
+            Log.e(TAG, "FastPair: Error");
             pairingProgressHandlerBase.onPairingFailed(e);
         }
     }
@@ -307,8 +307,7 @@ public class FastPairManager {
         // pattern) So we use this method instead, which returns true when on the lock screen
         // regardless.
         if (keyguardManager.isKeyguardLocked()) {
-            Log.v("FastPairManager",
-                    "FastPair: Screen is locked, waiting until unlocked "
+            Log.v(TAG, "FastPair: Screen is locked, waiting until unlocked "
                             + "to show status notifications.");
             try (SimpleBroadcastReceiver isUnlockedReceiver =
                          SimpleBroadcastReceiver.oneShotReceiver(
@@ -316,6 +315,28 @@ public class FastPairManager {
                                  Intent.ACTION_USER_PRESENT)) {
                 isUnlockedReceiver.await(WAIT_FOR_UNLOCK_MILLIS, TimeUnit.MILLISECONDS);
             }
+        }
+    }
+
+    private void registerFastPairScanChangeContentObserver(ContentResolver resolver) {
+        mFastPairScanChangeContentObserver = new ContentObserver(ForegroundThread.getHandler()) {
+            @Override
+            public void onChange(boolean selfChange, Uri uri) {
+                super.onChange(selfChange, uri);
+                try {
+                    setScanEnabled(getScanEnabledFromSettings());
+                } catch (Settings.SettingNotFoundException e) {
+                    Log.e(TAG, "Failed to get scan switch updates in Settings page.", e);
+                }
+            }
+        };
+        try {
+            resolver.registerContentObserver(
+                    Settings.Secure.getUriFor(Settings.Secure.FAST_PAIR_SCAN_ENABLED),
+                    /* notifyForDescendants= */ false,
+                    mFastPairScanChangeContentObserver);
+        }  catch (SecurityException e) {
+            Log.e(TAG, "Failed to register content observer for fast pair scan.", e);
         }
     }
 
@@ -339,6 +360,49 @@ public class FastPairManager {
     }
 
     /**
+     * Null when the Nearby Service is not available.
+     */
+    @Nullable
+    private NearbyManager getNearbyManager() {
+        return (NearbyManager) mLocatorContextWrapper
+                .getApplicationContext().getSystemService(Context.NEARBY_SERVICE);
+    }
+
+    private boolean getScanEnabledFromSettings() throws Settings.SettingNotFoundException {
+        return Settings.Secure.getInt(
+                mLocatorContextWrapper.getContext().getContentResolver(),
+                Settings.Secure.FAST_PAIR_SCAN_ENABLED) == SETTINGS_TRUE_VALUE;
+    }
+
+    private void setScanEnabled(boolean scanEnabled) {
+        if (mScanEnabled == scanEnabled) {
+            return;
+        }
+        mScanEnabled = scanEnabled;
+        invalidateScan();
+    }
+
+    /**
+     *  Starts or stops scanning according to mAllowScan value.
+     */
+    private void invalidateScan() {
+        NearbyManager nearbyManager = getNearbyManager();
+        if (nearbyManager == null) {
+            Log.w(TAG, "invalidateScan: "
+                    + "failed to start or stop scannning because NearbyManager is null.");
+            return;
+        }
+        if (mScanEnabled) {
+            nearbyManager.startScan(new ScanRequest.Builder()
+                            .setScanType(ScanRequest.SCAN_TYPE_FAST_PAIR).build(),
+                    ForegroundThread.getExecutor(),
+                    mScanCallback);
+        } else {
+            nearbyManager.stopScan(mScanCallback);
+        }
+    }
+
+    /**
      * Helper function to get bluetooth adapter.
      */
     @Nullable
@@ -346,5 +410,4 @@ public class FastPairManager {
         BluetoothManager manager = context.getSystemService(BluetoothManager.class);
         return manager == null ? null : manager.getAdapter();
     }
-
 }
