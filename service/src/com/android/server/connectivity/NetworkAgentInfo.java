@@ -18,6 +18,7 @@ package com.android.server.connectivity;
 
 import static android.net.ConnectivityDiagnosticsManager.ConnectivityReport;
 import static android.net.NetworkCapabilities.TRANSPORT_CELLULAR;
+import static android.net.NetworkCapabilities.TRANSPORT_TEST;
 import static android.net.NetworkCapabilities.transportNamesOf;
 
 import android.annotation.NonNull;
@@ -1186,6 +1187,19 @@ public class NetworkAgentInfo implements Comparable<NetworkAgentInfo>, NetworkRa
     @Nullable
     public ConnectivityReport getConnectivityReport() {
         return mConnectivityReport;
+    }
+
+    /**
+     * Make sure the NC from network agents don't contain stuff they shouldn't.
+     *
+     * @param nc the capabilities to sanitize
+     * @param creatorUid the UID of the process creating this network agent
+     */
+    public static void restrictCapabilitiesFromNetworkAgent(@NonNull final NetworkCapabilities nc,
+            final int creatorUid) {
+        if (nc.hasTransport(TRANSPORT_TEST)) {
+            nc.restrictCapabilitiesForTestNetwork(creatorUid);
+        }
     }
 
     // TODO: Print shorter members first and only print the boolean variable which value is true
