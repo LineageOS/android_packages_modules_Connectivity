@@ -62,7 +62,7 @@ private const val DBG = false
 class NsdManagerTest {
     private val context by lazy { InstrumentationRegistry.getInstrumentation().context }
     private val nsdManager by lazy { context.getSystemService(NsdManager::class.java) }
-    private val serviceName = "NsdTest%04d".format(Random().nextInt(1000))
+    private val serviceName = "NsdTest%09d".format(Random().nextInt(1_000_000_000))
 
     private interface NsdEvent
     private open class NsdRecord<T : NsdEvent> private constructor(
