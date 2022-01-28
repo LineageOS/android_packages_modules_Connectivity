@@ -35,8 +35,8 @@ import static org.mockito.Mockito.when;
 
 import android.annotation.NonNull;
 import android.annotation.Nullable;
+import android.app.usage.NetworkStatsManager;
 import android.content.Context;
-import android.net.NetworkTemplate;
 import android.os.Build;
 import android.os.Looper;
 import android.os.Parcel;
@@ -282,7 +282,7 @@ public final class NetworkStatsSubscriptionsMonitorTest {
         // NETWORK_TYPE_5G_NSA.
         setRatTypeForSub(TEST_SUBID1, TelephonyManager.NETWORK_TYPE_LTE,
                 OVERRIDE_NETWORK_TYPE_NR_NSA);
-        assertRatTypeChangedForSub(TEST_IMSI1, NetworkTemplate.NETWORK_TYPE_5G_NSA);
+        assertRatTypeChangedForSub(TEST_IMSI1, NetworkStatsManager.NETWORK_TYPE_5G_NSA);
         reset(mDelegate);
 
         // Set RAT type to LTE without NR connected, the RAT type should be downgraded to LTE.
