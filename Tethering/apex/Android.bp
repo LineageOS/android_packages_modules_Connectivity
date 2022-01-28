@@ -31,7 +31,7 @@ apex_defaults {
     // package names and keys, so that apex will be unused anyway.
     apps: ["Tethering"], // Replace to "Tethering" if ConnectivityNextEnableDefaults is false.
 }
-enable_tethering_next_apex = true
+enable_tethering_next_apex = false
 // This is a placeholder comment to avoid merge conflicts
 // as the above target may have different "enabled" values
 // depending on the branch
