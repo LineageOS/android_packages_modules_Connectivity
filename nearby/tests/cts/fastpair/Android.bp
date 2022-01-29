@@ -35,6 +35,7 @@ android_test {
     test_suites: [
         "cts",
         "general-tests",
+        "mts-tethering",
     ],
     platform_apis: true,
     sdk_version: "module_current",

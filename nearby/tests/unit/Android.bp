@@ -50,6 +50,6 @@ android_test {
     ],
     test_suites: [
         "general-tests",
-        "mts",
+        "mts-tethering",
     ],
 }
