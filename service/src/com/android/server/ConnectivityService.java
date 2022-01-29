@@ -126,6 +126,7 @@ import android.net.ConnectivityResources;
 import android.net.ConnectivitySettingsManager;
 import android.net.DataStallReportParcelable;
 import android.net.DnsResolverServiceManager;
+import android.net.DscpPolicy;
 import android.net.ICaptivePortal;
 import android.net.IConnectivityDiagnosticsCallback;
 import android.net.IConnectivityManager;
@@ -220,6 +221,7 @@ import android.os.UserHandle;
 import android.os.UserManager;
 import android.provider.Settings;
 import android.sysprop.NetworkProperties;
+import android.system.ErrnoException;
 import android.telephony.TelephonyManager;
 import android.text.TextUtils;
 import android.util.ArrayMap;
@@ -250,6 +252,7 @@ import com.android.server.connectivity.AutodestructReference;
 import com.android.server.connectivity.ConnectivityFlags;
 import com.android.server.connectivity.DnsManager;
 import com.android.server.connectivity.DnsManager.PrivateDnsValidationUpdate;
+import com.android.server.connectivity.DscpPolicyTracker;
 import com.android.server.connectivity.FullScore;
 import com.android.server.connectivity.KeepaliveTracker;
 import com.android.server.connectivity.LingerMonitor;
@@ -389,6 +392,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
     protected IDnsResolver mDnsResolver;
     @VisibleForTesting
     protected INetd mNetd;
+    private DscpPolicyTracker mDscpPolicyTracker = null;
     private NetworkStatsManager mStatsManager;
     private NetworkPolicyManager mPolicyManager;
     private final NetdCallback mNetdCallback;
@@ -1489,6 +1493,19 @@ public class ConnectivityService extends IConnectivityManager.Stub
                 new NetworkScore.Builder().setLegacyInt(0).build(), mContext, null,
                 new NetworkAgentConfig(), this, null, null, 0, INVALID_UID,
                 mLingerDelayMs, mQosCallbackTracker, mDeps);
+
+        try {
+            // DscpPolicyTracker cannot run on S because on S the tethering module can only load
+            // BPF programs/maps into /sys/fs/tethering/bpf, which the system server cannot access.
+            // Even if it could, running on S would at least require mocking out the BPF map,
+            // otherwise the unit tests will fail on pre-T devices where the seccomp filter blocks
+            // the bpf syscall. http://aosp/1907693
+            if (SdkLevel.isAtLeastT()) {
+                mDscpPolicyTracker = new DscpPolicyTracker();
+            }
+        } catch (ErrnoException e) {
+            loge("Unable to create DscpPolicyTracker");
+        }
     }
 
     private static NetworkCapabilities createDefaultNetworkCapabilitiesForUid(int uid) {
@@ -3404,6 +3421,25 @@ public class ConnectivityService extends IConnectivityManager.Stub
                 }
                 case NetworkAgent.EVENT_LINGER_DURATION_CHANGED: {
                     nai.setLingerDuration((int) arg.second);
+                    break;
+                }
+                case NetworkAgent.EVENT_ADD_DSCP_POLICY: {
+                    DscpPolicy policy = (DscpPolicy) arg.second;
+                    if (mDscpPolicyTracker != null) {
+                        mDscpPolicyTracker.addDscpPolicy(nai, policy);
+                    }
+                    break;
+                }
+                case NetworkAgent.EVENT_REMOVE_DSCP_POLICY: {
+                    if (mDscpPolicyTracker != null) {
+                        mDscpPolicyTracker.removeDscpPolicy(nai, (int) arg.second);
+                    }
+                    break;
+                }
+                case NetworkAgent.EVENT_REMOVE_ALL_DSCP_POLICIES: {
+                    if (mDscpPolicyTracker != null) {
+                        mDscpPolicyTracker.removeAllDscpPolicies(nai);
+                    }
                     break;
                 }
             }
