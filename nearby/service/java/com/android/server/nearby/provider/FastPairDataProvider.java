@@ -16,12 +16,15 @@
 
 package com.android.server.nearby.provider;
 
+import android.accounts.Account;
 import android.annotation.Nullable;
 import android.content.Context;
 import android.nearby.FastPairDataProviderBase;
 import android.util.Log;
 
 import androidx.annotation.WorkerThread;
+
+import com.android.server.nearby.fastpair.footprint.FastPairUploadInfo;
 
 import service.proto.Rpcs;
 
@@ -72,4 +75,19 @@ public class FastPairDataProvider {
         }
         throw new IllegalStateException("No ProxyFastPairDataProvider yet constructed");
     }
+
+    /**
+     * opt in default account to fast pair
+     */
+    public void optIn(Account account) {
+
+    }
+
+    /**
+     * Upload the device to the footprint
+     */
+    public void upload(Account account, FastPairUploadInfo uploadInfo) {
+
+    }
+
 }

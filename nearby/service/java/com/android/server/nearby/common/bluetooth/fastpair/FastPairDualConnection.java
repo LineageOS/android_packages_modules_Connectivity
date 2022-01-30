@@ -71,6 +71,8 @@ import com.android.server.nearby.common.bluetooth.gatt.BluetoothGattConnection;
 import com.android.server.nearby.common.bluetooth.gatt.BluetoothGattConnection.ChangeObserver;
 import com.android.server.nearby.common.bluetooth.testability.android.bluetooth.BluetoothAdapter;
 import com.android.server.nearby.common.bluetooth.util.BluetoothOperationExecutor.BluetoothOperationTimeoutException;
+import com.android.server.nearby.common.locator.Locator;
+import com.android.server.nearby.fastpair.FastPairController;
 import com.android.server.nearby.intdefs.FastPairEventIntDefs.BrEdrHandoverErrorCode;
 import com.android.server.nearby.intdefs.FastPairEventIntDefs.ConnectErrorCode;
 import com.android.server.nearby.intdefs.FastPairEventIntDefs.CreateBondErrorCode;
@@ -1325,6 +1327,7 @@ public class FastPairDualConnection extends FastPairConnection {
             throws InterruptedException, ExecutionException, TimeoutException,
             NoSuchAlgorithmException,
             BluetoothException {
+        Locator.get(mContext, FastPairController.class).setShouldUpload(false);
         if (!shouldWriteAccountKey()) {
             // For FastPair 2.0, here should be a subsequent pairing case.
             return null;
@@ -1347,7 +1350,9 @@ public class FastPairDualConnection extends FastPairConnection {
                 if (!mPreferences.getIsRetroactivePairing()) {
                     try (ScopedTiming scopedTiming2 = new ScopedTiming(mTimingLogger,
                             "Start CloudSyncing")) {
-                        mContext.startService(createCloudSyncingIntent(accountKey));
+                        // Start to sync to the footprint
+                        Locator.get(mContext, FastPairController.class).setShouldUpload(true);
+                        //mContext.startService(createCloudSyncingIntent(accountKey));
                     } catch (SecurityException e) {
                         Log.w(TAG, "Error adding device.", e);
                     }

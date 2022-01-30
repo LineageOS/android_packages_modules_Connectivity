@@ -34,11 +34,16 @@ import service.proto.Cache;
 public class FastPairCacheManagerTest {
 
     private static final String MODEL_ID = "001";
+    private static final String MODEL_ID2 = "002";
     private static final String APP_NAME = "APP_NAME";
     @Mock
     DiscoveryItem mDiscoveryItem;
+    @Mock DiscoveryItem mDiscoveryItem2;
     Cache.StoredDiscoveryItem mStoredDiscoveryItem = Cache.StoredDiscoveryItem.newBuilder()
             .setTriggerId(MODEL_ID)
+            .setAppName(APP_NAME).build();
+    Cache.StoredDiscoveryItem mStoredDiscoveryItem2 = Cache.StoredDiscoveryItem.newBuilder()
+            .setTriggerId(MODEL_ID2)
             .setAppName(APP_NAME).build();
 
     @Before
@@ -69,4 +74,23 @@ public class FastPairCacheManagerTest {
         assertThat(fastPairCacheManager.getStoredDiscoveryItem(MODEL_ID).getAppName())
                 .isEqualTo(APP_NAME);
     }
+
+    @Test
+    public void getAllInfo() {
+        Context mContext = ApplicationProvider.getApplicationContext();
+        when(mDiscoveryItem.getCopyOfStoredItem()).thenReturn(mStoredDiscoveryItem);
+        when(mDiscoveryItem.getTriggerId()).thenReturn(MODEL_ID);
+        when(mDiscoveryItem2.getCopyOfStoredItem()).thenReturn(mStoredDiscoveryItem2);
+        when(mDiscoveryItem2.getTriggerId()).thenReturn(MODEL_ID2);
+
+        FastPairCacheManager fastPairCacheManager = new FastPairCacheManager(mContext);
+        fastPairCacheManager.saveDiscoveryItem(mDiscoveryItem);
+
+        assertThat(fastPairCacheManager.getAllSavedStoreDiscoveryItem()).hasSize(2);
+
+        fastPairCacheManager.saveDiscoveryItem(mDiscoveryItem2);
+
+        assertThat(fastPairCacheManager.getAllSavedStoreDiscoveryItem()).hasSize(3);
+    }
+
 }

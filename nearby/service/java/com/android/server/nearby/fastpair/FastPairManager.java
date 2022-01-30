@@ -29,6 +29,7 @@ import android.nearby.FastPairDevice;
 import android.nearby.NearbyDevice;
 import android.nearby.NearbyManager;
 import android.nearby.ScanCallback;
+import android.nearby.ScanRequest;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
@@ -50,6 +51,7 @@ import com.android.server.nearby.fastpair.cache.FastPairCacheManager;
 import com.android.server.nearby.fastpair.footprint.FootprintsDeviceManager;
 import com.android.server.nearby.fastpair.pairinghandler.PairingProgressHandlerBase;
 import com.android.server.nearby.util.FastPairDecoder;
+import com.android.server.nearby.util.ForegroundThread;
 import com.android.server.nearby.util.Hex;
 
 import java.security.GeneralSecurityException;
@@ -80,6 +82,7 @@ public class FastPairManager {
     final LocatorContextWrapper mLocatorContextWrapper;
     final IntentFilter mIntentFilter;
     final Locator mLocator;
+    private boolean mAllowScan = false;
     private final BroadcastReceiver mScreenBroadcastReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
@@ -91,12 +94,13 @@ public class FastPairManager {
                 Log.d("FastPairService", " the nearby manager is " + nearbyManager);
 
                 if (nearbyManager != null) {
-                    // Uncomment this if you want to get mainline half sheet
-//                    nearbyManager.startScan(
-//                            new ScanRequest.Builder()
-//                                    .setScanType(ScanRequest.SCAN_TYPE_FAST_PAIR).build(),
-//                            ForegroundThread.getExecutor(),
-//                            mScanCallback);
+                    if (mAllowScan) {
+                        nearbyManager.startScan(
+                                new ScanRequest.Builder()
+                                        .setScanType(ScanRequest.SCAN_TYPE_FAST_PAIR).build(),
+                                ForegroundThread.getExecutor(),
+                                mScanCallback);
+                    }
                 } else {
                     Log.d("FastPairService", " the nearby manager is null");
                 }
@@ -256,6 +260,13 @@ public class FastPairManager {
                         connection.pair(
                                 accountKey != null ? accountKey
                                         : item.getAuthenticationPublicKeySecp256R1());
+                if (accountKey == null) {
+                    // Account key is null so it is initial pairing
+                    if (sharedSecret != null) {
+                        Locator.get(context, FastPairController.class).addDeviceToFootprint(
+                                connection.getPublicAddress(), sharedSecret.getKey(), item);
+                    }
+                }
 
                 byte[] key = pairingProgressHandlerBase.getKeyForLocalCache(accountKey,
                         connection, sharedSecret);
@@ -265,6 +276,7 @@ public class FastPairManager {
                     // CacheManager to save the content here
                 }
             } else {
+                // Fast Pair one
                 connection.pair();
             }
             pairingProgressHandlerBase.onPairingSuccess(connection.getPublicAddress());
@@ -305,6 +317,14 @@ public class FastPairManager {
                 isUnlockedReceiver.await(WAIT_FOR_UNLOCK_MILLIS, TimeUnit.MILLISECONDS);
             }
         }
+    }
+
+    /**
+     * Processed task in a background thread
+     */
+    @Annotations.EventThread
+    public static void processBackgroundTask(Runnable runnable) {
+        getExecutor().execute(runnable);
     }
 
     /**
