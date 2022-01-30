@@ -143,10 +143,8 @@ public class EthernetServiceImpl extends IEthernetManager.Stub {
      * Adds a listener.
      * @param listener A {@link IEthernetServiceListener} to add.
      */
-    public void addListener(IEthernetServiceListener listener) {
-        if (listener == null) {
-            throw new IllegalArgumentException("listener must not be null");
-        }
+    public void addListener(IEthernetServiceListener listener) throws RemoteException {
+        Objects.requireNonNull(listener, "listener must not be null");
         PermissionUtils.enforceAccessNetworkStatePermission(mContext, TAG);
         mTracker.addListener(listener, checkUseRestrictedNetworksPermission());
     }
