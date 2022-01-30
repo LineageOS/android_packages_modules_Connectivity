@@ -16,7 +16,6 @@
 
 package android.nearby;
 
-
 import android.annotation.IntRange;
 import android.annotation.NonNull;
 import android.annotation.Nullable;
@@ -24,6 +23,9 @@ import android.annotation.SystemApi;
 import android.bluetooth.le.ScanRecord;
 import android.os.Parcel;
 import android.os.Parcelable;
+
+import java.util.Arrays;
+import java.util.Objects;
 
 /**
  * A data class representing scan result from Nearby Service. Scan result can come from multiple
@@ -131,6 +133,43 @@ public final class NearbyDeviceParcelable implements Parcelable {
             dest.writeInt(mData.length);
             dest.writeByteArray(mData);
         }
+    }
+
+    /**
+     * Returns a string representation of this ScanRequest.
+     */
+    @Override
+    public String toString() {
+        return "NearbyDeviceParcelable["
+                + "name=" + mName
+                + ", medium=" + NearbyDevice.mediumToString(mMedium)
+                + ", rssi=" + mRssi
+                + ", bluetoothAddress=" + mBluetoothAddress
+                + ", fastPairModelId=" + mFastPairModelId
+                + ", data=" + Arrays.toString(mData)
+                + "]";
+    }
+
+    @Override
+    public boolean equals(Object other) {
+        if (other instanceof NearbyDeviceParcelable) {
+            NearbyDeviceParcelable otherNearbyDeviceParcelable = (NearbyDeviceParcelable) other;
+            return  Objects.equals(mName, otherNearbyDeviceParcelable.mName)
+                    && (mMedium == otherNearbyDeviceParcelable.mMedium)
+                    && (mRssi == otherNearbyDeviceParcelable.mRssi)
+                    && (Objects.equals(
+                            mBluetoothAddress, otherNearbyDeviceParcelable.mBluetoothAddress))
+                    && (Objects.equals(
+                            mFastPairModelId, otherNearbyDeviceParcelable.mFastPairModelId))
+                    && (Arrays.equals(mData, otherNearbyDeviceParcelable.mData));
+        }
+        return false;
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(
+                mName, mMedium, mRssi, mBluetoothAddress, mFastPairModelId, Arrays.hashCode(mData));
     }
 
     /**
