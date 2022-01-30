@@ -20,6 +20,7 @@ import android.annotation.NonNull;
 import android.annotation.Nullable;
 import android.content.Context;
 import android.net.ConnectivityManager;
+import android.net.EthernetManager;
 import android.net.EthernetNetworkSpecifier;
 import android.net.IEthernetNetworkManagementListener;
 import android.net.EthernetNetworkManagementException;
@@ -186,6 +187,18 @@ public class EthernetNetworkFactory extends NetworkFactory {
         updateCapabilityFilter();
     }
 
+    @VisibleForTesting
+    protected int getInterfaceState(@NonNull String iface) {
+        final NetworkInterfaceState interfaceState = mTrackingInterfaces.get(iface);
+        if (interfaceState == null) {
+            return EthernetManager.STATE_ABSENT;
+        } else if (!interfaceState.mLinkUp) {
+            return EthernetManager.STATE_LINK_DOWN;
+        } else {
+            return EthernetManager.STATE_LINK_UP;
+        }
+    }
+
     /**
      * Update a network's configuration and restart it if necessary.
      *
@@ -270,7 +283,8 @@ public class EthernetNetworkFactory extends NetworkFactory {
         return iface.updateLinkState(up, listener);
     }
 
-    boolean hasInterface(String ifaceName) {
+    @VisibleForTesting
+    protected boolean hasInterface(String ifaceName) {
         return mTrackingInterfaces.containsKey(ifaceName);
     }
 
