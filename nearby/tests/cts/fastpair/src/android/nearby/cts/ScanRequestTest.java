@@ -27,7 +27,6 @@ import static android.nearby.ScanRequest.SCAN_TYPE_NEARBY_SHARE;
 
 import static com.google.common.truth.Truth.assertThat;
 
-import android.annotation.TargetApi;
 import android.nearby.ScanRequest;
 import android.os.Build;
 import android.os.WorkSource;
@@ -38,10 +37,8 @@ import androidx.test.runner.AndroidJUnit4;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
-// NearbyFrameworkInitializer was added in T
 @RunWith(AndroidJUnit4.class)
 @RequiresApi(Build.VERSION_CODES.TIRAMISU)
-@TargetApi(Build.VERSION_CODES.TIRAMISU)
 public class ScanRequestTest {
 
     private static final int UID = 1001;

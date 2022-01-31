@@ -16,7 +16,6 @@
 
 package android.nearby.cts;
 
-import android.annotation.TargetApi;
 import android.nearby.NearbyFrameworkInitializer;
 import android.os.Build;
 
@@ -29,7 +28,6 @@ import org.junit.runner.RunWith;
 // NearbyFrameworkInitializer was added in T
 @RunWith(AndroidJUnit4.class)
 @RequiresApi(Build.VERSION_CODES.TIRAMISU)
-@TargetApi(Build.VERSION_CODES.TIRAMISU)
 public class NearbyFrameworkInitializerTest {
 
 //    // TODO(b/215435710) This test cannot pass now because our test cannot access system API.
