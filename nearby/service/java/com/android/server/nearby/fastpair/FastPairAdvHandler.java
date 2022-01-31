@@ -39,6 +39,14 @@ public class FastPairAdvHandler {
     Context mContext;
     String mBleAddress;
 
+    /** The types about how the bloomfilter is processed. */
+    public enum ProcessBloomFilterType {
+        IGNORE, // The bloomfilter is not handled. e.g. distance is too far away.
+        CACHE, // The bloomfilter is recognized in the local cache.
+        FOOTPRINT, // Need to check the bloomfilter from the footprints.
+        ACCOUNT_KEY_HIT // The specified account key was hit the bloom filter.
+    }
+
     /**
      * Constructor function.
      */
@@ -68,6 +76,9 @@ public class FastPairAdvHandler {
                     Cache.ScanFastPairStoreItem.newBuilder().setAddress(mBleAddress)
                             .setAntiSpoofingPublicKey(publicKey)
                             .build());
+        } else {
+            // Start to process bloomfilter
+
         }
     }
 }

@@ -27,6 +27,9 @@ import com.android.server.nearby.common.eventloop.Annotations;
 
 import com.google.protobuf.InvalidProtocolBufferException;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import service.proto.Cache;
 import service.proto.Rpcs;
 
@@ -132,6 +135,40 @@ public class FastPairCacheManager {
         return Cache.StoredDiscoveryItem.getDefaultInstance();
     }
 
+    /**
+     * Get all of the discovery item related info in the cache.
+     */
+    public List<Cache.StoredDiscoveryItem> getAllSavedStoreDiscoveryItem() {
+        List<Cache.StoredDiscoveryItem> storedDiscoveryItemList = new ArrayList<>();
+        SQLiteDatabase db = mDiscoveryItemDbHelper.getReadableDatabase();
+        String[] projection = {
+                DiscoveryItemContract.DiscoveryItemEntry.COLUMN_MODEL_ID,
+                DiscoveryItemContract.DiscoveryItemEntry.COLUMN_SCAN_BYTE
+        };
+        Cursor cursor = db.query(
+                DiscoveryItemContract.DiscoveryItemEntry.TABLE_NAME,
+                projection,
+                null,
+                null,
+                null,
+                null,
+                null
+        );
+
+        while (cursor.moveToNext()) {
+            byte[] res = cursor.getBlob(cursor.getColumnIndexOrThrow(
+                    DiscoveryItemContract.DiscoveryItemEntry.COLUMN_SCAN_BYTE));
+            try {
+                Cache.StoredDiscoveryItem item = Cache.StoredDiscoveryItem.parseFrom(res);
+                storedDiscoveryItemList.add(item);
+            } catch (InvalidProtocolBufferException e) {
+                Log.e("FastPairCacheManager", "storediscovery has error");
+            }
+
+        }
+        cursor.close();
+        return storedDiscoveryItemList;
+    }
     /**
      * Get scan result from local database use model id
      */
