@@ -16,14 +16,10 @@
 
 package com.android.server.nearby.common.bluetooth.fastpair;
 
-import static com.google.common.truth.Truth.assertThat;
-
-import static org.junit.Assert.assertThrows;
 import static org.robolectric.Shadows.shadowOf;
 
 import android.Manifest.permission;
 import android.bluetooth.BluetoothAdapter;
-import android.bluetooth.BluetoothDevice;
 
 import com.android.libraries.testing.deviceshadower.Bluelet.IoCapabilities;
 import com.android.libraries.testing.deviceshadower.DeviceShadowEnvironment;
@@ -38,7 +34,6 @@ import org.junit.runner.RunWith;
 import org.robolectric.RobolectricTestRunner;
 
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * Tests for {@link BluetoothClassicPairer}.
@@ -83,6 +78,8 @@ public class BluetoothClassicPairerTest extends BluetoothTestCase {
 
     @Test
     public void pair_setPairingConfirmationTrue_deviceBonded() throws Exception {
+    // TODO(b/217195327): replace deviceshadower with injector.
+    /*
         AtomicReference<BluetoothDevice> targetRemoteDevice = new AtomicReference<>();
         BluetoothClassicPairer bluetoothClassicPairer =
                 new BluetoothClassicPairer(
@@ -105,10 +102,13 @@ public class BluetoothClassicPairerTest extends BluetoothTestCase {
         assertThat(targetRemoteDevice.get().getAddress()).isEqualTo(REMOTE_DEVICE_PUBLIC_ADDRESS);
         assertThat(targetRemoteDevice.get().getBondState()).isEqualTo(BluetoothDevice.BOND_BONDED);
         assertThat(bluetoothClassicPairer.isPaired()).isTrue();
+    */
     }
 
     @Test
     public void pair_setPairingConfirmationFalse_throwsExceptionDeviceNotBonded() throws Exception {
+    // TODO(b/217195327): replace deviceshadower with injector.
+    /*
         AtomicReference<BluetoothDevice> targetRemoteDevice = new AtomicReference<>();
         BluetoothClassicPairer bluetoothClassicPairer =
                 new BluetoothClassicPairer(
@@ -132,11 +132,14 @@ public class BluetoothClassicPairerTest extends BluetoothTestCase {
         assertThat(targetRemoteDevice.get().getBondState()).isNotEqualTo(
                 BluetoothDevice.BOND_BONDED);
         assertThat(bluetoothClassicPairer.isPaired()).isFalse();
+    */
     }
 
     @Test
     public void pair_setPairingConfirmationIgnored_throwsExceptionDeviceNotBonded()
             throws Exception {
+    // TODO(b/217195327): replace deviceshadower with injector.
+    /*
         AtomicReference<BluetoothDevice> targetRemoteDevice = new AtomicReference<>();
         BluetoothClassicPairer bluetoothClassicPairer =
                 new BluetoothClassicPairer(
@@ -158,6 +161,7 @@ public class BluetoothClassicPairerTest extends BluetoothTestCase {
         assertThat(targetRemoteDevice.get().getBondState()).isNotEqualTo(
                 BluetoothDevice.BOND_BONDED);
         assertThat(bluetoothClassicPairer.isPaired()).isFalse();
+    */
     }
 
     private static void setPairingConfirmationAtRemoteDevice(boolean confirm) {
