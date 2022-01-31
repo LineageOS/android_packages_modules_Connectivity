@@ -20,9 +20,9 @@ package {
 }
 
 // The library name match the service-connectivity jarjar rules that put the JNI utils in the
-// com.android.connectivity.com.android.net.module.util package.
+// android.net.connectivity.com.android.net.module.util package.
 cc_library_shared {
-    name: "libcom_android_connectivity_com_android_net_module_util_jni",
+    name: "libandroid_net_connectivity_com_android_net_module_util_jni",
     min_sdk_version: "30",
     cflags: [
         "-Wall",
@@ -98,20 +98,20 @@ java_library {
     ],
     libs: [
         "framework-annotations-lib",
-        "framework-connectivity.impl",
+        "framework-connectivity-pre-jarjar",
         "framework-tethering.stubs.module_lib",
         "framework-wifi.stubs.module_lib",
         "unsupportedappusage",
         "ServiceConnectivityResources",
     ],
     static_libs: [
+        // Do not add libs here if they are already included
+        // in framework-connectivity
         "dnsresolver_aidl_interface-V9-java",
-        "modules-utils-build",
         "modules-utils-shell-command-handler",
         "net-utils-device-common",
         "net-utils-device-common-bpf",
         "net-utils-device-common-netlink",
-        "net-utils-framework-common",
         "netd-client",
         "networkstack-client",
         "PlatformProperties",
@@ -159,7 +159,7 @@ java_library {
         "service-connectivity-tiramisu-pre-jarjar",
         "service-nearby",
     ],
-    jarjar_rules: "jarjar-rules.txt",
+    jarjar_rules: ":connectivity-jarjar-rules",
     apex_available: [
         "com.android.tethering",
     ],
