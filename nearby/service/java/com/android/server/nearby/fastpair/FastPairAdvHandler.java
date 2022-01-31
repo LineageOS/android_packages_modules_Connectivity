@@ -70,7 +70,8 @@ public class FastPairAdvHandler {
                     "On discovery model id" + Hex.bytesToStringLowercase(model));
             // Use api to get anti spoofing key from model id.
             Rpcs.GetObservedDeviceResponse response =
-                    FastPairDataProvider.getInstance().loadFastPairDeviceMetadata(model);
+                    FastPairDataProvider.getInstance()
+                            .loadFastPairAntispoofkeyDeviceMetadata(model);
             ByteString publicKey = response.getDevice().getAntiSpoofingKeyPair().getPublicKey();
             Locator.get(mContext, FastPairHalfSheetManager.class).showHalfSheet(
                     Cache.ScanFastPairStoreItem.newBuilder().setAddress(mBleAddress)

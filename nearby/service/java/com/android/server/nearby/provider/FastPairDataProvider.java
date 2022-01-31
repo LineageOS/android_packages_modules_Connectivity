@@ -21,6 +21,10 @@ import android.annotation.Nullable;
 import android.content.Context;
 import android.nearby.FastPairDataProviderBase;
 import android.nearby.FastPairDevice;
+import android.nearby.aidl.FastPairAntispoofkeyDeviceMetadataRequestParcel;
+import android.nearby.aidl.FastPairEligibleAccountsRequestParcel;
+import android.nearby.aidl.FastPairManageAccountDeviceRequestParcel;
+import android.nearby.aidl.FastPairManageAccountRequestParcel;
 import android.util.Log;
 
 import androidx.annotation.WorkerThread;
@@ -28,9 +32,13 @@ import androidx.annotation.WorkerThread;
 import com.android.server.nearby.common.bloomfilter.BloomFilter;
 import com.android.server.nearby.fastpair.footprint.FastPairUploadInfo;
 
+import java.util.List;
+
 import service.proto.Rpcs;
 
-/** FastPairDataProvider is a singleton that implements APIs to get FastPair data. */
+/**
+ * FastPairDataProvider is a singleton that implements APIs to get FastPair data.
+ */
 public class FastPairDataProvider {
 
     private static final String TAG = "FastPairDataProvider";
@@ -39,7 +47,9 @@ public class FastPairDataProvider {
 
     private ProxyFastPairDataProvider mProxyFastPairDataProvider;
 
-    /** Initializes FastPairDataProvider singleton. */
+    /**
+     * Initializes FastPairDataProvider singleton.
+     */
     public static synchronized FastPairDataProvider init(Context context) {
 
         if (sInstance == null) {
@@ -68,28 +78,58 @@ public class FastPairDataProvider {
         }
     }
 
-    /** loadFastPairDeviceMetadata. */
+    /**
+     * Loads FastPairAntispoofkeyDeviceMetadata.
+     *
+     * @throws IllegalStateException If ProxyFastPairDataProvider is not available.
+     */
     @WorkerThread
     @Nullable
-    public Rpcs.GetObservedDeviceResponse loadFastPairDeviceMetadata(byte[] modelId) {
+    public Rpcs.GetObservedDeviceResponse loadFastPairAntispoofkeyDeviceMetadata(byte[] modelId) {
         if (mProxyFastPairDataProvider != null) {
-            return mProxyFastPairDataProvider.loadFastPairDeviceMetadata(modelId);
+            FastPairAntispoofkeyDeviceMetadataRequestParcel requestParcel =
+                    new FastPairAntispoofkeyDeviceMetadataRequestParcel();
+            requestParcel.modelId = modelId;
+            return Utils.convertFastPairAntispoofkeyDeviceMetadataToGetObservedDeviceResponse(
+                    mProxyFastPairDataProvider
+                            .loadFastPairAntispoofkeyDeviceMetadata(requestParcel));
         }
         throw new IllegalStateException("No ProxyFastPairDataProvider yet constructed");
     }
 
     /**
-     * opt in default account to fast pair
+     * Enrolls an account to Fast Pair.
+     *
+     * @throws IllegalStateException If ProxyFastPairDataProvider is not available.
      */
     public void optIn(Account account) {
-
+        if (mProxyFastPairDataProvider != null) {
+            FastPairManageAccountRequestParcel requestParcel =
+                    new FastPairManageAccountRequestParcel();
+            requestParcel.account = account;
+            requestParcel.requestType = FastPairDataProviderBase.MANAGE_REQUEST_ADD;
+            mProxyFastPairDataProvider.manageFastPairAccount(requestParcel);
+        }
+        throw new IllegalStateException("No ProxyFastPairDataProvider yet constructed");
     }
 
     /**
-     * Upload the device to the footprint
+     * Uploads the device info to Fast Pair account.
+     *
+     * @throws IllegalStateException If ProxyFastPairDataProvider is not available.
      */
     public void upload(Account account, FastPairUploadInfo uploadInfo) {
-
+        if (mProxyFastPairDataProvider != null) {
+            FastPairManageAccountDeviceRequestParcel requestParcel =
+                    new FastPairManageAccountDeviceRequestParcel();
+            requestParcel.account = account;
+            requestParcel.requestType = FastPairDataProviderBase.MANAGE_REQUEST_ADD;
+            requestParcel.accountKeyDeviceMetadata =
+                    Utils.convertFastPairUploadInfoToFastPairAccountKeyDeviceMetadata(
+                            uploadInfo);
+            mProxyFastPairDataProvider.manageFastPairAccountDevice(requestParcel);
+        }
+        throw new IllegalStateException("No ProxyFastPairDataProvider yet constructed");
     }
 
     /**
@@ -99,4 +139,18 @@ public class FastPairDataProvider {
         return new FastPairDevice.Builder().build();
     }
 
+    /**
+     * Get FastPair Eligible Accounts.
+     *
+     * @throws IllegalStateException If ProxyFastPairDataProvider is not available.
+     */
+    public List<Account> loadFastPairEligibleAccounts() {
+        if (mProxyFastPairDataProvider != null) {
+            FastPairEligibleAccountsRequestParcel requestParcel =
+                    new FastPairEligibleAccountsRequestParcel();
+            return Utils.convertFastPairEligibleAccountsToAccountList(
+                    mProxyFastPairDataProvider.loadFastPairEligibleAccounts(requestParcel));
+        }
+        throw new IllegalStateException("No ProxyFastPairDataProvider yet constructed");
+    }
 }
