@@ -117,7 +117,7 @@ java_library {
         "device/com/android/net/module/util/Struct.java",
         "device/com/android/net/module/util/TcUtils.java",
     ],
-    sdk_version: "system_current",
+    sdk_version: "module_current",
     min_sdk_version: "29",
     visibility: [
         "//frameworks/libs/net/common/tests:__subpackages__",
@@ -128,6 +128,7 @@ java_library {
     ],
     libs: [
         "androidx.annotation_annotation",
+        "framework-connectivity.stubs.module_lib",
     ],
     apex_available: [
         "com.android.tethering",
@@ -145,7 +146,7 @@ java_library {
         "device/com/android/net/module/util/Struct.java",
         "device/com/android/net/module/util/structs/*.java",
     ],
-    sdk_version: "system_current",
+    sdk_version: "module_current",
     min_sdk_version: "29",
     visibility: [
         "//frameworks/libs/net/common/testutils:__subpackages__",
@@ -157,6 +158,7 @@ java_library {
     ],
     libs: [
         "androidx.annotation_annotation",
+        "framework-connectivity.stubs.module_lib",
     ],
     apex_available: [
         "com.android.tethering",
@@ -170,7 +172,7 @@ java_library {
     srcs: [
         "device/com/android/net/module/util/netlink/*.java",
     ],
-    sdk_version: "system_current",
+    sdk_version: "module_current",
     min_sdk_version: "29",
     visibility: [
         "//frameworks/libs/net/common/testutils:__subpackages__",
@@ -182,6 +184,7 @@ java_library {
     ],
     libs: [
         "androidx.annotation_annotation",
+        "framework-connectivity.stubs.module_lib",
     ],
     apex_available: [
         "com.android.tethering",
@@ -225,11 +228,12 @@ java_library {
     name: "net-utils-framework-common",
     srcs: [
         ":net-utils-framework-common-srcs",
-        // TODO: avoid including all framework annotations as they end up in library users jars
-        // and need jarjaring
-        ":framework-annotations",
     ],
-    sdk_version: "system_current",
+    sdk_version: "module_current",
+    libs: [
+        "framework-annotations-lib",
+        "framework-connectivity.stubs.module_lib",
+    ],
     jarjar_rules: "jarjar-rules-shared.txt",
     visibility: [
         "//cts/tests/tests/net",
