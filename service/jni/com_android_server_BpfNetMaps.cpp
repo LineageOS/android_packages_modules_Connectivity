@@ -16,17 +16,17 @@
 
 #define LOG_TAG "TrafficControllerJni"
 
+#include "TrafficController.h"
+
+#include <bpf_shared.h>
 #include <jni.h>
+#include <log/log.h>
 #include <nativehelper/JNIHelp.h>
 #include <nativehelper/ScopedUtfChars.h>
 #include <nativehelper/ScopedPrimitiveArray.h>
 #include <net/if.h>
 #include <vector>
 
-#include "TrafficController.h"
-#include "android-base/logging.h"
-#include "bpf_shared.h"
-#include "utils/Log.h"
 
 using android::net::TrafficController;
 using android::netdutils::Status;

@@ -25,7 +25,6 @@
 #include "netdutils/DumpWriter.h"
 #include "netdutils/NetlinkListener.h"
 #include "netdutils/StatusOr.h"
-#include "utils/String16.h"
 
 namespace android {
 namespace net {
@@ -34,6 +33,8 @@ using netdutils::StatusOr;
 
 class TrafficController {
   public:
+    static constexpr char DUMP_KEYWORD[] = "trafficcontroller";
+
     /*
      * Initialize the whole controller
      */
@@ -84,7 +85,6 @@ class TrafficController {
 
     netdutils::Status updateUidOwnerMap(const uint32_t uid,
                                         UidOwnerMatchType matchType, IptOp op) EXCLUDES(mMutex);
-    static const String16 DUMP_KEYWORD;
 
     int toggleUidOwnerMap(ChildChain chain, bool enable) EXCLUDES(mMutex);
 

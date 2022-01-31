@@ -79,7 +79,6 @@ cc_library_shared {
     shared_libs: [
         "liblog",
         "libnativehelper",
-        "libutils",
     ],
     apex_available: [
         "com.android.tethering",
