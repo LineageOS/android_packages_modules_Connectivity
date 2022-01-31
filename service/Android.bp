@@ -152,11 +152,17 @@ java_library {
     static_libs: [
         "service-connectivity-pre-jarjar",
         "service-connectivity-tiramisu-pre-jarjar",
+        "service-nearby",
     ],
     jarjar_rules: "jarjar-rules.txt",
     apex_available: [
         "com.android.tethering",
     ],
+    optimize: {
+        enabled: true,
+        shrink: true,
+        proguard_flags_files: ["proguard.flags"],
+    },
     lint: { strict_updatability_linting: true },
 }
 
