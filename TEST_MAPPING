@@ -19,6 +19,9 @@
       ]
     },
     {
+      "name": "netd_updatable_unit_test"
+    },
+    {
       "name": "TetheringTests"
     },
     {
@@ -38,6 +41,10 @@
     // TODO: move to presubmit when known green.
     {
       "name": "bpf_existence_test"
+    },
+    {
+      "name": "netd_updatable_unit_test",
+      "keywords": ["netd-device-kernel-4.9", "netd-device-kernel-4.14"]
     },
     {
       "name": "libclat_test"
@@ -61,6 +68,9 @@
           "exclude-annotation": "androidx.test.filters.RequiresDevice"
         }
       ]
+    },
+    {
+      "name": "netd_updatable_unit_test[CaptivePortalLoginGoogle.apk+NetworkStackGoogle.apk+com.google.android.resolv.apex+com.google.android.tethering.apex]"
     },
     {
       "name": "ConnectivityCoverageTests[CaptivePortalLoginGoogle.apk+NetworkStackGoogle.apk+com.google.android.resolv.apex+com.google.android.tethering.apex]"
