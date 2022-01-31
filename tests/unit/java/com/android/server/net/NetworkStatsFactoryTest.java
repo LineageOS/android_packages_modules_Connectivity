@@ -28,7 +28,7 @@ import static android.net.NetworkStats.SET_FOREGROUND;
 import static android.net.NetworkStats.TAG_NONE;
 import static android.net.NetworkStats.UID_ALL;
 
-import static com.android.server.NetworkManagementSocketTagger.kernelToTag;
+import static com.android.server.net.NetworkStatsFactory.kernelToTag;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
