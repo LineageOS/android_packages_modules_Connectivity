@@ -16,57 +16,117 @@
 
 package com.android.server.nearby;
 
+import static com.android.server.SystemService.PHASE_BOOT_COMPLETED;
+import static com.android.server.SystemService.PHASE_THIRD_PARTY_APPS_CAN_START;
+
+import android.annotation.Nullable;
+import android.bluetooth.BluetoothAdapter;
+import android.bluetooth.BluetoothManager;
+import android.content.BroadcastReceiver;
 import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
+import android.nearby.INearbyManager;
+import android.nearby.IScanListener;
+import android.nearby.ScanRequest;
 import android.util.Log;
 
-import com.android.server.SystemService;
 import com.android.server.nearby.common.locator.LocatorContextWrapper;
 import com.android.server.nearby.fastpair.FastPairManager;
+import com.android.server.nearby.injector.Injector;
+import com.android.server.nearby.provider.DiscoveryProviderManager;
 import com.android.server.nearby.provider.FastPairDataProvider;
 
 /**
- * Service implementing nearby functionality. The actual implementation is delegated to
- * {@link NearbyServiceImpl}.
+ * Service implementing nearby functionality.
  */
-public class NearbyService extends SystemService {
-
+public class NearbyService extends INearbyManager.Stub {
     public static final String TAG = "NearbyService";
-    private static final boolean DBG = true;
 
     private final Context mContext;
-    private final NearbyServiceImpl mImpl;
+    private final SystemInjector mSystemInjector;
     private final FastPairManager mFastPairManager;
-    private LocatorContextWrapper mLocatorContextWrapper;
-
-    public NearbyService(Context contextBase) {
-        super(contextBase);
-        mContext = contextBase;
-        mImpl = new NearbyServiceImpl(contextBase);
-        mLocatorContextWrapper = new LocatorContextWrapper(contextBase, null);
-        mFastPairManager = new FastPairManager(mLocatorContextWrapper);
-    }
-
-    @Override
-    public void onStart() {
-        if (DBG) {
-            Log.d(TAG, "Publishing NearbyService");
+    private final BroadcastReceiver mBluetoothReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            int state = intent
+                    .getIntExtra(BluetoothAdapter.EXTRA_STATE, BluetoothAdapter.ERROR);
+            if (state == BluetoothAdapter.STATE_ON) {
+                if (mSystemInjector != null) {
+                    // Have to do this logic in listener. Even during PHASE_BOOT_COMPLETED
+                    // phase, BluetoothAdapter is not null, the BleScanner is null.
+                    Log.v(TAG, "Initiating BluetoothAdapter when Bluetooth is turned on.");
+                    mSystemInjector.initializeBluetoothAdapter();
+                }
+            }
         }
-        publishBinderService(Context.NEARBY_SERVICE, mImpl);
+    };
+    private DiscoveryProviderManager mProviderManager;
+
+    public NearbyService(Context context) {
+        mContext = context;
+        mSystemInjector = new SystemInjector(context);
+        mProviderManager = new DiscoveryProviderManager(context, mSystemInjector);
+        final LocatorContextWrapper lcw = new LocatorContextWrapper(context, null);
+        mFastPairManager = new FastPairManager(lcw);
     }
 
     @Override
+    public void registerScanListener(ScanRequest scanRequest, IScanListener listener) {
+        mProviderManager.registerScanListener(scanRequest, listener);
+    }
+
+    @Override
+    public void unregisterScanListener(IScanListener listener) {
+        mProviderManager.unregisterScanListener(listener);
+    }
+
+    /**
+     * Called by the service initializer.
+     *
+     * {@see com.android.server.SystemService#onBootPhase}.
+     */
     public void onBootPhase(int phase) {
-        if (phase == PHASE_THIRD_PARTY_APPS_CAN_START) {
-            onSystemThirdPartyAppsCanStart();
-        } else if (phase == PHASE_BOOT_COMPLETED) {
-            // the nearby service must be functioning after this boot phase.
-            mImpl.onSystemReady();
-            mFastPairManager.initiate();
+        switch (phase) {
+            case PHASE_THIRD_PARTY_APPS_CAN_START:
+                // Ensures that a fast pair data provider exists which will work in direct boot.
+                FastPairDataProvider.init(mContext);
+                break;
+            case PHASE_BOOT_COMPLETED:
+                // The nearby service must be functioning after this boot phase.
+                mSystemInjector.initializeBluetoothAdapter();
+                mContext.registerReceiver(mBluetoothReceiver,
+                        new IntentFilter(BluetoothAdapter.ACTION_STATE_CHANGED));
+                mFastPairManager.initiate();
+                break;
         }
     }
 
-    private void onSystemThirdPartyAppsCanStart() {
-        // Ensures that a fast pair data provider exists which will work in direct boot.
-        FastPairDataProvider.init(mContext);
+    private static final class SystemInjector implements Injector {
+        private final Context mContext;
+        @Nullable
+        private BluetoothAdapter mBluetoothAdapter;
+
+        SystemInjector(Context context) {
+            mContext = context;
+        }
+
+        @Override
+        @Nullable
+        public BluetoothAdapter getBluetoothAdapter() {
+            return mBluetoothAdapter;
+        }
+
+        synchronized void initializeBluetoothAdapter() {
+            if (mBluetoothAdapter != null) {
+                return;
+            }
+            BluetoothManager manager = mContext.getSystemService(BluetoothManager.class);
+            if (manager == null) {
+                return;
+            }
+            mBluetoothAdapter = manager.getAdapter();
+        }
     }
+
 }

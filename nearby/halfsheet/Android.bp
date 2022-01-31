@@ -20,14 +20,15 @@ java_defaults {
     name: "HalfSheetDefaults",
     srcs: ["src/**/*.java"],
     sdk_version: "module_current",
-    min_sdk_version: "current",
+    // This is included in tethering apex, which uses min SDK 30
+    min_sdk_version: "30",
     target_sdk_version: "current",
     manifest: "AndroidManifest.xml",
     plugins: ["java_api_finder"],
     jarjar_rules: ":nearby-jarjar-rules",
     libs: [
         "framework-bluetooth",
-        "framework-nearby-pre-jarjar",
+        "framework-connectivity-tiramisu",
         "nearby-service-string",
       ],
     static_libs: [
@@ -49,7 +50,7 @@ android_app {
     static_libs: [
         "com.google.android.material_material",
     ],
-    apex_available: ["com.android.nearby",],
+    apex_available: ["com.android.tethering",],
 }
 
 android_app_certificate {
