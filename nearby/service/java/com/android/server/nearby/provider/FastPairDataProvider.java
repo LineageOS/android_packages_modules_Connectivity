@@ -20,6 +20,7 @@ import android.accounts.Account;
 import android.annotation.Nullable;
 import android.content.Context;
 import android.nearby.FastPairDataProviderBase;
+import android.nearby.aidl.FastPairAccountDevicesMetadataRequestParcel;
 import android.nearby.aidl.FastPairAntispoofkeyDeviceMetadataRequestParcel;
 import android.nearby.aidl.FastPairEligibleAccountsRequestParcel;
 import android.nearby.aidl.FastPairManageAccountDeviceRequestParcel;
@@ -140,7 +141,24 @@ public class FastPairDataProvider {
     }
 
     /**
-     * Get FastPair Eligible Accounts.
+     * Loads FastPair devices for a given account.
+     *
+     * @throws IllegalStateException If ProxyFastPairDataProvider is not available.
+     */
+    public List<Data.FastPairDeviceWithAccountKey> loadFastPairDevicesWithAccountKey(
+            Account account) {
+        if (mProxyFastPairDataProvider != null) {
+            FastPairAccountDevicesMetadataRequestParcel requestParcel =
+                    new FastPairAccountDevicesMetadataRequestParcel();
+            requestParcel.account = account;
+            return Utils.convertFastPairAccountKeyDevicesMetadataToFastPairDevicesWithAccountKey(
+                    mProxyFastPairDataProvider.loadFastPairAccountDevicesMetadata(requestParcel));
+        }
+        throw new IllegalStateException("No ProxyFastPairDataProvider yet constructed");
+    }
+
+    /**
+     * Loads FastPair Eligible Accounts.
      *
      * @throws IllegalStateException If ProxyFastPairDataProvider is not available.
      */

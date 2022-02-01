@@ -32,13 +32,246 @@ import java.util.ArrayList;
 import java.util.List;
 
 import service.proto.Cache;
+import service.proto.Data;
 import service.proto.FastPairString.FastPairStrings;
 import service.proto.Rpcs;
 
 /**
- * Utility classes to convert between different data classes.
+ * Utility functions to convert between different data classes.
  */
 class Utils {
+
+    static List<Data.FastPairDeviceWithAccountKey>
+            convertFastPairAccountKeyDevicesMetadataToFastPairDevicesWithAccountKey(
+                    @Nullable FastPairAccountKeyDeviceMetadataParcel[] metadataParcels) {
+        if (metadataParcels == null) {
+            return new ArrayList<Data.FastPairDeviceWithAccountKey>(0);
+        }
+
+        List<Data.FastPairDeviceWithAccountKey> fpDeviceList =
+                new ArrayList<>(metadataParcels.length);
+        for (FastPairAccountKeyDeviceMetadataParcel metadataParcel : metadataParcels) {
+            Data.FastPairDeviceWithAccountKey.Builder fpDeviceBuilder =
+                    Data.FastPairDeviceWithAccountKey.newBuilder();
+            if (metadataParcel.accountKey != null) {
+                fpDeviceBuilder.setAccountKey(ByteString.copyFrom(metadataParcel.accountKey));
+            }
+            if (metadataParcel.sha256AccountKeyPublicAddress != null) {
+                fpDeviceBuilder.setSha256AccountKeyPublicAddress(
+                        ByteString.copyFrom(metadataParcel.sha256AccountKeyPublicAddress));
+            }
+
+            Cache.StoredDiscoveryItem.Builder storedDiscoveryItemBuilder =
+                    Cache.StoredDiscoveryItem.newBuilder();
+
+            if (metadataParcel.discoveryItem != null) {
+                if (metadataParcel.discoveryItem.actionUrl != null) {
+                    storedDiscoveryItemBuilder.setActionUrl(metadataParcel.discoveryItem.actionUrl);
+                }
+                storedDiscoveryItemBuilder.setActionUrlType(
+                        Cache.ResolvedUrlType.forNumber(
+                                metadataParcel.discoveryItem.actionUrlType));
+                if (metadataParcel.discoveryItem.appName != null) {
+                    storedDiscoveryItemBuilder.setAppName(metadataParcel.discoveryItem.appName);
+                }
+                storedDiscoveryItemBuilder.setAttachmentType(
+                        Cache.DiscoveryAttachmentType.forNumber(
+                                metadataParcel.discoveryItem.attachmentType));
+                if (metadataParcel.discoveryItem.authenticationPublicKeySecp256r1 != null) {
+                    storedDiscoveryItemBuilder.setAuthenticationPublicKeySecp256R1(
+                            ByteString.copyFrom(
+                                    metadataParcel.discoveryItem.authenticationPublicKeySecp256r1));
+                }
+                if (metadataParcel.discoveryItem.bleRecordBytes != null) {
+                    storedDiscoveryItemBuilder.setBleRecordBytes(
+                            ByteString.copyFrom(metadataParcel.discoveryItem.bleRecordBytes));
+                }
+                storedDiscoveryItemBuilder.setDebugCategory(
+                        Cache.StoredDiscoveryItem.DebugMessageCategory.forNumber(
+                                metadataParcel.discoveryItem.debugCategory));
+                if (metadataParcel.discoveryItem.debugMessage != null) {
+                    storedDiscoveryItemBuilder.setDebugMessage(
+                            metadataParcel.discoveryItem.debugMessage);
+                }
+                if (metadataParcel.discoveryItem.description != null) {
+                    storedDiscoveryItemBuilder.setDescription(
+                            metadataParcel.discoveryItem.description);
+                }
+                if (metadataParcel.discoveryItem.deviceName != null) {
+                    storedDiscoveryItemBuilder.setDeviceName(
+                            metadataParcel.discoveryItem.deviceName);
+                }
+                if (metadataParcel.discoveryItem.displayUrl != null) {
+                    storedDiscoveryItemBuilder.setDisplayUrl(
+                            metadataParcel.discoveryItem.displayUrl);
+                }
+                if (metadataParcel.discoveryItem.entityId != null) {
+                    storedDiscoveryItemBuilder.setEntityId(
+                            metadataParcel.discoveryItem.entityId);
+                }
+                if (metadataParcel.discoveryItem.featureGraphicUrl != null) {
+                    storedDiscoveryItemBuilder.setFeatureGraphicUrl(
+                            metadataParcel.discoveryItem.featureGraphicUrl);
+                }
+                storedDiscoveryItemBuilder.setFirstObservationTimestampMillis(
+                        metadataParcel.discoveryItem.firstObservationTimestampMillis);
+                if (metadataParcel.discoveryItem.groupId != null) {
+                    storedDiscoveryItemBuilder.setGroupId(metadataParcel.discoveryItem.groupId);
+                }
+                if (metadataParcel.discoveryItem.iconFifeUrl != null) {
+                    storedDiscoveryItemBuilder.setIconFifeUrl(
+                            metadataParcel.discoveryItem.iconFifeUrl);
+                }
+                if (metadataParcel.discoveryItem.iconPng != null) {
+                    storedDiscoveryItemBuilder.setIconPng(
+                            ByteString.copyFrom(metadataParcel.discoveryItem.iconPng));
+                }
+                if (metadataParcel.discoveryItem.id != null) {
+                    storedDiscoveryItemBuilder.setId(metadataParcel.discoveryItem.id);
+                }
+                storedDiscoveryItemBuilder.setLastObservationTimestampMillis(
+                        metadataParcel.discoveryItem.lastObservationTimestampMillis);
+                storedDiscoveryItemBuilder.setLastUserExperience(
+                        Cache.StoredDiscoveryItem.ExperienceType.forNumber(
+                                metadataParcel.discoveryItem.lastUserExperience));
+                storedDiscoveryItemBuilder.setLostMillis(metadataParcel.discoveryItem.lostMillis);
+                if (metadataParcel.discoveryItem.macAddress != null) {
+                    storedDiscoveryItemBuilder.setMacAddress(
+                            metadataParcel.discoveryItem.macAddress);
+                }
+                if (metadataParcel.discoveryItem.packageName != null) {
+                    storedDiscoveryItemBuilder.setPackageName(
+                            metadataParcel.discoveryItem.packageName);
+                }
+                storedDiscoveryItemBuilder.setPendingAppInstallTimestampMillis(
+                        metadataParcel.discoveryItem.pendingAppInstallTimestampMillis);
+                storedDiscoveryItemBuilder.setRssi(metadataParcel.discoveryItem.rssi);
+                storedDiscoveryItemBuilder.setState(
+                        Cache.StoredDiscoveryItem.State.forNumber(
+                                metadataParcel.discoveryItem.state));
+                if (metadataParcel.discoveryItem.title != null) {
+                    storedDiscoveryItemBuilder.setTitle(metadataParcel.discoveryItem.title);
+                }
+                if (metadataParcel.discoveryItem.triggerId != null) {
+                    storedDiscoveryItemBuilder.setTriggerId(metadataParcel.discoveryItem.triggerId);
+                }
+                storedDiscoveryItemBuilder.setTxPower(metadataParcel.discoveryItem.txPower);
+                storedDiscoveryItemBuilder.setType(
+                        Cache.NearbyType.forNumber(metadataParcel.discoveryItem.type));
+            }
+            if (metadataParcel.metadata != null) {
+                FastPairStrings.Builder stringsBuilder = FastPairStrings.newBuilder();
+                if (metadataParcel.metadata.assistantSetupHalfSheet != null) {
+                    stringsBuilder.setAssistantHalfSheetDescription(
+                            metadataParcel.metadata.assistantSetupHalfSheet);
+                }
+                if (metadataParcel.metadata.assistantSetupNotification != null) {
+                    stringsBuilder.setAssistantNotificationDescription(
+                            metadataParcel.metadata.assistantSetupNotification);
+                }
+                if (metadataParcel.metadata.confirmPinDescription != null) {
+                    stringsBuilder.setConfirmPinDescription(
+                            metadataParcel.metadata.confirmPinDescription);
+                }
+                if (metadataParcel.metadata.confirmPinTitle != null) {
+                    stringsBuilder.setConfirmPinTitle(
+                            metadataParcel.metadata.confirmPinTitle);
+                }
+                if (metadataParcel.metadata.connectSuccessCompanionAppInstalled != null) {
+                    stringsBuilder.setPairingFinishedCompanionAppInstalled(
+                            metadataParcel.metadata.connectSuccessCompanionAppInstalled);
+                }
+                if (metadataParcel.metadata.connectSuccessCompanionAppNotInstalled != null) {
+                    stringsBuilder.setPairingFinishedCompanionAppNotInstalled(
+                            metadataParcel.metadata.connectSuccessCompanionAppNotInstalled);
+                }
+                if (metadataParcel.metadata.failConnectGoToSettingsDescription != null) {
+                    stringsBuilder.setPairingFailDescription(
+                            metadataParcel.metadata.failConnectGoToSettingsDescription);
+                }
+                if (metadataParcel.metadata.fastPairTvConnectDeviceNoAccountDescription != null) {
+                    stringsBuilder.setFastPairTvConnectDeviceNoAccountDescription(
+                            metadataParcel.metadata.fastPairTvConnectDeviceNoAccountDescription);
+                }
+                if (metadataParcel.metadata.initialNotificationDescription != null) {
+                    stringsBuilder.setTapToPairWithAccount(
+                            metadataParcel.metadata.initialNotificationDescription);
+                }
+                if (metadataParcel.metadata.initialNotificationDescriptionNoAccount != null) {
+                    stringsBuilder.setTapToPairWithoutAccount(
+                            metadataParcel.metadata.initialNotificationDescriptionNoAccount);
+                }
+                if (metadataParcel.metadata.initialPairingDescription != null) {
+                    stringsBuilder.setInitialPairingDescription(
+                            metadataParcel.metadata.initialPairingDescription);
+                }
+                if (metadataParcel.metadata.retroactivePairingDescription != null) {
+                    stringsBuilder.setRetroactivePairingDescription(
+                            metadataParcel.metadata.retroactivePairingDescription);
+                }
+                if (metadataParcel.metadata.subsequentPairingDescription != null) {
+                    stringsBuilder.setSubsequentPairingDescription(
+                            metadataParcel.metadata.subsequentPairingDescription);
+                }
+                if (metadataParcel.metadata.syncContactsDescription != null) {
+                    stringsBuilder.setSyncContactsDescription(
+                            metadataParcel.metadata.syncContactsDescription);
+                }
+                if (metadataParcel.metadata.syncContactsTitle != null) {
+                    stringsBuilder.setSyncContactsTitle(
+                            metadataParcel.metadata.syncContactsTitle);
+                }
+                if (metadataParcel.metadata.syncSmsDescription != null) {
+                    stringsBuilder.setSyncSmsDescription(
+                            metadataParcel.metadata.syncSmsDescription);
+                }
+                if (metadataParcel.metadata.syncSmsTitle != null) {
+                    stringsBuilder.setSyncSmsTitle(metadataParcel.metadata.syncSmsTitle);
+                }
+                if (metadataParcel.metadata.waitLaunchCompanionAppDescription != null) {
+                    stringsBuilder.setWaitAppLaunchDescription(
+                            metadataParcel.metadata.waitLaunchCompanionAppDescription);
+                }
+                storedDiscoveryItemBuilder.setFastPairStrings(stringsBuilder.build());
+
+                Cache.FastPairInformation.Builder fpInformationBuilder =
+                        Cache.FastPairInformation.newBuilder();
+                Rpcs.TrueWirelessHeadsetImages.Builder imagesBuilder =
+                        Rpcs.TrueWirelessHeadsetImages.newBuilder();
+                if (metadataParcel.metadata.trueWirelessImageUrlCase != null) {
+                    imagesBuilder.setCaseUrl(metadataParcel.metadata.trueWirelessImageUrlCase);
+                }
+                if (metadataParcel.metadata.trueWirelessImageUrlLeftBud != null) {
+                    imagesBuilder.setLeftBudUrl(
+                            metadataParcel.metadata.trueWirelessImageUrlLeftBud);
+                }
+                if (metadataParcel.metadata.trueWirelessImageUrlRightBud != null) {
+                    imagesBuilder.setRightBudUrl(
+                            metadataParcel.metadata.trueWirelessImageUrlRightBud);
+                }
+                fpInformationBuilder.setTrueWirelessImages(imagesBuilder.build());
+                fpInformationBuilder.setDeviceType(
+                        Rpcs.DeviceType.forNumber(metadataParcel.metadata.deviceType));
+
+                storedDiscoveryItemBuilder.setFastPairInformation(fpInformationBuilder.build());
+                storedDiscoveryItemBuilder.setTxPower(metadataParcel.metadata.bleTxPower);
+
+                if (metadataParcel.metadata.image != null) {
+                    storedDiscoveryItemBuilder.setIconPng(
+                            ByteString.copyFrom(metadataParcel.metadata.image));
+                }
+                if (metadataParcel.metadata.imageUrl != null) {
+                    storedDiscoveryItemBuilder.setIconFifeUrl(metadataParcel.metadata.imageUrl);
+                }
+                if (metadataParcel.metadata.intentUri != null) {
+                    storedDiscoveryItemBuilder.setActionUrl(metadataParcel.metadata.intentUri);
+                }
+            }
+            fpDeviceBuilder.setDiscoveryItem(storedDiscoveryItemBuilder.build());
+            fpDeviceList.add(fpDeviceBuilder.build());
+        }
+        return fpDeviceList;
+    }
 
     static List<Account> convertFastPairEligibleAccountsToAccountList(
             @Nullable FastPairEligibleAccountParcel[] accountParcels) {
@@ -54,7 +287,7 @@ class Utils {
 
     static @Nullable Rpcs.GetObservedDeviceResponse
             convertFastPairAntispoofkeyDeviceMetadataToGetObservedDeviceResponse(
-            @Nullable FastPairAntispoofkeyDeviceMetadataParcel metadata) {
+                    @Nullable FastPairAntispoofkeyDeviceMetadataParcel metadata) {
         if (metadata == null) {
             return null;
         }
@@ -64,16 +297,16 @@ class Utils {
                                 .setPublicKey(ByteString.copyFrom(metadata.antiSpoofPublicKey))
                                 .build())
                         .setTrueWirelessImages(Rpcs.TrueWirelessHeadsetImages.newBuilder()
-                                        .setLeftBudUrl(
-                                                metadata.deviceMetadata.trueWirelessImageUrlLeftBud)
-                                        .setRightBudUrl(
-                                                metadata.deviceMetadata
-                                                        .trueWirelessImageUrlRightBud)
-                                        .setCaseUrl(
-                                                metadata.deviceMetadata
-                                                        .trueWirelessImageUrlCase
-                                        )
-                                        .build())
+                                .setLeftBudUrl(
+                                        metadata.deviceMetadata.trueWirelessImageUrlLeftBud)
+                                .setRightBudUrl(
+                                        metadata.deviceMetadata
+                                                .trueWirelessImageUrlRightBud)
+                                .setCaseUrl(
+                                        metadata.deviceMetadata
+                                                .trueWirelessImageUrlCase
+                                )
+                                .build())
                         .setImageUrl(metadata.deviceMetadata.imageUrl)
                         .setIntentUri(metadata.deviceMetadata.intentUri)
                         .setBleTxPower(metadata.deviceMetadata.bleTxPower)
@@ -133,7 +366,7 @@ class Utils {
 
     static @Nullable FastPairAccountKeyDeviceMetadataParcel
             convertFastPairUploadInfoToFastPairAccountKeyDeviceMetadata(
-            FastPairUploadInfo uploadInfo) {
+                    FastPairUploadInfo uploadInfo) {
         if (uploadInfo == null) {
             return null;
         }
@@ -155,7 +388,7 @@ class Utils {
 
     private static @Nullable FastPairDiscoveryItemParcel
             convertStoredDiscoveryItemToFastPairDiscoveryItem(
-            @Nullable Cache.StoredDiscoveryItem storedDiscoveryItem) {
+                    @Nullable Cache.StoredDiscoveryItem storedDiscoveryItem) {
         if (storedDiscoveryItem == null) {
             return null;
         }
@@ -164,7 +397,6 @@ class Utils {
         discoveryItemParcel.actionUrl = storedDiscoveryItem.getActionUrl();
         discoveryItemParcel.actionUrlType = storedDiscoveryItem.getActionUrlType().getNumber();
         discoveryItemParcel.appName = storedDiscoveryItem.getAppName();
-        discoveryItemParcel.attachmentType = storedDiscoveryItem.getAttachmentType().getNumber();
         discoveryItemParcel.attachmentType = storedDiscoveryItem.getAttachmentType().getNumber();
         discoveryItemParcel.authenticationPublicKeySecp256r1 =
                 storedDiscoveryItem.getAuthenticationPublicKeySecp256R1().toByteArray();
@@ -213,7 +445,7 @@ class Utils {
     */
     private static @Nullable FastPairDeviceMetadataParcel
             convertStoredDiscoveryItemToFastPairDeviceMetadata(
-            @Nullable Cache.StoredDiscoveryItem storedDiscoveryItem) {
+                    @Nullable Cache.StoredDiscoveryItem storedDiscoveryItem) {
         if (storedDiscoveryItem == null) {
             return null;
         }
