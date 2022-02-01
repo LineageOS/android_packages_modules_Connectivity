@@ -116,7 +116,7 @@ public class NetworkStatsUtils {
     }
 
     @VisibleForTesting
-    static android.net.NetworkStats.Entry fromBucket(NetworkStats.Bucket bucket) {
+    public static android.net.NetworkStats.Entry fromBucket(NetworkStats.Bucket bucket) {
         return new android.net.NetworkStats.Entry(
                 null /* IFACE_ALL */, bucket.getUid(), convertBucketState(bucket.getState()),
                 convertBucketTag(bucket.getTag()), convertBucketMetered(bucket.getMetered()),
