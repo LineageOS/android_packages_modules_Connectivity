@@ -23,6 +23,7 @@ cc_library_static {
         "bpf_connectivity_headers",
         "bpf_headers",
         "bpf_syscall_wrappers",
+        "libbase_headers",
     ],
     srcs: [
         "TcUtils.cpp",  // TODO: move to frameworks/libs/net
@@ -31,7 +32,6 @@ cc_library_static {
     ],
     stl: "libc++_static",
     static_libs: [
-        "libbase",
         "libip_checksum",
         "libnetdutils",  // for netdutils/UidConstants.h in bpf_shared.h
     ],
