@@ -21,8 +21,6 @@ cc_library_static {
     defaults: ["netd_defaults"],
     header_libs: [
         "bpf_connectivity_headers",
-        "bpf_headers",
-        "bpf_syscall_wrappers",
         "libbase_headers",
     ],
     srcs: [
@@ -47,8 +45,6 @@ cc_test {
     test_suites: ["device-tests"],
     header_libs: [
         "bpf_connectivity_headers",
-        "bpf_headers",
-        "bpf_syscall_wrappers",
     ],
     srcs: [
         "TcUtilsTest.cpp",

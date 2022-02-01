@@ -99,7 +99,6 @@ cc_library {
     ],
     min_sdk_version: "30",
     header_libs: [
-        "bpf_syscall_wrappers",
         "bpf_connectivity_headers",
     ],
     srcs: [

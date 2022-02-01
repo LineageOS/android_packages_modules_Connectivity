@@ -26,8 +26,6 @@ cc_library {
     ],
     header_libs: [
         "bpf_connectivity_headers",
-        "bpf_headers",
-        "bpf_syscall_wrappers",
     ],
     static_libs: [
         "libnetdutils",
