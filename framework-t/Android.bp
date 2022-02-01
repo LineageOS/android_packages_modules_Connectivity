@@ -87,6 +87,7 @@ java_sdk_library {
 
         // Tests using hidden APIs
         "//cts/tests/netlegacy22.api",
+        "//cts/tests/tests/app.usage", // NetworkUsageStatsTest
         "//external/sl4a:__subpackages__",
         "//frameworks/libs/net/common/testutils",
         "//frameworks/libs/net/common/tests:__subpackages__",
