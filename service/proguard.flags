@@ -1,4 +1,7 @@
 # Make sure proguard keeps all connectivity classes
+# TODO: instead of keeping everything, consider listing only "entry points"
+# (service loader, JNI registered methods, etc) and letting the optimizer do its job
+-keep class android.net.** { *; }
 -keep class com.android.connectivity.** { *; }
 -keep class com.android.net.** { *; }
 -keep class com.android.server.** { *; }
