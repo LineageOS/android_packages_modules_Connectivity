@@ -16,9 +16,8 @@
 
 package android.nearby.cts;
 
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
+import static com.google.common.truth.Truth.assertThat;
+
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
@@ -74,7 +73,7 @@ public class FastPairDataProviderBaseTest {
             "CONNECT_SUCCESS_COMPANION_APP_INSTALLED";
     private static final String CONNECT_SUCCESS_COMPANION_APP_NOT_INSTALLED =
             "CONNECT_SUCCESS_COMPANION_APP_NOT_INSTALLED";
-    private static final double DELTA = 0.000001;
+    private static final float DELTA = 0.001f;
     private static final int DEVICE_TYPE = 7;
     private static final String DOWNLOAD_COMPANION_APP_DESCRIPTION =
             "DOWNLOAD_COMPANION_APP_DESCRIPTION";
@@ -193,18 +192,18 @@ public class FastPairDataProviderBaseTest {
             HAPPY_PATH_FAST_PAIR_ANTI_SPOOF_KEY_DEVICE_METADATA =
             genHappyPathFastPairAntispoofkeyDeviceMetadata();
 
-    private @Captor ArgumentCaptor<FastPairEligibleAccountParcel[]>
+    @Captor private ArgumentCaptor<FastPairEligibleAccountParcel[]>
             mFastPairEligibleAccountParcelsArgumentCaptor;
-    private @Captor ArgumentCaptor<FastPairAccountKeyDeviceMetadataParcel[]>
+    @Captor private ArgumentCaptor<FastPairAccountKeyDeviceMetadataParcel[]>
             mFastPairAccountKeyDeviceMetadataParcelsArgumentCaptor;
 
-    private @Mock FastPairDataProviderBase mMockFastPairDataProviderBase;
-    private @Mock IFastPairAntispoofkeyDeviceMetadataCallback.Stub
+    @Mock private FastPairDataProviderBase mMockFastPairDataProviderBase;
+    @Mock private IFastPairAntispoofkeyDeviceMetadataCallback.Stub
             mAntispoofkeyDeviceMetadataCallback;
-    private @Mock IFastPairAccountDevicesMetadataCallback.Stub mAccountDevicesMetadataCallback;
-    private @Mock IFastPairEligibleAccountsCallback.Stub mEligibleAccountsCallback;
-    private @Mock IFastPairManageAccountCallback.Stub mManageAccountCallback;
-    private @Mock IFastPairManageAccountDeviceCallback.Stub mManageAccountDeviceCallback;
+    @Mock private IFastPairAccountDevicesMetadataCallback.Stub mAccountDevicesMetadataCallback;
+    @Mock private IFastPairEligibleAccountsCallback.Stub mEligibleAccountsCallback;
+    @Mock private IFastPairManageAccountCallback.Stub mManageAccountCallback;
+    @Mock private IFastPairManageAccountDeviceCallback.Stub mManageAccountDeviceCallback;
 
     private MyHappyPathProvider mHappyPathFastPairDataProvider;
     private MyErrorPathProvider mErrorPathFastPairDataProvider;
@@ -773,13 +772,13 @@ public class FastPairDataProviderBaseTest {
     /* Verifies Happy Path AntispoofkeyDeviceMetadataRequest. */
     private static void ensureHappyPathAsExpected(
             FastPairDataProviderBase.FastPairAntispoofkeyDeviceMetadataRequest request) {
-        assertEquals(REQUEST_MODEL_ID, request.getModelId());
+        assertThat(request.getModelId()).isEqualTo(REQUEST_MODEL_ID);
     }
 
     /* Verifies Happy Path AccountDevicesMetadataRequest. */
     private static void ensureHappyPathAsExpected(
             FastPairDataProviderBase.FastPairAccountDevicesMetadataRequest request) {
-        assertEquals(ACCOUNTDEVICES_METADATA_ACCOUNT, request.getAccount());
+        assertThat(request.getAccount()).isEqualTo(ACCOUNTDEVICES_METADATA_ACCOUNT);
     }
 
     /* Verifies Happy Path FastPairEligibleAccountsRequest. */
@@ -792,32 +791,32 @@ public class FastPairDataProviderBaseTest {
     /* Verifies Happy Path FastPairManageAccountRequest. */
     private static void ensureHappyPathAsExpected(
             FastPairDataProviderBase.FastPairManageAccountRequest request) {
-        assertEquals(MANAGE_ACCOUNT, request.getAccount());
-        assertEquals(MANAGE_ACCOUNT_REQUEST_TYPE, request.getRequestType());
+        assertThat(request.getAccount()).isEqualTo(MANAGE_ACCOUNT);
+        assertThat(request.getRequestType()).isEqualTo(MANAGE_ACCOUNT_REQUEST_TYPE);
     }
 
     /* Verifies Happy Path FastPairManageAccountDeviceRequest. */
     private static void ensureHappyPathAsExpected(
             FastPairDataProviderBase.FastPairManageAccountDeviceRequest request) {
-        assertEquals(MANAGE_ACCOUNT, request.getAccount());
-        assertEquals(MANAGE_ACCOUNT_REQUEST_TYPE, request.getRequestType());
-        assertEquals(BLE_ADDRESS, request.getBleAddress());
+        assertThat(request.getAccount()).isEqualTo(MANAGE_ACCOUNT);
+        assertThat(request.getRequestType()).isEqualTo(MANAGE_ACCOUNT_REQUEST_TYPE);
+        assertThat(request.getBleAddress()).isEqualTo(BLE_ADDRESS);
         ensureHappyPathAsExpected(request.getAccountKeyDeviceMetadata());
     }
 
     /* Verifies Happy Path AntispoofkeyDeviceMetadataParcel. */
     private static void ensureHappyPathAsExpected(
             FastPairAntispoofkeyDeviceMetadataParcel metadataParcel) {
-        assertNotNull(metadataParcel);
-        assertEquals(ANTI_SPOOFING_KEY, metadataParcel.antiSpoofPublicKey);
+        assertThat(metadataParcel).isNotNull();
+        assertThat(metadataParcel.antiSpoofPublicKey).isEqualTo(ANTI_SPOOFING_KEY);
         ensureHappyPathAsExpected(metadataParcel.deviceMetadata);
     }
 
     /* Verifies Happy Path FastPairAccountKeyDeviceMetadataParcel[]. */
     private static void ensureHappyPathAsExpected(
             FastPairAccountKeyDeviceMetadataParcel[] metadataParcels) {
-        assertNotNull(metadataParcels);
-        assertEquals(ACCOUNTKEY_DEVICE_NUM, metadataParcels.length);
+        assertThat(metadataParcels).isNotNull();
+        assertThat(metadataParcels).hasLength(ACCOUNTKEY_DEVICE_NUM);
         for (FastPairAccountKeyDeviceMetadataParcel parcel: metadataParcels) {
             ensureHappyPathAsExpected(parcel);
         }
@@ -826,10 +825,10 @@ public class FastPairDataProviderBaseTest {
     /* Verifies Happy Path FastPairAccountKeyDeviceMetadataParcel. */
     private static void ensureHappyPathAsExpected(
             FastPairAccountKeyDeviceMetadataParcel metadataParcel) {
-        assertNotNull(metadataParcel);
-        assertEquals(ACCOUNT_KEY, metadataParcel.accountKey);
-        assertEquals(SHA256_ACCOUNT_KEY_PUBLIC_ADDRESS,
-                metadataParcel.sha256AccountKeyPublicAddress);
+        assertThat(metadataParcel).isNotNull();
+        assertThat(metadataParcel.accountKey).isEqualTo(ACCOUNT_KEY);
+        assertThat(metadataParcel.sha256AccountKeyPublicAddress)
+                .isEqualTo(SHA256_ACCOUNT_KEY_PUBLIC_ADDRESS);
         ensureHappyPathAsExpected(metadataParcel.metadata);
         ensureHappyPathAsExpected(metadataParcel.discoveryItem);
     }
@@ -837,191 +836,217 @@ public class FastPairDataProviderBaseTest {
     /* Verifies Happy Path FastPairAccountKeyDeviceMetadata. */
     private static void ensureHappyPathAsExpected(
             FastPairAccountKeyDeviceMetadata metadata) {
-        assertEquals(ACCOUNT_KEY, metadata.getAccountKey());
-        assertEquals(SHA256_ACCOUNT_KEY_PUBLIC_ADDRESS,
-                metadata.getSha256AccountKeyPublicAddress());
+        assertThat(metadata.getAccountKey()).isEqualTo(ACCOUNT_KEY);
+        assertThat(metadata.getSha256AccountKeyPublicAddress())
+                .isEqualTo(SHA256_ACCOUNT_KEY_PUBLIC_ADDRESS);
         ensureHappyPathAsExpected(metadata.getFastPairDeviceMetadata());
         ensureHappyPathAsExpected(metadata.getFastPairDiscoveryItem());
     }
 
     /* Verifies Happy Path DeviceMetadataParcel. */
     private static void ensureHappyPathAsExpected(FastPairDeviceMetadataParcel metadataParcel) {
-        assertNotNull(metadataParcel);
-        assertEquals(ASSISTANT_SETUP_HALFSHEET, metadataParcel.assistantSetupHalfSheet);
-        assertEquals(ASSISTANT_SETUP_NOTIFICATION, metadataParcel.assistantSetupNotification);
-        assertEquals(BLE_TX_POWER, metadataParcel.bleTxPower);
-        assertEquals(CONFIRM_PIN_DESCRIPTION, metadataParcel.confirmPinDescription);
-        assertEquals(CONFIRM_PIN_TITLE, metadataParcel.confirmPinTitle);
-        assertEquals(CONNECT_SUCCESS_COMPANION_APP_INSTALLED,
-                metadataParcel.connectSuccessCompanionAppInstalled);
-        assertEquals(CONNECT_SUCCESS_COMPANION_APP_NOT_INSTALLED,
-                metadataParcel.connectSuccessCompanionAppNotInstalled);
-        assertEquals(DEVICE_TYPE, metadataParcel.deviceType);
-        assertEquals(DOWNLOAD_COMPANION_APP_DESCRIPTION,
-                metadataParcel.downloadCompanionAppDescription);
-        assertEquals(FAIL_CONNECT_GOTO_SETTINGS_DESCRIPTION,
-                metadataParcel.failConnectGoToSettingsDescription);
-        assertEquals(FAST_PAIR_TV_CONNECT_DEVICE_NO_ACCOUNT_DESCRIPTION,
-                metadataParcel.fastPairTvConnectDeviceNoAccountDescription);
-        assertArrayEquals(IMAGE, metadataParcel.image);
-        assertEquals(IMAGE_URL, metadataParcel.imageUrl);
-        assertEquals(INITIAL_NOTIFICATION_DESCRIPTION,
-                metadataParcel.initialNotificationDescription);
-        assertEquals(INITIAL_NOTIFICATION_DESCRIPTION_NO_ACCOUNT,
-                metadataParcel.initialNotificationDescriptionNoAccount);
-        assertEquals(INITIAL_PAIRING_DESCRIPTION, metadataParcel.initialPairingDescription);
-        assertEquals(INTENT_URI, metadataParcel.intentUri);
-        assertEquals(LOCALE, metadataParcel.locale);
-        assertEquals(OPEN_COMPANION_APP_DESCRIPTION, metadataParcel.openCompanionAppDescription);
-        assertEquals(RETRO_ACTIVE_PAIRING_DESCRIPTION,
-                metadataParcel.retroactivePairingDescription);
-        assertEquals(SUBSEQUENT_PAIRING_DESCRIPTION, metadataParcel.subsequentPairingDescription);
-        assertEquals(SYNC_CONTACT_DESCRPTION, metadataParcel.syncContactsDescription);
-        assertEquals(SYNC_CONTACTS_TITLE, metadataParcel.syncContactsTitle);
-        assertEquals(SYNC_SMS_DESCRIPTION, metadataParcel.syncSmsDescription);
-        assertEquals(SYNC_SMS_TITLE, metadataParcel.syncSmsTitle);
-        assertEquals(TRIGGER_DISTANCE, metadataParcel.triggerDistance, DELTA);
-        assertEquals(TRUE_WIRELESS_IMAGE_URL_CASE, metadataParcel.trueWirelessImageUrlCase);
-        assertEquals(TRUE_WIRELESS_IMAGE_URL_LEFT_BUD, metadataParcel.trueWirelessImageUrlLeftBud);
-        assertEquals(TRUE_WIRELESS_IMAGE_URL_RIGHT_BUD,
-                metadataParcel.trueWirelessImageUrlRightBud);
-        assertEquals(UNABLE_TO_CONNECT_DESCRIPTION, metadataParcel.unableToConnectDescription);
-        assertEquals(UNABLE_TO_CONNECT_TITLE, metadataParcel.unableToConnectTitle);
-        assertEquals(UPDATE_COMPANION_APP_DESCRIPTION,
-                metadataParcel.updateCompanionAppDescription);
-        assertEquals(WAIT_LAUNCH_COMPANION_APP_DESCRIPTION,
-                metadataParcel.waitLaunchCompanionAppDescription);
+        assertThat(metadataParcel).isNotNull();
+
+        assertThat(metadataParcel.assistantSetupHalfSheet).isEqualTo(ASSISTANT_SETUP_HALFSHEET);
+        assertThat(metadataParcel.assistantSetupNotification).isEqualTo(
+                ASSISTANT_SETUP_NOTIFICATION);
+
+        assertThat(metadataParcel.bleTxPower).isEqualTo(BLE_TX_POWER);
+
+        assertThat(metadataParcel.confirmPinDescription).isEqualTo(CONFIRM_PIN_DESCRIPTION);
+        assertThat(metadataParcel.confirmPinTitle).isEqualTo(CONFIRM_PIN_TITLE);
+        assertThat(metadataParcel.connectSuccessCompanionAppInstalled).isEqualTo(
+                CONNECT_SUCCESS_COMPANION_APP_INSTALLED);
+        assertThat(metadataParcel.connectSuccessCompanionAppNotInstalled).isEqualTo(
+                CONNECT_SUCCESS_COMPANION_APP_NOT_INSTALLED);
+
+        assertThat(metadataParcel.deviceType).isEqualTo(DEVICE_TYPE);
+        assertThat(metadataParcel.downloadCompanionAppDescription).isEqualTo(
+                DOWNLOAD_COMPANION_APP_DESCRIPTION);
+
+        assertThat(metadataParcel.failConnectGoToSettingsDescription).isEqualTo(
+                FAIL_CONNECT_GOTO_SETTINGS_DESCRIPTION);
+        assertThat(metadataParcel.fastPairTvConnectDeviceNoAccountDescription).isEqualTo(
+                FAST_PAIR_TV_CONNECT_DEVICE_NO_ACCOUNT_DESCRIPTION);
+
+        assertThat(metadataParcel.image).isEqualTo(IMAGE);
+        assertThat(metadataParcel.imageUrl).isEqualTo(IMAGE_URL);
+        assertThat(metadataParcel.initialNotificationDescription).isEqualTo(
+                INITIAL_NOTIFICATION_DESCRIPTION);
+        assertThat(metadataParcel.initialNotificationDescriptionNoAccount).isEqualTo(
+                INITIAL_NOTIFICATION_DESCRIPTION_NO_ACCOUNT);
+        assertThat(metadataParcel.initialPairingDescription).isEqualTo(INITIAL_PAIRING_DESCRIPTION);
+        assertThat(metadataParcel.intentUri).isEqualTo(INTENT_URI);
+
+        assertThat(metadataParcel.locale).isEqualTo(LOCALE);
+
+        assertThat(metadataParcel.openCompanionAppDescription).isEqualTo(
+                OPEN_COMPANION_APP_DESCRIPTION);
+
+        assertThat(metadataParcel.retroactivePairingDescription).isEqualTo(
+                RETRO_ACTIVE_PAIRING_DESCRIPTION);
+
+        assertThat(metadataParcel.subsequentPairingDescription).isEqualTo(
+                SUBSEQUENT_PAIRING_DESCRIPTION);
+        assertThat(metadataParcel.syncContactsDescription).isEqualTo(SYNC_CONTACT_DESCRPTION);
+        assertThat(metadataParcel.syncContactsTitle).isEqualTo(SYNC_CONTACTS_TITLE);
+        assertThat(metadataParcel.syncSmsDescription).isEqualTo(SYNC_SMS_DESCRIPTION);
+        assertThat(metadataParcel.syncSmsTitle).isEqualTo(SYNC_SMS_TITLE);
+
+        assertThat(metadataParcel.triggerDistance).isWithin(DELTA).of(TRIGGER_DISTANCE);
+        assertThat(metadataParcel.trueWirelessImageUrlCase).isEqualTo(TRUE_WIRELESS_IMAGE_URL_CASE);
+        assertThat(metadataParcel.trueWirelessImageUrlLeftBud).isEqualTo(
+                TRUE_WIRELESS_IMAGE_URL_LEFT_BUD);
+        assertThat(metadataParcel.trueWirelessImageUrlRightBud).isEqualTo(
+                TRUE_WIRELESS_IMAGE_URL_RIGHT_BUD);
+
+        assertThat(metadataParcel.unableToConnectDescription).isEqualTo(
+                UNABLE_TO_CONNECT_DESCRIPTION);
+        assertThat(metadataParcel.unableToConnectTitle).isEqualTo(UNABLE_TO_CONNECT_TITLE);
+        assertThat(metadataParcel.updateCompanionAppDescription).isEqualTo(
+                UPDATE_COMPANION_APP_DESCRIPTION);
+
+        assertThat(metadataParcel.waitLaunchCompanionAppDescription).isEqualTo(
+                WAIT_LAUNCH_COMPANION_APP_DESCRIPTION);
     }
 
     /* Verifies Happy Path DeviceMetadata. */
     private static void ensureHappyPathAsExpected(FastPairDeviceMetadata metadata) {
-        assertEquals(ASSISTANT_SETUP_HALFSHEET, metadata.getAssistantSetupHalfSheet());
-        assertEquals(ASSISTANT_SETUP_NOTIFICATION, metadata.getAssistantSetupNotification());
-        assertEquals(BLE_TX_POWER, metadata.getBleTxPower());
-        assertEquals(CONFIRM_PIN_DESCRIPTION, metadata.getConfirmPinDescription());
-        assertEquals(CONFIRM_PIN_TITLE, metadata.getConfirmPinTitle());
-        assertEquals(CONNECT_SUCCESS_COMPANION_APP_INSTALLED,
-                metadata.getConnectSuccessCompanionAppInstalled());
-        assertEquals(CONNECT_SUCCESS_COMPANION_APP_NOT_INSTALLED,
-                metadata.getConnectSuccessCompanionAppNotInstalled());
-        assertEquals(DEVICE_TYPE, metadata.getDeviceType());
-        assertEquals(DOWNLOAD_COMPANION_APP_DESCRIPTION,
-                metadata.getDownloadCompanionAppDescription());
-        assertEquals(FAIL_CONNECT_GOTO_SETTINGS_DESCRIPTION,
-                metadata.getFailConnectGoToSettingsDescription());
-        assertEquals(FAST_PAIR_TV_CONNECT_DEVICE_NO_ACCOUNT_DESCRIPTION,
-                metadata.getFastPairTvConnectDeviceNoAccountDescription());
-        assertArrayEquals(IMAGE, metadata.getImage());
-        assertEquals(IMAGE_URL, metadata.getImageUrl());
-        assertEquals(INITIAL_NOTIFICATION_DESCRIPTION,
-                metadata.getInitialNotificationDescription());
-        assertEquals(INITIAL_NOTIFICATION_DESCRIPTION_NO_ACCOUNT,
-                metadata.getInitialNotificationDescriptionNoAccount());
-        assertEquals(INITIAL_PAIRING_DESCRIPTION, metadata.getInitialPairingDescription());
-        assertEquals(INTENT_URI, metadata.getIntentUri());
-        assertEquals(LOCALE, metadata.getLocale());
-        assertEquals(OPEN_COMPANION_APP_DESCRIPTION, metadata.getOpenCompanionAppDescription());
-        assertEquals(RETRO_ACTIVE_PAIRING_DESCRIPTION,
-                metadata.getRetroactivePairingDescription());
-        assertEquals(SUBSEQUENT_PAIRING_DESCRIPTION, metadata.getSubsequentPairingDescription());
-        assertEquals(SYNC_CONTACT_DESCRPTION, metadata.getSyncContactsDescription());
-        assertEquals(SYNC_CONTACTS_TITLE, metadata.getSyncContactsTitle());
-        assertEquals(SYNC_SMS_DESCRIPTION, metadata.getSyncSmsDescription());
-        assertEquals(SYNC_SMS_TITLE, metadata.getSyncSmsTitle());
-        assertEquals(TRIGGER_DISTANCE, metadata.getTriggerDistance(), DELTA);
-        assertEquals(TRUE_WIRELESS_IMAGE_URL_CASE, metadata.getTrueWirelessImageUrlCase());
-        assertEquals(TRUE_WIRELESS_IMAGE_URL_LEFT_BUD, metadata.getTrueWirelessImageUrlLeftBud());
-        assertEquals(TRUE_WIRELESS_IMAGE_URL_RIGHT_BUD,
-                metadata.getTrueWirelessImageUrlRightBud());
-        assertEquals(UNABLE_TO_CONNECT_DESCRIPTION, metadata.getUnableToConnectDescription());
-        assertEquals(UNABLE_TO_CONNECT_TITLE, metadata.getUnableToConnectTitle());
-        assertEquals(UPDATE_COMPANION_APP_DESCRIPTION,
-                metadata.getUpdateCompanionAppDescription());
-        assertEquals(WAIT_LAUNCH_COMPANION_APP_DESCRIPTION,
-                metadata.getWaitLaunchCompanionAppDescription());
+        assertThat(metadata.getAssistantSetupHalfSheet()).isEqualTo(ASSISTANT_SETUP_HALFSHEET);
+        assertThat(metadata.getAssistantSetupNotification())
+                .isEqualTo(ASSISTANT_SETUP_NOTIFICATION);
+        assertThat(metadata.getBleTxPower()).isEqualTo(BLE_TX_POWER);
+        assertThat(metadata.getConfirmPinDescription()).isEqualTo(CONFIRM_PIN_DESCRIPTION);
+        assertThat(metadata.getConfirmPinTitle()).isEqualTo(CONFIRM_PIN_TITLE);
+        assertThat(metadata.getConnectSuccessCompanionAppInstalled())
+                .isEqualTo(CONNECT_SUCCESS_COMPANION_APP_INSTALLED);
+        assertThat(metadata.getConnectSuccessCompanionAppNotInstalled())
+                .isEqualTo(CONNECT_SUCCESS_COMPANION_APP_NOT_INSTALLED);
+        assertThat(metadata.getDeviceType()).isEqualTo(DEVICE_TYPE);
+        assertThat(metadata.getDownloadCompanionAppDescription())
+                .isEqualTo(DOWNLOAD_COMPANION_APP_DESCRIPTION);
+        assertThat(metadata.getFailConnectGoToSettingsDescription())
+                .isEqualTo(FAIL_CONNECT_GOTO_SETTINGS_DESCRIPTION);
+        assertThat(metadata.getFastPairTvConnectDeviceNoAccountDescription())
+                .isEqualTo(FAST_PAIR_TV_CONNECT_DEVICE_NO_ACCOUNT_DESCRIPTION);
+        assertThat(metadata.getImage()).isEqualTo(IMAGE);
+        assertThat(metadata.getImageUrl()).isEqualTo(IMAGE_URL);
+        assertThat(metadata.getInitialNotificationDescription())
+                .isEqualTo(INITIAL_NOTIFICATION_DESCRIPTION);
+        assertThat(metadata.getInitialNotificationDescriptionNoAccount())
+                .isEqualTo(INITIAL_NOTIFICATION_DESCRIPTION_NO_ACCOUNT);
+        assertThat(metadata.getInitialPairingDescription()).isEqualTo(INITIAL_PAIRING_DESCRIPTION);
+        assertThat(metadata.getIntentUri()).isEqualTo(INTENT_URI);
+        assertThat(metadata.getLocale()).isEqualTo(LOCALE);
+        assertThat(metadata.getOpenCompanionAppDescription())
+                .isEqualTo(OPEN_COMPANION_APP_DESCRIPTION);
+        assertThat(metadata.getRetroactivePairingDescription())
+                .isEqualTo(RETRO_ACTIVE_PAIRING_DESCRIPTION);
+        assertThat(metadata.getSubsequentPairingDescription())
+                .isEqualTo(SUBSEQUENT_PAIRING_DESCRIPTION);
+        assertThat(metadata.getSyncContactsDescription()).isEqualTo(SYNC_CONTACT_DESCRPTION);
+        assertThat(metadata.getSyncContactsTitle()).isEqualTo(SYNC_CONTACTS_TITLE);
+        assertThat(metadata.getSyncSmsDescription()).isEqualTo(SYNC_SMS_DESCRIPTION);
+        assertThat(metadata.getSyncSmsTitle()).isEqualTo(SYNC_SMS_TITLE);
+        assertThat(metadata.getTriggerDistance()).isWithin(DELTA).of(TRIGGER_DISTANCE);
+        assertThat(metadata.getTrueWirelessImageUrlCase()).isEqualTo(TRUE_WIRELESS_IMAGE_URL_CASE);
+        assertThat(metadata.getTrueWirelessImageUrlLeftBud())
+                .isEqualTo(TRUE_WIRELESS_IMAGE_URL_LEFT_BUD);
+        assertThat(metadata.getTrueWirelessImageUrlRightBud())
+                .isEqualTo(TRUE_WIRELESS_IMAGE_URL_RIGHT_BUD);
+        assertThat(metadata.getUnableToConnectDescription())
+                .isEqualTo(UNABLE_TO_CONNECT_DESCRIPTION);
+        assertThat(metadata.getUnableToConnectTitle()).isEqualTo(UNABLE_TO_CONNECT_TITLE);
+        assertThat(metadata.getUpdateCompanionAppDescription())
+                .isEqualTo(UPDATE_COMPANION_APP_DESCRIPTION);
+        assertThat(metadata.getWaitLaunchCompanionAppDescription())
+                .isEqualTo(WAIT_LAUNCH_COMPANION_APP_DESCRIPTION);
     }
 
     /* Verifies Happy Path FastPairDiscoveryItemParcel. */
     private static void ensureHappyPathAsExpected(FastPairDiscoveryItemParcel itemParcel) {
-        assertEquals(ACTION_URL, itemParcel.actionUrl);
-        assertEquals(ACTION_URL_TYPE, itemParcel.actionUrlType);
-        assertEquals(APP_NAME, itemParcel.appName);
-        assertEquals(ATTACHMENT_TYPE, itemParcel.attachmentType);
-        assertArrayEquals(AUTHENTICATION_PUBLIC_KEY_SEC_P256R1,
-                itemParcel.authenticationPublicKeySecp256r1);
-        assertArrayEquals(BLE_RECORD_BYTES, itemParcel.bleRecordBytes);
-        assertEquals(DEBUG_CATEGORY, itemParcel.debugCategory);
-        assertEquals(DEBUG_MESSAGE, itemParcel.debugMessage);
-        assertEquals(DESCRIPTION, itemParcel.description);
-        assertEquals(DEVICE_NAME, itemParcel.deviceName);
-        assertEquals(DISPLAY_URL, itemParcel.displayUrl);
-        assertEquals(ENTITY_ID, itemParcel.entityId);
-        assertEquals(FEATURE_GRAPHIC_URL, itemParcel.featureGraphicUrl);
-        assertEquals(FIRST_OBSERVATION_TIMESTAMP_MILLIS,
-                itemParcel.firstObservationTimestampMillis);
-        assertEquals(GROUP_ID, itemParcel.groupId);
-        assertEquals(ICON_FIFE_URL, itemParcel.iconFifeUrl);
-        assertEquals(ICON_PNG, itemParcel.iconPng);
-        assertEquals(ID, itemParcel.id);
-        assertEquals(LAST_OBSERVATION_TIMESTAMP_MILLIS, itemParcel.lastObservationTimestampMillis);
-        assertEquals(LAST_USER_EXPERIENCE, itemParcel.lastUserExperience);
-        assertEquals(LOST_MILLIS, itemParcel.lostMillis);
-        assertEquals(MAC_ADDRESS, itemParcel.macAddress);
-        assertEquals(PACKAGE_NAME, itemParcel.packageName);
-        assertEquals(PENDING_APP_INSTALL_TIMESTAMP_MILLIS,
-                itemParcel.pendingAppInstallTimestampMillis);
-        assertEquals(RSSI, itemParcel.rssi);
-        assertEquals(STATE, itemParcel.state);
-        assertEquals(TITLE, itemParcel.title);
-        assertEquals(TRIGGER_ID, itemParcel.triggerId);
-        assertEquals(TX_POWER, itemParcel.txPower);
-        assertEquals(TYPE, itemParcel.type);
+        assertThat(itemParcel.actionUrl).isEqualTo(ACTION_URL);
+        assertThat(itemParcel.actionUrlType).isEqualTo(ACTION_URL_TYPE);
+        assertThat(itemParcel.appName).isEqualTo(APP_NAME);
+        assertThat(itemParcel.attachmentType).isEqualTo(ATTACHMENT_TYPE);
+        assertThat(itemParcel.authenticationPublicKeySecp256r1)
+                .isEqualTo(AUTHENTICATION_PUBLIC_KEY_SEC_P256R1);
+        assertThat(itemParcel.bleRecordBytes).isEqualTo(BLE_RECORD_BYTES);
+        assertThat(itemParcel.debugCategory).isEqualTo(DEBUG_CATEGORY);
+        assertThat(itemParcel.debugMessage).isEqualTo(DEBUG_MESSAGE);
+        assertThat(itemParcel.description).isEqualTo(DESCRIPTION);
+        assertThat(itemParcel.deviceName).isEqualTo(DEVICE_NAME);
+        assertThat(itemParcel.displayUrl).isEqualTo(DISPLAY_URL);
+        assertThat(itemParcel.entityId).isEqualTo(ENTITY_ID);
+        assertThat(itemParcel.featureGraphicUrl).isEqualTo(FEATURE_GRAPHIC_URL);
+        assertThat(itemParcel.firstObservationTimestampMillis)
+                .isEqualTo(FIRST_OBSERVATION_TIMESTAMP_MILLIS);
+        assertThat(itemParcel.groupId).isEqualTo(GROUP_ID);
+        assertThat(itemParcel.iconFifeUrl).isEqualTo(ICON_FIFE_URL);
+        assertThat(itemParcel.iconPng).isEqualTo(ICON_PNG);
+        assertThat(itemParcel.id).isEqualTo(ID);
+        assertThat(itemParcel.lastObservationTimestampMillis)
+                .isEqualTo(LAST_OBSERVATION_TIMESTAMP_MILLIS);
+        assertThat(itemParcel.lastUserExperience).isEqualTo(LAST_USER_EXPERIENCE);
+        assertThat(itemParcel.lostMillis).isEqualTo(LOST_MILLIS);
+        assertThat(itemParcel.macAddress).isEqualTo(MAC_ADDRESS);
+        assertThat(itemParcel.packageName).isEqualTo(PACKAGE_NAME);
+        assertThat(itemParcel.pendingAppInstallTimestampMillis)
+                .isEqualTo(PENDING_APP_INSTALL_TIMESTAMP_MILLIS);
+        assertThat(itemParcel.rssi).isEqualTo(RSSI);
+        assertThat(itemParcel.state).isEqualTo(STATE);
+        assertThat(itemParcel.title).isEqualTo(TITLE);
+        assertThat(itemParcel.triggerId).isEqualTo(TRIGGER_ID);
+        assertThat(itemParcel.txPower).isEqualTo(TX_POWER);
+        assertThat(itemParcel.type).isEqualTo(TYPE);
     }
 
     /* Verifies Happy Path FastPairDiscoveryItem. */
     private static void ensureHappyPathAsExpected(FastPairDiscoveryItem item) {
-        assertEquals(ACTION_URL, item.getActionUrl());
-        assertEquals(ACTION_URL_TYPE, item.getActionUrlType());
-        assertEquals(APP_NAME, item.getAppName());
-        assertEquals(ATTACHMENT_TYPE, item.getAttachmentType());
-        assertArrayEquals(AUTHENTICATION_PUBLIC_KEY_SEC_P256R1,
-                item.getAuthenticationPublicKeySecp256r1());
-        assertArrayEquals(BLE_RECORD_BYTES, item.getBleRecordBytes());
-        assertEquals(DEBUG_CATEGORY, item.getDebugCategory());
-        assertEquals(DEBUG_MESSAGE, item.getDebugMessage());
-        assertEquals(DESCRIPTION, item.getDescription());
-        assertEquals(DEVICE_NAME, item.getDeviceName());
-        assertEquals(DISPLAY_URL, item.getDisplayUrl());
-        assertEquals(ENTITY_ID, item.getEntityId());
-        assertEquals(FEATURE_GRAPHIC_URL, item.getFeatureGraphicUrl());
-        assertEquals(FIRST_OBSERVATION_TIMESTAMP_MILLIS,
-                item.getFirstObservationTimestampMillis());
-        assertEquals(GROUP_ID, item.getGroupId());
-        assertEquals(ICON_FIFE_URL, item.getIconFfeUrl());
-        assertEquals(ICON_PNG, item.getIconPng());
-        assertEquals(ID, item.getId());
-        assertEquals(LAST_OBSERVATION_TIMESTAMP_MILLIS, item.getLastObservationTimestampMillis());
-        assertEquals(LAST_USER_EXPERIENCE, item.getLastUserExperience());
-        assertEquals(LOST_MILLIS, item.getLostMillis());
-        assertEquals(MAC_ADDRESS, item.getMacAddress());
-        assertEquals(PACKAGE_NAME, item.getPackageName());
-        assertEquals(PENDING_APP_INSTALL_TIMESTAMP_MILLIS,
-                item.getPendingAppInstallTimestampMillis());
-        assertEquals(RSSI, item.getRssi());
-        assertEquals(STATE, item.getState());
-        assertEquals(TITLE, item.getTitle());
-        assertEquals(TRIGGER_ID, item.getTriggerId());
-        assertEquals(TX_POWER, item.getTxPower());
-        assertEquals(TYPE, item.getType());
+        assertThat(item.getActionUrl()).isEqualTo(ACTION_URL);
+        assertThat(item.getActionUrlType()).isEqualTo(ACTION_URL_TYPE);
+        assertThat(item.getAppName()).isEqualTo(APP_NAME);
+        assertThat(item.getAttachmentType()).isEqualTo(ATTACHMENT_TYPE);
+        assertThat(item.getAuthenticationPublicKeySecp256r1())
+                .isEqualTo(AUTHENTICATION_PUBLIC_KEY_SEC_P256R1);
+        assertThat(item.getBleRecordBytes()).isEqualTo(BLE_RECORD_BYTES);
+        assertThat(item.getDebugCategory()).isEqualTo(DEBUG_CATEGORY);
+        assertThat(item.getDebugMessage()).isEqualTo(DEBUG_MESSAGE);
+        assertThat(item.getDescription()).isEqualTo(DESCRIPTION);
+        assertThat(item.getDeviceName()).isEqualTo(DEVICE_NAME);
+        assertThat(item.getDisplayUrl()).isEqualTo(DISPLAY_URL);
+        assertThat(item.getEntityId()).isEqualTo(ENTITY_ID);
+        assertThat(item.getFeatureGraphicUrl()).isEqualTo(FEATURE_GRAPHIC_URL);
+        assertThat(item.getFirstObservationTimestampMillis())
+                .isEqualTo(FIRST_OBSERVATION_TIMESTAMP_MILLIS);
+        assertThat(item.getGroupId()).isEqualTo(GROUP_ID);
+        assertThat(item.getIconFfeUrl()).isEqualTo(ICON_FIFE_URL);
+        assertThat(item.getIconPng()).isEqualTo(ICON_PNG);
+        assertThat(item.getId()).isEqualTo(ID);
+        assertThat(item.getLastObservationTimestampMillis())
+                .isEqualTo(LAST_OBSERVATION_TIMESTAMP_MILLIS);
+        assertThat(item.getLastUserExperience()).isEqualTo(LAST_USER_EXPERIENCE);
+        assertThat(item.getLostMillis()).isEqualTo(LOST_MILLIS);
+        assertThat(item.getMacAddress()).isEqualTo(MAC_ADDRESS);
+        assertThat(item.getPackageName()).isEqualTo(PACKAGE_NAME);
+        assertThat(item.getPendingAppInstallTimestampMillis())
+                .isEqualTo(PENDING_APP_INSTALL_TIMESTAMP_MILLIS);
+        assertThat(item.getRssi()).isEqualTo(RSSI);
+        assertThat(item.getState()).isEqualTo(STATE);
+        assertThat(item.getTitle()).isEqualTo(TITLE);
+        assertThat(item.getTriggerId()).isEqualTo(TRIGGER_ID);
+        assertThat(item.getTxPower()).isEqualTo(TX_POWER);
+        assertThat(item.getType()).isEqualTo(TYPE);
     }
 
     /* Verifies Happy Path EligibleAccountParcel[]. */
     private static void ensureHappyPathAsExpected(FastPairEligibleAccountParcel[] accountsParcel) {
-        assertEquals(ELIGIBLE_ACCOUNTS_NUM, accountsParcel.length);
-        assertEquals(ELIGIBLE_ACCOUNT_1, accountsParcel[0].account);
-        assertEquals(ELIGIBLE_ACCOUNT_1_OPT_IN, accountsParcel[0].optIn);
+        assertThat(accountsParcel).hasLength(ELIGIBLE_ACCOUNTS_NUM);
 
-        assertEquals(ELIGIBLE_ACCOUNT_2, accountsParcel[1].account);
-        assertEquals(ELIGIBLE_ACCOUNT_2_OPT_IN, accountsParcel[1].optIn);
+        assertThat(accountsParcel[0].account).isEqualTo(ELIGIBLE_ACCOUNT_1);
+        assertThat(accountsParcel[0].optIn).isEqualTo(ELIGIBLE_ACCOUNT_1_OPT_IN);
+
+        assertThat(accountsParcel[1].account).isEqualTo(ELIGIBLE_ACCOUNT_2);
+        assertThat(accountsParcel[1].optIn).isEqualTo(ELIGIBLE_ACCOUNT_2_OPT_IN);
     }
 }
