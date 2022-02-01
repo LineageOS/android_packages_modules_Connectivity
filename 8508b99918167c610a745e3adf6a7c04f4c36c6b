@@ -1,0 +1,27 @@
+{
+  "comments": [
+    {
+      "unresolved": true,
+      "key": {
+        "uuid": "d5dcc92d_a91c173d",
+        "filename": "framework/src/android/net/ConnectivityManager.java",
+        "patchSetId": 1
+      },
+      "lineNbr": 1202,
+      "author": {
+        "id": 11883
+      },
+      "writtenOn": "2022-02-01T11:58:39Z",
+      "side": 1,
+      "message": "I\u0027m blind, but where is this used?\nCan\u0027t we expose the other getActiveNetworkForUid instance or we require to pass \"true\"",
+      "range": {
+        "startLine": 1202,
+        "startChar": 19,
+        "endLine": 1202,
+        "endChar": 41
+      },
+      "revId": "8508b99918167c610a745e3adf6a7c04f4c36c6b",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    }
+  ]
+}
