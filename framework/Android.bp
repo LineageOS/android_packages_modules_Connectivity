@@ -55,12 +55,11 @@ filegroup {
     ],
 }
 
-java_sdk_library {
-    name: "framework-connectivity",
+java_defaults {
+    name: "framework-connectivity-defaults",
+    defaults: ["framework-module-defaults"],
     sdk_version: "module_current",
     min_sdk_version: "30",
-    defaults: ["framework-module-defaults"],
-    installable: true,
     srcs: [
         ":framework-connectivity-sources",
         ":net-utils-framework-common-srcs",
@@ -76,6 +75,9 @@ java_sdk_library {
             "frameworks/native/aidl/binder", // For PersistableBundle.aidl
         ],
     },
+    stub_only_libs: [
+        "framework-connectivity-tiramisu.stubs.module_lib",
+    ],
     impl_only_libs: [
         "framework-tethering.stubs.module_lib",
         "framework-wifi.stubs.module_lib",
@@ -83,16 +85,42 @@ java_sdk_library {
     ],
     static_libs: [
         "modules-utils-build",
+        "modules-utils-preconditions",
     ],
     libs: [
+        "framework-connectivity-tiramisu.stubs.module_lib",
         "unsupportedappusage",
     ],
-    jarjar_rules: "jarjar-rules.txt",
+    apex_available: [
+        "com.android.tethering",
+    ],
+    lint: { strict_updatability_linting: true },
+}
+
+java_library {
+    name: "framework-connectivity-pre-jarjar",
+    defaults: ["framework-connectivity-defaults"],
+    libs: [
+        // This cannot be in the defaults clause above because if it were, it would be used
+        // to generate the connectivity stubs. That would create a circular dependency
+        // because the tethering stubs depend on the connectivity stubs (e.g.,
+        // TetheringRequest depends on LinkAddress).
+        "framework-tethering.stubs.module_lib",
+    ],
+    visibility: ["//packages/modules/Connectivity:__subpackages__"]
+}
+
+java_sdk_library {
+    name: "framework-connectivity",
+    defaults: ["framework-connectivity-defaults"],
+    installable: true,
+    jarjar_rules: ":connectivity-jarjar-rules",
     permitted_packages: ["android.net"],
     impl_library_visibility: [
         "//packages/modules/Connectivity/Tethering/apex",
         // In preparation for future move
         "//packages/modules/Connectivity/apex",
+        "//packages/modules/Connectivity/framework-t",
         "//packages/modules/Connectivity/service",
         "//packages/modules/Connectivity/service-t",
         "//frameworks/base/packages/Connectivity/service",
@@ -111,10 +139,6 @@ java_sdk_library {
         "//packages/modules/NetworkStack/tests:__subpackages__",
         "//packages/modules/Wifi/service/tests/wifitests",
     ],
-    apex_available: [
-        "com.android.tethering",
-    ],
-    lint: { strict_updatability_linting: true },
 }
 
 cc_library_shared {
