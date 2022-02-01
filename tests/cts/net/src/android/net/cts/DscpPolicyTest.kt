@@ -146,8 +146,9 @@ class DscpPolicyTest {
     fun tearDown() {
         agentsToCleanUp.forEach { it.unregister() }
         callbacksToCleanUp.forEach { cm.unregisterNetworkCallback(it) }
+
+        // reader.stop() cleans up tun fd
         reader.handler.post { reader.stop() }
-        Os.close(iface.fileDescriptor.fileDescriptor)
         handlerThread.quitSafely()
     }
 
