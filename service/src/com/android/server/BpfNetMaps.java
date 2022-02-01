@@ -33,8 +33,7 @@ public class BpfNetMaps {
     private static final String TAG = "BpfNetMaps";
     private final INetd mNetd;
     // Use legacy netd for releases before T.
-    // TODO: change to !SdkLevel.isAtLeastT()
-    private static final boolean USE_NETD = true;
+    private static final boolean USE_NETD = !SdkLevel.isAtLeastT();
     private static boolean sInitialized = false;
 
     /**
