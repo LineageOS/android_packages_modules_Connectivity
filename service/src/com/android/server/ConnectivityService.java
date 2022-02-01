@@ -439,8 +439,6 @@ public class ConnectivityService extends IConnectivityManager.Stub
      * Requests that don't code for a per-app preference use PREFERENCE_ORDER_INVALID.
      * The default request uses PREFERENCE_ORDER_DEFAULT.
      */
-    // Bound for the lowest valid preference order.
-    static final int PREFERENCE_ORDER_LOWEST = 999;
     // Used when sending to netd to code for "no order".
     static final int PREFERENCE_ORDER_NONE = 0;
     // Order for requests that don't code for a per-app preference. As it is
@@ -448,11 +446,6 @@ public class ConnectivityService extends IConnectivityManager.Stub
     // PREFERENCE_ORDER_NONE when sending to netd.
     @VisibleForTesting
     static final int PREFERENCE_ORDER_INVALID = Integer.MAX_VALUE;
-    // Order for the default internet request. Since this must always have the
-    // lowest priority, its value is larger than the largest acceptable value. As
-    // it is out of the valid range, the corresponding order should be
-    // PREFERENCE_ORDER_NONE when sending to netd.
-    static final int PREFERENCE_ORDER_DEFAULT = 1000;
     // As a security feature, VPNs have the top priority.
     static final int PREFERENCE_ORDER_VPN = 0; // Netd supports only 0 for VPN.
     // Order of per-app OEM preference. See {@link #setOemNetworkPreference}.
@@ -467,6 +460,13 @@ public class ConnectivityService extends IConnectivityManager.Stub
     // See {@link ConnectivitySettingsManager#setMobileDataPreferredUids}
     @VisibleForTesting
     static final int PREFERENCE_ORDER_MOBILE_DATA_PREFERERRED = 30;
+    // Preference order that signifies the network shouldn't be set as a default network for
+    // the UIDs, only give them access to it. TODO : replace this with a boolean
+    // in NativeUidRangeConfig
+    @VisibleForTesting
+    static final int PREFERENCE_ORDER_IRRELEVANT_BECAUSE_NOT_DEFAULT = 999;
+    // Bound for the lowest valid preference order.
+    static final int PREFERENCE_ORDER_LOWEST = 999;
 
     /**
      * used internally to clear a wakelock when transitioning
@@ -2099,6 +2099,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
         newNc.setAdministratorUids(new int[0]);
         if (!checkAnyPermissionOf(
                 callerPid, callerUid, android.Manifest.permission.NETWORK_FACTORY)) {
+            newNc.setAccessUids(new ArraySet<>());
             newNc.setSubscriptionIds(Collections.emptySet());
         }
 
@@ -3348,18 +3349,8 @@ public class ConnectivityService extends IConnectivityManager.Stub
 
             switch (msg.what) {
                 case NetworkAgent.EVENT_NETWORK_CAPABILITIES_CHANGED: {
-                    NetworkCapabilities networkCapabilities = (NetworkCapabilities) arg.second;
-                    if (networkCapabilities.hasConnectivityManagedCapability()) {
-                        Log.wtf(TAG, "BUG: " + nai + " has CS-managed capability.");
-                    }
-                    if (networkCapabilities.hasTransport(TRANSPORT_TEST)) {
-                        // Make sure the original object is not mutated. NetworkAgent normally
-                        // makes a copy of the capabilities when sending the message through
-                        // the Messenger, but if this ever changes, not making a defensive copy
-                        // here will give attack vectors to clients using this code path.
-                        networkCapabilities = new NetworkCapabilities(networkCapabilities);
-                        networkCapabilities.restrictCapabilitiesForTestNetwork(nai.creatorUid);
-                    }
+                    final NetworkCapabilities networkCapabilities = new NetworkCapabilities(
+                            (NetworkCapabilities) arg.second);
                     processCapabilitiesFromAgent(nai, networkCapabilities);
                     updateCapabilities(nai.getCurrentScore(), nai, networkCapabilities);
                     break;
@@ -6220,6 +6211,9 @@ public class ConnectivityService extends IConnectivityManager.Stub
         if (nc.isPrivateDnsBroken()) {
             throw new IllegalArgumentException("Can't request broken private DNS");
         }
+        if (nc.hasAccessUids()) {
+            throw new IllegalArgumentException("Can't request access UIDs");
+        }
     }
 
     // TODO: Set the mini sdk to 31 and remove @TargetApi annotation when b/205923322 is addressed.
@@ -6454,9 +6448,10 @@ public class ConnectivityService extends IConnectivityManager.Stub
         ensureRequestableCapabilities(networkCapabilities);
         ensureSufficientPermissionsForRequest(networkCapabilities,
                 Binder.getCallingPid(), callingUid, callingPackageName);
-        ensureValidNetworkSpecifier(networkCapabilities);
         restrictRequestUidsForCallerAndSetRequestorInfo(networkCapabilities,
                 callingUid, callingPackageName);
+        ensureValid(networkCapabilities);
+
         NetworkRequest networkRequest = new NetworkRequest(networkCapabilities, TYPE_NONE,
                 nextNetworkRequestId(), NetworkRequest.Type.REQUEST);
         NetworkRequestInfo nri = new NetworkRequestInfo(callingUid, networkRequest, operation,
@@ -6976,27 +6971,17 @@ public class ConnectivityService extends IConnectivityManager.Stub
             LinkProperties linkProperties, NetworkCapabilities networkCapabilities,
             NetworkScore currentScore, NetworkAgentConfig networkAgentConfig, int providerId,
             int uid) {
-        if (networkCapabilities.hasTransport(TRANSPORT_TEST)) {
-            // Strictly, sanitizing here is unnecessary as the capabilities will be sanitized in
-            // the call to mixInCapabilities below anyway, but sanitizing here means the NAI never
-            // sees capabilities that may be malicious, which might prevent mistakes in the future.
-            networkCapabilities = new NetworkCapabilities(networkCapabilities);
-            networkCapabilities.restrictCapabilitiesForTestNetwork(uid);
-        }
 
-        LinkProperties lp = new LinkProperties(linkProperties);
-
-        final NetworkCapabilities nc = new NetworkCapabilities(networkCapabilities);
+        // At this point the capabilities/properties are untrusted and unverified, e.g. checks that
+        // the capabilities' access UID comply with security limitations. They will be sanitized
+        // as the NAI registration finishes, in handleRegisterNetworkAgent(). This is
+        // because some of the checks must happen on the handler thread.
         final NetworkAgentInfo nai = new NetworkAgentInfo(na,
-                new Network(mNetIdManager.reserveNetId()), new NetworkInfo(networkInfo), lp, nc,
+                new Network(mNetIdManager.reserveNetId()), new NetworkInfo(networkInfo),
+                linkProperties, networkCapabilities,
                 currentScore, mContext, mTrackerHandler, new NetworkAgentConfig(networkAgentConfig),
                 this, mNetd, mDnsResolver, providerId, uid, mLingerDelayMs,
                 mQosCallbackTracker, mDeps);
-
-        // Make sure the LinkProperties and NetworkCapabilities reflect what the agent info says.
-        processCapabilitiesFromAgent(nai, nc);
-        nai.getAndSetNetworkCapabilities(mixInCapabilities(nai, nc));
-        processLinkPropertiesFromAgent(nai, nai.linkProperties);
 
         final String extraInfo = networkInfo.getExtraInfo();
         final String name = TextUtils.isEmpty(extraInfo)
@@ -7012,8 +6997,20 @@ public class ConnectivityService extends IConnectivityManager.Stub
     }
 
     private void handleRegisterNetworkAgent(NetworkAgentInfo nai, INetworkMonitor networkMonitor) {
+        if (VDBG) log("Network Monitor created for " +  nai);
+        // nai.nc and nai.lp are the same object that was passed by the network agent if the agent
+        // lives in the same process as this code (e.g. wifi), so make sure this code doesn't
+        // mutate their object
+        final NetworkCapabilities nc = new NetworkCapabilities(nai.networkCapabilities);
+        final LinkProperties lp = new LinkProperties(nai.linkProperties);
+        // Make sure the LinkProperties and NetworkCapabilities reflect what the agent info says.
+        processCapabilitiesFromAgent(nai, nc);
+        nai.getAndSetNetworkCapabilities(mixInCapabilities(nai, nc));
+        processLinkPropertiesFromAgent(nai, lp);
+        nai.linkProperties = lp;
+
         nai.onNetworkMonitorCreated(networkMonitor);
-        if (VDBG) log("Got NetworkAgent Messenger");
+
         mNetworkAgentInfos.add(nai);
         synchronized (mNetworkForNetId) {
             mNetworkForNetId.put(nai.network.getNetId(), nai);
@@ -7024,6 +7021,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
         } catch (RemoteException e) {
             e.rethrowAsRuntimeException();
         }
+
         nai.notifyRegistered();
         NetworkInfo networkInfo = nai.networkInfo;
         updateNetworkInfo(nai, networkInfo);
@@ -7471,9 +7469,11 @@ public class ConnectivityService extends IConnectivityManager.Stub
      * Stores into |nai| any data coming from the agent that might also be written to the network's
      * NetworkCapabilities by ConnectivityService itself. This ensures that the data provided by the
      * agent is not lost when updateCapabilities is called.
-     * This method should never alter the agent's NetworkCapabilities, only store data in |nai|.
      */
     private void processCapabilitiesFromAgent(NetworkAgentInfo nai, NetworkCapabilities nc) {
+        if (nc.hasConnectivityManagedCapability()) {
+            Log.wtf(TAG, "BUG: " + nai + " has CS-managed capability.");
+        }
         // Note: resetting the owner UID before storing the agent capabilities in NAI means that if
         // the agent attempts to change the owner UID, then nai.declaredCapabilities will not
         // actually be the same as the capabilities sent by the agent. Still, it is safer to reset
@@ -7484,6 +7484,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
             nc.setOwnerUid(nai.networkCapabilities.getOwnerUid());
         }
         nai.declaredCapabilities = new NetworkCapabilities(nc);
+        NetworkAgentInfo.restrictCapabilitiesFromNetworkAgent(nc, nai.creatorUid);
     }
 
     /** Modifies |newNc| based on the capabilities of |underlyingNetworks| and |agentCaps|. */
@@ -7748,6 +7749,17 @@ public class ConnectivityService extends IConnectivityManager.Stub
         return stableRanges;
     }
 
+    private static UidRangeParcel[] intsToUidRangeStableParcels(
+            final @NonNull ArraySet<Integer> uids) {
+        final UidRangeParcel[] stableRanges = new UidRangeParcel[uids.size()];
+        int index = 0;
+        for (int uid : uids) {
+            stableRanges[index] = new UidRangeParcel(uid, uid);
+            index++;
+        }
+        return stableRanges;
+    }
+
     private static UidRangeParcel[] toUidRangeStableParcels(UidRange[] ranges) {
         final UidRangeParcel[] stableRanges = new UidRangeParcel[ranges.length];
         for (int i = 0; i < ranges.length; i++) {
@@ -7818,8 +7830,14 @@ public class ConnectivityService extends IConnectivityManager.Stub
         }
     }
 
-    private void updateUids(NetworkAgentInfo nai, NetworkCapabilities prevNc,
-            NetworkCapabilities newNc) {
+    private void updateUids(@NonNull NetworkAgentInfo nai, @Nullable NetworkCapabilities prevNc,
+            @Nullable NetworkCapabilities newNc) {
+        updateVpnUids(nai, prevNc, newNc);
+        updateAccessUids(nai, prevNc, newNc);
+    }
+
+    private void updateVpnUids(@NonNull NetworkAgentInfo nai, @Nullable NetworkCapabilities prevNc,
+            @Nullable NetworkCapabilities newNc) {
         Set<UidRange> prevRanges = null == prevNc ? null : prevNc.getUidRanges();
         Set<UidRange> newRanges = null == newNc ? null : newNc.getUidRanges();
         if (null == prevRanges) prevRanges = new ArraySet<>();
@@ -7875,6 +7893,46 @@ public class ConnectivityService extends IConnectivityManager.Stub
         } catch (Exception e) {
             // Never crash!
             loge("Exception in updateUids: ", e);
+        }
+    }
+
+    private void updateAccessUids(@NonNull NetworkAgentInfo nai,
+            @Nullable NetworkCapabilities prevNc, @Nullable NetworkCapabilities newNc) {
+        // In almost all cases both NC code for empty access UIDs. return as fast as possible.
+        final boolean prevEmpty = null == prevNc || prevNc.getAccessUidsNoCopy().isEmpty();
+        final boolean newEmpty = null == newNc || newNc.getAccessUidsNoCopy().isEmpty();
+        if (prevEmpty && newEmpty) return;
+
+        final ArraySet<Integer> prevUids =
+                null == prevNc ? new ArraySet<>() : prevNc.getAccessUidsNoCopy();
+        final ArraySet<Integer> newUids =
+                null == newNc ? new ArraySet<>() : newNc.getAccessUidsNoCopy();
+
+        if (prevUids.equals(newUids)) return;
+
+        // This implementation is very simple and vastly faster for sets of Integers than
+        // CompareOrUpdateResult, which is tuned for sets that need to be compared based on
+        // a key computed from the value and has storage for that.
+        final ArraySet<Integer> toRemove = new ArraySet<>(prevUids);
+        final ArraySet<Integer> toAdd = new ArraySet<>(newUids);
+        toRemove.removeAll(newUids);
+        toAdd.removeAll(prevUids);
+
+        try {
+            if (!toAdd.isEmpty()) {
+                mNetd.networkAddUidRangesParcel(new NativeUidRangeConfig(
+                        nai.network.netId,
+                        intsToUidRangeStableParcels(toAdd),
+                        PREFERENCE_ORDER_IRRELEVANT_BECAUSE_NOT_DEFAULT));
+            }
+            if (!toRemove.isEmpty()) {
+                mNetd.networkRemoveUidRangesParcel(new NativeUidRangeConfig(
+                        nai.network.netId,
+                        intsToUidRangeStableParcels(toRemove),
+                        PREFERENCE_ORDER_IRRELEVANT_BECAUSE_NOT_DEFAULT));
+            }
+        } catch (RemoteException e) {
+            // Netd died. This usually causes a runtime restart anyway.
         }
     }
 
@@ -9844,7 +9902,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
                 android.Manifest.permission.NETWORK_STACK);
         final NetworkCapabilities nc = getNetworkCapabilitiesInternal(network);
         if (!nc.hasTransport(TRANSPORT_TEST)) {
-            throw new SecurityException("Data Stall simluation is only possible for test networks");
+            throw new SecurityException("Data Stall simulation is only possible for test networks");
         }
 
         final NetworkAgentInfo nai = getNetworkAgentInfoForNetwork(network);
