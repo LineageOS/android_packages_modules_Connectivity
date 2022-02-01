@@ -36,15 +36,17 @@ java_library {
     ],
     libs: [
         "framework-annotations-lib",
-        "framework-connectivity.impl",
+        "framework-connectivity-pre-jarjar",
         "framework-connectivity-tiramisu.impl",
         "service-connectivity-pre-jarjar",
         "unsupportedappusage",
     ],
     static_libs: [
-        "modules-utils-build",
+        // Do not add static_libs here if they are already included in framework-connectivity
+        // or in service-connectivity. They are not necessary (included via
+        // service-connectivity-pre-jarjar), and in the case of code that is already in
+        // framework-connectivity, the classes would be included in the apex twice.
         "modules-utils-statemachine",
-        "net-utils-framework-common",
     ],
     apex_available: [
         "com.android.tethering",
