@@ -89,7 +89,6 @@ import android.net.util.SharedLog;
 import android.os.Build;
 import android.os.Handler;
 import android.os.test.TestLooper;
-import android.system.ErrnoException;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -100,7 +99,6 @@ import com.android.dx.mockito.inline.extended.ExtendedMockito;
 import com.android.net.module.util.BpfMap;
 import com.android.net.module.util.CollectionUtils;
 import com.android.net.module.util.NetworkStackConstants;
-import com.android.net.module.util.Struct;
 import com.android.net.module.util.netlink.ConntrackMessage;
 import com.android.net.module.util.netlink.NetlinkConstants;
 import com.android.net.module.util.netlink.NetlinkSocket;
@@ -110,6 +108,7 @@ import com.android.networkstack.tethering.BpfCoordinator.Ipv6ForwardingRule;
 import com.android.testutils.DevSdkIgnoreRule;
 import com.android.testutils.DevSdkIgnoreRule.IgnoreAfter;
 import com.android.testutils.DevSdkIgnoreRule.IgnoreUpTo;
+import com.android.testutils.TestBpfMap;
 import com.android.testutils.TestableNetworkStatsProviderCbBinder;
 
 import org.junit.Before;
@@ -128,10 +127,7 @@ import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
-import java.util.Map;
-import java.util.function.BiConsumer;
 
 @RunWith(AndroidJUnit4.class)
 @SmallTest
@@ -156,60 +152,6 @@ public class BpfCoordinatorTest {
     private static final InterfaceParams UPSTREAM_IFACE_PARAMS = new InterfaceParams(
             UPSTREAM_IFACE, UPSTREAM_IFINDEX, null /* macAddr, rawip */,
             NetworkStackConstants.ETHER_MTU);
-
-    // The test fake BPF map class is needed because the test has no privilege to access the BPF
-    // map. All member functions which eventually call JNI to access the real native BPF map need
-    // to be overridden.
-    // TODO: consider moving to an individual file.
-    private class TestBpfMap<K extends Struct, V extends Struct> extends BpfMap<K, V> {
-        private final HashMap<K, V> mMap = new HashMap<K, V>();
-
-        TestBpfMap(final Class<K> key, final Class<V> value) {
-            super(key, value);
-        }
-
-        @Override
-        public void forEach(BiConsumer<K, V> action) throws ErrnoException {
-            // TODO: consider using mocked #getFirstKey and #getNextKey to iterate. It helps to
-            // implement the entry deletion in the iteration if required.
-            for (Map.Entry<K, V> entry : mMap.entrySet()) {
-                action.accept(entry.getKey(), entry.getValue());
-            }
-        }
-
-        @Override
-        public void updateEntry(K key, V value) throws ErrnoException {
-            mMap.put(key, value);
-        }
-
-        @Override
-        public void insertEntry(K key, V value) throws ErrnoException,
-                IllegalArgumentException {
-            // The entry is created if and only if it doesn't exist. See BpfMap#insertEntry.
-            if (mMap.get(key) != null) {
-                throw new IllegalArgumentException(key + " already exist");
-            }
-            mMap.put(key, value);
-        }
-
-        @Override
-        public boolean deleteEntry(Struct key) throws ErrnoException {
-            return mMap.remove(key) != null;
-        }
-
-        @Override
-        public V getValue(@NonNull K key) throws ErrnoException {
-            // Return value for a given key. Otherwise, return null without an error ENOENT.
-            // BpfMap#getValue treats that the entry is not found as no error.
-            return mMap.get(key);
-        }
-
-        @Override
-        public void clear() throws ErrnoException {
-            // TODO: consider using mocked #getFirstKey and #deleteEntry to implement.
-            mMap.clear();
-        }
-    };
 
     @Mock private NetworkStatsManager mStatsManager;
     @Mock private INetd mNetd;
