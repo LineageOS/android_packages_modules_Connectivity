@@ -58,7 +58,6 @@ import android.os.SystemConfigManager;
 import android.os.UserHandle;
 import android.os.UserManager;
 import android.provider.Settings;
-import android.system.OsConstants;
 import android.util.ArrayMap;
 import android.util.ArraySet;
 import android.util.Log;
@@ -812,12 +811,8 @@ public class PermissionMonitor {
             } else {
                 mBpfNetMaps.removeUidInterfaceRules(toIntArray(uids));
             }
-        } catch (ServiceSpecificException e) {
-            // Silently ignore exception when device does not support eBPF, otherwise just log
-            // the exception and do not crash
-            if (e.errorCode != OsConstants.EOPNOTSUPP) {
-                loge("Exception when updating permissions: ", e);
-            }
+        } catch (RemoteException | ServiceSpecificException e) {
+            loge("Exception when updating permissions: ", e);
         }
     }
 
@@ -901,7 +896,7 @@ public class PermissionMonitor {
                 mBpfNetMaps.setNetPermForUids(PERMISSION_UNINSTALLED,
                         toIntArray(uninstalledAppIds));
             }
-        } catch (ServiceSpecificException e) {
+        } catch (RemoteException | ServiceSpecificException e) {
             Log.e(TAG, "Pass appId list of special permission failed." + e);
         }
     }
