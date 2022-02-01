@@ -22,7 +22,7 @@
     <option name="test-suite-tag" value="apct" />
     <option name="test-tag" value="NearbyUnitTests" />
     <option name="config-descriptor:metadata" key="mainline-param"
-            value="com.google.android.nearby.apex" />
+            value="com.google.android.tethering.apex" />
     <test class="com.android.tradefed.testtype.AndroidJUnitTest" >
         <option name="package" value="android.nearby.test" />
         <option name="runner" value="androidx.test.runner.AndroidJUnitRunner" />
@@ -32,6 +32,6 @@
     <!-- Only run NearbyUnitTests in MTS if the Nearby Mainline module is installed. -->
     <object type="module_controller"
             class="com.android.tradefed.testtype.suite.module.MainlineTestModuleController">
-        <option name="mainline-module-package-name" value="com.google.android.nearby" />
+        <option name="mainline-module-package-name" value="com.google.android.tethering" />
     </object>
 </configuration>
