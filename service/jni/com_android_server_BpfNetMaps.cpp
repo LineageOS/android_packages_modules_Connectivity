@@ -41,7 +41,7 @@ namespace android {
 static void native_init(JNIEnv* env, jobject clazz) {
   Status status = mTc.start();
    if (!isOk(status)) {
-    ALOGE("%s failed", __func__);
+    ALOGE("%s failed, error code = %d", __func__, status.code());
   }
 }
 
@@ -50,7 +50,7 @@ static jint native_addNaughtyApp(JNIEnv* env, jobject clazz, jint uid) {
   Status status = mTc.updateUidOwnerMap(appUids, PENALTY_BOX_MATCH,
       TrafficController::IptOp::IptOpInsert);
   if (!isOk(status)) {
-    ALOGE("%s failed, errer code = %d", __func__, status.code());
+    ALOGE("%s failed, error code = %d", __func__, status.code());
   }
   return (jint)status.code();
 }
@@ -60,7 +60,7 @@ static jint native_removeNaughtyApp(JNIEnv* env, jobject clazz, jint uid) {
   Status status = mTc.updateUidOwnerMap(appUids, PENALTY_BOX_MATCH,
       TrafficController::IptOp::IptOpDelete);
   if (!isOk(status)) {
-    ALOGE("%s failed, errer code = %d", __func__, status.code());
+    ALOGE("%s failed, error code = %d", __func__, status.code());
   }
   return (jint)status.code();
 }
@@ -70,7 +70,7 @@ static jint native_addNiceApp(JNIEnv* env, jobject clazz, jint uid) {
   Status status = mTc.updateUidOwnerMap(appUids, HAPPY_BOX_MATCH,
       TrafficController::IptOp::IptOpInsert);
   if (!isOk(status)) {
-    ALOGE("%s failed, errer code = %d", __func__, status.code());
+    ALOGE("%s failed, error code = %d", __func__, status.code());
   }
   return (jint)status.code();
 }
@@ -80,7 +80,7 @@ static jint native_removeNiceApp(JNIEnv* env, jobject clazz, jint uid) {
   Status status = mTc.updateUidOwnerMap(appUids, HAPPY_BOX_MATCH,
       TrafficController::IptOp::IptOpDelete);
   if (!isOk(status)) {
-    ALOGD("%s failed, errer code = %d", __func__, status.code());
+    ALOGD("%s failed, error code = %d", __func__, status.code());
   }
   return (jint)status.code();
 }
