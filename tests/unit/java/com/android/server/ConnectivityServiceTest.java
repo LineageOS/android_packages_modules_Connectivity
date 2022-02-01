@@ -5727,6 +5727,22 @@ public class ConnectivityServiceTest {
         }
     }
 
+    /**
+     * Validate the callback flow CBS request without carrier privilege.
+     */
+    @Test
+    public void testCBSRequestWithoutCarrierPrivilege() throws Exception {
+        final NetworkRequest nr = new NetworkRequest.Builder().addTransportType(
+                TRANSPORT_CELLULAR).addCapability(NET_CAPABILITY_CBS).build();
+        final TestNetworkCallback networkCallback = new TestNetworkCallback();
+
+        mServiceContext.setPermission(CONNECTIVITY_USE_RESTRICTED_NETWORKS, PERMISSION_DENIED);
+        // Now file the test request and expect it.
+        mCm.requestNetwork(nr, networkCallback);
+        networkCallback.expectCallback(CallbackEntry.UNAVAILABLE, (Network) null);
+        mCm.unregisterNetworkCallback(networkCallback);
+    }
+
     private static class TestKeepaliveCallback extends PacketKeepaliveCallback {
 
         public enum CallbackType { ON_STARTED, ON_STOPPED, ON_ERROR }

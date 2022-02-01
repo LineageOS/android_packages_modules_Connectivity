@@ -39,6 +39,7 @@ java_library {
         "framework-connectivity.impl",
         "framework-connectivity-tiramisu.impl",
         "service-connectivity-pre-jarjar",
+        "service-nearby",
         "unsupportedappusage",
     ],
     static_libs: [

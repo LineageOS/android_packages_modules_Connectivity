@@ -1,1 +1,315 @@
 // Signature format: 2.0
+package android.nearby {
+
+  public class FastPairAccountKeyDeviceMetadata {
+    method @Nullable public byte[] getAccountKey();
+    method @Nullable public android.nearby.FastPairDeviceMetadata getFastPairDeviceMetadata();
+    method @Nullable public android.nearby.FastPairDiscoveryItem getFastPairDiscoveryItem();
+    method @Nullable public byte[] getSha256AccountKeyPublicAddress();
+  }
+
+  public static final class FastPairAccountKeyDeviceMetadata.Builder {
+    ctor public FastPairAccountKeyDeviceMetadata.Builder();
+    method @NonNull public android.nearby.FastPairAccountKeyDeviceMetadata build();
+    method @NonNull public android.nearby.FastPairAccountKeyDeviceMetadata.Builder setAccountKey(@Nullable byte[]);
+    method @NonNull public android.nearby.FastPairAccountKeyDeviceMetadata.Builder setFastPairDeviceMetadata(@Nullable android.nearby.FastPairDeviceMetadata);
+    method @NonNull public android.nearby.FastPairAccountKeyDeviceMetadata.Builder setFastPairDiscoveryItem(@Nullable android.nearby.FastPairDiscoveryItem);
+    method @NonNull public android.nearby.FastPairAccountKeyDeviceMetadata.Builder setSha256AccountKeyPublicAddress(@Nullable byte[]);
+  }
+
+  public class FastPairAntispoofkeyDeviceMetadata {
+  }
+
+  public static final class FastPairAntispoofkeyDeviceMetadata.Builder {
+    ctor public FastPairAntispoofkeyDeviceMetadata.Builder();
+    method @NonNull public android.nearby.FastPairAntispoofkeyDeviceMetadata build();
+    method @NonNull public android.nearby.FastPairAntispoofkeyDeviceMetadata.Builder setAntiSpoofPublicKey(@Nullable byte[]);
+    method @NonNull public android.nearby.FastPairAntispoofkeyDeviceMetadata.Builder setFastPairDeviceMetadata(@Nullable android.nearby.FastPairDeviceMetadata);
+  }
+
+  public abstract class FastPairDataProviderBase {
+    ctor public FastPairDataProviderBase(@NonNull String);
+    method @Nullable public final android.os.IBinder getBinder();
+    method public abstract void onLoadFastPairAccountDevicesMetadata(@NonNull android.nearby.FastPairDataProviderBase.FastPairAccountDevicesMetadataRequest, @NonNull android.nearby.FastPairDataProviderBase.FastPairAccountDevicesMetadataCallback);
+    method public abstract void onLoadFastPairAntispoofkeyDeviceMetadata(@NonNull android.nearby.FastPairDataProviderBase.FastPairAntispoofkeyDeviceMetadataRequest, @NonNull android.nearby.FastPairDataProviderBase.FastPairAntispoofkeyDeviceMetadataCallback);
+    method public abstract void onLoadFastPairEligibleAccounts(@NonNull android.nearby.FastPairDataProviderBase.FastPairEligibleAccountsRequest, @NonNull android.nearby.FastPairDataProviderBase.FastPairEligibleAccountsCallback);
+    method public abstract void onManageFastPairAccount(@NonNull android.nearby.FastPairDataProviderBase.FastPairManageAccountRequest, @NonNull android.nearby.FastPairDataProviderBase.FastPairManageActionCallback);
+    method public abstract void onManageFastPairAccountDevice(@NonNull android.nearby.FastPairDataProviderBase.FastPairManageAccountDeviceRequest, @NonNull android.nearby.FastPairDataProviderBase.FastPairManageActionCallback);
+    field public static final String ACTION_FAST_PAIR_DATA_PROVIDER = "android.nearby.action.FAST_PAIR_DATA_PROVIDER";
+    field public static final int ERROR_CODE_BAD_REQUEST = 0; // 0x0
+    field public static final int ERROR_CODE_INTERNAL_ERROR = 1; // 0x1
+    field public static final int MANAGE_REQUEST_ADD = 0; // 0x0
+    field public static final int MANAGE_REQUEST_REMOVE = 1; // 0x1
+  }
+
+  public static interface FastPairDataProviderBase.FastPairAccountDevicesMetadataCallback {
+    method public void onError(int, @Nullable String);
+    method public void onFastPairAccountDevicesMetadataReceived(@NonNull java.util.Collection<android.nearby.FastPairAccountKeyDeviceMetadata>);
+  }
+
+  public static class FastPairDataProviderBase.FastPairAccountDevicesMetadataRequest {
+    method @NonNull public android.accounts.Account getAccount();
+  }
+
+  public static interface FastPairDataProviderBase.FastPairAntispoofkeyDeviceMetadataCallback {
+    method public void onError(int, @Nullable String);
+    method public void onFastPairAntispoofkeyDeviceMetadataReceived(@NonNull android.nearby.FastPairAntispoofkeyDeviceMetadata);
+  }
+
+  public static class FastPairDataProviderBase.FastPairAntispoofkeyDeviceMetadataRequest {
+    method @NonNull public byte[] getModelId();
+  }
+
+  public static interface FastPairDataProviderBase.FastPairEligibleAccountsCallback {
+    method public void onError(int, @Nullable String);
+    method public void onFastPairEligibleAccountsReceived(@NonNull java.util.Collection<android.nearby.FastPairEligibleAccount>);
+  }
+
+  public static class FastPairDataProviderBase.FastPairEligibleAccountsRequest {
+  }
+
+  public static class FastPairDataProviderBase.FastPairManageAccountDeviceRequest {
+    method @NonNull public android.accounts.Account getAccount();
+    method @NonNull public android.nearby.FastPairAccountKeyDeviceMetadata getAccountKeyDeviceMetadata();
+    method @Nullable public String getBleAddress();
+    method public int getRequestType();
+  }
+
+  public static class FastPairDataProviderBase.FastPairManageAccountRequest {
+    method @NonNull public android.accounts.Account getAccount();
+    method public int getRequestType();
+  }
+
+  public static interface FastPairDataProviderBase.FastPairManageActionCallback {
+    method public void onError(int, @Nullable String);
+    method public void onSuccess();
+  }
+
+  public class FastPairDeviceMetadata {
+    method @Nullable public String getAssistantSetupHalfSheet();
+    method @Nullable public String getAssistantSetupNotification();
+    method public int getBleTxPower();
+    method @Nullable public String getConfirmPinDescription();
+    method @Nullable public String getConfirmPinTitle();
+    method @Nullable public String getConnectSuccessCompanionAppInstalled();
+    method @Nullable public String getConnectSuccessCompanionAppNotInstalled();
+    method public int getDeviceType();
+    method @Nullable public String getDownloadCompanionAppDescription();
+    method @Nullable public String getFailConnectGoToSettingsDescription();
+    method @Nullable public String getFastPairTvConnectDeviceNoAccountDescription();
+    method @Nullable public byte[] getImage();
+    method @Nullable public String getImageUrl();
+    method @Nullable public String getInitialNotificationDescription();
+    method @Nullable public String getInitialNotificationDescriptionNoAccount();
+    method @Nullable public String getInitialPairingDescription();
+    method @Nullable public String getIntentUri();
+    method @Nullable public String getLocale();
+    method @Nullable public String getOpenCompanionAppDescription();
+    method @Nullable public String getRetroactivePairingDescription();
+    method @Nullable public String getSubsequentPairingDescription();
+    method @Nullable public String getSyncContactsDescription();
+    method @Nullable public String getSyncContactsTitle();
+    method @Nullable public String getSyncSmsDescription();
+    method @Nullable public String getSyncSmsTitle();
+    method public float getTriggerDistance();
+    method @Nullable public String getTrueWirelessImageUrlCase();
+    method @Nullable public String getTrueWirelessImageUrlLeftBud();
+    method @Nullable public String getTrueWirelessImageUrlRightBud();
+    method @Nullable public String getUnableToConnectDescription();
+    method @Nullable public String getUnableToConnectTitle();
+    method @Nullable public String getUpdateCompanionAppDescription();
+    method @Nullable public String getWaitLaunchCompanionAppDescription();
+  }
+
+  public static final class FastPairDeviceMetadata.Builder {
+    ctor public FastPairDeviceMetadata.Builder();
+    method @NonNull public android.nearby.FastPairDeviceMetadata build();
+    method @NonNull public android.nearby.FastPairDeviceMetadata.Builder setAssistantSetupHalfSheet(@Nullable String);
+    method @NonNull public android.nearby.FastPairDeviceMetadata.Builder setAssistantSetupNotification(@Nullable String);
+    method @NonNull public android.nearby.FastPairDeviceMetadata.Builder setBleTxPower(int);
+    method @NonNull public android.nearby.FastPairDeviceMetadata.Builder setConfirmPinDescription(@Nullable String);
+    method @NonNull public android.nearby.FastPairDeviceMetadata.Builder setConfirmPinTitle(@Nullable String);
+    method @NonNull public android.nearby.FastPairDeviceMetadata.Builder setConnectSuccessCompanionAppInstalled(@Nullable String);
+    method @NonNull public android.nearby.FastPairDeviceMetadata.Builder setConnectSuccessCompanionAppNotInstalled(@Nullable String);
+    method @NonNull public android.nearby.FastPairDeviceMetadata.Builder setDeviceType(int);
+    method @NonNull public android.nearby.FastPairDeviceMetadata.Builder setDownloadCompanionAppDescription(@Nullable String);
+    method @NonNull public android.nearby.FastPairDeviceMetadata.Builder setFailConnectGoToSettingsDescription(@Nullable String);
+    method @NonNull public android.nearby.FastPairDeviceMetadata.Builder setFastPairTvConnectDeviceNoAccountDescription(@Nullable String);
+    method @NonNull public android.nearby.FastPairDeviceMetadata.Builder setImage(@Nullable byte[]);
+    method @NonNull public android.nearby.FastPairDeviceMetadata.Builder setImageUrl(@Nullable String);
+    method @NonNull public android.nearby.FastPairDeviceMetadata.Builder setInitialNotificationDescription(@Nullable String);
+    method @NonNull public android.nearby.FastPairDeviceMetadata.Builder setInitialNotificationDescriptionNoAccount(@Nullable String);
+    method @NonNull public android.nearby.FastPairDeviceMetadata.Builder setInitialPairingDescription(@Nullable String);
+    method @NonNull public android.nearby.FastPairDeviceMetadata.Builder setIntentUri(@Nullable String);
+    method @NonNull public android.nearby.FastPairDeviceMetadata.Builder setLocale(@Nullable String);
+    method @NonNull public android.nearby.FastPairDeviceMetadata.Builder setOpenCompanionAppDescription(@Nullable String);
+    method @NonNull public android.nearby.FastPairDeviceMetadata.Builder setRetroactivePairingDescription(@Nullable String);
+    method @NonNull public android.nearby.FastPairDeviceMetadata.Builder setSubsequentPairingDescription(@Nullable String);
+    method @NonNull public android.nearby.FastPairDeviceMetadata.Builder setSyncContactsDescription(@Nullable String);
+    method @NonNull public android.nearby.FastPairDeviceMetadata.Builder setSyncContactsTitle(@Nullable String);
+    method @NonNull public android.nearby.FastPairDeviceMetadata.Builder setSyncSmsDescription(@Nullable String);
+    method @NonNull public android.nearby.FastPairDeviceMetadata.Builder setSyncSmsTitle(@Nullable String);
+    method @NonNull public android.nearby.FastPairDeviceMetadata.Builder setTriggerDistance(float);
+    method @NonNull public android.nearby.FastPairDeviceMetadata.Builder setTrueWirelessImageUrlCase(@Nullable String);
+    method @NonNull public android.nearby.FastPairDeviceMetadata.Builder setTrueWirelessImageUrlLeftBud(@Nullable String);
+    method @NonNull public android.nearby.FastPairDeviceMetadata.Builder setTrueWirelessImageUrlRightBud(@Nullable String);
+    method @NonNull public android.nearby.FastPairDeviceMetadata.Builder setUnableToConnectDescription(@Nullable String);
+    method @NonNull public android.nearby.FastPairDeviceMetadata.Builder setUnableToConnectTitle(@Nullable String);
+    method @NonNull public android.nearby.FastPairDeviceMetadata.Builder setUpdateCompanionAppDescription(@Nullable String);
+    method @NonNull public android.nearby.FastPairDeviceMetadata.Builder setWaitLaunchCompanionAppDescription(@Nullable String);
+  }
+
+  public class FastPairDiscoveryItem {
+    method @Nullable public String getActionUrl();
+    method public int getActionUrlType();
+    method @Nullable public String getAppName();
+    method public int getAttachmentType();
+    method @Nullable public byte[] getAuthenticationPublicKeySecp256r1();
+    method @Nullable public byte[] getBleRecordBytes();
+    method public int getDebugCategory();
+    method @Nullable public String getDebugMessage();
+    method @Nullable public String getDescription();
+    method @Nullable public String getDeviceName();
+    method @Nullable public String getDisplayUrl();
+    method @Nullable public String getEntityId();
+    method @Nullable public String getFeatureGraphicUrl();
+    method public long getFirstObservationTimestampMillis();
+    method @Nullable public String getGroupId();
+    method @Nullable public String getIconFfeUrl();
+    method @Nullable public byte[] getIconPng();
+    method @Nullable public String getId();
+    method public long getLastObservationTimestampMillis();
+    method public int getLastUserExperience();
+    method public long getLostMillis();
+    method @Nullable public String getMacAddress();
+    method @Nullable public String getPackageName();
+    method public long getPendingAppInstallTimestampMillis();
+    method public int getRssi();
+    method public int getState();
+    method @Nullable public String getTitle();
+    method @Nullable public String getTriggerId();
+    method public int getTxPower();
+    method public int getType();
+  }
+
+  public static final class FastPairDiscoveryItem.Builder {
+    ctor public FastPairDiscoveryItem.Builder();
+    method @NonNull public android.nearby.FastPairDiscoveryItem build();
+    method @NonNull public android.nearby.FastPairDiscoveryItem.Builder setActionUrl(@Nullable String);
+    method @NonNull public android.nearby.FastPairDiscoveryItem.Builder setActionUrlType(int);
+    method @NonNull public android.nearby.FastPairDiscoveryItem.Builder setAppName(@Nullable String);
+    method @NonNull public android.nearby.FastPairDiscoveryItem.Builder setAttachmentType(int);
+    method @NonNull public android.nearby.FastPairDiscoveryItem.Builder setAuthenticationPublicKeySecp256r1(@Nullable byte[]);
+    method @NonNull public android.nearby.FastPairDiscoveryItem.Builder setBleRecordBytes(@Nullable byte[]);
+    method @NonNull public android.nearby.FastPairDiscoveryItem.Builder setDebugCategory(int);
+    method @NonNull public android.nearby.FastPairDiscoveryItem.Builder setDebugMessage(@Nullable String);
+    method @NonNull public android.nearby.FastPairDiscoveryItem.Builder setDescription(@Nullable String);
+    method @NonNull public android.nearby.FastPairDiscoveryItem.Builder setDeviceName(@Nullable String);
+    method @NonNull public android.nearby.FastPairDiscoveryItem.Builder setDisplayUrl(@Nullable String);
+    method @NonNull public android.nearby.FastPairDiscoveryItem.Builder setEntityId(@Nullable String);
+    method @NonNull public android.nearby.FastPairDiscoveryItem.Builder setFeatureGraphicUrl(@Nullable String);
+    method @NonNull public android.nearby.FastPairDiscoveryItem.Builder setFirstObservationTimestampMillis(long);
+    method @NonNull public android.nearby.FastPairDiscoveryItem.Builder setGroupId(@Nullable String);
+    method @NonNull public android.nearby.FastPairDiscoveryItem.Builder setIconFfeUrl(@Nullable String);
+    method @NonNull public android.nearby.FastPairDiscoveryItem.Builder setIconPng(@Nullable byte[]);
+    method @NonNull public android.nearby.FastPairDiscoveryItem.Builder setId(@Nullable String);
+    method @NonNull public android.nearby.FastPairDiscoveryItem.Builder setLastObservationTimestampMillis(long);
+    method @NonNull public android.nearby.FastPairDiscoveryItem.Builder setLastUserExperience(int);
+    method @NonNull public android.nearby.FastPairDiscoveryItem.Builder setLostMillis(long);
+    method @NonNull public android.nearby.FastPairDiscoveryItem.Builder setMacAddress(@Nullable String);
+    method @NonNull public android.nearby.FastPairDiscoveryItem.Builder setPackageName(@Nullable String);
+    method @NonNull public android.nearby.FastPairDiscoveryItem.Builder setPendingAppInstallTimestampMillis(long);
+    method @NonNull public android.nearby.FastPairDiscoveryItem.Builder setRssi(int);
+    method @NonNull public android.nearby.FastPairDiscoveryItem.Builder setState(int);
+    method @NonNull public android.nearby.FastPairDiscoveryItem.Builder setTitle(@Nullable String);
+    method @NonNull public android.nearby.FastPairDiscoveryItem.Builder setTriggerId(@Nullable String);
+    method @NonNull public android.nearby.FastPairDiscoveryItem.Builder setTxPower(int);
+    method @NonNull public android.nearby.FastPairDiscoveryItem.Builder setType(int);
+  }
+
+  public class FastPairEligibleAccount {
+  }
+
+  public static final class FastPairEligibleAccount.Builder {
+    ctor public FastPairEligibleAccount.Builder();
+    method @NonNull public android.nearby.FastPairEligibleAccount build();
+    method @NonNull public android.nearby.FastPairEligibleAccount.Builder setAccount(@Nullable android.accounts.Account);
+    method @NonNull public android.nearby.FastPairEligibleAccount.Builder setOptIn(boolean);
+  }
+
+  public abstract class NearbyDevice {
+    method public int getMedium();
+    method @IntRange(from=0xffffff81, to=126) public int getRssi();
+    method public static boolean isValidMedium(int);
+  }
+
+  public final class NearbyDeviceParcelable implements android.os.Parcelable {
+    method public int describeContents();
+    method @Nullable public String getBluetoothAddress();
+    method @Nullable public byte[] getData();
+    method @Nullable public String getFastPairModelId();
+    method public int getMedium();
+    method @Nullable public String getName();
+    method @IntRange(from=0xffffff81, to=126) public int getRssi();
+    method public void writeToParcel(@NonNull android.os.Parcel, int);
+    field @NonNull public static final android.os.Parcelable.Creator<android.nearby.NearbyDeviceParcelable> CREATOR;
+  }
+
+  public static final class NearbyDeviceParcelable.Builder {
+    ctor public NearbyDeviceParcelable.Builder();
+    method @NonNull public android.nearby.NearbyDeviceParcelable build();
+    method @NonNull public android.nearby.NearbyDeviceParcelable.Builder setBluetoothAddress(@Nullable String);
+    method @NonNull public android.nearby.NearbyDeviceParcelable.Builder setData(@Nullable byte[]);
+    method @NonNull public android.nearby.NearbyDeviceParcelable.Builder setFastPairModelId(@Nullable String);
+    method @NonNull public android.nearby.NearbyDeviceParcelable.Builder setMedium(int);
+    method @NonNull public android.nearby.NearbyDeviceParcelable.Builder setName(@Nullable String);
+    method @NonNull public android.nearby.NearbyDeviceParcelable.Builder setRssi(int);
+  }
+
+  public final class NearbyFrameworkInitializer {
+    method public static void registerServiceWrappers();
+  }
+
+  public class NearbyManager {
+    method public void startScan(@NonNull android.nearby.ScanRequest, @NonNull java.util.concurrent.Executor, @NonNull android.nearby.ScanCallback);
+    method public void stopScan(@NonNull android.nearby.ScanCallback);
+  }
+
+  public interface ScanCallback {
+    method public void onDiscovered(@NonNull android.nearby.NearbyDevice);
+    method public void onLost(@NonNull android.nearby.NearbyDevice);
+    method public void onUpdated(@NonNull android.nearby.NearbyDevice);
+  }
+
+  public final class ScanRequest implements android.os.Parcelable {
+    method public int describeContents();
+    method public int getScanMode();
+    method public int getScanType();
+    method @NonNull public android.os.WorkSource getWorkSource();
+    method public boolean isEnableBle();
+    method public static boolean isValidScanMode(int);
+    method public static boolean isValidScanType(int);
+    method @NonNull public static String scanModeToString(int);
+    method public void writeToParcel(@NonNull android.os.Parcel, int);
+    field @NonNull public static final android.os.Parcelable.Creator<android.nearby.ScanRequest> CREATOR;
+    field public static final int SCAN_MODE_BALANCED = 1; // 0x1
+    field public static final int SCAN_MODE_LOW_LATENCY = 2; // 0x2
+    field public static final int SCAN_MODE_LOW_POWER = 0; // 0x0
+    field public static final int SCAN_MODE_NO_POWER = -1; // 0xffffffff
+    field public static final int SCAN_TYPE_EXPOSURE_NOTIFICATION = 4; // 0x4
+    field public static final int SCAN_TYPE_FAST_PAIR = 1; // 0x1
+    field public static final int SCAN_TYPE_NEARBY_PRESENCE = 3; // 0x3
+    field public static final int SCAN_TYPE_NEARBY_SHARE = 2; // 0x2
+  }
+
+  public static final class ScanRequest.Builder {
+    ctor public ScanRequest.Builder();
+    method @NonNull public android.nearby.ScanRequest build();
+    method @NonNull public android.nearby.ScanRequest.Builder setEnableBle(boolean);
+    method @NonNull public android.nearby.ScanRequest.Builder setScanMode(int);
+    method @NonNull public android.nearby.ScanRequest.Builder setScanType(int);
+    method @NonNull @RequiresPermission(android.Manifest.permission.UPDATE_DEVICE_STATS) public android.nearby.ScanRequest.Builder setWorkSource(@Nullable android.os.WorkSource);
+  }
+
+}
+
