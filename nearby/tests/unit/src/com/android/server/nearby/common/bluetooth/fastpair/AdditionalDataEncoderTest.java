@@ -29,6 +29,7 @@ import static org.junit.Assert.assertThrows;
 import android.platform.test.annotations.Presubmit;
 
 import androidx.test.ext.junit.runners.AndroidJUnit4;
+import androidx.test.filters.SdkSuppress;
 import androidx.test.filters.SmallTest;
 
 import org.junit.Test;
@@ -45,6 +46,7 @@ import java.security.GeneralSecurityException;
 public class AdditionalDataEncoderTest {
 
     @Test
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void decodeEncodedAdditionalDataPacket_mustGetSameRawData()
             throws GeneralSecurityException {
         byte[] secret = AesCtrMultipleBlockEncryption.generateKey();
@@ -60,6 +62,7 @@ public class AdditionalDataEncoderTest {
     }
 
     @Test
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void inputIncorrectKeySizeToEncode_mustThrowException() {
         byte[] secret = new byte[KEY_LENGTH - 1];
         byte[] rawData = base16().decode("00112233445566778899AABBCCDDEEFF");
@@ -75,6 +78,7 @@ public class AdditionalDataEncoderTest {
     }
 
     @Test
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void inputIncorrectKeySizeToDecode_mustThrowException() {
         byte[] secret = new byte[KEY_LENGTH - 1];
         byte[] packet = base16().decode("01234567890123456789");
@@ -90,6 +94,7 @@ public class AdditionalDataEncoderTest {
     }
 
     @Test
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void inputTooSmallPacketSize_mustThrowException() {
         byte[] secret = new byte[KEY_LENGTH];
         byte[] packet = new byte[EXTRACT_HMAC_SIZE - 1];
@@ -103,6 +108,7 @@ public class AdditionalDataEncoderTest {
     }
 
     @Test
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void inputTooLargePacketSize_mustThrowException() throws GeneralSecurityException {
         byte[] secret = AesCtrMultipleBlockEncryption.generateKey();
         byte[] packet = new byte[MAX_LENGTH_OF_DATA + EXTRACT_HMAC_SIZE + NONCE_SIZE + 1];
@@ -116,6 +122,7 @@ public class AdditionalDataEncoderTest {
     }
 
     @Test
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void inputIncorrectHmacToDecode_mustThrowException() throws GeneralSecurityException {
         byte[] secret = AesCtrMultipleBlockEncryption.generateKey();
         byte[] rawData = base16().decode("00112233445566778899AABBCCDDEEFF");

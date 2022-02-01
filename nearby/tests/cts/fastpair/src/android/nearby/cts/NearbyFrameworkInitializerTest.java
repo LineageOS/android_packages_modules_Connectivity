@@ -21,6 +21,7 @@ import android.os.Build;
 
 import androidx.annotation.RequiresApi;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
+import androidx.test.filters.SdkSuppress;
 
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -42,6 +43,7 @@ public class NearbyFrameworkInitializerTest {
 
     // registerServiceWrappers can only be called during initialization and should throw otherwise
     @Test(expected = IllegalStateException.class)
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void testThrowsException() {
         NearbyFrameworkInitializer.registerServiceWrappers();
     }

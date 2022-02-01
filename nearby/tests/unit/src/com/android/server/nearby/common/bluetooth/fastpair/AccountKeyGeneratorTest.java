@@ -23,6 +23,7 @@ import static com.google.common.truth.Truth.assertThat;
 import android.platform.test.annotations.Presubmit;
 
 import androidx.test.ext.junit.runners.AndroidJUnit4;
+import androidx.test.filters.SdkSuppress;
 import androidx.test.filters.SmallTest;
 
 import org.junit.Test;
@@ -38,6 +39,7 @@ import java.security.NoSuchAlgorithmException;
 @RunWith(AndroidJUnit4.class)
 public class AccountKeyGeneratorTest {
     @Test
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void createAccountKey() throws NoSuchAlgorithmException {
         byte[] accountKey = AccountKeyGenerator.createAccountKey();
 

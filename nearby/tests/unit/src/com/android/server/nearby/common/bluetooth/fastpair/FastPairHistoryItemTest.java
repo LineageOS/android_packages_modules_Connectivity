@@ -23,6 +23,7 @@ import static com.google.common.truth.Truth.assertThat;
 import android.platform.test.annotations.Presubmit;
 
 import androidx.test.ext.junit.runners.AndroidJUnit4;
+import androidx.test.filters.SdkSuppress;
 import androidx.test.filters.SmallTest;
 
 import com.google.common.hash.Hashing;
@@ -40,6 +41,7 @@ import org.junit.runner.RunWith;
 public class FastPairHistoryItemTest {
 
     @Test
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void inputMatchedPublicAddress_isMatchedReturnTrue() {
         final byte[] accountKey = base16().decode("0123456789ABCDEF");
         final byte[] publicAddress = BluetoothAddress.decode("11:22:33:44:55:66");
@@ -54,6 +56,7 @@ public class FastPairHistoryItemTest {
     }
 
     @Test
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void inputNotMatchedPublicAddress_isMatchedReturnFalse() {
         final byte[] accountKey = base16().decode("0123456789ABCDEF");
         final byte[] publicAddress1 = BluetoothAddress.decode("11:22:33:44:55:66");

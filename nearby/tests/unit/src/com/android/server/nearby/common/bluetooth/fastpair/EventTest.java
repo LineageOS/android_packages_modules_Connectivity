@@ -24,6 +24,7 @@ import android.os.Parcel;
 import android.platform.test.annotations.Presubmit;
 
 import androidx.test.ext.junit.runners.AndroidJUnit4;
+import androidx.test.filters.SdkSuppress;
 import androidx.test.filters.SmallTest;
 
 import com.android.server.nearby.intdefs.NearbyEventIntDefs.EventCode;
@@ -47,6 +48,7 @@ public class EventTest {
     private static final Short PROFILE = (short) 1;
 
     @Test
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void createAndReadFromParcel() {
         Event event =
                 Event.builder()

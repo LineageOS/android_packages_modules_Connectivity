@@ -18,6 +18,8 @@ package com.android.server.nearby.common.eventloop;
 
 import static com.google.common.truth.Truth.assertThat;
 
+import androidx.test.filters.SdkSuppress;
+
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
@@ -48,6 +50,7 @@ public class EventLoopTest {
     */
 
     @Test
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void isPosted() {
         NumberedRunnable runnable = new NumberedRunnable(0);
         mEventLoop.postRunnableDelayed(runnable, 10 * 1000L);
@@ -61,6 +64,7 @@ public class EventLoopTest {
     }
 
     @Test
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void postAndWaitAfterDestroy() throws InterruptedException {
         mEventLoop.destroy();
         mEventLoop.postAndWait(new NumberedRunnable(0));

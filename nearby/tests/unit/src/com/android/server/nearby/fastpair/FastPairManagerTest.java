@@ -22,6 +22,8 @@ import static org.mockito.Mockito.verify;
 
 import android.content.Context;
 
+import androidx.test.filters.SdkSuppress;
+
 import com.android.server.nearby.common.locator.LocatorContextWrapper;
 
 import org.junit.Before;
@@ -43,6 +45,7 @@ public class FastPairManagerTest {
     }
 
     @Test
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void testFastPairInit() {
         mFastPairManager.initiate();
 
@@ -50,6 +53,7 @@ public class FastPairManagerTest {
     }
 
     @Test
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void testFastPairCleanUp() {
         mFastPairManager.cleanUp();
 

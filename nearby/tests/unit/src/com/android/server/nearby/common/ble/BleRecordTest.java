@@ -18,6 +18,8 @@ package com.android.server.nearby.common.ble;
 
 import static com.google.common.truth.Truth.assertThat;
 
+import androidx.test.filters.SdkSuppress;
+
 import org.junit.Test;
 
 /** Test for Bluetooth LE {@link BleRecord}. */
@@ -215,6 +217,7 @@ public class BleRecordTest {
     };
 
     @Test
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void testEquals() {
         BleRecord record = BleRecord.parseFromBytes(BEACON);
         BleRecord record2 = BleRecord.parseFromBytes(SAME_BEACON);

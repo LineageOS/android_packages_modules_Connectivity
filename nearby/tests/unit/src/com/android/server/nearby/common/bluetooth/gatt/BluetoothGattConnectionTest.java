@@ -39,6 +39,8 @@ import android.bluetooth.BluetoothStatusCodes;
 import android.os.Build.VERSION;
 import android.os.Build.VERSION_CODES;
 
+import androidx.test.filters.SdkSuppress;
+
 import com.android.server.nearby.common.bluetooth.BluetoothConsts;
 import com.android.server.nearby.common.bluetooth.BluetoothException;
 import com.android.server.nearby.common.bluetooth.BluetoothGattException;
@@ -164,12 +166,14 @@ public class BluetoothGattConnectionTest extends TestCase {
         when(mMockBluetoothDevice.getBondState()).thenReturn(BluetoothDevice.BOND_BONDED);
     }
 
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void test_getDevice() {
         BluetoothDevice result = mBluetoothGattConnection.getDevice();
 
         assertThat(result).isEqualTo(mMockBluetoothDevice);
     }
 
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void test_getConnectionOptions() {
         BluetoothGattHelper.ConnectionOptions result = mBluetoothGattConnection
                 .getConnectionOptions();
@@ -177,6 +181,7 @@ public class BluetoothGattConnectionTest extends TestCase {
         assertThat(result).isSameInstanceAs(CONNECTION_OPTIONS);
     }
 
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void test_isConnected_false_beforeConnection() {
         mBluetoothGattConnection = new BluetoothGattConnection(
                 mMockBluetoothGattWrapper,
@@ -188,12 +193,14 @@ public class BluetoothGattConnectionTest extends TestCase {
         assertThat(result).isFalse();
     }
 
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void test_isConnected_true_afterConnection() {
         boolean result = mBluetoothGattConnection.isConnected();
 
         assertThat(result).isTrue();
     }
 
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void test_isConnected_false_afterDisconnection() {
         mBluetoothGattConnection.onClosed();
 
@@ -202,6 +209,7 @@ public class BluetoothGattConnectionTest extends TestCase {
         assertThat(result).isFalse();
     }
 
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void test_getService_notDiscovered() throws Exception {
         BluetoothGattService result = mBluetoothGattConnection.getService(SERVICE_UUID);
         verify(mMockBluetoothOperationExecutor).execute(mSynchronousOperationCaptor.capture());
@@ -216,6 +224,7 @@ public class BluetoothGattConnectionTest extends TestCase {
         verify(mMockBluetoothGattWrapper).discoverServices();
     }
 
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void test_getService_alreadyDiscovered() throws Exception {
         mBluetoothGattConnection.getService(SERVICE_UUID);
         verify(mMockBluetoothOperationExecutor).execute(mSynchronousOperationCaptor.capture());
@@ -229,6 +238,7 @@ public class BluetoothGattConnectionTest extends TestCase {
         verifyNoMoreInteractions(mMockBluetoothOperationExecutor);
     }
 
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void test_getService_notFound() throws Exception {
         when(mMockBluetoothGattWrapper.getServices()).thenReturn(
                 Arrays.<BluetoothGattService>asList());
@@ -240,6 +250,7 @@ public class BluetoothGattConnectionTest extends TestCase {
         }
     }
 
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void test_getService_moreThanOne() throws Exception {
         when(mMockBluetoothGattWrapper.getServices())
                 .thenReturn(Arrays.asList(mMockBluetoothGattService, mMockBluetoothGattService));
@@ -251,6 +262,7 @@ public class BluetoothGattConnectionTest extends TestCase {
         }
     }
 
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void test_getCharacteristic() throws Exception {
         BluetoothGattCharacteristic result =
                 mBluetoothGattConnection.getCharacteristic(SERVICE_UUID, CHARACTERISTIC_UUID);
@@ -258,6 +270,7 @@ public class BluetoothGattConnectionTest extends TestCase {
         assertThat(result).isEqualTo(mMockBluetoothGattCharacteristic);
     }
 
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void test_getCharacteristic_notFound() throws Exception {
         when(mMockBluetoothGattService.getCharacteristics())
                 .thenReturn(Arrays.<BluetoothGattCharacteristic>asList());
@@ -269,6 +282,7 @@ public class BluetoothGattConnectionTest extends TestCase {
         }
     }
 
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void test_getCharacteristic_moreThanOne() throws Exception {
         when(mMockBluetoothGattService.getCharacteristics())
                 .thenReturn(
@@ -282,6 +296,7 @@ public class BluetoothGattConnectionTest extends TestCase {
         }
     }
 
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void test_getCharacteristic_moreThanOneService() throws Exception {
         // Add a new service with the same service UUID as our existing one, but add a different
         // characteristic inside of it.
@@ -303,6 +318,7 @@ public class BluetoothGattConnectionTest extends TestCase {
         mBluetoothGattConnection.getCharacteristic(SERVICE_UUID, CHARACTERISTIC_UUID);
     }
 
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void test_getDescriptor() throws Exception {
         when(mMockBluetoothGattCharacteristic.getDescriptors())
                 .thenReturn(Arrays.asList(mMockBluetoothGattDescriptor));
@@ -314,6 +330,7 @@ public class BluetoothGattConnectionTest extends TestCase {
         assertThat(result).isEqualTo(mMockBluetoothGattDescriptor);
     }
 
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void test_getDescriptor_notFound() throws Exception {
         when(mMockBluetoothGattCharacteristic.getDescriptors())
                 .thenReturn(Arrays.<BluetoothGattDescriptor>asList());
@@ -326,6 +343,7 @@ public class BluetoothGattConnectionTest extends TestCase {
         }
     }
 
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void test_getDescriptor_moreThanOne() throws Exception {
         when(mMockBluetoothGattCharacteristic.getDescriptors())
                 .thenReturn(
@@ -339,6 +357,7 @@ public class BluetoothGattConnectionTest extends TestCase {
         }
     }
 
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void test_discoverServices() throws Exception {
         when(mMockBluetoothOperationExecutor.executeNonnull(
                 new SynchronousOperation<>(
@@ -358,6 +377,7 @@ public class BluetoothGattConnectionTest extends TestCase {
         verify(mMockBluetoothGattWrapper, never()).refresh();
     }
 
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void test_discoverServices_serviceChange() throws Exception {
         when(mMockBluetoothGattWrapper.getService(ReservedUuids.Services.GENERIC_ATTRIBUTE))
                 .thenReturn(mMockBluetoothGattService);
@@ -376,6 +396,7 @@ public class BluetoothGattConnectionTest extends TestCase {
         verify(mMockBluetoothGattWrapper).refresh();
     }
 
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void test_discoverServices_SelfDefinedServiceDynamic() throws Exception {
         when(mMockBluetoothGattWrapper.getService(BluetoothConsts.SERVICE_DYNAMIC_SERVICE))
                 .thenReturn(mMockBluetoothGattService);
@@ -394,6 +415,7 @@ public class BluetoothGattConnectionTest extends TestCase {
         verify(mMockBluetoothGattWrapper).refresh();
     }
 
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void test_discoverServices_refreshWithGattErrorOnMncAbove() throws Exception {
         if (VERSION.SDK_INT <= VERSION_CODES.LOLLIPOP_MR1) {
             return;
@@ -414,6 +436,7 @@ public class BluetoothGattConnectionTest extends TestCase {
         verify(mMockBluetoothGattWrapper).refresh();
     }
 
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void test_discoverServices_refreshWithGattInternalErrorOnMncAbove() throws Exception {
         if (VERSION.SDK_INT <= VERSION_CODES.LOLLIPOP_MR1) {
             return;
@@ -434,6 +457,7 @@ public class BluetoothGattConnectionTest extends TestCase {
         verify(mMockBluetoothGattWrapper).refresh();
     }
 
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void test_discoverServices_dynamicServices_notBonded() throws Exception {
         when(mMockBluetoothGattWrapper.getService(ReservedUuids.Services.GENERIC_ATTRIBUTE))
                 .thenReturn(mMockBluetoothGattService);
@@ -447,6 +471,7 @@ public class BluetoothGattConnectionTest extends TestCase {
         verify(mMockBluetoothGattWrapper, never()).refresh();
     }
 
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void test_readCharacteristic() throws Exception {
         when(mMockBluetoothOperationExecutor.executeNonnull(
                 new Operation<byte[]>(
@@ -466,6 +491,7 @@ public class BluetoothGattConnectionTest extends TestCase {
         verify(mMockBluetoothGattWrapper).readCharacteristic(mMockBluetoothGattCharacteristic);
     }
 
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void test_readCharacteristic_by_uuid() throws Exception {
         when(mMockBluetoothOperationExecutor.executeNonnull(
                 new Operation<byte[]>(
@@ -485,6 +511,7 @@ public class BluetoothGattConnectionTest extends TestCase {
         verify(mMockBluetoothGattWrapper).readCharacteristic(mMockBluetoothGattCharacteristic);
     }
 
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void test_writeCharacteristic() throws Exception {
         BluetoothGattCharacteristic characteristic =
                 new BluetoothGattCharacteristic(
@@ -502,6 +529,7 @@ public class BluetoothGattConnectionTest extends TestCase {
         assertThat(writtenCharacteristic).isEqualTo(characteristic);
     }
 
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void test_writeCharacteristic_by_uuid() throws Exception {
         mBluetoothGattConnection.writeCharacteristic(SERVICE_UUID, CHARACTERISTIC_UUID, DATA);
 
@@ -515,6 +543,7 @@ public class BluetoothGattConnectionTest extends TestCase {
         assertThat(writtenCharacteristic.getUuid()).isEqualTo(CHARACTERISTIC_UUID);
     }
 
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void test_readDescriptor() throws Exception {
         when(mMockBluetoothOperationExecutor.executeNonnull(
                 new Operation<byte[]>(
@@ -532,6 +561,7 @@ public class BluetoothGattConnectionTest extends TestCase {
         verify(mMockBluetoothGattWrapper).readDescriptor(mMockBluetoothGattDescriptor);
     }
 
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void test_readDescriptor_by_uuid() throws Exception {
         when(mMockBluetoothOperationExecutor.executeNonnull(
                 new Operation<byte[]>(
@@ -551,6 +581,7 @@ public class BluetoothGattConnectionTest extends TestCase {
         verify(mMockBluetoothGattWrapper).readDescriptor(mMockBluetoothGattDescriptor);
     }
 
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void test_writeDescriptor() throws Exception {
         BluetoothGattDescriptor descriptor = new BluetoothGattDescriptor(DESCRIPTOR_UUID, 0);
         mBluetoothGattConnection.writeDescriptor(descriptor, DATA);
@@ -565,6 +596,7 @@ public class BluetoothGattConnectionTest extends TestCase {
         assertThat(writtenDescriptor).isEqualTo(descriptor);
     }
 
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void test_writeDescriptor_by_uuid() throws Exception {
         mBluetoothGattConnection.writeDescriptor(
                 SERVICE_UUID, CHARACTERISTIC_UUID, DESCRIPTOR_UUID, DATA);
@@ -578,6 +610,7 @@ public class BluetoothGattConnectionTest extends TestCase {
         assertThat(writtenDescriptor.getUuid()).isEqualTo(DESCRIPTOR_UUID);
     }
 
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void test_readRemoteRssi() throws Exception {
         when(mMockBluetoothOperationExecutor.executeNonnull(
                 new Operation<Integer>(OperationType.READ_RSSI, mMockBluetoothGattWrapper),
@@ -595,12 +628,14 @@ public class BluetoothGattConnectionTest extends TestCase {
         verify(mMockBluetoothGattWrapper).readRemoteRssi();
     }
 
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void test_getMaxDataPacketSize() throws Exception {
         int result = mBluetoothGattConnection.getMaxDataPacketSize();
 
         assertThat(result).isEqualTo(mBluetoothGattConnection.getMtu() - 3);
     }
 
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void testSetNotificationEnabled_indication_enable() throws Exception {
         when(mMockBluetoothGattCharacteristic.getProperties())
                 .thenReturn(BluetoothGattCharacteristic.PROPERTY_INDICATE);
@@ -618,6 +653,7 @@ public class BluetoothGattConnectionTest extends TestCase {
                 .isEqualTo(ReservedUuids.Descriptors.CLIENT_CHARACTERISTIC_CONFIGURATION);
     }
 
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void test_getNotificationEnabled_notification_enable() throws Exception {
         mBluetoothGattConnection.setNotificationEnabled(mMockBluetoothGattCharacteristic, true);
 
@@ -632,6 +668,7 @@ public class BluetoothGattConnectionTest extends TestCase {
                 .isEqualTo(ReservedUuids.Descriptors.CLIENT_CHARACTERISTIC_CONFIGURATION);
     }
 
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void test_setNotificationEnabled_indication_disable() throws Exception {
         when(mMockBluetoothGattCharacteristic.getProperties())
                 .thenReturn(BluetoothGattCharacteristic.PROPERTY_INDICATE);
@@ -649,6 +686,7 @@ public class BluetoothGattConnectionTest extends TestCase {
                 .isEqualTo(ReservedUuids.Descriptors.CLIENT_CHARACTERISTIC_CONFIGURATION);
     }
 
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void test_setNotificationEnabled_notification_disable() throws Exception {
         mBluetoothGattConnection.setNotificationEnabled(mMockBluetoothGattCharacteristic, false);
 
@@ -663,6 +701,7 @@ public class BluetoothGattConnectionTest extends TestCase {
                 .isEqualTo(ReservedUuids.Descriptors.CLIENT_CHARACTERISTIC_CONFIGURATION);
     }
 
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void test_setNotificationEnabled_failure() throws Exception {
         when(mMockBluetoothGattCharacteristic.getProperties())
                 .thenReturn(BluetoothGattCharacteristic.PROPERTY_READ);
@@ -675,6 +714,7 @@ public class BluetoothGattConnectionTest extends TestCase {
         }
     }
 
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void test_enableNotification_Uuid() throws Exception {
         when(mMockBluetoothOperationExecutor.executeNonnull(
                 new SynchronousOperation<>(
@@ -692,6 +732,7 @@ public class BluetoothGattConnectionTest extends TestCase {
         verify(mMockCharChangeListener).onValueChange(DATA);
     }
 
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void test_enableNotification() throws Exception {
         when(mMockBluetoothOperationExecutor.executeNonnull(
                 new SynchronousOperation<>(
@@ -711,6 +752,7 @@ public class BluetoothGattConnectionTest extends TestCase {
         verify(mMockCharChangeListener).onValueChange(DATA);
     }
 
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void test_enableNotification_observe() throws Exception {
         when(mMockBluetoothOperationExecutor.executeNonnull(
                 new SynchronousOperation<>(
@@ -728,6 +770,7 @@ public class BluetoothGattConnectionTest extends TestCase {
         assertThat(changeObserver.waitForUpdate(TimeUnit.SECONDS.toMillis(1))).isEqualTo(DATA);
     }
 
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void test_disableNotification_Uuid() throws Exception {
         when(mMockBluetoothOperationExecutor.executeNonnull(
                 new SynchronousOperation<>(
@@ -743,6 +786,7 @@ public class BluetoothGattConnectionTest extends TestCase {
         verify(mMockCharChangeListener, never()).onValueChange(DATA);
     }
 
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void test_disableNotification() throws Exception {
         when(mMockBluetoothOperationExecutor.executeNonnull(
                 new SynchronousOperation<ChangeObserver>(
@@ -763,6 +807,7 @@ public class BluetoothGattConnectionTest extends TestCase {
         verify(mMockCharChangeListener, never()).onValueChange(DATA);
     }
 
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void test_addCloseListener() throws Exception {
         mBluetoothGattConnection.addCloseListener(mMockConnectionCloseListener);
 
@@ -770,6 +815,7 @@ public class BluetoothGattConnectionTest extends TestCase {
         verify(mMockConnectionCloseListener).onClose();
     }
 
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void test_removeCloseListener() throws Exception {
         mBluetoothGattConnection.addCloseListener(mMockConnectionCloseListener);
 
@@ -779,6 +825,7 @@ public class BluetoothGattConnectionTest extends TestCase {
         verify(mMockConnectionCloseListener, never()).onClose();
     }
 
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void test_close() throws Exception {
         mBluetoothGattConnection.close();
 
@@ -790,6 +837,7 @@ public class BluetoothGattConnectionTest extends TestCase {
         verify(mMockBluetoothGattWrapper).close();
     }
 
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void test_onClosed() throws Exception {
         mBluetoothGattConnection.onClosed();
 

@@ -25,6 +25,8 @@ import static org.mockito.MockitoAnnotations.initMocks;
 
 import android.bluetooth.BluetoothGatt;
 
+import androidx.test.filters.SdkSuppress;
+
 import com.android.server.nearby.common.bluetooth.BluetoothException;
 import com.android.server.nearby.common.bluetooth.testability.NonnullProvider;
 import com.android.server.nearby.common.bluetooth.testability.TimeProvider;
@@ -89,6 +91,7 @@ public class BluetoothOperationExecutorTest extends TestCase {
                         mMockBlockingQueueProvider);
     }
 
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void testExecute() throws Exception {
         when(mMockBlockingQueue.take()).thenReturn(OPERATION_RESULT);
 
@@ -98,6 +101,7 @@ public class BluetoothOperationExecutorTest extends TestCase {
         assertThat(result).isEqualTo(OPERATION_RESULT);
     }
 
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void testExecuteWithTimeout() throws Exception {
         when(mMockBlockingQueue.poll(TIMEOUT, TimeUnit.MILLISECONDS)).thenReturn(OPERATION_RESULT);
 
@@ -107,6 +111,7 @@ public class BluetoothOperationExecutorTest extends TestCase {
         assertThat(result).isEqualTo(OPERATION_RESULT);
     }
 
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void testSchedule() throws Exception {
         when(mMockBlockingQueue.poll(TIMEOUT, TimeUnit.MILLISECONDS)).thenReturn(OPERATION_RESULT);
 
@@ -116,6 +121,7 @@ public class BluetoothOperationExecutorTest extends TestCase {
         assertThat(result.get(TIMEOUT, TimeUnit.MILLISECONDS)).isEqualTo(OPERATION_RESULT);
     }
 
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void testScheduleOtherOperationInProgress() throws Exception {
         when(mMockSemaphore.tryAcquire()).thenReturn(false);
         when(mMockBlockingQueue.poll(TIMEOUT, TimeUnit.MILLISECONDS)).thenReturn(OPERATION_RESULT);
@@ -130,6 +136,7 @@ public class BluetoothOperationExecutorTest extends TestCase {
         verify(mMockStringOperation).execute(mBluetoothOperationExecutor);
     }
 
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void testNotifySuccessWithResult() throws Exception {
         when(mMockBlockingQueueProvider.get()).thenReturn(new LinkedBlockingDeque<Object>());
         Future<String> future = mBluetoothOperationExecutor.schedule(mMockStringOperation);
@@ -139,6 +146,7 @@ public class BluetoothOperationExecutorTest extends TestCase {
         assertThat(future.get(1, TimeUnit.MILLISECONDS)).isEqualTo(OPERATION_RESULT);
     }
 
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void testNotifySuccessTwice() throws Exception {
         BlockingQueue<Object> resultQueue = new LinkedBlockingDeque<Object>();
         when(mMockBlockingQueueProvider.get()).thenReturn(resultQueue);
@@ -153,6 +161,7 @@ public class BluetoothOperationExecutorTest extends TestCase {
         assertThat(resultQueue).isEmpty();
     }
 
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void testNotifySuccessWithNullResult() throws Exception {
         when(mMockBlockingQueueProvider.get()).thenReturn(new LinkedBlockingDeque<Object>());
         Future<String> future = mBluetoothOperationExecutor.schedule(mMockStringOperation);
@@ -162,6 +171,7 @@ public class BluetoothOperationExecutorTest extends TestCase {
         assertThat(future.get(1, TimeUnit.MILLISECONDS)).isNull();
     }
 
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void testNotifySuccess() throws Exception {
         when(mMockBlockingQueueProvider.get()).thenReturn(new LinkedBlockingDeque<Object>());
         Future<Void> future = mBluetoothOperationExecutor.schedule(mMockVoidOperation);
@@ -171,6 +181,7 @@ public class BluetoothOperationExecutorTest extends TestCase {
         future.get(1, TimeUnit.MILLISECONDS);
     }
 
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void testNotifyCompletionSuccess() throws Exception {
         when(mMockBlockingQueueProvider.get()).thenReturn(new LinkedBlockingDeque<Object>());
         Future<Void> future = mBluetoothOperationExecutor.schedule(mMockVoidOperation);
@@ -181,6 +192,7 @@ public class BluetoothOperationExecutorTest extends TestCase {
         future.get(1, TimeUnit.MILLISECONDS);
     }
 
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void testNotifyCompletionFailure() throws Exception {
         when(mMockBlockingQueueProvider.get()).thenReturn(new LinkedBlockingDeque<Object>());
         Future<Void> future = mBluetoothOperationExecutor.schedule(mMockVoidOperation);
@@ -196,6 +208,7 @@ public class BluetoothOperationExecutorTest extends TestCase {
         }
     }
 
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void testNotifyFailure() throws Exception {
         when(mMockBlockingQueueProvider.get()).thenReturn(new LinkedBlockingDeque<Object>());
         Future<Void> future = mBluetoothOperationExecutor.schedule(mMockVoidOperation);
@@ -212,6 +225,7 @@ public class BluetoothOperationExecutorTest extends TestCase {
     }
 
     @SuppressWarnings("unchecked")
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void testWaitFor() throws Exception {
         mBluetoothOperationExecutor.waitFor(Arrays.asList(mMockFuture, mMockFuture2));
 
@@ -220,6 +234,7 @@ public class BluetoothOperationExecutorTest extends TestCase {
     }
 
     @SuppressWarnings("unchecked")
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void testWaitForWithTimeout() throws Exception {
         mBluetoothOperationExecutor.waitFor(
                 Arrays.asList(mMockFuture, mMockFuture2),
@@ -229,6 +244,7 @@ public class BluetoothOperationExecutorTest extends TestCase {
         verify(mMockFuture2).get(TIMEOUT, TimeUnit.MILLISECONDS);
     }
 
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void testGetResult() throws Exception {
         when(mMockFuture.get()).thenReturn(OPERATION_RESULT);
 
@@ -237,6 +253,7 @@ public class BluetoothOperationExecutorTest extends TestCase {
         assertThat(result).isEqualTo(OPERATION_RESULT);
     }
 
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void testGetResultWithTimeout() throws Exception {
         when(mMockFuture.get(TIMEOUT, TimeUnit.MILLISECONDS)).thenThrow(new TimeoutException());
 
@@ -249,6 +266,7 @@ public class BluetoothOperationExecutorTest extends TestCase {
         verify(mMockFuture).cancel(true);
     }
 
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void test_SynchronousOperation_execute() throws Exception {
         when(mMockBlockingQueueProvider.get()).thenReturn(mMockBlockingQueue);
         SynchronousOperation<String> synchronousOperation = new SynchronousOperation<String>() {
@@ -265,6 +283,7 @@ public class BluetoothOperationExecutorTest extends TestCase {
         verify(mMockSemaphore).release();
     }
 
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void test_SynchronousOperation_exception() throws Exception {
         final BluetoothException exception = new BluetoothException(EXCEPTION_REASON);
         when(mMockBlockingQueueProvider.get()).thenReturn(mMockBlockingQueue);
@@ -282,6 +301,7 @@ public class BluetoothOperationExecutorTest extends TestCase {
         verify(mMockSemaphore).release();
     }
 
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void test_AsynchronousOperation_exception() throws Exception {
         final BluetoothException exception = new BluetoothException(EXCEPTION_REASON);
         when(mMockBlockingQueueProvider.get()).thenReturn(mMockBlockingQueue);

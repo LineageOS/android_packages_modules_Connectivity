@@ -22,6 +22,7 @@ import static com.google.common.truth.Truth.assertThat;
 import android.platform.test.annotations.Presubmit;
 
 import androidx.test.ext.junit.runners.AndroidJUnit4;
+import androidx.test.filters.SdkSuppress;
 import androidx.test.filters.SmallTest;
 
 import com.google.common.primitives.Bytes;
@@ -38,6 +39,7 @@ public class AesEcbSingleBlockEncryptionTest {
     private static final byte[] PLAINTEXT = base16().decode("F30F4E786C59A7BBF3873B5A49BA97EA");
 
     @Test
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void encryptDecryptSuccessful() throws Exception {
         byte[] secret = AesEcbSingleBlockEncryption.generateKey();
         byte[] encrypted = AesEcbSingleBlockEncryption.encrypt(secret, PLAINTEXT);
@@ -47,6 +49,7 @@ public class AesEcbSingleBlockEncryptionTest {
     }
 
     @Test(expected = IllegalArgumentException.class)
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void encryptionSizeLimitationEnforced() throws Exception {
         byte[] secret = AesEcbSingleBlockEncryption.generateKey();
         byte[] largePacket = Bytes.concat(PLAINTEXT, PLAINTEXT);
@@ -54,6 +57,7 @@ public class AesEcbSingleBlockEncryptionTest {
     }
 
     @Test(expected = IllegalArgumentException.class)
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void decryptionSizeLimitationEnforced() throws Exception {
         byte[] secret = AesEcbSingleBlockEncryption.generateKey();
         byte[] largePacket = Bytes.concat(PLAINTEXT, PLAINTEXT);

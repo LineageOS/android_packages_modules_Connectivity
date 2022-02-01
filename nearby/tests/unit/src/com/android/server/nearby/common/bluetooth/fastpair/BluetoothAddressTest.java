@@ -22,6 +22,7 @@ import android.bluetooth.BluetoothAdapter;
 import android.platform.test.annotations.Presubmit;
 
 import androidx.test.ext.junit.runners.AndroidJUnit4;
+import androidx.test.filters.SdkSuppress;
 import androidx.test.filters.SmallTest;
 
 import org.junit.Test;
@@ -34,28 +35,33 @@ import org.junit.runner.RunWith;
 public class BluetoothAddressTest {
 
     @Test
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void maskBluetoothAddress_whenInputIsNull() {
         assertThat(BluetoothAddress.maskBluetoothAddress(null)).isEqualTo("");
     }
 
     @Test
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void maskBluetoothAddress_whenInputStringNotMatchFormat() {
         assertThat(BluetoothAddress.maskBluetoothAddress("AA:BB:CC")).isEqualTo("AA:BB:CC");
     }
 
     @Test
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void maskBluetoothAddress_whenInputStringMatchFormat() {
         assertThat(BluetoothAddress.maskBluetoothAddress("AA:BB:CC:DD:EE:FF"))
                 .isEqualTo("XX:XX:XX:XX:EE:FF");
     }
 
     @Test
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void maskBluetoothAddress_whenInputStringContainLowerCaseMatchFormat() {
         assertThat(BluetoothAddress.maskBluetoothAddress("Aa:Bb:cC:dD:eE:Ff"))
                 .isEqualTo("XX:XX:XX:XX:EE:FF");
     }
 
     @Test
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void maskBluetoothAddress_whenInputBluetoothDevice() {
         assertThat(
                 BluetoothAddress.maskBluetoothAddress(

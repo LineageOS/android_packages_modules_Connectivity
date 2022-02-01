@@ -28,6 +28,7 @@ import static org.junit.Assert.assertThrows;
 import android.platform.test.annotations.Presubmit;
 
 import androidx.test.ext.junit.runners.AndroidJUnit4;
+import androidx.test.filters.SdkSuppress;
 import androidx.test.filters.SmallTest;
 
 import com.google.common.base.Preconditions;
@@ -53,6 +54,7 @@ public class HmacSha256Test {
     private static final byte INNER_PADDING_BYTE = 0x36;
 
     @Test
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void compareResultWithOurImplementation_mustBeIdentical()
             throws GeneralSecurityException {
         Random random = new Random(0xFE2C);
@@ -69,6 +71,7 @@ public class HmacSha256Test {
     }
 
     @Test
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void inputIncorrectKeySizeToDecrypt_mustThrowException() {
         byte[] secret = new byte[KEY_LENGTH - 1];
         byte[] data = base16().decode("1234567890ABCDEF1234567890ABCDEF1234567890ABCD");
@@ -82,6 +85,7 @@ public class HmacSha256Test {
     }
 
     @Test
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void inputTwoIdenticalArrays_compareTwoHmacMustReturnTrue() {
         Random random = new Random(0x1237);
         byte[] array1 = new byte[EXTRACT_HMAC_SIZE];
@@ -92,6 +96,7 @@ public class HmacSha256Test {
     }
 
     @Test
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void inputTwoRandomArrays_compareTwoHmacMustReturnFalse() {
         Random random = new Random(0xff);
         byte[] array1 = new byte[EXTRACT_HMAC_SIZE];
@@ -132,6 +137,7 @@ public class HmacSha256Test {
     // Adds this test example on spec. Also we can easily change the parameters(e.g. secret, data)
     // to clarify test results with partners.
     @Test
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void inputTestExampleToHmacSha256_getCorrectResult() {
         byte[] secret = base16().decode("0123456789ABCDEF0123456789ABCDEF");
         byte[] data =

@@ -29,6 +29,7 @@ import static org.junit.Assert.assertThrows;
 import android.platform.test.annotations.Presubmit;
 
 import androidx.test.ext.junit.runners.AndroidJUnit4;
+import androidx.test.filters.SdkSuppress;
 import androidx.test.filters.SmallTest;
 
 import org.junit.Test;
@@ -45,6 +46,7 @@ import java.security.GeneralSecurityException;
 public class NamingEncoderTest {
 
     @Test
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void decodeEncodedNamingPacket_mustGetSameName() throws GeneralSecurityException {
         byte[] secret = AesCtrMultipleBlockEncryption.generateKey();
         String name = "Someone's Google Headphone";
@@ -55,6 +57,7 @@ public class NamingEncoderTest {
     }
 
     @Test
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void inputIncorrectKeySizeToEncode_mustThrowException() {
         byte[] secret = new byte[KEY_LENGTH - 1];
         String data = "Someone's Google Headphone";
@@ -69,6 +72,7 @@ public class NamingEncoderTest {
     }
 
     @Test
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void inputIncorrectKeySizeToDecode_mustThrowException() {
         byte[] secret = new byte[KEY_LENGTH - 1];
         byte[] data = new byte[50];
@@ -83,6 +87,7 @@ public class NamingEncoderTest {
     }
 
     @Test
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void inputTooSmallPacketSize_mustThrowException() {
         byte[] secret = new byte[KEY_LENGTH];
         byte[] data = new byte[EXTRACT_HMAC_SIZE - 1];
@@ -96,6 +101,7 @@ public class NamingEncoderTest {
     }
 
     @Test
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void inputTooLargePacketSize_mustThrowException() throws GeneralSecurityException {
         byte[] secret = AesCtrMultipleBlockEncryption.generateKey();
         byte[] namingPacket = new byte[MAX_LENGTH_OF_NAME + EXTRACT_HMAC_SIZE + NONCE_SIZE + 1];
@@ -109,6 +115,7 @@ public class NamingEncoderTest {
     }
 
     @Test
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void inputIncorrectHmacToDecode_mustThrowException() throws GeneralSecurityException {
         byte[] secret = AesCtrMultipleBlockEncryption.generateKey();
         String name = "Someone's Google Headphone";
@@ -129,6 +136,7 @@ public class NamingEncoderTest {
     // Adds this test example on spec. Also we can easily change the parameters(e.g. secret, naming
     // packet) to clarify test results with partners.
     @Test
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void decodeTestNamingPacket_mustGetSameName() throws GeneralSecurityException {
         byte[] secret = base16().decode("0123456789ABCDEF0123456789ABCDEF");
         byte[] namingPacket = base16().decode(

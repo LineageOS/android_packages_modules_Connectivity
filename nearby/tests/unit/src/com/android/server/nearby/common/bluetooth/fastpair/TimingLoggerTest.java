@@ -22,6 +22,7 @@ import android.os.SystemClock;
 import android.platform.test.annotations.Presubmit;
 
 import androidx.test.ext.junit.runners.AndroidJUnit4;
+import androidx.test.filters.SdkSuppress;
 import androidx.test.filters.SmallTest;
 
 import com.android.server.nearby.common.bluetooth.fastpair.TimingLogger.ScopedTiming;
@@ -29,7 +30,6 @@ import com.android.server.nearby.common.bluetooth.fastpair.TimingLogger.Timing;
 
 import org.junit.Test;
 import org.junit.runner.RunWith;
-
 
 /**
  * Unit tests for {@link TimingLogger}.
@@ -42,6 +42,7 @@ public class TimingLoggerTest {
     private final Preferences mPrefs = Preferences.builder().setEvaluatePerformance(true).build();
 
     @Test
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void logPairedTiming() {
         String label = "start";
         TimingLogger timingLogger = new TimingLogger("paired", mPrefs);
@@ -65,6 +66,7 @@ public class TimingLoggerTest {
     }
 
     @Test
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void logScopedTiming() {
         String label = "scopedTiming";
         TimingLogger timingLogger = new TimingLogger("scoped", mPrefs);
@@ -88,6 +90,7 @@ public class TimingLoggerTest {
     }
 
     @Test
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void logOrderedTiming() {
         String label1 = "t1";
         String label2 = "t2";
@@ -128,6 +131,7 @@ public class TimingLoggerTest {
     }
 
     @Test
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void logNestedTiming() {
         String labelOuter = "outer";
         String labelInner1 = "inner1";

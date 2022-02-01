@@ -25,6 +25,7 @@ import static com.google.common.truth.Truth.assertThat;
 
 import androidx.annotation.RequiresApi;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
+import androidx.test.filters.SdkSuppress;
 
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -35,6 +36,7 @@ import org.junit.runner.RunWith;
 public class NearbyDeviceTest {
 
     @Test
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void test_isValidMedium() {
         assertThat(NearbyDevice.isValidMedium(1)).isTrue();
         assertThat(NearbyDevice.isValidMedium(2)).isTrue();
@@ -44,6 +46,7 @@ public class NearbyDeviceTest {
     }
 
     @Test
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void test_getMedium_fromChild() {
         FastPairDevice fastPairDevice = new FastPairDevice.Builder()
                 .setMedium(NearbyDevice.Medium.BLE)

@@ -19,6 +19,7 @@ package src.com.android.server.nearby.fastpair;
 import static com.google.common.truth.Truth.assertThat;
 
 import androidx.test.core.app.ApplicationProvider;
+import androidx.test.filters.SdkSuppress;
 
 import com.android.server.nearby.common.eventloop.EventLoop;
 import com.android.server.nearby.common.locator.Locator;
@@ -48,6 +49,7 @@ public class ModuleTest {
     }
 
     @Test
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void genericConstructor() {
         assertThat(mLocator.get(FastPairCacheManager.class)).isNotNull();
         assertThat(mLocator.get(FootprintsDeviceManager.class)).isNotNull();
@@ -58,6 +60,7 @@ public class ModuleTest {
     }
 
     @Test
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void genericDestroy() {
         mLocator.destroy();
     }
