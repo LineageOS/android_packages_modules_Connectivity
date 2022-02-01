@@ -31,20 +31,29 @@ java_sdk_library {
     name: "framework-connectivity-tiramisu",
     sdk_version: "module_current",
     min_sdk_version: "Tiramisu",
+    jarjar_rules: "jarjar-rules.txt",
     defaults: [
         "framework-module-defaults",
         "enable-framework-connectivity-t-targets",
     ],
     srcs: [
         ":framework-connectivity-tiramisu-updatable-sources",
+        ":framework-nearby-java-sources",
+    ],
+    static_libs: [
+        "modules-utils-preconditions",
     ],
     libs: [
         "unsupportedappusage",
         "app-compat-annotations",
+        "framework-bluetooth",
     ],
     permitted_packages: [
         "android.net",
         "android.net.nsd",
+        "android.nearby",
+        "com.android.connectivity",
+        "com.android.nearby",
     ],
     apex_available: [
         "com.android.tethering",
@@ -54,6 +63,7 @@ java_sdk_library {
         // In preparation for future move
         "//packages/modules/Connectivity/apex",
         "//packages/modules/Connectivity/service-t",
+        "//packages/modules/Nearby/service",
         "//frameworks/base",
 
         // Tests using hidden APIs
@@ -66,6 +76,7 @@ java_sdk_library {
         "//packages/modules/Connectivity/Tethering/tests:__subpackages__",
         "//packages/modules/Connectivity/tests:__subpackages__",
         "//packages/modules/NetworkStack/tests:__subpackages__",
+        "//packages/modules/Nearby/tests:__subpackages__",
         "//packages/modules/Wifi/service/tests/wifitests",
     ],
 }
