@@ -23,6 +23,7 @@ import static org.mockito.Mockito.when;
 import android.content.Context;
 
 import androidx.test.core.app.ApplicationProvider;
+import androidx.test.filters.SdkSuppress;
 
 import org.junit.Before;
 import org.junit.Test;
@@ -52,6 +53,7 @@ public class FastPairCacheManagerTest {
     }
 
     @Test
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void notSaveRetrieveInfo() {
         Context mContext = ApplicationProvider.getApplicationContext();
         when(mDiscoveryItem.getCopyOfStoredItem()).thenReturn(mStoredDiscoveryItem);
@@ -64,6 +66,7 @@ public class FastPairCacheManagerTest {
     }
 
     @Test
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void saveRetrieveInfo() {
         Context mContext = ApplicationProvider.getApplicationContext();
         when(mDiscoveryItem.getCopyOfStoredItem()).thenReturn(mStoredDiscoveryItem);
@@ -76,6 +79,7 @@ public class FastPairCacheManagerTest {
     }
 
     @Test
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void getAllInfo() {
         Context mContext = ApplicationProvider.getApplicationContext();
         when(mDiscoveryItem.getCopyOfStoredItem()).thenReturn(mStoredDiscoveryItem);

@@ -42,6 +42,8 @@ import android.content.Context;
 import android.os.ParcelUuid;
 import android.test.mock.MockContext;
 
+import androidx.test.filters.SdkSuppress;
+
 import com.android.server.nearby.common.bluetooth.BluetoothException;
 import com.android.server.nearby.common.bluetooth.gatt.BluetoothGattHelper.ConnectionOptions;
 import com.android.server.nearby.common.bluetooth.gatt.BluetoothGattHelper.OperationType;
@@ -144,6 +146,7 @@ public class BluetoothGattHelperTest extends TestCase {
                 .thenReturn(ConnectionOptions.builder().build());
     }
 
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void test_autoConnect_uuid_success_lowLatency() throws Exception {
         BluetoothGattConnection result = mBluetoothGattHelper.autoConnect(SERVICE_UUID);
 
@@ -163,6 +166,7 @@ public class BluetoothGattHelperTest extends TestCase {
         verifyNoMoreInteractions(mMockBluetoothLeScanner);
     }
 
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void test_autoConnect_uuid_success_lowPower() throws Exception {
         when(mMockBluetoothOperationExecutor.executeNonnull(SCANNING_OPERATION,
                 BluetoothGattHelper.LOW_LATENCY_SCAN_MILLIS)).thenThrow(
@@ -182,6 +186,7 @@ public class BluetoothGattHelperTest extends TestCase {
         verifyNoMoreInteractions(mMockBluetoothLeScanner);
     }
 
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void test_autoConnect_uuid_success_afterRetry() throws Exception {
         when(mMockBluetoothOperationExecutor.executeNonnull(
                 new Operation<BluetoothGattConnection>(OperationType.CONNECT, mMockBluetoothDevice),
@@ -194,6 +199,7 @@ public class BluetoothGattHelperTest extends TestCase {
         assertThat(result).isEqualTo(mMockBluetoothGattConnection);
     }
 
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void test_autoConnect_uuid_failure_scanning() throws Exception {
         when(mMockBluetoothOperationExecutor.executeNonnull(SCANNING_OPERATION,
                 BluetoothGattHelper.LOW_LATENCY_SCAN_MILLIS)).thenThrow(
@@ -207,6 +213,7 @@ public class BluetoothGattHelperTest extends TestCase {
         }
     }
 
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void test_autoConnect_uuid_failure_connecting() throws Exception {
         when(mMockBluetoothOperationExecutor.executeNonnull(
                 new Operation<BluetoothGattConnection>(OperationType.CONNECT, mMockBluetoothDevice),
@@ -226,6 +233,7 @@ public class BluetoothGattHelperTest extends TestCase {
                         CONNECT_TIMEOUT_MILLIS);
     }
 
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void test_autoConnect_uuid_failure_noBle() throws Exception {
         when(mMockBluetoothAdapter.getBluetoothLeScanner()).thenReturn(null);
 
@@ -237,6 +245,7 @@ public class BluetoothGattHelperTest extends TestCase {
         }
     }
 
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void test_connect() throws Exception {
         BluetoothGattConnection result = mBluetoothGattHelper.connect(mMockBluetoothDevice);
 
@@ -251,6 +260,7 @@ public class BluetoothGattHelperTest extends TestCase {
                 .isEqualTo(mMockBluetoothDevice);
     }
 
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void test_connect_withOptionAutoConnect_success() throws Exception {
         BluetoothGattConnection result = mBluetoothGattHelper
                 .connect(
@@ -272,6 +282,7 @@ public class BluetoothGattHelperTest extends TestCase {
                         .build());
     }
 
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void test_connect_withOptionAutoConnect_failure_nullResult() throws Exception {
         when(mMockBluetoothDevice.connectGatt(eq(mMockApplicationContext), anyBoolean(),
                 eq(mBluetoothGattHelper.mBluetoothGattCallback),
@@ -291,6 +302,7 @@ public class BluetoothGattHelperTest extends TestCase {
         }
     }
 
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void test_connect_withOptionRequestConnectionPriority_success() throws Exception {
         // Operation succeeds on the 3rd try.
         when(mMockBluetoothGattWrapper
@@ -322,6 +334,7 @@ public class BluetoothGattHelperTest extends TestCase {
                 .requestConnectionPriority(BluetoothGatt.CONNECTION_PRIORITY_HIGH);
     }
 
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void test_connect_cancel() throws Exception {
         mBluetoothGattHelper.connect(mMockBluetoothDevice);
 
@@ -336,6 +349,7 @@ public class BluetoothGattHelperTest extends TestCase {
         assertThat(mBluetoothGattHelper.mConnections.get(mMockBluetoothGattWrapper)).isNull();
     }
 
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void test_BluetoothGattCallback_onConnectionStateChange_connected_success()
             throws Exception {
         mBluetoothGattHelper.mConnections.put(mMockBluetoothGattWrapper,
@@ -352,6 +366,7 @@ public class BluetoothGattHelperTest extends TestCase {
         verify(mMockBluetoothGattConnection).onConnected();
     }
 
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void test_BluetoothGattCallback_onConnectionStateChange_connected_success_withMtuOption()
             throws Exception {
         mBluetoothGattHelper.mConnections.put(mMockBluetoothGattWrapper,
@@ -371,6 +386,7 @@ public class BluetoothGattHelperTest extends TestCase {
         verify(mMockBluetoothGattWrapper).requestMtu(MTU);
     }
 
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void test_BluetoothGattCallback_onConnectionStateChange_connected_success_failMtuOption()
             throws Exception {
         mBluetoothGattHelper.mConnections.put(mMockBluetoothGattWrapper,
@@ -394,6 +410,7 @@ public class BluetoothGattHelperTest extends TestCase {
         assertThat(mBluetoothGattHelper.mConnections.get(mMockBluetoothGattWrapper)).isNull();
     }
 
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void test_BluetoothGattCallback_onConnectionStateChange_connected_unexpectedSuccess()
             throws Exception {
         mBluetoothGattHelper.mBluetoothGattCallback.onConnectionStateChange(
@@ -403,6 +420,7 @@ public class BluetoothGattHelperTest extends TestCase {
         verifyZeroInteractions(mMockBluetoothOperationExecutor);
     }
 
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void test_BluetoothGattCallback_onConnectionStateChange_connected_failure()
             throws Exception {
         mBluetoothGattHelper.mConnections.put(mMockBluetoothGattWrapper,
@@ -424,6 +442,7 @@ public class BluetoothGattHelperTest extends TestCase {
         assertThat(mBluetoothGattHelper.mConnections.get(mMockBluetoothGattWrapper)).isNull();
     }
 
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void test_BluetoothGattCallback_onConnectionStateChange_disconnected_unexpectedSuccess()
             throws Exception {
         mBluetoothGattHelper.mBluetoothGattCallback
@@ -435,6 +454,7 @@ public class BluetoothGattHelperTest extends TestCase {
         verifyZeroInteractions(mMockBluetoothOperationExecutor);
     }
 
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void test_BluetoothGattCallback_onConnectionStateChange_disconnected_notConnected()
             throws Exception {
         mBluetoothGattHelper.mConnections.put(mMockBluetoothGattWrapper,
@@ -457,6 +477,7 @@ public class BluetoothGattHelperTest extends TestCase {
         assertThat(mBluetoothGattHelper.mConnections.get(mMockBluetoothGattWrapper)).isNull();
     }
 
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void test_BluetoothGattCallback_onConnectionStateChange_disconnected_success()
             throws Exception {
         mBluetoothGattHelper.mConnections.put(mMockBluetoothGattWrapper,
@@ -474,6 +495,7 @@ public class BluetoothGattHelperTest extends TestCase {
         assertThat(mBluetoothGattHelper.mConnections.get(mMockBluetoothGattWrapper)).isNull();
     }
 
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void test_BluetoothGattCallback_onConnectionStateChange_disconnected_failure()
             throws Exception {
         mBluetoothGattHelper.mConnections.put(mMockBluetoothGattWrapper,
@@ -491,6 +513,7 @@ public class BluetoothGattHelperTest extends TestCase {
         assertThat(mBluetoothGattHelper.mConnections.get(mMockBluetoothGattWrapper)).isNull();
     }
 
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void test_BluetoothGattCallback_onServicesDiscovered() throws Exception {
         mBluetoothGattHelper.mBluetoothGattCallback.onServicesDiscovered(mMockBluetoothGattWrapper,
                 GATT_STATUS);
@@ -501,6 +524,7 @@ public class BluetoothGattHelperTest extends TestCase {
                 GATT_STATUS);
     }
 
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void test_BluetoothGattCallback_onCharacteristicRead() throws Exception {
         mBluetoothGattHelper.mBluetoothGattCallback.onCharacteristicRead(mMockBluetoothGattWrapper,
                 mMockBluetoothGattCharacteristic, GATT_STATUS);
@@ -511,6 +535,7 @@ public class BluetoothGattHelperTest extends TestCase {
                 GATT_STATUS, CHARACTERISTIC_VALUE);
     }
 
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void test_BluetoothGattCallback_onCharacteristicWrite() throws Exception {
         mBluetoothGattHelper.mBluetoothGattCallback.onCharacteristicWrite(mMockBluetoothGattWrapper,
                 mMockBluetoothGattCharacteristic, GATT_STATUS);
@@ -521,6 +546,7 @@ public class BluetoothGattHelperTest extends TestCase {
                 GATT_STATUS);
     }
 
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void test_BluetoothGattCallback_onDescriptorRead() throws Exception {
         mBluetoothGattHelper.mBluetoothGattCallback.onDescriptorRead(mMockBluetoothGattWrapper,
                 mMockBluetoothGattDescriptor, GATT_STATUS);
@@ -532,6 +558,7 @@ public class BluetoothGattHelperTest extends TestCase {
                 DESCRIPTOR_VALUE);
     }
 
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void test_BluetoothGattCallback_onDescriptorWrite() throws Exception {
         mBluetoothGattHelper.mBluetoothGattCallback.onDescriptorWrite(mMockBluetoothGattWrapper,
                 mMockBluetoothGattDescriptor, GATT_STATUS);
@@ -542,6 +569,7 @@ public class BluetoothGattHelperTest extends TestCase {
                 GATT_STATUS);
     }
 
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void test_BluetoothGattCallback_onReadRemoteRssi() throws Exception {
         mBluetoothGattHelper.mBluetoothGattCallback.onReadRemoteRssi(mMockBluetoothGattWrapper,
                 RSSI, GATT_STATUS);
@@ -551,6 +579,7 @@ public class BluetoothGattHelperTest extends TestCase {
                 GATT_STATUS, RSSI);
     }
 
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void test_BluetoothGattCallback_onReliableWriteCompleted() throws Exception {
         mBluetoothGattHelper.mBluetoothGattCallback.onReliableWriteCompleted(
                 mMockBluetoothGattWrapper,
@@ -561,6 +590,7 @@ public class BluetoothGattHelperTest extends TestCase {
                 GATT_STATUS);
     }
 
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void test_BluetoothGattCallback_onMtuChanged() throws Exception {
         mBluetoothGattHelper.mConnections.put(mMockBluetoothGattWrapper,
                 mMockBluetoothGattConnection);
@@ -574,6 +604,7 @@ public class BluetoothGattHelperTest extends TestCase {
                 MTU);
     }
 
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void testBluetoothGattCallback_onMtuChangedDuringConnection_success() throws Exception {
         mBluetoothGattHelper.mConnections.put(mMockBluetoothGattWrapper,
                 mMockBluetoothGattConnection);
@@ -590,6 +621,7 @@ public class BluetoothGattHelperTest extends TestCase {
                         mMockBluetoothGattConnection);
     }
 
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void testBluetoothGattCallback_onMtuChangedDuringConnection_fail() throws Exception {
         mBluetoothGattHelper.mConnections.put(mMockBluetoothGattWrapper,
                 mMockBluetoothGattConnection);
@@ -609,6 +641,7 @@ public class BluetoothGattHelperTest extends TestCase {
         assertThat(mBluetoothGattHelper.mConnections.get(mMockBluetoothGattWrapper)).isNull();
     }
 
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void test_BluetoothGattCallback_onCharacteristicChanged() throws Exception {
         mBluetoothGattHelper.mConnections.put(mMockBluetoothGattWrapper,
                 mMockBluetoothGattConnection);
@@ -622,6 +655,7 @@ public class BluetoothGattHelperTest extends TestCase {
                 CHARACTERISTIC_VALUE);
     }
 
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void test_ScanCallback_onScanFailed() throws Exception {
         mBluetoothGattHelper.mScanCallback.onScanFailed(ScanCallback.SCAN_FAILED_INTERNAL_ERROR);
 
@@ -630,6 +664,7 @@ public class BluetoothGattHelperTest extends TestCase {
                 isA(BluetoothException.class));
     }
 
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void test_ScanCallback_onScanResult() throws Exception {
         mBluetoothGattHelper.mScanCallback.onScanResult(ScanSettings.CALLBACK_TYPE_ALL_MATCHES,
                 mMockScanResult);

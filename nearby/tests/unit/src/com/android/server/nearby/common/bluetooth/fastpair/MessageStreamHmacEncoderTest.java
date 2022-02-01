@@ -16,7 +16,6 @@
 
 package com.android.server.nearby.common.bluetooth.fastpair;
 
-
 import static com.android.server.nearby.common.bluetooth.fastpair.MessageStreamHmacEncoder.EXTRACT_HMAC_SIZE;
 import static com.android.server.nearby.common.bluetooth.fastpair.MessageStreamHmacEncoder.SECTION_NONCE_LENGTH;
 
@@ -26,6 +25,7 @@ import static com.google.common.truth.Truth.assertThat;
 import android.platform.test.annotations.Presubmit;
 
 import androidx.test.ext.junit.runners.AndroidJUnit4;
+import androidx.test.filters.SdkSuppress;
 import androidx.test.filters.SmallTest;
 
 import org.junit.Test;
@@ -46,6 +46,7 @@ public class MessageStreamHmacEncoderTest {
     private static final int ACCOUNT_KEY_LENGTH = 16;
 
     @Test
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void encodeMessagePacket() throws GeneralSecurityException {
         int messageLength = 2;
         SecureRandom secureRandom = new SecureRandom();
@@ -76,6 +77,7 @@ public class MessageStreamHmacEncoderTest {
     }
 
     @Test
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void verifyHmac() throws GeneralSecurityException {
         int messageLength = 2;
         SecureRandom secureRandom = new SecureRandom();
@@ -92,6 +94,7 @@ public class MessageStreamHmacEncoderTest {
     }
 
     @Test
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void verifyHmac_failedByAccountKey() throws GeneralSecurityException {
         int messageLength = 2;
         SecureRandom secureRandom = new SecureRandom();
@@ -109,6 +112,7 @@ public class MessageStreamHmacEncoderTest {
     }
 
     @Test
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void verifyHmac_failedBySectionNonce() throws GeneralSecurityException {
         int messageLength = 2;
         SecureRandom secureRandom = new SecureRandom();

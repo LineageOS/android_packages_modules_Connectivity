@@ -24,6 +24,7 @@ import android.os.Build;
 
 import androidx.annotation.RequiresApi;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
+import androidx.test.filters.SdkSuppress;
 
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -36,6 +37,7 @@ public class NearbyDeviceParcelableTest {
 
     /** Verify toString returns expected string. */
     @Test
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void testToString() {
         NearbyDeviceParcelable nearbyDeviceParcelable =  new NearbyDeviceParcelable.Builder()
                 .setName("testDevice")
@@ -53,6 +55,7 @@ public class NearbyDeviceParcelableTest {
     }
 
     @Test
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void test_defaultNullFields() {
         NearbyDeviceParcelable nearbyDeviceParcelable =  new NearbyDeviceParcelable.Builder()
                 .setMedium(NearbyDevice.Medium.BLE)

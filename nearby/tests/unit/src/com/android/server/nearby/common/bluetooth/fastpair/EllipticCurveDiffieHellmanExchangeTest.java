@@ -23,6 +23,7 @@ import static com.google.common.truth.Truth.assertThat;
 import android.platform.test.annotations.Presubmit;
 
 import androidx.test.ext.junit.runners.AndroidJUnit4;
+import androidx.test.filters.SdkSuppress;
 import androidx.test.filters.SmallTest;
 
 import org.junit.Test;
@@ -44,6 +45,7 @@ public class EllipticCurveDiffieHellmanExchangeTest {
 
 
     @Test
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void generateCommonKey() throws Exception {
         EllipticCurveDiffieHellmanExchange bob = EllipticCurveDiffieHellmanExchange.create();
         EllipticCurveDiffieHellmanExchange alice = EllipticCurveDiffieHellmanExchange.create();
@@ -56,6 +58,7 @@ public class EllipticCurveDiffieHellmanExchangeTest {
     }
 
     @Test
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void generateCommonKey_withExistingPrivateKey() throws Exception {
         EllipticCurveDiffieHellmanExchange bob = EllipticCurveDiffieHellmanExchange.create();
         EllipticCurveDiffieHellmanExchange alice =
@@ -66,6 +69,7 @@ public class EllipticCurveDiffieHellmanExchangeTest {
     }
 
     @Test
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void generateCommonKey_soundcoreAntiSpoofingKey_generatedTooShort() throws Exception {
         // This soundcore device has a public key that was generated which starts with 0x0. This was
         // stripped out in our database, but this test confirms that adding that byte back fixes the

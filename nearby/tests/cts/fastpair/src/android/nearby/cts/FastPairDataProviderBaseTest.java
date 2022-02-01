@@ -49,6 +49,7 @@ import android.nearby.aidl.IFastPairManageAccountDeviceCallback;
 
 import androidx.annotation.NonNull;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
+import androidx.test.filters.SdkSuppress;
 
 import com.google.common.collect.ImmutableList;
 
@@ -219,6 +220,7 @@ public class FastPairDataProviderBaseTest {
     }
 
     @Test
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void testHappyPathLoadFastPairAntispoofkeyDeviceMetadata() throws Exception {
         // AOSP sends calls to OEM via Parcelable.
         mHappyPathFastPairDataProvider.asProvider().loadFastPairAntispoofkeyDeviceMetadata(
@@ -245,6 +247,7 @@ public class FastPairDataProviderBaseTest {
     }
 
     @Test
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void testHappyPathLoadFastPairAccountDevicesMetadata() throws Exception {
         // AOSP sends calls to OEM via Parcelable.
         mHappyPathFastPairDataProvider.asProvider().loadFastPairAccountDevicesMetadata(
@@ -269,6 +272,7 @@ public class FastPairDataProviderBaseTest {
     }
 
     @Test
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void testHappyPathLoadFastPairEligibleAccounts() throws Exception {
         // AOSP sends calls to OEM via Parcelable.
         mHappyPathFastPairDataProvider.asProvider().loadFastPairEligibleAccounts(
@@ -292,6 +296,7 @@ public class FastPairDataProviderBaseTest {
     }
 
     @Test
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void testHappyPathManageFastPairAccount() throws Exception {
         // AOSP sends calls to OEM via Parcelable.
         mHappyPathFastPairDataProvider.asProvider().manageFastPairAccount(
@@ -313,6 +318,7 @@ public class FastPairDataProviderBaseTest {
     }
 
     @Test
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void testHappyPathManageFastPairAccountDevice() throws Exception {
         // AOSP sends calls to OEM via Parcelable.
         mHappyPathFastPairDataProvider.asProvider().manageFastPairAccountDevice(
@@ -334,6 +340,7 @@ public class FastPairDataProviderBaseTest {
     }
 
     @Test
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void testErrorPathLoadFastPairAntispoofkeyDeviceMetadata() throws Exception {
         mErrorPathFastPairDataProvider.asProvider().loadFastPairAntispoofkeyDeviceMetadata(
                 FAST_PAIR_ANTI_SPOOF_KEY_DEVICE_METADATA_REQUEST_PARCEL,
@@ -346,6 +353,7 @@ public class FastPairDataProviderBaseTest {
     }
 
     @Test
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void testErrorPathLoadFastPairAccountDevicesMetadata() throws Exception {
         mErrorPathFastPairDataProvider.asProvider().loadFastPairAccountDevicesMetadata(
                 FAST_PAIR_ACCOUNT_DEVICES_METADATA_REQUEST_PARCEL,
@@ -358,6 +366,7 @@ public class FastPairDataProviderBaseTest {
     }
 
     @Test
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void testErrorPathLoadFastPairEligibleAccounts() throws Exception {
         mErrorPathFastPairDataProvider.asProvider().loadFastPairEligibleAccounts(
                 FAST_PAIR_ELIGIBLE_ACCOUNTS_REQUEST_PARCEL,
@@ -370,6 +379,7 @@ public class FastPairDataProviderBaseTest {
     }
 
     @Test
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void testErrorPathManageFastPairAccount() throws Exception {
         mErrorPathFastPairDataProvider.asProvider().manageFastPairAccount(
                 FAST_PAIR_MANAGE_ACCOUNT_REQUEST_PARCEL,
@@ -381,6 +391,7 @@ public class FastPairDataProviderBaseTest {
     }
 
     @Test
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void testErrorPathManageFastPairAccountDevice() throws Exception {
         mErrorPathFastPairDataProvider.asProvider().manageFastPairAccountDevice(
                 FAST_PAIR_MANAGE_ACCOUNT_DEVICE_REQUEST_PARCEL,

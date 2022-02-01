@@ -29,6 +29,7 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import android.platform.test.annotations.Presubmit;
 
 import androidx.test.ext.junit.runners.AndroidJUnit4;
+import androidx.test.filters.SdkSuppress;
 import androidx.test.filters.SmallTest;
 
 import org.junit.Test;
@@ -45,6 +46,7 @@ import java.util.Arrays;
 public class AesCtrMultipleBlockEncryptionTest {
 
     @Test
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void decryptEncryptedData_nonBlockSizeAligned_mustEqualToPlaintext() throws Exception {
         byte[] secret = AesCtrMultipleBlockEncryption.generateKey();
         byte[] plaintext = "Someone's Google Headphone 2019".getBytes(UTF_8); // The length is 31.
@@ -56,6 +58,7 @@ public class AesCtrMultipleBlockEncryptionTest {
     }
 
     @Test
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void decryptEncryptedData_blockSizeAligned_mustEqualToPlaintext() throws Exception {
         byte[] secret = AesCtrMultipleBlockEncryption.generateKey();
         byte[] plaintext =
@@ -69,6 +72,7 @@ public class AesCtrMultipleBlockEncryptionTest {
     }
 
     @Test
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void generateNonceTwice_mustBeDifferent() {
         byte[] nonce1 = AesCtrMultipleBlockEncryption.generateNonce();
         byte[] nonce2 = AesCtrMultipleBlockEncryption.generateNonce();
@@ -77,6 +81,7 @@ public class AesCtrMultipleBlockEncryptionTest {
     }
 
     @Test
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void encryptedSamePlaintext_mustBeDifferentEncryptedResult() throws Exception {
         byte[] secret = AesCtrMultipleBlockEncryption.generateKey();
         byte[] plaintext = "Someone's Google Headphone 2019".getBytes(UTF_8);
@@ -88,6 +93,7 @@ public class AesCtrMultipleBlockEncryptionTest {
     }
 
     @Test
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void encryptData_mustBeDifferentToUnencrypted() throws Exception {
         byte[] secret = AesCtrMultipleBlockEncryption.generateKey();
         byte[] plaintext = "Someone's Google Headphone 2019".getBytes(UTF_8);
@@ -98,6 +104,7 @@ public class AesCtrMultipleBlockEncryptionTest {
     }
 
     @Test
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void inputIncorrectKeySizeToEncrypt_mustThrowException() {
         byte[] secret = new byte[KEY_LENGTH + 1];
         byte[] plaintext = "Someone's Google Headphone 2019".getBytes(UTF_8);
@@ -113,6 +120,7 @@ public class AesCtrMultipleBlockEncryptionTest {
     }
 
     @Test
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void inputIncorrectKeySizeToDecrypt_mustThrowException() {
         byte[] secret = new byte[KEY_LENGTH - 1];
         byte[] plaintext = "Someone's Google Headphone 2019".getBytes(UTF_8);
@@ -128,6 +136,7 @@ public class AesCtrMultipleBlockEncryptionTest {
     }
 
     @Test
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void inputIncorrectDataSizeToDecrypt_mustThrowException()
             throws GeneralSecurityException {
         byte[] secret = AesCtrMultipleBlockEncryption.generateKey();
@@ -147,6 +156,7 @@ public class AesCtrMultipleBlockEncryptionTest {
     // Add some random tests that for a certain amount of random plaintext of random length to prove
     // our encryption/decryption is correct. This is suggested by security team.
     @Test
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void decryptEncryptedRandomDataForCertainAmount_mustEqualToOriginalData()
             throws Exception {
         SecureRandom random = new SecureRandom();
@@ -166,6 +176,7 @@ public class AesCtrMultipleBlockEncryptionTest {
     // Add some random tests that for a certain amount of random plaintext of random length to prove
     // our encryption is correct. This is suggested by security team.
     @Test
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void twoDistinctEncryptionOnSameRandomData_mustBeDifferentResult() throws Exception {
         SecureRandom random = new SecureRandom();
         for (int i = 0; i < 1000; i++) {
@@ -184,6 +195,7 @@ public class AesCtrMultipleBlockEncryptionTest {
     // Adds this test example on spec. Also we can easily change the parameters(e.g. secret, data,
     // nonce) to clarify test results with partners.
     @Test
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void inputTestExampleToEncrypt_getCorrectResult() throws GeneralSecurityException {
         byte[] secret = base16().decode("0123456789ABCDEF0123456789ABCDEF");
         byte[] nonce = base16().decode("0001020304050607");

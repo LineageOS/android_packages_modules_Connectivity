@@ -33,6 +33,7 @@ import android.os.WorkSource;
 
 import androidx.annotation.RequiresApi;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
+import androidx.test.filters.SdkSuppress;
 
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -46,11 +47,13 @@ public class ScanRequestTest {
 
     // Valid scan type must be set to one of ScanRequest#SCAN_TYPE_
     @Test(expected = IllegalStateException.class)
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void testScanType_notSet_throwsException() {
         new ScanRequest.Builder().setScanMode(SCAN_MODE_BALANCED).build();
     }
 
     @Test
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void testScanMode_defaultLowPower() {
         ScanRequest request = new ScanRequest.Builder()
                 .setScanType(SCAN_TYPE_FAST_PAIR)
@@ -61,6 +64,7 @@ public class ScanRequestTest {
 
     /** Verify setting work source with null value in the scan request is allowed*/
     @Test
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void testSetWorkSource_nullValue() {
         ScanRequest request = new ScanRequest.Builder()
                 .setScanType(SCAN_TYPE_EXPOSURE_NOTIFICATION)
@@ -73,6 +77,7 @@ public class ScanRequestTest {
 
     /** Verify toString returns expected string. */
     @Test
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void testToString() {
         WorkSource workSource = getWorkSource();
         ScanRequest request = new ScanRequest.Builder()
@@ -89,6 +94,7 @@ public class ScanRequestTest {
 
     /** Verify toString works correctly with null WorkSource. */
     @Test
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void testToString_nullWorkSource() {
         ScanRequest request = new ScanRequest.Builder().setScanType(
                 SCAN_TYPE_FAST_PAIR).setWorkSource(null).build();
@@ -98,6 +104,7 @@ public class ScanRequestTest {
     }
 
     @Test
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void testisEnableBle_defaultTrue() {
         ScanRequest request = new ScanRequest.Builder()
                 .setScanType(SCAN_TYPE_FAST_PAIR)
@@ -107,6 +114,7 @@ public class ScanRequestTest {
     }
 
     @Test
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void test_isValidScanType() {
         assertThat(ScanRequest.isValidScanType(SCAN_TYPE_FAST_PAIR)).isTrue();
         assertThat(ScanRequest.isValidScanType(SCAN_TYPE_NEARBY_SHARE)).isTrue();
@@ -118,6 +126,7 @@ public class ScanRequestTest {
     }
 
     @Test
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void test_isValidScanMode() {
         assertThat(ScanRequest.isValidScanMode(SCAN_MODE_LOW_LATENCY)).isTrue();
         assertThat(ScanRequest.isValidScanMode(SCAN_MODE_BALANCED)).isTrue();
@@ -129,6 +138,7 @@ public class ScanRequestTest {
     }
 
     @Test
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void test_scanModeToString() {
         assertThat(ScanRequest.scanModeToString(2)).isEqualTo("SCAN_MODE_LOW_LATENCY");
         assertThat(ScanRequest.scanModeToString(1)).isEqualTo("SCAN_MODE_BALANCED");

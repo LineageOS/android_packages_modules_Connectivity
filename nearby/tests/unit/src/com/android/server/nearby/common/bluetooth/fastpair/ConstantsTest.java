@@ -27,6 +27,8 @@ import static org.mockito.MockitoAnnotations.initMocks;
 
 import android.bluetooth.BluetoothGattCharacteristic;
 
+import androidx.test.filters.SdkSuppress;
+
 import com.android.server.nearby.common.bluetooth.BluetoothException;
 import com.android.server.nearby.common.bluetooth.fastpair.Constants.FastPairService.KeyBasedPairingCharacteristic;
 import com.android.server.nearby.common.bluetooth.gatt.BluetoothGattConnection;
@@ -56,6 +58,7 @@ public class ConstantsTest extends TestCase {
         initMocks(this);
     }
 
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void test_getId_whenSupportNewCharacteristics() throws BluetoothException {
         when(mMockGattConnection.getCharacteristic(any(UUID.class), any(UUID.class)))
                 .thenReturn(new BluetoothGattCharacteristic(NEW_KEY_BASE_PAIRING_CHARACTERISTICS, 0,
@@ -65,6 +68,7 @@ public class ConstantsTest extends TestCase {
                 .isEqualTo(NEW_KEY_BASE_PAIRING_CHARACTERISTICS);
     }
 
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void test_getId_whenNotSupportNewCharacteristics() throws BluetoothException {
         // {@link BluetoothGattConnection#getCharacteristic(UUID, UUID)} throws {@link
         // BluetoothException} if the characteristic not found .

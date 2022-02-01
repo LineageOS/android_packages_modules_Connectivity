@@ -24,6 +24,7 @@ import android.bluetooth.BluetoothGatt;
 import android.platform.test.annotations.Presubmit;
 
 import androidx.test.ext.junit.runners.AndroidJUnit4;
+import androidx.test.filters.SdkSuppress;
 import androidx.test.filters.SmallTest;
 
 import com.google.common.collect.ImmutableSet;
@@ -45,6 +46,7 @@ public class BluetoothGattUtilsTest {
             "GATT_WRITE_REQUEST_BUSY", "GATT_WRITE_REQUEST_FAIL", "GATT_WRITE_REQUEST_SUCCESS");
 
     @Test
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void testGetMessageForStatusCode() throws Exception {
         Field[] publicFields = BluetoothGatt.class.getFields();
         for (Field field : publicFields) {

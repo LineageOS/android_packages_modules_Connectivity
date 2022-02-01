@@ -23,6 +23,7 @@ import android.os.Parcel;
 import android.platform.test.annotations.Presubmit;
 
 import androidx.test.ext.junit.runners.AndroidJUnit4;
+import androidx.test.filters.SdkSuppress;
 import androidx.test.filters.SmallTest;
 
 import org.junit.Test;
@@ -37,6 +38,7 @@ import org.junit.runner.RunWith;
 public class HeadsetPieceTest {
 
     @Test
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void parcelAndUnparcel() {
         HeadsetPiece headsetPiece = createDefaultHeadset().build();
         Parcel expectedParcel = Parcel.obtain();
@@ -49,6 +51,7 @@ public class HeadsetPieceTest {
     }
 
     @Test
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void parcelAndUnparcel_nullImageContentUri() {
         HeadsetPiece headsetPiece = createDefaultHeadset().setImageContentUri(null).build();
         Parcel expectedParcel = Parcel.obtain();
@@ -61,6 +64,7 @@ public class HeadsetPieceTest {
     }
 
     @Test
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void equals() {
         HeadsetPiece headsetPiece = createDefaultHeadset().build();
 
@@ -70,6 +74,7 @@ public class HeadsetPieceTest {
     }
 
     @Test
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void equals_nullImageContentUri() {
         HeadsetPiece headsetPiece = createDefaultHeadset().setImageContentUri(null).build();
 
@@ -79,6 +84,7 @@ public class HeadsetPieceTest {
     }
 
     @Test
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void notEquals_differentLowLevelThreshold() {
         HeadsetPiece headsetPiece = createDefaultHeadset().build();
 
@@ -88,6 +94,7 @@ public class HeadsetPieceTest {
     }
 
     @Test
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void notEquals_differentBatteryLevel() {
         HeadsetPiece headsetPiece = createDefaultHeadset().build();
 
@@ -97,6 +104,7 @@ public class HeadsetPieceTest {
     }
 
     @Test
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void notEquals_differentImageUrl() {
         HeadsetPiece headsetPiece = createDefaultHeadset().build();
 
@@ -107,6 +115,7 @@ public class HeadsetPieceTest {
     }
 
     @Test
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void notEquals_differentChargingState() {
         HeadsetPiece headsetPiece = createDefaultHeadset().build();
 
@@ -116,6 +125,7 @@ public class HeadsetPieceTest {
     }
 
     @Test
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void notEquals_differentImageContentUri() {
         HeadsetPiece headsetPiece = createDefaultHeadset().build();
 
@@ -127,6 +137,7 @@ public class HeadsetPieceTest {
     }
 
     @Test
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void notEquals_nullImageContentUri() {
         HeadsetPiece headsetPiece = createDefaultHeadset().build();
 
@@ -145,6 +156,7 @@ public class HeadsetPieceTest {
     }
 
     @Test
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void isLowBattery() {
         HeadsetPiece headsetPiece =
                 HeadsetPiece.builder()
@@ -158,6 +170,7 @@ public class HeadsetPieceTest {
     }
 
     @Test
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void isNotLowBattery() {
         HeadsetPiece headsetPiece =
                 HeadsetPiece.builder()
@@ -171,6 +184,7 @@ public class HeadsetPieceTest {
     }
 
     @Test
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void isNotLowBattery_whileCharging() {
         HeadsetPiece headsetPiece =
                 HeadsetPiece.builder()
