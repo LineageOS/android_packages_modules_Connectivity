@@ -32,10 +32,10 @@ cc_library {
         "NetdUpdatable.cpp",
     ],
     static_libs: [
+        "libbase",
         "libnetdutils",
     ],
     shared_libs: [
-        "libbase",
         "liblog",
     ],
     export_include_dirs: ["include"],
