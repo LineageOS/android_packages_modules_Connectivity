@@ -1,24 +1,35 @@
-/**
+/*
  * Copyright (C) 2015 The Android Open Source Project
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not
- * use this file except in compliance with the License. You may obtain a copy
- * of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
- * License for the specific language governing permissions and limitations
- * under the License.
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
-
 package android.net.cts;
 
+import static android.app.usage.NetworkStats.Bucket.DEFAULT_NETWORK_ALL;
+import static android.app.usage.NetworkStats.Bucket.DEFAULT_NETWORK_NO;
+import static android.app.usage.NetworkStats.Bucket.DEFAULT_NETWORK_YES;
+import static android.app.usage.NetworkStats.Bucket.METERED_ALL;
+import static android.app.usage.NetworkStats.Bucket.METERED_NO;
+import static android.app.usage.NetworkStats.Bucket.METERED_YES;
+import static android.app.usage.NetworkStats.Bucket.STATE_ALL;
+import static android.app.usage.NetworkStats.Bucket.STATE_DEFAULT;
+import static android.app.usage.NetworkStats.Bucket.STATE_FOREGROUND;
+import static android.app.usage.NetworkStats.Bucket.TAG_NONE;
+import static android.app.usage.NetworkStats.Bucket.UID_ALL;
+
 import android.app.AppOpsManager;
-import android.app.usage.NetworkStatsManager;
 import android.app.usage.NetworkStats;
+import android.app.usage.NetworkStatsManager;
 import android.content.Context;
 import android.content.pm.PackageManager;
 import android.net.ConnectivityManager;
@@ -29,7 +40,6 @@ import android.net.NetworkRequest;
 import android.net.TrafficStats;
 import android.os.Handler;
 import android.os.HandlerThread;
-import android.os.ParcelFileDescriptor;
 import android.os.Process;
 import android.os.RemoteException;
 import android.os.SystemClock;
@@ -41,31 +51,14 @@ import android.util.Log;
 import com.android.compatibility.common.util.ShellIdentityUtils;
 import com.android.compatibility.common.util.SystemUtil;
 
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.UnknownHostException;
 import java.text.MessageFormat;
 import java.util.ArrayList;
-import java.util.Scanner;
-import java.net.HttpURLConnection;
-
-import libcore.io.IoUtils;
-import libcore.io.Streams;
-
-import static android.app.usage.NetworkStats.Bucket.DEFAULT_NETWORK_ALL;
-import static android.app.usage.NetworkStats.Bucket.DEFAULT_NETWORK_NO;
-import static android.app.usage.NetworkStats.Bucket.DEFAULT_NETWORK_YES;
-import static android.app.usage.NetworkStats.Bucket.METERED_ALL;
-import static android.app.usage.NetworkStats.Bucket.METERED_YES;
-import static android.app.usage.NetworkStats.Bucket.METERED_NO;
-import static android.app.usage.NetworkStats.Bucket.STATE_ALL;
-import static android.app.usage.NetworkStats.Bucket.STATE_DEFAULT;
-import static android.app.usage.NetworkStats.Bucket.STATE_FOREGROUND;
-import static android.app.usage.NetworkStats.Bucket.TAG_NONE;
-import static android.app.usage.NetworkStats.Bucket.UID_ALL;
 
 public class NetworkStatsManagerTest extends InstrumentationTestCase {
     private static final String LOG_TAG = "NetworkStatsManagerTest";
@@ -150,13 +143,13 @@ public class NetworkStatsManagerTest extends InstrumentationTestCase {
 
                         @Override
                         public String getErrorMessage() {
-                            return " Please make sure you have added a SIM card with data plan to" +
-                                    " your phone, have enabled data over cellular and in case of" +
-                                    " dual SIM devices, have selected the right SIM " +
-                                    "for data connection.";
+                            return " Please make sure you have added a SIM card with data plan to"
+                                    + " your phone, have enabled data over cellular and in case of"
+                                    + " dual SIM devices, have selected the right SIM "
+                                    + "for data connection.";
                         }
                     }
-    };
+            };
 
     private String mPkg;
     private NetworkStatsManager mNsm;
@@ -296,7 +289,7 @@ public class NetworkStatsManagerTest extends InstrumentationTestCase {
                 }
             }
             fail(String.format("%s could not be resolved on network %s (%d attempts %dms apart)",
-                  mUrl.getHost(), network, HOST_RESOLUTION_RETRIES, HOST_RESOLUTION_INTERVAL_MS));
+                    mUrl.getHost(), network, HOST_RESOLUTION_RETRIES, HOST_RESOLUTION_INTERVAL_MS));
         }
 
         @Override
@@ -310,7 +303,7 @@ public class NetworkStatsManagerTest extends InstrumentationTestCase {
                 success = true;
                 metered = !mCm.getNetworkCapabilities(network)
                         .hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_METERED);
-                synchronized(NetworkStatsManagerTest.this) {
+                synchronized (NetworkStatsManagerTest.this) {
                     NetworkStatsManagerTest.this.notify();
                 }
             } catch (Exception e) {
@@ -332,9 +325,9 @@ public class NetworkStatsManagerTest extends InstrumentationTestCase {
                 .addTransportType(mNetworkInterfacesToTest[networkTypeIndex].getTransportType())
                 .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
                 .build(), callback);
-        synchronized(this) {
+        synchronized (this) {
             try {
-                wait((int)(TIMEOUT_MILLIS * 1.2));
+                wait((int) (TIMEOUT_MILLIS * 1.2));
             } catch (InterruptedException e) {
             }
         }
@@ -345,11 +338,11 @@ public class NetworkStatsManagerTest extends InstrumentationTestCase {
         }
 
         // This will always fail at this point as we know 'hasFeature' is true.
-        assertFalse (mNetworkInterfacesToTest[networkTypeIndex].getSystemFeature() +
-                " is a reported system feature, " +
-                "however no corresponding connected network interface was found or the attempt " +
-                "to connect has timed out (timeout = " + TIMEOUT_MILLIS + "ms)." +
-                mNetworkInterfacesToTest[networkTypeIndex].getErrorMessage(), hasFeature);
+        assertFalse(mNetworkInterfacesToTest[networkTypeIndex].getSystemFeature()
+                + " is a reported system feature, "
+                + "however no corresponding connected network interface was found or the attempt "
+                + "to connect has timed out (timeout = " + TIMEOUT_MILLIS + "ms)."
+                + mNetworkInterfacesToTest[networkTypeIndex].getErrorMessage(), hasFeature);
         return false;
     }
 
@@ -367,7 +360,7 @@ public class NetworkStatsManagerTest extends InstrumentationTestCase {
     @AppModeFull
     public void testDeviceSummary() throws Exception {
         for (int i = 0; i < mNetworkInterfacesToTest.length; ++i) {
-            if (!shouldTestThisNetworkType(i, MINUTE/2)) {
+            if (!shouldTestThisNetworkType(i, MINUTE / 2)) {
                 continue;
             }
             setAppOpsMode(AppOpsManager.OPSTR_GET_USAGE_STATS, "allow");
@@ -402,7 +395,7 @@ public class NetworkStatsManagerTest extends InstrumentationTestCase {
     @AppModeFull
     public void testUserSummary() throws Exception {
         for (int i = 0; i < mNetworkInterfacesToTest.length; ++i) {
-            if (!shouldTestThisNetworkType(i, MINUTE/2)) {
+            if (!shouldTestThisNetworkType(i, MINUTE / 2)) {
                 continue;
             }
             setAppOpsMode(AppOpsManager.OPSTR_GET_USAGE_STATS, "allow");
@@ -459,10 +452,10 @@ public class NetworkStatsManagerTest extends InstrumentationTestCase {
                 long totalRxBytes = 0;
                 boolean hasCorrectMetering = false;
                 boolean hasCorrectDefaultStatus = false;
-                int expectedMetering = mNetworkInterfacesToTest[i].getMetered() ?
-                        METERED_YES : METERED_NO;
-                int expectedDefaultStatus = mNetworkInterfacesToTest[i].getIsDefault() ?
-                        DEFAULT_NETWORK_YES : DEFAULT_NETWORK_NO;
+                int expectedMetering = mNetworkInterfacesToTest[i].getMetered()
+                        ? METERED_YES : METERED_NO;
+                int expectedDefaultStatus = mNetworkInterfacesToTest[i].getIsDefault()
+                        ? DEFAULT_NETWORK_YES : DEFAULT_NETWORK_NO;
                 while (result.hasNextBucket()) {
                     assertTrue(result.getNextBucket(bucket));
                     assertTimestamps(bucket);
@@ -477,10 +470,10 @@ public class NetworkStatsManagerTest extends InstrumentationTestCase {
                     }
                 }
                 assertFalse(result.getNextBucket(bucket));
-                assertTrue("Incorrect metering for NetworkType: " +
-                        mNetworkInterfacesToTest[i].getNetworkType(), hasCorrectMetering);
-                assertTrue("Incorrect isDefault for NetworkType: " +
-                        mNetworkInterfacesToTest[i].getNetworkType(), hasCorrectDefaultStatus);
+                assertTrue("Incorrect metering for NetworkType: "
+                        + mNetworkInterfacesToTest[i].getNetworkType(), hasCorrectMetering);
+                assertTrue("Incorrect isDefault for NetworkType: "
+                        + mNetworkInterfacesToTest[i].getNetworkType(), hasCorrectDefaultStatus);
                 assertTrue("No Rx bytes usage for uid " + Process.myUid(), totalRxBytes > 0);
                 assertTrue("No Rx packets usage for uid " + Process.myUid(), totalRxPackets > 0);
                 assertTrue("No Tx bytes usage for uid " + Process.myUid(), totalTxBytes > 0);
@@ -663,7 +656,7 @@ public class NetworkStatsManagerTest extends InstrumentationTestCase {
         public final int state;
         public final long total;
 
-        public QueryResult(int tag, int state, NetworkStats stats) {
+        QueryResult(int tag, int state, NetworkStats stats) {
             this.tag = tag;
             this.state = state;
             total = getTotalAndAssertNotEmpty(stats, tag, state);
@@ -787,7 +780,7 @@ public class NetworkStatsManagerTest extends InstrumentationTestCase {
     public void testCallback() throws Exception {
         for (int i = 0; i < mNetworkInterfacesToTest.length; ++i) {
             // Relatively large tolerance to accommodate for history bucket size.
-            if (!shouldTestThisNetworkType(i, MINUTE/2)) {
+            if (!shouldTestThisNetworkType(i, MINUTE / 2)) {
                 continue;
             }
             setAppOpsMode(AppOpsManager.OPSTR_GET_USAGE_STATS, "allow");
@@ -869,10 +862,10 @@ public class NetworkStatsManagerTest extends InstrumentationTestCase {
     }
 
     private void assertTimestamps(final NetworkStats.Bucket bucket) {
-        assertTrue("Start timestamp " + bucket.getStartTimeStamp() + " is less than " +
-                mStartTime, bucket.getStartTimeStamp() >= mStartTime);
-        assertTrue("End timestamp " + bucket.getEndTimeStamp() + " is greater than " +
-                mEndTime, bucket.getEndTimeStamp() <= mEndTime);
+        assertTrue("Start timestamp " + bucket.getStartTimeStamp() + " is less than "
+                + mStartTime, bucket.getStartTimeStamp() >= mStartTime);
+        assertTrue("End timestamp " + bucket.getEndTimeStamp() + " is greater than "
+                + mEndTime, bucket.getEndTimeStamp() <= mEndTime);
     }
 
     private static class TestUsageCallback extends NetworkStatsManager.UsageCallback {
