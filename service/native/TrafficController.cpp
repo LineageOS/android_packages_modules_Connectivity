@@ -683,8 +683,6 @@ void dumpBpfMap(const std::string& mapName, DumpWriter& dw, const std::string& h
     }
 }
 
-const String16 TrafficController::DUMP_KEYWORD = String16("trafficcontroller");
-
 void TrafficController::dump(DumpWriter& dw, bool verbose) {
     std::lock_guard guard(mMutex);
     ScopedIndent indentTop(dw);

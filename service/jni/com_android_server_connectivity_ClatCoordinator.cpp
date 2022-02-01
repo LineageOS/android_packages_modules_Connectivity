@@ -519,7 +519,7 @@ static const JNINativeMethod gMethods[] = {
          (void*)com_android_server_connectivity_ClatCoordinator_stopClatd},
 };
 
-int register_android_server_connectivity_ClatCoordinator(JNIEnv* env) {
+int register_com_android_server_connectivity_ClatCoordinator(JNIEnv* env) {
     return jniRegisterNativeMethods(env, "com/android/server/connectivity/ClatCoordinator",
                                     gMethods, NELEM(gMethods));
 }
