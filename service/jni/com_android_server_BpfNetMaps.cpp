@@ -16,17 +16,17 @@
 
 #define LOG_TAG "TrafficControllerJni"
 
+#include "TrafficController.h"
+
+#include <bpf_shared.h>
 #include <jni.h>
+#include <log/log.h>
 #include <nativehelper/JNIHelp.h>
 #include <nativehelper/ScopedUtfChars.h>
 #include <nativehelper/ScopedPrimitiveArray.h>
 #include <net/if.h>
 #include <vector>
 
-#include "TrafficController.h"
-#include "android-base/logging.h"
-#include "bpf_shared.h"
-#include "utils/Log.h"
 
 using android::net::TrafficController;
 using android::netdutils::Status;
@@ -39,7 +39,8 @@ static android::net::TrafficController mTc;
 namespace android {
 
 static void native_init(JNIEnv* env, jobject clazz) {
-  Status status = mTc.start();
+  // start is still being called by netd
+  Status status = mTc.initMaps();
    if (!isOk(status)) {
     ALOGE("%s failed", __func__);
   }
