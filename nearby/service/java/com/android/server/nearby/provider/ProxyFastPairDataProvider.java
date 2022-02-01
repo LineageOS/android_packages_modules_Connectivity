@@ -18,10 +18,20 @@ package com.android.server.nearby.provider;
 
 import android.annotation.Nullable;
 import android.content.Context;
+import android.nearby.aidl.FastPairAccountDevicesMetadataRequestParcel;
+import android.nearby.aidl.FastPairAccountKeyDeviceMetadataParcel;
 import android.nearby.aidl.FastPairAntispoofkeyDeviceMetadataParcel;
 import android.nearby.aidl.FastPairAntispoofkeyDeviceMetadataRequestParcel;
+import android.nearby.aidl.FastPairEligibleAccountParcel;
+import android.nearby.aidl.FastPairEligibleAccountsRequestParcel;
+import android.nearby.aidl.FastPairManageAccountDeviceRequestParcel;
+import android.nearby.aidl.FastPairManageAccountRequestParcel;
+import android.nearby.aidl.IFastPairAccountDevicesMetadataCallback;
 import android.nearby.aidl.IFastPairAntispoofkeyDeviceMetadataCallback;
 import android.nearby.aidl.IFastPairDataProvider;
+import android.nearby.aidl.IFastPairEligibleAccountsCallback;
+import android.nearby.aidl.IFastPairManageAccountCallback;
+import android.nearby.aidl.IFastPairManageAccountDeviceCallback;
 import android.os.IBinder;
 import android.os.RemoteException;
 
@@ -36,12 +46,12 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
-import service.proto.Rpcs;
-
 /**
  * Proxy for IFastPairDataProvider implementations.
  */
 public class ProxyFastPairDataProvider implements ServiceListener<BoundServiceInfo> {
+
+    private static final int TIME_OUT_MILLIS = 10000;
 
     /**
      * Creates and registers this proxy. If no suitable service is available for the proxy, returns
@@ -71,7 +81,9 @@ public class ProxyFastPairDataProvider implements ServiceListener<BoundServiceIn
         return mServiceMonitor.checkServiceResolves();
     }
 
-    /** User service watch to connect to actually services implemented by OEMs. */
+    /**
+     * User service watch to connect to actually services implemented by OEMs.
+     */
     public void register() {
         mServiceMonitor.register();
     }
@@ -88,29 +100,151 @@ public class ProxyFastPairDataProvider implements ServiceListener<BoundServiceIn
     public void onUnbind() {
     }
 
-    /** Invoke loadFastPairDeviceMetadata. */
+    /**
+     * Invokes system api loadFastPairEligibleAccounts.
+     *
+     * @return an array of acccounts and their opt in status.
+     */
     @WorkerThread
     @Nullable
-    Rpcs.GetObservedDeviceResponse loadFastPairDeviceMetadata(byte[] modelId) {
+    public FastPairEligibleAccountParcel[] loadFastPairEligibleAccounts(
+            FastPairEligibleAccountsRequestParcel requestParcel) {
         final CountDownLatch waitForCompletionLatch = new CountDownLatch(1);
-        final AtomicReference<Rpcs.GetObservedDeviceResponse> response = new AtomicReference<>();
+        final AtomicReference<FastPairEligibleAccountParcel[]> response = new AtomicReference<>();
         mServiceMonitor.runOnBinder(new ServiceMonitor.BinderOperation() {
             @Override
             public void run(IBinder binder) throws RemoteException {
                 IFastPairDataProvider provider = IFastPairDataProvider.Stub.asInterface(binder);
-                FastPairAntispoofkeyDeviceMetadataRequestParcel requestParcel =
-                        new FastPairAntispoofkeyDeviceMetadataRequestParcel();
-                requestParcel.modelId = modelId;
+                IFastPairEligibleAccountsCallback callback =
+                        new IFastPairEligibleAccountsCallback.Stub() {
+                            public void onFastPairEligibleAccountsReceived(
+                                    FastPairEligibleAccountParcel[] accountParcels) {
+                                response.set(accountParcels);
+                                waitForCompletionLatch.countDown();
+                            }
+
+                            public void onError(int code, String message) {
+                                waitForCompletionLatch.countDown();
+                            }
+                        };
+                provider.loadFastPairEligibleAccounts(requestParcel, callback);
+            }
+
+            @Override
+            public void onError() {
+                waitForCompletionLatch.countDown();
+            }
+        });
+        try {
+            waitForCompletionLatch.await(TIME_OUT_MILLIS, TimeUnit.MILLISECONDS);
+        } catch (InterruptedException e) {
+            // skip.
+        }
+        return response.get();
+    }
+
+    /**
+     * Invokes system api manageFastPairAccount to opt in account, or opt out account.
+     */
+    @WorkerThread
+    public void manageFastPairAccount(FastPairManageAccountRequestParcel requestParcel) {
+        final CountDownLatch waitForCompletionLatch = new CountDownLatch(1);
+        mServiceMonitor.runOnBinder(new ServiceMonitor.BinderOperation() {
+            @Override
+            public void run(IBinder binder) throws RemoteException {
+                IFastPairDataProvider provider = IFastPairDataProvider.Stub.asInterface(binder);
+                IFastPairManageAccountCallback callback =
+                        new IFastPairManageAccountCallback.Stub() {
+                            public void onSuccess() {
+                                waitForCompletionLatch.countDown();
+                            }
+
+                            public void onError(int code, String message) {
+                                waitForCompletionLatch.countDown();
+                            }
+                        };
+                provider.manageFastPairAccount(requestParcel, callback);
+            }
+
+            @Override
+            public void onError() {
+                waitForCompletionLatch.countDown();
+            }
+        });
+        try {
+            waitForCompletionLatch.await(TIME_OUT_MILLIS, TimeUnit.MILLISECONDS);
+        } catch (InterruptedException e) {
+            // skip.
+        }
+        return;
+    }
+
+    /**
+     * Invokes system api manageFastPairAccountDevice to add or remove a device from a Fast Pair
+     * account.
+     */
+    @WorkerThread
+    public void manageFastPairAccountDevice(
+            FastPairManageAccountDeviceRequestParcel requestParcel) {
+        final CountDownLatch waitForCompletionLatch = new CountDownLatch(1);
+        mServiceMonitor.runOnBinder(new ServiceMonitor.BinderOperation() {
+            @Override
+            public void run(IBinder binder) throws RemoteException {
+                IFastPairDataProvider provider = IFastPairDataProvider.Stub.asInterface(binder);
+                IFastPairManageAccountDeviceCallback callback =
+                        new IFastPairManageAccountDeviceCallback.Stub() {
+                            public void onSuccess() {
+                                waitForCompletionLatch.countDown();
+                            }
+
+                            public void onError(int code, String message) {
+                                waitForCompletionLatch.countDown();
+                            }
+                        };
+                provider.manageFastPairAccountDevice(requestParcel, callback);
+            }
+
+            @Override
+            public void onError() {
+                waitForCompletionLatch.countDown();
+            }
+        });
+        try {
+            waitForCompletionLatch.await(TIME_OUT_MILLIS, TimeUnit.MILLISECONDS);
+        } catch (InterruptedException e) {
+            // skip.
+        }
+        return;
+    }
+
+    /**
+     * Invokes system api loadFastPairAntispoofkeyDeviceMetadata.
+     *
+     * @return the Fast Pair AntispoofKeyDeviceMetadata of a given device.
+     */
+    @WorkerThread
+    @Nullable
+    FastPairAntispoofkeyDeviceMetadataParcel loadFastPairAntispoofkeyDeviceMetadata(
+            FastPairAntispoofkeyDeviceMetadataRequestParcel requestParcel) {
+        final CountDownLatch waitForCompletionLatch = new CountDownLatch(1);
+        final AtomicReference<FastPairAntispoofkeyDeviceMetadataParcel> response =
+                new AtomicReference<>();
+        mServiceMonitor.runOnBinder(new ServiceMonitor.BinderOperation() {
+            @Override
+            public void run(IBinder binder) throws RemoteException {
+                IFastPairDataProvider provider = IFastPairDataProvider.Stub.asInterface(binder);
                 IFastPairAntispoofkeyDeviceMetadataCallback callback =
                         new IFastPairAntispoofkeyDeviceMetadataCallback.Stub() {
-                    public void onFastPairAntispoofkeyDeviceMetadataReceived(
-                            FastPairAntispoofkeyDeviceMetadataParcel metadata) {
-                        response.set(Utils.convert(metadata));
-                        waitForCompletionLatch.countDown();
-                    }
-                    public void onError(int code, String message) {
-                    }
-                };
+                            public void onFastPairAntispoofkeyDeviceMetadataReceived(
+                                    FastPairAntispoofkeyDeviceMetadataParcel metadata) {
+                                response.set(metadata);
+                                waitForCompletionLatch.countDown();
+                            }
+
+                            public void onError(int code, String message) {
+                                waitForCompletionLatch.countDown();
+                            }
+                        };
                 provider.loadFastPairAntispoofkeyDeviceMetadata(requestParcel, callback);
             }
 
@@ -120,7 +254,51 @@ public class ProxyFastPairDataProvider implements ServiceListener<BoundServiceIn
             }
         });
         try {
-            waitForCompletionLatch.await(10000, TimeUnit.MILLISECONDS);
+            waitForCompletionLatch.await(TIME_OUT_MILLIS, TimeUnit.MILLISECONDS);
+        } catch (InterruptedException e) {
+            // skip.
+        }
+        return response.get();
+    }
+
+    /**
+     * Invokes loadFastPairAccountDevicesMetadata.
+     *
+     * @return the metadata of Fast Pair devices that are associated with a given account.
+     */
+    @WorkerThread
+    @Nullable
+    FastPairAccountKeyDeviceMetadataParcel[] loadFastPairAccountDevicesMetadata(
+            FastPairAccountDevicesMetadataRequestParcel requestParcel) {
+        final CountDownLatch waitForCompletionLatch = new CountDownLatch(1);
+        final AtomicReference<FastPairAccountKeyDeviceMetadataParcel[]> response =
+                new AtomicReference<>();
+        mServiceMonitor.runOnBinder(new ServiceMonitor.BinderOperation() {
+            @Override
+            public void run(IBinder binder) throws RemoteException {
+                IFastPairDataProvider provider = IFastPairDataProvider.Stub.asInterface(binder);
+                IFastPairAccountDevicesMetadataCallback callback =
+                        new IFastPairAccountDevicesMetadataCallback.Stub() {
+                            public void onFastPairAccountDevicesMetadataReceived(
+                                    FastPairAccountKeyDeviceMetadataParcel[] metadatas) {
+                                response.set(metadatas);
+                                waitForCompletionLatch.countDown();
+                            }
+
+                            public void onError(int code, String message) {
+                                waitForCompletionLatch.countDown();
+                            }
+                        };
+                provider.loadFastPairAccountDevicesMetadata(requestParcel, callback);
+            }
+
+            @Override
+            public void onError() {
+                waitForCompletionLatch.countDown();
+            }
+        });
+        try {
+            waitForCompletionLatch.await(TIME_OUT_MILLIS, TimeUnit.MILLISECONDS);
         } catch (InterruptedException e) {
             // skip.
         }
