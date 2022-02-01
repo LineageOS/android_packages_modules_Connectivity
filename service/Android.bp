@@ -67,15 +67,15 @@ cc_library_shared {
         "libbase_headers",
     ],
     static_libs: [
-        "libbase",
         "libclat",
         "libip_checksum",
-        "libnetdutils",
         "libnetjniutils",
         "libtraffic_controller",
         "netd_aidl_interface-lateststable-ndk",
     ],
     shared_libs: [
+        "libbase",
+        "libnetdutils",
         "liblog",
         "libnativehelper",
     ],

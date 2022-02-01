@@ -28,7 +28,6 @@ cc_library {
         "bpf_connectivity_headers",
     ],
     static_libs: [
-        "libnetdutils",
         // TrafficController would use the constants of INetd so that add
         // netd_aidl_interface-lateststable-ndk.
         "netd_aidl_interface-lateststable-ndk",
@@ -37,6 +36,7 @@ cc_library {
         // TODO: Find a good way to remove libbase.
         "libbase",
         "libcutils",
+        "libnetdutils",
         "libutils",
         "liblog",
     ],
