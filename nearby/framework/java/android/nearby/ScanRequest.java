@@ -30,6 +30,8 @@ import com.android.internal.util.Preconditions;
 
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 
 /**
@@ -48,6 +50,7 @@ public final class ScanRequest implements Parcelable {
     public static final int SCAN_TYPE_NEARBY_PRESENCE = 3;
     /** Scan type for scanning devices using exposure notification protocol. */
     public static final int SCAN_TYPE_EXPOSURE_NOTIFICATION = 4;
+
     /** Scan mode uses highest duty cycle. */
     public static final int SCAN_MODE_LOW_LATENCY = 2;
     /** Scan in balanced power mode.
@@ -73,7 +76,9 @@ public final class ScanRequest implements Parcelable {
                     /* scanType= */ in.readInt(),
                     /* scanMode= */ in.readInt(),
                     /* enableBle= */ in.readBoolean(),
-                    /* workSource= */ in.readTypedObject(WorkSource.CREATOR));
+                    /* workSource= */ in.readTypedObject(WorkSource.CREATOR),
+                    /* scanFilters= */
+                    in.readArrayList(ScanFilter.class.getClassLoader(), ScanFilter.class));
         }
 
         @Override
@@ -81,17 +86,20 @@ public final class ScanRequest implements Parcelable {
             return new ScanRequest[size];
         }
     };
+
     private final @ScanType int mScanType;
     private final @ScanMode int mScanMode;
     private final boolean mEnableBle;
     private final @NonNull WorkSource mWorkSource;
+    private final List<ScanFilter> mScanFilters;
 
     private ScanRequest(@ScanType int scanType, @ScanMode int scanMode, boolean enableBle,
-            @NonNull WorkSource workSource) {
+            @NonNull WorkSource workSource, List<ScanFilter> scanFilters) {
         mScanType = scanType;
         mScanMode = scanMode;
         mEnableBle = enableBle;
         mWorkSource = workSource;
+        mScanFilters = scanFilters;
     }
 
     /**
@@ -157,6 +165,16 @@ public final class ScanRequest implements Parcelable {
     }
 
     /**
+     * Returns Scan Filters for this request.
+     *
+     * @hide
+     */
+    @NonNull
+    public List<ScanFilter> getScanFilters() {
+        return mScanFilters;
+    }
+
+    /**
      * Returns the work source used for power attribution of this request.
      *
      * @hide
@@ -186,6 +204,7 @@ public final class ScanRequest implements Parcelable {
         stringBuilder.append(", scanMode=").append(scanModeToString(mScanMode));
         stringBuilder.append(", enableBle=").append(mEnableBle);
         stringBuilder.append(", workSource=").append(mWorkSource);
+        stringBuilder.append(", scanFilters=").append(mScanFilters);
         stringBuilder.append("]");
         return stringBuilder.toString();
     }
@@ -196,6 +215,7 @@ public final class ScanRequest implements Parcelable {
         dest.writeInt(mScanMode);
         dest.writeBoolean(mEnableBle);
         dest.writeTypedObject(mWorkSource, /* parcelableFlags= */0);
+        dest.writeTypedList(mScanFilters);
     }
 
     @Override
@@ -237,12 +257,14 @@ public final class ScanRequest implements Parcelable {
 
         private boolean mEnableBle;
         private WorkSource mWorkSource;
+        private List<ScanFilter> mScanFilters;
 
         /** Creates a new Builder with the given scan type. */
         public Builder() {
             mScanType = INVALID_SCAN_TYPE;
             mEnableBle = true;
             mWorkSource = new WorkSource();
+            mScanFilters = new ArrayList<>();
         }
 
         /**
@@ -304,6 +326,24 @@ public final class ScanRequest implements Parcelable {
         }
 
         /**
+         * Adds a scan filter to the request. Client can call this method multiple times to add
+         * more than one scan filter. Scan results that match any of these scan filters will
+         * be returned.
+         *
+         * <p>On devices with hardware support, scan filters can significantly improve the battery
+         * usage of Nearby scans.
+         *
+         * @param scanFilter Filter for scanning the request.
+         *
+         * @hide
+         */
+        @NonNull
+        public Builder addScanFilter(@NonNull ScanFilter scanFilter) {
+            mScanFilters.add(scanFilter);
+            return this;
+        }
+
+        /**
          * Builds a scan request from this builder.
          *
          * @return a new nearby scan request.
@@ -318,7 +358,7 @@ public final class ScanRequest implements Parcelable {
             Preconditions.checkState(isValidScanMode(mScanMode),
                     "invalid scan mode : " + mScanMode
                             + ", scan mode must be one of ScanMode#SCAN_MODE_");
-            return new ScanRequest(mScanType, mScanMode, mEnableBle, mWorkSource);
+            return new ScanRequest(mScanType, mScanMode, mEnableBle, mWorkSource, mScanFilters);
         }
     }
 }
