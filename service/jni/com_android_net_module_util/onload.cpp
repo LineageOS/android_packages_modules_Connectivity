@@ -30,10 +30,10 @@ extern "C" jint JNI_OnLoad(JavaVM* vm, void*) {
     }
 
     if (register_com_android_net_module_util_BpfMap(env,
-            "com/android/connectivity/com/android/net/module/util/BpfMap") < 0) return JNI_ERR;
+            "android/net/connectivity/com/android/net/module/util/BpfMap") < 0) return JNI_ERR;
 
     if (register_com_android_net_module_util_TcUtils(env,
-            "com/android/connectivity/com/android/net/module/util/TcUtils") < 0) return JNI_ERR;
+            "android/net/connectivity/com/android/net/module/util/TcUtils") < 0) return JNI_ERR;
 
     return JNI_VERSION_1_6;
 }
