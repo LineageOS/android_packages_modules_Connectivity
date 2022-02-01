@@ -32,21 +32,13 @@ namespace net {
 using netdutils::StatusOr;
 
 class TrafficController {
-    // TODO: marking this private for right now, as start is already called by
-    // netd. start() calls initMaps(), initPrograms(), and sets up the socket
-    // destroy listener. Both initPrograms() and setting up the socket destroy
-    // listener should only be done once.
+  public:
+    static constexpr char DUMP_KEYWORD[] = "trafficcontroller";
+
     /*
      * Initialize the whole controller
      */
     netdutils::Status start();
-
-  public:
-    static constexpr char DUMP_KEYWORD[] = "trafficcontroller";
-
-    // TODO: marking this public for right now, as start() is already called by
-    // netd.
-    netdutils::Status initMaps() EXCLUDES(mMutex);
 
     int setCounterSet(int counterSetNum, uid_t uid, uid_t callingUid) EXCLUDES(mMutex);
 
@@ -194,6 +186,8 @@ class TrafficController {
             REQUIRES(mMutex);
 
     std::mutex mMutex;
+
+    netdutils::Status initMaps() EXCLUDES(mMutex);
 
     // Keep track of uids that have permission UPDATE_DEVICE_STATS so we don't
     // need to call back to system server for permission check.
