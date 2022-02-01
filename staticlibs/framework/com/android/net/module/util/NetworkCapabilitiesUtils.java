@@ -85,7 +85,7 @@ public final class NetworkCapabilitiesUtils {
       * and {@code FORCE_RESTRICTED_CAPABILITIES}.
      */
     @VisibleForTesting
-    static final long RESTRICTED_CAPABILITIES = packBitList(
+    public static final long RESTRICTED_CAPABILITIES = packBitList(
             NET_CAPABILITY_BIP,
             NET_CAPABILITY_CBS,
             NET_CAPABILITY_DUN,
@@ -115,7 +115,7 @@ public final class NetworkCapabilitiesUtils {
      * See {@code NetworkCapabilities#maybeMarkCapabilitiesRestricted}.
      */
     @VisibleForTesting
-    static final long UNRESTRICTED_CAPABILITIES = packBitList(
+    public static final long UNRESTRICTED_CAPABILITIES = packBitList(
             NET_CAPABILITY_INTERNET,
             NET_CAPABILITY_MMS,
             NET_CAPABILITY_SUPL,
