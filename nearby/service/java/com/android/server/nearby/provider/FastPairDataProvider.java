@@ -20,10 +20,12 @@ import android.accounts.Account;
 import android.annotation.Nullable;
 import android.content.Context;
 import android.nearby.FastPairDataProviderBase;
+import android.nearby.FastPairDevice;
 import android.util.Log;
 
 import androidx.annotation.WorkerThread;
 
+import com.android.server.nearby.common.bloomfilter.BloomFilter;
 import com.android.server.nearby.fastpair.footprint.FastPairUploadInfo;
 
 import service.proto.Rpcs;
@@ -88,6 +90,13 @@ public class FastPairDataProvider {
      */
     public void upload(Account account, FastPairUploadInfo uploadInfo) {
 
+    }
+
+    /**
+     * Get recognized device from bloom filter.
+     */
+    public FastPairDevice getRecognizedDevice(BloomFilter bloomFilter, byte[] salt) {
+        return new FastPairDevice.Builder().build();
     }
 
 }
