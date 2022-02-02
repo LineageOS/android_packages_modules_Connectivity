@@ -30,7 +30,7 @@ import static org.mockito.Mockito.when;
 import android.content.Context;
 import android.content.res.Resources;
 import android.net.InetAddresses;
-import android.net.IInternalNetworkManagementListener;
+import android.net.IEthernetNetworkManagementListener;
 import android.net.INetd;
 import android.net.IpConfiguration;
 import android.net.IpConfiguration.IpAssignment;
@@ -62,7 +62,7 @@ public class EthernetTrackerTest {
     private static final String TEST_IFACE = "test123";
     private static final int TIMEOUT_MS = 1_000;
     private static final String THREAD_NAME = "EthernetServiceThread";
-    private static final IInternalNetworkManagementListener NULL_LISTENER = null;
+    private static final IEthernetNetworkManagementListener NULL_LISTENER = null;
     private EthernetTracker tracker;
     private HandlerThread mHandlerThread;
     @Mock private Context mContext;
@@ -325,7 +325,7 @@ public class EthernetTrackerTest {
     public void testUpdateConfiguration() {
         final NetworkCapabilities capabilities = new NetworkCapabilities.Builder().build();
         final StaticIpConfiguration staticIpConfig = new StaticIpConfiguration();
-        final IInternalNetworkManagementListener listener = null;
+        final IEthernetNetworkManagementListener listener = null;
 
         tracker.updateConfiguration(TEST_IFACE, staticIpConfig, capabilities, listener);
         waitForIdle();
