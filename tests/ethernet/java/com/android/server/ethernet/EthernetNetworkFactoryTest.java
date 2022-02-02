@@ -40,8 +40,8 @@ import android.content.Context;
 import android.content.res.Resources;
 import android.net.ConnectivityManager;
 import android.net.EthernetNetworkSpecifier;
-import android.net.IInternalNetworkManagementListener;
-import android.net.InternalNetworkManagementException;
+import android.net.IEthernetNetworkManagementListener;
+import android.net.EthernetNetworkManagementException;
 import android.net.IpConfiguration;
 import android.net.LinkAddress;
 import android.net.LinkProperties;
@@ -83,7 +83,7 @@ import java.util.concurrent.TimeUnit;
 public class EthernetNetworkFactoryTest {
     private static final int TIMEOUT_MS = 2_000;
     private static final String TEST_IFACE = "test123";
-    private static final IInternalNetworkManagementListener NULL_LISTENER = null;
+    private static final IEthernetNetworkManagementListener NULL_LISTENER = null;
     private static final String IP_ADDR = "192.0.2.2/25";
     private static final LinkAddress LINK_ADDR = new LinkAddress(IP_ADDR);
     private static final String HW_ADDR = "01:02:03:04:05:06";
@@ -627,17 +627,17 @@ public class EthernetNetworkFactoryTest {
     }
 
     private static final class TestNetworkManagementListener
-            implements IInternalNetworkManagementListener {
-        private final CompletableFuture<Pair<Network, InternalNetworkManagementException>> mDone
+            implements IEthernetNetworkManagementListener {
+        private final CompletableFuture<Pair<Network, EthernetNetworkManagementException>> mDone
                 = new CompletableFuture<>();
 
         @Override
         public void onComplete(final Network network,
-                final InternalNetworkManagementException exception) {
+                final EthernetNetworkManagementException exception) {
             mDone.complete(new Pair<>(network, exception));
         }
 
-        Pair<Network, InternalNetworkManagementException> expectOnComplete() throws Exception {
+        Pair<Network, EthernetNetworkManagementException> expectOnComplete() throws Exception {
             return mDone.get(TIMEOUT_MS, TimeUnit.MILLISECONDS);
         }
 
@@ -704,7 +704,7 @@ public class EthernetNetworkFactoryTest {
     private void assertSuccessfulListener(
             @NonNull final TestNetworkManagementListener successfulListener,
             @NonNull final Network expectedNetwork) throws Exception {
-        final Pair<Network, InternalNetworkManagementException> successfulResult =
+        final Pair<Network, EthernetNetworkManagementException> successfulResult =
                 successfulListener.expectOnComplete();
         assertEquals(expectedNetwork, successfulResult.first);
         assertNull(successfulResult.second);
@@ -713,7 +713,7 @@ public class EthernetNetworkFactoryTest {
     private void assertFailedListener(@NonNull final TestNetworkManagementListener failedListener,
             @NonNull final String errMsg)
             throws Exception {
-        final Pair<Network, InternalNetworkManagementException> failedResult =
+        final Pair<Network, EthernetNetworkManagementException> failedResult =
                 failedListener.expectOnComplete();
         assertNull(failedResult.first);
         assertNotNull(failedResult.second);
