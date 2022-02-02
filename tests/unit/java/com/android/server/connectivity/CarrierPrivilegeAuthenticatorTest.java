@@ -17,6 +17,7 @@
 package com.android.server.connectivity;
 
 import static android.net.NetworkCapabilities.TRANSPORT_CELLULAR;
+import static android.net.NetworkCapabilities.TRANSPORT_WIFI;
 import static android.telephony.TelephonyManager.ACTION_MULTI_SIM_CONFIG_CHANGED;
 
 import static com.android.testutils.DevSdkIgnoreRuleKt.SC_V2;
@@ -40,7 +41,9 @@ import android.content.IntentFilter;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.net.NetworkRequest;
+import android.net.NetworkSpecifier;
 import android.net.TelephonyNetworkSpecifier;
+import android.telephony.SubscriptionManager;
 import android.telephony.TelephonyManager;
 
 import com.android.networkstack.apishim.TelephonyManagerShimImpl;
@@ -66,27 +69,25 @@ import java.util.List;
 @RunWith(DevSdkIgnoreRunner.class)
 @IgnoreUpTo(SC_V2) // TODO: Use to Build.VERSION_CODES.SC_V2 when available
 public class CarrierPrivilegeAuthenticatorTest {
-    private static final String PACKAGE_NAME =
-            CarrierPrivilegeAuthenticatorTest.class.getPackage().getName();
-    private static final int TEST_SIM_SLOT_INDEX = 0;
-    private static final int TEST_SUBSCRIPTION_ID_1 = 2;
-    private static final int TEST_SUBSCRIPTION_ID_2 = 3;
+    private static final int SUBSCRIPTION_COUNT = 2;
+    private static final int TEST_SUBSCRIPTION_ID = 1;
 
     @NonNull private final Context mContext;
     @NonNull private final TelephonyManager mTelephonyManager;
     @NonNull private final TelephonyManagerShimImpl mTelephonyManagerShim;
     @NonNull private final PackageManager mPackageManager;
-    @NonNull private CarrierPrivilegeAuthenticatorChild mCarrierPrivilegeAuthenticator;
+    @NonNull private TestCarrierPrivilegeAuthenticator mCarrierPrivilegeAuthenticator;
     private final int mCarrierConfigPkgUid = 12345;
     private final String mTestPkg = "com.android.server.connectivity.test";
 
-    public class CarrierPrivilegeAuthenticatorChild extends CarrierPrivilegeAuthenticator {
-        CarrierPrivilegeAuthenticatorChild(@NonNull final Context c,
+    public class TestCarrierPrivilegeAuthenticator extends CarrierPrivilegeAuthenticator {
+        TestCarrierPrivilegeAuthenticator(@NonNull final Context c,
                 @NonNull final TelephonyManager t) {
             super(c, t, mTelephonyManagerShim);
         }
         @Override
         protected int getSlotIndex(int subId) {
+            if (SubscriptionManager.DEFAULT_SUBSCRIPTION_ID == subId) return TEST_SUBSCRIPTION_ID;
             return subId;
         }
     }
@@ -100,7 +101,7 @@ public class CarrierPrivilegeAuthenticatorTest {
 
     @Before
     public void setUp() throws Exception {
-        doReturn(2).when(mTelephonyManager).getActiveModemCount();
+        doReturn(SUBSCRIPTION_COUNT).when(mTelephonyManager).getActiveModemCount();
         doReturn(mTestPkg).when(mTelephonyManagerShim)
                 .getCarrierServicePackageNameForLogicalSlot(anyInt());
         doReturn(mPackageManager).when(mContext).getPackageManager();
@@ -109,7 +110,7 @@ public class CarrierPrivilegeAuthenticatorTest {
         doReturn(applicationInfo).when(mPackageManager)
                 .getApplicationInfo(eq(mTestPkg), anyInt());
         mCarrierPrivilegeAuthenticator =
-                new CarrierPrivilegeAuthenticatorChild(mContext, mTelephonyManager);
+                new TestCarrierPrivilegeAuthenticator(mContext, mTelephonyManager);
     }
 
     private IntentFilter getIntentFilter() {
@@ -126,7 +127,6 @@ public class CarrierPrivilegeAuthenticatorTest {
             verify(mTelephonyManagerShim, atLeastOnce())
                     .addCarrierPrivilegesListener(anyInt(), any(), captor.capture());
         } catch (UnsupportedApiLevelException e) {
-
         }
         return captor.getAllValues();
     }
@@ -160,10 +160,10 @@ public class CarrierPrivilegeAuthenticatorTest {
         networkRequestBuilder.addTransportType(TRANSPORT_CELLULAR);
         networkRequestBuilder.setNetworkSpecifier(telephonyNetworkSpecifier);
 
-        assertTrue(mCarrierPrivilegeAuthenticator.hasCarrierPrivilegeForNetworkRequest(
-                mCarrierConfigPkgUid, networkRequestBuilder.build()));
-        assertFalse(mCarrierPrivilegeAuthenticator.hasCarrierPrivilegeForNetworkRequest(
-                mCarrierConfigPkgUid + 1, networkRequestBuilder.build()));
+        assertTrue(mCarrierPrivilegeAuthenticator.hasCarrierPrivilegeForNetworkCapabilities(
+                mCarrierConfigPkgUid, networkRequestBuilder.build().networkCapabilities));
+        assertFalse(mCarrierPrivilegeAuthenticator.hasCarrierPrivilegeForNetworkCapabilities(
+                mCarrierConfigPkgUid + 1, networkRequestBuilder.build().networkCapabilities));
     }
 
     @Test
@@ -192,10 +192,10 @@ public class CarrierPrivilegeAuthenticatorTest {
         final NetworkRequest.Builder networkRequestBuilder = new NetworkRequest.Builder();
         networkRequestBuilder.addTransportType(TRANSPORT_CELLULAR);
         networkRequestBuilder.setNetworkSpecifier(telephonyNetworkSpecifier);
-        assertTrue(mCarrierPrivilegeAuthenticator.hasCarrierPrivilegeForNetworkRequest(
-                mCarrierConfigPkgUid, networkRequestBuilder.build()));
-        assertFalse(mCarrierPrivilegeAuthenticator.hasCarrierPrivilegeForNetworkRequest(
-                mCarrierConfigPkgUid + 1, networkRequestBuilder.build()));
+        assertTrue(mCarrierPrivilegeAuthenticator.hasCarrierPrivilegeForNetworkCapabilities(
+                mCarrierConfigPkgUid, networkRequestBuilder.build().networkCapabilities));
+        assertFalse(mCarrierPrivilegeAuthenticator.hasCarrierPrivilegeForNetworkCapabilities(
+                mCarrierConfigPkgUid + 1, networkRequestBuilder.build().networkCapabilities));
     }
 
     @Test
@@ -215,9 +215,30 @@ public class CarrierPrivilegeAuthenticatorTest {
                 .getApplicationInfo(eq(mTestPkg), anyInt());
         listener.onCarrierPrivilegesChanged(Collections.emptyList(), new int[] {});
 
-        assertFalse(mCarrierPrivilegeAuthenticator.hasCarrierPrivilegeForNetworkRequest(
-                mCarrierConfigPkgUid, networkRequestBuilder.build()));
-        assertTrue(mCarrierPrivilegeAuthenticator.hasCarrierPrivilegeForNetworkRequest(
-                mCarrierConfigPkgUid + 1, networkRequestBuilder.build()));
+        assertFalse(mCarrierPrivilegeAuthenticator.hasCarrierPrivilegeForNetworkCapabilities(
+                mCarrierConfigPkgUid, networkRequestBuilder.build().networkCapabilities));
+        assertTrue(mCarrierPrivilegeAuthenticator.hasCarrierPrivilegeForNetworkCapabilities(
+                mCarrierConfigPkgUid + 1, networkRequestBuilder.build().networkCapabilities));
+    }
+
+    @Test
+    public void testDefaultSubscription() throws Exception {
+        final NetworkRequest.Builder networkRequestBuilder = new NetworkRequest.Builder();
+        networkRequestBuilder.addTransportType(TRANSPORT_CELLULAR);
+        assertFalse(mCarrierPrivilegeAuthenticator.hasCarrierPrivilegeForNetworkCapabilities(
+                mCarrierConfigPkgUid, networkRequestBuilder.build().networkCapabilities));
+
+        networkRequestBuilder.setNetworkSpecifier(new TelephonyNetworkSpecifier(0));
+        assertTrue(mCarrierPrivilegeAuthenticator.hasCarrierPrivilegeForNetworkCapabilities(
+                mCarrierConfigPkgUid, networkRequestBuilder.build().networkCapabilities));
+
+        // The builder for NetworkRequest doesn't allow removing the transport as long as a
+        // specifier is set, so unset it first. TODO : fix the builder
+        networkRequestBuilder.setNetworkSpecifier((NetworkSpecifier) null);
+        networkRequestBuilder.removeTransportType(TRANSPORT_CELLULAR);
+        networkRequestBuilder.addTransportType(TRANSPORT_WIFI);
+        networkRequestBuilder.setNetworkSpecifier(new TelephonyNetworkSpecifier(0));
+        assertFalse(mCarrierPrivilegeAuthenticator.hasCarrierPrivilegeForNetworkCapabilities(
+                mCarrierConfigPkgUid, networkRequestBuilder.build().networkCapabilities));
     }
 }
