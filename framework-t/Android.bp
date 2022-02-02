@@ -63,6 +63,15 @@ java_defaults {
         // non-jarjard names of widely-used packages such as com.android.net.module.util.
         "framework-connectivity-pre-jarjar",
     ],
+    aidl: {
+        generate_get_transaction_name: true,
+        include_dirs: [
+            // For connectivity-framework classes such as Network.aidl,
+            // and connectivity-framework-t classes such as
+            // NetworkStateSnapshot.aidl
+            "packages/modules/Connectivity/framework/aidl-export",
+        ],
+    },
     apex_available: [
         "com.android.tethering",
     ],
