@@ -41,7 +41,6 @@ cc_library {
         cfi: true,
     },
     apex_available: [
-        "//apex_available:platform",
         "com.android.tethering",
     ],
     min_sdk_version: "30",
