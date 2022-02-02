@@ -20,7 +20,6 @@ import android.accounts.Account;
 import android.annotation.Nullable;
 import android.content.Context;
 import android.nearby.FastPairDataProviderBase;
-import android.nearby.FastPairDevice;
 import android.nearby.aidl.FastPairAntispoofkeyDeviceMetadataRequestParcel;
 import android.nearby.aidl.FastPairEligibleAccountsRequestParcel;
 import android.nearby.aidl.FastPairManageAccountDeviceRequestParcel;
@@ -34,6 +33,7 @@ import com.android.server.nearby.fastpair.footprint.FastPairUploadInfo;
 
 import java.util.List;
 
+import service.proto.Data;
 import service.proto.Rpcs;
 
 /**
@@ -51,7 +51,6 @@ public class FastPairDataProvider {
      * Initializes FastPairDataProvider singleton.
      */
     public static synchronized FastPairDataProvider init(Context context) {
-
         if (sInstance == null) {
             sInstance = new FastPairDataProvider(context);
         }
@@ -135,8 +134,9 @@ public class FastPairDataProvider {
     /**
      * Get recognized device from bloom filter.
      */
-    public FastPairDevice getRecognizedDevice(BloomFilter bloomFilter, byte[] salt) {
-        return new FastPairDevice.Builder().build();
+    public Data.FastPairDeviceWithAccountKey getRecognizedDevice(BloomFilter bloomFilter,
+            byte[] salt) {
+        return Data.FastPairDeviceWithAccountKey.newBuilder().build();
     }
 
     /**
