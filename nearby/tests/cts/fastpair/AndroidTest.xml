@@ -27,5 +27,9 @@
   <test class="com.android.tradefed.testtype.AndroidJUnitTest" >
     <option name="package" value="android.nearby.cts" />
   </test>
-
+  <!-- Only run NearbyUnitTests in MTS if the Nearby Mainline module is installed. -->
+  <object type="module_controller"
+      class="com.android.tradefed.testtype.suite.module.MainlineTestModuleController">
+    <option name="mainline-module-package-name" value="com.google.android.tethering" />
+  </object>
 </configuration>
