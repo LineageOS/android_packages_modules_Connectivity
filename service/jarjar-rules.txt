@@ -1,6 +1,15 @@
+# Classes in framework-connectivity are restricted to the android.net package.
+# This cannot be changed because it is harcoded in ART in S.
+# Any missing jarjar rule for framework-connectivity would be caught by the
+# build as an unexpected class outside of the android.net package.
+rule com.android.net.module.util.** android.net.connectivity.@0
+rule com.android.modules.utils.** android.net.connectivity.@0
+rule android.net.NetworkFactory* android.net.connectivity.@0
+
+# From modules-utils-preconditions
+rule com.android.internal.util.Preconditions* android.net.connectivity.@0
+
 rule android.sysprop.** com.android.connectivity.@0
-rule com.android.net.module.util.** com.android.connectivity.@0
-rule com.android.modules.utils.** com.android.connectivity.@0
 
 # internal util classes from framework-connectivity-shared-srcs
 rule android.util.LocalLog* com.android.connectivity.@0
@@ -22,9 +31,6 @@ rule android.net.ResolverOptionsParcel* com.android.connectivity.@0
 rule android.net.ResolverParamsParcel* com.android.connectivity.@0
 rule android.net.ResolverParamsParcel* com.android.connectivity.@0
 # Also includes netd event listener AIDL, but this is handled by netd-client rules
-
-# From net-utils-device-common
-rule android.net.NetworkFactory* com.android.connectivity.@0
 
 # From netd-client (newer AIDLs should go to android.net.netd.aidl)
 rule android.net.netd.aidl.** com.android.connectivity.@0

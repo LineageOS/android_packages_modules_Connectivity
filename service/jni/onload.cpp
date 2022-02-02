@@ -19,8 +19,9 @@
 
 namespace android {
 
-int register_android_server_TestNetworkService(JNIEnv* env);
-int register_android_server_connectivity_ClatCoordinator(JNIEnv* env);
+int register_com_android_server_TestNetworkService(JNIEnv* env);
+int register_com_android_server_connectivity_ClatCoordinator(JNIEnv* env);
+int register_com_android_server_BpfNetMaps(JNIEnv* env);
 
 extern "C" jint JNI_OnLoad(JavaVM* vm, void*) {
     JNIEnv *env;
@@ -29,11 +30,15 @@ extern "C" jint JNI_OnLoad(JavaVM* vm, void*) {
         return JNI_ERR;
     }
 
-    if (register_android_server_TestNetworkService(env) < 0) {
+    if (register_com_android_server_TestNetworkService(env) < 0) {
         return JNI_ERR;
     }
 
-    if (register_android_server_connectivity_ClatCoordinator(env) < 0) {
+    if (register_com_android_server_connectivity_ClatCoordinator(env) < 0) {
+        return JNI_ERR;
+    }
+
+    if (register_com_android_server_BpfNetMaps(env) < 0) {
         return JNI_ERR;
     }
 

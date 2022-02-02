@@ -132,6 +132,7 @@ package android.net {
   }
 
   public final class NetworkCapabilities implements android.os.Parcelable {
+    method @NonNull @RequiresPermission(android.Manifest.permission.NETWORK_FACTORY) public java.util.Set<java.lang.Integer> getAccessUids();
     method @Nullable public java.util.Set<android.util.Range<java.lang.Integer>> getUids();
     method public boolean hasForbiddenCapability(int);
     field public static final long REDACT_ALL = -1L; // 0xffffffffffffffffL
@@ -143,6 +144,7 @@ package android.net {
   }
 
   public static final class NetworkCapabilities.Builder {
+    method @NonNull @RequiresPermission(android.Manifest.permission.NETWORK_FACTORY) public android.net.NetworkCapabilities.Builder setAccessUids(@NonNull java.util.Set<java.lang.Integer>);
     method @NonNull public android.net.NetworkCapabilities.Builder setUids(@Nullable java.util.Set<android.util.Range<java.lang.Integer>>);
   }
 

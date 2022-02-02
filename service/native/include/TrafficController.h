@@ -25,7 +25,6 @@
 #include "netdutils/DumpWriter.h"
 #include "netdutils/NetlinkListener.h"
 #include "netdutils/StatusOr.h"
-#include "utils/String16.h"
 
 namespace android {
 namespace net {
@@ -33,11 +32,21 @@ namespace net {
 using netdutils::StatusOr;
 
 class TrafficController {
-  public:
+    // TODO: marking this private for right now, as start is already called by
+    // netd. start() calls initMaps(), initPrograms(), and sets up the socket
+    // destroy listener. Both initPrograms() and setting up the socket destroy
+    // listener should only be done once.
     /*
      * Initialize the whole controller
      */
     netdutils::Status start();
+
+  public:
+    static constexpr char DUMP_KEYWORD[] = "trafficcontroller";
+
+    // TODO: marking this public for right now, as start() is already called by
+    // netd.
+    netdutils::Status initMaps() EXCLUDES(mMutex);
 
     int setCounterSet(int counterSetNum, uid_t uid, uid_t callingUid) EXCLUDES(mMutex);
 
@@ -84,7 +93,6 @@ class TrafficController {
 
     netdutils::Status updateUidOwnerMap(const uint32_t uid,
                                         UidOwnerMatchType matchType, IptOp op) EXCLUDES(mMutex);
-    static const String16 DUMP_KEYWORD;
 
     int toggleUidOwnerMap(ChildChain chain, bool enable) EXCLUDES(mMutex);
 
@@ -186,8 +194,6 @@ class TrafficController {
             REQUIRES(mMutex);
 
     std::mutex mMutex;
-
-    netdutils::Status initMaps() EXCLUDES(mMutex);
 
     // Keep track of uids that have permission UPDATE_DEVICE_STATS so we don't
     // need to call back to system server for permission check.
