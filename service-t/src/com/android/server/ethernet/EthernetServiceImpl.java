@@ -243,6 +243,7 @@ public class EthernetServiceImpl extends IEthernetManager.Stub {
             @Nullable final IInternalNetworkManagementListener listener) {
         Log.i(TAG, "connectNetwork called with: iface=" + iface + ", listener=" + listener);
         validateNetworkManagementState(iface, "connectNetwork()");
+        mTracker.connectNetwork(iface, listener);
     }
 
     @Override
@@ -250,5 +251,6 @@ public class EthernetServiceImpl extends IEthernetManager.Stub {
             @Nullable final IInternalNetworkManagementListener listener) {
         Log.i(TAG, "disconnectNetwork called with: iface=" + iface + ", listener=" + listener);
         validateNetworkManagementState(iface, "disconnectNetwork()");
+        mTracker.disconnectNetwork(iface, listener);
     }
 }
