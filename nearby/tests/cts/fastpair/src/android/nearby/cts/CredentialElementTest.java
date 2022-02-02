@@ -39,8 +39,7 @@ public class CredentialElementTest {
 
     @Test
     public void testBuilder() {
-        CredentialElement element = new CredentialElement.Builder().setElement(KEY,
-                VALUE).build();
+        CredentialElement element = new CredentialElement(KEY, VALUE);
 
         assertThat(element.getKey()).isEqualTo(KEY);
         assertThat(Arrays.equals(element.getValue(), VALUE)).isTrue();
@@ -48,8 +47,7 @@ public class CredentialElementTest {
 
     @Test
     public void testWriteParcel() {
-        CredentialElement element = new CredentialElement.Builder().setElement(KEY,
-                VALUE).build();
+        CredentialElement element = new CredentialElement(KEY, VALUE);
 
         Parcel parcel = Parcel.obtain();
         element.writeToParcel(parcel, 0);

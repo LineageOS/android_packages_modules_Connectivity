@@ -126,7 +126,7 @@ public final class ScanRequest implements Parcelable {
     /**
      * Returns true if an integer is a defined scan type.
      */
-    public static boolean isValidScanType(int scanType) {
+    public static boolean isValidScanType(@ScanType int scanType) {
         return scanType == SCAN_TYPE_FAST_PAIR
                 || scanType == SCAN_TYPE_NEARBY_SHARE
                 || scanType == SCAN_TYPE_NEARBY_PRESENCE
@@ -136,7 +136,7 @@ public final class ScanRequest implements Parcelable {
     /**
      * Returns true if an integer is a defined scan mode.
      */
-    public static boolean isValidScanMode(int scanMode) {
+    public static boolean isValidScanMode(@ScanMode int scanMode) {
         return scanMode == SCAN_MODE_LOW_LATENCY
                 || scanMode == SCAN_MODE_BALANCED
                 || scanMode == SCAN_MODE_LOW_POWER
@@ -166,8 +166,6 @@ public final class ScanRequest implements Parcelable {
 
     /**
      * Returns Scan Filters for this request.
-     *
-     * @hide
      */
     @NonNull
     public List<ScanFilter> getScanFilters() {
@@ -334,11 +332,10 @@ public final class ScanRequest implements Parcelable {
          * usage of Nearby scans.
          *
          * @param scanFilter Filter for scanning the request.
-         *
-         * @hide
          */
         @NonNull
         public Builder addScanFilter(@NonNull ScanFilter scanFilter) {
+            Objects.requireNonNull(scanFilter);
             mScanFilters.add(scanFilter);
             return this;
         }

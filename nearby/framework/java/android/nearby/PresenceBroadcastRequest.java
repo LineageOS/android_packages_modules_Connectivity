@@ -16,7 +16,9 @@
 
 package android.nearby;
 
+import android.annotation.IntRange;
 import android.annotation.NonNull;
+import android.annotation.SystemApi;
 import android.os.Parcel;
 import android.os.Parcelable;
 
@@ -24,12 +26,14 @@ import com.android.internal.util.Preconditions;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * Request for Nearby Presence Broadcast.
  *
  * @hide
  */
+@SystemApi
 public final class PresenceBroadcastRequest extends BroadcastRequest implements Parcelable {
     private final byte[] mSalt;
     private final List<Integer> mActions;
@@ -128,8 +132,6 @@ public final class PresenceBroadcastRequest extends BroadcastRequest implements 
 
     /**
      * Builder for {@link PresenceBroadcastRequest}.
-     *
-     * @hide
      */
     public static final class Builder {
         private final List<Integer> mMediums;
@@ -141,12 +143,17 @@ public final class PresenceBroadcastRequest extends BroadcastRequest implements 
         private byte[] mSalt;
         private PrivateCredential mCredential;
 
-        public Builder() {
+        public Builder(@NonNull List<Integer> mediums, @NonNull byte[] salt) {
+            Preconditions.checkState(!mediums.isEmpty(), "mediums cannot be empty");
+            Preconditions.checkState(salt != null && salt.length > 0, "salt cannot be empty");
+
             mVersion = PRESENCE_VERSION_V0;
             mTxPower = UNKNOWN_TX_POWER;
-            mMediums = new ArrayList<>();
             mActions = new ArrayList<>();
             mExtendedProperties = new ArrayList<>();
+
+            mSalt = salt;
+            mMediums = mediums;
         }
 
         /**
@@ -159,29 +166,12 @@ public final class PresenceBroadcastRequest extends BroadcastRequest implements 
         }
 
         /**
-         * Sets the calibrated tx power level for this request.
+         * Sets the calibrated tx power level in dBm for this request. The tx power level should
+         * be between -127 dBm and 126 dBm.
          */
         @NonNull
-        public Builder setTxPower(int txPower) {
+        public Builder setTxPower(@IntRange(from = -127, to = 126) int txPower) {
             mTxPower = txPower;
-            return this;
-        }
-
-        /**
-         * Add a medium for the presence broadcast request.
-         */
-        @NonNull
-        public Builder addMediums(int medium) {
-            mMediums.add(medium);
-            return this;
-        }
-
-        /**
-         * Sets the salt for the presence broadcast request.
-         */
-        @NonNull
-        public Builder setSalt(byte[] salt) {
-            mSalt = salt;
             return this;
         }
 
@@ -189,7 +179,7 @@ public final class PresenceBroadcastRequest extends BroadcastRequest implements 
          * Adds an action for the presence broadcast request.
          */
         @NonNull
-        public Builder addAction(int action) {
+        public Builder addAction(@IntRange(from = 1, to = 255) int action) {
             mActions.add(action);
             return this;
         }
@@ -199,6 +189,7 @@ public final class PresenceBroadcastRequest extends BroadcastRequest implements 
          */
         @NonNull
         public Builder setCredential(@NonNull PrivateCredential credential) {
+            Objects.requireNonNull(credential);
             mCredential = credential;
             return this;
         }
@@ -207,7 +198,8 @@ public final class PresenceBroadcastRequest extends BroadcastRequest implements 
          * Adds an extended property for the presence broadcast request.
          */
         @NonNull
-        public Builder addExtendedProperty(DataElement dataElement) {
+        public Builder addExtendedProperty(@NonNull DataElement dataElement) {
+            Objects.requireNonNull(dataElement);
             mExtendedProperties.add(dataElement);
             return this;
         }
@@ -217,8 +209,6 @@ public final class PresenceBroadcastRequest extends BroadcastRequest implements 
          */
         @NonNull
         public PresenceBroadcastRequest build() {
-            Preconditions.checkState(!mMediums.isEmpty(), "mediums cannot be empty");
-            Preconditions.checkState(mSalt != null && mSalt.length > 0, "salt cannot be empty");
             return new PresenceBroadcastRequest(mVersion, mTxPower, mMediums, mSalt, mActions,
                     mCredential, mExtendedProperties);
         }

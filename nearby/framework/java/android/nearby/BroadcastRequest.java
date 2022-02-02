@@ -17,8 +17,10 @@
 package android.nearby;
 
 import android.annotation.IntDef;
+import android.annotation.IntRange;
 import android.annotation.NonNull;
 import android.annotation.SuppressLint;
+import android.annotation.SystemApi;
 import android.os.Parcel;
 import android.os.Parcelable;
 
@@ -32,6 +34,7 @@ import java.util.List;
  *
  * @hide
  */
+@SystemApi
 @SuppressLint("ParcelNotFinal")  // BroadcastRequest constructor is not public
 public abstract class BroadcastRequest implements Parcelable {
 
@@ -39,6 +42,8 @@ public abstract class BroadcastRequest implements Parcelable {
     public static final int BROADCAST_TYPE_NEARBY_PRESENCE = 3;
 
     /** @hide **/
+    // Currently, only Nearby Presence broadcast is supported, in the future
+    // broadcasting using other nearby specifications will be added.
     @Retention(RetentionPolicy.SOURCE)
     @IntDef({BROADCAST_TYPE_NEARBY_PRESENCE})
     public @interface BroadcastType {
@@ -114,7 +119,7 @@ public abstract class BroadcastRequest implements Parcelable {
     }
 
     /**
-     * Returns the version fo the broadcast.
+     * Returns the version of the broadcast.
      */
     public @BroadcastVersion int getVersion() {
         return mVersion;
@@ -123,12 +128,13 @@ public abstract class BroadcastRequest implements Parcelable {
     /**
      * Returns the calibrated TX power when this request is broadcast.
      */
+    @IntRange(from = -127, to = 126)
     public int getTxPower() {
         return mTxPower;
     }
 
     /**
-     * Returns the list broadcast mediums.
+     * Returns the list of broadcast mediums.
      */
     @NonNull
     public List<Integer> getMediums() {

@@ -51,12 +51,10 @@ public class PrivateCredentialTest {
 
     @Before
     public void setUp() {
-        mBuilder = new PrivateCredential.Builder()
+        mBuilder = new PrivateCredential.Builder(SECRETE_ID, AUTHENTICITY_KEY)
                 .setIdentityType(IDENTITY_TYPE_PRIVATE)
-                .setSecretId(SECRETE_ID).setAuthenticityKey(AUTHENTICITY_KEY)
-                .setMetaDataEncryptionKey(METADATA_ENCRYPTION_KEY)
-                .addCredentialElement(
-                        new CredentialElement.Builder().setElement(KEY, VALUE).build());
+                .setMetadataEncryptionKey(METADATA_ENCRYPTION_KEY)
+                .addCredentialElement(new CredentialElement(KEY, VALUE));
     }
 
     @Test
@@ -67,7 +65,7 @@ public class PrivateCredentialTest {
         assertThat(credential.getIdentityType()).isEqualTo(IDENTITY_TYPE_PRIVATE);
         assertThat(Arrays.equals(credential.getSecretId(), SECRETE_ID)).isTrue();
         assertThat(Arrays.equals(credential.getAuthenticityKey(), AUTHENTICITY_KEY)).isTrue();
-        assertThat(Arrays.equals(credential.getMetaDataEncryptionKey(),
+        assertThat(Arrays.equals(credential.getMetadataEncryptionKey(),
                 METADATA_ENCRYPTION_KEY)).isTrue();
         CredentialElement credentialElement = credential.getCredentialElements().get(0);
         assertThat(credentialElement.getKey()).isEqualTo(KEY);
@@ -90,7 +88,7 @@ public class PrivateCredentialTest {
         assertThat(Arrays.equals(credentialFromParcel.getSecretId(), SECRETE_ID)).isTrue();
         assertThat(Arrays.equals(credentialFromParcel.getAuthenticityKey(),
                 AUTHENTICITY_KEY)).isTrue();
-        assertThat(Arrays.equals(credentialFromParcel.getMetaDataEncryptionKey(),
+        assertThat(Arrays.equals(credentialFromParcel.getMetadataEncryptionKey(),
                 METADATA_ENCRYPTION_KEY)).isTrue();
         CredentialElement credentialElement = credentialFromParcel.getCredentialElements().get(0);
         assertThat(credentialElement.getKey()).isEqualTo(KEY);

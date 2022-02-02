@@ -16,8 +16,10 @@
 
 package android.nearby;
 
+import android.annotation.IntRange;
 import android.annotation.NonNull;
 import android.annotation.SuppressLint;
+import android.annotation.SystemApi;
 import android.os.Parcel;
 import android.os.Parcelable;
 
@@ -26,6 +28,7 @@ import android.os.Parcelable;
  *
  * @hide
  */
+@SystemApi
 @SuppressLint("ParcelNotFinal")  // ScanFilter constructor is not public
 public abstract class ScanFilter implements Parcelable {
     public static final @NonNull Creator<ScanFilter> CREATOR = new Creator<ScanFilter>() {
@@ -33,6 +36,8 @@ public abstract class ScanFilter implements Parcelable {
         public ScanFilter createFromParcel(Parcel in) {
             int type = in.readInt();
             switch (type) {
+                // Currently, only Nearby Presence filtering is supported, in the future
+                // filtering other nearby specifications will be added.
                 case ScanRequest.SCAN_TYPE_NEARBY_PRESENCE:
                     return PresenceScanFilter.createFromParcelBody(in);
                 default:
@@ -48,16 +53,16 @@ public abstract class ScanFilter implements Parcelable {
     };
 
     private final @ScanRequest.ScanType int mType;
-    private final int mRssiThreshold;
+    private final int mMaxPathLoss;
 
     /**
      * Constructs a Scan Filter.
      *
      * @hide
      */
-    ScanFilter(@ScanRequest.ScanType int type, int rssiThreshold) {
+    ScanFilter(@ScanRequest.ScanType int type, @IntRange(from = 0, to = 127) int maxPathLoss) {
         mType = type;
-        mRssiThreshold = rssiThreshold;
+        mMaxPathLoss = maxPathLoss;
     }
 
     /**
@@ -67,7 +72,7 @@ public abstract class ScanFilter implements Parcelable {
      */
     ScanFilter(@ScanRequest.ScanType int type, Parcel in) {
         mType = type;
-        mRssiThreshold = in.readInt();
+        mMaxPathLoss = in.readInt();
     }
 
     /**
@@ -78,16 +83,19 @@ public abstract class ScanFilter implements Parcelable {
     }
 
     /**
-     * Minimum RSSI of the received scan result.
+     * Returns the maximum path loss (in dBm) of the received scan result. The path loss is the
+     * attenuation of radio energy between sender and receiver. Path loss here is defined as
+     * (TxPower - Rssi).
      */
-    public int getRssiThreshold() {
-        return mRssiThreshold;
+    @IntRange(from = 0, to = 127)
+    public int getMaxPathLoss() {
+        return mMaxPathLoss;
     }
 
     @Override
     public void writeToParcel(@NonNull Parcel dest, int flags) {
         dest.writeInt(mType);
-        dest.writeInt(mRssiThreshold);
+        dest.writeInt(mMaxPathLoss);
     }
 
     /**
@@ -97,5 +105,4 @@ public abstract class ScanFilter implements Parcelable {
     public int describeContents() {
         return 0;
     }
-
 }

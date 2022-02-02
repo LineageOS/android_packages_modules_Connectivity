@@ -17,19 +17,20 @@
 package android.nearby;
 
 import android.annotation.NonNull;
+import android.annotation.SystemApi;
 import android.os.Parcel;
 import android.os.Parcelable;
 
-import com.android.internal.util.Preconditions;
-
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * Represents a public credential.
  *
  * @hide
  */
+@SystemApi
 public final class PublicCredential extends PresenceCredential implements Parcelable {
     @NonNull
     public static final Creator<PublicCredential> CREATOR = new Creator<PublicCredential>() {
@@ -47,15 +48,15 @@ public final class PublicCredential extends PresenceCredential implements Parcel
 
     private final byte[] mPublicKey;
     private final byte[] mEncryptedMetadata;
-    private final byte[] mMetaDataEncryptionKeyTag;
+    private final byte[] mEncryptedMetadataKeyTag;
 
-    private PublicCredential(int identityType, byte[] secreteId, byte[] authenticityKey,
+    private PublicCredential(int identityType, byte[] secretId, byte[] authenticityKey,
             List<CredentialElement> credentialElements, byte[] publicKey, byte[] encryptedMetadata,
-            byte[] metaDataEncryptionKeyTag) {
-        super(CREDENTIAL_TYPE_PUBLIC, identityType, secreteId, authenticityKey, credentialElements);
+            byte[] metadataEncryptionKeyTag) {
+        super(CREDENTIAL_TYPE_PUBLIC, identityType, secretId, authenticityKey, credentialElements);
         mPublicKey = publicKey;
         mEncryptedMetadata = encryptedMetadata;
-        mMetaDataEncryptionKeyTag = metaDataEncryptionKeyTag;
+        mEncryptedMetadataKeyTag = metadataEncryptionKeyTag;
     }
 
     private PublicCredential(Parcel in) {
@@ -64,8 +65,8 @@ public final class PublicCredential extends PresenceCredential implements Parcel
         in.readByteArray(mPublicKey);
         mEncryptedMetadata = new byte[in.readInt()];
         in.readByteArray(mEncryptedMetadata);
-        mMetaDataEncryptionKeyTag = new byte[in.readInt()];
-        in.readByteArray(mMetaDataEncryptionKeyTag);
+        mEncryptedMetadataKeyTag = new byte[in.readInt()];
+        in.readByteArray(mEncryptedMetadataKeyTag);
     }
 
     static PublicCredential createFromParcelBody(Parcel in) {
@@ -92,8 +93,8 @@ public final class PublicCredential extends PresenceCredential implements Parcel
      * Returns the metadata encryption key tag associated with this credential.
      */
     @NonNull
-    public byte[] getMetaDataEncryptionKeyTag() {
-        return mMetaDataEncryptionKeyTag;
+    public byte[] getEncryptedMetadataKeyTag() {
+        return mEncryptedMetadataKeyTag;
     }
 
     @Override
@@ -108,26 +109,28 @@ public final class PublicCredential extends PresenceCredential implements Parcel
         dest.writeByteArray(mPublicKey);
         dest.writeInt(mEncryptedMetadata.length);
         dest.writeByteArray(mEncryptedMetadata);
-        dest.writeInt(mMetaDataEncryptionKeyTag.length);
-        dest.writeByteArray(mMetaDataEncryptionKeyTag);
+        dest.writeInt(mEncryptedMetadataKeyTag.length);
+        dest.writeByteArray(mEncryptedMetadataKeyTag);
     }
 
     /**
      * Builder class for {@link PresenceCredential}.
-     *
-     * @hide
      */
     public static final class Builder {
         private final List<CredentialElement> mCredentialElements;
 
         private @IdentityType int mIdentityType;
-        private byte[] mSecreteId;
+        private byte[] mSecretId;
         private byte[] mAuthenticityKey;
         private byte[] mPublicKey;
         private byte[] mEncryptedMetadata;
-        private byte[] mMetaDataEncryptionKeyTag;
+        private byte[] mEncryptedMetadataKeyTag;
 
-        public Builder() {
+        public Builder(@NonNull byte[] secretId, @NonNull byte[] authenticityKey) {
+            Objects.requireNonNull(secretId);
+            Objects.requireNonNull(authenticityKey);
+            mSecretId = secretId;
+            mAuthenticityKey = authenticityKey;
             mCredentialElements = new ArrayList<>();
         }
 
@@ -141,28 +144,11 @@ public final class PublicCredential extends PresenceCredential implements Parcel
         }
 
         /**
-         * Sets the secrete id for the presence credential.
-         */
-        @NonNull
-        public Builder setSecretId(@NonNull byte[] secreteId) {
-            mSecreteId = secreteId;
-            return this;
-        }
-
-        /**
-         * Sets the authenticity key for the presence credential.
-         */
-        @NonNull
-        public Builder setAuthenticityKey(@NonNull byte[] authenticityKey) {
-            mAuthenticityKey = authenticityKey;
-            return this;
-        }
-
-        /**
          * Adds an element to the credential.
          */
         @NonNull
         public Builder addCredentialElement(@NonNull CredentialElement credentialElement) {
+            Objects.requireNonNull(credentialElement);
             mCredentialElements.add(credentialElement);
             return this;
         }
@@ -172,6 +158,7 @@ public final class PublicCredential extends PresenceCredential implements Parcel
          */
         @NonNull
         public Builder setPublicKey(@NonNull byte[] publicKey) {
+            Objects.requireNonNull(publicKey);
             mPublicKey = publicKey;
             return this;
         }
@@ -181,16 +168,18 @@ public final class PublicCredential extends PresenceCredential implements Parcel
          */
         @NonNull
         public Builder setEncryptedMetadata(@NonNull byte[] encryptedMetadata) {
+            Objects.requireNonNull(encryptedMetadata);
             mEncryptedMetadata = encryptedMetadata;
             return this;
         }
 
         /**
-         * Sets the metadata encryption key tag.
+         * Sets the encrypted metadata key tag.
          */
         @NonNull
-        public Builder setMetaDataEncryptionKeyTag(@NonNull byte[] metaDataEncryptionKeyTag) {
-            mMetaDataEncryptionKeyTag = metaDataEncryptionKeyTag;
+        public Builder setEncryptedMetadataKeyTag(@NonNull byte[] encryptedMetadataKeyTag) {
+            Objects.requireNonNull(encryptedMetadataKeyTag);
+            mEncryptedMetadataKeyTag = encryptedMetadataKeyTag;
             return this;
         }
 
@@ -199,11 +188,8 @@ public final class PublicCredential extends PresenceCredential implements Parcel
          */
         @NonNull
         public PublicCredential build() {
-            Preconditions.checkState(mSecreteId.length > 0, "secrete id cannot be empty");
-            Preconditions.checkState(mAuthenticityKey.length > 0,
-                    "authenticity key cannot be empty");
-            return new PublicCredential(mIdentityType, mSecreteId, mAuthenticityKey,
-                    mCredentialElements, mPublicKey, mEncryptedMetadata, mMetaDataEncryptionKeyTag);
+            return new PublicCredential(mIdentityType, mSecretId, mAuthenticityKey,
+                    mCredentialElements, mPublicKey, mEncryptedMetadata, mEncryptedMetadataKeyTag);
         }
 
     }

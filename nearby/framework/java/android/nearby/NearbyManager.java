@@ -67,7 +67,7 @@ public class NearbyManager {
         if (scanType == ScanRequest.SCAN_TYPE_FAST_PAIR) {
             return new FastPairDevice.Builder()
                     .setName(nearbyDeviceParcelable.getName())
-                    .setMedium(nearbyDeviceParcelable.getMedium())
+                    .addMedium(nearbyDeviceParcelable.getMedium())
                     .setRssi(nearbyDeviceParcelable.getRssi())
                     .setModelId(nearbyDeviceParcelable.getFastPairModelId())
                     .setBluetoothAddress(nearbyDeviceParcelable.getBluetoothAddress())
@@ -146,8 +146,6 @@ public class NearbyManager {
      * @param broadcastRequest Request for the nearby broadcast.
      * @param executor Executor for running the callback.
      * @param callback Callback for notifying the client..
-     *
-     * @hide
      */
     public void startBroadcast(@NonNull BroadcastRequest broadcastRequest,
             @CallbackExecutor @NonNull Executor executor, @NonNull BroadcastCallback callback) {
@@ -158,8 +156,6 @@ public class NearbyManager {
      * Stop the broadcast associated with the given callback.
      *
      * @param callback The callback that was used for starting the broadcast.
-     *
-     * @hide
      */
     @SuppressLint("ExecutorRegistration")
     public void stopBroadcast(@NonNull BroadcastCallback callback) {

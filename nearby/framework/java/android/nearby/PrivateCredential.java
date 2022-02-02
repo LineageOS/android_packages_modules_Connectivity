@@ -17,6 +17,7 @@
 package android.nearby;
 
 import android.annotation.NonNull;
+import android.annotation.SystemApi;
 import android.os.Parcel;
 import android.os.Parcelable;
 
@@ -30,6 +31,7 @@ import java.util.List;
  *
  * @hide
  */
+@SystemApi
 public final class PrivateCredential extends PresenceCredential implements Parcelable {
 
     @NonNull
@@ -46,23 +48,23 @@ public final class PrivateCredential extends PresenceCredential implements Parce
         }
     };
 
-    private byte[] mMetaDataEncryptionKey;
+    private byte[] mMetadataEncryptionKey;
     private String mDeviceName;
 
     private PrivateCredential(Parcel in) {
         super(CREDENTIAL_TYPE_PRIVATE, in);
-        mMetaDataEncryptionKey = new byte[in.readInt()];
-        in.readByteArray(mMetaDataEncryptionKey);
+        mMetadataEncryptionKey = new byte[in.readInt()];
+        in.readByteArray(mMetadataEncryptionKey);
         mDeviceName = in.readString();
     }
 
-    private PrivateCredential(int identityType, byte[] secreteId,
+    private PrivateCredential(int identityType, byte[] secretId,
             String deviceName, byte[] authenticityKey, List<CredentialElement> credentialElements,
-            byte[] metaDataEncryptionKey) {
-        super(CREDENTIAL_TYPE_PRIVATE, identityType, secreteId, authenticityKey,
+            byte[] metadataEncryptionKey) {
+        super(CREDENTIAL_TYPE_PRIVATE, identityType, secretId, authenticityKey,
                 credentialElements);
         mDeviceName = deviceName;
-        mMetaDataEncryptionKey = metaDataEncryptionKey;
+        mMetadataEncryptionKey = metadataEncryptionKey;
     }
 
     static PrivateCredential createFromParcelBody(Parcel in) {
@@ -77,8 +79,8 @@ public final class PrivateCredential extends PresenceCredential implements Parce
     @Override
     public void writeToParcel(@NonNull Parcel dest, int flags) {
         super.writeToParcel(dest, flags);
-        dest.writeInt(mMetaDataEncryptionKey.length);
-        dest.writeByteArray(mMetaDataEncryptionKey);
+        dest.writeInt(mMetadataEncryptionKey.length);
+        dest.writeByteArray(mMetadataEncryptionKey);
         dest.writeString(mDeviceName);
     }
 
@@ -86,8 +88,8 @@ public final class PrivateCredential extends PresenceCredential implements Parce
      * Returns the metadata encryption key associated with this credential.
      */
     @NonNull
-    public byte[] getMetaDataEncryptionKey() {
-        return mMetaDataEncryptionKey;
+    public byte[] getMetadataEncryptionKey() {
+        return mMetadataEncryptionKey;
     }
 
     /**
@@ -100,19 +102,23 @@ public final class PrivateCredential extends PresenceCredential implements Parce
 
     /**
      * Builder class for {@link PresenceCredential}.
-     *
-     * @hide
      */
     public static final class Builder {
         private final List<CredentialElement> mCredentialElements;
 
         private @IdentityType int mIdentityType;
-        private byte[] mSecreteId;
+        private byte[] mSecretId;
         private byte[] mAuthenticityKey;
-        private byte[] mMetaDataEncryptionKey;
+        private byte[] mMetadataEncryptionKey;
         private String mDeviceName;
 
-        public Builder() {
+        public Builder(@NonNull byte[] secretId, @NonNull byte[] authenticityKey) {
+            Preconditions.checkState(secretId != null && secretId.length > 0,
+                    "secret id cannot be empty");
+            Preconditions.checkState(authenticityKey != null && authenticityKey.length > 0,
+                    "authenticity key cannot be empty");
+            mSecretId = secretId;
+            mAuthenticityKey = authenticityKey;
             mCredentialElements = new ArrayList<>();
         }
 
@@ -126,29 +132,11 @@ public final class PrivateCredential extends PresenceCredential implements Parce
         }
 
         /**
-         * Sets the secrete id for the presence credential.
-         */
-        @NonNull
-        public Builder setSecretId(@NonNull byte[] secreteId) {
-            mSecreteId = secreteId;
-            return this;
-        }
-
-        /**
-         * Sets the authenticity key for the presence credential.
-         */
-        @NonNull
-        public Builder setAuthenticityKey(@NonNull byte[] authenticityKey) {
-            mAuthenticityKey = authenticityKey;
-            return this;
-        }
-
-        /**
          * Sets the metadata encryption key to the credential.
          */
         @NonNull
-        public Builder setMetaDataEncryptionKey(@NonNull byte[] metaDataEncryptionKey) {
-            mMetaDataEncryptionKey = metaDataEncryptionKey;
+        public Builder setMetadataEncryptionKey(@NonNull byte[] metadataEncryptionKey) {
+            mMetadataEncryptionKey = metadataEncryptionKey;
             return this;
         }
 
@@ -175,12 +163,8 @@ public final class PrivateCredential extends PresenceCredential implements Parce
          */
         @NonNull
         public PrivateCredential build() {
-            Preconditions.checkState(mSecreteId != null && mSecreteId.length > 0,
-                    "secrete id cannot be empty");
-            Preconditions.checkState(mAuthenticityKey != null && mAuthenticityKey.length > 0,
-                    "authenticity key cannot be empty");
-            return new PrivateCredential(mIdentityType, mSecreteId, mDeviceName,
-                    mAuthenticityKey, mCredentialElements, mMetaDataEncryptionKey);
+            return new PrivateCredential(mIdentityType, mSecretId, mDeviceName,
+                    mAuthenticityKey, mCredentialElements, mMetadataEncryptionKey);
         }
 
     }

@@ -22,7 +22,9 @@ import android.annotation.Nullable;
 import android.os.Parcel;
 import android.os.Parcelable;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Objects;
 
 /**
@@ -41,7 +43,10 @@ public class FastPairDevice extends NearbyDevice implements Parcelable {
             if (in.readInt() == 1) {
                 builder.setName(in.readString());
             }
-            builder.setMedium(in.readInt());
+            int size = in.readInt();
+            for (int i = 0; i < size; i++) {
+                builder.addMedium(in.readInt());
+            }
             builder.setRssi(in.readInt());
             if (in.readInt() == 1) {
                 builder.setModelId(in.readString());
@@ -75,7 +80,7 @@ public class FastPairDevice extends NearbyDevice implements Parcelable {
      * Creates a new FastPairDevice.
      *
      * @param name Name of the FastPairDevice. Can be {@code null} if there is no name.
-     * @param medium The {@link Medium} over which the device is discovered.
+     * @param mediums The {@link Medium}s over which the device is discovered.
      * @param rssi The received signal strength in dBm.
      * @param modelId The identifier of the Fast Pair device.
      *                Can be {@code null} if there is no Model ID.
@@ -83,41 +88,15 @@ public class FastPairDevice extends NearbyDevice implements Parcelable {
      * @param data Extra data for a Fast Pair device.
      */
     public FastPairDevice(@Nullable String name,
-            @Medium int medium,
+            List<Integer> mediums,
             int rssi,
             @Nullable String modelId,
             @NonNull String bluetoothAddress,
             @Nullable byte[] data) {
-        super(name, medium, rssi);
+        super(name, mediums, rssi);
         this.mModelId = modelId;
         this.mBluetoothAddress = bluetoothAddress;
         this.mData = data;
-    }
-
-    /**
-     * Gets the name of the device, or {@code null} if not available.
-     *
-     * @hide
-     */
-    @Nullable
-    @Override
-    public String getName() {
-        return mName;
-    }
-
-    /** Gets the medium over which this device was discovered. */
-    @Override
-    public int getMedium() {
-        return mMedium;
-    }
-
-    /**
-     * Gets the received signal strength in dBm.
-     */
-    @IntRange(from = -127, to  = 126)
-    @Override
-    public int getRssi() {
-        return mRssi;
     }
 
     /**
@@ -161,11 +140,15 @@ public class FastPairDevice extends NearbyDevice implements Parcelable {
     public String toString() {
         StringBuilder stringBuilder = new StringBuilder();
         stringBuilder.append("FastPairDevice [");
-        if (mName != null && !mName.isEmpty()) {
-            stringBuilder.append("name=").append(mName).append(", ");
+        String name = getName();
+        if (getName() != null && !name.isEmpty()) {
+            stringBuilder.append("name=").append(name).append(", ");
         }
-        stringBuilder.append("medium=").append(mediumToString(mMedium));
-        stringBuilder.append(" rssi=").append(mRssi);
+        stringBuilder.append("medium={");
+        for (int medium: getMediums()) {
+            stringBuilder.append(mediumToString(medium));
+        }
+        stringBuilder.append("} rssi=").append(getRssi());
         stringBuilder.append(" modelId=").append(mModelId);
         stringBuilder.append(" bluetoothAddress=").append(mBluetoothAddress);
         stringBuilder.append("]");
@@ -189,17 +172,23 @@ public class FastPairDevice extends NearbyDevice implements Parcelable {
     @Override
     public int hashCode() {
         return Objects.hash(
-                mName, mMedium, mRssi, mModelId, mBluetoothAddress, Arrays.hashCode(mData));
+                getName(), getMediums(), getRssi(), mModelId, mBluetoothAddress,
+                Arrays.hashCode(mData));
     }
 
     @Override
     public void writeToParcel(@NonNull Parcel dest, int flags) {
-        dest.writeInt(mName == null ? 0 : 1);
-        if (mName != null) {
-            dest.writeString(mName);
+        String name = getName();
+        dest.writeInt(name == null ? 0 : 1);
+        if (name != null) {
+            dest.writeString(name);
         }
-        dest.writeInt(mMedium);
-        dest.writeInt(mRssi);
+        List<Integer> mediums = getMediums();
+        dest.writeInt(mediums.size());
+        for (int medium : mediums) {
+            dest.writeInt(medium);
+        }
+        dest.writeInt(getRssi());
         dest.writeInt(mModelId == null ? 0 : 1);
         if (mModelId != null) {
             dest.writeString(mModelId);
@@ -218,13 +207,18 @@ public class FastPairDevice extends NearbyDevice implements Parcelable {
      * @hide
      */
     public static final class Builder {
+        private final List<Integer> mMediums;
 
         @Nullable private String mName;
-        @Medium private int mMedium;
         private int mRssi;
         @Nullable private String mModelId;
         private String mBluetoothAddress;
         @Nullable private byte[] mData;
+
+        public Builder() {
+            mMediums = new ArrayList<>();
+        }
+
         /**
          * Sets the name of the Fast Pair device.
          *
@@ -242,8 +236,8 @@ public class FastPairDevice extends NearbyDevice implements Parcelable {
          * @param medium The {@link Medium} over which the device is discovered.
          */
         @NonNull
-        public Builder setMedium(@Medium int medium) {
-            mMedium = medium;
+        public Builder addMedium(@Medium int medium) {
+            mMediums.add(medium);
             return this;
         }
 
@@ -253,7 +247,7 @@ public class FastPairDevice extends NearbyDevice implements Parcelable {
          * @param rssi The received signal strength in dBm.
          */
         @NonNull
-        public Builder setRssi(int rssi) {
+        public Builder setRssi(@IntRange(from = -127, to = 126) int rssi) {
             mRssi = rssi;
             return this;
         }
@@ -298,7 +292,7 @@ public class FastPairDevice extends NearbyDevice implements Parcelable {
          */
         @NonNull
         public FastPairDevice build() {
-            return new FastPairDevice(mName, mMedium, mRssi, mModelId,
+            return new FastPairDevice(mName, mMediums, mRssi, mModelId,
                     mBluetoothAddress, mData);
         }
     }

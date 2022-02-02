@@ -41,6 +41,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mock;
 
+import java.util.Collections;
 import java.util.concurrent.Executors;
 
 /**
@@ -92,15 +93,12 @@ public class NearbyManagerTest {
 
     @Test
     public void testStartStopBroadcast() {
-        PrivateCredential credential = new PrivateCredential.Builder()
+        PrivateCredential credential = new PrivateCredential.Builder(SECRETE_ID, AUTHENTICITY_KEY)
                 .setIdentityType(IDENTITY_TYPE_PRIVATE)
-                .setSecretId(SECRETE_ID)
-                .setAuthenticityKey(AUTHENTICITY_KEY)
                 .build();
         BroadcastRequest broadcastRequest =
-                new PresenceBroadcastRequest.Builder()
-                        .setSalt(SALT)
-                        .addMediums(BLE_MEDIUM).setCredential(credential)
+                new PresenceBroadcastRequest.Builder(Collections.singletonList(BLE_MEDIUM), SALT)
+                        .setCredential(credential)
                         .build();
 
         BroadcastCallback callback = status -> {

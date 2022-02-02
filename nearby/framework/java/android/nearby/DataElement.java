@@ -17,6 +17,7 @@
 package android.nearby;
 
 import android.annotation.NonNull;
+import android.annotation.SystemApi;
 import android.os.Parcel;
 import android.os.Parcelable;
 
@@ -28,12 +29,17 @@ import com.android.internal.util.Preconditions;
  *
  * @hide
  */
+@SystemApi
 public final class DataElement implements Parcelable {
 
     private final int mKey;
     private final byte[] mValue;
 
-    private DataElement(int key, byte[] value) {
+    /**
+     * Constructs a {@link DataElement}.
+     */
+    public DataElement(int key, @NonNull byte[] value) {
+        Preconditions.checkState(value != null, "value cannot be null");
         mKey = key;
         mValue = value;
     }
@@ -45,7 +51,7 @@ public final class DataElement implements Parcelable {
             int key = in.readInt();
             byte[] value = new byte[in.readInt()];
             in.readByteArray(value);
-            return new Builder().setElement(key, value).build();
+            return new DataElement(key, value);
         }
 
         @Override
@@ -67,7 +73,7 @@ public final class DataElement implements Parcelable {
     }
 
     /**
-     * Returns the key of the data element.
+     * Returns the key of the data element, as defined in the nearby presence specification.
      */
     public int getKey() {
         return mKey;
@@ -79,34 +85,5 @@ public final class DataElement implements Parcelable {
     @NonNull
     public byte[] getValue() {
         return mValue;
-    }
-
-    /**
-     * Builder for {@link DataElement}.
-     */
-    public static final class Builder {
-        private int mKey;
-        private byte[] mValue;
-
-        /**
-         * Set the key and value for this data element.
-         */
-        @NonNull
-        @SuppressWarnings("MissingGetterMatchingBuilder")
-        public Builder setElement(int key, @NonNull byte[] value) {
-            mKey = key;
-            mValue = value;
-            return this;
-        }
-
-        /**
-         * Builds a {@link DataElement}.
-         */
-        @NonNull
-        public DataElement build() {
-            Preconditions.checkState(mValue != null,
-                    "value can be null");
-            return new DataElement(mKey, mValue);
-        }
     }
 }

@@ -18,6 +18,7 @@ package android.nearby.cts;
 
 import static com.google.common.truth.Truth.assertThat;
 
+import android.nearby.DataElement;
 import android.nearby.NearbyDevice;
 import android.nearby.PresenceDevice;
 import android.os.Build;
@@ -29,6 +30,8 @@ import androidx.test.ext.junit.runners.AndroidJUnit4;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
+import java.util.Arrays;
+
 /**
  * Test for {@link PresenceDevice}.
  */
@@ -38,11 +41,11 @@ public class PresenceDeviceTest {
     private static final int DEVICE_TYPE = PresenceDevice.DeviceType.PHONE;
     private static final String DEVICE_ID = "123";
     private static final String IMAGE_URL = "http://example.com/imageUrl";
-    private static final String SUPPORT_MEDIA = "SupportMedia";
-    private static final String SUPPORT_MEDIA_VALUE = "true";
     private static final int RSSI = -40;
     private static final int MEDIUM = NearbyDevice.Medium.BLE;
     private static final String DEVICE_NAME = "testDevice";
+    private static final int KEY = 1234;
+    private static final byte[] VALUE = new byte[]{1, 1, 1, 1};
 
     @Test
     public void testBuilder() {
@@ -50,19 +53,20 @@ public class PresenceDeviceTest {
                 .setDeviceType(DEVICE_TYPE)
                 .setDeviceId(DEVICE_ID)
                 .setDeviceImageUrl(IMAGE_URL)
-                .addExtendedProperty(SUPPORT_MEDIA, SUPPORT_MEDIA_VALUE)
+                .addExtendedProperty(new DataElement(KEY, VALUE))
                 .setRssi(RSSI)
-                .setMedium(MEDIUM)
+                .addMedium(MEDIUM)
                 .setName(DEVICE_NAME)
                 .build();
 
         assertThat(device.getDeviceType()).isEqualTo(DEVICE_TYPE);
         assertThat(device.getDeviceId()).isEqualTo(DEVICE_ID);
         assertThat(device.getDeviceImageUrl()).isEqualTo(IMAGE_URL);
-        assertThat(device.getExtendedProperties().get(SUPPORT_MEDIA)).isEqualTo(
-                SUPPORT_MEDIA_VALUE);
+        DataElement dataElement = device.getExtendedProperties().get(0);
+        assertThat(dataElement.getKey()).isEqualTo(KEY);
+        assertThat(Arrays.equals(dataElement.getValue(), VALUE)).isTrue();
         assertThat(device.getRssi()).isEqualTo(RSSI);
-        assertThat(device.getMedium()).isEqualTo(MEDIUM);
+        assertThat(device.getMediums()).containsExactly(MEDIUM);
         assertThat(device.getName()).isEqualTo(DEVICE_NAME);
     }
 
@@ -70,9 +74,9 @@ public class PresenceDeviceTest {
     public void testWriteParcel() {
         PresenceDevice device = new PresenceDevice.Builder()
                 .setDeviceId(DEVICE_ID)
-                .addExtendedProperty(SUPPORT_MEDIA, SUPPORT_MEDIA_VALUE)
+                .addExtendedProperty(new DataElement(KEY, VALUE))
                 .setRssi(RSSI)
-                .setMedium(MEDIUM)
+                .addMedium(MEDIUM)
                 .setName(DEVICE_NAME)
                 .build();
 
@@ -83,10 +87,9 @@ public class PresenceDeviceTest {
         parcel.recycle();
 
         assertThat(parcelDevice.getDeviceId()).isEqualTo(DEVICE_ID);
-        assertThat(parcelDevice.getExtendedProperties().get(SUPPORT_MEDIA)).isEqualTo(
-                SUPPORT_MEDIA_VALUE);
+        assertThat(parcelDevice.getExtendedProperties().get(0).getKey()).isEqualTo(KEY);
         assertThat(parcelDevice.getRssi()).isEqualTo(RSSI);
-        assertThat(parcelDevice.getMedium()).isEqualTo(MEDIUM);
+        assertThat(parcelDevice.getMediums()).containsExactly(MEDIUM);
         assertThat(parcelDevice.getName()).isEqualTo(DEVICE_NAME);
     }
 }

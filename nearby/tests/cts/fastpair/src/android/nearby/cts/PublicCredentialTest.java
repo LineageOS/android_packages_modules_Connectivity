@@ -52,11 +52,10 @@ public class PublicCredentialTest {
 
     @Before
     public void setUp() {
-        mBuilder = new PublicCredential.Builder()
+        mBuilder = new PublicCredential.Builder(SECRETE_ID, AUTHENTICITY_KEY)
                 .setIdentityType(IDENTITY_TYPE_PRIVATE)
-                .setSecretId(SECRETE_ID).setAuthenticityKey(AUTHENTICITY_KEY)
                 .setPublicKey(PUBLIC_KEY).setEncryptedMetadata(ENCRYPTED_METADATA)
-                .setMetaDataEncryptionKeyTag(METADATA_ENCRYPTION_KEY_TAG);
+                .setEncryptedMetadataKeyTag(METADATA_ENCRYPTION_KEY_TAG);
     }
 
     @Test
@@ -69,7 +68,7 @@ public class PublicCredentialTest {
         assertThat(Arrays.equals(credential.getAuthenticityKey(), AUTHENTICITY_KEY)).isTrue();
         assertThat(Arrays.equals(credential.getPublicKey(), PUBLIC_KEY)).isTrue();
         assertThat(Arrays.equals(credential.getEncryptedMetadata(), ENCRYPTED_METADATA)).isTrue();
-        assertThat(Arrays.equals(credential.getMetaDataEncryptionKeyTag(),
+        assertThat(Arrays.equals(credential.getEncryptedMetadataKeyTag(),
                 METADATA_ENCRYPTION_KEY_TAG)).isTrue();
     }
 
@@ -92,7 +91,7 @@ public class PublicCredentialTest {
         assertThat(Arrays.equals(credentialFromParcel.getPublicKey(), PUBLIC_KEY)).isTrue();
         assertThat(Arrays.equals(credentialFromParcel.getEncryptedMetadata(),
                 ENCRYPTED_METADATA)).isTrue();
-        assertThat(Arrays.equals(credentialFromParcel.getMetaDataEncryptionKeyTag(),
+        assertThat(Arrays.equals(credentialFromParcel.getEncryptedMetadataKeyTag(),
                 METADATA_ENCRYPTION_KEY_TAG)).isTrue();
     }
 }

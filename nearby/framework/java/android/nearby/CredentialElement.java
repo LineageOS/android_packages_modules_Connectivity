@@ -17,6 +17,7 @@
 package android.nearby;
 
 import android.annotation.NonNull;
+import android.annotation.SystemApi;
 import android.os.Parcel;
 import android.os.Parcelable;
 
@@ -27,11 +28,17 @@ import com.android.internal.util.Preconditions;
  *
  * @hide
  */
+@SystemApi
 public final class CredentialElement implements Parcelable {
     private final String mKey;
     private final byte[] mValue;
 
-    private CredentialElement(String key, byte[] value) {
+    /**
+     * Constructs a {@link CredentialElement}.
+     */
+    public CredentialElement(@NonNull String key, @NonNull byte[] value) {
+        Preconditions.checkState(key != null && value != null,
+                "neither key or value can be null");
         mKey = key;
         mValue = value;
     }
@@ -44,7 +51,7 @@ public final class CredentialElement implements Parcelable {
                     String key = in.readString();
                     byte[] value = new byte[in.readInt()];
                     in.readByteArray(value);
-                    return new CredentialElement.Builder().setElement(key, value).build();
+                    return new CredentialElement(key, value);
                 }
 
                 @Override
@@ -79,34 +86,5 @@ public final class CredentialElement implements Parcelable {
     @NonNull
     public byte[] getValue() {
         return mValue;
-    }
-
-    /**
-     * Builder for {@link CredentialElement}.
-     */
-    public static final class Builder {
-        private String mKey;
-        private byte[] mValue;
-
-        /**
-         * Set the key and value for this credential element.
-         */
-        @NonNull
-        @SuppressWarnings("MissingGetterMatchingBuilder")
-        public CredentialElement.Builder setElement(@NonNull String key, @NonNull byte[] value) {
-            mKey = key;
-            mValue = value;
-            return this;
-        }
-
-        /**
-         * Builds a {@link CredentialElement}.
-         */
-        @NonNull
-        public CredentialElement build() {
-            Preconditions.checkState(mKey != null && mValue != null,
-                    "neither key or value can be null");
-            return new CredentialElement(mKey, mValue);
-        }
     }
 }
