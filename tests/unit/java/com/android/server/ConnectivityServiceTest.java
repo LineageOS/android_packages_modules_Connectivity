@@ -264,6 +264,7 @@ import android.net.ResolverParamsParcel;
 import android.net.RouteInfo;
 import android.net.RouteInfoParcel;
 import android.net.SocketKeepalive;
+import android.net.TelephonyNetworkSpecifier;
 import android.net.TransportInfo;
 import android.net.UidRange;
 import android.net.UidRangeParcel;
@@ -334,6 +335,7 @@ import com.android.net.module.util.LocationPermissionChecker;
 import com.android.server.ConnectivityService.ConnectivityDiagnosticsCallbackInfo;
 import com.android.server.ConnectivityService.NetworkRequestInfo;
 import com.android.server.ConnectivityServiceTest.ConnectivityServiceDependencies.ReportedInterfaces;
+import com.android.server.connectivity.CarrierPrivilegeAuthenticator;
 import com.android.server.connectivity.ConnectivityFlags;
 import com.android.server.connectivity.MockableSystemProperties;
 import com.android.server.connectivity.Nat464Xlat;
@@ -529,6 +531,7 @@ public class ConnectivityServiceTest {
     @Mock Resources mResources;
     @Mock PacProxyManager mPacProxyManager;
     @Mock BpfNetMaps mBpfNetMaps;
+    @Mock CarrierPrivilegeAuthenticator mCarrierPrivilegeAuthenticator;
 
     // BatteryStatsManager is final and cannot be mocked with regular mockito, so just mock the
     // underlying binder calls.
@@ -970,8 +973,6 @@ public class ConnectivityServiceTest {
          * @param hasInternet Indicate if network should pretend to have NET_CAPABILITY_INTERNET.
          */
         public void connect(boolean validated, boolean hasInternet, boolean isStrictMode) {
-            assertFalse(getNetworkCapabilities().hasCapability(NET_CAPABILITY_INTERNET));
-
             ConnectivityManager.NetworkCallback callback = null;
             final ConditionVariable validatedCv = new ConditionVariable();
             if (validated) {
@@ -1856,6 +1857,12 @@ public class ConnectivityServiceTest {
                     return runAsShell(CREATE_USERS, () -> super.getCurrentUser());
                 }
             };
+        }
+
+        @Override
+        public CarrierPrivilegeAuthenticator makeCarrierPrivilegeAuthenticator(
+                @NonNull final Context context, @NonNull final TelephonyManager tm) {
+            return SdkLevel.isAtLeastT() ? mCarrierPrivilegeAuthenticator : null;
         }
 
         @Override
@@ -14643,43 +14650,157 @@ public class ConnectivityServiceTest {
                 agent.getNetwork().getNetId(),
                 intToUidRangeStableParcels(uids),
                 preferenceOrder);
-        inOrder.verify(mMockNetd, times(1)).networkAddUidRangesParcel(uids200Parcel);
+        if (SdkLevel.isAtLeastT()) {
+            inOrder.verify(mMockNetd, times(1)).networkAddUidRangesParcel(uids200Parcel);
+        }
 
         uids.add(300);
         uids.add(400);
         nc.setAccessUids(uids);
         agent.setNetworkCapabilities(nc, true /* sendToConnectivityService */);
-        cb.expectCapabilitiesThat(agent, caps -> caps.getAccessUids().equals(uids));
+        if (SdkLevel.isAtLeastT()) {
+            cb.expectCapabilitiesThat(agent, caps -> caps.getAccessUids().equals(uids));
+        } else {
+            cb.assertNoCallback();
+        }
 
         uids.remove(200);
         final NativeUidRangeConfig uids300400Parcel = new NativeUidRangeConfig(
                 agent.getNetwork().getNetId(),
                 intToUidRangeStableParcels(uids),
                 preferenceOrder);
-        inOrder.verify(mMockNetd, times(1)).networkAddUidRangesParcel(uids300400Parcel);
+        if (SdkLevel.isAtLeastT()) {
+            inOrder.verify(mMockNetd, times(1)).networkAddUidRangesParcel(uids300400Parcel);
+        }
 
         nc.setAccessUids(uids);
         agent.setNetworkCapabilities(nc, true /* sendToConnectivityService */);
-        cb.expectCapabilitiesThat(agent, caps -> caps.getAccessUids().equals(uids));
-        inOrder.verify(mMockNetd, times(1)).networkRemoveUidRangesParcel(uids200Parcel);
+        if (SdkLevel.isAtLeastT()) {
+            cb.expectCapabilitiesThat(agent, caps -> caps.getAccessUids().equals(uids));
+            inOrder.verify(mMockNetd, times(1)).networkRemoveUidRangesParcel(uids200Parcel);
+        } else {
+            cb.assertNoCallback();
+        }
 
         uids.clear();
         uids.add(600);
         nc.setAccessUids(uids);
         agent.setNetworkCapabilities(nc, true /* sendToConnectivityService */);
-        cb.expectCapabilitiesThat(agent, caps -> caps.getAccessUids().equals(uids));
+        if (SdkLevel.isAtLeastT()) {
+            cb.expectCapabilitiesThat(agent, caps -> caps.getAccessUids().equals(uids));
+        } else {
+            cb.assertNoCallback();
+        }
         final NativeUidRangeConfig uids600Parcel = new NativeUidRangeConfig(
                 agent.getNetwork().getNetId(),
                 intToUidRangeStableParcels(uids),
                 preferenceOrder);
-        inOrder.verify(mMockNetd, times(1)).networkAddUidRangesParcel(uids600Parcel);
-        inOrder.verify(mMockNetd, times(1)).networkRemoveUidRangesParcel(uids300400Parcel);
+        if (SdkLevel.isAtLeastT()) {
+            inOrder.verify(mMockNetd, times(1)).networkAddUidRangesParcel(uids600Parcel);
+            inOrder.verify(mMockNetd, times(1)).networkRemoveUidRangesParcel(uids300400Parcel);
+        }
 
         uids.clear();
         nc.setAccessUids(uids);
         agent.setNetworkCapabilities(nc, true /* sendToConnectivityService */);
-        cb.expectCapabilitiesThat(agent, caps -> caps.getAccessUids().isEmpty());
-        inOrder.verify(mMockNetd, times(1)).networkRemoveUidRangesParcel(uids600Parcel);
+        if (SdkLevel.isAtLeastT()) {
+            cb.expectCapabilitiesThat(agent, caps -> caps.getAccessUids().isEmpty());
+            inOrder.verify(mMockNetd, times(1)).networkRemoveUidRangesParcel(uids600Parcel);
+        } else {
+            cb.assertNoCallback();
+            verify(mMockNetd, never()).networkAddUidRangesParcel(any());
+            verify(mMockNetd, never()).networkRemoveUidRangesParcel(any());
+        }
+
+    }
+
+    @Test
+    public void testCbsAccessUids() throws Exception {
+        mServiceContext.setPermission(NETWORK_FACTORY, PERMISSION_GRANTED);
+        mServiceContext.setPermission(MANAGE_TEST_NETWORKS, PERMISSION_GRANTED);
+
+        // In this test TEST_PACKAGE_UID will be the UID of the carrier service UID.
+        doReturn(true).when(mCarrierPrivilegeAuthenticator)
+                .hasCarrierPrivilegeForNetworkCapabilities(eq(TEST_PACKAGE_UID), any());
+
+        final ArraySet<Integer> serviceUidSet = new ArraySet<>();
+        serviceUidSet.add(TEST_PACKAGE_UID);
+        final ArraySet<Integer> nonServiceUidSet = new ArraySet<>();
+        nonServiceUidSet.add(TEST_PACKAGE_UID2);
+        final ArraySet<Integer> serviceUidSetPlus = new ArraySet<>();
+        serviceUidSetPlus.add(TEST_PACKAGE_UID);
+        serviceUidSetPlus.add(TEST_PACKAGE_UID2);
+
+        final TestNetworkCallback cb = new TestNetworkCallback();
+
+        // Simulate a restricted telephony network. The telephony factory is entitled to set
+        // the access UID to the service package on any of its restricted networks.
+        final NetworkCapabilities.Builder ncb = new NetworkCapabilities.Builder()
+                .addTransportType(TRANSPORT_CELLULAR)
+                .addCapability(NET_CAPABILITY_INTERNET)
+                .addCapability(NET_CAPABILITY_NOT_SUSPENDED)
+                .addCapability(NET_CAPABILITY_NOT_VCN_MANAGED)
+                .removeCapability(NET_CAPABILITY_NOT_RESTRICTED)
+                .setNetworkSpecifier(new TelephonyNetworkSpecifier(1 /* subid */));
+
+        // Cell gets to set the service UID as access UID
+        mCm.requestNetwork(new NetworkRequest.Builder()
+                .addTransportType(TRANSPORT_CELLULAR)
+                .removeCapability(NET_CAPABILITY_NOT_RESTRICTED)
+                .build(), cb);
+        mCellNetworkAgent = new TestNetworkAgentWrapper(TRANSPORT_CELLULAR,
+                new LinkProperties(), ncb.build());
+        mCellNetworkAgent.connect(true);
+        cb.expectAvailableThenValidatedCallbacks(mCellNetworkAgent);
+        ncb.setAccessUids(serviceUidSet);
+        mCellNetworkAgent.setNetworkCapabilities(ncb.build(), true /* sendToCS */);
+        if (SdkLevel.isAtLeastT()) {
+            cb.expectCapabilitiesThat(mCellNetworkAgent,
+                    caps -> caps.getAccessUids().equals(serviceUidSet));
+        } else {
+            // S must ignore access UIDs.
+            cb.assertNoCallback(TEST_CALLBACK_TIMEOUT_MS);
+        }
+
+        // ...but not to some other UID. Rejection sets UIDs to the empty set
+        ncb.setAccessUids(nonServiceUidSet);
+        mCellNetworkAgent.setNetworkCapabilities(ncb.build(), true /* sendToCS */);
+        if (SdkLevel.isAtLeastT()) {
+            cb.expectCapabilitiesThat(mCellNetworkAgent,
+                    caps -> caps.getAccessUids().isEmpty());
+        } else {
+            // S must ignore access UIDs.
+            cb.assertNoCallback(TEST_CALLBACK_TIMEOUT_MS);
+        }
+
+        // ...and also not to multiple UIDs even including the service UID
+        ncb.setAccessUids(serviceUidSetPlus);
+        mCellNetworkAgent.setNetworkCapabilities(ncb.build(), true /* sendToCS */);
+        cb.assertNoCallback(TEST_CALLBACK_TIMEOUT_MS);
+
+        mCellNetworkAgent.disconnect();
+        cb.expectCallback(CallbackEntry.LOST, mCellNetworkAgent);
+        mCm.unregisterNetworkCallback(cb);
+
+        // Must be unset before touching the transports, because remove and add transport types
+        // check the specifier on the builder immediately, contradicting normal builder semantics
+        // TODO : fix the builder
+        ncb.setNetworkSpecifier(null);
+        ncb.removeTransportType(TRANSPORT_CELLULAR);
+        ncb.addTransportType(TRANSPORT_WIFI);
+        // Wifi does not get to set access UID, even to the correct UID
+        mCm.requestNetwork(new NetworkRequest.Builder()
+                .addTransportType(TRANSPORT_WIFI)
+                .removeCapability(NET_CAPABILITY_NOT_RESTRICTED)
+                .build(), cb);
+        mWiFiNetworkAgent = new TestNetworkAgentWrapper(TRANSPORT_WIFI,
+                new LinkProperties(), ncb.build());
+        mWiFiNetworkAgent.connect(true);
+        cb.expectAvailableThenValidatedCallbacks(mWiFiNetworkAgent);
+        ncb.setAccessUids(serviceUidSet);
+        mWiFiNetworkAgent.setNetworkCapabilities(ncb.build(), true /* sendToCS */);
+        cb.assertNoCallback(TEST_CALLBACK_TIMEOUT_MS);
+        mCm.unregisterNetworkCallback(cb);
     }
 
     /**

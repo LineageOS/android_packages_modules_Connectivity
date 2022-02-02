@@ -621,22 +621,22 @@ public final class NetworkCapabilities implements Parcelable {
      * Network capabilities that are expected to be mutable, i.e., can change while a particular
      * network is connected.
      */
-    private static final long MUTABLE_CAPABILITIES =
+    private static final long MUTABLE_CAPABILITIES = NetworkCapabilitiesUtils.packBitList(
             // TRUSTED can change when user explicitly connects to an untrusted network in Settings.
             // http://b/18206275
-            (1 << NET_CAPABILITY_TRUSTED)
-            | (1 << NET_CAPABILITY_VALIDATED)
-            | (1 << NET_CAPABILITY_CAPTIVE_PORTAL)
-            | (1 << NET_CAPABILITY_NOT_ROAMING)
-            | (1 << NET_CAPABILITY_FOREGROUND)
-            | (1 << NET_CAPABILITY_NOT_CONGESTED)
-            | (1 << NET_CAPABILITY_NOT_SUSPENDED)
-            | (1 << NET_CAPABILITY_PARTIAL_CONNECTIVITY)
-            | (1 << NET_CAPABILITY_TEMPORARILY_NOT_METERED)
-            | (1 << NET_CAPABILITY_NOT_VCN_MANAGED)
+            NET_CAPABILITY_TRUSTED,
+            NET_CAPABILITY_VALIDATED,
+            NET_CAPABILITY_CAPTIVE_PORTAL,
+            NET_CAPABILITY_NOT_ROAMING,
+            NET_CAPABILITY_FOREGROUND,
+            NET_CAPABILITY_NOT_CONGESTED,
+            NET_CAPABILITY_NOT_SUSPENDED,
+            NET_CAPABILITY_PARTIAL_CONNECTIVITY,
+            NET_CAPABILITY_TEMPORARILY_NOT_METERED,
+            NET_CAPABILITY_NOT_VCN_MANAGED,
             // The value of NET_CAPABILITY_HEAD_UNIT is 32, which cannot use int to do bit shift,
             // otherwise there will be an overflow. Use long to do bit shift instead.
-            | (1L << NET_CAPABILITY_HEAD_UNIT);
+            NET_CAPABILITY_HEAD_UNIT);
 
     /**
      * Network capabilities that are not allowed in NetworkRequests. This exists because the
@@ -650,25 +650,26 @@ public final class NetworkCapabilities implements Parcelable {
     // in an infinite loop about these.
     private static final long NON_REQUESTABLE_CAPABILITIES =
             MUTABLE_CAPABILITIES
-            & ~(1 << NET_CAPABILITY_TRUSTED)
-            & ~(1 << NET_CAPABILITY_NOT_VCN_MANAGED);
+            & ~(1L << NET_CAPABILITY_TRUSTED)
+            & ~(1L << NET_CAPABILITY_NOT_VCN_MANAGED);
 
     /**
      * Capabilities that are set by default when the object is constructed.
      */
-    private static final long DEFAULT_CAPABILITIES =
-            (1 << NET_CAPABILITY_NOT_RESTRICTED)
-            | (1 << NET_CAPABILITY_TRUSTED)
-            | (1 << NET_CAPABILITY_NOT_VPN);
+    private static final long DEFAULT_CAPABILITIES = NetworkCapabilitiesUtils.packBitList(
+            NET_CAPABILITY_NOT_RESTRICTED,
+            NET_CAPABILITY_TRUSTED,
+            NET_CAPABILITY_NOT_VPN);
 
     /**
      * Capabilities that are managed by ConnectivityService.
      */
     private static final long CONNECTIVITY_MANAGED_CAPABILITIES =
-            (1 << NET_CAPABILITY_VALIDATED)
-            | (1 << NET_CAPABILITY_CAPTIVE_PORTAL)
-            | (1 << NET_CAPABILITY_FOREGROUND)
-            | (1 << NET_CAPABILITY_PARTIAL_CONNECTIVITY);
+            NetworkCapabilitiesUtils.packBitList(
+                    NET_CAPABILITY_VALIDATED,
+                    NET_CAPABILITY_CAPTIVE_PORTAL,
+                    NET_CAPABILITY_FOREGROUND,
+                    NET_CAPABILITY_PARTIAL_CONNECTIVITY);
 
     /**
      * Capabilities that are allowed for test networks. This list must be set so that it is safe
@@ -677,14 +678,15 @@ public final class NetworkCapabilities implements Parcelable {
      * INTERNET, IMS, SUPL, etc.
      */
     private static final long TEST_NETWORKS_ALLOWED_CAPABILITIES =
-            (1 << NET_CAPABILITY_NOT_METERED)
-            | (1 << NET_CAPABILITY_TEMPORARILY_NOT_METERED)
-            | (1 << NET_CAPABILITY_NOT_RESTRICTED)
-            | (1 << NET_CAPABILITY_NOT_VPN)
-            | (1 << NET_CAPABILITY_NOT_ROAMING)
-            | (1 << NET_CAPABILITY_NOT_CONGESTED)
-            | (1 << NET_CAPABILITY_NOT_SUSPENDED)
-            | (1 << NET_CAPABILITY_NOT_VCN_MANAGED);
+            NetworkCapabilitiesUtils.packBitList(
+            NET_CAPABILITY_NOT_METERED,
+            NET_CAPABILITY_TEMPORARILY_NOT_METERED,
+            NET_CAPABILITY_NOT_RESTRICTED,
+            NET_CAPABILITY_NOT_VPN,
+            NET_CAPABILITY_NOT_ROAMING,
+            NET_CAPABILITY_NOT_CONGESTED,
+            NET_CAPABILITY_NOT_SUSPENDED,
+            NET_CAPABILITY_NOT_VCN_MANAGED);
 
     /**
      * Adds the given capability to this {@code NetworkCapability} instance.
@@ -1156,12 +1158,13 @@ public final class NetworkCapabilities implements Parcelable {
     /**
      * Allowed transports on an unrestricted test network (in addition to TRANSPORT_TEST).
      */
-    private static final int UNRESTRICTED_TEST_NETWORKS_ALLOWED_TRANSPORTS =
-            1 << TRANSPORT_TEST
-            // Test ethernet networks can be created with EthernetManager#setIncludeTestInterfaces
-            | 1 << TRANSPORT_ETHERNET
-            // Test VPN networks can be created but their UID ranges must be empty.
-            | 1 << TRANSPORT_VPN;
+    private static final long UNRESTRICTED_TEST_NETWORKS_ALLOWED_TRANSPORTS =
+            NetworkCapabilitiesUtils.packBitList(
+                    TRANSPORT_TEST,
+                    // Test eth networks are created with EthernetManager#setIncludeTestInterfaces
+                    TRANSPORT_ETHERNET,
+                    // Test VPN networks can be created but their UID ranges must be empty.
+                    TRANSPORT_VPN);
 
     /**
      * Adds the given transport type to this {@code NetworkCapability} instance.

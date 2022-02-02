@@ -17,6 +17,7 @@
 package com.android.server.connectivity;
 
 import static android.net.NetworkCapabilities.NET_CAPABILITY_CBS;
+import static android.net.NetworkCapabilities.TRANSPORT_CELLULAR;
 
 import android.annotation.NonNull;
 import android.content.BroadcastReceiver;
@@ -25,7 +26,7 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
-import android.net.NetworkRequest;
+import android.net.NetworkCapabilities;
 import android.net.NetworkSpecifier;
 import android.net.TelephonyNetworkSpecifier;
 import android.os.Build;
@@ -235,24 +236,30 @@ public class CarrierPrivilegeAuthenticator extends BroadcastReceiver {
     }
 
     /**
-     * Check if network request is allowed based upon carrrier service package.
+     * Check if a UID is the carrier service app of the subscription ID in the provided capabilities
      *
-     * Network request for {@link NET_CAPABILITY_CBS} is allowed if the caller has
-     * carrier privilege and provides the carrier config. This function checks if caller
-     * has the same and returns true if it has else false.
+     * This returns whether the passed UID is the carrier service package for the subscription ID
+     * stored in the telephony network specifier in the passed network capabilities.
+     * If the capabilities don't code for a cellular network, or if they don't have the
+     * subscription ID in their specifier, this returns false.
      *
-     * @param callingUid user identifier that uniquely identifies the caller.
-     * @param networkRequest the network request for which the carrier privilege is checked.
-     * @return true if caller has carrier privilege and provides the carrier config else false.
+     * This method can be used to check that a network request for {@link NET_CAPABILITY_CBS} is
+     * allowed for the UID of a caller, which must hold carrier privilege and provide the carrier
+     * config.
+     * It can also be used to check that a factory is entitled to grant access to a given network
+     * to a given UID on grounds that it is the carrier service package.
+     *
+     * @param callingUid uid of the app claimed to be the carrier service package.
+     * @param networkCapabilities the network capabilities for which carrier privilege is checked.
+     * @return true if uid provides the relevant carrier config else false.
      */
-    public boolean hasCarrierPrivilegeForNetworkRequest(int callingUid,
-            NetworkRequest networkRequest) {
-        if (callingUid != Process.INVALID_UID) {
-            final int subId = getSubIdFromNetworkSpecifier(
-                    networkRequest.getNetworkSpecifier());
-            return callingUid == getCarrierServiceUidForSubId(subId);
-        }
-        return false;
+    public boolean hasCarrierPrivilegeForNetworkCapabilities(int callingUid,
+            @NonNull NetworkCapabilities networkCapabilities) {
+        if (callingUid == Process.INVALID_UID) return false;
+        if (!networkCapabilities.hasSingleTransport(TRANSPORT_CELLULAR)) return false;
+        final int subId = getSubIdFromNetworkSpecifier(networkCapabilities.getNetworkSpecifier());
+        if (SubscriptionManager.INVALID_SUBSCRIPTION_ID == subId) return false;
+        return callingUid == getCarrierServiceUidForSubId(subId);
     }
 
     @VisibleForTesting
@@ -286,7 +293,7 @@ public class CarrierPrivilegeAuthenticator extends BroadcastReceiver {
         if (specifier instanceof TelephonyNetworkSpecifier) {
             return ((TelephonyNetworkSpecifier) specifier).getSubscriptionId();
         }
-        return SubscriptionManager.DEFAULT_SUBSCRIPTION_ID;
+        return SubscriptionManager.INVALID_SUBSCRIPTION_ID;
     }
 
     @VisibleForTesting
