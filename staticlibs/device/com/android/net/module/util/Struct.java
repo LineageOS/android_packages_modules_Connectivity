@@ -518,7 +518,8 @@ public class Struct {
     private static FieldInfo[] getClassFieldInfo(final Class clazz) {
         if (!isStructSubclass(clazz)) {
             throw new IllegalArgumentException(clazz.getName() + " is not a subclass of "
-                    + Struct.class.getName());
+                    + Struct.class.getName() + ", its superclass is "
+                    + clazz.getSuperclass().getName());
         }
 
         final FieldInfo[] cachedAnnotationFields = sFieldCache.get(clazz);
