@@ -98,7 +98,7 @@ static const JNINativeMethod gMethods[] = {
     {"jniCreateTunTap", "(ZLjava/lang/String;)I", (void*)create},
 };
 
-int register_android_server_TestNetworkService(JNIEnv* env) {
+int register_com_android_server_TestNetworkService(JNIEnv* env) {
     return jniRegisterNativeMethods(env, "com/android/server/TestNetworkService", gMethods,
                                     NELEM(gMethods));
 }

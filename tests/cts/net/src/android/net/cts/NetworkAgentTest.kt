@@ -23,7 +23,6 @@ import android.net.INetworkAgent
 import android.net.INetworkAgentRegistry
 import android.net.InetAddresses
 import android.net.IpPrefix
-import android.net.KeepalivePacketData
 import android.net.LinkAddress
 import android.net.LinkProperties
 import android.net.NattKeepalivePacketData
@@ -42,6 +41,7 @@ import android.net.NetworkCapabilities.NET_CAPABILITY_NOT_VCN_MANAGED
 import android.net.NetworkCapabilities.NET_CAPABILITY_NOT_VPN
 import android.net.NetworkCapabilities.NET_CAPABILITY_TEMPORARILY_NOT_METERED
 import android.net.NetworkCapabilities.NET_CAPABILITY_TRUSTED
+import android.net.NetworkCapabilities.NET_CAPABILITY_VALIDATED
 import android.net.NetworkCapabilities.TRANSPORT_TEST
 import android.net.NetworkCapabilities.TRANSPORT_VPN
 import android.net.NetworkInfo
@@ -53,7 +53,6 @@ import android.net.RouteInfo
 import android.net.QosCallback
 import android.net.QosCallbackException
 import android.net.QosCallback.QosCallbackRegistrationException
-import android.net.QosFilter
 import android.net.QosSession
 import android.net.QosSessionAttributes
 import android.net.QosSocketInfo
@@ -67,7 +66,6 @@ import android.net.cts.NetworkAgentTest.TestableQosCallback.CallbackEntry.OnQosS
 import android.os.Build
 import android.os.Handler
 import android.os.HandlerThread
-import android.os.Looper
 import android.os.Message
 import android.os.SystemClock
 import android.telephony.TelephonyManager
@@ -82,6 +80,8 @@ import com.android.testutils.CompatUtil
 import com.android.testutils.DevSdkIgnoreRule.IgnoreUpTo
 import com.android.testutils.DevSdkIgnoreRunner
 import com.android.testutils.RecorderCallback.CallbackEntry.Available
+import com.android.testutils.RecorderCallback.CallbackEntry.BlockedStatus
+import com.android.testutils.RecorderCallback.CallbackEntry.LinkPropertiesChanged
 import com.android.testutils.RecorderCallback.CallbackEntry.Losing
 import com.android.testutils.RecorderCallback.CallbackEntry.Lost
 import com.android.testutils.TestableNetworkAgent
@@ -100,7 +100,6 @@ import com.android.testutils.TestableNetworkAgent.CallbackEntry.OnUnregisterQosC
 import com.android.testutils.TestableNetworkAgent.CallbackEntry.OnValidationStatus
 import com.android.testutils.TestableNetworkCallback
 import org.junit.After
-import org.junit.Assert.assertArrayEquals
 import org.junit.Assume.assumeFalse
 import org.junit.Before
 import org.junit.Test
@@ -460,6 +459,36 @@ class NetworkAgentTest {
         callback.expectCapabilitiesThat(agent.network!!) {
             it.hasCapability(NET_CAPABILITY_NOT_METERED)
         }
+    }
+
+    private fun ncWithAccessUids(vararg uids: Int) = NetworkCapabilities.Builder()
+                .addTransportType(TRANSPORT_TEST)
+                .setAccessUids(uids.toSet()).build()
+
+    @Test
+    fun testRejectedUpdates() {
+        val callback = TestableNetworkCallback()
+        // will be cleaned up in tearDown
+        registerNetworkCallback(makeTestNetworkRequest(), callback)
+        val agent = createNetworkAgent(initialNc = ncWithAccessUids(200))
+        agent.register()
+        agent.markConnected()
+
+        // Make sure the UIDs have been ignored.
+        callback.expectCallback<Available>(agent.network!!)
+        callback.expectCapabilitiesThat(agent.network!!) {
+            it.accessUids.isEmpty() && !it.hasCapability(NET_CAPABILITY_VALIDATED)
+        }
+        callback.expectCallback<LinkPropertiesChanged>(agent.network!!)
+        callback.expectCallback<BlockedStatus>(agent.network!!)
+        callback.expectCapabilitiesThat(agent.network!!) {
+            it.accessUids.isEmpty() && it.hasCapability(NET_CAPABILITY_VALIDATED)
+        }
+        callback.assertNoCallback(NO_CALLBACK_TIMEOUT)
+
+        // Make sure that the UIDs are also ignored upon update
+        agent.sendNetworkCapabilities(ncWithAccessUids(200, 300))
+        callback.assertNoCallback(NO_CALLBACK_TIMEOUT)
     }
 
     @Test

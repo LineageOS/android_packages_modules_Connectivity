@@ -23,6 +23,7 @@ import static android.Manifest.permission.CREATE_USERS;
 import static android.Manifest.permission.DUMP;
 import static android.Manifest.permission.GET_INTENT_SENDER_INTENT;
 import static android.Manifest.permission.LOCAL_MAC_ADDRESS;
+import static android.Manifest.permission.MANAGE_TEST_NETWORKS;
 import static android.Manifest.permission.NETWORK_FACTORY;
 import static android.Manifest.permission.NETWORK_SETTINGS;
 import static android.Manifest.permission.NETWORK_STACK;
@@ -108,6 +109,7 @@ import static android.net.NetworkCapabilities.REDACT_FOR_NETWORK_SETTINGS;
 import static android.net.NetworkCapabilities.REDACT_NONE;
 import static android.net.NetworkCapabilities.TRANSPORT_CELLULAR;
 import static android.net.NetworkCapabilities.TRANSPORT_ETHERNET;
+import static android.net.NetworkCapabilities.TRANSPORT_TEST;
 import static android.net.NetworkCapabilities.TRANSPORT_VPN;
 import static android.net.NetworkCapabilities.TRANSPORT_WIFI;
 import static android.net.NetworkCapabilities.TRANSPORT_WIFI_AWARE;
@@ -1488,6 +1490,10 @@ public class ConnectivityServiceTest {
     private UidRangeParcel[] toUidRangeStableParcels(final @NonNull Set<UidRange> ranges) {
         return ranges.stream().map(
                 r -> new UidRangeParcel(r.start, r.stop)).toArray(UidRangeParcel[]::new);
+    }
+
+    private UidRangeParcel[] intToUidRangeStableParcels(final @NonNull Set<Integer> ranges) {
+        return ranges.stream().map(r -> new UidRangeParcel(r, r)).toArray(UidRangeParcel[]::new);
     }
 
     private VpnManagerService makeVpnManagerService() {
@@ -3813,18 +3819,48 @@ public class ConnectivityServiceTest {
     public void testNoMutableNetworkRequests() throws Exception {
         final PendingIntent pendingIntent = PendingIntent.getBroadcast(
                 mContext, 0 /* requestCode */, new Intent("a"), FLAG_IMMUTABLE);
-        NetworkRequest request1 = new NetworkRequest.Builder()
+        final NetworkRequest request1 = new NetworkRequest.Builder()
                 .addCapability(NET_CAPABILITY_VALIDATED)
                 .build();
-        NetworkRequest request2 = new NetworkRequest.Builder()
+        final NetworkRequest request2 = new NetworkRequest.Builder()
                 .addCapability(NET_CAPABILITY_CAPTIVE_PORTAL)
                 .build();
 
-        Class<IllegalArgumentException> expected = IllegalArgumentException.class;
+        final Class<IllegalArgumentException> expected = IllegalArgumentException.class;
         assertThrows(expected, () -> mCm.requestNetwork(request1, new NetworkCallback()));
         assertThrows(expected, () -> mCm.requestNetwork(request1, pendingIntent));
         assertThrows(expected, () -> mCm.requestNetwork(request2, new NetworkCallback()));
         assertThrows(expected, () -> mCm.requestNetwork(request2, pendingIntent));
+    }
+
+    @Test
+    public void testNoAccessUidsInNetworkRequests() throws Exception {
+        final PendingIntent pendingIntent = PendingIntent.getBroadcast(
+                mContext, 0 /* requestCode */, new Intent("a"), FLAG_IMMUTABLE);
+        final NetworkRequest r = new NetworkRequest.Builder().build();
+        final ArraySet<Integer> accessUids = new ArraySet<>();
+        accessUids.add(6);
+        accessUids.add(9);
+        r.networkCapabilities.setAccessUids(accessUids);
+
+        final Handler handler = new Handler(ConnectivityThread.getInstanceLooper());
+        final NetworkCallback cb = new NetworkCallback();
+
+        final Class<IllegalArgumentException> expected = IllegalArgumentException.class;
+        assertThrows(expected, () -> mCm.requestNetwork(r, cb));
+        assertThrows(expected, () -> mCm.requestNetwork(r, pendingIntent));
+        assertThrows(expected, () -> mCm.registerNetworkCallback(r, cb));
+        assertThrows(expected, () -> mCm.registerNetworkCallback(r, cb, handler));
+        assertThrows(expected, () -> mCm.registerNetworkCallback(r, pendingIntent));
+        assertThrows(expected, () -> mCm.registerBestMatchingNetworkCallback(r, cb, handler));
+
+        // Make sure that resetting the access UIDs to the empty set will allow calling
+        // requestNetwork and registerNetworkCallback.
+        r.networkCapabilities.setAccessUids(Collections.emptySet());
+        mCm.requestNetwork(r, cb);
+        mCm.unregisterNetworkCallback(cb);
+        mCm.registerNetworkCallback(r, cb);
+        mCm.unregisterNetworkCallback(cb);
     }
 
     @Test
@@ -14569,6 +14605,75 @@ public class ConnectivityServiceTest {
         assertThrows(
                 expected,
                 () -> mCm.registerNetworkCallback(getRequestWithSubIds(), new NetworkCallback()));
+    }
+
+    @Test
+    public void testAccessUids() throws Exception {
+        final int preferenceOrder =
+                ConnectivityService.PREFERENCE_ORDER_IRRELEVANT_BECAUSE_NOT_DEFAULT;
+        mServiceContext.setPermission(NETWORK_FACTORY, PERMISSION_GRANTED);
+        mServiceContext.setPermission(MANAGE_TEST_NETWORKS, PERMISSION_GRANTED);
+        final TestNetworkCallback cb = new TestNetworkCallback();
+        mCm.requestNetwork(new NetworkRequest.Builder()
+                        .clearCapabilities()
+                        .addTransportType(TRANSPORT_TEST)
+                        .build(),
+                cb);
+
+        final ArraySet<Integer> uids = new ArraySet<>();
+        uids.add(200);
+        final NetworkCapabilities nc = new NetworkCapabilities.Builder()
+                .addTransportType(TRANSPORT_TEST)
+                .removeCapability(NET_CAPABILITY_NOT_RESTRICTED)
+                .setAccessUids(uids)
+                .build();
+        final TestNetworkAgentWrapper agent = new TestNetworkAgentWrapper(TRANSPORT_TEST,
+                new LinkProperties(), nc);
+        agent.connect(true);
+        cb.expectAvailableThenValidatedCallbacks(agent);
+
+        final InOrder inOrder = inOrder(mMockNetd);
+        final NativeUidRangeConfig uids200Parcel = new NativeUidRangeConfig(
+                agent.getNetwork().getNetId(),
+                intToUidRangeStableParcels(uids),
+                preferenceOrder);
+        inOrder.verify(mMockNetd, times(1)).networkAddUidRangesParcel(uids200Parcel);
+
+        uids.add(300);
+        uids.add(400);
+        nc.setAccessUids(uids);
+        agent.setNetworkCapabilities(nc, true /* sendToConnectivityService */);
+        cb.expectCapabilitiesThat(agent, caps -> caps.getAccessUids().equals(uids));
+
+        uids.remove(200);
+        final NativeUidRangeConfig uids300400Parcel = new NativeUidRangeConfig(
+                agent.getNetwork().getNetId(),
+                intToUidRangeStableParcels(uids),
+                preferenceOrder);
+        inOrder.verify(mMockNetd, times(1)).networkAddUidRangesParcel(uids300400Parcel);
+
+        nc.setAccessUids(uids);
+        agent.setNetworkCapabilities(nc, true /* sendToConnectivityService */);
+        cb.expectCapabilitiesThat(agent, caps -> caps.getAccessUids().equals(uids));
+        inOrder.verify(mMockNetd, times(1)).networkRemoveUidRangesParcel(uids200Parcel);
+
+        uids.clear();
+        uids.add(600);
+        nc.setAccessUids(uids);
+        agent.setNetworkCapabilities(nc, true /* sendToConnectivityService */);
+        cb.expectCapabilitiesThat(agent, caps -> caps.getAccessUids().equals(uids));
+        final NativeUidRangeConfig uids600Parcel = new NativeUidRangeConfig(
+                agent.getNetwork().getNetId(),
+                intToUidRangeStableParcels(uids),
+                preferenceOrder);
+        inOrder.verify(mMockNetd, times(1)).networkAddUidRangesParcel(uids600Parcel);
+        inOrder.verify(mMockNetd, times(1)).networkRemoveUidRangesParcel(uids300400Parcel);
+
+        uids.clear();
+        nc.setAccessUids(uids);
+        agent.setNetworkCapabilities(nc, true /* sendToConnectivityService */);
+        cb.expectCapabilitiesThat(agent, caps -> caps.getAccessUids().isEmpty());
+        inOrder.verify(mMockNetd, times(1)).networkRemoveUidRangesParcel(uids600Parcel);
     }
 
     /**

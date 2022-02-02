@@ -308,6 +308,48 @@ public class NetworkCapabilitiesTest {
         }
     }
 
+    @Test @IgnoreUpTo(SC_V2)
+    public void testSetAccessUids() {
+        final NetworkCapabilities nc = new NetworkCapabilities();
+        assertThrows(NullPointerException.class, () -> nc.setAccessUids(null));
+        assertFalse(nc.hasAccessUids());
+        assertFalse(nc.isAccessUid(0));
+        assertFalse(nc.isAccessUid(1000));
+        assertEquals(0, nc.getAccessUids().size());
+        nc.setAccessUids(new ArraySet<>());
+        assertFalse(nc.hasAccessUids());
+        assertFalse(nc.isAccessUid(0));
+        assertFalse(nc.isAccessUid(1000));
+        assertEquals(0, nc.getAccessUids().size());
+
+        final ArraySet<Integer> uids = new ArraySet<>();
+        uids.add(200);
+        uids.add(250);
+        uids.add(-1);
+        uids.add(Integer.MAX_VALUE);
+        nc.setAccessUids(uids);
+        assertNotEquals(nc, new NetworkCapabilities());
+        assertTrue(nc.hasAccessUids());
+
+        final List<Integer> includedList = List.of(-2, 0, 199, 700, 901, 1000, Integer.MIN_VALUE);
+        final List<Integer> excludedList = List.of(-1, 200, 250, Integer.MAX_VALUE);
+        for (final int uid : includedList) {
+            assertFalse(nc.isAccessUid(uid));
+        }
+        for (final int uid : excludedList) {
+            assertTrue(nc.isAccessUid(uid));
+        }
+
+        final Set<Integer> outUids = nc.getAccessUids();
+        assertEquals(4, outUids.size());
+        for (final int uid : includedList) {
+            assertFalse(outUids.contains(uid));
+        }
+        for (final int uid : excludedList) {
+            assertTrue(outUids.contains(uid));
+        }
+    }
+
     @Test
     public void testParcelNetworkCapabilities() {
         final Set<Range<Integer>> uids = new ArraySet<>();
@@ -318,6 +360,10 @@ public class NetworkCapabilitiesTest {
             .addCapability(NET_CAPABILITY_EIMS)
             .addCapability(NET_CAPABILITY_NOT_METERED);
         if (isAtLeastS()) {
+            final ArraySet<Integer> accessUids = new ArraySet<>();
+            accessUids.add(4);
+            accessUids.add(9);
+            netCap.setAccessUids(accessUids);
             netCap.setSubscriptionIds(Set.of(TEST_SUBID1, TEST_SUBID2));
             netCap.setUids(uids);
         }

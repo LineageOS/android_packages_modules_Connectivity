@@ -26,12 +26,13 @@ java_defaults {
 // The above defaults can be used to disable framework-connectivity t
 // targets while minimizing merge conflicts in the build rules.
 
-
+// SDK library for connectivity bootclasspath classes that were part of the non-updatable API before
+// T, and were moved to the module in T. Other bootclasspath classes in connectivity should go to
+// framework-connectivity.
 java_sdk_library {
     name: "framework-connectivity-tiramisu",
     sdk_version: "module_current",
     min_sdk_version: "Tiramisu",
-    jarjar_rules: "jarjar-rules.txt",
     defaults: [
         "framework-module-defaults",
         "enable-framework-connectivity-t-targets",
@@ -40,13 +41,31 @@ java_sdk_library {
         ":framework-connectivity-tiramisu-updatable-sources",
         ":framework-nearby-java-sources",
     ],
-    static_libs: [
-        "modules-utils-preconditions",
+    // Do not add static_libs to this library: put them in framework-connectivity instead.
+    // The jarjar rules are only so that references to jarjared utils in
+    // framework-connectivity-pre-jarjar match at runtime.
+    jarjar_rules: ":connectivity-jarjar-rules",
+    stub_only_libs: [
+        // Use prebuilt framework-connectivity stubs to avoid circular dependencies
+        "sdk_module-lib_current_framework-connectivity",
     ],
     libs: [
         "unsupportedappusage",
         "app-compat-annotations",
+        "sdk_module-lib_current_framework-connectivity",
+    ],
+    impl_only_libs: [
+        // The build system will use framework-bluetooth module_current stubs, because
+        // of sdk_version: "module_current" above.
         "framework-bluetooth",
+        // Compile against the entire implementation of framework-connectivity,
+        // including hidden methods. This is safe because if framework-connectivity-t is
+        // on the bootclasspath (i.e., T), then framework-connectivity is also on the
+        // bootclasspath (because it shipped in S).
+        //
+        // This compiles against the pre-jarjar target so that this code can use
+        // non-jarjard names of widely-used packages such as com.android.net.module.util.
+        "framework-connectivity-pre-jarjar",
     ],
     permitted_packages: [
         "android.net",

@@ -68,6 +68,7 @@ import com.android.internal.annotations.GuardedBy;
 import com.android.internal.annotations.VisibleForTesting;
 import com.android.internal.util.IndentingPrintWriter;
 import com.android.net.module.util.CollectionUtils;
+import com.android.server.BpfNetMaps;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -93,6 +94,7 @@ public class PermissionMonitor {
     private final INetd mNetd;
     private final Dependencies mDeps;
     private final Context mContext;
+    private final BpfNetMaps mBpfNetMaps;
 
     @GuardedBy("this")
     private final Set<UserHandle> mUsers = new HashSet<>();
@@ -184,12 +186,14 @@ public class PermissionMonitor {
         }
     }
 
-    public PermissionMonitor(@NonNull final Context context, @NonNull final INetd netd) {
-        this(context, netd, new Dependencies());
+    public PermissionMonitor(@NonNull final Context context, @NonNull final INetd netd,
+            @NonNull final BpfNetMaps bpfNetMaps) {
+        this(context, netd, bpfNetMaps, new Dependencies());
     }
 
     @VisibleForTesting
     PermissionMonitor(@NonNull final Context context, @NonNull final INetd netd,
+            @NonNull final BpfNetMaps bpfNetMaps,
             @NonNull final Dependencies deps) {
         mPackageManager = context.getPackageManager();
         mUserManager = (UserManager) context.getSystemService(Context.USER_SERVICE);
@@ -197,6 +201,7 @@ public class PermissionMonitor {
         mNetd = netd;
         mDeps = deps;
         mContext = context;
+        mBpfNetMaps = bpfNetMaps;
     }
 
     private int getPackageNetdNetworkPermission(@NonNull final PackageInfo app) {
@@ -803,9 +808,9 @@ public class PermissionMonitor {
         }
         try {
             if (add) {
-                mNetd.firewallAddUidInterfaceRules(iface, toIntArray(uids));
+                mBpfNetMaps.addUidInterfaceRules(iface, toIntArray(uids));
             } else {
-                mNetd.firewallRemoveUidInterfaceRules(toIntArray(uids));
+                mBpfNetMaps.removeUidInterfaceRules(toIntArray(uids));
             }
         } catch (ServiceSpecificException e) {
             // Silently ignore exception when device does not support eBPF, otherwise just log
@@ -813,8 +818,6 @@ public class PermissionMonitor {
             if (e.errorCode != OsConstants.EOPNOTSUPP) {
                 loge("Exception when updating permissions: ", e);
             }
-        } catch (RemoteException e) {
-            loge("Exception when updating permissions: ", e);
         }
     }
 
@@ -878,26 +881,27 @@ public class PermissionMonitor {
         try {
             // TODO: add a lock inside netd to protect IPC trafficSetNetPermForUids()
             if (allPermissionAppIds.size() != 0) {
-                mNetd.trafficSetNetPermForUids(
+                mBpfNetMaps.setNetPermForUids(
                         PERMISSION_INTERNET | PERMISSION_UPDATE_DEVICE_STATS,
                         toIntArray(allPermissionAppIds));
             }
             if (internetPermissionAppIds.size() != 0) {
-                mNetd.trafficSetNetPermForUids(PERMISSION_INTERNET,
+                mBpfNetMaps.setNetPermForUids(PERMISSION_INTERNET,
                         toIntArray(internetPermissionAppIds));
             }
             if (updateStatsPermissionAppIds.size() != 0) {
-                mNetd.trafficSetNetPermForUids(PERMISSION_UPDATE_DEVICE_STATS,
+                mBpfNetMaps.setNetPermForUids(PERMISSION_UPDATE_DEVICE_STATS,
                         toIntArray(updateStatsPermissionAppIds));
             }
             if (noPermissionAppIds.size() != 0) {
-                mNetd.trafficSetNetPermForUids(PERMISSION_NONE, toIntArray(noPermissionAppIds));
+                mBpfNetMaps.setNetPermForUids(PERMISSION_NONE,
+                        toIntArray(noPermissionAppIds));
             }
             if (uninstalledAppIds.size() != 0) {
-                mNetd.trafficSetNetPermForUids(PERMISSION_UNINSTALLED,
+                mBpfNetMaps.setNetPermForUids(PERMISSION_UNINSTALLED,
                         toIntArray(uninstalledAppIds));
             }
-        } catch (RemoteException e) {
+        } catch (ServiceSpecificException e) {
             Log.e(TAG, "Pass appId list of special permission failed." + e);
         }
     }

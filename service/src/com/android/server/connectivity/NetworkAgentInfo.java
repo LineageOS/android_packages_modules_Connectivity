@@ -17,7 +17,9 @@
 package com.android.server.connectivity;
 
 import static android.net.ConnectivityDiagnosticsManager.ConnectivityReport;
+import static android.net.NetworkCapabilities.NET_CAPABILITY_NOT_RESTRICTED;
 import static android.net.NetworkCapabilities.TRANSPORT_CELLULAR;
+import static android.net.NetworkCapabilities.TRANSPORT_TEST;
 import static android.net.NetworkCapabilities.transportNamesOf;
 
 import android.annotation.NonNull;
@@ -52,6 +54,7 @@ import android.os.RemoteException;
 import android.os.SystemClock;
 import android.telephony.data.EpsBearerQosSessionAttributes;
 import android.telephony.data.NrQosSessionAttributes;
+import android.util.ArraySet;
 import android.util.Log;
 import android.util.Pair;
 import android.util.SparseArray;
@@ -1186,6 +1189,38 @@ public class NetworkAgentInfo implements Comparable<NetworkAgentInfo>, NetworkRa
     @Nullable
     public ConnectivityReport getConnectivityReport() {
         return mConnectivityReport;
+    }
+
+    /**
+     * Make sure the NC from network agents don't contain stuff they shouldn't.
+     *
+     * @param nc the capabilities to sanitize
+     * @param creatorUid the UID of the process creating this network agent
+     */
+    public static void restrictCapabilitiesFromNetworkAgent(@NonNull final NetworkCapabilities nc,
+            final int creatorUid) {
+        if (nc.hasTransport(TRANSPORT_TEST)) {
+            nc.restrictCapabilitiesForTestNetwork(creatorUid);
+        }
+        if (!areAccessUidsAcceptableFromNetworkAgent(nc)) {
+            nc.setAccessUids(new ArraySet<>());
+        }
+    }
+
+    private static boolean areAccessUidsAcceptableFromNetworkAgent(
+            @NonNull final NetworkCapabilities nc) {
+        // NCs without access UIDs are fine.
+        if (!nc.hasAccessUids()) return true;
+
+        // On a non-restricted network, access UIDs make no sense
+        if (nc.hasCapability(NET_CAPABILITY_NOT_RESTRICTED)) return false;
+
+        // If this network has TRANSPORT_TEST, then the caller can do whatever they want to
+        // access UIDs
+        if (nc.hasTransport(TRANSPORT_TEST)) return true;
+
+        // TODO : accept more supported cases
+        return false;
     }
 
     // TODO: Print shorter members first and only print the boolean variable which value is true
