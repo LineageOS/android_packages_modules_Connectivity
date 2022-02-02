@@ -21,8 +21,8 @@ import android.annotation.Nullable;
 import android.content.Context;
 import android.net.ConnectivityManager;
 import android.net.EthernetNetworkSpecifier;
-import android.net.IInternalNetworkManagementListener;
-import android.net.InternalNetworkManagementException;
+import android.net.IEthernetNetworkManagementListener;
+import android.net.EthernetNetworkManagementException;
 import android.net.IpConfiguration;
 import android.net.IpConfiguration.IpAssignment;
 import android.net.IpConfiguration.ProxySettings;
@@ -195,14 +195,14 @@ public class EthernetNetworkFactory extends NetworkFactory {
      *                     {@code null} is passed, then the network's current
      *                     {@link NetworkCapabilities} will be used in support of existing APIs as
      *                     the public API does not allow this.
-     * @param listener an optional {@link IInternalNetworkManagementListener} to notify callers of
+     * @param listener an optional {@link IEthernetNetworkManagementListener} to notify callers of
      *                 completion.
      */
     @VisibleForTesting(visibility = VisibleForTesting.Visibility.PACKAGE)
     protected void updateInterface(@NonNull final String ifaceName,
             @NonNull final IpConfiguration ipConfig,
             @Nullable final NetworkCapabilities capabilities,
-            @Nullable final IInternalNetworkManagementListener listener) {
+            @Nullable final IEthernetNetworkManagementListener listener) {
         enforceInterfaceIsTracked(ifaceName);
         final NetworkInterfaceState iface = mTrackingInterfaces.get(ifaceName);
         iface.updateInterface(ipConfig, capabilities, listener);
@@ -254,10 +254,10 @@ public class EthernetNetworkFactory extends NetworkFactory {
     /** Returns true if state has been modified */
     @VisibleForTesting(visibility = VisibleForTesting.Visibility.PACKAGE)
     protected boolean updateInterfaceLinkState(@NonNull final String ifaceName, final boolean up,
-            @Nullable final IInternalNetworkManagementListener listener) {
+            @Nullable final IEthernetNetworkManagementListener listener) {
         if (!mTrackingInterfaces.containsKey(ifaceName)) {
             maybeSendNetworkManagementCallback(listener, null,
-                    new InternalNetworkManagementException(
+                    new EthernetNetworkManagementException(
                             ifaceName + " can't be updated as it is not available."));
             return false;
         }
@@ -306,9 +306,9 @@ public class EthernetNetworkFactory extends NetworkFactory {
     }
 
     private static void maybeSendNetworkManagementCallback(
-            @Nullable final IInternalNetworkManagementListener listener,
+            @Nullable final IEthernetNetworkManagementListener listener,
             @Nullable final Network network,
-            @Nullable final InternalNetworkManagementException e) {
+            @Nullable final EthernetNetworkManagementException e) {
         if (null == listener) {
             return;
         }
@@ -368,9 +368,9 @@ public class EthernetNetworkFactory extends NetworkFactory {
         private class EthernetIpClientCallback extends IpClientCallbacks {
             private final ConditionVariable mIpClientStartCv = new ConditionVariable(false);
             private final ConditionVariable mIpClientShutdownCv = new ConditionVariable(false);
-            @Nullable IInternalNetworkManagementListener mNetworkManagementListener;
+            @Nullable IEthernetNetworkManagementListener mNetworkManagementListener;
 
-            EthernetIpClientCallback(@Nullable final IInternalNetworkManagementListener listener) {
+            EthernetIpClientCallback(@Nullable final IEthernetNetworkManagementListener listener) {
                 mNetworkManagementListener = listener;
             }
 
@@ -455,7 +455,7 @@ public class EthernetNetworkFactory extends NetworkFactory {
 
         void updateInterface(@NonNull final IpConfiguration ipConfig,
                 @Nullable final NetworkCapabilities capabilities,
-                @Nullable final IInternalNetworkManagementListener listener) {
+                @Nullable final IEthernetNetworkManagementListener listener) {
             if (DBG) {
                 Log.d(TAG, "updateInterface, iface: " + name
                         + ", ipConfig: " + ipConfig + ", old ipConfig: " + mIpConfig
@@ -482,7 +482,7 @@ public class EthernetNetworkFactory extends NetworkFactory {
             start(null);
         }
 
-        private void start(@Nullable final IInternalNetworkManagementListener listener) {
+        private void start(@Nullable final IEthernetNetworkManagementListener listener) {
             if (mIpClient != null) {
                 if (DBG) Log.d(TAG, "IpClient already started");
                 return;
@@ -503,7 +503,7 @@ public class EthernetNetworkFactory extends NetworkFactory {
         }
 
         void onIpLayerStarted(@NonNull final LinkProperties linkProperties,
-                @Nullable final IInternalNetworkManagementListener listener) {
+                @Nullable final IEthernetNetworkManagementListener listener) {
             if(mIpClient == null) {
                 // This call comes from a message posted on the handler thread, but the IpClient has
                 // since been stopped such as may be the case if updateInterfaceLinkState() is
@@ -546,7 +546,7 @@ public class EthernetNetworkFactory extends NetworkFactory {
             realizeNetworkManagementCallback(mNetworkAgent.getNetwork(), null);
         }
 
-        void onIpLayerStopped(@Nullable final IInternalNetworkManagementListener listener) {
+        void onIpLayerStopped(@Nullable final IEthernetNetworkManagementListener listener) {
             // This cannot happen due to provisioning timeout, because our timeout is 0. It can
             // happen due to errors while provisioning or on provisioning loss.
             if(mIpClient == null) {
@@ -567,13 +567,13 @@ public class EthernetNetworkFactory extends NetworkFactory {
 
         private void maybeSendNetworkManagementCallbackForAbort() {
             realizeNetworkManagementCallback(null,
-                    new InternalNetworkManagementException(
+                    new EthernetNetworkManagementException(
                             "The IP provisioning request has been aborted."));
         }
 
         // Must be called on the handler thread
         private void realizeNetworkManagementCallback(@Nullable final Network network,
-                @Nullable final InternalNetworkManagementException e) {
+                @Nullable final EthernetNetworkManagementException e) {
             ensureRunningOnEthernetHandlerThread();
             if (null == mIpClientCallback) {
                 return;
@@ -621,10 +621,10 @@ public class EthernetNetworkFactory extends NetworkFactory {
 
         /** Returns true if state has been modified */
         boolean updateLinkState(final boolean up,
-                @Nullable final IInternalNetworkManagementListener listener) {
+                @Nullable final IEthernetNetworkManagementListener listener) {
             if (mLinkUp == up)  {
                 EthernetNetworkFactory.maybeSendNetworkManagementCallback(listener, null,
-                        new InternalNetworkManagementException(
+                        new EthernetNetworkManagementException(
                                 "No changes with requested link state " + up + " for " + name));
                 return false;
             }
@@ -692,7 +692,7 @@ public class EthernetNetworkFactory extends NetworkFactory {
             restart(null);
         }
 
-        void restart(@Nullable final IInternalNetworkManagementListener listener){
+        void restart(@Nullable final IEthernetNetworkManagementListener listener){
             if (DBG) Log.d(TAG, "reconnecting Ethernet");
             stop();
             start(listener);

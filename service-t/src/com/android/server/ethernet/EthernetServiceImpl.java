@@ -22,9 +22,9 @@ import android.content.Context;
 import android.content.pm.PackageManager;
 import android.net.IEthernetManager;
 import android.net.IEthernetServiceListener;
-import android.net.IInternalNetworkManagementListener;
+import android.net.IEthernetNetworkManagementListener;
 import android.net.ITetheredInterfaceCallback;
-import android.net.InternalNetworkUpdateRequest;
+import android.net.EthernetNetworkUpdateRequest;
 import android.net.IpConfiguration;
 import android.os.Binder;
 import android.os.Handler;
@@ -227,8 +227,8 @@ public class EthernetServiceImpl extends IEthernetManager.Stub {
 
     @Override
     public void updateConfiguration(@NonNull final String iface,
-            @NonNull final InternalNetworkUpdateRequest request,
-            @Nullable final IInternalNetworkManagementListener listener) {
+            @NonNull final EthernetNetworkUpdateRequest request,
+            @Nullable final IEthernetNetworkManagementListener listener) {
         Log.i(TAG, "updateConfiguration called with: iface=" + iface
                 + ", request=" + request + ", listener=" + listener);
         validateNetworkManagementState(iface, "updateConfiguration()");
@@ -240,7 +240,7 @@ public class EthernetServiceImpl extends IEthernetManager.Stub {
 
     @Override
     public void connectNetwork(@NonNull final String iface,
-            @Nullable final IInternalNetworkManagementListener listener) {
+            @Nullable final IEthernetNetworkManagementListener listener) {
         Log.i(TAG, "connectNetwork called with: iface=" + iface + ", listener=" + listener);
         validateNetworkManagementState(iface, "connectNetwork()");
         mTracker.connectNetwork(iface, listener);
@@ -248,7 +248,7 @@ public class EthernetServiceImpl extends IEthernetManager.Stub {
 
     @Override
     public void disconnectNetwork(@NonNull final String iface,
-            @Nullable final IInternalNetworkManagementListener listener) {
+            @Nullable final IEthernetNetworkManagementListener listener) {
         Log.i(TAG, "disconnectNetwork called with: iface=" + iface + ", listener=" + listener);
         validateNetworkManagementState(iface, "disconnectNetwork()");
         mTracker.disconnectNetwork(iface, listener);
