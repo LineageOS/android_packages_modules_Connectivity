@@ -16,8 +16,11 @@
 
 package com.android.server.ethernet;
 
+import static com.android.testutils.DevSdkIgnoreRuleKt.SC_V2;
+
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -63,6 +66,8 @@ import androidx.test.runner.AndroidJUnit4;
 import com.android.internal.R;
 import com.android.net.module.util.InterfaceParams;
 
+import com.android.testutils.DevSdkIgnoreRule;
+
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -72,9 +77,7 @@ import org.mockito.MockitoAnnotations;
 
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 
 @RunWith(AndroidJUnit4.class)
 @SmallTest
@@ -84,7 +87,7 @@ public class EthernetNetworkFactoryTest {
     private static final String IP_ADDR = "192.0.2.2/25";
     private static final LinkAddress LINK_ADDR = new LinkAddress(IP_ADDR);
     private static final String HW_ADDR = "01:02:03:04:05:06";
-    private final TestLooper mLooper = new TestLooper();
+    private TestLooper mLooper;
     private Handler mHandler;
     private EthernetNetworkFactory mNetFactory = null;
     private IpClientCallbacks mIpClientCallbacks;
@@ -99,12 +102,16 @@ public class EthernetNetworkFactoryTest {
     @Before
     public void setUp() throws Exception {
         MockitoAnnotations.initMocks(this);
-        mHandler = new Handler(mLooper.getLooper());
-        mNetFactory = new EthernetNetworkFactory(mHandler, mContext, mDeps);
-
         setupNetworkAgentMock();
         setupIpClientMock();
         setupContext();
+    }
+
+    //TODO: Move away from usage of TestLooper in order to move this logic back into @Before.
+    private void initEthernetNetworkFactory() {
+        mLooper = new TestLooper();
+        mHandler = new Handler(mLooper.getLooper());
+        mNetFactory = new EthernetNetworkFactory(mHandler, mContext, mDeps);
     }
 
     private void setupNetworkAgentMock() {
@@ -288,6 +295,7 @@ public class EthernetNetworkFactoryTest {
 
     @Test
     public void testAcceptRequest() throws Exception {
+        initEthernetNetworkFactory();
         createInterfaceUndergoingProvisioning(TEST_IFACE);
         assertTrue(mNetFactory.acceptRequest(createDefaultRequest()));
 
@@ -299,6 +307,7 @@ public class EthernetNetworkFactoryTest {
 
     @Test
     public void testUpdateInterfaceLinkStateForActiveProvisioningInterface() throws Exception {
+        initEthernetNetworkFactory();
         createInterfaceUndergoingProvisioning(TEST_IFACE);
         // verify that the IpClient gets shut down when interface state changes to down.
         assertTrue(mNetFactory.updateInterfaceLinkState(TEST_IFACE, false));
@@ -307,6 +316,7 @@ public class EthernetNetworkFactoryTest {
 
     @Test
     public void testUpdateInterfaceLinkStateForProvisionedInterface() throws Exception {
+        initEthernetNetworkFactory();
         createAndVerifyProvisionedInterface(TEST_IFACE);
         assertTrue(mNetFactory.updateInterfaceLinkState(TEST_IFACE, false));
         verifyStop();
@@ -314,6 +324,7 @@ public class EthernetNetworkFactoryTest {
 
     @Test
     public void testUpdateInterfaceLinkStateForUnprovisionedInterface() throws Exception {
+        initEthernetNetworkFactory();
         createUnprovisionedInterface(TEST_IFACE);
         assertTrue(mNetFactory.updateInterfaceLinkState(TEST_IFACE, false));
         // There should not be an active IPClient or NetworkAgent.
@@ -324,6 +335,7 @@ public class EthernetNetworkFactoryTest {
 
     @Test
     public void testUpdateInterfaceLinkStateForNonExistingInterface() throws Exception {
+        initEthernetNetworkFactory();
         // if interface was never added, link state cannot be updated.
         assertFalse(mNetFactory.updateInterfaceLinkState("eth1", true));
         verify(mDeps, never()).makeIpClient(any(), any(), any());
@@ -331,6 +343,7 @@ public class EthernetNetworkFactoryTest {
 
     @Test
     public void testNeedNetworkForOnProvisionedInterface() throws Exception {
+        initEthernetNetworkFactory();
         createAndVerifyProvisionedInterface(TEST_IFACE);
         mNetFactory.needNetworkFor(createDefaultRequest());
         verify(mIpClient, never()).startProvisioning(any());
@@ -338,6 +351,7 @@ public class EthernetNetworkFactoryTest {
 
     @Test
     public void testNeedNetworkForOnUnprovisionedInterface() throws Exception {
+        initEthernetNetworkFactory();
         createUnprovisionedInterface(TEST_IFACE);
         mNetFactory.needNetworkFor(createDefaultRequest());
         verify(mIpClient).startProvisioning(any());
@@ -348,6 +362,7 @@ public class EthernetNetworkFactoryTest {
 
     @Test
     public void testNeedNetworkForOnInterfaceUndergoingProvisioning() throws Exception {
+        initEthernetNetworkFactory();
         createInterfaceUndergoingProvisioning(TEST_IFACE);
         mNetFactory.needNetworkFor(createDefaultRequest());
         verify(mIpClient, never()).startProvisioning(any());
@@ -358,6 +373,7 @@ public class EthernetNetworkFactoryTest {
 
     @Test
     public void testProvisioningLoss() throws Exception {
+        initEthernetNetworkFactory();
         when(mDeps.getNetworkInterfaceByName(TEST_IFACE)).thenReturn(mInterfaceParams);
         createAndVerifyProvisionedInterface(TEST_IFACE);
 
@@ -369,18 +385,24 @@ public class EthernetNetworkFactoryTest {
 
     @Test
     public void testProvisioningLossForDisappearedInterface() throws Exception {
+        initEthernetNetworkFactory();
         // mocked method returns null by default, but just to be explicit in the test:
         when(mDeps.getNetworkInterfaceByName(eq(TEST_IFACE))).thenReturn(null);
 
         createAndVerifyProvisionedInterface(TEST_IFACE);
         triggerOnProvisioningFailure();
-        verifyStop();
+
         // the interface disappeared and getNetworkInterfaceByName returns null, we should not retry
+        verify(mIpClient, never()).startProvisioning(any());
+        verify(mNetworkAgent, never()).register();
+        verify(mIpClient, never()).shutdown();
+        verify(mNetworkAgent, never()).unregister();
         verify(mIpClient, never()).startProvisioning(any());
     }
 
     @Test
     public void testIpClientIsNotStartedWhenLinkIsDown() throws Exception {
+        initEthernetNetworkFactory();
         createUnprovisionedInterface(TEST_IFACE);
         mNetFactory.updateInterfaceLinkState(TEST_IFACE, false);
 
@@ -399,6 +421,7 @@ public class EthernetNetworkFactoryTest {
 
     @Test
     public void testLinkPropertiesChanged() throws Exception {
+        initEthernetNetworkFactory();
         createAndVerifyProvisionedInterface(TEST_IFACE);
 
         LinkProperties lp = new LinkProperties();
@@ -409,6 +432,7 @@ public class EthernetNetworkFactoryTest {
 
     @Test
     public void testNetworkUnwanted() throws Exception {
+        initEthernetNetworkFactory();
         createAndVerifyProvisionedInterface(TEST_IFACE);
 
         mNetworkAgent.getCallbacks().onNetworkUnwanted();
@@ -418,6 +442,7 @@ public class EthernetNetworkFactoryTest {
 
     @Test
     public void testNetworkUnwantedWithStaleNetworkAgent() throws Exception {
+        initEthernetNetworkFactory();
         // ensures provisioning is restarted after provisioning loss
         when(mDeps.getNetworkInterfaceByName(TEST_IFACE)).thenReturn(mInterfaceParams);
         createAndVerifyProvisionedInterface(TEST_IFACE);
@@ -441,6 +466,7 @@ public class EthernetNetworkFactoryTest {
 
     @Test
     public void testTransportOverrideIsCorrectlySet() throws Exception {
+        initEthernetNetworkFactory();
         // createProvisionedInterface() has verifications in place for transport override
         // functionality which for EthernetNetworkFactory is network score and legacy type mappings.
         createVerifyAndRemoveProvisionedInterface(NetworkCapabilities.TRANSPORT_ETHERNET,
@@ -461,6 +487,7 @@ public class EthernetNetworkFactoryTest {
 
     @Test
     public void testReachabilityLoss() throws Exception {
+        initEthernetNetworkFactory();
         createAndVerifyProvisionedInterface(TEST_IFACE);
 
         triggerOnReachabilityLost();
@@ -471,6 +498,7 @@ public class EthernetNetworkFactoryTest {
 
     @Test
     public void testIgnoreOnIpLayerStartedCallbackAfterIpClientHasStopped() throws Exception {
+        initEthernetNetworkFactory();
         createAndVerifyProvisionedInterface(TEST_IFACE);
         mIpClientCallbacks.onProvisioningFailure(new LinkProperties());
         mIpClientCallbacks.onProvisioningSuccess(new LinkProperties());
@@ -484,6 +512,7 @@ public class EthernetNetworkFactoryTest {
 
     @Test
     public void testIgnoreOnIpLayerStoppedCallbackAfterIpClientHasStopped() throws Exception {
+        initEthernetNetworkFactory();
         createAndVerifyProvisionedInterface(TEST_IFACE);
         when(mDeps.getNetworkInterfaceByName(TEST_IFACE)).thenReturn(mInterfaceParams);
         mIpClientCallbacks.onProvisioningFailure(new LinkProperties());
@@ -497,26 +526,37 @@ public class EthernetNetworkFactoryTest {
 
     @Test
     public void testIgnoreLinkPropertiesCallbackAfterIpClientHasStopped() throws Exception {
+        initEthernetNetworkFactory();
         createAndVerifyProvisionedInterface(TEST_IFACE);
         LinkProperties lp = new LinkProperties();
 
-        mIpClientCallbacks.onProvisioningFailure(lp);
+        // The test requires the two proceeding methods to happen one after the other in ENF and
+        // verifies onLinkPropertiesChange doesn't complete execution for a downed interface.
+        // Posting is necessary as updateInterfaceLinkState with false will set mIpClientCallbacks
+        // to null which will throw an NPE in the test if executed synchronously.
+        mHandler.post(() -> mNetFactory.updateInterfaceLinkState(TEST_IFACE, false));
         mIpClientCallbacks.onLinkPropertiesChange(lp);
         mLooper.dispatchAll();
-        verifyStop();
 
+        verifyStop();
         // ipClient has been shut down first, we should not update
         verify(mNetworkAgent, never()).sendLinkPropertiesImpl(same(lp));
     }
 
     @Test
     public void testIgnoreNeighborLossCallbackAfterIpClientHasStopped() throws Exception {
+        initEthernetNetworkFactory();
         createAndVerifyProvisionedInterface(TEST_IFACE);
-        mIpClientCallbacks.onProvisioningFailure(new LinkProperties());
+
+        // The test requires the two proceeding methods to happen one after the other in ENF and
+        // verifies onReachabilityLost doesn't complete execution for a downed interface.
+        // Posting is necessary as updateInterfaceLinkState with false will set mIpClientCallbacks
+        // to null which will throw an NPE in the test if executed synchronously.
+        mHandler.post(() -> mNetFactory.updateInterfaceLinkState(TEST_IFACE, false));
         mIpClientCallbacks.onReachabilityLost("Neighbor Lost");
         mLooper.dispatchAll();
-        verifyStop();
 
+        verifyStop();
         // ipClient has been shut down first, we should not update
         verify(mIpClient, never()).startProvisioning(any());
         verify(mNetworkAgent, never()).register();
@@ -567,6 +607,7 @@ public class EthernetNetworkFactoryTest {
 
     @Test
     public void testUpdateInterfaceCallsListenerCorrectlyOnSuccess() throws Exception {
+        initEthernetNetworkFactory();
         createAndVerifyProvisionedInterface(TEST_IFACE);
         final NetworkCapabilities capabilities = createDefaultFilterCaps();
         final IpConfiguration ipConfiguration = createStaticIpConfig();
@@ -580,8 +621,71 @@ public class EthernetNetworkFactoryTest {
         assertNull(ret.second);
     }
 
+    @DevSdkIgnoreRule.IgnoreUpTo(SC_V2) // TODO: Use to Build.VERSION_CODES.SC_V2 when available
+    @Test
+    public void testUpdateInterfaceAbortsOnConcurrentRemoveInterface() throws Exception {
+        initEthernetNetworkFactory();
+        verifyNetworkManagementCallIsAbortedWhenInterrupted(
+                TEST_IFACE,
+                () -> mNetFactory.removeInterface(TEST_IFACE));
+    }
+
+    @DevSdkIgnoreRule.IgnoreUpTo(SC_V2) // TODO: Use to Build.VERSION_CODES.SC_V2 when available
+    @Test
+    public void testUpdateInterfaceAbortsOnConcurrentUpdateInterfaceLinkState() throws Exception {
+        initEthernetNetworkFactory();
+        verifyNetworkManagementCallIsAbortedWhenInterrupted(
+                TEST_IFACE,
+                () -> mNetFactory.updateInterfaceLinkState(TEST_IFACE, false));
+    }
+
+    @DevSdkIgnoreRule.IgnoreUpTo(SC_V2) // TODO: Use to Build.VERSION_CODES.SC_V2 when available
+    @Test
+    public void testUpdateInterfaceCallsListenerCorrectlyOnConcurrentRequests() throws Exception {
+        initEthernetNetworkFactory();
+        final NetworkCapabilities capabilities = createDefaultFilterCaps();
+        final IpConfiguration ipConfiguration = createStaticIpConfig();
+        final TestNetworkManagementListener successfulListener =
+                new TestNetworkManagementListener();
+
+        // If two calls come in before the first one completes, the first listener will be aborted
+        // and the second one will be successful.
+        verifyNetworkManagementCallIsAbortedWhenInterrupted(
+                TEST_IFACE,
+                () -> {
+                    mNetFactory.updateInterface(
+                            TEST_IFACE, ipConfiguration, capabilities, successfulListener);
+                    triggerOnProvisioningSuccess();
+                });
+
+        final Pair<Network, InternalNetworkManagementException> successfulResult =
+                successfulListener.expectOnComplete();
+        assertEquals(mMockNetwork, successfulResult.first);
+        assertNull(successfulResult.second);
+    }
+
+    private void verifyNetworkManagementCallIsAbortedWhenInterrupted(
+            @NonNull final String iface,
+            @NonNull final Runnable interruptingRunnable) throws Exception {
+        createAndVerifyProvisionedInterface(iface);
+        final NetworkCapabilities capabilities = createDefaultFilterCaps();
+        final IpConfiguration ipConfiguration = createStaticIpConfig();
+        final TestNetworkManagementListener failedListener = new TestNetworkManagementListener();
+
+        // An active update request will be aborted on interrupt prior to provisioning completion.
+        mNetFactory.updateInterface(iface, ipConfiguration, capabilities, failedListener);
+        interruptingRunnable.run();
+
+        final Pair<Network, InternalNetworkManagementException> failedResult =
+                failedListener.expectOnComplete();
+        assertNull(failedResult.first);
+        assertNotNull(failedResult.second);
+        assertTrue(failedResult.second.getMessage().contains("aborted"));
+    }
+
     @Test
     public void testUpdateInterfaceRestartsAgentCorrectly() throws Exception {
+        initEthernetNetworkFactory();
         createAndVerifyProvisionedInterface(TEST_IFACE);
         final NetworkCapabilities capabilities = createDefaultFilterCaps();
         final IpConfiguration ipConfiguration = createStaticIpConfig();
