@@ -16,11 +16,13 @@
 
 package com.android.server.nearby.fastpair;
 
+import android.annotation.Nullable;
 import android.content.Context;
 import android.nearby.FastPairDevice;
 import android.nearby.NearbyDevice;
 import android.util.Log;
 
+import com.android.server.nearby.common.bloomfilter.BloomFilter;
 import com.android.server.nearby.common.locator.Locator;
 import com.android.server.nearby.fastpair.halfsheet.FastPairHalfSheetManager;
 import com.android.server.nearby.provider.FastPairDataProvider;
@@ -28,6 +30,8 @@ import com.android.server.nearby.util.FastPairDecoder;
 import com.android.server.nearby.util.Hex;
 
 import com.google.protobuf.ByteString;
+
+import java.util.List;
 
 import service.proto.Cache;
 import service.proto.Rpcs;
@@ -81,5 +85,22 @@ public class FastPairAdvHandler {
             // Start to process bloomfilter
 
         }
+    }
+
+    /**
+     * Checks the bloom filter to see if any of the devices are recognized and should have a
+     * notification displayed for them. A device is recognized if the account key + salt combination
+     * is inside the bloom filter.
+     */
+    @Nullable
+    static FastPairDevice findRecognizedDevice(
+            List<FastPairDevice> devices, BloomFilter bloomFilter, byte[] salt) {
+        for (FastPairDevice device : devices) {
+            // byte[] rotatedKey = concat(device.getAccountKey().toByteArray(), salt);
+//            if (bloomFilter.possiblyContains(rotatedKey)) {
+//                return device;
+//            }
+        }
+        return null;
     }
 }
