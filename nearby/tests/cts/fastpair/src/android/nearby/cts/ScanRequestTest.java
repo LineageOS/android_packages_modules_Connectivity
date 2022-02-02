@@ -89,7 +89,8 @@ public class ScanRequestTest {
 
         assertThat(request.toString()).isEqualTo(
                 "Request[scanType=2, scanMode=SCAN_MODE_BALANCED, "
-                        + "enableBle=true, workSource=WorkSource{" + UID + " " + APP_NAME + "}]");
+                        + "enableBle=true, workSource=WorkSource{" + UID + " " + APP_NAME
+                        + "}, scanFilters=[]]");
     }
 
     /** Verify toString works correctly with null WorkSource. */
@@ -100,7 +101,8 @@ public class ScanRequestTest {
                 SCAN_TYPE_FAST_PAIR).setWorkSource(null).build();
 
         assertThat(request.toString()).isEqualTo("Request[scanType=1, "
-                + "scanMode=SCAN_MODE_LOW_POWER, enableBle=true, workSource=WorkSource{}]");
+                + "scanMode=SCAN_MODE_LOW_POWER, enableBle=true, workSource=WorkSource{}, "
+                + "scanFilters=[]]");
     }
 
     @Test
