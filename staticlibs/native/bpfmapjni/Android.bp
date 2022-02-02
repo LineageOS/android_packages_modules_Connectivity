@@ -30,7 +30,7 @@ cc_library_static {
         "liblog",
         "libnativehelper_compat_libc++",
     ],
-    static_libs: [
+    whole_static_libs: [
         "libtcutils",
     ],
     cflags: [
