@@ -638,8 +638,8 @@ public class VpnTest {
 
         if (address instanceof Inet6Address) {
             checkUdpEcho(destination, "2001:db8:1:2::ffe");
-            checkTcpReflection(destination, "2001:db8:1:2::ffe");
             checkPing(destination);
+            checkTcpReflection(destination, "2001:db8:1:2::ffe");
         } else {
             checkUdpEcho(destination, "192.0.2.2");
             checkTcpReflection(destination, "192.0.2.2");
