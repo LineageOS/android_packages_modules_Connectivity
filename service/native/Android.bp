@@ -70,6 +70,7 @@ cc_test {
         "libnetdutils",
         "libtraffic_controller",
         "libutils",
+        "libnetd_updatable",
         "netd_aidl_interface-lateststable-ndk",
     ],
 }

@@ -37,7 +37,8 @@ java_library {
     libs: [
         "framework-annotations-lib",
         "framework-connectivity-pre-jarjar",
-        "framework-connectivity-tiramisu.impl",
+        "framework-connectivity-tiramisu-pre-jarjar",
+        "framework-tethering.stubs.module_lib",
         "service-connectivity-pre-jarjar",
         "service-nearby",
         "unsupportedappusage",

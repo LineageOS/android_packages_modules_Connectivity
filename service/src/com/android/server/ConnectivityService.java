@@ -1339,6 +1339,18 @@ public class ConnectivityService extends IConnectivityManager.Stub
         }
 
         /**
+         * @see CarrierPrivilegeAuthenticator
+         */
+        public CarrierPrivilegeAuthenticator makeCarrierPrivilegeAuthenticator(
+                @NonNull final Context context, @NonNull final TelephonyManager tm) {
+            if (SdkLevel.isAtLeastT()) {
+                return new CarrierPrivilegeAuthenticator(context, tm);
+            } else {
+                return null;
+            }
+        }
+
+        /**
          * @see DeviceConfigUtils#isFeatureEnabled
          */
         public boolean isFeatureEnabled(Context context, String name, boolean defaultEnabled) {
@@ -1426,12 +1438,8 @@ public class ConnectivityService extends IConnectivityManager.Stub
         mTelephonyManager = (TelephonyManager) mContext.getSystemService(Context.TELEPHONY_SERVICE);
         mAppOpsManager = (AppOpsManager) mContext.getSystemService(Context.APP_OPS_SERVICE);
         mLocationPermissionChecker = mDeps.makeLocationPermissionChecker(mContext);
-        if (SdkLevel.isAtLeastT()) {
-            mCarrierPrivilegeAuthenticator =
-                    new CarrierPrivilegeAuthenticator(mContext, mTelephonyManager);
-        } else {
-            mCarrierPrivilegeAuthenticator = null;
-        }
+        mCarrierPrivilegeAuthenticator =
+                mDeps.makeCarrierPrivilegeAuthenticator(mContext, mTelephonyManager);
 
         // To ensure uid state is synchronized with Network Policy, register for
         // NetworkPolicyManagerService events must happen prior to NetworkPolicyManagerService
@@ -4157,11 +4165,11 @@ public class ConnectivityService extends IConnectivityManager.Stub
         }
     }
 
-    private boolean hasCarrierPrivilegeForNetworkRequest(int callingUid,
-            NetworkRequest networkRequest) {
+    private boolean hasCarrierPrivilegeForNetworkCaps(final int callingUid,
+            @NonNull final NetworkCapabilities caps) {
         if (SdkLevel.isAtLeastT() && mCarrierPrivilegeAuthenticator != null) {
-            return mCarrierPrivilegeAuthenticator.hasCarrierPrivilegeForNetworkRequest(callingUid,
-                    networkRequest);
+            return mCarrierPrivilegeAuthenticator.hasCarrierPrivilegeForNetworkCapabilities(
+                    callingUid, caps);
         }
         return false;
     }
@@ -4205,7 +4213,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
                     }
                 }
                 if (req.hasCapability(NetworkCapabilities.NET_CAPABILITY_CBS)) {
-                    if (!hasCarrierPrivilegeForNetworkRequest(nri.mUid, req)
+                    if (!hasCarrierPrivilegeForNetworkCaps(nri.mUid, req.networkCapabilities)
                             && !checkConnectivityRestrictedNetworksPermission(
                                     nri.mPid, nri.mUid)) {
                         requestToBeReleased = req;
@@ -6140,13 +6148,6 @@ public class ConnectivityService extends IConnectivityManager.Stub
         }
     }
 
-    private void ensureRequestableCapabilities(NetworkCapabilities networkCapabilities) {
-        final String badCapability = networkCapabilities.describeFirstNonRequestableCapability();
-        if (badCapability != null) {
-            throw new IllegalArgumentException("Cannot request network with " + badCapability);
-        }
-    }
-
     // This checks that the passed capabilities either do not request a
     // specific SSID/SignalStrength, or the calling app has permission to do so.
     private void ensureSufficientPermissionsForRequest(NetworkCapabilities nc,
@@ -6204,7 +6205,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
         nai.onSignalStrengthThresholdsUpdated(thresholdsArray);
     }
 
-    private void ensureValidNetworkSpecifier(NetworkCapabilities nc) {
+    private static void ensureValidNetworkSpecifier(NetworkCapabilities nc) {
         if (nc == null) {
             return;
         }
@@ -6217,13 +6218,21 @@ public class ConnectivityService extends IConnectivityManager.Stub
         }
     }
 
-    private void ensureValid(NetworkCapabilities nc) {
+    private static void ensureListenableCapabilities(@NonNull final NetworkCapabilities nc) {
         ensureValidNetworkSpecifier(nc);
         if (nc.isPrivateDnsBroken()) {
             throw new IllegalArgumentException("Can't request broken private DNS");
         }
         if (nc.hasAccessUids()) {
             throw new IllegalArgumentException("Can't request access UIDs");
+        }
+    }
+
+    private void ensureRequestableCapabilities(@NonNull final NetworkCapabilities nc) {
+        ensureListenableCapabilities(nc);
+        final String badCapability = nc.describeFirstNonRequestableCapability();
+        if (badCapability != null) {
+            throw new IllegalArgumentException("Cannot request network with " + badCapability);
         }
     }
 
@@ -6319,7 +6328,6 @@ public class ConnectivityService extends IConnectivityManager.Stub
         if (timeoutMs < 0) {
             throw new IllegalArgumentException("Bad timeout specified");
         }
-        ensureValid(networkCapabilities);
 
         final NetworkRequest networkRequest = new NetworkRequest(networkCapabilities, legacyType,
                 nextNetworkRequestId(), reqType);
@@ -6461,7 +6469,6 @@ public class ConnectivityService extends IConnectivityManager.Stub
                 Binder.getCallingPid(), callingUid, callingPackageName);
         restrictRequestUidsForCallerAndSetRequestorInfo(networkCapabilities,
                 callingUid, callingPackageName);
-        ensureValid(networkCapabilities);
 
         NetworkRequest networkRequest = new NetworkRequest(networkCapabilities, TYPE_NONE,
                 nextNetworkRequestId(), NetworkRequest.Type.REQUEST);
@@ -6528,7 +6535,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
         // There is no need to do this for requests because an app without CHANGE_NETWORK_STATE
         // can't request networks.
         restrictBackgroundRequestForCaller(nc);
-        ensureValid(nc);
+        ensureListenableCapabilities(nc);
 
         NetworkRequest networkRequest = new NetworkRequest(nc, TYPE_NONE, nextNetworkRequestId(),
                 NetworkRequest.Type.LISTEN);
@@ -6550,7 +6557,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
         if (!hasWifiNetworkListenPermission(networkCapabilities)) {
             enforceAccessPermission();
         }
-        ensureValid(networkCapabilities);
+        ensureListenableCapabilities(networkCapabilities);
         ensureSufficientPermissionsForRequest(networkCapabilities,
                 Binder.getCallingPid(), callingUid, callingPackageName);
         final NetworkCapabilities nc = new NetworkCapabilities(networkCapabilities);
@@ -7495,7 +7502,8 @@ public class ConnectivityService extends IConnectivityManager.Stub
             nc.setOwnerUid(nai.networkCapabilities.getOwnerUid());
         }
         nai.declaredCapabilities = new NetworkCapabilities(nc);
-        NetworkAgentInfo.restrictCapabilitiesFromNetworkAgent(nc, nai.creatorUid);
+        NetworkAgentInfo.restrictCapabilitiesFromNetworkAgent(nc, nai.creatorUid,
+                mCarrierPrivilegeAuthenticator);
     }
 
     /** Modifies |newNc| based on the capabilities of |underlyingNetworks| and |agentCaps|. */
@@ -10843,7 +10851,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
             } else {
                 mBpfNetMaps.removeNiceApp(uid);
             }
-        } catch (ServiceSpecificException e) {
+        } catch (RemoteException | ServiceSpecificException e) {
             throw new IllegalStateException(e);
         }
     }
@@ -10858,7 +10866,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
             } else {
                 mBpfNetMaps.removeNaughtyApp(uid);
             }
-        } catch (ServiceSpecificException e) {
+        } catch (RemoteException | ServiceSpecificException e) {
             throw new IllegalStateException(e);
         }
     }
@@ -10870,7 +10878,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
         try {
             mBpfNetMaps.setUidRule(chain, uid,
                     allow ? INetd.FIREWALL_RULE_ALLOW : INetd.FIREWALL_RULE_DENY);
-        } catch (ServiceSpecificException e) {
+        } catch (RemoteException | ServiceSpecificException e) {
             throw new IllegalStateException(e);
         }
     }
@@ -10881,7 +10889,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
 
         try {
             mBpfNetMaps.setChildChain(chain, enable);
-        } catch (ServiceSpecificException e) {
+        } catch (RemoteException | ServiceSpecificException e) {
             throw new IllegalStateException(e);
         }
     }
@@ -10908,7 +10916,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
                     throw new IllegalArgumentException("replaceFirewallChain with invalid chain: "
                             + chain);
             }
-        } catch (ServiceSpecificException e) {
+        } catch (RemoteException | ServiceSpecificException e) {
             throw new IllegalStateException(e);
         }
     }
@@ -10918,7 +10926,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
         enforceNetworkStackOrSettingsPermission();
         try {
             mBpfNetMaps.swapActiveStatsMap();
-        } catch (ServiceSpecificException e) {
+        } catch (RemoteException | ServiceSpecificException e) {
             throw new IllegalStateException(e);
         }
     }
