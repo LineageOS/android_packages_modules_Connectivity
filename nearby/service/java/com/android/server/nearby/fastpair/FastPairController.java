@@ -63,6 +63,7 @@ import service.proto.Cache;
  * for pairing control.
  */
 public class FastPairController {
+    private static final String TAG = "FastPairController";
     private final Context mContext;
     private final EventLoop mEventLoop;
     private final FastPairCacheManager mFastPairCacheManager;
@@ -132,7 +133,7 @@ public class FastPairController {
                                 item = new DiscoveryItem(mContext,
                                         Cache.StoredDiscoveryItem.parseFrom(discoveryItem));
                             } catch (InvalidProtocolBufferException e) {
-                                Log.w("FastPairController",
+                                Log.w(TAG,
                                         "Error parsing serialized discovery item with size "
                                                 + discoveryItem.length);
                             }
@@ -140,8 +141,7 @@ public class FastPairController {
 
 
                         if (item == null || TextUtils.isEmpty(item.getMacAddress())) {
-                            Log.w("FastPairController",
-                                    "Invalid DiscoveryItem, ignore pairing");
+                            Log.w(TAG, "Invalid DiscoveryItem, ignore pairing");
                             return;
                         }
 
@@ -150,7 +150,7 @@ public class FastPairController {
                         // bug - b/31459521).
                         if (item.getState() != Cache.StoredDiscoveryItem.State.STATE_ENABLED
                                 && !isRetroactivePair) {
-                            Log.d("FastPairController", "Incorrect state, ignore pairing");
+                            Log.d(TAG, "Incorrect state, ignore pairing");
                             return;
                         }
 
@@ -193,10 +193,10 @@ public class FastPairController {
             @Nullable String companionApp,
             PairingProgressHandlerBase pairingProgressHandlerBase) {
         if (mIsFastPairing) {
-            Log.d("FastPairController", "FastPair: fastpairing, skip pair request");
+            Log.d(TAG, "FastPair: fastpairing, skip pair request");
             return;
         }
-        Log.d("FastPairController", "FastPair: start pair");
+        Log.d(TAG, "FastPair: start pair");
 
         // Hide all "tap to pair" notifications until after the flow completes.
         mEventLoop.removeRunnable(mReEnableAllDeviceItemsRunnable);
@@ -243,7 +243,7 @@ public class FastPairController {
         if (!mShouldUpload) {
             return;
         }
-        Log.d("FastPairController", "upload device to footprint");
+        Log.d(TAG, "upload device to footprint");
         FastPairManager.processBackgroundTask(() -> {
             Cache.StoredDiscoveryItem storedDiscoveryItem =
                     prepareStoredDiscoveryItemForFootprints(discoveryItem);
@@ -257,9 +257,13 @@ public class FastPairController {
                         new FastPairUploadInfo(storedDiscoveryItem, ByteString.copyFrom(accountKey),
                                 ByteString.copyFrom(hashValue));
                 // account data place holder here
-                FastPairDataProvider.getInstance().optIn(new Account("empty", "empty"));
-                FastPairDataProvider.getInstance().upload(
-                        new Account("empty", "empty"), uploadInfo);
+                try {
+                    FastPairDataProvider.getInstance().optIn(new Account("empty", "empty"));
+                    FastPairDataProvider.getInstance().upload(
+                            new Account("empty", "empty"), uploadInfo);
+                } catch (IllegalStateException e) {
+                    Log.e(TAG, "OEM does not construct fast pair data proxy correctly");
+                }
 
             }
 

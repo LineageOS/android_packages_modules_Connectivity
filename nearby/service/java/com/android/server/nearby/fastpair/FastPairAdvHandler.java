@@ -42,6 +42,7 @@ import service.proto.Rpcs;
 public class FastPairAdvHandler {
     Context mContext;
     String mBleAddress;
+    private static final String TAG = "FastPairAdvHandler";
 
     /** The types about how the bloomfilter is processed. */
     public enum ProcessBloomFilterType {
@@ -73,17 +74,21 @@ public class FastPairAdvHandler {
             Log.d("FastPairService",
                     "On discovery model id" + Hex.bytesToStringLowercase(model));
             // Use api to get anti spoofing key from model id.
-            Rpcs.GetObservedDeviceResponse response =
-                    FastPairDataProvider.getInstance()
-                            .loadFastPairAntispoofkeyDeviceMetadata(model);
-            ByteString publicKey = response.getDevice().getAntiSpoofingKeyPair().getPublicKey();
-            Locator.get(mContext, FastPairHalfSheetManager.class).showHalfSheet(
-                    Cache.ScanFastPairStoreItem.newBuilder().setAddress(mBleAddress)
-                            .setAntiSpoofingPublicKey(publicKey)
-                            .build());
+            try {
+                Rpcs.GetObservedDeviceResponse response =
+                        FastPairDataProvider.getInstance()
+                                .loadFastPairAntispoofkeyDeviceMetadata(model);
+                ByteString publicKey = response.getDevice().getAntiSpoofingKeyPair().getPublicKey();
+                Locator.get(mContext, FastPairHalfSheetManager.class).showHalfSheet(
+                        Cache.ScanFastPairStoreItem.newBuilder().setAddress(mBleAddress)
+                                .setAntiSpoofingPublicKey(publicKey)
+                                .build());
+            } catch (IllegalStateException e) {
+                Log.e(TAG, "OEM does not construct fast pair data proxy correctly");
+            }
+
         } else {
             // Start to process bloomfilter
-
         }
     }
 
