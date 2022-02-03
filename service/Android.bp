@@ -33,7 +33,6 @@ cc_library_shared {
     srcs: [
         "jni/com_android_net_module_util/onload.cpp",
     ],
-    stl: "libc++_static",
     static_libs: [
         "libnet_utils_device_common_bpfjni",
     ],
