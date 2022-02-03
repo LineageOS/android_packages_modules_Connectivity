@@ -61,7 +61,6 @@ cc_library_shared {
         "jni/com_android_server_TestNetworkService.cpp",
         "jni/onload.cpp",
     ],
-    stl: "libc++_static",
     header_libs: [
         "bpf_connectivity_headers",
         "libbase_headers",
