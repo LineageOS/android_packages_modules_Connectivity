@@ -16,6 +16,9 @@
 
 package com.android.server.nearby.fastpair;
 
+import static com.google.common.primitives.Bytes.concat;
+
+import android.accounts.Account;
 import android.annotation.Nullable;
 import android.content.Context;
 import android.nearby.FastPairDevice;
@@ -23,6 +26,7 @@ import android.nearby.NearbyDevice;
 import android.util.Log;
 
 import com.android.server.nearby.common.bloomfilter.BloomFilter;
+import com.android.server.nearby.common.bloomfilter.FastPairBloomFilterHasher;
 import com.android.server.nearby.common.locator.Locator;
 import com.android.server.nearby.fastpair.halfsheet.FastPairHalfSheetManager;
 import com.android.server.nearby.provider.FastPairDataProvider;
@@ -34,6 +38,7 @@ import com.google.protobuf.ByteString;
 import java.util.List;
 
 import service.proto.Cache;
+import service.proto.Data;
 import service.proto.Rpcs;
 
 /**
@@ -88,7 +93,29 @@ public class FastPairAdvHandler {
             }
 
         } else {
-            // Start to process bloomfilter
+            // Start to process bloom filter
+            List<Account> accountList =
+                    FastPairDataProvider.getInstance().loadFastPairEligibleAccounts();
+            byte[] bloomFilterByteArray = FastPairDecoder.getBloomFilter(fastPairDevice.getData());
+            byte[] bloomFilterSalt = FastPairDecoder.getBloomFilterSalt(fastPairDevice.getData());
+            for (Account account : accountList) {
+                try {
+                    List<Data.FastPairDeviceWithAccountKey> listDevices =
+                            FastPairDataProvider.getInstance().loadFastPairDevicesWithAccountKey(
+                                    account);
+                    Data.FastPairDeviceWithAccountKey recognizedDevice =
+                            findRecognizedDevice(listDevices,
+                                    new BloomFilter(bloomFilterByteArray,
+                                            new FastPairBloomFilterHasher()), bloomFilterSalt);
+                    if (recognizedDevice != null) {
+                        Log.d(TAG, "find matched device show notification to remind user to pair");
+                        return;
+                    }
+                } catch (IllegalStateException e) {
+                    Log.e(TAG, "OEM does not construct fast pair data proxy correctly");
+                }
+
+            }
         }
     }
 
@@ -98,13 +125,13 @@ public class FastPairAdvHandler {
      * is inside the bloom filter.
      */
     @Nullable
-    static FastPairDevice findRecognizedDevice(
-            List<FastPairDevice> devices, BloomFilter bloomFilter, byte[] salt) {
-        for (FastPairDevice device : devices) {
-            // byte[] rotatedKey = concat(device.getAccountKey().toByteArray(), salt);
-//            if (bloomFilter.possiblyContains(rotatedKey)) {
-//                return device;
-//            }
+    static Data.FastPairDeviceWithAccountKey findRecognizedDevice(
+            List<Data.FastPairDeviceWithAccountKey> devices, BloomFilter bloomFilter, byte[] salt) {
+        for (Data.FastPairDeviceWithAccountKey device : devices) {
+            byte[] rotatedKey = concat(device.getAccountKey().toByteArray(), salt);
+            if (bloomFilter.possiblyContains(rotatedKey)) {
+                return device;
+            }
         }
         return null;
     }
