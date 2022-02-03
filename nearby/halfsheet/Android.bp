@@ -16,45 +16,42 @@ package {
     default_applicable_licenses: ["Android-Apache-2.0"],
 }
 
-java_defaults {
-    name: "HalfSheetDefaults",
+android_app {
+    name: "HalfSheetUX",
+    defaults: ["platform_app_defaults"],
     srcs: ["src/**/*.java"],
     sdk_version: "module_current",
     // This is included in tethering apex, which uses min SDK 30
     min_sdk_version: "30",
     target_sdk_version: "current",
-    manifest: "AndroidManifest.xml",
-    plugins: ["java_api_finder"],
-    jarjar_rules: ":nearby-jarjar-rules",
+    updatable: true,
+    certificate: ":com.android.nearby.halfsheetcertificate",
     libs: [
         "framework-bluetooth",
         "framework-connectivity-tiramisu",
         "nearby-service-string",
-      ],
+    ],
     static_libs: [
         "androidx.annotation_annotation",
         "androidx.fragment_fragment",
         "androidx-constraintlayout_constraintlayout",
         "androidx.localbroadcastmanager_localbroadcastmanager",
+        "androidx.core_core",
+        "androidx.appcompat_appcompat",
+        "androidx.recyclerview_recyclerview",
+        "androidx.lifecycle_lifecycle-runtime",
+        "androidx.lifecycle_lifecycle-extensions",
+        "com.google.android.material_material",
         "fast-pair-lite-protos",
     ],
-    lint: { strict_updatability_linting: true }
-}
-
-android_app {
-    name: "HalfSheetUX",
-    defaults: ["HalfSheetDefaults"],
-    resource_dirs: ["res"],
-    certificate: ":com.android.nearby.halfsheetcertificate",
-    updatable: true,
-    static_libs: [
-        "com.google.android.material_material",
-    ],
+    plugins: ["java_api_finder"],
+    manifest: "AndroidManifest.xml",
+    jarjar_rules: ":nearby-jarjar-rules",
     apex_available: ["com.android.tethering",],
+    lint: { strict_updatability_linting: true }
 }
 
 android_app_certificate {
     name: "com.android.nearby.halfsheetcertificate",
     certificate: "apk-certs/com.android.nearby.halfsheet"
 }
-
