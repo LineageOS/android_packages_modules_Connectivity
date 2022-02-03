@@ -31,12 +31,10 @@ cc_library {
         "BpfHandler.cpp",
         "NetdUpdatable.cpp",
     ],
-    static_libs: [
-        "libbase",
-        "libnetdutils",
-    ],
     shared_libs: [
+        "libbase",
         "liblog",
+        "libnetdutils",
     ],
     export_include_dirs: ["include"],
     header_abi_checker: {
