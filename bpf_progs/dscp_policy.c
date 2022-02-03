@@ -16,6 +16,7 @@
 
 #include <linux/types.h>
 #include <linux/bpf.h>
+#include <linux/if_packet.h>
 #include <linux/ip.h>
 #include <linux/ipv6.h>
 #include <linux/if_ether.h>
@@ -27,249 +28,294 @@
 #include <string.h>
 
 #include "bpf_helpers.h"
+#include "dscp_policy.h"
 
-#define MAX_POLICIES 16
-#define MAP_A 1
-#define MAP_B 2
-
-#define STRUCT_SIZE(name, size) _Static_assert(sizeof(name) == (size), "Incorrect struct size.")
-
-// TODO: these are already defined in /system/netd/bpf_progs/bpf_net_helpers.h
-// should they be moved to common location?
-static uint64_t (*bpf_get_socket_cookie)(struct __sk_buff* skb) =
-        (void*)BPF_FUNC_get_socket_cookie;
-static int (*bpf_skb_store_bytes)(struct __sk_buff* skb, __u32 offset, const void* from, __u32 len,
-                                  __u64 flags) = (void*)BPF_FUNC_skb_store_bytes;
-static int (*bpf_l3_csum_replace)(struct __sk_buff* skb, __u32 offset, __u64 from, __u64 to,
-                                  __u64 flags) = (void*)BPF_FUNC_l3_csum_replace;
-
-typedef struct {
-    // Add family here to match __sk_buff ?
-    struct in_addr srcIp;
-    struct in_addr dstIp;
-    __be16 srcPort;
-    __be16 dstPort;
-    uint8_t proto;
-    uint8_t dscpVal;
-    uint8_t pad[2];
-} Ipv4RuleEntry;
-STRUCT_SIZE(Ipv4RuleEntry, 2 * 4 + 2 * 2 + 2 * 1 + 2);  // 16, 4 for in_addr
-
-#define SRC_IP_MASK     1
-#define DST_IP_MASK     2
-#define SRC_PORT_MASK   4
-#define DST_PORT_MASK   8
-#define PROTO_MASK      16
-
-typedef struct {
-    struct in6_addr srcIp;
-    struct in6_addr dstIp;
-    __be16 srcPort;
-    __be16 dstPortStart;
-    __be16 dstPortEnd;
-    uint8_t proto;
-    uint8_t dscpVal;
-    uint8_t mask;
-    uint8_t pad[3];
-} Ipv4Policy;
-STRUCT_SIZE(Ipv4Policy, 2 * 16 + 3 * 2 + 3 * 1 + 3);  // 44
-
-typedef struct {
-    struct in6_addr srcIp;
-    struct in6_addr dstIp;
-    __be16 srcPort;
-    __be16 dstPortStart;
-    __be16 dstPortEnd;
-    uint8_t proto;
-    uint8_t dscpVal;
-    uint8_t mask;
-    // should we override this struct to include the param bitmask for linear search?
-    // For mapping socket to policies, all the params should match exactly since we can
-    // pull any missing from the sock itself.
-} Ipv6RuleEntry;
-STRUCT_SIZE(Ipv6RuleEntry, 2 * 16 + 3 * 2 + 3 * 1 + 3);  // 44
-
-// TODO: move to using 1 map. Map v4 address to 0xffff::v4
-DEFINE_BPF_MAP_GRW(ipv4_socket_to_policies_map_A, HASH, uint64_t, Ipv4RuleEntry, MAX_POLICIES,
-        AID_SYSTEM)
-DEFINE_BPF_MAP_GRW(ipv4_socket_to_policies_map_B, HASH, uint64_t, Ipv4RuleEntry, MAX_POLICIES,
-        AID_SYSTEM)
-DEFINE_BPF_MAP_GRW(ipv6_socket_to_policies_map_A, HASH, uint64_t, Ipv6RuleEntry, MAX_POLICIES,
-        AID_SYSTEM)
-DEFINE_BPF_MAP_GRW(ipv6_socket_to_policies_map_B, HASH, uint64_t, Ipv6RuleEntry, MAX_POLICIES,
-        AID_SYSTEM)
 DEFINE_BPF_MAP_GRW(switch_comp_map, ARRAY, int, uint64_t, 1, AID_SYSTEM)
 
-DEFINE_BPF_MAP_GRW(ipv4_dscp_policies_map, ARRAY, uint32_t, Ipv4Policy, MAX_POLICIES,
+DEFINE_BPF_MAP_GRW(ipv4_socket_to_policies_map_A, HASH, uint64_t, RuleEntry, MAX_POLICIES,
         AID_SYSTEM)
-DEFINE_BPF_MAP_GRW(ipv6_dscp_policies_map, ARRAY, uint32_t, Ipv6RuleEntry, MAX_POLICIES,
+DEFINE_BPF_MAP_GRW(ipv4_socket_to_policies_map_B, HASH, uint64_t, RuleEntry, MAX_POLICIES,
+        AID_SYSTEM)
+DEFINE_BPF_MAP_GRW(ipv6_socket_to_policies_map_A, HASH, uint64_t, RuleEntry, MAX_POLICIES,
+        AID_SYSTEM)
+DEFINE_BPF_MAP_GRW(ipv6_socket_to_policies_map_B, HASH, uint64_t, RuleEntry, MAX_POLICIES,
         AID_SYSTEM)
 
-DEFINE_BPF_PROG_KVER("schedcls/set_dscp", AID_ROOT, AID_SYSTEM,
-                     schedcls_set_dscp, KVER(5, 4, 0))
-(struct __sk_buff* skb) {
-    int one = 0;
-    uint64_t* selectedMap = bpf_switch_comp_map_lookup_elem(&one);
+DEFINE_BPF_MAP_GRW(ipv4_dscp_policies_map, ARRAY, uint32_t, DscpPolicy, MAX_POLICIES,
+        AID_SYSTEM)
+DEFINE_BPF_MAP_GRW(ipv6_dscp_policies_map, ARRAY, uint32_t, DscpPolicy, MAX_POLICIES,
+        AID_SYSTEM)
+
+static inline __always_inline void match_policy(struct __sk_buff* skb, bool ipv4, bool is_eth) {
+    void* data = (void*)(long)skb->data;
+    const void* data_end = (void*)(long)skb->data_end;
+
+    const int l2_header_size = is_eth ? sizeof(struct ethhdr) : 0;
+    struct ethhdr* eth = is_eth ? data : NULL;
+
+    if (data + l2_header_size > data_end) return;
+
+    int zero = 0;
+    int hdr_size = 0;
+    uint64_t* selectedMap = bpf_switch_comp_map_lookup_elem(&zero);
 
     // use this with HASH map so map lookup only happens once policies have been added?
     if (!selectedMap) {
-        return TC_ACT_PIPE;
+        return;
     }
 
     // used for map lookup
     uint64_t cookie = bpf_get_socket_cookie(skb);
+    if (!cookie)
+        return;
 
-    // Do we need separate maps for ipv4/ipv6
-    if (skb->protocol == htons(ETH_P_IP)) { //maybe bpf_htons()
-        Ipv4RuleEntry* v4Policy;
-        if (*selectedMap == MAP_A) {
-            v4Policy = bpf_ipv4_socket_to_policies_map_A_lookup_elem(&cookie);
-        } else {
-            v4Policy = bpf_ipv4_socket_to_policies_map_B_lookup_elem(&cookie);
-        }
-
-        // How to use bitmask here to compare params efficiently?
-        // TODO: add BPF_PROG_TYPE_SK_SKB prog type to Loader?
-
-        void* data = (void*)(long)skb->data;
-        const void* data_end = (void*)(long)skb->data_end;
-        const struct iphdr* const iph = data;
-
+    uint16_t sport = 0;
+    uint16_t dport = 0;
+    uint8_t protocol = 0; // TODO: Use are reserved value? Or int (-1) and cast to uint below?
+    struct in6_addr srcIp = {};
+    struct in6_addr dstIp = {};
+    uint8_t tos = 0; // Only used for IPv4
+    uint8_t priority = 0; // Only used for IPv6
+    uint8_t flow_lbl = 0; // Only used for IPv6
+    if (ipv4) {
+        const struct iphdr* const iph = is_eth ? (void*)(eth + 1) : data;
         // Must have ipv4 header
-        if (data + sizeof(*iph) > data_end) return TC_ACT_PIPE;
+        if (data + l2_header_size + sizeof(*iph) > data_end) return;
 
         // IP version must be 4
-        if (iph->version != 4) return TC_ACT_PIPE;
+        if (iph->version != 4) return;
 
         // We cannot handle IP options, just standard 20 byte == 5 dword minimal IPv4 header
-        if (iph->ihl != 5) return TC_ACT_PIPE;
+        if (iph->ihl != 5) return;
 
-        if (iph->protocol != IPPROTO_UDP) return TC_ACT_PIPE;
+        // V4 mapped address in in6_addr sets 10/11 position to 0xff.
+        srcIp.s6_addr32[2] = htonl(0x0000ffff);
+        dstIp.s6_addr32[2] = htonl(0x0000ffff);
 
-        struct udphdr *udp;
-        udp = data + sizeof(struct iphdr); //sizeof(struct ethhdr)
+        // Copy IPv4 address into in6_addr for easy comparison below.
+        srcIp.s6_addr32[3] = iph->saddr;
+        dstIp.s6_addr32[3] = iph->daddr;
+        protocol = iph->protocol;
+        tos = iph->tos;
+        hdr_size = sizeof(struct iphdr);
+    } else {
+        struct ipv6hdr* ip6h = is_eth ? (void*)(eth + 1) : data;
+        // Must have ipv6 header
+        if (data + l2_header_size + sizeof(*ip6h) > data_end) return;
 
-        if ((void*)(udp + 1) > data_end) return TC_ACT_PIPE;
+        if (ip6h->version != 6) return;
 
-        // Source/destination port in udphdr are stored in be16, need to convert to le16.
-        // This can be done via ntohs or htons. Is there a more preferred way?
-        // Cached policy was found.
-        if (v4Policy && iph->saddr == v4Policy->srcIp.s_addr &&
-                    iph->daddr == v4Policy->dstIp.s_addr &&
-                    ntohs(udp->source) == v4Policy->srcPort &&
-                    ntohs(udp->dest) == v4Policy->dstPort &&
-                    iph->protocol == v4Policy->proto) {
-            // set dscpVal in packet. Least sig 2 bits of TOS
-            // reference ipv4_change_dsfield()
+        srcIp = ip6h->saddr;
+        dstIp = ip6h->daddr;
+        protocol = ip6h->nexthdr;
+        priority = ip6h->priority;
+        flow_lbl = ip6h->flow_lbl[0];
+        hdr_size = sizeof(struct ipv6hdr);
+    }
 
-            // TODO: fix checksum...
-            int ecn = iph->tos & 3;
-            uint8_t newDscpVal = (v4Policy->dscpVal << 2) + ecn;
-            int oldDscpVal = iph->tos >> 2;
+    switch (protocol) {
+        case IPPROTO_UDP:
+        case IPPROTO_UDPLITE:
+        {
+            struct udphdr *udp;
+            udp = data + hdr_size;
+            if ((void*)(udp + 1) > data_end) return;
+            sport = udp->source;
+            dport = udp->dest;
+        }
+        break;
+        case IPPROTO_TCP:
+        {
+            struct tcphdr *tcp;
+            tcp = data + hdr_size;
+            if ((void*)(tcp + 1) > data_end) return;
+            sport = tcp->source;
+            dport = tcp->dest;
+        }
+        break;
+        default:
+            return;
+    }
+
+    RuleEntry* existingRule;
+    if (ipv4) {
+        if (*selectedMap == MAP_A) {
+            existingRule = bpf_ipv4_socket_to_policies_map_A_lookup_elem(&cookie);
+        } else {
+            existingRule = bpf_ipv4_socket_to_policies_map_B_lookup_elem(&cookie);
+        }
+    } else {
+        if (*selectedMap == MAP_A) {
+            existingRule = bpf_ipv6_socket_to_policies_map_A_lookup_elem(&cookie);
+        } else {
+            existingRule = bpf_ipv6_socket_to_policies_map_B_lookup_elem(&cookie);
+        }
+    }
+
+    if (existingRule && v6_equal(srcIp, existingRule->srcIp) &&
+                v6_equal(dstIp, existingRule->dstIp) &&
+                skb->ifindex == existingRule->ifindex &&
+                ntohs(sport) == htons(existingRule->srcPort) &&
+                ntohs(dport) == htons(existingRule->dstPort) &&
+                protocol == existingRule->proto) {
+        if (ipv4) {
+            int ecn = tos & 3;
+            uint8_t newDscpVal = (existingRule->dscpVal << 2) + ecn;
+            int oldDscpVal = tos >> 2;
             bpf_l3_csum_replace(skb, 1, oldDscpVal, newDscpVal, sizeof(uint8_t));
             bpf_skb_store_bytes(skb, 1, &newDscpVal, sizeof(uint8_t), 0);
-            return TC_ACT_PIPE;
+        } else {
+            uint8_t new_priority = (existingRule->dscpVal >> 2) + 0x60;
+            uint8_t new_flow_label = ((existingRule->dscpVal & 0xf) << 6) + (priority >> 6);
+            bpf_skb_store_bytes(skb, 0, &new_priority, sizeof(uint8_t), 0);
+            bpf_skb_store_bytes(skb, 1, &new_flow_label, sizeof(uint8_t), 0);
+        }
+        return;
+    }
+
+    // Linear scan ipv4_dscp_policies_map since no stored params match skb.
+    int bestScore = -1;
+    uint32_t bestMatch = 0;
+
+    for (register uint64_t i = 0; i < MAX_POLICIES; i++) {
+        int score = 0;
+        uint8_t tempMask = 0;
+        // Using a uint64 in for loop prevents infinite loop during BPF load,
+        // but the key is uint32, so convert back.
+        uint32_t key = i;
+
+        DscpPolicy* policy;
+        if (ipv4) {
+            policy = bpf_ipv4_dscp_policies_map_lookup_elem(&key);
+        } else {
+            policy = bpf_ipv6_dscp_policies_map_lookup_elem(&key);
         }
 
-        // linear scan ipv4_dscp_policies_map, stored socket params do not match actual
-        int bestScore = -1;
-        uint32_t bestMatch = 0;
+        // If the policy lookup failed, presentFields is 0, or iface index does not match
+        // index on skb buff, then we can continue to next policy.
+        if (!policy || policy->presentFields == 0 || policy->ifindex != skb->ifindex)
+            continue;
 
-        for (register uint64_t i = 0; i < MAX_POLICIES; i++) {
-            int score = 0;
-            uint8_t tempMask = 0;
-            // Using a uint62 in for loop prevents infinite loop during BPF load,
-            // but the key is uint32, so convert back.
-            uint32_t key = i;
-            Ipv4Policy* policy = bpf_ipv4_dscp_policies_map_lookup_elem(&key);
+        if ((policy->presentFields & SRC_IP_MASK_FLAG) == SRC_IP_MASK_FLAG &&
+                v6_equal(srcIp, policy->srcIp)) {
+            score++;
+            tempMask |= SRC_IP_MASK_FLAG;
+        }
+        if ((policy->presentFields & DST_IP_MASK_FLAG) == DST_IP_MASK_FLAG &&
+                v6_equal(dstIp, policy->dstIp)) {
+            score++;
+            tempMask |= DST_IP_MASK_FLAG;
+        }
+        if ((policy->presentFields & SRC_PORT_MASK_FLAG) == SRC_PORT_MASK_FLAG &&
+                ntohs(sport) == htons(policy->srcPort)) {
+            score++;
+            tempMask |= SRC_PORT_MASK_FLAG;
+        }
+        if ((policy->presentFields & DST_PORT_MASK_FLAG) == DST_PORT_MASK_FLAG &&
+                ntohs(dport) >= htons(policy->dstPortStart) &&
+                ntohs(dport) <= htons(policy->dstPortEnd)) {
+            score++;
+            tempMask |= DST_PORT_MASK_FLAG;
+        }
+        if ((policy->presentFields & PROTO_MASK_FLAG) == PROTO_MASK_FLAG &&
+                protocol == policy->proto) {
+            score++;
+            tempMask |= PROTO_MASK_FLAG;
+        }
 
-            // if mask is 0 continue, key does not have corresponding policy value
-            if (policy && policy->mask != 0) {
-                if ((policy->mask & SRC_IP_MASK) == SRC_IP_MASK &&
-                        iph->saddr == policy->srcIp.s6_addr32[3]) {
-                    score++;
-                    tempMask |= SRC_IP_MASK;
-                }
-                if ((policy->mask & DST_IP_MASK) == DST_IP_MASK &&
-                        iph->daddr == policy->dstIp.s6_addr32[3]) {
-                    score++;
-                    tempMask |= DST_IP_MASK;
-                }
-                if ((policy->mask & SRC_PORT_MASK) == SRC_PORT_MASK &&
-                        ntohs(udp->source) == htons(policy->srcPort)) {
-                    score++;
-                    tempMask |= SRC_PORT_MASK;
-                }
-                if ((policy->mask & DST_PORT_MASK) == DST_PORT_MASK &&
-                        ntohs(udp->dest) >= htons(policy->dstPortStart) &&
-                        ntohs(udp->dest) <= htons(policy->dstPortEnd)) {
-                    score++;
-                    tempMask |= DST_PORT_MASK;
-                }
-                if ((policy->mask & PROTO_MASK) == PROTO_MASK &&
-                        iph->protocol == policy->proto) {
-                    score++;
-                    tempMask |= PROTO_MASK;
-                }
+        if (score > bestScore && tempMask == policy->presentFields) {
+            bestMatch = i;
+            bestScore = score;
+        }
+    }
 
-                if (score > bestScore && tempMask == policy->mask) {
-                    bestMatch = i;
-                    bestScore = score;
-                }
+    uint8_t new_tos= 0; // Can 0 be used as default forwarding value?
+    uint8_t new_priority = 0;
+    uint8_t new_flow_lbl = 0;
+    if (bestScore > 0) {
+        DscpPolicy* policy;
+        if (ipv4) {
+            policy = bpf_ipv4_dscp_policies_map_lookup_elem(&bestMatch);
+        } else {
+            policy = bpf_ipv6_dscp_policies_map_lookup_elem(&bestMatch);
+        }
+
+        if (policy) {
+            // TODO: if DSCP value is already set ignore?
+            if (ipv4) {
+                int ecn = tos & 3;
+                new_tos = (policy->dscpVal << 2) + ecn;
+            } else {
+                new_priority = (policy->dscpVal >> 2) + 0x60;
+                new_flow_lbl = ((policy->dscpVal & 0xf) << 6) + (flow_lbl >> 6);
+
+                // Set IPv6 curDscp value to stored value and recalulate priority
+                // and flow label during next use.
+                new_tos = policy->dscpVal;
             }
         }
+    } else return;
 
-        uint8_t newDscpVal = 0; // Can 0 be used as default forwarding value?
-        uint8_t curDscp = iph->tos & 252;
-        if (bestScore > 0) {
-            Ipv4Policy* policy = bpf_ipv4_dscp_policies_map_lookup_elem(&bestMatch);
-            if (policy) {
-                // TODO: if DSCP value is already set ignore?
-                // TODO: update checksum, for testing increment counter...
-                int ecn = iph->tos & 3;
-                newDscpVal = (policy->dscpVal << 2) + ecn;
-            }
-        }
+    RuleEntry value = {
+        .srcIp = srcIp,
+        .dstIp = dstIp,
+        .ifindex = skb->ifindex,
+        .srcPort = sport,
+        .dstPort = dport,
+        .proto = protocol,
+        .dscpVal = new_tos,
+    };
 
-        Ipv4RuleEntry value = {
-            .srcIp.s_addr = iph->saddr,
-            .dstIp.s_addr = iph->daddr,
-            .srcPort = udp->source,
-            .dstPort = udp->dest,
-            .proto = iph->protocol,
-            .dscpVal = newDscpVal,
-        };
-
-        if (!cookie)
-            return TC_ACT_PIPE;
-
-        // Update map
+    //Update map with new policy.
+    if (ipv4) {
         if (*selectedMap == MAP_A) {
             bpf_ipv4_socket_to_policies_map_A_update_elem(&cookie, &value, BPF_ANY);
         } else {
             bpf_ipv4_socket_to_policies_map_B_update_elem(&cookie, &value, BPF_ANY);
         }
-
-        // Need to store bytes after updating map or program will not load.
-        if (newDscpVal != curDscp) {
-            // 1 is the offset (Version/Header length)
-            int oldDscpVal = iph->tos >> 2;
-            bpf_l3_csum_replace(skb, 1, oldDscpVal, newDscpVal, sizeof(uint8_t));
-            bpf_skb_store_bytes(skb, 1, &newDscpVal, sizeof(uint8_t), 0);
-        }
-
-    } else if (skb->protocol == htons(ETH_P_IPV6)) { //maybe bpf_htons()
-        Ipv6RuleEntry* v6Policy;
+    } else {
         if (*selectedMap == MAP_A) {
-            v6Policy = bpf_ipv6_socket_to_policies_map_A_lookup_elem(&cookie);
+            bpf_ipv6_socket_to_policies_map_A_update_elem(&cookie, &value, BPF_ANY);
         } else {
-            v6Policy = bpf_ipv6_socket_to_policies_map_B_lookup_elem(&cookie);
+            bpf_ipv6_socket_to_policies_map_B_update_elem(&cookie, &value, BPF_ANY);
         }
+    }
 
-        if (!v6Policy)
-            return TC_ACT_PIPE;
+    // Need to store bytes after updating map or program will not load.
+    if (ipv4 && new_tos != (tos & 252)) {
+        int oldDscpVal = tos >> 2;
+        bpf_l3_csum_replace(skb, 1, oldDscpVal, new_tos, sizeof(uint8_t));
+        bpf_skb_store_bytes(skb, 1, &new_tos, sizeof(uint8_t), 0);
+    } else if (!ipv4 && (new_priority != priority || new_flow_lbl != flow_lbl)) {
+        bpf_skb_store_bytes(skb, 0, &new_priority, sizeof(uint8_t), 0);
+        bpf_skb_store_bytes(skb, 1, &new_flow_lbl, sizeof(uint8_t), 0);
+    }
+    return;
+}
 
-        // TODO: Add code to process IPv6 packet.
+DEFINE_BPF_PROG_KVER("schedcls/set_dscp_ether", AID_ROOT, AID_SYSTEM,
+                     schedcls_set_dscp_ether, KVER(5, 4, 0))
+(struct __sk_buff* skb) {
+
+    if (skb->pkt_type != PACKET_HOST) return TC_ACT_PIPE;
+
+    if (skb->protocol == htons(ETH_P_IP)) {
+        match_policy(skb, true, true);
+    } else if (skb->protocol == htons(ETH_P_IPV6)) {
+        match_policy(skb, false, true);
+    }
+
+    // Always return TC_ACT_PIPE
+    return TC_ACT_PIPE;
+}
+
+DEFINE_BPF_PROG_KVER("schedcls/set_dscp_raw_ip", AID_ROOT, AID_SYSTEM,
+                     schedcls_set_dscp_raw_ip, KVER(5, 4, 0))
+(struct __sk_buff* skb) {
+    if (skb->protocol == htons(ETH_P_IP)) {
+        match_policy(skb, true, false);
+    } else if (skb->protocol == htons(ETH_P_IPV6)) {
+        match_policy(skb, false, false);
     }
 
     // Always return TC_ACT_PIPE
