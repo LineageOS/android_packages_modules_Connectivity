@@ -132,6 +132,7 @@ package android.net {
     field public static final int MATCH_CARRIER = 10; // 0xa
     field public static final int MATCH_ETHERNET = 5; // 0x5
     field public static final int MATCH_MOBILE = 1; // 0x1
+    field public static final int MATCH_PROXY = 9; // 0x9
     field public static final int MATCH_WIFI = 4; // 0x4
     field public static final int NETWORK_TYPE_ALL = -1; // 0xffffffff
     field public static final int OEM_MANAGED_ALL = -1; // 0xffffffff
