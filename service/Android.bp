@@ -62,7 +62,6 @@ cc_library_shared {
     ],
     header_libs: [
         "bpf_connectivity_headers",
-        "libbase_headers",
     ],
     static_libs: [
         "libclat",
