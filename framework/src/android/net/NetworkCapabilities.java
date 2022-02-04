@@ -1615,8 +1615,8 @@ public final class NetworkCapabilities implements Parcelable {
      * <p>
      * Note that when used to register a network callback, this specifies the minimum acceptable
      * signal strength. When received as the state of an existing network it specifies the current
-     * value. A value of code SIGNAL_STRENGTH_UNSPECIFIED} means no value when received and has no
-     * effect when requesting a callback.
+     * value. A value of {@link #SIGNAL_STRENGTH_UNSPECIFIED} means no value when received and has
+     * no effect when requesting a callback.
      *
      * @param signalStrength the bearer-specific signal strength.
      * @hide
