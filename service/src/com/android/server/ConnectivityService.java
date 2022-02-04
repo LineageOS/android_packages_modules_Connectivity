@@ -10912,6 +10912,10 @@ public class ConnectivityService extends IConnectivityManager.Stub
                 case ConnectivityManager.FIREWALL_CHAIN_RESTRICTED:
                     mBpfNetMaps.replaceUidChain("fw_restricted", true /* isAllowList */, uids);
                     break;
+                case ConnectivityManager.FIREWALL_CHAIN_LOW_POWER_STANDBY:
+                    mBpfNetMaps.replaceUidChain("fw_low_power_standby", true /* isAllowList */,
+                            uids);
+                    break;
                 default:
                     throw new IllegalArgumentException("replaceFirewallChain with invalid chain: "
                             + chain);

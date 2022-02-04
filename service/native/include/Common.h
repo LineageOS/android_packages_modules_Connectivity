@@ -27,11 +27,14 @@ enum FirewallRule { ALLOW = INetd::FIREWALL_RULE_ALLOW, DENY = INetd::FIREWALL_R
 
 enum FirewallType { ALLOWLIST = INetd::FIREWALL_ALLOWLIST, DENYLIST = INetd::FIREWALL_DENYLIST };
 
+// LINT.IfChange(firewall_chain)
 enum ChildChain {
-    NONE = INetd::FIREWALL_CHAIN_NONE,
-    DOZABLE = INetd::FIREWALL_CHAIN_DOZABLE,
-    STANDBY = INetd::FIREWALL_CHAIN_STANDBY,
-    POWERSAVE = INetd::FIREWALL_CHAIN_POWERSAVE,
-    RESTRICTED = INetd::FIREWALL_CHAIN_RESTRICTED,
+    NONE = 0,
+    DOZABLE = 1,
+    STANDBY = 2,
+    POWERSAVE = 3,
+    RESTRICTED = 4,
+    LOW_POWER_STANDBY = 5,
     INVALID_CHAIN
 };
+// LINT.ThenChange(packages/modules/Connectivity/framework/src/android/net/ConnectivityManager.java)
