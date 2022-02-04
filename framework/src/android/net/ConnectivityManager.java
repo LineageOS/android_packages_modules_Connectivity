@@ -941,6 +941,7 @@ public class ConnectivityManager {
     @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.P, trackingBug = 130143562)
     private final IConnectivityManager mService;
 
+    // LINT.IfChange(firewall_chain)
     /**
      * Firewall chain for device idle (doze mode).
      * Allowlist of apps that have network access in device idle.
@@ -991,6 +992,7 @@ public class ConnectivityManager {
         FIREWALL_CHAIN_LOW_POWER_STANDBY
     })
     public @interface FirewallChain {}
+    // LINT.ThenChange(packages/modules/Connectivity/service/native/include/Common.h)
 
     /**
      * A kludge to facilitate static access where a Context pointer isn't available, like in the

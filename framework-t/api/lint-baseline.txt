@@ -1,0 +1,7 @@
+// Baseline format: 1.0
+GenericException: android.net.IpSecManager.SecurityParameterIndex#finalize():
+    Methods must not throw generic exceptions (`java.lang.Throwable`)
+GenericException: android.net.IpSecManager.UdpEncapsulationSocket#finalize():
+    Methods must not throw generic exceptions (`java.lang.Throwable`)
+GenericException: android.net.IpSecTransform#finalize():
+    Methods must not throw generic exceptions (`java.lang.Throwable`)

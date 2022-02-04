@@ -33,10 +33,8 @@ cc_library_shared {
     srcs: [
         "jni/com_android_net_module_util/onload.cpp",
     ],
-    stl: "libc++_static",
     static_libs: [
         "libnet_utils_device_common_bpfjni",
-        "libtcutils",
     ],
     shared_libs: [
         "liblog",
@@ -62,21 +60,20 @@ cc_library_shared {
         "jni/com_android_server_TestNetworkService.cpp",
         "jni/onload.cpp",
     ],
-    stl: "libc++_static",
     header_libs: [
         "bpf_connectivity_headers",
         "libbase_headers",
     ],
     static_libs: [
-        "libbase",
         "libclat",
         "libip_checksum",
-        "libnetdutils",
         "libnetjniutils",
         "libtraffic_controller",
         "netd_aidl_interface-lateststable-ndk",
     ],
     shared_libs: [
+        "libbase",
+        "libnetdutils",
         "liblog",
         "libnativehelper",
     ],
