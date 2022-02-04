@@ -287,6 +287,7 @@ java_library {
         // TODO: remove after NetworkStatsService moves to the module.
         "//frameworks/base/services/net",
         "//packages/modules/Connectivity/tests:__subpackages__",
+        "//packages/modules/Bluetooth/android/app",
     ],
     lint: { strict_updatability_linting: true },
 }
