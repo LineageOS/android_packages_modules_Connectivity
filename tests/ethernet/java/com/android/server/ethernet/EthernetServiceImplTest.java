@@ -18,10 +18,13 @@ package com.android.server.ethernet;
 
 import static org.junit.Assert.assertThrows;
 
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 
+import android.Manifest;
 import android.annotation.NonNull;
 import android.content.Context;
 import android.content.pm.PackageManager;
@@ -172,6 +175,36 @@ public class EthernetServiceImplTest {
     public void testDisconnectNetworkRejectsWithUntrackedIface() {
         shouldTrackIface(TEST_IFACE, false);
         assertThrows(UnsupportedOperationException.class, () -> {
+            mEthernetServiceImpl.disconnectNetwork(TEST_IFACE, NULL_LISTENER);
+        });
+    }
+
+    private void denyManageEthPermission() {
+        doThrow(new SecurityException("")).when(mContext)
+                .enforceCallingOrSelfPermission(
+                        eq(Manifest.permission.MANAGE_ETHERNET_NETWORKS), anyString());
+    }
+
+    @Test
+    public void testUpdateConfigurationRejectsWithoutManageEthPermission() {
+        denyManageEthPermission();
+        assertThrows(SecurityException.class, () -> {
+            mEthernetServiceImpl.updateConfiguration(TEST_IFACE, UPDATE_REQUEST, NULL_LISTENER);
+        });
+    }
+
+    @Test
+    public void testConnectNetworkRejectsWithoutManageEthPermission() {
+        denyManageEthPermission();
+        assertThrows(SecurityException.class, () -> {
+            mEthernetServiceImpl.connectNetwork(TEST_IFACE, NULL_LISTENER);
+        });
+    }
+
+    @Test
+    public void testDisconnectNetworkRejectsWithoutManageEthPermission() {
+        denyManageEthPermission();
+        assertThrows(SecurityException.class, () -> {
             mEthernetServiceImpl.disconnectNetwork(TEST_IFACE, NULL_LISTENER);
         });
     }
