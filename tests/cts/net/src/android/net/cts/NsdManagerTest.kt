@@ -15,6 +15,19 @@
  */
 package android.net.cts
 
+import android.Manifest.permission.MANAGE_TEST_NETWORKS
+import android.net.ConnectivityManager
+import android.net.ConnectivityManager.NetworkCallback
+import android.net.LinkProperties
+import android.net.Network
+import android.net.NetworkAgentConfig
+import android.net.NetworkCapabilities
+import android.net.NetworkCapabilities.NET_CAPABILITY_TRUSTED
+import android.net.NetworkCapabilities.TRANSPORT_TEST
+import android.net.NetworkRequest
+import android.net.TestNetworkInterface
+import android.net.TestNetworkManager
+import android.net.TestNetworkSpecifier
 import android.net.cts.NsdManagerTest.NsdDiscoveryRecord.DiscoveryEvent.DiscoveryStarted
 import android.net.cts.NsdManagerTest.NsdDiscoveryRecord.DiscoveryEvent.DiscoveryStopped
 import android.net.cts.NsdManagerTest.NsdDiscoveryRecord.DiscoveryEvent.ServiceFound
@@ -32,14 +45,27 @@ import android.net.nsd.NsdManager.DiscoveryListener
 import android.net.nsd.NsdManager.RegistrationListener
 import android.net.nsd.NsdManager.ResolveListener
 import android.net.nsd.NsdServiceInfo
+import android.os.HandlerThread
 import android.platform.test.annotations.AppModeFull
 import android.util.Log
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.runner.AndroidJUnit4
 import com.android.net.module.util.ArrayTrackRecord
 import com.android.net.module.util.TrackRecord
+import com.android.networkstack.apishim.ConstantsShim
+import com.android.networkstack.apishim.NsdShimImpl
+import com.android.testutils.DevSdkIgnoreRule
+import com.android.testutils.SC_V2
+import com.android.testutils.TestableNetworkAgent
+import com.android.testutils.TestableNetworkCallback
+import com.android.testutils.runAsShell
+import com.android.testutils.tryTest
+import org.junit.After
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertTrue
+import org.junit.Assume.assumeTrue
+import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import java.net.ServerSocket
@@ -57,12 +83,37 @@ private const val SERVICE_TYPE = "_nmt._tcp"
 private const val TIMEOUT_MS = 2000L
 private const val DBG = false
 
+private val nsdShim = NsdShimImpl.newInstance()
+
 @AppModeFull(reason = "Socket cannot bind in instant app mode")
 @RunWith(AndroidJUnit4::class)
 class NsdManagerTest {
+    // NsdManager is not updatable before S, so tests do not need to be backwards compatible
+    @get:Rule
+    val ignoreRule = DevSdkIgnoreRule(ignoreClassUpTo = SC_V2)
+
     private val context by lazy { InstrumentationRegistry.getInstrumentation().context }
     private val nsdManager by lazy { context.getSystemService(NsdManager::class.java) }
+
+    private val cm by lazy { context.getSystemService(ConnectivityManager::class.java) }
     private val serviceName = "NsdTest%09d".format(Random().nextInt(1_000_000_000))
+    private val handlerThread = HandlerThread(NsdManagerTest::class.java.simpleName)
+
+    private lateinit var testNetwork1: TestTapNetwork
+    private lateinit var testNetwork2: TestTapNetwork
+
+    private class TestTapNetwork(
+        val iface: TestNetworkInterface,
+        val requestCb: NetworkCallback,
+        val agent: TestableNetworkAgent,
+        val network: Network
+    ) {
+        fun close(cm: ConnectivityManager) {
+            cm.unregisterNetworkCallback(requestCb)
+            agent.unregister()
+            iface.fileDescriptor.close()
+        }
+    }
 
     private interface NsdEvent
     private open class NsdRecord<T : NsdEvent> private constructor(
@@ -163,9 +214,14 @@ class NsdManagerTest {
             add(ServiceLost(si))
         }
 
-        fun waitForServiceDiscovered(serviceName: String): NsdServiceInfo {
+        fun waitForServiceDiscovered(
+            serviceName: String,
+            expectedNetwork: Network? = null
+        ): NsdServiceInfo {
             return expectCallbackEventually<ServiceFound> {
-                it.serviceInfo.serviceName == serviceName
+                it.serviceInfo.serviceName == serviceName &&
+                        (expectedNetwork == null ||
+                                expectedNetwork == nsdShim.getNetwork(it.serviceInfo))
             }.serviceInfo
         }
     }
@@ -186,6 +242,52 @@ class NsdManagerTest {
         override fun onServiceResolved(si: NsdServiceInfo) {
             add(ServiceResolved(si))
         }
+    }
+
+    @Before
+    fun setUp() {
+        handlerThread.start()
+
+        runAsShell(MANAGE_TEST_NETWORKS) {
+            testNetwork1 = createTestNetwork()
+            testNetwork2 = createTestNetwork()
+        }
+    }
+
+    private fun createTestNetwork(): TestTapNetwork {
+        val tnm = context.getSystemService(TestNetworkManager::class.java)
+        val iface = tnm.createTapInterface()
+        val cb = TestableNetworkCallback()
+        val testNetworkSpecifier = TestNetworkSpecifier(iface.interfaceName)
+        cm.requestNetwork(NetworkRequest.Builder()
+                .removeCapability(NET_CAPABILITY_TRUSTED)
+                .addTransportType(TRANSPORT_TEST)
+                .setNetworkSpecifier(testNetworkSpecifier)
+                .build(), cb)
+        val agent = TestableNetworkAgent(context, handlerThread.looper,
+                NetworkCapabilities().apply {
+                    removeCapability(NET_CAPABILITY_TRUSTED)
+                    addTransportType(TRANSPORT_TEST)
+                    setNetworkSpecifier(testNetworkSpecifier)
+                },
+                LinkProperties().apply {
+                    interfaceName = iface.interfaceName
+                },
+                NetworkAgentConfig.Builder().build())
+        val network = agent.register()
+        agent.markConnected()
+        // The network has no INTERNET capability, so will be marked validated immediately
+        cb.expectAvailableThenValidatedCallbacks(network)
+        return TestTapNetwork(iface, cb, agent, network)
+    }
+
+    @After
+    fun tearDown() {
+        runAsShell(MANAGE_TEST_NETWORKS) {
+            testNetwork1.close(cm)
+            testNetwork2.close(cm)
+        }
+        handlerThread.quitSafely()
     }
 
     @Test
@@ -296,6 +398,84 @@ class NsdManagerTest {
 
         nsdManager.unregisterService(registrationRecord2)
         registrationRecord2.expectCallback<ServiceUnregistered>()
+    }
+
+    @Test
+    fun testNsdManager_DiscoverOnNetwork() {
+        // This tests requires shims supporting T+ APIs (discovering on specific network)
+        assumeTrue(ConstantsShim.VERSION > SC_V2)
+
+        val si = NsdServiceInfo()
+        si.serviceType = SERVICE_TYPE
+        si.serviceName = this.serviceName
+        si.port = 12345 // Test won't try to connect so port does not matter
+
+        val registrationRecord = NsdRegistrationRecord()
+        val registeredInfo = registerService(registrationRecord, si)
+
+        tryTest {
+            val discoveryRecord = NsdDiscoveryRecord()
+            nsdShim.discoverServices(nsdManager, SERVICE_TYPE, NsdManager.PROTOCOL_DNS_SD,
+                    testNetwork1.network, discoveryRecord)
+
+            val foundInfo = discoveryRecord.waitForServiceDiscovered(
+                    serviceName, testNetwork1.network)
+            assertEquals(testNetwork1.network, nsdShim.getNetwork(foundInfo))
+
+            // Rewind to ensure the service is not found on the other interface
+            discoveryRecord.nextEvents.rewind(0)
+            assertNull(discoveryRecord.nextEvents.poll(timeoutMs = 100L) {
+                it is ServiceFound &&
+                        it.serviceInfo.serviceName == registeredInfo.serviceName &&
+                        nsdShim.getNetwork(it.serviceInfo) != testNetwork1.network
+            }, "The service should not be found on this network")
+        } cleanup {
+            nsdManager.unregisterService(registrationRecord)
+        }
+    }
+
+    @Test
+    fun testNsdManager_ResolveOnNetwork() {
+        // This tests requires shims supporting T+ APIs (NsdServiceInfo.network)
+        assumeTrue(ConstantsShim.VERSION > SC_V2)
+
+        val si = NsdServiceInfo()
+        si.serviceType = SERVICE_TYPE
+        si.serviceName = this.serviceName
+        si.port = 12345 // Test won't try to connect so port does not matter
+
+        val registrationRecord = NsdRegistrationRecord()
+        val registeredInfo = registerService(registrationRecord, si)
+        tryTest {
+            val resolveRecord = NsdResolveRecord()
+
+            val discoveryRecord = NsdDiscoveryRecord()
+            nsdManager.discoverServices(SERVICE_TYPE, NsdManager.PROTOCOL_DNS_SD, discoveryRecord)
+
+            val foundInfo1 = discoveryRecord.waitForServiceDiscovered(
+                    serviceName, testNetwork1.network)
+            assertEquals(testNetwork1.network, nsdShim.getNetwork(foundInfo1))
+            // Rewind as the service could be found on each interface in any order
+            discoveryRecord.nextEvents.rewind(0)
+            val foundInfo2 = discoveryRecord.waitForServiceDiscovered(
+                    serviceName, testNetwork2.network)
+            assertEquals(testNetwork2.network, nsdShim.getNetwork(foundInfo2))
+
+            nsdManager.resolveService(foundInfo1, resolveRecord)
+            val cb = resolveRecord.expectCallback<ServiceResolved>()
+            cb.serviceInfo.let {
+                // Resolved service type has leading dot
+                assertEquals(".$SERVICE_TYPE", it.serviceType)
+                assertEquals(registeredInfo.serviceName, it.serviceName)
+                assertEquals(si.port, it.port)
+                assertEquals(testNetwork1.network, nsdShim.getNetwork(it))
+            }
+            // TODO: check that MDNS packets are sent only on testNetwork1.
+        } cleanupStep {
+            nsdManager.unregisterService(registrationRecord)
+        } cleanup {
+            registrationRecord.expectCallback<ServiceUnregistered>()
+        }
     }
 
     /**
