@@ -4,6 +4,7 @@ package android.net.nsd {
   public final class NsdManager {
     method public void discoverServices(String, int, android.net.nsd.NsdManager.DiscoveryListener);
     method public void discoverServices(@NonNull String, int, @Nullable android.net.Network, @NonNull android.net.nsd.NsdManager.DiscoveryListener);
+    method @RequiresPermission(android.Manifest.permission.ACCESS_NETWORK_STATE) public void discoverServices(@NonNull String, int, @NonNull android.net.NetworkRequest, @NonNull android.net.nsd.NsdManager.DiscoveryListener);
     method public void registerService(android.net.nsd.NsdServiceInfo, int, android.net.nsd.NsdManager.RegistrationListener);
     method public void resolveService(android.net.nsd.NsdServiceInfo, android.net.nsd.NsdManager.ResolveListener);
     method public void stopServiceDiscovery(android.net.nsd.NsdManager.DiscoveryListener);
