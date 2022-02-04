@@ -13,6 +13,9 @@ rule android.util.LocalLog* com.android.networkstack.tethering.util.LocalLog@1
 # Classes from net-utils-framework-common
 rule com.android.net.module.util.** com.android.networkstack.tethering.util.@1
 
+# Classes from net-tests-utils
+rule com.android.testutils.TestBpfMap* com.android.networkstack.tethering.testutils.TestBpfMap@1
+
 # TODO: either stop using frameworks-base-testutils or remove the unit test classes it contains.
 # TestableLooper from "testables" can be used instead of TestLooper from frameworks-base-testutils.
 zap android.os.test.TestLooperTest*
