@@ -208,6 +208,12 @@ public class EthernetServiceImpl extends IEthernetManager.Stub {
         pw.decreaseIndent();
     }
 
+    private void enforceNetworkManagementPermission() {
+        mContext.enforceCallingOrSelfPermission(
+                android.Manifest.permission.MANAGE_ETHERNET_NETWORKS,
+                "EthernetServiceImpl");
+    }
+
     /**
      * Validate the state of ethernet for APIs tied to network management.
      *
@@ -216,12 +222,12 @@ public class EthernetServiceImpl extends IEthernetManager.Stub {
      */
     private void validateNetworkManagementState(@NonNull final String iface,
             final @NonNull String methodName) {
+        enforceAutomotiveDevice(methodName);
+        enforceNetworkManagementPermission();
         logIfEthernetNotStarted();
 
-        // TODO: add permission check here for MANAGE_INTERNAL_NETWORKS when it's available.
         Objects.requireNonNull(iface, "Pass a non-null iface.");
         Objects.requireNonNull(methodName, "Pass a non-null methodName.");
-        enforceAutomotiveDevice(methodName);
         enforceInterfaceIsTracked(iface);
     }
 

@@ -362,7 +362,7 @@ public class EthernetNetworkFactoryTest {
 
         assertFalse(ret);
         verifyNoStopOrStart();
-        assertFailedListener(listener, "can't be updated as it is not configured");
+        assertFailedListener(listener, "can't be updated as it is not available");
     }
 
     @Test
