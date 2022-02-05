@@ -218,14 +218,14 @@ public class NsdServiceTest {
         client.discoverServices("a_type", PROTOCOL, listener2);
         waitForIdle();
         verify(mDaemon, times(1)).maybeStart();
-        verifyDaemonCommand("discover 3 a_type");
+        verifyDaemonCommand("discover 3 a_type 0");
 
         // Client resolve request
         NsdManager.ResolveListener listener3 = mock(NsdManager.ResolveListener.class);
         client.resolveService(request, listener3);
         waitForIdle();
         verify(mDaemon, times(1)).maybeStart();
-        verifyDaemonCommand("resolve 4 a_name a_type local.");
+        verifyDaemonCommand("resolve 4 a_name a_type local. 0");
 
         // Client disconnects, stop the daemon after CLEANUP_DELAY_MS.
         deathRecipient.binderDied();
