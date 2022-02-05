@@ -76,6 +76,8 @@ package android.net.nsd {
 
   public final class NsdManager {
     method public void discoverServices(String, int, android.net.nsd.NsdManager.DiscoveryListener);
+    method public void discoverServices(@NonNull String, int, @Nullable android.net.Network, @NonNull android.net.nsd.NsdManager.DiscoveryListener);
+    method @RequiresPermission(android.Manifest.permission.ACCESS_NETWORK_STATE) public void discoverServices(@NonNull String, int, @NonNull android.net.NetworkRequest, @NonNull android.net.nsd.NsdManager.DiscoveryListener);
     method public void registerService(android.net.nsd.NsdServiceInfo, int, android.net.nsd.NsdManager.RegistrationListener);
     method public void resolveService(android.net.nsd.NsdServiceInfo, android.net.nsd.NsdManager.ResolveListener);
     method public void stopServiceDiscovery(android.net.nsd.NsdManager.DiscoveryListener);
@@ -116,12 +118,14 @@ package android.net.nsd {
     method public int describeContents();
     method public java.util.Map<java.lang.String,byte[]> getAttributes();
     method public java.net.InetAddress getHost();
+    method @Nullable public android.net.Network getNetwork();
     method public int getPort();
     method public String getServiceName();
     method public String getServiceType();
     method public void removeAttribute(String);
     method public void setAttribute(String, String);
     method public void setHost(java.net.InetAddress);
+    method public void setNetwork(@Nullable android.net.Network);
     method public void setPort(int);
     method public void setServiceName(String);
     method public void setServiceType(String);
