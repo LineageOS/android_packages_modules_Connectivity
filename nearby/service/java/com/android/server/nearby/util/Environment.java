@@ -29,7 +29,7 @@ public class Environment {
     /**
      * NEARBY apex name.
      */
-    private static final String NEARBY_APEX_NAME = "com.android.nearby";
+    private static final String NEARBY_APEX_NAME = "com.android.tethering";
 
     /**
      * The path where the Nearby apex is mounted.

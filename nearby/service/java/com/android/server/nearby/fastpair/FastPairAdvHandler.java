@@ -70,9 +70,6 @@ public class FastPairAdvHandler {
      */
     public void handleBroadcast(NearbyDevice device) {
         FastPairDevice fastPairDevice = (FastPairDevice) device;
-        if (mBleAddress != null && mBleAddress.equals(fastPairDevice.getBluetoothAddress())) {
-            return;
-        }
         mBleAddress = fastPairDevice.getBluetoothAddress();
         if (FastPairDecoder.checkModelId(fastPairDevice.getData())) {
             byte[] model = FastPairDecoder.getModelId(fastPairDevice.getData());

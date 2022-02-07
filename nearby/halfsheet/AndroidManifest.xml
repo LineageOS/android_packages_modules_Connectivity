@@ -20,6 +20,7 @@
         <activity
             android:name="com.android.nearby.halfsheet.HalfSheetActivity"
             android:exported="true"
+            android:launchMode="singleInstance"
             android:theme="@style/HalfSheetStyle" >
             <intent-filter>
                 <action android:name="android.nearby.SHOW_HALFSHEET"/>

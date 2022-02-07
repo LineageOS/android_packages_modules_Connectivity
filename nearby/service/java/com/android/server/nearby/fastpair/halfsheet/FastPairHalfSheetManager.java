@@ -48,6 +48,8 @@ import service.proto.Cache;
  */
 public class FastPairHalfSheetManager {
     private static final String ACTIVITY_INTENT_ACTION = "android.nearby.SHOW_HALFSHEET";
+    private static final String HALF_SHEET_CLASS_NAME =
+            "com.android.nearby.halfsheet.HalfSheetActivity";
 
     private String mHalfSheetApkPkgName;
     private Context mContext;
@@ -65,22 +67,28 @@ public class FastPairHalfSheetManager {
      * app can't get the correct component name.
      */
     public void showHalfSheet(Cache.ScanFastPairStoreItem scanFastPairStoreItem) {
-        if (mContext != null) {
-            String packageName = getHalfSheetApkPkgName();
-            HalfSheetCallback callback = new HalfSheetCallback();
-            callback.setmFastPairController(Locator.get(mContext, FastPairController.class));
-            Bundle bundle = new Bundle();
-            bundle.putBinder(EXTRA_BINDER, callback);
-            mContext
-                    .startActivityAsUser(new Intent(ACTIVITY_INTENT_ACTION)
-                                    .putExtra(EXTRA_HALF_SHEET_INFO,
-                                            scanFastPairStoreItem.toByteArray())
-                                    .putExtra(EXTRA_HALF_SHEET_TYPE, DEVICE_PAIRING_FRAGMENT_TYPE)
-                                    .putExtra(EXTRA_BUNDLE, bundle)
-                                    .setComponent(new ComponentName(packageName,
-                                            packageName + ".HalfSheetActivity")),
-                            UserHandle.CURRENT);
+        try {
+            if (mContext != null) {
+                String packageName = getHalfSheetApkPkgName();
+                HalfSheetCallback callback = new HalfSheetCallback();
+                callback.setmFastPairController(Locator.get(mContext, FastPairController.class));
+                Bundle bundle = new Bundle();
+                bundle.putBinder(EXTRA_BINDER, callback);
+                mContext
+                        .startActivityAsUser(new Intent(ACTIVITY_INTENT_ACTION)
+                                        .putExtra(EXTRA_HALF_SHEET_INFO,
+                                                scanFastPairStoreItem.toByteArray())
+                                        .putExtra(EXTRA_HALF_SHEET_TYPE,
+                                                DEVICE_PAIRING_FRAGMENT_TYPE)
+                                        .putExtra(EXTRA_BUNDLE, bundle)
+                                        .setComponent(new ComponentName(packageName,
+                                                HALF_SHEET_CLASS_NAME)),
+                                UserHandle.CURRENT);
 
+            }
+        } catch (IllegalStateException e) {
+            Log.e("FastPairHalfSheetManager",
+                    "Can't resolve package that contains half sheet");
         }
     }
 
