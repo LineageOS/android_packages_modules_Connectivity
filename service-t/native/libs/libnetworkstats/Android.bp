@@ -61,11 +61,12 @@ cc_test {
         "-Wno-unused-parameter",
         "-Wthread-safety",
     ],
-    static_libs: ["libgmock"],
+    static_libs: [
+        "libgmock",
+        "libnetworkstats",
+    ],
     shared_libs: [
         "libbase",
         "liblog",
-        "libnetworkstats",
-        "libutils",
     ],
 }
