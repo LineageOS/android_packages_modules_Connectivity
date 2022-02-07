@@ -57,7 +57,10 @@ apex {
             native_shared_libs: ["libnetd_updatable"],
         },
         both: {
-            jni_libs: ["libframework-connectivity-jni"],
+            jni_libs: [
+                "libframework-connectivity-jni",
+                "libframework-connectivity-tiramisu-jni"
+            ],
         },
     },
     binaries: [
@@ -130,7 +133,10 @@ bootclasspath_fragment {
             "hiddenapi/hiddenapi-max-target-o-low-priority.txt",
             "hiddenapi/hiddenapi-max-target-o-low-priority-tiramisu.txt",
 	],
-        unsupported: ["hiddenapi/hiddenapi-unsupported.txt"],
+        unsupported: [
+            "hiddenapi/hiddenapi-unsupported.txt",
+            "hiddenapi/hiddenapi-unsupported-tiramisu.txt",
+        ],
     },
 }
 
