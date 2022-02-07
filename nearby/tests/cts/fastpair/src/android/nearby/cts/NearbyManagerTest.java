@@ -16,12 +16,18 @@
 
 package android.nearby.cts;
 
+import static android.nearby.PresenceCredential.IDENTITY_TYPE_PRIVATE;
+
 import static org.mockito.Mockito.when;
 import static org.mockito.MockitoAnnotations.initMocks;
 
 import android.content.Context;
+import android.nearby.BroadcastCallback;
+import android.nearby.BroadcastRequest;
 import android.nearby.NearbyDevice;
 import android.nearby.NearbyManager;
+import android.nearby.PresenceBroadcastRequest;
+import android.nearby.PrivateCredential;
 import android.nearby.ScanCallback;
 import android.nearby.ScanRequest;
 import android.os.Build;
@@ -44,9 +50,13 @@ import java.util.concurrent.Executors;
 @RunWith(AndroidJUnit4.class)
 @RequiresApi(Build.VERSION_CODES.TIRAMISU)
 public class NearbyManagerTest {
+    private static final byte[] SALT = new byte[] {1, 2};
+    private static final byte[] SECRETE_ID = new byte[]{1, 2, 3, 4};
+    private static final byte[] AUTHENTICITY_KEY = new byte[]{0, 1, 1, 1};
+    private static final int BLE_MEDIUM = 1;
 
-    @Mock Context mContext;
-    @Mock NearbyManager mNearbyManager;
+    @Mock private Context mContext;
+    @Mock private NearbyManager mNearbyManager;
 
     @Before
     public void setUp() {
@@ -78,5 +88,25 @@ public class NearbyManagerTest {
         };
         mNearbyManager.startScan(scanRequest, Executors.newSingleThreadExecutor(), scanCallback);
         mNearbyManager.stopScan(scanCallback);
+    }
+
+    @Test
+    public void testStartStopBroadcast() {
+        PrivateCredential credential = new PrivateCredential.Builder()
+                .setIdentityType(IDENTITY_TYPE_PRIVATE)
+                .setSecretId(SECRETE_ID)
+                .setAuthenticityKey(AUTHENTICITY_KEY)
+                .build();
+        BroadcastRequest broadcastRequest =
+                new PresenceBroadcastRequest.Builder()
+                        .setSalt(SALT)
+                        .addMediums(BLE_MEDIUM).setCredential(credential)
+                        .build();
+
+        BroadcastCallback callback = status -> {
+        };
+        mNearbyManager.startBroadcast(broadcastRequest, Executors.newSingleThreadExecutor(),
+                callback);
+        mNearbyManager.stopBroadcast(callback);
     }
 }
