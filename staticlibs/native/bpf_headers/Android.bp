@@ -18,7 +18,7 @@ package {
 
 cc_library_headers {
     name: "bpf_headers",
-    vendor_available: false,
+    vendor_available: true,
     host_supported: true,
     native_bridge_supported: true,
     header_libs: ["bpf_syscall_wrappers"],
