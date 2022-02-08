@@ -14,20 +14,30 @@
  * limitations under the License.
  */
 
-package android.net;
+package android.net.cts;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 
+import android.net.IpPrefix;
+import android.net.LinkAddress;
+import android.net.LinkProperties;
+import android.net.RouteInfo;
+import android.net.StaticIpConfiguration;
+import android.os.Build;
 import android.os.Parcel;
 
 import androidx.test.filters.SmallTest;
 import androidx.test.runner.AndroidJUnit4;
 
+import com.android.testutils.DevSdkIgnoreRule;
+
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
@@ -42,15 +52,20 @@ public class StaticIpConfigurationTest {
 
     private static final String ADDRSTR = "192.0.2.2/25";
     private static final LinkAddress ADDR = new LinkAddress(ADDRSTR);
-    private static final InetAddress GATEWAY = IpAddress("192.0.2.1");
-    private static final InetAddress OFFLINKGATEWAY = IpAddress("192.0.2.129");
-    private static final InetAddress DNS1 = IpAddress("8.8.8.8");
-    private static final InetAddress DNS2 = IpAddress("8.8.4.4");
-    private static final InetAddress DNS3 = IpAddress("4.2.2.2");
+    private static final InetAddress GATEWAY = ipAddress("192.0.2.1");
+    private static final InetAddress OFFLINKGATEWAY = ipAddress("192.0.2.129");
+    private static final InetAddress DNS1 = ipAddress("8.8.8.8");
+    private static final InetAddress DNS2 = ipAddress("8.8.4.4");
+    private static final InetAddress DNS3 = ipAddress("4.2.2.2");
+    private static final InetAddress IPV6_ADDRESS = ipAddress("2001:4860:800d::68");
+    private static final LinkAddress IPV6_LINK_ADDRESS = new LinkAddress("2001:db8::1/64");
     private static final String IFACE = "eth0";
     private static final String FAKE_DOMAINS = "google.com";
 
-    private static InetAddress IpAddress(String addr) {
+    @Rule
+    public final DevSdkIgnoreRule mIgnoreRule = new DevSdkIgnoreRule();
+
+    private static InetAddress ipAddress(String addr) {
         return InetAddress.parseNumericAddress(addr);
     }
 
@@ -239,6 +254,29 @@ public class StaticIpConfigurationTest {
         assertTrue(s.dnsServers.equals(s.getDnsServers()));
         assertEquals(1, s.getDnsServers().size());
         assertEquals(DNS1, s.getDnsServers().get(0));
+    }
+
+    @DevSdkIgnoreRule.IgnoreUpTo(Build.VERSION_CODES.R)
+    @Test
+    public void testIllegalBuilders() {
+        assertThrows("Can't set IP Address to IPv6!", IllegalArgumentException.class, () -> {
+            StaticIpConfiguration.Builder b = new StaticIpConfiguration.Builder().setIpAddress(
+                    IPV6_LINK_ADDRESS);
+        });
+
+        assertThrows("Can't set gateway to IPv6!", IllegalArgumentException.class, () -> {
+            StaticIpConfiguration.Builder b = new StaticIpConfiguration.Builder().setGateway(
+                    IPV6_ADDRESS);
+        });
+
+        assertThrows("Can't set DNS servers using IPv6!", IllegalArgumentException.class, () -> {
+            final ArrayList<InetAddress> dnsServers = new ArrayList<>();
+            dnsServers.add(DNS1);
+            dnsServers.add(IPV6_ADDRESS);
+
+            StaticIpConfiguration.Builder b = new StaticIpConfiguration.Builder().setDnsServers(
+                    dnsServers);
+        });
     }
 
     @Test
