@@ -60,6 +60,9 @@ public final class NearbyDeviceParcelable implements Parcelable {
                         builder.setFastPairModelId(in.readString());
                     }
                     if (in.readInt() == 1) {
+                        builder.setBluetoothAddress(in.readString());
+                    }
+                    if (in.readInt() == 1) {
                         int dataLength = in.readInt();
                         byte[] data = new byte[dataLength];
                         in.readByteArray(data);
@@ -125,7 +128,7 @@ public final class NearbyDeviceParcelable implements Parcelable {
             dest.writeString(mFastPairModelId);
         }
         dest.writeInt(mBluetoothAddress == null ? 0 : 1);
-        if (mFastPairModelId != null) {
+        if (mBluetoothAddress != null) {
             dest.writeString(mBluetoothAddress);
         }
         dest.writeInt(mData == null ? 0 : 1);
