@@ -133,17 +133,12 @@ package android.net {
   public final class IpConfiguration implements android.os.Parcelable {
     ctor public IpConfiguration();
     ctor public IpConfiguration(@NonNull android.net.IpConfiguration);
-    method public int describeContents();
-    method @Nullable public android.net.ProxyInfo getHttpProxy();
     method @NonNull public android.net.IpConfiguration.IpAssignment getIpAssignment();
     method @NonNull public android.net.IpConfiguration.ProxySettings getProxySettings();
-    method @Nullable public android.net.StaticIpConfiguration getStaticIpConfiguration();
     method public void setHttpProxy(@Nullable android.net.ProxyInfo);
     method public void setIpAssignment(@NonNull android.net.IpConfiguration.IpAssignment);
     method public void setProxySettings(@NonNull android.net.IpConfiguration.ProxySettings);
     method public void setStaticIpConfiguration(@Nullable android.net.StaticIpConfiguration);
-    method public void writeToParcel(@NonNull android.os.Parcel, int);
-    field @NonNull public static final android.os.Parcelable.Creator<android.net.IpConfiguration> CREATOR;
   }
 
   public enum IpConfiguration.IpAssignment {
@@ -484,23 +479,7 @@ package android.net {
     ctor public StaticIpConfiguration(@Nullable android.net.StaticIpConfiguration);
     method public void addDnsServer(@NonNull java.net.InetAddress);
     method public void clear();
-    method public int describeContents();
-    method @NonNull public java.util.List<java.net.InetAddress> getDnsServers();
-    method @Nullable public String getDomains();
-    method @Nullable public java.net.InetAddress getGateway();
-    method @Nullable public android.net.LinkAddress getIpAddress();
     method @NonNull public java.util.List<android.net.RouteInfo> getRoutes(@Nullable String);
-    method public void writeToParcel(android.os.Parcel, int);
-    field @NonNull public static final android.os.Parcelable.Creator<android.net.StaticIpConfiguration> CREATOR;
-  }
-
-  public static final class StaticIpConfiguration.Builder {
-    ctor public StaticIpConfiguration.Builder();
-    method @NonNull public android.net.StaticIpConfiguration build();
-    method @NonNull public android.net.StaticIpConfiguration.Builder setDnsServers(@NonNull Iterable<java.net.InetAddress>);
-    method @NonNull public android.net.StaticIpConfiguration.Builder setDomains(@Nullable String);
-    method @NonNull public android.net.StaticIpConfiguration.Builder setGateway(@Nullable java.net.InetAddress);
-    method @NonNull public android.net.StaticIpConfiguration.Builder setIpAddress(@Nullable android.net.LinkAddress);
   }
 
   public final class TcpKeepalivePacketData extends android.net.KeepalivePacketData implements android.os.Parcelable {
