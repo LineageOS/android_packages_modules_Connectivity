@@ -77,7 +77,7 @@ java_defaults {
         ],
     },
     stub_only_libs: [
-        "framework-connectivity-tiramisu.stubs.module_lib",
+        "framework-connectivity-t.stubs.module_lib",
     ],
     impl_only_libs: [
         "framework-tethering.stubs.module_lib",
@@ -90,7 +90,7 @@ java_defaults {
         "modules-utils-preconditions",
     ],
     libs: [
-        "framework-connectivity-tiramisu.stubs.module_lib",
+        "framework-connectivity-t.stubs.module_lib",
         "unsupportedappusage",
     ],
     apex_available: [

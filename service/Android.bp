@@ -100,7 +100,7 @@ java_library {
     libs: [
         "framework-annotations-lib",
         "framework-connectivity-pre-jarjar",
-        "framework-connectivity-tiramisu.stubs.module_lib",
+        "framework-connectivity-t.stubs.module_lib",
         "framework-tethering.stubs.module_lib",
         "framework-wifi.stubs.module_lib",
         "unsupportedappusage",
