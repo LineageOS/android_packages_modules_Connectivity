@@ -36,10 +36,10 @@ public final class PresenceBroadcastRequest extends BroadcastRequest implements 
     private final PrivateCredential mCredential;
     private final List<DataElement> mExtendedProperties;
 
-    private PresenceBroadcastRequest(int txPower, List<Integer> mediums, byte[] salt,
-            List<Integer> actions,
+    private PresenceBroadcastRequest(@BroadcastVersion int version, int txPower,
+            List<Integer> mediums, byte[] salt, List<Integer> actions,
             PrivateCredential credential, List<DataElement> extendedProperties) {
-        super(BROADCAST_TYPE_NEARBY_PRESENCE, txPower, mediums);
+        super(BROADCAST_TYPE_NEARBY_PRESENCE, version, txPower, mediums);
         mSalt = salt;
         mActions = actions;
         mCredential = credential;
@@ -82,6 +82,7 @@ public final class PresenceBroadcastRequest extends BroadcastRequest implements 
     /**
      * Returns the salt associated with this broadcast request.
      */
+    @NonNull
     public byte[] getSalt() {
         return mSalt;
     }
@@ -135,15 +136,26 @@ public final class PresenceBroadcastRequest extends BroadcastRequest implements 
         private final List<Integer> mActions;
         private final List<DataElement> mExtendedProperties;
 
+        private int mVersion;
         private int mTxPower;
         private byte[] mSalt;
         private PrivateCredential mCredential;
 
         public Builder() {
+            mVersion = PRESENCE_VERSION_V0;
             mTxPower = UNKNOWN_TX_POWER;
             mMediums = new ArrayList<>();
             mActions = new ArrayList<>();
             mExtendedProperties = new ArrayList<>();
+        }
+
+        /**
+         * Sets the version for this request.
+         */
+        @NonNull
+        public Builder setVersion(@BroadcastVersion int version) {
+            mVersion = version;
+            return this;
         }
 
         /**
@@ -207,7 +219,7 @@ public final class PresenceBroadcastRequest extends BroadcastRequest implements 
         public PresenceBroadcastRequest build() {
             Preconditions.checkState(!mMediums.isEmpty(), "mediums cannot be empty");
             Preconditions.checkState(mSalt != null && mSalt.length > 0, "salt cannot be empty");
-            return new PresenceBroadcastRequest(mTxPower, mMediums, mSalt, mActions,
+            return new PresenceBroadcastRequest(mVersion, mTxPower, mMediums, mSalt, mActions,
                     mCredential, mExtendedProperties);
         }
     }

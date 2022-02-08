@@ -44,12 +44,13 @@ public class PresenceBroadcastRequestTest {
     private static final int TX_POWER = 1;
     private static final byte[] SALT = new byte[]{1, 2};
     private static final int ACTION_ID = 123;
-    private static final String SUPPORT_MEDIA_KEY = "SupportMedia";
-    private static final byte[] SUPPORT_MEDIA_VALUE = new byte[]{1, 2, 34};
     private static final int BLE_MEDIUM = 1;
     private static final byte[] SECRETE_ID = new byte[]{1, 2, 3, 4};
     private static final byte[] AUTHENTICITY_KEY = new byte[]{0, 1, 1, 1};
     private static final byte[] METADATA_ENCRYPTION_KEY = new byte[]{1, 1, 3, 4, 5};
+    private static final int KEY = 1234;
+    private static final byte[] VALUE = new byte[]{1, 1, 1, 1};
+
 
     private PresenceBroadcastRequest.Builder mBuilder;
 
@@ -61,14 +62,14 @@ public class PresenceBroadcastRequestTest {
                 .setAuthenticityKey(AUTHENTICITY_KEY)
                 .setMetaDataEncryptionKey(METADATA_ENCRYPTION_KEY)
                 .build();
+        DataElement element = new DataElement.Builder().setElement(KEY, VALUE).build();
         mBuilder = new PresenceBroadcastRequest.Builder()
                 .setSalt(SALT)
                 .setTxPower(TX_POWER)
                 .setCredential(credential)
                 .addAction(ACTION_ID)
                 .addMediums(BLE_MEDIUM)
-                .addExtendedProperty(new DataElement.Builder().setElement(SUPPORT_MEDIA_KEY,
-                        SUPPORT_MEDIA_VALUE).build());
+                .addExtendedProperty(element);
     }
 
     @Test
@@ -78,7 +79,7 @@ public class PresenceBroadcastRequestTest {
         assertThat(broadcastRequest.getTxPower()).isEqualTo(TX_POWER);
         assertThat(broadcastRequest.getActions()).containsExactly(ACTION_ID);
         assertThat(broadcastRequest.getExtendedProperties().get(0).getKey()).isEqualTo(
-                SUPPORT_MEDIA_KEY);
+                KEY);
         assertThat(broadcastRequest.getMediums()).containsExactly(BLE_MEDIUM);
         assertThat(broadcastRequest.getCredential().getIdentityType()).isEqualTo(
                 IDENTITY_TYPE_PRIVATE);
@@ -99,7 +100,7 @@ public class PresenceBroadcastRequestTest {
         assertThat(parcelRequest.getTxPower()).isEqualTo(TX_POWER);
         assertThat(parcelRequest.getActions()).containsExactly(ACTION_ID);
         assertThat(parcelRequest.getExtendedProperties().get(0).getKey()).isEqualTo(
-                SUPPORT_MEDIA_KEY);
+                KEY);
         assertThat(parcelRequest.getMediums()).containsExactly(BLE_MEDIUM);
         assertThat(parcelRequest.getCredential().getIdentityType()).isEqualTo(
                 IDENTITY_TYPE_PRIVATE);

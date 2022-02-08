@@ -81,7 +81,7 @@ public abstract class PresenceCredential implements Parcelable {
 
     private final @CredentialType int mType;
     private final @IdentityType int mIdentityType;
-    private final byte[] mSecreteId;
+    private final byte[] mSecretId;
     private final byte[] mAuthenticityKey;
     private final List<CredentialElement> mCredentialElements;
 
@@ -89,7 +89,7 @@ public abstract class PresenceCredential implements Parcelable {
             byte[] secreteId, byte[] authenticityKey, List<CredentialElement> credentialElements) {
         mType = type;
         mIdentityType = identityType;
-        mSecreteId = secreteId;
+        mSecretId = secreteId;
         mAuthenticityKey = authenticityKey;
         mCredentialElements = credentialElements;
     }
@@ -97,8 +97,8 @@ public abstract class PresenceCredential implements Parcelable {
     PresenceCredential(@CredentialType int type, Parcel in) {
         mType = type;
         mIdentityType = in.readInt();
-        mSecreteId = new byte[in.readInt()];
-        in.readByteArray(mSecreteId);
+        mSecretId = new byte[in.readInt()];
+        in.readByteArray(mSecretId);
         mAuthenticityKey = new byte[in.readInt()];
         in.readByteArray(mAuthenticityKey);
         mCredentialElements = new ArrayList<>();
@@ -144,11 +144,11 @@ public abstract class PresenceCredential implements Parcelable {
     }
 
     /**
-     * Returns the secrete id of the credential.
+     * Returns the secret id of the credential.
      */
     @NonNull
-    public byte[] getSecreteId() {
-        return mSecreteId;
+    public byte[] getSecretId() {
+        return mSecretId;
     }
 
     /**
@@ -176,8 +176,8 @@ public abstract class PresenceCredential implements Parcelable {
     public void writeToParcel(@NonNull Parcel dest, int flags) {
         dest.writeInt(mType);
         dest.writeInt(mIdentityType);
-        dest.writeInt(mSecreteId.length);
-        dest.writeByteArray(mSecreteId);
+        dest.writeInt(mSecretId.length);
+        dest.writeByteArray(mSecretId);
         dest.writeInt(mAuthenticityKey.length);
         dest.writeByteArray(mAuthenticityKey);
         dest.writeList(mCredentialElements);

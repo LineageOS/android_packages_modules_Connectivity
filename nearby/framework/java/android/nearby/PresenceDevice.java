@@ -63,6 +63,9 @@ public final class PresenceDevice extends NearbyDevice implements Parcelable {
     }
 
     private final String mDeviceId;
+    private final byte[] mSalt;
+    private final byte[] mSecretId;
+    private final byte[] mEncryptedIdentity;
     private final int mDeviceType;
     private final String mDeviceImageUrl;
     private final long mDiscoveryTimestampMillis;
@@ -87,6 +90,30 @@ public final class PresenceDevice extends NearbyDevice implements Parcelable {
     @NonNull
     public String getDeviceId() {
         return mDeviceId;
+    }
+
+    /**
+     * Returns the salt used when presence device is discovered.
+     */
+    @NonNull
+    public byte[] getSalt() {
+        return mSalt;
+    }
+
+    /**
+     * Returns the secret used when presence device is discovered.
+     */
+    @NonNull
+    public byte[] getSecretId() {
+        return mSecretId;
+    }
+
+    /**
+     * Returns the encrypted identity used when presence device is discovered.
+     */
+    @NonNull
+    public byte[] getEncryptedIdentity() {
+        return mEncryptedIdentity;
     }
 
     /** The type of the device. */
@@ -115,12 +142,15 @@ public final class PresenceDevice extends NearbyDevice implements Parcelable {
     }
 
     private PresenceDevice(String deviceName, int mMedium, int rssi, String deviceId,
-            int deviceType,
+            byte[] salt, byte[] secretId, byte[] encryptedIdentity, int deviceType,
             String deviceImageUrl, long discoveryTimestampMillis,
             Bundle extendedProperties) {
         // TODO (b/217462253): change medium to a set in NearbyDevice.
         super(deviceName, mMedium, rssi);
         mDeviceId = deviceId;
+        mSalt = salt;
+        mSecretId = secretId;
+        mEncryptedIdentity = encryptedIdentity;
         mDeviceType = deviceType;
         mDeviceImageUrl = deviceImageUrl;
         mDiscoveryTimestampMillis = discoveryTimestampMillis;
@@ -192,6 +222,9 @@ public final class PresenceDevice extends NearbyDevice implements Parcelable {
         private int mRssi;
         private int mMedium;
         private String mDeviceId;
+        private byte[] mSalt;
+        private byte[] mSecretId;
+        private byte[] mEncryptedIdentity;
         private int mDeviceType;
         private String mDeviceImageUrl;
         private long mDiscoveryTimestampMillis;
@@ -245,6 +278,32 @@ public final class PresenceDevice extends NearbyDevice implements Parcelable {
             return this;
         }
 
+        /**
+         * Sets the identifier on the discovered Presence device.
+         */
+        @NonNull
+        public Builder setSalt(@NonNull byte[] salt) {
+            mSalt = salt;
+            return this;
+        }
+
+        /**
+         * Sets the secret Id of the discovered Presence device.
+         */
+        @NonNull
+        public Builder setSecretId(@NonNull byte[] secretId) {
+            mSecretId = secretId;
+            return this;
+        }
+
+        /**
+         * Sets the encrypted identity of the discovered Presence device.
+         */
+        @NonNull
+        public Builder setEncryptedIdentity(@NonNull byte[] encryptedIdentity) {
+            mEncryptedIdentity = encryptedIdentity;
+            return this;
+        }
 
         /**
          * Sets the type of discovered Presence device.
@@ -299,7 +358,9 @@ public final class PresenceDevice extends NearbyDevice implements Parcelable {
          */
         @NonNull
         public PresenceDevice build() {
-            return new PresenceDevice(mName, mMedium, mRssi, mDeviceId, mDeviceType,
+            return new PresenceDevice(mName, mMedium, mRssi, mDeviceId,
+                    mSalt, mSecretId, mEncryptedIdentity,
+                    mDeviceType,
                     mDeviceImageUrl,
                     mDiscoveryTimestampMillis, mExtendedProperties);
         }

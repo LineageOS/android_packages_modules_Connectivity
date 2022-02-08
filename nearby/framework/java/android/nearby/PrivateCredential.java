@@ -30,7 +30,7 @@ import java.util.List;
  *
  * @hide
  */
-public class PrivateCredential extends PresenceCredential implements Parcelable {
+public final class PrivateCredential extends PresenceCredential implements Parcelable {
 
     @NonNull
     public static final Creator<PrivateCredential> CREATOR = new Creator<PrivateCredential>() {
@@ -56,7 +56,7 @@ public class PrivateCredential extends PresenceCredential implements Parcelable 
         mDeviceName = in.readString();
     }
 
-    public PrivateCredential(int identityType, byte[] secreteId,
+    private PrivateCredential(int identityType, byte[] secreteId,
             String deviceName, byte[] authenticityKey, List<CredentialElement> credentialElements,
             byte[] metaDataEncryptionKey) {
         super(CREDENTIAL_TYPE_PRIVATE, identityType, secreteId, authenticityKey,
@@ -82,14 +82,21 @@ public class PrivateCredential extends PresenceCredential implements Parcelable 
         dest.writeString(mDeviceName);
     }
 
+    /**
+     * Returns the metadata encryption key associated with this credential.
+     */
+    @NonNull
     public byte[] getMetaDataEncryptionKey() {
         return mMetaDataEncryptionKey;
     }
 
+    /**
+     * Returns the device name associated with this credential.
+     */
+    @NonNull
     public String getDeviceName() {
         return mDeviceName;
     }
-
 
     /**
      * Builder class for {@link PresenceCredential}.
@@ -140,7 +147,7 @@ public class PrivateCredential extends PresenceCredential implements Parcelable 
          * Sets the metadata encryption key to the credential.
          */
         @NonNull
-        public Builder setMetaDataEncryptionKey(byte[] metaDataEncryptionKey) {
+        public Builder setMetaDataEncryptionKey(@NonNull byte[] metaDataEncryptionKey) {
             mMetaDataEncryptionKey = metaDataEncryptionKey;
             return this;
         }
@@ -149,7 +156,7 @@ public class PrivateCredential extends PresenceCredential implements Parcelable 
          * Sets the device name of the credential.
          */
         @NonNull
-        public Builder setDeviceName(String deviceName) {
+        public Builder setDeviceName(@NonNull String deviceName) {
             mDeviceName = deviceName;
             return this;
         }
@@ -158,7 +165,7 @@ public class PrivateCredential extends PresenceCredential implements Parcelable 
          * Adds an element to the credential.
          */
         @NonNull
-        public Builder addCredentialElement(CredentialElement credentialElement) {
+        public Builder addCredentialElement(@NonNull CredentialElement credentialElement) {
             mCredentialElements.add(credentialElement);
             return this;
         }

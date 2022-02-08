@@ -16,6 +16,7 @@
 
 package android.nearby.cts;
 
+import static android.nearby.PresenceCredential.IDENTITY_TYPE_PRIVATE;
 import static android.nearby.ScanRequest.SCAN_MODE_BALANCED;
 import static android.nearby.ScanRequest.SCAN_MODE_LOW_LATENCY;
 import static android.nearby.ScanRequest.SCAN_MODE_LOW_POWER;
@@ -27,6 +28,8 @@ import static android.nearby.ScanRequest.SCAN_TYPE_NEARBY_SHARE;
 
 import static com.google.common.truth.Truth.assertThat;
 
+import android.nearby.PresenceScanFilter;
+import android.nearby.PublicCredential;
 import android.nearby.ScanRequest;
 import android.os.Build;
 import android.os.WorkSource;
@@ -62,7 +65,7 @@ public class ScanRequestTest {
         assertThat(request.getScanMode()).isEqualTo(SCAN_MODE_LOW_POWER);
     }
 
-    /** Verify setting work source with null value in the scan request is allowed*/
+    /** Verify setting work source with null value in the scan request is allowed */
     @Test
     @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void testSetWorkSource_nullValue() {
@@ -149,6 +152,38 @@ public class ScanRequestTest {
 
         assertThat(ScanRequest.scanModeToString(3)).isEqualTo("SCAN_MODE_INVALID");
         assertThat(ScanRequest.scanModeToString(-2)).isEqualTo("SCAN_MODE_INVALID");
+    }
+
+    @Test
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
+    public void testScanFilter() {
+        final byte[] secreteId = new byte[]{1, 2, 3, 4};
+        final byte[] authenticityKey = new byte[]{0, 1, 1, 1};
+        final byte[] publicKey = new byte[]{1, 1, 2, 2};
+        final byte[] encryptedMetadata = new byte[]{1, 2, 3, 4, 5};
+        final byte[] metadataEncryptionKeyTag = new byte[]{1, 1, 3, 4, 5};
+
+        PublicCredential credential = new PublicCredential.Builder()
+                .setIdentityType(IDENTITY_TYPE_PRIVATE)
+                .setSecretId(secreteId)
+                .setAuthenticityKey(authenticityKey)
+                .setEncryptedMetadata(encryptedMetadata)
+                .setPublicKey(publicKey)
+                .setMetaDataEncryptionKeyTag(metadataEncryptionKeyTag).build();
+
+        final int rssi = -40;
+        final int action = 123;
+        PresenceScanFilter filter = new PresenceScanFilter.Builder()
+                .addCredential(credential)
+                .setRssiThreshold(rssi)
+                .addPresenceAction(action)
+                .build();
+
+        ScanRequest request = new ScanRequest.Builder().setScanType(
+                SCAN_TYPE_FAST_PAIR).addScanFilter(filter).build();
+
+        assertThat(request.getScanFilters()).isNotEmpty();
+        assertThat(request.getScanFilters().get(0).getRssiThreshold()).isEqualTo(rssi);
     }
 
     private static WorkSource getWorkSource() {

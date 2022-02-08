@@ -38,15 +38,31 @@ public abstract class BroadcastRequest implements Parcelable {
     /** Broadcast type for advertising using nearby presence protocol. */
     public static final int BROADCAST_TYPE_NEARBY_PRESENCE = 3;
 
+    /** @hide **/
+    @Retention(RetentionPolicy.SOURCE)
+    @IntDef({BROADCAST_TYPE_NEARBY_PRESENCE})
+    public @interface BroadcastType {
+    }
+
     /**
      * Tx Power when the value is not set in the broadcast.
      */
     public static final int UNKNOWN_TX_POWER = -100;
 
+    /**
+     * V0 of Nearby Presence Protocol.
+     */
+    public static final int PRESENCE_VERSION_V0 = 0;
+
+    /**
+     * V1 of Nearby Presence Protocol.
+     */
+    public static final int PRESENCE_VERSION_V1 = 1;
+
     /** @hide **/
     @Retention(RetentionPolicy.SOURCE)
-    @IntDef({BROADCAST_TYPE_NEARBY_PRESENCE})
-    public @interface BroadcastType {
+    @IntDef({PRESENCE_VERSION_V0, PRESENCE_VERSION_V1})
+    public @interface BroadcastVersion {
     }
 
     public static final @NonNull Creator<BroadcastRequest> CREATOR =
@@ -70,17 +86,21 @@ public abstract class BroadcastRequest implements Parcelable {
             };
 
     private final @BroadcastType int mType;
+    private final @BroadcastVersion int mVersion;
     private final int mTxPower;
     private final List<Integer> mMediums;
 
-    BroadcastRequest(@BroadcastType int type, int txPower, List<Integer> mediums) {
+    BroadcastRequest(@BroadcastType int type, @BroadcastVersion int version, int txPower,
+            List<Integer> mediums) {
         this.mType = type;
+        this.mVersion = version;
         this.mTxPower = txPower;
         this.mMediums = mediums;
     }
 
     BroadcastRequest(@BroadcastType int type, Parcel in) {
         mType = type;
+        mVersion = in.readInt();
         mTxPower = in.readInt();
         mMediums = new ArrayList<>();
         in.readList(mMediums, Integer.class.getClassLoader(), Integer.class);
@@ -91,6 +111,13 @@ public abstract class BroadcastRequest implements Parcelable {
      */
     public @BroadcastType int getType() {
         return mType;
+    }
+
+    /**
+     * Returns the version fo the broadcast.
+     */
+    public @BroadcastVersion int getVersion() {
+        return mVersion;
     }
 
     /**
@@ -111,6 +138,7 @@ public abstract class BroadcastRequest implements Parcelable {
     @Override
     public void writeToParcel(@NonNull Parcel dest, int flags) {
         dest.writeInt(mType);
+        dest.writeInt(mVersion);
         dest.writeInt(mTxPower);
         dest.writeList(mMediums);
     }

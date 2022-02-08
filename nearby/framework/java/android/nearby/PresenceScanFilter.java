@@ -17,8 +17,6 @@
 package android.nearby;
 
 import android.annotation.NonNull;
-import android.annotation.Nullable;
-import android.os.Bundle;
 import android.os.Parcel;
 import android.os.Parcelable;
 import android.util.ArraySet;
@@ -36,25 +34,16 @@ import java.util.Set;
  */
 public final class PresenceScanFilter extends ScanFilter implements Parcelable {
 
-    private final List<byte[]> mCertificates;
-    private final List<Integer> mPresenceIdentities;
+    private final List<PublicCredential> mCredentials;
     private final List<Integer> mPresenceActions;
-    private final Bundle mExtendedProperties;
+    private final List<DataElement> mExtendedProperties;
 
     /**
-     * A list of certificates to filter on.
+     * A list of credentials to filter on.
      */
     @NonNull
-    public List<byte[]> getCertificates() {
-        return mCertificates;
-    }
-
-    /**
-     * A list of presence identities for matching.
-     */
-    @NonNull
-    public List<Integer> getPresenceIdentities() {
-        return mPresenceIdentities;
+    public List<PublicCredential> getCredentials() {
+        return mCredentials;
     }
 
     /**
@@ -69,42 +58,33 @@ public final class PresenceScanFilter extends ScanFilter implements Parcelable {
      * A bundle of extended properties for matching.
      */
     @NonNull
-    public Bundle getExtendedProperties() {
+    public List<DataElement> getExtendedProperties() {
         return mExtendedProperties;
     }
 
-    private PresenceScanFilter(int rssiThreshold, List<byte[]> certificates,
-            List<Integer> presenceIdentities, List<Integer> presenceActions,
-            Bundle extendedProperties) {
+    private PresenceScanFilter(int rssiThreshold, List<PublicCredential> credentials,
+            List<Integer> presenceActions, List<DataElement> extendedProperties) {
         super(ScanRequest.SCAN_TYPE_NEARBY_PRESENCE, rssiThreshold);
-        mCertificates = new ArrayList<>(certificates);
-        mPresenceIdentities = new ArrayList<>(presenceIdentities);
+        mCredentials = new ArrayList<>(credentials);
         mPresenceActions = new ArrayList<>(presenceActions);
         mExtendedProperties = extendedProperties;
     }
 
     private PresenceScanFilter(Parcel in) {
         super(ScanRequest.SCAN_TYPE_NEARBY_PRESENCE, in);
-        mCertificates = new ArrayList<>();
-        int size = in.readInt();
-        for (int i = 0; i < size; i++) {
-            int len = in.readInt();
-            byte[] certificate = new byte[len];
-            in.readByteArray(certificate);
-            mCertificates.add(certificate);
-        }
-        mPresenceIdentities = new ArrayList<>();
+        mCredentials = new ArrayList<>();
         if (in.readInt() != 0) {
-            in.readList(mPresenceIdentities, Integer.class.getClassLoader(), Integer.class);
+            in.readParcelableList(mCredentials, PublicCredential.class.getClassLoader(),
+                    PublicCredential.class);
         }
         mPresenceActions = new ArrayList<>();
         if (in.readInt() != 0) {
             in.readList(mPresenceActions, Integer.class.getClassLoader(), Integer.class);
         }
-        mExtendedProperties = new Bundle();
-        Bundle bundle = in.readBundle(getClass().getClassLoader());
-        for (String key : bundle.keySet()) {
-            mExtendedProperties.putString(key, bundle.getString(key));
+        mExtendedProperties = new ArrayList<>();
+        if (in.readInt() != 0) {
+            in.readParcelableList(mExtendedProperties, DataElement.class.getClassLoader(),
+                    DataElement.class);
         }
     }
 
@@ -138,20 +118,18 @@ public final class PresenceScanFilter extends ScanFilter implements Parcelable {
     @Override
     public void writeToParcel(@NonNull Parcel dest, int flags) {
         super.writeToParcel(dest, flags);
-        dest.writeInt(mCertificates.size());
-        for (byte[] certificate : mCertificates) {
-            dest.writeInt(certificate.length);
-            dest.writeByteArray(certificate);
-        }
-        dest.writeInt(mPresenceIdentities.size());
-        if (!mPresenceIdentities.isEmpty()) {
-            dest.writeList(mPresenceIdentities);
+        dest.writeInt(mCredentials.size());
+        if (!mCredentials.isEmpty()) {
+            dest.writeParcelableList(mCredentials, 0);
         }
         dest.writeInt(mPresenceActions.size());
         if (!mPresenceActions.isEmpty()) {
             dest.writeList(mPresenceActions);
         }
-        dest.writeBundle(mExtendedProperties);
+        dest.writeInt(mExtendedProperties.size());
+        if (!mExtendedProperties.isEmpty()) {
+            dest.writeList(mExtendedProperties);
+        }
     }
 
     /**
@@ -161,17 +139,17 @@ public final class PresenceScanFilter extends ScanFilter implements Parcelable {
      */
     public static final class Builder {
         private int mRssiThreshold;
-        private final Set<byte[]> mCertificates;
+        private final Set<PublicCredential> mCredentials;
         private final Set<Integer> mPresenceIdentities;
         private final Set<Integer> mPresenceActions;
-        private final Bundle mExtendedProperties;
+        private final List<DataElement> mExtendedProperties;
 
         public Builder() {
             mRssiThreshold = -100;
-            mCertificates = new ArraySet<>();
+            mCredentials = new ArraySet<>();
             mPresenceIdentities = new ArraySet<>();
             mPresenceActions = new ArraySet<>();
-            mExtendedProperties = new Bundle();
+            mExtendedProperties = new ArrayList<>();
         }
 
         /**
@@ -184,21 +162,12 @@ public final class PresenceScanFilter extends ScanFilter implements Parcelable {
         }
 
         /**
-         * Adds a list of certificates the scan filter is expected to match.
+         * Adds a list of credentials the scan filter is expected to match.
          */
 
         @NonNull
-        public Builder addCertificate(@NonNull byte[] certificate) {
-            mCertificates.add(certificate);
-            return this;
-        }
-
-        /**
-         * Adds a presence identity for filtering.
-         */
-        @NonNull
-        public Builder addPresenceIdentity(int identity) {
-            mPresenceIdentities.add(identity);
+        public Builder addCredential(@NonNull PublicCredential credential) {
+            mCredentials.add(credential);
             return this;
         }
 
@@ -215,8 +184,8 @@ public final class PresenceScanFilter extends ScanFilter implements Parcelable {
          * Add an extended property for scan filtering.
          */
         @NonNull
-        public Builder addExtendedProperty(@NonNull String key, @Nullable String value) {
-            mExtendedProperties.putCharSequence(key, value);
+        public Builder addExtendedProperty(@NonNull DataElement dataElement) {
+            mExtendedProperties.add(dataElement);
             return this;
         }
 
@@ -225,9 +194,9 @@ public final class PresenceScanFilter extends ScanFilter implements Parcelable {
          */
         @NonNull
         public PresenceScanFilter build() {
-            Preconditions.checkState(!mCertificates.isEmpty(), "certificates cannot be empty");
-            return new PresenceScanFilter(mRssiThreshold, new ArrayList<>(mCertificates),
-                    new ArrayList<>(mPresenceIdentities),
+            Preconditions.checkState(!mCredentials.isEmpty(), "credentials cannot be empty");
+            return new PresenceScanFilter(mRssiThreshold,
+                    new ArrayList<>(mCredentials),
                     new ArrayList<>(mPresenceActions),
                     mExtendedProperties);
         }

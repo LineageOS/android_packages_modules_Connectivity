@@ -28,12 +28,12 @@ import com.android.internal.util.Preconditions;
  *
  * @hide
  */
-public class DataElement implements Parcelable {
+public final class DataElement implements Parcelable {
 
-    private final String mKey;
+    private final int mKey;
     private final byte[] mValue;
 
-    private DataElement(String key, byte[] value) {
+    private DataElement(int key, byte[] value) {
         mKey = key;
         mValue = value;
     }
@@ -42,7 +42,7 @@ public class DataElement implements Parcelable {
     public static final Creator<DataElement> CREATOR = new Creator<DataElement>() {
         @Override
         public DataElement createFromParcel(Parcel in) {
-            String key = in.readString();
+            int key = in.readInt();
             byte[] value = new byte[in.readInt()];
             in.readByteArray(value);
             return new Builder().setElement(key, value).build();
@@ -61,7 +61,7 @@ public class DataElement implements Parcelable {
 
     @Override
     public void writeToParcel(@NonNull Parcel dest, int flags) {
-        dest.writeString(mKey);
+        dest.writeInt(mKey);
         dest.writeInt(mValue.length);
         dest.writeByteArray(mValue);
     }
@@ -69,8 +69,7 @@ public class DataElement implements Parcelable {
     /**
      * Returns the key of the data element.
      */
-    @NonNull
-    public String getKey() {
+    public int getKey() {
         return mKey;
     }
 
@@ -85,15 +84,16 @@ public class DataElement implements Parcelable {
     /**
      * Builder for {@link DataElement}.
      */
-    public static class Builder {
-        private String mKey;
+    public static final class Builder {
+        private int mKey;
         private byte[] mValue;
 
         /**
          * Set the key and value for this data element.
          */
         @NonNull
-        public Builder setElement(@NonNull String key, @NonNull byte[] value) {
+        @SuppressWarnings("MissingGetterMatchingBuilder")
+        public Builder setElement(int key, @NonNull byte[] value) {
             mKey = key;
             mValue = value;
             return this;
@@ -104,8 +104,8 @@ public class DataElement implements Parcelable {
          */
         @NonNull
         public DataElement build() {
-            Preconditions.checkState(mKey != null && mValue != null,
-                    "neither key or value can be null");
+            Preconditions.checkState(mValue != null,
+                    "value can be null");
             return new DataElement(mKey, mValue);
         }
     }

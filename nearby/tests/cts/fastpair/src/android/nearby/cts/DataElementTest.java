@@ -35,7 +35,7 @@ import java.util.Arrays;
 @RequiresApi(Build.VERSION_CODES.TIRAMISU)
 public class DataElementTest {
 
-    private static final String KEY = "SUPPORT_MEDIA";
+    private static final int KEY = 1234;
     private static final byte[] VALUE = new byte[]{1, 1, 1, 1};
 
     @Test

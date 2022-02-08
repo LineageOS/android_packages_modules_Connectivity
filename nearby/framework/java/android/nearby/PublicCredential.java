@@ -30,7 +30,7 @@ import java.util.List;
  *
  * @hide
  */
-public class PublicCredential extends PresenceCredential implements Parcelable {
+public final class PublicCredential extends PresenceCredential implements Parcelable {
     @NonNull
     public static final Creator<PublicCredential> CREATOR = new Creator<PublicCredential>() {
         @Override
@@ -58,7 +58,7 @@ public class PublicCredential extends PresenceCredential implements Parcelable {
         mMetaDataEncryptionKeyTag = metaDataEncryptionKeyTag;
     }
 
-    public PublicCredential(Parcel in) {
+    private PublicCredential(Parcel in) {
         super(CREDENTIAL_TYPE_PUBLIC, in);
         mPublicKey = new byte[in.readInt()];
         in.readByteArray(mPublicKey);
@@ -72,14 +72,26 @@ public class PublicCredential extends PresenceCredential implements Parcelable {
         return new PublicCredential(in);
     }
 
+    /**
+     * Returns the public key associated with this credential.
+     */
+    @NonNull
     public byte[] getPublicKey() {
         return mPublicKey;
     }
 
+    /**
+     * Returns the encrypted metadata associated with this credential.
+     */
+    @NonNull
     public byte[] getEncryptedMetadata() {
         return mEncryptedMetadata;
     }
 
+    /**
+     * Returns the metadata encryption key tag associated with this credential.
+     */
+    @NonNull
     public byte[] getMetaDataEncryptionKeyTag() {
         return mMetaDataEncryptionKeyTag;
     }
@@ -150,7 +162,7 @@ public class PublicCredential extends PresenceCredential implements Parcelable {
          * Adds an element to the credential.
          */
         @NonNull
-        public Builder addCredentialElement(CredentialElement credentialElement) {
+        public Builder addCredentialElement(@NonNull CredentialElement credentialElement) {
             mCredentialElements.add(credentialElement);
             return this;
         }
@@ -159,7 +171,7 @@ public class PublicCredential extends PresenceCredential implements Parcelable {
          * Sets the public key for the credential.
          */
         @NonNull
-        public Builder setPublicKey(byte[] publicKey) {
+        public Builder setPublicKey(@NonNull byte[] publicKey) {
             mPublicKey = publicKey;
             return this;
         }
@@ -168,7 +180,7 @@ public class PublicCredential extends PresenceCredential implements Parcelable {
          * Sets the encrypted metadata.
          */
         @NonNull
-        public Builder setEncryptedMetadata(byte[] encryptedMetadata) {
+        public Builder setEncryptedMetadata(@NonNull byte[] encryptedMetadata) {
             mEncryptedMetadata = encryptedMetadata;
             return this;
         }
@@ -177,7 +189,7 @@ public class PublicCredential extends PresenceCredential implements Parcelable {
          * Sets the metadata encryption key tag.
          */
         @NonNull
-        public Builder setMetaDataEncryptionKeyTag(byte[] metaDataEncryptionKeyTag) {
+        public Builder setMetaDataEncryptionKeyTag(@NonNull byte[] metaDataEncryptionKeyTag) {
             mMetaDataEncryptionKeyTag = metaDataEncryptionKeyTag;
             return this;
         }

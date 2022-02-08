@@ -27,7 +27,7 @@ import com.android.internal.util.Preconditions;
  *
  * @hide
  */
-public class CredentialElement implements Parcelable {
+public final class CredentialElement implements Parcelable {
     private final String mKey;
     private final byte[] mValue;
 
@@ -84,7 +84,7 @@ public class CredentialElement implements Parcelable {
     /**
      * Builder for {@link CredentialElement}.
      */
-    public static class Builder {
+    public static final class Builder {
         private String mKey;
         private byte[] mValue;
 
@@ -92,6 +92,7 @@ public class CredentialElement implements Parcelable {
          * Set the key and value for this credential element.
          */
         @NonNull
+        @SuppressWarnings("MissingGetterMatchingBuilder")
         public CredentialElement.Builder setElement(@NonNull String key, @NonNull byte[] value) {
             mKey = key;
             mValue = value;

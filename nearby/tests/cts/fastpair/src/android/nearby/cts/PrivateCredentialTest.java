@@ -65,7 +65,7 @@ public class PrivateCredentialTest {
 
         assertThat(credential.getType()).isEqualTo(CREDENTIAL_TYPE_PRIVATE);
         assertThat(credential.getIdentityType()).isEqualTo(IDENTITY_TYPE_PRIVATE);
-        assertThat(Arrays.equals(credential.getSecreteId(), SECRETE_ID)).isTrue();
+        assertThat(Arrays.equals(credential.getSecretId(), SECRETE_ID)).isTrue();
         assertThat(Arrays.equals(credential.getAuthenticityKey(), AUTHENTICITY_KEY)).isTrue();
         assertThat(Arrays.equals(credential.getMetaDataEncryptionKey(),
                 METADATA_ENCRYPTION_KEY)).isTrue();
@@ -87,7 +87,7 @@ public class PrivateCredentialTest {
 
         assertThat(credentialFromParcel.getType()).isEqualTo(CREDENTIAL_TYPE_PRIVATE);
         assertThat(credentialFromParcel.getIdentityType()).isEqualTo(IDENTITY_TYPE_PRIVATE);
-        assertThat(Arrays.equals(credentialFromParcel.getSecreteId(), SECRETE_ID)).isTrue();
+        assertThat(Arrays.equals(credentialFromParcel.getSecretId(), SECRETE_ID)).isTrue();
         assertThat(Arrays.equals(credentialFromParcel.getAuthenticityKey(),
                 AUTHENTICITY_KEY)).isTrue();
         assertThat(Arrays.equals(credentialFromParcel.getMetaDataEncryptionKey(),
