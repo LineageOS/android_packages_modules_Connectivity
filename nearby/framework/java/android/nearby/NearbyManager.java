@@ -34,8 +34,8 @@ import java.util.WeakHashMap;
 import java.util.concurrent.Executor;
 
 /**
- * This class provides a way to perform Nearby related operations such as scanning and connecting
- * to nearby devices.
+ * This class provides a way to perform Nearby related operations such as scanning, broadcasting
+ * and connecting to nearby devices.
  *
  * <p> To get a {@link NearbyManager} instance, call the
  * <code>Context.getSystemService(NearbyManager.class)</code>.
@@ -137,6 +137,33 @@ public class NearbyManager {
         } catch (RemoteException e) {
             throw e.rethrowFromSystemServer();
         }
+    }
+
+
+    /**
+     * Start broadcasting the request using nearby specification.
+     *
+     * @param broadcastRequest Request for the nearby broadcast.
+     * @param executor Executor for running the callback.
+     * @param callback Callback for notifying the client..
+     *
+     * @hide
+     */
+    public void startBroadcast(@NonNull BroadcastRequest broadcastRequest,
+            @CallbackExecutor @NonNull Executor executor, @NonNull BroadcastCallback callback) {
+        // TODO(b/218187205): implement broadcast.
+    }
+
+    /**
+     * Stop the broadcast associated with the given callback.
+     *
+     * @param callback The callback that was used for starting the broadcast.
+     *
+     * @hide
+     */
+    @SuppressLint("ExecutorRegistration")
+    public void stopBroadcast(@NonNull BroadcastCallback callback) {
+        // TODO(b/218187205): implement broadcast.
     }
 
     private static class ScanListenerTransport extends IScanListener.Stub {
