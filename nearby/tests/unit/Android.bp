@@ -33,18 +33,14 @@ android_test {
     compile_multilib: "both",
 
     static_libs: [
-        "Robolectric_all-target",
         "androidx.test.ext.junit",
         "androidx.test.rules",
-        "compatibility-device-util-axt",
         "framework-nearby-static",
         "guava",
         "junit",
         "libprotobuf-java-lite",
         "mockito-target",
         "platform-test-annotations",
-        "robolectric_android-all-stub",
-        "service-appsearch",
         "service-nearby",
         "truth-prebuilt",
     ],
