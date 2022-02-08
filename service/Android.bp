@@ -55,6 +55,7 @@ cc_library_shared {
         "-Wthread-safety",
     ],
     srcs: [
+        ":services.connectivity-netstats-jni-sources",
         "jni/com_android_server_BpfNetMaps.cpp",
         "jni/com_android_server_connectivity_ClatCoordinator.cpp",
         "jni/com_android_server_TestNetworkService.cpp",
@@ -66,15 +67,19 @@ cc_library_shared {
     static_libs: [
         "libclat",
         "libip_checksum",
+        "libmodules-utils-build",
         "libnetjniutils",
+        "libnet_utils_device_common_bpfjni",
         "libtraffic_controller",
         "netd_aidl_interface-lateststable-ndk",
     ],
     shared_libs: [
         "libbase",
+        "libcutils",
         "libnetdutils",
         "liblog",
         "libnativehelper",
+        "libnetworkstats",
     ],
     apex_available: [
         "com.android.tethering",
@@ -95,6 +100,7 @@ java_library {
     libs: [
         "framework-annotations-lib",
         "framework-connectivity-pre-jarjar",
+        "framework-connectivity-tiramisu.stubs.module_lib",
         "framework-tethering.stubs.module_lib",
         "framework-wifi.stubs.module_lib",
         "unsupportedappusage",

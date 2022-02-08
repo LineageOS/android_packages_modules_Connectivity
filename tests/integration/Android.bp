@@ -40,7 +40,7 @@ android_test {
         "mockito-target-extended-minus-junit4",
         "net-tests-utils",
         "service-connectivity-pre-jarjar",
-        "services.core",
+        "service-connectivity-tiramisu-pre-jarjar",
         "services.net",
         "testables",
     ],

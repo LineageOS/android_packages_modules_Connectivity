@@ -63,6 +63,7 @@ java_defaults {
     srcs: [
         ":framework-connectivity-sources",
         ":net-utils-framework-common-srcs",
+        ":framework-connectivity-api-shared-srcs",
     ],
     aidl: {
         generate_get_transaction_name: true,
@@ -84,6 +85,7 @@ java_defaults {
         "net-utils-device-common",
     ],
     static_libs: [
+        "framework-connectivity-protos",
         "modules-utils-build",
         "modules-utils-preconditions",
     ],
@@ -131,6 +133,9 @@ java_sdk_library {
         "//cts/tests/tests/app.usage", // NetworkUsageStatsTest
         "//external/sl4a:__subpackages__",
         "//frameworks/base/packages/Connectivity/tests:__subpackages__",
+        "//frameworks/base/core/tests/bandwidthtests",
+        "//frameworks/base/core/tests/benchmarks",
+        "//frameworks/base/core/tests/utillib",
         "//frameworks/base/tests/vcn",
         "//frameworks/libs/net/common/testutils",
         "//frameworks/libs/net/common/tests:__subpackages__",
@@ -173,4 +178,24 @@ cc_library_shared {
     apex_available: [
         "com.android.tethering",
     ],
+}
+
+// TODO: reduce size of this library; consider using
+// proto nano for example
+java_library {
+    name: "framework-connectivity-protos",
+    sdk_version: "module_current",
+    min_sdk_version: "30",
+    proto: {
+        type: "lite",
+    },
+    srcs: [
+        "proto/**/*.*",
+    ],
+   static_libs: ["libprotobuf-java-lite"],
+    apex_available: [
+        "com.android.tethering",
+    ],
+    lint: { strict_updatability_linting: true },
+    visibility: ["//visibility:private"],
 }

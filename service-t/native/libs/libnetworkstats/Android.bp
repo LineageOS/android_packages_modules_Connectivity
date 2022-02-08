@@ -41,7 +41,6 @@ cc_library {
         cfi: true,
     },
     apex_available: [
-        "//apex_available:platform",
         "com.android.tethering",
     ],
     min_sdk_version: "30",
@@ -61,11 +60,12 @@ cc_test {
         "-Wno-unused-parameter",
         "-Wthread-safety",
     ],
-    static_libs: ["libgmock"],
+    static_libs: [
+        "libgmock",
+        "libnetworkstats",
+    ],
     shared_libs: [
         "libbase",
         "liblog",
-        "libnetworkstats",
-        "libutils",
     ],
 }
