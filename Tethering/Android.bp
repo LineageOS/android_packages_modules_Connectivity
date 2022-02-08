@@ -50,7 +50,7 @@ java_defaults {
     ],
     libs: [
         "framework-connectivity",
-        "framework-connectivity-tiramisu.stubs.module_lib",
+        "framework-connectivity-t.stubs.module_lib",
         "framework-statsd.stubs.module_lib",
         "framework-tethering.impl",
         "framework-wifi",

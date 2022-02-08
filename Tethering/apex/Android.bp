@@ -104,7 +104,7 @@ bootclasspath_fragment {
     name: "com.android.tethering-bootclasspath-fragment",
     contents: [
         "framework-connectivity",
-        "framework-connectivity-tiramisu",
+        "framework-connectivity-t",
         "framework-tethering",
     ],
     apex_available: ["com.android.tethering"],
