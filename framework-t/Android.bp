@@ -29,22 +29,17 @@ java_defaults {
 // SDK library for connectivity bootclasspath classes that were part of the non-updatable API before
 // T, and were moved to the module in T. Other bootclasspath classes in connectivity should go to
 // framework-connectivity.
-java_sdk_library {
-    name: "framework-connectivity-tiramisu",
+java_defaults {
+    name: "framework-connectivity-tiramisu-defaults",
     sdk_version: "module_current",
     min_sdk_version: "Tiramisu",
     defaults: [
         "framework-module-defaults",
-        "enable-framework-connectivity-t-targets",
     ],
     srcs: [
         ":framework-connectivity-tiramisu-updatable-sources",
         ":framework-nearby-java-sources",
     ],
-    // Do not add static_libs to this library: put them in framework-connectivity instead.
-    // The jarjar rules are only so that references to jarjared utils in
-    // framework-connectivity-pre-jarjar match at runtime.
-    jarjar_rules: ":connectivity-jarjar-rules",
     stub_only_libs: [
         // Use prebuilt framework-connectivity stubs to avoid circular dependencies
         "sdk_module-lib_current_framework-connectivity",
@@ -67,15 +62,40 @@ java_sdk_library {
         // non-jarjard names of widely-used packages such as com.android.net.module.util.
         "framework-connectivity-pre-jarjar",
     ],
+    apex_available: [
+        "com.android.tethering",
+    ],
+}
+
+java_library {
+    name: "framework-connectivity-tiramisu-pre-jarjar",
+    defaults: ["framework-connectivity-tiramisu-defaults"],
+    libs: [
+        "framework-bluetooth",
+        "framework-connectivity-pre-jarjar",
+    ],
+    visibility: ["//packages/modules/Connectivity:__subpackages__"],
+}
+
+// SDK library for connectivity bootclasspath classes that were part of the non-updatable API before
+// T, and were moved to the module in T. Other bootclasspath classes in connectivity should go to
+// framework-connectivity.
+java_sdk_library {
+    name: "framework-connectivity-tiramisu",
+    defaults: [
+        "framework-connectivity-tiramisu-defaults",
+        "enable-framework-connectivity-t-targets",
+    ],
+    // Do not add static_libs to this library: put them in framework-connectivity instead.
+    // The jarjar rules are only so that references to jarjared utils in
+    // framework-connectivity-pre-jarjar match at runtime.
+    jarjar_rules: ":connectivity-jarjar-rules",
     permitted_packages: [
         "android.net",
         "android.net.nsd",
         "android.nearby",
         "com.android.connectivity",
         "com.android.nearby",
-    ],
-    apex_available: [
-        "com.android.tethering",
     ],
     impl_library_visibility: [
         "//packages/modules/Connectivity/Tethering/apex",
