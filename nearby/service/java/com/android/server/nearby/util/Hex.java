@@ -30,8 +30,8 @@ public class Hex {
     public static String bytesToStringLowercase(byte[] bytes) {
         char[] hexChars = new char[bytes.length * 2];
         int j = 0;
-        for (int i = 0; i < bytes.length; i++) {
-            int v = bytes[i] & 0xFF;
+        for (byte aByte : bytes) {
+            int v = aByte & 0xFF;
             hexChars[j++] = HEX_LOWERCASE[v >>> 4];
             hexChars[j++] = HEX_LOWERCASE[v & 0x0F];
         }
