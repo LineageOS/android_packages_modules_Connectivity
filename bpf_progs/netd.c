@@ -297,12 +297,12 @@ static __always_inline inline int bpf_traffic_account(struct __sk_buff* skb, int
     return match;
 }
 
-DEFINE_BPF_PROG("cgroupskb/ingress/stats", AID_ROOT, AID_ROOT, bpf_cgroup_ingress)
+DEFINE_BPF_PROG("cgroupskb/ingress/stats", AID_ROOT, AID_SYSTEM, bpf_cgroup_ingress)
 (struct __sk_buff* skb) {
     return bpf_traffic_account(skb, BPF_INGRESS);
 }
 
-DEFINE_BPF_PROG("cgroupskb/egress/stats", AID_ROOT, AID_ROOT, bpf_cgroup_egress)
+DEFINE_BPF_PROG("cgroupskb/egress/stats", AID_ROOT, AID_SYSTEM, bpf_cgroup_egress)
 (struct __sk_buff* skb) {
     return bpf_traffic_account(skb, BPF_EGRESS);
 }
