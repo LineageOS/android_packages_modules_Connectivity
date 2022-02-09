@@ -74,7 +74,7 @@ public class FastPairAdvHandler {
         if (FastPairDecoder.checkModelId(fastPairDevice.getData())) {
             byte[] model = FastPairDecoder.getModelId(fastPairDevice.getData());
             Log.d("FastPairService",
-                    "On discovery model id" + Hex.bytesToStringLowercase(model));
+                    "On discovery model id " + Hex.bytesToStringLowercase(model));
             // Use api to get anti spoofing key from model id.
             try {
                 Rpcs.GetObservedDeviceResponse response =
