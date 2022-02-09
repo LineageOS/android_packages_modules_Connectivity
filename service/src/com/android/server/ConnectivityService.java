@@ -191,6 +191,7 @@ import android.net.metrics.NetworkEvent;
 import android.net.netd.aidl.NativeUidRangeConfig;
 import android.net.networkstack.ModuleNetworkStackClient;
 import android.net.networkstack.NetworkStackClientBase;
+import android.net.networkstack.aidl.NetworkMonitorParameters;
 import android.net.resolv.aidl.DnsHealthEventParcel;
 import android.net.resolv.aidl.IDnsResolverUnsolicitedEventListener;
 import android.net.resolv.aidl.Nat64PrefixEventParcel;
@@ -8883,10 +8884,12 @@ public class ConnectivityService extends IConnectivityManager.Stub
             if (networkAgent.networkAgentConfig.acceptPartialConnectivity) {
                 networkAgent.networkMonitor().setAcceptPartialConnectivity();
             }
-            networkAgent.networkMonitor().notifyNetworkConnected(
-                    new LinkProperties(networkAgent.linkProperties,
-                            true /* parcelSensitiveFields */),
-                    networkAgent.networkCapabilities);
+            final NetworkMonitorParameters params = new NetworkMonitorParameters();
+            params.networkAgentConfig = networkAgent.networkAgentConfig;
+            params.networkCapabilities = networkAgent.networkCapabilities;
+            params.linkProperties = new LinkProperties(networkAgent.linkProperties,
+                    true /* parcelSensitiveFields */);
+            networkAgent.networkMonitor().notifyNetworkConnected(params);
             scheduleUnvalidatedPrompt(networkAgent);
 
             // Whether a particular NetworkRequest listen should cause signal strength thresholds to
