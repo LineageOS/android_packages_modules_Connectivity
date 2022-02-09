@@ -150,6 +150,7 @@ public class FastPairDataProviderBaseTest {
     private static final int LAST_USER_EXPERIENCE = 93;
     private static final long LOST_MILLIS = 393284L;
     private static final String MAC_ADDRESS = "MAC_ADDRESS";
+    private static final String NAME = "NAME";
     private static final String PACKAGE_NAME = "PACKAGE_NAME";
     private static final long PENDING_APP_INSTALL_TIMESTAMP_MILLIS = 832393L;
     private static final int RSSI = 9;
@@ -707,6 +708,7 @@ public class FastPairDataProviderBaseTest {
         builder.setInitialPairingDescription(INITIAL_PAIRING_DESCRIPTION);
         builder.setIntentUri(INTENT_URI);
         builder.setLocale(LOCALE);
+        builder.setName(NAME);
         builder.setOpenCompanionAppDescription(OPEN_COMPANION_APP_DESCRIPTION);
         builder.setRetroactivePairingDescription(RETRO_ACTIVE_PAIRING_DESCRIPTION);
         builder.setSubsequentPairingDescription(SUBSEQUENT_PAIRING_DESCRIPTION);
@@ -751,6 +753,7 @@ public class FastPairDataProviderBaseTest {
         parcel.initialPairingDescription = INITIAL_PAIRING_DESCRIPTION;
         parcel.intentUri = INTENT_URI;
         parcel.locale = LOCALE;
+        parcel.name = NAME;
         parcel.openCompanionAppDescription = OPEN_COMPANION_APP_DESCRIPTION;
         parcel.retroactivePairingDescription = RETRO_ACTIVE_PAIRING_DESCRIPTION;
         parcel.subsequentPairingDescription = SUBSEQUENT_PAIRING_DESCRIPTION;
@@ -890,6 +893,7 @@ public class FastPairDataProviderBaseTest {
         assertThat(metadataParcel.intentUri).isEqualTo(INTENT_URI);
 
         assertThat(metadataParcel.locale).isEqualTo(LOCALE);
+        assertThat(metadataParcel.name).isEqualTo(NAME);
 
         assertThat(metadataParcel.openCompanionAppDescription).isEqualTo(
                 OPEN_COMPANION_APP_DESCRIPTION);
@@ -949,6 +953,7 @@ public class FastPairDataProviderBaseTest {
         assertThat(metadata.getInitialPairingDescription()).isEqualTo(INITIAL_PAIRING_DESCRIPTION);
         assertThat(metadata.getIntentUri()).isEqualTo(INTENT_URI);
         assertThat(metadata.getLocale()).isEqualTo(LOCALE);
+        assertThat(metadata.getName()).isEqualTo(NAME);
         assertThat(metadata.getOpenCompanionAppDescription())
                 .isEqualTo(OPEN_COMPANION_APP_DESCRIPTION);
         assertThat(metadata.getRetroactivePairingDescription())

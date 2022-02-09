@@ -309,6 +309,7 @@ class Utils {
                                 .build())
                         .setImageUrl(metadata.deviceMetadata.imageUrl)
                         .setIntentUri(metadata.deviceMetadata.intentUri)
+                        .setName(metadata.deviceMetadata.name)
                         .setBleTxPower(metadata.deviceMetadata.bleTxPower)
                         .setTriggerDistance(metadata.deviceMetadata.triggerDistance)
                         .setDeviceType(
