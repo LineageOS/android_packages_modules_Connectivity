@@ -30,14 +30,12 @@ import com.android.server.nearby.common.bloomfilter.FastPairBloomFilterHasher;
 import com.android.server.nearby.common.locator.Locator;
 import com.android.server.nearby.fastpair.halfsheet.FastPairHalfSheetManager;
 import com.android.server.nearby.provider.FastPairDataProvider;
+import com.android.server.nearby.util.DataUtils;
 import com.android.server.nearby.util.FastPairDecoder;
 import com.android.server.nearby.util.Hex;
 
-import com.google.protobuf.ByteString;
-
 import java.util.List;
 
-import service.proto.Cache;
 import service.proto.Data;
 import service.proto.Rpcs;
 
@@ -80,11 +78,8 @@ public class FastPairAdvHandler {
                 Rpcs.GetObservedDeviceResponse response =
                         FastPairDataProvider.getInstance()
                                 .loadFastPairAntispoofkeyDeviceMetadata(model);
-                ByteString publicKey = response.getDevice().getAntiSpoofingKeyPair().getPublicKey();
                 Locator.get(mContext, FastPairHalfSheetManager.class).showHalfSheet(
-                        Cache.ScanFastPairStoreItem.newBuilder().setAddress(mBleAddress)
-                                .setAntiSpoofingPublicKey(publicKey)
-                                .build());
+                        DataUtils.toScanFastPairStoreItem(response, mBleAddress));
             } catch (IllegalStateException e) {
                 Log.e(TAG, "OEM does not construct fast pair data proxy correctly");
             }
