@@ -52,7 +52,9 @@ java_library {
         "com.android.tethering",
     ],
     visibility: [
+        "//frameworks/base/tests/vcn",
         "//packages/modules/Connectivity/service",
         "//packages/modules/Connectivity/tests:__subpackages__",
+        "//packages/modules/IPsec/tests/iketests",
     ],
 }
