@@ -7043,7 +7043,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
         nai.notifyRegistered();
         NetworkInfo networkInfo = nai.networkInfo;
         updateNetworkInfo(nai, networkInfo);
-        updateVpnUids(nai, null, nai.networkCapabilities);
+        updateUids(nai, null, nai.networkCapabilities);
     }
 
     private class NetworkOfferInfo implements IBinder.DeathRecipient {
@@ -7679,8 +7679,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
         updateNetworkPermissions(nai, newNc);
         final NetworkCapabilities prevNc = nai.getAndSetNetworkCapabilities(newNc);
 
-        updateVpnUids(nai, prevNc, newNc);
-        updateAccessUids(nai, prevNc, newNc);
+        updateUids(nai, prevNc, newNc);
         nai.updateScoreForNetworkAgentUpdate();
 
         if (nai.getCurrentScore() == oldScore && newNc.equalRequestableCapabilities(prevNc)) {
@@ -7850,6 +7849,12 @@ public class ConnectivityService extends IConnectivityManager.Stub
         }
     }
 
+    private void updateUids(@NonNull NetworkAgentInfo nai, @Nullable NetworkCapabilities prevNc,
+            @Nullable NetworkCapabilities newNc) {
+        updateVpnUids(nai, prevNc, newNc);
+        updateAccessUids(nai, prevNc, newNc);
+    }
+
     private void updateVpnUids(@NonNull NetworkAgentInfo nai, @Nullable NetworkCapabilities prevNc,
             @Nullable NetworkCapabilities newNc) {
         Set<UidRange> prevRanges = null == prevNc ? null : prevNc.getUidRanges();
@@ -7906,7 +7911,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
             }
         } catch (Exception e) {
             // Never crash!
-            loge("Exception in updateVpnUids: ", e);
+            loge("Exception in updateUids: ", e);
         }
     }
 
@@ -7945,9 +7950,6 @@ public class ConnectivityService extends IConnectivityManager.Stub
                         intsToUidRangeStableParcels(toRemove),
                         PREFERENCE_ORDER_IRRELEVANT_BECAUSE_NOT_DEFAULT));
             }
-        } catch (ServiceSpecificException e) {
-            // Has the interface disappeared since the network was built ?
-            Log.i(TAG, "Can't set access UIDs for network " + nai.network, e);
         } catch (RemoteException e) {
             // Netd died. This usually causes a runtime restart anyway.
         }
@@ -8862,7 +8864,6 @@ public class ConnectivityService extends IConnectivityManager.Stub
             }
             networkAgent.created = true;
             networkAgent.onNetworkCreated();
-            updateAccessUids(networkAgent, null, networkAgent.networkCapabilities);
         }
 
         if (!networkAgent.everConnected && state == NetworkInfo.State.CONNECTED) {
@@ -8916,7 +8917,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
         } else if (state == NetworkInfo.State.DISCONNECTED) {
             networkAgent.disconnect();
             if (networkAgent.isVPN()) {
-                updateVpnUids(networkAgent, networkAgent.networkCapabilities, null);
+                updateUids(networkAgent, networkAgent.networkCapabilities, null);
             }
             disconnectAndDestroyNetwork(networkAgent);
             if (networkAgent.isVPN()) {
