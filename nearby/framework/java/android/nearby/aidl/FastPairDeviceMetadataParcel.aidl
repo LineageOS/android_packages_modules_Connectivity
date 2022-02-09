@@ -39,6 +39,9 @@ parcelable FastPairDeviceMetadataParcel {
     // The image icon that shows in the notification.
     byte[] image;
 
+    // The name of the device.
+    String name;
+
     int deviceType;
 
     // The image urls for device with device type "true wireless".

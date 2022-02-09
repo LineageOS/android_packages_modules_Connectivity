@@ -82,6 +82,14 @@ public class FastPairDeviceMetadata {
     }
 
     /**
+     * Get device name.
+     */
+    @Nullable
+    public String getName() {
+        return mMetadataParcel.name;
+    }
+
+    /**
      * Get true wireless image url for left bud.
      */
     @Nullable
@@ -311,6 +319,7 @@ public class FastPairDeviceMetadata {
             mBuilderParcel = new FastPairDeviceMetadataParcel();
             mBuilderParcel.imageUrl = null;
             mBuilderParcel.intentUri = null;
+            mBuilderParcel.name = null;
             mBuilderParcel.bleTxPower = 0;
             mBuilderParcel.triggerDistance = 0;
             mBuilderParcel.image = null;
@@ -365,6 +374,18 @@ public class FastPairDeviceMetadata {
         @NonNull
         public Builder setIntentUri(@Nullable String intentUri) {
             mBuilderParcel.intentUri = intentUri;
+            return this;
+        }
+
+        /**
+         * Set device name.
+         *
+         * @param name Device name.
+         * @return The builder, to facilitate chaining {@code builder.setXXX(..).setXXX(..)}.
+         */
+        @NonNull
+        public Builder setName(@Nullable String name) {
+            mBuilderParcel.name = name;
             return this;
         }
 
