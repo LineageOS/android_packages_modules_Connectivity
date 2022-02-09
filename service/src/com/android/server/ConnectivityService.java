@@ -90,6 +90,7 @@ import static android.net.shared.NetworkMonitorUtils.isPrivateDnsValidationRequi
 import static android.os.Process.INVALID_UID;
 import static android.os.Process.VPN_UID;
 import static android.provider.DeviceConfig.NAMESPACE_CONNECTIVITY;
+import static android.system.OsConstants.ETH_P_ALL;
 import static android.system.OsConstants.IPPROTO_TCP;
 import static android.system.OsConstants.IPPROTO_UDP;
 
@@ -197,6 +198,7 @@ import android.net.resolv.aidl.IDnsResolverUnsolicitedEventListener;
 import android.net.resolv.aidl.Nat64PrefixEventParcel;
 import android.net.resolv.aidl.PrivateDnsValidationEventParcel;
 import android.net.shared.PrivateDnsConfig;
+import android.net.util.InterfaceParams;
 import android.net.util.MultinetworkPolicyTracker;
 import android.os.BatteryStatsManager;
 import android.os.Binder;
@@ -248,6 +250,7 @@ import com.android.net.module.util.LinkPropertiesUtils.CompareResult;
 import com.android.net.module.util.LocationPermissionChecker;
 import com.android.net.module.util.NetworkCapabilitiesUtils;
 import com.android.net.module.util.PermissionUtils;
+import com.android.net.module.util.TcUtils;
 import com.android.net.module.util.netlink.InetDiagMessage;
 import com.android.server.connectivity.AutodestructReference;
 import com.android.server.connectivity.CarrierPrivilegeAuthenticator;
@@ -274,6 +277,7 @@ import com.android.server.connectivity.UidRangeUtils;
 import libcore.io.IoUtils;
 
 import java.io.FileDescriptor;
+import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.Writer;
 import java.net.Inet4Address;
@@ -709,6 +713,11 @@ public class ConnectivityService extends IConnectivityManager.Stub
     private static final int EVENT_SET_TEST_ALLOW_BAD_WIFI_UNTIL = 55;
 
     /**
+     * Used internally when INGRESS_RATE_LIMIT_BYTES_PER_SECOND setting changes.
+     */
+    private static final int EVENT_INGRESS_RATE_LIMIT_CHANGED = 56;
+
+    /**
      * Argument for {@link #EVENT_PROVISIONING_NOTIFICATION} to indicate that the notification
      * should be shown.
      */
@@ -724,6 +733,18 @@ public class ConnectivityService extends IConnectivityManager.Stub
      * The maximum alive time to allow bad wifi configuration for testing.
      */
     private static final long MAX_TEST_ALLOW_BAD_WIFI_UNTIL_MS = 5 * 60 * 1000L;
+
+    /**
+     * The priority of the tc police rate limiter -- smaller value is higher priority.
+     * This value needs to be coordinated with PRIO_CLAT, PRIO_TETHER4, and PRIO_TETHER6.
+     */
+    private static final short TC_PRIO_POLICE = 1;
+
+    /**
+     * The BPF program attached to the tc-police hook to account for to-be-dropped traffic.
+     */
+    private static final String TC_POLICE_BPF_PROG_PATH =
+            "/sys/fs/bpf/prog_netd_schedact_ingress_account";
 
     private static String eventName(int what) {
         return sMagicDecoderRing.get(what, Integer.toString(what));
@@ -814,6 +835,12 @@ public class ConnectivityService extends IConnectivityManager.Stub
     @VisibleForTesting
     final Map<IBinder, ConnectivityDiagnosticsCallbackInfo> mConnectivityDiagnosticsCallbacks =
             new HashMap<>();
+
+    // Rate limit applicable to all internet capable networks (-1 = disabled). This value is
+    // configured via {@link
+    // ConnectivitySettingsManager#INGRESS_RATE_LIMIT_BYTES_PER_SECOND}
+    // Only the handler thread is allowed to access this field.
+    private long mIngressRateLimit = -1;
 
     /**
      * Implements support for the legacy "one network per network type" model.
@@ -1367,6 +1394,48 @@ public class ConnectivityService extends IConnectivityManager.Stub
         public BpfNetMaps getBpfNetMaps(INetd netd) {
             return new BpfNetMaps(netd);
         }
+
+        /**
+         * Wraps {@link TcUtils#tcFilterAddDevIngressPolice}
+         */
+        public void enableIngressRateLimit(String iface, long rateInBytesPerSecond) {
+            final InterfaceParams params = InterfaceParams.getByName(iface);
+            if (params == null) {
+                // the interface might have disappeared.
+                logw("Failed to get interface params for interface " + iface);
+                return;
+            }
+            try {
+                // converting rateInBytesPerSecond from long to int is safe here because the
+                // setting's range is limited to INT_MAX.
+                // TODO: add long/uint64 support to tcFilterAddDevIngressPolice.
+                TcUtils.tcFilterAddDevIngressPolice(params.index, TC_PRIO_POLICE, (short) ETH_P_ALL,
+                        (int) rateInBytesPerSecond, TC_POLICE_BPF_PROG_PATH);
+            } catch (IOException e) {
+                loge("TcUtils.tcFilterAddDevIngressPolice(ifaceIndex=" + params.index
+                        + ", PRIO_POLICE, ETH_P_ALL, rateInBytesPerSecond="
+                        + rateInBytesPerSecond + ", bpfProgPath=" + TC_POLICE_BPF_PROG_PATH
+                        + ") failure: ", e);
+            }
+        }
+
+        /**
+         * Wraps {@link TcUtils#tcFilterDelDev}
+         */
+        public void disableIngressRateLimit(String iface) {
+            final InterfaceParams params = InterfaceParams.getByName(iface);
+            if (params == null) {
+                // the interface might have disappeared.
+                logw("Failed to get interface params for interface " + iface);
+                return;
+            }
+            try {
+                TcUtils.tcFilterDelDev(params.index, true, TC_PRIO_POLICE, (short) ETH_P_ALL);
+            } catch (IOException e) {
+                loge("TcUtils.tcFilterDelDev(ifaceIndex=" + params.index
+                        + ", ingress=true, PRIO_POLICE, ETH_P_ALL) failure: ", e);
+            }
+        }
     }
 
     public ConnectivityService(Context context) {
@@ -1541,6 +1610,9 @@ public class ConnectivityService extends IConnectivityManager.Stub
         } catch (ErrnoException e) {
             loge("Unable to create DscpPolicyTracker");
         }
+
+        mIngressRateLimit = ConnectivitySettingsManager.getIngressRateLimitInBytesPerSecond(
+                mContext);
     }
 
     private static NetworkCapabilities createDefaultNetworkCapabilitiesForUid(int uid) {
@@ -1611,6 +1683,11 @@ public class ConnectivityService extends IConnectivityManager.Stub
         mHandler.sendEmptyMessage(EVENT_MOBILE_DATA_PREFERRED_UIDS_CHANGED);
     }
 
+    @VisibleForTesting
+    void updateIngressRateLimit() {
+        mHandler.sendEmptyMessage(EVENT_INGRESS_RATE_LIMIT_CHANGED);
+    }
+
     private void handleAlwaysOnNetworkRequest(NetworkRequest networkRequest, int id) {
         final boolean enable = mContext.getResources().getBoolean(id);
         handleAlwaysOnNetworkRequest(networkRequest, enable);
@@ -1672,6 +1749,12 @@ public class ConnectivityService extends IConnectivityManager.Stub
         mSettingsObserver.observe(
                 Settings.Secure.getUriFor(ConnectivitySettingsManager.MOBILE_DATA_PREFERRED_UIDS),
                 EVENT_MOBILE_DATA_PREFERRED_UIDS_CHANGED);
+
+        // Watch for ingress rate limit changes.
+        mSettingsObserver.observe(
+                Settings.Secure.getUriFor(
+                        ConnectivitySettingsManager.INGRESS_RATE_LIMIT_BYTES_PER_SECOND),
+                EVENT_INGRESS_RATE_LIMIT_CHANGED);
     }
 
     private void registerPrivateDnsSettingsCallbacks() {
@@ -4091,6 +4174,11 @@ public class ConnectivityService extends IConnectivityManager.Stub
             // for an unnecessarily long time.
             destroyNativeNetwork(nai);
             mDnsManager.removeNetwork(nai.network);
+
+            // clean up tc police filters on interface.
+            if (canNetworkBeRateLimited(nai) && mIngressRateLimit >= 0) {
+                mDeps.disableIngressRateLimit(nai.linkProperties.getInterfaceName());
+            }
         }
         mNetIdManager.releaseNetId(nai.network.getNetId());
         nai.onNetworkDestroyed();
@@ -5157,6 +5245,9 @@ public class ConnectivityService extends IConnectivityManager.Stub
                 case EVENT_SET_TEST_ALLOW_BAD_WIFI_UNTIL:
                     final long timeMs = ((Long) msg.obj).longValue();
                     mMultinetworkPolicyTracker.setTestAllowBadWifiUntil(timeMs);
+                    break;
+                case EVENT_INGRESS_RATE_LIMIT_CHANGED:
+                    handleIngressRateLimitChanged();
                     break;
             }
         }
@@ -8854,6 +8945,19 @@ public class ConnectivityService extends IConnectivityManager.Stub
             // A network that has just connected has zero requests and is thus a foreground network.
             networkAgent.networkCapabilities.addCapability(NET_CAPABILITY_FOREGROUND);
 
+            // If a rate limit has been configured and is applicable to this network (network
+            // provides internet connectivity), apply it.
+            // Note: in case of a system server crash, there is a very small chance that this
+            // leaves some interfaces rate limited (i.e. if the rate limit had been changed just
+            // before the crash and was never applied). One solution would be to delete all
+            // potential tc police filters every time this is called. Since this is an unlikely
+            // scenario in the first place (and worst case, the interface stays rate limited until
+            // the device is rebooted), this seems a little overkill.
+            if (canNetworkBeRateLimited(networkAgent) && mIngressRateLimit >= 0) {
+                mDeps.enableIngressRateLimit(networkAgent.linkProperties.getInterfaceName(),
+                        mIngressRateLimit);
+            }
+
             if (!createNativeNetwork(networkAgent)) return;
             if (networkAgent.propagateUnderlyingCapabilities()) {
                 // Initialize the network's capabilities to their starting values according to the
@@ -10512,6 +10616,39 @@ public class ConnectivityService extends IConnectivityManager.Stub
                 createNrisFromMobileDataPreferredUids(mMobileDataPreferredUids));
         // Finally, rematch.
         rematchAllNetworksAndRequests();
+    }
+
+    private void handleIngressRateLimitChanged() {
+        final long oldIngressRateLimit = mIngressRateLimit;
+        mIngressRateLimit = ConnectivitySettingsManager.getIngressRateLimitInBytesPerSecond(
+                mContext);
+        for (final NetworkAgentInfo networkAgent : mNetworkAgentInfos) {
+            if (canNetworkBeRateLimited(networkAgent)) {
+                // If rate limit has previously been enabled, remove the old limit first.
+                if (oldIngressRateLimit >= 0) {
+                    mDeps.disableIngressRateLimit(networkAgent.linkProperties.getInterfaceName());
+                }
+                if (mIngressRateLimit >= 0) {
+                    mDeps.enableIngressRateLimit(networkAgent.linkProperties.getInterfaceName(),
+                            mIngressRateLimit);
+                }
+            }
+        }
+    }
+
+    private boolean canNetworkBeRateLimited(@NonNull final NetworkAgentInfo networkAgent) {
+        if (!networkAgent.networkCapabilities.hasCapability(NET_CAPABILITY_INTERNET)) {
+            // rate limits only apply to networks that provide internet connectivity.
+            return false;
+        }
+
+        final String iface = networkAgent.linkProperties.getInterfaceName();
+        if (iface == null) {
+            // This can never happen.
+            logwtf("canNetworkBeRateLimited: LinkProperties#getInterfaceName returns null");
+            return false;
+        }
+        return true;
     }
 
     private void enforceAutomotiveDevice() {
