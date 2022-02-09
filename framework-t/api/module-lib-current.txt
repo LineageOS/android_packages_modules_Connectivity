@@ -31,7 +31,7 @@ package android.net {
     method public static void registerServiceWrappers();
   }
 
-  public final class IpSecManager {
+  public class IpSecManager {
     field public static final int DIRECTION_FWD = 2; // 0x2
   }
 
