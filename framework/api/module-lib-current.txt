@@ -124,6 +124,7 @@ package android.net {
 
   public final class NetworkAgentConfig implements android.os.Parcelable {
     method @Nullable public String getSubscriberId();
+    method public boolean getVpnRequiresValidation();
     method public boolean isBypassableVpn();
   }
 
@@ -131,6 +132,7 @@ package android.net {
     method @NonNull public android.net.NetworkAgentConfig.Builder setBypassableVpn(boolean);
     method @NonNull public android.net.NetworkAgentConfig.Builder setExcludeLocalRoutesVpn(boolean);
     method @NonNull public android.net.NetworkAgentConfig.Builder setSubscriberId(@Nullable String);
+    method @NonNull public android.net.NetworkAgentConfig.Builder setVpnRequiresValidation(boolean);
   }
 
   public final class NetworkCapabilities implements android.os.Parcelable {
