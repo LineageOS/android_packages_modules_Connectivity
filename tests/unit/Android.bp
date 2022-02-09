@@ -103,8 +103,8 @@ java_library {
     visibility: ["//visibility:private"],
 }
 
-android_library {
-    name: "FrameworksNetTestsLib",
+java_defaults {
+    name: "FrameworksNetTestsDefaults",
     min_sdk_version: "30",
     defaults: [
         "framework-connectivity-test-defaults",
@@ -113,8 +113,6 @@ android_library {
         "java/**/*.java",
         "java/**/*.kt",
     ],
-    exclude_srcs: [":non-connectivity-module-test"],
-    jarjar_rules: "jarjar-rules.txt",
     static_libs: [
         "androidx.test.rules",
         "androidx.test.uiautomator",
@@ -140,31 +138,33 @@ android_library {
         "android.test.mock",
         "ServiceConnectivityResources",
     ],
-    visibility: ["//packages/modules/Connectivity/tests:__subpackages__"],
     exclude_kotlinc_generated_files: false,
+}
+
+android_library {
+    name: "FrameworksNetTestsLib",
+    defaults: [
+        "FrameworksNetTestsDefaults",
+    ],
+    exclude_srcs: [":non-connectivity-module-test"],
+    visibility: ["//packages/modules/Connectivity/tests:__subpackages__"],
 }
 
 android_test {
     name: "FrameworksNetTests",
     enabled: enable_frameworks_net_tests,
-    min_sdk_version: "30",
     defaults: [
-        "framework-connectivity-test-defaults",
+        "FrameworksNetTestsDefaults",
         "FrameworksNetTests-jni-defaults",
     ],
-    // this is in addition to FrameworksNetTestsLib.
-    srcs: [":non-connectivity-module-test"],
+    jarjar_rules: ":connectivity-jarjar-rules",
     test_suites: ["device-tests"],
     static_libs: [
         "services.core",
         "services.net",
-        "FrameworksNetTestsLib",
-    ],
-    libs: [
-        "android.test.mock",
-        "android.test.base",
     ],
     jni_libs: [
         "libservice-connectivity",
-    ]
+        "libandroid_net_connectivity_com_android_net_module_util_jni",
+    ],
 }
