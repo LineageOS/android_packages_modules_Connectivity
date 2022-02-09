@@ -106,5 +106,8 @@ rule com.android.internal.util.State* com.android.connectivity.@0
 # From the API shims
 rule com.android.networkstack.apishim.** com.android.connectivity.@0
 
+# From fast-pair-lite-protos
+rule service.proto.** com.android.server.nearby.@0
+
 # Remaining are connectivity sources in com.android.server and com.android.server.connectivity:
 # TODO: move to a subpackage of com.android.connectivity (such as com.android.connectivity.server)
