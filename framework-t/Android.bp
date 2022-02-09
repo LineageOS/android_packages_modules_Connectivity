@@ -35,7 +35,6 @@ java_defaults {
     min_sdk_version: "Tiramisu",
     defaults: [
         "framework-module-defaults",
-        "enable-framework-connectivity-t-targets",
     ],
     srcs: [
         ":framework-connectivity-tiramisu-updatable-sources",
@@ -85,6 +84,7 @@ java_sdk_library {
     name: "framework-connectivity-tiramisu",
     defaults: [
         "framework-connectivity-tiramisu-defaults",
+        "enable-framework-connectivity-t-targets",
     ],
     // Do not add static_libs to this library: put them in framework-connectivity instead.
     // The jarjar rules are only so that references to jarjared utils in
