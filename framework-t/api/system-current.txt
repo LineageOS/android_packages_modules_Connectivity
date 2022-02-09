@@ -104,6 +104,7 @@ package android.nearby {
     method @Nullable public String getInitialPairingDescription();
     method @Nullable public String getIntentUri();
     method @Nullable public String getLocale();
+    method @Nullable public String getName();
     method @Nullable public String getOpenCompanionAppDescription();
     method @Nullable public String getRetroactivePairingDescription();
     method @Nullable public String getSubsequentPairingDescription();
@@ -142,6 +143,7 @@ package android.nearby {
     method @NonNull public android.nearby.FastPairDeviceMetadata.Builder setInitialPairingDescription(@Nullable String);
     method @NonNull public android.nearby.FastPairDeviceMetadata.Builder setIntentUri(@Nullable String);
     method @NonNull public android.nearby.FastPairDeviceMetadata.Builder setLocale(@Nullable String);
+    method @NonNull public android.nearby.FastPairDeviceMetadata.Builder setName(@Nullable String);
     method @NonNull public android.nearby.FastPairDeviceMetadata.Builder setOpenCompanionAppDescription(@Nullable String);
     method @NonNull public android.nearby.FastPairDeviceMetadata.Builder setRetroactivePairingDescription(@Nullable String);
     method @NonNull public android.nearby.FastPairDeviceMetadata.Builder setSubsequentPairingDescription(@Nullable String);
