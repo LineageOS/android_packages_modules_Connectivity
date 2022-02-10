@@ -62,6 +62,7 @@ import android.util.Log;
 
 import com.android.compatibility.common.util.ShellIdentityUtils;
 import com.android.compatibility.common.util.SystemUtil;
+import com.android.modules.utils.build.SdkLevel;
 import com.android.testutils.DevSdkIgnoreRule;
 
 import java.io.IOException;
@@ -840,9 +841,13 @@ public class NetworkStatsManagerTest extends InstrumentationTestCase {
 
             mNsm.unregisterUsageCallback(usageCallback);
 
-            mNsm.registerUsageCallback(mNetworkInterfacesToTest[i].getNetworkType(),
-                    getSubscriberId(i), THRESHOLD_BYTES, usageCallback);
-            mNsm.unregisterUsageCallback(usageCallback);
+            // For T- devices, the registerUsageCallback invocation below will need a looper
+            // from the thread that calls into the API, which is not available in the test.
+            if (SdkLevel.isAtLeastT()) {
+                mNsm.registerUsageCallback(mNetworkInterfacesToTest[i].getNetworkType(),
+                        getSubscriberId(i), THRESHOLD_BYTES, usageCallback);
+                mNsm.unregisterUsageCallback(usageCallback);
+            }
         }
     }
 
