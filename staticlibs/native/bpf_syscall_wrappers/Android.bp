@@ -30,6 +30,7 @@ cc_library_headers {
     min_sdk_version: "30",
     apex_available: [
         "//apex_available:platform",
+        "com.android.art.debug",
         "com.android.mediaprovider",
         "com.android.tethering",
     ],
