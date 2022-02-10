@@ -50,9 +50,9 @@ cc_test {
         "-Werror",
         "-Wno-error=unused-variable",
     ],
+    header_libs: ["bpf_headers"],
     static_libs: ["libgmock"],
     shared_libs: [
-        "libbpf_android",
         "libbase",
         "liblog",
         "libutils",
