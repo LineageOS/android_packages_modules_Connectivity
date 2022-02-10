@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021 The Android Open Source Project
+ * Copyright (C) 2022 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,13 +20,12 @@ import android.content.Context;
 import android.os.Binder;
 
 /**
- * Fake NsdService class for sc-mainline-prod,
+ * Fake IpSecManager class for sc-mainline-prod,
  * to allow building the T service-connectivity before sources
  * are moved to the branch
  */
-public final class NsdService extends Binder {
-    /** Create instance */
-    public static NsdService create(Context ctx) throws InterruptedException {
+public final class IpSecService extends Binder {
+    public IpSecService(Context ctx) {
         throw new RuntimeException("This is a stub class");
     }
 }
