@@ -131,6 +131,9 @@ java_sdk_library {
         "//cts/tests/tests/app.usage", // NetworkUsageStatsTest
         "//external/sl4a:__subpackages__",
         "//frameworks/base/packages/Connectivity/tests:__subpackages__",
+        "//frameworks/base/core/tests/bandwidthtests",
+        "//frameworks/base/core/tests/benchmarks",
+        "//frameworks/base/core/tests/utillib",
         "//frameworks/base/tests/vcn",
         "//frameworks/libs/net/common/testutils",
         "//frameworks/libs/net/common/tests:__subpackages__",
