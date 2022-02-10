@@ -5,5 +5,13 @@ package android.net {
     method public static void registerServiceWrappers();
   }
 
+  public class IpSecManager {
+    field public static final int DIRECTION_FWD = 2; // 0x2
+  }
+
+  public static final class IpSecManager.UdpEncapsulationSocket implements java.lang.AutoCloseable {
+    method public int getResourceId();
+  }
+
 }
 
