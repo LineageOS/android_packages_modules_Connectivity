@@ -1409,6 +1409,8 @@ public class ConnectivityService extends IConnectivityManager.Stub
                 // converting rateInBytesPerSecond from long to int is safe here because the
                 // setting's range is limited to INT_MAX.
                 // TODO: add long/uint64 support to tcFilterAddDevIngressPolice.
+                Log.i(TAG,
+                        "enableIngressRateLimit on " + iface + ": " + rateInBytesPerSecond + "B/s");
                 TcUtils.tcFilterAddDevIngressPolice(params.index, TC_PRIO_POLICE, (short) ETH_P_ALL,
                         (int) rateInBytesPerSecond, TC_POLICE_BPF_PROG_PATH);
             } catch (IOException e) {
@@ -1430,6 +1432,8 @@ public class ConnectivityService extends IConnectivityManager.Stub
                 return;
             }
             try {
+                Log.i(TAG,
+                        "disableIngressRateLimit on " + iface);
                 TcUtils.tcFilterDelDev(params.index, true, TC_PRIO_POLICE, (short) ETH_P_ALL);
             } catch (IOException e) {
                 loge("TcUtils.tcFilterDelDev(ifaceIndex=" + params.index
