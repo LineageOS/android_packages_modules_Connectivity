@@ -21,6 +21,9 @@ import static android.app.usage.NetworkStats.Bucket.DEFAULT_NETWORK_YES;
 import static android.app.usage.NetworkStats.Bucket.METERED_ALL;
 import static android.app.usage.NetworkStats.Bucket.METERED_NO;
 import static android.app.usage.NetworkStats.Bucket.METERED_YES;
+import static android.app.usage.NetworkStats.Bucket.ROAMING_ALL;
+import static android.app.usage.NetworkStats.Bucket.ROAMING_NO;
+import static android.app.usage.NetworkStats.Bucket.ROAMING_YES;
 import static android.app.usage.NetworkStats.Bucket.STATE_ALL;
 import static android.app.usage.NetworkStats.Bucket.STATE_DEFAULT;
 import static android.app.usage.NetworkStats.Bucket.STATE_FOREGROUND;
@@ -77,6 +80,7 @@ public class NetworkStatsManagerTest extends InstrumentationTestCase {
 
     private abstract class NetworkInterfaceToTest {
         private boolean mMetered;
+        private boolean mRoaming;
         private boolean mIsDefault;
 
         abstract int getNetworkType();
@@ -88,6 +92,14 @@ public class NetworkStatsManagerTest extends InstrumentationTestCase {
 
         public void setMetered(boolean metered) {
             this.mMetered = metered;
+        }
+
+        public boolean getRoaming() {
+            return mRoaming;
+        }
+
+        public void setRoaming(boolean roaming) {
+            this.mRoaming = roaming;
         }
 
         public boolean getIsDefault() {
@@ -267,6 +279,7 @@ public class NetworkStatsManagerTest extends InstrumentationTestCase {
         private URL mUrl;
         public boolean success;
         public boolean metered;
+        public boolean roaming;
         public boolean isDefault;
 
         NetworkCallback(long tolerance, URL url) {
@@ -274,6 +287,7 @@ public class NetworkStatsManagerTest extends InstrumentationTestCase {
             mUrl = url;
             success = false;
             metered = false;
+            roaming = false;
             isDefault = false;
         }
 
@@ -303,6 +317,8 @@ public class NetworkStatsManagerTest extends InstrumentationTestCase {
                 success = true;
                 metered = !mCm.getNetworkCapabilities(network)
                         .hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_METERED);
+                roaming = !mCm.getNetworkCapabilities(network)
+                        .hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_ROAMING);
                 synchronized (NetworkStatsManagerTest.this) {
                     NetworkStatsManagerTest.this.notify();
                 }
@@ -333,6 +349,7 @@ public class NetworkStatsManagerTest extends InstrumentationTestCase {
         }
         if (callback.success) {
             mNetworkInterfacesToTest[networkTypeIndex].setMetered(callback.metered);
+            mNetworkInterfacesToTest[networkTypeIndex].setRoaming(callback.roaming);
             mNetworkInterfacesToTest[networkTypeIndex].setIsDefault(callback.isDefault);
             return true;
         }
@@ -377,6 +394,7 @@ public class NetworkStatsManagerTest extends InstrumentationTestCase {
             assertEquals(bucket.getState(), STATE_ALL);
             assertEquals(bucket.getUid(), UID_ALL);
             assertEquals(bucket.getMetered(), METERED_ALL);
+            assertEquals(bucket.getRoaming(), ROAMING_ALL);
             assertEquals(bucket.getDefaultNetworkStatus(), DEFAULT_NETWORK_ALL);
             setAppOpsMode(AppOpsManager.OPSTR_GET_USAGE_STATS, "deny");
             try {
@@ -412,6 +430,7 @@ public class NetworkStatsManagerTest extends InstrumentationTestCase {
             assertEquals(bucket.getState(), STATE_ALL);
             assertEquals(bucket.getUid(), UID_ALL);
             assertEquals(bucket.getMetered(), METERED_ALL);
+            assertEquals(bucket.getRoaming(), ROAMING_ALL);
             assertEquals(bucket.getDefaultNetworkStatus(), DEFAULT_NETWORK_ALL);
             setAppOpsMode(AppOpsManager.OPSTR_GET_USAGE_STATS, "deny");
             try {
@@ -451,15 +470,19 @@ public class NetworkStatsManagerTest extends InstrumentationTestCase {
                 long totalTxBytes = 0;
                 long totalRxBytes = 0;
                 boolean hasCorrectMetering = false;
+                boolean hasCorrectRoaming = false;
                 boolean hasCorrectDefaultStatus = false;
                 int expectedMetering = mNetworkInterfacesToTest[i].getMetered()
                         ? METERED_YES : METERED_NO;
+                int expectedRoaming = mNetworkInterfacesToTest[i].getRoaming()
+                        ? ROAMING_YES : ROAMING_NO;
                 int expectedDefaultStatus = mNetworkInterfacesToTest[i].getIsDefault()
                         ? DEFAULT_NETWORK_YES : DEFAULT_NETWORK_NO;
                 while (result.hasNextBucket()) {
                     assertTrue(result.getNextBucket(bucket));
                     assertTimestamps(bucket);
                     hasCorrectMetering |= bucket.getMetered() == expectedMetering;
+                    hasCorrectRoaming |= bucket.getRoaming() == expectedRoaming;
                     if (bucket.getUid() == Process.myUid()) {
                         totalTxPackets += bucket.getTxPackets();
                         totalRxPackets += bucket.getRxPackets();
@@ -472,6 +495,8 @@ public class NetworkStatsManagerTest extends InstrumentationTestCase {
                 assertFalse(result.getNextBucket(bucket));
                 assertTrue("Incorrect metering for NetworkType: "
                         + mNetworkInterfacesToTest[i].getNetworkType(), hasCorrectMetering);
+                assertTrue("Incorrect roaming for NetworkType: "
+                        + mNetworkInterfacesToTest[i].getNetworkType(), hasCorrectRoaming);
                 assertTrue("Incorrect isDefault for NetworkType: "
                         + mNetworkInterfacesToTest[i].getNetworkType(), hasCorrectDefaultStatus);
                 assertTrue("No Rx bytes usage for uid " + Process.myUid(), totalRxBytes > 0);
@@ -564,6 +589,7 @@ public class NetworkStatsManagerTest extends InstrumentationTestCase {
                     assertTimestamps(bucket);
                     assertEquals(bucket.getState(), STATE_ALL);
                     assertEquals(bucket.getMetered(), METERED_ALL);
+                    assertEquals(bucket.getRoaming(), ROAMING_ALL);
                     assertEquals(bucket.getDefaultNetworkStatus(), DEFAULT_NETWORK_ALL);
                     assertEquals(bucket.getUid(), Process.myUid());
                     totalTxPackets += bucket.getTxPackets();
@@ -617,6 +643,7 @@ public class NetworkStatsManagerTest extends InstrumentationTestCase {
                     assertTimestamps(bucket);
                     assertEquals(bucket.getState(), STATE_ALL);
                     assertEquals(bucket.getMetered(), METERED_ALL);
+                    assertEquals(bucket.getRoaming(), ROAMING_ALL);
                     assertEquals(bucket.getDefaultNetworkStatus(), DEFAULT_NETWORK_ALL);
                     assertEquals(bucket.getUid(), Process.myUid());
                     if (bucket.getTag() == NETWORK_TAG) {
@@ -838,6 +865,7 @@ public class NetworkStatsManagerTest extends InstrumentationTestCase {
             if (expectedTag != null) assertEquals(bucket.getTag(), (int) expectedTag);
             if (expectedState != null) assertEquals(bucket.getState(), (int) expectedState);
             assertEquals(bucket.getMetered(), METERED_ALL);
+            assertEquals(bucket.getRoaming(), ROAMING_ALL);
             assertEquals(bucket.getDefaultNetworkStatus(), DEFAULT_NETWORK_ALL);
             if (bucket.getUid() == Process.myUid()) {
                 totalTxPackets += bucket.getTxPackets();
