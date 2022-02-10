@@ -244,7 +244,7 @@ public final class NetworkAgentConfig implements Parcelable {
      * @return whether local traffic is excluded from the VPN network.
      * @hide
      */
-    public boolean getExcludeLocalRouteVpn() {
+    public boolean areLocalRoutesExcludedForVpn() {
         return excludeLocalRouteVpn;
     }
 
@@ -472,7 +472,7 @@ public final class NetworkAgentConfig implements Parcelable {
          */
         @NonNull
         @SystemApi(client = MODULE_LIBRARIES)
-        public Builder setExcludeLocalRoutesVpn(boolean excludeLocalRoutes) {
+        public Builder setLocalRoutesExcludedForVpn(boolean excludeLocalRoutes) {
             mConfig.excludeLocalRouteVpn = excludeLocalRoutes;
             return this;
         }
