@@ -16,6 +16,8 @@
 
 package com.android.server.nearby.util;
 
+import androidx.annotation.NonNull;
+
 import service.proto.Cache.ScanFastPairStoreItem;
 import service.proto.Cache.StoredDiscoveryItem;
 import service.proto.FastPairString.FastPairStrings;
@@ -34,9 +36,9 @@ public final class DataUtils {
      * Converts a {@link GetObservedDeviceResponse} to a {@link ScanFastPairStoreItem}.
      */
     public static ScanFastPairStoreItem toScanFastPairStoreItem(
-            GetObservedDeviceResponse observedDeviceResponse, String bleAddress) {
+            GetObservedDeviceResponse observedDeviceResponse, @NonNull String bleAddress) {
         Device device = observedDeviceResponse.getDevice();
-        ScanFastPairStoreItem item = ScanFastPairStoreItem.newBuilder()
+        return ScanFastPairStoreItem.newBuilder()
                 .setAddress(bleAddress)
                 .setActionUrl(device.getIntentUri())
                 .setDeviceName(device.getName())
@@ -45,7 +47,33 @@ public final class DataUtils {
                 .setAntiSpoofingPublicKey(device.getAntiSpoofingKeyPair().getPublicKey())
                 .setFastPairStrings(getFastPairStrings(observedDeviceResponse))
                 .build();
-        return item;
+    }
+
+    /**
+     * Prints readable string for a {@link FastPairStrings}
+     */
+    public static String toString(FastPairStrings fastPairStrings) {
+        return "FastPairStrings["
+                + "tapToPairWithAccount=" + fastPairStrings.getTapToPairWithAccount()
+                + ", tapToPairWithoutAccount=" + fastPairStrings.getTapToPairWithoutAccount()
+                + ", initialPairingDescription=" + fastPairStrings.getInitialPairingDescription()
+                + ", pairingFinishedCompanionAppInstalled="
+                + fastPairStrings.getPairingFinishedCompanionAppInstalled()
+                + ", pairingFinishedCompanionAppNotInstalled="
+                + fastPairStrings.getPairingFinishedCompanionAppNotInstalled()
+                + ", subsequentPairingDescription="
+                + fastPairStrings.getSubsequentPairingDescription()
+                + ", retroactivePairingDescription="
+                + fastPairStrings.getRetroactivePairingDescription()
+                + ", waitAppLaunchDescription=" + fastPairStrings.getWaitAppLaunchDescription()
+                + ", pairingFailDescription=" + fastPairStrings.getPairingFailDescription()
+                + ", assistantHalfSheetDescription="
+                + fastPairStrings.getAssistantHalfSheetDescription()
+                + ", assistantNotificationDescription="
+                + fastPairStrings.getAssistantNotificationDescription()
+                + ", fastPairTvConnectDeviceNoAccountDescription="
+                + fastPairStrings.getFastPairTvConnectDeviceNoAccountDescription()
+                + "]";
     }
 
     private static FastPairStrings getFastPairStrings(GetObservedDeviceResponse response) {
