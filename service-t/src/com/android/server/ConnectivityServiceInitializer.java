@@ -28,6 +28,7 @@ import com.android.modules.utils.build.SdkLevel;
 public final class ConnectivityServiceInitializer extends SystemService {
     private static final String TAG = ConnectivityServiceInitializer.class.getSimpleName();
     private final ConnectivityService mConnectivity;
+    private final IpSecService mIpSecService;
     private final NsdService mNsdService;
 
     public ConnectivityServiceInitializer(Context context) {
@@ -35,6 +36,7 @@ public final class ConnectivityServiceInitializer extends SystemService {
         // Load JNI libraries used by ConnectivityService and its dependencies
         System.loadLibrary("service-connectivity");
         mConnectivity = new ConnectivityService(context);
+        mIpSecService = createIpSecService(context);
         mNsdService = createNsdService(context);
     }
 
@@ -43,10 +45,25 @@ public final class ConnectivityServiceInitializer extends SystemService {
         Log.i(TAG, "Registering " + Context.CONNECTIVITY_SERVICE);
         publishBinderService(Context.CONNECTIVITY_SERVICE, mConnectivity,
                 /* allowIsolated= */ false);
+
+        if (mIpSecService != null) {
+            Log.i(TAG, "Registering " + Context.IPSEC_SERVICE);
+            publishBinderService(Context.IPSEC_SERVICE, mIpSecService, /* allowIsolated= */ false);
+        }
+
         if (mNsdService != null) {
             Log.i(TAG, "Registering " + Context.NSD_SERVICE);
             publishBinderService(Context.NSD_SERVICE, mNsdService, /* allowIsolated= */ false);
         }
+    }
+
+    /**
+     * Return IpSecService instance, or null if current SDK is lower than T.
+     */
+    private IpSecService createIpSecService(final Context context) {
+        if (!SdkLevel.isAtLeastT()) return null;
+
+        return new IpSecService(context);
     }
 
     /** Return NsdService instance or null if current SDK is lower than T */
