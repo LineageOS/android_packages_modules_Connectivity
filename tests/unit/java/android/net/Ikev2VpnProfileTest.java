@@ -270,11 +270,11 @@ public class Ikev2VpnProfileTest {
     public void testBuildExcludeLocalRoutesSet() throws Exception {
         final Ikev2VpnProfile.Builder builder = getBuilderWithDefaultOptions();
         builder.setAuthPsk(PSK_BYTES);
-        builder.setExcludeLocalRoutes(true);
+        builder.setLocalRoutesExcluded(true);
 
         final Ikev2VpnProfile profile = builder.build();
         assertNotNull(profile);
-        assertTrue(profile.getExcludeLocalRoutes());
+        assertTrue(profile.areLocalRoutesExcluded());
 
         builder.setBypassable(false);
         try {
