@@ -29,6 +29,11 @@ import static android.app.usage.NetworkStats.Bucket.STATE_DEFAULT;
 import static android.app.usage.NetworkStats.Bucket.STATE_FOREGROUND;
 import static android.app.usage.NetworkStats.Bucket.TAG_NONE;
 import static android.app.usage.NetworkStats.Bucket.UID_ALL;
+import static android.net.netstats.NetworkStatsDataMigrationUtils.PREFIX_UID;
+import static android.net.netstats.NetworkStatsDataMigrationUtils.PREFIX_UID_TAG;
+import static android.net.netstats.NetworkStatsDataMigrationUtils.PREFIX_XT;
+
+import static com.android.testutils.DevSdkIgnoreRuleKt.SC_V2;
 
 import android.app.AppOpsManager;
 import android.app.usage.NetworkStats;
@@ -40,7 +45,10 @@ import android.net.Network;
 import android.net.NetworkCapabilities;
 import android.net.NetworkInfo;
 import android.net.NetworkRequest;
+import android.net.NetworkStatsCollection;
+import android.net.NetworkStatsHistory;
 import android.net.TrafficStats;
+import android.net.netstats.NetworkStatsDataMigrationUtils;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.Process;
@@ -49,10 +57,12 @@ import android.os.SystemClock;
 import android.platform.test.annotations.AppModeFull;
 import android.telephony.TelephonyManager;
 import android.test.InstrumentationTestCase;
+import android.text.TextUtils;
 import android.util.Log;
 
 import com.android.compatibility.common.util.ShellIdentityUtils;
 import com.android.compatibility.common.util.SystemUtil;
+import com.android.testutils.DevSdkIgnoreRule;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -62,6 +72,10 @@ import java.net.URL;
 import java.net.UnknownHostException;
 import java.text.MessageFormat;
 import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.TimeUnit;
 
 public class NetworkStatsManagerTest extends InstrumentationTestCase {
     private static final String LOG_TAG = "NetworkStatsManagerTest";
@@ -825,6 +839,39 @@ public class NetworkStatsManagerTest extends InstrumentationTestCase {
             // storing files of >2MB in CTS.
 
             mNsm.unregisterUsageCallback(usageCallback);
+
+            mNsm.registerUsageCallback(mNetworkInterfacesToTest[i].getNetworkType(),
+                    getSubscriberId(i), THRESHOLD_BYTES, usageCallback);
+            mNsm.unregisterUsageCallback(usageCallback);
+        }
+    }
+
+    @AppModeFull
+    @DevSdkIgnoreRule.IgnoreUpTo(SC_V2)
+    public void testDataMigrationUtils() throws Exception {
+        final List<String> prefixes = List.of(PREFIX_UID, PREFIX_XT, PREFIX_UID_TAG);
+        for (final String prefix : prefixes) {
+            final long duration = TextUtils.equals(PREFIX_XT, prefix) ? TimeUnit.HOURS.toMillis(1)
+                    : TimeUnit.HOURS.toMillis(2);
+
+            final NetworkStatsCollection collection =
+                    NetworkStatsDataMigrationUtils.readPlatformCollection(prefix, duration);
+
+            final long now = System.currentTimeMillis();
+            final Set<Map.Entry<NetworkStatsCollection.Key, NetworkStatsHistory>> entries =
+                    collection.getEntries().entrySet();
+            for (final Map.Entry<NetworkStatsCollection.Key, NetworkStatsHistory> entry : entries) {
+                for (final NetworkStatsHistory.Entry historyEntry : entry.getValue().getEntries()) {
+                    // Verify all value fields are reasonable.
+                    assertTrue(historyEntry.getBucketStart() <= now);
+                    assertTrue(historyEntry.getActiveTime() <= duration);
+                    assertTrue(historyEntry.getRxBytes() >= 0);
+                    assertTrue(historyEntry.getRxPackets() >= 0);
+                    assertTrue(historyEntry.getTxBytes() >= 0);
+                    assertTrue(historyEntry.getTxPackets() >= 0);
+                    assertTrue(historyEntry.getOperations() >= 0);
+                }
+            }
         }
     }
 
