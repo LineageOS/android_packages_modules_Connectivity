@@ -125,17 +125,27 @@ inline int retrieveProgram(const char* pathname) {
 }
 
 inline int attachProgram(bpf_attach_type type, const BPF_FD_TYPE prog_fd,
-                         const BPF_FD_TYPE cg_fd) {
+                         const BPF_FD_TYPE cg_fd, uint32_t flags = 0) {
     return bpf(BPF_PROG_ATTACH, {
                                         .target_fd = BPF_FD_TO_U32(cg_fd),
                                         .attach_bpf_fd = BPF_FD_TO_U32(prog_fd),
                                         .attach_type = type,
+                                        .attach_flags = flags,
                                 });
 }
 
 inline int detachProgram(bpf_attach_type type, const BPF_FD_TYPE cg_fd) {
     return bpf(BPF_PROG_DETACH, {
                                         .target_fd = BPF_FD_TO_U32(cg_fd),
+                                        .attach_type = type,
+                                });
+}
+
+inline int detachSingleProgram(bpf_attach_type type, const BPF_FD_TYPE prog_fd,
+                               const BPF_FD_TYPE cg_fd) {
+    return bpf(BPF_PROG_DETACH, {
+                                        .target_fd = BPF_FD_TO_U32(cg_fd),
+                                        .attach_bpf_fd = BPF_FD_TO_U32(prog_fd),
                                         .attach_type = type,
                                 });
 }
