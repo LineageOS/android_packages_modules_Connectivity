@@ -1752,7 +1752,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
 
         // Watch for ingress rate limit changes.
         mSettingsObserver.observe(
-                Settings.Secure.getUriFor(
+                Settings.Global.getUriFor(
                         ConnectivitySettingsManager.INGRESS_RATE_LIMIT_BYTES_PER_SECOND),
                 EVENT_INGRESS_RATE_LIMIT_CHANGED);
     }
