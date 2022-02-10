@@ -291,30 +291,42 @@ class Utils {
         if (metadata == null) {
             return null;
         }
+
+        Rpcs.Device.Builder deviceBuilder = Rpcs.Device.newBuilder();
+        if (metadata.antiSpoofPublicKey != null) {
+            deviceBuilder.setAntiSpoofingKeyPair(Rpcs.AntiSpoofingKeyPair.newBuilder()
+                    .setPublicKey(ByteString.copyFrom(metadata.antiSpoofPublicKey))
+                    .build());
+        }
+        if (metadata.deviceMetadata != null) {
+            Rpcs.TrueWirelessHeadsetImages.Builder imagesBuilder =
+                    Rpcs.TrueWirelessHeadsetImages.newBuilder();
+            if (metadata.deviceMetadata.trueWirelessImageUrlLeftBud != null) {
+                imagesBuilder.setLeftBudUrl(metadata.deviceMetadata.trueWirelessImageUrlLeftBud);
+            }
+            if (metadata.deviceMetadata.trueWirelessImageUrlRightBud != null) {
+                imagesBuilder.setRightBudUrl(metadata.deviceMetadata.trueWirelessImageUrlRightBud);
+            }
+            if (metadata.deviceMetadata.trueWirelessImageUrlCase != null) {
+                imagesBuilder.setCaseUrl(metadata.deviceMetadata.trueWirelessImageUrlCase);
+            }
+            deviceBuilder.setTrueWirelessImages(imagesBuilder.build());
+            if (metadata.deviceMetadata.imageUrl != null) {
+                deviceBuilder.setImageUrl(metadata.deviceMetadata.imageUrl);
+            }
+            if (metadata.deviceMetadata.intentUri != null) {
+                deviceBuilder.setIntentUri(metadata.deviceMetadata.intentUri);
+            }
+            if (metadata.deviceMetadata.name != null) {
+                deviceBuilder.setName(metadata.deviceMetadata.name);
+            }
+            deviceBuilder.setBleTxPower(metadata.deviceMetadata.bleTxPower)
+                    .setTriggerDistance(metadata.deviceMetadata.triggerDistance)
+                    .setDeviceType(Rpcs.DeviceType.forNumber(metadata.deviceMetadata.deviceType));
+        }
+
         return Rpcs.GetObservedDeviceResponse.newBuilder()
-                .setDevice(Rpcs.Device.newBuilder()
-                        .setAntiSpoofingKeyPair(Rpcs.AntiSpoofingKeyPair.newBuilder()
-                                .setPublicKey(ByteString.copyFrom(metadata.antiSpoofPublicKey))
-                                .build())
-                        .setTrueWirelessImages(Rpcs.TrueWirelessHeadsetImages.newBuilder()
-                                .setLeftBudUrl(
-                                        metadata.deviceMetadata.trueWirelessImageUrlLeftBud)
-                                .setRightBudUrl(
-                                        metadata.deviceMetadata
-                                                .trueWirelessImageUrlRightBud)
-                                .setCaseUrl(
-                                        metadata.deviceMetadata
-                                                .trueWirelessImageUrlCase
-                                )
-                                .build())
-                        .setImageUrl(metadata.deviceMetadata.imageUrl)
-                        .setIntentUri(metadata.deviceMetadata.intentUri)
-                        .setName(metadata.deviceMetadata.name)
-                        .setBleTxPower(metadata.deviceMetadata.bleTxPower)
-                        .setTriggerDistance(metadata.deviceMetadata.triggerDistance)
-                        .setDeviceType(
-                                Rpcs.DeviceType.forNumber(metadata.deviceMetadata.deviceType))
-                        .build())
+                .setDevice(deviceBuilder.build())
                 .setImage(ByteString.copyFrom(metadata.deviceMetadata.image))
                 .setStrings(Rpcs.ObservedDeviceStrings.newBuilder()
                         .setAssistantSetupHalfSheet(metadata.deviceMetadata.assistantSetupHalfSheet)
