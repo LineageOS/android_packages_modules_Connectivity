@@ -40,7 +40,7 @@ public class DataElementTest {
 
     @Test
     public void testBuilder() {
-        DataElement dataElement = new DataElement.Builder().setElement(KEY, VALUE).build();
+        DataElement dataElement = new DataElement(KEY, VALUE);
 
         assertThat(dataElement.getKey()).isEqualTo(KEY);
         assertThat(Arrays.equals(dataElement.getValue(), VALUE)).isTrue();
@@ -48,7 +48,7 @@ public class DataElementTest {
 
     @Test
     public void testWriteParcel() {
-        DataElement dataElement = new DataElement.Builder().setElement(KEY, VALUE).build();
+        DataElement dataElement = new DataElement(KEY, VALUE);
 
         Parcel parcel = Parcel.obtain();
         dataElement.writeToParcel(parcel, 0);

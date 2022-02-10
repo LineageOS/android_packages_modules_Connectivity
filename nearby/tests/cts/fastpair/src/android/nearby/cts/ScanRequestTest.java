@@ -157,25 +157,23 @@ public class ScanRequestTest {
     @Test
     @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void testScanFilter() {
-        final byte[] secreteId = new byte[]{1, 2, 3, 4};
+        final byte[] secretId = new byte[]{1, 2, 3, 4};
         final byte[] authenticityKey = new byte[]{0, 1, 1, 1};
         final byte[] publicKey = new byte[]{1, 1, 2, 2};
         final byte[] encryptedMetadata = new byte[]{1, 2, 3, 4, 5};
         final byte[] metadataEncryptionKeyTag = new byte[]{1, 1, 3, 4, 5};
 
-        PublicCredential credential = new PublicCredential.Builder()
+        PublicCredential credential = new PublicCredential.Builder(secretId, authenticityKey)
                 .setIdentityType(IDENTITY_TYPE_PRIVATE)
-                .setSecretId(secreteId)
-                .setAuthenticityKey(authenticityKey)
                 .setEncryptedMetadata(encryptedMetadata)
                 .setPublicKey(publicKey)
-                .setMetaDataEncryptionKeyTag(metadataEncryptionKeyTag).build();
+                .setEncryptedMetadataKeyTag(metadataEncryptionKeyTag).build();
 
         final int rssi = -40;
         final int action = 123;
         PresenceScanFilter filter = new PresenceScanFilter.Builder()
                 .addCredential(credential)
-                .setRssiThreshold(rssi)
+                .setMaxPathLoss(rssi)
                 .addPresenceAction(action)
                 .build();
 
@@ -183,7 +181,7 @@ public class ScanRequestTest {
                 SCAN_TYPE_FAST_PAIR).addScanFilter(filter).build();
 
         assertThat(request.getScanFilters()).isNotEmpty();
-        assertThat(request.getScanFilters().get(0).getRssiThreshold()).isEqualTo(rssi);
+        assertThat(request.getScanFilters().get(0).getMaxPathLoss()).isEqualTo(rssi);
     }
 
     private static WorkSource getWorkSource() {

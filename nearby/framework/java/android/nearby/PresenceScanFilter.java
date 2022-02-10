@@ -16,7 +16,9 @@
 
 package android.nearby;
 
+import android.annotation.IntRange;
 import android.annotation.NonNull;
+import android.annotation.SystemApi;
 import android.os.Parcel;
 import android.os.Parcelable;
 import android.util.ArraySet;
@@ -25,6 +27,7 @@ import com.android.internal.util.Preconditions;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 
 /**
@@ -32,6 +35,7 @@ import java.util.Set;
  *
  * @hide
  */
+@SystemApi
 public final class PresenceScanFilter extends ScanFilter implements Parcelable {
 
     private final List<PublicCredential> mCredentials;
@@ -134,18 +138,16 @@ public final class PresenceScanFilter extends ScanFilter implements Parcelable {
 
     /**
      * Builder for {@link PresenceScanFilter}.
-     *
-     * @hide
      */
     public static final class Builder {
-        private int mRssiThreshold;
+        private int mMaxPathLoss;
         private final Set<PublicCredential> mCredentials;
         private final Set<Integer> mPresenceIdentities;
         private final Set<Integer> mPresenceActions;
         private final List<DataElement> mExtendedProperties;
 
         public Builder() {
-            mRssiThreshold = -100;
+            mMaxPathLoss = 127;
             mCredentials = new ArraySet<>();
             mPresenceIdentities = new ArraySet<>();
             mPresenceActions = new ArraySet<>();
@@ -153,29 +155,33 @@ public final class PresenceScanFilter extends ScanFilter implements Parcelable {
         }
 
         /**
-         * Sets the rssi threshold for the scan request.
+         * Sets the max path loss (in dBm) for the scan request. The path loss is the attenuation
+         * of radio energy between sender and receiver. Path loss here is defined as (TxPower -
+         * Rssi).
          */
         @NonNull
-        public Builder setRssiThreshold(int rssiThreshold) {
-            mRssiThreshold = rssiThreshold;
+        public Builder setMaxPathLoss(@IntRange(from = 0, to = 127) int maxPathLoss) {
+            mMaxPathLoss = maxPathLoss;
             return this;
         }
 
         /**
-         * Adds a list of credentials the scan filter is expected to match.
+         * Adds a credential the scan filter is expected to match.
          */
 
         @NonNull
         public Builder addCredential(@NonNull PublicCredential credential) {
+            Objects.requireNonNull(credential);
             mCredentials.add(credential);
             return this;
         }
 
         /**
-         * Adds a presence action for filtering.
+         * Adds a presence action for filtering, which is an action the discoverer could take
+         * when it receives the broadcast of a presence device.
          */
         @NonNull
-        public Builder addPresenceAction(int action) {
+        public Builder addPresenceAction(@IntRange(from = 1, to = 255) int action) {
             mPresenceActions.add(action);
             return this;
         }
@@ -185,6 +191,7 @@ public final class PresenceScanFilter extends ScanFilter implements Parcelable {
          */
         @NonNull
         public Builder addExtendedProperty(@NonNull DataElement dataElement) {
+            Objects.requireNonNull(dataElement);
             mExtendedProperties.add(dataElement);
             return this;
         }
@@ -195,7 +202,7 @@ public final class PresenceScanFilter extends ScanFilter implements Parcelable {
         @NonNull
         public PresenceScanFilter build() {
             Preconditions.checkState(!mCredentials.isEmpty(), "credentials cannot be empty");
-            return new PresenceScanFilter(mRssiThreshold,
+            return new PresenceScanFilter(mMaxPathLoss,
                     new ArrayList<>(mCredentials),
                     new ArrayList<>(mPresenceActions),
                     mExtendedProperties);

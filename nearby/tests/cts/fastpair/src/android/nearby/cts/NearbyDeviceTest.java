@@ -49,11 +49,11 @@ public class NearbyDeviceTest {
     @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void test_getMedium_fromChild() {
         FastPairDevice fastPairDevice = new FastPairDevice.Builder()
-                .setMedium(NearbyDevice.Medium.BLE)
+                .addMedium(NearbyDevice.Medium.BLE)
                 .setRssi(-60)
                 .build();
 
-        assertThat(fastPairDevice.getMedium()).isEqualTo(1);
+        assertThat(fastPairDevice.getMediums()).contains(1);
         assertThat(fastPairDevice.getRssi()).isEqualTo(-60);
     }
 }

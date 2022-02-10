@@ -34,6 +34,8 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
+import java.util.Collections;
+
 /**
  * Tests for {@link PresenceBroadcastRequest}.
  */
@@ -56,19 +58,15 @@ public class PresenceBroadcastRequestTest {
 
     @Before
     public void setUp() {
-        PrivateCredential credential = new PrivateCredential.Builder()
+        PrivateCredential credential = new PrivateCredential.Builder(SECRETE_ID, AUTHENTICITY_KEY)
                 .setIdentityType(IDENTITY_TYPE_PRIVATE)
-                .setSecretId(SECRETE_ID)
-                .setAuthenticityKey(AUTHENTICITY_KEY)
-                .setMetaDataEncryptionKey(METADATA_ENCRYPTION_KEY)
+                .setMetadataEncryptionKey(METADATA_ENCRYPTION_KEY)
                 .build();
-        DataElement element = new DataElement.Builder().setElement(KEY, VALUE).build();
-        mBuilder = new PresenceBroadcastRequest.Builder()
-                .setSalt(SALT)
+        DataElement element = new DataElement(KEY, VALUE);
+        mBuilder = new PresenceBroadcastRequest.Builder(Collections.singletonList(BLE_MEDIUM), SALT)
                 .setTxPower(TX_POWER)
                 .setCredential(credential)
                 .addAction(ACTION_ID)
-                .addMediums(BLE_MEDIUM)
                 .addExtendedProperty(element);
     }
 

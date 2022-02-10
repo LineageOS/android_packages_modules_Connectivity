@@ -19,6 +19,7 @@ package android.nearby;
 import android.annotation.IntDef;
 import android.annotation.NonNull;
 import android.annotation.SuppressLint;
+import android.annotation.SystemApi;
 import android.os.Parcel;
 import android.os.Parcelable;
 
@@ -32,6 +33,7 @@ import java.util.List;
  *
  * @hide
  */
+@SystemApi
 @SuppressLint("ParcelNotFinal")  // PresenceCredential constructor is not public
 public abstract class PresenceCredential implements Parcelable {
     /**
@@ -86,10 +88,10 @@ public abstract class PresenceCredential implements Parcelable {
     private final List<CredentialElement> mCredentialElements;
 
     PresenceCredential(@CredentialType int type, @IdentityType int identityType,
-            byte[] secreteId, byte[] authenticityKey, List<CredentialElement> credentialElements) {
+            byte[] secretId, byte[] authenticityKey, List<CredentialElement> credentialElements) {
         mType = type;
         mIdentityType = identityType;
-        mSecretId = secreteId;
+        mSecretId = secretId;
         mAuthenticityKey = authenticityKey;
         mCredentialElements = credentialElements;
     }

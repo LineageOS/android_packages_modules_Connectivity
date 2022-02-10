@@ -19,18 +19,22 @@ package android.nearby;
 import android.annotation.IntDef;
 import android.annotation.NonNull;
 import android.annotation.Nullable;
-import android.os.Bundle;
+import android.annotation.SystemApi;
 import android.os.Parcel;
 import android.os.Parcelable;
 
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
 
 /**
  * Represents a Presence device from nearby scans.
  *
  * @hide
  */
+@SystemApi
 public final class PresenceDevice extends NearbyDevice implements Parcelable {
 
     /** The type of presence device. */
@@ -69,18 +73,7 @@ public final class PresenceDevice extends NearbyDevice implements Parcelable {
     private final int mDeviceType;
     private final String mDeviceImageUrl;
     private final long mDiscoveryTimestampMillis;
-    private final Bundle mExtendedProperties;
-
-    /**
-     * Gets the name of the device, or {@code null} if not available.
-     *
-     * @hide
-     */
-    @Nullable
-    @Override
-    public String getName() {
-        return mName;
-    }
+    private final List<DataElement> mExtendedProperties;
 
     /**
      * The id of the device.
@@ -137,16 +130,15 @@ public final class PresenceDevice extends NearbyDevice implements Parcelable {
      * The extended properties of the device.
      */
     @NonNull
-    public Bundle getExtendedProperties() {
+    public List<DataElement> getExtendedProperties() {
         return mExtendedProperties;
     }
 
-    private PresenceDevice(String deviceName, int mMedium, int rssi, String deviceId,
+    private PresenceDevice(String deviceName, List<Integer> mMediums, int rssi, String deviceId,
             byte[] salt, byte[] secretId, byte[] encryptedIdentity, int deviceType,
             String deviceImageUrl, long discoveryTimestampMillis,
-            Bundle extendedProperties) {
-        // TODO (b/217462253): change medium to a set in NearbyDevice.
-        super(deviceName, mMedium, rssi);
+            List<DataElement> extendedProperties) {
+        super(deviceName, mMediums, rssi);
         mDeviceId = deviceId;
         mSalt = salt;
         mSecretId = secretId;
@@ -159,12 +151,17 @@ public final class PresenceDevice extends NearbyDevice implements Parcelable {
 
     @Override
     public void writeToParcel(@NonNull Parcel dest, int flags) {
-        dest.writeInt(mName == null ? 0 : 1);
-        if (mName != null) {
-            dest.writeString(mName);
+        String name = getName();
+        dest.writeInt(name == null ? 0 : 1);
+        if (name != null) {
+            dest.writeString(name);
         }
-        dest.writeInt(mMedium);
-        dest.writeInt(mRssi);
+        List<Integer> mediums = getMediums();
+        dest.writeInt(mediums.size());
+        for (int medium : mediums) {
+            dest.writeInt(medium);
+        }
+        dest.writeInt(getRssi());
         dest.writeString(mDeviceId);
         dest.writeInt(mDeviceType);
         dest.writeInt(mDeviceImageUrl == null ? 0 : 1);
@@ -172,7 +169,10 @@ public final class PresenceDevice extends NearbyDevice implements Parcelable {
             dest.writeString(mDeviceImageUrl);
         }
         dest.writeLong(mDiscoveryTimestampMillis);
-        dest.writeBundle(mExtendedProperties);
+        dest.writeInt(mExtendedProperties.size());
+        for (DataElement dataElement : mExtendedProperties) {
+            dest.writeParcelable(dataElement, 0);
+        }
     }
 
     @Override
@@ -188,7 +188,10 @@ public final class PresenceDevice extends NearbyDevice implements Parcelable {
             if (in.readInt() == 1) {
                 builder.setName(in.readString());
             }
-            builder.setMedium(in.readInt());
+            int size = in.readInt();
+            for (int i = 0; i < size; i++) {
+                builder.addMedium(in.readInt());
+            }
             builder.setRssi(in.readInt());
             builder.setDeviceId(in.readString());
             builder.setDeviceType(in.readInt());
@@ -196,9 +199,10 @@ public final class PresenceDevice extends NearbyDevice implements Parcelable {
                 builder.setDeviceImageUrl(in.readString());
             }
             builder.setDiscoveryTimestampMillis(in.readLong());
-            Bundle bundle = in.readBundle();
-            for (String key : bundle.keySet()) {
-                builder.addExtendedProperty(key, bundle.getCharSequence(key).toString());
+            int dataElementSize = in.readInt();
+            for (int i = 0; i < dataElementSize; i++) {
+                builder.addExtendedProperty(
+                        in.readParcelable(DataElement.class.getClassLoader(), DataElement.class));
             }
             return builder.build();
         }
@@ -211,16 +215,14 @@ public final class PresenceDevice extends NearbyDevice implements Parcelable {
 
     /**
      * Builder class for {@link PresenceDevice}.
-     *
-     * @hide
      */
     public static final class Builder {
 
-        private final Bundle mExtendedProperties;
+        private final List<DataElement> mExtendedProperties;
+        private final List<Integer> mMediums;
 
         private String mName;
         private int mRssi;
-        private int mMedium;
         private String mDeviceId;
         private byte[] mSalt;
         private byte[] mSecretId;
@@ -230,7 +232,8 @@ public final class PresenceDevice extends NearbyDevice implements Parcelable {
         private long mDiscoveryTimestampMillis;
 
         public Builder() {
-            mExtendedProperties = new Bundle();
+            mMediums = new ArrayList<>();
+            mExtendedProperties = new ArrayList<>();
             mRssi = -100;
         }
 
@@ -240,19 +243,19 @@ public final class PresenceDevice extends NearbyDevice implements Parcelable {
          * @param name Name of the Presence. Can be {@code null} if there is no name.
          */
         @NonNull
-        public Builder setName(@android.annotation.Nullable String name) {
+        public Builder setName(@Nullable String name) {
             mName = name;
             return this;
         }
 
         /**
-         * Sets the medium over which the Presence device is discovered.
+         * Adds the medium over which the Presence device is discovered.
          *
          * @param medium The {@link Medium} over which the device is discovered.
          */
         @NonNull
-        public Builder setMedium(@Medium int medium) {
-            mMedium = medium;
+        public Builder addMedium(@Medium int medium) {
+            mMediums.add(medium);
             return this;
         }
 
@@ -274,6 +277,7 @@ public final class PresenceDevice extends NearbyDevice implements Parcelable {
          */
         @NonNull
         public Builder setDeviceId(@NonNull String deviceId) {
+            Objects.requireNonNull(deviceId);
             mDeviceId = deviceId;
             return this;
         }
@@ -283,15 +287,17 @@ public final class PresenceDevice extends NearbyDevice implements Parcelable {
          */
         @NonNull
         public Builder setSalt(@NonNull byte[] salt) {
+            Objects.requireNonNull(salt);
             mSalt = salt;
             return this;
         }
 
         /**
-         * Sets the secret Id of the discovered Presence device.
+         * Sets the secret id of the discovered Presence device.
          */
         @NonNull
         public Builder setSecretId(@NonNull byte[] secretId) {
+            Objects.requireNonNull(secretId);
             mSecretId = secretId;
             return this;
         }
@@ -301,6 +307,7 @@ public final class PresenceDevice extends NearbyDevice implements Parcelable {
          */
         @NonNull
         public Builder setEncryptedIdentity(@NonNull byte[] encryptedIdentity) {
+            Objects.requireNonNull(encryptedIdentity);
             mEncryptedIdentity = encryptedIdentity;
             return this;
         }
@@ -311,7 +318,7 @@ public final class PresenceDevice extends NearbyDevice implements Parcelable {
          * @param deviceType Type of the Presence device.
          */
         @NonNull
-        public Builder setDeviceType(int deviceType) {
+        public Builder setDeviceType(@DeviceType int deviceType) {
             mDeviceType = deviceType;
             return this;
         }
@@ -323,7 +330,7 @@ public final class PresenceDevice extends NearbyDevice implements Parcelable {
          * @param deviceImageUrl Url of the image for the Presence device.
          */
         @NonNull
-        public Builder setDeviceImageUrl(@NonNull String deviceImageUrl) {
+        public Builder setDeviceImageUrl(@Nullable String deviceImageUrl) {
             mDeviceImageUrl = deviceImageUrl;
             return this;
         }
@@ -344,12 +351,12 @@ public final class PresenceDevice extends NearbyDevice implements Parcelable {
         /**
          * Adds an extended property of the discovered presence device.
          *
-         * @param key   Key of the extended property.
-         * @param value Value of the extended property,
+         * @param dataElement Data element of the extended property.
          */
         @NonNull
-        public Builder addExtendedProperty(@NonNull String key, @NonNull String value) {
-            mExtendedProperties.putCharSequence(key, value);
+        public Builder addExtendedProperty(@NonNull DataElement dataElement) {
+            Objects.requireNonNull(dataElement);
+            mExtendedProperties.add(dataElement);
             return this;
         }
 
@@ -358,7 +365,7 @@ public final class PresenceDevice extends NearbyDevice implements Parcelable {
          */
         @NonNull
         public PresenceDevice build() {
-            return new PresenceDevice(mName, mMedium, mRssi, mDeviceId,
+            return new PresenceDevice(mName, mMediums, mRssi, mDeviceId,
                     mSalt, mSecretId, mEncryptedIdentity,
                     mDeviceType,
                     mDeviceImageUrl,

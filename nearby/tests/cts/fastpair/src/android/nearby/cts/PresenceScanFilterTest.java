@@ -52,22 +52,21 @@ public class PresenceScanFilterTest {
 
 
     private PublicCredential mPublicCredential =
-            new PublicCredential.Builder()
+            new PublicCredential.Builder(SECRETE_ID, AUTHENTICITY_KEY)
                     .setIdentityType(IDENTITY_TYPE_PRIVATE)
-                    .setSecretId(SECRETE_ID).setAuthenticityKey(AUTHENTICITY_KEY)
                     .setPublicKey(PUBLIC_KEY).setEncryptedMetadata(ENCRYPTED_METADATA)
-                    .setMetaDataEncryptionKeyTag(METADATA_ENCRYPTION_KEY_TAG).build();
+                    .setEncryptedMetadataKeyTag(METADATA_ENCRYPTION_KEY_TAG).build();
     private PresenceScanFilter.Builder mBuilder = new PresenceScanFilter.Builder()
-            .setRssiThreshold(RSSI)
+            .setMaxPathLoss(RSSI)
             .addCredential(mPublicCredential)
             .addPresenceAction(ACTION)
-            .addExtendedProperty(new DataElement.Builder().setElement(KEY, VALUE).build());
+            .addExtendedProperty(new DataElement(KEY, VALUE));
 
     @Test
     public void testBuilder() {
         PresenceScanFilter filter = mBuilder.build();
 
-        assertThat(filter.getRssiThreshold()).isEqualTo(RSSI);
+        assertThat(filter.getMaxPathLoss()).isEqualTo(RSSI);
         assertThat(filter.getCredentials().get(0).getIdentityType()).isEqualTo(
                 IDENTITY_TYPE_PRIVATE);
         assertThat(filter.getPresenceActions()).containsExactly(ACTION);
@@ -84,7 +83,7 @@ public class PresenceScanFilterTest {
         parcel.recycle();
 
         assertThat(parcelFilter.getType()).isEqualTo(ScanRequest.SCAN_TYPE_NEARBY_PRESENCE);
-        assertThat(parcelFilter.getRssiThreshold()).isEqualTo(RSSI);
+        assertThat(parcelFilter.getMaxPathLoss()).isEqualTo(RSSI);
         assertThat(parcelFilter.getPresenceActions()).containsExactly(ACTION);
     }
 }

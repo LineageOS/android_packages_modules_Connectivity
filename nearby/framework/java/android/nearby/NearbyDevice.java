@@ -18,11 +18,13 @@ package android.nearby;
 
 import android.annotation.IntDef;
 import android.annotation.IntRange;
+import android.annotation.NonNull;
 import android.annotation.Nullable;
 import android.annotation.SystemApi;
 
 import com.android.internal.util.Preconditions;
 
+import java.util.List;
 import java.util.Objects;
 
 /**
@@ -34,27 +36,29 @@ import java.util.Objects;
 public abstract class NearbyDevice {
 
     @Nullable
-    final String mName;
+    private final String mName;
 
     @Medium
-    final int mMedium;
+    private final List<Integer> mMediums;
 
-    final int mRssi;
+    private final int mRssi;
 
     /**
      * Creates a new NearbyDevice.
      *
      * @param name Local device name. Can be {@code null} if there is no name.
-     * @param medium The {@link Medium} over which the device is discovered.
+     * @param mediums The {@link Medium}s over which the device is discovered.
      * @param rssi The received signal strength in dBm.
      * @hide
      */
-    public NearbyDevice(@Nullable String name, @Medium int medium, int rssi) {
-        Preconditions.checkState(isValidMedium(medium),
-                "Not supported medium: " + medium
-                        + ", scan medium must be one of NearbyDevice#Medium.");
+    public NearbyDevice(@Nullable String name, List<Integer> mediums, int rssi) {
+        for (int medium : mediums) {
+            Preconditions.checkState(isValidMedium(medium),
+                    "Not supported medium: " + medium
+                            + ", scan medium must be one of NearbyDevice#Medium.");
+        }
         mName = name;
-        mMedium = medium;
+        mMediums = mediums;
         mRssi = rssi;
     }
 
@@ -81,8 +85,6 @@ public abstract class NearbyDevice {
 
     /**
      * The name of the device, or null if not available.
-     *
-     * @hide
      */
     @Nullable
     public String getName() {
@@ -90,9 +92,9 @@ public abstract class NearbyDevice {
     }
 
     /** The medium over which this device was discovered. */
-    @Medium
-    public int getMedium() {
-        return mMedium;
+    @NonNull
+    @Medium public List<Integer> getMediums() {
+        return mMediums;
     }
 
     /**
@@ -110,8 +112,11 @@ public abstract class NearbyDevice {
         if (mName != null && !mName.isEmpty()) {
             stringBuilder.append("name=").append(mName).append(", ");
         }
-        stringBuilder.append("medium=").append(mediumToString(mMedium));
-        stringBuilder.append(" rssi=").append(mRssi);
+        stringBuilder.append("medium={");
+        for (int medium : mMediums) {
+            stringBuilder.append(mediumToString(medium));
+        }
+        stringBuilder.append("} rssi=").append(mRssi);
         stringBuilder.append("]");
         return stringBuilder.toString();
     }
@@ -121,7 +126,7 @@ public abstract class NearbyDevice {
         if (other instanceof NearbyDevice) {
             NearbyDevice otherDevice = (NearbyDevice) other;
             return Objects.equals(mName, otherDevice.mName)
-                    && mMedium == otherDevice.mMedium
+                    && mMediums == otherDevice.mMediums
                     && mRssi == otherDevice.mRssi;
         }
         return false;
@@ -129,7 +134,7 @@ public abstract class NearbyDevice {
 
     @Override
     public int hashCode() {
-        return Objects.hash(mName, mMedium, mRssi);
+        return Objects.hash(mName, mMediums, mRssi);
     }
 
     /**
