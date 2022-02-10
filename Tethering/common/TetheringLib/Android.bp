@@ -27,6 +27,9 @@ java_sdk_library {
         // Using for test only
         "//cts/tests/netlegacy22.api",
         "//external/sl4a:__subpackages__",
+        "//frameworks/base/core/tests/bandwidthtests",
+        "//frameworks/base/core/tests/benchmarks",
+        "//frameworks/base/core/tests/utillib",
         "//frameworks/base/packages/Connectivity/tests:__subpackages__",
         "//frameworks/base/tests/vcn",
         "//frameworks/libs/net/common/testutils",
