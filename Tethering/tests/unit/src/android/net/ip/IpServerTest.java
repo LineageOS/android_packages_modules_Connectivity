@@ -101,11 +101,11 @@ import androidx.test.runner.AndroidJUnit4;
 
 import com.android.net.module.util.BpfMap;
 import com.android.net.module.util.NetworkStackConstants;
+import com.android.net.module.util.bpf.Tether4Key;
+import com.android.net.module.util.bpf.Tether4Value;
 import com.android.networkstack.tethering.BpfCoordinator;
 import com.android.networkstack.tethering.BpfCoordinator.Ipv6ForwardingRule;
 import com.android.networkstack.tethering.PrivateAddressCoordinator;
-import com.android.networkstack.tethering.Tether4Key;
-import com.android.networkstack.tethering.Tether4Value;
 import com.android.networkstack.tethering.Tether6Value;
 import com.android.networkstack.tethering.TetherDevKey;
 import com.android.networkstack.tethering.TetherDevValue;

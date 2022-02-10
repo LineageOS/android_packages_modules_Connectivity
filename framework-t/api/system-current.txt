@@ -115,6 +115,7 @@ package android.nearby {
     method @Nullable public String getInitialPairingDescription();
     method @Nullable public String getIntentUri();
     method @Nullable public String getLocale();
+    method @Nullable public String getName();
     method @Nullable public String getOpenCompanionAppDescription();
     method @Nullable public String getRetroactivePairingDescription();
     method @Nullable public String getSubsequentPairingDescription();
@@ -153,6 +154,7 @@ package android.nearby {
     method @NonNull public android.nearby.FastPairDeviceMetadata.Builder setInitialPairingDescription(@Nullable String);
     method @NonNull public android.nearby.FastPairDeviceMetadata.Builder setIntentUri(@Nullable String);
     method @NonNull public android.nearby.FastPairDeviceMetadata.Builder setLocale(@Nullable String);
+    method @NonNull public android.nearby.FastPairDeviceMetadata.Builder setName(@Nullable String);
     method @NonNull public android.nearby.FastPairDeviceMetadata.Builder setOpenCompanionAppDescription(@Nullable String);
     method @NonNull public android.nearby.FastPairDeviceMetadata.Builder setRetroactivePairingDescription(@Nullable String);
     method @NonNull public android.nearby.FastPairDeviceMetadata.Builder setSubsequentPairingDescription(@Nullable String);
@@ -326,7 +328,7 @@ package android.nearby {
 
 package android.net {
 
-  public final class IpSecManager {
+  public class IpSecManager {
     method @RequiresPermission(android.Manifest.permission.MANAGE_IPSEC_TUNNELS) public void applyTunnelModeTransform(@NonNull android.net.IpSecManager.IpSecTunnelInterface, int, @NonNull android.net.IpSecTransform) throws java.io.IOException;
     method @NonNull @RequiresPermission(android.Manifest.permission.MANAGE_IPSEC_TUNNELS) public android.net.IpSecManager.IpSecTunnelInterface createIpSecTunnelInterface(@NonNull java.net.InetAddress, @NonNull java.net.InetAddress, @NonNull android.net.Network) throws java.io.IOException, android.net.IpSecManager.ResourceUnavailableException;
   }
