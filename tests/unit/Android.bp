@@ -27,7 +27,6 @@ java_defaults {
         "libbase",
         "libbinder",
         "libbpf_bcc",
-        "libbpf_android",
         "libc++",
         "libcgrouprc",
         "libcrypto",
