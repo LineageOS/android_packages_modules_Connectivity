@@ -196,7 +196,7 @@ public:
                 .acts = {
                     .attr = {
                         .nla_len = sizeof(mRequest.opt.acts),
-                        .nla_type = TCA_U32_ACT,
+                        .nla_type = TCA_MATCHALL_ACT,
                     },
                     .act1 = {
                         .attr = {
