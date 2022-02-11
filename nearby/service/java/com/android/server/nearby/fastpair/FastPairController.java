@@ -125,10 +125,7 @@ public class FastPairController {
                     @Override
                     public void run() {
                         DiscoveryItem item = null;
-                        if (itemId != null) {
-                            // api call to get Fast Pair related info
-                            item = mFastPairCacheManager.getDiscoveryItem(itemId);
-                        } else if (discoveryItem != null) {
+                        if (discoveryItem != null) {
                             try {
                                 item = new DiscoveryItem(mContext,
                                         Cache.StoredDiscoveryItem.parseFrom(discoveryItem));
@@ -136,6 +133,7 @@ public class FastPairController {
                                 Log.w(TAG,
                                         "Error parsing serialized discovery item with size "
                                                 + discoveryItem.length);
+                                return;
                             }
                         }
 
@@ -196,6 +194,7 @@ public class FastPairController {
             Log.d(TAG, "FastPair: fastpairing, skip pair request");
             return;
         }
+        mIsFastPairing = true;
         Log.d(TAG, "FastPair: start pair");
 
         // Hide all "tap to pair" notifications until after the flow completes.
@@ -213,7 +212,7 @@ public class FastPairController {
                         companionApp,
                         mFootprintsDeviceManager,
                         pairingProgressHandlerBase);
-        mIsFastPairing = true;
+        mIsFastPairing = false;
     }
 
     /** Fixes a companion app package name with extra spaces. */
@@ -247,26 +246,26 @@ public class FastPairController {
         FastPairManager.processBackgroundTask(() -> {
             Cache.StoredDiscoveryItem storedDiscoveryItem =
                     prepareStoredDiscoveryItemForFootprints(discoveryItem);
-            if (storedDiscoveryItem != null) {
-                byte[] hashValue =
-                        Hashing.sha256()
-                                .hashBytes(
-                                        concat(accountKey, BluetoothAddress.decode(publicAddress)))
-                                .asBytes();
-                FastPairUploadInfo uploadInfo =
-                        new FastPairUploadInfo(storedDiscoveryItem, ByteString.copyFrom(accountKey),
-                                ByteString.copyFrom(hashValue));
-                // account data place holder here
-                try {
-                    FastPairDataProvider.getInstance().optIn(new Account("empty", "empty"));
+            byte[] hashValue =
+                    Hashing.sha256()
+                            .hashBytes(
+                                    concat(accountKey, BluetoothAddress.decode(publicAddress)))
+                            .asBytes();
+            FastPairUploadInfo uploadInfo =
+                    new FastPairUploadInfo(storedDiscoveryItem, ByteString.copyFrom(accountKey),
+                            ByteString.copyFrom(hashValue));
+            // account data place holder here
+            try {
+                List<Account> accountList =
+                        FastPairDataProvider.getInstance().loadFastPairEligibleAccounts();
+                if (accountList.size() > 0) {
+                    FastPairDataProvider.getInstance().optIn(accountList.get(0));
                     FastPairDataProvider.getInstance().upload(
-                            new Account("empty", "empty"), uploadInfo);
-                } catch (IllegalStateException e) {
-                    Log.e(TAG, "OEM does not construct fast pair data proxy correctly");
+                            accountList.get(0), uploadInfo);
                 }
-
+            } catch (IllegalStateException e) {
+                Log.e(TAG, "OEM does not construct fast pair data proxy correctly");
             }
-
         });
     }
 

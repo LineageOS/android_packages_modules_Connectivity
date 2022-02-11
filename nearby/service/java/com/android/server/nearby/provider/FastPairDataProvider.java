@@ -109,6 +109,7 @@ public class FastPairDataProvider {
             requestParcel.account = account;
             requestParcel.requestType = FastPairDataProviderBase.MANAGE_REQUEST_ADD;
             mProxyFastPairDataProvider.manageFastPairAccount(requestParcel);
+            return;
         }
         throw new IllegalStateException("No ProxyFastPairDataProvider yet constructed");
     }
@@ -128,6 +129,7 @@ public class FastPairDataProvider {
                     Utils.convertFastPairUploadInfoToFastPairAccountKeyDeviceMetadata(
                             uploadInfo);
             mProxyFastPairDataProvider.manageFastPairAccountDevice(requestParcel);
+            return;
         }
         throw new IllegalStateException("No ProxyFastPairDataProvider yet constructed");
     }

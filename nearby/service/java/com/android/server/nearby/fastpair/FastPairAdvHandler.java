@@ -86,12 +86,19 @@ public class FastPairAdvHandler {
 
         } else {
             // Start to process bloom filter
-            List<Account> accountList =
-                    FastPairDataProvider.getInstance().loadFastPairEligibleAccounts();
-            byte[] bloomFilterByteArray = FastPairDecoder.getBloomFilter(fastPairDevice.getData());
-            byte[] bloomFilterSalt = FastPairDecoder.getBloomFilterSalt(fastPairDevice.getData());
-            for (Account account : accountList) {
-                try {
+            try {
+                List<Account> accountList =
+                        FastPairDataProvider.getInstance().loadFastPairEligibleAccounts();
+                Log.d(TAG, "account list size" + accountList.size());
+                byte[] bloomFilterByteArray = FastPairDecoder
+                        .getBloomFilter(fastPairDevice.getData());
+                byte[] bloomFilterSalt = FastPairDecoder
+                        .getBloomFilterSalt(fastPairDevice.getData());
+                if (bloomFilterByteArray == null || bloomFilterByteArray.length == 0) {
+                    Log.d(TAG, "bloom filter byte size is 0");
+                    return;
+                }
+                for (Account account : accountList) {
                     List<Data.FastPairDeviceWithAccountKey> listDevices =
                             FastPairDataProvider.getInstance().loadFastPairDevicesWithAccountKey(
                                     account);
@@ -100,14 +107,15 @@ public class FastPairAdvHandler {
                                     new BloomFilter(bloomFilterByteArray,
                                             new FastPairBloomFilterHasher()), bloomFilterSalt);
                     if (recognizedDevice != null) {
-                        Log.d(TAG, "find matched device show notification to remind user to pair");
+                        Log.d(TAG, "find matched device show notification to remind"
+                                + " user to pair");
                         return;
                     }
-                } catch (IllegalStateException e) {
-                    Log.e(TAG, "OEM does not construct fast pair data proxy correctly");
                 }
-
+            } catch (IllegalStateException e) {
+                Log.e(TAG, "OEM does not construct fast pair data proxy correctly");
             }
+
         }
     }
 
