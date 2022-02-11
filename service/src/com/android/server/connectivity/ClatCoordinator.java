@@ -67,6 +67,7 @@ public class ClatCoordinator {
 
     private static final int INVALID_IFINDEX = 0;
     private static final int INVALID_PID = 0;
+    private static final long INVALID_COOKIE = 0;
 
     @NonNull
     private final INetd mNetd;
@@ -81,6 +82,7 @@ public class ClatCoordinator {
     @Nullable
     private String mXlatLocalAddress6 = null;
     private int mPid = INVALID_PID;
+    private long mCookie = INVALID_COOKIE;
 
     @VisibleForTesting
     abstract static class Dependencies {
@@ -184,6 +186,13 @@ public class ClatCoordinator {
         public void stopClatd(String iface, String pfx96, String v4, String v6, int pid)
                 throws IOException {
             native_stopClatd(iface, pfx96, v4, v6, pid);
+        }
+
+        /**
+         * Tag socket as clat.
+         */
+        public long tagSocketAsClat(@NonNull FileDescriptor sock) throws IOException {
+            return native_tagSocketAsClat(sock);
         }
     }
 
@@ -335,6 +344,17 @@ public class ClatCoordinator {
             throw new IOException("add anycast sockopt failed: " + e);
         }
 
+        // Tag socket as AID_CLAT to avoid duplicated CLAT data usage accounting.
+        long cookie;
+        try {
+            cookie = mDeps.tagSocketAsClat(writeSock6.getFileDescriptor());
+        } catch (IOException e) {
+            tunFd.close();
+            readSock6.close();
+            writeSock6.close();
+            throw new IOException("tag raw socket failed: " + e);
+        }
+
         // Update our packet socket filter to reflect the new 464xlat IP address.
         try {
             mDeps.configurePacketSocket(readSock6.getFileDescriptor(), v6, ifaceIndex);
@@ -353,7 +373,9 @@ public class ClatCoordinator {
             mNat64Prefix = pfx96;
             mXlatLocalAddress4 = v4;
             mXlatLocalAddress6 = v6;
+            mCookie = cookie;
         } catch (IOException e) {
+            // TODO: untag socket.
             throw new IOException("Error start clatd on " + iface + ": " + e);
         } finally {
             tunFd.close();
@@ -403,4 +425,5 @@ public class ClatCoordinator {
             throws IOException;
     private static native void native_stopClatd(String iface, String pfx96, String v4, String v6,
             int pid) throws IOException;
+    private static native long native_tagSocketAsClat(FileDescriptor sock) throws IOException;
 }

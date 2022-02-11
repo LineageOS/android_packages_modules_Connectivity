@@ -82,6 +82,7 @@ public class ClatCoordinatorTest {
     private static final int TUN_FD = 534;
     private static final int RAW_SOCK_FD = 535;
     private static final int PACKET_SOCK_FD = 536;
+    private static final long RAW_SOCK_COOKIE = 27149;
     private static final ParcelFileDescriptor TUN_PFD = new ParcelFileDescriptor(
             new FileDescriptor());
     private static final ParcelFileDescriptor RAW_SOCK_PFD = new ParcelFileDescriptor(
@@ -258,11 +259,24 @@ public class ClatCoordinatorTest {
         /**
          * Stop clatd.
          */
+        @Override
         public void stopClatd(@NonNull String iface, @NonNull String pfx96, @NonNull String v4,
                 @NonNull String v6, int pid) throws IOException {
             if (pid == -1) {
                 fail("unsupported arg: " + pid);
             }
+        }
+
+        /**
+         * Tag socket as clat.
+         */
+        @Override
+        public long tagSocketAsClat(@NonNull FileDescriptor sock) throws IOException {
+            if (Objects.equals(RAW_SOCK_PFD.getFileDescriptor(), sock)) {
+                return RAW_SOCK_COOKIE;
+            }
+            fail("unsupported arg: " + sock);
+            return 0;
         }
     };
 
@@ -326,6 +340,8 @@ public class ClatCoordinatorTest {
         inOrder.verify(mDeps).addAnycastSetsockopt(
                 argThat(fd -> Objects.equals(RAW_SOCK_PFD.getFileDescriptor(), fd)),
                 eq(XLAT_LOCAL_IPV6ADDR_STRING), eq(BASE_IFINDEX));
+        inOrder.verify(mDeps).tagSocketAsClat(
+                argThat(fd -> Objects.equals(RAW_SOCK_PFD.getFileDescriptor(), fd)));
         inOrder.verify(mDeps).configurePacketSocket(
                 argThat(fd -> Objects.equals(PACKET_SOCK_PFD.getFileDescriptor(), fd)),
                 eq(XLAT_LOCAL_IPV6ADDR_STRING), eq(BASE_IFINDEX));
