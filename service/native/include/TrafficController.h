@@ -40,18 +40,6 @@ class TrafficController {
      */
     netdutils::Status start();
 
-    int setCounterSet(int counterSetNum, uid_t uid, uid_t callingUid) EXCLUDES(mMutex);
-
-    /*
-     * When deleting a tag data, the qtaguid module will grab the spinlock of each
-     * related rb_tree one by one and delete the tag information, counterSet
-     * information, iface stats information and uid stats information one by one.
-     * The new eBPF implementation is done similiarly by removing the entry on
-     * each map one by one. And deleting processes are also protected by the
-     * spinlock of the map. So no additional lock is required.
-     */
-    int deleteTagData(uint32_t tag, uid_t uid, uid_t callingUid) EXCLUDES(mMutex);
-
     /*
      * Swap the stats map config from current active stats map to the idle one.
      */

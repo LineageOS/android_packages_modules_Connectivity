@@ -55,7 +55,6 @@ constexpr uid_t TEST_UID2 = 54321;
 constexpr uid_t TEST_UID3 = 98765;
 constexpr uint32_t TEST_TAG = 42;
 constexpr uint32_t TEST_COUNTERSET = 1;
-constexpr uint32_t DEFAULT_COUNTERSET = 0;
 
 #define ASSERT_VALID(x) ASSERT_TRUE((x).isValid())
 
@@ -64,7 +63,6 @@ class TrafficControllerTest : public ::testing::Test {
     TrafficControllerTest() {}
     TrafficController mTc;
     BpfMap<uint64_t, UidTagValue> mFakeCookieTagMap;
-    BpfMap<uint32_t, uint8_t> mFakeUidCounterSetMap;
     BpfMap<uint32_t, StatsValue> mFakeAppUidStatsMap;
     BpfMap<StatsKey, StatsValue> mFakeStatsMapA;
     BpfMap<uint32_t, uint8_t> mFakeConfigurationMap;
@@ -78,10 +76,6 @@ class TrafficControllerTest : public ::testing::Test {
         mFakeCookieTagMap.reset(createMap(BPF_MAP_TYPE_HASH, sizeof(uint64_t), sizeof(UidTagValue),
                                           TEST_MAP_SIZE, 0));
         ASSERT_VALID(mFakeCookieTagMap);
-
-        mFakeUidCounterSetMap.reset(
-            createMap(BPF_MAP_TYPE_HASH, sizeof(uint32_t), sizeof(uint8_t), TEST_MAP_SIZE, 0));
-        ASSERT_VALID(mFakeUidCounterSetMap);
 
         mFakeAppUidStatsMap.reset(createMap(BPF_MAP_TYPE_HASH, sizeof(uint32_t), sizeof(StatsValue),
                                             TEST_MAP_SIZE, 0));
@@ -104,8 +98,6 @@ class TrafficControllerTest : public ::testing::Test {
 
         mTc.mCookieTagMap.reset(dupFd(mFakeCookieTagMap.getMap()));
         ASSERT_VALID(mTc.mCookieTagMap);
-        mTc.mUidCounterSetMap.reset(dupFd(mFakeUidCounterSetMap.getMap()));
-        ASSERT_VALID(mTc.mUidCounterSetMap);
         mTc.mAppUidStatsMap.reset(dupFd(mFakeAppUidStatsMap.getMap()));
         ASSERT_VALID(mTc.mAppUidStatsMap);
         mTc.mStatsMapA.reset(dupFd(mFakeStatsMapA.getMap()));
@@ -132,8 +124,6 @@ class TrafficControllerTest : public ::testing::Test {
         EXPECT_RESULT_OK(mFakeCookieTagMap.writeValue(cookie, cookieMapkey, BPF_ANY));
         *key = {.uid = uid, .tag = tag, .counterSet = TEST_COUNTERSET, .ifaceIndex = 1};
         StatsValue statsMapValue = {.rxPackets = 1, .rxBytes = 100};
-        uint8_t counterSet = TEST_COUNTERSET;
-        EXPECT_RESULT_OK(mFakeUidCounterSetMap.writeValue(uid, counterSet, BPF_ANY));
         EXPECT_RESULT_OK(mFakeStatsMapA.writeValue(*key, statsMapValue, BPF_ANY));
         key->tag = 0;
         EXPECT_RESULT_OK(mFakeStatsMapA.writeValue(*key, statsMapValue, BPF_ANY));
@@ -259,9 +249,6 @@ class TrafficControllerTest : public ::testing::Test {
         EXPECT_RESULT_OK(cookieMapResult);
         EXPECT_EQ(uid, cookieMapResult.value().uid);
         EXPECT_EQ(tag, cookieMapResult.value().tag);
-        Result<uint8_t> counterSetResult = mFakeUidCounterSetMap.readValue(uid);
-        EXPECT_RESULT_OK(counterSetResult);
-        EXPECT_EQ(TEST_COUNTERSET, counterSetResult.value());
         Result<StatsValue> statsMapResult = mFakeStatsMapA.readValue(tagStatsMapKey);
         EXPECT_RESULT_OK(statsMapResult);
         EXPECT_EQ((uint64_t)1, statsMapResult.value().rxPackets);
@@ -288,157 +275,6 @@ class TrafficControllerTest : public ::testing::Test {
     }
 
 };
-
-TEST_F(TrafficControllerTest, TestSetCounterSet) {
-    uid_t callingUid = TEST_UID2;
-    addPrivilegedUid(callingUid);
-    ASSERT_EQ(0, mTc.setCounterSet(TEST_COUNTERSET, TEST_UID, callingUid));
-    uid_t uid = TEST_UID;
-    Result<uint8_t> counterSetResult = mFakeUidCounterSetMap.readValue(uid);
-    ASSERT_RESULT_OK(counterSetResult);
-    ASSERT_EQ(TEST_COUNTERSET, counterSetResult.value());
-    ASSERT_EQ(0, mTc.setCounterSet(DEFAULT_COUNTERSET, TEST_UID, callingUid));
-    ASSERT_FALSE(mFakeUidCounterSetMap.readValue(uid).ok());
-    expectMapEmpty(mFakeUidCounterSetMap);
-}
-
-TEST_F(TrafficControllerTest, TestSetCounterSetWithoutPermission) {
-    ASSERT_EQ(-EPERM, mTc.setCounterSet(TEST_COUNTERSET, TEST_UID, TEST_UID2));
-    uid_t uid = TEST_UID;
-    ASSERT_FALSE(mFakeUidCounterSetMap.readValue(uid).ok());
-    expectMapEmpty(mFakeUidCounterSetMap);
-}
-
-TEST_F(TrafficControllerTest, TestSetInvalidCounterSet) {
-    uid_t callingUid = TEST_UID2;
-    addPrivilegedUid(callingUid);
-    ASSERT_GT(0, mTc.setCounterSet(OVERFLOW_COUNTERSET, TEST_UID, callingUid));
-    uid_t uid = TEST_UID;
-    ASSERT_FALSE(mFakeUidCounterSetMap.readValue(uid).ok());
-    expectMapEmpty(mFakeUidCounterSetMap);
-}
-
-TEST_F(TrafficControllerTest, TestDeleteTagDataWithoutPermission) {
-    uint64_t cookie = 1;
-    uid_t uid = TEST_UID;
-    uint32_t tag = TEST_TAG;
-    StatsKey tagStatsMapKey;
-    populateFakeStats(cookie, uid, tag, &tagStatsMapKey);
-    ASSERT_EQ(-EPERM, mTc.deleteTagData(0, TEST_UID, TEST_UID2));
-
-    expectFakeStatsUnchanged(cookie, tag, uid, tagStatsMapKey);
-}
-
-TEST_F(TrafficControllerTest, TestDeleteTagData) {
-    uid_t callingUid = TEST_UID2;
-    addPrivilegedUid(callingUid);
-    uint64_t cookie = 1;
-    uid_t uid = TEST_UID;
-    uint32_t tag = TEST_TAG;
-    StatsKey tagStatsMapKey;
-    populateFakeStats(cookie, uid, tag, &tagStatsMapKey);
-    ASSERT_EQ(0, mTc.deleteTagData(TEST_TAG, TEST_UID, callingUid));
-    ASSERT_FALSE(mFakeCookieTagMap.readValue(cookie).ok());
-    Result<uint8_t> counterSetResult = mFakeUidCounterSetMap.readValue(uid);
-    ASSERT_RESULT_OK(counterSetResult);
-    ASSERT_EQ(TEST_COUNTERSET, counterSetResult.value());
-    ASSERT_FALSE(mFakeStatsMapA.readValue(tagStatsMapKey).ok());
-    tagStatsMapKey.tag = 0;
-    Result<StatsValue> statsMapResult = mFakeStatsMapA.readValue(tagStatsMapKey);
-    ASSERT_RESULT_OK(statsMapResult);
-    ASSERT_EQ((uint64_t)1, statsMapResult.value().rxPackets);
-    ASSERT_EQ((uint64_t)100, statsMapResult.value().rxBytes);
-    auto appStatsResult = mFakeAppUidStatsMap.readValue(TEST_UID);
-    ASSERT_RESULT_OK(appStatsResult);
-    ASSERT_EQ((uint64_t)1, appStatsResult.value().rxPackets);
-    ASSERT_EQ((uint64_t)100, appStatsResult.value().rxBytes);
-}
-
-TEST_F(TrafficControllerTest, TestDeleteAllUidData) {
-    uid_t callingUid = TEST_UID2;
-    addPrivilegedUid(callingUid);
-    uint64_t cookie = 1;
-    uid_t uid = TEST_UID;
-    uint32_t tag = TEST_TAG;
-    StatsKey tagStatsMapKey;
-    populateFakeStats(cookie, uid, tag, &tagStatsMapKey);
-    ASSERT_EQ(0, mTc.deleteTagData(0, TEST_UID, callingUid));
-    ASSERT_FALSE(mFakeCookieTagMap.readValue(cookie).ok());
-    ASSERT_FALSE(mFakeUidCounterSetMap.readValue(uid).ok());
-    ASSERT_FALSE(mFakeStatsMapA.readValue(tagStatsMapKey).ok());
-    tagStatsMapKey.tag = 0;
-    ASSERT_FALSE(mFakeStatsMapA.readValue(tagStatsMapKey).ok());
-    ASSERT_FALSE(mFakeAppUidStatsMap.readValue(TEST_UID).ok());
-}
-
-TEST_F(TrafficControllerTest, TestDeleteDataWithTwoTags) {
-    uid_t callingUid = TEST_UID2;
-    addPrivilegedUid(callingUid);
-    uint64_t cookie1 = 1;
-    uint64_t cookie2 = 2;
-    uid_t uid = TEST_UID;
-    uint32_t tag1 = TEST_TAG;
-    uint32_t tag2 = TEST_TAG + 1;
-    StatsKey tagStatsMapKey1;
-    StatsKey tagStatsMapKey2;
-    populateFakeStats(cookie1, uid, tag1, &tagStatsMapKey1);
-    populateFakeStats(cookie2, uid, tag2, &tagStatsMapKey2);
-    ASSERT_EQ(0, mTc.deleteTagData(TEST_TAG, TEST_UID, callingUid));
-    ASSERT_FALSE(mFakeCookieTagMap.readValue(cookie1).ok());
-    Result<UidTagValue> cookieMapResult = mFakeCookieTagMap.readValue(cookie2);
-    ASSERT_RESULT_OK(cookieMapResult);
-    ASSERT_EQ(TEST_UID, cookieMapResult.value().uid);
-    ASSERT_EQ(TEST_TAG + 1, cookieMapResult.value().tag);
-    Result<uint8_t> counterSetResult = mFakeUidCounterSetMap.readValue(uid);
-    ASSERT_RESULT_OK(counterSetResult);
-    ASSERT_EQ(TEST_COUNTERSET, counterSetResult.value());
-    ASSERT_FALSE(mFakeStatsMapA.readValue(tagStatsMapKey1).ok());
-    Result<StatsValue> statsMapResult = mFakeStatsMapA.readValue(tagStatsMapKey2);
-    ASSERT_RESULT_OK(statsMapResult);
-    ASSERT_EQ((uint64_t)1, statsMapResult.value().rxPackets);
-    ASSERT_EQ((uint64_t)100, statsMapResult.value().rxBytes);
-}
-
-TEST_F(TrafficControllerTest, TestDeleteDataWithTwoUids) {
-    uid_t callingUid = TEST_UID2;
-    addPrivilegedUid(callingUid);
-    uint64_t cookie1 = 1;
-    uint64_t cookie2 = 2;
-    uid_t uid1 = TEST_UID;
-    uid_t uid2 = TEST_UID + 1;
-    uint32_t tag = TEST_TAG;
-    StatsKey tagStatsMapKey1;
-    StatsKey tagStatsMapKey2;
-    populateFakeStats(cookie1, uid1, tag, &tagStatsMapKey1);
-    populateFakeStats(cookie2, uid2, tag, &tagStatsMapKey2);
-
-    // Delete the stats of one of the uid. Check if it is properly collected by
-    // removedStats.
-    ASSERT_EQ(0, mTc.deleteTagData(0, uid2, callingUid));
-    ASSERT_FALSE(mFakeCookieTagMap.readValue(cookie2).ok());
-    Result<uint8_t> counterSetResult = mFakeUidCounterSetMap.readValue(uid1);
-    ASSERT_RESULT_OK(counterSetResult);
-    ASSERT_EQ(TEST_COUNTERSET, counterSetResult.value());
-    ASSERT_FALSE(mFakeUidCounterSetMap.readValue(uid2).ok());
-    ASSERT_FALSE(mFakeStatsMapA.readValue(tagStatsMapKey2).ok());
-    tagStatsMapKey2.tag = 0;
-    ASSERT_FALSE(mFakeStatsMapA.readValue(tagStatsMapKey2).ok());
-    ASSERT_FALSE(mFakeAppUidStatsMap.readValue(uid2).ok());
-    tagStatsMapKey1.tag = 0;
-    Result<StatsValue> statsMapResult = mFakeStatsMapA.readValue(tagStatsMapKey1);
-    ASSERT_RESULT_OK(statsMapResult);
-    ASSERT_EQ((uint64_t)1, statsMapResult.value().rxPackets);
-    ASSERT_EQ((uint64_t)100, statsMapResult.value().rxBytes);
-    auto appStatsResult = mFakeAppUidStatsMap.readValue(uid1);
-    ASSERT_RESULT_OK(appStatsResult);
-    ASSERT_EQ((uint64_t)1, appStatsResult.value().rxPackets);
-    ASSERT_EQ((uint64_t)100, appStatsResult.value().rxBytes);
-
-    // Delete the stats of the other uid.
-    ASSERT_EQ(0, mTc.deleteTagData(0, uid1, callingUid));
-    ASSERT_FALSE(mFakeStatsMapA.readValue(tagStatsMapKey1).ok());
-    ASSERT_FALSE(mFakeAppUidStatsMap.readValue(uid1).ok());
-}
 
 TEST_F(TrafficControllerTest, TestUpdateOwnerMapEntry) {
     uint32_t uid = TEST_UID;
