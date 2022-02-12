@@ -76,9 +76,14 @@ interface IConnectivityManager
     LinkProperties getActiveLinkProperties();
     LinkProperties getLinkPropertiesForType(int networkType);
     LinkProperties getLinkProperties(in Network network);
+    LinkProperties redactLinkPropertiesForPackage(in LinkProperties lp, int uid, String packageName,
+            String callingAttributionTag);
 
     NetworkCapabilities getNetworkCapabilities(in Network network, String callingPackageName,
             String callingAttributionTag);
+
+    NetworkCapabilities redactNetworkCapabilitiesForPackage(in NetworkCapabilities nc, int uid,
+            String callingPackageName, String callingAttributionTag);
 
     @UnsupportedAppUsage(maxTargetSdk = 30, trackingBug = 170729553)
     NetworkState[] getAllNetworkState();
