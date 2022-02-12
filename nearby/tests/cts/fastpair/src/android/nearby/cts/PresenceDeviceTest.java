@@ -46,6 +46,10 @@ public class PresenceDeviceTest {
     private static final String DEVICE_NAME = "testDevice";
     private static final int KEY = 1234;
     private static final byte[] VALUE = new byte[]{1, 1, 1, 1};
+    private static final byte[] SALT = new byte[]{2, 3};
+    private static final byte[] SECRET_ID = new byte[]{11, 13};
+    private static final byte[] ENCRYPTED_IDENTITY = new byte[]{1, 3, 5, 61};
+    private static final long DISCOVERY_MILLIS = 100L;
 
     @Test
     public void testBuilder() {
@@ -57,6 +61,10 @@ public class PresenceDeviceTest {
                 .setRssi(RSSI)
                 .addMedium(MEDIUM)
                 .setName(DEVICE_NAME)
+                .setDiscoveryTimestampMillis(DISCOVERY_MILLIS)
+                .setSalt(SALT)
+                .setSecretId(SECRET_ID)
+                .setEncryptedIdentity(ENCRYPTED_IDENTITY)
                 .build();
 
         assertThat(device.getDeviceType()).isEqualTo(DEVICE_TYPE);
@@ -68,6 +76,10 @@ public class PresenceDeviceTest {
         assertThat(device.getRssi()).isEqualTo(RSSI);
         assertThat(device.getMediums()).containsExactly(MEDIUM);
         assertThat(device.getName()).isEqualTo(DEVICE_NAME);
+        assertThat(Arrays.equals(device.getSalt(), SALT)).isTrue();
+        assertThat(Arrays.equals(device.getSecretId(), SECRET_ID)).isTrue();
+        assertThat(Arrays.equals(device.getEncryptedIdentity(), ENCRYPTED_IDENTITY)).isTrue();
+        assertThat(device.getDiscoveryTimestampMillis()).isEqualTo(DISCOVERY_MILLIS);
     }
 
     @Test

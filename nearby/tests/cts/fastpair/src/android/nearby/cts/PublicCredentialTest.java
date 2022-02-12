@@ -21,6 +21,7 @@ import static android.nearby.PresenceCredential.IDENTITY_TYPE_PRIVATE;
 
 import static com.google.common.truth.Truth.assertThat;
 
+import android.nearby.CredentialElement;
 import android.nearby.PresenceCredential;
 import android.nearby.PublicCredential;
 import android.os.Build;
@@ -47,12 +48,15 @@ public class PublicCredentialTest {
     private static final byte[] PUBLIC_KEY = new byte[]{1, 1, 2, 2};
     private static final byte[] ENCRYPTED_METADATA = new byte[]{1, 2, 3, 4, 5};
     private static final byte[] METADATA_ENCRYPTION_KEY_TAG = new byte[]{1, 1, 3, 4, 5};
+    private static final String KEY = "KEY";
+    private static final byte[] VALUE = new byte[]{1, 2, 3, 4, 5};
 
     private PublicCredential.Builder mBuilder;
 
     @Before
     public void setUp() {
         mBuilder = new PublicCredential.Builder(SECRETE_ID, AUTHENTICITY_KEY)
+                .addCredentialElement(new CredentialElement(KEY, VALUE))
                 .setIdentityType(IDENTITY_TYPE_PRIVATE)
                 .setPublicKey(PUBLIC_KEY).setEncryptedMetadata(ENCRYPTED_METADATA)
                 .setEncryptedMetadataKeyTag(METADATA_ENCRYPTION_KEY_TAG);
@@ -64,6 +68,7 @@ public class PublicCredentialTest {
 
         assertThat(credential.getType()).isEqualTo(CREDENTIAL_TYPE_PUBLIC);
         assertThat(credential.getIdentityType()).isEqualTo(IDENTITY_TYPE_PRIVATE);
+        assertThat(credential.getCredentialElements().get(0).getKey()).isEqualTo(KEY);
         assertThat(Arrays.equals(credential.getSecretId(), SECRETE_ID)).isTrue();
         assertThat(Arrays.equals(credential.getAuthenticityKey(), AUTHENTICITY_KEY)).isTrue();
         assertThat(Arrays.equals(credential.getPublicKey(), PUBLIC_KEY)).isTrue();

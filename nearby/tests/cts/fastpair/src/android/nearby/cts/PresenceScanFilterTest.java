@@ -70,6 +70,8 @@ public class PresenceScanFilterTest {
         assertThat(filter.getCredentials().get(0).getIdentityType()).isEqualTo(
                 IDENTITY_TYPE_PRIVATE);
         assertThat(filter.getPresenceActions()).containsExactly(ACTION);
+        assertThat(filter.getExtendedProperties().get(0).getKey()).isEqualTo(KEY);
+
     }
 
     @Test

@@ -41,6 +41,7 @@ import java.util.Arrays;
 @RunWith(AndroidJUnit4.class)
 @RequiresApi(Build.VERSION_CODES.TIRAMISU)
 public class PrivateCredentialTest {
+    private static final String DEVICE_NAME = "myDevice";
     private static final byte[] SECRETE_ID = new byte[]{1, 2, 3, 4};
     private static final byte[] AUTHENTICITY_KEY = new byte[]{0, 1, 1, 1};
     private static final String KEY = "SecreteId";
@@ -53,6 +54,7 @@ public class PrivateCredentialTest {
     public void setUp() {
         mBuilder = new PrivateCredential.Builder(SECRETE_ID, AUTHENTICITY_KEY)
                 .setIdentityType(IDENTITY_TYPE_PRIVATE)
+                .setDeviceName(DEVICE_NAME)
                 .setMetadataEncryptionKey(METADATA_ENCRYPTION_KEY)
                 .addCredentialElement(new CredentialElement(KEY, VALUE));
     }
@@ -63,6 +65,7 @@ public class PrivateCredentialTest {
 
         assertThat(credential.getType()).isEqualTo(CREDENTIAL_TYPE_PRIVATE);
         assertThat(credential.getIdentityType()).isEqualTo(IDENTITY_TYPE_PRIVATE);
+        assertThat(credential.getDeviceName()).isEqualTo(DEVICE_NAME);
         assertThat(Arrays.equals(credential.getSecretId(), SECRETE_ID)).isTrue();
         assertThat(Arrays.equals(credential.getAuthenticityKey(), AUTHENTICITY_KEY)).isTrue();
         assertThat(Arrays.equals(credential.getMetadataEncryptionKey(),

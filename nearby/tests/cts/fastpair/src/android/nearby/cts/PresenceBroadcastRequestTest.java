@@ -17,6 +17,7 @@
 package android.nearby.cts;
 
 import static android.nearby.BroadcastRequest.BROADCAST_TYPE_NEARBY_PRESENCE;
+import static android.nearby.BroadcastRequest.PRESENCE_VERSION_V0;
 import static android.nearby.PresenceCredential.IDENTITY_TYPE_PRIVATE;
 
 import static com.google.common.truth.Truth.assertThat;
@@ -34,6 +35,7 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
+import java.util.Arrays;
 import java.util.Collections;
 
 /**
@@ -43,6 +45,7 @@ import java.util.Collections;
 @RequiresApi(Build.VERSION_CODES.TIRAMISU)
 public class PresenceBroadcastRequestTest {
 
+    private static final int VERSION = PRESENCE_VERSION_V0;
     private static final int TX_POWER = 1;
     private static final byte[] SALT = new byte[]{1, 2};
     private static final int ACTION_ID = 123;
@@ -52,7 +55,6 @@ public class PresenceBroadcastRequestTest {
     private static final byte[] METADATA_ENCRYPTION_KEY = new byte[]{1, 1, 3, 4, 5};
     private static final int KEY = 1234;
     private static final byte[] VALUE = new byte[]{1, 1, 1, 1};
-
 
     private PresenceBroadcastRequest.Builder mBuilder;
 
@@ -65,6 +67,7 @@ public class PresenceBroadcastRequestTest {
         DataElement element = new DataElement(KEY, VALUE);
         mBuilder = new PresenceBroadcastRequest.Builder(Collections.singletonList(BLE_MEDIUM), SALT)
                 .setTxPower(TX_POWER)
+                .setVersion(VERSION)
                 .setCredential(credential)
                 .addAction(ACTION_ID)
                 .addExtendedProperty(element);
@@ -74,6 +77,8 @@ public class PresenceBroadcastRequestTest {
     public void testBuilder() {
         PresenceBroadcastRequest broadcastRequest = mBuilder.build();
 
+        assertThat(broadcastRequest.getVersion()).isEqualTo(VERSION);
+        assertThat(Arrays.equals(broadcastRequest.getSalt(), SALT)).isTrue();
         assertThat(broadcastRequest.getTxPower()).isEqualTo(TX_POWER);
         assertThat(broadcastRequest.getActions()).containsExactly(ACTION_ID);
         assertThat(broadcastRequest.getExtendedProperties().get(0).getKey()).isEqualTo(

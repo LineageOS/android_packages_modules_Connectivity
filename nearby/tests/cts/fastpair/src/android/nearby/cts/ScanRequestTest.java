@@ -48,6 +48,16 @@ public class ScanRequestTest {
     private static final int UID = 1001;
     private static final String APP_NAME = "android.nearby.tests";
 
+    @Test
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
+    public void testScanType() {
+        ScanRequest request = new ScanRequest.Builder()
+                .setScanType(SCAN_TYPE_NEARBY_PRESENCE)
+                .build();
+
+        assertThat(request.getScanType()).isEqualTo(SCAN_TYPE_NEARBY_PRESENCE);
+    }
+
     // Valid scan type must be set to one of ScanRequest#SCAN_TYPE_
     @Test(expected = IllegalStateException.class)
     @SdkSuppress(minSdkVersion = 32, codeName = "T")
