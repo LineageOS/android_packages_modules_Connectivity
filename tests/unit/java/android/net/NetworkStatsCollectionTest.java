@@ -84,6 +84,7 @@ public class NetworkStatsCollectionTest {
 
     private static final String TEST_FILE = "test.bin";
     private static final String TEST_IMSI = "310260000000000";
+    private static final int TEST_SUBID = 1;
 
     private static final long TIME_A = 1326088800000L; // UTC: Monday 9th January 2012 06:00:00 AM
     private static final long TIME_B = 1326110400000L; // UTC: Monday 9th January 2012 12:00:00 PM
@@ -210,7 +211,7 @@ public class NetworkStatsCollectionTest {
         final NetworkStats.Entry entry = new NetworkStats.Entry();
         final NetworkIdentitySet identSet = new NetworkIdentitySet();
         identSet.add(new NetworkIdentity(TYPE_MOBILE, TelephonyManager.NETWORK_TYPE_UNKNOWN,
-                TEST_IMSI, null, false, true, true, OEM_NONE));
+                TEST_IMSI, null, false, true, true, OEM_NONE, TEST_SUBID));
 
         int myUid = Process.myUid();
         int otherUidInSameUser = Process.myUid() + 1;
@@ -472,7 +473,7 @@ public class NetworkStatsCollectionTest {
         final NetworkStatsCollection large = new NetworkStatsCollection(HOUR_IN_MILLIS);
         final NetworkIdentitySet ident = new NetworkIdentitySet();
         ident.add(new NetworkIdentity(ConnectivityManager.TYPE_MOBILE, -1, TEST_IMSI, null,
-                false, true, true, OEM_NONE));
+                false, true, true, OEM_NONE, TEST_SUBID));
         large.recordData(ident, UID_ALL, SET_ALL, TAG_NONE, TIME_A, TIME_B,
                 new NetworkStats.Entry(12_730_893_164L, 1, 0, 0, 0));
 

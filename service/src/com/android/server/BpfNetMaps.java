@@ -273,32 +273,6 @@ public class BpfNetMaps {
         native_setPermissionForUids(permissions, uids);
     }
 
-    /**
-     * Set counter set for uid
-     *
-     * @param counterSet either SET_DEFAULT or SET_FOREGROUND
-     * @param uid        uid to foreground/background
-     * @throws ServiceSpecificException in case of failure, with an error code indicating the
-     *                                  cause of the failure.
-     */
-    public void setCounterSet(final int counterSet, final int uid) {
-        final int err = native_setCounterSet(counterSet, uid);
-        maybeThrow(err, "setCounterSet failed");
-    }
-
-    /**
-     * Reset Uid stats
-     *
-     * @param tag default 0
-     * @param uid given uid to be clear
-     * @throws ServiceSpecificException in case of failure, with an error code indicating the
-     *                                  cause of the failure.
-     */
-    public void deleteTagData(final int tag, final int uid) {
-        final int err = native_deleteTagData(tag, uid);
-        maybeThrow(err, "deleteTagData failed");
-    }
-
     private static native void native_init();
     private native int native_addNaughtyApp(int uid);
     private native int native_removeNaughtyApp(int uid);
@@ -311,6 +285,4 @@ public class BpfNetMaps {
     private native int native_removeUidInterfaceRules(int[] uids);
     private native int native_swapActiveStatsMap();
     private native void native_setPermissionForUids(int permissions, int[] uids);
-    private native int native_setCounterSet(int counterSet, int uid);
-    private native int native_deleteTagData(int tag, int uid);
 }

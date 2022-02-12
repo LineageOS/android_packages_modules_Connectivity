@@ -79,6 +79,7 @@ public class NetworkStatsObserversTest {
 
     private static final String IMSI_1 = "310004";
     private static final String IMSI_2 = "310260";
+    private static final int SUBID_1 = 1;
     private static final String TEST_SSID = "AndroidAP";
 
     private static NetworkTemplate sTemplateWifi = buildTemplateWifiWildcard();
@@ -226,7 +227,7 @@ public class NetworkStatsObserversTest {
         identSet.add(new NetworkIdentity(
                 TYPE_MOBILE, TelephonyManager.NETWORK_TYPE_UNKNOWN,
                 IMSI_1, null /* networkId */, false /* roaming */, true /* metered */,
-                true /* defaultNetwork */, OEM_NONE));
+                true /* defaultNetwork */, OEM_NONE, SUBID_1));
         return identSet;
     }
 
