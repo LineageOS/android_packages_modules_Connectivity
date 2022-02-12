@@ -26,6 +26,7 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.hardware.location.ContextHubManager;
 import android.nearby.INearbyManager;
 import android.nearby.IScanListener;
 import android.nearby.ScanRequest;
@@ -33,34 +34,42 @@ import android.util.Log;
 
 import com.android.server.nearby.common.locator.LocatorContextWrapper;
 import com.android.server.nearby.fastpair.FastPairManager;
+import com.android.server.nearby.injector.ContextHubManagerAdapter;
 import com.android.server.nearby.injector.Injector;
+import com.android.server.nearby.presence.ChreCommunication;
+import com.android.server.nearby.presence.PresenceManager;
 import com.android.server.nearby.provider.DiscoveryProviderManager;
 import com.android.server.nearby.provider.FastPairDataProvider;
 
-/**
- * Service implementing nearby functionality.
- */
+import java.util.concurrent.Executors;
+
+import service.proto.Blefilter;
+
+/** Service implementing nearby functionality. */
 public class NearbyService extends INearbyManager.Stub {
     public static final String TAG = "NearbyService";
 
     private final Context mContext;
     private final SystemInjector mSystemInjector;
     private final FastPairManager mFastPairManager;
-    private final BroadcastReceiver mBluetoothReceiver = new BroadcastReceiver() {
-        @Override
-        public void onReceive(Context context, Intent intent) {
-            int state = intent
-                    .getIntExtra(BluetoothAdapter.EXTRA_STATE, BluetoothAdapter.ERROR);
-            if (state == BluetoothAdapter.STATE_ON) {
-                if (mSystemInjector != null) {
-                    // Have to do this logic in listener. Even during PHASE_BOOT_COMPLETED
-                    // phase, BluetoothAdapter is not null, the BleScanner is null.
-                    Log.v(TAG, "Initiating BluetoothAdapter when Bluetooth is turned on.");
-                    mSystemInjector.initializeBluetoothAdapter();
+    private final PresenceManager mPresenceManager;
+    private final BroadcastReceiver mBluetoothReceiver =
+            new BroadcastReceiver() {
+                @Override
+                public void onReceive(Context context, Intent intent) {
+                    int state =
+                            intent.getIntExtra(
+                                    BluetoothAdapter.EXTRA_STATE, BluetoothAdapter.ERROR);
+                    if (state == BluetoothAdapter.STATE_ON) {
+                        if (mSystemInjector != null) {
+                            // Have to do this logic in listener. Even during PHASE_BOOT_COMPLETED
+                            // phase, BluetoothAdapter is not null, the BleScanner is null.
+                            Log.v(TAG, "Initiating BluetoothAdapter when Bluetooth is turned on.");
+                            mSystemInjector.initializeBluetoothAdapter();
+                        }
+                    }
                 }
-            }
-        }
-    };
+            };
     private DiscoveryProviderManager mProviderManager;
 
     public NearbyService(Context context) {
@@ -69,6 +78,19 @@ public class NearbyService extends INearbyManager.Stub {
         mProviderManager = new DiscoveryProviderManager(context, mSystemInjector);
         final LocatorContextWrapper lcw = new LocatorContextWrapper(context, null);
         mFastPairManager = new FastPairManager(lcw);
+        mPresenceManager =
+                new PresenceManager(
+                        mContext,
+                        (results) -> {
+                            // TODO(b/221082271): hooked with API codes.
+                            for (Blefilter.BleFilterResult result : results.getResultList()) {
+                                Log.i(
+                                        TAG,
+                                        String.format(
+                                                "received filter result with id: %d",
+                                                result.getId()));
+                            }
+                        });
     }
 
     @Override
@@ -84,7 +106,7 @@ public class NearbyService extends INearbyManager.Stub {
     /**
      * Called by the service initializer.
      *
-     * {@see com.android.server.SystemService#onBootPhase}.
+     * <p>{@see com.android.server.SystemService#onBootPhase}.
      */
     public void onBootPhase(int phase) {
         switch (phase) {
@@ -95,17 +117,22 @@ public class NearbyService extends INearbyManager.Stub {
             case PHASE_BOOT_COMPLETED:
                 // The nearby service must be functioning after this boot phase.
                 mSystemInjector.initializeBluetoothAdapter();
-                mContext.registerReceiver(mBluetoothReceiver,
+                mContext.registerReceiver(
+                        mBluetoothReceiver,
                         new IntentFilter(BluetoothAdapter.ACTION_STATE_CHANGED));
                 mFastPairManager.initiate();
+                mSystemInjector.initializeContextHubManagerAdapter();
+                mPresenceManager.initiate(
+                        new ChreCommunication(
+                                mSystemInjector, Executors.newSingleThreadExecutor()));
                 break;
         }
     }
 
     private static final class SystemInjector implements Injector {
         private final Context mContext;
-        @Nullable
-        private BluetoothAdapter mBluetoothAdapter;
+        @Nullable private BluetoothAdapter mBluetoothAdapter;
+        @Nullable private  ContextHubManagerAdapter mContextHubManagerAdapter;
 
         SystemInjector(Context context) {
             mContext = context;
@@ -115,6 +142,11 @@ public class NearbyService extends INearbyManager.Stub {
         @Nullable
         public BluetoothAdapter getBluetoothAdapter() {
             return mBluetoothAdapter;
+        }
+
+        @Override
+        public ContextHubManagerAdapter getContextHubManagerAdapter() {
+            return mContextHubManagerAdapter;
         }
 
         synchronized void initializeBluetoothAdapter() {
@@ -127,6 +159,17 @@ public class NearbyService extends INearbyManager.Stub {
             }
             mBluetoothAdapter = manager.getAdapter();
         }
-    }
 
+        synchronized void initializeContextHubManagerAdapter() {
+            if (mContextHubManagerAdapter != null) {
+                return;
+            }
+            ContextHubManager manager = mContext.getSystemService(ContextHubManager.class);
+            if (manager == null) {
+                return;
+            }
+            mContextHubManagerAdapter = new ContextHubManagerAdapter(manager);
+        }
+
+    }
 }

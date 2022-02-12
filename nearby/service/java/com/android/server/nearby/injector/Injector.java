@@ -19,14 +19,14 @@ package com.android.server.nearby.injector;
 import android.bluetooth.BluetoothAdapter;
 
 /**
- *  Nearby dependency injector. To be used for accessing various Nearby class instances and as a
- *  handle for mock injection.
+ * Nearby dependency injector. To be used for accessing various Nearby class instances and as a
+ * handle for mock injection.
  */
 public interface Injector {
 
-    /**
-     * Get the BluetoothAdapter for BleDiscoveryProvider to scan.
-     */
+    /** Get the BluetoothAdapter for BleDiscoveryProvider to scan. */
     BluetoothAdapter getBluetoothAdapter();
 
+    /** Get the ContextHubManagerAdapter for ChreDiscoveryProvider to scan. */
+    ContextHubManagerAdapter getContextHubManagerAdapter();
 }

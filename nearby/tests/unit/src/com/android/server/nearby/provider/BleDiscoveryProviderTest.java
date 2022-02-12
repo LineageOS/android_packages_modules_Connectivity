@@ -32,6 +32,7 @@ import android.content.Context;
 
 import androidx.test.platform.app.InstrumentationRegistry;
 
+import com.android.server.nearby.injector.ContextHubManagerAdapter;
 import com.android.server.nearby.injector.Injector;
 
 import org.junit.Before;
@@ -80,6 +81,11 @@ public final class BleDiscoveryProviderTest {
         @Override
         public BluetoothAdapter getBluetoothAdapter() {
             return mBluetoothAdapter;
+        }
+
+        @Override
+        public ContextHubManagerAdapter getContextHubManagerAdapter() {
+            return null;
         }
     }
 
