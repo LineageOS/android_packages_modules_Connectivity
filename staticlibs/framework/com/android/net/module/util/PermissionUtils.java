@@ -19,17 +19,21 @@ package com.android.net.module.util;
 import static android.Manifest.permission.ACCESS_NETWORK_STATE;
 import static android.Manifest.permission.CONNECTIVITY_USE_RESTRICTED_NETWORKS;
 import static android.Manifest.permission.NETWORK_STACK;
+import static android.content.pm.PackageInfo.REQUESTED_PERMISSION_GRANTED;
 import static android.content.pm.PackageManager.PERMISSION_GRANTED;
 import static android.net.NetworkStack.PERMISSION_MAINLINE_NETWORK_STACK;
 
 import android.annotation.NonNull;
 import android.annotation.Nullable;
 import android.content.Context;
+import android.content.pm.PackageInfo;
 import android.os.Binder;
 
 import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
 
 /**
  * Collection of permission utilities.
@@ -143,5 +147,26 @@ public final class PermissionUtils {
             }
             throw new UnsupportedOperationException(errorMessage);
         }
+    }
+
+    /**
+     * Get the list of granted permissions for a package info.
+     *
+     * PackageInfo contains the list of requested permissions, and their state (whether they
+     * were granted or not, in particular) as a parallel array. Most users care only about
+     * granted permissions. This method returns the list of them.
+     *
+     * @param packageInfo the package info for the relevant uid.
+     * @return the list of granted permissions.
+     */
+    public static List<String> getGrantedPermissions(final @NonNull PackageInfo packageInfo) {
+        if (null == packageInfo.requestedPermissions) return Collections.emptyList();
+        final ArrayList<String> result = new ArrayList<>(packageInfo.requestedPermissions.length);
+        for (int i = 0; i < packageInfo.requestedPermissions.length; ++i) {
+            if (0 != (REQUESTED_PERMISSION_GRANTED & packageInfo.requestedPermissionsFlags[i])) {
+                result.add(packageInfo.requestedPermissions[i]);
+            }
+        }
+        return result;
     }
 }
