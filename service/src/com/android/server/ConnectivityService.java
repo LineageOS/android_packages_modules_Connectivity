@@ -2164,6 +2164,19 @@ public class ConnectivityService extends IConnectivityManager.Stub
         }
     }
 
+    @Override
+    @Nullable
+    public LinkProperties redactLinkPropertiesForPackage(@NonNull LinkProperties lp, int uid,
+            @NonNull String packageName, @Nullable String callingAttributionTag) {
+        Objects.requireNonNull(packageName);
+        Objects.requireNonNull(lp);
+        enforceNetworkStackOrSettingsPermission();
+        if (!checkAccessPermission(-1 /* pid */, uid)) {
+            return null;
+        }
+        return linkPropertiesRestrictedForCallerPermissions(lp, -1 /* callerPid */, uid);
+    }
+
     private NetworkCapabilities getNetworkCapabilitiesInternal(Network network) {
         return getNetworkCapabilitiesInternal(getNetworkAgentInfoForNetwork(network));
     }
@@ -2187,13 +2200,34 @@ public class ConnectivityService extends IConnectivityManager.Stub
                 getCallingPid(), mDeps.getCallingUid(), callingPackageName, callingAttributionTag);
     }
 
+    @Override
+    public NetworkCapabilities redactNetworkCapabilitiesForPackage(@NonNull NetworkCapabilities nc,
+            int uid, @NonNull String packageName, @Nullable String callingAttributionTag) {
+        Objects.requireNonNull(nc);
+        Objects.requireNonNull(packageName);
+        enforceNetworkStackOrSettingsPermission();
+        if (!checkAccessPermission(-1 /* pid */, uid)) {
+            return null;
+        }
+        return createWithLocationInfoSanitizedIfNecessaryWhenParceled(
+                networkCapabilitiesRestrictedForCallerPermissions(nc, -1 /* callerPid */, uid),
+                true /* includeLocationSensitiveInfo */, -1 /* callingPid */, uid, packageName,
+                callingAttributionTag);
+    }
+
     @VisibleForTesting
     NetworkCapabilities networkCapabilitiesRestrictedForCallerPermissions(
             NetworkCapabilities nc, int callerPid, int callerUid) {
+        // Note : here it would be nice to check ACCESS_NETWORK_STATE and return null, but
+        // this would be expensive (one more permission check every time any NC callback is
+        // sent) and possibly dangerous : apps normally can't lose ACCESS_NETWORK_STATE, if
+        // it happens for some reason (e.g. the package is uninstalled while CS is trying to
+        // send the callback) it would crash the system server with NPE.
         final NetworkCapabilities newNc = new NetworkCapabilities(nc);
         if (!checkSettingsPermission(callerPid, callerUid)) {
             newNc.setUids(null);
             newNc.setSSID(null);
+            // TODO: Processes holding NETWORK_FACTORY should be able to see the underlying networks
             newNc.setUnderlyingNetworks(null);
         }
         if (newNc.getNetworkSpecifier() != null) {
@@ -2211,7 +2245,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
 
     /**
      * Wrapper used to cache the permission check results performed for the corresponding
-     * app. This avoid performing multiple permission checks for different fields in
+     * app. This avoids performing multiple permission checks for different fields in
      * NetworkCapabilities.
      * Note: This wrapper does not support any sort of invalidation and thus must not be
      * persistent or long-lived. It may only be used for the time necessary to
@@ -2339,6 +2373,8 @@ public class ConnectivityService extends IConnectivityManager.Stub
                 includeLocationSensitiveInfo);
         final NetworkCapabilities newNc = new NetworkCapabilities(nc, redactions);
         // Reset owner uid if not destined for the owner app.
+        // TODO : calling UID is redacted because apps should generally not know what UID is
+        // bringing up the VPN, but this should not apply to some very privileged apps like settings
         if (callingUid != nc.getOwnerUid()) {
             newNc.setOwnerUid(INVALID_UID);
             return newNc;
@@ -2364,9 +2400,15 @@ public class ConnectivityService extends IConnectivityManager.Stub
         return newNc;
     }
 
+    @NonNull
     private LinkProperties linkPropertiesRestrictedForCallerPermissions(
             LinkProperties lp, int callerPid, int callerUid) {
         if (lp == null) return new LinkProperties();
+        // Note : here it would be nice to check ACCESS_NETWORK_STATE and return null, but
+        // this would be expensive (one more permission check every time any LP callback is
+        // sent) and possibly dangerous : apps normally can't lose ACCESS_NETWORK_STATE, if
+        // it happens for some reason (e.g. the package is uninstalled while CS is trying to
+        // send the callback) it would crash the system server with NPE.
 
         // Only do a permission check if sanitization is needed, to avoid unnecessary binder calls.
         final boolean needsSanitization =
@@ -2735,6 +2777,11 @@ public class ConnectivityService extends IConnectivityManager.Stub
         mContext.enforceCallingOrSelfPermission(
                 android.Manifest.permission.ACCESS_NETWORK_STATE,
                 "ConnectivityService");
+    }
+
+    private boolean checkAccessPermission(int pid, int uid) {
+        return mContext.checkPermission(android.Manifest.permission.ACCESS_NETWORK_STATE, pid, uid)
+                == PERMISSION_GRANTED;
     }
 
     /**
