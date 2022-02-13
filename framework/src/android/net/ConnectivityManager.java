@@ -1625,16 +1625,45 @@ public class ConnectivityManager {
     }
 
     /**
-     * Get the {@link NetworkCapabilities} for the given {@link Network}.  This
-     * will return {@code null} if the network is unknown or if the |network| argument is null.
+     * Redact {@link LinkProperties} for a given package
      *
-     * This will remove any location sensitive data in {@link TransportInfo} embedded in
-     * {@link NetworkCapabilities#getTransportInfo()}. Some transport info instances like
-     * {@link android.net.wifi.WifiInfo} contain location sensitive information. Retrieving
-     * this location sensitive information (subject to app's location permissions) will be
-     * noted by system. To include any location sensitive data in {@link TransportInfo},
-     * use a {@link NetworkCallback} with
-     * {@link NetworkCallback#FLAG_INCLUDE_LOCATION_INFO} flag.
+     * Returns an instance of the given {@link LinkProperties} appropriately redacted to send to the
+     * given package, considering its permissions.
+     *
+     * @param lp A {@link LinkProperties} which will be redacted.
+     * @param uid The target uid.
+     * @param packageName The name of the package, for appops logging.
+     * @return A redacted {@link LinkProperties} which is appropriate to send to the given uid,
+     *         or null if the uid lacks the ACCESS_NETWORK_STATE permission.
+     * @hide
+     */
+    @RequiresPermission(anyOf = {
+            NetworkStack.PERMISSION_MAINLINE_NETWORK_STACK,
+            android.Manifest.permission.NETWORK_STACK,
+            android.Manifest.permission.NETWORK_SETTINGS})
+    @SystemApi(client = MODULE_LIBRARIES)
+    @Nullable
+    public LinkProperties redactLinkPropertiesForPackage(@NonNull LinkProperties lp, int uid,
+            @NonNull String packageName) {
+        try {
+            return mService.redactLinkPropertiesForPackage(
+                    lp, uid, packageName, getAttributionTag());
+        } catch (RemoteException e) {
+            throw e.rethrowFromSystemServer();
+        }
+    }
+
+    /**
+     * Get the {@link NetworkCapabilities} for the given {@link Network}, or null.
+     *
+     * This will remove any location sensitive data in the returned {@link NetworkCapabilities}.
+     * Some {@link TransportInfo} instances like {@link android.net.wifi.WifiInfo} contain location
+     * sensitive information. To retrieve this location sensitive information (subject to
+     * the caller's location permissions), use a {@link NetworkCallback} with the
+     * {@link NetworkCallback#FLAG_INCLUDE_LOCATION_INFO} flag instead.
+     *
+     * This method returns {@code null} if the network is unknown or if the |network| argument
+     * is null.
      *
      * @param network The {@link Network} object identifying the network in question.
      * @return The {@link NetworkCapabilities} for the network, or {@code null}.
@@ -1645,6 +1674,38 @@ public class ConnectivityManager {
         try {
             return mService.getNetworkCapabilities(
                     network, mContext.getOpPackageName(), getAttributionTag());
+        } catch (RemoteException e) {
+            throw e.rethrowFromSystemServer();
+        }
+    }
+
+    /**
+     * Redact {@link NetworkCapabilities} for a given package.
+     *
+     * Returns an instance of {@link NetworkCapabilities} that is appropriately redacted to send
+     * to the given package, considering its permissions. Calling this method will blame the UID for
+     * retrieving the device location if the passed capabilities contain location-sensitive
+     * information.
+     *
+     * @param nc A {@link NetworkCapabilities} instance which will be redacted.
+     * @param uid The target uid.
+     * @param packageName The name of the package, for appops logging.
+     * @return A redacted {@link NetworkCapabilities} which is appropriate to send to the given uid,
+     *         or null if the uid lacks the ACCESS_NETWORK_STATE permission.
+     * @hide
+     */
+    @RequiresPermission(anyOf = {
+            NetworkStack.PERMISSION_MAINLINE_NETWORK_STACK,
+            android.Manifest.permission.NETWORK_STACK,
+            android.Manifest.permission.NETWORK_SETTINGS})
+    @SystemApi(client = MODULE_LIBRARIES)
+    @Nullable
+    public NetworkCapabilities redactNetworkCapabilitiesForPackage(
+            @NonNull NetworkCapabilities nc,
+            int uid, @NonNull String packageName) {
+        try {
+            return mService.redactNetworkCapabilitiesForPackage(nc, uid, packageName,
+                    getAttributionTag());
         } catch (RemoteException e) {
             throw e.rethrowFromSystemServer();
         }
@@ -3547,7 +3608,20 @@ public class ConnectivityManager {
          * @hide
          */
         public static final int FLAG_NONE = 0;
+
         /**
+         * Inclusion of this flag means location-sensitive redaction requests keeping location info.
+         *
+         * Some objects like {@link NetworkCapabilities} may contain location-sensitive information.
+         * Prior to Android 12, this information is always returned to apps holding the appropriate
+         * permission, possibly noting that the app has used location.
+         * <p>In Android 12 and above, by default the sent objects do not contain any location
+         * information, even if the app holds the necessary permissions, and the system does not
+         * take note of location usage by the app. Apps can request that location information is
+         * included, in which case the system will check location permission and the location
+         * toggle state, and take note of location usage by the app if any such information is
+         * returned.
+         *
          * Use this flag to include any location sensitive data in {@link NetworkCapabilities} sent
          * via {@link #onCapabilitiesChanged(Network, NetworkCapabilities)}.
          * <p>
@@ -3564,8 +3638,7 @@ public class ConnectivityManager {
          * <li> Retrieving this location sensitive information (subject to app's location
          * permissions) will be noted by system. </li>
          * <li> Without this flag any {@link NetworkCapabilities} provided via the callback does
-         * not include location sensitive info.
-         * </p>
+         * not include location sensitive information.
          */
         // Note: Some existing fields which are location sensitive may still be included without
         // this flag if the app targets SDK < S (to maintain backwards compatibility).
