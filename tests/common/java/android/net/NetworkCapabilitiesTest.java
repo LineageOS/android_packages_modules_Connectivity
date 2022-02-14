@@ -49,6 +49,7 @@ import static android.net.NetworkCapabilities.REDACT_FOR_LOCAL_MAC_ADDRESS;
 import static android.net.NetworkCapabilities.REDACT_FOR_NETWORK_SETTINGS;
 import static android.net.NetworkCapabilities.SIGNAL_STRENGTH_UNSPECIFIED;
 import static android.net.NetworkCapabilities.TRANSPORT_CELLULAR;
+import static android.net.NetworkCapabilities.TRANSPORT_ETHERNET;
 import static android.net.NetworkCapabilities.TRANSPORT_TEST;
 import static android.net.NetworkCapabilities.TRANSPORT_USB;
 import static android.net.NetworkCapabilities.TRANSPORT_VPN;
@@ -727,25 +728,38 @@ public class NetworkCapabilitiesTest {
     @Test
     public void testSetNetworkSpecifierOnMultiTransportNc() {
         // Sequence 1: Transport + Transport + NetworkSpecifier
-        NetworkCapabilities nc1 = new NetworkCapabilities();
+        NetworkCapabilities.Builder nc1 = new NetworkCapabilities.Builder();
         nc1.addTransportType(TRANSPORT_CELLULAR).addTransportType(TRANSPORT_WIFI);
-        try {
-            nc1.setNetworkSpecifier(CompatUtil.makeEthernetNetworkSpecifier("eth0"));
-            fail("Cannot set NetworkSpecifier on a NetworkCapability with multiple transports!");
-        } catch (IllegalStateException expected) {
-            // empty
-        }
+        final NetworkSpecifier specifier = CompatUtil.makeEthernetNetworkSpecifier("eth0");
+        assertThrows("Cannot set NetworkSpecifier on a NetworkCapability with multiple transports!",
+                IllegalStateException.class,
+                () -> nc1.build().setNetworkSpecifier(specifier));
+        assertThrows("Cannot set NetworkSpecifier on a NetworkCapability with multiple transports!",
+                IllegalStateException.class,
+                () -> nc1.setNetworkSpecifier(specifier));
 
         // Sequence 2: Transport + NetworkSpecifier + Transport
-        NetworkCapabilities nc2 = new NetworkCapabilities();
-        nc2.addTransportType(TRANSPORT_CELLULAR).setNetworkSpecifier(
-                CompatUtil.makeEthernetNetworkSpecifier("testtap3"));
-        try {
-            nc2.addTransportType(TRANSPORT_WIFI);
-            fail("Cannot set a second TransportType of a network which has a NetworkSpecifier!");
-        } catch (IllegalStateException expected) {
-            // empty
-        }
+        NetworkCapabilities.Builder nc2 = new NetworkCapabilities.Builder();
+        nc2.addTransportType(TRANSPORT_CELLULAR).setNetworkSpecifier(specifier);
+
+        assertThrows("Cannot set a second TransportType of a network which has a NetworkSpecifier!",
+                IllegalStateException.class,
+                () -> nc2.build().addTransportType(TRANSPORT_WIFI));
+        assertThrows("Cannot set a second TransportType of a network which has a NetworkSpecifier!",
+                IllegalStateException.class,
+                () -> nc2.addTransportType(TRANSPORT_WIFI));
+    }
+
+    @Test @IgnoreUpTo(Build.VERSION_CODES.R) // New behavior in updatable NetworkCapabilities (S+)
+    public void testSetNetworkSpecifierOnTestMultiTransportNc() {
+        final NetworkSpecifier specifier = CompatUtil.makeEthernetNetworkSpecifier("eth0");
+        NetworkCapabilities nc = new NetworkCapabilities.Builder()
+                .addTransportType(TRANSPORT_TEST)
+                .addTransportType(TRANSPORT_ETHERNET)
+                .setNetworkSpecifier(specifier)
+                .build();
+        // Adding a specifier did not crash with 2 transports if one is TEST
+        assertEquals(specifier, nc.getNetworkSpecifier());
     }
 
     @Test
