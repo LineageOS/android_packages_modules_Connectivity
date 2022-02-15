@@ -90,7 +90,7 @@ public class FastPairDataProvider {
             FastPairAntispoofkeyDeviceMetadataRequestParcel requestParcel =
                     new FastPairAntispoofkeyDeviceMetadataRequestParcel();
             requestParcel.modelId = modelId;
-            return Utils.convertFastPairAntispoofkeyDeviceMetadataToGetObservedDeviceResponse(
+            return Utils.convertToGetObservedDeviceResponse(
                     mProxyFastPairDataProvider
                             .loadFastPairAntispoofkeyDeviceMetadata(requestParcel));
         }
@@ -126,8 +126,7 @@ public class FastPairDataProvider {
             requestParcel.account = account;
             requestParcel.requestType = FastPairDataProviderBase.MANAGE_REQUEST_ADD;
             requestParcel.accountKeyDeviceMetadata =
-                    Utils.convertFastPairUploadInfoToFastPairAccountKeyDeviceMetadata(
-                            uploadInfo);
+                    Utils.convertToFastPairAccountKeyDeviceMetadata(uploadInfo);
             mProxyFastPairDataProvider.manageFastPairAccountDevice(requestParcel);
             return;
         }
@@ -153,7 +152,7 @@ public class FastPairDataProvider {
             FastPairAccountDevicesMetadataRequestParcel requestParcel =
                     new FastPairAccountDevicesMetadataRequestParcel();
             requestParcel.account = account;
-            return Utils.convertFastPairAccountKeyDevicesMetadataToFastPairDevicesWithAccountKey(
+            return Utils.convertToFastPairDevicesWithAccountKey(
                     mProxyFastPairDataProvider.loadFastPairAccountDevicesMetadata(requestParcel));
         }
         throw new IllegalStateException("No ProxyFastPairDataProvider yet constructed");
@@ -168,7 +167,7 @@ public class FastPairDataProvider {
         if (mProxyFastPairDataProvider != null) {
             FastPairEligibleAccountsRequestParcel requestParcel =
                     new FastPairEligibleAccountsRequestParcel();
-            return Utils.convertFastPairEligibleAccountsToAccountList(
+            return Utils.convertToAccountList(
                     mProxyFastPairDataProvider.loadFastPairEligibleAccounts(requestParcel));
         }
         throw new IllegalStateException("No ProxyFastPairDataProvider yet constructed");
