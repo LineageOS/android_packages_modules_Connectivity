@@ -43,6 +43,7 @@ android_test {
         "platform-test-annotations",
         "service-nearby",
         "truth-prebuilt",
+        "Robolectric_all-target",
     ],
     test_suites: [
         "general-tests",
