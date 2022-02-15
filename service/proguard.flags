@@ -6,10 +6,11 @@
 -keep class com.android.net.** { *; }
 -keep class com.android.server.** { *; }
 
-# Prevent proguard from stripping out any nearby-service.
+# Prevent proguard from stripping out any nearby-service and fast-pair-lite-protos fields.
 # TODO: This could be optimized in the future to only keep the critical
 # entry points and then let proguard strip out any unused code within
-# the service.
+# the service. "com.android.server.nearby.service.proto" must be kept to prevent proguard
+# from stripping out any fast-pair-lite-protos fields.
 -keep class com.android.server.nearby.** { *; }
 
 # The lite proto runtime uses reflection to access fields based on the names in
