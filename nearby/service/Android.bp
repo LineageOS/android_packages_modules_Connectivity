@@ -20,6 +20,7 @@ filegroup {
     name: "nearby-service-srcs",
     srcs: [
         "java/**/*.java",
+        ":statslog-nearby-java-gen",
     ],
 }
 
@@ -53,6 +54,7 @@ java_library {
         "framework-bluetooth.stubs.module_lib", // TODO(b/215722418): Change to framework-bluetooth once fixed
         "error_prone_annotations",
         "framework-connectivity-tiramisu.impl",
+        "framework-statsd.stubs.module_lib",
     ],
     static_libs: [
         "androidx.annotation_annotation",
@@ -83,4 +85,13 @@ java_library {
     apex_available: [
         "com.android.tethering",
     ],
+}
+
+genrule {
+    name: "statslog-nearby-java-gen",
+    tools: ["stats-log-api-gen"],
+    cmd: "$(location stats-log-api-gen) --java $(out) --module nearby " +
+         " --javaPackage com.android.server.nearby.proto --javaClass NearbyStatsLog" +
+         " --minApiLevel 33",
+    out: ["com/android/server/nearby/proto/NearbyStatsLog.java"],
 }

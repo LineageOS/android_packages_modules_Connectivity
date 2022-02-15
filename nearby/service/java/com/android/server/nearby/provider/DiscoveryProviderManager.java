@@ -28,6 +28,7 @@ import android.util.Log;
 
 import com.android.internal.annotations.GuardedBy;
 import com.android.server.nearby.injector.Injector;
+import com.android.server.nearby.metrics.NearbyMetrics;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -59,6 +60,8 @@ public class DiscoveryProviderManager implements AbstractDiscoveryProvider.Liste
                     record.getScanListener().onDiscovered(
                             PrivacyFilter.filter(record.getScanRequest().getScanType(),
                                     nearbyDevice));
+                    NearbyMetrics.logScanDeviceDiscovered(
+                            record.hashCode(), record.getScanRequest(), nearbyDevice);
                 } catch (RemoteException e) {
                     Log.w(TAG, "DiscoveryProviderManager failed to report onDiscovered.", e);
                 }
@@ -89,8 +92,9 @@ public class DiscoveryProviderManager implements AbstractDiscoveryProvider.Liste
 
             startProviders(scanRequest);
 
-            mScanTypeScanListenerRecordMap.put(listenerBinder,
-                    new ScanListenerRecord(scanRequest, listener));
+            ScanListenerRecord scanListenerRecord = new ScanListenerRecord(scanRequest, listener);
+            mScanTypeScanListenerRecordMap.put(listenerBinder, scanListenerRecord);
+            NearbyMetrics.logScanStarted(scanListenerRecord.hashCode(), scanRequest);
             if (mScanMode < scanRequest.getScanMode()) {
                 mScanMode = scanRequest.getScanMode();
                 invalidateProviderScanMode();
@@ -113,6 +117,8 @@ public class DiscoveryProviderManager implements AbstractDiscoveryProvider.Liste
 
             ScanListenerRecord removedRecord = mScanTypeScanListenerRecordMap
                     .remove(listenerBinder);
+            NearbyMetrics.logScanStopped(
+                    removedRecord.hashCode(), removedRecord.getScanRequest());
             if (mScanTypeScanListenerRecordMap.isEmpty()) {
                 stopProviders();
                 return;
@@ -201,7 +207,7 @@ public class DiscoveryProviderManager implements AbstractDiscoveryProvider.Liste
 
         @Override
         public int hashCode() {
-            return  Objects.hash(mScanListener, mScanRequest);
+            return Objects.hash(mScanListener, mScanRequest);
         }
     }
 }
