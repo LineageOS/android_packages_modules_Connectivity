@@ -34,9 +34,9 @@ $ aidegen .
 
 ```sh
 $ source build/envsetup.sh && lunch <TARGET>
-$ m com.android.tethering deapexer
+$ m com.google.android.tethering.next deapexer
 $ $ANDROID_BUILD_TOP/out/host/linux-x86/bin/deapexer decompress --input \
-    {ANDROID_PRODUCT_OUT}/system/apex/com.android.tethering.capex --output \
-    /tmp/tethering.apex
+    ${ANDROID_PRODUCT_OUT}/system/apex/com.google.android.tethering.next.capex \
+    --output /tmp/tethering.apex
 $ adb install -r /tmp/tethering.apex
 ```
