@@ -64,8 +64,7 @@ android_test {
     name: "ConnectivityCoverageTests",
     // Tethering started on SDK 30
     min_sdk_version: "30",
-    // TODO: change to 31 as soon as it is available
-    target_sdk_version: "30",
+    target_sdk_version: "31",
     test_suites: ["general-tests", "mts-tethering"],
     defaults: [
         "framework-connectivity-test-defaults",
@@ -89,6 +88,7 @@ android_test {
         "libstaticjvmtiagent",
         // For NetworkStackUtils included in NetworkStackBase
         "libnetworkstackutilsjni",
+        "libandroid_net_connectivity_com_android_net_module_util_jni",
         "libcom_android_networkstack_tethering_util_jni",
         // For framework tests
         "libservice-connectivity",
@@ -115,10 +115,33 @@ java_defaults {
         // meaning @hide APIs in framework-connectivity are resolved before @SystemApi
         // stubs in framework
         "framework-connectivity.impl",
+        "framework-connectivity-tiramisu.impl",
         "framework-tethering.impl",
         "framework",
 
         // if sdk_version="" this gets automatically included, but here we need to add manually.
         "framework-res",
     ],
+}
+
+// Defaults for tests that want to run in mainline-presubmit.
+// Not widely used because many of our tests have AndroidTest.xml files and
+// use the mainline-param config-descriptor metadata in AndroidTest.xml.
+
+// test_mainline_modules is an array of strings. Each element in the array is a list of modules
+// separated by "+". The modules in this list must be in alphabetical order.
+// See SuiteModuleLoader.java.
+// TODO: why are the modules separated by + instead of being separate entries in the array?
+mainline_presubmit_modules = [
+        "CaptivePortalLoginGoogle.apk+NetworkStackGoogle.apk+com.google.android.resolv.apex+com.google.android.tethering.apex",
+]
+
+cc_defaults {
+    name: "connectivity-mainline-presubmit-cc-defaults",
+    test_mainline_modules: mainline_presubmit_modules,
+}
+
+java_defaults {
+    name: "connectivity-mainline-presubmit-java-defaults",
+    test_mainline_modules: mainline_presubmit_modules,
 }

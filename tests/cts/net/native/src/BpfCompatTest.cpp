@@ -21,6 +21,8 @@
 
 #include <gtest/gtest.h>
 
+#include "android-modules-utils/sdk_level.h"
+
 #include "libbpf_android.h"
 
 using namespace android::bpf;
@@ -33,9 +35,15 @@ void doBpfStructSizeTest(const char *elfPath) {
   EXPECT_EQ(28, readSectionUint("size_of_bpf_prog_def", elfFile, 0));
 }
 
-TEST(BpfTest, bpfStructSizeTest) {
+TEST(BpfTest, bpfStructSizeTestPreT) {
+  if (android::modules::sdklevel::IsAtLeastT()) GTEST_SKIP() << "T+ device.";
   doBpfStructSizeTest("/system/etc/bpf/netd.o");
   doBpfStructSizeTest("/system/etc/bpf/clatd.o");
+}
+
+TEST(BpfTest, bpfStructSizeTest) {
+  doBpfStructSizeTest("/system/etc/bpf/gpu_mem.o");
+  doBpfStructSizeTest("/system/etc/bpf/time_in_state.o");
 }
 
 int main(int argc, char **argv) {

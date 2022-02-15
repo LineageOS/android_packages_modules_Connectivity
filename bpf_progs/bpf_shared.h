@@ -20,7 +20,6 @@
 #include <linux/if_ether.h>
 #include <linux/in.h>
 #include <linux/in6.h>
-#include <netdutils/UidConstants.h>
 
 // This header file is shared by eBPF kernel programs (C) and netd (C++) and
 // some of the maps are also accessed directly from Java mainline module code.
@@ -131,7 +130,8 @@ enum UidOwnerMatchType {
     STANDBY_MATCH = (1 << 3),
     POWERSAVE_MATCH = (1 << 4),
     RESTRICTED_MATCH = (1 << 5),
-    IIF_MATCH = (1 << 6),
+    LOW_POWER_STANDBY_MATCH = (1 << 6),
+    IIF_MATCH = (1 << 7),
 };
 
 enum BpfPermissionMatch {

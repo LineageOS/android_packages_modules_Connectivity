@@ -49,6 +49,7 @@ java_defaults {
         "FrameworksNetCommonTests",
         "core-tests-support",
         "cts-net-utils",
+        "CtsNetTestsNonUpdatableLib",
         "ctstestrunner-axt",
         "junit",
         "junit-params",
@@ -69,7 +70,7 @@ java_defaults {
 // devices.
 android_test {
     name: "CtsNetTestCases",
-    defaults: ["CtsNetTestCasesDefaults", "NetworkStackNextEnableDefaults"],
+    defaults: ["CtsNetTestCasesDefaults", "ConnectivityNextEnableDefaults"],
     // TODO: CTS should not depend on the entirety of the networkstack code.
     static_libs: [
         "NetworkStackApiCurrentLib",

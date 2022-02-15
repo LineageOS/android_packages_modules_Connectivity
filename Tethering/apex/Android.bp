@@ -31,6 +31,7 @@ apex_defaults {
     // package names and keys, so that apex will be unused anyway.
     apps: ["TetheringNext"], // Replace to "Tethering" if ConnectivityNextEnableDefaults is false.
 }
+enable_tethering_next_apex = true
 // This is a placeholder comment to avoid merge conflicts
 // as the above target may have different "enabled" values
 // depending on the branch
@@ -44,23 +45,38 @@ apex {
     bootclasspath_fragments: [
         "com.android.tethering-bootclasspath-fragment",
     ],
-    java_libs: [
-        "service-connectivity",
+    systemserverclasspath_fragments: [
+        "com.android.tethering-systemserverclasspath-fragment",
     ],
     multilib: {
         first: {
-            jni_libs: ["libservice-connectivity"],
+            jni_libs: [
+                "libservice-connectivity",
+                "libandroid_net_connectivity_com_android_net_module_util_jni",
+            ],
+            native_shared_libs: ["libnetd_updatable"],
         },
         both: {
-            jni_libs: ["libframework-connectivity-jni"],
+            jni_libs: [
+                "libframework-connectivity-jni",
+                "libframework-connectivity-tiramisu-jni"
+            ],
         },
     },
+    binaries: [
+        "clatd",
+    ],
+    canned_fs_config: "canned_fs_config",
     bpfs: [
+        "clatd.o_mainline",
+        "netd.o_mainline",
+        "dscp_policy.o",
         "offload.o",
         "test.o",
     ],
     apps: [
         "ServiceConnectivityResources",
+        "HalfSheetUX",
     ],
     prebuilts: ["current_sdkinfo"],
     manifest: "manifest.json",
@@ -88,6 +104,7 @@ bootclasspath_fragment {
     name: "com.android.tethering-bootclasspath-fragment",
     contents: [
         "framework-connectivity",
+        "framework-connectivity-tiramisu",
         "framework-tethering",
     ],
     apex_available: ["com.android.tethering"],
@@ -109,15 +126,31 @@ bootclasspath_fragment {
     // Additional hidden API flag files to override the defaults. This must only be
     // modified by the Soong or platform compat team.
     hidden_api: {
-        max_target_o_low_priority: ["hiddenapi/hiddenapi-max-target-o-low-priority.txt"],
-        unsupported: ["hiddenapi/hiddenapi-unsupported.txt"],
+        max_target_r_low_priority: [
+            "hiddenapi/hiddenapi-max-target-r-loprio.txt",
+	],
+        max_target_o_low_priority: [
+            "hiddenapi/hiddenapi-max-target-o-low-priority.txt",
+            "hiddenapi/hiddenapi-max-target-o-low-priority-tiramisu.txt",
+	],
+        unsupported: [
+            "hiddenapi/hiddenapi-unsupported.txt",
+            "hiddenapi/hiddenapi-unsupported-tiramisu.txt",
+        ],
     },
+}
+
+systemserverclasspath_fragment {
+    name: "com.android.tethering-systemserverclasspath-fragment",
+    standalone_contents: ["service-connectivity"],
+    apex_available: ["com.android.tethering"],
 }
 
 override_apex {
     name: "com.android.tethering.inprocess",
     base: "com.android.tethering",
     package_name: "com.android.tethering.inprocess",
+    enabled: enable_tethering_next_apex,
     apps: [
         "ServiceConnectivityResources",
         "InProcessTethering",

@@ -89,6 +89,7 @@ import androidx.test.InstrumentationRegistry;
 import androidx.test.filters.SmallTest;
 
 import com.android.net.module.util.CollectionUtils;
+import com.android.server.BpfNetMaps;
 import com.android.testutils.DevSdkIgnoreRule;
 import com.android.testutils.DevSdkIgnoreRunner;
 
@@ -146,9 +147,11 @@ public class PermissionMonitorTest {
     @Mock private UserManager mUserManager;
     @Mock private PermissionMonitor.Dependencies mDeps;
     @Mock private SystemConfigManager mSystemConfigManager;
+    @Mock private BpfNetMaps mBpfNetMaps;
 
     private PermissionMonitor mPermissionMonitor;
     private NetdMonitor mNetdMonitor;
+    private BpfMapMonitor mBpfMapMonitor;
 
     @Before
     public void setUp() throws Exception {
@@ -177,8 +180,9 @@ public class PermissionMonitorTest {
         // by default.
         doReturn(VERSION_Q).when(mDeps).getDeviceFirstSdkInt();
 
-        mPermissionMonitor = new PermissionMonitor(mContext, mNetdService, mDeps);
+        mPermissionMonitor = new PermissionMonitor(mContext, mNetdService, mBpfNetMaps, mDeps);
         mNetdMonitor = new NetdMonitor(mNetdService);
+        mBpfMapMonitor = new BpfMapMonitor(mBpfNetMaps);
 
         doReturn(List.of()).when(mPackageManager).getInstalledPackagesAsUser(anyInt(), anyInt());
     }
@@ -511,9 +515,37 @@ public class PermissionMonitorTest {
         assertBackgroundPermission(true, MOCK_PACKAGE2, MOCK_UID12, NETWORK_STACK);
     }
 
+    private class BpfMapMonitor {
+        private final SparseIntArray mAppIdsTrafficPermission = new SparseIntArray();
+        private static final int DOES_NOT_EXIST = -2;
+
+        BpfMapMonitor(BpfNetMaps mockBpfmap) throws Exception {
+            // Add hook to verify and track result of trafficSetNetPerm.
+            doAnswer((InvocationOnMock invocation) -> {
+                final Object[] args = invocation.getArguments();
+                final int permission = (int) args[0];
+                for (final int appId : (int[]) args[1]) {
+                    mAppIdsTrafficPermission.put(appId, permission);
+                }
+                return null;
+            }).when(mockBpfmap).setNetPermForUids(anyInt(), any(int[].class));
+        }
+
+        public void expectTrafficPerm(int permission, int... appIds) {
+            for (final int appId : appIds) {
+                if (mAppIdsTrafficPermission.get(appId, DOES_NOT_EXIST) == DOES_NOT_EXIST) {
+                    fail("appId " + appId + " does not exist.");
+                }
+                if (mAppIdsTrafficPermission.get(appId) != permission) {
+                    fail("appId " + appId + " has wrong permission: "
+                            + mAppIdsTrafficPermission.get(appId));
+                }
+            }
+        }
+    }
+
     private class NetdMonitor {
         private final SparseIntArray mUidsNetworkPermission = new SparseIntArray();
-        private final SparseIntArray mAppIdsTrafficPermission = new SparseIntArray();
         private static final int DOES_NOT_EXIST = -2;
 
         NetdMonitor(INetd mockNetd) throws Exception {
@@ -545,16 +577,6 @@ public class PermissionMonitorTest {
                 }
                 return null;
             }).when(mockNetd).networkClearPermissionForUser(any(int[].class));
-
-            // Add hook to verify and track result of trafficSetNetPerm.
-            doAnswer((InvocationOnMock invocation) -> {
-                final Object[] args = invocation.getArguments();
-                final int permission = (int) args[0];
-                for (final int appId : (int[]) args[1]) {
-                    mAppIdsTrafficPermission.put(appId, permission);
-                }
-                return null;
-            }).when(mockNetd).trafficSetNetPermForUids(anyInt(), any(int[].class));
         }
 
         public void expectNetworkPerm(int permission, UserHandle[] users, int... appIds) {
@@ -578,18 +600,6 @@ public class PermissionMonitorTest {
                     if (mUidsNetworkPermission.get(uid, DOES_NOT_EXIST) != DOES_NOT_EXIST) {
                         fail("uid " + uid + " has listed permissions, expected none.");
                     }
-                }
-            }
-        }
-
-        public void expectTrafficPerm(int permission, int... appIds) {
-            for (final int appId : appIds) {
-                if (mAppIdsTrafficPermission.get(appId, DOES_NOT_EXIST) == DOES_NOT_EXIST) {
-                    fail("appId " + appId + " does not exist.");
-                }
-                if (mAppIdsTrafficPermission.get(appId) != permission) {
-                    fail("appId " + appId + " has wrong permission: "
-                            + mAppIdsTrafficPermission.get(appId));
                 }
             }
         }
@@ -702,30 +712,30 @@ public class PermissionMonitorTest {
 
         // When VPN is connected, expect a rule to be set up for user app MOCK_UID11
         mPermissionMonitor.onVpnUidRangesAdded("tun0", vpnRange1, VPN_UID);
-        verify(mNetdService).firewallAddUidInterfaceRules(eq("tun0"), aryEq(new int[]{MOCK_UID11}));
+        verify(mBpfNetMaps).addUidInterfaceRules(eq("tun0"), aryEq(new int[]{MOCK_UID11}));
 
-        reset(mNetdService);
+        reset(mBpfNetMaps);
 
         // When MOCK_UID11 package is uninstalled and reinstalled, expect Netd to be updated
         mPermissionMonitor.onPackageRemoved(MOCK_PACKAGE1, MOCK_UID11);
-        verify(mNetdService).firewallRemoveUidInterfaceRules(aryEq(new int[]{MOCK_UID11}));
+        verify(mBpfNetMaps).removeUidInterfaceRules(aryEq(new int[]{MOCK_UID11}));
         mPermissionMonitor.onPackageAdded(MOCK_PACKAGE1, MOCK_UID11);
-        verify(mNetdService).firewallAddUidInterfaceRules(eq("tun0"), aryEq(new int[]{MOCK_UID11}));
+        verify(mBpfNetMaps).addUidInterfaceRules(eq("tun0"), aryEq(new int[]{MOCK_UID11}));
 
-        reset(mNetdService);
+        reset(mBpfNetMaps);
 
         // During VPN uid update (vpnRange1 -> vpnRange2), ConnectivityService first deletes the
         // old UID rules then adds the new ones. Expect netd to be updated
         mPermissionMonitor.onVpnUidRangesRemoved("tun0", vpnRange1, VPN_UID);
-        verify(mNetdService).firewallRemoveUidInterfaceRules(aryEq(new int[] {MOCK_UID11}));
+        verify(mBpfNetMaps).removeUidInterfaceRules(aryEq(new int[] {MOCK_UID11}));
         mPermissionMonitor.onVpnUidRangesAdded("tun0", vpnRange2, VPN_UID);
-        verify(mNetdService).firewallAddUidInterfaceRules(eq("tun0"), aryEq(new int[]{MOCK_UID12}));
+        verify(mBpfNetMaps).addUidInterfaceRules(eq("tun0"), aryEq(new int[]{MOCK_UID12}));
 
-        reset(mNetdService);
+        reset(mBpfNetMaps);
 
         // When VPN is disconnected, expect rules to be torn down
         mPermissionMonitor.onVpnUidRangesRemoved("tun0", vpnRange2, VPN_UID);
-        verify(mNetdService).firewallRemoveUidInterfaceRules(aryEq(new int[] {MOCK_UID12}));
+        verify(mBpfNetMaps).removeUidInterfaceRules(aryEq(new int[] {MOCK_UID12}));
         assertNull(mPermissionMonitor.getVpnUidRanges("tun0"));
     }
 
@@ -744,13 +754,13 @@ public class PermissionMonitorTest {
 
         // Newly-installed package should have uid rules added
         addPackageForUsers(new UserHandle[]{MOCK_USER1, MOCK_USER2}, MOCK_PACKAGE1, MOCK_APPID1);
-        verify(mNetdService).firewallAddUidInterfaceRules(eq("tun0"), aryEq(new int[]{MOCK_UID11}));
-        verify(mNetdService).firewallAddUidInterfaceRules(eq("tun0"), aryEq(new int[]{MOCK_UID21}));
+        verify(mBpfNetMaps).addUidInterfaceRules(eq("tun0"), aryEq(new int[]{MOCK_UID11}));
+        verify(mBpfNetMaps).addUidInterfaceRules(eq("tun0"), aryEq(new int[]{MOCK_UID21}));
 
         // Removed package should have its uid rules removed
         mPermissionMonitor.onPackageRemoved(MOCK_PACKAGE1, MOCK_UID11);
-        verify(mNetdService).firewallRemoveUidInterfaceRules(aryEq(new int[]{MOCK_UID11}));
-        verify(mNetdService, never()).firewallRemoveUidInterfaceRules(aryEq(new int[]{MOCK_UID21}));
+        verify(mBpfNetMaps).removeUidInterfaceRules(aryEq(new int[]{MOCK_UID11}));
+        verify(mBpfNetMaps, never()).removeUidInterfaceRules(aryEq(new int[]{MOCK_UID21}));
     }
 
 
@@ -784,91 +794,91 @@ public class PermissionMonitorTest {
         // Send the permission information to netd, expect permission updated.
         mPermissionMonitor.sendAppIdsTrafficPermission(netdPermissionsAppIds);
 
-        mNetdMonitor.expectTrafficPerm(PERMISSION_INTERNET, MOCK_APPID1);
-        mNetdMonitor.expectTrafficPerm(PERMISSION_NONE, MOCK_APPID2);
-        mNetdMonitor.expectTrafficPerm(PERMISSION_TRAFFIC_ALL, SYSTEM_APPID1);
-        mNetdMonitor.expectTrafficPerm(PERMISSION_UPDATE_DEVICE_STATS, SYSTEM_APPID2);
+        mBpfMapMonitor.expectTrafficPerm(PERMISSION_INTERNET, MOCK_APPID1);
+        mBpfMapMonitor.expectTrafficPerm(PERMISSION_NONE, MOCK_APPID2);
+        mBpfMapMonitor.expectTrafficPerm(PERMISSION_TRAFFIC_ALL, SYSTEM_APPID1);
+        mBpfMapMonitor.expectTrafficPerm(PERMISSION_UPDATE_DEVICE_STATS, SYSTEM_APPID2);
 
         // Update permission of MOCK_APPID1, expect new permission show up.
         mPermissionMonitor.sendPackagePermissionsForAppId(MOCK_APPID1, PERMISSION_TRAFFIC_ALL);
-        mNetdMonitor.expectTrafficPerm(PERMISSION_TRAFFIC_ALL, MOCK_APPID1);
+        mBpfMapMonitor.expectTrafficPerm(PERMISSION_TRAFFIC_ALL, MOCK_APPID1);
 
         // Change permissions of SYSTEM_APPID2, expect new permission show up and old permission
         // revoked.
         mPermissionMonitor.sendPackagePermissionsForAppId(SYSTEM_APPID2, PERMISSION_INTERNET);
-        mNetdMonitor.expectTrafficPerm(PERMISSION_INTERNET, SYSTEM_APPID2);
+        mBpfMapMonitor.expectTrafficPerm(PERMISSION_INTERNET, SYSTEM_APPID2);
 
         // Revoke permission from SYSTEM_APPID1, expect no permission stored.
         mPermissionMonitor.sendPackagePermissionsForAppId(SYSTEM_APPID1, PERMISSION_NONE);
-        mNetdMonitor.expectTrafficPerm(PERMISSION_NONE, SYSTEM_APPID1);
+        mBpfMapMonitor.expectTrafficPerm(PERMISSION_NONE, SYSTEM_APPID1);
     }
 
     @Test
     public void testPackageInstall() throws Exception {
         addPackage(MOCK_PACKAGE1, MOCK_UID11, INTERNET, UPDATE_DEVICE_STATS);
-        mNetdMonitor.expectTrafficPerm(PERMISSION_TRAFFIC_ALL, MOCK_APPID1);
+        mBpfMapMonitor.expectTrafficPerm(PERMISSION_TRAFFIC_ALL, MOCK_APPID1);
 
         addPackage(MOCK_PACKAGE2, MOCK_UID12, INTERNET);
-        mNetdMonitor.expectTrafficPerm(PERMISSION_INTERNET, MOCK_APPID2);
+        mBpfMapMonitor.expectTrafficPerm(PERMISSION_INTERNET, MOCK_APPID2);
     }
 
     @Test
     public void testPackageInstallSharedUid() throws Exception {
         addPackage(MOCK_PACKAGE1, MOCK_UID11, INTERNET, UPDATE_DEVICE_STATS);
-        mNetdMonitor.expectTrafficPerm(PERMISSION_TRAFFIC_ALL, MOCK_APPID1);
+        mBpfMapMonitor.expectTrafficPerm(PERMISSION_TRAFFIC_ALL, MOCK_APPID1);
 
         // Install another package with the same uid and no permissions should not cause the app id
         // to lose permissions.
         addPackage(MOCK_PACKAGE2, MOCK_UID11);
-        mNetdMonitor.expectTrafficPerm(PERMISSION_TRAFFIC_ALL, MOCK_APPID1);
+        mBpfMapMonitor.expectTrafficPerm(PERMISSION_TRAFFIC_ALL, MOCK_APPID1);
     }
 
     @Test
     public void testPackageUninstallBasic() throws Exception {
         addPackage(MOCK_PACKAGE1, MOCK_UID11, INTERNET, UPDATE_DEVICE_STATS);
-        mNetdMonitor.expectTrafficPerm(PERMISSION_TRAFFIC_ALL, MOCK_APPID1);
+        mBpfMapMonitor.expectTrafficPerm(PERMISSION_TRAFFIC_ALL, MOCK_APPID1);
 
         when(mPackageManager.getPackagesForUid(MOCK_UID11)).thenReturn(new String[]{});
         mPermissionMonitor.onPackageRemoved(MOCK_PACKAGE1, MOCK_UID11);
-        mNetdMonitor.expectTrafficPerm(PERMISSION_UNINSTALLED, MOCK_APPID1);
+        mBpfMapMonitor.expectTrafficPerm(PERMISSION_UNINSTALLED, MOCK_APPID1);
     }
 
     @Test
     public void testPackageRemoveThenAdd() throws Exception {
         addPackage(MOCK_PACKAGE1, MOCK_UID11, INTERNET, UPDATE_DEVICE_STATS);
-        mNetdMonitor.expectTrafficPerm(PERMISSION_TRAFFIC_ALL, MOCK_APPID1);
+        mBpfMapMonitor.expectTrafficPerm(PERMISSION_TRAFFIC_ALL, MOCK_APPID1);
 
         when(mPackageManager.getPackagesForUid(MOCK_UID11)).thenReturn(new String[]{});
         mPermissionMonitor.onPackageRemoved(MOCK_PACKAGE1, MOCK_UID11);
-        mNetdMonitor.expectTrafficPerm(PERMISSION_UNINSTALLED, MOCK_APPID1);
+        mBpfMapMonitor.expectTrafficPerm(PERMISSION_UNINSTALLED, MOCK_APPID1);
 
         addPackage(MOCK_PACKAGE1, MOCK_UID11, INTERNET);
-        mNetdMonitor.expectTrafficPerm(PERMISSION_INTERNET, MOCK_APPID1);
+        mBpfMapMonitor.expectTrafficPerm(PERMISSION_INTERNET, MOCK_APPID1);
     }
 
     @Test
     public void testPackageUpdate() throws Exception {
         addPackage(MOCK_PACKAGE1, MOCK_UID11);
-        mNetdMonitor.expectTrafficPerm(PERMISSION_NONE, MOCK_APPID1);
+        mBpfMapMonitor.expectTrafficPerm(PERMISSION_NONE, MOCK_APPID1);
 
         addPackage(MOCK_PACKAGE1, MOCK_UID11, INTERNET);
-        mNetdMonitor.expectTrafficPerm(PERMISSION_INTERNET, MOCK_APPID1);
+        mBpfMapMonitor.expectTrafficPerm(PERMISSION_INTERNET, MOCK_APPID1);
     }
 
     @Test
     public void testPackageUninstallWithMultiplePackages() throws Exception {
         addPackage(MOCK_PACKAGE1, MOCK_UID11, INTERNET, UPDATE_DEVICE_STATS);
-        mNetdMonitor.expectTrafficPerm(PERMISSION_TRAFFIC_ALL, MOCK_APPID1);
+        mBpfMapMonitor.expectTrafficPerm(PERMISSION_TRAFFIC_ALL, MOCK_APPID1);
 
         // Install another package with the same uid but different permissions.
         addPackage(MOCK_PACKAGE2, MOCK_UID11, INTERNET);
-        mNetdMonitor.expectTrafficPerm(PERMISSION_TRAFFIC_ALL, MOCK_UID11);
+        mBpfMapMonitor.expectTrafficPerm(PERMISSION_TRAFFIC_ALL, MOCK_UID11);
 
         // Uninstall MOCK_PACKAGE1 and expect only INTERNET permission left.
         when(mPackageManager.getPackagesForUid(eq(MOCK_UID11)))
                 .thenReturn(new String[]{MOCK_PACKAGE2});
         mPermissionMonitor.onPackageRemoved(MOCK_PACKAGE1, MOCK_UID11);
-        mNetdMonitor.expectTrafficPerm(PERMISSION_INTERNET, MOCK_APPID1);
+        mBpfMapMonitor.expectTrafficPerm(PERMISSION_INTERNET, MOCK_APPID1);
     }
 
     @Test
@@ -876,7 +886,8 @@ public class PermissionMonitorTest {
         // Use the real context as this test must ensure the *real* system package holds the
         // necessary permission.
         final Context realContext = InstrumentationRegistry.getContext();
-        final PermissionMonitor monitor = new PermissionMonitor(realContext, mNetdService);
+        final PermissionMonitor monitor = new PermissionMonitor(realContext, mNetdService,
+                mBpfNetMaps);
         final PackageManager manager = realContext.getPackageManager();
         final PackageInfo systemInfo = manager.getPackageInfo(REAL_SYSTEM_PACKAGE_NAME,
                 GET_PERMISSIONS | MATCH_ANY_USER);
@@ -891,8 +902,8 @@ public class PermissionMonitorTest {
                 .thenReturn(new int[]{ MOCK_UID12 });
 
         mPermissionMonitor.startMonitoring();
-        mNetdMonitor.expectTrafficPerm(PERMISSION_INTERNET, MOCK_APPID1);
-        mNetdMonitor.expectTrafficPerm(PERMISSION_TRAFFIC_ALL, MOCK_APPID2);
+        mBpfMapMonitor.expectTrafficPerm(PERMISSION_INTERNET, MOCK_APPID1);
+        mBpfMapMonitor.expectTrafficPerm(PERMISSION_TRAFFIC_ALL, MOCK_APPID2);
     }
 
     private BroadcastReceiver expectBroadcastReceiver(String... actions) {
@@ -923,7 +934,7 @@ public class PermissionMonitorTest {
         buildAndMockPackageInfoWithPermissions(MOCK_PACKAGE1, MOCK_UID11, INTERNET,
                 UPDATE_DEVICE_STATS);
         receiver.onReceive(mContext, addedIntent);
-        mNetdMonitor.expectTrafficPerm(PERMISSION_TRAFFIC_ALL, MOCK_APPID1);
+        mBpfMapMonitor.expectTrafficPerm(PERMISSION_TRAFFIC_ALL, MOCK_APPID1);
 
         // Verify receiving PACKAGE_REMOVED intent.
         when(mPackageManager.getPackagesForUid(MOCK_UID11)).thenReturn(new String[]{});
@@ -931,7 +942,7 @@ public class PermissionMonitorTest {
                 Uri.fromParts("package", MOCK_PACKAGE1, null /* fragment */));
         removedIntent.putExtra(Intent.EXTRA_UID, MOCK_UID11);
         receiver.onReceive(mContext, removedIntent);
-        mNetdMonitor.expectTrafficPerm(PERMISSION_UNINSTALLED, MOCK_APPID1);
+        mBpfMapMonitor.expectTrafficPerm(PERMISSION_UNINSTALLED, MOCK_APPID1);
     }
 
     private ContentObserver expectRegisterContentObserver(Uri expectedUri) {
@@ -1070,7 +1081,7 @@ public class PermissionMonitorTest {
                 .when(mPackageManager).getInstalledPackagesAsUser(eq(GET_PERMISSIONS), anyInt());
         mPermissionMonitor.startMonitoring();
         mNetdMonitor.expectNoNetworkPerm(new UserHandle[]{MOCK_USER1}, MOCK_APPID1, MOCK_APPID2);
-        mNetdMonitor.expectTrafficPerm(PERMISSION_NONE, MOCK_APPID1, MOCK_APPID2);
+        mBpfMapMonitor.expectTrafficPerm(PERMISSION_NONE, MOCK_APPID1, MOCK_APPID2);
 
         final BroadcastReceiver receiver = expectBroadcastReceiver(
                 Intent.ACTION_EXTERNAL_APPLICATIONS_AVAILABLE);
@@ -1087,8 +1098,8 @@ public class PermissionMonitorTest {
                 MOCK_APPID1);
         mNetdMonitor.expectNetworkPerm(PERMISSION_NETWORK, new UserHandle[]{MOCK_USER1},
                 MOCK_APPID2);
-        mNetdMonitor.expectTrafficPerm(PERMISSION_INTERNET, MOCK_APPID1);
-        mNetdMonitor.expectTrafficPerm(PERMISSION_UPDATE_DEVICE_STATS, MOCK_APPID2);
+        mBpfMapMonitor.expectTrafficPerm(PERMISSION_INTERNET, MOCK_APPID1);
+        mBpfMapMonitor.expectTrafficPerm(PERMISSION_UPDATE_DEVICE_STATS, MOCK_APPID2);
     }
 
     @Test
@@ -1114,8 +1125,8 @@ public class PermissionMonitorTest {
                 MOCK_APPID1);
         mNetdMonitor.expectNetworkPerm(PERMISSION_NETWORK, new UserHandle[]{MOCK_USER1},
                 MOCK_APPID2);
-        mNetdMonitor.expectTrafficPerm(PERMISSION_INTERNET, MOCK_APPID1);
-        mNetdMonitor.expectTrafficPerm(PERMISSION_UPDATE_DEVICE_STATS, MOCK_APPID2);
+        mBpfMapMonitor.expectTrafficPerm(PERMISSION_INTERNET, MOCK_APPID1);
+        mBpfMapMonitor.expectTrafficPerm(PERMISSION_UPDATE_DEVICE_STATS, MOCK_APPID2);
     }
 
     @Test
@@ -1128,7 +1139,7 @@ public class PermissionMonitorTest {
                 .when(mPackageManager).getInstalledPackagesAsUser(eq(GET_PERMISSIONS), anyInt());
         mPermissionMonitor.startMonitoring();
         mNetdMonitor.expectNoNetworkPerm(new UserHandle[]{MOCK_USER1}, MOCK_APPID1);
-        mNetdMonitor.expectTrafficPerm(PERMISSION_NONE, MOCK_APPID1);
+        mBpfMapMonitor.expectTrafficPerm(PERMISSION_NONE, MOCK_APPID1);
 
         final BroadcastReceiver receiver = expectBroadcastReceiver(
                 Intent.ACTION_EXTERNAL_APPLICATIONS_AVAILABLE);
@@ -1140,7 +1151,7 @@ public class PermissionMonitorTest {
         receiver.onReceive(mContext, externalIntent);
         mNetdMonitor.expectNetworkPerm(PERMISSION_NETWORK, new UserHandle[]{MOCK_USER1},
                 MOCK_APPID1);
-        mNetdMonitor.expectTrafficPerm(PERMISSION_UPDATE_DEVICE_STATS, MOCK_APPID1);
+        mBpfMapMonitor.expectTrafficPerm(PERMISSION_UPDATE_DEVICE_STATS, MOCK_APPID1);
     }
 
     @Test
@@ -1155,7 +1166,7 @@ public class PermissionMonitorTest {
         mPermissionMonitor.startMonitoring();
         mNetdMonitor.expectNetworkPerm(PERMISSION_NETWORK, new UserHandle[]{MOCK_USER1},
                 MOCK_APPID1);
-        mNetdMonitor.expectTrafficPerm(PERMISSION_INTERNET, MOCK_APPID1);
+        mBpfMapMonitor.expectTrafficPerm(PERMISSION_INTERNET, MOCK_APPID1);
 
         final BroadcastReceiver receiver = expectBroadcastReceiver(
                 Intent.ACTION_EXTERNAL_APPLICATIONS_AVAILABLE);
@@ -1169,7 +1180,7 @@ public class PermissionMonitorTest {
         receiver.onReceive(mContext, externalIntent);
         mNetdMonitor.expectNetworkPerm(PERMISSION_SYSTEM, new UserHandle[]{MOCK_USER1},
                 MOCK_APPID1);
-        mNetdMonitor.expectTrafficPerm(PERMISSION_TRAFFIC_ALL, MOCK_APPID1);
+        mBpfMapMonitor.expectTrafficPerm(PERMISSION_TRAFFIC_ALL, MOCK_APPID1);
     }
 
     @Test

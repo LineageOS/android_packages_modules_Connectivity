@@ -22,14 +22,11 @@ import android.net.wifi.aware.WifiAwareNetworkSpecifier
 import android.os.Build
 import androidx.test.filters.SmallTest
 import androidx.test.runner.AndroidJUnit4
-
-import com.android.testutils.assertParcelSane
+import com.android.testutils.ConnectivityModuleTest
 import com.android.testutils.DevSdkIgnoreRule
 import com.android.testutils.DevSdkIgnoreRule.IgnoreAfter
 import com.android.testutils.DevSdkIgnoreRule.IgnoreUpTo
-
-import java.lang.IllegalStateException
-
+import com.android.testutils.assertParcelingIsLossless
 import org.junit.Assert.assertFalse
 import org.junit.Rule
 import org.junit.Test
@@ -38,6 +35,7 @@ import org.mockito.Mockito
 
 @RunWith(AndroidJUnit4::class)
 @SmallTest
+@ConnectivityModuleTest
 class MatchAllNetworkSpecifierTest {
     @Rule @JvmField
     val ignoreRule: DevSdkIgnoreRule = DevSdkIgnoreRule()
@@ -50,7 +48,7 @@ class MatchAllNetworkSpecifierTest {
 
     @Test
     fun testParcel() {
-        assertParcelSane(MatchAllNetworkSpecifier(), 0)
+        assertParcelingIsLossless(MatchAllNetworkSpecifier())
     }
 
     @Test

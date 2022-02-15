@@ -52,6 +52,7 @@ import android.system.ErrnoException;
 import android.system.OsConstants;
 import android.text.TextUtils;
 import android.util.ArraySet;
+import android.util.Base64;
 import android.util.Log;
 import android.util.SparseArray;
 
@@ -65,6 +66,8 @@ import com.android.net.module.util.BpfMap;
 import com.android.net.module.util.CollectionUtils;
 import com.android.net.module.util.NetworkStackConstants;
 import com.android.net.module.util.Struct;
+import com.android.net.module.util.bpf.Tether4Key;
+import com.android.net.module.util.bpf.Tether4Value;
 import com.android.net.module.util.netlink.ConntrackMessage;
 import com.android.net.module.util.netlink.NetlinkConstants;
 import com.android.net.module.util.netlink.NetlinkSocket;
@@ -115,6 +118,9 @@ public class BpfCoordinator {
     private static final String TETHER_LIMIT_MAP_PATH = makeMapPath("limit");
     private static final String TETHER_ERROR_MAP_PATH = makeMapPath("error");
     private static final String TETHER_DEV_MAP_PATH = makeMapPath("dev");
+
+    // Using "," as a separator is safe because base64 characters are [0-9a-zA-Z/=+].
+    private static final String DUMP_BASE64_DELIMITER = ",";
 
     /** The names of all the BPF counters defined in bpf_tethering.h. */
     public static final String[] sBpfCounterNames = getBpfCounterNames();
@@ -1063,6 +1069,42 @@ public class BpfCoordinator {
             map.forEach((k, v) -> pw.println(ipv6UpstreamRuletoString(k, v)));
         } catch (ErrnoException e) {
             pw.println("Error dumping IPv6 upstream map: " + e);
+        }
+    }
+
+    private String ipv4RuleToBase64String(Tether4Key key, Tether4Value value) {
+        final byte[] keyBytes = key.writeToBytes();
+        final String keyBase64Str = Base64.encodeToString(keyBytes, Base64.DEFAULT)
+                .replace("\n", "");
+        final byte[] valueBytes = value.writeToBytes();
+        final String valueBase64Str = Base64.encodeToString(valueBytes, Base64.DEFAULT)
+                .replace("\n", "");
+
+        return keyBase64Str + DUMP_BASE64_DELIMITER + valueBase64Str;
+    }
+
+    private void dumpRawIpv4ForwardingRuleMap(
+            BpfMap<Tether4Key, Tether4Value> map, IndentingPrintWriter pw) throws ErrnoException {
+        if (map == null) {
+            pw.println("No IPv4 support");
+            return;
+        }
+        if (map.isEmpty()) {
+            pw.println("No rules");
+            return;
+        }
+        map.forEach((k, v) -> pw.println(ipv4RuleToBase64String(k, v)));
+    }
+
+    /**
+     * Dump raw BPF map in base64 encoded strings. For test only.
+     */
+    public void dumpRawMap(@NonNull IndentingPrintWriter pw) {
+        try (BpfMap<Tether4Key, Tether4Value> upstreamMap = mDeps.getBpfUpstream4Map()) {
+            // TODO: dump downstream map.
+            dumpRawIpv4ForwardingRuleMap(upstreamMap, pw);
+        } catch (ErrnoException e) {
+            pw.println("Error dumping IPv4 map: " + e);
         }
     }
 

@@ -20,7 +20,6 @@ import static android.net.RouteInfo.RTN_THROW;
 import static android.net.RouteInfo.RTN_UNICAST;
 import static android.net.RouteInfo.RTN_UNREACHABLE;
 
-import static com.android.testutils.ParcelUtils.assertParcelSane;
 import static com.android.testutils.ParcelUtils.assertParcelingIsLossless;
 import static com.android.testutils.ParcelUtils.parcelingRoundTrip;
 
@@ -41,6 +40,7 @@ import androidx.test.filters.SmallTest;
 import androidx.test.runner.AndroidJUnit4;
 
 import com.android.net.module.util.LinkPropertiesUtils.CompareResult;
+import com.android.testutils.ConnectivityModuleTest;
 import com.android.testutils.DevSdkIgnoreRule;
 import com.android.testutils.DevSdkIgnoreRule.IgnoreAfter;
 import com.android.testutils.DevSdkIgnoreRule.IgnoreUpTo;
@@ -60,6 +60,7 @@ import java.util.Set;
 
 @RunWith(AndroidJUnit4.class)
 @SmallTest
+@ConnectivityModuleTest
 public class LinkPropertiesTest {
     @Rule
     public final DevSdkIgnoreRule ignoreRule = new DevSdkIgnoreRule();
@@ -1006,7 +1007,7 @@ public class LinkPropertiesTest {
     @Test @IgnoreAfter(Build.VERSION_CODES.Q)
     public void testLinkPropertiesParcelable_Q() throws Exception {
         final LinkProperties source = makeLinkPropertiesForParceling();
-        assertParcelSane(source, 14 /* fieldCount */);
+        assertParcelingIsLossless(source);
     }
 
     @Test @IgnoreUpTo(Build.VERSION_CODES.Q)
@@ -1017,8 +1018,7 @@ public class LinkPropertiesTest {
         source.setCaptivePortalApiUrl(CAPPORT_API_URL);
         source.setCaptivePortalData((CaptivePortalData) getCaptivePortalData());
         source.setDhcpServerAddress((Inet4Address) GATEWAY1);
-        assertParcelSane(new LinkProperties(source, true /* parcelSensitiveFields */),
-                18 /* fieldCount */);
+        assertParcelingIsLossless(new LinkProperties(source, true /* parcelSensitiveFields */));
 
         // Verify that without using a sensitiveFieldsParcelingCopy, sensitive fields are cleared.
         final LinkProperties sanitized = new LinkProperties(source);

@@ -25,6 +25,8 @@ cc_library_headers {
     name: "bpf_connectivity_headers",
     vendor_available: false,
     host_supported: false,
+    header_libs: ["bpf_headers"],
+    export_header_lib_headers: ["bpf_headers"],
     export_include_dirs: ["."],
     cflags: [
         "-Wall",
@@ -40,10 +42,13 @@ cc_library_headers {
         // TODO: remove it when NetworkStatsService is moved into the mainline module and no more
         // calls to JNI in libservices.core.
         "//frameworks/base/services/core/jni",
+        "//packages/modules/Connectivity/netd",
+        "//packages/modules/Connectivity/service",
+        "//packages/modules/Connectivity/service/native/libs/libclat",
         "//packages/modules/Connectivity/Tethering",
+        "//packages/modules/Connectivity/service/native",
+        "//packages/modules/Connectivity/service-t/native/libs/libnetworkstats",
         "//packages/modules/Connectivity/tests/unit/jni",
-        // TODO: remove system/netd/* when all BPF code is moved out of Netd.
-        "//system/netd/libnetdbpf",
         "//system/netd/server",
         "//system/netd/tests",
     ],
@@ -52,6 +57,16 @@ cc_library_headers {
 //
 // bpf kernel programs
 //
+bpf {
+    name: "dscp_policy.o",
+    srcs: ["dscp_policy.c"],
+    cflags: [
+        "-Wall",
+        "-Werror",
+    ],
+    sub_dir: "net_shared",
+}
+
 bpf {
     name: "offload.o",
     srcs: ["offload.c"],
@@ -68,4 +83,30 @@ bpf {
         "-Wall",
         "-Werror",
     ],
+}
+
+bpf {
+    name: "clatd.o_mainline",
+    srcs: ["clatd.c"],
+    cflags: [
+        "-Wall",
+        "-Werror",
+    ],
+    include_dirs: [
+        "frameworks/libs/net/common/netd/libnetdutils/include",
+    ],
+    sub_dir: "net_shared",
+}
+
+bpf {
+    name: "netd.o_mainline",
+    srcs: ["netd.c"],
+    cflags: [
+        "-Wall",
+        "-Werror",
+    ],
+    include_dirs: [
+        "frameworks/libs/net/common/netd/libnetdutils/include",
+    ],
+    sub_dir: "net_shared",
 }

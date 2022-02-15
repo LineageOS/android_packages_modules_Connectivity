@@ -21,6 +21,7 @@ import static android.net.NetworkCapabilities.NET_CAPABILITY_NOT_VCN_MANAGED;
 import static android.net.NetworkCapabilities.NET_CAPABILITY_NOT_VPN;
 import static android.net.NetworkCapabilities.TRANSPORT_CELLULAR;
 import static android.net.NetworkCapabilities.TRANSPORT_ETHERNET;
+import static android.net.NetworkCapabilities.TRANSPORT_TEST;
 import static android.net.NetworkCapabilities.TRANSPORT_VPN;
 import static android.net.NetworkCapabilities.TRANSPORT_WIFI;
 import static android.net.NetworkCapabilities.TRANSPORT_WIFI_AWARE;
@@ -108,6 +109,9 @@ public class NetworkAgentWrapper implements TestableNetworkCallback.HasNetwork {
                 break;
             case TRANSPORT_WIFI_AWARE:
                 mScore = new NetworkScore.Builder().setLegacyInt(20).build();
+                break;
+            case TRANSPORT_TEST:
+                mScore = new NetworkScore.Builder().build();
                 break;
             case TRANSPORT_VPN:
                 mNetworkCapabilities.removeCapability(NET_CAPABILITY_NOT_VPN);

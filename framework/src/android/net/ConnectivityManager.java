@@ -16,6 +16,7 @@
 package android.net;
 
 import static android.annotation.SystemApi.Client.MODULE_LIBRARIES;
+import static android.net.NetworkCapabilities.NET_ENTERPRISE_ID_1;
 import static android.net.NetworkRequest.Type.BACKGROUND_REQUEST;
 import static android.net.NetworkRequest.Type.LISTEN;
 import static android.net.NetworkRequest.Type.LISTEN_FOR_BEST;
@@ -876,6 +877,15 @@ public class ConnectivityManager {
     public static final int BLOCKED_REASON_LOCKDOWN_VPN = 1 << 4;
 
     /**
+     * Flag to indicate that an app is subject to Low Power Standby restrictions that would
+     * result in its network access being blocked.
+     *
+     * @hide
+     */
+    @SystemApi(client = SystemApi.Client.MODULE_LIBRARIES)
+    public static final int BLOCKED_REASON_LOW_POWER_STANDBY = 1 << 5;
+
+    /**
      * Flag to indicate that an app is subject to Data saver restrictions that would
      * result in its metered network access being blocked.
      *
@@ -913,6 +923,7 @@ public class ConnectivityManager {
             BLOCKED_REASON_APP_STANDBY,
             BLOCKED_REASON_RESTRICTED_MODE,
             BLOCKED_REASON_LOCKDOWN_VPN,
+            BLOCKED_REASON_LOW_POWER_STANDBY,
             BLOCKED_METERED_REASON_DATA_SAVER,
             BLOCKED_METERED_REASON_USER_RESTRICTED,
             BLOCKED_METERED_REASON_ADMIN_DISABLED,
@@ -929,6 +940,59 @@ public class ConnectivityManager {
 
     @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.P, trackingBug = 130143562)
     private final IConnectivityManager mService;
+
+    // LINT.IfChange(firewall_chain)
+    /**
+     * Firewall chain for device idle (doze mode).
+     * Allowlist of apps that have network access in device idle.
+     * @hide
+     */
+    @SystemApi(client = MODULE_LIBRARIES)
+    public static final int FIREWALL_CHAIN_DOZABLE = 1;
+
+    /**
+     * Firewall chain used for app standby.
+     * Denylist of apps that do not have network access.
+     * @hide
+     */
+    @SystemApi(client = MODULE_LIBRARIES)
+    public static final int FIREWALL_CHAIN_STANDBY = 2;
+
+    /**
+     * Firewall chain used for battery saver.
+     * Allowlist of apps that have network access when battery saver is on.
+     * @hide
+     */
+    @SystemApi(client = MODULE_LIBRARIES)
+    public static final int FIREWALL_CHAIN_POWERSAVE = 3;
+
+    /**
+     * Firewall chain used for restricted networking mode.
+     * Allowlist of apps that have access in restricted networking mode.
+     * @hide
+     */
+    @SystemApi(client = MODULE_LIBRARIES)
+    public static final int FIREWALL_CHAIN_RESTRICTED = 4;
+
+    /**
+     * Firewall chain used for low power standby.
+     * Allowlist of apps that have access in low power standby.
+     * @hide
+     */
+    @SystemApi(client = MODULE_LIBRARIES)
+    public static final int FIREWALL_CHAIN_LOW_POWER_STANDBY = 5;
+
+    /** @hide */
+    @Retention(RetentionPolicy.SOURCE)
+    @IntDef(flag = false, prefix = "FIREWALL_CHAIN_", value = {
+        FIREWALL_CHAIN_DOZABLE,
+        FIREWALL_CHAIN_STANDBY,
+        FIREWALL_CHAIN_POWERSAVE,
+        FIREWALL_CHAIN_RESTRICTED,
+        FIREWALL_CHAIN_LOW_POWER_STANDBY
+    })
+    public @interface FirewallChain {}
+    // LINT.ThenChange(packages/modules/Connectivity/service/native/include/Common.h)
 
     /**
      * A kludge to facilitate static access where a Context pointer isn't available, like in the
@@ -1078,7 +1142,8 @@ public class ConnectivityManager {
     }
 
     /**
-     * Preference for {@link #setNetworkPreferenceForUser(UserHandle, int, Executor, Runnable)}.
+     * Preference for {@link ProfileNetworkPreference#setPreference(int)}.
+     * {@see #setProfileNetworkPreferences(UserHandle, List, Executor, Runnable)}
      * Specify that the traffic for this user should by follow the default rules.
      * @hide
      */
@@ -1086,7 +1151,8 @@ public class ConnectivityManager {
     public static final int PROFILE_NETWORK_PREFERENCE_DEFAULT = 0;
 
     /**
-     * Preference for {@link #setNetworkPreferenceForUser(UserHandle, int, Executor, Runnable)}.
+     * Preference for {@link ProfileNetworkPreference#setPreference(int)}.
+     * {@see #setProfileNetworkPreferences(UserHandle, List, Executor, Runnable)}
      * Specify that the traffic for this user should by default go on a network with
      * {@link NetworkCapabilities#NET_CAPABILITY_ENTERPRISE}, and on the system default network
      * if no such network is available.
@@ -1095,13 +1161,25 @@ public class ConnectivityManager {
     @SystemApi(client = MODULE_LIBRARIES)
     public static final int PROFILE_NETWORK_PREFERENCE_ENTERPRISE = 1;
 
+    /**
+     * Preference for {@link ProfileNetworkPreference#setPreference(int)}.
+     * {@see #setProfileNetworkPreferences(UserHandle, List, Executor, Runnable)}
+     * Specify that the traffic for this user should by default go on a network with
+     * {@link NetworkCapabilities#NET_CAPABILITY_ENTERPRISE} and if no such network is available
+     * should not go on the system default network
+     * @hide
+     */
+    @SystemApi(client = MODULE_LIBRARIES)
+    public static final int PROFILE_NETWORK_PREFERENCE_ENTERPRISE_NO_FALLBACK = 2;
+
     /** @hide */
     @Retention(RetentionPolicy.SOURCE)
     @IntDef(value = {
             PROFILE_NETWORK_PREFERENCE_DEFAULT,
-            PROFILE_NETWORK_PREFERENCE_ENTERPRISE
+            PROFILE_NETWORK_PREFERENCE_ENTERPRISE,
+            PROFILE_NETWORK_PREFERENCE_ENTERPRISE_NO_FALLBACK
     })
-    public @interface ProfileNetworkPreference {
+    public @interface ProfileNetworkPreferencePolicy {
     }
 
     /**
@@ -1547,16 +1625,45 @@ public class ConnectivityManager {
     }
 
     /**
-     * Get the {@link NetworkCapabilities} for the given {@link Network}.  This
-     * will return {@code null} if the network is unknown or if the |network| argument is null.
+     * Redact {@link LinkProperties} for a given package
      *
-     * This will remove any location sensitive data in {@link TransportInfo} embedded in
-     * {@link NetworkCapabilities#getTransportInfo()}. Some transport info instances like
-     * {@link android.net.wifi.WifiInfo} contain location sensitive information. Retrieving
-     * this location sensitive information (subject to app's location permissions) will be
-     * noted by system. To include any location sensitive data in {@link TransportInfo},
-     * use a {@link NetworkCallback} with
-     * {@link NetworkCallback#FLAG_INCLUDE_LOCATION_INFO} flag.
+     * Returns an instance of the given {@link LinkProperties} appropriately redacted to send to the
+     * given package, considering its permissions.
+     *
+     * @param lp A {@link LinkProperties} which will be redacted.
+     * @param uid The target uid.
+     * @param packageName The name of the package, for appops logging.
+     * @return A redacted {@link LinkProperties} which is appropriate to send to the given uid,
+     *         or null if the uid lacks the ACCESS_NETWORK_STATE permission.
+     * @hide
+     */
+    @RequiresPermission(anyOf = {
+            NetworkStack.PERMISSION_MAINLINE_NETWORK_STACK,
+            android.Manifest.permission.NETWORK_STACK,
+            android.Manifest.permission.NETWORK_SETTINGS})
+    @SystemApi(client = MODULE_LIBRARIES)
+    @Nullable
+    public LinkProperties redactLinkPropertiesForPackage(@NonNull LinkProperties lp, int uid,
+            @NonNull String packageName) {
+        try {
+            return mService.redactLinkPropertiesForPackage(
+                    lp, uid, packageName, getAttributionTag());
+        } catch (RemoteException e) {
+            throw e.rethrowFromSystemServer();
+        }
+    }
+
+    /**
+     * Get the {@link NetworkCapabilities} for the given {@link Network}, or null.
+     *
+     * This will remove any location sensitive data in the returned {@link NetworkCapabilities}.
+     * Some {@link TransportInfo} instances like {@link android.net.wifi.WifiInfo} contain location
+     * sensitive information. To retrieve this location sensitive information (subject to
+     * the caller's location permissions), use a {@link NetworkCallback} with the
+     * {@link NetworkCallback#FLAG_INCLUDE_LOCATION_INFO} flag instead.
+     *
+     * This method returns {@code null} if the network is unknown or if the |network| argument
+     * is null.
      *
      * @param network The {@link Network} object identifying the network in question.
      * @return The {@link NetworkCapabilities} for the network, or {@code null}.
@@ -1567,6 +1674,38 @@ public class ConnectivityManager {
         try {
             return mService.getNetworkCapabilities(
                     network, mContext.getOpPackageName(), getAttributionTag());
+        } catch (RemoteException e) {
+            throw e.rethrowFromSystemServer();
+        }
+    }
+
+    /**
+     * Redact {@link NetworkCapabilities} for a given package.
+     *
+     * Returns an instance of {@link NetworkCapabilities} that is appropriately redacted to send
+     * to the given package, considering its permissions. Calling this method will blame the UID for
+     * retrieving the device location if the passed capabilities contain location-sensitive
+     * information.
+     *
+     * @param nc A {@link NetworkCapabilities} instance which will be redacted.
+     * @param uid The target uid.
+     * @param packageName The name of the package, for appops logging.
+     * @return A redacted {@link NetworkCapabilities} which is appropriate to send to the given uid,
+     *         or null if the uid lacks the ACCESS_NETWORK_STATE permission.
+     * @hide
+     */
+    @RequiresPermission(anyOf = {
+            NetworkStack.PERMISSION_MAINLINE_NETWORK_STACK,
+            android.Manifest.permission.NETWORK_STACK,
+            android.Manifest.permission.NETWORK_SETTINGS})
+    @SystemApi(client = MODULE_LIBRARIES)
+    @Nullable
+    public NetworkCapabilities redactNetworkCapabilitiesForPackage(
+            @NonNull NetworkCapabilities nc,
+            int uid, @NonNull String packageName) {
+        try {
+            return mService.redactNetworkCapabilitiesForPackage(nc, uid, packageName,
+                    getAttributionTag());
         } catch (RemoteException e) {
             throw e.rethrowFromSystemServer();
         }
@@ -3469,7 +3608,20 @@ public class ConnectivityManager {
          * @hide
          */
         public static final int FLAG_NONE = 0;
+
         /**
+         * Inclusion of this flag means location-sensitive redaction requests keeping location info.
+         *
+         * Some objects like {@link NetworkCapabilities} may contain location-sensitive information.
+         * Prior to Android 12, this information is always returned to apps holding the appropriate
+         * permission, possibly noting that the app has used location.
+         * <p>In Android 12 and above, by default the sent objects do not contain any location
+         * information, even if the app holds the necessary permissions, and the system does not
+         * take note of location usage by the app. Apps can request that location information is
+         * included, in which case the system will check location permission and the location
+         * toggle state, and take note of location usage by the app if any such information is
+         * returned.
+         *
          * Use this flag to include any location sensitive data in {@link NetworkCapabilities} sent
          * via {@link #onCapabilitiesChanged(Network, NetworkCapabilities)}.
          * <p>
@@ -3486,8 +3638,7 @@ public class ConnectivityManager {
          * <li> Retrieving this location sensitive information (subject to app's location
          * permissions) will be noted by system. </li>
          * <li> Without this flag any {@link NetworkCapabilities} provided via the callback does
-         * not include location sensitive info.
-         * </p>
+         * not include location sensitive information.
          */
         // Note: Some existing fields which are location sensitive may still be included without
         // this flag if the app targets SDK < S (to maintain backwards compatibility).
@@ -5461,6 +5612,8 @@ public class ConnectivityManager {
      * @param listener an optional listener to listen for completion of the operation.
      * @throws IllegalArgumentException if {@code profile} is not a valid user profile.
      * @throws SecurityException if missing the appropriate permissions.
+     * @deprecated Use {@link #setProfileNetworkPreferences(UserHandle, List, Executor, Runnable)}
+     * instead as it provides a more flexible API with more options.
      * @hide
      */
     // This function is for establishing per-profile default networking and can only be called by
@@ -5470,8 +5623,48 @@ public class ConnectivityManager {
     @SuppressLint({"UserHandle"})
     @SystemApi(client = MODULE_LIBRARIES)
     @RequiresPermission(android.Manifest.permission.NETWORK_STACK)
+    @Deprecated
     public void setProfileNetworkPreference(@NonNull final UserHandle profile,
-            @ProfileNetworkPreference final int preference,
+            @ProfileNetworkPreferencePolicy final int preference,
+            @Nullable @CallbackExecutor final Executor executor,
+            @Nullable final Runnable listener) {
+
+        ProfileNetworkPreference.Builder preferenceBuilder =
+                new ProfileNetworkPreference.Builder();
+        preferenceBuilder.setPreference(preference);
+        if (preference != PROFILE_NETWORK_PREFERENCE_DEFAULT) {
+            preferenceBuilder.setPreferenceEnterpriseId(NET_ENTERPRISE_ID_1);
+        }
+        setProfileNetworkPreferences(profile,
+                List.of(preferenceBuilder.build()), executor, listener);
+    }
+
+    /**
+     * Set a list of default network selection policies for a user profile.
+     *
+     * Calling this API with a user handle defines the entire policy for that user handle.
+     * It will overwrite any setting previously set for the same user profile,
+     * and not affect previously set settings for other handles.
+     *
+     * Call this API with an empty list to remove settings for this user profile.
+     *
+     * See {@link ProfileNetworkPreference} for more details on each preference
+     * parameter.
+     *
+     * @param profile the user profile for which the preference is being set.
+     * @param profileNetworkPreferences the list of profile network preferences for the
+     *        provided profile.
+     * @param executor an executor to execute the listener on. Optional if listener is null.
+     * @param listener an optional listener to listen for completion of the operation.
+     * @throws IllegalArgumentException if {@code profile} is not a valid user profile.
+     * @throws SecurityException if missing the appropriate permissions.
+     * @hide
+     */
+    @SystemApi(client = MODULE_LIBRARIES)
+    @RequiresPermission(android.Manifest.permission.NETWORK_STACK)
+    public void setProfileNetworkPreferences(
+            @NonNull final UserHandle profile,
+            @NonNull List<ProfileNetworkPreference>  profileNetworkPreferences,
             @Nullable @CallbackExecutor final Executor executor,
             @Nullable final Runnable listener) {
         if (null != listener) {
@@ -5489,7 +5682,7 @@ public class ConnectivityManager {
             };
         }
         try {
-            mService.setProfileNetworkPreference(profile, preference, proxy);
+            mService.setProfileNetworkPreferences(profile, profileNetworkPreferences, proxy);
         } catch (RemoteException e) {
             throw e.rethrowFromSystemServer();
         }
@@ -5510,5 +5703,142 @@ public class ConnectivityManager {
     @NonNull
     public static Range<Integer> getIpSecNetIdRange() {
         return new Range(TUN_INTF_NETID_START, TUN_INTF_NETID_START + TUN_INTF_NETID_RANGE - 1);
+    }
+
+    /**
+     * Sets whether the specified UID is allowed to use data on metered networks even when
+     * background data is restricted.
+     *
+     * @param uid uid of target app
+     * @throws IllegalStateException if updating allow list failed.
+     * @hide
+     */
+    @SystemApi(client = MODULE_LIBRARIES)
+    @RequiresPermission(anyOf = {
+            android.Manifest.permission.NETWORK_SETTINGS,
+            android.Manifest.permission.NETWORK_STACK,
+            NetworkStack.PERMISSION_MAINLINE_NETWORK_STACK
+    })
+    public void updateMeteredNetworkAllowList(final int uid, final boolean add) {
+        try {
+            mService.updateMeteredNetworkAllowList(uid, add);
+        } catch (RemoteException e) {
+            throw e.rethrowFromSystemServer();
+        }
+    }
+
+    /**
+     * Sets whether the specified UID is prevented from using background data on metered networks.
+     * Takes precedence over {@link #updateMeteredNetworkAllowList}.
+     *
+     * @param uid uid of target app
+     * @throws IllegalStateException if updating deny list failed.
+     * @hide
+     */
+    @SystemApi(client = MODULE_LIBRARIES)
+    @RequiresPermission(anyOf = {
+            android.Manifest.permission.NETWORK_SETTINGS,
+            android.Manifest.permission.NETWORK_STACK,
+            NetworkStack.PERMISSION_MAINLINE_NETWORK_STACK
+    })
+    public void updateMeteredNetworkDenyList(final int uid, final boolean add) {
+        try {
+            mService.updateMeteredNetworkDenyList(uid, add);
+        } catch (RemoteException e) {
+            throw e.rethrowFromSystemServer();
+        }
+    }
+
+    /**
+     * Sets a firewall rule for the specified UID on the specified chain.
+     *
+     * @param chain target chain.
+     * @param uid uid to allow/deny.
+     * @param allow whether networking is allowed or denied.
+     * @throws IllegalStateException if updating firewall rule failed.
+     * @hide
+     */
+    @SystemApi(client = MODULE_LIBRARIES)
+    @RequiresPermission(anyOf = {
+            android.Manifest.permission.NETWORK_SETTINGS,
+            android.Manifest.permission.NETWORK_STACK,
+            NetworkStack.PERMISSION_MAINLINE_NETWORK_STACK
+    })
+    public void updateFirewallRule(@FirewallChain final int chain, final int uid,
+            final boolean allow) {
+        try {
+            mService.updateFirewallRule(chain, uid, allow);
+        } catch (RemoteException e) {
+            throw e.rethrowFromSystemServer();
+        }
+    }
+
+    /**
+     * Enables or disables the specified firewall chain.
+     *
+     * @param chain target chain.
+     * @param enable whether the chain should be enabled.
+     * @throws IllegalStateException if enabling or disabling the firewall chain failed.
+     * @hide
+     */
+    @SystemApi(client = MODULE_LIBRARIES)
+    @RequiresPermission(anyOf = {
+            android.Manifest.permission.NETWORK_SETTINGS,
+            android.Manifest.permission.NETWORK_STACK,
+            NetworkStack.PERMISSION_MAINLINE_NETWORK_STACK
+    })
+    public void setFirewallChainEnabled(@FirewallChain final int chain, final boolean enable) {
+        try {
+            mService.setFirewallChainEnabled(chain, enable);
+        } catch (RemoteException e) {
+            throw e.rethrowFromSystemServer();
+        }
+    }
+
+    /**
+     * Replaces the contents of the specified UID-based firewall chain.
+     *
+     * @param chain target chain to replace.
+     * @param uids The list of UIDs to be placed into chain.
+     * @throws IllegalStateException if replacing the firewall chain failed.
+     * @throws IllegalArgumentException if {@code chain} is not a valid chain.
+     * @hide
+     */
+    @SystemApi(client = MODULE_LIBRARIES)
+    @RequiresPermission(anyOf = {
+            android.Manifest.permission.NETWORK_SETTINGS,
+            android.Manifest.permission.NETWORK_STACK,
+            NetworkStack.PERMISSION_MAINLINE_NETWORK_STACK
+    })
+    public void replaceFirewallChain(@FirewallChain final int chain, @NonNull final int[] uids) {
+        Objects.requireNonNull(uids);
+        try {
+            mService.replaceFirewallChain(chain, uids);
+        } catch (RemoteException e) {
+            throw e.rethrowFromSystemServer();
+        }
+    }
+
+    /**
+     * Request to change the current active network stats map.
+     * STOPSHIP: Remove this API before T sdk finalized, this API is temporary added for the
+     * NetworkStatsFactory which is platform code but will be moved into connectivity (tethering)
+     * mainline module.
+     *
+     * @throws IllegalStateException if swapping active stats map failed.
+     * @hide
+     */
+    @SystemApi(client = MODULE_LIBRARIES)
+    @RequiresPermission(anyOf = {
+            android.Manifest.permission.NETWORK_SETTINGS,
+            android.Manifest.permission.NETWORK_STACK,
+            NetworkStack.PERMISSION_MAINLINE_NETWORK_STACK
+    })
+    public void swapActiveStatsMap() {
+        try {
+            mService.swapActiveStatsMap();
+        } catch (RemoteException e) {
+            throw e.rethrowFromSystemServer();
+        }
     }
 }

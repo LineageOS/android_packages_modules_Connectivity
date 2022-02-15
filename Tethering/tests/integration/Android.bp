@@ -48,7 +48,7 @@ java_defaults {
 // Use with NetworkStackJarJarRules.
 android_library {
     name: "TetheringIntegrationTestsLatestSdkLib",
-    target_sdk_version: "30",
+    target_sdk_version: "31",
     platform_apis: true,
     defaults: ["TetheringIntegrationTestsDefaults"],
     visibility: [
@@ -128,7 +128,7 @@ android_test {
     name: "TetheringCoverageTests",
     platform_apis: true,
     min_sdk_version: "30",
-    target_sdk_version: "30",
+    target_sdk_version: "31",
     test_suites: ["device-tests", "mts-tethering"],
     test_config: "AndroidTest_Coverage.xml",
     defaults: ["libnetworkstackutilsjni_deps"],

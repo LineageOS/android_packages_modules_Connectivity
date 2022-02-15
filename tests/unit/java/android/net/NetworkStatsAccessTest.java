@@ -16,21 +16,21 @@
 
 package android.net;
 
+import static com.android.testutils.DevSdkIgnoreRuleKt.SC_V2;
+
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.when;
 
 import android.Manifest;
 import android.Manifest.permission;
 import android.app.AppOpsManager;
-import android.app.admin.DevicePolicyManagerInternal;
+import android.app.admin.DevicePolicyManager;
 import android.content.Context;
 import android.content.pm.PackageManager;
-import android.os.Build;
 import android.telephony.TelephonyManager;
 
 import androidx.test.filters.SmallTest;
 
-import com.android.server.LocalServices;
 import com.android.testutils.DevSdkIgnoreRule;
 import com.android.testutils.DevSdkIgnoreRunner;
 
@@ -43,123 +43,112 @@ import org.mockito.MockitoAnnotations;
 
 @RunWith(DevSdkIgnoreRunner.class)
 @SmallTest
-@DevSdkIgnoreRule.IgnoreUpTo(Build.VERSION_CODES.S)
+@DevSdkIgnoreRule.IgnoreUpTo(SC_V2) // TODO: Use to Build.VERSION_CODES.SC_V2 when available
 public class NetworkStatsAccessTest {
     private static final String TEST_PKG = "com.example.test";
+    private static final int TEST_PID = 1234;
     private static final int TEST_UID = 12345;
 
     @Mock private Context mContext;
-    @Mock private DevicePolicyManagerInternal mDpmi;
+    @Mock private DevicePolicyManager mDpm;
     @Mock private TelephonyManager mTm;
     @Mock private AppOpsManager mAppOps;
 
     // Hold the real service so we can restore it when tearing down the test.
-    private DevicePolicyManagerInternal mSystemDpmi;
+    private DevicePolicyManager mSystemDpm;
 
     @Before
     public void setUp() throws Exception {
         MockitoAnnotations.initMocks(this);
 
-        mSystemDpmi = LocalServices.getService(DevicePolicyManagerInternal.class);
-        LocalServices.removeServiceForTest(DevicePolicyManagerInternal.class);
-        LocalServices.addService(DevicePolicyManagerInternal.class, mDpmi);
-
         when(mContext.getSystemService(Context.TELEPHONY_SERVICE)).thenReturn(mTm);
         when(mContext.getSystemService(Context.APP_OPS_SERVICE)).thenReturn(mAppOps);
+        when(mContext.getSystemServiceName(DevicePolicyManager.class))
+                .thenReturn(Context.DEVICE_POLICY_SERVICE);
+        when(mContext.getSystemService(Context.DEVICE_POLICY_SERVICE)).thenReturn(mDpm);
+
+        setHasCarrierPrivileges(false);
+        setIsDeviceOwner(false);
+        setIsProfileOwner(false);
+        setHasAppOpsPermission(AppOpsManager.MODE_DEFAULT, false);
+        setHasReadHistoryPermission(false);
+        setHasNetworkStackPermission(false);
     }
 
     @After
     public void tearDown() throws Exception {
-        LocalServices.removeServiceForTest(DevicePolicyManagerInternal.class);
-        LocalServices.addService(DevicePolicyManagerInternal.class, mSystemDpmi);
     }
 
     @Test
     public void testCheckAccessLevel_hasCarrierPrivileges() throws Exception {
         setHasCarrierPrivileges(true);
-        setIsDeviceOwner(false);
-        setIsProfileOwner(false);
-        setHasAppOpsPermission(AppOpsManager.MODE_DEFAULT, false);
-        setHasReadHistoryPermission(false);
         assertEquals(NetworkStatsAccess.Level.DEVICE,
-                NetworkStatsAccess.checkAccessLevel(mContext, TEST_UID, TEST_PKG));
+                NetworkStatsAccess.checkAccessLevel(mContext, TEST_PID, TEST_UID, TEST_PKG));
     }
 
     @Test
     public void testCheckAccessLevel_isDeviceOwner() throws Exception {
-        setHasCarrierPrivileges(false);
         setIsDeviceOwner(true);
-        setIsProfileOwner(false);
-        setHasAppOpsPermission(AppOpsManager.MODE_DEFAULT, false);
-        setHasReadHistoryPermission(false);
         assertEquals(NetworkStatsAccess.Level.DEVICE,
-                NetworkStatsAccess.checkAccessLevel(mContext, TEST_UID, TEST_PKG));
+                NetworkStatsAccess.checkAccessLevel(mContext, TEST_PID, TEST_UID, TEST_PKG));
     }
 
     @Test
     public void testCheckAccessLevel_isProfileOwner() throws Exception {
-        setHasCarrierPrivileges(false);
-        setIsDeviceOwner(false);
         setIsProfileOwner(true);
-        setHasAppOpsPermission(AppOpsManager.MODE_DEFAULT, false);
-        setHasReadHistoryPermission(false);
         assertEquals(NetworkStatsAccess.Level.USER,
-                NetworkStatsAccess.checkAccessLevel(mContext, TEST_UID, TEST_PKG));
+                NetworkStatsAccess.checkAccessLevel(mContext, TEST_PID, TEST_UID, TEST_PKG));
     }
 
     @Test
     public void testCheckAccessLevel_hasAppOpsBitAllowed() throws Exception {
-        setHasCarrierPrivileges(false);
-        setIsDeviceOwner(false);
         setIsProfileOwner(true);
         setHasAppOpsPermission(AppOpsManager.MODE_ALLOWED, false);
-        setHasReadHistoryPermission(false);
         assertEquals(NetworkStatsAccess.Level.DEVICESUMMARY,
-                NetworkStatsAccess.checkAccessLevel(mContext, TEST_UID, TEST_PKG));
+                NetworkStatsAccess.checkAccessLevel(mContext, TEST_PID, TEST_UID, TEST_PKG));
     }
 
     @Test
     public void testCheckAccessLevel_hasAppOpsBitDefault_grantedPermission() throws Exception {
-        setHasCarrierPrivileges(false);
-        setIsDeviceOwner(false);
         setIsProfileOwner(true);
         setHasAppOpsPermission(AppOpsManager.MODE_DEFAULT, true);
-        setHasReadHistoryPermission(false);
         assertEquals(NetworkStatsAccess.Level.DEVICESUMMARY,
-                NetworkStatsAccess.checkAccessLevel(mContext, TEST_UID, TEST_PKG));
+                NetworkStatsAccess.checkAccessLevel(mContext, TEST_PID, TEST_UID, TEST_PKG));
     }
 
     @Test
     public void testCheckAccessLevel_hasReadHistoryPermission() throws Exception {
-        setHasCarrierPrivileges(false);
-        setIsDeviceOwner(false);
         setIsProfileOwner(true);
-        setHasAppOpsPermission(AppOpsManager.MODE_DEFAULT, false);
         setHasReadHistoryPermission(true);
         assertEquals(NetworkStatsAccess.Level.DEVICESUMMARY,
-                NetworkStatsAccess.checkAccessLevel(mContext, TEST_UID, TEST_PKG));
+                NetworkStatsAccess.checkAccessLevel(mContext, TEST_PID, TEST_UID, TEST_PKG));
     }
 
     @Test
     public void testCheckAccessLevel_deniedAppOpsBit() throws Exception {
-        setHasCarrierPrivileges(false);
-        setIsDeviceOwner(false);
-        setIsProfileOwner(false);
         setHasAppOpsPermission(AppOpsManager.MODE_ERRORED, true);
-        setHasReadHistoryPermission(false);
         assertEquals(NetworkStatsAccess.Level.DEFAULT,
-                NetworkStatsAccess.checkAccessLevel(mContext, TEST_UID, TEST_PKG));
+                NetworkStatsAccess.checkAccessLevel(mContext, TEST_PID, TEST_UID, TEST_PKG));
     }
 
     @Test
     public void testCheckAccessLevel_deniedAppOpsBit_deniedPermission() throws Exception {
-        setHasCarrierPrivileges(false);
-        setIsDeviceOwner(false);
-        setIsProfileOwner(false);
-        setHasAppOpsPermission(AppOpsManager.MODE_DEFAULT, false);
-        setHasReadHistoryPermission(false);
         assertEquals(NetworkStatsAccess.Level.DEFAULT,
-                NetworkStatsAccess.checkAccessLevel(mContext, TEST_UID, TEST_PKG));
+                NetworkStatsAccess.checkAccessLevel(mContext, TEST_PID, TEST_UID, TEST_PKG));
+    }
+
+    @Test
+    public void testCheckAccessLevel_hasNetworkStackPermission() throws Exception {
+        assertEquals(NetworkStatsAccess.Level.DEFAULT,
+                NetworkStatsAccess.checkAccessLevel(mContext, TEST_PID, TEST_UID, TEST_PKG));
+
+        setHasNetworkStackPermission(true);
+        assertEquals(NetworkStatsAccess.Level.DEVICE,
+                NetworkStatsAccess.checkAccessLevel(mContext, TEST_PID, TEST_UID, TEST_PKG));
+
+        setHasNetworkStackPermission(false);
+        assertEquals(NetworkStatsAccess.Level.DEFAULT,
+                NetworkStatsAccess.checkAccessLevel(mContext, TEST_PID, TEST_UID, TEST_PKG));
     }
 
     private void setHasCarrierPrivileges(boolean hasPrivileges) {
@@ -169,16 +158,16 @@ public class NetworkStatsAccessTest {
     }
 
     private void setIsDeviceOwner(boolean isOwner) {
-        when(mDpmi.isActiveDeviceOwner(TEST_UID)).thenReturn(isOwner);
+        when(mDpm.isDeviceOwnerApp(TEST_PKG)).thenReturn(isOwner);
     }
 
     private void setIsProfileOwner(boolean isOwner) {
-        when(mDpmi.isActiveProfileOwner(TEST_UID)).thenReturn(isOwner);
+        when(mDpm.isProfileOwnerApp(TEST_PKG)).thenReturn(isOwner);
     }
 
     private void setHasAppOpsPermission(int appOpsMode, boolean hasPermission) {
-        when(mAppOps.noteOp(AppOpsManager.OP_GET_USAGE_STATS, TEST_UID, TEST_PKG))
-                .thenReturn(appOpsMode);
+        when(mAppOps.noteOp(AppOpsManager.OPSTR_GET_USAGE_STATS, TEST_UID, TEST_PKG,
+                null /* attributionTag */, null /* message */)).thenReturn(appOpsMode);
         when(mContext.checkCallingPermission(Manifest.permission.PACKAGE_USAGE_STATS)).thenReturn(
                 hasPermission ? PackageManager.PERMISSION_GRANTED
                         : PackageManager.PERMISSION_DENIED);
@@ -188,5 +177,11 @@ public class NetworkStatsAccessTest {
         when(mContext.checkCallingOrSelfPermission(permission.READ_NETWORK_USAGE_HISTORY))
                 .thenReturn(hasPermission ? PackageManager.PERMISSION_GRANTED
                         : PackageManager.PERMISSION_DENIED);
+    }
+
+    private void setHasNetworkStackPermission(boolean hasPermission) {
+        when(mContext.checkPermission(android.Manifest.permission.NETWORK_STACK,
+                TEST_PID, TEST_UID)).thenReturn(hasPermission ? PackageManager.PERMISSION_GRANTED
+                : PackageManager.PERMISSION_DENIED);
     }
 }

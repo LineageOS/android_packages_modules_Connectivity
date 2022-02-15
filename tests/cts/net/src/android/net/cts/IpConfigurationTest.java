@@ -16,7 +16,7 @@
 
 package android.net.cts;
 
-import static com.android.testutils.ParcelUtils.assertParcelSane;
+import static com.android.testutils.ParcelUtils.assertParcelingIsLossless;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
@@ -25,12 +25,16 @@ import android.net.IpConfiguration;
 import android.net.LinkAddress;
 import android.net.ProxyInfo;
 import android.net.StaticIpConfiguration;
+import android.os.Build;
 
 import androidx.test.runner.AndroidJUnit4;
+
+import com.android.testutils.DevSdkIgnoreRule;
 
 import libcore.net.InetAddressUtils;
 
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
@@ -49,6 +53,9 @@ public final class IpConfigurationTest {
 
     private StaticIpConfiguration mStaticIpConfig;
     private ProxyInfo mProxy;
+
+    @Rule
+    public final DevSdkIgnoreRule mIgnoreRule = new DevSdkIgnoreRule();
 
     @Before
     public void setUp() {
@@ -99,6 +106,18 @@ public final class IpConfigurationTest {
         assertIpConfigurationEqual(ipConfig, new IpConfiguration(ipConfig));
     }
 
+    @DevSdkIgnoreRule.IgnoreUpTo(Build.VERSION_CODES.R)
+    @Test
+    public void testBuilder() {
+        final IpConfiguration c = new IpConfiguration.Builder()
+                .setStaticIpConfiguration(mStaticIpConfig)
+                .setHttpProxy(mProxy)
+                .build();
+
+        assertEquals(mStaticIpConfig, c.getStaticIpConfiguration());
+        assertEquals(mProxy, c.getHttpProxy());
+    }
+
     private void checkEmpty(IpConfiguration config) {
         assertEquals(IpConfiguration.IpAssignment.UNASSIGNED,
                 config.getIpAssignment().UNASSIGNED);
@@ -118,6 +137,6 @@ public final class IpConfigurationTest {
     @Test
     public void testParcel() {
         final IpConfiguration config = new IpConfiguration();
-        assertParcelSane(config, 4);
+        assertParcelingIsLossless(config);
     }
 }

@@ -28,7 +28,6 @@ import static android.system.OsConstants.RT_SCOPE_SITE;
 import static android.system.OsConstants.RT_SCOPE_UNIVERSE;
 
 import static com.android.testutils.MiscAsserts.assertEqualBothWays;
-import static com.android.testutils.MiscAsserts.assertFieldCountEquals;
 import static com.android.testutils.MiscAsserts.assertNotEqualEitherWay;
 import static com.android.testutils.ParcelUtils.assertParcelingIsLossless;
 
@@ -44,8 +43,8 @@ import android.os.SystemClock;
 import androidx.test.filters.SmallTest;
 import androidx.test.runner.AndroidJUnit4;
 
+import com.android.testutils.ConnectivityModuleTest;
 import com.android.testutils.DevSdkIgnoreRule;
-import com.android.testutils.DevSdkIgnoreRule.IgnoreAfter;
 import com.android.testutils.DevSdkIgnoreRule.IgnoreUpTo;
 
 import org.junit.Rule;
@@ -63,6 +62,7 @@ import java.util.List;
 
 @RunWith(AndroidJUnit4.class)
 @SmallTest
+@ConnectivityModuleTest
 public class LinkAddressTest {
     @Rule
     public final DevSdkIgnoreRule ignoreRule = new DevSdkIgnoreRule();
@@ -350,17 +350,6 @@ public class LinkAddressTest {
     public void testLifetimeParceling() {
         final LinkAddress l = new LinkAddress(V6_ADDRESS, 64, 123, 456, 1L, 3600000L);
         assertParcelingIsLossless(l);
-    }
-
-    @Test @IgnoreAfter(Build.VERSION_CODES.Q)
-    public void testFieldCount_Q() {
-        assertFieldCountEquals(4, LinkAddress.class);
-    }
-
-    @Test @IgnoreUpTo(Build.VERSION_CODES.Q)
-    public void testFieldCount() {
-        // Make sure any new field is covered by the above parceling tests when changing this number
-        assertFieldCountEquals(6, LinkAddress.class);
     }
 
     @Test @IgnoreUpTo(Build.VERSION_CODES.Q)

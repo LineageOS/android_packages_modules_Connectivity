@@ -17,13 +17,16 @@
 package com.android.server.connectivity;
 
 import static android.net.ConnectivityDiagnosticsManager.ConnectivityReport;
+import static android.net.NetworkCapabilities.NET_CAPABILITY_NOT_RESTRICTED;
 import static android.net.NetworkCapabilities.TRANSPORT_CELLULAR;
+import static android.net.NetworkCapabilities.TRANSPORT_TEST;
 import static android.net.NetworkCapabilities.transportNamesOf;
 
 import android.annotation.NonNull;
 import android.annotation.Nullable;
 import android.content.Context;
 import android.net.CaptivePortalData;
+import android.net.DscpPolicy;
 import android.net.IDnsResolver;
 import android.net.INetd;
 import android.net.INetworkAgent;
@@ -51,11 +54,13 @@ import android.os.RemoteException;
 import android.os.SystemClock;
 import android.telephony.data.EpsBearerQosSessionAttributes;
 import android.telephony.data.NrQosSessionAttributes;
+import android.util.ArraySet;
 import android.util.Log;
 import android.util.Pair;
 import android.util.SparseArray;
 
 import com.android.internal.util.WakeupMessage;
+import com.android.modules.utils.build.SdkLevel;
 import com.android.server.ConnectivityService;
 
 import java.io.PrintWriter;
@@ -700,6 +705,24 @@ public class NetworkAgentInfo implements Comparable<NetworkAgentInfo>, NetworkRa
             mHandler.obtainMessage(NetworkAgent.EVENT_LINGER_DURATION_CHANGED,
                     new Pair<>(NetworkAgentInfo.this, durationMs)).sendToTarget();
         }
+
+        @Override
+        public void sendAddDscpPolicy(final DscpPolicy policy) {
+            mHandler.obtainMessage(NetworkAgent.EVENT_ADD_DSCP_POLICY,
+                    new Pair<>(NetworkAgentInfo.this, policy)).sendToTarget();
+        }
+
+        @Override
+        public void sendRemoveDscpPolicy(final int policyId) {
+            mHandler.obtainMessage(NetworkAgent.EVENT_REMOVE_DSCP_POLICY,
+                    new Pair<>(NetworkAgentInfo.this, policyId)).sendToTarget();
+        }
+
+        @Override
+        public void sendRemoveAllDscpPolicies() {
+            mHandler.obtainMessage(NetworkAgent.EVENT_REMOVE_ALL_DSCP_POLICIES,
+                    new Pair<>(NetworkAgentInfo.this, null)).sendToTarget();
+        }
     }
 
     /**
@@ -1167,6 +1190,54 @@ public class NetworkAgentInfo implements Comparable<NetworkAgentInfo>, NetworkRa
     @Nullable
     public ConnectivityReport getConnectivityReport() {
         return mConnectivityReport;
+    }
+
+    /**
+     * Make sure the NC from network agents don't contain stuff they shouldn't.
+     *
+     * @param nc the capabilities to sanitize
+     * @param creatorUid the UID of the process creating this network agent
+     * @param authenticator the carrier privilege authenticator to check for telephony constraints
+     */
+    public static void restrictCapabilitiesFromNetworkAgent(@NonNull final NetworkCapabilities nc,
+            final int creatorUid, @NonNull final CarrierPrivilegeAuthenticator authenticator) {
+        if (nc.hasTransport(TRANSPORT_TEST)) {
+            nc.restrictCapabilitiesForTestNetwork(creatorUid);
+        }
+        if (!areAccessUidsAcceptableFromNetworkAgent(nc, authenticator)) {
+            nc.setAccessUids(new ArraySet<>());
+        }
+    }
+
+    private static boolean areAccessUidsAcceptableFromNetworkAgent(
+            @NonNull final NetworkCapabilities nc,
+            @Nullable final CarrierPrivilegeAuthenticator carrierPrivilegeAuthenticator) {
+        // NCs without access UIDs are fine.
+        if (!nc.hasAccessUids()) return true;
+        // S and below must never accept access UIDs, even if an agent sends them, because netd
+        // didn't support the required feature in S.
+        if (!SdkLevel.isAtLeastT()) return false;
+
+        // On a non-restricted network, access UIDs make no sense
+        if (nc.hasCapability(NET_CAPABILITY_NOT_RESTRICTED)) return false;
+
+        // If this network has TRANSPORT_TEST, then the caller can do whatever they want to
+        // access UIDs
+        if (nc.hasTransport(TRANSPORT_TEST)) return true;
+
+        // Factories that make cell networks can allow the UID for the carrier service package.
+        // This can only work in T where there is support for CarrierPrivilegeAuthenticator
+        if (null != carrierPrivilegeAuthenticator
+                && nc.hasSingleTransport(TRANSPORT_CELLULAR)
+                && (1 == nc.getAccessUidsNoCopy().size())
+                && (carrierPrivilegeAuthenticator.hasCarrierPrivilegeForNetworkCapabilities(
+                        nc.getAccessUidsNoCopy().valueAt(0), nc))) {
+            return true;
+        }
+
+        // TODO : accept Railway callers
+
+        return false;
     }
 
     // TODO: Print shorter members first and only print the boolean variable which value is true

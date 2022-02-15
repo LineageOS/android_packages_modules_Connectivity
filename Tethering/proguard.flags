@@ -8,6 +8,10 @@
     native <methods>;
 }
 
+-keep class com.android.networkstack.tethering.util.TcUtils {
+    native <methods>;
+}
+
 -keepclassmembers public class * extends com.android.networkstack.tethering.util.Struct {
     *;
 }

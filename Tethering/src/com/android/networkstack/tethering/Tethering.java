@@ -123,6 +123,7 @@ import android.telephony.TelephonyManager;
 import android.text.TextUtils;
 import android.util.ArrayMap;
 import android.util.Log;
+import android.util.Pair;
 import android.util.SparseArray;
 
 import androidx.annotation.NonNull;
@@ -133,7 +134,12 @@ import com.android.internal.util.IndentingPrintWriter;
 import com.android.internal.util.MessageUtils;
 import com.android.internal.util.State;
 import com.android.internal.util.StateMachine;
+import com.android.modules.utils.build.SdkLevel;
 import com.android.net.module.util.BaseNetdUnsolicitedEventListener;
+import com.android.networkstack.apishim.common.BluetoothPanShim;
+import com.android.networkstack.apishim.common.BluetoothPanShim.TetheredInterfaceCallbackShim;
+import com.android.networkstack.apishim.common.BluetoothPanShim.TetheredInterfaceRequestShim;
+import com.android.networkstack.apishim.common.UnsupportedApiLevelException;
 import com.android.networkstack.tethering.util.InterfaceSet;
 import com.android.networkstack.tethering.util.PrefixUtils;
 import com.android.networkstack.tethering.util.TetheringUtils;
@@ -264,9 +270,15 @@ public class Tethering {
     private int mOffloadStatus = TETHER_HARDWARE_OFFLOAD_STOPPED;
 
     private EthernetManager.TetheredInterfaceRequest mEthernetIfaceRequest;
+    private TetheredInterfaceRequestShim mBluetoothIfaceRequest;
     private String mConfiguredEthernetIface;
+    private String mConfiguredBluetoothIface;
     private EthernetCallback mEthernetCallback;
+    private TetheredInterfaceCallbackShim mBluetoothCallback;
     private SettingsObserver mSettingsObserver;
+    private BluetoothPan mBluetoothPan;
+    private PanServiceListener mBluetoothPanListener;
+    private ArrayList<Pair<Boolean, IIntResultListener>> mPendingPanRequests;
 
     public Tethering(TetheringDependencies deps) {
         mLog.mark("Tethering.constructed");
@@ -275,6 +287,11 @@ public class Tethering {
         mNetd = mDeps.getINetd(mContext);
         mLooper = mDeps.getTetheringLooper();
         mNotificationUpdater = mDeps.getNotificationUpdater(mContext, mLooper);
+
+        // This is intended to ensrure that if something calls startTethering(bluetooth) just after
+        // bluetooth is enabled. Before onServiceConnected is called, store the calls into this
+        // list and handle them as soon as onServiceConnected is called.
+        mPendingPanRequests = new ArrayList<>();
 
         mTetherStates = new ArrayMap<>();
         mConnectedClientsTracker = new ConnectedClientsTracker();
@@ -524,13 +541,15 @@ public class Tethering {
         }
     }
 
-    // This method needs to exist because TETHERING_BLUETOOTH and TETHERING_WIGIG can't use
-    // enableIpServing.
+    // This method needs to exist because TETHERING_BLUETOOTH before Android T and TETHERING_WIGIG
+    // can't use enableIpServing.
     private void processInterfaceStateChange(final String iface, boolean enabled) {
         // Do not listen to USB interface state changes or USB interface add/removes. USB tethering
         // is driven only by USB_ACTION broadcasts.
         final int type = ifaceNameToType(iface);
         if (type == TETHERING_USB || type == TETHERING_NCM) return;
+
+        if (type == TETHERING_BLUETOOTH && SdkLevel.isAtLeastT()) return;
 
         if (enabled) {
             ensureIpServerStarted(iface);
@@ -701,35 +720,151 @@ public class Tethering {
             return;
         }
 
-        adapter.getProfileProxy(mContext, new ServiceListener() {
-            @Override
-            public void onServiceDisconnected(int profile) { }
+        if (mBluetoothPanListener != null && mBluetoothPanListener.isConnected()) {
+            // The PAN service is connected. Enable or disable bluetooth tethering.
+            // When bluetooth tethering is enabled, any time a PAN client pairs with this
+            // host, bluetooth will bring up a bt-pan interface and notify tethering to
+            // enable IP serving.
+            setBluetoothTetheringSettings(mBluetoothPan, enable, listener);
+            return;
+        }
 
-            @Override
-            public void onServiceConnected(int profile, BluetoothProfile proxy) {
-                // Clear identify is fine because caller already pass tethering permission at
-                // ConnectivityService#startTethering()(or stopTethering) before the control comes
-                // here. Bluetooth will check tethering permission again that there is
-                // Context#getOpPackageName() under BluetoothPan#setBluetoothTethering() to get
-                // caller's package name for permission check.
-                // Calling BluetoothPan#setBluetoothTethering() here means the package name always
-                // be system server. If calling identity is not cleared, that package's uid might
-                // not match calling uid and end up in permission denied.
-                final long identityToken = Binder.clearCallingIdentity();
-                try {
-                    ((BluetoothPan) proxy).setBluetoothTethering(enable);
-                } finally {
-                    Binder.restoreCallingIdentity(identityToken);
+        // The reference of IIntResultListener should only exist when application want to start
+        // tethering but tethering is not bound to pan service yet. Even if the calling process
+        // dies, the referenice of IIntResultListener would still keep in mPendingPanRequests. Once
+        // tethering bound to pan service (onServiceConnected) or bluetooth just crash
+        // (onServiceDisconnected), all the references from mPendingPanRequests would be cleared.
+        mPendingPanRequests.add(new Pair(enable, listener));
+
+        // Bluetooth tethering is not a popular feature. To avoid bind to bluetooth pan service all
+        // the time but user never use bluetooth tethering. mBluetoothPanListener is created first
+        // time someone calls a bluetooth tethering method (even if it's just to disable tethering
+        // when it's already disabled) and never unset after that.
+        if (mBluetoothPanListener == null) {
+            mBluetoothPanListener = new PanServiceListener();
+            adapter.getProfileProxy(mContext, mBluetoothPanListener, BluetoothProfile.PAN);
+        }
+    }
+
+    private class PanServiceListener implements ServiceListener {
+        private boolean mIsConnected = false;
+
+        @Override
+        public void onServiceConnected(int profile, BluetoothProfile proxy) {
+            // Posting this to handling onServiceConnected in tethering handler thread may have
+            // race condition that bluetooth service may disconnected when tethering thread
+            // actaully handle onServiceconnected. If this race happen, calling
+            // BluetoothPan#setBluetoothTethering would silently fail. It is fine because pan
+            // service is unreachable and both bluetooth and bluetooth tethering settings are off.
+            mHandler.post(() -> {
+                mBluetoothPan = (BluetoothPan) proxy;
+                mIsConnected = true;
+
+                for (Pair<Boolean, IIntResultListener> request : mPendingPanRequests) {
+                    setBluetoothTetheringSettings(mBluetoothPan, request.first, request.second);
                 }
-                // TODO: Enabling bluetooth tethering can fail asynchronously here.
-                // We should figure out a way to bubble up that failure instead of sending success.
-                final int result = (((BluetoothPan) proxy).isTetheringOn() == enable)
-                        ? TETHER_ERROR_NO_ERROR
-                        : TETHER_ERROR_INTERNAL_ERROR;
-                sendTetherResult(listener, result, TETHERING_BLUETOOTH);
-                adapter.closeProfileProxy(BluetoothProfile.PAN, proxy);
+                mPendingPanRequests.clear();
+            });
+        }
+
+        @Override
+        public void onServiceDisconnected(int profile) {
+            mHandler.post(() -> {
+                // onServiceDisconnected means Bluetooth is off (or crashed) and is not
+                // reachable before next onServiceConnected.
+                mIsConnected = false;
+
+                for (Pair<Boolean, IIntResultListener> request : mPendingPanRequests) {
+                    sendTetherResult(request.second, TETHER_ERROR_SERVICE_UNAVAIL,
+                            TETHERING_BLUETOOTH);
+                }
+                mPendingPanRequests.clear();
+                mBluetoothIfaceRequest = null;
+                mBluetoothCallback = null;
+                maybeDisableBluetoothIpServing();
+            });
+        }
+
+        public boolean isConnected() {
+            return mIsConnected;
+        }
+    }
+
+    private void setBluetoothTetheringSettings(@NonNull final BluetoothPan bluetoothPan,
+            final boolean enable, final IIntResultListener listener) {
+        if (SdkLevel.isAtLeastT()) {
+            changeBluetoothTetheringSettings(bluetoothPan, enable);
+        } else {
+            changeBluetoothTetheringSettingsPreT(bluetoothPan, enable);
+        }
+
+        // Enabling bluetooth tethering settings can silently fail. Send internal error if the
+        // result is not expected.
+        final int result = bluetoothPan.isTetheringOn() == enable
+                ? TETHER_ERROR_NO_ERROR : TETHER_ERROR_INTERNAL_ERROR;
+        sendTetherResult(listener, result, TETHERING_BLUETOOTH);
+    }
+
+    private void changeBluetoothTetheringSettingsPreT(@NonNull final BluetoothPan bluetoothPan,
+            final boolean enable) {
+        bluetoothPan.setBluetoothTethering(enable);
+    }
+
+    private void changeBluetoothTetheringSettings(@NonNull final BluetoothPan bluetoothPan,
+            final boolean enable) {
+        final BluetoothPanShim panShim = mDeps.getBluetoothPanShim(bluetoothPan);
+        if (enable) {
+            if (mBluetoothIfaceRequest != null) {
+                Log.d(TAG, "Bluetooth tethering settings already enabled");
+                return;
             }
-        }, BluetoothProfile.PAN);
+
+            mBluetoothCallback = new BluetoothCallback();
+            try {
+                mBluetoothIfaceRequest = panShim.requestTetheredInterface(mExecutor,
+                        mBluetoothCallback);
+            } catch (UnsupportedApiLevelException e) {
+                Log.wtf(TAG, "Use unsupported API, " + e);
+            }
+        } else {
+            if (mBluetoothIfaceRequest == null) {
+                Log.d(TAG, "Bluetooth tethering settings already disabled");
+                return;
+            }
+
+            mBluetoothIfaceRequest.release();
+            mBluetoothIfaceRequest = null;
+            mBluetoothCallback = null;
+            // If bluetooth request is released, tethering won't able to receive
+            // onUnavailable callback, explicitly disable bluetooth IpServer manually.
+            maybeDisableBluetoothIpServing();
+        }
+    }
+
+    // BluetoothCallback is only called after T. Before T, PanService would call tether/untether to
+    // notify bluetooth interface status.
+    private class BluetoothCallback implements TetheredInterfaceCallbackShim {
+        @Override
+        public void onAvailable(String iface) {
+            if (this != mBluetoothCallback) return;
+
+            enableIpServing(TETHERING_BLUETOOTH, iface, getRequestedState(TETHERING_BLUETOOTH));
+            mConfiguredBluetoothIface = iface;
+        }
+
+        @Override
+        public void onUnavailable() {
+            if (this != mBluetoothCallback) return;
+
+            maybeDisableBluetoothIpServing();
+        }
+    }
+
+    private void maybeDisableBluetoothIpServing() {
+        if (mConfiguredBluetoothIface == null) return;
+
+        ensureIpServerStopped(mConfiguredBluetoothIface);
+        mConfiguredBluetoothIface = null;
     }
 
     private int setEthernetTethering(final boolean enable) {
@@ -2343,6 +2478,13 @@ public class Tethering {
         // Binder.java closes the resource for us.
         @SuppressWarnings("resource") final IndentingPrintWriter pw = new IndentingPrintWriter(
                 writer, "  ");
+
+        // Used for testing instead of human debug.
+        // TODO: add options to choose which map to dump.
+        if (argsContain(args, "bpfRawMap")) {
+            mBpfCoordinator.dumpRawMap(pw);
+            return;
+        }
 
         if (argsContain(args, "bpf")) {
             dumpBpf(pw);
