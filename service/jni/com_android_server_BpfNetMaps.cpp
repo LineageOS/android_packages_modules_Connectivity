@@ -116,27 +116,11 @@ static jint native_replaceUidChain(JNIEnv* env, jobject clazz, jstring name, jbo
     return (jint)res;
 }
 
-static FirewallType getFirewallType(ChildChain chain) {
-    switch (chain) {
-        case DOZABLE:
-            return ALLOWLIST;
-        case STANDBY:
-            return DENYLIST;
-        case POWERSAVE:
-            return ALLOWLIST;
-        case RESTRICTED:
-            return ALLOWLIST;
-        case NONE:
-        default:
-            return DENYLIST;
-    }
-}
-
 static jint native_setUidRule(JNIEnv* env, jobject clazz, jint childChain, jint uid,
                           jint firewallRule) {
     auto chain = static_cast<ChildChain>(childChain);
     auto rule = static_cast<FirewallRule>(firewallRule);
-    FirewallType fType = getFirewallType(chain);
+    FirewallType fType = mTc.getFirewallType(chain);
 
     int res = mTc.changeUidOwnerRule(chain, uid, rule, fType);
     if (res) {
