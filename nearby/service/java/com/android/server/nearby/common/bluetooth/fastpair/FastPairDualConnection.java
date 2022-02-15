@@ -701,7 +701,7 @@ public class FastPairDualConnection extends FastPairConnection {
                             /* keyBasedPairingInfo= */ null,
                             /* passkeyConfirmationHandler= */ null,
                             mTimingLogger),
-                    device,
+                    maskBluetoothAddress(device),
                     getSupportedProfiles(device),
                     /* numConnectionAttempts= */ 1,
                     /* enablePairingBehavior= */ false,
@@ -1053,7 +1053,7 @@ public class FastPairDualConnection extends FastPairConnection {
             try {
                 attemptConnectProfiles(
                         pairer,
-                        device,
+                        maskBluetoothAddress(device),
                         profiles,
                         mPreferences.getNumConnectAttempts(),
                         /* enablePairingBehavior= */ false);
@@ -1200,7 +1200,7 @@ public class FastPairDualConnection extends FastPairConnection {
                 new ScopedTiming(mTimingLogger, "Connect to profile directly")) {
             attemptConnectProfiles(
                     pairer,
-                    device,
+                    maskBluetoothAddress(device),
                     supportedProfiles,
                     mPreferences.getEnablePairFlowShowUiWithoutProfileConnection()
                             ? mPreferences.getNumConnectAttempts()
@@ -1216,16 +1216,17 @@ public class FastPairDualConnection extends FastPairConnection {
         }
     }
 
-    private void attemptConnectProfiles(
+    @VisibleForTesting
+    void attemptConnectProfiles(
             BluetoothAudioPairer pairer,
-            BluetoothDevice device,
+            String deviceMaskedBluetoothAddress,
             short[] profiles,
             int numConnectionAttempts,
             boolean enablePairingBehavior)
             throws PairingException {
         attemptConnectProfiles(
                 pairer,
-                device,
+                deviceMaskedBluetoothAddress,
                 profiles,
                 numConnectionAttempts,
                 enablePairingBehavior,
@@ -1234,7 +1235,7 @@ public class FastPairDualConnection extends FastPairConnection {
 
     private void attemptConnectProfiles(
             BluetoothAudioPairer pairer,
-            BluetoothDevice device,
+            String deviceMaskedBluetoothAddress,
             short[] profiles,
             int numConnectionAttempts,
             boolean enablePairingBehavior,
@@ -1277,7 +1278,7 @@ public class FastPairDualConnection extends FastPairConnection {
                         | ConnectException e) {
                     Log.w(TAG,
                             "Error connecting to profile=" + profile
-                                    + " for device=" + maskBluetoothAddress(device)
+                                    + " for device=" + deviceMaskedBluetoothAddress
                                     + " (attempt " + i + " of " + mPreferences
                                     .getNumConnectAttempts(), e);
                     mEventLogger.logCurrentEventFailed(e);
