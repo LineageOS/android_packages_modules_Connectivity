@@ -56,7 +56,7 @@ public class FastPairDataProvider {
             sInstance = new FastPairDataProvider(context);
         }
         if (sInstance.mProxyFastPairDataProvider == null) {
-            Log.wtf(TAG, "no proxy fast pair data provider found");
+            Log.w(TAG, "no proxy fast pair data provider found");
         } else {
             sInstance.mProxyFastPairDataProvider.register();
         }
