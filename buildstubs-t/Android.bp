@@ -32,6 +32,16 @@ filegroup {
     srcs: ["stubs-src/**/*.java"],
 }
 
+filegroup {
+    name: "framework-connectivity-api-shared-srcs",
+    srcs: [],
+}
+
+filegroup {
+    name: "services.connectivity-netstats-jni-sources",
+    srcs: [],
+}
+
 // Empty replacement for framework-connectivity-tiramisu.impl and stubs,
 // as framework-connectivity is disabled in the branch
 java_library {

@@ -57,7 +57,11 @@ apex {
             native_shared_libs: ["libnetd_updatable"],
         },
         both: {
-            jni_libs: ["libframework-connectivity-jni"],
+            jni_libs: [
+                "libframework-connectivity-jni",
+                // Changed in sc-mainline-prod only: no framework-connectivity-tiramisu
+                // "libframework-connectivity-tiramisu-jni"
+            ],
         },
     },
     binaries: [
