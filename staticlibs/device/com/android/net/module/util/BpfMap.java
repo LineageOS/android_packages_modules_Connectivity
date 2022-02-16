@@ -250,7 +250,7 @@ public class BpfMap<K extends Struct, V extends Struct> implements IBpfMap<K, V>
      * Otherwise, iteration will result in undefined behaviour.
      */
     @Override
-    public void forEach(BiConsumer<K, V> action) throws ErrnoException {
+    public void forEach(ThrowingBiConsumer<K, V> action) throws ErrnoException {
         @Nullable K nextKey = getFirstKey();
 
         while (nextKey != null) {
