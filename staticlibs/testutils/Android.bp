@@ -32,7 +32,6 @@ java_library {
     ],
     static_libs: [
         "androidx.test.ext.junit",
-        "compatibility-device-util-axt",
         "kotlin-reflect",
         "libnanohttpd",
         "net-tests-utils-host-device-common",
