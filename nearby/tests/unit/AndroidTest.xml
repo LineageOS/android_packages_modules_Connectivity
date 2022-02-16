@@ -22,7 +22,7 @@
     <option name="test-suite-tag" value="apct" />
     <option name="test-tag" value="NearbyUnitTests" />
     <option name="config-descriptor:metadata" key="mainline-param"
-            value="com.google.android.tethering.apex" />
+            value="com.google.android.tethering.next.apex" />
     <test class="com.android.tradefed.testtype.AndroidJUnitTest" >
         <option name="package" value="android.nearby.test" />
         <option name="runner" value="androidx.test.runner.AndroidJUnitRunner" />
