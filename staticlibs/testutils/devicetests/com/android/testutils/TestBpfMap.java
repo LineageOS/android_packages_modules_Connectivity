@@ -21,6 +21,7 @@ import android.system.ErrnoException;
 import androidx.annotation.NonNull;
 
 import com.android.net.module.util.BpfMap;
+import com.android.net.module.util.IBpfMap.ThrowingBiConsumer;
 import com.android.net.module.util.Struct;
 
 import java.util.HashMap;
@@ -28,7 +29,6 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Objects;
-import java.util.function.BiConsumer;
 
 /**
  *
@@ -49,7 +49,7 @@ public class TestBpfMap<K extends Struct, V extends Struct> extends BpfMap<K, V>
     }
 
     @Override
-    public void forEach(BiConsumer<K, V> action) throws ErrnoException {
+    public void forEach(ThrowingBiConsumer<K, V> action) throws ErrnoException {
         // TODO: consider using mocked #getFirstKey and #getNextKey to iterate. It helps to
         // implement the entry deletion in the iteration if required.
         for (Map.Entry<K, V> entry : mMap.entrySet()) {
