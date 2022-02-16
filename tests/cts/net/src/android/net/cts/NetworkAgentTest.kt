@@ -77,6 +77,7 @@ import com.android.compatibility.common.util.ThrowingSupplier
 import com.android.modules.utils.build.SdkLevel
 import com.android.net.module.util.ArrayTrackRecord
 import com.android.testutils.CompatUtil
+import com.android.testutils.ConnectivityModuleTest
 import com.android.testutils.DevSdkIgnoreRule.IgnoreUpTo
 import com.android.testutils.DevSdkIgnoreRunner
 import com.android.testutils.RecorderCallback.CallbackEntry.Available
@@ -465,6 +466,7 @@ class NetworkAgentTest {
                 .addTransportType(TRANSPORT_TEST)
                 .setAccessUids(uids.toSet()).build()
 
+    @ConnectivityModuleTest // Functionality was added post-S via connectivity module update
     @Test
     fun testRejectedUpdates() {
         val callback = TestableNetworkCallback()
