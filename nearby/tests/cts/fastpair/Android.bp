@@ -29,7 +29,7 @@ android_test {
     ],
     libs: [
         "android.test.base",
-        "framework-connectivity-tiramisu.impl",
+        "framework-connectivity-t.impl",
     ],
     srcs: ["src/**/*.java"],
     test_suites: [

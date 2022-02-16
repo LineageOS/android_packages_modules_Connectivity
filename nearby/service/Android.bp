@@ -53,7 +53,7 @@ java_library {
     libs: [
         "framework-bluetooth.stubs.module_lib", // TODO(b/215722418): Change to framework-bluetooth once fixed
         "error_prone_annotations",
-        "framework-connectivity-tiramisu.impl",
+        "framework-connectivity-t.impl",
         "framework-statsd.stubs.module_lib",
     ],
     static_libs: [
