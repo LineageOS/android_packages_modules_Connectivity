@@ -180,7 +180,7 @@ android_app {
     // The permission configuration *must* be included to ensure security of the device
     required: [
         "NetworkPermissionConfig",
-        "privapp_whitelist_com.android.networkstack.tethering",
+        "privapp_allowlist_com.android.tethering",
     ],
     apex_available: ["com.android.tethering"],
     lint: { strict_updatability_linting: true },
@@ -200,7 +200,7 @@ android_app {
     // The permission configuration *must* be included to ensure security of the device
     required: [
         "NetworkPermissionConfig",
-        "privapp_whitelist_com.android.networkstack.tethering",
+        "privapp_allowlist_com.android.tethering",
     ],
     apex_available: ["com.android.tethering"],
     lint: { strict_updatability_linting: true },
