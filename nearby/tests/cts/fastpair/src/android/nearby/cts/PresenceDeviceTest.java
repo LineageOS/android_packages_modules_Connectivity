@@ -26,6 +26,7 @@ import android.os.Parcel;
 
 import androidx.annotation.RequiresApi;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
+import androidx.test.filters.SdkSuppress;
 
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -52,6 +53,7 @@ public class PresenceDeviceTest {
     private static final long DISCOVERY_MILLIS = 100L;
 
     @Test
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void testBuilder() {
         PresenceDevice device = new PresenceDevice.Builder()
                 .setDeviceType(DEVICE_TYPE)
@@ -83,6 +85,7 @@ public class PresenceDeviceTest {
     }
 
     @Test
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void testWriteParcel() {
         PresenceDevice device = new PresenceDevice.Builder()
                 .setDeviceId(DEVICE_ID)

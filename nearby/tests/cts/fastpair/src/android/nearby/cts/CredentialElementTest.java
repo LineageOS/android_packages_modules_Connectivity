@@ -25,6 +25,7 @@ import android.os.Parcel;
 
 import androidx.annotation.RequiresApi;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
+import androidx.test.filters.SdkSuppress;
 
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -38,6 +39,7 @@ public class CredentialElementTest {
     private static final byte[] VALUE = new byte[]{1, 2, 3, 4};
 
     @Test
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void testBuilder() {
         CredentialElement element = new CredentialElement(KEY, VALUE);
 
@@ -46,6 +48,7 @@ public class CredentialElementTest {
     }
 
     @Test
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void testWriteParcel() {
         CredentialElement element = new CredentialElement(KEY, VALUE);
 

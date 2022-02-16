@@ -39,5 +39,6 @@ android_test {
     ],
     platform_apis: true,
     sdk_version: "module_current",
-    min_sdk_version: "32",
+    min_sdk_version: "30",
+    target_sdk_version: "32",
 }

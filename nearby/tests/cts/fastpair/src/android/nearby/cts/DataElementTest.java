@@ -24,6 +24,7 @@ import android.os.Parcel;
 
 import androidx.annotation.RequiresApi;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
+import androidx.test.filters.SdkSuppress;
 
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -39,6 +40,7 @@ public class DataElementTest {
     private static final byte[] VALUE = new byte[]{1, 1, 1, 1};
 
     @Test
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void testBuilder() {
         DataElement dataElement = new DataElement(KEY, VALUE);
 
@@ -47,6 +49,7 @@ public class DataElementTest {
     }
 
     @Test
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void testWriteParcel() {
         DataElement dataElement = new DataElement(KEY, VALUE);
 
