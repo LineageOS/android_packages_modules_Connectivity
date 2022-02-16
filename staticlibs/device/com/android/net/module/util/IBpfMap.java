@@ -64,10 +64,14 @@ public interface IBpfMap<K extends Struct, V extends Struct> {
     /** Retrieve a value from the map. */
     V getValue(@NonNull K key) throws ErrnoException;
 
+    public interface ThrowingBiConsumer<T,U> {
+        void accept(T t, U u) throws ErrnoException;
+    }
+
     /**
      * Iterate through the map and handle each key -> value retrieved base on the given BiConsumer.
      */
-    void forEach(BiConsumer<K, V> action) throws ErrnoException;
+    void forEach(ThrowingBiConsumer<K, V> action) throws ErrnoException;
 
     /** Clears the map. */
     void clear() throws ErrnoException;
