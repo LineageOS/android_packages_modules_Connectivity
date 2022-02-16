@@ -35,6 +35,7 @@ import android.os.Parcel;
 import androidx.test.filters.SmallTest;
 import androidx.test.runner.AndroidJUnit4;
 
+import com.android.testutils.ConnectivityModuleTest;
 import com.android.testutils.DevSdkIgnoreRule;
 
 import org.junit.Rule;
@@ -256,7 +257,7 @@ public class StaticIpConfigurationTest {
         assertEquals(DNS1, s.getDnsServers().get(0));
     }
 
-    @DevSdkIgnoreRule.IgnoreUpTo(Build.VERSION_CODES.R)
+    @ConnectivityModuleTest @DevSdkIgnoreRule.IgnoreUpTo(Build.VERSION_CODES.R)
     @Test
     public void testIllegalBuilders() {
         assertThrows("Can't set IP Address to IPv6!", IllegalArgumentException.class, () -> {
