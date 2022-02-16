@@ -67,6 +67,7 @@ import android.util.Range
 import androidx.test.InstrumentationRegistry
 import androidx.test.filters.SmallTest
 import com.android.net.module.util.ConnectivitySettingsUtils.getPrivateDnsModeAsString
+import com.android.testutils.ConnectivityModuleTest
 import com.android.testutils.DevSdkIgnoreRule.IgnoreUpTo
 import com.android.testutils.DevSdkIgnoreRunner
 import junit.framework.Assert.assertEquals
@@ -295,6 +296,7 @@ class ConnectivitySettingsManagerTest {
                 testIntValues = intArrayOf(0))
     }
 
+    @ConnectivityModuleTest // get/setIngressRateLimitInBytesPerSecond was added via module update
     @Test
     fun testInternetNetworkRateLimitInBytesPerSecond() {
         val defaultRate = getIngressRateLimitInBytesPerSecond(context)

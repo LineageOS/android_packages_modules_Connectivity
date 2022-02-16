@@ -32,6 +32,9 @@
     },
     {
       "name": "libnetworkstats_test"
+    },
+    {
+      "name": "FrameworksNetIntegrationTests"
     }
   ],
   "postsubmit": [
@@ -55,6 +58,9 @@
     },
     {
       "name": "libnetworkstats_test"
+    },
+    {
+      "name": "FrameworksNetDeflakeTest"
     }
   ],
   "mainline-presubmit": [
@@ -88,12 +94,58 @@
       "name": "CtsNetTestCasesLatestSdk[CaptivePortalLoginGoogle.apk+NetworkStackGoogle.apk+com.google.android.resolv.apex+com.google.android.tethering.apex]",
       "keywords": ["sim"]
     },
+    // TODO: move to mainline-presubmit when known green.
+    // Test with APK modules only, in cases where APEX is not supported, or the other modules were simply not updated
+    {
+      "name": "CtsNetTestCasesLatestSdk[CaptivePortalLoginGoogle.apk+NetworkStackGoogle.apk]",
+      "options": [
+        {
+          "exclude-annotation": "com.android.testutils.SkipPresubmit"
+        },
+        {
+          "exclude-annotation": "androidx.test.filters.RequiresDevice"
+        },
+        {
+          "exclude-annotation": "com.android.testutils.ConnectivityModuleTest"
+        }
+      ]
+    },
+    // TODO: move to mainline-presubmit when known green.
+    // Test with connectivity/tethering module only, to catch integration issues with older versions of other modules
+    {
+      "name": "CtsNetTestCasesLatestSdk[com.google.android.tethering.apex]",
+      "options": [
+        {
+          "exclude-annotation": "com.android.testutils.SkipPresubmit"
+        },
+        {
+          "exclude-annotation": "androidx.test.filters.RequiresDevice"
+        }
+      ]
+    },
     {
       "name": "TetheringCoverageTests[CaptivePortalLoginGoogle.apk+NetworkStackGoogle.apk+com.google.android.resolv.apex+com.google.android.tethering.apex]"
     },
     // TODO: move to mainline-presubmit when known green.
     {
       "name": "bpf_existence_test[CaptivePortalLoginGoogle.apk+NetworkStackGoogle.apk+com.google.android.resolv.apex+com.google.android.tethering.apex]"
+    }
+  ],
+  "auto-postsubmit": [
+    // Test tag for automotive targets. These are only running in postsubmit so as to harden the
+    // automotive targets to avoid introducing additional test flake and build time. The plan for
+    // presubmit testing for auto is to augment the existing tests to cover auto use cases as well.
+    // Additionally, this tag is used in targeted test suites to limit resource usage on the test
+    // infra during the hardening phase.
+    // TODO: this tag to be removed once the above is no longer an issue.
+    {
+      "name": "FrameworksNetTests"
+    },
+    {
+      "name": "FrameworksNetIntegrationTests"
+    },
+    {
+      "name": "FrameworksNetDeflakeTest"
     }
   ],
   "imports": [
@@ -108,9 +160,6 @@
     },
     {
       "path": "packages/modules/CaptivePortalLogin"
-    },
-    {
-      "path": "packages/modules/Connectivity"
     },
     {
       "path": "packages/modules/Connectivity/Tethering"
