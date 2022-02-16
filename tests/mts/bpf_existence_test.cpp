@@ -23,6 +23,7 @@
 #include <android/api-level.h>
 #include <android-base/properties.h>
 #include <android-modules-utils/sdk_level.h>
+#include <bpf/BpfUtils.h>
 
 #include <gtest/gtest.h>
 
@@ -151,6 +152,8 @@ void checkFiles() {
 }
 
 TEST_F(BpfExistenceTest, TestPrograms) {
+    SKIP_IF_BPF_NOT_SUPPORTED;
+
     // Pre-flight check to ensure test has been updated.
     uint64_t buildVersionSdk = android_get_device_api_level();
     ASSERT_NE(0, buildVersionSdk) << "Unable to determine device SDK version";
