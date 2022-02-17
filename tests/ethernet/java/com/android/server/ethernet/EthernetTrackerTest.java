@@ -324,15 +324,18 @@ public class EthernetTrackerTest {
     @Test
     public void testUpdateConfiguration() {
         final NetworkCapabilities capabilities = new NetworkCapabilities.Builder().build();
-        final StaticIpConfiguration staticIpConfig = new StaticIpConfiguration();
+        final LinkAddress linkAddr = new LinkAddress("192.0.2.2/25");
+        final StaticIpConfiguration staticIpConfig =
+                new StaticIpConfiguration.Builder().setIpAddress(linkAddr).build();
+        final IpConfiguration ipConfig =
+                new IpConfiguration.Builder().setStaticIpConfiguration(staticIpConfig).build();
         final IEthernetNetworkManagementListener listener = null;
 
-        tracker.updateConfiguration(TEST_IFACE, staticIpConfig, capabilities, listener);
+        tracker.updateConfiguration(TEST_IFACE, ipConfig, capabilities, listener);
         waitForIdle();
 
         verify(mFactory).updateInterface(
-                eq(TEST_IFACE), eq(EthernetTracker.createIpConfiguration(staticIpConfig)),
-                eq(capabilities), eq(listener));
+                eq(TEST_IFACE), eq(ipConfig), eq(capabilities), eq(listener));
     }
 
     @Test
