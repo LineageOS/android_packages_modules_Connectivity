@@ -75,6 +75,7 @@ import com.android.testutils.TestableNetworkAgent.CallbackEntry.OnDscpPolicyStat
 import com.android.testutils.TestableNetworkCallback
 import org.junit.After
 import org.junit.AfterClass
+import org.junit.Assume.assumeTrue
 import org.junit.Before
 import org.junit.BeforeClass
 import org.junit.Rule
@@ -88,6 +89,7 @@ import java.net.ServerSocket
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.util.UUID
+import java.util.regex.Pattern
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
@@ -125,8 +127,25 @@ class DscpPolicyTest {
     private lateinit var tunNetworkCallback: TestNetworkCallback
     private lateinit var reader: TapPacketReader
 
+    private fun getKernelVersion(): IntArray {
+        // Example:
+        // 4.9.29-g958411d --> 4.9
+        val release = Os.uname().release
+        val m = Pattern.compile("^(\\d+)\\.(\\d+)").matcher(release)
+        assertTrue(m.find(), "No pattern in release string: " + release)
+        return intArrayOf(Integer.parseInt(m.group(1)), Integer.parseInt(m.group(2)))
+    }
+
+    private fun kernelIsAtLeast(major: Int, minor: Int): Boolean {
+        val version = getKernelVersion()
+        return (version.get(0) > major || (version.get(0) == major && version.get(1) >= minor))
+    }
+
     @Before
     fun setUp() {
+        // For BPF support kernel needs to be at least 5.4.
+        assumeTrue(kernelIsAtLeast(5, 4))
+
         runAsShell(MANAGE_TEST_NETWORKS) {
             val tnm = realContext.getSystemService(TestNetworkManager::class.java)
 
