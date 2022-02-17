@@ -21,6 +21,7 @@ import android.annotation.IntDef;
 import android.annotation.NonNull;
 import android.annotation.Nullable;
 import android.annotation.SystemApi;
+import android.nearby.aidl.ByteArrayParcel;
 import android.nearby.aidl.FastPairAccountDevicesMetadataRequestParcel;
 import android.nearby.aidl.FastPairAccountKeyDeviceMetadataParcel;
 import android.nearby.aidl.FastPairAntispoofkeyDeviceMetadataRequestParcel;
@@ -40,7 +41,9 @@ import android.util.Log;
 
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
 
 /**
  * Base class for fast pair providers outside the system server.
@@ -223,7 +226,18 @@ public abstract class FastPairDataProviderBase {
     }
 
     /**
-     * Class for reading FastPairAccountDevicesMetadataRequest.
+     * Class for reading FastPairAccountDevicesMetadataRequest, which specifies the Fast Pair
+     * account and the allow list of the FastPair device keys saved to the account (i.e., FastPair
+     * accountKeys).
+     *
+     * A Fast Pair accountKey is created when a Fast Pair device is saved to an account. It is per
+     * Fast Pair device per account.
+     *
+     * To retrieve all Fast Pair accountKeys saved to an account, the caller needs to set
+     * account with an empty allow list.
+     *
+     * To retrieve metadata of a selected list of Fast Pair devices saved to an account, the caller
+     * needs to set account with a non-empty allow list.
      */
     public static class FastPairAccountDevicesMetadataRequest {
 
@@ -233,9 +247,33 @@ public abstract class FastPairDataProviderBase {
                 final FastPairAccountDevicesMetadataRequestParcel metaDataRequestParcel) {
             this.mMetadataRequestParcel = metaDataRequestParcel;
         }
-        /** Get account. */
+
+        /**
+         * Get FastPair account, whose Fast Pair devices' metadata is requested.
+         *
+         * @return a FastPair account.
+         */
         public @NonNull Account getAccount() {
             return this.mMetadataRequestParcel.account;
+        }
+
+        /**
+         * Get allowlist of Fast Pair devices using a collection of accountKeys.
+         * Note that as a special case, empty list actually means all FastPair devices under the
+         * account instead of none.
+         *
+         * @return allowlist of Fast Pair devices using a collection of accountKeys.
+         */
+        public @NonNull Collection<byte[]> getAccountKeys()  {
+            if (this.mMetadataRequestParcel.accountKeys == null) {
+                return new ArrayList<byte[]>(0);
+            }
+            List<byte[]> accountKeys =
+                    new ArrayList<>(this.mMetadataRequestParcel.accountKeys.length);
+            for (ByteArrayParcel accountKey : this.mMetadataRequestParcel.accountKeys) {
+                accountKeys.add(accountKey.byteArray);
+            }
+            return accountKeys;
         }
     }
 
