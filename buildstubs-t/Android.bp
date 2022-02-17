@@ -39,7 +39,23 @@ filegroup {
 
 filegroup {
     name: "services.connectivity-netstats-jni-sources",
-    srcs: [],
+    srcs: [
+        "stubs-src-jni/mock_com_android_server_net_NetworkStatsFactory.cpp",
+        "stubs-src-jni/mock_com_android_server_net_NetworkStatsService.cpp",
+    ],
+    visibility: [
+        "//packages/modules/Connectivity:__subpackages__",
+    ],
+}
+
+filegroup {
+    name: "framework-connectivity-tiramisu-jni-sources",
+    srcs: [
+        "stubs-src-jni/mock_android_net_TrafficStats.cpp",
+    ],
+    visibility: [
+        "//packages/modules/Connectivity:__subpackages__",
+    ],
 }
 
 // Empty replacement for framework-connectivity-tiramisu.impl and stubs,
