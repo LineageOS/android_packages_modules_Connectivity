@@ -47,7 +47,8 @@ public class MyActivity extends Activity {
                 MyActivity.this.finish();
             }
         };
-        registerReceiver(finishCommandReceiver, new IntentFilter(ACTION_FINISH_ACTIVITY));
+        registerReceiver(finishCommandReceiver, new IntentFilter(ACTION_FINISH_ACTIVITY),
+                Context.RECEIVER_EXPORTED);
         final RemoteCallback callback = getIntent().getParcelableExtra(
                 Intent.EXTRA_REMOTE_CALLBACK);
         if (callback != null) {
