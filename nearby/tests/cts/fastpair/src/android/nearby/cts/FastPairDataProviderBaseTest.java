@@ -30,6 +30,7 @@ import android.nearby.FastPairDataProviderBase;
 import android.nearby.FastPairDeviceMetadata;
 import android.nearby.FastPairDiscoveryItem;
 import android.nearby.FastPairEligibleAccount;
+import android.nearby.aidl.ByteArrayParcel;
 import android.nearby.aidl.FastPairAccountDevicesMetadataRequestParcel;
 import android.nearby.aidl.FastPairAccountKeyDeviceMetadataParcel;
 import android.nearby.aidl.FastPairAntispoofkeyDeviceMetadataParcel;
@@ -85,6 +86,7 @@ public class FastPairDataProviderBaseTest {
     private static final Account MANAGE_ACCOUNT = new Account("ghi@gmail.com", "type3");
     private static final Account ACCOUNTDEVICES_METADATA_ACCOUNT =
             new Account("jk@gmail.com", "type4");
+    private static final int NUM_ACCOUNT_DEVICES = 2;
 
     private static final int ERROR_CODE_BAD_REQUEST =
             FastPairDataProviderBase.ERROR_CODE_BAD_REQUEST;
@@ -125,6 +127,7 @@ public class FastPairDataProviderBaseTest {
     private static final String WAIT_LAUNCH_COMPANION_APP_DESCRIPTION =
             "WAIT_LAUNCH_COMPANION_APP_DESCRIPTION";
     private static final byte[] ACCOUNT_KEY = new byte[] {3};
+    private static final byte[] ACCOUNT_KEY_2 = new byte[] {9, 3};
     private static final byte[] SHA256_ACCOUNT_KEY_PUBLIC_ADDRESS = new byte[] {2, 8};
     private static final byte[] REQUEST_MODEL_ID = new byte[] {1, 2, 3};
     private static final byte[] ANTI_SPOOFING_KEY = new byte[] {4, 5, 6};
@@ -533,6 +536,11 @@ public class FastPairDataProviderBaseTest {
                 new FastPairAccountDevicesMetadataRequestParcel();
 
         requestParcel.account = ACCOUNTDEVICES_METADATA_ACCOUNT;
+        requestParcel.accountKeys = new ByteArrayParcel[NUM_ACCOUNT_DEVICES];
+        requestParcel.accountKeys[0] = new ByteArrayParcel();
+        requestParcel.accountKeys[1] = new ByteArrayParcel();
+        requestParcel.accountKeys[0].byteArray = ACCOUNT_KEY;
+        requestParcel.accountKeys[1].byteArray = ACCOUNT_KEY_2;
 
         return requestParcel;
     }
@@ -793,6 +801,9 @@ public class FastPairDataProviderBaseTest {
     private static void ensureHappyPathAsExpected(
             FastPairDataProviderBase.FastPairAccountDevicesMetadataRequest request) {
         assertThat(request.getAccount()).isEqualTo(ACCOUNTDEVICES_METADATA_ACCOUNT);
+        assertThat(request.getAccountKeys().size()).isEqualTo(ACCOUNTKEY_DEVICE_NUM);
+        assertThat(request.getAccountKeys()).contains(ACCOUNT_KEY);
+        assertThat(request.getAccountKeys()).contains(ACCOUNT_KEY_2);
     }
 
     /* Verifies Happy Path FastPairEligibleAccountsRequest. */
