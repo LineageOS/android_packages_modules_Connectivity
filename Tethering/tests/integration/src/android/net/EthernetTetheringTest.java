@@ -18,6 +18,7 @@ package android.net;
 
 import static android.Manifest.permission.ACCESS_NETWORK_STATE;
 import static android.Manifest.permission.CONNECTIVITY_USE_RESTRICTED_NETWORKS;
+import static android.Manifest.permission.DUMP;
 import static android.Manifest.permission.MANAGE_TEST_NETWORKS;
 import static android.Manifest.permission.NETWORK_SETTINGS;
 import static android.Manifest.permission.TETHER_PRIVILEGED;
@@ -53,11 +54,15 @@ import android.net.TetheringManager.StartTetheringCallback;
 import android.net.TetheringManager.TetheringEventCallback;
 import android.net.TetheringManager.TetheringRequest;
 import android.net.TetheringTester.TetheredDevice;
+import android.os.Build;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.SystemClock;
 import android.os.SystemProperties;
+import android.text.TextUtils;
+import android.util.Base64;
 import android.util.Log;
+import android.util.Pair;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -67,17 +72,24 @@ import androidx.test.runner.AndroidJUnit4;
 
 import com.android.net.module.util.PacketBuilder;
 import com.android.net.module.util.Struct;
+import com.android.net.module.util.bpf.Tether4Key;
+import com.android.net.module.util.bpf.Tether4Value;
 import com.android.net.module.util.structs.EthernetHeader;
 import com.android.net.module.util.structs.Icmpv6Header;
 import com.android.net.module.util.structs.Ipv4Header;
 import com.android.net.module.util.structs.Ipv6Header;
 import com.android.net.module.util.structs.UdpHeader;
+import com.android.testutils.DevSdkIgnoreRule;
+import com.android.testutils.DevSdkIgnoreRule.IgnoreAfter;
+import com.android.testutils.DevSdkIgnoreRule.IgnoreUpTo;
+import com.android.testutils.DumpTestUtils;
 import com.android.testutils.HandlerUtils;
 import com.android.testutils.TapPacketReader;
 import com.android.testutils.TestNetworkTracker;
 
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
@@ -88,9 +100,12 @@ import java.net.InterfaceAddress;
 import java.net.NetworkInterface;
 import java.net.SocketException;
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
@@ -101,16 +116,27 @@ import java.util.concurrent.TimeoutException;
 @RunWith(AndroidJUnit4.class)
 @MediumTest
 public class EthernetTetheringTest {
+    @Rule
+    public final DevSdkIgnoreRule mIgnoreRule = new DevSdkIgnoreRule();
 
     private static final String TAG = EthernetTetheringTest.class.getSimpleName();
     private static final int TIMEOUT_MS = 5000;
     private static final int TETHER_REACHABILITY_ATTEMPTS = 20;
+    private static final int DUMP_POLLING_MAX_RETRY = 100;
+    private static final int DUMP_POLLING_INTERVAL_MS = 50;
+    // Kernel treats a confirmed UDP connection which active after two seconds as stream mode.
+    // See upstream commit b7b1d02fc43925a4d569ec221715db2dfa1ce4f5.
+    private static final int UDP_STREAM_TS_MS = 2000;
     private static final LinkAddress TEST_IP4_ADDR = new LinkAddress("10.0.0.1/8");
     private static final LinkAddress TEST_IP6_ADDR = new LinkAddress("2001:db8:1::101/64");
     private static final InetAddress TEST_IP4_DNS = parseNumericAddress("8.8.8.8");
     private static final InetAddress TEST_IP6_DNS = parseNumericAddress("2001:db8:1::888");
     private static final ByteBuffer TEST_REACHABILITY_PAYLOAD =
             ByteBuffer.wrap(new byte[] { (byte) 0x55, (byte) 0xaa });
+
+    private static final String DUMPSYS_TETHERING_RAWMAP_ARG = "bpfRawMap";
+    private static final String BASE64_DELIMITER = ",";
+    private static final String LINE_DELIMITER = "\\n";
 
     private final Context mContext = InstrumentationRegistry.getContext();
     private final EthernetManager mEm = mContext.getSystemService(EthernetManager.class);
@@ -136,10 +162,11 @@ public class EthernetTetheringTest {
         // Needed to create a TestNetworkInterface, to call requestTetheredInterface, and to receive
         // tethered client callbacks. The restricted networks permission is needed to ensure that
         // EthernetManager#isAvailable will correctly return true on devices where Ethernet is
-        // marked restricted, like cuttlefish.
+        // marked restricted, like cuttlefish. The dump permission is needed to verify bpf related
+        // functions via dumpsys output.
         mUiAutomation.adoptShellPermissionIdentity(
                 MANAGE_TEST_NETWORKS, NETWORK_SETTINGS, TETHER_PRIVILEGED, ACCESS_NETWORK_STATE,
-                CONNECTIVITY_USE_RESTRICTED_NETWORKS);
+                CONNECTIVITY_USE_RESTRICTED_NETWORKS, DUMP);
         mRunTests = mTm.isTetheringSupported() && mEm != null;
         assumeTrue(mRunTests);
 
@@ -747,12 +774,15 @@ public class EthernetTetheringTest {
     private static final byte TYPE_OF_SERVICE = 0;
     private static final short ID = 27149;
     private static final short ID2 = 27150;
+    private static final short ID3 = 27151;
     private static final short FLAGS_AND_FRAGMENT_OFFSET = (short) 0x4000; // flags=DF, offset=0
     private static final byte TIME_TO_LIVE = (byte) 0x40;
     private static final ByteBuffer PAYLOAD =
             ByteBuffer.wrap(new byte[] { (byte) 0x12, (byte) 0x34 });
     private static final ByteBuffer PAYLOAD2 =
             ByteBuffer.wrap(new byte[] { (byte) 0x56, (byte) 0x78 });
+    private static final ByteBuffer PAYLOAD3 =
+            ByteBuffer.wrap(new byte[] { (byte) 0x9a, (byte) 0xbc });
 
     private boolean isExpectedUdpPacket(@NonNull final byte[] rawPacket, boolean hasEther,
             @NonNull final ByteBuffer payload) {
@@ -830,7 +860,8 @@ public class EthernetTetheringTest {
         return false;
     }
 
-    private void runUdp4Test(TetheringTester tester, RemoteResponder remote) throws Exception {
+    private void runUdp4Test(TetheringTester tester, RemoteResponder remote, boolean usingBpf)
+            throws Exception {
         final TetheredDevice tethered = tester.createTetheredDevice(MacAddress.fromString(
                 "1:2:3:4:5:6"));
 
@@ -861,10 +892,51 @@ public class EthernetTetheringTest {
             Log.d(TAG, "Packet in downstream: " + dumpHexString(p));
             return isExpectedUdpPacket(p, true/* hasEther */, PAYLOAD2);
         });
+
+        if (usingBpf) {
+            // Send second UDP packet in original direction.
+            // The BPF coordinator only offloads the ASSURED conntrack entry. The "request + reply"
+            // packets can make status IPS_SEEN_REPLY to be set. Need one more packet to make
+            // conntrack status IPS_ASSURED_BIT to be set. Note the third packet needs to delay
+            // 2 seconds because kernel monitors a UDP connection which still alive after 2 seconds
+            // and apply ASSURED flag.
+            // See kernel upstream commit b7b1d02fc43925a4d569ec221715db2dfa1ce4f5 and
+            // nf_conntrack_udp_packet in net/netfilter/nf_conntrack_proto_udp.c
+            Thread.sleep(UDP_STREAM_TS_MS);
+            final ByteBuffer originalPacket2 = buildUdpv4Packet(tethered.macAddr,
+                    tethered.routerMacAddr, ID, tethered.ipv4Addr /* srcIp */,
+                    REMOTE_IP4_ADDR /* dstIp */, LOCAL_PORT /* srcPort */,
+                    REMOTE_PORT /*dstPort */, PAYLOAD3 /* payload */);
+            tester.verifyUpload(remote, originalPacket2, p -> {
+                Log.d(TAG, "Packet in upstream: " + dumpHexString(p));
+                return isExpectedUdpPacket(p, false /* hasEther */, PAYLOAD3);
+            });
+
+            final HashMap<Tether4Key, Tether4Value> upstreamMap = pollIpv4UpstreamMapFromDump();
+            assertNotNull(upstreamMap);
+            assertEquals(1, upstreamMap.size());
+
+            final Map.Entry<Tether4Key, Tether4Value> rule =
+                    upstreamMap.entrySet().iterator().next();
+
+            final Tether4Key key = rule.getKey();
+            assertEquals(IPPROTO_UDP, key.l4proto);
+            assertTrue(Arrays.equals(tethered.ipv4Addr.getAddress(), key.src4));
+            assertEquals(LOCAL_PORT, key.srcPort);
+            assertTrue(Arrays.equals(REMOTE_IP4_ADDR.getAddress(), key.dst4));
+            assertEquals(REMOTE_PORT, key.dstPort);
+
+            final Tether4Value value = rule.getValue();
+            assertTrue(Arrays.equals(publicIp4Addr.getAddress(),
+                    InetAddress.getByAddress(value.src46).getAddress()));
+            assertEquals(LOCAL_PORT, value.srcPort);
+            assertTrue(Arrays.equals(REMOTE_IP4_ADDR.getAddress(),
+                    InetAddress.getByAddress(value.dst46).getAddress()));
+            assertEquals(REMOTE_PORT, value.dstPort);
+        }
     }
 
-    @Test
-    public void testUdpV4() throws Exception {
+    void initializeTethering() throws Exception {
         assumeFalse(mEm.isAvailable());
 
         // MyTetheringEventCallback currently only support await first available upstream. Tethering
@@ -885,8 +957,75 @@ public class EthernetTetheringTest {
 
         mDownstreamReader = makePacketReader(mDownstreamIface);
         mUpstreamReader = makePacketReader(mUpstreamTracker.getTestIface());
+    }
 
-        runUdp4Test(new TetheringTester(mDownstreamReader), new RemoteResponder(mUpstreamReader));
+    @Test
+    @IgnoreAfter(Build.VERSION_CODES.Q)
+    public void testTetherUdpV4WithoutBpf() throws Exception {
+        initializeTethering();
+        runUdp4Test(new TetheringTester(mDownstreamReader), new RemoteResponder(mUpstreamReader),
+                false /* usingBpf */);
+    }
+
+    @Test
+    @IgnoreUpTo(Build.VERSION_CODES.R)
+    public void testTetherUdpV4WithBpf() throws Exception {
+        initializeTethering();
+        runUdp4Test(new TetheringTester(mDownstreamReader), new RemoteResponder(mUpstreamReader),
+                true /* usingBpf */);
+    }
+
+    @Nullable
+    private Pair<Tether4Key, Tether4Value> parseTether4KeyValue(@NonNull String dumpStr) {
+        Log.w(TAG, "Parsing string: " + dumpStr);
+
+        String[] keyValueStrs = dumpStr.split(BASE64_DELIMITER);
+        if (keyValueStrs.length != 2 /* key + value */) {
+            fail("The length is " + keyValueStrs.length + " but expect 2. "
+                    + "Split string(s): " + TextUtils.join(",", keyValueStrs));
+        }
+
+        final byte[] keyBytes = Base64.decode(keyValueStrs[0], Base64.DEFAULT);
+        Log.d(TAG, "keyBytes: " + dumpHexString(keyBytes));
+        final ByteBuffer keyByteBuffer = ByteBuffer.wrap(keyBytes);
+        keyByteBuffer.order(ByteOrder.nativeOrder());
+        final Tether4Key tether4Key = Struct.parse(Tether4Key.class, keyByteBuffer);
+        Log.w(TAG, "tether4Key: " + tether4Key);
+
+        final byte[] valueBytes = Base64.decode(keyValueStrs[1], Base64.DEFAULT);
+        Log.d(TAG, "valueBytes: " + dumpHexString(valueBytes));
+        final ByteBuffer valueByteBuffer = ByteBuffer.wrap(valueBytes);
+        valueByteBuffer.order(ByteOrder.nativeOrder());
+        final Tether4Value tether4Value = Struct.parse(Tether4Value.class, valueByteBuffer);
+        Log.w(TAG, "tether4Value: " + tether4Value);
+
+        return new Pair<>(tether4Key, tether4Value);
+    }
+
+    @NonNull
+    private HashMap<Tether4Key, Tether4Value> dumpIpv4UpstreamMap() throws Exception {
+        final String rawMapStr = DumpTestUtils.dumpService(Context.TETHERING_SERVICE,
+                DUMPSYS_TETHERING_RAWMAP_ARG);
+        final HashMap<Tether4Key, Tether4Value> map = new HashMap<>();
+
+        for (final String line : rawMapStr.split(LINE_DELIMITER)) {
+            final Pair<Tether4Key, Tether4Value> rule = parseTether4KeyValue(line.trim());
+            map.put(rule.first, rule.second);
+        }
+        return map;
+    }
+
+    @Nullable
+    private HashMap<Tether4Key, Tether4Value> pollIpv4UpstreamMapFromDump() throws Exception {
+        for (int retryCount = 0; retryCount < DUMP_POLLING_MAX_RETRY; retryCount++) {
+            final HashMap<Tether4Key, Tether4Value> map = dumpIpv4UpstreamMap();
+            if (!map.isEmpty()) return map;
+
+            Thread.sleep(DUMP_POLLING_INTERVAL_MS);
+        }
+
+        fail("Cannot get rules after " + DUMP_POLLING_MAX_RETRY * DUMP_POLLING_INTERVAL_MS + "ms");
+        return null;
     }
 
     private <T> List<T> toList(T... array) {
