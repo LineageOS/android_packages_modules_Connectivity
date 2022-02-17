@@ -2174,7 +2174,7 @@ public class ConnectivityManagerTest {
     private void waitForAvailable(
             @NonNull final TestableNetworkCallback cb, @NonNull final Network expectedNetwork) {
         cb.expectAvailableCallbacks(expectedNetwork, false /* suspended */,
-                true /* validated */,
+                null /* validated */,
                 false /* blocked */, NETWORK_CALLBACK_TIMEOUT_MS);
     }
 
