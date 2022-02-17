@@ -35,6 +35,7 @@ import android.os.Build;
 import androidx.annotation.NonNull;
 import androidx.annotation.RequiresApi;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
+import androidx.test.filters.SdkSuppress;
 
 import org.junit.Before;
 import org.junit.Test;
@@ -66,6 +67,7 @@ public class NearbyManagerTest {
     }
 
     @Test
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void test_startAndStopScan() {
         ScanRequest scanRequest = new ScanRequest.Builder()
                 .setScanType(ScanRequest.SCAN_TYPE_FAST_PAIR)
@@ -92,6 +94,7 @@ public class NearbyManagerTest {
     }
 
     @Test
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void testStartStopBroadcast() {
         PrivateCredential credential = new PrivateCredential.Builder(SECRETE_ID, AUTHENTICITY_KEY)
                 .setIdentityType(IDENTITY_TYPE_PRIVATE)

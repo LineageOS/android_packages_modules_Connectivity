@@ -30,6 +30,7 @@ import android.os.Parcel;
 
 import androidx.annotation.RequiresApi;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
+import androidx.test.filters.SdkSuppress;
 
 import org.junit.Before;
 import org.junit.Test;
@@ -74,6 +75,7 @@ public class PresenceBroadcastRequestTest {
     }
 
     @Test
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void testBuilder() {
         PresenceBroadcastRequest broadcastRequest = mBuilder.build();
 
@@ -90,6 +92,7 @@ public class PresenceBroadcastRequestTest {
     }
 
     @Test
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void testWriteParcel() {
         PresenceBroadcastRequest broadcastRequest = mBuilder.build();
 

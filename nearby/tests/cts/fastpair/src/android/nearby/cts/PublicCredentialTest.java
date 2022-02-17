@@ -29,6 +29,7 @@ import android.os.Parcel;
 
 import androidx.annotation.RequiresApi;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
+import androidx.test.filters.SdkSuppress;
 
 import org.junit.Before;
 import org.junit.Test;
@@ -63,6 +64,7 @@ public class PublicCredentialTest {
     }
 
     @Test
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void testBuilder() {
         PublicCredential credential = mBuilder.build();
 
@@ -78,6 +80,7 @@ public class PublicCredentialTest {
     }
 
     @Test
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void testWriteParcel() {
         PublicCredential credential = mBuilder.build();
 

@@ -29,6 +29,7 @@ import android.os.Parcel;
 
 import androidx.annotation.RequiresApi;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
+import androidx.test.filters.SdkSuppress;
 
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -63,6 +64,7 @@ public class PresenceScanFilterTest {
             .addExtendedProperty(new DataElement(KEY, VALUE));
 
     @Test
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void testBuilder() {
         PresenceScanFilter filter = mBuilder.build();
 
@@ -75,6 +77,7 @@ public class PresenceScanFilterTest {
     }
 
     @Test
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void testWriteParcel() {
         PresenceScanFilter filter = mBuilder.build();
 
