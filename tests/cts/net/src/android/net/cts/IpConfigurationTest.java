@@ -29,6 +29,7 @@ import android.os.Build;
 
 import androidx.test.runner.AndroidJUnit4;
 
+import com.android.testutils.ConnectivityModuleTest;
 import com.android.testutils.DevSdkIgnoreRule;
 
 import libcore.net.InetAddressUtils;
@@ -106,7 +107,7 @@ public final class IpConfigurationTest {
         assertIpConfigurationEqual(ipConfig, new IpConfiguration(ipConfig));
     }
 
-    @DevSdkIgnoreRule.IgnoreUpTo(Build.VERSION_CODES.R)
+    @ConnectivityModuleTest @DevSdkIgnoreRule.IgnoreUpTo(Build.VERSION_CODES.R)
     @Test
     public void testBuilder() {
         final IpConfiguration c = new IpConfiguration.Builder()
