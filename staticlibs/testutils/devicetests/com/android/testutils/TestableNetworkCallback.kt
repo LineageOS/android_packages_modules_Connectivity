@@ -287,7 +287,7 @@ open class TestableNetworkCallback private constructor(
     fun expectAvailableCallbacks(
         net: Network,
         suspended: Boolean = false,
-        validated: Boolean = true,
+        validated: Boolean? = true,
         blocked: Boolean = false,
         tmt: Long = defaultTimeoutMs
     ) {
@@ -309,14 +309,18 @@ open class TestableNetworkCallback private constructor(
     private fun expectAvailableCallbacksCommon(
         net: Network,
         suspended: Boolean,
-        validated: Boolean,
+        validated: Boolean?,
         tmt: Long
     ) {
         expectCallback<Available>(net, tmt)
         if (suspended) {
             expectCallback<Suspended>(net, tmt)
         }
-        expectCapabilitiesThat(net, tmt) { validated == it.hasCapability(NET_CAPABILITY_VALIDATED) }
+        expectCapabilitiesThat(net, tmt) {
+            validated == null || validated == it.hasCapability(
+                NET_CAPABILITY_VALIDATED
+            )
+        }
         expectCallback<LinkPropertiesChanged>(net, tmt)
     }
 
