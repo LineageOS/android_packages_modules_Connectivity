@@ -16,7 +16,7 @@
 
 package com.android.testutils;
 
-import static com.android.compatibility.common.util.SystemUtil.runWithShellPermissionIdentity;
+import static com.android.testutils.TestPermissionUtil.runAsShell;
 
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -70,8 +70,7 @@ public class DumpTestUtils {
         final String what = "service '" + serviceName + "' with args: " + Arrays.toString(args);
         try {
             if (adoptPermission) {
-                runWithShellPermissionIdentity(() -> ib.dump(pipe[1], args),
-                        android.Manifest.permission.DUMP);
+                runAsShell(android.Manifest.permission.DUMP, () -> ib.dump(pipe[1], args));
             } else {
                 ib.dump(pipe[1], args);
             }
