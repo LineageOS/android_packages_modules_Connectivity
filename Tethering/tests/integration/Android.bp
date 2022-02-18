@@ -30,6 +30,7 @@ java_defaults {
         "androidx.test.rules",
         "mockito-target-extended-minus-junit4",
         "net-tests-utils",
+        "net-utils-device-common-bpf",
         "testables",
     ],
     libs: [
