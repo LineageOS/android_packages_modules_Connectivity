@@ -16,11 +16,6 @@
 
 package com.android.server.nearby.fastpair.halfsheet;
 
-
-import static com.android.server.nearby.fastpair.halfsheet.FastPairHalfSheetManager.ACTIVITY_INTENT_ACTION;
-
-import static com.google.common.truth.Truth.assertThat;
-
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.eq;
@@ -72,7 +67,6 @@ public class FastPairHalfSheetManagerTest {
     public void setup() {
         MockitoAnnotations.initMocks(this);
 
-
         mScanFastPairStoreItem = Cache.ScanFastPairStoreItem.newBuilder()
                 .setAddress(BLEADDRESS)
                 .setDeviceName(NAME)
@@ -84,7 +78,6 @@ public class FastPairHalfSheetManagerTest {
         mLocator.overrideBindingForTest(FastPairController.class, mFastPairController);
         ResolveInfo resolveInfo = new ResolveInfo();
         List<ResolveInfo> resolveInfoList = new ArrayList<>();
-
 
         mPackageManager = mock(PackageManager.class);
         when(mContextWrapper.getPackageManager()).thenReturn(mPackageManager);
@@ -108,8 +101,6 @@ public class FastPairHalfSheetManagerTest {
 
         verify(mContextWrapper, atLeastOnce())
                 .startActivityAsUser(intentArgumentCaptor.capture(), eq(UserHandle.CURRENT));
-        Intent launchIntent = intentArgumentCaptor.getValue();
-        assertThat(launchIntent.getAction()).isEqualTo(ACTIVITY_INTENT_ACTION);
     }
 
     @Test
@@ -117,7 +108,6 @@ public class FastPairHalfSheetManagerTest {
         mLocator.overrideBindingForTest(FastPairController.class, mFastPairController);
         ResolveInfo resolveInfo = new ResolveInfo();
         List<ResolveInfo> resolveInfoList = new ArrayList<>();
-
 
         mPackageManager = mock(PackageManager.class);
         when(mContextWrapper.getPackageManager()).thenReturn(mPackageManager);
@@ -142,6 +132,5 @@ public class FastPairHalfSheetManagerTest {
 
         verify(mContextWrapper, never())
                 .startActivityAsUser(intentArgumentCaptor.capture(), eq(UserHandle.CURRENT));
-
     }
 }

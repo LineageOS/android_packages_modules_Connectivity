@@ -73,7 +73,13 @@ public class FastPairService extends IFastPairClient.Stub {
      * Asks the Fast Pair service to pair the device.
      */
     @Override
-    public void connect(FastPairDevice fastPairDevice) {}
+    public void connect(FastPairDevice fastPairDevice) {
+        if (mFastPairController != null) {
+            mFastPairController.pair(fastPairDevice);
+        } else {
+            Log.w(TAG, "Failed to connect because there is no FastPairController.");
+        }
+    }
 
     public FastPairStatusCallback getPairStatusCallback() {
         return mFastPairStatusCallback;
