@@ -19,7 +19,7 @@ This directory contains code for the AOSP Nearby mainline module.
  - Server side implementation for nearby module services.
 
 `tests`
- - Unit tests for Nearby module (both Java and native code).
+ - Unit/Multi devices tests for Nearby module (both Java and native code).
 
 ## IDE setup
 
