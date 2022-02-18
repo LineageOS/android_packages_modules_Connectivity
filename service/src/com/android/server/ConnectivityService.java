@@ -1410,6 +1410,8 @@ public class ConnectivityService extends IConnectivityManager.Stub
                 // converting rateInBytesPerSecond from long to int is safe here because the
                 // setting's range is limited to INT_MAX.
                 // TODO: add long/uint64 support to tcFilterAddDevIngressPolice.
+                Log.i(TAG,
+                        "enableIngressRateLimit on " + iface + ": " + rateInBytesPerSecond + "B/s");
                 TcUtils.tcFilterAddDevIngressPolice(params.index, TC_PRIO_POLICE, (short) ETH_P_ALL,
                         (int) rateInBytesPerSecond, TC_POLICE_BPF_PROG_PATH);
             } catch (IOException e) {
@@ -1431,6 +1433,8 @@ public class ConnectivityService extends IConnectivityManager.Stub
                 return;
             }
             try {
+                Log.i(TAG,
+                        "disableIngressRateLimit on " + iface);
                 TcUtils.tcFilterDelDev(params.index, true, TC_PRIO_POLICE, (short) ETH_P_ALL);
             } catch (IOException e) {
                 loge("TcUtils.tcFilterDelDev(ifaceIndex=" + params.index
@@ -1753,7 +1757,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
 
         // Watch for ingress rate limit changes.
         mSettingsObserver.observe(
-                Settings.Secure.getUriFor(
+                Settings.Global.getUriFor(
                         ConnectivitySettingsManager.INGRESS_RATE_LIMIT_BYTES_PER_SECOND),
                 EVENT_INGRESS_RATE_LIMIT_CHANGED);
     }
@@ -10683,8 +10687,11 @@ public class ConnectivityService extends IConnectivityManager.Stub
     }
 
     private boolean canNetworkBeRateLimited(@NonNull final NetworkAgentInfo networkAgent) {
-        if (!networkAgent.networkCapabilities.hasCapability(NET_CAPABILITY_INTERNET)) {
-            // rate limits only apply to networks that provide internet connectivity.
+        final NetworkCapabilities agentCaps = networkAgent.networkCapabilities;
+        // Only test networks (they cannot hold NET_CAPABILITY_INTERNET) and networks that provide
+        // internet connectivity can be rate limited.
+        if (!agentCaps.hasCapability(NET_CAPABILITY_INTERNET) && !agentCaps.hasTransport(
+                TRANSPORT_TEST)) {
             return false;
         }
 
