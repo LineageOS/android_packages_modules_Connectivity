@@ -28,16 +28,6 @@
 #define DEVICEPREFIX "v4-"
 
 using android::base::unique_fd;
-using android::net::RAWIP;
-using android::net::getClatEgress4MapFd;
-using android::net::getClatIngress6MapFd;
-using android::net::getClatEgress4ProgFd;
-using android::net::getClatIngress6ProgFd;
-using android::net::tcQdiscAddDevClsact;
-using android::net::tcFilterAddDevEgressClatIpv4;
-using android::net::tcFilterAddDevIngressClatIpv6;
-using android::net::tcFilterDelDevEgressClatIpv4;
-using android::net::tcFilterDelDevIngressClatIpv6;
 using android::bpf::BpfMap;
 
 BpfMap<ClatEgress4Key, ClatEgress4Value> mClatEgress4Map;
