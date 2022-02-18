@@ -21,8 +21,6 @@ import static android.net.NetworkCapabilities.NET_CAPABILITY_NOT_METERED;
 import static android.net.NetworkCapabilities.NET_CAPABILITY_VALIDATED;
 import static android.net.NetworkCapabilities.TRANSPORT_VPN;
 import static android.net.NetworkScore.KEEP_CONNECTED_NONE;
-import static android.net.NetworkScore.POLICY_EXITING;
-import static android.net.NetworkScore.POLICY_TRANSPORT_PRIMARY;
 import static android.net.NetworkScore.POLICY_YIELD_TO_BAD_WIFI;
 
 import android.annotation.IntDef;
@@ -31,8 +29,10 @@ import android.net.NetworkAgentConfig;
 import android.net.NetworkCapabilities;
 import android.net.NetworkScore;
 import android.net.NetworkScore.KeepConnectedReason;
+import android.util.SparseArray;
 
 import com.android.internal.annotations.VisibleForTesting;
+import com.android.internal.util.MessageUtils;
 
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
@@ -112,21 +112,14 @@ public class FullScore {
     private static final long EXTERNAL_POLICIES_MASK =
             0x00000000FFFFFFFFL & ~(1L << POLICY_YIELD_TO_BAD_WIFI);
 
+    private static SparseArray<String> sMessageNames = MessageUtils.findMessageNames(
+            new Class[]{FullScore.class, NetworkScore.class}, new String[]{"POLICY_"});
+
     @VisibleForTesting
     static @NonNull String policyNameOf(final int policy) {
-        switch (policy) {
-            case POLICY_IS_VALIDATED: return "IS_VALIDATED";
-            case POLICY_IS_VPN: return "IS_VPN";
-            case POLICY_EVER_USER_SELECTED: return "EVER_USER_SELECTED";
-            case POLICY_ACCEPT_UNVALIDATED: return "ACCEPT_UNVALIDATED";
-            case POLICY_IS_UNMETERED: return "IS_UNMETERED";
-            case POLICY_YIELD_TO_BAD_WIFI: return "YIELD_TO_BAD_WIFI";
-            case POLICY_TRANSPORT_PRIMARY: return "TRANSPORT_PRIMARY";
-            case POLICY_EXITING: return "EXITING";
-            case POLICY_IS_INVINCIBLE: return "INVINCIBLE";
-            case POLICY_EVER_VALIDATED_NOT_AVOIDED_WHEN_BAD: return "EVER_VALIDATED";
-        }
-        throw new IllegalArgumentException("Unknown policy : " + policy);
+        final String name = sMessageNames.get(policy);
+        if (name == null) throw new IllegalArgumentException("Unknown policy: " + policy);
+        return name.substring("POLICY_".length());
     }
 
     // Bitmask of all the policies applied to this score.

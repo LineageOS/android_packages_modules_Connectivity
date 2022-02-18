@@ -26,6 +26,7 @@ import androidx.test.filters.SmallTest
 import com.android.server.connectivity.FullScore.MAX_CS_MANAGED_POLICY
 import com.android.server.connectivity.FullScore.POLICY_ACCEPT_UNVALIDATED
 import com.android.server.connectivity.FullScore.POLICY_EVER_USER_SELECTED
+import com.android.server.connectivity.FullScore.POLICY_IS_UNMETERED
 import com.android.server.connectivity.FullScore.POLICY_IS_VALIDATED
 import com.android.server.connectivity.FullScore.POLICY_IS_VPN
 import com.android.testutils.DevSdkIgnoreRule
@@ -101,6 +102,7 @@ class FullScoreTest {
         assertFailsWith<IllegalArgumentException> {
             FullScore.policyNameOf(MAX_CS_MANAGED_POLICY + 1)
         }
+        assertEquals("IS_UNMETERED", FullScore.policyNameOf(POLICY_IS_UNMETERED))
     }
 
     fun getAllPolicies() = Regex("POLICY_.*").let { nameRegex ->
