@@ -334,9 +334,8 @@ public class VpnTest {
             @Nullable ProxyInfo proxyInfo,
             @Nullable ArrayList<Network> underlyingNetworks, boolean isAlwaysMetered)
             throws Exception {
-        startVpn(addresses, routes, new String[0] /* excludedRoutes */, allowedApplications,
-                disallowedApplications, proxyInfo, underlyingNetworks, isAlwaysMetered,
-                false /* addRoutesByIpPrefix */);
+        startVpn(addresses, routes, excludedRoutes, allowedApplications, disallowedApplications,
+                proxyInfo, underlyingNetworks, isAlwaysMetered, false /* addRoutesByIpPrefix */);
     }
 
     private void startVpn(
