@@ -110,6 +110,7 @@ filegroup {
 java_library {
     name: "net-utils-device-common-bpf",
     srcs: [
+        "device/com/android/net/module/util/BpfBitmap.java",
         "device/com/android/net/module/util/BpfMap.java",
         "device/com/android/net/module/util/HexDump.java",
         "device/com/android/net/module/util/IBpfMap.java",
