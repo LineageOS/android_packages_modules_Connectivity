@@ -107,7 +107,11 @@ public final class IpConfigurationTest {
         assertIpConfigurationEqual(ipConfig, new IpConfiguration(ipConfig));
     }
 
-    @ConnectivityModuleTest @DevSdkIgnoreRule.IgnoreUpTo(Build.VERSION_CODES.R)
+    @ConnectivityModuleTest // The builder was added in an S+ module update.
+    // This whole class is not skipped (marked @ConnectivityModuleTest) in MTS for non-connectivity
+    // modules like NetworkStack, as NetworkStack uses IpConfiguration a lot on Q+, so tests that
+    // cover older APIs are still useful to provide used API coverage for NetworkStack.
+    @DevSdkIgnoreRule.IgnoreUpTo(Build.VERSION_CODES.R)
     @Test
     public void testBuilder() {
         final IpConfiguration c = new IpConfiguration.Builder()
