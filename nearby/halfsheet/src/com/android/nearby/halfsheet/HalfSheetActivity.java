@@ -19,22 +19,18 @@ package com.android.nearby.halfsheet;
 import static com.android.nearby.halfsheet.fragment.DevicePairingFragment.APP_LAUNCH_FRAGMENT_TYPE;
 import static com.android.server.nearby.common.bluetooth.fastpair.FastPairConstants.EXTRA_MODEL_ID;
 import static com.android.server.nearby.common.fastpair.service.UserActionHandlerBase.EXTRA_MAC_ADDRESS;
-import static com.android.server.nearby.fastpair.Constant.ACTION_FAST_PAIR_HALF_SHEET_BAN_STATE_RESET;
 import static com.android.server.nearby.fastpair.Constant.ACTION_FAST_PAIR_HALF_SHEET_CANCEL;
 import static com.android.server.nearby.fastpair.Constant.DEVICE_PAIRING_FRAGMENT_TYPE;
 import static com.android.server.nearby.fastpair.Constant.EXTRA_HALF_SHEET_INFO;
 import static com.android.server.nearby.fastpair.Constant.EXTRA_HALF_SHEET_TYPE;
 
-import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
-import android.util.DisplayMetrics;
 import android.util.Log;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.annotation.VisibleForTesting;
 import androidx.fragment.app.FragmentActivity;
 
 import com.android.nearby.halfsheet.fragment.DevicePairingFragment;
@@ -48,14 +44,12 @@ import java.util.Locale;
 import service.proto.Cache;
 
 /**
- * Half sheet activity to show pairing ux.
+ * A class show Fast Pair related information in Half sheet format.
  */
 public class HalfSheetActivity extends FragmentActivity {
 
-    public static final String EXTRA_HALF_SHEET_PENDING_INTENT_CALL_BACK =
-            "com.android.nearby.halfsheet.EXTRA_HALF_SHEET_PENDING_INTENT_CALL_BACK";
-    public static final String EXTRA_HALF_SHEET_PACKAGE_NAME =
-            "com.android.nearby.halfsheet.EXTRA_HALF_SHEET_PACKAGE_NAME";
+    public static final String TAG = "HalfSheetActivity";
+
     public static final String EXTRA_HALF_SHEET_CONTENT =
             "com.android.nearby.halfsheet.HALF_SHEET_CONTENT";
     public static final String EXTRA_TITLE =
@@ -72,38 +66,11 @@ public class HalfSheetActivity extends FragmentActivity {
             "com.android.nearby.halfsheet.EXTRA_HALF_SHEET_PAIRING_RESURFACE";
     public static final String ACTION_HALF_SHEET_FOREGROUND_STATE =
             "com.android.nearby.halfsheet.ACTION_HALF_SHEET_FOREGROUND_STATE";
-    public static final String ACTION_HALF_SHEET_BAN_ALL_ITEM =
-            "com.android.nearby.halfsheet.ACTION_HALF_SHEET_BAN_ALL_ITEM";
-    public static final String ACTION_HALF_SHEET_APP_LAUNCH_CLICKED =
-            "com.android.nearby.halfsheet.ACTION_HALF_SHEET_APP_LAUNCH_CLICKED";
-    public static final String ACTION_HALF_SHEET_WEAR_OS_CLICKED =
-            "com.android.nearby.halfsheet.ACTION_HALF_SHEET_WEAR_OS_CLICKED";
-    public static final String ACTION_HALF_SHEET_USER_COMPLETE_CONFIRMATION =
-            "com.android.nearby.halfsheet.ACTION_HALF_SHEET_USER_COMPLETE_CONFIRMATION";
-    public static final String ACTION_FAST_PAIR_HANDLE_CHIP_DEVICE =
-            "com.android.nearby.halfsheet.ACTION_FAST_PAIR_HANDLE_CHIP_DEVICE";
-    // Intent extra contains another intent that will trigger DiscoveryChimeraService to upload
-    // device
-    // information to the cloud.
-    public static final String EXTRA_HALF_SHEET_CLOUD_SYNC_INTENT =
-            "com.android.nearby.halfsheet.HALF_SHEET_CLOUD_SYNC_INTENT";
     // Intent extra contains the user gmail name eg. testaccount@gmail.com.
     public static final String EXTRA_HALF_SHEET_ACCOUNT_NAME =
             "com.android.nearby.halfsheet.HALF_SHEET_ACCOUNT_NAME";
     public static final String EXTRA_HALF_SHEET_FOREGROUND =
             "com.android.nearby.halfsheet.EXTRA_HALF_SHEET_FOREGROUND";
-    public static final String EXTRA_USER_CONSENT_SYNC_CONTACTS =
-            "com.android.nearby.halfsheet.EXTRA_USER_CONSENT_SYNC_CONTACTS";
-    public static final String EXTRA_USER_CONSENT_SYNC_SMS =
-            "com.android.nearby.halfsheet.EXTRA_USER_CONSENT_SYNC_SMS";
-    public static final String EXTRA_USER_CONFIRM_PASSKEY =
-            "com.android.nearby.halfsheet.EXTRA_USER_CONFIRM_PASSKEY";
-    public static final String CLASS_NAME =
-            "com.android.nearby.halfsheet.HalfSheetActivity";
-    public static final String ACTION_HALF_SHEET_STATUS_CHANGE =
-            "com.android.nearby.halfsheet.ACTION_HALF_SHEET_STATUS_CHANGE";
-    public static final String FINISHED_STATE = "FINISHED_STATE";
-    public static final String EXTRA_CLASSIC_MAC_ADDRESS = "EXTRA_CLASSIC_MAC_ADDRESS";
     public static final String ARG_FRAGMENT_STATE = "ARG_FRAGMENT_STATE";
     @Nullable
     private HalfSheetModuleFragment mHalfSheetModuleFragment;
@@ -128,7 +95,7 @@ public class HalfSheetActivity extends FragmentActivity {
                 mHalfSheetModuleFragment = DevicePairingFragment.newInstance(getIntent(),
                         savedInstanceState);
                 if (mHalfSheetModuleFragment == null) {
-                    Log.d("HalfSheetActivity", "device pairing fragment has error.");
+                    Log.d(TAG, "device pairing fragment has error.");
                     finish();
                     return;
                 }
@@ -136,13 +103,13 @@ public class HalfSheetActivity extends FragmentActivity {
             case APP_LAUNCH_FRAGMENT_TYPE:
                 // currentFragment = AppLaunchFragment.newInstance(getIntent());
                 if (mHalfSheetModuleFragment == null) {
-                    Log.v("HalfSheetActivity", "app launch fragment has error.");
+                    Log.v(TAG, "app launch fragment has error.");
                     finish();
                     return;
                 }
                 break;
             default:
-                Log.w("HalfSheetActivity", "there is no valid type for half sheet");
+                Log.w(TAG, "there is no valid type for half sheet");
                 finish();
                 return;
         }
@@ -159,23 +126,19 @@ public class HalfSheetActivity extends FragmentActivity {
         findViewById(R.id.background).setOnClickListener(v -> onCancelClicked());
         findViewById(R.id.card)
                 .setOnClickListener(
-                        v -> Log.v("HalfSheetActivity", "card view is clicked noop"));
+                        v -> Log.v(TAG, "card view is clicked noop"));
         try {
             mScanFastPairStoreItem =
                     Cache.ScanFastPairStoreItem.parseFrom(infoArray);
         } catch (InvalidProtocolBufferException e) {
             Log.w(
-                    "HalfSheetActivity", "error happens when pass info to half sheet");
+                    TAG, "error happens when pass info to half sheet");
         }
     }
 
     @Override
     protected void onStart() {
         super.onStart();
-        BroadcastUtils.sendBroadcast(
-                this,
-                new Intent(ACTION_HALF_SHEET_FOREGROUND_STATE)
-                        .putExtra(EXTRA_HALF_SHEET_FOREGROUND, true));
     }
 
     @Override
@@ -217,17 +180,18 @@ public class HalfSheetActivity extends FragmentActivity {
                         mScanFastPairStoreItem.getAddress())
                         && testScanFastPairStoreItem.getModelId().equals(
                         mScanFastPairStoreItem.getModelId())) {
-                    Log.d("HalfSheetActivity", "possible factory reset happens");
+                    Log.d(TAG, "possible factory reset happens");
                     halfSheetStateChange();
                 }
             } catch (InvalidProtocolBufferException | NullPointerException e) {
-                Log.w("HalfSheetActivity", "error happens when pass info to half sheet");
+                Log.w(TAG, "error happens when pass info to half sheet");
             }
         }
     }
 
     /** This function should be called when user click empty area and cancel button. */
     public void onCancelClicked() {
+        Log.d(TAG, "Cancels the half sheet and paring.");
         sendHalfSheetCancelBroadcast();
         finish();
     }
@@ -239,20 +203,6 @@ public class HalfSheetActivity extends FragmentActivity {
                 new Intent(ACTION_HALF_SHEET_FOREGROUND_STATE)
                         .putExtra(EXTRA_HALF_SHEET_FOREGROUND, false));
         finish();
-    }
-
-    /**
-     * Change the half sheet ban state to active sometimes users leave half sheet to go to fast pair
-     * info page we do not want the behavior to be counted as dismiss.
-     */
-    public void sendBanStateResetBroadcast() {
-        if (mScanFastPairStoreItem != null) {
-            BroadcastUtils.sendBroadcast(
-                    this,
-                    new Intent(ACTION_FAST_PAIR_HALF_SHEET_BAN_STATE_RESET)
-                            .putExtra(EXTRA_MODEL_ID,
-                                    mScanFastPairStoreItem.getModelId().toLowerCase(Locale.ROOT)));
-        }
     }
 
     private void sendHalfSheetCancelBroadcast() {
@@ -280,31 +230,10 @@ public class HalfSheetActivity extends FragmentActivity {
         }
     }
 
-    @Nullable
-    @VisibleForTesting
-    public HalfSheetModuleFragment getFragmentModel() {
-        return mHalfSheetModuleFragment;
-    }
-
     @Override
     public void setTitle(CharSequence title) {
         super.setTitle(title);
         TextView toolbarTitle = findViewById(R.id.toolbar_title);
         toolbarTitle.setText(title);
-    }
-
-
-    /**
-     * This method converts dp unit to equivalent pixels, depending on device density.
-     *
-     * @param dp      A value in dp (density independent pixels) unit, which we need to convert into
-     *                pixels
-     * @param context Context to get resources and device specific display metrics
-     * @return A float value to represent px equivalent to dp depending on device density
-     */
-    private float convertDpToPixel(float dp, Context context) {
-        return dp
-                * ((float) context.getResources().getDisplayMetrics().densityDpi
-                / DisplayMetrics.DENSITY_DEFAULT);
     }
 }

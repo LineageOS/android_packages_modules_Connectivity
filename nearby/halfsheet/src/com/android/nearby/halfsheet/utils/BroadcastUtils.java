@@ -16,30 +16,13 @@
 
 package com.android.nearby.halfsheet.utils;
 
-
-import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
-import android.content.IntentFilter;
 
 /**
  * Broadcast util class
  */
 public class BroadcastUtils {
-    /**
-     * Registers a list of broadcast receiver.
-     */
-    public static void registerReceiver(
-            Context context, BroadcastReceiver receiver, IntentFilter intentFilter) {
-        context.registerReceiver(receiver, intentFilter);
-    }
-
-    /**
-     * Unregisters the already registered receiver.
-     */
-    public static void unregisterReceiver(Context context, BroadcastReceiver receiver) {
-        context.unregisterReceiver(receiver);
-    }
 
     /**
      * Helps send broadcast.
