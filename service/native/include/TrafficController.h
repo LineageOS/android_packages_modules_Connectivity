@@ -62,7 +62,7 @@ class TrafficController {
     netdutils::Status updateOwnerMapEntry(UidOwnerMatchType match, uid_t uid, FirewallRule rule,
                                           FirewallType type) EXCLUDES(mMutex);
 
-    void dump(netdutils::DumpWriter& dw, bool verbose) EXCLUDES(mMutex);
+    void dump(int fd, bool verbose) EXCLUDES(mMutex);
 
     netdutils::Status replaceRulesInMap(UidOwnerMatchType match, const std::vector<int32_t>& uids)
             EXCLUDES(mMutex);

@@ -24,6 +24,7 @@
 #include <nativehelper/JNIHelp.h>
 #include <nativehelper/ScopedUtfChars.h>
 #include <nativehelper/ScopedPrimitiveArray.h>
+#include <netjniutils/netjniutils.h>
 #include <net/if.h>
 #include <vector>
 
@@ -186,6 +187,15 @@ static void native_setPermissionForUids(JNIEnv* env, jobject clazz, jint permiss
     mTc.setPermissionForUids(permission, data);
 }
 
+static void native_dump(JNIEnv* env, jobject clazz, jobject javaFd, jboolean verbose) {
+    int fd = netjniutils::GetNativeFileDescriptor(env, javaFd);
+    if (fd < 0) {
+        jniThrowExceptionFmt(env, "java/io/IOException", "Invalid file descriptor");
+        return;
+    }
+    mTc.dump(fd, verbose);
+}
+
 /*
  * JNI registration.
  */
@@ -216,6 +226,8 @@ static const JNINativeMethod gMethods[] = {
     (void*)native_swapActiveStatsMap},
     {"native_setPermissionForUids", "(I[I)V",
     (void*)native_setPermissionForUids},
+    {"native_dump", "(Ljava/io/FileDescriptor;Z)V",
+    (void*)native_dump},
 };
 // clang-format on
 
