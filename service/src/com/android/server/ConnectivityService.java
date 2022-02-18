@@ -313,6 +313,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
     public static final String SHORT_ARG = "--short";
     private static final String NETWORK_ARG = "networks";
     private static final String REQUEST_ARG = "requests";
+    private static final String TRAFFICCONTROLLER_ARG = "trafficcontroller";
 
     private static final boolean DBG = true;
     private static final boolean DDBG = Log.isLoggable(TAG, Log.DEBUG);
@@ -3217,6 +3218,10 @@ public class ConnectivityService extends IConnectivityManager.Stub
         } else if (CollectionUtils.contains(args, REQUEST_ARG)) {
             dumpNetworkRequests(pw);
             return;
+        } else if (CollectionUtils.contains(args, TRAFFICCONTROLLER_ARG)) {
+            boolean verbose = !CollectionUtils.contains(args, SHORT_ARG);
+            dumpTrafficController(pw, fd, verbose);
+            return;
         }
 
         pw.print("NetworkProviders for:");
@@ -3431,6 +3436,17 @@ public class ConnectivityService extends IConnectivityManager.Stub
         }
         for (NetworkRequestInfo nri : infos) {
             pw.println(nri.toString());
+        }
+    }
+
+    private void dumpTrafficController(IndentingPrintWriter pw, final FileDescriptor fd,
+            boolean verbose) {
+        try {
+            mBpfNetMaps.dump(fd, verbose);
+        } catch (ServiceSpecificException e) {
+            pw.println(e.getMessage());
+        } catch (IOException e) {
+            loge("Dump BPF maps failed, " + e);
         }
     }
 
