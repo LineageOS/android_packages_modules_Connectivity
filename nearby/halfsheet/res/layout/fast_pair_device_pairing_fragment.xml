@@ -73,50 +73,67 @@
     <RelativeLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
         app:layout_constraintTop_toBottomOf="@+id/connect_progressbar"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent">
+
       <ImageView
           android:id="@+id/info_icon"
+          android:layout_width="24dp"
+          android:layout_height="24dp"
+          app:srcCompat="@drawable/fast_pair_ic_info"
           android:layout_centerInParent="true"
           android:contentDescription="@null"
           android:layout_marginEnd="10dp"
           android:layout_toStartOf="@id/connect_btn"
-          android:layout_width="wrap_content"
-          android:layout_height="wrap_content"/>
-      <Button
+          android:visibility="invisible" />
+
+      <com.google.android.material.button.MaterialButton
           android:id="@+id/connect_btn"
-          android:text="@string/common_connect"
-          android:layout_height="wrap_content"
           android:layout_width="@dimen/fast_pair_half_sheet_image_size"
+          android:layout_height="wrap_content"
+          android:text="@string/paring_action_connect"
           android:layout_centerInParent="true"
-          android:background="@color/fast_pair_half_sheet_button_color"
           style="@style/HalfSheetButton" />
+
     </RelativeLayout>
 
-    <Button
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/settings_btn"
+        android:text="@string/paring_action_settings"
+        android:layout_height="wrap_content"
+        android:layout_width="@dimen/fast_pair_half_sheet_image_size"
+        app:layout_constraintTop_toBottomOf="@+id/connect_progressbar"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        android:visibility="invisible"
+        style="@style/HalfSheetButton" />
+
+    <com.google.android.material.button.MaterialButton
         android:id="@+id/cancel_btn"
-        android:text="@string/common_done"
-        android:visibility="gone"
+        android:text="@string/paring_action_done"
+        android:visibility="invisible"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintBottom_toBottomOf="parent"
         android:gravity="start|center_vertical"
         android:layout_marginTop="6dp"
-        android:layout_marginBottom="16dp"
         style="@style/HalfSheetButtonBorderless"/>
 
-    <Button
+    <com.google.android.material.button.MaterialButton
         android:id="@+id/setup_btn"
+        android:text="@string/paring_action_launch"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintBottom_toBottomOf="parent"
         android:layout_marginTop="6dp"
         android:layout_marginBottom="16dp"
         android:background="@color/fast_pair_half_sheet_button_color"
-        android:visibility="gone"
+        android:visibility="invisible"
         android:layout_height="@dimen/fast_pair_half_sheet_bottom_button_height"
         android:layout_width="wrap_content"
         style="@style/HalfSheetButton" />
+
   </androidx.constraintlayout.widget.ConstraintLayout>
 
 </LinearLayout>

@@ -38,8 +38,6 @@ import service.proto.Cache;
  */
 public class FastPairUtils {
 
-    public static final String TAG = "HalfSheetActivity";
-
     /** FastPair util method check certain app is install on the device or not. */
     public static boolean isAppInstalled(Context context, String packageName) {
         try {
