@@ -109,6 +109,7 @@ static jint native_replaceUidChain(JNIEnv* env, jobject clazz, jstring name, jbo
     }
 
     size_t size = uids.size();
+    static_assert(sizeof(*(uids.get())) == sizeof(int32_t));
     std::vector<int32_t> data ((int32_t *)&uids[0], (int32_t*)&uids[size]);
     int res = mTc.replaceUidOwnerMap(chainName, isAllowlist, data);
     if (res) {
@@ -145,6 +146,7 @@ static jint native_addUidInterfaceRules(JNIEnv* env, jobject clazz, jstring ifNa
     }
 
     size_t size = uids.size();
+    static_assert(sizeof(*(uids.get())) == sizeof(int32_t));
     std::vector<int32_t> data ((int32_t *)&uids[0], (int32_t*)&uids[size]);
     Status status = mTc.addUidInterfaceRules(ifIndex, data);
     if (!isOk(status)) {
@@ -160,6 +162,7 @@ static jint native_removeUidInterfaceRules(JNIEnv* env, jobject clazz, jintArray
     }
 
     size_t size = uids.size();
+    static_assert(sizeof(*(uids.get())) == sizeof(int32_t));
     std::vector<int32_t> data ((int32_t *)&uids[0], (int32_t*)&uids[size]);
     Status status = mTc.removeUidInterfaceRules(data);
     if (!isOk(status)) {
