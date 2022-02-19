@@ -63,6 +63,7 @@ import static android.text.format.DateUtils.WEEK_IN_MILLIS;
 
 import static com.android.net.module.util.NetworkStatsUtils.SUBSCRIBER_ID_MATCH_RULE_EXACT;
 import static com.android.server.net.NetworkStatsService.ACTION_NETWORK_STATS_POLL;
+import static com.android.testutils.DevSdkIgnoreRuleKt.SC_V2;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -103,7 +104,6 @@ import android.net.TetheringManager;
 import android.net.UnderlyingNetworkInfo;
 import android.net.netstats.provider.INetworkStatsProviderCallback;
 import android.net.wifi.WifiInfo;
-import android.os.Build;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.IBinder;
@@ -157,7 +157,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
  */
 @RunWith(DevSdkIgnoreRunner.class)
 @SmallTest
-@DevSdkIgnoreRule.IgnoreUpTo(Build.VERSION_CODES.R)
+// NetworkStatsService is not updatable before T, so tests do not need to be backwards compatible
+@DevSdkIgnoreRule.IgnoreUpTo(SC_V2)
 public class NetworkStatsServiceTest extends NetworkStatsBaseTest {
     private static final String TAG = "NetworkStatsServiceTest";
 
