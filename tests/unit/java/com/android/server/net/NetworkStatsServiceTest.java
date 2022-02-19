@@ -65,6 +65,7 @@ import static com.android.net.module.util.NetworkStatsUtils.SUBSCRIBER_ID_MATCH_
 import static com.android.server.net.NetworkStatsService.ACTION_NETWORK_STATS_POLL;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
@@ -77,6 +78,7 @@ import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.reset;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -108,6 +110,7 @@ import android.os.IBinder;
 import android.os.PowerManager;
 import android.os.SimpleClock;
 import android.provider.Settings;
+import android.system.ErrnoException;
 import android.telephony.TelephonyManager;
 
 import androidx.annotation.Nullable;
@@ -125,6 +128,7 @@ import com.android.server.net.NetworkStatsService.NetworkStatsSettings.Config;
 import com.android.testutils.DevSdkIgnoreRule;
 import com.android.testutils.DevSdkIgnoreRunner;
 import com.android.testutils.HandlerUtils;
+import com.android.testutils.TestBpfMap;
 import com.android.testutils.TestableNetworkStatsProviderBinder;
 
 import libcore.testing.io.TestIoUtils;
@@ -143,6 +147,7 @@ import java.time.Clock;
 import java.time.ZoneOffset;
 import java.util.Objects;
 import java.util.concurrent.Executor;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Tests for {@link NetworkStatsService}.
@@ -197,11 +202,16 @@ public class NetworkStatsServiceTest extends NetworkStatsBaseTest {
     private HandlerThread mHandlerThread;
     @Mock
     private LocationPermissionChecker mLocationPermissionChecker;
-    private @Mock IBpfMap<U32, U8> mUidCounterSetMap;
-    private @Mock IBpfMap<CookieTagMapKey, CookieTagMapValue> mCookieTagMap;
-    private @Mock IBpfMap<StatsMapKey, StatsMapValue> mStatsMapA;
-    private @Mock IBpfMap<StatsMapKey, StatsMapValue> mStatsMapB;
-    private @Mock IBpfMap<UidStatsMapKey, StatsMapValue> mAppUidStatsMap;
+    private TestBpfMap<U32, U8> mUidCounterSetMap = spy(new TestBpfMap<>(U32.class, U8.class));
+
+    private TestBpfMap<CookieTagMapKey, CookieTagMapValue> mCookieTagMap = new TestBpfMap<>(
+            CookieTagMapKey.class, CookieTagMapValue.class);
+    private TestBpfMap<StatsMapKey, StatsMapValue> mStatsMapA = new TestBpfMap<>(StatsMapKey.class,
+            StatsMapValue.class);
+    private TestBpfMap<StatsMapKey, StatsMapValue> mStatsMapB = new TestBpfMap<>(StatsMapKey.class,
+            StatsMapValue.class);
+    private TestBpfMap<UidStatsMapKey, StatsMapValue> mAppUidStatsMap = new TestBpfMap<>(
+            UidStatsMapKey.class, StatsMapValue.class);
 
     private NetworkStatsService mService;
     private INetworkStatsSession mSession;
@@ -1920,5 +1930,71 @@ public class NetworkStatsServiceTest extends NetworkStatsBaseTest {
 
     private void waitForIdle() {
         HandlerUtils.waitForIdle(mHandlerThread, WAIT_TIMEOUT);
+    }
+
+    private boolean cookieTagMapContainsUid(int uid) throws ErrnoException {
+        final AtomicBoolean found = new AtomicBoolean();
+        mCookieTagMap.forEach((k, v) -> {
+            if (v.uid == uid) {
+                found.set(true);
+            }
+        });
+        return found.get();
+    }
+
+    private static <K extends StatsMapKey, V extends StatsMapValue> boolean statsMapContainsUid(
+            TestBpfMap<K, V> map, int uid) throws ErrnoException {
+        final AtomicBoolean found = new AtomicBoolean();
+        map.forEach((k, v) -> {
+            if (k.uid == uid) {
+                found.set(true);
+            }
+        });
+        return found.get();
+    }
+
+    private void initBpfMapsWithTagData(int uid) throws ErrnoException {
+        // key needs to be unique, use some offset from uid.
+        mCookieTagMap.insertEntry(new CookieTagMapKey(1000 + uid), new CookieTagMapValue(uid, 1));
+        mCookieTagMap.insertEntry(new CookieTagMapKey(2000 + uid), new CookieTagMapValue(uid, 2));
+
+        mStatsMapA.insertEntry(new StatsMapKey(uid, 1, 0, 10), new StatsMapValue(5, 5000, 3, 3000));
+        mStatsMapA.insertEntry(new StatsMapKey(uid, 2, 0, 10), new StatsMapValue(5, 5000, 3, 3000));
+
+        mStatsMapB.insertEntry(new StatsMapKey(uid, 1, 0, 10), new StatsMapValue(0, 0, 0, 0));
+
+        mAppUidStatsMap.insertEntry(new UidStatsMapKey(uid), new StatsMapValue(10, 10000, 6, 6000));
+
+        mUidCounterSetMap.insertEntry(new U32(uid), new U8((short) 1));
+
+        assertTrue(cookieTagMapContainsUid(uid));
+        assertTrue(statsMapContainsUid(mStatsMapA, uid));
+        assertTrue(statsMapContainsUid(mStatsMapB, uid));
+        assertTrue(mAppUidStatsMap.containsKey(new UidStatsMapKey(uid)));
+        assertTrue(mUidCounterSetMap.containsKey(new U32(uid)));
+    }
+
+    @Test
+    public void testRemovingUidRemovesTagDataForUid() throws ErrnoException {
+        initBpfMapsWithTagData(UID_BLUE);
+        initBpfMapsWithTagData(UID_RED);
+
+        final Intent intent = new Intent(ACTION_UID_REMOVED);
+        intent.putExtra(EXTRA_UID, UID_BLUE);
+        mServiceContext.sendBroadcast(intent);
+
+        // assert that all UID_BLUE related tag data has been removed from the maps.
+        assertFalse(cookieTagMapContainsUid(UID_BLUE));
+        assertFalse(statsMapContainsUid(mStatsMapA, UID_BLUE));
+        assertFalse(statsMapContainsUid(mStatsMapB, UID_BLUE));
+        assertFalse(mAppUidStatsMap.containsKey(new UidStatsMapKey(UID_BLUE)));
+        assertFalse(mUidCounterSetMap.containsKey(new U32(UID_BLUE)));
+
+        // assert that UID_RED related tag data is still in the maps.
+        assertTrue(cookieTagMapContainsUid(UID_RED));
+        assertTrue(statsMapContainsUid(mStatsMapA, UID_RED));
+        assertTrue(statsMapContainsUid(mStatsMapB, UID_RED));
+        assertTrue(mAppUidStatsMap.containsKey(new UidStatsMapKey(UID_RED)));
+        assertTrue(mUidCounterSetMap.containsKey(new U32(UID_RED)));
     }
 }
