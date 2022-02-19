@@ -907,6 +907,7 @@ public class ConnectivityServiceTest {
                 return null;
             };
 
+            doAnswer(validateAnswer).when(mNetworkMonitor).notifyNetworkConnected(any(), any());
             doAnswer(validateAnswer).when(mNetworkMonitor).notifyNetworkConnectedParcel(any());
             doAnswer(validateAnswer).when(mNetworkMonitor).forceReevaluation(anyInt());
 
