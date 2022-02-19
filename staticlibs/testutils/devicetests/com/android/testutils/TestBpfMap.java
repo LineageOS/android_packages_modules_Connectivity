@@ -24,11 +24,11 @@ import com.android.net.module.util.BpfMap;
 import com.android.net.module.util.IBpfMap.ThrowingBiConsumer;
 import com.android.net.module.util.Struct;
 
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Objects;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  *
@@ -42,7 +42,7 @@ import java.util.Objects;
  * @param <V> the value type
  */
 public class TestBpfMap<K extends Struct, V extends Struct> extends BpfMap<K, V> {
-    private final HashMap<K, V> mMap = new HashMap<K, V>();
+    private final ConcurrentHashMap<K, V> mMap = new ConcurrentHashMap<>();
 
     public TestBpfMap(final Class<K> key, final Class<V> value) {
         super(key, value);
