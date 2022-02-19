@@ -104,6 +104,12 @@ public class BluetoothAudioPairer {
     private final PasskeyConfirmationHandler mPasskeyConfirmationHandler;
     private final TimingLogger mTimingLogger;
 
+    private static boolean sTestMode = false;
+
+    static void enableTestMode() {
+        sTestMode = true;
+    }
+
     static class KeyBasedPairingInfo {
 
         private final byte[] mSecret;
@@ -151,22 +157,24 @@ public class BluetoothAudioPairer {
         //
         // If that OS bug doesn't get fixed, we can flip these flags to force-reject the
         // permissions.
-        if (preferences.getRejectPhonebookAccess()
-                && !device.setPhonebookAccessPermission(BluetoothDevice.ACCESS_REJECTED)) {
+        if (preferences.getRejectPhonebookAccess() && (sTestMode ? false :
+                !device.setPhonebookAccessPermission(BluetoothDevice.ACCESS_REJECTED))) {
             throw new PairingException("Failed to deny contacts (phonebook) access.");
         }
         if (preferences.getRejectMessageAccess()
-                && !device.setMessageAccessPermission(BluetoothDevice.ACCESS_REJECTED)) {
+                && (sTestMode ? false :
+                !device.setMessageAccessPermission(BluetoothDevice.ACCESS_REJECTED))) {
             throw new PairingException("Failed to deny message access.");
         }
         if (preferences.getRejectSimAccess()
-                && !device.setSimAccessPermission(BluetoothDevice.ACCESS_REJECTED)) {
+                && (sTestMode ? false :
+                !device.setSimAccessPermission(BluetoothDevice.ACCESS_REJECTED))) {
             throw new PairingException("Failed to deny SIM access.");
         }
     }
 
     boolean isPaired() {
-        return mDevice.getBondState() == BOND_BONDED;
+        return (sTestMode ? false : mDevice.getBondState() == BOND_BONDED);
     }
 
     /**
@@ -175,7 +183,7 @@ public class BluetoothAudioPairer {
     @WorkerThread
     void unpair()
             throws InterruptedException, ExecutionException, TimeoutException, PairingException {
-        int bondState =  mDevice.getBondState();
+        int bondState =  sTestMode ? BOND_NONE : mDevice.getBondState();
         try (UnbondedReceiver unbondedReceiver = new UnbondedReceiver();
                 ScopedTiming scopedTiming = new ScopedTiming(mTimingLogger,
                         "Unpair for state: " + bondState)) {
@@ -223,15 +231,16 @@ public class BluetoothAudioPairer {
                 ScopedTiming scopedTiming = new ScopedTiming(mTimingLogger, "Create bond")) {
             // If the provider's initiating the bond, we do nothing but wait for broadcasts.
             if (mKeyBasedPairingInfo == null || !mKeyBasedPairingInfo.mProviderInitiatesBonding) {
-                Log.i(TAG, "createBond with " + maskBluetoothAddress(mDevice) + ", type="
+                if (!sTestMode) {
+                    Log.i(TAG, "createBond with " + maskBluetoothAddress(mDevice) + ", type="
                         + mDevice.getType());
-                if (mPreferences.getSpecifyCreateBondTransportType()) {
-                    mDevice.createBond(mPreferences.getCreateBondTransportType());
-                } else {
-                    mDevice.createBond();
+                    if (mPreferences.getSpecifyCreateBondTransportType()) {
+                        mDevice.createBond(mPreferences.getCreateBondTransportType());
+                    } else {
+                        mDevice.createBond();
+                    }
                 }
             }
-
             try {
                 bondedReceiver.await(mPreferences.getCreateBondTimeoutSeconds(), TimeUnit.SECONDS);
             } catch (TimeoutException e) {
@@ -286,19 +295,23 @@ public class BluetoothAudioPairer {
             // Try to connect via reflection
             Log.v(TAG, "Connect to proxy=" + proxy);
 
-            if (!(Boolean) Reflect.on(proxy).withMethod("connect", BluetoothDevice.class)
-                    .get(mDevice)) {
-                // If we're already connecting, connect() may return false. :/
-                Log.w(TAG, "connect returned false, expected if connecting, state="
-                        + proxy.getConnectionState(mDevice));
+            if (!sTestMode) {
+                if (!(Boolean) Reflect.on(proxy).withMethod("connect", BluetoothDevice.class)
+                        .get(mDevice)) {
+                    // If we're already connecting, connect() may return false. :/
+                    Log.w(TAG, "connect returned false, expected if connecting, state="
+                            + proxy.getConnectionState(mDevice));
+                }
             }
 
             // If we're already connected, the OS may not send the connection state broadcast, so
             // return immediately for that case.
-            if (proxy.getConnectionState(mDevice) == BluetoothProfile.STATE_CONNECTED) {
-                Log.v(TAG, "connectByProfileProxy: already connected to device="
-                        + maskBluetoothAddress(mDevice));
-                return;
+            if (!sTestMode) {
+                if (proxy.getConnectionState(mDevice) == BluetoothProfile.STATE_CONNECTED) {
+                    Log.v(TAG, "connectByProfileProxy: already connected to device="
+                            + maskBluetoothAddress(mDevice));
+                    return;
+                }
             }
 
             try (ScopedTiming scopedTiming = new ScopedTiming(mTimingLogger, "Wait connection")) {
@@ -332,7 +345,9 @@ public class BluetoothAudioPairer {
         public void close() {
             try (ScopedTiming scopedTiming =
                     new ScopedTiming(mTimingLogger, "Close profile: " + mProfile)) {
-                mBluetoothAdapter.closeProfileProxy(mProfile.type, mProxy);
+                if (!sTestMode) {
+                    mBluetoothAdapter.closeProfileProxy(mProfile.type, mProxy);
+                }
             }
         }
 
@@ -388,7 +403,7 @@ public class BluetoothAudioPairer {
     /**
      * Receiver that closes after bonding has completed.
      */
-    private class BondedReceiver extends DeviceIntentReceiver {
+    class BondedReceiver extends DeviceIntentReceiver {
 
         private boolean mReceivedUuids = false;
         private boolean mReceivedPasskey = false;
@@ -470,13 +485,17 @@ public class BluetoothAudioPairer {
                     // https://source.android.com/security/bulletin/2019-12-01#system
                     // Since we've certified the Fast Pair 1.0 devices, and user taps to pair it
                     // (with the device's image), we could help user to accept the consent.
-                    mDevice.setPairingConfirmation(true);
+                    if (!sTestMode) {
+                        mDevice.setPairingConfirmation(true);
+                    }
                     if (mPreferences.getMoreEventLogForQuality()) {
                         mEventLogger.logCurrentEventSucceeded();
                     }
                     return;
                 } else if (variant != BluetoothDevice.PAIRING_VARIANT_PASSKEY_CONFIRMATION) {
-                    mDevice.setPairingConfirmation(false);
+                    if (!sTestMode) {
+                        mDevice.setPairingConfirmation(false);
+                    }
                     if (mPreferences.getMoreEventLogForQuality()) {
                         mEventLogger.logCurrentEventFailed(
                                 new CreateBondException(
@@ -492,10 +511,14 @@ public class BluetoothAudioPairer {
                         // Must be the simulator using FP 1.0 (no Key-based Pairing). Real
                         // headphones using FP 1.0 use Just Works instead (and maybe we should
                         // disable this flag for them).
-                        mDevice.setPairingConfirmation(true);
+                        if (!sTestMode) {
+                            mDevice.setPairingConfirmation(true);
+                        }
                     }
                     if (mPreferences.getMoreEventLogForQuality()) {
-                        mEventLogger.logCurrentEventSucceeded();
+                        if (!sTestMode) {
+                            mEventLogger.logCurrentEventSucceeded();
+                        }
                     }
                     return;
                 }
@@ -559,8 +582,8 @@ public class BluetoothAudioPairer {
                                                         encryptedRemotePasskey);
                                     }
 
-                                    // We log success if we made it through with no exceptions. If
-                                    // the passkey was wrong, pairing will fail and we'll log
+                                    // We log success if we made it through with no exceptions.
+                                    // If the passkey was wrong, pairing will fail and we'll log
                                     // BOND_BROKEN with reason = AUTH_FAILED.
                                     mEventLogger.logCurrentEventSucceeded();
 
@@ -572,8 +595,8 @@ public class BluetoothAudioPairer {
                                                 + ", remote=" + remotePasskey);
                                     }
 
-                                    // Don't estimate the {@code ScopedTiming} because the passkey
-                                    // confirmation is done by UI.
+                                    // Don't estimate the {@code ScopedTiming} because the
+                                    // passkey confirmation is done by UI.
                                     if (isPasskeyCorrect
                                             && mPreferences.getHandlePasskeyConfirmationByUi()
                                             && mPasskeyConfirmationHandler != null) {
@@ -639,8 +662,10 @@ public class BluetoothAudioPairer {
 
             Log.i(TAG, "triggerDiscoverStateChange call startDiscovery.");
             // Uses startDiscovery to trigger Settings show pairing dialog instead of notification.
-            bluetoothAdapter.startDiscovery();
-            bluetoothAdapter.cancelDiscovery();
+            if (!sTestMode) {
+                bluetoothAdapter.startDiscovery();
+                bluetoothAdapter.cancelDiscovery();
+            }
             try {
                 receiver.await(DISCOVERY_STATE_CHANGE_TIMEOUT_MS, TimeUnit.MILLISECONDS);
             } catch (InterruptedException | ExecutionException | TimeoutException e) {
