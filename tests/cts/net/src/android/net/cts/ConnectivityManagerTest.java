@@ -2174,7 +2174,7 @@ public class ConnectivityManagerTest {
     private void waitForAvailable(
             @NonNull final TestableNetworkCallback cb, @NonNull final Network expectedNetwork) {
         cb.expectAvailableCallbacks(expectedNetwork, false /* suspended */,
-                true /* validated */,
+                null /* validated */,
                 false /* blocked */, NETWORK_CALLBACK_TIMEOUT_MS);
     }
 
@@ -3257,6 +3257,19 @@ public class ConnectivityManagerTest {
         final String dumpOutput = DumpTestUtils.dumpServiceWithShellPermission(
                 Context.CONNECTIVITY_SERVICE, "--short");
         assertTrue(dumpOutput, dumpOutput.contains("Active default network"));
+    }
+
+    @Test @IgnoreUpTo(SC_V2)
+    public void testDumpBpfNetMaps() throws Exception {
+        final String[] args = new String[] {"--short", "trafficcontroller"};
+        String dumpOutput = DumpTestUtils.dumpServiceWithShellPermission(
+                Context.CONNECTIVITY_SERVICE, args);
+        assertTrue(dumpOutput, dumpOutput.contains("TrafficController"));
+        assertFalse(dumpOutput, dumpOutput.contains("BPF map content"));
+
+        dumpOutput = DumpTestUtils.dumpServiceWithShellPermission(
+                Context.CONNECTIVITY_SERVICE, args[1]);
+        assertTrue(dumpOutput, dumpOutput.contains("BPF map content"));
     }
 
     private void unregisterRegisteredCallbacks() {

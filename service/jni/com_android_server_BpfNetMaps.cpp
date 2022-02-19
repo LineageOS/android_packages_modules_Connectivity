@@ -24,6 +24,7 @@
 #include <nativehelper/JNIHelp.h>
 #include <nativehelper/ScopedUtfChars.h>
 #include <nativehelper/ScopedPrimitiveArray.h>
+#include <netjniutils/netjniutils.h>
 #include <net/if.h>
 #include <vector>
 
@@ -108,6 +109,7 @@ static jint native_replaceUidChain(JNIEnv* env, jobject clazz, jstring name, jbo
     }
 
     size_t size = uids.size();
+    static_assert(sizeof(*(uids.get())) == sizeof(int32_t));
     std::vector<int32_t> data ((int32_t *)&uids[0], (int32_t*)&uids[size]);
     int res = mTc.replaceUidOwnerMap(chainName, isAllowlist, data);
     if (res) {
@@ -144,6 +146,7 @@ static jint native_addUidInterfaceRules(JNIEnv* env, jobject clazz, jstring ifNa
     }
 
     size_t size = uids.size();
+    static_assert(sizeof(*(uids.get())) == sizeof(int32_t));
     std::vector<int32_t> data ((int32_t *)&uids[0], (int32_t*)&uids[size]);
     Status status = mTc.addUidInterfaceRules(ifIndex, data);
     if (!isOk(status)) {
@@ -159,6 +162,7 @@ static jint native_removeUidInterfaceRules(JNIEnv* env, jobject clazz, jintArray
     }
 
     size_t size = uids.size();
+    static_assert(sizeof(*(uids.get())) == sizeof(int32_t));
     std::vector<int32_t> data ((int32_t *)&uids[0], (int32_t*)&uids[size]);
     Status status = mTc.removeUidInterfaceRules(data);
     if (!isOk(status)) {
@@ -184,6 +188,15 @@ static void native_setPermissionForUids(JNIEnv* env, jobject clazz, jint permiss
     static_assert(sizeof(*(uids.get())) == sizeof(uid_t));
     std::vector<uid_t> data ((uid_t *)&uids[0], (uid_t*)&uids[size]);
     mTc.setPermissionForUids(permission, data);
+}
+
+static void native_dump(JNIEnv* env, jobject clazz, jobject javaFd, jboolean verbose) {
+    int fd = netjniutils::GetNativeFileDescriptor(env, javaFd);
+    if (fd < 0) {
+        jniThrowExceptionFmt(env, "java/io/IOException", "Invalid file descriptor");
+        return;
+    }
+    mTc.dump(fd, verbose);
 }
 
 /*
@@ -216,6 +229,8 @@ static const JNINativeMethod gMethods[] = {
     (void*)native_swapActiveStatsMap},
     {"native_setPermissionForUids", "(I[I)V",
     (void*)native_setPermissionForUids},
+    {"native_dump", "(Ljava/io/FileDescriptor;Z)V",
+    (void*)native_dump},
 };
 // clang-format on
 
