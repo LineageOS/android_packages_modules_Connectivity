@@ -111,7 +111,10 @@
       ]
     },
     // TODO: move to mainline-presubmit when known green.
-    // Test with connectivity/tethering module only, to catch integration issues with older versions of other modules
+    // Test with connectivity/tethering module only, to catch integration issues with older versions of other modules.
+    // "new tethering + old NetworkStack" is not a configuration that should really exist in the field, but
+    // there is no strong guarantee, and it is required by MTS testing for module qualification, where modules
+    // are tested independently.
     {
       "name": "CtsNetTestCasesLatestSdk[com.google.android.tethering.apex]",
       "options": [
@@ -160,9 +163,6 @@
     },
     {
       "path": "packages/modules/CaptivePortalLogin"
-    },
-    {
-      "path": "packages/modules/Connectivity/Tethering"
     }
   ]
 }

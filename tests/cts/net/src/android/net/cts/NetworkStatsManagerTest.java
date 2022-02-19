@@ -33,8 +33,6 @@ import static android.net.netstats.NetworkStatsDataMigrationUtils.PREFIX_UID;
 import static android.net.netstats.NetworkStatsDataMigrationUtils.PREFIX_UID_TAG;
 import static android.net.netstats.NetworkStatsDataMigrationUtils.PREFIX_XT;
 
-import static com.android.testutils.DevSdkIgnoreRuleKt.SC_V2;
-
 import android.app.AppOpsManager;
 import android.app.usage.NetworkStats;
 import android.app.usage.NetworkStatsManager;
@@ -63,7 +61,6 @@ import android.util.Log;
 import com.android.compatibility.common.util.ShellIdentityUtils;
 import com.android.compatibility.common.util.SystemUtil;
 import com.android.modules.utils.build.SdkLevel;
-import com.android.testutils.DevSdkIgnoreRule;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -852,8 +849,9 @@ public class NetworkStatsManagerTest extends InstrumentationTestCase {
     }
 
     @AppModeFull
-    @DevSdkIgnoreRule.IgnoreUpTo(SC_V2)
     public void testDataMigrationUtils() throws Exception {
+        if (!SdkLevel.isAtLeastT()) return;
+
         final List<String> prefixes = List.of(PREFIX_UID, PREFIX_XT, PREFIX_UID_TAG);
         for (final String prefix : prefixes) {
             final long duration = TextUtils.equals(PREFIX_XT, prefix) ? TimeUnit.HOURS.toMillis(1)
