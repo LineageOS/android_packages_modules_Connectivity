@@ -30,7 +30,6 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.NoSuchElementException;
 import java.util.Objects;
-import java.util.function.BiConsumer;
 
 /**
  * BpfMap is a key -> value mapping structure that is designed to maintained the bpf map entries.
