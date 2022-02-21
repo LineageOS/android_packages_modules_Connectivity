@@ -53,6 +53,20 @@ public final class DataUtils {
     }
 
     /**
+     * Prints readable string for a {@link ScanFastPairStoreItem}.
+     */
+    public static String toString(ScanFastPairStoreItem item) {
+        return "ScanFastPairStoreItem=[address:" + item.getAddress()
+                + ", actionUr:" + item.getActionUrl()
+                + ", deviceName:" + item.getDeviceName()
+                + ", iconPng:" + item.getIconPng()
+                + ", iconFifeUrl:" + item.getIconFifeUrl()
+                + ", antiSpoofingKeyPair:" + item.getAntiSpoofingPublicKey()
+                + ", fastPairStrings:" + toString(item.getFastPairStrings())
+                + "]";
+    }
+
+    /**
      * Prints readable string for a {@link FastPairStrings}
      */
     public static String toString(FastPairStrings fastPairStrings) {
