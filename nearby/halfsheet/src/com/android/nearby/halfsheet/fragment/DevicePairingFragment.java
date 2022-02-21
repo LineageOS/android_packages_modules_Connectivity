@@ -324,7 +324,7 @@ public class DevicePairingFragment extends HalfSheetModuleFragment {
     private Intent createCompletionIntent(@Nullable String companionApp, @Nullable String address) {
         if (isEmpty(companionApp)) {
             return null;
-        } else if (FastPairUtils.isAppInstalled(companionApp, getContext())
+        } else if (FastPairUtils.isAppInstalled(getContext(), companionApp)
                 && isLaunchable(companionApp)) {
             mOpenCompanionAppIntent = createCompanionAppIntent(companionApp, address);
             return mOpenCompanionAppIntent;

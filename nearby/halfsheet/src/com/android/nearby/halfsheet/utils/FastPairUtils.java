@@ -18,11 +18,15 @@ package com.android.nearby.halfsheet.utils;
 import static com.android.server.nearby.common.fastpair.service.UserActionHandlerBase.EXTRA_COMPANION_APP;
 import static com.android.server.nearby.fastpair.UserActionHandler.ACTION_FAST_PAIR;
 
+import android.bluetooth.BluetoothAdapter;
+import android.bluetooth.BluetoothDevice;
+import android.bluetooth.BluetoothManager;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.util.Log;
 
+import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import java.net.URISyntaxException;
@@ -37,7 +41,7 @@ public class FastPairUtils {
     public static final String TAG = "HalfSheetActivity";
 
     /** FastPair util method check certain app is install on the device or not. */
-    public static boolean isAppInstalled(String packageName, Context context) {
+    public static boolean isAppInstalled(Context context, String packageName) {
         try {
             context.getPackageManager().getPackageInfo(packageName, 0);
             return true;
@@ -71,7 +75,8 @@ public class FastPairUtils {
     }
 
     /**
-     * Converts a {@link ScanFastPairStoreItem} to a {@link StoredDiscoveryItem}.
+     * Converts a {@link service.proto.Cache.ScanFastPairStoreItem}
+     * to a {@link service.proto.Cache.StoredDiscoveryItem}.
      *
      * <p>This is needed to make the new Fast Pair scanning stack compatible with the rest of the
      * legacy Fast Pair code.
@@ -110,7 +115,39 @@ public class FastPairUtils {
                 .build();
     }
 
-    private FastPairUtils() {
-
+    /**
+     * Returns true the application is installed and can be opened on device.
+     */
+    public static boolean isLaunchable(@NonNull Context context, String companionApp) {
+        return isAppInstalled(context, companionApp)
+                && createCompanionAppIntent(context, companionApp, null) != null;
     }
+
+    /**
+     * Returns an intent to launch given the package name and bluetooth address (if provided).
+     * Returns null if no such an intent can be found.
+     */
+    @Nullable
+    public static Intent createCompanionAppIntent(@NonNull Context context, String packageName,
+            @Nullable String address) {
+        Intent intent = context.getPackageManager().getLaunchIntentForPackage(packageName);
+        if (intent == null) {
+            return null;
+        }
+        if (address != null) {
+            BluetoothAdapter adapter = getBluetoothAdapter(context);
+            if (adapter != null) {
+                intent.putExtra(BluetoothDevice.EXTRA_DEVICE, adapter.getRemoteDevice(address));
+            }
+        }
+        return intent;
+    }
+
+    @Nullable
+    private static BluetoothAdapter getBluetoothAdapter(@NonNull Context context) {
+        BluetoothManager bluetoothManager = context.getSystemService(BluetoothManager.class);
+        return bluetoothManager == null ? null : bluetoothManager.getAdapter();
+    }
+
+    private FastPairUtils() {}
 }

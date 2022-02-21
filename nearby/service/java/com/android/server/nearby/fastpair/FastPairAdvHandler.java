@@ -16,6 +16,8 @@
 
 package com.android.server.nearby.fastpair;
 
+import static com.android.server.nearby.fastpair.Constant.TAG;
+
 import static com.google.common.primitives.Bytes.concat;
 
 import android.accounts.Account;
@@ -45,7 +47,6 @@ import service.proto.Rpcs;
 public class FastPairAdvHandler {
     Context mContext;
     String mBleAddress;
-    private static final String TAG = "FastPairAdvHandler";
 
     /** The types about how the bloomfilter is processed. */
     public enum ProcessBloomFilterType {
@@ -73,8 +74,7 @@ public class FastPairAdvHandler {
                 FastPairDataProvider.getInstance().loadFastPairEligibleAccounts();
         if (FastPairDecoder.checkModelId(fastPairDevice.getData())) {
             byte[] model = FastPairDecoder.getModelId(fastPairDevice.getData());
-            Log.d("FastPairService",
-                    "On discovery model id " + Hex.bytesToStringLowercase(model));
+            Log.d(TAG, "On discovery model id " + Hex.bytesToStringLowercase(model));
             // Use api to get anti spoofing key from model id.
             try {
                 Rpcs.GetObservedDeviceResponse response =
