@@ -10713,8 +10713,9 @@ public class ConnectivityService extends IConnectivityManager.Stub
 
         final String iface = networkAgent.linkProperties.getInterfaceName();
         if (iface == null) {
-            // This can never happen.
-            logwtf("canNetworkBeRateLimited: LinkProperties#getInterfaceName returns null");
+            // This may happen in tests, but if there is no interface then there is nothing that
+            // can be rate limited.
+            loge("canNetworkBeRateLimited: LinkProperties#getInterfaceName returns null");
             return false;
         }
         return true;
