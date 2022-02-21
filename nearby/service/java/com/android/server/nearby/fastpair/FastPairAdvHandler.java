@@ -70,6 +70,8 @@ public class FastPairAdvHandler {
     public void handleBroadcast(NearbyDevice device) {
         FastPairDevice fastPairDevice = (FastPairDevice) device;
         mBleAddress = fastPairDevice.getBluetoothAddress();
+        List<Account> accountList =
+                FastPairDataProvider.getInstance().loadFastPairEligibleAccounts();
         if (FastPairDecoder.checkModelId(fastPairDevice.getData())) {
             byte[] model = FastPairDecoder.getModelId(fastPairDevice.getData());
             Log.d(TAG, "On discovery model id " + Hex.bytesToStringLowercase(model));
@@ -79,16 +81,15 @@ public class FastPairAdvHandler {
                         FastPairDataProvider.getInstance()
                                 .loadFastPairAntispoofkeyDeviceMetadata(model);
                 Locator.get(mContext, FastPairHalfSheetManager.class).showHalfSheet(
-                        DataUtils.toScanFastPairStoreItem(response, mBleAddress));
+                        DataUtils.toScanFastPairStoreItem(
+                                response, mBleAddress,
+                                accountList.isEmpty() ? null : accountList.get(0).name));
             } catch (IllegalStateException e) {
                 Log.e(TAG, "OEM does not construct fast pair data proxy correctly");
             }
-
         } else {
             // Start to process bloom filter
             try {
-                List<Account> accountList =
-                        FastPairDataProvider.getInstance().loadFastPairEligibleAccounts();
                 Log.d(TAG, "account list size" + accountList.size());
                 byte[] bloomFilterByteArray = FastPairDecoder
                         .getBloomFilter(fastPairDevice.getData());
