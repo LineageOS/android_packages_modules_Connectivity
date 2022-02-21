@@ -16,11 +16,15 @@
 
 package com.android.server.nearby.provider;
 
+import static android.nearby.ScanRequest.SCAN_TYPE_NEARBY_PRESENCE;
+
 import static com.android.server.nearby.NearbyService.TAG;
 
 import android.content.Context;
 import android.nearby.IScanListener;
 import android.nearby.NearbyDeviceParcelable;
+import android.nearby.PresenceScanFilter;
+import android.nearby.ScanFilter;
 import android.nearby.ScanRequest;
 import android.os.IBinder;
 import android.os.RemoteException;
@@ -29,10 +33,13 @@ import android.util.Log;
 import com.android.internal.annotations.GuardedBy;
 import com.android.server.nearby.injector.Injector;
 import com.android.server.nearby.metrics.NearbyMetrics;
+import com.android.server.nearby.presence.PresenceDiscoveryResult;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 /**
  * Manages all aspects of discovery providers.
@@ -55,6 +62,16 @@ public class DiscoveryProviderManager implements AbstractDiscoveryProvider.Liste
                 if (record == null) {
                     Log.w(TAG, "DiscoveryProviderManager cannot find the scan record.");
                     continue;
+                }
+                if (nearbyDevice.getScanType() == SCAN_TYPE_NEARBY_PRESENCE) {
+                    List<ScanFilter> presenceFilters =
+                            record.getScanRequest().getScanFilters().stream().filter(
+                                    scanFilter -> scanFilter.getType()
+                                            == SCAN_TYPE_NEARBY_PRESENCE).collect(
+                                    Collectors.toList());
+                    if (!presenceFilterMatches(nearbyDevice, presenceFilters)) {
+                        continue;
+                    }
                 }
                 try {
                     record.getScanListener().onDiscovered(
@@ -173,6 +190,22 @@ public class DiscoveryProviderManager implements AbstractDiscoveryProvider.Liste
             return;
         }
         mBleDiscoveryProvider.getController().setProviderScanMode(mScanMode);
+    }
+
+    private static boolean presenceFilterMatches(NearbyDeviceParcelable device,
+            List<ScanFilter> scanFilters) {
+        if (scanFilters.isEmpty()) {
+            return true;
+        }
+        PresenceDiscoveryResult discoveryResult = PresenceDiscoveryResult.fromScanData(
+                device.getData(), device.getRssi());
+        for (ScanFilter scanFilter : scanFilters) {
+            PresenceScanFilter presenceScanFilter = (PresenceScanFilter) scanFilter;
+            if (discoveryResult.matches(presenceScanFilter)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static class ScanListenerRecord {
