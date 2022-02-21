@@ -34,6 +34,7 @@ import android.util.Log;
 
 import com.android.server.nearby.common.bluetooth.fastpair.Constants;
 import com.android.server.nearby.injector.Injector;
+import com.android.server.nearby.presence.PresenceConstants;
 import com.android.server.nearby.util.ForegroundThread;
 
 import java.util.ArrayList;
@@ -47,6 +48,8 @@ import java.util.concurrent.Executor;
 public class BleDiscoveryProvider extends AbstractDiscoveryProvider {
 
     private static final ParcelUuid FAST_PAIR_UUID = new ParcelUuid(Constants.FastPairService.ID);
+    private static final ParcelUuid PRESENCE_UUID = new ParcelUuid(PresenceConstants.PRESENCE_UUID);
+
     // Don't block the thread as it may be used by other services.
     private static final Executor NEARBY_EXECUTOR = ForegroundThread.getExecutor();
     private final Injector mInjector;
@@ -69,6 +72,11 @@ public class BleDiscoveryProvider extends AbstractDiscoveryProvider {
                         byte[] fastPairData = serviceDataMap.get(FAST_PAIR_UUID);
                         if (fastPairData != null) {
                             builder.setData(serviceDataMap.get(FAST_PAIR_UUID));
+                        } else {
+                            byte [] presenceData = serviceDataMap.get(PRESENCE_UUID);
+                            if (presenceData != null) {
+                                builder.setData(serviceDataMap.get(PRESENCE_UUID));
+                            }
                         }
                     }
                     mExecutor.execute(() -> mListener.onNearbyDeviceDiscovered(builder.build()));
