@@ -20,7 +20,6 @@ import static android.bluetooth.BluetoothDevice.BOND_BONDED;
 import static android.bluetooth.BluetoothDevice.BOND_BONDING;
 import static android.bluetooth.BluetoothDevice.BOND_NONE;
 
-import static com.android.server.nearby.common.bluetooth.fastpair.AesEcbSingleBlockEncryption.AES_BLOCK_LENGTH;
 import static com.android.server.nearby.common.bluetooth.fastpair.BluetoothAddress.maskBluetoothAddress;
 import static com.android.server.nearby.common.bluetooth.fastpair.BluetoothUuids.get16BitUuid;
 import static com.android.server.nearby.common.bluetooth.fastpair.BluetoothUuids.to128BitUuid;
@@ -28,7 +27,6 @@ import static com.android.server.nearby.common.bluetooth.fastpair.Bytes.toBytes;
 import static com.android.server.nearby.common.bluetooth.fastpair.Bytes.toShorts;
 
 import static com.google.common.base.Preconditions.checkNotNull;
-import static com.google.common.base.Strings.isNullOrEmpty;
 import static com.google.common.base.Verify.verifyNotNull;
 import static com.google.common.io.BaseEncoding.base16;
 import static com.google.common.primitives.Bytes.concat;
@@ -220,6 +218,12 @@ public class FastPairDualConnection extends FastPairConnection {
                             TransportDiscoveryService.BLUETOOTH_SIG_ORGANIZATION_ID
                     },
                     REQUESTED_SERVICES_LTV);
+
+    private static boolean sTestMode = false;
+
+    static void enableTestMode() {
+        sTestMode = true;
+    }
 
     /**
      * Operation Result Code.
@@ -493,6 +497,7 @@ public class FastPairDualConnection extends FastPairConnection {
         // Lazily initialize a new connection manager for each pairing request.
         initGattConnectionManager();
         boolean isSecretHandshakeCompleted = true;
+
         try {
             if (key != null && key.length > 0) {
                 // GATT_CONNECTION_AND_SECRET_HANDSHAKE start.
@@ -731,11 +736,6 @@ public class FastPairDualConnection extends FastPairConnection {
         }
     }
 
-    @VisibleForTesting
-    void setBeforeDirectlyConnectProfileFromCacheForTest(Runnable runnable) {
-        this.mBeforeDirectlyConnectProfileFromCacheForTest = runnable;
-    }
-
     /**
      * Logs for user retry, check go/fastpairquality21q3 for more details.
      */
@@ -898,6 +898,7 @@ public class FastPairDualConnection extends FastPairConnection {
                                     mBluetoothAdapter.getRemoteDevice(mBleAddress).unwrap(),
                                     mPreferences.getNumSdpAttempts()));
         }
+
         BluetoothDevice device =
                 mBluetoothAdapter.getRemoteDevice(brEdrHandoverInformation.mBluetoothAddress)
                         .unwrap();
@@ -910,6 +911,7 @@ public class FastPairDualConnection extends FastPairConnection {
                         ? null
                         : new KeyBasedPairingInfo(
                                 mPairingSecret, mGattConnectionManager, mProviderInitiatesBonding);
+
         BluetoothAudioPairer pairer =
                 new BluetoothAudioPairer(
                         mContext,
@@ -928,7 +930,9 @@ public class FastPairDualConnection extends FastPairConnection {
         // normally do and we can finish early. It is also more reliable than tearing down the bond
         // and recreating it.
         try {
-            attemptDirectConnectionIfBonded(device, pairer);
+            if (!sTestMode) {
+                attemptDirectConnectionIfBonded(device, pairer);
+            }
             callbackOnPaired();
             return maybeWriteAccountKey(device);
         } catch (PairingException e) {
@@ -1299,26 +1303,6 @@ public class FastPairDualConnection extends FastPairConnection {
     }
 
     /**
-     * Creates cloud syncing intent which saves the Fast Pair device to the account.
-     *
-     * @param accountKey account key which is written into the Fast Pair device
-     * @return cloud syncing intent
-     */
-    public Intent createCloudSyncingIntent(byte[] accountKey) {
-        Intent intent = new Intent(BroadcastConstants.ACTION_FAST_PAIR_DEVICE_ADDED);
-        intent.setClassName(BroadcastConstants.PACKAGE_NAME, BroadcastConstants.SERVICE_NAME);
-        intent.putExtra(BroadcastConstants.EXTRA_ADDRESS, mBleAddress);
-        if (mPublicAddress != null) {
-            intent.putExtra(BroadcastConstants.EXTRA_PUBLIC_ADDRESS, mPublicAddress);
-        }
-        intent.putExtra(BroadcastConstants.EXTRA_ACCOUNT_KEY, accountKey);
-        intent.putExtra(
-                BroadcastConstants.EXTRA_RETROACTIVE_PAIR, mPreferences.getIsRetroactivePairing());
-
-        return intent;
-    }
-
-    /**
      * Checks whether or not an account key should be written to the device and writes it if so.
      * This is called after handle notifying the pairedCallback that we've finished pairing, because
      * at this point the headset is ready to use.
@@ -1328,7 +1312,9 @@ public class FastPairDualConnection extends FastPairConnection {
             throws InterruptedException, ExecutionException, TimeoutException,
             NoSuchAlgorithmException,
             BluetoothException {
-        Locator.get(mContext, FastPairController.class).setShouldUpload(false);
+        if (!sTestMode) {
+            Locator.get(mContext, FastPairController.class).setShouldUpload(false);
+        }
         if (!shouldWriteAccountKey()) {
             // For FastPair 2.0, here should be a subsequent pairing case.
             return null;
@@ -1611,95 +1597,6 @@ public class FastPairDualConnection extends FastPairConnection {
         waitForBluetoothStateUsingPolling(state);
     }
 
-    /**
-     * Update device name to provider.
-     *
-     * <pre>
-     *    A) Connect GATT
-     *    B) Handshake with provider to get the pairing secret and public address
-     *    C) Write new device name into provider through name characteristic in GATT
-     *    D) Disconnect GATT
-     * </pre>
-     *
-     * Synchronous: Blocks until until the name has finished being written. Throws on any error.
-     *
-     * @param key is a 16-byte account key. See go/fast-pair-2-spec for how these keys are used.
-     * @return true if the task is done, i.e. name is written successfully or it is skipped because
-     * of unsupported Name characteristic, false if some error happens and may need to re-try.
-     */
-    @WorkerThread
-    public boolean updateProviderName(@Nullable byte[] key, @Nullable String deviceName)
-            throws BluetoothException, InterruptedException, TimeoutException, ExecutionException,
-            PairingException, GeneralSecurityException {
-        if (!mPreferences.getEnableNamingCharacteristic()) {
-            Log.i(TAG, "Disable NamingCharacteristic feature, ignoring.");
-            return false;
-        }
-        if (isNullOrEmpty(deviceName)) {
-            Log.i(TAG, "Provider name is null or empty, ignoring.");
-            return false;
-        }
-        if (key == null || key.length != AES_BLOCK_LENGTH) {
-            Log.i(TAG, "key is null or key length is not account key size.");
-            return false;
-        }
-
-        Log.i(TAG, "Start to update device name for provider.");
-        boolean result = false;
-        if (mPreferences.getExtraLoggingInformation() != null) {
-            this.mEventLogger.bind(
-                    mContext, mBleAddress, mPreferences.getExtraLoggingInformation());
-        }
-
-        // Lazily initialize a new connection manager for each renaming request.
-        mGattConnectionManager =
-                new GattConnectionManager(
-                        mContext,
-                        mPreferences,
-                        mEventLogger,
-                        mBluetoothAdapter,
-                        this::toggleBluetooth,
-                        mBleAddress,
-                        mTimingLogger,
-                        mFastPairSignalChecker,
-                        /* setMtu= */ true);
-
-        try (BluetoothGattConnection connection = mGattConnectionManager.getConnection()) {
-            UUID characteristicUuid = NameCharacteristic.getId(connection);
-            if (!validateBluetoothGattCharacteristic(connection, characteristicUuid)) {
-                Log.i(TAG, "Can't find name characteristic, skip to write name with retry times.");
-                mGattConnectionManager.closeConnection();
-                // Returns true because the task is done with no name characteristic in device.
-                return true;
-            }
-            mEventLogger.setCurrentEvent(EventCode.SECRET_HANDSHAKE);
-            // Handshake to get pairing secret for name characteristic decryption and encryption.
-            try (ScopedTiming scopedTiming = new ScopedTiming(mTimingLogger, "Handshake")) {
-                handshakeForActionOverBle(key, AdditionalDataType.PERSONALIZED_NAME);
-            }
-            mEventLogger.logCurrentEventSucceeded();
-            // After handshake to get secret, write the name back to provider.
-            try (ScopedTiming scopedTiming = new ScopedTiming(mTimingLogger,
-                    "WriteNameToProvider")) {
-                result = writeNameToProvider(deviceName, mPublicAddress);
-            }
-        } catch (BluetoothException
-                | InterruptedException
-                | TimeoutException
-                | ExecutionException
-                | PairingException
-                | GeneralSecurityException e) {
-            if (mEventLogger.isCurrentEvent()) {
-                mEventLogger.logCurrentEventFailed(e);
-            }
-            throw e;
-        } finally {
-            mTimingLogger.dump();
-        }
-        mGattConnectionManager.closeConnection();
-        return result;
-    }
-
     private void waitForBluetoothStateUsingPolling(int state) throws TimeoutException {
         // There's a bug where we (pretty often!) never get the broadcast for STATE_ON or STATE_OFF.
         // So poll instead.
@@ -1882,9 +1779,13 @@ public class FastPairDualConnection extends FastPairConnection {
                             /* setMtu= */ true);
             mGattConnectionManager.closeConnection();
         }
+        if (sTestMode) {
+            return null;
+        }
         BluetoothGattConnection connection = mGattConnectionManager.getConnection();
         connection.setOperationTimeout(
                 TimeUnit.SECONDS.toMillis(mPreferences.getGattOperationTimeoutSeconds()));
+
         try {
             String firmwareVersion =
                     new String(
