@@ -145,7 +145,6 @@ public class FastPairDecoder {
         return getExtraField(serviceData, FIELD_TYPE_BLOOM_FILTER_NO_NOTIFICATION);
     }
 
-
     /**
      * Get random resolvableData
      */
