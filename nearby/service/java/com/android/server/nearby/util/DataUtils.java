@@ -17,6 +17,7 @@
 package com.android.server.nearby.util;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 import service.proto.Cache.ScanFastPairStoreItem;
 import service.proto.Cache.StoredDiscoveryItem;
@@ -36,16 +37,18 @@ public final class DataUtils {
      * Converts a {@link GetObservedDeviceResponse} to a {@link ScanFastPairStoreItem}.
      */
     public static ScanFastPairStoreItem toScanFastPairStoreItem(
-            GetObservedDeviceResponse observedDeviceResponse, @NonNull String bleAddress) {
+            GetObservedDeviceResponse observedDeviceResponse,
+            @NonNull String bleAddress, @Nullable String account) {
         Device device = observedDeviceResponse.getDevice();
+        String deviceName = device.getName();
         return ScanFastPairStoreItem.newBuilder()
                 .setAddress(bleAddress)
                 .setActionUrl(device.getIntentUri())
-                .setDeviceName(device.getName())
+                .setDeviceName(deviceName)
                 .setIconPng(observedDeviceResponse.getImage())
                 .setIconFifeUrl(device.getImageUrl())
                 .setAntiSpoofingPublicKey(device.getAntiSpoofingKeyPair().getPublicKey())
-                .setFastPairStrings(getFastPairStrings(observedDeviceResponse))
+                .setFastPairStrings(getFastPairStrings(observedDeviceResponse, deviceName, account))
                 .build();
     }
 
@@ -76,13 +79,17 @@ public final class DataUtils {
                 + "]";
     }
 
-    private static FastPairStrings getFastPairStrings(GetObservedDeviceResponse response) {
+    private static FastPairStrings getFastPairStrings(GetObservedDeviceResponse response,
+            String deviceName, @Nullable String account) {
         ObservedDeviceStrings strings = response.getStrings();
         return FastPairStrings.newBuilder()
                 .setTapToPairWithAccount(strings.getInitialNotificationDescription())
                 .setTapToPairWithoutAccount(
                         strings.getInitialNotificationDescriptionNoAccount())
-                .setInitialPairingDescription(strings.getInitialPairingDescription())
+                .setInitialPairingDescription(account == null
+                        ? strings.getInitialNotificationDescriptionNoAccount()
+                        : String.format(strings.getInitialPairingDescription(),
+                                deviceName, account))
                 .setPairingFinishedCompanionAppInstalled(
                         strings.getConnectSuccessCompanionAppInstalled())
                 .setPairingFinishedCompanionAppNotInstalled(
