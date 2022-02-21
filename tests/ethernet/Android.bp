@@ -40,4 +40,5 @@ android_test {
         "services.core",
         "services.net",
     ],
+    test_suites: ["general-tests"],
 }
