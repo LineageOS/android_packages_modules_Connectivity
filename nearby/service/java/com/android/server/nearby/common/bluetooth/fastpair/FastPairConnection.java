@@ -18,7 +18,6 @@ package com.android.server.nearby.common.bluetooth.fastpair;
 
 import android.annotation.WorkerThread;
 import android.bluetooth.BluetoothDevice;
-import android.content.Intent;
 
 import androidx.annotation.Nullable;
 import androidx.core.util.Consumer;
@@ -135,13 +134,6 @@ public abstract class FastPairConnection {
     @Nullable
     public abstract String getPublicAddress();
 
-    /**
-     * Creates cloud syncing intent which saves the Fast Pair device to the account.
-     *
-     * @param accountKey account key which is written into the Fast Pair device
-     * @return cloud syncing intent
-     */
-    public abstract Intent createCloudSyncingIntent(byte[] accountKey);
 
     /** Callback for getting notifications when pairing has completed. */
     public interface OnPairedCallback {
