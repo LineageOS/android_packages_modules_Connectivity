@@ -31,6 +31,7 @@ import static org.mockito.ArgumentMatchers.same;
 import static org.mockito.Mockito.clearInvocations;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -455,16 +456,21 @@ public class EthernetNetworkFactoryTest {
 
         mNetFactory.needNetworkFor(createDefaultRequest());
 
+        verify(mDeps, never()).makeIpClient(any(), any(), any());
+
+        // BUG(b/191854824): requesting a network with a specifier (Android Auto use case) should
+        // not start an IpClient when the link is down, but fixing this may make matters worse by
+        // tiggering b/197548738.
         NetworkRequest specificNetRequest = new NetworkRequest.Builder()
                 .addTransportType(NetworkCapabilities.TRANSPORT_ETHERNET)
                 .setNetworkSpecifier(new EthernetNetworkSpecifier(TEST_IFACE))
                 .build();
         mNetFactory.needNetworkFor(specificNetRequest);
-
-        verify(mDeps, never()).makeIpClient(any(), any(), any());
+        mNetFactory.releaseNetworkFor(specificNetRequest);
 
         mNetFactory.updateInterfaceLinkState(TEST_IFACE, true, NULL_LISTENER);
-        verify(mDeps).makeIpClient(any(), eq(TEST_IFACE), any());
+        // TODO: change to once when b/191854824 is fixed.
+        verify(mDeps, times(2)).makeIpClient(any(), eq(TEST_IFACE), any());
     }
 
     @Test
