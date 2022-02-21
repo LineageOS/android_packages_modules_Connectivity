@@ -44,7 +44,6 @@
     {
       "name": "TetheringPrivilegedTests"
     },
-    // TODO: move to presubmit when known green.
     {
       "name": "netd_updatable_unit_test",
       "keywords": ["netd-device-kernel-4.9", "netd-device-kernel-4.14"]
