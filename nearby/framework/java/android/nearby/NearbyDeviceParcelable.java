@@ -76,6 +76,8 @@ public final class NearbyDeviceParcelable implements Parcelable {
                     return new NearbyDeviceParcelable[size];
                 }
             };
+
+    @ScanRequest.ScanType int mScanType;
     @Nullable
     private final String mName;
     @NearbyDevice.Medium
@@ -89,9 +91,10 @@ public final class NearbyDeviceParcelable implements Parcelable {
     @Nullable
     private final byte[] mData;
 
-    private NearbyDeviceParcelable(@Nullable String name, int medium, int rssi,
-            @Nullable String fastPairModelId, @Nullable String bluetoothAddress,
-            @Nullable byte[] data) {
+    private NearbyDeviceParcelable(@ScanRequest.ScanType int scanType, @Nullable String name,
+            int medium, int rssi, @Nullable String fastPairModelId,
+            @Nullable String bluetoothAddress, @Nullable byte[] data) {
+        mScanType = scanType;
         mName = name;
         mMedium = medium;
         mRssi = rssi;
@@ -176,6 +179,16 @@ public final class NearbyDeviceParcelable implements Parcelable {
     }
 
     /**
+     * Returns the type of the scan.
+     *
+     * @hide
+     */
+    @ScanRequest.ScanType
+    public int getScanType() {
+        return mScanType;
+    }
+
+    /**
      * Gets the name of the NearbyDeviceParcelable. Returns {@code null} If there is no name.
      */
     @Nullable
@@ -235,12 +248,23 @@ public final class NearbyDeviceParcelable implements Parcelable {
         @NearbyDevice.Medium
         private int mMedium;
         private int mRssi;
+        @ScanRequest.ScanType int mScanType;
         @Nullable
         private String mFastPairModelId;
         @Nullable
         private String mBluetoothAddress;
         @Nullable
         private byte[] mData;
+
+        /**
+         * Sets the scan type of the NearbyDeviceParcelable.
+         *
+         * @hide
+         */
+        public Builder setScanType(@ScanRequest.ScanType int scanType) {
+            mScanType = scanType;
+            return this;
+        }
 
         /**
          * Sets the name of the scanned device.
@@ -314,7 +338,7 @@ public final class NearbyDeviceParcelable implements Parcelable {
          */
         @NonNull
         public NearbyDeviceParcelable build() {
-            return new NearbyDeviceParcelable(mName, mMedium, mRssi, mFastPairModelId,
+            return new NearbyDeviceParcelable(mScanType, mName, mMedium, mRssi, mFastPairModelId,
                     mBluetoothAddress, mData);
         }
     }
