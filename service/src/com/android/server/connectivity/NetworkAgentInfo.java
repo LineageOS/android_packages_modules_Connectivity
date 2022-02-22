@@ -883,7 +883,7 @@ public class NetworkAgentInfo implements Comparable<NetworkAgentInfo>, NetworkRa
 
     /**
      * Returns the number of requests currently satisfied by this network of type
-     * {@link android.net.NetworkRequest.Type.BACKGROUND_REQUEST}.
+     * {@link android.net.NetworkRequest.Type#BACKGROUND_REQUEST}.
      */
     public int numBackgroundNetworkRequests() {
         return mNumBackgroundNetworkRequests;
@@ -1028,7 +1028,7 @@ public class NetworkAgentInfo implements Comparable<NetworkAgentInfo>, NetworkRa
      * when a network is newly created.
      *
      * @param requestId The requestId of the request that no longer need to be served by this
-     *                  network. Or {@link NetworkRequest.REQUEST_ID_NONE} if this is the
+     *                  network. Or {@link NetworkRequest#REQUEST_ID_NONE} if this is the
      *                  {@code InactivityTimer} for a newly created network.
      */
     // TODO: Consider creating a dedicated function for nascent network, e.g. start/stopNascent.
