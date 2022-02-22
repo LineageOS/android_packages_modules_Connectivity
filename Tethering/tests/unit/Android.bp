@@ -34,7 +34,7 @@ java_library {
     libs: [
         "framework-minus-apex",
         "framework-connectivity.impl",
-        "framework-connectivity-tiramisu.impl",
+        "framework-connectivity-t.impl",
         "framework-tethering.impl",
     ],
     visibility: [
@@ -69,7 +69,7 @@ java_defaults {
         "framework-res",
         "framework-bluetooth.stubs.module_lib",
         "framework-connectivity.impl",
-        "framework-connectivity-tiramisu.impl",
+        "framework-connectivity-t.impl",
         "framework-tethering.impl",
         "framework-wifi.stubs.module_lib",
     ],

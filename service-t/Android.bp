@@ -19,10 +19,10 @@ package {
     default_applicable_licenses: ["Android-Apache-2.0"],
 }
 
-// This builds T+ services depending on framework-connectivity-tiramisu
+// This builds T+ services depending on framework-connectivity-t
 // hidden symbols separately from the S+ services, to ensure that S+
 // services cannot accidentally depend on T+ hidden symbols from
-// framework-connectivity-tiramisu.
+// framework-connectivity-t.
 java_library {
     name: "service-connectivity-tiramisu-pre-jarjar",
     sdk_version: "system_server_current",
@@ -35,7 +35,7 @@ java_library {
     libs: [
         "framework-annotations-lib",
         "framework-connectivity-pre-jarjar",
-        "framework-connectivity-tiramisu-pre-jarjar",
+        "framework-connectivity-t-pre-jarjar",
         "framework-tethering.stubs.module_lib",
         "service-connectivity-pre-jarjar",
         "service-nearby",
