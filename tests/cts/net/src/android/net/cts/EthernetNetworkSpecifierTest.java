@@ -16,13 +16,12 @@
 
 package android.net.cts;
 
-import static com.android.testutils.DevSdkIgnoreRuleKt.SC_V2;
-
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertThrows;
 
 import android.net.EthernetNetworkSpecifier;
+import android.os.Build;
 
 import androidx.test.filters.SmallTest;
 
@@ -33,7 +32,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 
 @SmallTest
-@IgnoreUpTo(SC_V2) // TODO: Use to Build.VERSION_CODES.SC_V2 when available
+@IgnoreUpTo(Build.VERSION_CODES.R)
 @RunWith(DevSdkIgnoreRunner.class)
 public class EthernetNetworkSpecifierTest {
 
