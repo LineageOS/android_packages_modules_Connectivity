@@ -472,7 +472,7 @@ class NetworkAgentTest {
 
     @Test
     fun testRejectedUpdates() {
-        val callback = TestableNetworkCallback()
+        val callback = TestableNetworkCallback(DEFAULT_TIMEOUT_MS)
         // will be cleaned up in tearDown
         registerNetworkCallback(makeTestNetworkRequest(), callback)
         val agent = createNetworkAgent(initialNc = ncWithAccessUids(200))
