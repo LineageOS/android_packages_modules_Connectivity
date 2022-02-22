@@ -592,10 +592,12 @@ public class ConnectivityServiceTest {
                     .getStringArray(com.android.internal.R.array.networkAttributes);
 
             final int[] stringResourcesToMock = new int[] {
-                    com.android.internal.R.string.vpn_lockdown_config,
-                    com.android.internal.R.string.vpn_lockdown_connected,
-                    com.android.internal.R.string.vpn_lockdown_connecting,
-                    com.android.internal.R.string.vpn_lockdown_error,
+                com.android.internal.R.string.config_customVpnAlwaysOnDisconnectedDialogComponent,
+                com.android.internal.R.string.vpn_lockdown_config,
+                com.android.internal.R.string.vpn_lockdown_connected,
+                com.android.internal.R.string.vpn_lockdown_connecting,
+                com.android.internal.R.string.vpn_lockdown_disconnected,
+                com.android.internal.R.string.vpn_lockdown_error,
             };
             for (int resId : stringResourcesToMock) {
                 mockStringResource(resId);
