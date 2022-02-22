@@ -931,6 +931,11 @@ public class ConnectivityServiceTest {
         }
 
         private void onValidationRequested() throws Exception {
+            if (SdkLevel.isAtLeastT()) {
+                verify(mNetworkMonitor).notifyNetworkConnectedParcel(any());
+            } else {
+                verify(mNetworkMonitor).notifyNetworkConnected(any(), any());
+            }
             if (mNmProvNotificationRequested
                     && ((mNmValidationResult & NETWORK_VALIDATION_RESULT_VALID) != 0)) {
                 mNmCallbacks.hideProvisioningNotification();
