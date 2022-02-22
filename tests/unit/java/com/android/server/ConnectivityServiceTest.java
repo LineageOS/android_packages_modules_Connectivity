@@ -573,6 +573,12 @@ public class ConnectivityServiceTest {
         // is "<permission name>,<pid>,<uid>". PID+UID permissons have priority over generic ones.
         private final HashMap<String, Integer> mMockedPermissions = new HashMap<>();
 
+        private void mockStringResource(int resId) {
+            doAnswer((inv) -> {
+                return "Mock string resource ID=" + inv.getArgument(0);
+            }).when(mInternalResources).getString(resId);
+        }
+
         MockContext(Context base, ContentProvider settingsProvider) {
             super(base);
 
@@ -584,6 +590,16 @@ public class ConnectivityServiceTest {
                     "mobile_supl,3,0,2,60000,true",
             }).when(mInternalResources)
                     .getStringArray(com.android.internal.R.array.networkAttributes);
+
+            final int[] stringResourcesToMock = new int[] {
+                    com.android.internal.R.string.vpn_lockdown_config,
+                    com.android.internal.R.string.vpn_lockdown_connected,
+                    com.android.internal.R.string.vpn_lockdown_connecting,
+                    com.android.internal.R.string.vpn_lockdown_error,
+            };
+            for (int resId : stringResourcesToMock) {
+                mockStringResource(resId);
+            }
 
             mContentResolver = new MockContentResolver();
             mContentResolver.addProvider(Settings.AUTHORITY, settingsProvider);
