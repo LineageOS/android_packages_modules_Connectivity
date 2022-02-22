@@ -3873,7 +3873,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
             ConnectivityReportEvent reportEvent =
                     new ConnectivityReportEvent(p.timestampMillis, nai, extras);
             final Message m = mConnectivityDiagnosticsHandler.obtainMessage(
-                    ConnectivityDiagnosticsHandler.EVENT_NETWORK_TESTED, reportEvent);
+                    ConnectivityDiagnosticsHandler.CMD_SEND_CONNECTIVITY_REPORT, reportEvent);
             mConnectivityDiagnosticsHandler.sendMessage(m);
         }
 
@@ -9598,14 +9598,12 @@ public class ConnectivityService extends IConnectivityManager.Stub
 
         /**
          * Event for {@link NetworkStateTrackerHandler} to trigger ConnectivityReport callbacks
-         * after processing {@link #EVENT_NETWORK_TESTED} events.
+         * after processing {@link #CMD_SEND_CONNECTIVITY_REPORT} events.
          * obj = {@link ConnectivityReportEvent} representing ConnectivityReport info reported from
          * NetworkMonitor.
          * data = PersistableBundle of extras passed from NetworkMonitor.
-         *
-         * <p>See {@link ConnectivityService#EVENT_NETWORK_TESTED}.
          */
-        private static final int EVENT_NETWORK_TESTED = ConnectivityService.EVENT_NETWORK_TESTED;
+        private static final int CMD_SEND_CONNECTIVITY_REPORT = 3;
 
         /**
          * Event for NetworkMonitor to inform ConnectivityService that a potential data stall has
@@ -9643,7 +9641,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
                             (IConnectivityDiagnosticsCallback) msg.obj, msg.arg1);
                     break;
                 }
-                case EVENT_NETWORK_TESTED: {
+                case CMD_SEND_CONNECTIVITY_REPORT: {
                     final ConnectivityReportEvent reportEvent =
                             (ConnectivityReportEvent) msg.obj;
 
