@@ -47,7 +47,6 @@ import service.proto.Rpcs;
 public class FastPairAdvHandler {
     Context mContext;
     String mBleAddress;
-
     /** The types about how the bloomfilter is processed. */
     public enum ProcessBloomFilterType {
         IGNORE, // The bloomfilter is not handled. e.g. distance is too far away.

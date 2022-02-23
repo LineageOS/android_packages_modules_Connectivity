@@ -33,7 +33,7 @@ import android.os.Bundle;
 import android.os.UserHandle;
 import android.util.Log;
 
-import com.android.server.nearby.common.locator.Locator;
+import com.android.server.nearby.common.locator.LocatorContextWrapper;
 import com.android.server.nearby.fastpair.FastPairController;
 import com.android.server.nearby.fastpair.cache.DiscoveryItem;
 import com.android.server.nearby.util.Environment;
@@ -47,20 +47,28 @@ import service.proto.Cache;
  * Fast Pair ux manager for half sheet.
  */
 public class FastPairHalfSheetManager {
-    private static final String ACTIVITY_INTENT_ACTION = "android.nearby.SHOW_HALFSHEET";
+    static final String ACTIVITY_INTENT_ACTION = "android.nearby.SHOW_HALFSHEET";
     private static final String HALF_SHEET_CLASS_NAME =
             "com.android.nearby.halfsheet.HalfSheetActivity";
 
     private String mHalfSheetApkPkgName;
     private Context mContext;
+    private LocatorContextWrapper mLocatorContextWrapper;
 
     /**
      * Construct function
      */
     public FastPairHalfSheetManager(Context context) {
         mContext = context;
+        mLocatorContextWrapper = new LocatorContextWrapper(context);
     }
 
+    /**
+     * Construct function for test
+     */
+    public FastPairHalfSheetManager(LocatorContextWrapper locatorContextWrapper) {
+        mLocatorContextWrapper = locatorContextWrapper;
+    }
 
     /**
      * Invokes half sheet in the other apk. This function can only be called in Nearby because other
@@ -68,13 +76,18 @@ public class FastPairHalfSheetManager {
      */
     public void showHalfSheet(Cache.ScanFastPairStoreItem scanFastPairStoreItem) {
         try {
-            if (mContext != null) {
+            if (mLocatorContextWrapper != null) {
                 String packageName = getHalfSheetApkPkgName();
+                if (packageName == null) {
+                    Log.e("FastPairHalfSheetManager", "package name is null");
+                    return;
+                }
                 HalfSheetCallback callback = new HalfSheetCallback();
-                callback.setmFastPairController(Locator.get(mContext, FastPairController.class));
+                callback.setmFastPairController(
+                        mLocatorContextWrapper.getLocator().get(FastPairController.class));
                 Bundle bundle = new Bundle();
                 bundle.putBinder(EXTRA_BINDER, callback);
-                mContext
+                mLocatorContextWrapper
                         .startActivityAsUser(new Intent(ACTIVITY_INTENT_ACTION)
                                         .putExtra(EXTRA_HALF_SHEET_INFO,
                                                 scanFastPairStoreItem.toByteArray())
@@ -153,7 +166,7 @@ public class FastPairHalfSheetManager {
         if (mHalfSheetApkPkgName != null) {
             return mHalfSheetApkPkgName;
         }
-        List<ResolveInfo> resolveInfos = mContext
+        List<ResolveInfo> resolveInfos = mLocatorContextWrapper
                 .getPackageManager().queryIntentActivities(
                         new Intent(ACTION_RESOURCES_APK),
                         PackageManager.MATCH_SYSTEM_ONLY);
