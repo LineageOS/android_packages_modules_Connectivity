@@ -28,6 +28,7 @@ import static com.android.net.module.util.CollectionUtils.filter;
 import static com.android.server.connectivity.FullScore.POLICY_ACCEPT_UNVALIDATED;
 import static com.android.server.connectivity.FullScore.POLICY_EVER_USER_SELECTED;
 import static com.android.server.connectivity.FullScore.POLICY_EVER_VALIDATED_NOT_AVOIDED_WHEN_BAD;
+import static com.android.server.connectivity.FullScore.POLICY_IS_DESTROYED;
 import static com.android.server.connectivity.FullScore.POLICY_IS_INVINCIBLE;
 import static com.android.server.connectivity.FullScore.POLICY_IS_VALIDATED;
 import static com.android.server.connectivity.FullScore.POLICY_IS_VPN;
@@ -261,6 +262,15 @@ public class NetworkRanker {
                 candidates = new ArrayList<>(accepted);
                 break;
             }
+        }
+
+        // If two networks are equivalent, and one has been destroyed pending replacement, keep the
+        // other one. This ensures that when the replacement connects, it's preferred.
+        partitionInto(candidates, nai -> !nai.getScore().hasPolicy(POLICY_IS_DESTROYED),
+                accepted, rejected);
+        if (accepted.size() == 1) return accepted.get(0);
+        if (accepted.size() > 0 && rejected.size() > 0) {
+            candidates = new ArrayList<>(accepted);
         }
 
         // At this point there are still multiple networks passing all the tests above. If any
