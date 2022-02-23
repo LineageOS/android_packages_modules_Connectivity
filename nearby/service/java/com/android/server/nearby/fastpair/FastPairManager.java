@@ -41,6 +41,7 @@ import android.util.Log;
 
 import androidx.annotation.NonNull;
 
+import com.android.server.nearby.common.ble.decode.FastPairDecoder;
 import com.android.server.nearby.common.bluetooth.BluetoothException;
 import com.android.server.nearby.common.bluetooth.fastpair.FastPairConnection;
 import com.android.server.nearby.common.bluetooth.fastpair.FastPairDualConnection;
@@ -57,7 +58,6 @@ import com.android.server.nearby.fastpair.cache.DiscoveryItem;
 import com.android.server.nearby.fastpair.cache.FastPairCacheManager;
 import com.android.server.nearby.fastpair.footprint.FootprintsDeviceManager;
 import com.android.server.nearby.fastpair.pairinghandler.PairingProgressHandlerBase;
-import com.android.server.nearby.util.FastPairDecoder;
 import com.android.server.nearby.util.ForegroundThread;
 import com.android.server.nearby.util.Hex;
 

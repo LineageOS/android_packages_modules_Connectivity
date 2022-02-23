@@ -27,13 +27,13 @@ import android.nearby.FastPairDevice;
 import android.nearby.NearbyDevice;
 import android.util.Log;
 
+import com.android.server.nearby.common.ble.decode.FastPairDecoder;
 import com.android.server.nearby.common.bloomfilter.BloomFilter;
 import com.android.server.nearby.common.bloomfilter.FastPairBloomFilterHasher;
 import com.android.server.nearby.common.locator.Locator;
 import com.android.server.nearby.fastpair.halfsheet.FastPairHalfSheetManager;
 import com.android.server.nearby.provider.FastPairDataProvider;
 import com.android.server.nearby.util.DataUtils;
-import com.android.server.nearby.util.FastPairDecoder;
 import com.android.server.nearby.util.Hex;
 
 import java.util.List;
