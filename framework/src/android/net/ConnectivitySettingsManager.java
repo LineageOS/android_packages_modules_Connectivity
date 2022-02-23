@@ -1081,10 +1081,10 @@ public class ConnectivitySettingsManager {
     }
 
     /**
-     * Get the global network bandwidth rate limit.
+     * Get the network bandwidth ingress rate limit.
      *
-     * The limit is only applicable to networks that provide internet connectivity. If the setting
-     * is unset, it defaults to -1.
+     * The limit is only applicable to networks that provide internet connectivity. -1 codes for no
+     * bandwidth limitation.
      *
      * @param context The {@link Context} to query the setting.
      * @return The rate limit in number of bytes per second or -1 if disabled.
@@ -1095,15 +1095,17 @@ public class ConnectivitySettingsManager {
     }
 
     /**
-     * Set the global network bandwidth rate limit.
+     * Set the network bandwidth ingress rate limit.
      *
-     * The limit is only applicable to networks that provide internet connectivity.
+     * The limit is applied to all networks that provide internet connectivity. It is applied on a
+     * per-network basis, meaning that global ingress rate could exceed the limit when communicating
+     * on multiple networks simultaneously.
      *
      * @param context The {@link Context} to set the setting.
      * @param rateLimitInBytesPerSec The rate limit in number of bytes per second or -1 to disable.
      */
     public static void setIngressRateLimitInBytesPerSecond(@NonNull Context context,
-            @IntRange(from = -1, to = Integer.MAX_VALUE) long rateLimitInBytesPerSec) {
+            @IntRange(from = -1L, to = 0xFFFFFFFFL) long rateLimitInBytesPerSec) {
         if (rateLimitInBytesPerSec < -1) {
             throw new IllegalArgumentException(
                     "Rate limit must be within the range [-1, Integer.MAX_VALUE]");
