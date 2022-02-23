@@ -33,7 +33,7 @@ public class Environment {
 
     /**
      * The path where the Nearby apex is mounted.
-     * Current value = "/apex/com.android.nearby"
+     * Current value = "/apex/com.android.tethering"
      */
     private static final String NEARBY_APEX_PATH =
             new File("/apex", NEARBY_APEX_NAME).getAbsolutePath();
@@ -55,7 +55,7 @@ public class Environment {
 
     /**
      * Returns true if the app is in the nearby apex, false otherwise.
-     * Checks if the app's path starts with "/apex/com.android.nearby".
+     * Checks if the app's path starts with "/apex/com.android.tethering".
      */
     public static boolean isAppInNearbyApex(ApplicationInfo appInfo) {
         return appInfo.sourceDir.startsWith(NEARBY_APEX_PATH);
