@@ -70,6 +70,11 @@ final class GattConnectionManager {
     private final FastPairConnection.FastPairSignalChecker mFastPairSignalChecker;
     @Nullable
     private BluetoothGattConnection mGattConnection;
+    private static boolean sTestMode = false;
+
+    static void enableTestMode() {
+        sTestMode = true;
+    }
 
     GattConnectionManager(
             Context context,
@@ -147,6 +152,9 @@ final class GattConnectionManager {
             try (ScopedTiming scopedTiming =
                     new ScopedTiming(mTimingLogger, "Connect GATT #" + i)) {
                 Log.i(TAG, "Connecting to GATT server at " + maskBluetoothAddress(address));
+                if (sTestMode) {
+                    return null;
+                }
                 BluetoothGattConnection connection =
                         new BluetoothGattHelper(mContext, mBluetoothAdapter)
                                 .connect(
