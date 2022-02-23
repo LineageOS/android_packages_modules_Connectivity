@@ -92,7 +92,7 @@ package android.net {
     method public static void setDnsResolverSampleValidityDuration(@NonNull android.content.Context, @NonNull java.time.Duration);
     method public static void setDnsResolverSuccessThresholdPercent(@NonNull android.content.Context, @IntRange(from=0, to=100) int);
     method public static void setGlobalProxy(@NonNull android.content.Context, @NonNull android.net.ProxyInfo);
-    method public static void setIngressRateLimitInBytesPerSecond(@NonNull android.content.Context, @IntRange(from=0xffffffff, to=java.lang.Integer.MAX_VALUE) long);
+    method public static void setIngressRateLimitInBytesPerSecond(@NonNull android.content.Context, @IntRange(from=-1L, to=4294967295L) long);
     method public static void setMobileDataActivityTimeout(@NonNull android.content.Context, @NonNull java.time.Duration);
     method public static void setMobileDataAlwaysOn(@NonNull android.content.Context, boolean);
     method public static void setMobileDataPreferredUids(@NonNull android.content.Context, @NonNull java.util.Set<java.lang.Integer>);
