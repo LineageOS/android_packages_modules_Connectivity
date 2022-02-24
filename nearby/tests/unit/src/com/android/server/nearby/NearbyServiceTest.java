@@ -16,12 +16,11 @@
 
 package com.android.server.nearby;
 
+import static org.mockito.MockitoAnnotations.initMocks;
+
 import android.content.Context;
 import android.nearby.IScanListener;
-import android.nearby.NearbyDeviceParcelable;
 import android.nearby.ScanRequest;
-import android.os.IBinder;
-import android.os.RemoteException;
 
 import androidx.test.platform.app.InstrumentationRegistry;
 
@@ -31,6 +30,7 @@ import org.mockito.Mock;
 
 public final class NearbyServiceTest {
 
+    private Context mContext;
     private NearbyService mService;
     private ScanRequest mScanRequest;
     @Mock
@@ -38,11 +38,11 @@ public final class NearbyServiceTest {
 
     @Before
     public void setup() {
-        Context context = InstrumentationRegistry.getInstrumentation().getContext();
+        initMocks(this);
 
-        mService = new NearbyService(context);
+        mContext = InstrumentationRegistry.getInstrumentation().getContext();
+        mService = new NearbyService(mContext);
         mScanRequest = createScanRequest();
-        mScanListener = createMockScanListener();
     }
 
     @Test
@@ -60,29 +60,5 @@ public final class NearbyServiceTest {
                 .setScanType(ScanRequest.SCAN_TYPE_FAST_PAIR)
                 .setEnableBle(true)
                 .build();
-    }
-
-    private IScanListener createMockScanListener() {
-        return new IScanListener() {
-            @Override
-            public void onDiscovered(NearbyDeviceParcelable nearbyDeviceParcelable)
-                    throws RemoteException {
-            }
-
-            @Override
-            public void onUpdated(NearbyDeviceParcelable nearbyDeviceParcelable)
-                    throws RemoteException {
-            }
-
-            @Override
-            public void onLost(NearbyDeviceParcelable nearbyDeviceParcelable)
-                    throws RemoteException {
-            }
-
-            @Override
-            public IBinder asBinder() {
-                return null;
-            }
-        };
     }
 }
