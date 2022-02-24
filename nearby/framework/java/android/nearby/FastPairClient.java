@@ -40,6 +40,11 @@ public class FastPairClient {
     IFastPairClient mFastPairClient;
     PairStatusCallbackIBinder mPairStatusCallbackIBinder;
 
+    /**
+     * The Ibinder instance should be from
+     * {@link com.android.server.nearby.fastpair.halfsheet.FastPairService} so that the client can
+     * talk with the service.
+     */
     public FastPairClient(Context context, IBinder binder) {
         mBinder = binder;
         mFastPairClient = IFastPairClient.Stub.asInterface(mBinder);
