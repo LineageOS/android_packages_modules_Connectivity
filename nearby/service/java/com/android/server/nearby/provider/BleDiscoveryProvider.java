@@ -21,6 +21,7 @@ import static com.android.server.nearby.NearbyService.TAG;
 import android.annotation.Nullable;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.le.BluetoothLeScanner;
+import android.bluetooth.le.ScanCallback;
 import android.bluetooth.le.ScanFilter;
 import android.bluetooth.le.ScanRecord;
 import android.bluetooth.le.ScanResult;
@@ -37,6 +38,8 @@ import com.android.server.nearby.injector.Injector;
 import com.android.server.nearby.presence.PresenceConstants;
 import com.android.server.nearby.util.ForegroundThread;
 
+import com.google.common.annotations.VisibleForTesting;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -47,7 +50,8 @@ import java.util.concurrent.Executor;
  */
 public class BleDiscoveryProvider extends AbstractDiscoveryProvider {
 
-    private static final ParcelUuid FAST_PAIR_UUID = new ParcelUuid(Constants.FastPairService.ID);
+    @VisibleForTesting
+    static final ParcelUuid FAST_PAIR_UUID = new ParcelUuid(Constants.FastPairService.ID);
     private static final ParcelUuid PRESENCE_UUID = new ParcelUuid(PresenceConstants.PRESENCE_UUID);
 
     // Don't block the thread as it may be used by other services.
@@ -156,6 +160,7 @@ public class BleDiscoveryProvider extends AbstractDiscoveryProvider {
             if (bluetoothLeScanner == null) {
                 Log.w(TAG, "BleDiscoveryProvider failed to start BLE scanning "
                         + "because BluetoothLeScanner is null.");
+                return;
             }
             bluetoothLeScanner.startScan(scanFilters, scanSettings, scanCallback);
         } catch (NullPointerException | IllegalStateException | SecurityException e) {
@@ -187,5 +192,10 @@ public class BleDiscoveryProvider extends AbstractDiscoveryProvider {
                 break;
         }
         return new ScanSettings.Builder().setScanMode(bleScanMode).build();
+    }
+
+    @VisibleForTesting
+    ScanCallback getScanCallback() {
+        return mScanCallback;
     }
 }
