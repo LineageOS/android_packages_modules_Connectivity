@@ -39,11 +39,16 @@ android_test {
         "guava",
         "junit",
         "libprotobuf-java-lite",
-        "mockito-target",
+        "mockito-target-extended-minus-junit4",
         "platform-test-annotations",
         "service-nearby",
         "truth-prebuilt",
         // "Robolectric_all-target",
+    ],
+    // these are needed for Extended Mockito
+    jni_libs: [
+        "libdexmakerjvmtiagent",
+        "libstaticjvmtiagent",
     ],
     test_suites: [
         "general-tests",
