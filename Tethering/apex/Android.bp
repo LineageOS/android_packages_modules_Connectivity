@@ -138,7 +138,11 @@ bootclasspath_fragment {
             // Changed in sc-mainline-prod only: no list for
             // framework-connectivity-tiramisu APIs as it is not in the APEX
 	],
-        unsupported: ["hiddenapi/hiddenapi-unsupported.txt"],
+        unsupported: [
+            "hiddenapi/hiddenapi-unsupported.txt",
+            // Changed in sc-mainline-prod only: no framework-connectivity-tiramisu
+            // "hiddenapi/hiddenapi-unsupported-tiramisu.txt",
+        ],
     },
 }
 
