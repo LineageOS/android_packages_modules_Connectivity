@@ -493,33 +493,33 @@ class NetworkAgentTest {
         }
     }
 
-    private fun ncWithAccessUids(vararg uids: Int) = NetworkCapabilities.Builder()
+    private fun ncWithAllowedUids(vararg uids: Int) = NetworkCapabilities.Builder()
                 .addTransportType(TRANSPORT_TEST)
-                .setAccessUids(uids.toSet()).build()
+                .setAllowedUids(uids.toSet()).build()
 
     @Test
     fun testRejectedUpdates() {
         val callback = TestableNetworkCallback(DEFAULT_TIMEOUT_MS)
         // will be cleaned up in tearDown
         registerNetworkCallback(makeTestNetworkRequest(), callback)
-        val agent = createNetworkAgent(initialNc = ncWithAccessUids(200))
+        val agent = createNetworkAgent(initialNc = ncWithAllowedUids(200))
         agent.register()
         agent.markConnected()
 
         // Make sure the UIDs have been ignored.
         callback.expectCallback<Available>(agent.network!!)
         callback.expectCapabilitiesThat(agent.network!!) {
-            it.accessUids.isEmpty() && !it.hasCapability(NET_CAPABILITY_VALIDATED)
+            it.allowedUids.isEmpty() && !it.hasCapability(NET_CAPABILITY_VALIDATED)
         }
         callback.expectCallback<LinkPropertiesChanged>(agent.network!!)
         callback.expectCallback<BlockedStatus>(agent.network!!)
         callback.expectCapabilitiesThat(agent.network!!) {
-            it.accessUids.isEmpty() && it.hasCapability(NET_CAPABILITY_VALIDATED)
+            it.allowedUids.isEmpty() && it.hasCapability(NET_CAPABILITY_VALIDATED)
         }
         callback.assertNoCallback(NO_CALLBACK_TIMEOUT)
 
         // Make sure that the UIDs are also ignored upon update
-        agent.sendNetworkCapabilities(ncWithAccessUids(200, 300))
+        agent.sendNetworkCapabilities(ncWithAllowedUids(200, 300))
         callback.assertNoCallback(NO_CALLBACK_TIMEOUT)
     }
 
