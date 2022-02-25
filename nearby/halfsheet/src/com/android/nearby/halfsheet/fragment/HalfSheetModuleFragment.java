@@ -15,16 +15,22 @@
  */
 package com.android.nearby.halfsheet.fragment;
 
+import static com.android.nearby.halfsheet.HalfSheetActivity.TAG;
+import static com.android.nearby.halfsheet.fragment.HalfSheetModuleFragment.HalfSheetFragmentState.NOT_STARTED;
+
 import android.os.Bundle;
+import android.util.Log;
 
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 
 
 /** Base class for all of the half sheet fragment. */
-// TODO(b/177675274): Resolve nullness suppression.
-@SuppressWarnings("nullness")
 public abstract class HalfSheetModuleFragment extends Fragment {
+
+    static final int TEXT_ANIMATION_DURATION_MILLISECONDS = 200;
+
+    HalfSheetFragmentState mFragmentState = NOT_STARTED;
 
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
@@ -38,26 +44,15 @@ public abstract class HalfSheetModuleFragment extends Fragment {
 
     /** UI states of the half-sheet fragment. */
     public enum HalfSheetFragmentState {
-        NOT_STARTED,
-        SYNC_CONTACTS,
-        SYNC_SMS,
-        PROGRESSING,
-        CONFIRM_PASSKEY,
-        WRONG_PASSKEY,
-        PAIRING,
-        ADDITIONAL_SETUP_PROGRESS,
-        ADDITIONAL_SETUP_FINAL,
-        RESULT_SUCCESS,
-        RESULT_FAILURE,
-        FINISHED
-    }
-
-    /** Only used in {@link DevicePairingFragment} show pairing success info in half sheet. */
-    public void showSuccessInfo() {
-    }
-
-    /** Only used in {@link DevicePairingFragment} show pairing fail info in half sheet. */
-    public void showFailInfo() {
+        NOT_STARTED, // Initial status
+        FOUND_DEVICE, // When a device is found found from Nearby scan service
+        PAIRING, // When user taps 'Connect' and Fast Pair stars pairing process
+        PAIRED_LAUNCHABLE, // When pair successfully
+        // and we found a launchable companion app installed
+        PAIRED_UNLAUNCHABLE, // When pair successfully
+        // but we cannot find a companion app to launch it
+        FAILED, // When paring was failed
+        FINISHED // When the activity is about to end finished.
     }
 
     /**
@@ -67,6 +62,16 @@ public abstract class HalfSheetModuleFragment extends Fragment {
      * activity.
      */
     public HalfSheetFragmentState getFragmentState() {
-        return HalfSheetFragmentState.NOT_STARTED;
+        return mFragmentState;
     }
+
+    void setState(HalfSheetFragmentState state) {
+        Log.v(TAG, "Settings state from " + mFragmentState + " to " + state);
+        mFragmentState = state;
+    }
+
+    /**
+     * Populate data to UI widgets according to the latest {@link HalfSheetFragmentState}.
+     */
+    abstract void invalidateState();
 }

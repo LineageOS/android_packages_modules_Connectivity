@@ -16,21 +16,15 @@
 
 package com.android.server.nearby.fastpair;
 
-import static com.android.server.nearby.common.bluetooth.fastpair.BroadcastConstants.EXTRA_RETROACTIVE_PAIR;
-import static com.android.server.nearby.common.fastpair.service.UserActionHandlerBase.EXTRA_COMPANION_APP;
-import static com.android.server.nearby.fastpair.FastPairManager.EXTRA_NOTIFICATION_ID;
-
-import static com.google.common.io.BaseEncoding.base16;
 import static com.google.common.primitives.Bytes.concat;
 
 import android.accounts.Account;
 import android.annotation.Nullable;
 import android.content.Context;
-import android.content.Intent;
+import android.nearby.FastPairDevice;
 import android.text.TextUtils;
 import android.util.Log;
 
-import androidx.annotation.UiThread;
 import androidx.annotation.WorkerThread;
 
 import com.android.server.nearby.common.bluetooth.fastpair.BluetoothAddress;
@@ -110,73 +104,60 @@ public class FastPairController {
     /**
      * Pairing function.
      */
-    @UiThread
-    public void pair(Intent intent) {
-        String itemId = intent.getStringExtra(UserActionHandler.EXTRA_ITEM_ID);
-        int notificationId = intent.getIntExtra(EXTRA_NOTIFICATION_ID, -1);
-        byte[] discoveryItem = intent.getByteArrayExtra(UserActionHandler.EXTRA_DISCOVERY_ITEM);
-        String accountKeyString = intent.getStringExtra(UserActionHandler.EXTRA_FAST_PAIR_SECRET);
-        String companionApp = trimCompanionApp(intent.getStringExtra(EXTRA_COMPANION_APP));
-        byte[] accountKey = accountKeyString != null ? base16().decode(accountKeyString) : null;
-        boolean isRetroactivePair = intent.getBooleanExtra(EXTRA_RETROACTIVE_PAIR, false);
+    public void pair(FastPairDevice fastPairDevice) {
+        byte[] discoveryItem = fastPairDevice.getData();
+        String modelId = fastPairDevice.getModelId();
 
+        Log.v(TAG, "pair: fastPairDevice " + fastPairDevice);
         mEventLoop.postRunnable(
-                new NamedRunnable("fastPairWith=" + itemId) {
+                new NamedRunnable("fastPairWith=" + modelId) {
                     @Override
                     public void run() {
-                        DiscoveryItem item = null;
-                        if (discoveryItem != null) {
-                            try {
-                                item = new DiscoveryItem(mContext,
-                                        Cache.StoredDiscoveryItem.parseFrom(discoveryItem));
-                            } catch (InvalidProtocolBufferException e) {
-                                Log.w(TAG,
-                                        "Error parsing serialized discovery item with size "
-                                                + discoveryItem.length);
+                        try {
+                            DiscoveryItem item = new DiscoveryItem(mContext,
+                                    Cache.StoredDiscoveryItem.parseFrom(discoveryItem));
+                            if (TextUtils.isEmpty(item.getMacAddress())) {
+                                Log.w(TAG, "There is no mac address in the DiscoveryItem,"
+                                        + " ignore pairing");
                                 return;
                             }
+                            // Check enabled state to prevent multiple pair attempts if we get the
+                            // intent more than once (this can happen due to an Android platform
+                            // bug - b/31459521).
+                            if (item.getState()
+                                    != Cache.StoredDiscoveryItem.State.STATE_ENABLED) {
+                                Log.d(TAG, "Incorrect state, ignore pairing");
+                                return;
+                            }
+                            boolean useLargeNotifications =
+                                    item.getAuthenticationPublicKeySecp256R1() != null;
+                            FastPairNotificationManager fastPairNotificationManager =
+                                    new FastPairNotificationManager(mContext, item,
+                                            useLargeNotifications);
+                            FastPairHalfSheetManager fastPairHalfSheetManager =
+                                    Locator.get(mContext, FastPairHalfSheetManager.class);
+                            mFastPairCacheManager.saveDiscoveryItem(item);
+
+                            PairingProgressHandlerBase pairingProgressHandlerBase =
+                                    PairingProgressHandlerBase.create(
+                                            mContext,
+                                            item,
+                                            /* companionApp= */ null,
+                                            /* accountKey= */ null,
+                                            mFootprintsDeviceManager,
+                                            fastPairNotificationManager,
+                                            fastPairHalfSheetManager,
+                                            /* isRetroactivePair= */ false);
+
+                            pair(item,
+                                    /* accountKey= */ null,
+                                    /* companionApp= */ null,
+                                    pairingProgressHandlerBase);
+                        } catch (InvalidProtocolBufferException e) {
+                            Log.w(TAG,
+                                    "Error parsing serialized discovery item with size "
+                                            + discoveryItem.length);
                         }
-
-
-                        if (item == null || TextUtils.isEmpty(item.getMacAddress())) {
-                            Log.w(TAG, "Invalid DiscoveryItem, ignore pairing");
-                            return;
-                        }
-
-                        // Check enabled state to prevent multiple pair attempts if we get the
-                        // intent more than once (this can happen due to an Android platform
-                        // bug - b/31459521).
-                        if (item.getState() != Cache.StoredDiscoveryItem.State.STATE_ENABLED
-                                && !isRetroactivePair) {
-                            Log.d(TAG, "Incorrect state, ignore pairing");
-                            return;
-                        }
-
-                        boolean useLargeNotifications = accountKey != null
-                                || item.getAuthenticationPublicKeySecp256R1() != null;
-                        FastPairNotificationManager fastPairNotificationManager =
-                                notificationId == -1
-                                        ? new FastPairNotificationManager(mContext, item,
-                                        useLargeNotifications)
-                                        : new FastPairNotificationManager(mContext, item,
-                                                useLargeNotifications, notificationId);
-                        FastPairHalfSheetManager fastPairHalfSheetManager =
-                                Locator.get(mContext, FastPairHalfSheetManager.class);
-
-                        mFastPairCacheManager.saveDiscoveryItem(item);
-
-                        PairingProgressHandlerBase pairingProgressHandlerBase =
-                                PairingProgressHandlerBase.create(
-                                        mContext,
-                                        item,
-                                        companionApp,
-                                        accountKey,
-                                        mFootprintsDeviceManager,
-                                        fastPairNotificationManager,
-                                        fastPairHalfSheetManager,
-                                        isRetroactivePair);
-
-                        pair(item, accountKey, companionApp, pairingProgressHandlerBase);
                     }
                 });
     }
