@@ -100,8 +100,8 @@ public class FastPairAdvHandler {
                 }
                 for (Account account : accountList) {
                     List<Data.FastPairDeviceWithAccountKey> listDevices =
-                            FastPairDataProvider.getInstance().loadFastPairDevicesWithAccountKey(
-                                    account);
+                            FastPairDataProvider.getInstance()
+                                    .loadFastPairDeviceWithAccountKey(account);
                     Data.FastPairDeviceWithAccountKey recognizedDevice =
                             findRecognizedDevice(listDevices,
                                     new BloomFilter(bloomFilterByteArray,

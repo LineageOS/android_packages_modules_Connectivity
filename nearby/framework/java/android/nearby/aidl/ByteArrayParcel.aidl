@@ -16,14 +16,10 @@
 
 package android.nearby.aidl;
 
-import android.accounts.Account;
-import android.nearby.aidl.ByteArrayParcel;
-
 /**
- * Request details for Metadata of Fast Pair devices associated with an account.
+ * This is to support 2D byte arrays.
  * {@hide}
  */
-parcelable FastPairAccountDevicesMetadataRequestParcel {
-    Account account;
-    ByteArrayParcel[] accountKeys;
+parcelable ByteArrayParcel {
+    byte[] byteArray;
 }
