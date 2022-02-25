@@ -533,8 +533,9 @@ public class UpstreamNetworkMonitor {
 
         @Override
         public void onLinkPropertiesChanged(Network network, LinkProperties newLp) {
+            handleLinkProp(network, newLp);
+
             if (mCallbackType == CALLBACK_DEFAULT_INTERNET) {
-                updateLinkProperties(network, newLp);
                 // When the default network callback calls onLinkPropertiesChanged, it means that
                 // all the network information for the default network is known (because
                 // onLinkPropertiesChanged is called after onAvailable and onCapabilitiesChanged).
@@ -543,7 +544,6 @@ public class UpstreamNetworkMonitor {
                 return;
             }
 
-            handleLinkProp(network, newLp);
             // Any non-LISTEN_ALL callback will necessarily concern a network that will
             // also match the LISTEN_ALL callback by construction of the LISTEN_ALL callback.
             // So it's not useful to do this work for non-LISTEN_ALL callbacks.
