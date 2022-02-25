@@ -101,6 +101,7 @@ package android.nearby {
 
   public static class FastPairDataProviderBase.FastPairAccountDevicesMetadataRequest {
     method @NonNull public android.accounts.Account getAccount();
+    method @NonNull public java.util.Collection<byte[]> getAccountKeys();
   }
 
   public static interface FastPairDataProviderBase.FastPairAntispoofkeyDeviceMetadataCallback {
