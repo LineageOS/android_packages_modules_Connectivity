@@ -8814,15 +8814,22 @@ public class ConnectivityService extends IConnectivityManager.Stub
             @NonNull final Set<NetworkRequestInfo> networkRequests) {
         ensureRunningOnConnectivityServiceThread();
         // TODO: This may be slow, and should be optimized.
-        final long now = SystemClock.elapsedRealtime();
+        final long start = SystemClock.elapsedRealtime();
         final NetworkReassignment changes = computeNetworkReassignment(networkRequests);
+        final long computed = SystemClock.elapsedRealtime();
+        applyNetworkReassignment(changes, start);
+        final long applied = SystemClock.elapsedRealtime();
+        issueNetworkNeeds();
+        final long end = SystemClock.elapsedRealtime();
         if (VDBG || DDBG) {
+            log(String.format("Rematched networks [computed %dms] [applied %dms] [issued %d]",
+                    computed - start, applied - computed, end - applied));
             log(changes.debugString());
         } else if (DBG) {
-            log(changes.toString()); // Shorter form, only one line of log
+            // Shorter form, only one line of log
+            log(String.format("%s [c %d] [a %d] [i %d]", changes.toString(),
+                    computed - start, applied - computed, end - applied));
         }
-        applyNetworkReassignment(changes, now);
-        issueNetworkNeeds();
     }
 
     private void applyNetworkReassignment(@NonNull final NetworkReassignment changes,
