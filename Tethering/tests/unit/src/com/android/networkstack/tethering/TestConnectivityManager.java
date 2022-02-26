@@ -186,6 +186,16 @@ public class TestConnectivityManager extends ConnectivityManager {
         makeDefaultNetwork(agent, BROADCAST_FIRST, null /* inBetween */);
     }
 
+    void sendLinkProperties(TestNetworkAgent agent, boolean updateDefaultFirst) {
+        if (!updateDefaultFirst) agent.sendLinkProperties();
+
+        for (NetworkCallback cb : mTrackingDefault.keySet()) {
+            cb.onLinkPropertiesChanged(agent.networkId, agent.linkProperties);
+        }
+
+        if (updateDefaultFirst) agent.sendLinkProperties();
+    }
+
     static boolean looksLikeDefaultRequest(NetworkRequest req) {
         return req.hasCapability(NET_CAPABILITY_INTERNET)
                 && !req.hasCapability(NET_CAPABILITY_DUN)
