@@ -159,7 +159,7 @@ import java.util.TreeSet;
 // the network is no longer considered "lingering". After the linger timer expires, if the network
 // is satisfying one or more background NetworkRequests it is kept up in the background. If it is
 // not, ConnectivityService disconnects the NetworkAgent's AsyncChannel.
-public class NetworkAgentInfo implements Comparable<NetworkAgentInfo>, NetworkRanker.Scoreable {
+public class NetworkAgentInfo implements NetworkRanker.Scoreable {
 
     @NonNull public NetworkInfo networkInfo;
     // This Network object should always be used if possible, so as to encourage reuse of the
@@ -1018,18 +1018,6 @@ public class NetworkAgentInfo implements Comparable<NetworkAgentInfo>, NetworkRa
         return mScore;
     }
 
-    // Get the current score for this Network.  This may be modified from what the
-    // NetworkAgent sent, as it has modifiers applied to it.
-    public int getCurrentScore() {
-        return mScore.getLegacyInt();
-    }
-
-    // Get the current score for this Network as if it was validated.  This may be modified from
-    // what the NetworkAgent sent, as it has modifiers applied to it.
-    public int getCurrentScoreAsValidated() {
-        return mScore.getLegacyIntAsValidated();
-    }
-
     /**
      * Mix-in the ConnectivityService-managed bits in the score.
      */
@@ -1366,12 +1354,6 @@ public class NetworkAgentInfo implements Comparable<NetworkAgentInfo>, NetworkRa
     public String toShortString() {
         return "[" + network.getNetId() + " "
                 + transportNamesOf(networkCapabilities.getTransportTypes()) + "]";
-    }
-
-    // Enables sorting in descending order of score.
-    @Override
-    public int compareTo(NetworkAgentInfo other) {
-        return other.getCurrentScore() - getCurrentScore();
     }
 
     /**

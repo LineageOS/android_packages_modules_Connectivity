@@ -350,6 +350,26 @@ public class FullScore {
         return mKeepConnectedReason;
     }
 
+    @Override
+    public boolean equals(final Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        final FullScore fullScore = (FullScore) o;
+
+        if (mLegacyInt != fullScore.mLegacyInt) return false;
+        if (mPolicies != fullScore.mPolicies) return false;
+        return mKeepConnectedReason == fullScore.mKeepConnectedReason;
+    }
+
+    @Override
+    public int hashCode() {
+        return 2 * ((int) mPolicies)
+                + 3 * (int) (mPolicies >>> 32)
+                + 5 * mKeepConnectedReason
+                + 7 * mLegacyInt;
+    }
+
     // Example output :
     // Score(50 ; Policies : EVER_USER_SELECTED&IS_VALIDATED)
     @Override
