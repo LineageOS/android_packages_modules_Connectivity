@@ -67,6 +67,7 @@ import com.android.modules.utils.build.SdkLevel;
 import com.android.server.ConnectivityService;
 
 import java.io.PrintWriter;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -105,7 +106,7 @@ import java.util.TreeSet;
 //    for example:
 //    a. a captive portal is present, or
 //    b. a WiFi router whose Internet backhaul is down, or
-//    c. a wireless connection stops transfering packets temporarily (e.g. device is in elevator
+//    c. a wireless connection stops transferring packets temporarily (e.g. device is in elevator
 //       or tunnel) but does not disconnect from the AP/cell tower, or
 //    d. a stand-alone device offering a WiFi AP without an uplink for configuration purposes.
 // 5. registered, created, connected, validated
@@ -417,6 +418,8 @@ public class NetworkAgentInfo implements Comparable<NetworkAgentInfo>, NetworkRa
     private final Handler mHandler;
     private final QosCallbackTracker mQosCallbackTracker;
 
+    private final long mCreationTime;
+
     public NetworkAgentInfo(INetworkAgent na, Network net, NetworkInfo info,
             @NonNull LinkProperties lp, @NonNull NetworkCapabilities nc,
             @NonNull NetworkScore score, Context context,
@@ -449,6 +452,7 @@ public class NetworkAgentInfo implements Comparable<NetworkAgentInfo>, NetworkRa
         declaredUnderlyingNetworks = (nc.getUnderlyingNetworks() != null)
                 ? nc.getUnderlyingNetworks().toArray(new Network[0])
                 : null;
+        mCreationTime = System.currentTimeMillis();
     }
 
     private class AgentDeathMonitor implements IBinder.DeathRecipient {
@@ -1330,6 +1334,7 @@ public class NetworkAgentInfo implements Comparable<NetworkAgentInfo>, NetworkRa
         return "NetworkAgentInfo{"
                 + "network{" + network + "}  handle{" + network.getNetworkHandle() + "}  ni{"
                 + networkInfo.toShortString() + "} "
+                + "created=" + Instant.ofEpochMilli(mCreationTime) + " "
                 + mScore + " "
                 + (created ? " created" : "")
                 + (destroyed ? " destroyed" : "")
