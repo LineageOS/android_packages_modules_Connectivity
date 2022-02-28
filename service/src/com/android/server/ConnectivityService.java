@@ -8352,14 +8352,13 @@ public class ConnectivityService extends IConnectivityManager.Stub
         switch (notificationType) {
             case ConnectivityManager.CALLBACK_AVAILABLE: {
                 final NetworkCapabilities nc =
-                        networkCapabilitiesRestrictedForCallerPermissions(
-                                networkAgent.networkCapabilities, nri.mPid, nri.mUid);
-                putParcelable(
-                        bundle,
                         createWithLocationInfoSanitizedIfNecessaryWhenParceled(
-                                nc, includeLocationSensitiveInfo, nri.mPid, nri.mUid,
+                                networkCapabilitiesRestrictedForCallerPermissions(
+                                        networkAgent.networkCapabilities, nri.mPid, nri.mUid),
+                                includeLocationSensitiveInfo, nri.mPid, nri.mUid,
                                 nrForCallback.getRequestorPackageName(),
-                                nri.mCallingAttributionTag));
+                                nri.mCallingAttributionTag);
+                putParcelable(bundle, nc);
                 putParcelable(bundle, linkPropertiesRestrictedForCallerPermissions(
                         networkAgent.linkProperties, nri.mPid, nri.mUid));
                 // For this notification, arg1 contains the blocked status.
