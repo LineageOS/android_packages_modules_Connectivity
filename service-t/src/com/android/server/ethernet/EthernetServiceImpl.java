@@ -239,7 +239,7 @@ public class EthernetServiceImpl extends IEthernetManager.Stub {
         // TODO: validate that iface is listed in overlay config_ethernet_interfaces
 
         mTracker.updateConfiguration(
-                iface, request.getIpConfig(), request.getNetworkCapabilities(), listener);
+                iface, request.getIpConfiguration(), request.getNetworkCapabilities(), listener);
     }
 
     @Override
