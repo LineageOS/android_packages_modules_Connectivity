@@ -220,18 +220,15 @@ public class EthernetNetworkFactory extends NetworkFactory {
             @NonNull final IpConfiguration ipConfig,
             @Nullable final NetworkCapabilities capabilities,
             @Nullable final IEthernetNetworkManagementListener listener) {
-        enforceInterfaceIsTracked(ifaceName);
+        if (!hasInterface(ifaceName)) {
+            maybeSendNetworkManagementCallbackForUntracked(ifaceName, listener);
+            return;
+        }
+
         final NetworkInterfaceState iface = mTrackingInterfaces.get(ifaceName);
         iface.updateInterface(ipConfig, capabilities, listener);
         mTrackingInterfaces.put(ifaceName, iface);
         updateCapabilityFilter();
-    }
-
-    private void enforceInterfaceIsTracked(@NonNull final String ifaceName) {
-        if (!hasInterface(ifaceName)) {
-            throw new UnsupportedOperationException(
-                    "Interface with name " + ifaceName + " is not being tracked.");
-        }
     }
 
     private static NetworkCapabilities mixInCapabilities(NetworkCapabilities nc,
@@ -272,10 +269,8 @@ public class EthernetNetworkFactory extends NetworkFactory {
     @VisibleForTesting(visibility = VisibleForTesting.Visibility.PACKAGE)
     protected boolean updateInterfaceLinkState(@NonNull final String ifaceName, final boolean up,
             @Nullable final IEthernetNetworkManagementListener listener) {
-        if (!mTrackingInterfaces.containsKey(ifaceName)) {
-            maybeSendNetworkManagementCallback(listener, null,
-                    new EthernetNetworkManagementException(
-                            ifaceName + " can't be updated as it is not available."));
+        if (!hasInterface(ifaceName)) {
+            maybeSendNetworkManagementCallbackForUntracked(ifaceName, listener);
             return false;
         }
 
@@ -285,6 +280,13 @@ public class EthernetNetworkFactory extends NetworkFactory {
 
         NetworkInterfaceState iface = mTrackingInterfaces.get(ifaceName);
         return iface.updateLinkState(up, listener);
+    }
+
+    private void maybeSendNetworkManagementCallbackForUntracked(
+            String ifaceName, IEthernetNetworkManagementListener listener) {
+        maybeSendNetworkManagementCallback(listener, null,
+                new EthernetNetworkManagementException(
+                        ifaceName + " can't be updated as it is not available."));
     }
 
     @VisibleForTesting
