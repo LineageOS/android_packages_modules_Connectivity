@@ -179,12 +179,14 @@ public class RateLimitTest {
 
     @After
     public void tearDown() throws IOException {
-        // whatever happens, don't leave the device in rate limited state.
-        ConnectivitySettingsManager.setIngressRateLimitInBytesPerSecond(mContext, -1);
-        mSocket.close();
-        mNetworkAgent.unregister();
-        mTunInterface.getFileDescriptor().close();
-        mCm.unregisterNetworkCallback(mNetworkCallback);
+        if (mContext != null) {
+            // whatever happens, don't leave the device in rate limited state.
+            ConnectivitySettingsManager.setIngressRateLimitInBytesPerSecond(mContext, -1);
+        }
+        if (mSocket != null) mSocket.close();
+        if (mNetworkAgent != null) mNetworkAgent.unregister();
+        if (mTunInterface != null) mTunInterface.getFileDescriptor().close();
+        if (mCm != null) mCm.unregisterNetworkCallback(mNetworkCallback);
     }
 
     private void assertGreaterThan(final String msg, long lhs, long rhs) {
