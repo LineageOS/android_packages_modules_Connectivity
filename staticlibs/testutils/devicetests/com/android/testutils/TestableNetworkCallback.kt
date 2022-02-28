@@ -41,6 +41,7 @@ import kotlin.test.fail
 
 object NULL_NETWORK : Network(-1)
 object ANY_NETWORK : Network(-2)
+fun anyNetwork() = ANY_NETWORK
 
 private val Int.capabilityName get() = NetworkCapabilities.capabilityNameOf(this)
 
@@ -389,7 +390,7 @@ open class TestableNetworkCallback private constructor(
         val network = n ?: NULL_NETWORK
         // TODO : remove this .java access if the tests ever use kotlin-reflect. At the time of
         // this writing this would be the only use of this library in the tests.
-        assertTrue(type.java.isInstance(it) && it.network == network,
+        assertTrue(type.java.isInstance(it) && (ANY_NETWORK === n || it.network == network),
                 "Unexpected callback : $it, expected ${type.java} with Network[$network]")
     } as T
 
