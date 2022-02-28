@@ -29,10 +29,14 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
+import android.nearby.FastPairDevice;
+import android.nearby.FastPairStatusCallback;
+import android.nearby.PairStatusMetadata;
 import android.os.Bundle;
 import android.os.UserHandle;
 import android.util.Log;
 
+import com.android.internal.annotations.VisibleForTesting;
 import com.android.server.nearby.common.locator.LocatorContextWrapper;
 import com.android.server.nearby.fastpair.FastPairController;
 import com.android.server.nearby.fastpair.cache.DiscoveryItem;
@@ -47,27 +51,24 @@ import service.proto.Cache;
  * Fast Pair ux manager for half sheet.
  */
 public class FastPairHalfSheetManager {
-    static final String ACTIVITY_INTENT_ACTION = "android.nearby.SHOW_HALFSHEET";
+    private static final String ACTIVITY_INTENT_ACTION = "android.nearby.SHOW_HALFSHEET";
     private static final String HALF_SHEET_CLASS_NAME =
             "com.android.nearby.halfsheet.HalfSheetActivity";
+    private static final String TAG = "FPHalfSheetManager";
 
     private String mHalfSheetApkPkgName;
-    private Context mContext;
-    private LocatorContextWrapper mLocatorContextWrapper;
+    private final LocatorContextWrapper mLocatorContextWrapper;
 
-    /**
-     * Construct function
-     */
+    FastPairService mFastPairService;
+
     public FastPairHalfSheetManager(Context context) {
-        mContext = context;
-        mLocatorContextWrapper = new LocatorContextWrapper(context);
+        this(new LocatorContextWrapper(context));
     }
 
-    /**
-     * Construct function for test
-     */
-    public FastPairHalfSheetManager(LocatorContextWrapper locatorContextWrapper) {
+    @VisibleForTesting
+    FastPairHalfSheetManager(LocatorContextWrapper locatorContextWrapper) {
         mLocatorContextWrapper = locatorContextWrapper;
+        mFastPairService = new FastPairService();
     }
 
     /**
@@ -79,14 +80,13 @@ public class FastPairHalfSheetManager {
             if (mLocatorContextWrapper != null) {
                 String packageName = getHalfSheetApkPkgName();
                 if (packageName == null) {
-                    Log.e("FastPairHalfSheetManager", "package name is null");
+                    Log.e(TAG, "package name is null");
                     return;
                 }
-                HalfSheetCallback callback = new HalfSheetCallback();
-                callback.setmFastPairController(
+                mFastPairService.setFastPairController(
                         mLocatorContextWrapper.getLocator().get(FastPairController.class));
                 Bundle bundle = new Bundle();
-                bundle.putBinder(EXTRA_BINDER, callback);
+                bundle.putBinder(EXTRA_BINDER, mFastPairService);
                 mLocatorContextWrapper
                         .startActivityAsUser(new Intent(ACTIVITY_INTENT_ACTION)
                                         .putExtra(EXTRA_HALF_SHEET_INFO,
@@ -97,11 +97,9 @@ public class FastPairHalfSheetManager {
                                         .setComponent(new ComponentName(packageName,
                                                 HALF_SHEET_CLASS_NAME)),
                                 UserHandle.CURRENT);
-
             }
         } catch (IllegalStateException e) {
-            Log.e("FastPairHalfSheetManager",
-                    "Can't resolve package that contains half sheet");
+            Log.e(TAG, "Can't resolve package that contains half sheet");
         }
     }
 
@@ -109,7 +107,15 @@ public class FastPairHalfSheetManager {
      * Shows pairing fail half sheet.
      */
     public void showPairingFailed() {
-        Log.d("FastPairHalfSheetManager", "show fail half sheet");
+        FastPairStatusCallback pairStatusCallback = mFastPairService.getPairStatusCallback();
+        if (pairStatusCallback != null) {
+            Log.v(TAG, "showPairingFailed: pairStatusCallback not NULL");
+            pairStatusCallback.onPairUpdate(new FastPairDevice.Builder().build(),
+                    new PairStatusMetadata(PairStatusMetadata.Status.FAIL));
+        } else {
+            Log.w(TAG, "FastPairHalfSheetManager failed to show success half sheet because "
+                    + "the pairStatusCallback is null");
+        }
     }
 
     /**
@@ -129,14 +135,22 @@ public class FastPairHalfSheetManager {
      * This function will handle pairing steps for half sheet.
      */
     public void showPairingHalfSheet(DiscoveryItem item) {
-        Log.d("FastPairHalfSheetManager", "show pairing half sheet");
+        Log.d(TAG, "show pairing half sheet");
     }
 
     /**
      * Shows pairing success info.
      */
     public void showPairingSuccessHalfSheet(String address) {
-        Log.d("FastPairHalfSheetManager", "show success half sheet");
+        FastPairStatusCallback pairStatusCallback = mFastPairService.getPairStatusCallback();
+        if (pairStatusCallback != null) {
+            pairStatusCallback.onPairUpdate(
+                    new FastPairDevice.Builder().setBluetoothAddress(address).build(),
+                    new PairStatusMetadata(PairStatusMetadata.Status.SUCCESS));
+        } else {
+            Log.w(TAG, "FastPairHalfSheetManager failed to show success half sheet because "
+                    + "the pairStatusCallback is null");
+        }
     }
 
     /**

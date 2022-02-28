@@ -56,6 +56,7 @@ import com.android.server.nearby.common.locator.LocatorContextWrapper;
 import com.android.server.nearby.fastpair.cache.DiscoveryItem;
 import com.android.server.nearby.fastpair.cache.FastPairCacheManager;
 import com.android.server.nearby.fastpair.footprint.FootprintsDeviceManager;
+import com.android.server.nearby.fastpair.halfsheet.FastPairHalfSheetManager;
 import com.android.server.nearby.fastpair.pairinghandler.PairingProgressHandlerBase;
 import com.android.server.nearby.util.FastPairDecoder;
 import com.android.server.nearby.util.ForegroundThread;
@@ -194,7 +195,7 @@ public class FastPairManager {
             @Nullable byte[] accountKey,
             FootprintsDeviceManager footprints,
             PairingProgressHandlerBase pairingProgressHandlerBase) {
-
+        FastPairHalfSheetManager manager = Locator.get(context, FastPairHalfSheetManager.class);
         try {
             pairingProgressHandlerBase.onPairingStarted();
             if (pairingProgressHandlerBase.skipWaitingScreenUnlock()) {
@@ -279,6 +280,10 @@ public class FastPairManager {
                 // Fast Pair one
                 connection.pair();
             }
+
+            // TODO(b/213373051): Merge logic with pairingProgressHandlerBase or delete the
+            // pairingProgressHandlerBase class.
+            manager.showPairingSuccessHalfSheet(connection.getPublicAddress());
             pairingProgressHandlerBase.onPairingSuccess(connection.getPublicAddress());
         } catch (BluetoothException
                 | InterruptedException
@@ -287,7 +292,11 @@ public class FastPairManager {
                 | ExecutionException
                 | PairingException
                 | GeneralSecurityException e) {
-            Log.e(TAG, "FastPair: Error");
+            Log.e(TAG, "Failed to pair.", e);
+
+            // TODO(b/213373051): Merge logic with pairingProgressHandlerBase or delete the
+            // pairingProgressHandlerBase class.
+            manager.showPairingFailed();
             pairingProgressHandlerBase.onPairingFailed(e);
         }
     }
