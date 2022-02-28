@@ -64,7 +64,6 @@ import com.android.testutils.TestableNetworkCallback;
 
 import org.junit.After;
 import org.junit.Before;
-import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
@@ -84,6 +83,8 @@ import java.util.stream.Collectors;
 @RunWith(DevSdkIgnoreRunner.class)
 @DevSdkIgnoreRule.IgnoreUpTo(SC_V2)
 public class RateLimitTest {
+    private static final HashSet<String> sKernelConfig;
+
     private static final String TAG = "RateLimitTest";
     private static final LinkAddress LOCAL_IP4_ADDR = new LinkAddress("10.0.0.1/8");
     private static final InetAddress REMOTE_IP4_ADDR = InetAddresses.parseNumericAddress("8.8.8.8");
@@ -107,19 +108,21 @@ public class RateLimitTest {
     private Network mNetwork;
     private DatagramSocket mSocket;
 
-    @BeforeClass
-    public static void assumeKernelSupport() {
+    static {
         final String result = SystemUtil.runShellCommandOrThrow("gzip -cd /proc/config.gz");
-        HashSet<String> kernelConfig = Arrays.stream(result.split("\\R")).collect(
+        sKernelConfig = Arrays.stream(result.split("\\R")).collect(
                 Collectors.toCollection(HashSet::new));
 
         // make sure that if for some reason /proc/config.gz returns an empty string, this test
         // does not silently fail.
         assertNotEquals(0, result.length());
+    }
 
-        assumeTrue(kernelConfig.contains("CONFIG_NET_CLS_MATCHALL=y"));
-        assumeTrue(kernelConfig.contains("CONFIG_NET_ACT_POLICE=y"));
-        assumeTrue(kernelConfig.contains("CONFIG_NET_ACT_BPF=y"));
+    private static void assumeKernelSupport() {
+        // Note: assumptions that fail in @BeforeClass annotated methods are not handled correctly.
+        assumeTrue(sKernelConfig.contains("CONFIG_NET_CLS_MATCHALL=y"));
+        assumeTrue(sKernelConfig.contains("CONFIG_NET_ACT_POLICE=y"));
+        assumeTrue(sKernelConfig.contains("CONFIG_NET_ACT_BPF=y"));
     }
 
     @Before
@@ -288,6 +291,8 @@ public class RateLimitTest {
 
     @Test
     public void testIngressRateLimit_testLimit() throws Exception {
+        assumeKernelSupport();
+
         // If this value is too low, this test might become flaky because of the burst value that
         // allows to send at a higher data rate for a short period of time. The faster the data rate
         // and the longer the test, the less this test will be affected.
