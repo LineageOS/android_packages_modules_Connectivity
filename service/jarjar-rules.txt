@@ -9,19 +9,22 @@ rule android.net.NetworkFactory* android.net.connectivity.@0
 # From modules-utils-preconditions
 rule com.android.internal.util.Preconditions* android.net.connectivity.@0
 
+# From framework-connectivity-shared-srcs
+rule android.util.LocalLog* android.net.connectivity.@0
+rule android.util.IndentingPrintWriter* android.net.connectivity.@0
+rule com.android.internal.util.IndentingPrintWriter* android.net.connectivity.@0
+rule com.android.internal.util.MessageUtils* android.net.connectivity.@0
+rule com.android.internal.util.WakeupMessage* android.net.connectivity.@0
+rule com.android.internal.util.FileRotator* android.net.connectivity.@0
+rule com.android.internal.util.ProcFileReader* android.net.connectivity.@0
+
+# From framework-connectivity-protos
+rule com.google.protobuf.** android.net.connectivity.@0
+rule android.service.** android.net.connectivity.@0
+
 rule android.sysprop.** com.android.connectivity.@0
 
-# internal util classes from framework-connectivity-shared-srcs
-rule android.util.LocalLog* com.android.connectivity.@0
-# android.util.IndentingPrintWriter* should use a different package name from
-# the one in com.android.internal.util
-rule android.util.IndentingPrintWriter* com.android.connectivity.@0
-rule com.android.internal.util.IndentingPrintWriter* com.android.connectivity.@0
-rule com.android.internal.util.MessageUtils* com.android.connectivity.@0
-rule com.android.internal.util.WakeupMessage* com.android.connectivity.@0
-
 rule com.android.internal.messages.** com.android.connectivity.@0
-rule com.google.protobuf.** com.android.connectivity.@0
 
 # From dnsresolver_aidl_interface (newer AIDLs should go to android.net.resolv.aidl)
 rule android.net.resolv.aidl.** com.android.connectivity.@0
