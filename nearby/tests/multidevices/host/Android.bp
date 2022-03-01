@@ -16,7 +16,7 @@ package {
     default_applicable_licenses: ["Android-Apache-2.0"],
 }
 
-// Run the tests: atest -v CtsSeekerDiscoverProviderTest -- --replicate-parent-setup --multi-device-count 2
+// Run the tests: atest -v CtsSeekerDiscoverProviderTest
 python_test_host {
     name: "CtsSeekerDiscoverProviderTest",
     main: "seeker_discover_provider_test.py",
