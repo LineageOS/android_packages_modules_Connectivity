@@ -58,17 +58,17 @@ filegroup {
     ],
 }
 
-// Empty replacement for framework-connectivity-tiramisu.impl and stubs,
+// Empty replacement for framework-connectivity-t.impl and stubs,
 // as framework-connectivity is disabled in the branch
 java_library {
-    name: "framework-connectivity-tiramisu.impl",
+    name: "framework-connectivity-t.impl",
     min_sdk_version: "Tiramisu",
     sdk_version: "module_current",
     srcs: [],
 }
 
 java_library {
-    name: "framework-connectivity-tiramisu.stubs.module_lib",
+    name: "framework-connectivity-t.stubs.module_lib",
     min_sdk_version: "Tiramisu",
     sdk_version: "module_current",
     srcs: [],
