@@ -329,7 +329,8 @@ public abstract class AbstractRestrictBackgroundNetworkTestCase {
                     + "; sleeping 1s before trying again");
             SystemClock.sleep(SECOND_IN_MS);
         }
-        fail("App2 is not on background state after " + maxTries + " attempts: " + state );
+        fail("App2 (" + mUid + ") is not on background state after "
+                + maxTries + " attempts: " + state);
     }
 
     protected final void assertForegroundState() throws Exception {
@@ -347,7 +348,8 @@ public abstract class AbstractRestrictBackgroundNetworkTestCase {
             turnScreenOn();
             SystemClock.sleep(SECOND_IN_MS);
         }
-        fail("App2 is not on foreground state after " + maxTries + " attempts: " + state );
+        fail("App2 (" + mUid + ") is not on foreground state after "
+                + maxTries + " attempts: " + state);
     }
 
     protected final void assertForegroundServiceState() throws Exception {
@@ -364,7 +366,8 @@ public abstract class AbstractRestrictBackgroundNetworkTestCase {
                     + "; sleeping 1s before trying again");
             SystemClock.sleep(SECOND_IN_MS);
         }
-        fail("App2 is not on foreground service state after " + maxTries + " attempts: " + state );
+        fail("App2 (" + mUid + ") is not on foreground service state after "
+                + maxTries + " attempts: " + state);
     }
 
     /**
@@ -406,8 +409,8 @@ public abstract class AbstractRestrictBackgroundNetworkTestCase {
             // Exponential back-off.
             timeoutMs = Math.min(timeoutMs*2, NETWORK_TIMEOUT_MS);
         }
-        fail("Invalid state for expectAvailable=" + expectAvailable + " after " + maxTries
-                + " attempts.\nLast error: " + error);
+        fail("Invalid state for " + mUid + "; expectAvailable=" + expectAvailable + " after "
+                + maxTries + " attempts.\nLast error: " + error);
     }
 
     /**
@@ -763,7 +766,7 @@ public abstract class AbstractRestrictBackgroundNetworkTestCase {
             Log.v(TAG, "app2 receiver is not ready yet; sleeping 1s before polling again");
             SystemClock.sleep(SECOND_IN_MS);
         }
-        fail("app2 receiver is not ready");
+        fail("app2 receiver is not ready in " + mUid);
     }
 
     protected void registerNetworkCallback(final NetworkRequest request, INetworkCallback cb)
