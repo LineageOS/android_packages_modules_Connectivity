@@ -3,6 +3,11 @@
      *;
 }
 
+# Keep simulator reflection callback.
+-keep class com.android.server.nearby.common.bluetooth.fastpair.testing.** {
+     *;
+}
+
 # Do not touch Mobly.
 -keep class com.google.android.mobly.** {
   *;
