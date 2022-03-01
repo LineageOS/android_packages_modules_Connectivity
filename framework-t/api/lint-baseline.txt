@@ -41,86 +41,18 @@ MissingBuildMethod: android.net.IpSecTransform.Builder:
     android.net.IpSecTransform.Builder does not declare a `build()` method, but builder classes are expected to
 
 
-MissingNullability: android.app.usage.NetworkStats#getNextBucket(android.app.usage.NetworkStats.Bucket) parameter #0:
-    Missing nullability on parameter `bucketOut` in method `getNextBucket`
 MissingNullability: android.app.usage.NetworkStatsManager#queryDetails(int, String, long, long):
     Missing nullability on method `queryDetails` return
-MissingNullability: android.app.usage.NetworkStatsManager#queryDetails(int, String, long, long) parameter #1:
-    Missing nullability on parameter `subscriberId` in method `queryDetails`
-MissingNullability: android.app.usage.NetworkStatsManager#queryDetailsForUid(int, String, long, long, int):
-    Missing nullability on method `queryDetailsForUid` return
-MissingNullability: android.app.usage.NetworkStatsManager#queryDetailsForUid(int, String, long, long, int) parameter #1:
-    Missing nullability on parameter `subscriberId` in method `queryDetailsForUid`
-MissingNullability: android.app.usage.NetworkStatsManager#queryDetailsForUidTag(int, String, long, long, int, int):
-    Missing nullability on method `queryDetailsForUidTag` return
-MissingNullability: android.app.usage.NetworkStatsManager#queryDetailsForUidTag(int, String, long, long, int, int) parameter #1:
-    Missing nullability on parameter `subscriberId` in method `queryDetailsForUidTag`
-MissingNullability: android.app.usage.NetworkStatsManager#queryDetailsForUidTagState(int, String, long, long, int, int, int):
-    Missing nullability on method `queryDetailsForUidTagState` return
-MissingNullability: android.app.usage.NetworkStatsManager#queryDetailsForUidTagState(int, String, long, long, int, int, int) parameter #1:
-    Missing nullability on parameter `subscriberId` in method `queryDetailsForUidTagState`
 MissingNullability: android.app.usage.NetworkStatsManager#querySummary(int, String, long, long):
     Missing nullability on method `querySummary` return
-MissingNullability: android.app.usage.NetworkStatsManager#querySummary(int, String, long, long) parameter #1:
-    Missing nullability on parameter `subscriberId` in method `querySummary`
 MissingNullability: android.app.usage.NetworkStatsManager#querySummaryForDevice(int, String, long, long):
     Missing nullability on method `querySummaryForDevice` return
-MissingNullability: android.app.usage.NetworkStatsManager#querySummaryForDevice(int, String, long, long) parameter #1:
-    Missing nullability on parameter `subscriberId` in method `querySummaryForDevice`
 MissingNullability: android.app.usage.NetworkStatsManager#querySummaryForUser(int, String, long, long):
     Missing nullability on method `querySummaryForUser` return
-MissingNullability: android.app.usage.NetworkStatsManager#querySummaryForUser(int, String, long, long) parameter #1:
-    Missing nullability on parameter `subscriberId` in method `querySummaryForUser`
-MissingNullability: android.app.usage.NetworkStatsManager#registerUsageCallback(int, String, long, android.app.usage.NetworkStatsManager.UsageCallback) parameter #1:
-    Missing nullability on parameter `subscriberId` in method `registerUsageCallback`
-MissingNullability: android.app.usage.NetworkStatsManager#registerUsageCallback(int, String, long, android.app.usage.NetworkStatsManager.UsageCallback) parameter #3:
-    Missing nullability on parameter `callback` in method `registerUsageCallback`
-MissingNullability: android.app.usage.NetworkStatsManager#registerUsageCallback(int, String, long, android.app.usage.NetworkStatsManager.UsageCallback, android.os.Handler) parameter #1:
-    Missing nullability on parameter `subscriberId` in method `registerUsageCallback`
-MissingNullability: android.app.usage.NetworkStatsManager#registerUsageCallback(int, String, long, android.app.usage.NetworkStatsManager.UsageCallback, android.os.Handler) parameter #3:
-    Missing nullability on parameter `callback` in method `registerUsageCallback`
-MissingNullability: android.app.usage.NetworkStatsManager#unregisterUsageCallback(android.app.usage.NetworkStatsManager.UsageCallback) parameter #0:
-    Missing nullability on parameter `callback` in method `unregisterUsageCallback`
-MissingNullability: android.app.usage.NetworkStatsManager.UsageCallback#onThresholdReached(int, String) parameter #1:
-    Missing nullability on parameter `subscriberId` in method `onThresholdReached`
 MissingNullability: android.net.IpSecAlgorithm#writeToParcel(android.os.Parcel, int) parameter #0:
     Missing nullability on parameter `out` in method `writeToParcel`
 MissingNullability: android.net.IpSecManager.UdpEncapsulationSocket#getFileDescriptor():
     Missing nullability on method `getFileDescriptor` return
-MissingNullability: android.net.TrafficStats#tagDatagramSocket(java.net.DatagramSocket) parameter #0:
-    Missing nullability on parameter `socket` in method `tagDatagramSocket`
-MissingNullability: android.net.TrafficStats#tagFileDescriptor(java.io.FileDescriptor) parameter #0:
-    Missing nullability on parameter `fd` in method `tagFileDescriptor`
-MissingNullability: android.net.TrafficStats#tagSocket(java.net.Socket) parameter #0:
-    Missing nullability on parameter `socket` in method `tagSocket`
-MissingNullability: android.net.TrafficStats#untagDatagramSocket(java.net.DatagramSocket) parameter #0:
-    Missing nullability on parameter `socket` in method `untagDatagramSocket`
-MissingNullability: android.net.TrafficStats#untagFileDescriptor(java.io.FileDescriptor) parameter #0:
-    Missing nullability on parameter `fd` in method `untagFileDescriptor`
-MissingNullability: android.net.TrafficStats#untagSocket(java.net.Socket) parameter #0:
-    Missing nullability on parameter `socket` in method `untagSocket`
-MissingNullability: com.android.internal.util.FileRotator#FileRotator(java.io.File, String, long, long) parameter #0:
-    Missing nullability on parameter `basePath` in method `FileRotator`
-MissingNullability: com.android.internal.util.FileRotator#FileRotator(java.io.File, String, long, long) parameter #1:
-    Missing nullability on parameter `prefix` in method `FileRotator`
-MissingNullability: com.android.internal.util.FileRotator#dumpAll(java.io.OutputStream) parameter #0:
-    Missing nullability on parameter `os` in method `dumpAll`
-MissingNullability: com.android.internal.util.FileRotator#readMatching(com.android.internal.util.FileRotator.Reader, long, long) parameter #0:
-    Missing nullability on parameter `reader` in method `readMatching`
-MissingNullability: com.android.internal.util.FileRotator#rewriteActive(com.android.internal.util.FileRotator.Rewriter, long) parameter #0:
-    Missing nullability on parameter `rewriter` in method `rewriteActive`
-MissingNullability: com.android.internal.util.FileRotator#rewriteAll(com.android.internal.util.FileRotator.Rewriter) parameter #0:
-    Missing nullability on parameter `rewriter` in method `rewriteAll`
-MissingNullability: com.android.internal.util.FileRotator.Reader#read(java.io.InputStream) parameter #0:
-    Missing nullability on parameter `in` in method `read`
-MissingNullability: com.android.internal.util.FileRotator.Writer#write(java.io.OutputStream) parameter #0:
-    Missing nullability on parameter `out` in method `write`
-MissingNullability: com.android.server.NetworkManagementSocketTagger#kernelToTag(String) parameter #0:
-    Missing nullability on parameter `string` in method `kernelToTag`
-MissingNullability: com.android.server.NetworkManagementSocketTagger#tag(java.io.FileDescriptor) parameter #0:
-    Missing nullability on parameter `fd` in method `tag`
-MissingNullability: com.android.server.NetworkManagementSocketTagger#untag(java.io.FileDescriptor) parameter #0:
-    Missing nullability on parameter `fd` in method `untag`
 
 
 RethrowRemoteException: android.app.usage.NetworkStatsManager#queryDetails(int, String, long, long):
