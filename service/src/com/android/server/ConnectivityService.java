@@ -4242,7 +4242,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
             mDnsManager.removeNetwork(nai.network);
 
             // clean up tc police filters on interface.
-            if (canNetworkBeRateLimited(nai) && mIngressRateLimit >= 0) {
+            if (nai.everConnected && canNetworkBeRateLimited(nai) && mIngressRateLimit >= 0) {
                 mDeps.disableIngressRateLimit(nai.linkProperties.getInterfaceName());
             }
         }
@@ -9011,19 +9011,6 @@ public class ConnectivityService extends IConnectivityManager.Stub
             // A network that has just connected has zero requests and is thus a foreground network.
             networkAgent.networkCapabilities.addCapability(NET_CAPABILITY_FOREGROUND);
 
-            // If a rate limit has been configured and is applicable to this network (network
-            // provides internet connectivity), apply it.
-            // Note: in case of a system server crash, there is a very small chance that this
-            // leaves some interfaces rate limited (i.e. if the rate limit had been changed just
-            // before the crash and was never applied). One solution would be to delete all
-            // potential tc police filters every time this is called. Since this is an unlikely
-            // scenario in the first place (and worst case, the interface stays rate limited until
-            // the device is rebooted), this seems a little overkill.
-            if (canNetworkBeRateLimited(networkAgent) && mIngressRateLimit >= 0) {
-                mDeps.enableIngressRateLimit(networkAgent.linkProperties.getInterfaceName(),
-                        mIngressRateLimit);
-            }
-
             if (!createNativeNetwork(networkAgent)) return;
             if (networkAgent.propagateUnderlyingCapabilities()) {
                 // Initialize the network's capabilities to their starting values according to the
@@ -9046,6 +9033,17 @@ public class ConnectivityService extends IConnectivityManager.Stub
             handlePerNetworkPrivateDnsConfig(networkAgent, mDnsManager.getPrivateDnsConfig());
             updateLinkProperties(networkAgent, new LinkProperties(networkAgent.linkProperties),
                     null);
+
+            // If a rate limit has been configured and is applicable to this network (network
+            // provides internet connectivity), apply it. The tc police filter cannot be attached
+            // before the clsact qdisc is added which happens as part of updateLinkProperties ->
+            // updateInterfaces -> INetd#networkAddInterface.
+            // Note: in case of a system server crash, the NetworkController constructor in netd
+            // (called when netd starts up) deletes the clsact qdisc of all interfaces.
+            if (canNetworkBeRateLimited(networkAgent) && mIngressRateLimit >= 0) {
+                mDeps.enableIngressRateLimit(networkAgent.linkProperties.getInterfaceName(),
+                        mIngressRateLimit);
+            }
 
             // Until parceled LinkProperties are sent directly to NetworkMonitor, the connect
             // command must be sent after updating LinkProperties to maximize chances of
