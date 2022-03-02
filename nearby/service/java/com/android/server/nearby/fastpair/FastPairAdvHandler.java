@@ -79,6 +79,11 @@ public class FastPairAdvHandler {
                 Rpcs.GetObservedDeviceResponse response =
                         FastPairDataProvider.getInstance()
                                 .loadFastPairAntispoofkeyDeviceMetadata(model);
+                if (response == null) {
+                    Log.e(TAG, "server does not have model id "
+                            + Hex.bytesToStringLowercase(model));
+                    return;
+                }
                 Locator.get(mContext, FastPairHalfSheetManager.class).showHalfSheet(
                         DataUtils.toScanFastPairStoreItem(
                                 response, mBleAddress,
@@ -128,6 +133,9 @@ public class FastPairAdvHandler {
     static Data.FastPairDeviceWithAccountKey findRecognizedDevice(
             List<Data.FastPairDeviceWithAccountKey> devices, BloomFilter bloomFilter, byte[] salt) {
         for (Data.FastPairDeviceWithAccountKey device : devices) {
+            if (device.getAccountKey().toByteArray() == null) {
+                continue;
+            }
             byte[] rotatedKey = concat(device.getAccountKey().toByteArray(), salt);
             if (bloomFilter.possiblyContains(rotatedKey)) {
                 return device;
