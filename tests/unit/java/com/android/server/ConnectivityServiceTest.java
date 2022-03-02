@@ -1998,6 +1998,13 @@ public class ConnectivityServiceTest {
             // updated. Check that this happened.
             assertEquals(-1L, (long) mActiveRateLimit.getOrDefault(iface, -1L));
             mActiveRateLimit.put(iface, rateInBytesPerSecond);
+            // verify that clsact qdisc has already been created, otherwise attaching a tc police
+            // filter will fail.
+            try {
+                verify(mMockNetd).networkAddInterface(anyInt(), eq(iface));
+            } catch (RemoteException e) {
+                fail(e.getMessage());
+            }
         }
 
         @Override
