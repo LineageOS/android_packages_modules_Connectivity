@@ -20,6 +20,7 @@ import android.accounts.Account;
 import android.annotation.Nullable;
 import android.content.Context;
 import android.nearby.FastPairDataProviderBase;
+import android.nearby.aidl.ByteArrayParcel;
 import android.nearby.aidl.FastPairAccountDevicesMetadataRequestParcel;
 import android.nearby.aidl.FastPairAntispoofkeyDeviceMetadataRequestParcel;
 import android.nearby.aidl.FastPairEligibleAccountsRequestParcel;
@@ -32,6 +33,7 @@ import androidx.annotation.WorkerThread;
 import com.android.server.nearby.common.bloomfilter.BloomFilter;
 import com.android.server.nearby.fastpair.footprint.FastPairUploadInfo;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import service.proto.Data;
@@ -142,16 +144,38 @@ public class FastPairDataProvider {
     }
 
     /**
-     * Loads FastPair devices for a given account.
+     * Loads FastPair device accountKeys for a given account, but not other detailed fields.
      *
      * @throws IllegalStateException If ProxyFastPairDataProvider is not available.
      */
-    public List<Data.FastPairDeviceWithAccountKey> loadFastPairDevicesWithAccountKey(
+    public List<Data.FastPairDeviceWithAccountKey> loadFastPairDeviceWithAccountKey(
             Account account) {
+        return loadFastPairDeviceWithAccountKey(account, new ArrayList<byte[]>(0));
+    }
+
+    /**
+     * Loads FastPair devices for a list of accountKeys of a given account.
+     *
+     * @param account The account of the FastPair devices.
+     * @param accountKeys The allow list of FastPair devices if it is not empty. Otherwise, the
+     *                    function returns accountKeys of all FastPair devices under the account,
+     *                    without detailed fields.
+     *
+     * @throws IllegalStateException If ProxyFastPairDataProvider is not available.
+     */
+    public List<Data.FastPairDeviceWithAccountKey> loadFastPairDeviceWithAccountKey(
+            Account account, List<byte[]> accountKeys) {
         if (mProxyFastPairDataProvider != null) {
             FastPairAccountDevicesMetadataRequestParcel requestParcel =
                     new FastPairAccountDevicesMetadataRequestParcel();
             requestParcel.account = account;
+            requestParcel.accountKeys = new ByteArrayParcel[accountKeys.size()];
+            int i = 0;
+            for (byte[] accountKey : accountKeys) {
+                requestParcel.accountKeys[i] = new ByteArrayParcel();
+                requestParcel.accountKeys[i].byteArray = accountKey;
+                i = i + 1;
+            }
             return Utils.convertToFastPairDevicesWithAccountKey(
                     mProxyFastPairDataProvider.loadFastPairAccountDevicesMetadata(requestParcel));
         }
