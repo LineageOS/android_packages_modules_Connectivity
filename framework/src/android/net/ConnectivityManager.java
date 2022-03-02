@@ -1643,10 +1643,10 @@ public class ConnectivityManager {
             android.Manifest.permission.NETWORK_SETTINGS})
     @SystemApi(client = MODULE_LIBRARIES)
     @Nullable
-    public LinkProperties redactLinkPropertiesForPackage(@NonNull LinkProperties lp, int uid,
+    public LinkProperties getRedactedLinkPropertiesForPackage(@NonNull LinkProperties lp, int uid,
             @NonNull String packageName) {
         try {
-            return mService.redactLinkPropertiesForPackage(
+            return mService.getRedactedLinkPropertiesForPackage(
                     lp, uid, packageName, getAttributionTag());
         } catch (RemoteException e) {
             throw e.rethrowFromSystemServer();
@@ -1683,9 +1683,11 @@ public class ConnectivityManager {
      * Redact {@link NetworkCapabilities} for a given package.
      *
      * Returns an instance of {@link NetworkCapabilities} that is appropriately redacted to send
-     * to the given package, considering its permissions. Calling this method will blame the UID for
-     * retrieving the device location if the passed capabilities contain location-sensitive
-     * information.
+     * to the given package, considering its permissions. If the passed capabilities contain
+     * location-sensitive information, they will be redacted to the correct degree for the location
+     * permissions of the app (COARSE or FINE), and will blame the UID accordingly for retrieving
+     * that level of location. If the UID holds no location permission, the returned object will
+     * contain no location-sensitive information and the UID is not blamed.
      *
      * @param nc A {@link NetworkCapabilities} instance which will be redacted.
      * @param uid The target uid.
@@ -1700,11 +1702,11 @@ public class ConnectivityManager {
             android.Manifest.permission.NETWORK_SETTINGS})
     @SystemApi(client = MODULE_LIBRARIES)
     @Nullable
-    public NetworkCapabilities redactNetworkCapabilitiesForPackage(
+    public NetworkCapabilities getRedactedNetworkCapabilitiesForPackage(
             @NonNull NetworkCapabilities nc,
             int uid, @NonNull String packageName) {
         try {
-            return mService.redactNetworkCapabilitiesForPackage(nc, uid, packageName,
+            return mService.getRedactedNetworkCapabilitiesForPackage(nc, uid, packageName,
                     getAttributionTag());
         } catch (RemoteException e) {
             throw e.rethrowFromSystemServer();
