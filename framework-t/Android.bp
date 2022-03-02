@@ -30,7 +30,7 @@ java_defaults {
 // T, and were moved to the module in T. Other bootclasspath classes in connectivity should go to
 // framework-connectivity.
 java_defaults {
-    name: "framework-connectivity-tiramisu-defaults",
+    name: "framework-connectivity-t-defaults",
     sdk_version: "module_current",
     min_sdk_version: "Tiramisu",
     defaults: [
@@ -78,8 +78,8 @@ java_defaults {
 }
 
 java_library {
-    name: "framework-connectivity-tiramisu-pre-jarjar",
-    defaults: ["framework-connectivity-tiramisu-defaults"],
+    name: "framework-connectivity-t-pre-jarjar",
+    defaults: ["framework-connectivity-t-defaults"],
     libs: [
         "framework-bluetooth",
         "framework-wifi",
@@ -92,9 +92,9 @@ java_library {
 // T, and were moved to the module in T. Other bootclasspath classes in connectivity should go to
 // framework-connectivity.
 java_sdk_library {
-    name: "framework-connectivity-tiramisu",
+    name: "framework-connectivity-t",
     defaults: [
-        "framework-connectivity-tiramisu-defaults",
+        "framework-connectivity-t-defaults",
         "enable-framework-connectivity-t-targets",
     ],
     // Do not add static_libs to this library: put them in framework-connectivity instead.
