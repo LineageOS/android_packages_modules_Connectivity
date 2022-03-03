@@ -95,7 +95,6 @@ public class TetheringConfigurationTest {
     @Mock private ModuleInfo mMi;
     private Context mMockContext;
     private boolean mHasTelephonyManager;
-    private boolean mEnableLegacyDhcpServer;
     private MockitoSession mMockingSession;
     private MockContentResolver mContentResolver;
 
@@ -185,7 +184,6 @@ public class TetheringConfigurationTest {
 
         mHasTelephonyManager = true;
         mMockContext = new MockContext(mContext);
-        mEnableLegacyDhcpServer = false;
 
         mContentResolver = new MockContentResolver(mMockContext);
         mContentResolver.addProvider(Settings.AUTHORITY, new FakeSettingsProvider());
@@ -397,7 +395,7 @@ public class TetheringConfigurationTest {
 
         final TetheringConfiguration enableByRes =
                 new TetheringConfiguration(mMockContext, mLog, INVALID_SUBSCRIPTION_ID);
-        assertTrue(enableByRes.enableLegacyDhcpServer);
+        assertTrue(enableByRes.useLegacyDhcpServer());
 
         when(mResources.getBoolean(R.bool.config_tether_enable_legacy_dhcp_server)).thenReturn(
                 false);
@@ -407,7 +405,7 @@ public class TetheringConfigurationTest {
 
         final TetheringConfiguration enableByDevConfig =
                 new TetheringConfiguration(mMockContext, mLog, INVALID_SUBSCRIPTION_ID);
-        assertTrue(enableByDevConfig.enableLegacyDhcpServer);
+        assertTrue(enableByDevConfig.useLegacyDhcpServer());
     }
 
     @Test
@@ -421,7 +419,7 @@ public class TetheringConfigurationTest {
         final TetheringConfiguration cfg =
                 new TetheringConfiguration(mMockContext, mLog, INVALID_SUBSCRIPTION_ID);
 
-        assertFalse(cfg.enableLegacyDhcpServer);
+        assertFalse(cfg.useLegacyDhcpServer());
     }
 
     @Test
