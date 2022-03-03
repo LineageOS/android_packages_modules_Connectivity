@@ -29,14 +29,15 @@ import static android.bluetooth.BluetoothGattCharacteristic.PROPERTY_INDICATE;
 import static android.bluetooth.BluetoothGattCharacteristic.PROPERTY_NOTIFY;
 import static android.bluetooth.BluetoothGattCharacteristic.PROPERTY_READ;
 import static android.bluetooth.BluetoothGattCharacteristic.PROPERTY_WRITE;
-import static com.android.server.nearby.common.bluetooth.fastpair.testing.RfcommServer.State.CONNECTED;
 
 import static com.android.server.nearby.common.bluetooth.fastpair.AesEcbSingleBlockEncryption.AES_BLOCK_LENGTH;
 import static com.android.server.nearby.common.bluetooth.fastpair.AesEcbSingleBlockEncryption.encrypt;
 import static com.android.server.nearby.common.bluetooth.fastpair.Bytes.toBytes;
 import static com.android.server.nearby.common.bluetooth.fastpair.Constants.A2DP_SINK_SERVICE_UUID;
 import static com.android.server.nearby.common.bluetooth.fastpair.Constants.TransportDiscoveryService.BLUETOOTH_SIG_ORGANIZATION_ID;
+import static com.android.server.nearby.common.bluetooth.fastpair.EllipticCurveDiffieHellmanExchange.PUBLIC_KEY_LENGTH;
 import static com.android.server.nearby.common.bluetooth.fastpair.MessageStreamHmacEncoder.SECTION_NONCE_LENGTH;
+import static com.android.server.nearby.common.bluetooth.fastpair.testing.RfcommServer.State.CONNECTED;
 import static com.android.server.nearby.common.bluetooth.testability.android.bluetooth.BluetoothManager.wrap;
 
 import static com.google.common.io.BaseEncoding.base16;
@@ -55,7 +56,12 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.nearby.multidevices.fastpair.EventStreamProtocol;
+import android.nearby.multidevices.fastpair.EventStreamProtocol.AcknowledgementEventCode;
+import android.nearby.multidevices.fastpair.EventStreamProtocol.DeviceActionEventCode;
+import android.nearby.multidevices.fastpair.EventStreamProtocol.DeviceCapabilitySyncEventCode;
+import android.nearby.multidevices.fastpair.EventStreamProtocol.DeviceConfigurationEventCode;
+import android.nearby.multidevices.fastpair.EventStreamProtocol.DeviceEventCode;
+import android.nearby.multidevices.fastpair.EventStreamProtocol.EventGroup;
 import android.os.Build.VERSION;
 import android.os.Build.VERSION_CODES;
 import android.os.Handler;
@@ -68,6 +74,8 @@ import androidx.annotation.Nullable;
 import androidx.annotation.VisibleForTesting;
 import androidx.core.util.Consumer;
 
+import com.android.server.nearby.common.bloomfilter.BloomFilter;
+import com.android.server.nearby.common.bloomfilter.FastPairBloomFilterHasher;
 import com.android.server.nearby.common.bluetooth.BluetoothException;
 import com.android.server.nearby.common.bluetooth.BluetoothGattException;
 import com.android.server.nearby.common.bluetooth.fastpair.AesEcbSingleBlockEncryption;
@@ -83,6 +91,8 @@ import com.android.server.nearby.common.bluetooth.fastpair.Constants.FastPairSer
 import com.android.server.nearby.common.bluetooth.fastpair.Constants.FastPairService.NameCharacteristic;
 import com.android.server.nearby.common.bluetooth.fastpair.Constants.FastPairService.PasskeyCharacteristic;
 import com.android.server.nearby.common.bluetooth.fastpair.Constants.TransportDiscoveryService;
+import com.android.server.nearby.common.bluetooth.fastpair.Constants.TransportDiscoveryService.BrHandoverDataCharacteristic;
+import com.android.server.nearby.common.bluetooth.fastpair.Constants.TransportDiscoveryService.ControlPointCharacteristic;
 import com.android.server.nearby.common.bluetooth.fastpair.EllipticCurveDiffieHellmanExchange;
 import com.android.server.nearby.common.bluetooth.fastpair.Ltv;
 import com.android.server.nearby.common.bluetooth.fastpair.MessageStreamHmacEncoder;
@@ -98,13 +108,8 @@ import com.android.server.nearby.common.bluetooth.gatt.server.BluetoothGattServl
 
 import com.google.common.base.Ascii;
 import com.google.common.primitives.Bytes;
-
-import com.android.server.nearby.common.bloomfilter.BloomFilter;
-import com.android.server.nearby.common.bloomfilter.FastPairBloomFilterHasher;
-
 import com.google.protobuf.ByteString;
 
-import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Method;
 import java.nio.ByteOrder;
 import java.nio.charset.StandardCharsets;
@@ -250,12 +255,14 @@ public class FastPairSimulator {
                         return;
                     }
                     if (isDestroyed) {
-                        // Sometimes this receiver does not successfully unregister in destroy() which causes
-                        // events to occur after the simulator is stopped, so ignore those events.
+                        // Sometimes this receiver does not successfully unregister in destroy()
+                        // which causes events to occur after the simulator is stopped, so ignore
+                        // those events.
                         logger.log("Intent received after simulator destroyed, ignoring");
                         return;
                     }
-                    BluetoothDevice device = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
+                    BluetoothDevice device = intent.getParcelableExtra(
+                            BluetoothDevice.EXTRA_DEVICE);
                     switch (intent.getAction()) {
                         case BluetoothAdapter.ACTION_SCAN_MODE_CHANGED:
                             if (isDiscoverable()) {
@@ -263,28 +270,34 @@ public class FastPairSimulator {
                             }
                             break;
                         case BluetoothDevice.ACTION_PAIRING_REQUEST:
-                            int variant = intent.getIntExtra(BluetoothDevice.EXTRA_PAIRING_VARIANT, ERROR);
+                            int variant = intent.getIntExtra(BluetoothDevice.EXTRA_PAIRING_VARIANT,
+                                    ERROR);
                             int key = intent.getIntExtra(BluetoothDevice.EXTRA_PAIRING_KEY, ERROR);
                             logger.log(
-                                    "Pairing request, variant=%d, key=%s", variant, key == ERROR ? "(none)" : key);
+                                    "Pairing request, variant=%d, key=%s", variant,
+                                    key == ERROR ? "(none)" : key);
 
                             // Prevent Bluetooth Settings from getting the pairing request.
                             abortBroadcast();
 
                             pairingDevice = device;
                             if (secret == null) {
-                                // We haven't done the handshake over GATT to agree on the shared secret. For now,
-                                // just accept anyway (so we can still simulate old 1.0 model IDs).
+                                // We haven't done the handshake over GATT to agree on the shared
+                                // secret. For now, just accept anyway (so we can still simulate
+                                // old 1.0 model IDs).
                                 logger.log("No handshake, auto-accepting anyway.");
                                 setPasskeyConfirmation(true);
-                            } else if (variant == BluetoothDevice.PAIRING_VARIANT_PASSKEY_CONFIRMATION) {
-                                // Store the passkey. And check it, since there's a race (see method for why).
-                                // Usually this check is a no-op and we'll get the passkey later over GATT.
+                            } else if (variant
+                                    == BluetoothDevice.PAIRING_VARIANT_PASSKEY_CONFIRMATION) {
+                                // Store the passkey. And check it, since there's a race (see
+                                // method for why). Usually this check is a no-op and we'll get
+                                // the passkey later over GATT.
                                 localPasskey = key;
                                 checkPasskey();
                             } else if (variant == PAIRING_VARIANT_DISPLAY_PASSKEY) {
                                 if (passkeyEventCallback != null) {
-                                    passkeyEventCallback.onPasskeyRequested(FastPairSimulator.this::enterPassKey);
+                                    passkeyEventCallback.onPasskeyRequested(
+                                            FastPairSimulator.this::enterPassKey);
                                 } else {
                                     logger.log("passkeyEventCallback is not set!");
                                     enterPassKey(key);
@@ -295,20 +308,22 @@ public class FastPairSimulator {
                             } else if (variant == BluetoothDevice.PAIRING_VARIANT_PIN) {
                                 if (passkeyEventCallback != null) {
                                     passkeyEventCallback.onPasskeyRequested(
-                                            (int pin) ->
-                                                    pairingDevice.setPin(
-                                                            convertPinToBytes(
-                                                                    String.format(Locale.ENGLISH, "%d", pin))));
+                                            (int pin) -> {
+                                                byte[] newPin = convertPinToBytes(
+                                                        String.format(Locale.ENGLISH, "%d", pin));
+                                                pairingDevice.setPin(newPin);
+                                            });
                                 }
                             } else {
-                                // Reject the pairing request if it's not using the Numeric Comparison (aka Passkey
-                                // Confirmation) method.
+                                // Reject the pairing request if it's not using the Numeric
+                                // Comparison (aka Passkey Confirmation) method.
                                 setPasskeyConfirmation(false);
                             }
                             break;
                         case BluetoothDevice.ACTION_BOND_STATE_CHANGED:
                             int bondState =
-                                    intent.getIntExtra(BluetoothDevice.EXTRA_BOND_STATE, BluetoothDevice.BOND_NONE);
+                                    intent.getIntExtra(BluetoothDevice.EXTRA_BOND_STATE,
+                                            BluetoothDevice.BOND_NONE);
                             logger.log("Bond state to %s changed to %d", device, bondState);
                             switch (bondState) {
                                 case BluetoothDevice.BOND_BONDING:
@@ -323,7 +338,9 @@ public class FastPairSimulator {
                                     setScanMode(BluetoothAdapter.SCAN_MODE_CONNECTABLE);
 
                                     // If it is subsequent pair, we need to add paired device here.
-                                    if (isSubsequentPair && secret != null && secret.length == AES_BLOCK_LENGTH) {
+                                    if (isSubsequentPair
+                                            && secret != null
+                                            && secret.length == AES_BLOCK_LENGTH) {
                                         addAccountKey(secret, pairingDevice);
                                     }
                                     break;
@@ -357,8 +374,8 @@ public class FastPairSimulator {
                             }
                             break;
                         default:
-                            logger.log(
-                                    new IllegalArgumentException(intent.toString()), "Received unexpected intent");
+                            logger.log(new IllegalArgumentException(intent.toString()),
+                                    "Received unexpected intent");
                             break;
                     }
                 }
@@ -370,12 +387,7 @@ public class FastPairSimulator {
             return null;
         }
         byte[] pinBytes;
-        try {
-            pinBytes = pin.getBytes("UTF-8");
-        } catch (UnsupportedEncodingException uee) {
-            logger.log("UTF-8 not supported?!?");
-            return null;
-        }
+        pinBytes = pin.getBytes(StandardCharsets.UTF_8);
         if (pinBytes.length <= 0 || pinBytes.length > 16) {
             return null;
         }
@@ -395,7 +407,8 @@ public class FastPairSimulator {
                 }
 
                 @Override
-                public void write(BluetoothGattServerConnection connection, int offset, byte[] value) {
+                public void write(
+                        BluetoothGattServerConnection connection, int offset, byte[] value) {
                     logger.log("Got value from passkey servlet: %s", base16().encode(value));
                     if (secret == null) {
                         logger.log("Ignoring write to passkey characteristic, no pairing secret.");
@@ -403,8 +416,8 @@ public class FastPairSimulator {
                     }
 
                     try {
-                        remotePasskey =
-                                PasskeyCharacteristic.decrypt(PasskeyCharacteristic.Type.SEEKER, secret, value);
+                        remotePasskey = PasskeyCharacteristic.decrypt(
+                                PasskeyCharacteristic.Type.SEEKER, secret, value);
                         if (passkeyEventCallback != null) {
                             passkeyEventCallback.onRemotePasskeyReceived(remotePasskey);
                         }
@@ -430,17 +443,18 @@ public class FastPairSimulator {
                 }
 
                 @Override
-                public void write(BluetoothGattServerConnection connection, int offset, byte[] value) {
+                public void write(
+                        BluetoothGattServerConnection connection, int offset, byte[] value) {
                     logger.log("Got value from device naming servlet: %s", base16().encode(value));
                     if (secret == null) {
                         logger.log("Ignoring write to name characteristic, no pairing secret.");
                         return;
                     }
-                    // Parse the device name from seeker to write name into provider. See
-                    // go/fast-pair-naming-design-doc for the decryption detail to get the device name.
+                    // Parse the device name from seeker to write name into provider.
                     logger.log("Got name byte array size = %d", value.length);
                     try {
-                        String decryptedDeviceName = NamingEncoder.decodeNamingPacket(secret, value);
+                        String decryptedDeviceName =
+                                NamingEncoder.decodeNamingPacket(secret, value);
                         if (decryptedDeviceName != null) {
                             setDeviceName(decryptedDeviceName.getBytes(StandardCharsets.UTF_8));
                             logger.log("write device name = %s", decryptedDeviceName);
@@ -458,7 +472,8 @@ public class FastPairSimulator {
 
     private Value bluetoothAddress;
     private final FastPairAdvertiser advertiser;
-    private final Map<String, BluetoothGattServerHelper> bluetoothGattServerHelpers = new HashMap<>();
+    private final Map<String, BluetoothGattServerHelper> mBluetoothGattServerHelpers =
+            new HashMap<>();
     private CountDownLatch isDiscoverableLatch = new CountDownLatch(1);
     private ScheduledFuture<?> revertDiscoverableFuture;
     private boolean shouldFailPairing = false;
@@ -532,9 +547,9 @@ public class FastPairSimulator {
     }
 
     /** Send Event Message on to rfcomm connected devices. */
-    public void sendEventStreamMessageToRfcommDevices(EventStreamProtocol.EventGroup eventGroup) {
+    public void sendEventStreamMessageToRfcommDevices(EventGroup eventGroup) {
         // Send fake log when event code is logging and type is not using Log_Full event.
-        if (eventGroup == EventStreamProtocol.EventGroup.LOGGING && !useLogFullEvent) {
+        if (eventGroup == EventGroup.LOGGING && !useLogFullEvent) {
             rfcommServer.sendFakeEventStreamLoggingMessage(
                     getDeviceName()
                             + " "
@@ -568,8 +583,8 @@ public class FastPairSimulator {
     }
 
     /**
-     * Callback when there comes a passkey input request from BT service, or receiving remote device's
-     * passkey.
+     * Callback when there comes a passkey input request from BT service, or receiving remote
+     * device's passkey.
      */
     public interface PasskeyEventCallback {
         void onPasskeyRequested(KeyInputCallback keyInputCallback);
@@ -816,7 +831,8 @@ public class FastPairSimulator {
                 this.mCallback = option.mCallback;
                 this.mIncludeTransportDataDescriptor = option.mIncludeTransportDataDescriptor;
                 this.mAntiSpoofingPrivateKey = option.mAntiSpoofingPrivateKey;
-                this.mUseRandomSaltForAccountKeyRotation = option.mUseRandomSaltForAccountKeyRotation;
+                this.mUseRandomSaltForAccountKeyRotation =
+                        option.mUseRandomSaltForAccountKeyRotation;
                 this.mIsMemoryTest = option.mIsMemoryTest;
                 this.mBecomeDiscoverable = option.mBecomeDiscoverable;
                 this.mShowsPasskeyConfirmation = option.mShowsPasskeyConfirmation;
@@ -834,7 +850,10 @@ public class FastPairSimulator {
                 return this;
             }
 
-            /** Must be a 6-byte hex string (optionally with colons). Default is this device's BT MAC. */
+            /**
+             * Must be a 6-byte hex string (optionally with colons).
+             * Default is this device's BT MAC.
+             */
             public Builder setBluetoothAddress(@Nullable String bluetoothAddress) {
                 this.mBluetoothAddress = bluetoothAddress;
                 return this;
@@ -864,10 +883,11 @@ public class FastPairSimulator {
 
             /**
              * Set whether to include the Transport Data descriptor, which has the list of supported
-             * profiles. This is required by the spec, but if we can't get it, we recover gracefully by
-             * assuming support for one of {A2DP, Headset}. Default is true.
+             * profiles. This is required by the spec, but if we can't get it, we recover gracefully
+             * by assuming support for one of {A2DP, Headset}. Default is true.
              */
-            public Builder setIncludeTransportDataDescriptor(boolean includeTransportDataDescriptor) {
+            public Builder setIncludeTransportDataDescriptor(
+                    boolean includeTransportDataDescriptor) {
                 this.mIncludeTransportDataDescriptor = includeTransportDataDescriptor;
                 return this;
             }
@@ -915,7 +935,10 @@ public class FastPairSimulator {
                 return this;
             }
 
-            /** Non-public because this is required to create a builder. See {@link Options#builder}. */
+            /**
+             * Non-public because this is required to create a builder. See
+             * {@link Options#builder}.
+             */
             public Builder setModelId(String modelId) {
                 this.mModelId = modelId;
                 return this;
@@ -959,7 +982,8 @@ public class FastPairSimulator {
         String bluetoothAddress =
                 !TextUtils.isEmpty(options.getBluetoothAddress())
                         ? options.getBluetoothAddress()
-                        : Settings.Secure.getString(context.getContentResolver(), "bluetooth_address");
+                        : Settings.Secure.getString(context.getContentResolver(),
+                                "bluetooth_address");
         if (bluetoothAddress == null && VERSION.SDK_INT >= VERSION_CODES.O) {
             // Requires a modified Android O build for access to bluetoothAdapter.getAddress().
             // See http://google3/java/com/google/location/nearby/apps/fastpair/simulator/README.md.
@@ -979,12 +1003,12 @@ public class FastPairSimulator {
                 deviceName != null ? new String(deviceName, StandardCharsets.UTF_8) : null);
 
         if (dataOnlyConnection) {
-            // To get BLE address, we need to start advertising first, and then {@code #setBleAddress}
-            // will be called with BLE address.
+            // To get BLE address, we need to start advertising first, and then
+            // {@code#setBleAddress} will be called with BLE address.
             advertiser.startAdvertising(modelIdServiceData(/* forAdvertising= */ true));
         } else {
-            // TODO(jklinker): Make this so that the simulator doesn't start automatically. This is tricky
-            // since the simulator is used in our integ tests as well.
+            // Make this so that the simulator doesn't start automatically.
+            // This is tricky since the simulator is used in our integ tests as well.
             start(bleAddress != null ? bleAddress : bluetoothAddress);
         }
     }
@@ -1001,7 +1025,7 @@ public class FastPairSimulator {
                 (BluetoothManager) context.getSystemService(Context.BLUETOOTH_SERVICE);
         BluetoothGattServerHelper bluetoothGattServerHelper =
                 new BluetoothGattServerHelper(context, wrap(bluetoothManager));
-        bluetoothGattServerHelpers.put(address, bluetoothGattServerHelper);
+        mBluetoothGattServerHelpers.put(address, bluetoothGattServerHelper);
 
         if (options.getBecomeDiscoverable()) {
             try {
@@ -1018,8 +1042,8 @@ public class FastPairSimulator {
     }
 
     /**
-     * Regenerate service data on a fixed interval. This causes the bloom filter to be refreshed and a
-     * different salt to be used for rotation.
+     * Regenerate service data on a fixed interval.
+     * This causes the bloom filter to be refreshed and a different salt to be used for rotation.
      */
     @SuppressWarnings("FutureReturnValueIgnored")
     private void scheduleAdvertisingRefresh() {
@@ -1044,7 +1068,7 @@ public class FastPairSimulator {
             isDestroyed = true;
             context.unregisterReceiver(broadcastReceiver);
             advertiser.stopAdvertising();
-            for (BluetoothGattServerHelper helper : bluetoothGattServerHelpers.values()) {
+            for (BluetoothGattServerHelper helper : mBluetoothGattServerHelpers.values()) {
                 helper.close();
             }
             stopRfcommServer();
@@ -1088,8 +1112,8 @@ public class FastPairSimulator {
         // When BLE address changes, needs to send BLE address to the client again.
         sendDeviceBleAddress(bleAddress);
 
-        // If we are advertising something other than the model id (eg the bloom filter), restart the
-        // advertisement so that it is updated with the new address.
+        // If we are advertising something other than the model id (e.g. the bloom filter), restart
+        // the advertisement so that it is updated with the new address.
         if (isAdvertising() && !isDiscoverable()) {
             advertiser.startAdvertising(getServiceData());
         }
@@ -1123,7 +1147,8 @@ public class FastPairSimulator {
             characteristic.addDescriptor(
                     new BluetoothGattDescriptor(
                             Constants.CLIENT_CHARACTERISTIC_CONFIGURATION_DESCRIPTOR_UUID,
-                            BluetoothGattDescriptor.PERMISSION_READ | BluetoothGattDescriptor.PERMISSION_WRITE));
+                            BluetoothGattDescriptor.PERMISSION_READ
+                                    | BluetoothGattDescriptor.PERMISSION_WRITE));
             return characteristic;
         }
 
@@ -1157,9 +1182,9 @@ public class FastPairSimulator {
                         for (Map.Entry<BluetoothGattServerConnection, Notifier> entry :
                                 connections.entrySet()) {
                             try {
-                                logger.log(
-                                        "Sending notify %s to %s",
-                                        getCharacteristic(), entry.getKey().getDevice().getAddress());
+                                logger.log("Sending notify %s to %s",
+                                        getCharacteristic(),
+                                        entry.getKey().getDevice().getAddress());
                                 entry.getValue().notify(data);
                             } catch (BluetoothException e) {
                                 logger.log(
@@ -1174,58 +1199,61 @@ public class FastPairSimulator {
     }
 
     private void startRfcommServer() {
-        rfcommServer.setRequestHandler(
-                (int eventGroup, int eventCode, byte[] data) -> {
-                    switch (eventGroup) {
-                        case EventStreamProtocol.EventGroup.DEVICE_VALUE:
-                            if (eventCode == EventStreamProtocol.DeviceEventCode.DEVICE_CAPABILITY_VALUE
-                                    && data != null) {
-                                logger.log("Received phone capability: %s", base16().encode(data));
-                            } else if (eventCode == EventStreamProtocol.DeviceEventCode.PLATFORM_TYPE_VALUE
-                                    && data != null) {
-                                logger.log("Received platform type: %s", base16().encode(data));
-                            }
-                            break;
-                        case EventStreamProtocol.EventGroup.DEVICE_ACTION_VALUE:
-                            if (eventCode == EventStreamProtocol.DeviceActionEventCode.DEVICE_ACTION_RING_VALUE) {
-                                logger.log("receive device action with ring value, data = %d", data[0]);
-                                sendDeviceRingActionResponse();
-                                // Simulate notifying the seeker that the ringing has stopped due to user
-                                // interaction (such as tapping the bud).
-                                uiThreadHandler.postDelayed(this::sendDeviceRingStoppedAction, 5000);
-                            }
-                            break;
-                        case EventStreamProtocol.EventGroup.DEVICE_CONFIGURATION_VALUE:
-                            if (eventCode
-                                    == EventStreamProtocol.DeviceConfigurationEventCode.CONFIGURATION_BUFFER_SIZE_VALUE) {
-                                logger.log(
-                                        "receive device action with buffer size value, data = %s",
-                                        base16().encode(data));
-                                sendSetBufferActionResponse(data);
-                            }
-                            break;
-                        case EventStreamProtocol.EventGroup.DEVICE_CAPABILITY_SYNC_VALUE:
-                            if (eventCode
-                                    == EventStreamProtocol.DeviceCapabilitySyncEventCode.REQUEST_CAPABILITY_UPDATE_VALUE) {
-                                logger.log("receive device capability update request.");
-                                sendCapabilitySync();
-                            }
-                            break;
-                        default: // fall out
-                    }
-                });
-        rfcommServer.setStateMonitor(
-                state -> {
-                    logger.log("RfcommServer is in %s state", state);
-                    if (CONNECTED.equals(state)) {
-                        sendModelId();
-                        sendDeviceBleAddress(bleAddress);
-                        sendFirmwareVersion();
-                        sendSessionNonce();
-                    }
-                });
-
+        rfcommServer.setRequestHandler(this::handleRfcommServerRequest);
+        rfcommServer.setStateMonitor(state -> {
+            logger.log("RfcommServer is in %s state", state);
+            if (CONNECTED.equals(state)) {
+                sendModelId();
+                sendDeviceBleAddress(bleAddress);
+                sendFirmwareVersion();
+                sendSessionNonce();
+            }
+        });
         rfcommServer.start();
+    }
+
+    private void handleRfcommServerRequest(int eventGroup, int eventCode, byte[] data) {
+        switch (eventGroup) {
+            case EventGroup.DEVICE_VALUE:
+                if (data == null) {
+                    break;
+                }
+
+                String deviceValue = base16().encode(data);
+                if (eventCode == DeviceEventCode.DEVICE_CAPABILITY_VALUE) {
+                    logger.log("Received phone capability: %s", deviceValue);
+                } else if (eventCode == DeviceEventCode.PLATFORM_TYPE_VALUE) {
+                    logger.log("Received platform type: %s", deviceValue);
+                }
+                break;
+            case EventGroup.DEVICE_ACTION_VALUE:
+                if (eventCode == DeviceActionEventCode.DEVICE_ACTION_RING_VALUE) {
+                    logger.log("receive device action with ring value, data = %d",
+                            data[0]);
+                    sendDeviceRingActionResponse();
+                    // Simulate notifying the seeker that the ringing has stopped due
+                    // to user interaction (such as tapping the bud).
+                    uiThreadHandler.postDelayed(this::sendDeviceRingStoppedAction,
+                            5000);
+                }
+                break;
+            case EventGroup.DEVICE_CONFIGURATION_VALUE:
+                if (eventCode == DeviceConfigurationEventCode.CONFIGURATION_BUFFER_SIZE_VALUE) {
+                    logger.log(
+                            "receive device action with buffer size value, data = %s",
+                            base16().encode(data));
+                    sendSetBufferActionResponse(data);
+                }
+                break;
+            case EventGroup.DEVICE_CAPABILITY_SYNC_VALUE:
+                if (eventCode == DeviceCapabilitySyncEventCode.REQUEST_CAPABILITY_UPDATE_VALUE) {
+                    logger.log("receive device capability update request.");
+                    sendCapabilitySync();
+                }
+                break;
+            default: // fall out
+                break;
+        }
     }
 
     private void stopRfcommServer() {
@@ -1237,18 +1265,17 @@ public class FastPairSimulator {
     private void sendModelId() {
         logger.log("Send model ID to the client");
         rfcommServer.send(
-                EventStreamProtocol.EventGroup.DEVICE_VALUE,
-                EventStreamProtocol.DeviceEventCode.DEVICE_MODEL_ID_VALUE,
+                EventGroup.DEVICE_VALUE,
+                DeviceEventCode.DEVICE_MODEL_ID_VALUE,
                 modelIdServiceData(/* forAdvertising= */ false));
     }
 
     private void sendDeviceBleAddress(String bleAddress) {
         logger.log("Send BLE address (%s) to the client", bleAddress);
-        // TODO(b/134244147): to solve central address resolution problem, adds api for simulator app.
         if (bleAddress != null) {
             rfcommServer.send(
-                    EventStreamProtocol.EventGroup.DEVICE_VALUE,
-                    EventStreamProtocol.DeviceEventCode.DEVICE_BLE_ADDRESS_VALUE,
+                    EventGroup.DEVICE_VALUE,
+                    DeviceEventCode.DEVICE_BLE_ADDRESS_VALUE,
                     BluetoothAddress.decode(bleAddress));
         }
     }
@@ -1256,8 +1283,8 @@ public class FastPairSimulator {
     private void sendFirmwareVersion() {
         logger.log("Send Firmware Version (%s) to the client", deviceFirmwareVersion);
         rfcommServer.send(
-                EventStreamProtocol.EventGroup.DEVICE_VALUE,
-                EventStreamProtocol.DeviceEventCode.FIRMWARE_VERSION_VALUE,
+                EventGroup.DEVICE_VALUE,
+                DeviceEventCode.FIRMWARE_VERSION_VALUE,
                 deviceFirmwareVersion.getBytes());
     }
 
@@ -1266,18 +1293,18 @@ public class FastPairSimulator {
         SecureRandom secureRandom = new SecureRandom();
         sessionNonce = new byte[SECTION_NONCE_LENGTH];
         secureRandom.nextBytes(sessionNonce);
-        rfcommServer.send(EventStreamProtocol.EventGroup.DEVICE_VALUE,
-                EventStreamProtocol.DeviceEventCode.SECTION_NONCE_VALUE, sessionNonce);
+        rfcommServer.send(
+                EventGroup.DEVICE_VALUE, DeviceEventCode.SECTION_NONCE_VALUE, sessionNonce);
     }
 
     private void sendDeviceRingActionResponse() {
         logger.log("Send device ring action response to the client");
         rfcommServer.send(
-                EventStreamProtocol.EventGroup.ACKNOWLEDGEMENT_VALUE,
-                EventStreamProtocol.AcknowledgementEventCode.ACKNOWLEDGEMENT_ACK_VALUE,
+                EventGroup.ACKNOWLEDGEMENT_VALUE,
+                AcknowledgementEventCode.ACKNOWLEDGEMENT_ACK_VALUE,
                 new byte[]{
-                        EventStreamProtocol.EventGroup.DEVICE_ACTION_VALUE,
-                        EventStreamProtocol.DeviceActionEventCode.DEVICE_ACTION_RING_VALUE
+                        EventGroup.DEVICE_ACTION_VALUE,
+                        DeviceActionEventCode.DEVICE_ACTION_RING_VALUE
                 });
     }
 
@@ -1285,10 +1312,11 @@ public class FastPairSimulator {
         boolean hmacPassed = false;
         for (ByteString accountKey : getAccountKeys()) {
             try {
-                if (MessageStreamHmacEncoder.verifyHmac(accountKey.toByteArray(), sessionNonce, data)) {
+                if (MessageStreamHmacEncoder.verifyHmac(
+                        accountKey.toByteArray(), sessionNonce, data)) {
                     hmacPassed = true;
-                    logger.log(
-                            "Buffer size data matches account key %s", base16().encode(accountKey.toByteArray()));
+                    logger.log("Buffer size data matches account key %s",
+                            base16().encode(accountKey.toByteArray()));
                     break;
                 }
             } catch (GeneralSecurityException e) {
@@ -1298,11 +1326,11 @@ public class FastPairSimulator {
         if (hmacPassed) {
             logger.log("Send buffer size action response %s to the client", base16().encode(data));
             rfcommServer.send(
-                    EventStreamProtocol.EventGroup.ACKNOWLEDGEMENT_VALUE,
-                    EventStreamProtocol.AcknowledgementEventCode.ACKNOWLEDGEMENT_ACK_VALUE,
+                    EventGroup.ACKNOWLEDGEMENT_VALUE,
+                    AcknowledgementEventCode.ACKNOWLEDGEMENT_ACK_VALUE,
                     new byte[]{
-                            EventStreamProtocol.EventGroup.DEVICE_CONFIGURATION_VALUE,
-                            EventStreamProtocol.DeviceConfigurationEventCode.CONFIGURATION_BUFFER_SIZE_VALUE,
+                            EventGroup.DEVICE_CONFIGURATION_VALUE,
+                            DeviceConfigurationEventCode.CONFIGURATION_BUFFER_SIZE_VALUE,
                             data[0],
                             data[1],
                             data[2]
@@ -1317,8 +1345,8 @@ public class FastPairSimulator {
         if (supportDynamicBufferSize) {
             logger.log("Send dynamic buffer size range to the client");
             rfcommServer.send(
-                    EventStreamProtocol.EventGroup.DEVICE_CAPABILITY_SYNC_VALUE,
-                    EventStreamProtocol.DeviceCapabilitySyncEventCode.CONFIGURABLE_BUFFER_SIZE_RANGE_VALUE,
+                    EventGroup.DEVICE_CAPABILITY_SYNC_VALUE,
+                    DeviceCapabilitySyncEventCode.CONFIGURABLE_BUFFER_SIZE_RANGE_VALUE,
                     new byte[]{
                             0x00, 0x01, (byte) 0xf4, 0x00, 0x64, 0x00, (byte) 0xc8,
                             0x01, 0x00, (byte) 0xff, 0x00, 0x01, 0x00, (byte) 0x88,
@@ -1332,8 +1360,8 @@ public class FastPairSimulator {
     private void sendDeviceRingStoppedAction() {
         logger.log("Sending device ring stopped action to the client");
         rfcommServer.send(
-                EventStreamProtocol.EventGroup.DEVICE_ACTION_VALUE,
-                EventStreamProtocol.DeviceActionEventCode.DEVICE_ACTION_RING_VALUE,
+                EventGroup.DEVICE_ACTION_VALUE,
+                DeviceActionEventCode.DEVICE_ACTION_RING_VALUE,
                 // Additional data for stopping ringing on all components.
                 new byte[]{0x00});
     }
@@ -1343,16 +1371,16 @@ public class FastPairSimulator {
                 new NotifiableGattServlet() {
                     @Override
                     public BluetoothGattCharacteristic getBaseCharacteristic() {
-                        return new BluetoothGattCharacteristic(
-                                TransportDiscoveryService.ControlPointCharacteristic.ID,
-                                PROPERTY_WRITE | PROPERTY_INDICATE,
-                                PERMISSION_WRITE);
+                        return new BluetoothGattCharacteristic(ControlPointCharacteristic.ID,
+                                PROPERTY_WRITE | PROPERTY_INDICATE, PERMISSION_WRITE);
                     }
 
                     @Override
-                    public void write(BluetoothGattServerConnection connection, int offset, byte[] value)
+                    public void write(
+                            BluetoothGattServerConnection connection, int offset, byte[] value)
                             throws BluetoothGattException {
-                        logger.log("Requested TDS Control Point write, value=%s", base16().encode(value));
+                        logger.log("Requested TDS Control Point write, value=%s",
+                                base16().encode(value));
 
                         ResultCode resultCode = checkTdsControlPointRequest(value);
                         if (resultCode == ResultCode.SUCCESS) {
@@ -1369,7 +1397,10 @@ public class FastPairSimulator {
                         logger.log("Sending TDS Control Point response indication");
                         sendNotification(
                                 Bytes.concat(
-                                        new byte[]{getTdsControlPointOpCode(value), resultCode.byteValue},
+                                        new byte[]{
+                                                getTdsControlPointOpCode(value),
+                                                resultCode.byteValue,
+                                        },
                                         resultCode == ResultCode.SUCCESS
                                                 ? TDS_CONTROL_POINT_RESPONSE_PARAMETER
                                                 : new byte[0]));
@@ -1381,17 +1412,14 @@ public class FastPairSimulator {
 
                     @Override
                     public BluetoothGattCharacteristic getCharacteristic() {
-                        return new BluetoothGattCharacteristic(
-                                TransportDiscoveryService.BrHandoverDataCharacteristic.ID,
-                                PROPERTY_READ,
-                                PERMISSION_READ);
+                        return new BluetoothGattCharacteristic(BrHandoverDataCharacteristic.ID,
+                                PROPERTY_READ, PERMISSION_READ);
                     }
 
                     @Override
-                    public byte[] read(BluetoothGattServerConnection connection, int offset)
-                            throws BluetoothGattException {
+                    public byte[] read(BluetoothGattServerConnection connection, int offset) {
                         return Bytes.concat(
-                                new byte[]{TransportDiscoveryService.BrHandoverDataCharacteristic.BR_EDR_FEATURES},
+                                new byte[]{BrHandoverDataCharacteristic.BR_EDR_FEATURES},
                                 bluetoothAddress.getBytes(ByteOrder.LITTLE_ENDIAN),
                                 CLASS_OF_DEVICE.getBytes(ByteOrder.LITTLE_ENDIAN));
                     }
@@ -1441,14 +1469,18 @@ public class FastPairSimulator {
                     }
 
                     @Override
-                    public void write(BluetoothGattServerConnection connection, int offset, byte[] value) {
-                        logger.log("Got value from account key servlet: %s", base16().encode(value));
+                    public void write(
+                            BluetoothGattServerConnection connection, int offset, byte[] value) {
+                        logger.log("Got value from account key servlet: %s",
+                                base16().encode(value));
                         try {
-                            addAccountKey(AesEcbSingleBlockEncryption.decrypt(secret, value), pairingDevice);
+                            addAccountKey(AesEcbSingleBlockEncryption.decrypt(secret, value),
+                                    pairingDevice);
                         } catch (GeneralSecurityException e) {
                             logger.log(e, "Failed to decrypt account key.");
                         }
-                        uiThreadHandler.post(() -> advertiser.startAdvertising(accountKeysServiceData()));
+                        uiThreadHandler.post(
+                                () -> advertiser.startAdvertising(accountKeysServiceData()));
                     }
                 };
 
@@ -1469,7 +1501,8 @@ public class FastPairSimulator {
         BluetoothGattServlet keyBasedPairingServlet =
                 new NotifiableGattServlet() {
                     @Override
-                    // Simulating deprecated API {@code KeyBasedPairingCharacteristic.ID} for testing.
+                    // Simulating deprecated API {@code KeyBasedPairingCharacteristic.ID} for
+                    // testing.
                     @SuppressWarnings("deprecation")
                     public BluetoothGattCharacteristic getBaseCharacteristic() {
                         return new BluetoothGattCharacteristic(
@@ -1479,9 +1512,10 @@ public class FastPairSimulator {
                     }
 
                     @Override
-                    public void write(BluetoothGattServerConnection connection, int offset, byte[] value)
-                            throws BluetoothGattException {
-                        logger.log("Requesting key based pairing handshake, value=%s", base16().encode(value));
+                    public void write(
+                            BluetoothGattServerConnection connection, int offset, byte[] value) {
+                        logger.log("Requesting key based pairing handshake, value=%s",
+                                base16().encode(value));
 
                         secret = null;
                         byte[] seekerPublicAddress = null;
@@ -1495,18 +1529,19 @@ public class FastPairSimulator {
                                     isSubsequentPair = true;
                                     break;
                                 } catch (GeneralSecurityException e) {
-                                    logger.log(e, "Failed to decrypt with %s", base16().encode(candidateSecret));
+                                    logger.log(e, "Failed to decrypt with %s",
+                                            base16().encode(candidateSecret));
                                 }
                             }
-                        } else if (value.length
-                                == AES_BLOCK_LENGTH + EllipticCurveDiffieHellmanExchange.PUBLIC_KEY_LENGTH
+                        } else if (value.length == AES_BLOCK_LENGTH + PUBLIC_KEY_LENGTH
                                 && options.getAntiSpoofingPrivateKey() != null) {
                             try {
                                 byte[] encryptedRequest = Arrays.copyOf(value, AES_BLOCK_LENGTH);
                                 byte[] receivedPublicKey =
                                         Arrays.copyOfRange(value, AES_BLOCK_LENGTH, value.length);
                                 byte[] candidateSecret =
-                                        EllipticCurveDiffieHellmanExchange.create(options.getAntiSpoofingPrivateKey())
+                                        EllipticCurveDiffieHellmanExchange.create(
+                                                        options.getAntiSpoofingPrivateKey())
                                                 .generateSecret(receivedPublicKey);
                                 seekerPublicAddress = handshake(candidateSecret, encryptedRequest);
                                 secret = candidateSecret;
@@ -1530,54 +1565,61 @@ public class FastPairSimulator {
                         byte[] salt = new byte[9];
                         new Random().nextBytes(salt);
                         try {
-                            byte[] encryptedAddress =
-                                    encrypt(
-                                            secret,
-                                            Bytes.concat(
-                                                    new byte[]{KeyBasedPairingCharacteristic.Response.TYPE},
-                                                    bluetoothAddress.getBytes(ByteOrder.BIG_ENDIAN),
-                                                    salt));
+                            byte[] data = concat(
+                                    new byte[]{KeyBasedPairingCharacteristic.Response.TYPE},
+                                    bluetoothAddress.getBytes(ByteOrder.BIG_ENDIAN), salt);
+                            byte[] encryptedAddress = encrypt(secret, data);
                             logger.log(
                                     "Sending handshake response %s with size %d",
                                     base16().encode(encryptedAddress), encryptedAddress.length);
                             sendNotification(encryptedAddress);
 
-                            // Notify seeker for NameCharacteristic to get provider device name  when seeker
-                            // request device name flag is true.
-                            if (options.getEnableNameCharacteristic() && handshakeRequest.requestDeviceName()) {
+                            // Notify seeker for NameCharacteristic to get provider device name
+                            // when seeker request device name flag is true.
+                            if (options.getEnableNameCharacteristic()
+                                    && handshakeRequest.requestDeviceName()) {
                                 byte[] encryptedResponse =
-                                        getDeviceNameInBytes() != null ? createEncryptedDeviceName() : new byte[0];
+                                        getDeviceNameInBytes() != null ? createEncryptedDeviceName()
+                                                : new byte[0];
                                 logger.log(
                                         "Sending device name response %s with size %d",
-                                        base16().encode(encryptedResponse), encryptedResponse.length);
+                                        base16().encode(encryptedResponse),
+                                        encryptedResponse.length);
                                 deviceNameServlet.sendNotification(encryptedResponse);
                             }
 
-                            // Disconnects the current connection to allow the following pairing request.
-                            // Needs to be on a separate thread to avoid deadlocking and timing out (waits for a
-                            // callback from OS, which happens on this thread).
+                            // Disconnects the current connection to allow the following pairing
+                            // request. Needs to be on a separate thread to avoid deadlocking and
+                            // timing out (waits for a callback from OS, which happens on this
+                            // thread).
                             //
-                            // Note: The spec does not require you to disconnect from other devices at this point.
-                            // If headphones support multiple simultaneous connections, they should stay
-                            // connected. But Android fails to pair with the new device if we don't first
-                            // disconnect from any other device.
-                            logger.log("Skip remove bond, value=%s", options.getRemoveAllDevicesDuringPairing());
+                            // Note: The spec does not require you to disconnect from other
+                            // devices at this point.
+                            // If headphones support multiple simultaneous connections, they
+                            // should stay connected. But Android fails to pair with the new
+                            // device if we don't first disconnect from any other device.
+                            logger.log("Skip remove bond, value=%s",
+                                    options.getRemoveAllDevicesDuringPairing());
                             if (options.getRemoveAllDevicesDuringPairing()
-                                    && handshakeRequest.getType() == HandshakeRequest.Type.KEY_BASED_PAIRING_REQUEST
+                                    && handshakeRequest.getType()
+                                    == HandshakeRequest.Type.KEY_BASED_PAIRING_REQUEST
                                     && !handshakeRequest.requestRetroactivePair()) {
                                 executor.execute(() -> disconnect());
                             }
 
-                            if (handshakeRequest.getType() == HandshakeRequest.Type.KEY_BASED_PAIRING_REQUEST
+                            if (handshakeRequest.getType()
+                                    == HandshakeRequest.Type.KEY_BASED_PAIRING_REQUEST
                                     && handshakeRequest.requestProviderInitialBonding()) {
-                                // Run on executor to ensure it doesn't happen until after the notify (which tells
-                                // the remote device what address to expect).
-                                String seekerPublicAddressString = BluetoothAddress.encode(seekerPublicAddress);
-                                executor.execute(
-                                        () -> {
-                                            logger.log("Sending pairing request to %s", seekerPublicAddressString);
-                                            bluetoothAdapter.getRemoteDevice(seekerPublicAddressString).createBond();
-                                        });
+                                // Run on executor to ensure it doesn't happen until after the
+                                // notify (which tells the remote device what address to expect).
+                                String seekerPublicAddressString =
+                                        BluetoothAddress.encode(seekerPublicAddress);
+                                executor.execute(() -> {
+                                    logger.log("Sending pairing request to %s",
+                                            seekerPublicAddressString);
+                                    bluetoothAdapter.getRemoteDevice(
+                                            seekerPublicAddressString).createBond();
+                                });
                             }
                         } catch (GeneralSecurityException e) {
                             logger.log(e, "Failed to notify of static mac address");
@@ -1591,9 +1633,10 @@ public class FastPairSimulator {
 
                         byte[] decryptedAddress = handshakeRequest.getVerificationData();
                         if (bleAddress != null
-                                && Arrays.equals(decryptedAddress, BluetoothAddress.decode(bleAddress))
-                                || (Arrays.equals(
-                                decryptedAddress, bluetoothAddress.getBytes(ByteOrder.BIG_ENDIAN)))) {
+                                && Arrays.equals(decryptedAddress,
+                                BluetoothAddress.decode(bleAddress))
+                                || Arrays.equals(decryptedAddress,
+                                bluetoothAddress.getBytes(ByteOrder.BIG_ENDIAN))) {
                             logger.log("Address matches: %s", base16().encode(decryptedAddress));
                         } else {
                             throw new GeneralSecurityException(
@@ -1626,7 +1669,8 @@ public class FastPairSimulator {
                         }
 
                         logger.log(
-                                "KeyBasedPairing: initialBonding=%s, requestDeviceName=%s, retroactivePair=%s",
+                                "KeyBasedPairing: initialBonding=%s, requestDeviceName=%s, "
+                                        + "retroactivePair=%s",
                                 handshakeRequest.requestProviderInitialBonding(),
                                 handshakeRequest.requestDeviceName(),
                                 handshakeRequest.requestRetroactivePair());
@@ -1659,7 +1703,8 @@ public class FastPairSimulator {
                             logger.log("Requesting action over BLE, device action");
                         } else if (handshakeRequest.requestFollowedByAdditionalData()) {
                             logger.log(
-                                    "Requesting action over BLE, followed by additional data, type:%s",
+                                    "Requesting action over BLE, followed by additional data, "
+                                            + "type:%s",
                                     handshakeRequest.getAdditionalDataType());
                         } else {
                             logger.log("Requesting action over BLE");
@@ -1668,8 +1713,7 @@ public class FastPairSimulator {
                     }
 
                     /**
-                     * @return The encrypted device name from provider for seeker to use. See
-                     *     go/fast-pair-naming-design-doc for the encryption detail to encrypt device name.
+                     * @return The encrypted device name from provider for seeker to use.
                      */
                     private byte[] createEncryptedDeviceName() throws GeneralSecurityException {
                         byte[] deviceName = getDeviceNameInBytes();
@@ -1703,7 +1747,8 @@ public class FastPairSimulator {
                             sha256 = MessageDigest.getInstance("SHA-256");
                             sha256.reset();
                         } catch (NoSuchAlgorithmException e) {
-                            throw new IllegalStateException("System missing SHA-256 implementation.", e);
+                            throw new IllegalStateException(
+                                    "System missing SHA-256 implementation.", e);
                         }
                     }
 
@@ -1725,12 +1770,15 @@ public class FastPairSimulator {
                     }
 
                     @Override
-                    public void write(BluetoothGattServerConnection connection, int offset, byte[] value)
+                    public void write(
+                            BluetoothGattServerConnection connection, int offset, byte[] value)
                             throws BluetoothGattException {
-                        logger.log("Got value from beacon actions servlet: %s", base16().encode(value));
+                        logger.log("Got value from beacon actions servlet: %s",
+                                base16().encode(value));
                         if (value.length == 0) {
                             logger.log("Packet length invalid, %d", value.length);
-                            throw new BluetoothGattException("Packet length invalid", GATT_ERROR_INVALID_VALUE);
+                            throw new BluetoothGattException("Packet length invalid",
+                                    GATT_ERROR_INVALID_VALUE);
                         }
                         switch (value[0]) {
                             case BeaconActionType.READ_BEACON_PARAMETERS:
@@ -1747,10 +1795,12 @@ public class FastPairSimulator {
                             case BeaconActionType.RING:
                             case BeaconActionType.READ_RINGING_STATE:
                                 throw new BluetoothGattException(
-                                        "Unimplemented beacon action", BluetoothGatt.GATT_REQUEST_NOT_SUPPORTED);
+                                        "Unimplemented beacon action",
+                                        BluetoothGatt.GATT_REQUEST_NOT_SUPPORTED);
                             default:
                                 throw new BluetoothGattException(
-                                        "Unknown beacon action", BluetoothGatt.GATT_REQUEST_NOT_SUPPORTED);
+                                        "Unknown beacon action",
+                                        BluetoothGatt.GATT_REQUEST_NOT_SUPPORTED);
                         }
                     }
 
@@ -1758,7 +1808,8 @@ public class FastPairSimulator {
                             throws BluetoothGattException {
                         if (value.length < ONE_TIME_AUTH_KEY_LENGTH + ONE_TIME_AUTH_KEY_OFFSET) {
                             logger.log("Packet length invalid, %d", value.length);
-                            throw new BluetoothGattException("Packet length invalid", GATT_ERROR_INVALID_VALUE);
+                            throw new BluetoothGattException(
+                                    "Packet length invalid", GATT_ERROR_INVALID_VALUE);
                         }
                         byte[] hashedAccountKey =
                                 Arrays.copyOfRange(
@@ -1766,7 +1817,8 @@ public class FastPairSimulator {
                                         ONE_TIME_AUTH_KEY_OFFSET,
                                         ONE_TIME_AUTH_KEY_LENGTH + ONE_TIME_AUTH_KEY_OFFSET);
                         if (lastNonce == null) {
-                            throw new BluetoothGattException("Nonce wasn't set", GATT_ERROR_UNAUTHENTICATED);
+                            throw new BluetoothGattException(
+                                    "Nonce wasn't set", GATT_ERROR_UNAUTHENTICATED);
                         }
                         if (ownerOnly) {
                             ByteString accountKey = getOwnerAccountKey();
@@ -1774,7 +1826,8 @@ public class FastPairSimulator {
                                 sha256.update(accountKey.toByteArray());
                                 sha256.update(lastNonce);
                                 return Arrays.equals(
-                                        hashedAccountKey, Arrays.copyOf(sha256.digest(), ONE_TIME_AUTH_KEY_LENGTH));
+                                        hashedAccountKey,
+                                        Arrays.copyOf(sha256.digest(), ONE_TIME_AUTH_KEY_LENGTH));
                             }
                         } else {
                             Set<ByteString> accountKeys = getAccountKeys();
@@ -1782,7 +1835,8 @@ public class FastPairSimulator {
                                 sha256.update(accountKey.toByteArray());
                                 sha256.update(lastNonce);
                                 if (Arrays.equals(
-                                        hashedAccountKey, Arrays.copyOf(sha256.digest(), ONE_TIME_AUTH_KEY_LENGTH))) {
+                                        hashedAccountKey,
+                                        Arrays.copyOf(sha256.digest(), ONE_TIME_AUTH_KEY_LENGTH))) {
                                     return true;
                                 }
                             }
@@ -1807,24 +1861,29 @@ public class FastPairSimulator {
                         return data;
                     }
 
-                    private void handleReadBeaconParameters(byte[] value) throws BluetoothGattException {
+                    private void handleReadBeaconParameters(byte[] value)
+                            throws BluetoothGattException {
                         if (!verifyAccountKeyToken(value, /* ownerOnly= */ false)) {
                             throw new BluetoothGattException(
-                                    "failed to authenticate account key", GATT_ERROR_UNAUTHENTICATED);
+                                    "failed to authenticate account key",
+                                    GATT_ERROR_UNAUTHENTICATED);
                         }
                         sendNotification(
                                 fromBytes(
                                         (byte) BeaconActionType.READ_BEACON_PARAMETERS,
                                         (byte) 5 /* data length */,
                                         TRANSMISSION_POWER)
-                                        .concat(ByteString.copyFrom(intToByteArray(getBeaconClock())))
+                                        .concat(ByteString.copyFrom(
+                                                intToByteArray(getBeaconClock())))
                                         .toByteArray());
                     }
 
-                    private void handleReadProvisioningState(byte[] value) throws BluetoothGattException {
+                    private void handleReadProvisioningState(byte[] value)
+                            throws BluetoothGattException {
                         if (!verifyAccountKeyToken(value, /* ownerOnly= */ false)) {
                             throw new BluetoothGattException(
-                                    "failed to authenticate account key", GATT_ERROR_UNAUTHENTICATED);
+                                    "failed to authenticate account key",
+                                    GATT_ERROR_UNAUTHENTICATED);
                         }
                         byte flags = 0;
                         if (verifyAccountKeyToken(value, /* ownerOnly= */ true)) {
@@ -1846,30 +1905,36 @@ public class FastPairSimulator {
                                             flags)
                                             .concat(
                                                     E2eeCalculator.computeE2eeEid(
-                                                            identityKey, /* exponent= */ 10, getBeaconClock()))
+                                                            identityKey, /* exponent= */ 10,
+                                                            getBeaconClock()))
                                             .toByteArray());
                         }
                     }
 
-                    private void handleSetEphemeralIdentityKey(byte[] value) throws BluetoothGattException {
+                    private void handleSetEphemeralIdentityKey(byte[] value)
+                            throws BluetoothGattException {
                         if (!verifyAccountKeyToken(value, /* ownerOnly= */ true)) {
                             throw new BluetoothGattException(
-                                    "failed to authenticate owner account key", GATT_ERROR_UNAUTHENTICATED);
+                                    "failed to authenticate owner account key",
+                                    GATT_ERROR_UNAUTHENTICATED);
                         }
                         if (value.length
-                                != ONE_TIME_AUTH_KEY_LENGTH + ONE_TIME_AUTH_KEY_OFFSET + IDENTITY_KEY_LENGTH) {
+                                != ONE_TIME_AUTH_KEY_LENGTH + ONE_TIME_AUTH_KEY_OFFSET
+                                + IDENTITY_KEY_LENGTH) {
                             logger.log("Packet length invalid, %d", value.length);
-                            throw new BluetoothGattException("Packet length invalid", GATT_ERROR_INVALID_VALUE);
+                            throw new BluetoothGattException("Packet length invalid",
+                                    GATT_ERROR_INVALID_VALUE);
                         }
                         if (identityKey != null) {
                             throw new BluetoothGattException(
-                                    "Device is already provisioned as Eddystone", GATT_ERROR_UNAUTHENTICATED);
+                                    "Device is already provisioned as Eddystone",
+                                    GATT_ERROR_UNAUTHENTICATED);
                         }
-                        identityKey =
-                                Crypto.aesEcbNoPaddingDecrypt(
-                                        ByteString.copyFrom(ownerAccountKey),
-                                        ByteString.copyFrom(value)
-                                                .substring(ONE_TIME_AUTH_KEY_LENGTH + ONE_TIME_AUTH_KEY_OFFSET));
+                        identityKey = Crypto.aesEcbNoPaddingDecrypt(
+                                ByteString.copyFrom(ownerAccountKey),
+                                ByteString.copyFrom(value)
+                                        .substring(ONE_TIME_AUTH_KEY_LENGTH
+                                                + ONE_TIME_AUTH_KEY_OFFSET));
                     }
                 };
 
@@ -1916,7 +1981,8 @@ public class FastPairSimulator {
         logger.log("enterPassKey called with passkey %d.", passkey);
         try {
             boolean result =
-                    (Boolean) Reflect.on(pairingDevice).withMethod("setPasskey", int.class).get(passkey);
+                    (Boolean) Reflect.on(pairingDevice).withMethod("setPasskey", int.class).get(
+                            passkey);
             logger.log("enterPassKey called with result %b", result);
         } catch (ReflectionException e) {
             logger.log("enterPassKey meet Exception %s.", e.getMessage());
@@ -1938,7 +2004,8 @@ public class FastPairSimulator {
 
         logger.log("Checking localPasskey %s == remotePasskey %s", localPasskey, remotePasskey);
         boolean passkeysMatched = localPasskey == remotePasskey;
-        if (options.getShowsPasskeyConfirmation() && passkeysMatched && passkeyEventCallback != null) {
+        if (options.getShowsPasskeyConfirmation() && passkeysMatched
+                && passkeyEventCallback != null) {
             logger.log("callbacks the UI for passkey confirmation.");
             passkeyEventCallback.onPasskeyConfirmation(localPasskey, this::setPasskeyConfirmation);
         } else {
@@ -1949,7 +2016,8 @@ public class FastPairSimulator {
     private void sendPasskeyToRemoteDevice(int passkey) {
         try {
             passkeyServlet.sendNotification(
-                    PasskeyCharacteristic.encrypt(PasskeyCharacteristic.Type.PROVIDER, secret, passkey));
+                    PasskeyCharacteristic.encrypt(
+                            PasskeyCharacteristic.Type.PROVIDER, secret, passkey));
         } catch (GeneralSecurityException e) {
             logger.log(e, "Failed to encrypt passkey response.");
         }
@@ -1996,7 +2064,8 @@ public class FastPairSimulator {
         setDiscoverable(false);
     }
 
-    private void setDiscoverable(boolean discoverable) throws InterruptedException, TimeoutException {
+    private void setDiscoverable(boolean discoverable)
+            throws InterruptedException, TimeoutException {
         isDiscoverableLatch = new CountDownLatch(1);
         setScanMode(discoverable ? SCAN_MODE_CONNECTABLE_DISCOVERABLE : SCAN_MODE_CONNECTABLE);
         // If we're already discoverable, count down the latch right away. Otherwise,
@@ -2049,11 +2118,12 @@ public class FastPairSimulator {
     private ResultCode checkTdsControlPointRequest(byte[] request) {
         if (request.length < 2) {
             logger.log(
-                    new IllegalArgumentException(), "Expected length >= 2 for %s", base16().encode(request));
+                    new IllegalArgumentException(), "Expected length >= 2 for %s",
+                    base16().encode(request));
             return ResultCode.INVALID_PARAMETER;
         }
         byte opCode = getTdsControlPointOpCode(request);
-        if (opCode != TransportDiscoveryService.ControlPointCharacteristic.ACTIVATE_TRANSPORT_OP_CODE) {
+        if (opCode != ControlPointCharacteristic.ACTIVATE_TRANSPORT_OP_CODE) {
             logger.log(
                     new IllegalArgumentException(),
                     "Expected Activate Transport op code (0x01), got %d",
@@ -2067,7 +2137,6 @@ public class FastPairSimulator {
                     request[1]);
             return ResultCode.UNSUPPORTED_ORGANIZATION_ID;
         }
-        // TODO(jfarfel): Parse out the requested service UUIDs, and if they don't include A2DP, fail.
         return ResultCode.SUCCESS;
     }
 
@@ -2082,10 +2151,11 @@ public class FastPairSimulator {
     private byte[] modelIdServiceData(boolean forAdvertising) {
         // Note: This used to be little-endian but is now big-endian. See b/78229467 for details.
         byte[] modelIdPacket =
-                base16().decode(forAdvertising ? options.getAdvertisingModelId() : options.getModelId());
+                base16().decode(
+                        forAdvertising ? options.getAdvertisingModelId() : options.getModelId());
         if (!batteryValues.isEmpty()) {
-            // If we are going to advertise battery values with the packet, then switch to the non-3-byte
-            // model ID format from go/fast-pair-service-data.
+            // If we are going to advertise battery values with the packet, then switch to the
+            // non-3-byte model ID format.
             modelIdPacket = concat(new byte[]{0b00000110}, modelIdPacket);
         }
         return modelIdPacket;
@@ -2115,15 +2185,15 @@ public class FastPairSimulator {
         }
         BloomFilter bloomFilter =
                 new BloomFilter(
-                        new byte[(int) (1.2 * accountKeys.size()) + 3], new FastPairBloomFilterHasher());
+                        new byte[(int) (1.2 * accountKeys.size()) + 3],
+                        new FastPairBloomFilterHasher());
         String address = bleAddress == null ? SIMULATOR_FAKE_BLE_ADDRESS : bleAddress;
 
-        // Simulator supports Central Address Resolution characteristic, so when paired, the BLE address
-        // in Seeker will be resolved to BR/EDR address. This caused Seeker fails on checking the bloom
-        // filter due to different address is used for salting. In order to let battery values
-        // notification be shown on paired device, we use random salt to workaround it.
-        // TODO(tonyysliu): Remove this workaround when simulator does not support Central Address
-        // Resolution characteristic.
+        // Simulator supports Central Address Resolution characteristic, so when paired, the BLE
+        // address in Seeker will be resolved to BR/EDR address. This caused Seeker fails on
+        // checking the bloom filter due to different address is used for salting. In order to
+        // let battery values notification be shown on paired device, we use random salt to
+        // workaround it.
         boolean advertisingBatteryValues = !batteryValues.isEmpty();
         byte[] salt;
         if (options.getUseRandomSaltForAccountKeyRotation() || advertisingBatteryValues) {
@@ -2157,9 +2227,10 @@ public class FastPairSimulator {
     }
 
     /**
-     * Creates a new field for the packet. The header is formatted 0xLLLLTTTT where LLLL is the length
-     * of the field and TTTT is the type (0 for bloom filter, 1 for salt). See go/fast-pair-2-spec for
-     * more information.
+     * Creates a new field for the packet.
+     *
+     * The header is formatted 0xLLLLTTTT where LLLL is the
+     * length of the field and TTTT is the type (0 for bloom filter, 1 for salt).
      */
     private byte[] createField(byte header, byte[] value) {
         return concat(new byte[]{header}, value);
@@ -2188,13 +2259,13 @@ public class FastPairSimulator {
     }
 
     private byte[] generateBatteryData() {
-        // Byte 0: Battery length and type, first 4 bits are the number of battery values, second 4 are
-        // the type. See go/fast-pair-2-service-data for the battery type definitions.
+        // Byte 0: Battery length and type, first 4 bits are the number of battery values, second
+        // 4 are the type.
         // Byte 1 - length: Battery values, the first bit is charging status, the remaining bits are
         // the actual value between 0 and 100, or -1 for unknown.
         byte[] batteryData = new byte[batteryValues.size() + 1];
-        batteryData[0] =
-                (byte) (batteryValues.size() << 4 | (suppressBatteryNotification ? 0b0100 : 0b0011));
+        batteryData[0] = (byte) (batteryValues.size() << 4
+                | (suppressBatteryNotification ? 0b0100 : 0b0011));
 
         int batteryValueIndex = 1;
         for (BatteryValue batteryValue : batteryValues) {
@@ -2208,13 +2279,12 @@ public class FastPairSimulator {
     }
 
     private byte[] generateAccountKeyData(BloomFilter bloomFilter) {
-        // Byte 0: length and type, first 4 bits are the length of bloom filter, second 4 are the type
-        // which inditcating the subsequent pairing notification is suppressed or not.
+        // Byte 0: length and type, first 4 bits are the length of bloom filter, second 4 are the
+        // type which indicating the subsequent pairing notification is suppressed or not.
         // The following bytes are the data of bloom filter.
         byte[] filterBytes = bloomFilter.asBytes();
-        byte lengthAndType =
-                (byte)
-                        (filterBytes.length << 4 | (suppressSubsequentPairingNotification ? 0b0010 : 0b0000));
+        byte lengthAndType = (byte) (filterBytes.length << 4
+                | (suppressSubsequentPairingNotification ? 0b0010 : 0b0000));
         logger.log(
                 "Generate bloom filter with suppress subsequent pairing notification:%b",
                 suppressSubsequentPairingNotification);
