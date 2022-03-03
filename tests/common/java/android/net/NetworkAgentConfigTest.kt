@@ -88,7 +88,7 @@ class NetworkAgentConfigTest {
         assertEquals("TEST_NETWORK", config.getLegacyTypeName())
         if (isAtLeastT()) {
             assertTrue(config.areLocalRoutesExcludedForVpn())
-            assertTrue(config.getVpnRequiresValidation())
+            assertTrue(config.isVpnValidationRequired())
         }
         if (isAtLeastS()) {
             assertEquals(testExtraInfo, config.getLegacyExtraInfo())
