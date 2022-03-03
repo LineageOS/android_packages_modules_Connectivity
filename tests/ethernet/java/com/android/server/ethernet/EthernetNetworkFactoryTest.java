@@ -763,4 +763,18 @@ public class EthernetNetworkFactoryTest {
                 eq(capabilities), any(), any(), any(), any());
         verifyRestart(ipConfiguration);
     }
+
+    @Test
+    public void testUpdateInterfaceForNonExistingInterface() throws Exception {
+        initEthernetNetworkFactory();
+        // No interface exists due to not calling createAndVerifyProvisionedInterface(...).
+        final NetworkCapabilities capabilities = createDefaultFilterCaps();
+        final IpConfiguration ipConfiguration = createStaticIpConfig();
+        final TestNetworkManagementListener listener = new TestNetworkManagementListener();
+
+        mNetFactory.updateInterface(TEST_IFACE, ipConfiguration, capabilities, listener);
+
+        verifyNoStopOrStart();
+        assertFailedListener(listener, "can't be updated as it is not available");
+    }
 }
