@@ -77,7 +77,7 @@ class BluetoothStateChangeReceiver(private val context: Context) : BroadcastRece
         when (intent.action) {
             BluetoothAdapter.ACTION_SCAN_MODE_CHANGED -> {
                 val scanMode =
-                    intent.getIntExtra(BluetoothAdapter.EXTRA_SCAN_MODE, BluetoothAdapter.SCAN_MODE_NONE)
+                    intent.getIntExtra(BluetoothAdapter.EXTRA_SCAN_MODE, SCAN_MODE_NONE)
                 val scanModeStr = scanModeToString(scanMode)
                 Log.i(TAG, "ACTION_SCAN_MODE_CHANGED, the new scanMode: $scanModeStr")
                 listener?.onScanModeChange(scanModeStr)
