@@ -454,15 +454,15 @@ int TrafficController::replaceUidOwnerMap(const std::string& name, bool isAllowl
 int TrafficController::toggleUidOwnerMap(ChildChain chain, bool enable) {
     std::lock_guard guard(mMutex);
     uint32_t key = UID_RULES_CONFIGURATION_KEY;
-    auto oldConfiguration = mConfigurationMap.readValue(key);
-    if (!oldConfiguration.ok()) {
+    auto oldConfigure = mConfigurationMap.readValue(key);
+    if (!oldConfigure.ok()) {
         ALOGE("Cannot read the old configuration from map: %s",
-              oldConfiguration.error().message().c_str());
-        return -oldConfiguration.error().code();
+              oldConfigure.error().message().c_str());
+        return -oldConfigure.error().code();
     }
     Status res;
     BpfConfig newConfiguration;
-    uint8_t match;
+    uint32_t match;
     switch (chain) {
         case DOZABLE:
             match = DOZABLE_MATCH;
@@ -483,7 +483,7 @@ int TrafficController::toggleUidOwnerMap(ChildChain chain, bool enable) {
             return -EINVAL;
     }
     newConfiguration =
-            enable ? (oldConfiguration.value() | match) : (oldConfiguration.value() & (~match));
+            enable ? (oldConfigure.value() | match) : (oldConfigure.value() & (~match));
     res = mConfigurationMap.writeValue(key, newConfiguration, BPF_EXIST);
     if (!isOk(res)) {
         ALOGE("Failed to toggleUidOwnerMap(%d): %s", chain, res.msg().c_str());
@@ -495,17 +495,17 @@ Status TrafficController::swapActiveStatsMap() {
     std::lock_guard guard(mMutex);
 
     uint32_t key = CURRENT_STATS_MAP_CONFIGURATION_KEY;
-    auto oldConfiguration = mConfigurationMap.readValue(key);
-    if (!oldConfiguration.ok()) {
+    auto oldConfigure = mConfigurationMap.readValue(key);
+    if (!oldConfigure.ok()) {
         ALOGE("Cannot read the old configuration from map: %s",
-              oldConfiguration.error().message().c_str());
-        return Status(oldConfiguration.error().code(), oldConfiguration.error().message());
+              oldConfigure.error().message().c_str());
+        return Status(oldConfigure.error().code(), oldConfigure.error().message());
     }
 
     // Write to the configuration map to inform the kernel eBPF program to switch
     // from using one map to the other. Use flag BPF_EXIST here since the map should
     // be already populated in initMaps.
-    uint8_t newConfigure = (oldConfiguration.value() == SELECT_MAP_A) ? SELECT_MAP_B : SELECT_MAP_A;
+    uint32_t newConfigure = (oldConfigure.value() == SELECT_MAP_A) ? SELECT_MAP_B : SELECT_MAP_A;
     auto res = mConfigurationMap.writeValue(CURRENT_STATS_MAP_CONFIGURATION_KEY, newConfigure,
                                             BPF_EXIST);
     if (!res.ok()) {
