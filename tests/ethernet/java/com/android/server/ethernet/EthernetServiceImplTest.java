@@ -156,30 +156,6 @@ public class EthernetServiceImplTest {
         });
     }
 
-    @Test
-    public void testUpdateConfigurationRejectsWithUntrackedIface() {
-        shouldTrackIface(TEST_IFACE, false);
-        assertThrows(UnsupportedOperationException.class, () -> {
-            mEthernetServiceImpl.updateConfiguration(TEST_IFACE, UPDATE_REQUEST, NULL_LISTENER);
-        });
-    }
-
-    @Test
-    public void testConnectNetworkRejectsWithUntrackedIface() {
-        shouldTrackIface(TEST_IFACE, false);
-        assertThrows(UnsupportedOperationException.class, () -> {
-            mEthernetServiceImpl.connectNetwork(TEST_IFACE, NULL_LISTENER);
-        });
-    }
-
-    @Test
-    public void testDisconnectNetworkRejectsWithUntrackedIface() {
-        shouldTrackIface(TEST_IFACE, false);
-        assertThrows(UnsupportedOperationException.class, () -> {
-            mEthernetServiceImpl.disconnectNetwork(TEST_IFACE, NULL_LISTENER);
-        });
-    }
-
     private void denyManageEthPermission() {
         doThrow(new SecurityException("")).when(mContext)
                 .enforceCallingOrSelfPermission(
