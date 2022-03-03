@@ -62,7 +62,7 @@ DEFINE_BPF_MAP_GRW(stats_map_A, HASH, StatsKey, StatsValue, STATS_MAP_SIZE, AID_
 DEFINE_BPF_MAP_GRW(stats_map_B, HASH, StatsKey, StatsValue, STATS_MAP_SIZE, AID_NET_BW_ACCT)
 DEFINE_BPF_MAP_GRW(iface_stats_map, HASH, uint32_t, StatsValue, IFACE_STATS_MAP_SIZE,
                    AID_NET_BW_ACCT)
-DEFINE_BPF_MAP_GRW(configuration_map, HASH, uint32_t, uint8_t, CONFIGURATION_MAP_SIZE,
+DEFINE_BPF_MAP_GRW(configuration_map, HASH, uint32_t, uint32_t, CONFIGURATION_MAP_SIZE,
                    AID_NET_BW_ACCT)
 DEFINE_BPF_MAP_GRW(uid_owner_map, HASH, uint32_t, UidOwnerValue, UID_OWNER_MAP_SIZE,
                    AID_NET_BW_ACCT)
@@ -234,7 +234,7 @@ static inline int bpf_owner_match(struct __sk_buff* skb, uint32_t uid, int direc
 }
 
 static __always_inline inline void update_stats_with_config(struct __sk_buff* skb, int direction,
-                                                            StatsKey* key, uint8_t selectedMap) {
+                                                            StatsKey* key, uint32_t selectedMap) {
     if (selectedMap == SELECT_MAP_A) {
         update_stats_map_A(skb, direction, key);
     } else if (selectedMap == SELECT_MAP_B) {
@@ -286,7 +286,7 @@ static __always_inline inline int bpf_traffic_account(struct __sk_buff* skb, int
     if (counterSet) key.counterSet = (uint32_t)*counterSet;
 
     uint32_t mapSettingKey = CURRENT_STATS_MAP_CONFIGURATION_KEY;
-    uint8_t* selectedMap = bpf_configuration_map_lookup_elem(&mapSettingKey);
+    uint32_t* selectedMap = bpf_configuration_map_lookup_elem(&mapSettingKey);
 
     // Use asm("%0 &= 1" : "+r"(match)) before return match,
     // to help kernel's bpf verifier, so that it can be 100% certain
