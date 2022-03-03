@@ -100,7 +100,6 @@ public final class PrivateAddressCoordinatorTest {
         when(mContext.getSystemService(Context.CONNECTIVITY_SERVICE)).thenReturn(mConnectivityMgr);
         when(mConnectivityMgr.getAllNetworks()).thenReturn(mAllNetworks);
         when(mConfig.shouldEnableWifiP2pDedicatedIp()).thenReturn(false);
-        when(mConfig.isSelectAllPrefixRangeEnabled()).thenReturn(true);
         setUpIpServers();
         mPrivateAddressCoordinator = spy(new PrivateAddressCoordinator(mContext, mConfig));
     }
