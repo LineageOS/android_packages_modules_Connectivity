@@ -94,7 +94,7 @@ public class FastPairAdvHandler {
         } else {
             // Start to process bloom filter
             try {
-                Log.d(TAG, "account list size" + accountList.size());
+                Log.d(TAG, "account list size " + accountList.size());
                 byte[] bloomFilterByteArray = FastPairDecoder
                         .getBloomFilter(fastPairDevice.getData());
                 byte[] bloomFilterSalt = FastPairDecoder
