@@ -18,6 +18,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="android.nearby.cts">
   <uses-sdk android:minSdkVersion="32" android:targetSdkVersion="32" />
+  <uses-permission android:name="android.permission.WRITE_SECURE_SETTINGS" />
+
   <application>
     <uses-library android:name="android.test.runner"/>
   </application>

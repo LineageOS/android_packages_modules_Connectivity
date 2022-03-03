@@ -38,10 +38,10 @@ class FastPairSettingsProviderTest(private val flag: FastPairSettingsFlag) {
         val appContext = ApplicationProvider.getApplicationContext<Context>()
         val contentResolver = appContext.contentResolver
 
-        Settings.Secure.putInt(contentResolver, Settings.Secure.FAST_PAIR_SCAN_ENABLED, flag.value)
+        Settings.Secure.putInt(contentResolver, "fast_pair_scan_enabled", flag.value)
 
         val actualValue = Settings.Secure.getInt(
-                contentResolver, Settings.Secure.FAST_PAIR_SCAN_ENABLED, /* default value */ -1)
+                contentResolver, "fast_pair_scan_enabled", /* default value */ -1)
         assertThat(actualValue).isEqualTo(flag.value)
     }
 

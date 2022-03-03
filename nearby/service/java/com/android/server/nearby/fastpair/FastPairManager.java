@@ -16,7 +16,6 @@
 
 package com.android.server.nearby.fastpair;
 
-import static com.android.server.nearby.fastpair.Constant.SETTINGS_TRUE_VALUE;
 import static com.android.server.nearby.fastpair.Constant.TAG;
 
 import android.annotation.Nullable;
@@ -147,13 +146,8 @@ public class FastPairManager {
                 .registerReceiver(mScreenBroadcastReceiver, mIntentFilter);
 
         Locator.getFromContextWrapper(mLocatorContextWrapper, FastPairCacheManager.class);
-        try {
-            mScanEnabled = getScanEnabledFromSettings();
-            mScanEnabled = ENFORCED_SCAN_ENABLED_VALUE;
-        } catch (Settings.SettingNotFoundException e) {
-            Log.w(TAG,
-                    "initiate: Failed to get initial scan enabled status from Settings.", e);
-        }
+        mScanEnabled = NearbyManager.getFastPairScanEnabled(mLocatorContextWrapper, true);
+        mScanEnabled = ENFORCED_SCAN_ENABLED_VALUE;
         registerFastPairScanChangeContentObserver(mLocatorContextWrapper.getContentResolver());
     }
 
@@ -334,16 +328,13 @@ public class FastPairManager {
             @Override
             public void onChange(boolean selfChange, Uri uri) {
                 super.onChange(selfChange, uri);
-                try {
-                    setScanEnabled(getScanEnabledFromSettings());
-                } catch (Settings.SettingNotFoundException e) {
-                    Log.e(TAG, "Failed to get scan switch updates in Settings page.", e);
-                }
+                setScanEnabled(
+                        NearbyManager.getFastPairScanEnabled(mLocatorContextWrapper, mScanEnabled));
             }
         };
         try {
             resolver.registerContentObserver(
-                    Settings.Secure.getUriFor(Settings.Secure.FAST_PAIR_SCAN_ENABLED),
+                    Settings.Secure.getUriFor(NearbyManager.FAST_PAIR_SCAN_ENABLED),
                     /* notifyForDescendants= */ false,
                     mFastPairScanChangeContentObserver);
         }  catch (SecurityException e) {
@@ -378,13 +369,6 @@ public class FastPairManager {
         return (NearbyManager) mLocatorContextWrapper
                 .getApplicationContext().getSystemService(Context.NEARBY_SERVICE);
     }
-
-    private boolean getScanEnabledFromSettings() throws Settings.SettingNotFoundException {
-        return Settings.Secure.getInt(
-                mLocatorContextWrapper.getContext().getContentResolver(),
-                Settings.Secure.FAST_PAIR_SCAN_ENABLED) == SETTINGS_TRUE_VALUE;
-    }
-
     private void setScanEnabled(boolean scanEnabled) {
         if (mScanEnabled == scanEnabled) {
             return;
