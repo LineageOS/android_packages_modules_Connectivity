@@ -194,6 +194,13 @@ public class ClatCoordinator {
         public long tagSocketAsClat(@NonNull FileDescriptor sock) throws IOException {
             return native_tagSocketAsClat(sock);
         }
+
+        /**
+         * Untag socket.
+         */
+        public void untagSocket(long cookie) throws IOException {
+            native_untagSocket(cookie);
+        }
     }
 
     @VisibleForTesting
@@ -375,7 +382,7 @@ public class ClatCoordinator {
             mXlatLocalAddress6 = v6;
             mCookie = cookie;
         } catch (IOException e) {
-            // TODO: untag socket.
+            mDeps.untagSocket(cookie);
             throw new IOException("Error start clatd on " + iface + ": " + e);
         } finally {
             tunFd.close();
@@ -396,7 +403,7 @@ public class ClatCoordinator {
         Log.i(TAG, "Stopping clatd pid=" + mPid + " on " + mIface);
 
         mDeps.stopClatd(mIface, mNat64Prefix, mXlatLocalAddress4, mXlatLocalAddress6, mPid);
-        // TODO: remove setIptablesDropRule
+        mDeps.untagSocket(mCookie);
 
         Log.i(TAG, "clatd on " + mIface + " stopped");
 
@@ -405,6 +412,7 @@ public class ClatCoordinator {
         mXlatLocalAddress4 = null;
         mXlatLocalAddress6 = null;
         mPid = INVALID_PID;
+        mCookie = INVALID_COOKIE;
     }
 
     private static native String native_selectIpv4Address(String v4addr, int prefixlen)
@@ -426,4 +434,5 @@ public class ClatCoordinator {
     private static native void native_stopClatd(String iface, String pfx96, String v4, String v6,
             int pid) throws IOException;
     private static native long native_tagSocketAsClat(FileDescriptor sock) throws IOException;
+    private static native void native_untagSocket(long cookie) throws IOException;
 }

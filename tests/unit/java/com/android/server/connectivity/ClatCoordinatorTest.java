@@ -26,13 +26,10 @@ import static com.android.testutils.MiscAsserts.assertThrows;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
-import static org.mockito.Mockito.anyInt;
-import static org.mockito.Mockito.anyString;
 import static org.mockito.Mockito.argThat;
 import static org.mockito.Mockito.clearInvocations;
 import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.inOrder;
-import static org.mockito.Mockito.never;
 
 import android.annotation.NonNull;
 import android.net.INetd;
@@ -278,6 +275,16 @@ public class ClatCoordinatorTest {
             fail("unsupported arg: " + sock);
             return 0;
         }
+
+        /**
+         * Untag socket.
+         */
+        @Override
+        public void untagSocket(long cookie) throws IOException {
+            if (cookie != RAW_SOCK_COOKIE) {
+                fail("unsupported arg: " + cookie);
+            }
+        }
     };
 
     @NonNull
@@ -364,13 +371,12 @@ public class ClatCoordinatorTest {
         coordinator.clatStop();
         inOrder.verify(mDeps).stopClatd(eq(BASE_IFACE), eq(NAT64_PREFIX_STRING),
                 eq(XLAT_LOCAL_IPV4ADDR_STRING), eq(XLAT_LOCAL_IPV6ADDR_STRING), eq(CLATD_PID));
+        inOrder.verify(mDeps).untagSocket(eq(RAW_SOCK_COOKIE));
         inOrder.verifyNoMoreInteractions();
 
         // [4] Expect an IO exception while stopping a clatd that doesn't exist.
         assertThrows("java.io.IOException: Clatd has not started", IOException.class,
                 () -> coordinator.clatStop());
-        inOrder.verify(mDeps, never()).stopClatd(anyString(), anyString(), anyString(),
-                anyString(), anyInt());
         inOrder.verifyNoMoreInteractions();
     }
 
