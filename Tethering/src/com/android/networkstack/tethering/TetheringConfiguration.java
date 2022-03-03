@@ -99,13 +99,6 @@ public class TetheringConfiguration {
             "use_legacy_wifi_p2p_dedicated_ip";
 
     /**
-     * Flag use to enable select all prefix ranges feature.
-     * TODO: Remove this flag if there are no problems after M-2020-12 rolls out.
-     */
-    public static final String TETHER_ENABLE_SELECT_ALL_PREFIX_RANGES =
-            "tether_enable_select_all_prefix_ranges";
-
-    /**
      * Experiment flag to force choosing upstreams automatically.
      *
      * This setting is intended to help force-enable the feature on OEM devices that disabled it
@@ -157,7 +150,6 @@ public class TetheringConfiguration {
     private final boolean mEnableBpfOffload;
     private final boolean mEnableWifiP2pDedicatedIp;
 
-    private final boolean mEnableSelectAllPrefixRange;
     private final int mUsbTetheringFunction;
     protected final ContentResolver mContentResolver;
 
@@ -221,11 +213,6 @@ public class TetheringConfiguration {
         mEnableWifiP2pDedicatedIp = getResourceBoolean(res,
                 R.bool.config_tether_enable_legacy_wifi_p2p_dedicated_ip,
                 false /* defaultValue */);
-
-        // Flags should normally not be booleans, but this is a kill-switch flag that is only used
-        // to turn off the feature, so binary rollback problems do not apply.
-        mEnableSelectAllPrefixRange = getDeviceConfigBoolean(
-                TETHER_ENABLE_SELECT_ALL_PREFIX_RANGES, true /* defaultValue */);
 
         configLog.log(toString());
     }
@@ -318,9 +305,6 @@ public class TetheringConfiguration {
         pw.print("enableWifiP2pDedicatedIp: ");
         pw.println(mEnableWifiP2pDedicatedIp);
 
-        pw.print("mEnableSelectAllPrefixRange: ");
-        pw.println(mEnableSelectAllPrefixRange);
-
         pw.print("mUsbTetheringFunction: ");
         pw.println(isUsingNcm() ? "NCM" : "RNDIS");
     }
@@ -382,10 +366,6 @@ public class TetheringConfiguration {
 
     public boolean isBpfOffloadEnabled() {
         return mEnableBpfOffload;
-    }
-
-    public boolean isSelectAllPrefixRangeEnabled() {
-        return mEnableSelectAllPrefixRange;
     }
 
     private int getUsbTetheringFunction(Resources res) {
