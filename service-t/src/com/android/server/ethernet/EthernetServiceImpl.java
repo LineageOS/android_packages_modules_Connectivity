@@ -66,12 +66,6 @@ public class EthernetServiceImpl extends IEthernetManager.Stub {
                 methodName + " is only available on automotive devices.");
     }
 
-    private void enforceInterfaceIsTracked(final @NonNull String iface) {
-        if(!mTracker.isTrackingInterface(iface)) {
-            throw new UnsupportedOperationException("The given iface is not currently tracked.");
-        }
-    }
-
     private boolean checkUseRestrictedNetworksPermission() {
         return PermissionUtils.checkAnyPermissionOf(mContext,
                 android.Manifest.permission.CONNECTIVITY_USE_RESTRICTED_NETWORKS);
@@ -220,13 +214,12 @@ public class EthernetServiceImpl extends IEthernetManager.Stub {
      */
     private void validateNetworkManagementState(@NonNull final String iface,
             final @NonNull String methodName) {
+        Objects.requireNonNull(iface, "Pass a non-null iface.");
+        Objects.requireNonNull(methodName, "Pass a non-null methodName.");
+
         enforceAutomotiveDevice(methodName);
         enforceNetworkManagementPermission();
         logIfEthernetNotStarted();
-
-        Objects.requireNonNull(iface, "Pass a non-null iface.");
-        Objects.requireNonNull(methodName, "Pass a non-null methodName.");
-        enforceInterfaceIsTracked(iface);
     }
 
     @Override
