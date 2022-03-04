@@ -86,7 +86,6 @@ import android.net.dhcp.IDhcpServerCallbacks;
 import android.net.ip.IpNeighborMonitor.NeighborEvent;
 import android.net.ip.IpNeighborMonitor.NeighborEventConsumer;
 import android.net.ip.RouterAdvertisementDaemon.RaParams;
-import android.net.util.InterfaceParams;
 import android.net.util.SharedLog;
 import android.os.Build;
 import android.os.Handler;
@@ -100,6 +99,7 @@ import androidx.test.filters.SmallTest;
 import androidx.test.runner.AndroidJUnit4;
 
 import com.android.net.module.util.BpfMap;
+import com.android.net.module.util.InterfaceParams;
 import com.android.net.module.util.NetworkStackConstants;
 import com.android.net.module.util.bpf.Tether4Key;
 import com.android.net.module.util.bpf.Tether4Value;
