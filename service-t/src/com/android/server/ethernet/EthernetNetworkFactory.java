@@ -485,7 +485,9 @@ public class EthernetNetworkFactory extends NetworkFactory {
             }
 
             mIpConfig = ipConfig;
-            setCapabilities(capabilities);
+            if (null != capabilities) {
+                setCapabilities(capabilities);
+            }
             // Send an abort callback if a request is filed before the previous one has completed.
             maybeSendNetworkManagementCallbackForAbort();
             // TODO: Update this logic to only do a restart if required. Although a restart may
