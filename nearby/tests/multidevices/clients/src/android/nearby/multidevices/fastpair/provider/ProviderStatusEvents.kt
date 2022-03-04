@@ -16,7 +16,7 @@
 
 package android.nearby.multidevices.fastpair.provider
 
-import android.nearby.multidevices.common.postSnippetEvent
+import com.google.android.mobly.snippet.util.postSnippetEvent
 
 /** The Mobly snippet events to report to the Python side. */
 class ProviderStatusEvents(private val callbackId: String) :
