@@ -68,6 +68,7 @@ import com.android.networkstack.tethering.BpfCoordinator;
 import com.android.networkstack.tethering.BpfCoordinator.ClientInfo;
 import com.android.networkstack.tethering.BpfCoordinator.Ipv6ForwardingRule;
 import com.android.networkstack.tethering.PrivateAddressCoordinator;
+import com.android.networkstack.tethering.TetheringConfiguration;
 import com.android.networkstack.tethering.util.InterfaceSet;
 import com.android.networkstack.tethering.util.PrefixUtils;
 
@@ -285,8 +286,8 @@ public class IpServer extends StateMachine {
     public IpServer(
             String ifaceName, Looper looper, int interfaceType, SharedLog log,
             INetd netd, @NonNull BpfCoordinator coordinator, Callback callback,
-            boolean usingLegacyDhcp, boolean usingBpfOffload,
-            PrivateAddressCoordinator addressCoordinator, Dependencies deps) {
+            TetheringConfiguration config, PrivateAddressCoordinator addressCoordinator,
+            Dependencies deps) {
         super(ifaceName, looper);
         mLog = log.forSubComponent(ifaceName);
         mNetd = netd;
@@ -296,8 +297,8 @@ public class IpServer extends StateMachine {
         mIfaceName = ifaceName;
         mInterfaceType = interfaceType;
         mLinkProperties = new LinkProperties();
-        mUsingLegacyDhcp = usingLegacyDhcp;
-        mUsingBpfOffload = usingBpfOffload;
+        mUsingLegacyDhcp = config.useLegacyDhcpServer();
+        mUsingBpfOffload = config.isBpfOffloadEnabled();
         mPrivateAddressCoordinator = addressCoordinator;
         mDeps = deps;
         resetLinkProperties();
