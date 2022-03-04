@@ -17,9 +17,11 @@
 package com.android.server.nearby.common.bluetooth.testability.android.bluetooth;
 
 import android.content.Context;
+
+import androidx.annotation.Nullable;
+
 import java.util.ArrayList;
 import java.util.List;
-import javax.annotation.Nullable;
 
 /**
  * Mockable wrapper of {@link android.bluetooth.BluetoothManager}.
@@ -37,13 +39,15 @@ public class BluetoothManager {
      * android.bluetooth.BluetoothGattServerCallback)}.
      */
     @Nullable
-    public BluetoothGattServer openGattServer(Context context, BluetoothGattServerCallback callback) {
-        return BluetoothGattServer.wrap(mWrappedInstance.openGattServer(context, callback.unwrap()));
+    public BluetoothGattServer openGattServer(Context context,
+            BluetoothGattServerCallback callback) {
+        return BluetoothGattServer.wrap(
+                mWrappedInstance.openGattServer(context, callback.unwrap()));
     }
 
     /**
      * See {@link android.bluetooth.BluetoothManager#getConnectionState(
-     * android.bluetooth.BluetoothDevice, int)}.
+     *android.bluetooth.BluetoothDevice, int)}.
      */
     public int getConnectionState(BluetoothDevice device, int profile) {
         return mWrappedInstance.getConnectionState(device.unwrap(), profile);
@@ -51,7 +55,8 @@ public class BluetoothManager {
 
     /** See {@link android.bluetooth.BluetoothManager#getConnectedDevices(int)}. */
     public List<BluetoothDevice> getConnectedDevices(int profile) {
-        List<android.bluetooth.BluetoothDevice> devices = mWrappedInstance.getConnectedDevices(profile);
+        List<android.bluetooth.BluetoothDevice> devices = mWrappedInstance.getConnectedDevices(
+                profile);
         List<BluetoothDevice> wrappedDevices = new ArrayList<>(devices.size());
         for (android.bluetooth.BluetoothDevice device : devices) {
             wrappedDevices.add(BluetoothDevice.wrap(device));

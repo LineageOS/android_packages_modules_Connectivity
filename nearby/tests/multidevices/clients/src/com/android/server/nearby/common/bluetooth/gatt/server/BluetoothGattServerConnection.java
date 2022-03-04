@@ -5,6 +5,9 @@ import android.bluetooth.BluetoothGatt;
 import android.bluetooth.BluetoothGattCharacteristic;
 import android.bluetooth.BluetoothGattDescriptor;
 import android.util.Log;
+
+import androidx.annotation.Nullable;
+
 import com.android.server.nearby.common.bluetooth.BluetoothException;
 import com.android.server.nearby.common.bluetooth.BluetoothGattException;
 import com.android.server.nearby.common.bluetooth.ReservedUuids;
@@ -12,12 +15,12 @@ import com.android.server.nearby.common.bluetooth.testability.android.bluetooth.
 import com.android.server.nearby.common.bluetooth.util.BluetoothGattUtils;
 import com.android.server.nearby.common.bluetooth.util.BluetoothOperationExecutor;
 import com.android.server.nearby.common.bluetooth.util.BluetoothOperationExecutor.Operation;
+
 import com.google.common.annotations.VisibleForTesting;
-// import com.google.common.annotations.VisibleForTesting.Visibility;
-import com.android.internal.annotations.VisibleForTesting.Visibility;
 import com.google.common.base.Objects;
 import com.google.common.base.Preconditions;
 import com.google.common.io.BaseEncoding;
+
 import java.io.ByteArrayOutputStream;
 import java.io.Closeable;
 import java.io.IOException;
@@ -29,7 +32,6 @@ import java.util.Map.Entry;
 import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.concurrent.TimeUnit;
-import javax.annotation.Nullable;
 
 /**
  * Connection to a bluetooth LE device over Gatt.
