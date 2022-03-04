@@ -31,7 +31,7 @@ filegroup {
 
 java_library {
     name: "service-nearby",
-    srcs: [],
+    srcs: ["service-src/**/*.java"],
     sdk_version: "module_current",
     min_sdk_version: "30",
     apex_available: ["com.android.tethering"],
