@@ -42,10 +42,10 @@ class FastPairSeekerSnippet : Snippet {
     @AsyncRpc(description = "Starts scanning as Fast Pair seeker to find Fast Pair provider devices.")
     fun startScan(callbackId: String) {
         val scanRequest = ScanRequest.Builder()
-                .setScanMode(ScanRequest.SCAN_MODE_LOW_LATENCY)
-                .setScanType(ScanRequest.SCAN_TYPE_FAST_PAIR)
-                .setEnableBle(true)
-                .build()
+            .setScanMode(ScanRequest.SCAN_MODE_LOW_LATENCY)
+            .setScanType(ScanRequest.SCAN_TYPE_FAST_PAIR)
+            .setEnableBle(true)
+            .build()
         scanCallback = ScanCallbackEvents(callbackId)
 
         Log.i("Start Fast Pair scanning via BLE...")
@@ -70,6 +70,42 @@ class FastPairSeekerSnippet : Snippet {
             putExtra(FAST_PAIR_MANAGER_EXTRA_ADDRESS, address)
         }
         appContext.sendBroadcast(scanIntent)
+    }
+
+    /** Puts a model id to FastPairAntiSpoofKeyDeviceMetadata pair into test data cache.
+     *
+     * @param modelId a string of model id to be associated with.
+     * @param json a string of FastPairAntiSpoofKeyDeviceMetadata JSON object.
+     */
+    @Rpc(description = "Puts a model id to FastPairAntiSpoofKeyDeviceMetadata pair into test data cache.")
+    fun putAntiSpoofKeyDeviceMetadata(modelId: String, json: String) {
+        Log.i("Puts a model id to FastPairAntiSpoofKeyDeviceMetadata pair into test data cache.")
+        FastPairTestDataCache.putAntiSpoofKeyDeviceMetadata(modelId, json)
+    }
+
+    /** Puts an array of FastPairAccountKeyDeviceMetadata into test data cache.
+     *
+     * @param json a string of FastPairAccountKeyDeviceMetadata JSON array.
+     */
+    @Rpc(description = "Puts an array of FastPairAccountKeyDeviceMetadata into test data cache.")
+    fun putAccountKeyDeviceMetadata(json: String) {
+        Log.i("Puts an array of FastPairAccountKeyDeviceMetadata into test data cache.")
+        FastPairTestDataCache.putAccountKeyDeviceMetadata(json)
+    }
+
+    /** Dumps all FastPairAccountKeyDeviceMetadata from the test data cache. */
+    @Rpc(description = "Dumps all FastPairAccountKeyDeviceMetadata from the test data cache.")
+    fun dumpAccountKeyDeviceMetadata(): String {
+        Log.i("Dumps all FastPairAccountKeyDeviceMetadata from the test data cache.")
+        return FastPairTestDataCache.dumpAccountKeyDeviceMetadata()
+    }
+
+    /** Invokes when the snippet runner shutting down. */
+    override fun shutdown() {
+        super.shutdown()
+
+        Log.i("Resets the Fast Pair test data cache.")
+        FastPairTestDataCache.reset()
     }
 
     companion object {
