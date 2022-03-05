@@ -16,6 +16,7 @@
  * BpfHandlerTest.cpp - unit tests for BpfHandler.cpp
  */
 
+#include <private/android_filesystem_config.h>
 #include <sys/socket.h>
 
 #include <gtest/gtest.h>
@@ -207,6 +208,12 @@ TEST_F(BpfHandlerTest, TestTagSocketWithPermission) {
     expectUidTag(sockCookie, TEST_UID, TEST_TAG);
     EXPECT_EQ(0, mBh.untagSocket(v6socket));
     expectNoTag(sockCookie);
+    expectMapEmpty(mFakeCookieTagMap);
+
+    // Tag a socket to AID_CLAT other then realUid.
+    int sock = socket(AF_INET6, SOCK_STREAM | SOCK_CLOEXEC, 0);
+    ASSERT_NE(-1, sock);
+    ASSERT_EQ(-EPERM, mBh.tagSocket(sock, TEST_TAG, AID_CLAT, realUid));
     expectMapEmpty(mFakeCookieTagMap);
 }
 
