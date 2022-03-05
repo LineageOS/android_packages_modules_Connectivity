@@ -20,11 +20,13 @@ import android.bluetooth.BluetoothGatt;
 import android.bluetooth.BluetoothGattCharacteristic;
 import android.bluetooth.BluetoothGattDescriptor;
 import android.bluetooth.BluetoothGattService;
+
+import androidx.annotation.Nullable;
+
 import com.android.server.nearby.common.bluetooth.BluetoothException;
+
 import java.lang.reflect.Field;
 import java.util.Arrays;
-
-import javax.annotation.Nullable;
 
 /**
  * Utils for Gatt profile.
@@ -66,12 +68,14 @@ public class BluetoothGattUtils {
     /** Clones a {@link BluetoothGattCharacteristic} so the value can be changed thread-safely. */
     public static BluetoothGattCharacteristic clone(BluetoothGattCharacteristic characteristic)
             throws BluetoothException {
-        BluetoothGattCharacteristic result = new BluetoothGattCharacteristic(characteristic.getUuid(),
+        BluetoothGattCharacteristic result = new BluetoothGattCharacteristic(
+                characteristic.getUuid(),
                 characteristic.getProperties(), characteristic.getPermissions());
         try {
             Field instanceIdField = BluetoothGattCharacteristic.class.getDeclaredField("mInstance");
             Field serviceField = BluetoothGattCharacteristic.class.getDeclaredField("mService");
-            Field descriptorField = BluetoothGattCharacteristic.class.getDeclaredField("mDescriptors");
+            Field descriptorField = BluetoothGattCharacteristic.class.getDeclaredField(
+                    "mDescriptors");
             instanceIdField.setAccessible(true);
             serviceField.setAccessible(true);
             descriptorField.setAccessible(true);

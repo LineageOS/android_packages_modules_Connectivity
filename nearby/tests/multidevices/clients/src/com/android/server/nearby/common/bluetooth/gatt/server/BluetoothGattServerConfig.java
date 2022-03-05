@@ -4,14 +4,17 @@ package com.android.server.nearby.common.bluetooth.gatt.server;
 import android.annotation.TargetApi;
 import android.bluetooth.BluetoothGattCharacteristic;
 import android.bluetooth.BluetoothGattService;
+
+import androidx.annotation.Nullable;
+
 import com.android.server.nearby.common.bluetooth.BluetoothConsts;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.UUID;
-import javax.annotation.Nullable;
 
 /** Configuration of a GATT server. */
 @TargetApi(18)
