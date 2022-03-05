@@ -37,7 +37,6 @@ import android.net.IpPrefix;
 import android.net.LinkAddress;
 import android.net.MacAddress;
 import android.net.TrafficStats;
-import android.net.util.InterfaceParams;
 import android.net.util.SocketUtils;
 import android.system.ErrnoException;
 import android.system.Os;
@@ -45,6 +44,7 @@ import android.system.StructTimeval;
 import android.util.Log;
 
 import com.android.internal.annotations.GuardedBy;
+import com.android.net.module.util.InterfaceParams;
 import com.android.net.module.util.structs.Icmpv6Header;
 import com.android.net.module.util.structs.LlaOption;
 import com.android.net.module.util.structs.MtuOption;
