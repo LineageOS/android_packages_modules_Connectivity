@@ -9,8 +9,10 @@ import android.bluetooth.BluetoothProfile;
 import android.content.Context;
 import android.os.Build.VERSION_CODES;
 import android.util.Log;
+
+import androidx.annotation.Nullable;
+
 import com.android.internal.annotations.VisibleForTesting;
-import com.android.internal.annotations.VisibleForTesting.Visibility;
 import com.android.server.nearby.common.bluetooth.BluetoothException;
 import com.android.server.nearby.common.bluetooth.BluetoothGattException;
 import com.android.server.nearby.common.bluetooth.testability.VersionProvider;
@@ -21,12 +23,12 @@ import com.android.server.nearby.common.bluetooth.testability.android.bluetooth.
 import com.android.server.nearby.common.bluetooth.util.BluetoothGattUtils;
 import com.android.server.nearby.common.bluetooth.util.BluetoothOperationExecutor;
 import com.android.server.nearby.common.bluetooth.util.BluetoothOperationExecutor.Operation;
-// import com.google.common.annotations.VisibleForTesting;
+
 import com.google.common.base.Preconditions;
+
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeUnit;
-import javax.annotation.Nullable;
 
 /**
  * Helper for simplifying operations on {@link BluetoothGattServer}.

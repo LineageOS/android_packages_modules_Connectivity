@@ -4,6 +4,7 @@ import android.annotation.TargetApi;
 import android.bluetooth.BluetoothGatt;
 import android.bluetooth.BluetoothGattCharacteristic;
 import android.bluetooth.BluetoothGattDescriptor;
+
 import com.android.server.nearby.common.bluetooth.BluetoothGattException;
 import com.android.server.nearby.common.bluetooth.gatt.server.BluetoothGattServerConnection.Notifier;
 
