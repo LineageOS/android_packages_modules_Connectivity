@@ -29,6 +29,7 @@ android_library {
         "error_prone_annotations",
         "fast-pair-lite-protos",
         "framework-annotations-lib",
+        "gson-prebuilt-jar",
         "kotlin-stdlib",
         "mobly-snippet-lib",
         "service-nearby",
