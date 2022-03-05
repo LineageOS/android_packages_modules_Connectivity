@@ -106,8 +106,8 @@ public class NearbyManagerTest {
                 .setIdentityType(IDENTITY_TYPE_PRIVATE)
                 .build();
         BroadcastRequest broadcastRequest =
-                new PresenceBroadcastRequest.Builder(Collections.singletonList(BLE_MEDIUM), SALT)
-                        .setCredential(credential)
+                new PresenceBroadcastRequest.Builder(
+                        Collections.singletonList(BLE_MEDIUM), SALT, credential)
                         .build();
 
         BroadcastCallback callback = status -> {

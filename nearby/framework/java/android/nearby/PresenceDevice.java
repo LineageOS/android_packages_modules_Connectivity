@@ -162,6 +162,12 @@ public final class PresenceDevice extends NearbyDevice implements Parcelable {
             dest.writeInt(medium);
         }
         dest.writeInt(getRssi());
+        dest.writeInt(mSalt.length);
+        dest.writeByteArray(mSalt);
+        dest.writeInt(mSecretId.length);
+        dest.writeByteArray(mSecretId);
+        dest.writeInt(mEncryptedIdentity.length);
+        dest.writeByteArray(mEncryptedIdentity);
         dest.writeString(mDeviceId);
         dest.writeInt(mDeviceType);
         dest.writeInt(mDeviceImageUrl == null ? 0 : 1);
@@ -184,25 +190,46 @@ public final class PresenceDevice extends NearbyDevice implements Parcelable {
     public static final Creator<PresenceDevice> CREATOR = new Creator<PresenceDevice>() {
         @Override
         public PresenceDevice createFromParcel(Parcel in) {
-            Builder builder = new Builder();
+            String name = null;
             if (in.readInt() == 1) {
-                builder.setName(in.readString());
+                name = in.readString();
             }
             int size = in.readInt();
+            List<Integer> mediums = new ArrayList<>();
             for (int i = 0; i < size; i++) {
-                builder.addMedium(in.readInt());
+                mediums.add(in.readInt());
             }
-            builder.setRssi(in.readInt());
-            builder.setDeviceId(in.readString());
-            builder.setDeviceType(in.readInt());
+            int rssi = in.readInt();
+            byte[] salt = new byte[in.readInt()];
+            in.readByteArray(salt);
+            byte[] secretId = new byte[in.readInt()];
+            in.readByteArray(secretId);
+            byte[] encryptedIdentity = new byte[in.readInt()];
+            in.readByteArray(encryptedIdentity);
+            String deviceId = in.readString();
+            int deviceType = in.readInt();
+            String deviceImageUrl = null;
             if (in.readInt() == 1) {
-                builder.setDeviceImageUrl(in.readString());
+                deviceImageUrl = in.readString();
             }
-            builder.setDiscoveryTimestampMillis(in.readLong());
+            long discoveryTimeMillis = in.readLong();
             int dataElementSize = in.readInt();
+            List<DataElement> dataElements = new ArrayList<>();
             for (int i = 0; i < dataElementSize; i++) {
-                builder.addExtendedProperty(
+                dataElements.add(
                         in.readParcelable(DataElement.class.getClassLoader(), DataElement.class));
+            }
+            Builder builder = new Builder(deviceId, salt, secretId, encryptedIdentity)
+                    .setName(name)
+                    .setRssi(rssi)
+                    .setDeviceType(deviceType)
+                    .setDeviceImageUrl(deviceImageUrl)
+                    .setDiscoveryTimestampMillis(discoveryTimeMillis);
+            for (int i = 0; i < mediums.size(); i++) {
+                builder.addMedium(mediums.get(i));
+            }
+            for (int i = 0; i < dataElements.size(); i++) {
+                builder.addExtendedProperty(dataElements.get(i));
             }
             return builder.build();
         }
@@ -220,21 +247,34 @@ public final class PresenceDevice extends NearbyDevice implements Parcelable {
 
         private final List<DataElement> mExtendedProperties;
         private final List<Integer> mMediums;
+        private final String mDeviceId;
+        private final byte[] mSalt;
+        private final byte[] mSecretId;
+        private final byte[] mEncryptedIdentity;
 
         private String mName;
         private int mRssi;
-        private String mDeviceId;
-        private byte[] mSalt;
-        private byte[] mSecretId;
-        private byte[] mEncryptedIdentity;
         private int mDeviceType;
         private String mDeviceImageUrl;
         private long mDiscoveryTimestampMillis;
 
-        public Builder() {
+        /**
+         * Constructs a {@link Builder}.
+         *
+         * @param deviceId the identifier on the discovered Presence device
+         * @param salt a random salt used in the beacon from the Presence device.
+         * @param secretId a secret identifier used in the beacon from the Presence device.
+         * @param encryptedIdentity the identity associated with the Presence device.
+         */
+        public Builder(@NonNull String deviceId, @NonNull byte[] salt, @NonNull byte[] secretId,
+                @NonNull byte[] encryptedIdentity) {
+            mDeviceId = deviceId;
+            mSalt = salt;
+            mSecretId = secretId;
+            mEncryptedIdentity = encryptedIdentity;
             mMediums = new ArrayList<>();
             mExtendedProperties = new ArrayList<>();
-            mRssi = -100;
+            mRssi = -127;
         }
 
         /**
@@ -267,48 +307,6 @@ public final class PresenceDevice extends NearbyDevice implements Parcelable {
         @NonNull
         public Builder setRssi(int rssi) {
             mRssi = rssi;
-            return this;
-        }
-
-        /**
-         * Sets the identifier on the discovered Presence device.
-         *
-         * @param deviceId Identifier of the Presence device.
-         */
-        @NonNull
-        public Builder setDeviceId(@NonNull String deviceId) {
-            Objects.requireNonNull(deviceId);
-            mDeviceId = deviceId;
-            return this;
-        }
-
-        /**
-         * Sets the identifier on the discovered Presence device.
-         */
-        @NonNull
-        public Builder setSalt(@NonNull byte[] salt) {
-            Objects.requireNonNull(salt);
-            mSalt = salt;
-            return this;
-        }
-
-        /**
-         * Sets the secret id of the discovered Presence device.
-         */
-        @NonNull
-        public Builder setSecretId(@NonNull byte[] secretId) {
-            Objects.requireNonNull(secretId);
-            mSecretId = secretId;
-            return this;
-        }
-
-        /**
-         * Sets the encrypted identity of the discovered Presence device.
-         */
-        @NonNull
-        public Builder setEncryptedIdentity(@NonNull byte[] encryptedIdentity) {
-            Objects.requireNonNull(encryptedIdentity);
-            mEncryptedIdentity = encryptedIdentity;
             return this;
         }
 

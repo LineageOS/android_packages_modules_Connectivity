@@ -137,18 +137,20 @@ public final class PresenceBroadcastRequest extends BroadcastRequest implements 
         private final List<Integer> mMediums;
         private final List<Integer> mActions;
         private final List<DataElement> mExtendedProperties;
+        private final byte[] mSalt;
+        private final PrivateCredential mCredential;
 
         private int mVersion;
         private int mTxPower;
-        private byte[] mSalt;
-        private PrivateCredential mCredential;
 
-        public Builder(@NonNull List<Integer> mediums, @NonNull byte[] salt) {
+        public Builder(@NonNull List<Integer> mediums, @NonNull byte[] salt,
+                @NonNull PrivateCredential credential) {
             Preconditions.checkState(!mediums.isEmpty(), "mediums cannot be empty");
             Preconditions.checkState(salt != null && salt.length > 0, "salt cannot be empty");
 
             mVersion = PRESENCE_VERSION_V0;
             mTxPower = UNKNOWN_TX_POWER;
+            mCredential = credential;
             mActions = new ArrayList<>();
             mExtendedProperties = new ArrayList<>();
 
@@ -181,16 +183,6 @@ public final class PresenceBroadcastRequest extends BroadcastRequest implements 
         @NonNull
         public Builder addAction(@IntRange(from = 1, to = 255) int action) {
             mActions.add(action);
-            return this;
-        }
-
-        /**
-         * Sets the credential associated with the presence broadcast request.
-         */
-        @NonNull
-        public Builder setCredential(@NonNull PrivateCredential credential) {
-            Objects.requireNonNull(credential);
-            mCredential = credential;
             return this;
         }
 

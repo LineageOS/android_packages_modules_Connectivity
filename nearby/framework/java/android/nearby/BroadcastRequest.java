@@ -38,6 +38,9 @@ import java.util.List;
 @SuppressLint("ParcelNotFinal")  // BroadcastRequest constructor is not public
 public abstract class BroadcastRequest implements Parcelable {
 
+    /** An unknown nearby broadcast request type. */
+    public static final int BROADCAST_TYPE_UNKNOWN = -1;
+
     /** Broadcast type for advertising using nearby presence protocol. */
     public static final int BROADCAST_TYPE_NEARBY_PRESENCE = 3;
 
@@ -45,29 +48,47 @@ public abstract class BroadcastRequest implements Parcelable {
     // Currently, only Nearby Presence broadcast is supported, in the future
     // broadcasting using other nearby specifications will be added.
     @Retention(RetentionPolicy.SOURCE)
-    @IntDef({BROADCAST_TYPE_NEARBY_PRESENCE})
+    @IntDef({BROADCAST_TYPE_UNKNOWN, BROADCAST_TYPE_NEARBY_PRESENCE})
     public @interface BroadcastType {
     }
 
     /**
      * Tx Power when the value is not set in the broadcast.
      */
-    public static final int UNKNOWN_TX_POWER = -100;
+    public static final int UNKNOWN_TX_POWER = -127;
 
     /**
-     * V0 of Nearby Presence Protocol.
+     * An unknown version of presence broadcast request.
+     */
+    public static final int PRESENCE_VERSION_UNKNOWN = -1;
+
+    /**
+     * A legacy presence version that is only suitable for legacy (31 bytes) BLE advertisements.
+     * This exists to support legacy presence version, and not recommended for use.
      */
     public static final int PRESENCE_VERSION_V0 = 0;
 
     /**
-     * V1 of Nearby Presence Protocol.
+     * V1 of Nearby Presence Protocol. This version supports both legacy (31 bytes) BLE
+     * advertisements, and extended BLE advertisements.
      */
     public static final int PRESENCE_VERSION_V1 = 1;
 
     /** @hide **/
     @Retention(RetentionPolicy.SOURCE)
-    @IntDef({PRESENCE_VERSION_V0, PRESENCE_VERSION_V1})
+    @IntDef({PRESENCE_VERSION_UNKNOWN, PRESENCE_VERSION_V0, PRESENCE_VERSION_V1})
     public @interface BroadcastVersion {
+    }
+
+    /**
+     * The medium where the broadcast request should be sent.
+     *
+     * @hide
+     */
+    @IntDef({Medium.BLE, Medium.MDNS})
+    public @interface Medium {
+        int BLE = 1;
+        int MDNS = 2;
     }
 
     public static final @NonNull Creator<BroadcastRequest> CREATOR =
@@ -93,10 +114,10 @@ public abstract class BroadcastRequest implements Parcelable {
     private final @BroadcastType int mType;
     private final @BroadcastVersion int mVersion;
     private final int mTxPower;
-    private final List<Integer> mMediums;
+    private final @Medium List<Integer> mMediums;
 
     BroadcastRequest(@BroadcastType int type, @BroadcastVersion int version, int txPower,
-            List<Integer> mediums) {
+            @Medium List<Integer> mediums) {
         this.mType = type;
         this.mVersion = version;
         this.mTxPower = txPower;
@@ -137,6 +158,7 @@ public abstract class BroadcastRequest implements Parcelable {
      * Returns the list of broadcast mediums.
      */
     @NonNull
+    @Medium
     public List<Integer> getMediums() {
         return mMediums;
     }
