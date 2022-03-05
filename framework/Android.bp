@@ -64,6 +64,7 @@ java_defaults {
         ":framework-connectivity-sources",
         ":net-utils-framework-common-srcs",
         ":framework-connectivity-api-shared-srcs",
+        ":framework-connectivity-javastream-protos",
     ],
     aidl: {
         generate_get_transaction_name: true,
@@ -85,7 +86,6 @@ java_defaults {
         "net-utils-device-common",
     ],
     static_libs: [
-        "framework-connectivity-protos",
         "modules-utils-build",
         "modules-utils-preconditions",
     ],
@@ -180,22 +180,36 @@ cc_library_shared {
     ],
 }
 
-// TODO: reduce size of this library; consider using
-// proto nano for example
-java_library {
+filegroup {
     name: "framework-connectivity-protos",
-    sdk_version: "module_current",
-    min_sdk_version: "30",
-    proto: {
-        type: "lite",
-    },
     srcs: [
-        "proto/**/*.*",
+        "proto/**/*.proto",
     ],
-   static_libs: ["libprotobuf-java-lite"],
-    apex_available: [
-        "com.android.tethering",
+    visibility: ["//frameworks/base"],
+}
+
+gensrcs {
+    name: "framework-connectivity-javastream-protos",
+    depfile: true,
+
+    tools: [
+        "aprotoc",
+        "protoc-gen-javastream",
+        "soong_zip",
     ],
-    lint: { strict_updatability_linting: true },
-    visibility: ["//visibility:private"],
+
+    cmd: "mkdir -p $(genDir)/$(in) " +
+        "&& $(location aprotoc) " +
+        "  --plugin=$(location protoc-gen-javastream) " +
+        "  --dependency_out=$(depfile) " +
+        "  --javastream_out=$(genDir)/$(in) " +
+        "  -Iexternal/protobuf/src " +
+        "  -I . " +
+        "  $(in) " +
+        "&& $(location soong_zip) -jar -o $(out) -C $(genDir)/$(in) -D $(genDir)/$(in)",
+
+    srcs: [
+        ":framework-connectivity-protos",
+    ],
+    output_extension: "srcjar",
 }
