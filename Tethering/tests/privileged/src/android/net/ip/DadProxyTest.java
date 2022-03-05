@@ -30,7 +30,6 @@ import android.content.Context;
 import android.net.INetd;
 import android.net.InetAddresses;
 import android.net.MacAddress;
-import android.net.util.InterfaceParams;
 import android.os.Build;
 import android.os.Handler;
 import android.os.HandlerThread;
@@ -40,6 +39,7 @@ import android.os.Looper;
 import androidx.test.InstrumentationRegistry;
 import androidx.test.filters.SmallTest;
 
+import com.android.net.module.util.InterfaceParams;
 import com.android.networkstack.tethering.util.TetheringUtils;
 import com.android.testutils.DevSdkIgnoreRule.IgnoreUpTo;
 import com.android.testutils.DevSdkIgnoreRunner;
