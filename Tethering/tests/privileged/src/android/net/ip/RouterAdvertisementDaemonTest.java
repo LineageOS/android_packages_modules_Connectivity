@@ -44,7 +44,6 @@ import android.net.IpPrefix;
 import android.net.MacAddress;
 import android.net.RouteInfo;
 import android.net.ip.RouterAdvertisementDaemon.RaParams;
-import android.net.util.InterfaceParams;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.IBinder;
@@ -54,6 +53,7 @@ import androidx.test.InstrumentationRegistry;
 import androidx.test.filters.SmallTest;
 import androidx.test.runner.AndroidJUnit4;
 
+import com.android.net.module.util.InterfaceParams;
 import com.android.net.module.util.Ipv6Utils;
 import com.android.net.module.util.NetdUtils;
 import com.android.net.module.util.Struct;
