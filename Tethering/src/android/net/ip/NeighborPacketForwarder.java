@@ -24,13 +24,13 @@ import static android.system.OsConstants.SOCK_DGRAM;
 import static android.system.OsConstants.SOCK_NONBLOCK;
 import static android.system.OsConstants.SOCK_RAW;
 
-import android.net.util.InterfaceParams;
 import android.net.util.SocketUtils;
 import android.os.Handler;
 import android.system.ErrnoException;
 import android.system.Os;
 import android.util.Log;
 
+import com.android.net.module.util.InterfaceParams;
 import com.android.net.module.util.PacketReader;
 import com.android.networkstack.tethering.util.TetheringUtils;
 

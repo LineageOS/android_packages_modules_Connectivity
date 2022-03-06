@@ -20,10 +20,9 @@ import static android.system.OsConstants.ETH_P_IPV6;
 
 import static com.android.networkstack.tethering.util.TetheringUtils.getTetheringJniLibraryName;
 
-import android.net.util.InterfaceParams;
-
 import androidx.annotation.NonNull;
 
+import com.android.net.module.util.InterfaceParams;
 import com.android.net.module.util.TcUtils;
 
 import java.io.IOException;
