@@ -92,7 +92,6 @@ rule android.net.shared.** com.android.connectivity.@0
 rule android.net.util.KeepalivePacketDataUtil* com.android.connectivity.@0
 
 # From connectivity-module-utils
-rule android.net.util.InterfaceParams* com.android.connectivity.@0
 rule android.net.util.SharedLog* com.android.connectivity.@0
 rule android.net.shared.** com.android.connectivity.@0
 
@@ -108,6 +107,9 @@ rule com.android.networkstack.apishim.** com.android.connectivity.@0
 
 # From fast-pair-lite-protos
 rule service.proto.** com.android.server.nearby.@0
+
+# From filegroup framework-connectivity-protos
+rule android.service.*Proto com.android.connectivity.@0
 
 # Remaining are connectivity sources in com.android.server and com.android.server.connectivity:
 # TODO: move to a subpackage of com.android.connectivity (such as com.android.connectivity.server)
