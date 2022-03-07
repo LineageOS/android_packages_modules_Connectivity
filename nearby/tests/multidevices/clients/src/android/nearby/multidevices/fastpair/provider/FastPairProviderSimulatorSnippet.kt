@@ -21,7 +21,7 @@ import android.bluetooth.le.AdvertiseSettings
 import android.content.Context
 import android.os.Build
 import androidx.test.platform.app.InstrumentationRegistry
-import com.android.server.nearby.common.bluetooth.fastpair.testing.FastPairSimulator
+import android.nearby.fastpair.provider.FastPairSimulator
 import com.google.android.mobly.snippet.Snippet
 import com.google.android.mobly.snippet.rpc.AsyncRpc
 import com.google.android.mobly.snippet.rpc.Rpc
@@ -70,7 +70,9 @@ class FastPairProviderSimulatorSnippet : Snippet {
         fastPairSimulator =
             FastPairSimulator(
                 context,
-                FastPairSimulator.Options.builder(modelId)
+                FastPairSimulator.Options.builder(
+                    modelId
+                )
                     .setAdvertisingModelId(modelId)
                     .setBluetoothAddress(null)
                     .setTxPowerLevel(AdvertiseSettings.ADVERTISE_TX_POWER_HIGH)

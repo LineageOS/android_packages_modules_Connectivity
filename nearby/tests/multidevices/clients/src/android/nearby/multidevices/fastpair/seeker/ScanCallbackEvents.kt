@@ -18,7 +18,7 @@ package android.nearby.multidevices.fastpair.seeker
 
 import android.nearby.NearbyDevice
 import android.nearby.ScanCallback
-import android.nearby.multidevices.common.postSnippetEvent
+import com.google.android.mobly.snippet.util.postSnippetEvent
 
 /** The Mobly snippet events to report to the Python side. */
 class ScanCallbackEvents(private val callbackId: String) : ScanCallback {
