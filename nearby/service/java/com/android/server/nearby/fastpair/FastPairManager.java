@@ -86,6 +86,7 @@ public class FastPairManager {
     /** A notification ID which should be dismissed */
     public static final String EXTRA_NOTIFICATION_ID = ACTION_PREFIX + "EXTRA_NOTIFICATION_ID";
     public static final String ACTION_RESOURCES_APK = "android.nearby.SHOW_HALFSHEET";
+    public static final boolean ENFORCED_SCAN_ENABLED_VALUE = false;
 
     private static Executor sFastPairExecutor;
 
@@ -94,7 +95,7 @@ public class FastPairManager {
     final LocatorContextWrapper mLocatorContextWrapper;
     final IntentFilter mIntentFilter;
     final Locator mLocator;
-    private boolean mScanEnabled = false;
+    private boolean mScanEnabled = ENFORCED_SCAN_ENABLED_VALUE;
     private final BroadcastReceiver mScreenBroadcastReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
@@ -148,6 +149,7 @@ public class FastPairManager {
         Locator.getFromContextWrapper(mLocatorContextWrapper, FastPairCacheManager.class);
         try {
             mScanEnabled = getScanEnabledFromSettings();
+            mScanEnabled = ENFORCED_SCAN_ENABLED_VALUE;
         } catch (Settings.SettingNotFoundException e) {
             Log.w(TAG,
                     "initiate: Failed to get initial scan enabled status from Settings.", e);
@@ -388,6 +390,7 @@ public class FastPairManager {
             return;
         }
         mScanEnabled = scanEnabled;
+        mScanEnabled = ENFORCED_SCAN_ENABLED_VALUE;
         invalidateScan();
     }
 
