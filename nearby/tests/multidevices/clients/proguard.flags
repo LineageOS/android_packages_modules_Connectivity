@@ -4,7 +4,7 @@
 }
 
 # Keep simulator reflection callback.
--keep class com.android.server.nearby.common.bluetooth.fastpair.testing.** {
+-keep class android.nearby.fastpair.provider.** {
      *;
 }
 

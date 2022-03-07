@@ -17,30 +17,19 @@ package {
 }
 
 android_library {
-    name: "NearbyMultiDevicesClientsLib",
+    name: "NearbyFastPairProviderLib",
     srcs: [
         "src/**/*.java",
         "src/**/*.kt",
     ],
     sdk_version: "test_current",
     static_libs: [
-        "MoblySnippetHelperLib",
-        "NearbyFastPairProviderLib",
+        "NearbyFastPairProviderLiteProtos",
         "androidx.test.core",
-        "gson-prebuilt-jar",
+        "error_prone_annotations",
+        "fast-pair-lite-protos",
+        "framework-annotations-lib",
         "kotlin-stdlib",
-        "mobly-snippet-lib",
+        "service-nearby",
     ],
-}
-
-android_app {
-    name: "NearbyMultiDevicesClientsSnippets",
-    sdk_version: "test_current",
-    certificate: "platform",
-    static_libs: ["NearbyMultiDevicesClientsLib"],
-    optimize: {
-        enabled: true,
-        shrink: true,
-        proguard_flags_files: ["proguard.flags"],
-    },
 }
