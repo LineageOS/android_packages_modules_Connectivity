@@ -38,10 +38,11 @@ enable_tethering_next_apex = false
 
 apex {
     name: "com.android.tethering",
-    defaults: ["ConnectivityApexDefaults"],
+    defaults: [
+        "ConnectivityApexDefaults",
+        "r-launched-apex-module",
+    ],
     compile_multilib: "both",
-    updatable: true,
-    min_sdk_version: "30",
     bootclasspath_fragments: [
         "com.android.tethering-bootclasspath-fragment",
     ],
