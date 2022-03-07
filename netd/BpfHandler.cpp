@@ -143,6 +143,25 @@ int BpfHandler::tagSocket(int sockFd, uint32_t tag, uid_t chargeUid, uid_t realU
         return -EPERM;
     }
 
+    // The socket destroy listener only monitors on the group {INET_TCP, INET_UDP, INET6_TCP,
+    // INET6_UDP}. Tagging listener unsupported socket causes that the tag can't be removed from
+    // tag map automatically. Eventually, the tag map may run out of space because of dead tag
+    // entries.
+    // See TrafficController::makeSkDestroyListener in
+    // packages/modules/Connectivity/service/native/TrafficController.cpp
+    // TODO: remove this once the socket destroy listener can detect more types of socket destroy.
+    int socketProto;
+    socklen_t intSize = sizeof(socketProto);
+    if (getsockopt(sockFd, SOL_SOCKET, SO_PROTOCOL, &socketProto, &intSize)) {
+        ALOGE("Failed to getsockopt: %s, fd: %d", strerror(errno), sockFd);
+        return -errno;
+    } else {
+        if (socketProto != IPPROTO_UDP && socketProto != IPPROTO_TCP) {
+            ALOGE("Unsupported protocol: %d", socketProto);
+            return -EPROTONOSUPPORT;
+        }
+    }
+
     uint64_t sock_cookie = getSocketCookie(sockFd);
     if (sock_cookie == NONEXISTENT_COOKIE) return -errno;
     UidTagValue newKey = {.uid = (uint32_t)chargeUid, .tag = tag};
