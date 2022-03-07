@@ -327,6 +327,8 @@ package android.nearby {
   }
 
   public class NearbyManager {
+    method public static boolean getFastPairScanEnabled(@NonNull android.content.Context, boolean);
+    method public static void setFastPairScanEnabled(@NonNull android.content.Context, boolean);
     method public void startBroadcast(@NonNull android.nearby.BroadcastRequest, @NonNull java.util.concurrent.Executor, @NonNull android.nearby.BroadcastCallback);
     method public void startScan(@NonNull android.nearby.ScanRequest, @NonNull java.util.concurrent.Executor, @NonNull android.nearby.ScanCallback);
     method public void stopBroadcast(@NonNull android.nearby.BroadcastCallback);
