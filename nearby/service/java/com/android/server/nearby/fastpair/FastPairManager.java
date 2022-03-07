@@ -41,6 +41,7 @@ import android.util.Log;
 
 import androidx.annotation.NonNull;
 
+import com.android.server.nearby.common.ble.decode.FastPairDecoder;
 import com.android.server.nearby.common.bluetooth.BluetoothException;
 import com.android.server.nearby.common.bluetooth.fastpair.FastPairConnection;
 import com.android.server.nearby.common.bluetooth.fastpair.FastPairDualConnection;
@@ -48,6 +49,7 @@ import com.android.server.nearby.common.bluetooth.fastpair.PairingException;
 import com.android.server.nearby.common.bluetooth.fastpair.Preferences;
 import com.android.server.nearby.common.bluetooth.fastpair.ReflectionException;
 import com.android.server.nearby.common.bluetooth.fastpair.SimpleBroadcastReceiver;
+import com.android.server.nearby.common.bluetooth.testability.android.bluetooth.BluetoothDevice;
 import com.android.server.nearby.common.eventloop.Annotations;
 import com.android.server.nearby.common.eventloop.EventLoop;
 import com.android.server.nearby.common.eventloop.NamedRunnable;
@@ -58,9 +60,11 @@ import com.android.server.nearby.fastpair.cache.FastPairCacheManager;
 import com.android.server.nearby.fastpair.footprint.FootprintsDeviceManager;
 import com.android.server.nearby.fastpair.halfsheet.FastPairHalfSheetManager;
 import com.android.server.nearby.fastpair.pairinghandler.PairingProgressHandlerBase;
-import com.android.server.nearby.util.FastPairDecoder;
 import com.android.server.nearby.util.ForegroundThread;
 import com.android.server.nearby.util.Hex;
+
+import com.google.common.collect.ImmutableList;
+import com.google.protobuf.ByteString;
 
 import java.security.GeneralSecurityException;
 import java.util.concurrent.ExecutionException;
@@ -71,6 +75,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
+import service.proto.Cache;
 import service.proto.Rpcs;
 
 /**
@@ -178,7 +183,6 @@ public class FastPairManager {
             @Nullable String companionApp,
             FootprintsDeviceManager footprints,
             PairingProgressHandlerBase pairingProgressHandlerBase) {
-
         return executor.submit(
                 () -> pairInternal(context, item, companionApp, accountKey, footprints,
                         pairingProgressHandlerBase), /* result= */ null);
@@ -195,7 +199,8 @@ public class FastPairManager {
             @Nullable byte[] accountKey,
             FootprintsDeviceManager footprints,
             PairingProgressHandlerBase pairingProgressHandlerBase) {
-        FastPairHalfSheetManager manager = Locator.get(context, FastPairHalfSheetManager.class);
+        FastPairHalfSheetManager fastPairHalfSheetManager =
+                Locator.get(context, FastPairHalfSheetManager.class);
         try {
             pairingProgressHandlerBase.onPairingStarted();
             if (pairingProgressHandlerBase.skipWaitingScreenUnlock()) {
@@ -266,24 +271,17 @@ public class FastPairManager {
                     if (sharedSecret != null) {
                         Locator.get(context, FastPairController.class).addDeviceToFootprint(
                                 connection.getPublicAddress(), sharedSecret.getKey(), item);
+                        cacheFastPairDevice(context, connection.getPublicAddress(),
+                                sharedSecret.getKey(), item);
                     }
-                }
-
-                byte[] key = pairingProgressHandlerBase.getKeyForLocalCache(accountKey,
-                        connection, sharedSecret);
-
-                // We don't cache initial pairing case here but cache it when upload to footprints.
-                if (key != null) {
-                    // CacheManager to save the content here
                 }
             } else {
                 // Fast Pair one
                 connection.pair();
             }
-
             // TODO(b/213373051): Merge logic with pairingProgressHandlerBase or delete the
             // pairingProgressHandlerBase class.
-            manager.showPairingSuccessHalfSheet(connection.getPublicAddress());
+            fastPairHalfSheetManager.showPairingSuccessHalfSheet(connection.getPublicAddress());
             pairingProgressHandlerBase.onPairingSuccess(connection.getPublicAddress());
         } catch (BluetoothException
                 | InterruptedException
@@ -296,8 +294,35 @@ public class FastPairManager {
 
             // TODO(b/213373051): Merge logic with pairingProgressHandlerBase or delete the
             // pairingProgressHandlerBase class.
-            manager.showPairingFailed();
+            fastPairHalfSheetManager.showPairingFailed();
             pairingProgressHandlerBase.onPairingFailed(e);
+        }
+    }
+
+    private static void cacheFastPairDevice(Context context, String publicAddress, byte[] key,
+            DiscoveryItem item) {
+        try {
+            Locator.get(context, EventLoop.class).postAndWait(
+                    new NamedRunnable("FastPairCacheDevice") {
+                        @Override
+                        public void run() {
+                            Cache.StoredFastPairItem storedFastPairItem =
+                                    Cache.StoredFastPairItem.newBuilder()
+                                            .setMacAddress(publicAddress)
+                                            .setAccountKey(ByteString.copyFrom(key))
+                                            .setModelId(item.getTriggerId())
+                                            .addAllFeatures(item.getFastPairInformation() == null
+                                                    ? ImmutableList.of() :
+                                                    item.getFastPairInformation().getFeaturesList())
+                                            .setDiscoveryItem(item.getCopyOfStoredItem())
+                                            .build();
+                            Locator.get(context, FastPairCacheManager.class)
+                                    .putStoredFastPairItem(storedFastPairItem);
+                        }
+                    }
+            );
+        } catch (InterruptedException e) {
+            Log.e(TAG, "Fail to insert paired device into cache");
         }
     }
 
@@ -317,7 +342,7 @@ public class FastPairManager {
         // regardless.
         if (keyguardManager.isKeyguardLocked()) {
             Log.v(TAG, "FastPair: Screen is locked, waiting until unlocked "
-                            + "to show status notifications.");
+                    + "to show status notifications.");
             try (SimpleBroadcastReceiver isUnlockedReceiver =
                          SimpleBroadcastReceiver.oneShotReceiver(
                                  context, FlagUtils.getPreferencesBuilder().build(),
@@ -344,7 +369,7 @@ public class FastPairManager {
                     Settings.Secure.getUriFor(Settings.Secure.FAST_PAIR_SCAN_ENABLED),
                     /* notifyForDescendants= */ false,
                     mFastPairScanChangeContentObserver);
-        }  catch (SecurityException e) {
+        } catch (SecurityException e) {
             Log.e(TAG, "Failed to register content observer for fast pair scan.", e);
         }
     }
@@ -392,7 +417,7 @@ public class FastPairManager {
     }
 
     /**
-     *  Starts or stops scanning according to mAllowScan value.
+     * Starts or stops scanning according to mAllowScan value.
      */
     private void invalidateScan() {
         NearbyManager nearbyManager = getNearbyManager();
@@ -408,6 +433,30 @@ public class FastPairManager {
                     mScanCallback);
         } else {
             nearbyManager.stopScan(mScanCallback);
+        }
+    }
+
+    /**
+     * When certain device is forgotten we need to remove the info from database because the info
+     * is no longer useful.
+     */
+    private void processBluetoothConnectionEvent(Intent intent) {
+        int bondState = intent.getIntExtra(BluetoothDevice.EXTRA_BOND_STATE,
+                BluetoothDevice.ERROR);
+        if (bondState == BluetoothDevice.BOND_NONE) {
+            BluetoothDevice device =
+                    intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
+            if (device != null) {
+                Log.d("FastPairService", "Forget device detect");
+                processBackgroundTask(new Runnable() {
+                    @Override
+                    public void run() {
+                        mLocatorContextWrapper.getLocator().get(FastPairCacheManager.class)
+                                .removeStoredFastPairItem(device.getAddress());
+                    }
+                });
+            }
+
         }
     }
 
