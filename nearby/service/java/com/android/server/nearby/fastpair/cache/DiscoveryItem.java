@@ -31,6 +31,7 @@ import android.util.Log;
 import com.android.server.nearby.common.ble.util.RangingUtils;
 import com.android.server.nearby.common.fastpair.IconUtils;
 import com.android.server.nearby.common.locator.Locator;
+import com.android.server.nearby.common.locator.LocatorContextWrapper;
 
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
@@ -66,6 +67,15 @@ public class DiscoveryItem implements Comparable<DiscoveryItem> {
     })
     @Retention(RetentionPolicy.SOURCE)
     public @interface ItemState {}
+
+    public DiscoveryItem(LocatorContextWrapper locatorContextWrapper,
+            Cache.StoredDiscoveryItem mStoredDiscoveryItem) {
+        this.mFastPairCacheManager =
+                locatorContextWrapper.getLocator().get(FastPairCacheManager.class);
+        this.mClock =
+            locatorContextWrapper.getLocator().get(Clock.class);
+        this.mStoredDiscoveryItem = mStoredDiscoveryItem;
+    }
 
     public DiscoveryItem(Context context, Cache.StoredDiscoveryItem mStoredDiscoveryItem) {
         this.mFastPairCacheManager = Locator.get(context, FastPairCacheManager.class);
