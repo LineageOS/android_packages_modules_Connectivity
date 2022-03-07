@@ -10699,6 +10699,9 @@ public class ConnectivityService extends IConnectivityManager.Stub
     }
 
     private boolean canNetworkBeRateLimited(@NonNull final NetworkAgentInfo networkAgent) {
+        // Rate-limiting cannot run correctly before T because the BPF program is not loaded.
+        if (!SdkLevel.isAtLeastT()) return false;
+
         final NetworkCapabilities agentCaps = networkAgent.networkCapabilities;
         // Only test networks (they cannot hold NET_CAPABILITY_INTERNET) and networks that provide
         // internet connectivity can be rate limited.
