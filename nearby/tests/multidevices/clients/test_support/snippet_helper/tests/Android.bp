@@ -16,31 +16,23 @@ package {
     default_applicable_licenses: ["Android-Apache-2.0"],
 }
 
-android_library {
-    name: "NearbyMultiDevicesClientsLib",
-    srcs: [
-        "src/**/*.java",
-        "src/**/*.kt",
-    ],
-    sdk_version: "test_current",
+// Run the tests: atest --host MoblySnippetHelperRoboTest
+android_robolectric_test {
+    name: "MoblySnippetHelperRoboTest",
+    srcs: ["src/**/*.kt"],
+    instrumentation_for: "NearbyMultiDevicesClientsSnippets",
+    java_resources: ["robolectric.properties"],
+
     static_libs: [
         "MoblySnippetHelperLib",
-        "NearbyFastPairProviderLib",
-        "androidx.test.core",
-        "gson-prebuilt-jar",
-        "kotlin-stdlib",
+        "androidx.test.ext.junit",
+        "androidx.test.rules",
+        "junit",
         "mobly-snippet-lib",
+        "truth-prebuilt",
     ],
-}
-
-android_app {
-    name: "NearbyMultiDevicesClientsSnippets",
-    sdk_version: "test_current",
-    certificate: "platform",
-    static_libs: ["NearbyMultiDevicesClientsLib"],
-    optimize: {
-        enabled: true,
-        shrink: true,
-        proguard_flags_files: ["proguard.flags"],
+    test_options: {
+        // timeout in seconds.
+        timeout: 36000,
     },
 }
