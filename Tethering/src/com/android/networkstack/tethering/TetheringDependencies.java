@@ -94,13 +94,6 @@ public abstract class TetheringDependencies {
     public abstract IpServer.Dependencies getIpServerDependencies();
 
     /**
-     * Indicates whether tethering is supported on the device.
-     */
-    public boolean isTetheringSupported() {
-        return true;
-    }
-
-    /**
      * Get a reference to the EntitlementManager to be used by tethering.
      */
     public EntitlementManager getEntitlementManager(Context ctx, Handler h, SharedLog log,
