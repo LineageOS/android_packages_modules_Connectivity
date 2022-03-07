@@ -287,9 +287,15 @@ java_library {
         "framework-annotations-lib",
         "framework-connectivity",
     ],
+    // TODO: remove "apex_available:platform".
+    apex_available: [
+        "//apex_available:platform",
+        "com.android.tethering",
+    ],
     visibility: [
         // TODO: remove after NetworkStatsService moves to the module.
         "//frameworks/base/services/net",
+        "//packages/modules/Connectivity/service",
         "//packages/modules/Connectivity/tests:__subpackages__",
         "//packages/modules/Bluetooth/android/app",
     ],
