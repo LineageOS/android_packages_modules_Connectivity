@@ -50,6 +50,10 @@ public class NearbyManager {
     @GuardedBy("sScanListeners")
     private static final WeakHashMap<ScanCallback, WeakReference<ScanListenerTransport>>
             sScanListeners = new WeakHashMap<>();
+    @GuardedBy("sBroadcastListeners")
+    private static final WeakHashMap<BroadcastCallback, WeakReference<BroadcastListenerTransport>>
+            sBroadcastListeners = new WeakHashMap<>();
+
     private final INearbyManager mService;
 
     /**
@@ -149,7 +153,23 @@ public class NearbyManager {
      */
     public void startBroadcast(@NonNull BroadcastRequest broadcastRequest,
             @CallbackExecutor @NonNull Executor executor, @NonNull BroadcastCallback callback) {
-        // TODO(b/218187205): implement broadcast.
+        try {
+            synchronized (sBroadcastListeners) {
+                WeakReference<BroadcastListenerTransport> reference = sBroadcastListeners.get(
+                        callback);
+                BroadcastListenerTransport transport = reference != null ? reference.get() : null;
+                if (transport == null) {
+                    transport = new BroadcastListenerTransport(callback, executor);
+                } else {
+                    Preconditions.checkState(transport.isRegistered());
+                    transport.setExecutor(executor);
+                }
+                mService.startBroadcast(broadcastRequest, transport);
+                sBroadcastListeners.put(callback, new WeakReference<>(transport));
+            }
+        } catch (RemoteException e) {
+            throw e.rethrowFromSystemServer();
+        }
     }
 
     /**
@@ -159,7 +179,19 @@ public class NearbyManager {
      */
     @SuppressLint("ExecutorRegistration")
     public void stopBroadcast(@NonNull BroadcastCallback callback) {
-        // TODO(b/218187205): implement broadcast.
+        try {
+            synchronized (sBroadcastListeners) {
+                WeakReference<BroadcastListenerTransport> reference = sBroadcastListeners.remove(
+                        callback);
+                BroadcastListenerTransport transport = reference != null ? reference.get() : null;
+                if (transport != null) {
+                    transport.unregister();
+                    mService.stopBroadcast(transport);
+                }
+            }
+        } catch (RemoteException e) {
+            throw e.rethrowFromSystemServer();
+        }
     }
 
     private static class ScanListenerTransport extends IScanListener.Stub {
@@ -214,6 +246,36 @@ public class NearbyManager {
             mExecutor.execute(
                     () -> mScanCallback.onLost(
                             toClientNearbyDevice(nearbyDeviceParcelable, mScanType)));
+        }
+    }
+
+    private static class BroadcastListenerTransport extends IBroadcastListener.Stub {
+        private volatile @Nullable BroadcastCallback mBroadcastCallback;
+        private Executor mExecutor;
+
+        BroadcastListenerTransport(BroadcastCallback broadcastCallback,
+                @CallbackExecutor Executor executor) {
+            mBroadcastCallback = broadcastCallback;
+            mExecutor = executor;
+        }
+
+        void setExecutor(Executor executor) {
+            Preconditions.checkArgument(
+                    executor != null, "invalid null executor");
+            mExecutor = executor;
+        }
+
+        boolean isRegistered() {
+            return mBroadcastCallback != null;
+        }
+
+        void unregister() {
+            mBroadcastCallback = null;
+        }
+
+        @Override
+        public void onStatusChanged(int status) {
+            mExecutor.execute(()-> mBroadcastCallback.onStatus(status));
         }
     }
 }

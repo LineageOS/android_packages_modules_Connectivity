@@ -16,8 +16,11 @@
 
 package com.android.server.nearby;
 
+import static android.Manifest.permission.READ_DEVICE_CONFIG;
+
 import static org.mockito.MockitoAnnotations.initMocks;
 
+import android.app.UiAutomation;
 import android.content.Context;
 import android.nearby.IScanListener;
 import android.nearby.ScanRequest;
@@ -33,13 +36,16 @@ public final class NearbyServiceTest {
     private Context mContext;
     private NearbyService mService;
     private ScanRequest mScanRequest;
+    private UiAutomation mUiAutomation =
+            InstrumentationRegistry.getInstrumentation().getUiAutomation();
+
     @Mock
     private IScanListener mScanListener;
 
     @Before
     public void setup() {
         initMocks(this);
-
+        mUiAutomation.adoptShellPermissionIdentity(READ_DEVICE_CONFIG);
         mContext = InstrumentationRegistry.getInstrumentation().getContext();
         mService = new NearbyService(mContext);
         mScanRequest = createScanRequest();
