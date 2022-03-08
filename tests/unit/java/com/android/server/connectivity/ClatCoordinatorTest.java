@@ -26,13 +26,10 @@ import static com.android.testutils.MiscAsserts.assertThrows;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
-import static org.mockito.Mockito.anyInt;
-import static org.mockito.Mockito.anyString;
 import static org.mockito.Mockito.argThat;
 import static org.mockito.Mockito.clearInvocations;
 import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.inOrder;
-import static org.mockito.Mockito.never;
 
 import android.annotation.NonNull;
 import android.net.INetd;
@@ -82,6 +79,7 @@ public class ClatCoordinatorTest {
     private static final int TUN_FD = 534;
     private static final int RAW_SOCK_FD = 535;
     private static final int PACKET_SOCK_FD = 536;
+    private static final long RAW_SOCK_COOKIE = 27149;
     private static final ParcelFileDescriptor TUN_PFD = new ParcelFileDescriptor(
             new FileDescriptor());
     private static final ParcelFileDescriptor RAW_SOCK_PFD = new ParcelFileDescriptor(
@@ -258,10 +256,33 @@ public class ClatCoordinatorTest {
         /**
          * Stop clatd.
          */
+        @Override
         public void stopClatd(@NonNull String iface, @NonNull String pfx96, @NonNull String v4,
                 @NonNull String v6, int pid) throws IOException {
             if (pid == -1) {
                 fail("unsupported arg: " + pid);
+            }
+        }
+
+        /**
+         * Tag socket as clat.
+         */
+        @Override
+        public long tagSocketAsClat(@NonNull FileDescriptor sock) throws IOException {
+            if (Objects.equals(RAW_SOCK_PFD.getFileDescriptor(), sock)) {
+                return RAW_SOCK_COOKIE;
+            }
+            fail("unsupported arg: " + sock);
+            return 0;
+        }
+
+        /**
+         * Untag socket.
+         */
+        @Override
+        public void untagSocket(long cookie) throws IOException {
+            if (cookie != RAW_SOCK_COOKIE) {
+                fail("unsupported arg: " + cookie);
             }
         }
     };
@@ -326,6 +347,8 @@ public class ClatCoordinatorTest {
         inOrder.verify(mDeps).addAnycastSetsockopt(
                 argThat(fd -> Objects.equals(RAW_SOCK_PFD.getFileDescriptor(), fd)),
                 eq(XLAT_LOCAL_IPV6ADDR_STRING), eq(BASE_IFINDEX));
+        inOrder.verify(mDeps).tagSocketAsClat(
+                argThat(fd -> Objects.equals(RAW_SOCK_PFD.getFileDescriptor(), fd)));
         inOrder.verify(mDeps).configurePacketSocket(
                 argThat(fd -> Objects.equals(PACKET_SOCK_PFD.getFileDescriptor(), fd)),
                 eq(XLAT_LOCAL_IPV6ADDR_STRING), eq(BASE_IFINDEX));
@@ -348,13 +371,12 @@ public class ClatCoordinatorTest {
         coordinator.clatStop();
         inOrder.verify(mDeps).stopClatd(eq(BASE_IFACE), eq(NAT64_PREFIX_STRING),
                 eq(XLAT_LOCAL_IPV4ADDR_STRING), eq(XLAT_LOCAL_IPV6ADDR_STRING), eq(CLATD_PID));
+        inOrder.verify(mDeps).untagSocket(eq(RAW_SOCK_COOKIE));
         inOrder.verifyNoMoreInteractions();
 
         // [4] Expect an IO exception while stopping a clatd that doesn't exist.
         assertThrows("java.io.IOException: Clatd has not started", IOException.class,
                 () -> coordinator.clatStop());
-        inOrder.verify(mDeps, never()).stopClatd(anyString(), anyString(), anyString(),
-                anyString(), anyInt());
         inOrder.verifyNoMoreInteractions();
     }
 
