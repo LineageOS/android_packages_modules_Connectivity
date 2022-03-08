@@ -105,7 +105,7 @@ public class IpConfigStoreTest {
         IpConfigStore store = new IpConfigStore(writer);
         store.writeIpConfigurations("file/path/not/used/", expectedNetworks);
 
-        InputStream in = new ByteArrayInputStream(writer.byteStream.toByteArray());
+        InputStream in = new ByteArrayInputStream(writer.mByteStream.toByteArray());
         ArrayMap<String, IpConfiguration> actualNetworks = IpConfigStore.readIpConfigurations(in);
         assertNotNull(actualNetworks);
         assertEquals(2, actualNetworks.size());
