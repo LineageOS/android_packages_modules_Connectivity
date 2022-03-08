@@ -16,12 +16,16 @@
 
 package android.nearby.cts;
 
+import static com.google.common.truth.Truth.assertThat;
+
+import android.content.Context;
 import android.nearby.NearbyFrameworkInitializer;
 import android.os.Build;
 
 import androidx.annotation.RequiresApi;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
 import androidx.test.filters.SdkSuppress;
+import androidx.test.platform.app.InstrumentationRegistry;
 
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -31,15 +35,11 @@ import org.junit.runner.RunWith;
 @RequiresApi(Build.VERSION_CODES.TIRAMISU)
 public class NearbyFrameworkInitializerTest {
 
-//    // TODO(b/215435710) This test cannot pass now because our test cannot access system API.
-//    // run "adb root && adb shell setenforce permissive" and uncomment testServicesRegistered,
-//    // test passes.
-//    @Test
-//    public void testServicesRegistered() {
-//        Context ctx = InstrumentationRegistry.getInstrumentation().getContext();
-//        assertNotNull( "NearbyManager not registered",
-//                ctx.getSystemService(Context.NEARBY_SERVICE));
-//    }
+    @Test
+    public void testServicesRegistered() {
+        Context ctx = InstrumentationRegistry.getInstrumentation().getContext();
+        assertThat(ctx.getSystemService(Context.NEARBY_SERVICE)).isNotNull();
+    }
 
     // registerServiceWrappers can only be called during initialization and should throw otherwise
     @Test(expected = IllegalStateException.class)
