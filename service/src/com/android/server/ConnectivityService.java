@@ -11132,14 +11132,4 @@ public class ConnectivityService extends IConnectivityManager.Stub
             throw new IllegalStateException(e);
         }
     }
-
-    @Override
-    public void swapActiveStatsMap() {
-        enforceNetworkStackOrSettingsPermission();
-        try {
-            mBpfNetMaps.swapActiveStatsMap();
-        } catch (RemoteException | ServiceSpecificException e) {
-            throw new IllegalStateException(e);
-        }
-    }
 }
