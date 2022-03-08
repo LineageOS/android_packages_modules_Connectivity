@@ -170,18 +170,16 @@ public class FastPairSimulator {
     private static final Value CLASS_OF_DEVICE =
             new Value(base16().decode("200418"), ByteOrder.BIG_ENDIAN);
 
-    private static final byte[] SUPPORTED_SERVICES_LTV =
-            new Ltv(
-                    TransportDiscoveryService.SERVICE_UUIDS_16_BIT_LIST_TYPE,
-                    toBytes(ByteOrder.LITTLE_ENDIAN, A2DP_SINK_SERVICE_UUID))
-                    .getBytes();
+    private static final byte[] SUPPORTED_SERVICES_LTV = new Ltv(
+            TransportDiscoveryService.SERVICE_UUIDS_16_BIT_LIST_TYPE,
+            toBytes(ByteOrder.LITTLE_ENDIAN, A2DP_SINK_SERVICE_UUID)
+    ).getBytes();
     private static final byte[] TDS_CONTROL_POINT_RESPONSE_PARAMETER =
             Bytes.concat(new byte[]{BLUETOOTH_SIG_ORGANIZATION_ID}, SUPPORTED_SERVICES_LTV);
 
     private static final String SIMULATOR_FAKE_BLE_ADDRESS = "11:22:33:44:55:66";
 
     private static final long ADVERTISING_REFRESH_DELAY_1_MIN = TimeUnit.MINUTES.toMillis(1);
-    private static final long ADVERTISING_REFRESH_DELAY_5_MINS = TimeUnit.MINUTES.toMillis(5);
 
     /** The user will be prompted to accept or deny the incoming pairing request */
     public static final int PAIRING_VARIANT_CONSENT = 3;
@@ -250,140 +248,139 @@ public class FastPairSimulator {
     private final ScheduledExecutorService mExecutor =
             Executors.newSingleThreadScheduledExecutor(); // exempt
     private final BluetoothAdapter mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
-    private final BroadcastReceiver mBroadcastReceiver =
-            new BroadcastReceiver() {
-                @Override
-                public void onReceive(Context context, Intent intent) {
-                    if (mShouldFailPairing) {
-                        mLogger.log("Pairing disabled by test app switch");
-                        return;
+    private final BroadcastReceiver mBroadcastReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            if (mShouldFailPairing) {
+                mLogger.log("Pairing disabled by test app switch");
+                return;
+            }
+            if (mIsDestroyed) {
+                // Sometimes this receiver does not successfully unregister in destroy()
+                // which causes events to occur after the simulator is stopped, so ignore
+                // those events.
+                mLogger.log("Intent received after simulator destroyed, ignoring");
+                return;
+            }
+            BluetoothDevice device = intent.getParcelableExtra(
+                    BluetoothDevice.EXTRA_DEVICE);
+            switch (intent.getAction()) {
+                case BluetoothAdapter.ACTION_SCAN_MODE_CHANGED:
+                    if (isDiscoverable()) {
+                        mIsDiscoverableLatch.countDown();
                     }
-                    if (mIsDestroyed) {
-                        // Sometimes this receiver does not successfully unregister in destroy()
-                        // which causes events to occur after the simulator is stopped, so ignore
-                        // those events.
-                        mLogger.log("Intent received after simulator destroyed, ignoring");
-                        return;
+                    break;
+                case BluetoothDevice.ACTION_PAIRING_REQUEST:
+                    int variant = intent.getIntExtra(BluetoothDevice.EXTRA_PAIRING_VARIANT,
+                            ERROR);
+                    int key = intent.getIntExtra(BluetoothDevice.EXTRA_PAIRING_KEY, ERROR);
+                    mLogger.log(
+                            "Pairing request, variant=%d, key=%s", variant,
+                            key == ERROR ? "(none)" : key);
+
+                    // Prevent Bluetooth Settings from getting the pairing request.
+                    abortBroadcast();
+
+                    mPairingDevice = device;
+                    if (mSecret == null) {
+                        // We haven't done the handshake over GATT to agree on the shared
+                        // secret. For now, just accept anyway (so we can still simulate
+                        // old 1.0 model IDs).
+                        mLogger.log("No handshake, auto-accepting anyway.");
+                        setPasskeyConfirmation(true);
+                    } else if (variant
+                            == BluetoothDevice.PAIRING_VARIANT_PASSKEY_CONFIRMATION) {
+                        // Store the passkey. And check it, since there's a race (see
+                        // method for why). Usually this check is a no-op and we'll get
+                        // the passkey later over GATT.
+                        mLocalPasskey = key;
+                        checkPasskey();
+                    } else if (variant == PAIRING_VARIANT_DISPLAY_PASSKEY) {
+                        if (mPasskeyEventCallback != null) {
+                            mPasskeyEventCallback.onPasskeyRequested(
+                                    FastPairSimulator.this::enterPassKey);
+                        } else {
+                            mLogger.log("passkeyEventCallback is not set!");
+                            enterPassKey(key);
+                        }
+                    } else if (variant == PAIRING_VARIANT_CONSENT) {
+                        setPasskeyConfirmation(true);
+
+                    } else if (variant == BluetoothDevice.PAIRING_VARIANT_PIN) {
+                        if (mPasskeyEventCallback != null) {
+                            mPasskeyEventCallback.onPasskeyRequested(
+                                    (int pin) -> {
+                                        byte[] newPin = convertPinToBytes(
+                                                String.format(Locale.ENGLISH, "%d", pin));
+                                        mPairingDevice.setPin(newPin);
+                                    });
+                        }
+                    } else {
+                        // Reject the pairing request if it's not using the Numeric
+                        // Comparison (aka Passkey Confirmation) method.
+                        setPasskeyConfirmation(false);
                     }
-                    BluetoothDevice device = intent.getParcelableExtra(
-                            BluetoothDevice.EXTRA_DEVICE);
-                    switch (intent.getAction()) {
-                        case BluetoothAdapter.ACTION_SCAN_MODE_CHANGED:
-                            if (isDiscoverable()) {
-                                mIsDiscoverableLatch.countDown();
+                    break;
+                case BluetoothDevice.ACTION_BOND_STATE_CHANGED:
+                    int bondState =
+                            intent.getIntExtra(BluetoothDevice.EXTRA_BOND_STATE,
+                                    BluetoothDevice.BOND_NONE);
+                    mLogger.log("Bond state to %s changed to %d", device, bondState);
+                    switch (bondState) {
+                        case BluetoothDevice.BOND_BONDING:
+                            // If we've started bonding, we shouldn't be advertising.
+                            mAdvertiser.stopAdvertising();
+                            // Not discoverable anymore, but still connectable.
+                            setScanMode(BluetoothAdapter.SCAN_MODE_CONNECTABLE);
+                            break;
+                        case BluetoothDevice.BOND_BONDED:
+                            // Once bonded, advertise the account keys.
+                            mAdvertiser.startAdvertising(accountKeysServiceData());
+                            setScanMode(BluetoothAdapter.SCAN_MODE_CONNECTABLE);
+
+                            // If it is subsequent pair, we need to add paired device here.
+                            if (mIsSubsequentPair
+                                    && mSecret != null
+                                    && mSecret.length == AES_BLOCK_LENGTH) {
+                                addAccountKey(mSecret, mPairingDevice);
                             }
                             break;
-                        case BluetoothDevice.ACTION_PAIRING_REQUEST:
-                            int variant = intent.getIntExtra(BluetoothDevice.EXTRA_PAIRING_VARIANT,
-                                    ERROR);
-                            int key = intent.getIntExtra(BluetoothDevice.EXTRA_PAIRING_KEY, ERROR);
-                            mLogger.log(
-                                    "Pairing request, variant=%d, key=%s", variant,
-                                    key == ERROR ? "(none)" : key);
-
-                            // Prevent Bluetooth Settings from getting the pairing request.
-                            abortBroadcast();
-
-                            mPairingDevice = device;
-                            if (mSecret == null) {
-                                // We haven't done the handshake over GATT to agree on the shared
-                                // secret. For now, just accept anyway (so we can still simulate
-                                // old 1.0 model IDs).
-                                mLogger.log("No handshake, auto-accepting anyway.");
-                                setPasskeyConfirmation(true);
-                            } else if (variant
-                                    == BluetoothDevice.PAIRING_VARIANT_PASSKEY_CONFIRMATION) {
-                                // Store the passkey. And check it, since there's a race (see
-                                // method for why). Usually this check is a no-op and we'll get
-                                // the passkey later over GATT.
-                                mLocalPasskey = key;
-                                checkPasskey();
-                            } else if (variant == PAIRING_VARIANT_DISPLAY_PASSKEY) {
-                                if (mPasskeyEventCallback != null) {
-                                    mPasskeyEventCallback.onPasskeyRequested(
-                                            FastPairSimulator.this::enterPassKey);
-                                } else {
-                                    mLogger.log("passkeyEventCallback is not set!");
-                                    enterPassKey(key);
-                                }
-                            } else if (variant == PAIRING_VARIANT_CONSENT) {
-                                setPasskeyConfirmation(true);
-
-                            } else if (variant == BluetoothDevice.PAIRING_VARIANT_PIN) {
-                                if (mPasskeyEventCallback != null) {
-                                    mPasskeyEventCallback.onPasskeyRequested(
-                                            (int pin) -> {
-                                                byte[] newPin = convertPinToBytes(
-                                                        String.format(Locale.ENGLISH, "%d", pin));
-                                                mPairingDevice.setPin(newPin);
-                                            });
-                                }
-                            } else {
-                                // Reject the pairing request if it's not using the Numeric
-                                // Comparison (aka Passkey Confirmation) method.
-                                setPasskeyConfirmation(false);
-                            }
-                            break;
-                        case BluetoothDevice.ACTION_BOND_STATE_CHANGED:
-                            int bondState =
-                                    intent.getIntExtra(BluetoothDevice.EXTRA_BOND_STATE,
-                                            BluetoothDevice.BOND_NONE);
-                            mLogger.log("Bond state to %s changed to %d", device, bondState);
-                            switch (bondState) {
-                                case BluetoothDevice.BOND_BONDING:
-                                    // If we've started bonding, we shouldn't be advertising.
-                                    mAdvertiser.stopAdvertising();
-                                    // Not discoverable anymore, but still connectable.
-                                    setScanMode(BluetoothAdapter.SCAN_MODE_CONNECTABLE);
-                                    break;
-                                case BluetoothDevice.BOND_BONDED:
-                                    // Once bonded, advertise the account keys.
-                                    mAdvertiser.startAdvertising(accountKeysServiceData());
-                                    setScanMode(BluetoothAdapter.SCAN_MODE_CONNECTABLE);
-
-                                    // If it is subsequent pair, we need to add paired device here.
-                                    if (mIsSubsequentPair
-                                            && mSecret != null
-                                            && mSecret.length == AES_BLOCK_LENGTH) {
-                                        addAccountKey(mSecret, mPairingDevice);
-                                    }
-                                    break;
-                                case BluetoothDevice.BOND_NONE:
-                                    // If the bonding process fails, we should be advertising again.
-                                    mAdvertiser.startAdvertising(getServiceData());
-                                    break;
-                                default:
-                                    break;
-                            }
-                            break;
-                        case BluetoothAdapter.ACTION_CONNECTION_STATE_CHANGED:
-                            mLogger.log(
-                                    "Connection state to %s changed to %d",
-                                    device,
-                                    intent.getIntExtra(
-                                            BluetoothAdapter.EXTRA_CONNECTION_STATE,
-                                            BluetoothAdapter.STATE_DISCONNECTED));
-                            break;
-                        case BluetoothAdapter.ACTION_STATE_CHANGED:
-                            int state = intent.getIntExtra(EXTRA_STATE, -1);
-                            mLogger.log("Bluetooth adapter state=%s", state);
-                            switch (state) {
-                                case STATE_ON:
-                                    startRfcommServer();
-                                    break;
-                                case STATE_OFF:
-                                    stopRfcommServer();
-                                    break;
-                                default: // fall out
-                            }
+                        case BluetoothDevice.BOND_NONE:
+                            // If the bonding process fails, we should be advertising again.
+                            mAdvertiser.startAdvertising(getServiceData());
                             break;
                         default:
-                            mLogger.log(new IllegalArgumentException(intent.toString()),
-                                    "Received unexpected intent");
                             break;
                     }
-                }
-            };
+                    break;
+                case BluetoothAdapter.ACTION_CONNECTION_STATE_CHANGED:
+                    mLogger.log(
+                            "Connection state to %s changed to %d",
+                            device,
+                            intent.getIntExtra(
+                                    BluetoothAdapter.EXTRA_CONNECTION_STATE,
+                                    BluetoothAdapter.STATE_DISCONNECTED));
+                    break;
+                case BluetoothAdapter.ACTION_STATE_CHANGED:
+                    int state = intent.getIntExtra(EXTRA_STATE, -1);
+                    mLogger.log("Bluetooth adapter state=%s", state);
+                    switch (state) {
+                        case STATE_ON:
+                            startRfcommServer();
+                            break;
+                        case STATE_OFF:
+                            stopRfcommServer();
+                            break;
+                        default: // fall out
+                    }
+                    break;
+                default:
+                    mLogger.log(new IllegalArgumentException(intent.toString()),
+                            "Received unexpected intent");
+                    break;
+            }
+        }
+    };
 
     @Nullable
     private byte[] convertPinToBytes(@Nullable String pin) {
@@ -508,7 +505,6 @@ public class FastPairSimulator {
     @Nullable
     private CountDownLatch mWriteNameCountDown;
     private final RfcommServer mRfcommServer = new RfcommServer();
-    private final boolean mDataOnlyConnection;
     private boolean mSupportDynamicBufferSize = false;
     private NotifiableGattServlet mBeaconActionsServlet;
     private final FastPairSimulatorDatabase mFastPairSimulatorDatabase;
@@ -570,8 +566,8 @@ public class FastPairSimulator {
         this.mUseLogFullEvent = useLogFullEvent;
     }
 
-    /** An optional way to get status updates. */
-    public interface Callback {
+    /** An optional way to get advertising status updates. */
+    public interface AdvertisingChangedCallback {
         /** Called when we change our BLE advertisement. */
         void onAdvertisingChanged();
     }
@@ -618,7 +614,7 @@ public class FastPairSimulator {
 
         private final boolean mEnableNameCharacteristic;
 
-        private final Callback mCallback;
+        private final AdvertisingChangedCallback mAdvertisingChangedCallback;
 
         private final boolean mIncludeTransportDataDescriptor;
 
@@ -626,8 +622,6 @@ public class FastPairSimulator {
         private final byte[] mAntiSpoofingPrivateKey;
 
         private final boolean mUseRandomSaltForAccountKeyRotation;
-
-        private final boolean mIsMemoryTest;
 
         private final boolean mBecomeDiscoverable;
 
@@ -648,11 +642,10 @@ public class FastPairSimulator {
                 boolean dataOnlyConnection,
                 int txPowerLevel,
                 boolean enableNameCharacteristic,
-                Callback callback,
+                AdvertisingChangedCallback advertisingChangedCallback,
                 boolean includeTransportDataDescriptor,
                 @Nullable byte[] antiSpoofingPrivateKey,
                 boolean useRandomSaltForAccountKeyRotation,
-                boolean isMemoryTest,
                 boolean becomeDiscoverable,
                 boolean showsPasskeyConfirmation,
                 boolean enableBeaconActionsCharacteristic,
@@ -665,11 +658,10 @@ public class FastPairSimulator {
             this.mDataOnlyConnection = dataOnlyConnection;
             this.mTxPowerLevel = txPowerLevel;
             this.mEnableNameCharacteristic = enableNameCharacteristic;
-            this.mCallback = callback;
+            this.mAdvertisingChangedCallback = advertisingChangedCallback;
             this.mIncludeTransportDataDescriptor = includeTransportDataDescriptor;
             this.mAntiSpoofingPrivateKey = antiSpoofingPrivateKey;
             this.mUseRandomSaltForAccountKeyRotation = useRandomSaltForAccountKeyRotation;
-            this.mIsMemoryTest = isMemoryTest;
             this.mBecomeDiscoverable = becomeDiscoverable;
             this.mShowsPasskeyConfirmation = showsPasskeyConfirmation;
             this.mEnableBeaconActionsCharacteristic = enableBeaconActionsCharacteristic;
@@ -708,8 +700,8 @@ public class FastPairSimulator {
             return mEnableNameCharacteristic;
         }
 
-        public Callback getCallback() {
-            return mCallback;
+        public AdvertisingChangedCallback getAdvertisingChangedCallback() {
+            return mAdvertisingChangedCallback;
         }
 
         public boolean getIncludeTransportDataDescriptor() {
@@ -723,10 +715,6 @@ public class FastPairSimulator {
 
         public boolean getUseRandomSaltForAccountKeyRotation() {
             return mUseRandomSaltForAccountKeyRotation;
-        }
-
-        public boolean getIsMemoryTest() {
-            return mIsMemoryTest;
         }
 
         public boolean getBecomeDiscoverable() {
@@ -766,13 +754,12 @@ public class FastPairSimulator {
                     .setModelId(Ascii.toUpperCase(modelId))
                     .setAdvertisingModelId(Ascii.toUpperCase(modelId))
                     .setTxPowerLevel(AdvertiseSettings.ADVERTISE_TX_POWER_HIGH)
-                    .setCallback(() -> {
+                    .setAdvertisingChangedCallback(() -> {
                     })
                     .setIncludeTransportDataDescriptor(true)
                     .setUseRandomSaltForAccountKeyRotation(false)
                     .setEnableNameCharacteristic(true)
                     .setDataOnlyConnection(false)
-                    .setIsMemoryTest(false)
                     .setBecomeDiscoverable(true)
                     .setShowsPasskeyConfirmation(false)
                     .setEnableBeaconActionsCharacteristic(true)
@@ -799,7 +786,7 @@ public class FastPairSimulator {
 
             private boolean mEnableNameCharacteristic;
 
-            private Callback mCallback;
+            private AdvertisingChangedCallback mAdvertisingChangedCallback;
 
             private boolean mIncludeTransportDataDescriptor;
 
@@ -807,8 +794,6 @@ public class FastPairSimulator {
             private byte[] mAntiSpoofingPrivateKey;
 
             private boolean mUseRandomSaltForAccountKeyRotation;
-
-            private boolean mIsMemoryTest;
 
             private boolean mBecomeDiscoverable;
 
@@ -832,12 +817,11 @@ public class FastPairSimulator {
                 this.mDataOnlyConnection = option.mDataOnlyConnection;
                 this.mTxPowerLevel = option.mTxPowerLevel;
                 this.mEnableNameCharacteristic = option.mEnableNameCharacteristic;
-                this.mCallback = option.mCallback;
+                this.mAdvertisingChangedCallback = option.mAdvertisingChangedCallback;
                 this.mIncludeTransportDataDescriptor = option.mIncludeTransportDataDescriptor;
                 this.mAntiSpoofingPrivateKey = option.mAntiSpoofingPrivateKey;
                 this.mUseRandomSaltForAccountKeyRotation =
                         option.mUseRandomSaltForAccountKeyRotation;
-                this.mIsMemoryTest = option.mIsMemoryTest;
                 this.mBecomeDiscoverable = option.mBecomeDiscoverable;
                 this.mShowsPasskeyConfirmation = option.mShowsPasskeyConfirmation;
                 this.mEnableBeaconActionsCharacteristic = option.mEnableBeaconActionsCharacteristic;
@@ -874,9 +858,10 @@ public class FastPairSimulator {
                 return this;
             }
 
-            /** @see Callback */
-            public Builder setCallback(Callback callback) {
-                this.mCallback = callback;
+            /** @see AdvertisingChangedCallback */
+            public Builder setAdvertisingChangedCallback(
+                    AdvertisingChangedCallback advertisingChangedCallback) {
+                this.mAdvertisingChangedCallback = advertisingChangedCallback;
                 return this;
             }
 
@@ -910,11 +895,6 @@ public class FastPairSimulator {
             // TODO(b/143117318):Remove this when app-launch type has its own anti-spoofing key.
             public Builder setAdvertisingModelId(String modelId) {
                 this.mAdvertisingModelId = modelId;
-                return this;
-            }
-
-            public Builder setIsMemoryTest(boolean isMemoryTest) {
-                this.mIsMemoryTest = isMemoryTest;
                 return this;
             }
 
@@ -963,11 +943,10 @@ public class FastPairSimulator {
                         mDataOnlyConnection,
                         mTxPowerLevel,
                         mEnableNameCharacteristic,
-                        mCallback,
+                        mAdvertisingChangedCallback,
                         mIncludeTransportDataDescriptor,
                         mAntiSpoofingPrivateKey,
                         mUseRandomSaltForAccountKeyRotation,
-                        mIsMemoryTest,
                         mBecomeDiscoverable,
                         mShowsPasskeyConfirmation,
                         mEnableBeaconActionsCharacteristic,
@@ -1001,7 +980,6 @@ public class FastPairSimulator {
         this.mBluetoothAddress =
                 new Value(BluetoothAddress.decode(bluetoothAddress), ByteOrder.BIG_ENDIAN);
         this.mBleAddress = options.getBleAddress();
-        this.mDataOnlyConnection = options.getDataOnlyConnection();
         this.mAdvertiser = new OreoFastPairAdvertiser(this);
 
         mFastPairSimulatorDatabase = new FastPairSimulatorDatabase(context);
@@ -1011,7 +989,7 @@ public class FastPairSimulator {
                 "Provider default device name is %s",
                 deviceName != null ? new String(deviceName, StandardCharsets.UTF_8) : null);
 
-        if (mDataOnlyConnection) {
+        if (mOptions.getDataOnlyConnection()) {
             // To get BLE address, we need to start advertising first, and then
             // {@code#setBleAddress} will be called with BLE address.
             mAdvertiser.startAdvertising(modelIdServiceData(/* forAdvertising= */ true));
@@ -1055,19 +1033,11 @@ public class FastPairSimulator {
      */
     @SuppressWarnings("FutureReturnValueIgnored")
     private void scheduleAdvertisingRefresh() {
-        mExecutor.scheduleAtFixedRate(
-                () -> {
-                    if (mIsAdvertising) {
-                        mAdvertiser.startAdvertising(getServiceData());
-                    }
-                },
-                mOptions.getIsMemoryTest()
-                        ? ADVERTISING_REFRESH_DELAY_5_MINS
-                        : ADVERTISING_REFRESH_DELAY_1_MIN,
-                mOptions.getIsMemoryTest()
-                        ? ADVERTISING_REFRESH_DELAY_5_MINS
-                        : ADVERTISING_REFRESH_DELAY_1_MIN,
-                TimeUnit.MILLISECONDS);
+        mExecutor.scheduleAtFixedRate(() -> {
+            if (mIsAdvertising) {
+                mAdvertiser.startAdvertising(getServiceData());
+            }
+        }, ADVERTISING_REFRESH_DELAY_1_MIN, ADVERTISING_REFRESH_DELAY_1_MIN, TimeUnit.MILLISECONDS);
     }
 
     public void destroy() {
@@ -1103,7 +1073,7 @@ public class FastPairSimulator {
     public void setIsAdvertising(boolean isAdvertising) {
         if (this.mIsAdvertising != isAdvertising) {
             this.mIsAdvertising = isAdvertising;
-            mOptions.getCallback().onAdvertisingChanged();
+            mOptions.getAdvertisingChangedCallback().onAdvertisingChanged();
         }
     }
 
@@ -1113,7 +1083,7 @@ public class FastPairSimulator {
 
     public void setBleAddress(String bleAddress) {
         this.mBleAddress = bleAddress;
-        if (mDataOnlyConnection) {
+        if (mOptions.getDataOnlyConnection()) {
             mBluetoothAddress = new Value(BluetoothAddress.decode(bleAddress),
                     ByteOrder.BIG_ENDIAN);
             start(bleAddress);
@@ -2104,11 +2074,8 @@ public class FastPairSimulator {
             method.invoke(mBluetoothAdapter, scanMode);
 
             if (scanMode == SCAN_MODE_CONNECTABLE_DISCOVERABLE) {
-                mRevertDiscoverableFuture =
-                        mExecutor.schedule(
-                                () -> setScanMode(SCAN_MODE_CONNECTABLE),
-                                mOptions.getIsMemoryTest() ? 300 : 30,
-                                TimeUnit.SECONDS);
+                mRevertDiscoverableFuture = mExecutor.schedule(
+                        () -> setScanMode(SCAN_MODE_CONNECTABLE), 30, TimeUnit.SECONDS);
             }
         } catch (Exception e) {
             mLogger.log(e, "Error setting scan mode to %d", scanMode);

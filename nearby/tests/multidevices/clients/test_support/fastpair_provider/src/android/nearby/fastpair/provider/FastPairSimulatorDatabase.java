@@ -37,7 +37,7 @@ import java.util.StringTokenizer;
 public class FastPairSimulatorDatabase {
 
     private static final String SHARED_PREF_NAME =
-            "android.nearby.multidevices.fastpair.provider.fastpairsimulator";
+            "android.nearby.fastpair.provider.fastpairsimulator";
     private static final String KEY_DEVICE_NAME = "DEVICE_NAME";
     private static final String KEY_ACCOUNT_KEYS = "ACCOUNT_KEYS";
     private static final int MAX_NUMBER_OF_ACCOUNT_KEYS = 8;

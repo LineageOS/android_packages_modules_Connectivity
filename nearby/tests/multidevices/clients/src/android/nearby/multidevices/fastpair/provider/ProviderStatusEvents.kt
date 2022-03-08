@@ -20,7 +20,7 @@ import com.google.android.mobly.snippet.util.postSnippetEvent
 
 /** The Mobly snippet events to report to the Python side. */
 class ProviderStatusEvents(private val callbackId: String) :
-  BluetoothStateChangeReceiver.EventListener {
+  FastPairProviderSimulatorController.EventListener {
 
   /**
    * Indicates the Bluetooth scan mode of the Fast Pair provider simulator has changed.
@@ -36,7 +36,7 @@ class ProviderStatusEvents(private val callbackId: String) :
    *
    * @param isAdvertising the current advertising state, true if advertising otherwise false.
    */
-  fun onAdvertisingChange(isAdvertising: Boolean) {
+  override fun onAdvertisingChange(isAdvertising: Boolean) {
     postSnippetEvent(callbackId, "onAdvertisingChange") {
       putBoolean("isAdvertising", isAdvertising)
     }

@@ -54,53 +54,53 @@ public final class OreoFastPairAdvertiser implements FastPairAdvertiser {
     public OreoFastPairAdvertiser(FastPairSimulator simulator) {
         this.mSimulator = simulator;
         this.mAdvertiser = BluetoothAdapter.getDefaultAdapter().getBluetoothLeAdvertiser();
-        this.mAdvertisingSetCallback =
-                new AdvertisingSetCallback() {
-                    @Override
-                    public void onAdvertisingSetStarted(
-                            AdvertisingSet set, int txPower, int status) {
-                        if (status == AdvertisingSetCallback.ADVERTISE_SUCCESS) {
-                            mLogger.log("Advertising succeeded, advertising at %s dBm", txPower);
-                            simulator.setIsAdvertising(true);
-                            mAdvertisingSet = set;
+        this.mAdvertisingSetCallback = new AdvertisingSetCallback() {
 
-                            try {
-                                // Requires custom Android build, see callback below.
-                                Reflect.on(set).withMethod("getOwnAddress").invoke();
-                            } catch (ReflectionException e) {
-                                mLogger.log(e, "Error calling getOwnAddress for AdvertisingSet");
-                            }
-                        } else {
-                            mLogger.log(
-                                    new IllegalStateException(),
-                                    "Advertising failed, error code=%d", status);
-                        }
-                    }
+            @Override
+            public void onAdvertisingSetStarted(
+                    AdvertisingSet set, int txPower, int status) {
+                if (status == AdvertisingSetCallback.ADVERTISE_SUCCESS) {
+                    mLogger.log("Advertising succeeded, advertising at %s dBm", txPower);
+                    simulator.setIsAdvertising(true);
+                    mAdvertisingSet = set;
 
-                    @Override
-                    public void onAdvertisingDataSet(AdvertisingSet set, int status) {
-                        if (status != AdvertisingSetCallback.ADVERTISE_SUCCESS) {
-                            mLogger.log(
-                                    new IllegalStateException(),
-                                    "Updating advertisement failed, error code=%d",
-                                    status);
-                            stopAdvertising();
-                        }
+                    try {
+                        // Requires custom Android build, see callback below.
+                        Reflect.on(set).withMethod("getOwnAddress").invoke();
+                    } catch (ReflectionException e) {
+                        mLogger.log(e, "Error calling getOwnAddress for AdvertisingSet");
                     }
+                } else {
+                    mLogger.log(
+                            new IllegalStateException(),
+                            "Advertising failed, error code=%d", status);
+                }
+            }
 
-                    // Called via reflection with AdvertisingSet.getOwnAddress().
-                    public void onOwnAddressRead(
-                            AdvertisingSet set, int addressType, String address) {
-                        if (!address.equals(simulator.getBleAddress())) {
-                            mLogger.log(
-                                    "Read own BLE address=%s at %s",
-                                    address,
-                                    new SimpleDateFormat("HH:mm:ss:SSS", Locale.US)
-                                            .format(Calendar.getInstance().getTime()));
-                            simulator.setBleAddress(address);
-                        }
-                    }
-                };
+            @Override
+            public void onAdvertisingDataSet(AdvertisingSet set, int status) {
+                if (status != AdvertisingSetCallback.ADVERTISE_SUCCESS) {
+                    mLogger.log(
+                            new IllegalStateException(),
+                            "Updating advertisement failed, error code=%d",
+                            status);
+                    stopAdvertising();
+                }
+            }
+
+            // Called via reflection with AdvertisingSet.getOwnAddress().
+            public void onOwnAddressRead(
+                    AdvertisingSet set, int addressType, String address) {
+                if (!address.equals(simulator.getBleAddress())) {
+                    mLogger.log(
+                            "Read own BLE address=%s at %s",
+                            address,
+                            new SimpleDateFormat("HH:mm:ss:SSS", Locale.US)
+                                    .format(Calendar.getInstance().getTime()));
+                    simulator.setBleAddress(address);
+                }
+            }
+        };
     }
 
     @Override
