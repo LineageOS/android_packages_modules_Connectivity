@@ -27,17 +27,19 @@ import android.nearby.FastPairDevice;
 import android.nearby.NearbyDevice;
 import android.util.Log;
 
+import com.android.server.nearby.common.ble.decode.FastPairDecoder;
 import com.android.server.nearby.common.bloomfilter.BloomFilter;
 import com.android.server.nearby.common.bloomfilter.FastPairBloomFilterHasher;
 import com.android.server.nearby.common.locator.Locator;
+import com.android.server.nearby.fastpair.cache.FastPairCacheManager;
 import com.android.server.nearby.fastpair.halfsheet.FastPairHalfSheetManager;
 import com.android.server.nearby.provider.FastPairDataProvider;
 import com.android.server.nearby.util.DataUtils;
-import com.android.server.nearby.util.FastPairDecoder;
 import com.android.server.nearby.util.Hex;
 
 import java.util.List;
 
+import service.proto.Cache;
 import service.proto.Data;
 import service.proto.Rpcs;
 
@@ -47,6 +49,7 @@ import service.proto.Rpcs;
 public class FastPairAdvHandler {
     Context mContext;
     String mBleAddress;
+
     /** The types about how the bloomfilter is processed. */
     public enum ProcessBloomFilterType {
         IGNORE, // The bloomfilter is not handled. e.g. distance is too far away.
@@ -69,16 +72,18 @@ public class FastPairAdvHandler {
     public void handleBroadcast(NearbyDevice device) {
         FastPairDevice fastPairDevice = (FastPairDevice) device;
         mBleAddress = fastPairDevice.getBluetoothAddress();
-        List<Account> accountList =
-                FastPairDataProvider.getInstance().loadFastPairEligibleAccounts();
+        FastPairDataProvider dataProvider = FastPairDataProvider.getInstance();
+        if (dataProvider == null) {
+            return;
+        }
+        List<Account> accountList = dataProvider.loadFastPairEligibleAccounts();
         if (FastPairDecoder.checkModelId(fastPairDevice.getData())) {
             byte[] model = FastPairDecoder.getModelId(fastPairDevice.getData());
             Log.d(TAG, "On discovery model id " + Hex.bytesToStringLowercase(model));
             // Use api to get anti spoofing key from model id.
             try {
                 Rpcs.GetObservedDeviceResponse response =
-                        FastPairDataProvider.getInstance()
-                                .loadFastPairAntispoofkeyDeviceMetadata(model);
+                        dataProvider.loadFastPairAntispoofkeyDeviceMetadata(model);
                 if (response == null) {
                     Log.e(TAG, "server does not have model id "
                             + Hex.bytesToStringLowercase(model));
@@ -94,26 +99,41 @@ public class FastPairAdvHandler {
         } else {
             // Start to process bloom filter
             try {
-                Log.d(TAG, "account list size " + accountList.size());
                 byte[] bloomFilterByteArray = FastPairDecoder
                         .getBloomFilter(fastPairDevice.getData());
                 byte[] bloomFilterSalt = FastPairDecoder
                         .getBloomFilterSalt(fastPairDevice.getData());
                 if (bloomFilterByteArray == null || bloomFilterByteArray.length == 0) {
-                    Log.d(TAG, "bloom filter byte size is 0");
                     return;
                 }
                 for (Account account : accountList) {
                     List<Data.FastPairDeviceWithAccountKey> listDevices =
-                            FastPairDataProvider.getInstance()
-                                    .loadFastPairDeviceWithAccountKey(account);
+                            dataProvider.loadFastPairDeviceWithAccountKey(account);
                     Data.FastPairDeviceWithAccountKey recognizedDevice =
                             findRecognizedDevice(listDevices,
                                     new BloomFilter(bloomFilterByteArray,
                                             new FastPairBloomFilterHasher()), bloomFilterSalt);
+
                     if (recognizedDevice != null) {
                         Log.d(TAG, "find matched device show notification to remind"
                                 + " user to pair");
+                        // Check if the device is already paired
+                        List<Cache.StoredFastPairItem> storedFastPairItemList =
+                                Locator.get(mContext, FastPairCacheManager.class)
+                                        .getAllSavedStoredFastPairItem();
+                        Cache.StoredFastPairItem recognizedStoredFastPairItem =
+                                findRecognizedDeviceFromCachedItem(storedFastPairItemList,
+                                        new BloomFilter(bloomFilterByteArray,
+                                                new FastPairBloomFilterHasher()), bloomFilterSalt);
+                        if (recognizedStoredFastPairItem != null) {
+                            // The bloomfilter is recognized in the cache so the device is paired
+                            // before
+                            Log.d(TAG, "bloom filter is recognized in the cache");
+                            continue;
+                        } else {
+                            Log.d(TAG, "bloom filter is not recognized not paired before");
+                        }
+
                         return;
                     }
                 }
@@ -132,10 +152,27 @@ public class FastPairAdvHandler {
     @Nullable
     static Data.FastPairDeviceWithAccountKey findRecognizedDevice(
             List<Data.FastPairDeviceWithAccountKey> devices, BloomFilter bloomFilter, byte[] salt) {
+        Log.d(TAG, "saved devices size in the account is " + devices.size());
         for (Data.FastPairDeviceWithAccountKey device : devices) {
-            if (device.getAccountKey().toByteArray() == null) {
-                continue;
+            byte[] rotatedKey = concat(device.getAccountKey().toByteArray(), salt);
+            StringBuilder sb = new StringBuilder();
+            for (byte b : rotatedKey) {
+                sb.append(b);
             }
+            if (bloomFilter.possiblyContains(rotatedKey)) {
+                Log.d(TAG, "match " + sb.toString());
+                return device;
+            } else {
+                Log.d(TAG, "not match " + sb.toString());
+            }
+        }
+        return null;
+    }
+
+    @Nullable
+    static Cache.StoredFastPairItem findRecognizedDeviceFromCachedItem(
+            List<Cache.StoredFastPairItem> devices, BloomFilter bloomFilter, byte[] salt) {
+        for (Cache.StoredFastPairItem device : devices) {
             byte[] rotatedKey = concat(device.getAccountKey().toByteArray(), salt);
             if (bloomFilter.possiblyContains(rotatedKey)) {
                 return device;
@@ -143,4 +180,5 @@ public class FastPairAdvHandler {
         }
         return null;
     }
+
 }

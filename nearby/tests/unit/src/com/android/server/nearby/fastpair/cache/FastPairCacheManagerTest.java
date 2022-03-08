@@ -25,6 +25,8 @@ import android.content.Context;
 import androidx.test.core.app.ApplicationProvider;
 import androidx.test.filters.SdkSuppress;
 
+import com.google.protobuf.ByteString;
+
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mock;
@@ -37,9 +39,17 @@ public class FastPairCacheManagerTest {
     private static final String MODEL_ID = "001";
     private static final String MODEL_ID2 = "002";
     private static final String APP_NAME = "APP_NAME";
+    private static final String MAC_ADDRESS = "00:11:22:33";
+    private static final ByteString ACCOUNT_KEY = ByteString.copyFromUtf8("axgs");
+    private static final String MAC_ADDRESS_B = "00:11:22:44";
+    private static final ByteString ACCOUNT_KEY_B = ByteString.copyFromUtf8("axgb");
+
     @Mock
     DiscoveryItem mDiscoveryItem;
-    @Mock DiscoveryItem mDiscoveryItem2;
+    @Mock
+    DiscoveryItem mDiscoveryItem2;
+    @Mock
+    Cache.StoredFastPairItem mStoredFastPairItem;
     Cache.StoredDiscoveryItem mStoredDiscoveryItem = Cache.StoredDiscoveryItem.newBuilder()
             .setTriggerId(MODEL_ID)
             .setAppName(APP_NAME).build();
@@ -97,4 +107,47 @@ public class FastPairCacheManagerTest {
         assertThat(fastPairCacheManager.getAllSavedStoreDiscoveryItem()).hasSize(3);
     }
 
+    @Test
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
+    public void saveRetrieveInfoStoredFastPairItem() {
+        Context mContext = ApplicationProvider.getApplicationContext();
+        Cache.StoredFastPairItem storedFastPairItem = Cache.StoredFastPairItem.newBuilder()
+                .setMacAddress(MAC_ADDRESS)
+                .setAccountKey(ACCOUNT_KEY)
+                .build();
+
+
+        FastPairCacheManager fastPairCacheManager = new FastPairCacheManager(mContext);
+        fastPairCacheManager.putStoredFastPairItem(storedFastPairItem);
+
+        assertThat(fastPairCacheManager.getStoredFastPairItemFromMacAddress(
+                MAC_ADDRESS).getAccountKey())
+                .isEqualTo(ACCOUNT_KEY);
+    }
+
+    @Test
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
+    public void checkGetAllFastPairItems() {
+        Context mContext = ApplicationProvider.getApplicationContext();
+        Cache.StoredFastPairItem storedFastPairItem = Cache.StoredFastPairItem.newBuilder()
+                .setMacAddress(MAC_ADDRESS)
+                .setAccountKey(ACCOUNT_KEY)
+                .build();
+        Cache.StoredFastPairItem storedFastPairItemB = Cache.StoredFastPairItem.newBuilder()
+                .setMacAddress(MAC_ADDRESS_B)
+                .setAccountKey(ACCOUNT_KEY_B)
+                .build();
+
+        FastPairCacheManager fastPairCacheManager = new FastPairCacheManager(mContext);
+        fastPairCacheManager.putStoredFastPairItem(storedFastPairItem);
+        fastPairCacheManager.putStoredFastPairItem(storedFastPairItemB);
+
+        assertThat(fastPairCacheManager.getAllSavedStoredFastPairItem().size())
+                .isEqualTo(2);
+
+        fastPairCacheManager.removeStoredFastPairItem(MAC_ADDRESS_B);
+
+        assertThat(fastPairCacheManager.getAllSavedStoredFastPairItem().size())
+                .isEqualTo(1);
+    }
 }

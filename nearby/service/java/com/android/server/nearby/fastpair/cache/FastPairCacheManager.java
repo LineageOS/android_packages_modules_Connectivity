@@ -39,18 +39,18 @@ import service.proto.Rpcs;
  */
 public class FastPairCacheManager {
     private final Context mContext;
-    private final DiscoveryItemDbHelper mDiscoveryItemDbHelper;
+    private final FastPairDbHelper mFastPairDbHelper;
 
     public FastPairCacheManager(Context context) {
         mContext = context;
-        mDiscoveryItemDbHelper = new DiscoveryItemDbHelper(context);
+        mFastPairDbHelper = new FastPairDbHelper(context);
     }
 
     /**
      * Clean up function to release db
      */
     public void cleanUp() {
-        mDiscoveryItemDbHelper.close();
+        mFastPairDbHelper.close();
     }
 
     /**
@@ -74,10 +74,12 @@ public class FastPairCacheManager {
     }
 
     /**
-     * Save discovery item into database.
+     * Save discovery item into database. Discovery item is item that discovered through Ble before
+     * pairing success.
      */
     public boolean saveDiscoveryItem(DiscoveryItem item) {
-        SQLiteDatabase db = mDiscoveryItemDbHelper.getWritableDatabase();
+
+        SQLiteDatabase db = mFastPairDbHelper.getWritableDatabase();
         ContentValues values = new ContentValues();
         values.put(DiscoveryItemContract.DiscoveryItemEntry.COLUMN_MODEL_ID, item.getTriggerId());
         values.put(DiscoveryItemContract.DiscoveryItemEntry.COLUMN_SCAN_BYTE,
@@ -103,8 +105,7 @@ public class FastPairCacheManager {
      * Get discovery item from item id.
      */
     public Cache.StoredDiscoveryItem getStoredDiscoveryItem(String itemId) {
-
-        SQLiteDatabase db = mDiscoveryItemDbHelper.getReadableDatabase();
+        SQLiteDatabase db = mFastPairDbHelper.getReadableDatabase();
         String[] projection = {
                 DiscoveryItemContract.DiscoveryItemEntry.COLUMN_MODEL_ID,
                 DiscoveryItemContract.DiscoveryItemEntry.COLUMN_SCAN_BYTE
@@ -140,7 +141,7 @@ public class FastPairCacheManager {
      */
     public List<Cache.StoredDiscoveryItem> getAllSavedStoreDiscoveryItem() {
         List<Cache.StoredDiscoveryItem> storedDiscoveryItemList = new ArrayList<>();
-        SQLiteDatabase db = mDiscoveryItemDbHelper.getReadableDatabase();
+        SQLiteDatabase db = mFastPairDbHelper.getReadableDatabase();
         String[] projection = {
                 DiscoveryItemContract.DiscoveryItemEntry.COLUMN_MODEL_ID,
                 DiscoveryItemContract.DiscoveryItemEntry.COLUMN_SCAN_BYTE
@@ -169,6 +170,7 @@ public class FastPairCacheManager {
         cursor.close();
         return storedDiscoveryItemList;
     }
+
     /**
      * Get scan result from local database use model id
      */
@@ -176,4 +178,105 @@ public class FastPairCacheManager {
         return Cache.StoredScanResult.getDefaultInstance();
     }
 
+    /**
+     * Gets the paired Fast Pair item that paired to the phone through mac address.
+     */
+    public Cache.StoredFastPairItem getStoredFastPairItemFromMacAddress(String macAddress) {
+        SQLiteDatabase db = mFastPairDbHelper.getReadableDatabase();
+        String[] projection = {
+                StoredFastPairItemContract.StoredFastPairItemEntry.COLUMN_ACCOUNT_KEY,
+                StoredFastPairItemContract.StoredFastPairItemEntry.COLUMN_MAC_ADDRESS,
+                StoredFastPairItemContract.StoredFastPairItemEntry.COLUMN_STORED_FAST_PAIR_BYTE
+        };
+        String selection =
+                StoredFastPairItemContract.StoredFastPairItemEntry.COLUMN_MAC_ADDRESS + " =? ";
+        String[] selectionArgs = {macAddress};
+        Cursor cursor = db.query(
+                StoredFastPairItemContract.StoredFastPairItemEntry.TABLE_NAME,
+                projection,
+                selection,
+                selectionArgs,
+                null,
+                null,
+                null
+        );
+
+        if (cursor.moveToNext()) {
+            byte[] res = cursor.getBlob(cursor.getColumnIndexOrThrow(
+                    StoredFastPairItemContract.StoredFastPairItemEntry
+                            .COLUMN_STORED_FAST_PAIR_BYTE));
+            try {
+                Cache.StoredFastPairItem item = Cache.StoredFastPairItem.parseFrom(res);
+                return item;
+            } catch (InvalidProtocolBufferException e) {
+                Log.e("FastPairCacheManager", "storediscovery has error");
+            }
+        }
+        cursor.close();
+        return Cache.StoredFastPairItem.getDefaultInstance();
+    }
+
+    /**
+     * Save paired fast pair item into the database.
+     */
+    public boolean putStoredFastPairItem(Cache.StoredFastPairItem storedFastPairItem) {
+        SQLiteDatabase db = mFastPairDbHelper.getWritableDatabase();
+        ContentValues values = new ContentValues();
+        values.put(StoredFastPairItemContract.StoredFastPairItemEntry.COLUMN_MAC_ADDRESS,
+                storedFastPairItem.getMacAddress());
+        values.put(StoredFastPairItemContract.StoredFastPairItemEntry.COLUMN_ACCOUNT_KEY,
+                storedFastPairItem.getAccountKey().toString());
+        values.put(StoredFastPairItemContract.StoredFastPairItemEntry.COLUMN_STORED_FAST_PAIR_BYTE,
+                storedFastPairItem.toByteArray());
+        db.insert(StoredFastPairItemContract.StoredFastPairItemEntry.TABLE_NAME, null, values);
+        return true;
+
+    }
+
+    /**
+     * Removes certain storedFastPairItem so that it can update timely.
+     */
+    public void removeStoredFastPairItem(String macAddress) {
+        SQLiteDatabase db = mFastPairDbHelper.getWritableDatabase();
+        int res = db.delete(StoredFastPairItemContract.StoredFastPairItemEntry.TABLE_NAME,
+                StoredFastPairItemContract.StoredFastPairItemEntry.COLUMN_MAC_ADDRESS + "=?",
+                new String[]{macAddress});
+
+    }
+
+    /**
+     * Get all of the store fast pair item related info in the cache.
+     */
+    public List<Cache.StoredFastPairItem> getAllSavedStoredFastPairItem() {
+        List<Cache.StoredFastPairItem> storedFastPairItemList = new ArrayList<>();
+        SQLiteDatabase db = mFastPairDbHelper.getReadableDatabase();
+        String[] projection = {
+                StoredFastPairItemContract.StoredFastPairItemEntry.COLUMN_MAC_ADDRESS,
+                StoredFastPairItemContract.StoredFastPairItemEntry.COLUMN_ACCOUNT_KEY,
+                StoredFastPairItemContract.StoredFastPairItemEntry.COLUMN_STORED_FAST_PAIR_BYTE
+        };
+        Cursor cursor = db.query(
+                StoredFastPairItemContract.StoredFastPairItemEntry.TABLE_NAME,
+                projection,
+                null,
+                null,
+                null,
+                null,
+                null
+        );
+
+        while (cursor.moveToNext()) {
+            byte[] res = cursor.getBlob(cursor.getColumnIndexOrThrow(StoredFastPairItemContract
+                    .StoredFastPairItemEntry.COLUMN_STORED_FAST_PAIR_BYTE));
+            try {
+                Cache.StoredFastPairItem item = Cache.StoredFastPairItem.parseFrom(res);
+                storedFastPairItemList.add(item);
+            } catch (InvalidProtocolBufferException e) {
+                Log.e("FastPairCacheManager", "storediscovery has error");
+            }
+
+        }
+        cursor.close();
+        return storedFastPairItemList;
+    }
 }
