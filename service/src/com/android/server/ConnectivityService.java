@@ -10699,6 +10699,9 @@ public class ConnectivityService extends IConnectivityManager.Stub
     }
 
     private boolean canNetworkBeRateLimited(@NonNull final NetworkAgentInfo networkAgent) {
+        // Rate-limiting cannot run correctly before T because the BPF program is not loaded.
+        if (!SdkLevel.isAtLeastT()) return false;
+
         final NetworkCapabilities agentCaps = networkAgent.networkCapabilities;
         // Only test networks (they cannot hold NET_CAPABILITY_INTERNET) and networks that provide
         // internet connectivity can be rate limited.
@@ -11056,7 +11059,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
             } else {
                 mBpfNetMaps.removeNiceApp(uid);
             }
-        } catch (RemoteException | ServiceSpecificException e) {
+        } catch (ServiceSpecificException e) {
             throw new IllegalStateException(e);
         }
     }
@@ -11071,7 +11074,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
             } else {
                 mBpfNetMaps.removeNaughtyApp(uid);
             }
-        } catch (RemoteException | ServiceSpecificException e) {
+        } catch (ServiceSpecificException e) {
             throw new IllegalStateException(e);
         }
     }
@@ -11083,7 +11086,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
         try {
             mBpfNetMaps.setUidRule(chain, uid,
                     allow ? INetd.FIREWALL_RULE_ALLOW : INetd.FIREWALL_RULE_DENY);
-        } catch (RemoteException | ServiceSpecificException e) {
+        } catch (ServiceSpecificException e) {
             throw new IllegalStateException(e);
         }
     }
@@ -11094,7 +11097,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
 
         try {
             mBpfNetMaps.setChildChain(chain, enable);
-        } catch (RemoteException | ServiceSpecificException e) {
+        } catch (ServiceSpecificException e) {
             throw new IllegalStateException(e);
         }
     }
@@ -11125,7 +11128,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
                     throw new IllegalArgumentException("replaceFirewallChain with invalid chain: "
                             + chain);
             }
-        } catch (RemoteException | ServiceSpecificException e) {
+        } catch (ServiceSpecificException e) {
             throw new IllegalStateException(e);
         }
     }

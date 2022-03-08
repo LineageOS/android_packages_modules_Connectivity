@@ -297,6 +297,7 @@ public class TetheringTest {
     private TetheredInterfaceCallbackShim mTetheredInterfaceCallbackShim;
 
     private TestConnectivityManager mCm;
+    private boolean mForceEthernetServiceUnavailable = false;
 
     private class TestContext extends BroadcastInterceptingContext {
         TestContext(Context base) {
@@ -331,7 +332,11 @@ public class TetheringTest {
             if (Context.USER_SERVICE.equals(name)) return mUserManager;
             if (Context.NETWORK_STATS_SERVICE.equals(name)) return mStatsManager;
             if (Context.CONNECTIVITY_SERVICE.equals(name)) return mCm;
-            if (Context.ETHERNET_SERVICE.equals(name)) return mEm;
+            if (Context.ETHERNET_SERVICE.equals(name)) {
+                if (mForceEthernetServiceUnavailable) return null;
+
+                return mEm;
+            }
             return super.getSystemService(name);
         }
 
@@ -449,11 +454,6 @@ public class TetheringTest {
                 Runnable callback) {
             mEntitleMgr = spy(super.getEntitlementManager(ctx, h, log, callback));
             return mEntitleMgr;
-        }
-
-        @Override
-        public boolean isTetheringSupported() {
-            return true;
         }
 
         @Override
@@ -680,6 +680,7 @@ public class TetheringTest {
                 .thenReturn(new String[] {TEST_BT_REGEX});
         when(mResources.getStringArray(R.array.config_tether_ncm_regexs))
                 .thenReturn(new String[] {TEST_NCM_REGEX});
+        when(mPackageManager.hasSystemFeature(PackageManager.FEATURE_ETHERNET)).thenReturn(true);
         when(mResources.getIntArray(R.array.config_tether_upstream_types)).thenReturn(
                 new int[] {TYPE_WIFI, TYPE_MOBILE_DUN});
         when(mResources.getBoolean(R.bool.config_tether_upstream_automatic)).thenReturn(true);
@@ -2833,6 +2834,55 @@ public class TetheringTest {
         // Run TETHERING_USB with rndis configuration.
         runDualStackUsbTethering(TEST_RNDIS_IFNAME);
         runStopUSBTethering();
+    }
+
+    @Test
+    public void testTetheringSupported() throws Exception {
+        setTetheringSupported(true /* supported */);
+        updateConfigAndVerifySupported(true /* supported */);
+
+        // Could disable tethering supported by settings.
+        Settings.Global.putInt(mContentResolver, Settings.Global.TETHER_SUPPORTED, 0);
+        updateConfigAndVerifySupported(false /* supported */);
+
+        // Could disable tethering supported by user restriction.
+        setTetheringSupported(true /* supported */);
+        when(mUserManager.hasUserRestriction(
+                UserManager.DISALLOW_CONFIG_TETHERING)).thenReturn(true);
+        updateConfigAndVerifySupported(false /* supported */);
+
+        // Tethering is supported if it has any supported downstream.
+        setTetheringSupported(true /* supported */);
+        when(mResources.getStringArray(R.array.config_tether_usb_regexs))
+                .thenReturn(new String[0]);
+        updateConfigAndVerifySupported(true /* supported */);
+        when(mResources.getStringArray(R.array.config_tether_wifi_regexs))
+                .thenReturn(new String[0]);
+        updateConfigAndVerifySupported(true /* supported */);
+
+
+        if (isAtLeastT()) {
+            when(mResources.getStringArray(R.array.config_tether_bluetooth_regexs))
+                    .thenReturn(new String[0]);
+            updateConfigAndVerifySupported(true /* supported */);
+            when(mResources.getStringArray(R.array.config_tether_wifi_p2p_regexs))
+                    .thenReturn(new String[0]);
+            updateConfigAndVerifySupported(true /* supported */);
+            when(mResources.getStringArray(R.array.config_tether_ncm_regexs))
+                    .thenReturn(new String[0]);
+            updateConfigAndVerifySupported(true /* supported */);
+            mForceEthernetServiceUnavailable = true;
+            updateConfigAndVerifySupported(false /* supported */);
+        } else {
+            when(mResources.getStringArray(R.array.config_tether_bluetooth_regexs))
+                    .thenReturn(new String[0]);
+            updateConfigAndVerifySupported(false /* supported */);
+        }
+    }
+
+    private void updateConfigAndVerifySupported(boolean supported) {
+        sendConfigurationChanged();
+        assertEquals(supported, mTethering.isTetheringSupported());
     }
     // TODO: Test that a request for hotspot mode doesn't interfere with an
     // already operating tethering mode interface.
