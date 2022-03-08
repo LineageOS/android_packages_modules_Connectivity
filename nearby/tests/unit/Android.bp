@@ -41,7 +41,7 @@ android_test {
         "libprotobuf-java-lite",
         "mockito-target-extended-minus-junit4",
         "platform-test-annotations",
-        "service-nearby",
+        "service-nearby-pre-jarjar",
         "truth-prebuilt",
         // "Robolectric_all-target",
     ],
