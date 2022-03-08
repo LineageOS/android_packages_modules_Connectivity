@@ -14,11 +14,6 @@
 // limitations under the License.
 //
 
-package {
-    // See: http://go/android-license-faq
-    default_applicable_licenses: ["Android-Apache-2.0"],
-}
-
 // NetworkStats related libraries.
 
 filegroup {
@@ -47,22 +42,9 @@ filegroup {
 }
 
 filegroup {
-    name: "framework-connectivity-netstats-aidl-export-sources",
-    srcs: [
-        "aidl-export/android/net/NetworkStats.aidl",
-        "aidl-export/android/net/NetworkTemplate.aidl",
-    ],
-    path: "aidl-export",
-    visibility: [
-        "//visibility:private",
-    ],
-}
-
-filegroup {
     name: "framework-connectivity-netstats-sources",
     srcs: [
         ":framework-connectivity-netstats-internal-sources",
-        ":framework-connectivity-netstats-aidl-export-sources",
     ],
     visibility: [
         "//visibility:private",
@@ -84,21 +66,9 @@ filegroup {
 }
 
 filegroup {
-    name: "framework-connectivity-nsd-aidl-export-sources",
-    srcs: [
-        "aidl-export/android/net/nsd/*.aidl",
-    ],
-    path: "aidl-export",
-    visibility: [
-        "//visibility:private",
-    ],
-}
-
-filegroup {
     name: "framework-connectivity-nsd-sources",
     srcs: [
         ":framework-connectivity-nsd-internal-sources",
-        ":framework-connectivity-nsd-aidl-export-sources",
     ],
     visibility: [
         "//visibility:private",
