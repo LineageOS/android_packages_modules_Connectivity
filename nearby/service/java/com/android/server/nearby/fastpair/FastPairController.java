@@ -237,12 +237,14 @@ public class FastPairController {
                             ByteString.copyFrom(hashValue));
             // account data place holder here
             try {
-                List<Account> accountList =
-                        FastPairDataProvider.getInstance().loadFastPairEligibleAccounts();
+                FastPairDataProvider fastPairDataProvider = FastPairDataProvider.getInstance();
+                if (fastPairDataProvider == null) {
+                    return;
+                }
+                List<Account> accountList = fastPairDataProvider.loadFastPairEligibleAccounts();
                 if (accountList.size() > 0) {
-                    FastPairDataProvider.getInstance().optIn(accountList.get(0));
-                    FastPairDataProvider.getInstance().upload(
-                            accountList.get(0), uploadInfo);
+                    fastPairDataProvider.optIn(accountList.get(0));
+                    fastPairDataProvider.upload(accountList.get(0), uploadInfo);
                 }
             } catch (IllegalStateException e) {
                 Log.e(TAG, "OEM does not construct fast pair data proxy correctly");
