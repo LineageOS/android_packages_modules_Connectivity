@@ -137,6 +137,9 @@ import static com.android.server.ConnectivityService.PREFERENCE_ORDER_VPN;
 import static com.android.server.ConnectivityServiceTestUtils.transportToLegacyType;
 import static com.android.testutils.ConcurrentUtils.await;
 import static com.android.testutils.ConcurrentUtils.durationOf;
+import static com.android.testutils.DevSdkIgnoreRule.IgnoreAfter;
+import static com.android.testutils.DevSdkIgnoreRule.IgnoreUpTo;
+import static com.android.testutils.DevSdkIgnoreRuleKt.SC_V2;
 import static com.android.testutils.ExceptionUtils.ignoreExceptions;
 import static com.android.testutils.HandlerUtils.waitForIdleSerialExecutor;
 import static com.android.testutils.MiscAsserts.assertContainsAll;
@@ -358,6 +361,7 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Ignore;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.AdditionalAnswers;
@@ -419,6 +423,9 @@ import kotlin.reflect.KClass;
 @DevSdkIgnoreRule.IgnoreUpTo(Build.VERSION_CODES.R)
 public class ConnectivityServiceTest {
     private static final String TAG = "ConnectivityServiceTest";
+
+    @Rule
+    public final DevSdkIgnoreRule ignoreRule = new DevSdkIgnoreRule();
 
     private static final int TIMEOUT_MS = 2_000;
     // Broadcasts can take a long time to be delivered. The test will not wait for that long unless
@@ -15397,7 +15404,7 @@ public class ConnectivityServiceTest {
                 null /* callingAttributionTag */));
     }
 
-    @Test
+    @Test @IgnoreUpTo(SC_V2)
     public void testUpdateRateLimit_EnableDisable() throws Exception {
         final LinkProperties wifiLp = new LinkProperties();
         wifiLp.setInterfaceName(WIFI_IFNAME);
@@ -15436,7 +15443,7 @@ public class ConnectivityServiceTest {
                 it -> it.first == cellLp.getInterfaceName() && it.second == -1));
     }
 
-    @Test
+    @Test @IgnoreUpTo(SC_V2)
     public void testUpdateRateLimit_WhenNewNetworkIsAdded() throws Exception {
         final LinkProperties wifiLp = new LinkProperties();
         wifiLp.setInterfaceName(WIFI_IFNAME);
@@ -15462,7 +15469,7 @@ public class ConnectivityServiceTest {
                 && it.second == rateLimitInBytesPerSec));
     }
 
-    @Test
+    @Test @IgnoreUpTo(SC_V2)
     public void testUpdateRateLimit_OnlyAffectsInternetCapableNetworks() throws Exception {
         final LinkProperties wifiLp = new LinkProperties();
         wifiLp.setInterfaceName(WIFI_IFNAME);
@@ -15480,7 +15487,7 @@ public class ConnectivityServiceTest {
         assertNull(readHeadWifi.poll(TIMEOUT_MS, it -> it.first == wifiLp.getInterfaceName()));
     }
 
-    @Test
+    @Test @IgnoreUpTo(SC_V2)
     public void testUpdateRateLimit_DisconnectingResetsRateLimit()
             throws Exception {
         // Steps:
@@ -15516,7 +15523,7 @@ public class ConnectivityServiceTest {
         assertNull(readHeadWifi.poll(TIMEOUT_MS, it -> it.first == wifiLp.getInterfaceName()));
     }
 
-    @Test
+    @Test @IgnoreUpTo(SC_V2)
     public void testUpdateRateLimit_UpdateExistingRateLimit() throws Exception {
         final LinkProperties wifiLp = new LinkProperties();
         wifiLp.setInterfaceName(WIFI_IFNAME);
@@ -15544,5 +15551,22 @@ public class ConnectivityServiceTest {
         assertNotNull(readHeadWifi.poll(TIMEOUT_MS,
                 it -> it.first == wifiLp.getInterfaceName()
                         && it.second == 2000));
+    }
+
+    @Test @IgnoreAfter(SC_V2)
+    public void testUpdateRateLimit_DoesNothingBeforeT() throws Exception {
+        final LinkProperties wifiLp = new LinkProperties();
+        wifiLp.setInterfaceName(WIFI_IFNAME);
+        mWiFiNetworkAgent = new TestNetworkAgentWrapper(TRANSPORT_WIFI, wifiLp);
+        mWiFiNetworkAgent.connect(true);
+        waitForIdle();
+
+        final ArrayTrackRecord<Pair<String, Long>>.ReadHead readHead =
+                mDeps.mRateLimitHistory.newReadHead();
+
+        setIngressRateLimit(1000);
+        waitForIdle();
+
+        assertNull(readHead.poll(TEST_CALLBACK_TIMEOUT_MS, it -> true));
     }
 }

@@ -16,8 +16,6 @@
 
 package com.android.server;
 
-import static android.net.INetd.FIREWALL_CHAIN_DOZABLE;
-import static android.net.INetd.FIREWALL_RULE_ALLOW;
 import static android.net.INetd.PERMISSION_INTERNET;
 
 import static org.junit.Assume.assumeFalse;
@@ -60,20 +58,6 @@ public final class BpfNetMapsTest {
     @Test
     public void testBpfNetMapsBeforeT() throws Exception {
         assumeFalse(SdkLevel.isAtLeastT());
-        mBpfNetMaps.addNaughtyApp(TEST_UID);
-        verify(mNetd).bandwidthAddNaughtyApp(TEST_UID);
-        mBpfNetMaps.removeNaughtyApp(TEST_UID);
-        verify(mNetd).bandwidthRemoveNaughtyApp(TEST_UID);
-        mBpfNetMaps.addNiceApp(TEST_UID);
-        verify(mNetd).bandwidthAddNiceApp(TEST_UID);
-        mBpfNetMaps.removeNiceApp(TEST_UID);
-        verify(mNetd).bandwidthRemoveNiceApp(TEST_UID);
-        mBpfNetMaps.setChildChain(FIREWALL_CHAIN_DOZABLE, true);
-        verify(mNetd).firewallEnableChildChain(FIREWALL_CHAIN_DOZABLE, true);
-        mBpfNetMaps.replaceUidChain(CHAINNAME, true, TEST_UIDS);
-        verify(mNetd).firewallReplaceUidChain(CHAINNAME, true, TEST_UIDS);
-        mBpfNetMaps.setUidRule(FIREWALL_CHAIN_DOZABLE, TEST_UID, FIREWALL_RULE_ALLOW);
-        verify(mNetd).firewallSetUidRule(FIREWALL_CHAIN_DOZABLE, TEST_UID, FIREWALL_RULE_ALLOW);
         mBpfNetMaps.addUidInterfaceRules(IFNAME, TEST_UIDS);
         verify(mNetd).firewallAddUidInterfaceRules(IFNAME, TEST_UIDS);
         mBpfNetMaps.removeUidInterfaceRules(TEST_UIDS);
