@@ -143,6 +143,37 @@ int BpfHandler::tagSocket(int sockFd, uint32_t tag, uid_t chargeUid, uid_t realU
         return -EPERM;
     }
 
+    // The socket destroy listener only monitors on the group {INET_TCP, INET_UDP, INET6_TCP,
+    // INET6_UDP}. Tagging listener unsupported socket causes that the tag can't be removed from
+    // tag map automatically. Eventually, the tag map may run out of space because of dead tag
+    // entries. Note that although tagSocket() of net client has already denied the family which
+    // is neither AF_INET nor AF_INET6, the family validation is still added here just in case.
+    // See tagSocket in system/netd/client/NetdClient.cpp and
+    // TrafficController::makeSkDestroyListener in
+    // packages/modules/Connectivity/service/native/TrafficController.cpp
+    // TODO: remove this once the socket destroy listener can detect more types of socket destroy.
+    int socketFamily;
+    socklen_t familyLen = sizeof(socketFamily);
+    if (getsockopt(sockFd, SOL_SOCKET, SO_DOMAIN, &socketFamily, &familyLen)) {
+        ALOGE("Failed to getsockopt SO_DOMAIN: %s, fd: %d", strerror(errno), sockFd);
+        return -errno;
+    }
+    if (socketFamily != AF_INET && socketFamily != AF_INET6) {
+        ALOGE("Unsupported family: %d", socketFamily);
+        return -EAFNOSUPPORT;
+    }
+
+    int socketProto;
+    socklen_t protoLen = sizeof(socketProto);
+    if (getsockopt(sockFd, SOL_SOCKET, SO_PROTOCOL, &socketProto, &protoLen)) {
+        ALOGE("Failed to getsockopt SO_PROTOCOL: %s, fd: %d", strerror(errno), sockFd);
+        return -errno;
+    }
+    if (socketProto != IPPROTO_UDP && socketProto != IPPROTO_TCP) {
+        ALOGE("Unsupported protocol: %d", socketProto);
+        return -EPROTONOSUPPORT;
+    }
+
     uint64_t sock_cookie = getSocketCookie(sockFd);
     if (sock_cookie == NONEXISTENT_COOKIE) return -errno;
     UidTagValue newKey = {.uid = (uint32_t)chargeUid, .tag = tag};

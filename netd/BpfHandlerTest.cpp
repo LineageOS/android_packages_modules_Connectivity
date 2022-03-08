@@ -188,6 +188,20 @@ TEST_F(BpfHandlerTest, TestTagInvalidSocket) {
     expectMapEmpty(mFakeCookieTagMap);
 }
 
+TEST_F(BpfHandlerTest, TestTagSocketWithUnsupportedFamily) {
+    int packetSocket = socket(AF_PACKET, SOCK_DGRAM | SOCK_CLOEXEC, 0);
+    EXPECT_LE(0, packetSocket);
+    EXPECT_NE(NONEXISTENT_COOKIE, getSocketCookie(packetSocket));
+    EXPECT_EQ(-EAFNOSUPPORT, mBh.tagSocket(packetSocket, TEST_TAG, TEST_UID, TEST_UID));
+}
+
+TEST_F(BpfHandlerTest, TestTagSocketWithUnsupportedProtocol) {
+    int rawSocket = socket(AF_INET, SOCK_RAW | SOCK_CLOEXEC, IPPROTO_RAW);
+    EXPECT_LE(0, rawSocket);
+    EXPECT_NE(NONEXISTENT_COOKIE, getSocketCookie(rawSocket));
+    EXPECT_EQ(-EPROTONOSUPPORT, mBh.tagSocket(rawSocket, TEST_TAG, TEST_UID, TEST_UID));
+}
+
 TEST_F(BpfHandlerTest, TestTagSocketWithoutPermission) {
     int sock = socket(AF_INET6, SOCK_STREAM | SOCK_CLOEXEC, 0);
     ASSERT_NE(-1, sock);
