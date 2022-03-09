@@ -18,9 +18,9 @@ package android.nearby.aidl;
 
 /**
  * Request details for metadata of a Fast Pair device keyed by either
- * antispoofkey or modelId.
+ * antispoofKey or modelId.
  * {@hide}
  */
-parcelable FastPairAntispoofkeyDeviceMetadataRequestParcel {
+parcelable FastPairAntispoofKeyDeviceMetadataRequestParcel {
     byte[] modelId;
 }

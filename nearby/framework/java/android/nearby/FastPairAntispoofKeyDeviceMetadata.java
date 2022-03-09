@@ -19,33 +19,33 @@ import android.annotation.NonNull;
 import android.annotation.Nullable;
 import android.annotation.SuppressLint;
 import android.annotation.SystemApi;
-import android.nearby.aidl.FastPairAntispoofkeyDeviceMetadataParcel;
+import android.nearby.aidl.FastPairAntispoofKeyDeviceMetadataParcel;
 
 /**
- * Class for a type of registered Fast Pair device keyed by modelID, or antiSpoofKey.
+ * Class for a type of registered Fast Pair device keyed by modelID, or antispoofKey.
  * @hide
  */
 @SystemApi
-public class FastPairAntispoofkeyDeviceMetadata {
+public class FastPairAntispoofKeyDeviceMetadata {
 
-    FastPairAntispoofkeyDeviceMetadataParcel mMetadataParcel;
-    FastPairAntispoofkeyDeviceMetadata(
-            FastPairAntispoofkeyDeviceMetadataParcel metadataParcel) {
+    FastPairAntispoofKeyDeviceMetadataParcel mMetadataParcel;
+    FastPairAntispoofKeyDeviceMetadata(
+            FastPairAntispoofKeyDeviceMetadataParcel metadataParcel) {
         this.mMetadataParcel = metadataParcel;
     }
 
     /**
-     * Builder used to create FastPairAntisppofkeyDeviceMetadata.
+     * Builder used to create FastPairAntispoofKeyDeviceMetadata.
      */
     public static final class Builder {
 
-        private final FastPairAntispoofkeyDeviceMetadataParcel mBuilderParcel;
+        private final FastPairAntispoofKeyDeviceMetadataParcel mBuilderParcel;
 
         /**
          * Default constructor of Builder.
          */
         public Builder() {
-            mBuilderParcel = new FastPairAntispoofkeyDeviceMetadataParcel();
+            mBuilderParcel = new FastPairAntispoofKeyDeviceMetadataParcel();
             mBuilderParcel.antiSpoofPublicKey = null;
             mBuilderParcel.deviceMetadata = null;
         }
@@ -78,11 +78,11 @@ public class FastPairAntispoofkeyDeviceMetadata {
         }
 
         /**
-         * Build {@link FastPairAntispoofkeyDeviceMetadata} with the currently set configuration.
+         * Build {@link FastPairAntispoofKeyDeviceMetadata} with the currently set configuration.
          */
         @NonNull
-        public FastPairAntispoofkeyDeviceMetadata build() {
-            return new FastPairAntispoofkeyDeviceMetadata(mBuilderParcel);
+        public FastPairAntispoofKeyDeviceMetadata build() {
+            return new FastPairAntispoofKeyDeviceMetadata(mBuilderParcel);
         }
     }
 }

@@ -14,18 +14,14 @@
 
 package android.nearby.aidl;
 
-import android.nearby.aidl.FastPairDeviceMetadataParcel;
+import android.nearby.aidl.FastPairAntispoofKeyDeviceMetadataParcel;
 
 /**
- * Metadata of a Fast Pair device keyed by Antispoofkey,
- * Used by initial pairing without account association.
- *
- * {@hide}
- */
-parcelable FastPairAntispoofkeyDeviceMetadataParcel {
-    // Anti spoof public key.
-    byte[] antiSpoofPublicKey;
-
-    // Fast Pair device metadata for the Fast Pair device.
-    FastPairDeviceMetadataParcel deviceMetadata;
+  * Provides callback interface for OEMs to send FastPair AntispoofKey Device metadata back.
+  *
+  * {@hide}
+  */
+interface IFastPairAntispoofKeyDeviceMetadataCallback {
+     void onFastPairAntispoofKeyDeviceMetadataReceived(in FastPairAntispoofKeyDeviceMetadataParcel metadata);
+     void onError(int code, String message);
 }
