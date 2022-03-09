@@ -248,6 +248,18 @@ public class EthernetServiceImplTest {
     }
 
     @Test
+    public void testUpdateConfigurationRejectsTestRequestWithNullCapabilities() {
+        enableTestInterface();
+        final EthernetNetworkUpdateRequest request =
+                new EthernetNetworkUpdateRequest
+                        .Builder()
+                        .setIpConfiguration(new IpConfiguration()).build();
+        assertThrows(IllegalArgumentException.class, () -> {
+            mEthernetServiceImpl.updateConfiguration(TEST_IFACE, request, NULL_LISTENER);
+        });
+    }
+
+    @Test
     public void testUpdateConfigurationRejectsInvalidTestRequest() {
         enableTestInterface();
         assertThrows(IllegalArgumentException.class, () -> {
