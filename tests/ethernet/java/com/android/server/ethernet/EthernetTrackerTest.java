@@ -16,8 +16,12 @@
 
 package com.android.server.ethernet;
 
+import static android.net.TestNetworkManager.TEST_TAP_PREFIX;
+
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertThrows;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
@@ -39,6 +43,7 @@ import android.net.LinkAddress;
 import android.net.NetworkCapabilities;
 import android.net.StaticIpConfiguration;
 import android.os.HandlerThread;
+import android.os.RemoteException;
 
 import androidx.test.filters.SmallTest;
 import androidx.test.runner.AndroidJUnit4;
@@ -71,10 +76,11 @@ public class EthernetTrackerTest {
     @Mock Resources mResources;
 
     @Before
-    public void setUp() {
+    public void setUp() throws RemoteException {
         MockitoAnnotations.initMocks(this);
         initMockResources();
         when(mFactory.updateInterfaceLinkState(anyString(), anyBoolean(), any())).thenReturn(false);
+        when(mNetd.interfaceGetList()).thenReturn(new String[0]);
         mHandlerThread = new HandlerThread(THREAD_NAME);
         mHandlerThread.start();
         tracker = new EthernetTracker(mContext, mHandlerThread.getThreadHandler(), mFactory, mNetd);
@@ -354,5 +360,38 @@ public class EthernetTrackerTest {
 
         verify(mFactory).updateInterfaceLinkState(eq(TEST_IFACE), eq(false /* up */),
                 eq(NULL_LISTENER));
+    }
+
+    @Test
+    public void testIsValidTestInterfaceIsFalseWhenTestInterfacesAreNotIncluded() {
+        final String validIfaceName = TEST_TAP_PREFIX + "123";
+        tracker.setIncludeTestInterfaces(false);
+        waitForIdle();
+
+        final boolean isValidTestInterface = tracker.isValidTestInterface(validIfaceName);
+
+        assertFalse(isValidTestInterface);
+    }
+
+    @Test
+    public void testIsValidTestInterfaceIsFalseWhenTestInterfaceNameIsInvalid() {
+        final String invalidIfaceName = "123" + TEST_TAP_PREFIX;
+        tracker.setIncludeTestInterfaces(true);
+        waitForIdle();
+
+        final boolean isValidTestInterface = tracker.isValidTestInterface(invalidIfaceName);
+
+        assertFalse(isValidTestInterface);
+    }
+
+    @Test
+    public void testIsValidTestInterfaceIsTrueWhenTestInterfacesIncludedAndValidName() {
+        final String validIfaceName = TEST_TAP_PREFIX + "123";
+        tracker.setIncludeTestInterfaces(true);
+        waitForIdle();
+
+        final boolean isValidTestInterface = tracker.isValidTestInterface(validIfaceName);
+
+        assertTrue(isValidTestInterface);
     }
 }

@@ -16,6 +16,8 @@
 
 package com.android.server.ethernet;
 
+import static android.net.NetworkCapabilities.TRANSPORT_TEST;
+
 import android.annotation.NonNull;
 import android.annotation.Nullable;
 import android.content.Context;
@@ -26,6 +28,7 @@ import android.net.IEthernetNetworkManagementListener;
 import android.net.ITetheredInterfaceCallback;
 import android.net.EthernetNetworkUpdateRequest;
 import android.net.IpConfiguration;
+import android.net.NetworkCapabilities;
 import android.os.Binder;
 import android.os.Handler;
 import android.os.RemoteException;
@@ -206,6 +209,12 @@ public class EthernetServiceImpl extends IEthernetManager.Stub {
                 "EthernetServiceImpl");
     }
 
+    private void enforceManageTestNetworksPermission() {
+        mContext.enforceCallingOrSelfPermission(
+                android.Manifest.permission.MANAGE_TEST_NETWORKS,
+                "EthernetServiceImpl");
+    }
+
     /**
      * Validate the state of ethernet for APIs tied to network management.
      *
@@ -217,18 +226,35 @@ public class EthernetServiceImpl extends IEthernetManager.Stub {
         Objects.requireNonNull(iface, "Pass a non-null iface.");
         Objects.requireNonNull(methodName, "Pass a non-null methodName.");
 
-        enforceAutomotiveDevice(methodName);
-        enforceNetworkManagementPermission();
+        // Only bypass the permission/device checks if this is a valid test interface.
+        if (mTracker.isValidTestInterface(iface)) {
+            enforceManageTestNetworksPermission();
+            Log.i(TAG, "Ethernet network management API used with test interface " + iface);
+        } else {
+            enforceAutomotiveDevice(methodName);
+            enforceNetworkManagementPermission();
+        }
         logIfEthernetNotStarted();
+    }
+
+    private void validateTestCapabilities(@Nullable final NetworkCapabilities nc) {
+        if (null != nc && nc.hasTransport(TRANSPORT_TEST)) {
+            return;
+        }
+        throw new IllegalArgumentException(
+                "Updates to test interfaces must have NetworkCapabilities.TRANSPORT_TEST.");
     }
 
     @Override
     public void updateConfiguration(@NonNull final String iface,
             @NonNull final EthernetNetworkUpdateRequest request,
             @Nullable final IEthernetNetworkManagementListener listener) {
-        Log.i(TAG, "updateConfiguration called with: iface=" + iface
-                + ", request=" + request + ", listener=" + listener);
         validateNetworkManagementState(iface, "updateConfiguration()");
+        if (mTracker.isValidTestInterface(iface)) {
+            validateTestCapabilities(request.getNetworkCapabilities());
+            // TODO: use NetworkCapabilities#restrictCapabilitiesForTestNetwork when available on a
+            //  local NetworkCapabilities copy to pass to mTracker.updateConfiguration.
+        }
         // TODO: validate that iface is listed in overlay config_ethernet_interfaces
 
         mTracker.updateConfiguration(
