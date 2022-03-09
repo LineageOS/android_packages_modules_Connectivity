@@ -69,21 +69,21 @@ package android.nearby {
     method @NonNull public android.nearby.FastPairAccountKeyDeviceMetadata.Builder setSha256AccountKeyPublicAddress(@Nullable byte[]);
   }
 
-  public class FastPairAntispoofkeyDeviceMetadata {
+  public class FastPairAntispoofKeyDeviceMetadata {
   }
 
-  public static final class FastPairAntispoofkeyDeviceMetadata.Builder {
-    ctor public FastPairAntispoofkeyDeviceMetadata.Builder();
-    method @NonNull public android.nearby.FastPairAntispoofkeyDeviceMetadata build();
-    method @NonNull public android.nearby.FastPairAntispoofkeyDeviceMetadata.Builder setAntiSpoofPublicKey(@Nullable byte[]);
-    method @NonNull public android.nearby.FastPairAntispoofkeyDeviceMetadata.Builder setFastPairDeviceMetadata(@Nullable android.nearby.FastPairDeviceMetadata);
+  public static final class FastPairAntispoofKeyDeviceMetadata.Builder {
+    ctor public FastPairAntispoofKeyDeviceMetadata.Builder();
+    method @NonNull public android.nearby.FastPairAntispoofKeyDeviceMetadata build();
+    method @NonNull public android.nearby.FastPairAntispoofKeyDeviceMetadata.Builder setAntiSpoofPublicKey(@Nullable byte[]);
+    method @NonNull public android.nearby.FastPairAntispoofKeyDeviceMetadata.Builder setFastPairDeviceMetadata(@Nullable android.nearby.FastPairDeviceMetadata);
   }
 
   public abstract class FastPairDataProviderBase {
     ctor public FastPairDataProviderBase(@NonNull String);
     method @Nullable public final android.os.IBinder getBinder();
     method public abstract void onLoadFastPairAccountDevicesMetadata(@NonNull android.nearby.FastPairDataProviderBase.FastPairAccountDevicesMetadataRequest, @NonNull android.nearby.FastPairDataProviderBase.FastPairAccountDevicesMetadataCallback);
-    method public abstract void onLoadFastPairAntispoofkeyDeviceMetadata(@NonNull android.nearby.FastPairDataProviderBase.FastPairAntispoofkeyDeviceMetadataRequest, @NonNull android.nearby.FastPairDataProviderBase.FastPairAntispoofkeyDeviceMetadataCallback);
+    method public abstract void onLoadFastPairAntispoofKeyDeviceMetadata(@NonNull android.nearby.FastPairDataProviderBase.FastPairAntispoofKeyDeviceMetadataRequest, @NonNull android.nearby.FastPairDataProviderBase.FastPairAntispoofKeyDeviceMetadataCallback);
     method public abstract void onLoadFastPairEligibleAccounts(@NonNull android.nearby.FastPairDataProviderBase.FastPairEligibleAccountsRequest, @NonNull android.nearby.FastPairDataProviderBase.FastPairEligibleAccountsCallback);
     method public abstract void onManageFastPairAccount(@NonNull android.nearby.FastPairDataProviderBase.FastPairManageAccountRequest, @NonNull android.nearby.FastPairDataProviderBase.FastPairManageActionCallback);
     method public abstract void onManageFastPairAccountDevice(@NonNull android.nearby.FastPairDataProviderBase.FastPairManageAccountDeviceRequest, @NonNull android.nearby.FastPairDataProviderBase.FastPairManageActionCallback);
@@ -104,12 +104,12 @@ package android.nearby {
     method @NonNull public java.util.Collection<byte[]> getAccountKeys();
   }
 
-  public static interface FastPairDataProviderBase.FastPairAntispoofkeyDeviceMetadataCallback {
+  public static interface FastPairDataProviderBase.FastPairAntispoofKeyDeviceMetadataCallback {
     method public void onError(int, @Nullable String);
-    method public void onFastPairAntispoofkeyDeviceMetadataReceived(@NonNull android.nearby.FastPairAntispoofkeyDeviceMetadata);
+    method public void onFastPairAntispoofKeyDeviceMetadataReceived(@NonNull android.nearby.FastPairAntispoofKeyDeviceMetadata);
   }
 
-  public static class FastPairDataProviderBase.FastPairAntispoofkeyDeviceMetadataRequest {
+  public static class FastPairDataProviderBase.FastPairAntispoofKeyDeviceMetadataRequest {
     method @NonNull public byte[] getModelId();
   }
 
