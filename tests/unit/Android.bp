@@ -55,6 +55,7 @@ filegroup {
     name: "non-connectivity-module-test",
     srcs: [
         "java/android/app/usage/*.java",
+        "java/android/net/EthernetNetworkUpdateRequestTest.java",
         "java/android/net/Ikev2VpnProfileTest.java",
         "java/android/net/IpMemoryStoreTest.java",
         "java/android/net/IpSecAlgorithmTest.java",
