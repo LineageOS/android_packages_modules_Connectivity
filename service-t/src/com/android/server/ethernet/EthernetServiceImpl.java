@@ -237,8 +237,8 @@ public class EthernetServiceImpl extends IEthernetManager.Stub {
         logIfEthernetNotStarted();
     }
 
-    private void validateTestCapabilities(@NonNull final NetworkCapabilities nc) {
-        if (nc.hasTransport(TRANSPORT_TEST)) {
+    private void validateTestCapabilities(@Nullable final NetworkCapabilities nc) {
+        if (null != nc && nc.hasTransport(TRANSPORT_TEST)) {
             return;
         }
         throw new IllegalArgumentException(
