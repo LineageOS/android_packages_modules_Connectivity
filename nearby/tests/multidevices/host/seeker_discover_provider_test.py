@@ -17,6 +17,7 @@ DEFAULT_MODEL_ID = '00000C'
 # Default public key to simulate as registered headsets.
 DEFAULT_ANTI_SPOOFING_KEY = 'Cbj9eCJrTdDgSYxLkqtfADQi86vIaMvxJsQ298sZYWE='
 # Time in seconds for events waiting.
+SETUP_TIMEOUT_SEC = 5
 BECOME_DISCOVERABLE_TIMEOUT_SEC = 10
 START_ADVERTISING_TIMEOUT_SEC = 5
 SCAN_TIMEOUT_SEC = 30
@@ -47,8 +48,8 @@ class SeekerDiscoverProviderTest(base_test.BaseTestClass):
 
     def setup_test(self) -> None:
         super().setup_test()
-        self._provider.start_provider_simulator(DEFAULT_MODEL_ID,
-                                                DEFAULT_ANTI_SPOOFING_KEY)
+        self._provider.setup_provider_simulator(SETUP_TIMEOUT_SEC)
+        self._provider.start_model_id_advertising(DEFAULT_MODEL_ID, DEFAULT_ANTI_SPOOFING_KEY)
         self._provider.wait_for_discoverable_mode(BECOME_DISCOVERABLE_TIMEOUT_SEC)
         self._provider.wait_for_advertising_start(START_ADVERTISING_TIMEOUT_SEC)
         self._seeker.start_scan()
@@ -56,7 +57,7 @@ class SeekerDiscoverProviderTest(base_test.BaseTestClass):
     def teardown_test(self) -> None:
         super().teardown_test()
         self._seeker.stop_scan()
-        self._provider.stop_provider_simulator()
+        self._provider.teardown_provider_simulator()
         # Create per-test excepts of logcat.
         for dut in self.duts:
             dut.services.create_output_excerpts_all(self.current_test_info)
