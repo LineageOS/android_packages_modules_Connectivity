@@ -24,6 +24,7 @@ import android.annotation.SystemApi;
 import android.annotation.SystemService;
 import android.content.Context;
 import android.os.RemoteException;
+import android.provider.Settings;
 
 import com.android.internal.annotations.GuardedBy;
 import com.android.internal.util.Preconditions;
@@ -46,7 +47,15 @@ import java.util.concurrent.Executor;
 @SystemService(Context.NEARBY_SERVICE)
 public class NearbyManager {
 
-    private static final String TAG = "NearbyManager";
+    /**
+     * Whether allows Fast Pair to scan.
+     *
+     * (0 = disabled, 1 = enabled)
+     *
+     * @hide
+     */
+    public static final String FAST_PAIR_SCAN_ENABLED = "fast_pair_scan_enabled";
+
     @GuardedBy("sScanListeners")
     private static final WeakHashMap<ScanCallback, WeakReference<ScanListenerTransport>>
             sScanListeners = new WeakHashMap<>();
@@ -143,7 +152,6 @@ public class NearbyManager {
         }
     }
 
-
     /**
      * Start broadcasting the request using nearby specification.
      *
@@ -192,6 +200,30 @@ public class NearbyManager {
         } catch (RemoteException e) {
             throw e.rethrowFromSystemServer();
         }
+    }
+
+    /**
+     * Read from {@link Settings} whether Fast Pair scan is enabled.
+     *
+     * @param context the {@link Context} to query the setting.
+     * @param def the default value if no setting value.
+     * @return whether the Fast Pair is enabled.
+     */
+    public static boolean getFastPairScanEnabled(@NonNull Context context, boolean def) {
+        final int enabled = Settings.Secure.getInt(
+                context.getContentResolver(), FAST_PAIR_SCAN_ENABLED, (def ? 1 : 0));
+        return enabled != 0;
+    }
+
+    /**
+     * Write into {@link Settings} whether Fast Pair scan is enabled
+     *
+     * @param context the {@link Context} to set the setting.
+     * @param enable whether the Fast Pair scan should be enabled.
+     */
+    public static void setFastPairScanEnabled(@NonNull Context context, boolean enable) {
+        Settings.Secure.putInt(
+                context.getContentResolver(), FAST_PAIR_SCAN_ENABLED, enable ? 1 : 0);
     }
 
     private static class ScanListenerTransport extends IScanListener.Stub {
