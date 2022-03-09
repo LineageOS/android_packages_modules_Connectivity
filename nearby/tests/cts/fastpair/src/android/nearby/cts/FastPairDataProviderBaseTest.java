@@ -536,11 +536,11 @@ public class FastPairDataProviderBaseTest {
                 new FastPairAccountDevicesMetadataRequestParcel();
 
         requestParcel.account = ACCOUNTDEVICES_METADATA_ACCOUNT;
-        requestParcel.accountKeys = new ByteArrayParcel[NUM_ACCOUNT_DEVICES];
-        requestParcel.accountKeys[0] = new ByteArrayParcel();
-        requestParcel.accountKeys[1] = new ByteArrayParcel();
-        requestParcel.accountKeys[0].byteArray = ACCOUNT_KEY;
-        requestParcel.accountKeys[1].byteArray = ACCOUNT_KEY_2;
+        requestParcel.deviceAccountKeys = new ByteArrayParcel[NUM_ACCOUNT_DEVICES];
+        requestParcel.deviceAccountKeys[0] = new ByteArrayParcel();
+        requestParcel.deviceAccountKeys[1] = new ByteArrayParcel();
+        requestParcel.deviceAccountKeys[0].byteArray = ACCOUNT_KEY;
+        requestParcel.deviceAccountKeys[1].byteArray = ACCOUNT_KEY_2;
 
         return requestParcel;
     }
@@ -584,7 +584,7 @@ public class FastPairDataProviderBaseTest {
             genHappyPathFastPairAntispoofKeyDeviceMetadata() {
         FastPairAntispoofKeyDeviceMetadata.Builder builder =
                 new FastPairAntispoofKeyDeviceMetadata.Builder();
-        builder.setAntiSpoofPublicKey(ANTI_SPOOFING_KEY);
+        builder.setAntispoofPublicKey(ANTI_SPOOFING_KEY);
         builder.setFastPairDeviceMetadata(genHappyPathFastPairDeviceMetadata());
 
         return builder.build();
@@ -595,9 +595,9 @@ public class FastPairDataProviderBaseTest {
             genHappyPathFastPairAccountkeyDeviceMetadata() {
         FastPairAccountKeyDeviceMetadata.Builder builder =
                 new FastPairAccountKeyDeviceMetadata.Builder();
-        builder.setAccountKey(ACCOUNT_KEY);
+        builder.setDeviceAccountKey(ACCOUNT_KEY);
         builder.setFastPairDeviceMetadata(genHappyPathFastPairDeviceMetadata());
-        builder.setSha256AccountKeyPublicAddress(SHA256_ACCOUNT_KEY_PUBLIC_ADDRESS);
+        builder.setSha256DeviceAccountKeyPublicAddress(SHA256_ACCOUNT_KEY_PUBLIC_ADDRESS);
         builder.setFastPairDiscoveryItem(genHappyPathFastPairDiscoveryItem());
 
         return builder.build();
@@ -608,9 +608,9 @@ public class FastPairDataProviderBaseTest {
             genHappyPathFastPairAccountkeyDeviceMetadataParcel() {
         FastPairAccountKeyDeviceMetadataParcel parcel =
                 new FastPairAccountKeyDeviceMetadataParcel();
-        parcel.accountKey = ACCOUNT_KEY;
+        parcel.deviceAccountKey = ACCOUNT_KEY;
         parcel.metadata = genHappyPathFastPairDeviceMetadataParcel();
-        parcel.sha256AccountKeyPublicAddress = SHA256_ACCOUNT_KEY_PUBLIC_ADDRESS;
+        parcel.sha256DeviceAccountKeyPublicAddress = SHA256_ACCOUNT_KEY_PUBLIC_ADDRESS;
         parcel.discoveryItem = genHappyPathFastPairDiscoveryItemParcel();
 
         return parcel;
@@ -801,9 +801,9 @@ public class FastPairDataProviderBaseTest {
     private static void ensureHappyPathAsExpected(
             FastPairDataProviderBase.FastPairAccountDevicesMetadataRequest request) {
         assertThat(request.getAccount()).isEqualTo(ACCOUNTDEVICES_METADATA_ACCOUNT);
-        assertThat(request.getAccountKeys().size()).isEqualTo(ACCOUNTKEY_DEVICE_NUM);
-        assertThat(request.getAccountKeys()).contains(ACCOUNT_KEY);
-        assertThat(request.getAccountKeys()).contains(ACCOUNT_KEY_2);
+        assertThat(request.getDeviceAccountKeys().size()).isEqualTo(ACCOUNTKEY_DEVICE_NUM);
+        assertThat(request.getDeviceAccountKeys()).contains(ACCOUNT_KEY);
+        assertThat(request.getDeviceAccountKeys()).contains(ACCOUNT_KEY_2);
     }
 
     /* Verifies Happy Path FastPairEligibleAccountsRequest. */
@@ -833,7 +833,7 @@ public class FastPairDataProviderBaseTest {
     private static void ensureHappyPathAsExpected(
             FastPairAntispoofKeyDeviceMetadataParcel metadataParcel) {
         assertThat(metadataParcel).isNotNull();
-        assertThat(metadataParcel.antiSpoofPublicKey).isEqualTo(ANTI_SPOOFING_KEY);
+        assertThat(metadataParcel.antispoofPublicKey).isEqualTo(ANTI_SPOOFING_KEY);
         ensureHappyPathAsExpected(metadataParcel.deviceMetadata);
     }
 
@@ -851,8 +851,8 @@ public class FastPairDataProviderBaseTest {
     private static void ensureHappyPathAsExpected(
             FastPairAccountKeyDeviceMetadataParcel metadataParcel) {
         assertThat(metadataParcel).isNotNull();
-        assertThat(metadataParcel.accountKey).isEqualTo(ACCOUNT_KEY);
-        assertThat(metadataParcel.sha256AccountKeyPublicAddress)
+        assertThat(metadataParcel.deviceAccountKey).isEqualTo(ACCOUNT_KEY);
+        assertThat(metadataParcel.sha256DeviceAccountKeyPublicAddress)
                 .isEqualTo(SHA256_ACCOUNT_KEY_PUBLIC_ADDRESS);
         ensureHappyPathAsExpected(metadataParcel.metadata);
         ensureHappyPathAsExpected(metadataParcel.discoveryItem);
@@ -861,8 +861,8 @@ public class FastPairDataProviderBaseTest {
     /* Verifies Happy Path FastPairAccountKeyDeviceMetadata. */
     private static void ensureHappyPathAsExpected(
             FastPairAccountKeyDeviceMetadata metadata) {
-        assertThat(metadata.getAccountKey()).isEqualTo(ACCOUNT_KEY);
-        assertThat(metadata.getSha256AccountKeyPublicAddress())
+        assertThat(metadata.getDeviceAccountKey()).isEqualTo(ACCOUNT_KEY);
+        assertThat(metadata.getSha256DeviceAccountKeyPublicAddress())
                 .isEqualTo(SHA256_ACCOUNT_KEY_PUBLIC_ADDRESS);
         ensureHappyPathAsExpected(metadata.getFastPairDeviceMetadata());
         ensureHappyPathAsExpected(metadata.getFastPairDiscoveryItem());

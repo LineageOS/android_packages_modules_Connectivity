@@ -157,23 +157,23 @@ public class FastPairDataProvider {
      * Loads FastPair devices for a list of accountKeys of a given account.
      *
      * @param account The account of the FastPair devices.
-     * @param accountKeys The allow list of FastPair devices if it is not empty. Otherwise, the
-     *                    function returns accountKeys of all FastPair devices under the account,
-     *                    without detailed fields.
+     * @param deviceAccountKeys The allow list of FastPair devices if it is not empty. Otherwise,
+     *                    the function returns accountKeys of all FastPair devices under the
+     *                    account, without detailed fields.
      *
      * @throws IllegalStateException If ProxyFastPairDataProvider is not available.
      */
     public List<Data.FastPairDeviceWithAccountKey> loadFastPairDeviceWithAccountKey(
-            Account account, List<byte[]> accountKeys) {
+            Account account, List<byte[]> deviceAccountKeys) {
         if (mProxyFastPairDataProvider != null) {
             FastPairAccountDevicesMetadataRequestParcel requestParcel =
                     new FastPairAccountDevicesMetadataRequestParcel();
             requestParcel.account = account;
-            requestParcel.accountKeys = new ByteArrayParcel[accountKeys.size()];
+            requestParcel.deviceAccountKeys = new ByteArrayParcel[deviceAccountKeys.size()];
             int i = 0;
-            for (byte[] accountKey : accountKeys) {
-                requestParcel.accountKeys[i] = new ByteArrayParcel();
-                requestParcel.accountKeys[i].byteArray = accountKey;
+            for (byte[] deviceAccountKey : deviceAccountKeys) {
+                requestParcel.deviceAccountKeys[i] = new ByteArrayParcel();
+                requestParcel.deviceAccountKeys[i].byteArray = deviceAccountKey;
                 i = i + 1;
             }
             return Utils.convertToFastPairDevicesWithAccountKey(
