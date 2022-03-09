@@ -18,6 +18,8 @@ package android.nearby.cts;
 
 import static android.nearby.PresenceCredential.IDENTITY_TYPE_PRIVATE;
 
+import static com.google.common.truth.Truth.assertThat;
+
 import static org.mockito.Mockito.when;
 import static org.mockito.MockitoAnnotations.initMocks;
 
@@ -36,6 +38,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.RequiresApi;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
 import androidx.test.filters.SdkSuppress;
+import androidx.test.platform.app.InstrumentationRegistry;
 
 import org.junit.Before;
 import org.junit.Test;
@@ -63,7 +66,10 @@ public class NearbyManagerTest {
     @Before
     public void setUp() {
         initMocks(this);
+
         when(mContext.getSystemService(Context.NEARBY_SERVICE)).thenReturn(mNearbyManager);
+        when(mContext.getContentResolver()).thenReturn(
+                InstrumentationRegistry.getInstrumentation().getContext().getContentResolver());
     }
 
     @Test
@@ -109,5 +115,12 @@ public class NearbyManagerTest {
         mNearbyManager.startBroadcast(broadcastRequest, Executors.newSingleThreadExecutor(),
                 callback);
         mNearbyManager.stopBroadcast(callback);
+    }
+
+    @Test
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
+    public void testSettingsEnable() {
+        NearbyManager.setFastPairScanEnabled(mContext, false);
+        assertThat(NearbyManager.getFastPairScanEnabled(mContext, true)).isFalse();
     }
 }
