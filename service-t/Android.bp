@@ -38,6 +38,7 @@ java_library {
         "framework-connectivity-t-pre-jarjar",
         "framework-tethering.stubs.module_lib",
         "service-connectivity-pre-jarjar",
+        "service-nearby",
         "unsupportedappusage",
     ],
     static_libs: [
