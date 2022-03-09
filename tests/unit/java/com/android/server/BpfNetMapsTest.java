@@ -62,8 +62,6 @@ public final class BpfNetMapsTest {
         verify(mNetd).firewallAddUidInterfaceRules(IFNAME, TEST_UIDS);
         mBpfNetMaps.removeUidInterfaceRules(TEST_UIDS);
         verify(mNetd).firewallRemoveUidInterfaceRules(TEST_UIDS);
-        mBpfNetMaps.swapActiveStatsMap();
-        verify(mNetd).trafficSwapActiveStatsMap();
         mBpfNetMaps.setNetPermForUids(PERMISSION_INTERNET, TEST_UIDS);
         verify(mNetd).trafficSetNetPermForUids(PERMISSION_INTERNET, TEST_UIDS);
     }

@@ -54,6 +54,13 @@ public class BpfNetMaps {
         sInitialized = true;
     }
 
+    /** Constructor used after T that doesn't need to use netd anymore. */
+    public BpfNetMaps() {
+        this(null);
+
+        if (USE_NETD) throw new IllegalArgumentException("BpfNetMaps need to use netd before T");
+    }
+
     public BpfNetMaps(INetd netd) {
         ensureInitialized();
         mNetd = netd;
@@ -211,15 +218,10 @@ public class BpfNetMaps {
     /**
      * Request netd to change the current active network stats map.
      *
-     * @throws RemoteException when netd has crashed.
      * @throws ServiceSpecificException in case of failure, with an error code indicating the
      *                                  cause of the failure.
      */
-    public void swapActiveStatsMap() throws RemoteException {
-        if (USE_NETD) {
-            mNetd.trafficSwapActiveStatsMap();
-            return;
-        }
+    public void swapActiveStatsMap() {
         final int err = native_swapActiveStatsMap();
         maybeThrow(err, "Unable to swap active stats map");
     }
