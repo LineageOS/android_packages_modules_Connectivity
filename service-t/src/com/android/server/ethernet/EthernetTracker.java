@@ -233,7 +233,7 @@ public class EthernetTracker {
     @VisibleForTesting(visibility = PACKAGE)
     protected void updateConfiguration(@NonNull final String iface,
             @NonNull final IpConfiguration ipConfig,
-            @NonNull final NetworkCapabilities capabilities,
+            @Nullable final NetworkCapabilities capabilities,
             @Nullable final IEthernetNetworkManagementListener listener) {
         if (DBG) {
             Log.i(TAG, "updateConfiguration, iface: " + iface + ", capabilities: " + capabilities
@@ -241,7 +241,9 @@ public class EthernetTracker {
         }
         final IpConfiguration localIpConfig = new IpConfiguration(ipConfig);
         writeIpConfiguration(iface, localIpConfig);
-        mNetworkCapabilities.put(iface, capabilities);
+        if (null != capabilities) {
+            mNetworkCapabilities.put(iface, capabilities);
+        }
         mHandler.post(() -> {
             mFactory.updateInterface(iface, localIpConfig, capabilities, listener);
             broadcastInterfaceStateChange(iface);
