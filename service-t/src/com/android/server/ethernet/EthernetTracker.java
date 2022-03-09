@@ -86,6 +86,9 @@ public class EthernetTracker {
      * if setIncludeTestInterfaces is true, any test interfaces.
      */
     private String mIfaceMatch;
+    /**
+     * Track test interfaces if true, don't track otherwise.
+     */
     private boolean mIncludeTestInterfaces = false;
 
     /** Mapping between {iface name | mac address} -> {NetworkCapabilities} */
@@ -230,7 +233,7 @@ public class EthernetTracker {
     @VisibleForTesting(visibility = PACKAGE)
     protected void updateConfiguration(@NonNull final String iface,
             @NonNull final IpConfiguration ipConfig,
-            @NonNull final NetworkCapabilities capabilities,
+            @Nullable final NetworkCapabilities capabilities,
             @Nullable final IEthernetNetworkManagementListener listener) {
         if (DBG) {
             Log.i(TAG, "updateConfiguration, iface: " + iface + ", capabilities: " + capabilities
@@ -238,7 +241,9 @@ public class EthernetTracker {
         }
         final IpConfiguration localIpConfig = new IpConfiguration(ipConfig);
         writeIpConfiguration(iface, localIpConfig);
-        mNetworkCapabilities.put(iface, capabilities);
+        if (null != capabilities) {
+            mNetworkCapabilities.put(iface, capabilities);
+        }
         mHandler.post(() -> {
             mFactory.updateInterface(iface, localIpConfig, capabilities, listener);
             broadcastInterfaceStateChange(iface);
@@ -736,6 +741,17 @@ public class EthernetTracker {
                 ? "(" + match + "|" + TEST_IFACE_REGEXP + ")"
                 : match;
         Log.d(TAG, "Interface match regexp set to '" + mIfaceMatch + "'");
+    }
+
+    /**
+     * Validate if a given interface is valid for testing.
+     *
+     * @param iface the name of the interface to validate.
+     * @return {@code true} if test interfaces are enabled and the given {@code iface} has a test
+     * interface prefix, {@code false} otherwise.
+     */
+    public boolean isValidTestInterface(@NonNull final String iface) {
+        return mIncludeTestInterfaces && iface.matches(TEST_IFACE_REGEXP);
     }
 
     private void postAndWaitForRunnable(Runnable r) {
