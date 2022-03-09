@@ -97,6 +97,7 @@ public final class OreoFastPairAdvertiser implements FastPairAdvertiser {
                             address,
                             new SimpleDateFormat("HH:mm:ss:SSS", Locale.US)
                                     .format(Calendar.getInstance().getTime()));
+                    // Implicitly start the advertising once BLE address callback arrived.
                     simulator.setBleAddress(address);
                 }
             }
