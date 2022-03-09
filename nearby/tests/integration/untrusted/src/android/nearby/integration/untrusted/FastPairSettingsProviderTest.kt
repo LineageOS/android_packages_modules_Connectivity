@@ -40,14 +40,14 @@ class FastPairSettingsProviderTest {
     @Test
     fun testSettingsFastPairScan_fromUnTrustedApp_readsSucceed() {
         Settings.Secure.getInt(contentResolver,
-                Settings.Secure.FAST_PAIR_SCAN_ENABLED, /* default value */ -1)
+                "fast_pair_scan_enabled", /* default value */ -1)
     }
 
     /** Verify untrusted app can't write Fast Pair scan enabled setting. */
     @Test
     fun testSettingsFastPairScan_fromUnTrustedApp_writesFailed() {
         assertFailsWith<SecurityException> {
-            Settings.Secure.putInt(contentResolver, Settings.Secure.FAST_PAIR_SCAN_ENABLED, 1)
+            Settings.Secure.putInt(contentResolver, "fast_pair_scan_enabled", 1)
         }
     }
 }
