@@ -17,25 +17,18 @@
 package android.nearby.multidevices.fastpair.provider
 
 import android.annotation.TargetApi
-import android.bluetooth.le.AdvertiseSettings
 import android.content.Context
 import android.os.Build
 import androidx.test.platform.app.InstrumentationRegistry
-import android.nearby.fastpair.provider.FastPairSimulator
 import com.google.android.mobly.snippet.Snippet
 import com.google.android.mobly.snippet.rpc.AsyncRpc
 import com.google.android.mobly.snippet.rpc.Rpc
-import com.google.android.mobly.snippet.util.Log
-import com.google.common.io.BaseEncoding.base64
 
 /** Expose Mobly RPC methods for Python side to simulate fast pair provider role. */
 @TargetApi(Build.VERSION_CODES.LOLLIPOP)
 class FastPairProviderSimulatorSnippet : Snippet {
     private val context: Context = InstrumentationRegistry.getInstrumentation().context
-    private val bluetoothA2dpSinkService = BluetoothA2dpSinkService(context)
-    private val bluetoothStateChangeReceiver = BluetoothStateChangeReceiver(context)
-    private lateinit var fastPairSimulator: FastPairSimulator
-    private lateinit var providerStatusEvents: ProviderStatusEvents
+    private lateinit var fastPairProviderSimulatorController: FastPairProviderSimulatorController
 
     /**
      * Starts the Fast Pair provider simulator.
@@ -47,47 +40,21 @@ class FastPairProviderSimulatorSnippet : Snippet {
      */
     @AsyncRpc(description = "Starts FP provider simulator for seekers to discover.")
     fun startProviderSimulator(callbackId: String, modelId: String, antiSpoofingKeyString: String) {
-        providerStatusEvents = ProviderStatusEvents(callbackId)
-        bluetoothStateChangeReceiver.register(listener = providerStatusEvents)
-        bluetoothA2dpSinkService.start { createFastPairSimulator(modelId, antiSpoofingKeyString) }
+        fastPairProviderSimulatorController = FastPairProviderSimulatorController(
+            context, modelId, antiSpoofingKeyString, ProviderStatusEvents(callbackId)
+        )
+        fastPairProviderSimulatorController.startProviderSimulator()
     }
 
     /** Stops the Fast Pair provider simulator. */
     @Rpc(description = "Stops FP provider simulator.")
     fun stopProviderSimulator() {
-        fastPairSimulator.destroy()
-        bluetoothStateChangeReceiver.unregister()
+        fastPairProviderSimulatorController.stopProviderSimulator()
     }
 
     /** Gets BLE mac address of the Fast Pair provider simulator. */
     @Rpc(description = "Gets BLE mac address of the Fast Pair provider simulator.")
     fun getBluetoothLeAddress(): String {
-        return fastPairSimulator.bleAddress!!
-    }
-
-    private fun createFastPairSimulator(modelId: String, antiSpoofingKeyString: String) {
-        val antiSpoofingKey = base64().decode(antiSpoofingKeyString)
-        fastPairSimulator =
-            FastPairSimulator(
-                context,
-                FastPairSimulator.Options.builder(
-                    modelId
-                )
-                    .setAdvertisingModelId(modelId)
-                    .setBluetoothAddress(null)
-                    .setTxPowerLevel(AdvertiseSettings.ADVERTISE_TX_POWER_HIGH)
-                    .setCallback {
-                        val isAdvertising = fastPairSimulator.isAdvertising
-                        Log.i("FastPairSimulator callback(), isAdvertising: $isAdvertising")
-                        providerStatusEvents.onAdvertisingChange(isAdvertising)
-                    }
-                    .setAntiSpoofingPrivateKey(antiSpoofingKey)
-                    .setUseRandomSaltForAccountKeyRotation(false)
-                    .setDataOnlyConnection(false)
-                    .setIsMemoryTest(false)
-                    .setShowsPasskeyConfirmation(false)
-                    .setRemoveAllDevicesDuringPairing(true)
-                    .build()
-            )
+        return fastPairProviderSimulatorController.simulator.bleAddress!!
     }
 }

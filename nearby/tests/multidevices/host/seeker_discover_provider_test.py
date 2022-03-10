@@ -16,8 +16,10 @@ import fast_pair_seeker
 DEFAULT_MODEL_ID = '00000C'
 # Default public key to simulate as registered headsets.
 DEFAULT_ANTI_SPOOFING_KEY = 'Cbj9eCJrTdDgSYxLkqtfADQi86vIaMvxJsQ298sZYWE='
-# Default time in seconds for events waiting.
-DEFAULT_TIMEOUT_SEC = 60
+# Time in seconds for events waiting.
+BECOME_DISCOVERABLE_TIMEOUT_SEC = 10
+START_ADVERTISING_TIMEOUT_SEC = 5
+SCAN_TIMEOUT_SEC = 30
 
 # Abbreviations for common use type.
 FastPairProviderSimulator = fast_pair_provider_simulator.FastPairProviderSimulator
@@ -47,8 +49,8 @@ class SeekerDiscoverProviderTest(base_test.BaseTestClass):
         super().setup_test()
         self._provider.start_provider_simulator(DEFAULT_MODEL_ID,
                                                 DEFAULT_ANTI_SPOOFING_KEY)
-        self._provider.wait_for_discoverable_mode(DEFAULT_TIMEOUT_SEC)
-        self._provider.wait_for_advertising_start(DEFAULT_TIMEOUT_SEC)
+        self._provider.wait_for_discoverable_mode(BECOME_DISCOVERABLE_TIMEOUT_SEC)
+        self._provider.wait_for_advertising_start(START_ADVERTISING_TIMEOUT_SEC)
         self._seeker.start_scan()
 
     def teardown_test(self) -> None:
@@ -62,7 +64,7 @@ class SeekerDiscoverProviderTest(base_test.BaseTestClass):
     def test_seeker_start_scanning_find_provider(self) -> None:
         provider_ble_mac_address = self._provider.get_ble_mac_address()
         self._seeker.wait_and_assert_provider_found(
-            timeout_seconds=DEFAULT_TIMEOUT_SEC,
+            timeout_seconds=SCAN_TIMEOUT_SEC,
             expected_model_id=DEFAULT_MODEL_ID,
             expected_ble_mac_address=provider_ble_mac_address)
 
