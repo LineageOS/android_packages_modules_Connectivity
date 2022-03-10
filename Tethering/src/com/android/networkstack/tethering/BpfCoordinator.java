@@ -65,7 +65,7 @@ import com.android.net.module.util.BpfMap;
 import com.android.net.module.util.CollectionUtils;
 import com.android.net.module.util.InterfaceParams;
 import com.android.net.module.util.NetworkStackConstants;
-import com.android.net.module.util.Struct;
+import com.android.net.module.util.Struct.U32;
 import com.android.net.module.util.bpf.Tether4Key;
 import com.android.net.module.util.bpf.Tether4Value;
 import com.android.net.module.util.netlink.ConntrackMessage;
@@ -1177,22 +1177,13 @@ public class BpfCoordinator {
         }
     }
 
-    /**
-     * Simple struct that only contains a u32. Must be public because Struct needs access to it.
-     * TODO: make this a public inner class of Struct so anyone can use it as, e.g., Struct.U32?
-     */
-    public static class U32Struct extends Struct {
-        @Struct.Field(order = 0, type = Struct.Type.U32)
-        public long val;
-    }
-
     private void dumpCounters(@NonNull IndentingPrintWriter pw) {
         if (!mDeps.isAtLeastS()) {
             pw.println("No counter support");
             return;
         }
-        try (BpfMap<U32Struct, U32Struct> map = new BpfMap<>(TETHER_ERROR_MAP_PATH,
-                BpfMap.BPF_F_RDONLY, U32Struct.class, U32Struct.class)) {
+        try (BpfMap<U32, U32> map = new BpfMap<>(TETHER_ERROR_MAP_PATH, BpfMap.BPF_F_RDONLY,
+                U32.class, U32.class)) {
 
             map.forEach((k, v) -> {
                 String counterName;
