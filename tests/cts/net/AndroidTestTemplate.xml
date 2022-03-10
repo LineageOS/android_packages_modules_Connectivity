@@ -30,6 +30,8 @@
     </target_preparer>
     <target_preparer class="com.android.testutils.ConnectivityCheckTargetPreparer">
     </target_preparer>
+    <target_preparer class="com.android.testutils.DisableConfigSyncTargetPreparer">
+    </target_preparer>
     <test class="com.android.tradefed.testtype.AndroidJUnitTest" >
         <option name="package" value="android.net.cts" />
         <option name="runtime-hint" value="9m4s" />
