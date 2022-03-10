@@ -58,7 +58,7 @@ public final class NearbyServiceTest {
     private ScanRequest createScanRequest() {
         return new ScanRequest.Builder()
                 .setScanType(ScanRequest.SCAN_TYPE_FAST_PAIR)
-                .setEnableBle(true)
+                .setBleEnabled(true)
                 .build();
     }
 }

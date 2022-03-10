@@ -89,15 +89,15 @@ public final class ScanRequest implements Parcelable {
 
     private final @ScanType int mScanType;
     private final @ScanMode int mScanMode;
-    private final boolean mEnableBle;
+    private final boolean mBleEnabled;
     private final @NonNull WorkSource mWorkSource;
     private final List<ScanFilter> mScanFilters;
 
-    private ScanRequest(@ScanType int scanType, @ScanMode int scanMode, boolean enableBle,
+    private ScanRequest(@ScanType int scanType, @ScanMode int scanMode, boolean bleEnabled,
             @NonNull WorkSource workSource, List<ScanFilter> scanFilters) {
         mScanType = scanType;
         mScanMode = scanMode;
-        mEnableBle = enableBle;
+        mBleEnabled = bleEnabled;
         mWorkSource = workSource;
         mScanFilters = scanFilters;
     }
@@ -160,8 +160,8 @@ public final class ScanRequest implements Parcelable {
     /**
      * Returns if Bluetooth Low Energy enabled for scanning.
      */
-    public boolean isEnableBle() {
-        return mEnableBle;
+    public boolean isBleEnabled() {
+        return mBleEnabled;
     }
 
     /**
@@ -200,7 +200,7 @@ public final class ScanRequest implements Parcelable {
         stringBuilder.append("Request[")
                 .append("scanType=").append(mScanType);
         stringBuilder.append(", scanMode=").append(scanModeToString(mScanMode));
-        stringBuilder.append(", enableBle=").append(mEnableBle);
+        stringBuilder.append(", enableBle=").append(mBleEnabled);
         stringBuilder.append(", workSource=").append(mWorkSource);
         stringBuilder.append(", scanFilters=").append(mScanFilters);
         stringBuilder.append("]");
@@ -211,7 +211,7 @@ public final class ScanRequest implements Parcelable {
     public void writeToParcel(@NonNull Parcel dest, int flags) {
         dest.writeInt(mScanType);
         dest.writeInt(mScanMode);
-        dest.writeBoolean(mEnableBle);
+        dest.writeBoolean(mBleEnabled);
         dest.writeTypedObject(mWorkSource, /* parcelableFlags= */0);
         dest.writeTypedList(mScanFilters);
     }
@@ -222,7 +222,7 @@ public final class ScanRequest implements Parcelable {
             ScanRequest otherRequest = (ScanRequest) other;
             return mScanType == otherRequest.mScanType
                     && (mScanMode == otherRequest.mScanMode)
-                    && (mEnableBle == otherRequest.mEnableBle)
+                    && (mBleEnabled == otherRequest.mBleEnabled)
                     && (Objects.equals(mWorkSource, otherRequest.mWorkSource));
         }
         return false;
@@ -230,7 +230,7 @@ public final class ScanRequest implements Parcelable {
 
     @Override
     public int hashCode() {
-        return Objects.hash(mScanType, mScanMode, mEnableBle, mWorkSource);
+        return Objects.hash(mScanType, mScanMode, mBleEnabled, mWorkSource);
     }
 
     /** @hide **/
@@ -253,14 +253,14 @@ public final class ScanRequest implements Parcelable {
         private @ScanType int mScanType;
         private @ScanMode int mScanMode;
 
-        private boolean mEnableBle;
+        private boolean mBleEnabled;
         private WorkSource mWorkSource;
         private List<ScanFilter> mScanFilters;
 
         /** Creates a new Builder with the given scan type. */
         public Builder() {
             mScanType = INVALID_SCAN_TYPE;
-            mEnableBle = true;
+            mBleEnabled = true;
             mWorkSource = new WorkSource();
             mScanFilters = new ArrayList<>();
         }
@@ -292,11 +292,11 @@ public final class ScanRequest implements Parcelable {
         /**
          * Sets if the ble is enabled for scanning.
          *
-         * @param enableBle If the BluetoothLe is enabled in the device.
+         * @param bleEnabled If the BluetoothLe is enabled in the device.
          */
         @NonNull
-        public Builder setEnableBle(boolean enableBle) {
-            mEnableBle = enableBle;
+        public Builder setBleEnabled(boolean bleEnabled) {
+            mBleEnabled = bleEnabled;
             return this;
         }
 
@@ -355,7 +355,7 @@ public final class ScanRequest implements Parcelable {
             Preconditions.checkState(isValidScanMode(mScanMode),
                     "invalid scan mode : " + mScanMode
                             + ", scan mode must be one of ScanMode#SCAN_MODE_");
-            return new ScanRequest(mScanType, mScanMode, mEnableBle, mWorkSource, mScanFilters);
+            return new ScanRequest(mScanType, mScanMode, mBleEnabled, mWorkSource, mScanFilters);
         }
     }
 }

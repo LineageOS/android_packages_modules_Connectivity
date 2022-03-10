@@ -78,7 +78,7 @@ public class NearbyManagerTest {
         ScanRequest scanRequest = new ScanRequest.Builder()
                 .setScanType(ScanRequest.SCAN_TYPE_FAST_PAIR)
                 .setScanMode(ScanRequest.SCAN_MODE_LOW_LATENCY)
-                .setEnableBle(true)
+                .setBleEnabled(true)
                 .build();
         ScanCallback scanCallback = new ScanCallback() {
             @Override

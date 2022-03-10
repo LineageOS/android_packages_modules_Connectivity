@@ -45,7 +45,7 @@ class FastPairSeekerSnippet : Snippet {
         val scanRequest = ScanRequest.Builder()
             .setScanMode(ScanRequest.SCAN_MODE_LOW_LATENCY)
             .setScanType(ScanRequest.SCAN_TYPE_FAST_PAIR)
-            .setEnableBle(true)
+            .setBleEnabled(true)
             .build()
         scanCallback = ScanCallbackEvents(callbackId)
 
