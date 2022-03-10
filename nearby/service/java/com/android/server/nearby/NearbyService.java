@@ -27,6 +27,8 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.hardware.location.ContextHubManager;
+import android.nearby.BroadcastRequest;
+import android.nearby.IBroadcastListener;
 import android.nearby.INearbyManager;
 import android.nearby.IScanListener;
 import android.nearby.ScanRequest;
@@ -38,6 +40,7 @@ import com.android.server.nearby.injector.ContextHubManagerAdapter;
 import com.android.server.nearby.injector.Injector;
 import com.android.server.nearby.presence.ChreCommunication;
 import com.android.server.nearby.presence.PresenceManager;
+import com.android.server.nearby.provider.BroadcastProviderManager;
 import com.android.server.nearby.provider.DiscoveryProviderManager;
 import com.android.server.nearby.provider.FastPairDataProvider;
 
@@ -71,11 +74,13 @@ public class NearbyService extends INearbyManager.Stub {
                 }
             };
     private DiscoveryProviderManager mProviderManager;
+    private BroadcastProviderManager mBroadcastProviderManager;
 
     public NearbyService(Context context) {
         mContext = context;
         mSystemInjector = new SystemInjector(context);
         mProviderManager = new DiscoveryProviderManager(context, mSystemInjector);
+        mBroadcastProviderManager = new BroadcastProviderManager(context, mSystemInjector);
         final LocatorContextWrapper lcw = new LocatorContextWrapper(context, null);
         mFastPairManager = new FastPairManager(lcw);
         mPresenceManager =
@@ -101,6 +106,16 @@ public class NearbyService extends INearbyManager.Stub {
     @Override
     public void unregisterScanListener(IScanListener listener) {
         mProviderManager.unregisterScanListener(listener);
+    }
+
+    @Override
+    public void startBroadcast(BroadcastRequest broadcastRequest, IBroadcastListener listener) {
+        mBroadcastProviderManager.startBroadcast(broadcastRequest, listener);
+    }
+
+    @Override
+    public void stopBroadcast(IBroadcastListener listener) {
+        mBroadcastProviderManager.stopBroadcast(listener);
     }
 
     /**
