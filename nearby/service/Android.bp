@@ -44,7 +44,7 @@ java_library {
 
 // Main lib for nearby services.
 java_library {
-    name: "service-nearby",
+    name: "service-nearby-pre-jarjar",
     srcs: [":nearby-service-srcs"],
 
     defaults: [
