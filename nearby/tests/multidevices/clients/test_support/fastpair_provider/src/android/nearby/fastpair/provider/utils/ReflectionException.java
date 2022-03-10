@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package android.nearby.fastpair.provider.simulator.testing;
+package android.nearby.fastpair.provider.utils;
 
 /**
  * An exception thrown during a reflection operation. Like ReflectiveOperationException, except

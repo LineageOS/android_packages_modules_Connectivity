@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package android.nearby.fastpair.provider.simulator.testing;
+package android.nearby.fastpair.provider.utils;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
