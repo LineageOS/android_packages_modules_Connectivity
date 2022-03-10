@@ -37,6 +37,5 @@ python_test_host {
 
 python_library_host {
     name: "NearbyMultiDevicesHostHelper",
-    srcs: ["*.py"],
-    exclude_srcs: ["*_test.py"],
+    srcs: ["test_helper/*.py"],
 }
