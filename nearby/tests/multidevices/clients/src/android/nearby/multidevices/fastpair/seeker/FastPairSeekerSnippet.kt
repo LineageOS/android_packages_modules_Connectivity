@@ -21,6 +21,7 @@ import android.content.Intent
 import android.nearby.NearbyManager
 import android.nearby.ScanCallback
 import android.nearby.ScanRequest
+import android.nearby.multidevices.fastpair.seeker.dataprovider.FastPairTestDataCache
 import androidx.test.core.app.ApplicationProvider
 import com.google.android.mobly.snippet.Snippet
 import com.google.android.mobly.snippet.rpc.AsyncRpc
