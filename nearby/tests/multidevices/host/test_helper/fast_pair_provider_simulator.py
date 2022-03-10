@@ -43,6 +43,7 @@ class FastPairProviderSimulator:
 
     def __init__(self, ad: AndroidDevice) -> None:
         self._ad = ad
+        self._ad.debug_tag = 'FastPairProviderSimulator'
         self._provider_status_callback = None
 
     def load_snippet(self) -> None:
@@ -92,6 +93,9 @@ class FastPairProviderSimulator:
             0x00000C).
           anti_spoofing_key: A public key for registered headsets.
         """
+        self._ad.log.info(
+            'Provider simulator starts advertising as model id "%s" with anti-spoofing key "%s".',
+            model_id, anti_spoofing_key)
         self._provider_status_callback = (
             self._ad.fp.startModelIdAdvertising(model_id, anti_spoofing_key))
 
