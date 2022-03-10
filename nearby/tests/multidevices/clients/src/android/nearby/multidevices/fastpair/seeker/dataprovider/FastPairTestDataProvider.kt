@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package android.nearby.multidevices.fastpair.seeker
+package android.nearby.multidevices.fastpair.seeker.dataprovider
 
 import android.accounts.Account
 import android.nearby.FastPairDataProviderBase

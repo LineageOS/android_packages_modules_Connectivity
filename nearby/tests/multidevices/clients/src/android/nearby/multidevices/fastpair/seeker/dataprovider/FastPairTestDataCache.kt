@@ -14,13 +14,13 @@
  * limitations under the License.
  */
 
-package android.nearby.multidevices.fastpair.seeker
+package android.nearby.multidevices.fastpair.seeker.dataprovider
 
 import android.nearby.FastPairAccountKeyDeviceMetadata
 import android.nearby.FastPairAntispoofkeyDeviceMetadata
 import android.nearby.FastPairDeviceMetadata
 import android.nearby.FastPairDiscoveryItem
-import com.google.common.io.BaseEncoding.base64
+import com.google.common.io.BaseEncoding
 import com.google.gson.Gson
 import com.google.gson.annotations.SerializedName
 
@@ -297,6 +297,6 @@ object FastPairTestDataCache {
         }
     }
 
-    private fun String.base64Decode(): ByteArray = base64().decode(this)
-    private fun ByteArray.base64Encode(): String = base64().encode(this)
+    private fun String.base64Decode(): ByteArray = BaseEncoding.base64().decode(this)
+    private fun ByteArray.base64Encode(): String = BaseEncoding.base64().encode(this)
 }
