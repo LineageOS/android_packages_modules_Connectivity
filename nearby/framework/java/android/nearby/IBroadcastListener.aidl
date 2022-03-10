@@ -16,23 +16,12 @@
 
 package android.nearby;
 
-import android.nearby.IBroadcastListener;
-import android.nearby.IScanListener;
-import android.nearby.BroadcastRequest;
-import android.nearby.ScanRequest;
-
 /**
- * Interface for communicating with the nearby services.
+ * Callback when brodacast status changes.
  *
- * @hide
+ * {@hide}
  */
-interface INearbyManager {
-
-    void registerScanListener(in ScanRequest scanRequest, in IScanListener listener);
-
-    void unregisterScanListener(in IScanListener listener);
-
-    void startBroadcast(in BroadcastRequest broadcastRequest, in IBroadcastListener callback);
-
-    void stopBroadcast(in IBroadcastListener callback);
+oneway interface IBroadcastListener {
+    /** Called when the broadcast status changes. */
+    void onStatusChanged(int status);
 }
