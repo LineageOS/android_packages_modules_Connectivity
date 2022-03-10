@@ -20,6 +20,7 @@ import android.content.Context;
 import android.util.Log;
 
 import com.android.modules.utils.build.SdkLevel;
+import com.android.networkstack.apishim.ConstantsShim;
 import com.android.server.nearby.NearbyService;
 
 /**
@@ -60,8 +61,8 @@ public final class ConnectivityServiceInitializer extends SystemService {
         }
 
         if (mNearbyService != null) {
-            Log.i(TAG, "Registering " + Context.NEARBY_SERVICE);
-            publishBinderService(Context.NEARBY_SERVICE, mNearbyService,
+            Log.i(TAG, "Registering " + ConstantsShim.NEARBY_SERVICE);
+            publishBinderService(ConstantsShim.NEARBY_SERVICE, mNearbyService,
                     /* allowIsolated= */ false);
         }
     }
@@ -96,6 +97,13 @@ public final class ConnectivityServiceInitializer extends SystemService {
     /** Return Nearby service instance or null if current SDK is lower than T */
     private NearbyService createNearbyService(final Context context) {
         if (!SdkLevel.isAtLeastT()) return null;
-        return new NearbyService(context);
+        try {
+            return new NearbyService(context);
+        } catch (UnsupportedOperationException e) {
+            // Nearby is not yet supported in all branches
+            // TODO: remove catch clause when it is available.
+            Log.i(TAG, "Skipping unsupported service " + ConstantsShim.NEARBY_SERVICE);
+            return null;
+        }
     }
 }
