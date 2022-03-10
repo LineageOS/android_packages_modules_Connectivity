@@ -22,6 +22,7 @@ import static org.junit.Assert.assertThrows;
 
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
@@ -54,6 +55,10 @@ public class EthernetServiceImplTest {
             new EthernetNetworkUpdateRequest.Builder()
                     .setIpConfiguration(new IpConfiguration())
                     .setNetworkCapabilities(new NetworkCapabilities.Builder().build())
+                    .build();
+    private static final EthernetNetworkUpdateRequest UPDATE_REQUEST_WITHOUT_CAPABILITIES =
+            new EthernetNetworkUpdateRequest.Builder()
+                    .setIpConfiguration(new IpConfiguration())
                     .build();
     private static final IEthernetNetworkManagementListener NULL_LISTENER = null;
     private EthernetServiceImpl mEthernetServiceImpl;
@@ -136,11 +141,21 @@ public class EthernetServiceImplTest {
     }
 
     @Test
-    public void testUpdateConfigurationRejectsWithoutAutomotiveFeature() {
+    public void testUpdateConfigurationWithCapabilitiesRejectsWithoutAutomotiveFeature() {
         toggleAutomotiveFeature(false);
         assertThrows(UnsupportedOperationException.class, () -> {
             mEthernetServiceImpl.updateConfiguration(TEST_IFACE, UPDATE_REQUEST, NULL_LISTENER);
         });
+    }
+
+    @Test
+    public void testUpdateConfigurationWithCapabilitiesWithAutomotiveFeature() {
+        toggleAutomotiveFeature(false);
+        mEthernetServiceImpl.updateConfiguration(TEST_IFACE, UPDATE_REQUEST_WITHOUT_CAPABILITIES,
+                NULL_LISTENER);
+        verify(mEthernetTracker).updateConfiguration(eq(TEST_IFACE),
+                eq(UPDATE_REQUEST_WITHOUT_CAPABILITIES.getIpConfiguration()),
+                eq(UPDATE_REQUEST_WITHOUT_CAPABILITIES.getNetworkCapabilities()), isNull());
     }
 
     @Test
@@ -248,15 +263,16 @@ public class EthernetServiceImplTest {
     }
 
     @Test
-    public void testUpdateConfigurationRejectsTestRequestWithNullCapabilities() {
+    public void testUpdateConfigurationAcceptsTestRequestWithNullCapabilities() {
         enableTestInterface();
         final EthernetNetworkUpdateRequest request =
                 new EthernetNetworkUpdateRequest
                         .Builder()
                         .setIpConfiguration(new IpConfiguration()).build();
-        assertThrows(IllegalArgumentException.class, () -> {
-            mEthernetServiceImpl.updateConfiguration(TEST_IFACE, request, NULL_LISTENER);
-        });
+        mEthernetServiceImpl.updateConfiguration(TEST_IFACE, request, NULL_LISTENER);
+        verify(mEthernetTracker).updateConfiguration(eq(TEST_IFACE),
+                eq(request.getIpConfiguration()),
+                eq(request.getNetworkCapabilities()), isNull());
     }
 
     @Test
