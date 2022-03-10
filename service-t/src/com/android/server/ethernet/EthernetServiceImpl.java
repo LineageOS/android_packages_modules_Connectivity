@@ -80,7 +80,7 @@ public class EthernetServiceImpl extends IEthernetManager.Stub {
         mStarted.set(true);
     }
 
-    private void logIfEthernetNotStarted() {
+    private void throwIfEthernetNotStarted() {
         if (!mStarted.get()) {
             throw new IllegalStateException("System isn't ready to change ethernet configurations");
         }
@@ -111,7 +111,7 @@ public class EthernetServiceImpl extends IEthernetManager.Stub {
      */
     @Override
     public void setConfiguration(String iface, IpConfiguration config) {
-        logIfEthernetNotStarted();
+        throwIfEthernetNotStarted();
 
         PermissionUtils.enforceNetworkStackPermission(mContext);
         if (mTracker.isRestrictedInterface(iface)) {
@@ -229,8 +229,7 @@ public class EthernetServiceImpl extends IEthernetManager.Stub {
             @Nullable final IEthernetNetworkManagementListener listener) {
         Objects.requireNonNull(iface);
         Objects.requireNonNull(request);
-        // TODO: rename to throwIfEthernetNotStarted.
-        logIfEthernetNotStarted();
+        throwIfEthernetNotStarted();
 
         if (mTracker.isValidTestInterface(iface)) {
             enforceManageTestNetworksPermission();
@@ -255,7 +254,7 @@ public class EthernetServiceImpl extends IEthernetManager.Stub {
             @Nullable final IEthernetNetworkManagementListener listener) {
         Log.i(TAG, "connectNetwork called with: iface=" + iface + ", listener=" + listener);
         Objects.requireNonNull(iface);
-        logIfEthernetNotStarted();
+        throwIfEthernetNotStarted();
 
         if (mTracker.isValidTestInterface(iface)) {
             enforceManageTestNetworksPermission();
@@ -273,7 +272,7 @@ public class EthernetServiceImpl extends IEthernetManager.Stub {
             @Nullable final IEthernetNetworkManagementListener listener) {
         Log.i(TAG, "disconnectNetwork called with: iface=" + iface + ", listener=" + listener);
         Objects.requireNonNull(iface);
-        logIfEthernetNotStarted();
+        throwIfEthernetNotStarted();
 
         if (mTracker.isValidTestInterface(iface)) {
             enforceManageTestNetworksPermission();
