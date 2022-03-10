@@ -30,6 +30,6 @@ android_library {
         "fast-pair-lite-protos",
         "framework-annotations-lib",
         "kotlin-stdlib",
-        "service-nearby",
+        "service-nearby-pre-jarjar",
     ],
 }

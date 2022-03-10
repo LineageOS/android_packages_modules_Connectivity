@@ -43,7 +43,7 @@ android_robolectric_test {
         "androidx.mediarouter_mediarouter-nodeps",
         "error_prone_annotations",
         "mockito-robolectric-prebuilt",
-        "service-nearby",
+        "service-nearby-pre-jarjar",
         "truth-prebuilt",
         "robolectric_android-all-stub",
         "Robolectric_all-target",
