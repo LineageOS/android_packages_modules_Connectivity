@@ -63,7 +63,7 @@ import android.util.Pair;
 import androidx.test.filters.SmallTest;
 import androidx.test.runner.AndroidJUnit4;
 
-import com.android.internal.R;
+import com.android.connectivity.resources.R;
 import com.android.net.module.util.InterfaceParams;
 
 import com.android.testutils.DevSdkIgnoreRule;
@@ -174,8 +174,7 @@ public class EthernetNetworkFactoryTest {
     }
 
     private void setupContext() {
-        when(mContext.getResources()).thenReturn(mResources);
-        when(mResources.getString(R.string.config_ethernet_tcp_buffers)).thenReturn("");
+        when(mDeps.getTcpBufferSizesFromResource(eq(mContext))).thenReturn("");
     }
 
     @After
