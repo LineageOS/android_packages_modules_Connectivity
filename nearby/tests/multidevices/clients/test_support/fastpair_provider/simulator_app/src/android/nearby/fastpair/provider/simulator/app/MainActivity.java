@@ -20,8 +20,6 @@ import static android.content.pm.PackageManager.PERMISSION_GRANTED;
 import static android.nearby.fastpair.provider.simulator.SimulatorStreamProtocol.Event.Code.BLUETOOTH_STATE_BOND;
 import static android.nearby.fastpair.provider.simulator.SimulatorStreamProtocol.Event.Code.BLUETOOTH_STATE_CONNECTION;
 import static android.nearby.fastpair.provider.simulator.SimulatorStreamProtocol.Event.Code.BLUETOOTH_STATE_SCAN_MODE;
-import static android.nearby.fastpair.provider.simulator.app.AppLogger.log;
-import static android.nearby.fastpair.provider.simulator.app.AppLogger.warning;
 
 import static com.google.common.io.BaseEncoding.base16;
 import static com.google.common.io.BaseEncoding.base64;
@@ -41,6 +39,7 @@ import android.nearby.fastpair.provider.FastPairSimulator;
 import android.nearby.fastpair.provider.FastPairSimulator.BatteryValue;
 import android.nearby.fastpair.provider.FastPairSimulator.KeyInputCallback;
 import android.nearby.fastpair.provider.FastPairSimulator.PasskeyEventCallback;
+import android.nearby.fastpair.provider.bluetooth.BluetoothController;
 import android.nearby.fastpair.provider.simulator.SimulatorStreamProtocol.Event;
 import android.nearby.fastpair.provider.simulator.testing.RemoteDevice;
 import android.nearby.fastpair.provider.simulator.testing.RemoteDevicesManager;
@@ -96,6 +95,9 @@ import service.proto.Rpcs.DeviceType;
  */
 @SuppressLint("SetTextI18n")
 public class MainActivity extends Activity {
+    public static final String TAG = "FastPairProviderSimulatorApp";
+    private final Logger mLogger = new Logger(TAG);
+
     /** Device has a display and the ability to input Yes/No. */
     private static final int IO_CAPABILITY_IO = 1;
 
@@ -213,7 +215,7 @@ public class MainActivity extends Activity {
             return;
         }
 
-        log("Send data to output stream: %s", eventBuilder.getCode().getNumber());
+        mLogger.log("Send data to output stream: %s", eventBuilder.getCode().getNumber());
         mRemoteDevicesManager.writeDataToRemoteDevice(
                 mRemoteDeviceId,
                 eventBuilder.build().toByteString(),
@@ -446,7 +448,7 @@ public class MainActivity extends Activity {
 
     private void setupRemoteDevices() {
         if (Strings.isNullOrEmpty(getIntent().getStringExtra(EXTRA_REMOTE_DEVICE_ID))) {
-            log("Can't get remote device id");
+            mLogger.log("Can't get remote device id");
             return;
         }
         mRemoteDeviceId = getIntent().getStringExtra(EXTRA_REMOTE_DEVICE_ID);
@@ -463,7 +465,7 @@ public class MainActivity extends Activity {
                                     REMOTE_DEVICE_OUTPUT_STREAM_URI),
                             mInputStreamListener));
         } catch (IOException e) {
-            warning("Failed to create stream IO handler: %s", e);
+            mLogger.log(e, "Failed to create stream IO handler");
         }
     }
 
@@ -503,7 +505,7 @@ public class MainActivity extends Activity {
     private boolean setModelId(String modelId) {
         String validModelId = getValidModelId(modelId);
         if (TextUtils.isEmpty(validModelId)) {
-            log("Can't do setModelId because inputted modelId is invalid!");
+            mLogger.log("Can't do setModelId because inputted modelId is invalid!");
             return false;
         }
 
@@ -612,7 +614,7 @@ public class MainActivity extends Activity {
         try {
             Preconditions.checkArgument(base16().decode(bluetoothAddress).length == 6);
         } catch (IllegalArgumentException e) {
-            log("Invalid BLUETOOTH_ADDRESS extra (%s), using default.", bluetoothAddress);
+            mLogger.log("Invalid BLUETOOTH_ADDRESS extra (%s), using default.", bluetoothAddress);
             bluetoothAddress = null;
         }
         final String finalBluetoothAddress = bluetoothAddress;
@@ -669,11 +671,10 @@ public class MainActivity extends Activity {
                                 mAppLaunchSwitch.isChecked() ? MODEL_ID_APP_LAUNCH : modelId)
                         .setBluetoothAddress(finalBluetoothAddress)
                         .setTxPowerLevel(toTxPowerLevel(txPower))
-                        .setCallback(this::updateStatusView)
+                        .setAdvertisingChangedCallback(this::updateStatusView)
                         .setAntiSpoofingPrivateKey(antiSpoofingKey)
                         .setUseRandomSaltForAccountKeyRotation(useRandomSaltForAccountKeyRotation)
                         .setDataOnlyConnection(device != null && device.getDataOnlyConnection())
-                        .setIsMemoryTest(mInputStreamListener != null)
                         .setShowsPasskeyConfirmation(
                                 device.getDeviceType().equals(DeviceType.ANDROID_AUTO))
                         .setRemoveAllDevicesDuringPairing(mRemoveAllDevicesDuringPairing)
