@@ -44,7 +44,7 @@
              Must stay in the same process as Nearby Discovery Service.
         -->
         <service
-            android:name=".fastpair.seeker.FastPairTestDataProviderService"
+            android:name=".fastpair.seeker.dataprovider.FastPairTestDataProviderService"
             android:exported="true"
             android:permission="android.permission.WRITE_SECURE_SETTINGS"
             android:visibleToInstantApps="true">
