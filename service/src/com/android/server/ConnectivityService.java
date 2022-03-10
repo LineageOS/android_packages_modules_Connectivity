@@ -10616,15 +10616,16 @@ public class ConnectivityService extends IConnectivityManager.Stub
             @NonNull final UserHandle profile,
             @NonNull final ProfileNetworkPreference profileNetworkPreference) {
         final UidRange profileUids = UidRange.createForUser(profile);
-        Set<UidRange> uidRangeSet = UidRangeUtils.convertListToUidRange(
-                profileNetworkPreference.getIncludedUids());
+        Set<UidRange> uidRangeSet = UidRangeUtils.convertArrayToUidRange(
+                        profileNetworkPreference.getIncludedUids());
+
         if (uidRangeSet.size() > 0) {
             if (!UidRangeUtils.isRangeSetInUidRange(profileUids, uidRangeSet)) {
                 throw new IllegalArgumentException(
                         "Allow uid range is outside the uid range of profile.");
             }
         } else {
-            ArraySet<UidRange> disallowUidRangeSet = UidRangeUtils.convertListToUidRange(
+            ArraySet<UidRange> disallowUidRangeSet = UidRangeUtils.convertArrayToUidRange(
                     profileNetworkPreference.getExcludedUids());
             if (disallowUidRangeSet.size() > 0) {
                 if (!UidRangeUtils.isRangeSetInUidRange(profileUids, disallowUidRangeSet)) {

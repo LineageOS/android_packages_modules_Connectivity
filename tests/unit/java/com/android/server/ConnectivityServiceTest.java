@@ -13868,12 +13868,13 @@ public class ConnectivityServiceTest {
             ProfileNetworkPreference profileNetworkPreference) {
         final Set<UidRange> uidRangeSet;
         UidRange range = UidRange.createForUser(handle);
-        if (profileNetworkPreference.getIncludedUids().size() != 0) {
-            uidRangeSet = UidRangeUtils.convertListToUidRange(
+        if (profileNetworkPreference.getIncludedUids().length != 0) {
+            uidRangeSet = UidRangeUtils.convertArrayToUidRange(
                     profileNetworkPreference.getIncludedUids());
-        } else if (profileNetworkPreference.getExcludedUids().size() != 0)  {
+
+        } else if (profileNetworkPreference.getExcludedUids().length != 0)  {
             uidRangeSet = UidRangeUtils.removeRangeSetFromUidRange(
-                    range, UidRangeUtils.convertListToUidRange(
+                    range, UidRangeUtils.convertArrayToUidRange(
                             profileNetworkPreference.getExcludedUids()));
         } else {
             uidRangeSet = new ArraySet<>();
@@ -14245,7 +14246,7 @@ public class ConnectivityServiceTest {
         profileNetworkPreferenceBuilder.setPreference(PROFILE_NETWORK_PREFERENCE_ENTERPRISE);
         profileNetworkPreferenceBuilder.setPreferenceEnterpriseId(NET_ENTERPRISE_ID_1);
         profileNetworkPreferenceBuilder.setIncludedUids(
-                List.of(testHandle.getUid(TEST_WORK_PROFILE_APP_UID)));
+                new int[]{testHandle.getUid(TEST_WORK_PROFILE_APP_UID)});
         registerDefaultNetworkCallbacks();
         testPreferenceForUserNetworkUpDownForGivenPreference(
                 profileNetworkPreferenceBuilder.build(), false, testHandle,
@@ -14264,7 +14265,7 @@ public class ConnectivityServiceTest {
         profileNetworkPreferenceBuilder.setPreference(PROFILE_NETWORK_PREFERENCE_ENTERPRISE);
         profileNetworkPreferenceBuilder.setPreferenceEnterpriseId(NET_ENTERPRISE_ID_1);
         profileNetworkPreferenceBuilder.setIncludedUids(
-                List.of(testHandle.getUid(TEST_WORK_PROFILE_APP_UID_2)));
+                new int[]{testHandle.getUid(TEST_WORK_PROFILE_APP_UID_2)});
         registerDefaultNetworkCallbacks();
         testPreferenceForUserNetworkUpDownForGivenPreference(
                 profileNetworkPreferenceBuilder.build(), false,
@@ -14283,7 +14284,7 @@ public class ConnectivityServiceTest {
         profileNetworkPreferenceBuilder.setPreference(PROFILE_NETWORK_PREFERENCE_ENTERPRISE);
         profileNetworkPreferenceBuilder.setPreferenceEnterpriseId(NET_ENTERPRISE_ID_1);
         profileNetworkPreferenceBuilder.setExcludedUids(
-                List.of(testHandle.getUid(TEST_WORK_PROFILE_APP_UID_2)));
+                new int[]{testHandle.getUid(TEST_WORK_PROFILE_APP_UID_2)});
         registerDefaultNetworkCallbacks();
         testPreferenceForUserNetworkUpDownForGivenPreference(
                 profileNetworkPreferenceBuilder.build(), false,
@@ -14303,7 +14304,7 @@ public class ConnectivityServiceTest {
         profileNetworkPreferenceBuilder.setPreference(PROFILE_NETWORK_PREFERENCE_ENTERPRISE);
         profileNetworkPreferenceBuilder.setPreferenceEnterpriseId(NET_ENTERPRISE_ID_1);
         profileNetworkPreferenceBuilder.setExcludedUids(
-                List.of(testHandle.getUid(0) - 1));
+                new int[]{testHandle.getUid(0) - 1});
         final TestOnCompleteListener listener = new TestOnCompleteListener();
         Assert.assertThrows(IllegalArgumentException.class, () -> mCm.setProfileNetworkPreferences(
                 testHandle, List.of(profileNetworkPreferenceBuilder.build()),
@@ -14311,7 +14312,7 @@ public class ConnectivityServiceTest {
 
         profileNetworkPreferenceBuilder.setPreference(PROFILE_NETWORK_PREFERENCE_ENTERPRISE);
         profileNetworkPreferenceBuilder.setIncludedUids(
-                List.of(testHandle.getUid(0) - 1));
+                new int[]{testHandle.getUid(0) - 1});
         Assert.assertThrows(IllegalArgumentException.class,
                 () -> mCm.setProfileNetworkPreferences(
                         testHandle, List.of(profileNetworkPreferenceBuilder.build()),
@@ -14320,9 +14321,9 @@ public class ConnectivityServiceTest {
 
         profileNetworkPreferenceBuilder.setPreference(PROFILE_NETWORK_PREFERENCE_ENTERPRISE);
         profileNetworkPreferenceBuilder.setIncludedUids(
-                List.of(testHandle.getUid(0) - 1));
+                new int[]{testHandle.getUid(0) - 1});
         profileNetworkPreferenceBuilder.setExcludedUids(
-                List.of(testHandle.getUid(TEST_WORK_PROFILE_APP_UID_2)));
+                new int[]{testHandle.getUid(TEST_WORK_PROFILE_APP_UID_2)});
         Assert.assertThrows(IllegalArgumentException.class,
                 () -> mCm.setProfileNetworkPreferences(
                         testHandle, List.of(profileNetworkPreferenceBuilder.build()),
@@ -14333,9 +14334,9 @@ public class ConnectivityServiceTest {
         profileNetworkPreferenceBuilder2.setPreference(PROFILE_NETWORK_PREFERENCE_ENTERPRISE);
         profileNetworkPreferenceBuilder2.setPreferenceEnterpriseId(NET_ENTERPRISE_ID_1);
         profileNetworkPreferenceBuilder2.setIncludedUids(
-                List.of(testHandle.getUid(TEST_WORK_PROFILE_APP_UID_2)));
+                new int[]{testHandle.getUid(TEST_WORK_PROFILE_APP_UID_2)});
         profileNetworkPreferenceBuilder.setIncludedUids(
-                List.of(testHandle.getUid(TEST_WORK_PROFILE_APP_UID_2)));
+                new int[]{testHandle.getUid(TEST_WORK_PROFILE_APP_UID_2)});
         Assert.assertThrows(IllegalArgumentException.class,
                 () -> mCm.setProfileNetworkPreferences(
                         testHandle, List.of(profileNetworkPreferenceBuilder.build(),
@@ -14344,9 +14345,9 @@ public class ConnectivityServiceTest {
 
         profileNetworkPreferenceBuilder2.setPreference(PROFILE_NETWORK_PREFERENCE_ENTERPRISE);
         profileNetworkPreferenceBuilder2.setExcludedUids(
-                List.of(testHandle.getUid(TEST_WORK_PROFILE_APP_UID_2)));
+                new int[]{testHandle.getUid(TEST_WORK_PROFILE_APP_UID_2)});
         profileNetworkPreferenceBuilder.setExcludedUids(
-                List.of(testHandle.getUid(TEST_WORK_PROFILE_APP_UID_2)));
+                new int[]{testHandle.getUid(TEST_WORK_PROFILE_APP_UID_2)});
         Assert.assertThrows(IllegalArgumentException.class,
                 () -> mCm.setProfileNetworkPreferences(
                         testHandle, List.of(profileNetworkPreferenceBuilder.build(),
@@ -14356,9 +14357,9 @@ public class ConnectivityServiceTest {
         profileNetworkPreferenceBuilder2.setPreference(
                 PROFILE_NETWORK_PREFERENCE_ENTERPRISE_NO_FALLBACK);
         profileNetworkPreferenceBuilder2.setExcludedUids(
-                List.of(testHandle.getUid(TEST_WORK_PROFILE_APP_UID_2)));
+                new int[]{testHandle.getUid(TEST_WORK_PROFILE_APP_UID_2)});
         profileNetworkPreferenceBuilder.setExcludedUids(
-                List.of(testHandle.getUid(TEST_WORK_PROFILE_APP_UID_2)));
+                new int[]{testHandle.getUid(TEST_WORK_PROFILE_APP_UID_2)});
         Assert.assertThrows(IllegalArgumentException.class,
                 () -> mCm.setProfileNetworkPreferences(
                         testHandle, List.of(profileNetworkPreferenceBuilder.build(),
