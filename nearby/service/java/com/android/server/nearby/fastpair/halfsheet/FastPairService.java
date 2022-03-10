@@ -70,7 +70,7 @@ public class FastPairService extends IFastPairClient.Stub {
     }
 
     /**
-     * Asks the Fast Pair service to pair the device.
+     * Asks the Fast Pair service to pair the device. initial pairing.
      */
     @Override
     public void connect(FastPairDevice fastPairDevice) {
