@@ -44,7 +44,11 @@ class FastPairTestDataProvider : FastPairDataProviderBase(TAG) {
         callback: FastPairAccountDevicesMetadataCallback
     ) {
         val requestedAccount = request.account
-        Log.d(TAG, "onLoadFastPairAccountDevicesMetadata(account: $requestedAccount)")
+        val requestedAccountKeys = request.accountKeys
+        Log.d(
+            TAG, "onLoadFastPairAccountDevicesMetadata(" +
+                    "account: $requestedAccount, accountKeys:$requestedAccountKeys)"
+        )
         Log.d(TAG, FastPairTestDataCache.dumpAccountKeyDeviceMetadata())
 
         callback.onFastPairAccountDevicesMetadataReceived(
