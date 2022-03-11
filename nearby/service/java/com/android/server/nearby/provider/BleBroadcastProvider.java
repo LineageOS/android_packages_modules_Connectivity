@@ -27,6 +27,8 @@ import android.os.ParcelUuid;
 import com.android.server.nearby.injector.Injector;
 import com.android.server.nearby.presence.PresenceConstants;
 
+import java.util.concurrent.Executor;
+
 /**
  * A provider for Bluetooth Low Energy advertisement.
  */
@@ -40,15 +42,17 @@ public class BleBroadcastProvider extends AdvertiseCallback {
     }
 
     private final Injector mInjector;
+    private final Executor mExecutor;
+
     private BroadcastListener mBroadcastListener;
     private boolean mIsAdvertising;
 
-    BleBroadcastProvider(Injector injector) {
+    BleBroadcastProvider(Injector injector, Executor executor) {
         mInjector = injector;
+        mExecutor = executor;
     }
 
     void start(byte[] advertisementPackets, BroadcastListener listener) {
-
         if (mIsAdvertising) {
             stop();
         }
@@ -100,9 +104,12 @@ public class BleBroadcastProvider extends AdvertiseCallback {
 
     @Override
     public void onStartSuccess(AdvertiseSettings settingsInEffect) {
-        if (mBroadcastListener != null) {
-            mBroadcastListener.onStatusChanged(BroadcastCallback.STATUS_OK);
-        }
+        mExecutor.execute(() -> {
+            if (mBroadcastListener != null) {
+                mBroadcastListener.onStatusChanged(BroadcastCallback.STATUS_OK);
+            }
+            mIsAdvertising = true;
+        });
     }
 
     @Override
