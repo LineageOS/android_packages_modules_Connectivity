@@ -83,7 +83,7 @@ public class FastPairAdvHandler {
             // Use api to get anti spoofing key from model id.
             try {
                 Rpcs.GetObservedDeviceResponse response =
-                        dataProvider.loadFastPairAntispoofkeyDeviceMetadata(model);
+                        dataProvider.loadFastPairAntispoofKeyDeviceMetadata(model);
                 if (response == null) {
                     Log.e(TAG, "server does not have model id "
                             + Hex.bytesToStringLowercase(model));

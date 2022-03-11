@@ -20,14 +20,14 @@ import android.annotation.Nullable;
 import android.content.Context;
 import android.nearby.aidl.FastPairAccountDevicesMetadataRequestParcel;
 import android.nearby.aidl.FastPairAccountKeyDeviceMetadataParcel;
-import android.nearby.aidl.FastPairAntispoofkeyDeviceMetadataParcel;
-import android.nearby.aidl.FastPairAntispoofkeyDeviceMetadataRequestParcel;
+import android.nearby.aidl.FastPairAntispoofKeyDeviceMetadataParcel;
+import android.nearby.aidl.FastPairAntispoofKeyDeviceMetadataRequestParcel;
 import android.nearby.aidl.FastPairEligibleAccountParcel;
 import android.nearby.aidl.FastPairEligibleAccountsRequestParcel;
 import android.nearby.aidl.FastPairManageAccountDeviceRequestParcel;
 import android.nearby.aidl.FastPairManageAccountRequestParcel;
 import android.nearby.aidl.IFastPairAccountDevicesMetadataCallback;
-import android.nearby.aidl.IFastPairAntispoofkeyDeviceMetadataCallback;
+import android.nearby.aidl.IFastPairAntispoofKeyDeviceMetadataCallback;
 import android.nearby.aidl.IFastPairDataProvider;
 import android.nearby.aidl.IFastPairEligibleAccountsCallback;
 import android.nearby.aidl.IFastPairManageAccountCallback;
@@ -218,25 +218,25 @@ public class ProxyFastPairDataProvider implements ServiceListener<BoundServiceIn
     }
 
     /**
-     * Invokes system api loadFastPairAntispoofkeyDeviceMetadata.
+     * Invokes system api loadFastPairAntispoofKeyDeviceMetadata.
      *
      * @return the Fast Pair AntispoofKeyDeviceMetadata of a given device.
      */
     @WorkerThread
     @Nullable
-    FastPairAntispoofkeyDeviceMetadataParcel loadFastPairAntispoofkeyDeviceMetadata(
-            FastPairAntispoofkeyDeviceMetadataRequestParcel requestParcel) {
+    FastPairAntispoofKeyDeviceMetadataParcel loadFastPairAntispoofKeyDeviceMetadata(
+            FastPairAntispoofKeyDeviceMetadataRequestParcel requestParcel) {
         final CountDownLatch waitForCompletionLatch = new CountDownLatch(1);
-        final AtomicReference<FastPairAntispoofkeyDeviceMetadataParcel> response =
+        final AtomicReference<FastPairAntispoofKeyDeviceMetadataParcel> response =
                 new AtomicReference<>();
         mServiceMonitor.runOnBinder(new ServiceMonitor.BinderOperation() {
             @Override
             public void run(IBinder binder) throws RemoteException {
                 IFastPairDataProvider provider = IFastPairDataProvider.Stub.asInterface(binder);
-                IFastPairAntispoofkeyDeviceMetadataCallback callback =
-                        new IFastPairAntispoofkeyDeviceMetadataCallback.Stub() {
-                            public void onFastPairAntispoofkeyDeviceMetadataReceived(
-                                    FastPairAntispoofkeyDeviceMetadataParcel metadata) {
+                IFastPairAntispoofKeyDeviceMetadataCallback callback =
+                        new IFastPairAntispoofKeyDeviceMetadataCallback.Stub() {
+                            public void onFastPairAntispoofKeyDeviceMetadataReceived(
+                                    FastPairAntispoofKeyDeviceMetadataParcel metadata) {
                                 response.set(metadata);
                                 waitForCompletionLatch.countDown();
                             }
@@ -245,7 +245,7 @@ public class ProxyFastPairDataProvider implements ServiceListener<BoundServiceIn
                                 waitForCompletionLatch.countDown();
                             }
                         };
-                provider.loadFastPairAntispoofkeyDeviceMetadata(requestParcel, callback);
+                provider.loadFastPairAntispoofKeyDeviceMetadata(requestParcel, callback);
             }
 
             @Override

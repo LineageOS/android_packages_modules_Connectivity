@@ -22,7 +22,7 @@ import android.content.Context;
 import android.nearby.FastPairDataProviderBase;
 import android.nearby.aidl.ByteArrayParcel;
 import android.nearby.aidl.FastPairAccountDevicesMetadataRequestParcel;
-import android.nearby.aidl.FastPairAntispoofkeyDeviceMetadataRequestParcel;
+import android.nearby.aidl.FastPairAntispoofKeyDeviceMetadataRequestParcel;
 import android.nearby.aidl.FastPairEligibleAccountsRequestParcel;
 import android.nearby.aidl.FastPairManageAccountDeviceRequestParcel;
 import android.nearby.aidl.FastPairManageAccountRequestParcel;
@@ -81,20 +81,20 @@ public class FastPairDataProvider {
     }
 
     /**
-     * Loads FastPairAntispoofkeyDeviceMetadata.
+     * Loads FastPairAntispoofKeyDeviceMetadata.
      *
      * @throws IllegalStateException If ProxyFastPairDataProvider is not available.
      */
     @WorkerThread
     @Nullable
-    public Rpcs.GetObservedDeviceResponse loadFastPairAntispoofkeyDeviceMetadata(byte[] modelId) {
+    public Rpcs.GetObservedDeviceResponse loadFastPairAntispoofKeyDeviceMetadata(byte[] modelId) {
         if (mProxyFastPairDataProvider != null) {
-            FastPairAntispoofkeyDeviceMetadataRequestParcel requestParcel =
-                    new FastPairAntispoofkeyDeviceMetadataRequestParcel();
+            FastPairAntispoofKeyDeviceMetadataRequestParcel requestParcel =
+                    new FastPairAntispoofKeyDeviceMetadataRequestParcel();
             requestParcel.modelId = modelId;
             return Utils.convertToGetObservedDeviceResponse(
                     mProxyFastPairDataProvider
-                            .loadFastPairAntispoofkeyDeviceMetadata(requestParcel));
+                            .loadFastPairAntispoofKeyDeviceMetadata(requestParcel));
         }
         throw new IllegalStateException("No ProxyFastPairDataProvider yet constructed");
     }

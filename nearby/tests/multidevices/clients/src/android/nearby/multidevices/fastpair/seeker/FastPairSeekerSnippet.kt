@@ -73,15 +73,15 @@ class FastPairSeekerSnippet : Snippet {
         appContext.sendBroadcast(scanIntent)
     }
 
-    /** Puts a model id to FastPairAntiSpoofKeyDeviceMetadata pair into test data cache.
+    /** Puts a model id to FastPairAntispoofKeyDeviceMetadata pair into test data cache.
      *
      * @param modelId a string of model id to be associated with.
-     * @param json a string of FastPairAntiSpoofKeyDeviceMetadata JSON object.
+     * @param json a string of FastPairAntispoofKeyDeviceMetadata JSON object.
      */
-    @Rpc(description = "Puts a model id to FastPairAntiSpoofKeyDeviceMetadata pair into test data cache.")
-    fun putAntiSpoofKeyDeviceMetadata(modelId: String, json: String) {
-        Log.i("Puts a model id to FastPairAntiSpoofKeyDeviceMetadata pair into test data cache.")
-        FastPairTestDataCache.putAntiSpoofKeyDeviceMetadata(modelId, json)
+    @Rpc(description = "Puts a model id to FastPairAntispoofKeyDeviceMetadata pair into test data cache.")
+    fun putAntispoofKeyDeviceMetadata(modelId: String, json: String) {
+        Log.i("Puts a model id to FastPairAntispoofKeyDeviceMetadata pair into test data cache.")
+        FastPairTestDataCache.putAntispoofKeyDeviceMetadata(modelId, json)
     }
 
     /** Puts an array of FastPairAccountKeyDeviceMetadata into test data cache.

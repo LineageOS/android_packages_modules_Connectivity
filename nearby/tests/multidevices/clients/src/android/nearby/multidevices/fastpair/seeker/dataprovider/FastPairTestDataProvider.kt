@@ -23,17 +23,17 @@ import android.util.Log
 
 class FastPairTestDataProvider : FastPairDataProviderBase(TAG) {
 
-    override fun onLoadFastPairAntispoofkeyDeviceMetadata(
-        request: FastPairAntispoofkeyDeviceMetadataRequest,
-        callback: FastPairAntispoofkeyDeviceMetadataCallback
+    override fun onLoadFastPairAntispoofKeyDeviceMetadata(
+        request: FastPairAntispoofKeyDeviceMetadataRequest,
+        callback: FastPairAntispoofKeyDeviceMetadataCallback
     ) {
         val requestedModelId = request.modelId.bytesToStringLowerCase()
-        Log.d(TAG, "onLoadFastPairAntispoofkeyDeviceMetadata(modelId: $requestedModelId)")
+        Log.d(TAG, "onLoadFastPairAntispoofKeyDeviceMetadata(modelId: $requestedModelId)")
 
-        val fastPairAntiSpoofKeyDeviceMetadata =
-            FastPairTestDataCache.antiSpoofKeyDeviceMetadataMap[requestedModelId]
-        if (fastPairAntiSpoofKeyDeviceMetadata != null) {
-            callback.onFastPairAntispoofkeyDeviceMetadataReceived(fastPairAntiSpoofKeyDeviceMetadata)
+        val fastPairAntispoofKeyDeviceMetadata =
+            FastPairTestDataCache.antispoofKeyDeviceMetadataMap[requestedModelId]
+        if (fastPairAntispoofKeyDeviceMetadata != null) {
+            callback.onFastPairAntispoofKeyDeviceMetadataReceived(fastPairAntispoofKeyDeviceMetadata)
         } else {
             callback.onError(ERROR_CODE_BAD_REQUEST, "No metadata available for $requestedModelId")
         }

@@ -14,8 +14,8 @@
 
 package android.nearby.aidl;
 
-import android.nearby.aidl.FastPairAntispoofkeyDeviceMetadataRequestParcel;
-import android.nearby.aidl.IFastPairAntispoofkeyDeviceMetadataCallback;
+import android.nearby.aidl.FastPairAntispoofKeyDeviceMetadataRequestParcel;
+import android.nearby.aidl.IFastPairAntispoofKeyDeviceMetadataCallback;
 import android.nearby.aidl.FastPairAccountDevicesMetadataRequestParcel;
 import android.nearby.aidl.IFastPairAccountDevicesMetadataCallback;
 import android.nearby.aidl.FastPairEligibleAccountsRequestParcel;
@@ -31,8 +31,8 @@ import android.nearby.aidl.IFastPairManageAccountDeviceCallback;
  * {@hide}
  */
 oneway interface IFastPairDataProvider {
-    void loadFastPairAntispoofkeyDeviceMetadata(in FastPairAntispoofkeyDeviceMetadataRequestParcel request,
-        in IFastPairAntispoofkeyDeviceMetadataCallback callback);
+    void loadFastPairAntispoofKeyDeviceMetadata(in FastPairAntispoofKeyDeviceMetadataRequestParcel request,
+        in IFastPairAntispoofKeyDeviceMetadataCallback callback);
     void loadFastPairAccountDevicesMetadata(in FastPairAccountDevicesMetadataRequestParcel request,
         in IFastPairAccountDevicesMetadataCallback callback);
     void loadFastPairEligibleAccounts(in FastPairEligibleAccountsRequestParcel request,
