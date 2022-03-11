@@ -24,13 +24,13 @@ import android.annotation.SystemApi;
 import android.nearby.aidl.ByteArrayParcel;
 import android.nearby.aidl.FastPairAccountDevicesMetadataRequestParcel;
 import android.nearby.aidl.FastPairAccountKeyDeviceMetadataParcel;
-import android.nearby.aidl.FastPairAntispoofkeyDeviceMetadataRequestParcel;
+import android.nearby.aidl.FastPairAntispoofKeyDeviceMetadataRequestParcel;
 import android.nearby.aidl.FastPairEligibleAccountParcel;
 import android.nearby.aidl.FastPairEligibleAccountsRequestParcel;
 import android.nearby.aidl.FastPairManageAccountDeviceRequestParcel;
 import android.nearby.aidl.FastPairManageAccountRequestParcel;
 import android.nearby.aidl.IFastPairAccountDevicesMetadataCallback;
-import android.nearby.aidl.IFastPairAntispoofkeyDeviceMetadataCallback;
+import android.nearby.aidl.IFastPairAntispoofKeyDeviceMetadataCallback;
 import android.nearby.aidl.IFastPairDataProvider;
 import android.nearby.aidl.IFastPairEligibleAccountsCallback;
 import android.nearby.aidl.IFastPairManageAccountCallback;
@@ -110,15 +110,15 @@ public abstract class FastPairDataProviderBase {
     }
 
     /**
-     * Callback to be invoked when an antispoofkeyed device metadata is loaded.
+     * Callback to be invoked when an AntispoofKeyed device metadata is loaded.
      */
-    public interface FastPairAntispoofkeyDeviceMetadataCallback {
+    public interface FastPairAntispoofKeyDeviceMetadataCallback {
 
         /**
          * Invoked once the meta data is loaded.
          */
-        void onFastPairAntispoofkeyDeviceMetadataReceived(
-                @NonNull FastPairAntispoofkeyDeviceMetadata metadata);
+        void onFastPairAntispoofKeyDeviceMetadataReceived(
+                @NonNull FastPairAntispoofKeyDeviceMetadata metadata);
         /** Invoked in case of error. */
         void onError(@ErrorCode int code, @Nullable String message);
     }
@@ -166,9 +166,9 @@ public abstract class FastPairDataProviderBase {
      * Fulfills the Fast Pair device metadata request by using callback to send back the
      * device meta data of a given modelId.
      */
-    public abstract void onLoadFastPairAntispoofkeyDeviceMetadata(
-            @NonNull FastPairAntispoofkeyDeviceMetadataRequest request,
-            @NonNull FastPairAntispoofkeyDeviceMetadataCallback callback);
+    public abstract void onLoadFastPairAntispoofKeyDeviceMetadata(
+            @NonNull FastPairAntispoofKeyDeviceMetadataRequest request,
+            @NonNull FastPairAntispoofKeyDeviceMetadataCallback callback);
 
     /**
      * Fulfills the account tied Fast Pair devices metadata request by using callback to send back
@@ -208,18 +208,18 @@ public abstract class FastPairDataProviderBase {
     }
 
     /**
-     * Class for reading FastPairAntispoofkeyDeviceMetadataRequest.
+     * Class for reading FastPairAntispoofKeyDeviceMetadataRequest.
      */
-    public static class FastPairAntispoofkeyDeviceMetadataRequest {
+    public static class FastPairAntispoofKeyDeviceMetadataRequest {
 
-        private final FastPairAntispoofkeyDeviceMetadataRequestParcel mMetadataRequestParcel;
+        private final FastPairAntispoofKeyDeviceMetadataRequestParcel mMetadataRequestParcel;
 
-        private FastPairAntispoofkeyDeviceMetadataRequest(
-                final FastPairAntispoofkeyDeviceMetadataRequestParcel metaDataRequestParcel) {
+        private FastPairAntispoofKeyDeviceMetadataRequest(
+                final FastPairAntispoofKeyDeviceMetadataRequestParcel metaDataRequestParcel) {
             this.mMetadataRequestParcel = metaDataRequestParcel;
         }
 
-        /** Get modelId, the key for FastPairAntispoofkeyDeviceMetadata. */
+        /** Get modelId, the key for FastPairAntispoofKeyDeviceMetadata. */
         public @NonNull byte[] getModelId() {
             return this.mMetadataRequestParcel.modelId;
         }
@@ -338,26 +338,26 @@ public abstract class FastPairDataProviderBase {
     }
 
     /**
-     * Callback class that sends back FastPairAntispoofkeyDeviceMetadata.
+     * Callback class that sends back FastPairAntispoofKeyDeviceMetadata.
      */
-    private final class WrapperFastPairAntispoofkeyDeviceMetadataCallback implements
-            FastPairAntispoofkeyDeviceMetadataCallback {
+    private final class WrapperFastPairAntispoofKeyDeviceMetadataCallback implements
+            FastPairAntispoofKeyDeviceMetadataCallback {
 
-        private IFastPairAntispoofkeyDeviceMetadataCallback mCallback;
+        private IFastPairAntispoofKeyDeviceMetadataCallback mCallback;
 
-        private WrapperFastPairAntispoofkeyDeviceMetadataCallback(
-                IFastPairAntispoofkeyDeviceMetadataCallback callback) {
+        private WrapperFastPairAntispoofKeyDeviceMetadataCallback(
+                IFastPairAntispoofKeyDeviceMetadataCallback callback) {
             mCallback = callback;
         }
 
         /**
-         * Sends back FastPairAntispoofkeyDeviceMetadata.
+         * Sends back FastPairAntispoofKeyDeviceMetadata.
          */
         @Override
-        public void onFastPairAntispoofkeyDeviceMetadataReceived(
-                @NonNull FastPairAntispoofkeyDeviceMetadata metadata) {
+        public void onFastPairAntispoofKeyDeviceMetadataReceived(
+                @NonNull FastPairAntispoofKeyDeviceMetadata metadata) {
             try {
-                mCallback.onFastPairAntispoofkeyDeviceMetadataReceived(metadata.mMetadataParcel);
+                mCallback.onFastPairAntispoofKeyDeviceMetadataReceived(metadata.mMetadataParcel);
             } catch (RemoteException e) {
                 throw e.rethrowFromSystemServer();
             } catch (RuntimeException e) {
@@ -555,12 +555,12 @@ public abstract class FastPairDataProviderBase {
         }
 
         @Override
-        public void loadFastPairAntispoofkeyDeviceMetadata(
-                @NonNull FastPairAntispoofkeyDeviceMetadataRequestParcel requestParcel,
-                IFastPairAntispoofkeyDeviceMetadataCallback callback) {
-            onLoadFastPairAntispoofkeyDeviceMetadata(
-                    new FastPairAntispoofkeyDeviceMetadataRequest(requestParcel),
-                    new WrapperFastPairAntispoofkeyDeviceMetadataCallback(callback));
+        public void loadFastPairAntispoofKeyDeviceMetadata(
+                @NonNull FastPairAntispoofKeyDeviceMetadataRequestParcel requestParcel,
+                IFastPairAntispoofKeyDeviceMetadataCallback callback) {
+            onLoadFastPairAntispoofKeyDeviceMetadata(
+                    new FastPairAntispoofKeyDeviceMetadataRequest(requestParcel),
+                    new WrapperFastPairAntispoofKeyDeviceMetadataCallback(callback));
         }
 
         @Override

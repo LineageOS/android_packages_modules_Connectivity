@@ -20,7 +20,7 @@ import static com.google.common.truth.Truth.assertThat;
 
 import android.accounts.Account;
 import android.nearby.aidl.FastPairAccountKeyDeviceMetadataParcel;
-import android.nearby.aidl.FastPairAntispoofkeyDeviceMetadataParcel;
+import android.nearby.aidl.FastPairAntispoofKeyDeviceMetadataParcel;
 import android.nearby.aidl.FastPairDeviceMetadataParcel;
 import android.nearby.aidl.FastPairDiscoveryItemParcel;
 import android.nearby.aidl.FastPairEligibleAccountParcel;
@@ -240,7 +240,7 @@ public class UtilsTest {
     public void testHappyPathConvertToGetObservedDeviceResponse() {
         Rpcs.GetObservedDeviceResponse response =
                 Utils.convertToGetObservedDeviceResponse(
-                        genHappyPathFastPairAntispoofkeyDeviceMetadataParcel());
+                        genHappyPathFastPairAntispoofKeyDeviceMetadataParcel());
         assertThat(response).isEqualTo(genHappyPathObservedDeviceResponse());
     }
 
@@ -255,14 +255,14 @@ public class UtilsTest {
     @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void testConvertToGetObservedDeviceResponseWithEmptyInputNotCrash() {
         Utils.convertToGetObservedDeviceResponse(
-                genEmptyFastPairAntispoofkeyDeviceMetadataParcel());
+                genEmptyFastPairAntispoofKeyDeviceMetadataParcel());
     }
 
     @Test
     @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void testConvertToGetObservedDeviceResponseWithEmptyDeviceMetadataNotCrash() {
         Utils.convertToGetObservedDeviceResponse(
-                genFastPairAntispoofkeyDeviceMetadataParcelWithEmptyDeviceMetadata());
+                genFastPairAntispoofKeyDeviceMetadataParcelWithEmptyDeviceMetadata());
     }
 
     @Test
@@ -706,28 +706,28 @@ public class UtilsTest {
                 .build();
     }
 
-    private static FastPairAntispoofkeyDeviceMetadataParcel
-            genHappyPathFastPairAntispoofkeyDeviceMetadataParcel() {
-        FastPairAntispoofkeyDeviceMetadataParcel parcel =
-                new FastPairAntispoofkeyDeviceMetadataParcel();
+    private static FastPairAntispoofKeyDeviceMetadataParcel
+            genHappyPathFastPairAntispoofKeyDeviceMetadataParcel() {
+        FastPairAntispoofKeyDeviceMetadataParcel parcel =
+                new FastPairAntispoofKeyDeviceMetadataParcel();
         parcel.antiSpoofPublicKey = ANTI_SPOOFING_KEY;
         parcel.deviceMetadata = genHappyPathFastPairDeviceMetadataParcel();
 
         return parcel;
     }
 
-    private static FastPairAntispoofkeyDeviceMetadataParcel
-            genFastPairAntispoofkeyDeviceMetadataParcelWithEmptyDeviceMetadata() {
-        FastPairAntispoofkeyDeviceMetadataParcel parcel =
-                new FastPairAntispoofkeyDeviceMetadataParcel();
+    private static FastPairAntispoofKeyDeviceMetadataParcel
+            genFastPairAntispoofKeyDeviceMetadataParcelWithEmptyDeviceMetadata() {
+        FastPairAntispoofKeyDeviceMetadataParcel parcel =
+                new FastPairAntispoofKeyDeviceMetadataParcel();
         parcel.antiSpoofPublicKey = ANTI_SPOOFING_KEY;
         parcel.deviceMetadata = genEmptyFastPairDeviceMetadataParcel();
 
         return parcel;
     }
 
-    private static FastPairAntispoofkeyDeviceMetadataParcel
-            genEmptyFastPairAntispoofkeyDeviceMetadataParcel() {
-        return new FastPairAntispoofkeyDeviceMetadataParcel();
+    private static FastPairAntispoofKeyDeviceMetadataParcel
+            genEmptyFastPairAntispoofKeyDeviceMetadataParcel() {
+        return new FastPairAntispoofKeyDeviceMetadataParcel();
     }
 }

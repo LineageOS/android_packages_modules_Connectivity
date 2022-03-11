@@ -25,7 +25,7 @@ import static org.mockito.MockitoAnnotations.initMocks;
 
 import android.accounts.Account;
 import android.nearby.FastPairAccountKeyDeviceMetadata;
-import android.nearby.FastPairAntispoofkeyDeviceMetadata;
+import android.nearby.FastPairAntispoofKeyDeviceMetadata;
 import android.nearby.FastPairDataProviderBase;
 import android.nearby.FastPairDeviceMetadata;
 import android.nearby.FastPairDiscoveryItem;
@@ -33,8 +33,8 @@ import android.nearby.FastPairEligibleAccount;
 import android.nearby.aidl.ByteArrayParcel;
 import android.nearby.aidl.FastPairAccountDevicesMetadataRequestParcel;
 import android.nearby.aidl.FastPairAccountKeyDeviceMetadataParcel;
-import android.nearby.aidl.FastPairAntispoofkeyDeviceMetadataParcel;
-import android.nearby.aidl.FastPairAntispoofkeyDeviceMetadataRequestParcel;
+import android.nearby.aidl.FastPairAntispoofKeyDeviceMetadataParcel;
+import android.nearby.aidl.FastPairAntispoofKeyDeviceMetadataRequestParcel;
 import android.nearby.aidl.FastPairDeviceMetadataParcel;
 import android.nearby.aidl.FastPairDiscoveryItemParcel;
 import android.nearby.aidl.FastPairEligibleAccountParcel;
@@ -42,7 +42,7 @@ import android.nearby.aidl.FastPairEligibleAccountsRequestParcel;
 import android.nearby.aidl.FastPairManageAccountDeviceRequestParcel;
 import android.nearby.aidl.FastPairManageAccountRequestParcel;
 import android.nearby.aidl.IFastPairAccountDevicesMetadataCallback;
-import android.nearby.aidl.IFastPairAntispoofkeyDeviceMetadataCallback;
+import android.nearby.aidl.IFastPairAntispoofKeyDeviceMetadataCallback;
 import android.nearby.aidl.IFastPairDataProvider;
 import android.nearby.aidl.IFastPairEligibleAccountsCallback;
 import android.nearby.aidl.IFastPairManageAccountCallback;
@@ -178,9 +178,9 @@ public class FastPairDataProviderBaseTest {
                     genHappyPathFastPairAccountkeyDeviceMetadata(),
                     genHappyPathFastPairAccountkeyDeviceMetadata());
 
-    private static final FastPairAntispoofkeyDeviceMetadataRequestParcel
+    private static final FastPairAntispoofKeyDeviceMetadataRequestParcel
             FAST_PAIR_ANTI_SPOOF_KEY_DEVICE_METADATA_REQUEST_PARCEL =
-            genFastPairAntispoofkeyDeviceMetadataRequestParcel();
+            genFastPairAntispoofKeyDeviceMetadataRequestParcel();
     private static final FastPairAccountDevicesMetadataRequestParcel
             FAST_PAIR_ACCOUNT_DEVICES_METADATA_REQUEST_PARCEL =
             genFastPairAccountDevicesMetadataRequestParcel();
@@ -193,9 +193,9 @@ public class FastPairDataProviderBaseTest {
     private static final FastPairManageAccountDeviceRequestParcel
             FAST_PAIR_MANAGE_ACCOUNT_DEVICE_REQUEST_PARCEL =
             genFastPairManageAccountDeviceRequestParcel();
-    private static final FastPairAntispoofkeyDeviceMetadata
+    private static final FastPairAntispoofKeyDeviceMetadata
             HAPPY_PATH_FAST_PAIR_ANTI_SPOOF_KEY_DEVICE_METADATA =
-            genHappyPathFastPairAntispoofkeyDeviceMetadata();
+            genHappyPathFastPairAntispoofKeyDeviceMetadata();
 
     @Captor private ArgumentCaptor<FastPairEligibleAccountParcel[]>
             mFastPairEligibleAccountParcelsArgumentCaptor;
@@ -203,8 +203,8 @@ public class FastPairDataProviderBaseTest {
             mFastPairAccountKeyDeviceMetadataParcelsArgumentCaptor;
 
     @Mock private FastPairDataProviderBase mMockFastPairDataProviderBase;
-    @Mock private IFastPairAntispoofkeyDeviceMetadataCallback.Stub
-            mAntispoofkeyDeviceMetadataCallback;
+    @Mock private IFastPairAntispoofKeyDeviceMetadataCallback.Stub
+            mAntispoofKeyDeviceMetadataCallback;
     @Mock private IFastPairAccountDevicesMetadataCallback.Stub mAccountDevicesMetadataCallback;
     @Mock private IFastPairEligibleAccountsCallback.Stub mEligibleAccountsCallback;
     @Mock private IFastPairManageAccountCallback.Stub mManageAccountCallback;
@@ -225,29 +225,29 @@ public class FastPairDataProviderBaseTest {
 
     @Test
     @SdkSuppress(minSdkVersion = 32, codeName = "T")
-    public void testHappyPathLoadFastPairAntispoofkeyDeviceMetadata() throws Exception {
+    public void testHappyPathLoadFastPairAntispoofKeyDeviceMetadata() throws Exception {
         // AOSP sends calls to OEM via Parcelable.
-        mHappyPathFastPairDataProvider.asProvider().loadFastPairAntispoofkeyDeviceMetadata(
+        mHappyPathFastPairDataProvider.asProvider().loadFastPairAntispoofKeyDeviceMetadata(
                 FAST_PAIR_ANTI_SPOOF_KEY_DEVICE_METADATA_REQUEST_PARCEL,
-                mAntispoofkeyDeviceMetadataCallback);
+                mAntispoofKeyDeviceMetadataCallback);
 
         // OEM receives request and verifies that it is as expected.
-        final ArgumentCaptor<FastPairDataProviderBase.FastPairAntispoofkeyDeviceMetadataRequest>
-                fastPairAntispoofkeyDeviceMetadataRequestCaptor =
+        final ArgumentCaptor<FastPairDataProviderBase.FastPairAntispoofKeyDeviceMetadataRequest>
+                fastPairAntispoofKeyDeviceMetadataRequestCaptor =
                 ArgumentCaptor.forClass(
-                        FastPairDataProviderBase.FastPairAntispoofkeyDeviceMetadataRequest.class);
-        verify(mMockFastPairDataProviderBase).onLoadFastPairAntispoofkeyDeviceMetadata(
-                fastPairAntispoofkeyDeviceMetadataRequestCaptor.capture(),
-                any(FastPairDataProviderBase.FastPairAntispoofkeyDeviceMetadataCallback.class));
-        ensureHappyPathAsExpected(fastPairAntispoofkeyDeviceMetadataRequestCaptor.getValue());
+                        FastPairDataProviderBase.FastPairAntispoofKeyDeviceMetadataRequest.class);
+        verify(mMockFastPairDataProviderBase).onLoadFastPairAntispoofKeyDeviceMetadata(
+                fastPairAntispoofKeyDeviceMetadataRequestCaptor.capture(),
+                any(FastPairDataProviderBase.FastPairAntispoofKeyDeviceMetadataCallback.class));
+        ensureHappyPathAsExpected(fastPairAntispoofKeyDeviceMetadataRequestCaptor.getValue());
 
         // AOSP receives responses and verifies that it is as expected.
-        final ArgumentCaptor<FastPairAntispoofkeyDeviceMetadataParcel>
-                fastPairAntispoofkeyDeviceMetadataParcelCaptor =
-                ArgumentCaptor.forClass(FastPairAntispoofkeyDeviceMetadataParcel.class);
-        verify(mAntispoofkeyDeviceMetadataCallback).onFastPairAntispoofkeyDeviceMetadataReceived(
-                fastPairAntispoofkeyDeviceMetadataParcelCaptor.capture());
-        ensureHappyPathAsExpected(fastPairAntispoofkeyDeviceMetadataParcelCaptor.getValue());
+        final ArgumentCaptor<FastPairAntispoofKeyDeviceMetadataParcel>
+                fastPairAntispoofKeyDeviceMetadataParcelCaptor =
+                ArgumentCaptor.forClass(FastPairAntispoofKeyDeviceMetadataParcel.class);
+        verify(mAntispoofKeyDeviceMetadataCallback).onFastPairAntispoofKeyDeviceMetadataReceived(
+                fastPairAntispoofKeyDeviceMetadataParcelCaptor.capture());
+        ensureHappyPathAsExpected(fastPairAntispoofKeyDeviceMetadataParcelCaptor.getValue());
     }
 
     @Test
@@ -345,14 +345,14 @@ public class FastPairDataProviderBaseTest {
 
     @Test
     @SdkSuppress(minSdkVersion = 32, codeName = "T")
-    public void testErrorPathLoadFastPairAntispoofkeyDeviceMetadata() throws Exception {
-        mErrorPathFastPairDataProvider.asProvider().loadFastPairAntispoofkeyDeviceMetadata(
+    public void testErrorPathLoadFastPairAntispoofKeyDeviceMetadata() throws Exception {
+        mErrorPathFastPairDataProvider.asProvider().loadFastPairAntispoofKeyDeviceMetadata(
                 FAST_PAIR_ANTI_SPOOF_KEY_DEVICE_METADATA_REQUEST_PARCEL,
-                mAntispoofkeyDeviceMetadataCallback);
-        verify(mMockFastPairDataProviderBase).onLoadFastPairAntispoofkeyDeviceMetadata(
-                any(FastPairDataProviderBase.FastPairAntispoofkeyDeviceMetadataRequest.class),
-                any(FastPairDataProviderBase.FastPairAntispoofkeyDeviceMetadataCallback.class));
-        verify(mAntispoofkeyDeviceMetadataCallback).onError(
+                mAntispoofKeyDeviceMetadataCallback);
+        verify(mMockFastPairDataProviderBase).onLoadFastPairAntispoofKeyDeviceMetadata(
+                any(FastPairDataProviderBase.FastPairAntispoofKeyDeviceMetadataRequest.class),
+                any(FastPairDataProviderBase.FastPairAntispoofKeyDeviceMetadataCallback.class));
+        verify(mAntispoofKeyDeviceMetadataCallback).onError(
                 eq(ERROR_CODE_BAD_REQUEST), eq(ERROR_STRING));
     }
 
@@ -420,12 +420,12 @@ public class FastPairDataProviderBaseTest {
         }
 
         @Override
-        public void onLoadFastPairAntispoofkeyDeviceMetadata(
-                @NonNull FastPairAntispoofkeyDeviceMetadataRequest request,
-                @NonNull FastPairAntispoofkeyDeviceMetadataCallback callback) {
-            mMockFastPairDataProviderBase.onLoadFastPairAntispoofkeyDeviceMetadata(
+        public void onLoadFastPairAntispoofKeyDeviceMetadata(
+                @NonNull FastPairAntispoofKeyDeviceMetadataRequest request,
+                @NonNull FastPairAntispoofKeyDeviceMetadataCallback callback) {
+            mMockFastPairDataProviderBase.onLoadFastPairAntispoofKeyDeviceMetadata(
                     request, callback);
-            callback.onFastPairAntispoofkeyDeviceMetadataReceived(
+            callback.onFastPairAntispoofKeyDeviceMetadataReceived(
                     HAPPY_PATH_FAST_PAIR_ANTI_SPOOF_KEY_DEVICE_METADATA);
         }
 
@@ -478,10 +478,10 @@ public class FastPairDataProviderBaseTest {
         }
 
         @Override
-        public void onLoadFastPairAntispoofkeyDeviceMetadata(
-                @NonNull FastPairAntispoofkeyDeviceMetadataRequest request,
-                @NonNull FastPairAntispoofkeyDeviceMetadataCallback callback) {
-            mMockFastPairDataProviderBase.onLoadFastPairAntispoofkeyDeviceMetadata(
+        public void onLoadFastPairAntispoofKeyDeviceMetadata(
+                @NonNull FastPairAntispoofKeyDeviceMetadataRequest request,
+                @NonNull FastPairAntispoofKeyDeviceMetadataCallback callback) {
+            mMockFastPairDataProviderBase.onLoadFastPairAntispoofKeyDeviceMetadata(
                     request, callback);
             callback.onError(ERROR_CODE_BAD_REQUEST, ERROR_STRING);
         }
@@ -519,11 +519,11 @@ public class FastPairDataProviderBaseTest {
         }
     }
 
-    /* Generates AntispoofkeyDeviceMetadataRequestParcel. */
-    private static FastPairAntispoofkeyDeviceMetadataRequestParcel
-            genFastPairAntispoofkeyDeviceMetadataRequestParcel() {
-        FastPairAntispoofkeyDeviceMetadataRequestParcel requestParcel =
-                new FastPairAntispoofkeyDeviceMetadataRequestParcel();
+    /* Generates AntispoofKeyDeviceMetadataRequestParcel. */
+    private static FastPairAntispoofKeyDeviceMetadataRequestParcel
+            genFastPairAntispoofKeyDeviceMetadataRequestParcel() {
+        FastPairAntispoofKeyDeviceMetadataRequestParcel requestParcel =
+                new FastPairAntispoofKeyDeviceMetadataRequestParcel();
         requestParcel.modelId = REQUEST_MODEL_ID;
 
         return requestParcel;
@@ -579,11 +579,11 @@ public class FastPairDataProviderBaseTest {
         return requestParcel;
     }
 
-    /* Generates Happy Path AntispoofkeyDeviceMetadata. */
-    private static FastPairAntispoofkeyDeviceMetadata
-            genHappyPathFastPairAntispoofkeyDeviceMetadata() {
-        FastPairAntispoofkeyDeviceMetadata.Builder builder =
-                new FastPairAntispoofkeyDeviceMetadata.Builder();
+    /* Generates Happy Path AntispoofKeyDeviceMetadata. */
+    private static FastPairAntispoofKeyDeviceMetadata
+            genHappyPathFastPairAntispoofKeyDeviceMetadata() {
+        FastPairAntispoofKeyDeviceMetadata.Builder builder =
+                new FastPairAntispoofKeyDeviceMetadata.Builder();
         builder.setAntiSpoofPublicKey(ANTI_SPOOFING_KEY);
         builder.setFastPairDeviceMetadata(genHappyPathFastPairDeviceMetadata());
 
@@ -791,9 +791,9 @@ public class FastPairDataProviderBaseTest {
         return builder.build();
     }
 
-    /* Verifies Happy Path AntispoofkeyDeviceMetadataRequest. */
+    /* Verifies Happy Path AntispoofKeyDeviceMetadataRequest. */
     private static void ensureHappyPathAsExpected(
-            FastPairDataProviderBase.FastPairAntispoofkeyDeviceMetadataRequest request) {
+            FastPairDataProviderBase.FastPairAntispoofKeyDeviceMetadataRequest request) {
         assertThat(request.getModelId()).isEqualTo(REQUEST_MODEL_ID);
     }
 
@@ -829,9 +829,9 @@ public class FastPairDataProviderBaseTest {
         ensureHappyPathAsExpected(request.getAccountKeyDeviceMetadata());
     }
 
-    /* Verifies Happy Path AntispoofkeyDeviceMetadataParcel. */
+    /* Verifies Happy Path AntispoofKeyDeviceMetadataParcel. */
     private static void ensureHappyPathAsExpected(
-            FastPairAntispoofkeyDeviceMetadataParcel metadataParcel) {
+            FastPairAntispoofKeyDeviceMetadataParcel metadataParcel) {
         assertThat(metadataParcel).isNotNull();
         assertThat(metadataParcel.antiSpoofPublicKey).isEqualTo(ANTI_SPOOFING_KEY);
         ensureHappyPathAsExpected(metadataParcel.deviceMetadata);

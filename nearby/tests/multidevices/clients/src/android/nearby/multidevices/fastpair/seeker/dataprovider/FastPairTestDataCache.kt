@@ -17,7 +17,7 @@
 package android.nearby.multidevices.fastpair.seeker.dataprovider
 
 import android.nearby.FastPairAccountKeyDeviceMetadata
-import android.nearby.FastPairAntispoofkeyDeviceMetadata
+import android.nearby.FastPairAntispoofKeyDeviceMetadata
 import android.nearby.FastPairDeviceMetadata
 import android.nearby.FastPairDiscoveryItem
 import com.google.common.io.BaseEncoding
@@ -28,8 +28,8 @@ import com.google.gson.annotations.SerializedName
 object FastPairTestDataCache {
     private val gson = Gson()
     val accountKeyDeviceMetadata = mutableListOf<FastPairAccountKeyDeviceMetadata>()
-    val antiSpoofKeyDeviceMetadataMap =
-        mutableMapOf<String, FastPairAntispoofkeyDeviceMetadata>()
+    val antispoofKeyDeviceMetadataMap =
+        mutableMapOf<String, FastPairAntispoofKeyDeviceMetadata>()
 
     fun putAccountKeyDeviceMetadata(json: String) {
         accountKeyDeviceMetadata +=
@@ -40,15 +40,15 @@ object FastPairTestDataCache {
     fun dumpAccountKeyDeviceMetadata(): String =
         gson.toJson(accountKeyDeviceMetadata.map { FastPairAccountKeyDeviceMetadataData(it) })
 
-    fun putAntiSpoofKeyDeviceMetadata(modelId: String, json: String) {
-        antiSpoofKeyDeviceMetadataMap[modelId] =
-            gson.fromJson(json, FastPairAntiSpoofKeyDeviceMetadataData::class.java)
-                .toFastPairAntispoofkeyDeviceMetadata()
+    fun putAntispoofKeyDeviceMetadata(modelId: String, json: String) {
+        antispoofKeyDeviceMetadataMap[modelId] =
+            gson.fromJson(json, FastPairAntispoofKeyDeviceMetadataData::class.java)
+                .toFastPairAntispoofKeyDeviceMetadata()
     }
 
     fun reset() {
         accountKeyDeviceMetadata.clear()
-        antiSpoofKeyDeviceMetadataMap.clear()
+        antispoofKeyDeviceMetadataMap.clear()
     }
 
     data class FastPairAccountKeyDeviceMetadataData(
@@ -74,12 +74,12 @@ object FastPairTestDataCache {
         }
     }
 
-    data class FastPairAntiSpoofKeyDeviceMetadataData(
+    data class FastPairAntispoofKeyDeviceMetadataData(
         @SerializedName("anti_spoofing_public_key_str") val antiSpoofPublicKey: String?,
         @SerializedName("fast_pair_device_metadata") val deviceMeta: FastPairDeviceMetadataData?,
     ) {
-        fun toFastPairAntispoofkeyDeviceMetadata(): FastPairAntispoofkeyDeviceMetadata {
-            return FastPairAntispoofkeyDeviceMetadata.Builder()
+        fun toFastPairAntispoofKeyDeviceMetadata(): FastPairAntispoofKeyDeviceMetadata {
+            return FastPairAntispoofKeyDeviceMetadata.Builder()
                 .setAntiSpoofPublicKey(antiSpoofPublicKey?.base64Decode())
                 .setFastPairDeviceMetadata(deviceMeta?.toFastPairDeviceMetadata())
                 .build()

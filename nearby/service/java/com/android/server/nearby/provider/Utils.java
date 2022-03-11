@@ -19,7 +19,7 @@ package com.android.server.nearby.provider;
 import android.accounts.Account;
 import android.annotation.Nullable;
 import android.nearby.aidl.FastPairAccountKeyDeviceMetadataParcel;
-import android.nearby.aidl.FastPairAntispoofkeyDeviceMetadataParcel;
+import android.nearby.aidl.FastPairAntispoofKeyDeviceMetadataParcel;
 import android.nearby.aidl.FastPairDeviceMetadataParcel;
 import android.nearby.aidl.FastPairDiscoveryItemParcel;
 import android.nearby.aidl.FastPairEligibleAccountParcel;
@@ -298,7 +298,7 @@ class Utils {
     }
 
     private static @Nullable Rpcs.Device convertToDevice(
-            FastPairAntispoofkeyDeviceMetadataParcel metadata) {
+            FastPairAntispoofKeyDeviceMetadataParcel metadata) {
 
         Rpcs.Device.Builder deviceBuilder = Rpcs.Device.newBuilder();
         if (metadata.antiSpoofPublicKey != null) {
@@ -341,7 +341,7 @@ class Utils {
     }
 
     private static @Nullable ByteString convertToImage(
-            FastPairAntispoofkeyDeviceMetadataParcel metadata) {
+            FastPairAntispoofKeyDeviceMetadataParcel metadata) {
         if (metadata.deviceMetadata == null || metadata.deviceMetadata.image == null) {
             return null;
         }
@@ -350,7 +350,7 @@ class Utils {
     }
 
     private static @Nullable Rpcs.ObservedDeviceStrings
-            convertToObservedDeviceStrings(FastPairAntispoofkeyDeviceMetadataParcel metadata) {
+            convertToObservedDeviceStrings(FastPairAntispoofKeyDeviceMetadataParcel metadata) {
         if (metadata.deviceMetadata == null) {
             return null;
         }
@@ -455,7 +455,7 @@ class Utils {
 
     static @Nullable Rpcs.GetObservedDeviceResponse
             convertToGetObservedDeviceResponse(
-                    @Nullable FastPairAntispoofkeyDeviceMetadataParcel metadata) {
+                    @Nullable FastPairAntispoofKeyDeviceMetadataParcel metadata) {
         if (metadata == null) {
             return null;
         }
