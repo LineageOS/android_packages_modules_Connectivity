@@ -28,33 +28,44 @@ import com.google.android.mobly.snippet.rpc.Rpc
 @TargetApi(Build.VERSION_CODES.LOLLIPOP)
 class FastPairProviderSimulatorSnippet : Snippet {
     private val context: Context = InstrumentationRegistry.getInstrumentation().context
-    private lateinit var fastPairProviderSimulatorController: FastPairProviderSimulatorController
+    private val fastPairProviderSimulatorController = FastPairProviderSimulatorController(context)
+
+    /** Sets up the Fast Pair provider simulator. */
+    @AsyncRpc(description = "Sets up FP provider simulator.")
+    fun setupProviderSimulator(callbackId: String) {
+        fastPairProviderSimulatorController.setupProviderSimulator(ProviderStatusEvents(callbackId))
+    }
 
     /**
-     * Starts the Fast Pair provider simulator.
+     * Starts model id advertising for scanning and initial pairing.
      *
      * @param callbackId the callback ID corresponding to the
      * [FastPairProviderSimulatorSnippet#startProviderSimulator] call that started the scanning.
      * @param modelId a 3-byte hex string for seeker side to recognize the device (ex: 0x00000C).
      * @param antiSpoofingKeyString a public key for registered headsets.
      */
-    @AsyncRpc(description = "Starts FP provider simulator for seekers to discover.")
-    fun startProviderSimulator(callbackId: String, modelId: String, antiSpoofingKeyString: String) {
-        fastPairProviderSimulatorController = FastPairProviderSimulatorController(
-            context, modelId, antiSpoofingKeyString, ProviderStatusEvents(callbackId)
+    @AsyncRpc(description = "Starts model id advertising for scanning and initial pairing.")
+    fun startModelIdAdvertising(
+        callbackId: String,
+        modelId: String,
+        antiSpoofingKeyString: String
+    ) {
+        fastPairProviderSimulatorController.startModelIdAdvertising(
+            modelId,
+            antiSpoofingKeyString,
+            ProviderStatusEvents(callbackId)
         )
-        fastPairProviderSimulatorController.startProviderSimulator()
     }
 
-    /** Stops the Fast Pair provider simulator. */
-    @Rpc(description = "Stops FP provider simulator.")
-    fun stopProviderSimulator() {
-        fastPairProviderSimulatorController.stopProviderSimulator()
+    /** Tears down the Fast Pair provider simulator. */
+    @Rpc(description = "Tears down FP provider simulator.")
+    fun teardownProviderSimulator() {
+        fastPairProviderSimulatorController.teardownProviderSimulator()
     }
 
     /** Gets BLE mac address of the Fast Pair provider simulator. */
     @Rpc(description = "Gets BLE mac address of the Fast Pair provider simulator.")
     fun getBluetoothLeAddress(): String {
-        return fastPairProviderSimulatorController.simulator.bleAddress!!
+        return fastPairProviderSimulatorController.getProviderSimulatorBleAddress()
     }
 }

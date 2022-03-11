@@ -23,62 +23,99 @@ import android.nearby.fastpair.provider.bluetooth.BluetoothController
 import com.google.android.mobly.snippet.util.Log
 import com.google.common.io.BaseEncoding
 
-class FastPairProviderSimulatorController(
-    private val context: Context,
-    private val modelId: String,
-    private val antiSpoofingKeyString: String,
-    private val eventListener: EventListener,
-) : BluetoothController.EventListener {
+class FastPairProviderSimulatorController(private val context: Context) :
+    FastPairSimulator.AdvertisingChangedCallback, BluetoothController.EventListener {
     private lateinit var bluetoothController: BluetoothController
-    lateinit var simulator: FastPairSimulator
+    private lateinit var eventListener: EventListener
+    private var simulator: FastPairSimulator? = null
 
-    fun startProviderSimulator() {
+    fun setupProviderSimulator(listener: EventListener) {
+        eventListener = listener
+
         bluetoothController = BluetoothController(context, this)
         bluetoothController.registerBluetoothStateReceiver()
         bluetoothController.enableBluetooth()
         bluetoothController.connectA2DPSinkProfile()
     }
 
-    fun stopProviderSimulator() {
-        simulator.destroy()
+    fun teardownProviderSimulator() {
+        simulator?.destroy()
         bluetoothController.unregisterBluetoothStateReceiver()
     }
 
-    override fun onA2DPSinkProfileConnected() {
-        createFastPairSimulator()
+    fun startModelIdAdvertising(
+        modelId: String,
+        antiSpoofingKeyString: String,
+        listener: EventListener
+    ) {
+        eventListener = listener
+
+        val antiSpoofingKey = BaseEncoding.base64().decode(antiSpoofingKeyString)
+        simulator = FastPairSimulator(
+            context, FastPairSimulator.Options.builder(modelId)
+                .setAdvertisingModelId(modelId)
+                .setBluetoothAddress(null)
+                .setTxPowerLevel(AdvertiseSettings.ADVERTISE_TX_POWER_HIGH)
+                .setAdvertisingChangedCallback(this)
+                .setAntiSpoofingPrivateKey(antiSpoofingKey)
+                .setUseRandomSaltForAccountKeyRotation(false)
+                .setDataOnlyConnection(false)
+                .setShowsPasskeyConfirmation(false)
+                .setRemoveAllDevicesDuringPairing(true)
+                .build()
+        )
+
+        // TODO(b/222070055): Workaround the FATAL EXCEPTION after the end of initial pairing.
+        simulator!!.setSuppressSubsequentPairingNotification(true)
     }
 
+    fun getProviderSimulatorBleAddress() = simulator!!.bleAddress!!
+
+    /**
+     * Called when we change our BLE advertisement.
+     *
+     * @param isAdvertising the advertising status.
+     */
+    override fun onAdvertisingChanged(isAdvertising: Boolean) {
+        Log.i("FastPairSimulator onAdvertisingChanged(isAdvertising: $isAdvertising)")
+        eventListener.onAdvertisingChange(isAdvertising)
+    }
+
+    /** The callback for the first onServiceConnected of A2DP sink profile. */
+    override fun onA2DPSinkProfileConnected() {
+        eventListener.onA2DPSinkProfileConnected()
+    }
+
+    /**
+     * Reports the current bond state of the remote device.
+     *
+     * @param bondState the bond state of the remote device.
+     */
     override fun onBondStateChanged(bondState: Int) {
     }
 
+    /**
+     * Reports the current connection state of the remote device.
+     *
+     * @param connectionState the bond state of the remote device.
+     */
     override fun onConnectionStateChanged(connectionState: Int) {
     }
 
+    /**
+     * Reports the current scan mode of the local Adapter.
+     *
+     * @param mode the current scan mode of the local Adapter.
+     */
     override fun onScanModeChange(mode: Int) {
         eventListener.onScanModeChange(FastPairSimulator.scanModeToString(mode))
     }
 
-    private fun createFastPairSimulator() {
-        val antiSpoofingKey = BaseEncoding.base64().decode(antiSpoofingKeyString)
-        simulator = FastPairSimulator(context, FastPairSimulator.Options.builder(modelId)
-            .setAdvertisingModelId(modelId)
-            .setBluetoothAddress(null)
-            .setTxPowerLevel(AdvertiseSettings.ADVERTISE_TX_POWER_HIGH)
-            .setAdvertisingChangedCallback {
-                val isAdvertising = simulator.isAdvertising
-                Log.i("FastPairSimulator callback(), isAdvertising: $isAdvertising")
-                eventListener.onAdvertisingChange(isAdvertising)
-            }
-            .setAntiSpoofingPrivateKey(antiSpoofingKey)
-            .setUseRandomSaltForAccountKeyRotation(false)
-            .setDataOnlyConnection(false)
-            .setShowsPasskeyConfirmation(false)
-            .setRemoveAllDevicesDuringPairing(true)
-            .build())
-    }
-
     /** Interface for listening the events from Fast Pair Provider Simulator. */
     interface EventListener {
+        /** Reports the first onServiceConnected of A2DP sink profile. */
+        fun onA2DPSinkProfileConnected()
+
         /**
          * Reports the current scan mode of the local Adapter.
          *

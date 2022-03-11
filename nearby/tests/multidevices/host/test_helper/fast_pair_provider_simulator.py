@@ -1,3 +1,17 @@
+#  Copyright (C) 2022 The Android Open Source Project
+#
+#  Licensed under the Apache License, Version 2.0 (the "License");
+#  you may not use this file except in compliance with the License.
+#  You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+#  Unless required by applicable law or agreed to in writing, software
+#  distributed under the License is distributed on an "AS IS" BASIS,
+#  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#  See the License for the specific language governing permissions and
+#  limitations under the License.
+
 """Fast Pair provider simulator role."""
 
 from mobly import asserts
@@ -5,12 +19,13 @@ from mobly.controllers import android_device
 from mobly.controllers.android_device_lib import snippet_event
 import retry
 
-import event_helper
+from test_helper import event_helper
 
 # The package name of the provider simulator snippet.
 FP_PROVIDER_SIMULATOR_SNIPPETS_PACKAGE = 'android.nearby.multidevices'
 
 # Events reported from the provider simulator snippet.
+ON_A2DP_SINK_PROFILE_CONNECT_EVENT = 'onA2DPSinkProfileConnected'
 ON_SCAN_MODE_CHANGE_EVENT = 'onScanModeChange'
 ON_ADVERTISING_CHANGE_EVENT = 'onAdvertisingChange'
 
@@ -39,21 +54,50 @@ class FastPairProviderSimulator:
         self._ad.load_snippet(
             name='fp', package=FP_PROVIDER_SIMULATOR_SNIPPETS_PACKAGE)
 
-    def start_provider_simulator(self, model_id: str,
-                                 anti_spoofing_key: str) -> None:
-        """Starts the Fast Pair provider simulator.
+    def setup_provider_simulator(self, timeout_seconds: int) -> None:
+        """Sets up the Fast Pair provider simulator.
+
+        Args:
+          timeout_seconds: The number of seconds to wait before giving up.
+        """
+        setup_status_callback = self._ad.fp.setupProviderSimulator()
+
+        def _on_a2dp_sink_profile_connect_event_received(_, elapsed_time: int) -> bool:
+            self._ad.log.info('Provider simulator connected to A2DP sink in %d seconds.',
+                              elapsed_time)
+            return True
+
+        def _on_a2dp_sink_profile_connect_event_waiting(elapsed_time: int) -> None:
+            self._ad.log.info(
+                'Still waiting "%s" event callback from provider side '
+                'after %d seconds...', ON_A2DP_SINK_PROFILE_CONNECT_EVENT, elapsed_time)
+
+        def _on_a2dp_sink_profile_connect_event_missed() -> None:
+            asserts.fail(f'Timed out after {timeout_seconds} seconds waiting for '
+                         f'the specific "{ON_A2DP_SINK_PROFILE_CONNECT_EVENT}" event.')
+
+        wait_for_event(
+            callback_event_handler=setup_status_callback,
+            event_name=ON_A2DP_SINK_PROFILE_CONNECT_EVENT,
+            timeout_seconds=timeout_seconds,
+            on_received=_on_a2dp_sink_profile_connect_event_received,
+            on_waiting=_on_a2dp_sink_profile_connect_event_waiting,
+            on_missed=_on_a2dp_sink_profile_connect_event_missed)
+
+    def start_model_id_advertising(self, model_id: str, anti_spoofing_key: str) -> None:
+        """Starts model id advertising for scanning and initial pairing.
 
         Args:
           model_id: A 3-byte hex string for seeker side to recognize the device (ex:
             0x00000C).
           anti_spoofing_key: A public key for registered headsets.
         """
-        self._provider_status_callback = self._ad.fp.startProviderSimulator(
-            model_id, anti_spoofing_key)
+        self._provider_status_callback = (
+            self._ad.fp.startModelIdAdvertising(model_id, anti_spoofing_key))
 
-    def stop_provider_simulator(self) -> None:
-        """Stops the Fast Pair provider simulator."""
-        self._ad.fp.stopProviderSimulator()
+    def teardown_provider_simulator(self) -> None:
+        """Tears down the Fast Pair provider simulator."""
+        self._ad.fp.teardownProviderSimulator()
 
     @retry.retry(tries=3)
     def get_ble_mac_address(self) -> str:
