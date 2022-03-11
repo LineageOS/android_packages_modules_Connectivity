@@ -572,8 +572,12 @@ public class FastPairSimulator {
 
     /** An optional way to get advertising status updates. */
     public interface AdvertisingChangedCallback {
-        /** Called when we change our BLE advertisement. */
-        void onAdvertisingChanged();
+        /**
+         * Called when we change our BLE advertisement.
+         *
+         * @param isAdvertising the advertising status.
+         */
+        void onAdvertisingChanged(boolean isAdvertising);
     }
 
     /** A way for tests to get callbacks when passkey confirmation is invoked. */
@@ -758,7 +762,7 @@ public class FastPairSimulator {
                     .setModelId(Ascii.toUpperCase(modelId))
                     .setAdvertisingModelId(Ascii.toUpperCase(modelId))
                     .setTxPowerLevel(AdvertiseSettings.ADVERTISE_TX_POWER_HIGH)
-                    .setAdvertisingChangedCallback(() -> {
+                    .setAdvertisingChangedCallback(isAdvertising -> {
                     })
                     .setIncludeTransportDataDescriptor(true)
                     .setUseRandomSaltForAccountKeyRotation(false)
@@ -1077,7 +1081,7 @@ public class FastPairSimulator {
     public void setIsAdvertising(boolean isAdvertising) {
         if (this.mIsAdvertising != isAdvertising) {
             this.mIsAdvertising = isAdvertising;
-            mOptions.getAdvertisingChangedCallback().onAdvertisingChanged();
+            mOptions.getAdvertisingChangedCallback().onAdvertisingChanged(isAdvertising);
         }
     }
 

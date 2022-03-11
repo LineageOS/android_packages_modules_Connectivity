@@ -671,7 +671,7 @@ public class MainActivity extends Activity {
                                 mAppLaunchSwitch.isChecked() ? MODEL_ID_APP_LAUNCH : modelId)
                         .setBluetoothAddress(finalBluetoothAddress)
                         .setTxPowerLevel(toTxPowerLevel(txPower))
-                        .setAdvertisingChangedCallback(this::updateStatusView)
+                        .setAdvertisingChangedCallback(isAdvertising -> updateStatusView())
                         .setAntiSpoofingPrivateKey(antiSpoofingKey)
                         .setUseRandomSaltForAccountKeyRotation(useRandomSaltForAccountKeyRotation)
                         .setDataOnlyConnection(device != null && device.getDataOnlyConnection())

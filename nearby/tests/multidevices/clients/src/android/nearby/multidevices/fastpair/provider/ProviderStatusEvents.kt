@@ -22,6 +22,11 @@ import com.google.android.mobly.snippet.util.postSnippetEvent
 class ProviderStatusEvents(private val callbackId: String) :
   FastPairProviderSimulatorController.EventListener {
 
+  /** Reports the first onServiceConnected of A2DP sink profile. */
+  override fun onA2DPSinkProfileConnected() {
+    postSnippetEvent(callbackId, "onA2DPSinkProfileConnected") {}
+  }
+
   /**
    * Indicates the Bluetooth scan mode of the Fast Pair provider simulator has changed.
    *
