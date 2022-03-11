@@ -92,9 +92,8 @@ public class BroadcastProviderManagerTest {
                         .build();
         mBroadcastRequest =
                 new PresenceBroadcastRequest.Builder(Collections.singletonList(MEDIUM_TYPE_BLE),
-                        SALT)
+                        SALT, privateCredential)
                         .setTxPower(TX_POWER)
-                        .setCredential(privateCredential)
                         .setVersion(BroadcastRequest.PRESENCE_VERSION_V0)
                         .addAction(PRESENCE_ACTION).build();
     }

@@ -55,19 +55,16 @@ public class PresenceDeviceTest {
     @Test
     @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void testBuilder() {
-        PresenceDevice device = new PresenceDevice.Builder()
-                .setDeviceType(DEVICE_TYPE)
-                .setDeviceId(DEVICE_ID)
-                .setDeviceImageUrl(IMAGE_URL)
-                .addExtendedProperty(new DataElement(KEY, VALUE))
-                .setRssi(RSSI)
-                .addMedium(MEDIUM)
-                .setName(DEVICE_NAME)
-                .setDiscoveryTimestampMillis(DISCOVERY_MILLIS)
-                .setSalt(SALT)
-                .setSecretId(SECRET_ID)
-                .setEncryptedIdentity(ENCRYPTED_IDENTITY)
-                .build();
+        PresenceDevice device =
+                new PresenceDevice.Builder(DEVICE_ID, SALT, SECRET_ID, ENCRYPTED_IDENTITY)
+                        .setDeviceType(DEVICE_TYPE)
+                        .setDeviceImageUrl(IMAGE_URL)
+                        .addExtendedProperty(new DataElement(KEY, VALUE))
+                        .setRssi(RSSI)
+                        .addMedium(MEDIUM)
+                        .setName(DEVICE_NAME)
+                        .setDiscoveryTimestampMillis(DISCOVERY_MILLIS)
+                        .build();
 
         assertThat(device.getDeviceType()).isEqualTo(DEVICE_TYPE);
         assertThat(device.getDeviceId()).isEqualTo(DEVICE_ID);
@@ -87,13 +84,13 @@ public class PresenceDeviceTest {
     @Test
     @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void testWriteParcel() {
-        PresenceDevice device = new PresenceDevice.Builder()
-                .setDeviceId(DEVICE_ID)
-                .addExtendedProperty(new DataElement(KEY, VALUE))
-                .setRssi(RSSI)
-                .addMedium(MEDIUM)
-                .setName(DEVICE_NAME)
-                .build();
+        PresenceDevice device =
+                new PresenceDevice.Builder(DEVICE_ID, SALT, SECRET_ID, ENCRYPTED_IDENTITY)
+                        .addExtendedProperty(new DataElement(KEY, VALUE))
+                        .setRssi(RSSI)
+                        .addMedium(MEDIUM)
+                        .setName(DEVICE_NAME)
+                        .build();
 
         Parcel parcel = Parcel.obtain();
         device.writeToParcel(parcel, 0);

@@ -66,10 +66,10 @@ public class PresenceBroadcastRequestTest {
                 .setMetadataEncryptionKey(METADATA_ENCRYPTION_KEY)
                 .build();
         DataElement element = new DataElement(KEY, VALUE);
-        mBuilder = new PresenceBroadcastRequest.Builder(Collections.singletonList(BLE_MEDIUM), SALT)
+        mBuilder = new PresenceBroadcastRequest.Builder(Collections.singletonList(BLE_MEDIUM), SALT,
+                credential)
                 .setTxPower(TX_POWER)
                 .setVersion(VERSION)
-                .setCredential(credential)
                 .addAction(ACTION_ID)
                 .addExtendedProperty(element);
     }
