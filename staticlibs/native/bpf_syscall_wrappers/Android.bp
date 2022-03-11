@@ -19,6 +19,7 @@ package {
 cc_library_headers {
     name: "bpf_syscall_wrappers",
     vendor_available: true,
+    recovery_available: true,
     host_supported: true,
     native_bridge_supported: true,
     export_include_dirs: ["include"],
