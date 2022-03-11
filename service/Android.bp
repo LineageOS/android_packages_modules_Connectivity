@@ -114,6 +114,7 @@ java_library {
         "net-utils-device-common",
         "net-utils-device-common-bpf",
         "net-utils-device-common-netlink",
+        "net-utils-services-common",
         "netd-client",
         "networkstack-client",
         "PlatformProperties",
@@ -159,7 +160,7 @@ java_library {
     static_libs: [
         "service-connectivity-pre-jarjar",
         "service-connectivity-tiramisu-pre-jarjar",
-        "service-nearby",
+        "service-nearby-pre-jarjar",
     ],
     jarjar_rules: ":connectivity-jarjar-rules",
     apex_available: [

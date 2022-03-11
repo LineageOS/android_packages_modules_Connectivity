@@ -30,6 +30,7 @@ java_library {
     min_sdk_version: "30",
     srcs: [
         "src/**/*.java",
+        ":ethernet-service-updatable-sources",
         ":services.connectivity-tiramisu-updatable-sources",
     ],
     libs: [
@@ -38,7 +39,8 @@ java_library {
         "framework-connectivity-t-pre-jarjar",
         "framework-tethering.stubs.module_lib",
         "service-connectivity-pre-jarjar",
-        "service-nearby",
+        "service-nearby-pre-jarjar",
+        "ServiceConnectivityResources",
         "unsupportedappusage",
     ],
     static_libs: [
