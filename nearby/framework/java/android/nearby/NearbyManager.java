@@ -307,7 +307,7 @@ public class NearbyManager {
 
         @Override
         public void onStatusChanged(int status) {
-            mExecutor.execute(()-> mBroadcastCallback.onStatus(status));
+            mExecutor.execute(()-> mBroadcastCallback.onStatusChanged(status));
         }
     }
 }

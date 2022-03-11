@@ -56,9 +56,8 @@ public class FastAdvertisementTest {
                         .build();
         mBuilder =
                 new PresenceBroadcastRequest.Builder(Collections.singletonList(MEDIUM_TYPE_BLE),
-                        SALT)
+                        SALT, mCredential)
                         .setTxPower(TX_POWER)
-                        .setCredential(mCredential)
                         .setVersion(BroadcastRequest.PRESENCE_VERSION_V0)
                         .addAction(PRESENCE_ACTION);
     }

@@ -60,5 +60,5 @@ public interface BroadcastCallback {
     /**
      * Called when broadcast status changes.
      */
-    void onStatus(@BroadcastStatus int status);
+    void onStatusChanged(@BroadcastStatus int status);
 }

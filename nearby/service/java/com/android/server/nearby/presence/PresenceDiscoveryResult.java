@@ -79,10 +79,13 @@ public class PresenceDiscoveryResult {
      * Converts a presence device from the discovery result.
      */
     public PresenceDevice toPresenceDevice() {
-        return new PresenceDevice.Builder()
+        return new PresenceDevice.Builder(
+                // Use the public credential hash as the device Id.
+                String.valueOf(mPublicCredential.hashCode()),
+                mSalt,
+                mPublicCredential.getSecretId(),
+                mPublicCredential.getEncryptedMetadata())
                 .setRssi(mRssi)
-                .setSalt(mSalt)
-                .setSecretId(mPublicCredential.getSecretId())
                 .addMedium(NearbyDevice.Medium.BLE).build();
     }
 
