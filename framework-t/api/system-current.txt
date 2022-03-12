@@ -21,16 +21,13 @@ package android.nearby {
     field public static final int STATUS_OK = 0; // 0x0
   }
 
-  public abstract class BroadcastRequest implements android.os.Parcelable {
-    method public int describeContents();
+  public abstract class BroadcastRequest {
     method @NonNull public java.util.List<java.lang.Integer> getMediums();
     method @IntRange(from=0xffffff81, to=126) public int getTxPower();
     method public int getType();
     method public int getVersion();
-    method public void writeToParcel(@NonNull android.os.Parcel, int);
     field public static final int BROADCAST_TYPE_NEARBY_PRESENCE = 3; // 0x3
     field public static final int BROADCAST_TYPE_UNKNOWN = -1; // 0xffffffff
-    field @NonNull public static final android.os.Parcelable.Creator<android.nearby.BroadcastRequest> CREATOR;
     field public static final int PRESENCE_VERSION_UNKNOWN = -1; // 0xffffffff
     field public static final int PRESENCE_VERSION_V0 = 0; // 0x0
     field public static final int PRESENCE_VERSION_V1 = 1; // 0x1
@@ -338,10 +335,12 @@ package android.nearby {
   }
 
   public final class PresenceBroadcastRequest extends android.nearby.BroadcastRequest implements android.os.Parcelable {
+    method public int describeContents();
     method @NonNull public java.util.List<java.lang.Integer> getActions();
     method @NonNull public android.nearby.PrivateCredential getCredential();
     method @NonNull public java.util.List<android.nearby.DataElement> getExtendedProperties();
     method @NonNull public byte[] getSalt();
+    method public void writeToParcel(@NonNull android.os.Parcel, int);
     field @NonNull public static final android.os.Parcelable.Creator<android.nearby.PresenceBroadcastRequest> CREATOR;
   }
 
@@ -354,15 +353,12 @@ package android.nearby {
     method @NonNull public android.nearby.PresenceBroadcastRequest.Builder setVersion(int);
   }
 
-  public abstract class PresenceCredential implements android.os.Parcelable {
-    method public int describeContents();
+  public abstract class PresenceCredential {
     method @NonNull public byte[] getAuthenticityKey();
     method @NonNull public java.util.List<android.nearby.CredentialElement> getCredentialElements();
     method public int getIdentityType();
     method @NonNull public byte[] getSecretId();
     method public int getType();
-    method public void writeToParcel(@NonNull android.os.Parcel, int);
-    field @NonNull public static final android.os.Parcelable.Creator<android.nearby.PresenceCredential> CREATOR;
     field public static final int CREDENTIAL_TYPE_PRIVATE = 0; // 0x0
     field public static final int CREDENTIAL_TYPE_PUBLIC = 1; // 0x1
     field public static final int IDENTITY_TYPE_PRIVATE = 1; // 0x1
@@ -399,9 +395,11 @@ package android.nearby {
   }
 
   public final class PresenceScanFilter extends android.nearby.ScanFilter implements android.os.Parcelable {
+    method public int describeContents();
     method @NonNull public java.util.List<android.nearby.PublicCredential> getCredentials();
     method @NonNull public java.util.List<android.nearby.DataElement> getExtendedProperties();
     method @NonNull public java.util.List<java.lang.Integer> getPresenceActions();
+    method public void writeToParcel(@NonNull android.os.Parcel, int);
     field @NonNull public static final android.os.Parcelable.Creator<android.nearby.PresenceScanFilter> CREATOR;
   }
 
@@ -415,35 +413,34 @@ package android.nearby {
   }
 
   public final class PrivateCredential extends android.nearby.PresenceCredential implements android.os.Parcelable {
+    method public int describeContents();
     method @NonNull public String getDeviceName();
     method @NonNull public byte[] getMetadataEncryptionKey();
+    method public void writeToParcel(@NonNull android.os.Parcel, int);
     field @NonNull public static final android.os.Parcelable.Creator<android.nearby.PrivateCredential> CREATOR;
   }
 
   public static final class PrivateCredential.Builder {
-    ctor public PrivateCredential.Builder(@NonNull byte[], @NonNull byte[]);
+    ctor public PrivateCredential.Builder(@NonNull byte[], @NonNull byte[], @NonNull byte[], @NonNull String);
     method @NonNull public android.nearby.PrivateCredential.Builder addCredentialElement(@NonNull android.nearby.CredentialElement);
     method @NonNull public android.nearby.PrivateCredential build();
-    method @NonNull public android.nearby.PrivateCredential.Builder setDeviceName(@NonNull String);
     method @NonNull public android.nearby.PrivateCredential.Builder setIdentityType(int);
-    method @NonNull public android.nearby.PrivateCredential.Builder setMetadataEncryptionKey(@NonNull byte[]);
   }
 
   public final class PublicCredential extends android.nearby.PresenceCredential implements android.os.Parcelable {
+    method public int describeContents();
     method @NonNull public byte[] getEncryptedMetadata();
     method @NonNull public byte[] getEncryptedMetadataKeyTag();
     method @NonNull public byte[] getPublicKey();
+    method public void writeToParcel(@NonNull android.os.Parcel, int);
     field @NonNull public static final android.os.Parcelable.Creator<android.nearby.PublicCredential> CREATOR;
   }
 
   public static final class PublicCredential.Builder {
-    ctor public PublicCredential.Builder(@NonNull byte[], @NonNull byte[]);
+    ctor public PublicCredential.Builder(@NonNull byte[], @NonNull byte[], @NonNull byte[], @NonNull byte[], @NonNull byte[]);
     method @NonNull public android.nearby.PublicCredential.Builder addCredentialElement(@NonNull android.nearby.CredentialElement);
     method @NonNull public android.nearby.PublicCredential build();
-    method @NonNull public android.nearby.PublicCredential.Builder setEncryptedMetadata(@NonNull byte[]);
-    method @NonNull public android.nearby.PublicCredential.Builder setEncryptedMetadataKeyTag(@NonNull byte[]);
     method @NonNull public android.nearby.PublicCredential.Builder setIdentityType(int);
-    method @NonNull public android.nearby.PublicCredential.Builder setPublicKey(@NonNull byte[]);
   }
 
   public interface ScanCallback {
@@ -452,12 +449,9 @@ package android.nearby {
     method public void onUpdated(@NonNull android.nearby.NearbyDevice);
   }
 
-  public abstract class ScanFilter implements android.os.Parcelable {
-    method public int describeContents();
+  public abstract class ScanFilter {
     method @IntRange(from=0, to=127) public int getMaxPathLoss();
     method public int getType();
-    method public void writeToParcel(@NonNull android.os.Parcel, int);
-    field @NonNull public static final android.os.Parcelable.Creator<android.nearby.ScanFilter> CREATOR;
   }
 
   public final class ScanRequest implements android.os.Parcelable {
