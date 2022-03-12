@@ -37,53 +37,79 @@ public class FastPairDeviceMetadata {
     }
 
     /**
-     * Get ImageUlr.
+     * Get ImageUrl, which will be displayed in notification.
+     *
+     * @hide
      */
+    @SystemApi
     @Nullable
     public String getImageUrl() {
         return mMetadataParcel.imageUrl;
     }
 
     /**
-     * Get IntentUri.
+     * Get IntentUri, which will be launched to install companion app.
+     *
+     * @hide
      */
+    @SystemApi
     @Nullable
     public String getIntentUri() {
         return mMetadataParcel.intentUri;
     }
 
     /**
-     * Get ble transmission power.
+     * Get BLE transmit power, as described in Fast Pair spec, see
+     * <a href="https://developers.google.com/nearby/fast-pair/spec#transmit_power">Transmit Power</a>
+     *
+     * @hide
      */
+    @SystemApi
     public int getBleTxPower() {
         return mMetadataParcel.bleTxPower;
     }
 
     /**
-     * Get trigger distance.
+     * Get Fast Pair Half Sheet trigger distance in meters.
+     *
+     * @hide
      */
+    @SystemApi
     public float getTriggerDistance() {
         return mMetadataParcel.triggerDistance;
     }
 
     /**
-     * Get image.
+     * Get Fast Pair device image, which is submitted at device registration time to display on
+     * notification. It is a 32-bit PNG with dimensions of 512px by 512px.
+     *
+     * @return Fast Pair device image in 32-bit PNG with dimensions of 512px by 512px.
+     * @hide
      */
+    @SystemApi
     @Nullable
     public byte[] getImage() {
         return mMetadataParcel.image;
     }
 
     /**
-     * Get device type.
+     * Get Fast Pair device type.
+     * DEVICE_TYPE_UNSPECIFIED = 0;
+     * HEADPHONES = 1;
+     * TRUE_WIRELESS_HEADPHONES = 7;
+     * @hide
      */
+    @SystemApi
     public int getDeviceType() {
         return mMetadataParcel.deviceType;
     }
 
     /**
-     * Get device name.
+     * Get Fast Pair device name. e.g., "Pixel Buds A-Series".
+     *
+     * @hide
      */
+    @SystemApi
     @Nullable
     public String getName() {
         return mMetadataParcel.name;
@@ -91,7 +117,10 @@ public class FastPairDeviceMetadata {
 
     /**
      * Get true wireless image url for left bud.
+     *
+     * @hide
      */
+    @SystemApi
     @Nullable
     public String getTrueWirelessImageUrlLeftBud() {
         return mMetadataParcel.trueWirelessImageUrlLeftBud;
@@ -99,7 +128,10 @@ public class FastPairDeviceMetadata {
 
     /**
      * Get true wireless image url for right bud.
+     *
+     * @hide
      */
+    @SystemApi
     @Nullable
     public String getTrueWirelessImageUrlRightBud() {
         return mMetadataParcel.trueWirelessImageUrlRightBud;
@@ -107,62 +139,89 @@ public class FastPairDeviceMetadata {
 
     /**
      * Get true wireless image url for case.
+     *
+     * @hide
      */
+    @SystemApi
     @Nullable
     public String getTrueWirelessImageUrlCase() {
         return mMetadataParcel.trueWirelessImageUrlCase;
     }
 
     /**
-     * Get Locale.
+     * Get Locale of the device.
+     *
+     * @hide
      */
+    @SystemApi
     @Nullable
     public String getLocale() {
         return mMetadataParcel.locale;
     }
 
     /**
-     * Get InitialNotificationDescription.
+     * Get InitialNotificationDescription, which is a translated string of
+     * "Tap to pair. Earbuds will be tied to %s" based on locale.
+     *
+     * @hide
      */
+    @SystemApi
     @Nullable
     public String getInitialNotificationDescription() {
         return mMetadataParcel.initialNotificationDescription;
     }
 
     /**
-     * Get InitialNotificationDescriptionNoAccount.
+     * Get InitialNotificationDescriptionNoAccount, which is a translated string of
+     * "Tap to pair with this device" based on locale.
+     *
+     * @hide
      */
+    @SystemApi
     @Nullable
     public String getInitialNotificationDescriptionNoAccount() {
         return mMetadataParcel.initialNotificationDescriptionNoAccount;
     }
 
     /**
-     * Get OpenCompanionAppDescription.
+     * Get OpenCompanionAppDescription, which is a translated string of
+     * "Tap to finish setup" based on locale.
+     *
+     * @hide
      */
+    @SystemApi
     @Nullable
     public String getOpenCompanionAppDescription() {
         return mMetadataParcel.openCompanionAppDescription;
     }
 
     /**
-     * Get UpdateCompanionAppDescription.
+     * Get UpdateCompanionAppDescription, which is a translated string of
+     * "Tap to update device settings and finish setup" based on locale.
+     *
+     * @hide
      */
+    @SystemApi
     @Nullable
     public String getUpdateCompanionAppDescription() {
         return mMetadataParcel.updateCompanionAppDescription;
     }
 
     /**
-     * Get DownloadCompanionAppDescription.
+     * Get DownloadCompanionAppDescription, which is a translated string of
+     * "Tap to download device app on Google Play and see all features" based on locale.
+     *
+     * @hide
      */
+    @SystemApi
     @Nullable
     public String getDownloadCompanionAppDescription() {
         return mMetadataParcel.downloadCompanionAppDescription;
     }
 
     /**
-     * Get UnableToConnectTitle.
+     * Get UnableToConnectTitle, which is a translated string of
+     * "Unable to connect" based on locale.
      */
     @Nullable
     public String getUnableToConnectTitle() {
@@ -170,136 +229,201 @@ public class FastPairDeviceMetadata {
     }
 
     /**
-     * Get UnableToConnectDescription.
+     * Get UnableToConnectDescription, which is a translated string of
+     * "Try manually pairing to the device" based on locale.
+     *
+     * @hide
      */
+    @SystemApi
     @Nullable
     public String getUnableToConnectDescription() {
         return mMetadataParcel.unableToConnectDescription;
     }
 
     /**
-     * Get InitialPairingDescription.
+     * Get InitialPairingDescription, which is a translated string of
+     * "%s will appear on devices linked with %s" based on locale.
+     *
+     * @hide
      */
+    @SystemApi
     @Nullable
     public String getInitialPairingDescription() {
         return mMetadataParcel.initialPairingDescription;
     }
 
     /**
-     * Get ConnectSuccessCompanionAppInstalled.
+     * Get ConnectSuccessCompanionAppInstalled, which is a translated string of
+     * "Your device is ready to be set up" based on locale.
+     *
+     * @hide
      */
+    @SystemApi
     @Nullable
     public String getConnectSuccessCompanionAppInstalled() {
         return mMetadataParcel.connectSuccessCompanionAppInstalled;
     }
 
     /**
-     * Get ConnectSuccessCompanionAppNotInstalled.
+     * Get ConnectSuccessCompanionAppNotInstalled, which is a translated string of
+     * "Download the device app on Google Play to see all available features" based on locale.
+     *
+     * @hide
      */
+    @SystemApi
     @Nullable
     public String getConnectSuccessCompanionAppNotInstalled() {
         return mMetadataParcel.connectSuccessCompanionAppNotInstalled;
     }
 
     /**
-     * Get SubsequentPairingDescription.
+     * Get SubsequentPairingDescription, which is a translated string of
+     * "Connect %s to this phone" based on locale.
+     *
+     * @hide
      */
+    @SystemApi
     @Nullable
     public String getSubsequentPairingDescription() {
         return mMetadataParcel.subsequentPairingDescription;
     }
 
     /**
-     * Get RetroactivePairingDescription.
+     * Get RetroactivePairingDescription, which is a translated string of
+     * "Save device to %s for faster pairing to your other devices" based on locale.
+     *
+     * @hide
      */
+    @SystemApi
     @Nullable
     public String getRetroactivePairingDescription() {
         return mMetadataParcel.retroactivePairingDescription;
     }
 
     /**
-     * Get WaitLaunchCompanionAppDescription.
+     * Get WaitLaunchCompanionAppDescription, which is a translated string of
+     * "This will take a few moments" based on locale.
+     *
+     * @hide
      */
+    @SystemApi
     @Nullable
     public String getWaitLaunchCompanionAppDescription() {
         return mMetadataParcel.waitLaunchCompanionAppDescription;
     }
 
     /**
-     * Get FailConnectGoToSettingsDescription.
+     * Get FailConnectGoToSettingsDescription, which is a translated string of
+     * "Try manually pairing to the device by going to Settings" based on locale.
+     *
+     * @hide
      */
+    @SystemApi
     @Nullable
     public String getFailConnectGoToSettingsDescription() {
         return mMetadataParcel.failConnectGoToSettingsDescription;
     }
 
     /**
-     * Get ConfirmPinTitle.
+     * Get ConfirmPinTitle, which is a translated string of
+     * based on locale.
+     *
+     * @hide
      */
+    @SystemApi
     @Nullable
     public String getConfirmPinTitle() {
         return mMetadataParcel.confirmPinTitle;
     }
 
     /**
-     * Get ConfirmPinDescription.
+     * Get ConfirmPinDescription, which is a translated string of "confirm pin" based on locale.
+     *
+     * @hide
      */
+    @SystemApi
     @Nullable
     public String getConfirmPinDescription() {
         return mMetadataParcel.confirmPinDescription;
     }
 
     /**
-     * Get SyncContactsTitle.
+     * Get SyncContactsTitle, which is a translated string of "sync contacts title" based on locale.
+     *
+     * @hide
      */
+    @SystemApi
     @Nullable
     public String getSyncContactsTitle() {
         return mMetadataParcel.syncContactsTitle;
     }
 
     /**
-     * Get SyncContactsDescription.
+     * Get SyncContactsDescription, which is a translated string of "sync contacts description"
+     * based on locale.
+     *
+     * @hide
      */
+    @SystemApi
     @Nullable
     public String getSyncContactsDescription() {
         return mMetadataParcel.syncContactsDescription;
     }
 
     /**
-     * Get SyncSmsTitle.
+     * Get SyncSmsTitle, which is a translated string of "sync sms title" based on locale.
+     *
+     * @hide
      */
+    @SystemApi
     @Nullable
     public String getSyncSmsTitle() {
         return mMetadataParcel.syncSmsTitle;
     }
 
     /**
-     * Get SyncSmsDescription.
+     * Get SyncSmsDescription, which is a translated string of "sync sms description" based on
+     * locale.
+     *
+     * @hide
      */
+    @SystemApi
     @Nullable
     public String getSyncSmsDescription() {
         return mMetadataParcel.syncSmsDescription;
     }
 
     /**
-     * Get AssistantSetupHalfSheet.
+     * Get AssistantSetupHalfSheet, which is a translated string of
+     * "Tap to set up your Google Assistant" based on locale.
+     *
+     * @hide
      */
+    @SystemApi
     @Nullable
     public String getAssistantSetupHalfSheet() {
         return mMetadataParcel.assistantSetupHalfSheet;
     }
 
     /**
-     * Get AssistantSetupNotification.
+     * Get AssistantSetupNotification, which is a translated string of
+     * "Tap to set up your Google Assistant" based on locale.
+     *
+     * @hide
      */
+    @SystemApi
     @Nullable
     public String getAssistantSetupNotification() {
         return mMetadataParcel.assistantSetupNotification;
     }
 
     /**
-     * Get FastPairTvConnectDeviceNoAccountDescription.
+     * Get FastPairTvConnectDeviceNoAccountDescription, which is a translated string of
+     * "Select connect to pair your %s with this device" based on locale.
+     *
+     * @hide
      */
+    @SystemApi
     @Nullable
     public String getFastPairTvConnectDeviceNoAccountDescription() {
         return mMetadataParcel.fastPairTvConnectDeviceNoAccountDescription;
@@ -307,14 +431,20 @@ public class FastPairDeviceMetadata {
 
     /**
      * Builder used to create FastPairDeviceMetadata.
+     *
+     * @hide
      */
+    @SystemApi
     public static final class Builder {
 
         private final FastPairDeviceMetadataParcel mBuilderParcel;
 
         /**
          * Default constructor of Builder.
+         *
+         * @hide
          */
+        @SystemApi
         public Builder() {
             mBuilderParcel = new FastPairDeviceMetadataParcel();
             mBuilderParcel.imageUrl = null;
@@ -358,7 +488,9 @@ public class FastPairDeviceMetadata {
          *
          * @param imageUrl Image Ulr.
          * @return The builder, to facilitate chaining {@code builder.setXXX(..).setXXX(..)}.
+         * @hide
          */
+        @SystemApi
         @NonNull
         public Builder setImageUrl(@Nullable String imageUrl) {
             mBuilderParcel.imageUrl = imageUrl;
@@ -370,7 +502,9 @@ public class FastPairDeviceMetadata {
          *
          * @param intentUri Intent uri.
          * @return The builder, to facilitate chaining {@code builder.setXXX(..).setXXX(..)}.
+         * @hide
          */
+        @SystemApi
         @NonNull
         public Builder setIntentUri(@Nullable String intentUri) {
             mBuilderParcel.intentUri = intentUri;
@@ -382,7 +516,9 @@ public class FastPairDeviceMetadata {
          *
          * @param name Device name.
          * @return The builder, to facilitate chaining {@code builder.setXXX(..).setXXX(..)}.
+         * @hide
          */
+        @SystemApi
         @NonNull
         public Builder setName(@Nullable String name) {
             mBuilderParcel.name = name;
@@ -394,8 +530,9 @@ public class FastPairDeviceMetadata {
          *
          * @param bleTxPower Ble transmission power.
          * @return The builder, to facilitate chaining {@code builder.setXXX(..).setXXX(..)}.
-
+         * @hide
          */
+        @SystemApi
         @NonNull
         public Builder setBleTxPower(int bleTxPower) {
             mBuilderParcel.bleTxPower = bleTxPower;
@@ -407,7 +544,9 @@ public class FastPairDeviceMetadata {
          *
          * @param triggerDistance Fast Pair trigger distance.
          * @return The builder, to facilitate chaining {@code builder.setXXX(..).setXXX(..)}.
+         * @hide
          */
+        @SystemApi
         @NonNull
         public Builder setTriggerDistance(float triggerDistance) {
             mBuilderParcel.triggerDistance = triggerDistance;
@@ -417,9 +556,13 @@ public class FastPairDeviceMetadata {
         /**
          * Set image.
          *
-         * @param image Fast Pair device image.
+         * @param image Fast Pair device image, which is submitted at device registration time to
+         *              display on notification. It is a 32-bit PNG with dimensions of
+         *              512px by 512px.
          * @return The builder, to facilitate chaining {@code builder.setXXX(..).setXXX(..)}.
+         * @hide
          */
+        @SystemApi
         @NonNull
         public Builder setImage(@Nullable byte[] image) {
             mBuilderParcel.image = image;
@@ -431,7 +574,9 @@ public class FastPairDeviceMetadata {
          *
          * @param deviceType Fast Pair device type.
          * @return The builder, to facilitate chaining {@code builder.setXXX(..).setXXX(..)}.
+         * @hide
          */
+        @SystemApi
         @NonNull
         public Builder setDeviceType(int deviceType) {
             mBuilderParcel.deviceType = deviceType;
@@ -443,7 +588,9 @@ public class FastPairDeviceMetadata {
          *
          * @param trueWirelessImageUrlLeftBud True wireless image url for left bud.
          * @return The builder, to facilitate chaining {@code builder.setXXX(..).setXXX(..)}.
+         * @hide
          */
+        @SystemApi
         @NonNull
         public Builder setTrueWirelessImageUrlLeftBud(
                 @Nullable String trueWirelessImageUrlLeftBud) {
@@ -456,7 +603,9 @@ public class FastPairDeviceMetadata {
          *
          * @param trueWirelessImageUrlRightBud True wireless image url for right bud.
          * @return The builder, to facilitate chaining {@code builder.setXXX(..).setXXX(..)}.
+         * @hide
          */
+        @SystemApi
         @NonNull
         public Builder setTrueWirelessImageUrlRightBud(
                 @Nullable String trueWirelessImageUrlRightBud) {
@@ -469,7 +618,9 @@ public class FastPairDeviceMetadata {
          *
          * @param trueWirelessImageUrlCase True wireless image url for case.
          * @return The builder, to facilitate chaining {@code builder.setXXX(..).setXXX(..)}.
+         * @hide
          */
+        @SystemApi
         @NonNull
         public Builder setTrueWirelessImageUrlCase(@Nullable String trueWirelessImageUrlCase) {
             mBuilderParcel.trueWirelessImageUrlCase = trueWirelessImageUrlCase;
@@ -481,7 +632,9 @@ public class FastPairDeviceMetadata {
          *
          * @param locale Device locale.
          * @return The builder, to facilitate chaining {@code builder.setXXX(..).setXXX(..)}.
+         * @hide
          */
+        @SystemApi
         @NonNull
         public Builder setLocale(@Nullable String locale) {
             mBuilderParcel.locale = locale;
@@ -493,7 +646,9 @@ public class FastPairDeviceMetadata {
          *
          * @param initialNotificationDescription Initial notification description.
          * @return The builder, to facilitate chaining {@code builder.setXXX(..).setXXX(..)}.
+         * @hide
          */
+        @SystemApi
         @NonNull
         public Builder setInitialNotificationDescription(
                 @Nullable String initialNotificationDescription) {
@@ -507,7 +662,9 @@ public class FastPairDeviceMetadata {
          * @param initialNotificationDescriptionNoAccount Initial notification description when
          *                                                account is not present.
          * @return The builder, to facilitate chaining {@code builder.setXXX(..).setXXX(..)}.
+         * @hide
          */
+        @SystemApi
         @NonNull
         public Builder setInitialNotificationDescriptionNoAccount(
                 @Nullable String initialNotificationDescriptionNoAccount) {
@@ -521,7 +678,9 @@ public class FastPairDeviceMetadata {
          *
          * @param openCompanionAppDescription Description for opening companion app.
          * @return The builder, to facilitate chaining {@code builder.setXXX(..).setXXX(..)}.
+         * @hide
          */
+        @SystemApi
         @NonNull
         public Builder setOpenCompanionAppDescription(
                 @Nullable String openCompanionAppDescription) {
@@ -534,7 +693,9 @@ public class FastPairDeviceMetadata {
          *
          * @param updateCompanionAppDescription Description for updating companion app.
          * @return The builder, to facilitate chaining {@code builder.setXXX(..).setXXX(..)}.
+         * @hide
          */
+        @SystemApi
         @NonNull
         public Builder setUpdateCompanionAppDescription(
                 @Nullable String updateCompanionAppDescription) {
@@ -547,7 +708,9 @@ public class FastPairDeviceMetadata {
          *
          * @param downloadCompanionAppDescription Description for downloading companion app.
          * @return The builder, to facilitate chaining {@code builder.setXXX(..).setXXX(..)}.
+         * @hide
          */
+        @SystemApi
         @NonNull
         public Builder setDownloadCompanionAppDescription(
                 @Nullable String downloadCompanionAppDescription) {
@@ -560,7 +723,9 @@ public class FastPairDeviceMetadata {
          *
          * @param unableToConnectTitle Title when Fast Pair device is unable to be connected to.
          * @return The builder, to facilitate chaining {@code builder.setXXX(..).setXXX(..)}.
+         * @hide
          */
+        @SystemApi
         @NonNull
         public Builder setUnableToConnectTitle(@Nullable String unableToConnectTitle) {
             mBuilderParcel.unableToConnectTitle = unableToConnectTitle;
@@ -573,7 +738,9 @@ public class FastPairDeviceMetadata {
          * @param unableToConnectDescription Description when Fast Pair device is unable to be
          *                                   connected to.
          * @return The builder, to facilitate chaining {@code builder.setXXX(..).setXXX(..)}.
+         * @hide
          */
+        @SystemApi
         @NonNull
         public Builder setUnableToConnectDescription(
                 @Nullable String unableToConnectDescription) {
@@ -586,7 +753,9 @@ public class FastPairDeviceMetadata {
          *
          * @param initialPairingDescription Description for Fast Pair initial pairing.
          * @return The builder, to facilitate chaining {@code builder.setXXX(..).setXXX(..)}.
+         * @hide
          */
+        @SystemApi
         @NonNull
         public Builder setInitialPairingDescription(@Nullable String initialPairingDescription) {
             mBuilderParcel.initialPairingDescription = initialPairingDescription;
@@ -599,7 +768,9 @@ public class FastPairDeviceMetadata {
          * @param connectSuccessCompanionAppInstalled Description that let user open the companion
          *                                            app.
          * @return The builder, to facilitate chaining {@code builder.setXXX(..).setXXX(..)}.
+         * @hide
          */
+        @SystemApi
         @NonNull
         public Builder setConnectSuccessCompanionAppInstalled(
                 @Nullable String connectSuccessCompanionAppInstalled) {
@@ -614,7 +785,9 @@ public class FastPairDeviceMetadata {
          * @param connectSuccessCompanionAppNotInstalled Description that let user download the
          *                                               companion app.
          * @return The builder, to facilitate chaining {@code builder.setXXX(..).setXXX(..)}.
+         * @hide
          */
+        @SystemApi
         @NonNull
         public Builder setConnectSuccessCompanionAppNotInstalled(
                 @Nullable String connectSuccessCompanionAppNotInstalled) {
@@ -629,7 +802,9 @@ public class FastPairDeviceMetadata {
          * @param subsequentPairingDescription Description that reminds user there is a paired
          *                                     device nearby.
          * @return The builder, to facilitate chaining {@code builder.setXXX(..).setXXX(..)}.
+         * @hide
          */
+        @SystemApi
         @NonNull
         public Builder setSubsequentPairingDescription(
                 @Nullable String subsequentPairingDescription) {
@@ -642,7 +817,9 @@ public class FastPairDeviceMetadata {
          *
          * @param retroactivePairingDescription Description that reminds users opt in their device.
          * @return The builder, to facilitate chaining {@code builder.setXXX(..).setXXX(..)}.
+         * @hide
          */
+        @SystemApi
         @NonNull
         public Builder setRetroactivePairingDescription(
                 @Nullable String retroactivePairingDescription) {
@@ -656,7 +833,9 @@ public class FastPairDeviceMetadata {
          * @param waitLaunchCompanionAppDescription Description that indicates companion app is
          *                                          about to launch.
          * @return The builder, to facilitate chaining {@code builder.setXXX(..).setXXX(..)}.
+         * @hide
          */
+        @SystemApi
         @NonNull
         public Builder setWaitLaunchCompanionAppDescription(
                 @Nullable String waitLaunchCompanionAppDescription) {
@@ -671,7 +850,9 @@ public class FastPairDeviceMetadata {
          * @param failConnectGoToSettingsDescription Description that indicates go to bluetooth
          *                                           settings when connection fail.
          * @return The builder, to facilitate chaining {@code builder.setXXX(..).setXXX(..)}.
+         * @hide
          */
+        @SystemApi
         @NonNull
         public Builder setFailConnectGoToSettingsDescription(
                 @Nullable String failConnectGoToSettingsDescription) {
@@ -685,7 +866,9 @@ public class FastPairDeviceMetadata {
          *
          * @param confirmPinTitle Title of the UI to ask the user to confirm the pin code.
          * @return The builder, to facilitate chaining {@code builder.setXXX(..).setXXX(..)}.
+         * @hide
          */
+        @SystemApi
         @NonNull
         public Builder setConfirmPinTitle(@Nullable String confirmPinTitle) {
             mBuilderParcel.confirmPinTitle = confirmPinTitle;
@@ -698,7 +881,9 @@ public class FastPairDeviceMetadata {
          * @param confirmPinDescription Description of the UI to ask the user to confirm the pin
          *                              code.
          * @return The builder, to facilitate chaining {@code builder.setXXX(..).setXXX(..)}.
+         * @hide
          */
+        @SystemApi
         @NonNull
         public Builder setConfirmPinDescription(@Nullable String confirmPinDescription) {
             mBuilderParcel.confirmPinDescription = confirmPinDescription;
@@ -710,7 +895,9 @@ public class FastPairDeviceMetadata {
          *
          * @param syncContactsTitle Title of the UI to ask the user to confirm to sync contacts.
          * @return The builder, to facilitate chaining {@code builder.setXXX(..).setXXX(..)}.
+         * @hide
          */
+        @SystemApi
         @NonNull
         public Builder setSyncContactsTitle(@Nullable String syncContactsTitle) {
             mBuilderParcel.syncContactsTitle = syncContactsTitle;
@@ -722,7 +909,9 @@ public class FastPairDeviceMetadata {
          *
          * @param syncContactsDescription Description of the UI to ask the user to confirm to sync
          *                                contacts.
+         * @hide
          */
+        @SystemApi
         @NonNull
         public Builder setSyncContactsDescription(@Nullable String syncContactsDescription) {
             mBuilderParcel.syncContactsDescription = syncContactsDescription;
@@ -734,7 +923,9 @@ public class FastPairDeviceMetadata {
          *
          * @param syncSmsTitle Title of the UI to ask the user to confirm to sync SMS.
          * @return The builder, to facilitate chaining {@code builder.setXXX(..).setXXX(..)}.
+         * @hide
          */
+        @SystemApi
         @NonNull
         public Builder setSyncSmsTitle(@Nullable String syncSmsTitle) {
             mBuilderParcel.syncSmsTitle = syncSmsTitle;
@@ -746,7 +937,9 @@ public class FastPairDeviceMetadata {
          *
          * @param syncSmsDescription Description of the UI to ask the user to confirm to sync SMS.
          * @return The builder, to facilitate chaining {@code builder.setXXX(..).setXXX(..)}.
+         * @hide
          */
+        @SystemApi
         @NonNull
         public Builder setSyncSmsDescription(@Nullable String syncSmsDescription) {
             mBuilderParcel.syncSmsDescription = syncSmsDescription;
@@ -759,7 +952,9 @@ public class FastPairDeviceMetadata {
          * @param assistantSetupHalfSheet Description in half sheet to ask user setup google
          * assistant.
          * @return The builder, to facilitate chaining {@code builder.setXXX(..).setXXX(..)}.
+         * @hide
          */
+        @SystemApi
         @NonNull
         public Builder setAssistantSetupHalfSheet(@Nullable String assistantSetupHalfSheet) {
             mBuilderParcel.assistantSetupHalfSheet = assistantSetupHalfSheet;
@@ -772,7 +967,9 @@ public class FastPairDeviceMetadata {
          * @param assistantSetupNotification Description in notification to ask user setup google
          *                                   assistant.
          * @return The builder, to facilitate chaining {@code builder.setXXX(..).setXXX(..)}.
+         * @hide
          */
+        @SystemApi
         @NonNull
         public Builder setAssistantSetupNotification(
                 @Nullable String assistantSetupNotification) {
@@ -787,7 +984,9 @@ public class FastPairDeviceMetadata {
          *                                                    action on TV, when user is not logged
          *                                                    in.
          * @return The builder, to facilitate chaining {@code builder.setXXX(..).setXXX(..)}.
+         * @hide
          */
+        @SystemApi
         @NonNull
         public Builder setFastPairTvConnectDeviceNoAccountDescription(
                 @Nullable String fastPairTvConnectDeviceNoAccountDescription) {
@@ -798,7 +997,10 @@ public class FastPairDeviceMetadata {
 
         /**
          * Build {@link FastPairDeviceMetadata} with the currently set configuration.
+         *
+         * @hide
          */
+        @SystemApi
         @NonNull
         public FastPairDeviceMetadata build() {
             return new FastPairDeviceMetadata(mBuilderParcel);

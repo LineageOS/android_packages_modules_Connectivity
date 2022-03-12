@@ -19,7 +19,6 @@ package android.nearby;
 import android.accounts.Account;
 import android.annotation.NonNull;
 import android.annotation.Nullable;
-import android.annotation.SuppressLint;
 import android.annotation.SystemApi;
 import android.nearby.aidl.FastPairEligibleAccountParcel;
 
@@ -60,14 +59,20 @@ public class FastPairEligibleAccount {
 
     /**
      * Builder used to create FastPairEligibleAccount.
+     *
+     * @hide
      */
+    @SystemApi
     public static final class Builder {
 
         private final FastPairEligibleAccountParcel mBuilderParcel;
 
         /**
          * Default constructor of Builder.
+         *
+         * @hide
          */
+        @SystemApi
         public Builder() {
             mBuilderParcel = new FastPairEligibleAccountParcel();
             mBuilderParcel.account = null;
@@ -79,8 +84,9 @@ public class FastPairEligibleAccount {
          *
          * @param account Fast Pair eligible account.
          * @return The builder, to facilitate chaining {@code builder.setXXX(..).setXXX(..)}.
+         * @hide
          */
-        @SuppressLint("MissingGetterMatchingBuilder")
+        @SystemApi
         @NonNull
         public Builder setAccount(@Nullable Account account) {
             mBuilderParcel.account = account;
@@ -92,8 +98,9 @@ public class FastPairEligibleAccount {
          *
          * @param optIn Whether the Fast Pair eligible account opts into Fast Pair.
          * @return The builder, to facilitate chaining {@code builder.setXXX(..).setXXX(..)}.
+         * @hide
          */
-        @SuppressLint("MissingGetterMatchingBuilder")
+        @SystemApi
         @NonNull
         public Builder setOptIn(boolean optIn) {
             mBuilderParcel.optIn = optIn;
@@ -102,7 +109,10 @@ public class FastPairEligibleAccount {
 
         /**
          * Build {@link FastPairEligibleAccount} with the currently set configuration.
+         *
+         * @hide
          */
+        @SystemApi
         @NonNull
         public FastPairEligibleAccount build() {
             return new FastPairEligibleAccount(mBuilderParcel);
