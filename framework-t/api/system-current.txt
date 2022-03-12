@@ -13,7 +13,7 @@ package android.app.usage {
 package android.nearby {
 
   public interface BroadcastCallback {
-    method public void onStatus(int);
+    method public void onStatusChanged(int);
     field public static final int STATUS_FAILURE = 1; // 0x1
     field public static final int STATUS_FAILURE_ALREADY_REGISTERED = 2; // 0x2
     field public static final int STATUS_FAILURE_MISSING_PERMISSIONS = 4; // 0x4
@@ -29,10 +29,12 @@ package android.nearby {
     method public int getVersion();
     method public void writeToParcel(@NonNull android.os.Parcel, int);
     field public static final int BROADCAST_TYPE_NEARBY_PRESENCE = 3; // 0x3
+    field public static final int BROADCAST_TYPE_UNKNOWN = -1; // 0xffffffff
     field @NonNull public static final android.os.Parcelable.Creator<android.nearby.BroadcastRequest> CREATOR;
+    field public static final int PRESENCE_VERSION_UNKNOWN = -1; // 0xffffffff
     field public static final int PRESENCE_VERSION_V0 = 0; // 0x0
     field public static final int PRESENCE_VERSION_V1 = 1; // 0x1
-    field public static final int UNKNOWN_TX_POWER = -100; // 0xffffff9c
+    field public static final int UNKNOWN_TX_POWER = -127; // 0xffffff81
   }
 
   public final class CredentialElement implements android.os.Parcelable {
@@ -69,21 +71,21 @@ package android.nearby {
     method @NonNull public android.nearby.FastPairAccountKeyDeviceMetadata.Builder setSha256AccountKeyPublicAddress(@Nullable byte[]);
   }
 
-  public class FastPairAntispoofkeyDeviceMetadata {
+  public class FastPairAntispoofKeyDeviceMetadata {
   }
 
-  public static final class FastPairAntispoofkeyDeviceMetadata.Builder {
-    ctor public FastPairAntispoofkeyDeviceMetadata.Builder();
-    method @NonNull public android.nearby.FastPairAntispoofkeyDeviceMetadata build();
-    method @NonNull public android.nearby.FastPairAntispoofkeyDeviceMetadata.Builder setAntiSpoofPublicKey(@Nullable byte[]);
-    method @NonNull public android.nearby.FastPairAntispoofkeyDeviceMetadata.Builder setFastPairDeviceMetadata(@Nullable android.nearby.FastPairDeviceMetadata);
+  public static final class FastPairAntispoofKeyDeviceMetadata.Builder {
+    ctor public FastPairAntispoofKeyDeviceMetadata.Builder();
+    method @NonNull public android.nearby.FastPairAntispoofKeyDeviceMetadata build();
+    method @NonNull public android.nearby.FastPairAntispoofKeyDeviceMetadata.Builder setAntiSpoofPublicKey(@Nullable byte[]);
+    method @NonNull public android.nearby.FastPairAntispoofKeyDeviceMetadata.Builder setFastPairDeviceMetadata(@Nullable android.nearby.FastPairDeviceMetadata);
   }
 
   public abstract class FastPairDataProviderBase {
     ctor public FastPairDataProviderBase(@NonNull String);
     method @Nullable public final android.os.IBinder getBinder();
     method public abstract void onLoadFastPairAccountDevicesMetadata(@NonNull android.nearby.FastPairDataProviderBase.FastPairAccountDevicesMetadataRequest, @NonNull android.nearby.FastPairDataProviderBase.FastPairAccountDevicesMetadataCallback);
-    method public abstract void onLoadFastPairAntispoofkeyDeviceMetadata(@NonNull android.nearby.FastPairDataProviderBase.FastPairAntispoofkeyDeviceMetadataRequest, @NonNull android.nearby.FastPairDataProviderBase.FastPairAntispoofkeyDeviceMetadataCallback);
+    method public abstract void onLoadFastPairAntispoofKeyDeviceMetadata(@NonNull android.nearby.FastPairDataProviderBase.FastPairAntispoofKeyDeviceMetadataRequest, @NonNull android.nearby.FastPairDataProviderBase.FastPairAntispoofKeyDeviceMetadataCallback);
     method public abstract void onLoadFastPairEligibleAccounts(@NonNull android.nearby.FastPairDataProviderBase.FastPairEligibleAccountsRequest, @NonNull android.nearby.FastPairDataProviderBase.FastPairEligibleAccountsCallback);
     method public abstract void onManageFastPairAccount(@NonNull android.nearby.FastPairDataProviderBase.FastPairManageAccountRequest, @NonNull android.nearby.FastPairDataProviderBase.FastPairManageActionCallback);
     method public abstract void onManageFastPairAccountDevice(@NonNull android.nearby.FastPairDataProviderBase.FastPairManageAccountDeviceRequest, @NonNull android.nearby.FastPairDataProviderBase.FastPairManageActionCallback);
@@ -104,12 +106,12 @@ package android.nearby {
     method @NonNull public java.util.Collection<byte[]> getAccountKeys();
   }
 
-  public static interface FastPairDataProviderBase.FastPairAntispoofkeyDeviceMetadataCallback {
+  public static interface FastPairDataProviderBase.FastPairAntispoofKeyDeviceMetadataCallback {
     method public void onError(int, @Nullable String);
-    method public void onFastPairAntispoofkeyDeviceMetadataReceived(@NonNull android.nearby.FastPairAntispoofkeyDeviceMetadata);
+    method public void onFastPairAntispoofKeyDeviceMetadataReceived(@NonNull android.nearby.FastPairAntispoofKeyDeviceMetadata);
   }
 
-  public static class FastPairDataProviderBase.FastPairAntispoofkeyDeviceMetadataRequest {
+  public static class FastPairDataProviderBase.FastPairAntispoofKeyDeviceMetadataRequest {
     method @NonNull public byte[] getModelId();
   }
 
@@ -344,11 +346,10 @@ package android.nearby {
   }
 
   public static final class PresenceBroadcastRequest.Builder {
-    ctor public PresenceBroadcastRequest.Builder(@NonNull java.util.List<java.lang.Integer>, @NonNull byte[]);
+    ctor public PresenceBroadcastRequest.Builder(@NonNull java.util.List<java.lang.Integer>, @NonNull byte[], @NonNull android.nearby.PrivateCredential);
     method @NonNull public android.nearby.PresenceBroadcastRequest.Builder addAction(@IntRange(from=1, to=255) int);
     method @NonNull public android.nearby.PresenceBroadcastRequest.Builder addExtendedProperty(@NonNull android.nearby.DataElement);
     method @NonNull public android.nearby.PresenceBroadcastRequest build();
-    method @NonNull public android.nearby.PresenceBroadcastRequest.Builder setCredential(@NonNull android.nearby.PrivateCredential);
     method @NonNull public android.nearby.PresenceBroadcastRequest.Builder setTxPower(@IntRange(from=0xffffff81, to=126) int);
     method @NonNull public android.nearby.PresenceBroadcastRequest.Builder setVersion(int);
   }
@@ -386,19 +387,15 @@ package android.nearby {
   }
 
   public static final class PresenceDevice.Builder {
-    ctor public PresenceDevice.Builder();
+    ctor public PresenceDevice.Builder(@NonNull String, @NonNull byte[], @NonNull byte[], @NonNull byte[]);
     method @NonNull public android.nearby.PresenceDevice.Builder addExtendedProperty(@NonNull android.nearby.DataElement);
     method @NonNull public android.nearby.PresenceDevice.Builder addMedium(int);
     method @NonNull public android.nearby.PresenceDevice build();
-    method @NonNull public android.nearby.PresenceDevice.Builder setDeviceId(@NonNull String);
     method @NonNull public android.nearby.PresenceDevice.Builder setDeviceImageUrl(@Nullable String);
     method @NonNull public android.nearby.PresenceDevice.Builder setDeviceType(int);
     method @NonNull public android.nearby.PresenceDevice.Builder setDiscoveryTimestampMillis(long);
-    method @NonNull public android.nearby.PresenceDevice.Builder setEncryptedIdentity(@NonNull byte[]);
     method @NonNull public android.nearby.PresenceDevice.Builder setName(@Nullable String);
     method @NonNull public android.nearby.PresenceDevice.Builder setRssi(int);
-    method @NonNull public android.nearby.PresenceDevice.Builder setSalt(@NonNull byte[]);
-    method @NonNull public android.nearby.PresenceDevice.Builder setSecretId(@NonNull byte[]);
   }
 
   public final class PresenceScanFilter extends android.nearby.ScanFilter implements android.os.Parcelable {
