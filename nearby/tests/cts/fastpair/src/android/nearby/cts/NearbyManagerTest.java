@@ -65,6 +65,7 @@ public class NearbyManagerTest {
     private static final byte[] SECRETE_ID = new byte[]{1, 2, 3, 4};
     private static final byte[] META_DATA_ENCRYPTION_KEY = new byte[14];
     private static final byte[] AUTHENTICITY_KEY = new byte[]{0, 1, 1, 1};
+    private static final String DEVICE_NAME = "test_device";
     private static final int BLE_MEDIUM = 1;
 
     private Context mContext;
@@ -114,9 +115,9 @@ public class NearbyManagerTest {
     @Test
     @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void testStartStopBroadcast() throws InterruptedException {
-        PrivateCredential credential = new PrivateCredential.Builder(SECRETE_ID, AUTHENTICITY_KEY)
+        PrivateCredential credential = new PrivateCredential.Builder(SECRETE_ID, AUTHENTICITY_KEY,
+                META_DATA_ENCRYPTION_KEY, DEVICE_NAME)
                 .setIdentityType(IDENTITY_TYPE_PRIVATE)
-                .setMetadataEncryptionKey(META_DATA_ENCRYPTION_KEY)
                 .build();
         BroadcastRequest broadcastRequest =
                 new PresenceBroadcastRequest.Builder(

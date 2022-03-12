@@ -21,6 +21,8 @@ import android.annotation.SystemApi;
 import android.os.Parcel;
 import android.os.Parcelable;
 
+import com.android.internal.util.Preconditions;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -120,17 +122,33 @@ public final class PublicCredential extends PresenceCredential implements Parcel
         private final List<CredentialElement> mCredentialElements;
 
         private @IdentityType int mIdentityType;
-        private byte[] mSecretId;
-        private byte[] mAuthenticityKey;
-        private byte[] mPublicKey;
-        private byte[] mEncryptedMetadata;
-        private byte[] mEncryptedMetadataKeyTag;
+        private final byte[] mSecretId;
+        private final byte[] mAuthenticityKey;
+        private final byte[] mPublicKey;
+        private final byte[] mEncryptedMetadata;
+        private final byte[] mEncryptedMetadataKeyTag;
 
-        public Builder(@NonNull byte[] secretId, @NonNull byte[] authenticityKey) {
-            Objects.requireNonNull(secretId);
-            Objects.requireNonNull(authenticityKey);
+        public Builder(@NonNull byte[] secretId, @NonNull byte[] authenticityKey,
+                @NonNull byte[] publicKey, @NonNull byte[] encryptedMetadata,
+                @NonNull byte[] encryptedMetadataKeyTag) {
+            Preconditions.checkState(secretId != null && secretId.length > 0,
+                    "secret id cannot be empty");
+            Preconditions.checkState(authenticityKey != null && authenticityKey.length > 0,
+                    "authenticity key cannot be empty");
+            Preconditions.checkState(
+                    publicKey != null && publicKey.length > 0,
+                    "publicKey cannot be empty");
+            Preconditions.checkState(encryptedMetadata != null && encryptedMetadata.length > 0,
+                    "encryptedMetadata cannot be empty");
+            Preconditions.checkState(
+                    encryptedMetadataKeyTag != null && encryptedMetadataKeyTag.length > 0,
+                    "encryptedMetadataKeyTag cannot be empty");
+
             mSecretId = secretId;
             mAuthenticityKey = authenticityKey;
+            mPublicKey = publicKey;
+            mEncryptedMetadata = encryptedMetadata;
+            mEncryptedMetadataKeyTag = encryptedMetadataKeyTag;
             mCredentialElements = new ArrayList<>();
         }
 
@@ -150,36 +168,6 @@ public final class PublicCredential extends PresenceCredential implements Parcel
         public Builder addCredentialElement(@NonNull CredentialElement credentialElement) {
             Objects.requireNonNull(credentialElement);
             mCredentialElements.add(credentialElement);
-            return this;
-        }
-
-        /**
-         * Sets the public key for the credential.
-         */
-        @NonNull
-        public Builder setPublicKey(@NonNull byte[] publicKey) {
-            Objects.requireNonNull(publicKey);
-            mPublicKey = publicKey;
-            return this;
-        }
-
-        /**
-         * Sets the encrypted metadata.
-         */
-        @NonNull
-        public Builder setEncryptedMetadata(@NonNull byte[] encryptedMetadata) {
-            Objects.requireNonNull(encryptedMetadata);
-            mEncryptedMetadata = encryptedMetadata;
-            return this;
-        }
-
-        /**
-         * Sets the encrypted metadata key tag.
-         */
-        @NonNull
-        public Builder setEncryptedMetadataKeyTag(@NonNull byte[] encryptedMetadataKeyTag) {
-            Objects.requireNonNull(encryptedMetadataKeyTag);
-            mEncryptedMetadataKeyTag = encryptedMetadataKeyTag;
             return this;
         }
 

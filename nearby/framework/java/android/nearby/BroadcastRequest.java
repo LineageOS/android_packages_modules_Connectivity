@@ -19,10 +19,8 @@ package android.nearby;
 import android.annotation.IntDef;
 import android.annotation.IntRange;
 import android.annotation.NonNull;
-import android.annotation.SuppressLint;
 import android.annotation.SystemApi;
 import android.os.Parcel;
-import android.os.Parcelable;
 
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
@@ -35,8 +33,7 @@ import java.util.List;
  * @hide
  */
 @SystemApi
-@SuppressLint("ParcelNotFinal")  // BroadcastRequest constructor is not public
-public abstract class BroadcastRequest implements Parcelable {
+public abstract class BroadcastRequest {
 
     /** An unknown nearby broadcast request type. */
     public static final int BROADCAST_TYPE_UNKNOWN = -1;
@@ -91,25 +88,22 @@ public abstract class BroadcastRequest implements Parcelable {
         int MDNS = 2;
     }
 
-    public static final @NonNull Creator<BroadcastRequest> CREATOR =
-            new Creator<BroadcastRequest>() {
-                @Override
-                public BroadcastRequest createFromParcel(Parcel in) {
-                    int type = in.readInt();
-                    switch (type) {
-                        case BroadcastRequest.BROADCAST_TYPE_NEARBY_PRESENCE:
-                            return PresenceBroadcastRequest.createFromParcelBody(in);
-                        default:
-                            throw new IllegalStateException(
-                                    "Unexpected broadcast type (value " + type + ") in parcel.");
-                    }
-                }
-
-                @Override
-                public BroadcastRequest[] newArray(int size) {
-                    return new BroadcastRequest[size];
-                }
-            };
+    /**
+     * Creates a {@link BroadcastRequest} from parcel.
+     *
+     * @hide
+     */
+    @NonNull
+    public static BroadcastRequest createFromParcel(Parcel in) {
+        int type = in.readInt();
+        switch (type) {
+            case BroadcastRequest.BROADCAST_TYPE_NEARBY_PRESENCE:
+                return PresenceBroadcastRequest.createFromParcelBody(in);
+            default:
+                throw new IllegalStateException(
+                        "Unexpected broadcast type (value " + type + ") in parcel.");
+        }
+    }
 
     private final @BroadcastType int mType;
     private final @BroadcastVersion int mVersion;
@@ -163,16 +157,15 @@ public abstract class BroadcastRequest implements Parcelable {
         return mMediums;
     }
 
-    @Override
+    /**
+     * Writes the BroadcastRequest to the parcel.
+     *
+     * @hide
+     */
     public void writeToParcel(@NonNull Parcel dest, int flags) {
         dest.writeInt(mType);
         dest.writeInt(mVersion);
         dest.writeInt(mTxPower);
         dest.writeList(mMediums);
-    }
-
-    @Override
-    public int describeContents() {
-        return 0;
     }
 }

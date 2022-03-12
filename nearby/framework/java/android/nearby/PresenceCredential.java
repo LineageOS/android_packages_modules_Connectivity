@@ -18,10 +18,8 @@ package android.nearby;
 
 import android.annotation.IntDef;
 import android.annotation.NonNull;
-import android.annotation.SuppressLint;
 import android.annotation.SystemApi;
 import android.os.Parcel;
-import android.os.Parcelable;
 
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
@@ -34,8 +32,7 @@ import java.util.List;
  * @hide
  */
 @SystemApi
-@SuppressLint("ParcelNotFinal")  // PresenceCredential constructor is not public
-public abstract class PresenceCredential implements Parcelable {
+public abstract class PresenceCredential {
     /**
      * Private credential type.
      */
@@ -108,29 +105,6 @@ public abstract class PresenceCredential implements Parcelable {
                 CredentialElement.class);
     }
 
-
-    @NonNull
-    public static final Creator<PresenceCredential> CREATOR = new Creator<PresenceCredential>() {
-        @Override
-        public PresenceCredential createFromParcel(Parcel in) {
-            int type = in.readInt();
-            switch (type) {
-                case CREDENTIAL_TYPE_PRIVATE:
-                    return PrivateCredential.createFromParcelBody(in);
-                case CREDENTIAL_TYPE_PUBLIC:
-                    return PublicCredential.createFromParcelBody(in);
-                default:
-                    throw new IllegalStateException(
-                            "Unexpected credential type (value " + type + ") in parcel.");
-            }
-        }
-
-        @Override
-        public PresenceCredential[] newArray(int size) {
-            return new PresenceCredential[size];
-        }
-    };
-
     /**
      * Returns the type of the credential.
      */
@@ -169,12 +143,11 @@ public abstract class PresenceCredential implements Parcelable {
         return mCredentialElements;
     }
 
-    @Override
-    public int describeContents() {
-        return 0;
-    }
-
-    @Override
+    /**
+     * Writes the presence credential to the parcel.
+     *
+     * @hide
+     */
     public void writeToParcel(@NonNull Parcel dest, int flags) {
         dest.writeInt(mType);
         dest.writeInt(mIdentityType);

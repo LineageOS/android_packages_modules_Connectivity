@@ -18,10 +18,8 @@ package android.nearby;
 
 import android.annotation.IntRange;
 import android.annotation.NonNull;
-import android.annotation.SuppressLint;
 import android.annotation.SystemApi;
 import android.os.Parcel;
-import android.os.Parcelable;
 
 /**
  * Filter for scanning a nearby device.
@@ -29,28 +27,24 @@ import android.os.Parcelable;
  * @hide
  */
 @SystemApi
-@SuppressLint("ParcelNotFinal")  // ScanFilter constructor is not public
-public abstract class ScanFilter implements Parcelable {
-    public static final @NonNull Creator<ScanFilter> CREATOR = new Creator<ScanFilter>() {
-        @Override
-        public ScanFilter createFromParcel(Parcel in) {
-            int type = in.readInt();
-            switch (type) {
-                // Currently, only Nearby Presence filtering is supported, in the future
-                // filtering other nearby specifications will be added.
-                case ScanRequest.SCAN_TYPE_NEARBY_PRESENCE:
-                    return PresenceScanFilter.createFromParcelBody(in);
-                default:
-                    throw new IllegalStateException(
-                            "Unexpected scan type (value " + type + ") in parcel.");
-            }
+public abstract class ScanFilter {
+    /**
+     * Creates a {@link ScanFilter} from the parcel.
+     *
+     * @hide
+     */
+    public static ScanFilter createFromParcel(Parcel in) {
+        int type = in.readInt();
+        switch (type) {
+            // Currently, only Nearby Presence filtering is supported, in the future
+            // filtering other nearby specifications will be added.
+            case ScanRequest.SCAN_TYPE_NEARBY_PRESENCE:
+                return PresenceScanFilter.createFromParcelBody(in);
+            default:
+                throw new IllegalStateException(
+                        "Unexpected scan type (value " + type + ") in parcel.");
         }
-
-        @Override
-        public ScanFilter[] newArray(int size) {
-            return new ScanFilter[size];
-        }
-    };
+    }
 
     private final @ScanRequest.ScanType int mType;
     private final int mMaxPathLoss;
@@ -92,17 +86,14 @@ public abstract class ScanFilter implements Parcelable {
         return mMaxPathLoss;
     }
 
-    @Override
+    /**
+     *
+     * Writes the scan filter to the parcel.
+     *
+     * @hide
+     */
     public void writeToParcel(@NonNull Parcel dest, int flags) {
         dest.writeInt(mType);
         dest.writeInt(mMaxPathLoss);
-    }
-
-    /**
-     * No special parcel contents.
-     */
-    @Override
-    public int describeContents() {
-        return 0;
     }
 }
