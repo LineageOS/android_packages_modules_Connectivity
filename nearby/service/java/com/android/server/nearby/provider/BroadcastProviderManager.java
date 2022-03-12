@@ -47,7 +47,8 @@ public class BroadcastProviderManager implements BleBroadcastProvider.BroadcastL
     private IBroadcastListener mBroadcastListener;
 
     public BroadcastProviderManager(Context context, Injector injector) {
-        this(ForegroundThread.getExecutor(), new BleBroadcastProvider(injector));
+        this(ForegroundThread.getExecutor(),
+                new BleBroadcastProvider(injector, ForegroundThread.getExecutor()));
     }
 
     @VisibleForTesting
@@ -64,7 +65,8 @@ public class BroadcastProviderManager implements BleBroadcastProvider.BroadcastL
      */
     public void startBroadcast(BroadcastRequest broadcastRequest, IBroadcastListener listener) {
         synchronized (mLock) {
-            if (!mNearbyConfiguration.isPresenceBroadcastLegacyEnabled()) {
+            NearbyConfiguration configuration = new NearbyConfiguration();
+            if (!configuration.isPresenceBroadcastLegacyEnabled()) {
                 reportBroadcastStatus(listener, BroadcastCallback.STATUS_FAILURE);
                 return;
             }

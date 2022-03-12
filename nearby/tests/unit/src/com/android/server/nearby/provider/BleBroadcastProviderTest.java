@@ -31,6 +31,8 @@ import androidx.test.core.app.ApplicationProvider;
 import com.android.server.nearby.injector.ContextHubManagerAdapter;
 import com.android.server.nearby.injector.Injector;
 
+import com.google.common.util.concurrent.MoreExecutors;
+
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -51,7 +53,8 @@ public class BleBroadcastProviderTest {
 
     @Before
     public void setUp() {
-        mBleBroadcastProvider = new BleBroadcastProvider(new TestInjector());
+        mBleBroadcastProvider = new BleBroadcastProvider(new TestInjector(),
+                MoreExecutors.directExecutor());
     }
 
     @Test
