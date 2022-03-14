@@ -159,7 +159,7 @@ java_library {
     static_libs: [
         "service-connectivity-pre-jarjar",
         "service-connectivity-tiramisu-pre-jarjar",
-        "service-nearby",
+        "service-nearby-pre-jarjar",
     ],
     jarjar_rules: ":connectivity-jarjar-rules",
     apex_available: [

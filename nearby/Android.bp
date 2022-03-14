@@ -30,7 +30,7 @@ filegroup {
 
 
 java_library {
-    name: "service-nearby",
+    name: "service-nearby-pre-jarjar",
     srcs: ["service-src/**/*.java"],
     sdk_version: "module_current",
     min_sdk_version: "30",
