@@ -60,6 +60,10 @@ public class EthernetServiceImplTest {
             new EthernetNetworkUpdateRequest.Builder()
                     .setIpConfiguration(new IpConfiguration())
                     .build();
+    private static final EthernetNetworkUpdateRequest UPDATE_REQUEST_WITHOUT_IP_CONFIG =
+            new EthernetNetworkUpdateRequest.Builder()
+                    .setNetworkCapabilities(new NetworkCapabilities.Builder().build())
+                    .build();
     private static final IEthernetNetworkManagementListener NULL_LISTENER = null;
     private EthernetServiceImpl mEthernetServiceImpl;
     @Mock private Context mContext;
@@ -273,6 +277,15 @@ public class EthernetServiceImplTest {
         verify(mEthernetTracker).updateConfiguration(eq(TEST_IFACE),
                 eq(request.getIpConfiguration()),
                 eq(request.getNetworkCapabilities()), isNull());
+    }
+
+    @Test
+    public void testUpdateConfigurationAcceptsRequestWithNullIpConfiguration() {
+        mEthernetServiceImpl.updateConfiguration(TEST_IFACE, UPDATE_REQUEST_WITHOUT_IP_CONFIG,
+                NULL_LISTENER);
+        verify(mEthernetTracker).updateConfiguration(eq(TEST_IFACE),
+                eq(UPDATE_REQUEST_WITHOUT_IP_CONFIG.getIpConfiguration()),
+                eq(UPDATE_REQUEST_WITHOUT_IP_CONFIG.getNetworkCapabilities()), isNull());
     }
 
     @Test

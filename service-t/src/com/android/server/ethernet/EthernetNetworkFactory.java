@@ -233,7 +233,8 @@ public class EthernetNetworkFactory extends NetworkFactory {
      * Update a network's configuration and restart it if necessary.
      *
      * @param ifaceName the interface name of the network to be updated.
-     * @param ipConfig the desired {@link IpConfiguration} for the given network.
+     * @param ipConfig the desired {@link IpConfiguration} for the given network or null. If
+     *                 {@code null} is passed, the existing IpConfiguration is not updated.
      * @param capabilities the desired {@link NetworkCapabilities} for the given network. If
      *                     {@code null} is passed, then the network's current
      *                     {@link NetworkCapabilities} will be used in support of existing APIs as
@@ -243,7 +244,7 @@ public class EthernetNetworkFactory extends NetworkFactory {
      */
     @VisibleForTesting(visibility = VisibleForTesting.Visibility.PACKAGE)
     protected void updateInterface(@NonNull final String ifaceName,
-            @NonNull final IpConfiguration ipConfig,
+            @Nullable final IpConfiguration ipConfig,
             @Nullable final NetworkCapabilities capabilities,
             @Nullable final IEthernetNetworkManagementListener listener) {
         if (!hasInterface(ifaceName)) {
@@ -499,7 +500,7 @@ public class EthernetNetworkFactory extends NetworkFactory {
             mLegacyType = getLegacyType(mCapabilities);
         }
 
-        void updateInterface(@NonNull final IpConfiguration ipConfig,
+        void updateInterface(@Nullable final IpConfiguration ipConfig,
                 @Nullable final NetworkCapabilities capabilities,
                 @Nullable final IEthernetNetworkManagementListener listener) {
             if (DBG) {
@@ -510,7 +511,9 @@ public class EthernetNetworkFactory extends NetworkFactory {
                 );
             }
 
-            mIpConfig = ipConfig;
+            if (null != ipConfig){
+                mIpConfig = ipConfig;
+            }
             if (null != capabilities) {
                 setCapabilities(capabilities);
             }

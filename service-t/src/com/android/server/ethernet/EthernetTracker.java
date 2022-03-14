@@ -289,15 +289,20 @@ public class EthernetTracker {
 
     @VisibleForTesting(visibility = PACKAGE)
     protected void updateConfiguration(@NonNull final String iface,
-            @NonNull final IpConfiguration ipConfig,
+            @Nullable final IpConfiguration ipConfig,
             @Nullable final NetworkCapabilities capabilities,
             @Nullable final IEthernetNetworkManagementListener listener) {
         if (DBG) {
             Log.i(TAG, "updateConfiguration, iface: " + iface + ", capabilities: " + capabilities
                     + ", ipConfig: " + ipConfig);
         }
-        final IpConfiguration localIpConfig = new IpConfiguration(ipConfig);
-        writeIpConfiguration(iface, localIpConfig);
+
+        final IpConfiguration localIpConfig = ipConfig == null
+                ? null : new IpConfiguration(ipConfig);
+        if (ipConfig != null) {
+            writeIpConfiguration(iface, localIpConfig);
+        }
+
         if (null != capabilities) {
             mNetworkCapabilities.put(iface, capabilities);
         }
