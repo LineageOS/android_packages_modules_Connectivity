@@ -90,7 +90,7 @@ package android.net {
     method @NonNull public android.net.NetworkStatsCollection build();
   }
 
-  public static class NetworkStatsCollection.Key {
+  public static final class NetworkStatsCollection.Key {
     ctor public NetworkStatsCollection.Key(@NonNull java.util.Set<android.net.NetworkIdentity>, int, int, int);
   }
 
