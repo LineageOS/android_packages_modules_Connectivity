@@ -160,7 +160,7 @@ public class DiscoveryProviderManager implements AbstractDiscoveryProvider.Liste
     }
 
     private void startProviders(ScanRequest scanRequest) {
-        if (scanRequest.isEnableBle()) {
+        if (scanRequest.isBleEnabled()) {
             startBleProvider(scanRequest);
         }
     }

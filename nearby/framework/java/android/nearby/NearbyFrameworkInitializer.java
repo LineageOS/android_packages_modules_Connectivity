@@ -25,7 +25,7 @@ import android.content.Context;
  *
  * @hide
  */
-@SystemApi
+@SystemApi(client = SystemApi.Client.MODULE_LIBRARIES)
 public final class NearbyFrameworkInitializer {
 
     private NearbyFrameworkInitializer() {}
