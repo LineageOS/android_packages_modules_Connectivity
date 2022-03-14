@@ -34,6 +34,7 @@ import androidx.annotation.NonNull;
 import com.android.internal.util.StateMachine;
 import com.android.networkstack.apishim.BluetoothPanShimImpl;
 import com.android.networkstack.apishim.common.BluetoothPanShim;
+import com.android.networkstack.tethering.metrics.TetheringMetrics;
 
 import java.util.ArrayList;
 
@@ -162,5 +163,12 @@ public abstract class TetheringDependencies {
      */
     public BluetoothPanShim getBluetoothPanShim(BluetoothPan pan) {
         return BluetoothPanShimImpl.newInstance(pan);
+    }
+
+    /**
+     * Get a reference to the TetheringMetrics to be used by tethering.
+     */
+    public TetheringMetrics getTetheringMetrics() {
+        return new TetheringMetrics();
     }
 }
