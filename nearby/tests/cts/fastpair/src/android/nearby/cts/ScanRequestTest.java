@@ -96,7 +96,7 @@ public class ScanRequestTest {
         ScanRequest request = new ScanRequest.Builder()
                 .setScanType(SCAN_TYPE_NEARBY_SHARE)
                 .setScanMode(SCAN_MODE_BALANCED)
-                .setEnableBle(true)
+                .setBleEnabled(true)
                 .setWorkSource(workSource)
                 .build();
 
@@ -125,7 +125,7 @@ public class ScanRequestTest {
                 .setScanType(SCAN_TYPE_FAST_PAIR)
                 .build();
 
-        assertThat(request.isEnableBle()).isTrue();
+        assertThat(request.isBleEnabled()).isTrue();
     }
 
     @Test

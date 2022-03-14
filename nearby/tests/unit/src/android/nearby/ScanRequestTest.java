@@ -108,7 +108,7 @@ public class ScanRequestTest {
         ScanRequest request = new ScanRequest.Builder()
                 .setScanType(SCAN_TYPE_NEARBY_SHARE)
                 .setScanMode(SCAN_MODE_BALANCED)
-                .setEnableBle(true)
+                .setBleEnabled(true)
                 .setWorkSource(workSource)
                 .build();
 
@@ -137,7 +137,7 @@ public class ScanRequestTest {
         ScanRequest originalRequest = new ScanRequest.Builder()
                 .setScanType(scanType)
                 .setScanMode(SCAN_MODE_BALANCED)
-                .setEnableBle(true)
+                .setBleEnabled(true)
                 .setWorkSource(workSource)
                 .build();
 
