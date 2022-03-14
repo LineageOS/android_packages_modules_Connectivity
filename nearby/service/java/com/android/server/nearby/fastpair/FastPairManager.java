@@ -22,6 +22,7 @@ import android.annotation.Nullable;
 import android.annotation.WorkerThread;
 import android.app.KeyguardManager;
 import android.bluetooth.BluetoothAdapter;
+import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothManager;
 import android.content.BroadcastReceiver;
 import android.content.ContentResolver;
@@ -48,7 +49,6 @@ import com.android.server.nearby.common.bluetooth.fastpair.PairingException;
 import com.android.server.nearby.common.bluetooth.fastpair.Preferences;
 import com.android.server.nearby.common.bluetooth.fastpair.ReflectionException;
 import com.android.server.nearby.common.bluetooth.fastpair.SimpleBroadcastReceiver;
-import com.android.server.nearby.common.bluetooth.testability.android.bluetooth.BluetoothDevice;
 import com.android.server.nearby.common.eventloop.Annotations;
 import com.android.server.nearby.common.eventloop.EventLoop;
 import com.android.server.nearby.common.eventloop.NamedRunnable;
@@ -106,6 +106,8 @@ public class FastPairManager {
             if (intent.getAction().equals(Intent.ACTION_SCREEN_ON)) {
                 Log.d(TAG, "onReceive: ACTION_SCREEN_ON.");
                 invalidateScan();
+            } else if (intent.getAction().equals(BluetoothDevice.ACTION_BOND_STATE_CHANGED)) {
+                processBluetoothConnectionEvent(intent);
             }
         }
     };
@@ -146,6 +148,7 @@ public class FastPairManager {
     public void initiate() {
         mIntentFilter.addAction(Intent.ACTION_SCREEN_ON);
         mIntentFilter.addAction(Intent.ACTION_SCREEN_OFF);
+        mIntentFilter.addAction(BluetoothDevice.ACTION_BOND_STATE_CHANGED);
 
         mLocatorContextWrapper.getContext()
                 .registerReceiver(mScreenBroadcastReceiver, mIntentFilter);
