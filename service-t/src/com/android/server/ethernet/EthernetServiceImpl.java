@@ -215,11 +215,28 @@ public class EthernetServiceImpl extends IEthernetManager.Stub {
                 "EthernetServiceImpl");
     }
 
-    private void validateTestCapabilities(@Nullable final NetworkCapabilities nc) {
-        // For test capabilities, only null or capabilities that include TRANSPORT_TEST are allowed.
+    private void maybeValidateTestCapabilities(final String iface,
+            @Nullable final NetworkCapabilities nc) {
+        if (!mTracker.isValidTestInterface(iface)) {
+            return;
+        }
+        // For test interfaces, only null or capabilities that include TRANSPORT_TEST are
+        // allowed.
         if (nc != null && !nc.hasTransport(TRANSPORT_TEST)) {
             throw new IllegalArgumentException(
                     "Updates to test interfaces must have NetworkCapabilities.TRANSPORT_TEST.");
+        }
+    }
+
+    private void enforceAdminPermission(final String iface, boolean enforceAutomotive,
+            final String logMessage) {
+        if (mTracker.isValidTestInterface(iface)) {
+            enforceManageTestNetworksPermission();
+        } else {
+            enforceNetworkManagementPermission();
+            if (enforceAutomotive) {
+                enforceAutomotiveDevice(logMessage);
+            }
         }
     }
 
@@ -231,19 +248,11 @@ public class EthernetServiceImpl extends IEthernetManager.Stub {
         Objects.requireNonNull(request);
         throwIfEthernetNotStarted();
 
-        if (mTracker.isValidTestInterface(iface)) {
-            enforceManageTestNetworksPermission();
-            validateTestCapabilities(request.getNetworkCapabilities());
-            // TODO: use NetworkCapabilities#restrictCapabilitiesForTestNetwork when available on a
-            //  local NetworkCapabilities copy to pass to mTracker.updateConfiguration.
-        } else {
-            enforceNetworkManagementPermission();
-            if (request.getNetworkCapabilities() != null) {
-                // only automotive devices are allowed to set the NetworkCapabilities using this API
-                enforceAutomotiveDevice("updateConfiguration() with non-null capabilities");
-            }
-        }
         // TODO: validate that iface is listed in overlay config_ethernet_interfaces
+        // only automotive devices are allowed to set the NetworkCapabilities using this API
+        enforceAdminPermission(iface, request.getNetworkCapabilities() != null,
+                "updateConfiguration() with non-null capabilities");
+        maybeValidateTestCapabilities(iface, request.getNetworkCapabilities());
 
         mTracker.updateConfiguration(
                 iface, request.getIpConfiguration(), request.getNetworkCapabilities(), listener);
@@ -256,13 +265,7 @@ public class EthernetServiceImpl extends IEthernetManager.Stub {
         Objects.requireNonNull(iface);
         throwIfEthernetNotStarted();
 
-        if (mTracker.isValidTestInterface(iface)) {
-            enforceManageTestNetworksPermission();
-        } else {
-            // only automotive devices are allowed to use this API.
-            enforceNetworkManagementPermission();
-            enforceAutomotiveDevice("connectNetwork()");
-        }
+        enforceAdminPermission(iface, true, "connectNetwork()");
 
         mTracker.connectNetwork(iface, listener);
     }
@@ -274,13 +277,7 @@ public class EthernetServiceImpl extends IEthernetManager.Stub {
         Objects.requireNonNull(iface);
         throwIfEthernetNotStarted();
 
-        if (mTracker.isValidTestInterface(iface)) {
-            enforceManageTestNetworksPermission();
-        } else {
-            // only automotive devices are allowed to use this API.
-            enforceNetworkManagementPermission();
-            enforceAutomotiveDevice("disconnectNetwork()");
-        }
+        enforceAdminPermission(iface, true, "connectNetwork()");
 
         mTracker.disconnectNetwork(iface, listener);
     }
