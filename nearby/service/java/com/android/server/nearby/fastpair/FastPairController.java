@@ -163,6 +163,28 @@ public class FastPairController {
     }
 
     /**
+     * Subsequent pairing entry.
+     */
+    public void pair(DiscoveryItem item,
+            @Nullable byte[] accountKey,
+            @Nullable String companionApp) {
+        FastPairNotificationManager fastPairNotificationManager =
+                new FastPairNotificationManager(mContext, item, false);
+        FastPairHalfSheetManager fastPairHalfSheetManager =
+                Locator.get(mContext, FastPairHalfSheetManager.class);
+        PairingProgressHandlerBase pairingProgressHandlerBase =
+                PairingProgressHandlerBase.create(
+                        mContext,
+                        item,
+                        /* companionApp= */ null,
+                        /* accountKey= */ accountKey,
+                        mFootprintsDeviceManager,
+                        fastPairNotificationManager,
+                        fastPairHalfSheetManager,
+                        /* isRetroactivePair= */ false);
+        pair(item, accountKey, companionApp, pairingProgressHandlerBase);
+    }
+    /**
      * Pairing function
      */
     @Annotations.EventThread

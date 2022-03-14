@@ -31,6 +31,7 @@ import com.android.server.nearby.common.ble.decode.FastPairDecoder;
 import com.android.server.nearby.common.bloomfilter.BloomFilter;
 import com.android.server.nearby.common.bloomfilter.FastPairBloomFilterHasher;
 import com.android.server.nearby.common.locator.Locator;
+import com.android.server.nearby.fastpair.cache.DiscoveryItem;
 import com.android.server.nearby.fastpair.cache.FastPairCacheManager;
 import com.android.server.nearby.fastpair.halfsheet.FastPairHalfSheetManager;
 import com.android.server.nearby.provider.FastPairDataProvider;
@@ -49,6 +50,8 @@ import service.proto.Rpcs;
 public class FastPairAdvHandler {
     Context mContext;
     String mBleAddress;
+    // Need to be deleted after notification manager in use.
+    private boolean mIsFirst = false;
 
     /** The types about how the bloomfilter is processed. */
     public enum ProcessBloomFilterType {
@@ -131,7 +134,29 @@ public class FastPairAdvHandler {
                             Log.d(TAG, "bloom filter is recognized in the cache");
                             continue;
                         } else {
-                            Log.d(TAG, "bloom filter is not recognized not paired before");
+                            Log.d(TAG, "bloom filter is recognized not paired before should"
+                                    + "show subsequent pairing notification");
+                            if (mIsFirst) {
+                                mIsFirst = false;
+                                // Get full info from api the initial request will only return
+                                // part of the info due to size limit.
+                                List<Data.FastPairDeviceWithAccountKey> resList =
+                                        dataProvider.loadFastPairDeviceWithAccountKey(account,
+                                        List.of(recognizedDevice.getAccountKey().toByteArray()));
+                                if (resList != null && resList.size() > 0) {
+                                    //Saved device from footprint does not have ble address so
+                                    // fill ble address with current scan result.
+                                    Cache.StoredDiscoveryItem storedDiscoveryItem =
+                                            resList.get(0).getDiscoveryItem().toBuilder()
+                                                    .setMacAddress(
+                                                            fastPairDevice.getBluetoothAddress())
+                                                    .build();
+                                    Locator.get(mContext, FastPairController.class).pair(
+                                            new DiscoveryItem(mContext, storedDiscoveryItem),
+                                            resList.get(0).getAccountKey().toByteArray(),
+                                            /** companionApp=*/ null);
+                                }
+                            }
                         }
 
                         return;
