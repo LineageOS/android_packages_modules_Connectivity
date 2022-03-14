@@ -426,6 +426,8 @@ public class ClatCoordinatorTest {
 
         // [3] Expect clatd to stop successfully.
         coordinator.clatStop();
+        inOrder.verify(mEgressMap).deleteEntry(eq(EGRESS_KEY));
+        inOrder.verify(mIngressMap).deleteEntry(eq(INGRESS_KEY));
         inOrder.verify(mDeps).stopClatd(eq(BASE_IFACE), eq(NAT64_PREFIX_STRING),
                 eq(XLAT_LOCAL_IPV4ADDR_STRING), eq(XLAT_LOCAL_IPV6ADDR_STRING), eq(CLATD_PID));
         inOrder.verify(mDeps).untagSocket(eq(RAW_SOCK_COOKIE));

@@ -563,6 +563,27 @@ public class ClatCoordinator {
         return v6Str;
     }
 
+    private void maybeStopBpf(final ClatdTracker tracker) {
+        if (mIngressMap == null || mEgressMap == null) return;
+
+        final ClatEgress4Key txKey = new ClatEgress4Key(tracker.v4ifIndex, tracker.v4);
+        try {
+            mEgressMap.deleteEntry(txKey);
+        } catch (ErrnoException | IllegalStateException e) {
+            Log.e(TAG, "Could not delete entry (" + txKey + "): " + e);
+        }
+
+        final ClatIngress6Key rxKey = new ClatIngress6Key(tracker.ifIndex, tracker.pfx96,
+                tracker.v6);
+        try {
+            mIngressMap.deleteEntry(rxKey);
+        } catch (ErrnoException | IllegalStateException e) {
+            Log.e(TAG, "Could not delete entry (" + rxKey + "): " + e);
+        }
+
+        // TODO: dettach program.
+    }
+
     /**
      * Stop clatd
      */
@@ -572,6 +593,7 @@ public class ClatCoordinator {
         }
         Log.i(TAG, "Stopping clatd pid=" + mClatdTracker.pid + " on " + mClatdTracker.iface);
 
+        maybeStopBpf(mClatdTracker);
         mDeps.stopClatd(mClatdTracker.iface, mClatdTracker.pfx96.getHostAddress(),
                 mClatdTracker.v4.getHostAddress(), mClatdTracker.v6.getHostAddress(),
                 mClatdTracker.pid);

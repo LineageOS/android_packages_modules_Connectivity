@@ -139,26 +139,6 @@ void maybeStopBpf(const ClatdTracker& tracker) {
         ALOGE("tcFilterDelDevEgressClatIpv4(%d[%s]) failure: %s", tracker.v4ifIndex,
               tracker.v4iface, strerror(-rv));
     }
-
-    // We cleanup the maps last, so scanning through them can be used to
-    // determine what still needs cleanup.
-
-    ClatEgress4Key txKey = {
-            .iif = tracker.v4ifIndex,
-            .local4 = tracker.v4,
-    };
-
-    auto ret = mClatEgress4Map.deleteValue(txKey);
-    if (!ret.ok()) ALOGE("mClatEgress4Map.deleteValue failure: %s", strerror(ret.error().code()));
-
-    ClatIngress6Key rxKey = {
-            .iif = tracker.ifIndex,
-            .pfx96 = tracker.pfx96,
-            .local6 = tracker.v6,
-    };
-
-    ret = mClatIngress6Map.deleteValue(rxKey);
-    if (!ret.ok()) ALOGE("mClatIngress6Map.deleteValue failure: %s", strerror(ret.error().code()));
 }
 
 }  // namespace clat
