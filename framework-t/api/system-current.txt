@@ -324,10 +324,6 @@ package android.nearby {
     method @NonNull public android.nearby.NearbyDeviceParcelable.Builder setRssi(int);
   }
 
-  public final class NearbyFrameworkInitializer {
-    method public static void registerServiceWrappers();
-  }
-
   public class NearbyManager {
     method public static boolean getFastPairScanEnabled(@NonNull android.content.Context, boolean);
     method public static void setFastPairScanEnabled(@NonNull android.content.Context, boolean);
@@ -466,7 +462,7 @@ package android.nearby {
     method public int getScanMode();
     method public int getScanType();
     method @NonNull public android.os.WorkSource getWorkSource();
-    method public boolean isEnableBle();
+    method public boolean isBleEnabled();
     method public static boolean isValidScanMode(int);
     method public static boolean isValidScanType(int);
     method @NonNull public static String scanModeToString(int);
@@ -486,7 +482,7 @@ package android.nearby {
     ctor public ScanRequest.Builder();
     method @NonNull public android.nearby.ScanRequest.Builder addScanFilter(@NonNull android.nearby.ScanFilter);
     method @NonNull public android.nearby.ScanRequest build();
-    method @NonNull public android.nearby.ScanRequest.Builder setEnableBle(boolean);
+    method @NonNull public android.nearby.ScanRequest.Builder setBleEnabled(boolean);
     method @NonNull public android.nearby.ScanRequest.Builder setScanMode(int);
     method @NonNull public android.nearby.ScanRequest.Builder setScanType(int);
     method @NonNull @RequiresPermission(android.Manifest.permission.UPDATE_DEVICE_STATS) public android.nearby.ScanRequest.Builder setWorkSource(@Nullable android.os.WorkSource);
