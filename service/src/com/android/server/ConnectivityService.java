@@ -2172,7 +2172,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
 
     @Override
     @Nullable
-    public LinkProperties redactLinkPropertiesForPackage(@NonNull LinkProperties lp, int uid,
+    public LinkProperties getRedactedLinkPropertiesForPackage(@NonNull LinkProperties lp, int uid,
             @NonNull String packageName, @Nullable String callingAttributionTag) {
         Objects.requireNonNull(packageName);
         Objects.requireNonNull(lp);
@@ -2207,8 +2207,9 @@ public class ConnectivityService extends IConnectivityManager.Stub
     }
 
     @Override
-    public NetworkCapabilities redactNetworkCapabilitiesForPackage(@NonNull NetworkCapabilities nc,
-            int uid, @NonNull String packageName, @Nullable String callingAttributionTag) {
+    public NetworkCapabilities getRedactedNetworkCapabilitiesForPackage(
+            @NonNull NetworkCapabilities nc, int uid, @NonNull String packageName,
+            @Nullable String callingAttributionTag) {
         Objects.requireNonNull(nc);
         Objects.requireNonNull(packageName);
         enforceNetworkStackOrSettingsPermission();
