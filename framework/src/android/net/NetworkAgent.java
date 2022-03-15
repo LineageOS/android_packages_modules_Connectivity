@@ -434,6 +434,14 @@ public abstract class NetworkAgent {
      */
     public static final int CMD_DSCP_POLICY_STATUS = BASE + 28;
 
+    /**
+     * Sent by the NetworkAgent to ConnectivityService to notify that this network is expected to be
+     * replaced within the specified time by a similar network.
+     * arg1 = timeout in milliseconds
+     * @hide
+     */
+    public static final int EVENT_DESTROY_AND_AWAIT_REPLACEMENT = BASE + 29;
+
     private static NetworkInfo getLegacyNetworkInfo(final NetworkAgentConfig config) {
         final NetworkInfo ni = new NetworkInfo(config.legacyType, config.legacySubType,
                 config.legacyTypeName, config.legacySubTypeName);
@@ -940,6 +948,45 @@ public abstract class NetworkAgent {
     public void setTeardownDelayMillis(
             @IntRange(from = 0, to = MAX_TEARDOWN_DELAY_MS) int teardownDelayMillis) {
         queueOrSendMessage(reg -> reg.sendTeardownDelayMs(teardownDelayMillis));
+    }
+
+    /**
+     * Indicates that this agent will likely soon be replaced by another agent for a very similar
+     * network (e.g., same Wi-Fi SSID).
+     *
+     * If the network is not currently satisfying any {@link NetworkRequest}s, it will be torn down.
+     * If it is satisfying requests, then the native network corresponding to the agent will be
+     * destroyed immediately, but the agent will remain registered and will continue to satisfy
+     * requests until {@link #unregister} is called, the network is replaced by an equivalent or
+     * better network, or the specified timeout expires. During this time:
+     *
+     * <ul>
+     * <li>The agent may not send any further updates, for example by calling methods
+     *    such as {@link #sendNetworkCapabilities}, {@link #sendLinkProperties},
+     *    {@link #sendNetworkScore(NetworkScore)} and so on. Any such updates will be ignored.
+     * <li>The network will remain connected and continue to satisfy any requests that it would
+     *    otherwise satisfy (including, possibly, the default request).
+     * <li>The validation state of the network will not change, and calls to
+     *    {@link ConnectivityManager#reportNetworkConnectivity(Network, boolean)} will be ignored.
+     * </ul>
+     *
+     * Once this method is called, it is not possible to restore the agent to a functioning state.
+     * If a replacement network becomes available, then a new agent must be registered. When that
+     * replacement network is fully capable of replacing this network (including, possibly, being
+     * validated), this agent will no longer be needed and will be torn down. Otherwise, this agent
+     * can be disconnected by calling {@link #unregister}. If {@link #unregister} is not called,
+     * this agent will automatically be unregistered when the specified timeout expires. Any
+     * teardown delay previously set using{@link #setTeardownDelayMillis} is ignored.
+     *
+     * <p>This method has no effect if {@link #markConnected} has not yet been called.
+     * <p>This method may only be called once.
+     *
+     * @param timeoutMillis the timeout after which this network will be unregistered even if
+     *                      {@link #unregister} was not called.
+     */
+    public void destroyAndAwaitReplacement(
+            @IntRange(from = 0, to = MAX_TEARDOWN_DELAY_MS) int timeoutMillis) {
+        queueOrSendMessage(reg -> reg.sendDestroyAndAwaitReplacement(timeoutMillis));
     }
 
     /**
