@@ -732,6 +732,12 @@ public class NetworkAgentInfo implements Comparable<NetworkAgentInfo>, NetworkRa
             mHandler.obtainMessage(NetworkAgent.EVENT_REMOVE_ALL_DSCP_POLICIES,
                     new Pair<>(NetworkAgentInfo.this, null)).sendToTarget();
         }
+
+        @Override
+        public void sendDestroyAndAwaitReplacement(final int timeoutMillis) {
+            mHandler.obtainMessage(NetworkAgent.EVENT_DESTROY_AND_AWAIT_REPLACEMENT,
+                    new Pair<>(NetworkAgentInfo.this, timeoutMillis)).sendToTarget();
+        }
     }
 
     /**
@@ -976,7 +982,7 @@ public class NetworkAgentInfo implements Comparable<NetworkAgentInfo>, NetworkRa
     /**
      * Update the ConnectivityService-managed bits in the score.
      *
-     * Call this after updating the network agent config.
+     * Call this after changing any data that might affect the score (e.g., agent config).
      */
     public void updateScoreForNetworkAgentUpdate() {
         mScore = mScore.mixInScore(networkCapabilities, networkAgentConfig,
@@ -1256,6 +1262,8 @@ public class NetworkAgentInfo implements Comparable<NetworkAgentInfo>, NetworkRa
                 + "network{" + network + "}  handle{" + network.getNetworkHandle() + "}  ni{"
                 + networkInfo.toShortString() + "} "
                 + mScore + " "
+                + (created ? " created" : "")
+                + (destroyed ? " destroyed" : "")
                 + (isNascent() ? " nascent" : (isLingering() ? " lingering" : ""))
                 + (everValidated ? " everValidated" : "")
                 + (lastValidated ? " lastValidated" : "")
