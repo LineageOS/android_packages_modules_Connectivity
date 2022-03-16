@@ -31,7 +31,6 @@ import com.android.server.nearby.NearbyService;
  */
 public final class ConnectivityServiceInitializer extends SystemService {
     private static final String TAG = ConnectivityServiceInitializer.class.getSimpleName();
-    private final Context mContext;
     private final ConnectivityService mConnectivity;
     private final IpSecService mIpSecService;
     private final NsdService mNsdService;
@@ -40,7 +39,6 @@ public final class ConnectivityServiceInitializer extends SystemService {
 
     public ConnectivityServiceInitializer(Context context) {
         super(context);
-        mContext = context;
         // Load JNI libraries used by ConnectivityService and its dependencies
         System.loadLibrary("service-connectivity");
         mEthernetServiceImpl = createEthernetService(context);
@@ -52,7 +50,7 @@ public final class ConnectivityServiceInitializer extends SystemService {
 
     @Override
     public void onStart() {
-        if (mConnectivity.deviceSupportsEthernet(mContext)) {
+        if (mEthernetServiceImpl != null) {
             Log.i(TAG, "Registering " + Context.ETHERNET_SERVICE);
             publishBinderService(Context.ETHERNET_SERVICE, mEthernetServiceImpl,
                     /* allowIsolated= */ false);
