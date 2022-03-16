@@ -31,8 +31,9 @@ open class TestableNetworkStatsProviderCbBinder : NetworkStatsProviderCbStubComp
             val ifaceStats: NetworkStats,
             val uidStats: NetworkStats
         ) : CallbackType()
+        object NotifyWarningReached : CallbackType()
+        object NotifyLimitReached : CallbackType()
         object NotifyWarningOrLimitReached : CallbackType()
-        object LegacyNotifyLimitReached : CallbackType()
         object NotifyAlertReached : CallbackType()
         object Unregister : CallbackType()
     }
@@ -43,13 +44,17 @@ open class TestableNetworkStatsProviderCbBinder : NetworkStatsProviderCbStubComp
         history.add(CallbackType.NotifyStatsUpdated(token, ifaceStats, uidStats))
     }
 
-    override fun notifyWarningOrLimitReached() {
-        history.add(CallbackType.NotifyWarningOrLimitReached)
+    override fun notifyWarningReached() {
+        history.add(CallbackType.NotifyWarningReached)
     }
 
     override fun notifyLimitReached() {
-        // Older callback renamed to notifyWarningOrLimitReached in S
-        history.add(CallbackType.LegacyNotifyLimitReached)
+        history.add(CallbackType.NotifyLimitReached)
+    }
+
+    override fun notifyWarningOrLimitReached() {
+        // Older callback is split into notifyLimitReached and notifyWarningReached in T.
+        history.add(CallbackType.NotifyWarningOrLimitReached)
     }
 
     override fun notifyAlertReached() {
@@ -75,11 +80,14 @@ open class TestableNetworkStatsProviderCbBinder : NetworkStatsProviderCbStubComp
         assertNetworkStatsEquals(uidStats, event.uidStats)
     }
 
+    fun expectNotifyWarningReached() =
+            assertEquals(CallbackType.NotifyWarningReached, history.poll(DEFAULT_TIMEOUT_MS))
+
+    fun expectNotifyLimitReached() =
+            assertEquals(CallbackType.NotifyLimitReached, history.poll(DEFAULT_TIMEOUT_MS))
+
     fun expectNotifyWarningOrLimitReached() =
             assertEquals(CallbackType.NotifyWarningOrLimitReached, history.poll(DEFAULT_TIMEOUT_MS))
-
-    fun expectLegacyNotifyLimitReached() =
-            assertEquals(CallbackType.LegacyNotifyLimitReached, history.poll(DEFAULT_TIMEOUT_MS))
 
     fun expectNotifyAlertReached() =
             assertEquals(CallbackType.NotifyAlertReached, history.poll(DEFAULT_TIMEOUT_MS))
