@@ -18,7 +18,6 @@ package com.android.networkstack.tethering;
 
 import static android.Manifest.permission.NETWORK_SETTINGS;
 import static android.Manifest.permission.NETWORK_STACK;
-import static android.content.pm.PackageManager.GET_ACTIVITIES;
 import static android.content.pm.PackageManager.PERMISSION_GRANTED;
 import static android.hardware.usb.UsbManager.USB_CONFIGURED;
 import static android.hardware.usb.UsbManager.USB_CONNECTED;
@@ -319,8 +318,8 @@ public class Tethering {
         mEntitlementMgr = mDeps.getEntitlementManager(mContext, mHandler, mLog,
                 () -> mTetherMainSM.sendMessage(
                 TetherMainSM.EVENT_UPSTREAM_PERMISSION_CHANGED));
-        mEntitlementMgr.setOnUiEntitlementFailedListener((int downstream) -> {
-            mLog.log("OBSERVED UiEnitlementFailed");
+        mEntitlementMgr.setOnTetherProvisioningFailedListener((downstream, reason) -> {
+            mLog.log("OBSERVED OnTetherProvisioningFailed : " + reason);
             stopTethering(downstream);
         });
         mEntitlementMgr.setTetheringConfigurationFetcher(() -> {
@@ -995,28 +994,9 @@ public class Tethering {
         return tetherState.lastError;
     }
 
-    private boolean isProvisioningNeededButUnavailable() {
-        return isTetherProvisioningRequired() && !doesEntitlementPackageExist();
-    }
-
     boolean isTetherProvisioningRequired() {
         final TetheringConfiguration cfg = mConfig;
         return mEntitlementMgr.isTetherProvisioningRequired(cfg);
-    }
-
-    private boolean doesEntitlementPackageExist() {
-        // provisioningApp must contain package and class name.
-        if (mConfig.provisioningApp.length != 2) {
-            return false;
-        }
-
-        final PackageManager pm = mContext.getPackageManager();
-        try {
-            pm.getPackageInfo(mConfig.provisioningApp[0], GET_ACTIVITIES);
-        } catch (PackageManager.NameNotFoundException e) {
-            return false;
-        }
-        return true;
     }
 
     private int getRequestedState(int type) {
@@ -2476,7 +2456,7 @@ public class Tethering {
                 && !mUserManager.hasUserRestriction(UserManager.DISALLOW_CONFIG_TETHERING);
 
         return tetherEnabledInSettings && hasAnySupportedDownstream()
-                && !isProvisioningNeededButUnavailable();
+                && !mEntitlementMgr.isProvisioningNeededButUnavailable();
     }
 
     private void dumpBpf(IndentingPrintWriter pw) {
