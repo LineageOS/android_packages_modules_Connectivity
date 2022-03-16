@@ -351,4 +351,55 @@ public class UidRangeUtilsTest {
         expected.add(uids6);
         assertEquals(expected, UidRangeUtils.convertListToUidRange(input));
     }
+
+    @Test @DevSdkIgnoreRule.IgnoreUpTo(Build.VERSION_CODES.R)
+    public void testConvertArrayToUidRange() {
+        final UidRange uids1_1 = new UidRange(1, 1);
+        final UidRange uids1_2 = new UidRange(1, 2);
+        final UidRange uids100_100 = new UidRange(100, 100);
+        final UidRange uids10_10 = new UidRange(10, 10);
+
+        final UidRange uids10_14 = new UidRange(10, 14);
+        final UidRange uids20_24 = new UidRange(20, 24);
+
+        final Set<UidRange> expected = new ArraySet<>();
+        int[] input = new int[0];
+
+        assertThrows(NullPointerException.class, () -> UidRangeUtils.convertArrayToUidRange(null));
+        assertEquals(expected, UidRangeUtils.convertArrayToUidRange(input));
+
+        input = new int[] {1};
+        expected.add(uids1_1);
+        assertEquals(expected, UidRangeUtils.convertArrayToUidRange(input));
+
+        input = new int[]{1, 2};
+        expected.clear();
+        expected.add(uids1_2);
+        assertEquals(expected, UidRangeUtils.convertArrayToUidRange(input));
+
+        input = new int[]{1, 100};
+        expected.clear();
+        expected.add(uids1_1);
+        expected.add(uids100_100);
+        assertEquals(expected, UidRangeUtils.convertArrayToUidRange(input));
+
+        input = new int[]{100, 1};
+        expected.clear();
+        expected.add(uids1_1);
+        expected.add(uids100_100);
+        assertEquals(expected, UidRangeUtils.convertArrayToUidRange(input));
+
+        input = new int[]{100, 1, 2, 1, 10};
+        expected.clear();
+        expected.add(uids1_2);
+        expected.add(uids10_10);
+        expected.add(uids100_100);
+        assertEquals(expected, UidRangeUtils.convertArrayToUidRange(input));
+
+        input = new int[]{10, 11, 12, 13, 14, 20, 21, 22, 23, 24};
+        expected.clear();
+        expected.add(uids10_14);
+        expected.add(uids20_24);
+        assertEquals(expected, UidRangeUtils.convertArrayToUidRange(input));
+    }
 }
