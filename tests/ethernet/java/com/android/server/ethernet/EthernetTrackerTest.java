@@ -27,7 +27,6 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -48,7 +47,7 @@ import android.os.RemoteException;
 import androidx.test.filters.SmallTest;
 import androidx.test.runner.AndroidJUnit4;
 
-import com.android.internal.R;
+import com.android.connectivity.resources.R;
 import com.android.testutils.HandlerUtils;
 
 import org.junit.After;
@@ -73,7 +72,7 @@ public class EthernetTrackerTest {
     @Mock private Context mContext;
     @Mock private EthernetNetworkFactory mFactory;
     @Mock private INetd mNetd;
-    @Mock Resources mResources;
+    @Mock private EthernetTracker.Dependencies mDeps;
 
     @Before
     public void setUp() throws RemoteException {
@@ -83,7 +82,8 @@ public class EthernetTrackerTest {
         when(mNetd.interfaceGetList()).thenReturn(new String[0]);
         mHandlerThread = new HandlerThread(THREAD_NAME);
         mHandlerThread.start();
-        tracker = new EthernetTracker(mContext, mHandlerThread.getThreadHandler(), mFactory, mNetd);
+        tracker = new EthernetTracker(mContext, mHandlerThread.getThreadHandler(), mFactory, mNetd,
+                mDeps);
     }
 
     @After
@@ -92,9 +92,8 @@ public class EthernetTrackerTest {
     }
 
     private void initMockResources() {
-        doReturn("").when(mResources).getString(R.string.config_ethernet_iface_regex);
-        doReturn(new String[0]).when(mResources).getStringArray(R.array.config_ethernet_interfaces);
-        doReturn(mResources).when(mContext).getResources();
+        when(mDeps.getInterfaceRegexFromResource(eq(mContext))).thenReturn("");
+        when(mDeps.getInterfaceConfigFromResource(eq(mContext))).thenReturn(new String[0]);
     }
 
     private void waitForIdle() {
