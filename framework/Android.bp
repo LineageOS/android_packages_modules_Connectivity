@@ -86,6 +86,7 @@ java_defaults {
     ],
     static_libs: [
         "framework-connectivity-protos",
+        "modules-utils-backgroundthread",
         "modules-utils-build",
         "modules-utils-preconditions",
     ],
@@ -139,6 +140,7 @@ java_sdk_library {
         "//frameworks/base/tests/vcn",
         "//frameworks/libs/net/common/testutils",
         "//frameworks/libs/net/common/tests:__subpackages__",
+        "//frameworks/opt/net/ethernet/tests:__subpackages__",
         "//frameworks/opt/telephony/tests/telephonytests",
         "//packages/modules/CaptivePortalLogin/tests",
         "//packages/modules/Connectivity/Tethering/tests:__subpackages__",

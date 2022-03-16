@@ -114,6 +114,7 @@ java_library {
         "net-utils-device-common",
         "net-utils-device-common-bpf",
         "net-utils-device-common-netlink",
+        "net-utils-services-common",
         "netd-client",
         "networkstack-client",
         "PlatformProperties",
