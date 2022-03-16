@@ -21,6 +21,7 @@ import android.net.UidRange;
 import android.util.ArraySet;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
@@ -125,7 +126,7 @@ public final class UidRangeUtils {
     }
 
     /**
-     * Convert a list of uid to set of UidRanges.
+     * Convert a list of uids to set of UidRanges.
      * @param uids list of uids
      * @return set of UidRanges
      * @hide
@@ -142,6 +143,36 @@ public final class UidRangeUtils {
         int stop = start;
 
         for (Integer i : uidsNew) {
+            if (i <= stop + 1) {
+                stop = i;
+            } else {
+                uidRangeSet.add(new UidRange(start, stop));
+                start = i;
+                stop = i;
+            }
+        }
+        uidRangeSet.add(new UidRange(start, stop));
+        return uidRangeSet;
+    }
+
+    /**
+     * Convert an array of uids to set of UidRanges.
+     * @param uids array of uids
+     * @return set of UidRanges
+     * @hide
+     */
+    public static ArraySet<UidRange> convertArrayToUidRange(@NonNull int[] uids) {
+        Objects.requireNonNull(uids);
+        final ArraySet<UidRange> uidRangeSet = new ArraySet<UidRange>();
+        if (uids.length == 0) {
+            return uidRangeSet;
+        }
+        int[] uidsNew = uids.clone();
+        Arrays.sort(uidsNew);
+        int start = uidsNew[0];
+        int stop = start;
+
+        for (int i : uidsNew) {
             if (i <= stop + 1) {
                 stop = i;
             } else {
