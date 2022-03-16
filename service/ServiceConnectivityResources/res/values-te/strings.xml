@@ -17,27 +17,27 @@
 
 <resources xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
-    <string name="connectivityResourcesAppLabel" msgid="8294935652079168395">"సిస్టమ్ కనెక్టివిటీ రిసోర్స్‌లు"</string>
-    <string name="wifi_available_sign_in" msgid="5254156478006453593">"Wi-Fi నెట్‌వర్క్‌కి సైన్ ఇన్ చేయండి"</string>
-    <string name="network_available_sign_in" msgid="7794369329839408792">"నెట్‌వర్క్‌కి సైన్ ఇన్ చేయండి"</string>
-    <!-- no translation found for network_available_sign_in_detailed (3643910593681893097) -->
+    <string name="connectivityResourcesAppLabel" msgid="2476261877900882974">"సిస్టమ్ కనెక్టివిటీ రిసోర్స్‌లు"</string>
+    <string name="wifi_available_sign_in" msgid="8041178343789805553">"Wi-Fi నెట్‌వర్క్‌కి సైన్ ఇన్ చేయండి"</string>
+    <string name="network_available_sign_in" msgid="2622520134876355561">"నెట్‌వర్క్‌కి సైన్ ఇన్ చేయండి"</string>
+    <!-- no translation found for network_available_sign_in_detailed (8439369644697866359) -->
     <skip />
-    <string name="wifi_no_internet" msgid="3961697321010262514">"<xliff:g id="NETWORK_SSID">%1$s</xliff:g>కి ఇంటర్నెట్ యాక్సెస్ లేదు"</string>
-    <string name="wifi_no_internet_detailed" msgid="1229067002306296104">"ఎంపికల కోసం నొక్కండి"</string>
-    <string name="mobile_no_internet" msgid="2262524005014119639">"మొబైల్ నెట్‌వర్క్‌కు ఇంటర్నెట్ యాక్సెస్ లేదు"</string>
-    <string name="other_networks_no_internet" msgid="8226004998719563755">"నెట్‌వర్క్‌కు ఇంటర్నెట్ యాక్సెస్ లేదు"</string>
-    <string name="private_dns_broken_detailed" msgid="3537567373166991809">"ప్రైవేట్ DNS సర్వర్‌ను యాక్సెస్ చేయడం సాధ్యపడదు"</string>
-    <string name="network_partial_connectivity" msgid="5957065286265771273">"<xliff:g id="NETWORK_SSID">%1$s</xliff:g> పరిమిత కనెక్టివిటీని కలిగి ఉంది"</string>
-    <string name="network_partial_connectivity_detailed" msgid="6975752539442533034">"ఏదేమైనా కనెక్ట్ చేయడానికి నొక్కండి"</string>
-    <string name="network_switch_metered" msgid="2814798852883117872">"<xliff:g id="NETWORK_TYPE">%1$s</xliff:g>కి మార్చబడింది"</string>
-    <string name="network_switch_metered_detail" msgid="605546931076348229">"పరికరం <xliff:g id="PREVIOUS_NETWORK">%2$s</xliff:g>కి ఇంటర్నెట్ యాక్సెస్ లేనప్పుడు <xliff:g id="NEW_NETWORK">%1$s</xliff:g>ని ఉపయోగిస్తుంది. ఛార్జీలు వర్తించవచ్చు."</string>
-    <string name="network_switch_metered_toast" msgid="8831325515040986641">"<xliff:g id="PREVIOUS_NETWORK">%1$s</xliff:g> నుండి <xliff:g id="NEW_NETWORK">%2$s</xliff:g>కి మార్చబడింది"</string>
+    <string name="wifi_no_internet" msgid="1326348603404555475">"<xliff:g id="NETWORK_SSID">%1$s</xliff:g>కి ఇంటర్నెట్ యాక్సెస్ లేదు"</string>
+    <string name="wifi_no_internet_detailed" msgid="1746921096565304090">"ఎంపికల కోసం నొక్కండి"</string>
+    <string name="mobile_no_internet" msgid="4087718456753201450">"మొబైల్ నెట్‌వర్క్‌కు ఇంటర్నెట్ యాక్సెస్ లేదు"</string>
+    <string name="other_networks_no_internet" msgid="5693932964749676542">"నెట్‌వర్క్‌కు ఇంటర్నెట్ యాక్సెస్ లేదు"</string>
+    <string name="private_dns_broken_detailed" msgid="2677123850463207823">"ప్రైవేట్ DNS సర్వర్‌ను యాక్సెస్ చేయడం సాధ్యపడదు"</string>
+    <string name="network_partial_connectivity" msgid="5549503845834993258">"<xliff:g id="NETWORK_SSID">%1$s</xliff:g> పరిమిత కనెక్టివిటీని కలిగి ఉంది"</string>
+    <string name="network_partial_connectivity_detailed" msgid="4732435946300249845">"ఏదేమైనా కనెక్ట్ చేయడానికి నొక్కండి"</string>
+    <string name="network_switch_metered" msgid="5016937523571166319">"<xliff:g id="NETWORK_TYPE">%1$s</xliff:g>కి మార్చబడింది"</string>
+    <string name="network_switch_metered_detail" msgid="1257300152739542096">"పరికరం <xliff:g id="PREVIOUS_NETWORK">%2$s</xliff:g>కి ఇంటర్నెట్ యాక్సెస్ లేనప్పుడు <xliff:g id="NEW_NETWORK">%1$s</xliff:g>ని ఉపయోగిస్తుంది. ఛార్జీలు వర్తించవచ్చు."</string>
+    <string name="network_switch_metered_toast" msgid="70691146054130335">"<xliff:g id="PREVIOUS_NETWORK">%1$s</xliff:g> నుండి <xliff:g id="NEW_NETWORK">%2$s</xliff:g>కి మార్చబడింది"</string>
   <string-array name="network_switch_type_name">
-    <item msgid="5454013645032700715">"మొబైల్ డేటా"</item>
-    <item msgid="6341719431034774569">"Wi-Fi"</item>
-    <item msgid="5081440868800877512">"బ్లూటూత్"</item>
-    <item msgid="1160736166977503463">"ఈథర్‌నెట్"</item>
-    <item msgid="7347618872551558605">"VPN"</item>
+    <item msgid="3004933964374161223">"మొబైల్ డేటా"</item>
+    <item msgid="5624324321165953608">"Wi-Fi"</item>
+    <item msgid="5667906231066981731">"బ్లూటూత్"</item>
+    <item msgid="346574747471703768">"ఈథర్‌నెట్"</item>
+    <item msgid="5734728378097476003">"VPN"</item>
   </string-array>
-    <string name="network_switch_type_name_unknown" msgid="7826330274368951740">"తెలియని నెట్‌వర్క్ రకం"</string>
+    <string name="network_switch_type_name_unknown" msgid="5116448402191972082">"తెలియని నెట్‌వర్క్ రకం"</string>
 </resources>
