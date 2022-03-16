@@ -28,7 +28,7 @@ import android.nearby.ScanRequest;
  */
 interface INearbyManager {
 
-    void registerScanListener(in ScanRequest scanRequest, in IScanListener listener);
+    int registerScanListener(in ScanRequest scanRequest, in IScanListener listener);
 
     void unregisterScanListener(in IScanListener listener);
 
