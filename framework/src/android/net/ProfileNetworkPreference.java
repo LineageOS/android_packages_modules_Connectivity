@@ -22,14 +22,12 @@ import static android.net.NetworkCapabilities.NET_ENTERPRISE_ID_1;
 import static android.net.NetworkCapabilities.NET_ENTERPRISE_ID_5;
 
 import android.annotation.NonNull;
-import android.annotation.Nullable;
 import android.annotation.SystemApi;
 import android.net.ConnectivityManager.ProfileNetworkPreferencePolicy;
 import android.os.Parcel;
 import android.os.Parcelable;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.Arrays;
 import java.util.Objects;
 
 /**
@@ -41,31 +39,31 @@ import java.util.Objects;
 public final class ProfileNetworkPreference implements Parcelable {
     private final @ProfileNetworkPreferencePolicy int mPreference;
     private final @NetworkCapabilities.EnterpriseId int mPreferenceEnterpriseId;
-    private final List<Integer> mIncludedUids;
-    private final List<Integer> mExcludedUids;
+    private int[] mIncludedUids = new int[0];
+    private int[] mExcludedUids = new int[0];
 
-    private ProfileNetworkPreference(int preference, List<Integer> includedUids,
-            List<Integer> excludedUids,
+    private ProfileNetworkPreference(int preference, int[] includedUids,
+            int[] excludedUids,
             @NetworkCapabilities.EnterpriseId int preferenceEnterpriseId) {
         mPreference = preference;
         mPreferenceEnterpriseId = preferenceEnterpriseId;
         if (includedUids != null) {
-            mIncludedUids = new ArrayList<>(includedUids);
+            mIncludedUids = includedUids.clone();
         } else {
-            mIncludedUids = new ArrayList<>();
+            mIncludedUids = new int[0];
         }
 
         if (excludedUids != null) {
-            mExcludedUids = new ArrayList<>(excludedUids);
+            mExcludedUids = excludedUids.clone();
         } else {
-            mExcludedUids = new ArrayList<>();
+            mExcludedUids = new int[0];
         }
     }
 
     private ProfileNetworkPreference(Parcel in) {
         mPreference = in.readInt();
-        mIncludedUids = in.readArrayList(Integer.class.getClassLoader());
-        mExcludedUids = in.readArrayList(Integer.class.getClassLoader());
+        in.readIntArray(mIncludedUids);
+        in.readIntArray(mExcludedUids);
         mPreferenceEnterpriseId = in.readInt();
     }
 
@@ -74,31 +72,31 @@ public final class ProfileNetworkPreference implements Parcelable {
     }
 
     /**
-     * Get the list of UIDs subject to this preference.
+     * Get the array of UIDs subject to this preference.
      *
      * Included UIDs and Excluded UIDs can't both be non-empty.
      * if both are empty, it means this request applies to all uids in the user profile.
      * if included is not empty, then only included UIDs are applied.
      * if excluded is not empty, then it is all uids in the user profile except these UIDs.
-     * @return List of uids included for the profile preference.
+     * @return Array of uids included for the profile preference.
      * {@see #getExcludedUids()}
      */
-    public @NonNull List<Integer> getIncludedUids() {
-        return new ArrayList<>(mIncludedUids);
+    public @NonNull int[] getIncludedUids() {
+        return mIncludedUids.clone();
     }
 
     /**
-     * Get the list of UIDS excluded from this preference.
+     * Get the array of UIDS excluded from this preference.
      *
      * <ul>Included UIDs and Excluded UIDs can't both be non-empty.</ul>
      * <ul>If both are empty, it means this request applies to all uids in the user profile.</ul>
      * <ul>If included is not empty, then only included UIDs are applied.</ul>
      * <ul>If excluded is not empty, then it is all uids in the user profile except these UIDs.</ul>
-     * @return List of uids not included for the profile preference.
+     * @return Array of uids not included for the profile preference.
      * {@see #getIncludedUids()}
      */
-    public @NonNull List<Integer> getExcludedUids() {
-        return new ArrayList<>(mExcludedUids);
+    public @NonNull int[] getExcludedUids() {
+        return mExcludedUids.clone();
     }
 
     /**
@@ -134,8 +132,8 @@ public final class ProfileNetworkPreference implements Parcelable {
         if (o == null || getClass() != o.getClass()) return false;
         final ProfileNetworkPreference that = (ProfileNetworkPreference) o;
         return mPreference == that.mPreference
-                && (Objects.equals(mIncludedUids, that.mIncludedUids))
-                && (Objects.equals(mExcludedUids, that.mExcludedUids))
+                && (Arrays.equals(mIncludedUids, that.mIncludedUids))
+                && (Arrays.equals(mExcludedUids, that.mExcludedUids))
                 && mPreferenceEnterpriseId == that.mPreferenceEnterpriseId;
     }
 
@@ -143,8 +141,8 @@ public final class ProfileNetworkPreference implements Parcelable {
     public int hashCode() {
         return mPreference
                 + mPreferenceEnterpriseId * 2
-                + (Objects.hashCode(mIncludedUids) * 11)
-                + (Objects.hashCode(mExcludedUids) * 13);
+                + (Arrays.hashCode(mIncludedUids) * 11)
+                + (Arrays.hashCode(mExcludedUids) * 13);
     }
 
     /**
@@ -154,8 +152,8 @@ public final class ProfileNetworkPreference implements Parcelable {
     public static final class Builder {
         private @ProfileNetworkPreferencePolicy int mPreference =
                 PROFILE_NETWORK_PREFERENCE_DEFAULT;
-        private @NonNull List<Integer> mIncludedUids = new ArrayList<>();
-        private @NonNull List<Integer> mExcludedUids = new ArrayList<>();
+        private int[] mIncludedUids = new int[0];
+        private int[] mExcludedUids = new int[0];
         private int mPreferenceEnterpriseId;
 
         /**
@@ -177,44 +175,38 @@ public final class ProfileNetworkPreference implements Parcelable {
         }
 
         /**
-         * This is a list of uids for which profile perefence is set.
-         * Null would mean that this preference applies to all uids in the profile.
-         * {@see #setExcludedUids(List<Integer>)}
+         * This is a array of uids for which profile perefence is set.
+         * Empty would mean that this preference applies to all uids in the profile.
+         * {@see #setExcludedUids(int[])}
          * Included UIDs and Excluded UIDs can't both be non-empty.
          * if both are empty, it means this request applies to all uids in the user profile.
          * if included is not empty, then only included UIDs are applied.
          * if excluded is not empty, then it is all uids in the user profile except these UIDs.
-         * @param uids  list of uids that are included
+         * @param uids  Array of uids that are included
          * @return The builder to facilitate chaining.
          */
         @NonNull
-        public Builder setIncludedUids(@Nullable List<Integer> uids) {
-            if (uids != null) {
-                mIncludedUids = new ArrayList<Integer>(uids);
-            } else {
-                mIncludedUids = new ArrayList<Integer>();
-            }
+        public Builder setIncludedUids(@NonNull int[] uids) {
+            Objects.requireNonNull(uids);
+            mIncludedUids = uids.clone();
             return this;
         }
 
 
         /**
-         * This is a list of uids that are excluded for the profile perefence.
-         * {@see #setIncludedUids(List<Integer>)}
+         * This is a array of uids that are excluded for the profile perefence.
+         * {@see #setIncludedUids(int[])}
          * Included UIDs and Excluded UIDs can't both be non-empty.
          * if both are empty, it means this request applies to all uids in the user profile.
          * if included is not empty, then only included UIDs are applied.
          * if excluded is not empty, then it is all uids in the user profile except these UIDs.
-         * @param uids  list of uids that are not included
+         * @param uids  Array of uids that are not included
          * @return The builder to facilitate chaining.
          */
         @NonNull
-        public Builder setExcludedUids(@Nullable List<Integer> uids) {
-            if (uids != null) {
-                mExcludedUids = new ArrayList<Integer>(uids);
-            } else {
-                mExcludedUids = new ArrayList<Integer>();
-            }
+        public Builder setExcludedUids(@NonNull int[] uids) {
+            Objects.requireNonNull(uids);
+            mExcludedUids = uids.clone();
             return this;
         }
 
@@ -241,7 +233,7 @@ public final class ProfileNetworkPreference implements Parcelable {
          */
         @NonNull
         public ProfileNetworkPreference  build() {
-            if (mIncludedUids.size() > 0 && mExcludedUids.size() > 0) {
+            if (mIncludedUids.length > 0 && mExcludedUids.length > 0) {
                 throw new IllegalArgumentException("Both includedUids and excludedUids "
                         + "cannot be nonempty");
             }
@@ -280,8 +272,8 @@ public final class ProfileNetworkPreference implements Parcelable {
     @Override
     public void writeToParcel(@NonNull android.os.Parcel dest, int flags) {
         dest.writeInt(mPreference);
-        dest.writeList(mIncludedUids);
-        dest.writeList(mExcludedUids);
+        dest.writeIntArray(mIncludedUids);
+        dest.writeIntArray(mExcludedUids);
         dest.writeInt(mPreferenceEnterpriseId);
     }
 
