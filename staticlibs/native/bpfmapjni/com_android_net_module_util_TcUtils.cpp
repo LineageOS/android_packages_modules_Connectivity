@@ -84,6 +84,18 @@ static void com_android_net_module_util_TcUtils_tcFilterDelDev(
   }
 }
 
+// tc qdisc add dev .. clsact
+static void com_android_net_module_util_TcUtils_tcQdiscAddDevClsact(JNIEnv *env,
+                                                                    jobject clazz,
+                                                                    jint ifIndex) {
+  int error = tcAddQdiscClsact(ifIndex);
+  if (error) {
+    throwIOException(
+        env,
+        "com_android_net_module_util_TcUtils_tcQdiscAddDevClsact error: ", error);
+  }
+}
+
 /*
  * JNI registration.
  */
@@ -97,6 +109,8 @@ static const JNINativeMethod gMethods[] = {
      (void *)com_android_net_module_util_TcUtils_tcFilterAddDevIngressPolice},
     {"tcFilterDelDev", "(IZSS)V",
      (void *)com_android_net_module_util_TcUtils_tcFilterDelDev},
+    {"tcQdiscAddDevClsact", "(I)V",
+     (void *)com_android_net_module_util_TcUtils_tcQdiscAddDevClsact},
 };
 
 int register_com_android_net_module_util_TcUtils(JNIEnv *env,

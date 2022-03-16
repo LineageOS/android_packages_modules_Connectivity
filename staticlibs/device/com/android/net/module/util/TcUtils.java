@@ -90,4 +90,15 @@ public class TcUtils {
      */
     public static native void tcFilterDelDev(int ifIndex, boolean ingress, short prio,
             short proto) throws IOException;
+
+    /**
+     * Add a clsact qdisc.
+     *
+     * Equivalent to the following 'tc' command:
+     * tc qdisc add dev .. clsact
+     *
+     * @param ifIndex the network interface index.
+     * @throws IOException
+     */
+    public static native void tcQdiscAddDevClsact(int ifIndex) throws IOException;
 }
