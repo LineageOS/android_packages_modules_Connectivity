@@ -301,29 +301,6 @@ package android.nearby {
     method public static boolean isValidMedium(int);
   }
 
-  public final class NearbyDeviceParcelable implements android.os.Parcelable {
-    method public int describeContents();
-    method @Nullable public String getBluetoothAddress();
-    method @Nullable public byte[] getData();
-    method @Nullable public String getFastPairModelId();
-    method public int getMedium();
-    method @Nullable public String getName();
-    method @IntRange(from=0xffffff81, to=126) public int getRssi();
-    method public void writeToParcel(@NonNull android.os.Parcel, int);
-    field @NonNull public static final android.os.Parcelable.Creator<android.nearby.NearbyDeviceParcelable> CREATOR;
-  }
-
-  public static final class NearbyDeviceParcelable.Builder {
-    ctor public NearbyDeviceParcelable.Builder();
-    method @NonNull public android.nearby.NearbyDeviceParcelable build();
-    method @NonNull public android.nearby.NearbyDeviceParcelable.Builder setBluetoothAddress(@Nullable String);
-    method @NonNull public android.nearby.NearbyDeviceParcelable.Builder setData(@Nullable byte[]);
-    method @NonNull public android.nearby.NearbyDeviceParcelable.Builder setFastPairModelId(@Nullable String);
-    method @NonNull public android.nearby.NearbyDeviceParcelable.Builder setMedium(int);
-    method @NonNull public android.nearby.NearbyDeviceParcelable.Builder setName(@Nullable String);
-    method @NonNull public android.nearby.NearbyDeviceParcelable.Builder setRssi(int);
-  }
-
   public class NearbyManager {
     method public static boolean getFastPairScanEnabled(@NonNull android.content.Context, boolean);
     method public static void setFastPairScanEnabled(@NonNull android.content.Context, boolean);
