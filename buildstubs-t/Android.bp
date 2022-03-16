@@ -38,6 +38,11 @@ filegroup {
 }
 
 filegroup {
+    name: "ethernet-service-updatable-sources",
+    srcs: [],
+}
+
+filegroup {
     name: "services.connectivity-netstats-jni-sources",
     srcs: [
         "stubs-src-jni/mock_com_android_server_net_NetworkStatsFactory.cpp",
