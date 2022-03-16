@@ -52,6 +52,7 @@ import static android.system.OsConstants.IPPROTO_UDP;
 
 import static com.android.compatibility.common.util.PropertyUtil.getFirstApiLevel;
 import static com.android.compatibility.common.util.PropertyUtil.getVendorApiLevel;
+import static com.android.testutils.MiscAsserts.assertThrows;
 
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
@@ -129,12 +130,11 @@ public class IpSecManagerTest extends IpSecBaseTest {
             assertTrue("Failed to allocate specified SPI, " + DROID_SPI,
                     droidSpi.getSpi() == DROID_SPI);
 
-            try {
-                mISM.allocateSecurityParameterIndex(addr, DROID_SPI);
-                fail("Duplicate SPI was allowed to be created");
-            } catch (IpSecManager.SpiUnavailableException expected) {
-                // This is a success case because we expect a dupe SPI to throw
-            }
+            IpSecManager.SpiUnavailableException expectedException =
+                    assertThrows("Duplicate SPI was allowed to be created",
+                            IpSecManager.SpiUnavailableException.class,
+                            () -> mISM.allocateSecurityParameterIndex(addr, DROID_SPI));
+            assertEquals(expectedException.getSpi(), droidSpi.getSpi());
 
             randomSpi.close();
             droidSpi.close();
