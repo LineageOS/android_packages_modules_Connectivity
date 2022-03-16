@@ -19,7 +19,6 @@ package android.nearby;
 import android.annotation.IntRange;
 import android.annotation.NonNull;
 import android.annotation.Nullable;
-import android.annotation.SystemApi;
 import android.bluetooth.le.ScanRecord;
 import android.os.Parcel;
 import android.os.Parcelable;
@@ -39,7 +38,6 @@ import java.util.Objects;
  *
  * @hide
  */
-@SystemApi
 public final class NearbyDeviceParcelable implements Parcelable {
 
     /**
