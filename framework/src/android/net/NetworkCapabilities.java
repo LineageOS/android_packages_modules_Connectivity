@@ -147,27 +147,32 @@ public final class NetworkCapabilities implements Parcelable {
     private String mRequestorPackageName;
 
     /**
-     * Enterprise capability identifier 1.
+     * Enterprise capability identifier 1. It will be used to uniquely identify specific
+     * enterprise network.
      */
     public static final int NET_ENTERPRISE_ID_1 = 1;
 
     /**
-     * Enterprise capability identifier 2.
+     * Enterprise capability identifier 2. It will be used to uniquely identify specific
+     * enterprise network.
      */
     public static final int NET_ENTERPRISE_ID_2 = 2;
 
     /**
-     * Enterprise capability identifier 3.
+     * Enterprise capability identifier 3. It will be used to uniquely identify specific
+     * enterprise network.
      */
     public static final int NET_ENTERPRISE_ID_3 = 3;
 
     /**
-     * Enterprise capability identifier 4.
+     * Enterprise capability identifier 4. It will be used to uniquely identify specific
+     * enterprise network.
      */
     public static final int NET_ENTERPRISE_ID_4 = 4;
 
     /**
-     * Enterprise capability identifier 5.
+     * Enterprise capability identifier 5. It will be used to uniquely identify specific
+     * enterprise network.
      */
     public static final int NET_ENTERPRISE_ID_5 = 5;
 
