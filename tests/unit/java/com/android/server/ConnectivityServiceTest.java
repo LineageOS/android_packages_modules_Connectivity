@@ -3906,14 +3906,14 @@ public class ConnectivityServiceTest {
     }
 
     @Test
-    public void testNoAccessUidsInNetworkRequests() throws Exception {
+    public void testNoAllowedUidsInNetworkRequests() throws Exception {
         final PendingIntent pendingIntent = PendingIntent.getBroadcast(
                 mContext, 0 /* requestCode */, new Intent("a"), FLAG_IMMUTABLE);
         final NetworkRequest r = new NetworkRequest.Builder().build();
-        final ArraySet<Integer> accessUids = new ArraySet<>();
-        accessUids.add(6);
-        accessUids.add(9);
-        r.networkCapabilities.setAccessUids(accessUids);
+        final ArraySet<Integer> allowedUids = new ArraySet<>();
+        allowedUids.add(6);
+        allowedUids.add(9);
+        r.networkCapabilities.setAllowedUids(allowedUids);
 
         final Handler handler = new Handler(ConnectivityThread.getInstanceLooper());
         final NetworkCallback cb = new NetworkCallback();
@@ -3928,7 +3928,7 @@ public class ConnectivityServiceTest {
 
         // Make sure that resetting the access UIDs to the empty set will allow calling
         // requestNetwork and registerNetworkCallback.
-        r.networkCapabilities.setAccessUids(Collections.emptySet());
+        r.networkCapabilities.setAllowedUids(Collections.emptySet());
         mCm.requestNetwork(r, cb);
         mCm.unregisterNetworkCallback(cb);
         mCm.registerNetworkCallback(r, cb);
@@ -14687,7 +14687,7 @@ public class ConnectivityServiceTest {
     }
 
     @Test
-    public void testAccessUids() throws Exception {
+    public void testAllowedUids() throws Exception {
         final int preferenceOrder =
                 ConnectivityService.PREFERENCE_ORDER_IRRELEVANT_BECAUSE_NOT_DEFAULT;
         mServiceContext.setPermission(NETWORK_FACTORY, PERMISSION_GRANTED);
@@ -14704,7 +14704,7 @@ public class ConnectivityServiceTest {
         final NetworkCapabilities nc = new NetworkCapabilities.Builder()
                 .addTransportType(TRANSPORT_TEST)
                 .removeCapability(NET_CAPABILITY_NOT_RESTRICTED)
-                .setAccessUids(uids)
+                .setAllowedUids(uids)
                 .build();
         final TestNetworkAgentWrapper agent = new TestNetworkAgentWrapper(TRANSPORT_TEST,
                 new LinkProperties(), nc);
@@ -14722,10 +14722,10 @@ public class ConnectivityServiceTest {
 
         uids.add(300);
         uids.add(400);
-        nc.setAccessUids(uids);
+        nc.setAllowedUids(uids);
         agent.setNetworkCapabilities(nc, true /* sendToConnectivityService */);
         if (SdkLevel.isAtLeastT()) {
-            cb.expectCapabilitiesThat(agent, caps -> caps.getAccessUids().equals(uids));
+            cb.expectCapabilitiesThat(agent, caps -> caps.getAllowedUids().equals(uids));
         } else {
             cb.assertNoCallback();
         }
@@ -14739,10 +14739,10 @@ public class ConnectivityServiceTest {
             inOrder.verify(mMockNetd, times(1)).networkAddUidRangesParcel(uids300400Parcel);
         }
 
-        nc.setAccessUids(uids);
+        nc.setAllowedUids(uids);
         agent.setNetworkCapabilities(nc, true /* sendToConnectivityService */);
         if (SdkLevel.isAtLeastT()) {
-            cb.expectCapabilitiesThat(agent, caps -> caps.getAccessUids().equals(uids));
+            cb.expectCapabilitiesThat(agent, caps -> caps.getAllowedUids().equals(uids));
             inOrder.verify(mMockNetd, times(1)).networkRemoveUidRangesParcel(uids200Parcel);
         } else {
             cb.assertNoCallback();
@@ -14750,10 +14750,10 @@ public class ConnectivityServiceTest {
 
         uids.clear();
         uids.add(600);
-        nc.setAccessUids(uids);
+        nc.setAllowedUids(uids);
         agent.setNetworkCapabilities(nc, true /* sendToConnectivityService */);
         if (SdkLevel.isAtLeastT()) {
-            cb.expectCapabilitiesThat(agent, caps -> caps.getAccessUids().equals(uids));
+            cb.expectCapabilitiesThat(agent, caps -> caps.getAllowedUids().equals(uids));
         } else {
             cb.assertNoCallback();
         }
@@ -14767,10 +14767,10 @@ public class ConnectivityServiceTest {
         }
 
         uids.clear();
-        nc.setAccessUids(uids);
+        nc.setAllowedUids(uids);
         agent.setNetworkCapabilities(nc, true /* sendToConnectivityService */);
         if (SdkLevel.isAtLeastT()) {
-            cb.expectCapabilitiesThat(agent, caps -> caps.getAccessUids().isEmpty());
+            cb.expectCapabilitiesThat(agent, caps -> caps.getAllowedUids().isEmpty());
             inOrder.verify(mMockNetd, times(1)).networkRemoveUidRangesParcel(uids600Parcel);
         } else {
             cb.assertNoCallback();
@@ -14781,7 +14781,7 @@ public class ConnectivityServiceTest {
     }
 
     @Test
-    public void testCbsAccessUids() throws Exception {
+    public void testCbsAllowedUids() throws Exception {
         mServiceContext.setPermission(NETWORK_FACTORY, PERMISSION_GRANTED);
         mServiceContext.setPermission(MANAGE_TEST_NETWORKS, PERMISSION_GRANTED);
 
@@ -14818,29 +14818,29 @@ public class ConnectivityServiceTest {
                 new LinkProperties(), ncb.build());
         mCellNetworkAgent.connect(true);
         cb.expectAvailableThenValidatedCallbacks(mCellNetworkAgent);
-        ncb.setAccessUids(serviceUidSet);
+        ncb.setAllowedUids(serviceUidSet);
         mCellNetworkAgent.setNetworkCapabilities(ncb.build(), true /* sendToCS */);
         if (SdkLevel.isAtLeastT()) {
             cb.expectCapabilitiesThat(mCellNetworkAgent,
-                    caps -> caps.getAccessUids().equals(serviceUidSet));
+                    caps -> caps.getAllowedUids().equals(serviceUidSet));
         } else {
             // S must ignore access UIDs.
             cb.assertNoCallback(TEST_CALLBACK_TIMEOUT_MS);
         }
 
         // ...but not to some other UID. Rejection sets UIDs to the empty set
-        ncb.setAccessUids(nonServiceUidSet);
+        ncb.setAllowedUids(nonServiceUidSet);
         mCellNetworkAgent.setNetworkCapabilities(ncb.build(), true /* sendToCS */);
         if (SdkLevel.isAtLeastT()) {
             cb.expectCapabilitiesThat(mCellNetworkAgent,
-                    caps -> caps.getAccessUids().isEmpty());
+                    caps -> caps.getAllowedUids().isEmpty());
         } else {
             // S must ignore access UIDs.
             cb.assertNoCallback(TEST_CALLBACK_TIMEOUT_MS);
         }
 
         // ...and also not to multiple UIDs even including the service UID
-        ncb.setAccessUids(serviceUidSetPlus);
+        ncb.setAllowedUids(serviceUidSetPlus);
         mCellNetworkAgent.setNetworkCapabilities(ncb.build(), true /* sendToCS */);
         cb.assertNoCallback(TEST_CALLBACK_TIMEOUT_MS);
 
@@ -14863,7 +14863,7 @@ public class ConnectivityServiceTest {
                 new LinkProperties(), ncb.build());
         mWiFiNetworkAgent.connect(true);
         cb.expectAvailableThenValidatedCallbacks(mWiFiNetworkAgent);
-        ncb.setAccessUids(serviceUidSet);
+        ncb.setAllowedUids(serviceUidSet);
         mWiFiNetworkAgent.setNetworkCapabilities(ncb.build(), true /* sendToCS */);
         cb.assertNoCallback(TEST_CALLBACK_TIMEOUT_MS);
         mCm.unregisterNetworkCallback(cb);
