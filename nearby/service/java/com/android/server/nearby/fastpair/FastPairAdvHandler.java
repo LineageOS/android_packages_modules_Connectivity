@@ -179,6 +179,9 @@ public class FastPairAdvHandler {
             List<Data.FastPairDeviceWithAccountKey> devices, BloomFilter bloomFilter, byte[] salt) {
         Log.d(TAG, "saved devices size in the account is " + devices.size());
         for (Data.FastPairDeviceWithAccountKey device : devices) {
+            if (device.getAccountKey().toByteArray() == null || salt == null) {
+                return null;
+            }
             byte[] rotatedKey = concat(device.getAccountKey().toByteArray(), salt);
             StringBuilder sb = new StringBuilder();
             for (byte b : rotatedKey) {
@@ -198,6 +201,9 @@ public class FastPairAdvHandler {
     static Cache.StoredFastPairItem findRecognizedDeviceFromCachedItem(
             List<Cache.StoredFastPairItem> devices, BloomFilter bloomFilter, byte[] salt) {
         for (Cache.StoredFastPairItem device : devices) {
+            if (device.getAccountKey().toByteArray() == null || salt == null) {
+                return null;
+            }
             byte[] rotatedKey = concat(device.getAccountKey().toByteArray(), salt);
             if (bloomFilter.possiblyContains(rotatedKey)) {
                 return device;
