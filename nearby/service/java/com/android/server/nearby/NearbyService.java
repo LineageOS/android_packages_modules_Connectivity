@@ -27,7 +27,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.hardware.location.ContextHubManager;
-import android.nearby.BroadcastRequest;
+import android.nearby.BroadcastRequestParcelable;
 import android.nearby.IBroadcastListener;
 import android.nearby.INearbyManager;
 import android.nearby.IScanListener;
@@ -109,8 +109,11 @@ public class NearbyService extends INearbyManager.Stub {
     }
 
     @Override
-    public void startBroadcast(BroadcastRequest broadcastRequest, IBroadcastListener listener) {
-        mBroadcastProviderManager.startBroadcast(broadcastRequest, listener);
+    public void startBroadcast(BroadcastRequestParcelable broadcastRequestParcelable,
+            IBroadcastListener listener) {
+        mBroadcastProviderManager.startBroadcast(
+                broadcastRequestParcelable.getBroadcastRequest(),
+                listener);
     }
 
     @Override

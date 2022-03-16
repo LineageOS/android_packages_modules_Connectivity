@@ -53,10 +53,9 @@ public class PrivateCredentialTest {
 
     @Before
     public void setUp() {
-        mBuilder = new PrivateCredential.Builder(SECRETE_ID, AUTHENTICITY_KEY)
+        mBuilder = new PrivateCredential.Builder(
+                SECRETE_ID, AUTHENTICITY_KEY, METADATA_ENCRYPTION_KEY, DEVICE_NAME)
                 .setIdentityType(IDENTITY_TYPE_PRIVATE)
-                .setDeviceName(DEVICE_NAME)
-                .setMetadataEncryptionKey(METADATA_ENCRYPTION_KEY)
                 .addCredentialElement(new CredentialElement(KEY, VALUE));
     }
 

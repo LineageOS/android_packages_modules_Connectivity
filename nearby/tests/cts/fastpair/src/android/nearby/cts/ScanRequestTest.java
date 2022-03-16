@@ -173,11 +173,10 @@ public class ScanRequestTest {
         final byte[] encryptedMetadata = new byte[]{1, 2, 3, 4, 5};
         final byte[] metadataEncryptionKeyTag = new byte[]{1, 1, 3, 4, 5};
 
-        PublicCredential credential = new PublicCredential.Builder(secretId, authenticityKey)
+        PublicCredential credential = new PublicCredential.Builder(
+                secretId, authenticityKey, publicKey, encryptedMetadata, metadataEncryptionKeyTag)
                 .setIdentityType(IDENTITY_TYPE_PRIVATE)
-                .setEncryptedMetadata(encryptedMetadata)
-                .setPublicKey(publicKey)
-                .setEncryptedMetadataKeyTag(metadataEncryptionKeyTag).build();
+                .build();
 
         final int rssi = -40;
         final int action = 123;
