@@ -776,4 +776,28 @@ public class EthernetNetworkFactoryTest {
         verifyNoStopOrStart();
         assertFailedListener(listener, "can't be updated as it is not available");
     }
+
+    @Test
+    public void testUpdateInterfaceWithNullIpConfiguration() throws Exception {
+        initEthernetNetworkFactory();
+        createAndVerifyProvisionedInterface(TEST_IFACE);
+
+        final IpConfiguration initialIpConfig = createStaticIpConfig();
+        mNetFactory.updateInterface(TEST_IFACE, initialIpConfig, null /*capabilities*/,
+                null /*listener*/);
+        triggerOnProvisioningSuccess();
+        verifyRestart(initialIpConfig);
+
+        // TODO: have verifyXyz functions clear invocations.
+        clearInvocations(mDeps);
+        clearInvocations(mIpClient);
+        clearInvocations(mNetworkAgent);
+
+
+        // verify that sending a null ipConfig does not update the current ipConfig.
+        mNetFactory.updateInterface(TEST_IFACE, null /*ipConfig*/, null /*capabilities*/,
+                null /*listener*/);
+        triggerOnProvisioningSuccess();
+        verifyRestart(initialIpConfig);
+    }
 }
