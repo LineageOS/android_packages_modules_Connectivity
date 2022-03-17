@@ -157,7 +157,7 @@ public class NearbyManager {
      *
      * @param broadcastRequest Request for the nearby broadcast.
      * @param executor Executor for running the callback.
-     * @param callback Callback for notifying the client..
+     * @param callback Callback for notifying the client.
      */
     public void startBroadcast(@NonNull BroadcastRequest broadcastRequest,
             @CallbackExecutor @NonNull Executor executor, @NonNull BroadcastCallback callback) {
@@ -172,7 +172,8 @@ public class NearbyManager {
                     Preconditions.checkState(transport.isRegistered());
                     transport.setExecutor(executor);
                 }
-                mService.startBroadcast(broadcastRequest, transport);
+                mService.startBroadcast(new BroadcastRequestParcelable(broadcastRequest),
+                        transport);
                 sBroadcastListeners.put(callback, new WeakReference<>(transport));
             }
         } catch (RemoteException e) {

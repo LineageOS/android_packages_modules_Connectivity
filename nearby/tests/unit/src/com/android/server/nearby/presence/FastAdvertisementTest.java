@@ -43,6 +43,7 @@ public class FastAdvertisementTest {
     private static final byte[] AUTHENTICITY_KEY = new byte[]{12, 13, 14};
     private static final byte[] EXPECTED_ADV_BYTES =
             new byte[]{2, 2, 3, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 4, 123};
+    private static final String DEVICE_NAME = "test_device";
 
     private PresenceBroadcastRequest.Builder mBuilder;
     private PrivateCredential mCredential;
@@ -50,9 +51,8 @@ public class FastAdvertisementTest {
     @Before
     public void setUp() {
         mCredential =
-                new PrivateCredential.Builder(SECRET_ID, AUTHENTICITY_KEY)
+                new PrivateCredential.Builder(SECRET_ID, AUTHENTICITY_KEY, IDENTITY, DEVICE_NAME)
                         .setIdentityType(PresenceCredential.IDENTITY_TYPE_PRIVATE)
-                        .setMetadataEncryptionKey(IDENTITY)
                         .build();
         mBuilder =
                 new PresenceBroadcastRequest.Builder(Collections.singletonList(MEDIUM_TYPE_BLE),

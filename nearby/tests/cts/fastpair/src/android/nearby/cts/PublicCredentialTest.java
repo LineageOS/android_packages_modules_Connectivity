@@ -56,11 +56,10 @@ public class PublicCredentialTest {
 
     @Before
     public void setUp() {
-        mBuilder = new PublicCredential.Builder(SECRETE_ID, AUTHENTICITY_KEY)
+        mBuilder = new PublicCredential.Builder(SECRETE_ID, AUTHENTICITY_KEY, PUBLIC_KEY,
+                ENCRYPTED_METADATA, METADATA_ENCRYPTION_KEY_TAG)
                 .addCredentialElement(new CredentialElement(KEY, VALUE))
-                .setIdentityType(IDENTITY_TYPE_PRIVATE)
-                .setPublicKey(PUBLIC_KEY).setEncryptedMetadata(ENCRYPTED_METADATA)
-                .setEncryptedMetadataKeyTag(METADATA_ENCRYPTION_KEY_TAG);
+                .setIdentityType(IDENTITY_TYPE_PRIVATE);
     }
 
     @Test

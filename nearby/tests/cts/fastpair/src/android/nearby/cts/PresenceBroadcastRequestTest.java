@@ -56,14 +56,15 @@ public class PresenceBroadcastRequestTest {
     private static final byte[] METADATA_ENCRYPTION_KEY = new byte[]{1, 1, 3, 4, 5};
     private static final int KEY = 1234;
     private static final byte[] VALUE = new byte[]{1, 1, 1, 1};
+    private static final String DEVICE_NAME = "test_device";
 
     private PresenceBroadcastRequest.Builder mBuilder;
 
     @Before
     public void setUp() {
-        PrivateCredential credential = new PrivateCredential.Builder(SECRETE_ID, AUTHENTICITY_KEY)
+        PrivateCredential credential = new PrivateCredential.Builder(SECRETE_ID, AUTHENTICITY_KEY,
+                METADATA_ENCRYPTION_KEY, DEVICE_NAME)
                 .setIdentityType(IDENTITY_TYPE_PRIVATE)
-                .setMetadataEncryptionKey(METADATA_ENCRYPTION_KEY)
                 .build();
         DataElement element = new DataElement(KEY, VALUE);
         mBuilder = new PresenceBroadcastRequest.Builder(Collections.singletonList(BLE_MEDIUM), SALT,

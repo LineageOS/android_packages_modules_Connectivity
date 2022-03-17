@@ -40,6 +40,9 @@ public class PresenceDiscoveryResultTest {
     private static final byte[] SALT = new byte[]{12, 34};
     private static final byte[] SECRET_ID = new byte[]{1, 2, 3, 4};
     private static final byte[] AUTHENTICITY_KEY = new byte[]{12, 13, 14};
+    private static final byte[] PUBLIC_KEY = new byte[]{1, 1, 2, 2};
+    private static final byte[] ENCRYPTED_METADATA = new byte[]{1, 2, 3, 4, 5};
+    private static final byte[] METADATA_ENCRYPTION_KEY_TAG = new byte[]{1, 1, 3, 4, 5};
 
     private PresenceDiscoveryResult.Builder mBuilder;
     private PublicCredential mCredential;
@@ -47,7 +50,8 @@ public class PresenceDiscoveryResultTest {
     @Before
     public void setUp() {
         mCredential =
-                new PublicCredential.Builder(SECRET_ID, AUTHENTICITY_KEY)
+                new PublicCredential.Builder(SECRET_ID, AUTHENTICITY_KEY, PUBLIC_KEY,
+                        ENCRYPTED_METADATA, METADATA_ENCRYPTION_KEY_TAG)
                         .setIdentityType(PresenceCredential.IDENTITY_TYPE_PRIVATE)
                         .build();
         mBuilder = new PresenceDiscoveryResult.Builder()

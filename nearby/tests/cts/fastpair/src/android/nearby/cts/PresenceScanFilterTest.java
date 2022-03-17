@@ -53,10 +53,10 @@ public class PresenceScanFilterTest {
 
 
     private PublicCredential mPublicCredential =
-            new PublicCredential.Builder(SECRETE_ID, AUTHENTICITY_KEY)
+            new PublicCredential.Builder(SECRETE_ID, AUTHENTICITY_KEY, PUBLIC_KEY,
+                    ENCRYPTED_METADATA, METADATA_ENCRYPTION_KEY_TAG)
                     .setIdentityType(IDENTITY_TYPE_PRIVATE)
-                    .setPublicKey(PUBLIC_KEY).setEncryptedMetadata(ENCRYPTED_METADATA)
-                    .setEncryptedMetadataKeyTag(METADATA_ENCRYPTION_KEY_TAG).build();
+                    .build();
     private PresenceScanFilter.Builder mBuilder = new PresenceScanFilter.Builder()
             .setMaxPathLoss(RSSI)
             .addCredential(mPublicCredential)

@@ -61,6 +61,7 @@ public class BroadcastProviderManagerTest {
     private static final int PRESENCE_ACTION = 123;
     private static final byte[] SECRET_ID = new byte[]{1, 2, 3, 4};
     private static final byte[] AUTHENTICITY_KEY = new byte[]{12, 13, 14};
+    private static final String DEVICE_NAME = "test_device";
 
     @Rule
     public final MockitoRule mocks = MockitoJUnit.rule();
@@ -86,9 +87,8 @@ public class BroadcastProviderManagerTest {
                 mBleBroadcastProvider);
 
         PrivateCredential privateCredential =
-                new PrivateCredential.Builder(SECRET_ID, AUTHENTICITY_KEY)
+                new PrivateCredential.Builder(SECRET_ID, AUTHENTICITY_KEY, IDENTITY, DEVICE_NAME)
                         .setIdentityType(PresenceCredential.IDENTITY_TYPE_PRIVATE)
-                        .setMetadataEncryptionKey(IDENTITY)
                         .build();
         mBroadcastRequest =
                 new PresenceBroadcastRequest.Builder(Collections.singletonList(MEDIUM_TYPE_BLE),

@@ -107,18 +107,26 @@ public final class PrivateCredential extends PresenceCredential implements Parce
         private final List<CredentialElement> mCredentialElements;
 
         private @IdentityType int mIdentityType;
-        private byte[] mSecretId;
-        private byte[] mAuthenticityKey;
-        private byte[] mMetadataEncryptionKey;
-        private String mDeviceName;
+        private final byte[] mSecretId;
+        private final byte[] mAuthenticityKey;
+        private final byte[] mMetadataEncryptionKey;
+        private final String mDeviceName;
 
-        public Builder(@NonNull byte[] secretId, @NonNull byte[] authenticityKey) {
+        public Builder(@NonNull byte[] secretId, @NonNull byte[] authenticityKey,
+                @NonNull byte[] metadataEncryptionKey, @NonNull String deviceName) {
             Preconditions.checkState(secretId != null && secretId.length > 0,
                     "secret id cannot be empty");
             Preconditions.checkState(authenticityKey != null && authenticityKey.length > 0,
                     "authenticity key cannot be empty");
+            Preconditions.checkState(
+                    metadataEncryptionKey != null && metadataEncryptionKey.length > 0,
+                    "metadataEncryptionKey cannot be empty");
+            Preconditions.checkState(deviceName != null && deviceName.length() > 0,
+                    "deviceName cannot be empty");
             mSecretId = secretId;
             mAuthenticityKey = authenticityKey;
+            mMetadataEncryptionKey = metadataEncryptionKey;
+            mDeviceName = deviceName;
             mCredentialElements = new ArrayList<>();
         }
 
@@ -128,24 +136,6 @@ public final class PrivateCredential extends PresenceCredential implements Parce
         @NonNull
         public Builder setIdentityType(@IdentityType int identityType) {
             mIdentityType = identityType;
-            return this;
-        }
-
-        /**
-         * Sets the metadata encryption key to the credential.
-         */
-        @NonNull
-        public Builder setMetadataEncryptionKey(@NonNull byte[] metadataEncryptionKey) {
-            mMetadataEncryptionKey = metadataEncryptionKey;
-            return this;
-        }
-
-        /**
-         * Sets the device name of the credential.
-         */
-        @NonNull
-        public Builder setDeviceName(@NonNull String deviceName) {
-            mDeviceName = deviceName;
             return this;
         }
 
