@@ -19,6 +19,8 @@ package android.net;
 import static com.android.testutils.DevSdkIgnoreRuleKt.SC_V2;
 import static com.android.testutils.ParcelUtils.assertParcelingIsLossless;
 
+import static org.junit.Assert.assertThrows;
+
 import com.android.testutils.DevSdkIgnoreRule;
 import com.android.testutils.DevSdkIgnoreRunner;
 
@@ -47,8 +49,19 @@ public class EthernetNetworkUpdateRequestTest {
         EthernetNetworkUpdateRequest reqWithNullCaps =
                 new EthernetNetworkUpdateRequest.Builder().setIpConfiguration(
                         buildIpConfiguration()).build();
+        EthernetNetworkUpdateRequest reqWithNullConfig =
+                new EthernetNetworkUpdateRequest.Builder().setNetworkCapabilities(
+                        buildNetworkCapabilities()).build();
 
         assertParcelingIsLossless(reqWithNonNull);
         assertParcelingIsLossless(reqWithNullCaps);
+        assertParcelingIsLossless(reqWithNullConfig);
+    }
+
+    @Test
+    public void testEmptyUpdateRequestThrows() {
+        EthernetNetworkUpdateRequest.Builder emptyBuilder =
+                new EthernetNetworkUpdateRequest.Builder();
+        assertThrows(IllegalStateException.class, () -> emptyBuilder.build());
     }
 }
