@@ -17,11 +17,16 @@
 package com.android.server.connectivity;
 
 import static android.net.INetd.IF_STATE_UP;
+import static android.system.OsConstants.ETH_P_IP;
+import static android.system.OsConstants.ETH_P_IPV6;
 
 import static com.android.net.module.util.NetworkStackConstants.ETHER_MTU;
 import static com.android.server.connectivity.ClatCoordinator.CLAT_MAX_MTU;
+import static com.android.server.connectivity.ClatCoordinator.EGRESS;
+import static com.android.server.connectivity.ClatCoordinator.INGRESS;
 import static com.android.server.connectivity.ClatCoordinator.INIT_V4ADDR_PREFIX_LEN;
 import static com.android.server.connectivity.ClatCoordinator.INIT_V4ADDR_STRING;
+import static com.android.server.connectivity.ClatCoordinator.PRIO_CLAT;
 import static com.android.testutils.MiscAsserts.assertThrows;
 
 import static org.junit.Assert.assertEquals;
@@ -103,6 +108,10 @@ public class ClatCoordinatorTest {
     private static final ParcelFileDescriptor PACKET_SOCK_PFD = new ParcelFileDescriptor(
             new FileDescriptor());
 
+    private static final String EGRESS_PROG_PATH =
+            "/sys/fs/bpf/prog_clatd_schedcls_egress4_clat_rawip";
+    private static final String INGRESS_PROG_PATH =
+            "/sys/fs/bpf/prog_clatd_schedcls_ingress6_clat_ether";
     private static final ClatEgress4Key EGRESS_KEY = new ClatEgress4Key(STACKED_IFINDEX,
             INET4_LOCAL4);
     private static final ClatEgress4Value EGRESS_VALUE = new ClatEgress4Value(BASE_IFINDEX,
@@ -334,6 +343,29 @@ public class ClatCoordinatorTest {
             fail("unsupported arg: " + iface);
             return false;
         }
+
+        /** Add a clsact qdisc. */
+        @Override
+        public void tcQdiscAddDevClsact(int ifIndex) throws IOException {
+            // no-op
+            return;
+        }
+
+        /** Attach a tc bpf filter. */
+        @Override
+        public void tcFilterAddDevBpf(int ifIndex, boolean ingress, short prio, short proto,
+                String bpfProgPath) throws IOException {
+            // no-op
+            return;
+        }
+
+        /** Delete a tc filter. */
+        @Override
+        public void tcFilterDelDev(int ifIndex, boolean ingress, short prio, short proto)
+                throws IOException {
+            // no-op
+            return;
+        }
     };
 
     @NonNull
@@ -417,6 +449,11 @@ public class ClatCoordinatorTest {
                 eq(XLAT_LOCAL_IPV4ADDR_STRING), eq(XLAT_LOCAL_IPV6ADDR_STRING));
         inOrder.verify(mEgressMap).insertEntry(eq(EGRESS_KEY), eq(EGRESS_VALUE));
         inOrder.verify(mIngressMap).insertEntry(eq(INGRESS_KEY), eq(INGRESS_VALUE));
+        inOrder.verify(mDeps).tcQdiscAddDevClsact(eq(STACKED_IFINDEX));
+        inOrder.verify(mDeps).tcFilterAddDevBpf(eq(STACKED_IFINDEX), eq(EGRESS),
+                eq((short) PRIO_CLAT), eq((short) ETH_P_IP), eq(EGRESS_PROG_PATH));
+        inOrder.verify(mDeps).tcFilterAddDevBpf(eq(BASE_IFINDEX), eq(INGRESS),
+                eq((short) PRIO_CLAT), eq((short) ETH_P_IPV6), eq(INGRESS_PROG_PATH));
         inOrder.verifyNoMoreInteractions();
 
         // [2] Start clatd again failed.
