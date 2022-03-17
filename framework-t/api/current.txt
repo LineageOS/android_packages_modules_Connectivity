@@ -3,7 +3,7 @@ package android.app.usage {
 
   public final class NetworkStats implements java.lang.AutoCloseable {
     method public void close();
-    method public boolean getNextBucket(android.app.usage.NetworkStats.Bucket);
+    method public boolean getNextBucket(@Nullable android.app.usage.NetworkStats.Bucket);
     method public boolean hasNextBucket();
   }
 
@@ -40,21 +40,21 @@ package android.app.usage {
   }
 
   public class NetworkStatsManager {
-    method @WorkerThread public android.app.usage.NetworkStats queryDetails(int, String, long, long) throws android.os.RemoteException, java.lang.SecurityException;
-    method @WorkerThread public android.app.usage.NetworkStats queryDetailsForUid(int, String, long, long, int) throws java.lang.SecurityException;
-    method @WorkerThread public android.app.usage.NetworkStats queryDetailsForUidTag(int, String, long, long, int, int) throws java.lang.SecurityException;
-    method @WorkerThread public android.app.usage.NetworkStats queryDetailsForUidTagState(int, String, long, long, int, int, int) throws java.lang.SecurityException;
-    method @WorkerThread public android.app.usage.NetworkStats querySummary(int, String, long, long) throws android.os.RemoteException, java.lang.SecurityException;
-    method @WorkerThread public android.app.usage.NetworkStats.Bucket querySummaryForDevice(int, String, long, long) throws android.os.RemoteException, java.lang.SecurityException;
-    method @WorkerThread public android.app.usage.NetworkStats.Bucket querySummaryForUser(int, String, long, long) throws android.os.RemoteException, java.lang.SecurityException;
-    method public void registerUsageCallback(int, String, long, android.app.usage.NetworkStatsManager.UsageCallback);
-    method public void registerUsageCallback(int, String, long, android.app.usage.NetworkStatsManager.UsageCallback, @Nullable android.os.Handler);
-    method public void unregisterUsageCallback(android.app.usage.NetworkStatsManager.UsageCallback);
+    method @WorkerThread public android.app.usage.NetworkStats queryDetails(int, @Nullable String, long, long) throws android.os.RemoteException, java.lang.SecurityException;
+    method @NonNull @WorkerThread public android.app.usage.NetworkStats queryDetailsForUid(int, @Nullable String, long, long, int) throws java.lang.SecurityException;
+    method @NonNull @WorkerThread public android.app.usage.NetworkStats queryDetailsForUidTag(int, @Nullable String, long, long, int, int) throws java.lang.SecurityException;
+    method @NonNull @WorkerThread public android.app.usage.NetworkStats queryDetailsForUidTagState(int, @Nullable String, long, long, int, int, int) throws java.lang.SecurityException;
+    method @WorkerThread public android.app.usage.NetworkStats querySummary(int, @Nullable String, long, long) throws android.os.RemoteException, java.lang.SecurityException;
+    method @WorkerThread public android.app.usage.NetworkStats.Bucket querySummaryForDevice(int, @Nullable String, long, long) throws android.os.RemoteException, java.lang.SecurityException;
+    method @WorkerThread public android.app.usage.NetworkStats.Bucket querySummaryForUser(int, @Nullable String, long, long) throws android.os.RemoteException, java.lang.SecurityException;
+    method public void registerUsageCallback(int, @Nullable String, long, @NonNull android.app.usage.NetworkStatsManager.UsageCallback);
+    method public void registerUsageCallback(int, @Nullable String, long, @NonNull android.app.usage.NetworkStatsManager.UsageCallback, @Nullable android.os.Handler);
+    method public void unregisterUsageCallback(@NonNull android.app.usage.NetworkStatsManager.UsageCallback);
   }
 
   public abstract static class NetworkStatsManager.UsageCallback {
     ctor public NetworkStatsManager.UsageCallback();
-    method public abstract void onThresholdReached(int, String);
+    method public abstract void onThresholdReached(int, @Nullable String);
   }
 
 }
@@ -173,12 +173,12 @@ package android.net {
     method public static void incrementOperationCount(int, int);
     method public static void setThreadStatsTag(int);
     method public static void setThreadStatsUid(int);
-    method public static void tagDatagramSocket(java.net.DatagramSocket) throws java.net.SocketException;
-    method public static void tagFileDescriptor(java.io.FileDescriptor) throws java.io.IOException;
-    method public static void tagSocket(java.net.Socket) throws java.net.SocketException;
-    method public static void untagDatagramSocket(java.net.DatagramSocket) throws java.net.SocketException;
-    method public static void untagFileDescriptor(java.io.FileDescriptor) throws java.io.IOException;
-    method public static void untagSocket(java.net.Socket) throws java.net.SocketException;
+    method public static void tagDatagramSocket(@NonNull java.net.DatagramSocket) throws java.net.SocketException;
+    method public static void tagFileDescriptor(@NonNull java.io.FileDescriptor) throws java.io.IOException;
+    method public static void tagSocket(@NonNull java.net.Socket) throws java.net.SocketException;
+    method public static void untagDatagramSocket(@NonNull java.net.DatagramSocket) throws java.net.SocketException;
+    method public static void untagFileDescriptor(@NonNull java.io.FileDescriptor) throws java.io.IOException;
+    method public static void untagSocket(@NonNull java.net.Socket) throws java.net.SocketException;
     field public static final int UNSUPPORTED = -1; // 0xffffffff
   }
 
