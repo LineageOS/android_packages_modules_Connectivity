@@ -1219,16 +1219,16 @@ public class NetworkAgentInfo implements Comparable<NetworkAgentInfo>, NetworkRa
         if (nc.hasTransport(TRANSPORT_TEST)) {
             nc.restrictCapabilitiesForTestNetwork(creatorUid);
         }
-        if (!areAccessUidsAcceptableFromNetworkAgent(nc, authenticator)) {
-            nc.setAccessUids(new ArraySet<>());
+        if (!areAllowedUidsAcceptableFromNetworkAgent(nc, authenticator)) {
+            nc.setAllowedUids(new ArraySet<>());
         }
     }
 
-    private static boolean areAccessUidsAcceptableFromNetworkAgent(
+    private static boolean areAllowedUidsAcceptableFromNetworkAgent(
             @NonNull final NetworkCapabilities nc,
             @Nullable final CarrierPrivilegeAuthenticator carrierPrivilegeAuthenticator) {
         // NCs without access UIDs are fine.
-        if (!nc.hasAccessUids()) return true;
+        if (!nc.hasAllowedUids()) return true;
         // S and below must never accept access UIDs, even if an agent sends them, because netd
         // didn't support the required feature in S.
         if (!SdkLevel.isAtLeastT()) return false;
@@ -1244,9 +1244,9 @@ public class NetworkAgentInfo implements Comparable<NetworkAgentInfo>, NetworkRa
         // This can only work in T where there is support for CarrierPrivilegeAuthenticator
         if (null != carrierPrivilegeAuthenticator
                 && nc.hasSingleTransport(TRANSPORT_CELLULAR)
-                && (1 == nc.getAccessUidsNoCopy().size())
+                && (1 == nc.getAllowedUidsNoCopy().size())
                 && (carrierPrivilegeAuthenticator.hasCarrierPrivilegeForNetworkCapabilities(
-                        nc.getAccessUidsNoCopy().valueAt(0), nc))) {
+                        nc.getAllowedUidsNoCopy().valueAt(0), nc))) {
             return true;
         }
 

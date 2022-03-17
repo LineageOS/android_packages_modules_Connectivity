@@ -310,38 +310,38 @@ public class NetworkCapabilitiesTest {
     }
 
     @Test @IgnoreUpTo(SC_V2)
-    public void testSetAccessUids() {
+    public void testSetAllowedUids() {
         final NetworkCapabilities nc = new NetworkCapabilities();
-        assertThrows(NullPointerException.class, () -> nc.setAccessUids(null));
-        assertFalse(nc.hasAccessUids());
-        assertFalse(nc.isAccessUid(0));
-        assertFalse(nc.isAccessUid(1000));
-        assertEquals(0, nc.getAccessUids().size());
-        nc.setAccessUids(new ArraySet<>());
-        assertFalse(nc.hasAccessUids());
-        assertFalse(nc.isAccessUid(0));
-        assertFalse(nc.isAccessUid(1000));
-        assertEquals(0, nc.getAccessUids().size());
+        assertThrows(NullPointerException.class, () -> nc.setAllowedUids(null));
+        assertFalse(nc.hasAllowedUids());
+        assertFalse(nc.isUidWithAccess(0));
+        assertFalse(nc.isUidWithAccess(1000));
+        assertEquals(0, nc.getAllowedUids().size());
+        nc.setAllowedUids(new ArraySet<>());
+        assertFalse(nc.hasAllowedUids());
+        assertFalse(nc.isUidWithAccess(0));
+        assertFalse(nc.isUidWithAccess(1000));
+        assertEquals(0, nc.getAllowedUids().size());
 
         final ArraySet<Integer> uids = new ArraySet<>();
         uids.add(200);
         uids.add(250);
         uids.add(-1);
         uids.add(Integer.MAX_VALUE);
-        nc.setAccessUids(uids);
+        nc.setAllowedUids(uids);
         assertNotEquals(nc, new NetworkCapabilities());
-        assertTrue(nc.hasAccessUids());
+        assertTrue(nc.hasAllowedUids());
 
         final List<Integer> includedList = List.of(-2, 0, 199, 700, 901, 1000, Integer.MIN_VALUE);
         final List<Integer> excludedList = List.of(-1, 200, 250, Integer.MAX_VALUE);
         for (final int uid : includedList) {
-            assertFalse(nc.isAccessUid(uid));
+            assertFalse(nc.isUidWithAccess(uid));
         }
         for (final int uid : excludedList) {
-            assertTrue(nc.isAccessUid(uid));
+            assertTrue(nc.isUidWithAccess(uid));
         }
 
-        final Set<Integer> outUids = nc.getAccessUids();
+        final Set<Integer> outUids = nc.getAllowedUids();
         assertEquals(4, outUids.size());
         for (final int uid : includedList) {
             assertFalse(outUids.contains(uid));
@@ -361,10 +361,10 @@ public class NetworkCapabilitiesTest {
             .addCapability(NET_CAPABILITY_EIMS)
             .addCapability(NET_CAPABILITY_NOT_METERED);
         if (isAtLeastS()) {
-            final ArraySet<Integer> accessUids = new ArraySet<>();
-            accessUids.add(4);
-            accessUids.add(9);
-            netCap.setAccessUids(accessUids);
+            final ArraySet<Integer> allowedUids = new ArraySet<>();
+            allowedUids.add(4);
+            allowedUids.add(9);
+            netCap.setAllowedUids(allowedUids);
             netCap.setSubscriptionIds(Set.of(TEST_SUBID1, TEST_SUBID2));
             netCap.setUids(uids);
         }
