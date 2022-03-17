@@ -32,7 +32,7 @@ import android.Manifest;
 import android.annotation.NonNull;
 import android.content.Context;
 import android.content.pm.PackageManager;
-import android.net.INetworkInterfaceOutcomeReceiver;
+import android.net.IEthernetNetworkManagementListener;
 import android.net.EthernetNetworkUpdateRequest;
 import android.net.IpConfiguration;
 import android.net.NetworkCapabilities;
@@ -64,7 +64,7 @@ public class EthernetServiceImplTest {
             new EthernetNetworkUpdateRequest.Builder()
                     .setNetworkCapabilities(new NetworkCapabilities.Builder().build())
                     .build();
-    private static final INetworkInterfaceOutcomeReceiver NULL_LISTENER = null;
+    private static final IEthernetNetworkManagementListener NULL_LISTENER = null;
     private EthernetServiceImpl mEthernetServiceImpl;
     @Mock private Context mContext;
     @Mock private Handler mHandler;
