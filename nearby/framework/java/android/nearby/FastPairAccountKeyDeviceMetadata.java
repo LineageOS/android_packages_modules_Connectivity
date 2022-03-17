@@ -36,20 +36,21 @@ public class FastPairAccountKeyDeviceMetadata {
     }
 
     /**
-     * Get Account Key, which uniquely identifies a Fast Pair device associated with an account.
+     * Get Device Account Key, which uniquely identifies a Fast Pair device associated with an
+     * account.
      */
     @Nullable
-    public byte[] getAccountKey() {
-        return mMetadataParcel.accountKey;
+    public byte[] getDeviceAccountKey() {
+        return mMetadataParcel.deviceAccountKey;
     }
 
     /**
-     * Get a hash value of account key and public bluetooth address without revealing the public
-     * bluetooth address.
+     * Get a hash value of device's account key and public bluetooth address without revealing the
+     * public bluetooth address.
      */
     @Nullable
-    public byte[] getSha256AccountKeyPublicAddress() {
-        return mMetadataParcel.sha256AccountKeyPublicAddress;
+    public byte[] getSha256DeviceAccountKeyPublicAddress() {
+        return mMetadataParcel.sha256DeviceAccountKeyPublicAddress;
     }
 
     /**
@@ -86,8 +87,8 @@ public class FastPairAccountKeyDeviceMetadata {
          */
         public Builder() {
             mBuilderParcel = new FastPairAccountKeyDeviceMetadataParcel();
-            mBuilderParcel.accountKey = null;
-            mBuilderParcel.sha256AccountKeyPublicAddress = null;
+            mBuilderParcel.deviceAccountKey = null;
+            mBuilderParcel.sha256DeviceAccountKeyPublicAddress = null;
             mBuilderParcel.metadata = null;
             mBuilderParcel.discoveryItem = null;
         }
@@ -95,25 +96,27 @@ public class FastPairAccountKeyDeviceMetadata {
         /**
          * Set Account Key.
          *
-         * @param accountKey Fast Pair device account key.
+         * @param deviceAccountKey Fast Pair device account key.
          * @return The builder, to facilitate chaining {@code builder.setXXX(..).setXXX(..)}.
          */
         @NonNull
-        public Builder setAccountKey(@Nullable byte[] accountKey) {
-            mBuilderParcel.accountKey = accountKey;
+        public Builder setDeviceAccountKey(@Nullable byte[] deviceAccountKey) {
+            mBuilderParcel.deviceAccountKey = deviceAccountKey;
             return this;
         }
 
         /**
          * Set sha256 account key and  public address.
          *
-         * @param sha256AccountKeyPublicAddress Hash value of account key and public address.
+         * @param sha256DeviceAccountKeyPublicAddress Hash value of device's account key and public
+         *                                            address.
          * @return The builder, to facilitate chaining {@code builder.setXXX(..).setXXX(..)}.
          */
         @NonNull
-        public Builder setSha256AccountKeyPublicAddress(
-                @Nullable byte[] sha256AccountKeyPublicAddress) {
-            mBuilderParcel.sha256AccountKeyPublicAddress = sha256AccountKeyPublicAddress;
+        public Builder setSha256DeviceAccountKeyPublicAddress(
+                @Nullable byte[] sha256DeviceAccountKeyPublicAddress) {
+            mBuilderParcel.sha256DeviceAccountKeyPublicAddress =
+                    sha256DeviceAccountKeyPublicAddress;
             return this;
         }
 
@@ -126,7 +129,11 @@ public class FastPairAccountKeyDeviceMetadata {
          */
         @NonNull
         public Builder setFastPairDeviceMetadata(@Nullable FastPairDeviceMetadata metadata) {
-            mBuilderParcel.metadata = metadata.mMetadataParcel;
+            if (metadata == null) {
+                mBuilderParcel.metadata = null;
+            } else {
+                mBuilderParcel.metadata = metadata.mMetadataParcel;
+            }
             return this;
         }
 
@@ -138,7 +145,11 @@ public class FastPairAccountKeyDeviceMetadata {
          */
         @NonNull
         public Builder setFastPairDiscoveryItem(@Nullable FastPairDiscoveryItem discoveryItem) {
-            mBuilderParcel.discoveryItem = discoveryItem.mMetadataParcel;
+            if (discoveryItem == null) {
+                mBuilderParcel.discoveryItem = null;
+            } else {
+                mBuilderParcel.discoveryItem = discoveryItem.mMetadataParcel;
+            }
             return this;
         }
 

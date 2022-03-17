@@ -24,9 +24,9 @@ import android.nearby.aidl.FastPairDiscoveryItemParcel;
  // TODO(b/204780849): remove unnecessary fields and polish comments.
 parcelable FastPairAccountKeyDeviceMetadataParcel {
     // Key of the Fast Pair device associated with the account.
-    byte[] accountKey;
-    // Hash function of account key and public bluetooth address.
-    byte[] sha256AccountKeyPublicAddress;
+    byte[] deviceAccountKey;
+    // Hash function of device account key and public bluetooth address.
+    byte[] sha256DeviceAccountKeyPublicAddress;
     // Fast Pair device metadata for the Fast Pair device.
     FastPairDeviceMetadataParcel metadata;
     // Fast Pair discovery item tied to both the Fast Pair device and the

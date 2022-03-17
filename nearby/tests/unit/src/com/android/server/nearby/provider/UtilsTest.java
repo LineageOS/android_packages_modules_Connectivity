@@ -300,8 +300,8 @@ public class UtilsTest {
     private static void ensureHappyPathAsExpected(
             FastPairAccountKeyDeviceMetadataParcel metadataParcel) {
         assertThat(metadataParcel).isNotNull();
-        assertThat(metadataParcel.accountKey).isEqualTo(ACCOUNT_KEY);
-        assertThat(metadataParcel.sha256AccountKeyPublicAddress)
+        assertThat(metadataParcel.deviceAccountKey).isEqualTo(ACCOUNT_KEY);
+        assertThat(metadataParcel.sha256DeviceAccountKeyPublicAddress)
                 .isEqualTo(SHA256_ACCOUNT_KEY_PUBLIC_ADDRESS);
         ensureHappyPathAsExpected(metadataParcel.metadata);
         ensureHappyPathAsExpected(metadataParcel.discoveryItem);
@@ -450,9 +450,9 @@ public class UtilsTest {
             genHappyPathFastPairAccountkeyDeviceMetadataParcel() {
         FastPairAccountKeyDeviceMetadataParcel parcel =
                 new FastPairAccountKeyDeviceMetadataParcel();
-        parcel.accountKey = ACCOUNT_KEY;
+        parcel.deviceAccountKey = ACCOUNT_KEY;
         parcel.metadata = genHappyPathFastPairDeviceMetadataParcel();
-        parcel.sha256AccountKeyPublicAddress = SHA256_ACCOUNT_KEY_PUBLIC_ADDRESS;
+        parcel.sha256DeviceAccountKeyPublicAddress = SHA256_ACCOUNT_KEY_PUBLIC_ADDRESS;
         parcel.discoveryItem = genHappyPathFastPairDiscoveryItemParcel();
 
         return parcel;
@@ -710,7 +710,7 @@ public class UtilsTest {
             genHappyPathFastPairAntispoofKeyDeviceMetadataParcel() {
         FastPairAntispoofKeyDeviceMetadataParcel parcel =
                 new FastPairAntispoofKeyDeviceMetadataParcel();
-        parcel.antiSpoofPublicKey = ANTI_SPOOFING_KEY;
+        parcel.antispoofPublicKey = ANTI_SPOOFING_KEY;
         parcel.deviceMetadata = genHappyPathFastPairDeviceMetadataParcel();
 
         return parcel;
@@ -720,7 +720,7 @@ public class UtilsTest {
             genFastPairAntispoofKeyDeviceMetadataParcelWithEmptyDeviceMetadata() {
         FastPairAntispoofKeyDeviceMetadataParcel parcel =
                 new FastPairAntispoofKeyDeviceMetadataParcel();
-        parcel.antiSpoofPublicKey = ANTI_SPOOFING_KEY;
+        parcel.antispoofPublicKey = ANTI_SPOOFING_KEY;
         parcel.deviceMetadata = genEmptyFastPairDeviceMetadataParcel();
 
         return parcel;

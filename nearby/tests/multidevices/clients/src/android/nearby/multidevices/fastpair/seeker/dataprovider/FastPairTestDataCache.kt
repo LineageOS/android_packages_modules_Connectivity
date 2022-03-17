@@ -58,16 +58,16 @@ object FastPairTestDataCache {
         @SerializedName("fast_pair_discovery_item") val discoveryItem: FastPairDiscoveryItemData?,
     ) {
         constructor(meta: FastPairAccountKeyDeviceMetadata) : this(
-            accountKey = meta.accountKey?.base64Encode(),
-            accountKeyPublicAddress = meta.sha256AccountKeyPublicAddress?.base64Encode(),
+            accountKey = meta.deviceAccountKey?.base64Encode(),
+            accountKeyPublicAddress = meta.sha256DeviceAccountKeyPublicAddress?.base64Encode(),
             deviceMeta = meta.fastPairDeviceMetadata?.let { FastPairDeviceMetadataData(it) },
             discoveryItem = meta.fastPairDiscoveryItem?.let { FastPairDiscoveryItemData(it) },
         )
 
         fun toFastPairAccountKeyDeviceMetadata(): FastPairAccountKeyDeviceMetadata {
             return FastPairAccountKeyDeviceMetadata.Builder()
-                .setAccountKey(accountKey?.base64Decode())
-                .setSha256AccountKeyPublicAddress(accountKeyPublicAddress?.base64Decode())
+                .setDeviceAccountKey(accountKey?.base64Decode())
+                .setSha256DeviceAccountKeyPublicAddress(accountKeyPublicAddress?.base64Decode())
                 .setFastPairDeviceMetadata(deviceMeta?.toFastPairDeviceMetadata())
                 .setFastPairDiscoveryItem(discoveryItem?.toFastPairDiscoveryItem())
                 .build()
@@ -75,12 +75,12 @@ object FastPairTestDataCache {
     }
 
     data class FastPairAntispoofKeyDeviceMetadataData(
-        @SerializedName("anti_spoofing_public_key_str") val antiSpoofPublicKey: String?,
+        @SerializedName("anti_spoofing_public_key_str") val antispoofPublicKey: String?,
         @SerializedName("fast_pair_device_metadata") val deviceMeta: FastPairDeviceMetadataData?,
     ) {
         fun toFastPairAntispoofKeyDeviceMetadata(): FastPairAntispoofKeyDeviceMetadata {
             return FastPairAntispoofKeyDeviceMetadata.Builder()
-                .setAntiSpoofPublicKey(antiSpoofPublicKey?.base64Decode())
+                .setAntispoofPublicKey(antispoofPublicKey?.base64Decode())
                 .setFastPairDeviceMetadata(deviceMeta?.toFastPairDeviceMetadata())
                 .build()
         }
