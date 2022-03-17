@@ -24,7 +24,7 @@ import android.content.Context;
 import android.content.pm.PackageManager;
 import android.net.IEthernetManager;
 import android.net.IEthernetServiceListener;
-import android.net.INetworkInterfaceOutcomeReceiver;
+import android.net.IEthernetNetworkManagementListener;
 import android.net.ITetheredInterfaceCallback;
 import android.net.EthernetNetworkUpdateRequest;
 import android.net.IpConfiguration;
@@ -243,7 +243,7 @@ public class EthernetServiceImpl extends IEthernetManager.Stub {
     @Override
     public void updateConfiguration(@NonNull final String iface,
             @NonNull final EthernetNetworkUpdateRequest request,
-            @Nullable final INetworkInterfaceOutcomeReceiver listener) {
+            @Nullable final IEthernetNetworkManagementListener listener) {
         Objects.requireNonNull(iface);
         Objects.requireNonNull(request);
         throwIfEthernetNotStarted();
@@ -260,7 +260,7 @@ public class EthernetServiceImpl extends IEthernetManager.Stub {
 
     @Override
     public void connectNetwork(@NonNull final String iface,
-            @Nullable final INetworkInterfaceOutcomeReceiver listener) {
+            @Nullable final IEthernetNetworkManagementListener listener) {
         Log.i(TAG, "connectNetwork called with: iface=" + iface + ", listener=" + listener);
         Objects.requireNonNull(iface);
         throwIfEthernetNotStarted();
@@ -272,7 +272,7 @@ public class EthernetServiceImpl extends IEthernetManager.Stub {
 
     @Override
     public void disconnectNetwork(@NonNull final String iface,
-            @Nullable final INetworkInterfaceOutcomeReceiver listener) {
+            @Nullable final IEthernetNetworkManagementListener listener) {
         Log.i(TAG, "disconnectNetwork called with: iface=" + iface + ", listener=" + listener);
         Objects.requireNonNull(iface);
         throwIfEthernetNotStarted();
