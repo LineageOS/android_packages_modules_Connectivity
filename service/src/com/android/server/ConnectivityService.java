@@ -2252,7 +2252,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
         newNc.setAdministratorUids(new int[0]);
         if (!checkAnyPermissionOf(
                 callerPid, callerUid, android.Manifest.permission.NETWORK_FACTORY)) {
-            newNc.setAccessUids(new ArraySet<>());
+            newNc.setAllowedUids(new ArraySet<>());
             newNc.setSubscriptionIds(Collections.emptySet());
         }
 
@@ -6466,7 +6466,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
         if (nc.isPrivateDnsBroken()) {
             throw new IllegalArgumentException("Can't request broken private DNS");
         }
-        if (nc.hasAccessUids()) {
+        if (nc.hasAllowedUids()) {
             throw new IllegalArgumentException("Can't request access UIDs");
         }
     }
@@ -7923,7 +7923,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
         final NetworkCapabilities prevNc = nai.getAndSetNetworkCapabilities(newNc);
 
         updateVpnUids(nai, prevNc, newNc);
-        updateAccessUids(nai, prevNc, newNc);
+        updateAllowedUids(nai, prevNc, newNc);
         nai.updateScoreForNetworkAgentUpdate();
 
         if (nai.getCurrentScore() == oldScore && newNc.equalRequestableCapabilities(prevNc)) {
@@ -8153,17 +8153,17 @@ public class ConnectivityService extends IConnectivityManager.Stub
         }
     }
 
-    private void updateAccessUids(@NonNull NetworkAgentInfo nai,
+    private void updateAllowedUids(@NonNull NetworkAgentInfo nai,
             @Nullable NetworkCapabilities prevNc, @Nullable NetworkCapabilities newNc) {
         // In almost all cases both NC code for empty access UIDs. return as fast as possible.
-        final boolean prevEmpty = null == prevNc || prevNc.getAccessUidsNoCopy().isEmpty();
-        final boolean newEmpty = null == newNc || newNc.getAccessUidsNoCopy().isEmpty();
+        final boolean prevEmpty = null == prevNc || prevNc.getAllowedUidsNoCopy().isEmpty();
+        final boolean newEmpty = null == newNc || newNc.getAllowedUidsNoCopy().isEmpty();
         if (prevEmpty && newEmpty) return;
 
         final ArraySet<Integer> prevUids =
-                null == prevNc ? new ArraySet<>() : prevNc.getAccessUidsNoCopy();
+                null == prevNc ? new ArraySet<>() : prevNc.getAllowedUidsNoCopy();
         final ArraySet<Integer> newUids =
-                null == newNc ? new ArraySet<>() : newNc.getAccessUidsNoCopy();
+                null == newNc ? new ArraySet<>() : newNc.getAllowedUidsNoCopy();
 
         if (prevUids.equals(newUids)) return;
 
@@ -9113,7 +9113,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
             }
             networkAgent.created = true;
             networkAgent.onNetworkCreated();
-            updateAccessUids(networkAgent, null, networkAgent.networkCapabilities);
+            updateAllowedUids(networkAgent, null, networkAgent.networkCapabilities);
         }
 
         if (!networkAgent.everConnected && state == NetworkInfo.State.CONNECTED) {
@@ -10625,15 +10625,16 @@ public class ConnectivityService extends IConnectivityManager.Stub
             @NonNull final UserHandle profile,
             @NonNull final ProfileNetworkPreference profileNetworkPreference) {
         final UidRange profileUids = UidRange.createForUser(profile);
-        Set<UidRange> uidRangeSet = UidRangeUtils.convertListToUidRange(
-                profileNetworkPreference.getIncludedUids());
+        Set<UidRange> uidRangeSet = UidRangeUtils.convertArrayToUidRange(
+                        profileNetworkPreference.getIncludedUids());
+
         if (uidRangeSet.size() > 0) {
             if (!UidRangeUtils.isRangeSetInUidRange(profileUids, uidRangeSet)) {
                 throw new IllegalArgumentException(
                         "Allow uid range is outside the uid range of profile.");
             }
         } else {
-            ArraySet<UidRange> disallowUidRangeSet = UidRangeUtils.convertListToUidRange(
+            ArraySet<UidRange> disallowUidRangeSet = UidRangeUtils.convertArrayToUidRange(
                     profileNetworkPreference.getExcludedUids());
             if (disallowUidRangeSet.size() > 0) {
                 if (!UidRangeUtils.isRangeSetInUidRange(profileUids, disallowUidRangeSet)) {
