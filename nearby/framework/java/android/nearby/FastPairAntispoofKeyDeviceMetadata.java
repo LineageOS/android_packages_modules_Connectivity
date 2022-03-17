@@ -23,6 +23,7 @@ import android.nearby.aidl.FastPairAntispoofKeyDeviceMetadataParcel;
 
 /**
  * Class for a type of registered Fast Pair device keyed by modelID, or antispoofKey.
+ *
  * @hide
  */
 @SystemApi
@@ -35,7 +36,32 @@ public class FastPairAntispoofKeyDeviceMetadata {
     }
 
     /**
-     * Builder used to create FastPairAntispoofKeyDeviceMetadata.
+     * Get Antispoof public key.
+     *
+     * @hide
+     */
+    @SystemApi
+    @Nullable
+    public byte[] getAntispoofPublicKey() {
+        return this.mMetadataParcel.antispoofPublicKey;
+    }
+
+    /**
+     * Get metadata of a Fast Pair device type.
+     *
+     * @hide
+     */
+    @SystemApi
+    @Nullable
+    public FastPairDeviceMetadata getFastPairDeviceMetadata() {
+        if (this.mMetadataParcel.deviceMetadata == null) {
+            return null;
+        }
+        return new FastPairDeviceMetadata(this.mMetadataParcel.deviceMetadata);
+    }
+
+    /**
+     * Builder used to create FastPairAntispoofkeyDeviceMetadata.
      */
     public static final class Builder {
 
@@ -46,20 +72,20 @@ public class FastPairAntispoofKeyDeviceMetadata {
          */
         public Builder() {
             mBuilderParcel = new FastPairAntispoofKeyDeviceMetadataParcel();
-            mBuilderParcel.antiSpoofPublicKey = null;
+            mBuilderParcel.antispoofPublicKey = null;
             mBuilderParcel.deviceMetadata = null;
         }
 
         /**
          * Set AntiSpoof public key, which uniquely identify a Fast Pair device type.
          *
-         * @param antiSpoofPublicKey AntiSpoof public key.
+         * @param antispoofPublicKey AntiSpoof public key.
          * @return The builder, to facilitate chaining {@code builder.setXXX(..).setXXX(..)}.
          */
         @SuppressLint("MissingGetterMatchingBuilder")
         @NonNull
-        public Builder setAntiSpoofPublicKey(@Nullable byte[] antiSpoofPublicKey) {
-            mBuilderParcel.antiSpoofPublicKey = antiSpoofPublicKey;
+        public Builder setAntispoofPublicKey(@Nullable byte[] antispoofPublicKey) {
+            mBuilderParcel.antispoofPublicKey = antispoofPublicKey;
             return this;
         }
 
@@ -73,7 +99,11 @@ public class FastPairAntispoofKeyDeviceMetadata {
         @SuppressLint("MissingGetterMatchingBuilder")
         @NonNull
         public Builder setFastPairDeviceMetadata(@Nullable FastPairDeviceMetadata metadata) {
-            mBuilderParcel.deviceMetadata = metadata.mMetadataParcel;
+            if (metadata != null) {
+                mBuilderParcel.deviceMetadata = metadata.mMetadataParcel;
+            } else {
+                mBuilderParcel.deviceMetadata = null;
+            }
             return this;
         }
 

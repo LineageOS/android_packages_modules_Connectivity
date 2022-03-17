@@ -23,8 +23,8 @@ import android.nearby.aidl.FastPairDeviceMetadataParcel;
  * {@hide}
  */
 parcelable FastPairAntispoofKeyDeviceMetadataParcel {
-    // Anti spoof public key.
-    byte[] antiSpoofPublicKey;
+    // Anti-spoof public key.
+    byte[] antispoofPublicKey;
 
     // Fast Pair device metadata for the Fast Pair device.
     FastPairDeviceMetadataParcel deviceMetadata;

@@ -258,22 +258,22 @@ public abstract class FastPairDataProviderBase {
         }
 
         /**
-         * Get allowlist of Fast Pair devices using a collection of accountKeys.
+         * Get allowlist of Fast Pair devices using a collection of deviceAccountKeys.
          * Note that as a special case, empty list actually means all FastPair devices under the
          * account instead of none.
          *
-         * @return allowlist of Fast Pair devices using a collection of accountKeys.
+         * @return allowlist of Fast Pair devices using a collection of deviceAccountKeys.
          */
-        public @NonNull Collection<byte[]> getAccountKeys()  {
-            if (this.mMetadataRequestParcel.accountKeys == null) {
+        public @NonNull Collection<byte[]> getDeviceAccountKeys()  {
+            if (this.mMetadataRequestParcel.deviceAccountKeys == null) {
                 return new ArrayList<byte[]>(0);
             }
-            List<byte[]> accountKeys =
-                    new ArrayList<>(this.mMetadataRequestParcel.accountKeys.length);
-            for (ByteArrayParcel accountKey : this.mMetadataRequestParcel.accountKeys) {
-                accountKeys.add(accountKey.byteArray);
+            List<byte[]> deviceAccountKeys =
+                    new ArrayList<>(this.mMetadataRequestParcel.deviceAccountKeys.length);
+            for (ByteArrayParcel deviceAccountKey : this.mMetadataRequestParcel.deviceAccountKeys) {
+                deviceAccountKeys.add(deviceAccountKey.byteArray);
             }
-            return accountKeys;
+            return deviceAccountKeys;
         }
     }
 
