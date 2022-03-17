@@ -147,27 +147,32 @@ public final class NetworkCapabilities implements Parcelable {
     private String mRequestorPackageName;
 
     /**
-     * Enterprise capability identifier 1.
+     * Enterprise capability identifier 1. It will be used to uniquely identify specific
+     * enterprise network.
      */
     public static final int NET_ENTERPRISE_ID_1 = 1;
 
     /**
-     * Enterprise capability identifier 2.
+     * Enterprise capability identifier 2. It will be used to uniquely identify specific
+     * enterprise network.
      */
     public static final int NET_ENTERPRISE_ID_2 = 2;
 
     /**
-     * Enterprise capability identifier 3.
+     * Enterprise capability identifier 3. It will be used to uniquely identify specific
+     * enterprise network.
      */
     public static final int NET_ENTERPRISE_ID_3 = 3;
 
     /**
-     * Enterprise capability identifier 4.
+     * Enterprise capability identifier 4. It will be used to uniquely identify specific
+     * enterprise network.
      */
     public static final int NET_ENTERPRISE_ID_4 = 4;
 
     /**
-     * Enterprise capability identifier 5.
+     * Enterprise capability identifier 5. It will be used to uniquely identify specific
+     * enterprise network.
      */
     public static final int NET_ENTERPRISE_ID_5 = 5;
 
@@ -264,7 +269,7 @@ public final class NetworkCapabilities implements Parcelable {
         mTransportInfo = null;
         mSignalStrength = SIGNAL_STRENGTH_UNSPECIFIED;
         mUids = null;
-        mAccessUids.clear();
+        mAllowedUids.clear();
         mAdministratorUids = new int[0];
         mOwnerUid = Process.INVALID_UID;
         mSSID = null;
@@ -295,7 +300,7 @@ public final class NetworkCapabilities implements Parcelable {
         }
         mSignalStrength = nc.mSignalStrength;
         mUids = (nc.mUids == null) ? null : new ArraySet<>(nc.mUids);
-        setAccessUids(nc.mAccessUids);
+        setAllowedUids(nc.mAllowedUids);
         setAdministratorUids(nc.getAdministratorUids());
         mOwnerUid = nc.mOwnerUid;
         mForbiddenNetworkCapabilities = nc.mForbiddenNetworkCapabilities;
@@ -1029,7 +1034,7 @@ public final class NetworkCapabilities implements Parcelable {
         final int[] originalAdministratorUids = getAdministratorUids();
         final TransportInfo originalTransportInfo = getTransportInfo();
         final Set<Integer> originalSubIds = getSubscriptionIds();
-        final Set<Integer> originalAccessUids = new ArraySet<>(mAccessUids);
+        final Set<Integer> originalAllowedUids = new ArraySet<>(mAllowedUids);
         clearAll();
         if (0 != (originalCapabilities & (1 << NET_CAPABILITY_NOT_RESTRICTED))) {
             // If the test network is not restricted, then it is only allowed to declare some
@@ -1049,7 +1054,7 @@ public final class NetworkCapabilities implements Parcelable {
         mNetworkSpecifier = originalSpecifier;
         mSignalStrength = originalSignalStrength;
         mTransportInfo = originalTransportInfo;
-        mAccessUids.addAll(originalAccessUids);
+        mAllowedUids.addAll(originalAllowedUids);
 
         // Only retain the owner and administrator UIDs if they match the app registering the remote
         // caller that registered the network.
@@ -1836,20 +1841,20 @@ public final class NetworkCapabilities implements Parcelable {
      * @hide
      */
     @NonNull
-    private final ArraySet<Integer> mAccessUids = new ArraySet<>();
+    private final ArraySet<Integer> mAllowedUids = new ArraySet<>();
 
     /**
      * Set the list of UIDs that can always access this network.
      * @param uids
      * @hide
      */
-    public void setAccessUids(@NonNull final Set<Integer> uids) {
+    public void setAllowedUids(@NonNull final Set<Integer> uids) {
         // could happen with nc.set(nc), cheaper than always making a defensive copy
-        if (uids == mAccessUids) return;
+        if (uids == mAllowedUids) return;
 
         Objects.requireNonNull(uids);
-        mAccessUids.clear();
-        mAccessUids.addAll(uids);
+        mAllowedUids.clear();
+        mAllowedUids.addAll(uids);
     }
 
     /**
@@ -1867,35 +1872,36 @@ public final class NetworkCapabilities implements Parcelable {
      */
     @SystemApi(client = SystemApi.Client.MODULE_LIBRARIES)
     @RequiresPermission(android.Manifest.permission.NETWORK_FACTORY)
-    public @NonNull Set<Integer> getAccessUids() {
-        return new ArraySet<>(mAccessUids);
+    public @NonNull Set<Integer> getAllowedUids() {
+        return new ArraySet<>(mAllowedUids);
     }
 
     /** @hide */
     // For internal clients that know what they are doing and need to avoid the performance hit
     // of the defensive copy.
-    public @NonNull ArraySet<Integer> getAccessUidsNoCopy() {
-        return mAccessUids;
+    public @NonNull ArraySet<Integer> getAllowedUidsNoCopy() {
+        return mAllowedUids;
     }
 
     /**
-     * Test whether this UID has special permission to access this network, as per mAccessUids.
+     * Test whether this UID has special permission to access this network, as per mAllowedUids.
      * @hide
      */
-    public boolean isAccessUid(int uid) {
-        return mAccessUids.contains(uid);
+    // TODO : should this be "doesUidHaveAccess" and check the USE_RESTRICTED_NETWORKS permission ?
+    public boolean isUidWithAccess(int uid) {
+        return mAllowedUids.contains(uid);
     }
 
     /**
      * @return whether any UID is in the list of access UIDs
      * @hide
      */
-    public boolean hasAccessUids() {
-        return !mAccessUids.isEmpty();
+    public boolean hasAllowedUids() {
+        return !mAllowedUids.isEmpty();
     }
 
-    private boolean equalsAccessUids(@NonNull NetworkCapabilities other) {
-        return mAccessUids.equals(other.mAccessUids);
+    private boolean equalsAllowedUids(@NonNull NetworkCapabilities other) {
+        return mAllowedUids.equals(other.mAllowedUids);
     }
 
     /**
@@ -2052,7 +2058,7 @@ public final class NetworkCapabilities implements Parcelable {
                 && equalsSpecifier(that)
                 && equalsTransportInfo(that)
                 && equalsUids(that)
-                && equalsAccessUids(that)
+                && equalsAllowedUids(that)
                 && equalsSSID(that)
                 && equalsOwnerUid(that)
                 && equalsPrivateDnsBroken(that)
@@ -2077,7 +2083,7 @@ public final class NetworkCapabilities implements Parcelable {
                 + mSignalStrength * 29
                 + mOwnerUid * 31
                 + Objects.hashCode(mUids) * 37
-                + Objects.hashCode(mAccessUids) * 41
+                + Objects.hashCode(mAllowedUids) * 41
                 + Objects.hashCode(mSSID) * 43
                 + Objects.hashCode(mTransportInfo) * 47
                 + Objects.hashCode(mPrivateDnsBroken) * 53
@@ -2114,7 +2120,7 @@ public final class NetworkCapabilities implements Parcelable {
         dest.writeParcelable((Parcelable) mTransportInfo, flags);
         dest.writeInt(mSignalStrength);
         writeParcelableArraySet(dest, mUids, flags);
-        dest.writeIntArray(CollectionUtils.toIntArray(mAccessUids));
+        dest.writeIntArray(CollectionUtils.toIntArray(mAllowedUids));
         dest.writeString(mSSID);
         dest.writeBoolean(mPrivateDnsBroken);
         dest.writeIntArray(getAdministratorUids());
@@ -2141,10 +2147,10 @@ public final class NetworkCapabilities implements Parcelable {
                 netCap.mTransportInfo = in.readParcelable(null);
                 netCap.mSignalStrength = in.readInt();
                 netCap.mUids = readParcelableArraySet(in, null /* ClassLoader, null for default */);
-                final int[] accessUids = in.createIntArray();
-                netCap.mAccessUids.ensureCapacity(accessUids.length);
-                for (int uid : accessUids) {
-                    netCap.mAccessUids.add(uid);
+                final int[] allowedUids = in.createIntArray();
+                netCap.mAllowedUids.ensureCapacity(allowedUids.length);
+                for (int uid : allowedUids) {
+                    netCap.mAllowedUids.add(uid);
                 }
                 netCap.mSSID = in.readString();
                 netCap.mPrivateDnsBroken = in.readBoolean();
@@ -2223,8 +2229,8 @@ public final class NetworkCapabilities implements Parcelable {
             }
         }
 
-        if (hasAccessUids()) {
-            sb.append(" AccessUids: <").append(mAccessUids).append(">");
+        if (hasAllowedUids()) {
+            sb.append(" AllowedUids: <").append(mAllowedUids).append(">");
         }
 
         if (mOwnerUid != Process.INVALID_UID) {
@@ -3043,9 +3049,9 @@ public final class NetworkCapabilities implements Parcelable {
         @NonNull
         @SystemApi(client = SystemApi.Client.MODULE_LIBRARIES)
         @RequiresPermission(android.Manifest.permission.NETWORK_FACTORY)
-        public Builder setAccessUids(@NonNull Set<Integer> uids) {
+        public Builder setAllowedUids(@NonNull Set<Integer> uids) {
             Objects.requireNonNull(uids);
-            mCaps.setAccessUids(uids);
+            mCaps.setAllowedUids(uids);
             return this;
         }
 

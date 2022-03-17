@@ -141,7 +141,7 @@ package android.net {
   }
 
   public final class NetworkCapabilities implements android.os.Parcelable {
-    method @NonNull @RequiresPermission(android.Manifest.permission.NETWORK_FACTORY) public java.util.Set<java.lang.Integer> getAccessUids();
+    method @NonNull @RequiresPermission(android.Manifest.permission.NETWORK_FACTORY) public java.util.Set<java.lang.Integer> getAllowedUids();
     method @Nullable public java.util.Set<android.util.Range<java.lang.Integer>> getUids();
     method public boolean hasForbiddenCapability(int);
     field public static final long REDACT_ALL = -1L; // 0xffffffffffffffffL
@@ -153,7 +153,7 @@ package android.net {
   }
 
   public static final class NetworkCapabilities.Builder {
-    method @NonNull @RequiresPermission(android.Manifest.permission.NETWORK_FACTORY) public android.net.NetworkCapabilities.Builder setAccessUids(@NonNull java.util.Set<java.lang.Integer>);
+    method @NonNull @RequiresPermission(android.Manifest.permission.NETWORK_FACTORY) public android.net.NetworkCapabilities.Builder setAllowedUids(@NonNull java.util.Set<java.lang.Integer>);
     method @NonNull public android.net.NetworkCapabilities.Builder setUids(@Nullable java.util.Set<android.util.Range<java.lang.Integer>>);
   }
 
@@ -172,8 +172,8 @@ package android.net {
 
   public final class ProfileNetworkPreference implements android.os.Parcelable {
     method public int describeContents();
-    method @NonNull public java.util.List<java.lang.Integer> getExcludedUids();
-    method @NonNull public java.util.List<java.lang.Integer> getIncludedUids();
+    method @NonNull public int[] getExcludedUids();
+    method @NonNull public int[] getIncludedUids();
     method public int getPreference();
     method public int getPreferenceEnterpriseId();
     method public void writeToParcel(@NonNull android.os.Parcel, int);
@@ -183,8 +183,8 @@ package android.net {
   public static final class ProfileNetworkPreference.Builder {
     ctor public ProfileNetworkPreference.Builder();
     method @NonNull public android.net.ProfileNetworkPreference build();
-    method @NonNull public android.net.ProfileNetworkPreference.Builder setExcludedUids(@Nullable java.util.List<java.lang.Integer>);
-    method @NonNull public android.net.ProfileNetworkPreference.Builder setIncludedUids(@Nullable java.util.List<java.lang.Integer>);
+    method @NonNull public android.net.ProfileNetworkPreference.Builder setExcludedUids(@NonNull int[]);
+    method @NonNull public android.net.ProfileNetworkPreference.Builder setIncludedUids(@NonNull int[]);
     method @NonNull public android.net.ProfileNetworkPreference.Builder setPreference(int);
     method @NonNull public android.net.ProfileNetworkPreference.Builder setPreferenceEnterpriseId(int);
   }
