@@ -78,14 +78,14 @@ package android.nearby {
     method @NonNull public android.nearby.FastPairAntispoofKeyDeviceMetadata.Builder setFastPairDeviceMetadata(@Nullable android.nearby.FastPairDeviceMetadata);
   }
 
-  public abstract class FastPairDataProviderBase {
-    ctor public FastPairDataProviderBase(@NonNull String);
-    method @Nullable public final android.os.IBinder getBinder();
-    method public abstract void onLoadFastPairAccountDevicesMetadata(@NonNull android.nearby.FastPairDataProviderBase.FastPairAccountDevicesMetadataRequest, @NonNull android.nearby.FastPairDataProviderBase.FastPairAccountDevicesMetadataCallback);
-    method public abstract void onLoadFastPairAntispoofKeyDeviceMetadata(@NonNull android.nearby.FastPairDataProviderBase.FastPairAntispoofKeyDeviceMetadataRequest, @NonNull android.nearby.FastPairDataProviderBase.FastPairAntispoofKeyDeviceMetadataCallback);
-    method public abstract void onLoadFastPairEligibleAccounts(@NonNull android.nearby.FastPairDataProviderBase.FastPairEligibleAccountsRequest, @NonNull android.nearby.FastPairDataProviderBase.FastPairEligibleAccountsCallback);
-    method public abstract void onManageFastPairAccount(@NonNull android.nearby.FastPairDataProviderBase.FastPairManageAccountRequest, @NonNull android.nearby.FastPairDataProviderBase.FastPairManageActionCallback);
-    method public abstract void onManageFastPairAccountDevice(@NonNull android.nearby.FastPairDataProviderBase.FastPairManageAccountDeviceRequest, @NonNull android.nearby.FastPairDataProviderBase.FastPairManageActionCallback);
+  public abstract class FastPairDataProviderService extends android.app.Service {
+    ctor public FastPairDataProviderService(@NonNull String);
+    method @NonNull public final android.os.IBinder onBind(@NonNull android.content.Intent);
+    method public abstract void onLoadFastPairAccountDevicesMetadata(@NonNull android.nearby.FastPairDataProviderService.FastPairAccountDevicesMetadataRequest, @NonNull android.nearby.FastPairDataProviderService.FastPairAccountDevicesMetadataCallback);
+    method public abstract void onLoadFastPairAntispoofKeyDeviceMetadata(@NonNull android.nearby.FastPairDataProviderService.FastPairAntispoofKeyDeviceMetadataRequest, @NonNull android.nearby.FastPairDataProviderService.FastPairAntispoofKeyDeviceMetadataCallback);
+    method public abstract void onLoadFastPairEligibleAccounts(@NonNull android.nearby.FastPairDataProviderService.FastPairEligibleAccountsRequest, @NonNull android.nearby.FastPairDataProviderService.FastPairEligibleAccountsCallback);
+    method public abstract void onManageFastPairAccount(@NonNull android.nearby.FastPairDataProviderService.FastPairManageAccountRequest, @NonNull android.nearby.FastPairDataProviderService.FastPairManageActionCallback);
+    method public abstract void onManageFastPairAccountDevice(@NonNull android.nearby.FastPairDataProviderService.FastPairManageAccountDeviceRequest, @NonNull android.nearby.FastPairDataProviderService.FastPairManageActionCallback);
     field public static final String ACTION_FAST_PAIR_DATA_PROVIDER = "android.nearby.action.FAST_PAIR_DATA_PROVIDER";
     field public static final int ERROR_CODE_BAD_REQUEST = 0; // 0x0
     field public static final int ERROR_CODE_INTERNAL_ERROR = 1; // 0x1
@@ -93,46 +93,46 @@ package android.nearby {
     field public static final int MANAGE_REQUEST_REMOVE = 1; // 0x1
   }
 
-  public static interface FastPairDataProviderBase.FastPairAccountDevicesMetadataCallback {
+  public static interface FastPairDataProviderService.FastPairAccountDevicesMetadataCallback {
     method public void onError(int, @Nullable String);
     method public void onFastPairAccountDevicesMetadataReceived(@NonNull java.util.Collection<android.nearby.FastPairAccountKeyDeviceMetadata>);
   }
 
-  public static class FastPairDataProviderBase.FastPairAccountDevicesMetadataRequest {
+  public static class FastPairDataProviderService.FastPairAccountDevicesMetadataRequest {
     method @NonNull public android.accounts.Account getAccount();
     method @NonNull public java.util.Collection<byte[]> getDeviceAccountKeys();
   }
 
-  public static interface FastPairDataProviderBase.FastPairAntispoofKeyDeviceMetadataCallback {
+  public static interface FastPairDataProviderService.FastPairAntispoofKeyDeviceMetadataCallback {
     method public void onError(int, @Nullable String);
     method public void onFastPairAntispoofKeyDeviceMetadataReceived(@NonNull android.nearby.FastPairAntispoofKeyDeviceMetadata);
   }
 
-  public static class FastPairDataProviderBase.FastPairAntispoofKeyDeviceMetadataRequest {
+  public static class FastPairDataProviderService.FastPairAntispoofKeyDeviceMetadataRequest {
     method @NonNull public byte[] getModelId();
   }
 
-  public static interface FastPairDataProviderBase.FastPairEligibleAccountsCallback {
+  public static interface FastPairDataProviderService.FastPairEligibleAccountsCallback {
     method public void onError(int, @Nullable String);
     method public void onFastPairEligibleAccountsReceived(@NonNull java.util.Collection<android.nearby.FastPairEligibleAccount>);
   }
 
-  public static class FastPairDataProviderBase.FastPairEligibleAccountsRequest {
+  public static class FastPairDataProviderService.FastPairEligibleAccountsRequest {
   }
 
-  public static class FastPairDataProviderBase.FastPairManageAccountDeviceRequest {
+  public static class FastPairDataProviderService.FastPairManageAccountDeviceRequest {
     method @NonNull public android.accounts.Account getAccount();
     method @NonNull public android.nearby.FastPairAccountKeyDeviceMetadata getAccountKeyDeviceMetadata();
     method @Nullable public String getBleAddress();
     method public int getRequestType();
   }
 
-  public static class FastPairDataProviderBase.FastPairManageAccountRequest {
+  public static class FastPairDataProviderService.FastPairManageAccountRequest {
     method @NonNull public android.accounts.Account getAccount();
     method public int getRequestType();
   }
 
-  public static interface FastPairDataProviderBase.FastPairManageActionCallback {
+  public static interface FastPairDataProviderService.FastPairManageActionCallback {
     method public void onError(int, @Nullable String);
     method public void onSuccess();
   }
