@@ -41,6 +41,7 @@ import com.android.net.module.util.PermissionUtils;
 
 import java.io.FileDescriptor;
 import java.io.PrintWriter;
+import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -288,5 +289,11 @@ public class EthernetServiceImpl extends IEthernetManager.Stub {
                 android.Manifest.permission.NETWORK_SETTINGS);
 
         mTracker.setEthernetEnabled(enabled);
+    }
+
+    @Override
+    public List<String> getInterfaceList() {
+        PermissionUtils.enforceAccessNetworkStatePermission(mContext, TAG);
+        return mTracker.getInterfaceList();
     }
 }
