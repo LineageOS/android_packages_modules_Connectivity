@@ -17,7 +17,7 @@
 package android.net;
 
 import static com.android.testutils.DevSdkIgnoreRuleKt.SC_V2;
-import static com.android.testutils.ParcelUtils.assertParcelSane;
+import static com.android.testutils.ParcelUtils.assertParcelingIsLossless;
 
 import com.android.testutils.DevSdkIgnoreRule;
 import com.android.testutils.DevSdkIgnoreRunner;
@@ -48,7 +48,7 @@ public class EthernetNetworkUpdateRequestTest {
                 new EthernetNetworkUpdateRequest.Builder().setIpConfiguration(
                         buildIpConfiguration()).build();
 
-        assertParcelSane(reqWithNonNull, 2);
-        assertParcelSane(reqWithNullCaps, 2);
+        assertParcelingIsLossless(reqWithNonNull);
+        assertParcelingIsLossless(reqWithNullCaps);
     }
 }
