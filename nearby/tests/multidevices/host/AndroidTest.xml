@@ -10,7 +10,7 @@
      See the License for the specific language governing permissions and
      limitations under the License.
 -->
-<configuration description="Config for CTS seeker scan provider test">
+<configuration description="Config for CTS Nearby Mainline multi devices end-to-end test suite">
     <option name="test-suite-tag" value="cts" />
     <option name="config-descriptor:metadata" key="component" value="wifi" />
     <option name="config-descriptor:metadata" key="parameter" value="not_instant_app" />
@@ -56,7 +56,7 @@
 
     <test class="com.android.tradefed.testtype.mobly.MoblyBinaryHostTest">
       <!-- The mobly-par-file-name should match the module name -->
-      <option name="mobly-par-file-name" value="CtsSeekerDiscoverProviderTest" />
+      <option name="mobly-par-file-name" value="CtsNearbyMultiDevicesTestSuite" />
       <!-- Timeout limit in milliseconds for all test cases of the python binary -->
       <option name="mobly-test-timeout" value="60000" />
     </test>
