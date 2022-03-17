@@ -27,7 +27,7 @@ import android.content.res.Resources;
 import android.net.ConnectivityResources;
 import android.net.EthernetManager;
 import android.net.IEthernetServiceListener;
-import android.net.IEthernetNetworkManagementListener;
+import android.net.INetworkInterfaceOutcomeReceiver;
 import android.net.INetd;
 import android.net.ITetheredInterfaceCallback;
 import android.net.InterfaceConfigurationParcel;
@@ -291,7 +291,7 @@ public class EthernetTracker {
     protected void updateConfiguration(@NonNull final String iface,
             @Nullable final IpConfiguration ipConfig,
             @Nullable final NetworkCapabilities capabilities,
-            @Nullable final IEthernetNetworkManagementListener listener) {
+            @Nullable final INetworkInterfaceOutcomeReceiver listener) {
         if (DBG) {
             Log.i(TAG, "updateConfiguration, iface: " + iface + ", capabilities: " + capabilities
                     + ", ipConfig: " + ipConfig);
@@ -314,13 +314,13 @@ public class EthernetTracker {
 
     @VisibleForTesting(visibility = PACKAGE)
     protected void connectNetwork(@NonNull final String iface,
-            @Nullable final IEthernetNetworkManagementListener listener) {
+            @Nullable final INetworkInterfaceOutcomeReceiver listener) {
         mHandler.post(() -> updateInterfaceState(iface, true, listener));
     }
 
     @VisibleForTesting(visibility = PACKAGE)
     protected void disconnectNetwork(@NonNull final String iface,
-            @Nullable final IEthernetNetworkManagementListener listener) {
+            @Nullable final INetworkInterfaceOutcomeReceiver listener) {
         mHandler.post(() -> updateInterfaceState(iface, false, listener));
     }
 
@@ -505,7 +505,7 @@ public class EthernetTracker {
     }
 
     private void updateInterfaceState(@NonNull final String iface, final boolean up,
-            @Nullable final IEthernetNetworkManagementListener listener) {
+            @Nullable final INetworkInterfaceOutcomeReceiver listener) {
         final int mode = getInterfaceMode(iface);
         final boolean factoryLinkStateUpdated = (mode == INTERFACE_MODE_CLIENT)
                 && mFactory.updateInterfaceLinkState(iface, up, listener);
