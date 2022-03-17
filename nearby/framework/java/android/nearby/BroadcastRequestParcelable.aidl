@@ -16,4 +16,4 @@
 
 package android.nearby;
 
-parcelable BroadcastRequest;
+parcelable BroadcastRequestParcelable;
