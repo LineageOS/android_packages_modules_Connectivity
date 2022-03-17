@@ -463,6 +463,10 @@ public class ClatCoordinatorTest {
 
         // [3] Expect clatd to stop successfully.
         coordinator.clatStop();
+        inOrder.verify(mDeps).tcFilterDelDev(eq(BASE_IFINDEX), eq(INGRESS),
+                eq((short) PRIO_CLAT), eq((short) ETH_P_IPV6));
+        inOrder.verify(mDeps).tcFilterDelDev(eq(STACKED_IFINDEX), eq(EGRESS),
+                eq((short) PRIO_CLAT), eq((short) ETH_P_IP));
         inOrder.verify(mEgressMap).deleteEntry(eq(EGRESS_KEY));
         inOrder.verify(mIngressMap).deleteEntry(eq(INGRESS_KEY));
         inOrder.verify(mDeps).stopClatd(eq(BASE_IFACE), eq(NAT64_PREFIX_STRING),
