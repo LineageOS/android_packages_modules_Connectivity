@@ -25,5 +25,5 @@ import android.nearby.aidl.ByteArrayParcel;
  */
 parcelable FastPairAccountDevicesMetadataRequestParcel {
     Account account;
-    ByteArrayParcel[] accountKeys;
+    ByteArrayParcel[] deviceAccountKeys;
 }

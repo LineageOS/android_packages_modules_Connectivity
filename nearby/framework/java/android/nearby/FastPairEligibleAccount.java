@@ -38,6 +38,27 @@ public class FastPairEligibleAccount {
     }
 
     /**
+     * Get Account.
+     *
+     * @hide
+     */
+    @SystemApi
+    @Nullable
+    public Account getAccount() {
+        return this.mAccountParcel.account;
+    }
+
+    /**
+     * Get OptIn Status.
+     *
+     * @hide
+     */
+    @SystemApi
+    public boolean isOptIn() {
+        return this.mAccountParcel.optIn;
+    }
+
+    /**
      * Builder used to create FastPairEligibleAccount.
      */
     public static final class Builder {

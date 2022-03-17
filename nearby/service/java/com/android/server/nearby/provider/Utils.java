@@ -55,12 +55,13 @@ class Utils {
             }
             Data.FastPairDeviceWithAccountKey.Builder fpDeviceBuilder =
                     Data.FastPairDeviceWithAccountKey.newBuilder();
-            if (metadataParcel.accountKey != null) {
-                fpDeviceBuilder.setAccountKey(ByteString.copyFrom(metadataParcel.accountKey));
+            if (metadataParcel.deviceAccountKey != null) {
+                fpDeviceBuilder.setAccountKey(
+                        ByteString.copyFrom(metadataParcel.deviceAccountKey));
             }
-            if (metadataParcel.sha256AccountKeyPublicAddress != null) {
+            if (metadataParcel.sha256DeviceAccountKeyPublicAddress != null) {
                 fpDeviceBuilder.setSha256AccountKeyPublicAddress(
-                        ByteString.copyFrom(metadataParcel.sha256AccountKeyPublicAddress));
+                        ByteString.copyFrom(metadataParcel.sha256DeviceAccountKeyPublicAddress));
             }
 
             Cache.StoredDiscoveryItem.Builder storedDiscoveryItemBuilder =
@@ -301,9 +302,9 @@ class Utils {
             FastPairAntispoofKeyDeviceMetadataParcel metadata) {
 
         Rpcs.Device.Builder deviceBuilder = Rpcs.Device.newBuilder();
-        if (metadata.antiSpoofPublicKey != null) {
+        if (metadata.antispoofPublicKey != null) {
             deviceBuilder.setAntiSpoofingKeyPair(Rpcs.AntiSpoofingKeyPair.newBuilder()
-                    .setPublicKey(ByteString.copyFrom(metadata.antiSpoofPublicKey))
+                    .setPublicKey(ByteString.copyFrom(metadata.antispoofPublicKey))
                     .build());
         }
         if (metadata.deviceMetadata != null) {
@@ -489,10 +490,11 @@ class Utils {
         FastPairAccountKeyDeviceMetadataParcel accountKeyDeviceMetadataParcel =
                 new FastPairAccountKeyDeviceMetadataParcel();
         if (uploadInfo.getAccountKey() != null) {
-            accountKeyDeviceMetadataParcel.accountKey = uploadInfo.getAccountKey().toByteArray();
+            accountKeyDeviceMetadataParcel.deviceAccountKey =
+                    uploadInfo.getAccountKey().toByteArray();
         }
         if (uploadInfo.getSha256AccountKeyPublicAddress() != null) {
-            accountKeyDeviceMetadataParcel.sha256AccountKeyPublicAddress =
+            accountKeyDeviceMetadataParcel.sha256DeviceAccountKeyPublicAddress =
                     uploadInfo.getSha256AccountKeyPublicAddress().toByteArray();
         }
         if (uploadInfo.getStoredDiscoveryItem() != null) {
