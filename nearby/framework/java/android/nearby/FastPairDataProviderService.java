@@ -21,6 +21,8 @@ import android.annotation.IntDef;
 import android.annotation.NonNull;
 import android.annotation.Nullable;
 import android.annotation.SystemApi;
+import android.app.Service;
+import android.content.Intent;
 import android.nearby.aidl.ByteArrayParcel;
 import android.nearby.aidl.FastPairAccountDevicesMetadataRequestParcel;
 import android.nearby.aidl.FastPairAccountKeyDeviceMetadataParcel;
@@ -46,7 +48,7 @@ import java.util.Collection;
 import java.util.List;
 
 /**
- * Base class for fast pair providers outside the system server.
+ * A service class for fast pair data providers outside the system server.
  *
  * Fast pair providers should be wrapped in a non-exported service which returns the result of
  * {@link #getBinder()} from the service's {@link android.app.Service#onBind(Intent)} method. The
@@ -58,7 +60,7 @@ import java.util.List;
  * @hide
  */
 @SystemApi
-public abstract class FastPairDataProviderBase {
+public abstract class FastPairDataProviderService extends Service {
     /**
      * The action the wrapping service should have in its intent filter to implement the
      * {@link android.nearby.FastPairDataProviderBase}.
@@ -123,15 +125,21 @@ public abstract class FastPairDataProviderBase {
     private final String mTag;
 
     /**
-     * Constructor of FastPairDataProviderBase.
+     * Constructor of FastPairDataProviderService.
      *
      * @param tag TAG for on device logging.
      * @hide
      */
     @SystemApi
-    public FastPairDataProviderBase(@NonNull String tag) {
+    public FastPairDataProviderService(@NonNull String tag) {
         mBinder = new Service();
         mTag = tag;
+    }
+
+    @Override
+    @NonNull
+    public final IBinder onBind(@NonNull Intent intent) {
+        return mBinder;
     }
 
     /**
@@ -285,17 +293,6 @@ public abstract class FastPairDataProviderBase {
     public abstract void onManageFastPairAccountDevice(
             @NonNull FastPairManageAccountDeviceRequest request,
             @NonNull FastPairManageActionCallback callback);
-
-    /**
-     * Returns the IBinder instance that should be returned from the {@link
-     * android.app.Service#onBind(Intent)} method of the wrapping service.
-     *
-     * @hide
-     */
-    @SystemApi
-    public final @Nullable IBinder getBinder() {
-        return mBinder;
-    }
 
     /**
      * Class for reading FastPairAntispoofKeyDeviceMetadataRequest, which specifies the model ID of
