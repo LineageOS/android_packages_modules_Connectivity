@@ -168,4 +168,15 @@
 
     <!-- Regex of wired ethernet ifaces -->
     <string translatable="false" name="config_ethernet_iface_regex">eth\\d</string>
+
+    <!-- Ignores Wi-Fi validation failures after roam.
+    If validation fails on a Wi-Fi network after a roam to a new BSSID,
+    assume that the roam temporarily disrupted network connectivity, and
+    ignore all failures until this time has passed.
+    NetworkMonitor will continue to attempt validation, and if it fails after this time has passed,
+    the network will be marked unvalidated.
+
+    Only supported up to S. On T+, the Wi-Fi code should use destroyAndAwaitReplacement in order
+    to ensure that apps see the network disconnect and reconnect. -->
+    <integer translatable="false" name="config_validationFailureAfterRoamIgnoreTimeMillis">-1</integer>
 </resources>
