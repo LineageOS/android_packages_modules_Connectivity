@@ -2,10 +2,8 @@
 package android.app.usage {
 
   public class NetworkStatsManager {
-    method @NonNull @RequiresPermission(anyOf={android.net.NetworkStack.PERMISSION_MAINLINE_NETWORK_STACK, android.Manifest.permission.NETWORK_STACK}) public android.net.NetworkStats getMobileUidStats();
-    method @NonNull @RequiresPermission(anyOf={android.net.NetworkStack.PERMISSION_MAINLINE_NETWORK_STACK, android.Manifest.permission.NETWORK_STACK}) public android.net.NetworkStats getWifiUidStats();
-    method @NonNull @RequiresPermission(anyOf={android.Manifest.permission.NETWORK_STATS_PROVIDER, android.net.NetworkStack.PERMISSION_MAINLINE_NETWORK_STACK}) public void registerNetworkStatsProvider(@NonNull String, @NonNull android.net.netstats.provider.NetworkStatsProvider);
-    method @NonNull @RequiresPermission(anyOf={android.Manifest.permission.NETWORK_STATS_PROVIDER, android.net.NetworkStack.PERMISSION_MAINLINE_NETWORK_STACK}) public void unregisterNetworkStatsProvider(@NonNull android.net.netstats.provider.NetworkStatsProvider);
+    method @RequiresPermission(anyOf={android.Manifest.permission.NETWORK_STATS_PROVIDER, android.net.NetworkStack.PERMISSION_MAINLINE_NETWORK_STACK}) public void registerNetworkStatsProvider(@NonNull String, @NonNull android.net.netstats.provider.NetworkStatsProvider);
+    method @RequiresPermission(anyOf={android.Manifest.permission.NETWORK_STATS_PROVIDER, android.net.NetworkStack.PERMISSION_MAINLINE_NETWORK_STACK}) public void unregisterNetworkStatsProvider(@NonNull android.net.netstats.provider.NetworkStatsProvider);
   }
 
 }
@@ -21,16 +19,13 @@ package android.nearby {
     field public static final int STATUS_OK = 0; // 0x0
   }
 
-  public abstract class BroadcastRequest implements android.os.Parcelable {
-    method public int describeContents();
+  public abstract class BroadcastRequest {
     method @NonNull public java.util.List<java.lang.Integer> getMediums();
     method @IntRange(from=0xffffff81, to=126) public int getTxPower();
     method public int getType();
     method public int getVersion();
-    method public void writeToParcel(@NonNull android.os.Parcel, int);
     field public static final int BROADCAST_TYPE_NEARBY_PRESENCE = 3; // 0x3
     field public static final int BROADCAST_TYPE_UNKNOWN = -1; // 0xffffffff
-    field @NonNull public static final android.os.Parcelable.Creator<android.nearby.BroadcastRequest> CREATOR;
     field public static final int PRESENCE_VERSION_UNKNOWN = -1; // 0xffffffff
     field public static final int PRESENCE_VERSION_V0 = 0; // 0x0
     field public static final int PRESENCE_VERSION_V1 = 1; // 0x1
@@ -56,28 +51,30 @@ package android.nearby {
   }
 
   public class FastPairAccountKeyDeviceMetadata {
-    method @Nullable public byte[] getAccountKey();
+    method @Nullable public byte[] getDeviceAccountKey();
     method @Nullable public android.nearby.FastPairDeviceMetadata getFastPairDeviceMetadata();
     method @Nullable public android.nearby.FastPairDiscoveryItem getFastPairDiscoveryItem();
-    method @Nullable public byte[] getSha256AccountKeyPublicAddress();
+    method @Nullable public byte[] getSha256DeviceAccountKeyPublicAddress();
   }
 
   public static final class FastPairAccountKeyDeviceMetadata.Builder {
     ctor public FastPairAccountKeyDeviceMetadata.Builder();
     method @NonNull public android.nearby.FastPairAccountKeyDeviceMetadata build();
-    method @NonNull public android.nearby.FastPairAccountKeyDeviceMetadata.Builder setAccountKey(@Nullable byte[]);
+    method @NonNull public android.nearby.FastPairAccountKeyDeviceMetadata.Builder setDeviceAccountKey(@Nullable byte[]);
     method @NonNull public android.nearby.FastPairAccountKeyDeviceMetadata.Builder setFastPairDeviceMetadata(@Nullable android.nearby.FastPairDeviceMetadata);
     method @NonNull public android.nearby.FastPairAccountKeyDeviceMetadata.Builder setFastPairDiscoveryItem(@Nullable android.nearby.FastPairDiscoveryItem);
-    method @NonNull public android.nearby.FastPairAccountKeyDeviceMetadata.Builder setSha256AccountKeyPublicAddress(@Nullable byte[]);
+    method @NonNull public android.nearby.FastPairAccountKeyDeviceMetadata.Builder setSha256DeviceAccountKeyPublicAddress(@Nullable byte[]);
   }
 
   public class FastPairAntispoofKeyDeviceMetadata {
+    method @Nullable public byte[] getAntispoofPublicKey();
+    method @Nullable public android.nearby.FastPairDeviceMetadata getFastPairDeviceMetadata();
   }
 
   public static final class FastPairAntispoofKeyDeviceMetadata.Builder {
     ctor public FastPairAntispoofKeyDeviceMetadata.Builder();
     method @NonNull public android.nearby.FastPairAntispoofKeyDeviceMetadata build();
-    method @NonNull public android.nearby.FastPairAntispoofKeyDeviceMetadata.Builder setAntiSpoofPublicKey(@Nullable byte[]);
+    method @NonNull public android.nearby.FastPairAntispoofKeyDeviceMetadata.Builder setAntispoofPublicKey(@Nullable byte[]);
     method @NonNull public android.nearby.FastPairAntispoofKeyDeviceMetadata.Builder setFastPairDeviceMetadata(@Nullable android.nearby.FastPairDeviceMetadata);
   }
 
@@ -103,7 +100,7 @@ package android.nearby {
 
   public static class FastPairDataProviderBase.FastPairAccountDevicesMetadataRequest {
     method @NonNull public android.accounts.Account getAccount();
-    method @NonNull public java.util.Collection<byte[]> getAccountKeys();
+    method @NonNull public java.util.Collection<byte[]> getDeviceAccountKeys();
   }
 
   public static interface FastPairDataProviderBase.FastPairAntispoofKeyDeviceMetadataCallback {
@@ -285,6 +282,8 @@ package android.nearby {
   }
 
   public class FastPairEligibleAccount {
+    method @Nullable public android.accounts.Account getAccount();
+    method public boolean isOptIn();
   }
 
   public static final class FastPairEligibleAccount.Builder {
@@ -311,10 +310,12 @@ package android.nearby {
   }
 
   public final class PresenceBroadcastRequest extends android.nearby.BroadcastRequest implements android.os.Parcelable {
+    method public int describeContents();
     method @NonNull public java.util.List<java.lang.Integer> getActions();
     method @NonNull public android.nearby.PrivateCredential getCredential();
     method @NonNull public java.util.List<android.nearby.DataElement> getExtendedProperties();
     method @NonNull public byte[] getSalt();
+    method public void writeToParcel(@NonNull android.os.Parcel, int);
     field @NonNull public static final android.os.Parcelable.Creator<android.nearby.PresenceBroadcastRequest> CREATOR;
   }
 
@@ -327,15 +328,12 @@ package android.nearby {
     method @NonNull public android.nearby.PresenceBroadcastRequest.Builder setVersion(int);
   }
 
-  public abstract class PresenceCredential implements android.os.Parcelable {
-    method public int describeContents();
+  public abstract class PresenceCredential {
     method @NonNull public byte[] getAuthenticityKey();
     method @NonNull public java.util.List<android.nearby.CredentialElement> getCredentialElements();
     method public int getIdentityType();
     method @NonNull public byte[] getSecretId();
     method public int getType();
-    method public void writeToParcel(@NonNull android.os.Parcel, int);
-    field @NonNull public static final android.os.Parcelable.Creator<android.nearby.PresenceCredential> CREATOR;
     field public static final int CREDENTIAL_TYPE_PRIVATE = 0; // 0x0
     field public static final int CREDENTIAL_TYPE_PUBLIC = 1; // 0x1
     field public static final int IDENTITY_TYPE_PRIVATE = 1; // 0x1
@@ -372,9 +370,11 @@ package android.nearby {
   }
 
   public final class PresenceScanFilter extends android.nearby.ScanFilter implements android.os.Parcelable {
+    method public int describeContents();
     method @NonNull public java.util.List<android.nearby.PublicCredential> getCredentials();
     method @NonNull public java.util.List<android.nearby.DataElement> getExtendedProperties();
     method @NonNull public java.util.List<java.lang.Integer> getPresenceActions();
+    method public void writeToParcel(@NonNull android.os.Parcel, int);
     field @NonNull public static final android.os.Parcelable.Creator<android.nearby.PresenceScanFilter> CREATOR;
   }
 
@@ -388,35 +388,34 @@ package android.nearby {
   }
 
   public final class PrivateCredential extends android.nearby.PresenceCredential implements android.os.Parcelable {
+    method public int describeContents();
     method @NonNull public String getDeviceName();
     method @NonNull public byte[] getMetadataEncryptionKey();
+    method public void writeToParcel(@NonNull android.os.Parcel, int);
     field @NonNull public static final android.os.Parcelable.Creator<android.nearby.PrivateCredential> CREATOR;
   }
 
   public static final class PrivateCredential.Builder {
-    ctor public PrivateCredential.Builder(@NonNull byte[], @NonNull byte[]);
+    ctor public PrivateCredential.Builder(@NonNull byte[], @NonNull byte[], @NonNull byte[], @NonNull String);
     method @NonNull public android.nearby.PrivateCredential.Builder addCredentialElement(@NonNull android.nearby.CredentialElement);
     method @NonNull public android.nearby.PrivateCredential build();
-    method @NonNull public android.nearby.PrivateCredential.Builder setDeviceName(@NonNull String);
     method @NonNull public android.nearby.PrivateCredential.Builder setIdentityType(int);
-    method @NonNull public android.nearby.PrivateCredential.Builder setMetadataEncryptionKey(@NonNull byte[]);
   }
 
   public final class PublicCredential extends android.nearby.PresenceCredential implements android.os.Parcelable {
+    method public int describeContents();
     method @NonNull public byte[] getEncryptedMetadata();
     method @NonNull public byte[] getEncryptedMetadataKeyTag();
     method @NonNull public byte[] getPublicKey();
+    method public void writeToParcel(@NonNull android.os.Parcel, int);
     field @NonNull public static final android.os.Parcelable.Creator<android.nearby.PublicCredential> CREATOR;
   }
 
   public static final class PublicCredential.Builder {
-    ctor public PublicCredential.Builder(@NonNull byte[], @NonNull byte[]);
+    ctor public PublicCredential.Builder(@NonNull byte[], @NonNull byte[], @NonNull byte[], @NonNull byte[], @NonNull byte[]);
     method @NonNull public android.nearby.PublicCredential.Builder addCredentialElement(@NonNull android.nearby.CredentialElement);
     method @NonNull public android.nearby.PublicCredential build();
-    method @NonNull public android.nearby.PublicCredential.Builder setEncryptedMetadata(@NonNull byte[]);
-    method @NonNull public android.nearby.PublicCredential.Builder setEncryptedMetadataKeyTag(@NonNull byte[]);
     method @NonNull public android.nearby.PublicCredential.Builder setIdentityType(int);
-    method @NonNull public android.nearby.PublicCredential.Builder setPublicKey(@NonNull byte[]);
   }
 
   public interface ScanCallback {
@@ -425,12 +424,9 @@ package android.nearby {
     method public void onUpdated(@NonNull android.nearby.NearbyDevice);
   }
 
-  public abstract class ScanFilter implements android.os.Parcelable {
-    method public int describeContents();
+  public abstract class ScanFilter {
     method @IntRange(from=0, to=127) public int getMaxPathLoss();
     method public int getType();
-    method public void writeToParcel(@NonNull android.os.Parcel, int);
-    field @NonNull public static final android.os.Parcelable.Creator<android.nearby.ScanFilter> CREATOR;
   }
 
   public final class ScanRequest implements android.os.Parcelable {
@@ -494,7 +490,7 @@ package android.net {
 
   public final class EthernetNetworkUpdateRequest implements android.os.Parcelable {
     method public int describeContents();
-    method @NonNull public android.net.IpConfiguration getIpConfiguration();
+    method @Nullable public android.net.IpConfiguration getIpConfiguration();
     method @Nullable public android.net.NetworkCapabilities getNetworkCapabilities();
     method public void writeToParcel(@NonNull android.os.Parcel, int);
     field @NonNull public static final android.os.Parcelable.Creator<android.net.EthernetNetworkUpdateRequest> CREATOR;
@@ -504,7 +500,7 @@ package android.net {
     ctor public EthernetNetworkUpdateRequest.Builder();
     ctor public EthernetNetworkUpdateRequest.Builder(@NonNull android.net.EthernetNetworkUpdateRequest);
     method @NonNull public android.net.EthernetNetworkUpdateRequest build();
-    method @NonNull public android.net.EthernetNetworkUpdateRequest.Builder setIpConfiguration(@NonNull android.net.IpConfiguration);
+    method @NonNull public android.net.EthernetNetworkUpdateRequest.Builder setIpConfiguration(@Nullable android.net.IpConfiguration);
     method @NonNull public android.net.EthernetNetworkUpdateRequest.Builder setNetworkCapabilities(@Nullable android.net.NetworkCapabilities);
   }
 
@@ -530,7 +526,6 @@ package android.net {
     method @NonNull public android.net.NetworkStats add(@NonNull android.net.NetworkStats);
     method @NonNull public android.net.NetworkStats addEntry(@NonNull android.net.NetworkStats.Entry);
     method public int describeContents();
-    method @NonNull public java.util.Iterator<android.net.NetworkStats.Entry> iterator();
     method @NonNull public android.net.NetworkStats subtract(@NonNull android.net.NetworkStats);
     method public void writeToParcel(@NonNull android.os.Parcel, int);
     field @NonNull public static final android.os.Parcelable.Creator<android.net.NetworkStats> CREATOR;
@@ -554,23 +549,11 @@ package android.net {
 
   public static class NetworkStats.Entry {
     ctor public NetworkStats.Entry(@Nullable String, int, int, int, int, int, int, long, long, long, long, long);
-    method public int getDefaultNetwork();
-    method public int getMetered();
-    method public long getOperations();
-    method public int getRoaming();
-    method public long getRxBytes();
-    method public long getRxPackets();
-    method public int getSet();
-    method public int getTag();
-    method public long getTxBytes();
-    method public long getTxPackets();
-    method public int getUid();
   }
 
   public class TrafficStats {
     method public static void setThreadStatsTagApp();
     method public static void setThreadStatsTagBackup();
-    method public static void setThreadStatsTagDownload();
     method public static void setThreadStatsTagRestore();
     field public static final int TAG_NETWORK_STACK_IMPERSONATION_RANGE_END = -113; // 0xffffff8f
     field public static final int TAG_NETWORK_STACK_IMPERSONATION_RANGE_START = -128; // 0xffffff80
