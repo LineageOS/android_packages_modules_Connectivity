@@ -16,6 +16,8 @@
 
 package com.android.server.ethernet;
 
+import static android.net.EthernetManager.ETHERNET_STATE_DISABLED;
+import static android.net.EthernetManager.ETHERNET_STATE_ENABLED;
 import static android.net.TestNetworkManager.TEST_TAP_PREFIX;
 
 import static com.android.internal.annotations.VisibleForTesting.Visibility.PACKAGE;
@@ -118,6 +120,8 @@ public class EthernetTracker {
     // Tracks whether clients were notified that the tethered interface is available
     private boolean mTetheredInterfaceWasAvailable = false;
     private volatile IpConfiguration mIpConfigForDefaultInterface;
+
+    private int mEthernetState = ETHERNET_STATE_ENABLED;
 
     private class TetheredInterfaceRequestList extends
             RemoteCallbackList<ITetheredInterfaceCallback> {
@@ -355,6 +359,8 @@ public class EthernetTracker {
             for (String iface : getInterfaces(canUseRestrictedNetworks)) {
                 unicastInterfaceStateChange(listener, iface);
             }
+
+            unicastEthernetStateChange(listener, mEthernetState);
         });
     }
 
@@ -823,6 +829,53 @@ public class EthernetTracker {
         })) {
             cv.block(2000L);
         }
+    }
+
+    @VisibleForTesting(visibility = PACKAGE)
+    protected void setEthernetEnabled(boolean enabled) {
+        mHandler.post(() -> {
+            int newState = enabled ? ETHERNET_STATE_ENABLED : ETHERNET_STATE_DISABLED;
+            if (mEthernetState == newState) return;
+
+            mEthernetState = newState;
+
+            if (enabled) {
+                trackAvailableInterfaces();
+            } else {
+                // TODO: maybe also disable server mode interface as well.
+                untrackFactoryInterfaces();
+            }
+            broadcastEthernetStateChange(mEthernetState);
+        });
+    }
+
+    private void untrackFactoryInterfaces() {
+        for (String iface : mFactory.getAvailableInterfaces(true /* includeRestricted */)) {
+            stopTrackingInterface(iface);
+        }
+    }
+
+    private void unicastEthernetStateChange(@NonNull IEthernetServiceListener listener,
+            int state) {
+        ensureRunningOnEthernetServiceThread();
+        try {
+            listener.onEthernetStateChanged(state);
+        } catch (RemoteException e) {
+            // Do nothing here.
+        }
+    }
+
+    private void broadcastEthernetStateChange(int state) {
+        ensureRunningOnEthernetServiceThread();
+        final int n = mListeners.beginBroadcast();
+        for (int i = 0; i < n; i++) {
+            try {
+                mListeners.getBroadcastItem(i).onEthernetStateChanged(state);
+            } catch (RemoteException e) {
+                // Do nothing here.
+            }
+        }
+        mListeners.finishBroadcast();
     }
 
     void dump(FileDescriptor fd, IndentingPrintWriter pw, String[] args) {
