@@ -37,6 +37,7 @@ class FastPairSeeker:
 
     def __init__(self, ad: AndroidDevice) -> None:
         self._ad = ad
+        self._ad.debug_tag = 'MainlineFastPairSeeker'
         self._scan_result_callback = None
 
     def load_snippet(self) -> None:
