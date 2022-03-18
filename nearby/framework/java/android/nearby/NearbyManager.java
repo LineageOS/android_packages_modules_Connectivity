@@ -16,9 +16,12 @@
 
 package android.nearby;
 
+import android.Manifest;
 import android.annotation.CallbackExecutor;
+import android.annotation.IntDef;
 import android.annotation.NonNull;
 import android.annotation.Nullable;
+import android.annotation.RequiresPermission;
 import android.annotation.SuppressLint;
 import android.annotation.SystemApi;
 import android.annotation.SystemService;
@@ -48,6 +51,25 @@ import java.util.concurrent.Executor;
 public class NearbyManager {
 
     /**
+     * Represents the scanning state.
+     *
+     * @hide
+     */
+    @IntDef({
+            ScanStatus.UNKNOWN,
+            ScanStatus.SUCCESS,
+            ScanStatus.ERROR,
+    })
+    public @interface ScanStatus {
+        // Default, invalid state.
+        int UNKNOWN = 0;
+        // The successful state.
+        int SUCCESS = 1;
+        // Failed state.
+        int ERROR = 2;
+    }
+
+    /**
      * Whether allows Fast Pair to scan.
      *
      * (0 = disabled, 1 = enabled)
@@ -68,7 +90,7 @@ public class NearbyManager {
     /**
      * Creates a new NearbyManager.
      *
-     * @param service The service object.
+     * @param service the service object
      */
     NearbyManager(@NonNull INearbyManager service) {
         mService = service;
@@ -93,11 +115,16 @@ public class NearbyManager {
      * Start scan for nearby devices with given parameters. Devices matching {@link ScanRequest}
      * will be delivered through the given callback.
      *
-     * @param scanRequest Various parameters clients send when requesting scanning.
-     * @param executor Executor where the listener method is called.
-     * @param scanCallback The callback to notify clients when there is a scan result.
+     * @param scanRequest various parameters clients send when requesting scanning
+     * @param executor executor where the listener method is called
+     * @param scanCallback the callback to notify clients when there is a scan result
+     *
+     * @return whether scanning was successfully started
      */
-    public void startScan(@NonNull ScanRequest scanRequest,
+    @RequiresPermission(allOf = {android.Manifest.permission.BLUETOOTH_SCAN,
+            android.Manifest.permission.BLUETOOTH_PRIVILEGED})
+    @ScanStatus
+    public int startScan(@NonNull ScanRequest scanRequest,
             @CallbackExecutor @NonNull Executor executor,
             @NonNull ScanCallback scanCallback) {
         Objects.requireNonNull(scanRequest, "scanRequest must not be null");
@@ -115,8 +142,12 @@ public class NearbyManager {
                     Preconditions.checkState(transport.isRegistered());
                     transport.setExecutor(executor);
                 }
-                mService.registerScanListener(scanRequest, transport);
+                @ScanStatus int status = mService.registerScanListener(scanRequest, transport);
+                if (status != ScanStatus.SUCCESS) {
+                    return status;
+                }
                 sScanListeners.put(scanCallback, new WeakReference<>(transport));
+                return ScanStatus.SUCCESS;
             }
         } catch (RemoteException e) {
             throw e.rethrowFromSystemServer();
@@ -131,9 +162,11 @@ public class NearbyManager {
      * Suppressed lint: Registration methods should have overload that accepts delivery Executor.
      * Already have executor in startScan() method.
      *
-     * @param scanCallback  The callback that was used to start the scan.
+     * @param scanCallback the callback that was used to start the scan
      */
     @SuppressLint("ExecutorRegistration")
+    @RequiresPermission(allOf = {android.Manifest.permission.BLUETOOTH_SCAN,
+            android.Manifest.permission.BLUETOOTH_PRIVILEGED})
     public void stopScan(@NonNull ScanCallback scanCallback) {
         Preconditions.checkArgument(scanCallback != null,
                 "invalid null scanCallback");
@@ -155,10 +188,12 @@ public class NearbyManager {
     /**
      * Start broadcasting the request using nearby specification.
      *
-     * @param broadcastRequest Request for the nearby broadcast.
-     * @param executor Executor for running the callback.
-     * @param callback Callback for notifying the client.
+     * @param broadcastRequest request for the nearby broadcast
+     * @param executor executor for running the callback
+     * @param callback callback for notifying the client
      */
+    @RequiresPermission(allOf = {Manifest.permission.BLUETOOTH_ADVERTISE,
+            android.Manifest.permission.BLUETOOTH_PRIVILEGED})
     public void startBroadcast(@NonNull BroadcastRequest broadcastRequest,
             @CallbackExecutor @NonNull Executor executor, @NonNull BroadcastCallback callback) {
         try {
@@ -184,9 +219,11 @@ public class NearbyManager {
     /**
      * Stop the broadcast associated with the given callback.
      *
-     * @param callback The callback that was used for starting the broadcast.
+     * @param callback the callback that was used for starting the broadcast
      */
     @SuppressLint("ExecutorRegistration")
+    @RequiresPermission(allOf = {Manifest.permission.BLUETOOTH_ADVERTISE,
+            android.Manifest.permission.BLUETOOTH_PRIVILEGED})
     public void stopBroadcast(@NonNull BroadcastCallback callback) {
         try {
             synchronized (sBroadcastListeners) {
@@ -206,9 +243,9 @@ public class NearbyManager {
     /**
      * Read from {@link Settings} whether Fast Pair scan is enabled.
      *
-     * @param context the {@link Context} to query the setting.
-     * @param def the default value if no setting value.
-     * @return whether the Fast Pair is enabled.
+     * @param context the {@link Context} to query the setting
+     * @param def the default value if no setting value
+     * @return whether the Fast Pair is enabled
      */
     public static boolean getFastPairScanEnabled(@NonNull Context context, boolean def) {
         final int enabled = Settings.Secure.getInt(
@@ -219,8 +256,8 @@ public class NearbyManager {
     /**
      * Write into {@link Settings} whether Fast Pair scan is enabled
      *
-     * @param context the {@link Context} to set the setting.
-     * @param enable whether the Fast Pair scan should be enabled.
+     * @param context the {@link Context} to set the setting
+     * @param enable whether the Fast Pair scan should be enabled
      */
     public static void setFastPairScanEnabled(@NonNull Context context, boolean enable) {
         Settings.Secure.putInt(

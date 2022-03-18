@@ -31,6 +31,7 @@ import android.nearby.BroadcastRequestParcelable;
 import android.nearby.IBroadcastListener;
 import android.nearby.INearbyManager;
 import android.nearby.IScanListener;
+import android.nearby.NearbyManager;
 import android.nearby.ScanRequest;
 import android.util.Log;
 
@@ -99,8 +100,12 @@ public class NearbyService extends INearbyManager.Stub {
     }
 
     @Override
-    public void registerScanListener(ScanRequest scanRequest, IScanListener listener) {
-        mProviderManager.registerScanListener(scanRequest, listener);
+    @NearbyManager.ScanStatus
+    public int registerScanListener(ScanRequest scanRequest, IScanListener listener) {
+        if (mProviderManager.registerScanListener(scanRequest, listener)) {
+            return NearbyManager.ScanStatus.SUCCESS;
+        }
+        return NearbyManager.ScanStatus.ERROR;
     }
 
     @Override
