@@ -17,7 +17,6 @@ package android.nearby;
 
 import android.annotation.NonNull;
 import android.annotation.Nullable;
-import android.annotation.SuppressLint;
 import android.annotation.SystemApi;
 import android.nearby.aidl.FastPairAntispoofKeyDeviceMetadataParcel;
 
@@ -62,14 +61,20 @@ public class FastPairAntispoofKeyDeviceMetadata {
 
     /**
      * Builder used to create FastPairAntispoofkeyDeviceMetadata.
+     *
+     * @hide
      */
+    @SystemApi
     public static final class Builder {
 
         private final FastPairAntispoofKeyDeviceMetadataParcel mBuilderParcel;
 
         /**
          * Default constructor of Builder.
+         *
+         * @hide
          */
+        @SystemApi
         public Builder() {
             mBuilderParcel = new FastPairAntispoofKeyDeviceMetadataParcel();
             mBuilderParcel.antispoofPublicKey = null;
@@ -79,10 +84,11 @@ public class FastPairAntispoofKeyDeviceMetadata {
         /**
          * Set AntiSpoof public key, which uniquely identify a Fast Pair device type.
          *
-         * @param antispoofPublicKey AntiSpoof public key.
+         * @param antispoofPublicKey is 64 bytes, see <a href="https://developers.google.com/nearby/fast-pair/spec#data_format">Data Format</a>.
          * @return The builder, to facilitate chaining {@code builder.setXXX(..).setXXX(..)}.
+         * @hide
          */
-        @SuppressLint("MissingGetterMatchingBuilder")
+        @SystemApi
         @NonNull
         public Builder setAntispoofPublicKey(@Nullable byte[] antispoofPublicKey) {
             mBuilderParcel.antispoofPublicKey = antispoofPublicKey;
@@ -95,8 +101,9 @@ public class FastPairAntispoofKeyDeviceMetadata {
          *
          * @param metadata Fast Pair device meta data.
          * @return The builder, to facilitate chaining {@code builder.setXXX(..).setXXX(..)}.
+         * @hide
          */
-        @SuppressLint("MissingGetterMatchingBuilder")
+        @SystemApi
         @NonNull
         public Builder setFastPairDeviceMetadata(@Nullable FastPairDeviceMetadata metadata) {
             if (metadata != null) {
@@ -109,7 +116,10 @@ public class FastPairAntispoofKeyDeviceMetadata {
 
         /**
          * Build {@link FastPairAntispoofKeyDeviceMetadata} with the currently set configuration.
+         *
+         * @hide
          */
+        @SystemApi
         @NonNull
         public FastPairAntispoofKeyDeviceMetadata build() {
             return new FastPairAntispoofKeyDeviceMetadata(mBuilderParcel);
