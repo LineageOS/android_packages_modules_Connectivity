@@ -99,12 +99,14 @@ class TestNetworkService extends ITestNetworkManager.Stub {
     }
 
     /**
-     * Create a TUN or TAP interface with the given interface name and link addresses
+     * Create a TUN or TAP interface with the specified parameters.
      *
      * <p>This method will return the FileDescriptor to the interface. Close it to tear down the
      * interface.
      */
-    private TestNetworkInterface createInterface(boolean isTun, LinkAddress[] linkAddrs) {
+    @Override
+    public TestNetworkInterface createInterface(boolean isTun, boolean bringUp,
+            LinkAddress[] linkAddrs) {
         enforceTestNetworkPermissions(mContext);
 
         Objects.requireNonNull(linkAddrs, "missing linkAddrs");
@@ -122,7 +124,9 @@ class TestNetworkService extends ITestNetworkManager.Stub {
                         addr.getPrefixLength());
             }
 
-            NetdUtils.setInterfaceUp(mNetd, iface);
+            if (bringUp) {
+                NetdUtils.setInterfaceUp(mNetd, iface);
+            }
 
             return new TestNetworkInterface(tunIntf, iface);
         } catch (RemoteException e) {
@@ -130,28 +134,6 @@ class TestNetworkService extends ITestNetworkManager.Stub {
         } finally {
             Binder.restoreCallingIdentity(token);
         }
-    }
-
-    /**
-     * Create a TUN interface with the given interface name and link addresses
-     *
-     * <p>This method will return the FileDescriptor to the TUN interface. Close it to tear down the
-     * TUN interface.
-     */
-    @Override
-    public TestNetworkInterface createTunInterface(@NonNull LinkAddress[] linkAddrs) {
-        return createInterface(true, linkAddrs);
-    }
-
-    /**
-     * Create a TAP interface with the given interface name
-     *
-     * <p>This method will return the FileDescriptor to the TAP interface. Close it to tear down the
-     * TAP interface.
-     */
-    @Override
-    public TestNetworkInterface createTapInterface() {
-        return createInterface(false, new LinkAddress[0]);
     }
 
     // Tracker for TestNetworkAgents
