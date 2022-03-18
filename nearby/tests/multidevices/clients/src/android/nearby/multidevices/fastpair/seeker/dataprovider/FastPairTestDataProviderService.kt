@@ -16,34 +16,100 @@
 
 package android.nearby.multidevices.fastpair.seeker.dataprovider
 
-import android.app.Service
+import android.accounts.Account
 import android.content.Intent
+import android.nearby.FastPairDataProviderService
+import android.nearby.FastPairEligibleAccount
 import android.os.IBinder
 import android.util.Log
 
 /**
  * Fast Pair Test Data Provider Service entry point for platform overlay.
  */
-class FastPairTestDataProviderService : Service() {
-    private var testDataProvider: FastPairTestDataProvider? = null
+class FastPairTestDataProviderService : FastPairDataProviderService(TAG) {
 
-    override fun onBind(intent: Intent?): IBinder? {
-        Log.d(TAG, "onBind(intent: $intent)")
-        if (testDataProvider == null) {
-            testDataProvider = FastPairTestDataProvider()
+    override fun onLoadFastPairAntispoofKeyDeviceMetadata(
+        request: FastPairAntispoofKeyDeviceMetadataRequest,
+        callback: FastPairAntispoofKeyDeviceMetadataCallback
+    ) {
+        val requestedModelId = request.modelId.bytesToStringLowerCase()
+        Log.d(TAG, "onLoadFastPairAntispoofKeyDeviceMetadata(modelId: $requestedModelId)")
+
+        val fastPairAntispoofKeyDeviceMetadata =
+            FastPairTestDataCache.antispoofKeyDeviceMetadataMap[requestedModelId]
+        if (fastPairAntispoofKeyDeviceMetadata != null) {
+            callback.onFastPairAntispoofKeyDeviceMetadataReceived(fastPairAntispoofKeyDeviceMetadata)
+        } else {
+            callback.onError(ERROR_CODE_BAD_REQUEST, "No metadata available for $requestedModelId")
         }
-        return testDataProvider!!.binder
     }
 
-    override fun onDestroy() {
-        Log.d(TAG, "onDestroy()")
-        if (testDataProvider != null) {
-            testDataProvider = null
-        }
-        super.onDestroy()
+    override fun onLoadFastPairAccountDevicesMetadata(
+        request: FastPairAccountDevicesMetadataRequest,
+        callback: FastPairAccountDevicesMetadataCallback
+    ) {
+        val requestedAccount = request.account
+        val requestedAccountKeys = request.deviceAccountKeys
+        Log.d(
+            TAG, "onLoadFastPairAccountDevicesMetadata(" +
+                    "account: $requestedAccount, accountKeys:$requestedAccountKeys)"
+        )
+        Log.d(TAG, FastPairTestDataCache.dumpAccountKeyDeviceMetadata())
+
+        callback.onFastPairAccountDevicesMetadataReceived(
+            FastPairTestDataCache.accountKeyDeviceMetadata
+        )
+    }
+
+    override fun onLoadFastPairEligibleAccounts(
+        request: FastPairEligibleAccountsRequest,
+        callback: FastPairEligibleAccountsCallback
+    ) {
+        Log.d(TAG, "onLoadFastPairEligibleAccounts()")
+        callback.onFastPairEligibleAccountsReceived(ELIGIBLE_ACCOUNTS_TEST_CONSTANT)
+    }
+
+    override fun onManageFastPairAccount(
+        request: FastPairManageAccountRequest, callback: FastPairManageActionCallback
+    ) {
+        val requestedAccount = request.account
+        val requestType = request.requestType
+        Log.d(TAG, "onManageFastPairAccount(account: $requestedAccount, requestType: $requestType)")
+
+        callback.onSuccess()
+    }
+
+    override fun onManageFastPairAccountDevice(
+        request: FastPairManageAccountDeviceRequest, callback: FastPairManageActionCallback
+    ) {
+        val requestedAccount = request.account
+        val requestType = request.requestType
+        val requestTypeString = if (requestType == MANAGE_REQUEST_ADD) "Add" else "Remove"
+        val requestedBleAddress = request.bleAddress
+        val requestedAccountKeyDeviceMetadata = request.accountKeyDeviceMetadata
+        Log.d(
+            TAG,
+            "onManageFastPairAccountDevice(requestedAccount: $requestedAccount, " +
+                    "requestType: $requestTypeString,"
+        )
+        Log.d(TAG, "requestedBleAddress: $requestedBleAddress,")
+        Log.d(TAG, "requestedAccountKeyDeviceMetadata: $requestedAccountKeyDeviceMetadata)")
+
+        FastPairTestDataCache.accountKeyDeviceMetadata += requestedAccountKeyDeviceMetadata
+
+        callback.onSuccess()
     }
 
     companion object {
         private const val TAG = "FastPairTestDataProviderService"
+        private val ELIGIBLE_ACCOUNTS_TEST_CONSTANT = listOf(
+            FastPairEligibleAccount.Builder()
+                .setAccount(Account("nearby-mainline-fpseeker@google.com", "FakeTestAccount"))
+                .setOptIn(true)
+                .build(),
+        )
+
+        private fun ByteArray.bytesToStringLowerCase(): String =
+            joinToString(separator = "") { eachByte -> "%02x".format(eachByte) }
     }
 }
