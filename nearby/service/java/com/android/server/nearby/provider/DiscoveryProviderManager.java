@@ -95,7 +95,7 @@ public class DiscoveryProviderManager implements AbstractDiscoveryProvider.Liste
     /**
      * Registers the listener in the manager and starts scan according to the requested scan mode.
      */
-    public void registerScanListener(ScanRequest scanRequest, IScanListener listener) {
+    public boolean registerScanListener(ScanRequest scanRequest, IScanListener listener) {
         synchronized (mLock) {
             IBinder listenerBinder = listener.asBinder();
             if (mScanTypeScanListenerRecordMap.containsKey(listener.asBinder())) {
@@ -103,11 +103,13 @@ public class DiscoveryProviderManager implements AbstractDiscoveryProvider.Liste
                         .get(listenerBinder).getScanRequest();
                 if (scanRequest.equals(savedScanRequest)) {
                     Log.d(TAG, "Already registered the scanRequest: " + scanRequest);
-                    return;
+                    return true;
                 }
             }
 
-            startProviders(scanRequest);
+            if (!startProviders(scanRequest)) {
+                return false;
+            }
 
             ScanListenerRecord scanListenerRecord = new ScanListenerRecord(scanRequest, listener);
             mScanTypeScanListenerRecordMap.put(listenerBinder, scanListenerRecord);
@@ -116,6 +118,7 @@ public class DiscoveryProviderManager implements AbstractDiscoveryProvider.Liste
                 mScanMode = scanRequest.getScanMode();
                 invalidateProviderScanMode();
             }
+            return true;
         }
     }
 
@@ -159,10 +162,14 @@ public class DiscoveryProviderManager implements AbstractDiscoveryProvider.Liste
         }
     }
 
-    private void startProviders(ScanRequest scanRequest) {
+    // Returns false when fail to start all the providers. Returns true if any one of the provider
+    // starts successfully.
+    private boolean startProviders(ScanRequest scanRequest) {
         if (scanRequest.isBleEnabled()) {
             startBleProvider(scanRequest);
+            return true;
         }
+        return false;
     }
 
     private void startBleProvider(ScanRequest scanRequest) {
