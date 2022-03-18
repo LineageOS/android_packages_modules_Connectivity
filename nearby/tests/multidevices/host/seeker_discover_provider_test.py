@@ -14,12 +14,9 @@
 
 """CTS-V Nearby Mainline Fast Pair end-to-end test case: seeker can discover the provider."""
 
-import logging
-import sys
 from typing import List
 
 from mobly import base_test
-from mobly import test_runner
 from mobly.controllers import android_device
 
 from test_helper import constants
@@ -83,12 +80,3 @@ class SeekerDiscoverProviderTest(base_test.BaseTestClass):
             timeout_seconds=SCAN_TIMEOUT_SEC,
             expected_model_id=PROVIDER_SIMULATOR_MODEL_ID,
             expected_ble_mac_address=provider_ble_mac_address)
-
-
-if __name__ == '__main__':
-    # Take test args
-    index = sys.argv.index('--')
-    sys.argv = sys.argv[:1] + sys.argv[index + 1:]
-
-    logging.basicConfig(filename="/tmp/seeker_discover_provider_test_log.txt", level=logging.INFO)
-    test_runner.main()

@@ -16,11 +16,11 @@ package {
     default_applicable_licenses: ["Android-Apache-2.0"],
 }
 
-// Run the tests: atest -v CtsSeekerDiscoverProviderTest
+// Run the tests: atest -v CtsNearbyMultiDevicesTestSuite
 python_test_host {
-    name: "CtsSeekerDiscoverProviderTest",
-    main: "seeker_discover_provider_test.py",
-    srcs: ["seeker_discover_provider_test.py"],
+    name: "CtsNearbyMultiDevicesTestSuite",
+    main: "suite_main.py",
+    srcs: ["*.py"],
     libs: ["NearbyMultiDevicesHostHelper"],
     test_suites: [
         "cts",
