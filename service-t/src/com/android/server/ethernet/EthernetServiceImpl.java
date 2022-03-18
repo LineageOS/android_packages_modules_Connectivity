@@ -281,4 +281,12 @@ public class EthernetServiceImpl extends IEthernetManager.Stub {
 
         mTracker.disconnectNetwork(iface, listener);
     }
+
+    @Override
+    public void setEthernetEnabled(boolean enabled) {
+        PermissionUtils.enforceNetworkStackPermissionOr(mContext,
+                android.Manifest.permission.NETWORK_SETTINGS);
+
+        mTracker.setEthernetEnabled(enabled);
+    }
 }

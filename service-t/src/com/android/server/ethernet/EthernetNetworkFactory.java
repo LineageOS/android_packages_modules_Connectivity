@@ -183,7 +183,8 @@ public class EthernetNetworkFactory extends NetworkFactory {
      * Returns an array of available interface names. The array is sorted: unrestricted interfaces
      * goes first, then sorted by name.
      */
-    String[] getAvailableInterfaces(boolean includeRestricted) {
+    @VisibleForTesting(visibility = VisibleForTesting.Visibility.PACKAGE)
+    protected String[] getAvailableInterfaces(boolean includeRestricted) {
         return mTrackingInterfaces.values()
                 .stream()
                 .filter(iface -> !iface.isRestricted() || includeRestricted)
@@ -195,7 +196,8 @@ public class EthernetNetworkFactory extends NetworkFactory {
                 .toArray(String[]::new);
     }
 
-    void addInterface(@NonNull final String ifaceName, @NonNull final String hwAddress,
+    @VisibleForTesting(visibility = VisibleForTesting.Visibility.PACKAGE)
+    protected void addInterface(@NonNull final String ifaceName, @NonNull final String hwAddress,
             @NonNull final IpConfiguration ipConfig,
             @NonNull final NetworkCapabilities capabilities) {
         if (mTrackingInterfaces.containsKey(ifaceName)) {
@@ -282,7 +284,8 @@ public class EthernetNetworkFactory extends NetworkFactory {
                 .addTransportType(NetworkCapabilities.TRANSPORT_ETHERNET).build();
     }
 
-    void removeInterface(String interfaceName) {
+    @VisibleForTesting(visibility = VisibleForTesting.Visibility.PACKAGE)
+    protected void removeInterface(String interfaceName) {
         NetworkInterfaceState iface = mTrackingInterfaces.remove(interfaceName);
         if (iface != null) {
             iface.maybeSendNetworkManagementCallbackForAbort();
