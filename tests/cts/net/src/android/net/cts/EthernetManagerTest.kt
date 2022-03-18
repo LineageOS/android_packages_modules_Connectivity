@@ -47,7 +47,9 @@ import com.android.networkstack.apishim.common.EthernetManagerShim.ROLE_CLIENT
 import com.android.networkstack.apishim.common.EthernetManagerShim.ROLE_NONE
 import com.android.networkstack.apishim.EthernetManagerShimImpl
 import java.util.concurrent.Executor
+import kotlin.test.assertFalse
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 private const val TIMEOUT_MS = 1000L
 private const val NO_CALLBACK_TIMEOUT_MS = 200L
@@ -180,5 +182,33 @@ class EthernetManagerTest {
     private fun removeInterface(iface: TestNetworkInterface) {
         iface.fileDescriptor.close()
         createdIfaces.remove(iface)
+    }
+
+    private fun doTestGetInterfaceList() {
+        em.setIncludeTestInterfaces(true)
+
+        // Create two test interfaces and check the return list contains the interface names.
+        val iface1 = createInterface()
+        val iface2 = createInterface()
+        var ifaces = em.getInterfaceList()
+        assertTrue(ifaces.size > 0)
+        assertTrue(ifaces.contains(iface1.getInterfaceName()))
+        assertTrue(ifaces.contains(iface2.getInterfaceName()))
+
+        // Remove one existing test interface and check the return list doesn't contain the
+        // removed interface name.
+        removeInterface(iface1)
+        ifaces = em.getInterfaceList()
+        assertFalse(ifaces.contains(iface1.getInterfaceName()))
+        assertTrue(ifaces.contains(iface2.getInterfaceName()))
+
+        removeInterface(iface2)
+    }
+
+    @Test
+    public fun testGetInterfaceList() {
+        runAsShell(MANAGE_TEST_NETWORKS, NETWORK_SETTINGS) {
+            doTestGetInterfaceList()
+        }
     }
 }
