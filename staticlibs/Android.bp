@@ -290,6 +290,7 @@ java_library {
     // TODO: remove "apex_available:platform".
     apex_available: [
         "//apex_available:platform",
+        "com.android.bluetooth",
         "com.android.tethering",
     ],
     visibility: [
