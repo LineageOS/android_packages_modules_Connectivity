@@ -38,7 +38,10 @@ public class FastPairDiscoveryItem {
 
     /**
      * Get Id.
+     *
+     * @hide
      */
+    @SystemApi
     @Nullable
     public String getId() {
         return mMetadataParcel.id;
@@ -46,14 +49,20 @@ public class FastPairDiscoveryItem {
 
     /**
      * Get Type.
+     *
+     * @hide
      */
+    @SystemApi
     public int getType() {
         return mMetadataParcel.type;
     }
 
     /**
      * Get MacAddress.
+     *
+     * @hide
      */
+    @SystemApi
     @Nullable
     public String getMacAddress() {
         return mMetadataParcel.macAddress;
@@ -61,7 +70,10 @@ public class FastPairDiscoveryItem {
 
     /**
      * Get ActionUrl.
+     *
+     * @hide
      */
+    @SystemApi
     @Nullable
     public String getActionUrl() {
         return mMetadataParcel.actionUrl;
@@ -69,7 +81,10 @@ public class FastPairDiscoveryItem {
 
     /**
      * Get DeviceName.
+     *
+     * @hide
      */
+    @SystemApi
     @Nullable
     public String getDeviceName() {
         return mMetadataParcel.deviceName;
@@ -77,7 +92,10 @@ public class FastPairDiscoveryItem {
 
     /**
      * Get Title.
+     *
+     * @hide
      */
+    @SystemApi
     @Nullable
     public String getTitle() {
         return mMetadataParcel.title;
@@ -85,7 +103,10 @@ public class FastPairDiscoveryItem {
 
     /**
      * Get Description.
+     *
+     * @hide
      */
+    @SystemApi
     @Nullable
     public String getDescription() {
         return mMetadataParcel.description;
@@ -93,7 +114,10 @@ public class FastPairDiscoveryItem {
 
     /**
      * Get DisplayUrl.
+     *
+     * @hide
      */
+    @SystemApi
     @Nullable
     public String getDisplayUrl() {
         return mMetadataParcel.displayUrl;
@@ -101,56 +125,80 @@ public class FastPairDiscoveryItem {
 
     /**
      * Get LastObservationTimestampMillis.
+     *
+     * @hide
      */
+    @SystemApi
     public long getLastObservationTimestampMillis() {
         return mMetadataParcel.lastObservationTimestampMillis;
     }
 
     /**
      * Get FirstObservationTimestampMillis.
+     *
+     * @hide
      */
+    @SystemApi
     public long getFirstObservationTimestampMillis() {
         return mMetadataParcel.firstObservationTimestampMillis;
     }
 
     /**
      * Get State.
+     *
+     * @hide
      */
+    @SystemApi
     public int getState() {
         return mMetadataParcel.state;
     }
 
     /**
      * Get ActionUrlType.
+     *
+     * @hide
      */
+    @SystemApi
     public int getActionUrlType() {
         return mMetadataParcel.actionUrlType;
     }
 
     /**
      * Get Rssi.
+     *
+     * @hide
      */
+    @SystemApi
     public int getRssi() {
         return mMetadataParcel.rssi;
     }
 
     /**
      * Get PendingAppInstallTimestampMillis.
+     *
+     * @hide
      */
+    @SystemApi
     public long getPendingAppInstallTimestampMillis() {
         return mMetadataParcel.pendingAppInstallTimestampMillis;
     }
 
     /**
      * Get TxPower.
+     *
+     * @hide
      */
+    @SystemApi
     public int getTxPower() {
         return mMetadataParcel.txPower;
     }
 
     /**
      * Get AppName.
+     *
+     * @hide
      */
+    @SystemApi
     @Nullable
     public String getAppName() {
         return mMetadataParcel.appName;
@@ -158,7 +206,10 @@ public class FastPairDiscoveryItem {
 
     /**
      * Get GroupId.
+     *
+     * @hide
      */
+    @SystemApi
     @Nullable
     public String getGroupId() {
         return mMetadataParcel.groupId;
@@ -166,14 +217,20 @@ public class FastPairDiscoveryItem {
 
     /**
      * Get AttachmentType.
+     *
+     * @hide
      */
+    @SystemApi
     public int getAttachmentType() {
         return mMetadataParcel.attachmentType;
     }
 
     /**
      * Get PackageName.
+     *
+     * @hide
      */
+    @SystemApi
     @Nullable
     public String getPackageName() {
         return mMetadataParcel.packageName;
@@ -181,7 +238,10 @@ public class FastPairDiscoveryItem {
 
     /**
      * Get FeatureGraphicUrl.
+     *
+     * @hide
      */
+    @SystemApi
     @Nullable
     public String getFeatureGraphicUrl() {
         return mMetadataParcel.featureGraphicUrl;
@@ -189,15 +249,23 @@ public class FastPairDiscoveryItem {
 
     /**
      * Get TriggerId.
+     *
+     * @hide
      */
+    @SystemApi
     @Nullable
     public String getTriggerId() {
         return mMetadataParcel.triggerId;
     }
 
     /**
-     * Get IconPng.
+     * Get IconPng, which is submitted at device registration time to display on notification. It is
+     * a 32-bit PNG with dimensions of 512px by 512px.
+     *
+     * @return IconPng in 32-bit PNG with dimensions of 512px by 512px.
+     * @hide
      */
+    @SystemApi
     @Nullable
     public byte[] getIconPng() {
         return mMetadataParcel.iconPng;
@@ -205,7 +273,10 @@ public class FastPairDiscoveryItem {
 
     /**
      * Get IconFifeUrl.
+     *
+     * @hide
      */
+    @SystemApi
     @Nullable
     public String getIconFfeUrl() {
         return mMetadataParcel.iconFifeUrl;
@@ -213,7 +284,10 @@ public class FastPairDiscoveryItem {
 
     /**
      * Get DebugMessage.
+     *
+     * @hide
      */
+    @SystemApi
     @Nullable
     public String getDebugMessage() {
         return mMetadataParcel.debugMessage;
@@ -221,7 +295,10 @@ public class FastPairDiscoveryItem {
 
     /**
      * Get DebugCategory.
+     *
+     * @hide
      */
+    @SystemApi
     public int getDebugCategory() {
         return mMetadataParcel.debugCategory;
     }
@@ -235,14 +312,23 @@ public class FastPairDiscoveryItem {
 
     /**
      * Get LastUserExperience.
+     *
+     * @hide
      */
+    @SystemApi
     public int getLastUserExperience() {
         return mMetadataParcel.lastUserExperience;
     }
 
     /**
-     * Get BleRecordBytes.
+     * Get BleRecordBytes. Raw bytes of {@link android.bluetooth.le.ScanRecord}.
+     * It is the most recent BLE advertisement related to this item.
+     *
+     * @return the most recent BLE advertisement in raw bytes of
+     *         {@link android.bluetooth.le.ScanRecord}.
+     * @hide
      */
+    @SystemApi
     @Nullable
     public byte[] getBleRecordBytes() {
         return mMetadataParcel.bleRecordBytes;
@@ -250,15 +336,23 @@ public class FastPairDiscoveryItem {
 
     /**
      * Get EntityId.
+     *
+     * @hide
      */
+    @SystemApi
     @Nullable
     public String getEntityId() {
         return mMetadataParcel.entityId;
     }
 
     /**
-     * Get authenticationPublicKeySecp256r1.
+     * Get authenticationPublicKeySecp256r1, which is same as AntiSpoof public key, see
+     * <a href="https://developers.google.com/nearby/fast-pair/spec#data_format">Data Format</a>.
+     *
+     * @return 64-byte authenticationPublicKeySecp256r1.
+     * @hide
      */
+    @SystemApi
     @Nullable
     public byte[] getAuthenticationPublicKeySecp256r1() {
         return mMetadataParcel.authenticationPublicKeySecp256r1;
@@ -266,14 +360,20 @@ public class FastPairDiscoveryItem {
 
     /**
      * Builder used to create FastPairDiscoveryItem.
+     *
+     * @hide
      */
+    @SystemApi
     public static final class Builder {
 
         private final FastPairDiscoveryItemParcel mBuilderParcel;
 
         /**
          * Default constructor of Builder.
+         *
+         * @hide
          */
+        @SystemApi
         public Builder() {
             mBuilderParcel = new FastPairDiscoveryItemParcel();
         }
@@ -283,7 +383,10 @@ public class FastPairDiscoveryItem {
          *
          * @param id Unique id.
          * @return The builder, to facilitate chaining {@code builder.setXXX(..).setXXX(..)}.
+         *
+         * @hide
          */
+        @SystemApi
         @NonNull
         public Builder setId(@Nullable String id) {
             mBuilderParcel.id = id;
@@ -295,7 +398,9 @@ public class FastPairDiscoveryItem {
          *
          * @param type Nearby type.
          * @return The builder, to facilitate chaining {@code builder.setXXX(..).setXXX(..)}.
+         * @hide
          */
+        @SystemApi
         @NonNull
         public Builder setType(int type) {
             mBuilderParcel.type = type;
@@ -307,7 +412,9 @@ public class FastPairDiscoveryItem {
          *
          * @param macAddress Fast Pair device rotating mac address.
          * @return The builder, to facilitate chaining {@code builder.setXXX(..).setXXX(..)}.
+         * @hide
          */
+        @SystemApi
         @NonNull
         public Builder setMacAddress(@Nullable String macAddress) {
             mBuilderParcel.macAddress = macAddress;
@@ -319,7 +426,9 @@ public class FastPairDiscoveryItem {
          *
          * @param actionUrl Action Url of Fast Pair device.
          * @return The builder, to facilitate chaining {@code builder.setXXX(..).setXXX(..)}.
+         * @hide
          */
+        @SystemApi
         @NonNull
         public Builder setActionUrl(@Nullable String actionUrl) {
             mBuilderParcel.actionUrl = actionUrl;
@@ -330,7 +439,9 @@ public class FastPairDiscoveryItem {
          * Set DeviceName.
          * @param deviceName Fast Pair device name.
          * @return The builder, to facilitate chaining {@code builder.setXXX(..).setXXX(..)}.
+         * @hide
          */
+        @SystemApi
         @NonNull
         public Builder setDeviceName(@Nullable String deviceName) {
             mBuilderParcel.deviceName = deviceName;
@@ -342,7 +453,9 @@ public class FastPairDiscoveryItem {
          *
          * @param title Title of Fast Pair device.
          * @return The builder, to facilitate chaining {@code builder.setXXX(..).setXXX(..)}.
+         * @hide
          */
+        @SystemApi
         @NonNull
         public Builder setTitle(@Nullable String title) {
             mBuilderParcel.title = title;
@@ -354,7 +467,9 @@ public class FastPairDiscoveryItem {
          *
          * @param description Description of Fast Pair device.
          * @return The builder, to facilitate chaining {@code builder.setXXX(..).setXXX(..)}.
+         * @hide
          */
+        @SystemApi
         @NonNull
         public Builder setDescription(@Nullable String description) {
             mBuilderParcel.description = description;
@@ -366,7 +481,9 @@ public class FastPairDiscoveryItem {
          *
          * @param displayUrl Display Url of Fast Pair device.
          * @return The builder, to facilitate chaining {@code builder.setXXX(..).setXXX(..)}.
+         * @hide
          */
+        @SystemApi
         @NonNull
         public Builder setDisplayUrl(@Nullable String displayUrl) {
             mBuilderParcel.displayUrl = displayUrl;
@@ -379,7 +496,9 @@ public class FastPairDiscoveryItem {
          * @param lastObservationTimestampMillis Last observed timestamp of Fast Pair device, keyed
          *                                       by a rotating id.
          * @return The builder, to facilitate chaining {@code builder.setXXX(..).setXXX(..)}.
+         * @hide
          */
+        @SystemApi
         @NonNull
         public Builder setLastObservationTimestampMillis(
                 long lastObservationTimestampMillis) {
@@ -393,7 +512,9 @@ public class FastPairDiscoveryItem {
          * @param firstObservationTimestampMillis First observed timestamp of Fast Pair device,
          *                                        keyed by a rotating id.
          * @return The builder, to facilitate chaining {@code builder.setXXX(..).setXXX(..)}.
+         * @hide
          */
+        @SystemApi
         @NonNull
         public Builder setFirstObservationTimestampMillis(
                 long firstObservationTimestampMillis) {
@@ -406,7 +527,9 @@ public class FastPairDiscoveryItem {
          *
          * @param state Item's current state. e.g. if the item is blocked.
          * @return The builder, to facilitate chaining {@code builder.setXXX(..).setXXX(..)}.
+         * @hide
          */
+        @SystemApi
         @NonNull
         public Builder setState(int state) {
             mBuilderParcel.state = state;
@@ -418,7 +541,9 @@ public class FastPairDiscoveryItem {
          *
          * @param actionUrlType The resolved url type for the action_url.
          * @return The builder, to facilitate chaining {@code builder.setXXX(..).setXXX(..)}.
+         * @hide
          */
+        @SystemApi
         @NonNull
         public Builder setActionUrlType(int actionUrlType) {
             mBuilderParcel.actionUrlType = actionUrlType;
@@ -430,7 +555,9 @@ public class FastPairDiscoveryItem {
          *
          * @param rssi Beacon's RSSI value.
          * @return The builder, to facilitate chaining {@code builder.setXXX(..).setXXX(..)}.
+         * @hide
          */
+        @SystemApi
         @NonNull
         public Builder setRssi(int rssi) {
             mBuilderParcel.rssi = rssi;
@@ -443,7 +570,9 @@ public class FastPairDiscoveryItem {
          * @param pendingAppInstallTimestampMillis The timestamp when the user is redirected to App
          *                                         Store after clicking on the item.
          * @return The builder, to facilitate chaining {@code builder.setXXX(..).setXXX(..)}.
+         * @hide
          */
+        @SystemApi
         @NonNull
         public Builder setPendingAppInstallTimestampMillis(long pendingAppInstallTimestampMillis) {
             mBuilderParcel.pendingAppInstallTimestampMillis = pendingAppInstallTimestampMillis;
@@ -455,7 +584,9 @@ public class FastPairDiscoveryItem {
          *
          * @param txPower Beacon's tx power.
          * @return The builder, to facilitate chaining {@code builder.setXXX(..).setXXX(..)}.
+         * @hide
          */
+        @SystemApi
         @NonNull
         public Builder setTxPower(int txPower) {
             mBuilderParcel.txPower = txPower;
@@ -467,7 +598,9 @@ public class FastPairDiscoveryItem {
          *
          * @param appName Human readable name of the app designated to open the uri.
          * @return The builder, to facilitate chaining {@code builder.setXXX(..).setXXX(..)}.
+         * @hide
          */
+        @SystemApi
         @NonNull
         public Builder setAppName(@Nullable String appName) {
             mBuilderParcel.appName = appName;
@@ -480,7 +613,9 @@ public class FastPairDiscoveryItem {
          * @param groupId ID used for associating several DiscoveryItems. These items may be
          *                visually displayed together.
          * @return The builder, to facilitate chaining {@code builder.setXXX(..).setXXX(..)}.
+         * @hide
          */
+        @SystemApi
         @NonNull
         public Builder setGroupId(@Nullable String groupId) {
             mBuilderParcel.groupId = groupId;
@@ -492,7 +627,9 @@ public class FastPairDiscoveryItem {
          *
          * @param attachmentType Whether the attachment is created in debug namespace.
          * @return The builder, to facilitate chaining {@code builder.setXXX(..).setXXX(..)}.
+         * @hide
          */
+        @SystemApi
         @NonNull
         public Builder setAttachmentType(int attachmentType) {
             mBuilderParcel.attachmentType = attachmentType;
@@ -504,7 +641,9 @@ public class FastPairDiscoveryItem {
          *
          * @param packageName Package name of the App that owns this item.
          * @return The builder, to facilitate chaining {@code builder.setXXX(..).setXXX(..)}.
+         * @hide
          */
+        @SystemApi
         @NonNull
         public Builder setPackageName(@Nullable String packageName) {
             mBuilderParcel.packageName = packageName;
@@ -517,7 +656,9 @@ public class FastPairDiscoveryItem {
          * @param featureGraphicUrl The "feature" graphic image url used for large sized list view
          *                          entries.
          * @return The builder, to facilitate chaining {@code builder.setXXX(..).setXXX(..)}.
+         * @hide
          */
+        @SystemApi
         @NonNull
         public Builder setFeatureGraphicUrl(@Nullable String featureGraphicUrl) {
             mBuilderParcel.featureGraphicUrl = featureGraphicUrl;
@@ -529,7 +670,9 @@ public class FastPairDiscoveryItem {
          *
          * @param triggerId TriggerId identifies the trigger/beacon that is attached with a message.
          * @return The builder, to facilitate chaining {@code builder.setXXX(..).setXXX(..)}.
+         * @hide
          */
+        @SystemApi
         @NonNull
         public Builder setTriggerId(@Nullable String triggerId) {
             mBuilderParcel.triggerId = triggerId;
@@ -541,7 +684,9 @@ public class FastPairDiscoveryItem {
          *
          * @param iconPng Bytes of item icon in PNG format displayed in Discovery item list.
          * @return The builder, to facilitate chaining {@code builder.setXXX(..).setXXX(..)}.
+         * @hide
          */
+        @SystemApi
         @NonNull
         public Builder setIconPng(@Nullable byte[] iconPng) {
             mBuilderParcel.iconPng = iconPng;
@@ -553,7 +698,9 @@ public class FastPairDiscoveryItem {
          *
          * @param iconFifeUrl A FIFE URL of the item icon displayed in Discovery item list.
          * @return The builder, to facilitate chaining {@code builder.setXXX(..).setXXX(..)}.
+         * @hide
          */
+        @SystemApi
         @NonNull
         public Builder setIconFfeUrl(@Nullable String iconFifeUrl) {
             mBuilderParcel.iconFifeUrl = iconFifeUrl;
@@ -565,7 +712,9 @@ public class FastPairDiscoveryItem {
          *
          * @param debugMessage Message written to bugreport for 3P developers.(No sensitive info)
          * @return The builder, to facilitate chaining {@code builder.setXXX(..).setXXX(..)}.
+         * @hide
          */
+        @SystemApi
         @NonNull
         public Builder setDebugMessage(@Nullable String debugMessage) {
             mBuilderParcel.debugMessage = debugMessage;
@@ -577,7 +726,9 @@ public class FastPairDiscoveryItem {
          *
          * @param debugCategory Weather the item is filtered out on server.
          * @return The builder, to facilitate chaining {@code builder.setXXX(..).setXXX(..)}.
+         * @hide
          */
+        @SystemApi
         @NonNull
         public Builder setDebugCategory(int debugCategory) {
             mBuilderParcel.debugCategory = debugCategory;
@@ -590,7 +741,9 @@ public class FastPairDiscoveryItem {
          * @param lostMillis Client timestamp when the trigger (e.g. beacon) was last lost
          *                   (e.g. when Messages told us the beacon's no longer nearby).
          * @return The builder, to facilitate chaining {@code builder.setXXX(..).setXXX(..)}.
+         * @hide
          */
+        @SystemApi
         @NonNull
         public Builder setLostMillis(long lostMillis) {
             mBuilderParcel.lostMillis = lostMillis;
@@ -604,7 +757,9 @@ public class FastPairDiscoveryItem {
          *                           they dismissed the notification, that's bad; but if they tapped
          *                           it, that's good).
          * @return The builder, to facilitate chaining {@code builder.setXXX(..).setXXX(..)}.
+         * @hide
          */
+        @SystemApi
         @NonNull
         public Builder setLastUserExperience(int lastUserExperience) {
             mBuilderParcel.lastUserExperience = lastUserExperience;
@@ -614,9 +769,12 @@ public class FastPairDiscoveryItem {
         /**
          * Set BleRecordBytes.
          *
-         * @param bleRecordBytes The most recent BLE advertisement related to this item.
+         * @param bleRecordBytes The most recent BLE advertisement related to this item. Raw bytes
+         *                       of {@link android.bluetooth.le.ScanRecord}.
          * @return The builder, to facilitate chaining {@code builder.setXXX(..).setXXX(..)}.
+         * @hide
          */
+        @SystemApi
         @NonNull
         public Builder setBleRecordBytes(@Nullable byte[] bleRecordBytes) {
             mBuilderParcel.bleRecordBytes = bleRecordBytes;
@@ -628,7 +786,9 @@ public class FastPairDiscoveryItem {
          *
          * @param entityId An ID generated on the server to uniquely identify content.
          * @return The builder, to facilitate chaining {@code builder.setXXX(..).setXXX(..)}.
+         * @hide
          */
+        @SystemApi
         @NonNull
         public Builder setEntityId(@Nullable String entityId) {
             mBuilderParcel.entityId = entityId;
@@ -636,11 +796,14 @@ public class FastPairDiscoveryItem {
         }
 
         /**
-         * Set authenticationPublicKeySecp256r1.
+         * Set authenticationPublicKeySecp256r1, which is same as AntiSpoof public key, see
+         * <a href="https://developers.google.com/nearby/fast-pair/spec#data_format">Data Format</a>
          *
-         * @param authenticationPublicKeySecp256r1 Fast Pair device public key.
+         * @param authenticationPublicKeySecp256r1 64-byte Fast Pair device public key.
          * @return The builder, to facilitate chaining {@code builder.setXXX(..).setXXX(..)}.
+         * @hide
          */
+        @SystemApi
         @NonNull
         public Builder setAuthenticationPublicKeySecp256r1(
                 @Nullable byte[] authenticationPublicKeySecp256r1) {
@@ -650,7 +813,10 @@ public class FastPairDiscoveryItem {
 
         /**
          * Build {@link FastPairDiscoveryItem} with the currently set configuration.
+         *
+         * @hide
          */
+        @SystemApi
         @NonNull
         public FastPairDiscoveryItem build() {
             return new FastPairDiscoveryItem(mBuilderParcel);

@@ -62,17 +62,27 @@ public abstract class FastPairDataProviderBase {
     /**
      * The action the wrapping service should have in its intent filter to implement the
      * {@link android.nearby.FastPairDataProviderBase}.
+     *
+     * @hide
      */
+    @SystemApi
     public static final String ACTION_FAST_PAIR_DATA_PROVIDER =
             "android.nearby.action.FAST_PAIR_DATA_PROVIDER";
 
     /**
      * Manage request type to add, or opt-in.
+     *
+     * @hide
      */
+    @SystemApi
     public static final int MANAGE_REQUEST_ADD = 0;
+
     /**
      * Manage request type to remove, or opt-out.
+     *
+     * @hide
      */
+    @SystemApi
     public static final int MANAGE_REQUEST_REMOVE = 1;
 
     /**
@@ -84,9 +94,22 @@ public abstract class FastPairDataProviderBase {
             MANAGE_REQUEST_REMOVE})
     @interface ManageRequestType {}
 
-
+    /**
+     * Error code for bad request.
+     *
+     * @hide
+     */
+    @SystemApi
     public static final int ERROR_CODE_BAD_REQUEST = 0;
+
+    /**
+     * Error code for internal error.
+     *
+     * @hide
+     */
+    @SystemApi
     public static final int ERROR_CODE_INTERNAL_ERROR = 1;
+
     /**
      * @hide
      */
@@ -103,7 +126,9 @@ public abstract class FastPairDataProviderBase {
      * Constructor of FastPairDataProviderBase.
      *
      * @param tag TAG for on device logging.
+     * @hide
      */
+    @SystemApi
     public FastPairDataProviderBase(@NonNull String tag) {
         mBinder = new Service();
         mTag = tag;
@@ -111,61 +136,110 @@ public abstract class FastPairDataProviderBase {
 
     /**
      * Callback to be invoked when an AntispoofKeyed device metadata is loaded.
+     *
+     * @hide
      */
+    @SystemApi
     public interface FastPairAntispoofKeyDeviceMetadataCallback {
 
         /**
          * Invoked once the meta data is loaded.
+         *
+         * @hide
          */
+        @SystemApi
         void onFastPairAntispoofKeyDeviceMetadataReceived(
                 @NonNull FastPairAntispoofKeyDeviceMetadata metadata);
-        /** Invoked in case of error. */
+
+        /** Invoked in case of error.
+         *
+         * @hide
+         */
+        @SystemApi
         void onError(@ErrorCode int code, @Nullable String message);
     }
 
     /**
      * Callback to be invoked when Fast Pair devices of a given account is loaded.
+     *
+     * @hide
      */
+    @SystemApi
     public interface FastPairAccountDevicesMetadataCallback {
 
         /**
          * Should be invoked once the metadatas are loaded.
+         *
+         * @hide
          */
+        @SystemApi
         void onFastPairAccountDevicesMetadataReceived(
                 @NonNull Collection<FastPairAccountKeyDeviceMetadata> metadatas);
-        /** Invoked in case of error. */
+        /**
+         * Invoked in case of error.
+         *
+         * @hide
+         */
+        @SystemApi
         void onError(@ErrorCode int code, @Nullable String message);
     }
 
-    /** Callback to be invoked when FastPair eligible accounts are loaded. */
+    /**
+     * Callback to be invoked when FastPair eligible accounts are loaded.
+     *
+     * @hide
+     */
+    @SystemApi
     public interface FastPairEligibleAccountsCallback {
 
         /**
          * Should be invoked once the eligible accounts are loaded.
+         *
+         * @hide
          */
+        @SystemApi
         void onFastPairEligibleAccountsReceived(
                 @NonNull Collection<FastPairEligibleAccount> accounts);
-        /** Invoked in case of error. */
+        /**
+         * Invoked in case of error.
+         *
+         * @hide
+         */
+        @SystemApi
         void onError(@ErrorCode int code, @Nullable String message);
     }
 
     /**
      * Callback to be invoked when a management action is finished.
+     *
+     * @hide
      */
+    @SystemApi
     public interface FastPairManageActionCallback {
 
         /**
          * Should be invoked once the manage action is successful.
+         *
+         * @hide
          */
+        @SystemApi
         void onSuccess();
-        /** Invoked in case of error. */
+        /**
+         * Invoked in case of error.
+         *
+         * @hide
+         */
+        @SystemApi
         void onError(@ErrorCode int code, @Nullable String message);
     }
 
     /**
      * Fulfills the Fast Pair device metadata request by using callback to send back the
      * device meta data of a given modelId.
+     *
+     * @hide
      */
+    @SystemApi
     public abstract void onLoadFastPairAntispoofKeyDeviceMetadata(
             @NonNull FastPairAntispoofKeyDeviceMetadataRequest request,
             @NonNull FastPairAntispoofKeyDeviceMetadataCallback callback);
@@ -173,28 +247,41 @@ public abstract class FastPairDataProviderBase {
     /**
      * Fulfills the account tied Fast Pair devices metadata request by using callback to send back
      * all Fast Pair device's metadata of a given account.
+     *
+     * @hide
      */
+    @SystemApi
     public abstract void onLoadFastPairAccountDevicesMetadata(
             @NonNull FastPairAccountDevicesMetadataRequest request,
             @NonNull FastPairAccountDevicesMetadataCallback callback);
 
     /**
      * Fulfills the Fast Pair eligible accounts request by using callback to send back Fast Pair
-     * eligible accounts */
+     * eligible accounts.
+     *
+     * @hide
+     */
+    @SystemApi
     public abstract void onLoadFastPairEligibleAccounts(
             @NonNull FastPairEligibleAccountsRequest request,
             @NonNull FastPairEligibleAccountsCallback callback);
 
     /**
      * Fulfills the Fast Pair account management request by using callback to send back result.
+     *
+     * @hide
      */
+    @SystemApi
     public abstract void onManageFastPairAccount(
             @NonNull FastPairManageAccountRequest request,
             @NonNull FastPairManageActionCallback callback);
 
     /**
      * Fulfills the request to manage device-account mapping by using callback to send back result.
+     *
+     * @hide
      */
+    @SystemApi
     public abstract void onManageFastPairAccountDevice(
             @NonNull FastPairManageAccountDeviceRequest request,
             @NonNull FastPairManageActionCallback callback);
@@ -202,14 +289,22 @@ public abstract class FastPairDataProviderBase {
     /**
      * Returns the IBinder instance that should be returned from the {@link
      * android.app.Service#onBind(Intent)} method of the wrapping service.
+     *
+     * @hide
      */
+    @SystemApi
     public final @Nullable IBinder getBinder() {
         return mBinder;
     }
 
     /**
-     * Class for reading FastPairAntispoofKeyDeviceMetadataRequest.
+     * Class for reading FastPairAntispoofKeyDeviceMetadataRequest, which specifies the model ID of
+     * a Fast Pair device. To fulfill this request, corresponding
+     * {@link FastPairAntispoofKeyDeviceMetadata} should be fetched and returned.
+     *
+     * @hide
      */
+    @SystemApi
     public static class FastPairAntispoofKeyDeviceMetadataRequest {
 
         private final FastPairAntispoofKeyDeviceMetadataRequestParcel mMetadataRequestParcel;
@@ -219,7 +314,17 @@ public abstract class FastPairDataProviderBase {
             this.mMetadataRequestParcel = metaDataRequestParcel;
         }
 
-        /** Get modelId, the key for FastPairAntispoofKeyDeviceMetadata. */
+        /**
+         * Get modelId (24 bit), the key for FastPairAntispoofKeyDeviceMetadata in the same format
+         * returned by Google at device registration time.
+         *
+         * ModelId format is defined at device registration time, see
+         * <a href="https://developers.google.com/nearby/fast-pair/spec#model_id">Model ID</a>.
+         * @return raw bytes of modelId in the same format returned by Google at device registration
+         *         time.
+         * @hide
+         */
+        @SystemApi
         public @NonNull byte[] getModelId() {
             return this.mMetadataRequestParcel.modelId;
         }
@@ -238,7 +343,9 @@ public abstract class FastPairDataProviderBase {
      *
      * To retrieve metadata of a selected list of Fast Pair devices saved to an account, the caller
      * needs to set account with a non-empty allow list.
+     * @hide
      */
+    @SystemApi
     public static class FastPairAccountDevicesMetadataRequest {
 
         private final FastPairAccountDevicesMetadataRequestParcel mMetadataRequestParcel;
@@ -252,7 +359,9 @@ public abstract class FastPairDataProviderBase {
          * Get FastPair account, whose Fast Pair devices' metadata is requested.
          *
          * @return a FastPair account.
+         * @hide
          */
+        @SystemApi
         public @NonNull Account getAccount() {
             return this.mMetadataRequestParcel.account;
         }
@@ -262,8 +371,12 @@ public abstract class FastPairDataProviderBase {
          * Note that as a special case, empty list actually means all FastPair devices under the
          * account instead of none.
          *
+         * DeviceAccountKey is 16 bytes: first byte is 0x04. Other 15 bytes are randomly generated.
+         *
          * @return allowlist of Fast Pair devices using a collection of deviceAccountKeys.
+         * @hide
          */
+        @SystemApi
         public @NonNull Collection<byte[]> getDeviceAccountKeys()  {
             if (this.mMetadataRequestParcel.deviceAccountKeys == null) {
                 return new ArrayList<byte[]>(0);
@@ -277,7 +390,13 @@ public abstract class FastPairDataProviderBase {
         }
     }
 
-    /** Class for reading FastPairEligibleAccountsRequest. */
+    /**
+     *  Class for reading FastPairEligibleAccountsRequest. Upon receiving this request, Fast Pair
+     *  eligible accounts should be returned to bind Fast Pair devices.
+     *
+     * @hide
+     */
+    @SystemApi
     public static class FastPairEligibleAccountsRequest {
         @SuppressWarnings("UnusedVariable")
         private final FastPairEligibleAccountsRequestParcel mAccountsRequestParcel;
@@ -288,7 +407,15 @@ public abstract class FastPairDataProviderBase {
         }
     }
 
-    /** Class for reading FastPairManageAccountRequest. */
+    /**
+     * Class for reading FastPairManageAccountRequest. If the request type is MANAGE_REQUEST_ADD,
+     * the account is enabled to bind Fast Pair devices; If the request type is
+     * MANAGE_REQUEST_REMOVE, the account is disabled to bind more Fast Pair devices. Furthermore,
+     * all existing bounded Fast Pair devices are unbounded.
+     *
+     * @hide
+     */
+    @SystemApi
     public static class FastPairManageAccountRequest {
 
         private final FastPairManageAccountRequestParcel mAccountRequestParcel;
@@ -298,17 +425,35 @@ public abstract class FastPairDataProviderBase {
             this.mAccountRequestParcel = accountRequestParcel;
         }
 
-        /** Get request type: MANAGE_REQUEST_ADD, or MANAGE_REQUEST_REMOVE. */
+        /**
+         * Get request type: MANAGE_REQUEST_ADD, or MANAGE_REQUEST_REMOVE.
+         *
+         * @hide
+         */
+        @SystemApi
         public @ManageRequestType int getRequestType() {
             return this.mAccountRequestParcel.requestType;
         }
-        /** Get account. */
+        /**
+         * Get account.
+         *
+         * @hide
+         */
+        @SystemApi
         public @NonNull Account getAccount() {
             return this.mAccountRequestParcel.account;
         }
     }
 
-    /** Class for reading FastPairManageAccountDeviceRequest. */
+    /**
+     *  Class for reading FastPairManageAccountDeviceRequest. If the request type is
+     *  MANAGE_REQUEST_ADD, then a Fast Pair device is bounded to a Fast Pair account. If the
+     *  request type is MANAGE_REQUEST_REMOVE, then a Fast Pair device is removed from a Fast Pair
+     *  account.
+     *
+     * @hide
+     */
+    @SystemApi
     public static class FastPairManageAccountDeviceRequest {
 
         private final FastPairManageAccountDeviceRequestParcel mRequestParcel;
@@ -318,19 +463,39 @@ public abstract class FastPairDataProviderBase {
             this.mRequestParcel = requestParcel;
         }
 
-        /** Get request type: MANAGE_REQUEST_ADD, or MANAGE_REQUEST_REMOVE. */
+        /**
+         * Get request type: MANAGE_REQUEST_ADD, or MANAGE_REQUEST_REMOVE.
+         *
+         * @hide
+         */
+        @SystemApi
         public @ManageRequestType int getRequestType() {
             return this.mRequestParcel.requestType;
         }
-        /** Get account. */
+        /**
+         * Get account.
+         *
+         * @hide
+         */
+        @SystemApi
         public @NonNull Account getAccount() {
             return this.mRequestParcel.account;
         }
-        /** Get BleAddress. */
+        /**
+         * Get BleAddress.
+         *
+         * @hide
+         */
+        @SystemApi
         public @Nullable String getBleAddress() {
             return this.mRequestParcel.bleAddress;
         }
-        /** Get account key device metadata. */
+        /**
+         * Get account key device metadata.
+         *
+         * @hide
+         */
+        @SystemApi
         public @NonNull FastPairAccountKeyDeviceMetadata getAccountKeyDeviceMetadata() {
             return new FastPairAccountKeyDeviceMetadata(
                     this.mRequestParcel.accountKeyDeviceMetadata);
