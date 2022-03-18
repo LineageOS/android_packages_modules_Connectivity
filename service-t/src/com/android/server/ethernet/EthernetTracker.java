@@ -57,6 +57,7 @@ import com.android.net.module.util.PermissionUtils;
 import java.io.FileDescriptor;
 import java.net.InetAddress;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -90,7 +91,8 @@ public class EthernetTracker {
      * Interface names we track. This is a product-dependent regular expression, plus,
      * if setIncludeTestInterfaces is true, any test interfaces.
      */
-    private String mIfaceMatch;
+    private volatile String mIfaceMatch;
+
     /**
      * Track test interfaces if true, don't track otherwise.
      */
@@ -339,6 +341,22 @@ public class EthernetTracker {
 
     String[] getInterfaces(boolean includeRestricted) {
         return mFactory.getAvailableInterfaces(includeRestricted);
+    }
+
+    List<String> getInterfaceList() {
+        final List<String> interfaceList = new ArrayList<String>();
+        final String[] ifaces;
+        try {
+            ifaces = mNetd.interfaceGetList();
+        } catch (RemoteException e) {
+            Log.e(TAG, "Could not get list of interfaces " + e);
+            return interfaceList;
+        }
+        final String ifaceMatch = mIfaceMatch;
+        for (String iface : ifaces) {
+            if (iface.matches(ifaceMatch)) interfaceList.add(iface);
+        }
+        return interfaceList;
     }
 
     /**
