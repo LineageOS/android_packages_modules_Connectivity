@@ -17,11 +17,10 @@
 package android.nearby.multidevices.fastpair.seeker
 
 import android.content.Context
-import android.content.Intent
 import android.nearby.NearbyManager
 import android.nearby.ScanCallback
 import android.nearby.ScanRequest
-import android.nearby.multidevices.fastpair.seeker.dataprovider.FastPairTestDataCache
+import android.nearby.multidevices.fastpair.seeker.data.FastPairTestDataManager
 import androidx.test.core.app.ApplicationProvider
 import com.google.android.mobly.snippet.Snippet
 import com.google.android.mobly.snippet.rpc.AsyncRpc
@@ -32,6 +31,7 @@ import com.google.android.mobly.snippet.util.Log
 class FastPairSeekerSnippet : Snippet {
     private val appContext = ApplicationProvider.getApplicationContext<Context>()
     private val nearbyManager = appContext.getSystemService(Context.NEARBY_SERVICE) as NearbyManager
+    private val fastPairTestDataManager = FastPairTestDataManager(appContext)
     private lateinit var scanCallback: ScanCallback
 
     /**
@@ -60,19 +60,6 @@ class FastPairSeekerSnippet : Snippet {
         nearbyManager.stopScan(scanCallback)
     }
 
-    /** Starts the Fast Pair seeker pairing. */
-    @Rpc(description = "Starts the Fast Pair seeker pairing.")
-    fun startPairing(modelId: String, address: String) {
-        Log.i("Starts the Fast Pair seeker pairing.")
-
-        val scanIntent = Intent().apply {
-            action = FAST_PAIR_MANAGER_ACTION_START_PAIRING
-            putExtra(FAST_PAIR_MANAGER_EXTRA_MODEL_ID, modelId.toByteArray())
-            putExtra(FAST_PAIR_MANAGER_EXTRA_ADDRESS, address)
-        }
-        appContext.sendBroadcast(scanIntent)
-    }
-
     /** Puts a model id to FastPairAntispoofKeyDeviceMetadata pair into test data cache.
      *
      * @param modelId a string of model id to be associated with.
@@ -81,7 +68,7 @@ class FastPairSeekerSnippet : Snippet {
     @Rpc(description = "Puts a model id to FastPairAntispoofKeyDeviceMetadata pair into test data cache.")
     fun putAntispoofKeyDeviceMetadata(modelId: String, json: String) {
         Log.i("Puts a model id to FastPairAntispoofKeyDeviceMetadata pair into test data cache.")
-        FastPairTestDataCache.putAntispoofKeyDeviceMetadata(modelId, json)
+        fastPairTestDataManager.sendAntispoofKeyDeviceMetadata(modelId, json)
     }
 
     /** Puts an array of FastPairAccountKeyDeviceMetadata into test data cache.
@@ -91,14 +78,14 @@ class FastPairSeekerSnippet : Snippet {
     @Rpc(description = "Puts an array of FastPairAccountKeyDeviceMetadata into test data cache.")
     fun putAccountKeyDeviceMetadata(json: String) {
         Log.i("Puts an array of FastPairAccountKeyDeviceMetadata into test data cache.")
-        FastPairTestDataCache.putAccountKeyDeviceMetadata(json)
+        fastPairTestDataManager.sendAccountKeyDeviceMetadata(json)
     }
 
     /** Dumps all FastPairAccountKeyDeviceMetadata from the test data cache. */
     @Rpc(description = "Dumps all FastPairAccountKeyDeviceMetadata from the test data cache.")
     fun dumpAccountKeyDeviceMetadata(): String {
         Log.i("Dumps all FastPairAccountKeyDeviceMetadata from the test data cache.")
-        return FastPairTestDataCache.dumpAccountKeyDeviceMetadata()
+        return fastPairTestDataManager.testDataCache.dumpAccountKeyDeviceMetadataListAsJson()
     }
 
     /** Invokes when the snippet runner shutting down. */
@@ -106,12 +93,6 @@ class FastPairSeekerSnippet : Snippet {
         super.shutdown()
 
         Log.i("Resets the Fast Pair test data cache.")
-        FastPairTestDataCache.reset()
-    }
-
-    companion object {
-        private const val FAST_PAIR_MANAGER_ACTION_START_PAIRING = "NEARBY_START_PAIRING"
-        private const val FAST_PAIR_MANAGER_EXTRA_MODEL_ID = "MODELID"
-        private const val FAST_PAIR_MANAGER_EXTRA_ADDRESS = "ADDRESS"
+        fastPairTestDataManager.sendResetCache()
     }
 }

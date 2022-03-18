@@ -18,16 +18,13 @@ package {
 
 android_library {
     name: "NearbyMultiDevicesClientsLib",
-    srcs: [
-        "src/**/*.java",
-        "src/**/*.kt",
-    ],
+    srcs: ["src/**/*.kt"],
     sdk_version: "test_current",
     static_libs: [
         "MoblySnippetHelperLib",
         "NearbyFastPairProviderLib",
+        "NearbyFastPairSeekerSharedLib",
         "androidx.test.core",
-        "gson-prebuilt-jar",
         "kotlin-stdlib",
         "mobly-snippet-lib",
     ],
