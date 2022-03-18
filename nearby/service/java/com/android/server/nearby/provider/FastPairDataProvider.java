@@ -19,7 +19,7 @@ package com.android.server.nearby.provider;
 import android.accounts.Account;
 import android.annotation.Nullable;
 import android.content.Context;
-import android.nearby.FastPairDataProviderBase;
+import android.nearby.FastPairDataProviderService;
 import android.nearby.aidl.ByteArrayParcel;
 import android.nearby.aidl.FastPairAccountDevicesMetadataRequestParcel;
 import android.nearby.aidl.FastPairAntispoofKeyDeviceMetadataRequestParcel;
@@ -72,7 +72,7 @@ public class FastPairDataProvider {
 
     private FastPairDataProvider(Context context) {
         mProxyFastPairDataProvider = ProxyFastPairDataProvider.create(
-                context, FastPairDataProviderBase.ACTION_FAST_PAIR_DATA_PROVIDER);
+                context, FastPairDataProviderService.ACTION_FAST_PAIR_DATA_PROVIDER);
         if (mProxyFastPairDataProvider == null) {
             Log.d("FastPairService", "fail to initiate the fast pair proxy provider");
         } else {
@@ -109,7 +109,7 @@ public class FastPairDataProvider {
             FastPairManageAccountRequestParcel requestParcel =
                     new FastPairManageAccountRequestParcel();
             requestParcel.account = account;
-            requestParcel.requestType = FastPairDataProviderBase.MANAGE_REQUEST_ADD;
+            requestParcel.requestType = FastPairDataProviderService.MANAGE_REQUEST_ADD;
             mProxyFastPairDataProvider.manageFastPairAccount(requestParcel);
             return;
         }
@@ -126,7 +126,7 @@ public class FastPairDataProvider {
             FastPairManageAccountDeviceRequestParcel requestParcel =
                     new FastPairManageAccountDeviceRequestParcel();
             requestParcel.account = account;
-            requestParcel.requestType = FastPairDataProviderBase.MANAGE_REQUEST_ADD;
+            requestParcel.requestType = FastPairDataProviderService.MANAGE_REQUEST_ADD;
             requestParcel.accountKeyDeviceMetadata =
                     Utils.convertToFastPairAccountKeyDeviceMetadata(uploadInfo);
             mProxyFastPairDataProvider.manageFastPairAccountDevice(requestParcel);
