@@ -25,8 +25,11 @@ android_library {
         "NearbyFastPairProviderLib",
         "NearbyFastPairSeekerSharedLib",
         "androidx.test.core",
+        "androidx.test.ext.junit",
+        "androidx.test.uiautomator_uiautomator",
         "kotlin-stdlib",
         "mobly-snippet-lib",
+        "truth-prebuilt",
     ],
 }
 

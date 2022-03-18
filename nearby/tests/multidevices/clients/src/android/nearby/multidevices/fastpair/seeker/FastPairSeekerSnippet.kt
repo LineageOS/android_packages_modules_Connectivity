@@ -17,10 +17,14 @@
 package android.nearby.multidevices.fastpair.seeker
 
 import android.content.Context
+import android.nearby.FastPairDeviceMetadata
 import android.nearby.NearbyManager
 import android.nearby.ScanCallback
 import android.nearby.ScanRequest
+import android.nearby.fastpair.seeker.FAKE_TEST_ACCOUNT_NAME
 import android.nearby.multidevices.fastpair.seeker.data.FastPairTestDataManager
+import android.nearby.multidevices.fastpair.seeker.ui.CheckNearbyHalfSheetUiTest
+import android.nearby.multidevices.fastpair.seeker.ui.DismissNearbyHalfSheetUiTest
 import androidx.test.core.app.ApplicationProvider
 import com.google.android.mobly.snippet.Snippet
 import com.google.android.mobly.snippet.rpc.AsyncRpc
@@ -60,6 +64,34 @@ class FastPairSeekerSnippet : Snippet {
         nearbyManager.stopScan(scanCallback)
     }
 
+    /** Waits and asserts the HalfSheet showed for Fast Pair pairing.
+     *
+     * @param modelId the expected model id to be associated with the HalfSheet.
+     * @param timeout the number of seconds to wait before giving up.
+     */
+    @Rpc(description = "Waits the HalfSheet showed for Fast Pair pairing.")
+    fun waitAndAssertHalfSheetShowed(modelId: String, timeout: Int) {
+        Log.i("Waits and asserts the HalfSheet showed for Fast Pair model $modelId.")
+
+        val deviceMetadata: FastPairDeviceMetadata =
+            fastPairTestDataManager.testDataCache.getFastPairDeviceMetadata(modelId)
+                ?: throw IllegalArgumentException(
+                    "Can't find $modelId-FastPairAntispoofKeyDeviceMetadata pair in " +
+                            "FastPairTestDataCache."
+                )
+        val deviceName = deviceMetadata.name!!
+        val initialPairingDescriptionTemplateText = deviceMetadata.initialPairingDescription!!
+
+        CheckNearbyHalfSheetUiTest(
+            waitHalfSheetPopupTimeoutSeconds = timeout,
+            halfSheetTitleText = deviceName,
+            halfSheetSubtitleText = initialPairingDescriptionTemplateText.format(
+                deviceName,
+                FAKE_TEST_ACCOUNT_NAME
+            )
+        ).checkNearbyHalfSheetUi()
+    }
+
     /** Puts a model id to FastPairAntispoofKeyDeviceMetadata pair into test data cache.
      *
      * @param modelId a string of model id to be associated with.
@@ -86,6 +118,24 @@ class FastPairSeekerSnippet : Snippet {
     fun dumpAccountKeyDeviceMetadata(): String {
         Log.i("Dumps all FastPairAccountKeyDeviceMetadata from the test data cache.")
         return fastPairTestDataManager.testDataCache.dumpAccountKeyDeviceMetadataListAsJson()
+    }
+
+    /** Writes into {@link Settings} whether Fast Pair scan is enabled.
+     *
+     * @param enable whether the Fast Pair scan should be enabled.
+     */
+    @Rpc(description = "Writes into Settings whether Fast Pair scan is enabled.")
+    fun setFastPairScanEnabled(enable: Boolean) {
+        Log.i("Writes into Settings whether Fast Pair scan is enabled.")
+        NearbyManager.setFastPairScanEnabled(appContext, enable)
+    }
+
+    /** Dismisses the half sheet UI if showed. */
+    @Rpc(description = "Dismisses the half sheet UI if showed.")
+    fun dismissHalfSheet() {
+        Log.i("Dismisses the half sheet UI if showed.")
+
+        DismissNearbyHalfSheetUiTest().dismissHalfSheet()
     }
 
     /** Invokes when the snippet runner shutting down. */
