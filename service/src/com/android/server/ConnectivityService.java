@@ -199,6 +199,7 @@ import android.net.resolv.aidl.Nat64PrefixEventParcel;
 import android.net.resolv.aidl.PrivateDnsValidationEventParcel;
 import android.net.shared.PrivateDnsConfig;
 import android.net.util.MultinetworkPolicyTracker;
+import android.net.wifi.WifiInfo;
 import android.os.BatteryStatsManager;
 import android.os.Binder;
 import android.os.Build;
@@ -347,6 +348,9 @@ public class ConnectivityService extends IConnectivityManager.Stub
     private static final String LINGER_DELAY_PROPERTY = "persist.netmon.linger";
     private static final int DEFAULT_LINGER_DELAY_MS = 30_000;
     private static final int DEFAULT_NASCENT_DELAY_MS = 5_000;
+
+    // The maximum value for the blocking validation result, in milliseconds.
+    public static final int MAX_VALIDATION_FAILURE_BLOCKING_TIME_MS = 10000;
 
     // The maximum number of network request allowed per uid before an exception is thrown.
     @VisibleForTesting
@@ -3543,6 +3547,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
                 case NetworkAgent.EVENT_NETWORK_CAPABILITIES_CHANGED: {
                     final NetworkCapabilities networkCapabilities = new NetworkCapabilities(
                             (NetworkCapabilities) arg.second);
+                    maybeUpdateWifiRoamTimestamp(nai, networkCapabilities);
                     processCapabilitiesFromAgent(nai, networkCapabilities);
                     updateCapabilities(nai.getCurrentScore(), nai, networkCapabilities);
                     break;
@@ -3790,14 +3795,21 @@ public class ConnectivityService extends IConnectivityManager.Stub
 
         private void handleNetworkTested(
                 @NonNull NetworkAgentInfo nai, int testResult, @NonNull String redirectUrl) {
+            final boolean valid = ((testResult & NETWORK_VALIDATION_RESULT_VALID) != 0);
+            if (!valid && shouldIgnoreValidationFailureAfterRoam(nai)) {
+                // Assume the validation failure is due to a temporary failure after roaming
+                // and ignore it. NetworkMonitor will continue to retry validation. If it
+                // continues to fail after the block timeout expires, the network will be
+                // marked unvalidated. If it succeeds, then validation state will not change.
+                return;
+            }
+
+            final boolean wasValidated = nai.lastValidated;
+            final boolean wasDefault = isDefaultNetwork(nai);
             final boolean wasPartial = nai.partialConnectivity;
             nai.partialConnectivity = ((testResult & NETWORK_VALIDATION_RESULT_PARTIAL) != 0);
             final boolean partialConnectivityChanged =
                     (wasPartial != nai.partialConnectivity);
-
-            final boolean valid = ((testResult & NETWORK_VALIDATION_RESULT_VALID) != 0);
-            final boolean wasValidated = nai.lastValidated;
-            final boolean wasDefault = isDefaultNetwork(nai);
 
             if (DBG) {
                 final String logMsg = !TextUtils.isEmpty(redirectUrl)
@@ -4195,6 +4207,23 @@ public class ConnectivityService extends IConnectivityManager.Stub
 
     private static boolean shouldDestroyNativeNetwork(@NonNull NetworkAgentInfo nai) {
         return nai.created && !nai.destroyed;
+    }
+
+    private boolean shouldIgnoreValidationFailureAfterRoam(NetworkAgentInfo nai) {
+        // T+ devices should use destroyAndAwaitReplacement.
+        if (SdkLevel.isAtLeastT()) return false;
+        final long blockTimeOut = Long.valueOf(mResources.get().getInteger(
+                R.integer.config_validationFailureAfterRoamIgnoreTimeMillis));
+        if (blockTimeOut <= MAX_VALIDATION_FAILURE_BLOCKING_TIME_MS
+                && blockTimeOut >= 0) {
+            final long currentTimeMs  = SystemClock.elapsedRealtime();
+            long timeSinceLastRoam = currentTimeMs - nai.lastRoamTimestamp;
+            if (timeSinceLastRoam <= blockTimeOut) {
+                log ("blocked because only " + timeSinceLastRoam + "ms after roam");
+                return true;
+            }
+        }
+        return false;
     }
 
     private void handleNetworkAgentDisconnected(Message msg) {
@@ -9611,6 +9640,18 @@ public class ConnectivityService extends IConnectivityManager.Stub
         final TransportInfo ti = vpn.networkCapabilities.getTransportInfo();
         if (!(ti instanceof VpnTransportInfo)) return VpnManager.TYPE_VPN_NONE;
         return ((VpnTransportInfo) ti).getType();
+    }
+
+    private void maybeUpdateWifiRoamTimestamp(NetworkAgentInfo nai, NetworkCapabilities nc) {
+        if (nai == null) return;
+        final TransportInfo prevInfo = nai.networkCapabilities.getTransportInfo();
+        final TransportInfo newInfo = nc.getTransportInfo();
+        if (!(prevInfo instanceof WifiInfo) || !(newInfo instanceof WifiInfo)) {
+            return;
+        }
+        if (!TextUtils.equals(((WifiInfo)prevInfo).getBSSID(), ((WifiInfo)newInfo).getBSSID())) {
+            nai.lastRoamTimestamp = SystemClock.elapsedRealtime();
+        }
     }
 
     /**
