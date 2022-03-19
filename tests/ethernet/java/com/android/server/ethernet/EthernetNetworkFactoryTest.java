@@ -279,19 +279,13 @@ public class EthernetNetworkFactoryTest {
 
     // creates an unprovisioned interface
     private void createUnprovisionedInterface(String iface) throws Exception {
-        // the only way to create an unprovisioned interface is by calling needNetworkFor
-        // followed by releaseNetworkFor which will stop the NetworkAgent and IpClient. When
-        // EthernetNetworkFactory#updateInterfaceLinkState(iface, true) is called, the interface
-        // is automatically provisioned even if nobody has ever called needNetworkFor
+        // To create an unprovisioned interface, provision and then "stop" it, i.e. stop its
+        // NetworkAgent and IpClient. One way this can be done is by provisioning an interface and
+        // then calling onNetworkUnwanted.
         createAndVerifyProvisionedInterface(iface);
 
-        // Interface is already provisioned, so startProvisioning / register should not be called
-        // again
-        mNetFactory.needNetworkFor(createDefaultRequest());
-        verify(mIpClient, never()).startProvisioning(any());
-        verify(mNetworkAgent, never()).register();
-
-        mNetFactory.releaseNetworkFor(createDefaultRequest());
+        mNetworkAgent.getCallbacks().onNetworkUnwanted();
+        mLooper.dispatchAll();
         verifyStop();
 
         clearInvocations(mIpClient);
