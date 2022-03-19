@@ -28,6 +28,7 @@
     <uses-permission android:name="android.permission.BLUETOOTH_SCAN" />
     <uses-permission android:name="android.permission.INTERNET"/>
     <uses-permission android:name="android.permission.GET_ACCOUNTS"/>
+    <uses-permission android:name="android.permission.WRITE_SECURE_SETTINGS" />
 
     <application>
         <meta-data
@@ -37,29 +38,12 @@
             android:name="mobly-snippets"
             android:value="android.nearby.multidevices.fastpair.seeker.FastPairSeekerSnippet,
                            android.nearby.multidevices.fastpair.provider.FastPairProviderSimulatorSnippet" />
-
-        <!-- Fast Pair Data Provider Service which acts as an "overlay" to the
-             framework Fast Pair Data Provider. Only supported on Android T and later.
-             All overlays are protected from non-system access via WRITE_SECURE_SETTINGS.
-             Must stay in the same process as Nearby Discovery Service.
-        -->
-        <service
-            android:name=".fastpair.seeker.dataprovider.FastPairTestDataProviderService"
-            android:exported="true"
-            android:permission="android.permission.WRITE_SECURE_SETTINGS"
-            android:visibleToInstantApps="true">
-            <intent-filter>
-                <action android:name="android.nearby.action.FAST_PAIR_DATA_PROVIDER" />
-            </intent-filter>
-
-            <meta-data
-                android:name="instantapps.clients.allowed"
-                android:value="true" />
-            <meta-data
-                android:name="serviceVersion"
-                android:value="1" />
-        </service>
     </application>
+
+    <instrumentation
+        android:name="androidx.test.runner.AndroidJUnitRunner"
+        android:label="Nearby Mainline Module Instrumentation Test"
+        android:targetPackage="android.nearby.multidevices" />
 
     <instrumentation
         android:name="com.google.android.mobly.snippet.SnippetRunner"

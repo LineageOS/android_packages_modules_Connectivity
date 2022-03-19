@@ -17,6 +17,7 @@ package {
 }
 
 // Run the tests: atest -v CtsNearbyMultiDevicesTestSuite
+// TODO(b/223370810): Flash ROM with ag/17109260 reverted to pass Fast Pair scanning related tests.
 python_test_host {
     name: "CtsNearbyMultiDevicesTestSuite",
     main: "suite_main.py",
@@ -30,8 +31,12 @@ python_test_host {
         unit_test: false,
     },
     data: [
-        // Package the snippet with the Mobly test
+        // Package the snippet with the Mobly test.
         ":NearbyMultiDevicesClientsSnippets",
+        // Package the data provider with the Mobly test.
+        ":NearbyFastPairSeekerDataProvider",
+        // Package the JSON metadata with the Mobly test.
+        "test_data/**/*",
     ],
 }
 

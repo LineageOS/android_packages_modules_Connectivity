@@ -14,19 +14,39 @@
  * limitations under the License.
  */
 
-package android.nearby.multidevices.fastpair.seeker.dataprovider
+package android.nearby.fastpair.seeker.dataprovider
 
 import android.accounts.Account
-import android.content.Intent
+import android.content.IntentFilter
 import android.nearby.FastPairDataProviderService
 import android.nearby.FastPairEligibleAccount
-import android.os.IBinder
+import android.nearby.fastpair.seeker.*
+import android.nearby.fastpair.seeker.data.FastPairTestDataManager
 import android.util.Log
 
 /**
  * Fast Pair Test Data Provider Service entry point for platform overlay.
  */
 class FastPairTestDataProviderService : FastPairDataProviderService(TAG) {
+    private lateinit var testDataManager: FastPairTestDataManager
+
+    override fun onCreate() {
+        Log.d(TAG, "onCreate()")
+        testDataManager = FastPairTestDataManager(this)
+
+        val bondStateFilter = IntentFilter(ACTION_RESET_TEST_DATA_CACHE).apply {
+            addAction(ACTION_SEND_ACCOUNT_KEY_DEVICE_METADATA)
+            addAction(ACTION_SEND_ANTISPOOF_KEY_DEVICE_METADATA)
+        }
+        registerReceiver(testDataManager, bondStateFilter)
+    }
+
+    override fun onDestroy() {
+        Log.d(TAG, "onDestroy()")
+        unregisterReceiver(testDataManager)
+
+        super.onDestroy()
+    }
 
     override fun onLoadFastPairAntispoofKeyDeviceMetadata(
         request: FastPairAntispoofKeyDeviceMetadataRequest,
@@ -36,10 +56,11 @@ class FastPairTestDataProviderService : FastPairDataProviderService(TAG) {
         Log.d(TAG, "onLoadFastPairAntispoofKeyDeviceMetadata(modelId: $requestedModelId)")
 
         val fastPairAntispoofKeyDeviceMetadata =
-            FastPairTestDataCache.antispoofKeyDeviceMetadataMap[requestedModelId]
+            testDataManager.testDataCache.getAntispoofKeyDeviceMetadata(requestedModelId)
         if (fastPairAntispoofKeyDeviceMetadata != null) {
             callback.onFastPairAntispoofKeyDeviceMetadataReceived(fastPairAntispoofKeyDeviceMetadata)
         } else {
+            Log.d(TAG, "No metadata available for $requestedModelId!")
             callback.onError(ERROR_CODE_BAD_REQUEST, "No metadata available for $requestedModelId")
         }
     }
@@ -54,10 +75,10 @@ class FastPairTestDataProviderService : FastPairDataProviderService(TAG) {
             TAG, "onLoadFastPairAccountDevicesMetadata(" +
                     "account: $requestedAccount, accountKeys:$requestedAccountKeys)"
         )
-        Log.d(TAG, FastPairTestDataCache.dumpAccountKeyDeviceMetadata())
+        Log.d(TAG, testDataManager.testDataCache.dumpAccountKeyDeviceMetadataListAsJson())
 
         callback.onFastPairAccountDevicesMetadataReceived(
-            FastPairTestDataCache.accountKeyDeviceMetadata
+            testDataManager.testDataCache.getAccountKeyDeviceMetadataList()
         )
     }
 
@@ -95,7 +116,7 @@ class FastPairTestDataProviderService : FastPairDataProviderService(TAG) {
         Log.d(TAG, "requestedBleAddress: $requestedBleAddress,")
         Log.d(TAG, "requestedAccountKeyDeviceMetadata: $requestedAccountKeyDeviceMetadata)")
 
-        FastPairTestDataCache.accountKeyDeviceMetadata += requestedAccountKeyDeviceMetadata
+        testDataManager.writeAccountKeyDeviceMetadata(requestedAccountKeyDeviceMetadata)
 
         callback.onSuccess()
     }
@@ -104,7 +125,7 @@ class FastPairTestDataProviderService : FastPairDataProviderService(TAG) {
         private const val TAG = "FastPairTestDataProviderService"
         private val ELIGIBLE_ACCOUNTS_TEST_CONSTANT = listOf(
             FastPairEligibleAccount.Builder()
-                .setAccount(Account("nearby-mainline-fpseeker@google.com", "FakeTestAccount"))
+                .setAccount(Account(FAKE_TEST_ACCOUNT_NAME, "FakeTestAccount"))
                 .setOptIn(true)
                 .build(),
         )
