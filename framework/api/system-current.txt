@@ -361,6 +361,7 @@ package android.net {
   }
 
   public class NetworkReleasedException extends java.lang.Exception {
+    ctor public NetworkReleasedException();
   }
 
   public class NetworkRequest implements android.os.Parcelable {
@@ -425,6 +426,8 @@ package android.net {
   }
 
   public final class QosCallbackException extends java.lang.Exception {
+    ctor public QosCallbackException(@NonNull String);
+    ctor public QosCallbackException(@NonNull Throwable);
   }
 
   public abstract class QosFilter {
@@ -470,9 +473,11 @@ package android.net {
   }
 
   public class SocketLocalAddressChangedException extends java.lang.Exception {
+    ctor public SocketLocalAddressChangedException();
   }
 
   public class SocketNotBoundException extends java.lang.Exception {
+    ctor public SocketNotBoundException();
   }
 
   public final class StaticIpConfiguration implements android.os.Parcelable {
