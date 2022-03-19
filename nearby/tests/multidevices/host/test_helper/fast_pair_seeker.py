@@ -19,6 +19,7 @@ from mobly.controllers import android_device
 from mobly.controllers.android_device_lib import snippet_event
 
 from test_helper import event_helper
+from test_helper import utils
 
 # The package name of the Nearby Mainline Fast Pair seeker Mobly snippet.
 FP_SEEKER_SNIPPETS_PACKAGE = 'android.nearby.multidevices'
@@ -28,6 +29,7 @@ ON_PROVIDER_FOUND_EVENT = 'onDiscovered'
 
 # Abbreviations for common use type.
 AndroidDevice = android_device.AndroidDevice
+JsonObject = utils.JsonObject
 SnippetEvent = snippet_event.SnippetEvent
 wait_for_event = event_helper.wait_callback_event
 
@@ -104,3 +106,44 @@ class FastPairSeeker:
             on_received=_on_provider_found_event_received,
             on_waiting=_on_provider_found_event_waiting,
             on_missed=_on_provider_found_event_missed)
+
+    def put_anti_spoof_key_device_metadata(self, model_id: str, kdm_json_file_name: str) -> None:
+        """Puts a model id to FastPairAntispoofKeyDeviceMetadata pair into test data cache.
+
+        Args:
+          model_id: A string of model id to be associated with.
+          kdm_json_file_name: The FastPairAntispoofKeyDeviceMetadata JSON object.
+        """
+        self._ad.log.info('Puts FastPairAntispoofKeyDeviceMetadata into test data cache for '
+                          'model id "%s".', model_id)
+        kdm_json_object = utils.load_json_fast_pair_test_data(kdm_json_file_name)
+        self._ad.fp.putAntispoofKeyDeviceMetadata(
+            model_id,
+            utils.serialize_as_simplified_json_str(kdm_json_object))
+
+    def set_fast_pair_scan_enabled(self, enable: bool) -> None:
+        """Writes into Settings whether Fast Pair scan is enabled.
+
+        Args:
+          enable: whether the Fast Pair scan should be enabled.
+        """
+        self._ad.log.info('%s Fast Pair scan in Android settings.',
+                          'Enables' if enable else 'Disables')
+        self._ad.fp.setFastPairScanEnabled(enable)
+
+    def wait_and_assert_halfsheet_showed(self, timeout_seconds: int,
+                                         expected_model_id: str) -> None:
+        """Waits and asserts the onHalfSheetShowed event from the seeker.
+
+        Args:
+          timeout_seconds: The number of seconds to wait before giving up.
+          expected_model_id: The expected model ID of the remote Fast Pair provider
+            device.
+        """
+        self._ad.log.info('Waits and asserts the half sheet showed for model id "%s".',
+                          expected_model_id)
+        self._ad.fp.waitAndAssertHalfSheetShowed(expected_model_id, timeout_seconds)
+
+    def dismiss_halfsheet(self) -> None:
+        """Dismisses the half sheet UI if showed."""
+        self._ad.fp.dismissHalfSheet()

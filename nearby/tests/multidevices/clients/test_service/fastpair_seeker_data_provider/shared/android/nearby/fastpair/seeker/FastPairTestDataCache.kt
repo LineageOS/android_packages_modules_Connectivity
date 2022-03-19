@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package android.nearby.multidevices.fastpair.seeker.dataprovider
+package android.nearby.fastpair.seeker
 
 import android.nearby.FastPairAccountKeyDeviceMetadata
 import android.nearby.FastPairAntispoofKeyDeviceMetadata
@@ -25,30 +25,46 @@ import com.google.gson.Gson
 import com.google.gson.annotations.SerializedName
 
 /** Manage a cache of Fast Pair test data for testing. */
-object FastPairTestDataCache {
+class FastPairTestDataCache {
     private val gson = Gson()
-    val accountKeyDeviceMetadata = mutableListOf<FastPairAccountKeyDeviceMetadata>()
-    val antispoofKeyDeviceMetadataMap =
-        mutableMapOf<String, FastPairAntispoofKeyDeviceMetadata>()
+    private val accountKeyDeviceMetadataList = mutableListOf<FastPairAccountKeyDeviceMetadata>()
+    private val antispoofKeyDeviceMetadataDataMap =
+        mutableMapOf<String, FastPairAntispoofKeyDeviceMetadataData>()
 
     fun putAccountKeyDeviceMetadata(json: String) {
-        accountKeyDeviceMetadata +=
+        accountKeyDeviceMetadataList +=
             gson.fromJson(json, Array<FastPairAccountKeyDeviceMetadataData>::class.java)
                 .map { it.toFastPairAccountKeyDeviceMetadata() }
     }
 
-    fun dumpAccountKeyDeviceMetadata(): String =
-        gson.toJson(accountKeyDeviceMetadata.map { FastPairAccountKeyDeviceMetadataData(it) })
-
-    fun putAntispoofKeyDeviceMetadata(modelId: String, json: String) {
-        antispoofKeyDeviceMetadataMap[modelId] =
-            gson.fromJson(json, FastPairAntispoofKeyDeviceMetadataData::class.java)
-                .toFastPairAntispoofKeyDeviceMetadata()
+    fun putAccountKeyDeviceMetadata(accountKeyDeviceMetadata: FastPairAccountKeyDeviceMetadata) {
+        accountKeyDeviceMetadataList += accountKeyDeviceMetadata
     }
 
+    fun getAccountKeyDeviceMetadataList(): List<FastPairAccountKeyDeviceMetadata> =
+        accountKeyDeviceMetadataList.toList()
+
+    fun dumpAccountKeyDeviceMetadataAsJson(metadata: FastPairAccountKeyDeviceMetadata): String =
+        gson.toJson(FastPairAccountKeyDeviceMetadataData(metadata))
+
+    fun dumpAccountKeyDeviceMetadataListAsJson(): String =
+        gson.toJson(accountKeyDeviceMetadataList.map { FastPairAccountKeyDeviceMetadataData(it) })
+
+    fun putAntispoofKeyDeviceMetadata(modelId: String, json: String) {
+        antispoofKeyDeviceMetadataDataMap[modelId] =
+            gson.fromJson(json, FastPairAntispoofKeyDeviceMetadataData::class.java)
+    }
+
+    fun getAntispoofKeyDeviceMetadata(modelId: String): FastPairAntispoofKeyDeviceMetadata? {
+        return antispoofKeyDeviceMetadataDataMap[modelId]?.toFastPairAntispoofKeyDeviceMetadata()
+    }
+
+    fun getFastPairDeviceMetadata(modelId: String): FastPairDeviceMetadata? =
+        antispoofKeyDeviceMetadataDataMap[modelId]?.deviceMeta?.toFastPairDeviceMetadata()
+
     fun reset() {
-        accountKeyDeviceMetadata.clear()
-        antispoofKeyDeviceMetadataMap.clear()
+        accountKeyDeviceMetadataList.clear()
+        antispoofKeyDeviceMetadataDataMap.clear()
     }
 
     data class FastPairAccountKeyDeviceMetadataData(
@@ -296,7 +312,8 @@ object FastPairTestDataCache {
                 .build()
         }
     }
-
-    private fun String.base64Decode(): ByteArray = BaseEncoding.base64().decode(this)
-    private fun ByteArray.base64Encode(): String = BaseEncoding.base64().encode(this)
 }
+
+private fun String.base64Decode(): ByteArray = BaseEncoding.base64().decode(this)
+
+private fun ByteArray.base64Encode(): String = BaseEncoding.base64().encode(this)

@@ -17,27 +17,27 @@ package {
 }
 
 android_library {
-    name: "NearbyMultiDevicesClientsLib",
-    srcs: ["src/**/*.kt"],
+    name: "NearbyFastPairSeekerSharedLib",
+    srcs: ["shared/**/*.kt"],
     sdk_version: "test_current",
     static_libs: [
-        "MoblySnippetHelperLib",
-        "NearbyFastPairProviderLib",
-        "NearbyFastPairSeekerSharedLib",
-        "androidx.test.core",
-        "androidx.test.ext.junit",
-        "androidx.test.uiautomator_uiautomator",
-        "kotlin-stdlib",
-        "mobly-snippet-lib",
-        "truth-prebuilt",
+        "guava",
+        "gson-prebuilt-jar",
     ],
 }
 
+android_library {
+    name: "NearbyFastPairSeekerDataProviderLib",
+    srcs: ["src/**/*.kt"],
+    sdk_version: "test_current",
+    static_libs: ["NearbyFastPairSeekerSharedLib"],
+}
+
 android_app {
-    name: "NearbyMultiDevicesClientsSnippets",
+    name: "NearbyFastPairSeekerDataProvider",
     sdk_version: "test_current",
     certificate: "platform",
-    static_libs: ["NearbyMultiDevicesClientsLib"],
+    static_libs: ["NearbyFastPairSeekerDataProviderLib"],
     optimize: {
         enabled: true,
         shrink: true,
