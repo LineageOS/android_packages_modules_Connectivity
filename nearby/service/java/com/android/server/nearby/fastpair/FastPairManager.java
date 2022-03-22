@@ -90,7 +90,6 @@ public class FastPairManager {
     /** A notification ID which should be dismissed */
     public static final String EXTRA_NOTIFICATION_ID = ACTION_PREFIX + "EXTRA_NOTIFICATION_ID";
     public static final String ACTION_RESOURCES_APK = "android.nearby.SHOW_HALFSHEET";
-    public static final boolean ENFORCED_SCAN_ENABLED_VALUE = false;
 
     private static Executor sFastPairExecutor;
 
@@ -99,7 +98,8 @@ public class FastPairManager {
     final LocatorContextWrapper mLocatorContextWrapper;
     final IntentFilter mIntentFilter;
     final Locator mLocator;
-    private boolean mScanEnabled = ENFORCED_SCAN_ENABLED_VALUE;
+    private boolean mScanEnabled;
+
     private final BroadcastReceiver mScreenBroadcastReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
@@ -154,8 +154,8 @@ public class FastPairManager {
                 .registerReceiver(mScreenBroadcastReceiver, mIntentFilter);
 
         Locator.getFromContextWrapper(mLocatorContextWrapper, FastPairCacheManager.class);
-        mScanEnabled = NearbyManager.getFastPairScanEnabled(mLocatorContextWrapper, true);
-        mScanEnabled = ENFORCED_SCAN_ENABLED_VALUE;
+        // Default false for now.
+        mScanEnabled = NearbyManager.getFastPairScanEnabled(mLocatorContextWrapper, false);
         registerFastPairScanChangeContentObserver(mLocatorContextWrapper.getContentResolver());
     }
 
@@ -402,7 +402,6 @@ public class FastPairManager {
             return;
         }
         mScanEnabled = scanEnabled;
-        mScanEnabled = ENFORCED_SCAN_ENABLED_VALUE;
         invalidateScan();
     }
 
