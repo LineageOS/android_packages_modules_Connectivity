@@ -995,6 +995,36 @@ public class ConnectivityManager {
     // LINT.ThenChange(packages/modules/Connectivity/service/native/include/Common.h)
 
     /**
+     * Specify default rule which may allow or drop packets depending on existing policy.
+     * @hide
+     */
+    @SystemApi(client = MODULE_LIBRARIES)
+    public static final int FIREWALL_RULE_DEFAULT = 0;
+
+    /**
+     * Specify allow rule which allows packets.
+     * @hide
+     */
+    @SystemApi(client = MODULE_LIBRARIES)
+    public static final int FIREWALL_RULE_ALLOW = 1;
+
+    /**
+     * Specify deny rule which drops packets.
+     * @hide
+     */
+    @SystemApi(client = MODULE_LIBRARIES)
+    public static final int FIREWALL_RULE_DENY = 2;
+
+    /** @hide */
+    @Retention(RetentionPolicy.SOURCE)
+    @IntDef(flag = false, prefix = "FIREWALL_RULE_", value = {
+        FIREWALL_RULE_DEFAULT,
+        FIREWALL_RULE_ALLOW,
+        FIREWALL_RULE_DENY
+    })
+    public @interface FirewallRule {}
+
+    /**
      * A kludge to facilitate static access where a Context pointer isn't available, like in the
      * case of the static set/getProcessDefaultNetwork methods and from the Network class.
      * TODO: Remove this after deprecating the static methods in favor of non-static methods or
@@ -5802,8 +5832,9 @@ public class ConnectivityManager {
      *
      * @param chain target chain.
      * @param uid uid to allow/deny.
-     * @param allow whether networking is allowed or denied.
+     * @param rule firewall rule to allow/drop packets.
      * @throws IllegalStateException if updating firewall rule failed.
+     * @throws IllegalArgumentException if {@code rule} is not a valid rule.
      * @hide
      */
     @SystemApi(client = MODULE_LIBRARIES)
@@ -5812,10 +5843,10 @@ public class ConnectivityManager {
             android.Manifest.permission.NETWORK_STACK,
             NetworkStack.PERMISSION_MAINLINE_NETWORK_STACK
     })
-    public void updateFirewallRule(@FirewallChain final int chain, final int uid,
-            final boolean allow) {
+    public void setUidFirewallRule(@FirewallChain final int chain, final int uid,
+            @FirewallRule final int rule) {
         try {
-            mService.updateFirewallRule(chain, uid, allow);
+            mService.setUidFirewallRule(chain, uid, rule);
         } catch (RemoteException e) {
             throw e.rethrowFromSystemServer();
         }
