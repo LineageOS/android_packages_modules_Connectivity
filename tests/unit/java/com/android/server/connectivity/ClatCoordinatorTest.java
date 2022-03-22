@@ -25,6 +25,7 @@ import static com.android.server.connectivity.ClatCoordinator.INIT_V4ADDR_STRING
 import static com.android.testutils.MiscAsserts.assertThrows;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.fail;
 import static org.mockito.Mockito.argThat;
 import static org.mockito.Mockito.clearInvocations;
@@ -33,6 +34,7 @@ import static org.mockito.Mockito.inOrder;
 
 import android.annotation.NonNull;
 import android.net.INetd;
+import android.net.InetAddresses;
 import android.net.IpPrefix;
 import android.os.Build;
 import android.os.ParcelFileDescriptor;
@@ -52,6 +54,8 @@ import org.mockito.Spy;
 
 import java.io.FileDescriptor;
 import java.io.IOException;
+import java.net.Inet4Address;
+import java.net.Inet6Address;
 import java.util.Objects;
 
 @RunWith(DevSdkIgnoreRunner.class)
@@ -61,9 +65,12 @@ public class ClatCoordinatorTest {
     private static final String BASE_IFACE = "test0";
     private static final String STACKED_IFACE = "v4-test0";
     private static final int BASE_IFINDEX = 1000;
+    private static final int STACKED_IFINDEX = 1001;
 
     private static final IpPrefix NAT64_IP_PREFIX = new IpPrefix("64:ff9b::/96");
     private static final String NAT64_PREFIX_STRING = "64:ff9b::";
+    private static final Inet6Address INET6_PFX96 = (Inet6Address)
+            InetAddresses.parseNumericAddress(NAT64_PREFIX_STRING);
     private static final int GOOGLE_DNS_4 = 0x08080808;  // 8.8.8.8
     private static final int NETID = 42;
 
@@ -74,6 +81,10 @@ public class ClatCoordinatorTest {
 
     private static final String XLAT_LOCAL_IPV4ADDR_STRING = "192.0.0.46";
     private static final String XLAT_LOCAL_IPV6ADDR_STRING = "2001:db8:0:b11::464";
+    private static final Inet4Address INET4_LOCAL4 = (Inet4Address)
+            InetAddresses.parseNumericAddress(XLAT_LOCAL_IPV4ADDR_STRING);
+    private static final Inet6Address INET6_LOCAL6 = (Inet6Address)
+            InetAddresses.parseNumericAddress(XLAT_LOCAL_IPV6ADDR_STRING);
     private static final int CLATD_PID = 10483;
 
     private static final int TUN_FD = 534;
@@ -129,6 +140,8 @@ public class ClatCoordinatorTest {
         public int getInterfaceIndex(String ifName) {
             if (BASE_IFACE.equals(ifName)) {
                 return BASE_IFINDEX;
+            } else if (STACKED_IFACE.equals(ifName)) {
+                return STACKED_IFINDEX;
             }
             fail("unsupported arg: " + ifName);
             return -1;
@@ -315,6 +328,11 @@ public class ClatCoordinatorTest {
         // [1] Start clatd.
         final String addr6For464xlat = coordinator.clatStart(BASE_IFACE, NETID, NAT64_IP_PREFIX);
         assertEquals(XLAT_LOCAL_IPV6ADDR_STRING, addr6For464xlat);
+        final ClatCoordinator.ClatdTracker expected = new ClatCoordinator.ClatdTracker(
+                BASE_IFACE, BASE_IFINDEX, STACKED_IFACE, STACKED_IFINDEX,
+                INET4_LOCAL4, INET6_LOCAL6, INET6_PFX96, CLATD_PID, RAW_SOCK_COOKIE);
+        final ClatCoordinator.ClatdTracker actual = coordinator.getClatdTrackerForTesting();
+        assertEquals(expected, actual);
 
         // Pick an IPv4 address.
         inOrder.verify(mDeps).selectIpv4Address(eq(INIT_V4ADDR_STRING),
@@ -327,6 +345,7 @@ public class ClatCoordinatorTest {
         // Open, configure and bring up the tun interface.
         inOrder.verify(mDeps).createTunInterface(eq(STACKED_IFACE));
         inOrder.verify(mDeps).adoptFd(eq(TUN_FD));
+        inOrder.verify(mDeps).getInterfaceIndex(eq(STACKED_IFACE));
         inOrder.verify(mNetd).interfaceSetEnableIPv6(eq(STACKED_IFACE), eq(false /* enable */));
         inOrder.verify(mDeps).detectMtu(eq(NAT64_PREFIX_STRING), eq(GOOGLE_DNS_4), eq(MARK));
         inOrder.verify(mNetd).interfaceSetMtu(eq(STACKED_IFACE),
@@ -372,6 +391,7 @@ public class ClatCoordinatorTest {
         inOrder.verify(mDeps).stopClatd(eq(BASE_IFACE), eq(NAT64_PREFIX_STRING),
                 eq(XLAT_LOCAL_IPV4ADDR_STRING), eq(XLAT_LOCAL_IPV6ADDR_STRING), eq(CLATD_PID));
         inOrder.verify(mDeps).untagSocket(eq(RAW_SOCK_COOKIE));
+        assertNull(coordinator.getClatdTrackerForTesting());
         inOrder.verifyNoMoreInteractions();
 
         // [4] Expect an IO exception while stopping a clatd that doesn't exist.
