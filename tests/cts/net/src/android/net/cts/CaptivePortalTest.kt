@@ -77,7 +77,7 @@ private const val LOCALHOST_HOSTNAME = "localhost"
 
 // Re-connecting to the AP, obtaining an IP address, revalidating can take a long time
 private const val WIFI_CONNECT_TIMEOUT_MS = 40_000L
-private const val TEST_TIMEOUT_MS = 10_000L
+private const val TEST_TIMEOUT_MS = 20_000L
 
 private const val TAG = "CaptivePortalTest"
 
