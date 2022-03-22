@@ -41,8 +41,8 @@ import android.content.Context;
 import android.content.res.Resources;
 import android.net.ConnectivityManager;
 import android.net.EthernetNetworkSpecifier;
-import android.net.IEthernetNetworkManagementListener;
 import android.net.EthernetNetworkManagementException;
+import android.net.INetworkInterfaceOutcomeReceiver;
 import android.net.IpConfiguration;
 import android.net.LinkAddress;
 import android.net.LinkProperties;
@@ -85,7 +85,7 @@ import java.util.concurrent.TimeUnit;
 public class EthernetNetworkFactoryTest {
     private static final int TIMEOUT_MS = 2_000;
     private static final String TEST_IFACE = "test123";
-    private static final IEthernetNetworkManagementListener NULL_LISTENER = null;
+    private static final INetworkInterfaceOutcomeReceiver NULL_LISTENER = null;
     private static final String IP_ADDR = "192.0.2.2/25";
     private static final LinkAddress LINK_ADDR = new LinkAddress(IP_ADDR);
     private static final String HW_ADDR = "01:02:03:04:05:06";
@@ -316,7 +316,7 @@ public class EthernetNetworkFactoryTest {
 
         assertTrue(ret);
         verify(mIpClient).shutdown();
-        assertSuccessfulListener(listener, null);
+        assertEquals(listener.expectOnResult(), TEST_IFACE);
     }
 
     @Test
@@ -330,7 +330,7 @@ public class EthernetNetworkFactoryTest {
 
         assertTrue(ret);
         verifyStop();
-        assertSuccessfulListener(listener, mMockNetwork);
+        assertEquals(listener.expectOnResult(), TEST_IFACE);
     }
 
     @Test
@@ -347,7 +347,7 @@ public class EthernetNetworkFactoryTest {
         verify(mDeps, never()).makeIpClient(any(), any(), any());
         verify(mDeps, never())
                 .makeEthernetNetworkAgent(any(), any(), any(), any(), any(), any(), any());
-        assertSuccessfulListener(listener, null);
+        assertEquals(listener.expectOnResult(), TEST_IFACE);
     }
 
     @Test
@@ -361,7 +361,7 @@ public class EthernetNetworkFactoryTest {
 
         assertFalse(ret);
         verifyNoStopOrStart();
-        assertFailedListener(listener, "can't be updated as it is not available");
+        listener.expectOnErrorWithMessage("can't be updated as it is not available");
     }
 
     @Test
@@ -375,7 +375,7 @@ public class EthernetNetworkFactoryTest {
 
         assertFalse(ret);
         verifyNoStopOrStart();
-        assertFailedListener(listener, "No changes");
+        listener.expectOnErrorWithMessage("No changes");
     }
 
     @Test
@@ -632,18 +632,31 @@ public class EthernetNetworkFactoryTest {
     }
 
     private static final class TestNetworkManagementListener
-            implements IEthernetNetworkManagementListener {
-        private final CompletableFuture<Pair<Network, EthernetNetworkManagementException>> mDone
-                = new CompletableFuture<>();
+            implements INetworkInterfaceOutcomeReceiver {
+        private final CompletableFuture<String> mResult = new CompletableFuture<>();
+        private final CompletableFuture<EthernetNetworkManagementException> mError =
+                new CompletableFuture<>();
 
         @Override
-        public void onComplete(final Network network,
-                final EthernetNetworkManagementException exception) {
-            mDone.complete(new Pair<>(network, exception));
+        public void onResult(@NonNull String iface) {
+            mResult.complete(iface);
         }
 
-        Pair<Network, EthernetNetworkManagementException> expectOnComplete() throws Exception {
-            return mDone.get(TIMEOUT_MS, TimeUnit.MILLISECONDS);
+        @Override
+        public void onError(@NonNull EthernetNetworkManagementException exception) {
+            mError.complete(exception);
+        }
+
+        String expectOnResult() throws Exception {
+            return mResult.get(TIMEOUT_MS, TimeUnit.MILLISECONDS);
+        }
+
+        EthernetNetworkManagementException expectOnError() throws Exception {
+            return mError.get(TIMEOUT_MS, TimeUnit.MILLISECONDS);
+        }
+
+        void expectOnErrorWithMessage(String msg) throws Exception {
+            assertTrue(expectOnError().getMessage().contains(msg));
         }
 
         @Override
@@ -663,7 +676,7 @@ public class EthernetNetworkFactoryTest {
         mNetFactory.updateInterface(TEST_IFACE, ipConfiguration, capabilities, listener);
         triggerOnProvisioningSuccess();
 
-        assertSuccessfulListener(listener, mMockNetwork);
+        assertEquals(listener.expectOnResult(), TEST_IFACE);
     }
 
     @DevSdkIgnoreRule.IgnoreUpTo(SC_V2) // TODO: Use to Build.VERSION_CODES.SC_V2 when available
@@ -703,26 +716,7 @@ public class EthernetNetworkFactoryTest {
                     triggerOnProvisioningSuccess();
                 });
 
-        assertSuccessfulListener(successfulListener, mMockNetwork);
-    }
-
-    private void assertSuccessfulListener(
-            @NonNull final TestNetworkManagementListener successfulListener,
-            @NonNull final Network expectedNetwork) throws Exception {
-        final Pair<Network, EthernetNetworkManagementException> successfulResult =
-                successfulListener.expectOnComplete();
-        assertEquals(expectedNetwork, successfulResult.first);
-        assertNull(successfulResult.second);
-    }
-
-    private void assertFailedListener(@NonNull final TestNetworkManagementListener failedListener,
-            @NonNull final String errMsg)
-            throws Exception {
-        final Pair<Network, EthernetNetworkManagementException> failedResult =
-                failedListener.expectOnComplete();
-        assertNull(failedResult.first);
-        assertNotNull(failedResult.second);
-        assertTrue(failedResult.second.getMessage().contains(errMsg));
+        assertEquals(successfulListener.expectOnResult(), TEST_IFACE);
     }
 
     private void verifyNetworkManagementCallIsAbortedWhenInterrupted(
@@ -737,7 +731,7 @@ public class EthernetNetworkFactoryTest {
         mNetFactory.updateInterface(iface, ipConfiguration, capabilities, failedListener);
         interruptingRunnable.run();
 
-        assertFailedListener(failedListener, "aborted");
+        failedListener.expectOnErrorWithMessage("aborted");
     }
 
     @Test
@@ -751,7 +745,7 @@ public class EthernetNetworkFactoryTest {
         mNetFactory.updateInterface(TEST_IFACE, ipConfiguration, capabilities, listener);
         triggerOnProvisioningSuccess();
 
-        listener.expectOnComplete();
+        assertEquals(listener.expectOnResult(), TEST_IFACE);
         verify(mDeps).makeEthernetNetworkAgent(any(), any(),
                 eq(capabilities), any(), any(), any(), any());
         verifyRestart(ipConfiguration);
@@ -768,7 +762,7 @@ public class EthernetNetworkFactoryTest {
         mNetFactory.updateInterface(TEST_IFACE, ipConfiguration, capabilities, listener);
 
         verifyNoStopOrStart();
-        assertFailedListener(listener, "can't be updated as it is not available");
+        listener.expectOnErrorWithMessage("can't be updated as it is not available");
     }
 
     @Test
