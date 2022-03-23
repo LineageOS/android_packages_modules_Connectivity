@@ -244,12 +244,11 @@ public class NearbyManager {
      * Read from {@link Settings} whether Fast Pair scan is enabled.
      *
      * @param context the {@link Context} to query the setting
-     * @param def the default value if no setting value
      * @return whether the Fast Pair is enabled
      */
-    public static boolean getFastPairScanEnabled(@NonNull Context context, boolean def) {
+    public static boolean getFastPairScanEnabled(@NonNull Context context) {
         final int enabled = Settings.Secure.getInt(
-                context.getContentResolver(), FAST_PAIR_SCAN_ENABLED, (def ? 1 : 0));
+                context.getContentResolver(), FAST_PAIR_SCAN_ENABLED, 0);
         return enabled != 0;
     }
 
