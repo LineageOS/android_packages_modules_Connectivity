@@ -25,11 +25,13 @@ import android.nearby.FastPairDevice;
  *
  * {@hide}
  */
-interface IFastPairClient {
+interface IFastPairUiService {
 
-    void registerHalfSheet(in IFastPairStatusCallback fastPairStatusCallback);
+    void registerCallback(in IFastPairStatusCallback fastPairStatusCallback);
 
-    void unregisterHalfSheet(in IFastPairStatusCallback fastPairStatusCallback);
+    void unregisterCallback(in IFastPairStatusCallback fastPairStatusCallback);
 
     void connect(in FastPairDevice fastPairDevice);
+
+    void cancel(in FastPairDevice fastPairDevice);
 }
