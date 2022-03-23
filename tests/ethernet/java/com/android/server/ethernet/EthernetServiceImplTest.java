@@ -19,12 +19,15 @@ package com.android.server.ethernet;
 import static android.net.NetworkCapabilities.TRANSPORT_TEST;
 
 import static org.junit.Assert.assertThrows;
+import static org.junit.Assert.fail;
 
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -338,5 +341,32 @@ public class EthernetServiceImplTest {
 
         mEthernetServiceImpl.disconnectNetwork(TEST_IFACE, NULL_LISTENER);
         verify(mEthernetTracker).disconnectNetwork(eq(TEST_IFACE), eq(NULL_LISTENER));
+    }
+
+    private void denyPermissions(String... permissions) {
+        for (String permission: permissions) {
+            doReturn(PackageManager.PERMISSION_DENIED).when(mContext)
+                    .checkCallingOrSelfPermission(eq(permission));
+        }
+    }
+
+    @Test
+    public void testSetEthernetEnabled() {
+        denyPermissions(android.net.NetworkStack.PERMISSION_MAINLINE_NETWORK_STACK);
+        mEthernetServiceImpl.setEthernetEnabled(true);
+        verify(mEthernetTracker).setEthernetEnabled(true);
+        reset(mEthernetTracker);
+
+        denyPermissions(Manifest.permission.NETWORK_STACK);
+        mEthernetServiceImpl.setEthernetEnabled(false);
+        verify(mEthernetTracker).setEthernetEnabled(false);
+        reset(mEthernetTracker);
+
+        denyPermissions(Manifest.permission.NETWORK_SETTINGS);
+        try {
+            mEthernetServiceImpl.setEthernetEnabled(true);
+            fail("Should get SecurityException");
+        } catch (SecurityException e) { }
+        verify(mEthernetTracker, never()).setEthernetEnabled(false);
     }
 }
