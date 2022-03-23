@@ -32,9 +32,14 @@ package android.net {
   }
 
   public class EthernetManager {
+    method @RequiresPermission(android.Manifest.permission.ACCESS_NETWORK_STATE) public void addEthernetStateListener(@NonNull java.util.concurrent.Executor, @NonNull java.util.function.IntConsumer);
     method @RequiresPermission(android.Manifest.permission.ACCESS_NETWORK_STATE) public void addInterfaceStateListener(@NonNull java.util.concurrent.Executor, @NonNull android.net.EthernetManager.InterfaceStateListener);
+    method @RequiresPermission(android.Manifest.permission.ACCESS_NETWORK_STATE) public void removeEthernetStateListener(@NonNull java.util.function.IntConsumer);
     method public void removeInterfaceStateListener(@NonNull android.net.EthernetManager.InterfaceStateListener);
+    method @RequiresPermission(anyOf={android.net.NetworkStack.PERMISSION_MAINLINE_NETWORK_STACK, android.Manifest.permission.NETWORK_STACK, android.Manifest.permission.NETWORK_SETTINGS}) public void setEthernetEnabled(boolean);
     method public void setIncludeTestInterfaces(boolean);
+    field public static final int ETHERNET_STATE_DISABLED = 0; // 0x0
+    field public static final int ETHERNET_STATE_ENABLED = 1; // 0x1
     field public static final int ROLE_CLIENT = 1; // 0x1
     field public static final int ROLE_NONE = 0; // 0x0
     field public static final int ROLE_SERVER = 2; // 0x2
