@@ -71,6 +71,7 @@ import org.junit.runner.RunWith
 import java.net.ServerSocket
 import java.nio.charset.StandardCharsets
 import java.util.Random
+import java.util.concurrent.Executor
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNotNull
@@ -342,9 +343,12 @@ class NsdManagerTest {
         if (DBG) Log.d(TAG, "Port = $localPort")
 
         val registrationRecord = NsdRegistrationRecord()
-        val registeredInfo = registerService(registrationRecord, si)
+        // Test registering without an Executor
+        nsdManager.registerService(si, NsdManager.PROTOCOL_DNS_SD, registrationRecord)
+        val registeredInfo = registrationRecord.expectCallback<ServiceRegistered>().serviceInfo
 
         val discoveryRecord = NsdDiscoveryRecord()
+        // Test discovering without an Executor
         nsdManager.discoverServices(SERVICE_TYPE, NsdManager.PROTOCOL_DNS_SD, discoveryRecord)
 
         // Expect discovery started
@@ -353,7 +357,10 @@ class NsdManagerTest {
         // Expect a service record to be discovered
         val foundInfo = discoveryRecord.waitForServiceDiscovered(registeredInfo.serviceName)
 
-        val resolvedService = resolveService(foundInfo)
+        // Test resolving without an Executor
+        val resolveRecord = NsdResolveRecord()
+        nsdManager.resolveService(foundInfo, resolveRecord)
+        val resolvedService = resolveRecord.expectCallback<ServiceResolved>().serviceInfo
 
         // Check Txt attributes
         assertEquals(8, resolvedService.attributes.size)
@@ -408,7 +415,7 @@ class NsdManagerTest {
 
     @Test
     fun testNsdManager_DiscoverOnNetwork() {
-        // This tests requires shims supporting T+ APIs (discovering on specific network)
+        // This test requires shims supporting T+ APIs (discovering on specific network)
         assumeTrue(ConstantsShim.VERSION > SC_V2)
 
         val si = NsdServiceInfo()
@@ -422,7 +429,7 @@ class NsdManagerTest {
         tryTest {
             val discoveryRecord = NsdDiscoveryRecord()
             nsdShim.discoverServices(nsdManager, SERVICE_TYPE, NsdManager.PROTOCOL_DNS_SD,
-                    testNetwork1.network, discoveryRecord)
+                    testNetwork1.network, Executor { it.run() }, discoveryRecord)
 
             val foundInfo = discoveryRecord.waitForServiceDiscovered(
                     serviceName, testNetwork1.network)
@@ -442,7 +449,7 @@ class NsdManagerTest {
 
     @Test
     fun testNsdManager_DiscoverWithNetworkRequest() {
-        // This tests requires shims supporting T+ APIs (discovering on network request)
+        // This test requires shims supporting T+ APIs (discovering on network request)
         assumeTrue(ConstantsShim.VERSION > SC_V2)
 
         val si = NsdServiceInfo()
@@ -462,7 +469,7 @@ class NsdManagerTest {
                             .addTransportType(TRANSPORT_TEST)
                             .setNetworkSpecifier(specifier)
                             .build(),
-                    discoveryRecord)
+                    Executor { it.run() }, discoveryRecord)
 
             val discoveryStarted = discoveryRecord.expectCallback<DiscoveryStarted>()
             assertEquals(SERVICE_TYPE, discoveryStarted.serviceType)
@@ -507,7 +514,7 @@ class NsdManagerTest {
 
     @Test
     fun testNsdManager_ResolveOnNetwork() {
-        // This tests requires shims supporting T+ APIs (NsdServiceInfo.network)
+        // This test requires shims supporting T+ APIs (NsdServiceInfo.network)
         assumeTrue(ConstantsShim.VERSION > SC_V2)
 
         val si = NsdServiceInfo()
@@ -532,7 +539,7 @@ class NsdManagerTest {
                     serviceName, testNetwork2.network)
             assertEquals(testNetwork2.network, nsdShim.getNetwork(foundInfo2))
 
-            nsdManager.resolveService(foundInfo1, resolveRecord)
+            nsdShim.resolveService(nsdManager, foundInfo1, Executor { it.run() }, resolveRecord)
             val cb = resolveRecord.expectCallback<ServiceResolved>()
             cb.serviceInfo.let {
                 // Resolved service type has leading dot
@@ -553,7 +560,8 @@ class NsdManagerTest {
      * Register a service and return its registration record.
      */
     private fun registerService(record: NsdRegistrationRecord, si: NsdServiceInfo): NsdServiceInfo {
-        nsdManager.registerService(si, NsdManager.PROTOCOL_DNS_SD, record)
+        nsdShim.registerService(nsdManager, si, NsdManager.PROTOCOL_DNS_SD, Executor { it.run() },
+                record)
         // We may not always get the name that we tried to register;
         // This events tells us the name that was registered.
         val cb = record.expectCallback<ServiceRegistered>()
@@ -562,7 +570,7 @@ class NsdManagerTest {
 
     private fun resolveService(discoveredInfo: NsdServiceInfo): NsdServiceInfo {
         val record = NsdResolveRecord()
-        nsdManager.resolveService(discoveredInfo, record)
+        nsdShim.resolveService(nsdManager, discoveredInfo, Executor { it.run() }, record)
         val resolvedCb = record.expectCallback<ServiceResolved>()
         assertEquals(discoveredInfo.serviceName, resolvedCb.serviceInfo.serviceName)
 
