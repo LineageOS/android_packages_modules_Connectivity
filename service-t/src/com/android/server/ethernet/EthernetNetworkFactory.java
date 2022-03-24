@@ -442,24 +442,44 @@ public class EthernetNetworkFactory extends NetworkFactory {
                 mIpClientShutdownCv.block();
             }
 
+            // At the time IpClient is stopped, an IpClient event may have already been posted on
+            // the back of the handler and is awaiting execution. Once that event is executed, the
+            // associated callback object may not be valid anymore
+            // (NetworkInterfaceState#mIpClientCallback points to a different object / null).
+            private boolean isCurrentCallback() {
+                return this == mIpClientCallback;
+            }
+
+            private void handleIpEvent(final @NonNull Runnable r) {
+                mHandler.post(() -> {
+                    if (!isCurrentCallback()) {
+                        Log.i(TAG, "Ignoring stale IpClientCallbacks " + this);
+                        return;
+                    }
+                    r.run();
+                });
+            }
+
             @Override
             public void onProvisioningSuccess(LinkProperties newLp) {
-                mHandler.post(() -> onIpLayerStarted(newLp, mNetworkManagementListener));
+                handleIpEvent(() -> onIpLayerStarted(newLp, mNetworkManagementListener));
             }
 
             @Override
             public void onProvisioningFailure(LinkProperties newLp) {
-                mHandler.post(() -> onIpLayerStopped(mNetworkManagementListener));
+                // This cannot happen due to provisioning timeout, because our timeout is 0. It can
+                // happen due to errors while provisioning or on provisioning loss.
+                handleIpEvent(() -> onIpLayerStopped(mNetworkManagementListener));
             }
 
             @Override
             public void onLinkPropertiesChange(LinkProperties newLp) {
-                mHandler.post(() -> updateLinkProperties(newLp));
+                handleIpEvent(() -> updateLinkProperties(newLp));
             }
 
             @Override
             public void onReachabilityLost(String logMsg) {
-                mHandler.post(() -> updateNeighborLostEvent(logMsg));
+                handleIpEvent(() -> updateNeighborLostEvent(logMsg));
             }
 
             @Override
@@ -561,14 +581,6 @@ public class EthernetNetworkFactory extends NetworkFactory {
 
         void onIpLayerStarted(@NonNull final LinkProperties linkProperties,
                 @Nullable final INetworkInterfaceOutcomeReceiver listener) {
-            if(mIpClient == null) {
-                // This call comes from a message posted on the handler thread, but the IpClient has
-                // since been stopped such as may be the case if updateInterfaceLinkState() is
-                // queued on the handler thread prior. As network management callbacks are sent in
-                // stop(), there is no need to send them again here.
-                if (DBG) Log.d(TAG, "IpClient is not initialized.");
-                return;
-            }
             if (mNetworkAgent != null) {
                 Log.e(TAG, "Already have a NetworkAgent - aborting new request");
                 stop();
@@ -604,12 +616,6 @@ public class EthernetNetworkFactory extends NetworkFactory {
         }
 
         void onIpLayerStopped(@Nullable final INetworkInterfaceOutcomeReceiver listener) {
-            // This cannot happen due to provisioning timeout, because our timeout is 0. It can
-            // happen due to errors while provisioning or on provisioning loss.
-            if(mIpClient == null) {
-                if (DBG) Log.d(TAG, "IpClient is not initialized.");
-                return;
-            }
             // There is no point in continuing if the interface is gone as stop() will be triggered
             // by removeInterface() when processed on the handler thread and start() won't
             // work for a non-existent interface.
@@ -651,10 +657,6 @@ public class EthernetNetworkFactory extends NetworkFactory {
         }
 
         void updateLinkProperties(LinkProperties linkProperties) {
-            if(mIpClient == null) {
-                if (DBG) Log.d(TAG, "IpClient is not initialized.");
-                return;
-            }
             mLinkProperties = linkProperties;
             if (mNetworkAgent != null) {
                 mNetworkAgent.sendLinkPropertiesImpl(linkProperties);
@@ -662,10 +664,6 @@ public class EthernetNetworkFactory extends NetworkFactory {
         }
 
         void updateNeighborLostEvent(String logMsg) {
-            if(mIpClient == null) {
-                if (DBG) Log.d(TAG, "IpClient is not initialized.");
-                return;
-            }
             Log.i(TAG, "updateNeighborLostEvent " + logMsg);
             // Reachability lost will be seen only if the gateway is not reachable.
             // Since ethernet FW doesn't have the mechanism to scan for new networks
