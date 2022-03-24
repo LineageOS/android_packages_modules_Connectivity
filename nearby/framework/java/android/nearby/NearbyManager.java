@@ -104,6 +104,7 @@ public class NearbyManager {
                     .setName(nearbyDeviceParcelable.getName())
                     .addMedium(nearbyDeviceParcelable.getMedium())
                     .setRssi(nearbyDeviceParcelable.getRssi())
+                    .setTxPower(nearbyDeviceParcelable.getTxPower())
                     .setModelId(nearbyDeviceParcelable.getFastPairModelId())
                     .setBluetoothAddress(nearbyDeviceParcelable.getBluetoothAddress())
                     .setData(nearbyDeviceParcelable.getData()).build();

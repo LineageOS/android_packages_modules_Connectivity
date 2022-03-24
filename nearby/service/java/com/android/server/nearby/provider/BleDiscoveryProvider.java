@@ -64,6 +64,7 @@ public class BleDiscoveryProvider extends AbstractDiscoveryProvider {
                     NearbyDeviceParcelable.Builder builder = new NearbyDeviceParcelable.Builder();
                     builder.setMedium(NearbyDevice.Medium.BLE)
                             .setRssi(scanResult.getRssi())
+                            .setTxPower(scanResult.getTxPower())
                             .setBluetoothAddress(scanResult.getDevice().getAddress());
 
                     ScanRecord record = scanResult.getScanRecord();
