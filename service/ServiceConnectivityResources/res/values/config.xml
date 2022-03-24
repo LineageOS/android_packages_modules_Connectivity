@@ -176,7 +176,7 @@
     NetworkMonitor will continue to attempt validation, and if it fails after this time has passed,
     the network will be marked unvalidated.
 
-    Only supported up to S. On T+, the Wi-Fi code should use destroyAndAwaitReplacement in order
+    Only supported up to S. On T+, the Wi-Fi code should use unregisterAfterReplacement in order
     to ensure that apps see the network disconnect and reconnect. -->
     <integer translatable="false" name="config_validationFailureAfterRoamIgnoreTimeMillis">-1</integer>
 </resources>
