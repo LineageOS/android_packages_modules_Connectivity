@@ -16,7 +16,6 @@
 
 package android.net;
 
-import android.annotation.IntDef;
 import android.annotation.NonNull;
 import android.annotation.Nullable;
 import android.annotation.SystemApi;
@@ -26,8 +25,6 @@ import android.util.Range;
 
 import com.android.net.module.util.InetAddressUtils;
 
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
 import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.util.Objects;
@@ -48,36 +45,6 @@ public final class DscpPolicy implements Parcelable {
      * Indicates that the policy does not specify a port.
      */
     public static final int SOURCE_PORT_ANY = -1;
-
-    /**
-     * Policy was successfully added.
-     */
-    public static final int STATUS_SUCCESS = 0;
-
-    /**
-     * Policy was rejected for any reason besides invalid classifier or insufficient resources.
-     */
-    public static final int STATUS_REQUEST_DECLINED = 1;
-
-    /**
-     * Requested policy contained a classifier which is not supported.
-     */
-    public static final int STATUS_REQUESTED_CLASSIFIER_NOT_SUPPORTED = 2;
-
-    /**
-     * TODO: should this error case be supported?
-     */
-    public static final int STATUS_INSUFFICIENT_PROCESSING_RESOURCES = 3;
-
-    /**
-     * Policy was deleted.
-     */
-    public static final int STATUS_DELETED = 4;
-
-    /**
-     * Policy was not found during deletion.
-     */
-    public static final int STATUS_POLICY_NOT_FOUND = 5;
 
     /** The unique policy ID. Each requesting network is responsible for maintaining policy IDs
      * unique within that network. In the case where a policy with an existing ID is created, the
@@ -111,17 +78,6 @@ public final class DscpPolicy implements Parcelable {
     public int describeContents() {
         return 0;
     }
-
-    /** @hide */
-    @IntDef(prefix = "STATUS_", value = {
-        STATUS_SUCCESS,
-        STATUS_REQUEST_DECLINED,
-        STATUS_REQUESTED_CLASSIFIER_NOT_SUPPORTED,
-        STATUS_INSUFFICIENT_PROCESSING_RESOURCES,
-        STATUS_DELETED
-    })
-    @Retention(RetentionPolicy.SOURCE)
-    public @interface DscpPolicyStatus {}
 
     /* package */ DscpPolicy(
             int policyId,
