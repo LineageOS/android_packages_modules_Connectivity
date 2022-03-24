@@ -47,6 +47,14 @@ message PublicateCertificate {
   optional bytes metadata_encryption_key_tag = 2;
 }
 
+message PublicCredential {
+  optional bytes secret_id = 1;
+  optional bytes authenticity_key = 2;
+  optional bytes public_key = 3;
+  optional bytes encrypted_metadata = 4;
+  optional bytes encrypted_metadata_tag = 5;
+}
+
 message BleFilter {
   optional uint32 id = 1;  // Required, unique id of this filter.
   // Maximum delay to notify the client after an event occurs.
@@ -73,8 +81,11 @@ message BleFilters {
 // FilterResult is returned to host when a BLE event matches a Filter.
 message BleFilterResult {
   optional uint32 id = 1;  // id of the matched Filter.
-  // TODO(b/193756395): replace with BLE event proto.
-  optional bytes raw_data = 2;
+  optional uint32 tx_power = 2;
+  optional uint32 rssi = 3;
+  optional uint32 intent = 4;
+  optional bytes bluetooth_address = 5;
+  optional PublicCredential public_credential = 6;
 }
 
 message BleFilterResults {

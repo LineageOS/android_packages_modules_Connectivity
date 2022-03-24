@@ -20,6 +20,7 @@ import static com.google.common.truth.Truth.assertThat;
 
 import android.nearby.NearbyDevice;
 import android.nearby.NearbyDeviceParcelable;
+import android.nearby.PublicCredential;
 import android.os.Build;
 import android.os.Parcel;
 
@@ -46,37 +47,50 @@ public class NearbyDeviceParcelableTest {
 
     @Before
     public void setUp() {
-        mBuilder =  new NearbyDeviceParcelable.Builder()
-                .setName("testDevice")
-                .setMedium(NearbyDevice.Medium.BLE)
-                .setRssi(RSSI)
-                .setTxPower(-90)
-                .setFastPairModelId(FAST_PAIR_MODEL_ID)
-                .setBluetoothAddress(BLUETOOTH_ADDRESS)
-                .setData(SCAN_DATA);
+        mBuilder =
+                new NearbyDeviceParcelable.Builder()
+                        .setName("testDevice")
+                        .setMedium(NearbyDevice.Medium.BLE)
+                        .setRssi(RSSI)
+                        .setFastPairModelId(FAST_PAIR_MODEL_ID)
+                        .setBluetoothAddress(BLUETOOTH_ADDRESS)
+                        .setData(SCAN_DATA);
     }
-
 
     /** Verify toString returns expected string. */
     @Test
-    @SdkSuppress(minSdkVersion = 32, codeName = "T")
+    @SdkSuppress(minSdkVersion = 33, codeName = "T")
     public void testToString() {
+        PublicCredential publicCredential =
+                new PublicCredential.Builder(
+                                new byte[] {1},
+                                new byte[] {2},
+                                new byte[] {3},
+                                new byte[] {4},
+                                new byte[] {5})
+                        .build();
         NearbyDeviceParcelable nearbyDeviceParcelable =
-                mBuilder.setFastPairModelId(null).setData(null).build();
+                mBuilder.setFastPairModelId(null)
+                        .setData(null)
+                        .setPublicCredential(publicCredential)
+                        .build();
 
-        assertThat(nearbyDeviceParcelable.toString()).isEqualTo(
-                "NearbyDeviceParcelable[name=testDevice, medium=BLE, rssi=-60, txPower=-90, "
-                        + "bluetoothAddress="
-                        + BLUETOOTH_ADDRESS + ", fastPairModelId=null, data=null]");
+        assertThat(nearbyDeviceParcelable.toString())
+                .isEqualTo(
+                        "NearbyDeviceParcelable[name=testDevice, medium=BLE, txPower=0, rssi=-60,"
+                                + " action=0, bluetoothAddress="
+                                + BLUETOOTH_ADDRESS
+                                + ", fastPairModelId=null, data=null]");
     }
 
     @Test
-    @SdkSuppress(minSdkVersion = 32, codeName = "T")
+    @SdkSuppress(minSdkVersion = 33, codeName = "T")
     public void test_defaultNullFields() {
-        NearbyDeviceParcelable nearbyDeviceParcelable = new NearbyDeviceParcelable.Builder()
-                .setMedium(NearbyDevice.Medium.BLE)
-                .setRssi(RSSI)
-                .build();
+        NearbyDeviceParcelable nearbyDeviceParcelable =
+                new NearbyDeviceParcelable.Builder()
+                        .setMedium(NearbyDevice.Medium.BLE)
+                        .setRssi(RSSI)
+                        .build();
 
         assertThat(nearbyDeviceParcelable.getName()).isNull();
         assertThat(nearbyDeviceParcelable.getFastPairModelId()).isNull();
@@ -88,15 +102,15 @@ public class NearbyDeviceParcelableTest {
     }
 
     @Test
-    @SdkSuppress(minSdkVersion = 32, codeName = "T")
+    @SdkSuppress(minSdkVersion = 33, codeName = "T")
     public void testWriteParcel() {
-        NearbyDeviceParcelable nearbyDeviceParcelable =  mBuilder.build();
+        NearbyDeviceParcelable nearbyDeviceParcelable = mBuilder.build();
 
         Parcel parcel = Parcel.obtain();
         nearbyDeviceParcelable.writeToParcel(parcel, 0);
         parcel.setDataPosition(0);
-        NearbyDeviceParcelable actualNearbyDevice = NearbyDeviceParcelable.CREATOR.createFromParcel(
-                parcel);
+        NearbyDeviceParcelable actualNearbyDevice =
+                NearbyDeviceParcelable.CREATOR.createFromParcel(parcel);
         parcel.recycle();
 
         assertThat(actualNearbyDevice.getRssi()).isEqualTo(RSSI);
@@ -106,32 +120,30 @@ public class NearbyDeviceParcelableTest {
     }
 
     @Test
-    @SdkSuppress(minSdkVersion = 32, codeName = "T")
+    @SdkSuppress(minSdkVersion = 33, codeName = "T")
     public void testWriteParcel_nullModelId() {
-        NearbyDeviceParcelable nearbyDeviceParcelable =
-                mBuilder.setFastPairModelId(null).build();
+        NearbyDeviceParcelable nearbyDeviceParcelable = mBuilder.setFastPairModelId(null).build();
 
         Parcel parcel = Parcel.obtain();
         nearbyDeviceParcelable.writeToParcel(parcel, 0);
         parcel.setDataPosition(0);
-        NearbyDeviceParcelable actualNearbyDevice = NearbyDeviceParcelable.CREATOR.createFromParcel(
-                parcel);
+        NearbyDeviceParcelable actualNearbyDevice =
+                NearbyDeviceParcelable.CREATOR.createFromParcel(parcel);
         parcel.recycle();
 
         assertThat(actualNearbyDevice.getFastPairModelId()).isNull();
     }
 
     @Test
-    @SdkSuppress(minSdkVersion = 32, codeName = "T")
+    @SdkSuppress(minSdkVersion = 33, codeName = "T")
     public void testWriteParcel_nullBluetoothAddress() {
-        NearbyDeviceParcelable nearbyDeviceParcelable =
-                mBuilder.setBluetoothAddress(null).build();
+        NearbyDeviceParcelable nearbyDeviceParcelable = mBuilder.setBluetoothAddress(null).build();
 
         Parcel parcel = Parcel.obtain();
         nearbyDeviceParcelable.writeToParcel(parcel, 0);
         parcel.setDataPosition(0);
-        NearbyDeviceParcelable actualNearbyDevice = NearbyDeviceParcelable.CREATOR.createFromParcel(
-                parcel);
+        NearbyDeviceParcelable actualNearbyDevice =
+                NearbyDeviceParcelable.CREATOR.createFromParcel(parcel);
         parcel.recycle();
 
         assertThat(actualNearbyDevice.getBluetoothAddress()).isNull();

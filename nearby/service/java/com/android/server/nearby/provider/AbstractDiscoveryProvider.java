@@ -20,11 +20,13 @@ import static com.android.server.nearby.NearbyService.TAG;
 
 import android.content.Context;
 import android.nearby.NearbyDeviceParcelable;
+import android.nearby.ScanFilter;
 import android.nearby.ScanRequest;
 import android.util.Log;
 
 import androidx.annotation.Nullable;
 
+import java.util.List;
 import java.util.concurrent.Executor;
 
 /**
@@ -38,10 +40,9 @@ public abstract class AbstractDiscoveryProvider {
     protected final DiscoveryProviderController mController;
     protected final Executor mExecutor;
     protected Listener mListener;
+    protected List<ScanFilter> mScanFilters;
 
-    /**
-     * Interface for listening to discovery providers.
-     */
+    /** Interface for listening to discovery providers. */
     public interface Listener {
         /**
          * Called when a provider has a new nearby device available. May be invoked from any thread.
@@ -60,20 +61,20 @@ public abstract class AbstractDiscoveryProvider {
      * can now be expected. Always implies that the provider request is set to the empty request.
      * Always invoked on the provider executor.
      */
-    protected void onStart() { }
+    protected void onStart() {}
 
     /**
      * Callback invoked when the provider is stopped, and signals that no further callback
      * invocations will occur (until a further call to {@link #onStart()}. Always invoked on the
      * provider executor.
      */
-    protected void onStop() { }
+    protected void onStop() {}
 
     /**
      * Callback invoked to inform the provider of a new provider request which replaces any prior
      * provider request. Always invoked on the provider executor.
      */
-    protected void invalidateScanMode() { }
+    protected void invalidateScanMode() {}
 
     /**
      * Retrieves the controller for this discovery provider. Should never be invoked by subclasses,
@@ -133,6 +134,11 @@ public abstract class AbstractDiscoveryProvider {
         @Override
         public int getProviderScanMode() {
             return mScanMode;
+        }
+
+        @Override
+        public void setProviderScanFilters(List<ScanFilter> filters) {
+            mScanFilters = filters;
         }
     }
 }
