@@ -27,3 +27,10 @@ BECOME_DISCOVERABLE_TIMEOUT_SEC = 10
 START_ADVERTISING_TIMEOUT_SEC = 5
 SCAN_TIMEOUT_SEC = 30
 HALF_SHEET_POPUP_TIMEOUT_SEC = 30
+
+# The phone to simulate Fast Pair provider (like headphone) needs changes in Android system:
+# 1. System permission check removal
+# 2. Adjusts Bluetooth profile configurations
+# The build fingerprint of the custom ROM for Fast Pair provider simulator.
+FAST_PAIR_PROVIDER_SIMULATOR_BUILD_FINGERPRINT = (
+    'google/bramble/bramble:Tiramisu/MASTER/eng.hylo.20211019.091550:userdebug/dev-keys')
