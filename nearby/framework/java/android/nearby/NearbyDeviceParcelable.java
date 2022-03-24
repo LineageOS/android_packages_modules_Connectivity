@@ -20,6 +20,7 @@ import android.annotation.IntRange;
 import android.annotation.NonNull;
 import android.annotation.Nullable;
 import android.bluetooth.le.ScanRecord;
+import android.bluetooth.le.ScanResult;
 import android.os.Parcel;
 import android.os.Parcelable;
 
@@ -54,6 +55,7 @@ public final class NearbyDeviceParcelable implements Parcelable {
                     }
                     builder.setMedium(in.readInt());
                     builder.setRssi(in.readInt());
+                    builder.setTxPower(in.readInt());
                     if (in.readInt() == 1) {
                         builder.setFastPairModelId(in.readString());
                     }
@@ -81,6 +83,7 @@ public final class NearbyDeviceParcelable implements Parcelable {
     @NearbyDevice.Medium
     private final int mMedium;
     private final int mRssi;
+    private final int mTxPower;
 
     @Nullable
     private final String mBluetoothAddress;
@@ -90,12 +93,13 @@ public final class NearbyDeviceParcelable implements Parcelable {
     private final byte[] mData;
 
     private NearbyDeviceParcelable(@ScanRequest.ScanType int scanType, @Nullable String name,
-            int medium, int rssi, @Nullable String fastPairModelId,
+            int medium, int rssi, int txPower, @Nullable String fastPairModelId,
             @Nullable String bluetoothAddress, @Nullable byte[] data) {
         mScanType = scanType;
         mName = name;
         mMedium = medium;
         mRssi = rssi;
+        mTxPower = txPower;
         mFastPairModelId = fastPairModelId;
         mBluetoothAddress = bluetoothAddress;
         mData = data;
@@ -124,6 +128,7 @@ public final class NearbyDeviceParcelable implements Parcelable {
         }
         dest.writeInt(mMedium);
         dest.writeInt(mRssi);
+        dest.writeInt(mTxPower);
         dest.writeInt(mFastPairModelId == null ? 0 : 1);
         if (mFastPairModelId != null) {
             dest.writeString(mFastPairModelId);
@@ -148,6 +153,7 @@ public final class NearbyDeviceParcelable implements Parcelable {
                 + "name=" + mName
                 + ", medium=" + NearbyDevice.mediumToString(mMedium)
                 + ", rssi=" + mRssi
+                + ", txPower=" + mTxPower
                 + ", bluetoothAddress=" + mBluetoothAddress
                 + ", fastPairModelId=" + mFastPairModelId
                 + ", data=" + Arrays.toString(mData)
@@ -161,6 +167,7 @@ public final class NearbyDeviceParcelable implements Parcelable {
             return  Objects.equals(mName, otherNearbyDeviceParcelable.mName)
                     && (mMedium == otherNearbyDeviceParcelable.mMedium)
                     && (mRssi == otherNearbyDeviceParcelable.mRssi)
+                    && (mTxPower == otherNearbyDeviceParcelable.mTxPower)
                     && (Objects.equals(
                             mBluetoothAddress, otherNearbyDeviceParcelable.mBluetoothAddress))
                     && (Objects.equals(
@@ -173,7 +180,8 @@ public final class NearbyDeviceParcelable implements Parcelable {
     @Override
     public int hashCode() {
         return Objects.hash(
-                mName, mMedium, mRssi, mBluetoothAddress, mFastPairModelId, Arrays.hashCode(mData));
+                mName, mMedium, mRssi, mTxPower, mBluetoothAddress,
+                mFastPairModelId, Arrays.hashCode(mData));
     }
 
     /**
@@ -212,6 +220,16 @@ public final class NearbyDeviceParcelable implements Parcelable {
     }
 
     /**
+     * Gets the transmit power in dBm. A value of
+     * android.bluetooth.le.ScanResult#TX_POWER_NOT_PRESENT
+     * indicates that the TX power is not present.
+     */
+    @IntRange(from = -127, to = 126)
+    public int getTxPower() {
+        return mTxPower;
+    }
+
+    /**
      * Gets the Fast Pair identifier. Returns {@code null} if there is no Model ID or this is not a
      * Fast Pair device.
      */
@@ -246,6 +264,7 @@ public final class NearbyDeviceParcelable implements Parcelable {
         @NearbyDevice.Medium
         private int mMedium;
         private int mRssi;
+        private int mTxPower = ScanResult.TX_POWER_NOT_PRESENT;
         @ScanRequest.ScanType int mScanType;
         @Nullable
         private String mFastPairModelId;
@@ -292,8 +311,19 @@ public final class NearbyDeviceParcelable implements Parcelable {
          * @param rssi The received signal strength in dBm.
          */
         @NonNull
-        public Builder setRssi(int rssi) {
+        public Builder setRssi(@IntRange(from = -127, to = 126) int rssi) {
             mRssi = rssi;
+            return this;
+        }
+
+        /**
+         * Sets the txPower.
+         *
+         * @param txPower The transmit power in dBm
+         */
+        @NonNull
+        public Builder setTxPower(@IntRange(from = -127, to = 126) int txPower) {
+            mTxPower = txPower;
             return this;
         }
 
@@ -336,8 +366,8 @@ public final class NearbyDeviceParcelable implements Parcelable {
          */
         @NonNull
         public NearbyDeviceParcelable build() {
-            return new NearbyDeviceParcelable(mScanType, mName, mMedium, mRssi, mFastPairModelId,
-                    mBluetoothAddress, mData);
+            return new NearbyDeviceParcelable(mScanType, mName, mMedium, mRssi, mTxPower,
+                    mFastPairModelId, mBluetoothAddress, mData);
         }
     }
 }
