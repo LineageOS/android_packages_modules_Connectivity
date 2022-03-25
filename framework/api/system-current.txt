@@ -104,12 +104,6 @@ package android.net {
     field @NonNull public static final android.os.Parcelable.Creator<android.net.DscpPolicy> CREATOR;
     field public static final int PROTOCOL_ANY = -1; // 0xffffffff
     field public static final int SOURCE_PORT_ANY = -1; // 0xffffffff
-    field public static final int STATUS_DELETED = 4; // 0x4
-    field public static final int STATUS_INSUFFICIENT_PROCESSING_RESOURCES = 3; // 0x3
-    field public static final int STATUS_POLICY_NOT_FOUND = 5; // 0x5
-    field public static final int STATUS_REQUESTED_CLASSIFIER_NOT_SUPPORTED = 2; // 0x2
-    field public static final int STATUS_REQUEST_DECLINED = 1; // 0x1
-    field public static final int STATUS_SUCCESS = 0; // 0x0
   }
 
   public static final class DscpPolicy.Builder {
@@ -271,6 +265,12 @@ package android.net {
     method public final void setUnderlyingNetworks(@Nullable java.util.List<android.net.Network>);
     method public void unregister();
     method public void unregisterAfterReplacement(@IntRange(from=0, to=0x1388) int);
+    field public static final int DSCP_POLICY_STATUS_DELETED = 4; // 0x4
+    field public static final int DSCP_POLICY_STATUS_INSUFFICIENT_PROCESSING_RESOURCES = 3; // 0x3
+    field public static final int DSCP_POLICY_STATUS_POLICY_NOT_FOUND = 5; // 0x5
+    field public static final int DSCP_POLICY_STATUS_REQUESTED_CLASSIFIER_NOT_SUPPORTED = 2; // 0x2
+    field public static final int DSCP_POLICY_STATUS_REQUEST_DECLINED = 1; // 0x1
+    field public static final int DSCP_POLICY_STATUS_SUCCESS = 0; // 0x0
     field public static final int VALIDATION_STATUS_NOT_VALID = 2; // 0x2
     field public static final int VALIDATION_STATUS_VALID = 1; // 0x1
   }
