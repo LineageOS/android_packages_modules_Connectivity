@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.android.server.nearby.presence;
+package com.android.server.nearby.provider;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -65,10 +65,11 @@ public class ChreCommunicationTest {
         when(mTransactionResponse.getContents())
                 .thenReturn(
                         Collections.singletonList(
-                                new NanoAppState(PresenceManager.NANOAPP_ID, 1, true)));
+                                new NanoAppState(ChreDiscoveryProvider.NANOAPP_ID, 1, true)));
 
         mChreCommunication = new ChreCommunication(mInjector, new InlineExecutor());
-        mChreCommunication.start(mChreCallback, Collections.singleton(PresenceManager.NANOAPP_ID));
+        mChreCommunication.start(
+                mChreCallback, Collections.singleton(ChreDiscoveryProvider.NANOAPP_ID));
 
         verify(mTransaction).setOnCompleteListener(mOnQueryCompleteListenerCaptor.capture(), any());
         mOnQueryCompleteListenerCaptor.getValue().onComplete(mTransaction, mTransactionResponse);
@@ -89,8 +90,8 @@ public class ChreCommunicationTest {
     public void testSendMessageToNanApp() {
         NanoAppMessage message =
                 NanoAppMessage.createMessageToNanoApp(
-                        PresenceManager.NANOAPP_ID,
-                        PresenceManager.NANOAPP_MESSAGE_TYPE_FILTER,
+                        ChreDiscoveryProvider.NANOAPP_ID,
+                        ChreDiscoveryProvider.NANOAPP_MESSAGE_TYPE_FILTER,
                         new byte[] {1, 2, 3});
         mChreCommunication.sendMessageToNanoApp(message);
         verify(mClient).sendMessageToNanoApp(eq(message));
@@ -100,8 +101,8 @@ public class ChreCommunicationTest {
     public void testOnMessageFromNanoApp() {
         NanoAppMessage message =
                 NanoAppMessage.createMessageToNanoApp(
-                        PresenceManager.NANOAPP_ID,
-                        PresenceManager.NANOAPP_MESSAGE_TYPE_FILTER_RESULT,
+                        ChreDiscoveryProvider.NANOAPP_ID,
+                        ChreDiscoveryProvider.NANOAPP_MESSAGE_TYPE_FILTER_RESULT,
                         new byte[] {1, 2, 3});
         mChreCommunication.onMessageFromNanoApp(mClient, message);
         verify(mChreCallback).onMessageFromNanoApp(eq(message));
@@ -115,8 +116,8 @@ public class ChreCommunicationTest {
 
     @Test
     public void testOnNanoAppLoaded() {
-        mChreCommunication.onNanoAppLoaded(mClient, PresenceManager.NANOAPP_ID);
-        verify(mChreCallback).onNanoAppRestart(eq(PresenceManager.NANOAPP_ID));
+        mChreCommunication.onNanoAppLoaded(mClient, ChreDiscoveryProvider.NANOAPP_ID);
+        verify(mChreCallback).onNanoAppRestart(eq(ChreDiscoveryProvider.NANOAPP_ID));
     }
 
     private static class InlineExecutor implements Executor {
