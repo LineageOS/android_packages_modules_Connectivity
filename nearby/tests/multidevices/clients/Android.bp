@@ -40,7 +40,7 @@ android_app {
     static_libs: ["NearbyMultiDevicesClientsLib"],
     optimize: {
         enabled: true,
-        shrink: true,
+        shrink: false,
         proguard_flags_files: ["proguard.flags"],
     },
 }
