@@ -17,11 +17,15 @@
 package android.nearby;
 
 import android.annotation.NonNull;
+import android.annotation.Nullable;
 import android.annotation.SystemApi;
 import android.os.Parcel;
 import android.os.Parcelable;
 
 import com.android.internal.util.Preconditions;
+
+import java.util.Arrays;
+import java.util.Objects;
 
 /**
  * Represents an element in {@link PresenceCredential}.
@@ -33,12 +37,9 @@ public final class CredentialElement implements Parcelable {
     private final String mKey;
     private final byte[] mValue;
 
-    /**
-     * Constructs a {@link CredentialElement}.
-     */
+    /** Constructs a {@link CredentialElement}. */
     public CredentialElement(@NonNull String key, @NonNull byte[] value) {
-        Preconditions.checkState(key != null && value != null,
-                "neither key or value can be null");
+        Preconditions.checkState(key != null && value != null, "neither key or value can be null");
         mKey = key;
         mValue = value;
     }
@@ -58,7 +59,7 @@ public final class CredentialElement implements Parcelable {
                 public CredentialElement[] newArray(int size) {
                     return new CredentialElement[size];
                 }
-    };
+            };
 
     @Override
     public int describeContents() {
@@ -72,19 +73,29 @@ public final class CredentialElement implements Parcelable {
         dest.writeByteArray(mValue);
     }
 
-    /**
-     * Returns the key of the credential element.
-     */
+    /** Returns the key of the credential element. */
     @NonNull
     public String getKey() {
         return mKey;
     }
 
-    /**
-     * Returns the value of the credential element.
-     */
+    /** Returns the value of the credential element. */
     @NonNull
     public byte[] getValue() {
         return mValue;
+    }
+
+    @Override
+    public boolean equals(@Nullable Object obj) {
+        if (obj instanceof CredentialElement) {
+            CredentialElement that = (CredentialElement) obj;
+            return mKey.equals(that.mKey) && Arrays.equals(mValue, that.mValue);
+        }
+        return false;
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(mKey.hashCode(), Arrays.hashCode(mValue));
     }
 }

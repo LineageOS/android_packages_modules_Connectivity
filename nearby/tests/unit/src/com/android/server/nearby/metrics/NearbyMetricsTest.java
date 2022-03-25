@@ -20,6 +20,7 @@ import static android.nearby.ScanRequest.SCAN_MODE_BALANCED;
 import static android.nearby.ScanRequest.SCAN_TYPE_NEARBY_SHARE;
 
 import android.nearby.NearbyDeviceParcelable;
+import android.nearby.PublicCredential;
 import android.nearby.ScanRequest;
 import android.os.WorkSource;
 
@@ -42,39 +43,50 @@ public class NearbyMetricsTest {
     private static final int RSSI = -60;
     private static final String FAST_PAIR_MODEL_ID = "1234";
     private static final String BLUETOOTH_ADDRESS = "00:11:22:33:FF:EE";
-    private static final byte[] SCAN_DATA = new byte[]{1, 2, 3, 4};
+    private static final byte[] SCAN_DATA = new byte[] {1, 2, 3, 4};
+    private static final PublicCredential PUBLIC_CREDENTIAL =
+            new PublicCredential.Builder(
+                            new byte[] {1},
+                            new byte[] {2},
+                            new byte[] {3},
+                            new byte[] {4},
+                            new byte[] {5})
+                    .build();
 
     private final WorkSource mWorkSource = new WorkSource(WORK_SOURCE_UID);
     private final WorkSource mEmptyWorkSource = new WorkSource();
 
-    private final ScanRequest.Builder mScanRequestBuilder = new ScanRequest.Builder()
-            .setScanMode(SCAN_MODE_BALANCED)
-            .setScanType(SCAN_TYPE_NEARBY_SHARE);
-    private final ScanRequest mScanRequest = mScanRequestBuilder
-            .setWorkSource(mWorkSource)
-            .build();
-    private final ScanRequest mScanRequestWithEmptyWorkSource = mScanRequestBuilder
-            .setWorkSource(mEmptyWorkSource)
-            .build();
+    private final ScanRequest.Builder mScanRequestBuilder =
+            new ScanRequest.Builder()
+                    .setScanMode(SCAN_MODE_BALANCED)
+                    .setScanType(SCAN_TYPE_NEARBY_SHARE);
+    private final ScanRequest mScanRequest = mScanRequestBuilder.setWorkSource(mWorkSource).build();
+    private final ScanRequest mScanRequestWithEmptyWorkSource =
+            mScanRequestBuilder.setWorkSource(mEmptyWorkSource).build();
 
     private final NearbyDeviceParcelable mNearbyDevice =
             new NearbyDeviceParcelable.Builder()
                     .setName(DEVICE_NAME)
                     .setMedium(SCAN_MEDIUM)
+                    .setTxPower(1)
                     .setRssi(RSSI)
+                    .setAction(1)
+                    .setPublicCredential(PUBLIC_CREDENTIAL)
                     .setFastPairModelId(FAST_PAIR_MODEL_ID)
                     .setBluetoothAddress(BLUETOOTH_ADDRESS)
-                    .setData(SCAN_DATA).build();
+                    .setData(SCAN_DATA)
+                    .build();
 
     private MockitoSession mSession;
 
     @Before
     public void setUp() throws Exception {
         MockitoAnnotations.initMocks(this);
-        mSession = ExtendedMockito.mockitoSession()
-                .strictness(Strictness.LENIENT)
-                .mockStatic(NearbyStatsLog.class)
-                .startMocking();
+        mSession =
+                ExtendedMockito.mockitoSession()
+                        .strictness(Strictness.LENIENT)
+                        .mockStatic(NearbyStatsLog.class)
+                        .startMocking();
     }
 
     @After
@@ -164,8 +176,8 @@ public class NearbyMetricsTest {
 
     @Test
     public void testLogScanDeviceDiscovered_emptyWorkSource() {
-        NearbyMetrics.logScanDeviceDiscovered(SESSION_ID, mScanRequestWithEmptyWorkSource,
-                mNearbyDevice);
+        NearbyMetrics.logScanDeviceDiscovered(
+                SESSION_ID, mScanRequestWithEmptyWorkSource, mNearbyDevice);
         ExtendedMockito.verify(() -> NearbyStatsLog.write(
                 NearbyStatsLog.NEARBY_DEVICE_SCAN_STATE_CHANGED,
                 -1,
