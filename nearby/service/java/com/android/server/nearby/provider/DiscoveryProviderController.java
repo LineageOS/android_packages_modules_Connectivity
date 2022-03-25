@@ -17,42 +17,43 @@
 package com.android.server.nearby.provider;
 
 import android.annotation.Nullable;
+import android.nearby.ScanFilter;
 import android.nearby.ScanRequest;
 
-/**
- * Interface for controlling discovery providers.
- */
+import java.util.List;
+
+/** Interface for controlling discovery providers. */
 interface DiscoveryProviderController {
 
     /**
-     * Sets the listener which can expect to receive all state updates from after this point.
-     * May be invoked at any time.
+     * Sets the listener which can expect to receive all state updates from after this point. May be
+     * invoked at any time.
      */
     void setListener(@Nullable AbstractDiscoveryProvider.Listener listener);
 
-    /**
-     * Returns true if in the started state.
-     */
+    /** Returns true if in the started state. */
     boolean isStarted();
 
     /**
-     * Starts the discovery provider. Must be invoked before any other method (except
-     * {@link #setListener(AbstractDiscoveryProvider.Listener)} (Listener)}).
+     * Starts the discovery provider. Must be invoked before any other method (except {@link
+     * #setListener(AbstractDiscoveryProvider.Listener)} (Listener)}).
      */
     void start();
 
     /**
      * Stops the discovery provider. No other methods may be invoked after this method (except
-     * {@link #setListener(AbstractDiscoveryProvider.Listener)} (Listener)}), until {@link #start()} is called again.
+     * {@link #setListener(AbstractDiscoveryProvider.Listener)} (Listener)}), until {@link #start()}
+     * is called again.
      */
     void stop();
 
-    /**
-     * Sets the desired scan mode.
-     */
+    /** Sets the desired scan mode. */
     void setProviderScanMode(@ScanRequest.ScanMode int scanMode);
 
     /** Gets the controller scan mode. */
     @ScanRequest.ScanMode
     int getProviderScanMode();
+
+    /** Sets the scan filters. */
+    void setProviderScanFilters(List<ScanFilter> filters);
 }

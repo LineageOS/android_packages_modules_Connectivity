@@ -14,7 +14,9 @@
  * limitations under the License.
  */
 
-package com.android.server.nearby.presence;
+package com.android.server.nearby.provider;
+
+import static com.android.server.nearby.NearbyService.TAG;
 
 import android.annotation.Nullable;
 import android.hardware.location.ContextHubClient;
@@ -60,8 +62,7 @@ public class ChreCommunication extends ContextHubClientCallback {
         void onMessageFromNanoApp(NanoAppMessage message);
     }
 
-    public static final String TAG = "PresenceService";
-    @Nullable private final ContextHubManagerAdapter mManager;
+    private final Injector mInjector;
     private final Executor mExecutor;
 
     private boolean mStarted = false;
@@ -69,8 +70,12 @@ public class ChreCommunication extends ContextHubClientCallback {
     @Nullable private ContextHubClient mContextHubClient;
 
     public ChreCommunication(Injector injector, Executor executor) {
-        this.mManager = injector.getContextHubManagerAdapter();
+        mInjector = injector;
         mExecutor = executor;
+    }
+
+    public boolean available() {
+        return mInjector.getContextHubManagerAdapter() != null;
     }
 
     /**
@@ -81,18 +86,17 @@ public class ChreCommunication extends ContextHubClientCallback {
      *     contexthub.
      */
     public synchronized void start(ContextHubCommsCallback callback, Set<Long> nanoAppIds) {
-        if (this.mManager == null) {
+        ContextHubManagerAdapter manager = mInjector.getContextHubManagerAdapter();
+        if (manager == null) {
             Log.e(TAG, "ContexHub not available in this device");
             return;
         } else {
             Log.i(TAG, "Start ChreCommunication");
         }
         Preconditions.checkNotNull(callback);
-        if (nanoAppIds.isEmpty() || mManager == null) {
-            callback.started(false);
-            return;
-        }
+        Preconditions.checkArgument(!nanoAppIds.isEmpty());
         if (mStarted) {
+            Log.i(TAG, "ChreCommunication already started");
             this.mCallback.started(true);
             return;
         }
@@ -102,17 +106,18 @@ public class ChreCommunication extends ContextHubClientCallback {
         mStarted = true;
         this.mCallback = callback;
 
-        List<ContextHubInfo> contextHubs = mManager.getContextHubs();
+        List<ContextHubInfo> contextHubs = manager.getContextHubs();
 
         // Make a copy of the list so we can modify it during our async callbacks (in case the code
         // is still iterating)
         List<ContextHubInfo> validContextHubs = new ArrayList<>(contextHubs);
 
         for (ContextHubInfo info : contextHubs) {
-            ContextHubTransaction<List<NanoAppState>> transaction = mManager.queryNanoApps(info);
+            ContextHubTransaction<List<NanoAppState>> transaction = manager.queryNanoApps(info);
             Log.i(TAG, "After query Nano Apps ");
             transaction.setOnCompleteListener(
-                    new OnQueryCompleteListener(info, validContextHubs, nanoAppIds), mExecutor);
+                    new OnQueryCompleteListener(info, validContextHubs, nanoAppIds, manager),
+                    mExecutor);
         }
     }
 
@@ -202,14 +207,17 @@ public class ChreCommunication extends ContextHubClientCallback {
         private final ContextHubInfo mQueriedContextHub;
         private final List<ContextHubInfo> mContextHubs;
         private final Set<Long> mNanoAppIds;
+        private final ContextHubManagerAdapter mManager;
 
         OnQueryCompleteListener(
                 ContextHubInfo queriedContextHub,
                 List<ContextHubInfo> contextHubs,
-                Set<Long> nanoAppIds) {
+                Set<Long> nanoAppIds,
+                ContextHubManagerAdapter manager) {
             this.mQueriedContextHub = queriedContextHub;
             this.mContextHubs = contextHubs;
             this.mNanoAppIds = nanoAppIds;
+            this.mManager = manager;
         }
 
         @Override

@@ -24,7 +24,9 @@ import android.os.Parcel;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * Represents a credential for Nearby Presence.
@@ -33,50 +35,43 @@ import java.util.List;
  */
 @SystemApi
 public abstract class PresenceCredential {
-    /**
-     * Private credential type.
-     */
+    /** Private credential type. */
     public static final int CREDENTIAL_TYPE_PRIVATE = 0;
 
-    /**
-     * Public credential type.
-     */
+    /** Public credential type. */
     public static final int CREDENTIAL_TYPE_PUBLIC = 1;
 
-    /** @hide **/
+    /**
+     * @hide *
+     */
     @Retention(RetentionPolicy.SOURCE)
     @IntDef({CREDENTIAL_TYPE_PUBLIC, CREDENTIAL_TYPE_PRIVATE})
-    public @interface CredentialType {
-    }
+    public @interface CredentialType {}
 
-    /**
-     * Unknown identity type.
-     */
+    /** Unknown identity type. */
     public static final int IDENTITY_TYPE_UNKNOWN = 0;
 
-    /**
-     * Private identity type.
-     */
+    /** Private identity type. */
     public static final int IDENTITY_TYPE_PRIVATE = 1;
-    /**
-     * Provisioned identity type.
-     */
+    /** Provisioned identity type. */
     public static final int IDENTITY_TYPE_PROVISIONED = 2;
-    /**
-     * Trusted identity type.
-     */
+    /** Trusted identity type. */
     public static final int IDENTITY_TYPE_TRUSTED = 3;
-    /**
-     * Public identity type.
-     */
+    /** Public identity type. */
     public static final int IDENTITY_TYPE_PUBLIC = 4;
 
-    /** @hide **/
+    /**
+     * @hide *
+     */
     @Retention(RetentionPolicy.SOURCE)
-    @IntDef({IDENTITY_TYPE_UNKNOWN, IDENTITY_TYPE_PRIVATE, IDENTITY_TYPE_PROVISIONED,
-            IDENTITY_TYPE_TRUSTED, IDENTITY_TYPE_PUBLIC})
-    public @interface IdentityType {
-    }
+    @IntDef({
+        IDENTITY_TYPE_UNKNOWN,
+        IDENTITY_TYPE_PRIVATE,
+        IDENTITY_TYPE_PROVISIONED,
+        IDENTITY_TYPE_TRUSTED,
+        IDENTITY_TYPE_PUBLIC
+    })
+    public @interface IdentityType {}
 
     private final @CredentialType int mType;
     private final @IdentityType int mIdentityType;
@@ -84,8 +79,12 @@ public abstract class PresenceCredential {
     private final byte[] mAuthenticityKey;
     private final List<CredentialElement> mCredentialElements;
 
-    PresenceCredential(@CredentialType int type, @IdentityType int identityType,
-            byte[] secretId, byte[] authenticityKey, List<CredentialElement> credentialElements) {
+    PresenceCredential(
+            @CredentialType int type,
+            @IdentityType int identityType,
+            byte[] secretId,
+            byte[] authenticityKey,
+            List<CredentialElement> credentialElements) {
         mType = type;
         mIdentityType = identityType;
         mSecretId = secretId;
@@ -101,46 +100,61 @@ public abstract class PresenceCredential {
         mAuthenticityKey = new byte[in.readInt()];
         in.readByteArray(mAuthenticityKey);
         mCredentialElements = new ArrayList<>();
-        in.readList(mCredentialElements, CredentialElement.class.getClassLoader(),
+        in.readList(
+                mCredentialElements,
+                CredentialElement.class.getClassLoader(),
                 CredentialElement.class);
     }
 
-    /**
-     * Returns the type of the credential.
-     */
+    /** Returns the type of the credential. */
     public @CredentialType int getType() {
         return mType;
     }
 
-    /**
-     * Returns the identity type of the credential.
-     */
+    /** Returns the identity type of the credential. */
     public @IdentityType int getIdentityType() {
         return mIdentityType;
     }
 
-    /**
-     * Returns the secret id of the credential.
-     */
+    /** Returns the secret id of the credential. */
     @NonNull
     public byte[] getSecretId() {
         return mSecretId;
     }
 
-    /**
-     * Returns the authenticity key of the credential.
-     */
+    /** Returns the authenticity key of the credential. */
     @NonNull
     public byte[] getAuthenticityKey() {
         return mAuthenticityKey;
     }
 
-    /**
-     * Returns the elements of the credential.
-     */
+    /** Returns the elements of the credential. */
     @NonNull
     public List<CredentialElement> getCredentialElements() {
         return mCredentialElements;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (obj instanceof PresenceCredential) {
+            PresenceCredential that = (PresenceCredential) obj;
+            return mType == that.mType
+                    && mIdentityType == that.mIdentityType
+                    && Arrays.equals(mSecretId, that.mSecretId)
+                    && Arrays.equals(mAuthenticityKey, that.mAuthenticityKey)
+                    && mCredentialElements.equals(that.mCredentialElements);
+        }
+        return false;
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(
+                mType,
+                mIdentityType,
+                Arrays.hashCode(mSecretId),
+                Arrays.hashCode(mAuthenticityKey),
+                mCredentialElements.hashCode());
     }
 
     /**

@@ -37,29 +37,32 @@ import org.junit.runner.RunWith;
 
 import java.util.Arrays;
 
-/**
- * Tests for {@link PresenceCredential}.
- */
+/** Tests for {@link PresenceCredential}. */
 @RunWith(AndroidJUnit4.class)
 @RequiresApi(Build.VERSION_CODES.TIRAMISU)
 public class PublicCredentialTest {
 
-    private static final byte[] SECRETE_ID = new byte[]{1, 2, 3, 4};
-    private static final byte[] AUTHENTICITY_KEY = new byte[]{0, 1, 1, 1};
-    private static final byte[] PUBLIC_KEY = new byte[]{1, 1, 2, 2};
-    private static final byte[] ENCRYPTED_METADATA = new byte[]{1, 2, 3, 4, 5};
-    private static final byte[] METADATA_ENCRYPTION_KEY_TAG = new byte[]{1, 1, 3, 4, 5};
+    private static final byte[] SECRETE_ID = new byte[] {1, 2, 3, 4};
+    private static final byte[] AUTHENTICITY_KEY = new byte[] {0, 1, 1, 1};
+    private static final byte[] PUBLIC_KEY = new byte[] {1, 1, 2, 2};
+    private static final byte[] ENCRYPTED_METADATA = new byte[] {1, 2, 3, 4, 5};
+    private static final byte[] METADATA_ENCRYPTION_KEY_TAG = new byte[] {1, 1, 3, 4, 5};
     private static final String KEY = "KEY";
-    private static final byte[] VALUE = new byte[]{1, 2, 3, 4, 5};
+    private static final byte[] VALUE = new byte[] {1, 2, 3, 4, 5};
 
     private PublicCredential.Builder mBuilder;
 
     @Before
     public void setUp() {
-        mBuilder = new PublicCredential.Builder(SECRETE_ID, AUTHENTICITY_KEY, PUBLIC_KEY,
-                ENCRYPTED_METADATA, METADATA_ENCRYPTION_KEY_TAG)
-                .addCredentialElement(new CredentialElement(KEY, VALUE))
-                .setIdentityType(IDENTITY_TYPE_PRIVATE);
+        mBuilder =
+                new PublicCredential.Builder(
+                                SECRETE_ID,
+                                AUTHENTICITY_KEY,
+                                PUBLIC_KEY,
+                                ENCRYPTED_METADATA,
+                                METADATA_ENCRYPTION_KEY_TAG)
+                        .addCredentialElement(new CredentialElement(KEY, VALUE))
+                        .setIdentityType(IDENTITY_TYPE_PRIVATE);
     }
 
     @Test
@@ -74,8 +77,11 @@ public class PublicCredentialTest {
         assertThat(Arrays.equals(credential.getAuthenticityKey(), AUTHENTICITY_KEY)).isTrue();
         assertThat(Arrays.equals(credential.getPublicKey(), PUBLIC_KEY)).isTrue();
         assertThat(Arrays.equals(credential.getEncryptedMetadata(), ENCRYPTED_METADATA)).isTrue();
-        assertThat(Arrays.equals(credential.getEncryptedMetadataKeyTag(),
-                METADATA_ENCRYPTION_KEY_TAG)).isTrue();
+        assertThat(
+                        Arrays.equals(
+                                credential.getEncryptedMetadataKeyTag(),
+                                METADATA_ENCRYPTION_KEY_TAG))
+                .isTrue();
     }
 
     @Test
@@ -86,19 +92,73 @@ public class PublicCredentialTest {
         Parcel parcel = Parcel.obtain();
         credential.writeToParcel(parcel, 0);
         parcel.setDataPosition(0);
-        PublicCredential credentialFromParcel = PublicCredential.CREATOR.createFromParcel(
-                parcel);
+        PublicCredential credentialFromParcel = PublicCredential.CREATOR.createFromParcel(parcel);
         parcel.recycle();
 
         assertThat(credentialFromParcel.getType()).isEqualTo(CREDENTIAL_TYPE_PUBLIC);
         assertThat(credentialFromParcel.getIdentityType()).isEqualTo(IDENTITY_TYPE_PRIVATE);
         assertThat(Arrays.equals(credentialFromParcel.getSecretId(), SECRETE_ID)).isTrue();
-        assertThat(Arrays.equals(credentialFromParcel.getAuthenticityKey(),
-                AUTHENTICITY_KEY)).isTrue();
+        assertThat(Arrays.equals(credentialFromParcel.getAuthenticityKey(), AUTHENTICITY_KEY))
+                .isTrue();
         assertThat(Arrays.equals(credentialFromParcel.getPublicKey(), PUBLIC_KEY)).isTrue();
-        assertThat(Arrays.equals(credentialFromParcel.getEncryptedMetadata(),
-                ENCRYPTED_METADATA)).isTrue();
-        assertThat(Arrays.equals(credentialFromParcel.getEncryptedMetadataKeyTag(),
-                METADATA_ENCRYPTION_KEY_TAG)).isTrue();
+        assertThat(Arrays.equals(credentialFromParcel.getEncryptedMetadata(), ENCRYPTED_METADATA))
+                .isTrue();
+        assertThat(
+                        Arrays.equals(
+                                credentialFromParcel.getEncryptedMetadataKeyTag(),
+                                METADATA_ENCRYPTION_KEY_TAG))
+                .isTrue();
+    }
+
+    @Test
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
+    public void testEquals() {
+        PublicCredential credentialOne =
+                new PublicCredential.Builder(
+                                SECRETE_ID,
+                                AUTHENTICITY_KEY,
+                                PUBLIC_KEY,
+                                ENCRYPTED_METADATA,
+                                METADATA_ENCRYPTION_KEY_TAG)
+                        .addCredentialElement(new CredentialElement(KEY, VALUE))
+                        .setIdentityType(IDENTITY_TYPE_PRIVATE)
+                        .build();
+
+        PublicCredential credentialTwo =
+                new PublicCredential.Builder(
+                                SECRETE_ID,
+                                AUTHENTICITY_KEY,
+                                PUBLIC_KEY,
+                                ENCRYPTED_METADATA,
+                                METADATA_ENCRYPTION_KEY_TAG)
+                        .addCredentialElement(new CredentialElement(KEY, VALUE))
+                        .setIdentityType(IDENTITY_TYPE_PRIVATE)
+                        .build();
+        assertThat(credentialOne.equals((Object) credentialTwo)).isTrue();
+    }
+
+    @Test
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
+    public void testUnEquals() {
+        byte[] idOne = new byte[] {1, 2, 3, 4};
+        byte[] idTwo = new byte[] {4, 5, 6, 7};
+        PublicCredential credentialOne =
+                new PublicCredential.Builder(
+                                idOne,
+                                AUTHENTICITY_KEY,
+                                PUBLIC_KEY,
+                                ENCRYPTED_METADATA,
+                                METADATA_ENCRYPTION_KEY_TAG)
+                        .build();
+
+        PublicCredential credentialTwo =
+                new PublicCredential.Builder(
+                                idTwo,
+                                AUTHENTICITY_KEY,
+                                PUBLIC_KEY,
+                                ENCRYPTED_METADATA,
+                                METADATA_ENCRYPTION_KEY_TAG)
+                        .build();
+        assertThat(credentialOne.equals((Object) credentialTwo)).isFalse();
     }
 }
