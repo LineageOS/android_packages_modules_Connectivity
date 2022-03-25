@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package android.nearby.multidevices.fastpair.provider
+package android.nearby.multidevices.fastpair.provider.controller
 
 import android.bluetooth.le.AdvertiseSettings
 import android.content.Context
