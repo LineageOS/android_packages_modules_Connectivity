@@ -736,8 +736,8 @@ public class NetworkAgentInfo implements Comparable<NetworkAgentInfo>, NetworkRa
         }
 
         @Override
-        public void sendDestroyAndAwaitReplacement(final int timeoutMillis) {
-            mHandler.obtainMessage(NetworkAgent.EVENT_DESTROY_AND_AWAIT_REPLACEMENT,
+        public void sendUnregisterAfterReplacement(final int timeoutMillis) {
+            mHandler.obtainMessage(NetworkAgent.EVENT_UNREGISTER_AFTER_REPLACEMENT,
                     new Pair<>(NetworkAgentInfo.this, timeoutMillis)).sendToTarget();
         }
     }

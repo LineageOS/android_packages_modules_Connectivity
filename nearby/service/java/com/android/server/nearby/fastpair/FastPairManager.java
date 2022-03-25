@@ -155,7 +155,7 @@ public class FastPairManager {
 
         Locator.getFromContextWrapper(mLocatorContextWrapper, FastPairCacheManager.class);
         // Default false for now.
-        mScanEnabled = NearbyManager.getFastPairScanEnabled(mLocatorContextWrapper, false);
+        mScanEnabled = NearbyManager.getFastPairScanEnabled(mLocatorContextWrapper.getContext());
         registerFastPairScanChangeContentObserver(mLocatorContextWrapper.getContentResolver());
     }
 
@@ -357,7 +357,7 @@ public class FastPairManager {
             public void onChange(boolean selfChange, Uri uri) {
                 super.onChange(selfChange, uri);
                 setScanEnabled(
-                        NearbyManager.getFastPairScanEnabled(mLocatorContextWrapper, mScanEnabled));
+                        NearbyManager.getFastPairScanEnabled(mLocatorContextWrapper.getContext()));
             }
         };
         try {
