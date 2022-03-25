@@ -114,9 +114,10 @@ class FastPairTestDataProviderService : FastPairDataProviderService(TAG) {
                     "requestType: $requestTypeString,"
         )
         Log.d(TAG, "requestedBleAddress: $requestedBleAddress,")
-        Log.d(TAG, "requestedAccountKeyDeviceMetadata: $requestedAccountKeyDeviceMetadata)")
 
-        testDataManager.writeAccountKeyDeviceMetadata(requestedAccountKeyDeviceMetadata)
+        val requestedAccountKeyDeviceMetadataInJson =
+            testDataManager.writeAccountKeyDeviceMetadata(requestedAccountKeyDeviceMetadata)
+        Log.d(TAG, "requestedAccountKeyDeviceMetadata: $requestedAccountKeyDeviceMetadataInJson)")
 
         callback.onSuccess()
     }
