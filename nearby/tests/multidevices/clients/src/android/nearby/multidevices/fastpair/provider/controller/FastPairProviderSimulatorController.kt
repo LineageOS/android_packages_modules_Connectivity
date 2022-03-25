@@ -64,9 +64,6 @@ class FastPairProviderSimulatorController(private val context: Context) :
                 .setRemoveAllDevicesDuringPairing(true)
                 .build()
         )
-
-        // TODO(b/222070055): Workaround the FATAL EXCEPTION after the end of initial pairing.
-        simulator!!.setSuppressSubsequentPairingNotification(true)
     }
 
     fun getProviderSimulatorBleAddress() = simulator!!.bleAddress!!
