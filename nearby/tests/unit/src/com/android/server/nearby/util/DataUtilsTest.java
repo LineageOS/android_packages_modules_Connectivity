@@ -92,12 +92,6 @@ public final class DataUtilsTest {
                 .isEqualTo(MESSAGE_WAIT_LAUNCH_COMPANION_APP_DESCRIPTION);
         assertThat(strings.getPairingFailDescription())
                 .isEqualTo(MESSAGE_FAIL_CONNECT_DESCRIPTION);
-        assertThat(strings.getAssistantHalfSheetDescription())
-                .isEqualTo(MESSAGE_ASSISTANT_HALF_SHEET_DESCRIPTION);
-        assertThat(strings.getAssistantNotificationDescription())
-                .isEqualTo(MESSAGE_ASSISTANT_NOTIFICATION_DESCRIPTION);
-        assertThat(strings.getFastPairTvConnectDeviceNoAccountDescription())
-                .isEqualTo(MESSAGE_FAST_PAIR_TV_CONNECT_DEVICE_NO_ACCOUNT_DESCRIPTION);
     }
 
     @Test
@@ -124,10 +118,7 @@ public final class DataUtilsTest {
                         + "subsequentPairingDescription=message 6, "
                         + "retroactivePairingDescription=message 7, "
                         + "waitAppLaunchDescription=message 8, "
-                        + "pairingFailDescription=message 9, "
-                        + "assistantHalfSheetDescription=message 11, "
-                        + "assistantNotificationDescription=message 12, "
-                        + "fastPairTvConnectDeviceNoAccountDescription=message 10]");
+                        + "pairingFailDescription=message 9]");
     }
 
     private static GetObservedDeviceResponse createObservedDeviceResponse() {
@@ -168,13 +159,7 @@ public final class DataUtilsTest {
                                 .setWaitLaunchCompanionAppDescription(
                                         MESSAGE_WAIT_LAUNCH_COMPANION_APP_DESCRIPTION)
                                 .setFailConnectGoToSettingsDescription(
-                                        MESSAGE_FAIL_CONNECT_DESCRIPTION)
-                                .setAssistantSetupHalfSheet(
-                                        MESSAGE_ASSISTANT_HALF_SHEET_DESCRIPTION)
-                                .setAssistantSetupNotification(
-                                        MESSAGE_ASSISTANT_NOTIFICATION_DESCRIPTION)
-                                .setFastPairTvConnectDeviceNoAccountDescription(
-                                        MESSAGE_FAST_PAIR_TV_CONNECT_DEVICE_NO_ACCOUNT_DESCRIPTION))
+                                        MESSAGE_FAIL_CONNECT_DESCRIPTION))
                 .build();
     }
 }

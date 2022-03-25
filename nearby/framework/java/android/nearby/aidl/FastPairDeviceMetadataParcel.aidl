@@ -49,10 +49,6 @@ parcelable FastPairDeviceMetadataParcel {
     String trueWirelessImageUrlRightBud;
     String trueWirelessImageUrlCase;
 
-    // Stings to be displayed in notification surfaced for a device.
-    // The locale of all of the Strings.
-    String locale;
-
     // The notification description for when the device is initially discovered.
     String initialNotificationDescription;
 
@@ -100,31 +96,4 @@ parcelable FastPairDeviceMetadataParcel {
     // The description that indicates go to bluetooth settings when connection
     // fail.
     String failConnectGoToSettingsDescription;
-
-    // The title of the UI to ask the user to confirm the pin code.
-    String confirmPinTitle;
-
-    // The description of the UI to ask the user to confirm the pin code.
-    String confirmPinDescription;
-
-    // The title of the UI to ask the user to confirm to sync contacts.
-    String syncContactsTitle;
-
-    // The description of the UI to ask the user to confirm to sync contacts.
-    String syncContactsDescription;
-
-    // The title of the UI to ask the user to confirm to sync SMS.
-    String syncSmsTitle;
-
-    // The description of the UI to ask the user to confirm to sync SMS.
-    String syncSmsDescription;
-
-    // The description in half sheet to ask user setup google assistant
-    String assistantSetupHalfSheet;
-
-    // The description in notification to ask user setup google assistant
-    String assistantSetupNotification;
-
-    // Description of the connect device action on TV, when user is not logged in.
-    String fastPairTvConnectDeviceNoAccountDescription;
 }

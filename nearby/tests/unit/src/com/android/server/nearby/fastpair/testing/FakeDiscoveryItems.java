@@ -42,7 +42,6 @@ public class FakeDiscoveryItems {
         item.setState(Cache.StoredDiscoveryItem.State.STATE_ENABLED);
         item.setId(FAST_PAIR_ID);
         item.setDescription(DEFAULT_DESCRIPITON);
-        item.setType(Cache.NearbyType.NEARBY_DEVICE);
         item.setTriggerId(triggerId);
         item.setMacAddress(DEFAULT_MAC_ADDRESS);
         item.setFirstObservationTimestampMillis(DEFAULT_TIMESTAMP);
