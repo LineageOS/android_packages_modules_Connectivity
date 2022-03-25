@@ -236,7 +236,6 @@ package android.net {
   public abstract class NetworkAgent {
     ctor public NetworkAgent(@NonNull android.content.Context, @NonNull android.os.Looper, @NonNull String, @NonNull android.net.NetworkCapabilities, @NonNull android.net.LinkProperties, int, @NonNull android.net.NetworkAgentConfig, @Nullable android.net.NetworkProvider);
     ctor public NetworkAgent(@NonNull android.content.Context, @NonNull android.os.Looper, @NonNull String, @NonNull android.net.NetworkCapabilities, @NonNull android.net.LinkProperties, @NonNull android.net.NetworkScore, @NonNull android.net.NetworkAgentConfig, @Nullable android.net.NetworkProvider);
-    method public void destroyAndAwaitReplacement(@IntRange(from=0, to=0x1388) int);
     method @Nullable public android.net.Network getNetwork();
     method public void markConnected();
     method public void onAddKeepalivePacketFilter(int, @NonNull android.net.KeepalivePacketData);
@@ -271,6 +270,7 @@ package android.net {
     method public void setTeardownDelayMillis(@IntRange(from=0, to=0x1388) int);
     method public final void setUnderlyingNetworks(@Nullable java.util.List<android.net.Network>);
     method public void unregister();
+    method public void unregisterAfterReplacement(@IntRange(from=0, to=0x1388) int);
     field public static final int VALIDATION_STATUS_NOT_VALID = 2; // 0x2
     field public static final int VALIDATION_STATUS_VALID = 1; // 0x1
   }

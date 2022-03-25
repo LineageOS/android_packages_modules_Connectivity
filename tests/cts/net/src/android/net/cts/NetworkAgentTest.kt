@@ -1152,7 +1152,7 @@ class NetworkAgentTest {
     }
 
     @Test
-    fun testDestroyAndAwaitReplacement() {
+    fun testUnregisterAfterReplacement() {
         // Keeps an eye on all test networks.
         val matchAllCallback = TestableNetworkCallback(timeoutMs = DEFAULT_TIMEOUT_MS)
         registerNetworkCallback(makeTestNetworkRequest(), matchAllCallback)
@@ -1180,15 +1180,15 @@ class NetworkAgentTest {
         // Mark the first network as awaiting replacement. This should destroy the underlying
         // native network and send onNetworkDestroyed, but will not send any NetworkCallbacks,
         // because for callback and scoring purposes network1 is still connected.
-        agent1.destroyAndAwaitReplacement(5_000 /* timeoutMillis */)
+        agent1.unregisterAfterReplacement(5_000 /* timeoutMillis */)
         agent1.expectCallback<OnNetworkDestroyed>()
         assertThrows(IOException::class.java) { network1.bindSocket(DatagramSocket()) }
         assertNotNull(mCM.getLinkProperties(network1))
 
-        // Calling destroyAndAwaitReplacement more than once has no effect.
+        // Calling unregisterAfterReplacement more than once has no effect.
         // If it did, this test would fail because the 1ms timeout means that the network would be
         // torn down before the replacement arrives.
-        agent1.destroyAndAwaitReplacement(1 /* timeoutMillis */)
+        agent1.unregisterAfterReplacement(1 /* timeoutMillis */)
 
         // Connect a third network. Because network1 is awaiting replacement, network3 is preferred
         // as soon as it validates (until then, it is outscored by network1).
@@ -1216,14 +1216,14 @@ class NetworkAgentTest {
         matchAllCallback.expectCallback<Losing>(network3)
         testCallback.expectAvailableCallbacks(network4, validated = true)
         mCM.unregisterNetworkCallback(agent4callback)
-        agent3.destroyAndAwaitReplacement(5_000)
+        agent3.unregisterAfterReplacement(5_000)
         agent3.expectCallback<OnNetworkUnwanted>()
         matchAllCallback.expectCallback<Lost>(network3, 1000L)
         agent3.expectCallback<OnNetworkDestroyed>()
 
         // Now mark network4 awaiting replacement with a low timeout, and check that if no
         // replacement arrives, it is torn down.
-        agent4.destroyAndAwaitReplacement(100 /* timeoutMillis */)
+        agent4.unregisterAfterReplacement(100 /* timeoutMillis */)
         matchAllCallback.expectCallback<Lost>(network4, 1000L /* timeoutMs */)
         testCallback.expectCallback<Lost>(network4, 1000L /* timeoutMs */)
         agent4.expectCallback<OnNetworkDestroyed>()
@@ -1234,7 +1234,7 @@ class NetworkAgentTest {
         val (agent5, network5) = connectNetwork()
         matchAllCallback.expectAvailableThenValidatedCallbacks(network5)
         testCallback.expectAvailableThenValidatedCallbacks(network5)
-        agent5.destroyAndAwaitReplacement(5_000 /* timeoutMillis */)
+        agent5.unregisterAfterReplacement(5_000 /* timeoutMillis */)
         agent5.unregister()
         matchAllCallback.expectCallback<Lost>(network5, 1000L /* timeoutMs */)
         testCallback.expectCallback<Lost>(network5, 1000L /* timeoutMs */)
@@ -1257,7 +1257,7 @@ class NetworkAgentTest {
             it.hasCapability(NET_CAPABILITY_VALIDATED)
         }
 
-        wifiAgent.destroyAndAwaitReplacement(5_000 /* timeoutMillis */)
+        wifiAgent.unregisterAfterReplacement(5_000 /* timeoutMillis */)
         wifiAgent.expectCallback<OnNetworkDestroyed>()
 
         // Once the network is awaiting replacement, changing LinkProperties, NetworkCapabilities or

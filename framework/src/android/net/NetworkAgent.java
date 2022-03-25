@@ -440,7 +440,7 @@ public abstract class NetworkAgent {
      * arg1 = timeout in milliseconds
      * @hide
      */
-    public static final int EVENT_DESTROY_AND_AWAIT_REPLACEMENT = BASE + 29;
+    public static final int EVENT_UNREGISTER_AFTER_REPLACEMENT = BASE + 29;
 
     private static NetworkInfo getLegacyNetworkInfo(final NetworkAgentConfig config) {
         final NetworkInfo ni = new NetworkInfo(config.legacyType, config.legacySubType,
@@ -984,9 +984,9 @@ public abstract class NetworkAgent {
      * @param timeoutMillis the timeout after which this network will be unregistered even if
      *                      {@link #unregister} was not called.
      */
-    public void destroyAndAwaitReplacement(
+    public void unregisterAfterReplacement(
             @IntRange(from = 0, to = MAX_TEARDOWN_DELAY_MS) int timeoutMillis) {
-        queueOrSendMessage(reg -> reg.sendDestroyAndAwaitReplacement(timeoutMillis));
+        queueOrSendMessage(reg -> reg.sendUnregisterAfterReplacement(timeoutMillis));
     }
 
     /**

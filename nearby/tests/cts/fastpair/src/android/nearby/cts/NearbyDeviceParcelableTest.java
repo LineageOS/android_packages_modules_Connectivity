@@ -50,6 +50,7 @@ public class NearbyDeviceParcelableTest {
                 .setName("testDevice")
                 .setMedium(NearbyDevice.Medium.BLE)
                 .setRssi(RSSI)
+                .setTxPower(-90)
                 .setFastPairModelId(FAST_PAIR_MODEL_ID)
                 .setBluetoothAddress(BLUETOOTH_ADDRESS)
                 .setData(SCAN_DATA);
@@ -64,7 +65,7 @@ public class NearbyDeviceParcelableTest {
                 mBuilder.setFastPairModelId(null).setData(null).build();
 
         assertThat(nearbyDeviceParcelable.toString()).isEqualTo(
-                "NearbyDeviceParcelable[name=testDevice, medium=BLE, rssi=-60, "
+                "NearbyDeviceParcelable[name=testDevice, medium=BLE, rssi=-60, txPower=-90, "
                         + "bluetoothAddress="
                         + BLUETOOTH_ADDRESS + ", fastPairModelId=null, data=null]");
     }
@@ -72,7 +73,7 @@ public class NearbyDeviceParcelableTest {
     @Test
     @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void test_defaultNullFields() {
-        NearbyDeviceParcelable nearbyDeviceParcelable =  new NearbyDeviceParcelable.Builder()
+        NearbyDeviceParcelable nearbyDeviceParcelable = new NearbyDeviceParcelable.Builder()
                 .setMedium(NearbyDevice.Medium.BLE)
                 .setRssi(RSSI)
                 .build();
