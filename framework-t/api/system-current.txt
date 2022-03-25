@@ -26,6 +26,7 @@ package android.nearby {
     method public int getVersion();
     field public static final int BROADCAST_TYPE_NEARBY_PRESENCE = 3; // 0x3
     field public static final int BROADCAST_TYPE_UNKNOWN = -1; // 0xffffffff
+    field public static final int MEDIUM_BLE = 1; // 0x1
     field public static final int PRESENCE_VERSION_UNKNOWN = -1; // 0xffffffff
     field public static final int PRESENCE_VERSION_V0 = 0; // 0x0
     field public static final int PRESENCE_VERSION_V1 = 1; // 0x1
@@ -338,7 +339,6 @@ package android.nearby {
     field public static final int CREDENTIAL_TYPE_PUBLIC = 1; // 0x1
     field public static final int IDENTITY_TYPE_PRIVATE = 1; // 0x1
     field public static final int IDENTITY_TYPE_PROVISIONED = 2; // 0x2
-    field public static final int IDENTITY_TYPE_PUBLIC = 4; // 0x4
     field public static final int IDENTITY_TYPE_TRUSTED = 3; // 0x3
     field public static final int IDENTITY_TYPE_UNKNOWN = 0; // 0x0
   }
