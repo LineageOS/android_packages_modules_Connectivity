@@ -259,6 +259,7 @@ public class NearbyManager {
      * @param context the {@link Context} to set the setting
      * @param enable whether the Fast Pair scan should be enabled
      */
+    @RequiresPermission(Manifest.permission.WRITE_SECURE_SETTINGS)
     public static void setFastPairScanEnabled(@NonNull Context context, boolean enable) {
         Settings.Secure.putInt(
                 context.getContentResolver(), FAST_PAIR_SCAN_ENABLED, enable ? 1 : 0);
