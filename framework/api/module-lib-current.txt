@@ -30,10 +30,10 @@ package android.net {
     method @Deprecated @RequiresPermission(android.Manifest.permission.NETWORK_STACK) public void setProfileNetworkPreference(@NonNull android.os.UserHandle, int, @Nullable java.util.concurrent.Executor, @Nullable Runnable);
     method @RequiresPermission(android.Manifest.permission.NETWORK_STACK) public void setProfileNetworkPreferences(@NonNull android.os.UserHandle, @NonNull java.util.List<android.net.ProfileNetworkPreference>, @Nullable java.util.concurrent.Executor, @Nullable Runnable);
     method @RequiresPermission(anyOf={android.net.NetworkStack.PERMISSION_MAINLINE_NETWORK_STACK, android.Manifest.permission.NETWORK_STACK, android.Manifest.permission.NETWORK_SETTINGS}) public void setRequireVpnForUids(boolean, @NonNull java.util.Collection<android.util.Range<java.lang.Integer>>);
+    method @RequiresPermission(anyOf={android.Manifest.permission.NETWORK_SETTINGS, android.Manifest.permission.NETWORK_STACK, android.net.NetworkStack.PERMISSION_MAINLINE_NETWORK_STACK}) public void setUidFirewallRule(int, int, int);
     method @RequiresPermission(anyOf={android.Manifest.permission.MANAGE_TEST_NETWORKS, android.Manifest.permission.NETWORK_STACK}) public void simulateDataStall(int, long, @NonNull android.net.Network, @NonNull android.os.PersistableBundle);
     method @RequiresPermission(anyOf={android.Manifest.permission.NETWORK_SETTINGS, android.Manifest.permission.NETWORK_STACK, android.net.NetworkStack.PERMISSION_MAINLINE_NETWORK_STACK}) public void startCaptivePortalApp(@NonNull android.net.Network);
     method public void systemReady();
-    method @RequiresPermission(anyOf={android.Manifest.permission.NETWORK_SETTINGS, android.Manifest.permission.NETWORK_STACK, android.net.NetworkStack.PERMISSION_MAINLINE_NETWORK_STACK}) public void updateFirewallRule(int, int, boolean);
     field public static final String ACTION_CLEAR_DNS_CACHE = "android.net.action.CLEAR_DNS_CACHE";
     field public static final String ACTION_PROMPT_LOST_VALIDATION = "android.net.action.PROMPT_LOST_VALIDATION";
     field public static final String ACTION_PROMPT_PARTIAL_CONNECTIVITY = "android.net.action.PROMPT_PARTIAL_CONNECTIVITY";
@@ -54,6 +54,9 @@ package android.net {
     field public static final int FIREWALL_CHAIN_POWERSAVE = 3; // 0x3
     field public static final int FIREWALL_CHAIN_RESTRICTED = 4; // 0x4
     field public static final int FIREWALL_CHAIN_STANDBY = 2; // 0x2
+    field public static final int FIREWALL_RULE_ALLOW = 1; // 0x1
+    field public static final int FIREWALL_RULE_DEFAULT = 0; // 0x0
+    field public static final int FIREWALL_RULE_DENY = 2; // 0x2
     field public static final int PROFILE_NETWORK_PREFERENCE_DEFAULT = 0; // 0x0
     field public static final int PROFILE_NETWORK_PREFERENCE_ENTERPRISE = 1; // 0x1
     field public static final int PROFILE_NETWORK_PREFERENCE_ENTERPRISE_NO_FALLBACK = 2; // 0x2
