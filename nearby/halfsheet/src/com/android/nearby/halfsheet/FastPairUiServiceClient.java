@@ -14,53 +14,60 @@
  * limitations under the License.
  */
 
-package android.nearby;
+package com.android.nearby.halfsheet;
 
-import android.annotation.BinderThread;
 import android.content.Context;
-import android.nearby.aidl.IFastPairClient;
+import android.nearby.FastPairDevice;
+import android.nearby.FastPairStatusCallback;
+import android.nearby.PairStatusMetadata;
 import android.nearby.aidl.IFastPairStatusCallback;
+import android.nearby.aidl.IFastPairUiService;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.RemoteException;
 import android.util.Log;
 
+import androidx.annotation.BinderThread;
+import androidx.annotation.UiThread;
+
 import java.lang.ref.WeakReference;
 
 /**
- * 0p API for controlling Fast Pair. It communicates between main thread and service.
+ *  A utility class for connecting to the {@link IFastPairUiService} and receive callbacks.
  *
  * @hide
  */
-public class FastPairClient {
+@UiThread
+public class FastPairUiServiceClient {
 
-    private static final String TAG = "FastPairClient";
+    private static final String TAG = "FastPairHalfSheet";
+
     private final IBinder mBinder;
     private final WeakReference<Context> mWeakContext;
-    IFastPairClient mFastPairClient;
+    IFastPairUiService mFastPairUiService;
     PairStatusCallbackIBinder mPairStatusCallbackIBinder;
 
     /**
      * The Ibinder instance should be from
-     * {@link com.android.server.nearby.fastpair.halfsheet.FastPairService} so that the client can
+     * {@link com.android.server.nearby.fastpair.halfsheet.FastPairUiServiceImpl} so that the client can
      * talk with the service.
      */
-    public FastPairClient(Context context, IBinder binder) {
+    public FastPairUiServiceClient(Context context, IBinder binder) {
         mBinder = binder;
-        mFastPairClient = IFastPairClient.Stub.asInterface(mBinder);
+        mFastPairUiService = IFastPairUiService.Stub.asInterface(mBinder);
         mWeakContext = new WeakReference<>(context);
     }
 
     /**
      * Registers a callback at service to get UI updates.
      */
-    public void registerHalfSheet(FastPairStatusCallback fastPairStatusCallback) {
+    public void registerHalfSheetStateCallBack(FastPairStatusCallback fastPairStatusCallback) {
         if (mPairStatusCallbackIBinder != null) {
             return;
         }
         mPairStatusCallbackIBinder = new PairStatusCallbackIBinder(fastPairStatusCallback);
         try {
-            mFastPairClient.registerHalfSheet(mPairStatusCallbackIBinder);
+            mFastPairUiService.registerCallback(mPairStatusCallbackIBinder);
         } catch (RemoteException e) {
             Log.w(TAG, "Failed to register fastPairStatusCallback", e);
         }
@@ -71,7 +78,18 @@ public class FastPairClient {
      */
     public void connect(FastPairDevice fastPairDevice) {
         try {
-            mFastPairClient.connect(fastPairDevice);
+            mFastPairUiService.connect(fastPairDevice);
+        } catch (RemoteException e) {
+            Log.w(TAG, "Failed to connect Fast Pair device" + fastPairDevice, e);
+        }
+    }
+
+    /**
+     * Cancels Fast Pair connection and dismisses half sheet.
+     */
+    public void cancel(FastPairDevice fastPairDevice) {
+        try {
+            mFastPairUiService.cancel(fastPairDevice);
         } catch (RemoteException e) {
             Log.w(TAG, "Failed to connect Fast Pair device" + fastPairDevice, e);
         }

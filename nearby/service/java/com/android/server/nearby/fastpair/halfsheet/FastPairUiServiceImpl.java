@@ -21,8 +21,8 @@ import static com.android.server.nearby.fastpair.Constant.TAG;
 import android.nearby.FastPairDevice;
 import android.nearby.FastPairStatusCallback;
 import android.nearby.PairStatusMetadata;
-import android.nearby.aidl.IFastPairClient;
 import android.nearby.aidl.IFastPairStatusCallback;
+import android.nearby.aidl.IFastPairUiService;
 import android.os.IBinder;
 import android.os.RemoteException;
 import android.util.Log;
@@ -34,7 +34,7 @@ import com.android.server.nearby.fastpair.FastPairController;
  *
  * @hide
  */
-public class FastPairService extends IFastPairClient.Stub {
+public class FastPairUiServiceImpl extends IFastPairUiService.Stub {
 
     private IBinder mStatusCallbackProxy;
     private FastPairController mFastPairController;
@@ -45,7 +45,7 @@ public class FastPairService extends IFastPairClient.Stub {
      * in the server.
      */
     @Override
-    public void registerHalfSheet(IFastPairStatusCallback iFastPairStatusCallback) {
+    public void registerCallback(IFastPairStatusCallback iFastPairStatusCallback) {
         mStatusCallbackProxy = iFastPairStatusCallback.asBinder();
         mFastPairStatusCallback = new FastPairStatusCallback() {
             @Override
@@ -64,7 +64,7 @@ public class FastPairService extends IFastPairClient.Stub {
      * Unregisters the Binder call back in the server.
      */
     @Override
-    public void unregisterHalfSheet(IFastPairStatusCallback iFastPairStatusCallback) {
+    public void unregisterCallback(IFastPairStatusCallback iFastPairStatusCallback) {
         mStatusCallbackProxy = null;
         mFastPairStatusCallback = null;
     }
@@ -79,6 +79,13 @@ public class FastPairService extends IFastPairClient.Stub {
         } else {
             Log.w(TAG, "Failed to connect because there is no FastPairController.");
         }
+    }
+
+    /**
+     * Cancels Fast Pair connection and dismisses half sheet.
+     */
+    @Override
+    public void cancel(FastPairDevice fastPairDevice) {
     }
 
     public FastPairStatusCallback getPairStatusCallback() {

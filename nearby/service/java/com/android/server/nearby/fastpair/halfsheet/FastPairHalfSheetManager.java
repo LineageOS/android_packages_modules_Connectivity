@@ -59,7 +59,7 @@ public class FastPairHalfSheetManager {
     private String mHalfSheetApkPkgName;
     private final LocatorContextWrapper mLocatorContextWrapper;
 
-    FastPairService mFastPairService;
+    FastPairUiServiceImpl mFastPairUiService;
 
     public FastPairHalfSheetManager(Context context) {
         this(new LocatorContextWrapper(context));
@@ -68,7 +68,7 @@ public class FastPairHalfSheetManager {
     @VisibleForTesting
     FastPairHalfSheetManager(LocatorContextWrapper locatorContextWrapper) {
         mLocatorContextWrapper = locatorContextWrapper;
-        mFastPairService = new FastPairService();
+        mFastPairUiService = new FastPairUiServiceImpl();
     }
 
     /**
@@ -83,10 +83,10 @@ public class FastPairHalfSheetManager {
                     Log.e(TAG, "package name is null");
                     return;
                 }
-                mFastPairService.setFastPairController(
+                mFastPairUiService.setFastPairController(
                         mLocatorContextWrapper.getLocator().get(FastPairController.class));
                 Bundle bundle = new Bundle();
-                bundle.putBinder(EXTRA_BINDER, mFastPairService);
+                bundle.putBinder(EXTRA_BINDER, mFastPairUiService);
                 mLocatorContextWrapper
                         .startActivityAsUser(new Intent(ACTIVITY_INTENT_ACTION)
                                         .putExtra(EXTRA_HALF_SHEET_INFO,
@@ -107,7 +107,7 @@ public class FastPairHalfSheetManager {
      * Shows pairing fail half sheet.
      */
     public void showPairingFailed() {
-        FastPairStatusCallback pairStatusCallback = mFastPairService.getPairStatusCallback();
+        FastPairStatusCallback pairStatusCallback = mFastPairUiService.getPairStatusCallback();
         if (pairStatusCallback != null) {
             Log.v(TAG, "showPairingFailed: pairStatusCallback not NULL");
             pairStatusCallback.onPairUpdate(new FastPairDevice.Builder().build(),
@@ -142,7 +142,7 @@ public class FastPairHalfSheetManager {
      * Shows pairing success info.
      */
     public void showPairingSuccessHalfSheet(String address) {
-        FastPairStatusCallback pairStatusCallback = mFastPairService.getPairStatusCallback();
+        FastPairStatusCallback pairStatusCallback = mFastPairUiService.getPairStatusCallback();
         if (pairStatusCallback != null) {
             pairStatusCallback.onPairUpdate(
                     new FastPairDevice.Builder().setBluetoothAddress(address).build(),
