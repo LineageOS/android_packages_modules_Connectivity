@@ -21,12 +21,12 @@ import android.nearby.FastPairAntispoofKeyDeviceMetadata
 import android.nearby.FastPairDeviceMetadata
 import android.nearby.FastPairDiscoveryItem
 import com.google.common.io.BaseEncoding
-import com.google.gson.Gson
+import com.google.gson.GsonBuilder
 import com.google.gson.annotations.SerializedName
 
 /** Manage a cache of Fast Pair test data for testing. */
 class FastPairTestDataCache {
-    private val gson = Gson()
+    private val gson = GsonBuilder().disableHtmlEscaping().create()
     private val accountKeyDeviceMetadataList = mutableListOf<FastPairAccountKeyDeviceMetadata>()
     private val antispoofKeyDeviceMetadataDataMap =
         mutableMapOf<String, FastPairAntispoofKeyDeviceMetadataData>()
@@ -71,13 +71,13 @@ class FastPairTestDataCache {
         @SerializedName("account_key") val accountKey: String?,
         @SerializedName("sha256_account_key_public_address") val accountKeyPublicAddress: String?,
         @SerializedName("fast_pair_device_metadata") val deviceMeta: FastPairDeviceMetadataData?,
-        @SerializedName("fast_pair_discovery_item") val discoveryItem: FastPairDiscoveryItemData?,
+        @SerializedName("fast_pair_discovery_item") val discoveryItem: FastPairDiscoveryItemData?
     ) {
         constructor(meta: FastPairAccountKeyDeviceMetadata) : this(
             accountKey = meta.deviceAccountKey?.base64Encode(),
             accountKeyPublicAddress = meta.sha256DeviceAccountKeyPublicAddress?.base64Encode(),
             deviceMeta = meta.fastPairDeviceMetadata?.let { FastPairDeviceMetadataData(it) },
-            discoveryItem = meta.fastPairDiscoveryItem?.let { FastPairDiscoveryItemData(it) },
+            discoveryItem = meta.fastPairDiscoveryItem?.let { FastPairDiscoveryItemData(it) }
         )
 
         fun toFastPairAccountKeyDeviceMetadata(): FastPairAccountKeyDeviceMetadata {
@@ -92,7 +92,7 @@ class FastPairTestDataCache {
 
     data class FastPairAntispoofKeyDeviceMetadataData(
         @SerializedName("anti_spoofing_public_key_str") val antispoofPublicKey: String?,
-        @SerializedName("fast_pair_device_metadata") val deviceMeta: FastPairDeviceMetadataData?,
+        @SerializedName("fast_pair_device_metadata") val deviceMeta: FastPairDeviceMetadataData?
     ) {
         fun toFastPairAntispoofKeyDeviceMetadata(): FastPairAntispoofKeyDeviceMetadata {
             return FastPairAntispoofKeyDeviceMetadata.Builder()
@@ -135,7 +135,7 @@ class FastPairTestDataCache {
         @SerializedName("unable_to_connect_description") val unableToConnectDescription: String?,
         @SerializedName("unable_to_connect_title") val unableToConnectTitle: String?,
         @SerializedName("update_companion_app_description") val updateCompAppDes: String?,
-        @SerializedName("wait_launch_companion_app_description") val waitLaunchCompApp: String?,
+        @SerializedName("wait_launch_companion_app_description") val waitLaunchCompApp: String?
     ) {
         constructor(meta: FastPairDeviceMetadata) : this(
             assistantSetupHalfSheet = meta.assistantSetupHalfSheet,
@@ -170,7 +170,7 @@ class FastPairTestDataCache {
             unableToConnectDescription = meta.unableToConnectDescription,
             unableToConnectTitle = meta.unableToConnectTitle,
             updateCompAppDes = meta.updateCompanionAppDescription,
-            waitLaunchCompApp = meta.waitLaunchCompanionAppDescription,
+            waitLaunchCompApp = meta.waitLaunchCompanionAppDescription
         )
 
         fun toFastPairDeviceMetadata(): FastPairDeviceMetadata {
@@ -242,7 +242,7 @@ class FastPairTestDataCache {
         @SerializedName("title") val title: String?,
         @SerializedName("trigger_id") val triggerId: String?,
         @SerializedName("tx_power") val txPower: Int,
-        @SerializedName("type") val type: Int,
+        @SerializedName("type") val type: Int
     ) {
         constructor(item: FastPairDiscoveryItem) : this(
             actionUrl = item.actionUrl,
@@ -274,7 +274,7 @@ class FastPairTestDataCache {
             title = item.title,
             triggerId = item.triggerId,
             txPower = item.txPower,
-            type = item.type,
+            type = item.type
         )
 
         fun toFastPairDiscoveryItem(): FastPairDiscoveryItem {
