@@ -20,6 +20,7 @@ import static android.nearby.ScanRequest.SCAN_TYPE_NEARBY_PRESENCE;
 
 import static com.android.server.nearby.NearbyService.TAG;
 
+import android.annotation.Nullable;
 import android.content.Context;
 import android.nearby.IScanListener;
 import android.nearby.NearbyDeviceParcelable;
@@ -35,20 +36,22 @@ import com.android.server.nearby.injector.Injector;
 import com.android.server.nearby.metrics.NearbyMetrics;
 import com.android.server.nearby.presence.PresenceDiscoveryResult;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
 
-/**
- * Manages all aspects of discovery providers.
- */
+/** Manages all aspects of discovery providers. */
 public class DiscoveryProviderManager implements AbstractDiscoveryProvider.Listener {
 
     protected final Object mLock = new Object();
     private final Context mContext;
     private final BleDiscoveryProvider mBleDiscoveryProvider;
+    @Nullable private final ChreDiscoveryProvider mChreDiscoveryProvider;
     private @ScanRequest.ScanMode int mScanMode;
 
     @GuardedBy("mLock")
@@ -65,18 +68,24 @@ public class DiscoveryProviderManager implements AbstractDiscoveryProvider.Liste
                 }
                 if (nearbyDevice.getScanType() == SCAN_TYPE_NEARBY_PRESENCE) {
                     List<ScanFilter> presenceFilters =
-                            record.getScanRequest().getScanFilters().stream().filter(
-                                    scanFilter -> scanFilter.getType()
-                                            == SCAN_TYPE_NEARBY_PRESENCE).collect(
-                                    Collectors.toList());
+                            record.getScanRequest().getScanFilters().stream()
+                                    .filter(
+                                            scanFilter ->
+                                                    scanFilter.getType()
+                                                            == SCAN_TYPE_NEARBY_PRESENCE)
+                                    .collect(Collectors.toList());
+                    Log.i(
+                            TAG,
+                            String.format("match with filters size: %d", presenceFilters.size()));
                     if (!presenceFilterMatches(nearbyDevice, presenceFilters)) {
                         continue;
                     }
                 }
                 try {
-                    record.getScanListener().onDiscovered(
-                            PrivacyFilter.filter(record.getScanRequest().getScanType(),
-                                    nearbyDevice));
+                    record.getScanListener()
+                            .onDiscovered(
+                                    PrivacyFilter.filter(
+                                            record.getScanRequest().getScanType(), nearbyDevice));
                     NearbyMetrics.logScanDeviceDiscovered(
                             record.hashCode(), record.getScanRequest(), nearbyDevice);
                 } catch (RemoteException e) {
@@ -89,6 +98,10 @@ public class DiscoveryProviderManager implements AbstractDiscoveryProvider.Liste
     public DiscoveryProviderManager(Context context, Injector injector) {
         mContext = context;
         mBleDiscoveryProvider = new BleDiscoveryProvider(mContext, injector);
+        Executor executor = Executors.newSingleThreadExecutor();
+        mChreDiscoveryProvider =
+                new ChreDiscoveryProvider(
+                        mContext, new ChreCommunication(injector, executor), executor);
         mScanTypeScanListenerRecordMap = new HashMap<>();
     }
 
@@ -96,23 +109,24 @@ public class DiscoveryProviderManager implements AbstractDiscoveryProvider.Liste
      * Registers the listener in the manager and starts scan according to the requested scan mode.
      */
     public boolean registerScanListener(ScanRequest scanRequest, IScanListener listener) {
+        Log.i(TAG, "DiscoveryProviderManager registerScanListener");
         synchronized (mLock) {
             IBinder listenerBinder = listener.asBinder();
             if (mScanTypeScanListenerRecordMap.containsKey(listener.asBinder())) {
-                ScanRequest savedScanRequest = mScanTypeScanListenerRecordMap
-                        .get(listenerBinder).getScanRequest();
+                ScanRequest savedScanRequest =
+                        mScanTypeScanListenerRecordMap.get(listenerBinder).getScanRequest();
                 if (scanRequest.equals(savedScanRequest)) {
                     Log.d(TAG, "Already registered the scanRequest: " + scanRequest);
                     return true;
                 }
             }
+            ScanListenerRecord scanListenerRecord = new ScanListenerRecord(scanRequest, listener);
+            mScanTypeScanListenerRecordMap.put(listenerBinder, scanListenerRecord);
 
             if (!startProviders(scanRequest)) {
                 return false;
             }
 
-            ScanListenerRecord scanListenerRecord = new ScanListenerRecord(scanRequest, listener);
-            mScanTypeScanListenerRecordMap.put(listenerBinder, scanListenerRecord);
             NearbyMetrics.logScanStarted(scanListenerRecord.hashCode(), scanRequest);
             if (mScanMode < scanRequest.getScanMode()) {
                 mScanMode = scanRequest.getScanMode();
@@ -129,20 +143,22 @@ public class DiscoveryProviderManager implements AbstractDiscoveryProvider.Liste
         IBinder listenerBinder = listener.asBinder();
         synchronized (mLock) {
             if (!mScanTypeScanListenerRecordMap.containsKey(listenerBinder)) {
-                Log.w(TAG,
+                Log.w(
+                        TAG,
                         "Cannot unregister the scanRequest because the request is never "
                                 + "registered.");
                 return;
             }
 
-            ScanListenerRecord removedRecord = mScanTypeScanListenerRecordMap
-                    .remove(listenerBinder);
-            NearbyMetrics.logScanStopped(
-                    removedRecord.hashCode(), removedRecord.getScanRequest());
+            ScanListenerRecord removedRecord =
+                    mScanTypeScanListenerRecordMap.remove(listenerBinder);
+            NearbyMetrics.logScanStopped(removedRecord.hashCode(), removedRecord.getScanRequest());
             if (mScanTypeScanListenerRecordMap.isEmpty()) {
                 stopProviders();
                 return;
             }
+
+            // TODO(b/221082271): updates the scan with reduced filters.
 
             // Removes current highest scan mode requested and sets the next highest scan mode.
             if (removedRecord.getScanRequest().getScanMode() == mScanMode) {
@@ -166,8 +182,13 @@ public class DiscoveryProviderManager implements AbstractDiscoveryProvider.Liste
     // starts successfully.
     private boolean startProviders(ScanRequest scanRequest) {
         if (scanRequest.isBleEnabled()) {
-            startBleProvider(scanRequest);
-            return true;
+            if (mChreDiscoveryProvider.available()) {
+                startChreProvider();
+                return true;
+            } else {
+                startBleProvider(scanRequest);
+                return true;
+            }
         }
         return false;
     }
@@ -181,31 +202,57 @@ public class DiscoveryProviderManager implements AbstractDiscoveryProvider.Liste
         }
     }
 
+    private void startChreProvider() {
+        Log.d(TAG, "DiscoveryProviderManager starts CHRE scanning.");
+        synchronized (mLock) {
+            mChreDiscoveryProvider.getController().setListener(this);
+            List<ScanFilter> scanFilters = new ArrayList();
+            for (IBinder listenerBinder : mScanTypeScanListenerRecordMap.keySet()) {
+                ScanListenerRecord record = mScanTypeScanListenerRecordMap.get(listenerBinder);
+                List<ScanFilter> presenceFilters =
+                        record.getScanRequest().getScanFilters().stream()
+                                .filter(
+                                        scanFilter ->
+                                                scanFilter.getType() == SCAN_TYPE_NEARBY_PRESENCE)
+                                .collect(Collectors.toList());
+                scanFilters.addAll(presenceFilters);
+            }
+            mChreDiscoveryProvider.getController().setProviderScanFilters(scanFilters);
+            mChreDiscoveryProvider.getController().setProviderScanMode(mScanMode);
+            mChreDiscoveryProvider.getController().start();
+        }
+    }
+
     private void stopProviders() {
         stopBleProvider();
+        stopChreProvider();
     }
 
     private void stopBleProvider() {
         mBleDiscoveryProvider.getController().stop();
     }
 
-    private void invalidateProviderScanMode() {
-        if (!mBleDiscoveryProvider.getController().isStarted()) {
-            Log.d(TAG,
-                    "Skip invalidating BleDiscoveryProvider scan mode because the provider not "
-                            + "started.");
-            return;
-        }
-        mBleDiscoveryProvider.getController().setProviderScanMode(mScanMode);
+    private void stopChreProvider() {
+        mChreDiscoveryProvider.getController().stop();
     }
 
-    private static boolean presenceFilterMatches(NearbyDeviceParcelable device,
-            List<ScanFilter> scanFilters) {
+    private void invalidateProviderScanMode() {
+        if (mBleDiscoveryProvider.getController().isStarted()) {
+            mBleDiscoveryProvider.getController().setProviderScanMode(mScanMode);
+        } else {
+            Log.d(
+                    TAG,
+                    "Skip invalidating BleDiscoveryProvider scan mode because the provider not "
+                            + "started.");
+        }
+    }
+
+    private static boolean presenceFilterMatches(
+            NearbyDeviceParcelable device, List<ScanFilter> scanFilters) {
         if (scanFilters.isEmpty()) {
             return true;
         }
-        PresenceDiscoveryResult discoveryResult = PresenceDiscoveryResult.fromScanData(
-                device.getData(), device.getRssi());
+        PresenceDiscoveryResult discoveryResult = PresenceDiscoveryResult.fromDevice(device);
         for (ScanFilter scanFilter : scanFilters) {
             PresenceScanFilter presenceScanFilter = (PresenceScanFilter) scanFilter;
             if (discoveryResult.matches(presenceScanFilter)) {
@@ -220,7 +267,6 @@ public class DiscoveryProviderManager implements AbstractDiscoveryProvider.Liste
         private final ScanRequest mScanRequest;
 
         private final IScanListener mScanListener;
-
 
         ScanListenerRecord(ScanRequest scanRequest, IScanListener iScanListener) {
             mScanListener = iScanListener;

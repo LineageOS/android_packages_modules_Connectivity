@@ -16,10 +16,10 @@
 
 package com.android.server.connectivity;
 
-import static android.net.DscpPolicy.STATUS_DELETED;
-import static android.net.DscpPolicy.STATUS_INSUFFICIENT_PROCESSING_RESOURCES;
-import static android.net.DscpPolicy.STATUS_POLICY_NOT_FOUND;
-import static android.net.DscpPolicy.STATUS_SUCCESS;
+import static android.net.NetworkAgent.DSCP_POLICY_STATUS_DELETED;
+import static android.net.NetworkAgent.DSCP_POLICY_STATUS_INSUFFICIENT_PROCESSING_RESOURCES;
+import static android.net.NetworkAgent.DSCP_POLICY_STATUS_POLICY_NOT_FOUND;
+import static android.net.NetworkAgent.DSCP_POLICY_STATUS_SUCCESS;
 import static android.system.OsConstants.ETH_P_ALL;
 
 import android.annotation.NonNull;
@@ -112,12 +112,12 @@ public class DscpPolicyTracker {
         // the maximum number of policies then return INSUFFICIENT_PROCESSING_RESOURCES.
         final int existingIndex = mPolicyIdToBpfMapIndex.get(policy.getPolicyId(), -1);
         if (existingIndex == -1 && mPolicyIdToBpfMapIndex.size() >= MAX_POLICIES) {
-            return STATUS_INSUFFICIENT_PROCESSING_RESOURCES;
+            return DSCP_POLICY_STATUS_INSUFFICIENT_PROCESSING_RESOURCES;
         }
 
         // Currently all classifiers are supported, if any are removed return
-        // STATUS_REQUESTED_CLASSIFIER_NOT_SUPPORTED,
-        // and for any other generic error STATUS_REQUEST_DECLINED
+        // DSCP_POLICY_STATUS_REQUESTED_CLASSIFIER_NOT_SUPPORTED,
+        // and for any other generic error DSCP_POLICY_STATUS_REQUEST_DECLINED
 
         int addIndex = 0;
         // If a policy with a matching ID exists, replace it, otherwise use the next free
@@ -154,24 +154,25 @@ public class DscpPolicyTracker {
             }
         } catch (ErrnoException e) {
             Log.e(TAG, "Failed to insert policy into map: ", e);
-            return STATUS_INSUFFICIENT_PROCESSING_RESOURCES;
+            return DSCP_POLICY_STATUS_INSUFFICIENT_PROCESSING_RESOURCES;
         }
 
-        return STATUS_SUCCESS;
+        return DSCP_POLICY_STATUS_SUCCESS;
     }
 
     /**
      * Add the provided DSCP policy to the bpf map. Attach bpf program dscp_policy to iface
      * if not already attached. Response will be sent back to nai with status.
      *
-     * STATUS_SUCCESS - if policy was added successfully
-     * STATUS_INSUFFICIENT_PROCESSING_RESOURCES - if max policies were already set
+     * DSCP_POLICY_STATUS_SUCCESS - if policy was added successfully
+     * DSCP_POLICY_STATUS_INSUFFICIENT_PROCESSING_RESOURCES - if max policies were already set
      */
     public void addDscpPolicy(NetworkAgentInfo nai, DscpPolicy policy) {
         if (!mAttachedIfaces.contains(nai.linkProperties.getInterfaceName())) {
             if (!attachProgram(nai.linkProperties.getInterfaceName())) {
                 Log.e(TAG, "Unable to attach program");
-                sendStatus(nai, policy.getPolicyId(), STATUS_INSUFFICIENT_PROCESSING_RESOURCES);
+                sendStatus(nai, policy.getPolicyId(),
+                        DSCP_POLICY_STATUS_INSUFFICIENT_PROCESSING_RESOURCES);
                 return;
             }
         }
@@ -181,11 +182,11 @@ public class DscpPolicyTracker {
     }
 
     private void removePolicyFromMap(NetworkAgentInfo nai, int policyId, int index) {
-        int status = STATUS_POLICY_NOT_FOUND;
+        int status = DSCP_POLICY_STATUS_POLICY_NOT_FOUND;
         try {
             mBpfDscpIpv4Policies.replaceEntry(new Struct.U32(index), DscpPolicyValue.NONE);
             mBpfDscpIpv6Policies.replaceEntry(new Struct.U32(index), DscpPolicyValue.NONE);
-            status = STATUS_DELETED;
+            status = DSCP_POLICY_STATUS_DELETED;
         } catch (ErrnoException e) {
             Log.e(TAG, "Failed to delete policy from map: ", e);
         }
@@ -199,7 +200,7 @@ public class DscpPolicyTracker {
     public void removeDscpPolicy(NetworkAgentInfo nai, int policyId) {
         if (!mAttachedIfaces.contains(nai.linkProperties.getInterfaceName())) {
             // Nothing to remove since program is not attached. Send update back for policy id.
-            sendStatus(nai, policyId, STATUS_POLICY_NOT_FOUND);
+            sendStatus(nai, policyId, DSCP_POLICY_STATUS_POLICY_NOT_FOUND);
             return;
         }
 
@@ -222,7 +223,7 @@ public class DscpPolicyTracker {
         if (!mAttachedIfaces.contains(nai.linkProperties.getInterfaceName())) {
             // Nothing to remove since program is not attached. Send update for policy
             // id 0. The status update must contain a policy ID, and 0 is an invalid id.
-            sendStatus(nai, 0, STATUS_SUCCESS);
+            sendStatus(nai, 0, DSCP_POLICY_STATUS_SUCCESS);
             return;
         }
 

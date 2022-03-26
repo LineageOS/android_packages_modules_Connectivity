@@ -1,5 +1,5 @@
-/*
- * Copyright (C) 2022, The Android Open Source Project
+/**
+ * Copyright (c) 2011, The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,22 +14,6 @@
  * limitations under the License.
  */
 
-package android.nearby.aidl;
+package android.net;
 
-import android.nearby.aidl.IFastPairStatusCallback;
-import android.nearby.FastPairDevice;
-
-/**
- * 0p API for controlling Fast Pair. Used to talk between foreground activities
- * and background services.
- *
- * {@hide}
- */
-interface IFastPairClient {
-
-    void registerHalfSheet(in IFastPairStatusCallback fastPairStatusCallback);
-
-    void unregisterHalfSheet(in IFastPairStatusCallback fastPairStatusCallback);
-
-    void connect(in FastPairDevice fastPairDevice);
-}
+parcelable NetworkTemplate;

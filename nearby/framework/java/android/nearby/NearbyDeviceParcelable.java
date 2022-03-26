@@ -29,21 +29,18 @@ import java.util.Objects;
 
 /**
  * A data class representing scan result from Nearby Service. Scan result can come from multiple
- * mediums like BLE, Wi-Fi Aware, and etc.
- * A scan result  consists of
- * An encapsulation of various parameters for requesting nearby scans.
+ * mediums like BLE, Wi-Fi Aware, and etc. A scan result consists of An encapsulation of various
+ * parameters for requesting nearby scans.
  *
  * <p>All scan results generated through {@link NearbyManager} are guaranteed to have a valid
- * medium, identifier, timestamp (both UTC time and elapsed real-time since boot), and accuracy.
- * All other parameters are optional.
+ * medium, identifier, timestamp (both UTC time and elapsed real-time since boot), and accuracy. All
+ * other parameters are optional.
  *
  * @hide
  */
 public final class NearbyDeviceParcelable implements Parcelable {
 
-    /**
-     * Used to read a NearbyDeviceParcelable from a Parcel.
-     */
+    /** Used to read a NearbyDeviceParcelable from a Parcel. */
     @NonNull
     public static final Creator<NearbyDeviceParcelable> CREATOR =
             new Creator<NearbyDeviceParcelable>() {
@@ -54,8 +51,13 @@ public final class NearbyDeviceParcelable implements Parcelable {
                         builder.setName(in.readString());
                     }
                     builder.setMedium(in.readInt());
-                    builder.setRssi(in.readInt());
                     builder.setTxPower(in.readInt());
+                    builder.setRssi(in.readInt());
+                    builder.setAction(in.readInt());
+                    builder.setPublicCredential(
+                            in.readParcelable(
+                                    PublicCredential.class.getClassLoader(),
+                                    PublicCredential.class));
                     if (in.readInt() == 1) {
                         builder.setFastPairModelId(in.readString());
                     }
@@ -78,36 +80,40 @@ public final class NearbyDeviceParcelable implements Parcelable {
             };
 
     @ScanRequest.ScanType int mScanType;
-    @Nullable
-    private final String mName;
-    @NearbyDevice.Medium
-    private final int mMedium;
-    private final int mRssi;
+    @Nullable private final String mName;
+    @NearbyDevice.Medium private final int mMedium;
     private final int mTxPower;
+    private final int mRssi;
+    private final int mAction;
+    private final PublicCredential mPublicCredential;
+    @Nullable private final String mBluetoothAddress;
+    @Nullable private final String mFastPairModelId;
+    @Nullable private final byte[] mData;
 
-    @Nullable
-    private final String mBluetoothAddress;
-    @Nullable
-    private final String mFastPairModelId;
-    @Nullable
-    private final byte[] mData;
-
-    private NearbyDeviceParcelable(@ScanRequest.ScanType int scanType, @Nullable String name,
-            int medium, int rssi, int txPower, @Nullable String fastPairModelId,
-            @Nullable String bluetoothAddress, @Nullable byte[] data) {
+    private NearbyDeviceParcelable(
+            @ScanRequest.ScanType int scanType,
+            @Nullable String name,
+            int medium,
+            int TxPower,
+            int rssi,
+            int action,
+            PublicCredential publicCredential,
+            @Nullable String fastPairModelId,
+            @Nullable String bluetoothAddress,
+            @Nullable byte[] data) {
         mScanType = scanType;
         mName = name;
         mMedium = medium;
+        mTxPower = TxPower;
         mRssi = rssi;
-        mTxPower = txPower;
+        mAction = action;
+        mPublicCredential = publicCredential;
         mFastPairModelId = fastPairModelId;
         mBluetoothAddress = bluetoothAddress;
         mData = data;
     }
 
-    /**
-     * No special parcel contents.
-     */
+    /** No special parcel contents. */
     @Override
     public int describeContents() {
         return 0;
@@ -119,7 +125,6 @@ public final class NearbyDeviceParcelable implements Parcelable {
      * @param dest The Parcel in which the object should be written.
      * @param flags Additional flags about how the object should be written.
      */
-
     @Override
     public void writeToParcel(@NonNull Parcel dest, int flags) {
         dest.writeInt(mName == null ? 0 : 1);
@@ -127,8 +132,10 @@ public final class NearbyDeviceParcelable implements Parcelable {
             dest.writeString(mName);
         }
         dest.writeInt(mMedium);
-        dest.writeInt(mRssi);
         dest.writeInt(mTxPower);
+        dest.writeInt(mRssi);
+        dest.writeInt(mAction);
+        dest.writeParcelable(mPublicCredential, flags);
         dest.writeInt(mFastPairModelId == null ? 0 : 1);
         if (mFastPairModelId != null) {
             dest.writeString(mFastPairModelId);
@@ -144,19 +151,26 @@ public final class NearbyDeviceParcelable implements Parcelable {
         }
     }
 
-    /**
-     * Returns a string representation of this ScanRequest.
-     */
+    /** Returns a string representation of this ScanRequest. */
     @Override
     public String toString() {
         return "NearbyDeviceParcelable["
-                + "name=" + mName
-                + ", medium=" + NearbyDevice.mediumToString(mMedium)
-                + ", rssi=" + mRssi
-                + ", txPower=" + mTxPower
-                + ", bluetoothAddress=" + mBluetoothAddress
-                + ", fastPairModelId=" + mFastPairModelId
-                + ", data=" + Arrays.toString(mData)
+                + "name="
+                + mName
+                + ", medium="
+                + NearbyDevice.mediumToString(mMedium)
+                + ", txPower="
+                + mTxPower
+                + ", rssi="
+                + mRssi
+                + ", action="
+                + mAction
+                + ", bluetoothAddress="
+                + mBluetoothAddress
+                + ", fastPairModelId="
+                + mFastPairModelId
+                + ", data="
+                + Arrays.toString(mData)
                 + "]";
     }
 
@@ -164,10 +178,13 @@ public final class NearbyDeviceParcelable implements Parcelable {
     public boolean equals(Object other) {
         if (other instanceof NearbyDeviceParcelable) {
             NearbyDeviceParcelable otherNearbyDeviceParcelable = (NearbyDeviceParcelable) other;
-            return  Objects.equals(mName, otherNearbyDeviceParcelable.mName)
+            return Objects.equals(mName, otherNearbyDeviceParcelable.mName)
                     && (mMedium == otherNearbyDeviceParcelable.mMedium)
-                    && (mRssi == otherNearbyDeviceParcelable.mRssi)
                     && (mTxPower == otherNearbyDeviceParcelable.mTxPower)
+                    && (mRssi == otherNearbyDeviceParcelable.mRssi)
+                    && (mAction == otherNearbyDeviceParcelable.mAction)
+                    && (Objects.equals(
+                            mPublicCredential, otherNearbyDeviceParcelable.mPublicCredential))
                     && (Objects.equals(
                             mBluetoothAddress, otherNearbyDeviceParcelable.mBluetoothAddress))
                     && (Objects.equals(
@@ -180,8 +197,14 @@ public final class NearbyDeviceParcelable implements Parcelable {
     @Override
     public int hashCode() {
         return Objects.hash(
-                mName, mMedium, mRssi, mTxPower, mBluetoothAddress,
-                mFastPairModelId, Arrays.hashCode(mData));
+                mName,
+                mMedium,
+                mRssi,
+                mAction,
+                mPublicCredential.hashCode(),
+                mBluetoothAddress,
+                mFastPairModelId,
+                Arrays.hashCode(mData));
     }
 
     /**
@@ -194,9 +217,7 @@ public final class NearbyDeviceParcelable implements Parcelable {
         return mScanType;
     }
 
-    /**
-     * Gets the name of the NearbyDeviceParcelable. Returns {@code null} If there is no name.
-     */
+    /** Gets the name of the NearbyDeviceParcelable. Returns {@code null} If there is no name. */
     @Nullable
     public String getName() {
         return mName;
@@ -212,21 +233,39 @@ public final class NearbyDeviceParcelable implements Parcelable {
     }
 
     /**
-     * Gets the received signal strength in dBm.
+     * Gets the transmission power in dBm.
+     *
+     * @hide
      */
+    @IntRange(from = -127, to = 126)
+    public int getTxPower() {
+        return mTxPower;
+    }
+
+    /** Gets the received signal strength in dBm. */
     @IntRange(from = -127, to = 126)
     public int getRssi() {
         return mRssi;
     }
 
     /**
-     * Gets the transmit power in dBm. A value of
-     * android.bluetooth.le.ScanResult#TX_POWER_NOT_PRESENT
-     * indicates that the TX power is not present.
+     * Gets the Action.
+     *
+     * @hide
      */
     @IntRange(from = -127, to = 126)
-    public int getTxPower() {
-        return mTxPower;
+    public int getAction() {
+        return mAction;
+    }
+
+    /**
+     * Gets the public credential.
+     *
+     * @hide
+     */
+    @NonNull
+    public PublicCredential getPublicCredential() {
+        return mPublicCredential;
     }
 
     /**
@@ -247,31 +286,24 @@ public final class NearbyDeviceParcelable implements Parcelable {
         return mBluetoothAddress;
     }
 
-    /**
-     * Gets the raw data from the scanning. Returns {@code null} if there is no extra data.
-     */
+    /** Gets the raw data from the scanning. Returns {@code null} if there is no extra data. */
     @Nullable
     public byte[] getData() {
         return mData;
     }
 
-    /**
-     * Builder class for {@link NearbyDeviceParcelable}.
-     */
+    /** Builder class for {@link NearbyDeviceParcelable}. */
     public static final class Builder {
-        @Nullable
-        private String mName;
-        @NearbyDevice.Medium
-        private int mMedium;
+        @Nullable private String mName;
+        @NearbyDevice.Medium private int mMedium;
+        private int mTxPower;
         private int mRssi;
-        private int mTxPower = ScanResult.TX_POWER_NOT_PRESENT;
+        private int mAction;
+        private PublicCredential mPublicCredential;
         @ScanRequest.ScanType int mScanType;
-        @Nullable
-        private String mFastPairModelId;
-        @Nullable
-        private String mBluetoothAddress;
-        @Nullable
-        private byte[] mData;
+        @Nullable private String mFastPairModelId;
+        @Nullable private String mBluetoothAddress;
+        @Nullable private byte[] mData;
 
         /**
          * Sets the scan type of the NearbyDeviceParcelable.
@@ -306,6 +338,18 @@ public final class NearbyDeviceParcelable implements Parcelable {
         }
 
         /**
+         * Sets the transmission power of the discovered device.
+         *
+         * @param txPower The transmission power in dBm.
+         * @hide
+         */
+        @NonNull
+        public Builder setTxPower(int txPower) {
+            mTxPower = txPower;
+            return this;
+        }
+
+        /**
          * Sets the RSSI between scanned device and the discovered device.
          *
          * @param rssi The received signal strength in dBm.
@@ -317,13 +361,26 @@ public final class NearbyDeviceParcelable implements Parcelable {
         }
 
         /**
-         * Sets the txPower.
+         * Sets the action from the discovered device.
          *
-         * @param txPower The transmit power in dBm
+         * @param action The action of the discovered device.
+         * @hide
          */
         @NonNull
-        public Builder setTxPower(@IntRange(from = -127, to = 126) int txPower) {
-            mTxPower = txPower;
+        public Builder setAction(int action) {
+            mAction = action;
+            return this;
+        }
+
+        /**
+         * Sets the public credential of the discovered device.
+         *
+         * @param publicCredential The public credential.
+         * @hide
+         */
+        @NonNull
+        public Builder setPublicCredential(@NonNull PublicCredential publicCredential) {
+            mPublicCredential = publicCredential;
             return this;
         }
 
@@ -352,8 +409,8 @@ public final class NearbyDeviceParcelable implements Parcelable {
         /**
          * Sets the scanned raw data.
          *
-         * @param data Data the scan.
-         * For example, {@link ScanRecord#getServiceData()} if scanned by Bluetooth.
+         * @param data Data the scan. For example, {@link ScanRecord#getServiceData()} if scanned by
+         *     Bluetooth.
          */
         @NonNull
         public Builder setData(@Nullable byte[] data) {
@@ -361,13 +418,20 @@ public final class NearbyDeviceParcelable implements Parcelable {
             return this;
         }
 
-        /**
-         * Builds a ScanResult.
-         */
+        /** Builds a ScanResult. */
         @NonNull
         public NearbyDeviceParcelable build() {
-            return new NearbyDeviceParcelable(mScanType, mName, mMedium, mRssi, mTxPower,
-                    mFastPairModelId, mBluetoothAddress, mData);
+            return new NearbyDeviceParcelable(
+                    mScanType,
+                    mName,
+                    mMedium,
+                    mTxPower,
+                    mRssi,
+                    mAction,
+                    mPublicCredential,
+                    mFastPairModelId,
+                    mBluetoothAddress,
+                    mData);
         }
     }
 }

@@ -17,6 +17,7 @@
 package com.android.server.nearby.presence;
 
 import android.nearby.NearbyDevice;
+import android.nearby.NearbyDeviceParcelable;
 import android.nearby.PresenceDevice;
 import android.nearby.PresenceScanFilter;
 import android.nearby.PublicCredential;
@@ -24,16 +25,17 @@ import android.nearby.PublicCredential;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Represents a Presence discovery result.
- */
+/** Represents a Presence discovery result. */
 public class PresenceDiscoveryResult {
 
-    /**
-     * Creates a {@link PresenceDiscoveryResult} from the scan data.
-     */
-    public static PresenceDiscoveryResult fromScanData(byte[] scanData, int rssi) {
-        return new PresenceDiscoveryResult.Builder().setRssi(rssi).build();
+    /** Creates a {@link PresenceDiscoveryResult} from the scan data. */
+    public static PresenceDiscoveryResult fromDevice(NearbyDeviceParcelable device) {
+        return new PresenceDiscoveryResult.Builder()
+                .setTxPower(device.getTxPower())
+                .setRssi(device.getRssi())
+                .addPresenceAction(device.getAction())
+                .setPublicCredential(device.getPublicCredential())
+                .build();
     }
 
     private final int mTxPower;
@@ -42,8 +44,12 @@ public class PresenceDiscoveryResult {
     private final List<Integer> mPresenceActions;
     private final PublicCredential mPublicCredential;
 
-    private PresenceDiscoveryResult(int txPower, int rssi, byte[] salt,
-            List<Integer> presenceActions, PublicCredential publicCredential) {
+    private PresenceDiscoveryResult(
+            int txPower,
+            int rssi,
+            byte[] salt,
+            List<Integer> presenceActions,
+            PublicCredential publicCredential) {
         mTxPower = txPower;
         mRssi = rssi;
         mSalt = salt;
@@ -51,9 +57,7 @@ public class PresenceDiscoveryResult {
         mPublicCredential = publicCredential;
     }
 
-    /**
-     * Returns whether the discovery result matches the scan filter.
-     */
+    /** Returns whether the discovery result matches the scan filter. */
     public boolean matches(PresenceScanFilter scanFilter) {
         return pathLossMatches(scanFilter.getMaxPathLoss())
                 && actionMatches(scanFilter.getPresenceActions())
@@ -75,9 +79,7 @@ public class PresenceDiscoveryResult {
         return credentials.contains(mPublicCredential);
     }
 
-    /**
-     * Converts a presence device from the discovery result.
-     */
+    /** Converts a presence device from the discovery result. */
     public PresenceDevice toPresenceDevice() {
         return new PresenceDevice.Builder(
                 // Use the public credential hash as the device Id.
@@ -86,12 +88,11 @@ public class PresenceDiscoveryResult {
                 mPublicCredential.getSecretId(),
                 mPublicCredential.getEncryptedMetadata())
                 .setRssi(mRssi)
-                .addMedium(NearbyDevice.Medium.BLE).build();
+                .addMedium(NearbyDevice.Medium.BLE)
+                .build();
     }
 
-    /**
-     * Builder for {@link PresenceDiscoveryResult}.
-     */
+    /** Builder for {@link PresenceDiscoveryResult}. */
     public static class Builder {
         private int mTxPower;
         private int mRssi;
@@ -104,52 +105,40 @@ public class PresenceDiscoveryResult {
             mPresenceActions = new ArrayList<>();
         }
 
-        /**
-         * Sets the calibrated tx power for the discovery result.
-         */
+        /** Sets the calibrated tx power for the discovery result. */
         public Builder setTxPower(int txPower) {
             mTxPower = txPower;
             return this;
         }
 
-        /**
-         * Sets the rssi for the discovery result.
-         */
+        /** Sets the rssi for the discovery result. */
         public Builder setRssi(int rssi) {
             mRssi = rssi;
             return this;
         }
 
-        /**
-         * Sets the salt for the discovery result.
-         */
+        /** Sets the salt for the discovery result. */
         public Builder setSalt(byte[] salt) {
             mSalt = salt;
             return this;
         }
 
-        /**
-         * Sets the public credential for the discovery result.
-         */
+        /** Sets the public credential for the discovery result. */
         public Builder setPublicCredential(PublicCredential publicCredential) {
             mPublicCredential = publicCredential;
             return this;
         }
 
-        /**
-         * Adds presence action of the discovery result.
-         */
+        /** Adds presence action of the discovery result. */
         public Builder addPresenceAction(int presenceAction) {
             mPresenceActions.add(presenceAction);
             return this;
         }
 
-        /**
-         * Builds a {@link PresenceDiscoveryResult}.
-         */
+        /** Builds a {@link PresenceDiscoveryResult}. */
         public PresenceDiscoveryResult build() {
-            return new PresenceDiscoveryResult(mTxPower, mRssi, mSalt, mPresenceActions,
-                    mPublicCredential);
+            return new PresenceDiscoveryResult(
+                    mTxPower, mRssi, mSalt, mPresenceActions, mPublicCredential);
         }
     }
 }
