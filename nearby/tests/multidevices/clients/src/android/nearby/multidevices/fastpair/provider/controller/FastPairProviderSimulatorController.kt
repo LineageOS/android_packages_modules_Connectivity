@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package android.nearby.multidevices.fastpair.provider
+package android.nearby.multidevices.fastpair.provider.controller
 
 import android.bluetooth.le.AdvertiseSettings
 import android.content.Context
@@ -64,9 +64,6 @@ class FastPairProviderSimulatorController(private val context: Context) :
                 .setRemoveAllDevicesDuringPairing(true)
                 .build()
         )
-
-        // TODO(b/222070055): Workaround the FATAL EXCEPTION after the end of initial pairing.
-        simulator!!.setSuppressSubsequentPairingNotification(true)
     }
 
     fun getProviderSimulatorBleAddress() = simulator!!.bleAddress!!

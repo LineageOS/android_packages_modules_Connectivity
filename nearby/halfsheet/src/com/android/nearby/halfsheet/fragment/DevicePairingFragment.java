@@ -38,7 +38,6 @@ import android.bluetooth.BluetoothDevice;
 import android.content.Intent;
 import android.content.res.Configuration;
 import android.graphics.Bitmap;
-import android.nearby.FastPairClient;
 import android.nearby.FastPairDevice;
 import android.nearby.FastPairStatusCallback;
 import android.nearby.NearbyDevice;
@@ -58,6 +57,7 @@ import android.widget.TextView;
 
 import androidx.annotation.Nullable;
 
+import com.android.nearby.halfsheet.FastPairUiServiceClient;
 import com.android.nearby.halfsheet.HalfSheetActivity;
 import com.android.nearby.halfsheet.R;
 import com.android.nearby.halfsheet.utils.FastPairUtils;
@@ -92,7 +92,7 @@ public class DevicePairingFragment extends HalfSheetModuleFragment implements
     private Bundle mBundle;
 
     private ScanFastPairStoreItem mScanFastPairStoreItem;
-    private FastPairClient mFastPairClient;
+    private FastPairUiServiceClient mFastPairUiServiceClient;
 
     private @PairStatusMetadata.Status int mPairStatus = PairStatusMetadata.Status.UNKNOWN;
     // True when there is a companion app to open.
@@ -179,8 +179,9 @@ public class DevicePairingFragment extends HalfSheetModuleFragment implements
         byte[] storeFastPairItemBytesArray = args.getByteArray(EXTRA_HALF_SHEET_INFO);
         mBundle = args.getBundle(EXTRA_BUNDLE);
         if (mBundle != null) {
-            mFastPairClient = new FastPairClient(getContext(), mBundle.getBinder(EXTRA_BINDER));
-            mFastPairClient.registerHalfSheet(this);
+            mFastPairUiServiceClient =
+                    new FastPairUiServiceClient(getContext(), mBundle.getBinder(EXTRA_BINDER));
+            mFastPairUiServiceClient.registerHalfSheetStateCallBack(this);
         }
         if (args.containsKey(ARG_FRAGMENT_STATE)) {
             mFragmentState = (HalfSheetFragmentState) args.getSerializable(ARG_FRAGMENT_STATE);
@@ -293,7 +294,7 @@ public class DevicePairingFragment extends HalfSheetModuleFragment implements
         }
         mIsConnecting = true;
         invalidateState();
-        mFastPairClient.connect(
+        mFastPairUiServiceClient.connect(
                 new FastPairDevice.Builder()
                         .addMedium(NearbyDevice.Medium.BLE)
                         .setBluetoothAddress(mScanFastPairStoreItem.getAddress())

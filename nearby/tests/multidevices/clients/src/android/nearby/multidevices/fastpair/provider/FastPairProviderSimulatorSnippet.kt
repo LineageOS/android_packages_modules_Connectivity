@@ -18,6 +18,8 @@ package android.nearby.multidevices.fastpair.provider
 
 import android.annotation.TargetApi
 import android.content.Context
+import android.nearby.multidevices.fastpair.provider.controller.FastPairProviderSimulatorController
+import android.nearby.multidevices.fastpair.provider.events.ProviderStatusEvents
 import android.os.Build
 import androidx.test.platform.app.InstrumentationRegistry
 import com.google.android.mobly.snippet.Snippet
