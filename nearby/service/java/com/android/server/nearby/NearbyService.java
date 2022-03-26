@@ -39,15 +39,10 @@ import com.android.server.nearby.common.locator.LocatorContextWrapper;
 import com.android.server.nearby.fastpair.FastPairManager;
 import com.android.server.nearby.injector.ContextHubManagerAdapter;
 import com.android.server.nearby.injector.Injector;
-import com.android.server.nearby.presence.ChreCommunication;
 import com.android.server.nearby.presence.PresenceManager;
 import com.android.server.nearby.provider.BroadcastProviderManager;
 import com.android.server.nearby.provider.DiscoveryProviderManager;
 import com.android.server.nearby.provider.FastPairDataProvider;
-
-import java.util.concurrent.Executors;
-
-import service.proto.Blefilter;
 
 /** Service implementing nearby functionality. */
 public class NearbyService extends INearbyManager.Stub {
@@ -84,19 +79,7 @@ public class NearbyService extends INearbyManager.Stub {
         mBroadcastProviderManager = new BroadcastProviderManager(context, mSystemInjector);
         final LocatorContextWrapper lcw = new LocatorContextWrapper(context, null);
         mFastPairManager = new FastPairManager(lcw);
-        mPresenceManager =
-                new PresenceManager(
-                        mContext,
-                        (results) -> {
-                            // TODO(b/221082271): hooked with API codes.
-                            for (Blefilter.BleFilterResult result : results.getResultList()) {
-                                Log.i(
-                                        TAG,
-                                        String.format(
-                                                "received filter result with id: %d",
-                                                result.getId()));
-                            }
-                        });
+        mPresenceManager = new PresenceManager(lcw);
     }
 
     @Override
@@ -144,10 +127,9 @@ public class NearbyService extends INearbyManager.Stub {
                         mBluetoothReceiver,
                         new IntentFilter(BluetoothAdapter.ACTION_STATE_CHANGED));
                 mFastPairManager.initiate();
+                // Initialize ContextManager for CHRE scan.
                 mSystemInjector.initializeContextHubManagerAdapter();
-                mPresenceManager.initiate(
-                        new ChreCommunication(
-                                mSystemInjector, Executors.newSingleThreadExecutor()));
+                mPresenceManager.initiate();
                 break;
         }
     }
@@ -155,7 +137,7 @@ public class NearbyService extends INearbyManager.Stub {
     private static final class SystemInjector implements Injector {
         private final Context mContext;
         @Nullable private BluetoothAdapter mBluetoothAdapter;
-        @Nullable private  ContextHubManagerAdapter mContextHubManagerAdapter;
+        @Nullable private ContextHubManagerAdapter mContextHubManagerAdapter;
 
         SystemInjector(Context context) {
             mContext = context;
@@ -168,6 +150,7 @@ public class NearbyService extends INearbyManager.Stub {
         }
 
         @Override
+        @Nullable
         public ContextHubManagerAdapter getContextHubManagerAdapter() {
             return mContextHubManagerAdapter;
         }
@@ -193,6 +176,5 @@ public class NearbyService extends INearbyManager.Stub {
             }
             mContextHubManagerAdapter = new ContextHubManagerAdapter(manager);
         }
-
     }
 }

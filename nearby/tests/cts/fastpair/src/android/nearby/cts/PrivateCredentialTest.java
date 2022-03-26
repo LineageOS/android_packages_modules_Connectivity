@@ -60,7 +60,7 @@ public class PrivateCredentialTest {
     }
 
     @Test
-    @SdkSuppress(minSdkVersion = 32, codeName = "T")
+    @SdkSuppress(minSdkVersion = 33, codeName = "T")
     public void testBuilder() {
         PrivateCredential credential = mBuilder.build();
 
@@ -77,7 +77,7 @@ public class PrivateCredentialTest {
     }
 
     @Test
-    @SdkSuppress(minSdkVersion = 32, codeName = "T")
+    @SdkSuppress(minSdkVersion = 33, codeName = "T")
     public void testWriteParcel() {
         PrivateCredential credential = mBuilder.build();
 

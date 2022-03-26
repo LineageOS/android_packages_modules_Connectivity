@@ -48,6 +48,7 @@ public class FastPairDevice extends NearbyDevice implements Parcelable {
                 builder.addMedium(in.readInt());
             }
             builder.setRssi(in.readInt());
+            builder.setTxPower(in.readInt());
             if (in.readInt() == 1) {
                 builder.setModelId(in.readString());
             }
@@ -67,6 +68,10 @@ public class FastPairDevice extends NearbyDevice implements Parcelable {
         }
     };
 
+    // The transmit power in dBm. Valid range is [-127, 126]. a
+    // See android.bluetooth.le.ScanResult#getTxPower
+    private int mTxPower;
+
     // Some OEM devices devices don't have model Id.
     @Nullable private final String mModelId;
 
@@ -82,6 +87,7 @@ public class FastPairDevice extends NearbyDevice implements Parcelable {
      * @param name Name of the FastPairDevice. Can be {@code null} if there is no name.
      * @param mediums The {@link Medium}s over which the device is discovered.
      * @param rssi The received signal strength in dBm.
+     * @param txPower The transmit power in dBm. Valid range is [-127, 126].
      * @param modelId The identifier of the Fast Pair device.
      *                Can be {@code null} if there is no Model ID.
      * @param bluetoothAddress The hardware address of this BluetoothDevice.
@@ -90,13 +96,25 @@ public class FastPairDevice extends NearbyDevice implements Parcelable {
     public FastPairDevice(@Nullable String name,
             List<Integer> mediums,
             int rssi,
+            int txPower,
             @Nullable String modelId,
             @NonNull String bluetoothAddress,
             @Nullable byte[] data) {
         super(name, mediums, rssi);
+        this.mTxPower = txPower;
         this.mModelId = modelId;
         this.mBluetoothAddress = bluetoothAddress;
         this.mData = data;
+    }
+
+    /**
+     * Gets the transmit power in dBm. A value of
+     * android.bluetooth.le.ScanResult#TX_POWER_NOT_PRESENT
+     * indicates that the TX power is not present.
+     */
+    @IntRange(from = -127, to = 126)
+    public int getTxPower() {
+        return mTxPower;
     }
 
     /**
@@ -149,6 +167,7 @@ public class FastPairDevice extends NearbyDevice implements Parcelable {
             stringBuilder.append(mediumToString(medium));
         }
         stringBuilder.append("} rssi=").append(getRssi());
+        stringBuilder.append(" txPower=").append(mTxPower);
         stringBuilder.append(" modelId=").append(mModelId);
         stringBuilder.append(" bluetoothAddress=").append(mBluetoothAddress);
         stringBuilder.append("]");
@@ -162,7 +181,8 @@ public class FastPairDevice extends NearbyDevice implements Parcelable {
             if (!super.equals(other)) {
                 return false;
             }
-            return Objects.equals(mModelId, otherDevice.mModelId)
+            return  mTxPower == otherDevice.mTxPower
+                    && Objects.equals(mModelId, otherDevice.mModelId)
                     && Objects.equals(mBluetoothAddress, otherDevice.mBluetoothAddress)
                     && Arrays.equals(mData, otherDevice.mData);
         }
@@ -172,7 +192,7 @@ public class FastPairDevice extends NearbyDevice implements Parcelable {
     @Override
     public int hashCode() {
         return Objects.hash(
-                getName(), getMediums(), getRssi(), mModelId, mBluetoothAddress,
+                getName(), getMediums(), getRssi(), mTxPower, mModelId, mBluetoothAddress,
                 Arrays.hashCode(mData));
     }
 
@@ -189,6 +209,7 @@ public class FastPairDevice extends NearbyDevice implements Parcelable {
             dest.writeInt(medium);
         }
         dest.writeInt(getRssi());
+        dest.writeInt(mTxPower);
         dest.writeInt(mModelId == null ? 0 : 1);
         if (mModelId != null) {
             dest.writeString(mModelId);
@@ -211,6 +232,7 @@ public class FastPairDevice extends NearbyDevice implements Parcelable {
 
         @Nullable private String mName;
         private int mRssi;
+        private int mTxPower;
         @Nullable private String mModelId;
         private String mBluetoothAddress;
         @Nullable private byte[] mData;
@@ -249,6 +271,17 @@ public class FastPairDevice extends NearbyDevice implements Parcelable {
         @NonNull
         public Builder setRssi(@IntRange(from = -127, to = 126) int rssi) {
             mRssi = rssi;
+            return this;
+        }
+
+        /**
+         * Sets the txPower.
+         *
+         * @param txPower The transmit power in dBm
+         */
+        @NonNull
+        public Builder setTxPower(@IntRange(from = -127, to = 126) int txPower) {
+            mTxPower = txPower;
             return this;
         }
 
@@ -292,7 +325,7 @@ public class FastPairDevice extends NearbyDevice implements Parcelable {
          */
         @NonNull
         public FastPairDevice build() {
-            return new FastPairDevice(mName, mMediums, mRssi, mModelId,
+            return new FastPairDevice(mName, mMediums, mRssi, mTxPower, mModelId,
                     mBluetoothAddress, mData);
         }
     }

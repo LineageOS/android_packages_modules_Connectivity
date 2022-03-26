@@ -23,6 +23,7 @@ import android.nearby.ScanCallback
 import android.nearby.ScanRequest
 import android.nearby.fastpair.seeker.FAKE_TEST_ACCOUNT_NAME
 import android.nearby.multidevices.fastpair.seeker.data.FastPairTestDataManager
+import android.nearby.multidevices.fastpair.seeker.events.ScanCallbackEvents
 import android.nearby.multidevices.fastpair.seeker.ui.CheckNearbyHalfSheetUiTest
 import android.nearby.multidevices.fastpair.seeker.ui.DismissNearbyHalfSheetUiTest
 import androidx.test.core.app.ApplicationProvider
@@ -39,12 +40,12 @@ class FastPairSeekerSnippet : Snippet {
     private lateinit var scanCallback: ScanCallback
 
     /**
-     * Starts scanning as a Fast Pair seeker to find Fast Pair provider devices.
+     * Starts scanning as a Fast Pair seeker to find provider devices.
      *
      * @param callbackId the callback ID corresponding to the {@link FastPairSeekerSnippet#startScan}
      * call that started the scanning.
      */
-    @AsyncRpc(description = "Starts scanning as Fast Pair seeker to find Fast Pair provider devices.")
+    @AsyncRpc(description = "Starts scanning as Fast Pair seeker to find provider devices.")
     fun startScan(callbackId: String) {
         val scanRequest = ScanRequest.Builder()
             .setScanMode(ScanRequest.SCAN_MODE_LOW_LATENCY)
@@ -97,7 +98,10 @@ class FastPairSeekerSnippet : Snippet {
      * @param modelId a string of model id to be associated with.
      * @param json a string of FastPairAntispoofKeyDeviceMetadata JSON object.
      */
-    @Rpc(description = "Puts a model id to FastPairAntispoofKeyDeviceMetadata pair into test data cache.")
+    @Rpc(
+        description =
+        "Puts a model id to FastPairAntispoofKeyDeviceMetadata pair into test data cache."
+    )
     fun putAntispoofKeyDeviceMetadata(modelId: String, json: String) {
         Log.i("Puts a model id to FastPairAntispoofKeyDeviceMetadata pair into test data cache.")
         fastPairTestDataManager.sendAntispoofKeyDeviceMetadata(modelId, json)

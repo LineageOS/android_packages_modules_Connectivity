@@ -25,7 +25,6 @@ import android.annotation.SystemApi;
 import android.annotation.TestApi;
 import android.compat.annotation.UnsupportedAppUsage;
 import android.content.Context;
-import android.net.DscpPolicy.DscpPolicyStatus;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.ConditionVariable;
@@ -433,6 +432,48 @@ public abstract class NetworkAgent {
      * @hide
      */
     public static final int CMD_DSCP_POLICY_STATUS = BASE + 28;
+
+    /**
+     * DSCP policy was successfully added.
+     */
+    public static final int DSCP_POLICY_STATUS_SUCCESS = 0;
+
+    /**
+     * DSCP policy was rejected for any reason besides invalid classifier or insufficient resources.
+     */
+    public static final int DSCP_POLICY_STATUS_REQUEST_DECLINED = 1;
+
+    /**
+     * Requested DSCP policy contained a classifier which is not supported.
+     */
+    public static final int DSCP_POLICY_STATUS_REQUESTED_CLASSIFIER_NOT_SUPPORTED = 2;
+
+    /**
+     * Requested DSCP policy was not added due to insufficient processing resources.
+     */
+    // TODO: should this error case be supported?
+    public static final int DSCP_POLICY_STATUS_INSUFFICIENT_PROCESSING_RESOURCES = 3;
+
+    /**
+     * DSCP policy was deleted.
+     */
+    public static final int DSCP_POLICY_STATUS_DELETED = 4;
+
+    /**
+     * DSCP policy was not found during deletion.
+     */
+    public static final int DSCP_POLICY_STATUS_POLICY_NOT_FOUND = 5;
+
+    /** @hide */
+    @IntDef(prefix = "DSCP_POLICY_STATUS_", value = {
+        DSCP_POLICY_STATUS_SUCCESS,
+        DSCP_POLICY_STATUS_REQUEST_DECLINED,
+        DSCP_POLICY_STATUS_REQUESTED_CLASSIFIER_NOT_SUPPORTED,
+        DSCP_POLICY_STATUS_INSUFFICIENT_PROCESSING_RESOURCES,
+        DSCP_POLICY_STATUS_DELETED
+    })
+    @Retention(RetentionPolicy.SOURCE)
+    public @interface DscpPolicyStatus {}
 
     /**
      * Sent by the NetworkAgent to ConnectivityService to notify that this network is expected to be

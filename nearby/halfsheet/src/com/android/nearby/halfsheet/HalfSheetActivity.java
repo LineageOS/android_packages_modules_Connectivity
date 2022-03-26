@@ -48,7 +48,7 @@ import service.proto.Cache;
  */
 public class HalfSheetActivity extends FragmentActivity {
 
-    public static final String TAG = "HalfSheetActivity";
+    public static final String TAG = "FastPairHalfSheet";
 
     public static final String EXTRA_HALF_SHEET_CONTENT =
             "com.android.nearby.halfsheet.HALF_SHEET_CONTENT";

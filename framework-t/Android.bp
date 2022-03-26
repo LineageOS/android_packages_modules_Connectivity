@@ -19,6 +19,9 @@ package {
     default_applicable_licenses: ["Android-Apache-2.0"],
 }
 
+// Include build rules from Sources.bp
+build = ["Sources.bp"]
+
 java_defaults {
     name: "enable-framework-connectivity-t-targets",
     enabled: true,

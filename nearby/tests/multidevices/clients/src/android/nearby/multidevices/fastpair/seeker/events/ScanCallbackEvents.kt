@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package android.nearby.multidevices.fastpair.seeker
+package android.nearby.multidevices.fastpair.seeker.events
 
 import android.nearby.NearbyDevice
 import android.nearby.ScanCallback
