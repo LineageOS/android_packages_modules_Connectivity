@@ -337,6 +337,7 @@ import com.android.modules.utils.build.SdkLevel;
 import com.android.net.module.util.ArrayTrackRecord;
 import com.android.net.module.util.CollectionUtils;
 import com.android.net.module.util.LocationPermissionChecker;
+import com.android.networkstack.apishim.NetworkAgentConfigShimImpl;
 import com.android.server.ConnectivityService.ConnectivityDiagnosticsCallbackInfo;
 import com.android.server.ConnectivityService.NetworkRequestInfo;
 import com.android.server.ConnectivityServiceTest.ConnectivityServiceDependencies.ReportedInterfaces;
@@ -1371,6 +1372,10 @@ public class ConnectivityServiceTest {
         @Override
         public Network getNetwork() {
             return (mMockNetworkAgent == null) ? null : mMockNetworkAgent.getNetwork();
+        }
+
+        public NetworkAgentConfig getNetworkAgentConfig() {
+            return null == mMockNetworkAgent ? null : mMockNetworkAgent.getNetworkAgentConfig();
         }
 
         @Override
@@ -2936,6 +2941,7 @@ public class ConnectivityServiceTest {
     @Test
     public void testRequiresValidation() {
         assertTrue(NetworkMonitorUtils.isValidationRequired(
+                NetworkAgentConfigShimImpl.newInstance(null),
                 mCm.getDefaultRequest().networkCapabilities));
     }
 
@@ -7933,6 +7939,7 @@ public class ConnectivityServiceTest {
         // VPN networks do not satisfy the default request and are automatically validated
         // by NetworkMonitor
         assertFalse(NetworkMonitorUtils.isValidationRequired(
+                NetworkAgentConfigShimImpl.newInstance(mMockVpn.getNetworkAgentConfig()),
                 mMockVpn.getAgent().getNetworkCapabilities()));
         mMockVpn.getAgent().setNetworkValid(false /* isStrictMode */);
 
@@ -8083,6 +8090,7 @@ public class ConnectivityServiceTest {
         assertTrue(nc.hasCapability(NET_CAPABILITY_INTERNET));
 
         assertFalse(NetworkMonitorUtils.isValidationRequired(
+                NetworkAgentConfigShimImpl.newInstance(mMockVpn.getNetworkAgentConfig()),
                 mMockVpn.getAgent().getNetworkCapabilities()));
         assertTrue(NetworkMonitorUtils.isPrivateDnsValidationRequired(
                 mMockVpn.getAgent().getNetworkCapabilities()));
