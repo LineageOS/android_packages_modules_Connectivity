@@ -70,4 +70,10 @@ class FastPairProviderSimulatorSnippet : Snippet {
     fun getBluetoothLeAddress(): String {
         return fastPairProviderSimulatorController.getProviderSimulatorBleAddress()
     }
+
+    /** Gets the latest account key received on the Fast Pair provider simulator */
+    @Rpc(description = "Gets the latest account key received on the Fast Pair provider simulator.")
+    fun getLatestReceivedAccountKey(): String? {
+        return fastPairProviderSimulatorController.getLatestReceivedAccountKey()
+    }
 }
