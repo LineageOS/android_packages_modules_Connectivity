@@ -343,6 +343,10 @@ public class NetworkAgentWrapper implements TestableNetworkCallback.HasNetwork {
         return mNetworkAgent;
     }
 
+    public NetworkAgentConfig getNetworkAgentConfig() {
+        return mNetworkAgentConfig;
+    }
+
     public NetworkCapabilities getNetworkCapabilities() {
         return mNetworkCapabilities;
     }
