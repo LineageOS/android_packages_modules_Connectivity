@@ -30,16 +30,16 @@ android_app {
 android_library {
     name: "NearbyFastPairProviderSimulatorLib",
     sdk_version: "test_current",
-        srcs: [
-            "src/**/*.java",
-            "src/**/*.kt",
-        ],
-        static_libs: [
-            "NearbyFastPairProviderLib",
-            "NearbyFastPairProviderLiteProtos",
-            "NearbyFastPairProviderSimulatorLiteProtos",
-            "androidx.annotation_annotation",
-            "error_prone_annotations",
-            "fast-pair-lite-protos",
-        ],
+    srcs: [
+        "src/**/*.java",
+        "src/**/*.kt",
+    ],
+    static_libs: [
+        "NearbyFastPairProviderLib",
+        "NearbyFastPairProviderLiteProtos",
+        "NearbyFastPairProviderSimulatorLiteProtos",
+        "androidx.annotation_annotation",
+        "error_prone_annotations",
+        "fast-pair-lite-protos",
+    ],
 }
