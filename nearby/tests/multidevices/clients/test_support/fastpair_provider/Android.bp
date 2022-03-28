@@ -22,7 +22,16 @@ android_library {
         "src/**/*.java",
         "src/**/*.kt",
     ],
-    sdk_version: "test_current",
+    sdk_version: "core_platform",
+    libs: [
+        // order matters: classes in framework-bluetooth are resolved before framework, meaning
+        // @hide APIs in framework-bluetooth are resolved before @SystemApi stubs in framework
+        "framework-bluetooth.impl",
+        "framework",
+
+        // if sdk_version="" this gets automatically included, but here we need to add manually.
+        "framework-res",
+    ],
     static_libs: [
         "NearbyFastPairProviderLiteProtos",
         "androidx.test.core",

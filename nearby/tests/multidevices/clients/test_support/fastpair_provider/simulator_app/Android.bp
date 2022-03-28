@@ -16,9 +16,20 @@ package {
     default_applicable_licenses: ["Android-Apache-2.0"],
 }
 
+// Build and install NearbyFastPairProviderSimulatorApp to your phone:
+// m NearbyFastPairProviderSimulatorApp
+// adb root
+// adb remount && adb reboot (make first time remount work)
+//
+// adb root
+// adb remount
+// adb push ${ANDROID_PRODUCT_OUT}/system/app/NearbyFastPairProviderSimulatorApp /system/app/
+// adb reboot
 android_app {
     name: "NearbyFastPairProviderSimulatorApp",
     sdk_version: "test_current",
+    // Sign with "platform" certificate for accessing Bluetooth @SystemAPI
+    certificate: "platform",
     static_libs: ["NearbyFastPairProviderSimulatorLib"],
     optimize: {
         enabled: true,
