@@ -554,7 +554,8 @@ public class EthernetManager {
      *                 information about the error.
      * @throws SecurityException if the process doesn't hold
      *                          {@link android.Manifest.permission.MANAGE_ETHERNET_NETWORKS}.
-     * @throws UnsupportedOperationException if called on a non-automotive device or on an
+     * @throws UnsupportedOperationException if the {@link NetworkCapabilities} are updated on a
+     *                                       non-automotive device or this function is called on an
      *                                       unsupported interface.
      * @hide
      */
