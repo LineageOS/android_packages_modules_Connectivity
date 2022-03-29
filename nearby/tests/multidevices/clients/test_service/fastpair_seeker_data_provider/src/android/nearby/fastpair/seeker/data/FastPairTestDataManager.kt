@@ -72,7 +72,7 @@ class FastPairTestDataManager(private val context: Context) : BroadcastReceiver(
             ACTION_SEND_ACCOUNT_KEY_DEVICE_METADATA -> {
                 Log.d(TAG, "ACTION_SEND_ACCOUNT_KEY_DEVICE_METADATA received!")
                 val json = intent.getStringExtra(DATA_JSON_STRING_KEY)!!
-                testDataCache.putAccountKeyDeviceMetadata(json)
+                testDataCache.putAccountKeyDeviceMetadataJsonArray(json)
             }
             ACTION_RESET_TEST_DATA_CACHE -> {
                 Log.d(TAG, "ACTION_RESET_TEST_DATA_CACHE received!")
