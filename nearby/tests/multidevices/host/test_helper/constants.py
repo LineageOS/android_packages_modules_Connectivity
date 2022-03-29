@@ -21,12 +21,14 @@ DEFAULT_ANTI_SPOOFING_KEY = 'Cbj9eCJrTdDgSYxLkqtfADQi86vIaMvxJsQ298sZYWE='
 # Default anti-spoof Key Device Metadata JSON file for data provider at seeker side.
 DEFAULT_KDM_JSON_FILE = 'simulator_antispoofkey_devicemeta_json.txt'
 
-# Time in seconds for events waiting.
+# Time in seconds for events waiting according to Fast Pair certification guidelines:
+# https://developers.google.com/nearby/fast-pair/certification-guideline
 SETUP_TIMEOUT_SEC = 5
 BECOME_DISCOVERABLE_TIMEOUT_SEC = 10
 START_ADVERTISING_TIMEOUT_SEC = 5
-SCAN_TIMEOUT_SEC = 30
-HALF_SHEET_POPUP_TIMEOUT_SEC = 30
+SCAN_TIMEOUT_SEC = 5
+HALF_SHEET_POPUP_TIMEOUT_SEC = 5
+AVERAGE_PAIRING_TIMEOUT_SEC = 12
 
 # The phone to simulate Fast Pair provider (like headphone) needs changes in Android system:
 # 1. System permission check removal

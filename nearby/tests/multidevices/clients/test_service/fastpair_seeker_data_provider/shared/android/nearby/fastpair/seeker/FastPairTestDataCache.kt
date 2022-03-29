@@ -31,10 +31,16 @@ class FastPairTestDataCache {
     private val antispoofKeyDeviceMetadataDataMap =
         mutableMapOf<String, FastPairAntispoofKeyDeviceMetadataData>()
 
-    fun putAccountKeyDeviceMetadata(json: String) {
+    fun putAccountKeyDeviceMetadataJsonArray(json: String) {
         accountKeyDeviceMetadataList +=
             gson.fromJson(json, Array<FastPairAccountKeyDeviceMetadataData>::class.java)
                 .map { it.toFastPairAccountKeyDeviceMetadata() }
+    }
+
+    fun putAccountKeyDeviceMetadataJsonObject(json: String) {
+        accountKeyDeviceMetadataList +=
+            gson.fromJson(json, FastPairAccountKeyDeviceMetadataData::class.java)
+                .toFastPairAccountKeyDeviceMetadata()
     }
 
     fun putAccountKeyDeviceMetadata(accountKeyDeviceMetadata: FastPairAccountKeyDeviceMetadata) {
