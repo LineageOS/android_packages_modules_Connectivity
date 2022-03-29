@@ -3,8 +3,8 @@
      *;
 }
 
-# Keep simulator reflection callback.
--keep class android.nearby.fastpair.provider.** {
+# Keep AdvertisingSetCallback#onOwnAddressRead callback.
+-keep class * extends android.bluetooth.le.AdvertisingSetCallback {
      *;
 }
 
