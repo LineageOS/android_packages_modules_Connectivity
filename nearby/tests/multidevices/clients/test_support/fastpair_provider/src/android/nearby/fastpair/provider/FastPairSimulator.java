@@ -107,8 +107,6 @@ import com.android.server.nearby.common.bluetooth.fastpair.EllipticCurveDiffieHe
 import com.android.server.nearby.common.bluetooth.fastpair.Ltv;
 import com.android.server.nearby.common.bluetooth.fastpair.MessageStreamHmacEncoder;
 import com.android.server.nearby.common.bluetooth.fastpair.NamingEncoder;
-import com.android.server.nearby.common.bluetooth.fastpair.Reflect;
-import com.android.server.nearby.common.bluetooth.fastpair.ReflectionException;
 
 import com.google.common.base.Ascii;
 import com.google.common.primitives.Bytes;
@@ -184,15 +182,6 @@ public class FastPairSimulator {
     private static final String SIMULATOR_FAKE_BLE_ADDRESS = "11:22:33:44:55:66";
 
     private static final long ADVERTISING_REFRESH_DELAY_1_MIN = TimeUnit.MINUTES.toMillis(1);
-
-    /** The user will be prompted to accept or deny the incoming pairing request */
-    public static final int PAIRING_VARIANT_CONSENT = 3;
-
-    /**
-     * The user will be prompted to enter the passkey displayed on remote device. This is used for
-     * Bluetooth 2.1 pairing.
-     */
-    public static final int PAIRING_VARIANT_DISPLAY_PASSKEY = 4;
 
     /**
      * The size of account key filter in bytes is (1.2*n + 3), n represents the size of account key,
@@ -299,7 +288,7 @@ public class FastPairSimulator {
                         // the passkey later over GATT.
                         mLocalPasskey = key;
                         checkPasskey();
-                    } else if (variant == PAIRING_VARIANT_DISPLAY_PASSKEY) {
+                    } else if (variant == BluetoothDevice.PAIRING_VARIANT_DISPLAY_PASSKEY) {
                         if (mPasskeyEventCallback != null) {
                             mPasskeyEventCallback.onPasskeyRequested(
                                     FastPairSimulator.this::enterPassKey);
@@ -307,7 +296,7 @@ public class FastPairSimulator {
                             mLogger.log("passkeyEventCallback is not set!");
                             enterPassKey(key);
                         }
-                    } else if (variant == PAIRING_VARIANT_CONSENT) {
+                    } else if (variant == BluetoothDevice.PAIRING_VARIANT_CONSENT) {
                         setPasskeyConfirmation(true);
 
                     } else if (variant == BluetoothDevice.PAIRING_VARIANT_PIN) {
@@ -1969,14 +1958,7 @@ public class FastPairSimulator {
 
     public void enterPassKey(int passkey) {
         mLogger.log("enterPassKey called with passkey %d.", passkey);
-        try {
-            boolean result =
-                    (Boolean) Reflect.on(mPairingDevice).withMethod("setPasskey", int.class).get(
-                            passkey);
-            mLogger.log("enterPassKey called with result %b", result);
-        } catch (ReflectionException e) {
-            mLogger.log("enterPassKey meet Exception %s.", e.getMessage());
-        }
+        mPairingDevice.setPairingConfirmation(true);
     }
 
     private void checkPasskey() {
@@ -2290,19 +2272,11 @@ public class FastPairSimulator {
     }
 
     public void disconnect(BluetoothProfile profile, BluetoothDevice device) {
-        try {
-            Reflect.on(profile).withMethod("disconnect", BluetoothDevice.class).invoke(device);
-        } catch (ReflectionException e) {
-            mLogger.log(e, "Error disconnecting device=%s from profile=%s", device, profile);
-        }
+        device.disconnect();
     }
 
     public void removeBond(BluetoothDevice device) {
-        try {
-            Reflect.on(device).withMethod("removeBond").invoke();
-        } catch (ReflectionException e) {
-            mLogger.log(e, "Error removing bond for device=%s", device);
-        }
+        device.removeBond();
     }
 
     public void resetAccountKeys() {

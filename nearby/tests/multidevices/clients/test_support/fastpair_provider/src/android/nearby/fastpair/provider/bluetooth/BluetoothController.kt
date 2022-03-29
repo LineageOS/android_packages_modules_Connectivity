@@ -26,15 +26,13 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.nearby.fastpair.provider.FastPairSimulator
 import android.nearby.fastpair.provider.utils.Logger
-import android.nearby.fastpair.provider.utils.Reflect
-import android.nearby.fastpair.provider.utils.ReflectionException
 import android.os.SystemClock
 import android.provider.Settings
 
 /** Controls the local Bluetooth adapter for Fast Pair testing. */
 class BluetoothController(
     private val context: Context,
-    private val listener: EventListener,
+    private val listener: EventListener
 ) : BroadcastReceiver() {
     private val mLogger = Logger(TAG)
     private val bluetoothAdapter: BluetoothAdapter =
@@ -67,23 +65,10 @@ class BluetoothController(
      * ```
      */
     fun setIoCapability(ioCapabilityClassic: Int, ioCapabilityBLE: Int) {
-        try {
-            Reflect.on(bluetoothAdapter)
-                .withMethod("setIoCapability", Int::class.javaPrimitiveType)[
-                    ioCapabilityClassic]
-        } catch (e: ReflectionException) {
-            mLogger.log(e, "Error setIoCapability to %s: %s", ioCapabilityClassic)
-        }
-        try {
-            Reflect.on(bluetoothAdapter)
-                .withMethod("setLeIoCapability", Int::class.javaPrimitiveType)[
-                    ioCapabilityBLE]
-        } catch (e: ReflectionException) {
-            mLogger.log(e, "Error setLeIoCapability to %s: %s", ioCapabilityBLE)
-        }
+        bluetoothAdapter.ioCapability = ioCapabilityClassic
+        bluetoothAdapter.leIoCapability = ioCapabilityBLE
 
         // Toggling airplane mode on/off to restart Bluetooth stack and reset the BLE.
-        // Since it also increases reliability, we will do so even if ReflectionException is caught.
         try {
             Settings.Global.putInt(
                 context.contentResolver,
@@ -165,7 +150,7 @@ class BluetoothController(
 
                 override fun onServiceDisconnected(profile: Int) {}
             },
-            BLUETOOTH_PROFILE_A2DP_SINK
+            BluetoothProfile.A2DP_SINK
         )
     }
 
@@ -204,7 +189,8 @@ class BluetoothController(
                         else -> remoteDevice
                     }
                 mLogger.log(
-                    "ACTION_BOND_STATE_CHANGED, the bound state of the remote device (%s) change to %s.",
+                    "ACTION_BOND_STATE_CHANGED, the bound state of " +
+                            "the remote device (%s) change to %s.",
                     remoteDevice?.remoteDeviceToString(),
                     bondState.bondStateToString()
                 )
@@ -283,9 +269,6 @@ class BluetoothController(
 
     companion object {
         private const val TAG = "BluetoothController"
-
-        /** Hidden SystemApi field in [BluetoothProfile] interface. */
-        private const val BLUETOOTH_PROFILE_A2DP_SINK = 11
 
         private const val TURN_AIRPLANE_MODE_OFF = 0
         private const val TURN_AIRPLANE_MODE_ON = 1
