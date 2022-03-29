@@ -995,21 +995,25 @@ public class ConnectivityManager {
     // LINT.ThenChange(packages/modules/Connectivity/service/native/include/Common.h)
 
     /**
-     * Specify default rule which may allow or drop packets depending on existing policy.
+     * A firewall rule which allows or drops packets depending on existing policy.
+     * Used by {@link #setUidFirewallRule(int, int, int)} to follow existing policy to handle
+     * specific uid's packets in specific firewall chain.
      * @hide
      */
     @SystemApi(client = MODULE_LIBRARIES)
     public static final int FIREWALL_RULE_DEFAULT = 0;
 
     /**
-     * Specify allow rule which allows packets.
+     * A firewall rule which allows packets. Used by {@link #setUidFirewallRule(int, int, int)} to
+     * allow specific uid's packets in specific firewall chain.
      * @hide
      */
     @SystemApi(client = MODULE_LIBRARIES)
     public static final int FIREWALL_RULE_ALLOW = 1;
 
     /**
-     * Specify deny rule which drops packets.
+     * A firewall rule which drops packets. Used by {@link #setUidFirewallRule(int, int, int)} to
+     * drop specific uid's packets in specific firewall chain.
      * @hide
      */
     @SystemApi(client = MODULE_LIBRARIES)
