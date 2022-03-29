@@ -47,7 +47,7 @@ import service.proto.Cache;
  */
 public class DiscoveryItem implements Comparable<DiscoveryItem> {
 
-    private static final String  ACTION_FAST_PAIR =
+    private static final String ACTION_FAST_PAIR =
             "com.android.server.nearby:ACTION_FAST_PAIR";
     private static final int BEACON_STALENESS_MILLIS = 120000;
     private static final int ITEM_EXPIRATION_MILLIS = 20000;
@@ -66,14 +66,15 @@ public class DiscoveryItem implements Comparable<DiscoveryItem> {
             Cache.StoredDiscoveryItem.State.STATE_DISABLED_BY_SYSTEM_VALUE
     })
     @Retention(RetentionPolicy.SOURCE)
-    public @interface ItemState {}
+    public @interface ItemState {
+    }
 
     public DiscoveryItem(LocatorContextWrapper locatorContextWrapper,
             Cache.StoredDiscoveryItem mStoredDiscoveryItem) {
         this.mFastPairCacheManager =
                 locatorContextWrapper.getLocator().get(FastPairCacheManager.class);
         this.mClock =
-            locatorContextWrapper.getLocator().get(Clock.class);
+                locatorContextWrapper.getLocator().get(Clock.class);
         this.mStoredDiscoveryItem = mStoredDiscoveryItem;
     }
 
@@ -160,6 +161,7 @@ public class DiscoveryItem implements Comparable<DiscoveryItem> {
                 .setLastUserExperience(experienceType).build();
         mFastPairCacheManager.saveDiscoveryItem(this);
     }
+
     /**
      * Gets the user experience to be good or bad.
      */
@@ -312,6 +314,7 @@ public class DiscoveryItem implements Comparable<DiscoveryItem> {
     }
 
     // Getters below
+
     /**
      * Returns the id of store discovery item.
      */
@@ -376,7 +379,7 @@ public class DiscoveryItem implements Comparable<DiscoveryItem> {
         Intent intent = parseIntentScheme(mStoredDiscoveryItem.getActionUrl());
         if (intent == null) {
             Log.d("FastPairDiscoveryItem", "FastPair: fail to parse action url "
-                            + mStoredDiscoveryItem.getActionUrl());
+                    + mStoredDiscoveryItem.getActionUrl());
             return null;
         }
         return intent.getStringExtra(EXTRA_FAST_PAIR_SECRET);
@@ -472,7 +475,7 @@ public class DiscoveryItem implements Comparable<DiscoveryItem> {
     @Nullable
     public Double getEstimatedDistance() {
         // In the future, we may want to do a foreground subscription to leverage onDistanceChanged.
-        return RangingUtils.distanceFromRssi(mStoredDiscoveryItem.getRssi(),
+        return RangingUtils.distanceFromRssiAndTxPower(mStoredDiscoveryItem.getRssi(),
                 mStoredDiscoveryItem.getTxPower());
     }
 

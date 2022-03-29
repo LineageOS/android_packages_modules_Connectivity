@@ -23,12 +23,19 @@ package com.android.server.nearby.common.ble.util;
  * square of the frequency of the propagation signal.
  */
 public final class RangingUtils {
-    /*
-     * Key to variable names used in this class (viz. Physics):
+    private static final int MAX_RSSI_VALUE = 126;
+    private static final int MIN_RSSI_VALUE = -127;
+
+    private RangingUtils() {
+    }
+
+    /* This was original derived in {@link com.google.android.gms.beacon.util.RangingUtils} from
+     * <a href="http://en.wikipedia.org/wiki/Free-space_path_loss">Free-space_path_loss</a>.
+     * Duplicated here for easy reference.
      *
      * c   = speed of light (2.9979 x 10^8 m/s);
      * f   = frequency (Bluetooth center frequency is 2.44175GHz = 2.44175x10^9 Hz);
-     * l   = wavelength (meters);
+     * l   = wavelength (in meters);
      * d   = distance (from transmitter to receiver in meters);
      * dB  = decibels
      * dBm = decibel milliwatts
@@ -40,124 +47,115 @@ public final class RangingUtils {
      *
      * FSPL      = (4 * pi * d / l)^2 = (4 * pi * d * f / c)^2
      *
-     * FSPL (dB) = 10*log10((4 * pi * d * f / c)^2)
-     *           = 20*log10(4 * pi * d * f / c)
-     *           = 20*log10(d) + 20*log10(f) + 20*log10(4*pi/c)
+     * FSPL (dB) = 10 * log10((4 * pi * d  * f / c)^2)
+     *           = 20 * log10(4 * pi * d * f / c)
+     *           = (20 * log10(d)) + (20 * log10(f)) + (20 * log10(4 * pi/c))
      *
      * Calculating constants:
      *
-     * FSPL_FREQ        = 20*log10(f)
-     *                  = 20*log10(2.44175 * 10^9)
+     * FSPL_FREQ        = 20 * log10(f)
+     *                  = 20 * log10(2.44175 * 10^9)
      *                  = 187.75
      *
-     * FSPL_LIGHT       = 20*log10(4*pi/c)
-     *                  = 20*log10(4*pi/(2.9979*10^8))
+     * FSPL_LIGHT       = 20 * log10(4 * pi/c)
+     *                  = 20 * log10(4 * pi/(2.9979 * 10^8))
+     *                  = 20 * log10(4 * pi/(2.9979 * 10^8))
+     *                  = 20 * log10(41.9172441s * 10^-9)
      *                  = -147.55
      *
-     * FSPL_DISTANCE_1M = 20*log10(1m)
+     * FSPL_DISTANCE_1M = 20 * log10(1)
      *                  = 0
      *
      * PATH_LOSS_AT_1M  = FSPL_DISTANCE_1M + FSPL_FREQ + FSPL_LIGHT
-     *                  = 0                + 187.75    + (-147.55)
-     *                  = 40.20 [round to 41]
+     *                  =       0          + 187.75    + (-147.55)
+     *                  = 40.20db [round to 41db]
      *
-     * Note that PATH_LOSS_AT_1M is rounded to 41 instead to the more natural 40. The first version
-     * of this file had a typo that caused the value to be close to 41; when this was discovered,
-     * the value 41 was already used in many places, and it was more important to be consistent
-     * rather than exact.
-     *
-     * Given this we can work out a formula for distance from a given RSSI (received signal strength
-     * indicator) and a given value for the expected strength at one meter from the beacon (aka
-     * calibrated transmission power). Both values are in dBm.
-     *
-     * FSPL = 20*log10(d) + PATH_LOSS_AT_1M = full_power - RSSI
-     *        20*log10(d) + PATH_LOSS_AT_1M = power_at_1m + PATH_LOSS_AT_1M - RSSI
-     *        20*log10(d)                   = power_at_1m - RSSI
-     *           log10(d)                   = (power_at_1m - RSSI) / 20
-     *                 d                    = 10 ^ ((power_at_1m - RSSI) / 20)
-     *
-     * Note: because of how logarithms work, units get a bit funny. If you take a two values x and y
-     * whose units are dBm, the value of x - y has units of dB, not dBm. Similarly, if x is dBm and
-     * y is in dB, then x - y will be in dBm.
+     * Note: Rounding up makes us "closer" and makes us more aggressive at showing notifications.
      */
-
-    /* (dBm) PATH_LOSS at 1m for isotropic antenna transmitting BLE */
-    public static final int PATH_LOSS_AT_1M = 41;
-
-    /** Different region categories, based on distance range. */
-    public static final class Region {
-
-        public static final int UNKNOWN = -1;
-        public static final int NEAR = 0;
-        public static final int MID = 1;
-        public static final int FAR = 2;
-
-        private Region() {}
-    }
-
-    // Cutoff distances between different regions.
-    public static final double NEAR_TO_MID_METERS = 0.5;
-    public static final double MID_TO_FAR_METERS = 2.0;
-
-    public static final int DEFAULT_CALIBRATED_TX_POWER = -77;
-
-    private RangingUtils() {}
+    private static final int RSSI_DROP_OFF_AT_1_M = 41;
 
     /**
-     * Convert RSSI to path loss using the free space path loss equation. See <a
-     * href="http://en.wikipedia.org/wiki/Free-space_path_loss">Free-space_path_loss</a>
+     * Convert target distance and txPower to a RSSI value using the Log-distance path loss model
+     * with Path Loss at 1m of 41db.
      *
-     * @param rssi Received Signal Strength Indication (RSSI) in dBm
-     * @param calibratedTxPower the calibrated power of the transmitter (dBm) at 1 meter
-     * @return The calculated path loss.
+     * @return RSSI expected at distanceInMeters with device broadcasting at txPower.
      */
-    public static int pathLossFromRssi(int rssi, int calibratedTxPower) {
-        return calibratedTxPower + PATH_LOSS_AT_1M - rssi;
-    }
-
-    /**
-     * Convert RSSI to distance using the free space path loss equation. See <a
-     * href="http://en.wikipedia.org/wiki/Free-space_path_loss">Free-space_path_loss</a>
-     *
-     * @param rssi Received Signal Strength Indication (RSSI) in dBm
-     * @param calibratedTxPower the calibrated power of the transmitter (dBm) at 1 meter
-     * @return the distance at which that rssi value would occur in meters
-     */
-    public static double distanceFromRssi(int rssi, int calibratedTxPower) {
-        return Math.pow(10, (calibratedTxPower - rssi) / 20.0);
-    }
-
-    /**
-     * Determine the region of a beacon given its perceived distance.
-     *
-     * @param distance The measured distance in meters.
-     * @return the region as one of the constants in {@link Region}.
-     */
-    public static int regionFromDistance(double distance) {
-        if (distance < 0) {
-            return Region.UNKNOWN;
-        }
-        if (distance <= NEAR_TO_MID_METERS) {
-            return Region.NEAR;
-        }
-        if (distance <= MID_TO_FAR_METERS) {
-            return Region.MID;
-        }
-        return Region.FAR;
-    }
-
-    /**
-     * Convert distance to RSSI using the free space path loss equation. See <a
-     * href="http://en.wikipedia.org/wiki/Free-space_path_loss">Free-space_path_loss</a>
-     *
-     * @param distanceInMeters distance in meters (m)
-     * @param calibratedTxPower transmitted power (dBm) calibrated to 1 meter
-     * @return the rssi (dBm) that would be measured at that distance
-     */
-    public static int rssiFromDistance(double distanceInMeters, int calibratedTxPower) {
+    public static int rssiFromTargetDistance(double distanceInMeters, int txPower) {
+        /*
+         * See <a href="https://en.wikipedia.org/wiki/Log-distance_path_loss_model">
+         * Log-distance path loss model</a>.
+         *
+         * PL      = total path loss in db
+         * txPower = TxPower in dbm
+         * rssi    = Received signal strength in dbm
+         * PL_0    = Path loss at reference distance d_0 {@link RSSI_DROP_OFF_AT_1_M} dbm
+         * d       = length of path
+         * d_0     = reference distance  (1 m)
+         * gamma   = path loss exponent (2 in free space)
+         *
+         * Log-distance path loss (LDPL) formula:
+         *
+         * PL = txPower - rssi =                   PL_0          + 10 * gamma  * log_10(d / d_0)
+         *      txPower - rssi =            RSSI_DROP_OFF_AT_1_M + 10 * 2 * log_10
+         * (distanceInMeters / 1)
+         *              - rssi = -txPower + RSSI_DROP_OFF_AT_1_M + 20 * log_10(distanceInMeters)
+         *                rssi =  txPower - RSSI_DROP_OFF_AT_1_M - 20 * log_10(distanceInMeters)
+         */
+        txPower = adjustPower(txPower);
         return distanceInMeters == 0
-                ? calibratedTxPower + PATH_LOSS_AT_1M
-                : (int) (calibratedTxPower - (20 * Math.log10(distanceInMeters)));
+                ? txPower
+                : (int) Math.floor((txPower - RSSI_DROP_OFF_AT_1_M)
+                        - 20 * Math.log10(distanceInMeters));
+    }
+
+    /**
+     * Convert RSSI and txPower to a distance value using the Log-distance path loss model with Path
+     * Loss at 1m of 41db.
+     *
+     * @return distance in meters with device broadcasting at txPower and given RSSI.
+     */
+    public static double distanceFromRssiAndTxPower(int rssi, int txPower) {
+        /*
+         * See <a href="https://en.wikipedia.org/wiki/Log-distance_path_loss_model">Log-distance
+         * path
+         * loss model</a>.
+         *
+         * PL      = total path loss in db
+         * txPower = TxPower in dbm
+         * rssi    = Received signal strength in dbm
+         * PL_0    = Path loss at reference distance d_0 {@link RSSI_DROP_OFF_AT_1_M} dbm
+         * d       = length of path
+         * d_0     = reference distance  (1 m)
+         * gamma   = path loss exponent (2 in free space)
+         *
+         * Log-distance path loss (LDPL) formula:
+         *
+         * PL =    txPower - rssi                               = PL_0 + 10 * gamma  * log_10(d /
+         *  d_0)
+         *         txPower - rssi               = RSSI_DROP_OFF_AT_1_M + 10 * gamma  * log_10(d /
+         *  d_0)
+         *         txPower - rssi - RSSI_DROP_OFF_AT_1_M        = 10 * 2 * log_10
+         * (distanceInMeters / 1)
+         *         txPower - rssi - RSSI_DROP_OFF_AT_1_M        = 20 * log_10(distanceInMeters / 1)
+         *        (txPower - rssi - RSSI_DROP_OFF_AT_1_M) / 20  = log_10(distanceInMeters)
+         *  10 ^ ((txPower - rssi - RSSI_DROP_OFF_AT_1_M) / 20) = distanceInMeters
+         */
+        txPower = adjustPower(txPower);
+        rssi = adjustPower(rssi);
+        return Math.pow(10, (txPower - rssi - RSSI_DROP_OFF_AT_1_M) / 20.0);
+    }
+
+    /**
+     * Prevents the power from becoming too large or too small.
+     */
+    private static int adjustPower(int power) {
+        if (power > MAX_RSSI_VALUE) {
+            return MAX_RSSI_VALUE;
+        }
+        if (power < MIN_RSSI_VALUE) {
+            return MIN_RSSI_VALUE;
+        }
+        return power;
     }
 }
 

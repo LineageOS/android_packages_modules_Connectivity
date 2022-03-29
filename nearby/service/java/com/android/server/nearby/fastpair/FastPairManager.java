@@ -103,8 +103,9 @@ public class FastPairManager {
     private final BroadcastReceiver mScreenBroadcastReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
-            if (intent.getAction().equals(Intent.ACTION_SCREEN_ON)) {
-                Log.d(TAG, "onReceive: ACTION_SCREEN_ON.");
+            if (intent.getAction().equals(Intent.ACTION_SCREEN_ON)
+                    || intent.getAction().equals(Intent.ACTION_BOOT_COMPLETED)) {
+                Log.d(TAG, "onReceive: ACTION_SCREEN_ON or boot complete.");
                 invalidateScan();
             } else if (intent.getAction().equals(BluetoothDevice.ACTION_BOND_STATE_CHANGED)) {
                 processBluetoothConnectionEvent(intent);
@@ -149,6 +150,7 @@ public class FastPairManager {
         mIntentFilter.addAction(Intent.ACTION_SCREEN_ON);
         mIntentFilter.addAction(Intent.ACTION_SCREEN_OFF);
         mIntentFilter.addAction(BluetoothDevice.ACTION_BOND_STATE_CHANGED);
+        mIntentFilter.addAction(Intent.ACTION_BOOT_COMPLETED);
 
         mLocatorContextWrapper.getContext()
                 .registerReceiver(mScreenBroadcastReceiver, mIntentFilter);
