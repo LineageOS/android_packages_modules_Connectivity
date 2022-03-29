@@ -29,6 +29,7 @@ import android.net.NetworkAgentConfig;
 import android.net.NetworkCapabilities;
 import android.net.NetworkScore;
 import android.net.NetworkScore.KeepConnectedReason;
+import android.util.Log;
 import android.util.SparseArray;
 
 import com.android.internal.annotations.VisibleForTesting;
@@ -46,6 +47,8 @@ import java.util.StringJoiner;
  * they are handling a score that had the CS-managed bits set.
  */
 public class FullScore {
+    private static final String TAG = FullScore.class.getSimpleName();
+
     // This will be removed soon. Do *NOT* depend on it for any new code that is not part of
     // a migration.
     private final int mLegacyInt;
@@ -126,7 +129,15 @@ public class FullScore {
     @VisibleForTesting
     static @NonNull String policyNameOf(final int policy) {
         final String name = sMessageNames.get(policy);
-        if (name == null) throw new IllegalArgumentException("Unknown policy: " + policy);
+        if (name == null) {
+            // Don't throw here because name might be null due to proguard stripping out the
+            // POLICY_* constants, potentially causing a crash only on user builds because proguard
+            // does not run on userdebug builds.
+            // TODO: make MessageUtils safer by not returning the array and instead storing it
+            // internally and providing a getter (that does not throw) for individual values.
+            Log.wtf(TAG, "Unknown policy: " + policy);
+            return Integer.toString(policy);
+        }
         return name.substring("POLICY_".length());
     }
 
