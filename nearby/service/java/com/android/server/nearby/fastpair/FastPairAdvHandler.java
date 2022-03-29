@@ -91,12 +91,13 @@ public class FastPairAdvHandler {
         if (mPairDataProvider == null) {
             return;
         }
-        List<Account> accountList = mPairDataProvider.loadFastPairEligibleAccounts();
+
         if (FastPairDecoder.checkModelId(fastPairDevice.getData())) {
             byte[] model = FastPairDecoder.getModelId(fastPairDevice.getData());
             Log.d(TAG, "On discovery model id " + Hex.bytesToStringLowercase(model));
             // Use api to get anti spoofing key from model id.
             try {
+                List<Account> accountList = mPairDataProvider.loadFastPairEligibleAccounts();
                 Rpcs.GetObservedDeviceResponse response =
                         mPairDataProvider.loadFastPairAntispoofKeyDeviceMetadata(model);
                 if (response == null) {
@@ -121,6 +122,7 @@ public class FastPairAdvHandler {
         } else {
             // Start to process bloom filter
             try {
+                List<Account> accountList = mPairDataProvider.loadFastPairEligibleAccounts();
                 byte[] bloomFilterByteArray = FastPairDecoder
                         .getBloomFilter(fastPairDevice.getData());
                 byte[] bloomFilterSalt = FastPairDecoder
