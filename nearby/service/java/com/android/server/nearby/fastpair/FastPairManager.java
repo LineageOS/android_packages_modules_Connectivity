@@ -416,11 +416,13 @@ public class FastPairManager {
             return;
         }
         if (mScanEnabled) {
+            Log.v(TAG, "invalidateScan: scan is enabled");
             nearbyManager.startScan(new ScanRequest.Builder()
                             .setScanType(ScanRequest.SCAN_TYPE_FAST_PAIR).build(),
                     ForegroundThread.getExecutor(),
                     mScanCallback);
         } else {
+            Log.v(TAG, "invalidateScan: scan is disabled");
             nearbyManager.stopScan(mScanCallback);
         }
     }

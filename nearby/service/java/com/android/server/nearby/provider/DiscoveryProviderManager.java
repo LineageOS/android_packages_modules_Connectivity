@@ -152,8 +152,11 @@ public class DiscoveryProviderManager implements AbstractDiscoveryProvider.Liste
 
             ScanListenerRecord removedRecord =
                     mScanTypeScanListenerRecordMap.remove(listenerBinder);
+            Log.v(TAG, "DiscoveryProviderManager unregistered scan listener.");
             NearbyMetrics.logScanStopped(removedRecord.hashCode(), removedRecord.getScanRequest());
             if (mScanTypeScanListenerRecordMap.isEmpty()) {
+                Log.v(TAG, "DiscoveryProviderManager stops provider because there is no "
+                        + "scan listener registered.");
                 stopProviders();
                 return;
             }
@@ -162,6 +165,8 @@ public class DiscoveryProviderManager implements AbstractDiscoveryProvider.Liste
 
             // Removes current highest scan mode requested and sets the next highest scan mode.
             if (removedRecord.getScanRequest().getScanMode() == mScanMode) {
+                Log.v(TAG, "DiscoveryProviderManager starts to find the new highest scan mode "
+                        + "because the highest scan mode listener was unregistered.");
                 @ScanRequest.ScanMode int highestScanModeRequested = ScanRequest.SCAN_MODE_NO_POWER;
                 // find the next highest scan mode;
                 for (ScanListenerRecord record : mScanTypeScanListenerRecordMap.values()) {
