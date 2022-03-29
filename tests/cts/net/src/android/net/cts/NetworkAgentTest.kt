@@ -72,6 +72,7 @@ import android.os.Handler
 import android.os.HandlerThread
 import android.os.Message
 import android.os.SystemClock
+import android.platform.test.annotations.AppModeFull
 import android.telephony.TelephonyManager
 import android.telephony.data.EpsBearerQosSessionAttributes
 import android.util.DebugUtils.valueToString
@@ -106,7 +107,6 @@ import com.android.testutils.TestableNetworkAgent.CallbackEntry.OnValidationStat
 import com.android.testutils.TestableNetworkCallback
 import com.android.testutils.assertThrows
 import org.junit.After
-import org.junit.Assume.assumeFalse
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -946,11 +946,9 @@ class NetworkAgentTest {
         return Pair(agent, qosTestSocket!!)
     }
 
+    @AppModeFull(reason = "Instant apps don't have permission to bind sockets.")
     @Test
     fun testQosCallbackRegisterWithUnregister() {
-        // Instant apps can't bind sockets to localhost
-        // TODO: use @AppModeFull when supported by DevSdkIgnoreRunner
-        assumeFalse(realContext.packageManager.isInstantApp())
         val (agent, socket) = setupForQosCallbackTesting()
 
         val qosCallback = TestableQosCallback()
@@ -975,11 +973,9 @@ class NetworkAgentTest {
         }
     }
 
+    @AppModeFull(reason = "Instant apps don't have permission to bind sockets.")
     @Test
     fun testQosCallbackOnQosSession() {
-        // Instant apps can't bind sockets to localhost
-        // TODO: use @AppModeFull when supported by DevSdkIgnoreRunner
-        assumeFalse(realContext.packageManager.isInstantApp())
         val (agent, socket) = setupForQosCallbackTesting()
         val qosCallback = TestableQosCallback()
         Executors.newSingleThreadExecutor().let { executor ->
@@ -1023,11 +1019,9 @@ class NetworkAgentTest {
         }
     }
 
+    @AppModeFull(reason = "Instant apps don't have permission to bind sockets.")
     @Test
     fun testQosCallbackOnError() {
-        // Instant apps can't bind sockets to localhost
-        // TODO: use @AppModeFull when supported by DevSdkIgnoreRunner
-        assumeFalse(realContext.packageManager.isInstantApp())
         val (agent, socket) = setupForQosCallbackTesting()
         val qosCallback = TestableQosCallback()
         Executors.newSingleThreadExecutor().let { executor ->
@@ -1064,11 +1058,9 @@ class NetworkAgentTest {
         }
     }
 
+    @AppModeFull(reason = "Instant apps don't have permission to bind sockets.")
     @Test
     fun testQosCallbackIdsAreMappedCorrectly() {
-        // Instant apps can't bind sockets to localhost
-        // TODO: use @AppModeFull when supported by DevSdkIgnoreRunner
-        assumeFalse(realContext.packageManager.isInstantApp())
         val (agent, socket) = setupForQosCallbackTesting()
         val qosCallback1 = TestableQosCallback()
         val qosCallback2 = TestableQosCallback()
@@ -1107,11 +1099,9 @@ class NetworkAgentTest {
         }
     }
 
+    @AppModeFull(reason = "Instant apps don't have permission to bind sockets.")
     @Test
     fun testQosCallbackWhenNetworkReleased() {
-        // Instant apps can't bind sockets to localhost
-        // TODO: use @AppModeFull when supported by DevSdkIgnoreRunner
-        assumeFalse(realContext.packageManager.isInstantApp())
         val (agent, socket) = setupForQosCallbackTesting()
         Executors.newSingleThreadExecutor().let { executor ->
             try {
@@ -1151,6 +1141,7 @@ class NetworkAgentTest {
         )
     }
 
+    @AppModeFull(reason = "Instant apps don't have permission to bind sockets.")
     @Test
     fun testUnregisterAfterReplacement() {
         // Keeps an eye on all test networks.
