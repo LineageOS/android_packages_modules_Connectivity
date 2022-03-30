@@ -39,7 +39,7 @@ cc_library_static {
     visibility: [
         "//frameworks/libs/net/common/native/bpfmapjni",
         "//packages/modules/Connectivity:__subpackages__",
-        "//system/netd/server",
+        "//system/netd:__subpackages__",
     ],
 }
 
