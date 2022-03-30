@@ -18,6 +18,7 @@ from mobly import asserts
 from mobly.controllers import android_device
 from mobly.controllers.android_device_lib import snippet_event
 import retry
+from typing import Optional
 
 from test_helper import event_helper
 
@@ -179,3 +180,11 @@ class FastPairProviderSimulator:
             on_received=_on_advertising_mode_change_event_received,
             on_waiting=_on_advertising_mode_change_event_waiting,
             on_missed=_on_advertising_mode_change_event_missed)
+
+    def get_latest_received_account_key(self) -> Optional[str]:
+        """Gets the latest account key received on the provider side.
+
+        Returns:
+          The account key received at provider side.
+        """
+        return self._ad.fp.getLatestReceivedAccountKey()

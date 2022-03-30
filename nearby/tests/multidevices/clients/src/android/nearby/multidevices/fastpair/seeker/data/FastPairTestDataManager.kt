@@ -19,12 +19,20 @@ package android.nearby.multidevices.fastpair.seeker.data
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
-import android.nearby.fastpair.seeker.*
+import android.content.IntentFilter
+import android.nearby.fastpair.seeker.ACTION_RESET_TEST_DATA_CACHE
+import android.nearby.fastpair.seeker.ACTION_SEND_ACCOUNT_KEY_DEVICE_METADATA
+import android.nearby.fastpair.seeker.ACTION_SEND_ANTISPOOF_KEY_DEVICE_METADATA
+import android.nearby.fastpair.seeker.ACTION_WRITE_ACCOUNT_KEY_DEVICE_METADATA
+import android.nearby.fastpair.seeker.DATA_JSON_STRING_KEY
+import android.nearby.fastpair.seeker.DATA_MODEL_ID_STRING_KEY
+import android.nearby.fastpair.seeker.FastPairTestDataCache
 import android.util.Log
 
 /** Manage local FastPairTestDataCache and send to/sync from the remote cache in data provider. */
 class FastPairTestDataManager(private val context: Context) : BroadcastReceiver() {
     val testDataCache = FastPairTestDataCache()
+    var listener: EventListener? = null
 
     /** Puts a model id to FastPairAntispoofKeyDeviceMetadata pair into local and remote cache.
      *
@@ -41,17 +49,17 @@ class FastPairTestDataManager(private val context: Context) : BroadcastReceiver(
         testDataCache.putAntispoofKeyDeviceMetadata(modelId, json)
     }
 
-    /** Puts account key device metadata to local and remote cache.
+    /** Puts account key device metadata array to local and remote cache.
      *
      * @param json a string of FastPairAccountKeyDeviceMetadata JSON array.
      */
-    fun sendAccountKeyDeviceMetadata(json: String) {
+    fun sendAccountKeyDeviceMetadataJsonArray(json: String) {
         Intent().also { intent ->
             intent.action = ACTION_SEND_ACCOUNT_KEY_DEVICE_METADATA
             intent.putExtra(DATA_JSON_STRING_KEY, json)
             context.sendBroadcast(intent)
         }
-        testDataCache.putAccountKeyDeviceMetadata(json)
+        testDataCache.putAccountKeyDeviceMetadataJsonArray(json)
     }
 
     /** Clears local and remote cache. */
@@ -73,10 +81,31 @@ class FastPairTestDataManager(private val context: Context) : BroadcastReceiver(
             ACTION_WRITE_ACCOUNT_KEY_DEVICE_METADATA -> {
                 Log.d(TAG, "ACTION_WRITE_ACCOUNT_KEY_DEVICE_METADATA received!")
                 val json = intent.getStringExtra(DATA_JSON_STRING_KEY)!!
-                testDataCache.putAccountKeyDeviceMetadata(json)
+                testDataCache.putAccountKeyDeviceMetadataJsonObject(json)
+                listener?.onManageFastPairAccountDevice(json)
             }
             else -> Log.d(TAG, "Unknown action received!")
         }
+    }
+
+    fun registerDataReceiveListener(listener: EventListener) {
+        this.listener = listener
+        val bondStateFilter = IntentFilter(ACTION_WRITE_ACCOUNT_KEY_DEVICE_METADATA)
+        context.registerReceiver(this, bondStateFilter)
+    }
+
+    fun unregisterDataReceiveListener() {
+        this.listener = null
+        context.unregisterReceiver(this)
+    }
+
+    /** Interface for listening the data receive from the remote cache in data provider. */
+    interface EventListener {
+        /** Reports a FastPairAccountKeyDeviceMetadata write into the cache.
+         *
+         * @param json the FastPairAccountKeyDeviceMetadata as JSON object string.
+         */
+        fun onManageFastPairAccountDevice(json: String)
     }
 
     companion object {
