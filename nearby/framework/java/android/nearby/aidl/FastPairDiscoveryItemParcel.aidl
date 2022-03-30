@@ -26,8 +26,6 @@ parcelable FastPairDiscoveryItemParcel {
   // Online item: unique ID generated on server.
   String id;
 
-  int type;
-
   // The most recent all upper case mac associated with this item.
   // (Mac-to-DiscoveryItem is a many-to-many relationship)
   String macAddress;
@@ -72,18 +70,8 @@ parcelable FastPairDiscoveryItemParcel {
   // Used in the second line of the notification, "Open in {} app"
   String appName;
 
-  // ID used for associating several DiscoveryItems.  These items may be
-  // visually displayed together.
-  String groupId;
-
-  // Whether the attachment is created in debug namespace
-  int attachmentType;
-
   // Package name of the App that owns this item.
   String packageName;
-
-  // The "feature" graphic image url used for large sized list view entries.
-  String featureGraphicUrl;
 
   // TriggerId identifies the trigger/beacon that is attached with a message.
   // It's generated from server for online messages to synchronize formatting
@@ -99,27 +87,6 @@ parcelable FastPairDiscoveryItemParcel {
 
   // A FIFE URL of the item icon displayed in Discovery item list.
   String iconFifeUrl;
-
-  // Message written to bugreport for 3P developers.(No sensitive info)
-  // null if the item is valid
-  String debugMessage;
-
-  // Weather the item is filtered out on server.
-  int debugCategory;
-
-  // Client timestamp when the trigger (e.g. beacon) was last lost (e.g. when
-  // Messages told us the beacon's no longer nearby).
-  long lostMillis;
-
-  // The kind of experience the user last had with this (e.g. if they dismissed
-  // the notification, that's bad; but if they tapped it, that's good).
-  int lastUserExperience;
-
-  // The most recent BLE advertisement related to this item.
-  byte[] bleRecordBytes;
-
-  // An ID generated on the server to uniquely identify content.
-  String entityId;
 
   // Fast Pair antispoof key.
   byte[] authenticationPublicKeySecp256r1;

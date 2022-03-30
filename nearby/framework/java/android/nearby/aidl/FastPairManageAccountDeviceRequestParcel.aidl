@@ -31,6 +31,4 @@ parcelable FastPairManageAccountDeviceRequestParcel {
     int requestType;
     // Fast Pair account key-ed device metadata.
     FastPairAccountKeyDeviceMetadataParcel accountKeyDeviceMetadata;
-    // BLE address of the device at the device add time.
-    String bleAddress;
 }

@@ -36,30 +36,5 @@ message FastPairStrings {
   // Description when user fail to pair with device
   optional string pairing_fail_description = 9;
 
-  // Title to ask the user to confirm the pin code.
-  optional string confirm_pin_title = 10;
-
-  // Description to ask the user to confirm the pin code.
-  optional string confirm_pin_description = 11;
-
-  // The title of the UI to ask the user to confirm to sync contacts.
-  optional string sync_contacts_title = 12;
-
-  // The description of the UI to ask the user to confirm to sync contacts.
-  optional string sync_contacts_description = 13;
-
-  // The title of the UI to ask the user to confirm to sync SMS.
-  optional string sync_sms_title = 14;
-
-  // The description of the UI to ask the user to confirm to sync SMS.
-  optional string sync_sms_description = 15;
-
-  // The description for half sheet to ask user to setup google assistant.
-  optional string assistant_half_sheet_description = 16;
-
-  // The description for notification to ask user to setup google assistant.
-  optional string assistant_notification_description = 17;
-
-  // Description of the connect device action on TV, when user is not logged in.
-  optional string fast_pair_tv_connect_device_no_account_description = 18;
+  reserved 10, 11, 12, 13, 14,15, 16, 17, 18;
 }

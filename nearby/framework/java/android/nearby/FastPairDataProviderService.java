@@ -479,15 +479,6 @@ public abstract class FastPairDataProviderService extends Service {
             return this.mRequestParcel.account;
         }
         /**
-         * Get BleAddress.
-         *
-         * @hide
-         */
-        @SystemApi
-        public @Nullable String getBleAddress() {
-            return this.mRequestParcel.bleAddress;
-        }
-        /**
          * Get account key device metadata.
          *
          * @hide

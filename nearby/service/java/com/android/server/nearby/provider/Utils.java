@@ -79,30 +79,10 @@ class Utils {
                 if (metadataParcel.discoveryItem.appName != null) {
                     storedDiscoveryItemBuilder.setAppName(metadataParcel.discoveryItem.appName);
                 }
-                Cache.DiscoveryAttachmentType attachmentType =
-                        Cache.DiscoveryAttachmentType.forNumber(
-                                metadataParcel.discoveryItem.attachmentType);
-                if (attachmentType != null) {
-                    storedDiscoveryItemBuilder.setAttachmentType(attachmentType);
-                }
                 if (metadataParcel.discoveryItem.authenticationPublicKeySecp256r1 != null) {
                     storedDiscoveryItemBuilder.setAuthenticationPublicKeySecp256R1(
                             ByteString.copyFrom(
                                     metadataParcel.discoveryItem.authenticationPublicKeySecp256r1));
-                }
-                if (metadataParcel.discoveryItem.bleRecordBytes != null) {
-                    storedDiscoveryItemBuilder.setBleRecordBytes(
-                            ByteString.copyFrom(metadataParcel.discoveryItem.bleRecordBytes));
-                }
-                Cache.StoredDiscoveryItem.DebugMessageCategory debugMessageCategory =
-                        Cache.StoredDiscoveryItem.DebugMessageCategory.forNumber(
-                                metadataParcel.discoveryItem.debugCategory);
-                if (debugMessageCategory != null) {
-                    storedDiscoveryItemBuilder.setDebugCategory(debugMessageCategory);
-                }
-                if (metadataParcel.discoveryItem.debugMessage != null) {
-                    storedDiscoveryItemBuilder.setDebugMessage(
-                            metadataParcel.discoveryItem.debugMessage);
                 }
                 if (metadataParcel.discoveryItem.description != null) {
                     storedDiscoveryItemBuilder.setDescription(
@@ -116,19 +96,8 @@ class Utils {
                     storedDiscoveryItemBuilder.setDisplayUrl(
                             metadataParcel.discoveryItem.displayUrl);
                 }
-                if (metadataParcel.discoveryItem.entityId != null) {
-                    storedDiscoveryItemBuilder.setEntityId(
-                            metadataParcel.discoveryItem.entityId);
-                }
-                if (metadataParcel.discoveryItem.featureGraphicUrl != null) {
-                    storedDiscoveryItemBuilder.setFeatureGraphicUrl(
-                            metadataParcel.discoveryItem.featureGraphicUrl);
-                }
                 storedDiscoveryItemBuilder.setFirstObservationTimestampMillis(
                         metadataParcel.discoveryItem.firstObservationTimestampMillis);
-                if (metadataParcel.discoveryItem.groupId != null) {
-                    storedDiscoveryItemBuilder.setGroupId(metadataParcel.discoveryItem.groupId);
-                }
                 if (metadataParcel.discoveryItem.iconFifeUrl != null) {
                     storedDiscoveryItemBuilder.setIconFifeUrl(
                             metadataParcel.discoveryItem.iconFifeUrl);
@@ -142,13 +111,6 @@ class Utils {
                 }
                 storedDiscoveryItemBuilder.setLastObservationTimestampMillis(
                         metadataParcel.discoveryItem.lastObservationTimestampMillis);
-                Cache.StoredDiscoveryItem.ExperienceType experienceType =
-                        Cache.StoredDiscoveryItem.ExperienceType.forNumber(
-                                metadataParcel.discoveryItem.lastUserExperience);
-                if (experienceType != null) {
-                    storedDiscoveryItemBuilder.setLastUserExperience(experienceType);
-                }
-                storedDiscoveryItemBuilder.setLostMillis(metadataParcel.discoveryItem.lostMillis);
                 if (metadataParcel.discoveryItem.macAddress != null) {
                     storedDiscoveryItemBuilder.setMacAddress(
                             metadataParcel.discoveryItem.macAddress);
@@ -173,30 +135,9 @@ class Utils {
                     storedDiscoveryItemBuilder.setTriggerId(metadataParcel.discoveryItem.triggerId);
                 }
                 storedDiscoveryItemBuilder.setTxPower(metadataParcel.discoveryItem.txPower);
-                Cache.NearbyType type =
-                        Cache.NearbyType.forNumber(metadataParcel.discoveryItem.type);
-                if (type != null) {
-                    storedDiscoveryItemBuilder.setType(type);
-                }
             }
             if (metadataParcel.metadata != null) {
                 FastPairStrings.Builder stringsBuilder = FastPairStrings.newBuilder();
-                if (metadataParcel.metadata.assistantSetupHalfSheet != null) {
-                    stringsBuilder.setAssistantHalfSheetDescription(
-                            metadataParcel.metadata.assistantSetupHalfSheet);
-                }
-                if (metadataParcel.metadata.assistantSetupNotification != null) {
-                    stringsBuilder.setAssistantNotificationDescription(
-                            metadataParcel.metadata.assistantSetupNotification);
-                }
-                if (metadataParcel.metadata.confirmPinDescription != null) {
-                    stringsBuilder.setConfirmPinDescription(
-                            metadataParcel.metadata.confirmPinDescription);
-                }
-                if (metadataParcel.metadata.confirmPinTitle != null) {
-                    stringsBuilder.setConfirmPinTitle(
-                            metadataParcel.metadata.confirmPinTitle);
-                }
                 if (metadataParcel.metadata.connectSuccessCompanionAppInstalled != null) {
                     stringsBuilder.setPairingFinishedCompanionAppInstalled(
                             metadataParcel.metadata.connectSuccessCompanionAppInstalled);
@@ -208,10 +149,6 @@ class Utils {
                 if (metadataParcel.metadata.failConnectGoToSettingsDescription != null) {
                     stringsBuilder.setPairingFailDescription(
                             metadataParcel.metadata.failConnectGoToSettingsDescription);
-                }
-                if (metadataParcel.metadata.fastPairTvConnectDeviceNoAccountDescription != null) {
-                    stringsBuilder.setFastPairTvConnectDeviceNoAccountDescription(
-                            metadataParcel.metadata.fastPairTvConnectDeviceNoAccountDescription);
                 }
                 if (metadataParcel.metadata.initialNotificationDescription != null) {
                     stringsBuilder.setTapToPairWithAccount(
@@ -232,21 +169,6 @@ class Utils {
                 if (metadataParcel.metadata.subsequentPairingDescription != null) {
                     stringsBuilder.setSubsequentPairingDescription(
                             metadataParcel.metadata.subsequentPairingDescription);
-                }
-                if (metadataParcel.metadata.syncContactsDescription != null) {
-                    stringsBuilder.setSyncContactsDescription(
-                            metadataParcel.metadata.syncContactsDescription);
-                }
-                if (metadataParcel.metadata.syncContactsTitle != null) {
-                    stringsBuilder.setSyncContactsTitle(
-                            metadataParcel.metadata.syncContactsTitle);
-                }
-                if (metadataParcel.metadata.syncSmsDescription != null) {
-                    stringsBuilder.setSyncSmsDescription(
-                            metadataParcel.metadata.syncSmsDescription);
-                }
-                if (metadataParcel.metadata.syncSmsTitle != null) {
-                    stringsBuilder.setSyncSmsTitle(metadataParcel.metadata.syncSmsTitle);
                 }
                 if (metadataParcel.metadata.waitLaunchCompanionAppDescription != null) {
                     stringsBuilder.setWaitAppLaunchDescription(
@@ -357,20 +279,6 @@ class Utils {
         }
 
         Rpcs.ObservedDeviceStrings.Builder stringsBuilder = Rpcs.ObservedDeviceStrings.newBuilder();
-        if (metadata.deviceMetadata.assistantSetupHalfSheet != null) {
-            stringsBuilder
-                    .setAssistantSetupHalfSheet(metadata.deviceMetadata.assistantSetupHalfSheet);
-        }
-        if (metadata.deviceMetadata.assistantSetupNotification != null) {
-            stringsBuilder.setAssistantSetupNotification(
-                    metadata.deviceMetadata.assistantSetupNotification);
-        }
-        if (metadata.deviceMetadata.confirmPinDescription != null) {
-            stringsBuilder.setConfirmPinDescription(metadata.deviceMetadata.confirmPinDescription);
-        }
-        if (metadata.deviceMetadata.confirmPinTitle != null) {
-            stringsBuilder.setConfirmPinTitle(metadata.deviceMetadata.confirmPinTitle);
-        }
         if (metadata.deviceMetadata.connectSuccessCompanionAppInstalled != null) {
             stringsBuilder.setConnectSuccessCompanionAppInstalled(
                     metadata.deviceMetadata.connectSuccessCompanionAppInstalled);
@@ -387,10 +295,6 @@ class Utils {
             stringsBuilder.setFailConnectGoToSettingsDescription(
                     metadata.deviceMetadata.failConnectGoToSettingsDescription);
         }
-        if (metadata.deviceMetadata.fastPairTvConnectDeviceNoAccountDescription != null) {
-            stringsBuilder.setFastPairTvConnectDeviceNoAccountDescription(
-                    metadata.deviceMetadata.fastPairTvConnectDeviceNoAccountDescription);
-        }
         if (metadata.deviceMetadata.initialNotificationDescription != null) {
             stringsBuilder.setInitialNotificationDescription(
                     metadata.deviceMetadata.initialNotificationDescription);
@@ -403,9 +307,6 @@ class Utils {
             stringsBuilder.setInitialPairingDescription(
                     metadata.deviceMetadata.initialPairingDescription);
         }
-        if (metadata.deviceMetadata.locale != null) {
-            stringsBuilder.setLocale(metadata.deviceMetadata.locale);
-        }
         if (metadata.deviceMetadata.openCompanionAppDescription != null) {
             stringsBuilder.setOpenCompanionAppDescription(
                     metadata.deviceMetadata.openCompanionAppDescription);
@@ -417,22 +318,6 @@ class Utils {
         if (metadata.deviceMetadata.subsequentPairingDescription != null) {
             stringsBuilder.setSubsequentPairingDescription(
                     metadata.deviceMetadata.subsequentPairingDescription);
-        }
-        if (metadata.deviceMetadata.syncContactsDescription != null) {
-            stringsBuilder.setSyncContactsDescription(
-                    metadata.deviceMetadata.syncContactsDescription);
-        }
-        if (metadata.deviceMetadata.syncContactsTitle != null) {
-            stringsBuilder.setSyncContactsTitle(
-                    metadata.deviceMetadata.syncContactsTitle);
-        }
-        if (metadata.deviceMetadata.syncSmsDescription != null) {
-            stringsBuilder.setSyncSmsDescription(
-                    metadata.deviceMetadata.syncSmsDescription);
-        }
-        if (metadata.deviceMetadata.syncSmsTitle != null) {
-            stringsBuilder.setSyncSmsTitle(
-                    metadata.deviceMetadata.syncSmsTitle);
         }
         if (metadata.deviceMetadata.unableToConnectDescription != null) {
             stringsBuilder.setUnableToConnectDescription(
@@ -513,28 +398,18 @@ class Utils {
         discoveryItemParcel.actionUrl = storedDiscoveryItem.getActionUrl();
         discoveryItemParcel.actionUrlType = storedDiscoveryItem.getActionUrlType().getNumber();
         discoveryItemParcel.appName = storedDiscoveryItem.getAppName();
-        discoveryItemParcel.attachmentType = storedDiscoveryItem.getAttachmentType().getNumber();
         discoveryItemParcel.authenticationPublicKeySecp256r1 =
                 storedDiscoveryItem.getAuthenticationPublicKeySecp256R1().toByteArray();
-        discoveryItemParcel.bleRecordBytes = storedDiscoveryItem.getBleRecordBytes().toByteArray();
-        discoveryItemParcel.debugCategory = storedDiscoveryItem.getDebugCategory().getNumber();
-        discoveryItemParcel.debugMessage = storedDiscoveryItem.getDebugMessage();
         discoveryItemParcel.description = storedDiscoveryItem.getDescription();
         discoveryItemParcel.deviceName = storedDiscoveryItem.getDeviceName();
         discoveryItemParcel.displayUrl = storedDiscoveryItem.getDisplayUrl();
-        discoveryItemParcel.entityId = storedDiscoveryItem.getEntityId();
-        discoveryItemParcel.featureGraphicUrl = storedDiscoveryItem.getFeatureGraphicUrl();
         discoveryItemParcel.firstObservationTimestampMillis =
                 storedDiscoveryItem.getFirstObservationTimestampMillis();
-        discoveryItemParcel.groupId = storedDiscoveryItem.getGroupId();
         discoveryItemParcel.iconFifeUrl = storedDiscoveryItem.getIconFifeUrl();
         discoveryItemParcel.iconPng = storedDiscoveryItem.getIconPng().toByteArray();
         discoveryItemParcel.id = storedDiscoveryItem.getId();
         discoveryItemParcel.lastObservationTimestampMillis =
                 storedDiscoveryItem.getLastObservationTimestampMillis();
-        discoveryItemParcel.lastUserExperience =
-                storedDiscoveryItem.getLastUserExperience().getNumber();
-        discoveryItemParcel.lostMillis = storedDiscoveryItem.getLostMillis();
         discoveryItemParcel.macAddress = storedDiscoveryItem.getMacAddress();
         discoveryItemParcel.packageName = storedDiscoveryItem.getPackageName();
         discoveryItemParcel.pendingAppInstallTimestampMillis =
@@ -544,7 +419,6 @@ class Utils {
         discoveryItemParcel.title = storedDiscoveryItem.getTitle();
         discoveryItemParcel.triggerId = storedDiscoveryItem.getTriggerId();
         discoveryItemParcel.txPower = storedDiscoveryItem.getTxPower();
-        discoveryItemParcel.type = storedDiscoveryItem.getType().getNumber();
 
         return discoveryItemParcel;
     }
@@ -564,27 +438,17 @@ class Utils {
         FastPairStrings fpStrings = storedDiscoveryItem.getFastPairStrings();
 
         FastPairDeviceMetadataParcel metadataParcel = new FastPairDeviceMetadataParcel();
-        metadataParcel.assistantSetupHalfSheet = fpStrings.getAssistantHalfSheetDescription();
-        metadataParcel.assistantSetupNotification = fpStrings.getAssistantNotificationDescription();
-        metadataParcel.confirmPinDescription = fpStrings.getConfirmPinDescription();
-        metadataParcel.confirmPinTitle = fpStrings.getConfirmPinTitle();
         metadataParcel.connectSuccessCompanionAppInstalled =
                 fpStrings.getPairingFinishedCompanionAppInstalled();
         metadataParcel.connectSuccessCompanionAppNotInstalled =
                 fpStrings.getPairingFinishedCompanionAppNotInstalled();
         metadataParcel.failConnectGoToSettingsDescription = fpStrings.getPairingFailDescription();
-        metadataParcel.fastPairTvConnectDeviceNoAccountDescription =
-                fpStrings.getFastPairTvConnectDeviceNoAccountDescription();
         metadataParcel.initialNotificationDescription = fpStrings.getTapToPairWithAccount();
         metadataParcel.initialNotificationDescriptionNoAccount =
                 fpStrings.getTapToPairWithoutAccount();
         metadataParcel.initialPairingDescription = fpStrings.getInitialPairingDescription();
         metadataParcel.retroactivePairingDescription = fpStrings.getRetroactivePairingDescription();
         metadataParcel.subsequentPairingDescription = fpStrings.getSubsequentPairingDescription();
-        metadataParcel.syncContactsDescription = fpStrings.getSyncContactsDescription();
-        metadataParcel.syncContactsTitle = fpStrings.getSyncContactsTitle();
-        metadataParcel.syncSmsDescription = fpStrings.getSyncSmsDescription();
-        metadataParcel.syncSmsTitle = fpStrings.getSyncSmsTitle();
         metadataParcel.waitLaunchCompanionAppDescription = fpStrings.getWaitAppLaunchDescription();
 
         Cache.FastPairInformation fpInformation = storedDiscoveryItem.getFastPairInformation();
