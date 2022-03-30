@@ -21,7 +21,7 @@ import android.content.Context
 import android.nearby.fastpair.provider.FastPairSimulator
 import android.nearby.fastpair.provider.bluetooth.BluetoothController
 import com.google.android.mobly.snippet.util.Log
-import com.google.common.io.BaseEncoding
+import com.google.common.io.BaseEncoding.base64
 
 class FastPairProviderSimulatorController(private val context: Context) :
     FastPairSimulator.AdvertisingChangedCallback, BluetoothController.EventListener {
@@ -50,7 +50,7 @@ class FastPairProviderSimulatorController(private val context: Context) :
     ) {
         eventListener = listener
 
-        val antiSpoofingKey = BaseEncoding.base64().decode(antiSpoofingKeyString)
+        val antiSpoofingKey = base64().decode(antiSpoofingKeyString)
         simulator = FastPairSimulator(
             context, FastPairSimulator.Options.builder(modelId)
                 .setAdvertisingModelId(modelId)
@@ -67,6 +67,9 @@ class FastPairProviderSimulatorController(private val context: Context) :
     }
 
     fun getProviderSimulatorBleAddress() = simulator!!.bleAddress!!
+
+    fun getLatestReceivedAccountKey() =
+        simulator!!.accountKey?.let { base64().encode(it.toByteArray()) }
 
     /**
      * Called when we change our BLE advertisement.

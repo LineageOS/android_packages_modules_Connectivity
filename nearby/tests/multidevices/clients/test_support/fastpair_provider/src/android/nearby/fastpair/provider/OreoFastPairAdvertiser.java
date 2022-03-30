@@ -18,7 +18,6 @@ package android.nearby.fastpair.provider;
 
 import static com.google.common.io.BaseEncoding.base16;
 
-import android.annotation.TargetApi;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.le.AdvertiseData;
 import android.bluetooth.le.AdvertiseSettings;
@@ -27,21 +26,17 @@ import android.bluetooth.le.AdvertisingSetCallback;
 import android.bluetooth.le.AdvertisingSetParameters;
 import android.bluetooth.le.BluetoothLeAdvertiser;
 import android.nearby.fastpair.provider.utils.Logger;
-import android.os.Build.VERSION_CODES;
 import android.os.ParcelUuid;
 
 import androidx.annotation.Nullable;
 
 import com.android.server.nearby.common.bluetooth.fastpair.Constants.FastPairService;
-import com.android.server.nearby.common.bluetooth.fastpair.Reflect;
-import com.android.server.nearby.common.bluetooth.fastpair.ReflectionException;
 
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Locale;
 
 /** Fast Pair advertiser taking advantage of new Android Oreo advertising features. */
-@TargetApi(VERSION_CODES.O)
 public final class OreoFastPairAdvertiser implements FastPairAdvertiser {
     private static final String TAG = "OreoFastPairAdvertiser";
     private final Logger mLogger = new Logger(TAG);
@@ -63,13 +58,7 @@ public final class OreoFastPairAdvertiser implements FastPairAdvertiser {
                     mLogger.log("Advertising succeeded, advertising at %s dBm", txPower);
                     simulator.setIsAdvertising(true);
                     mAdvertisingSet = set;
-
-                    try {
-                        // Requires custom Android build, see callback below.
-                        Reflect.on(set).withMethod("getOwnAddress").invoke();
-                    } catch (ReflectionException e) {
-                        mLogger.log(e, "Error calling getOwnAddress for AdvertisingSet");
-                    }
+                    mAdvertisingSet.getOwnAddress();
                 } else {
                     mLogger.log(
                             new IllegalStateException(),
@@ -88,7 +77,8 @@ public final class OreoFastPairAdvertiser implements FastPairAdvertiser {
                 }
             }
 
-            // Called via reflection with AdvertisingSet.getOwnAddress().
+            // Callback for AdvertisingSet.getOwnAddress().
+            @Override
             public void onOwnAddressRead(
                     AdvertisingSet set, int addressType, String address) {
                 if (!address.equals(simulator.getBleAddress())) {
@@ -108,12 +98,7 @@ public final class OreoFastPairAdvertiser implements FastPairAdvertiser {
     public void startAdvertising(@Nullable byte[] serviceData) {
         // To be informed that BLE address is rotated, we need to polling query it asynchronously.
         if (mAdvertisingSet != null) {
-            try {
-                // Requires custom Android build, see callback: onOwnAddressRead.
-                Reflect.on(mAdvertisingSet).withMethod("getOwnAddress").invoke();
-            } catch (ReflectionException ignored) {
-                // Ignore it due to user already knows it when setting advertisingSet.
-            }
+            mAdvertisingSet.getOwnAddress();
         }
 
         if (mSimulator.isDestroyed()) {
