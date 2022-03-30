@@ -24,8 +24,7 @@ android_test {
     name: "EthernetServiceTests",
 
     srcs: [
-        ":ethernet-service-updatable-sources",
-        ":services.connectivity-ethernet-sources",
+        ":ethernet-service-test-sources",
         "java/**/*.java",
     ],
 
