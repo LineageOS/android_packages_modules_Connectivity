@@ -10,7 +10,6 @@
     "left_bud_url": "https:\/\/lh3.googleusercontent.com\/O8SVJ5E7CXUkpkym7ibZbp6wypuO7HaTFcslT_FjmEzJX4KHoIY_kzLTdK2kwJXiDBgg8cC__sG-JJ5aVnQtFjQ",
     "right_bud_url": "https:\/\/lh3.googleusercontent.com\/X_FsRmEKH_fgKzvopyrlyWJAdczRel42Tih7p9-e-U48gBTaggGVQx70K27TzlqIaqYVuaNpTnGoUsKIgiy4WA",
     "case_url": "https:\/\/lh3.googleusercontent.com\/mNZ7CGplQSpZhoY79jXDQU4B65eY2f0SndnYZLk1PSm8zKTYeRU7REmrLL_pptD6HpVI2F_oQ6xhhtZKOvB8EQ",
-    "locale": "en-US",
     "initial_notification_description": "Tap to pair. Earbuds will be tied to %s",
     "initial_notification_description_no_account": "Tap to pair with this device",
     "open_companion_app_description": "Tap to finish setup",
@@ -24,15 +23,6 @@
     "subsequent_pairing_description": "Connect %s to this phone",
     "retroactive_pairing_description": "Save device to %s for faster pairing to your other devices",
     "wait_launch_companion_app_description": "This will take a few moments",
-    "fail_connect_go_to_settings_description": "Try manually pairing to the device by going to Settings",
-    "confirm_pin_title": "",
-    "confirm_pin_description": "",
-    "sync_contacts_title": "",
-    "sync_contacts_description": "",
-    "sync_sms_title": "",
-    "sync_sms_description": "",
-    "assistant_setup_half_sheet": "Get hands-free help on the go from Google Assistant",
-    "assistant_setup_notification": "Tap to set up your Google Assistant",
-    "fast_pair_tv_connect_device_no_account_description": "Select connect to pair your %s with this device"
+    "fail_connect_go_to_settings_description": "Try manually pairing to the device by going to Settings"
   }
 }
