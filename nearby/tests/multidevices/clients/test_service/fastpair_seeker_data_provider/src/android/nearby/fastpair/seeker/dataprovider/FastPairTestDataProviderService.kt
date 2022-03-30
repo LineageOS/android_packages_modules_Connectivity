@@ -20,7 +20,10 @@ import android.accounts.Account
 import android.content.IntentFilter
 import android.nearby.FastPairDataProviderService
 import android.nearby.FastPairEligibleAccount
-import android.nearby.fastpair.seeker.*
+import android.nearby.fastpair.seeker.ACTION_RESET_TEST_DATA_CACHE
+import android.nearby.fastpair.seeker.ACTION_SEND_ACCOUNT_KEY_DEVICE_METADATA
+import android.nearby.fastpair.seeker.ACTION_SEND_ANTISPOOF_KEY_DEVICE_METADATA
+import android.nearby.fastpair.seeker.FAKE_TEST_ACCOUNT_NAME
 import android.nearby.fastpair.seeker.data.FastPairTestDataManager
 import android.util.Log
 
@@ -58,7 +61,9 @@ class FastPairTestDataProviderService : FastPairDataProviderService(TAG) {
         val fastPairAntispoofKeyDeviceMetadata =
             testDataManager.testDataCache.getAntispoofKeyDeviceMetadata(requestedModelId)
         if (fastPairAntispoofKeyDeviceMetadata != null) {
-            callback.onFastPairAntispoofKeyDeviceMetadataReceived(fastPairAntispoofKeyDeviceMetadata)
+            callback.onFastPairAntispoofKeyDeviceMetadataReceived(
+                fastPairAntispoofKeyDeviceMetadata
+            )
         } else {
             Log.d(TAG, "No metadata available for $requestedModelId!")
             callback.onError(ERROR_CODE_BAD_REQUEST, "No metadata available for $requestedModelId")
@@ -91,7 +96,8 @@ class FastPairTestDataProviderService : FastPairDataProviderService(TAG) {
     }
 
     override fun onManageFastPairAccount(
-        request: FastPairManageAccountRequest, callback: FastPairManageActionCallback
+        request: FastPairManageAccountRequest,
+        callback: FastPairManageActionCallback
     ) {
         val requestedAccount = request.account
         val requestType = request.requestType
@@ -101,19 +107,18 @@ class FastPairTestDataProviderService : FastPairDataProviderService(TAG) {
     }
 
     override fun onManageFastPairAccountDevice(
-        request: FastPairManageAccountDeviceRequest, callback: FastPairManageActionCallback
+        request: FastPairManageAccountDeviceRequest,
+        callback: FastPairManageActionCallback
     ) {
         val requestedAccount = request.account
         val requestType = request.requestType
         val requestTypeString = if (requestType == MANAGE_REQUEST_ADD) "Add" else "Remove"
-        val requestedBleAddress = request.bleAddress
         val requestedAccountKeyDeviceMetadata = request.accountKeyDeviceMetadata
         Log.d(
             TAG,
             "onManageFastPairAccountDevice(requestedAccount: $requestedAccount, " +
                     "requestType: $requestTypeString,"
         )
-        Log.d(TAG, "requestedBleAddress: $requestedBleAddress,")
 
         val requestedAccountKeyDeviceMetadataInJson =
             testDataManager.writeAccountKeyDeviceMetadata(requestedAccountKeyDeviceMetadata)
@@ -128,7 +133,7 @@ class FastPairTestDataProviderService : FastPairDataProviderService(TAG) {
             FastPairEligibleAccount.Builder()
                 .setAccount(Account(FAKE_TEST_ACCOUNT_NAME, "FakeTestAccount"))
                 .setOptIn(true)
-                .build(),
+                .build()
         )
 
         private fun ByteArray.bytesToStringLowerCase(): String =
