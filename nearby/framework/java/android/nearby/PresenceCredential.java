@@ -57,8 +57,6 @@ public abstract class PresenceCredential {
     public static final int IDENTITY_TYPE_PROVISIONED = 2;
     /** Trusted identity type. */
     public static final int IDENTITY_TYPE_TRUSTED = 3;
-    /** Public identity type. */
-    public static final int IDENTITY_TYPE_PUBLIC = 4;
 
     /**
      * @hide *
@@ -68,8 +66,7 @@ public abstract class PresenceCredential {
         IDENTITY_TYPE_UNKNOWN,
         IDENTITY_TYPE_PRIVATE,
         IDENTITY_TYPE_PROVISIONED,
-        IDENTITY_TYPE_TRUSTED,
-        IDENTITY_TYPE_PUBLIC
+        IDENTITY_TYPE_TRUSTED
     })
     public @interface IdentityType {}
 

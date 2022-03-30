@@ -78,15 +78,17 @@ public abstract class BroadcastRequest {
     }
 
     /**
+     * Broadcast the request using the Bluetooth Low Energy (BLE) medium.
+     */
+    public static final int MEDIUM_BLE = 1;
+
+    /**
      * The medium where the broadcast request should be sent.
      *
      * @hide
      */
-    @IntDef({Medium.BLE, Medium.MDNS})
-    public @interface Medium {
-        int BLE = 1;
-        int MDNS = 2;
-    }
+    @IntDef({MEDIUM_BLE})
+    public @interface Medium {}
 
     /**
      * Creates a {@link BroadcastRequest} from parcel.
@@ -149,7 +151,8 @@ public abstract class BroadcastRequest {
     }
 
     /**
-     * Returns the list of broadcast mediums.
+     * Returns the list of broadcast mediums. A medium represents the channel on which the broadcast
+     * request is sent.
      */
     @NonNull
     @Medium
