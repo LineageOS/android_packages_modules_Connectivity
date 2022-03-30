@@ -863,8 +863,11 @@ public final class NetworkCapabilities implements Parcelable {
     }
 
     /**
-     * Get the underlying networks of this network. If the caller is not system privileged, this is
-     * always redacted to null and it will be never useful to the caller.
+     * Get the underlying networks of this network. If the caller doesn't have one of
+     * {@link android.Manifest.permission.NETWORK_FACTORY},
+     * {@link android.Manifest.permission.NETWORK_SETTINGS} and
+     * {@link NetworkStack.PERMISSION_MAINLINE_NETWORK_STACK}, this is always redacted to null and
+     * it will be never useful to the caller.
      *
      * @return <li>If the list is null, this network hasn't declared underlying networks.</li>
      *         <li>If the list is empty, this network has declared that it has no underlying
@@ -2650,7 +2653,7 @@ public final class NetworkCapabilities implements Parcelable {
     /**
      * Builder class for NetworkCapabilities.
      *
-     * This class is mainly for for {@link NetworkAgent} instances to use. Many fields in
+     * This class is mainly for {@link NetworkAgent} instances to use. Many fields in
      * the built class require holding a signature permission to use - mostly
      * {@link android.Manifest.permission.NETWORK_FACTORY}, but refer to the specific
      * description of each setter. As this class lives entirely in app space it does not
@@ -3058,9 +3061,20 @@ public final class NetworkCapabilities implements Parcelable {
         /**
          * Set the underlying networks of this network.
          *
+         * <p>This API is mainly for {@link NetworkAgent}s who hold
+         * {@link android.Manifest.permission.NETWORK_FACTORY} to set its underlying networks.
+         *
+         * <p>The underlying networks are only visible for the receiver who has one of
+         * {@link android.Manifest.permission.NETWORK_FACTORY},
+         * {@link android.Manifest.permission.NETWORK_SETTINGS} and
+         * {@link NetworkStack.PERMISSION_MAINLINE_NETWORK_STACK}.
+         * If the receiver doesn't have required permissions, the field will be cleared before
+         * sending to the caller.</p>
+         *
          * @param networks The underlying networks of this network.
          */
         @NonNull
+        @RequiresPermission(android.Manifest.permission.NETWORK_FACTORY)
         public Builder setUnderlyingNetworks(@Nullable List<Network> networks) {
             mCaps.setUnderlyingNetworks(networks);
             return this;

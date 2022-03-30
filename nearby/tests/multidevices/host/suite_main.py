@@ -19,6 +19,7 @@ import sys
 
 from mobly import suite_runner
 
+import initial_pairing_test
 import seeker_discover_provider_test
 import seeker_show_halfsheet_test
 
@@ -26,6 +27,7 @@ _BOOTSTRAP_LOGGING_FILENAME = '/tmp/nearby_multi_devices_test_suite_log.txt'
 _TEST_CLASSES_LIST = [
     seeker_discover_provider_test.SeekerDiscoverProviderTest,
     seeker_show_halfsheet_test.SeekerShowHalfSheetTest,
+    initial_pairing_test.InitialPairingTest,
 ]
 
 
