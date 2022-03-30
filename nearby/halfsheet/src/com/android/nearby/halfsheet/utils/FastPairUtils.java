@@ -85,7 +85,6 @@ public class FastPairUtils {
                 .setId(item.getModelId())
                 .setFirstObservationTimestampMillis(item.getFirstObservationTimestampMillis())
                 .setLastObservationTimestampMillis(item.getLastObservationTimestampMillis())
-                .setType(Cache.NearbyType.NEARBY_DEVICE)
                 .setActionUrl(item.getActionUrl())
                 .setActionUrlType(Cache.ResolvedUrlType.APP)
                 .setTitle(

@@ -149,17 +149,6 @@ public class FastPairDeviceMetadata {
     }
 
     /**
-     * Get Locale of the device.
-     *
-     * @hide
-     */
-    @SystemApi
-    @Nullable
-    public String getLocale() {
-        return mMetadataParcel.locale;
-    }
-
-    /**
      * Get InitialNotificationDescription, which is a translated string of
      * "Tap to pair. Earbuds will be tied to %s" based on locale.
      *
@@ -325,111 +314,6 @@ public class FastPairDeviceMetadata {
     }
 
     /**
-     * Get ConfirmPinTitle, which is a translated string of
-     * based on locale.
-     *
-     * @hide
-     */
-    @SystemApi
-    @Nullable
-    public String getConfirmPinTitle() {
-        return mMetadataParcel.confirmPinTitle;
-    }
-
-    /**
-     * Get ConfirmPinDescription, which is a translated string of "confirm pin" based on locale.
-     *
-     * @hide
-     */
-    @SystemApi
-    @Nullable
-    public String getConfirmPinDescription() {
-        return mMetadataParcel.confirmPinDescription;
-    }
-
-    /**
-     * Get SyncContactsTitle, which is a translated string of "sync contacts title" based on locale.
-     *
-     * @hide
-     */
-    @SystemApi
-    @Nullable
-    public String getSyncContactsTitle() {
-        return mMetadataParcel.syncContactsTitle;
-    }
-
-    /**
-     * Get SyncContactsDescription, which is a translated string of "sync contacts description"
-     * based on locale.
-     *
-     * @hide
-     */
-    @SystemApi
-    @Nullable
-    public String getSyncContactsDescription() {
-        return mMetadataParcel.syncContactsDescription;
-    }
-
-    /**
-     * Get SyncSmsTitle, which is a translated string of "sync sms title" based on locale.
-     *
-     * @hide
-     */
-    @SystemApi
-    @Nullable
-    public String getSyncSmsTitle() {
-        return mMetadataParcel.syncSmsTitle;
-    }
-
-    /**
-     * Get SyncSmsDescription, which is a translated string of "sync sms description" based on
-     * locale.
-     *
-     * @hide
-     */
-    @SystemApi
-    @Nullable
-    public String getSyncSmsDescription() {
-        return mMetadataParcel.syncSmsDescription;
-    }
-
-    /**
-     * Get AssistantSetupHalfSheet, which is a translated string of
-     * "Tap to set up your Google Assistant" based on locale.
-     *
-     * @hide
-     */
-    @SystemApi
-    @Nullable
-    public String getAssistantSetupHalfSheet() {
-        return mMetadataParcel.assistantSetupHalfSheet;
-    }
-
-    /**
-     * Get AssistantSetupNotification, which is a translated string of
-     * "Tap to set up your Google Assistant" based on locale.
-     *
-     * @hide
-     */
-    @SystemApi
-    @Nullable
-    public String getAssistantSetupNotification() {
-        return mMetadataParcel.assistantSetupNotification;
-    }
-
-    /**
-     * Get FastPairTvConnectDeviceNoAccountDescription, which is a translated string of
-     * "Select connect to pair your %s with this device" based on locale.
-     *
-     * @hide
-     */
-    @SystemApi
-    @Nullable
-    public String getFastPairTvConnectDeviceNoAccountDescription() {
-        return mMetadataParcel.fastPairTvConnectDeviceNoAccountDescription;
-    }
-
-    /**
      * Builder used to create FastPairDeviceMetadata.
      *
      * @hide
@@ -457,7 +341,6 @@ public class FastPairDeviceMetadata {
             mBuilderParcel.trueWirelessImageUrlLeftBud = null;
             mBuilderParcel.trueWirelessImageUrlRightBud = null;
             mBuilderParcel.trueWirelessImageUrlCase = null;
-            mBuilderParcel.locale = null;
             mBuilderParcel.initialNotificationDescription = null;
             mBuilderParcel.initialNotificationDescriptionNoAccount = null;
             mBuilderParcel.openCompanionAppDescription = null;
@@ -472,15 +355,6 @@ public class FastPairDeviceMetadata {
             mBuilderParcel.retroactivePairingDescription = null;
             mBuilderParcel.waitLaunchCompanionAppDescription = null;
             mBuilderParcel.failConnectGoToSettingsDescription = null;
-            mBuilderParcel.confirmPinTitle = null;
-            mBuilderParcel.confirmPinDescription = null;
-            mBuilderParcel.syncContactsTitle = null;
-            mBuilderParcel.syncContactsDescription = null;
-            mBuilderParcel.syncSmsTitle = null;
-            mBuilderParcel.syncSmsDescription = null;
-            mBuilderParcel.assistantSetupHalfSheet = null;
-            mBuilderParcel.assistantSetupNotification = null;
-            mBuilderParcel.fastPairTvConnectDeviceNoAccountDescription = null;
         }
 
         /**
@@ -624,20 +498,6 @@ public class FastPairDeviceMetadata {
         @NonNull
         public Builder setTrueWirelessImageUrlCase(@Nullable String trueWirelessImageUrlCase) {
             mBuilderParcel.trueWirelessImageUrlCase = trueWirelessImageUrlCase;
-            return this;
-        }
-
-        /**
-         * Set Locale.
-         *
-         * @param locale Device locale.
-         * @return The builder, to facilitate chaining {@code builder.setXXX(..).setXXX(..)}.
-         * @hide
-         */
-        @SystemApi
-        @NonNull
-        public Builder setLocale(@Nullable String locale) {
-            mBuilderParcel.locale = locale;
             return this;
         }
 
@@ -858,140 +718,6 @@ public class FastPairDeviceMetadata {
                 @Nullable String failConnectGoToSettingsDescription) {
             mBuilderParcel.failConnectGoToSettingsDescription =
                     failConnectGoToSettingsDescription;
-            return this;
-        }
-
-        /**
-         * Set ConfirmPinTitle.
-         *
-         * @param confirmPinTitle Title of the UI to ask the user to confirm the pin code.
-         * @return The builder, to facilitate chaining {@code builder.setXXX(..).setXXX(..)}.
-         * @hide
-         */
-        @SystemApi
-        @NonNull
-        public Builder setConfirmPinTitle(@Nullable String confirmPinTitle) {
-            mBuilderParcel.confirmPinTitle = confirmPinTitle;
-            return this;
-        }
-
-        /**
-         * Set ConfirmPinDescription.
-         *
-         * @param confirmPinDescription Description of the UI to ask the user to confirm the pin
-         *                              code.
-         * @return The builder, to facilitate chaining {@code builder.setXXX(..).setXXX(..)}.
-         * @hide
-         */
-        @SystemApi
-        @NonNull
-        public Builder setConfirmPinDescription(@Nullable String confirmPinDescription) {
-            mBuilderParcel.confirmPinDescription = confirmPinDescription;
-            return this;
-        }
-
-        /**
-         * Set SyncContactsTitle.
-         *
-         * @param syncContactsTitle Title of the UI to ask the user to confirm to sync contacts.
-         * @return The builder, to facilitate chaining {@code builder.setXXX(..).setXXX(..)}.
-         * @hide
-         */
-        @SystemApi
-        @NonNull
-        public Builder setSyncContactsTitle(@Nullable String syncContactsTitle) {
-            mBuilderParcel.syncContactsTitle = syncContactsTitle;
-            return this;
-        }
-
-        /**
-         * Set SyncContactsDescription.
-         *
-         * @param syncContactsDescription Description of the UI to ask the user to confirm to sync
-         *                                contacts.
-         * @hide
-         */
-        @SystemApi
-        @NonNull
-        public Builder setSyncContactsDescription(@Nullable String syncContactsDescription) {
-            mBuilderParcel.syncContactsDescription = syncContactsDescription;
-            return this;
-        }
-
-        /**
-         * Set SyncSmsTitle.
-         *
-         * @param syncSmsTitle Title of the UI to ask the user to confirm to sync SMS.
-         * @return The builder, to facilitate chaining {@code builder.setXXX(..).setXXX(..)}.
-         * @hide
-         */
-        @SystemApi
-        @NonNull
-        public Builder setSyncSmsTitle(@Nullable String syncSmsTitle) {
-            mBuilderParcel.syncSmsTitle = syncSmsTitle;
-            return this;
-        }
-
-        /**
-         * Set SyncSmsDescription.
-         *
-         * @param syncSmsDescription Description of the UI to ask the user to confirm to sync SMS.
-         * @return The builder, to facilitate chaining {@code builder.setXXX(..).setXXX(..)}.
-         * @hide
-         */
-        @SystemApi
-        @NonNull
-        public Builder setSyncSmsDescription(@Nullable String syncSmsDescription) {
-            mBuilderParcel.syncSmsDescription = syncSmsDescription;
-            return this;
-        }
-
-        /**
-         * Set AssistantSetupHalfSheet.
-         *
-         * @param assistantSetupHalfSheet Description in half sheet to ask user setup google
-         * assistant.
-         * @return The builder, to facilitate chaining {@code builder.setXXX(..).setXXX(..)}.
-         * @hide
-         */
-        @SystemApi
-        @NonNull
-        public Builder setAssistantSetupHalfSheet(@Nullable String assistantSetupHalfSheet) {
-            mBuilderParcel.assistantSetupHalfSheet = assistantSetupHalfSheet;
-            return this;
-        }
-
-        /**
-         * Set AssistantSetupNotification.
-         *
-         * @param assistantSetupNotification Description in notification to ask user setup google
-         *                                   assistant.
-         * @return The builder, to facilitate chaining {@code builder.setXXX(..).setXXX(..)}.
-         * @hide
-         */
-        @SystemApi
-        @NonNull
-        public Builder setAssistantSetupNotification(
-                @Nullable String assistantSetupNotification) {
-            mBuilderParcel.assistantSetupNotification = assistantSetupNotification;
-            return this;
-        }
-
-        /**
-         * Set FastPairTvConnectDeviceNoAccountDescription.
-         *
-         * @param fastPairTvConnectDeviceNoAccountDescription Description of the connect device
-         *                                                    action on TV, when user is not logged
-         *                                                    in.
-         * @return The builder, to facilitate chaining {@code builder.setXXX(..).setXXX(..)}.
-         * @hide
-         */
-        @SystemApi
-        @NonNull
-        public Builder setFastPairTvConnectDeviceNoAccountDescription(
-                @Nullable String fastPairTvConnectDeviceNoAccountDescription) {
-            mBuilderParcel.fastPairTvConnectDeviceNoAccountDescription =
-                    fastPairTvConnectDeviceNoAccountDescription;
             return this;
         }
 
