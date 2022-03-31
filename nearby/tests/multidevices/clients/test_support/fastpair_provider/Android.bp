@@ -34,11 +34,13 @@ android_library {
     ],
     static_libs: [
         "NearbyFastPairProviderLiteProtos",
+        "androidx.core_core",
         "androidx.test.core",
         "error_prone_annotations",
         "fast-pair-lite-protos",
         "framework-annotations-lib",
+        "guava",
         "kotlin-stdlib",
-        "service-nearby-pre-jarjar",
+        "nearby-common-lib",
     ],
 }
