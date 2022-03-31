@@ -69,8 +69,6 @@ import java.util.List;
 @RunWith(DevSdkIgnoreRunner.class)
 @IgnoreUpTo(SC_V2) // TODO: Use to Build.VERSION_CODES.SC_V2 when available
 public class CarrierPrivilegeAuthenticatorTest {
-    // TODO : use ConstantsShim.RECEIVER_NOT_EXPORTED when it's available in tests.
-    private static final int RECEIVER_NOT_EXPORTED = 4;
     private static final int SUBSCRIPTION_COUNT = 2;
     private static final int TEST_SUBSCRIPTION_ID = 1;
 
@@ -117,7 +115,7 @@ public class CarrierPrivilegeAuthenticatorTest {
 
     private IntentFilter getIntentFilter() {
         final ArgumentCaptor<IntentFilter> captor = ArgumentCaptor.forClass(IntentFilter.class);
-        verify(mContext).registerReceiver(any(), captor.capture(), any(), any(), anyInt());
+        verify(mContext).registerReceiver(any(), captor.capture(), any(), any());
         return captor.getValue();
     }
 
@@ -140,11 +138,10 @@ public class CarrierPrivilegeAuthenticatorTest {
     @Test
     public void testConstructor() throws Exception {
         verify(mContext).registerReceiver(
-                eq(mCarrierPrivilegeAuthenticator),
-                any(IntentFilter.class),
-                any(),
-                any(),
-                eq(RECEIVER_NOT_EXPORTED));
+                        eq(mCarrierPrivilegeAuthenticator),
+                        any(IntentFilter.class),
+                        any(),
+                        any());
         final IntentFilter filter = getIntentFilter();
         assertEquals(1, filter.countActions());
         assertTrue(filter.hasAction(ACTION_MULTI_SIM_CONFIG_CHANGED));
