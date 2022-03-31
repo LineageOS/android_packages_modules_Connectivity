@@ -17,7 +17,7 @@
 package com.android.server.nearby.metrics;
 
 import static android.nearby.ScanRequest.SCAN_MODE_BALANCED;
-import static android.nearby.ScanRequest.SCAN_TYPE_NEARBY_SHARE;
+import static android.nearby.ScanRequest.SCAN_TYPE_FAST_PAIR;
 
 import android.nearby.NearbyDeviceParcelable;
 import android.nearby.PublicCredential;
@@ -59,7 +59,7 @@ public class NearbyMetricsTest {
     private final ScanRequest.Builder mScanRequestBuilder =
             new ScanRequest.Builder()
                     .setScanMode(SCAN_MODE_BALANCED)
-                    .setScanType(SCAN_TYPE_NEARBY_SHARE);
+                    .setScanType(SCAN_TYPE_FAST_PAIR);
     private final ScanRequest mScanRequest = mScanRequestBuilder.setWorkSource(mWorkSource).build();
     private final ScanRequest mScanRequestWithEmptyWorkSource =
             mScanRequestBuilder.setWorkSource(mEmptyWorkSource).build();
@@ -103,7 +103,7 @@ public class NearbyMetricsTest {
                 SESSION_ID,
                 NearbyStatsLog
                         .NEARBY_DEVICE_SCAN_STATE_CHANGED__SCAN_STATE__NEARBY_SCAN_STATE_STARTED,
-                SCAN_TYPE_NEARBY_SHARE,
+                SCAN_TYPE_FAST_PAIR,
                 0,
                 0,
                 "",
@@ -119,7 +119,7 @@ public class NearbyMetricsTest {
                 SESSION_ID,
                 NearbyStatsLog
                         .NEARBY_DEVICE_SCAN_STATE_CHANGED__SCAN_STATE__NEARBY_SCAN_STATE_STARTED,
-                SCAN_TYPE_NEARBY_SHARE,
+                SCAN_TYPE_FAST_PAIR,
                 0,
                 0,
                 "",
@@ -135,7 +135,7 @@ public class NearbyMetricsTest {
                 SESSION_ID,
                 NearbyStatsLog
                         .NEARBY_DEVICE_SCAN_STATE_CHANGED__SCAN_STATE__NEARBY_SCAN_STATE_STOPPED,
-                SCAN_TYPE_NEARBY_SHARE,
+                SCAN_TYPE_FAST_PAIR,
                 0,
                 0,
                 "",
@@ -151,7 +151,7 @@ public class NearbyMetricsTest {
                 SESSION_ID,
                 NearbyStatsLog
                         .NEARBY_DEVICE_SCAN_STATE_CHANGED__SCAN_STATE__NEARBY_SCAN_STATE_STOPPED,
-                SCAN_TYPE_NEARBY_SHARE,
+                SCAN_TYPE_FAST_PAIR,
                 0,
                 0,
                 "",
@@ -167,7 +167,7 @@ public class NearbyMetricsTest {
                 SESSION_ID,
                 NearbyStatsLog
                         .NEARBY_DEVICE_SCAN_STATE_CHANGED__SCAN_STATE__NEARBY_SCAN_STATE_DISCOVERED,
-                SCAN_TYPE_NEARBY_SHARE,
+                SCAN_TYPE_FAST_PAIR,
                 SCAN_MEDIUM,
                 RSSI,
                 FAST_PAIR_MODEL_ID,
@@ -184,7 +184,7 @@ public class NearbyMetricsTest {
                 SESSION_ID,
                 NearbyStatsLog
                         .NEARBY_DEVICE_SCAN_STATE_CHANGED__SCAN_STATE__NEARBY_SCAN_STATE_DISCOVERED,
-                SCAN_TYPE_NEARBY_SHARE,
+                SCAN_TYPE_FAST_PAIR,
                 SCAN_MEDIUM,
                 RSSI,
                 FAST_PAIR_MODEL_ID,

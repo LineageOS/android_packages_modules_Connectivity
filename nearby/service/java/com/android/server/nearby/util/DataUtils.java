@@ -84,12 +84,6 @@ public final class DataUtils {
                 + fastPairStrings.getRetroactivePairingDescription()
                 + ", waitAppLaunchDescription=" + fastPairStrings.getWaitAppLaunchDescription()
                 + ", pairingFailDescription=" + fastPairStrings.getPairingFailDescription()
-                + ", assistantHalfSheetDescription="
-                + fastPairStrings.getAssistantHalfSheetDescription()
-                + ", assistantNotificationDescription="
-                + fastPairStrings.getAssistantNotificationDescription()
-                + ", fastPairTvConnectDeviceNoAccountDescription="
-                + fastPairStrings.getFastPairTvConnectDeviceNoAccountDescription()
                 + "]";
     }
 
@@ -112,10 +106,6 @@ public final class DataUtils {
                 .setRetroactivePairingDescription(strings.getRetroactivePairingDescription())
                 .setWaitAppLaunchDescription(strings.getWaitLaunchCompanionAppDescription())
                 .setPairingFailDescription(strings.getFailConnectGoToSettingsDescription())
-                .setAssistantHalfSheetDescription(strings.getAssistantSetupHalfSheet())
-                .setAssistantNotificationDescription(strings.getAssistantSetupNotification())
-                .setFastPairTvConnectDeviceNoAccountDescription(
-                        strings.getFastPairTvConnectDeviceNoAccountDescription())
                 .build();
     }
 }

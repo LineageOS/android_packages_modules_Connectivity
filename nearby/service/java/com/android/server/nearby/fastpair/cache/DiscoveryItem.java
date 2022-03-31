@@ -47,7 +47,7 @@ import service.proto.Cache;
  */
 public class DiscoveryItem implements Comparable<DiscoveryItem> {
 
-    private static final String  ACTION_FAST_PAIR =
+    private static final String ACTION_FAST_PAIR =
             "com.android.server.nearby:ACTION_FAST_PAIR";
     private static final int BEACON_STALENESS_MILLIS = 120000;
     private static final int ITEM_EXPIRATION_MILLIS = 20000;
@@ -66,14 +66,15 @@ public class DiscoveryItem implements Comparable<DiscoveryItem> {
             Cache.StoredDiscoveryItem.State.STATE_DISABLED_BY_SYSTEM_VALUE
     })
     @Retention(RetentionPolicy.SOURCE)
-    public @interface ItemState {}
+    public @interface ItemState {
+    }
 
     public DiscoveryItem(LocatorContextWrapper locatorContextWrapper,
             Cache.StoredDiscoveryItem mStoredDiscoveryItem) {
         this.mFastPairCacheManager =
                 locatorContextWrapper.getLocator().get(FastPairCacheManager.class);
         this.mClock =
-            locatorContextWrapper.getLocator().get(Clock.class);
+                locatorContextWrapper.getLocator().get(Clock.class);
         this.mStoredDiscoveryItem = mStoredDiscoveryItem;
     }
 
@@ -91,23 +92,6 @@ public class DiscoveryItem implements Comparable<DiscoveryItem> {
         return storedDiscoveryItem.build();
     }
 
-    /** @return True if the item is currently nearby. */
-    public boolean isNearby() {
-        return isNearby(mStoredDiscoveryItem, mClock.millis());
-    }
-
-    /**
-     * Checks if the item is Nearby
-     */
-    static boolean isNearby(Cache.StoredDiscoveryItem item, long currentTimeMillis) {
-        // A notification may disappear early, if we get a lost callback from Messages.
-        // But regardless, if we haven't detected the thing in Xmin, consider it gone.
-        return !isLost(item)
-                && !isExpired(
-                currentTimeMillis,
-                item.getLastObservationTimestampMillis());
-    }
-
     /**
      * Checks if store discovery item support fast pair or not.
      */
@@ -122,56 +106,12 @@ public class DiscoveryItem implements Comparable<DiscoveryItem> {
     }
 
     /**
-     * Sets the pairing result to done.
-     */
-    public void setPairingProcessDone(boolean success) {
-        setLastUserExperience(success ? Cache.StoredDiscoveryItem.ExperienceType.EXPERIENCE_GOOD
-                : Cache.StoredDiscoveryItem.ExperienceType.EXPERIENCE_BAD);
-        setLostMillis(mClock.millis());
-        Log.d("FastPairDiscovery",
-                "FastPair: set Lost when pairing process done, " + getId());
-    }
-
-    /**
-     * Sets the store discovery item lost time.
-     */
-    public void setLostMillis(long lostMillis) {
-        mStoredDiscoveryItem = mStoredDiscoveryItem.toBuilder().setLostMillis(lostMillis).build();
-
-        mStoredDiscoveryItem = mStoredDiscoveryItem.toBuilder().clearRssi().build();
-
-        mFastPairCacheManager.saveDiscoveryItem(this);
-    }
-
-    /**
      * Sets the store discovery item mac address.
      */
     public void setMacAddress(String address) {
         mStoredDiscoveryItem = mStoredDiscoveryItem.toBuilder().setMacAddress(address).build();
 
         mFastPairCacheManager.saveDiscoveryItem(this);
-    }
-
-    /**
-     * Sets the user experience to be good or bad.
-     */
-    public void setLastUserExperience(Cache.StoredDiscoveryItem.ExperienceType experienceType) {
-        mStoredDiscoveryItem = mStoredDiscoveryItem.toBuilder()
-                .setLastUserExperience(experienceType).build();
-        mFastPairCacheManager.saveDiscoveryItem(this);
-    }
-    /**
-     * Gets the user experience to be good or bad.
-     */
-    public Cache.StoredDiscoveryItem.ExperienceType getLastUserExperience() {
-        return mStoredDiscoveryItem.getLastUserExperience();
-    }
-
-    /**
-     * Checks if the item is lost.
-     */
-    private static boolean isLost(Cache.StoredDiscoveryItem item) {
-        return item.getLastObservationTimestampMillis() <= item.getLostMillis();
     }
 
     /**
@@ -224,37 +164,14 @@ public class DiscoveryItem implements Comparable<DiscoveryItem> {
 
     /** Checks if the item has enough data to be shown */
     public boolean isReadyForDisplay() {
-        if (isOffline()) {
-            return true;
-        }
         boolean hasUrlOrPopularApp = !mStoredDiscoveryItem.getActionUrl().isEmpty();
 
         return !TextUtils.isEmpty(mStoredDiscoveryItem.getTitle()) && hasUrlOrPopularApp;
     }
 
-    /** Checks if the item has server error */
-    public boolean isDisabledByServer() {
-        return mStoredDiscoveryItem.getDebugCategory()
-                == Cache.StoredDiscoveryItem.DebugMessageCategory.STATUS_DISABLED_BY_SERVER;
-    }
-
-    private boolean isOffline() {
-        return isOfflineType(getType());
-    }
-
-    /** Checks if the item can be generated on client side. */
-    private static boolean isOfflineType(Cache.NearbyType type) {
-        return type == Cache.NearbyType.NEARBY_CHROMECAST || type == Cache.NearbyType.NEARBY_WEAR;
-    }
-
     /** Checks if the action url is app install */
     public boolean isApp() {
         return mStoredDiscoveryItem.getActionUrlType() == Cache.ResolvedUrlType.APP;
-    }
-
-    /** Checks if it's device item. e.g. Chromecast / Wear */
-    public boolean isDevice() {
-        return isDeviceType(mStoredDiscoveryItem.getType());
     }
 
     /** Returns true if an item is muted, or if state is unavailable. */
@@ -293,39 +210,22 @@ public class DiscoveryItem implements Comparable<DiscoveryItem> {
 
     /** Gets hash code of UI related data so we can collapse identical items. */
     public int getUiHashCode() {
-        switch (mStoredDiscoveryItem.getType()) {
-            case NEARBY_CHROMECAST:
-            case NEARBY_WEAR:
-                // For the special-case device types, show one item per type.
-                return Objects.hashCode(mStoredDiscoveryItem.getType());
-            case NEARBY_DEVICE:
-            case NEARBY_TYPE_UNKNOWN:
-            default:
-                return Objects.hash(
-                        mStoredDiscoveryItem.getType(),
+        return Objects.hash(
                         mStoredDiscoveryItem.getTitle(),
                         mStoredDiscoveryItem.getDescription(),
                         mStoredDiscoveryItem.getAppName(),
                         mStoredDiscoveryItem.getDisplayUrl(),
                         mStoredDiscoveryItem.getMacAddress());
-        }
     }
 
     // Getters below
+
     /**
      * Returns the id of store discovery item.
      */
     @Nullable
     public String getId() {
         return mStoredDiscoveryItem.getId();
-    }
-
-    /**
-     * Returns the type of store discovery item.
-     */
-    @Nullable
-    public Cache.NearbyType getType() {
-        return mStoredDiscoveryItem.getType();
     }
 
     /**
@@ -376,7 +276,7 @@ public class DiscoveryItem implements Comparable<DiscoveryItem> {
         Intent intent = parseIntentScheme(mStoredDiscoveryItem.getActionUrl());
         if (intent == null) {
             Log.d("FastPairDiscoveryItem", "FastPair: fail to parse action url "
-                            + mStoredDiscoveryItem.getActionUrl());
+                    + mStoredDiscoveryItem.getActionUrl());
             return null;
         }
         return intent.getStringExtra(EXTRA_FAST_PAIR_SECRET);
@@ -407,15 +307,6 @@ public class DiscoveryItem implements Comparable<DiscoveryItem> {
         return mStoredDiscoveryItem.getPackageName();
     }
 
-
-    /**
-     * Returns the feature graph url of discovery item.
-     */
-    @Nullable
-    private String getHeroImage() {
-        return mStoredDiscoveryItem.getFeatureGraphicUrl();
-    }
-
     /**
      * Returns the action url of discovery item.
      */
@@ -430,14 +321,6 @@ public class DiscoveryItem implements Comparable<DiscoveryItem> {
     @Nullable
     public Integer getRssi() {
         return mStoredDiscoveryItem.getRssi();
-    }
-
-    /**
-     * Returns the ble record of discovery item.
-     */
-    @Nullable
-    public byte[] getBleRecordBytes() {
-        return mStoredDiscoveryItem.getBleRecordBytes().toByteArray();
     }
 
     /**
@@ -472,7 +355,7 @@ public class DiscoveryItem implements Comparable<DiscoveryItem> {
     @Nullable
     public Double getEstimatedDistance() {
         // In the future, we may want to do a foreground subscription to leverage onDistanceChanged.
-        return RangingUtils.distanceFromRssi(mStoredDiscoveryItem.getRssi(),
+        return RangingUtils.distanceFromRssiAndTxPower(mStoredDiscoveryItem.getRssi(),
                 mStoredDiscoveryItem.getTxPower());
     }
 
@@ -501,15 +384,6 @@ public class DiscoveryItem implements Comparable<DiscoveryItem> {
     }
 
     /**
-     * Gets group id of storedDiscoveryItem.
-     */
-    @Nullable
-    public String getGroupId() {
-        return mStoredDiscoveryItem.getGroupId();
-    }
-
-
-    /**
      * Compares this object to the specified object: 1. By device type. Device setups are 'greater
      * than' beacons. 2. By relevance. More relevant items are 'greater than' less relevant items.
      * 3.By distance. Nearer items are 'greater than' further items.
@@ -518,10 +392,6 @@ public class DiscoveryItem implements Comparable<DiscoveryItem> {
      */
     @Override
     public int compareTo(DiscoveryItem another) {
-        if (getType() != another.getType()) {
-            // For device type v.s. beacon type, rank device item higher.
-            return isDevice() ? 1 : -1;
-        }
         // For items of the same relevance, compare distance.
         Double distance1 = getEstimatedDistance();
         Double distance2 = another.getEstimatedDistance();
@@ -529,12 +399,6 @@ public class DiscoveryItem implements Comparable<DiscoveryItem> {
         distance2 = distance2 != null ? distance2 : Double.MAX_VALUE;
         // Negate because closer items are better ("greater than") further items.
         return -distance1.compareTo(distance2);
-    }
-
-
-    public Integer getTriggerIdAttachmentTypeHash() {
-        return Objects.hash(mStoredDiscoveryItem.getTriggerId(),
-                mStoredDiscoveryItem.getAttachmentType());
     }
 
     @Nullable
@@ -558,9 +422,7 @@ public class DiscoveryItem implements Comparable<DiscoveryItem> {
     @Override
     public String toString() {
         return String.format(
-                "[type=%s], [triggerId=%s], [id=%s], [title=%s], [url=%s], "
-                        + "[ready=%s], [macAddress=%s]",
-                getType().name(),
+                "[triggerId=%s], [id=%s], [title=%s], [url=%s], [ready=%s], [macAddress=%s]",
                 getTriggerId(),
                 getId(),
                 getTitle(),

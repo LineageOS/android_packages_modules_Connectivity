@@ -75,7 +75,7 @@ public class ChreCommunication extends ContextHubClientCallback {
     }
 
     public boolean available() {
-        return mInjector.getContextHubManagerAdapter() != null;
+        return mContextHubClient != null;
     }
 
     /**

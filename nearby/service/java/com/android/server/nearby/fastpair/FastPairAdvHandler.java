@@ -27,7 +27,9 @@ import android.nearby.FastPairDevice;
 import android.nearby.NearbyDevice;
 import android.util.Log;
 
+import com.android.internal.annotations.VisibleForTesting;
 import com.android.server.nearby.common.ble.decode.FastPairDecoder;
+import com.android.server.nearby.common.ble.util.RangingUtils;
 import com.android.server.nearby.common.bloomfilter.BloomFilter;
 import com.android.server.nearby.common.bloomfilter.FastPairBloomFilterHasher;
 import com.android.server.nearby.common.locator.Locator;
@@ -52,6 +54,8 @@ public class FastPairAdvHandler {
     String mBleAddress;
     // Need to be deleted after notification manager in use.
     private boolean mIsFirst = false;
+    private FastPairDataProvider mPairDataProvider;
+    private static final double NEARBY_DISTANCE_THRESHOLD = 0.6;
 
     /** The types about how the bloomfilter is processed. */
     public enum ProcessBloomFilterType {
@@ -68,6 +72,12 @@ public class FastPairAdvHandler {
         mContext = context;
     }
 
+    @VisibleForTesting
+    FastPairAdvHandler(Context context, FastPairDataProvider dataProvider) {
+        mContext = context;
+        mPairDataProvider = dataProvider;
+    }
+
     /**
      * Handles all of the scanner result. Fast Pair will handle model id broadcast bloomfilter
      * broadcast and battery level broadcast.
@@ -75,21 +85,31 @@ public class FastPairAdvHandler {
     public void handleBroadcast(NearbyDevice device) {
         FastPairDevice fastPairDevice = (FastPairDevice) device;
         mBleAddress = fastPairDevice.getBluetoothAddress();
-        FastPairDataProvider dataProvider = FastPairDataProvider.getInstance();
-        if (dataProvider == null) {
+        if (mPairDataProvider == null) {
+            mPairDataProvider = FastPairDataProvider.getInstance();
+        }
+        if (mPairDataProvider == null) {
             return;
         }
-        List<Account> accountList = dataProvider.loadFastPairEligibleAccounts();
+
         if (FastPairDecoder.checkModelId(fastPairDevice.getData())) {
             byte[] model = FastPairDecoder.getModelId(fastPairDevice.getData());
             Log.d(TAG, "On discovery model id " + Hex.bytesToStringLowercase(model));
             // Use api to get anti spoofing key from model id.
             try {
+                List<Account> accountList = mPairDataProvider.loadFastPairEligibleAccounts();
                 Rpcs.GetObservedDeviceResponse response =
-                        dataProvider.loadFastPairAntispoofKeyDeviceMetadata(model);
+                        mPairDataProvider.loadFastPairAntispoofKeyDeviceMetadata(model);
                 if (response == null) {
                     Log.e(TAG, "server does not have model id "
                             + Hex.bytesToStringLowercase(model));
+                    return;
+                }
+                // Check the distance of the device if the distance is larger than the threshold
+                // do not show half sheet.
+                if (!isNearby(fastPairDevice.getRssi(),
+                        response.getDevice().getBleTxPower() == 0 ? fastPairDevice.getTxPower()
+                                : response.getDevice().getBleTxPower())) {
                     return;
                 }
                 Locator.get(mContext, FastPairHalfSheetManager.class).showHalfSheet(
@@ -102,6 +122,7 @@ public class FastPairAdvHandler {
         } else {
             // Start to process bloom filter
             try {
+                List<Account> accountList = mPairDataProvider.loadFastPairEligibleAccounts();
                 byte[] bloomFilterByteArray = FastPairDecoder
                         .getBloomFilter(fastPairDevice.getData());
                 byte[] bloomFilterSalt = FastPairDecoder
@@ -111,7 +132,7 @@ public class FastPairAdvHandler {
                 }
                 for (Account account : accountList) {
                     List<Data.FastPairDeviceWithAccountKey> listDevices =
-                            dataProvider.loadFastPairDeviceWithAccountKey(account);
+                            mPairDataProvider.loadFastPairDeviceWithAccountKey(account);
                     Data.FastPairDeviceWithAccountKey recognizedDevice =
                             findRecognizedDevice(listDevices,
                                     new BloomFilter(bloomFilterByteArray,
@@ -120,6 +141,15 @@ public class FastPairAdvHandler {
                     if (recognizedDevice != null) {
                         Log.d(TAG, "find matched device show notification to remind"
                                 + " user to pair");
+                        // Check the distance of the device if the distance is larger than the
+                        // threshold
+                        // do not show half sheet.
+                        if (!isNearby(fastPairDevice.getRssi(),
+                                recognizedDevice.getDiscoveryItem().getTxPower() == 0
+                                        ? fastPairDevice.getTxPower()
+                                        : recognizedDevice.getDiscoveryItem().getTxPower())) {
+                            return;
+                        }
                         // Check if the device is already paired
                         List<Cache.StoredFastPairItem> storedFastPairItemList =
                                 Locator.get(mContext, FastPairCacheManager.class)
@@ -141,8 +171,9 @@ public class FastPairAdvHandler {
                                 // Get full info from api the initial request will only return
                                 // part of the info due to size limit.
                                 List<Data.FastPairDeviceWithAccountKey> resList =
-                                        dataProvider.loadFastPairDeviceWithAccountKey(account,
-                                        List.of(recognizedDevice.getAccountKey().toByteArray()));
+                                        mPairDataProvider.loadFastPairDeviceWithAccountKey(account,
+                                                List.of(recognizedDevice.getAccountKey()
+                                                        .toByteArray()));
                                 if (resList != null && resList.size() > 0) {
                                     //Saved device from footprint does not have ble address so
                                     // fill ble address with current scan result.
@@ -154,7 +185,7 @@ public class FastPairAdvHandler {
                                     Locator.get(mContext, FastPairController.class).pair(
                                             new DiscoveryItem(mContext, storedDiscoveryItem),
                                             resList.get(0).getAccountKey().toByteArray(),
-                                            /** companionApp=*/ null);
+                                            /** companionApp=*/null);
                                 }
                             }
                         }
@@ -210,6 +241,13 @@ public class FastPairAdvHandler {
             }
         }
         return null;
+    }
+
+    /**
+     * Check the device distance for certain rssi value.
+     */
+    boolean isNearby(int rssi, int txPower) {
+        return RangingUtils.distanceFromRssiAndTxPower(rssi, txPower) < NEARBY_DISTANCE_THRESHOLD;
     }
 
 }
