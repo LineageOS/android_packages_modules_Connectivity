@@ -20,12 +20,17 @@ package {
 }
 
 // Include build rules from Sources.bp
-build = ["Sources.bp"]
+// sc-mainline-prod only: do not include Sources.bp
+// build = ["Sources.bp"]
 
 filegroup {
     name: "service-connectivity-tiramisu-sources",
     srcs: [
-        "src/**/*.java",
+        // sc-mainline-prod only: Building T sources is disabled on this branch.
+        // "src/**/*.java",
+        "src/com/android/server/ConnectivityServiceInitializer.java",
+        // filegroup contains empty stubs on sc-mainline-prod.
+        ":services.connectivity-tiramisu-updatable-sources",
     ],
     visibility: ["//visibility:private"],
 }
