@@ -22,6 +22,17 @@ package {
 // Include build rules from Sources.bp
 build = ["Sources.bp"]
 
+filegroup {
+    name: "service-connectivity-tiramisu-sources",
+    srcs: [
+        "src/**/*.java",
+    ],
+    visibility: ["//visibility:private"],
+}
+// The above filegroup can be used to specify different sources depending
+// on the branch, while minimizing merge conflicts in the rest of the
+// build rules.
+
 // This builds T+ services depending on framework-connectivity-t
 // hidden symbols separately from the S+ services, to ensure that S+
 // services cannot accidentally depend on T+ hidden symbols from
@@ -32,9 +43,7 @@ java_library {
     // TODO(b/210962470): Bump this to at least S, and then T.
     min_sdk_version: "30",
     srcs: [
-        "src/**/*.java",
-        ":ethernet-service-updatable-sources",
-        ":services.connectivity-tiramisu-updatable-sources",
+        ":service-connectivity-tiramisu-sources",
     ],
     libs: [
         "framework-annotations-lib",
@@ -61,5 +70,20 @@ java_library {
         "//packages/modules/Connectivity/service",
         "//packages/modules/Connectivity/tests:__subpackages__",
         "//packages/modules/IPsec/tests/iketests",
+    ],
+}
+
+// Ethernet related libraries.
+// TODO: remove when ethernet tests are merged into connectivity tests
+filegroup {
+    name: "ethernet-service-test-sources",
+    srcs: [
+        "src/com/android/server/ethernet/**/*.java",
+        "src/com/android/server/net/DelayedDiskWrite.java",
+        "src/com/android/server/net/IpConfigStore.java",
+    ],
+    path: "src",
+    visibility: [
+        "//packages/modules/Connectivity/tests:__subpackages__",
     ],
 }
