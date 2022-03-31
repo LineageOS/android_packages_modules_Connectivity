@@ -16,6 +16,9 @@
 
 package android.net;
 
+import static android.net.cts.util.IkeSessionTestUtils.CHILD_PARAMS;
+import static android.net.cts.util.IkeSessionTestUtils.IKE_PARAMS;
+
 import static com.android.testutils.DevSdkIgnoreRuleKt.SC_V2;
 
 import static org.junit.Assert.assertArrayEquals;
@@ -25,6 +28,7 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
+import android.net.ipsec.ike.IkeTunnelConnectionParams;
 import android.os.Build;
 import android.test.mock.MockContext;
 
@@ -440,6 +444,33 @@ public class Ikev2VpnProfileTest {
 
         assertEquals(ikeProfile, Ikev2VpnProfile.fromVpnProfile(ikeProfile.toVpnProfile()));
     }
+
+    @Test
+    public void testConversionIsLosslessWithIkeTunConnParams() throws Exception {
+        final IkeTunnelConnectionParams tunnelParams =
+                new IkeTunnelConnectionParams(IKE_PARAMS, CHILD_PARAMS);
+        // Config authentication related fields is not required while building with
+        // IkeTunnelConnectionParams.
+        final Ikev2VpnProfile ikeProfile = new Ikev2VpnProfile.Builder(tunnelParams).build();
+        assertEquals(ikeProfile, Ikev2VpnProfile.fromVpnProfile(ikeProfile.toVpnProfile()));
+    }
+
+    @Test
+    public void testEquals() throws Exception {
+        // Verify building without IkeTunnelConnectionParams
+        final Ikev2VpnProfile.Builder builder = getBuilderWithDefaultOptions();
+        builder.setAuthDigitalSignature(mUserCert, mPrivateKey, mServerRootCa);
+        assertEquals(builder.build(), builder.build());
+
+        // Verify building with IkeTunnelConnectionParams
+        final IkeTunnelConnectionParams tunnelParams =
+                new IkeTunnelConnectionParams(IKE_PARAMS, CHILD_PARAMS);
+        final IkeTunnelConnectionParams tunnelParams2 =
+                new IkeTunnelConnectionParams(IKE_PARAMS, CHILD_PARAMS);
+        assertEquals(new Ikev2VpnProfile.Builder(tunnelParams).build(),
+                new Ikev2VpnProfile.Builder(tunnelParams2).build());
+    }
+
 
     private static class CertificateAndKey {
         public final X509Certificate cert;
