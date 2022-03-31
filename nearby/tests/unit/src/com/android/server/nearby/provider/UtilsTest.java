@@ -310,13 +310,6 @@ public class UtilsTest {
     private static void ensureHappyPathAsExpected(FastPairDeviceMetadataParcel metadataParcel) {
         assertThat(metadataParcel).isNotNull();
 
-        assertThat(metadataParcel.assistantSetupHalfSheet).isEqualTo(ASSISTANT_SETUP_HALFSHEET);
-        assertThat(metadataParcel.assistantSetupNotification).isEqualTo(
-                ASSISTANT_SETUP_NOTIFICATION);
-
-
-        assertThat(metadataParcel.confirmPinDescription).isEqualTo(CONFIRM_PIN_DESCRIPTION);
-        assertThat(metadataParcel.confirmPinTitle).isEqualTo(CONFIRM_PIN_TITLE);
         assertThat(metadataParcel.connectSuccessCompanionAppInstalled).isEqualTo(
                 CONNECT_SUCCESS_COMPANION_APP_INSTALLED);
         assertThat(metadataParcel.connectSuccessCompanionAppNotInstalled).isEqualTo(
@@ -326,8 +319,6 @@ public class UtilsTest {
 
         assertThat(metadataParcel.failConnectGoToSettingsDescription).isEqualTo(
                 FAIL_CONNECT_GOTO_SETTINGS_DESCRIPTION);
-        assertThat(metadataParcel.fastPairTvConnectDeviceNoAccountDescription).isEqualTo(
-                FAST_PAIR_TV_CONNECT_DEVICE_NO_ACCOUNT_DESCRIPTION);
 
         assertThat(metadataParcel.initialNotificationDescription).isEqualTo(
                 INITIAL_NOTIFICATION_DESCRIPTION);
@@ -341,10 +332,6 @@ public class UtilsTest {
 
         assertThat(metadataParcel.subsequentPairingDescription).isEqualTo(
                 SUBSEQUENT_PAIRING_DESCRIPTION);
-        assertThat(metadataParcel.syncContactsDescription).isEqualTo(SYNC_CONTACT_DESCRPTION);
-        assertThat(metadataParcel.syncContactsTitle).isEqualTo(SYNC_CONTACTS_TITLE);
-        assertThat(metadataParcel.syncSmsDescription).isEqualTo(SYNC_SMS_DESCRIPTION);
-        assertThat(metadataParcel.syncSmsTitle).isEqualTo(SYNC_SMS_TITLE);
 
         assertThat(metadataParcel.trueWirelessImageUrlCase).isEqualTo(TRUE_WIRELESS_IMAGE_URL_CASE);
         assertThat(metadataParcel.trueWirelessImageUrlLeftBud).isEqualTo(
@@ -378,27 +365,18 @@ public class UtilsTest {
         assertThat(itemParcel.actionUrl).isEqualTo(ACTION_URL);
         assertThat(itemParcel.actionUrlType).isEqualTo(ACTION_URL_TYPE);
         assertThat(itemParcel.appName).isEqualTo(APP_NAME);
-        assertThat(itemParcel.attachmentType).isEqualTo(ATTACHMENT_TYPE);
         assertThat(itemParcel.authenticationPublicKeySecp256r1)
                 .isEqualTo(AUTHENTICATION_PUBLIC_KEY_SEC_P256R1);
-        assertThat(itemParcel.bleRecordBytes).isEqualTo(BLE_RECORD_BYTES);
-        assertThat(itemParcel.debugCategory).isEqualTo(DEBUG_CATEGORY);
-        assertThat(itemParcel.debugMessage).isEqualTo(DEBUG_MESSAGE);
         assertThat(itemParcel.description).isEqualTo(DESCRIPTION);
         assertThat(itemParcel.deviceName).isEqualTo(DEVICE_NAME);
         assertThat(itemParcel.displayUrl).isEqualTo(DISPLAY_URL);
-        assertThat(itemParcel.entityId).isEqualTo(ENTITY_ID);
-        assertThat(itemParcel.featureGraphicUrl).isEqualTo(FEATURE_GRAPHIC_URL);
         assertThat(itemParcel.firstObservationTimestampMillis)
                 .isEqualTo(FIRST_OBSERVATION_TIMESTAMP_MILLIS);
-        assertThat(itemParcel.groupId).isEqualTo(GROUP_ID);
         assertThat(itemParcel.iconFifeUrl).isEqualTo(ICON_FIFE_URL);
         assertThat(itemParcel.iconPng).isEqualTo(ICON_PNG);
         assertThat(itemParcel.id).isEqualTo(ID);
         assertThat(itemParcel.lastObservationTimestampMillis)
                 .isEqualTo(LAST_OBSERVATION_TIMESTAMP_MILLIS);
-        assertThat(itemParcel.lastUserExperience).isEqualTo(LAST_USER_EXPERIENCE);
-        assertThat(itemParcel.lostMillis).isEqualTo(LOST_MILLIS);
         assertThat(itemParcel.macAddress).isEqualTo(MAC_ADDRESS);
         assertThat(itemParcel.packageName).isEqualTo(PACKAGE_NAME);
         assertThat(itemParcel.pendingAppInstallTimestampMillis)
@@ -408,7 +386,6 @@ public class UtilsTest {
         assertThat(itemParcel.title).isEqualTo(TITLE);
         assertThat(itemParcel.triggerId).isEqualTo(TRIGGER_ID);
         assertThat(itemParcel.txPower).isEqualTo(TX_POWER);
-        assertThat(itemParcel.type).isEqualTo(TYPE);
     }
 
     private static FastPairEligibleAccountParcel genHappyPathFastPairEligibleAccountParcel() {
@@ -461,19 +438,13 @@ public class UtilsTest {
     private static FastPairDeviceMetadataParcel genHappyPathFastPairDeviceMetadataParcel() {
         FastPairDeviceMetadataParcel parcel = new FastPairDeviceMetadataParcel();
 
-        parcel.assistantSetupHalfSheet = ASSISTANT_SETUP_HALFSHEET;
-        parcel.assistantSetupNotification = ASSISTANT_SETUP_NOTIFICATION;
         parcel.bleTxPower = BLE_TX_POWER;
-        parcel.confirmPinDescription = CONFIRM_PIN_DESCRIPTION;
-        parcel.confirmPinTitle = CONFIRM_PIN_TITLE;
         parcel.connectSuccessCompanionAppInstalled = CONNECT_SUCCESS_COMPANION_APP_INSTALLED;
         parcel.connectSuccessCompanionAppNotInstalled =
                 CONNECT_SUCCESS_COMPANION_APP_NOT_INSTALLED;
         parcel.deviceType = DEVICE_TYPE;
         parcel.downloadCompanionAppDescription = DOWNLOAD_COMPANION_APP_DESCRIPTION;
         parcel.failConnectGoToSettingsDescription = FAIL_CONNECT_GOTO_SETTINGS_DESCRIPTION;
-        parcel.fastPairTvConnectDeviceNoAccountDescription =
-                FAST_PAIR_TV_CONNECT_DEVICE_NO_ACCOUNT_DESCRIPTION;
         parcel.image = IMAGE;
         parcel.imageUrl = IMAGE_URL;
         parcel.initialNotificationDescription = INITIAL_NOTIFICATION_DESCRIPTION;
@@ -481,15 +452,10 @@ public class UtilsTest {
                 INITIAL_NOTIFICATION_DESCRIPTION_NO_ACCOUNT;
         parcel.initialPairingDescription = INITIAL_PAIRING_DESCRIPTION;
         parcel.intentUri = INTENT_URI;
-        parcel.locale = LOCALE;
         parcel.name = NAME;
         parcel.openCompanionAppDescription = OPEN_COMPANION_APP_DESCRIPTION;
         parcel.retroactivePairingDescription = RETRO_ACTIVE_PAIRING_DESCRIPTION;
         parcel.subsequentPairingDescription = SUBSEQUENT_PAIRING_DESCRIPTION;
-        parcel.syncContactsDescription = SYNC_CONTACT_DESCRPTION;
-        parcel.syncContactsTitle = SYNC_CONTACTS_TITLE;
-        parcel.syncSmsDescription = SYNC_SMS_DESCRIPTION;
-        parcel.syncSmsTitle = SYNC_SMS_TITLE;
         parcel.triggerDistance = TRIGGER_DISTANCE;
         parcel.trueWirelessImageUrlCase = TRUE_WIRELESS_IMAGE_URL_CASE;
         parcel.trueWirelessImageUrlLeftBud = TRUE_WIRELESS_IMAGE_URL_LEFT_BUD;
@@ -508,30 +474,18 @@ public class UtilsTest {
         storedDiscoveryItemBuilder.setActionUrl(ACTION_URL);
         storedDiscoveryItemBuilder.setActionUrlType(Cache.ResolvedUrlType.WEBPAGE);
         storedDiscoveryItemBuilder.setAppName(APP_NAME);
-        storedDiscoveryItemBuilder.setAttachmentType(
-                Cache.DiscoveryAttachmentType.DISCOVERY_ATTACHMENT_TYPE_NORMAL);
         storedDiscoveryItemBuilder.setAuthenticationPublicKeySecp256R1(
                 ByteString.copyFrom(AUTHENTICATION_PUBLIC_KEY_SEC_P256R1));
-        storedDiscoveryItemBuilder.setBleRecordBytes(ByteString.copyFrom(BLE_RECORD_BYTES));
-        storedDiscoveryItemBuilder.setDebugCategory(
-                Cache.StoredDiscoveryItem.DebugMessageCategory.STATUS_VALID_NOTIFICATION);
-        storedDiscoveryItemBuilder.setDebugMessage(DEBUG_MESSAGE);
         storedDiscoveryItemBuilder.setDescription(DESCRIPTION);
         storedDiscoveryItemBuilder.setDeviceName(DEVICE_NAME);
         storedDiscoveryItemBuilder.setDisplayUrl(DISPLAY_URL);
-        storedDiscoveryItemBuilder.setEntityId(ENTITY_ID);
-        storedDiscoveryItemBuilder.setFeatureGraphicUrl(FEATURE_GRAPHIC_URL);
         storedDiscoveryItemBuilder.setFirstObservationTimestampMillis(
                 FIRST_OBSERVATION_TIMESTAMP_MILLIS);
-        storedDiscoveryItemBuilder.setGroupId(GROUP_ID);
         storedDiscoveryItemBuilder.setIconFifeUrl(ICON_FIFE_URL);
         storedDiscoveryItemBuilder.setIconPng(ByteString.copyFrom(ICON_PNG));
         storedDiscoveryItemBuilder.setId(ID);
         storedDiscoveryItemBuilder.setLastObservationTimestampMillis(
                 LAST_OBSERVATION_TIMESTAMP_MILLIS);
-        storedDiscoveryItemBuilder.setLastUserExperience(
-                Cache.StoredDiscoveryItem.ExperienceType.EXPERIENCE_GOOD);
-        storedDiscoveryItemBuilder.setLostMillis(LOST_MILLIS);
         storedDiscoveryItemBuilder.setMacAddress(MAC_ADDRESS);
         storedDiscoveryItemBuilder.setPackageName(PACKAGE_NAME);
         storedDiscoveryItemBuilder.setPendingAppInstallTimestampMillis(
@@ -541,21 +495,14 @@ public class UtilsTest {
         storedDiscoveryItemBuilder.setTitle(TITLE);
         storedDiscoveryItemBuilder.setTriggerId(TRIGGER_ID);
         storedDiscoveryItemBuilder.setTxPower(TX_POWER);
-        storedDiscoveryItemBuilder.setType(Cache.NearbyType.NEARBY_PROXIMITY_BEACON);
 
         FastPairStrings.Builder stringsBuilder = FastPairStrings.newBuilder();
-        stringsBuilder.setAssistantHalfSheetDescription(ASSISTANT_SETUP_HALFSHEET);
-        stringsBuilder.setAssistantNotificationDescription(ASSISTANT_SETUP_NOTIFICATION);
-        stringsBuilder.setConfirmPinDescription(CONFIRM_PIN_DESCRIPTION);
-        stringsBuilder.setConfirmPinTitle(CONFIRM_PIN_TITLE);
         stringsBuilder.setPairingFinishedCompanionAppInstalled(
                 CONNECT_SUCCESS_COMPANION_APP_INSTALLED);
         stringsBuilder.setPairingFinishedCompanionAppNotInstalled(
                 CONNECT_SUCCESS_COMPANION_APP_NOT_INSTALLED);
         stringsBuilder.setPairingFailDescription(
                 FAIL_CONNECT_GOTO_SETTINGS_DESCRIPTION);
-        stringsBuilder.setFastPairTvConnectDeviceNoAccountDescription(
-                FAST_PAIR_TV_CONNECT_DEVICE_NO_ACCOUNT_DESCRIPTION);
         stringsBuilder.setTapToPairWithAccount(
                 INITIAL_NOTIFICATION_DESCRIPTION);
         stringsBuilder.setTapToPairWithoutAccount(
@@ -563,10 +510,6 @@ public class UtilsTest {
         stringsBuilder.setInitialPairingDescription(INITIAL_PAIRING_DESCRIPTION);
         stringsBuilder.setRetroactivePairingDescription(RETRO_ACTIVE_PAIRING_DESCRIPTION);
         stringsBuilder.setSubsequentPairingDescription(SUBSEQUENT_PAIRING_DESCRIPTION);
-        stringsBuilder.setSyncContactsDescription(SYNC_CONTACT_DESCRPTION);
-        stringsBuilder.setSyncContactsTitle(SYNC_CONTACTS_TITLE);
-        stringsBuilder.setSyncSmsDescription(SYNC_SMS_DESCRIPTION);
-        stringsBuilder.setSyncSmsTitle(SYNC_SMS_TITLE);
         stringsBuilder.setWaitAppLaunchDescription(WAIT_LAUNCH_COMPANION_APP_DESCRIPTION);
         storedDiscoveryItemBuilder.setFastPairStrings(stringsBuilder.build());
 
@@ -606,24 +549,15 @@ public class UtilsTest {
         parcel.actionUrl = ACTION_URL;
         parcel.actionUrlType = ACTION_URL_TYPE;
         parcel.appName = APP_NAME;
-        parcel.attachmentType = ATTACHMENT_TYPE;
         parcel.authenticationPublicKeySecp256r1 = AUTHENTICATION_PUBLIC_KEY_SEC_P256R1;
-        parcel.bleRecordBytes = BLE_RECORD_BYTES;
-        parcel.debugCategory = DEBUG_CATEGORY;
-        parcel.debugMessage = DEBUG_MESSAGE;
         parcel.description = DESCRIPTION;
         parcel.deviceName = DEVICE_NAME;
         parcel.displayUrl = DISPLAY_URL;
-        parcel.entityId = ENTITY_ID;
-        parcel.featureGraphicUrl = FEATURE_GRAPHIC_URL;
         parcel.firstObservationTimestampMillis = FIRST_OBSERVATION_TIMESTAMP_MILLIS;
-        parcel.groupId = GROUP_ID;
         parcel.iconFifeUrl = ICON_FIFE_URL;
         parcel.iconPng = ICON_PNG;
         parcel.id = ID;
         parcel.lastObservationTimestampMillis = LAST_OBSERVATION_TIMESTAMP_MILLIS;
-        parcel.lastUserExperience = LAST_USER_EXPERIENCE;
-        parcel.lostMillis = LOST_MILLIS;
         parcel.macAddress = MAC_ADDRESS;
         parcel.packageName = PACKAGE_NAME;
         parcel.pendingAppInstallTimestampMillis = PENDING_APP_INSTALL_TIMESTAMP_MILLIS;
@@ -632,7 +566,6 @@ public class UtilsTest {
         parcel.title = TITLE;
         parcel.triggerId = TRIGGER_ID;
         parcel.txPower = TX_POWER;
-        parcel.type = TYPE;
 
         return parcel;
     }
@@ -659,10 +592,6 @@ public class UtilsTest {
                 .setDevice(deviceBuilder.build())
                 .setImage(ByteString.copyFrom(IMAGE))
                 .setStrings(Rpcs.ObservedDeviceStrings.newBuilder()
-                        .setAssistantSetupHalfSheet(ASSISTANT_SETUP_HALFSHEET)
-                        .setAssistantSetupNotification(ASSISTANT_SETUP_NOTIFICATION)
-                        .setConfirmPinDescription(CONFIRM_PIN_DESCRIPTION)
-                        .setConfirmPinTitle(CONFIRM_PIN_TITLE)
                         .setConnectSuccessCompanionAppInstalled(
                                 CONNECT_SUCCESS_COMPANION_APP_INSTALLED)
                         .setConnectSuccessCompanionAppNotInstalled(
@@ -671,29 +600,18 @@ public class UtilsTest {
                                 DOWNLOAD_COMPANION_APP_DESCRIPTION)
                         .setFailConnectGoToSettingsDescription(
                                 FAIL_CONNECT_GOTO_SETTINGS_DESCRIPTION)
-                        .setFastPairTvConnectDeviceNoAccountDescription(
-                                FAST_PAIR_TV_CONNECT_DEVICE_NO_ACCOUNT_DESCRIPTION)
                         .setInitialNotificationDescription(
                                 INITIAL_NOTIFICATION_DESCRIPTION)
                         .setInitialNotificationDescriptionNoAccount(
                                 INITIAL_NOTIFICATION_DESCRIPTION_NO_ACCOUNT)
                         .setInitialPairingDescription(
                                 INITIAL_PAIRING_DESCRIPTION)
-                        .setLocale(LOCALE)
                         .setOpenCompanionAppDescription(
                                 OPEN_COMPANION_APP_DESCRIPTION)
                         .setRetroactivePairingDescription(
                                 RETRO_ACTIVE_PAIRING_DESCRIPTION)
                         .setSubsequentPairingDescription(
                                 SUBSEQUENT_PAIRING_DESCRIPTION)
-                        .setSyncContactsDescription(
-                                SYNC_CONTACT_DESCRPTION)
-                        .setSyncContactsTitle(
-                                SYNC_CONTACTS_TITLE)
-                        .setSyncSmsDescription(
-                                SYNC_SMS_DESCRIPTION)
-                        .setSyncSmsTitle(
-                                SYNC_SMS_TITLE)
                         .setUnableToConnectDescription(
                                 UNABLE_TO_CONNECT_DESCRIPTION)
                         .setUnableToConnectTitle(

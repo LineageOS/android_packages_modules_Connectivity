@@ -48,16 +48,6 @@ public class FastPairDiscoveryItem {
     }
 
     /**
-     * Get Type.
-     *
-     * @hide
-     */
-    @SystemApi
-    public int getType() {
-        return mMetadataParcel.type;
-    }
-
-    /**
      * Get MacAddress.
      *
      * @hide
@@ -205,27 +195,6 @@ public class FastPairDiscoveryItem {
     }
 
     /**
-     * Get GroupId.
-     *
-     * @hide
-     */
-    @SystemApi
-    @Nullable
-    public String getGroupId() {
-        return mMetadataParcel.groupId;
-    }
-
-    /**
-     * Get AttachmentType.
-     *
-     * @hide
-     */
-    @SystemApi
-    public int getAttachmentType() {
-        return mMetadataParcel.attachmentType;
-    }
-
-    /**
      * Get PackageName.
      *
      * @hide
@@ -234,17 +203,6 @@ public class FastPairDiscoveryItem {
     @Nullable
     public String getPackageName() {
         return mMetadataParcel.packageName;
-    }
-
-    /**
-     * Get FeatureGraphicUrl.
-     *
-     * @hide
-     */
-    @SystemApi
-    @Nullable
-    public String getFeatureGraphicUrl() {
-        return mMetadataParcel.featureGraphicUrl;
     }
 
     /**
@@ -280,69 +238,6 @@ public class FastPairDiscoveryItem {
     @Nullable
     public String getIconFfeUrl() {
         return mMetadataParcel.iconFifeUrl;
-    }
-
-    /**
-     * Get DebugMessage.
-     *
-     * @hide
-     */
-    @SystemApi
-    @Nullable
-    public String getDebugMessage() {
-        return mMetadataParcel.debugMessage;
-    }
-
-    /**
-     * Get DebugCategory.
-     *
-     * @hide
-     */
-    @SystemApi
-    public int getDebugCategory() {
-        return mMetadataParcel.debugCategory;
-    }
-
-    /**
-     * Get LostMillis.
-     */
-    public long getLostMillis() {
-        return mMetadataParcel.lostMillis;
-    }
-
-    /**
-     * Get LastUserExperience.
-     *
-     * @hide
-     */
-    @SystemApi
-    public int getLastUserExperience() {
-        return mMetadataParcel.lastUserExperience;
-    }
-
-    /**
-     * Get BleRecordBytes. Raw bytes of {@link android.bluetooth.le.ScanRecord}.
-     * It is the most recent BLE advertisement related to this item.
-     *
-     * @return the most recent BLE advertisement in raw bytes of
-     *         {@link android.bluetooth.le.ScanRecord}.
-     * @hide
-     */
-    @SystemApi
-    @Nullable
-    public byte[] getBleRecordBytes() {
-        return mMetadataParcel.bleRecordBytes;
-    }
-
-    /**
-     * Get EntityId.
-     *
-     * @hide
-     */
-    @SystemApi
-    @Nullable
-    public String getEntityId() {
-        return mMetadataParcel.entityId;
     }
 
     /**
@@ -390,20 +285,6 @@ public class FastPairDiscoveryItem {
         @NonNull
         public Builder setId(@Nullable String id) {
             mBuilderParcel.id = id;
-            return this;
-        }
-
-        /**
-         * Set Nearby Type.
-         *
-         * @param type Nearby type.
-         * @return The builder, to facilitate chaining {@code builder.setXXX(..).setXXX(..)}.
-         * @hide
-         */
-        @SystemApi
-        @NonNull
-        public Builder setType(int type) {
-            mBuilderParcel.type = type;
             return this;
         }
 
@@ -608,35 +489,6 @@ public class FastPairDiscoveryItem {
         }
 
         /**
-         * Set GroupId.
-         *
-         * @param groupId ID used for associating several DiscoveryItems. These items may be
-         *                visually displayed together.
-         * @return The builder, to facilitate chaining {@code builder.setXXX(..).setXXX(..)}.
-         * @hide
-         */
-        @SystemApi
-        @NonNull
-        public Builder setGroupId(@Nullable String groupId) {
-            mBuilderParcel.groupId = groupId;
-            return this;
-        }
-
-        /**
-         * Set AttachmentType.
-         *
-         * @param attachmentType Whether the attachment is created in debug namespace.
-         * @return The builder, to facilitate chaining {@code builder.setXXX(..).setXXX(..)}.
-         * @hide
-         */
-        @SystemApi
-        @NonNull
-        public Builder setAttachmentType(int attachmentType) {
-            mBuilderParcel.attachmentType = attachmentType;
-            return this;
-        }
-
-        /**
          * Set PackageName.
          *
          * @param packageName Package name of the App that owns this item.
@@ -647,21 +499,6 @@ public class FastPairDiscoveryItem {
         @NonNull
         public Builder setPackageName(@Nullable String packageName) {
             mBuilderParcel.packageName = packageName;
-            return this;
-        }
-
-        /**
-         * Set FeatureGraphicUrl.
-         *
-         * @param featureGraphicUrl The "feature" graphic image url used for large sized list view
-         *                          entries.
-         * @return The builder, to facilitate chaining {@code builder.setXXX(..).setXXX(..)}.
-         * @hide
-         */
-        @SystemApi
-        @NonNull
-        public Builder setFeatureGraphicUrl(@Nullable String featureGraphicUrl) {
-            mBuilderParcel.featureGraphicUrl = featureGraphicUrl;
             return this;
         }
 
@@ -704,94 +541,6 @@ public class FastPairDiscoveryItem {
         @NonNull
         public Builder setIconFfeUrl(@Nullable String iconFifeUrl) {
             mBuilderParcel.iconFifeUrl = iconFifeUrl;
-            return this;
-        }
-
-        /**
-         * Set DebugMessage.
-         *
-         * @param debugMessage Message written to bugreport for 3P developers.(No sensitive info)
-         * @return The builder, to facilitate chaining {@code builder.setXXX(..).setXXX(..)}.
-         * @hide
-         */
-        @SystemApi
-        @NonNull
-        public Builder setDebugMessage(@Nullable String debugMessage) {
-            mBuilderParcel.debugMessage = debugMessage;
-            return this;
-        }
-
-        /**
-         * Set DebugCategory.
-         *
-         * @param debugCategory Weather the item is filtered out on server.
-         * @return The builder, to facilitate chaining {@code builder.setXXX(..).setXXX(..)}.
-         * @hide
-         */
-        @SystemApi
-        @NonNull
-        public Builder setDebugCategory(int debugCategory) {
-            mBuilderParcel.debugCategory = debugCategory;
-            return this;
-        }
-
-        /**
-         * Set LostMillis.
-         *
-         * @param lostMillis Client timestamp when the trigger (e.g. beacon) was last lost
-         *                   (e.g. when Messages told us the beacon's no longer nearby).
-         * @return The builder, to facilitate chaining {@code builder.setXXX(..).setXXX(..)}.
-         * @hide
-         */
-        @SystemApi
-        @NonNull
-        public Builder setLostMillis(long lostMillis) {
-            mBuilderParcel.lostMillis = lostMillis;
-            return this;
-        }
-
-        /**
-         * Set LastUserExperience.
-         *
-         * @param lastUserExperience The kind of experience the user last had with this (e.g. if
-         *                           they dismissed the notification, that's bad; but if they tapped
-         *                           it, that's good).
-         * @return The builder, to facilitate chaining {@code builder.setXXX(..).setXXX(..)}.
-         * @hide
-         */
-        @SystemApi
-        @NonNull
-        public Builder setLastUserExperience(int lastUserExperience) {
-            mBuilderParcel.lastUserExperience = lastUserExperience;
-            return this;
-        }
-
-        /**
-         * Set BleRecordBytes.
-         *
-         * @param bleRecordBytes The most recent BLE advertisement related to this item. Raw bytes
-         *                       of {@link android.bluetooth.le.ScanRecord}.
-         * @return The builder, to facilitate chaining {@code builder.setXXX(..).setXXX(..)}.
-         * @hide
-         */
-        @SystemApi
-        @NonNull
-        public Builder setBleRecordBytes(@Nullable byte[] bleRecordBytes) {
-            mBuilderParcel.bleRecordBytes = bleRecordBytes;
-            return this;
-        }
-
-        /**
-         * Set EntityId.
-         *
-         * @param entityId An ID generated on the server to uniquely identify content.
-         * @return The builder, to facilitate chaining {@code builder.setXXX(..).setXXX(..)}.
-         * @hide
-         */
-        @SystemApi
-        @NonNull
-        public Builder setEntityId(@Nullable String entityId) {
-            mBuilderParcel.entityId = entityId;
             return this;
         }
 

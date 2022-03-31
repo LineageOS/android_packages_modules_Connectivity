@@ -234,9 +234,6 @@ message Status {
 
 // Strings to be displayed in notifications surfaced for a device.
 message ObservedDeviceStrings {
-  // The locale of all of the strings.
-  string locale = 1;
-
   // The notification description for when the device is initially discovered.
   string initial_notification_description = 2;
 
@@ -285,32 +282,7 @@ message ObservedDeviceStrings {
   // fail.
   string fail_connect_go_to_settings_description = 15;
 
-  // The title of the UI to ask the user to confirm the pin code.
-  string confirm_pin_title = 16;
-
-  // The description of the UI to ask the user to confirm the pin code.
-  string confirm_pin_description = 17;
-
-  // The title of the UI to ask the user to confirm to sync contacts.
-  string sync_contacts_title = 18;
-
-  // The description of the UI to ask the user to confirm to sync contacts.
-  string sync_contacts_description = 19;
-
-  // The title of the UI to ask the user to confirm to sync SMS.
-  string sync_sms_title = 20;
-
-  // The description of the UI to ask the user to confirm to sync SMS.
-  string sync_sms_description = 21;
-
-  // The description in half sheet to ask user setup google assistant
-  string assistant_setup_half_sheet = 22;
-
-  // The description in notification to ask user setup google assistant
-  string assistant_setup_notification = 23;
-
-  // Description of the connect device action on TV, when user is not logged in.
-  string fast_pair_tv_connect_device_no_account_description = 24;
+  reserved 1, 16, 17, 18, 19, 20, 21, 22, 23, 24;
 }
 
 // The buffer size range of a Fast Pair devices support dynamic buffer size.

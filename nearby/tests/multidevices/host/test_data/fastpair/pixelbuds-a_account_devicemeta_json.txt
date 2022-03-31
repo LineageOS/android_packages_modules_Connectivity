@@ -19,20 +19,10 @@
       "subsequent_pairing_description": "Connect %s to this phone",
       "retroactive_pairing_description": "Save device to %s for faster pairing to your other devices",
       "wait_launch_companion_app_description": "This will take a few moments",
-      "fail_connect_go_to_settings_description": "Try manually pairing to the device by going to Settings",
-      "confirm_pin_title": "",
-      "confirm_pin_description": "",
-      "sync_contacts_title": "",
-      "sync_contacts_description": "",
-      "sync_sms_title": "",
-      "sync_sms_description": "",
-      "assistant_setup_half_sheet": "Get hands-free help on the go from Google Assistant",
-      "assistant_setup_notification": "Tap to set up your Google Assistant",
-      "fast_pair_tv_connect_device_no_account_description": "Select connect to pair your %s with this device"
+      "fail_connect_go_to_settings_description": "Try manually pairing to the device by going to Settings"
     },
     "fast_pair_discovery_item": {
       "id": "",
-      "type": 6,
       "mac_address": "",
       "action_url": "intent:#Intent;action=com.google.android.gms.nearby.discovery%3AACTION_MAGIC_PAIR;package=com.google.android.gms;component=com.google.android.gms\/.nearby.discovery.service.DiscoveryService;S.com.google.android.gms.nearby.discovery%3AEXTRA_COMPANION_APP=com.google.android.apps.wearables.maestro.companion;end",
       "device_name": "",
@@ -47,19 +37,10 @@
       "pending_app_install_timestamp_millis": 0,
       "tx_power": 0,
       "app_name": "",
-      "group_id": "",
-      "attachment_type": 0,
       "package_name": "",
-      "feature_graphic_url": "",
       "trigger_id": "",
       "icon_png": "",
       "icon_fife_url": "https:\/\/lh3.googleusercontent.com\/2PffmZiopo2AjT8sshX0Se3jV-91cp4yOCIay2bBvZqKoKGVy5B4uyzdHsde6UrUSGaoCqV-h4edd5ZljA4oSGc",
-      "debug_message": "",
-      "debug_category": 0,
-      "lost_millis": 0,
-      "last_user_experience": 0,
-      "ble_record_bytes": "",
-      "entity_id": "",
       "authentication_public_key_secp256r1": "z+grhW8lWVA34JUQhXOxMrk1WqVy+VpEDd2K+01ZJvS6KdV0OUg7FRMzq+ITuOqKO\/2TIRKEAEfMKdyk2Ob1Vw=="
     }
   }

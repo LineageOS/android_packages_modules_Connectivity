@@ -112,9 +112,6 @@ message StoredDiscoveryItem {
   string id = 1;
 
   // REQUIRED
-  NearbyType type = 2;
-
-  // REQUIRED
   // The most recent all upper case mac associated with this item.
   // (Mac-to-DiscoveryItem is a many-to-many relationship)
   string mac_address = 4;
@@ -164,27 +161,17 @@ message StoredDiscoveryItem {
   // Used in the second line of the notification, "Open in {} app"
   string app_name = 25;
 
-  // ID used for associating several DiscoveryItems.  These items may be
-  // visually displayed together.
-  string group_id = 26;
-
   // The timestamp when the attachment was created on PBS server. In case there
   // are duplicate
   // items with the same scanId/groupID, only show the one with the latest
   // timestamp.
   int64 attachment_creation_sec = 28;
 
-  // Whether the attachment is created in debug namespace
-  DiscoveryAttachmentType attachment_type = 29;
-
   // Package name of the App that owns this item.
   string package_name = 30;
 
   // The average star rating of the app.
   float star_rating = 31;
-
-  // The "feature" graphic image url used for large sized list view entries.
-  string feature_graphic_url = 32;
 
   // TriggerId identifies the trigger/beacon that is attached with a message.
   // It's generated from server for online messages to synchronize formatting
@@ -201,27 +188,6 @@ message StoredDiscoveryItem {
   // A FIFE URL of the item icon displayed in Discovery item list.
   string icon_fife_url = 49;
 
-  // Message written to bugreport for 3P developers.(No sensitive info)
-  // null if the item is valid
-  string debug_message = 37;
-
-  // Weather the item is filtered out on server.
-  DebugMessageCategory debug_category = 38;
-
-  // Client timestamp when the trigger (e.g. beacon) was last lost (e.g. when
-  // Messages told us the beacon's no longer nearby).
-  int64 lost_millis = 41;
-
-  // The kind of expereince the user last had with this (e.g. if they dismissed
-  // the notification, that's bad; but if they tapped it, that's good).
-  ExperienceType last_user_experience = 42;
-
-  // The most recent BLE advertisement related to this item.
-  bytes ble_record_bytes = 43;
-
-  // An ID generated on the server to uniquely identify content.
-  string entity_id = 44;
-
   // See equivalent field in NearbyItem.
   bytes authentication_public_key_secp256r1 = 45;
 
@@ -235,7 +201,7 @@ message StoredDiscoveryItem {
   FastPairStrings fast_pair_strings = 48;
 
   // Deprecated fields.
-  reserved 3, 12, 13, 14, 15, 16, 18, 21, 24, 27, 33, 35, 39, 40;
+  reserved 2, 3, 12, 13, 14, 15, 16, 18, 21, 24, 26, 27, 29, 32, 33, 35, 37, 38, 39, 40, 41, 42, 43, 44;
 }
 enum ResolvedUrlType {
   RESOLVED_URL_TYPE_UNKNOWN = 0;
