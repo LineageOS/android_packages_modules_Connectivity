@@ -187,13 +187,13 @@ public class DiscoveryProviderManager implements AbstractDiscoveryProvider.Liste
     // starts successfully.
     private boolean startProviders(ScanRequest scanRequest) {
         if (scanRequest.isBleEnabled()) {
-            if (mChreDiscoveryProvider.available()) {
+            if (mChreDiscoveryProvider.available()
+                    && scanRequest.getScanType() == SCAN_TYPE_NEARBY_PRESENCE) {
                 startChreProvider();
-                return true;
             } else {
                 startBleProvider(scanRequest);
-                return true;
             }
+            return true;
         }
         return false;
     }
