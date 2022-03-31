@@ -47,6 +47,7 @@ java_defaults {
         "net-utils-device-common-bpf",
         "net-utils-device-common-netlink",
         "netd-client",
+        "tetheringstatsprotos",
     ],
     libs: [
         "framework-connectivity",
@@ -210,4 +211,15 @@ sdk {
     name: "tethering-module-sdk",
     bootclasspath_fragments: ["com.android.tethering-bootclasspath-fragment"],
     systemserverclasspath_fragments: ["com.android.tethering-systemserverclasspath-fragment"],
+}
+
+java_library_static {
+    name: "tetheringstatsprotos",
+    proto: {type: "lite"},
+    srcs: [
+        "src/com/android/networkstack/tethering/metrics/stats.proto",
+    ],
+    static_libs: ["tetheringprotos"],
+    apex_available: ["com.android.tethering"],
+    min_sdk_version: "30",
 }
