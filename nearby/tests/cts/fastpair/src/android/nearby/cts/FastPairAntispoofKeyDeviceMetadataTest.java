@@ -105,12 +105,7 @@ public class FastPairAntispoofKeyDeviceMetadataTest {
 
     /* Verifies DeviceMetadata. */
     private static void ensureFastPairDeviceMetadataAsExpected(FastPairDeviceMetadata metadata) {
-        assertThat(metadata.getAssistantSetupHalfSheet()).isEqualTo(ASSISTANT_SETUP_HALFSHEET);
-        assertThat(metadata.getAssistantSetupNotification())
-                .isEqualTo(ASSISTANT_SETUP_NOTIFICATION);
         assertThat(metadata.getBleTxPower()).isEqualTo(BLE_TX_POWER);
-        assertThat(metadata.getConfirmPinDescription()).isEqualTo(CONFIRM_PIN_DESCRIPTION);
-        assertThat(metadata.getConfirmPinTitle()).isEqualTo(CONFIRM_PIN_TITLE);
         assertThat(metadata.getConnectSuccessCompanionAppInstalled())
                 .isEqualTo(CONNECT_SUCCESS_COMPANION_APP_INSTALLED);
         assertThat(metadata.getConnectSuccessCompanionAppNotInstalled())
@@ -120,8 +115,6 @@ public class FastPairAntispoofKeyDeviceMetadataTest {
                 .isEqualTo(DOWNLOAD_COMPANION_APP_DESCRIPTION);
         assertThat(metadata.getFailConnectGoToSettingsDescription())
                 .isEqualTo(FAIL_CONNECT_GOTO_SETTINGS_DESCRIPTION);
-        assertThat(metadata.getFastPairTvConnectDeviceNoAccountDescription())
-                .isEqualTo(FAST_PAIR_TV_CONNECT_DEVICE_NO_ACCOUNT_DESCRIPTION);
         assertThat(metadata.getImage()).isEqualTo(IMAGE);
         assertThat(metadata.getImageUrl()).isEqualTo(IMAGE_URL);
         assertThat(metadata.getInitialNotificationDescription())
@@ -130,7 +123,6 @@ public class FastPairAntispoofKeyDeviceMetadataTest {
                 .isEqualTo(INITIAL_NOTIFICATION_DESCRIPTION_NO_ACCOUNT);
         assertThat(metadata.getInitialPairingDescription()).isEqualTo(INITIAL_PAIRING_DESCRIPTION);
         assertThat(metadata.getIntentUri()).isEqualTo(INTENT_URI);
-        assertThat(metadata.getLocale()).isEqualTo(LOCALE);
         assertThat(metadata.getName()).isEqualTo(NAME);
         assertThat(metadata.getOpenCompanionAppDescription())
                 .isEqualTo(OPEN_COMPANION_APP_DESCRIPTION);
@@ -138,10 +130,6 @@ public class FastPairAntispoofKeyDeviceMetadataTest {
                 .isEqualTo(RETRO_ACTIVE_PAIRING_DESCRIPTION);
         assertThat(metadata.getSubsequentPairingDescription())
                 .isEqualTo(SUBSEQUENT_PAIRING_DESCRIPTION);
-        assertThat(metadata.getSyncContactsDescription()).isEqualTo(SYNC_CONTACT_DESCRPTION);
-        assertThat(metadata.getSyncContactsTitle()).isEqualTo(SYNC_CONTACTS_TITLE);
-        assertThat(metadata.getSyncSmsDescription()).isEqualTo(SYNC_SMS_DESCRIPTION);
-        assertThat(metadata.getSyncSmsTitle()).isEqualTo(SYNC_SMS_TITLE);
         assertThat(metadata.getTriggerDistance()).isWithin(DELTA).of(TRIGGER_DISTANCE);
         assertThat(metadata.getTrueWirelessImageUrlCase()).isEqualTo(TRUE_WIRELESS_IMAGE_URL_CASE);
         assertThat(metadata.getTrueWirelessImageUrlLeftBud())
@@ -171,19 +159,13 @@ public class FastPairAntispoofKeyDeviceMetadataTest {
     /* Generates FastPairDeviceMetadata. */
     private static FastPairDeviceMetadata genFastPairDeviceMetadata() {
         FastPairDeviceMetadata.Builder builder = new FastPairDeviceMetadata.Builder();
-        builder.setAssistantSetupHalfSheet(ASSISTANT_SETUP_HALFSHEET);
-        builder.setAssistantSetupNotification(ASSISTANT_SETUP_NOTIFICATION);
         builder.setBleTxPower(BLE_TX_POWER);
-        builder.setConfirmPinDescription(CONFIRM_PIN_DESCRIPTION);
-        builder.setConfirmPinTitle(CONFIRM_PIN_TITLE);
         builder.setConnectSuccessCompanionAppInstalled(CONNECT_SUCCESS_COMPANION_APP_INSTALLED);
         builder.setConnectSuccessCompanionAppNotInstalled(
                 CONNECT_SUCCESS_COMPANION_APP_NOT_INSTALLED);
         builder.setDeviceType(DEVICE_TYPE);
         builder.setDownloadCompanionAppDescription(DOWNLOAD_COMPANION_APP_DESCRIPTION);
         builder.setFailConnectGoToSettingsDescription(FAIL_CONNECT_GOTO_SETTINGS_DESCRIPTION);
-        builder.setFastPairTvConnectDeviceNoAccountDescription(
-                FAST_PAIR_TV_CONNECT_DEVICE_NO_ACCOUNT_DESCRIPTION);
         builder.setImage(IMAGE);
         builder.setImageUrl(IMAGE_URL);
         builder.setInitialNotificationDescription(INITIAL_NOTIFICATION_DESCRIPTION);
@@ -191,15 +173,10 @@ public class FastPairAntispoofKeyDeviceMetadataTest {
                 INITIAL_NOTIFICATION_DESCRIPTION_NO_ACCOUNT);
         builder.setInitialPairingDescription(INITIAL_PAIRING_DESCRIPTION);
         builder.setIntentUri(INTENT_URI);
-        builder.setLocale(LOCALE);
         builder.setName(NAME);
         builder.setOpenCompanionAppDescription(OPEN_COMPANION_APP_DESCRIPTION);
         builder.setRetroactivePairingDescription(RETRO_ACTIVE_PAIRING_DESCRIPTION);
         builder.setSubsequentPairingDescription(SUBSEQUENT_PAIRING_DESCRIPTION);
-        builder.setSyncContactsDescription(SYNC_CONTACT_DESCRPTION);
-        builder.setSyncContactsTitle(SYNC_CONTACTS_TITLE);
-        builder.setSyncSmsDescription(SYNC_SMS_DESCRIPTION);
-        builder.setSyncSmsTitle(SYNC_SMS_TITLE);
         builder.setTriggerDistance(TRIGGER_DISTANCE);
         builder.setTrueWirelessImageUrlCase(TRUE_WIRELESS_IMAGE_URL_CASE);
         builder.setTrueWirelessImageUrlLeftBud(TRUE_WIRELESS_IMAGE_URL_LEFT_BUD);
