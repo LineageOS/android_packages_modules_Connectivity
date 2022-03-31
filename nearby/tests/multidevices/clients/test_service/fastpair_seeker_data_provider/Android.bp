@@ -21,6 +21,8 @@ android_library {
     srcs: ["shared/**/*.kt"],
     sdk_version: "test_current",
     static_libs: [
+        // TODO(b/227513829): Remove "framework-nearby-static" once Fast Pair system APIs add back.
+        "framework-nearby-static",
         "guava",
         "gson-prebuilt-jar",
     ],
