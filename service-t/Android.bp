@@ -19,6 +19,25 @@ package {
     default_applicable_licenses: ["Android-Apache-2.0"],
 }
 
+// Include build rules from Sources.bp
+// sc-mainline-prod only: do not include Sources.bp
+// build = ["Sources.bp"]
+
+filegroup {
+    name: "service-connectivity-tiramisu-sources",
+    srcs: [
+        // sc-mainline-prod only: Building T sources is disabled on this branch.
+        // "src/**/*.java",
+        "src/com/android/server/ConnectivityServiceInitializer.java",
+        // filegroup contains empty stubs on sc-mainline-prod.
+        ":services.connectivity-tiramisu-updatable-sources",
+    ],
+    visibility: ["//visibility:private"],
+}
+// The above filegroup can be used to specify different sources depending
+// on the branch, while minimizing merge conflicts in the rest of the
+// build rules.
+
 // This builds T+ services depending on framework-connectivity-t
 // hidden symbols separately from the S+ services, to ensure that S+
 // services cannot accidentally depend on T+ hidden symbols from
@@ -29,9 +48,7 @@ java_library {
     // TODO(b/210962470): Bump this to at least S, and then T.
     min_sdk_version: "30",
     srcs: [
-        "src/**/*.java",
-        ":ethernet-service-updatable-sources",
-        ":services.connectivity-tiramisu-updatable-sources",
+        ":service-connectivity-tiramisu-sources",
     ],
     libs: [
         "framework-annotations-lib",
