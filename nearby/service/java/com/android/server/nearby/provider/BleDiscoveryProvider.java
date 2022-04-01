@@ -144,6 +144,7 @@ public class BleDiscoveryProvider extends AbstractDiscoveryProvider {
                     + "because BluetoothLeScanner is null.");
             return;
         }
+        Log.v(TAG, "Ble scan stopped.");
         bluetoothLeScanner.stopScan(mScanCallback);
     }
 

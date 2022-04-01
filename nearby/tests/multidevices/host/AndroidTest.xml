@@ -21,11 +21,13 @@
         <!-- For coverage to work, the APK should not be uninstalled until after coverage is pulled.
              So it's a lot easier to install APKs outside the python code.
         -->
-        <target_preparer class="com.android.tradefed.targetprep.suite.SuiteApkInstaller">
-            <option name="test-file-name" value="NearbyMultiDevicesClientsSnippets.apk" />
-            <option name="test-file-name" value="NearbyFastPairSeekerDataProvider.apk" />
-            <option name="check-min-sdk" value="true" />
+        <target_preparer class="com.android.tradefed.targetprep.RootTargetPreparer" />
+        <target_preparer class="com.android.compatibility.common.tradefed.targetprep.FilePusher">
+            <option name="remount-system" value="true" />
+            <option name="push" value="NearbyMultiDevicesClientsSnippets.apk->/system/app/NearbyMultiDevicesClientsSnippets/NearbyMultiDevicesClientsSnippets.apk" />
+            <option name="push" value="NearbyFastPairSeekerDataProvider.apk->/system/app/NearbyFastPairSeekerDataProvider/NearbyFastPairSeekerDataProvider.apk" />
         </target_preparer>
+        <target_preparer class="com.android.tradefed.targetprep.RebootTargetPreparer" />
         <target_preparer class="com.android.tradefed.targetprep.RunCommandTargetPreparer">
             <option name="run-command" value="input keyevent KEYCODE_WAKEUP" />
             <option name="run-command" value="wm dismiss-keyguard" />
@@ -39,14 +41,47 @@
         <target_preparer class="com.android.tradefed.targetprep.DeviceSetup">
             <option name="force-skip-system-props" value="true" /> <!-- avoid restarting device -->
             <option name="screen-always-on" value="on" />
+            <!-- List permissions requested by the APK: aapt d permissions <PATH_TO_YOUR_APK> -->
+            <option
+                name="run-command"
+                value="pm grant android.nearby.multidevices android.permission.BLUETOOTH" />
+            <option
+                name="run-command"
+                value="pm grant android.nearby.multidevices android.permission.BLUETOOTH_ADMIN" />
+            <option
+                name="run-command"
+                value="pm grant android.nearby.multidevices android.permission.BLUETOOTH_ADVERTISE" />
+            <option
+                name="run-command"
+                value="pm grant android.nearby.multidevices android.permission.BLUETOOTH_CONNECT" />
+            <option
+                name="run-command"
+                value="pm grant android.nearby.multidevices android.permission.BLUETOOTH_PRIVILEGED" />
+            <option
+                name="run-command"
+                value="pm grant android.nearby.multidevices android.permission.BLUETOOTH_SCAN" />
+            <option
+                name="run-command"
+                value="pm grant android.nearby.multidevices android.permission.INTERNET" />
+            <option
+                name="run-command"
+                value="pm grant android.nearby.multidevices android.permission.GET_ACCOUNTS" />
+            <option
+                name="run-command"
+                value="pm grant android.nearby.multidevices android.permission.WRITE_SECURE_SETTINGS" />
+            <option
+                name="run-command"
+                value="pm grant android.nearby.multidevices android.permission.REORDER_TASKS" />
         </target_preparer>
     </device>
     <device name="device2">
-        <target_preparer class="com.android.tradefed.targetprep.suite.SuiteApkInstaller">
-            <option name="test-file-name" value="NearbyMultiDevicesClientsSnippets.apk" />
-            <option name="test-file-name" value="NearbyFastPairSeekerDataProvider.apk" />
-            <option name="check-min-sdk" value="true" />
+        <target_preparer class="com.android.tradefed.targetprep.RootTargetPreparer" />
+        <target_preparer class="com.android.compatibility.common.tradefed.targetprep.FilePusher">
+            <option name="remount-system" value="true" />
+            <option name="push" value="NearbyMultiDevicesClientsSnippets.apk->/system/app/NearbyMultiDevicesClientsSnippets/NearbyMultiDevicesClientsSnippets.apk" />
+            <option name="push" value="NearbyFastPairSeekerDataProvider.apk->/system/app/NearbyFastPairSeekerDataProvider/NearbyFastPairSeekerDataProvider.apk" />
         </target_preparer>
+        <target_preparer class="com.android.tradefed.targetprep.RebootTargetPreparer" />
         <target_preparer class="com.android.tradefed.targetprep.RunCommandTargetPreparer">
             <option name="run-command" value="input keyevent KEYCODE_WAKEUP" />
             <option name="run-command" value="wm dismiss-keyguard" />
@@ -54,6 +89,37 @@
         <target_preparer class="com.android.tradefed.targetprep.DeviceSetup">
             <option name="force-skip-system-props" value="true" /> <!-- avoid restarting device -->
             <option name="screen-always-on" value="on" />
+            <!-- List permissions requested by the APK: aapt d permissions <PATH_TO_YOUR_APK> -->
+            <option
+                name="run-command"
+                value="pm grant android.nearby.multidevices android.permission.BLUETOOTH" />
+            <option
+                name="run-command"
+                value="pm grant android.nearby.multidevices android.permission.BLUETOOTH_ADMIN" />
+            <option
+                name="run-command"
+                value="pm grant android.nearby.multidevices android.permission.BLUETOOTH_ADVERTISE" />
+            <option
+                name="run-command"
+                value="pm grant android.nearby.multidevices android.permission.BLUETOOTH_CONNECT" />
+            <option
+                name="run-command"
+                value="pm grant android.nearby.multidevices android.permission.BLUETOOTH_PRIVILEGED" />
+            <option
+                name="run-command"
+                value="pm grant android.nearby.multidevices android.permission.BLUETOOTH_SCAN" />
+            <option
+                name="run-command"
+                value="pm grant android.nearby.multidevices android.permission.INTERNET" />
+            <option
+                name="run-command"
+                value="pm grant android.nearby.multidevices android.permission.GET_ACCOUNTS" />
+            <option
+                name="run-command"
+                value="pm grant android.nearby.multidevices android.permission.WRITE_SECURE_SETTINGS" />
+            <option
+                name="run-command"
+                value="pm grant android.nearby.multidevices android.permission.REORDER_TASKS" />
         </target_preparer>
     </device>
 

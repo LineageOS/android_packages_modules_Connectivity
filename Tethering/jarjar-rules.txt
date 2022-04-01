@@ -12,3 +12,5 @@ rule com.android.net.module.util.** com.android.networkstack.tethering.util.@1
 
 # Classes from net-utils-device-common
 rule com.android.net.module.util.Struct* com.android.networkstack.tethering.util.Struct@1
+
+rule com.google.protobuf.** com.android.networkstack.tethering.protobuf@1

@@ -19,7 +19,6 @@ package android.nearby;
 import android.accounts.Account;
 import android.annotation.NonNull;
 import android.annotation.Nullable;
-import android.annotation.SystemApi;
 import android.nearby.aidl.FastPairEligibleAccountParcel;
 
 /**
@@ -27,7 +26,6 @@ import android.nearby.aidl.FastPairEligibleAccountParcel;
  *
  * @hide
  */
-@SystemApi
 public class FastPairEligibleAccount {
 
     FastPairEligibleAccountParcel mAccountParcel;
@@ -41,7 +39,6 @@ public class FastPairEligibleAccount {
      *
      * @hide
      */
-    @SystemApi
     @Nullable
     public Account getAccount() {
         return this.mAccountParcel.account;
@@ -52,7 +49,6 @@ public class FastPairEligibleAccount {
      *
      * @hide
      */
-    @SystemApi
     public boolean isOptIn() {
         return this.mAccountParcel.optIn;
     }
@@ -62,7 +58,6 @@ public class FastPairEligibleAccount {
      *
      * @hide
      */
-    @SystemApi
     public static final class Builder {
 
         private final FastPairEligibleAccountParcel mBuilderParcel;
@@ -72,7 +67,6 @@ public class FastPairEligibleAccount {
          *
          * @hide
          */
-        @SystemApi
         public Builder() {
             mBuilderParcel = new FastPairEligibleAccountParcel();
             mBuilderParcel.account = null;
@@ -86,7 +80,6 @@ public class FastPairEligibleAccount {
          * @return The builder, to facilitate chaining {@code builder.setXXX(..).setXXX(..)}.
          * @hide
          */
-        @SystemApi
         @NonNull
         public Builder setAccount(@Nullable Account account) {
             mBuilderParcel.account = account;
@@ -100,7 +93,6 @@ public class FastPairEligibleAccount {
          * @return The builder, to facilitate chaining {@code builder.setXXX(..).setXXX(..)}.
          * @hide
          */
-        @SystemApi
         @NonNull
         public Builder setOptIn(boolean optIn) {
             mBuilderParcel.optIn = optIn;
@@ -112,7 +104,6 @@ public class FastPairEligibleAccount {
          *
          * @hide
          */
-        @SystemApi
         @NonNull
         public FastPairEligibleAccount build() {
             return new FastPairEligibleAccount(mBuilderParcel);

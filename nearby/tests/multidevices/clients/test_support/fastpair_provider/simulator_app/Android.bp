@@ -25,6 +25,7 @@ package {
 // adb remount
 // adb push ${ANDROID_PRODUCT_OUT}/system/app/NearbyFastPairProviderSimulatorApp /system/app/
 // adb reboot
+// Grant all permissions requested to NearbyFastPairProviderSimulatorApp before launching it.
 android_app {
     name: "NearbyFastPairProviderSimulatorApp",
     sdk_version: "test_current",
