@@ -80,6 +80,7 @@ filegroup {
         "java/com/android/server/IpSecServiceParameterizedTest.java",
         "java/com/android/server/IpSecServiceRefcountedResourceTest.java",
         "java/com/android/server/IpSecServiceTest.java",
+        "java/com/android/server/NativeDaemonConnectorTest.java",
         "java/com/android/server/NetworkManagementServiceTest.java",
         "java/com/android/server/NsdServiceTest.java",
         "java/com/android/server/connectivity/IpConnectivityEventBuilderTest.java",
@@ -87,8 +88,10 @@ filegroup {
         "java/com/android/server/connectivity/MultipathPolicyTrackerTest.java",
         "java/com/android/server/connectivity/NetdEventListenerServiceTest.java",
         "java/com/android/server/connectivity/VpnTest.java",
+        "java/com/android/server/ethernet/*.java",
         "java/com/android/server/net/ipmemorystore/*.java",
         "java/com/android/server/net/BpfInterfaceMapUpdaterTest.java",
+        "java/com/android/server/net/IpConfigStoreTest.java",
         "java/com/android/server/net/NetworkStats*.java",
         "java/com/android/server/net/TestableUsageCallback.kt",
     ]
