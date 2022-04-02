@@ -246,6 +246,7 @@ public class NearbyManager {
      *
      * @param context the {@link Context} to query the setting
      * @return whether the Fast Pair is enabled
+     * @hide
      */
     public static boolean getFastPairScanEnabled(@NonNull Context context) {
         final int enabled = Settings.Secure.getInt(
@@ -258,6 +259,7 @@ public class NearbyManager {
      *
      * @param context the {@link Context} to set the setting
      * @param enable whether the Fast Pair scan should be enabled
+     * @hide
      */
     @RequiresPermission(Manifest.permission.WRITE_SECURE_SETTINGS)
     public static void setFastPairScanEnabled(@NonNull Context context, boolean enable) {
