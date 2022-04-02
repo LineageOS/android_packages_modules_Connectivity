@@ -47,6 +47,7 @@ cc_library_headers {
         "//packages/modules/Connectivity/service/native/libs/libclat",
         "//packages/modules/Connectivity/Tethering",
         "//packages/modules/Connectivity/service/native",
+        "//packages/modules/Connectivity/tests/native",
         "//packages/modules/Connectivity/service-t/native/libs/libnetworkstats",
         "//packages/modules/Connectivity/tests/unit/jni",
         "//system/netd/server",
@@ -57,6 +58,16 @@ cc_library_headers {
 //
 // bpf kernel programs
 //
+bpf {
+    name: "block.o",
+    srcs: ["block.c"],
+    cflags: [
+        "-Wall",
+        "-Werror",
+    ],
+    sub_dir: "net_shared",
+}
+
 bpf {
     name: "dscp_policy.o",
     srcs: ["dscp_policy.c"],
