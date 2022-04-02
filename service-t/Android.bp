@@ -72,18 +72,3 @@ java_library {
         "//packages/modules/IPsec/tests/iketests",
     ],
 }
-
-// Ethernet related libraries.
-// TODO: remove when ethernet tests are merged into connectivity tests
-filegroup {
-    name: "ethernet-service-test-sources",
-    srcs: [
-        "src/com/android/server/ethernet/**/*.java",
-        "src/com/android/server/net/DelayedDiskWrite.java",
-        "src/com/android/server/net/IpConfigStore.java",
-    ],
-    path: "src",
-    visibility: [
-        "//packages/modules/Connectivity/tests:__subpackages__",
-    ],
-}

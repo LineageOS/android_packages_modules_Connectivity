@@ -126,16 +126,6 @@ class FastPairSeekerSnippet : Snippet {
         return fastPairTestDataManager.testDataCache.dumpAccountKeyDeviceMetadataListAsJson()
     }
 
-    /** Writes into {@link Settings} whether Fast Pair scan is enabled.
-     *
-     * @param enable whether the Fast Pair scan should be enabled.
-     */
-    @Rpc(description = "Writes into Settings whether Fast Pair scan is enabled.")
-    fun setFastPairScanEnabled(enable: Boolean) {
-        Log.i("Writes into Settings whether Fast Pair scan is enabled.")
-        NearbyManager.setFastPairScanEnabled(appContext, enable)
-    }
-
     /** Dismisses the half sheet UI if showed. */
     @Rpc(description = "Dismisses the half sheet UI if showed.")
     fun dismissHalfSheet() {
