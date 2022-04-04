@@ -22,7 +22,7 @@ import android.util.Log;
 import androidx.annotation.NonNull;
 
 import com.android.net.module.util.JniUtil;
-import com.android.networkstack.tethering.TetherStatsValue;
+import com.android.net.module.util.bpf.TetherStatsValue;
 
 import java.io.FileDescriptor;
 import java.net.Inet6Address;
