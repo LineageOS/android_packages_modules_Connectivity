@@ -3,6 +3,10 @@
     {
       "name": "ConnectivityCoverageTests"
     },
+    {
+      // In addition to ConnectivityCoverageTests, runs non-connectivity-module tests
+      "name": "FrameworksNetTests"
+    },
     // Run in addition to mainline-presubmit as mainline-presubmit is not
     // supported in every branch.
     // CtsNetTestCasesLatestSdk uses stable API shims, so does not exercise
