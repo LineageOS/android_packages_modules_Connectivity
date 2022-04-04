@@ -10,7 +10,7 @@ cc_test {
         "vts",
     ],
     test_config_template: "AndroidTestTemplate.xml",
-    min_sdk_version: "31",
+    min_sdk_version: "34",
     tidy: false,
     srcs: [
         "connectivity_native_test.cpp",

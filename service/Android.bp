@@ -22,7 +22,6 @@ package {
 aidl_interface {
     name: "connectivity_native_aidl_interface",
     local_include_dir: "binder",
-    vendor_available: true,
     srcs: [
         "binder/android/net/connectivity/aidl/*.aidl",
     ],
