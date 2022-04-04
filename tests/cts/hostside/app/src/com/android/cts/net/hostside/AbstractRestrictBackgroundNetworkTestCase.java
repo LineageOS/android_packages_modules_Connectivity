@@ -149,7 +149,7 @@ public abstract class AbstractRestrictBackgroundNetworkTestCase {
 
     private static final String APP_NOT_FOREGROUND_ERROR = "app_not_fg";
 
-    protected static final long TEMP_POWERSAVE_WHITELIST_DURATION_MS = 5_000; // 5 sec
+    protected static final long TEMP_POWERSAVE_WHITELIST_DURATION_MS = 20_000; // 20 sec
 
     private static final long BROADCAST_TIMEOUT_MS = 15_000;
 
