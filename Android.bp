@@ -77,10 +77,16 @@ cc_binary {
         "-*",
         "cert-*",
         "clang-analyzer-security*",
+        // b/2043314, warnings on memcpy_s, memset_s, snprintf_s calls
+        // are blocking the migration from gnu99 to gnu11.
+        // Until those warnings are fixed, disable these checks.
+        "-clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling",
         "android-*",
     ],
-    tidy_flags: [
-        "-warnings-as-errors=clang-analyzer-security*,cert-*,android-*",
+    tidy_checks_as_errors: [
+        "clang-analyzer-security*",
+        "cert-*",
+        "android-*",
     ],
     sanitize: {
         memtag_heap: true,
