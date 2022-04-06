@@ -541,8 +541,7 @@ public class EthernetManager {
      * Similarly, use {@link NetworkCapabilities.Builder} to build a {@code NetworkCapabilities}
      * object for this network to put inside the {@code request}.
      *
-     * This function accepts an {@link OutcomeReceiver} that is called once the operation has
-     * finished execution.
+     * The provided {@link OutcomeReceiver} is called once the operation has finished execution.
      *
      * @param iface the name of the interface to act upon.
      * @param request the {@link EthernetNetworkUpdateRequest} used to set an ethernet network's
@@ -554,7 +553,8 @@ public class EthernetManager {
      *                 information about the error.
      * @throws SecurityException if the process doesn't hold
      *                          {@link android.Manifest.permission.MANAGE_ETHERNET_NETWORKS}.
-     * @throws UnsupportedOperationException if called on a non-automotive device or on an
+     * @throws UnsupportedOperationException if the {@link NetworkCapabilities} are updated on a
+     *                                       non-automotive device or this function is called on an
      *                                       unsupported interface.
      * @hide
      */
@@ -582,9 +582,9 @@ public class EthernetManager {
     /**
      * Enable a network interface.
      *
-     * Enables a previously disabled network interface.
-     * This function accepts an {@link OutcomeReceiver} that is called once the operation has
-     * finished execution.
+     * Enables a previously disabled network interface. An attempt to enable an already-enabled
+     * interface is ignored.
+     * The provided {@link OutcomeReceiver} is called once the operation has finished execution.
      *
      * @param iface the name of the interface to enable.
      * @param executor an {@link Executor} to execute the callback on. Optional if callback is null.
@@ -619,10 +619,9 @@ public class EthernetManager {
     /**
      * Disable a network interface.
      *
-     * Disables the use of a network interface to fulfill network requests. If the interface
-     * currently serves a request, the network will be torn down.
-     * This function accepts an {@link OutcomeReceiver} that is called once the operation has
-     * finished execution.
+     * Disables the specified interface. If this interface is in use in a connected
+     * {@link android.net.Network}, then that {@code Network} will be torn down.
+     * The provided {@link OutcomeReceiver} is called once the operation has finished execution.
      *
      * @param iface the name of the interface to disable.
      * @param executor an {@link Executor} to execute the callback on. Optional if callback is null.
