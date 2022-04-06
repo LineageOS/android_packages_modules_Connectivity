@@ -156,6 +156,8 @@ public class IpServerTest {
     private static final int BLUETOOTH_DHCP_PREFIX_LENGTH = 24;
     private static final int DHCP_LEASE_TIME_SECS = 3600;
     private static final boolean DEFAULT_USING_BPF_OFFLOAD = true;
+    private static final int DEFAULT_SUBNET_PREFIX_LENGTH = 0;
+    private static final int P2P_SUBNET_PREFIX_LENGTH = 25;
 
     private static final InterfaceParams TEST_IFACE_PARAMS = new InterfaceParams(
             IFACE_NAME, 42 /* index */, MacAddress.ALL_ZEROS_ADDRESS, 1500 /* defaultMtu */);
@@ -230,6 +232,7 @@ public class IpServerTest {
 
         when(mTetherConfig.isBpfOffloadEnabled()).thenReturn(usingBpfOffload);
         when(mTetherConfig.useLegacyDhcpServer()).thenReturn(usingLegacyDhcp);
+        when(mTetherConfig.getP2pLeasesSubnetPrefixLength()).thenReturn(P2P_SUBNET_PREFIX_LENGTH);
         mIpServer = new IpServer(
                 IFACE_NAME, mLooper.getLooper(), interfaceType, mSharedLog, mNetd, mBpfCoordinator,
                 mCallback, mTetherConfig, mAddressCoordinator, mDependencies);
@@ -1311,6 +1314,12 @@ public class IpServerTest {
         assertEquals(DHCP_LEASE_TIME_SECS, params.dhcpLeaseTimeSecs);
         if (mIpServer.interfaceType() == TETHERING_NCM) {
             assertTrue(params.changePrefixOnDecline);
+        }
+
+        if (mIpServer.interfaceType() == TETHERING_WIFI_P2P) {
+            assertEquals(P2P_SUBNET_PREFIX_LENGTH, params.leasesSubnetPrefixLength);
+        } else {
+            assertEquals(DEFAULT_SUBNET_PREFIX_LENGTH, params.leasesSubnetPrefixLength);
         }
     }
 
