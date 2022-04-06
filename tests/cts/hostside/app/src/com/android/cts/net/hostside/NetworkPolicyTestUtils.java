@@ -38,6 +38,7 @@ import android.app.ActivityManager;
 import android.app.Instrumentation;
 import android.app.UiAutomation;
 import android.content.Context;
+import android.content.pm.PackageManager;
 import android.location.LocationManager;
 import android.net.ConnectivityManager;
 import android.net.ConnectivityManager.NetworkCallback;
@@ -99,6 +100,10 @@ public class NetworkPolicyTestUtils {
         return mBatterySaverSupported;
     }
 
+    private static boolean isWear() {
+        return getContext().getPackageManager().hasSystemFeature(PackageManager.FEATURE_WATCH);
+    }
+
     /**
      * As per CDD requirements, if the device doesn't support data saver mode then
      * ConnectivityManager.getRestrictBackgroundStatus() will always return
@@ -107,6 +112,9 @@ public class NetworkPolicyTestUtils {
      * RESTRICT_BACKGROUND_STATUS_DISABLED or not.
      */
     public static boolean isDataSaverSupported() {
+        if (isWear()) {
+            return false;
+        }
         if (mDataSaverSupported == null) {
             assertMyRestrictBackgroundStatus(RESTRICT_BACKGROUND_STATUS_DISABLED);
             try {
