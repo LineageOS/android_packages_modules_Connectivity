@@ -24,6 +24,7 @@ import static com.android.net.module.util.NetworkStackConstants.IPV6_MIN_MTU;
 import android.annotation.NonNull;
 import android.annotation.Nullable;
 import android.net.INetd;
+import android.net.InetAddresses;
 import android.net.InterfaceConfigurationParcel;
 import android.net.IpPrefix;
 import android.os.ParcelFileDescriptor;
@@ -36,8 +37,11 @@ import com.android.net.module.util.InterfaceParams;
 
 import java.io.FileDescriptor;
 import java.io.IOException;
+import java.net.Inet4Address;
+import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.nio.ByteBuffer;
+import java.util.Objects;
 
 /**
  * This coordinator is responsible for providing clat relevant functionality.
@@ -66,23 +70,13 @@ public class ClatCoordinator {
     private static final InetAddress GOOGLE_DNS_4 = InetAddress.parseNumericAddress("8.8.8.8");
 
     private static final int INVALID_IFINDEX = 0;
-    private static final int INVALID_PID = 0;
-    private static final long INVALID_COOKIE = 0;
 
     @NonNull
     private final INetd mNetd;
     @NonNull
     private final Dependencies mDeps;
     @Nullable
-    private String mIface = null;
-    @Nullable
-    private String mNat64Prefix = null;
-    @Nullable
-    private String mXlatLocalAddress4 = null;
-    @Nullable
-    private String mXlatLocalAddress6 = null;
-    private int mPid = INVALID_PID;
-    private long mCookie = INVALID_COOKIE;
+    private ClatdTracker mClatdTracker = null;
 
     @VisibleForTesting
     abstract static class Dependencies {
@@ -204,6 +198,53 @@ public class ClatCoordinator {
     }
 
     @VisibleForTesting
+    static class ClatdTracker {
+        @NonNull
+        public final String iface;
+        public final int ifIndex;
+        @NonNull
+        public final String v4iface;
+        public final int v4ifIndex;
+        @NonNull
+        public final Inet4Address v4;
+        @NonNull
+        public final Inet6Address v6;
+        @NonNull
+        public final Inet6Address pfx96;
+        public final int pid;
+        public final long cookie;
+
+        ClatdTracker(@NonNull String iface, int ifIndex, @NonNull String v4iface,
+                int v4ifIndex, @NonNull Inet4Address v4, @NonNull Inet6Address v6,
+                @NonNull Inet6Address pfx96, int pid, long cookie) {
+            this.iface = iface;
+            this.ifIndex = ifIndex;
+            this.v4iface = v4iface;
+            this.v4ifIndex = v4ifIndex;
+            this.v4 = v4;
+            this.v6 = v6;
+            this.pfx96 = pfx96;
+            this.pid = pid;
+            this.cookie = cookie;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (!(o instanceof ClatdTracker)) return false;
+            ClatdTracker that = (ClatdTracker) o;
+            return Objects.equals(this.iface, that.iface)
+                    && this.ifIndex == that.ifIndex
+                    && Objects.equals(this.v4iface, that.v4iface)
+                    && this.v4ifIndex == that.v4ifIndex
+                    && Objects.equals(this.v4, that.v4)
+                    && Objects.equals(this.v6, that.v6)
+                    && Objects.equals(this.pfx96, that.pfx96)
+                    && this.pid == that.pid
+                    && this.cookie == that.cookie;
+        }
+    };
+
+    @VisibleForTesting
     static int getFwmark(int netId) {
         // See union Fwmark in system/netd/include/Fwmark.h
         return (netId & 0xffff)
@@ -235,28 +276,44 @@ public class ClatCoordinator {
     public String clatStart(final String iface, final int netId,
             @NonNull final IpPrefix nat64Prefix)
             throws IOException {
-        if (mIface != null || mPid != INVALID_PID) {
-            throw new IOException("Clatd is already running on " + mIface + " (pid " + mPid + ")");
+        if (mClatdTracker != null) {
+            throw new IOException("Clatd is already running on " + mClatdTracker.iface
+                    + " (pid " + mClatdTracker.pid + ")");
         }
         if (nat64Prefix.getPrefixLength() != 96) {
             throw new IOException("Prefix must be 96 bits long: " + nat64Prefix);
         }
 
         // [1] Pick an IPv4 address from 192.0.0.4, 192.0.0.5, 192.0.0.6 ..
-        final String v4;
+        final String v4Str;
         try {
-            v4 = mDeps.selectIpv4Address(INIT_V4ADDR_STRING, INIT_V4ADDR_PREFIX_LEN);
+            v4Str = mDeps.selectIpv4Address(INIT_V4ADDR_STRING, INIT_V4ADDR_PREFIX_LEN);
         } catch (IOException e) {
             throw new IOException("no IPv4 addresses were available for clat: " + e);
         }
 
-        // [2] Generate a checksum-neutral IID.
-        final String pfx96 = nat64Prefix.getAddress().getHostAddress();
-        final String v6;
+        final Inet4Address v4;
         try {
-            v6 = mDeps.generateIpv6Address(iface, v4, pfx96);
+            v4 = (Inet4Address) InetAddresses.parseNumericAddress(v4Str);
+        } catch (ClassCastException | IllegalArgumentException | NullPointerException e) {
+            throw new IOException("Invalid IPv4 address " + v4Str);
+        }
+
+        // [2] Generate a checksum-neutral IID.
+        final String pfx96Str = nat64Prefix.getAddress().getHostAddress();
+        final String v6Str;
+        try {
+            v6Str = mDeps.generateIpv6Address(iface, v4Str, pfx96Str);
         } catch (IOException e) {
             throw new IOException("no IPv6 addresses were available for clat: " + e);
+        }
+
+        final Inet6Address pfx96 = (Inet6Address) nat64Prefix.getAddress();
+        final Inet6Address v6;
+        try {
+            v6 = (Inet6Address) InetAddresses.parseNumericAddress(v6Str);
+        } catch (ClassCastException | IllegalArgumentException | NullPointerException e) {
+            throw new IOException("Invalid IPv6 address " + v6Str);
         }
 
         // [3] Open, configure and bring up the tun interface.
@@ -269,6 +326,12 @@ public class ClatCoordinator {
             throw new IOException("Create tun interface " + tunIface + " failed: " + e);
         }
 
+        final int tunIfIndex = mDeps.getInterfaceIndex(tunIface);
+        if (tunIfIndex == INVALID_IFINDEX) {
+            tunFd.close();
+            throw new IOException("Fail to get interface index for interface " + tunIface);
+        }
+
         // disable IPv6 on it - failing to do so is not a critical error
         try {
             mNetd.interfaceSetEnableIPv6(tunIface, false /* enabled */);
@@ -279,7 +342,7 @@ public class ClatCoordinator {
 
         // Detect ipv4 mtu.
         final Integer fwmark = getFwmark(netId);
-        final int detectedMtu = mDeps.detectMtu(pfx96,
+        final int detectedMtu = mDeps.detectMtu(pfx96Str,
                 ByteBuffer.wrap(GOOGLE_DNS_4.getAddress()).getInt(), fwmark);
         final int mtu = adjustMtu(detectedMtu);
         Log.i(TAG, "ipv4 mtu is " + mtu);
@@ -295,7 +358,7 @@ public class ClatCoordinator {
         }
         final InterfaceConfigurationParcel ifConfig = new InterfaceConfigurationParcel();
         ifConfig.ifName = tunIface;
-        ifConfig.ipv4Addr = v4;
+        ifConfig.ipv4Addr = v4Str;
         ifConfig.prefixLength = 32;
         ifConfig.hwAddr = "";
         ifConfig.flags = new String[] {IF_STATE_UP};
@@ -333,8 +396,8 @@ public class ClatCoordinator {
             throw new IOException("Open raw socket failed: " + e);
         }
 
-        final int ifaceIndex = mDeps.getInterfaceIndex(iface);
-        if (ifaceIndex == INVALID_IFINDEX) {
+        final int ifIndex = mDeps.getInterfaceIndex(iface);
+        if (ifIndex == INVALID_IFINDEX) {
             tunFd.close();
             readSock6.close();
             writeSock6.close();
@@ -343,7 +406,7 @@ public class ClatCoordinator {
 
         // Start translating packets to the new prefix.
         try {
-            mDeps.addAnycastSetsockopt(writeSock6.getFileDescriptor(), v6, ifaceIndex);
+            mDeps.addAnycastSetsockopt(writeSock6.getFileDescriptor(), v6Str, ifIndex);
         } catch (IOException e) {
             tunFd.close();
             readSock6.close();
@@ -352,7 +415,7 @@ public class ClatCoordinator {
         }
 
         // Tag socket as AID_CLAT to avoid duplicated CLAT data usage accounting.
-        long cookie;
+        final long cookie;
         try {
             cookie = mDeps.tagSocketAsClat(writeSock6.getFileDescriptor());
         } catch (IOException e) {
@@ -364,7 +427,7 @@ public class ClatCoordinator {
 
         // Update our packet socket filter to reflect the new 464xlat IP address.
         try {
-            mDeps.configurePacketSocket(readSock6.getFileDescriptor(), v6, ifaceIndex);
+            mDeps.configurePacketSocket(readSock6.getFileDescriptor(), v6Str, ifIndex);
         } catch (IOException e) {
             tunFd.close();
             readSock6.close();
@@ -373,15 +436,12 @@ public class ClatCoordinator {
         }
 
         // [5] Start clatd.
+        final int pid;
         try {
-            mPid = mDeps.startClatd(tunFd.getFileDescriptor(), readSock6.getFileDescriptor(),
-                    writeSock6.getFileDescriptor(), iface, pfx96, v4, v6);
-            mIface = iface;
-            mNat64Prefix = pfx96;
-            mXlatLocalAddress4 = v4;
-            mXlatLocalAddress6 = v6;
-            mCookie = cookie;
+            pid = mDeps.startClatd(tunFd.getFileDescriptor(), readSock6.getFileDescriptor(),
+                    writeSock6.getFileDescriptor(), iface, pfx96Str, v4Str, v6Str);
         } catch (IOException e) {
+            // TODO: probably refactor to handle the exception of #untagSocket if any.
             mDeps.untagSocket(cookie);
             throw new IOException("Error start clatd on " + iface + ": " + e);
         } finally {
@@ -390,29 +450,38 @@ public class ClatCoordinator {
             writeSock6.close();
         }
 
-        return v6;
+        // [6] Initialize and store clatd tracker object.
+        mClatdTracker = new ClatdTracker(iface, ifIndex, tunIface, tunIfIndex, v4, v6, pfx96,
+                pid, cookie);
+
+        return v6Str;
     }
 
     /**
      * Stop clatd
      */
     public void clatStop() throws IOException {
-        if (mPid == INVALID_PID) {
+        if (mClatdTracker == null) {
             throw new IOException("Clatd has not started");
         }
-        Log.i(TAG, "Stopping clatd pid=" + mPid + " on " + mIface);
+        Log.i(TAG, "Stopping clatd pid=" + mClatdTracker.pid + " on " + mClatdTracker.iface);
 
-        mDeps.stopClatd(mIface, mNat64Prefix, mXlatLocalAddress4, mXlatLocalAddress6, mPid);
-        mDeps.untagSocket(mCookie);
+        mDeps.stopClatd(mClatdTracker.iface, mClatdTracker.pfx96.getHostAddress(),
+                mClatdTracker.v4.getHostAddress(), mClatdTracker.v6.getHostAddress(),
+                mClatdTracker.pid);
+        mDeps.untagSocket(mClatdTracker.cookie);
 
-        Log.i(TAG, "clatd on " + mIface + " stopped");
+        Log.i(TAG, "clatd on " + mClatdTracker.iface + " stopped");
+        mClatdTracker = null;
+    }
 
-        mIface = null;
-        mNat64Prefix = null;
-        mXlatLocalAddress4 = null;
-        mXlatLocalAddress6 = null;
-        mPid = INVALID_PID;
-        mCookie = INVALID_COOKIE;
+    /**
+     * Get clatd tracker. For test only.
+     */
+    @VisibleForTesting
+    @Nullable
+    ClatdTracker getClatdTrackerForTesting() {
+        return mClatdTracker;
     }
 
     private static native String native_selectIpv4Address(String v4addr, int prefixlen)

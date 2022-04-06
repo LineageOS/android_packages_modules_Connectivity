@@ -124,7 +124,12 @@ public class TcpKeepaliveController {
             final TcpKeepalivePacketDataParcelable tcpDetails = switchToRepairMode(fd);
             // TODO: consider building a TcpKeepalivePacketData directly from switchToRepairMode
             return fromStableParcelable(tcpDetails);
-        } catch (InvalidPacketException | InvalidSocketException e) {
+        // Use separate catch blocks: a combined catch would get wrongly optimized by R8
+        // (b/226127213).
+        } catch (InvalidSocketException e) {
+            switchOutOfRepairMode(fd);
+            throw e;
+        } catch (InvalidPacketException e) {
             switchOutOfRepairMode(fd);
             throw e;
         }

@@ -616,4 +616,35 @@ public class TetheringConfigurationTest {
         assertArrayEquals(ncmRegexs, cfg.tetherableNcmRegexs);
     }
 
+    @Test
+    public void testP2pLeasesSubnetPrefixLength() throws Exception {
+        when(mResources.getBoolean(R.bool.config_tether_enable_legacy_wifi_p2p_dedicated_ip))
+                .thenReturn(true);
+
+        final int defaultSubnetPrefixLength = 0;
+        final TetheringConfiguration defaultCfg =
+                new TetheringConfiguration(mMockContext, mLog, INVALID_SUBSCRIPTION_ID);
+        assertEquals(defaultSubnetPrefixLength, defaultCfg.getP2pLeasesSubnetPrefixLength());
+
+        final int prefixLengthTooSmall = -1;
+        when(mResources.getInteger(R.integer.config_p2p_leases_subnet_prefix_length)).thenReturn(
+                prefixLengthTooSmall);
+        final TetheringConfiguration tooSmallCfg =
+                new TetheringConfiguration(mMockContext, mLog, INVALID_SUBSCRIPTION_ID);
+        assertEquals(defaultSubnetPrefixLength, tooSmallCfg.getP2pLeasesSubnetPrefixLength());
+
+        final int prefixLengthTooLarge = 31;
+        when(mResources.getInteger(R.integer.config_p2p_leases_subnet_prefix_length)).thenReturn(
+                prefixLengthTooLarge);
+        final TetheringConfiguration tooLargeCfg =
+                new TetheringConfiguration(mMockContext, mLog, INVALID_SUBSCRIPTION_ID);
+        assertEquals(defaultSubnetPrefixLength, tooLargeCfg.getP2pLeasesSubnetPrefixLength());
+
+        final int p2pLeasesSubnetPrefixLength = 27;
+        when(mResources.getInteger(R.integer.config_p2p_leases_subnet_prefix_length)).thenReturn(
+                p2pLeasesSubnetPrefixLength);
+        final TetheringConfiguration p2pCfg =
+                new TetheringConfiguration(mMockContext, mLog, INVALID_SUBSCRIPTION_ID);
+        assertEquals(p2pLeasesSubnetPrefixLength, p2pCfg.getP2pLeasesSubnetPrefixLength());
+    }
 }

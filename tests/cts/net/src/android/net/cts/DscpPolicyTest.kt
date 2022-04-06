@@ -22,15 +22,14 @@ import android.app.Instrumentation
 import android.Manifest.permission.MANAGE_TEST_NETWORKS
 import android.content.Context
 import android.net.ConnectivityManager
-import android.net.cts.util.CtsNetUtils
 import android.net.DscpPolicy
-import android.net.DscpPolicy.STATUS_DELETED
-import android.net.DscpPolicy.STATUS_SUCCESS
 import android.net.InetAddresses
 import android.net.IpPrefix
 import android.net.LinkAddress
 import android.net.LinkProperties
 import android.net.NetworkAgent
+import android.net.NetworkAgent.DSCP_POLICY_STATUS_DELETED
+import android.net.NetworkAgent.DSCP_POLICY_STATUS_SUCCESS
 import android.net.NetworkAgentConfig
 import android.net.NetworkCapabilities
 import android.net.NetworkCapabilities.NET_CAPABILITY_INTERNET
@@ -45,26 +44,18 @@ import android.net.NetworkRequest
 import android.net.TestNetworkInterface
 import android.net.TestNetworkManager
 import android.net.RouteInfo
-import android.net.util.SocketUtils
-import android.os.Build
 import android.os.HandlerThread
-import android.os.Looper
 import android.platform.test.annotations.AppModeFull
 import android.system.Os
-import android.system.OsConstants
 import android.system.OsConstants.AF_INET
-import android.system.OsConstants.IPPROTO_IP
 import android.system.OsConstants.IPPROTO_UDP
 import android.system.OsConstants.SOCK_DGRAM
 import android.system.OsConstants.SOCK_NONBLOCK
-import android.util.Log
 import android.util.Range
 import androidx.test.InstrumentationRegistry
 import androidx.test.runner.AndroidJUnit4
-import com.android.modules.utils.build.SdkLevel
 import com.android.testutils.CompatUtil
 import com.android.testutils.DevSdkIgnoreRule
-import com.android.testutils.OffsetFilter
 import com.android.testutils.assertParcelingIsLossless
 import com.android.testutils.runAsShell
 import com.android.testutils.SC_V2
@@ -74,26 +65,18 @@ import com.android.testutils.TestableNetworkAgent.CallbackEntry.OnNetworkCreated
 import com.android.testutils.TestableNetworkAgent.CallbackEntry.OnDscpPolicyStatusUpdated
 import com.android.testutils.TestableNetworkCallback
 import org.junit.After
-import org.junit.AfterClass
 import org.junit.Assume.assumeTrue
 import org.junit.Before
-import org.junit.BeforeClass
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import java.net.Inet4Address
-import java.net.Inet6Address
-import java.net.InetAddress
-import java.net.InetSocketAddress
-import java.net.ServerSocket
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
-import java.util.UUID
 import java.util.regex.Pattern
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
-import kotlin.concurrent.thread
 import kotlin.test.fail
 
 private const val MAX_PACKET_LENGTH = 1500
@@ -149,7 +132,7 @@ class DscpPolicyTest {
         runAsShell(MANAGE_TEST_NETWORKS) {
             val tnm = realContext.getSystemService(TestNetworkManager::class.java)
 
-            iface = tnm.createTunInterface( Array(1){ LinkAddress(LOCAL_IPV4_ADDRESS, 32) } )
+            iface = tnm.createTunInterface(Array(1) { LinkAddress(LOCAL_IPV4_ADDRESS, 32) })
             assertNotNull(iface)
         }
 
@@ -191,7 +174,7 @@ class DscpPolicyTest {
 
     private fun createConnectedNetworkAgent(
         context: Context = realContext,
-        specifier: String? = iface.getInterfaceName(),
+        specifier: String? = iface.getInterfaceName()
     ): Pair<TestableNetworkAgent, TestableNetworkCallback> {
         val callback = TestableNetworkCallback()
         // Ensure this NetworkAgent is never unneeded by filing a request with its specifier.
@@ -233,10 +216,10 @@ class DscpPolicyTest {
     }
 
     fun checkDscpValue(
-        agent : TestableNetworkAgent,
-        callback : TestableNetworkCallback,
-        dscpValue : Int = 0,
-        dstPort : Int = 0,
+        agent: TestableNetworkAgent,
+        callback: TestableNetworkCallback,
+        dscpValue: Int = 0,
+        dstPort: Int = 0
     ) {
         val testString = "test string"
         val testPacket = ByteBuffer.wrap(testString.toByteArray(Charsets.UTF_8))
@@ -263,9 +246,9 @@ class DscpPolicyTest {
 
             val ipAddr = ByteArray(4)
             buffer.get(ipAddr)
-            val srcIp = Inet4Address.getByAddress(ipAddr);
+            val srcIp = Inet4Address.getByAddress(ipAddr)
             buffer.get(ipAddr)
-            val dstIp = Inet4Address.getByAddress(ipAddr);
+            val dstIp = Inet4Address.getByAddress(ipAddr)
             val packetSrcPort = buffer.getShort().toInt()
             val packetDstPort = buffer.getShort().toInt()
 
@@ -280,15 +263,15 @@ class DscpPolicyTest {
     }
 
     fun doRemovePolicyTest(
-        agent : TestableNetworkAgent,
-        callback : TestableNetworkCallback,
-        policyId : Int
+        agent: TestableNetworkAgent,
+        callback: TestableNetworkCallback,
+        policyId: Int
     ) {
         val portNumber = 1111 * policyId
         agent.sendRemoveDscpPolicy(policyId)
         agent.expectCallback<OnDscpPolicyStatusUpdated>().let {
             assertEquals(policyId, it.policyId)
-            assertEquals(STATUS_DELETED, it.status)
+            assertEquals(DSCP_POLICY_STATUS_DELETED, it.status)
             checkDscpValue(agent, callback, dstPort = portNumber)
         }
     }
@@ -300,7 +283,7 @@ class DscpPolicyTest {
         agent.sendAddDscpPolicy(policy)
         agent.expectCallback<OnDscpPolicyStatusUpdated>().let {
             assertEquals(1, it.policyId)
-            assertEquals(STATUS_SUCCESS, it.status)
+            assertEquals(DSCP_POLICY_STATUS_SUCCESS, it.status)
         }
 
         checkDscpValue(agent, callback, dscpValue = 1, dstPort = 4444)
@@ -308,7 +291,7 @@ class DscpPolicyTest {
         agent.sendRemoveDscpPolicy(1)
         agent.expectCallback<OnDscpPolicyStatusUpdated>().let {
             assertEquals(1, it.policyId)
-            assertEquals(STATUS_DELETED, it.status)
+            assertEquals(DSCP_POLICY_STATUS_DELETED, it.status)
         }
 
         val policy2 = DscpPolicy.Builder(1, 4)
@@ -317,7 +300,7 @@ class DscpPolicyTest {
         agent.sendAddDscpPolicy(policy2)
         agent.expectCallback<OnDscpPolicyStatusUpdated>().let {
             assertEquals(1, it.policyId)
-            assertEquals(STATUS_SUCCESS, it.status)
+            assertEquals(DSCP_POLICY_STATUS_SUCCESS, it.status)
         }
 
         checkDscpValue(agent, callback, dscpValue = 4, dstPort = 5555)
@@ -325,7 +308,7 @@ class DscpPolicyTest {
         agent.sendRemoveDscpPolicy(1)
         agent.expectCallback<OnDscpPolicyStatusUpdated>().let {
             assertEquals(1, it.policyId)
-            assertEquals(STATUS_DELETED, it.status)
+            assertEquals(DSCP_POLICY_STATUS_DELETED, it.status)
         }
     }
 
@@ -337,7 +320,7 @@ class DscpPolicyTest {
         agent.sendAddDscpPolicy(policy)
         agent.expectCallback<OnDscpPolicyStatusUpdated>().let {
             assertEquals(1, it.policyId)
-            assertEquals(STATUS_SUCCESS, it.status)
+            assertEquals(DSCP_POLICY_STATUS_SUCCESS, it.status)
             checkDscpValue(agent, callback, dscpValue = 1, dstPort = 1111)
         }
 
@@ -345,7 +328,7 @@ class DscpPolicyTest {
         agent.sendAddDscpPolicy(policy2)
         agent.expectCallback<OnDscpPolicyStatusUpdated>().let {
             assertEquals(2, it.policyId)
-            assertEquals(STATUS_SUCCESS, it.status)
+            assertEquals(DSCP_POLICY_STATUS_SUCCESS, it.status)
             checkDscpValue(agent, callback, dscpValue = 1, dstPort = 2222)
         }
 
@@ -353,7 +336,7 @@ class DscpPolicyTest {
         agent.sendAddDscpPolicy(policy3)
         agent.expectCallback<OnDscpPolicyStatusUpdated>().let {
             assertEquals(3, it.policyId)
-            assertEquals(STATUS_SUCCESS, it.status)
+            assertEquals(DSCP_POLICY_STATUS_SUCCESS, it.status)
             checkDscpValue(agent, callback, dscpValue = 1, dstPort = 3333)
         }
 
@@ -365,12 +348,12 @@ class DscpPolicyTest {
 
     @Test
     fun testRemoveDscpPolicy_RemoveImmediatelyAfterAdd(): Unit =
-            createConnectedNetworkAgent().let{ (agent, callback) ->
+            createConnectedNetworkAgent().let { (agent, callback) ->
         val policy = DscpPolicy.Builder(1, 1).setDestinationPortRange(Range(1111, 1111)).build()
         agent.sendAddDscpPolicy(policy)
         agent.expectCallback<OnDscpPolicyStatusUpdated>().let {
             assertEquals(1, it.policyId)
-            assertEquals(STATUS_SUCCESS, it.status)
+            assertEquals(DSCP_POLICY_STATUS_SUCCESS, it.status)
             checkDscpValue(agent, callback, dscpValue = 1, dstPort = 1111)
         }
         doRemovePolicyTest(agent, callback, 1)
@@ -379,7 +362,7 @@ class DscpPolicyTest {
         agent.sendAddDscpPolicy(policy2)
         agent.expectCallback<OnDscpPolicyStatusUpdated>().let {
             assertEquals(2, it.policyId)
-            assertEquals(STATUS_SUCCESS, it.status)
+            assertEquals(DSCP_POLICY_STATUS_SUCCESS, it.status)
             checkDscpValue(agent, callback, dscpValue = 1, dstPort = 2222)
         }
         doRemovePolicyTest(agent, callback, 2)
@@ -388,7 +371,7 @@ class DscpPolicyTest {
         agent.sendAddDscpPolicy(policy3)
         agent.expectCallback<OnDscpPolicyStatusUpdated>().let {
             assertEquals(3, it.policyId)
-            assertEquals(STATUS_SUCCESS, it.status)
+            assertEquals(DSCP_POLICY_STATUS_SUCCESS, it.status)
             checkDscpValue(agent, callback, dscpValue = 1, dstPort = 3333)
         }
         doRemovePolicyTest(agent, callback, 3)
@@ -402,7 +385,7 @@ class DscpPolicyTest {
         agent.sendAddDscpPolicy(policy)
         agent.expectCallback<OnDscpPolicyStatusUpdated>().let {
             assertEquals(1, it.policyId)
-            assertEquals(STATUS_SUCCESS, it.status)
+            assertEquals(DSCP_POLICY_STATUS_SUCCESS, it.status)
             checkDscpValue(agent, callback, dscpValue = 1, dstPort = 1111)
         }
 
@@ -410,7 +393,7 @@ class DscpPolicyTest {
         agent.sendAddDscpPolicy(policy2)
         agent.expectCallback<OnDscpPolicyStatusUpdated>().let {
             assertEquals(2, it.policyId)
-            assertEquals(STATUS_SUCCESS, it.status)
+            assertEquals(DSCP_POLICY_STATUS_SUCCESS, it.status)
             checkDscpValue(agent, callback, dscpValue = 1, dstPort = 2222)
         }
 
@@ -418,7 +401,7 @@ class DscpPolicyTest {
         agent.sendAddDscpPolicy(policy3)
         agent.expectCallback<OnDscpPolicyStatusUpdated>().let {
             assertEquals(3, it.policyId)
-            assertEquals(STATUS_SUCCESS, it.status)
+            assertEquals(DSCP_POLICY_STATUS_SUCCESS, it.status)
             checkDscpValue(agent, callback, dscpValue = 1, dstPort = 3333)
         }
 
@@ -433,7 +416,7 @@ class DscpPolicyTest {
                 (agent, callback) ->
         agent.sendRemoveDscpPolicy(3)
         // Is there something to add in TestableNetworkCallback to NOT expect a callback?
-        // Or should we send STATUS_DELETED in any case or a different STATUS?
+        // Or should we send DSCP_POLICY_STATUS_DELETED in any case or a different STATUS?
     }
 
     @Test
@@ -443,7 +426,7 @@ class DscpPolicyTest {
         agent.sendAddDscpPolicy(policy)
         agent.expectCallback<OnDscpPolicyStatusUpdated>().let {
             assertEquals(1, it.policyId)
-            assertEquals(STATUS_SUCCESS, it.status)
+            assertEquals(DSCP_POLICY_STATUS_SUCCESS, it.status)
             checkDscpValue(agent, callback, dscpValue = 1, dstPort = 1111)
         }
 
@@ -452,7 +435,7 @@ class DscpPolicyTest {
         agent.sendAddDscpPolicy(policy2)
         agent.expectCallback<OnDscpPolicyStatusUpdated>().let {
             assertEquals(2, it.policyId)
-            assertEquals(STATUS_SUCCESS, it.status)
+            assertEquals(DSCP_POLICY_STATUS_SUCCESS, it.status)
             checkDscpValue(agent, callback, dscpValue = 1, dstPort = 2222)
         }
 
@@ -461,24 +444,24 @@ class DscpPolicyTest {
         agent.sendAddDscpPolicy(policy3)
         agent.expectCallback<OnDscpPolicyStatusUpdated>().let {
             assertEquals(3, it.policyId)
-            assertEquals(STATUS_SUCCESS, it.status)
+            assertEquals(DSCP_POLICY_STATUS_SUCCESS, it.status)
             checkDscpValue(agent, callback, dscpValue = 1, dstPort = 3333)
         }
 
         agent.sendRemoveAllDscpPolicies()
         agent.expectCallback<OnDscpPolicyStatusUpdated>().let {
             assertEquals(1, it.policyId)
-            assertEquals(STATUS_DELETED, it.status)
+            assertEquals(DSCP_POLICY_STATUS_DELETED, it.status)
             checkDscpValue(agent, callback, dstPort = 1111)
         }
         agent.expectCallback<OnDscpPolicyStatusUpdated>().let {
             assertEquals(2, it.policyId)
-            assertEquals(STATUS_DELETED, it.status)
+            assertEquals(DSCP_POLICY_STATUS_DELETED, it.status)
             checkDscpValue(agent, callback, dstPort = 2222)
         }
         agent.expectCallback<OnDscpPolicyStatusUpdated>().let {
             assertEquals(3, it.policyId)
-            assertEquals(STATUS_DELETED, it.status)
+            assertEquals(DSCP_POLICY_STATUS_DELETED, it.status)
             checkDscpValue(agent, callback, dstPort = 3333)
         }
     }
@@ -490,7 +473,7 @@ class DscpPolicyTest {
         agent.sendAddDscpPolicy(policy)
         agent.expectCallback<OnDscpPolicyStatusUpdated>().let {
             assertEquals(1, it.policyId)
-            assertEquals(STATUS_SUCCESS, it.status)
+            assertEquals(DSCP_POLICY_STATUS_SUCCESS, it.status)
             checkDscpValue(agent, callback, dscpValue = 1, dstPort = 4444)
         }
 
@@ -501,7 +484,7 @@ class DscpPolicyTest {
         agent.sendAddDscpPolicy(policy2)
         agent.expectCallback<OnDscpPolicyStatusUpdated>().let {
             assertEquals(1, it.policyId)
-            assertEquals(STATUS_SUCCESS, it.status)
+            assertEquals(DSCP_POLICY_STATUS_SUCCESS, it.status)
 
             // Sending packet with old policy should fail
             checkDscpValue(agent, callback, dstPort = 4444)
@@ -511,7 +494,7 @@ class DscpPolicyTest {
         agent.sendRemoveDscpPolicy(1)
         agent.expectCallback<OnDscpPolicyStatusUpdated>().let {
             assertEquals(1, it.policyId)
-            assertEquals(STATUS_DELETED, it.status)
+            assertEquals(DSCP_POLICY_STATUS_DELETED, it.status)
         }
     }
 
@@ -520,14 +503,14 @@ class DscpPolicyTest {
                 (agent, callback) ->
         // Check that policy with partial parameters is lossless.
         val policy = DscpPolicy.Builder(1, 1).setDestinationPortRange(Range(4444, 4444)).build()
-        assertParcelingIsLossless(policy);
+        assertParcelingIsLossless(policy)
 
         // Check that policy with all parameters is lossless.
         val policy2 = DscpPolicy.Builder(1, 1).setDestinationPortRange(Range(4444, 4444))
                 .setSourceAddress(LOCAL_IPV4_ADDRESS)
                 .setDestinationAddress(TEST_TARGET_IPV4_ADDR)
                 .setProtocol(IPPROTO_UDP).build()
-        assertParcelingIsLossless(policy2);
+        assertParcelingIsLossless(policy2)
     }
 }
 

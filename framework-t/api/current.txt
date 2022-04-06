@@ -3,7 +3,7 @@ package android.app.usage {
 
   public final class NetworkStats implements java.lang.AutoCloseable {
     method public void close();
-    method public boolean getNextBucket(android.app.usage.NetworkStats.Bucket);
+    method public boolean getNextBucket(@Nullable android.app.usage.NetworkStats.Bucket);
     method public boolean hasNextBucket();
   }
 
@@ -40,26 +40,34 @@ package android.app.usage {
   }
 
   public class NetworkStatsManager {
-    method @WorkerThread public android.app.usage.NetworkStats queryDetails(int, String, long, long) throws android.os.RemoteException, java.lang.SecurityException;
-    method @WorkerThread public android.app.usage.NetworkStats queryDetailsForUid(int, String, long, long, int) throws java.lang.SecurityException;
-    method @WorkerThread public android.app.usage.NetworkStats queryDetailsForUidTag(int, String, long, long, int, int) throws java.lang.SecurityException;
-    method @WorkerThread public android.app.usage.NetworkStats queryDetailsForUidTagState(int, String, long, long, int, int, int) throws java.lang.SecurityException;
-    method @WorkerThread public android.app.usage.NetworkStats querySummary(int, String, long, long) throws android.os.RemoteException, java.lang.SecurityException;
-    method @WorkerThread public android.app.usage.NetworkStats.Bucket querySummaryForDevice(int, String, long, long) throws android.os.RemoteException, java.lang.SecurityException;
-    method @WorkerThread public android.app.usage.NetworkStats.Bucket querySummaryForUser(int, String, long, long) throws android.os.RemoteException, java.lang.SecurityException;
-    method public void registerUsageCallback(int, String, long, android.app.usage.NetworkStatsManager.UsageCallback);
-    method public void registerUsageCallback(int, String, long, android.app.usage.NetworkStatsManager.UsageCallback, @Nullable android.os.Handler);
-    method public void unregisterUsageCallback(android.app.usage.NetworkStatsManager.UsageCallback);
+    method @WorkerThread public android.app.usage.NetworkStats queryDetails(int, @Nullable String, long, long) throws android.os.RemoteException, java.lang.SecurityException;
+    method @NonNull @WorkerThread public android.app.usage.NetworkStats queryDetailsForUid(int, @Nullable String, long, long, int) throws java.lang.SecurityException;
+    method @NonNull @WorkerThread public android.app.usage.NetworkStats queryDetailsForUidTag(int, @Nullable String, long, long, int, int) throws java.lang.SecurityException;
+    method @NonNull @WorkerThread public android.app.usage.NetworkStats queryDetailsForUidTagState(int, @Nullable String, long, long, int, int, int) throws java.lang.SecurityException;
+    method @WorkerThread public android.app.usage.NetworkStats querySummary(int, @Nullable String, long, long) throws android.os.RemoteException, java.lang.SecurityException;
+    method @WorkerThread public android.app.usage.NetworkStats.Bucket querySummaryForDevice(int, @Nullable String, long, long) throws android.os.RemoteException, java.lang.SecurityException;
+    method @WorkerThread public android.app.usage.NetworkStats.Bucket querySummaryForUser(int, @Nullable String, long, long) throws android.os.RemoteException, java.lang.SecurityException;
+    method public void registerUsageCallback(int, @Nullable String, long, @NonNull android.app.usage.NetworkStatsManager.UsageCallback);
+    method public void registerUsageCallback(int, @Nullable String, long, @NonNull android.app.usage.NetworkStatsManager.UsageCallback, @Nullable android.os.Handler);
+    method public void unregisterUsageCallback(@NonNull android.app.usage.NetworkStatsManager.UsageCallback);
   }
 
   public abstract static class NetworkStatsManager.UsageCallback {
     ctor public NetworkStatsManager.UsageCallback();
-    method public abstract void onThresholdReached(int, String);
+    method public abstract void onThresholdReached(int, @Nullable String);
   }
 
 }
 
 package android.net {
+
+  public final class EthernetNetworkSpecifier extends android.net.NetworkSpecifier implements android.os.Parcelable {
+    ctor public EthernetNetworkSpecifier(@NonNull String);
+    method public int describeContents();
+    method @Nullable public String getInterfaceName();
+    method public void writeToParcel(@NonNull android.os.Parcel, int);
+    field @NonNull public static final android.os.Parcelable.Creator<android.net.EthernetNetworkSpecifier> CREATOR;
+  }
 
   public final class IpSecAlgorithm implements android.os.Parcelable {
     ctor public IpSecAlgorithm(@NonNull String, @NonNull byte[]);
@@ -165,12 +173,12 @@ package android.net {
     method public static void incrementOperationCount(int, int);
     method public static void setThreadStatsTag(int);
     method public static void setThreadStatsUid(int);
-    method public static void tagDatagramSocket(java.net.DatagramSocket) throws java.net.SocketException;
-    method public static void tagFileDescriptor(java.io.FileDescriptor) throws java.io.IOException;
-    method public static void tagSocket(java.net.Socket) throws java.net.SocketException;
-    method public static void untagDatagramSocket(java.net.DatagramSocket) throws java.net.SocketException;
-    method public static void untagFileDescriptor(java.io.FileDescriptor) throws java.io.IOException;
-    method public static void untagSocket(java.net.Socket) throws java.net.SocketException;
+    method public static void tagDatagramSocket(@NonNull java.net.DatagramSocket) throws java.net.SocketException;
+    method public static void tagFileDescriptor(@NonNull java.io.FileDescriptor) throws java.io.IOException;
+    method public static void tagSocket(@NonNull java.net.Socket) throws java.net.SocketException;
+    method public static void untagDatagramSocket(@NonNull java.net.DatagramSocket) throws java.net.SocketException;
+    method public static void untagFileDescriptor(@NonNull java.io.FileDescriptor) throws java.io.IOException;
+    method public static void untagSocket(@NonNull java.net.Socket) throws java.net.SocketException;
     field public static final int UNSUPPORTED = -1; // 0xffffffff
   }
 
@@ -180,10 +188,12 @@ package android.net.nsd {
 
   public final class NsdManager {
     method public void discoverServices(String, int, android.net.nsd.NsdManager.DiscoveryListener);
-    method public void discoverServices(@NonNull String, int, @Nullable android.net.Network, @NonNull android.net.nsd.NsdManager.DiscoveryListener);
-    method @RequiresPermission(android.Manifest.permission.ACCESS_NETWORK_STATE) public void discoverServices(@NonNull String, int, @NonNull android.net.NetworkRequest, @NonNull android.net.nsd.NsdManager.DiscoveryListener);
+    method public void discoverServices(@NonNull String, int, @Nullable android.net.Network, @NonNull java.util.concurrent.Executor, @NonNull android.net.nsd.NsdManager.DiscoveryListener);
+    method @RequiresPermission(android.Manifest.permission.ACCESS_NETWORK_STATE) public void discoverServices(@NonNull String, int, @NonNull android.net.NetworkRequest, @NonNull java.util.concurrent.Executor, @NonNull android.net.nsd.NsdManager.DiscoveryListener);
     method public void registerService(android.net.nsd.NsdServiceInfo, int, android.net.nsd.NsdManager.RegistrationListener);
+    method public void registerService(@NonNull android.net.nsd.NsdServiceInfo, int, @NonNull java.util.concurrent.Executor, @NonNull android.net.nsd.NsdManager.RegistrationListener);
     method public void resolveService(android.net.nsd.NsdServiceInfo, android.net.nsd.NsdManager.ResolveListener);
+    method public void resolveService(@NonNull android.net.nsd.NsdServiceInfo, @NonNull java.util.concurrent.Executor, @NonNull android.net.nsd.NsdManager.ResolveListener);
     method public void stopServiceDiscovery(android.net.nsd.NsdManager.DiscoveryListener);
     method public void unregisterService(android.net.nsd.NsdManager.RegistrationListener);
     field public static final String ACTION_NSD_STATE_CHANGED = "android.net.nsd.STATE_CHANGED";

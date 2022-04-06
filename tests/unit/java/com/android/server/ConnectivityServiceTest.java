@@ -36,6 +36,7 @@ import static android.content.Intent.ACTION_USER_ADDED;
 import static android.content.Intent.ACTION_USER_REMOVED;
 import static android.content.Intent.ACTION_USER_UNLOCKED;
 import static android.content.pm.PackageInfo.REQUESTED_PERMISSION_GRANTED;
+import static android.content.pm.PackageManager.FEATURE_ETHERNET;
 import static android.content.pm.PackageManager.FEATURE_WIFI;
 import static android.content.pm.PackageManager.FEATURE_WIFI_DIRECT;
 import static android.content.pm.PackageManager.GET_PERMISSIONS;
@@ -159,6 +160,7 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.junit.Assume.assumeTrue;
+import static org.junit.Assume.assumeFalse;
 import static org.mockito.AdditionalMatchers.aryEq;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyLong;
@@ -282,6 +284,7 @@ import android.net.resolv.aidl.PrivateDnsValidationEventParcel;
 import android.net.shared.NetworkMonitorUtils;
 import android.net.shared.PrivateDnsConfig;
 import android.net.util.MultinetworkPolicyTracker;
+import android.net.wifi.WifiInfo;
 import android.os.BadParcelableException;
 import android.os.BatteryStatsManager;
 import android.os.Binder;
@@ -334,6 +337,7 @@ import com.android.modules.utils.build.SdkLevel;
 import com.android.net.module.util.ArrayTrackRecord;
 import com.android.net.module.util.CollectionUtils;
 import com.android.net.module.util.LocationPermissionChecker;
+import com.android.networkstack.apishim.NetworkAgentConfigShimImpl;
 import com.android.server.ConnectivityService.ConnectivityDiagnosticsCallbackInfo;
 import com.android.server.ConnectivityService.NetworkRequestInfo;
 import com.android.server.ConnectivityServiceTest.ConnectivityServiceDependencies.ReportedInterfaces;
@@ -1370,6 +1374,10 @@ public class ConnectivityServiceTest {
             return (mMockNetworkAgent == null) ? null : mMockNetworkAgent.getNetwork();
         }
 
+        public NetworkAgentConfig getNetworkAgentConfig() {
+            return null == mMockNetworkAgent ? null : mMockNetworkAgent.getNetworkAgentConfig();
+        }
+
         @Override
         public int getActiveVpnType() {
             return mVpnType;
@@ -1739,6 +1747,7 @@ public class ConnectivityServiceTest {
         mockDefaultPackages();
         mockHasSystemFeature(FEATURE_WIFI, true);
         mockHasSystemFeature(FEATURE_WIFI_DIRECT, true);
+        mockHasSystemFeature(FEATURE_ETHERNET, true);
         doReturn(true).when(mTelephonyManager).isDataCapable();
 
         FakeSettingsProvider.clearSettingsProvider();
@@ -2932,6 +2941,7 @@ public class ConnectivityServiceTest {
     @Test
     public void testRequiresValidation() {
         assertTrue(NetworkMonitorUtils.isValidationRequired(
+                NetworkAgentConfigShimImpl.newInstance(null),
                 mCm.getDefaultRequest().networkCapabilities));
     }
 
@@ -3904,14 +3914,14 @@ public class ConnectivityServiceTest {
     }
 
     @Test
-    public void testNoAccessUidsInNetworkRequests() throws Exception {
+    public void testNoAllowedUidsInNetworkRequests() throws Exception {
         final PendingIntent pendingIntent = PendingIntent.getBroadcast(
                 mContext, 0 /* requestCode */, new Intent("a"), FLAG_IMMUTABLE);
         final NetworkRequest r = new NetworkRequest.Builder().build();
-        final ArraySet<Integer> accessUids = new ArraySet<>();
-        accessUids.add(6);
-        accessUids.add(9);
-        r.networkCapabilities.setAccessUids(accessUids);
+        final ArraySet<Integer> allowedUids = new ArraySet<>();
+        allowedUids.add(6);
+        allowedUids.add(9);
+        r.networkCapabilities.setAllowedUids(allowedUids);
 
         final Handler handler = new Handler(ConnectivityThread.getInstanceLooper());
         final NetworkCallback cb = new NetworkCallback();
@@ -3926,7 +3936,7 @@ public class ConnectivityServiceTest {
 
         // Make sure that resetting the access UIDs to the empty set will allow calling
         // requestNetwork and registerNetworkCallback.
-        r.networkCapabilities.setAccessUids(Collections.emptySet());
+        r.networkCapabilities.setAllowedUids(Collections.emptySet());
         mCm.requestNetwork(r, cb);
         mCm.unregisterNetworkCallback(cb);
         mCm.registerNetworkCallback(r, cb);
@@ -7078,6 +7088,36 @@ public class ConnectivityServiceTest {
     }
 
     @Test
+    public void testAdminUidsRedacted() throws Exception {
+        final int[] adminUids = new int[] {Process.myUid() + 1};
+        final NetworkCapabilities ncTemplate = new NetworkCapabilities();
+        ncTemplate.setAdministratorUids(adminUids);
+        mCellNetworkAgent =
+                new TestNetworkAgentWrapper(TRANSPORT_CELLULAR, new LinkProperties(), ncTemplate);
+        mCellNetworkAgent.connect(false /* validated */);
+
+        // Verify case where caller has permission
+        mServiceContext.setPermission(
+                NetworkStack.PERMISSION_MAINLINE_NETWORK_STACK, PERMISSION_GRANTED);
+        TestNetworkCallback callback = new TestNetworkCallback();
+        mCm.registerDefaultNetworkCallback(callback);
+        callback.expectCallback(CallbackEntry.AVAILABLE, mCellNetworkAgent);
+        callback.expectCapabilitiesThat(
+                mCellNetworkAgent, nc -> Arrays.equals(adminUids, nc.getAdministratorUids()));
+        mCm.unregisterNetworkCallback(callback);
+
+        // Verify case where caller does NOT have permission
+        mServiceContext.setPermission(
+                NetworkStack.PERMISSION_MAINLINE_NETWORK_STACK, PERMISSION_DENIED);
+        mServiceContext.setPermission(NETWORK_STACK, PERMISSION_DENIED);
+        callback = new TestNetworkCallback();
+        mCm.registerDefaultNetworkCallback(callback);
+        callback.expectCallback(CallbackEntry.AVAILABLE, mCellNetworkAgent);
+        callback.expectCapabilitiesThat(
+                mCellNetworkAgent, nc -> nc.getAdministratorUids().length == 0);
+    }
+
+    @Test
     public void testNonVpnUnderlyingNetworks() throws Exception {
         // Ensure wifi and cellular are not torn down.
         for (int transport : new int[]{TRANSPORT_CELLULAR, TRANSPORT_WIFI}) {
@@ -7899,6 +7939,7 @@ public class ConnectivityServiceTest {
         // VPN networks do not satisfy the default request and are automatically validated
         // by NetworkMonitor
         assertFalse(NetworkMonitorUtils.isValidationRequired(
+                NetworkAgentConfigShimImpl.newInstance(mMockVpn.getNetworkAgentConfig()),
                 mMockVpn.getAgent().getNetworkCapabilities()));
         mMockVpn.getAgent().setNetworkValid(false /* isStrictMode */);
 
@@ -8049,6 +8090,7 @@ public class ConnectivityServiceTest {
         assertTrue(nc.hasCapability(NET_CAPABILITY_INTERNET));
 
         assertFalse(NetworkMonitorUtils.isValidationRequired(
+                NetworkAgentConfigShimImpl.newInstance(mMockVpn.getNetworkAgentConfig()),
                 mMockVpn.getAgent().getNetworkCapabilities()));
         assertTrue(NetworkMonitorUtils.isPrivateDnsValidationRequired(
                 mMockVpn.getAgent().getNetworkCapabilities()));
@@ -13868,12 +13910,13 @@ public class ConnectivityServiceTest {
             ProfileNetworkPreference profileNetworkPreference) {
         final Set<UidRange> uidRangeSet;
         UidRange range = UidRange.createForUser(handle);
-        if (profileNetworkPreference.getIncludedUids().size() != 0) {
-            uidRangeSet = UidRangeUtils.convertListToUidRange(
+        if (profileNetworkPreference.getIncludedUids().length != 0) {
+            uidRangeSet = UidRangeUtils.convertArrayToUidRange(
                     profileNetworkPreference.getIncludedUids());
-        } else if (profileNetworkPreference.getExcludedUids().size() != 0)  {
+
+        } else if (profileNetworkPreference.getExcludedUids().length != 0)  {
             uidRangeSet = UidRangeUtils.removeRangeSetFromUidRange(
-                    range, UidRangeUtils.convertListToUidRange(
+                    range, UidRangeUtils.convertArrayToUidRange(
                             profileNetworkPreference.getExcludedUids()));
         } else {
             uidRangeSet = new ArraySet<>();
@@ -14245,7 +14288,7 @@ public class ConnectivityServiceTest {
         profileNetworkPreferenceBuilder.setPreference(PROFILE_NETWORK_PREFERENCE_ENTERPRISE);
         profileNetworkPreferenceBuilder.setPreferenceEnterpriseId(NET_ENTERPRISE_ID_1);
         profileNetworkPreferenceBuilder.setIncludedUids(
-                List.of(testHandle.getUid(TEST_WORK_PROFILE_APP_UID)));
+                new int[]{testHandle.getUid(TEST_WORK_PROFILE_APP_UID)});
         registerDefaultNetworkCallbacks();
         testPreferenceForUserNetworkUpDownForGivenPreference(
                 profileNetworkPreferenceBuilder.build(), false, testHandle,
@@ -14264,7 +14307,7 @@ public class ConnectivityServiceTest {
         profileNetworkPreferenceBuilder.setPreference(PROFILE_NETWORK_PREFERENCE_ENTERPRISE);
         profileNetworkPreferenceBuilder.setPreferenceEnterpriseId(NET_ENTERPRISE_ID_1);
         profileNetworkPreferenceBuilder.setIncludedUids(
-                List.of(testHandle.getUid(TEST_WORK_PROFILE_APP_UID_2)));
+                new int[]{testHandle.getUid(TEST_WORK_PROFILE_APP_UID_2)});
         registerDefaultNetworkCallbacks();
         testPreferenceForUserNetworkUpDownForGivenPreference(
                 profileNetworkPreferenceBuilder.build(), false,
@@ -14283,7 +14326,7 @@ public class ConnectivityServiceTest {
         profileNetworkPreferenceBuilder.setPreference(PROFILE_NETWORK_PREFERENCE_ENTERPRISE);
         profileNetworkPreferenceBuilder.setPreferenceEnterpriseId(NET_ENTERPRISE_ID_1);
         profileNetworkPreferenceBuilder.setExcludedUids(
-                List.of(testHandle.getUid(TEST_WORK_PROFILE_APP_UID_2)));
+                new int[]{testHandle.getUid(TEST_WORK_PROFILE_APP_UID_2)});
         registerDefaultNetworkCallbacks();
         testPreferenceForUserNetworkUpDownForGivenPreference(
                 profileNetworkPreferenceBuilder.build(), false,
@@ -14303,7 +14346,7 @@ public class ConnectivityServiceTest {
         profileNetworkPreferenceBuilder.setPreference(PROFILE_NETWORK_PREFERENCE_ENTERPRISE);
         profileNetworkPreferenceBuilder.setPreferenceEnterpriseId(NET_ENTERPRISE_ID_1);
         profileNetworkPreferenceBuilder.setExcludedUids(
-                List.of(testHandle.getUid(0) - 1));
+                new int[]{testHandle.getUid(0) - 1});
         final TestOnCompleteListener listener = new TestOnCompleteListener();
         Assert.assertThrows(IllegalArgumentException.class, () -> mCm.setProfileNetworkPreferences(
                 testHandle, List.of(profileNetworkPreferenceBuilder.build()),
@@ -14311,7 +14354,7 @@ public class ConnectivityServiceTest {
 
         profileNetworkPreferenceBuilder.setPreference(PROFILE_NETWORK_PREFERENCE_ENTERPRISE);
         profileNetworkPreferenceBuilder.setIncludedUids(
-                List.of(testHandle.getUid(0) - 1));
+                new int[]{testHandle.getUid(0) - 1});
         Assert.assertThrows(IllegalArgumentException.class,
                 () -> mCm.setProfileNetworkPreferences(
                         testHandle, List.of(profileNetworkPreferenceBuilder.build()),
@@ -14320,9 +14363,9 @@ public class ConnectivityServiceTest {
 
         profileNetworkPreferenceBuilder.setPreference(PROFILE_NETWORK_PREFERENCE_ENTERPRISE);
         profileNetworkPreferenceBuilder.setIncludedUids(
-                List.of(testHandle.getUid(0) - 1));
+                new int[]{testHandle.getUid(0) - 1});
         profileNetworkPreferenceBuilder.setExcludedUids(
-                List.of(testHandle.getUid(TEST_WORK_PROFILE_APP_UID_2)));
+                new int[]{testHandle.getUid(TEST_WORK_PROFILE_APP_UID_2)});
         Assert.assertThrows(IllegalArgumentException.class,
                 () -> mCm.setProfileNetworkPreferences(
                         testHandle, List.of(profileNetworkPreferenceBuilder.build()),
@@ -14333,9 +14376,9 @@ public class ConnectivityServiceTest {
         profileNetworkPreferenceBuilder2.setPreference(PROFILE_NETWORK_PREFERENCE_ENTERPRISE);
         profileNetworkPreferenceBuilder2.setPreferenceEnterpriseId(NET_ENTERPRISE_ID_1);
         profileNetworkPreferenceBuilder2.setIncludedUids(
-                List.of(testHandle.getUid(TEST_WORK_PROFILE_APP_UID_2)));
+                new int[]{testHandle.getUid(TEST_WORK_PROFILE_APP_UID_2)});
         profileNetworkPreferenceBuilder.setIncludedUids(
-                List.of(testHandle.getUid(TEST_WORK_PROFILE_APP_UID_2)));
+                new int[]{testHandle.getUid(TEST_WORK_PROFILE_APP_UID_2)});
         Assert.assertThrows(IllegalArgumentException.class,
                 () -> mCm.setProfileNetworkPreferences(
                         testHandle, List.of(profileNetworkPreferenceBuilder.build(),
@@ -14344,9 +14387,9 @@ public class ConnectivityServiceTest {
 
         profileNetworkPreferenceBuilder2.setPreference(PROFILE_NETWORK_PREFERENCE_ENTERPRISE);
         profileNetworkPreferenceBuilder2.setExcludedUids(
-                List.of(testHandle.getUid(TEST_WORK_PROFILE_APP_UID_2)));
+                new int[]{testHandle.getUid(TEST_WORK_PROFILE_APP_UID_2)});
         profileNetworkPreferenceBuilder.setExcludedUids(
-                List.of(testHandle.getUid(TEST_WORK_PROFILE_APP_UID_2)));
+                new int[]{testHandle.getUid(TEST_WORK_PROFILE_APP_UID_2)});
         Assert.assertThrows(IllegalArgumentException.class,
                 () -> mCm.setProfileNetworkPreferences(
                         testHandle, List.of(profileNetworkPreferenceBuilder.build(),
@@ -14356,9 +14399,9 @@ public class ConnectivityServiceTest {
         profileNetworkPreferenceBuilder2.setPreference(
                 PROFILE_NETWORK_PREFERENCE_ENTERPRISE_NO_FALLBACK);
         profileNetworkPreferenceBuilder2.setExcludedUids(
-                List.of(testHandle.getUid(TEST_WORK_PROFILE_APP_UID_2)));
+                new int[]{testHandle.getUid(TEST_WORK_PROFILE_APP_UID_2)});
         profileNetworkPreferenceBuilder.setExcludedUids(
-                List.of(testHandle.getUid(TEST_WORK_PROFILE_APP_UID_2)));
+                new int[]{testHandle.getUid(TEST_WORK_PROFILE_APP_UID_2)});
         Assert.assertThrows(IllegalArgumentException.class,
                 () -> mCm.setProfileNetworkPreferences(
                         testHandle, List.of(profileNetworkPreferenceBuilder.build(),
@@ -14685,7 +14728,7 @@ public class ConnectivityServiceTest {
     }
 
     @Test
-    public void testAccessUids() throws Exception {
+    public void testAllowedUids() throws Exception {
         final int preferenceOrder =
                 ConnectivityService.PREFERENCE_ORDER_IRRELEVANT_BECAUSE_NOT_DEFAULT;
         mServiceContext.setPermission(NETWORK_FACTORY, PERMISSION_GRANTED);
@@ -14702,7 +14745,7 @@ public class ConnectivityServiceTest {
         final NetworkCapabilities nc = new NetworkCapabilities.Builder()
                 .addTransportType(TRANSPORT_TEST)
                 .removeCapability(NET_CAPABILITY_NOT_RESTRICTED)
-                .setAccessUids(uids)
+                .setAllowedUids(uids)
                 .build();
         final TestNetworkAgentWrapper agent = new TestNetworkAgentWrapper(TRANSPORT_TEST,
                 new LinkProperties(), nc);
@@ -14720,10 +14763,10 @@ public class ConnectivityServiceTest {
 
         uids.add(300);
         uids.add(400);
-        nc.setAccessUids(uids);
+        nc.setAllowedUids(uids);
         agent.setNetworkCapabilities(nc, true /* sendToConnectivityService */);
         if (SdkLevel.isAtLeastT()) {
-            cb.expectCapabilitiesThat(agent, caps -> caps.getAccessUids().equals(uids));
+            cb.expectCapabilitiesThat(agent, caps -> caps.getAllowedUids().equals(uids));
         } else {
             cb.assertNoCallback();
         }
@@ -14737,10 +14780,10 @@ public class ConnectivityServiceTest {
             inOrder.verify(mMockNetd, times(1)).networkAddUidRangesParcel(uids300400Parcel);
         }
 
-        nc.setAccessUids(uids);
+        nc.setAllowedUids(uids);
         agent.setNetworkCapabilities(nc, true /* sendToConnectivityService */);
         if (SdkLevel.isAtLeastT()) {
-            cb.expectCapabilitiesThat(agent, caps -> caps.getAccessUids().equals(uids));
+            cb.expectCapabilitiesThat(agent, caps -> caps.getAllowedUids().equals(uids));
             inOrder.verify(mMockNetd, times(1)).networkRemoveUidRangesParcel(uids200Parcel);
         } else {
             cb.assertNoCallback();
@@ -14748,10 +14791,10 @@ public class ConnectivityServiceTest {
 
         uids.clear();
         uids.add(600);
-        nc.setAccessUids(uids);
+        nc.setAllowedUids(uids);
         agent.setNetworkCapabilities(nc, true /* sendToConnectivityService */);
         if (SdkLevel.isAtLeastT()) {
-            cb.expectCapabilitiesThat(agent, caps -> caps.getAccessUids().equals(uids));
+            cb.expectCapabilitiesThat(agent, caps -> caps.getAllowedUids().equals(uids));
         } else {
             cb.assertNoCallback();
         }
@@ -14765,10 +14808,10 @@ public class ConnectivityServiceTest {
         }
 
         uids.clear();
-        nc.setAccessUids(uids);
+        nc.setAllowedUids(uids);
         agent.setNetworkCapabilities(nc, true /* sendToConnectivityService */);
         if (SdkLevel.isAtLeastT()) {
-            cb.expectCapabilitiesThat(agent, caps -> caps.getAccessUids().isEmpty());
+            cb.expectCapabilitiesThat(agent, caps -> caps.getAllowedUids().isEmpty());
             inOrder.verify(mMockNetd, times(1)).networkRemoveUidRangesParcel(uids600Parcel);
         } else {
             cb.assertNoCallback();
@@ -14779,7 +14822,7 @@ public class ConnectivityServiceTest {
     }
 
     @Test
-    public void testCbsAccessUids() throws Exception {
+    public void testCbsAllowedUids() throws Exception {
         mServiceContext.setPermission(NETWORK_FACTORY, PERMISSION_GRANTED);
         mServiceContext.setPermission(MANAGE_TEST_NETWORKS, PERMISSION_GRANTED);
 
@@ -14816,29 +14859,29 @@ public class ConnectivityServiceTest {
                 new LinkProperties(), ncb.build());
         mCellNetworkAgent.connect(true);
         cb.expectAvailableThenValidatedCallbacks(mCellNetworkAgent);
-        ncb.setAccessUids(serviceUidSet);
+        ncb.setAllowedUids(serviceUidSet);
         mCellNetworkAgent.setNetworkCapabilities(ncb.build(), true /* sendToCS */);
         if (SdkLevel.isAtLeastT()) {
             cb.expectCapabilitiesThat(mCellNetworkAgent,
-                    caps -> caps.getAccessUids().equals(serviceUidSet));
+                    caps -> caps.getAllowedUids().equals(serviceUidSet));
         } else {
             // S must ignore access UIDs.
             cb.assertNoCallback(TEST_CALLBACK_TIMEOUT_MS);
         }
 
         // ...but not to some other UID. Rejection sets UIDs to the empty set
-        ncb.setAccessUids(nonServiceUidSet);
+        ncb.setAllowedUids(nonServiceUidSet);
         mCellNetworkAgent.setNetworkCapabilities(ncb.build(), true /* sendToCS */);
         if (SdkLevel.isAtLeastT()) {
             cb.expectCapabilitiesThat(mCellNetworkAgent,
-                    caps -> caps.getAccessUids().isEmpty());
+                    caps -> caps.getAllowedUids().isEmpty());
         } else {
             // S must ignore access UIDs.
             cb.assertNoCallback(TEST_CALLBACK_TIMEOUT_MS);
         }
 
         // ...and also not to multiple UIDs even including the service UID
-        ncb.setAccessUids(serviceUidSetPlus);
+        ncb.setAllowedUids(serviceUidSetPlus);
         mCellNetworkAgent.setNetworkCapabilities(ncb.build(), true /* sendToCS */);
         cb.assertNoCallback(TEST_CALLBACK_TIMEOUT_MS);
 
@@ -14861,7 +14904,7 @@ public class ConnectivityServiceTest {
                 new LinkProperties(), ncb.build());
         mWiFiNetworkAgent.connect(true);
         cb.expectAvailableThenValidatedCallbacks(mWiFiNetworkAgent);
-        ncb.setAccessUids(serviceUidSet);
+        ncb.setAllowedUids(serviceUidSet);
         mWiFiNetworkAgent.setNetworkCapabilities(ncb.build(), true /* sendToCS */);
         cb.assertNoCallback(TEST_CALLBACK_TIMEOUT_MS);
         mCm.unregisterNetworkCallback(cb);
@@ -15568,5 +15611,92 @@ public class ConnectivityServiceTest {
         waitForIdle();
 
         assertNull(readHead.poll(TEST_CALLBACK_TIMEOUT_MS, it -> true));
+    }
+
+    @Test
+    public void testIgnoreValidationAfterRoamDisabled() throws Exception {
+        assumeFalse(SdkLevel.isAtLeastT());
+        // testIgnoreValidationAfterRoam off
+        doReturn(-1).when(mResources)
+                .getInteger(R.integer.config_validationFailureAfterRoamIgnoreTimeMillis);
+
+        mCellNetworkAgent = new TestNetworkAgentWrapper(TRANSPORT_CELLULAR);
+        mCellNetworkAgent.connect(true);
+        NetworkCapabilities wifiNc1 = new NetworkCapabilities()
+                .addTransportType(TRANSPORT_WIFI)
+                .setTransportInfo(new WifiInfo.Builder().setBssid("AA:AA:AA:AA:AA:AA").build());
+        NetworkCapabilities wifiNc2 = new NetworkCapabilities()
+                .addTransportType(TRANSPORT_WIFI)
+                .setTransportInfo(new WifiInfo.Builder().setBssid("BB:BB:BB:BB:BB:BB").build());
+        final LinkProperties wifiLp = new LinkProperties();
+        wifiLp.setInterfaceName(WIFI_IFNAME);
+        mWiFiNetworkAgent = new TestNetworkAgentWrapper(TRANSPORT_WIFI, wifiLp, wifiNc1);
+        mWiFiNetworkAgent.connect(true);
+
+        // The default network will be switching to Wi-Fi Network.
+        final TestNetworkCallback wifiNetworkCallback = new TestNetworkCallback();
+        final NetworkRequest wifiRequest = new NetworkRequest.Builder()
+                .addTransportType(TRANSPORT_WIFI).build();
+        mCm.registerNetworkCallback(wifiRequest, wifiNetworkCallback);
+        wifiNetworkCallback.expectAvailableCallbacksValidated(mWiFiNetworkAgent);
+        registerDefaultNetworkCallbacks();
+        mDefaultNetworkCallback.expectAvailableCallbacksValidated(mWiFiNetworkAgent);
+
+        // Wi-Fi roaming from wifiNc1 to wifiNc2.
+        mWiFiNetworkAgent.setNetworkCapabilities(wifiNc2, true);
+        mWiFiNetworkAgent.setNetworkInvalid(false);
+        mCm.reportNetworkConnectivity(mWiFiNetworkAgent.getNetwork(), false);
+        mDefaultNetworkCallback.expectAvailableCallbacksValidated(mCellNetworkAgent);
+    }
+
+    @Test
+    public void testIgnoreValidationAfterRoamEnabled() throws Exception {
+        assumeFalse(SdkLevel.isAtLeastT());
+        // testIgnoreValidationAfterRoam on
+        doReturn(5000).when(mResources)
+                .getInteger(R.integer.config_validationFailureAfterRoamIgnoreTimeMillis);
+
+        mCellNetworkAgent = new TestNetworkAgentWrapper(TRANSPORT_CELLULAR);
+        mCellNetworkAgent.connect(true);
+        NetworkCapabilities wifiNc1 = new NetworkCapabilities()
+                .addTransportType(TRANSPORT_WIFI)
+                .setTransportInfo(new WifiInfo.Builder().setBssid("AA:AA:AA:AA:AA:AA").build());
+        NetworkCapabilities wifiNc2 = new NetworkCapabilities()
+                .addTransportType(TRANSPORT_WIFI)
+                .setTransportInfo(new WifiInfo.Builder().setBssid("BB:BB:BB:BB:BB:BB").build());
+        final LinkProperties wifiLp = new LinkProperties();
+        wifiLp.setInterfaceName(WIFI_IFNAME);
+        mWiFiNetworkAgent = new TestNetworkAgentWrapper(TRANSPORT_WIFI, wifiLp, wifiNc1);
+        mWiFiNetworkAgent.connect(true);
+
+        // The default network will be switching to Wi-Fi Network.
+        final TestNetworkCallback wifiNetworkCallback = new TestNetworkCallback();
+        final NetworkRequest wifiRequest = new NetworkRequest.Builder()
+                .addTransportType(TRANSPORT_WIFI).build();
+        mCm.registerNetworkCallback(wifiRequest, wifiNetworkCallback);
+        wifiNetworkCallback.expectAvailableCallbacksValidated(mWiFiNetworkAgent);
+        registerDefaultNetworkCallbacks();
+        mDefaultNetworkCallback.expectAvailableCallbacksValidated(mWiFiNetworkAgent);
+
+        // Wi-Fi roaming from wifiNc1 to wifiNc2.
+        mWiFiNetworkAgent.setNetworkCapabilities(wifiNc2, true);
+        mWiFiNetworkAgent.setNetworkInvalid(false);
+        mCm.reportNetworkConnectivity(mWiFiNetworkAgent.getNetwork(), false);
+
+        // Network validation failed, but the result will be ignored.
+        assertTrue(mCm.getNetworkCapabilities(mWiFiNetworkAgent.getNetwork()).hasCapability(
+                NET_CAPABILITY_VALIDATED));
+        mWiFiNetworkAgent.setNetworkValid(false);
+
+        // Behavior of after config_validationFailureAfterRoamIgnoreTimeMillis
+        ConditionVariable waitForValidationBlock = new ConditionVariable();
+        doReturn(50).when(mResources)
+                .getInteger(R.integer.config_validationFailureAfterRoamIgnoreTimeMillis);
+        // Wi-Fi roaming from wifiNc2 to wifiNc1.
+        mWiFiNetworkAgent.setNetworkCapabilities(wifiNc1, true);
+        mWiFiNetworkAgent.setNetworkInvalid(false);
+        waitForValidationBlock.block(150);
+        mCm.reportNetworkConnectivity(mWiFiNetworkAgent.getNetwork(), false);
+        mDefaultNetworkCallback.expectAvailableCallbacksValidated(mCellNetworkAgent);
     }
 }

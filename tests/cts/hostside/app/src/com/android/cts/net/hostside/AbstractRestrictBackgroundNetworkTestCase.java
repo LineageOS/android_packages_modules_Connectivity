@@ -151,7 +151,7 @@ public abstract class AbstractRestrictBackgroundNetworkTestCase {
 
     private static final String APP_NOT_FOREGROUND_ERROR = "app_not_fg";
 
-    protected static final long TEMP_POWERSAVE_WHITELIST_DURATION_MS = 5_000; // 5 sec
+    protected static final long TEMP_POWERSAVE_WHITELIST_DURATION_MS = 20_000; // 20 sec
 
     private static final long BROADCAST_TIMEOUT_MS = 15_000;
 
@@ -897,6 +897,11 @@ public abstract class AbstractRestrictBackgroundNetworkTestCase {
         } else {
             throw new IllegalArgumentException("Unknown type: " + type);
         }
+    }
+
+    protected void startActivity() throws Exception {
+        final Intent launchIntent = getIntentForComponent(TYPE_COMPONENT_ACTIVTIY);
+        mContext.startActivity(launchIntent);
     }
 
     private void startForegroundService() throws Exception {
