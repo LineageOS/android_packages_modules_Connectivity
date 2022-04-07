@@ -124,13 +124,6 @@ filegroup {
     ],
 }
 
-// TODO: remove this empty filegroup.
-filegroup {
-    name: "framework-connectivity-tiramisu-sources",
-    srcs: [],
-    visibility: ["//frameworks/base"],
-}
-
 filegroup {
     name: "framework-connectivity-tiramisu-updatable-sources",
     srcs: [
