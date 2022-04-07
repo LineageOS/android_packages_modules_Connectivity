@@ -108,5 +108,8 @@ rule com.android.networkstack.apishim.** com.android.connectivity.@0
 # From filegroup framework-connectivity-protos
 rule android.service.*Proto com.android.connectivity.@0
 
+# From mdns-aidl-interface
+rule android.net.mdns.aidl.** android.net.connectivity.@0
+
 # Remaining are connectivity sources in com.android.server and com.android.server.connectivity:
 # TODO: move to a subpackage of com.android.connectivity (such as com.android.connectivity.server)
