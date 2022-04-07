@@ -16,15 +16,24 @@
 
 package com.android.server;
 
+import static android.net.ConnectivityManager.NETID_UNSET;
+import static android.net.nsd.NsdManager.MDNS_SERVICE_EVENT;
+
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.net.ConnectivityManager;
 import android.net.LinkProperties;
 import android.net.Network;
+import android.net.mdns.aidl.DiscoveryInfo;
+import android.net.mdns.aidl.GetAddressInfo;
+import android.net.mdns.aidl.IMDnsEventListener;
+import android.net.mdns.aidl.RegistrationInfo;
+import android.net.mdns.aidl.ResolutionInfo;
 import android.net.nsd.INsdManager;
 import android.net.nsd.INsdManagerCallback;
 import android.net.nsd.INsdServiceConnector;
+import android.net.nsd.MDnsManager;
 import android.net.nsd.NsdManager;
 import android.net.nsd.NsdServiceInfo;
 import android.os.Handler;
@@ -33,7 +42,6 @@ import android.os.IBinder;
 import android.os.Message;
 import android.os.RemoteException;
 import android.os.UserHandle;
-import android.util.Base64;
 import android.util.Log;
 import android.util.Pair;
 import android.util.SparseArray;
@@ -42,7 +50,6 @@ import android.util.SparseIntArray;
 import com.android.internal.annotations.VisibleForTesting;
 import com.android.internal.util.State;
 import com.android.internal.util.StateMachine;
-import com.android.net.module.util.DnsSdTxtRecord;
 
 import java.io.FileDescriptor;
 import java.io.PrintWriter;
@@ -50,9 +57,7 @@ import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.net.SocketException;
 import java.net.UnknownHostException;
-import java.util.Arrays;
 import java.util.HashMap;
-import java.util.concurrent.CountDownLatch;
 
 /**
  * Network Service Discovery Service handles remote service discovery operation requests by
@@ -64,14 +69,18 @@ public class NsdService extends INsdManager.Stub {
     private static final String TAG = "NsdService";
     private static final String MDNS_TAG = "mDnsConnector";
 
-    private static final boolean DBG = true;
+    private static final boolean DBG = Log.isLoggable(TAG, Log.DEBUG);
     private static final long CLEANUP_DELAY_MS = 10000;
     private static final int IFACE_IDX_ANY = 0;
 
     private final Context mContext;
     private final NsdStateMachine mNsdStateMachine;
-    private final DaemonConnection mDaemon;
-    private final NativeCallbackReceiver mDaemonCallback;
+    private final MDnsManager mMDnsManager;
+    private final MDnsEventCallback mMDnsEventCallback;
+    // WARNING : Accessing this value in any thread is not safe, it must only be changed in the
+    // state machine thread. If change this outside state machine, it will need to introduce
+    // synchronization.
+    private boolean mIsDaemonStarted = false;
 
     /**
      * Clients receiving asynchronous messages
@@ -100,8 +109,24 @@ public class NsdService extends INsdManager.Stub {
         }
 
         private void maybeStartDaemon() {
-            mDaemon.maybeStart();
+            if (mIsDaemonStarted) {
+                if (DBG) Log.d(TAG, "Daemon is already started.");
+                return;
+            }
+            mMDnsManager.registerEventListener(mMDnsEventCallback);
+            mMDnsManager.startDaemon();
+            mIsDaemonStarted = true;
             maybeScheduleStop();
+        }
+
+        private void maybeStopDaemon() {
+            if (!mIsDaemonStarted) {
+                if (DBG) Log.d(TAG, "Daemon has not been started.");
+                return;
+            }
+            mMDnsManager.unregisterEventListener(mMDnsEventCallback);
+            mMDnsManager.stopDaemon();
+            mIsDaemonStarted = false;
         }
 
         private boolean isAnyRequestActive() {
@@ -198,7 +223,7 @@ public class NsdService extends INsdManager.Stub {
                         }
                         break;
                     case NsdManager.DAEMON_CLEANUP:
-                        mDaemon.maybeStop();
+                        maybeStopDaemon();
                         break;
                     // This event should be only sent by the legacy (target SDK < S) clients.
                     // Mark the sending client as legacy.
@@ -211,7 +236,6 @@ public class NsdService extends INsdManager.Stub {
                             maybeStartDaemon();
                         }
                         break;
-                    case NsdManager.NATIVE_DAEMON_EVENT:
                     default:
                         Log.e(TAG, "Unhandled " + msg);
                         return NOT_HANDLED;
@@ -397,9 +421,8 @@ public class NsdService extends INsdManager.Stub {
                                     clientId, NsdManager.FAILURE_INTERNAL_ERROR);
                         }
                         break;
-                    case NsdManager.NATIVE_DAEMON_EVENT:
-                        NativeEvent event = (NativeEvent) msg.obj;
-                        if (!handleNativeEvent(event.code, event.raw, event.cooked)) {
+                    case MDNS_SERVICE_EVENT:
+                        if (!handleMDnsServiceEvent(msg.arg1, msg.arg2, msg.obj)) {
                             return NOT_HANDLED;
                         }
                         break;
@@ -409,13 +432,11 @@ public class NsdService extends INsdManager.Stub {
                 return HANDLED;
             }
 
-            private boolean handleNativeEvent(int code, String raw, String[] cooked) {
+            private boolean handleMDnsServiceEvent(int code, int id, Object obj) {
                 NsdServiceInfo servInfo;
-                int id = Integer.parseInt(cooked[1]);
                 ClientInfo clientInfo = mIdToClientInfoMap.get(id);
                 if (clientInfo == null) {
-                    String name = NativeResponseCode.nameOf(code);
-                    Log.e(TAG, String.format("id %d for %s has no client mapping", id, name));
+                    Log.e(TAG, String.format("id %d for %d has no client mapping", id, code));
                     return false;
                 }
 
@@ -425,27 +446,20 @@ public class NsdService extends INsdManager.Stub {
                     // This can happen because of race conditions. For example,
                     // SERVICE_FOUND may race with STOP_SERVICE_DISCOVERY,
                     // and we may get in this situation.
-                    String name = NativeResponseCode.nameOf(code);
-                    Log.d(TAG, String.format(
-                            "Notification %s for listener id %d that is no longer active",
-                            name, id));
+                    Log.d(TAG, String.format("%d for listener id %d that is no longer active",
+                            code, id));
                     return false;
                 }
                 if (DBG) {
-                    String name = NativeResponseCode.nameOf(code);
-                    Log.d(TAG, String.format("Native daemon message %s: %s", name, raw));
+                    Log.d(TAG, String.format("MDns service event code:%d id=%d", code, id));
                 }
                 switch (code) {
-                    case NativeResponseCode.SERVICE_FOUND:
-                        /* NNN uniqueId serviceName regType domain interfaceIdx netId */
-                        servInfo = new NsdServiceInfo(cooked[2], cooked[3]);
-                        final int foundNetId;
-                        try {
-                            foundNetId = Integer.parseInt(cooked[6]);
-                        } catch (NumberFormatException e) {
-                            Log.wtf(TAG, "Invalid network received from mdnsd: " + cooked[6]);
-                            break;
-                        }
+                    case IMDnsEventListener.SERVICE_FOUND: {
+                        final DiscoveryInfo info = (DiscoveryInfo) obj;
+                        final String name = info.serviceName;
+                        final String type = info.registrationType;
+                        servInfo = new NsdServiceInfo(name, type);
+                        final int foundNetId = info.netId;
                         if (foundNetId == 0L) {
                             // Ignore services that do not have a Network: they are not usable
                             // by apps, as they would need privileged permissions to use
@@ -455,74 +469,65 @@ public class NsdService extends INsdManager.Stub {
                         servInfo.setNetwork(new Network(foundNetId));
                         clientInfo.onServiceFound(clientId, servInfo);
                         break;
-                    case NativeResponseCode.SERVICE_LOST:
-                        /* NNN uniqueId serviceName regType domain interfaceIdx netId */
-                        final int lostNetId;
-                        try {
-                            lostNetId = Integer.parseInt(cooked[6]);
-                        } catch (NumberFormatException e) {
-                            Log.wtf(TAG, "Invalid network received from mdnsd: " + cooked[6]);
-                            break;
-                        }
-                        servInfo = new NsdServiceInfo(cooked[2], cooked[3]);
+                    }
+                    case IMDnsEventListener.SERVICE_LOST: {
+                        final DiscoveryInfo info = (DiscoveryInfo) obj;
+                        final String name = info.serviceName;
+                        final String type = info.registrationType;
+                        final int lostNetId = info.netId;
+                        servInfo = new NsdServiceInfo(name, type);
                         // The network could be null if it was torn down when the service is lost
                         // TODO: avoid returning null in that case, possibly by remembering found
                         // services on the same interface index and their network at the time
                         servInfo.setNetwork(lostNetId == 0 ? null : new Network(lostNetId));
                         clientInfo.onServiceLost(clientId, servInfo);
                         break;
-                    case NativeResponseCode.SERVICE_DISCOVERY_FAILED:
-                        /* NNN uniqueId errorCode */
+                    }
+                    case IMDnsEventListener.SERVICE_DISCOVERY_FAILED:
                         clientInfo.onDiscoverServicesFailed(
                                 clientId, NsdManager.FAILURE_INTERNAL_ERROR);
                         break;
-                    case NativeResponseCode.SERVICE_REGISTERED:
-                        /* NNN regId serviceName regType */
-                        servInfo = new NsdServiceInfo(cooked[2], null);
+                    case IMDnsEventListener.SERVICE_REGISTERED: {
+                        final RegistrationInfo info = (RegistrationInfo) obj;
+                        final String name = info.serviceName;
+                        servInfo = new NsdServiceInfo(name, null /* serviceType */);
                         clientInfo.onRegisterServiceSucceeded(clientId, servInfo);
                         break;
-                    case NativeResponseCode.SERVICE_REGISTRATION_FAILED:
-                        /* NNN regId errorCode */
+                    }
+                    case IMDnsEventListener.SERVICE_REGISTRATION_FAILED:
                         clientInfo.onRegisterServiceFailed(
                                 clientId, NsdManager.FAILURE_INTERNAL_ERROR);
                         break;
-                    case NativeResponseCode.SERVICE_UPDATED:
-                        /* NNN regId */
-                        break;
-                    case NativeResponseCode.SERVICE_UPDATE_FAILED:
-                        /* NNN regId errorCode */
-                        break;
-                    case NativeResponseCode.SERVICE_RESOLVED:
-                        /* NNN resolveId fullName hostName port txtlen txtdata interfaceIdx */
+                    case IMDnsEventListener.SERVICE_RESOLVED: {
+                        final ResolutionInfo info = (ResolutionInfo) obj;
                         int index = 0;
-                        while (index < cooked[2].length() && cooked[2].charAt(index) != '.') {
-                            if (cooked[2].charAt(index) == '\\') {
+                        final String fullName = info.serviceFullName;
+                        while (index < fullName.length() && fullName.charAt(index) != '.') {
+                            if (fullName.charAt(index) == '\\') {
                                 ++index;
                             }
                             ++index;
                         }
-                        if (index >= cooked[2].length()) {
-                            Log.e(TAG, "Invalid service found " + raw);
+                        if (index >= fullName.length()) {
+                            Log.e(TAG, "Invalid service found " + fullName);
                             break;
                         }
 
-                        String name = cooked[2].substring(0, index);
-                        String rest = cooked[2].substring(index);
+                        String name = fullName.substring(0, index);
+                        String rest = fullName.substring(index);
                         String type = rest.replace(".local.", "");
-
-                        name = unescape(name);
 
                         clientInfo.mResolvedService.setServiceName(name);
                         clientInfo.mResolvedService.setServiceType(type);
-                        clientInfo.mResolvedService.setPort(Integer.parseInt(cooked[4]));
-                        clientInfo.mResolvedService.setTxtRecords(cooked[6]);
+                        clientInfo.mResolvedService.setPort(info.port);
+                        clientInfo.mResolvedService.setTxtRecords(info.txtRecord);
                         // Network will be added after SERVICE_GET_ADDR_SUCCESS
 
                         stopResolveService(id);
                         removeRequestMap(clientId, id, clientInfo);
 
-                        int id2 = getUniqueId();
-                        if (getAddrInfo(id2, cooked[3], cooked[7] /* interfaceIdx */)) {
+                        final int id2 = getUniqueId();
+                        if (getAddrInfo(id2, info.hostname, info.interfaceIdx)) {
                             storeRequestMap(clientId, id2, clientInfo, NsdManager.RESOLVE_SERVICE);
                         } else {
                             clientInfo.onResolveServiceFailed(
@@ -530,7 +535,8 @@ public class NsdService extends INsdManager.Stub {
                             clientInfo.mResolvedService = null;
                         }
                         break;
-                    case NativeResponseCode.SERVICE_RESOLUTION_FAILED:
+                    }
+                    case IMDnsEventListener.SERVICE_RESOLUTION_FAILED:
                         /* NNN resolveId errorCode */
                         stopResolveService(id);
                         removeRequestMap(clientId, id, clientInfo);
@@ -538,7 +544,7 @@ public class NsdService extends INsdManager.Stub {
                         clientInfo.onResolveServiceFailed(
                                 clientId, NsdManager.FAILURE_INTERNAL_ERROR);
                         break;
-                    case NativeResponseCode.SERVICE_GET_ADDR_FAILED:
+                    case IMDnsEventListener.SERVICE_GET_ADDR_FAILED:
                         /* NNN resolveId errorCode */
                         stopGetAddrInfo(id);
                         removeRequestMap(clientId, id, clientInfo);
@@ -546,19 +552,15 @@ public class NsdService extends INsdManager.Stub {
                         clientInfo.onResolveServiceFailed(
                                 clientId, NsdManager.FAILURE_INTERNAL_ERROR);
                         break;
-                    case NativeResponseCode.SERVICE_GET_ADDR_SUCCESS:
+                    case IMDnsEventListener.SERVICE_GET_ADDR_SUCCESS: {
                         /* NNN resolveId hostname ttl addr interfaceIdx netId */
-                        Network network = null;
-                        try {
-                            final int netId = Integer.parseInt(cooked[6]);
-                            network = netId == 0L ? null : new Network(netId);
-                        } catch (NumberFormatException e) {
-                            Log.wtf(TAG, "Invalid network in GET_ADDR_SUCCESS: " + cooked[6], e);
-                        }
-
+                        final GetAddressInfo info = (GetAddressInfo) obj;
+                        final String address = info.address;
+                        final int netId = info.netId;
+                        final Network network = netId == NETID_UNSET ? null : new Network(netId);
                         InetAddress serviceHost = null;
                         try {
-                            serviceHost = InetAddress.getByName(cooked[4]);
+                            serviceHost = InetAddress.getByName(address);
                         } catch (UnknownHostException e) {
                             Log.wtf(TAG, "Invalid host in GET_ADDR_SUCCESS", e);
                         }
@@ -579,6 +581,7 @@ public class NsdService extends INsdManager.Stub {
                         removeRequestMap(clientId, id, clientInfo);
                         clientInfo.mResolvedService = null;
                         break;
+                    }
                     default:
                         return false;
                 }
@@ -587,48 +590,64 @@ public class NsdService extends INsdManager.Stub {
        }
     }
 
-    private String unescape(String s) {
-        StringBuilder sb = new StringBuilder(s.length());
-        for (int i = 0; i < s.length(); ++i) {
-            char c = s.charAt(i);
-            if (c == '\\') {
-                if (++i >= s.length()) {
-                    Log.e(TAG, "Unexpected end of escape sequence in: " + s);
-                    break;
-                }
-                c = s.charAt(i);
-                if (c != '.' && c != '\\') {
-                    if (i + 2 >= s.length()) {
-                        Log.e(TAG, "Unexpected end of escape sequence in: " + s);
-                        break;
-                    }
-                    c = (char) ((c-'0') * 100 + (s.charAt(i+1)-'0') * 10 + (s.charAt(i+2)-'0'));
-                    i += 2;
-                }
-            }
-            sb.append(c);
-        }
-        return sb.toString();
-    }
-
     @VisibleForTesting
-    NsdService(Context ctx, Handler handler, DaemonConnectionSupplier fn, long cleanupDelayMs) {
+    NsdService(Context ctx, Handler handler, long cleanupDelayMs) {
         mCleanupDelayMs = cleanupDelayMs;
         mContext = ctx;
         mNsdStateMachine = new NsdStateMachine(TAG, handler);
         mNsdStateMachine.start();
-        mDaemonCallback = new NativeCallbackReceiver();
-        mDaemon = fn.get(mDaemonCallback);
+        mMDnsManager = ctx.getSystemService(MDnsManager.class);
+        mMDnsEventCallback = new MDnsEventCallback(mNsdStateMachine);
     }
 
     public static NsdService create(Context context) throws InterruptedException {
         HandlerThread thread = new HandlerThread(TAG);
         thread.start();
         Handler handler = new Handler(thread.getLooper());
-        NsdService service =
-                new NsdService(context, handler, DaemonConnection::new, CLEANUP_DELAY_MS);
-        service.mDaemonCallback.awaitConnection();
+        NsdService service = new NsdService(context, handler, CLEANUP_DELAY_MS);
         return service;
+    }
+
+    private static class MDnsEventCallback extends IMDnsEventListener.Stub {
+        private final StateMachine mStateMachine;
+
+        MDnsEventCallback(StateMachine sm) {
+            mStateMachine = sm;
+        }
+
+        @Override
+        public void onServiceRegistrationStatus(final RegistrationInfo status) {
+            mStateMachine.sendMessage(
+                    MDNS_SERVICE_EVENT, status.result, status.id, status);
+        }
+
+        @Override
+        public void onServiceDiscoveryStatus(final DiscoveryInfo status) {
+            mStateMachine.sendMessage(
+                    MDNS_SERVICE_EVENT, status.result, status.id, status);
+        }
+
+        @Override
+        public void onServiceResolutionStatus(final ResolutionInfo status) {
+            mStateMachine.sendMessage(
+                    MDNS_SERVICE_EVENT, status.result, status.id, status);
+        }
+
+        @Override
+        public void onGettingServiceAddressStatus(final GetAddressInfo status) {
+            mStateMachine.sendMessage(
+                    MDNS_SERVICE_EVENT, status.result, status.id, status);
+        }
+
+        @Override
+        public int getInterfaceVersion() throws RemoteException {
+            return this.VERSION;
+        }
+
+        @Override
+        public String getInterfaceHash() throws RemoteException {
+            return this.HASH;
+        }
     }
 
     @Override
@@ -711,140 +730,6 @@ public class NsdService extends INsdManager.Stub {
         return mUniqueId;
     }
 
-    /* These should be in sync with system/netd/server/ResponseCode.h */
-    static final class NativeResponseCode {
-        public static final int SERVICE_DISCOVERY_FAILED    =   602;
-        public static final int SERVICE_FOUND               =   603;
-        public static final int SERVICE_LOST                =   604;
-
-        public static final int SERVICE_REGISTRATION_FAILED =   605;
-        public static final int SERVICE_REGISTERED          =   606;
-
-        public static final int SERVICE_RESOLUTION_FAILED   =   607;
-        public static final int SERVICE_RESOLVED            =   608;
-
-        public static final int SERVICE_UPDATED             =   609;
-        public static final int SERVICE_UPDATE_FAILED       =   610;
-
-        public static final int SERVICE_GET_ADDR_FAILED     =   611;
-        public static final int SERVICE_GET_ADDR_SUCCESS    =   612;
-
-        private static final SparseArray<String> CODE_NAMES = new SparseArray<>();
-        static {
-            CODE_NAMES.put(SERVICE_DISCOVERY_FAILED, "SERVICE_DISCOVERY_FAILED");
-            CODE_NAMES.put(SERVICE_FOUND, "SERVICE_FOUND");
-            CODE_NAMES.put(SERVICE_LOST, "SERVICE_LOST");
-            CODE_NAMES.put(SERVICE_REGISTRATION_FAILED, "SERVICE_REGISTRATION_FAILED");
-            CODE_NAMES.put(SERVICE_REGISTERED, "SERVICE_REGISTERED");
-            CODE_NAMES.put(SERVICE_RESOLUTION_FAILED, "SERVICE_RESOLUTION_FAILED");
-            CODE_NAMES.put(SERVICE_RESOLVED, "SERVICE_RESOLVED");
-            CODE_NAMES.put(SERVICE_UPDATED, "SERVICE_UPDATED");
-            CODE_NAMES.put(SERVICE_UPDATE_FAILED, "SERVICE_UPDATE_FAILED");
-            CODE_NAMES.put(SERVICE_GET_ADDR_FAILED, "SERVICE_GET_ADDR_FAILED");
-            CODE_NAMES.put(SERVICE_GET_ADDR_SUCCESS, "SERVICE_GET_ADDR_SUCCESS");
-        }
-
-        static String nameOf(int code) {
-            String name = CODE_NAMES.get(code);
-            if (name == null) {
-                return Integer.toString(code);
-            }
-            return name;
-        }
-    }
-
-    private class NativeEvent {
-        final int code;
-        final String raw;
-        final String[] cooked;
-
-        NativeEvent(int code, String raw, String[] cooked) {
-            this.code = code;
-            this.raw = raw;
-            this.cooked = cooked;
-        }
-    }
-
-    class NativeCallbackReceiver implements INativeDaemonConnectorCallbacks {
-        private final CountDownLatch connected = new CountDownLatch(1);
-
-        public void awaitConnection() throws InterruptedException {
-            connected.await();
-        }
-
-        @Override
-        public void onDaemonConnected() {
-            connected.countDown();
-        }
-
-        @Override
-        public boolean onCheckHoldWakeLock(int code) {
-            return false;
-        }
-
-        @Override
-        public boolean onEvent(int code, String raw, String[] cooked) {
-            // TODO: NDC translates a message to a callback, we could enhance NDC to
-            // directly interact with a state machine through messages
-            NativeEvent event = new NativeEvent(code, raw, cooked);
-            mNsdStateMachine.sendMessage(NsdManager.NATIVE_DAEMON_EVENT, event);
-            return true;
-        }
-    }
-
-    interface DaemonConnectionSupplier {
-        DaemonConnection get(NativeCallbackReceiver callback);
-    }
-
-    @VisibleForTesting
-    public static class DaemonConnection {
-        final NativeDaemonConnector mNativeConnector;
-        boolean mIsStarted = false;
-
-        DaemonConnection(NativeCallbackReceiver callback) {
-            mNativeConnector = new NativeDaemonConnector(callback, "mdns", 10, MDNS_TAG, 25, null);
-            new Thread(mNativeConnector, MDNS_TAG).start();
-        }
-
-        /**
-         * Executes the specified cmd on the daemon.
-         */
-        public boolean execute(Object... args) {
-            if (DBG) {
-                Log.d(TAG, "mdnssd " + Arrays.toString(args));
-            }
-            try {
-                mNativeConnector.execute("mdnssd", args);
-            } catch (NativeDaemonConnectorException e) {
-                Log.e(TAG, "Failed to execute mdnssd " + Arrays.toString(args), e);
-                return false;
-            }
-            return true;
-        }
-
-        /**
-         * Starts the daemon if it is not already started.
-         */
-        public void maybeStart() {
-            if (mIsStarted) {
-                return;
-            }
-            execute("start-service");
-            mIsStarted = true;
-        }
-
-        /**
-         * Stops the daemon if it is started.
-         */
-        public void maybeStop() {
-            if (!mIsStarted) {
-                return;
-            }
-            execute("stop-service");
-            mIsStarted = false;
-        }
-    }
-
     private boolean registerService(int regId, NsdServiceInfo service) {
         if (DBG) {
             Log.d(TAG, "registerService: " + regId + " " + service);
@@ -853,34 +738,26 @@ public class NsdService extends INsdManager.Stub {
         String type = service.getServiceType();
         int port = service.getPort();
         byte[] textRecord = service.getTxtRecord();
-        String record = Base64.encodeToString(textRecord, Base64.DEFAULT).replace("\n", "");
-        return mDaemon.execute("register", regId, name, type, port, record);
+        return mMDnsManager.registerService(regId, name, type, port, textRecord, IFACE_IDX_ANY);
     }
 
     private boolean unregisterService(int regId) {
-        return mDaemon.execute("stop-register", regId);
-    }
-
-    private boolean updateService(int regId, DnsSdTxtRecord t) {
-        if (t == null) {
-            return false;
-        }
-        return mDaemon.execute("update", regId, t.size(), t.getRawData());
+        return mMDnsManager.stopOperation(regId);
     }
 
     private boolean discoverServices(int discoveryId, NsdServiceInfo serviceInfo) {
         final Network network = serviceInfo.getNetwork();
+        final String type = serviceInfo.getServiceType();
         final int discoverInterface = getNetworkInterfaceIndex(network);
         if (network != null && discoverInterface == IFACE_IDX_ANY) {
             Log.e(TAG, "Interface to discover service on not found");
             return false;
         }
-        return mDaemon.execute("discover", discoveryId, serviceInfo.getServiceType(),
-                discoverInterface);
+        return mMDnsManager.discover(discoveryId, type, discoverInterface);
     }
 
     private boolean stopServiceDiscovery(int discoveryId) {
-        return mDaemon.execute("stop-discover", discoveryId);
+        return mMDnsManager.stopOperation(discoveryId);
     }
 
     private boolean resolveService(int resolveId, NsdServiceInfo service) {
@@ -892,7 +769,7 @@ public class NsdService extends INsdManager.Stub {
             Log.e(TAG, "Interface to resolve service on not found");
             return false;
         }
-        return mDaemon.execute("resolve", resolveId, name, type, "local.", resolveInterface);
+        return mMDnsManager.resolve(resolveId, name, type, "local.", resolveInterface);
     }
 
     /**
@@ -933,16 +810,15 @@ public class NsdService extends INsdManager.Stub {
     }
 
     private boolean stopResolveService(int resolveId) {
-        return mDaemon.execute("stop-resolve", resolveId);
+        return mMDnsManager.stopOperation(resolveId);
     }
 
-    private boolean getAddrInfo(int resolveId, String hostname, String interfaceIdx) {
-        // interfaceIdx is always obtained (as string) from the service resolved callback
-        return mDaemon.execute("getaddrinfo", resolveId, hostname, interfaceIdx);
+    private boolean getAddrInfo(int resolveId, String hostname, int interfaceIdx) {
+        return mMDnsManager.getServiceAddress(resolveId, hostname, interfaceIdx);
     }
 
     private boolean stopGetAddrInfo(int resolveId) {
-        return mDaemon.execute("stop-getaddrinfo", resolveId);
+        return mMDnsManager.stopOperation(resolveId);
     }
 
     @Override

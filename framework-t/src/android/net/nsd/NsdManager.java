@@ -235,7 +235,7 @@ public final class NsdManager {
     public static final int DISABLE                                 = 21;
 
     /** @hide */
-    public static final int NATIVE_DAEMON_EVENT                     = 22;
+    public static final int MDNS_SERVICE_EVENT                      = 22;
 
     /** @hide */
     public static final int REGISTER_CLIENT                         = 23;
@@ -268,7 +268,7 @@ public final class NsdManager {
         EVENT_NAMES.put(DAEMON_STARTUP, "DAEMON_STARTUP");
         EVENT_NAMES.put(ENABLE, "ENABLE");
         EVENT_NAMES.put(DISABLE, "DISABLE");
-        EVENT_NAMES.put(NATIVE_DAEMON_EVENT, "NATIVE_DAEMON_EVENT");
+        EVENT_NAMES.put(MDNS_SERVICE_EVENT, "MDNS_SERVICE_EVENT");
     }
 
     /** @hide */
