@@ -302,23 +302,33 @@ public class NearbyManager {
         @Override
         public void onDiscovered(NearbyDeviceParcelable nearbyDeviceParcelable)
                 throws RemoteException {
-            mExecutor.execute(() -> mScanCallback.onDiscovered(
-                    toClientNearbyDevice(nearbyDeviceParcelable, mScanType)));
+            mExecutor.execute(() -> {
+                if (mScanCallback != null) {
+                    mScanCallback.onDiscovered(
+                            toClientNearbyDevice(nearbyDeviceParcelable, mScanType));
+                }
+            });
         }
 
         @Override
         public void onUpdated(NearbyDeviceParcelable nearbyDeviceParcelable)
                 throws RemoteException {
-            mExecutor.execute(
-                    () -> mScanCallback.onUpdated(
-                            toClientNearbyDevice(nearbyDeviceParcelable, mScanType)));
+            mExecutor.execute(() -> {
+                if (mScanCallback != null) {
+                    mScanCallback.onUpdated(
+                            toClientNearbyDevice(nearbyDeviceParcelable, mScanType));
+                }
+            });
         }
 
         @Override
         public void onLost(NearbyDeviceParcelable nearbyDeviceParcelable) throws RemoteException {
-            mExecutor.execute(
-                    () -> mScanCallback.onLost(
-                            toClientNearbyDevice(nearbyDeviceParcelable, mScanType)));
+            mExecutor.execute(() -> {
+                if (mScanCallback != null) {
+                    mScanCallback.onLost(
+                            toClientNearbyDevice(nearbyDeviceParcelable, mScanType));
+                }
+            });
         }
     }
 
