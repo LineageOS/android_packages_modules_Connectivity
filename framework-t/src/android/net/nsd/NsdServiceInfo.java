@@ -24,7 +24,6 @@ import android.os.Parcel;
 import android.os.Parcelable;
 import android.text.TextUtils;
 import android.util.ArrayMap;
-import android.util.Base64;
 import android.util.Log;
 
 import java.io.UnsupportedEncodingException;
@@ -106,13 +105,11 @@ public final class NsdServiceInfo implements Parcelable {
     /**
      * Unpack txt information from a base-64 encoded byte array.
      *
-     * @param rawRecords The raw base64 encoded records string read from netd.
+     * @param txtRecordsRawBytes The raw base64 encoded byte array.
      *
      * @hide
      */
-    public void setTxtRecords(@NonNull String rawRecords) {
-        byte[] txtRecordsRawBytes = Base64.decode(rawRecords, Base64.DEFAULT);
-
+    public void setTxtRecords(@NonNull byte[] txtRecordsRawBytes) {
         // There can be multiple TXT records after each other. Each record has to following format:
         //
         // byte                  type                  required   meaning
