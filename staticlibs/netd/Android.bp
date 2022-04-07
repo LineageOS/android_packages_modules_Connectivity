@@ -157,6 +157,19 @@ aidl_interface {
     },
 }
 
+java_library {
+    name: "mdns_aidl_interface-lateststable-java",
+    sdk_version: "module_current",
+    min_sdk_version: "30",
+    static_libs: [
+        "mdns_aidl_interface-V1-java",
+    ],
+    apex_available: [
+        "//apex_available:platform",
+        "com.android.tethering",
+    ],
+}
+
 aidl_interface {
     name: "mdns_aidl_interface",
     local_include_dir: "binder",
@@ -173,4 +186,5 @@ aidl_interface {
             min_sdk_version: "30",
         },
     },
+    versions: ["1"],
 }
