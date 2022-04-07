@@ -59,16 +59,6 @@ filegroup {
     ],
 }
 
-// Connectivity-T common libraries.
-
-// TODO: remove this empty filegroup.
-filegroup {
-    name: "services.connectivity-tiramisu-sources",
-    srcs: [],
-    path: "src",
-    visibility: ["//frameworks/base/services/core"],
-}
-
 cc_library_shared {
     name: "libcom_android_net_module_util_jni",
     min_sdk_version: "30",
