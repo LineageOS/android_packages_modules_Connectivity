@@ -135,6 +135,7 @@ java_defaults {
         "service-connectivity-pre-jarjar",
         "service-connectivity-tiramisu-pre-jarjar",
         "services.core-vpn",
+        "cts-net-utils"
     ],
     libs: [
         "android.net.ipsec.ike.stubs.module_lib",
