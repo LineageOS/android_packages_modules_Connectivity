@@ -16,6 +16,9 @@
 
 package com.android.internal.net;
 
+import static android.net.cts.util.IkeSessionTestUtils.CHILD_PARAMS;
+import static android.net.cts.util.IkeSessionTestUtils.IKE_PARAMS;
+
 import static com.android.modules.utils.build.SdkLevel.isAtLeastT;
 import static com.android.testutils.ParcelUtils.assertParcelSane;
 
@@ -26,6 +29,7 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 import android.net.IpSecAlgorithm;
+import android.net.ipsec.ike.IkeTunnelConnectionParams;
 import android.os.Build;
 
 import androidx.test.filters.SmallTest;
@@ -85,7 +89,8 @@ public class VpnProfileTest {
 
     private VpnProfile getSampleIkev2Profile(String key) {
         final VpnProfile p = new VpnProfile(key, true /* isRestrictedToTestNetworks */,
-                false /* excludesLocalRoutes */, true /* requiresPlatformValidation */);
+                false /* excludesLocalRoutes */, true /* requiresPlatformValidation */,
+                null /* ikeTunConnParams */);
 
         p.name = "foo";
         p.type = VpnProfile.TYPE_IKEV2_IPSEC_USER_PASS;
@@ -120,6 +125,35 @@ public class VpnProfileTest {
         return p;
     }
 
+    private VpnProfile getSampleIkev2ProfileWithIkeTunConnParams(String key) {
+        final VpnProfile p = new VpnProfile(key, true /* isRestrictedToTestNetworks */,
+                false /* excludesLocalRoutes */, true /* requiresPlatformValidation */,
+                new IkeTunnelConnectionParams(IKE_PARAMS, CHILD_PARAMS));
+
+        p.name = "foo";
+        p.server = "bar";
+        p.dnsServers = "8.8.8.8";
+        p.searchDomains = "";
+        p.routes = "0.0.0.0/0";
+        p.mppe = false;
+        p.proxy = null;
+        p.setAllowedAlgorithms(
+                Arrays.asList(
+                        IpSecAlgorithm.AUTH_CRYPT_AES_GCM,
+                        IpSecAlgorithm.AUTH_CRYPT_CHACHA20_POLY1305,
+                        IpSecAlgorithm.AUTH_HMAC_SHA512,
+                        IpSecAlgorithm.CRYPT_AES_CBC));
+        p.isBypassable = true;
+        p.isMetered = true;
+        p.maxMtu = 1350;
+        p.areAuthParamsInline = true;
+
+        // Not saved, but also not compared.
+        p.saveLogin = true;
+
+        return p;
+    }
+
     @Test
     public void testEquals() {
         assertEquals(
@@ -134,10 +168,18 @@ public class VpnProfileTest {
     public void testParcelUnparcel() {
         if (isAtLeastT()) {
             // excludeLocalRoutes, requiresPlatformValidation were added in T.
-            assertParcelSane(getSampleIkev2Profile(DUMMY_PROFILE_KEY), 25);
+            assertParcelSane(getSampleIkev2Profile(DUMMY_PROFILE_KEY), 26);
+            assertParcelSane(getSampleIkev2ProfileWithIkeTunConnParams(DUMMY_PROFILE_KEY), 26);
         } else {
             assertParcelSane(getSampleIkev2Profile(DUMMY_PROFILE_KEY), 23);
         }
+    }
+
+    @Test
+    public void testEncodeDecodeWithIkeTunConnParams() {
+        final VpnProfile profile = getSampleIkev2ProfileWithIkeTunConnParams(DUMMY_PROFILE_KEY);
+        final VpnProfile decoded = VpnProfile.decode(DUMMY_PROFILE_KEY, profile.encode());
+        assertEquals(profile, decoded);
     }
 
     @Test
