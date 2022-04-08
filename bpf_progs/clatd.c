@@ -37,6 +37,12 @@
 // From kernel:include/net/ip.h
 #define IP_DF 0x4000  // Flag: "Don't Fragment"
 
+// Used for iptables drops ingress clat packet. Beware of clat mark change may break the device
+// which is using the old clat mark in netd platform code. The reason is that the clat mark is a
+// mainline constant since T+ but netd iptable rules (ex: bandwidth control, firewall, and so on)
+// are set in stone.
+#define CLAT_MARK 0xdeadc1a7
+
 DEFINE_BPF_MAP_GRW(clat_ingress6_map, HASH, ClatIngress6Key, ClatIngress6Value, 16, AID_SYSTEM)
 
 static inline __always_inline int nat64(struct __sk_buff* skb, bool is_ethernet) {
@@ -64,17 +70,6 @@ static inline __always_inline int nat64(struct __sk_buff* skb, bool is_ethernet)
     // Maximum IPv6 payload length that can be translated to IPv4
     if (ntohs(ip6->payload_len) > 0xFFFF - sizeof(struct iphdr)) return TC_ACT_PIPE;
 
-    switch (ip6->nexthdr) {
-        case IPPROTO_TCP:  // For TCP & UDP the checksum neutrality of the chosen IPv6
-        case IPPROTO_UDP:  // address means there is no need to update their checksums.
-        case IPPROTO_GRE:  // We do not need to bother looking at GRE/ESP headers,
-        case IPPROTO_ESP:  // since there is never a checksum to update.
-            break;
-
-        default:  // do not know how to handle anything else
-            return TC_ACT_PIPE;
-    }
-
     ClatIngress6Key k = {
             .iif = skb->ifindex,
             .pfx96.in6_u.u6_addr32 =
@@ -89,6 +84,21 @@ static inline __always_inline int nat64(struct __sk_buff* skb, bool is_ethernet)
     ClatIngress6Value* v = bpf_clat_ingress6_map_lookup_elem(&k);
 
     if (!v) return TC_ACT_PIPE;
+
+    switch (ip6->nexthdr) {
+        case IPPROTO_TCP:  // For TCP & UDP the checksum neutrality of the chosen IPv6
+        case IPPROTO_UDP:  // address means there is no need to update their checksums.
+        case IPPROTO_GRE:  // We do not need to bother looking at GRE/ESP headers,
+        case IPPROTO_ESP:  // since there is never a checksum to update.
+            break;
+
+        default:  // do not know how to handle anything else
+            // Mark ingress non-offloaded clat packet for dropping in ip6tables bw_raw_PREROUTING.
+            // Non-offloaded clat packet is going to be handled by clat daemon and ip6tables. The
+            // duplicate one in ip6tables is not necessary.
+            skb->mark = CLAT_MARK;
+            return TC_ACT_PIPE;
+    }
 
     struct ethhdr eth2;  // used iff is_ethernet
     if (is_ethernet) {
@@ -132,7 +142,13 @@ static inline __always_inline int nat64(struct __sk_buff* skb, bool is_ethernet)
 
     // Packet mutations begin - point of no return, but if this first modification fails
     // the packet is probably still pristine, so let clatd handle it.
-    if (bpf_skb_change_proto(skb, htons(ETH_P_IP), 0)) return TC_ACT_PIPE;
+    if (bpf_skb_change_proto(skb, htons(ETH_P_IP), 0)) {
+        // Mark ingress non-offloaded clat packet for dropping in ip6tables bw_raw_PREROUTING.
+        // Non-offloaded clat packet is going to be handled by clat daemon and ip6tables. The
+        // duplicate one in ip6tables is not necessary.
+        skb->mark = CLAT_MARK;
+        return TC_ACT_PIPE;
+    }
 
     // This takes care of updating the skb->csum field for a CHECKSUM_COMPLETE packet.
     //
