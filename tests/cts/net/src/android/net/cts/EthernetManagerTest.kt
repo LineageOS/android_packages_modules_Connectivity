@@ -116,35 +116,6 @@ class EthernetManagerTest {
         }
     }
 
-    @Test
-    public fun testCallbacks() {
-        val executor = HandlerExecutor(Handler(Looper.getMainLooper()))
-
-        // If an interface exists when the callback is registered, it is reported on registration.
-        val iface = createInterface()
-        val listener = EthernetStateListener()
-        addInterfaceStateListener(executor, listener)
-        listener.expectCallback(iface, STATE_LINK_UP, ROLE_CLIENT)
-
-        // If an interface appears, existing callbacks see it.
-        // TODO: fix the up/up/down/up callbacks and only send down/up.
-        val iface2 = createInterface()
-        listener.expectCallback(iface2, STATE_LINK_UP, ROLE_CLIENT)
-        listener.expectCallback(iface2, STATE_LINK_UP, ROLE_CLIENT)
-        listener.expectCallback(iface2, STATE_LINK_DOWN, ROLE_CLIENT)
-        listener.expectCallback(iface2, STATE_LINK_UP, ROLE_CLIENT)
-
-        // Removing interfaces first sends link down, then STATE_ABSENT/ROLE_NONE.
-        removeInterface(iface)
-        listener.expectCallback(iface, STATE_LINK_DOWN, ROLE_CLIENT)
-        listener.expectCallback(iface, STATE_ABSENT, ROLE_NONE)
-
-        removeInterface(iface2)
-        listener.expectCallback(iface2, STATE_LINK_DOWN, ROLE_CLIENT)
-        listener.expectCallback(iface2, STATE_ABSENT, ROLE_NONE)
-        listener.assertNoCallback()
-    }
-
     @Before
     fun setUp() {
         setIncludeTestInterfaces(true)
@@ -182,6 +153,35 @@ class EthernetManagerTest {
     private fun removeInterface(iface: TestNetworkInterface) {
         iface.fileDescriptor.close()
         createdIfaces.remove(iface)
+    }
+
+    @Test
+    public fun testCallbacks() {
+        val executor = HandlerExecutor(Handler(Looper.getMainLooper()))
+
+        // If an interface exists when the callback is registered, it is reported on registration.
+        val iface = createInterface()
+        val listener = EthernetStateListener()
+        addInterfaceStateListener(executor, listener)
+        listener.expectCallback(iface, STATE_LINK_UP, ROLE_CLIENT)
+
+        // If an interface appears, existing callbacks see it.
+        // TODO: fix the up/up/down/up callbacks and only send down/up.
+        val iface2 = createInterface()
+        listener.expectCallback(iface2, STATE_LINK_UP, ROLE_CLIENT)
+        listener.expectCallback(iface2, STATE_LINK_UP, ROLE_CLIENT)
+        listener.expectCallback(iface2, STATE_LINK_DOWN, ROLE_CLIENT)
+        listener.expectCallback(iface2, STATE_LINK_UP, ROLE_CLIENT)
+
+        // Removing interfaces first sends link down, then STATE_ABSENT/ROLE_NONE.
+        removeInterface(iface)
+        listener.expectCallback(iface, STATE_LINK_DOWN, ROLE_CLIENT)
+        listener.expectCallback(iface, STATE_ABSENT, ROLE_NONE)
+
+        removeInterface(iface2)
+        listener.expectCallback(iface2, STATE_LINK_DOWN, ROLE_CLIENT)
+        listener.expectCallback(iface2, STATE_ABSENT, ROLE_NONE)
+        listener.assertNoCallback()
     }
 
     @Test
