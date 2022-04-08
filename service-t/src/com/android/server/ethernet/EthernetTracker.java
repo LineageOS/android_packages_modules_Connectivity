@@ -29,8 +29,8 @@ import android.content.res.Resources;
 import android.net.ConnectivityResources;
 import android.net.EthernetManager;
 import android.net.IEthernetServiceListener;
-import android.net.INetworkInterfaceOutcomeReceiver;
 import android.net.INetd;
+import android.net.INetworkInterfaceOutcomeReceiver;
 import android.net.ITetheredInterfaceCallback;
 import android.net.InterfaceConfigurationParcel;
 import android.net.IpConfiguration;
@@ -57,6 +57,7 @@ import com.android.net.module.util.PermissionUtils;
 import java.io.FileDescriptor;
 import java.net.InetAddress;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
@@ -389,8 +390,31 @@ public class EthernetTracker {
         mHandler.post(() -> {
             mIncludeTestInterfaces = include;
             updateIfaceMatchRegexp();
+            if (!include) {
+                removeTestData();
+            }
             mHandler.post(() -> trackAvailableInterfaces());
         });
+    }
+
+    private void removeTestData() {
+        removeTestIpData();
+        removeTestCapabilityData();
+    }
+
+    private void removeTestIpData() {
+        final Iterator<String> iterator = mIpConfigurations.keySet().iterator();
+        while (iterator.hasNext()) {
+            final String iface = iterator.next();
+            if (iface.matches(TEST_IFACE_REGEXP)) {
+                mConfigStore.write(iface, null);
+                iterator.remove();
+            }
+        }
+    }
+
+    private void removeTestCapabilityData() {
+        mNetworkCapabilities.keySet().removeIf(iface -> iface.matches(TEST_IFACE_REGEXP));
     }
 
     public void requestTetheredInterface(ITetheredInterfaceCallback callback) {
