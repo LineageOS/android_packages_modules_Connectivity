@@ -43,10 +43,23 @@ java_library {
     ],
 }
 
-// Connectivity coverage tests combines Tethering and Connectivity tests, each with their
-// respective jarjar rules applied.
-// Some tests may be duplicated (in particular static lib tests), as they need to be run under both
-// jarjared packages to cover both usages.
+// Combine Connectivity, NetworkStack and Tethering jarjar rules for coverage target.
+// The jarjar files are simply concatenated in the order specified in srcs.
+// jarjar stops at the first matching rule, so order of concatenation affects the output.
+genrule {
+    name: "ConnectivityCoverageJarJarRules",
+    srcs: [
+        "tethering-jni-jarjar-rules.txt",
+        ":connectivity-jarjar-rules",
+        ":TetheringTestsJarJarRules",
+        ":NetworkStackJarJarRules",
+    ],
+    out: ["jarjar-rules-connectivity-coverage.txt"],
+    // Concat files with a line break in the middle
+    cmd: "for src in $(in); do cat $${src}; echo; done > $(out)",
+    visibility: ["//visibility:private"],
+}
+
 android_library {
     name: "ConnectivityCoverageTestsLib",
     min_sdk_version: "30",
@@ -54,8 +67,11 @@ android_library {
         "FrameworksNetTestsLib",
         "NetdStaticLibTestsLib",
         "NetworkStaticLibTestsLib",
+        "NetworkStackTestsLib",
+        "TetheringTestsLatestSdkLib",
+        "TetheringIntegrationTestsLatestSdkLib",
     ],
-    jarjar_rules: ":connectivity-jarjar-rules",
+    jarjar_rules: ":ConnectivityCoverageJarJarRules",
     manifest: "AndroidManifest_coverage.xml",
     visibility: ["//visibility:private"],
 }
@@ -80,7 +96,6 @@ android_test {
         "mockito-target-extended-minus-junit4",
         "modules-utils-native-coverage-listener",
         "ConnectivityCoverageTestsLib",
-        "TetheringCoverageTestsLib",
     ],
     jni_libs: [
         // For mockito extended

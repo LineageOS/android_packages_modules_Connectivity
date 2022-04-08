@@ -20,9 +20,9 @@ import static com.android.testutils.DevSdkIgnoreRuleKt.SC_V2;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNotSame;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -41,8 +41,8 @@ import android.app.test.MockAnswerUtil.AnswerWithArguments;
 import android.content.Context;
 import android.content.res.Resources;
 import android.net.ConnectivityManager;
-import android.net.EthernetNetworkSpecifier;
 import android.net.EthernetNetworkManagementException;
+import android.net.EthernetNetworkSpecifier;
 import android.net.INetworkInterfaceOutcomeReceiver;
 import android.net.IpConfiguration;
 import android.net.LinkAddress;
@@ -59,14 +59,11 @@ import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
 import android.os.test.TestLooper;
-import android.util.Pair;
 
 import androidx.test.filters.SmallTest;
 import androidx.test.runner.AndroidJUnit4;
 
-import com.android.connectivity.resources.R;
 import com.android.net.module.util.InterfaceParams;
-
 import com.android.testutils.DevSdkIgnoreRule;
 
 import org.junit.After;
@@ -79,6 +76,7 @@ import org.mockito.MockitoAnnotations;
 
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
 @RunWith(AndroidJUnit4.class)
@@ -362,7 +360,7 @@ public class EthernetNetworkFactoryTest {
 
         assertFalse(ret);
         verifyNoStopOrStart();
-        listener.expectOnErrorWithMessage("can't be updated as it is not available");
+        listener.expectOnError();
     }
 
     @Test
@@ -376,7 +374,7 @@ public class EthernetNetworkFactoryTest {
 
         assertFalse(ret);
         verifyNoStopOrStart();
-        listener.expectOnErrorWithMessage("No changes");
+        listener.expectOnError();
     }
 
     @Test
@@ -626,8 +624,6 @@ public class EthernetNetworkFactoryTest {
     private static final class TestNetworkManagementListener
             implements INetworkInterfaceOutcomeReceiver {
         private final CompletableFuture<String> mResult = new CompletableFuture<>();
-        private final CompletableFuture<EthernetNetworkManagementException> mError =
-                new CompletableFuture<>();
 
         @Override
         public void onResult(@NonNull String iface) {
@@ -636,19 +632,21 @@ public class EthernetNetworkFactoryTest {
 
         @Override
         public void onError(@NonNull EthernetNetworkManagementException exception) {
-            mError.complete(exception);
+            mResult.completeExceptionally(exception);
         }
 
         String expectOnResult() throws Exception {
             return mResult.get(TIMEOUT_MS, TimeUnit.MILLISECONDS);
         }
 
-        EthernetNetworkManagementException expectOnError() throws Exception {
-            return mError.get(TIMEOUT_MS, TimeUnit.MILLISECONDS);
-        }
-
-        void expectOnErrorWithMessage(String msg) throws Exception {
-            assertTrue(expectOnError().getMessage().contains(msg));
+        void expectOnError() throws Exception {
+            assertThrows(EthernetNetworkManagementException.class, () -> {
+                try {
+                    mResult.get();
+                } catch (ExecutionException e) {
+                    throw e.getCause();
+                }
+            });
         }
 
         @Override
@@ -723,7 +721,7 @@ public class EthernetNetworkFactoryTest {
         mNetFactory.updateInterface(iface, ipConfiguration, capabilities, failedListener);
         interruptingRunnable.run();
 
-        failedListener.expectOnErrorWithMessage("aborted");
+        failedListener.expectOnError();
     }
 
     @Test
@@ -754,7 +752,7 @@ public class EthernetNetworkFactoryTest {
         mNetFactory.updateInterface(TEST_IFACE, ipConfiguration, capabilities, listener);
 
         verifyNoStopOrStart();
-        listener.expectOnErrorWithMessage("can't be updated as it is not available");
+        listener.expectOnError();
     }
 
     @Test
