@@ -121,18 +121,14 @@ class EthernetManagerTest {
         val executor = HandlerExecutor(Handler(Looper.getMainLooper()))
 
         // If an interface exists when the callback is registered, it is reported on registration.
-        val iface = runAsShell(MANAGE_TEST_NETWORKS) {
-            createInterface()
-        }
+        val iface = createInterface()
         val listener = EthernetStateListener()
         addInterfaceStateListener(executor, listener)
         listener.expectCallback(iface, STATE_LINK_UP, ROLE_CLIENT)
 
         // If an interface appears, existing callbacks see it.
         // TODO: fix the up/up/down/up callbacks and only send down/up.
-        val iface2 = runAsShell(MANAGE_TEST_NETWORKS) {
-            createInterface()
-        }
+        val iface2 = createInterface()
         listener.expectCallback(iface2, STATE_LINK_UP, ROLE_CLIENT)
         listener.expectCallback(iface2, STATE_LINK_UP, ROLE_CLIENT)
         listener.expectCallback(iface2, STATE_LINK_DOWN, ROLE_CLIENT)
@@ -151,21 +147,17 @@ class EthernetManagerTest {
 
     @Before
     fun setUp() {
-        runAsShell(MANAGE_TEST_NETWORKS, NETWORK_SETTINGS) {
-            em.setIncludeTestInterfaces(true)
-        }
+        setIncludeTestInterfaces(true)
     }
 
     @After
     fun tearDown() {
-        runAsShell(MANAGE_TEST_NETWORKS, NETWORK_SETTINGS) {
-            em.setIncludeTestInterfaces(false)
-            for (iface in createdIfaces) {
-                if (iface.fileDescriptor.fileDescriptor.valid()) iface.fileDescriptor.close()
-            }
-            for (listener in addedListeners) {
-                em.removeInterfaceStateListener(listener)
-            }
+        setIncludeTestInterfaces(false)
+        for (iface in createdIfaces) {
+            if (iface.fileDescriptor.fileDescriptor.valid()) iface.fileDescriptor.close()
+        }
+        for (listener in addedListeners) {
+            em.removeInterfaceStateListener(listener)
         }
     }
 
@@ -175,8 +167,16 @@ class EthernetManagerTest {
     }
 
     private fun createInterface(): TestNetworkInterface {
-        val tnm = context.getSystemService(TestNetworkManager::class.java)
-        return tnm.createTapInterface(false /* bringUp */).also { createdIfaces.add(it) }
+        return runAsShell(MANAGE_TEST_NETWORKS) {
+            val tnm = context.getSystemService(TestNetworkManager::class.java)
+            tnm.createTapInterface(false /* bringUp */).also { createdIfaces.add(it) }
+        }
+    }
+
+    private fun setIncludeTestInterfaces(value: Boolean) {
+        runAsShell(NETWORK_SETTINGS) {
+            em.setIncludeTestInterfaces(value)
+        }
     }
 
     private fun removeInterface(iface: TestNetworkInterface) {
@@ -184,8 +184,9 @@ class EthernetManagerTest {
         createdIfaces.remove(iface)
     }
 
-    private fun doTestGetInterfaceList() {
-        em.setIncludeTestInterfaces(true)
+    @Test
+    public fun testGetInterfaceList() {
+        setIncludeTestInterfaces(true)
 
         // Create two test interfaces and check the return list contains the interface names.
         val iface1 = createInterface()
@@ -203,12 +204,5 @@ class EthernetManagerTest {
         assertTrue(ifaces.contains(iface2.getInterfaceName()))
 
         removeInterface(iface2)
-    }
-
-    @Test
-    public fun testGetInterfaceList() {
-        runAsShell(MANAGE_TEST_NETWORKS, NETWORK_SETTINGS) {
-            doTestGetInterfaceList()
-        }
     }
 }
