@@ -17,6 +17,7 @@ package {
 }
 
 // Run the tests: atest -v CtsNearbyMultiDevicesTestSuite
+// Check go/run-nearby-mainline-e2e for more details.
 python_test_host {
     name: "CtsNearbyMultiDevicesTestSuite",
     main: "suite_main.py",
