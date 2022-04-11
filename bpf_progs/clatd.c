@@ -46,17 +46,23 @@
 DEFINE_BPF_MAP_GRW(clat_ingress6_map, HASH, ClatIngress6Key, ClatIngress6Value, 16, AID_SYSTEM)
 
 static inline __always_inline int nat64(struct __sk_buff* skb, bool is_ethernet) {
-    const int l2_header_size = is_ethernet ? sizeof(struct ethhdr) : 0;
-    void* data = (void*)(long)skb->data;
-    const void* data_end = (void*)(long)skb->data_end;
-    const struct ethhdr* const eth = is_ethernet ? data : NULL;  // used iff is_ethernet
-    const struct ipv6hdr* const ip6 = is_ethernet ? (void*)(eth + 1) : data;
-
     // Require ethernet dst mac address to be our unicast address.
     if (is_ethernet && (skb->pkt_type != PACKET_HOST)) return TC_ACT_PIPE;
 
     // Must be meta-ethernet IPv6 frame
     if (skb->protocol != htons(ETH_P_IPV6)) return TC_ACT_PIPE;
+
+    const int l2_header_size = is_ethernet ? sizeof(struct ethhdr) : 0;
+
+    // Not clear if this is actually necessary considering we use DPA (Direct Packet Access),
+    // but we need to make sure we can read the IPv6 header reliably so that we can set
+    // skb->mark = 0xDeadC1a7 for packets we fail to offload.
+    try_make_readable(skb, l2_header_size + sizeof(struct ipv6hdr));
+
+    void* data = (void*)(long)skb->data;
+    const void* data_end = (void*)(long)skb->data_end;
+    const struct ethhdr* const eth = is_ethernet ? data : NULL;  // used iff is_ethernet
+    const struct ipv6hdr* const ip6 = is_ethernet ? (void*)(eth + 1) : data;
 
     // Must have (ethernet and) ipv6 header
     if (data + l2_header_size + sizeof(*ip6) > data_end) return TC_ACT_PIPE;
@@ -214,12 +220,15 @@ DEFINE_BPF_PROG("schedcls/egress4/clat_ether", AID_ROOT, AID_SYSTEM, sched_cls_e
 
 DEFINE_BPF_PROG("schedcls/egress4/clat_rawip", AID_ROOT, AID_SYSTEM, sched_cls_egress4_clat_rawip)
 (struct __sk_buff* skb) {
+    // Must be meta-ethernet IPv4 frame
+    if (skb->protocol != htons(ETH_P_IP)) return TC_ACT_PIPE;
+
+    // Possibly not needed, but for consistency with nat64 up above
+    try_make_readable(skb, sizeof(struct iphdr));
+
     void* data = (void*)(long)skb->data;
     const void* data_end = (void*)(long)skb->data_end;
     const struct iphdr* const ip4 = data;
-
-    // Must be meta-ethernet IPv4 frame
-    if (skb->protocol != htons(ETH_P_IP)) return TC_ACT_PIPE;
 
     // Must have ipv4 header
     if (data + sizeof(*ip4) > data_end) return TC_ACT_PIPE;
