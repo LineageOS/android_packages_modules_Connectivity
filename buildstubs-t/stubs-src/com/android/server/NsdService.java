@@ -26,7 +26,7 @@ import android.os.Binder;
  */
 public final class NsdService extends Binder {
     /** Create instance */
-    public static NsdService create(Context ctx) throws InterruptedException {
+    public static NsdService create(Context ctx) {
         throw new RuntimeException("This is a stub class");
     }
 }
