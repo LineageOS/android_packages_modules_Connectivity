@@ -30,10 +30,19 @@ import android.net.IpPrefix;
 import android.os.ParcelFileDescriptor;
 import android.os.RemoteException;
 import android.os.ServiceSpecificException;
+import android.system.ErrnoException;
 import android.util.Log;
 
 import com.android.internal.annotations.VisibleForTesting;
+import com.android.modules.utils.build.SdkLevel;
+import com.android.net.module.util.BpfMap;
+import com.android.net.module.util.IBpfMap;
 import com.android.net.module.util.InterfaceParams;
+import com.android.net.module.util.TcUtils;
+import com.android.net.module.util.bpf.ClatEgress4Key;
+import com.android.net.module.util.bpf.ClatEgress4Value;
+import com.android.net.module.util.bpf.ClatIngress6Key;
+import com.android.net.module.util.bpf.ClatIngress6Value;
 
 import java.io.FileDescriptor;
 import java.io.IOException;
@@ -71,10 +80,21 @@ public class ClatCoordinator {
 
     private static final int INVALID_IFINDEX = 0;
 
+    private static final String CLAT_EGRESS4_MAP_PATH = makeMapPath("egress4");
+    private static final String CLAT_INGRESS6_MAP_PATH = makeMapPath("ingress6");
+
+    private static String makeMapPath(String which) {
+        return "/sys/fs/bpf/map_clatd_clat_" + which + "_map";
+    }
+
     @NonNull
     private final INetd mNetd;
     @NonNull
     private final Dependencies mDeps;
+    @Nullable
+    private final IBpfMap<ClatIngress6Key, ClatIngress6Value> mIngressMap;
+    @Nullable
+    private final IBpfMap<ClatEgress4Key, ClatEgress4Value> mEgressMap;
     @Nullable
     private ClatdTracker mClatdTracker = null;
 
@@ -195,6 +215,45 @@ public class ClatCoordinator {
         public void untagSocket(long cookie) throws IOException {
             native_untagSocket(cookie);
         }
+
+        /** Get ingress6 BPF map. */
+        @Nullable
+        public IBpfMap<ClatIngress6Key, ClatIngress6Value> getBpfIngress6Map() {
+            // Pre-T devices don't use ClatCoordinator to access clat map. Since Nat464Xlat
+            // initializes a ClatCoordinator object to avoid redundant null pointer check
+            // while using, ignore the BPF map initialization on pre-T devices.
+            // TODO: probably don't initialize ClatCoordinator object on pre-T devices.
+            if (!SdkLevel.isAtLeastT()) return null;
+            try {
+                return new BpfMap<>(CLAT_INGRESS6_MAP_PATH,
+                    BpfMap.BPF_F_RDWR, ClatIngress6Key.class, ClatIngress6Value.class);
+            } catch (ErrnoException e) {
+                Log.e(TAG, "Cannot create ingress6 map: " + e);
+                return null;
+            }
+        }
+
+        /** Get egress4 BPF map. */
+        @Nullable
+        public IBpfMap<ClatEgress4Key, ClatEgress4Value> getBpfEgress4Map() {
+            // Pre-T devices don't use ClatCoordinator to access clat map. Since Nat464Xlat
+            // initializes a ClatCoordinator object to avoid redundant null pointer check
+            // while using, ignore the BPF map initialization on pre-T devices.
+            // TODO: probably don't initialize ClatCoordinator object on pre-T devices.
+            if (!SdkLevel.isAtLeastT()) return null;
+            try {
+                return new BpfMap<>(CLAT_EGRESS4_MAP_PATH,
+                    BpfMap.BPF_F_RDWR, ClatEgress4Key.class, ClatEgress4Value.class);
+            } catch (ErrnoException e) {
+                Log.e(TAG, "Cannot create egress4 map: " + e);
+                return null;
+            }
+        }
+
+        /** Checks if the network interface uses an ethernet L2 header. */
+        public boolean isEthernet(String iface) throws IOException {
+            return TcUtils.isEthernet(iface);
+        }
     }
 
     @VisibleForTesting
@@ -268,6 +327,50 @@ public class ClatCoordinator {
     public ClatCoordinator(@NonNull Dependencies deps) {
         mDeps = deps;
         mNetd = mDeps.getNetd();
+        mIngressMap = mDeps.getBpfIngress6Map();
+        mEgressMap = mDeps.getBpfEgress4Map();
+    }
+
+    private void maybeStartBpf(final ClatdTracker tracker) {
+        if (mIngressMap == null || mEgressMap == null) return;
+
+        final boolean isEthernet;
+        try {
+            isEthernet = mDeps.isEthernet(tracker.iface);
+        } catch (IOException e) {
+            Log.e(TAG, "Fail to call isEthernet for interface " + tracker.iface);
+            return;
+        }
+
+        final ClatEgress4Key txKey = new ClatEgress4Key(tracker.v4ifIndex, tracker.v4);
+        final ClatEgress4Value txValue = new ClatEgress4Value(tracker.ifIndex, tracker.v6,
+                tracker.pfx96, (short) (isEthernet ? 1 /* ETHER */ : 0 /* RAWIP */));
+        try {
+            mEgressMap.insertEntry(txKey, txValue);
+        } catch (ErrnoException | IllegalStateException e) {
+            Log.e(TAG, "Could not insert entry (" + txKey + ", " + txValue + ") on egress map: "
+                    + e);
+            return;
+        }
+
+        final ClatIngress6Key rxKey = new ClatIngress6Key(tracker.ifIndex, tracker.pfx96,
+                tracker.v6);
+        final ClatIngress6Value rxValue = new ClatIngress6Value(tracker.v4ifIndex,
+                tracker.v4);
+        try {
+            mIngressMap.insertEntry(rxKey, rxValue);
+        } catch (ErrnoException | IllegalStateException e) {
+            Log.e(TAG, "Could not insert entry (" + rxKey + ", " + rxValue + ") ingress map: "
+                    + e);
+            try {
+                mEgressMap.deleteEntry(txKey);
+            } catch (ErrnoException | IllegalStateException e2) {
+                Log.e(TAG, "Could not delete entry (" + txKey + ") from egress map: " + e2);
+            }
+            return;
+        }
+
+        // TODO: attach program.
     }
 
     /**
@@ -454,7 +557,31 @@ public class ClatCoordinator {
         mClatdTracker = new ClatdTracker(iface, ifIndex, tunIface, tunIfIndex, v4, v6, pfx96,
                 pid, cookie);
 
+        // [7] Start BPF
+        maybeStartBpf(mClatdTracker);
+
         return v6Str;
+    }
+
+    private void maybeStopBpf(final ClatdTracker tracker) {
+        if (mIngressMap == null || mEgressMap == null) return;
+
+        final ClatEgress4Key txKey = new ClatEgress4Key(tracker.v4ifIndex, tracker.v4);
+        try {
+            mEgressMap.deleteEntry(txKey);
+        } catch (ErrnoException | IllegalStateException e) {
+            Log.e(TAG, "Could not delete entry (" + txKey + "): " + e);
+        }
+
+        final ClatIngress6Key rxKey = new ClatIngress6Key(tracker.ifIndex, tracker.pfx96,
+                tracker.v6);
+        try {
+            mIngressMap.deleteEntry(rxKey);
+        } catch (ErrnoException | IllegalStateException e) {
+            Log.e(TAG, "Could not delete entry (" + rxKey + "): " + e);
+        }
+
+        // TODO: dettach program.
     }
 
     /**
@@ -466,6 +593,7 @@ public class ClatCoordinator {
         }
         Log.i(TAG, "Stopping clatd pid=" + mClatdTracker.pid + " on " + mClatdTracker.iface);
 
+        maybeStopBpf(mClatdTracker);
         mDeps.stopClatd(mClatdTracker.iface, mClatdTracker.pfx96.getHostAddress(),
                 mClatdTracker.v4.getHostAddress(), mClatdTracker.v6.getHostAddress(),
                 mClatdTracker.pid);
