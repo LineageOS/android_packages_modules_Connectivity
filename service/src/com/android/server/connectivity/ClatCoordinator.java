@@ -686,6 +686,23 @@ public class ClatCoordinator {
     private void maybeStopBpf(final ClatdTracker tracker) {
         if (mIngressMap == null || mEgressMap == null) return;
 
+        try {
+            mDeps.tcFilterDelDev(tracker.ifIndex, INGRESS, (short) PRIO_CLAT, (short) ETH_P_IPV6);
+        } catch (IOException e) {
+            Log.e(TAG, "tc filter del dev (" + tracker.ifIndex + "[" + tracker.iface
+                    + "]) ingress prio PRIO_CLAT protocol ipv6 failure: " + e);
+        }
+
+        try {
+            mDeps.tcFilterDelDev(tracker.v4ifIndex, EGRESS, (short) PRIO_CLAT, (short) ETH_P_IP);
+        } catch (IOException e) {
+            Log.e(TAG, "tc filter del dev (" + tracker.v4ifIndex + "[" + tracker.v4iface
+                    + "]) egress prio PRIO_CLAT protocol ip failure: " + e);
+        }
+
+        // We cleanup the maps last, so scanning through them can be used to
+        // determine what still needs cleanup.
+
         final ClatEgress4Key txKey = new ClatEgress4Key(tracker.v4ifIndex, tracker.v4);
         try {
             mEgressMap.deleteEntry(txKey);
@@ -700,8 +717,6 @@ public class ClatCoordinator {
         } catch (ErrnoException | IllegalStateException e) {
             Log.e(TAG, "Could not delete entry (" + rxKey + "): " + e);
         }
-
-        // TODO: dettach program.
     }
 
     /**
