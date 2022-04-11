@@ -404,15 +404,6 @@ static jint com_android_server_connectivity_ClatCoordinator_startClatd(
     posix_spawnattr_destroy(&attr);
     posix_spawn_file_actions_destroy(&fa);
 
-    // 6. Start BPF if any
-    if (!net::clat::initMaps()) {
-        net::clat::ClatdTracker tracker = {};
-        if (!initTracker(ifaceStr.c_str(), pfx96Str.c_str(), v4Str.c_str(), v6Str.c_str(),
-                &tracker)) {
-            net::clat::maybeStartBpf(tracker);
-        }
-    }
-
     return pid;
 }
 
