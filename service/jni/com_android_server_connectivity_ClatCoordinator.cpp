@@ -34,7 +34,6 @@
 #include <netjniutils/netjniutils.h>
 #include <private/android_filesystem_config.h>
 
-#include "libclat/bpfhelper.h"
 #include "libclat/clatutils.h"
 #include "nativehelper/scoped_utf_chars.h"
 
@@ -257,46 +256,6 @@ static void com_android_server_connectivity_ClatCoordinator_configurePacketSocke
     }
 }
 
-int initTracker(const std::string& iface, const std::string& pfx96, const std::string& v4,
-        const std::string& v6, net::clat::ClatdTracker* output) {
-    strlcpy(output->iface, iface.c_str(), sizeof(output->iface));
-    output->ifIndex = if_nametoindex(iface.c_str());
-    if (output->ifIndex == 0) {
-        ALOGE("interface %s not found", output->iface);
-        return -1;
-    }
-
-    unsigned len = snprintf(output->v4iface, sizeof(output->v4iface),
-            "%s%s", DEVICEPREFIX, iface.c_str());
-    if (len >= sizeof(output->v4iface)) {
-        ALOGE("interface name too long '%s'", output->v4iface);
-        return -1;
-    }
-
-    output->v4ifIndex = if_nametoindex(output->v4iface);
-    if (output->v4ifIndex == 0) {
-        ALOGE("v4-interface %s not found", output->v4iface);
-        return -1;
-    }
-
-    if (!inet_pton(AF_INET6, pfx96.c_str(), &output->pfx96)) {
-        ALOGE("invalid IPv6 address specified for plat prefix: %s", pfx96.c_str());
-        return -1;
-    }
-
-    if (!inet_pton(AF_INET, v4.c_str(), &output->v4)) {
-        ALOGE("Invalid IPv4 address %s", v4.c_str());
-        return -1;
-    }
-
-    if (!inet_pton(AF_INET6, v6.c_str(), &output->v6)) {
-        ALOGE("Invalid source address %s", v6.c_str());
-        return -1;
-    }
-
-    return 0;
-}
-
 static jint com_android_server_connectivity_ClatCoordinator_startClatd(
         JNIEnv* env, jobject clazz, jobject tunJavaFd, jobject readSockJavaFd,
         jobject writeSockJavaFd, jstring iface, jstring pfx96, jstring v4, jstring v6) {
@@ -456,14 +415,6 @@ static void com_android_server_connectivity_ClatCoordinator_stopClatd(JNIEnv* en
     if (pid <= 0) {
         jniThrowExceptionFmt(env, "java/io/IOException", "Invalid pid");
         return;
-    }
-
-    if (!net::clat::initMaps()) {
-        net::clat::ClatdTracker tracker = {};
-        if (!initTracker(ifaceStr.c_str(), pfx96Str.c_str(), v4Str.c_str(), v6Str.c_str(),
-                &tracker)) {
-            net::clat::maybeStopBpf(tracker);
-        }
     }
 
     stopClatdProcess(pid);
