@@ -18,6 +18,8 @@ package com.android.server.connectivity;
 
 import static android.net.INetd.IF_STATE_UP;
 import static android.net.INetd.PERMISSION_SYSTEM;
+import static android.system.OsConstants.ETH_P_IP;
+import static android.system.OsConstants.ETH_P_IPV6;
 
 import static com.android.net.module.util.NetworkStackConstants.IPV6_MIN_MTU;
 
@@ -80,11 +82,33 @@ public class ClatCoordinator {
 
     private static final int INVALID_IFINDEX = 0;
 
+    // For better code clarity when used for 'bool ingress' parameter.
+    @VisibleForTesting
+    static final boolean EGRESS = false;
+    @VisibleForTesting
+    static final boolean INGRESS = true;
+
+    // For better code clarity when used for 'bool ether' parameter.
+    static final boolean RAWIP = false;
+    static final boolean ETHER = true;
+
+    // The priority of clat hook - must be after tethering.
+    @VisibleForTesting
+    static final int PRIO_CLAT = 4;
+
     private static final String CLAT_EGRESS4_MAP_PATH = makeMapPath("egress4");
     private static final String CLAT_INGRESS6_MAP_PATH = makeMapPath("ingress6");
 
     private static String makeMapPath(String which) {
         return "/sys/fs/bpf/map_clatd_clat_" + which + "_map";
+    }
+
+    private static String makeProgPath(boolean ingress, boolean ether) {
+        String path = "/sys/fs/bpf/prog_clatd_schedcls_"
+                + (ingress ? "ingress6" : "egress4")
+                + "_clat_"
+                + (ether ? "ether" : "rawip");
+        return path;
     }
 
     @NonNull
@@ -254,6 +278,23 @@ public class ClatCoordinator {
         public boolean isEthernet(String iface) throws IOException {
             return TcUtils.isEthernet(iface);
         }
+
+        /** Add a clsact qdisc. */
+        public void tcQdiscAddDevClsact(int ifIndex) throws IOException {
+            TcUtils.tcQdiscAddDevClsact(ifIndex);
+        }
+
+        /** Attach a tc bpf filter. */
+        public void tcFilterAddDevBpf(int ifIndex, boolean ingress, short prio, short proto,
+                String bpfProgPath) throws IOException {
+            TcUtils.tcFilterAddDevBpf(ifIndex, ingress, prio, proto, bpfProgPath);
+        }
+
+        /** Delete a tc filter. */
+        public void tcFilterDelDev(int ifIndex, boolean ingress, short prio, short proto)
+                throws IOException {
+            TcUtils.tcFilterDelDev(ifIndex, ingress, prio, proto);
+        }
     }
 
     @VisibleForTesting
@@ -370,7 +411,86 @@ public class ClatCoordinator {
             return;
         }
 
-        // TODO: attach program.
+        // Usually the clsact will be added in netd RouteController::addInterfaceToPhysicalNetwork.
+        // But clat is started before the v4- interface is added to the network. The clat startup
+        // have to add clsact of v4- tun interface first for adding bpf filter in maybeStartBpf.
+        try {
+            // tc qdisc add dev .. clsact
+            mDeps.tcQdiscAddDevClsact(tracker.v4ifIndex);
+        } catch (IOException e) {
+            Log.e(TAG, "tc qdisc add dev (" + tracker.v4ifIndex + "[" + tracker.v4iface
+                    + "]) failure: " + e);
+            try {
+                mEgressMap.deleteEntry(txKey);
+            } catch (ErrnoException | IllegalStateException e2) {
+                Log.e(TAG, "Could not delete entry (" + txKey + ") from egress map: " + e2);
+            }
+            try {
+                mIngressMap.deleteEntry(rxKey);
+            } catch (ErrnoException | IllegalStateException e3) {
+                Log.e(TAG, "Could not delete entry (" + rxKey + ") from ingress map: " + e3);
+            }
+            return;
+        }
+
+        // This program will be attached to the v4-* interface which is a TUN and thus always rawip.
+        try {
+            // tc filter add dev .. egress prio 4 protocol ip bpf object-pinned /sys/fs/bpf/...
+            // direct-action
+            mDeps.tcFilterAddDevBpf(tracker.v4ifIndex, EGRESS, (short) PRIO_CLAT, (short) ETH_P_IP,
+                    makeProgPath(EGRESS, RAWIP));
+        } catch (IOException e) {
+            Log.e(TAG, "tc filter add dev (" + tracker.v4ifIndex + "[" + tracker.v4iface
+                    + "]) egress prio PRIO_CLAT protocol ip failure: " + e);
+
+            // The v4- interface clsact is not deleted for unwinding error because once it is
+            // created with interface addition, the lifetime is till interface deletion. Moreover,
+            // the clsact has no clat filter now. It should not break anything.
+
+            try {
+                mEgressMap.deleteEntry(txKey);
+            } catch (ErrnoException | IllegalStateException e2) {
+                Log.e(TAG, "Could not delete entry (" + txKey + ") from egress map: " + e2);
+            }
+            try {
+                mIngressMap.deleteEntry(rxKey);
+            } catch (ErrnoException | IllegalStateException e3) {
+                Log.e(TAG, "Could not delete entry (" + rxKey + ") from ingress map: " + e3);
+            }
+            return;
+        }
+
+        try {
+            // tc filter add dev .. ingress prio 4 protocol ipv6 bpf object-pinned /sys/fs/bpf/...
+            // direct-action
+            mDeps.tcFilterAddDevBpf(tracker.ifIndex, INGRESS, (short) PRIO_CLAT,
+                    (short) ETH_P_IPV6, makeProgPath(INGRESS, isEthernet));
+        } catch (IOException e) {
+            Log.e(TAG, "tc filter add dev (" + tracker.ifIndex + "[" + tracker.iface
+                    + "]) ingress prio PRIO_CLAT protocol ipv6 failure: " + e);
+
+            // The v4- interface clsact is not deleted. See the reason in the error unwinding code
+            // of the egress filter attaching of v4- tun interface.
+
+            try {
+                mDeps.tcFilterDelDev(tracker.v4ifIndex, EGRESS, (short) PRIO_CLAT,
+                        (short) ETH_P_IP);
+            } catch (IOException e2) {
+                Log.e(TAG, "tc filter del dev (" + tracker.v4ifIndex + "[" + tracker.v4iface
+                        + "]) egress prio PRIO_CLAT protocol ip failure: " + e2);
+            }
+            try {
+                mEgressMap.deleteEntry(txKey);
+            } catch (ErrnoException | IllegalStateException e3) {
+                Log.e(TAG, "Could not delete entry (" + txKey + ") from egress map: " + e3);
+            }
+            try {
+                mIngressMap.deleteEntry(rxKey);
+            } catch (ErrnoException | IllegalStateException e4) {
+                Log.e(TAG, "Could not delete entry (" + rxKey + ") from ingress map: " + e4);
+            }
+            return;
+        }
     }
 
     /**
