@@ -600,7 +600,7 @@ public class NsdService extends INsdManager.Stub {
         mMDnsEventCallback = new MDnsEventCallback(mNsdStateMachine);
     }
 
-    public static NsdService create(Context context) throws InterruptedException {
+    public static NsdService create(Context context) {
         HandlerThread thread = new HandlerThread(TAG);
         thread.start();
         Handler handler = new Handler(thread.getLooper());
