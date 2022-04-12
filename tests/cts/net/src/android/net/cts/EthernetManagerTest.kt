@@ -17,7 +17,9 @@ package android.net.cts
 
 import android.Manifest.permission.MANAGE_TEST_NETWORKS
 import android.Manifest.permission.NETWORK_SETTINGS
+import android.net.InetAddresses
 import android.net.IpConfiguration
+import android.net.MacAddress
 import android.net.TestNetworkInterface
 import android.net.TestNetworkManager
 import android.platform.test.annotations.AppModeFull
@@ -32,6 +34,7 @@ import org.junit.After
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
+import android.content.Context
 import org.junit.runner.RunWith
 import kotlin.test.assertNull
 import kotlin.test.fail
@@ -46,10 +49,15 @@ import com.android.networkstack.apishim.common.EthernetManagerShim.STATE_LINK_UP
 import com.android.networkstack.apishim.common.EthernetManagerShim.ROLE_CLIENT
 import com.android.networkstack.apishim.common.EthernetManagerShim.ROLE_NONE
 import com.android.networkstack.apishim.EthernetManagerShimImpl
+import com.android.testutils.RouterAdvertisementResponder
+import com.android.testutils.TapPacketReader
+import com.android.testutils.waitForIdle
+import java.net.Inet6Address
 import java.util.concurrent.Executor
 import kotlin.test.assertFalse
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
+import java.net.NetworkInterface
 
 private const val TIMEOUT_MS = 1000L
 private const val NO_CALLBACK_TIMEOUT_MS = 200L
@@ -66,8 +74,39 @@ class EthernetManagerTest {
     private val context by lazy { InstrumentationRegistry.getInstrumentation().context }
     private val em by lazy { EthernetManagerShimImpl.newInstance(context) }
 
-    private val createdIfaces = ArrayList<TestNetworkInterface>()
+    private val createdIfaces = ArrayList<EthernetTestInterface>()
     private val addedListeners = ArrayList<InterfaceStateListener>()
+
+    private class EthernetTestInterface(
+        context: Context,
+        private val handler: Handler
+    ) {
+        private val tapInterface: TestNetworkInterface
+        private val packetReader: TapPacketReader
+        private val raResponder: RouterAdvertisementResponder
+        val interfaceName get() = tapInterface.interfaceName
+
+        init {
+            tapInterface = runAsShell(MANAGE_TEST_NETWORKS) {
+                val tnm = context.getSystemService(TestNetworkManager::class.java)
+                tnm.createTapInterface(false /* bringUp */)
+            }
+            val mtu = NetworkInterface.getByName(tapInterface.interfaceName).getMTU()
+            packetReader = TapPacketReader(handler, tapInterface.fileDescriptor.fileDescriptor, mtu)
+            raResponder = RouterAdvertisementResponder(packetReader)
+            raResponder.addRouterEntry(MacAddress.fromString("01:23:45:67:89:ab"),
+                    InetAddresses.parseNumericAddress("fe80::abcd") as Inet6Address)
+
+            packetReader.startAsyncForTest()
+            raResponder.start()
+        }
+
+        fun destroy() {
+            raResponder.stop()
+            handler.post({ packetReader.stop() })
+            handler.waitForIdle(TIMEOUT_MS)
+        }
+    }
 
     private open class EthernetStateListener private constructor(
         private val history: ArrayTrackRecord<CallbackEntry>
@@ -101,7 +140,7 @@ class EthernetManagerTest {
             return event as T
         }
 
-        fun expectCallback(iface: TestNetworkInterface, state: Int, role: Int) {
+        fun expectCallback(iface: EthernetTestInterface, state: Int, role: Int) {
             expectCallback(InterfaceStateChanged(iface.interfaceName, state, role,
                 if (state != STATE_ABSENT) DEFAULT_IP_CONFIGURATION else null))
         }
@@ -116,23 +155,55 @@ class EthernetManagerTest {
         }
     }
 
+    @Before
+    fun setUp() {
+        setIncludeTestInterfaces(true)
+    }
+
+    @After
+    fun tearDown() {
+        setIncludeTestInterfaces(false)
+        for (iface in createdIfaces) {
+            iface.destroy()
+        }
+        for (listener in addedListeners) {
+            em.removeInterfaceStateListener(listener)
+        }
+    }
+
+    private fun addInterfaceStateListener(executor: Executor, listener: InterfaceStateListener) {
+        em.addInterfaceStateListener(executor, listener)
+        addedListeners.add(listener)
+    }
+
+    private fun createInterface(): EthernetTestInterface {
+        return EthernetTestInterface(context, Handler(Looper.getMainLooper()))
+    }
+
+    private fun setIncludeTestInterfaces(value: Boolean) {
+        runAsShell(NETWORK_SETTINGS) {
+            em.setIncludeTestInterfaces(value)
+        }
+    }
+
+    private fun removeInterface(iface: EthernetTestInterface) {
+        iface.destroy()
+        createdIfaces.remove(iface)
+    }
+
     @Test
     public fun testCallbacks() {
         val executor = HandlerExecutor(Handler(Looper.getMainLooper()))
 
         // If an interface exists when the callback is registered, it is reported on registration.
-        val iface = runAsShell(MANAGE_TEST_NETWORKS) {
-            createInterface()
-        }
+        val iface = createInterface()
         val listener = EthernetStateListener()
         addInterfaceStateListener(executor, listener)
         listener.expectCallback(iface, STATE_LINK_UP, ROLE_CLIENT)
 
         // If an interface appears, existing callbacks see it.
         // TODO: fix the up/up/down/up callbacks and only send down/up.
-        val iface2 = runAsShell(MANAGE_TEST_NETWORKS) {
-            createInterface()
-        }
+        val iface2 = createInterface()
         listener.expectCallback(iface2, STATE_LINK_UP, ROLE_CLIENT)
         listener.expectCallback(iface2, STATE_LINK_UP, ROLE_CLIENT)
         listener.expectCallback(iface2, STATE_LINK_DOWN, ROLE_CLIENT)
@@ -149,66 +220,25 @@ class EthernetManagerTest {
         listener.assertNoCallback()
     }
 
-    @Before
-    fun setUp() {
-        runAsShell(MANAGE_TEST_NETWORKS, NETWORK_SETTINGS) {
-            em.setIncludeTestInterfaces(true)
-        }
-    }
-
-    @After
-    fun tearDown() {
-        runAsShell(MANAGE_TEST_NETWORKS, NETWORK_SETTINGS) {
-            em.setIncludeTestInterfaces(false)
-            for (iface in createdIfaces) {
-                if (iface.fileDescriptor.fileDescriptor.valid()) iface.fileDescriptor.close()
-            }
-            for (listener in addedListeners) {
-                em.removeInterfaceStateListener(listener)
-            }
-        }
-    }
-
-    private fun addInterfaceStateListener(executor: Executor, listener: InterfaceStateListener) {
-        em.addInterfaceStateListener(executor, listener)
-        addedListeners.add(listener)
-    }
-
-    private fun createInterface(): TestNetworkInterface {
-        val tnm = context.getSystemService(TestNetworkManager::class.java)
-        return tnm.createTapInterface(false /* bringUp */).also { createdIfaces.add(it) }
-    }
-
-    private fun removeInterface(iface: TestNetworkInterface) {
-        iface.fileDescriptor.close()
-        createdIfaces.remove(iface)
-    }
-
-    private fun doTestGetInterfaceList() {
-        em.setIncludeTestInterfaces(true)
+    @Test
+    public fun testGetInterfaceList() {
+        setIncludeTestInterfaces(true)
 
         // Create two test interfaces and check the return list contains the interface names.
         val iface1 = createInterface()
         val iface2 = createInterface()
         var ifaces = em.getInterfaceList()
         assertTrue(ifaces.size > 0)
-        assertTrue(ifaces.contains(iface1.getInterfaceName()))
-        assertTrue(ifaces.contains(iface2.getInterfaceName()))
+        assertTrue(ifaces.contains(iface1.interfaceName))
+        assertTrue(ifaces.contains(iface2.interfaceName))
 
         // Remove one existing test interface and check the return list doesn't contain the
         // removed interface name.
         removeInterface(iface1)
         ifaces = em.getInterfaceList()
-        assertFalse(ifaces.contains(iface1.getInterfaceName()))
-        assertTrue(ifaces.contains(iface2.getInterfaceName()))
+        assertFalse(ifaces.contains(iface1.interfaceName))
+        assertTrue(ifaces.contains(iface2.interfaceName))
 
         removeInterface(iface2)
-    }
-
-    @Test
-    public fun testGetInterfaceList() {
-        runAsShell(MANAGE_TEST_NETWORKS, NETWORK_SETTINGS) {
-            doTestGetInterfaceList()
-        }
     }
 }
