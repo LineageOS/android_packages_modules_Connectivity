@@ -76,7 +76,6 @@ filegroup {
         "java/com/android/server/IpSecServiceParameterizedTest.java",
         "java/com/android/server/IpSecServiceRefcountedResourceTest.java",
         "java/com/android/server/IpSecServiceTest.java",
-        "java/com/android/server/NativeDaemonConnectorTest.java",
         "java/com/android/server/NetworkManagementServiceTest.java",
         "java/com/android/server/NsdServiceTest.java",
         "java/com/android/server/connectivity/IpConnectivityEventBuilderTest.java",
