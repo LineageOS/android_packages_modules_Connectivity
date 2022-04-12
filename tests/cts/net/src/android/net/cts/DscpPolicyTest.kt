@@ -146,6 +146,9 @@ class DscpPolicyTest {
 
     @After
     fun tearDown() {
+        if (!kernelIsAtLeast(5, 4)) {
+            return;
+        }
         agentsToCleanUp.forEach { it.unregister() }
         callbacksToCleanUp.forEach { cm.unregisterNetworkCallback(it) }
 
