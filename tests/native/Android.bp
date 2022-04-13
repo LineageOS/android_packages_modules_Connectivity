@@ -9,8 +9,8 @@ cc_test {
         "mts-tethering",
         "vts",
     ],
+    test_config_template: "AndroidTestTemplate.xml",
     min_sdk_version: "31",
-    require_root: true,
     tidy: false,
     srcs: [
         "connectivity_native_test.cpp",
@@ -30,5 +30,4 @@ cc_test {
         "libutils",
     ],
     compile_multilib: "first",
-    defaults: ["connectivity-mainline-presubmit-cc-defaults"],
 }
