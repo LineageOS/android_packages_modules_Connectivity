@@ -24,6 +24,8 @@ import android.annotation.SystemApi;
 import android.os.Parcel;
 import android.os.Parcelable;
 
+import com.android.modules.utils.build.SdkLevel;
+
 import java.util.Objects;
 
 /**
@@ -473,6 +475,9 @@ public final class NetworkAgentConfig implements Parcelable {
         @NonNull
         @SystemApi(client = MODULE_LIBRARIES)
         public Builder setLocalRoutesExcludedForVpn(boolean excludeLocalRoutes) {
+            if (!SdkLevel.isAtLeastT()) {
+                throw new UnsupportedOperationException("Method is not supported");
+            }
             mConfig.excludeLocalRouteVpn = excludeLocalRoutes;
             return this;
         }
