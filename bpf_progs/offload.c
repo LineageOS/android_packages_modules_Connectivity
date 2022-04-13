@@ -122,7 +122,7 @@ static inline __always_inline int do_forward6(struct __sk_buff* skb, const bool 
     // not trigger and thus we need to manually make sure we can read packet headers via DPA.
     // Note: this is a blind best effort pull, which may fail or pull less - this doesn't matter.
     // It has to be done early cause it will invalidate any skb->data/data_end derived pointers.
-    try_make_readable(skb, l2_header_size + IP6_HLEN + TCP_HLEN);
+    try_make_writable(skb, l2_header_size + IP6_HLEN + TCP_HLEN);
 
     void* data = (void*)(long)skb->data;
     const void* data_end = (void*)(long)skb->data_end;
@@ -369,7 +369,7 @@ static inline __always_inline int do_forward4(struct __sk_buff* skb, const bool 
     // not trigger and thus we need to manually make sure we can read packet headers via DPA.
     // Note: this is a blind best effort pull, which may fail or pull less - this doesn't matter.
     // It has to be done early cause it will invalidate any skb->data/data_end derived pointers.
-    try_make_readable(skb, l2_header_size + IP4_HLEN + TCP_HLEN);
+    try_make_writable(skb, l2_header_size + IP4_HLEN + TCP_HLEN);
 
     void* data = (void*)(long)skb->data;
     const void* data_end = (void*)(long)skb->data_end;
