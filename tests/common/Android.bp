@@ -36,6 +36,7 @@ java_library {
         "modules-utils-build",
         "net-tests-utils",
         "net-utils-framework-common",
+        "platform-compat-test-rules",
         "platform-test-annotations",
     ],
     libs: [
