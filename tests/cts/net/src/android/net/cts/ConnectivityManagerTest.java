@@ -590,6 +590,7 @@ public class ConnectivityManagerTest {
     }
 
     @DevSdkIgnoreRule.IgnoreUpTo(SC_V2)
+    @AppModeFull(reason = "Cannot get installed packages in instant app mode")
     @Test
     public void testGetRedactedLinkPropertiesForPackage() throws Exception {
         final String groundedPkg = findPackageByPermissions(
@@ -675,6 +676,7 @@ public class ConnectivityManagerTest {
     }
 
     @DevSdkIgnoreRule.IgnoreUpTo(SC_V2)
+    @AppModeFull(reason = "Cannot get installed packages in instant app mode")
     @Test
     public void testGetRedactedNetworkCapabilitiesForPackage() throws Exception {
         final String groundedPkg = findPackageByPermissions(
