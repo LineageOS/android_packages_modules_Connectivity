@@ -57,7 +57,7 @@ static inline __always_inline int nat64(struct __sk_buff* skb, bool is_ethernet)
     // Not clear if this is actually necessary considering we use DPA (Direct Packet Access),
     // but we need to make sure we can read the IPv6 header reliably so that we can set
     // skb->mark = 0xDeadC1a7 for packets we fail to offload.
-    try_make_readable(skb, l2_header_size + sizeof(struct ipv6hdr));
+    try_make_writable(skb, l2_header_size + sizeof(struct ipv6hdr));
 
     void* data = (void*)(long)skb->data;
     const void* data_end = (void*)(long)skb->data_end;
@@ -224,7 +224,7 @@ DEFINE_BPF_PROG("schedcls/egress4/clat_rawip", AID_ROOT, AID_SYSTEM, sched_cls_e
     if (skb->protocol != htons(ETH_P_IP)) return TC_ACT_PIPE;
 
     // Possibly not needed, but for consistency with nat64 up above
-    try_make_readable(skb, sizeof(struct iphdr));
+    try_make_writable(skb, sizeof(struct iphdr));
 
     void* data = (void*)(long)skb->data;
     const void* data_end = (void*)(long)skb->data_end;

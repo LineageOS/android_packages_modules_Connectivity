@@ -92,6 +92,7 @@ java_defaults {
         "modules-utils-preconditions",
     ],
     libs: [
+        "app-compat-annotations",
         "framework-connectivity-t.stubs.module_lib",
         "unsupportedappusage",
     ],
@@ -150,6 +151,11 @@ java_sdk_library {
         "//packages/modules/NetworkStack/tests:__subpackages__",
         "//packages/modules/Wifi/service/tests/wifitests",
     ],
+}
+
+platform_compat_config {
+    name: "connectivity-platform-compat-config",
+    src: ":framework-connectivity",
 }
 
 cc_library_shared {
