@@ -3669,7 +3669,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
                 }
                 case NetworkAgent.EVENT_REMOVE_ALL_DSCP_POLICIES: {
                     if (mDscpPolicyTracker != null) {
-                        mDscpPolicyTracker.removeAllDscpPolicies(nai);
+                        mDscpPolicyTracker.removeAllDscpPolicies(nai, true);
                     }
                     break;
                 }
@@ -4410,6 +4410,9 @@ public class ConnectivityService extends IConnectivityManager.Stub
     }
 
     private void destroyNativeNetwork(@NonNull NetworkAgentInfo nai) {
+        if (mDscpPolicyTracker != null) {
+            mDscpPolicyTracker.removeAllDscpPolicies(nai, false);
+        }
         try {
             mNetd.networkDestroy(nai.network.getNetId());
         } catch (RemoteException | ServiceSpecificException e) {
