@@ -31,29 +31,31 @@ import java.net.UnknownHostException;
 public class DscpPolicyValue extends Struct {
     private static final String TAG = DscpPolicyValue.class.getSimpleName();
 
-    // TODO: add the interface index.
     @Field(order = 0, type = Type.ByteArray, arraysize = 16)
     public final byte[] src46;
 
     @Field(order = 1, type = Type.ByteArray, arraysize = 16)
     public final byte[] dst46;
 
-    @Field(order = 2, type = Type.UBE16)
-    public final int srcPort;
+    @Field(order = 2, type = Type.U32)
+    public final long ifIndex;
 
     @Field(order = 3, type = Type.UBE16)
-    public final int dstPortStart;
+    public final int srcPort;
 
     @Field(order = 4, type = Type.UBE16)
+    public final int dstPortStart;
+
+    @Field(order = 5, type = Type.UBE16)
     public final int dstPortEnd;
 
-    @Field(order = 5, type = Type.U8)
+    @Field(order = 6, type = Type.U8)
     public final short proto;
 
-    @Field(order = 6, type = Type.U8)
+    @Field(order = 7, type = Type.U8)
     public final short dscp;
 
-    @Field(order = 7, type = Type.U8, padding = 3)
+    @Field(order = 8, type = Type.U8, padding = 3)
     public final short mask;
 
     private static final int SRC_IP_MASK = 0x1;
@@ -69,6 +71,7 @@ public class DscpPolicyValue extends Struct {
         return true;
     }
 
+    // TODO:  move to frameworks/libs/net and have this and BpfCoordinator import it.
     private byte[] toIpv4MappedAddressBytes(InetAddress ia) {
         final byte[] addr6 = new byte[16];
         if (ia != null) {
@@ -117,13 +120,12 @@ public class DscpPolicyValue extends Struct {
         return mask;
     }
 
-    // This constructor is necessary for BpfMap#getValue since all values must be
-    // in the constructor.
-    public DscpPolicyValue(final InetAddress src46, final InetAddress dst46, final int srcPort,
-            final int dstPortStart, final int dstPortEnd, final short proto,
+    private DscpPolicyValue(final InetAddress src46, final InetAddress dst46, final long ifIndex,
+            final int srcPort, final int dstPortStart, final int dstPortEnd, final short proto,
             final short dscp) {
         this.src46 = toAddressField(src46);
         this.dst46 = toAddressField(dst46);
+        this.ifIndex = ifIndex;
 
         // These params need to be stored as 0 because uints are used in BpfMap.
         // If they are -1 BpfMap write will throw errors.
@@ -138,15 +140,15 @@ public class DscpPolicyValue extends Struct {
         this.mask = makeMask(this.src46, this.dst46, srcPort, dstPortStart, proto, dscp);
     }
 
-    public DscpPolicyValue(final InetAddress src46, final InetAddress dst46, final int srcPort,
-            final Range<Integer> dstPort, final short proto,
+    public DscpPolicyValue(final InetAddress src46, final InetAddress dst46, final long ifIndex,
+            final int srcPort, final Range<Integer> dstPort, final short proto,
             final short dscp) {
-        this(src46, dst46, srcPort, dstPort != null ? dstPort.getLower() : -1,
+        this(src46, dst46, ifIndex, srcPort, dstPort != null ? dstPort.getLower() : -1,
                 dstPort != null ? dstPort.getUpper() : -1, proto, dscp);
     }
 
     public static final DscpPolicyValue NONE = new DscpPolicyValue(
-            null /* src46 */, null /* dst46 */, -1 /* srcPort */,
+            null /* src46 */, null /* dst46 */, 0 /* ifIndex */, -1 /* srcPort */,
             -1 /* dstPortStart */, -1 /* dstPortEnd */, (short) -1 /* proto */,
             (short) 0 /* dscp */);
 
@@ -170,9 +172,9 @@ public class DscpPolicyValue extends Struct {
 
         try {
             return String.format(
-                    "src46: %s, dst46: %s, srcPort: %d, dstPortStart: %d, dstPortEnd: %d,"
-                    + " protocol: %d, dscp %s", srcIpString, dstIpString, srcPort, dstPortStart,
-                    dstPortEnd, proto, dscp);
+                    "src46: %s, dst46: %s, ifIndex: %d, srcPort: %d, dstPortStart: %d,"
+                    + " dstPortEnd: %d, protocol: %d, dscp %s", srcIpString, dstIpString,
+                    ifIndex, srcPort, dstPortStart, dstPortEnd, proto, dscp);
         } catch (IllegalArgumentException e) {
             return String.format("String format error: " + e);
         }
