@@ -27,10 +27,10 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class NearbyManagerTest {
 
-    /** Verify untrusted app can't get Nearby service. */
+    /** Verify untrusted app can get Nearby service. */
     @Test
-    fun testContextGetNearbyService_fromUnTrustedApp_returnsNull() {
+    fun testContextGetNearbyService_fromUnTrustedApp_returnsNotNull() {
         val appContext = ApplicationProvider.getApplicationContext<Context>()
-        assertThat(appContext.getSystemService(Context.NEARBY_SERVICE)).isNull()
+        assertThat(appContext.getSystemService(Context.NEARBY_SERVICE)).isNotNull()
     }
 }
