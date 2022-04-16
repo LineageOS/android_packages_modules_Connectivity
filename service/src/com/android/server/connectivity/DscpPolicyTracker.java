@@ -19,6 +19,7 @@ package com.android.server.connectivity;
 import static android.net.NetworkAgent.DSCP_POLICY_STATUS_DELETED;
 import static android.net.NetworkAgent.DSCP_POLICY_STATUS_INSUFFICIENT_PROCESSING_RESOURCES;
 import static android.net.NetworkAgent.DSCP_POLICY_STATUS_POLICY_NOT_FOUND;
+import static android.net.NetworkAgent.DSCP_POLICY_STATUS_REQUEST_DECLINED;
 import static android.net.NetworkAgent.DSCP_POLICY_STATUS_SUCCESS;
 import static android.system.OsConstants.ETH_P_ALL;
 
@@ -37,6 +38,7 @@ import java.io.IOException;
 import java.net.Inet4Address;
 import java.net.Inet6Address;
 import java.net.NetworkInterface;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -66,30 +68,68 @@ public class DscpPolicyTracker {
 
     private final BpfMap<Struct.U32, DscpPolicyValue> mBpfDscpIpv4Policies;
     private final BpfMap<Struct.U32, DscpPolicyValue> mBpfDscpIpv6Policies;
-    private final SparseIntArray mPolicyIdToBpfMapIndex;
+
+    // The actual policy rules used by the BPF code to process packets
+    // are in mBpfDscpIpv4Policies and mBpfDscpIpv4Policies. Both of
+    // these can contain up to MAX_POLICIES rules.
+    //
+    // A given policy always consumes one entry in both the IPv4 and
+    // IPv6 maps even if if's an IPv4-only or IPv6-only policy.
+    //
+    // Each interface index has a SparseIntArray of rules which maps a
+    // policy ID to the index of the corresponding rule in the maps.
+    // mIfaceIndexToPolicyIdBpfMapIndex maps the interface index to
+    // the per-interface SparseIntArray.
+    private final HashMap<Integer, SparseIntArray> mIfaceIndexToPolicyIdBpfMapIndex;
 
     public DscpPolicyTracker() throws ErrnoException {
         mAttachedIfaces = new HashSet<String>();
-
-        mPolicyIdToBpfMapIndex = new SparseIntArray(MAX_POLICIES);
+        mIfaceIndexToPolicyIdBpfMapIndex = new HashMap<Integer, SparseIntArray>();
         mBpfDscpIpv4Policies = new BpfMap<Struct.U32, DscpPolicyValue>(IPV4_POLICY_MAP_PATH,
                 BpfMap.BPF_F_RDWR, Struct.U32.class, DscpPolicyValue.class);
         mBpfDscpIpv6Policies = new BpfMap<Struct.U32, DscpPolicyValue>(IPV6_POLICY_MAP_PATH,
                 BpfMap.BPF_F_RDWR, Struct.U32.class, DscpPolicyValue.class);
     }
 
+    private boolean isUnusedIndex(int index) {
+        for (SparseIntArray ifacePolicies : mIfaceIndexToPolicyIdBpfMapIndex.values()) {
+            if (ifacePolicies.indexOfValue(index) >= 0) return false;
+        }
+        return true;
+    }
+
     private int getFirstFreeIndex() {
+        if (mIfaceIndexToPolicyIdBpfMapIndex.size() == 0) return 0;
         for (int i = 0; i < MAX_POLICIES; i++) {
-            if (mPolicyIdToBpfMapIndex.indexOfValue(i) < 0) return i;
+            if (isUnusedIndex(i)) {
+                return i;
+            }
         }
         return MAX_POLICIES;
+    }
+
+    private int findIndex(int policyId, int ifIndex) {
+        SparseIntArray ifacePolicies = mIfaceIndexToPolicyIdBpfMapIndex.get(ifIndex);
+        if (ifacePolicies != null) {
+            final int existingIndex = ifacePolicies.get(policyId, -1);
+            if (existingIndex != -1) {
+                return existingIndex;
+            }
+        }
+
+        final int firstIndex = getFirstFreeIndex();
+        if (firstIndex >= MAX_POLICIES) {
+            // New policy is being added, but max policies has already been reached.
+            return -1;
+        }
+        return firstIndex;
     }
 
     private void sendStatus(NetworkAgentInfo nai, int policyId, int status) {
         try {
             nai.networkAgent.onDscpPolicyStatusUpdated(policyId, status);
         } catch (RemoteException e) {
-            Log.d(TAG, "Failed update policy status: ", e);
+            Log.e(TAG, "Failed update policy status: ", e);
         }
     }
 
@@ -107,37 +147,43 @@ public class DscpPolicyTracker {
                         || policy.getSourceAddress() instanceof Inet6Address));
     }
 
-    private int addDscpPolicyInternal(DscpPolicy policy) {
+    private int getIfaceIndex(NetworkAgentInfo nai) {
+        String iface = nai.linkProperties.getInterfaceName();
+        NetworkInterface netIface;
+        try {
+            netIface = NetworkInterface.getByName(iface);
+        } catch (IOException e) {
+            Log.e(TAG, "Unable to get iface index for " + iface + ": " + e);
+            netIface = null;
+        }
+        return (netIface != null) ? netIface.getIndex() : 0;
+    }
+
+    private int addDscpPolicyInternal(DscpPolicy policy, int ifIndex) {
         // If there is no existing policy with a matching ID, and we are already at
         // the maximum number of policies then return INSUFFICIENT_PROCESSING_RESOURCES.
-        final int existingIndex = mPolicyIdToBpfMapIndex.get(policy.getPolicyId(), -1);
-        if (existingIndex == -1 && mPolicyIdToBpfMapIndex.size() >= MAX_POLICIES) {
-            return DSCP_POLICY_STATUS_INSUFFICIENT_PROCESSING_RESOURCES;
+        SparseIntArray ifacePolicies = mIfaceIndexToPolicyIdBpfMapIndex.get(ifIndex);
+        if (ifacePolicies == null) {
+            ifacePolicies = new SparseIntArray(MAX_POLICIES);
         }
 
         // Currently all classifiers are supported, if any are removed return
         // DSCP_POLICY_STATUS_REQUESTED_CLASSIFIER_NOT_SUPPORTED,
         // and for any other generic error DSCP_POLICY_STATUS_REQUEST_DECLINED
 
-        int addIndex = 0;
-        // If a policy with a matching ID exists, replace it, otherwise use the next free
-        // index for the policy.
-        if (existingIndex != -1) {
-            addIndex = mPolicyIdToBpfMapIndex.get(policy.getPolicyId());
-        } else {
-            addIndex = getFirstFreeIndex();
+        final int addIndex = findIndex(policy.getPolicyId(), ifIndex);
+        if (addIndex == -1) {
+            return DSCP_POLICY_STATUS_INSUFFICIENT_PROCESSING_RESOURCES;
         }
 
         try {
-            mPolicyIdToBpfMapIndex.put(policy.getPolicyId(), addIndex);
-
             // Add v4 policy to mBpfDscpIpv4Policies if source and destination address
-            // are both null or if they are both instances of Inet6Address.
+            // are both null or if they are both instances of Inet4Address.
             if (matchesIpv4(policy)) {
                 mBpfDscpIpv4Policies.insertOrReplaceEntry(
                         new Struct.U32(addIndex),
                         new DscpPolicyValue(policy.getSourceAddress(),
-                            policy.getDestinationAddress(),
+                            policy.getDestinationAddress(), ifIndex,
                             policy.getSourcePort(), policy.getDestinationPortRange(),
                             (short) policy.getProtocol(), (short) policy.getDscpValue()));
             }
@@ -148,10 +194,16 @@ public class DscpPolicyTracker {
                 mBpfDscpIpv6Policies.insertOrReplaceEntry(
                         new Struct.U32(addIndex),
                         new DscpPolicyValue(policy.getSourceAddress(),
-                                policy.getDestinationAddress(),
+                                policy.getDestinationAddress(), ifIndex,
                                 policy.getSourcePort(), policy.getDestinationPortRange(),
                                 (short) policy.getProtocol(), (short) policy.getDscpValue()));
             }
+
+            ifacePolicies.put(policy.getPolicyId(), addIndex);
+            // Only add the policy to the per interface map if the policy was successfully
+            // added to both bpf maps above. It is safe to assume that if insert fails for
+            // one map then it fails for both.
+            mIfaceIndexToPolicyIdBpfMapIndex.put(ifIndex, ifacePolicies);
         } catch (ErrnoException e) {
             Log.e(TAG, "Failed to insert policy into map: ", e);
             return DSCP_POLICY_STATUS_INSUFFICIENT_PROCESSING_RESOURCES;
@@ -166,6 +218,7 @@ public class DscpPolicyTracker {
      *
      * DSCP_POLICY_STATUS_SUCCESS - if policy was added successfully
      * DSCP_POLICY_STATUS_INSUFFICIENT_PROCESSING_RESOURCES - if max policies were already set
+     * DSCP_POLICY_STATUS_REQUEST_DECLINED - Interface index was invalid
      */
     public void addDscpPolicy(NetworkAgentInfo nai, DscpPolicy policy) {
         if (!mAttachedIfaces.contains(nai.linkProperties.getInterfaceName())) {
@@ -177,11 +230,19 @@ public class DscpPolicyTracker {
             }
         }
 
-        int status = addDscpPolicyInternal(policy);
+        final int ifIndex = getIfaceIndex(nai);
+        if (ifIndex == 0) {
+            Log.e(TAG, "Iface index is invalid");
+            sendStatus(nai, policy.getPolicyId(), DSCP_POLICY_STATUS_REQUEST_DECLINED);
+            return;
+        }
+
+        int status = addDscpPolicyInternal(policy, ifIndex);
         sendStatus(nai, policy.getPolicyId(), status);
     }
 
-    private void removePolicyFromMap(NetworkAgentInfo nai, int policyId, int index) {
+    private void removePolicyFromMap(NetworkAgentInfo nai, int policyId, int index,
+            boolean sendCallback) {
         int status = DSCP_POLICY_STATUS_POLICY_NOT_FOUND;
         try {
             mBpfDscpIpv4Policies.replaceEntry(new Struct.U32(index), DscpPolicyValue.NONE);
@@ -191,7 +252,9 @@ public class DscpPolicyTracker {
             Log.e(TAG, "Failed to delete policy from map: ", e);
         }
 
-        sendStatus(nai, policyId, status);
+        if (sendCallback) {
+            sendStatus(nai, policyId, status);
+        }
     }
 
     /**
@@ -204,36 +267,44 @@ public class DscpPolicyTracker {
             return;
         }
 
-        if (mPolicyIdToBpfMapIndex.get(policyId, -1) != -1) {
-            removePolicyFromMap(nai, policyId, mPolicyIdToBpfMapIndex.get(policyId));
-            mPolicyIdToBpfMapIndex.delete(policyId);
+        SparseIntArray ifacePolicies = mIfaceIndexToPolicyIdBpfMapIndex.get(getIfaceIndex(nai));
+        if (ifacePolicies == null) return;
+
+        final int existingIndex = ifacePolicies.get(policyId, -1);
+        if (existingIndex == -1) {
+            Log.e(TAG, "Policy " + policyId + " does not exist in map.");
+            sendStatus(nai, policyId, DSCP_POLICY_STATUS_POLICY_NOT_FOUND);
+            return;
         }
 
-        // TODO: detach should only occur if no more policies are present on the nai's iface.
-        if (mPolicyIdToBpfMapIndex.size() == 0) {
+        removePolicyFromMap(nai, policyId, existingIndex, true);
+        ifacePolicies.delete(policyId);
+
+        if (ifacePolicies.size() == 0) {
             detachProgram(nai.linkProperties.getInterfaceName());
         }
     }
 
     /**
-     * Remove all DSCP policies and detach program.
+     * Remove all DSCP policies and detach program. Send callback if requested.
      */
-    // TODO: Remove all should only remove policies from corresponding nai iface.
-    public void removeAllDscpPolicies(NetworkAgentInfo nai) {
+    public void removeAllDscpPolicies(NetworkAgentInfo nai, boolean sendCallback) {
         if (!mAttachedIfaces.contains(nai.linkProperties.getInterfaceName())) {
             // Nothing to remove since program is not attached. Send update for policy
             // id 0. The status update must contain a policy ID, and 0 is an invalid id.
-            sendStatus(nai, 0, DSCP_POLICY_STATUS_SUCCESS);
+            if (sendCallback) {
+                sendStatus(nai, 0, DSCP_POLICY_STATUS_SUCCESS);
+            }
             return;
         }
 
-        for (int i = 0; i < mPolicyIdToBpfMapIndex.size(); i++) {
-            removePolicyFromMap(nai, mPolicyIdToBpfMapIndex.keyAt(i),
-                    mPolicyIdToBpfMapIndex.valueAt(i));
+        SparseIntArray ifacePolicies = mIfaceIndexToPolicyIdBpfMapIndex.get(getIfaceIndex(nai));
+        if (ifacePolicies == null) return;
+        for (int i = 0; i < ifacePolicies.size(); i++) {
+            removePolicyFromMap(nai, ifacePolicies.keyAt(i), ifacePolicies.valueAt(i),
+                    sendCallback);
         }
-        mPolicyIdToBpfMapIndex.clear();
-
-        // Can detach program since no policies are active.
+        ifacePolicies.clear();
         detachProgram(nai.linkProperties.getInterfaceName());
     }
 
@@ -241,12 +312,12 @@ public class DscpPolicyTracker {
      * Attach BPF program
      */
     private boolean attachProgram(@NonNull String iface) {
-        // TODO: attach needs to be per iface not program.
-
         try {
             NetworkInterface netIface = NetworkInterface.getByName(iface);
+            boolean isEth = TcUtils.isEthernet(iface);
+            String path = PROG_PATH + (isEth ? "_ether" : "_raw_ip");
             TcUtils.tcFilterAddDevBpf(netIface.getIndex(), false, PRIO_DSCP, (short) ETH_P_ALL,
-                    PROG_PATH);
+                    path);
         } catch (IOException e) {
             Log.e(TAG, "Unable to attach to TC on " + iface + ": " + e);
             return false;
@@ -264,9 +335,9 @@ public class DscpPolicyTracker {
             if (netIface != null) {
                 TcUtils.tcFilterDelDev(netIface.getIndex(), false, PRIO_DSCP, (short) ETH_P_ALL);
             }
+            mAttachedIfaces.remove(iface);
         } catch (IOException e) {
             Log.e(TAG, "Unable to detach to TC on " + iface + ": " + e);
         }
-        mAttachedIfaces.remove(iface);
     }
 }
