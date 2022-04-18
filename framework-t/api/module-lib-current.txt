@@ -4,6 +4,8 @@ package android.app.usage {
   public class NetworkStatsManager {
     method @RequiresPermission(anyOf={android.net.NetworkStack.PERMISSION_MAINLINE_NETWORK_STACK, android.Manifest.permission.NETWORK_STACK}) public void forceUpdate();
     method public static int getCollapsedRatType(int);
+    method @NonNull @RequiresPermission(anyOf={android.net.NetworkStack.PERMISSION_MAINLINE_NETWORK_STACK, android.Manifest.permission.NETWORK_STACK}) public android.net.NetworkStats getMobileUidStats();
+    method @NonNull @RequiresPermission(anyOf={android.net.NetworkStack.PERMISSION_MAINLINE_NETWORK_STACK, android.Manifest.permission.NETWORK_STACK}) public android.net.NetworkStats getWifiUidStats();
     method @RequiresPermission(anyOf={android.net.NetworkStack.PERMISSION_MAINLINE_NETWORK_STACK, android.Manifest.permission.NETWORK_STACK}) public void noteUidForeground(int, boolean);
     method @RequiresPermission(anyOf={android.net.NetworkStack.PERMISSION_MAINLINE_NETWORK_STACK, android.Manifest.permission.NETWORK_STACK}) public void notifyNetworkStatus(@NonNull java.util.List<android.net.Network>, @NonNull java.util.List<android.net.NetworkStateSnapshot>, @Nullable String, @NonNull java.util.List<android.net.UnderlyingNetworkInfo>);
     method @NonNull @WorkerThread public android.app.usage.NetworkStats queryDetailsForDevice(@NonNull android.net.NetworkTemplate, long, long);
@@ -182,6 +184,7 @@ package android.net {
   public class TrafficStats {
     method public static void attachSocketTagger();
     method public static void init(@NonNull android.content.Context);
+    method public static void setThreadStatsTagDownload();
   }
 
   public final class UnderlyingNetworkInfo implements android.os.Parcelable {

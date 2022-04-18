@@ -124,7 +124,6 @@ public final class NetworkStats implements Parcelable, Iterable<NetworkStats.Ent
     public @Nullable static final String[] INTERFACES_ALL = null;
 
     /** {@link #tag} value for total data across all tags. */
-    // TODO: Rename TAG_NONE to TAG_ALL.
     public static final int TAG_NONE = 0;
 
     /** {@link #metered} value to account for all metered states. */
@@ -412,21 +411,24 @@ public final class NetworkStats implements Parcelable, Iterable<NetworkStats.Ent
         /**
          * @return the metered state.
          */
-        @Meteredness public int getMetered() {
+        @Meteredness
+        public int getMetered() {
             return metered;
         }
 
         /**
          * @return the roaming state.
          */
-        @Roaming public int getRoaming() {
+        @Roaming
+        public int getRoaming() {
             return roaming;
         }
 
         /**
          * @return the default network state.
          */
-        @DefaultNetwork public int getDefaultNetwork() {
+        @DefaultNetwork
+        public int getDefaultNetwork() {
             return defaultNetwork;
         }
 
