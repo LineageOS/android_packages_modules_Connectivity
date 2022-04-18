@@ -2,10 +2,8 @@
 package android.app.usage {
 
   public class NetworkStatsManager {
-    method @NonNull @RequiresPermission(anyOf={android.net.NetworkStack.PERMISSION_MAINLINE_NETWORK_STACK, android.Manifest.permission.NETWORK_STACK}) public android.net.NetworkStats getMobileUidStats();
-    method @NonNull @RequiresPermission(anyOf={android.net.NetworkStack.PERMISSION_MAINLINE_NETWORK_STACK, android.Manifest.permission.NETWORK_STACK}) public android.net.NetworkStats getWifiUidStats();
-    method @NonNull @RequiresPermission(anyOf={android.Manifest.permission.NETWORK_STATS_PROVIDER, android.net.NetworkStack.PERMISSION_MAINLINE_NETWORK_STACK}) public void registerNetworkStatsProvider(@NonNull String, @NonNull android.net.netstats.provider.NetworkStatsProvider);
-    method @NonNull @RequiresPermission(anyOf={android.Manifest.permission.NETWORK_STATS_PROVIDER, android.net.NetworkStack.PERMISSION_MAINLINE_NETWORK_STACK}) public void unregisterNetworkStatsProvider(@NonNull android.net.netstats.provider.NetworkStatsProvider);
+    method @RequiresPermission(anyOf={android.Manifest.permission.NETWORK_STATS_PROVIDER, android.net.NetworkStack.PERMISSION_MAINLINE_NETWORK_STACK}) public void registerNetworkStatsProvider(@NonNull String, @NonNull android.net.netstats.provider.NetworkStatsProvider);
+    method @RequiresPermission(anyOf={android.Manifest.permission.NETWORK_STATS_PROVIDER, android.net.NetworkStack.PERMISSION_MAINLINE_NETWORK_STACK}) public void unregisterNetworkStatsProvider(@NonNull android.net.netstats.provider.NetworkStatsProvider);
   }
 
 }
@@ -73,7 +71,6 @@ package android.net {
     method @NonNull public android.net.NetworkStats add(@NonNull android.net.NetworkStats);
     method @NonNull public android.net.NetworkStats addEntry(@NonNull android.net.NetworkStats.Entry);
     method public int describeContents();
-    method @NonNull public java.util.Iterator<android.net.NetworkStats.Entry> iterator();
     method @NonNull public android.net.NetworkStats subtract(@NonNull android.net.NetworkStats);
     method public void writeToParcel(@NonNull android.os.Parcel, int);
     field @NonNull public static final android.os.Parcelable.Creator<android.net.NetworkStats> CREATOR;
@@ -97,23 +94,11 @@ package android.net {
 
   public static class NetworkStats.Entry {
     ctor public NetworkStats.Entry(@Nullable String, int, int, int, int, int, int, long, long, long, long, long);
-    method public int getDefaultNetwork();
-    method public int getMetered();
-    method public long getOperations();
-    method public int getRoaming();
-    method public long getRxBytes();
-    method public long getRxPackets();
-    method public int getSet();
-    method public int getTag();
-    method public long getTxBytes();
-    method public long getTxPackets();
-    method public int getUid();
   }
 
   public class TrafficStats {
     method public static void setThreadStatsTagApp();
     method public static void setThreadStatsTagBackup();
-    method public static void setThreadStatsTagDownload();
     method public static void setThreadStatsTagRestore();
     field public static final int TAG_NETWORK_STACK_IMPERSONATION_RANGE_END = -113; // 0xffffff8f
     field public static final int TAG_NETWORK_STACK_IMPERSONATION_RANGE_START = -128; // 0xffffff80
