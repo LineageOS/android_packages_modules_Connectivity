@@ -151,7 +151,7 @@ public abstract class AbstractRestrictBackgroundNetworkTestCase {
 
     protected static final long TEMP_POWERSAVE_WHITELIST_DURATION_MS = 5_000; // 5 sec
 
-    private static final long BROADCAST_TIMEOUT_MS = 15_000;
+    private static final long BROADCAST_TIMEOUT_MS = 5_000;
 
     protected Context mContext;
     protected Instrumentation mInstrumentation;
