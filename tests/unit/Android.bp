@@ -63,6 +63,7 @@ filegroup {
         "java/android/net/IpSecManagerTest.java",
         "java/android/net/IpSecTransformTest.java",
         "java/android/net/KeepalivePacketDataUtilTest.java",
+        "java/android/net/NetworkIdentitySetTest.kt",
         "java/android/net/NetworkIdentityTest.kt",
         "java/android/net/NetworkStats*.java",
         "java/android/net/NetworkTemplateTest.kt",
