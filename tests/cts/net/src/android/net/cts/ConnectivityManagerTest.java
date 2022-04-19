@@ -151,6 +151,7 @@ import android.os.Handler;
 import android.os.Looper;
 import android.os.MessageQueue;
 import android.os.Process;
+import android.os.ServiceManager;
 import android.os.SystemClock;
 import android.os.SystemProperties;
 import android.os.UserHandle;
@@ -661,10 +662,12 @@ public class ConnectivityManagerTest {
 
             // CaptivePortalApiUrl & CaptivePortalData will be preserved if the given uid holds the
             // NETWORK_SETTINGS permission.
-            assertEquals(capportUrl,
+            assertNotNull(lp.getCaptivePortalApiUrl());
+            assertNotNull(lp.getCaptivePortalData());
+            assertEquals(lp.getCaptivePortalApiUrl(),
                     mCm.getRedactedLinkPropertiesForPackage(lp, privilegedUid, privilegedPkg)
                             .getCaptivePortalApiUrl());
-            assertEquals(capportData,
+            assertEquals(lp.getCaptivePortalData(),
                     mCm.getRedactedLinkPropertiesForPackage(lp, privilegedUid, privilegedPkg)
                             .getCaptivePortalData());
         });
@@ -887,9 +890,21 @@ public class ConnectivityManagerTest {
         //
         // Note that this test this will still fail in instant mode if a device supports Ethernet
         // via other hardware means. We are not currently aware of any such device.
-        return (mContext.getSystemService(Context.ETHERNET_SERVICE) != null) ||
-            mPackageManager.hasSystemFeature(FEATURE_ETHERNET) ||
-            mPackageManager.hasSystemFeature(FEATURE_USB_HOST);
+        return hasEthernetService()
+                || mPackageManager.hasSystemFeature(FEATURE_ETHERNET)
+                || mPackageManager.hasSystemFeature(FEATURE_USB_HOST);
+    }
+
+    private boolean hasEthernetService() {
+        // On Q creating EthernetManager from a thread that does not have a looper (like the test
+        // thread) crashes because it tried to use Looper.myLooper() through the default Handler
+        // constructor to run onAvailabilityChanged callbacks. Use ServiceManager to check whether
+        // the service exists instead.
+        // TODO: remove once Q is no longer supported in MTS, as ServiceManager is hidden API
+        if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.Q) {
+            return ServiceManager.getService(Context.ETHERNET_SERVICE) != null;
+        }
+        return mContext.getSystemService(Context.ETHERNET_SERVICE) != null;
     }
 
     private boolean shouldBeSupported(int networkType) {
