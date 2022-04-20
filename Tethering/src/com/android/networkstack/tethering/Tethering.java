@@ -135,6 +135,7 @@ import com.android.internal.util.State;
 import com.android.internal.util.StateMachine;
 import com.android.modules.utils.build.SdkLevel;
 import com.android.net.module.util.BaseNetdUnsolicitedEventListener;
+import com.android.net.module.util.CollectionUtils;
 import com.android.networkstack.apishim.common.BluetoothPanShim;
 import com.android.networkstack.apishim.common.BluetoothPanShim.TetheredInterfaceCallbackShim;
 import com.android.networkstack.apishim.common.BluetoothPanShim.TetheredInterfaceRequestShim;
@@ -2513,12 +2514,12 @@ public class Tethering {
                 writer, "  ");
 
         // Used for testing instead of human debug.
-        if (argsContain(args, "bpfRawMap")) {
+        if (CollectionUtils.contains(args, "bpfRawMap")) {
             mBpfCoordinator.dumpRawMap(pw, args);
             return;
         }
 
-        if (argsContain(args, "bpf")) {
+        if (CollectionUtils.contains(args, "bpf")) {
             dumpBpf(pw);
             return;
         }
@@ -2584,7 +2585,7 @@ public class Tethering {
 
         pw.println("Log:");
         pw.increaseIndent();
-        if (argsContain(args, "--short")) {
+        if (CollectionUtils.contains(args, "--short")) {
             pw.println("<log removed for brevity>");
         } else {
             mLog.dump(fd, pw, args);
@@ -2626,13 +2627,6 @@ public class Tethering {
 
         final RuntimeException e = exceptionRef.get();
         if (e != null) throw e;
-    }
-
-    private static boolean argsContain(String[] args, String target) {
-        for (String arg : args) {
-            if (target.equals(arg)) return true;
-        }
-        return false;
     }
 
     private void updateConnectedClients(final List<WifiClient> wifiClients) {
