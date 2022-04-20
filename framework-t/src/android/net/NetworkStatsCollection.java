@@ -776,7 +776,7 @@ public class NetworkStatsCollection implements FileRotator.Reader, FileRotator.W
             if (!templateMatches(groupTemplate, key.ident)) continue;
             if (key.set >= NetworkStats.SET_DEBUG_START) continue;
 
-            final Key groupKey = new Key(null, key.uid, key.set, key.tag);
+            final Key groupKey = new Key(new NetworkIdentitySet(), key.uid, key.set, key.tag);
             NetworkStatsHistory groupHistory = grouped.get(groupKey);
             if (groupHistory == null) {
                 groupHistory = new NetworkStatsHistory(value.getBucketDuration());
