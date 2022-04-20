@@ -77,7 +77,7 @@ public final class QosCallbackException extends Exception {
      * {@hide}
      */
     @NonNull
-    static QosCallbackException createException(@ExceptionType final int type) {
+    public static QosCallbackException createException(@ExceptionType final int type) {
         switch (type) {
             case EX_TYPE_FILTER_NETWORK_RELEASED:
                 return new QosCallbackException(new NetworkReleasedException());
