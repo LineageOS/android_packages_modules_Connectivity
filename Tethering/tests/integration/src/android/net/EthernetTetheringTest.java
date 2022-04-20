@@ -74,6 +74,8 @@ import com.android.net.module.util.PacketBuilder;
 import com.android.net.module.util.Struct;
 import com.android.net.module.util.bpf.Tether4Key;
 import com.android.net.module.util.bpf.Tether4Value;
+import com.android.net.module.util.bpf.TetherStatsKey;
+import com.android.net.module.util.bpf.TetherStatsValue;
 import com.android.net.module.util.structs.EthernetHeader;
 import com.android.net.module.util.structs.Icmpv6Header;
 import com.android.net.module.util.structs.Ipv4Header;
@@ -128,6 +130,13 @@ public class EthernetTetheringTest {
     // Kernel treats a confirmed UDP connection which active after two seconds as stream mode.
     // See upstream commit b7b1d02fc43925a4d569ec221715db2dfa1ce4f5.
     private static final int UDP_STREAM_TS_MS = 2000;
+    // Per RX UDP packet size: iphdr (20) + udphdr (8) + payload (2) = 30 bytes.
+    private static final int RX_UDP_PACKET_SIZE = 30;
+    private static final int RX_UDP_PACKET_COUNT = 456;
+    // Per TX UDP packet size: ethhdr (14) + iphdr (20) + udphdr (8) + payload (2) = 44 bytes.
+    private static final int TX_UDP_PACKET_SIZE = 44;
+    private static final int TX_UDP_PACKET_COUNT = 123;
+
     private static final LinkAddress TEST_IP4_ADDR = new LinkAddress("10.0.0.1/8");
     private static final LinkAddress TEST_IP6_ADDR = new LinkAddress("2001:db8:1::101/64");
     private static final InetAddress TEST_IP4_DNS = parseNumericAddress("8.8.8.8");
@@ -136,6 +145,7 @@ public class EthernetTetheringTest {
             ByteBuffer.wrap(new byte[] { (byte) 0x55, (byte) 0xaa });
 
     private static final String DUMPSYS_TETHERING_RAWMAP_ARG = "bpfRawMap";
+    private static final String DUMPSYS_RAWMAP_ARG_STATS = "--stats";
     private static final String DUMPSYS_RAWMAP_ARG_UPSTREAM4 = "--upstream4";
     private static final String BASE64_DELIMITER = ",";
     private static final String LINE_DELIMITER = "\\n";
@@ -957,6 +967,7 @@ public class EthernetTetheringTest {
                 return isExpectedUdpPacket(p, false /* hasEther */, PAYLOAD3);
             });
 
+            // [1] Verify IPv4 upstream rule map.
             final HashMap<Tether4Key, Tether4Value> upstreamMap = pollRawMapFromDump(
                     Tether4Key.class, Tether4Value.class, DUMPSYS_RAWMAP_ARG_UPSTREAM4);
             assertNotNull(upstreamMap);
@@ -965,20 +976,60 @@ public class EthernetTetheringTest {
             final Map.Entry<Tether4Key, Tether4Value> rule =
                     upstreamMap.entrySet().iterator().next();
 
-            final Tether4Key key = rule.getKey();
-            assertEquals(IPPROTO_UDP, key.l4proto);
-            assertTrue(Arrays.equals(tethered.ipv4Addr.getAddress(), key.src4));
-            assertEquals(LOCAL_PORT, key.srcPort);
-            assertTrue(Arrays.equals(REMOTE_IP4_ADDR.getAddress(), key.dst4));
-            assertEquals(REMOTE_PORT, key.dstPort);
+            final Tether4Key upstream4Key = rule.getKey();
+            assertEquals(IPPROTO_UDP, upstream4Key.l4proto);
+            assertTrue(Arrays.equals(tethered.ipv4Addr.getAddress(), upstream4Key.src4));
+            assertEquals(LOCAL_PORT, upstream4Key.srcPort);
+            assertTrue(Arrays.equals(REMOTE_IP4_ADDR.getAddress(), upstream4Key.dst4));
+            assertEquals(REMOTE_PORT, upstream4Key.dstPort);
 
-            final Tether4Value value = rule.getValue();
+            final Tether4Value upstream4Value = rule.getValue();
             assertTrue(Arrays.equals(publicIp4Addr.getAddress(),
-                    InetAddress.getByAddress(value.src46).getAddress()));
-            assertEquals(LOCAL_PORT, value.srcPort);
+                    InetAddress.getByAddress(upstream4Value.src46).getAddress()));
+            assertEquals(LOCAL_PORT, upstream4Value.srcPort);
             assertTrue(Arrays.equals(REMOTE_IP4_ADDR.getAddress(),
-                    InetAddress.getByAddress(value.dst46).getAddress()));
-            assertEquals(REMOTE_PORT, value.dstPort);
+                    InetAddress.getByAddress(upstream4Value.dst46).getAddress()));
+            assertEquals(REMOTE_PORT, upstream4Value.dstPort);
+
+            // [2] Verify stats map.
+            // Transmit packets on both direction for verifying stats. Because we only care the
+            // packet count in stats test, we just reuse the existing packets to increaes
+            // the packet count on both direction.
+
+            // Send packets on original direction.
+            for (int i = 0; i < TX_UDP_PACKET_COUNT; i++) {
+                tester.verifyUpload(remote, originalPacket, p -> {
+                    Log.d(TAG, "Packet in upstream: " + dumpHexString(p));
+                    return isExpectedUdpPacket(p, false /* hasEther */, PAYLOAD);
+                });
+            }
+
+            // Send packets on reply direction.
+            for (int i = 0; i < RX_UDP_PACKET_COUNT; i++) {
+                remote.verifyDownload(tester, replyPacket, p -> {
+                    Log.d(TAG, "Packet in downstream: " + dumpHexString(p));
+                    return isExpectedUdpPacket(p, true/* hasEther */, PAYLOAD2);
+                });
+            }
+
+            // Dump stats map to verify.
+            final HashMap<TetherStatsKey, TetherStatsValue> statsMap = pollRawMapFromDump(
+                    TetherStatsKey.class, TetherStatsValue.class, DUMPSYS_RAWMAP_ARG_STATS);
+            assertNotNull(statsMap);
+            assertEquals(1, statsMap.size());
+
+            final Map.Entry<TetherStatsKey, TetherStatsValue> stats =
+                    statsMap.entrySet().iterator().next();
+
+            // TODO: verify the upstream index in TetherStatsKey.
+
+            final TetherStatsValue statsValue = stats.getValue();
+            assertEquals(RX_UDP_PACKET_COUNT, statsValue.rxPackets);
+            assertEquals(RX_UDP_PACKET_COUNT * RX_UDP_PACKET_SIZE, statsValue.rxBytes);
+            assertEquals(0, statsValue.rxErrors);
+            assertEquals(TX_UDP_PACKET_COUNT, statsValue.txPackets);
+            assertEquals(TX_UDP_PACKET_COUNT * TX_UDP_PACKET_SIZE, statsValue.txBytes);
+            assertEquals(0, statsValue.txErrors);
         }
     }
 
