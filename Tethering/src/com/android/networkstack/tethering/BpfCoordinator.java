@@ -121,6 +121,7 @@ public class BpfCoordinator {
     private static final String TETHER_LIMIT_MAP_PATH = makeMapPath("limit");
     private static final String TETHER_ERROR_MAP_PATH = makeMapPath("error");
     private static final String TETHER_DEV_MAP_PATH = makeMapPath("dev");
+    private static final String DUMPSYS_RAWMAP_ARG_STATS = "--stats";
     private static final String DUMPSYS_RAWMAP_ARG_UPSTREAM4 = "--upstream4";
 
     // Using "," as a separator is safe because base64 characters are [0-9a-zA-Z/=+].
@@ -1088,14 +1089,14 @@ public class BpfCoordinator {
         return keyBase64Str + DUMP_BASE64_DELIMITER + valueBase64Str;
     }
 
-    private void dumpRawIpv4ForwardingRuleMap(
-            BpfMap<Tether4Key, Tether4Value> map, IndentingPrintWriter pw) throws ErrnoException {
+    private <K extends Struct, V extends Struct> void dumpRawMap(BpfMap<K, V> map,
+            IndentingPrintWriter pw) throws ErrnoException {
         if (map == null) {
-            pw.println("No IPv4 support");
+            pw.println("No BPF support");
             return;
         }
         if (map.isEmpty()) {
-            pw.println("No rules");
+            pw.println("No entries");
             return;
         }
         map.forEach((k, v) -> pw.println(bpfMapEntryToBase64String(k, v)));
@@ -1112,9 +1113,17 @@ public class BpfCoordinator {
         // it is okay for now because this is used by test only and test is supposed to use
         // expected argument order.
         // TODO: dump downstream4 map.
+        if (CollectionUtils.contains(args, DUMPSYS_RAWMAP_ARG_STATS)) {
+            try (BpfMap<TetherStatsKey, TetherStatsValue> statsMap = mDeps.getBpfStatsMap()) {
+                dumpRawMap(statsMap, pw);
+            } catch (ErrnoException e) {
+                pw.println("Error dumping stats map: " + e);
+            }
+            return;
+        }
         if (CollectionUtils.contains(args, DUMPSYS_RAWMAP_ARG_UPSTREAM4)) {
             try (BpfMap<Tether4Key, Tether4Value> upstreamMap = mDeps.getBpfUpstream4Map()) {
-                dumpRawIpv4ForwardingRuleMap(upstreamMap, pw);
+                dumpRawMap(upstreamMap, pw);
             } catch (ErrnoException e) {
                 pw.println("Error dumping IPv4 map: " + e);
             }
