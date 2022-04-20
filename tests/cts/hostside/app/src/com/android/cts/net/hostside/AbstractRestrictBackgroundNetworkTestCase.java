@@ -16,6 +16,7 @@
 
 package com.android.cts.net.hostside;
 
+import static android.app.job.JobScheduler.RESULT_SUCCESS;
 import static android.net.ConnectivityManager.ACTION_RESTRICT_BACKGROUND_CHANGED;
 import static android.os.BatteryManager.BATTERY_PLUGGED_AC;
 import static android.os.BatteryManager.BATTERY_PLUGGED_USB;
@@ -855,7 +856,8 @@ public abstract class AbstractRestrictBackgroundNetworkTestCase {
                     .setRequiredNetworkType(JobInfo.NETWORK_TYPE_ANY)
                     .setTransientExtras(extras)
                     .build();
-            mServiceClient.scheduleJob(jobInfo);
+            assertEquals("Error scheduling " + jobInfo,
+                    RESULT_SUCCESS, mServiceClient.scheduleJob(jobInfo));
             forceRunJob(TEST_APP2_PKG, TEST_JOB_ID);
             if (latch.await(JOB_NETWORK_STATE_TIMEOUT_MS, TimeUnit.MILLISECONDS)) {
                 final int resultCode = result.get(0).first;
