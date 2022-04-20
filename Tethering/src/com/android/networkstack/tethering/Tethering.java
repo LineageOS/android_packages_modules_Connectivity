@@ -2513,9 +2513,8 @@ public class Tethering {
                 writer, "  ");
 
         // Used for testing instead of human debug.
-        // TODO: add options to choose which map to dump.
         if (argsContain(args, "bpfRawMap")) {
-            mBpfCoordinator.dumpRawMap(pw);
+            mBpfCoordinator.dumpRawMap(pw, args);
             return;
         }
 
