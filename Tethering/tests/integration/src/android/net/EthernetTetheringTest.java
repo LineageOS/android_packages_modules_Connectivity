@@ -136,6 +136,7 @@ public class EthernetTetheringTest {
             ByteBuffer.wrap(new byte[] { (byte) 0x55, (byte) 0xaa });
 
     private static final String DUMPSYS_TETHERING_RAWMAP_ARG = "bpfRawMap";
+    private static final String DUMPSYS_RAWMAP_ARG_UPSTREAM4 = "--upstream4";
     private static final String BASE64_DELIMITER = ",";
     private static final String LINE_DELIMITER = "\\n";
 
@@ -956,7 +957,8 @@ public class EthernetTetheringTest {
                 return isExpectedUdpPacket(p, false /* hasEther */, PAYLOAD3);
             });
 
-            final HashMap<Tether4Key, Tether4Value> upstreamMap = pollIpv4UpstreamMapFromDump();
+            final HashMap<Tether4Key, Tether4Value> upstreamMap = pollRawMapFromDump(
+                    Tether4Key.class, Tether4Value.class, DUMPSYS_RAWMAP_ARG_UPSTREAM4);
             assertNotNull(upstreamMap);
             assertEquals(1, upstreamMap.size());
 
@@ -1021,7 +1023,8 @@ public class EthernetTetheringTest {
     }
 
     @Nullable
-    private Pair<Tether4Key, Tether4Value> parseTether4KeyValue(@NonNull String dumpStr) {
+    private <K extends Struct, V extends Struct> Pair<K, V> parseMapKeyValue(
+            Class<K> keyClass, Class<V> valueClass, @NonNull String dumpStr) {
         Log.w(TAG, "Parsing string: " + dumpStr);
 
         String[] keyValueStrs = dumpStr.split(BASE64_DELIMITER);
@@ -1034,36 +1037,38 @@ public class EthernetTetheringTest {
         Log.d(TAG, "keyBytes: " + dumpHexString(keyBytes));
         final ByteBuffer keyByteBuffer = ByteBuffer.wrap(keyBytes);
         keyByteBuffer.order(ByteOrder.nativeOrder());
-        final Tether4Key tether4Key = Struct.parse(Tether4Key.class, keyByteBuffer);
-        Log.w(TAG, "tether4Key: " + tether4Key);
+        final K k = Struct.parse(keyClass, keyByteBuffer);
 
         final byte[] valueBytes = Base64.decode(keyValueStrs[1], Base64.DEFAULT);
         Log.d(TAG, "valueBytes: " + dumpHexString(valueBytes));
         final ByteBuffer valueByteBuffer = ByteBuffer.wrap(valueBytes);
         valueByteBuffer.order(ByteOrder.nativeOrder());
-        final Tether4Value tether4Value = Struct.parse(Tether4Value.class, valueByteBuffer);
-        Log.w(TAG, "tether4Value: " + tether4Value);
+        final V v = Struct.parse(valueClass, valueByteBuffer);
 
-        return new Pair<>(tether4Key, tether4Value);
+        return new Pair<>(k, v);
     }
 
     @NonNull
-    private HashMap<Tether4Key, Tether4Value> dumpIpv4UpstreamMap() throws Exception {
-        final String rawMapStr = DumpTestUtils.dumpService(Context.TETHERING_SERVICE,
-                DUMPSYS_TETHERING_RAWMAP_ARG);
-        final HashMap<Tether4Key, Tether4Value> map = new HashMap<>();
+    private <K extends Struct, V extends Struct> HashMap<K, V> dumpAndParseRawMap(
+            Class<K> keyClass, Class<V> valueClass, @NonNull String mapArg)
+            throws Exception {
+        final String[] args = new String[] {DUMPSYS_TETHERING_RAWMAP_ARG, mapArg};
+        final String rawMapStr = DumpTestUtils.dumpService(Context.TETHERING_SERVICE, args);
+        final HashMap<K, V> map = new HashMap<>();
 
         for (final String line : rawMapStr.split(LINE_DELIMITER)) {
-            final Pair<Tether4Key, Tether4Value> rule = parseTether4KeyValue(line.trim());
+            final Pair<K, V> rule = parseMapKeyValue(keyClass, valueClass, line.trim());
             map.put(rule.first, rule.second);
         }
         return map;
     }
 
     @Nullable
-    private HashMap<Tether4Key, Tether4Value> pollIpv4UpstreamMapFromDump() throws Exception {
+    private <K extends Struct, V extends Struct> HashMap<K, V> pollRawMapFromDump(
+            Class<K> keyClass, Class<V> valueClass, @NonNull String mapArg)
+            throws Exception {
         for (int retryCount = 0; retryCount < DUMP_POLLING_MAX_RETRY; retryCount++) {
-            final HashMap<Tether4Key, Tether4Value> map = dumpIpv4UpstreamMap();
+            final HashMap<K, V> map = dumpAndParseRawMap(keyClass, valueClass, mapArg);
             if (!map.isEmpty()) return map;
 
             Thread.sleep(DUMP_POLLING_INTERVAL_MS);
