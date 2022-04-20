@@ -393,8 +393,9 @@ public final class NetworkTemplate implements Parcelable {
         //constructor passes METERED_YES for these types.
         this(matchRule, subscriberId, matchSubscriberIds,
                 wifiNetworkKey != null ? new String[] { wifiNetworkKey } : new String[0],
-                (matchRule == MATCH_MOBILE || matchRule == MATCH_MOBILE_WILDCARD) ? METERED_YES
-                : METERED_ALL , ROAMING_ALL, DEFAULT_NETWORK_ALL, NETWORK_TYPE_ALL,
+                (matchRule == MATCH_MOBILE || matchRule == MATCH_MOBILE_WILDCARD
+                        || matchRule == MATCH_CARRIER) ? METERED_YES : METERED_ALL,
+                ROAMING_ALL, DEFAULT_NETWORK_ALL, NETWORK_TYPE_ALL,
                 OEM_MANAGED_ALL, NetworkStatsUtils.SUBSCRIBER_ID_MATCH_RULE_EXACT);
     }
 
