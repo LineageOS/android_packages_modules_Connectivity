@@ -134,7 +134,9 @@ public class PermissionMonitor {
 
     // Store appIds traffic permissions for each user.
     // Keys are users, Values are SparseArrays where each entry maps an appId to the permissions
-    // that appId has within that user.
+    // that appId has within that user. The permissions are a bitmask of PERMISSION_INTERNET and
+    // PERMISSION_UPDATE_DEVICE_STATS, or 0 (PERMISSION_NONE) if the app has neither of those
+    // permissions. They can never be PERMISSION_UNINSTALLED.
     @GuardedBy("this")
     private final Map<UserHandle, SparseIntArray> mUsersTrafficPermissions = new ArrayMap<>();
 
@@ -545,17 +547,21 @@ public class PermissionMonitor {
 
         // Remove appIds traffic permission that belongs to the user
         final SparseIntArray removedUserAppIds = mUsersTrafficPermissions.remove(user);
-        // Generate appIds from left users.
+        // Generate appIds from the remaining users.
         final SparseIntArray appIds = makeAppIdsTrafficPermForAllUsers();
+
+        if (removedUserAppIds == null) {
+            Log.wtf(TAG, "onUserRemoved: Receive unknown user=" + user);
+            return;
+        }
+
         // Clear permission on those appIds belong to this user only, set the permission to
         // PERMISSION_UNINSTALLED.
-        if (removedUserAppIds != null) {
-            for (int i = 0; i < removedUserAppIds.size(); i++) {
-                final int appId = removedUserAppIds.keyAt(i);
-                // Need to clear permission if the removed appId is not found in the array.
-                if (appIds.indexOfKey(appId) < 0) {
-                    appIds.put(appId, PERMISSION_UNINSTALLED);
-                }
+        for (int i = 0; i < removedUserAppIds.size(); i++) {
+            final int appId = removedUserAppIds.keyAt(i);
+            // Need to clear permission if the removed appId is not found in the array.
+            if (appIds.indexOfKey(appId) < 0) {
+                appIds.put(appId, PERMISSION_UNINSTALLED);
             }
         }
         sendAppIdsTrafficPermission(appIds);
@@ -650,7 +656,6 @@ public class PermissionMonitor {
     }
 
     private synchronized void updateAppIdTrafficPermission(int uid) {
-        final int appId = UserHandle.getAppId(uid);
         final int uidTrafficPerm = getTrafficPermissionForUid(uid);
         final SparseIntArray userTrafficPerms =
                 mUsersTrafficPermissions.get(UserHandle.getUserHandleForUid(uid));
@@ -661,6 +666,7 @@ public class PermissionMonitor {
         // Do not put PERMISSION_UNINSTALLED into the array. If no package left on the uid
         // (PERMISSION_UNINSTALLED), remove the appId from the array. Otherwise, update the latest
         // permission to the appId.
+        final int appId = UserHandle.getAppId(uid);
         if (uidTrafficPerm == PERMISSION_UNINSTALLED) {
             userTrafficPerms.delete(appId);
         } else {
@@ -984,10 +990,6 @@ public class PermissionMonitor {
      */
     @VisibleForTesting
     void sendAppIdsTrafficPermission(SparseIntArray netdPermissionsAppIds) {
-        if (mNetd == null) {
-            Log.e(TAG, "Failed to get the netd service");
-            return;
-        }
         final ArrayList<Integer> allPermissionAppIds = new ArrayList<>();
         final ArrayList<Integer> internetPermissionAppIds = new ArrayList<>();
         final ArrayList<Integer> updateStatsPermissionAppIds = new ArrayList<>();
