@@ -22,10 +22,13 @@ import static android.net.ConnectivityManager.TYPE_MOBILE_DUN;
 import static android.net.ConnectivityManager.TYPE_MOBILE_HIPRI;
 import static android.net.ConnectivityManager.TYPE_WIFI;
 import static android.provider.DeviceConfig.NAMESPACE_CONNECTIVITY;
+import static android.telephony.CarrierConfigManager.KEY_CARRIER_CONFIG_APPLIED_BOOL;
+import static android.telephony.CarrierConfigManager.KEY_REQUIRE_ENTITLEMENT_CHECKS_BOOL;
 import static android.telephony.SubscriptionManager.INVALID_SUBSCRIPTION_ID;
 
 import static com.android.dx.mockito.inline.extended.ExtendedMockito.doReturn;
 import static com.android.dx.mockito.inline.extended.ExtendedMockito.mockitoSession;
+import static com.android.networkstack.apishim.ConstantsShim.KEY_CARRIER_SUPPORTS_TETHERING_BOOL;
 import static com.android.networkstack.tethering.TetheringConfiguration.TETHER_FORCE_USB_FUNCTIONS;
 import static com.android.networkstack.tethering.TetheringConfiguration.TETHER_USB_NCM_FUNCTION;
 import static com.android.networkstack.tethering.TetheringConfiguration.TETHER_USB_RNDIS_FUNCTION;
@@ -46,8 +49,10 @@ import android.content.pm.PackageManager;
 import android.content.res.Resources;
 import android.net.util.SharedLog;
 import android.os.Build;
+import android.os.PersistableBundle;
 import android.provider.DeviceConfig;
 import android.provider.Settings;
+import android.telephony.CarrierConfigManager;
 import android.telephony.TelephonyManager;
 import android.test.mock.MockContentResolver;
 
@@ -56,6 +61,7 @@ import androidx.test.runner.AndroidJUnit4;
 
 import com.android.internal.util.test.BroadcastInterceptingContext;
 import com.android.internal.util.test.FakeSettingsProvider;
+import com.android.modules.utils.build.SdkLevel;
 import com.android.net.module.util.DeviceConfigUtils;
 import com.android.testutils.DevSdkIgnoreRule;
 import com.android.testutils.DevSdkIgnoreRule.IgnoreAfter;
@@ -88,6 +94,7 @@ public class TetheringConfigurationTest {
     private static final long TEST_PACKAGE_VERSION = 1234L;
     @Mock private ApplicationInfo mApplicationInfo;
     @Mock private Context mContext;
+    @Mock private CarrierConfigManager mCarrierConfigManager;
     @Mock private TelephonyManager mTelephonyManager;
     @Mock private Resources mResources;
     @Mock private Resources mResourcesForSubId;
@@ -97,6 +104,7 @@ public class TetheringConfigurationTest {
     private boolean mHasTelephonyManager;
     private MockitoSession mMockingSession;
     private MockContentResolver mContentResolver;
+    private final PersistableBundle mCarrierConfig = new PersistableBundle();
 
     private class MockTetheringConfiguration extends TetheringConfiguration {
         MockTetheringConfiguration(Context ctx, SharedLog log, int id) {
@@ -472,6 +480,56 @@ public class TetheringConfigurationTest {
         when(mResourcesForSubId.getString(
                 R.string.config_mobile_hotspot_provision_response)).thenReturn(
                 PROVISIONING_APP_RESPONSE);
+    }
+
+    private <T> void mockService(String serviceName, Class<T> serviceClass, T service) {
+        when(mMockContext.getSystemServiceName(serviceClass)).thenReturn(serviceName);
+        when(mMockContext.getSystemService(serviceName)).thenReturn(service);
+    }
+
+    @Test
+    public void testGetCarrierConfigBySubId_noCarrierConfigManager_configsAreDefault() {
+        // Act like the CarrierConfigManager is present and ready unless told otherwise.
+        mockService(Context.CARRIER_CONFIG_SERVICE,
+                CarrierConfigManager.class, null);
+        final TetheringConfiguration cfg = new TetheringConfiguration(
+                mMockContext, mLog, INVALID_SUBSCRIPTION_ID);
+
+        assertTrue(cfg.isCarrierSupportTethering);
+        assertTrue(cfg.isCarrierConfigAffirmsEntitlementCheckRequired);
+    }
+
+    @Test
+    public void testGetCarrierConfigBySubId_carrierConfigMissing_configsAreDefault() {
+        // Act like the CarrierConfigManager is present and ready unless told otherwise.
+        mockService(Context.CARRIER_CONFIG_SERVICE,
+                CarrierConfigManager.class, mCarrierConfigManager);
+        when(mCarrierConfigManager.getConfigForSubId(anyInt())).thenReturn(null);
+        final TetheringConfiguration cfg = new TetheringConfiguration(
+                mMockContext, mLog, INVALID_SUBSCRIPTION_ID);
+
+        assertTrue(cfg.isCarrierSupportTethering);
+        assertTrue(cfg.isCarrierConfigAffirmsEntitlementCheckRequired);
+    }
+
+    @Test
+    public void testGetCarrierConfigBySubId_hasConfigs_carrierUnsupportAndCheckNotRequired() {
+        mockService(Context.CARRIER_CONFIG_SERVICE,
+                CarrierConfigManager.class, mCarrierConfigManager);
+        mCarrierConfig.putBoolean(KEY_CARRIER_CONFIG_APPLIED_BOOL, true);
+        mCarrierConfig.putBoolean(KEY_REQUIRE_ENTITLEMENT_CHECKS_BOOL, false);
+        mCarrierConfig.putBoolean(KEY_CARRIER_SUPPORTS_TETHERING_BOOL, false);
+        when(mCarrierConfigManager.getConfigForSubId(anyInt())).thenReturn(mCarrierConfig);
+        final TetheringConfiguration cfg = new TetheringConfiguration(
+                mMockContext, mLog, INVALID_SUBSCRIPTION_ID);
+
+        if (SdkLevel.isAtLeastT()) {
+            assertFalse(cfg.isCarrierSupportTethering);
+        } else {
+            assertTrue(cfg.isCarrierSupportTethering);
+        }
+        assertFalse(cfg.isCarrierConfigAffirmsEntitlementCheckRequired);
+
     }
 
     @Test
