@@ -87,6 +87,7 @@ import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.PrivateKey;
 import java.security.cert.X509Certificate;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
@@ -196,6 +197,7 @@ public class Ikev2VpnTest {
 
     private final X509Certificate mServerRootCa;
     private final CertificateAndKey mUserCertKey;
+    private final List<TestableNetworkCallback> mCallbacksToUnregister = new ArrayList<>();
 
     public Ikev2VpnTest() throws Exception {
         // Build certificates
@@ -205,6 +207,9 @@ public class Ikev2VpnTest {
 
     @After
     public void tearDown() {
+        for (TestableNetworkCallback callback : mCallbacksToUnregister) {
+            sCM.unregisterNetworkCallback(callback);
+        }
         setAppop(AppOpsManager.OP_ACTIVATE_VPN, false);
         setAppop(AppOpsManager.OP_ACTIVATE_PLATFORM_VPN, false);
     }
@@ -484,7 +489,7 @@ public class Ikev2VpnTest {
         final TestableNetworkCallback cb = new TestableNetworkCallback(TIMEOUT_MS);
         final NetworkRequest nr = new NetworkRequest.Builder()
                 .clearCapabilities().addTransportType(TRANSPORT_VPN).build();
-        sCM.registerNetworkCallback(nr, cb);
+        registerNetworkCallback(nr, cb);
 
         if (testSessionKey) {
             // testSessionKey will never be true if running on <T
@@ -520,7 +525,8 @@ public class Ikev2VpnTest {
             assertFalse(profileState.isLockdownEnabled());
         }
 
-        cb.expectCapabilitiesThat(vpnNetwork, TIMEOUT_MS, caps -> caps.hasTransport(TRANSPORT_VPN)
+        cb.expectCapabilitiesThat(vpnNetwork, TIMEOUT_MS,
+                caps -> caps.hasTransport(TRANSPORT_VPN)
                 && caps.hasCapability(NET_CAPABILITY_INTERNET)
                 && !caps.hasCapability(NET_CAPABILITY_VALIDATED)
                 && Process.myUid() == caps.getOwnerUid());
@@ -533,8 +539,10 @@ public class Ikev2VpnTest {
         // but unexpectedly sends this callback, expecting LOST below will fail because the next
         // callback will be the validated capabilities instead.
         // In S and below, |requiresValidation| is ignored, so this callback is always sent
-        // regardless of its value.
-        if (!requiresValidation || !TestUtils.shouldTestTApis()) {
+        // regardless of its value. However, there is a race in Vpn(see b/228574221) that VPN may
+        // misuse VPN network itself as the underlying network. The fix is not available without
+        // SDK > T platform. Thus, verify this only on T+ platform.
+        if (!requiresValidation && TestUtils.shouldTestTApis()) {
             cb.eventuallyExpect(CallbackEntry.NETWORK_CAPS_UPDATED, TIMEOUT_MS,
                     entry -> ((CallbackEntry.CapabilitiesChanged) entry).getCaps()
                             .hasCapability(NET_CAPABILITY_VALIDATED));
@@ -545,6 +553,11 @@ public class Ikev2VpnTest {
         // callbacks such as linkproperties change.
         cb.eventuallyExpect(CallbackEntry.LOST, TIMEOUT_MS,
                 lost -> vpnNetwork.equals(lost.getNetwork()));
+    }
+
+    private void registerNetworkCallback(NetworkRequest request, TestableNetworkCallback callback) {
+        sCM.registerNetworkCallback(request, callback);
+        mCallbacksToUnregister.add(callback);
     }
 
     private class VerifyStartStopVpnProfileTest implements TestNetworkRunnable.Test {
