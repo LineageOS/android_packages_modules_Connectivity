@@ -14,14 +14,15 @@
  * limitations under the License.
  */
 
+#include <aidl/android/net/connectivity/aidl/ConnectivityNative.h>
+#include <android/binder_manager.h>
+#include <android/binder_process.h>
 #include <android-modules-utils/sdk_level.h>
 #include <cutils/misc.h>  // FIRST_APPLICATION_UID
 #include <gtest/gtest.h>
 #include <netinet/in.h>
-#include <android/binder_manager.h>
-#include <android/binder_process.h>
 
-#include <aidl/android/net/connectivity/aidl/ConnectivityNative.h>
+#include "bpf/BpfUtils.h"
 
 using aidl::android::net::connectivity::aidl::IConnectivityNative;
 
@@ -39,6 +40,10 @@ class ConnectivityNativeBinderTest : public ::testing::Test {
         // Skip test case if not on T.
         if (!android::modules::sdklevel::IsAtLeastT()) GTEST_SKIP() <<
                 "Should be at least T device.";
+
+        // Skip test case if not on 5.4 kernel which is required by bpf prog.
+        if (!android::bpf::isAtLeastKernelVersion(5, 4, 0)) GTEST_SKIP() <<
+                "Kernel should be at least 5.4.";
 
         ASSERT_NE(nullptr, mService.get());
 
