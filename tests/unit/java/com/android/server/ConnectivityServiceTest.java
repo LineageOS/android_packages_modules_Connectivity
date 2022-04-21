@@ -805,6 +805,32 @@ public class ConnectivityServiceTest {
         }
     }
 
+    // This was only added in the T SDK, but this test needs to build against the R+S SDKs, too.
+    private static int toSdkSandboxUid(int appUid) {
+        final int firstSdkSandboxUid = 20000;
+        return appUid + (firstSdkSandboxUid - Process.FIRST_APPLICATION_UID);
+    }
+
+    // This function assumes the UID range for user 0 ([1, 99999])
+    private static UidRangeParcel[] uidRangeParcelsExcludingUids(Integer... excludedUids) {
+        int start = 1;
+        Arrays.sort(excludedUids);
+        List<UidRangeParcel> parcels = new ArrayList<UidRangeParcel>();
+        for (int excludedUid : excludedUids) {
+            if (excludedUid == start) {
+                start++;
+            } else {
+                parcels.add(new UidRangeParcel(start, excludedUid - 1));
+                start = excludedUid + 1;
+            }
+        }
+        if (start <= 99999) {
+            parcels.add(new UidRangeParcel(start, 99999));
+        }
+
+        return parcels.toArray(new UidRangeParcel[0]);
+    }
+
     private void waitForIdle() {
         HandlerUtils.waitForIdle(mCsHandlerThread, TIMEOUT_MS);
         waitForIdle(mCellNetworkAgent, TIMEOUT_MS);
@@ -9016,10 +9042,16 @@ public class ConnectivityServiceTest {
                 allowList);
         waitForIdle();
 
-        UidRangeParcel firstHalf = new UidRangeParcel(1, VPN_UID - 1);
-        UidRangeParcel secondHalf = new UidRangeParcel(VPN_UID + 1, 99999);
+        final Set<Integer> excludedUids = new ArraySet<Integer>();
+        excludedUids.add(VPN_UID);
+        if (SdkLevel.isAtLeastT()) {
+            // On T onwards, the corresponding SDK sandbox UID should also be excluded
+            excludedUids.add(toSdkSandboxUid(VPN_UID));
+        }
+        final UidRangeParcel[] uidRangeParcels = uidRangeParcelsExcludingUids(
+                excludedUids.toArray(new Integer[0]));
         InOrder inOrder = inOrder(mMockNetd);
-        expectNetworkRejectNonSecureVpn(inOrder, true, firstHalf, secondHalf);
+        expectNetworkRejectNonSecureVpn(inOrder, true, uidRangeParcels);
 
         // Connect a network when lockdown is active, expect to see it blocked.
         mWiFiNetworkAgent = new TestNetworkAgentWrapper(TRANSPORT_WIFI);
@@ -9043,7 +9075,7 @@ public class ConnectivityServiceTest {
         vpnUidCallback.assertNoCallback();
         vpnUidDefaultCallback.assertNoCallback();
         vpnDefaultCallbackAsUid.assertNoCallback();
-        expectNetworkRejectNonSecureVpn(inOrder, false, firstHalf, secondHalf);
+        expectNetworkRejectNonSecureVpn(inOrder, false, uidRangeParcels);
         assertEquals(mWiFiNetworkAgent.getNetwork(), mCm.getActiveNetworkForUid(VPN_UID));
         assertEquals(mWiFiNetworkAgent.getNetwork(), mCm.getActiveNetwork());
         assertActiveNetworkInfo(TYPE_WIFI, DetailedState.CONNECTED);
@@ -9060,13 +9092,14 @@ public class ConnectivityServiceTest {
         vpnUidDefaultCallback.assertNoCallback();
         vpnDefaultCallbackAsUid.assertNoCallback();
 
-        // The following requires that the UID of this test package is greater than VPN_UID. This
-        // is always true in practice because a plain AOSP build with no apps installed has almost
-        // 200 packages installed.
-        final UidRangeParcel piece1 = new UidRangeParcel(1, VPN_UID - 1);
-        final UidRangeParcel piece2 = new UidRangeParcel(VPN_UID + 1, uid - 1);
-        final UidRangeParcel piece3 = new UidRangeParcel(uid + 1, 99999);
-        expectNetworkRejectNonSecureVpn(inOrder, true, piece1, piece2, piece3);
+        excludedUids.add(uid);
+        if (SdkLevel.isAtLeastT()) {
+            // On T onwards, the corresponding SDK sandbox UID should also be excluded
+            excludedUids.add(toSdkSandboxUid(uid));
+        }
+        final UidRangeParcel[] uidRangeParcelsAlsoExcludingUs = uidRangeParcelsExcludingUids(
+                excludedUids.toArray(new Integer[0]));
+        expectNetworkRejectNonSecureVpn(inOrder, true, uidRangeParcelsAlsoExcludingUs);
         assertEquals(mWiFiNetworkAgent.getNetwork(), mCm.getActiveNetworkForUid(VPN_UID));
         assertEquals(mWiFiNetworkAgent.getNetwork(), mCm.getActiveNetwork());
         assertActiveNetworkInfo(TYPE_WIFI, DetailedState.CONNECTED);
@@ -9092,12 +9125,12 @@ public class ConnectivityServiceTest {
         // Everything should now be blocked.
         mVpnManagerService.setAlwaysOnVpnPackage(userId, null, false /* lockdown */, allowList);
         waitForIdle();
-        expectNetworkRejectNonSecureVpn(inOrder, false, piece1, piece2, piece3);
+        expectNetworkRejectNonSecureVpn(inOrder, false, uidRangeParcelsAlsoExcludingUs);
         allowList.clear();
         mVpnManagerService.setAlwaysOnVpnPackage(userId, ALWAYS_ON_PACKAGE, true /* lockdown */,
                 allowList);
         waitForIdle();
-        expectNetworkRejectNonSecureVpn(inOrder, true, firstHalf, secondHalf);
+        expectNetworkRejectNonSecureVpn(inOrder, true, uidRangeParcels);
         defaultCallback.expectBlockedStatusCallback(true, mWiFiNetworkAgent);
         assertBlockedCallbackInAnyOrder(callback, true, mWiFiNetworkAgent, mCellNetworkAgent);
         vpnUidCallback.assertNoCallback();
