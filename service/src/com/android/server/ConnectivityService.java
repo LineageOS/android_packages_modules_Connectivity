@@ -3266,11 +3266,12 @@ public class ConnectivityService extends IConnectivityManager.Stub
             return;
         }
 
-        pw.print("NetworkProviders for:");
+        pw.println("NetworkProviders for:");
+        pw.increaseIndent();
         for (NetworkProviderInfo npi : mNetworkProviderInfos.values()) {
-            pw.print(" " + npi.name);
+            pw.println(npi.providerId + ": " + npi.name);
         }
-        pw.println();
+        pw.decreaseIndent();
         pw.println();
 
         final NetworkAgentInfo defaultNai = getDefaultNetwork();
@@ -3316,6 +3317,14 @@ public class ConnectivityService extends IConnectivityManager.Stub
         pw.println("Network Requests:");
         pw.increaseIndent();
         dumpNetworkRequests(pw);
+        pw.decreaseIndent();
+        pw.println();
+
+        pw.println("Network Offers:");
+        pw.increaseIndent();
+        for (final NetworkOfferInfo offerInfo : mNetworkOffers) {
+            pw.println(offerInfo.offer);
+        }
         pw.decreaseIndent();
         pw.println();
 
