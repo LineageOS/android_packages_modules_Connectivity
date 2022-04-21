@@ -34,7 +34,6 @@ import static android.net.TetheringManager.TETHER_ERROR_NO_ERROR;
 import static android.net.TetheringManager.TETHER_ERROR_PROVISIONING_FAILED;
 
 import static com.android.networkstack.apishim.ConstantsShim.ACTION_TETHER_UNSUPPORTED_CARRIER_UI;
-import static com.android.networkstack.apishim.ConstantsShim.KEY_CARRIER_SUPPORTS_TETHERING_BOOL;
 
 import android.app.AlarmManager;
 import android.app.PendingIntent;
@@ -48,12 +47,10 @@ import android.net.util.SharedLog;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Parcel;
-import android.os.PersistableBundle;
 import android.os.ResultReceiver;
 import android.os.SystemClock;
 import android.os.SystemProperties;
 import android.provider.Settings;
-import android.telephony.CarrierConfigManager;
 import android.util.SparseIntArray;
 
 import com.android.internal.annotations.VisibleForTesting;
@@ -307,13 +304,13 @@ public class EntitlementManager {
         if (SystemProperties.getBoolean(DISABLE_PROVISIONING_SYSPROP_KEY, false)) {
             return TETHERING_PROVISIONING_NOT_REQUIRED;
         }
-        // TODO: Find a way to avoid get carrier config twice.
-        if (carrierConfigAffirmsCarrierNotSupport(config)) {
+
+        if (!config.isCarrierSupportTethering) {
             // To block tethering, behave as if running provisioning check and failed.
             return TETHERING_PROVISIONING_CARRIER_UNSUPPORT;
         }
 
-        if (carrierConfigAffirmsEntitlementCheckNotRequired(config)) {
+        if (!config.isCarrierConfigAffirmsEntitlementCheckRequired) {
             return TETHERING_PROVISIONING_NOT_REQUIRED;
         }
         return (config.provisioningApp.length == 2)
@@ -380,57 +377,6 @@ public class EntitlementManager {
     }
 
     /**
-     * Get carrier configuration bundle.
-     * @param config an object that encapsulates the various tethering configuration elements.
-     * */
-    public PersistableBundle getCarrierConfig(final TetheringConfiguration config) {
-        final CarrierConfigManager configManager = mContext
-                .getSystemService(CarrierConfigManager.class);
-        if (configManager == null) return null;
-
-        final PersistableBundle carrierConfig = configManager.getConfigForSubId(
-                config.activeDataSubId);
-
-        if (CarrierConfigManager.isConfigForIdentifiedCarrier(carrierConfig)) {
-            return carrierConfig;
-        }
-
-        return null;
-    }
-
-    // The logic here is aimed solely at confirming that a CarrierConfig exists
-    // and affirms that entitlement checks are not required.
-    //
-    // TODO: find a better way to express this, or alter the checking process
-    // entirely so that this is more intuitive.
-    // TODO: Find a way to avoid using getCarrierConfig everytime.
-    private boolean carrierConfigAffirmsEntitlementCheckNotRequired(
-            final TetheringConfiguration config) {
-        // Check carrier config for entitlement checks
-        final PersistableBundle carrierConfig = getCarrierConfig(config);
-        if (carrierConfig == null) return false;
-
-        // A CarrierConfigManager was found and it has a config.
-        final boolean isEntitlementCheckRequired = carrierConfig.getBoolean(
-                CarrierConfigManager.KEY_REQUIRE_ENTITLEMENT_CHECKS_BOOL);
-        return !isEntitlementCheckRequired;
-    }
-
-    private boolean carrierConfigAffirmsCarrierNotSupport(final TetheringConfiguration config) {
-        if (!SdkLevel.isAtLeastT()) {
-            return false;
-        }
-        // Check carrier config for entitlement checks
-        final PersistableBundle carrierConfig = getCarrierConfig(config);
-        if (carrierConfig == null) return false;
-
-        // A CarrierConfigManager was found and it has a config.
-        final boolean mIsCarrierSupport = carrierConfig.getBoolean(
-                KEY_CARRIER_SUPPORTS_TETHERING_BOOL, true);
-        return !mIsCarrierSupport;
-    }
-
-    /**
      * Run no UI tethering provisioning check.
      * @param type tethering type from TetheringManager.TETHERING_{@code *}
      * @param subId default data subscription ID.
@@ -479,7 +425,7 @@ public class EntitlementManager {
 
     private void runTetheringProvisioning(
             boolean showProvisioningUi, int downstreamType, final TetheringConfiguration config) {
-        if (carrierConfigAffirmsCarrierNotSupport(config)) {
+        if (!config.isCarrierSupportTethering) {
             mListener.onTetherProvisioningFailed(downstreamType, "Carrier does not support.");
             if (showProvisioningUi) {
                 showCarrierUnsupportedDialog();
@@ -497,7 +443,7 @@ public class EntitlementManager {
     }
 
     private void showCarrierUnsupportedDialog() {
-        // This is only used when carrierConfigAffirmsCarrierNotSupport() is true.
+        // This is only used when TetheringConfiguration.isCarrierSupportTethering is false.
         if (!SdkLevel.isAtLeastT()) {
             return;
         }

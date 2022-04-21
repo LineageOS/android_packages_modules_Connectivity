@@ -482,7 +482,7 @@ public class Tethering {
             // To avoid launching unexpected provisioning checks, ignore re-provisioning
             // when no CarrierConfig loaded yet. Assume reevaluateSimCardProvisioning()
             // will be triggered again when CarrierConfig is loaded.
-            if (mEntitlementMgr.getCarrierConfig(mConfig) != null) {
+            if (TetheringConfiguration.getCarrierConfig(mContext, subId) != null) {
                 mEntitlementMgr.reevaluateSimCardProvisioning(mConfig);
             } else {
                 mLog.log("IGNORED reevaluate provisioning, no carrier config loaded");
