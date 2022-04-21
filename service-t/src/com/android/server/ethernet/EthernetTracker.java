@@ -25,7 +25,6 @@ import static com.android.internal.annotations.VisibleForTesting.Visibility.PACK
 import android.annotation.NonNull;
 import android.annotation.Nullable;
 import android.content.Context;
-import android.content.res.Resources;
 import android.net.ConnectivityResources;
 import android.net.EthernetManager;
 import android.net.IEthernetServiceListener;
@@ -86,7 +85,6 @@ public class EthernetTracker {
     private static final boolean DBG = EthernetNetworkFactory.DBG;
 
     private static final String TEST_IFACE_REGEXP = TEST_TAP_PREFIX + "\\d+";
-    private static final String LEGACY_IFACE_REGEXP = "eth\\d";
 
     /**
      * Interface names we track. This is a product-dependent regular expression, plus,
@@ -134,48 +132,16 @@ public class EthernetTracker {
     }
 
     public static class Dependencies {
-        // TODO: remove legacy resource fallback after migrating its overlays.
-        private String getPlatformRegexResource(Context context) {
-            final Resources r = context.getResources();
-            final int resId =
-                r.getIdentifier("config_ethernet_iface_regex", "string", context.getPackageName());
-            return r.getString(resId);
-        }
-
-        // TODO: remove legacy resource fallback after migrating its overlays.
-        private String[] getPlatformInterfaceConfigs(Context context) {
-            final Resources r = context.getResources();
-            final int resId = r.getIdentifier("config_ethernet_interfaces", "array",
-                    context.getPackageName());
-            return r.getStringArray(resId);
-        }
-
         public String getInterfaceRegexFromResource(Context context) {
-            final String platformRegex = getPlatformRegexResource(context);
-            final String match;
-            if (!LEGACY_IFACE_REGEXP.equals(platformRegex)) {
-                // Platform resource is not the historical default: use the overlay
-                match = platformRegex;
-            } else {
-                final ConnectivityResources resources = new ConnectivityResources(context);
-                match = resources.get().getString(
-                        com.android.connectivity.resources.R.string.config_ethernet_iface_regex);
-            }
-            return match;
+            final ConnectivityResources resources = new ConnectivityResources(context);
+            return resources.get().getString(
+                    com.android.connectivity.resources.R.string.config_ethernet_iface_regex);
         }
 
         public String[] getInterfaceConfigFromResource(Context context) {
-            final String[] platformInterfaceConfigs = getPlatformInterfaceConfigs(context);
-            final String[] interfaceConfigs;
-            if (platformInterfaceConfigs.length != 0) {
-                // Platform resource is not the historical default: use the overlay
-                interfaceConfigs = platformInterfaceConfigs;
-            } else {
-                final ConnectivityResources resources = new ConnectivityResources(context);
-                interfaceConfigs = resources.get().getStringArray(
-                        com.android.connectivity.resources.R.array.config_ethernet_interfaces);
-            }
-            return interfaceConfigs;
+            final ConnectivityResources resources = new ConnectivityResources(context);
+            return resources.get().getStringArray(
+                    com.android.connectivity.resources.R.array.config_ethernet_interfaces);
         }
     }
 
