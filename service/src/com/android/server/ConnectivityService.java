@@ -108,6 +108,7 @@ import android.annotation.TargetApi;
 import android.app.AppOpsManager;
 import android.app.BroadcastOptions;
 import android.app.PendingIntent;
+import android.app.admin.DevicePolicyManager;
 import android.app.usage.NetworkStatsManager;
 import android.content.BroadcastReceiver;
 import android.content.ComponentName;
@@ -10635,13 +10636,29 @@ public class ConnectivityService extends IConnectivityManager.Stub
         mQosCallbackTracker.unregisterCallback(callback);
     }
 
+    private boolean isNetworkPreferenceAllowedForProfile(@NonNull UserHandle profile) {
+        // UserManager.isManagedProfile returns true for all apps in managed user profiles.
+        // Enterprise device can be fully managed like device owner and such use case
+        // also should be supported. Calling app check for work profile and fully managed device
+        // is already done in DevicePolicyManager.
+        // This check is an extra caution to be sure device is fully managed or not.
+        final UserManager um = mContext.getSystemService(UserManager.class);
+        final DevicePolicyManager dpm = mContext.getSystemService(DevicePolicyManager.class);
+        if (um.isManagedProfile(profile.getIdentifier())) {
+            return true;
+        }
+        if (SdkLevel.isAtLeastT() && dpm.getDeviceOwner() != null) return true;
+        return false;
+    }
+
     /**
-     * Request that a user profile is put by default on a network matching a given preference.
+     * Set a list of default network selection policies for a user profile or device owner.
      *
      * See the documentation for the individual preferences for a description of the supported
      * behaviors.
      *
-     * @param profile the user profile for whih the preference is being set.
+     * @param profile If the device owner is set, any profile is allowed.
+              Otherwise, the given profile can only be managed profile.
      * @param preferences the list of profile network preferences for the
      *        provided profile.
      * @param listener an optional listener to listen for completion of the operation.
@@ -10666,9 +10683,9 @@ public class ConnectivityService extends IConnectivityManager.Stub
             throw new IllegalArgumentException("Must explicitly specify a user handle ("
                     + "UserHandle.CURRENT not supported)");
         }
-        final UserManager um = mContext.getSystemService(UserManager.class);
-        if (!um.isManagedProfile(profile.getIdentifier())) {
-            throw new IllegalArgumentException("Profile must be a managed profile");
+        if (!isNetworkPreferenceAllowedForProfile(profile)) {
+            throw new IllegalArgumentException("Profile must be a managed profile "
+                    + "or the device owner must be set. ");
         }
 
         final List<ProfileNetworkPreferenceList.Preference> preferenceList =
