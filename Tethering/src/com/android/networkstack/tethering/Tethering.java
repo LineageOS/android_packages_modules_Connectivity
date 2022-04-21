@@ -135,6 +135,7 @@ import com.android.internal.util.State;
 import com.android.internal.util.StateMachine;
 import com.android.modules.utils.build.SdkLevel;
 import com.android.net.module.util.BaseNetdUnsolicitedEventListener;
+import com.android.net.module.util.CollectionUtils;
 import com.android.networkstack.apishim.common.BluetoothPanShim;
 import com.android.networkstack.apishim.common.BluetoothPanShim.TetheredInterfaceCallbackShim;
 import com.android.networkstack.apishim.common.BluetoothPanShim.TetheredInterfaceRequestShim;
@@ -278,6 +279,11 @@ public class Tethering {
     private BluetoothPan mBluetoothPan;
     private PanServiceListener mBluetoothPanListener;
     private ArrayList<Pair<Boolean, IIntResultListener>> mPendingPanRequests;
+    // AIDL doesn't support Set<Integer>. Maintain a int bitmap here. When the bitmap is passed to
+    // TetheringManager, TetheringManager would convert it to a set of Integer types.
+    // mSupportedTypeBitmap should always be updated inside tethering internal thread but it may be
+    // read from binder thread which called TetheringService directly.
+    private volatile long mSupportedTypeBitmap;
 
     public Tethering(TetheringDependencies deps) {
         mLog.mark("Tethering.constructed");
@@ -494,6 +500,8 @@ public class Tethering {
         mUpstreamNetworkMonitor.setUpstreamConfig(mConfig.chooseUpstreamAutomatically,
                 mConfig.isDunRequired);
         reportConfigurationChanged(mConfig.toStableParcelable());
+
+        updateSupportedDownstreams(mConfig);
     }
 
     private void maybeDunSettingChanged() {
@@ -1513,26 +1521,6 @@ public class Tethering {
         return mConfig;
     }
 
-    boolean hasAnySupportedDownstream() {
-        if ((mConfig.tetherableUsbRegexs.length != 0)
-                || (mConfig.tetherableWifiRegexs.length != 0)
-                || (mConfig.tetherableBluetoothRegexs.length != 0)) {
-            return true;
-        }
-
-        // Before T, isTetheringSupported would return true if wifi, usb and bluetooth tethering are
-        // disabled (whole tethering settings would be hidden). This means tethering would also not
-        // support wifi p2p, ethernet tethering and mirrorlink. This is wrong but probably there are
-        // some devices in the field rely on this to disable tethering entirely.
-        if (!SdkLevel.isAtLeastT()) return false;
-
-        return (mConfig.tetherableWifiP2pRegexs.length != 0)
-                || (mConfig.tetherableNcmRegexs.length != 0)
-                || isEthernetSupported();
-    }
-
-    // TODO: using EtherentManager new API to check whether ethernet is supported when the API is
-    // ready to use.
     private boolean isEthernetSupported() {
         return mContext.getSystemService(Context.ETHERNET_SERVICE) != null;
     }
@@ -2322,7 +2310,7 @@ public class Tethering {
         mHandler.post(() -> {
             mTetheringEventCallbacks.register(callback, new CallbackCookie(hasListPermission));
             final TetheringCallbackStartedParcel parcel = new TetheringCallbackStartedParcel();
-            parcel.tetheringSupported = isTetheringSupported();
+            parcel.supportedTypes = mSupportedTypeBitmap;
             parcel.upstreamNetwork = mTetherUpstream;
             parcel.config = mConfig.toStableParcelable();
             parcel.states =
@@ -2359,6 +2347,22 @@ public class Tethering {
         mHandler.post(() -> {
             mTetheringEventCallbacks.unregister(callback);
         });
+    }
+
+    private void reportTetheringSupportedChange(final long supportedBitmap) {
+        final int length = mTetheringEventCallbacks.beginBroadcast();
+        try {
+            for (int i = 0; i < length; i++) {
+                try {
+                    mTetheringEventCallbacks.getBroadcastItem(i).onSupportedTetheringTypes(
+                            supportedBitmap);
+                } catch (RemoteException e) {
+                    // Not really very much to do here.
+                }
+            }
+        } finally {
+            mTetheringEventCallbacks.finishBroadcast();
+        }
     }
 
     private void reportUpstreamChanged(UpstreamNetworkState ns) {
@@ -2445,18 +2449,56 @@ public class Tethering {
         }
     }
 
+    private void updateSupportedDownstreams(final TetheringConfiguration config) {
+        final long preSupportedBitmap = mSupportedTypeBitmap;
+
+        if (!isTetheringAllowed() || mEntitlementMgr.isProvisioningNeededButUnavailable()) {
+            mSupportedTypeBitmap = 0;
+        } else {
+            mSupportedTypeBitmap = makeSupportedDownstreams(config);
+        }
+
+        if (preSupportedBitmap != mSupportedTypeBitmap) {
+            reportTetheringSupportedChange(mSupportedTypeBitmap);
+        }
+    }
+
+    private long makeSupportedDownstreams(final TetheringConfiguration config) {
+        long types = 0;
+        if (config.tetherableUsbRegexs.length != 0) types |= (1 << TETHERING_USB);
+
+        if (config.tetherableWifiRegexs.length != 0) types |= (1 << TETHERING_WIFI);
+
+        if (config.tetherableBluetoothRegexs.length != 0) types |= (1 << TETHERING_BLUETOOTH);
+
+        // Before T, isTetheringSupported would return true if wifi, usb and bluetooth tethering are
+        // disabled (whole tethering settings would be hidden). This means tethering would also not
+        // support wifi p2p, ethernet tethering and mirrorlink. This is wrong but probably there are
+        // some devices in the field rely on this to disable tethering entirely.
+        if (!SdkLevel.isAtLeastT() && types == 0) return types;
+
+        if (config.tetherableNcmRegexs.length != 0) types |= (1 << TETHERING_NCM);
+
+        if (config.tetherableWifiP2pRegexs.length != 0) types |= (1 << TETHERING_WIFI_P2P);
+
+        if (isEthernetSupported()) types |= (1 << TETHERING_ETHERNET);
+
+        return types;
+    }
+
     // if ro.tether.denied = true we default to no tethering
     // gservices could set the secure setting to 1 though to enable it on a build where it
     // had previously been turned off.
-    boolean isTetheringSupported() {
+    private boolean isTetheringAllowed() {
         final int defaultVal = mDeps.isTetheringDenied() ? 0 : 1;
         final boolean tetherSupported = Settings.Global.getInt(mContext.getContentResolver(),
                 Settings.Global.TETHER_SUPPORTED, defaultVal) != 0;
-        final boolean tetherEnabledInSettings = tetherSupported
+        return tetherSupported
                 && !mUserManager.hasUserRestriction(UserManager.DISALLOW_CONFIG_TETHERING);
+    }
 
-        return tetherEnabledInSettings && hasAnySupportedDownstream()
-                && !mEntitlementMgr.isProvisioningNeededButUnavailable();
+    boolean isTetheringSupported() {
+        return mSupportedTypeBitmap > 0;
     }
 
     private void dumpBpf(IndentingPrintWriter pw) {
@@ -2472,13 +2514,12 @@ public class Tethering {
                 writer, "  ");
 
         // Used for testing instead of human debug.
-        // TODO: add options to choose which map to dump.
-        if (argsContain(args, "bpfRawMap")) {
-            mBpfCoordinator.dumpRawMap(pw);
+        if (CollectionUtils.contains(args, "bpfRawMap")) {
+            mBpfCoordinator.dumpRawMap(pw, args);
             return;
         }
 
-        if (argsContain(args, "bpf")) {
+        if (CollectionUtils.contains(args, "bpf")) {
             dumpBpf(pw);
             return;
         }
@@ -2544,7 +2585,7 @@ public class Tethering {
 
         pw.println("Log:");
         pw.increaseIndent();
-        if (argsContain(args, "--short")) {
+        if (CollectionUtils.contains(args, "--short")) {
             pw.println("<log removed for brevity>");
         } else {
             mLog.dump(fd, pw, args);
@@ -2586,13 +2627,6 @@ public class Tethering {
 
         final RuntimeException e = exceptionRef.get();
         if (e != null) throw e;
-    }
-
-    private static boolean argsContain(String[] args, String target) {
-        for (String arg : args) {
-            if (target.equals(arg)) return true;
-        }
-        return false;
     }
 
     private void updateConnectedClients(final List<WifiClient> wifiClients) {
