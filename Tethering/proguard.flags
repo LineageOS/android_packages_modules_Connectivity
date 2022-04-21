@@ -12,6 +12,11 @@
     native <methods>;
 }
 
+# Ensure runtime-visible field annotations are kept when using R8 full mode.
+-keepattributes RuntimeVisibleAnnotations,AnnotationDefault
+-keep interface com.android.networkstack.tethering.util.Struct$Field {
+    *;
+}
 -keepclassmembers public class * extends com.android.networkstack.tethering.util.Struct {
     *;
 }

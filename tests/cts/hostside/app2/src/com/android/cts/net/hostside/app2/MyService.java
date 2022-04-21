@@ -165,10 +165,10 @@ public class MyService extends Service {
         }
 
         @Override
-        public void scheduleJob(JobInfo jobInfo) {
+        public int scheduleJob(JobInfo jobInfo) {
             final JobScheduler jobScheduler = getApplicationContext()
                     .getSystemService(JobScheduler.class);
-            jobScheduler.schedule(jobInfo);
+            return jobScheduler.schedule(jobInfo);
         }
       };
 

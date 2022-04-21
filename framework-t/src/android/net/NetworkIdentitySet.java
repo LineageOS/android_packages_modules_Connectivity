@@ -206,6 +206,7 @@ public class NetworkIdentitySet extends HashSet<NetworkIdentity> {
     public static int compare(@NonNull NetworkIdentitySet left, @NonNull NetworkIdentitySet right) {
         Objects.requireNonNull(left);
         Objects.requireNonNull(right);
+        if (left.isEmpty() && right.isEmpty()) return 0;
         if (left.isEmpty()) return -1;
         if (right.isEmpty()) return 1;
 
