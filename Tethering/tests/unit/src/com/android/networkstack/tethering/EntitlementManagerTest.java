@@ -304,33 +304,6 @@ public final class EntitlementManagerTest {
     }
 
     @Test
-    public void toleratesCarrierConfigManagerMissing() {
-        setupForRequiredProvisioning();
-        mockService(Context.CARRIER_CONFIG_SERVICE, CarrierConfigManager.class, null);
-        mConfig = new FakeTetheringConfiguration(mMockContext, mLog, INVALID_SUBSCRIPTION_ID);
-        // Couldn't get the CarrierConfigManager, but still had a declared provisioning app.
-        // Therefore provisioning still be required.
-        assertTrue(mEnMgr.isTetherProvisioningRequired(mConfig));
-    }
-
-    @Test
-    public void toleratesCarrierConfigMissing() {
-        setupForRequiredProvisioning();
-        when(mCarrierConfigManager.getConfig()).thenReturn(null);
-        mConfig = new FakeTetheringConfiguration(mMockContext, mLog, INVALID_SUBSCRIPTION_ID);
-        // We still have a provisioning app configured, so still require provisioning.
-        assertTrue(mEnMgr.isTetherProvisioningRequired(mConfig));
-    }
-
-    @Test
-    public void toleratesCarrierConfigNotLoaded() {
-        setupForRequiredProvisioning();
-        mCarrierConfig.putBoolean(CarrierConfigManager.KEY_CARRIER_CONFIG_APPLIED_BOOL, false);
-        // We still have a provisioning app configured, so still require provisioning.
-        assertTrue(mEnMgr.isTetherProvisioningRequired(mConfig));
-    }
-
-    @Test
     public void provisioningNotRequiredWhenAppNotFound() {
         setupForRequiredProvisioning();
         when(mResources.getStringArray(R.array.config_mobile_hotspot_provision_app))
@@ -706,8 +679,8 @@ public final class EntitlementManagerTest {
     @IgnoreUpTo(SC_V2)
     public void requestLatestTetheringEntitlementResult_carrierDoesNotSupport_noProvisionCount()
             throws Exception {
-        setupForRequiredProvisioning();
         setupCarrierConfig(false);
+        setupForRequiredProvisioning();
         mEnMgr.fakeEntitlementResult = TETHER_ERROR_NO_ERROR;
         ResultReceiver receiver = new ResultReceiver(null) {
             @Override
@@ -735,6 +708,7 @@ public final class EntitlementManagerTest {
         mEnMgr.notifyUpstream(false);
         mLooper.dispatchAll();
         setupCarrierConfig(false);
+        mConfig = new FakeTetheringConfiguration(mMockContext, mLog, INVALID_SUBSCRIPTION_ID);
         mEnMgr.reevaluateSimCardProvisioning(mConfig);
 
         // Turn on upstream.
@@ -749,8 +723,8 @@ public final class EntitlementManagerTest {
     @IgnoreUpTo(SC_V2)
     public void startProvisioningIfNeeded_carrierUnsupport()
             throws Exception {
-        setupForRequiredProvisioning();
         setupCarrierConfig(false);
+        setupForRequiredProvisioning();
         mEnMgr.startProvisioningIfNeeded(TETHERING_WIFI, true);
         verify(mTetherProvisioningFailedListener, never())
                 .onTetherProvisioningFailed(TETHERING_WIFI, "Carrier does not support.");
