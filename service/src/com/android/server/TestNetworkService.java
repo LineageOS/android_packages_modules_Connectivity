@@ -16,6 +16,7 @@
 
 package com.android.server;
 
+import static android.net.TestNetworkManager.CLAT_INTERFACE_PREFIX;
 import static android.net.TestNetworkManager.TEST_TAP_PREFIX;
 import static android.net.TestNetworkManager.TEST_TUN_PREFIX;
 
@@ -98,6 +99,14 @@ class TestNetworkService extends ITestNetworkManager.Stub {
         }
     }
 
+    // TODO: find a way to allow the caller to pass in non-clat interface names, ensuring that
+    // those names do not conflict with names created by callers that do not pass in an interface
+    // name.
+    private static boolean isValidInterfaceName(@NonNull final String iface) {
+        return iface.startsWith(CLAT_INTERFACE_PREFIX + TEST_TUN_PREFIX)
+                || iface.startsWith(CLAT_INTERFACE_PREFIX + TEST_TAP_PREFIX);
+    }
+
     /**
      * Create a TUN or TAP interface with the specified parameters.
      *
@@ -106,29 +115,35 @@ class TestNetworkService extends ITestNetworkManager.Stub {
      */
     @Override
     public TestNetworkInterface createInterface(boolean isTun, boolean bringUp,
-            LinkAddress[] linkAddrs) {
+            LinkAddress[] linkAddrs, @Nullable String iface) {
         enforceTestNetworkPermissions(mContext);
 
         Objects.requireNonNull(linkAddrs, "missing linkAddrs");
 
-        String ifacePrefix = isTun ? TEST_TUN_PREFIX : TEST_TAP_PREFIX;
-        String iface = ifacePrefix + sTestTunIndex.getAndIncrement();
+        String interfaceName = iface;
+        if (iface == null) {
+            String ifacePrefix = isTun ? TEST_TUN_PREFIX : TEST_TAP_PREFIX;
+            interfaceName = ifacePrefix + sTestTunIndex.getAndIncrement();
+        } else if (!isValidInterfaceName(iface)) {
+            throw new IllegalArgumentException("invalid interface name requested: " + iface);
+        }
+
         final long token = Binder.clearCallingIdentity();
         try {
             ParcelFileDescriptor tunIntf =
-                    ParcelFileDescriptor.adoptFd(jniCreateTunTap(isTun, iface));
+                    ParcelFileDescriptor.adoptFd(jniCreateTunTap(isTun, interfaceName));
             for (LinkAddress addr : linkAddrs) {
                 mNetd.interfaceAddAddress(
-                        iface,
+                        interfaceName,
                         addr.getAddress().getHostAddress(),
                         addr.getPrefixLength());
             }
 
             if (bringUp) {
-                NetdUtils.setInterfaceUp(mNetd, iface);
+                NetdUtils.setInterfaceUp(mNetd, interfaceName);
             }
 
-            return new TestNetworkInterface(tunIntf, iface);
+            return new TestNetworkInterface(tunIntf, interfaceName);
         } catch (RemoteException e) {
             throw e.rethrowFromSystemServer();
         } finally {
