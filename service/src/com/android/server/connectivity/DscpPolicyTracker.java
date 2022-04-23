@@ -52,7 +52,7 @@ public class DscpPolicyTracker {
 
     private static final String TAG = DscpPolicyTracker.class.getSimpleName();
     private static final String PROG_PATH =
-            "/sys/fs/bpf/prog_dscp_policy_schedcls_set_dscp";
+            "/sys/fs/bpf/net_shared/prog_dscp_policy_schedcls_set_dscp";
     // Name is "map + *.o + map_name + map". Can probably shorten this
     private static final String IPV4_POLICY_MAP_PATH = makeMapPath(
             "dscp_policy_ipv4_dscp_policies");
@@ -61,7 +61,7 @@ public class DscpPolicyTracker {
     private static final int MAX_POLICIES = 16;
 
     private static String makeMapPath(String which) {
-        return "/sys/fs/bpf/map_" + which + "_map";
+        return "/sys/fs/bpf/net_shared/map_" + which + "_map";
     }
 
     private Set<String> mAttachedIfaces;
