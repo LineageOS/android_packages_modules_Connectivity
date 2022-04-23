@@ -88,7 +88,9 @@ apex {
         "dscp_policy.o",
         "netd.o",
         "offload.o",
+        "offload@btf.o",
         "test.o",
+        "test@btf.o",
     ],
     apps: [
         "ServiceConnectivityResources",
