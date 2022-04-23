@@ -42,6 +42,7 @@ using android::modules::sdklevel::IsAtLeastT;
 
 #define PLATFORM "/sys/fs/bpf/"
 #define TETHERING "/sys/fs/bpf/tethering/"
+#define SHARED "/sys/fs/bpf/net_shared/"
 
 class BpfExistenceTest : public ::testing::Test {
 };

@@ -100,11 +100,11 @@ public class ClatCoordinator {
     private static final String CLAT_INGRESS6_MAP_PATH = makeMapPath("ingress6");
 
     private static String makeMapPath(String which) {
-        return "/sys/fs/bpf/map_clatd_clat_" + which + "_map";
+        return "/sys/fs/bpf/net_shared/map_clatd_clat_" + which + "_map";
     }
 
     private static String makeProgPath(boolean ingress, boolean ether) {
-        String path = "/sys/fs/bpf/prog_clatd_schedcls_"
+        String path = "/sys/fs/bpf/net_shared/prog_clatd_schedcls_"
                 + (ingress ? "ingress6" : "egress4")
                 + "_clat_"
                 + (ether ? "ether" : "rawip");
