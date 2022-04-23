@@ -98,7 +98,7 @@ static const int IFACE_STATS_MAP_SIZE = 1000;
 static const int CONFIGURATION_MAP_SIZE = 2;
 static const int UID_OWNER_MAP_SIZE = 2000;
 
-#define BPF_PATH "/sys/fs/bpf/"
+#define BPF_PATH "/sys/fs/bpf/net_shared/"
 
 #define BPF_EGRESS_PROG_PATH BPF_PATH "prog_netd_cgroupskb_egress_stats"
 #define BPF_INGRESS_PROG_PATH BPF_PATH "prog_netd_cgroupskb_ingress_stats"
