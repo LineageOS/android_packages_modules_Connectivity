@@ -109,9 +109,9 @@ public class ClatCoordinatorTest {
             new FileDescriptor());
 
     private static final String EGRESS_PROG_PATH =
-            "/sys/fs/bpf/prog_clatd_schedcls_egress4_clat_rawip";
+            "/sys/fs/bpf/net_shared/prog_clatd_schedcls_egress4_clat_rawip";
     private static final String INGRESS_PROG_PATH =
-            "/sys/fs/bpf/prog_clatd_schedcls_ingress6_clat_ether";
+            "/sys/fs/bpf/net_shared/prog_clatd_schedcls_ingress6_clat_ether";
     private static final ClatEgress4Key EGRESS_KEY = new ClatEgress4Key(STACKED_IFINDEX,
             INET4_LOCAL4);
     private static final ClatEgress4Value EGRESS_VALUE = new ClatEgress4Value(BASE_IFINDEX,
