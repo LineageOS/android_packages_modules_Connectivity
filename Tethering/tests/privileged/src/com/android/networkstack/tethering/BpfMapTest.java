@@ -352,15 +352,6 @@ public final class BpfMapTest {
         assertFalse(mTestMap.isEmpty());
         mTestMap.clear();
         assertTrue(mTestMap.isEmpty());
-
-        // Clearing an already-closed map throws.
-        mTestMap.close();
-        try {
-            mTestMap.clear();
-            fail("clearing already-closed map should throw");
-        } catch (IllegalStateException expected) {
-            // ParcelFileDescriptor.getFd throws IllegalStateException: Already closed.
-        }
     }
 
     @Test
