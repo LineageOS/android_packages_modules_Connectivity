@@ -53,11 +53,22 @@ cc_library_static {
     min_sdk_version: "29",
 }
 
+// TODO: delete this one when AOSP is no longer auto-merge to git_sc-mainline-prod.
 cc_library_static {
     name: "netd_aidl_interface-lateststable-cpp",
     whole_static_libs: [
         "netd_aidl_interface-V8-cpp",
     ],
+}
+
+cc_defaults {
+    name: "netd_aidl_interface_lateststable_cpp_static",
+    static_libs: ["netd_aidl_interface-V8-cpp"],
+}
+
+cc_defaults {
+    name: "netd_aidl_interface_lateststable_cpp_shared",
+    shared_libs: ["netd_aidl_interface-V8-cpp"],
 }
 
 aidl_interface {
