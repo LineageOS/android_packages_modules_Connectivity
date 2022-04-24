@@ -47,10 +47,11 @@ public class ConnectivityNativeService extends ConnectivityNative.Stub {
     private static final String TAG = ConnectivityNativeService.class.getSimpleName();
     private static final String CGROUP_PATH = "/sys/fs/cgroup";
     private static final String V4_PROG_PATH =
-            "/sys/fs/bpf/prog_block_bind4_block_port";
+            "/sys/fs/bpf/net_shared/prog_block_bind4_block_port";
     private static final String V6_PROG_PATH =
-            "/sys/fs/bpf/prog_block_bind6_block_port";
-    private static final String BLOCKED_PORTS_MAP_PATH = "/sys/fs/bpf/map_block_blocked_ports_map";
+            "/sys/fs/bpf/net_shared/prog_block_bind6_block_port";
+    private static final String BLOCKED_PORTS_MAP_PATH =
+            "/sys/fs/bpf/net_shared/map_block_blocked_ports_map";
 
     private final Context mContext;
 
