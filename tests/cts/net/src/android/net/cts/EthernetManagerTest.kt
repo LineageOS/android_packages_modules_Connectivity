@@ -177,7 +177,10 @@ class EthernetManagerTest {
     }
 
     private fun createInterface(): EthernetTestInterface {
-        return EthernetTestInterface(context, Handler(Looper.getMainLooper()))
+        return EthernetTestInterface(
+            context,
+            Handler(Looper.getMainLooper())
+        ).also { createdIfaces.add(it) }
     }
 
     private fun setIncludeTestInterfaces(value: Boolean) {
