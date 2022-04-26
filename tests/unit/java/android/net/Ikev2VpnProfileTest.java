@@ -17,7 +17,7 @@
 package android.net;
 
 import static android.net.cts.util.IkeSessionTestUtils.CHILD_PARAMS;
-import static android.net.cts.util.IkeSessionTestUtils.IKE_PARAMS;
+import static android.net.cts.util.IkeSessionTestUtils.IKE_PARAMS_V6;
 
 import static com.android.testutils.DevSdkIgnoreRuleKt.SC_V2;
 
@@ -448,7 +448,7 @@ public class Ikev2VpnProfileTest {
     @Test
     public void testConversionIsLosslessWithIkeTunConnParams() throws Exception {
         final IkeTunnelConnectionParams tunnelParams =
-                new IkeTunnelConnectionParams(IKE_PARAMS, CHILD_PARAMS);
+                new IkeTunnelConnectionParams(IKE_PARAMS_V6, CHILD_PARAMS);
         // Config authentication related fields is not required while building with
         // IkeTunnelConnectionParams.
         final Ikev2VpnProfile ikeProfile = new Ikev2VpnProfile.Builder(tunnelParams).build();
@@ -464,9 +464,9 @@ public class Ikev2VpnProfileTest {
 
         // Verify building with IkeTunnelConnectionParams
         final IkeTunnelConnectionParams tunnelParams =
-                new IkeTunnelConnectionParams(IKE_PARAMS, CHILD_PARAMS);
+                new IkeTunnelConnectionParams(IKE_PARAMS_V6, CHILD_PARAMS);
         final IkeTunnelConnectionParams tunnelParams2 =
-                new IkeTunnelConnectionParams(IKE_PARAMS, CHILD_PARAMS);
+                new IkeTunnelConnectionParams(IKE_PARAMS_V6, CHILD_PARAMS);
         assertEquals(new Ikev2VpnProfile.Builder(tunnelParams).build(),
                 new Ikev2VpnProfile.Builder(tunnelParams2).build());
     }
