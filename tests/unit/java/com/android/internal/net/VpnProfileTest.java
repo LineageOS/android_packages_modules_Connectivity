@@ -17,7 +17,7 @@
 package com.android.internal.net;
 
 import static android.net.cts.util.IkeSessionTestUtils.CHILD_PARAMS;
-import static android.net.cts.util.IkeSessionTestUtils.IKE_PARAMS;
+import static android.net.cts.util.IkeSessionTestUtils.IKE_PARAMS_V4;
 
 import static com.android.modules.utils.build.SdkLevel.isAtLeastT;
 import static com.android.testutils.ParcelUtils.assertParcelSane;
@@ -128,7 +128,7 @@ public class VpnProfileTest {
     private VpnProfile getSampleIkev2ProfileWithIkeTunConnParams(String key) {
         final VpnProfile p = new VpnProfile(key, true /* isRestrictedToTestNetworks */,
                 false /* excludesLocalRoutes */, true /* requiresPlatformValidation */,
-                new IkeTunnelConnectionParams(IKE_PARAMS, CHILD_PARAMS));
+                new IkeTunnelConnectionParams(IKE_PARAMS_V4, CHILD_PARAMS));
 
         p.name = "foo";
         p.server = "bar";
