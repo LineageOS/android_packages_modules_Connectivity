@@ -178,9 +178,9 @@ android_app {
     certificate: "networkstack",
     manifest: "AndroidManifest.xml",
     use_embedded_native_libs: true,
-    // The permission configuration *must* be included to ensure security of the device
+    // The network stack *must* be included to ensure security of the device
     required: [
-        "NetworkPermissionConfig",
+        "NetworkStack",
         "privapp_allowlist_com.android.tethering",
     ],
     apex_available: ["com.android.tethering"],
@@ -198,9 +198,9 @@ android_app {
     certificate: "networkstack",
     manifest: "AndroidManifest.xml",
     use_embedded_native_libs: true,
-    // The permission configuration *must* be included to ensure security of the device
+    // The network stack *must* be included to ensure security of the device
     required: [
-        "NetworkPermissionConfig",
+        "NetworkStackNext",
         "privapp_allowlist_com.android.tethering",
     ],
     apex_available: ["com.android.tethering"],
