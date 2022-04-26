@@ -96,6 +96,7 @@ import android.net.NetworkProvider;
 import android.net.RouteInfo;
 import android.net.UidRangeParcel;
 import android.net.VpnManager;
+import android.net.VpnProfileState;
 import android.net.VpnService;
 import android.net.VpnTransportInfo;
 import android.net.ipsec.ike.IkeSessionCallback;
@@ -1095,21 +1096,28 @@ public class VpnTest {
     }
 
     private void verifyVpnManagerEvent(String sessionKey, String category, int errorClass,
-            int errorCode) {
+            int errorCode, VpnProfileState... profileState) {
         final Context userContext =
                 mContext.createContextAsUser(UserHandle.of(primaryUser.id), 0 /* flags */);
         final ArgumentCaptor<Intent> intentArgumentCaptor = ArgumentCaptor.forClass(Intent.class);
 
-        verify(userContext, timeout(TEST_TIMEOUT_MS)).startService(
-                intentArgumentCaptor.capture());
+        final int verifyTimes = (profileState == null) ? 1 : profileState.length;
+        verify(userContext, times(verifyTimes)).startService(intentArgumentCaptor.capture());
 
-        final Intent intent = intentArgumentCaptor.getValue();
-        assertEquals(sessionKey, intent.getStringExtra(VpnManager.EXTRA_SESSION_KEY));
-        assertTrue(intent.getCategories().contains(category));
-        assertEquals(errorClass,
-                intent.getIntExtra(VpnManager.EXTRA_ERROR_CLASS, -1 /* defaultValue */));
-        assertEquals(errorCode,
-                intent.getIntExtra(VpnManager.EXTRA_ERROR_CODE, -1 /* defaultValue */));
+        for (int i = 0; i < verifyTimes; i++) {
+            final Intent intent = intentArgumentCaptor.getAllValues().get(i);
+            assertEquals(sessionKey, intent.getStringExtra(VpnManager.EXTRA_SESSION_KEY));
+            final Set<String> categories = intent.getCategories();
+            assertTrue(categories.contains(category));
+            assertEquals(errorClass,
+                    intent.getIntExtra(VpnManager.EXTRA_ERROR_CLASS, -1 /* defaultValue */));
+            assertEquals(errorCode,
+                    intent.getIntExtra(VpnManager.EXTRA_ERROR_CODE, -1 /* defaultValue */));
+            if (profileState != null) {
+                assertEquals(profileState[i], intent.getParcelableExtra(
+                        VpnManager.EXTRA_VPN_PROFILE_STATE, VpnProfileState.class));
+            }
+        }
         reset(userContext);
     }
 
@@ -1134,7 +1142,7 @@ public class VpnTest {
         // CATEGORY_EVENT_DEACTIVATED_BY_USER is not an error event, so both of errorClass and
         // errorCode won't be set.
         verifyVpnManagerEvent(sessionKey1, VpnManager.CATEGORY_EVENT_DEACTIVATED_BY_USER,
-                -1 /* errorClass */, -1 /* errorCode */);
+                -1 /* errorClass */, -1 /* errorCode */, null /* profileState */);
         reset(mAppOps);
 
         // Test the case that the user chooses another vpn and the original one is replaced.
@@ -1145,7 +1153,68 @@ public class VpnTest {
         // CATEGORY_EVENT_DEACTIVATED_BY_USER is not an error event, so both of errorClass and
         // errorCode won't be set.
         verifyVpnManagerEvent(sessionKey2, VpnManager.CATEGORY_EVENT_DEACTIVATED_BY_USER,
-                -1 /* errorClass */, -1 /* errorCode */);
+                -1 /* errorClass */, -1 /* errorCode */, null /* profileState */);
+    }
+
+    @Test
+    public void testVpnManagerEventForAlwaysOnChanged() throws Exception {
+        assumeTrue(SdkLevel.isAtLeastT());
+        // Calling setAlwaysOnPackage() needs to hold CONTROL_VPN.
+        doReturn(PERMISSION_GRANTED).when(mContext).checkCallingOrSelfPermission(CONTROL_VPN);
+        final Vpn vpn = createVpn(primaryUser.id);
+        // Enable VPN always-on for PKGS[1].
+        assertTrue(vpn.setAlwaysOnPackage(PKGS[1], false /* lockdown */,
+                null /* lockdownAllowlist */));
+        verifyVpnManagerEvent(null /* sessionKey */,
+                VpnManager.CATEGORY_EVENT_ALWAYS_ON_STATE_CHANGED, -1 /* errorClass */,
+                -1 /* errorCode */, new VpnProfileState(VpnProfileState.STATE_DISCONNECTED,
+                        null /* sessionKey */, true /* alwaysOn */, false /* lockdown */));
+
+        // Enable VPN lockdown for PKGS[1].
+        assertTrue(vpn.setAlwaysOnPackage(PKGS[1], true /* lockdown */,
+                null /* lockdownAllowlist */));
+        verifyVpnManagerEvent(null /* sessionKey */,
+                VpnManager.CATEGORY_EVENT_ALWAYS_ON_STATE_CHANGED, -1 /* errorClass */,
+                -1 /* errorCode */, new VpnProfileState(VpnProfileState.STATE_DISCONNECTED,
+                        null /* sessionKey */, true /* alwaysOn */, true /* lockdown */));
+
+        // Disable VPN lockdown for PKGS[1].
+        assertTrue(vpn.setAlwaysOnPackage(PKGS[1], false /* lockdown */,
+                null /* lockdownAllowlist */));
+        verifyVpnManagerEvent(null /* sessionKey */,
+                VpnManager.CATEGORY_EVENT_ALWAYS_ON_STATE_CHANGED, -1 /* errorClass */,
+                -1 /* errorCode */, new VpnProfileState(VpnProfileState.STATE_DISCONNECTED,
+                        null /* sessionKey */, true /* alwaysOn */, false /* lockdown */));
+
+        // Disable VPN always-on.
+        assertTrue(vpn.setAlwaysOnPackage(null, false /* lockdown */,
+                null /* lockdownAllowlist */));
+        verifyVpnManagerEvent(null /* sessionKey */,
+                VpnManager.CATEGORY_EVENT_ALWAYS_ON_STATE_CHANGED, -1 /* errorClass */,
+                -1 /* errorCode */, new VpnProfileState(VpnProfileState.STATE_DISCONNECTED,
+                        null /* sessionKey */, false /* alwaysOn */, false /* lockdown */));
+
+        // Enable VPN always-on for PKGS[1] again.
+        assertTrue(vpn.setAlwaysOnPackage(PKGS[1], false /* lockdown */,
+                null /* lockdownAllowlist */));
+        verifyVpnManagerEvent(null /* sessionKey */,
+                VpnManager.CATEGORY_EVENT_ALWAYS_ON_STATE_CHANGED, -1 /* errorClass */,
+                -1 /* errorCode */, new VpnProfileState(VpnProfileState.STATE_DISCONNECTED,
+                        null /* sessionKey */, true /* alwaysOn */, false /* lockdown */));
+
+        // Enable VPN always-on for PKGS[2].
+        assertTrue(vpn.setAlwaysOnPackage(PKGS[2], false /* lockdown */,
+                null /* lockdownAllowlist */));
+        // PKGS[1] is replaced with PKGS[2].
+        // Pass 2 VpnProfileState objects to verifyVpnManagerEvent(), the first one is sent to
+        // PKGS[1] to notify PKGS[1] that the VPN always-on is disabled, the second one is sent to
+        // PKGS[2] to notify PKGS[2] that the VPN always-on is enabled.
+        verifyVpnManagerEvent(null /* sessionKey */,
+                VpnManager.CATEGORY_EVENT_ALWAYS_ON_STATE_CHANGED, -1 /* errorClass */,
+                -1 /* errorCode */, new VpnProfileState(VpnProfileState.STATE_DISCONNECTED,
+                        null /* sessionKey */, false /* alwaysOn */, false /* lockdown */),
+                new VpnProfileState(VpnProfileState.STATE_DISCONNECTED,
+                        null /* sessionKey */, true /* alwaysOn */, false /* lockdown */));
     }
 
     @Test
