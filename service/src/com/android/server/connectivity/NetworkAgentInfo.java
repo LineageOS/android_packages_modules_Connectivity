@@ -59,6 +59,7 @@ import android.util.Log;
 import android.util.Pair;
 import android.util.SparseArray;
 
+import com.android.internal.util.IndentingPrintWriter;
 import com.android.internal.util.WakeupMessage;
 import com.android.modules.utils.build.SdkLevel;
 import com.android.server.ConnectivityService;
@@ -1183,6 +1184,15 @@ public class NetworkAgentInfo implements Comparable<NetworkAgentInfo>, NetworkRa
         for (InactivityTimer timer : mInactivityTimers) {
             pw.println(timer);
         }
+    }
+
+    /**
+     * Dump the NAT64 xlat information.
+     *
+     * @param pw print writer.
+     */
+    public void dumpNat464Xlat(IndentingPrintWriter pw) {
+        clatd.dump(pw);
     }
 
     /**
