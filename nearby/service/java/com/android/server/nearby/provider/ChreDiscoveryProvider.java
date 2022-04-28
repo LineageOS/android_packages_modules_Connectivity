@@ -33,10 +33,10 @@ import com.android.internal.annotations.VisibleForTesting;
 
 import com.google.protobuf.InvalidProtocolBufferException;
 
-import service.proto.Blefilter;
-
 import java.util.Collections;
 import java.util.concurrent.Executor;
+
+import service.proto.Blefilter;
 
 /** Discovery provider that uses CHRE Nearby Nanoapp to do scanning. */
 public class ChreDiscoveryProvider extends AbstractDiscoveryProvider {
