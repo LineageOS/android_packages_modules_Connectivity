@@ -49,6 +49,7 @@ import android.os.CancellationSignal;
 import android.os.Handler;
 import android.os.Looper;
 import android.platform.test.annotations.AppModeFull;
+import android.provider.Settings;
 import android.system.ErrnoException;
 import android.util.Log;
 
@@ -727,6 +728,18 @@ public class DnsResolverTest {
 
     @Test
     public void testPrivateDnsBypass() throws InterruptedException {
+        final String dataStallSetting = Settings.Global.getString(mCR,
+                Settings.Global.DATA_STALL_RECOVERY_ON_BAD_NETWORK);
+        Settings.Global.putInt(mCR, Settings.Global.DATA_STALL_RECOVERY_ON_BAD_NETWORK, 0);
+        try {
+            doTestPrivateDnsBypass();
+        } finally {
+            Settings.Global.putString(mCR, Settings.Global.DATA_STALL_RECOVERY_ON_BAD_NETWORK,
+                    dataStallSetting);
+        }
+    }
+
+    private void doTestPrivateDnsBypass() throws InterruptedException {
         final Network[] testNetworks = getTestableNetworks();
 
         // Set an invalid private DNS server
