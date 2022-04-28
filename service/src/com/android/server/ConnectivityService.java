@@ -8092,7 +8092,8 @@ public class ConnectivityService extends IConnectivityManager.Stub
                 && nc.getOwnerUid() != Process.SYSTEM_UID
                 && lp.getInterfaceName() != null
                 && (lp.hasIpv4DefaultRoute() || lp.hasIpv4UnreachableDefaultRoute())
-                && (lp.hasIpv6DefaultRoute() || lp.hasIpv6UnreachableDefaultRoute());
+                && (lp.hasIpv6DefaultRoute() || lp.hasIpv6UnreachableDefaultRoute())
+                && !lp.hasExcludeRoute();
     }
 
     private static UidRangeParcel[] toUidRangeStableParcels(final @NonNull Set<UidRange> ranges) {
