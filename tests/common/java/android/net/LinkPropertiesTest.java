@@ -1261,6 +1261,17 @@ public class LinkPropertiesTest {
         assertFalse(lp.hasIpv4UnreachableDefaultRoute());
     }
 
+    @Test @IgnoreUpTo(Build.VERSION_CODES.S_V2)
+    public void testHasExcludeRoute() {
+        LinkProperties lp = new LinkProperties();
+        lp.setInterfaceName("VPN");
+        lp.addRoute(new RouteInfo(new IpPrefix(ADDRV4, 2), RTN_UNICAST));
+        lp.addRoute(new RouteInfo(new IpPrefix(ADDRV6, 0), RTN_UNICAST));
+        assertFalse(lp.hasExcludeRoute());
+        lp.addRoute(new RouteInfo(new IpPrefix(ADDRV6, 2), RTN_THROW));
+        assertTrue(lp.hasExcludeRoute());
+    }
+
     @Test @IgnoreUpTo(Build.VERSION_CODES.Q)
     @EnableCompatChanges({LinkProperties.EXCLUDED_ROUTES})
     public void testRouteAddWithSameKey() throws Exception {
