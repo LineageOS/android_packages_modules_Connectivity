@@ -30,9 +30,14 @@ public class PresenceDiscoveryResult {
 
     /** Creates a {@link PresenceDiscoveryResult} from the scan data. */
     public static PresenceDiscoveryResult fromDevice(NearbyDeviceParcelable device) {
+        byte[] salt = device.getSalt();
+        if (salt == null) {
+            salt = new byte[0];
+        }
         return new PresenceDiscoveryResult.Builder()
                 .setTxPower(device.getTxPower())
                 .setRssi(device.getRssi())
+                .setSalt(salt)
                 .addPresenceAction(device.getAction())
                 .setPublicCredential(device.getPublicCredential())
                 .build();
