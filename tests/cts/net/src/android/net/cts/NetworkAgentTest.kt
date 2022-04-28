@@ -1275,4 +1275,23 @@ class NetworkAgentTest {
         matchAllCallback.expectCallback<Lost>(wifiNetwork)
         wifiAgent.expectCallback<OnNetworkUnwanted>()
     }
+
+    @Test
+    fun testUnregisterAgentBeforeAgentFullyConnected() {
+        val specifier = UUID.randomUUID().toString()
+        val callback = TestableNetworkCallback()
+        val transports = intArrayOf(TRANSPORT_CELLULAR)
+        // Ensure this NetworkAgent is never unneeded by filing a request with its specifier.
+        requestNetwork(makeTestNetworkRequest(specifier = specifier), callback)
+        val nc = makeTestNetworkCapabilities(specifier, transports)
+        val agent = createNetworkAgent(realContext, initialNc = nc)
+        // Connect the agent
+        agent.register()
+        // Mark agent connected then unregister agent immediately. Verify that both available and
+        // lost callback should be sent still.
+        agent.markConnected()
+        agent.unregister()
+        callback.expectCallback<Available>(agent.network!!)
+        callback.eventuallyExpect<Lost> { it.network == agent.network }
+    }
 }
