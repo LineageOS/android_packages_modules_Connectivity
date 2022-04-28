@@ -109,6 +109,26 @@ public class NearbyManager {
                     .setBluetoothAddress(nearbyDeviceParcelable.getBluetoothAddress())
                     .setData(nearbyDeviceParcelable.getData()).build();
         }
+
+        if (scanType == ScanRequest.SCAN_TYPE_NEARBY_PRESENCE) {
+            PublicCredential publicCredential = nearbyDeviceParcelable.getPublicCredential();
+            if (publicCredential == null) {
+                return null;
+            }
+            byte[] salt = nearbyDeviceParcelable.getSalt();
+            if (salt == null) {
+                salt = new byte[0];
+            }
+            return new PresenceDevice.Builder(
+                    // Use the public credential hash as the device Id.
+                    String.valueOf(publicCredential.hashCode()),
+                    salt,
+                    publicCredential.getSecretId(),
+                    publicCredential.getEncryptedMetadata())
+                    .setRssi(nearbyDeviceParcelable.getRssi())
+                    .addMedium(nearbyDeviceParcelable.getMedium())
+                    .build();
+        }
         return null;
     }
 
