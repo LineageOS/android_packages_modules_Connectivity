@@ -268,6 +268,11 @@ public final class PresenceDevice extends NearbyDevice implements Parcelable {
          */
         public Builder(@NonNull String deviceId, @NonNull byte[] salt, @NonNull byte[] secretId,
                 @NonNull byte[] encryptedIdentity) {
+            Objects.requireNonNull(deviceId);
+            Objects.requireNonNull(salt);
+            Objects.requireNonNull(secretId);
+            Objects.requireNonNull(encryptedIdentity);
+
             mDeviceId = deviceId;
             mSalt = salt;
             mSecretId = secretId;
