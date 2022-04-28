@@ -1076,11 +1076,12 @@ public abstract class NetworkAgent {
      */
     @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.P, trackingBug = 115609023)
     public final void sendNetworkInfo(NetworkInfo networkInfo) {
-        queueOrSendNetworkInfo(new NetworkInfo(networkInfo));
+        queueOrSendNetworkInfo(networkInfo);
     }
 
     private void queueOrSendNetworkInfo(NetworkInfo networkInfo) {
-        queueOrSendMessage(reg -> reg.sendNetworkInfo(networkInfo));
+        final NetworkInfo ni = new NetworkInfo(networkInfo);
+        queueOrSendMessage(reg -> reg.sendNetworkInfo(ni));
     }
 
     /**
