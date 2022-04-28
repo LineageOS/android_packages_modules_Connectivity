@@ -75,7 +75,7 @@ class EthernetManagerTest {
     private val em by lazy { EthernetManagerShimImpl.newInstance(context) }
 
     private val createdIfaces = ArrayList<EthernetTestInterface>()
-    private val addedListeners = ArrayList<InterfaceStateListener>()
+    private val addedListeners = ArrayList<EthernetStateListener>()
 
     private class EthernetTestInterface(
         context: Context,
@@ -171,7 +171,7 @@ class EthernetManagerTest {
         }
     }
 
-    private fun addInterfaceStateListener(executor: Executor, listener: InterfaceStateListener) {
+    private fun addInterfaceStateListener(executor: Executor, listener: EthernetStateListener) {
         em.addInterfaceStateListener(executor, listener)
         addedListeners.add(listener)
     }
@@ -212,15 +212,25 @@ class EthernetManagerTest {
         listener.expectCallback(iface2, STATE_LINK_DOWN, ROLE_CLIENT)
         listener.expectCallback(iface2, STATE_LINK_UP, ROLE_CLIENT)
 
+        // Register a new listener, it should see state of all existing interfaces immediately.
+        val listener2 = EthernetStateListener()
+        addInterfaceStateListener(executor, listener2)
+        listener2.expectCallback(iface, STATE_LINK_UP, ROLE_CLIENT)
+        listener2.expectCallback(iface2, STATE_LINK_UP, ROLE_CLIENT)
+
         // Removing interfaces first sends link down, then STATE_ABSENT/ROLE_NONE.
         removeInterface(iface)
-        listener.expectCallback(iface, STATE_LINK_DOWN, ROLE_CLIENT)
-        listener.expectCallback(iface, STATE_ABSENT, ROLE_NONE)
+        for (listener in addedListeners) {
+            listener.expectCallback(iface, STATE_LINK_DOWN, ROLE_CLIENT)
+            listener.expectCallback(iface, STATE_ABSENT, ROLE_NONE)
+        }
 
         removeInterface(iface2)
-        listener.expectCallback(iface2, STATE_LINK_DOWN, ROLE_CLIENT)
-        listener.expectCallback(iface2, STATE_ABSENT, ROLE_NONE)
-        listener.assertNoCallback()
+        for (listener in addedListeners) {
+            listener.expectCallback(iface2, STATE_LINK_DOWN, ROLE_CLIENT)
+            listener.expectCallback(iface2, STATE_ABSENT, ROLE_NONE)
+            listener.assertNoCallback()
+        }
     }
 
     @Test
