@@ -57,6 +57,7 @@ import android.telephony.data.ApnSetting;
 import android.util.Log;
 
 import androidx.test.platform.app.InstrumentationRegistry;
+import androidx.test.uiautomator.UiDevice;
 
 import com.android.compatibility.common.util.AppStandbyUtils;
 import com.android.compatibility.common.util.BatteryUtils;
@@ -436,6 +437,10 @@ public class NetworkPolicyTestUtils {
 
     public static Instrumentation getInstrumentation() {
         return InstrumentationRegistry.getInstrumentation();
+    }
+
+    public static UiDevice getUiDevice() {
+        return UiDevice.getInstance(getInstrumentation());
     }
 
     // When power saver mode or restrict background enabled or adding any white/black list into

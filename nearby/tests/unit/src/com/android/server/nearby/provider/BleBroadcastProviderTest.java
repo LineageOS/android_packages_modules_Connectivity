@@ -20,6 +20,7 @@ import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
+import android.app.AppOpsManager;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothManager;
 import android.bluetooth.le.AdvertiseSettings;
@@ -61,7 +62,6 @@ public class BleBroadcastProviderTest {
     public void testOnStatus_success() {
         byte[] advertiseBytes = new byte[]{1, 2, 3, 4};
         mBleBroadcastProvider.start(advertiseBytes, mBroadcastListener);
-        verify(mBroadcastListener).onStatusChanged(eq(BroadcastCallback.STATUS_FAILURE));
 
         AdvertiseSettings settings = new AdvertiseSettings.Builder().build();
         mBleBroadcastProvider.onStartSuccess(settings);
@@ -74,7 +74,8 @@ public class BleBroadcastProviderTest {
         mBleBroadcastProvider.start(advertiseBytes, mBroadcastListener);
 
         mBleBroadcastProvider.onStartFailure(BroadcastCallback.STATUS_FAILURE);
-        verify(mBroadcastListener, times(2)).onStatusChanged(eq(BroadcastCallback.STATUS_FAILURE));
+        verify(mBroadcastListener, times(1))
+                .onStatusChanged(eq(BroadcastCallback.STATUS_FAILURE));
     }
 
     private static class TestInjector implements Injector {
@@ -88,6 +89,11 @@ public class BleBroadcastProviderTest {
 
         @Override
         public ContextHubManagerAdapter getContextHubManagerAdapter() {
+            return null;
+        }
+
+        @Override
+        public AppOpsManager getAppOpsManager() {
             return null;
         }
     }
