@@ -34,4 +34,10 @@ java_test_host {
         "general-tests",
         "sts"
     ],
+    data: [
+        ":CtsHostsideNetworkTestsApp",
+        ":CtsHostsideNetworkTestsApp2",
+        ":CtsHostsideNetworkTestsAppNext",
+    ],
+    per_testcase_directory: true,
 }
