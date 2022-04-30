@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "e2254701_da367c45",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 2
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 2195
+      },
+      "writtenOn": "2022-04-30T00:09:07Z",
+      "side": 1,
+      "message": "Oliver, see Luca\u0027s comment, and then if not that, do you have a replacement for this API?\n\nThis makes APEX updates harder so let\u0027s avoid changing the API here if we can.",
+      "revId": "aacb1a1c4830a80949ecf4dcf949c943dda1a912",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    }
+  ]
+}
