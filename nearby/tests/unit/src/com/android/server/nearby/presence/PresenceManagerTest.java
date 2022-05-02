@@ -16,9 +16,6 @@
 
 package com.android.server.nearby.presence;
 
-
-
-
 import androidx.test.filters.SdkSuppress;
 
 import org.junit.Before;
@@ -26,7 +23,6 @@ import org.junit.Test;
 import org.mockito.MockitoAnnotations;
 
 public class PresenceManagerTest {
-    private PresenceManager mPresenceManager;
 
     @Before
     public void setup() {
