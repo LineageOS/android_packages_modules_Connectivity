@@ -548,6 +548,8 @@ interface INetd {
    /**
     * Start clatd
     *
+    * @deprecated This method has no effect and throws UnsupportedOperationException. The clatd
+    *             control plane moved to the mainline module starting in T. See ClatCoordinator.
     * @param ifName interface name to start clatd
     * @param nat64Prefix the NAT64 prefix, e.g., "2001:db8:64::/96".
     * @return a string, the IPv6 address that will be used for 464xlat.
@@ -559,6 +561,8 @@ interface INetd {
    /**
     * Stop clatd
     *
+    * @deprecated This method has no effect and throws UnsupportedOperationException. The clatd
+    *             control plane moved to the mainline module starting in T. See ClatCoordinator.
     * @param ifName interface name to stop clatd
     * @throws ServiceSpecificException in case of failure, with an error code indicating the
     *         cause of the failure.
@@ -1283,6 +1287,8 @@ interface INetd {
      * Currently, only downstream /128 IPv6 entries are supported. An existing rule will be updated
      * if the input interface and destination prefix match. Otherwise, a new rule will be created.
      *
+     * @deprecated This method has no effect and throws UnsupportedOperationException. The mainline
+     *             module accesses the BPF map directly starting in S. See BpfCoordinator.
      * @param rule The rule to add or update.
      * @throws ServiceSpecificException in case of failure, with an error code indicating the
      *                                  cause of the failure.
@@ -1296,6 +1302,8 @@ interface INetd {
      * if the destination IP address and the source interface match. It is not an error if there is
      * no matching rule to delete.
      *
+     * @deprecated This method has no effect and throws UnsupportedOperationException. The mainline
+     *             module accesses the BPF map directly starting in S. See BpfCoordinator.
      * @param rule The rule to delete.
      * @throws ServiceSpecificException in case of failure, with an error code indicating the
      *                                  cause of the failure.
@@ -1305,6 +1313,8 @@ interface INetd {
     /**
      * Return BPF tethering offload statistics.
      *
+     * @deprecated This method has no effect and throws UnsupportedOperationException. The mainline
+     *             module accesses the BPF map directly starting in S. See BpfCoordinator.
      * @return an array of TetherStatsParcel's, where each entry contains the upstream interface
      *         index and its tethering statistics since tethering was first started.
      *         There will only ever be one entry for a given interface index.
@@ -1316,9 +1326,11 @@ interface INetd {
    /**
     * Set a per-interface quota for tethering offload.
     *
+    * @deprecated This method has no effect and throws UnsupportedOperationException. The mainline
+    *             module accesses the BPF map directly starting in S. See BpfCoordinator.
     * @param ifIndex Index of upstream interface
     * @param quotaBytes The quota defined as the number of bytes, starting from zero and counting
-     *       from *now*. A value of QUOTA_UNLIMITED (-1) indicates there is no limit.
+    *       from *now*. A value of QUOTA_UNLIMITED (-1) indicates there is no limit.
     * @throws ServiceSpecificException in case of failure, with an error code indicating the
     *         cause of the failure.
     */
@@ -1334,6 +1346,8 @@ interface INetd {
      * The stats and limit for a given upstream interface must be initialized (using
      * tetherOffloadSetInterfaceQuota) before any offload will occur on that interface.
      *
+     * @deprecated This method has no effect and throws UnsupportedOperationException. The mainline
+     *             module accesses the BPF map directly starting in S. See BpfCoordinator.
      * @param ifIndex Index of upstream interface.
      * @return TetherStatsParcel, which contains the given upstream interface index and its
      *         tethering statistics since tethering was first started on that upstream interface.
