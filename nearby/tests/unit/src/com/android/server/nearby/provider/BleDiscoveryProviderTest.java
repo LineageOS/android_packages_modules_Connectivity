@@ -23,6 +23,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.MockitoAnnotations.initMocks;
 
+import android.app.AppOpsManager;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothManager;
@@ -85,6 +86,11 @@ public final class BleDiscoveryProviderTest {
 
         @Override
         public ContextHubManagerAdapter getContextHubManagerAdapter() {
+            return null;
+        }
+
+        @Override
+        public AppOpsManager getAppOpsManager() {
             return null;
         }
     }

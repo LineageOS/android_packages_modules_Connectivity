@@ -28,12 +28,13 @@ import android.nearby.ScanRequest;
  */
 interface INearbyManager {
 
-    int registerScanListener(in ScanRequest scanRequest, in IScanListener listener);
+    int registerScanListener(in ScanRequest scanRequest, in IScanListener listener,
+            String packageName, @nullable String attributionTag);
 
     void unregisterScanListener(in IScanListener listener);
 
     void startBroadcast(in BroadcastRequestParcelable broadcastRequest,
-            in IBroadcastListener callback);
+            in IBroadcastListener callback, String packageName, @nullable String attributionTag);
 
     void stopBroadcast(in IBroadcastListener callback);
 }
