@@ -32,4 +32,7 @@ oneway interface IScanListener {
 
         /** Reports a {@link NearbyDevice} is no longer within range. */
         void onLost(in NearbyDeviceParcelable nearbyDeviceParcelable);
+
+        /** Reports when there is an error during scanning. */
+        void onError();
 }
