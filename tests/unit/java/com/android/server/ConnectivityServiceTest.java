@@ -14758,6 +14758,7 @@ public class ConnectivityServiceTest {
      * Make sure requests for per-profile default networking for a device owner is
      * accepted on T and not accepted on S
      */
+    @Test
     public void testProfileNetworkDeviceOwner() throws Exception {
         final UserHandle testHandle = UserHandle.of(TEST_WORK_PROFILE_USER_ID);
         mServiceContext.setWorkProfile(testHandle, false);
