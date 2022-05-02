@@ -16,12 +16,15 @@
 
 package android.nearby.cts;
 
+import static android.Manifest.permission.BLUETOOTH_PRIVILEGED;
 import static android.Manifest.permission.READ_DEVICE_CONFIG;
 import static android.Manifest.permission.WRITE_DEVICE_CONFIG;
 import static android.nearby.PresenceCredential.IDENTITY_TYPE_PRIVATE;
 import static android.provider.DeviceConfig.NAMESPACE_TETHERING;
 
 import static com.google.common.truth.Truth.assertThat;
+
+import static org.junit.Assert.assertThrows;
 
 import android.app.UiAutomation;
 import android.bluetooth.BluetoothAdapter;
@@ -51,6 +54,7 @@ import org.junit.runner.RunWith;
 
 import java.util.Collections;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
@@ -73,10 +77,32 @@ public class NearbyManagerTest {
     private UiAutomation mUiAutomation =
             InstrumentationRegistry.getInstrumentation().getUiAutomation();
 
+    private ScanRequest mScanRequest = new ScanRequest.Builder()
+            .setScanType(ScanRequest.SCAN_TYPE_FAST_PAIR)
+            .setScanMode(ScanRequest.SCAN_MODE_LOW_LATENCY)
+            .setBleEnabled(true)
+            .build();
+    private  ScanCallback mScanCallback = new ScanCallback() {
+        @Override
+        public void onDiscovered(@NonNull NearbyDevice device) {
+        }
+
+        @Override
+        public void onUpdated(@NonNull NearbyDevice device) {
+        }
+
+        @Override
+        public void onLost(@NonNull NearbyDevice device) {
+        }
+    };
+    private static final Executor EXECUTOR = Executors.newSingleThreadExecutor();
+
     @Before
     public void setUp() {
-        mUiAutomation.adoptShellPermissionIdentity(READ_DEVICE_CONFIG, WRITE_DEVICE_CONFIG);
-        DeviceConfig.setProperty(NAMESPACE_TETHERING, "nearby_enable_presence_broadcast_legacy",
+        mUiAutomation.adoptShellPermissionIdentity(READ_DEVICE_CONFIG, WRITE_DEVICE_CONFIG,
+                BLUETOOTH_PRIVILEGED);
+        DeviceConfig.setProperty(NAMESPACE_TETHERING,
+                "nearby_enable_presence_broadcast_legacy",
                 "true", false);
 
         mContext = InstrumentationRegistry.getContext();
@@ -88,28 +114,16 @@ public class NearbyManagerTest {
     @Test
     @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void test_startAndStopScan() {
-        ScanRequest scanRequest = new ScanRequest.Builder()
-                .setScanType(ScanRequest.SCAN_TYPE_FAST_PAIR)
-                .setScanMode(ScanRequest.SCAN_MODE_LOW_LATENCY)
-                .setBleEnabled(true)
-                .build();
-        ScanCallback scanCallback = new ScanCallback() {
-            @Override
-            public void onDiscovered(@NonNull NearbyDevice device) {
-            }
+        mNearbyManager.startScan(mScanRequest, EXECUTOR, mScanCallback);
+        mNearbyManager.stopScan(mScanCallback);
+    }
 
-            @Override
-            public void onUpdated(@NonNull NearbyDevice device) {
-
-            }
-
-            @Override
-            public void onLost(@NonNull NearbyDevice device) {
-
-            }
-        };
-        mNearbyManager.startScan(scanRequest, Executors.newSingleThreadExecutor(), scanCallback);
-        mNearbyManager.stopScan(scanCallback);
+    @Test
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
+    public void test_startScan_noPrivilegedPermission() {
+        mUiAutomation.dropShellPermissionIdentity();
+        assertThrows(SecurityException.class, () -> mNearbyManager
+                .startScan(mScanRequest, EXECUTOR, mScanCallback));
     }
 
     @Test
