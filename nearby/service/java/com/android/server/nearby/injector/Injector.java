@@ -16,6 +16,7 @@
 
 package com.android.server.nearby.injector;
 
+import android.app.AppOpsManager;
 import android.bluetooth.BluetoothAdapter;
 
 /**
@@ -29,4 +30,7 @@ public interface Injector {
 
     /** Get the ContextHubManagerAdapter for ChreDiscoveryProvider to scan. */
     ContextHubManagerAdapter getContextHubManagerAdapter();
+
+    /** Get the AppOpsManager to control access. */
+    AppOpsManager getAppOpsManager();
 }
