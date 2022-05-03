@@ -1366,6 +1366,21 @@ public final class LinkProperties implements Parcelable {
     }
 
     /**
+     * Returns true if this link has a throw route.
+     *
+     * @return {@code true} if there is an exclude route, {@code false} otherwise.
+     * @hide
+     */
+    public boolean hasExcludeRoute() {
+        for (RouteInfo r : mRoutes) {
+            if (r.getType() == RouteInfo.RTN_THROW) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
      * Compares this {@code LinkProperties} interface name against the target
      *
      * @param target LinkProperties to compare.
