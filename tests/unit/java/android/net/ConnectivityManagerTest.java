@@ -41,6 +41,7 @@ import static com.android.testutils.MiscAsserts.assertThrows;
 
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.anyBoolean;
@@ -506,8 +507,7 @@ public class ConnectivityManagerTest {
             Thread.sleep(waitIntervalMs);
         }
 
-        // TODO: fix memory leak then assertNull here.
-        assertNotNull("Couldn't find the Context leak in ConnectivityManager after " + attempts
-                + " attempts", ref.get());
+        assertNull("ConnectivityManager weak reference still not null after " + attempts
+                    + " attempts", ref.get());
     }
 }
