@@ -2589,9 +2589,24 @@ public class ConnectivityManager {
      * {@hide}
      */
     public ConnectivityManager(Context context, IConnectivityManager service) {
+        this(context, service, true /* newStatic */);
+    }
+
+    private ConnectivityManager(Context context, IConnectivityManager service, boolean newStatic) {
         mContext = Objects.requireNonNull(context, "missing context");
         mService = Objects.requireNonNull(service, "missing IConnectivityManager");
-        sInstance = this;
+        // sInstance is accessed without a lock, so it may actually be reassigned several times with
+        // different ConnectivityManager, but that's still OK considering its usage.
+        if (sInstance == null && newStatic) {
+            final Context appContext = mContext.getApplicationContext();
+            // Don't create static ConnectivityManager instance again to prevent infinite loop.
+            // If the application context is null, we're either in the system process or
+            // it's the application context very early in app initialization. In both these
+            // cases, the passed-in Context will not be freed, so it's safe to pass it to the
+            // service. http://b/27532714 .
+            sInstance = new ConnectivityManager(appContext != null ? appContext : context, service,
+                    false /* newStatic */);
+        }
     }
 
     /** {@hide} */
