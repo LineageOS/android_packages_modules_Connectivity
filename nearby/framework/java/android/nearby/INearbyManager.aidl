@@ -31,10 +31,10 @@ interface INearbyManager {
     int registerScanListener(in ScanRequest scanRequest, in IScanListener listener,
             String packageName, @nullable String attributionTag);
 
-    void unregisterScanListener(in IScanListener listener);
+    void unregisterScanListener(in IScanListener listener, String packageName, @nullable String attributionTag);
 
     void startBroadcast(in BroadcastRequestParcelable broadcastRequest,
             in IBroadcastListener callback, String packageName, @nullable String attributionTag);
 
-    void stopBroadcast(in IBroadcastListener callback);
+    void stopBroadcast(in IBroadcastListener callback, String packageName, @nullable String attributionTag);
 }

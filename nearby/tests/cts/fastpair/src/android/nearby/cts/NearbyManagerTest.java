@@ -128,6 +128,13 @@ public class NearbyManagerTest {
 
     @Test
     @SdkSuppress(minSdkVersion = 32, codeName = "T")
+    public void test_stopScan_noPrivilegedPermission() {
+        mUiAutomation.dropShellPermissionIdentity();
+        assertThrows(SecurityException.class, () -> mNearbyManager.stopScan(mScanCallback));
+    }
+
+    @Test
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void testStartStopBroadcast() throws InterruptedException {
         PrivateCredential credential = new PrivateCredential.Builder(SECRETE_ID, AUTHENTICITY_KEY,
                 META_DATA_ENCRYPTION_KEY, DEVICE_NAME)

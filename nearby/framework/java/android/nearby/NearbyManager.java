@@ -70,6 +70,8 @@ public class NearbyManager {
         int ERROR = 2;
     }
 
+    private static final String TAG = "NearbyManager";
+
     /**
      * Whether allows Fast Pair to scan.
      *
@@ -204,7 +206,8 @@ public class NearbyManager {
                 ScanListenerTransport transport = reference != null ? reference.get() : null;
                 if (transport != null) {
                     transport.unregister();
-                    mService.unregisterScanListener(transport);
+                    mService.unregisterScanListener(transport, mContext.getPackageName(),
+                            mContext.getAttributionTag());
                 }
             }
         } catch (RemoteException e) {
@@ -259,7 +262,8 @@ public class NearbyManager {
                 BroadcastListenerTransport transport = reference != null ? reference.get() : null;
                 if (transport != null) {
                     transport.unregister();
-                    mService.stopBroadcast(transport);
+                    mService.stopBroadcast(transport, mContext.getPackageName(),
+                            mContext.getAttributionTag());
                 }
             }
         } catch (RemoteException e) {
