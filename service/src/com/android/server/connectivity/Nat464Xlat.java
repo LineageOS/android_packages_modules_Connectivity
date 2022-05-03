@@ -36,6 +36,7 @@ import android.os.ServiceSpecificException;
 import android.util.Log;
 
 import com.android.internal.annotations.VisibleForTesting;
+import com.android.internal.util.IndentingPrintWriter;
 import com.android.modules.utils.build.SdkLevel;
 import com.android.net.module.util.NetworkStackConstants;
 import com.android.server.ConnectivityService;
@@ -524,6 +525,24 @@ public class Nat464Xlat {
 
     public void interfaceRemoved(String iface) {
         mNetwork.handler().post(() -> handleInterfaceRemoved(iface));
+    }
+
+    /**
+     * Dump the NAT64 xlat information.
+     *
+     * @param pw print writer.
+     */
+    public void dump(IndentingPrintWriter pw) {
+        if (SdkLevel.isAtLeastT()) {
+            if (isStarted()) {
+                pw.println("ClatCoordinator:");
+                pw.increaseIndent();
+                mClatCoordinator.dump(pw);
+                pw.decreaseIndent();
+            } else {
+                pw.println("<not start>");
+            }
+        }
     }
 
     @Override
