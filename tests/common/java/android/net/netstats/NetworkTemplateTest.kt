@@ -19,6 +19,7 @@ package android.net.netstats
 import android.net.NetworkStats.DEFAULT_NETWORK_ALL
 import android.net.NetworkStats.METERED_ALL
 import android.net.NetworkStats.METERED_YES
+import android.net.NetworkStats.ROAMING_YES
 import android.net.NetworkStats.ROAMING_ALL
 import android.net.NetworkTemplate
 import android.net.NetworkTemplate.MATCH_BLUETOOTH
@@ -79,6 +80,19 @@ class NetworkTemplateTest {
                         val expectedTemplate = NetworkTemplate(matchRule, TEST_IMSI1,
                                 arrayOf(TEST_IMSI1), arrayOf<String>(), METERED_YES,
                                 ROAMING_ALL, DEFAULT_NETWORK_ALL, NETWORK_TYPE_ALL,
+                                OEM_MANAGED_ALL, SUBSCRIBER_ID_MATCH_RULE_EXACT)
+                        assertEquals(expectedTemplate, it)
+                    }
+        }
+
+        // Verify template which matches roaming cellular and carrier networks with
+        // the given IMSI.
+        listOf(MATCH_MOBILE, MATCH_CARRIER).forEach { matchRule ->
+            NetworkTemplate.Builder(matchRule).setSubscriberIds(setOf(TEST_IMSI1))
+                    .setRoaming(ROAMING_YES).setMeteredness(METERED_YES).build().let {
+                        val expectedTemplate = NetworkTemplate(matchRule, TEST_IMSI1,
+                                arrayOf(TEST_IMSI1), arrayOf<String>(), METERED_YES,
+                                ROAMING_YES, DEFAULT_NETWORK_ALL, NETWORK_TYPE_ALL,
                                 OEM_MANAGED_ALL, SUBSCRIBER_ID_MATCH_RULE_EXACT)
                         assertEquals(expectedTemplate, it)
                     }
