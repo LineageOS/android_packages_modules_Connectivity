@@ -43,7 +43,7 @@ public final class NearbyFrameworkInitializer {
                 NearbyManager.class,
                 (context, serviceBinder) -> {
                     INearbyManager service = INearbyManager.Stub.asInterface(serviceBinder);
-                    return new NearbyManager(service);
+                    return new NearbyManager(context, service);
                 }
         );
     }

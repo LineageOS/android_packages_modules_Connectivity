@@ -21,6 +21,7 @@ import static android.nearby.ScanRequest.SCAN_TYPE_NEARBY_PRESENCE;
 import static com.android.server.nearby.NearbyService.TAG;
 
 import android.annotation.Nullable;
+import android.app.AppOpsManager;
 import android.content.Context;
 import android.nearby.IScanListener;
 import android.nearby.NearbyDeviceParcelable;
@@ -35,6 +36,8 @@ import com.android.internal.annotations.GuardedBy;
 import com.android.server.nearby.injector.Injector;
 import com.android.server.nearby.metrics.NearbyMetrics;
 import com.android.server.nearby.presence.PresenceDiscoveryResult;
+import com.android.server.nearby.util.identity.CallerIdentity;
+import com.android.server.nearby.util.permissions.DiscoveryPermissions;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -53,6 +56,7 @@ public class DiscoveryProviderManager implements AbstractDiscoveryProvider.Liste
     private final BleDiscoveryProvider mBleDiscoveryProvider;
     @Nullable private final ChreDiscoveryProvider mChreDiscoveryProvider;
     private @ScanRequest.ScanMode int mScanMode;
+    private final Injector mInjector;
 
     @GuardedBy("mLock")
     private Map<IBinder, ScanListenerRecord> mScanTypeScanListenerRecordMap;
@@ -60,12 +64,26 @@ public class DiscoveryProviderManager implements AbstractDiscoveryProvider.Liste
     @Override
     public void onNearbyDeviceDiscovered(NearbyDeviceParcelable nearbyDevice) {
         synchronized (mLock) {
+            AppOpsManager appOpsManager = Objects.requireNonNull(mInjector.getAppOpsManager());
             for (IBinder listenerBinder : mScanTypeScanListenerRecordMap.keySet()) {
                 ScanListenerRecord record = mScanTypeScanListenerRecordMap.get(listenerBinder);
                 if (record == null) {
                     Log.w(TAG, "DiscoveryProviderManager cannot find the scan record.");
                     continue;
                 }
+                CallerIdentity callerIdentity = record.getCallerIdentity();
+                if (!DiscoveryPermissions.noteDiscoveryResultDelivery(
+                        appOpsManager, callerIdentity)) {
+                    Log.w(TAG, "[DiscoveryProviderManager] scan permission revoked "
+                            + "- not forwarding results");
+                    try {
+                        record.getScanListener().onError();
+                    } catch (RemoteException e) {
+                        Log.w(TAG, "DiscoveryProviderManager failed to report error.", e);
+                    }
+                    return;
+                }
+
                 if (nearbyDevice.getScanType() == SCAN_TYPE_NEARBY_PRESENCE) {
                     List<ScanFilter> presenceFilters =
                             record.getScanRequest().getScanFilters().stream()
@@ -103,13 +121,14 @@ public class DiscoveryProviderManager implements AbstractDiscoveryProvider.Liste
                 new ChreDiscoveryProvider(
                         mContext, new ChreCommunication(injector, executor), executor);
         mScanTypeScanListenerRecordMap = new HashMap<>();
+        mInjector = injector;
     }
 
     /**
      * Registers the listener in the manager and starts scan according to the requested scan mode.
      */
-    public boolean registerScanListener(ScanRequest scanRequest, IScanListener listener) {
-        Log.i(TAG, "DiscoveryProviderManager registerScanListener");
+    public boolean registerScanListener(ScanRequest scanRequest, IScanListener listener,
+            CallerIdentity callerIdentity) {
         synchronized (mLock) {
             IBinder listenerBinder = listener.asBinder();
             if (mScanTypeScanListenerRecordMap.containsKey(listener.asBinder())) {
@@ -120,7 +139,8 @@ public class DiscoveryProviderManager implements AbstractDiscoveryProvider.Liste
                     return true;
                 }
             }
-            ScanListenerRecord scanListenerRecord = new ScanListenerRecord(scanRequest, listener);
+            ScanListenerRecord scanListenerRecord =
+                    new ScanListenerRecord(scanRequest, listener, callerIdentity);
             mScanTypeScanListenerRecordMap.put(listenerBinder, scanListenerRecord);
 
             if (!startProviders(scanRequest)) {
@@ -273,9 +293,13 @@ public class DiscoveryProviderManager implements AbstractDiscoveryProvider.Liste
 
         private final IScanListener mScanListener;
 
-        ScanListenerRecord(ScanRequest scanRequest, IScanListener iScanListener) {
+        private final CallerIdentity mCallerIdentity;
+
+        ScanListenerRecord(ScanRequest scanRequest, IScanListener iScanListener,
+                CallerIdentity callerIdentity) {
             mScanListener = iScanListener;
             mScanRequest = scanRequest;
+            mCallerIdentity = callerIdentity;
         }
 
         IScanListener getScanListener() {
@@ -284,6 +308,10 @@ public class DiscoveryProviderManager implements AbstractDiscoveryProvider.Liste
 
         ScanRequest getScanRequest() {
             return mScanRequest;
+        }
+
+        CallerIdentity getCallerIdentity() {
+            return mCallerIdentity;
         }
 
         @Override
