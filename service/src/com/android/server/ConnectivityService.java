@@ -2628,7 +2628,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
         verifyCallingUidAndPackage(callingPackageName, mDeps.getCallingUid());
         enforceChangePermission(callingPackageName, callingAttributionTag);
         if (mProtectedNetworks.contains(networkType)) {
-            enforceConnectivityRestrictedNetworksPermission();
+            enforceConnectivityRestrictedNetworksPermission(true /* checkUidsAllowedList */);
         }
 
         InetAddress addr;
@@ -2982,18 +2982,35 @@ public class ConnectivityService extends IConnectivityManager.Stub
                 android.Manifest.permission.NETWORK_SETTINGS);
     }
 
-    private void enforceConnectivityRestrictedNetworksPermission() {
-        try {
-            mContext.enforceCallingOrSelfPermission(
-                    android.Manifest.permission.CONNECTIVITY_USE_RESTRICTED_NETWORKS,
-                    "ConnectivityService");
-            return;
-        } catch (SecurityException e) { /* fallback to ConnectivityInternalPermission */ }
-        //  TODO: Remove this fallback check after all apps have declared
-        //   CONNECTIVITY_USE_RESTRICTED_NETWORKS.
-        mContext.enforceCallingOrSelfPermission(
-                android.Manifest.permission.CONNECTIVITY_INTERNAL,
-                "ConnectivityService");
+    private boolean checkConnectivityRestrictedNetworksPermission(int callingUid,
+            boolean checkUidsAllowedList) {
+        if (PermissionUtils.checkAnyPermissionOf(mContext,
+                android.Manifest.permission.CONNECTIVITY_USE_RESTRICTED_NETWORKS)) {
+            return true;
+        }
+
+        // fallback to ConnectivityInternalPermission
+        // TODO: Remove this fallback check after all apps have declared
+        //  CONNECTIVITY_USE_RESTRICTED_NETWORKS.
+        if (PermissionUtils.checkAnyPermissionOf(mContext,
+                android.Manifest.permission.CONNECTIVITY_INTERNAL)) {
+            return true;
+        }
+
+        // Check whether uid is in allowed on restricted networks list.
+        if (checkUidsAllowedList
+                && mPermissionMonitor.isUidAllowedOnRestrictedNetworks(callingUid)) {
+            return true;
+        }
+        return false;
+    }
+
+    private void enforceConnectivityRestrictedNetworksPermission(boolean checkUidsAllowedList) {
+        final int callingUid = mDeps.getCallingUid();
+        if (!checkConnectivityRestrictedNetworksPermission(callingUid, checkUidsAllowedList)) {
+            throw new SecurityException("ConnectivityService: user " + callingUid
+                    + " has no permission to access restricted network.");
+        }
     }
 
     private void enforceKeepalivePermission() {
@@ -6718,7 +6735,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
             String callingPackageName, String callingAttributionTag) {
         if (networkCapabilities.hasCapability(NET_CAPABILITY_NOT_RESTRICTED) == false) {
             if (!networkCapabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_CBS)) {
-                enforceConnectivityRestrictedNetworksPermission();
+                enforceConnectivityRestrictedNetworksPermission(true /* checkUidsAllowedList */);
             }
         } else {
             enforceChangePermission(callingPackageName, callingAttributionTag);
@@ -10625,7 +10642,11 @@ public class ConnectivityService extends IConnectivityManager.Stub
         if (callback == null) throw new IllegalArgumentException("callback must be non-null");
 
         if (!nai.networkCapabilities.hasCapability(NET_CAPABILITY_NOT_RESTRICTED)) {
-            enforceConnectivityRestrictedNetworksPermission();
+            // TODO: Check allowed list here and ensure that either a) any QoS callback registered
+            //  on this network is unregistered when the app loses permission or b) no QoS
+            //  callbacks are sent for restricted networks unless the app currently has permission
+            //  to access restricted networks.
+            enforceConnectivityRestrictedNetworksPermission(false /* checkUidsAllowedList */);
         }
         mQosCallbackTracker.registerCallback(callback, filter, nai);
     }
