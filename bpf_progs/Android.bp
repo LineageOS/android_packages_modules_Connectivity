@@ -97,7 +97,7 @@ bpf {
 }
 
 bpf {
-    name: "clatd.o_mainline",
+    name: "clatd.o",
     srcs: ["clatd.c"],
     cflags: [
         "-Wall",
@@ -110,7 +110,7 @@ bpf {
 }
 
 bpf {
-    name: "netd.o_mainline",
+    name: "netd.o",
     srcs: ["netd.c"],
     cflags: [
         "-Wall",
