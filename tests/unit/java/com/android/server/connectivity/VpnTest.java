@@ -86,8 +86,11 @@ import android.net.LinkAddress;
 import android.net.LinkProperties;
 import android.net.LocalSocket;
 import android.net.Network;
+import android.net.NetworkAgent;
+import android.net.NetworkAgentConfig;
 import android.net.NetworkCapabilities;
 import android.net.NetworkInfo.DetailedState;
+import android.net.NetworkProvider;
 import android.net.RouteInfo;
 import android.net.UidRangeParcel;
 import android.net.VpnManager;
@@ -104,6 +107,7 @@ import android.os.Build.VERSION_CODES;
 import android.os.Bundle;
 import android.os.ConditionVariable;
 import android.os.INetworkManagementService;
+import android.os.Looper;
 import android.os.ParcelFileDescriptor;
 import android.os.Process;
 import android.os.UserHandle;
@@ -121,6 +125,7 @@ import com.android.internal.R;
 import com.android.internal.net.LegacyVpnInfo;
 import com.android.internal.net.VpnConfig;
 import com.android.internal.net.VpnProfile;
+import com.android.internal.util.HexDump;
 import com.android.modules.utils.build.SdkLevel;
 import com.android.server.IpSecService;
 import com.android.testutils.DevSdkIgnoreRule;
@@ -198,6 +203,20 @@ public class VpnTest {
      *  - One pair of packages have consecutive UIDs.
      */
     static final String[] PKGS = {"com.example", "org.example", "net.example", "web.vpn"};
+    static final String PKGS_BYTES =
+            "3C62756E646C653E0A3C696E74206E616D653D22434F4C4C454354494F4E5F4C454E4754482220"
+            + "76616C75653D223422202F3E0A3C7062756E646C655F61735F6D6170206E616D653D224C4953"
+            + "545F4954454D5F30223E0A3C737472696E67206E616D653D22535452494E475F4B4559223E63"
+            + "6F6D2E6578616D706C653C2F737472696E673E0A3C2F7062756E646C655F61735F6D61703E0A"
+            + "3C7062756E646C655F61735F6D6170206E616D653D224C4953545F4954454D5F31223E0A3C73"
+            + "7472696E67206E616D653D22535452494E475F4B4559223E6F72672E6578616D706C653C2F73"
+            + "7472696E673E0A3C2F7062756E646C655F61735F6D61703E0A3C7062756E646C655F61735F6D"
+            + "6170206E616D653D224C4953545F4954454D5F32223E0A3C737472696E67206E616D653D2253"
+            + "5452494E475F4B4559223E6E65742E6578616D706C653C2F737472696E673E0A3C2F7062756E"
+            + "646C655F61735F6D61703E0A3C7062756E646C655F61735F6D6170206E616D653D224C495354"
+            + "5F4954454D5F33223E0A3C737472696E67206E616D653D22535452494E475F4B4559223E7765"
+            + "622E76706E3C2F737472696E673E0A3C2F7062756E646C655F61735F6D61703E0A3C2F62756E"
+            + "646C653E0A";
     static final int[] PKG_UIDS = {66, 77, 78, 400};
 
     // Mock packages
@@ -709,6 +728,47 @@ public class VpnTest {
             fail("Expected exception due to missing feature");
         } catch (UnsupportedOperationException expected) {
         }
+    }
+
+    private Vpn prepareVpnForVerifyAppExclusionList() throws Exception {
+        assumeTrue(isAtLeastT());
+        final Vpn vpn = createVpnAndSetupUidChecks(AppOpsManager.OPSTR_ACTIVATE_PLATFORM_VPN);
+        when(mVpnProfileStore.get(vpn.getProfileNameForPackage(TEST_VPN_PKG)))
+                .thenReturn(mVpnProfile.encode());
+        when(mVpnProfileStore.get(vpn.getVpnAppExcludedForPackage(TEST_VPN_PKG)))
+                .thenReturn(HexDump.hexStringToByteArray(PKGS_BYTES));
+
+        vpn.startVpnProfile(TEST_VPN_PKG);
+        verify(mVpnProfileStore).get(eq(vpn.getProfileNameForPackage(TEST_VPN_PKG)));
+        vpn.mNetworkAgent = new NetworkAgent(mContext, Looper.getMainLooper(), TAG,
+                new NetworkCapabilities.Builder().build(), new LinkProperties(), 10 /* score */,
+                new NetworkAgentConfig.Builder().build(),
+                new NetworkProvider(mContext, Looper.getMainLooper(), TAG)) {};
+        return vpn;
+    }
+
+    @Test
+    public void testSetAndGetAppExclusionList() throws Exception {
+        final Vpn vpn = prepareVpnForVerifyAppExclusionList();
+        vpn.setAppExclusionList(TEST_VPN_PKG, Arrays.asList(PKGS));
+        verify(mVpnProfileStore)
+                .put(eq(vpn.getVpnAppExcludedForPackage(TEST_VPN_PKG)),
+                     eq(HexDump.hexStringToByteArray(PKGS_BYTES)));
+        assertEquals(vpn.createUserAndRestrictedProfilesRanges(
+                primaryUser.id, null, Arrays.asList(PKGS)),
+                vpn.mNetworkCapabilities.getUids());
+        assertEquals(Arrays.asList(PKGS), vpn.getAppExclusionList(TEST_VPN_PKG));
+    }
+
+    @Test
+    public void testSetAndGetAppExclusionListRestrictedUser() throws Exception {
+        final Vpn vpn = prepareVpnForVerifyAppExclusionList();
+        // Mock it to restricted profile
+        when(mUserManager.getUserInfo(anyInt())).thenReturn(restrictedProfileA);
+        // Restricted users cannot configure VPNs
+        assertThrows(SecurityException.class,
+                () -> vpn.setAppExclusionList(TEST_VPN_PKG, new ArrayList<>()));
+        assertThrows(SecurityException.class, () -> vpn.getAppExclusionList(TEST_VPN_PKG));
     }
 
     @Test
