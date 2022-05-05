@@ -59,6 +59,7 @@ import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.SystemClock;
 import android.os.SystemProperties;
+import android.os.VintfRuntimeInfo;
 import android.text.TextUtils;
 import android.util.Base64;
 import android.util.Log;
@@ -84,6 +85,7 @@ import com.android.net.module.util.structs.UdpHeader;
 import com.android.testutils.DevSdkIgnoreRule;
 import com.android.testutils.DevSdkIgnoreRule.IgnoreAfter;
 import com.android.testutils.DevSdkIgnoreRule.IgnoreUpTo;
+import com.android.testutils.DeviceInfoUtils;
 import com.android.testutils.DumpTestUtils;
 import com.android.testutils.HandlerUtils;
 import com.android.testutils.TapPacketReader;
@@ -1058,19 +1060,33 @@ public class EthernetTetheringTest {
     }
 
     @Test
-    @IgnoreAfter(Build.VERSION_CODES.Q)
-    public void testTetherUdpV4WithoutBpf() throws Exception {
+    @IgnoreAfter(Build.VERSION_CODES.R)
+    public void testTetherUdpV4UpToR() throws Exception {
         initializeTethering();
         runUdp4Test(new TetheringTester(mDownstreamReader), new RemoteResponder(mUpstreamReader),
                 false /* usingBpf */);
     }
 
+    private static boolean isUdpOffloadSupportedByKernel() {
+        final String kVersionString = VintfRuntimeInfo.getKernelVersion();
+        // Kernel version which is older than 4.14 doesn't support UDP offload absolutely. Kernel
+        // version which is between 4.14 and 5.8 support UDP offload probably. Simply apply kernel
+        // 4.14 to be threshold first and monitor on what devices tests fail for improving the
+        // offload support checking.
+        return DeviceInfoUtils.compareMajorMinorVersion(kVersionString, "4.14") >= 0;
+    }
+
     @Test
     @IgnoreUpTo(Build.VERSION_CODES.R)
-    public void testTetherUdpV4WithBpf() throws Exception {
+    public void testTetherUdpV4AfterR() throws Exception {
         initializeTethering();
+        boolean usingBpf = isUdpOffloadSupportedByKernel();
+        if (!usingBpf) {
+            Log.i(TAG, "testTetherUdpV4AfterR will skip BPF offload test for kernel "
+                    + VintfRuntimeInfo.getKernelVersion());
+        }
         runUdp4Test(new TetheringTester(mDownstreamReader), new RemoteResponder(mUpstreamReader),
-                true /* usingBpf */);
+                usingBpf);
     }
 
     @Nullable
