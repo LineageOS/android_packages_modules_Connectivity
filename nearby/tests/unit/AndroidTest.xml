@@ -15,6 +15,9 @@
   ~ limitations under the License.
   -->
 <configuration description="Runs Nearby Mainline API Tests.">
+    <!-- Only run tests if the device under test is SDK version 33 (Android 13) or above. -->
+    <object type="module_controller" class="com.android.tradefed.testtype.suite.module.Sdk33ModuleController" />
+
     <target_preparer class="com.android.tradefed.targetprep.suite.SuiteApkInstaller">
         <option name="test-file-name" value="NearbyUnitTests.apk" />
     </target_preparer>
