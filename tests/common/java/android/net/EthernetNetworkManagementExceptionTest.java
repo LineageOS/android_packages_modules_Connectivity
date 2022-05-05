@@ -32,21 +32,21 @@ import org.junit.runner.RunWith;
 @DevSdkIgnoreRule.IgnoreUpTo(SC_V2) // TODO: Use to Build.VERSION_CODES.SC_V2 when available
 @RunWith(DevSdkIgnoreRunner.class)
 @SmallTest
-public class InternalNetworkManagementExceptionTest {
+public class EthernetNetworkManagementExceptionTest {
     private static final String ERROR_MESSAGE = "Test error message";
 
     @Test
-    public void testInternalNetworkManagementExceptionParcelable() {
-        final InternalNetworkManagementException e =
-                new InternalNetworkManagementException(ERROR_MESSAGE);
+    public void testEthernetNetworkManagementExceptionParcelable() {
+        final EthernetNetworkManagementException e =
+                new EthernetNetworkManagementException(ERROR_MESSAGE);
 
         assertParcelingIsLossless(e);
     }
 
     @Test
-    public void testInternalNetworkManagementExceptionHasExpectedErrorMessage() {
-        final InternalNetworkManagementException e =
-                new InternalNetworkManagementException(ERROR_MESSAGE);
+    public void testEthernetNetworkManagementExceptionHasExpectedErrorMessage() {
+        final EthernetNetworkManagementException e =
+                new EthernetNetworkManagementException(ERROR_MESSAGE);
 
         assertEquals(ERROR_MESSAGE, e.getMessage());
     }
