@@ -39,6 +39,33 @@ public class MyActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         Log.d(TAG, "MyActivity.onCreate()");
+    }
+
+    @Override
+    public void finish() {
+        if (finishCommandReceiver != null) {
+            unregisterReceiver(finishCommandReceiver);
+        }
+        super.finish();
+    }
+
+    @Override
+    protected void onStart() {
+        super.onStart();
+        Log.d(TAG, "MyActivity.onStart()");
+    }
+
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        Log.d(TAG, "MyActivity.onNewIntent()");
+        setIntent(intent);
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        Log.d(TAG, "MyActivity.onResume(): " + getIntent());
         Common.notifyNetworkStateObserver(this, getIntent(), TYPE_COMPONENT_ACTIVTY);
         finishCommandReceiver = new BroadcastReceiver() {
             @Override
@@ -54,20 +81,6 @@ public class MyActivity extends Activity {
         if (callback != null) {
             callback.sendResult(null);
         }
-    }
-
-    @Override
-    public void finish() {
-        if (finishCommandReceiver != null) {
-            unregisterReceiver(finishCommandReceiver);
-        }
-        super.finish();
-    }
-
-    @Override
-    protected void onStart() {
-        super.onStart();
-        Log.d(TAG, "MyActivity.onStart()");
     }
 
     @Override
