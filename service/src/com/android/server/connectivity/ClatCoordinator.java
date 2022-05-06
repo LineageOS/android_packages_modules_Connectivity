@@ -39,6 +39,7 @@ import com.android.internal.annotations.VisibleForTesting;
 import com.android.internal.util.IndentingPrintWriter;
 import com.android.modules.utils.build.SdkLevel;
 import com.android.net.module.util.BpfMap;
+import com.android.net.module.util.IBpfMap;
 import com.android.net.module.util.InterfaceParams;
 import com.android.net.module.util.TcUtils;
 import com.android.net.module.util.bpf.ClatEgress4Key;
@@ -115,12 +116,12 @@ public class ClatCoordinator {
     private final INetd mNetd;
     @NonNull
     private final Dependencies mDeps;
-    // BpfMap objects {mIngressMap, mEgressMap} are initialized in #maybeStartBpf and closed in
+    // IBpfMap objects {mIngressMap, mEgressMap} are initialized in #maybeStartBpf and closed in
     // #maybeStopBpf.
     @Nullable
-    private BpfMap<ClatIngress6Key, ClatIngress6Value> mIngressMap = null;
+    private IBpfMap<ClatIngress6Key, ClatIngress6Value> mIngressMap = null;
     @Nullable
-    private BpfMap<ClatEgress4Key, ClatEgress4Value> mEgressMap = null;
+    private IBpfMap<ClatEgress4Key, ClatEgress4Value> mEgressMap = null;
     @Nullable
     private ClatdTracker mClatdTracker = null;
 
@@ -248,7 +249,7 @@ public class ClatCoordinator {
 
         /** Get ingress6 BPF map. */
         @Nullable
-        public BpfMap<ClatIngress6Key, ClatIngress6Value> getBpfIngress6Map() {
+        public IBpfMap<ClatIngress6Key, ClatIngress6Value> getBpfIngress6Map() {
             // Pre-T devices don't use ClatCoordinator to access clat map. Since Nat464Xlat
             // initializes a ClatCoordinator object to avoid redundant null pointer check
             // while using, ignore the BPF map initialization on pre-T devices.
@@ -265,7 +266,7 @@ public class ClatCoordinator {
 
         /** Get egress4 BPF map. */
         @Nullable
-        public BpfMap<ClatEgress4Key, ClatEgress4Value> getBpfEgress4Map() {
+        public IBpfMap<ClatEgress4Key, ClatEgress4Value> getBpfEgress4Map() {
             // Pre-T devices don't use ClatCoordinator to access clat map. Since Nat464Xlat
             // initializes a ClatCoordinator object to avoid redundant null pointer check
             // while using, ignore the BPF map initialization on pre-T devices.
@@ -379,7 +380,7 @@ public class ClatCoordinator {
     private void closeEgressMap() {
         try {
             mEgressMap.close();
-        } catch (ErrnoException e) {
+        } catch (Exception e) {
             Log.e(TAG, "Cannot close egress4 map: " + e);
         }
         mEgressMap = null;
@@ -388,7 +389,7 @@ public class ClatCoordinator {
     private void closeIngressMap() {
         try {
             mIngressMap.close();
-        } catch (ErrnoException e) {
+        } catch (Exception e) {
             Log.e(TAG, "Cannot close ingress6 map: " + e);
         }
         mIngressMap = null;
