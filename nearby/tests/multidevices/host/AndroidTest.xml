@@ -36,7 +36,6 @@
           <!-- Any python dependencies can be specified and will be installed with pip -->
           <!-- TODO(b/225958696): Import python dependencies -->
           <option name="dep-module" value="mobly" />
-          <option name="dep-module" value="retry" />
         </target_preparer>
         <target_preparer class="com.android.tradefed.targetprep.DeviceSetup">
             <option name="force-skip-system-props" value="true" /> <!-- avoid restarting device -->
