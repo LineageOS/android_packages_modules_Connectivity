@@ -39,7 +39,7 @@ import java.util.Objects;
  * @param <K> the key of the map.
  * @param <V> the value of the map.
  */
-public class BpfMap<K extends Struct, V extends Struct> implements IBpfMap<K, V>, AutoCloseable {
+public class BpfMap<K extends Struct, V extends Struct> implements IBpfMap<K, V> {
     static {
         System.loadLibrary(JniUtil.getJniLibraryName(BpfMap.class.getPackage()));
     }
