@@ -61,6 +61,7 @@ cc_library_headers {
 bpf {
     name: "block.o",
     srcs: ["block.c"],
+    btf: true,
     cflags: [
         "-Wall",
         "-Werror",
@@ -71,6 +72,7 @@ bpf {
 bpf {
     name: "dscp_policy.o",
     srcs: ["dscp_policy.c"],
+    btf: true,
     cflags: [
         "-Wall",
         "-Werror",
@@ -99,6 +101,7 @@ bpf {
 bpf {
     name: "clatd.o",
     srcs: ["clatd.c"],
+    btf: true,
     cflags: [
         "-Wall",
         "-Werror",
@@ -112,6 +115,7 @@ bpf {
 bpf {
     name: "netd.o",
     srcs: ["netd.c"],
+    btf: true,
     cflags: [
         "-Wall",
         "-Werror",
