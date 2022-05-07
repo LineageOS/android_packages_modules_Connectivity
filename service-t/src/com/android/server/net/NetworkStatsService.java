@@ -1279,13 +1279,14 @@ public class NetworkStatsService extends INetworkStatsService.Stub {
         Objects.requireNonNull(request.template, "NetworkTemplate is null");
         Objects.requireNonNull(callback, "callback is null");
 
-        int callingUid = Binder.getCallingUid();
+        final int callingPid = Binder.getCallingPid();
+        final int callingUid = Binder.getCallingUid();
         @NetworkStatsAccess.Level int accessLevel = checkAccessLevel(callingPackage);
         DataUsageRequest normalizedRequest;
         final long token = Binder.clearCallingIdentity();
         try {
             normalizedRequest = mStatsObservers.register(mContext,
-                    request, callback, callingUid, accessLevel);
+                    request, callback, callingPid, callingUid, callingPackage, accessLevel);
         } finally {
             Binder.restoreCallingIdentity(token);
         }
@@ -2098,6 +2099,13 @@ public class NetworkStatsService extends INetworkStatsService.Stub {
                 }
             });
             pw.decreaseIndent();
+            pw.println();
+
+            pw.println("Stats Observers:");
+            pw.increaseIndent();
+            mStatsObservers.dump(pw);
+            pw.decreaseIndent();
+            pw.println();
 
             pw.println("Dev stats:");
             pw.increaseIndent();
