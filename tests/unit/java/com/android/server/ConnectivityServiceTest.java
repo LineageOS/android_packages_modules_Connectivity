@@ -137,6 +137,8 @@ import static com.android.server.ConnectivityService.PREFERENCE_ORDER_OEM;
 import static com.android.server.ConnectivityService.PREFERENCE_ORDER_PROFILE;
 import static com.android.server.ConnectivityService.PREFERENCE_ORDER_VPN;
 import static com.android.server.ConnectivityServiceTestUtils.transportToLegacyType;
+import static com.android.server.NetworkAgentWrapper.CallbackType.OnQosCallbackRegister;
+import static com.android.server.NetworkAgentWrapper.CallbackType.OnQosCallbackUnregister;
 import static com.android.testutils.ConcurrentUtils.await;
 import static com.android.testutils.ConcurrentUtils.durationOf;
 import static com.android.testutils.DevSdkIgnoreRule.IgnoreAfter;
@@ -11941,16 +11943,14 @@ public class ConnectivityServiceTest {
         mQosCallbackMockHelper.registerQosCallback(
                 mQosCallbackMockHelper.mFilter, mQosCallbackMockHelper.mCallback);
 
-        final NetworkAgentWrapper.CallbackType.OnQosCallbackRegister cbRegister1 =
-                (NetworkAgentWrapper.CallbackType.OnQosCallbackRegister)
-                        wrapper.getCallbackHistory().poll(1000, x -> true);
+        final OnQosCallbackRegister cbRegister1 =
+                (OnQosCallbackRegister) wrapper.getCallbackHistory().poll(1000, x -> true);
         assertNotNull(cbRegister1);
 
         final int registerCallbackId = cbRegister1.mQosCallbackId;
         mService.unregisterQosCallback(mQosCallbackMockHelper.mCallback);
-        final NetworkAgentWrapper.CallbackType.OnQosCallbackUnregister cbUnregister;
-        cbUnregister = (NetworkAgentWrapper.CallbackType.OnQosCallbackUnregister)
-                wrapper.getCallbackHistory().poll(1000, x -> true);
+        final OnQosCallbackUnregister cbUnregister =
+                (OnQosCallbackUnregister) wrapper.getCallbackHistory().poll(1000, x -> true);
         assertNotNull(cbUnregister);
         assertEquals(registerCallbackId, cbUnregister.mQosCallbackId);
         assertNull(wrapper.getCallbackHistory().poll(200, x -> true));
@@ -12027,6 +12027,86 @@ public class ConnectivityServiceTest {
         verify(mQosCallbackMockHelper.mCallback).onQosSessionLost(argThat(session ->
                 session.getSessionId() == sessionId
                         && session.getSessionType() == QosSession.TYPE_NR_BEARER));
+    }
+
+    @Test @IgnoreUpTo(SC_V2)
+    public void testQosCallbackAvailableOnValidationError() throws Exception {
+        mQosCallbackMockHelper = new QosCallbackMockHelper();
+        final NetworkAgentWrapper wrapper = mQosCallbackMockHelper.mAgentWrapper;
+        final int sessionId = 10;
+        final int qosCallbackId = 1;
+
+        doReturn(QosCallbackException.EX_TYPE_FILTER_NONE)
+                .when(mQosCallbackMockHelper.mFilter).validate();
+        mQosCallbackMockHelper.registerQosCallback(
+                mQosCallbackMockHelper.mFilter, mQosCallbackMockHelper.mCallback);
+        OnQosCallbackRegister cbRegister1 =
+                (OnQosCallbackRegister) wrapper.getCallbackHistory().poll(1000, x -> true);
+        assertNotNull(cbRegister1);
+        final int registerCallbackId = cbRegister1.mQosCallbackId;
+
+        waitForIdle();
+
+        doReturn(QosCallbackException.EX_TYPE_FILTER_SOCKET_REMOTE_ADDRESS_CHANGED)
+                .when(mQosCallbackMockHelper.mFilter).validate();
+        final EpsBearerQosSessionAttributes attributes = new EpsBearerQosSessionAttributes(
+                1, 2, 3, 4, 5, new ArrayList<>());
+        mQosCallbackMockHelper.mAgentWrapper.getNetworkAgent()
+                .sendQosSessionAvailable(qosCallbackId, sessionId, attributes);
+        waitForIdle();
+
+        final NetworkAgentWrapper.CallbackType.OnQosCallbackUnregister cbUnregister;
+        cbUnregister = (NetworkAgentWrapper.CallbackType.OnQosCallbackUnregister)
+                wrapper.getCallbackHistory().poll(1000, x -> true);
+        assertNotNull(cbUnregister);
+        assertEquals(registerCallbackId, cbUnregister.mQosCallbackId);
+        waitForIdle();
+        verify(mQosCallbackMockHelper.mCallback)
+                .onError(eq(QosCallbackException.EX_TYPE_FILTER_SOCKET_REMOTE_ADDRESS_CHANGED));
+    }
+
+    @Test @IgnoreUpTo(SC_V2)
+    public void testQosCallbackLostOnValidationError() throws Exception {
+        mQosCallbackMockHelper = new QosCallbackMockHelper();
+        final int sessionId = 10;
+        final int qosCallbackId = 1;
+
+        doReturn(QosCallbackException.EX_TYPE_FILTER_NONE)
+                .when(mQosCallbackMockHelper.mFilter).validate();
+        mQosCallbackMockHelper.registerQosCallback(
+                mQosCallbackMockHelper.mFilter, mQosCallbackMockHelper.mCallback);
+        waitForIdle();
+        EpsBearerQosSessionAttributes attributes =
+                sendQosSessionEvent(qosCallbackId, sessionId, true);
+        waitForIdle();
+
+        verify(mQosCallbackMockHelper.mCallback).onQosEpsBearerSessionAvailable(argThat(session ->
+                session.getSessionId() == sessionId
+                        && session.getSessionType() == QosSession.TYPE_EPS_BEARER), eq(attributes));
+
+        doReturn(QosCallbackException.EX_TYPE_FILTER_SOCKET_REMOTE_ADDRESS_CHANGED)
+                .when(mQosCallbackMockHelper.mFilter).validate();
+
+        sendQosSessionEvent(qosCallbackId, sessionId, false);
+        waitForIdle();
+        verify(mQosCallbackMockHelper.mCallback)
+                .onError(eq(QosCallbackException.EX_TYPE_FILTER_SOCKET_REMOTE_ADDRESS_CHANGED));
+    }
+
+    private EpsBearerQosSessionAttributes sendQosSessionEvent(
+            int qosCallbackId, int sessionId, boolean available) {
+        if (available) {
+            final EpsBearerQosSessionAttributes attributes = new EpsBearerQosSessionAttributes(
+                    1, 2, 3, 4, 5, new ArrayList<>());
+            mQosCallbackMockHelper.mAgentWrapper.getNetworkAgent()
+                    .sendQosSessionAvailable(qosCallbackId, sessionId, attributes);
+            return attributes;
+        } else {
+            mQosCallbackMockHelper.mAgentWrapper.getNetworkAgent()
+                    .sendQosSessionLost(qosCallbackId, sessionId, QosSession.TYPE_EPS_BEARER);
+            return null;
+        }
+
     }
 
     @Test
