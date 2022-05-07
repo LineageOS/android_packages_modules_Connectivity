@@ -28,11 +28,14 @@ import android.os.Bundle;
 import android.os.RemoteCallback;
 import android.util.Log;
 
+import androidx.annotation.GuardedBy;
+
 /**
  * Activity used to bring process to foreground.
  */
 public class MyActivity extends Activity {
 
+    @GuardedBy("this")
     private BroadcastReceiver finishCommandReceiver = null;
 
     @Override
@@ -43,8 +46,11 @@ public class MyActivity extends Activity {
 
     @Override
     public void finish() {
-        if (finishCommandReceiver != null) {
-            unregisterReceiver(finishCommandReceiver);
+        synchronized (this) {
+            if (finishCommandReceiver != null) {
+                unregisterReceiver(finishCommandReceiver);
+                finishCommandReceiver = null;
+            }
         }
         super.finish();
     }
@@ -67,15 +73,17 @@ public class MyActivity extends Activity {
         super.onResume();
         Log.d(TAG, "MyActivity.onResume(): " + getIntent());
         Common.notifyNetworkStateObserver(this, getIntent(), TYPE_COMPONENT_ACTIVTY);
-        finishCommandReceiver = new BroadcastReceiver() {
-            @Override
-            public void onReceive(Context context, Intent intent) {
-                Log.d(TAG, "Finishing MyActivity");
-                MyActivity.this.finish();
-            }
-        };
-        registerReceiver(finishCommandReceiver, new IntentFilter(ACTION_FINISH_ACTIVITY),
-                Context.RECEIVER_EXPORTED);
+        synchronized (this) {
+            finishCommandReceiver = new BroadcastReceiver() {
+                @Override
+                public void onReceive(Context context, Intent intent) {
+                    Log.d(TAG, "Finishing MyActivity");
+                    MyActivity.this.finish();
+                }
+            };
+            registerReceiver(finishCommandReceiver, new IntentFilter(ACTION_FINISH_ACTIVITY),
+                    Context.RECEIVER_EXPORTED);
+        }
         final RemoteCallback callback = getIntent().getParcelableExtra(
                 Intent.EXTRA_REMOTE_CALLBACK);
         if (callback != null) {
