@@ -30,6 +30,8 @@ import android.os.Bundle;
 import android.os.RemoteException;
 import android.util.Log;
 
+import androidx.annotation.GuardedBy;
+
 import com.android.cts.net.hostside.INetworkStateObserver;
 
 /**
@@ -37,6 +39,7 @@ import com.android.cts.net.hostside.INetworkStateObserver;
  */
 public class MyActivity extends Activity {
 
+    @GuardedBy("this")
     private BroadcastReceiver finishCommandReceiver = null;
 
     @Override
@@ -47,8 +50,11 @@ public class MyActivity extends Activity {
 
     @Override
     public void finish() {
-        if (finishCommandReceiver != null) {
-            unregisterReceiver(finishCommandReceiver);
+        synchronized (this) {
+            if (finishCommandReceiver != null) {
+                unregisterReceiver(finishCommandReceiver);
+                finishCommandReceiver = null;
+            }
         }
         super.finish();
     }
@@ -71,14 +77,17 @@ public class MyActivity extends Activity {
         super.onResume();
         Log.d(TAG, "MyActivity.onResume(): " + getIntent());
         Common.notifyNetworkStateObserver(this, getIntent(), TYPE_COMPONENT_ACTIVTY);
-        finishCommandReceiver = new BroadcastReceiver() {
-            @Override
-            public void onReceive(Context context, Intent intent) {
-                Log.d(TAG, "Finishing MyActivity");
-                MyActivity.this.finish();
-            }
-        };
-        registerReceiver(finishCommandReceiver, new IntentFilter(ACTION_FINISH_ACTIVITY));
+        synchronized (this) {
+            finishCommandReceiver = new BroadcastReceiver() {
+                @Override
+                public void onReceive(Context context, Intent intent) {
+                    Log.d(TAG, "Finishing MyActivity");
+                    MyActivity.this.finish();
+                }
+            };
+            registerReceiver(finishCommandReceiver, new IntentFilter(ACTION_FINISH_ACTIVITY),
+                    Context.RECEIVER_EXPORTED);
+        }
     }
 
     @Override
