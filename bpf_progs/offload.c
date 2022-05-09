@@ -355,88 +355,10 @@ DEFINE_BPF_MAP_GRW(tether_downstream4_map, HASH, Tether4Key, Tether4Value, 1024,
 
 DEFINE_BPF_MAP_GRW(tether_upstream4_map, HASH, Tether4Key, Tether4Value, 1024, AID_NETWORK_STACK)
 
-static inline __always_inline int do_forward4(struct __sk_buff* skb, const bool is_ethernet,
-        const bool downstream, const bool updatetime) {
-    // Require ethernet dst mac address to be our unicast address.
-    if (is_ethernet && (skb->pkt_type != PACKET_HOST)) return TC_ACT_PIPE;
-
-    // Must be meta-ethernet IPv4 frame
-    if (skb->protocol != htons(ETH_P_IP)) return TC_ACT_PIPE;
-
-    const int l2_header_size = is_ethernet ? sizeof(struct ethhdr) : 0;
-
-    // Since the program never writes via DPA (direct packet access) auto-pull/unclone logic does
-    // not trigger and thus we need to manually make sure we can read packet headers via DPA.
-    // Note: this is a blind best effort pull, which may fail or pull less - this doesn't matter.
-    // It has to be done early cause it will invalidate any skb->data/data_end derived pointers.
-    try_make_writable(skb, l2_header_size + IP4_HLEN + TCP_HLEN);
-
-    void* data = (void*)(long)skb->data;
-    const void* data_end = (void*)(long)skb->data_end;
-    struct ethhdr* eth = is_ethernet ? data : NULL;  // used iff is_ethernet
-    struct iphdr* ip = is_ethernet ? (void*)(eth + 1) : data;
-
-    // Must have (ethernet and) ipv4 header
-    if (data + l2_header_size + sizeof(*ip) > data_end) return TC_ACT_PIPE;
-
-    // Ethertype - if present - must be IPv4
-    if (is_ethernet && (eth->h_proto != htons(ETH_P_IP))) return TC_ACT_PIPE;
-
-    // IP version must be 4
-    if (ip->version != 4) TC_PUNT(INVALID_IP_VERSION);
-
-    // We cannot handle IP options, just standard 20 byte == 5 dword minimal IPv4 header
-    if (ip->ihl != 5) TC_PUNT(HAS_IP_OPTIONS);
-
-    // Calculate the IPv4 one's complement checksum of the IPv4 header.
-    __wsum sum4 = 0;
-    for (int i = 0; i < sizeof(*ip) / sizeof(__u16); ++i) {
-        sum4 += ((__u16*)ip)[i];
-    }
-    // Note that sum4 is guaranteed to be non-zero by virtue of ip4->version == 4
-    sum4 = (sum4 & 0xFFFF) + (sum4 >> 16);  // collapse u32 into range 1 .. 0x1FFFE
-    sum4 = (sum4 & 0xFFFF) + (sum4 >> 16);  // collapse any potential carry into u16
-    // for a correct checksum we should get *a* zero, but sum4 must be positive, ie 0xFFFF
-    if (sum4 != 0xFFFF) TC_PUNT(CHECKSUM);
-
-    // Minimum IPv4 total length is the size of the header
-    if (ntohs(ip->tot_len) < sizeof(*ip)) TC_PUNT(TRUNCATED_IPV4);
-
-    // We are incapable of dealing with IPv4 fragments
-    if (ip->frag_off & ~htons(IP_DF)) TC_PUNT(IS_IP_FRAG);
-
-    // Cannot decrement during forward if already zero or would be zero,
-    // Let the kernel's stack handle these cases and generate appropriate ICMP errors.
-    if (ip->ttl <= 1) TC_PUNT(LOW_TTL);
-
-    // If we cannot update the 'last_used' field due to lack of bpf_ktime_get_boot_ns() helper,
-    // then it is not safe to offload UDP due to the small conntrack timeouts, as such,
-    // in such a situation we can only support TCP.  This also has the added nice benefit of
-    // using a separate error counter, and thus making it obvious which version of the program
-    // is loaded.
-    if (!updatetime && ip->protocol != IPPROTO_TCP) TC_PUNT(NON_TCP);
-
-    // We do not support offloading anything besides IPv4 TCP and UDP, due to need for NAT,
-    // but no need to check this if !updatetime due to check immediately above.
-    if (updatetime && (ip->protocol != IPPROTO_TCP) && (ip->protocol != IPPROTO_UDP))
-        TC_PUNT(NON_TCP_UDP);
-
-    // We want to make sure that the compiler will, in the !updatetime case, entirely optimize
-    // out all the non-tcp logic.  Also note that at this point is_udp === !is_tcp.
-    const bool is_tcp = !updatetime || (ip->protocol == IPPROTO_TCP);
-
-    // This is a bit of a hack to make things easier on the bpf verifier.
-    // (In particular I believe the Linux 4.14 kernel's verifier can get confused later on about
-    // what offsets into the packet are valid and can spuriously reject the program, this is
-    // because it fails to realize that is_tcp && !is_tcp is impossible)
-    //
-    // For both TCP & UDP we'll need to read and modify the src/dst ports, which so happen to
-    // always be in the first 4 bytes of the L4 header.  Additionally for UDP we'll need access
-    // to the checksum field which is in bytes 7 and 8.  While for TCP we'll need to read the
-    // TCP flags (at offset 13) and access to the checksum field (2 bytes at offset 16).
-    // As such we *always* need access to at least 8 bytes.
-    if (data + l2_header_size + sizeof(*ip) + 8 > data_end) TC_PUNT(SHORT_L4_HEADER);
-
+static inline __always_inline int do_forward4_bottom(struct __sk_buff* skb,
+        const int l2_header_size, void* data, const void* data_end,
+        struct ethhdr* eth, struct iphdr* ip, const bool is_ethernet,
+        const bool downstream, const bool updatetime, const bool is_tcp) {
     struct tcphdr* tcph = is_tcp ? (void*)(ip + 1) : NULL;
     struct udphdr* udph = is_tcp ? NULL : (void*)(ip + 1);
 
@@ -623,6 +545,102 @@ static inline __always_inline int do_forward4(struct __sk_buff* skb, const bool 
     // and can fail for example for mtu reasons at that point in time, but there's nothing
     // we can do about it here.
     return bpf_redirect(v->oif, 0 /* this is effectively BPF_F_EGRESS */);
+}
+
+static inline __always_inline int do_forward4(struct __sk_buff* skb, const bool is_ethernet,
+        const bool downstream, const bool updatetime) {
+    // Require ethernet dst mac address to be our unicast address.
+    if (is_ethernet && (skb->pkt_type != PACKET_HOST)) return TC_ACT_PIPE;
+
+    // Must be meta-ethernet IPv4 frame
+    if (skb->protocol != htons(ETH_P_IP)) return TC_ACT_PIPE;
+
+    const int l2_header_size = is_ethernet ? sizeof(struct ethhdr) : 0;
+
+    // Since the program never writes via DPA (direct packet access) auto-pull/unclone logic does
+    // not trigger and thus we need to manually make sure we can read packet headers via DPA.
+    // Note: this is a blind best effort pull, which may fail or pull less - this doesn't matter.
+    // It has to be done early cause it will invalidate any skb->data/data_end derived pointers.
+    try_make_writable(skb, l2_header_size + IP4_HLEN + TCP_HLEN);
+
+    void* data = (void*)(long)skb->data;
+    const void* data_end = (void*)(long)skb->data_end;
+    struct ethhdr* eth = is_ethernet ? data : NULL;  // used iff is_ethernet
+    struct iphdr* ip = is_ethernet ? (void*)(eth + 1) : data;
+
+    // Must have (ethernet and) ipv4 header
+    if (data + l2_header_size + sizeof(*ip) > data_end) return TC_ACT_PIPE;
+
+    // Ethertype - if present - must be IPv4
+    if (is_ethernet && (eth->h_proto != htons(ETH_P_IP))) return TC_ACT_PIPE;
+
+    // IP version must be 4
+    if (ip->version != 4) TC_PUNT(INVALID_IP_VERSION);
+
+    // We cannot handle IP options, just standard 20 byte == 5 dword minimal IPv4 header
+    if (ip->ihl != 5) TC_PUNT(HAS_IP_OPTIONS);
+
+    // Calculate the IPv4 one's complement checksum of the IPv4 header.
+    __wsum sum4 = 0;
+    for (int i = 0; i < sizeof(*ip) / sizeof(__u16); ++i) {
+        sum4 += ((__u16*)ip)[i];
+    }
+    // Note that sum4 is guaranteed to be non-zero by virtue of ip4->version == 4
+    sum4 = (sum4 & 0xFFFF) + (sum4 >> 16);  // collapse u32 into range 1 .. 0x1FFFE
+    sum4 = (sum4 & 0xFFFF) + (sum4 >> 16);  // collapse any potential carry into u16
+    // for a correct checksum we should get *a* zero, but sum4 must be positive, ie 0xFFFF
+    if (sum4 != 0xFFFF) TC_PUNT(CHECKSUM);
+
+    // Minimum IPv4 total length is the size of the header
+    if (ntohs(ip->tot_len) < sizeof(*ip)) TC_PUNT(TRUNCATED_IPV4);
+
+    // We are incapable of dealing with IPv4 fragments
+    if (ip->frag_off & ~htons(IP_DF)) TC_PUNT(IS_IP_FRAG);
+
+    // Cannot decrement during forward if already zero or would be zero,
+    // Let the kernel's stack handle these cases and generate appropriate ICMP errors.
+    if (ip->ttl <= 1) TC_PUNT(LOW_TTL);
+
+    // If we cannot update the 'last_used' field due to lack of bpf_ktime_get_boot_ns() helper,
+    // then it is not safe to offload UDP due to the small conntrack timeouts, as such,
+    // in such a situation we can only support TCP.  This also has the added nice benefit of
+    // using a separate error counter, and thus making it obvious which version of the program
+    // is loaded.
+    if (!updatetime && ip->protocol != IPPROTO_TCP) TC_PUNT(NON_TCP);
+
+    // We do not support offloading anything besides IPv4 TCP and UDP, due to need for NAT,
+    // but no need to check this if !updatetime due to check immediately above.
+    if (updatetime && (ip->protocol != IPPROTO_TCP) && (ip->protocol != IPPROTO_UDP))
+        TC_PUNT(NON_TCP_UDP);
+
+    // We want to make sure that the compiler will, in the !updatetime case, entirely optimize
+    // out all the non-tcp logic.  Also note that at this point is_udp === !is_tcp.
+    const bool is_tcp = !updatetime || (ip->protocol == IPPROTO_TCP);
+
+    // This is a bit of a hack to make things easier on the bpf verifier.
+    // (In particular I believe the Linux 4.14 kernel's verifier can get confused later on about
+    // what offsets into the packet are valid and can spuriously reject the program, this is
+    // because it fails to realize that is_tcp && !is_tcp is impossible)
+    //
+    // For both TCP & UDP we'll need to read and modify the src/dst ports, which so happen to
+    // always be in the first 4 bytes of the L4 header.  Additionally for UDP we'll need access
+    // to the checksum field which is in bytes 7 and 8.  While for TCP we'll need to read the
+    // TCP flags (at offset 13) and access to the checksum field (2 bytes at offset 16).
+    // As such we *always* need access to at least 8 bytes.
+    if (data + l2_header_size + sizeof(*ip) + 8 > data_end) TC_PUNT(SHORT_L4_HEADER);
+
+    // We're forcing the compiler to emit two copies of the following code, optimized
+    // separately for is_tcp being true or false.  This simplifies the resulting bpf
+    // byte code sufficiently that the 4.14 bpf verifier is able to keep track of things.
+    // Without this (updatetime == true) case would fail to bpf verify on 4.14 even
+    // if the underlying requisite kernel support (bpf_ktime_get_boot_ns) was backported.
+    if (is_tcp) {
+      return do_forward4_bottom(skb, l2_header_size, data, data_end, eth, ip,
+                                is_ethernet, downstream, updatetime, /* is_tcp */ true);
+    } else {
+      return do_forward4_bottom(skb, l2_header_size, data, data_end, eth, ip,
+                                is_ethernet, downstream, updatetime, /* is_tcp */ false);
+    }
 }
 
 // Full featured (required) implementations for 5.8+ kernels (these are S+ by definition)
