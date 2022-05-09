@@ -14,8 +14,9 @@
  * limitations under the License.
  */
 
-package android.nearby.multidevices.fastpair.seeker.ui
+package android.nearby.integration.ui
 
+import android.platform.test.rule.ScreenRecordRule.ScreenRecord
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.uiautomator.UiDevice
@@ -27,14 +28,15 @@ import org.junit.runner.RunWith
  *
  * To run this test directly:
  * am instrument -w -r \
- * -e class android.nearby.multidevices.fastpair.seeker.ui.DismissNearbyHalfSheetUiTest \
- * android.nearby.multidevices/androidx.test.runner.AndroidJUnitRunner
+ * -e class android.nearby.integration.ui.DismissNearbyHalfSheetUiTest \
+ * android.nearby.integration.ui/androidx.test.runner.AndroidJUnitRunner
  */
 @RunWith(AndroidJUnit4::class)
-class DismissNearbyHalfSheetUiTest {
+class DismissNearbyHalfSheetUiTest : BaseUiTest() {
     private val device = UiDevice.getInstance(InstrumentationRegistry.getInstrumentation())
 
     @Test
+    @ScreenRecord
     fun dismissHalfSheet() {
         device.pressHome()
         device.waitForIdle()
