@@ -10833,10 +10833,20 @@ public class ConnectivityService extends IConnectivityManager.Stub
     private void handleSetProfileNetworkPreference(
             @NonNull final List<ProfileNetworkPreferenceList.Preference> preferenceList,
             @Nullable final IOnCompleteListener listener) {
+        /*
+         * handleSetProfileNetworkPreference is always called for single user.
+         * preferenceList only contains preferences for different uids within the same user
+         * (enforced by getUidListToBeAppliedForNetworkPreference).
+         * Clear all the existing preferences for the user before applying new preferences.
+         *
+         */
+        mProfileNetworkPreferences = mProfileNetworkPreferences.clearUser(
+                preferenceList.get(0).user);
         for (final ProfileNetworkPreferenceList.Preference preference : preferenceList) {
             validateNetworkCapabilitiesOfProfileNetworkPreference(preference.capabilities);
             mProfileNetworkPreferences = mProfileNetworkPreferences.plus(preference);
         }
+
         removeDefaultNetworkRequestsForPreference(PREFERENCE_ORDER_PROFILE);
         addPerAppDefaultNetworkRequests(
                 createNrisFromProfileNetworkPreferences(mProfileNetworkPreferences));
