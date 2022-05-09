@@ -164,7 +164,6 @@ import android.telephony.TelephonyManager;
 import android.text.TextUtils;
 import android.util.ArraySet;
 import android.util.Log;
-import android.util.Pair;
 import android.util.Range;
 
 import androidx.test.InstrumentationRegistry;
@@ -182,6 +181,7 @@ import com.android.testutils.CompatUtil;
 import com.android.testutils.DevSdkIgnoreRule;
 import com.android.testutils.DevSdkIgnoreRule.IgnoreUpTo;
 import com.android.testutils.DevSdkIgnoreRuleKt;
+import com.android.testutils.DeviceInfoUtils;
 import com.android.testutils.DumpTestUtils;
 import com.android.testutils.RecorderCallback.CallbackEntry;
 import com.android.testutils.TestHttpServer;
@@ -1605,51 +1605,7 @@ public class ConnectivityManagerTest {
 
     private static boolean isTcpKeepaliveSupportedByKernel() {
         final String kVersionString = VintfRuntimeInfo.getKernelVersion();
-        return compareMajorMinorVersion(kVersionString, "4.8") >= 0;
-    }
-
-    private static Pair<Integer, Integer> getVersionFromString(String version) {
-        // Only gets major and minor number of the version string.
-        final Pattern versionPattern = Pattern.compile("^(\\d+)(\\.(\\d+))?.*");
-        final Matcher m = versionPattern.matcher(version);
-        if (m.matches()) {
-            final int major = Integer.parseInt(m.group(1));
-            final int minor = TextUtils.isEmpty(m.group(3)) ? 0 : Integer.parseInt(m.group(3));
-            return new Pair<>(major, minor);
-        } else {
-            return new Pair<>(0, 0);
-        }
-    }
-
-    // TODO: Move to util class.
-    private static int compareMajorMinorVersion(final String s1, final String s2) {
-        final Pair<Integer, Integer> v1 = getVersionFromString(s1);
-        final Pair<Integer, Integer> v2 = getVersionFromString(s2);
-
-        if (v1.first == v2.first) {
-            return Integer.compare(v1.second, v2.second);
-        } else {
-            return Integer.compare(v1.first, v2.first);
-        }
-    }
-
-    /**
-     * Verifies that version string compare logic returns expected result for various cases.
-     * Note that only major and minor number are compared.
-     */
-    @Test
-    public void testMajorMinorVersionCompare() {
-        assertEquals(0, compareMajorMinorVersion("4.8.1", "4.8"));
-        assertEquals(1, compareMajorMinorVersion("4.9", "4.8.1"));
-        assertEquals(1, compareMajorMinorVersion("5.0", "4.8"));
-        assertEquals(1, compareMajorMinorVersion("5", "4.8"));
-        assertEquals(0, compareMajorMinorVersion("5", "5.0"));
-        assertEquals(1, compareMajorMinorVersion("5-beta1", "4.8"));
-        assertEquals(0, compareMajorMinorVersion("4.8.0.0", "4.8"));
-        assertEquals(0, compareMajorMinorVersion("4.8-RC1", "4.8"));
-        assertEquals(0, compareMajorMinorVersion("4.8", "4.8"));
-        assertEquals(-1, compareMajorMinorVersion("3.10", "4.8.0"));
-        assertEquals(-1, compareMajorMinorVersion("4.7.10.10", "4.8"));
+        return DeviceInfoUtils.compareMajorMinorVersion(kVersionString, "4.8") >= 0;
     }
 
     /**
