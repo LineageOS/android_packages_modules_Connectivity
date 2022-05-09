@@ -8,6 +8,9 @@
     },
     {
       "name": "NearbyIntegrationUntrustedTests"
+    },
+    {
+      "name": "NearbyIntegrationUiTests"
     }
   ],
   "postsubmit": [
