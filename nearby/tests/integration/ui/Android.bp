@@ -16,31 +16,25 @@ package {
     default_applicable_licenses: ["Android-Apache-2.0"],
 }
 
+android_test {
+    name: "NearbyIntegrationUiTests",
+    defaults: ["mts-target-sdk-version-current"],
+    sdk_version: "test_current",
+    static_libs: ["NearbyIntegrationUiTestsLib"],
+    test_suites: ["device-tests"],
+}
+
 android_library {
-    name: "NearbyMultiDevicesClientsLib",
+    name: "NearbyIntegrationUiTestsLib",
     srcs: ["src/**/*.kt"],
     sdk_version: "test_current",
     static_libs: [
-        "MoblySnippetHelperLib",
-        "NearbyFastPairProviderLib",
-        "NearbyFastPairSeekerSharedLib",
-        "NearbyIntegrationUiTestsLib",
-        "androidx.test.core",
         "androidx.test.ext.junit",
-        "kotlin-stdlib",
-        "mobly-snippet-lib",
+        "androidx.test.rules",
+        "androidx.test.uiautomator_uiautomator",
+        "junit",
+        "platform-test-rules",
+        "service-nearby-pre-jarjar",
         "truth-prebuilt",
     ],
-}
-
-android_app {
-    name: "NearbyMultiDevicesClientsSnippets",
-    sdk_version: "test_current",
-    certificate: "platform",
-    static_libs: ["NearbyMultiDevicesClientsLib"],
-    optimize: {
-        enabled: true,
-        shrink: false,
-        proguard_flags_files: ["proguard.flags"],
-    },
 }

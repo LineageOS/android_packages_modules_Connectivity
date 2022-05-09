@@ -22,12 +22,12 @@ import android.nearby.NearbyManager
 import android.nearby.ScanCallback
 import android.nearby.ScanRequest
 import android.nearby.fastpair.seeker.FAKE_TEST_ACCOUNT_NAME
+import android.nearby.integration.ui.CheckNearbyHalfSheetUiTest
+import android.nearby.integration.ui.DismissNearbyHalfSheetUiTest
+import android.nearby.integration.ui.PairByNearbyHalfSheetUiTest
 import android.nearby.multidevices.fastpair.seeker.data.FastPairTestDataManager
 import android.nearby.multidevices.fastpair.seeker.events.PairingCallbackEvents
 import android.nearby.multidevices.fastpair.seeker.events.ScanCallbackEvents
-import android.nearby.multidevices.fastpair.seeker.ui.CheckNearbyHalfSheetUiTest
-import android.nearby.multidevices.fastpair.seeker.ui.DismissNearbyHalfSheetUiTest
-import android.nearby.multidevices.fastpair.seeker.ui.PairByNearbyHalfSheetUiTest
 import android.provider.Settings
 import androidx.test.core.app.ApplicationProvider
 import com.google.android.mobly.snippet.Snippet
@@ -86,14 +86,17 @@ class FastPairSeekerSnippet : Snippet {
         val deviceName = deviceMetadata.name!!
         val initialPairingDescriptionTemplateText = deviceMetadata.initialPairingDescription!!
 
-        CheckNearbyHalfSheetUiTest(
-            waitHalfSheetPopupTimeoutSeconds = timeout,
-            halfSheetTitleText = deviceName,
-            halfSheetSubtitleText = initialPairingDescriptionTemplateText.format(
-                deviceName,
-                FAKE_TEST_ACCOUNT_NAME
+        CheckNearbyHalfSheetUiTest().apply {
+            updateTestArguments(
+                waitHalfSheetPopupTimeoutSeconds = timeout,
+                halfSheetTitleText = deviceName,
+                halfSheetSubtitleText = initialPairingDescriptionTemplateText.format(
+                    deviceName,
+                    FAKE_TEST_ACCOUNT_NAME
+                )
             )
-        ).checkNearbyHalfSheetUi()
+            checkNearbyHalfSheetUi()
+        }
     }
 
     /** Puts a model id to FastPairAntispoofKeyDeviceMetadata pair into test data cache.
