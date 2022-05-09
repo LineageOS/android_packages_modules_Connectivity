@@ -84,15 +84,14 @@ java_library {
         "framework-system-server-module-defaults"
     ],
     libs: [
+        "androidx.annotation_annotation",
         "framework-bluetooth.stubs.module_lib", // TODO(b/215722418): Change to framework-bluetooth once fixed
         "error_prone_annotations",
         "framework-connectivity-t.impl",
         "framework-statsd.stubs.module_lib",
     ],
     static_libs: [
-        "androidx.annotation_annotation",
         "androidx.core_core",
-        "androidx.localbroadcastmanager_localbroadcastmanager",
         "guava",
         "libprotobuf-java-lite",
         "fast-pair-lite-protos",
