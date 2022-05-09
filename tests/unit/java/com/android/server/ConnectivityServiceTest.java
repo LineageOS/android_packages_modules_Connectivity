@@ -104,6 +104,7 @@ import static android.net.NetworkCapabilities.NET_CAPABILITY_VSIM;
 import static android.net.NetworkCapabilities.NET_CAPABILITY_WIFI_P2P;
 import static android.net.NetworkCapabilities.NET_CAPABILITY_XCAP;
 import static android.net.NetworkCapabilities.NET_ENTERPRISE_ID_1;
+import static android.net.NetworkCapabilities.NET_ENTERPRISE_ID_2;
 import static android.net.NetworkCapabilities.REDACT_FOR_ACCESS_FINE_LOCATION;
 import static android.net.NetworkCapabilities.REDACT_FOR_LOCAL_MAC_ADDRESS;
 import static android.net.NetworkCapabilities.REDACT_FOR_NETWORK_SETTINGS;
@@ -469,6 +470,7 @@ public class ConnectivityServiceTest {
     private static final int TEST_APP_ID_2 = 104;
     private static final int TEST_WORK_PROFILE_APP_UID_2 =
             UserHandle.getUid(TEST_WORK_PROFILE_USER_ID, TEST_APP_ID_2);
+    private static final int TEST_APP_ID_3 = 105;
 
     private static final String CLAT_PREFIX = "v4-";
     private static final String MOBILE_IFNAME = "test_rmnet_data0";
@@ -14650,6 +14652,148 @@ public class ConnectivityServiceTest {
         registerDefaultNetworkCallbacks();
         assertThrows("Should not be able to set invalid enterprise id",
                 IllegalStateException.class, () -> profileNetworkPreferenceBuilder.build());
+    }
+
+    /**
+     * Make sure per profile network preferences behave as expected when two slices with
+     * two different apps within same user profile is configured
+     * Make sure per profile network preferences overrides with latest preference when
+     * same user preference is set twice
+     */
+    @Test
+    public void testSetPreferenceWithOverridingPreference()
+            throws Exception {
+        final InOrder inOrder = inOrder(mMockNetd);
+        final UserHandle testHandle = setupEnterpriseNetwork();
+        mServiceContext.setWorkProfile(testHandle, true);
+        registerDefaultNetworkCallbacks();
+
+        final TestNetworkCallback appCb1 = new TestNetworkCallback();
+        final TestNetworkCallback appCb2 = new TestNetworkCallback();
+        final TestNetworkCallback appCb3 = new TestNetworkCallback();
+
+        final int testWorkProfileAppUid1 =
+                UserHandle.getUid(testHandle.getIdentifier(), TEST_APP_ID);
+        final int testWorkProfileAppUid2 =
+                UserHandle.getUid(testHandle.getIdentifier(), TEST_APP_ID_2);
+        final int testWorkProfileAppUid3 =
+                UserHandle.getUid(testHandle.getIdentifier(), TEST_APP_ID_3);
+
+        registerDefaultNetworkCallbackAsUid(appCb1, testWorkProfileAppUid1);
+        registerDefaultNetworkCallbackAsUid(appCb2, testWorkProfileAppUid2);
+        registerDefaultNetworkCallbackAsUid(appCb3, testWorkProfileAppUid3);
+
+        // Connect both a regular cell agent and an enterprise network first.
+        mCellNetworkAgent = new TestNetworkAgentWrapper(TRANSPORT_CELLULAR);
+        mCellNetworkAgent.connect(true);
+
+        final TestNetworkAgentWrapper workAgent1 = makeEnterpriseNetworkAgent(NET_ENTERPRISE_ID_1);
+        final TestNetworkAgentWrapper workAgent2 = makeEnterpriseNetworkAgent(NET_ENTERPRISE_ID_2);
+        workAgent1.connect(true);
+        workAgent2.connect(true);
+
+        mSystemDefaultNetworkCallback.expectAvailableThenValidatedCallbacks(mCellNetworkAgent);
+        mDefaultNetworkCallback.expectAvailableThenValidatedCallbacks(mCellNetworkAgent);
+        appCb1.expectAvailableThenValidatedCallbacks(mCellNetworkAgent);
+        appCb2.expectAvailableThenValidatedCallbacks(mCellNetworkAgent);
+        appCb3.expectAvailableThenValidatedCallbacks(mCellNetworkAgent);
+
+        verify(mMockNetd).networkCreate(nativeNetworkConfigPhysical(
+                mCellNetworkAgent.getNetwork().netId, INetd.PERMISSION_NONE));
+        verify(mMockNetd).networkCreate(nativeNetworkConfigPhysical(
+                workAgent1.getNetwork().netId, INetd.PERMISSION_SYSTEM));
+        verify(mMockNetd).networkCreate(nativeNetworkConfigPhysical(
+                workAgent2.getNetwork().netId, INetd.PERMISSION_SYSTEM));
+
+        final TestOnCompleteListener listener = new TestOnCompleteListener();
+
+        // Set preferences for testHandle to map testWorkProfileAppUid1 to
+        // NET_ENTERPRISE_ID_1 and testWorkProfileAppUid2 to NET_ENTERPRISE_ID_2.
+        ProfileNetworkPreference.Builder profileNetworkPreferenceBuilder1 =
+                new ProfileNetworkPreference.Builder();
+        profileNetworkPreferenceBuilder1.setPreference(PROFILE_NETWORK_PREFERENCE_ENTERPRISE);
+        profileNetworkPreferenceBuilder1.setPreferenceEnterpriseId(NET_ENTERPRISE_ID_1);
+        profileNetworkPreferenceBuilder1.setIncludedUids(new int[]{testWorkProfileAppUid1});
+
+        ProfileNetworkPreference.Builder profileNetworkPreferenceBuilder2 =
+                new ProfileNetworkPreference.Builder();
+        profileNetworkPreferenceBuilder2.setPreference(PROFILE_NETWORK_PREFERENCE_ENTERPRISE);
+        profileNetworkPreferenceBuilder2.setPreferenceEnterpriseId(NET_ENTERPRISE_ID_2);
+        profileNetworkPreferenceBuilder2.setIncludedUids(new int[]{testWorkProfileAppUid2});
+
+        mCm.setProfileNetworkPreferences(testHandle,
+                List.of(profileNetworkPreferenceBuilder1.build(),
+                        profileNetworkPreferenceBuilder2.build()),
+                r -> r.run(), listener);
+        listener.expectOnComplete();
+        verify(mMockNetd).networkAddUidRangesParcel(new NativeUidRangeConfig(
+                workAgent2.getNetwork().netId,
+                uidRangeFor(testHandle, profileNetworkPreferenceBuilder2.build()),
+                PREFERENCE_ORDER_PROFILE));
+        // BUG: the second preference silently replaces the first because they are
+        // both for testHandle.
+        verify(mMockNetd, never()).networkAddUidRangesParcel(new NativeUidRangeConfig(
+                workAgent1.getNetwork().netId,
+                uidRangeFor(testHandle, profileNetworkPreferenceBuilder1.build()),
+                PREFERENCE_ORDER_PROFILE));
+
+        assertNoCallbacks(mSystemDefaultNetworkCallback, mDefaultNetworkCallback, appCb1);
+        appCb2.expectAvailableCallbacksValidated(workAgent2);
+
+        // Set preferences for testHandle to map testWorkProfileAppUid3 to
+        // to NET_ENTERPRISE_ID_1.
+        ProfileNetworkPreference.Builder profileNetworkPreferenceBuilder3 =
+                new ProfileNetworkPreference.Builder();
+        profileNetworkPreferenceBuilder3.setPreference(PROFILE_NETWORK_PREFERENCE_ENTERPRISE);
+        profileNetworkPreferenceBuilder3.setPreferenceEnterpriseId(NET_ENTERPRISE_ID_1);
+        profileNetworkPreferenceBuilder3.setIncludedUids(new int[]{testWorkProfileAppUid3});
+
+        mCm.setProfileNetworkPreferences(testHandle,
+                List.of(profileNetworkPreferenceBuilder3.build()),
+                r -> r.run(), listener);
+        listener.expectOnComplete();
+        verify(mMockNetd).networkAddUidRangesParcel(new NativeUidRangeConfig(
+                workAgent1.getNetwork().netId,
+                uidRangeFor(testHandle, profileNetworkPreferenceBuilder3.build()),
+                PREFERENCE_ORDER_PROFILE));
+        verify(mMockNetd).networkRemoveUidRangesParcel(new NativeUidRangeConfig(
+                workAgent2.getNetwork().netId,
+                uidRangeFor(testHandle, profileNetworkPreferenceBuilder2.build()),
+                PREFERENCE_ORDER_PROFILE));
+        // BUG: the second preference should also get removed here unless it was silently
+        // discarded
+        verify(mMockNetd, never()).networkRemoveUidRangesParcel(new NativeUidRangeConfig(
+                workAgent1.getNetwork().netId,
+                uidRangeFor(testHandle, profileNetworkPreferenceBuilder1.build()),
+                PREFERENCE_ORDER_PROFILE));
+
+        assertNoCallbacks(mSystemDefaultNetworkCallback, mDefaultNetworkCallback, appCb1);
+        appCb3.expectAvailableCallbacksValidated(workAgent1);
+        appCb2.expectAvailableCallbacksValidated(mCellNetworkAgent);
+
+        // Set the preferences for testHandle to default.
+        ProfileNetworkPreference.Builder profileNetworkPreferenceBuilder =
+                new ProfileNetworkPreference.Builder();
+        profileNetworkPreferenceBuilder.setPreference(PROFILE_NETWORK_PREFERENCE_DEFAULT);
+
+        mCm.setProfileNetworkPreferences(testHandle,
+                List.of(profileNetworkPreferenceBuilder.build()),
+                r -> r.run(), listener);
+        listener.expectOnComplete();
+        verify(mMockNetd).networkRemoveUidRangesParcel(new NativeUidRangeConfig(
+                workAgent1.getNetwork().netId,
+                uidRangeFor(testHandle, profileNetworkPreferenceBuilder3.build()),
+                PREFERENCE_ORDER_PROFILE));
+
+        assertNoCallbacks(mSystemDefaultNetworkCallback, mDefaultNetworkCallback, appCb1, appCb2);
+        appCb3.expectAvailableCallbacksValidated(mCellNetworkAgent);
+        workAgent2.disconnect();
+        mCellNetworkAgent.disconnect();
+
+        mCm.unregisterNetworkCallback(appCb1);
+        mCm.unregisterNetworkCallback(appCb2);
+        mCm.unregisterNetworkCallback(appCb3);
+        // Other callbacks will be unregistered by tearDown()
     }
 
     /**
