@@ -14552,7 +14552,7 @@ public class ConnectivityServiceTest {
         profileNetworkPreferenceBuilder.setPreference(
                 PROFILE_NETWORK_PREFERENCE_ENTERPRISE_NO_FALLBACK);
         profileNetworkPreferenceBuilder.setPreferenceEnterpriseId(
-                NetworkCapabilities.NET_ENTERPRISE_ID_2);
+                NET_ENTERPRISE_ID_2);
         registerDefaultNetworkCallbacks();
         testPreferenceForUserNetworkUpDownForGivenPreference(
                 profileNetworkPreferenceBuilder.build(), true,
@@ -14652,14 +14652,13 @@ public class ConnectivityServiceTest {
                 workAgent2.getNetwork().netId,
                 uidRangeFor(testHandle, profileNetworkPreferenceBuilder2.build()),
                 PREFERENCE_ORDER_PROFILE));
-        // BUG: the second preference silently replaces the first because they are
-        // both for testHandle.
-        verify(mMockNetd, never()).networkAddUidRangesParcel(new NativeUidRangeConfig(
+        verify(mMockNetd).networkAddUidRangesParcel(new NativeUidRangeConfig(
                 workAgent1.getNetwork().netId,
                 uidRangeFor(testHandle, profileNetworkPreferenceBuilder1.build()),
                 PREFERENCE_ORDER_PROFILE));
 
-        assertNoCallbacks(mSystemDefaultNetworkCallback, mDefaultNetworkCallback, appCb1);
+        assertNoCallbacks(mSystemDefaultNetworkCallback, mDefaultNetworkCallback);
+        appCb1.expectAvailableCallbacksValidated(workAgent1);
         appCb2.expectAvailableCallbacksValidated(workAgent2);
 
         // Set preferences for testHandle to map testWorkProfileAppUid3 to
@@ -14682,16 +14681,15 @@ public class ConnectivityServiceTest {
                 workAgent2.getNetwork().netId,
                 uidRangeFor(testHandle, profileNetworkPreferenceBuilder2.build()),
                 PREFERENCE_ORDER_PROFILE));
-        // BUG: the second preference should also get removed here unless it was silently
-        // discarded
-        verify(mMockNetd, never()).networkRemoveUidRangesParcel(new NativeUidRangeConfig(
+        verify(mMockNetd).networkRemoveUidRangesParcel(new NativeUidRangeConfig(
                 workAgent1.getNetwork().netId,
                 uidRangeFor(testHandle, profileNetworkPreferenceBuilder1.build()),
                 PREFERENCE_ORDER_PROFILE));
 
-        assertNoCallbacks(mSystemDefaultNetworkCallback, mDefaultNetworkCallback, appCb1);
+        assertNoCallbacks(mSystemDefaultNetworkCallback, mDefaultNetworkCallback);
         appCb3.expectAvailableCallbacksValidated(workAgent1);
         appCb2.expectAvailableCallbacksValidated(mCellNetworkAgent);
+        appCb1.expectAvailableCallbacksValidated(mCellNetworkAgent);
 
         // Set the preferences for testHandle to default.
         ProfileNetworkPreference.Builder profileNetworkPreferenceBuilder =
