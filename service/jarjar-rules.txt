@@ -105,14 +105,19 @@ rule com.android.internal.util.State* com.android.connectivity.@0
 # From the API shims
 rule com.android.networkstack.apishim.** com.android.connectivity.@0
 
-# From fast-pair-lite-protos
-rule service.proto.** com.android.server.nearby.@0
-
 # From filegroup framework-connectivity-protos
 rule android.service.*Proto com.android.connectivity.@0
 
 # From mdns-aidl-interface
 rule android.net.mdns.aidl.** android.net.connectivity.@0
+
+# From nearby-service, including proto
+rule service.proto.** com.android.server.nearby.@0
+rule androidx.annotation.Keep* com.android.server.nearby.@0
+rule androidx.collection.** com.android.server.nearby.@0
+rule androidx.core.** com.android.server.nearby.@0
+rule androidx.versionedparcelable.** com.android.server.nearby.@0
+rule com.google.common.** com.android.server.nearby.@0
 
 # Remaining are connectivity sources in com.android.server and com.android.server.connectivity:
 # TODO: move to a subpackage of com.android.connectivity (such as com.android.connectivity.server)
