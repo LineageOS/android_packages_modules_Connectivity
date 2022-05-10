@@ -10677,7 +10677,10 @@ public class ConnectivityService extends IConnectivityManager.Stub
         Objects.requireNonNull(profile);
 
         if (preferences.size() == 0) {
-            preferences.add((new ProfileNetworkPreference.Builder()).build());
+            final ProfileNetworkPreference pref = new ProfileNetworkPreference.Builder()
+                    .setPreference(ConnectivityManager.PROFILE_NETWORK_PREFERENCE_DEFAULT)
+                    .build();
+            preferences.add(pref);
         }
 
         PermissionUtils.enforceNetworkStackPermission(mContext);
@@ -10695,12 +10698,14 @@ public class ConnectivityService extends IConnectivityManager.Stub
 
         final List<ProfileNetworkPreferenceList.Preference> preferenceList =
                 new ArrayList<ProfileNetworkPreferenceList.Preference>();
-        boolean allowFallback = true;
+        boolean hasDefaultPreference = false;
         for (final ProfileNetworkPreference preference : preferences) {
             final NetworkCapabilities nc;
+            boolean allowFallback = true;
             switch (preference.getPreference()) {
                 case ConnectivityManager.PROFILE_NETWORK_PREFERENCE_DEFAULT:
                     nc = null;
+                    hasDefaultPreference = true;
                     if (preference.getPreferenceEnterpriseId() != 0) {
                         throw new IllegalArgumentException(
                                 "Invalid enterprise identifier in setProfileNetworkPreferences");
@@ -10710,6 +10715,14 @@ public class ConnectivityService extends IConnectivityManager.Stub
                     allowFallback = false;
                     // continue to process the enterprise preference.
                 case ConnectivityManager.PROFILE_NETWORK_PREFERENCE_ENTERPRISE:
+                    // This code is needed even though there is a check later on,
+                    // because isRangeAlreadyInPreferenceList assumes that every preference
+                    // has a UID list.
+                    if (hasDefaultPreference) {
+                        throw new IllegalArgumentException(
+                                "Default profile preference should not be set along with other "
+                                        + "preference");
+                    }
                     if (!isEnterpriseIdentifierValid(preference.getPreferenceEnterpriseId())) {
                         throw new IllegalArgumentException(
                                 "Invalid enterprise identifier in setProfileNetworkPreferences");
@@ -10733,6 +10746,10 @@ public class ConnectivityService extends IConnectivityManager.Stub
             }
             preferenceList.add(new ProfileNetworkPreferenceList.Preference(
                     profile, nc, allowFallback));
+            if (hasDefaultPreference && preferenceList.size() > 1) {
+                throw new IllegalArgumentException(
+                        "Default profile preference should not be set along with other preference");
+            }
         }
         mHandler.sendMessage(mHandler.obtainMessage(EVENT_SET_PROFILE_NETWORK_PREFERENCE,
                 new Pair<>(preferenceList, listener)));
@@ -10775,12 +10792,6 @@ public class ConnectivityService extends IConnectivityManager.Stub
             return true;
         }
         return false;
-    }
-
-    private void validateNetworkCapabilitiesOfProfileNetworkPreference(
-            @Nullable final NetworkCapabilities nc) {
-        if (null == nc) return; // Null caps are always allowed. It means to remove the setting.
-        ensureRequestableCapabilities(nc);
     }
 
     private ArraySet<NetworkRequestInfo> createNrisFromProfileNetworkPreferences(
@@ -10840,10 +10851,9 @@ public class ConnectivityService extends IConnectivityManager.Stub
          * Clear all the existing preferences for the user before applying new preferences.
          *
          */
-        mProfileNetworkPreferences = mProfileNetworkPreferences.clearUser(
+        mProfileNetworkPreferences = mProfileNetworkPreferences.withoutUser(
                 preferenceList.get(0).user);
         for (final ProfileNetworkPreferenceList.Preference preference : preferenceList) {
-            validateNetworkCapabilitiesOfProfileNetworkPreference(preference.capabilities);
             mProfileNetworkPreferences = mProfileNetworkPreferences.plus(preference);
         }
 
