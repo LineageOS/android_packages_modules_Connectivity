@@ -194,7 +194,7 @@ public class EthernetNetworkFactory extends NetworkFactory {
         }
 
         final NetworkInterfaceState iface = new NetworkInterfaceState(
-                ifaceName, hwAddress, mHandler, mContext, ipConfig, nc, this, mDeps);
+                ifaceName, hwAddress, mHandler, mContext, ipConfig, nc, getProvider(), mDeps);
         mTrackingInterfaces.put(ifaceName, iface);
         updateCapabilityFilter();
     }
@@ -361,7 +361,7 @@ public class EthernetNetworkFactory extends NetworkFactory {
         private final String mHwAddress;
         private final Handler mHandler;
         private final Context mContext;
-        private final NetworkFactory mNetworkFactory;
+        private final NetworkProvider mNetworkProvider;
         private final Dependencies mDeps;
 
         private static String sTcpBufferSizes = null;  // Lazy initialized.
@@ -471,14 +471,14 @@ public class EthernetNetworkFactory extends NetworkFactory {
 
         NetworkInterfaceState(String ifaceName, String hwAddress, Handler handler, Context context,
                 @NonNull IpConfiguration ipConfig, @NonNull NetworkCapabilities capabilities,
-                NetworkFactory networkFactory, Dependencies deps) {
+                NetworkProvider networkProvider, Dependencies deps) {
             name = ifaceName;
             mIpConfig = Objects.requireNonNull(ipConfig);
             mCapabilities = Objects.requireNonNull(capabilities);
             mLegacyType = getLegacyType(mCapabilities);
             mHandler = handler;
             mContext = context;
-            mNetworkFactory = networkFactory;
+            mNetworkProvider = networkProvider;
             mDeps = deps;
             mHwAddress = hwAddress;
         }
@@ -575,7 +575,7 @@ public class EthernetNetworkFactory extends NetworkFactory {
                     .setLegacyExtraInfo(mHwAddress)
                     .build();
             mNetworkAgent = mDeps.makeEthernetNetworkAgent(mContext, mHandler.getLooper(),
-                    mCapabilities, mLinkProperties, config, mNetworkFactory.getProvider(),
+                    mCapabilities, mLinkProperties, config, mNetworkProvider,
                     new EthernetNetworkAgent.Callbacks() {
                         @Override
                         public void onNetworkUnwanted() {
