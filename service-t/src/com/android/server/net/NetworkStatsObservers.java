@@ -18,6 +18,7 @@ package com.android.server.net;
 
 import static android.app.usage.NetworkStatsManager.MIN_THRESHOLD_BYTES;
 
+import android.annotation.NonNull;
 import android.app.usage.NetworkStatsManager;
 import android.content.Context;
 import android.content.pm.PackageManager;
@@ -38,6 +39,7 @@ import android.os.Message;
 import android.os.Process;
 import android.os.RemoteException;
 import android.util.ArrayMap;
+import android.util.IndentingPrintWriter;
 import android.util.Log;
 import android.util.SparseArray;
 
@@ -52,11 +54,14 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 class NetworkStatsObservers {
     private static final String TAG = "NetworkStatsObservers";
+    private static final boolean LOG = true;
     private static final boolean LOGV = false;
 
     private static final int MSG_REGISTER = 1;
     private static final int MSG_UNREGISTER = 2;
     private static final int MSG_UPDATE_STATS = 3;
+
+    private static final int DUMP_USAGE_REQUESTS_COUNT = 200;
 
     // All access to this map must be done from the handler thread.
     // indexed by DataUsageRequest#requestId
@@ -77,13 +82,15 @@ class NetworkStatsObservers {
      *
      * @return the normalized request wrapped within {@link RequestInfo}.
      */
-    public DataUsageRequest register(Context context, DataUsageRequest inputRequest,
-            IUsageCallback callback, int callingUid, @NetworkStatsAccess.Level int accessLevel) {
+    public DataUsageRequest register(@NonNull Context context,
+            @NonNull DataUsageRequest inputRequest, @NonNull IUsageCallback callback,
+            int callingPid, int callingUid, @NonNull String callingPackage,
+            @NetworkStatsAccess.Level int accessLevel) {
         DataUsageRequest request = buildRequest(context, inputRequest, callingUid);
-        RequestInfo requestInfo = buildRequestInfo(request, callback, callingUid,
-                accessLevel);
+        RequestInfo requestInfo = buildRequestInfo(request, callback, callingPid, callingUid,
+                callingPackage, accessLevel);
 
-        if (LOGV) Log.v(TAG, "Registering observer for " + request);
+        if (LOG) Log.d(TAG, "Registering observer for " + requestInfo);
         getHandler().sendMessage(mHandler.obtainMessage(MSG_REGISTER, requestInfo));
         return request;
     }
@@ -172,7 +179,7 @@ class NetworkStatsObservers {
         RequestInfo requestInfo;
         requestInfo = mDataUsageRequests.get(request.requestId);
         if (requestInfo == null) {
-            if (LOGV) Log.v(TAG, "Trying to unregister unknown request " + request);
+            if (LOG) Log.d(TAG, "Trying to unregister unknown request " + request);
             return;
         }
         if (Process.SYSTEM_UID != callingUid && requestInfo.mCallingUid != callingUid) {
@@ -180,7 +187,7 @@ class NetworkStatsObservers {
             return;
         }
 
-        if (LOGV) Log.v(TAG, "Unregistering " + request);
+        if (LOG) Log.d(TAG, "Unregistering " + requestInfo);
         mDataUsageRequests.remove(request.requestId);
         requestInfo.unlinkDeathRecipient();
         requestInfo.callCallback(NetworkStatsManager.CALLBACK_RELEASED);
@@ -214,18 +221,19 @@ class NetworkStatsObservers {
     }
 
     private RequestInfo buildRequestInfo(DataUsageRequest request, IUsageCallback callback,
-            int callingUid, @NetworkStatsAccess.Level int accessLevel) {
+            int callingPid, int callingUid, @NonNull String callingPackage,
+            @NetworkStatsAccess.Level int accessLevel) {
         if (accessLevel <= NetworkStatsAccess.Level.USER) {
-            return new UserUsageRequestInfo(this, request, callback, callingUid,
-                    accessLevel);
+            return new UserUsageRequestInfo(this, request, callback, callingPid,
+                    callingUid, callingPackage, accessLevel);
         } else {
             // Safety check in case a new access level is added and we forgot to update this
             if (accessLevel < NetworkStatsAccess.Level.DEVICESUMMARY) {
                 throw new IllegalArgumentException(
                         "accessLevel " + accessLevel + " is less than DEVICESUMMARY.");
             }
-            return new NetworkUsageRequestInfo(this, request, callback, callingUid,
-                    accessLevel);
+            return new NetworkUsageRequestInfo(this, request, callback, callingPid,
+                    callingUid, callingPackage, accessLevel);
         }
     }
 
@@ -237,18 +245,22 @@ class NetworkStatsObservers {
         private final NetworkStatsObservers mStatsObserver;
         protected final DataUsageRequest mRequest;
         private final IUsageCallback mCallback;
+        protected final int mCallingPid;
         protected final int mCallingUid;
+        protected final String mCallingPackage;
         protected final @NetworkStatsAccess.Level int mAccessLevel;
         protected NetworkStatsRecorder mRecorder;
         protected NetworkStatsCollection mCollection;
 
         RequestInfo(NetworkStatsObservers statsObserver, DataUsageRequest request,
-                IUsageCallback callback, int callingUid,
-                    @NetworkStatsAccess.Level int accessLevel) {
+                IUsageCallback callback, int callingPid, int callingUid,
+                @NonNull String callingPackage, @NetworkStatsAccess.Level int accessLevel) {
             mStatsObserver = statsObserver;
             mRequest = request;
             mCallback = callback;
+            mCallingPid = callingPid;
             mCallingUid = callingUid;
+            mCallingPackage = callingPackage;
             mAccessLevel = accessLevel;
 
             try {
@@ -269,7 +281,8 @@ class NetworkStatsObservers {
 
         @Override
         public String toString() {
-            return "RequestInfo from uid:" + mCallingUid
+            return "RequestInfo from pid/uid:" + mCallingPid + "/" + mCallingUid
+                    + "(" + mCallingPackage + ")"
                     + " for " + mRequest + " accessLevel:" + mAccessLevel;
         }
 
@@ -338,9 +351,10 @@ class NetworkStatsObservers {
 
     private static class NetworkUsageRequestInfo extends RequestInfo {
         NetworkUsageRequestInfo(NetworkStatsObservers statsObserver, DataUsageRequest request,
-                IUsageCallback callback, int callingUid,
-                    @NetworkStatsAccess.Level int accessLevel) {
-            super(statsObserver, request, callback, callingUid, accessLevel);
+                IUsageCallback callback, int callingPid, int callingUid,
+                @NonNull String callingPackage, @NetworkStatsAccess.Level int accessLevel) {
+            super(statsObserver, request, callback, callingPid, callingUid, callingPackage,
+                    accessLevel);
         }
 
         @Override
@@ -380,9 +394,10 @@ class NetworkStatsObservers {
 
     private static class UserUsageRequestInfo extends RequestInfo {
         UserUsageRequestInfo(NetworkStatsObservers statsObserver, DataUsageRequest request,
-                    IUsageCallback callback, int callingUid,
-                    @NetworkStatsAccess.Level int accessLevel) {
-            super(statsObserver, request, callback, callingUid, accessLevel);
+                IUsageCallback callback, int callingPid, int callingUid,
+                @NonNull String callingPackage, @NetworkStatsAccess.Level int accessLevel) {
+            super(statsObserver, request, callback, callingPid, callingUid,
+                    callingPackage, accessLevel);
         }
 
         @Override
@@ -446,6 +461,12 @@ class NetworkStatsObservers {
             mActiveIfaces = activeIfaces;
             mActiveUidIfaces = activeUidIfaces;
             mCurrentTime = currentTime;
+        }
+    }
+
+    public void dump(IndentingPrintWriter pw) {
+        for (int i = 0; i < Math.min(mDataUsageRequests.size(), DUMP_USAGE_REQUESTS_COUNT); i++) {
+            pw.println(mDataUsageRequests.valueAt(i));
         }
     }
 }
