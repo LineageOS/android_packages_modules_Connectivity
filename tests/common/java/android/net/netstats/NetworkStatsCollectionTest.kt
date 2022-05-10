@@ -16,7 +16,7 @@
 
 package android.net.netstats
 
-import android.net.NetworkIdentitySet
+import android.net.NetworkIdentity
 import android.net.NetworkStatsCollection
 import android.net.NetworkStatsHistory
 import androidx.test.filters.SmallTest
@@ -40,7 +40,7 @@ class NetworkStatsCollectionTest {
 
     @Test
     fun testBuilder() {
-        val ident = NetworkIdentitySet()
+        val ident = setOf<NetworkIdentity>()
         val key1 = NetworkStatsCollection.Key(ident, /* uid */ 0, /* set */ 0, /* tag */ 0)
         val key2 = NetworkStatsCollection.Key(ident, /* uid */ 1, /* set */ 0, /* tag */ 0)
         val bucketDuration = 10L

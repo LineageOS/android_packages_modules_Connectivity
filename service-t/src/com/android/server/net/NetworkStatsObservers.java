@@ -61,6 +61,8 @@ class NetworkStatsObservers {
     private static final int MSG_UNREGISTER = 2;
     private static final int MSG_UPDATE_STATS = 3;
 
+    private static final int DUMP_USAGE_REQUESTS_COUNT = 200;
+
     // All access to this map must be done from the handler thread.
     // indexed by DataUsageRequest#requestId
     private final SparseArray<RequestInfo> mDataUsageRequests = new SparseArray<>();
@@ -463,7 +465,7 @@ class NetworkStatsObservers {
     }
 
     public void dump(IndentingPrintWriter pw) {
-        for (int i = 0; i < mDataUsageRequests.size(); i++) {
+        for (int i = 0; i < Math.min(mDataUsageRequests.size(), DUMP_USAGE_REQUESTS_COUNT); i++) {
             pw.println(mDataUsageRequests.valueAt(i));
         }
     }

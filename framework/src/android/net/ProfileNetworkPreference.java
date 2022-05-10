@@ -120,8 +120,8 @@ public final class ProfileNetworkPreference implements Parcelable {
     public String toString() {
         return "ProfileNetworkPreference{"
                 + "mPreference=" + getPreference()
-                + "mIncludedUids=" + mIncludedUids.toString()
-                + "mExcludedUids=" + mExcludedUids.toString()
+                + "mIncludedUids=" + Arrays.toString(mIncludedUids)
+                + "mExcludedUids=" + Arrays.toString(mExcludedUids)
                 + "mPreferenceEnterpriseId=" + mPreferenceEnterpriseId
                 + '}';
     }
