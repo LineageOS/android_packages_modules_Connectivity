@@ -16,6 +16,7 @@
 
 package android.nearby;
 
+import static android.nearby.PresenceCredential.IDENTITY_TYPE_PRIVATE;
 import static android.nearby.ScanRequest.SCAN_MODE_BALANCED;
 import static android.nearby.ScanRequest.SCAN_MODE_LOW_POWER;
 import static android.nearby.ScanRequest.SCAN_TYPE_FAST_PAIR;
@@ -38,6 +39,8 @@ import org.junit.runner.RunWith;
 @SmallTest
 @RunWith(AndroidJUnit4.class)
 public class ScanRequestTest {
+
+    private static final int RSSI = -40;
 
     private static WorkSource getWorkSource() {
         final int uid = 1001;
@@ -137,6 +140,7 @@ public class ScanRequestTest {
                 .setScanMode(SCAN_MODE_BALANCED)
                 .setBleEnabled(true)
                 .setWorkSource(workSource)
+                .addScanFilter(getPresenceScanFilter())
                 .build();
 
         // Write the scan request to parcel, then read from it.
@@ -163,5 +167,25 @@ public class ScanRequestTest {
         originalRequest.writeToParcel(parcel, 0);
         parcel.setDataPosition(0);
         return ScanRequest.CREATOR.createFromParcel(parcel);
+    }
+
+    private static PresenceScanFilter getPresenceScanFilter() {
+        final byte[] secretId = new byte[]{1, 2, 3, 4};
+        final byte[] authenticityKey = new byte[]{0, 1, 1, 1};
+        final byte[] publicKey = new byte[]{1, 1, 2, 2};
+        final byte[] encryptedMetadata = new byte[]{1, 2, 3, 4, 5};
+        final byte[] metadataEncryptionKeyTag = new byte[]{1, 1, 3, 4, 5};
+
+        PublicCredential credential = new PublicCredential.Builder(
+                secretId, authenticityKey, publicKey, encryptedMetadata, metadataEncryptionKeyTag)
+                .setIdentityType(IDENTITY_TYPE_PRIVATE)
+                .build();
+
+        final int action = 123;
+        return new PresenceScanFilter.Builder()
+                .addCredential(credential)
+                .setMaxPathLoss(RSSI)
+                .addPresenceAction(action)
+                .build();
     }
 }

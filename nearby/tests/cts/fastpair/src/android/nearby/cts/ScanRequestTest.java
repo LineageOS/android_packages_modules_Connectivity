@@ -45,6 +45,7 @@ public class ScanRequestTest {
 
     private static final int UID = 1001;
     private static final String APP_NAME = "android.nearby.tests";
+    private static final int RSSI = -40;
 
     @Test
     @SdkSuppress(minSdkVersion = 32, codeName = "T")
@@ -163,6 +164,14 @@ public class ScanRequestTest {
     @Test
     @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void testScanFilter() {
+        ScanRequest request = new ScanRequest.Builder().setScanType(
+                SCAN_TYPE_NEARBY_PRESENCE).addScanFilter(getPresenceScanFilter()).build();
+
+        assertThat(request.getScanFilters()).isNotEmpty();
+        assertThat(request.getScanFilters().get(0).getMaxPathLoss()).isEqualTo(RSSI);
+    }
+
+    private static PresenceScanFilter getPresenceScanFilter() {
         final byte[] secretId = new byte[]{1, 2, 3, 4};
         final byte[] authenticityKey = new byte[]{0, 1, 1, 1};
         final byte[] publicKey = new byte[]{1, 1, 2, 2};
@@ -174,19 +183,12 @@ public class ScanRequestTest {
                 .setIdentityType(IDENTITY_TYPE_PRIVATE)
                 .build();
 
-        final int rssi = -40;
         final int action = 123;
-        PresenceScanFilter filter = new PresenceScanFilter.Builder()
+        return new PresenceScanFilter.Builder()
                 .addCredential(credential)
-                .setMaxPathLoss(rssi)
+                .setMaxPathLoss(RSSI)
                 .addPresenceAction(action)
                 .build();
-
-        ScanRequest request = new ScanRequest.Builder().setScanType(
-                SCAN_TYPE_FAST_PAIR).addScanFilter(filter).build();
-
-        assertThat(request.getScanFilters()).isNotEmpty();
-        assertThat(request.getScanFilters().get(0).getMaxPathLoss()).isEqualTo(rssi);
     }
 
     private static WorkSource getWorkSource() {
