@@ -87,7 +87,7 @@ public class ProfileNetworkPreferenceList {
     /**
      * Remove all preferences corresponding to a user.
      */
-    public ProfileNetworkPreferenceList clearUser(UserHandle user) {
+    public ProfileNetworkPreferenceList withoutUser(UserHandle user) {
         final ArrayList<Preference> newPrefs = new ArrayList<>();
         for (final Preference existingPref : preferences) {
             if (!existingPref.user.equals(user)) {
