@@ -77,6 +77,7 @@ import com.android.net.module.util.netlink.NetlinkSocket;
 import com.android.networkstack.tethering.apishim.common.BpfCoordinatorShim;
 import com.android.networkstack.tethering.util.TetheringUtils.ForwardedStats;
 
+import java.io.IOException;
 import java.net.Inet4Address;
 import java.net.Inet6Address;
 import java.net.InetAddress;
@@ -1024,7 +1025,7 @@ public class BpfCoordinator {
             map.forEach((k, v) -> {
                 pw.println(String.format("%s: %s", k, v));
             });
-        } catch (ErrnoException e) {
+        } catch (ErrnoException | IOException e) {
             pw.println("Error dumping BPF stats map: " + e);
         }
     }
@@ -1072,7 +1073,7 @@ public class BpfCoordinator {
                 return;
             }
             map.forEach((k, v) -> pw.println(ipv6UpstreamRuletoString(k, v)));
-        } catch (ErrnoException e) {
+        } catch (ErrnoException | IOException e) {
             pw.println("Error dumping IPv6 upstream map: " + e);
         }
     }
@@ -1116,7 +1117,7 @@ public class BpfCoordinator {
         if (CollectionUtils.contains(args, DUMPSYS_RAWMAP_ARG_STATS)) {
             try (BpfMap<TetherStatsKey, TetherStatsValue> statsMap = mDeps.getBpfStatsMap()) {
                 dumpRawMap(statsMap, pw);
-            } catch (ErrnoException e) {
+            } catch (ErrnoException | IOException e) {
                 pw.println("Error dumping stats map: " + e);
             }
             return;
@@ -1124,7 +1125,7 @@ public class BpfCoordinator {
         if (CollectionUtils.contains(args, DUMPSYS_RAWMAP_ARG_UPSTREAM4)) {
             try (BpfMap<Tether4Key, Tether4Value> upstreamMap = mDeps.getBpfUpstream4Map()) {
                 dumpRawMap(upstreamMap, pw);
-            } catch (ErrnoException e) {
+            } catch (ErrnoException | IOException e) {
                 pw.println("Error dumping IPv4 map: " + e);
             }
             return;
@@ -1195,7 +1196,7 @@ public class BpfCoordinator {
             pw.increaseIndent();
             dumpIpv4ForwardingRuleMap(now, DOWNSTREAM, downstreamMap, pw);
             pw.decreaseIndent();
-        } catch (ErrnoException e) {
+        } catch (ErrnoException | IOException e) {
             pw.println("Error dumping IPv4 map: " + e);
         }
     }
@@ -1220,7 +1221,7 @@ public class BpfCoordinator {
                 }
                 if (v.val > 0) pw.println(String.format("%s: %d", counterName, v.val));
             });
-        } catch (ErrnoException e) {
+        } catch (ErrnoException | IOException e) {
             pw.println("Error dumping counter map: " + e);
         }
     }
@@ -1244,7 +1245,7 @@ public class BpfCoordinator {
                 pw.println(String.format("%d (%s) -> %d (%s)", k.ifIndex, getIfName(k.ifIndex),
                         v.ifIndex, getIfName(v.ifIndex)));
             });
-        } catch (ErrnoException e) {
+        } catch (ErrnoException | IOException e) {
             pw.println("Error dumping dev map: " + e);
         }
         pw.decreaseIndent();
