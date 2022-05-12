@@ -216,6 +216,11 @@ java_library {
     apex_available: [
         "com.android.tethering",
     ],
+    optimize: {
+        enabled: true,
+        shrink: true,
+        proguard_flags_files: ["proguard.flags"],
+    },
     lint: { strict_updatability_linting: true },
 }
 
