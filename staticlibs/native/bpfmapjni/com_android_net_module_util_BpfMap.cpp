@@ -27,15 +27,6 @@
 
 namespace android {
 
-static jint com_android_net_module_util_BpfMap_closeMap(JNIEnv *env, jobject clazz,
-        jint fd) {
-    int ret = close(fd);
-
-    if (ret) jniThrowErrnoException(env, "closeMap", errno);
-
-    return ret;
-}
-
 static jint com_android_net_module_util_BpfMap_bpfFdGet(JNIEnv *env, jobject clazz,
         jstring path, jint mode) {
     ScopedUtfChars pathname(env, path);
@@ -112,8 +103,6 @@ static jboolean com_android_net_module_util_BpfMap_findMapEntry(JNIEnv *env, job
  */
 static const JNINativeMethod gMethods[] = {
     /* name, signature, funcPtr */
-    { "closeMap", "(I)I",
-        (void*) com_android_net_module_util_BpfMap_closeMap },
     { "bpfFdGet", "(Ljava/lang/String;I)I",
         (void*) com_android_net_module_util_BpfMap_bpfFdGet },
     { "writeToMapEntry", "(I[B[BI)V",
