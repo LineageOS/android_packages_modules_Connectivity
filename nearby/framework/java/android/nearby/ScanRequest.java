@@ -73,7 +73,8 @@ public final class ScanRequest implements Parcelable {
                     .setScanMode(in.readInt())
                     .setBleEnabled(in.readBoolean())
                     .setWorkSource(in.readTypedObject(WorkSource.CREATOR));
-            for (int i = 0; i < in.readInt(); i++) {
+            final int size = in.readInt();
+            for (int i = 0; i < size; i++) {
                 builder.addScanFilter(ScanFilter.createFromParcel(in));
             }
             return builder.build();
@@ -209,8 +210,9 @@ public final class ScanRequest implements Parcelable {
         dest.writeInt(mScanMode);
         dest.writeBoolean(mBleEnabled);
         dest.writeTypedObject(mWorkSource, /* parcelableFlags= */0);
-        dest.writeInt(mScanFilters.size());
-        for (int i = 0; i < mScanFilters.size(); ++i) {
+        final int size = mScanFilters.size();
+        dest.writeInt(size);
+        for (int i = 0; i < size; i++) {
             mScanFilters.get(i).writeToParcel(dest, flags);
         }
     }
