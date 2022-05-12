@@ -65,26 +65,26 @@ public class BroadcastProviderManager implements BleBroadcastProvider.BroadcastL
      */
     public void startBroadcast(BroadcastRequest broadcastRequest, IBroadcastListener listener) {
         synchronized (mLock) {
-            NearbyConfiguration configuration = new NearbyConfiguration();
-            if (!configuration.isPresenceBroadcastLegacyEnabled()) {
-                reportBroadcastStatus(listener, BroadcastCallback.STATUS_FAILURE);
-                return;
-            }
-            if (broadcastRequest.getType() != BroadcastRequest.BROADCAST_TYPE_NEARBY_PRESENCE) {
-                reportBroadcastStatus(listener, BroadcastCallback.STATUS_FAILURE);
-                return;
-            }
-            PresenceBroadcastRequest presenceBroadcastRequest =
-                    (PresenceBroadcastRequest) broadcastRequest;
-            if (presenceBroadcastRequest.getVersion() != BroadcastRequest.PRESENCE_VERSION_V0) {
-                reportBroadcastStatus(listener, BroadcastCallback.STATUS_FAILURE);
-                return;
-            }
-            FastAdvertisement fastAdvertisement = FastAdvertisement.createFromRequest(
-                    presenceBroadcastRequest);
-            byte[] advertisementPackets = fastAdvertisement.toBytes();
-            mBroadcastListener = listener;
             mExecutor.execute(() -> {
+                NearbyConfiguration configuration = new NearbyConfiguration();
+                if (!configuration.isPresenceBroadcastLegacyEnabled()) {
+                    reportBroadcastStatus(listener, BroadcastCallback.STATUS_FAILURE);
+                    return;
+                }
+                if (broadcastRequest.getType() != BroadcastRequest.BROADCAST_TYPE_NEARBY_PRESENCE) {
+                    reportBroadcastStatus(listener, BroadcastCallback.STATUS_FAILURE);
+                    return;
+                }
+                PresenceBroadcastRequest presenceBroadcastRequest =
+                        (PresenceBroadcastRequest) broadcastRequest;
+                if (presenceBroadcastRequest.getVersion() != BroadcastRequest.PRESENCE_VERSION_V0) {
+                    reportBroadcastStatus(listener, BroadcastCallback.STATUS_FAILURE);
+                    return;
+                }
+                FastAdvertisement fastAdvertisement = FastAdvertisement.createFromRequest(
+                        presenceBroadcastRequest);
+                byte[] advertisementPackets = fastAdvertisement.toBytes();
+                mBroadcastListener = listener;
                 mBleBroadcastProvider.start(advertisementPackets, this);
             });
         }
