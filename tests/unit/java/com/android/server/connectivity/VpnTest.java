@@ -28,9 +28,11 @@ import static android.net.ConnectivityManager.NetworkCallback;
 import static android.net.INetd.IF_STATE_DOWN;
 import static android.net.INetd.IF_STATE_UP;
 import static android.net.VpnManager.TYPE_VPN_PLATFORM;
+import static android.os.Build.VERSION_CODES.S_V2;
 import static android.os.UserHandle.PER_USER_RANGE;
 
 import static com.android.modules.utils.build.SdkLevel.isAtLeastT;
+import static com.android.testutils.DevSdkIgnoreRule.IgnoreUpTo;
 import static com.android.testutils.MiscAsserts.assertThrows;
 
 import static org.junit.Assert.assertArrayEquals;
@@ -128,11 +130,13 @@ import com.android.internal.net.VpnProfile;
 import com.android.internal.util.HexDump;
 import com.android.modules.utils.build.SdkLevel;
 import com.android.server.IpSecService;
+import com.android.server.vcn.util.PersistableBundleUtils;
 import com.android.testutils.DevSdkIgnoreRule;
 import com.android.testutils.DevSdkIgnoreRunner;
 
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.AdditionalAnswers;
@@ -169,9 +173,12 @@ import java.util.stream.Stream;
  */
 @RunWith(DevSdkIgnoreRunner.class)
 @SmallTest
-@DevSdkIgnoreRule.IgnoreUpTo(VERSION_CODES.R)
+@IgnoreUpTo(VERSION_CODES.R)
 public class VpnTest {
     private static final String TAG = "VpnTest";
+
+    @Rule
+    public final DevSdkIgnoreRule mIgnoreRule = new DevSdkIgnoreRule();
 
     // Mock users
     static final UserInfo primaryUser = new UserInfo(27, "Primary", FLAG_ADMIN | FLAG_PRIMARY);
@@ -196,27 +203,15 @@ public class VpnTest {
     private static final String TEST_IFACE_NAME = "TEST_IFACE";
     private static final int TEST_TUNNEL_RESOURCE_ID = 0x2345;
     private static final long TEST_TIMEOUT_MS = 500L;
-
+    private static final String PRIMARY_USER_APP_EXCLUDE_KEY =
+            "VPN_APP_EXCLUDED_27_com.testvpn.vpn";
     /**
      * Names and UIDs for some fake packages. Important points:
      *  - UID is ordered increasing.
      *  - One pair of packages have consecutive UIDs.
      */
     static final String[] PKGS = {"com.example", "org.example", "net.example", "web.vpn"};
-    static final String PKGS_BYTES =
-            "3C62756E646C653E0A3C696E74206E616D653D22434F4C4C454354494F4E5F4C454E4754482220"
-            + "76616C75653D223422202F3E0A3C7062756E646C655F61735F6D6170206E616D653D224C4953"
-            + "545F4954454D5F30223E0A3C737472696E67206E616D653D22535452494E475F4B4559223E63"
-            + "6F6D2E6578616D706C653C2F737472696E673E0A3C2F7062756E646C655F61735F6D61703E0A"
-            + "3C7062756E646C655F61735F6D6170206E616D653D224C4953545F4954454D5F31223E0A3C73"
-            + "7472696E67206E616D653D22535452494E475F4B4559223E6F72672E6578616D706C653C2F73"
-            + "7472696E673E0A3C2F7062756E646C655F61735F6D61703E0A3C7062756E646C655F61735F6D"
-            + "6170206E616D653D224C4953545F4954454D5F32223E0A3C737472696E67206E616D653D2253"
-            + "5452494E475F4B4559223E6E65742E6578616D706C653C2F737472696E673E0A3C2F7062756E"
-            + "646C655F61735F6D61703E0A3C7062756E646C655F61735F6D6170206E616D653D224C495354"
-            + "5F4954454D5F33223E0A3C737472696E67206E616D653D22535452494E475F4B4559223E7765"
-            + "622E76706E3C2F737472696E673E0A3C2F7062756E646C655F61735F6D61703E0A3C2F62756E"
-            + "646C653E0A";
+    static final String PKGS_BYTES = getPackageByteString(List.of(PKGS));
     static final int[] PKG_UIDS = {66, 77, 78, 400};
 
     // Mock packages
@@ -328,6 +323,17 @@ public class VpnTest {
 
     private Range<Integer> uidRange(int start, int stop) {
         return new Range<Integer>(start, stop);
+    }
+
+    private static String getPackageByteString(List<String> packages) {
+        try {
+            return HexDump.toHexString(
+                    PersistableBundleUtils.toDiskStableBytes(PersistableBundleUtils.fromList(
+                            packages, PersistableBundleUtils.STRING_SERIALIZER)),
+                        true /* upperCase */);
+        } catch (IOException e) {
+            return null;
+        }
     }
 
     @Test
@@ -731,11 +737,10 @@ public class VpnTest {
     }
 
     private Vpn prepareVpnForVerifyAppExclusionList() throws Exception {
-        assumeTrue(isAtLeastT());
         final Vpn vpn = createVpnAndSetupUidChecks(AppOpsManager.OPSTR_ACTIVATE_PLATFORM_VPN);
         when(mVpnProfileStore.get(vpn.getProfileNameForPackage(TEST_VPN_PKG)))
                 .thenReturn(mVpnProfile.encode());
-        when(mVpnProfileStore.get(vpn.getVpnAppExcludedForPackage(TEST_VPN_PKG)))
+        when(mVpnProfileStore.get(PRIMARY_USER_APP_EXCLUDE_KEY))
                 .thenReturn(HexDump.hexStringToByteArray(PKGS_BYTES));
 
         vpn.startVpnProfile(TEST_VPN_PKG);
@@ -747,12 +752,13 @@ public class VpnTest {
         return vpn;
     }
 
-    @Test
+    @Test @IgnoreUpTo(S_V2)
     public void testSetAndGetAppExclusionList() throws Exception {
         final Vpn vpn = prepareVpnForVerifyAppExclusionList();
+        verify(mVpnProfileStore, never()).put(eq(PRIMARY_USER_APP_EXCLUDE_KEY), any());
         vpn.setAppExclusionList(TEST_VPN_PKG, Arrays.asList(PKGS));
         verify(mVpnProfileStore)
-                .put(eq(vpn.getVpnAppExcludedForPackage(TEST_VPN_PKG)),
+                .put(eq(PRIMARY_USER_APP_EXCLUDE_KEY),
                      eq(HexDump.hexStringToByteArray(PKGS_BYTES)));
         assertEquals(vpn.createUserAndRestrictedProfilesRanges(
                 primaryUser.id, null, Arrays.asList(PKGS)),
@@ -760,7 +766,7 @@ public class VpnTest {
         assertEquals(Arrays.asList(PKGS), vpn.getAppExclusionList(TEST_VPN_PKG));
     }
 
-    @Test
+    @Test @IgnoreUpTo(S_V2)
     public void testSetAndGetAppExclusionListRestrictedUser() throws Exception {
         final Vpn vpn = prepareVpnForVerifyAppExclusionList();
         // Mock it to restricted profile
