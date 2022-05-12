@@ -738,7 +738,13 @@ public class NsdService extends INsdManager.Stub {
         String type = service.getServiceType();
         int port = service.getPort();
         byte[] textRecord = service.getTxtRecord();
-        return mMDnsManager.registerService(regId, name, type, port, textRecord, IFACE_IDX_ANY);
+        final Network network = service.getNetwork();
+        final int registerInterface = getNetworkInterfaceIndex(network);
+        if (network != null && registerInterface == IFACE_IDX_ANY) {
+            Log.e(TAG, "Interface to register service on not found");
+            return false;
+        }
+        return mMDnsManager.registerService(regId, name, type, port, textRecord, registerInterface);
     }
 
     private boolean unregisterService(int regId) {
