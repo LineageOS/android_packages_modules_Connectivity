@@ -46,7 +46,7 @@ import android.os.ParcelFileDescriptor;
 
 import androidx.test.filters.SmallTest;
 
-import com.android.net.module.util.IBpfMap;
+import com.android.net.module.util.BpfMap;
 import com.android.net.module.util.bpf.ClatEgress4Key;
 import com.android.net.module.util.bpf.ClatEgress4Value;
 import com.android.net.module.util.bpf.ClatIngress6Key;
@@ -123,8 +123,8 @@ public class ClatCoordinatorTest {
 
     @Mock private INetd mNetd;
     @Spy private TestDependencies mDeps = new TestDependencies();
-    @Mock private IBpfMap<ClatIngress6Key, ClatIngress6Value> mIngressMap;
-    @Mock private IBpfMap<ClatEgress4Key, ClatEgress4Value> mEgressMap;
+    @Mock private BpfMap<ClatIngress6Key, ClatIngress6Value> mIngressMap;
+    @Mock private BpfMap<ClatEgress4Key, ClatEgress4Value> mEgressMap;
 
     /**
       * The dependency injection class is used to mock the JNI functions and system functions
@@ -326,13 +326,13 @@ public class ClatCoordinatorTest {
 
         /** Get ingress6 BPF map. */
         @Override
-        public IBpfMap<ClatIngress6Key, ClatIngress6Value> getBpfIngress6Map() {
+        public BpfMap<ClatIngress6Key, ClatIngress6Value> getBpfIngress6Map() {
             return mIngressMap;
         }
 
         /** Get egress4 BPF map. */
         @Override
-        public IBpfMap<ClatEgress4Key, ClatEgress4Value> getBpfEgress4Map() {
+        public BpfMap<ClatEgress4Key, ClatEgress4Value> getBpfEgress4Map() {
             return mEgressMap;
         }
 
