@@ -88,7 +88,7 @@ static_assert(BPF_PERMISSION_UPDATE_DEVICE_STATS == INetd::PERMISSION_UPDATE_DEV
         }                                   \
     } while (0)
 
-const std::string uidMatchTypeToString(uint8_t match) {
+const std::string uidMatchTypeToString(uint32_t match) {
     std::string matchType;
     FLAG_MSG_TRANS(matchType, HAPPY_BOX_MATCH, match);
     FLAG_MSG_TRANS(matchType, PENALTY_BOX_MATCH, match);
@@ -272,7 +272,7 @@ Status TrafficController::removeRule(uint32_t uid, UidOwnerMatchType match) {
     if (oldMatch.ok()) {
         UidOwnerValue newMatch = {
                 .iif = (match == IIF_MATCH) ? 0 : oldMatch.value().iif,
-                .rule = static_cast<uint8_t>(oldMatch.value().rule & ~match),
+                .rule = oldMatch.value().rule & ~match,
         };
         if (newMatch.rule == 0) {
             RETURN_IF_NOT_OK(mUidOwnerMap.deleteValue(uid));
@@ -296,13 +296,13 @@ Status TrafficController::addRule(uint32_t uid, UidOwnerMatchType match, uint32_
     if (oldMatch.ok()) {
         UidOwnerValue newMatch = {
                 .iif = iif ? iif : oldMatch.value().iif,
-                .rule = static_cast<uint8_t>(oldMatch.value().rule | match),
+                .rule = oldMatch.value().rule | match,
         };
         RETURN_IF_NOT_OK(mUidOwnerMap.writeValue(uid, newMatch, BPF_ANY));
     } else {
         UidOwnerValue newMatch = {
                 .iif = iif,
-                .rule = static_cast<uint8_t>(match),
+                .rule = match,
         };
         RETURN_IF_NOT_OK(mUidOwnerMap.writeValue(uid, newMatch, BPF_ANY));
     }
