@@ -1187,6 +1187,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
     /**
      * Keeps track of the number of requests made under different uids.
      */
+    // TODO: Remove the hack and use com.android.net.module.util.PerUidCounter instead.
     public static class PerUidCounter {
         private final int mMaxCountPerUid;
 
