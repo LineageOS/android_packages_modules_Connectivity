@@ -64,7 +64,7 @@ public final class LinkProperties implements Parcelable {
      * @hide
      */
     @ChangeId
-    @EnabledAfter(targetSdkVersion = Build.VERSION_CODES.S) // Switch to S_V2 when it is available.
+    @EnabledAfter(targetSdkVersion = Build.VERSION_CODES.S_V2)
     @VisibleForTesting
     public static final long EXCLUDED_ROUTES = 186082280;
 
