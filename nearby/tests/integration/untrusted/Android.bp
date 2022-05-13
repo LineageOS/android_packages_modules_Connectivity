@@ -21,10 +21,14 @@ android_test {
     defaults: ["mts-target-sdk-version-current"],
     sdk_version: "test_current",
 
-    srcs: ["src/**/*.kt"],
+    srcs: [
+        "src/**/*.java",
+        "src/**/*.kt",
+    ],
     static_libs: [
         "androidx.test.ext.junit",
         "androidx.test.rules",
+        "androidx.test.uiautomator_uiautomator",
         "junit",
         "kotlin-test",
         "truth-prebuilt",
