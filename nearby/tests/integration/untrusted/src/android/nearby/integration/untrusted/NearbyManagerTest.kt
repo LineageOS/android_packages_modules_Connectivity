@@ -28,12 +28,14 @@ import android.nearby.ScanCallback
 import android.nearby.ScanRequest
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.test.uiautomator.LogcatWaitMixin
 import com.google.common.truth.Truth.assertThat
 import org.junit.Assert.assertThrows
 import org.junit.Before
-import org.junit.Ignore
 import org.junit.Test
 import org.junit.runner.RunWith
+import java.time.Duration
+import java.util.Calendar
 
 @RunWith(AndroidJUnit4::class)
 class NearbyManagerTest {
@@ -75,13 +77,9 @@ class NearbyManagerTest {
         }
     }
 
-    /**
-     * Verify untrusted app can't stop scan because it needs BLUETOOTH_PRIVILEGED
-     * permission which is not for use by third-party applications.
-     */
+    /** Verify untrusted app can't stop scan because it never successfully registers a callback. */
     @Test
-    @Ignore("Permission check for stopXXX not yet implement: b/229338477#comment24")
-    fun testNearbyManagerStopScan_fromUnTrustedApp_throwsException() {
+    fun testNearbyManagerStopScan_fromUnTrustedApp_logsError() {
         val nearbyManager = appContext.getSystemService(Context.NEARBY_SERVICE) as NearbyManager
         val scanCallback = object : ScanCallback {
             override fun onDiscovered(device: NearbyDevice) {}
@@ -90,10 +88,17 @@ class NearbyManagerTest {
 
             override fun onLost(device: NearbyDevice) {}
         }
+        val startTime = Calendar.getInstance().time
 
-        assertThrows(SecurityException::class.java) {
-            nearbyManager.stopScan(scanCallback)
-        }
+        nearbyManager.stopScan(scanCallback)
+
+        assertThat(
+            LogcatWaitMixin().waitForSpecificLog(
+                "Cannot stop scan with this callback because it is never registered.",
+                startTime,
+                WAIT_INVALID_OPERATIONS_LOGS_TIMEOUT
+            )
+        ).isTrue()
     }
 
     /**
@@ -127,17 +132,26 @@ class NearbyManagerTest {
     }
 
     /**
-     * Verify untrusted app can't stop broadcast because it needs BLUETOOTH_PRIVILEGED
-     * permission which is not for use by third-party applications.
+     * Verify untrusted app can't stop broadcast because it never successfully registers a callback.
      */
     @Test
-    @Ignore("Permission check for stopXXX not yet implement: b/229338477#comment24")
-    fun testNearbyManagerStopBroadcast_fromUnTrustedApp_throwsException() {
+    fun testNearbyManagerStopBroadcast_fromUnTrustedApp_logsError() {
         val nearbyManager = appContext.getSystemService(Context.NEARBY_SERVICE) as NearbyManager
         val broadcastCallback = BroadcastCallback { }
+        val startTime = Calendar.getInstance().time
 
-        assertThrows(SecurityException::class.java) {
-            nearbyManager.stopBroadcast(broadcastCallback)
-        }
+        nearbyManager.stopBroadcast(broadcastCallback)
+
+        assertThat(
+            LogcatWaitMixin().waitForSpecificLog(
+                "Cannot stop broadcast with this callback because it is never registered.",
+                startTime,
+                WAIT_INVALID_OPERATIONS_LOGS_TIMEOUT
+            )
+        ).isTrue()
+    }
+
+    companion object {
+        private val WAIT_INVALID_OPERATIONS_LOGS_TIMEOUT = Duration.ofSeconds(5)
     }
 }
