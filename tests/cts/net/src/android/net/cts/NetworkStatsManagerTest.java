@@ -870,10 +870,9 @@ public class NetworkStatsManagerTest {
         }
     }
 
+    @DevSdkIgnoreRule.IgnoreUpTo(SC_V2)
     @Test
     public void testDataMigrationUtils() throws Exception {
-        if (!SdkLevel.isAtLeastT()) return;
-
         final List<String> prefixes = List.of(PREFIX_UID, PREFIX_XT, PREFIX_UID_TAG);
         for (final String prefix : prefixes) {
             final long duration = TextUtils.equals(PREFIX_XT, prefix) ? TimeUnit.HOURS.toMillis(1)
