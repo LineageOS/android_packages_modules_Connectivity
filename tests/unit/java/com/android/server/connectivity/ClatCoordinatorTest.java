@@ -447,8 +447,6 @@ public class ClatCoordinatorTest {
                 argThat(fd -> Objects.equals(RAW_SOCK_PFD.getFileDescriptor(), fd)),
                 eq(BASE_IFACE), eq(NAT64_PREFIX_STRING),
                 eq(XLAT_LOCAL_IPV4ADDR_STRING), eq(XLAT_LOCAL_IPV6ADDR_STRING));
-        inOrder.verify(mDeps).getBpfEgress4Map();
-        inOrder.verify(mDeps).getBpfIngress6Map();
         inOrder.verify(mEgressMap).insertEntry(eq(EGRESS_KEY), eq(EGRESS_VALUE));
         inOrder.verify(mIngressMap).insertEntry(eq(INGRESS_KEY), eq(INGRESS_VALUE));
         inOrder.verify(mDeps).tcQdiscAddDevClsact(eq(STACKED_IFINDEX));
@@ -471,8 +469,6 @@ public class ClatCoordinatorTest {
                 eq((short) PRIO_CLAT), eq((short) ETH_P_IP));
         inOrder.verify(mEgressMap).deleteEntry(eq(EGRESS_KEY));
         inOrder.verify(mIngressMap).deleteEntry(eq(INGRESS_KEY));
-        inOrder.verify(mEgressMap).close();
-        inOrder.verify(mIngressMap).close();
         inOrder.verify(mDeps).stopClatd(eq(BASE_IFACE), eq(NAT64_PREFIX_STRING),
                 eq(XLAT_LOCAL_IPV4ADDR_STRING), eq(XLAT_LOCAL_IPV6ADDR_STRING), eq(CLATD_PID));
         inOrder.verify(mDeps).untagSocket(eq(RAW_SOCK_COOKIE));

@@ -116,12 +116,10 @@ public class ClatCoordinator {
     private final INetd mNetd;
     @NonNull
     private final Dependencies mDeps;
-    // IBpfMap objects {mIngressMap, mEgressMap} are initialized in #maybeStartBpf and closed in
-    // #maybeStopBpf.
     @Nullable
-    private IBpfMap<ClatIngress6Key, ClatIngress6Value> mIngressMap = null;
+    private final IBpfMap<ClatIngress6Key, ClatIngress6Value> mIngressMap;
     @Nullable
-    private IBpfMap<ClatEgress4Key, ClatEgress4Value> mEgressMap = null;
+    private final IBpfMap<ClatEgress4Key, ClatEgress4Value> mEgressMap;
     @Nullable
     private ClatdTracker mClatdTracker = null;
 
@@ -375,35 +373,12 @@ public class ClatCoordinator {
     public ClatCoordinator(@NonNull Dependencies deps) {
         mDeps = deps;
         mNetd = mDeps.getNetd();
-    }
-
-    private void closeEgressMap() {
-        try {
-            mEgressMap.close();
-        } catch (Exception e) {
-            Log.e(TAG, "Cannot close egress4 map: " + e);
-        }
-        mEgressMap = null;
-    }
-
-    private void closeIngressMap() {
-        try {
-            mIngressMap.close();
-        } catch (Exception e) {
-            Log.e(TAG, "Cannot close ingress6 map: " + e);
-        }
-        mIngressMap = null;
+        mIngressMap = mDeps.getBpfIngress6Map();
+        mEgressMap = mDeps.getBpfEgress4Map();
     }
 
     private void maybeStartBpf(final ClatdTracker tracker) {
-        mEgressMap = mDeps.getBpfEgress4Map();
-        if (mEgressMap == null) return;
-
-        mIngressMap = mDeps.getBpfIngress6Map();
-        if (mIngressMap == null) {
-            closeEgressMap();
-            return;
-        }
+        if (mIngressMap == null || mEgressMap == null) return;
 
         final boolean isEthernet;
         try {
@@ -747,13 +722,6 @@ public class ClatCoordinator {
         } catch (ErrnoException | IllegalStateException e) {
             Log.e(TAG, "Could not delete entry (" + rxKey + "): " + e);
         }
-
-        // Manual close BPF map file descriptors. Just don't rely on that GC releasing to close
-        // the file descriptors even if class BpfMap supports close file descriptor in
-        // finalize(). If the interfaces are added and removed quickly, too many unclosed file
-        // descriptors may cause unexpected problem.
-        closeEgressMap();
-        closeIngressMap();
     }
 
     /**
@@ -822,7 +790,7 @@ public class ClatCoordinator {
     }
 
     /**
-     * Dump the cordinator information. Only called when clat is started. See Nat464Xlat#dump.
+     * Dump the cordinator information.
      *
      * @param pw print writer.
      */

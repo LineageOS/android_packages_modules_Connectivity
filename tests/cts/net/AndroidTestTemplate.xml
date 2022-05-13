@@ -38,4 +38,20 @@
         <option name="hidden-api-checks" value="false" />
         <option name="isolated-storage" value="false" />
     </test>
+    <!-- When this test is run in a Mainline context (e.g. with `mts-tradefed`), only enable it if
+        one of the Mainline modules below is present on the device used for testing. -->
+    <object type="module_controller" class="com.android.tradefed.testtype.suite.module.MainlineTestModuleController">
+        <!-- Tethering Module (internal version). -->
+        <option name="mainline-module-package-name" value="com.google.android.tethering" />
+        <!-- Tethering Module (AOSP version). -->
+        <option name="mainline-module-package-name" value="com.android.tethering" />
+        <!-- NetworkStack Module (internal version). Should always be installed with CaptivePortalLogin. -->
+        <option name="mainline-module-package-name" value="com.google.android.networkstack" />
+        <!-- NetworkStack Module (AOSP version). Should always be installed with CaptivePortalLogin. -->
+        <option name="mainline-module-package-name" value="com.android.networkstack" />
+        <!-- Resolver Module (internal version). -->
+        <option name="mainline-module-package-name" value="com.google.android.resolv" />
+        <!-- Resolver Module (AOSP version). -->
+        <option name="mainline-module-package-name" value="com.android.resolv" />
+    </object>
 </configuration>
