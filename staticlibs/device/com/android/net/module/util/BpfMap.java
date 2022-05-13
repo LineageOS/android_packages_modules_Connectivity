@@ -20,6 +20,7 @@ import static android.system.OsConstants.ENOENT;
 
 import android.os.ParcelFileDescriptor;
 import android.system.ErrnoException;
+import android.util.Pair;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -32,6 +33,7 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.NoSuchElementException;
 import java.util.Objects;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * BpfMap is a key -> value mapping structure that is designed to maintained the bpf map entries.
@@ -65,6 +67,27 @@ public class BpfMap<K extends Struct, V extends Struct> implements IBpfMap<K, V>
     private final int mKeySize;
     private final int mValueSize;
 
+    private static ConcurrentHashMap<Pair<String, Integer>, ParcelFileDescriptor> sFdCache =
+            new ConcurrentHashMap<>();
+
+    private static ParcelFileDescriptor cachedBpfFdGet(String path, int mode)
+            throws ErrnoException, NullPointerException {
+        Pair<String, Integer> key = Pair.create(path, mode);
+        // unlocked fetch is safe: map is concurrent read capable, and only inserted into
+        ParcelFileDescriptor fd = sFdCache.get(key);
+        if (fd != null) return fd;
+        // ok, no cached fd present, need to grab a lock
+        synchronized (BpfMap.class) {
+            // need to redo the check
+            fd = sFdCache.get(key);
+            if (fd != null) return fd;
+            // okay, we really haven't opened this before...
+            fd = ParcelFileDescriptor.adoptFd(nativeBpfFdGet(path, mode));
+            sFdCache.put(key, fd);
+            return fd;
+        }
+    }
+
     /**
      * Create a BpfMap map wrapper with "path" of filesystem.
      *
@@ -74,7 +97,7 @@ public class BpfMap<K extends Struct, V extends Struct> implements IBpfMap<K, V>
      */
     public BpfMap(@NonNull final String path, final int flag, final Class<K> key,
             final Class<V> value) throws ErrnoException, NullPointerException {
-        mMapFd = ParcelFileDescriptor.adoptFd(bpfFdGet(path, flag));
+        mMapFd = cachedBpfFdGet(path, flag);
         mKeyClass = key;
         mValueClass = value;
         mKeySize = Struct.getSize(key);
@@ -90,7 +113,7 @@ public class BpfMap<K extends Struct, V extends Struct> implements IBpfMap<K, V>
      */
     @VisibleForTesting
     protected BpfMap(final Class<K> key, final Class<V> value) {
-        mMapFd = ParcelFileDescriptor.adoptFd(-1 /*invalid*/);  // unused
+        mMapFd = null;  // unused
         mKeyClass = key;
         mValueClass = value;
         mKeySize = Struct.getSize(key);
@@ -103,7 +126,7 @@ public class BpfMap<K extends Struct, V extends Struct> implements IBpfMap<K, V>
      */
     @Override
     public void updateEntry(K key, V value) throws ErrnoException {
-        writeToMapEntry(mMapFd.getFd(), key.writeToBytes(), value.writeToBytes(), BPF_ANY);
+        nativeWriteToMapEntry(mMapFd.getFd(), key.writeToBytes(), value.writeToBytes(), BPF_ANY);
     }
 
     /**
@@ -114,7 +137,8 @@ public class BpfMap<K extends Struct, V extends Struct> implements IBpfMap<K, V>
     public void insertEntry(K key, V value)
             throws ErrnoException, IllegalStateException {
         try {
-            writeToMapEntry(mMapFd.getFd(), key.writeToBytes(), value.writeToBytes(), BPF_NOEXIST);
+            nativeWriteToMapEntry(mMapFd.getFd(), key.writeToBytes(), value.writeToBytes(),
+                    BPF_NOEXIST);
         } catch (ErrnoException e) {
             if (e.errno == EEXIST) throw new IllegalStateException(key + " already exists");
 
@@ -130,7 +154,8 @@ public class BpfMap<K extends Struct, V extends Struct> implements IBpfMap<K, V>
     public void replaceEntry(K key, V value)
             throws ErrnoException, NoSuchElementException {
         try {
-            writeToMapEntry(mMapFd.getFd(), key.writeToBytes(), value.writeToBytes(), BPF_EXIST);
+            nativeWriteToMapEntry(mMapFd.getFd(), key.writeToBytes(), value.writeToBytes(),
+                    BPF_EXIST);
         } catch (ErrnoException e) {
             if (e.errno == ENOENT) throw new NoSuchElementException(key + " not found");
 
@@ -148,13 +173,15 @@ public class BpfMap<K extends Struct, V extends Struct> implements IBpfMap<K, V>
     public boolean insertOrReplaceEntry(K key, V value)
             throws ErrnoException {
         try {
-            writeToMapEntry(mMapFd.getFd(), key.writeToBytes(), value.writeToBytes(), BPF_NOEXIST);
+            nativeWriteToMapEntry(mMapFd.getFd(), key.writeToBytes(), value.writeToBytes(),
+                    BPF_NOEXIST);
             return true;   /* insert succeeded */
         } catch (ErrnoException e) {
             if (e.errno != EEXIST) throw e;
         }
         try {
-            writeToMapEntry(mMapFd.getFd(), key.writeToBytes(), value.writeToBytes(), BPF_EXIST);
+            nativeWriteToMapEntry(mMapFd.getFd(), key.writeToBytes(), value.writeToBytes(),
+                    BPF_EXIST);
             return false;   /* replace succeeded */
         } catch (ErrnoException e) {
             if (e.errno != ENOENT) throw e;
@@ -171,7 +198,7 @@ public class BpfMap<K extends Struct, V extends Struct> implements IBpfMap<K, V>
     /** Remove existing key from eBpf map. Return false if map was not modified. */
     @Override
     public boolean deleteEntry(K key) throws ErrnoException {
-        return deleteMapEntry(mMapFd.getFd(), key.writeToBytes());
+        return nativeDeleteMapEntry(mMapFd.getFd(), key.writeToBytes());
     }
 
     /** Returns {@code true} if this map contains no elements. */
@@ -204,7 +231,7 @@ public class BpfMap<K extends Struct, V extends Struct> implements IBpfMap<K, V>
 
     private byte[] getNextRawKey(@Nullable final byte[] key) throws ErrnoException {
         byte[] nextKey = new byte[mKeySize];
-        if (getNextMapKey(mMapFd.getFd(), key, nextKey)) return nextKey;
+        if (nativeGetNextMapKey(mMapFd.getFd(), key, nextKey)) return nextKey;
 
         return null;
     }
@@ -239,7 +266,7 @@ public class BpfMap<K extends Struct, V extends Struct> implements IBpfMap<K, V>
 
     private byte[] getRawValue(final byte[] key) throws ErrnoException {
         byte[] value = new byte[mValueSize];
-        if (findMapEntry(mMapFd.getFd(), key, value)) return value;
+        if (nativeFindMapEntry(mMapFd.getFd(), key, value)) return value;
 
         return null;
     }
@@ -263,9 +290,13 @@ public class BpfMap<K extends Struct, V extends Struct> implements IBpfMap<K, V>
         }
     }
 
+    /* Empty implementation to implement AutoCloseable, so we can use BpfMaps
+     * with try with resources, but due to persistent FD cache, there is no actual
+     * need to close anything.  File descriptors will actually be closed when we
+     * unlock the BpfMap class and destroy the ParcelFileDescriptor objects.
+     */
     @Override
     public void close() throws IOException {
-        mMapFd.close();
     }
 
     /**
@@ -283,17 +314,25 @@ public class BpfMap<K extends Struct, V extends Struct> implements IBpfMap<K, V>
         }
     }
 
-    private native int bpfFdGet(String path, int mode) throws ErrnoException, NullPointerException;
+    private static native int nativeBpfFdGet(String path, int mode)
+            throws ErrnoException, NullPointerException;
 
-    private native void writeToMapEntry(int fd, byte[] key, byte[] value, int flags)
+    // Note: the following methods appear to not require the object by virtue of taking the
+    // fd as an int argument, but the hidden reference to this is actually what prevents
+    // the object from being garbage collected (and thus potentially maps closed) prior
+    // to the native code actually running (with a possibly already closed fd).
+
+    private native void nativeWriteToMapEntry(int fd, byte[] key, byte[] value, int flags)
             throws ErrnoException;
 
-    private native boolean deleteMapEntry(int fd, byte[] key) throws ErrnoException;
+    private native boolean nativeDeleteMapEntry(int fd, byte[] key) throws ErrnoException;
 
     // If key is found, the operation returns true and the nextKey would reference to the next
     // element.  If key is not found, the operation returns true and the nextKey would reference to
     // the first element.  If key is the last element, false is returned.
-    private native boolean getNextMapKey(int fd, byte[] key, byte[] nextKey) throws ErrnoException;
+    private native boolean nativeGetNextMapKey(int fd, byte[] key, byte[] nextKey)
+            throws ErrnoException;
 
-    private native boolean findMapEntry(int fd, byte[] key, byte[] value) throws ErrnoException;
+    private native boolean nativeFindMapEntry(int fd, byte[] key, byte[] value)
+            throws ErrnoException;
 }
