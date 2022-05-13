@@ -110,22 +110,36 @@ public class NearbyService extends INearbyManager.Stub {
     }
 
     @Override
-    public void unregisterScanListener(IScanListener listener) {
+    public void unregisterScanListener(IScanListener listener, String packageName,
+            @Nullable String attributionTag) {
+        // Permissions check
+        enforceBluetoothPrivilegedPermission(mContext);
+        CallerIdentity identity = CallerIdentity.fromBinder(mContext, packageName, attributionTag);
+        DiscoveryPermissions.enforceDiscoveryPermission(mContext, identity);
+
         mProviderManager.unregisterScanListener(listener);
     }
 
     @Override
     public void startBroadcast(BroadcastRequestParcelable broadcastRequestParcelable,
             IBroadcastListener listener, String packageName, @Nullable String attributionTag) {
+        // Permissions check
         enforceBluetoothPrivilegedPermission(mContext);
         BroadcastPermissions.enforceBroadcastPermission(
                 mContext, CallerIdentity.fromBinder(mContext, packageName, attributionTag));
+
         mBroadcastProviderManager.startBroadcast(
                 broadcastRequestParcelable.getBroadcastRequest(), listener);
     }
 
     @Override
-    public void stopBroadcast(IBroadcastListener listener) {
+    public void stopBroadcast(IBroadcastListener listener, String packageName,
+            @Nullable String attributionTag) {
+        // Permissions check
+        enforceBluetoothPrivilegedPermission(mContext);
+        CallerIdentity identity = CallerIdentity.fromBinder(mContext, packageName, attributionTag);
+        BroadcastPermissions.enforceBroadcastPermission(mContext, identity);
+
         mBroadcastProviderManager.stopBroadcast(listener);
     }
 
