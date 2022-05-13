@@ -626,15 +626,31 @@ class DscpPolicyTest {
     @Test
     fun testParcelingDscpPolicyIsLossless(): Unit = createConnectedNetworkAgent().let {
                 (agent, callback) ->
+        val policyId = 1
+        val dscpValue = 1
+        val range = Range(4444, 4444)
+        val srcPort = 555
+
         // Check that policy with partial parameters is lossless.
-        val policy = DscpPolicy.Builder(1, 1).setDestinationPortRange(Range(4444, 4444)).build()
+        val policy = DscpPolicy.Builder(policyId, dscpValue).setDestinationPortRange(range).build()
+        assertEquals(policyId, policy.policyId)
+        assertEquals(dscpValue, policy.dscpValue)
+        assertEquals(range, policy.destinationPortRange)
         assertParcelingIsLossless(policy)
 
         // Check that policy with all parameters is lossless.
-        val policy2 = DscpPolicy.Builder(1, 1).setDestinationPortRange(Range(4444, 4444))
+        val policy2 = DscpPolicy.Builder(policyId, dscpValue).setDestinationPortRange(range)
                 .setSourceAddress(LOCAL_IPV4_ADDRESS)
                 .setDestinationAddress(TEST_TARGET_IPV4_ADDR)
+                .setSourcePort(srcPort)
                 .setProtocol(IPPROTO_UDP).build()
+        assertEquals(policyId, policy2.policyId)
+        assertEquals(dscpValue, policy2.dscpValue)
+        assertEquals(range, policy2.destinationPortRange)
+        assertEquals(TEST_TARGET_IPV4_ADDR, policy2.destinationAddress)
+        assertEquals(LOCAL_IPV4_ADDRESS, policy2.sourceAddress)
+        assertEquals(srcPort, policy2.sourcePort)
+        assertEquals(IPPROTO_UDP, policy2.protocol)
         assertParcelingIsLossless(policy2)
     }
 }
