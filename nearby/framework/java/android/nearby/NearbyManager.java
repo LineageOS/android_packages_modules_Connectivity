@@ -208,6 +208,9 @@ public class NearbyManager {
                     transport.unregister();
                     mService.unregisterScanListener(transport, mContext.getPackageName(),
                             mContext.getAttributionTag());
+                } else {
+                    Log.e(TAG, "Cannot stop scan with this callback "
+                            + "because it is never registered.");
                 }
             }
         } catch (RemoteException e) {
@@ -264,6 +267,9 @@ public class NearbyManager {
                     transport.unregister();
                     mService.stopBroadcast(transport, mContext.getPackageName(),
                             mContext.getAttributionTag());
+                } else {
+                    Log.e(TAG, "Cannot stop broadcast with this callback "
+                            + "because it is never registered.");
                 }
             }
         } catch (RemoteException e) {
