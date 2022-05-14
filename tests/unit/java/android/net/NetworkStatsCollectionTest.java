@@ -37,12 +37,15 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.fail;
 
+import android.annotation.NonNull;
 import android.content.res.Resources;
+import android.net.NetworkStatsCollection.Key;
 import android.os.Process;
 import android.os.UserHandle;
 import android.telephony.SubscriptionPlan;
 import android.telephony.TelephonyManager;
 import android.text.format.DateUtils;
+import android.util.ArrayMap;
 import android.util.RecurrenceRule;
 
 import androidx.test.InstrumentationRegistry;
@@ -73,6 +76,8 @@ import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * Tests for {@link NetworkStatsCollection}.
@@ -529,6 +534,86 @@ public class NetworkStatsCollectionTest {
                 multiplySafeByRational(4_939_212_288L, 2_121_815_528L, 12_730_893_165L));
 
         assertThrows(ArithmeticException.class, () -> multiplySafeByRational(30, 3, 0));
+    }
+
+    private static void assertCollectionEntries(
+            @NonNull Map<Key, NetworkStatsHistory> expectedEntries,
+            @NonNull NetworkStatsCollection collection) {
+        final Map<Key, NetworkStatsHistory> actualEntries = collection.getEntries();
+        assertEquals(expectedEntries.size(), actualEntries.size());
+        for (Key expectedKey : expectedEntries.keySet()) {
+            final NetworkStatsHistory expectedHistory = expectedEntries.get(expectedKey);
+            final NetworkStatsHistory actualHistory = actualEntries.get(expectedKey);
+            assertNotNull(actualHistory);
+            assertEquals(expectedHistory.getEntries(), actualHistory.getEntries());
+            actualEntries.remove(expectedKey);
+        }
+        assertEquals(0, actualEntries.size());
+    }
+
+    @Test
+    public void testRemoveHistoryBefore() {
+        final NetworkIdentity testIdent = new NetworkIdentity.Builder()
+                .setSubscriberId(TEST_IMSI).build();
+        final Key key1 = new Key(Set.of(testIdent), 0, 0, 0);
+        final Key key2 = new Key(Set.of(testIdent), 1, 0, 0);
+        final long bucketDuration = 10;
+
+        // Prepare entries for testing, with different bucket start timestamps.
+        final NetworkStatsHistory.Entry entry1 = new NetworkStatsHistory.Entry(10, 10, 40,
+                4, 50, 5, 60);
+        final NetworkStatsHistory.Entry entry2 = new NetworkStatsHistory.Entry(20, 10, 3,
+                41, 7, 1, 0);
+        final NetworkStatsHistory.Entry entry3 = new NetworkStatsHistory.Entry(30, 10, 1,
+                21, 70, 4, 1);
+
+        NetworkStatsHistory history1 = new NetworkStatsHistory.Builder(10, 5)
+                .addEntry(entry1)
+                .addEntry(entry2)
+                .build();
+        NetworkStatsHistory history2 = new NetworkStatsHistory.Builder(10, 5)
+                .addEntry(entry2)
+                .addEntry(entry3)
+                .build();
+        NetworkStatsCollection collection = new NetworkStatsCollection.Builder(bucketDuration)
+                .addEntry(key1, history1)
+                .addEntry(key2, history2)
+                .build();
+
+        // Verify nothing is removed if the cutoff time is equal to bucketStart.
+        collection.removeHistoryBefore(10);
+        final Map<Key, NetworkStatsHistory> expectedEntries = new ArrayMap<>();
+        expectedEntries.put(key1, history1);
+        expectedEntries.put(key2, history2);
+        assertCollectionEntries(expectedEntries, collection);
+
+        // Verify entry1 will be removed if its bucket start before to cutoff timestamp.
+        collection.removeHistoryBefore(11);
+        history1 = new NetworkStatsHistory.Builder(10, 5)
+                .addEntry(entry2)
+                .build();
+        history2 = new NetworkStatsHistory.Builder(10, 5)
+                .addEntry(entry2)
+                .addEntry(entry3)
+                .build();
+        final Map<Key, NetworkStatsHistory> cutoff1Entries1 = new ArrayMap<>();
+        cutoff1Entries1.put(key1, history1);
+        cutoff1Entries1.put(key2, history2);
+        assertCollectionEntries(cutoff1Entries1, collection);
+
+        // Verify entry2 will be removed if its bucket start covers by cutoff timestamp.
+        collection.removeHistoryBefore(22);
+        history2 = new NetworkStatsHistory.Builder(10, 5)
+                .addEntry(entry3)
+                .build();
+        final Map<Key, NetworkStatsHistory> cutoffEntries2 = new ArrayMap<>();
+        // History1 is not expected since the collection will omit empty entries.
+        cutoffEntries2.put(key2, history2);
+        assertCollectionEntries(cutoffEntries2, collection);
+
+        // Verify all entries will be removed if cutoff timestamp covers all.
+        collection.removeHistoryBefore(Long.MAX_VALUE);
+        assertEquals(0, collection.getEntries().size());
     }
 
     /**
