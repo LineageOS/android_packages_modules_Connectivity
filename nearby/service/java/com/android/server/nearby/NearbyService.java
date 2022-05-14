@@ -43,7 +43,6 @@ import com.android.server.nearby.common.locator.LocatorContextWrapper;
 import com.android.server.nearby.fastpair.FastPairManager;
 import com.android.server.nearby.injector.ContextHubManagerAdapter;
 import com.android.server.nearby.injector.Injector;
-import com.android.server.nearby.presence.PresenceManager;
 import com.android.server.nearby.provider.BroadcastProviderManager;
 import com.android.server.nearby.provider.DiscoveryProviderManager;
 import com.android.server.nearby.provider.FastPairDataProvider;
@@ -58,7 +57,6 @@ public class NearbyService extends INearbyManager.Stub {
     private final Context mContext;
     private Injector mInjector;
     private final FastPairManager mFastPairManager;
-    private final PresenceManager mPresenceManager;
     private final BroadcastReceiver mBluetoothReceiver =
             new BroadcastReceiver() {
                 @Override
@@ -86,7 +84,6 @@ public class NearbyService extends INearbyManager.Stub {
         mBroadcastProviderManager = new BroadcastProviderManager(context, mInjector);
         final LocatorContextWrapper lcw = new LocatorContextWrapper(context, null);
         mFastPairManager = new FastPairManager(lcw);
-        mPresenceManager = new PresenceManager(lcw);
     }
 
     @VisibleForTesting
@@ -170,7 +167,6 @@ public class NearbyService extends INearbyManager.Stub {
                         mBluetoothReceiver,
                         new IntentFilter(BluetoothAdapter.ACTION_STATE_CHANGED));
                 mFastPairManager.initiate();
-                mPresenceManager.initiate();
                 break;
         }
     }
