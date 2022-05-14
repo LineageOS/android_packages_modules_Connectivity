@@ -1,3 +1,4 @@
+//
 // Copyright (C) 2022 The Android Open Source Project
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -11,27 +12,39 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+//
 
-package {
-    default_applicable_licenses: ["Android-Apache-2.0"],
-}
-
-android_test {
-    name: "NearbyIntegrationUntrustedTests",
-    defaults: ["mts-target-sdk-version-current"],
-    sdk_version: "test_current",
-
-    srcs: [
-        "src/**/*.java",
-        "src/**/*.kt",
+java_defaults {
+    name: "CtsHostsideNetworkTestsApp3Defaults",
+    srcs: ["src/**/*.java"],
+    libs: [
+        "junit",
     ],
     static_libs: [
-        "androidx.test.ext.junit",
-        "androidx.test.rules",
-        "androidx.test.uiautomator_uiautomator",
-        "junit",
-        "kotlin-test",
+        "ctstestrunner-axt",
         "truth-prebuilt",
     ],
-    test_suites: ["device-tests"],
+
+    // Tag this module as a cts test artifact
+    test_suites: [
+        "cts",
+        "general-tests",
+    ],
+}
+
+android_test_helper_app {
+    name: "CtsHostsideNetworkTestsApp3",
+    defaults: [
+        "cts_support_defaults",
+        "CtsHostsideNetworkTestsApp3Defaults",
+    ],
+}
+
+android_test_helper_app {
+    name: "CtsHostsideNetworkTestsApp3PreT",
+    target_sdk_version: "31",
+    defaults: [
+        "cts_support_defaults",
+        "CtsHostsideNetworkTestsApp3Defaults",
+    ],
 }
