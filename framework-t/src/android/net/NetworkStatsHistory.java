@@ -680,19 +680,21 @@ public final class NetworkStatsHistory implements Parcelable {
     }
 
     /**
-     * Remove buckets older than requested cutoff.
+     * Remove buckets that start older than requested cutoff.
+     *
+     * This method will remove any bucket that contains any data older than the requested
+     * cutoff, even if that same bucket includes some data from after the cutoff.
+     *
      * @hide
      */
-    public void removeBucketsBefore(long cutoff) {
+    public void removeBucketsStartingBefore(final long cutoff) {
         // TODO: Consider use getIndexBefore.
         int i;
         for (i = 0; i < bucketCount; i++) {
             final long curStart = bucketStart[i];
-            final long curEnd = curStart + bucketDuration;
 
-            // cutoff happens before or during this bucket; everything before
-            // this bucket should be removed.
-            if (curEnd > cutoff) break;
+            // This bucket starts after or at the cutoff, so it should be kept.
+            if (curStart >= cutoff) break;
         }
 
         if (i > 0) {
