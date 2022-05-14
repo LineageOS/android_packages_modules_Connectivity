@@ -87,8 +87,19 @@ public final class NearbyServiceTest {
     }
 
     @Test
+    public void test_unregister_noPrivilegedPermission_throwsException() {
+        mUiAutomation.dropShellPermissionIdentity();
+        assertThrows(java.lang.SecurityException.class,
+                () -> mService.unregisterScanListener(mScanListener, PACKAGE_NAME,
+                        /* attributionTag= */ null));
+    }
+
+    @Test
     public void test_unregister() {
-        mService.unregisterScanListener(mScanListener);
+        setMockInjector(/* isMockOpsAllowed= */ true);
+        mService.registerScanListener(mScanRequest, mScanListener, PACKAGE_NAME,
+                /* attributionTag= */ null);
+        mService.unregisterScanListener(mScanListener,  PACKAGE_NAME, /* attributionTag= */ null);
     }
 
     private ScanRequest createScanRequest() {
