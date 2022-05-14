@@ -358,8 +358,8 @@ public final class BpfMapTest {
         try {
             mTestMap.clear();
             fail("clearing already-closed map should throw");
-        } catch (ErrnoException expected) {
-            assertEquals(OsConstants.EBADF, expected.errno);
+        } catch (IllegalStateException expected) {
+            // ParcelFileDescriptor.getFd throws IllegalStateException: Already closed.
         }
     }
 
