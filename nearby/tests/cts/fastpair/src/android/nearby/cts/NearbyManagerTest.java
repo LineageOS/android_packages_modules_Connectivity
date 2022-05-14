@@ -129,6 +129,7 @@ public class NearbyManagerTest {
     @Test
     @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void test_stopScan_noPrivilegedPermission() {
+        mNearbyManager.startScan(mScanRequest, EXECUTOR, mScanCallback);
         mUiAutomation.dropShellPermissionIdentity();
         assertThrows(SecurityException.class, () -> mNearbyManager.stopScan(mScanCallback));
     }
