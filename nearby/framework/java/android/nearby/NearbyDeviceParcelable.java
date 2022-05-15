@@ -46,6 +46,7 @@ public final class NearbyDeviceParcelable implements Parcelable {
                 @Override
                 public NearbyDeviceParcelable createFromParcel(Parcel in) {
                     Builder builder = new Builder();
+                    builder.setScanType(in.readInt());
                     if (in.readInt() == 1) {
                         builder.setName(in.readString());
                     }
@@ -68,6 +69,12 @@ public final class NearbyDeviceParcelable implements Parcelable {
                         byte[] data = new byte[dataLength];
                         in.readByteArray(data);
                         builder.setData(data);
+                    }
+                    if (in.readInt() == 1) {
+                        int saltLength = in.readInt();
+                        byte[] salt = new byte[saltLength];
+                        in.readByteArray(salt);
+                        builder.setData(salt);
                     }
                     return builder.build();
                 }
@@ -129,6 +136,7 @@ public final class NearbyDeviceParcelable implements Parcelable {
      */
     @Override
     public void writeToParcel(@NonNull Parcel dest, int flags) {
+        dest.writeInt(mScanType);
         dest.writeInt(mName == null ? 0 : 1);
         if (mName != null) {
             dest.writeString(mName);
@@ -162,7 +170,9 @@ public final class NearbyDeviceParcelable implements Parcelable {
     @Override
     public String toString() {
         return "NearbyDeviceParcelable["
-                + "name="
+                + "scanType="
+                + mScanType
+                + ", name="
                 + mName
                 + ", medium="
                 + NearbyDevice.mediumToString(mMedium)
@@ -187,7 +197,8 @@ public final class NearbyDeviceParcelable implements Parcelable {
     public boolean equals(Object other) {
         if (other instanceof NearbyDeviceParcelable) {
             NearbyDeviceParcelable otherNearbyDeviceParcelable = (NearbyDeviceParcelable) other;
-            return Objects.equals(mName, otherNearbyDeviceParcelable.mName)
+            return mScanType == otherNearbyDeviceParcelable.mScanType
+                    && (Objects.equals(mName, otherNearbyDeviceParcelable.mName))
                     && (mMedium == otherNearbyDeviceParcelable.mMedium)
                     && (mTxPower == otherNearbyDeviceParcelable.mTxPower)
                     && (mRssi == otherNearbyDeviceParcelable.mRssi)
@@ -207,6 +218,7 @@ public final class NearbyDeviceParcelable implements Parcelable {
     @Override
     public int hashCode() {
         return Objects.hash(
+                mScanType,
                 mName,
                 mMedium,
                 mRssi,
