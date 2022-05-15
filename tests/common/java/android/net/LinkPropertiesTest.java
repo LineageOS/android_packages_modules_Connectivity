@@ -1262,13 +1262,14 @@ public class LinkPropertiesTest {
     }
 
     @Test @IgnoreUpTo(Build.VERSION_CODES.S_V2)
+    @EnableCompatChanges({LinkProperties.EXCLUDED_ROUTES})
     public void testHasExcludeRoute() {
         LinkProperties lp = new LinkProperties();
-        lp.setInterfaceName("VPN");
-        lp.addRoute(new RouteInfo(new IpPrefix(ADDRV4, 2), RTN_UNICAST));
+        lp.setInterfaceName("tun0");
+        lp.addRoute(new RouteInfo(new IpPrefix(ADDRV4, 24), RTN_UNICAST));
         lp.addRoute(new RouteInfo(new IpPrefix(ADDRV6, 0), RTN_UNICAST));
         assertFalse(lp.hasExcludeRoute());
-        lp.addRoute(new RouteInfo(new IpPrefix(ADDRV6, 2), RTN_THROW));
+        lp.addRoute(new RouteInfo(new IpPrefix(ADDRV6, 32), RTN_THROW));
         assertTrue(lp.hasExcludeRoute());
     }
 

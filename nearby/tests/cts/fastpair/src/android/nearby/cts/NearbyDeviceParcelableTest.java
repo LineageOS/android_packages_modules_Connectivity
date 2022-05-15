@@ -16,6 +16,8 @@
 
 package android.nearby.cts;
 
+import static android.nearby.ScanRequest.SCAN_TYPE_NEARBY_PRESENCE;
+
 import static com.google.common.truth.Truth.assertThat;
 
 import android.nearby.NearbyDevice;
@@ -49,6 +51,7 @@ public class NearbyDeviceParcelableTest {
     public void setUp() {
         mBuilder =
                 new NearbyDeviceParcelable.Builder()
+                        .setScanType(SCAN_TYPE_NEARBY_PRESENCE)
                         .setName("testDevice")
                         .setMedium(NearbyDevice.Medium.BLE)
                         .setRssi(RSSI)
@@ -77,8 +80,8 @@ public class NearbyDeviceParcelableTest {
 
         assertThat(nearbyDeviceParcelable.toString())
                 .isEqualTo(
-                        "NearbyDeviceParcelable[name=testDevice, medium=BLE, txPower=0, rssi=-60,"
-                                + " action=0, bluetoothAddress="
+                        "NearbyDeviceParcelable[scanType=2, name=testDevice, medium=BLE, "
+                                + "txPower=0, rssi=-60, action=0, bluetoothAddress="
                                 + BLUETOOTH_ADDRESS
                                 + ", fastPairModelId=null, data=null, salt=null]");
     }
