@@ -137,7 +137,7 @@ public class TetheringService extends Service {
                 return;
             }
 
-            mTethering.startTethering(request, listener);
+            mTethering.startTethering(request, callerPkg, listener);
         }
 
         @Override
