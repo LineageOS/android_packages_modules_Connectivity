@@ -21,7 +21,7 @@ package {
 
 android_test {
     name: "FrameworksNetIntegrationTests",
-    defaults: ["framework-connectivity-test-defaults"],
+    defaults: ["framework-connectivity-internal-test-defaults"],
     platform_apis: true,
     certificate: "platform",
     srcs: [
@@ -71,8 +71,12 @@ java_library {
         "net-tests-utils",
     ],
     libs: [
-        "service-connectivity",
+        "service-connectivity-pre-jarjar",
         "services.core",
         "services.net",
+    ],
+    visibility: [
+        "//packages/modules/Connectivity/tests/integration",
+        "//packages/modules/Connectivity/tests/unit",
     ],
 }
