@@ -41,8 +41,8 @@ public class PerUidCounter {
      * @param maxCountPerUid the maximum count per uid allowed
      */
     public PerUidCounter(final int maxCountPerUid) {
-        if (maxCountPerUid < 0) {
-            throw new IllegalArgumentException("Maximum counter value cannot be negative");
+        if (maxCountPerUid <= 0) {
+            throw new IllegalArgumentException("Maximum counter value must be positive");
         }
         mMaxCountPerUid = maxCountPerUid;
     }
@@ -58,12 +58,10 @@ public class PerUidCounter {
      * @param uid the uid that the counter was made under
      */
     public void incrementCountOrThrow(final int uid) {
-        synchronized (mUidToCount) {
-            incrementCountOrThrow(uid, 1 /* numToIncrement */);
-        }
+        incrementCountOrThrow(uid, 1 /* numToIncrement */);
     }
 
-    public void incrementCountOrThrow(final int uid, final int numToIncrement) {
+    public synchronized void incrementCountOrThrow(final int uid, final int numToIncrement) {
         if (numToIncrement <= 0) {
             throw new IllegalArgumentException("Increment count must be positive");
         }
@@ -71,8 +69,8 @@ public class PerUidCounter {
         if (newCount > mMaxCountPerUid) {
             throw new IllegalStateException("Uid " + uid + " exceeded its allowed limit");
         }
-        // Since the count cannot be greater than Integer.MAX_VALUE here,
-        // it is safe to cast to int.
+        // Since the count cannot be greater than Integer.MAX_VALUE here since mMaxCountPerUid
+        // is an integer, it is safe to cast to int.
         mUidToCount.put(uid, (int) newCount);
     }
 
@@ -86,12 +84,10 @@ public class PerUidCounter {
      * @param uid the uid that the count was made under
      */
     public void decrementCountOrThrow(final int uid) {
-        synchronized (mUidToCount) {
-            decrementCountOrThrow(uid, 1 /* numToDecrement */);
-        }
+        decrementCountOrThrow(uid, 1 /* numToDecrement */);
     }
 
-    public void decrementCountOrThrow(final int uid, final int numToDecrement) {
+    public synchronized void decrementCountOrThrow(final int uid, final int numToDecrement) {
         if (numToDecrement <= 0) {
             throw new IllegalArgumentException("Decrement count must be positive");
         }
