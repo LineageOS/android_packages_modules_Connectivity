@@ -21,6 +21,7 @@
 #include <vector>
 
 #include <android-base/macros.h>
+#include <fmt/format.h>
 #include <gtest/gtest.h>
 
 #include "netdutils/InternetAddresses.h"
@@ -435,6 +436,192 @@ TEST(IPPrefixTest, TruncationOther) {
                 << "Unexpected cidrLen " << expectation.cidrLen;
         EXPECT_EQ(ipTruncated, prefix.ip())
                 << "Unexpected IP truncation: " << prefix.ip() << ", expected: " << ipTruncated;
+    }
+}
+
+TEST(IPPrefixTest, containsPrefix) {
+    const struct {
+        const char* prefix;
+        const char* otherPrefix;
+        const bool expected;
+        std::string asParameters() const {
+            return fmt::format("prefix={}, other={}, expect={}", prefix, otherPrefix, expected);
+        }
+    } testExpectations[] = {
+            {"192.0.0.0/8", "192.0.0.0/8", true},
+            {"192.1.0.0/16", "192.1.0.0/16", true},
+            {"192.1.2.0/24", "192.1.2.0/24", true},
+            {"192.1.2.3/32", "192.1.2.3/32", true},
+            {"0.0.0.0/0", "192.0.0.0/8", true},
+            {"0.0.0.0/0", "192.1.0.0/16", true},
+            {"0.0.0.0/0", "192.1.2.0/24", true},
+            {"0.0.0.0/0", "192.1.2.3/32", true},
+            {"192.0.0.0/8", "192.1.0.0/16", true},
+            {"192.0.0.0/8", "192.1.2.0/24", true},
+            {"192.0.0.0/8", "192.1.2.5/32", true},
+            {"192.1.0.0/16", "192.1.2.0/24", true},
+            {"192.1.0.0/16", "192.1.3.6/32", true},
+            {"192.5.6.0/24", "192.5.6.7/32", true},
+            {"192.1.2.3/32", "192.1.2.0/24", false},
+            {"192.1.2.3/32", "192.1.0.0/16", false},
+            {"192.1.2.3/32", "192.0.0.0/8", false},
+            {"192.1.2.3/32", "0.0.0.0/0", false},
+            {"192.1.2.0/24", "192.1.0.0/16", false},
+            {"192.1.2.0/24", "192.0.0.0/8", false},
+            {"192.1.2.0/24", "0.0.0.0/0", false},
+            {"192.9.0.0/16", "192.0.0.0/8", false},
+            {"192.9.0.0/16", "0.0.0.0/0", false},
+            {"192.0.0.0/8", "0.0.0.0/0", false},
+            {"192.0.0.0/8", "191.0.0.0/8", false},
+            {"191.0.0.0/8", "192.0.0.0/8", false},
+            {"192.8.0.0/16", "192.7.0.0/16", false},
+            {"192.7.0.0/16", "192.8.0.0/16", false},
+            {"192.8.6.0/24", "192.7.5.0/24", false},
+            {"192.7.5.0/24", "192.8.6.0/24", false},
+            {"192.8.6.100/32", "192.8.6.200/32", false},
+            {"192.8.6.200/32", "192.8.6.100/32", false},
+            {"192.0.0.0/8", "192.0.0.0/12", true},
+            {"192.0.0.0/12", "192.0.0.0/8", false},
+            {"2001::/16", "2001::/16", true},
+            {"2001:db8::/32", "2001:db8::/32", true},
+            {"2001:db8:cafe::/48", "2001:db8:cafe::/48", true},
+            {"2001:db8:cafe:d00d::/64", "2001:db8:cafe:d00d::/64", true},
+            {"2001:db8:cafe:d00d:fec0::/80", "2001:db8:cafe:d00d:fec0::/80", true},
+            {"2001:db8:cafe:d00d:fec0:de::/96", "2001:db8:cafe:d00d:fec0:de::/96", true},
+            {"2001:db8:cafe:d00d:fec0:de:ac::/112", "2001:db8:cafe:d00d:fec0:de:ac::/112", true},
+            {"2001:db8::cafe:0:1/128", "2001:db8::cafe:0:1/128", true},
+            {"2001::/16", "2001:db8::/32", true},
+            {"2001::/16", "2001:db8:cafe::/48", true},
+            {"2001::/16", "2001:db8:cafe:d00d::/64", true},
+            {"2001::/16", "2001:db8:cafe:d00d:fec0::/80", true},
+            {"2001::/16", "2001:db8:cafe:d00d:fec0:de::/96", true},
+            {"2001::/16", "2001:db8:cafe:d00d:fec0:de:ac::/112", true},
+            {"2001::/16", "2001:db8:cafe:d00d:fec0:de:ac:dd/128", true},
+            {"::/0", "2001::/16", true},
+            {"::/0", "2001:db8::/32", true},
+            {"::/0", "2001:db8:cafe::/48", true},
+            {"::/0", "2001:db8:cafe:d00d::/64", true},
+            {"::/0", "2001:db8:cafe:d00d:fec0::/80", true},
+            {"::/0", "2001:db8:cafe:d00d:fec0:de::/96", true},
+            {"::/0", "2001:db8:cafe:d00d:fec0:de:ac::/112", true},
+            {"::/0", "2001:db8:cafe:d00d:fec0:de:ac:dd/128", true},
+            {"2001:db8::dd/128", "2001::/16", false},
+            {"2001:db8::dd/128", "2001:db8::/32", false},
+            {"2001:db8::dd/128", "2001:db8:cafe::/48", false},
+            {"2001:db8::dd/128", "2001:db8:cafe:d00d::/64", false},
+            {"2001:db8::dd/128", "2001:db8:cafe:d00d:fec0::/80", false},
+            {"2001:db8::dd/128", "2001:db8:cafe:d00d:fec0:de::/96", false},
+            {"2001:db8::dd/128", "2001:db8:cafe:d00d:fec0:de:ac::/112", false},
+            {"2001:db7::/32", "2001:db8::/32", false},
+            {"2001:db8::/32", "2001:db7::/32", false},
+            {"2001:db8:caff::/48", "2001:db8:cafe::/48", false},
+            {"2001:db8:cafe::/48", "2001:db8:caff::/48", false},
+            {"2001:db8:cafe:a00d::/64", "2001:db8:cafe:d00d::/64", false},
+            {"2001:db8:cafe:d00d::/64", "2001:db8:cafe:a00d::/64", false},
+            {"2001:db8:cafe:d00d:fec1::/80", "2001:db8:cafe:d00d:fec0::/80", false},
+            {"2001:db8:cafe:d00d:fec0::/80", "2001:db8:cafe:d00d:fec1::/80", false},
+            {"2001:db8:cafe:d00d:fec0:dd::/96", "2001:db8:cafe:d00d:fec0:ae::/96", false},
+            {"2001:db8:cafe:d00d:fec0:ae::/96", "2001:db8:cafe:d00d:fec0:dd::/96", false},
+            {"2001:db8:cafe:d00d:fec0:de:aa::/112", "2001:db8:cafe:d00d:fec0:de:ac::/112", false},
+            {"2001:db8:cafe:d00d:fec0:de:ac::/112", "2001:db8:cafe:d00d:fec0:de:aa::/112", false},
+            {"2001:db8::cafe:0:123/128", "2001:db8::cafe:0:456/128", false},
+            {"2001:db8::cafe:0:456/128", "2001:db8::cafe:0:123/128", false},
+            {"2001:db8::/32", "2001:db8::/64", true},
+            {"2001:db8::/64", "2001:db8::/32", false},
+            {"::/0", "0.0.0.0/0", false},
+            {"::/0", "1.0.0.0/8", false},
+            {"::/0", "1.2.0.0/16", false},
+            {"::/0", "1.2.3.0/24", false},
+            {"::/0", "1.2.3.4/32", false},
+            {"2001::/16", "1.2.3.4/32", false},
+            {"2001::db8::/32", "1.2.3.4/32", false},
+            {"2001:db8:cafe::/48", "1.2.3.4/32", false},
+            {"2001:db8:cafe:d00d::/64", "1.2.3.4/32", false},
+            {"2001:db8:cafe:d00d:fec0::/80", "1.2.3.4/32", false},
+            {"2001:db8:cafe:d00d:fec0:ae::/96", "1.2.3.4/32", false},
+            {"2001:db8:cafe:d00d:fec0:de:aa::/112", "1.2.3.4/32", false},
+            {"0.0.0.0/0", "::/0", false},
+            {"0.0.0.0/0", "2001::/16", false},
+            {"0.0.0.0/0", "2001::db8::/32", false},
+            {"0.0.0.0/0", "2001:db8:cafe::/48", false},
+            {"0.0.0.0/0", "2001:db8:cafe:d00d::/64", false},
+            {"0.0.0.0/0", "2001:db8:cafe:d00d:fec0::/80", false},
+            {"0.0.0.0/0", "2001:db8:cafe:d00d:fec0:ae::/96", false},
+            {"0.0.0.0/0", "2001:db8:cafe:d00d:fec0:de:aa::/112", false},
+            {"1.2.3.4/32", "2001:db8:cafe:d00d:fec0:de:aa::/112", false},
+            {"1.2.3.0/24", "2001:db8:cafe:d00d:fec0:de:aa::/112", false},
+            {"1.2.0.0/16", "2001:db8:cafe:d00d:fec0:de:aa::/112", false},
+            {"1.0.0.0/8", "2001:db8:cafe:d00d:fec0:de:aa::/112", false},
+    };
+
+    for (const auto& expectation : testExpectations) {
+        SCOPED_TRACE(expectation.asParameters());
+        IPPrefix a = IPPrefix::forString(expectation.prefix);
+        IPPrefix b = IPPrefix::forString(expectation.otherPrefix);
+        EXPECT_EQ(expectation.expected, a.contains(b));
+    }
+}
+
+TEST(IPPrefixTest, containsAddress) {
+    const struct {
+        const char* prefix;
+        const char* address;
+        const bool expected;
+        std::string asParameters() const {
+            return fmt::format("prefix={}, address={}, expect={}", prefix, address, expected);
+        }
+    } testExpectations[] = {
+        {"0.0.0.0/0", "255.255.255.255", true},
+        {"0.0.0.0/0", "1.2.3.4", true},
+        {"0.0.0.0/0", "1.2.3.0", true},
+        {"0.0.0.0/0", "1.2.0.0", true},
+        {"0.0.0.0/0", "1.0.0.0", true},
+        {"0.0.0.0/0", "0.0.0.0", true},
+        {"0.0.0.0/0", "2001:4868:4860::8888", false},
+        {"0.0.0.0/0", "::/0", false},
+        {"192.0.2.0/23", "192.0.2.0", true},
+        {"192.0.2.0/23", "192.0.2.43", true},
+        {"192.0.2.0/23", "192.0.3.21", true},
+        {"192.0.2.0/23", "192.0.0.21", false},
+        {"192.0.2.0/23", "8.8.8.8", false},
+        {"192.0.2.0/23", "2001:4868:4860::8888", false},
+        {"192.0.2.0/23", "::/0", false},
+        {"1.2.3.4/32", "1.2.3.4", true},
+        {"1.2.3.4/32", "1.2.3.5", false},
+        {"10.0.0.0/8", "10.2.0.0", true},
+        {"10.0.0.0/8", "10.2.3.5", true},
+        {"10.0.0.0/8", "10.0.0.0", true},
+        {"10.0.0.0/8", "10.255.255.254", true},
+        {"10.0.0.0/8", "11.0.0.0", false},
+        {"::/0", "2001:db8:f000::ace:d00c", true},
+        {"::/0", "2002:db8:f00::ace:d00d", true},
+        {"::/0", "2001:db7:f00::ace:d00e", true},
+        {"::/0", "2001:db8:f01::bad:d00d", true},
+        {"::/0", "::", true},
+        {"::/0", "0.0.0.0", false},
+        {"::/0", "1.2.3.4", false},
+        {"2001:db8:f00::ace:d00d/127", "2001:db8:f00::ace:d00c", true},
+        {"2001:db8:f00::ace:d00d/127", "2001:db8:f00::ace:d00d", true},
+        {"2001:db8:f00::ace:d00d/127", "2001:db8:f00::ace:d00e", false},
+        {"2001:db8:f00::ace:d00d/127", "2001:db8:f00::bad:d00d", false},
+        {"2001:db8:f00::ace:d00d/127", "2001:4868:4860::8888", false},
+        {"2001:db8:f00::ace:d00d/127", "8.8.8.8", false},
+        {"2001:db8:f00::ace:d00d/127", "0.0.0.0", false},
+        {"2001:db8:f00::ace:d00d/128", "2001:db8:f00::ace:d00d", true},
+        {"2001:db8:f00::ace:d00d/128", "2001:db8:f00::ace:d00c", false},
+        {"2001::/16", "2001::", true},
+        {"2001::/16", "2001:db8:f00::ace:d00d", true},
+        {"2001::/16", "2001:db8:f00::bad:d00d", true},
+        {"2001::/16", "2001::abc", true},
+        {"2001::/16", "2001:ffff:ffff:ffff:ffff:ffff:ffff:ffff", true},
+        {"2001::/16", "2000::", false},
+    };
+
+    for (const auto& expectation : testExpectations) {
+        SCOPED_TRACE(expectation.asParameters());
+        IPPrefix a = IPPrefix::forString(expectation.prefix);
+        IPAddress b = IPAddress::forString(expectation.address);
+        EXPECT_EQ(expectation.expected, a.contains(b));
     }
 }
 
