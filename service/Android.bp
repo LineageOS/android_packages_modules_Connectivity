@@ -224,9 +224,15 @@ java_library {
     lint: { strict_updatability_linting: true },
 }
 
-filegroup {
+genrule {
     name: "connectivity-jarjar-rules",
-    srcs: ["jarjar-rules.txt"],
+    defaults: ["jarjar-rules-combine-defaults"],
+    srcs: [
+        ":framework-connectivity-jarjar-rules",
+        ":service-connectivity-jarjar-gen",
+        ":service-nearby-jarjar-gen",
+    ],
+    out: ["connectivity-jarjar-rules.txt"],
     visibility: ["//packages/modules/Connectivity:__subpackages__"],
 }
 
@@ -236,4 +242,46 @@ filegroup {
     name: "traffic-controller-utils",
     srcs: ["src/com/android/server/BpfNetMaps.java"],
     visibility: ["//packages/modules/Connectivity:__subpackages__"],
+}
+
+java_genrule {
+    name: "service-connectivity-jarjar-gen",
+    tool_files: [
+        ":service-connectivity-pre-jarjar",
+        ":service-connectivity-tiramisu-pre-jarjar",
+        "jarjar-excludes.txt",
+    ],
+    tools: [
+        "jarjar-rules-generator",
+        "dexdump",
+    ],
+    out: ["service_connectivity_jarjar_rules.txt"],
+    cmd: "$(location jarjar-rules-generator) " +
+        "--jars $(location :service-connectivity-pre-jarjar) " +
+        "$(location :service-connectivity-tiramisu-pre-jarjar) " +
+        "--prefix android.net.connectivity " +
+        "--excludes $(location jarjar-excludes.txt) " +
+        "--dexdump $(location dexdump) " +
+        "--output $(out)",
+    visibility: ["//visibility:private"],
+}
+
+java_genrule {
+    name: "service-nearby-jarjar-gen",
+    tool_files: [
+        ":service-nearby-pre-jarjar",
+        "jarjar-excludes.txt",
+    ],
+    tools: [
+        "jarjar-rules-generator",
+        "dexdump",
+    ],
+    out: ["service_nearby_jarjar_rules.txt"],
+    cmd: "$(location jarjar-rules-generator) " +
+        "--jars $(location :service-nearby-pre-jarjar) " +
+        "--prefix com.android.server.nearby " +
+        "--excludes $(location jarjar-excludes.txt) " +
+        "--dexdump $(location dexdump) " +
+        "--output $(out)",
+    visibility: ["//visibility:private"],
 }
