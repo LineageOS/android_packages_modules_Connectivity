@@ -373,8 +373,7 @@ DEFINE_BPF_PROG("skfilter/denylist/xtbpf", AID_ROOT, AID_NET_ADMIN, xt_bpf_denyl
     return BPF_NOMATCH;
 }
 
-DEFINE_BPF_PROG_KVER("cgroupsock/inet/create", AID_ROOT, AID_ROOT, inet_socket_create,
-                     KVER(4, 14, 0))
+DEFINE_BPF_PROG("cgroupsock/inet/create", AID_ROOT, AID_ROOT, inet_socket_create)
 (struct bpf_sock* sk) {
     uint64_t gid_uid = bpf_get_current_uid_gid();
     /*
