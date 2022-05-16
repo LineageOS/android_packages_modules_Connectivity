@@ -33,13 +33,8 @@ class PerUidCounterTest {
         assertFailsWith<IllegalArgumentException> {
             PerUidCounter(-1)
         }
-
-        val uselessCounter = PerUidCounter(0)
-        assertFailsWith<IllegalStateException> {
-            uselessCounter.incrementCountOrThrow(UID_A)
-        }
-        assertFailsWith<IllegalStateException> {
-            uselessCounter.decrementCountOrThrow(UID_A)
+        assertFailsWith<IllegalArgumentException> {
+            PerUidCounter(0)
         }
 
         val largeMaxCounter = PerUidCounter(Integer.MAX_VALUE)
