@@ -275,7 +275,7 @@ public final class TetheringServiceTest {
         mTetheringConnector.startTethering(request, TEST_CALLER_PKG, TEST_ATTRIBUTION_TAG,
                 result);
         verify(mTethering).isTetheringSupported();
-        verify(mTethering).startTethering(eq(request), eq(result));
+        verify(mTethering).startTethering(eq(request), eq(TEST_CALLER_PKG), eq(result));
     }
 
     @Test
