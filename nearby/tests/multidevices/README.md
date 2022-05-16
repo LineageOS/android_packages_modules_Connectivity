@@ -141,5 +141,5 @@ control the state of the Fast Pair provider simulator. Install this app on phone
 2 (Fast Pair provider role) to work correctly.
 
 See
-[clients/test_support/fastpair_provider/simulator_ap/Android.bp](clients/test_support/fastpair_provider/simulator_ap/Android.bp)
+[clients/test_support/fastpair_provider/simulator_app/Android.bp](clients/test_support/fastpair_provider/simulator_app/Android.bp)
 for more documentation.
