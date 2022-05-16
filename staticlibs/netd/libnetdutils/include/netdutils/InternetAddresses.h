@@ -221,6 +221,12 @@ class IPPrefix {
     in_addr addr4() const noexcept { return mData.ip.v4; }
     in6_addr addr6() const noexcept { return mData.ip.v6; }
     constexpr int length() const noexcept { return mData.cidrlen; }
+    bool contains(const IPPrefix& other) {
+        return length() <= other.length() && IPPrefix(other.ip(), length()).ip() == ip();
+    }
+    bool contains(const IPAddress& other) {
+        return IPPrefix(other, length()).ip() == ip();
+    }
 
     bool isUninitialized() const noexcept;
     std::string toString() const noexcept;
