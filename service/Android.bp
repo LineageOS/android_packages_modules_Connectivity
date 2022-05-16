@@ -169,7 +169,7 @@ java_library {
         "networkstack-client",
         "PlatformProperties",
         "service-connectivity-protos",
-        "NetworkStackApiCurrentShims",
+        "NetworkStackApiStableShims",
     ],
     apex_available: [
         "com.android.tethering",
