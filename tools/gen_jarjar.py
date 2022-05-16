@@ -31,7 +31,9 @@ def parse_arguments(argv):
         '--jars', nargs='+',
         help='Path to pre-jarjar JAR. Can be followed by multiple space-separated paths.')
     parser.add_argument(
-        '--prefix', required=True, help='Package prefix to use for jarjared classes.')
+        '--prefix', required=True,
+        help='Package prefix to use for jarjared classes, '
+             'for example "com.android.connectivity" (does not end with a dot).')
     parser.add_argument(
         '--output', required=True, help='Path to output jarjar rules file.')
     parser.add_argument(
