@@ -22,6 +22,18 @@
         }
       ]
     },
+    // Also run CtsNetTestCasesLatestSdk to ensure tests using older shims pass.
+    {
+      "name": "CtsNetTestCasesLatestSdk",
+      "options": [
+        {
+          "exclude-annotation": "com.android.testutils.SkipPresubmit"
+        },
+        {
+          "exclude-annotation": "androidx.test.filters.RequiresDevice"
+        }
+      ]
+    },
     {
       "name": "bpf_existence_test"
     },
