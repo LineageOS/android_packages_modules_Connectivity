@@ -448,8 +448,22 @@ public class Tethering {
                 mStateReceiver, noUpstreamFilter, PERMISSION_MAINLINE_NETWORK_STACK, mHandler);
 
         final WifiManager wifiManager = getWifiManager();
+        TetheringSoftApCallback softApCallback = new TetheringSoftApCallback();
         if (wifiManager != null) {
-            wifiManager.registerSoftApCallback(mExecutor, new TetheringSoftApCallback());
+            wifiManager.registerSoftApCallback(mExecutor, softApCallback);
+        }
+        if (SdkLevel.isAtLeastT() && wifiManager != null) {
+            try {
+                // Although WifiManager#registerLocalOnlyHotspotSoftApCallback document that it need
+                // NEARBY_WIFI_DEVICES permission, but actually a caller who have NETWORK_STACK
+                // or MAINLINE_NETWORK_STACK permission would also able to use this API.
+                wifiManager.registerLocalOnlyHotspotSoftApCallback(mExecutor, softApCallback);
+            } catch (UnsupportedOperationException e) {
+                // Since wifi module development in internal branch,
+                // #registerLocalOnlyHotspotSoftApCallback currently doesn't supported in AOSP
+                // before AOSP switch to Android T + 1.
+                Log.wtf(TAG, "registerLocalOnlyHotspotSoftApCallback API is not supported");
+            }
         }
 
         startTrackDefaultNetwork();
@@ -545,6 +559,13 @@ public class Tethering {
         }
 
         // Called by wifi when the number of soft AP clients changed.
+        // Currently multiple softAp would not behave well in PrivateAddressCoordinator
+        // (where it gets the address from cache), it ensure tethering only support one ipServer for
+        // TETHERING_WIFI. Once tethering support multiple softAp enabled simultaneously,
+        // onConnectedClientsChanged should also be updated to support tracking different softAp's
+        // clients individually.
+        // TODO: Add wtf log and have check to reject request duplicated type with different
+        // interface.
         @Override
         public void onConnectedClientsChanged(final List<WifiClient> clients) {
             updateConnectedClients(clients);
