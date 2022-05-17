@@ -133,12 +133,16 @@ static jint native_setUidRule(JNIEnv* env, jobject clazz, jint childChain, jint 
 
 static jint native_addUidInterfaceRules(JNIEnv* env, jobject clazz, jstring ifName,
                                     jintArray jUids) {
-    const ScopedUtfChars ifNameUtf8(env, ifName);
-    if (ifNameUtf8.c_str() == nullptr) {
-        return -EINVAL;
+    // Null ifName is a wildcard to allow apps to receive packets on all interfaces and ifIndex is
+    // set to 0.
+    int ifIndex;
+    if (ifName != nullptr) {
+        const ScopedUtfChars ifNameUtf8(env, ifName);
+        const std::string interfaceName(ifNameUtf8.c_str());
+        ifIndex = if_nametoindex(interfaceName.c_str());
+    } else {
+        ifIndex = 0;
     }
-    const std::string interfaceName(ifNameUtf8.c_str());
-    const int ifIndex = if_nametoindex(interfaceName.c_str());
 
     ScopedIntArrayRO uids(env, jUids);
     if (uids.get() == nullptr) {
