@@ -327,6 +327,130 @@ public class PacketBuilderTest {
                 (byte) 0xde, (byte) 0xad, (byte) 0xbe, (byte) 0xef
             };
 
+    private static final byte[] TEST_PACKET_ETHERHDR_IPV6HDR_TCPHDR_DATA =
+            new byte[] {
+                // packet = (scapy.Ether(src="11:22:33:44:55:66", dst="aa:bb:cc:dd:ee:ff",
+                //                       type='IPv6') /
+                //           scapy.IPv6(src="2001:db8::1", dst="2001:db8::2", tc=0x80,
+                //                      fl=0x515ca, plen=64, hlim=0x40) /
+                //           scapy.TCP(sport=9876, dport=433, seq=13579, ack=24680,
+                //                     flags='A', window=8192, urgptr=0) /
+                //           b'\xde\xad\xbe\xef')
+                // Note that plen(64) = ipv6hdr(40) + udphdr(20) + data(4).
+                // Ether header
+                (byte) 0xaa, (byte) 0xbb, (byte) 0xcc, (byte) 0xdd,
+                (byte) 0xee, (byte) 0xff, (byte) 0x11, (byte) 0x22,
+                (byte) 0x33, (byte) 0x44, (byte) 0x55, (byte) 0x66,
+                (byte) 0x86, (byte) 0xdd,
+                // IPv6 header
+                (byte) 0x68, (byte) 0x05, (byte) 0x15, (byte) 0xca,
+                (byte) 0x00, (byte) 0x40, (byte) 0x06, (byte) 0x40,
+                (byte) 0x20, (byte) 0x01, (byte) 0x0d, (byte) 0xb8,
+                (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00,
+                (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00,
+                (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x01,
+                (byte) 0x20, (byte) 0x01, (byte) 0x0d, (byte) 0xb8,
+                (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00,
+                (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00,
+                (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x02,
+                // TCP header
+                (byte) 0x26, (byte) 0x94, (byte) 0x01, (byte) 0xb1,
+                (byte) 0x00, (byte) 0x00, (byte) 0x35, (byte) 0x0b,
+                (byte) 0x00, (byte) 0x00, (byte) 0x60, (byte) 0x68,
+                (byte) 0x50, (byte) 0x10, (byte) 0x20, (byte) 0x00,
+                (byte) 0xd9, (byte) 0x05, (byte) 0x00, (byte) 0x00,
+                // Data
+                (byte) 0xde, (byte) 0xad, (byte) 0xbe, (byte) 0xef
+            };
+
+    private static final byte[] TEST_PACKET_ETHERHDR_IPV6HDR_TCPHDR =
+            new byte[] {
+                // packet = (scapy.Ether(src="11:22:33:44:55:66", dst="aa:bb:cc:dd:ee:ff",
+                //                       type='IPv6') /
+                //           scapy.IPv6(src="2001:db8::1", dst="2001:db8::2", tc=0x80,
+                //                      fl=0x515ca, plen=60, hlim=0x40) /
+                //           scapy.TCP(sport=9876, dport=433, seq=13579, ack=24680,
+                //                     flags='A', window=8192, urgptr=0))
+                // Note that plen(60) = ipv6hdr(40) + udphdr(20).
+                // Ether header
+                (byte) 0xaa, (byte) 0xbb, (byte) 0xcc, (byte) 0xdd,
+                (byte) 0xee, (byte) 0xff, (byte) 0x11, (byte) 0x22,
+                (byte) 0x33, (byte) 0x44, (byte) 0x55, (byte) 0x66,
+                (byte) 0x86, (byte) 0xdd,
+                // IPv6 header
+                (byte) 0x68, (byte) 0x05, (byte) 0x15, (byte) 0xca,
+                (byte) 0x00, (byte) 0x3c, (byte) 0x06, (byte) 0x40,
+                (byte) 0x20, (byte) 0x01, (byte) 0x0d, (byte) 0xb8,
+                (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00,
+                (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00,
+                (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x01,
+                (byte) 0x20, (byte) 0x01, (byte) 0x0d, (byte) 0xb8,
+                (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00,
+                (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00,
+                (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x02,
+                // TCP header
+                (byte) 0x26, (byte) 0x94, (byte) 0x01, (byte) 0xb1,
+                (byte) 0x00, (byte) 0x00, (byte) 0x35, (byte) 0x0b,
+                (byte) 0x00, (byte) 0x00, (byte) 0x60, (byte) 0x68,
+                (byte) 0x50, (byte) 0x10, (byte) 0x20, (byte) 0x00,
+                (byte) 0x76, (byte) 0xa7, (byte) 0x00, (byte) 0x00
+            };
+
+    private static final byte[] TEST_PACKET_IPV6HDR_TCPHDR_DATA =
+            new byte[] {
+                // packet = (scapy.IPv6(src="2001:db8::1", dst="2001:db8::2", tc=0x80,
+                //                      fl=0x515ca, plen=64, hlim=0x40) /
+                //           scapy.TCP(sport=9876, dport=433, seq=13579, ack=24680,
+                //                     flags='A', window=8192, urgptr=0) /
+                //           b'\xde\xad\xbe\xef')
+                // Note that plen(64) = ipv6hdr(40) + udphdr(20) + data(4).
+                // IPv6 header
+                (byte) 0x68, (byte) 0x05, (byte) 0x15, (byte) 0xca,
+                (byte) 0x00, (byte) 0x40, (byte) 0x06, (byte) 0x40,
+                (byte) 0x20, (byte) 0x01, (byte) 0x0d, (byte) 0xb8,
+                (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00,
+                (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00,
+                (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x01,
+                (byte) 0x20, (byte) 0x01, (byte) 0x0d, (byte) 0xb8,
+                (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00,
+                (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00,
+                (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x02,
+                // TCP header
+                (byte) 0x26, (byte) 0x94, (byte) 0x01, (byte) 0xb1,
+                (byte) 0x00, (byte) 0x00, (byte) 0x35, (byte) 0x0b,
+                (byte) 0x00, (byte) 0x00, (byte) 0x60, (byte) 0x68,
+                (byte) 0x50, (byte) 0x10, (byte) 0x20, (byte) 0x00,
+                (byte) 0xd9, (byte) 0x05, (byte) 0x00, (byte) 0x00,
+                // Data
+                (byte) 0xde, (byte) 0xad, (byte) 0xbe, (byte) 0xef
+            };
+
+    private static final byte[] TEST_PACKET_IPV6HDR_TCPHDR =
+            new byte[] {
+                // packet = (scapy.IPv6(src="2001:db8::1", dst="2001:db8::2", tc=0x80,
+                //                      fl=0x515ca, plen=60, hlim=0x40) /
+                //           scapy.TCP(sport=9876, dport=433, seq=13579, ack=24680,
+                //                     flags='A', window=8192, urgptr=0))
+                // Note that plen(60) = ipv6hdr(40) + udphdr(20).
+                // IPv6 header
+                (byte) 0x68, (byte) 0x05, (byte) 0x15, (byte) 0xca,
+                (byte) 0x00, (byte) 0x3c, (byte) 0x06, (byte) 0x40,
+                (byte) 0x20, (byte) 0x01, (byte) 0x0d, (byte) 0xb8,
+                (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00,
+                (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00,
+                (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x01,
+                (byte) 0x20, (byte) 0x01, (byte) 0x0d, (byte) 0xb8,
+                (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00,
+                (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00,
+                (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x02,
+                // TCP header
+                (byte) 0x26, (byte) 0x94, (byte) 0x01, (byte) 0xb1,
+                (byte) 0x00, (byte) 0x00, (byte) 0x35, (byte) 0x0b,
+                (byte) 0x00, (byte) 0x00, (byte) 0x60, (byte) 0x68,
+                (byte) 0x50, (byte) 0x10, (byte) 0x20, (byte) 0x00,
+                (byte) 0x76, (byte) 0xa7, (byte) 0x00, (byte) 0x00
+            };
+
     private static final byte[] TEST_PACKET_IPV6HDR_UDPHDR =
             new byte[] {
                 // packet = (scapy.IPv6(src="2001:db8::1", dst="2001:db8::2", tc=0x80,
@@ -540,27 +664,33 @@ public class PacketBuilderTest {
     }
 
     /**
-     * Check TCPv4 packet.
+     * Check TCP packet.
      *
      * @param hasEther true if the packet has ether header; false otherwise.
      * @param l3proto the layer 3 protocol. Only {@code IPPROTO_IP} and {@code IPPROTO_IPV6}
      *        currently supported.
      * @param hasData true if the packet has data payload; false otherwise.
      * @param actual the packet to check.
-     *
-     * TODO: support IPv6
      */
-    private void checkTcpv4Packet(final boolean hasEther, final int l3proto, final boolean hasData,
+    private void checkTcpPacket(final boolean hasEther, final int l3proto, final boolean hasData,
             final ByteBuffer actual) {
         if (l3proto != IPPROTO_IP && l3proto != IPPROTO_IPV6) {
             fail("Unsupported layer 3 protocol " + l3proto);
         }
 
+        // [1] Check ether header.
         if (hasEther) {
             checkEtherHeader(l3proto, actual);
         }
-        checkIpv4Header(IPPROTO_TCP, hasData, actual);
 
+        // [2] Check IP header.
+        if (l3proto == IPPROTO_IP) {
+            checkIpv4Header(IPPROTO_TCP, hasData, actual);
+        } else if (l3proto == IPPROTO_IPV6) {
+            checkIpv6Header(IPPROTO_TCP, hasData, actual);
+        }
+
+        // [3] Check TCP header.
         final TcpHeader tcpHeader = Struct.parse(TcpHeader.class, actual);
         assertEquals(SRC_PORT, tcpHeader.srcPort);
         assertEquals(DST_PORT, tcpHeader.dstPort);
@@ -569,9 +699,14 @@ public class PacketBuilderTest {
         assertEquals((short) 0x5010 /* offset=5(*4bytes), control bits=ACK */,
                 tcpHeader.dataOffsetAndControlBits);
         assertEquals(WINDOW, tcpHeader.window);
-        assertEquals(hasData ? (short) 0x4844 : (short) 0xe5e5, tcpHeader.checksum);
         assertEquals(URGENT_POINTER, tcpHeader.urgentPointer);
+        if (l3proto == IPPROTO_IP) {
+            assertEquals(hasData ? (short) 0x4844 : (short) 0xe5e5, tcpHeader.checksum);
+        } else if (l3proto == IPPROTO_IPV6) {
+            assertEquals(hasData ? (short) 0xd905 : (short) 0x76a7, tcpHeader.checksum);
+        }
 
+        // [4] Check payload.
         if (hasData) {
             assertEquals(0xdeadbeef, actual.getInt());
         }
@@ -626,14 +761,14 @@ public class PacketBuilderTest {
     public void testBuildPacketEtherIPv4Tcp() throws Exception {
         final ByteBuffer packet = buildPacket(SRC_MAC, DST_MAC, IPPROTO_IP, IPPROTO_TCP,
                 null /* data */);
-        checkTcpv4Packet(true /* hasEther */, IPPROTO_IP, false /* hasData */, packet);
+        checkTcpPacket(true /* hasEther */, IPPROTO_IP, false /* hasData */, packet);
         assertArrayEquals(TEST_PACKET_ETHERHDR_IPV4HDR_TCPHDR, packet.array());
     }
 
     @Test
     public void testBuildPacketEtherIPv4TcpData() throws Exception {
         final ByteBuffer packet = buildPacket(SRC_MAC, DST_MAC, IPPROTO_IP, IPPROTO_TCP, DATA);
-        checkTcpv4Packet(true /* hasEther */, IPPROTO_IP, true /* hasData */, packet);
+        checkTcpPacket(true /* hasEther */, IPPROTO_IP, true /* hasData */, packet);
         assertArrayEquals(TEST_PACKET_ETHERHDR_IPV4HDR_TCPHDR_DATA,
                 packet.array());
     }
@@ -642,7 +777,7 @@ public class PacketBuilderTest {
     public void testBuildPacketIPv4Tcp() throws Exception {
         final ByteBuffer packet = buildPacket(null /* srcMac */, null /* dstMac */,
                 IPPROTO_IP, IPPROTO_TCP, null /* data */);
-        checkTcpv4Packet(false /* hasEther */, IPPROTO_IP, false /* hasData */, packet);
+        checkTcpPacket(false /* hasEther */, IPPROTO_IP, false /* hasData */, packet);
         assertArrayEquals(TEST_PACKET_IPV4HDR_TCPHDR, packet.array());
     }
 
@@ -650,7 +785,7 @@ public class PacketBuilderTest {
     public void testBuildPacketIPv4TcpData() throws Exception {
         final ByteBuffer packet = buildPacket(null /* srcMac */, null /* dstMac */,
                 IPPROTO_IP, IPPROTO_TCP, DATA);
-        checkTcpv4Packet(false /* hasEther */, IPPROTO_IP, true /* hasData */, packet);
+        checkTcpPacket(false /* hasEther */, IPPROTO_IP, true /* hasData */, packet);
         assertArrayEquals(TEST_PACKET_IPV4HDR_TCPHDR_DATA, packet.array());
     }
 
@@ -683,6 +818,39 @@ public class PacketBuilderTest {
                 IPPROTO_IP, IPPROTO_UDP, DATA);
         checkUdpPacket(false /* hasEther */, IPPROTO_IP, true /* hasData */, packet);
         assertArrayEquals(TEST_PACKET_IPV4HDR_UDPHDR_DATA, packet.array());
+    }
+
+    @Test
+    public void testBuildPacketEtherIPv6TcpData() throws Exception {
+        final ByteBuffer packet = buildPacket(SRC_MAC, DST_MAC, IPPROTO_IPV6, IPPROTO_TCP, DATA);
+        checkTcpPacket(true /* hasEther */, IPPROTO_IPV6, true /* hasData */, packet);
+        assertArrayEquals(TEST_PACKET_ETHERHDR_IPV6HDR_TCPHDR_DATA,
+                packet.array());
+    }
+
+    @Test
+    public void testBuildPacketEtherIPv6Tcp() throws Exception {
+        final ByteBuffer packet = buildPacket(SRC_MAC, DST_MAC, IPPROTO_IPV6, IPPROTO_TCP,
+                null /*data*/);
+        checkTcpPacket(true /* hasEther */, IPPROTO_IPV6, false /* hasData */, packet);
+        assertArrayEquals(TEST_PACKET_ETHERHDR_IPV6HDR_TCPHDR,
+                packet.array());
+    }
+
+    @Test
+    public void testBuildPacketIPv6TcpData() throws Exception {
+        final ByteBuffer packet = buildPacket(null /* srcMac */, null /* dstMac */, IPPROTO_IPV6,
+                IPPROTO_TCP, DATA);
+        checkTcpPacket(false /* hasEther */, IPPROTO_IPV6, true /* hasData */, packet);
+        assertArrayEquals(TEST_PACKET_IPV6HDR_TCPHDR_DATA, packet.array());
+    }
+
+    @Test
+    public void testBuildPacketIPv6Tcp() throws Exception {
+        final ByteBuffer packet = buildPacket(null /* srcMac */, null /* dstMac */, IPPROTO_IPV6,
+                IPPROTO_TCP, null /*data*/);
+        checkTcpPacket(false /* hasEther */, IPPROTO_IPV6, false /* hasData */, packet);
+        assertArrayEquals(TEST_PACKET_IPV6HDR_TCPHDR, packet.array());
     }
 
     @Test
