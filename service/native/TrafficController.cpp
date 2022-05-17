@@ -98,6 +98,7 @@ const std::string uidMatchTypeToString(uint32_t match) {
     FLAG_MSG_TRANS(matchType, RESTRICTED_MATCH, match);
     FLAG_MSG_TRANS(matchType, LOW_POWER_STANDBY_MATCH, match);
     FLAG_MSG_TRANS(matchType, IIF_MATCH, match);
+    FLAG_MSG_TRANS(matchType, LOCKDOWN_VPN_MATCH, match);
     if (match) {
         return StringPrintf("Unknown match: %u", match);
     }
@@ -286,16 +287,13 @@ Status TrafficController::removeRule(uint32_t uid, UidOwnerMatchType match) {
 }
 
 Status TrafficController::addRule(uint32_t uid, UidOwnerMatchType match, uint32_t iif) {
-    // iif should be non-zero if and only if match == MATCH_IIF
-    if (match == IIF_MATCH && iif == 0) {
-        return statusFromErrno(EINVAL, "Interface match must have nonzero interface index");
-    } else if (match != IIF_MATCH && iif != 0) {
+    if (match != IIF_MATCH && iif != 0) {
         return statusFromErrno(EINVAL, "Non-interface match must have zero interface index");
     }
     auto oldMatch = mUidOwnerMap.readValue(uid);
     if (oldMatch.ok()) {
         UidOwnerValue newMatch = {
-                .iif = iif ? iif : oldMatch.value().iif,
+                .iif = (match == IIF_MATCH) ? iif : oldMatch.value().iif,
                 .rule = oldMatch.value().rule | match,
         };
         RETURN_IF_NOT_OK(mUidOwnerMap.writeValue(uid, newMatch, BPF_ANY));
@@ -335,6 +333,8 @@ FirewallType TrafficController::getFirewallType(ChildChain chain) {
             return ALLOWLIST;
         case LOW_POWER_STANDBY:
             return ALLOWLIST;
+        case LOCKDOWN:
+            return DENYLIST;
         case NONE:
         default:
             return DENYLIST;
@@ -359,6 +359,9 @@ int TrafficController::changeUidOwnerRule(ChildChain chain, uid_t uid, FirewallR
             break;
         case LOW_POWER_STANDBY:
             res = updateOwnerMapEntry(LOW_POWER_STANDBY_MATCH, uid, rule, type);
+            break;
+        case LOCKDOWN:
+            res = updateOwnerMapEntry(LOCKDOWN_VPN_MATCH, uid, rule, type);
             break;
         case NONE:
         default:
@@ -399,9 +402,6 @@ Status TrafficController::replaceRulesInMap(const UidOwnerMatchType match,
 
 Status TrafficController::addUidInterfaceRules(const int iif,
                                                const std::vector<int32_t>& uidsToAdd) {
-    if (!iif) {
-        return statusFromErrno(EINVAL, "Interface rule must specify interface");
-    }
     std::lock_guard guard(mMutex);
 
     for (auto uid : uidsToAdd) {
