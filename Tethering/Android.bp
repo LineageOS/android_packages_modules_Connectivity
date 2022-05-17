@@ -33,6 +33,7 @@ java_defaults {
         ":framework-connectivity-shared-srcs",
         ":tethering-module-utils-srcs",
         ":services-tethering-shared-srcs",
+        ":statslog-tethering-java-gen",
     ],
     static_libs: [
         "androidx.annotation_annotation",
@@ -222,4 +223,12 @@ java_library_static {
     static_libs: ["tetheringprotos"],
     apex_available: ["com.android.tethering"],
     min_sdk_version: "30",
+}
+
+genrule {
+    name: "statslog-tethering-java-gen",
+    tools: ["stats-log-api-gen"],
+    cmd: "$(location stats-log-api-gen) --java $(out) --module network_tethering" +
+         " --javaPackage com.android.networkstack.tethering.metrics --javaClass TetheringStatsLog",
+    out: ["com/android/networkstack/tethering/metrics/TetheringStatsLog.java"],
 }
