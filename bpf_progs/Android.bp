@@ -123,5 +123,5 @@ bpf {
     include_dirs: [
         "frameworks/libs/net/common/netd/libnetdutils/include",
     ],
-    sub_dir: "net_shared",
+    sub_dir: "netd_shared",
 }
