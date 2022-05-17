@@ -32,6 +32,7 @@ import static android.text.format.DateUtils.SECOND_IN_MILLIS;
 import static com.android.net.module.util.NetworkStatsUtils.multiplySafeByRational;
 
 import android.annotation.NonNull;
+import android.annotation.Nullable;
 import android.annotation.SystemApi;
 import android.compat.annotation.UnsupportedAppUsage;
 import android.os.Build;
@@ -947,6 +948,25 @@ public final class NetworkStatsHistory implements Parcelable {
         final CharArrayWriter writer = new CharArrayWriter();
         dump(new IndentingPrintWriter(writer, "  "), false);
         return writer.toString();
+    }
+
+    /**
+     * Same as "equals", but not actually called equals as this would affect public API behavior.
+     * @hide
+     */
+    @Nullable
+    public boolean isSameAs(NetworkStatsHistory other) {
+        return bucketCount == other.bucketCount
+                && Arrays.equals(bucketStart, other.bucketStart)
+                // Don't check activeTime since it can change on import due to the importer using
+                // recordHistory. It's also not exposed by the APIs or present in dumpsys or
+                // toString().
+                && Arrays.equals(rxBytes, other.rxBytes)
+                && Arrays.equals(rxPackets, other.rxPackets)
+                && Arrays.equals(txBytes, other.txBytes)
+                && Arrays.equals(txPackets, other.txPackets)
+                && Arrays.equals(operations, other.operations)
+                && totalBytes == other.totalBytes;
     }
 
     @UnsupportedAppUsage
