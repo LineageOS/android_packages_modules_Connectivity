@@ -172,6 +172,9 @@ public class PrivateAddressCoordinator {
             return new LinkAddress(LEGACY_WIFI_P2P_IFACE_ADDRESS);
         }
 
+        // This ensures that tethering isn't started on 2 different interfaces with the same type.
+        // Once tethering could support multiple interface with the same type,
+        // TetheringSoftApCallback would need to handle it among others.
         final LinkAddress cachedAddress = mCachedAddresses.get(ipServer.interfaceType());
         if (useLastAddress && cachedAddress != null
                 && !isConflictWithUpstream(asIpPrefix(cachedAddress))) {
