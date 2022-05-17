@@ -233,7 +233,7 @@ int BpfHandler::untagSocket(int sockFd) {
     if (sock_cookie == NONEXISTENT_COOKIE) return -errno;
     base::Result<void> res = mCookieTagMap.deleteValue(sock_cookie);
     if (!res.ok()) {
-        ALOGE("Failed to untag socket: %s\n", strerror(res.error().code()));
+        ALOGE("Failed to untag socket: %s", strerror(res.error().code()));
         return -res.error().code();
     }
     return 0;
