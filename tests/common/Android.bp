@@ -23,7 +23,7 @@ package {
 
 java_library {
     name: "FrameworksNetCommonTests",
-    defaults: ["framework-connectivity-test-defaults"],
+    defaults: ["framework-connectivity-internal-test-defaults"],
     srcs: [
         "java/**/*.java",
         "java/**/*.kt",
@@ -49,6 +49,7 @@ java_library {
 // jarjar stops at the first matching rule, so order of concatenation affects the output.
 genrule {
     name: "ConnectivityCoverageJarJarRules",
+    defaults: ["jarjar-rules-combine-defaults"],
     srcs: [
         "tethering-jni-jarjar-rules.txt",
         ":connectivity-jarjar-rules",
@@ -56,8 +57,6 @@ genrule {
         ":NetworkStackJarJarRules",
     ],
     out: ["jarjar-rules-connectivity-coverage.txt"],
-    // Concat files with a line break in the middle
-    cmd: "for src in $(in); do cat $${src}; echo; done > $(out)",
     visibility: ["//visibility:private"],
 }
 
@@ -84,7 +83,7 @@ android_test {
     target_sdk_version: "31",
     test_suites: ["general-tests", "mts-tethering"],
     defaults: [
-        "framework-connectivity-test-defaults",
+        "framework-connectivity-internal-test-defaults",
         "FrameworksNetTests-jni-defaults",
         "libnetworkstackutilsjni_deps",
     ],
@@ -138,6 +137,30 @@ java_defaults {
         // if sdk_version="" this gets automatically included, but here we need to add manually.
         "framework-res",
     ],
+}
+
+// defaults for tests that need to build against framework-connectivity's @hide APIs, but also
+// using fully @hide classes that are jarjared (because they have no API member). Similar to
+// framework-connectivity-test-defaults above but uses pre-jarjar class names.
+// Only usable from targets that have visibility on framework-connectivity-pre-jarjar, and apply
+// connectivity jarjar rules so that references to jarjared classes still match: this is limited to
+// connectivity internal tests only.
+java_defaults {
+    name: "framework-connectivity-internal-test-defaults",
+    sdk_version: "core_platform", // tests can use @CorePlatformApi's
+    libs: [
+        // order matters: classes in framework-connectivity are resolved before framework,
+        // meaning @hide APIs in framework-connectivity are resolved before @SystemApi
+        // stubs in framework
+        "framework-connectivity-pre-jarjar",
+        "framework-connectivity-t-pre-jarjar",
+        "framework-tethering.impl",
+        "framework",
+
+        // if sdk_version="" this gets automatically included, but here we need to add manually.
+        "framework-res",
+    ],
+    defaults_visibility: ["//packages/modules/Connectivity/tests:__subpackages__"],
 }
 
 // Defaults for tests that want to run in mainline-presubmit.

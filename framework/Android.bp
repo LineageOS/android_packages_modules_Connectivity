@@ -111,6 +111,7 @@ java_library {
         // because the tethering stubs depend on the connectivity stubs (e.g.,
         // TetheringRequest depends on LinkAddress).
         "framework-tethering.stubs.module_lib",
+        "framework-wifi.stubs.module_lib",
     ],
     visibility: ["//packages/modules/Connectivity:__subpackages__"]
 }
@@ -119,7 +120,7 @@ java_sdk_library {
     name: "framework-connectivity",
     defaults: ["framework-connectivity-defaults"],
     installable: true,
-    jarjar_rules: ":connectivity-jarjar-rules",
+    jarjar_rules: ":framework-connectivity-jarjar-rules",
     permitted_packages: ["android.net"],
     impl_library_visibility: [
         "//packages/modules/Connectivity/Tethering/apex",
@@ -221,4 +222,36 @@ gensrcs {
         ":framework-connectivity-protos",
     ],
     output_extension: "srcjar",
+}
+
+java_genrule {
+    name: "framework-connectivity-jarjar-rules",
+    tool_files: [
+        ":connectivity-hiddenapi-files",
+        ":framework-connectivity-pre-jarjar",
+        ":framework-connectivity-t-pre-jarjar",
+        ":framework-connectivity.stubs.module_lib",
+        ":framework-connectivity-t.stubs.module_lib",
+        "jarjar-excludes.txt",
+    ],
+    tools: [
+        "jarjar-rules-generator",
+        "dexdump",
+    ],
+    out: ["framework_connectivity_jarjar_rules.txt"],
+    cmd: "$(location jarjar-rules-generator) " +
+        "--jars $(location :framework-connectivity-pre-jarjar) " +
+        "$(location :framework-connectivity-t-pre-jarjar) " +
+        "--prefix android.net.connectivity " +
+        "--apistubs $(location :framework-connectivity.stubs.module_lib) " +
+        "$(location :framework-connectivity-t.stubs.module_lib) " +
+        "--unsupportedapi $(locations :connectivity-hiddenapi-files) " +
+        "--excludes $(location jarjar-excludes.txt) " +
+        "--dexdump $(location dexdump) " +
+        "--output $(out)",
+    visibility: [
+        "//packages/modules/Connectivity/framework:__subpackages__",
+        "//packages/modules/Connectivity/framework-t:__subpackages__",
+        "//packages/modules/Connectivity/service",
+    ],
 }
