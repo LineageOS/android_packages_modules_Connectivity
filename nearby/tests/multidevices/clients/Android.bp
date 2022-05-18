@@ -41,6 +41,9 @@ android_app {
     optimize: {
         enabled: true,
         shrink: false,
+        // Required to avoid class collisions from static and shared linking
+        // of MessageNano.
+        proguard_compatibility: true,
         proguard_flags_files: ["proguard.flags"],
     },
 }
