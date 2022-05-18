@@ -14,6 +14,9 @@
  * limitations under the License.
  */
 
+// The resulting .o needs to load on the Android T Beta 3 bpfloader v0.13+
+#define BPFLOADER_MIN_VER 13u
+
 #include <bpf_helpers.h>
 #include <linux/bpf.h>
 #include <linux/if.h>
@@ -214,9 +217,16 @@ static inline int bpf_owner_match(struct __sk_buff* skb, uint32_t uid, int direc
             return BPF_DROP;
         }
     }
-    if (direction == BPF_INGRESS && (uidRules & IIF_MATCH)) {
-        // Drops packets not coming from lo nor the allowlisted interface
-        if (allowed_iif && skb->ifindex != 1 && skb->ifindex != allowed_iif) {
+    if (direction == BPF_INGRESS && skb->ifindex != 1) {
+        if (uidRules & IIF_MATCH) {
+            if (allowed_iif && skb->ifindex != allowed_iif) {
+                // Drops packets not coming from lo nor the allowed interface
+                // allowed interface=0 is a wildcard and does not drop packets
+                return BPF_DROP_UNLESS_DNS;
+            }
+        } else if (uidRules & LOCKDOWN_VPN_MATCH) {
+            // Drops packets not coming from lo and rule does not have IIF_MATCH but has
+            // LOCKDOWN_VPN_MATCH
             return BPF_DROP_UNLESS_DNS;
         }
     }
@@ -373,8 +383,7 @@ DEFINE_BPF_PROG("skfilter/denylist/xtbpf", AID_ROOT, AID_NET_ADMIN, xt_bpf_denyl
     return BPF_NOMATCH;
 }
 
-DEFINE_BPF_PROG_KVER("cgroupsock/inet/create", AID_ROOT, AID_ROOT, inet_socket_create,
-                     KVER(4, 14, 0))
+DEFINE_BPF_PROG("cgroupsock/inet/create", AID_ROOT, AID_ROOT, inet_socket_create)
 (struct bpf_sock* sk) {
     uint64_t gid_uid = bpf_get_current_uid_gid();
     /*
