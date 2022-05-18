@@ -24,9 +24,9 @@ import android.util.Log;
 import java.util.concurrent.Executor;
 
 /** @hide */
-public final class TcpSocketKeepalive extends SocketKeepalive {
+final class TcpSocketKeepalive extends SocketKeepalive {
 
-    public TcpSocketKeepalive(@NonNull IConnectivityManager service,
+    TcpSocketKeepalive(@NonNull IConnectivityManager service,
             @NonNull Network network,
             @NonNull ParcelFileDescriptor pfd,
             @NonNull Executor executor,
@@ -50,7 +50,7 @@ public final class TcpSocketKeepalive extends SocketKeepalive {
      *   acknowledgement.
      */
     @Override
-    protected void startImpl(int intervalSec) {
+    void startImpl(int intervalSec) {
         mExecutor.execute(() -> {
             try {
                 mService.startTcpKeepalive(mNetwork, mPfd, intervalSec, mCallback);
@@ -62,7 +62,7 @@ public final class TcpSocketKeepalive extends SocketKeepalive {
     }
 
     @Override
-    protected void stopImpl() {
+    void stopImpl() {
         mExecutor.execute(() -> {
             try {
                 if (mSlot != null) {
