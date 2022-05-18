@@ -53,10 +53,9 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import java.net.Inet6Address
-import java.net.NetworkInterface
-import java.util.concurrent.Executor
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import kotlin.test.fail
@@ -76,6 +75,7 @@ class EthernetManagerTest {
     private val context by lazy { InstrumentationRegistry.getInstrumentation().context }
     private val em by lazy { EthernetManagerShimImpl.newInstance(context) }
 
+    private val ifaceListener = EthernetStateListener()
     private val createdIfaces = ArrayList<EthernetTestInterface>()
     private val addedListeners = ArrayList<EthernetStateListener>()
 
@@ -154,6 +154,12 @@ class EthernetManagerTest {
             return events.poll(TIMEOUT_MS) ?: fail("Did not receive callback after ${TIMEOUT_MS}ms")
         }
 
+        fun eventuallyExpect(expected: CallbackEntry) = events.poll(TIMEOUT_MS) { it == expected }
+
+        fun eventuallyExpect(iface: EthernetTestInterface, state: Int, role: Int) {
+            assertNotNull(eventuallyExpect(createChangeEvent(iface, state, role)))
+        }
+
         fun assertNoCallback() {
             val cb = events.poll(NO_CALLBACK_TIMEOUT_MS)
             assertNull(cb, "Expected no callback but got $cb")
@@ -163,6 +169,7 @@ class EthernetManagerTest {
     @Before
     fun setUp() {
         setIncludeTestInterfaces(true)
+        addInterfaceStateListener(ifaceListener)
     }
 
     @After
@@ -176,18 +183,20 @@ class EthernetManagerTest {
         }
     }
 
-    private fun addInterfaceStateListener(executor: Executor, listener: EthernetStateListener) {
+    private fun addInterfaceStateListener(listener: EthernetStateListener) {
         runAsShell(CONNECTIVITY_USE_RESTRICTED_NETWORKS) {
-            em.addInterfaceStateListener(executor, listener)
+            em.addInterfaceStateListener(HandlerExecutor(Handler(Looper.getMainLooper())), listener)
         }
         addedListeners.add(listener)
     }
 
     private fun createInterface(): EthernetTestInterface {
-        return EthernetTestInterface(
+        val iface = EthernetTestInterface(
             context,
             Handler(Looper.getMainLooper())
         ).also { createdIfaces.add(it) }
+        ifaceListener.eventuallyExpect(iface, STATE_LINK_UP, ROLE_CLIENT)
+        return iface
     }
 
     private fun setIncludeTestInterfaces(value: Boolean) {
@@ -203,12 +212,10 @@ class EthernetManagerTest {
 
     @Test
     fun testCallbacks() {
-        val executor = HandlerExecutor(Handler(Looper.getMainLooper()))
-
         // If an interface exists when the callback is registered, it is reported on registration.
         val iface = createInterface()
         val listener1 = EthernetStateListener()
-        addInterfaceStateListener(executor, listener1)
+        addInterfaceStateListener(listener1)
         validateListenerOnRegistration(listener1)
 
         // If an interface appears, existing callbacks see it.
@@ -221,18 +228,18 @@ class EthernetManagerTest {
 
         // Register a new listener, it should see state of all existing interfaces immediately.
         val listener2 = EthernetStateListener()
-        addInterfaceStateListener(executor, listener2)
+        addInterfaceStateListener(listener2)
         validateListenerOnRegistration(listener2)
 
         // Removing interfaces first sends link down, then STATE_ABSENT/ROLE_NONE.
         removeInterface(iface)
-        for (listener in addedListeners) {
+        for (listener in listOf(listener1, listener2)) {
             listener.expectCallback(iface, STATE_LINK_DOWN, ROLE_CLIENT)
             listener.expectCallback(iface, STATE_ABSENT, ROLE_NONE)
         }
 
         removeInterface(iface2)
-        for (listener in addedListeners) {
+        for (listener in listOf(listener1, listener2)) {
             listener.expectCallback(iface2, STATE_LINK_DOWN, ROLE_CLIENT)
             listener.expectCallback(iface2, STATE_ABSENT, ROLE_NONE)
             listener.assertNoCallback()
