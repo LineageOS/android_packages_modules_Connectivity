@@ -112,7 +112,7 @@ java_defaults {
     name: "FrameworksNetTestsDefaults",
     min_sdk_version: "30",
     defaults: [
-        "framework-connectivity-internal-test-defaults",
+        "framework-connectivity-test-defaults",
     ],
     srcs: [
         "java/**/*.java",
