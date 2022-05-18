@@ -73,10 +73,9 @@ public final class QosSocketInfo implements Parcelable {
      * The parcel file descriptor wrapped around the socket's file descriptor.
      *
      * @return the parcel file descriptor of the socket
-     * @hide
      */
     @NonNull
-    public ParcelFileDescriptor getParcelFileDescriptor() {
+    ParcelFileDescriptor getParcelFileDescriptor() {
         return mParcelFileDescriptor;
     }
 
