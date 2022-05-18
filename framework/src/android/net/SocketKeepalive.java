@@ -52,8 +52,7 @@ import java.util.concurrent.Executor;
  * request. If it does, it MUST support at least 3 concurrent keepalive slots.
  */
 public abstract class SocketKeepalive implements AutoCloseable {
-    /** @hide */
-    protected static final String TAG = "SocketKeepalive";
+    static final String TAG = "SocketKeepalive";
 
     /**
      * Success. It indicates there is no error.
@@ -216,22 +215,15 @@ public abstract class SocketKeepalive implements AutoCloseable {
         }
     }
 
-    /** @hide */
-    @NonNull protected final IConnectivityManager mService;
-    /** @hide */
-    @NonNull protected final Network mNetwork;
-    /** @hide */
-    @NonNull protected final ParcelFileDescriptor mPfd;
-    /** @hide */
-    @NonNull protected final Executor mExecutor;
-    /** @hide */
-    @NonNull protected final ISocketKeepaliveCallback mCallback;
+    @NonNull final IConnectivityManager mService;
+    @NonNull final Network mNetwork;
+    @NonNull final ParcelFileDescriptor mPfd;
+    @NonNull final Executor mExecutor;
+    @NonNull final ISocketKeepaliveCallback mCallback;
     // TODO: remove slot since mCallback could be used to identify which keepalive to stop.
-    /** @hide */
-    @Nullable protected Integer mSlot;
+    @Nullable Integer mSlot;
 
-    /** @hide */
-    public SocketKeepalive(@NonNull IConnectivityManager service, @NonNull Network network,
+    SocketKeepalive(@NonNull IConnectivityManager service, @NonNull Network network,
             @NonNull ParcelFileDescriptor pfd,
             @NonNull Executor executor, @NonNull Callback callback) {
         mService = service;
@@ -311,8 +303,7 @@ public abstract class SocketKeepalive implements AutoCloseable {
         startImpl(intervalSec);
     }
 
-    /** @hide */
-    protected abstract void startImpl(int intervalSec);
+    abstract void startImpl(int intervalSec);
 
     /**
      * Requests that keepalive be stopped. The application must wait for {@link Callback#onStopped}
@@ -322,8 +313,7 @@ public abstract class SocketKeepalive implements AutoCloseable {
         stopImpl();
     }
 
-    /** @hide */
-    protected abstract void stopImpl();
+    abstract void stopImpl();
 
     /**
      * Deactivate this {@link SocketKeepalive} and free allocated resources. The instance won't be

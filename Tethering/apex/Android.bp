@@ -105,12 +105,6 @@ android_app_certificate {
     certificate: "com.android.tethering",
 }
 
-filegroup {
-    name: "connectivity-hiddenapi-files",
-    srcs: ["hiddenapi/*.txt"],
-    visibility: ["//packages/modules/Connectivity:__subpackages__"],
-}
-
 // Encapsulate the contributions made by the com.android.tethering to the bootclasspath.
 bootclasspath_fragment {
     name: "com.android.tethering-bootclasspath-fragment",
