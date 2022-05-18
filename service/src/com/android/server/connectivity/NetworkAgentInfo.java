@@ -19,6 +19,7 @@ package com.android.server.connectivity;
 import static android.net.ConnectivityDiagnosticsManager.ConnectivityReport;
 import static android.net.NetworkCapabilities.NET_CAPABILITY_NOT_RESTRICTED;
 import static android.net.NetworkCapabilities.TRANSPORT_CELLULAR;
+import static android.net.NetworkCapabilities.TRANSPORT_ETHERNET;
 import static android.net.NetworkCapabilities.TRANSPORT_TEST;
 import static android.net.NetworkCapabilities.transportNamesOf;
 
@@ -1224,20 +1225,22 @@ public class NetworkAgentInfo implements Comparable<NetworkAgentInfo>, NetworkRa
      *
      * @param nc the capabilities to sanitize
      * @param creatorUid the UID of the process creating this network agent
+     * @param hasAutomotiveFeature true if this device has the automotive feature, false otherwise
      * @param authenticator the carrier privilege authenticator to check for telephony constraints
      */
     public static void restrictCapabilitiesFromNetworkAgent(@NonNull final NetworkCapabilities nc,
-            final int creatorUid, @NonNull final CarrierPrivilegeAuthenticator authenticator) {
+            final int creatorUid, final boolean hasAutomotiveFeature,
+            @Nullable final CarrierPrivilegeAuthenticator authenticator) {
         if (nc.hasTransport(TRANSPORT_TEST)) {
             nc.restrictCapabilitiesForTestNetwork(creatorUid);
         }
-        if (!areAllowedUidsAcceptableFromNetworkAgent(nc, authenticator)) {
+        if (!areAllowedUidsAcceptableFromNetworkAgent(nc, hasAutomotiveFeature, authenticator)) {
             nc.setAllowedUids(new ArraySet<>());
         }
     }
 
     private static boolean areAllowedUidsAcceptableFromNetworkAgent(
-            @NonNull final NetworkCapabilities nc,
+            @NonNull final NetworkCapabilities nc, final boolean hasAutomotiveFeature,
             @Nullable final CarrierPrivilegeAuthenticator carrierPrivilegeAuthenticator) {
         // NCs without access UIDs are fine.
         if (!nc.hasAllowedUids()) return true;
@@ -1252,6 +1255,11 @@ public class NetworkAgentInfo implements Comparable<NetworkAgentInfo>, NetworkRa
         // access UIDs
         if (nc.hasTransport(TRANSPORT_TEST)) return true;
 
+        // Factories that make ethernet networks can allow UIDs for automotive devices.
+        if (nc.hasTransport(TRANSPORT_ETHERNET) && hasAutomotiveFeature) {
+            return true;
+        }
+
         // Factories that make cell networks can allow the UID for the carrier service package.
         // This can only work in T where there is support for CarrierPrivilegeAuthenticator
         if (null != carrierPrivilegeAuthenticator
@@ -1261,8 +1269,6 @@ public class NetworkAgentInfo implements Comparable<NetworkAgentInfo>, NetworkRa
                         nc.getAllowedUidsNoCopy().valueAt(0), nc))) {
             return true;
         }
-
-        // TODO : accept Railway callers
 
         return false;
     }
