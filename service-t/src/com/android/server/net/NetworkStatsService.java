@@ -222,15 +222,15 @@ public class NetworkStatsService extends INetworkStatsService.Stub {
             "netstats_combine_subtype_enabled";
 
     private static final String UID_COUNTERSET_MAP_PATH =
-            "/sys/fs/bpf/net_shared/map_netd_uid_counterset_map";
+            "/sys/fs/bpf/netd_shared/map_netd_uid_counterset_map";
     private static final String COOKIE_TAG_MAP_PATH =
-            "/sys/fs/bpf/net_shared/map_netd_cookie_tag_map";
+            "/sys/fs/bpf/netd_shared/map_netd_cookie_tag_map";
     private static final String APP_UID_STATS_MAP_PATH =
-            "/sys/fs/bpf/net_shared/map_netd_app_uid_stats_map";
+            "/sys/fs/bpf/netd_shared/map_netd_app_uid_stats_map";
     private static final String STATS_MAP_A_PATH =
-            "/sys/fs/bpf/net_shared/map_netd_stats_map_A";
+            "/sys/fs/bpf/netd_shared/map_netd_stats_map_A";
     private static final String STATS_MAP_B_PATH =
-            "/sys/fs/bpf/net_shared/map_netd_stats_map_B";
+            "/sys/fs/bpf/netd_shared/map_netd_stats_map_B";
 
     private final Context mContext;
     private final NetworkStatsFactory mStatsFactory;

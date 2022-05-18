@@ -748,7 +748,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
      * The BPF program attached to the tc-police hook to account for to-be-dropped traffic.
      */
     private static final String TC_POLICE_BPF_PROG_PATH =
-            "/sys/fs/bpf/net_shared/prog_netd_schedact_ingress_account";
+            "/sys/fs/bpf/netd_shared/prog_netd_schedact_ingress_account";
 
     private static String eventName(int what) {
         return sMagicDecoderRing.get(what, Integer.toString(what));
