@@ -32,6 +32,7 @@ import static android.text.format.DateUtils.MINUTE_IN_MILLIS;
 import static com.android.testutils.DevSdkIgnoreRuleKt.SC_V2;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyInt;
@@ -64,6 +65,7 @@ import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 
+import java.util.ArrayList;
 import java.util.Objects;
 
 /**
@@ -182,6 +184,51 @@ public class NetworkStatsObserversTest {
         assertTrue(request2.requestId > request1.requestId);
         assertTrue(Objects.equals(sTemplateWifi, request2.template));
         assertEquals(THRESHOLD_BYTES, request2.thresholdInBytes);
+    }
+
+    @Test
+    public void testRegister_limit() throws Exception {
+        final DataUsageRequest inputRequest = new DataUsageRequest(
+                DataUsageRequest.REQUEST_ID_UNSET, sTemplateWifi, THRESHOLD_BYTES);
+
+        // Register maximum requests for red.
+        final ArrayList<DataUsageRequest> redRequests = new ArrayList<>();
+        for (int i = 0; i < NetworkStatsObservers.MAX_REQUESTS_PER_UID; i++) {
+            final DataUsageRequest returnedRequest =
+                    mStatsObservers.register(mContext, inputRequest, mUsageCallback,
+                            PID_RED, UID_RED, PACKAGE_RED, NetworkStatsAccess.Level.DEVICE);
+            redRequests.add(returnedRequest);
+            assertTrue(returnedRequest.requestId > 0);
+        }
+
+        // Verify request exceeds the limit throws.
+        assertThrows(IllegalStateException.class, () ->
+                mStatsObservers.register(mContext, inputRequest, mUsageCallback,
+                    PID_RED, UID_RED, PACKAGE_RED, NetworkStatsAccess.Level.DEVICE));
+
+        // Verify another uid is not affected.
+        final ArrayList<DataUsageRequest> blueRequests = new ArrayList<>();
+        for (int i = 0; i < NetworkStatsObservers.MAX_REQUESTS_PER_UID; i++) {
+            final DataUsageRequest returnedRequest =
+                    mStatsObservers.register(mContext, inputRequest, mUsageCallback,
+                            PID_BLUE, UID_BLUE, PACKAGE_BLUE, NetworkStatsAccess.Level.DEVICE);
+            blueRequests.add(returnedRequest);
+            assertTrue(returnedRequest.requestId > 0);
+        }
+
+        // Again, verify request exceeds the limit throws for the 2nd uid.
+        assertThrows(IllegalStateException.class, () ->
+                mStatsObservers.register(mContext, inputRequest, mUsageCallback,
+                        PID_RED, UID_RED, PACKAGE_RED, NetworkStatsAccess.Level.DEVICE));
+
+        // Unregister all registered requests. Note that exceptions cannot be tested since
+        // unregister is handled in the handler thread.
+        for (final DataUsageRequest request : redRequests) {
+            mStatsObservers.unregister(request, UID_RED);
+        }
+        for (final DataUsageRequest request : blueRequests) {
+            mStatsObservers.unregister(request, UID_BLUE);
+        }
     }
 
     @Test
