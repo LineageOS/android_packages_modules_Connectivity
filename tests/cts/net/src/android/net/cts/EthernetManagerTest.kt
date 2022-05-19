@@ -93,7 +93,7 @@ class EthernetManagerTest {
                 val tnm = context.getSystemService(TestNetworkManager::class.java)
                 tnm.createTapInterface(false /* bringUp */)
             }
-            val mtu = NetworkInterface.getByName(tapInterface.interfaceName).getMTU()
+            val mtu = 1500
             packetReader = TapPacketReader(handler, tapInterface.fileDescriptor.fileDescriptor, mtu)
             raResponder = RouterAdvertisementResponder(packetReader)
             raResponder.addRouterEntry(MacAddress.fromString("01:23:45:67:89:ab"),
