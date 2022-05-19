@@ -608,6 +608,41 @@ class NsdManagerTest {
         }
     }
 
+    @Test
+    fun testNsdManager_RegisterServiceNameWithNonStandardCharacters() {
+        val serviceNames = "^Nsd.Test|Non-#AsCiI\\Characters&\\ufffe テスト 測試"
+        val si = NsdServiceInfo().apply {
+            serviceType = SERVICE_TYPE
+            serviceName = serviceNames
+            port = 12345 // Test won't try to connect so port does not matter
+        }
+
+        // Register the service name which contains non-standard characters.
+        val registrationRecord = NsdRegistrationRecord()
+        nsdManager.registerService(si, NsdManager.PROTOCOL_DNS_SD, registrationRecord)
+        registrationRecord.expectCallback<ServiceRegistered>()
+
+        tryTest {
+            // Discover that service name.
+            val discoveryRecord = NsdDiscoveryRecord()
+            nsdManager.discoverServices(
+                SERVICE_TYPE, NsdManager.PROTOCOL_DNS_SD, discoveryRecord
+            )
+            val foundInfo = discoveryRecord.waitForServiceDiscovered(serviceNames)
+
+            // Expect that resolving the service name works properly even service name contains
+            // non-standard characters.
+            val resolveRecord = NsdResolveRecord()
+            nsdManager.resolveService(foundInfo, resolveRecord)
+            val resolvedCb = resolveRecord.expectCallback<ServiceResolved>()
+            assertEquals(foundInfo.serviceName, resolvedCb.serviceInfo.serviceName)
+        } cleanupStep {
+            nsdManager.unregisterService(registrationRecord)
+        } cleanup {
+            registrationRecord.expectCallback<ServiceUnregistered>()
+        }
+    }
+
     /**
      * Register a service and return its registration record.
      */
