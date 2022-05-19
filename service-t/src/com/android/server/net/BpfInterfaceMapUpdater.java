@@ -38,7 +38,7 @@ public class BpfInterfaceMapUpdater {
     private static final String TAG = BpfInterfaceMapUpdater.class.getSimpleName();
     // This is current path but may be changed soon.
     private static final String IFACE_INDEX_NAME_MAP_PATH =
-            "/sys/fs/bpf/net_shared/map_netd_iface_index_name_map";
+            "/sys/fs/bpf/netd_shared/map_netd_iface_index_name_map";
     private final IBpfMap<U32, InterfaceMapValue> mBpfMap;
     private final INetd mNetd;
     private final Handler mHandler;
