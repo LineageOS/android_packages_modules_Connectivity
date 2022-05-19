@@ -3428,6 +3428,10 @@ public class ConnectivityService extends IConnectivityManager.Stub
         for (NetworkAgentInfo nai : networksSortedById()) {
             pw.println(nai.toString());
             pw.increaseIndent();
+            pw.println("Nat464Xlat:");
+            pw.increaseIndent();
+            nai.dumpNat464Xlat(pw);
+            pw.decreaseIndent();
             pw.println(String.format(
                     "Requests: REQUEST:%d LISTEN:%d BACKGROUND_REQUEST:%d total:%d",
                     nai.numForegroundNetworkRequests(),
@@ -3442,10 +3446,6 @@ public class ConnectivityService extends IConnectivityManager.Stub
             pw.println("Inactivity Timers:");
             pw.increaseIndent();
             nai.dumpInactivityTimers(pw);
-            pw.decreaseIndent();
-            pw.println("Nat464Xlat:");
-            pw.increaseIndent();
-            nai.dumpNat464Xlat(pw);
             pw.decreaseIndent();
             pw.decreaseIndent();
         }

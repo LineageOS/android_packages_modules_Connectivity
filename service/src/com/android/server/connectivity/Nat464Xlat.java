@@ -540,7 +540,7 @@ public class Nat464Xlat {
                 mClatCoordinator.dump(pw);
                 pw.decreaseIndent();
             } else {
-                pw.println("<not start>");
+                pw.println("<not started>");
             }
         }
     }
