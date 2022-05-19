@@ -17,10 +17,14 @@
 package com.android.server.net
 
 import android.util.SystemConfigFileCommitEventLogger
+import com.android.testutils.DevSdkIgnoreRule.IgnoreUpTo
+import com.android.testutils.DevSdkIgnoreRunner
+import com.android.testutils.SC_V2
 import com.android.testutils.assertThrows
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
+import org.junit.runner.RunWith
 import java.io.File
 import java.io.IOException
 import java.nio.file.Files
@@ -32,6 +36,8 @@ import java.nio.file.attribute.PosixFilePermission.OWNER_WRITE
 import java.util.Random
 import kotlin.test.assertEquals
 
+@RunWith(DevSdkIgnoreRunner::class)
+@IgnoreUpTo(SC_V2)
 class PersistentIntTest {
     val tempFilesCreated = mutableSetOf<Path>()
     lateinit var tempDir: Path
