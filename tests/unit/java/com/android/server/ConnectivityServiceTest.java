@@ -15536,7 +15536,7 @@ public class ConnectivityServiceTest {
 
         mEthernetNetworkAgent = new TestNetworkAgentWrapper(TRANSPORT_ETHERNET,
                 new LinkProperties(), agentNetCaps.build());
-        validateAllowedUids(mEthernetNetworkAgent, TRANSPORT_ETHERNET, agentNetCaps);
+        validateAllowedUids(mEthernetNetworkAgent, TRANSPORT_ETHERNET, agentNetCaps, true);
     }
 
     @Test
@@ -15560,12 +15560,12 @@ public class ConnectivityServiceTest {
 
         mCellNetworkAgent = new TestNetworkAgentWrapper(TRANSPORT_CELLULAR,
                 new LinkProperties(), agentNetCaps.build());
-        validateAllowedUids(mCellNetworkAgent, TRANSPORT_CELLULAR, agentNetCaps);
+        validateAllowedUids(mCellNetworkAgent, TRANSPORT_CELLULAR, agentNetCaps, false);
     }
 
     private void validateAllowedUids(final TestNetworkAgentWrapper testAgent,
             @NetworkCapabilities.Transport final int transportUnderTest,
-            final NetworkCapabilities.Builder ncb) throws Exception {
+            final NetworkCapabilities.Builder ncb, final boolean forAutomotive) throws Exception {
         final ArraySet<Integer> serviceUidSet = new ArraySet<>();
         serviceUidSet.add(TEST_PACKAGE_UID);
         final ArraySet<Integer> nonServiceUidSet = new ArraySet<>();
@@ -15595,7 +15595,7 @@ public class ConnectivityServiceTest {
         }
 
         /* Test setting UIDs is rejected when expected */
-        if (TRANSPORT_ETHERNET == transportUnderTest) {
+        if (forAutomotive) {
             mockHasSystemFeature(PackageManager.FEATURE_AUTOMOTIVE, false);
         }
 
