@@ -1136,14 +1136,44 @@ public final class NetworkStatsHistory implements Parcelable {
             mOperations = new ArrayList<>(initialCapacity);
         }
 
+        private void addToElement(List<Long> list, int pos, long value) {
+            list.set(pos, list.get(pos) + value);
+        }
+
         /**
          * Add an {@link Entry} into the {@link NetworkStatsHistory} instance.
          *
-         * @param entry The target {@link Entry} object.
+         * @param entry The target {@link Entry} object. The entry timestamp must be greater than
+         *              that of any previously-added entry.
          * @return The builder object.
          */
         @NonNull
         public Builder addEntry(@NonNull Entry entry) {
+            final int lastBucket = mBucketStart.size() - 1;
+            final long lastBucketStart = (lastBucket != -1) ? mBucketStart.get(lastBucket) : 0;
+
+            // If last bucket has the same timestamp, modify it instead of adding another bucket.
+            // This allows callers to pass in the same bucket twice (e.g., to accumulate
+            // data over time), but still requires that entries must be sorted.
+            // The importer will do this in case a rotated file has the same timestamp as
+            // the previous file.
+            if (lastBucket != -1 && entry.bucketStart == lastBucketStart) {
+                addToElement(mActiveTime, lastBucket, entry.activeTime);
+                addToElement(mRxBytes, lastBucket, entry.rxBytes);
+                addToElement(mRxPackets, lastBucket, entry.rxPackets);
+                addToElement(mTxBytes, lastBucket, entry.txBytes);
+                addToElement(mTxPackets, lastBucket, entry.txPackets);
+                addToElement(mOperations, lastBucket, entry.operations);
+                return this;
+            }
+
+            // Inserting in the middle is prohibited for performance reasons.
+            if (entry.bucketStart <= lastBucketStart) {
+                throw new IllegalArgumentException("new bucket start " + entry.bucketStart
+                        + " must be greater than last bucket start " + lastBucketStart);
+            }
+
+            // Common case: add entries at the end of the list.
             mBucketStart.add(entry.bucketStart);
             mActiveTime.add(entry.activeTime);
             mRxBytes.add(entry.rxBytes);
