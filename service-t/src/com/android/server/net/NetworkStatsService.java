@@ -76,6 +76,7 @@ import android.content.IntentFilter;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.database.ContentObserver;
+import android.net.ConnectivityManager;
 import android.net.DataUsageRequest;
 import android.net.INetd;
 import android.net.INetworkStatsService;
@@ -574,6 +575,15 @@ public class NetworkStatsService extends INetworkStatsService.Stub {
     @VisibleForTesting
     public static class Dependencies {
         /**
+         * Get legacy platform stats directory.
+         */
+        @NonNull
+        public File getLegacyStatsDir() {
+            final File systemDataDir = new File(Environment.getDataDirectory(), "system");
+            return new File(systemDataDir, "netstats");
+        }
+
+        /**
          * Get or create the directory that stores the persisted data usage.
          */
         @NonNull
@@ -588,8 +598,7 @@ public class NetworkStatsService extends INetworkStatsService.Stub {
                 statsDataDir = new File(apexDataDir, "netstats");
 
             } else {
-                final File systemDataDir = new File(Environment.getDataDirectory(), "system");
-                statsDataDir = new File(systemDataDir, "netstats");
+                statsDataDir = getLegacyStatsDir();
             }
 
             if (statsDataDir.exists() || statsDataDir.mkdirs()) {
@@ -781,10 +790,11 @@ public class NetworkStatsService extends INetworkStatsService.Stub {
             mSystemReady = true;
 
             // create data recorders along with historical rotators
-            mDevRecorder = buildRecorder(PREFIX_DEV, mSettings.getDevConfig(), false);
-            mXtRecorder = buildRecorder(PREFIX_XT, mSettings.getXtConfig(), false);
-            mUidRecorder = buildRecorder(PREFIX_UID, mSettings.getUidConfig(), false);
-            mUidTagRecorder = buildRecorder(PREFIX_UID_TAG, mSettings.getUidTagConfig(), true);
+            mDevRecorder = buildRecorder(PREFIX_DEV, mSettings.getDevConfig(), false, mStatsDir);
+            mXtRecorder = buildRecorder(PREFIX_XT, mSettings.getXtConfig(), false, mStatsDir);
+            mUidRecorder = buildRecorder(PREFIX_UID, mSettings.getUidConfig(), false, mStatsDir);
+            mUidTagRecorder = buildRecorder(PREFIX_UID_TAG, mSettings.getUidTagConfig(), true,
+                    mStatsDir);
 
             updatePersistThresholdsLocked();
 
@@ -848,11 +858,12 @@ public class NetworkStatsService extends INetworkStatsService.Stub {
     }
 
     private NetworkStatsRecorder buildRecorder(
-            String prefix, NetworkStatsSettings.Config config, boolean includeTags) {
+            String prefix, NetworkStatsSettings.Config config, boolean includeTags,
+            File baseDir) {
         final DropBoxManager dropBox = (DropBoxManager) mContext.getSystemService(
                 Context.DROPBOX_SERVICE);
         return new NetworkStatsRecorder(new FileRotator(
-                mStatsDir, prefix, config.rotateAgeMillis, config.deleteAgeMillis),
+                baseDir, prefix, config.rotateAgeMillis, config.deleteAgeMillis),
                 mNonMonotonicObserver, dropBox, prefix, config.bucketDuration, includeTags);
     }
 
@@ -921,16 +932,59 @@ public class NetworkStatsService extends INetworkStatsService.Stub {
 
         Log.i(TAG, "Starting import : attempts " + attempts + "/" + targetAttempts);
 
-        final List<MigrationInfo> migrations = List.of(
+        final MigrationInfo[] migrations = new MigrationInfo[]{
                 new MigrationInfo(mDevRecorder), new MigrationInfo(mXtRecorder),
                 new MigrationInfo(mUidRecorder), new MigrationInfo(mUidTagRecorder)
-        );
+        };
+
+        // Legacy directories will be created by recorders if they do not exist
+        final File legacyBaseDir = mDeps.getLegacyStatsDir();
+        final NetworkStatsRecorder[] legacyRecorders = new NetworkStatsRecorder[]{
+                buildRecorder(PREFIX_DEV, mSettings.getDevConfig(), false, legacyBaseDir),
+                buildRecorder(PREFIX_XT, mSettings.getXtConfig(), false, legacyBaseDir),
+                buildRecorder(PREFIX_UID, mSettings.getUidConfig(), false, legacyBaseDir),
+                buildRecorder(PREFIX_UID_TAG, mSettings.getUidTagConfig(), true, legacyBaseDir)
+        };
+
         long migrationEndTime = Long.MIN_VALUE;
+        boolean endedWithFallback = false;
         try {
             // First, read all legacy collections. This is OEM code and it can throw. Don't
             // commit any data to disk until all are read.
-            for (final MigrationInfo migration : migrations) {
+            for (int i = 0; i < migrations.length; i++) {
+                final MigrationInfo migration = migrations[i];
                 migration.collection = readPlatformCollectionForRecorder(migration.recorder);
+
+                // Also read the collection with legacy method
+                final NetworkStatsRecorder legacyRecorder = legacyRecorders[i];
+
+                final NetworkStatsCollection legacyStats;
+                try {
+                    legacyStats = legacyRecorder.getOrLoadCompleteLocked();
+                } catch (Throwable e) {
+                    Log.wtf(TAG, "Failed to read stats with legacy method", e);
+                    // Newer stats will be used here; that's the only thing that is usable
+                    continue;
+                }
+
+                String errMsg;
+                Throwable exception = null;
+                try {
+                    errMsg = compareStats(migration.collection, legacyStats);
+                } catch (Throwable e) {
+                    errMsg = "Failed to compare migrated stats with all stats";
+                    exception = e;
+                }
+
+                if (errMsg != null) {
+                    Log.wtf(TAG, "NetworkStats import for migration " + i
+                            + " returned invalid data: " + errMsg, exception);
+                    // Fall back to legacy stats for this boot. The stats for old data will be
+                    // re-imported again on next boot until they succeed the import. This is fine
+                    // since every import clears the previous stats for the imported timespan.
+                    migration.collection = legacyStats;
+                    endedWithFallback = true;
+                }
             }
 
             // Find the latest end time.
@@ -955,7 +1009,11 @@ public class NetworkStatsService extends INetworkStatsService.Stub {
                 migration.recorder.importCollectionLocked(migration.collection);
             }
 
-            Log.i(TAG, "Successfully imported platform collections");
+            if (endedWithFallback) {
+                Log.wtf(TAG, "Imported platform collections with legacy fallback");
+            } else {
+                Log.i(TAG, "Successfully imported platform collections");
+            }
         } catch (Throwable e) {
             // The code above calls OEM code that may behave differently across devices.
             // It can throw any exception including RuntimeExceptions and
@@ -1002,6 +1060,93 @@ public class NetworkStatsService extends INetworkStatsService.Stub {
         } catch (IOException e) {
             Log.wtf(TAG, "Succeed but failed to update counters.", e);
         }
+    }
+
+    private static String str(NetworkStatsCollection.Key key) {
+        StringBuilder sb = new StringBuilder()
+                .append(key.ident.toString())
+                .append(" uid=").append(key.uid);
+        if (key.set != SET_FOREGROUND) {
+            sb.append(" set=").append(key.set);
+        }
+        if (key.tag != 0) {
+            sb.append(" tag=").append(key.tag);
+        }
+        return sb.toString();
+    }
+
+    // The importer will modify some keys when importing them.
+    // In order to keep the comparison code simple, add such special cases here and simply
+    // ignore them. This should not impact fidelity much because the start/end checks and the total
+    // bytes check still need to pass.
+    private static boolean couldKeyChangeOnImport(NetworkStatsCollection.Key key) {
+        if (key.ident.isEmpty()) return false;
+        final NetworkIdentity firstIdent = key.ident.iterator().next();
+
+        // Non-mobile network with non-empty RAT type.
+        // This combination is invalid and the NetworkIdentity.Builder will throw if it is passed
+        // in, but it looks like it was previously possible to persist it to disk. The importer sets
+        // the RAT type to NETWORK_TYPE_ALL.
+        if (firstIdent.getType() != ConnectivityManager.TYPE_MOBILE
+                && firstIdent.getRatType() != NetworkTemplate.NETWORK_TYPE_ALL) {
+            return true;
+        }
+
+        return false;
+    }
+
+    @Nullable
+    private static String compareStats(
+            NetworkStatsCollection migrated, NetworkStatsCollection legacy) {
+        final Map<NetworkStatsCollection.Key, NetworkStatsHistory> migEntries =
+                migrated.getEntries();
+        final Map<NetworkStatsCollection.Key, NetworkStatsHistory> legEntries = legacy.getEntries();
+
+        final ArraySet<NetworkStatsCollection.Key> unmatchedLegKeys =
+                new ArraySet<>(legEntries.keySet());
+
+        for (NetworkStatsCollection.Key legKey : legEntries.keySet()) {
+            final NetworkStatsHistory legHistory = legEntries.get(legKey);
+            final NetworkStatsHistory migHistory = migEntries.get(legKey);
+
+            if (migHistory == null && couldKeyChangeOnImport(legKey)) {
+                unmatchedLegKeys.remove(legKey);
+                continue;
+            }
+
+            if (migHistory == null) {
+                return "Missing migrated history for legacy key " + str(legKey)
+                        + ", legacy history was " + legHistory;
+            }
+            if (!migHistory.isSameAs(legHistory)) {
+                return "Difference in history for key " + legKey + "; legacy history " + legHistory
+                        + ", migrated history " + migHistory;
+            }
+            unmatchedLegKeys.remove(legKey);
+        }
+
+        if (!unmatchedLegKeys.isEmpty()) {
+            final NetworkStatsHistory first = legEntries.get(unmatchedLegKeys.valueAt(0));
+            return "Found unmatched legacy keys: count=" + unmatchedLegKeys.size()
+                    + ", first unmatched collection " + first;
+        }
+
+        if (migrated.getStartMillis() != legacy.getStartMillis()
+                || migrated.getEndMillis() != legacy.getEndMillis()) {
+            return "Start / end of the collections "
+                    + migrated.getStartMillis() + "/" + legacy.getStartMillis() + " and "
+                    + migrated.getEndMillis() + "/" + legacy.getEndMillis()
+                    + " don't match";
+        }
+
+        if (migrated.getTotalBytes() != legacy.getTotalBytes()) {
+            return "Total bytes " + migrated.getTotalBytes() + " and " + legacy.getTotalBytes()
+                    + " don't match for collections with start/end "
+                    + migrated.getStartMillis()
+                    + "/" + legacy.getStartMillis();
+        }
+
+        return null;
     }
 
     @GuardedBy("mStatsLock")
