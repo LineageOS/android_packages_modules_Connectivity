@@ -30,9 +30,6 @@ import static android.content.pm.PackageInfo.REQUESTED_PERMISSION_GRANTED;
 import static android.content.pm.PackageInfo.REQUESTED_PERMISSION_REQUIRED;
 import static android.content.pm.PackageManager.GET_PERMISSIONS;
 import static android.content.pm.PackageManager.MATCH_ANY_USER;
-import static android.net.ConnectivityManager.FIREWALL_CHAIN_LOCKDOWN_VPN;
-import static android.net.ConnectivityManager.FIREWALL_RULE_ALLOW;
-import static android.net.ConnectivityManager.FIREWALL_RULE_DENY;
 import static android.net.ConnectivitySettingsManager.UIDS_ALLOWED_ON_RESTRICTED_NETWORKS;
 import static android.net.INetd.PERMISSION_INTERNET;
 import static android.net.INetd.PERMISSION_NETWORK;
@@ -872,19 +869,14 @@ public class PermissionMonitorTest {
 
         // Add Lockdown uid range, expect a rule to be set up for user app MOCK_UID11
         mPermissionMonitor.updateVpnLockdownUidRanges(true /* add */, vpnRange1);
-        verify(mBpfNetMaps)
-                .setUidRule(
-                        eq(FIREWALL_CHAIN_LOCKDOWN_VPN), eq(MOCK_UID11),
-                        eq(FIREWALL_RULE_DENY));
+        verify(mBpfNetMaps).updateUidLockdownRule(MOCK_UID11, true /* add */);
         assertEquals(mPermissionMonitor.getVpnLockdownUidRanges(), Set.of(vpnRange1));
 
         reset(mBpfNetMaps);
 
         // Remove Lockdown uid range, expect rules to be torn down
         mPermissionMonitor.updateVpnLockdownUidRanges(false /* false */, vpnRange1);
-        verify(mBpfNetMaps)
-                .setUidRule(eq(FIREWALL_CHAIN_LOCKDOWN_VPN), eq(MOCK_UID11),
-                        eq(FIREWALL_RULE_ALLOW));
+        verify(mBpfNetMaps).updateUidLockdownRule(MOCK_UID11, false /* add */);
         assertTrue(mPermissionMonitor.getVpnLockdownUidRanges().isEmpty());
     }
 
@@ -902,9 +894,7 @@ public class PermissionMonitorTest {
 
         // Add Lockdown uid range at 1st time, expect a rule to be set up
         mPermissionMonitor.updateVpnLockdownUidRanges(true /* add */, vpnRange);
-        verify(mBpfNetMaps)
-                .setUidRule(eq(FIREWALL_CHAIN_LOCKDOWN_VPN), eq(MOCK_UID11),
-                        eq(FIREWALL_RULE_DENY));
+        verify(mBpfNetMaps).updateUidLockdownRule(MOCK_UID11, true /* add */);
         assertEquals(mPermissionMonitor.getVpnLockdownUidRanges(), Set.of(vpnRange));
 
         reset(mBpfNetMaps);
@@ -912,7 +902,7 @@ public class PermissionMonitorTest {
         // Add Lockdown uid range at 2nd time, expect a rule not to be set up because the uid
         // already has the rule
         mPermissionMonitor.updateVpnLockdownUidRanges(true /* add */, vpnRange);
-        verify(mBpfNetMaps, never()).setUidRule(anyInt(), anyInt(), anyInt());
+        verify(mBpfNetMaps, never()).updateUidLockdownRule(anyInt(),  anyBoolean());
         assertEquals(mPermissionMonitor.getVpnLockdownUidRanges(), Set.of(vpnRange));
 
         reset(mBpfNetMaps);
@@ -920,7 +910,7 @@ public class PermissionMonitorTest {
         // Remove Lockdown uid range at 1st time, expect a rule not to be torn down because we added
         // the range 2 times.
         mPermissionMonitor.updateVpnLockdownUidRanges(false /* false */, vpnRange);
-        verify(mBpfNetMaps, never()).setUidRule(anyInt(), anyInt(), anyInt());
+        verify(mBpfNetMaps, never()).updateUidLockdownRule(anyInt(),  anyBoolean());
         assertEquals(mPermissionMonitor.getVpnLockdownUidRanges(), Set.of(vpnRange));
 
         reset(mBpfNetMaps);
@@ -928,9 +918,7 @@ public class PermissionMonitorTest {
         // Remove Lockdown uid range at 2nd time, expect a rule to be torn down because we added
         // twice and we removed twice.
         mPermissionMonitor.updateVpnLockdownUidRanges(false /* false */, vpnRange);
-        verify(mBpfNetMaps)
-                .setUidRule(eq(FIREWALL_CHAIN_LOCKDOWN_VPN), eq(MOCK_UID11),
-                        eq(FIREWALL_RULE_ALLOW));
+        verify(mBpfNetMaps).updateUidLockdownRule(MOCK_UID11, false /* add */);
         assertTrue(mPermissionMonitor.getVpnLockdownUidRanges().isEmpty());
     }
 
@@ -949,9 +937,7 @@ public class PermissionMonitorTest {
 
         // Add Lockdown uid ranges which contains duplicated uid ranges
         mPermissionMonitor.updateVpnLockdownUidRanges(true /* add */, vpnRangeDuplicates);
-        verify(mBpfNetMaps)
-                .setUidRule(eq(FIREWALL_CHAIN_LOCKDOWN_VPN), eq(MOCK_UID11),
-                        eq(FIREWALL_RULE_DENY));
+        verify(mBpfNetMaps).updateUidLockdownRule(MOCK_UID11, true /* add */);
         assertEquals(mPermissionMonitor.getVpnLockdownUidRanges(), Set.of(vpnRange));
 
         reset(mBpfNetMaps);
@@ -959,16 +945,14 @@ public class PermissionMonitorTest {
         // Remove Lockdown uid range at 1st time, expect a rule not to be torn down because uid
         // ranges we added contains duplicated uid ranges.
         mPermissionMonitor.updateVpnLockdownUidRanges(false /* false */, vpnRange);
-        verify(mBpfNetMaps, never()).setUidRule(anyInt(), anyInt(), anyInt());
+        verify(mBpfNetMaps, never()).updateUidLockdownRule(anyInt(), anyBoolean());
         assertEquals(mPermissionMonitor.getVpnLockdownUidRanges(), Set.of(vpnRange));
 
         reset(mBpfNetMaps);
 
         // Remove Lockdown uid range at 2nd time, expect a rule to be torn down.
         mPermissionMonitor.updateVpnLockdownUidRanges(false /* false */, vpnRange);
-        verify(mBpfNetMaps)
-                .setUidRule(eq(FIREWALL_CHAIN_LOCKDOWN_VPN), eq(MOCK_UID11),
-                        eq(FIREWALL_RULE_ALLOW));
+        verify(mBpfNetMaps).updateUidLockdownRule(MOCK_UID11, false /* add */);
         assertTrue(mPermissionMonitor.getVpnLockdownUidRanges().isEmpty());
     }
 
@@ -989,23 +973,15 @@ public class PermissionMonitorTest {
 
         // Installing package should add Lockdown rules
         addPackageForUsers(new UserHandle[]{MOCK_USER1, MOCK_USER2}, MOCK_PACKAGE1, MOCK_APPID1);
-        verify(mBpfNetMaps)
-                .setUidRule(eq(FIREWALL_CHAIN_LOCKDOWN_VPN), eq(MOCK_UID11),
-                        eq(FIREWALL_RULE_DENY));
-        verify(mBpfNetMaps)
-                .setUidRule(eq(FIREWALL_CHAIN_LOCKDOWN_VPN), eq(MOCK_UID21),
-                        eq(FIREWALL_RULE_DENY));
+        verify(mBpfNetMaps).updateUidLockdownRule(MOCK_UID11, true /* add */);
+        verify(mBpfNetMaps).updateUidLockdownRule(MOCK_UID21, true /* add */);
 
         reset(mBpfNetMaps);
 
         // Uninstalling package should remove Lockdown rules
         mPermissionMonitor.onPackageRemoved(MOCK_PACKAGE1, MOCK_UID11);
-        verify(mBpfNetMaps)
-                .setUidRule(eq(FIREWALL_CHAIN_LOCKDOWN_VPN), eq(MOCK_UID11),
-                        eq(FIREWALL_RULE_ALLOW));
-        verify(mBpfNetMaps, never())
-                .setUidRule(eq(FIREWALL_CHAIN_LOCKDOWN_VPN), eq(MOCK_UID21),
-                        eq(FIREWALL_RULE_ALLOW));
+        verify(mBpfNetMaps).updateUidLockdownRule(MOCK_UID11, false /* add */);
+        verify(mBpfNetMaps, never()).updateUidLockdownRule(MOCK_UID21, false /* add */);
     }
 
     // Normal package add/remove operations will trigger multiple intent for uids corresponding to
