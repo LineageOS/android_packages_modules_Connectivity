@@ -107,14 +107,10 @@ static const set<string> INTRODUCED_T = {
     NETD "map_netd_uid_counterset_map",
     NETD "map_netd_uid_owner_map",
     NETD "map_netd_uid_permission_map",
-    SHARED "prog_block_bind4_block_port",
-    SHARED "prog_block_bind6_block_port",
     SHARED "prog_clatd_schedcls_egress4_clat_ether",
     SHARED "prog_clatd_schedcls_egress4_clat_rawip",
     SHARED "prog_clatd_schedcls_ingress6_clat_ether",
     SHARED "prog_clatd_schedcls_ingress6_clat_rawip",
-    SHARED "prog_dscp_policy_schedcls_set_dscp_ether",
-    SHARED "prog_dscp_policy_schedcls_set_dscp_raw_ip",
     NETD "prog_netd_cgroupskb_egress_stats",
     NETD "prog_netd_cgroupskb_ingress_stats",
     NETD "prog_netd_cgroupsock_inet_create",
@@ -123,6 +119,13 @@ static const set<string> INTRODUCED_T = {
     NETD "prog_netd_skfilter_denylist_xtbpf",
     NETD "prog_netd_skfilter_egress_xtbpf",
     NETD "prog_netd_skfilter_ingress_xtbpf",
+};
+
+static const set<string> INTRODUCED_T_5_4 = {
+    SHARED "prog_block_bind4_block_port",
+    SHARED "prog_block_bind6_block_port",
+    SHARED "prog_dscp_policy_schedcls_set_dscp_ether",
+    SHARED "prog_dscp_policy_schedcls_set_dscp_raw_ip",
 };
 
 static const set<string> REMOVED_T = {
@@ -164,6 +167,7 @@ void getFileLists(set<string>* expected, set<string>* unexpected) {
 
     if (IsAtLeastT()) {
         addAll(expected, INTRODUCED_T);
+        if (android::bpf::isAtLeastKernelVersion(5, 4, 0)) addAll(expected, INTRODUCED_T_5_4);
         removeAll(expected, REMOVED_T);
 
         addAll(unexpected, REMOVED_T);
