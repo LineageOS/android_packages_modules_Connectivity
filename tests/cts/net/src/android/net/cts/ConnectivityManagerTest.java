@@ -3235,14 +3235,16 @@ public class ConnectivityManagerTest {
             // TODD: Have a significant signal to know the uids has been sent to netd.
             assertBindSocketToNetworkSuccess(network);
 
-            // Uid is in allowed list. Try file network request again.
-            requestNetwork(restrictedRequest, restrictedNetworkCb);
-            // Verify that the network is restricted.
-            restrictedNetworkCb.eventuallyExpect(CallbackEntry.NETWORK_CAPS_UPDATED,
-                    NETWORK_CALLBACK_TIMEOUT_MS,
-                    entry -> network.equals(entry.getNetwork())
-                            && (!((CallbackEntry.CapabilitiesChanged) entry).getCaps()
-                            .hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_RESTRICTED)));
+            if (TestUtils.shouldTestTApis()) {
+                // Uid is in allowed list. Try file network request again.
+                requestNetwork(restrictedRequest, restrictedNetworkCb);
+                // Verify that the network is restricted.
+                restrictedNetworkCb.eventuallyExpect(CallbackEntry.NETWORK_CAPS_UPDATED,
+                        NETWORK_CALLBACK_TIMEOUT_MS,
+                        entry -> network.equals(entry.getNetwork())
+                                && (!((CallbackEntry.CapabilitiesChanged) entry).getCaps()
+                                .hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_RESTRICTED)));
+            }
         } finally {
             agent.unregister();
 
