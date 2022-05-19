@@ -1256,7 +1256,7 @@ public class NetworkAgentInfo implements Comparable<NetworkAgentInfo>, NetworkRa
         if (nc.hasTransport(TRANSPORT_TEST)) return true;
 
         // Factories that make ethernet networks can allow UIDs for automotive devices.
-        if (nc.hasTransport(TRANSPORT_ETHERNET) && hasAutomotiveFeature) {
+        if (nc.hasSingleTransport(TRANSPORT_ETHERNET) && hasAutomotiveFeature) {
             return true;
         }
 
