@@ -33,7 +33,7 @@ public final class NattSocketKeepalive extends SocketKeepalive {
     @NonNull private final InetAddress mDestination;
     private final int mResourceId;
 
-    public NattSocketKeepalive(@NonNull IConnectivityManager service,
+    NattSocketKeepalive(@NonNull IConnectivityManager service,
             @NonNull Network network,
             @NonNull ParcelFileDescriptor pfd,
             int resourceId,
@@ -48,7 +48,7 @@ public final class NattSocketKeepalive extends SocketKeepalive {
     }
 
     @Override
-    protected void startImpl(int intervalSec) {
+    void startImpl(int intervalSec) {
         mExecutor.execute(() -> {
             try {
                 mService.startNattKeepaliveWithFd(mNetwork, mPfd, mResourceId,
@@ -62,7 +62,7 @@ public final class NattSocketKeepalive extends SocketKeepalive {
     }
 
     @Override
-    protected void stopImpl() {
+    void stopImpl() {
         mExecutor.execute(() -> {
             try {
                 if (mSlot != null) {

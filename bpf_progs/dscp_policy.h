@@ -26,12 +26,11 @@
 
 #define STRUCT_SIZE(name, size) _Static_assert(sizeof(name) == (size), "Incorrect struct size.")
 
-#ifndef v6_equal
-#define v6_equal(a, b)    (a.s6_addr32[0] == b.s6_addr32[0] && \
-                 a.s6_addr32[1] == b.s6_addr32[1] && \
-                 a.s6_addr32[2] == b.s6_addr32[2] && \
-                 a.s6_addr32[3] == b.s6_addr32[3])
-#endif
+#define v6_equal(a, b) \
+    (((a.s6_addr32[0] ^ b.s6_addr32[0]) | \
+      (a.s6_addr32[1] ^ b.s6_addr32[1]) | \
+      (a.s6_addr32[2] ^ b.s6_addr32[2]) | \
+      (a.s6_addr32[3] ^ b.s6_addr32[3])) == 0)
 
 // TODO: these are already defined in packages/modules/Connectivity/bpf_progs/bpf_net_helpers.h.
 // smove to common location in future.
