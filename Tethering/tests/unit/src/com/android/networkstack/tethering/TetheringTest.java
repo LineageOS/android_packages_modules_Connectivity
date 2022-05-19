@@ -195,12 +195,14 @@ import com.android.networkstack.apishim.common.BluetoothPanShim.TetheredInterfac
 import com.android.networkstack.apishim.common.UnsupportedApiLevelException;
 import com.android.networkstack.tethering.TestConnectivityManager.TestNetworkAgent;
 import com.android.networkstack.tethering.metrics.TetheringMetrics;
+import com.android.testutils.DevSdkIgnoreRule;
 import com.android.testutils.DevSdkIgnoreRule.IgnoreUpTo;
 import com.android.testutils.MiscAsserts;
 
 import org.junit.After;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.ArgumentCaptor;
@@ -223,6 +225,8 @@ import java.util.Vector;
 @RunWith(AndroidJUnit4.class)
 @SmallTest
 public class TetheringTest {
+    @Rule public final DevSdkIgnoreRule mIgnoreRule = new DevSdkIgnoreRule();
+
     private static final int IFINDEX_OFFSET = 100;
 
     private static final String TEST_MOBILE_IFNAME = "test_rmnet_data0";
