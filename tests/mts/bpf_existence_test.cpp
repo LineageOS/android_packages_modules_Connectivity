@@ -42,7 +42,9 @@ using android::modules::sdklevel::IsAtLeastT;
 
 #define PLATFORM "/sys/fs/bpf/"
 #define TETHERING "/sys/fs/bpf/tethering/"
+#define PRIVATE "/sys/fs/bpf/net_private/"
 #define SHARED "/sys/fs/bpf/net_shared/"
+#define NETD "/sys/fs/bpf/netd_shared/"
 
 class BpfExistenceTest : public ::testing::Test {
 };
@@ -95,32 +97,35 @@ static const set<string> INTRODUCED_T = {
     SHARED "map_dscp_policy_ipv6_socket_to_policies_map_A",
     SHARED "map_dscp_policy_ipv6_socket_to_policies_map_B",
     SHARED "map_dscp_policy_switch_comp_map",
-    SHARED "map_netd_app_uid_stats_map",
-    SHARED "map_netd_configuration_map",
-    SHARED "map_netd_cookie_tag_map",
-    SHARED "map_netd_iface_index_name_map",
-    SHARED "map_netd_iface_stats_map",
-    SHARED "map_netd_stats_map_A",
-    SHARED "map_netd_stats_map_B",
-    SHARED "map_netd_uid_counterset_map",
-    SHARED "map_netd_uid_owner_map",
-    SHARED "map_netd_uid_permission_map",
-    SHARED "prog_block_bind4_block_port",
-    SHARED "prog_block_bind6_block_port",
+    NETD "map_netd_app_uid_stats_map",
+    NETD "map_netd_configuration_map",
+    NETD "map_netd_cookie_tag_map",
+    NETD "map_netd_iface_index_name_map",
+    NETD "map_netd_iface_stats_map",
+    NETD "map_netd_stats_map_A",
+    NETD "map_netd_stats_map_B",
+    NETD "map_netd_uid_counterset_map",
+    NETD "map_netd_uid_owner_map",
+    NETD "map_netd_uid_permission_map",
     SHARED "prog_clatd_schedcls_egress4_clat_ether",
     SHARED "prog_clatd_schedcls_egress4_clat_rawip",
     SHARED "prog_clatd_schedcls_ingress6_clat_ether",
     SHARED "prog_clatd_schedcls_ingress6_clat_rawip",
+    NETD "prog_netd_cgroupskb_egress_stats",
+    NETD "prog_netd_cgroupskb_ingress_stats",
+    NETD "prog_netd_cgroupsock_inet_create",
+    NETD "prog_netd_schedact_ingress_account",
+    NETD "prog_netd_skfilter_allowlist_xtbpf",
+    NETD "prog_netd_skfilter_denylist_xtbpf",
+    NETD "prog_netd_skfilter_egress_xtbpf",
+    NETD "prog_netd_skfilter_ingress_xtbpf",
+};
+
+static const set<string> INTRODUCED_T_5_4 = {
+    SHARED "prog_block_bind4_block_port",
+    SHARED "prog_block_bind6_block_port",
     SHARED "prog_dscp_policy_schedcls_set_dscp_ether",
     SHARED "prog_dscp_policy_schedcls_set_dscp_raw_ip",
-    SHARED "prog_netd_cgroupskb_egress_stats",
-    SHARED "prog_netd_cgroupskb_ingress_stats",
-    SHARED "prog_netd_cgroupsock_inet_create",
-    SHARED "prog_netd_schedact_ingress_account",
-    SHARED "prog_netd_skfilter_allowlist_xtbpf",
-    SHARED "prog_netd_skfilter_denylist_xtbpf",
-    SHARED "prog_netd_skfilter_egress_xtbpf",
-    SHARED "prog_netd_skfilter_ingress_xtbpf",
 };
 
 static const set<string> REMOVED_T = {
@@ -162,6 +167,7 @@ void getFileLists(set<string>* expected, set<string>* unexpected) {
 
     if (IsAtLeastT()) {
         addAll(expected, INTRODUCED_T);
+        if (android::bpf::isAtLeastKernelVersion(5, 4, 0)) addAll(expected, INTRODUCED_T_5_4);
         removeAll(expected, REMOVED_T);
 
         addAll(unexpected, REMOVED_T);

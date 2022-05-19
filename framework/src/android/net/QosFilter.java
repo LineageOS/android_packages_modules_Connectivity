@@ -33,15 +33,13 @@ import java.net.InetAddress;
 @SystemApi
 public abstract class QosFilter {
 
-    /** @hide */
-    protected QosFilter() {
-        // Ensure that all derived types are known, and known to be properly handled when being
-        // passed to and from NetworkAgent.
-        // For now the only known derived type is QosSocketFilter.
-        if (!(this instanceof QosSocketFilter)) {
-            throw new UnsupportedOperationException(
-                    "Unsupported QosFilter type: " + this.getClass().getName());
-        }
+    /**
+     * The constructor is kept hidden from outside this package to ensure that all derived types
+     * are known and properly handled when being passed to and from {@link NetworkAgent}.
+     *
+     * @hide
+     */
+    QosFilter() {
     }
 
     /**
