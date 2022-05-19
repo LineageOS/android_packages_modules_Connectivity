@@ -52,6 +52,9 @@ import static android.net.ConnectivityManager.BLOCKED_REASON_NONE;
 import static android.net.ConnectivityManager.CONNECTIVITY_ACTION;
 import static android.net.ConnectivityManager.EXTRA_NETWORK_INFO;
 import static android.net.ConnectivityManager.EXTRA_NETWORK_TYPE;
+import static android.net.ConnectivityManager.FIREWALL_CHAIN_LOCKDOWN_VPN;
+import static android.net.ConnectivityManager.FIREWALL_RULE_ALLOW;
+import static android.net.ConnectivityManager.FIREWALL_RULE_DENY;
 import static android.net.ConnectivityManager.PROFILE_NETWORK_PREFERENCE_DEFAULT;
 import static android.net.ConnectivityManager.PROFILE_NETWORK_PREFERENCE_ENTERPRISE;
 import static android.net.ConnectivityManager.PROFILE_NETWORK_PREFERENCE_ENTERPRISE_NO_FALLBACK;
@@ -9502,6 +9505,46 @@ public class ConnectivityServiceTest {
         b2.expectBroadcast();
     }
 
+    @Test
+    public void testLockdownSetFirewallUidRule() throws Exception {
+        // For ConnectivityService#setAlwaysOnVpnPackage.
+        mServiceContext.setPermission(
+                Manifest.permission.CONTROL_ALWAYS_ON_VPN, PERMISSION_GRANTED);
+        // Needed to call Vpn#setAlwaysOnPackage.
+        mServiceContext.setPermission(Manifest.permission.CONTROL_VPN, PERMISSION_GRANTED);
+        // Needed to call Vpn#isAlwaysOnPackageSupported.
+        mServiceContext.setPermission(NETWORK_SETTINGS, PERMISSION_GRANTED);
+
+        // Enable Lockdown
+        final ArrayList<String> allowList = new ArrayList<>();
+        mVpnManagerService.setAlwaysOnVpnPackage(PRIMARY_USER, ALWAYS_ON_PACKAGE,
+                true /* lockdown */, allowList);
+        waitForIdle();
+
+        // Lockdown rule is set to apps uids
+        verify(mBpfNetMaps).setUidRule(
+                eq(FIREWALL_CHAIN_LOCKDOWN_VPN), eq(APP1_UID), eq(FIREWALL_RULE_DENY));
+        verify(mBpfNetMaps).setUidRule(
+                eq(FIREWALL_CHAIN_LOCKDOWN_VPN), eq(APP2_UID), eq(FIREWALL_RULE_DENY));
+
+        reset(mBpfNetMaps);
+
+        // Disable lockdown
+        mVpnManagerService.setAlwaysOnVpnPackage(PRIMARY_USER, null, false /* lockdown */,
+                allowList);
+        waitForIdle();
+
+        // Lockdown rule is removed from apps uids
+        verify(mBpfNetMaps).setUidRule(
+                eq(FIREWALL_CHAIN_LOCKDOWN_VPN), eq(APP1_UID), eq(FIREWALL_RULE_ALLOW));
+        verify(mBpfNetMaps).setUidRule(
+                eq(FIREWALL_CHAIN_LOCKDOWN_VPN), eq(APP2_UID), eq(FIREWALL_RULE_ALLOW));
+
+        // Interface rules are not changed by Lockdown mode enable/disable
+        verify(mBpfNetMaps, never()).addUidInterfaceRules(any(), any());
+        verify(mBpfNetMaps, never()).removeUidInterfaceRules(any());
+    }
+
     /**
      * Test mutable and requestable network capabilities such as
      * {@link NetworkCapabilities#NET_CAPABILITY_TRUSTED} and
@@ -10373,7 +10416,7 @@ public class ConnectivityServiceTest {
         verify(mBpfNetMaps, times(2)).addUidInterfaceRules(eq("tun0"), uidCaptor.capture());
         assertContainsExactly(uidCaptor.getAllValues().get(0), APP1_UID, APP2_UID);
         assertContainsExactly(uidCaptor.getAllValues().get(1), APP1_UID, APP2_UID);
-        assertTrue(mService.mPermissionMonitor.getVpnUidRanges("tun0").equals(vpnRange));
+        assertTrue(mService.mPermissionMonitor.getVpnInterfaceUidRanges("tun0").equals(vpnRange));
 
         mMockVpn.disconnect();
         waitForIdle();
@@ -10381,11 +10424,11 @@ public class ConnectivityServiceTest {
         // Disconnected VPN should have interface rules removed
         verify(mBpfNetMaps).removeUidInterfaceRules(uidCaptor.capture());
         assertContainsExactly(uidCaptor.getValue(), APP1_UID, APP2_UID);
-        assertNull(mService.mPermissionMonitor.getVpnUidRanges("tun0"));
+        assertNull(mService.mPermissionMonitor.getVpnInterfaceUidRanges("tun0"));
     }
 
     @Test
-    public void testLegacyVpnDoesNotResultInInterfaceFilteringRule() throws Exception {
+    public void testLegacyVpnSetInterfaceFilteringRuleWithWildcard() throws Exception {
         LinkProperties lp = new LinkProperties();
         lp.setInterfaceName("tun0");
         lp.addRoute(new RouteInfo(new IpPrefix(Inet6Address.ANY, 0), null));
@@ -10395,13 +10438,29 @@ public class ConnectivityServiceTest {
         mMockVpn.establish(lp, Process.SYSTEM_UID, vpnRange);
         assertVpnUidRangesUpdated(true, vpnRange, Process.SYSTEM_UID);
 
-        // Legacy VPN should not have interface rules set up
-        verify(mBpfNetMaps, never()).addUidInterfaceRules(any(), any());
+        // A connected Legacy VPN should have interface rules with null interface.
+        // Null Interface is a wildcard and this accepts traffic from all the interfaces.
+        // There are two expected invocations, one during the VPN initial connection,
+        // one during the VPN LinkProperties update.
+        ArgumentCaptor<int[]> uidCaptor = ArgumentCaptor.forClass(int[].class);
+        verify(mBpfNetMaps, times(2)).addUidInterfaceRules(
+                eq(null) /* iface */, uidCaptor.capture());
+        assertContainsExactly(uidCaptor.getAllValues().get(0), APP1_UID, APP2_UID, VPN_UID);
+        assertContainsExactly(uidCaptor.getAllValues().get(1), APP1_UID, APP2_UID, VPN_UID);
+        assertEquals(mService.mPermissionMonitor.getVpnInterfaceUidRanges(null /* iface */),
+                vpnRange);
+
+        mMockVpn.disconnect();
+        waitForIdle();
+
+        // Disconnected VPN should have interface rules removed
+        verify(mBpfNetMaps).removeUidInterfaceRules(uidCaptor.capture());
+        assertContainsExactly(uidCaptor.getValue(), APP1_UID, APP2_UID, VPN_UID);
+        assertNull(mService.mPermissionMonitor.getVpnInterfaceUidRanges(null /* iface */));
     }
 
     @Test
-    public void testLocalIpv4OnlyVpnDoesNotResultInInterfaceFilteringRule()
-            throws Exception {
+    public void testLocalIpv4OnlyVpnSetInterfaceFilteringRuleWithWildcard() throws Exception {
         LinkProperties lp = new LinkProperties();
         lp.setInterfaceName("tun0");
         lp.addRoute(new RouteInfo(new IpPrefix("192.0.2.0/24"), null, "tun0"));
@@ -10412,7 +10471,25 @@ public class ConnectivityServiceTest {
         assertVpnUidRangesUpdated(true, vpnRange, Process.SYSTEM_UID);
 
         // IPv6 unreachable route should not be misinterpreted as a default route
-        verify(mBpfNetMaps, never()).addUidInterfaceRules(any(), any());
+        // A connected VPN should have interface rules with null interface.
+        // Null Interface is a wildcard and this accepts traffic from all the interfaces.
+        // There are two expected invocations, one during the VPN initial connection,
+        // one during the VPN LinkProperties update.
+        ArgumentCaptor<int[]> uidCaptor = ArgumentCaptor.forClass(int[].class);
+        verify(mBpfNetMaps, times(2)).addUidInterfaceRules(
+                eq(null) /* iface */, uidCaptor.capture());
+        assertContainsExactly(uidCaptor.getAllValues().get(0), APP1_UID, APP2_UID, VPN_UID);
+        assertContainsExactly(uidCaptor.getAllValues().get(1), APP1_UID, APP2_UID, VPN_UID);
+        assertEquals(mService.mPermissionMonitor.getVpnInterfaceUidRanges(null /* iface */),
+                vpnRange);
+
+        mMockVpn.disconnect();
+        waitForIdle();
+
+        // Disconnected VPN should have interface rules removed
+        verify(mBpfNetMaps).removeUidInterfaceRules(uidCaptor.capture());
+        assertContainsExactly(uidCaptor.getValue(), APP1_UID, APP2_UID, VPN_UID);
+        assertNull(mService.mPermissionMonitor.getVpnInterfaceUidRanges(null /* iface */));
     }
 
     @Test

@@ -14,6 +14,9 @@
  * limitations under the License.
  */
 
+// The resulting .o needs to load on the Android T Beta 3 bpfloader v0.13+
+#define BPFLOADER_MIN_VER 13u
+
 #include <bpf_helpers.h>
 #include <linux/bpf.h>
 #include <linux/if.h>
@@ -194,7 +197,7 @@ static inline int bpf_owner_match(struct __sk_buff* skb, uint32_t uid, int direc
     BpfConfig enabledRules = getConfig(UID_RULES_CONFIGURATION_KEY);
 
     UidOwnerValue* uidEntry = bpf_uid_owner_map_lookup_elem(&uid);
-    uint8_t uidRules = uidEntry ? uidEntry->rule : 0;
+    uint32_t uidRules = uidEntry ? uidEntry->rule : 0;
     uint32_t allowed_iif = uidEntry ? uidEntry->iif : 0;
 
     if (enabledRules) {
@@ -214,9 +217,16 @@ static inline int bpf_owner_match(struct __sk_buff* skb, uint32_t uid, int direc
             return BPF_DROP;
         }
     }
-    if (direction == BPF_INGRESS && (uidRules & IIF_MATCH)) {
-        // Drops packets not coming from lo nor the allowlisted interface
-        if (allowed_iif && skb->ifindex != 1 && skb->ifindex != allowed_iif) {
+    if (direction == BPF_INGRESS && skb->ifindex != 1) {
+        if (uidRules & IIF_MATCH) {
+            if (allowed_iif && skb->ifindex != allowed_iif) {
+                // Drops packets not coming from lo nor the allowed interface
+                // allowed interface=0 is a wildcard and does not drop packets
+                return BPF_DROP_UNLESS_DNS;
+            }
+        } else if (uidRules & LOCKDOWN_VPN_MATCH) {
+            // Drops packets not coming from lo and rule does not have IIF_MATCH but has
+            // LOCKDOWN_VPN_MATCH
             return BPF_DROP_UNLESS_DNS;
         }
     }

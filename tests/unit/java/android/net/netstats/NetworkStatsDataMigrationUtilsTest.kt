@@ -61,14 +61,6 @@ class NetworkStatsDataMigrationUtilsTest {
         assertValues(builder.build(), 55, 1814302L, 21050L, 31001636L, 26152L)
     }
 
-    @Test
-    fun testMaybeReadLegacyUid() {
-        val builder = NetworkStatsCollection.Builder(BUCKET_DURATION_MS)
-        NetworkStatsDataMigrationUtils.readLegacyUid(builder,
-                getInputStreamForResource(R.raw.netstats_uid_v4), false /* taggedData */)
-        assertValues(builder.build(), 223, 106245210L, 710722L, 1130647496L, 1103989L)
-    }
-
     private fun assertValues(
         collection: NetworkStatsCollection,
         expectedSize: Int,

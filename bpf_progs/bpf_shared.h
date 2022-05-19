@@ -98,29 +98,29 @@ static const int IFACE_STATS_MAP_SIZE = 1000;
 static const int CONFIGURATION_MAP_SIZE = 2;
 static const int UID_OWNER_MAP_SIZE = 2000;
 
-#define BPF_PATH "/sys/fs/bpf/net_shared/"
+#define BPF_NETD_PATH "/sys/fs/bpf/netd_shared/"
 
-#define BPF_EGRESS_PROG_PATH BPF_PATH "prog_netd_cgroupskb_egress_stats"
-#define BPF_INGRESS_PROG_PATH BPF_PATH "prog_netd_cgroupskb_ingress_stats"
-#define XT_BPF_INGRESS_PROG_PATH BPF_PATH "prog_netd_skfilter_ingress_xtbpf"
-#define XT_BPF_EGRESS_PROG_PATH BPF_PATH "prog_netd_skfilter_egress_xtbpf"
-#define XT_BPF_ALLOWLIST_PROG_PATH BPF_PATH "prog_netd_skfilter_allowlist_xtbpf"
-#define XT_BPF_DENYLIST_PROG_PATH BPF_PATH "prog_netd_skfilter_denylist_xtbpf"
-#define CGROUP_SOCKET_PROG_PATH BPF_PATH "prog_netd_cgroupsock_inet_create"
+#define BPF_EGRESS_PROG_PATH BPF_NETD_PATH "prog_netd_cgroupskb_egress_stats"
+#define BPF_INGRESS_PROG_PATH BPF_NETD_PATH "prog_netd_cgroupskb_ingress_stats"
+#define XT_BPF_INGRESS_PROG_PATH BPF_NETD_PATH "prog_netd_skfilter_ingress_xtbpf"
+#define XT_BPF_EGRESS_PROG_PATH BPF_NETD_PATH "prog_netd_skfilter_egress_xtbpf"
+#define XT_BPF_ALLOWLIST_PROG_PATH BPF_NETD_PATH "prog_netd_skfilter_allowlist_xtbpf"
+#define XT_BPF_DENYLIST_PROG_PATH BPF_NETD_PATH "prog_netd_skfilter_denylist_xtbpf"
+#define CGROUP_SOCKET_PROG_PATH BPF_NETD_PATH "prog_netd_cgroupsock_inet_create"
 
 #define TC_BPF_INGRESS_ACCOUNT_PROG_NAME "prog_netd_schedact_ingress_account"
-#define TC_BPF_INGRESS_ACCOUNT_PROG_PATH BPF_PATH TC_BPF_INGRESS_ACCOUNT_PROG_NAME
+#define TC_BPF_INGRESS_ACCOUNT_PROG_PATH BPF_NETD_PATH TC_BPF_INGRESS_ACCOUNT_PROG_NAME
 
-#define COOKIE_TAG_MAP_PATH BPF_PATH "map_netd_cookie_tag_map"
-#define UID_COUNTERSET_MAP_PATH BPF_PATH "map_netd_uid_counterset_map"
-#define APP_UID_STATS_MAP_PATH BPF_PATH "map_netd_app_uid_stats_map"
-#define STATS_MAP_A_PATH BPF_PATH "map_netd_stats_map_A"
-#define STATS_MAP_B_PATH BPF_PATH "map_netd_stats_map_B"
-#define IFACE_INDEX_NAME_MAP_PATH BPF_PATH "map_netd_iface_index_name_map"
-#define IFACE_STATS_MAP_PATH BPF_PATH "map_netd_iface_stats_map"
-#define CONFIGURATION_MAP_PATH BPF_PATH "map_netd_configuration_map"
-#define UID_OWNER_MAP_PATH BPF_PATH "map_netd_uid_owner_map"
-#define UID_PERMISSION_MAP_PATH BPF_PATH "map_netd_uid_permission_map"
+#define COOKIE_TAG_MAP_PATH BPF_NETD_PATH "map_netd_cookie_tag_map"
+#define UID_COUNTERSET_MAP_PATH BPF_NETD_PATH "map_netd_uid_counterset_map"
+#define APP_UID_STATS_MAP_PATH BPF_NETD_PATH "map_netd_app_uid_stats_map"
+#define STATS_MAP_A_PATH BPF_NETD_PATH "map_netd_stats_map_A"
+#define STATS_MAP_B_PATH BPF_NETD_PATH "map_netd_stats_map_B"
+#define IFACE_INDEX_NAME_MAP_PATH BPF_NETD_PATH "map_netd_iface_index_name_map"
+#define IFACE_STATS_MAP_PATH BPF_NETD_PATH "map_netd_iface_stats_map"
+#define CONFIGURATION_MAP_PATH BPF_NETD_PATH "map_netd_configuration_map"
+#define UID_OWNER_MAP_PATH BPF_NETD_PATH "map_netd_uid_owner_map"
+#define UID_PERMISSION_MAP_PATH BPF_NETD_PATH "map_netd_uid_permission_map"
 
 enum UidOwnerMatchType {
     NO_MATCH = 0,
@@ -132,6 +132,7 @@ enum UidOwnerMatchType {
     RESTRICTED_MATCH = (1 << 5),
     LOW_POWER_STANDBY_MATCH = (1 << 6),
     IIF_MATCH = (1 << 7),
+    LOCKDOWN_VPN_MATCH = (1 << 8),
 };
 
 enum BpfPermissionMatch {
@@ -162,13 +163,15 @@ STRUCT_SIZE(UidOwnerValue, 2 * 4);  // 8
 #define UID_RULES_CONFIGURATION_KEY 1
 #define CURRENT_STATS_MAP_CONFIGURATION_KEY 2
 
+#define BPF_CLATD_PATH "/sys/fs/bpf/net_shared/"
+
 #define CLAT_INGRESS6_PROG_RAWIP_NAME "prog_clatd_schedcls_ingress6_clat_rawip"
 #define CLAT_INGRESS6_PROG_ETHER_NAME "prog_clatd_schedcls_ingress6_clat_ether"
 
-#define CLAT_INGRESS6_PROG_RAWIP_PATH BPF_PATH CLAT_INGRESS6_PROG_RAWIP_NAME
-#define CLAT_INGRESS6_PROG_ETHER_PATH BPF_PATH CLAT_INGRESS6_PROG_ETHER_NAME
+#define CLAT_INGRESS6_PROG_RAWIP_PATH BPF_CLATD_PATH CLAT_INGRESS6_PROG_RAWIP_NAME
+#define CLAT_INGRESS6_PROG_ETHER_PATH BPF_CLATD_PATH CLAT_INGRESS6_PROG_ETHER_NAME
 
-#define CLAT_INGRESS6_MAP_PATH BPF_PATH "map_clatd_clat_ingress6_map"
+#define CLAT_INGRESS6_MAP_PATH BPF_CLATD_PATH "map_clatd_clat_ingress6_map"
 
 typedef struct {
     uint32_t iif;            // The input interface index
@@ -186,10 +189,10 @@ STRUCT_SIZE(ClatIngress6Value, 4 + 4);  // 8
 #define CLAT_EGRESS4_PROG_RAWIP_NAME "prog_clatd_schedcls_egress4_clat_rawip"
 #define CLAT_EGRESS4_PROG_ETHER_NAME "prog_clatd_schedcls_egress4_clat_ether"
 
-#define CLAT_EGRESS4_PROG_RAWIP_PATH BPF_PATH CLAT_EGRESS4_PROG_RAWIP_NAME
-#define CLAT_EGRESS4_PROG_ETHER_PATH BPF_PATH CLAT_EGRESS4_PROG_ETHER_NAME
+#define CLAT_EGRESS4_PROG_RAWIP_PATH BPF_CLATD_PATH CLAT_EGRESS4_PROG_RAWIP_NAME
+#define CLAT_EGRESS4_PROG_ETHER_PATH BPF_CLATD_PATH CLAT_EGRESS4_PROG_ETHER_NAME
 
-#define CLAT_EGRESS4_MAP_PATH BPF_PATH "map_clatd_clat_egress4_map"
+#define CLAT_EGRESS4_MAP_PATH BPF_CLATD_PATH "map_clatd_clat_egress4_map"
 
 typedef struct {
     uint32_t iif;           // The input interface index

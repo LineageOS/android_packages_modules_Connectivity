@@ -748,7 +748,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
      * The BPF program attached to the tc-police hook to account for to-be-dropped traffic.
      */
     private static final String TC_POLICE_BPF_PROG_PATH =
-            "/sys/fs/bpf/net_shared/prog_netd_schedact_ingress_account";
+            "/sys/fs/bpf/netd_shared/prog_netd_schedact_ingress_account";
 
     private static String eventName(int what) {
         return sMagicDecoderRing.get(what, Integer.toString(what));
@@ -1187,6 +1187,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
     /**
      * Keeps track of the number of requests made under different uids.
      */
+    // TODO: Remove the hack and use com.android.net.module.util.PerUidCounter instead.
     public static class PerUidCounter {
         private final int mMaxCountPerUid;
 
@@ -5974,6 +5975,10 @@ public class ConnectivityService extends IConnectivityManager.Stub
                     + Arrays.toString(ranges) + "): netd command failed: " + e);
         }
 
+        if (SdkLevel.isAtLeastT()) {
+            mPermissionMonitor.updateVpnLockdownUidRanges(requireVpn, ranges);
+        }
+
         for (final NetworkAgentInfo nai : mNetworkAgentInfos) {
             final boolean curMetered = nai.networkCapabilities.isMetered();
             maybeNotifyNetworkBlocked(nai, curMetered, curMetered,
@@ -7737,10 +7742,10 @@ public class ConnectivityService extends IConnectivityManager.Stub
 
     private void updateVpnFiltering(LinkProperties newLp, LinkProperties oldLp,
             NetworkAgentInfo nai) {
-        final String oldIface = oldLp != null ? oldLp.getInterfaceName() : null;
-        final String newIface = newLp != null ? newLp.getInterfaceName() : null;
-        final boolean wasFiltering = requiresVpnIsolation(nai, nai.networkCapabilities, oldLp);
-        final boolean needsFiltering = requiresVpnIsolation(nai, nai.networkCapabilities, newLp);
+        final String oldIface = getVpnIsolationInterface(nai, nai.networkCapabilities, oldLp);
+        final String newIface = getVpnIsolationInterface(nai, nai.networkCapabilities, newLp);
+        final boolean wasFiltering = requiresVpnAllowRule(nai, oldLp, oldIface);
+        final boolean needsFiltering = requiresVpnAllowRule(nai, newLp, newIface);
 
         if (!wasFiltering && !needsFiltering) {
             // Nothing to do.
@@ -7753,11 +7758,19 @@ public class ConnectivityService extends IConnectivityManager.Stub
         }
 
         final Set<UidRange> ranges = nai.networkCapabilities.getUidRanges();
+        if (ranges == null || ranges.isEmpty()) {
+            return;
+        }
+
         final int vpnAppUid = nai.networkCapabilities.getOwnerUid();
         // TODO: this create a window of opportunity for apps to receive traffic between the time
         // when the old rules are removed and the time when new rules are added. To fix this,
         // make eBPF support two allowlisted interfaces so here new rules can be added before the
         // old rules are being removed.
+
+        // Null iface given to onVpnUidRangesAdded/Removed is a wildcard to allow apps to receive
+        // packets on all interfaces. This is required to accept incoming traffic in Lockdown mode
+        // by overriding the Lockdown blocking rule.
         if (wasFiltering) {
             mPermissionMonitor.onVpnUidRangesRemoved(oldIface, ranges, vpnAppUid);
         }
@@ -8046,15 +8059,14 @@ public class ConnectivityService extends IConnectivityManager.Stub
     }
 
     /**
-     * Returns whether VPN isolation (ingress interface filtering) should be applied on the given
-     * network.
+     * Returns the interface which requires VPN isolation (ingress interface filtering).
      *
      * Ingress interface filtering enforces that all apps under the given network can only receive
      * packets from the network's interface (and loopback). This is important for VPNs because
      * apps that cannot bypass a fully-routed VPN shouldn't be able to receive packets from any
      * non-VPN interfaces.
      *
-     * As a result, this method should return true iff
+     * As a result, this method should return Non-null interface iff
      *  1. the network is an app VPN (not legacy VPN)
      *  2. the VPN does not allow bypass
      *  3. the VPN is fully-routed
@@ -8063,16 +8075,32 @@ public class ConnectivityService extends IConnectivityManager.Stub
      * @see INetd#firewallAddUidInterfaceRules
      * @see INetd#firewallRemoveUidInterfaceRules
      */
-    private boolean requiresVpnIsolation(@NonNull NetworkAgentInfo nai, NetworkCapabilities nc,
+    @Nullable
+    private String getVpnIsolationInterface(@NonNull NetworkAgentInfo nai, NetworkCapabilities nc,
             LinkProperties lp) {
-        if (nc == null || lp == null) return false;
-        return nai.isVPN()
+        if (nc == null || lp == null) return null;
+        if (nai.isVPN()
                 && !nai.networkAgentConfig.allowBypass
                 && nc.getOwnerUid() != Process.SYSTEM_UID
                 && lp.getInterfaceName() != null
                 && (lp.hasIpv4DefaultRoute() || lp.hasIpv4UnreachableDefaultRoute())
                 && (lp.hasIpv6DefaultRoute() || lp.hasIpv6UnreachableDefaultRoute())
-                && !lp.hasExcludeRoute();
+                && !lp.hasExcludeRoute()) {
+            return lp.getInterfaceName();
+        }
+        return null;
+    }
+
+    /**
+     * Returns whether we need to set interface filtering rule or not
+     */
+    private boolean requiresVpnAllowRule(NetworkAgentInfo nai, LinkProperties lp,
+            String filterIface) {
+        // Only filter if lp has an interface.
+        if (lp == null || lp.getInterfaceName() == null) return false;
+        // Before T, allow rules are only needed if VPN isolation is enabled.
+        // T and After T, allow rules are needed for all VPNs.
+        return filterIface != null || (nai.isVPN() && SdkLevel.isAtLeastT());
     }
 
     private static UidRangeParcel[] toUidRangeStableParcels(final @NonNull Set<UidRange> ranges) {
@@ -8200,9 +8228,10 @@ public class ConnectivityService extends IConnectivityManager.Stub
             if (!prevRanges.isEmpty()) {
                 updateVpnUidRanges(false, nai, prevRanges);
             }
-            final boolean wasFiltering = requiresVpnIsolation(nai, prevNc, nai.linkProperties);
-            final boolean shouldFilter = requiresVpnIsolation(nai, newNc, nai.linkProperties);
-            final String iface = nai.linkProperties.getInterfaceName();
+            final String oldIface = getVpnIsolationInterface(nai, prevNc, nai.linkProperties);
+            final String newIface = getVpnIsolationInterface(nai, newNc, nai.linkProperties);
+            final boolean wasFiltering = requiresVpnAllowRule(nai, nai.linkProperties, oldIface);
+            final boolean shouldFilter = requiresVpnAllowRule(nai, nai.linkProperties, newIface);
             // For VPN uid interface filtering, old ranges need to be removed before new ranges can
             // be added, due to the range being expanded and stored as individual UIDs. For example
             // the UIDs might be updated from [0, 99999] to ([0, 10012], [10014, 99999]) which means
@@ -8214,11 +8243,16 @@ public class ConnectivityService extends IConnectivityManager.Stub
             // above, where the addition of new ranges happens before the removal of old ranges.
             // TODO Fix this window by computing an accurate diff on Set<UidRange>, so the old range
             // to be removed will never overlap with the new range to be added.
+
+            // Null iface given to onVpnUidRangesAdded/Removed is a wildcard to allow apps to
+            // receive packets on all interfaces. This is required to accept incoming traffic in
+            // Lockdown mode by overriding the Lockdown blocking rule.
             if (wasFiltering && !prevRanges.isEmpty()) {
-                mPermissionMonitor.onVpnUidRangesRemoved(iface, prevRanges, prevNc.getOwnerUid());
+                mPermissionMonitor.onVpnUidRangesRemoved(oldIface, prevRanges,
+                        prevNc.getOwnerUid());
             }
             if (shouldFilter && !newRanges.isEmpty()) {
-                mPermissionMonitor.onVpnUidRangesAdded(iface, newRanges, newNc.getOwnerUid());
+                mPermissionMonitor.onVpnUidRangesAdded(newIface, newRanges, newNc.getOwnerUid());
             }
         } catch (Exception e) {
             // Never crash!

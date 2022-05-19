@@ -54,7 +54,6 @@ import com.android.net.module.util.ArrayTrackRecord
 import com.android.net.module.util.TrackRecord
 import com.android.networkstack.apishim.ConstantsShim
 import com.android.networkstack.apishim.NsdShimImpl
-import com.android.testutils.DevSdkIgnoreRule
 import com.android.testutils.SC_V2
 import com.android.testutils.TestableNetworkAgent
 import com.android.testutils.TestableNetworkCallback
@@ -65,7 +64,6 @@ import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertTrue
 import org.junit.Assume.assumeTrue
 import org.junit.Before
-import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import java.net.ServerSocket
@@ -90,10 +88,6 @@ private val nsdShim = NsdShimImpl.newInstance()
 @AppModeFull(reason = "Socket cannot bind in instant app mode")
 @RunWith(AndroidJUnit4::class)
 class NsdManagerTest {
-    // NsdManager is not updatable before S, so tests do not need to be backwards compatible
-    @get:Rule
-    val ignoreRule = DevSdkIgnoreRule(ignoreClassUpTo = SC_V2)
-
     private val context by lazy { InstrumentationRegistry.getInstrumentation().context }
     private val nsdManager by lazy { context.getSystemService(NsdManager::class.java) }
 
@@ -399,14 +393,17 @@ class NsdManagerTest {
         si2.serviceName = serviceName
         si2.port = localPort
         val registrationRecord2 = NsdRegistrationRecord()
-        val registeredInfo2 = registerService(registrationRecord2, si2)
+        nsdManager.registerService(si2, NsdManager.PROTOCOL_DNS_SD, registrationRecord2)
+        val registeredInfo2 = registrationRecord2.expectCallback<ServiceRegistered>().serviceInfo
 
         // Expect a service record to be discovered (and filter the ones
         // that are unrelated to this test)
         val foundInfo2 = discoveryRecord.waitForServiceDiscovered(registeredInfo2.serviceName)
 
         // Resolve the service
-        val resolvedService2 = resolveService(foundInfo2)
+        val resolveRecord2 = NsdResolveRecord()
+        nsdManager.resolveService(foundInfo2, resolveRecord2)
+        val resolvedService2 = resolveRecord2.expectCallback<ServiceResolved>().serviceInfo
 
         // Check that the resolved service doesn't have any TXT records
         assertEquals(0, resolvedService2.attributes.size)
@@ -608,6 +605,41 @@ class NsdManagerTest {
             discoveryRecord2.expectCallback<DiscoveryStopped>()
         } cleanup {
             nsdManager.unregisterService(registrationRecord)
+        }
+    }
+
+    @Test
+    fun testNsdManager_RegisterServiceNameWithNonStandardCharacters() {
+        val serviceNames = "^Nsd.Test|Non-#AsCiI\\Characters&\\ufffe テスト 測試"
+        val si = NsdServiceInfo().apply {
+            serviceType = SERVICE_TYPE
+            serviceName = serviceNames
+            port = 12345 // Test won't try to connect so port does not matter
+        }
+
+        // Register the service name which contains non-standard characters.
+        val registrationRecord = NsdRegistrationRecord()
+        nsdManager.registerService(si, NsdManager.PROTOCOL_DNS_SD, registrationRecord)
+        registrationRecord.expectCallback<ServiceRegistered>()
+
+        tryTest {
+            // Discover that service name.
+            val discoveryRecord = NsdDiscoveryRecord()
+            nsdManager.discoverServices(
+                SERVICE_TYPE, NsdManager.PROTOCOL_DNS_SD, discoveryRecord
+            )
+            val foundInfo = discoveryRecord.waitForServiceDiscovered(serviceNames)
+
+            // Expect that resolving the service name works properly even service name contains
+            // non-standard characters.
+            val resolveRecord = NsdResolveRecord()
+            nsdManager.resolveService(foundInfo, resolveRecord)
+            val resolvedCb = resolveRecord.expectCallback<ServiceResolved>()
+            assertEquals(foundInfo.serviceName, resolvedCb.serviceInfo.serviceName)
+        } cleanupStep {
+            nsdManager.unregisterService(registrationRecord)
+        } cleanup {
+            registrationRecord.expectCallback<ServiceUnregistered>()
         }
     }
 
