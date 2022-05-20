@@ -30,6 +30,9 @@
 #define __kernel_udphdr udphdr
 #include <linux/udp.h>
 
+// The resulting .o needs to load on the Android T bpfloader v0.12+
+#define BPFLOADER_MIN_VER 12u
+
 #include "bpf_helpers.h"
 #include "bpf_net_helpers.h"
 #include "bpf_shared.h"
