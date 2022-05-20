@@ -27,6 +27,7 @@ import android.content.IntentFilter;
 import android.os.Bundle;
 import android.os.RemoteCallback;
 import android.util.Log;
+import android.view.WindowManager;
 
 import androidx.annotation.GuardedBy;
 
@@ -42,6 +43,8 @@ public class MyActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         Log.d(TAG, "MyActivity.onCreate()");
+
+        getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
     }
 
     @Override
