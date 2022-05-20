@@ -57,6 +57,7 @@ import static android.net.wifi.WifiManager.EXTRA_WIFI_AP_MODE;
 import static android.net.wifi.WifiManager.EXTRA_WIFI_AP_STATE;
 import static android.net.wifi.WifiManager.IFACE_IP_MODE_LOCAL_ONLY;
 import static android.net.wifi.WifiManager.IFACE_IP_MODE_TETHERED;
+import static android.net.wifi.WifiManager.WIFI_AP_STATE_DISABLED;
 import static android.net.wifi.WifiManager.WIFI_AP_STATE_ENABLED;
 import static android.system.OsConstants.RT_SCOPE_UNIVERSE;
 import static android.telephony.SubscriptionManager.INVALID_SUBSCRIPTION_ID;
@@ -936,7 +937,7 @@ public class TetheringTest {
 
         // Emulate externally-visible WifiManager effects, when hotspot mode
         // is being torn down.
-        sendWifiApStateChanged(WifiManager.WIFI_AP_STATE_DISABLED);
+        sendWifiApStateChanged(WIFI_AP_STATE_DISABLED, TEST_WLAN_IFNAME, IFACE_IP_MODE_LOCAL_ONLY);
         mTethering.interfaceRemoved(TEST_WLAN_IFNAME);
         mLooper.dispatchAll();
 
@@ -1509,7 +1510,7 @@ public class TetheringTest {
 
         // Emulate externally-visible WifiManager effects, when tethering mode
         // is being torn down.
-        sendWifiApStateChanged(WifiManager.WIFI_AP_STATE_DISABLED);
+        sendWifiApStateChanged(WIFI_AP_STATE_DISABLED, TEST_WLAN_IFNAME, IFACE_IP_MODE_TETHERED);
         mTethering.interfaceRemoved(TEST_WLAN_IFNAME);
         mLooper.dispatchAll();
 
@@ -1903,7 +1904,13 @@ public class TetheringTest {
         mTethering.unregisterTetheringEventCallback(callback);
         mLooper.dispatchAll();
         mTethering.stopTethering(TETHERING_WIFI);
-        sendWifiApStateChanged(WifiManager.WIFI_AP_STATE_DISABLED);
+        sendWifiApStateChanged(WIFI_AP_STATE_DISABLED);
+        if (isAtLeastT()) {
+            // After T, tethering doesn't support WIFI_AP_STATE_DISABLED with null interface name.
+            callback2.assertNoStateChangeCallback();
+            sendWifiApStateChanged(WIFI_AP_STATE_DISABLED, TEST_WLAN_IFNAME,
+                    IFACE_IP_MODE_TETHERED);
+        }
         tetherState = callback2.pollTetherStatesChanged();
         assertArrayEquals(tetherState.availableList, new TetheringInterface[] {wifiIface});
         mLooper.dispatchAll();
