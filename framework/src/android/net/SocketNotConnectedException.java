@@ -16,13 +16,18 @@
 
 package android.net;
 
+import android.annotation.SystemApi;
+
+import com.android.internal.annotations.VisibleForTesting;
+
 /**
  * Thrown when a previously bound socket becomes unbound.
  *
  * @hide
  */
+@SystemApi
 public class SocketNotConnectedException extends Exception {
-    /** @hide */
+    @VisibleForTesting
     public SocketNotConnectedException() {
         super("The socket is not connected");
     }
