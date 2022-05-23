@@ -1452,6 +1452,11 @@ public class IpSecService extends IIpSecService.Stub {
         final ConnectivityManager connectivityManager =
                 mContext.getSystemService(ConnectivityManager.class);
         final LinkProperties lp = connectivityManager.getLinkProperties(underlyingNetwork);
+        if (lp == null) {
+            throw new IllegalArgumentException(
+                    "LinkProperties is null. The underlyingNetwork may not be functional");
+        }
+
         if (tunnelInterfaceInfo.getInterfaceName().equals(lp.getInterfaceName())) {
             throw new IllegalArgumentException(
                     "Underlying network cannot be the network being exposed by this tunnel");
