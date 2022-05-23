@@ -817,10 +817,10 @@ public class IpSecManager {
          * </ol>
          *
          * @param underlyingNetwork the new {@link Network} that will carry traffic for this tunnel.
-         *     This network MUST never be the network exposing this IpSecTunnelInterface, otherwise
-         *     this method will throw an {@link IllegalArgumentException}. If the
-         *     IpSecTunnelInterface is later added to this network, all outbound traffic will be
-         *     blackholed.
+         *     This network MUST be a functional {@link Network} with valid {@link LinkProperties},
+         *     and MUST never be the network exposing this IpSecTunnelInterface, otherwise this
+         *     method will throw an {@link IllegalArgumentException}. If the IpSecTunnelInterface is
+         *     later added to this network, all outbound traffic will be blackholed.
          */
         // TODO: b/169171001 Update the documentation when transform migration is supported.
         // The purpose of making updating network and applying transforms separate is to leave open
@@ -961,7 +961,6 @@ public class IpSecManager {
      * IPsec (applies an outer IP header and IPsec Header to all traffic, and expects an additional
      * IP header and IPsec Header on all inbound traffic).
      * <p>Applications should probably not use this API directly.
-     *
      *
      * @param tunnel The {@link IpSecManager#IpSecTunnelInterface} that will use the supplied
      *        transform.
