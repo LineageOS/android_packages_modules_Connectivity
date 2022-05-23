@@ -184,6 +184,7 @@ Status TrafficController::initMaps() {
     RETURN_IF_NOT_OK(mUidOwnerMap.init(UID_OWNER_MAP_PATH));
     RETURN_IF_NOT_OK(mUidOwnerMap.clear());
     RETURN_IF_NOT_OK(mUidPermissionMap.init(UID_PERMISSION_MAP_PATH));
+    ALOGI("%s successfully", __func__);
 
     return netdutils::status::ok;
 }
