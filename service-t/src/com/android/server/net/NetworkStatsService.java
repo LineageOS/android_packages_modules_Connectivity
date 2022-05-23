@@ -253,7 +253,8 @@ public class NetworkStatsService extends INetworkStatsService.Stub {
             "netstats_import_legacy_target_attempts";
     static final int DEFAULT_NETSTATS_IMPORT_LEGACY_TARGET_ATTEMPTS = 1;
     static final String NETSTATS_IMPORT_ATTEMPTS_COUNTER_NAME = "import.attempts";
-    static final String NETSTATS_IMPORT_SUCCESS_COUNTER_NAME = "import.successes";
+    static final String NETSTATS_IMPORT_SUCCESSES_COUNTER_NAME = "import.successes";
+    static final String NETSTATS_IMPORT_FALLBACKS_COUNTER_NAME = "import.fallbacks";
 
     private final Context mContext;
     private final NetworkStatsFactory mStatsFactory;
@@ -273,10 +274,11 @@ public class NetworkStatsService extends INetworkStatsService.Stub {
     private final AlertObserver mAlertObserver = new AlertObserver();
 
     // Persistent counters that backed by AtomicFile which stored in the data directory as a file,
-    // to track attempts/successes count across reboot. Note that these counter values will be
-    // rollback as the module rollbacks.
+    // to track attempts/successes/fallbacks count across reboot. Note that these counter values
+    // will be rollback as the module rollbacks.
     private PersistentInt mImportLegacyAttemptsCounter = null;
     private PersistentInt mImportLegacySuccessesCounter = null;
+    private PersistentInt mImportLegacyFallbacksCounter = null;
 
     @VisibleForTesting
     public static final String ACTION_NETWORK_STATS_POLL =
@@ -621,6 +623,7 @@ public class NetworkStatsService extends INetworkStatsService.Stub {
         /**
          * Create the persistent counter that counts total import legacy stats attempts.
          */
+        // TODO: Refactor multiple create counter functions into one.
         public PersistentInt createImportLegacyAttemptsCounter(@NonNull Path path)
                 throws IOException {
             // TODO: Modify PersistentInt to call setStartTime every time a write is made.
@@ -632,6 +635,14 @@ public class NetworkStatsService extends INetworkStatsService.Stub {
          * Create the persistent counter that counts total import legacy stats successes.
          */
         public PersistentInt createImportLegacySuccessesCounter(@NonNull Path path)
+                throws IOException {
+            return new PersistentInt(path.toString(), null /* logger */);
+        }
+
+        /**
+         * Create the persistent counter that counts total import legacy stats fallbacks.
+         */
+        public PersistentInt createImportLegacyFallbacksCounter(@NonNull Path path)
                 throws IOException {
             return new PersistentInt(path.toString(), null /* logger */);
         }
@@ -914,7 +925,9 @@ public class NetworkStatsService extends INetworkStatsService.Stub {
             mImportLegacyAttemptsCounter = mDeps.createImportLegacyAttemptsCounter(
                     mStatsDir.toPath().resolve(NETSTATS_IMPORT_ATTEMPTS_COUNTER_NAME));
             mImportLegacySuccessesCounter = mDeps.createImportLegacySuccessesCounter(
-                    mStatsDir.toPath().resolve(NETSTATS_IMPORT_SUCCESS_COUNTER_NAME));
+                    mStatsDir.toPath().resolve(NETSTATS_IMPORT_SUCCESSES_COUNTER_NAME));
+            mImportLegacyFallbacksCounter = mDeps.createImportLegacyFallbacksCounter(
+                    mStatsDir.toPath().resolve(NETSTATS_IMPORT_FALLBACKS_COUNTER_NAME));
         } catch (IOException e) {
             Log.wtf(TAG, "Failed to create persistent counters, skip.", e);
             return;
@@ -1009,11 +1022,7 @@ public class NetworkStatsService extends INetworkStatsService.Stub {
                 migration.recorder.importCollectionLocked(migration.collection);
             }
 
-            if (endedWithFallback) {
-                Log.wtf(TAG, "Imported platform collections with legacy fallback");
-            } else {
-                Log.i(TAG, "Successfully imported platform collections");
-            }
+            // Success normally or uses fallback method.
         } catch (Throwable e) {
             // The code above calls OEM code that may behave differently across devices.
             // It can throw any exception including RuntimeExceptions and
@@ -1053,10 +1062,17 @@ public class NetworkStatsService extends INetworkStatsService.Stub {
         // Success ! No need to import again next time.
         try {
             mImportLegacyAttemptsCounter.set(targetAttempts);
-            // The successes counter is only for debugging. Hence, the synchronization
-            // between these two counters are not very critical.
-            final int successCount = mImportLegacySuccessesCounter.get();
-            mImportLegacySuccessesCounter.set(successCount + 1);
+            if (endedWithFallback) {
+                Log.wtf(TAG, "Imported platform collections with legacy fallback");
+                final int fallbacksCount = mImportLegacyFallbacksCounter.get();
+                mImportLegacyFallbacksCounter.set(fallbacksCount + 1);
+            } else {
+                Log.i(TAG, "Successfully imported platform collections");
+                // The successes counter is only for debugging. Hence, the synchronization
+                // between successes counter and attempts counter are not very critical.
+                final int successCount = mImportLegacySuccessesCounter.get();
+                mImportLegacySuccessesCounter.set(successCount + 1);
+            }
         } catch (IOException e) {
             Log.wtf(TAG, "Succeed but failed to update counters.", e);
         }
@@ -2477,6 +2493,9 @@ public class NetworkStatsService extends INetworkStatsService.Stub {
                     pw.println();
                     pw.print("platform legacy stats import successes count",
                             mImportLegacySuccessesCounter.get());
+                    pw.println();
+                    pw.print("platform legacy stats import fallbacks count",
+                            mImportLegacyFallbacksCounter.get());
                     pw.println();
                 } catch (IOException e) {
                     pw.println("(failed to dump platform legacy stats import counters)");
