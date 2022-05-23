@@ -205,6 +205,10 @@ int parseBpfNetworkStatsDetail(std::vector<stats_line>* lines,
               configuration.error().message().c_str());
         return -configuration.error().code();
     }
+    if (configuration.value() != SELECT_MAP_A && configuration.value() != SELECT_MAP_B) {
+        ALOGE("%s unknown configuration value: %d", __func__, configuration.value());
+        return -EINVAL;
+    }
     const char* statsMapPath = STATS_MAP_PATH[configuration.value()];
     BpfMap<StatsKey, StatsValue> statsMap(statsMapPath);
     if (!statsMap.isValid()) {

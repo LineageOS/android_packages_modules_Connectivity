@@ -104,6 +104,7 @@ Status BpfHandler::initMaps() {
     RETURN_IF_NOT_OK(mConfigurationMap.writeValue(CURRENT_STATS_MAP_CONFIGURATION_KEY, SELECT_MAP_A,
                                                   BPF_ANY));
     RETURN_IF_NOT_OK(mUidPermissionMap.init(UID_PERMISSION_MAP_PATH));
+    ALOGI("%s successfully", __func__);
 
     return netdutils::status::ok;
 }
