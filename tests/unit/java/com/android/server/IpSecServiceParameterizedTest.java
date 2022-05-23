@@ -783,6 +783,23 @@ public class IpSecServiceParameterizedTest {
     }
 
     @Test
+    public void testSetNetworkForTunnelInterfaceFailsForNullLp() throws Exception {
+        final IpSecTunnelInterfaceResponse createTunnelResp =
+                createAndValidateTunnel(mSourceAddr, mDestinationAddr, BLESSED_PACKAGE);
+        final Network newFakeNetwork = new Network(1000);
+        final int tunnelIfaceResourceId = createTunnelResp.resourceId;
+
+        try {
+            mIpSecService.setNetworkForTunnelInterface(
+                    tunnelIfaceResourceId, newFakeNetwork, BLESSED_PACKAGE);
+            fail(
+                    "Expected an IllegalArgumentException for underlying network with null"
+                            + " LinkProperties");
+        } catch (IllegalArgumentException expected) {
+        }
+    }
+
+    @Test
     public void testSetNetworkForTunnelInterfaceFailsForInvalidResourceId() throws Exception {
         final IpSecTunnelInterfaceResponse createTunnelResp =
                 createAndValidateTunnel(mSourceAddr, mDestinationAddr, BLESSED_PACKAGE);
