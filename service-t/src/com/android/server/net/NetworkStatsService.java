@@ -935,15 +935,23 @@ public class NetworkStatsService extends INetworkStatsService.Stub {
 
         final int targetAttempts = mDeps.getImportLegacyTargetAttempts();
         final int attempts;
+        final int fallbacks;
         try {
             attempts = mImportLegacyAttemptsCounter.get();
+            fallbacks = mImportLegacyFallbacksCounter.get();
         } catch (IOException e) {
-            Log.wtf(TAG, "Failed to read attempts counter, skip.", e);
+            Log.wtf(TAG, "Failed to read counters, skip.", e);
             return;
         }
-        if (attempts >= targetAttempts) return;
+        // If fallbacks is not zero, proceed with reading only to give signals from dogfooders.
+        // TODO: Remove fallbacks counter check before T formal release.
+        if (attempts >= targetAttempts && fallbacks == 0) return;
 
-        Log.i(TAG, "Starting import : attempts " + attempts + "/" + targetAttempts);
+        if (attempts >= targetAttempts) {
+            Log.i(TAG, "Starting import : only perform read");
+        } else{
+            Log.i(TAG, "Starting import : attempts " + attempts + "/" + targetAttempts);
+        }
 
         final MigrationInfo[] migrations = new MigrationInfo[]{
                 new MigrationInfo(mDevRecorder), new MigrationInfo(mXtRecorder),
@@ -999,6 +1007,10 @@ public class NetworkStatsService extends INetworkStatsService.Stub {
                     endedWithFallback = true;
                 }
             }
+
+            // For cases where the fallbacks is not zero but target attempts counts reached,
+            // only perform reads above and return here.
+            if (attempts >= targetAttempts) return;
 
             // Find the latest end time.
             for (final MigrationInfo migration : migrations) {
