@@ -52,9 +52,7 @@ import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.runner.AndroidJUnit4
 import com.android.net.module.util.ArrayTrackRecord
 import com.android.net.module.util.TrackRecord
-import com.android.networkstack.apishim.ConstantsShim
 import com.android.networkstack.apishim.NsdShimImpl
-import com.android.testutils.SC_V2
 import com.android.testutils.TestableNetworkAgent
 import com.android.testutils.TestableNetworkCallback
 import com.android.testutils.runAsShell
@@ -249,9 +247,11 @@ class NsdManagerTest {
     fun setUp() {
         handlerThread.start()
 
-        runAsShell(MANAGE_TEST_NETWORKS) {
-            testNetwork1 = createTestNetwork()
-            testNetwork2 = createTestNetwork()
+        if (TestUtils.shouldTestTApis()) {
+            runAsShell(MANAGE_TEST_NETWORKS) {
+                testNetwork1 = createTestNetwork()
+                testNetwork2 = createTestNetwork()
+            }
         }
     }
 
@@ -290,9 +290,11 @@ class NsdManagerTest {
 
     @After
     fun tearDown() {
-        runAsShell(MANAGE_TEST_NETWORKS) {
-            testNetwork1.close(cm)
-            testNetwork2.close(cm)
+        if (TestUtils.shouldTestTApis()) {
+            runAsShell(MANAGE_TEST_NETWORKS) {
+                testNetwork1.close(cm)
+                testNetwork2.close(cm)
+            }
         }
         handlerThread.quitSafely()
     }
@@ -419,7 +421,7 @@ class NsdManagerTest {
     @Test
     fun testNsdManager_DiscoverOnNetwork() {
         // This test requires shims supporting T+ APIs (discovering on specific network)
-        assumeTrue(ConstantsShim.VERSION > SC_V2)
+        assumeTrue(TestUtils.shouldTestTApis())
 
         val si = NsdServiceInfo()
         si.serviceType = SERVICE_TYPE
@@ -453,7 +455,7 @@ class NsdManagerTest {
     @Test
     fun testNsdManager_DiscoverWithNetworkRequest() {
         // This test requires shims supporting T+ APIs (discovering on network request)
-        assumeTrue(ConstantsShim.VERSION > SC_V2)
+        assumeTrue(TestUtils.shouldTestTApis())
 
         val si = NsdServiceInfo()
         si.serviceType = SERVICE_TYPE
@@ -518,7 +520,7 @@ class NsdManagerTest {
     @Test
     fun testNsdManager_ResolveOnNetwork() {
         // This test requires shims supporting T+ APIs (NsdServiceInfo.network)
-        assumeTrue(ConstantsShim.VERSION > SC_V2)
+        assumeTrue(TestUtils.shouldTestTApis())
 
         val si = NsdServiceInfo()
         si.serviceType = SERVICE_TYPE
@@ -562,7 +564,7 @@ class NsdManagerTest {
     @Test
     fun testNsdManager_RegisterOnNetwork() {
         // This test requires shims supporting T+ APIs (NsdServiceInfo.network)
-        assumeTrue(ConstantsShim.VERSION > SC_V2)
+        assumeTrue(TestUtils.shouldTestTApis())
 
         val si = NsdServiceInfo()
         si.serviceType = SERVICE_TYPE
