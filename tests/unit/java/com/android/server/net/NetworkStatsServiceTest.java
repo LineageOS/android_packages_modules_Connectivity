@@ -67,6 +67,9 @@ import static android.text.format.DateUtils.WEEK_IN_MILLIS;
 
 import static com.android.net.module.util.NetworkStatsUtils.SUBSCRIBER_ID_MATCH_RULE_EXACT;
 import static com.android.server.net.NetworkStatsService.ACTION_NETWORK_STATS_POLL;
+import static com.android.server.net.NetworkStatsService.NETSTATS_IMPORT_ATTEMPTS_COUNTER_NAME;
+import static com.android.server.net.NetworkStatsService.NETSTATS_IMPORT_FALLBACKS_COUNTER_NAME;
+import static com.android.server.net.NetworkStatsService.NETSTATS_IMPORT_SUCCESSES_COUNTER_NAME;
 import static com.android.testutils.DevSdkIgnoreRuleKt.SC_V2;
 
 import static org.junit.Assert.assertEquals;
@@ -152,6 +155,7 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
 import java.io.File;
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Clock;
@@ -383,21 +387,18 @@ public class NetworkStatsServiceTest extends NetworkStatsBaseTest {
             }
 
             @Override
-            public PersistentInt createImportLegacyAttemptsCounter(
-                    @androidx.annotation.NonNull Path path) {
-                return mImportLegacyAttemptsCounter;
-            }
-
-            @Override
-            public PersistentInt createImportLegacySuccessesCounter(
-                    @androidx.annotation.NonNull Path path) {
-                return mImportLegacySuccessesCounter;
-            }
-
-            @Override
-            public PersistentInt createImportLegacyFallbacksCounter(
-                    @androidx.annotation.NonNull Path path) {
-                return mImportLegacyFallbacksCounter;
+            public PersistentInt createPersistentCounter(@androidx.annotation.NonNull Path dir,
+                    @androidx.annotation.NonNull String name) throws IOException {
+                switch (name) {
+                    case NETSTATS_IMPORT_ATTEMPTS_COUNTER_NAME:
+                        return mImportLegacyAttemptsCounter;
+                    case NETSTATS_IMPORT_SUCCESSES_COUNTER_NAME:
+                        return mImportLegacySuccessesCounter;
+                    case NETSTATS_IMPORT_FALLBACKS_COUNTER_NAME:
+                        return mImportLegacyFallbacksCounter;
+                    default:
+                        throw new IllegalArgumentException("Unknown counter name: " + name);
+                }
             }
 
             @Override
