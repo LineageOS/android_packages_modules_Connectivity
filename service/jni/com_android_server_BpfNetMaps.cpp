@@ -39,152 +39,126 @@ static android::net::TrafficController mTc;
 
 namespace android {
 
-static void native_init(JNIEnv* env, jobject clazz) {
+#define CHECK_LOG(status) \
+  do { \
+    if (!isOk(status)) \
+      ALOGE("%s failed, error code = %d", __func__, status.code()); \
+  } while (0)
+
+static void native_init(JNIEnv* env, jclass clazz) {
   Status status = mTc.start();
-   if (!isOk(status)) {
-    ALOGE("%s failed, error code = %d", __func__, status.code());
-  }
+  CHECK_LOG(status);
 }
 
-static jint native_addNaughtyApp(JNIEnv* env, jobject clazz, jint uid) {
+static jint native_addNaughtyApp(JNIEnv* env, jobject self, jint uid) {
   const uint32_t appUids = static_cast<uint32_t>(abs(uid));
   Status status = mTc.updateUidOwnerMap(appUids, PENALTY_BOX_MATCH,
       TrafficController::IptOp::IptOpInsert);
-  if (!isOk(status)) {
-    ALOGE("%s failed, error code = %d", __func__, status.code());
-  }
+  CHECK_LOG(status);
   return (jint)status.code();
 }
 
-static jint native_removeNaughtyApp(JNIEnv* env, jobject clazz, jint uid) {
+static jint native_removeNaughtyApp(JNIEnv* env, jobject self, jint uid) {
   const uint32_t appUids = static_cast<uint32_t>(abs(uid));
   Status status = mTc.updateUidOwnerMap(appUids, PENALTY_BOX_MATCH,
       TrafficController::IptOp::IptOpDelete);
-  if (!isOk(status)) {
-    ALOGE("%s failed, error code = %d", __func__, status.code());
-  }
+  CHECK_LOG(status);
   return (jint)status.code();
 }
 
-static jint native_addNiceApp(JNIEnv* env, jobject clazz, jint uid) {
+static jint native_addNiceApp(JNIEnv* env, jobject self, jint uid) {
   const uint32_t appUids = static_cast<uint32_t>(abs(uid));
   Status status = mTc.updateUidOwnerMap(appUids, HAPPY_BOX_MATCH,
       TrafficController::IptOp::IptOpInsert);
-  if (!isOk(status)) {
-    ALOGE("%s failed, error code = %d", __func__, status.code());
-  }
+  CHECK_LOG(status);
   return (jint)status.code();
 }
 
-static jint native_removeNiceApp(JNIEnv* env, jobject clazz, jint uid) {
+static jint native_removeNiceApp(JNIEnv* env, jobject self, jint uid) {
   const uint32_t appUids = static_cast<uint32_t>(abs(uid));
   Status status = mTc.updateUidOwnerMap(appUids, HAPPY_BOX_MATCH,
       TrafficController::IptOp::IptOpDelete);
-  if (!isOk(status)) {
-    ALOGD("%s failed, error code = %d", __func__, status.code());
-  }
+  CHECK_LOG(status);
   return (jint)status.code();
 }
 
-static jint native_setChildChain(JNIEnv* env, jobject clazz, jint childChain, jboolean enable) {
+static jint native_setChildChain(JNIEnv* env, jobject self, jint childChain, jboolean enable) {
   auto chain = static_cast<ChildChain>(childChain);
   int res = mTc.toggleUidOwnerMap(chain, enable);
-  if (res) {
-    ALOGE("%s failed, error code = %d", __func__, res);
-  }
+  if (res) ALOGE("%s failed, error code = %d", __func__, res);
   return (jint)res;
 }
 
-static jint native_replaceUidChain(JNIEnv* env, jobject clazz, jstring name, jboolean isAllowlist,
-                                jintArray jUids) {
+static jint native_replaceUidChain(JNIEnv* env, jobject self, jstring name, jboolean isAllowlist,
+                                   jintArray jUids) {
     const ScopedUtfChars chainNameUtf8(env, name);
-    if (chainNameUtf8.c_str() == nullptr) {
-        return -EINVAL;
-    }
+    if (chainNameUtf8.c_str() == nullptr) return -EINVAL;
     const std::string chainName(chainNameUtf8.c_str());
 
     ScopedIntArrayRO uids(env, jUids);
-    if (uids.get() == nullptr) {
-        return -EINVAL;
-    }
+    if (uids.get() == nullptr) return -EINVAL;
 
     size_t size = uids.size();
     static_assert(sizeof(*(uids.get())) == sizeof(int32_t));
     std::vector<int32_t> data ((int32_t *)&uids[0], (int32_t*)&uids[size]);
     int res = mTc.replaceUidOwnerMap(chainName, isAllowlist, data);
-    if (res) {
-      ALOGE("%s failed, error code = %d", __func__, res);
-    }
+    if (res) ALOGE("%s failed, error code = %d", __func__, res);
     return (jint)res;
 }
 
-static jint native_setUidRule(JNIEnv* env, jobject clazz, jint childChain, jint uid,
-                          jint firewallRule) {
+static jint native_setUidRule(JNIEnv* env, jobject self, jint childChain, jint uid,
+                              jint firewallRule) {
     auto chain = static_cast<ChildChain>(childChain);
     auto rule = static_cast<FirewallRule>(firewallRule);
     FirewallType fType = mTc.getFirewallType(chain);
 
     int res = mTc.changeUidOwnerRule(chain, uid, rule, fType);
-    if (res) {
-      ALOGE("%s failed, error code = %d", __func__, res);
-    }
+    if (res) ALOGE("%s failed, error code = %d", __func__, res);
     return (jint)res;
 }
 
-static jint native_addUidInterfaceRules(JNIEnv* env, jobject clazz, jstring ifName,
-                                    jintArray jUids) {
+static jint native_addUidInterfaceRules(JNIEnv* env, jobject self, jstring ifName,
+                                        jintArray jUids) {
     // Null ifName is a wildcard to allow apps to receive packets on all interfaces and ifIndex is
     // set to 0.
-    int ifIndex;
+    int ifIndex = 0;
     if (ifName != nullptr) {
         const ScopedUtfChars ifNameUtf8(env, ifName);
         const std::string interfaceName(ifNameUtf8.c_str());
         ifIndex = if_nametoindex(interfaceName.c_str());
-    } else {
-        ifIndex = 0;
     }
 
     ScopedIntArrayRO uids(env, jUids);
-    if (uids.get() == nullptr) {
-        return -EINVAL;
-    }
+    if (uids.get() == nullptr) return -EINVAL;
 
     size_t size = uids.size();
     static_assert(sizeof(*(uids.get())) == sizeof(int32_t));
     std::vector<int32_t> data ((int32_t *)&uids[0], (int32_t*)&uids[size]);
     Status status = mTc.addUidInterfaceRules(ifIndex, data);
-    if (!isOk(status)) {
-        ALOGE("%s failed, error code = %d", __func__, status.code());
-    }
+    CHECK_LOG(status);
     return (jint)status.code();
 }
 
-static jint native_removeUidInterfaceRules(JNIEnv* env, jobject clazz, jintArray jUids) {
+static jint native_removeUidInterfaceRules(JNIEnv* env, jobject self, jintArray jUids) {
     ScopedIntArrayRO uids(env, jUids);
-    if (uids.get() == nullptr) {
-        return -EINVAL;
-    }
+    if (uids.get() == nullptr) return -EINVAL;
 
     size_t size = uids.size();
     static_assert(sizeof(*(uids.get())) == sizeof(int32_t));
     std::vector<int32_t> data ((int32_t *)&uids[0], (int32_t*)&uids[size]);
     Status status = mTc.removeUidInterfaceRules(data);
-    if (!isOk(status)) {
-        ALOGE("%s failed, error code = %d", __func__, status.code());
-    }
+    CHECK_LOG(status);
     return (jint)status.code();
 }
 
-static jint native_swapActiveStatsMap(JNIEnv* env, jobject clazz) {
+static jint native_swapActiveStatsMap(JNIEnv* env, jobject self) {
     Status status = mTc.swapActiveStatsMap();
-    if (!isOk(status)) {
-        ALOGD("%s failed, error code = %d", __func__, status.code());
-    }
+    CHECK_LOG(status);
     return (jint)status.code();
 }
 
-static void native_setPermissionForUids(JNIEnv* env, jobject clazz, jint permission,
-                                      jintArray jUids) {
+static void native_setPermissionForUids(JNIEnv* env, jobject self, jint permission,
+                                        jintArray jUids) {
     ScopedIntArrayRO uids(env, jUids);
     if (uids.get() == nullptr) return;
 
@@ -194,7 +168,7 @@ static void native_setPermissionForUids(JNIEnv* env, jobject clazz, jint permiss
     mTc.setPermissionForUids(permission, data);
 }
 
-static void native_dump(JNIEnv* env, jobject clazz, jobject javaFd, jboolean verbose) {
+static void native_dump(JNIEnv* env, jobject self, jobject javaFd, jboolean verbose) {
     int fd = netjniutils::GetNativeFileDescriptor(env, javaFd);
     if (fd < 0) {
         jniThrowExceptionFmt(env, "java/io/IOException", "Invalid file descriptor");
@@ -239,9 +213,8 @@ static const JNINativeMethod gMethods[] = {
 // clang-format on
 
 int register_com_android_server_BpfNetMaps(JNIEnv* env) {
-    return jniRegisterNativeMethods(env,
-    "com/android/server/BpfNetMaps",
-    gMethods, NELEM(gMethods));
+    return jniRegisterNativeMethods(env, "com/android/server/BpfNetMaps",
+                                    gMethods, NELEM(gMethods));
 }
 
 }; // namespace android
