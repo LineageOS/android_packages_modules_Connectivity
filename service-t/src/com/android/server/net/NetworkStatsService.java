@@ -621,30 +621,14 @@ public class NetworkStatsService extends INetworkStatsService.Stub {
         }
 
         /**
-         * Create the persistent counter that counts total import legacy stats attempts.
+         * Create a persistent counter for given directory and name.
          */
-        // TODO: Refactor multiple create counter functions into one.
-        public PersistentInt createImportLegacyAttemptsCounter(@NonNull Path path)
+        public PersistentInt createPersistentCounter(@NonNull Path dir, @NonNull String name)
                 throws IOException {
             // TODO: Modify PersistentInt to call setStartTime every time a write is made.
             //  Create and pass a real logger here.
-            return new PersistentInt(path.toString(), null /* logger */);
-        }
-
-        /**
-         * Create the persistent counter that counts total import legacy stats successes.
-         */
-        public PersistentInt createImportLegacySuccessesCounter(@NonNull Path path)
-                throws IOException {
-            return new PersistentInt(path.toString(), null /* logger */);
-        }
-
-        /**
-         * Create the persistent counter that counts total import legacy stats fallbacks.
-         */
-        public PersistentInt createImportLegacyFallbacksCounter(@NonNull Path path)
-                throws IOException {
-            return new PersistentInt(path.toString(), null /* logger */);
+            final String path = dir.resolve(name).toString();
+            return new PersistentInt(path, null /* logger */);
         }
 
         /**
@@ -922,12 +906,12 @@ public class NetworkStatsService extends INetworkStatsService.Stub {
             return;
         }
         try {
-            mImportLegacyAttemptsCounter = mDeps.createImportLegacyAttemptsCounter(
-                    mStatsDir.toPath().resolve(NETSTATS_IMPORT_ATTEMPTS_COUNTER_NAME));
-            mImportLegacySuccessesCounter = mDeps.createImportLegacySuccessesCounter(
-                    mStatsDir.toPath().resolve(NETSTATS_IMPORT_SUCCESSES_COUNTER_NAME));
-            mImportLegacyFallbacksCounter = mDeps.createImportLegacyFallbacksCounter(
-                    mStatsDir.toPath().resolve(NETSTATS_IMPORT_FALLBACKS_COUNTER_NAME));
+            mImportLegacyAttemptsCounter = mDeps.createPersistentCounter(mStatsDir.toPath(),
+                    NETSTATS_IMPORT_ATTEMPTS_COUNTER_NAME);
+            mImportLegacySuccessesCounter = mDeps.createPersistentCounter(mStatsDir.toPath(),
+                    NETSTATS_IMPORT_SUCCESSES_COUNTER_NAME);
+            mImportLegacyFallbacksCounter = mDeps.createPersistentCounter(mStatsDir.toPath(),
+                    NETSTATS_IMPORT_FALLBACKS_COUNTER_NAME);
         } catch (IOException e) {
             Log.wtf(TAG, "Failed to create persistent counters, skip.", e);
             return;
@@ -944,12 +928,13 @@ public class NetworkStatsService extends INetworkStatsService.Stub {
             return;
         }
         // If fallbacks is not zero, proceed with reading only to give signals from dogfooders.
-        // TODO: Remove fallbacks counter check before T formal release.
+        // TODO(b/233752318): Remove fallbacks counter check before T formal release.
         if (attempts >= targetAttempts && fallbacks == 0) return;
 
-        if (attempts >= targetAttempts) {
+        final boolean dryRunImportOnly = (attempts >= targetAttempts);
+        if (dryRunImportOnly) {
             Log.i(TAG, "Starting import : only perform read");
-        } else{
+        } else {
             Log.i(TAG, "Starting import : attempts " + attempts + "/" + targetAttempts);
         }
 
@@ -1010,7 +995,7 @@ public class NetworkStatsService extends INetworkStatsService.Stub {
 
             // For cases where the fallbacks is not zero but target attempts counts reached,
             // only perform reads above and return here.
-            if (attempts >= targetAttempts) return;
+            if (dryRunImportOnly) return;
 
             // Find the latest end time.
             for (final MigrationInfo migration : migrations) {
