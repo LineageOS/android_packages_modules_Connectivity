@@ -685,7 +685,7 @@ class NetlinkListenerTest : public testing::Test {
                 if (res.ok() || (res.error().code() == ENOENT)) {
                     return Result<void>();
                 }
-                ALOGE("Failed to delete data(cookie = %" PRIu64 "): %s\n", key,
+                ALOGE("Failed to delete data(cookie = %" PRIu64 "): %s", key,
                       strerror(res.error().code()));
             }
             // Move forward to next cookie in the map.

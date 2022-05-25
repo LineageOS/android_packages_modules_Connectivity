@@ -104,6 +104,7 @@ Status BpfHandler::initMaps() {
     RETURN_IF_NOT_OK(mConfigurationMap.writeValue(CURRENT_STATS_MAP_CONFIGURATION_KEY, SELECT_MAP_A,
                                                   BPF_ANY));
     RETURN_IF_NOT_OK(mUidPermissionMap.init(UID_PERMISSION_MAP_PATH));
+    ALOGI("%s successfully", __func__);
 
     return netdutils::status::ok;
 }
@@ -233,7 +234,7 @@ int BpfHandler::untagSocket(int sockFd) {
     if (sock_cookie == NONEXISTENT_COOKIE) return -errno;
     base::Result<void> res = mCookieTagMap.deleteValue(sock_cookie);
     if (!res.ok()) {
-        ALOGE("Failed to untag socket: %s\n", strerror(res.error().code()));
+        ALOGE("Failed to untag socket: %s", strerror(res.error().code()));
         return -res.error().code();
     }
     return 0;
