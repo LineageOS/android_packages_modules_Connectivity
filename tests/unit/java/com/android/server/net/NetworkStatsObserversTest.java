@@ -274,8 +274,12 @@ public class NetworkStatsObserversTest {
 
         mStatsObservers.unregister(request, UID_BLUE);
         waitForObserverToIdle();
-
         Mockito.verifyZeroInteractions(mUsageCallbackBinder);
+
+        // Verify that system uid can unregister for other uids.
+        mStatsObservers.unregister(request, Process.SYSTEM_UID);
+        waitForObserverToIdle();
+        mUsageCallback.expectOnCallbackReleased(request);
     }
 
     private NetworkIdentitySet makeTestIdentSet() {
