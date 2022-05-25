@@ -27,8 +27,8 @@
 #include <netinet/udp.h>
 #include <string.h>
 
-// The resulting .o needs to load on the Android T bpfloader v0.12+
-#define BPFLOADER_MIN_VER 12u
+// The resulting .o needs to load on the Android T beta 3 bpfloader
+#define BPFLOADER_MIN_VER BPFLOADER_T_BETA3_VERSION
 
 #include "bpf_helpers.h"
 #include "dscp_policy.h"
