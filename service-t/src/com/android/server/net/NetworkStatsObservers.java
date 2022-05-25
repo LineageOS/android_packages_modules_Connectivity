@@ -198,7 +198,7 @@ class NetworkStatsObservers {
 
         if (LOG) Log.d(TAG, "Unregistering " + requestInfo);
         mDataUsageRequests.remove(request.requestId);
-        mDataUsageRequestsPerUid.decrementCountOrThrow(callingUid);
+        mDataUsageRequestsPerUid.decrementCountOrThrow(requestInfo.mCallingUid);
         requestInfo.unlinkDeathRecipient();
         requestInfo.callCallback(NetworkStatsManager.CALLBACK_RELEASED);
     }
