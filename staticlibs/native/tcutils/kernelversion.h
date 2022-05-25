@@ -32,7 +32,7 @@
 
 namespace android {
 
-static inline unsigned kernelVersion() {
+static inline unsigned uncachedKernelVersion() {
   struct utsname buf;
   int ret = uname(&buf);
   if (ret)
@@ -49,6 +49,11 @@ static inline unsigned kernelVersion() {
     return 0;
 
   return KVER(kver_major, kver_minor, kver_sub);
+}
+
+static unsigned kernelVersion() {
+  static unsigned kver = uncachedKernelVersion();
+  return kver;
 }
 
 static inline bool isAtLeastKernelVersion(unsigned major, unsigned minor,
