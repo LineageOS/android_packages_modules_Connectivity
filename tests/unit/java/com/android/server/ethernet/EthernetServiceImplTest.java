@@ -20,7 +20,6 @@ import static android.net.NetworkCapabilities.TRANSPORT_TEST;
 
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.fail;
-
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
@@ -35,8 +34,8 @@ import android.Manifest;
 import android.annotation.NonNull;
 import android.content.Context;
 import android.content.pm.PackageManager;
-import android.net.INetworkInterfaceOutcomeReceiver;
 import android.net.EthernetNetworkUpdateRequest;
+import android.net.INetworkInterfaceOutcomeReceiver;
 import android.net.IpConfiguration;
 import android.net.NetworkCapabilities;
 import android.os.Handler;
@@ -111,18 +110,18 @@ public class EthernetServiceImplTest {
     }
 
     @Test
-    public void testConnectNetworkRejectsWhenEthNotStarted() {
+    public void testEnableInterfaceRejectsWhenEthNotStarted() {
         mEthernetServiceImpl.mStarted.set(false);
         assertThrows(IllegalStateException.class, () -> {
-            mEthernetServiceImpl.connectNetwork("" /* iface */, null /* listener */);
+            mEthernetServiceImpl.enableInterface("" /* iface */, null /* listener */);
         });
     }
 
     @Test
-    public void testDisconnectNetworkRejectsWhenEthNotStarted() {
+    public void testDisableInterfaceRejectsWhenEthNotStarted() {
         mEthernetServiceImpl.mStarted.set(false);
         assertThrows(IllegalStateException.class, () -> {
-            mEthernetServiceImpl.disconnectNetwork("" /* iface */, null /* listener */);
+            mEthernetServiceImpl.disableInterface("" /* iface */, null /* listener */);
         });
     }
 
@@ -134,16 +133,16 @@ public class EthernetServiceImplTest {
     }
 
     @Test
-    public void testConnectNetworkRejectsNullIface() {
+    public void testEnableInterfaceRejectsNullIface() {
         assertThrows(NullPointerException.class, () -> {
-            mEthernetServiceImpl.connectNetwork(null /* iface */, NULL_LISTENER);
+            mEthernetServiceImpl.enableInterface(null /* iface */, NULL_LISTENER);
         });
     }
 
     @Test
-    public void testDisconnectNetworkRejectsNullIface() {
+    public void testDisableInterfaceRejectsNullIface() {
         assertThrows(NullPointerException.class, () -> {
-            mEthernetServiceImpl.disconnectNetwork(null /* iface */, NULL_LISTENER);
+            mEthernetServiceImpl.disableInterface(null /* iface */, NULL_LISTENER);
         });
     }
 
@@ -163,22 +162,6 @@ public class EthernetServiceImplTest {
         verify(mEthernetTracker).updateConfiguration(eq(TEST_IFACE),
                 eq(UPDATE_REQUEST_WITHOUT_CAPABILITIES.getIpConfiguration()),
                 eq(UPDATE_REQUEST_WITHOUT_CAPABILITIES.getNetworkCapabilities()), isNull());
-    }
-
-    @Test
-    public void testConnectNetworkRejectsWithoutAutomotiveFeature() {
-        toggleAutomotiveFeature(false);
-        assertThrows(UnsupportedOperationException.class, () -> {
-            mEthernetServiceImpl.connectNetwork("" /* iface */, NULL_LISTENER);
-        });
-    }
-
-    @Test
-    public void testDisconnectNetworkRejectsWithoutAutomotiveFeature() {
-        toggleAutomotiveFeature(false);
-        assertThrows(UnsupportedOperationException.class, () -> {
-            mEthernetServiceImpl.disconnectNetwork("" /* iface */, NULL_LISTENER);
-        });
     }
 
     private void denyManageEthPermission() {
@@ -202,18 +185,18 @@ public class EthernetServiceImplTest {
     }
 
     @Test
-    public void testConnectNetworkRejectsWithoutManageEthPermission() {
+    public void testEnableInterfaceRejectsWithoutManageEthPermission() {
         denyManageEthPermission();
         assertThrows(SecurityException.class, () -> {
-            mEthernetServiceImpl.connectNetwork(TEST_IFACE, NULL_LISTENER);
+            mEthernetServiceImpl.enableInterface(TEST_IFACE, NULL_LISTENER);
         });
     }
 
     @Test
-    public void testDisconnectNetworkRejectsWithoutManageEthPermission() {
+    public void testDisableInterfaceRejectsWithoutManageEthPermission() {
         denyManageEthPermission();
         assertThrows(SecurityException.class, () -> {
-            mEthernetServiceImpl.disconnectNetwork(TEST_IFACE, NULL_LISTENER);
+            mEthernetServiceImpl.disableInterface(TEST_IFACE, NULL_LISTENER);
         });
     }
 
@@ -231,20 +214,20 @@ public class EthernetServiceImplTest {
     }
 
     @Test
-    public void testConnectNetworkRejectsTestRequestWithoutTestPermission() {
+    public void testEnableInterfaceRejectsTestRequestWithoutTestPermission() {
         enableTestInterface();
         denyManageTestNetworksPermission();
         assertThrows(SecurityException.class, () -> {
-            mEthernetServiceImpl.connectNetwork(TEST_IFACE, NULL_LISTENER);
+            mEthernetServiceImpl.enableInterface(TEST_IFACE, NULL_LISTENER);
         });
     }
 
     @Test
-    public void testDisconnectNetworkRejectsTestRequestWithoutTestPermission() {
+    public void testDisableInterfaceRejectsTestRequestWithoutTestPermission() {
         enableTestInterface();
         denyManageTestNetworksPermission();
         assertThrows(SecurityException.class, () -> {
-            mEthernetServiceImpl.disconnectNetwork(TEST_IFACE, NULL_LISTENER);
+            mEthernetServiceImpl.disableInterface(TEST_IFACE, NULL_LISTENER);
         });
     }
 
@@ -258,15 +241,15 @@ public class EthernetServiceImplTest {
     }
 
     @Test
-    public void testConnectNetwork() {
-        mEthernetServiceImpl.connectNetwork(TEST_IFACE, NULL_LISTENER);
-        verify(mEthernetTracker).connectNetwork(eq(TEST_IFACE), eq(NULL_LISTENER));
+    public void testEnableInterface() {
+        mEthernetServiceImpl.enableInterface(TEST_IFACE, NULL_LISTENER);
+        verify(mEthernetTracker).enableInterface(eq(TEST_IFACE), eq(NULL_LISTENER));
     }
 
     @Test
-    public void testDisconnectNetwork() {
-        mEthernetServiceImpl.disconnectNetwork(TEST_IFACE, NULL_LISTENER);
-        verify(mEthernetTracker).disconnectNetwork(eq(TEST_IFACE), eq(NULL_LISTENER));
+    public void testDisableInterface() {
+        mEthernetServiceImpl.disableInterface(TEST_IFACE, NULL_LISTENER);
+        verify(mEthernetTracker).disableInterface(eq(TEST_IFACE), eq(NULL_LISTENER));
     }
 
     @Test
@@ -324,23 +307,23 @@ public class EthernetServiceImplTest {
     }
 
     @Test
-    public void testConnectNetworkForTestRequestDoesNotRequireAutoOrNetPermission() {
+    public void testEnableInterfaceForTestRequestDoesNotRequireNetPermission() {
         enableTestInterface();
         toggleAutomotiveFeature(false);
         denyManageEthPermission();
 
-        mEthernetServiceImpl.connectNetwork(TEST_IFACE, NULL_LISTENER);
-        verify(mEthernetTracker).connectNetwork(eq(TEST_IFACE), eq(NULL_LISTENER));
+        mEthernetServiceImpl.enableInterface(TEST_IFACE, NULL_LISTENER);
+        verify(mEthernetTracker).enableInterface(eq(TEST_IFACE), eq(NULL_LISTENER));
     }
 
     @Test
-    public void testDisconnectNetworkForTestRequestDoesNotRequireAutoOrNetPermission() {
+    public void testDisableInterfaceForTestRequestDoesNotRequireAutoOrNetPermission() {
         enableTestInterface();
         toggleAutomotiveFeature(false);
         denyManageEthPermission();
 
-        mEthernetServiceImpl.disconnectNetwork(TEST_IFACE, NULL_LISTENER);
-        verify(mEthernetTracker).disconnectNetwork(eq(TEST_IFACE), eq(NULL_LISTENER));
+        mEthernetServiceImpl.disableInterface(TEST_IFACE, NULL_LISTENER);
+        verify(mEthernetTracker).disableInterface(eq(TEST_IFACE), eq(NULL_LISTENER));
     }
 
     private void denyPermissions(String... permissions) {
