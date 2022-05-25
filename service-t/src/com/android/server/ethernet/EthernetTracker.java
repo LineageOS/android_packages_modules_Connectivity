@@ -286,13 +286,13 @@ public class EthernetTracker {
     }
 
     @VisibleForTesting(visibility = PACKAGE)
-    protected void connectNetwork(@NonNull final String iface,
+    protected void enableInterface(@NonNull final String iface,
             @Nullable final INetworkInterfaceOutcomeReceiver listener) {
         mHandler.post(() -> updateInterfaceState(iface, true, listener));
     }
 
     @VisibleForTesting(visibility = PACKAGE)
-    protected void disconnectNetwork(@NonNull final String iface,
+    protected void disableInterface(@NonNull final String iface,
             @Nullable final INetworkInterfaceOutcomeReceiver listener) {
         mHandler.post(() -> updateInterfaceState(iface, false, listener));
     }
