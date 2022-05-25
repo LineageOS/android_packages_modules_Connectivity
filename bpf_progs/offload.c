@@ -24,8 +24,8 @@
 #define __kernel_udphdr udphdr
 #include <linux/udp.h>
 
-// The resulting .o needs to load on the Android S bpfloader v0.2
-#define BPFLOADER_MIN_VER 2u
+// The resulting .o needs to load on the Android S bpfloader
+#define BPFLOADER_MIN_VER BPFLOADER_S_VERSION
 
 #include "bpf_helpers.h"
 #include "bpf_net_helpers.h"
