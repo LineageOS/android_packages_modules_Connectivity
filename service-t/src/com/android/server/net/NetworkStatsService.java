@@ -958,8 +958,17 @@ public class NetworkStatsService extends INetworkStatsService.Stub {
             // First, read all legacy collections. This is OEM code and it can throw. Don't
             // commit any data to disk until all are read.
             for (int i = 0; i < migrations.length; i++) {
+                String errMsg = null;
+                Throwable exception = null;
                 final MigrationInfo migration = migrations[i];
-                migration.collection = readPlatformCollectionForRecorder(migration.recorder);
+
+                // Read the collection from platform code, and using fallback method if throws.
+                try {
+                    migration.collection = readPlatformCollectionForRecorder(migration.recorder);
+                } catch (Throwable e) {
+                    errMsg = "Failed to read stats from platform";
+                    exception = e;
+                }
 
                 // Also read the collection with legacy method
                 final NetworkStatsRecorder legacyRecorder = legacyRecorders[i];
@@ -968,18 +977,22 @@ public class NetworkStatsService extends INetworkStatsService.Stub {
                 try {
                     legacyStats = legacyRecorder.getOrLoadCompleteLocked();
                 } catch (Throwable e) {
-                    Log.wtf(TAG, "Failed to read stats with legacy method", e);
-                    // Newer stats will be used here; that's the only thing that is usable
-                    continue;
+                    Log.wtf(TAG, "Failed to read stats with legacy method for recorder " + i, e);
+                    if (exception != null) {
+                        throw exception;
+                    } else {
+                        // Use newer stats, since that's all that is available
+                        continue;
+                    }
                 }
 
-                String errMsg;
-                Throwable exception = null;
-                try {
-                    errMsg = compareStats(migration.collection, legacyStats);
-                } catch (Throwable e) {
-                    errMsg = "Failed to compare migrated stats with all stats";
-                    exception = e;
+                if (errMsg == null) {
+                    try {
+                        errMsg = compareStats(migration.collection, legacyStats);
+                    } catch (Throwable e) {
+                        errMsg = "Failed to compare migrated stats with all stats";
+                        exception = e;
+                    }
                 }
 
                 if (errMsg != null) {
