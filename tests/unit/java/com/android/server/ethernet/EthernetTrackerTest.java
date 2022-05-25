@@ -352,8 +352,8 @@ public class EthernetTrackerTest {
     }
 
     @Test
-    public void testConnectNetworkCorrectlyCallsFactory() {
-        tracker.connectNetwork(TEST_IFACE, NULL_LISTENER);
+    public void testEnableInterfaceCorrectlyCallsFactory() {
+        tracker.enableInterface(TEST_IFACE, NULL_LISTENER);
         waitForIdle();
 
         verify(mFactory).updateInterfaceLinkState(eq(TEST_IFACE), eq(true /* up */),
@@ -361,8 +361,8 @@ public class EthernetTrackerTest {
     }
 
     @Test
-    public void testDisconnectNetworkCorrectlyCallsFactory() {
-        tracker.disconnectNetwork(TEST_IFACE, NULL_LISTENER);
+    public void testDisableInterfaceCorrectlyCallsFactory() {
+        tracker.disableInterface(TEST_IFACE, NULL_LISTENER);
         waitForIdle();
 
         verify(mFactory).updateInterfaceLinkState(eq(TEST_IFACE), eq(false /* up */),
