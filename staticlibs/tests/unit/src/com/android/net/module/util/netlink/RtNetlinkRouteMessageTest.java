@@ -195,11 +195,8 @@ public class RtNetlinkRouteMessageTest {
 
         // Try to parse the RTM_NEWADDR message.
         msg = NetlinkMessage.parse(byteBuffer, NETLINK_ROUTE);
-        // The current parse code does not advance to the end of the message if the
-        // entire message wasn't consumed, then the remaining attributes in the
-        // RTM_NEWROUTE message will be considered as another new rtm netlink message,
-        // that will return null.
-        assertNull(msg);
+        assertNotNull(msg);
+        assertTrue(msg instanceof RtNetlinkAddressMessage);
     }
 
     @Test
