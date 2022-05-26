@@ -16,6 +16,7 @@
 
 package android.nearby;
 
+import android.annotation.IntDef;
 import android.annotation.NonNull;
 import android.annotation.SystemApi;
 import android.os.Parcel;
@@ -34,6 +35,13 @@ public final class DataElement implements Parcelable {
 
     private final int mKey;
     private final byte[] mValue;
+
+    /** @hide */
+    @IntDef({DataType.BLE_SERVICE_DATA, DataType.ACCOUNT_KEY})
+    @interface DataType {
+        int BLE_SERVICE_DATA = 0;
+        int ACCOUNT_KEY = 1;
+    }
 
     /**
      * Constructs a {@link DataElement}.
