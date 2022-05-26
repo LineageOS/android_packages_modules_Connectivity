@@ -32,7 +32,6 @@ import static org.mockito.ArgumentMatchers.same;
 import static org.mockito.Mockito.clearInvocations;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -51,6 +50,7 @@ import android.net.Network;
 import android.net.NetworkAgentConfig;
 import android.net.NetworkCapabilities;
 import android.net.NetworkProvider;
+import android.net.NetworkProvider.NetworkOfferCallback;
 import android.net.NetworkRequest;
 import android.net.StaticIpConfiguration;
 import android.net.ip.IpClientCallbacks;
@@ -99,6 +99,7 @@ public class EthernetNetworkFactoryTest {
     @Mock private EthernetNetworkAgent mNetworkAgent;
     @Mock private InterfaceParams mInterfaceParams;
     @Mock private Network mMockNetwork;
+    @Mock private NetworkProvider mNetworkProvider;
 
     @Before
     public void setUp() throws Exception {
@@ -112,7 +113,7 @@ public class EthernetNetworkFactoryTest {
     private void initEthernetNetworkFactory() {
         mLooper = new TestLooper();
         mHandler = new Handler(mLooper.getLooper());
-        mNetFactory = new EthernetNetworkFactory(mHandler, mContext, mDeps);
+        mNetFactory = new EthernetNetworkFactory(mHandler, mContext, mNetworkProvider, mDeps);
     }
 
     private void setupNetworkAgentMock() {
@@ -239,9 +240,16 @@ public class EthernetNetworkFactoryTest {
         mNetFactory.addInterface(iface, HW_ADDR, ipConfig,
                 createInterfaceCapsBuilder(transportType).build());
         assertTrue(mNetFactory.updateInterfaceLinkState(iface, true, NULL_LISTENER));
+
+        ArgumentCaptor<NetworkOfferCallback> captor = ArgumentCaptor.forClass(
+                NetworkOfferCallback.class);
+        verify(mNetworkProvider).registerNetworkOffer(any(), any(), any(), captor.capture());
+        captor.getValue().onNetworkNeeded(createDefaultRequest());
+
         verifyStart(ipConfig);
         clearInvocations(mDeps);
         clearInvocations(mIpClient);
+        clearInvocations(mNetworkProvider);
     }
 
     // creates a provisioned interface
@@ -281,26 +289,12 @@ public class EthernetNetworkFactoryTest {
         // To create an unprovisioned interface, provision and then "stop" it, i.e. stop its
         // NetworkAgent and IpClient. One way this can be done is by provisioning an interface and
         // then calling onNetworkUnwanted.
-        createAndVerifyProvisionedInterface(iface);
-
-        mNetworkAgent.getCallbacks().onNetworkUnwanted();
-        mLooper.dispatchAll();
-        verifyStop();
+        mNetFactory.addInterface(iface, HW_ADDR, createDefaultIpConfig(),
+                createInterfaceCapsBuilder(NetworkCapabilities.TRANSPORT_ETHERNET).build());
+        assertTrue(mNetFactory.updateInterfaceLinkState(iface, true, NULL_LISTENER));
 
         clearInvocations(mIpClient);
         clearInvocations(mNetworkAgent);
-    }
-
-    @Test
-    public void testAcceptRequest() throws Exception {
-        initEthernetNetworkFactory();
-        createInterfaceUndergoingProvisioning(TEST_IFACE);
-        assertTrue(mNetFactory.acceptRequest(createDefaultRequest()));
-
-        NetworkRequest wifiRequest = createDefaultRequestBuilder()
-                .removeTransportType(NetworkCapabilities.TRANSPORT_ETHERNET)
-                .addTransportType(NetworkCapabilities.TRANSPORT_WIFI).build();
-        assertFalse(mNetFactory.acceptRequest(wifiRequest));
     }
 
     @Test
@@ -378,36 +372,6 @@ public class EthernetNetworkFactoryTest {
     }
 
     @Test
-    public void testNeedNetworkForOnProvisionedInterface() throws Exception {
-        initEthernetNetworkFactory();
-        createAndVerifyProvisionedInterface(TEST_IFACE);
-        mNetFactory.needNetworkFor(createDefaultRequest());
-        verify(mIpClient, never()).startProvisioning(any());
-    }
-
-    @Test
-    public void testNeedNetworkForOnUnprovisionedInterface() throws Exception {
-        initEthernetNetworkFactory();
-        createUnprovisionedInterface(TEST_IFACE);
-        mNetFactory.needNetworkFor(createDefaultRequest());
-        verify(mIpClient).startProvisioning(any());
-
-        triggerOnProvisioningSuccess();
-        verifyNetworkAgentRegistersAndConnects();
-    }
-
-    @Test
-    public void testNeedNetworkForOnInterfaceUndergoingProvisioning() throws Exception {
-        initEthernetNetworkFactory();
-        createInterfaceUndergoingProvisioning(TEST_IFACE);
-        mNetFactory.needNetworkFor(createDefaultRequest());
-        verify(mIpClient, never()).startProvisioning(any());
-
-        triggerOnProvisioningSuccess();
-        verifyNetworkAgentRegistersAndConnects();
-    }
-
-    @Test
     public void testProvisioningLoss() throws Exception {
         initEthernetNetworkFactory();
         when(mDeps.getNetworkInterfaceByName(TEST_IFACE)).thenReturn(mInterfaceParams);
@@ -438,31 +402,6 @@ public class EthernetNetworkFactoryTest {
         verify(mIpClient, never()).shutdown();
         verify(mNetworkAgent, never()).unregister();
         verify(mIpClient, never()).startProvisioning(any());
-    }
-
-    @Test
-    public void testIpClientIsNotStartedWhenLinkIsDown() throws Exception {
-        initEthernetNetworkFactory();
-        createUnprovisionedInterface(TEST_IFACE);
-        mNetFactory.updateInterfaceLinkState(TEST_IFACE, false, NULL_LISTENER);
-
-        mNetFactory.needNetworkFor(createDefaultRequest());
-
-        verify(mDeps, never()).makeIpClient(any(), any(), any());
-
-        // BUG(b/191854824): requesting a network with a specifier (Android Auto use case) should
-        // not start an IpClient when the link is down, but fixing this may make matters worse by
-        // tiggering b/197548738.
-        NetworkRequest specificNetRequest = new NetworkRequest.Builder()
-                .addTransportType(NetworkCapabilities.TRANSPORT_ETHERNET)
-                .setNetworkSpecifier(new EthernetNetworkSpecifier(TEST_IFACE))
-                .build();
-        mNetFactory.needNetworkFor(specificNetRequest);
-        mNetFactory.releaseNetworkFor(specificNetRequest);
-
-        mNetFactory.updateInterfaceLinkState(TEST_IFACE, true, NULL_LISTENER);
-        // TODO: change to once when b/191854824 is fixed.
-        verify(mDeps, times(2)).makeIpClient(any(), eq(TEST_IFACE), any());
     }
 
     @Test
