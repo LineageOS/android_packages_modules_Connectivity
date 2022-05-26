@@ -68,7 +68,6 @@ import com.android.testutils.DevSdkIgnoreRule;
 
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.ArgumentCaptor;
@@ -298,7 +297,6 @@ public class EthernetNetworkFactoryTest {
         clearInvocations(mNetworkAgent);
     }
 
-    @Ignore("TODO: temporarily ignore tests until prebuilts are updated")
     @Test
     public void testUpdateInterfaceLinkStateForActiveProvisioningInterface() throws Exception {
         initEthernetNetworkFactory();
@@ -314,7 +312,6 @@ public class EthernetNetworkFactoryTest {
         assertEquals(listener.expectOnResult(), TEST_IFACE);
     }
 
-    @Ignore("TODO: temporarily ignore tests until prebuilts are updated")
     @Test
     public void testUpdateInterfaceLinkStateForProvisionedInterface() throws Exception {
         initEthernetNetworkFactory();
@@ -329,7 +326,6 @@ public class EthernetNetworkFactoryTest {
         assertEquals(listener.expectOnResult(), TEST_IFACE);
     }
 
-    @Ignore("TODO: temporarily ignore tests until prebuilts are updated")
     @Test
     public void testUpdateInterfaceLinkStateForUnprovisionedInterface() throws Exception {
         initEthernetNetworkFactory();
@@ -347,7 +343,6 @@ public class EthernetNetworkFactoryTest {
         assertEquals(listener.expectOnResult(), TEST_IFACE);
     }
 
-    @Ignore("TODO: temporarily ignore tests until prebuilts are updated")
     @Test
     public void testUpdateInterfaceLinkStateForNonExistingInterface() throws Exception {
         initEthernetNetworkFactory();
@@ -362,7 +357,6 @@ public class EthernetNetworkFactoryTest {
         listener.expectOnError();
     }
 
-    @Ignore("TODO: temporarily ignore tests until prebuilts are updated")
     @Test
     public void testUpdateInterfaceLinkStateWithNoChanges() throws Exception {
         initEthernetNetworkFactory();
@@ -377,7 +371,6 @@ public class EthernetNetworkFactoryTest {
         listener.expectOnError();
     }
 
-    @Ignore("TODO: temporarily ignore tests until prebuilts are updated")
     @Test
     public void testProvisioningLoss() throws Exception {
         initEthernetNetworkFactory();
@@ -390,7 +383,6 @@ public class EthernetNetworkFactoryTest {
         verify(mIpClient).startProvisioning(any());
     }
 
-    @Ignore("TODO: temporarily ignore tests until prebuilts are updated")
     @Test
     public void testProvisioningLossForDisappearedInterface() throws Exception {
         initEthernetNetworkFactory();
@@ -412,7 +404,6 @@ public class EthernetNetworkFactoryTest {
         verify(mIpClient, never()).startProvisioning(any());
     }
 
-    @Ignore("TODO: temporarily ignore tests until prebuilts are updated")
     @Test
     public void testLinkPropertiesChanged() throws Exception {
         initEthernetNetworkFactory();
@@ -424,7 +415,6 @@ public class EthernetNetworkFactoryTest {
         verify(mNetworkAgent).sendLinkPropertiesImpl(same(lp));
     }
 
-    @Ignore("TODO: temporarily ignore tests until prebuilts are updated")
     @Test
     public void testNetworkUnwanted() throws Exception {
         initEthernetNetworkFactory();
@@ -435,7 +425,6 @@ public class EthernetNetworkFactoryTest {
         verifyStop();
     }
 
-    @Ignore("TODO: temporarily ignore tests until prebuilts are updated")
     @Test
     public void testNetworkUnwantedWithStaleNetworkAgent() throws Exception {
         initEthernetNetworkFactory();
@@ -460,7 +449,6 @@ public class EthernetNetworkFactoryTest {
         verify(mNetworkAgent, never()).unregister();
     }
 
-    @Ignore("TODO: temporarily ignore tests until prebuilts are updated")
     @Test
     public void testTransportOverrideIsCorrectlySet() throws Exception {
         initEthernetNetworkFactory();
@@ -482,7 +470,6 @@ public class EthernetNetworkFactoryTest {
                 ConnectivityManager.TYPE_NONE);
     }
 
-    @Ignore("TODO: temporarily ignore tests until prebuilts are updated")
     @Test
     public void testReachabilityLoss() throws Exception {
         initEthernetNetworkFactory();
@@ -503,7 +490,6 @@ public class EthernetNetworkFactoryTest {
         return staleIpClientCallbacks;
     }
 
-    @Ignore("TODO: temporarily ignore tests until prebuilts are updated")
     @Test
     public void testIgnoreOnIpLayerStartedCallbackForStaleCallback() throws Exception {
         initEthernetNetworkFactory();
@@ -516,7 +502,6 @@ public class EthernetNetworkFactoryTest {
         verify(mNetworkAgent, never()).register();
     }
 
-    @Ignore("TODO: temporarily ignore tests until prebuilts are updated")
     @Test
     public void testIgnoreOnIpLayerStoppedCallbackForStaleCallback() throws Exception {
         initEthernetNetworkFactory();
@@ -529,7 +514,6 @@ public class EthernetNetworkFactoryTest {
         verify(mIpClient, never()).startProvisioning(any());
     }
 
-    @Ignore("TODO: temporarily ignore tests until prebuilts are updated")
     @Test
     public void testIgnoreLinkPropertiesCallbackForStaleCallback() throws Exception {
         initEthernetNetworkFactory();
@@ -542,7 +526,6 @@ public class EthernetNetworkFactoryTest {
         verify(mNetworkAgent, never()).sendLinkPropertiesImpl(eq(lp));
     }
 
-    @Ignore("TODO: temporarily ignore tests until prebuilts are updated")
     @Test
     public void testIgnoreNeighborLossCallbackForStaleCallback() throws Exception {
         initEthernetNetworkFactory();
@@ -611,7 +594,6 @@ public class EthernetNetworkFactoryTest {
         }
     }
 
-    @Ignore("TODO: temporarily ignore tests until prebuilts are updated")
     @Test
     public void testUpdateInterfaceCallsListenerCorrectlyOnSuccess() throws Exception {
         initEthernetNetworkFactory();
@@ -627,7 +609,6 @@ public class EthernetNetworkFactoryTest {
     }
 
     @DevSdkIgnoreRule.IgnoreUpTo(SC_V2) // TODO: Use to Build.VERSION_CODES.SC_V2 when available
-    @Ignore("TODO: temporarily ignore tests until prebuilts are updated")
     @Test
     public void testUpdateInterfaceAbortsOnConcurrentRemoveInterface() throws Exception {
         initEthernetNetworkFactory();
@@ -637,7 +618,6 @@ public class EthernetNetworkFactoryTest {
     }
 
     @DevSdkIgnoreRule.IgnoreUpTo(SC_V2) // TODO: Use to Build.VERSION_CODES.SC_V2 when available
-    @Ignore("TODO: temporarily ignore tests until prebuilts are updated")
     @Test
     public void testUpdateInterfaceAbortsOnConcurrentUpdateInterfaceLinkState() throws Exception {
         initEthernetNetworkFactory();
@@ -647,7 +627,6 @@ public class EthernetNetworkFactoryTest {
     }
 
     @DevSdkIgnoreRule.IgnoreUpTo(SC_V2) // TODO: Use to Build.VERSION_CODES.SC_V2 when available
-    @Ignore("TODO: temporarily ignore tests until prebuilts are updated")
     @Test
     public void testUpdateInterfaceCallsListenerCorrectlyOnConcurrentRequests() throws Exception {
         initEthernetNetworkFactory();
@@ -684,7 +663,6 @@ public class EthernetNetworkFactoryTest {
         failedListener.expectOnError();
     }
 
-    @Ignore("TODO: temporarily ignore tests until prebuilts are updated")
     @Test
     public void testUpdateInterfaceRestartsAgentCorrectly() throws Exception {
         initEthernetNetworkFactory();
@@ -702,7 +680,6 @@ public class EthernetNetworkFactoryTest {
         verifyRestart(ipConfiguration);
     }
 
-    @Ignore("TODO: temporarily ignore tests until prebuilts are updated")
     @Test
     public void testUpdateInterfaceForNonExistingInterface() throws Exception {
         initEthernetNetworkFactory();
@@ -717,7 +694,6 @@ public class EthernetNetworkFactoryTest {
         listener.expectOnError();
     }
 
-    @Ignore("TODO: temporarily ignore tests until prebuilts are updated")
     @Test
     public void testUpdateInterfaceWithNullIpConfiguration() throws Exception {
         initEthernetNetworkFactory();
