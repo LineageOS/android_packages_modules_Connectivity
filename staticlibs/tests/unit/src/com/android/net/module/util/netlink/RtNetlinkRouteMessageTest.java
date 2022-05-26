@@ -63,15 +63,7 @@ public class RtNetlinkRouteMessageTest {
         return ByteBuffer.wrap(HexDump.hexStringToByteArray(hexString));
     }
 
-    @Test
-    public void testParseRtmRouteAddress() {
-        final ByteBuffer byteBuffer = toByteBuffer(RTM_NEWROUTE_HEX);
-        byteBuffer.order(ByteOrder.LITTLE_ENDIAN);  // For testing.
-        final NetlinkMessage msg = NetlinkMessage.parse(byteBuffer, NETLINK_ROUTE);
-        assertNotNull(msg);
-        assertTrue(msg instanceof RtNetlinkRouteMessage);
-        final RtNetlinkRouteMessage routeMsg = (RtNetlinkRouteMessage) msg;
-
+    private void assertRtmRouteMessage(final RtNetlinkRouteMessage routeMsg) {
         final StructNlMsgHdr hdr = routeMsg.getHeader();
         assertNotNull(hdr);
         assertEquals(136, hdr.nlmsg_len);
@@ -95,6 +87,18 @@ public class RtNetlinkRouteMessageTest {
         assertEquals(routeMsg.getDestination(), TEST_IPV6_GLOBAL_PREFIX);
         assertEquals(735, routeMsg.getInterfaceIndex());
         assertEquals((Inet6Address) routeMsg.getGateway(), TEST_IPV6_LINK_LOCAL_GATEWAY);
+    }
+
+    @Test
+    public void testParseRtmRouteMessage() {
+        final ByteBuffer byteBuffer = toByteBuffer(RTM_NEWROUTE_HEX);
+        byteBuffer.order(ByteOrder.LITTLE_ENDIAN);  // For testing.
+
+        final NetlinkMessage msg = NetlinkMessage.parse(byteBuffer, NETLINK_ROUTE);
+        assertNotNull(msg);
+        assertTrue(msg instanceof RtNetlinkRouteMessage);
+        final RtNetlinkRouteMessage routeMsg = (RtNetlinkRouteMessage) msg;
+        assertRtmRouteMessage(routeMsg);
     }
 
     private static final String RTM_NEWROUTE_PACK_HEX =
@@ -143,7 +147,7 @@ public class RtNetlinkRouteMessageTest {
             + "08000400DF020000";                          // RTA_OIF
 
     @Test
-    public void testParseRtmRouteAddress_IPv4MappedIPv6Gateway() {
+    public void testParseRtmRouteMessage_IPv4MappedIPv6Gateway() {
         final ByteBuffer byteBuffer = toByteBuffer(RTM_NEWROUTE_IPV4_MAPPED_IPV6_GATEWAY_HEX);
         byteBuffer.order(ByteOrder.LITTLE_ENDIAN);  // For testing.
         final NetlinkMessage msg = NetlinkMessage.parse(byteBuffer, NETLINK_ROUTE);
@@ -160,12 +164,41 @@ public class RtNetlinkRouteMessageTest {
             + "08000400DF020000";                          // RTA_OIF
 
     @Test
-    public void testParseRtmRouteAddress_IPv4MappedIPv6Destination() {
+    public void testParseRtmRouteMessage_IPv4MappedIPv6Destination() {
         final ByteBuffer byteBuffer = toByteBuffer(RTM_NEWROUTE_IPV4_MAPPED_IPV6_DST_HEX);
         byteBuffer.order(ByteOrder.LITTLE_ENDIAN);  // For testing.
         final NetlinkMessage msg = NetlinkMessage.parse(byteBuffer, NETLINK_ROUTE);
         // Parsing RTM_NEWROUTE with IPv4-mapped IPv6 destination prefix, which doesn't match
         // rtm_family after address parsing.
+        assertNull(msg);
+    }
+
+    // An example of the full RTM_NEWADDR message.
+    private static final String RTM_NEWADDR_HEX =
+            "48000000140000000000000000000000"            // struct nlmsghr
+            + "0A4080FD1E000000"                          // struct ifaddrmsg
+            + "14000100FE800000000000002C415CFFFE096665"  // IFA_ADDRESS
+            + "14000600100E0000201C00002A70000045700000"  // IFA_CACHEINFO
+            + "0800080080000000";                         // IFA_FLAGS
+
+    @Test
+    public void testParseMultipleRtmMessagesInOneByteBuffer() {
+        final ByteBuffer byteBuffer = toByteBuffer(RTM_NEWROUTE_HEX + RTM_NEWADDR_HEX);
+        byteBuffer.order(ByteOrder.LITTLE_ENDIAN);  // For testing.
+
+        // Try to parse the RTM_NEWROUTE message.
+        NetlinkMessage msg = NetlinkMessage.parse(byteBuffer, NETLINK_ROUTE);
+        assertNotNull(msg);
+        assertTrue(msg instanceof RtNetlinkRouteMessage);
+        final RtNetlinkRouteMessage routeMsg = (RtNetlinkRouteMessage) msg;
+        assertRtmRouteMessage(routeMsg);
+
+        // Try to parse the RTM_NEWADDR message.
+        msg = NetlinkMessage.parse(byteBuffer, NETLINK_ROUTE);
+        // The current parse code does not advance to the end of the message if the
+        // entire message wasn't consumed, then the remaining attributes in the
+        // RTM_NEWROUTE message will be considered as another new rtm netlink message,
+        // that will return null.
         assertNull(msg);
     }
 
