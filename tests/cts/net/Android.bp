@@ -94,7 +94,7 @@ android_test {
     ],
     jni_uses_sdk_apis: true,
     min_sdk_version: "29",
-    target_sdk_version: "30",
+    target_sdk_version: "33",
     test_suites: [
         "general-tests",
         "mts-dnsresolver",
