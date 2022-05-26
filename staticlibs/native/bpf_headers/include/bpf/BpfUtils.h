@@ -92,7 +92,7 @@ static inline int setrlimitForTest() {
 
 #define KVER(a, b, c) (((a) << 24) + ((b) << 16) + (c))
 
-static inline unsigned kernelVersion() {
+static inline unsigned uncachedKernelVersion() {
     struct utsname buf;
     int ret = uname(&buf);
     if (ret) return 0;
@@ -106,6 +106,11 @@ static inline unsigned kernelVersion() {
     if (ret < 3) return 0;
 
     return KVER(kver_major, kver_minor, kver_sub);
+}
+
+static inline unsigned kernelVersion() {
+    static unsigned kver = uncachedKernelVersion();
+    return kver;
 }
 
 static inline bool isAtLeastKernelVersion(unsigned major, unsigned minor, unsigned sub) {
