@@ -195,7 +195,11 @@ class EthernetManagerTest {
             context,
             Handler(Looper.getMainLooper())
         ).also { createdIfaces.add(it) }
-        ifaceListener.eventuallyExpect(iface, STATE_LINK_UP, ROLE_CLIENT)
+        with(ifaceListener) {
+            // when an interface comes up, we should always see a down cb before an up cb.
+            eventuallyExpect(iface, STATE_LINK_DOWN, ROLE_CLIENT)
+            expectCallback(iface, STATE_LINK_UP, ROLE_CLIENT)
+        }
         return iface
     }
 
@@ -208,6 +212,7 @@ class EthernetManagerTest {
     private fun removeInterface(iface: EthernetTestInterface) {
         iface.destroy()
         createdIfaces.remove(iface)
+        ifaceListener.eventuallyExpect(iface, STATE_ABSENT, ROLE_NONE)
     }
 
     @Test
