@@ -75,9 +75,6 @@
       "keywords": ["netd-device-kernel-4.9", "netd-device-kernel-4.14"]
     },
     {
-      "name": "libnetworkstats_test"
-    },
-    {
       "name": "FrameworksNetDeflakeTest"
     }
   ],
