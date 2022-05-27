@@ -27,9 +27,11 @@ import android.net.IpConfiguration.ProxySettings;
 import android.net.LinkAddress;
 import android.net.ProxyInfo;
 import android.net.StaticIpConfiguration;
+import android.os.Build;
 import android.util.ArrayMap;
 
-import androidx.test.runner.AndroidJUnit4;
+import com.android.testutils.DevSdkIgnoreRule;
+import com.android.testutils.DevSdkIgnoreRunner;
 
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -46,7 +48,8 @@ import java.util.Arrays;
 /**
  * Unit tests for {@link IpConfigStore}
  */
-@RunWith(AndroidJUnit4.class)
+@RunWith(DevSdkIgnoreRunner.class)
+@DevSdkIgnoreRule.IgnoreUpTo(Build.VERSION_CODES.S_V2)
 public class IpConfigStoreTest {
     private static final int KEY_CONFIG = 17;
     private static final String IFACE_1 = "eth0";
