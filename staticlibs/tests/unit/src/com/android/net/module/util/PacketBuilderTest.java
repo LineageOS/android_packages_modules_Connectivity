@@ -24,7 +24,6 @@ import static android.system.OsConstants.IPPROTO_UDP;
 import static com.android.net.module.util.NetworkStackConstants.ETHER_TYPE_IPV4;
 import static com.android.net.module.util.NetworkStackConstants.ETHER_TYPE_IPV6;
 import static com.android.net.module.util.NetworkStackConstants.IPV4_HEADER_MIN_LEN;
-import static com.android.net.module.util.NetworkStackConstants.IPV6_HEADER_LEN;
 import static com.android.net.module.util.NetworkStackConstants.TCPHDR_ACK;
 import static com.android.net.module.util.NetworkStackConstants.TCP_HEADER_MIN_LEN;
 import static com.android.net.module.util.NetworkStackConstants.UDP_HEADER_LEN;
@@ -271,9 +270,8 @@ public class PacketBuilderTest {
                 // packet = (scapy.Ether(src="11:22:33:44:55:66", dst="aa:bb:cc:dd:ee:ff",
                 //                     type='IPv6') /
                 //           scapy.IPv6(src="2001:db8::1", dst="2001:db8::2", tc=0x80,
-                //                      fl=0x515ca, plen=48, hlim=0x40) /
+                //                      fl=0x515ca, hlim=0x40) /
                 //           scapy.UDP(sport=9876, dport=433))
-                // Note that plen(48) = ipv6hdr(40) + udphdr(8).
                 // Ether header
                 (byte) 0xaa, (byte) 0xbb, (byte) 0xcc, (byte) 0xdd,
                 (byte) 0xee, (byte) 0xff, (byte) 0x11, (byte) 0x22,
@@ -281,7 +279,7 @@ public class PacketBuilderTest {
                 (byte) 0x86, (byte) 0xdd,
                 // IP header
                 (byte) 0x68, (byte) 0x05, (byte) 0x15, (byte) 0xca,
-                (byte) 0x00, (byte) 0x30, (byte) 0x11, (byte) 0x40,
+                (byte) 0x00, (byte) 0x08, (byte) 0x11, (byte) 0x40,
                 (byte) 0x20, (byte) 0x01, (byte) 0x0d, (byte) 0xb8,
                 (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00,
                 (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00,
@@ -300,10 +298,9 @@ public class PacketBuilderTest {
                 // packet = (scapy.Ether(src="11:22:33:44:55:66", dst="aa:bb:cc:dd:ee:ff",
                 //                       type='IPv6') /
                 //           scapy.IPv6(src="2001:db8::1", dst="2001:db8::2", tc=0x80,
-                //                      fl=0x515ca, plen=52, hlim=0x40) /
+                //                      fl=0x515ca, hlim=0x40) /
                 //           scapy.UDP(sport=9876, dport=433) /
                 //           b'\xde\xad\xbe\xef')
-                // Note that plen(52) = ipv6hdr(40) + udphdr(8) + data(4).
                 // Ether header
                 (byte) 0xaa, (byte) 0xbb, (byte) 0xcc, (byte) 0xdd,
                 (byte) 0xee, (byte) 0xff, (byte) 0x11, (byte) 0x22,
@@ -311,7 +308,7 @@ public class PacketBuilderTest {
                 (byte) 0x86, (byte) 0xdd,
                 // IP header
                 (byte) 0x68, (byte) 0x05, (byte) 0x15, (byte) 0xca,
-                (byte) 0x00, (byte) 0x34, (byte) 0x11, (byte) 0x40,
+                (byte) 0x00, (byte) 0x0c, (byte) 0x11, (byte) 0x40,
                 (byte) 0x20, (byte) 0x01, (byte) 0x0d, (byte) 0xb8,
                 (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00,
                 (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00,
@@ -332,11 +329,10 @@ public class PacketBuilderTest {
                 // packet = (scapy.Ether(src="11:22:33:44:55:66", dst="aa:bb:cc:dd:ee:ff",
                 //                       type='IPv6') /
                 //           scapy.IPv6(src="2001:db8::1", dst="2001:db8::2", tc=0x80,
-                //                      fl=0x515ca, plen=64, hlim=0x40) /
+                //                      fl=0x515ca, hlim=0x40) /
                 //           scapy.TCP(sport=9876, dport=433, seq=13579, ack=24680,
                 //                     flags='A', window=8192, urgptr=0) /
                 //           b'\xde\xad\xbe\xef')
-                // Note that plen(64) = ipv6hdr(40) + udphdr(20) + data(4).
                 // Ether header
                 (byte) 0xaa, (byte) 0xbb, (byte) 0xcc, (byte) 0xdd,
                 (byte) 0xee, (byte) 0xff, (byte) 0x11, (byte) 0x22,
@@ -344,7 +340,7 @@ public class PacketBuilderTest {
                 (byte) 0x86, (byte) 0xdd,
                 // IPv6 header
                 (byte) 0x68, (byte) 0x05, (byte) 0x15, (byte) 0xca,
-                (byte) 0x00, (byte) 0x40, (byte) 0x06, (byte) 0x40,
+                (byte) 0x00, (byte) 0x18, (byte) 0x06, (byte) 0x40,
                 (byte) 0x20, (byte) 0x01, (byte) 0x0d, (byte) 0xb8,
                 (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00,
                 (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00,
@@ -368,10 +364,9 @@ public class PacketBuilderTest {
                 // packet = (scapy.Ether(src="11:22:33:44:55:66", dst="aa:bb:cc:dd:ee:ff",
                 //                       type='IPv6') /
                 //           scapy.IPv6(src="2001:db8::1", dst="2001:db8::2", tc=0x80,
-                //                      fl=0x515ca, plen=60, hlim=0x40) /
+                //                      fl=0x515ca, hlim=0x40) /
                 //           scapy.TCP(sport=9876, dport=433, seq=13579, ack=24680,
                 //                     flags='A', window=8192, urgptr=0))
-                // Note that plen(60) = ipv6hdr(40) + udphdr(20).
                 // Ether header
                 (byte) 0xaa, (byte) 0xbb, (byte) 0xcc, (byte) 0xdd,
                 (byte) 0xee, (byte) 0xff, (byte) 0x11, (byte) 0x22,
@@ -379,7 +374,7 @@ public class PacketBuilderTest {
                 (byte) 0x86, (byte) 0xdd,
                 // IPv6 header
                 (byte) 0x68, (byte) 0x05, (byte) 0x15, (byte) 0xca,
-                (byte) 0x00, (byte) 0x3c, (byte) 0x06, (byte) 0x40,
+                (byte) 0x00, (byte) 0x14, (byte) 0x06, (byte) 0x40,
                 (byte) 0x20, (byte) 0x01, (byte) 0x0d, (byte) 0xb8,
                 (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00,
                 (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00,
@@ -399,14 +394,13 @@ public class PacketBuilderTest {
     private static final byte[] TEST_PACKET_IPV6HDR_TCPHDR_DATA =
             new byte[] {
                 // packet = (scapy.IPv6(src="2001:db8::1", dst="2001:db8::2", tc=0x80,
-                //                      fl=0x515ca, plen=64, hlim=0x40) /
+                //                      fl=0x515ca, hlim=0x40) /
                 //           scapy.TCP(sport=9876, dport=433, seq=13579, ack=24680,
                 //                     flags='A', window=8192, urgptr=0) /
                 //           b'\xde\xad\xbe\xef')
-                // Note that plen(64) = ipv6hdr(40) + udphdr(20) + data(4).
                 // IPv6 header
                 (byte) 0x68, (byte) 0x05, (byte) 0x15, (byte) 0xca,
-                (byte) 0x00, (byte) 0x40, (byte) 0x06, (byte) 0x40,
+                (byte) 0x00, (byte) 0x18, (byte) 0x06, (byte) 0x40,
                 (byte) 0x20, (byte) 0x01, (byte) 0x0d, (byte) 0xb8,
                 (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00,
                 (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00,
@@ -428,13 +422,12 @@ public class PacketBuilderTest {
     private static final byte[] TEST_PACKET_IPV6HDR_TCPHDR =
             new byte[] {
                 // packet = (scapy.IPv6(src="2001:db8::1", dst="2001:db8::2", tc=0x80,
-                //                      fl=0x515ca, plen=60, hlim=0x40) /
+                //                      fl=0x515ca, hlim=0x40) /
                 //           scapy.TCP(sport=9876, dport=433, seq=13579, ack=24680,
                 //                     flags='A', window=8192, urgptr=0))
-                // Note that plen(60) = ipv6hdr(40) + udphdr(20).
                 // IPv6 header
                 (byte) 0x68, (byte) 0x05, (byte) 0x15, (byte) 0xca,
-                (byte) 0x00, (byte) 0x3c, (byte) 0x06, (byte) 0x40,
+                (byte) 0x00, (byte) 0x14, (byte) 0x06, (byte) 0x40,
                 (byte) 0x20, (byte) 0x01, (byte) 0x0d, (byte) 0xb8,
                 (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00,
                 (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00,
@@ -454,12 +447,11 @@ public class PacketBuilderTest {
     private static final byte[] TEST_PACKET_IPV6HDR_UDPHDR =
             new byte[] {
                 // packet = (scapy.IPv6(src="2001:db8::1", dst="2001:db8::2", tc=0x80,
-                //                      fl=0x515ca, plen=48, hlim=0x40) /
+                //                      fl=0x515ca, hlim=0x40) /
                 //           scapy.UDP(sport=9876, dport=433))
-                // Note that plen(48) = ipv6hdr(40) + udphdr(8).
                 // IP header
                 (byte) 0x68, (byte) 0x05, (byte) 0x15, (byte) 0xca,
-                (byte) 0x00, (byte) 0x30, (byte) 0x11, (byte) 0x40,
+                (byte) 0x00, (byte) 0x08, (byte) 0x11, (byte) 0x40,
                 (byte) 0x20, (byte) 0x01, (byte) 0x0d, (byte) 0xb8,
                 (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00,
                 (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00,
@@ -476,13 +468,12 @@ public class PacketBuilderTest {
     private static final byte[] TEST_PACKET_IPV6HDR_UDPHDR_DATA =
             new byte[] {
                 // packet = (scapy.IPv6(src="2001:db8::1", dst="2001:db8::2", tc=0x80,
-                //                      fl=0x515ca, plen=52, hlim=0x40) /
+                //                      fl=0x515ca, hlim=0x40) /
                 //           scapy.UDP(sport=9876, dport=433) /
                 //           b'\xde\xad\xbe\xef')
-                // Note that plen(52) = ipv6hdr(40) + udphdr(8) + data(4).
                 // IP header
                 (byte) 0x68, (byte) 0x05, (byte) 0x15, (byte) 0xca,
-                (byte) 0x00, (byte) 0x34, (byte) 0x11, (byte) 0x40,
+                (byte) 0x00, (byte) 0x0c, (byte) 0x11, (byte) 0x40,
                 (byte) 0x20, (byte) 0x01, (byte) 0x0d, (byte) 0xb8,
                 (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00,
                 (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00,
@@ -653,12 +644,10 @@ public class PacketBuilderTest {
 
         final int dataLength = hasData ? DATA.limit() : 0;
         if (l4proto == IPPROTO_TCP) {
-            assertEquals(IPV6_HEADER_LEN + TCP_HEADER_MIN_LEN + dataLength,
-                    ipv6Header.payloadLength);
+            assertEquals(TCP_HEADER_MIN_LEN + dataLength, ipv6Header.payloadLength);
             assertEquals((byte) IPPROTO_TCP, ipv6Header.nextHeader);
         } else if (l4proto == IPPROTO_UDP) {
-            assertEquals(IPV6_HEADER_LEN + UDP_HEADER_LEN + dataLength,
-                    ipv6Header.payloadLength);
+            assertEquals(UDP_HEADER_LEN + dataLength, ipv6Header.payloadLength);
             assertEquals((byte) IPPROTO_UDP, ipv6Header.nextHeader);
         }
     }
