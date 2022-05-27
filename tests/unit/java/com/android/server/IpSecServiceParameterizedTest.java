@@ -89,7 +89,7 @@ import java.util.Set;
 public class IpSecServiceParameterizedTest {
     @Rule
     public final DevSdkIgnoreRule mIgnoreRule = new DevSdkIgnoreRule(
-            Build.VERSION_CODES.R /* ignoreClassUpTo */);
+            Build.VERSION_CODES.S_V2 /* ignoreClassUpTo */);
 
     private static final int TEST_SPI = 0xD1201D;
 

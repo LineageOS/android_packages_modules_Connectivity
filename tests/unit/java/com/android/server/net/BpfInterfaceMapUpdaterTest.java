@@ -24,16 +24,18 @@ import static org.mockito.Mockito.when;
 import android.content.Context;
 import android.net.INetd;
 import android.net.MacAddress;
+import android.os.Build;
 import android.os.Handler;
 import android.os.test.TestLooper;
 
 import androidx.test.filters.SmallTest;
-import androidx.test.runner.AndroidJUnit4;
 
 import com.android.net.module.util.BaseNetdUnsolicitedEventListener;
 import com.android.net.module.util.IBpfMap;
 import com.android.net.module.util.InterfaceParams;
 import com.android.net.module.util.Struct.U32;
+import com.android.testutils.DevSdkIgnoreRule;
+import com.android.testutils.DevSdkIgnoreRunner;
 
 import org.junit.Before;
 import org.junit.Test;
@@ -42,8 +44,9 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
-@RunWith(AndroidJUnit4.class)
 @SmallTest
+@RunWith(DevSdkIgnoreRunner.class)
+@DevSdkIgnoreRule.IgnoreUpTo(Build.VERSION_CODES.S_V2)
 public final class BpfInterfaceMapUpdaterTest {
     private static final int TEST_INDEX = 1;
     private static final int TEST_INDEX2 = 2;

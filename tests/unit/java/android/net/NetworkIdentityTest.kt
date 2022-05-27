@@ -47,7 +47,7 @@ private const val TEST_SUBID1 = 1
 private const val TEST_SUBID2 = 2
 
 @RunWith(DevSdkIgnoreRunner::class)
-@DevSdkIgnoreRule.IgnoreUpTo(Build.VERSION_CODES.R)
+@DevSdkIgnoreRule.IgnoreUpTo(Build.VERSION_CODES.S_V2)
 class NetworkIdentityTest {
     private val mockContext = mock(Context::class.java)
 

@@ -47,7 +47,7 @@ import java.util.Set;
 /** Unit tests for {@link IpSecAlgorithm}. */
 @SmallTest
 @RunWith(DevSdkIgnoreRunner.class)
-@DevSdkIgnoreRule.IgnoreUpTo(Build.VERSION_CODES.R)
+@DevSdkIgnoreRule.IgnoreUpTo(Build.VERSION_CODES.S_V2)
 public class IpSecAlgorithmTest {
     private static final byte[] KEY_MATERIAL;
 
