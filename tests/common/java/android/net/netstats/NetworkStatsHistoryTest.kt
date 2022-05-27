@@ -22,12 +22,12 @@ import androidx.test.filters.SmallTest
 import com.android.testutils.ConnectivityModuleTest
 import com.android.testutils.DevSdkIgnoreRule
 import com.android.testutils.SC_V2
+import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.JUnit4
 import kotlin.test.assertEquals
-import kotlin.test.assertFailsWith
 
 @ConnectivityModuleTest
 @RunWith(JUnit4::class)
@@ -37,6 +37,7 @@ class NetworkStatsHistoryTest {
     @JvmField
     val ignoreRule = DevSdkIgnoreRule(ignoreClassUpTo = SC_V2)
 
+    @Ignore
     @Test
     fun testBuilder() {
         val entry1 = NetworkStatsHistory.Entry(10, 30, 40, 4, 50, 5, 60)
@@ -53,21 +54,37 @@ class NetworkStatsHistoryTest {
         statsSingle.assertEntriesEqual(entry1)
         assertEquals(DateUtils.HOUR_IN_MILLIS, statsSingle.bucketDuration)
 
-        // Verify the builder throws if the timestamp of added entry is not greater than
-        // that of any previously-added entry.
-        assertFailsWith(IllegalArgumentException::class) {
-            NetworkStatsHistory
-                    .Builder(DateUtils.SECOND_IN_MILLIS, /* initialCapacity */ 0)
-                    .addEntry(entry1).addEntry(entry2).addEntry(entry3)
-                    .build()
-        }
+        val statsMultiple = NetworkStatsHistory
+                .Builder(DateUtils.SECOND_IN_MILLIS, /* initialCapacity */ 0)
+                .addEntry(entry1).addEntry(entry2).addEntry(entry3)
+                .build()
+        assertEquals(DateUtils.SECOND_IN_MILLIS, statsMultiple.bucketDuration)
+        // Verify the entries exist and sorted.
+        statsMultiple.assertEntriesEqual(entry3, entry1, entry2)
+    }
+
+    @Ignore
+    @Test
+    fun testBuilderSortAndDeduplicate() {
+        val entry1 = NetworkStatsHistory.Entry(10, 30, 40, 4, 50, 5, 60)
+        val entry2 = NetworkStatsHistory.Entry(30, 15, 3, 41, 7, 1, 0)
+        val entry3 = NetworkStatsHistory.Entry(30, 999, 11, 14, 31, 2, 80)
+        val entry4 = NetworkStatsHistory.Entry(10, 15, 1, 17, 5, 33, 10)
+        val entry5 = NetworkStatsHistory.Entry(6, 1, 9, 11, 29, 1, 7)
+
+        // Entries for verification.
+        // Note that active time of 2 + 3 is truncated to bucket duration since the active time
+        // should not go over bucket duration.
+        val entry2and3 = NetworkStatsHistory.Entry(30, 1000, 14, 55, 38, 3, 80)
+        val entry1and4 = NetworkStatsHistory.Entry(10, 45, 41, 21, 55, 38, 70)
 
         val statsMultiple = NetworkStatsHistory
                 .Builder(DateUtils.SECOND_IN_MILLIS, /* initialCapacity */ 0)
-                .addEntry(entry3).addEntry(entry1).addEntry(entry2)
-                .build()
+                .addEntry(entry1).addEntry(entry2).addEntry(entry3)
+                .addEntry(entry4).addEntry(entry5).build()
         assertEquals(DateUtils.SECOND_IN_MILLIS, statsMultiple.bucketDuration)
-        statsMultiple.assertEntriesEqual(entry3, entry1, entry2)
+        // Verify the entries sorted and deduplicated.
+        statsMultiple.assertEntriesEqual(entry5, entry1and4, entry2and3)
     }
 
     fun NetworkStatsHistory.assertEntriesEqual(vararg entries: NetworkStatsHistory.Entry) {
