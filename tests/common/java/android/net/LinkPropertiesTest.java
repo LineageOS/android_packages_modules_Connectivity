@@ -46,6 +46,7 @@ import com.android.testutils.ConnectivityModuleTest;
 import com.android.testutils.DevSdkIgnoreRule;
 import com.android.testutils.DevSdkIgnoreRule.IgnoreAfter;
 import com.android.testutils.DevSdkIgnoreRule.IgnoreUpTo;
+import com.android.testutils.filters.CtsNetTestCasesMaxTargetSdk31;
 
 import libcore.junit.util.compat.CoreCompatChangeRule.DisableCompatChanges;
 import libcore.junit.util.compat.CoreCompatChangeRule.EnableCompatChanges;
@@ -1307,6 +1308,7 @@ public class LinkPropertiesTest {
     }
 
     @Test @IgnoreUpTo(SC_V2)
+    @CtsNetTestCasesMaxTargetSdk31(reason = "Compat change cannot be overridden on T or above")
     @DisableCompatChanges({LinkProperties.EXCLUDED_ROUTES})
     public void testExcludedRoutesDisabled() {
         final LinkProperties lp = new LinkProperties();
