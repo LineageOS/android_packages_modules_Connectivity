@@ -55,7 +55,8 @@ cc_library {
 cc_test {
     name: "netd_updatable_unit_test",
     defaults: ["netd_defaults"],
-    test_suites: ["general-tests"],
+    test_suites: ["general-tests", "mts-tethering"],
+    test_config_template: ":net_native_test_config_template",
     require_root: true,  // required by setrlimitForTest()
     header_libs: [
         "bpf_connectivity_headers",
@@ -72,6 +73,7 @@ cc_test {
         "liblog",
         "libnetdutils",
     ],
+    compile_multilib: "both",
     multilib: {
         lib32: {
             suffix: "32",
