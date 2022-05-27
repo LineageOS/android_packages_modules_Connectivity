@@ -72,6 +72,9 @@ message BleFilter {
   optional float distance_m = 7;
   // Used to verify the list of trusted devices.
   repeated PublicateCertificate certficate = 8;
+  // Used to store additional information(like account key, connection status, battery, and etc.)
+  // In key and value format.
+  repeated DataElement data_element = 9;
 }
 
 message BleFilters {
@@ -86,8 +89,22 @@ message BleFilterResult {
   optional uint32 intent = 4;
   optional bytes bluetooth_address = 5;
   optional PublicCredential public_credential = 6;
+  repeated DataElement data_element = 7;
+  optional bytes ble_service_data = 8;
 }
 
 message BleFilterResults {
   repeated BleFilterResult result = 1;
+}
+
+message DataElement {
+  enum ElementType {
+    DE_NONE = 0;
+    DE_FAST_PAIR_ACCOUNT_KEY = 1;
+  }
+
+  optional ElementType key = 1;
+  optional bytes value = 2;
+  // Required for low level implementation.
+  optional uint32 value_length = 3;
 }
