@@ -48,7 +48,8 @@ cc_library {
 
 cc_test {
     name: "libnetworkstats_test",
-    test_suites: ["general-tests"],
+    test_suites: ["general-tests", "mts-tethering"],
+    test_config_template: ":net_native_test_config_template",
     require_root: true,  // required by setrlimitForTest()
     header_libs: ["bpf_connectivity_headers"],
     srcs: [
@@ -68,4 +69,13 @@ cc_test {
         "libbase",
         "liblog",
     ],
+    compile_multilib: "both",
+    multilib: {
+        lib32: {
+            suffix: "32",
+        },
+        lib64: {
+            suffix: "64",
+        },
+    },
 }
