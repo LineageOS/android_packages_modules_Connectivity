@@ -26,6 +26,7 @@ import static com.android.net.module.util.IpUtils.tcpChecksum;
 import static com.android.net.module.util.IpUtils.udpChecksum;
 import static com.android.net.module.util.NetworkStackConstants.IPV4_CHECKSUM_OFFSET;
 import static com.android.net.module.util.NetworkStackConstants.IPV4_LENGTH_OFFSET;
+import static com.android.net.module.util.NetworkStackConstants.IPV6_HEADER_LEN;
 import static com.android.net.module.util.NetworkStackConstants.IPV6_LEN_OFFSET;
 import static com.android.net.module.util.NetworkStackConstants.TCP_CHECKSUM_OFFSET;
 import static com.android.net.module.util.NetworkStackConstants.UDP_CHECKSUM_OFFSET;
@@ -100,9 +101,9 @@ public class PacketBuilder {
      */
     public void writeL2Header(MacAddress srcMac, MacAddress dstMac, short etherType) throws
             IOException {
-        final EthernetHeader ethv4Header = new EthernetHeader(dstMac, srcMac, etherType);
+        final EthernetHeader ethHeader = new EthernetHeader(dstMac, srcMac, etherType);
         try {
-            ethv4Header.writeToByteBuffer(mBuffer);
+            ethHeader.writeToByteBuffer(mBuffer);
         } catch (IllegalArgumentException | BufferOverflowException e) {
             throw new IOException("Error writing to buffer: ", e);
         }
@@ -218,7 +219,7 @@ public class PacketBuilder {
      */
     @NonNull
     public ByteBuffer finalizePacket() throws IOException {
-        // Finalize IPv4 or IPv6 header.
+        // [1] Finalize IPv4 or IPv6 header.
         int ipHeaderOffset = INVALID_OFFSET;
         if (mIpv4HeaderOffset != INVALID_OFFSET) {
             ipHeaderOffset = mIpv4HeaderOffset;
@@ -234,13 +235,14 @@ public class PacketBuilder {
             ipHeaderOffset = mIpv6HeaderOffset;
 
             // Populate the IPv6 payloadLength field.
+            // The payload length doesn't include IPv6 header length. See rfc8200 section 3.
             mBuffer.putShort(mIpv6HeaderOffset + IPV6_LEN_OFFSET,
-                    (short) (mBuffer.position() - mIpv6HeaderOffset));
+                    (short) (mBuffer.position() - mIpv6HeaderOffset - IPV6_HEADER_LEN));
         } else {
             throw new IOException("Packet is missing neither IPv4 nor IPv6 header");
         }
 
-        // Finalize TCP or UDP header.
+        // [2] Finalize TCP or UDP header.
         if (mTcpHeaderOffset != INVALID_OFFSET) {
             // Populate the TCP header checksum field.
             mBuffer.putShort(mTcpHeaderOffset + TCP_CHECKSUM_OFFSET, tcpChecksum(mBuffer,
