@@ -42,7 +42,7 @@ import java.util.Map;
 
 @RunWith(DevSdkIgnoreRunner.class)
 @SmallTest
-@DevSdkIgnoreRule.IgnoreUpTo(Build.VERSION_CODES.R)
+@DevSdkIgnoreRule.IgnoreUpTo(Build.VERSION_CODES.S_V2)
 public class NsdServiceInfoTest {
 
     public final static InetAddress LOCALHOST;
