@@ -19,6 +19,7 @@ package android.net;
 import static com.android.testutils.DevSdkIgnoreRuleKt.SC_V2;
 
 import static org.junit.Assert.assertEquals;
+import static org.mockito.Mockito.doCallRealMethod;
 import static org.mockito.Mockito.when;
 
 import android.Manifest;
@@ -66,6 +67,10 @@ public class NetworkStatsAccessTest {
         when(mContext.getSystemServiceName(DevicePolicyManager.class))
                 .thenReturn(Context.DEVICE_POLICY_SERVICE);
         when(mContext.getSystemService(Context.DEVICE_POLICY_SERVICE)).thenReturn(mDpm);
+        if (mContext.getSystemService(DevicePolicyManager.class) == null) {
+            // Test is using mockito-extended
+            doCallRealMethod().when(mContext).getSystemService(DevicePolicyManager.class);
+        }
 
         setHasCarrierPrivileges(false);
         setIsDeviceOwner(false);
