@@ -16,8 +16,6 @@
 
 package com.android.server.ethernet;
 
-import static com.android.testutils.DevSdkIgnoreRuleKt.SC_V2;
-
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotSame;
@@ -55,16 +53,17 @@ import android.net.NetworkRequest;
 import android.net.StaticIpConfiguration;
 import android.net.ip.IpClientCallbacks;
 import android.net.ip.IpClientManager;
+import android.os.Build;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
 import android.os.test.TestLooper;
 
 import androidx.test.filters.SmallTest;
-import androidx.test.runner.AndroidJUnit4;
 
 import com.android.net.module.util.InterfaceParams;
 import com.android.testutils.DevSdkIgnoreRule;
+import com.android.testutils.DevSdkIgnoreRunner;
 
 import org.junit.After;
 import org.junit.Before;
@@ -79,8 +78,9 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
-@RunWith(AndroidJUnit4.class)
 @SmallTest
+@RunWith(DevSdkIgnoreRunner.class)
+@DevSdkIgnoreRule.IgnoreUpTo(Build.VERSION_CODES.S_V2)
 public class EthernetNetworkFactoryTest {
     private static final int TIMEOUT_MS = 2_000;
     private static final String TEST_IFACE = "test123";
@@ -608,7 +608,6 @@ public class EthernetNetworkFactoryTest {
         assertEquals(listener.expectOnResult(), TEST_IFACE);
     }
 
-    @DevSdkIgnoreRule.IgnoreUpTo(SC_V2) // TODO: Use to Build.VERSION_CODES.SC_V2 when available
     @Test
     public void testUpdateInterfaceAbortsOnConcurrentRemoveInterface() throws Exception {
         initEthernetNetworkFactory();
@@ -617,7 +616,6 @@ public class EthernetNetworkFactoryTest {
                 () -> mNetFactory.removeInterface(TEST_IFACE));
     }
 
-    @DevSdkIgnoreRule.IgnoreUpTo(SC_V2) // TODO: Use to Build.VERSION_CODES.SC_V2 when available
     @Test
     public void testUpdateInterfaceAbortsOnConcurrentUpdateInterfaceLinkState() throws Exception {
         initEthernetNetworkFactory();
@@ -626,7 +624,6 @@ public class EthernetNetworkFactoryTest {
                 () -> mNetFactory.updateInterfaceLinkState(TEST_IFACE, false, NULL_LISTENER));
     }
 
-    @DevSdkIgnoreRule.IgnoreUpTo(SC_V2) // TODO: Use to Build.VERSION_CODES.SC_V2 when available
     @Test
     public void testUpdateInterfaceCallsListenerCorrectlyOnConcurrentRequests() throws Exception {
         initEthernetNetworkFactory();
