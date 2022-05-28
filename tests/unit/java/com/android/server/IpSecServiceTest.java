@@ -75,7 +75,7 @@ import java.util.List;
 /** Unit tests for {@link IpSecService}. */
 @SmallTest
 @RunWith(DevSdkIgnoreRunner.class)
-@DevSdkIgnoreRule.IgnoreUpTo(Build.VERSION_CODES.R)
+@DevSdkIgnoreRule.IgnoreUpTo(Build.VERSION_CODES.S_V2)
 public class IpSecServiceTest {
 
     private static final int DROID_SPI = 0xD1201D;

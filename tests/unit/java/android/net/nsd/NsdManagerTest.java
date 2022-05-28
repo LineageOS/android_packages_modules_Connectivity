@@ -51,7 +51,7 @@ import org.mockito.MockitoAnnotations;
 
 @RunWith(DevSdkIgnoreRunner.class)
 @SmallTest
-@DevSdkIgnoreRule.IgnoreUpTo(Build.VERSION_CODES.R)
+@DevSdkIgnoreRule.IgnoreUpTo(Build.VERSION_CODES.S_V2)
 public class NsdManagerTest {
 
     static final int PROTOCOL = NsdManager.PROTOCOL_DNS_SD;
