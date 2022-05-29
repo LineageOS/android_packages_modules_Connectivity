@@ -570,8 +570,14 @@ public class ClatCoordinator {
 
         // Detect ipv4 mtu.
         final Integer fwmark = getFwmark(netId);
-        final int detectedMtu = mDeps.detectMtu(pfx96Str,
+        final int detectedMtu;
+        try {
+            detectedMtu = mDeps.detectMtu(pfx96Str,
                 ByteBuffer.wrap(GOOGLE_DNS_4.getAddress()).getInt(), fwmark);
+        } catch (IOException e) {
+            tunFd.close();
+            throw new IOException("Detect MTU on " + tunIface + " failed: " + e);
+        }
         final int mtu = adjustMtu(detectedMtu);
         Log.i(TAG, "ipv4 mtu is " + mtu);
 
