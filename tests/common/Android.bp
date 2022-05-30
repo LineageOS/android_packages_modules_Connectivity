@@ -140,6 +140,30 @@ java_defaults {
     ],
 }
 
+// defaults for tests that need to build against framework-connectivity's @hide APIs, but also
+// using fully @hide classes that are jarjared (because they have no API member). Similar to
+// framework-connectivity-test-defaults above but uses pre-jarjar class names.
+// Only usable from targets that have visibility on framework-connectivity-pre-jarjar, and apply
+// connectivity jarjar rules so that references to jarjared classes still match: this is limited to
+// connectivity internal tests only.
+java_defaults {
+    name: "framework-connectivity-internal-test-defaults",
+    sdk_version: "core_platform", // tests can use @CorePlatformApi's
+    libs: [
+        // order matters: classes in framework-connectivity are resolved before framework,
+        // meaning @hide APIs in framework-connectivity are resolved before @SystemApi
+        // stubs in framework
+        "framework-connectivity-pre-jarjar",
+        "framework-connectivity-t-pre-jarjar",
+        "framework-tethering.impl",
+        "framework",
+
+        // if sdk_version="" this gets automatically included, but here we need to add manually.
+        "framework-res",
+    ],
+    defaults_visibility: ["//packages/modules/Connectivity/tests:__subpackages__"],
+}
+
 // Defaults for tests that want to run in mainline-presubmit.
 // Not widely used because many of our tests have AndroidTest.xml files and
 // use the mainline-param config-descriptor metadata in AndroidTest.xml.
