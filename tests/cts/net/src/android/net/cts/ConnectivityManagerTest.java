@@ -241,6 +241,10 @@ public class ConnectivityManagerTest {
     @Rule
     public final DevSdkIgnoreRule ignoreRule = new DevSdkIgnoreRule();
 
+    @Rule
+    public final DeviceConfigRule mTestValidationConfigRule = new DeviceConfigRule(
+            5 /* retryCountBeforeSIfConfigChanged */);
+
     private static final String TAG = ConnectivityManagerTest.class.getSimpleName();
 
     public static final int TYPE_MOBILE = ConnectivityManager.TYPE_MOBILE;
@@ -2756,9 +2760,8 @@ public class ConnectivityManagerTest {
             // Accept partial connectivity network should result in a validated network
             expectNetworkHasCapability(network, NET_CAPABILITY_VALIDATED, WIFI_CONNECT_TIMEOUT_MS);
         } finally {
-            resetValidationConfig();
-            // Reconnect wifi to reset the wifi status
-            reconnectWifi();
+            mHttpServer.stop();
+            mTestValidationConfigRule.runAfterNextCleanup(this::reconnectWifi);
         }
     }
 
@@ -2783,11 +2786,13 @@ public class ConnectivityManagerTest {
             // Reject partial connectivity network should cause the network being torn down
             assertEquals(network, cb.waitForLost());
         } finally {
-            resetValidationConfig();
+            mHttpServer.stop();
             // Wifi will not automatically reconnect to the network. ensureWifiDisconnected cannot
             // apply here. Thus, turn off wifi first and restart to restore.
-            runShellCommand("svc wifi disable");
-            mCtsNetUtils.ensureWifiConnected();
+            mTestValidationConfigRule.runAfterNextCleanup(() -> {
+                runShellCommand("svc wifi disable");
+                mCtsNetUtils.ensureWifiConnected();
+            });
         }
     }
 
@@ -2823,11 +2828,13 @@ public class ConnectivityManagerTest {
             });
             waitForLost(wifiCb);
         } finally {
-            resetValidationConfig();
+            mHttpServer.stop();
             /// Wifi will not automatically reconnect to the network. ensureWifiDisconnected cannot
             // apply here. Thus, turn off wifi first and restart to restore.
-            runShellCommand("svc wifi disable");
-            mCtsNetUtils.ensureWifiConnected();
+            mTestValidationConfigRule.runAfterNextCleanup(() -> {
+                runShellCommand("svc wifi disable");
+                mCtsNetUtils.ensureWifiConnected();
+            });
         }
     }
 
@@ -2887,9 +2894,8 @@ public class ConnectivityManagerTest {
             wifiCb.assertNoCallbackThat(NO_CALLBACK_TIMEOUT_MS, c -> isValidatedCaps(c));
         } finally {
             resetAvoidBadWifi(previousAvoidBadWifi);
-            resetValidationConfig();
-            // Reconnect wifi to reset the wifi status
-            reconnectWifi();
+            mHttpServer.stop();
+            mTestValidationConfigRule.runAfterNextCleanup(this::reconnectWifi);
         }
     }
 
@@ -2931,11 +2937,6 @@ public class ConnectivityManagerTest {
 
         registerNetworkCallback(new NetworkRequest.Builder().build(), cb);
         return future.get(timeout, TimeUnit.MILLISECONDS);
-    }
-
-    private void resetValidationConfig() {
-        NetworkValidationTestUtil.clearValidationTestUrlsDeviceConfig();
-        mHttpServer.stop();
     }
 
     private void prepareHttpServer() throws Exception {
@@ -3010,9 +3011,11 @@ public class ConnectivityManagerTest {
         mHttpServer.addResponse(new TestHttpServer.Request(
                 TEST_HTTP_URL_PATH, Method.GET, "" /* queryParameters */),
                 httpStatusCode, null /* locationHeader */, "" /* content */);
-        NetworkValidationTestUtil.setHttpsUrlDeviceConfig(makeUrl(TEST_HTTPS_URL_PATH));
-        NetworkValidationTestUtil.setHttpUrlDeviceConfig(makeUrl(TEST_HTTP_URL_PATH));
-        NetworkValidationTestUtil.setUrlExpirationDeviceConfig(
+        NetworkValidationTestUtil.setHttpsUrlDeviceConfig(mTestValidationConfigRule,
+                makeUrl(TEST_HTTPS_URL_PATH));
+        NetworkValidationTestUtil.setHttpUrlDeviceConfig(mTestValidationConfigRule,
+                makeUrl(TEST_HTTP_URL_PATH));
+        NetworkValidationTestUtil.setUrlExpirationDeviceConfig(mTestValidationConfigRule,
                 System.currentTimeMillis() + WIFI_CONNECT_TIMEOUT_MS);
     }
 
