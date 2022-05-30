@@ -681,8 +681,12 @@ public class PermissionMonitor {
     }
 
     private synchronized void updateLockdownUid(int uid, boolean add) {
-        if (UidRange.containsUid(mVpnLockdownUidRanges.getSet(), uid)
-                && !hasRestrictedNetworksPermission(uid)) {
+        // Apps that can use restricted networks can always bypass VPNs.
+        if (hasRestrictedNetworksPermission(uid)) {
+            return;
+        }
+
+        if (UidRange.containsUid(mVpnLockdownUidRanges.getSet(), uid)) {
             updateLockdownUidRule(uid, add);
         }
     }
@@ -1252,7 +1256,7 @@ public class PermissionMonitor {
         pw.println("Lockdown filtering rules:");
         pw.increaseIndent();
         for (final UidRange range : mVpnLockdownUidRanges.getSet()) {
-            pw.println("UIDs: " + range.toString());
+            pw.println("UIDs: " + range);
         }
         pw.decreaseIndent();
 

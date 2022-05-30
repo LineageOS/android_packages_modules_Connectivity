@@ -695,7 +695,8 @@ public class PermissionMonitorTest {
         mNetdMonitor.expectNetworkPerm(PERMISSION_SYSTEM, new UserHandle[]{MOCK_USER1},
                 SYSTEM_APPID1);
 
-        final List<PackageInfo> pkgs = List.of(buildPackageInfo(SYSTEM_PACKAGE1, SYSTEM_APP_UID21,
+        final List<PackageInfo> pkgs = List.of(
+                buildPackageInfo(SYSTEM_PACKAGE1, SYSTEM_APP_UID21,
                         CONNECTIVITY_USE_RESTRICTED_NETWORKS),
                 buildPackageInfo(SYSTEM_PACKAGE2, SYSTEM_APP_UID21, CHANGE_NETWORK_STATE));
         doReturn(pkgs).when(mPackageManager).getInstalledPackagesAsUser(eq(GET_PERMISSIONS),
@@ -761,9 +762,10 @@ public class PermissionMonitorTest {
                 MOCK_APPID1);
     }
 
-    private void doTestuidFilteringDuringVpnConnectDisconnectAndUidUpdates(@Nullable String ifName)
+    private void doTestUidFilteringDuringVpnConnectDisconnectAndUidUpdates(@Nullable String ifName)
             throws Exception {
-        doReturn(List.of(buildPackageInfo(SYSTEM_PACKAGE1, SYSTEM_APP_UID11, CHANGE_NETWORK_STATE,
+        doReturn(List.of(
+                buildPackageInfo(SYSTEM_PACKAGE1, SYSTEM_APP_UID11, CHANGE_NETWORK_STATE,
                         CONNECTIVITY_USE_RESTRICTED_NETWORKS),
                 buildPackageInfo(MOCK_PACKAGE1, MOCK_UID11),
                 buildPackageInfo(MOCK_PACKAGE2, MOCK_UID12),
@@ -771,7 +773,7 @@ public class PermissionMonitorTest {
                 .when(mPackageManager).getInstalledPackagesAsUser(eq(GET_PERMISSIONS), anyInt());
         buildAndMockPackageInfoWithPermissions(MOCK_PACKAGE1, MOCK_UID11);
         mPermissionMonitor.startMonitoring();
-        // Every app on user 0 except MOCK_UID12 are under VPN.
+        // Every app on user 0 except MOCK_UID12 is subject to the VPN.
         final Set<UidRange> vpnRange1 = Set.of(
                 new UidRange(0, MOCK_UID12 - 1),
                 new UidRange(MOCK_UID12 + 1, UserHandle.PER_USER_RANGE - 1));
@@ -808,18 +810,19 @@ public class PermissionMonitorTest {
 
     @Test
     public void testUidFilteringDuringVpnConnectDisconnectAndUidUpdates() throws Exception {
-        doTestuidFilteringDuringVpnConnectDisconnectAndUidUpdates("tun0");
+        doTestUidFilteringDuringVpnConnectDisconnectAndUidUpdates("tun0");
     }
 
     @Test
     public void testUidFilteringDuringVpnConnectDisconnectAndUidUpdatesWithWildcard()
             throws Exception {
-        doTestuidFilteringDuringVpnConnectDisconnectAndUidUpdates(null /* ifName */);
+        doTestUidFilteringDuringVpnConnectDisconnectAndUidUpdates(null /* ifName */);
     }
 
     private void doTestUidFilteringDuringPackageInstallAndUninstall(@Nullable String ifName) throws
             Exception {
-        doReturn(List.of(buildPackageInfo(SYSTEM_PACKAGE1, SYSTEM_APP_UID11, CHANGE_NETWORK_STATE,
+        doReturn(List.of(
+                buildPackageInfo(SYSTEM_PACKAGE1, SYSTEM_APP_UID11, CHANGE_NETWORK_STATE,
                         NETWORK_STACK, CONNECTIVITY_USE_RESTRICTED_NETWORKS),
                 buildPackageInfo(SYSTEM_PACKAGE2, VPN_UID)))
                 .when(mPackageManager).getInstalledPackagesAsUser(eq(GET_PERMISSIONS), anyInt());
@@ -854,125 +857,140 @@ public class PermissionMonitorTest {
 
     @Test
     public void testLockdownUidFilteringWithLockdownEnableDisable() {
-        doReturn(List.of(buildPackageInfo(SYSTEM_PACKAGE1, SYSTEM_APP_UID11, CHANGE_NETWORK_STATE,
+        doReturn(List.of(
+                buildPackageInfo(SYSTEM_PACKAGE1, SYSTEM_APP_UID11, CHANGE_NETWORK_STATE,
                         CONNECTIVITY_USE_RESTRICTED_NETWORKS),
                 buildPackageInfo(MOCK_PACKAGE1, MOCK_UID11),
                 buildPackageInfo(MOCK_PACKAGE2, MOCK_UID12),
                 buildPackageInfo(SYSTEM_PACKAGE2, VPN_UID)))
                 .when(mPackageManager).getInstalledPackagesAsUser(eq(GET_PERMISSIONS), anyInt());
         mPermissionMonitor.startMonitoring();
-        // Every app on user 0 except MOCK_UID12 are under VPN.
-        final UidRange[] vpnRange1 = {
+        // Every app on user 0 except MOCK_UID12 is subject to the VPN.
+        final UidRange[] lockdownRange = {
                 new UidRange(0, MOCK_UID12 - 1),
                 new UidRange(MOCK_UID12 + 1, UserHandle.PER_USER_RANGE - 1)
         };
 
-        // Add Lockdown uid range, expect a rule to be set up for user app MOCK_UID11
-        mPermissionMonitor.updateVpnLockdownUidRanges(true /* add */, vpnRange1);
+        // Add Lockdown uid range, expect a rule to be set up for MOCK_UID11 and VPN_UID
+        mPermissionMonitor.updateVpnLockdownUidRanges(true /* add */, lockdownRange);
+        verify(mBpfNetMaps, times(2)).updateUidLockdownRule(anyInt(), eq(true) /* add */);
         verify(mBpfNetMaps).updateUidLockdownRule(MOCK_UID11, true /* add */);
-        assertEquals(mPermissionMonitor.getVpnLockdownUidRanges(), Set.of(vpnRange1));
+        verify(mBpfNetMaps).updateUidLockdownRule(VPN_UID, true /* add */);
+        assertEquals(mPermissionMonitor.getVpnLockdownUidRanges(), Set.of(lockdownRange));
 
         reset(mBpfNetMaps);
 
         // Remove Lockdown uid range, expect rules to be torn down
-        mPermissionMonitor.updateVpnLockdownUidRanges(false /* false */, vpnRange1);
+        mPermissionMonitor.updateVpnLockdownUidRanges(false /* add */, lockdownRange);
+        verify(mBpfNetMaps, times(2)).updateUidLockdownRule(anyInt(), eq(false) /* add */);
         verify(mBpfNetMaps).updateUidLockdownRule(MOCK_UID11, false /* add */);
+        verify(mBpfNetMaps).updateUidLockdownRule(VPN_UID, false /* add */);
         assertTrue(mPermissionMonitor.getVpnLockdownUidRanges().isEmpty());
     }
 
     @Test
     public void testLockdownUidFilteringWithLockdownEnableDisableWithMultiAdd() {
-        doReturn(List.of(buildPackageInfo(SYSTEM_PACKAGE1, SYSTEM_APP_UID11, CHANGE_NETWORK_STATE,
+        doReturn(List.of(
+                buildPackageInfo(SYSTEM_PACKAGE1, SYSTEM_APP_UID11, CHANGE_NETWORK_STATE,
                         CONNECTIVITY_USE_RESTRICTED_NETWORKS),
                 buildPackageInfo(MOCK_PACKAGE1, MOCK_UID11),
                 buildPackageInfo(SYSTEM_PACKAGE2, VPN_UID)))
                 .when(mPackageManager).getInstalledPackagesAsUser(eq(GET_PERMISSIONS), anyInt());
         mPermissionMonitor.startMonitoring();
-        // MOCK_UID11 is under VPN.
+        // MOCK_UID11 is subject to the VPN.
         final UidRange range = new UidRange(MOCK_UID11, MOCK_UID11);
-        final UidRange[] vpnRange = {range};
+        final UidRange[] lockdownRange = {range};
 
         // Add Lockdown uid range at 1st time, expect a rule to be set up
-        mPermissionMonitor.updateVpnLockdownUidRanges(true /* add */, vpnRange);
+        mPermissionMonitor.updateVpnLockdownUidRanges(true /* add */, lockdownRange);
+        verify(mBpfNetMaps).updateUidLockdownRule(anyInt(), eq(true) /* add */);
         verify(mBpfNetMaps).updateUidLockdownRule(MOCK_UID11, true /* add */);
-        assertEquals(mPermissionMonitor.getVpnLockdownUidRanges(), Set.of(vpnRange));
+        assertEquals(mPermissionMonitor.getVpnLockdownUidRanges(), Set.of(lockdownRange));
 
         reset(mBpfNetMaps);
 
         // Add Lockdown uid range at 2nd time, expect a rule not to be set up because the uid
         // already has the rule
-        mPermissionMonitor.updateVpnLockdownUidRanges(true /* add */, vpnRange);
+        mPermissionMonitor.updateVpnLockdownUidRanges(true /* add */, lockdownRange);
         verify(mBpfNetMaps, never()).updateUidLockdownRule(anyInt(),  anyBoolean());
-        assertEquals(mPermissionMonitor.getVpnLockdownUidRanges(), Set.of(vpnRange));
+        assertEquals(mPermissionMonitor.getVpnLockdownUidRanges(), Set.of(lockdownRange));
 
         reset(mBpfNetMaps);
 
         // Remove Lockdown uid range at 1st time, expect a rule not to be torn down because we added
         // the range 2 times.
-        mPermissionMonitor.updateVpnLockdownUidRanges(false /* false */, vpnRange);
+        mPermissionMonitor.updateVpnLockdownUidRanges(false /* add */, lockdownRange);
         verify(mBpfNetMaps, never()).updateUidLockdownRule(anyInt(),  anyBoolean());
-        assertEquals(mPermissionMonitor.getVpnLockdownUidRanges(), Set.of(vpnRange));
+        assertEquals(mPermissionMonitor.getVpnLockdownUidRanges(), Set.of(lockdownRange));
 
         reset(mBpfNetMaps);
 
         // Remove Lockdown uid range at 2nd time, expect a rule to be torn down because we added
         // twice and we removed twice.
-        mPermissionMonitor.updateVpnLockdownUidRanges(false /* false */, vpnRange);
+        mPermissionMonitor.updateVpnLockdownUidRanges(false /* add */, lockdownRange);
+        verify(mBpfNetMaps).updateUidLockdownRule(anyInt(), eq(false) /* add */);
         verify(mBpfNetMaps).updateUidLockdownRule(MOCK_UID11, false /* add */);
         assertTrue(mPermissionMonitor.getVpnLockdownUidRanges().isEmpty());
     }
 
     @Test
     public void testLockdownUidFilteringWithLockdownEnableDisableWithDuplicates() {
-        doReturn(List.of(buildPackageInfo(SYSTEM_PACKAGE1, SYSTEM_APP_UID11, CHANGE_NETWORK_STATE,
+        doReturn(List.of(
+                buildPackageInfo(SYSTEM_PACKAGE1, SYSTEM_APP_UID11, CHANGE_NETWORK_STATE,
                         CONNECTIVITY_USE_RESTRICTED_NETWORKS),
                 buildPackageInfo(MOCK_PACKAGE1, MOCK_UID11),
                 buildPackageInfo(SYSTEM_PACKAGE2, VPN_UID)))
                 .when(mPackageManager).getInstalledPackagesAsUser(eq(GET_PERMISSIONS), anyInt());
         mPermissionMonitor.startMonitoring();
-        // MOCK_UID11 is under VPN.
+        // MOCK_UID11 is subject to the VPN.
         final UidRange range = new UidRange(MOCK_UID11, MOCK_UID11);
-        final UidRange[] vpnRangeDuplicates = {range, range};
-        final UidRange[] vpnRange = {range};
+        final UidRange[] lockdownRangeDuplicates = {range, range};
+        final UidRange[] lockdownRange = {range};
 
         // Add Lockdown uid ranges which contains duplicated uid ranges
-        mPermissionMonitor.updateVpnLockdownUidRanges(true /* add */, vpnRangeDuplicates);
+        mPermissionMonitor.updateVpnLockdownUidRanges(true /* add */, lockdownRangeDuplicates);
+        verify(mBpfNetMaps).updateUidLockdownRule(anyInt(), eq(true) /* add */);
         verify(mBpfNetMaps).updateUidLockdownRule(MOCK_UID11, true /* add */);
-        assertEquals(mPermissionMonitor.getVpnLockdownUidRanges(), Set.of(vpnRange));
+        assertEquals(mPermissionMonitor.getVpnLockdownUidRanges(), Set.of(lockdownRange));
 
         reset(mBpfNetMaps);
 
         // Remove Lockdown uid range at 1st time, expect a rule not to be torn down because uid
         // ranges we added contains duplicated uid ranges.
-        mPermissionMonitor.updateVpnLockdownUidRanges(false /* false */, vpnRange);
+        mPermissionMonitor.updateVpnLockdownUidRanges(false /* add */, lockdownRange);
         verify(mBpfNetMaps, never()).updateUidLockdownRule(anyInt(), anyBoolean());
-        assertEquals(mPermissionMonitor.getVpnLockdownUidRanges(), Set.of(vpnRange));
+        assertEquals(mPermissionMonitor.getVpnLockdownUidRanges(), Set.of(lockdownRange));
 
         reset(mBpfNetMaps);
 
         // Remove Lockdown uid range at 2nd time, expect a rule to be torn down.
-        mPermissionMonitor.updateVpnLockdownUidRanges(false /* false */, vpnRange);
+        mPermissionMonitor.updateVpnLockdownUidRanges(false /* add */, lockdownRange);
+        verify(mBpfNetMaps).updateUidLockdownRule(anyInt(), eq(false) /* add */);
         verify(mBpfNetMaps).updateUidLockdownRule(MOCK_UID11, false /* add */);
         assertTrue(mPermissionMonitor.getVpnLockdownUidRanges().isEmpty());
     }
 
     @Test
     public void testLockdownUidFilteringWithInstallAndUnInstall() {
-        doReturn(List.of(buildPackageInfo(SYSTEM_PACKAGE1, SYSTEM_APP_UID11, CHANGE_NETWORK_STATE,
+        doReturn(List.of(
+                buildPackageInfo(SYSTEM_PACKAGE1, SYSTEM_APP_UID11, CHANGE_NETWORK_STATE,
                         NETWORK_STACK, CONNECTIVITY_USE_RESTRICTED_NETWORKS),
                 buildPackageInfo(SYSTEM_PACKAGE2, VPN_UID)))
                 .when(mPackageManager).getInstalledPackagesAsUser(eq(GET_PERMISSIONS), anyInt());
         doReturn(List.of(MOCK_USER1, MOCK_USER2)).when(mUserManager).getUserHandles(eq(true));
 
         mPermissionMonitor.startMonitoring();
-        final UidRange[] vpnRange = {
+        final UidRange[] lockdownRange = {
                 UidRange.createForUser(MOCK_USER1),
                 UidRange.createForUser(MOCK_USER2)
         };
-        mPermissionMonitor.updateVpnLockdownUidRanges(true /* add */, vpnRange);
+        mPermissionMonitor.updateVpnLockdownUidRanges(true /* add */, lockdownRange);
+
+        reset(mBpfNetMaps);
 
         // Installing package should add Lockdown rules
         addPackageForUsers(new UserHandle[]{MOCK_USER1, MOCK_USER2}, MOCK_PACKAGE1, MOCK_APPID1);
+        verify(mBpfNetMaps, times(2)).updateUidLockdownRule(anyInt(), eq(true) /* add */);
         verify(mBpfNetMaps).updateUidLockdownRule(MOCK_UID11, true /* add */);
         verify(mBpfNetMaps).updateUidLockdownRule(MOCK_UID21, true /* add */);
 
@@ -980,8 +998,8 @@ public class PermissionMonitorTest {
 
         // Uninstalling package should remove Lockdown rules
         mPermissionMonitor.onPackageRemoved(MOCK_PACKAGE1, MOCK_UID11);
+        verify(mBpfNetMaps).updateUidLockdownRule(anyInt(), eq(false) /* add */);
         verify(mBpfNetMaps).updateUidLockdownRule(MOCK_UID11, false /* add */);
-        verify(mBpfNetMaps, never()).updateUidLockdownRule(MOCK_UID21, false /* add */);
     }
 
     // Normal package add/remove operations will trigger multiple intent for uids corresponding to
@@ -1305,7 +1323,8 @@ public class PermissionMonitorTest {
     public void testOnExternalApplicationsAvailable() throws Exception {
         // Initial the permission state. MOCK_PACKAGE1 and MOCK_PACKAGE2 are installed on external
         // and have different uids. There has no permission for both uids.
-        doReturn(List.of(buildPackageInfo(MOCK_PACKAGE1, MOCK_UID11),
+        doReturn(List.of(
+                buildPackageInfo(MOCK_PACKAGE1, MOCK_UID11),
                 buildPackageInfo(MOCK_PACKAGE2, MOCK_UID12)))
                 .when(mPackageManager).getInstalledPackagesAsUser(eq(GET_PERMISSIONS), anyInt());
         mPermissionMonitor.startMonitoring();
@@ -1363,7 +1382,8 @@ public class PermissionMonitorTest {
             throws Exception {
         // Initial the permission state. MOCK_PACKAGE1 and MOCK_PACKAGE2 are installed on external
         // storage and shared on MOCK_UID11. There has no permission for MOCK_UID11.
-        doReturn(List.of(buildPackageInfo(MOCK_PACKAGE1, MOCK_UID11),
+        doReturn(List.of(
+                buildPackageInfo(MOCK_PACKAGE1, MOCK_UID11),
                 buildPackageInfo(MOCK_PACKAGE2, MOCK_UID11)))
                 .when(mPackageManager).getInstalledPackagesAsUser(eq(GET_PERMISSIONS), anyInt());
         mPermissionMonitor.startMonitoring();
@@ -1389,7 +1409,8 @@ public class PermissionMonitorTest {
         // Initial the permission state. MOCK_PACKAGE1 is installed on external storage and
         // MOCK_PACKAGE2 is installed on device. These two packages are shared on MOCK_UID11.
         // MOCK_UID11 has NETWORK and INTERNET permissions.
-        doReturn(List.of(buildPackageInfo(MOCK_PACKAGE1, MOCK_UID11),
+        doReturn(List.of(
+                buildPackageInfo(MOCK_PACKAGE1, MOCK_UID11),
                 buildPackageInfo(MOCK_PACKAGE2, MOCK_UID11, CHANGE_NETWORK_STATE, INTERNET)))
                 .when(mPackageManager).getInstalledPackagesAsUser(eq(GET_PERMISSIONS), anyInt());
         mPermissionMonitor.startMonitoring();
