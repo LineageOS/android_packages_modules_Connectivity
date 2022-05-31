@@ -75,6 +75,8 @@ public class ConnOnActivityStartTest extends AbstractRestrictBackgroundNetworkTe
     @RequiredProperties({DOZE_MODE})
     public void testStartActivity_doze() throws Exception {
         setDozeMode(true);
+        // TODO (235284115): We need to turn on Doze every time before starting
+        // the activity.
         assertLaunchedActivityHasNetworkAccess("testStartActivity_doze");
     }
 
@@ -83,6 +85,8 @@ public class ConnOnActivityStartTest extends AbstractRestrictBackgroundNetworkTe
     public void testStartActivity_appStandby() throws Exception {
         turnBatteryOn();
         setAppIdle(true);
+        // TODO (235284115): We need to put the app into app standby mode every
+        // time before starting the activity.
         assertLaunchedActivityHasNetworkAccess("testStartActivity_appStandby");
     }
 
