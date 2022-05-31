@@ -102,6 +102,23 @@ class BpfMap {
     // Function that tries to get map from a pinned path.
     base::Result<void> init(const char* path);
 
+#ifdef TEST_BPF_MAP
+    // due to Android SELinux limitations which prevent map creation by anyone besides the bpfloader
+    // this should only ever be used by test code, it is equivalent to:
+    //   .reset(createMap(type, keysize, valuesize, max_entries, map_flags)
+    // TODO: derive map_flags from BpfMap vs BpfMapRO
+    base::Result<void> resetMap(bpf_map_type map_type, uint32_t max_entries, uint32_t map_flags = 0) {
+        int map_fd = createMap(map_type, sizeof(Key), sizeof(Value), max_entries, map_flags);
+        if (map_fd < 0) {
+             auto err = ErrnoErrorf("Unable to create map.");
+             mMapFd.reset();
+             return err;
+        };
+        mMapFd.reset(map_fd);
+        return {};
+    }
+#endif
+
     // Iterate through the map and handle each key retrieved based on the filter
     // without modification of map content.
     base::Result<void> iterate(
