@@ -96,27 +96,23 @@ class TrafficControllerTest : public ::testing::Test {
                 createMap(BPF_MAP_TYPE_HASH, sizeof(uint32_t), sizeof(uint8_t), TEST_MAP_SIZE, 0));
         ASSERT_VALID(mFakeUidPermissionMap);
 
-        mTc.mCookieTagMap.reset(dupFd(mFakeCookieTagMap.getMap()));
+        mTc.mCookieTagMap = mFakeCookieTagMap;
         ASSERT_VALID(mTc.mCookieTagMap);
-        mTc.mAppUidStatsMap.reset(dupFd(mFakeAppUidStatsMap.getMap()));
+        mTc.mAppUidStatsMap = mFakeAppUidStatsMap;
         ASSERT_VALID(mTc.mAppUidStatsMap);
-        mTc.mStatsMapA.reset(dupFd(mFakeStatsMapA.getMap()));
+        mTc.mStatsMapA = mFakeStatsMapA;
         ASSERT_VALID(mTc.mStatsMapA);
-        mTc.mConfigurationMap.reset(dupFd(mFakeConfigurationMap.getMap()));
+        mTc.mConfigurationMap = mFakeConfigurationMap;
         ASSERT_VALID(mTc.mConfigurationMap);
 
         // Always write to stats map A by default.
         ASSERT_RESULT_OK(mTc.mConfigurationMap.writeValue(CURRENT_STATS_MAP_CONFIGURATION_KEY,
                                                           SELECT_MAP_A, BPF_ANY));
-        mTc.mUidOwnerMap.reset(dupFd(mFakeUidOwnerMap.getMap()));
+        mTc.mUidOwnerMap = mFakeUidOwnerMap;
         ASSERT_VALID(mTc.mUidOwnerMap);
-        mTc.mUidPermissionMap.reset(dupFd(mFakeUidPermissionMap.getMap()));
+        mTc.mUidPermissionMap = mFakeUidPermissionMap;
         ASSERT_VALID(mTc.mUidPermissionMap);
         mTc.mPrivilegedUser.clear();
-    }
-
-    int dupFd(const android::base::unique_fd& mapFd) {
-        return fcntl(mapFd.get(), F_DUPFD_CLOEXEC, 0);
     }
 
     void populateFakeStats(uint64_t cookie, uint32_t uid, uint32_t tag, StatsKey* key) {
