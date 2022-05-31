@@ -34,20 +34,12 @@ namespace android {
 
 static inline unsigned uncachedKernelVersion() {
   struct utsname buf;
-  int ret = uname(&buf);
-  if (ret)
-    return 0;
+  if (uname(&buf)) return 0;
 
-  unsigned kver_major;
-  unsigned kver_minor;
-  unsigned kver_sub;
-  char discard;
-  ret = sscanf(buf.release, "%u.%u.%u%c", &kver_major, &kver_minor, &kver_sub,
-               &discard);
-  // Check the device kernel version
-  if (ret < 3)
-    return 0;
-
+  unsigned kver_major = 0;
+  unsigned kver_minor = 0;
+  unsigned kver_sub = 0;
+  (void)sscanf(buf.release, "%u.%u.%u", &kver_major, &kver_minor, &kver_sub);
   return KVER(kver_major, kver_minor, kver_sub);
 }
 
