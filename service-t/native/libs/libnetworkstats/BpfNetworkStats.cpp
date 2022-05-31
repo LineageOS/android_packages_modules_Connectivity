@@ -193,7 +193,7 @@ int parseBpfNetworkStatsDetail(std::vector<stats_line>* lines,
         return ret;
     }
 
-    BpfMapRO<uint32_t, uint8_t> configurationMap(CONFIGURATION_MAP_PATH);
+    BpfMapRO<uint32_t, uint32_t> configurationMap(CONFIGURATION_MAP_PATH);
     if (!configurationMap.isValid()) {
         int ret = -errno;
         ALOGE("get configuration map fd failed: %s", strerror(errno));
