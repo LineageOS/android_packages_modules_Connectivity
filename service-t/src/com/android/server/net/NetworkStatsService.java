@@ -1468,9 +1468,9 @@ public class NetworkStatsService extends INetworkStatsService.Stub {
         // We've been using pure XT stats long enough that we no longer need to
         // splice DEV and XT together.
         final NetworkStatsHistory history = internalGetHistoryForNetwork(template, flags, FIELD_ALL,
-                accessLevel, callingUid, start, end);
+                accessLevel, callingUid, Long.MIN_VALUE, Long.MAX_VALUE);
 
-        final long now = System.currentTimeMillis();
+        final long now = mClock.millis();
         final NetworkStatsHistory.Entry entry = history.getValues(start, end, now, null);
 
         final NetworkStats stats = new NetworkStats(end - start, 1);
