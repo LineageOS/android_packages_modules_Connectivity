@@ -147,9 +147,9 @@ enum StatsMapType {
     SELECT_MAP_B,
 };
 
-// TODO: change the configuration object from an 8-bit bitmask to an object with clearer
+// TODO: change the configuration object from a bitmask to an object with clearer
 // semantics, like a struct.
-typedef uint8_t BpfConfig;
+typedef uint32_t BpfConfig;
 static const BpfConfig DEFAULT_CONFIG = 0;
 
 typedef struct {
@@ -160,7 +160,9 @@ typedef struct {
 } UidOwnerValue;
 STRUCT_SIZE(UidOwnerValue, 2 * 4);  // 8
 
+// Entry in the configuration map that stores which UID rules are enabled.
 #define UID_RULES_CONFIGURATION_KEY 1
+// Entry in the configuration map that stores which stats map is currently in use.
 #define CURRENT_STATS_MAP_CONFIGURATION_KEY 2
 
 #define BPF_CLATD_PATH "/sys/fs/bpf/net_shared/"
