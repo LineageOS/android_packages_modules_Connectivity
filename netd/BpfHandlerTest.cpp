@@ -71,21 +71,17 @@ class BpfHandlerTest : public ::testing::Test {
                 createMap(BPF_MAP_TYPE_HASH, sizeof(uint32_t), sizeof(uint8_t), TEST_MAP_SIZE, 0));
         ASSERT_VALID(mFakeUidPermissionMap);
 
-        mBh.mCookieTagMap.reset(dupFd(mFakeCookieTagMap.getMap()));
+        mBh.mCookieTagMap = mFakeCookieTagMap;
         ASSERT_VALID(mBh.mCookieTagMap);
-        mBh.mStatsMapA.reset(dupFd(mFakeStatsMapA.getMap()));
+        mBh.mStatsMapA = mFakeStatsMapA;
         ASSERT_VALID(mBh.mStatsMapA);
-        mBh.mConfigurationMap.reset(dupFd(mFakeConfigurationMap.getMap()));
+        mBh.mConfigurationMap = mFakeConfigurationMap;
         ASSERT_VALID(mBh.mConfigurationMap);
         // Always write to stats map A by default.
         ASSERT_RESULT_OK(mBh.mConfigurationMap.writeValue(CURRENT_STATS_MAP_CONFIGURATION_KEY,
                                                           SELECT_MAP_A, BPF_ANY));
-        mBh.mUidPermissionMap.reset(dupFd(mFakeUidPermissionMap.getMap()));
+        mBh.mUidPermissionMap = mFakeUidPermissionMap;
         ASSERT_VALID(mBh.mUidPermissionMap);
-    }
-
-    int dupFd(const android::base::unique_fd& mapFd) {
-        return fcntl(mapFd.get(), F_DUPFD_CLOEXEC, 0);
     }
 
     int setUpSocketAndTag(int protocol, uint64_t* cookie, uint32_t tag, uid_t uid,
