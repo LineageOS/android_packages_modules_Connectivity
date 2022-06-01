@@ -62,7 +62,7 @@ class BpfHandler {
     BpfMap<uint64_t, UidTagValue> mCookieTagMap;
     BpfMap<StatsKey, StatsValue> mStatsMapA;
     BpfMap<StatsKey, StatsValue> mStatsMapB;
-    BpfMap<uint32_t, uint8_t> mConfigurationMap;
+    BpfMap<uint32_t, uint32_t> mConfigurationMap;
     BpfMap<uint32_t, uint8_t> mUidPermissionMap;
 
     std::mutex mMutex;

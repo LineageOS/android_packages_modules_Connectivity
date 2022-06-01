@@ -155,7 +155,7 @@ class TrafficController {
      *    Userspace can do scraping and cleaning job on the other one depending on the
      *    current configs.
      */
-    bpf::BpfMap<uint32_t, uint8_t> mConfigurationMap GUARDED_BY(mMutex);
+    bpf::BpfMap<uint32_t, uint32_t> mConfigurationMap GUARDED_BY(mMutex);
 
     /*
      * mUidOwnerMap: Store uids that are used for bandwidth control uid match.
