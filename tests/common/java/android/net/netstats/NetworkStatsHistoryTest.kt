@@ -27,6 +27,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.JUnit4
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 
 @ConnectivityModuleTest
 @RunWith(JUnit4::class)
@@ -51,12 +52,22 @@ class NetworkStatsHistoryTest {
                 .build()
         statsSingle.assertEntriesEqual(entry1)
         assertEquals(DateUtils.HOUR_IN_MILLIS, statsSingle.bucketDuration)
+
+        // Verify the builder throws if the timestamp of added entry is not greater than
+        // that of any previously-added entry.
+        assertFailsWith(IllegalArgumentException::class) {
+            NetworkStatsHistory
+                    .Builder(DateUtils.SECOND_IN_MILLIS, /* initialCapacity */ 0)
+                    .addEntry(entry1).addEntry(entry2).addEntry(entry3)
+                    .build()
+        }
+
         val statsMultiple = NetworkStatsHistory
                 .Builder(DateUtils.SECOND_IN_MILLIS, /* initialCapacity */ 0)
-                .addEntry(entry1).addEntry(entry2).addEntry(entry3)
+                .addEntry(entry3).addEntry(entry1).addEntry(entry2)
                 .build()
         assertEquals(DateUtils.SECOND_IN_MILLIS, statsMultiple.bucketDuration)
-        statsMultiple.assertEntriesEqual(entry1, entry2, entry3)
+        statsMultiple.assertEntriesEqual(entry3, entry1, entry2)
     }
 
     fun NetworkStatsHistory.assertEntriesEqual(vararg entries: NetworkStatsHistory.Entry) {
