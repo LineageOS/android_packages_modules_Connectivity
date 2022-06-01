@@ -22,6 +22,7 @@ import androidx.test.filters.SmallTest
 import com.android.testutils.ConnectivityModuleTest
 import com.android.testutils.DevSdkIgnoreRule
 import com.android.testutils.SC_V2
+import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -36,6 +37,7 @@ class NetworkStatsHistoryTest {
     @JvmField
     val ignoreRule = DevSdkIgnoreRule(ignoreClassUpTo = SC_V2)
 
+    @Ignore
     @Test
     fun testBuilder() {
         val entry1 = NetworkStatsHistory.Entry(10, 30, 40, 4, 50, 5, 60)
@@ -61,6 +63,7 @@ class NetworkStatsHistoryTest {
         statsMultiple.assertEntriesEqual(entry3, entry1, entry2)
     }
 
+    @Ignore
     @Test
     fun testBuilderSortAndDeduplicate() {
         val entry1 = NetworkStatsHistory.Entry(10, 30, 40, 4, 50, 5, 60)
