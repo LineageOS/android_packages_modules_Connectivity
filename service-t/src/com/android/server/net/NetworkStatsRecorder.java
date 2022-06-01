@@ -43,7 +43,6 @@ import com.android.net.module.util.NetworkStatsUtils;
 import libcore.io.IoUtils;
 
 import java.io.ByteArrayOutputStream;
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -420,46 +419,6 @@ public class NetworkStatsRecorder {
         @Override
         public void write(OutputStream out) throws IOException {
             mTemp.write(out);
-        }
-    }
-
-    public void importLegacyNetworkLocked(File file) throws IOException {
-        Objects.requireNonNull(mRotator, "missing FileRotator");
-
-        // legacy file still exists; start empty to avoid double importing
-        mRotator.deleteAll();
-
-        final NetworkStatsCollection collection = new NetworkStatsCollection(mBucketDuration);
-        collection.readLegacyNetwork(file);
-
-        final long startMillis = collection.getStartMillis();
-        final long endMillis = collection.getEndMillis();
-
-        if (!collection.isEmpty()) {
-            // process legacy data, creating active file at starting time, then
-            // using end time to possibly trigger rotation.
-            mRotator.rewriteActive(new CombiningRewriter(collection), startMillis);
-            mRotator.maybeRotate(endMillis);
-        }
-    }
-
-    public void importLegacyUidLocked(File file) throws IOException {
-        Objects.requireNonNull(mRotator, "missing FileRotator");
-
-        // legacy file still exists; start empty to avoid double importing
-        mRotator.deleteAll();
-
-        final NetworkStatsCollection collection = new NetworkStatsCollection(mBucketDuration);
-        collection.readLegacyUid(file, mOnlyTags);
-
-        final long startMillis = collection.getStartMillis();
-        final long endMillis = collection.getEndMillis();
-
-        if (!collection.isEmpty()) {
-            // process legacy data, creating active file at starting time, then
-            // using end time to possibly trigger rotation.
-            mRotator.rewriteActive(new CombiningRewriter(collection), startMillis);
-            mRotator.maybeRotate(endMillis);
         }
     }
 
