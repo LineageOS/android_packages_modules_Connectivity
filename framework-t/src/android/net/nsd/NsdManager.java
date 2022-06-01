@@ -175,6 +175,7 @@ public final class NsdManager {
      *
      * @see #ACTION_NSD_STATE_CHANGED
      */
+    // TODO: Deprecate this since NSD service is never disabled.
     public static final int NSD_STATE_DISABLED = 1;
 
     /**
@@ -230,17 +231,12 @@ public final class NsdManager {
     public static final int DAEMON_STARTUP                          = 19;
 
     /** @hide */
-    public static final int ENABLE                                  = 20;
-    /** @hide */
-    public static final int DISABLE                                 = 21;
+    public static final int MDNS_SERVICE_EVENT                      = 20;
 
     /** @hide */
-    public static final int MDNS_SERVICE_EVENT                      = 22;
-
+    public static final int REGISTER_CLIENT                         = 21;
     /** @hide */
-    public static final int REGISTER_CLIENT                         = 23;
-    /** @hide */
-    public static final int UNREGISTER_CLIENT                       = 24;
+    public static final int UNREGISTER_CLIENT                       = 22;
 
     /** Dns based service discovery protocol */
     public static final int PROTOCOL_DNS_SD = 0x0001;
@@ -266,8 +262,6 @@ public final class NsdManager {
         EVENT_NAMES.put(RESOLVE_SERVICE_SUCCEEDED, "RESOLVE_SERVICE_SUCCEEDED");
         EVENT_NAMES.put(DAEMON_CLEANUP, "DAEMON_CLEANUP");
         EVENT_NAMES.put(DAEMON_STARTUP, "DAEMON_STARTUP");
-        EVENT_NAMES.put(ENABLE, "ENABLE");
-        EVENT_NAMES.put(DISABLE, "DISABLE");
         EVENT_NAMES.put(MDNS_SERVICE_EVENT, "MDNS_SERVICE_EVENT");
     }
 
