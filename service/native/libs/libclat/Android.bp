@@ -35,7 +35,8 @@ cc_library_static {
 cc_test {
     name: "libclat_test",
     defaults: ["netd_defaults"],
-    test_suites: ["device-tests"],
+    test_suites: ["general-tests", "mts-tethering"],
+    test_config_template: ":net_native_test_config_template",
     srcs: [
         "clatutils_test.cpp",
     ],
@@ -49,5 +50,14 @@ cc_test {
         "liblog",
         "libnetutils",
     ],
+    compile_multilib: "both",
+    multilib: {
+        lib32: {
+            suffix: "32",
+        },
+        lib64: {
+            suffix: "64",
+        },
+    },
     require_root: true,
 }
