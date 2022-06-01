@@ -101,7 +101,6 @@ public class NsdService extends INsdManager.Stub {
     private class NsdStateMachine extends StateMachine {
 
         private final DefaultState mDefaultState = new DefaultState();
-        private final DisabledState mDisabledState = new DisabledState();
         private final EnabledState mEnabledState = new EnabledState();
 
         @Override
@@ -152,7 +151,6 @@ public class NsdService extends INsdManager.Stub {
         NsdStateMachine(String name, Handler handler) {
             super(name, handler);
             addState(mDefaultState);
-                addState(mDisabledState, mDefaultState);
                 addState(mEnabledState, mDefaultState);
             State initialState = mEnabledState;
             setInitialState(initialState);
@@ -250,25 +248,6 @@ public class NsdService extends INsdManager.Stub {
             }
         }
 
-        class DisabledState extends State {
-            @Override
-            public void enter() {
-                sendNsdStateChangeBroadcast(false);
-            }
-
-            @Override
-            public boolean processMessage(Message msg) {
-                switch (msg.what) {
-                    case NsdManager.ENABLE:
-                        transitionTo(mEnabledState);
-                        break;
-                    default:
-                        return NOT_HANDLED;
-                }
-                return HANDLED;
-            }
-        }
-
         class EnabledState extends State {
             @Override
             public void enter() {
@@ -312,10 +291,6 @@ public class NsdService extends INsdManager.Stub {
                 final int clientId = msg.arg2;
                 final ListenerArgs args;
                 switch (msg.what) {
-                    case NsdManager.DISABLE:
-                        //TODO: cleanup clients
-                        transitionTo(mDisabledState);
-                        break;
                     case NsdManager.DISCOVER_SERVICES:
                         if (DBG) Log.d(TAG, "Discover services");
                         args = (ListenerArgs) msg.obj;
