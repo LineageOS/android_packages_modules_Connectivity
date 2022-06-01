@@ -290,6 +290,7 @@ java_library {
         "//packages/modules/Connectivity/service",
         "//packages/modules/Connectivity/tests:__subpackages__",
         "//packages/modules/Bluetooth/android/app",
+        "//packages/modules/Wifi/service:__subpackages__",
     ],
     lint: { strict_updatability_linting: true },
 }
