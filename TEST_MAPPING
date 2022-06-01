@@ -34,6 +34,18 @@
         }
       ]
     },
+    // CTS tests that target older SDKs.
+    {
+      "name": "CtsNetTestCasesMaxTargetSdk31",
+      "options": [
+        {
+          "exclude-annotation": "com.android.testutils.SkipPresubmit"
+        },
+        {
+          "exclude-annotation": "androidx.test.filters.RequiresDevice"
+        }
+      ]
+    },
     {
       "name": "bpf_existence_test"
     },
@@ -81,6 +93,17 @@
   "mainline-presubmit": [
     {
       "name": "CtsNetTestCasesLatestSdk[CaptivePortalLoginGoogle.apk+NetworkStackGoogle.apk+com.google.android.resolv.apex+com.google.android.tethering.apex]",
+      "options": [
+        {
+          "exclude-annotation": "com.android.testutils.SkipPresubmit"
+        },
+        {
+          "exclude-annotation": "androidx.test.filters.RequiresDevice"
+        }
+      ]
+    },
+    {
+      "name": "CtsNetTestCasesMaxTargetSdk31[CaptivePortalLoginGoogle.apk+NetworkStackGoogle.apk+com.google.android.resolv.apex+com.google.android.tethering.apex]",
       "options": [
         {
           "exclude-annotation": "com.android.testutils.SkipPresubmit"
