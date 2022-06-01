@@ -17,15 +17,20 @@
 package com.android.testutils
 
 import android.os.Build
+import androidx.test.InstrumentationRegistry
 import com.android.modules.utils.build.SdkLevel
 import kotlin.test.fail
 import org.junit.Assume.assumeTrue
 import org.junit.rules.TestRule
 import org.junit.runner.Description
 import org.junit.runners.model.Statement
+import java.util.regex.Pattern
 
 // TODO: Remove it when Build.VERSION_CODES.SC_V2 is available
 const val SC_V2 = 32
+
+private val MAX_TARGET_SDK_ANNOTATION_RE = Pattern.compile("MaxTargetSdk([0-9]+)$")
+private val targetSdk = InstrumentationRegistry.getContext().applicationInfo.targetSdkVersion
 
 /**
  * Returns true if the development SDK version of the device is in the provided range.
@@ -64,6 +69,14 @@ private fun isDevSdkUpTo(maxInclusive: Int): Boolean {
         Build.VERSION_CODES.R -> !SdkLevel.isAtLeastS()
         // Development builds of SDK versions <= R are not used anymore
         else -> Build.VERSION.SDK_INT <= maxInclusive
+    }
+}
+
+private fun getMaxTargetSdk(description: Description): Int? {
+    return description.annotations.firstNotNullOfOrNull {
+        MAX_TARGET_SDK_ANNOTATION_RE.matcher(it::class.simpleName).let { m ->
+            if (m.find()) m.group(1).toIntOrNull() else null
+        }
     }
 }
 
@@ -108,11 +121,16 @@ class DevSdkIgnoreRule @JvmOverloads constructor(
             val ignoreAfter = description.getAnnotation(IgnoreAfter::class.java)
             val ignoreUpTo = description.getAnnotation(IgnoreUpTo::class.java)
 
-            val message = "Skipping test for build ${Build.VERSION.CODENAME} " +
+            val devSdkMessage = "Skipping test for build ${Build.VERSION.CODENAME} " +
                     "with SDK ${Build.VERSION.SDK_INT}"
-            assumeTrue(message, isDevSdkInRange(ignoreClassUpTo, ignoreClassAfter))
-            assumeTrue(message, isDevSdkInRange(ignoreUpTo?.value, ignoreAfter?.value))
-            base.evaluate()
+            assumeTrue(devSdkMessage, isDevSdkInRange(ignoreClassUpTo, ignoreClassAfter))
+            assumeTrue(devSdkMessage, isDevSdkInRange(ignoreUpTo?.value, ignoreAfter?.value))
+
+            val maxTargetSdk = getMaxTargetSdk(description)
+            if (maxTargetSdk != null) {
+                assumeTrue("Skipping test, target SDK $targetSdk greater than $maxTargetSdk",
+                        targetSdk <= maxTargetSdk)
+            }
         }
     }
 }
