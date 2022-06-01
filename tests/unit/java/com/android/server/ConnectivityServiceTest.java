@@ -11617,6 +11617,12 @@ public class ConnectivityServiceTest {
         mCm.unregisterNetworkCallback(networkCallback);
     }
 
+    private void verifyDump(String[] args) {
+        final StringWriter stringWriter = new StringWriter();
+        mService.dump(new FileDescriptor(), new PrintWriter(stringWriter), args);
+        assertFalse(stringWriter.toString().isEmpty());
+    }
+
     @Test
     public void testDumpDoesNotCrash() {
         mServiceContext.setPermission(DUMP, PERMISSION_GRANTED);
@@ -11629,11 +11635,26 @@ public class ConnectivityServiceTest {
                 .addTransportType(TRANSPORT_WIFI).build();
         mCm.registerNetworkCallback(genericRequest, genericNetworkCallback);
         mCm.registerNetworkCallback(wifiRequest, wifiNetworkCallback);
-        final StringWriter stringWriter = new StringWriter();
 
-        mService.dump(new FileDescriptor(), new PrintWriter(stringWriter), new String[0]);
+        verifyDump(new String[0]);
 
-        assertFalse(stringWriter.toString().isEmpty());
+        // Verify dump with arguments.
+        final String dumpPrio = "--dump-priority";
+        final String[] dumpArgs = {dumpPrio};
+        verifyDump(dumpArgs);
+
+        final String[] highDumpArgs = {dumpPrio, "HIGH"};
+        verifyDump(highDumpArgs);
+
+        final String[] normalDumpArgs = {dumpPrio, "NORMAL"};
+        verifyDump(normalDumpArgs);
+
+        // Invalid args should do dumpNormal w/o exception
+        final String[] unknownDumpArgs = {dumpPrio, "UNKNOWN"};
+        verifyDump(unknownDumpArgs);
+
+        final String[] invalidDumpArgs = {"UNKNOWN"};
+        verifyDump(invalidDumpArgs);
     }
 
     @Test
