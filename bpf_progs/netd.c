@@ -216,6 +216,12 @@ static inline int bpf_owner_match(struct __sk_buff* skb, uint32_t uid, int direc
         if ((enabledRules & LOW_POWER_STANDBY_MATCH) && !(uidRules & LOW_POWER_STANDBY_MATCH)) {
             return BPF_DROP;
         }
+        if ((enabledRules & OEM_DENY_1_MATCH) && (uidRules & OEM_DENY_1_MATCH)) {
+            return BPF_DROP;
+        }
+        if ((enabledRules & OEM_DENY_2_MATCH) && (uidRules & OEM_DENY_2_MATCH)) {
+            return BPF_DROP;
+        }
     }
     if (direction == BPF_INGRESS && skb->ifindex != 1) {
         if (uidRules & IIF_MATCH) {

@@ -37,6 +37,10 @@ import static android.content.pm.PackageManager.GET_PERMISSIONS;
 import static android.content.pm.PackageManager.PERMISSION_GRANTED;
 import static android.net.ConnectivityManager.EXTRA_NETWORK;
 import static android.net.ConnectivityManager.EXTRA_NETWORK_REQUEST;
+import static android.net.ConnectivityManager.FIREWALL_CHAIN_OEM_DENY_1;
+import static android.net.ConnectivityManager.FIREWALL_CHAIN_OEM_DENY_2;
+import static android.net.ConnectivityManager.FIREWALL_RULE_ALLOW;
+import static android.net.ConnectivityManager.FIREWALL_RULE_DENY;
 import static android.net.ConnectivityManager.PROFILE_NETWORK_PREFERENCE_ENTERPRISE;
 import static android.net.ConnectivityManager.TYPE_BLUETOOTH;
 import static android.net.ConnectivityManager.TYPE_ETHERNET;
@@ -204,6 +208,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
+import java.net.DatagramPacket;
+import java.net.DatagramSocket;
 import java.net.HttpURLConnection;
 import java.net.Inet4Address;
 import java.net.Inet6Address;
@@ -218,6 +224,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
+import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
@@ -255,6 +262,7 @@ public class ConnectivityManagerTest {
     private static final int NETWORK_CALLBACK_TIMEOUT_MS = 30_000;
     private static final int LISTEN_ACTIVITY_TIMEOUT_MS = 5_000;
     private static final int NO_CALLBACK_TIMEOUT_MS = 100;
+    private static final int SOCKET_TIMEOUT_MS = 100;
     private static final int NUM_TRIES_MULTIPATH_PREF_CHECK = 20;
     private static final long INTERVAL_MULTIPATH_PREF_CHECK_MS = 500;
     // device could have only one interface: data, wifi.
@@ -3314,6 +3322,111 @@ public class ConnectivityManagerTest {
         dumpOutput = DumpTestUtils.dumpServiceWithShellPermission(
                 Context.CONNECTIVITY_SERVICE, args[1]);
         assertTrue(dumpOutput, dumpOutput.contains("BPF map content"));
+    }
+
+    private void checkFirewallBlocking(final DatagramSocket srcSock, final DatagramSocket dstSock,
+            final boolean expectBlock) throws Exception {
+        final Random random = new Random();
+        final byte[] sendData = new byte[100];
+        random.nextBytes(sendData);
+
+        final DatagramPacket pkt = new DatagramPacket(sendData, sendData.length,
+                InetAddresses.parseNumericAddress("::1"), dstSock.getLocalPort());
+        try {
+            srcSock.send(pkt);
+        } catch (IOException e) {
+            if (expectBlock) {
+                return;
+            }
+            fail("Expect not to be blocked by firewall but sending packet was blocked");
+        }
+
+        if (expectBlock) {
+            fail("Expect to be blocked by firewall but sending packet was not blocked");
+        }
+
+        dstSock.receive(pkt);
+        assertArrayEquals(sendData, pkt.getData());
+    }
+
+    private static final boolean EXPECT_PASS = false;
+    private static final boolean EXPECT_BLOCK = true;
+
+    private void doTestFirewallBlockingDenyRule(final int chain) {
+        runWithShellPermissionIdentity(() -> {
+            try (DatagramSocket srcSock = new DatagramSocket();
+                 DatagramSocket dstSock = new DatagramSocket()) {
+                dstSock.setSoTimeout(SOCKET_TIMEOUT_MS);
+
+                // No global config, No uid config
+                checkFirewallBlocking(srcSock, dstSock, EXPECT_PASS);
+
+                // Has global config, No uid config
+                mCm.setFirewallChainEnabled(chain, true /* enable */);
+                checkFirewallBlocking(srcSock, dstSock, EXPECT_PASS);
+
+                // Has global config, Has uid config
+                mCm.setUidFirewallRule(chain, Process.myUid(), FIREWALL_RULE_DENY);
+                checkFirewallBlocking(srcSock, dstSock, EXPECT_BLOCK);
+
+                // No global config, Has uid config
+                mCm.setFirewallChainEnabled(chain, false /* enable */);
+                checkFirewallBlocking(srcSock, dstSock, EXPECT_PASS);
+
+                // No global config, No uid config
+                mCm.setUidFirewallRule(chain, Process.myUid(), FIREWALL_RULE_ALLOW);
+                checkFirewallBlocking(srcSock, dstSock, EXPECT_PASS);
+            } finally {
+                mCm.setFirewallChainEnabled(chain, false /* enable */);
+                mCm.setUidFirewallRule(chain, Process.myUid(), FIREWALL_RULE_ALLOW);
+            }
+        }, NETWORK_SETTINGS);
+    }
+
+    private void doTestFirewallBlockingAllowRule(final int chain) {
+        runWithShellPermissionIdentity(() -> {
+            try (DatagramSocket srcSock = new DatagramSocket();
+                 DatagramSocket dstSock = new DatagramSocket()) {
+                dstSock.setSoTimeout(SOCKET_TIMEOUT_MS);
+
+                // No global config, No uid config
+                checkFirewallBlocking(srcSock, dstSock, EXPECT_PASS);
+
+                // Has global config, No uid config
+                mCm.setFirewallChainEnabled(chain, true /* enable */);
+                checkFirewallBlocking(srcSock, dstSock, EXPECT_BLOCK);
+
+                // Has global config, Has uid config
+                mCm.setUidFirewallRule(chain, Process.myUid(), FIREWALL_RULE_ALLOW);
+                checkFirewallBlocking(srcSock, dstSock, EXPECT_PASS);
+
+                // No global config, Has uid config
+                mCm.setFirewallChainEnabled(chain, false /* enable */);
+                checkFirewallBlocking(srcSock, dstSock, EXPECT_PASS);
+
+                // No global config, No uid config
+                mCm.setUidFirewallRule(chain, Process.myUid(), FIREWALL_RULE_DENY);
+                checkFirewallBlocking(srcSock, dstSock, EXPECT_PASS);
+            } finally {
+                mCm.setFirewallChainEnabled(chain, false /* enable */);
+                mCm.setUidFirewallRule(chain, Process.myUid(), FIREWALL_RULE_DENY);
+            }
+        }, NETWORK_SETTINGS);
+    }
+
+    @Test @IgnoreUpTo(SC_V2)
+    public void testFirewallBlocking() {
+        // Following tests affect the actual state of networking on the device after the test.
+        // This might cause unexpected behaviour of the device. So, we skip them for now.
+        // We will enable following tests after adding the logic of firewall state restoring.
+        // doTestFirewallBlockingAllowRule(FIREWALL_CHAIN_DOZABLE);
+        // doTestFirewallBlockingAllowRule(FIREWALL_CHAIN_POWERSAVE);
+        // doTestFirewallBlockingAllowRule(FIREWALL_CHAIN_RESTRICTED);
+        // doTestFirewallBlockingAllowRule(FIREWALL_CHAIN_LOW_POWER_STANDBY);
+
+        // doTestFirewallBlockingDenyRule(FIREWALL_CHAIN_STANDBY);
+        doTestFirewallBlockingDenyRule(FIREWALL_CHAIN_OEM_DENY_1);
+        doTestFirewallBlockingDenyRule(FIREWALL_CHAIN_OEM_DENY_2);
     }
 
     private void assumeTestSApis() {
