@@ -211,7 +211,7 @@ public abstract class FdEventsReader<BufferType> {
         return true;
     }
 
-    private boolean isRunning() {
+    protected boolean isRunning() {
         return (mFd != null) && mFd.valid();
     }
 
