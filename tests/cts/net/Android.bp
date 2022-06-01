@@ -62,6 +62,7 @@ java_defaults {
     // sdk_version: "current",
     platform_apis: true,
     required: ["ConnectivityChecker"],
+    test_config_template: "AndroidTestTemplate.xml",
 }
 
 // Networking CTS tests for development and release. These tests always target the platform SDK
@@ -79,7 +80,16 @@ android_test {
         "cts",
         "general-tests",
     ],
-    test_config_template: "AndroidTestTemplate.xml",
+}
+
+java_defaults {
+    name: "CtsNetTestCasesApiStableDefaults",
+    // TODO: CTS should not depend on the entirety of the networkstack code.
+    static_libs: [
+        "NetworkStackApiStableLib",
+    ],
+    jni_uses_sdk_apis: true,
+    min_sdk_version: "29",
 }
 
 // Networking CTS tests that target the latest released SDK. These tests can be installed on release
@@ -87,14 +97,11 @@ android_test {
 // on release devices.
 android_test {
     name: "CtsNetTestCasesLatestSdk",
-    defaults: ["CtsNetTestCasesDefaults"],
-    // TODO: CTS should not depend on the entirety of the networkstack code.
-    static_libs: [
-        "NetworkStackApiStableLib",
+    defaults: [
+        "CtsNetTestCasesDefaults",
+        "CtsNetTestCasesApiStableDefaults",
     ],
-    jni_uses_sdk_apis: true,
-    min_sdk_version: "29",
-    target_sdk_version: "30",
+    target_sdk_version: "33",
     test_suites: [
         "general-tests",
         "mts-dnsresolver",
@@ -102,5 +109,21 @@ android_test {
         "mts-tethering",
         "mts-wifi",
     ],
-    test_config_template: "AndroidTestTemplate.xml",
 }
+
+android_test {
+    name: "CtsNetTestCasesMaxTargetSdk31",  // Must match CtsNetTestCasesMaxTargetSdk31 annotation.
+    defaults: [
+        "CtsNetTestCasesDefaults",
+        "CtsNetTestCasesApiStableDefaults",
+    ],
+    target_sdk_version: "31",
+    package_name: "android.net.cts.maxtargetsdk31",  // CTS package names must be unique.
+    instrumentation_target_package: "android.net.cts.maxtargetsdk31",
+    test_suites: [
+        "cts",
+        "general-tests",
+        "mts-networking",
+    ],
+}
+
