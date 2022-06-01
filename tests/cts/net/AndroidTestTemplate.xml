@@ -33,10 +33,21 @@
     <target_preparer class="com.android.testutils.DisableConfigSyncTargetPreparer">
     </target_preparer>
     <test class="com.android.tradefed.testtype.AndroidJUnitTest" >
-        <option name="package" value="android.net.cts" />
+        <option name="package" value="{PACKAGE}" />
         <option name="runtime-hint" value="9m4s" />
         <option name="hidden-api-checks" value="false" />
         <option name="isolated-storage" value="false" />
+        <!-- Test filter that allows test APKs to select which tests they want to run by annotating
+             those tests with an annotation matching the name of the APK.
+
+             This allows us to maintain one AndroidTestTemplate.xml for all CtsNetTestCases*.apk,
+             and have CtsNetTestCases and CtsNetTestCasesLatestSdk run all tests, but have
+             CtsNetTestCasesMaxTargetSdk31 run only tests that require target SDK 31.
+
+             This relies on the fact that if the class specified in include-annotation exists, then
+             the runner will only run the tests annotated with that annotation, but if it does not,
+             the runner will run all the tests. -->
+        <option name="include-annotation" value="com.android.testutils.filters.{MODULE}" />
     </test>
     <!-- When this test is run in a Mainline context (e.g. with `mts-tradefed`), only enable it if
         one of the Mainline modules below is present on the device used for testing. -->
