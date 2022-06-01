@@ -23,6 +23,7 @@ import android.net.LinkAddress
 import android.net.Network
 import android.net.NetworkCapabilities
 import android.net.NetworkRequest
+import android.net.LinkProperties
 import android.net.TestNetworkInterface
 import android.net.TestNetworkManager
 import android.os.Binder
@@ -32,6 +33,7 @@ import java.util.concurrent.TimeUnit
 
 /**
  * Create a test network based on a TUN interface with a LinkAddress.
+ * TODO: remove this function after fixing all the callers.
  *
  * This method will block until the test network is available. Requires
  * [android.Manifest.permission.CHANGE_NETWORK_STATE] and
@@ -42,11 +44,13 @@ fun initTestNetwork(
     interfaceAddr: LinkAddress,
     setupTimeoutMs: Long = 10_000L
 ): TestNetworkTracker {
-    return initTestNetwork(context, listOf(interfaceAddr), setupTimeoutMs)
+    val lp = LinkProperties()
+    lp.addLinkAddress(interfaceAddr)
+    return initTestNetwork(context, lp, setupTimeoutMs)
 }
 
 /**
- * Create a test network based on a TUN interface with giving LinkAddress list.
+ * Create a test network based on a TUN interface
  *
  * This method will block until the test network is available. Requires
  * [android.Manifest.permission.CHANGE_NETWORK_STATE] and
@@ -54,13 +58,14 @@ fun initTestNetwork(
  */
 fun initTestNetwork(
     context: Context,
-    linkAddrs: List<LinkAddress>,
+    lp: LinkProperties,
     setupTimeoutMs: Long = 10_000L
 ): TestNetworkTracker {
     val tnm = context.getSystemService(TestNetworkManager::class.java)
-    val iface = if (isAtLeastS()) tnm.createTunInterface(linkAddrs)
-            else tnm.createTunInterface(linkAddrs.toTypedArray())
-    return TestNetworkTracker(context, iface, tnm, setupTimeoutMs)
+    val iface = if (isAtLeastS()) tnm.createTunInterface(lp.getLinkAddresses())
+            else tnm.createTunInterface(lp.getLinkAddresses().toTypedArray())
+    lp.setInterfaceName(iface.interfaceName)
+    return TestNetworkTracker(context, iface, tnm, lp, setupTimeoutMs)
 }
 
 /**
@@ -72,6 +77,7 @@ class TestNetworkTracker internal constructor(
     val context: Context,
     val iface: TestNetworkInterface,
     val tnm: TestNetworkManager,
+    val lp: LinkProperties,
     setupTimeoutMs: Long
 ) {
     private val cm = context.getSystemService(ConnectivityManager::class.java)
@@ -98,7 +104,7 @@ class TestNetworkTracker internal constructor(
         cm.requestNetwork(networkRequest, networkCallback)
 
         try {
-            tnm.setupTestNetwork(iface.interfaceName, binder)
+            tnm.setupTestNetwork(lp, true /* isMetered */, binder)
             network = networkFuture.get(setupTimeoutMs, TimeUnit.MILLISECONDS)
         } catch (e: Throwable) {
             teardown()
