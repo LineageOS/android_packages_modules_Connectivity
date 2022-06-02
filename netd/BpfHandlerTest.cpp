@@ -48,7 +48,7 @@ class BpfHandlerTest : public ::testing::Test {
     BpfHandler mBh;
     BpfMap<uint64_t, UidTagValue> mFakeCookieTagMap;
     BpfMap<StatsKey, StatsValue> mFakeStatsMapA;
-    BpfMap<uint32_t, uint8_t> mFakeConfigurationMap;
+    BpfMap<uint32_t, uint32_t> mFakeConfigurationMap;
     BpfMap<uint32_t, uint8_t> mFakeUidPermissionMap;
 
     void SetUp() {

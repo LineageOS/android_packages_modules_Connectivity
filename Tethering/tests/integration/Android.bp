@@ -49,7 +49,7 @@ java_defaults {
 // Use with NetworkStackJarJarRules.
 android_library {
     name: "TetheringIntegrationTestsLatestSdkLib",
-    target_sdk_version: "31",
+    target_sdk_version: "33",
     platform_apis: true,
     defaults: ["TetheringIntegrationTestsDefaults"],
     visibility: [
