@@ -37,6 +37,7 @@ import static org.mockito.Mockito.argThat;
 import static org.mockito.Mockito.clearInvocations;
 import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.inOrder;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 
@@ -556,14 +557,28 @@ public class ClatCoordinatorTest {
                 () -> coordinator.clatStart(BASE_IFACE, NETID, NAT64_IP_PREFIX));
     }
 
-    private void checkNotStartClat(final TestDependencies deps, final boolean verifyTunFd,
-            final boolean verifyPacketSockFd, final boolean verifyRawSockFd) throws Exception {
+    private void checkNotStartClat(final TestDependencies deps, final boolean needToCloseTunFd,
+            final boolean needToClosePacketSockFd, final boolean needToCloseRawSockFd)
+            throws Exception {
         // [1] Expect that modified TestDependencies can't start clatd.
+        // Use precise check to make sure that there is no unexpected file descriptor closing.
         clearInvocations(TUN_PFD, RAW_SOCK_PFD, PACKET_SOCK_PFD);
         assertNotStartClat(deps);
-        if (verifyTunFd) verify(TUN_PFD).close();
-        if (verifyPacketSockFd) verify(PACKET_SOCK_PFD).close();
-        if (verifyRawSockFd) verify(RAW_SOCK_PFD).close();
+        if (needToCloseTunFd) {
+            verify(TUN_PFD).close();
+        } else {
+            verify(TUN_PFD, never()).close();
+        }
+        if (needToClosePacketSockFd) {
+            verify(PACKET_SOCK_PFD).close();
+        } else {
+            verify(PACKET_SOCK_PFD, never()).close();
+        }
+        if (needToCloseRawSockFd) {
+            verify(RAW_SOCK_PFD).close();
+        } else {
+            verify(RAW_SOCK_PFD, never()).close();
+        }
 
         // [2] Expect that unmodified TestDependencies can start clatd.
         // Used to make sure that the above modified TestDependencies has really broken the
@@ -582,8 +597,8 @@ public class ClatCoordinatorTest {
                 throw new IOException();
             }
         }
-        checkNotStartClat(new FailureDependencies(), false /* verifyTunFd */,
-                false /* verifyPacketSockFd */, false /* verifyRawSockFd */);
+        checkNotStartClat(new FailureDependencies(), false /* needToCloseTunFd */,
+                false /* needToClosePacketSockFd */, false /* needToCloseRawSockFd */);
     }
 
     @Test
@@ -595,8 +610,8 @@ public class ClatCoordinatorTest {
                 throw new IOException();
             }
         }
-        checkNotStartClat(new FailureDependencies(), false /* verifyTunFd */,
-                false /* verifyPacketSockFd */, false /* verifyRawSockFd */);
+        checkNotStartClat(new FailureDependencies(), false /* needToCloseTunFd */,
+                false /* needToClosePacketSockFd */, false /* needToCloseRawSockFd */);
     }
 
     @Test
@@ -607,8 +622,8 @@ public class ClatCoordinatorTest {
                 throw new IOException();
             }
         }
-        checkNotStartClat(new FailureDependencies(), false /* verifyTunFd */,
-                false /* verifyPacketSockFd */, false /* verifyRawSockFd */);
+        checkNotStartClat(new FailureDependencies(), false /* needToCloseTunFd */,
+                false /* needToClosePacketSockFd */, false /* needToCloseRawSockFd */);
     }
 
     @Test
@@ -620,8 +635,8 @@ public class ClatCoordinatorTest {
                 throw new IOException();
             }
         }
-        checkNotStartClat(new FailureDependencies(), true /* verifyTunFd */,
-                false /* verifyPacketSockFd */, false /* verifyRawSockFd */);
+        checkNotStartClat(new FailureDependencies(), true /* needToCloseTunFd */,
+                false /* needToClosePacketSockFd */, false /* needToCloseRawSockFd */);
     }
 
     @Test
@@ -632,8 +647,8 @@ public class ClatCoordinatorTest {
                 throw new IOException();
             }
         }
-        checkNotStartClat(new FailureDependencies(), true /* verifyTunFd */,
-                false /* verifyPacketSockFd */, false /* verifyRawSockFd */);
+        checkNotStartClat(new FailureDependencies(), true /* needToCloseTunFd */,
+                false /* needToClosePacketSockFd */, false /* needToCloseRawSockFd */);
     }
 
     @Test
@@ -644,8 +659,8 @@ public class ClatCoordinatorTest {
                 throw new IOException();
             }
         }
-        checkNotStartClat(new FailureDependencies(), true /* verifyTunFd */,
-                true /* verifyPacketSockFd */, false /* verifyRawSockFd */);
+        checkNotStartClat(new FailureDependencies(), true /* needToCloseTunFd */,
+                true /* needToClosePacketSockFd */, false /* needToCloseRawSockFd */);
     }
 
     @Test
@@ -657,8 +672,8 @@ public class ClatCoordinatorTest {
                 throw new IOException();
             }
         }
-        checkNotStartClat(new FailureDependencies(), true /* verifyTunFd */,
-                true /* verifyPacketSockFd */, true /* verifyRawSockFd */);
+        checkNotStartClat(new FailureDependencies(), true /* needToCloseTunFd */,
+                true /* needToClosePacketSockFd */, true /* needToCloseRawSockFd */);
     }
 
     @Test
@@ -669,8 +684,8 @@ public class ClatCoordinatorTest {
                 throw new IOException();
             }
         }
-        checkNotStartClat(new FailureDependencies(), true /* verifyTunFd */,
-                true /* verifyPacketSockFd */, true /* verifyRawSockFd */);
+        checkNotStartClat(new FailureDependencies(), true /* needToCloseTunFd */,
+                true /* needToClosePacketSockFd */, true /* needToCloseRawSockFd */);
     }
 
     @Test
@@ -682,8 +697,8 @@ public class ClatCoordinatorTest {
                 throw new IOException();
             }
         }
-        checkNotStartClat(new FailureDependencies(), true /* verifyTunFd */,
-                true /* verifyPacketSockFd */, true /* verifyRawSockFd */);
+        checkNotStartClat(new FailureDependencies(), true /* needToCloseTunFd */,
+                true /* needToClosePacketSockFd */, true /* needToCloseRawSockFd */);
     }
 
     @Test
@@ -697,7 +712,7 @@ public class ClatCoordinatorTest {
                 throw new IOException();
             }
         }
-        checkNotStartClat(new FailureDependencies(), true /* verifyTunFd */,
-                true /* verifyPacketSockFd */, true /* verifyRawSockFd */);
+        checkNotStartClat(new FailureDependencies(), true /* needToCloseTunFd */,
+                true /* needToClosePacketSockFd */, true /* needToCloseRawSockFd */);
     }
 }
