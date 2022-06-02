@@ -131,6 +131,7 @@ class DevSdkIgnoreRule @JvmOverloads constructor(
                 assumeTrue("Skipping test, target SDK $targetSdk greater than $maxTargetSdk",
                         targetSdk <= maxTargetSdk)
             }
+            base.evaluate()
         }
     }
 }
