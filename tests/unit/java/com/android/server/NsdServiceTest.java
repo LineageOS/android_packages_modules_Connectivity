@@ -83,7 +83,9 @@ import java.util.Queue;
 //  - test NSD_ON ENABLE/DISABLED listening
 @RunWith(DevSdkIgnoreRunner.class)
 @SmallTest
-@DevSdkIgnoreRule.IgnoreUpTo(Build.VERSION_CODES.R)
+// TODO(b/234099453): re-enable once a newer prebuilt is available
+// @DevSdkIgnoreRule.IgnoreUpTo(Build.VERSION_CODES.R)
+@DevSdkIgnoreRule.IgnoreUpTo(Build.VERSION_CODES.CUR_DEVELOPMENT)
 public class NsdServiceTest {
 
     static final int PROTOCOL = NsdManager.PROTOCOL_DNS_SD;
