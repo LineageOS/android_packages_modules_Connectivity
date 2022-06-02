@@ -19,7 +19,9 @@ package com.android.server;
 import static libcore.junit.util.compat.CoreCompatChangeRule.DisableCompatChanges;
 import static libcore.junit.util.compat.CoreCompatChangeRule.EnableCompatChanges;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.any;
@@ -36,6 +38,12 @@ import static org.mockito.Mockito.when;
 import android.compat.testing.PlatformCompatChangeRule;
 import android.content.ContentResolver;
 import android.content.Context;
+import android.net.INetd;
+import android.net.InetAddresses;
+import android.net.mdns.aidl.DiscoveryInfo;
+import android.net.mdns.aidl.GetAddressInfo;
+import android.net.mdns.aidl.IMDnsEventListener;
+import android.net.mdns.aidl.ResolutionInfo;
 import android.net.nsd.INsdManagerCallback;
 import android.net.nsd.INsdServiceConnector;
 import android.net.nsd.MDnsManager;
@@ -63,6 +71,7 @@ import org.junit.Test;
 import org.junit.rules.TestRule;
 import org.junit.runner.RunWith;
 import org.mockito.AdditionalAnswers;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
@@ -74,7 +83,9 @@ import java.util.Queue;
 //  - test NSD_ON ENABLE/DISABLED listening
 @RunWith(DevSdkIgnoreRunner.class)
 @SmallTest
-@DevSdkIgnoreRule.IgnoreUpTo(Build.VERSION_CODES.R)
+// TODO(b/234099453): re-enable once a newer prebuilt is available
+// @DevSdkIgnoreRule.IgnoreUpTo(Build.VERSION_CODES.R)
+@DevSdkIgnoreRule.IgnoreUpTo(Build.VERSION_CODES.CUR_DEVELOPMENT)
 public class NsdServiceTest {
 
     static final int PROTOCOL = NsdManager.PROTOCOL_DNS_SD;
@@ -273,6 +284,105 @@ public class NsdServiceTest {
         // Client disconnects, daemon should not be stopped after CLEANUP_DELAY_MS.
         verify(mMockMDnsM, never()).unregisterEventListener(any());
         verify(mMockMDnsM, never()).stopDaemon();
+    }
+
+    @Test
+    public void testDiscoverOnTetheringDownstream() throws Exception {
+        NsdService service = makeService();
+        NsdManager client = connectClient(service);
+
+        final String serviceType = "a_type";
+        final String serviceName = "a_name";
+        final String domainName = "mytestdevice.local";
+        final int interfaceIdx = 123;
+        final NsdManager.DiscoveryListener discListener = mock(NsdManager.DiscoveryListener.class);
+        client.discoverServices(serviceType, NsdManager.PROTOCOL_DNS_SD, discListener);
+        waitForIdle();
+
+        final ArgumentCaptor<IMDnsEventListener> listenerCaptor =
+                ArgumentCaptor.forClass(IMDnsEventListener.class);
+        verify(mMockMDnsM).registerEventListener(listenerCaptor.capture());
+        final ArgumentCaptor<Integer> discIdCaptor = ArgumentCaptor.forClass(Integer.class);
+        verify(mMockMDnsM).discover(discIdCaptor.capture(), eq(serviceType),
+                eq(0) /* interfaceIdx */);
+        // NsdManager uses a separate HandlerThread to dispatch callbacks (on ServiceHandler), so
+        // this needs to use a timeout
+        verify(discListener, timeout(TIMEOUT_MS)).onDiscoveryStarted(serviceType);
+
+        final DiscoveryInfo discoveryInfo = new DiscoveryInfo(
+                discIdCaptor.getValue(),
+                IMDnsEventListener.SERVICE_FOUND,
+                serviceName,
+                serviceType,
+                domainName,
+                interfaceIdx,
+                INetd.LOCAL_NET_ID); // LOCAL_NET_ID (99) used on tethering downstreams
+        final IMDnsEventListener eventListener = listenerCaptor.getValue();
+        eventListener.onServiceDiscoveryStatus(discoveryInfo);
+        waitForIdle();
+
+        final ArgumentCaptor<NsdServiceInfo> discoveredInfoCaptor =
+                ArgumentCaptor.forClass(NsdServiceInfo.class);
+        verify(discListener, timeout(TIMEOUT_MS)).onServiceFound(discoveredInfoCaptor.capture());
+        final NsdServiceInfo foundInfo = discoveredInfoCaptor.getValue();
+        assertEquals(serviceName, foundInfo.getServiceName());
+        assertEquals(serviceType, foundInfo.getServiceType());
+        assertNull(foundInfo.getHost());
+        assertNull(foundInfo.getNetwork());
+        assertEquals(interfaceIdx, foundInfo.getInterfaceIndex());
+
+        // After discovering the service, verify resolving it
+        final NsdManager.ResolveListener resolveListener = mock(NsdManager.ResolveListener.class);
+        client.resolveService(foundInfo, resolveListener);
+        waitForIdle();
+
+        final ArgumentCaptor<Integer> resolvIdCaptor = ArgumentCaptor.forClass(Integer.class);
+        verify(mMockMDnsM).resolve(resolvIdCaptor.capture(), eq(serviceName), eq(serviceType),
+                eq("local.") /* domain */, eq(interfaceIdx));
+
+        final int servicePort = 10123;
+        final String serviceFullName = serviceName + "." + serviceType;
+        final ResolutionInfo resolutionInfo = new ResolutionInfo(
+                resolvIdCaptor.getValue(),
+                IMDnsEventListener.SERVICE_RESOLVED,
+                null /* serviceName */,
+                null /* serviceType */,
+                null /* domain */,
+                serviceFullName,
+                domainName,
+                servicePort,
+                new byte[0] /* txtRecord */,
+                interfaceIdx);
+
+        doReturn(true).when(mMockMDnsM).getServiceAddress(anyInt(), any(), anyInt());
+        eventListener.onServiceResolutionStatus(resolutionInfo);
+        waitForIdle();
+
+        final ArgumentCaptor<Integer> getAddrIdCaptor = ArgumentCaptor.forClass(Integer.class);
+        verify(mMockMDnsM).getServiceAddress(getAddrIdCaptor.capture(), eq(domainName),
+                eq(interfaceIdx));
+
+        final String serviceAddress = "192.0.2.123";
+        final GetAddressInfo addressInfo = new GetAddressInfo(
+                getAddrIdCaptor.getValue(),
+                IMDnsEventListener.SERVICE_GET_ADDR_SUCCESS,
+                serviceFullName,
+                serviceAddress,
+                interfaceIdx,
+                INetd.LOCAL_NET_ID);
+        eventListener.onGettingServiceAddressStatus(addressInfo);
+        waitForIdle();
+
+        final ArgumentCaptor<NsdServiceInfo> resInfoCaptor =
+                ArgumentCaptor.forClass(NsdServiceInfo.class);
+        verify(resolveListener, timeout(TIMEOUT_MS)).onServiceResolved(resInfoCaptor.capture());
+        final NsdServiceInfo resolvedService = resInfoCaptor.getValue();
+        assertEquals(serviceName, resolvedService.getServiceName());
+        assertEquals("." + serviceType, resolvedService.getServiceType());
+        assertEquals(InetAddresses.parseNumericAddress(serviceAddress), resolvedService.getHost());
+        assertEquals(servicePort, resolvedService.getPort());
+        assertNull(resolvedService.getNetwork());
+        assertEquals(interfaceIdx, resolvedService.getInterfaceIndex());
     }
 
     private void waitForIdle() {
