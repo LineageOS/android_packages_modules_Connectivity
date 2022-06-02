@@ -36,9 +36,11 @@ import static com.android.net.module.util.HexDump.dumpHexString;
 import static com.android.net.module.util.NetworkStackConstants.ETHER_TYPE_IPV4;
 import static com.android.net.module.util.NetworkStackConstants.ETHER_TYPE_IPV6;
 import static com.android.net.module.util.NetworkStackConstants.ICMPV6_ROUTER_ADVERTISEMENT;
+import static com.android.testutils.DeviceInfoUtils.KVersion;
 import static com.android.testutils.TestNetworkTrackerKt.initTestNetwork;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
@@ -1067,23 +1069,43 @@ public class EthernetTetheringTest {
                 false /* usingBpf */);
     }
 
-    private static boolean isUdpOffloadSupportedByKernel() {
-        final String kVersionString = VintfRuntimeInfo.getKernelVersion();
-        // Kernel version which is older than 4.14 doesn't support UDP offload absolutely. Kernel
-        // version which is between 4.14 and 5.8 support UDP offload probably. Simply apply kernel
-        // 4.14 to be threshold first and monitor on what devices tests fail for improving the
-        // offload support checking.
-        return DeviceInfoUtils.compareMajorMinorVersion(kVersionString, "4.14") >= 0;
+    private static boolean isUdpOffloadSupportedByKernel(final String kernelVersion) {
+        final KVersion current = DeviceInfoUtils.getMajorMinorSubminorVersion(kernelVersion);
+        return current.isInRange(new KVersion(4, 14, 222), new KVersion(4, 19, 0))
+                || current.isInRange(new KVersion(4, 19, 176), new KVersion(5, 4, 0))
+                || current.isAtLeast(new KVersion(5, 4, 98));
     }
 
+    @Test
+    public void testIsUdpOffloadSupportedByKernel() throws Exception {
+        assertFalse(isUdpOffloadSupportedByKernel("4.14.221"));
+        assertTrue(isUdpOffloadSupportedByKernel("4.14.222"));
+        assertTrue(isUdpOffloadSupportedByKernel("4.16.0"));
+        assertTrue(isUdpOffloadSupportedByKernel("4.18.0"));
+        assertFalse(isUdpOffloadSupportedByKernel("4.19.0"));
+
+        assertFalse(isUdpOffloadSupportedByKernel("4.19.175"));
+        assertTrue(isUdpOffloadSupportedByKernel("4.19.176"));
+        assertTrue(isUdpOffloadSupportedByKernel("5.2.0"));
+        assertTrue(isUdpOffloadSupportedByKernel("5.3.0"));
+        assertFalse(isUdpOffloadSupportedByKernel("5.4.0"));
+
+        assertFalse(isUdpOffloadSupportedByKernel("5.4.97"));
+        assertTrue(isUdpOffloadSupportedByKernel("5.4.98"));
+        assertTrue(isUdpOffloadSupportedByKernel("5.10.0"));
+    }
+
+    // TODO: refactor test testTetherUdpV4* into IPv4 UDP non-offload and offload tests.
+    // That can be easier to know which feature is verified from test results.
     @Test
     @IgnoreUpTo(Build.VERSION_CODES.R)
     public void testTetherUdpV4AfterR() throws Exception {
         initializeTethering();
-        boolean usingBpf = isUdpOffloadSupportedByKernel();
+        final String kernelVersion = VintfRuntimeInfo.getKernelVersion();
+        boolean usingBpf = isUdpOffloadSupportedByKernel(kernelVersion);
         if (!usingBpf) {
             Log.i(TAG, "testTetherUdpV4AfterR will skip BPF offload test for kernel "
-                    + VintfRuntimeInfo.getKernelVersion());
+                    + kernelVersion);
         }
         runUdp4Test(new TetheringTester(mDownstreamReader), new RemoteResponder(mUpstreamReader),
                 usingBpf);
