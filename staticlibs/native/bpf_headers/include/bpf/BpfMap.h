@@ -196,7 +196,7 @@ class BpfMap {
 
 template <class Key, class Value>
 base::Result<void> BpfMap<Key, Value>::init(const char* path) {
-    mMapFd = base::unique_fd(mapRetrieveRW(path));
+    mMapFd.reset(mapRetrieveRW(path));
     if (mMapFd == -1) {
         return ErrnoErrorf("Pinned map not accessible or does not exist: ({})", path);
     }
