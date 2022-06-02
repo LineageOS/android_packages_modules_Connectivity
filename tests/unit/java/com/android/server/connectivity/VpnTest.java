@@ -101,7 +101,10 @@ import android.net.VpnService;
 import android.net.VpnTransportInfo;
 import android.net.ipsec.ike.IkeSessionCallback;
 import android.net.ipsec.ike.exceptions.IkeException;
+import android.net.ipsec.ike.exceptions.IkeNetworkLostException;
+import android.net.ipsec.ike.exceptions.IkeNonProtocolException;
 import android.net.ipsec.ike.exceptions.IkeProtocolException;
+import android.net.ipsec.ike.exceptions.IkeTimeoutException;
 import android.os.Build.VERSION_CODES;
 import android.os.Bundle;
 import android.os.ConditionVariable;
@@ -150,6 +153,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.net.Inet4Address;
 import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -1285,8 +1289,8 @@ public class VpnTest {
                 config -> Arrays.asList(config.flags).contains(flag)));
     }
 
-    private void setupPlatformVpnWithSpecificExceptionAndItsErrorCode(
-            IkeException exception, int errorType, int errorCode) throws Exception {
+    private void setupPlatformVpnWithSpecificExceptionAndItsErrorCode(IkeException exception,
+            String category, int errorType, int errorCode) throws Exception {
         final ArgumentCaptor<IkeSessionCallback> captor =
                 ArgumentCaptor.forClass(IkeSessionCallback.class);
 
@@ -1306,8 +1310,7 @@ public class VpnTest {
         final IkeSessionCallback ikeCb = captor.getValue();
         ikeCb.onClosedWithException(exception);
 
-        verifyVpnManagerEvent(sessionKey, VpnManager.CATEGORY_EVENT_IKE_ERROR, errorType, errorCode,
-                null /* profileState */);
+        verifyVpnManagerEvent(sessionKey, category, errorType, errorCode, null /* profileState */);
         if (errorType == VpnManager.ERROR_CLASS_NOT_RECOVERABLE) {
             verify(mConnectivityManager, timeout(TEST_TIMEOUT_MS))
                     .unregisterNetworkCallback(eq(cb));
@@ -1320,7 +1323,8 @@ public class VpnTest {
         final int errorCode = IkeProtocolException.ERROR_TYPE_AUTHENTICATION_FAILED;
         when(exception.getErrorType()).thenReturn(errorCode);
         setupPlatformVpnWithSpecificExceptionAndItsErrorCode(exception,
-                VpnManager.ERROR_CLASS_NOT_RECOVERABLE, errorCode);
+                VpnManager.CATEGORY_EVENT_IKE_ERROR, VpnManager.ERROR_CLASS_NOT_RECOVERABLE,
+                errorCode);
     }
 
     @Test
@@ -1329,7 +1333,50 @@ public class VpnTest {
         final int errorCode = IkeProtocolException.ERROR_TYPE_TEMPORARY_FAILURE;
         when(exception.getErrorType()).thenReturn(errorCode);
         setupPlatformVpnWithSpecificExceptionAndItsErrorCode(exception,
-                VpnManager.ERROR_CLASS_RECOVERABLE, errorCode);
+                VpnManager.CATEGORY_EVENT_IKE_ERROR, VpnManager.ERROR_CLASS_RECOVERABLE, errorCode);
+    }
+
+    @Test
+    public void testStartPlatformVpnFailedWithUnknownHostException() throws Exception {
+        final IkeNonProtocolException exception = mock(IkeNonProtocolException.class);
+        final UnknownHostException unknownHostException = new UnknownHostException();
+        final int errorCode = VpnManager.ERROR_CODE_NETWORK_UNKNOWN_HOST;
+        when(exception.getCause()).thenReturn(unknownHostException);
+        setupPlatformVpnWithSpecificExceptionAndItsErrorCode(exception,
+                VpnManager.CATEGORY_EVENT_NETWORK_ERROR, VpnManager.ERROR_CLASS_RECOVERABLE,
+                errorCode);
+    }
+
+    @Test
+    public void testStartPlatformVpnFailedWithIkeTimeoutException() throws Exception {
+        final IkeNonProtocolException exception = mock(IkeNonProtocolException.class);
+        final IkeTimeoutException ikeTimeoutException =
+                new IkeTimeoutException("IkeTimeoutException");
+        final int errorCode = VpnManager.ERROR_CODE_NETWORK_PROTOCOL_TIMEOUT;
+        when(exception.getCause()).thenReturn(ikeTimeoutException);
+        setupPlatformVpnWithSpecificExceptionAndItsErrorCode(exception,
+                VpnManager.CATEGORY_EVENT_NETWORK_ERROR, VpnManager.ERROR_CLASS_RECOVERABLE,
+                errorCode);
+    }
+
+    @Test
+    public void testStartPlatformVpnFailedWithIkeNetworkLostException() throws Exception {
+        final IkeNetworkLostException exception = new IkeNetworkLostException(
+                new Network(100));
+        setupPlatformVpnWithSpecificExceptionAndItsErrorCode(exception,
+                VpnManager.CATEGORY_EVENT_NETWORK_ERROR, VpnManager.ERROR_CLASS_RECOVERABLE,
+                VpnManager.ERROR_CODE_NETWORK_LOST);
+    }
+
+    @Test
+    public void testStartPlatformVpnFailedWithIOException() throws Exception {
+        final IkeNonProtocolException exception = mock(IkeNonProtocolException.class);
+        final IOException ioException = new IOException();
+        final int errorCode = VpnManager.ERROR_CODE_NETWORK_IO;
+        when(exception.getCause()).thenReturn(ioException);
+        setupPlatformVpnWithSpecificExceptionAndItsErrorCode(exception,
+                VpnManager.CATEGORY_EVENT_NETWORK_ERROR, VpnManager.ERROR_CLASS_RECOVERABLE,
+                errorCode);
     }
 
     @Test
