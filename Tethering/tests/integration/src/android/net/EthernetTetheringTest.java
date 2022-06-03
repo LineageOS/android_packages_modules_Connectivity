@@ -26,7 +26,8 @@ import static android.net.InetAddresses.parseNumericAddress;
 import static android.net.TetheringManager.CONNECTIVITY_SCOPE_GLOBAL;
 import static android.net.TetheringManager.CONNECTIVITY_SCOPE_LOCAL;
 import static android.net.TetheringManager.TETHERING_ETHERNET;
-import static android.net.TetheringTester.isIcmpv6Type;
+import static android.net.TetheringTester.isExpectedIcmpv6Packet;
+import static android.net.TetheringTester.isExpectedUdpPacket;
 import static android.system.OsConstants.IPPROTO_IP;
 import static android.system.OsConstants.IPPROTO_IPV6;
 import static android.system.OsConstants.IPPROTO_UDP;
@@ -82,10 +83,7 @@ import com.android.net.module.util.bpf.Tether4Key;
 import com.android.net.module.util.bpf.Tether4Value;
 import com.android.net.module.util.bpf.TetherStatsKey;
 import com.android.net.module.util.bpf.TetherStatsValue;
-import com.android.net.module.util.structs.EthernetHeader;
-import com.android.net.module.util.structs.Ipv4Header;
 import com.android.net.module.util.structs.Ipv6Header;
-import com.android.net.module.util.structs.UdpHeader;
 import com.android.testutils.DevSdkIgnoreRule;
 import com.android.testutils.DevSdkIgnoreRule.IgnoreAfter;
 import com.android.testutils.DevSdkIgnoreRule.IgnoreUpTo;
@@ -332,7 +330,7 @@ public class EthernetTetheringTest {
         final long deadline = SystemClock.uptimeMillis() + timeoutMs;
         do {
             byte[] pkt = reader.popPacket(timeoutMs);
-            if (isIcmpv6Type(pkt, true /* hasEth */, ICMPV6_ROUTER_ADVERTISEMENT)) return;
+            if (isExpectedIcmpv6Packet(pkt, true /* hasEth */, ICMPV6_ROUTER_ADVERTISEMENT)) return;
 
             timeoutMs = deadline - SystemClock.uptimeMillis();
         } while (timeoutMs > 0);
@@ -832,14 +830,14 @@ public class EthernetTetheringTest {
         tester.verifyUpload(request, p -> {
             Log.d(TAG, "Packet in upstream: " + dumpHexString(p));
 
-            return isIcmpv6Type(p, false /* hasEth */, ICMPV6_ECHO_REQUEST_TYPE);
+            return isExpectedIcmpv6Packet(p, false /* hasEth */, ICMPV6_ECHO_REQUEST_TYPE);
         });
 
         ByteBuffer reply = Ipv6Utils.buildEchoReplyPacket(remoteIp6Addr, tethered.ipv6Addr);
         tester.verifyDownload(reply, p -> {
             Log.d(TAG, "Packet in downstream: " + dumpHexString(p));
 
-            return isIcmpv6Type(p, true /* hasEth */, ICMPV6_ECHO_REPLY_TYPE);
+            return isExpectedIcmpv6Packet(p, true /* hasEth */, ICMPV6_ECHO_REPLY_TYPE);
         });
     }
 
@@ -871,28 +869,6 @@ public class EthernetTetheringTest {
             ByteBuffer.wrap(new byte[] { (byte) 0x56, (byte) 0x78 });
     private static final ByteBuffer PAYLOAD3 =
             ByteBuffer.wrap(new byte[] { (byte) 0x9a, (byte) 0xbc });
-
-    private boolean isExpectedUdpPacket(@NonNull final byte[] rawPacket, boolean hasEther,
-            boolean isIpv4, @NonNull final ByteBuffer payload) {
-        final ByteBuffer buf = ByteBuffer.wrap(rawPacket);
-
-        if (hasEther) {
-            if (Struct.parse(EthernetHeader.class, buf) == null) return false;
-        }
-
-        if (isIpv4) {
-            if (Struct.parse(Ipv4Header.class, buf) == null) return false;
-        } else {
-            if (Struct.parse(Ipv6Header.class, buf) == null) return false;
-        }
-
-        if (Struct.parse(UdpHeader.class, buf) == null) return false;
-
-        if (buf.remaining() != payload.limit()) return false;
-
-        return Arrays.equals(Arrays.copyOfRange(buf.array(), buf.position(), buf.limit()),
-                payload.array());
-    }
 
     @NonNull
     private ByteBuffer buildUdpPacket(
