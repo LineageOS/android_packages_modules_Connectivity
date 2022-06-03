@@ -229,7 +229,7 @@ public class EthernetTracker {
      */
     protected void broadcastInterfaceStateChange(@NonNull String iface) {
         ensureRunningOnEthernetServiceThread();
-        final int state = mFactory.getInterfaceState(iface);
+        final int state = getInterfaceState(iface);
         final int role = getInterfaceRole(iface);
         final IpConfiguration config = getIpConfigurationForCallback(iface, state);
         final int n = mListeners.beginBroadcast();
@@ -436,15 +436,34 @@ public class EthernetTracker {
         if (mDefaultInterface != null) {
             removeInterface(mDefaultInterface);
             addInterface(mDefaultInterface);
+            // when this broadcast is sent, any calls to notifyTetheredInterfaceAvailable or
+            // notifyTetheredInterfaceUnavailable have already happened
+            broadcastInterfaceStateChange(mDefaultInterface);
         }
     }
 
+    private int getInterfaceState(final String iface) {
+        if (mFactory.hasInterface(iface)) {
+            return mFactory.getInterfaceState(iface);
+        }
+        if (getInterfaceMode(iface) == INTERFACE_MODE_SERVER) {
+            // server mode interfaces are not tracked by the factory.
+            // TODO(b/234743836): interface state for server mode interfaces is not tracked
+            // properly; just return link up.
+            return EthernetManager.STATE_LINK_UP;
+        }
+        return EthernetManager.STATE_ABSENT;
+    }
+
     private int getInterfaceRole(final String iface) {
-        if (!mFactory.hasInterface(iface)) return EthernetManager.ROLE_NONE;
-        final int mode = getInterfaceMode(iface);
-        return (mode == INTERFACE_MODE_CLIENT)
-                ? EthernetManager.ROLE_CLIENT
-                : EthernetManager.ROLE_SERVER;
+        if (mFactory.hasInterface(iface)) {
+            // only client mode interfaces are tracked by the factory.
+            return EthernetManager.ROLE_CLIENT;
+        }
+        if (getInterfaceMode(iface) == INTERFACE_MODE_SERVER) {
+            return EthernetManager.ROLE_SERVER;
+        }
+        return EthernetManager.ROLE_NONE;
     }
 
     private int getInterfaceMode(final String iface) {
