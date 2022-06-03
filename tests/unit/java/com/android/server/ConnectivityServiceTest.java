@@ -52,8 +52,16 @@ import static android.net.ConnectivityManager.BLOCKED_REASON_NONE;
 import static android.net.ConnectivityManager.CONNECTIVITY_ACTION;
 import static android.net.ConnectivityManager.EXTRA_NETWORK_INFO;
 import static android.net.ConnectivityManager.EXTRA_NETWORK_TYPE;
+import static android.net.ConnectivityManager.FIREWALL_CHAIN_DOZABLE;
 import static android.net.ConnectivityManager.FIREWALL_CHAIN_LOCKDOWN_VPN;
+import static android.net.ConnectivityManager.FIREWALL_CHAIN_LOW_POWER_STANDBY;
+import static android.net.ConnectivityManager.FIREWALL_CHAIN_OEM_DENY_1;
+import static android.net.ConnectivityManager.FIREWALL_CHAIN_OEM_DENY_2;
+import static android.net.ConnectivityManager.FIREWALL_CHAIN_POWERSAVE;
+import static android.net.ConnectivityManager.FIREWALL_CHAIN_RESTRICTED;
+import static android.net.ConnectivityManager.FIREWALL_CHAIN_STANDBY;
 import static android.net.ConnectivityManager.FIREWALL_RULE_ALLOW;
+import static android.net.ConnectivityManager.FIREWALL_RULE_DEFAULT;
 import static android.net.ConnectivityManager.FIREWALL_RULE_DENY;
 import static android.net.ConnectivityManager.PROFILE_NETWORK_PREFERENCE_DEFAULT;
 import static android.net.ConnectivityManager.PROFILE_NETWORK_PREFERENCE_ENTERPRISE;
@@ -9547,6 +9555,95 @@ public class ConnectivityServiceTest {
         // Interface rules are not changed by Lockdown mode enable/disable
         verify(mBpfNetMaps, never()).addUidInterfaceRules(any(), any());
         verify(mBpfNetMaps, never()).removeUidInterfaceRules(any());
+    }
+
+    private void doTestSetUidFirewallRule(final int chain, final int defaultRule) {
+        final int uid = 1001;
+        mCm.setUidFirewallRule(chain, uid, FIREWALL_RULE_ALLOW);
+        verify(mBpfNetMaps).setUidRule(chain, uid, FIREWALL_RULE_ALLOW);
+        reset(mBpfNetMaps);
+
+        mCm.setUidFirewallRule(chain, uid, FIREWALL_RULE_DENY);
+        verify(mBpfNetMaps).setUidRule(chain, uid, FIREWALL_RULE_DENY);
+        reset(mBpfNetMaps);
+
+        mCm.setUidFirewallRule(chain, uid, FIREWALL_RULE_DEFAULT);
+        verify(mBpfNetMaps).setUidRule(chain, uid, defaultRule);
+        reset(mBpfNetMaps);
+    }
+
+    @Test @IgnoreUpTo(SC_V2)
+    public void testSetUidFirewallRule() throws Exception {
+        doTestSetUidFirewallRule(FIREWALL_CHAIN_DOZABLE, FIREWALL_RULE_DENY);
+        doTestSetUidFirewallRule(FIREWALL_CHAIN_STANDBY, FIREWALL_RULE_ALLOW);
+        doTestSetUidFirewallRule(FIREWALL_CHAIN_POWERSAVE, FIREWALL_RULE_DENY);
+        doTestSetUidFirewallRule(FIREWALL_CHAIN_RESTRICTED, FIREWALL_RULE_DENY);
+        doTestSetUidFirewallRule(FIREWALL_CHAIN_LOW_POWER_STANDBY, FIREWALL_RULE_DENY);
+        doTestSetUidFirewallRule(FIREWALL_CHAIN_OEM_DENY_1, FIREWALL_RULE_ALLOW);
+        doTestSetUidFirewallRule(FIREWALL_CHAIN_OEM_DENY_2, FIREWALL_RULE_ALLOW);
+    }
+
+    @Test @IgnoreUpTo(SC_V2)
+    public void testSetFirewallChainEnabled() throws Exception {
+        final List<Integer> firewallChains = Arrays.asList(
+                FIREWALL_CHAIN_DOZABLE,
+                FIREWALL_CHAIN_STANDBY,
+                FIREWALL_CHAIN_POWERSAVE,
+                FIREWALL_CHAIN_RESTRICTED,
+                FIREWALL_CHAIN_LOW_POWER_STANDBY,
+                FIREWALL_CHAIN_OEM_DENY_1,
+                FIREWALL_CHAIN_OEM_DENY_2);
+        for (final int chain: firewallChains) {
+            mCm.setFirewallChainEnabled(chain, true /* enabled */);
+            verify(mBpfNetMaps).setChildChain(chain, true /* enable */);
+            reset(mBpfNetMaps);
+
+            mCm.setFirewallChainEnabled(chain, false /* enabled */);
+            verify(mBpfNetMaps).setChildChain(chain, false /* enable */);
+            reset(mBpfNetMaps);
+        }
+    }
+
+    private void doTestReplaceFirewallChain(final int chain, final String chainName,
+            final boolean allowList) {
+        final int[] uids = new int[] {1001, 1002};
+        mCm.replaceFirewallChain(chain, uids);
+        verify(mBpfNetMaps).replaceUidChain(chainName, allowList, uids);
+        reset(mBpfNetMaps);
+    }
+
+    @Test @IgnoreUpTo(SC_V2)
+    public void testReplaceFirewallChain() {
+        doTestReplaceFirewallChain(FIREWALL_CHAIN_DOZABLE, "fw_dozable", true);
+        doTestReplaceFirewallChain(FIREWALL_CHAIN_STANDBY, "fw_standby", false);
+        doTestReplaceFirewallChain(FIREWALL_CHAIN_POWERSAVE, "fw_powersave",  true);
+        doTestReplaceFirewallChain(FIREWALL_CHAIN_RESTRICTED, "fw_restricted", true);
+        doTestReplaceFirewallChain(FIREWALL_CHAIN_LOW_POWER_STANDBY, "fw_low_power_standby", true);
+        doTestReplaceFirewallChain(FIREWALL_CHAIN_OEM_DENY_1, "fw_oem_deny_1", false);
+        doTestReplaceFirewallChain(FIREWALL_CHAIN_OEM_DENY_2, "fw_oem_deny_2", false);
+    }
+
+    @Test @IgnoreUpTo(SC_V2)
+    public void testInvalidFirewallChain() throws Exception {
+        final int uid = 1001;
+        final Class<IllegalArgumentException> expected = IllegalArgumentException.class;
+        assertThrows(expected,
+                () -> mCm.setUidFirewallRule(-1 /* chain */, uid, FIREWALL_RULE_ALLOW));
+        assertThrows(expected,
+                () -> mCm.setUidFirewallRule(100 /* chain */, uid, FIREWALL_RULE_ALLOW));
+        assertThrows(expected, () -> mCm.replaceFirewallChain(-1 /* chain */, new int[]{uid}));
+        assertThrows(expected, () -> mCm.replaceFirewallChain(100 /* chain */, new int[]{uid}));
+    }
+
+    @Test @IgnoreUpTo(SC_V2)
+    public void testInvalidFirewallRule() throws Exception {
+        final Class<IllegalArgumentException> expected = IllegalArgumentException.class;
+        assertThrows(expected,
+                () -> mCm.setUidFirewallRule(FIREWALL_CHAIN_DOZABLE,
+                        1001 /* uid */, -1 /* rule */));
+        assertThrows(expected,
+                () -> mCm.setUidFirewallRule(FIREWALL_CHAIN_DOZABLE,
+                        1001 /* uid */, 100 /* rule */));
     }
 
     /**
