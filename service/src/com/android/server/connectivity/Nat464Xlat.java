@@ -17,7 +17,6 @@
 package com.android.server.connectivity;
 
 import static android.net.NetworkCapabilities.TRANSPORT_CELLULAR;
-import static android.net.NetworkCapabilities.TRANSPORT_TEST;
 
 import static com.android.net.module.util.CollectionUtils.contains;
 
@@ -128,11 +127,6 @@ public class Nat464Xlat {
         final boolean supported = contains(NETWORK_TYPES, nai.networkInfo.getType());
         final boolean connected = contains(NETWORK_STATES, nai.networkInfo.getState());
 
-        // Allow to run clat on test network.
-        // TODO: merge to boolean "supported" once boolean "supported" is migrated to
-        // NetworkCapabilities.TRANSPORT_*.
-        final boolean isTestNetwork = nai.networkCapabilities.hasTransport(TRANSPORT_TEST);
-
         // Only run clat on networks that have a global IPv6 address and don't have a native IPv4
         // address.
         LinkProperties lp = nai.linkProperties;
@@ -143,8 +137,8 @@ public class Nat464Xlat {
         final boolean skip464xlat = (nai.netAgentConfig() != null)
                 && nai.netAgentConfig().skip464xlat;
 
-        return (supported || isTestNetwork) && connected && isIpv6OnlyNetwork && !skip464xlat
-                && !nai.destroyed && (nai.networkCapabilities.hasTransport(TRANSPORT_CELLULAR)
+        return supported && connected && isIpv6OnlyNetwork && !skip464xlat && !nai.destroyed
+                && (nai.networkCapabilities.hasTransport(TRANSPORT_CELLULAR)
                 ? isCellular464XlatEnabled() : true);
     }
 
