@@ -22,6 +22,7 @@ import android.net.LinkProperties
 import android.net.Network
 import android.net.NetworkAgentConfig
 import android.net.NetworkCapabilities
+import android.net.NetworkCapabilities.NET_CAPABILITY_TEMPORARILY_NOT_METERED
 import android.net.NetworkCapabilities.NET_CAPABILITY_TRUSTED
 import android.net.NetworkCapabilities.TRANSPORT_TEST
 import android.net.NetworkRequest
@@ -45,7 +46,9 @@ import android.net.nsd.NsdManager.DiscoveryListener
 import android.net.nsd.NsdManager.RegistrationListener
 import android.net.nsd.NsdManager.ResolveListener
 import android.net.nsd.NsdServiceInfo
+import android.os.Handler
 import android.os.HandlerThread
+import android.os.Process.myTid
 import android.platform.test.annotations.AppModeFull
 import android.util.Log
 import androidx.test.platform.app.InstrumentationRegistry
@@ -111,11 +114,19 @@ class NsdManagerTest {
 
     private interface NsdEvent
     private open class NsdRecord<T : NsdEvent> private constructor(
-        private val history: ArrayTrackRecord<T>
+        private val history: ArrayTrackRecord<T>,
+        private val expectedThreadId: Int? = null
     ) : TrackRecord<T> by history {
-        constructor() : this(ArrayTrackRecord())
+        constructor(expectedThreadId: Int? = null) : this(ArrayTrackRecord(), expectedThreadId)
 
         val nextEvents = history.newReadHead()
+
+        override fun add(e: T): Boolean {
+            if (expectedThreadId != null) {
+                assertEquals(expectedThreadId, myTid(), "Callback is running on the wrong thread")
+            }
+            return history.add(e)
+        }
 
         inline fun <reified V : NsdEvent> expectCallbackEventually(
             crossinline predicate: (V) -> Boolean = { true }
@@ -136,8 +147,8 @@ class NsdManagerTest {
         }
     }
 
-    private class NsdRegistrationRecord : RegistrationListener,
-            NsdRecord<NsdRegistrationRecord.RegistrationEvent>() {
+    private class NsdRegistrationRecord(expectedThreadId: Int? = null) : RegistrationListener,
+            NsdRecord<NsdRegistrationRecord.RegistrationEvent>(expectedThreadId) {
         sealed class RegistrationEvent : NsdEvent {
             abstract val serviceInfo: NsdServiceInfo
 
@@ -174,8 +185,8 @@ class NsdManagerTest {
         }
     }
 
-    private class NsdDiscoveryRecord : DiscoveryListener,
-            NsdRecord<NsdDiscoveryRecord.DiscoveryEvent>() {
+    private class NsdDiscoveryRecord(expectedThreadId: Int? = null) :
+            DiscoveryListener, NsdRecord<NsdDiscoveryRecord.DiscoveryEvent>(expectedThreadId) {
         sealed class DiscoveryEvent : NsdEvent {
             data class StartDiscoveryFailed(val serviceType: String, val errorCode: Int)
                 : DiscoveryEvent()
@@ -462,9 +473,12 @@ class NsdManagerTest {
         si.serviceName = this.serviceName
         si.port = 12345 // Test won't try to connect so port does not matter
 
-        val registrationRecord = NsdRegistrationRecord()
-        val registeredInfo1 = registerService(registrationRecord, si)
-        val discoveryRecord = NsdDiscoveryRecord()
+        val handler = Handler(handlerThread.looper)
+        val executor = Executor { handler.post(it) }
+
+        val registrationRecord = NsdRegistrationRecord(expectedThreadId = handlerThread.threadId)
+        val registeredInfo1 = registerService(registrationRecord, si, executor)
+        val discoveryRecord = NsdDiscoveryRecord(expectedThreadId = handlerThread.threadId)
 
         tryTest {
             val specifier = TestNetworkSpecifier(testNetwork1.iface.interfaceName)
@@ -474,7 +488,7 @@ class NsdManagerTest {
                             .addTransportType(TRANSPORT_TEST)
                             .setNetworkSpecifier(specifier)
                             .build(),
-                    Executor { it.run() }, discoveryRecord)
+                    executor, discoveryRecord)
 
             val discoveryStarted = discoveryRecord.expectCallback<DiscoveryStarted>()
             assertEquals(SERVICE_TYPE, discoveryStarted.serviceType)
@@ -490,7 +504,7 @@ class NsdManagerTest {
             assertEquals(testNetwork1.network, nsdShim.getNetwork(serviceLost1.serviceInfo))
 
             registrationRecord.expectCallback<ServiceUnregistered>()
-            val registeredInfo2 = registerService(registrationRecord, si)
+            val registeredInfo2 = registerService(registrationRecord, si, executor)
             val serviceDiscovered2 = discoveryRecord.expectCallback<ServiceFound>()
             assertEquals(registeredInfo2.serviceName, serviceDiscovered2.serviceInfo.serviceName)
             assertEquals(testNetwork1.network, nsdShim.getNetwork(serviceDiscovered2.serviceInfo))
@@ -514,6 +528,39 @@ class NsdManagerTest {
             discoveryRecord.expectCallback<DiscoveryStopped>()
         } cleanup {
             nsdManager.unregisterService(registrationRecord)
+        }
+    }
+
+    @Test
+    fun testNsdManager_DiscoverWithNetworkRequest_NoMatchingNetwork() {
+        // This test requires shims supporting T+ APIs (discovering on network request)
+        assumeTrue(TestUtils.shouldTestTApis())
+
+        val si = NsdServiceInfo()
+        si.serviceType = SERVICE_TYPE
+        si.serviceName = this.serviceName
+        si.port = 12345 // Test won't try to connect so port does not matter
+
+        val handler = Handler(handlerThread.looper)
+        val executor = Executor { handler.post(it) }
+
+        val discoveryRecord = NsdDiscoveryRecord(expectedThreadId = handlerThread.threadId)
+        val specifier = TestNetworkSpecifier(testNetwork1.iface.interfaceName)
+
+        tryTest {
+            nsdShim.discoverServices(nsdManager, SERVICE_TYPE, NsdManager.PROTOCOL_DNS_SD,
+                    NetworkRequest.Builder()
+                            .removeCapability(NET_CAPABILITY_TRUSTED)
+                            .addTransportType(TRANSPORT_TEST)
+                            // Specified network does not have this capability
+                            .addCapability(NET_CAPABILITY_TEMPORARILY_NOT_METERED)
+                            .setNetworkSpecifier(specifier)
+                            .build(),
+                    executor, discoveryRecord)
+            discoveryRecord.expectCallback<DiscoveryStarted>()
+        } cleanup {
+            nsdManager.stopServiceDiscovery(discoveryRecord)
+            discoveryRecord.expectCallback<DiscoveryStopped>()
         }
     }
 
@@ -648,9 +695,12 @@ class NsdManagerTest {
     /**
      * Register a service and return its registration record.
      */
-    private fun registerService(record: NsdRegistrationRecord, si: NsdServiceInfo): NsdServiceInfo {
-        nsdShim.registerService(nsdManager, si, NsdManager.PROTOCOL_DNS_SD, Executor { it.run() },
-                record)
+    private fun registerService(
+        record: NsdRegistrationRecord,
+        si: NsdServiceInfo,
+        executor: Executor = Executor { it.run() }
+    ): NsdServiceInfo {
+        nsdShim.registerService(nsdManager, si, NsdManager.PROTOCOL_DNS_SD, executor, record)
         // We may not always get the name that we tried to register;
         // This events tells us the name that was registered.
         val cb = record.expectCallback<ServiceRegistered>()
