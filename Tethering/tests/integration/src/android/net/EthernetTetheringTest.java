@@ -790,38 +790,11 @@ public class EthernetTetheringTest {
 
     @Test
     public void testIcmpv6Echo() throws Exception {
-        assumeFalse(mEm.isAvailable());
-
-        // MyTetheringEventCallback currently only support await first available upstream. Tethering
-        // may select internet network as upstream if test network is not available and not be
-        // preferred yet. Create test upstream network before enable tethering.
-        mUpstreamTracker = createTestUpstream(toList(TEST_IP4_ADDR, TEST_IP6_ADDR),
-                toList(TEST_IP4_DNS, TEST_IP6_DNS));
-
-        mDownstreamIface = createTestInterface();
-        mEm.setIncludeTestInterfaces(true);
-
-        final String iface = mTetheredInterfaceRequester.getInterface();
-        assertEquals("TetheredInterfaceCallback for unexpected interface",
-                mDownstreamIface.getInterfaceName(), iface);
-
-        mTetheringEventCallback = enableEthernetTethering(mDownstreamIface.getInterfaceName(),
-                mUpstreamTracker.getNetwork());
-        assertEquals("onUpstreamChanged for unexpected network", mUpstreamTracker.getNetwork(),
-                mTetheringEventCallback.awaitUpstreamChanged());
-
-        mDownstreamReader = makePacketReader(mDownstreamIface);
-        mUpstreamReader = makePacketReader(mUpstreamTracker.getTestIface());
-
-        runPing6Test(new TetheringTester(mDownstreamReader, mUpstreamReader));
+        runPing6Test(initTetheringTester(toList(TEST_IP4_ADDR, TEST_IP6_ADDR),
+                toList(TEST_IP4_DNS, TEST_IP6_DNS)));
     }
 
     private void runPing6Test(TetheringTester tester) throws Exception {
-        // Currently tethering don't have API to tell when ipv6 tethering is available. Thus, let
-        // TetheringTester test ipv6 tethering connectivity before testing ipv6.
-        // TODO: move to a common place to avoid that every IPv6 test needs to call this function.
-        tester.waitForIpv6TetherConnectivityVerified();
-
         TetheredDevice tethered = tester.createTetheredDevice(MacAddress.fromString("1:2:3:4:5:6"),
                 true /* hasIpv6 */);
         Inet6Address remoteIp6Addr = (Inet6Address) parseNumericAddress("2400:222:222::222");
@@ -1068,8 +1041,8 @@ public class EthernetTetheringTest {
         }
     }
 
-    void initializeTethering(List<LinkAddress> upstreamAddresses, List<InetAddress> upstreamDnses)
-            throws Exception {
+    private TetheringTester initTetheringTester(List<LinkAddress> upstreamAddresses,
+            List<InetAddress> upstreamDnses) throws Exception {
         assumeFalse(mEm.isAvailable());
 
         // MyTetheringEventCallback currently only support await first available upstream. Tethering
@@ -1080,9 +1053,9 @@ public class EthernetTetheringTest {
         mDownstreamIface = createTestInterface();
         mEm.setIncludeTestInterfaces(true);
 
-        final String iface = mTetheredInterfaceRequester.getInterface();
+        // Make sure EtherentTracker use "mDownstreamIface" as server mode interface.
         assertEquals("TetheredInterfaceCallback for unexpected interface",
-                mDownstreamIface.getInterfaceName(), iface);
+                mDownstreamIface.getInterfaceName(), mTetheredInterfaceRequester.getInterface());
 
         mTetheringEventCallback = enableEthernetTethering(mDownstreamIface.getInterfaceName(),
                 mUpstreamTracker.getNetwork());
@@ -1091,13 +1064,23 @@ public class EthernetTetheringTest {
 
         mDownstreamReader = makePacketReader(mDownstreamIface);
         mUpstreamReader = makePacketReader(mUpstreamTracker.getTestIface());
+
+        final ConnectivityManager cm = mContext.getSystemService(ConnectivityManager.class);
+        // Currently tethering don't have API to tell when ipv6 tethering is available. Thus, make
+        // sure tethering already have ipv6 connectivity before testing.
+        if (cm.getLinkProperties(mUpstreamTracker.getNetwork()).hasGlobalIpv6Address()) {
+            waitForRouterAdvertisement(mDownstreamReader, mDownstreamIface.getInterfaceName(),
+                    WAIT_RA_TIMEOUT_MS);
+        }
+
+        return new TetheringTester(mDownstreamReader, mUpstreamReader);
     }
 
     @Test
     @IgnoreAfter(Build.VERSION_CODES.R)
     public void testTetherUdpV4UpToR() throws Exception {
-        initializeTethering(toList(TEST_IP4_ADDR), toList(TEST_IP4_DNS));
-        runUdp4Test(new TetheringTester(mDownstreamReader, mUpstreamReader), false /* usingBpf */);
+        runUdp4Test(initTetheringTester(toList(TEST_IP4_ADDR), toList(TEST_IP4_DNS)),
+                false /* usingBpf */);
     }
 
     private static boolean isUdpOffloadSupportedByKernel(final String kernelVersion) {
@@ -1131,14 +1114,13 @@ public class EthernetTetheringTest {
     @Test
     @IgnoreUpTo(Build.VERSION_CODES.R)
     public void testTetherUdpV4AfterR() throws Exception {
-        initializeTethering(toList(TEST_IP4_ADDR), toList(TEST_IP4_DNS));
         final String kernelVersion = VintfRuntimeInfo.getKernelVersion();
         boolean usingBpf = isUdpOffloadSupportedByKernel(kernelVersion);
         if (!usingBpf) {
             Log.i(TAG, "testTetherUdpV4AfterR will skip BPF offload test for kernel "
                     + kernelVersion);
         }
-        runUdp4Test(new TetheringTester(mDownstreamReader, mUpstreamReader), usingBpf);
+        runUdp4Test(initTetheringTester(toList(TEST_IP4_ADDR), toList(TEST_IP4_DNS)), usingBpf);
     }
 
     @Nullable
@@ -1240,11 +1222,6 @@ public class EthernetTetheringTest {
     // packet.
     //
     private void runClatUdpTest(TetheringTester tester) throws Exception {
-        // Currently tethering don't have API to tell when ipv6 tethering is available. Thus, let
-        // TetheringTester test ipv6 tethering connectivity before testing ipv6.
-        // TODO: move to a common place to avoid that every IPv6 test needs to call this function.
-        tester.waitForIpv6TetherConnectivityVerified();
-
         final TetheredDevice tethered = tester.createTetheredDevice(MacAddress.fromString(
                 "1:2:3:4:5:6"), true /* hasIpv6 */);
 
@@ -1280,8 +1257,7 @@ public class EthernetTetheringTest {
     @IgnoreUpTo(Build.VERSION_CODES.R)
     public void testTetherClatUdp() throws Exception {
         // CLAT only starts on IPv6 only network.
-        initializeTethering(toList(TEST_IP6_ADDR), toList(TEST_IP6_DNS));
-        runClatUdpTest(new TetheringTester(mDownstreamReader, mUpstreamReader));
+        runClatUdpTest(initTetheringTester(toList(TEST_IP6_ADDR), toList(TEST_IP6_DNS)));
     }
 
     private <T> List<T> toList(T... array) {

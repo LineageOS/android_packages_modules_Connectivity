@@ -257,22 +257,6 @@ public final class TetheringTester {
         return null;
     }
 
-    public void waitForIpv6TetherConnectivityVerified() throws Exception {
-        Log.d(TAG, "Waiting RA multicast");
-
-        // Wait for RA multicast message from router to confirm that the IPv6 tethering
-        // connectivity is ready. We don't extract the router mac address from RA because
-        // we get the router mac address from IPv4 ARP packet. See #getRouterMacAddressFromArp.
-        for (int i = 0; i < READ_RA_ATTEMPTS; i++) {
-            final byte[] raPacket = getDownloadPacket((p) -> {
-                return isExpectedIcmpv6Packet(p, true /* hasEth */, ICMPV6_ROUTER_ADVERTISEMENT);
-            });
-            if (raPacket != null) return;
-        }
-
-        fail("Could not get RA multicast packet after " + READ_RA_ATTEMPTS + " attempts");
-    }
-
     private List<PrefixInformationOption> getRaPrefixOptions(byte[] packet) {
         ByteBuffer buf = ByteBuffer.wrap(packet);
         if (!isExpectedIcmpv6Packet(buf, true /* hasEth */, ICMPV6_ROUTER_ADVERTISEMENT)) {
