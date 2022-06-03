@@ -133,6 +133,8 @@ enum UidOwnerMatchType {
     LOW_POWER_STANDBY_MATCH = (1 << 6),
     IIF_MATCH = (1 << 7),
     LOCKDOWN_VPN_MATCH = (1 << 8),
+    OEM_DENY_1_MATCH = (1 << 9),
+    OEM_DENY_2_MATCH = (1 << 10),
 };
 
 enum BpfPermissionMatch {
