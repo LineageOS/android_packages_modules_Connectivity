@@ -1149,7 +1149,7 @@ public class NetworkStatsServiceTest extends NetworkStatsBaseTest {
         // already documented publicly, refer to {@link NetworkStatsManager#queryDetails}.
     }
 
-    @Test
+    @Test @Ignore // TODO(b/234099453): re-enable when the prebuilt module is updated
     public void testUidStatsForTransport() throws Exception {
         // pretend that network comes online
         expectDefaultSettings();
