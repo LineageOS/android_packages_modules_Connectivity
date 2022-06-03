@@ -1300,6 +1300,17 @@ public final class NetworkStats implements Parcelable, Iterable<NetworkStats.Ent
     }
 
     /**
+     * Removes the interface name from all entries.
+     * This mutates the original structure in place.
+     * @hide
+     */
+    public void clearInterfaces() {
+        for (int i = 0; i < size; i++) {
+            iface[i] = null;
+        }
+    }
+
+    /**
      * Only keep entries that match all specified filters.
      *
      * <p>This mutates the original structure in place. After this method is called,
