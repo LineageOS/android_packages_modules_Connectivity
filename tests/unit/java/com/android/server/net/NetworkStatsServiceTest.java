@@ -1180,9 +1180,12 @@ public class NetworkStatsServiceTest extends NetworkStatsBaseTest {
 
         assertEquals(3, stats.size());
         entry1.operations = 1;
+        entry1.iface = null;
         assertEquals(entry1, stats.getValues(0, null));
         entry2.operations = 1;
+        entry2.iface = null;
         assertEquals(entry2, stats.getValues(1, null));
+        entry3.iface = null;
         assertEquals(entry3, stats.getValues(2, null));
     }
 
