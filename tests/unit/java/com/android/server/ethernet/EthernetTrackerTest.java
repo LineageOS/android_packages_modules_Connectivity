@@ -28,6 +28,7 @@ import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.reset;
@@ -69,6 +70,7 @@ import org.mockito.MockitoAnnotations;
 
 import java.net.InetAddress;
 import java.util.ArrayList;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 @SmallTest
 @RunWith(DevSdkIgnoreRunner.class)
@@ -435,7 +437,20 @@ public class EthernetTrackerTest {
         when(mNetd.interfaceGetList()).thenReturn(new String[] {testIface});
         when(mNetd.interfaceGetCfg(eq(testIface))).thenReturn(ifaceParcel);
         doReturn(new String[] {testIface}).when(mFactory).getAvailableInterfaces(anyBoolean());
-        doReturn(EthernetManager.STATE_LINK_UP).when(mFactory).getInterfaceState(eq(testIface));
+
+        final AtomicBoolean ifaceUp = new AtomicBoolean(true);
+        doAnswer(inv -> ifaceUp.get()).when(mFactory).hasInterface(testIface);
+        doAnswer(inv ->
+                ifaceUp.get() ? EthernetManager.STATE_LINK_UP : EthernetManager.STATE_ABSENT)
+                .when(mFactory).getInterfaceState(testIface);
+        doAnswer(inv -> {
+            ifaceUp.set(true);
+            return null;
+        }).when(mFactory).addInterface(eq(testIface), eq(testHwAddr), any(), any());
+        doAnswer(inv -> {
+            ifaceUp.set(false);
+            return null;
+        }).when(mFactory).removeInterface(testIface);
 
         final EthernetStateListener listener = spy(new EthernetStateListener());
         tracker.addListener(listener, true /* canUseRestrictedNetworks */);
@@ -446,7 +461,6 @@ public class EthernetTrackerTest {
         verify(listener).onEthernetStateChanged(eq(EthernetManager.ETHERNET_STATE_ENABLED));
         reset(listener);
 
-        doReturn(EthernetManager.STATE_ABSENT).when(mFactory).getInterfaceState(eq(testIface));
         tracker.setEthernetEnabled(false);
         waitForIdle();
         verify(mFactory).removeInterface(eq(testIface));
@@ -455,7 +469,6 @@ public class EthernetTrackerTest {
                 anyInt(), any());
         reset(listener);
 
-        doReturn(EthernetManager.STATE_LINK_UP).when(mFactory).getInterfaceState(eq(testIface));
         tracker.setEthernetEnabled(true);
         waitForIdle();
         verify(mFactory).addInterface(eq(testIface), eq(testHwAddr), any(), any());
