@@ -71,7 +71,9 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import kotlin.test.fail
 
-private const val TIMEOUT_MS = 1000L
+// TODO: try to lower this timeout in the future. Currently, ethernet tests are still flaky because
+// the interface is not ready fast enough (mostly due to the up / up / down / up issue).
+private const val TIMEOUT_MS = 2000L
 private const val NO_CALLBACK_TIMEOUT_MS = 200L
 private val DEFAULT_IP_CONFIGURATION = IpConfiguration(IpConfiguration.IpAssignment.DHCP,
     IpConfiguration.ProxySettings.NONE, null, null)
