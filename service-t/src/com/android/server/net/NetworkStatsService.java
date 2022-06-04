@@ -25,6 +25,7 @@ import static android.content.Intent.ACTION_UID_REMOVED;
 import static android.content.Intent.ACTION_USER_REMOVED;
 import static android.content.Intent.EXTRA_UID;
 import static android.content.pm.PackageManager.PERMISSION_GRANTED;
+import static android.net.NetworkCapabilities.TRANSPORT_CELLULAR;
 import static android.net.NetworkCapabilities.TRANSPORT_WIFI;
 import static android.net.NetworkStats.DEFAULT_NETWORK_ALL;
 import static android.net.NetworkStats.IFACE_ALL;
@@ -172,6 +173,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Semaphore;
@@ -343,11 +345,16 @@ public class NetworkStatsService extends INetworkStatsService.Stub {
     @GuardedBy("mStatsLock")
     private String mActiveIface;
 
-    /** Set of any ifaces associated with mobile networks since boot. */
+    /** Set of all ifaces currently associated with mobile networks. */
     private volatile String[] mMobileIfaces = new String[0];
 
-    /** Set of any ifaces associated with wifi networks since boot. */
-    private volatile String[] mWifiIfaces = new String[0];
+    /* A set of all interfaces that have ever been associated with mobile networks since boot. */
+    @GuardedBy("mStatsLock")
+    private final Set<String> mAllMobileIfacesSinceBoot = new ArraySet<>();
+
+    /* A set of all interfaces that have ever been associated with wifi networks since boot. */
+    @GuardedBy("mStatsLock")
+    private final Set<String> mAllWifiIfacesSinceBoot = new ArraySet<>();
 
     /** Set of all ifaces currently used by traffic that does not explicitly specify a Network. */
     @GuardedBy("mStatsLock")
@@ -1564,17 +1571,37 @@ public class NetworkStatsService extends INetworkStatsService.Stub {
         return dataLayer;
     }
 
+    private String[] getAllIfacesSinceBoot(int transport) {
+        synchronized (mStatsLock) {
+            final Set<String> ifaceSet;
+            if (transport == TRANSPORT_WIFI) {
+                ifaceSet = mAllWifiIfacesSinceBoot;
+            } else if (transport == TRANSPORT_CELLULAR) {
+                ifaceSet = mAllMobileIfacesSinceBoot;
+            } else {
+                throw new IllegalArgumentException("Invalid transport " + transport);
+            }
+
+            return ifaceSet.toArray(new String[0]);
+        }
+    }
+
     @Override
     public NetworkStats getUidStatsForTransport(int transport) {
         PermissionUtils.enforceNetworkStackPermission(mContext);
         try {
-            final String[] relevantIfaces =
-                    transport == TRANSPORT_WIFI ? mWifiIfaces : mMobileIfaces;
+            final String[] ifaceArray = getAllIfacesSinceBoot(transport);
             // TODO(b/215633405) : mMobileIfaces and mWifiIfaces already contain the stacked
             // interfaces, so this is not useful, remove it.
             final String[] ifacesToQuery =
-                    mStatsFactory.augmentWithStackedInterfaces(relevantIfaces);
-            return getNetworkStatsUidDetail(ifacesToQuery);
+                    mStatsFactory.augmentWithStackedInterfaces(ifaceArray);
+            final NetworkStats stats = getNetworkStatsUidDetail(ifacesToQuery);
+            // Clear the interfaces of the stats before returning, so callers won't get this
+            // information. This is because no caller needs this information for now, and it
+            // makes it easier to change the implementation later by using the histories in the
+            // recorder.
+            stats.clearInterfaces();
+            return stats;
         } catch (RemoteException e) {
             Log.wtf(TAG, "Error compiling UID stats", e);
             return new NetworkStats(0L, 0);
@@ -1955,7 +1982,6 @@ public class NetworkStatsService extends INetworkStatsService.Stub {
 
         final boolean combineSubtypeEnabled = mSettings.getCombineSubtypeEnabled();
         final ArraySet<String> mobileIfaces = new ArraySet<>();
-        final ArraySet<String> wifiIfaces = new ArraySet<>();
         for (NetworkStateSnapshot snapshot : snapshots) {
             final int displayTransport =
                     getDisplayTransport(snapshot.getNetworkCapabilities().getTransportTypes());
@@ -2000,9 +2026,12 @@ public class NetworkStatsService extends INetworkStatsService.Stub {
 
                 if (isMobile) {
                     mobileIfaces.add(baseIface);
+                    // If the interface name was present in the wifi set, the interface won't
+                    // be removed from it to prevent stats from getting rollback.
+                    mAllMobileIfacesSinceBoot.add(baseIface);
                 }
                 if (isWifi) {
-                    wifiIfaces.add(baseIface);
+                    mAllWifiIfacesSinceBoot.add(baseIface);
                 }
             }
 
@@ -2044,9 +2073,10 @@ public class NetworkStatsService extends INetworkStatsService.Stub {
                     findOrCreateNetworkIdentitySet(mActiveUidIfaces, iface).add(ident);
                     if (isMobile) {
                         mobileIfaces.add(iface);
+                        mAllMobileIfacesSinceBoot.add(iface);
                     }
                     if (isWifi) {
-                        wifiIfaces.add(iface);
+                        mAllWifiIfacesSinceBoot.add(iface);
                     }
 
                     mStatsFactory.noteStackedIface(iface, baseIface);
@@ -2055,15 +2085,10 @@ public class NetworkStatsService extends INetworkStatsService.Stub {
         }
 
         mMobileIfaces = mobileIfaces.toArray(new String[0]);
-        mWifiIfaces = wifiIfaces.toArray(new String[0]);
         // TODO (b/192758557): Remove debug log.
         if (CollectionUtils.contains(mMobileIfaces, null)) {
             throw new NullPointerException(
                     "null element in mMobileIfaces: " + Arrays.toString(mMobileIfaces));
-        }
-        if (CollectionUtils.contains(mWifiIfaces, null)) {
-            throw new NullPointerException(
-                    "null element in mWifiIfaces: " + Arrays.toString(mWifiIfaces));
         }
     }
 
@@ -2530,6 +2555,22 @@ public class NetworkStatsService extends INetworkStatsService.Stub {
                 pw.print("ident", mActiveUidIfaces.valueAt(i));
                 pw.println();
             }
+            pw.decreaseIndent();
+
+            pw.println("All wifi interfaces:");
+            pw.increaseIndent();
+            for (String iface : mAllWifiIfacesSinceBoot) {
+                pw.print(iface + " ");
+            }
+            pw.println();
+            pw.decreaseIndent();
+
+            pw.println("All mobile interfaces:");
+            pw.increaseIndent();
+            for (String iface : mAllMobileIfacesSinceBoot) {
+                pw.print(iface + " ");
+            }
+            pw.println();
             pw.decreaseIndent();
 
             // Get the top openSession callers
