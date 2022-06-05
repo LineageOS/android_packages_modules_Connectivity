@@ -30,6 +30,7 @@
 
 #include <gtest/gtest.h>
 
+#include <android-base/file.h>
 #include <android-base/stringprintf.h>
 #include <android-base/strings.h>
 #include <binder/Status.h>
@@ -49,6 +50,7 @@ namespace net {
 using android::netdutils::Status;
 using base::Result;
 using netdutils::isOk;
+using netdutils::statusFromErrno;
 
 constexpr int TEST_MAP_SIZE = 10;
 constexpr uid_t TEST_UID = 10086;
@@ -265,6 +267,55 @@ class TrafficControllerTest : public ::testing::Test {
         return ret;
     }
 
+    Status dump(bool verbose, std::vector<std::string>& outputLines) {
+      if (!outputLines.empty()) return statusFromErrno(EUCLEAN, "Output buffer is not empty");
+
+      android::base::unique_fd localFd, remoteFd;
+      if (!Pipe(&localFd, &remoteFd)) return statusFromErrno(errno, "Failed on pipe");
+
+      // dump() blocks until another thread has consumed all its output.
+      std::thread dumpThread =
+          std::thread([this, remoteFd{std::move(remoteFd)}, verbose]() {
+            mTc.dump(remoteFd, verbose);
+          });
+
+      std::string dumpContent;
+      if (!android::base::ReadFdToString(localFd.get(), &dumpContent)) {
+        return statusFromErrno(errno, "Failed to read dump results from fd");
+      }
+      dumpThread.join();
+
+      std::stringstream dumpStream(std::move(dumpContent));
+      std::string line;
+      while (std::getline(dumpStream, line)) {
+        outputLines.push_back(line);
+      }
+
+      return netdutils::status::ok;
+    }
+
+    // Strings in the |expect| must exist in dump results in order. But no need to be consecutive.
+    bool expectDumpsysContains(std::vector<std::string>& expect) {
+        if (expect.empty()) return false;
+
+        std::vector<std::string> output;
+        Status result = dump(true, output);
+        if (!isOk(result)) {
+            GTEST_LOG_(ERROR) << "TrafficController dump failed: " << netdutils::toString(result);
+            return false;
+        }
+
+        int matched = 0;
+        auto it = expect.begin();
+        for (const auto& line : output) {
+            if (it == expect.end()) break;
+            if (std::string::npos != line.find(*it)) {
+                matched++;
+                ++it;
+            }
+        }
+        return matched == expect.size();
+    }
 };
 
 TEST_F(TrafficControllerTest, TestUpdateOwnerMapEntry) {
@@ -643,6 +694,28 @@ TEST_F(TrafficControllerTest, TestGrantDuplicatePermissionSlientlyFail) {
 
     mTc.setPermissionForUids(INetd::PERMISSION_NONE, appUids);
     expectPrivilegedUserSetEmpty();
+}
+
+TEST_F(TrafficControllerTest, TestDumpsys) {
+    std::vector<uid_t> appUid = {TEST_UID};
+    mTc.setPermissionForUids(INetd::PERMISSION_NONE, appUid);
+    std::vector<uid_t> appUid2 = {TEST_UID2};
+    mTc.setPermissionForUids(INetd::PERMISSION_UPDATE_DEVICE_STATS, appUid2);
+
+    std::vector<std::string> expectedLines = {
+        "mUidPermissionMap:",
+        fmt::format("{}  BPF_PERMISSION_UPDATE_DEVICE_STATS", TEST_UID2),
+        fmt::format("{} PERMISSION_NONE", TEST_UID),
+        "mPrivilegedUser:",
+        fmt::format("{} ALLOW_UPDATE_DEVICE_STATS", TEST_UID2)};
+    EXPECT_TRUE(expectDumpsysContains(expectedLines));
+
+    mTc.setPermissionForUids(INetd::PERMISSION_INTERNET, {TEST_UID, TEST_UID2});
+    expectedLines = {
+        "mUidPermissionMap:",
+        "mPrivilegedUser:",
+    };
+    EXPECT_TRUE(expectDumpsysContains(expectedLines));
 }
 
 constexpr uint32_t SOCK_CLOSE_WAIT_US = 30 * 1000;
