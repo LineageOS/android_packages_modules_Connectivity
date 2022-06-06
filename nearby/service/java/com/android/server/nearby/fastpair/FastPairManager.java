@@ -242,7 +242,7 @@ public class FastPairManager {
 
             String modelId = item.getTriggerId();
             Preferences.Builder prefsBuilder =
-                    Preferences.builderFromGmsLog()
+                    Preferences.builder()
                             .setEnableBrEdrHandover(false)
                             .setIgnoreDiscoveryError(true);
             pairingProgressHandlerBase.onSetupPreferencesBuilder(prefsBuilder);
