@@ -21,7 +21,6 @@ import static org.mockito.Mockito.verify;
 
 import android.content.Context;
 import android.hardware.location.NanoAppMessage;
-import android.nearby.ScanFilter;
 
 import androidx.test.filters.SdkSuppress;
 import androidx.test.platform.app.InstrumentationRegistry;
@@ -35,11 +34,9 @@ import org.mockito.Captor;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
-import service.proto.Blefilter;
-
-import java.util.ArrayList;
-import java.util.List;
 import java.util.concurrent.Executor;
+
+import service.proto.Blefilter;
 
 public class ChreDiscoveryProviderTest {
     @Mock AbstractDiscoveryProvider.Listener mListener;
@@ -59,13 +56,10 @@ public class ChreDiscoveryProviderTest {
 
     @Test
     @SdkSuppress(minSdkVersion = 32, codeName = "T")
-    public void testOnStart() {
-        List<ScanFilter> scanFilters = new ArrayList<>();
-        mChreDiscoveryProvider.getController().setProviderScanFilters(scanFilters);
-        mChreDiscoveryProvider.onStart();
+    public void testInit() {
+        mChreDiscoveryProvider.init();
         verify(mChreCommunication).start(mChreCallbackCaptor.capture(), any());
         mChreCallbackCaptor.getValue().started(true);
-        verify(mChreCommunication).sendMessageToNanoApp(any());
     }
 
     @Test
@@ -93,6 +87,7 @@ public class ChreDiscoveryProviderTest {
                         ChreDiscoveryProvider.NANOAPP_MESSAGE_TYPE_FILTER_RESULT,
                         results.toByteArray());
         mChreDiscoveryProvider.getController().setListener(mListener);
+        mChreDiscoveryProvider.init();
         mChreDiscoveryProvider.onStart();
         verify(mChreCommunication).start(mChreCallbackCaptor.capture(), any());
         mChreCallbackCaptor.getValue().onMessageFromNanoApp(chre_message);

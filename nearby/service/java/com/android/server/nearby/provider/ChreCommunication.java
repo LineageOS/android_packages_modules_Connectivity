@@ -92,7 +92,7 @@ public class ChreCommunication extends ContextHubClientCallback {
             Log.e(TAG, "ContexHub not available in this device");
             return;
         } else {
-            Log.i(TAG, "Start ChreCommunication");
+            Log.i(TAG, "[ChreCommunication] Start ChreCommunication");
         }
         Preconditions.checkNotNull(callback);
         Preconditions.checkArgument(!nanoAppIds.isEmpty());
