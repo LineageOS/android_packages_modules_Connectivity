@@ -39,6 +39,7 @@ import static android.net.ConnectivityManager.EXTRA_NETWORK;
 import static android.net.ConnectivityManager.EXTRA_NETWORK_REQUEST;
 import static android.net.ConnectivityManager.FIREWALL_CHAIN_OEM_DENY_1;
 import static android.net.ConnectivityManager.FIREWALL_CHAIN_OEM_DENY_2;
+import static android.net.ConnectivityManager.FIREWALL_CHAIN_OEM_DENY_3;
 import static android.net.ConnectivityManager.FIREWALL_RULE_ALLOW;
 import static android.net.ConnectivityManager.FIREWALL_RULE_DENY;
 import static android.net.ConnectivityManager.PROFILE_NETWORK_PREFERENCE_ENTERPRISE;
@@ -3385,6 +3386,7 @@ public class ConnectivityManagerTest {
         // doTestFirewallBlockingDenyRule(FIREWALL_CHAIN_STANDBY);
         doTestFirewallBlockingDenyRule(FIREWALL_CHAIN_OEM_DENY_1);
         doTestFirewallBlockingDenyRule(FIREWALL_CHAIN_OEM_DENY_2);
+        doTestFirewallBlockingDenyRule(FIREWALL_CHAIN_OEM_DENY_3);
     }
 
     private void assumeTestSApis() {
