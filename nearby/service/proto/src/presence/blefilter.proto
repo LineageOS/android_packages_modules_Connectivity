@@ -47,6 +47,7 @@ message PublicateCertificate {
   optional bytes metadata_encryption_key_tag = 2;
 }
 
+// Public credential returned in BleFilterResult.
 message PublicCredential {
   optional bytes secret_id = 1;
   optional bytes authenticity_key = 2;
@@ -55,6 +56,18 @@ message PublicCredential {
   optional bytes encrypted_metadata_tag = 5;
 }
 
+message DataElement {
+  enum ElementType {
+    DE_NONE = 0;
+    DE_FAST_PAIR_ACCOUNT_KEY = 1;
+  }
+
+  optional ElementType key = 1;
+  optional bytes value = 2;
+  optional uint32 value_length = 3;
+}
+
+// A single filter used to filter BLE events.
 message BleFilter {
   optional uint32 id = 1;  // Required, unique id of this filter.
   // Maximum delay to notify the client after an event occurs.
@@ -72,8 +85,7 @@ message BleFilter {
   optional float distance_m = 7;
   // Used to verify the list of trusted devices.
   repeated PublicateCertificate certficate = 8;
-  // Used to store additional information(like account key, connection status, battery, and etc.)
-  // In key and value format.
+  // Data Elements for extended properties.
   repeated DataElement data_element = 9;
 }
 
@@ -97,14 +109,12 @@ message BleFilterResults {
   repeated BleFilterResult result = 1;
 }
 
-message DataElement {
-  enum ElementType {
-    DE_NONE = 0;
-    DE_FAST_PAIR_ACCOUNT_KEY = 1;
-  }
-
-  optional ElementType key = 1;
-  optional bytes value = 2;
-  // Required for low level implementation.
-  optional uint32 value_length = 3;
+message BleConfig {
+  // True to start BLE scan. Otherwise, stop BLE scan.
+  optional bool start_scan = 1;
+  // True when screen is turned on. Otherwise, set to false when screen is
+  // turned off.
+  optional bool screen_on = 2;
+  // Fast Pair cache expires after this time period.
+  optional uint64 fast_pair_cache_expire_time_sec = 3;
 }

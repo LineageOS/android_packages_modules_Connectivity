@@ -83,7 +83,8 @@ public class NearbyDeviceParcelableTest {
                         "NearbyDeviceParcelable[scanType=2, name=testDevice, medium=BLE, "
                                 + "txPower=0, rssi=-60, action=0, bluetoothAddress="
                                 + BLUETOOTH_ADDRESS
-                                + ", fastPairModelId=null, data=null, salt=null]");
+                                + ", fastPairModelId=null, data=null, salt=null,"
+                                + " presenceDevice=null]");
     }
 
     @Test

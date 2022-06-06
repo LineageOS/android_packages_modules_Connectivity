@@ -37,10 +37,11 @@ public final class DataElement implements Parcelable {
     private final byte[] mValue;
 
     /** @hide */
-    @IntDef({DataType.BLE_SERVICE_DATA, DataType.ACCOUNT_KEY})
-    @interface DataType {
+    @IntDef({DataType.BLE_SERVICE_DATA, DataType.ACCOUNT_KEY, DataType.BLE_ADDRESS})
+    public  @interface DataType {
         int BLE_SERVICE_DATA = 0;
         int ACCOUNT_KEY = 1;
+        int BLE_ADDRESS = 2;
     }
 
     /**
