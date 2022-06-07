@@ -11375,6 +11375,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
             case ConnectivityManager.FIREWALL_CHAIN_STANDBY:
             case ConnectivityManager.FIREWALL_CHAIN_OEM_DENY_1:
             case ConnectivityManager.FIREWALL_CHAIN_OEM_DENY_2:
+            case ConnectivityManager.FIREWALL_CHAIN_OEM_DENY_3:
                 defaultRule = FIREWALL_RULE_ALLOW;
                 break;
             case ConnectivityManager.FIREWALL_CHAIN_DOZABLE:
@@ -11429,6 +11430,9 @@ public class ConnectivityService extends IConnectivityManager.Stub
                     break;
                 case ConnectivityManager.FIREWALL_CHAIN_OEM_DENY_2:
                     mBpfNetMaps.replaceUidChain("fw_oem_deny_2", false /* isAllowList */, uids);
+                    break;
+                case ConnectivityManager.FIREWALL_CHAIN_OEM_DENY_3:
+                    mBpfNetMaps.replaceUidChain("fw_oem_deny_3", false /* isAllowList */, uids);
                     break;
                 default:
                     throw new IllegalArgumentException("replaceFirewallChain with invalid chain: "
