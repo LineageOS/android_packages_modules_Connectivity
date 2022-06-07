@@ -50,6 +50,7 @@ import com.android.internal.annotations.VisibleForTesting;
 import com.android.net.module.util.NetdUtils;
 import com.android.net.module.util.NetworkStackConstants;
 
+import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.net.Inet4Address;
 import java.net.Inet6Address;
@@ -76,7 +77,10 @@ class TestNetworkService extends ITestNetworkManager.Stub {
     @NonNull private final NetworkProvider mNetworkProvider;
 
     // Native method stubs
-    private static native int jniCreateTunTap(boolean isTun, @NonNull String iface);
+    private static native int nativeCreateTunTap(boolean isTun, @NonNull String iface);
+
+    private static native void nativeSetTunTapCarrierEnabled(@NonNull String iface, int tunFd,
+            boolean enabled);
 
     @VisibleForTesting
     protected TestNetworkService(@NonNull Context context) {
@@ -131,7 +135,7 @@ class TestNetworkService extends ITestNetworkManager.Stub {
         final long token = Binder.clearCallingIdentity();
         try {
             ParcelFileDescriptor tunIntf =
-                    ParcelFileDescriptor.adoptFd(jniCreateTunTap(isTun, interfaceName));
+                    ParcelFileDescriptor.adoptFd(nativeCreateTunTap(isTun, interfaceName));
             for (LinkAddress addr : linkAddrs) {
                 mNetd.interfaceAddAddress(
                         interfaceName,
@@ -374,5 +378,21 @@ class TestNetworkService extends ITestNetworkManager.Stub {
 
     public static void enforceTestNetworkPermissions(@NonNull Context context) {
         context.enforceCallingOrSelfPermission(PERMISSION_NAME, "TestNetworkService");
+    }
+
+    /** Enable / disable TestNetworkInterface carrier */
+    @Override
+    public void setCarrierEnabled(@NonNull TestNetworkInterface iface, boolean enabled) {
+        enforceTestNetworkPermissions(mContext);
+        nativeSetTunTapCarrierEnabled(iface.getInterfaceName(), iface.getFileDescriptor().getFd(),
+                enabled);
+        // Explicitly close fd after use to prevent StrictMode from complaining.
+        // Also, explicitly referencing iface guarantees that the object is not garbage collected
+        // before nativeSetTunTapCarrierEnabled() executes.
+        try {
+            iface.getFileDescriptor().close();
+        } catch (IOException e) {
+            // if the close fails, there is not much that can be done -- move on.
+        }
     }
 }

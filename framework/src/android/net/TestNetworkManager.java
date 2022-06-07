@@ -231,4 +231,23 @@ public class TestNetworkManager {
             throw e.rethrowFromSystemServer();
         }
     }
+
+    /**
+     * Enable / disable carrier on TestNetworkInterface
+     *
+     * Note: TUNSETCARRIER is not supported until kernel version 5.0.
+     * TODO: add RequiresApi annotation.
+     *
+     * @param iface the interface to configure.
+     * @param enabled true to turn carrier on, false to turn carrier off.
+     * @hide
+     */
+    @RequiresPermission(Manifest.permission.MANAGE_TEST_NETWORKS)
+    public void setCarrierEnabled(@NonNull TestNetworkInterface iface, boolean enabled) {
+        try {
+            mService.setCarrierEnabled(iface, enabled);
+        } catch (RemoteException e) {
+            throw e.rethrowFromSystemServer();
+        }
+    }
 }

@@ -32,6 +32,8 @@ interface ITestNetworkManager
     TestNetworkInterface createInterface(boolean isTun, boolean bringUp, in LinkAddress[] addrs,
             in @nullable String iface);
 
+    void setCarrierEnabled(in TestNetworkInterface iface, boolean enabled);
+
     void setupTestNetwork(in String iface, in LinkProperties lp, in boolean isMetered,
             in int[] administratorUids, in IBinder binder);
 
