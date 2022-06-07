@@ -40,7 +40,7 @@ public final class TestNetworkInterface implements Parcelable {
 
     @Override
     public void writeToParcel(@NonNull Parcel out, int flags) {
-        out.writeParcelable(mFileDescriptor, PARCELABLE_WRITE_RETURN_VALUE);
+        out.writeParcelable(mFileDescriptor, flags);
         out.writeString(mInterfaceName);
     }
 
