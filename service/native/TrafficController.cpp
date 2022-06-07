@@ -76,6 +76,7 @@ const char* TrafficController::LOCAL_RESTRICTED = "fw_restricted";
 const char* TrafficController::LOCAL_LOW_POWER_STANDBY = "fw_low_power_standby";
 const char* TrafficController::LOCAL_OEM_DENY_1 = "fw_oem_deny_1";
 const char* TrafficController::LOCAL_OEM_DENY_2 = "fw_oem_deny_2";
+const char* TrafficController::LOCAL_OEM_DENY_3 = "fw_oem_deny_3";
 
 static_assert(BPF_PERMISSION_INTERNET == INetd::PERMISSION_INTERNET,
               "Mismatch between BPF and AIDL permissions: PERMISSION_INTERNET");
@@ -103,6 +104,7 @@ const std::string uidMatchTypeToString(uint32_t match) {
     FLAG_MSG_TRANS(matchType, LOCKDOWN_VPN_MATCH, match);
     FLAG_MSG_TRANS(matchType, OEM_DENY_1_MATCH, match);
     FLAG_MSG_TRANS(matchType, OEM_DENY_2_MATCH, match);
+    FLAG_MSG_TRANS(matchType, OEM_DENY_3_MATCH, match);
     if (match) {
         return StringPrintf("Unknown match: %u", match);
     }
@@ -344,6 +346,8 @@ FirewallType TrafficController::getFirewallType(ChildChain chain) {
             return DENYLIST;
         case OEM_DENY_2:
             return DENYLIST;
+        case OEM_DENY_3:
+            return DENYLIST;
         case NONE:
         default:
             return DENYLIST;
@@ -377,6 +381,9 @@ int TrafficController::changeUidOwnerRule(ChildChain chain, uid_t uid, FirewallR
             break;
         case OEM_DENY_2:
             res = updateOwnerMapEntry(OEM_DENY_2_MATCH, uid, rule, type);
+            break;
+        case OEM_DENY_3:
+            res = updateOwnerMapEntry(OEM_DENY_3_MATCH, uid, rule, type);
             break;
         case NONE:
         default:
@@ -459,6 +466,8 @@ int TrafficController::replaceUidOwnerMap(const std::string& name, bool isAllowl
         res = replaceRulesInMap(OEM_DENY_1_MATCH, uids);
     } else if (!name.compare(LOCAL_OEM_DENY_2)) {
         res = replaceRulesInMap(OEM_DENY_2_MATCH, uids);
+    } else if (!name.compare(LOCAL_OEM_DENY_3)) {
+        res = replaceRulesInMap(OEM_DENY_3_MATCH, uids);
     } else {
         ALOGE("unknown chain name: %s", name.c_str());
         return -EINVAL;
@@ -503,6 +512,9 @@ int TrafficController::toggleUidOwnerMap(ChildChain chain, bool enable) {
             break;
         case OEM_DENY_2:
             match = OEM_DENY_2_MATCH;
+            break;
+        case OEM_DENY_3:
+            match = OEM_DENY_3_MATCH;
             break;
         default:
             return -EINVAL;
