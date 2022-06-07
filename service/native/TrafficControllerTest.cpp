@@ -392,6 +392,7 @@ TEST_F(TrafficControllerTest, TestChangeUidOwnerRule) {
     checkUidOwnerRuleForChain(LOCKDOWN, LOCKDOWN_VPN_MATCH);
     checkUidOwnerRuleForChain(OEM_DENY_1, OEM_DENY_1_MATCH);
     checkUidOwnerRuleForChain(OEM_DENY_2, OEM_DENY_2_MATCH);
+    checkUidOwnerRuleForChain(OEM_DENY_3, OEM_DENY_3_MATCH);
     ASSERT_EQ(-EINVAL, mTc.changeUidOwnerRule(NONE, TEST_UID, ALLOW, ALLOWLIST));
     ASSERT_EQ(-EINVAL, mTc.changeUidOwnerRule(INVALID_CHAIN, TEST_UID, ALLOW, ALLOWLIST));
 }
@@ -405,6 +406,7 @@ TEST_F(TrafficControllerTest, TestReplaceUidOwnerMap) {
     checkUidMapReplace("fw_low_power_standby", uids, LOW_POWER_STANDBY_MATCH);
     checkUidMapReplace("fw_oem_deny_1", uids, OEM_DENY_1_MATCH);
     checkUidMapReplace("fw_oem_deny_2", uids, OEM_DENY_2_MATCH);
+    checkUidMapReplace("fw_oem_deny_3", uids, OEM_DENY_3_MATCH);
     ASSERT_EQ(-EINVAL, mTc.replaceUidOwnerMap("unknow", true, uids));
 }
 
