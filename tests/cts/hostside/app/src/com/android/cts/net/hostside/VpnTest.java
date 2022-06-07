@@ -378,10 +378,6 @@ public class VpnTest {
         if (mNetwork == null) {
             fail("VPN did not become available after " + TIMEOUT_MS + "ms");
         }
-
-        // Unfortunately, when the available callback fires, the VPN UID ranges are not yet
-        // configured. Give the system some time to do so. http://b/18436087 .
-        try { Thread.sleep(3000); } catch(InterruptedException e) {}
     }
 
     private void stopVpn() {
