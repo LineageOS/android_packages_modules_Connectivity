@@ -27,6 +27,7 @@ import static android.provider.Settings.Global.NETWORK_DEFAULT_DAILY_MULTIPATH_Q
 
 import static com.android.server.net.NetworkPolicyManagerInternal.QUOTA_TYPE_MULTIPATH;
 import static com.android.server.net.NetworkPolicyManagerService.OPPORTUNISTIC_QUOTA_UNKNOWN;
+import static com.android.testutils.DevSdkIgnoreRuleKt.SC_V2;
 
 import static org.junit.Assert.assertNotNull;
 import static org.mockito.ArgumentMatchers.any;
@@ -184,7 +185,7 @@ public class MultipathPolicyTrackerTest {
                 (int) setting);
     }
 
-    private void testGetMultipathPreference(
+    private void prepareGetMultipathPreferenceTest(
             long usedBytesToday, long subscriptionQuota, long policyWarning, long policyLimit,
             long defaultGlobalSetting, long defaultResSetting, boolean roaming) {
 
@@ -286,7 +287,7 @@ public class MultipathPolicyTrackerTest {
 
     @Test
     public void testGetMultipathPreference_SubscriptionQuota() {
-        testGetMultipathPreference(
+        prepareGetMultipathPreferenceTest(
                 DataUnit.MEGABYTES.toBytes(2) /* usedBytesToday */,
                 DataUnit.MEGABYTES.toBytes(14) /* subscriptionQuota */,
                 DataUnit.MEGABYTES.toBytes(100) /* policyWarning */,
@@ -301,7 +302,7 @@ public class MultipathPolicyTrackerTest {
 
     @Test
     public void testGetMultipathPreference_UserWarningQuota() {
-        testGetMultipathPreference(
+        prepareGetMultipathPreferenceTest(
                 DataUnit.MEGABYTES.toBytes(7) /* usedBytesToday */,
                 OPPORTUNISTIC_QUOTA_UNKNOWN,
                 // Remaining days are 29 days from Apr. 2nd to May 1st.
@@ -320,7 +321,7 @@ public class MultipathPolicyTrackerTest {
 
     @Test
     public void testGetMultipathPreference_SnoozedWarningQuota() {
-        testGetMultipathPreference(
+        prepareGetMultipathPreferenceTest(
                 DataUnit.MEGABYTES.toBytes(7) /* usedBytesToday */,
                 OPPORTUNISTIC_QUOTA_UNKNOWN,
                 POLICY_SNOOZED /* policyWarning */,
@@ -339,7 +340,7 @@ public class MultipathPolicyTrackerTest {
 
     @Test
     public void testGetMultipathPreference_SnoozedBothQuota() {
-        testGetMultipathPreference(
+        prepareGetMultipathPreferenceTest(
                 DataUnit.MEGABYTES.toBytes(7) /* usedBytesToday */,
                 OPPORTUNISTIC_QUOTA_UNKNOWN,
                 // 29 days from Apr. 2nd to May 1st
@@ -356,7 +357,7 @@ public class MultipathPolicyTrackerTest {
 
     @Test
     public void testGetMultipathPreference_SettingChanged() {
-        testGetMultipathPreference(
+        prepareGetMultipathPreferenceTest(
                 DataUnit.MEGABYTES.toBytes(2) /* usedBytesToday */,
                 OPPORTUNISTIC_QUOTA_UNKNOWN,
                 WARNING_DISABLED,
@@ -381,7 +382,7 @@ public class MultipathPolicyTrackerTest {
 
     @Test
     public void testGetMultipathPreference_ResourceChanged() {
-        testGetMultipathPreference(
+        prepareGetMultipathPreferenceTest(
                 DataUnit.MEGABYTES.toBytes(2) /* usedBytesToday */,
                 OPPORTUNISTIC_QUOTA_UNKNOWN,
                 WARNING_DISABLED,
@@ -403,5 +404,46 @@ public class MultipathPolicyTrackerTest {
         // Uses the new setting (16 - 2 = 14MB)
         verify(mStatsManager, times(1)).registerUsageCallback(
                 any(), eq(DataUnit.MEGABYTES.toBytes(14)), any(), any());
+    }
+
+    @DevSdkIgnoreRule.IgnoreUpTo(SC_V2)
+    @Test
+    public void testOnThresholdReached() {
+        prepareGetMultipathPreferenceTest(
+                DataUnit.MEGABYTES.toBytes(2) /* usedBytesToday */,
+                DataUnit.MEGABYTES.toBytes(14) /* subscriptionQuota */,
+                DataUnit.MEGABYTES.toBytes(100) /* policyWarning */,
+                LIMIT_DISABLED,
+                DataUnit.MEGABYTES.toBytes(12) /* defaultGlobalSetting */,
+                2_500_000 /* defaultResSetting */,
+                false /* roaming */);
+
+        final ArgumentCaptor<NetworkStatsManager.UsageCallback> usageCallbackCaptor =
+                ArgumentCaptor.forClass(NetworkStatsManager.UsageCallback.class);
+        final ArgumentCaptor<NetworkTemplate> networkTemplateCaptor =
+                ArgumentCaptor.forClass(NetworkTemplate.class);
+        // Verify the callback is registered with quota - used = 14 - 2 = 12MB.
+        verify(mStatsManager, times(1)).registerUsageCallback(
+                networkTemplateCaptor.capture(), eq(DataUnit.MEGABYTES.toBytes(12)), any(),
+                usageCallbackCaptor.capture());
+
+        // Capture arguments for later use.
+        final NetworkStatsManager.UsageCallback usageCallback = usageCallbackCaptor.getValue();
+        final NetworkTemplate template = networkTemplateCaptor.getValue();
+        assertNotNull(usageCallback);
+        assertNotNull(template);
+
+        // Decrease quota from 14 to 11, and trigger the event.
+        // TODO: Mock daily and monthly used bytes instead of changing subscription to simulate
+        //  remaining quota changed.
+        when(mNPMI.getSubscriptionOpportunisticQuota(TEST_NETWORK, QUOTA_TYPE_MULTIPATH))
+                .thenReturn(DataUnit.MEGABYTES.toBytes(11));
+        usageCallback.onThresholdReached(template);
+
+        // Callback must have been re-registered with new remaining quota = 11 - 2 = 9MB.
+        verify(mStatsManager, times(1))
+                .unregisterUsageCallback(eq(usageCallback));
+        verify(mStatsManager, times(1)).registerUsageCallback(
+                eq(template), eq(DataUnit.MEGABYTES.toBytes(9)), any(), eq(usageCallback));
     }
 }
