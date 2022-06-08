@@ -498,6 +498,31 @@ public class ClatCoordinator {
         }
     }
 
+    private void maybeCleanUp(ParcelFileDescriptor tunFd, ParcelFileDescriptor readSock6,
+            ParcelFileDescriptor writeSock6) {
+        if (tunFd != null) {
+            try {
+                tunFd.close();
+            } catch (IOException e) {
+                Log.e(TAG, "Fail to close tun file descriptor " + e);
+            }
+        }
+        if (readSock6 != null) {
+            try {
+                readSock6.close();
+            } catch (IOException e) {
+                Log.e(TAG, "Fail to close read socket " + e);
+            }
+        }
+        if (writeSock6 != null) {
+            try {
+                writeSock6.close();
+            } catch (IOException e) {
+                Log.e(TAG, "Fail to close write socket " + e);
+            }
+        }
+    }
+
     /**
      * Start clatd for a given interface and NAT64 prefix.
      */
@@ -546,8 +571,15 @@ public class ClatCoordinator {
 
         // [3] Open, configure and bring up the tun interface.
         // Create the v4-... tun interface.
+
+        // Initialize all required file descriptors with null pointer. This makes the following
+        // error handling easier. Simply always call #maybeCleanUp for closing file descriptors,
+        // if any valid ones, in error handling.
+        ParcelFileDescriptor tunFd = null;
+        ParcelFileDescriptor readSock6 = null;
+        ParcelFileDescriptor writeSock6 = null;
+
         final String tunIface = CLAT_PREFIX + iface;
-        final ParcelFileDescriptor tunFd;
         try {
             tunFd = mDeps.adoptFd(mDeps.createTunInterface(tunIface));
         } catch (IOException e) {
@@ -556,7 +588,7 @@ public class ClatCoordinator {
 
         final int tunIfIndex = mDeps.getInterfaceIndex(tunIface);
         if (tunIfIndex == INVALID_IFINDEX) {
-            tunFd.close();
+            maybeCleanUp(tunFd, readSock6, writeSock6);
             throw new IOException("Fail to get interface index for interface " + tunIface);
         }
 
@@ -564,7 +596,7 @@ public class ClatCoordinator {
         try {
             mNetd.interfaceSetEnableIPv6(tunIface, false /* enabled */);
         } catch (RemoteException | ServiceSpecificException e) {
-            tunFd.close();
+            maybeCleanUp(tunFd, readSock6, writeSock6);
             Log.e(TAG, "Disable IPv6 on " + tunIface + " failed: " + e);
         }
 
@@ -575,19 +607,17 @@ public class ClatCoordinator {
             detectedMtu = mDeps.detectMtu(pfx96Str,
                 ByteBuffer.wrap(GOOGLE_DNS_4.getAddress()).getInt(), fwmark);
         } catch (IOException e) {
-            tunFd.close();
+            maybeCleanUp(tunFd, readSock6, writeSock6);
             throw new IOException("Detect MTU on " + tunIface + " failed: " + e);
         }
         final int mtu = adjustMtu(detectedMtu);
         Log.i(TAG, "ipv4 mtu is " + mtu);
 
-        // TODO: add setIptablesDropRule
-
         // Config tun interface mtu, address and bring up.
         try {
             mNetd.interfaceSetMtu(tunIface, mtu);
         } catch (RemoteException | ServiceSpecificException e) {
-            tunFd.close();
+            maybeCleanUp(tunFd, readSock6, writeSock6);
             throw new IOException("Set MTU " + mtu + " on " + tunIface + " failed: " + e);
         }
         final InterfaceConfigurationParcel ifConfig = new InterfaceConfigurationParcel();
@@ -599,14 +629,13 @@ public class ClatCoordinator {
         try {
             mNetd.interfaceSetCfg(ifConfig);
         } catch (RemoteException | ServiceSpecificException e) {
-            tunFd.close();
+            maybeCleanUp(tunFd, readSock6, writeSock6);
             throw new IOException("Setting IPv4 address to " + ifConfig.ipv4Addr + "/"
                     + ifConfig.prefixLength + " failed on " + ifConfig.ifName + ": " + e);
         }
 
         // [4] Open and configure local 464xlat read/write sockets.
         // Opens a packet socket to receive IPv6 packets in clatd.
-        final ParcelFileDescriptor readSock6;
         try {
             // Use a JNI call to get native file descriptor instead of Os.socket() because we would
             // like to use ParcelFileDescriptor to manage file descriptor. But ctor
@@ -614,27 +643,23 @@ public class ClatCoordinator {
             // descriptor to initialize ParcelFileDescriptor object instead.
             readSock6 = mDeps.adoptFd(mDeps.openPacketSocket());
         } catch (IOException e) {
-            tunFd.close();
+            maybeCleanUp(tunFd, readSock6, writeSock6);
             throw new IOException("Open packet socket failed: " + e);
         }
 
         // Opens a raw socket with a given fwmark to send IPv6 packets in clatd.
-        final ParcelFileDescriptor writeSock6;
         try {
             // Use a JNI call to get native file descriptor instead of Os.socket(). See above
             // reason why we use jniOpenPacketSocket6().
             writeSock6 = mDeps.adoptFd(mDeps.openRawSocket6(fwmark));
         } catch (IOException e) {
-            tunFd.close();
-            readSock6.close();
+            maybeCleanUp(tunFd, readSock6, writeSock6);
             throw new IOException("Open raw socket failed: " + e);
         }
 
         final int ifIndex = mDeps.getInterfaceIndex(iface);
         if (ifIndex == INVALID_IFINDEX) {
-            tunFd.close();
-            readSock6.close();
-            writeSock6.close();
+            maybeCleanUp(tunFd, readSock6, writeSock6);
             throw new IOException("Fail to get interface index for interface " + iface);
         }
 
@@ -642,9 +667,7 @@ public class ClatCoordinator {
         try {
             mDeps.addAnycastSetsockopt(writeSock6.getFileDescriptor(), v6Str, ifIndex);
         } catch (IOException e) {
-            tunFd.close();
-            readSock6.close();
-            writeSock6.close();
+            maybeCleanUp(tunFd, readSock6, writeSock6);
             throw new IOException("add anycast sockopt failed: " + e);
         }
 
@@ -653,9 +676,7 @@ public class ClatCoordinator {
         try {
             cookie = mDeps.tagSocketAsClat(writeSock6.getFileDescriptor());
         } catch (IOException e) {
-            tunFd.close();
-            readSock6.close();
-            writeSock6.close();
+            maybeCleanUp(tunFd, readSock6, writeSock6);
             throw new IOException("tag raw socket failed: " + e);
         }
 
@@ -663,9 +684,7 @@ public class ClatCoordinator {
         try {
             mDeps.configurePacketSocket(readSock6.getFileDescriptor(), v6Str, ifIndex);
         } catch (IOException e) {
-            tunFd.close();
-            readSock6.close();
-            writeSock6.close();
+            maybeCleanUp(tunFd, readSock6, writeSock6);
             throw new IOException("configure packet socket failed: " + e);
         }
 
@@ -679,9 +698,9 @@ public class ClatCoordinator {
             mDeps.untagSocket(cookie);
             throw new IOException("Error start clatd on " + iface + ": " + e);
         } finally {
-            tunFd.close();
-            readSock6.close();
-            writeSock6.close();
+            // The file descriptors have been duplicated (dup2) to clatd in native_startClatd().
+            // Close these file descriptor stubs which are unused anymore.
+            maybeCleanUp(tunFd, readSock6, writeSock6);
         }
 
         // [6] Initialize and store clatd tracker object.
