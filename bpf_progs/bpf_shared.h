@@ -135,6 +135,7 @@ enum UidOwnerMatchType {
     LOCKDOWN_VPN_MATCH = (1 << 8),
     OEM_DENY_1_MATCH = (1 << 9),
     OEM_DENY_2_MATCH = (1 << 10),
+    OEM_DENY_3_MATCH = (1 << 11),
 };
 
 enum BpfPermissionMatch {
