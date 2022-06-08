@@ -790,6 +790,46 @@ TEST_F(TrafficControllerTest, TestDumpsys) {
     EXPECT_TRUE(expectDumpsysContains(expectedLines));
 }
 
+TEST_F(TrafficControllerTest, uidMatchTypeToString) {
+    // NO_MATCH(0) can't be verified because match type flag is added by OR operator.
+    // See TrafficController::addRule()
+    static const struct TestConfig {
+        UidOwnerMatchType uidOwnerMatchType;
+        std::string expected;
+    } testConfigs[] = {
+            // clang-format off
+            {HAPPY_BOX_MATCH, "HAPPY_BOX_MATCH"},
+            {DOZABLE_MATCH, "DOZABLE_MATCH"},
+            {STANDBY_MATCH, "STANDBY_MATCH"},
+            {POWERSAVE_MATCH, "POWERSAVE_MATCH"},
+            {HAPPY_BOX_MATCH, "HAPPY_BOX_MATCH"},
+            {RESTRICTED_MATCH, "RESTRICTED_MATCH"},
+            {LOW_POWER_STANDBY_MATCH, "LOW_POWER_STANDBY_MATCH"},
+            {IIF_MATCH, "IIF_MATCH"},
+            {LOCKDOWN_VPN_MATCH, "LOCKDOWN_VPN_MATCH"},
+            {OEM_DENY_1_MATCH, "OEM_DENY_1_MATCH"},
+            {OEM_DENY_2_MATCH, "OEM_DENY_2_MATCH"},
+            {OEM_DENY_3_MATCH, "OEM_DENY_3_MATCH"},
+            // clang-format on
+    };
+
+    for (const auto& config : testConfigs) {
+        SCOPED_TRACE(fmt::format("testConfig: [{}, {}]", config.uidOwnerMatchType,
+                     config.expected));
+
+        // Test private function uidMatchTypeToString() via dumpsys.
+        ASSERT_TRUE(isOk(updateUidOwnerMaps({TEST_UID}, config.uidOwnerMatchType,
+                                            TrafficController::IptOpInsert)));
+        std::vector<std::string> expectedLines;
+        expectedLines.emplace_back(fmt::format("{}  {}", TEST_UID, config.expected));
+        EXPECT_TRUE(expectDumpsysContains(expectedLines));
+
+        // Clean up the stubs.
+        ASSERT_TRUE(isOk(updateUidOwnerMaps({TEST_UID}, config.uidOwnerMatchType,
+                                            TrafficController::IptOpDelete)));
+    }
+}
+
 TEST_F(TrafficControllerTest, getFirewallType) {
     static const struct TestConfig {
         ChildChain childChain;
