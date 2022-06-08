@@ -675,7 +675,7 @@ class NetlinkListenerTest : public testing::Test {
     BpfMap<uint64_t, UidTagValue> mCookieTagMap;
 
     void SetUp() {
-        mCookieTagMap.reset(android::bpf::mapRetrieveRW(COOKIE_TAG_MAP_PATH));
+        mCookieTagMap.init(COOKIE_TAG_MAP_PATH);
         ASSERT_TRUE(mCookieTagMap.isValid());
     }
 
