@@ -57,6 +57,7 @@ import static android.net.ConnectivityManager.FIREWALL_CHAIN_LOCKDOWN_VPN;
 import static android.net.ConnectivityManager.FIREWALL_CHAIN_LOW_POWER_STANDBY;
 import static android.net.ConnectivityManager.FIREWALL_CHAIN_OEM_DENY_1;
 import static android.net.ConnectivityManager.FIREWALL_CHAIN_OEM_DENY_2;
+import static android.net.ConnectivityManager.FIREWALL_CHAIN_OEM_DENY_3;
 import static android.net.ConnectivityManager.FIREWALL_CHAIN_POWERSAVE;
 import static android.net.ConnectivityManager.FIREWALL_CHAIN_RESTRICTED;
 import static android.net.ConnectivityManager.FIREWALL_CHAIN_STANDBY;
@@ -9579,6 +9580,7 @@ public class ConnectivityServiceTest {
         doTestSetUidFirewallRule(FIREWALL_CHAIN_LOW_POWER_STANDBY, FIREWALL_RULE_DENY);
         doTestSetUidFirewallRule(FIREWALL_CHAIN_OEM_DENY_1, FIREWALL_RULE_ALLOW);
         doTestSetUidFirewallRule(FIREWALL_CHAIN_OEM_DENY_2, FIREWALL_RULE_ALLOW);
+        doTestSetUidFirewallRule(FIREWALL_CHAIN_OEM_DENY_3, FIREWALL_RULE_ALLOW);
     }
 
     @Test @IgnoreUpTo(SC_V2)
@@ -9590,7 +9592,8 @@ public class ConnectivityServiceTest {
                 FIREWALL_CHAIN_RESTRICTED,
                 FIREWALL_CHAIN_LOW_POWER_STANDBY,
                 FIREWALL_CHAIN_OEM_DENY_1,
-                FIREWALL_CHAIN_OEM_DENY_2);
+                FIREWALL_CHAIN_OEM_DENY_2,
+                FIREWALL_CHAIN_OEM_DENY_3);
         for (final int chain: firewallChains) {
             mCm.setFirewallChainEnabled(chain, true /* enabled */);
             verify(mBpfNetMaps).setChildChain(chain, true /* enable */);
@@ -9619,6 +9622,7 @@ public class ConnectivityServiceTest {
         doTestReplaceFirewallChain(FIREWALL_CHAIN_LOW_POWER_STANDBY, "fw_low_power_standby", true);
         doTestReplaceFirewallChain(FIREWALL_CHAIN_OEM_DENY_1, "fw_oem_deny_1", false);
         doTestReplaceFirewallChain(FIREWALL_CHAIN_OEM_DENY_2, "fw_oem_deny_2", false);
+        doTestReplaceFirewallChain(FIREWALL_CHAIN_OEM_DENY_3, "fw_oem_deny_3", false);
     }
 
     @Test @IgnoreUpTo(SC_V2)

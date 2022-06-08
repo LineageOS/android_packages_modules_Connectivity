@@ -21,6 +21,7 @@
 
 #include <gtest/gtest.h>
 
+#define TEST_BPF_MAP
 #include "BpfHandler.h"
 
 using namespace android::bpf;  // NOLINT(google-build-using-namespace): exempted
@@ -55,37 +56,29 @@ class BpfHandlerTest : public ::testing::Test {
         std::lock_guard guard(mBh.mMutex);
         ASSERT_EQ(0, setrlimitForTest());
 
-        mFakeCookieTagMap.reset(createMap(BPF_MAP_TYPE_HASH, sizeof(uint64_t), sizeof(UidTagValue),
-                                          TEST_MAP_SIZE, 0));
+        mFakeCookieTagMap.resetMap(BPF_MAP_TYPE_HASH, TEST_MAP_SIZE);
         ASSERT_VALID(mFakeCookieTagMap);
 
-        mFakeStatsMapA.reset(createMap(BPF_MAP_TYPE_HASH, sizeof(StatsKey), sizeof(StatsValue),
-                                       TEST_MAP_SIZE, 0));
+        mFakeStatsMapA.resetMap(BPF_MAP_TYPE_HASH, TEST_MAP_SIZE);
         ASSERT_VALID(mFakeStatsMapA);
 
-        mFakeConfigurationMap.reset(
-                createMap(BPF_MAP_TYPE_HASH, sizeof(uint32_t), sizeof(uint8_t), 1, 0));
+        mFakeConfigurationMap.resetMap(BPF_MAP_TYPE_HASH, 1);
         ASSERT_VALID(mFakeConfigurationMap);
 
-        mFakeUidPermissionMap.reset(
-                createMap(BPF_MAP_TYPE_HASH, sizeof(uint32_t), sizeof(uint8_t), TEST_MAP_SIZE, 0));
+        mFakeUidPermissionMap.resetMap(BPF_MAP_TYPE_HASH, TEST_MAP_SIZE, 0);
         ASSERT_VALID(mFakeUidPermissionMap);
 
-        mBh.mCookieTagMap.reset(dupFd(mFakeCookieTagMap.getMap()));
+        mBh.mCookieTagMap = mFakeCookieTagMap;
         ASSERT_VALID(mBh.mCookieTagMap);
-        mBh.mStatsMapA.reset(dupFd(mFakeStatsMapA.getMap()));
+        mBh.mStatsMapA = mFakeStatsMapA;
         ASSERT_VALID(mBh.mStatsMapA);
-        mBh.mConfigurationMap.reset(dupFd(mFakeConfigurationMap.getMap()));
+        mBh.mConfigurationMap = mFakeConfigurationMap;
         ASSERT_VALID(mBh.mConfigurationMap);
         // Always write to stats map A by default.
         ASSERT_RESULT_OK(mBh.mConfigurationMap.writeValue(CURRENT_STATS_MAP_CONFIGURATION_KEY,
                                                           SELECT_MAP_A, BPF_ANY));
-        mBh.mUidPermissionMap.reset(dupFd(mFakeUidPermissionMap.getMap()));
+        mBh.mUidPermissionMap = mFakeUidPermissionMap;
         ASSERT_VALID(mBh.mUidPermissionMap);
-    }
-
-    int dupFd(const android::base::unique_fd& mapFd) {
-        return fcntl(mapFd.get(), F_DUPFD_CLOEXEC, 0);
     }
 
     int setUpSocketAndTag(int protocol, uint64_t* cookie, uint32_t tag, uid_t uid,
