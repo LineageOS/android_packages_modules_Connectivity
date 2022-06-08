@@ -805,6 +805,7 @@ TEST_F(TrafficControllerTest, getFirewallType) {
             {LOCKDOWN, DENYLIST},
             {OEM_DENY_1, DENYLIST},
             {OEM_DENY_2, DENYLIST},
+            {OEM_DENY_3, DENYLIST},
             {INVALID_CHAIN, DENYLIST},
             // clang-format on
     };
