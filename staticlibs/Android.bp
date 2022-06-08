@@ -127,7 +127,6 @@ java_library {
         "//frameworks/libs/net/common/testutils:__subpackages__",
         "//packages/modules/Connectivity:__subpackages__",
         "//packages/modules/NetworkStack:__subpackages__",
-        "//frameworks/base/services/core",
     ],
     libs: [
         "androidx.annotation_annotation",
