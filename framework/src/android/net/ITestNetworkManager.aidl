@@ -29,8 +29,8 @@ import android.os.ParcelFileDescriptor;
  */
 interface ITestNetworkManager
 {
-    TestNetworkInterface createInterface(boolean isTun, boolean bringUp, in LinkAddress[] addrs,
-            in @nullable String iface);
+    TestNetworkInterface createInterface(boolean isTun, boolean hasCarrier, boolean bringUp,
+            in LinkAddress[] addrs, in @nullable String iface);
 
     void setCarrierEnabled(in TestNetworkInterface iface, boolean enabled);
 

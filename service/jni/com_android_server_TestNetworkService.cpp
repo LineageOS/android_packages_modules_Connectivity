@@ -59,7 +59,7 @@ static void setTunTapCarrierEnabledImpl(JNIEnv* env, const char* iface, int tunF
     }
 }
 
-static int createTunTapImpl(JNIEnv* env, bool isTun, const char* iface) {
+static int createTunTapImpl(JNIEnv* env, bool isTun, bool hasCarrier, const char* iface) {
     base::unique_fd tun(open("/dev/tun", O_RDWR | O_NONBLOCK));
     ifreq ifr{};
 
@@ -69,6 +69,11 @@ static int createTunTapImpl(JNIEnv* env, bool isTun, const char* iface) {
     if (ioctl(tun.get(), TUNSETIFF, &ifr)) {
         throwException(env, errno, "allocating", ifr.ifr_name);
         return -1;
+    }
+
+    if (!hasCarrier) {
+        // disable carrier before setting IFF_UP
+        setTunTapCarrierEnabledImpl(env, iface, tun.get(), hasCarrier);
     }
 
     // Activate interface using an unconnected datagram socket.
@@ -96,21 +101,22 @@ static void setTunTapCarrierEnabled(JNIEnv* env, jclass /* clazz */, jstring
     setTunTapCarrierEnabledImpl(env, iface.c_str(), tunFd, enabled);
 }
 
-static jint createTunTap(JNIEnv* env, jclass /* clazz */, jboolean isTun, jstring jIface) {
+static jint createTunTap(JNIEnv* env, jclass /* clazz */, jboolean isTun,
+                             jboolean hasCarrier, jstring jIface) {
     ScopedUtfChars iface(env, jIface);
     if (!iface.c_str()) {
         jniThrowNullPointerException(env, "iface");
         return -1;
     }
 
-    return createTunTapImpl(env, isTun, iface.c_str());
+    return createTunTapImpl(env, isTun, hasCarrier, iface.c_str());
 }
 
 //------------------------------------------------------------------------------
 
 static const JNINativeMethod gMethods[] = {
     {"nativeSetTunTapCarrierEnabled", "(Ljava/lang/String;IZ)V", (void*)setTunTapCarrierEnabled},
-    {"nativeCreateTunTap", "(ZLjava/lang/String;)I", (void*)createTunTap},
+    {"nativeCreateTunTap", "(ZZLjava/lang/String;)I", (void*)createTunTap},
 };
 
 int register_com_android_server_TestNetworkService(JNIEnv* env) {

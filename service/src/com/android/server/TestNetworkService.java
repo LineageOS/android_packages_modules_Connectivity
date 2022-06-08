@@ -77,7 +77,8 @@ class TestNetworkService extends ITestNetworkManager.Stub {
     @NonNull private final NetworkProvider mNetworkProvider;
 
     // Native method stubs
-    private static native int nativeCreateTunTap(boolean isTun, @NonNull String iface);
+    private static native int nativeCreateTunTap(boolean isTun, boolean hasCarrier,
+            @NonNull String iface);
 
     private static native void nativeSetTunTapCarrierEnabled(@NonNull String iface, int tunFd,
             boolean enabled);
@@ -118,7 +119,7 @@ class TestNetworkService extends ITestNetworkManager.Stub {
      * interface.
      */
     @Override
-    public TestNetworkInterface createInterface(boolean isTun, boolean bringUp,
+    public TestNetworkInterface createInterface(boolean isTun, boolean hasCarrier, boolean bringUp,
             LinkAddress[] linkAddrs, @Nullable String iface) {
         enforceTestNetworkPermissions(mContext);
 
@@ -134,8 +135,8 @@ class TestNetworkService extends ITestNetworkManager.Stub {
 
         final long token = Binder.clearCallingIdentity();
         try {
-            ParcelFileDescriptor tunIntf =
-                    ParcelFileDescriptor.adoptFd(nativeCreateTunTap(isTun, interfaceName));
+            ParcelFileDescriptor tunIntf = ParcelFileDescriptor.adoptFd(
+                    nativeCreateTunTap(isTun, hasCarrier, interfaceName));
             for (LinkAddress addr : linkAddrs) {
                 mNetd.interfaceAddAddress(
                         interfaceName,
