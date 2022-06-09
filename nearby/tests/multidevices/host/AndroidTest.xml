@@ -11,7 +11,17 @@
      limitations under the License.
 -->
 <configuration description="Config for CTS Nearby Mainline multi devices end-to-end test suite">
-    <option name="test-suite-tag" value="cts" />
+    <!-- Only run tests if the device under test is SDK version 33 (Android 13) or above. -->
+    <object type="module_controller"
+            class="com.android.tradefed.testtype.suite.module.Sdk33ModuleController" />
+    <!-- Only run NearbyMultiDevicesTestSuite in MTS if the Nearby Mainline module is installed. -->
+    <object type="module_controller"
+            class="com.android.tradefed.testtype.suite.module.MainlineTestModuleController">
+        <option name="mainline-module-package-name" value="com.google.android.tethering" />
+    </object>
+
+    <option name="test-suite-tag" value="apct" />
+    <option name="test-tag" value="NearbyMultiDevicesTestSuite" />
     <option name="config-descriptor:metadata" key="component" value="wifi" />
     <option name="config-descriptor:metadata" key="parameter" value="not_instant_app" />
     <option name="config-descriptor:metadata" key="parameter" value="not_multi_abi" />
@@ -119,7 +129,7 @@
 
     <test class="com.android.tradefed.testtype.mobly.MoblyBinaryHostTest">
       <!-- The mobly-par-file-name should match the module name -->
-      <option name="mobly-par-file-name" value="CtsNearbyMultiDevicesTestSuite" />
+      <option name="mobly-par-file-name" value="NearbyMultiDevicesTestSuite" />
       <!-- Timeout limit in milliseconds for all test cases of the python binary -->
       <option name="mobly-test-timeout" value="60000" />
     </test>
