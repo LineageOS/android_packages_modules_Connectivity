@@ -71,7 +71,7 @@ java_library {
         "net-tests-utils",
     ],
     libs: [
-        "service-connectivity",
+        "service-connectivity-for-tests",
         "services.core",
         "services.net",
     ],
