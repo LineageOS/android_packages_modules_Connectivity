@@ -68,6 +68,7 @@ constexpr int TXPACKETS = 0;
 constexpr int TXBYTES = 0;
 
 #define ASSERT_VALID(x) ASSERT_TRUE((x).isValid())
+#define ASSERT_INVALID(x) ASSERT_FALSE((x).isValid())
 
 class TrafficControllerTest : public ::testing::Test {
   protected:
@@ -76,6 +77,8 @@ class TrafficControllerTest : public ::testing::Test {
     BpfMap<uint64_t, UidTagValue> mFakeCookieTagMap;
     BpfMap<uint32_t, StatsValue> mFakeAppUidStatsMap;
     BpfMap<StatsKey, StatsValue> mFakeStatsMapA;
+    BpfMap<StatsKey, StatsValue> mFakeStatsMapB;  // makeTrafficControllerMapsInvalid only
+    BpfMap<uint32_t, StatsValue> mFakeIfaceStatsMap; ;  // makeTrafficControllerMapsInvalid only
     BpfMap<uint32_t, uint32_t> mFakeConfigurationMap;
     BpfMap<uint32_t, UidOwnerValue> mFakeUidOwnerMap;
     BpfMap<uint32_t, uint8_t> mFakeUidPermissionMap;
@@ -355,6 +358,52 @@ class TrafficControllerTest : public ::testing::Test {
             return false;
         }
         return true;
+    }
+
+    // Once called, the maps of TrafficController can't recover to valid maps which initialized
+    // in SetUp().
+    void makeTrafficControllerMapsInvalid() {
+        constexpr char INVALID_PATH[] = "invalid";
+
+        mFakeCookieTagMap.init(INVALID_PATH);
+        mTc.mCookieTagMap = mFakeCookieTagMap;
+        ASSERT_INVALID(mTc.mCookieTagMap);
+
+        mFakeAppUidStatsMap.init(INVALID_PATH);
+        mTc.mAppUidStatsMap = mFakeAppUidStatsMap;
+        ASSERT_INVALID(mTc.mAppUidStatsMap);
+
+        mFakeStatsMapA.init(INVALID_PATH);
+        mTc.mStatsMapA = mFakeStatsMapA;
+        ASSERT_INVALID(mTc.mStatsMapA);
+
+        mFakeStatsMapB.init(INVALID_PATH);
+        mTc.mStatsMapB = mFakeStatsMapB;
+        ASSERT_INVALID(mTc.mStatsMapB);
+
+        mFakeIfaceStatsMap.init(INVALID_PATH);
+        mTc.mIfaceStatsMap = mFakeIfaceStatsMap;
+        ASSERT_INVALID(mTc.mIfaceStatsMap);
+
+        mFakeConfigurationMap.init(INVALID_PATH);
+        mTc.mConfigurationMap = mFakeConfigurationMap;
+        ASSERT_INVALID(mTc.mConfigurationMap);
+
+        mFakeUidOwnerMap.init(INVALID_PATH);
+        mTc.mUidOwnerMap = mFakeUidOwnerMap;
+        ASSERT_INVALID(mTc.mUidOwnerMap);
+
+        mFakeUidPermissionMap.init(INVALID_PATH);
+        mTc.mUidPermissionMap = mFakeUidPermissionMap;
+        ASSERT_INVALID(mTc.mUidPermissionMap);
+
+        mFakeUidCounterSetMap.init(INVALID_PATH);
+        mTc.mUidCounterSetMap = mFakeUidCounterSetMap;
+        ASSERT_INVALID(mTc.mUidCounterSetMap);
+
+        mFakeIfaceIndexNameMap.init(INVALID_PATH);
+        mTc.mIfaceIndexNameMap = mFakeIfaceIndexNameMap;
+        ASSERT_INVALID(mTc.mIfaceIndexNameMap);
     }
 };
 
@@ -787,6 +836,26 @@ TEST_F(TrafficControllerTest, TestDumpsys) {
     expectedLines.emplace_back(fmt::format("{}  BPF_PERMISSION_UPDATE_DEVICE_STATS", TEST_UID2));
     expectedLines.emplace_back("mPrivilegedUser:");
     expectedLines.emplace_back(fmt::format("{} ALLOW_UPDATE_DEVICE_STATS", TEST_UID2));
+    EXPECT_TRUE(expectDumpsysContains(expectedLines));
+}
+
+TEST_F(TrafficControllerTest, dumpsysInvalidMaps) {
+    makeTrafficControllerMapsInvalid();
+
+    std::vector<std::string> expectedLines = {
+        "mCookieTagMap print end with error: Get firstKey map -1 failed: Bad file descriptor",
+        "mUidCounterSetMap print end with error: Get firstKey map -1 failed: Bad file descriptor",
+        "mAppUidStatsMap print end with error: Get firstKey map -1 failed: Bad file descriptor",
+        "mStatsMapA print end with error: Get firstKey map -1 failed: Bad file descriptor",
+        "mStatsMapB print end with error: Get firstKey map -1 failed: Bad file descriptor",
+        "mIfaceIndexNameMap print end with error: Get firstKey map -1 failed: Bad file descriptor",
+        "mIfaceStatsMap print end with error: Get firstKey map -1 failed: Bad file descriptor",
+        "mConfigurationMap read ownerMatch configure failed with error: "
+                "Read value of map -1 failed: Bad file descriptor",
+        "mConfigurationMap read stats map configure failed with error: "
+                "Read value of map -1 failed: Bad file descriptor",
+        "mUidOwnerMap print end with error: Get firstKey map -1 failed: Bad file descriptor",
+        "mUidPermissionMap print end with error: Get firstKey map -1 failed: Bad file descriptor"};
     EXPECT_TRUE(expectDumpsysContains(expectedLines));
 }
 
