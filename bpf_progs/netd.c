@@ -189,6 +189,11 @@ static __always_inline BpfConfig getConfig(uint32_t configKey) {
     return *config;
 }
 
+// DROP_IF_SET is set of rules that BPF_DROP if rule is globally enabled, and per-uid bit is set
+#define DROP_IF_SET (STANDBY_MATCH | OEM_DENY_1_MATCH | OEM_DENY_2_MATCH | OEM_DENY_3_MATCH)
+// DROP_IF_UNSET is set of rules that should DROP if globally enabled, and per-uid bit is NOT set
+#define DROP_IF_UNSET (DOZABLE_MATCH | POWERSAVE_MATCH | RESTRICTED_MATCH | LOW_POWER_STANDBY_MATCH)
+
 static inline int bpf_owner_match(struct __sk_buff* skb, uint32_t uid, int direction) {
     if (skip_owner_match(skb)) return BPF_PASS;
 
@@ -200,32 +205,13 @@ static inline int bpf_owner_match(struct __sk_buff* skb, uint32_t uid, int direc
     uint32_t uidRules = uidEntry ? uidEntry->rule : 0;
     uint32_t allowed_iif = uidEntry ? uidEntry->iif : 0;
 
-    if (enabledRules) {
-        if ((enabledRules & DOZABLE_MATCH) && !(uidRules & DOZABLE_MATCH)) {
-            return BPF_DROP;
-        }
-        if ((enabledRules & STANDBY_MATCH) && (uidRules & STANDBY_MATCH)) {
-            return BPF_DROP;
-        }
-        if ((enabledRules & POWERSAVE_MATCH) && !(uidRules & POWERSAVE_MATCH)) {
-            return BPF_DROP;
-        }
-        if ((enabledRules & RESTRICTED_MATCH) && !(uidRules & RESTRICTED_MATCH)) {
-            return BPF_DROP;
-        }
-        if ((enabledRules & LOW_POWER_STANDBY_MATCH) && !(uidRules & LOW_POWER_STANDBY_MATCH)) {
-            return BPF_DROP;
-        }
-        if ((enabledRules & OEM_DENY_1_MATCH) && (uidRules & OEM_DENY_1_MATCH)) {
-            return BPF_DROP;
-        }
-        if ((enabledRules & OEM_DENY_2_MATCH) && (uidRules & OEM_DENY_2_MATCH)) {
-            return BPF_DROP;
-        }
-        if ((enabledRules & OEM_DENY_3_MATCH) && (uidRules & OEM_DENY_3_MATCH)) {
-            return BPF_DROP;
-        }
-    }
+    // Warning: funky bit-wise arithmetic: in parallel, for all DROP_IF_SET/UNSET rules
+    // check whether the rules are globally enabled, and if so whether the rules are
+    // set/unset for the specific uid.  BPF_DROP if that is the case for ANY of the rules.
+    // We achieve this by masking out only the bits/rules we're interested in checking,
+    // and negating (via bit-wise xor) the bits/rules that should drop if unset.
+    if (enabledRules & (DROP_IF_SET | DROP_IF_UNSET) & (uidRules ^ DROP_IF_UNSET)) return BPF_DROP;
+
     if (direction == BPF_INGRESS && skb->ifindex != 1) {
         if (uidRules & IIF_MATCH) {
             if (allowed_iif && skb->ifindex != allowed_iif) {
