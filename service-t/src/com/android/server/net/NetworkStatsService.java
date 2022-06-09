@@ -1597,11 +1597,6 @@ public class NetworkStatsService extends INetworkStatsService.Stub {
 
     @Override
     public String[] getMobileIfaces() {
-        // TODO (b/192758557): Remove debug log.
-        if (CollectionUtils.contains(mMobileIfaces, null)) {
-            throw new NullPointerException(
-                    "null element in mMobileIfaces: " + Arrays.toString(mMobileIfaces));
-        }
         return mMobileIfaces.clone();
     }
 
@@ -2072,11 +2067,6 @@ public class NetworkStatsService extends INetworkStatsService.Stub {
         }
 
         mMobileIfaces = mobileIfaces.toArray(new String[0]);
-        // TODO (b/192758557): Remove debug log.
-        if (CollectionUtils.contains(mMobileIfaces, null)) {
-            throw new NullPointerException(
-                    "null element in mMobileIfaces: " + Arrays.toString(mMobileIfaces));
-        }
     }
 
     private static int getSubIdForMobile(@NonNull NetworkStateSnapshot state) {
