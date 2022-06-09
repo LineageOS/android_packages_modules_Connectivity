@@ -71,7 +71,7 @@ public final class PresenceScanFilter extends ScanFilter implements Parcelable {
         super(ScanRequest.SCAN_TYPE_NEARBY_PRESENCE, rssiThreshold);
         mCredentials = new ArrayList<>(credentials);
         mPresenceActions = new ArrayList<>(presenceActions);
-        mExtendedProperties = extendedProperties;
+        mExtendedProperties = new ArrayList<>(extendedProperties);
     }
 
     private PresenceScanFilter(Parcel in) {
