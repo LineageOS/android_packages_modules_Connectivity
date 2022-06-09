@@ -43,6 +43,7 @@ import com.android.server.nearby.common.locator.LocatorContextWrapper;
 import com.android.server.nearby.fastpair.FastPairManager;
 import com.android.server.nearby.injector.ContextHubManagerAdapter;
 import com.android.server.nearby.injector.Injector;
+import com.android.server.nearby.presence.PresenceManager;
 import com.android.server.nearby.provider.BroadcastProviderManager;
 import com.android.server.nearby.provider.DiscoveryProviderManager;
 import com.android.server.nearby.provider.FastPairDataProvider;
@@ -53,10 +54,12 @@ import com.android.server.nearby.util.permissions.DiscoveryPermissions;
 /** Service implementing nearby functionality. */
 public class NearbyService extends INearbyManager.Stub {
     public static final String TAG = "NearbyService";
+    public static final Boolean MANUAL_TEST = false;
 
     private final Context mContext;
     private Injector mInjector;
     private final FastPairManager mFastPairManager;
+    private final PresenceManager mPresenceManager;
     private final BroadcastReceiver mBluetoothReceiver =
             new BroadcastReceiver() {
                 @Override
@@ -84,6 +87,7 @@ public class NearbyService extends INearbyManager.Stub {
         mBroadcastProviderManager = new BroadcastProviderManager(context, mInjector);
         final LocatorContextWrapper lcw = new LocatorContextWrapper(context, null);
         mFastPairManager = new FastPairManager(lcw);
+        mPresenceManager = new PresenceManager(lcw);
     }
 
     @VisibleForTesting
@@ -163,10 +167,15 @@ public class NearbyService extends INearbyManager.Stub {
                     // Initialize ContextManager for CHRE scan.
                     ((SystemInjector) mInjector).initializeContextHubManagerAdapter();
                 }
+                mProviderManager.init();
                 mContext.registerReceiver(
                         mBluetoothReceiver,
                         new IntentFilter(BluetoothAdapter.ACTION_STATE_CHANGED));
                 mFastPairManager.initiate();
+                // Only enable for manual Presence test on device.
+                if (MANUAL_TEST) {
+                    mPresenceManager.initiate();
+                }
                 break;
         }
     }
