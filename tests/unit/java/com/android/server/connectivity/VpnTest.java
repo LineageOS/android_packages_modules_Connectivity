@@ -1315,7 +1315,7 @@ public class VpnTest {
                 config -> Arrays.asList(config.flags).contains(flag)));
     }
 
-    private void setupPlatformVpnWithSpecificExceptionAndItsErrorCode(IkeException exception,
+    private void doTestPlatformVpnWithException(IkeException exception,
             String category, int errorType, int errorCode) throws Exception {
         final ArgumentCaptor<IkeSessionCallback> captor =
                 ArgumentCaptor.forClass(IkeSessionCallback.class);
@@ -1333,6 +1333,7 @@ public class VpnTest {
         // state
         verify(mIkev2SessionCreator, timeout(TEST_TIMEOUT_MS))
                 .createIkeSession(any(), any(), any(), any(), captor.capture(), any());
+        reset(mIkev2SessionCreator);
         final IkeSessionCallback ikeCb = captor.getValue();
         ikeCb.onClosedWithException(exception);
 
@@ -1342,6 +1343,23 @@ public class VpnTest {
         if (errorType == VpnManager.ERROR_CLASS_NOT_RECOVERABLE) {
             verify(mConnectivityManager, timeout(TEST_TIMEOUT_MS))
                     .unregisterNetworkCallback(eq(cb));
+        } else if (errorType == VpnManager.ERROR_CLASS_RECOVERABLE) {
+            // To prevent spending much time to test the retry function, only retry 2 times here.
+            int retryIndex = 0;
+            verify(mIkev2SessionCreator,
+                    timeout(((TestDeps) vpn.mDeps).getNextRetryDelaySeconds(retryIndex++) * 1000
+                            + TEST_TIMEOUT_MS))
+                    .createIkeSession(any(), any(), any(), any(), captor.capture(), any());
+
+            // Capture a new IkeSessionCallback to get the latest token.
+            reset(mIkev2SessionCreator);
+            final IkeSessionCallback ikeCb2 = captor.getValue();
+            ikeCb2.onClosedWithException(exception);
+            verify(mIkev2SessionCreator,
+                    timeout(((TestDeps) vpn.mDeps).getNextRetryDelaySeconds(retryIndex++) * 1000
+                            + TEST_TIMEOUT_MS))
+                    .createIkeSession(any(), any(), any(), any(), captor.capture(), any());
+            reset(mIkev2SessionCreator);
         }
     }
 
@@ -1350,7 +1368,7 @@ public class VpnTest {
         final IkeProtocolException exception = mock(IkeProtocolException.class);
         final int errorCode = IkeProtocolException.ERROR_TYPE_AUTHENTICATION_FAILED;
         when(exception.getErrorType()).thenReturn(errorCode);
-        setupPlatformVpnWithSpecificExceptionAndItsErrorCode(exception,
+        doTestPlatformVpnWithException(exception,
                 VpnManager.CATEGORY_EVENT_IKE_ERROR, VpnManager.ERROR_CLASS_NOT_RECOVERABLE,
                 errorCode);
     }
@@ -1360,7 +1378,7 @@ public class VpnTest {
         final IkeProtocolException exception = mock(IkeProtocolException.class);
         final int errorCode = IkeProtocolException.ERROR_TYPE_TEMPORARY_FAILURE;
         when(exception.getErrorType()).thenReturn(errorCode);
-        setupPlatformVpnWithSpecificExceptionAndItsErrorCode(exception,
+        doTestPlatformVpnWithException(exception,
                 VpnManager.CATEGORY_EVENT_IKE_ERROR, VpnManager.ERROR_CLASS_RECOVERABLE, errorCode);
     }
 
@@ -1370,7 +1388,7 @@ public class VpnTest {
         final UnknownHostException unknownHostException = new UnknownHostException();
         final int errorCode = VpnManager.ERROR_CODE_NETWORK_UNKNOWN_HOST;
         when(exception.getCause()).thenReturn(unknownHostException);
-        setupPlatformVpnWithSpecificExceptionAndItsErrorCode(exception,
+        doTestPlatformVpnWithException(exception,
                 VpnManager.CATEGORY_EVENT_NETWORK_ERROR, VpnManager.ERROR_CLASS_RECOVERABLE,
                 errorCode);
     }
@@ -1382,7 +1400,7 @@ public class VpnTest {
                 new IkeTimeoutException("IkeTimeoutException");
         final int errorCode = VpnManager.ERROR_CODE_NETWORK_PROTOCOL_TIMEOUT;
         when(exception.getCause()).thenReturn(ikeTimeoutException);
-        setupPlatformVpnWithSpecificExceptionAndItsErrorCode(exception,
+        doTestPlatformVpnWithException(exception,
                 VpnManager.CATEGORY_EVENT_NETWORK_ERROR, VpnManager.ERROR_CLASS_RECOVERABLE,
                 errorCode);
     }
@@ -1391,7 +1409,7 @@ public class VpnTest {
     public void testStartPlatformVpnFailedWithIkeNetworkLostException() throws Exception {
         final IkeNetworkLostException exception = new IkeNetworkLostException(
                 new Network(100));
-        setupPlatformVpnWithSpecificExceptionAndItsErrorCode(exception,
+        doTestPlatformVpnWithException(exception,
                 VpnManager.CATEGORY_EVENT_NETWORK_ERROR, VpnManager.ERROR_CLASS_RECOVERABLE,
                 VpnManager.ERROR_CODE_NETWORK_LOST);
     }
@@ -1402,7 +1420,7 @@ public class VpnTest {
         final IOException ioException = new IOException();
         final int errorCode = VpnManager.ERROR_CODE_NETWORK_IO;
         when(exception.getCause()).thenReturn(ioException);
-        setupPlatformVpnWithSpecificExceptionAndItsErrorCode(exception,
+        doTestPlatformVpnWithException(exception,
                 VpnManager.CATEGORY_EVENT_NETWORK_ERROR, VpnManager.ERROR_CLASS_RECOVERABLE,
                 errorCode);
     }
@@ -1693,6 +1711,11 @@ public class VpnTest {
         @Override
         public DeviceIdleInternal getDeviceIdleInternal() {
             return mDeviceIdleInternal;
+        }
+
+        public long getNextRetryDelaySeconds(int retryCount) {
+            // Simply return retryCount as the delay seconds for retrying.
+            return retryCount;
         }
     }
 
