@@ -16,6 +16,8 @@
 
 package com.android.cts.net;
 
+import android.platform.test.annotations.FlakyTest;
+
 public class HostsideConnOnActivityStartTest extends HostsideNetworkTestCase {
     private static final String TEST_CLASS = TEST_PKG + ".ConnOnActivityStartTest";
     @Override
@@ -41,6 +43,7 @@ public class HostsideConnOnActivityStartTest extends HostsideNetworkTestCase {
         runDeviceTests(TEST_PKG, TEST_CLASS, "testStartActivity_dataSaver");
     }
 
+    @FlakyTest(bugId = 231440256)
     public void testStartActivity_doze() throws Exception {
         runDeviceTests(TEST_PKG, TEST_CLASS, "testStartActivity_doze");
     }
