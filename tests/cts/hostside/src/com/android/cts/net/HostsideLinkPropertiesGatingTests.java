@@ -22,6 +22,9 @@ import java.util.Set;
 
 /**
  * Tests for the {@link android.net.LinkProperties#EXCLUDED_ROUTES} compatibility change.
+ *
+ * TODO: see if we can delete this cumbersome host test by moving the coverage to CtsNetTestCases
+ * and CtsNetTestCasesMaxTargetSdk31.
  */
 public class HostsideLinkPropertiesGatingTests extends CompatChangeGatingTestCase {
     private static final String TEST_APK = "CtsHostsideNetworkTestsApp3.apk";
@@ -45,8 +48,19 @@ public class HostsideLinkPropertiesGatingTests extends CompatChangeGatingTestCas
         runDeviceCompatTest("testExcludedRoutesChangeDisabled");
     }
 
-    public void testExcludedRoutesChangeDisabledByOverride() throws Exception {
+    public void testExcludedRoutesChangeDisabledByOverrideOnDebugBuild() throws Exception {
+        // Must install APK even when skipping test, because tearDown expects uninstall to succeed.
         installPackage(TEST_APK, true);
+
+        // This test uses an app with a target SDK where the compat change is on by default.
+        // Because user builds do not allow overriding compat changes, only run this test on debug
+        // builds. This seems better than deleting this test and not running it anywhere because we
+        // could in the future run this test on userdebug builds in presubmit.
+        //
+        // We cannot use assumeXyz here because CompatChangeGatingTestCase ultimately inherits from
+        // junit.framework.TestCase, which does not understand assumption failures.
+        if ("user".equals(getDevice().getProperty("ro.build.type"))) return;
+
         runDeviceCompatTestWithChangeDisabled("testExcludedRoutesChangeDisabled");
     }
 
