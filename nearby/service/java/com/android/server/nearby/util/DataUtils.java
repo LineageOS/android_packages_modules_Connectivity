@@ -57,11 +57,9 @@ public final class DataUtils {
      */
     public static String toString(ScanFastPairStoreItem item) {
         return "ScanFastPairStoreItem=[address:" + item.getAddress()
-                + ", actionUr:" + item.getActionUrl()
+                + ", actionUrl:" + item.getActionUrl()
                 + ", deviceName:" + item.getDeviceName()
-                + ", iconPng:" + item.getIconPng()
                 + ", iconFifeUrl:" + item.getIconFifeUrl()
-                + ", antiSpoofingKeyPair:" + item.getAntiSpoofingPublicKey()
                 + ", fastPairStrings:" + toString(item.getFastPairStrings())
                 + "]";
     }

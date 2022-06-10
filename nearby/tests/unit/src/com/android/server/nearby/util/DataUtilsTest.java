@@ -107,6 +107,24 @@ public final class DataUtilsTest {
     public void test_toString() {
         Cache.ScanFastPairStoreItem item = DataUtils.toScanFastPairStoreItem(
                 createObservedDeviceResponse(), BLUETOOTH_ADDRESS, ACCOUNT);
+
+        assertThat(DataUtils.toString(item))
+                .isEqualTo("ScanFastPairStoreItem=[address:00:11:22:33:FF:EE, "
+                        + "actionUrl:intent:#Intent;action=cto_be_set%3AACTION_MAGIC_PAIR;"
+                        + "package=to_be_set;component=to_be_set;"
+                        + "to_be_set%3AEXTRA_COMPANION_APP=test_package;"
+                        + "end, deviceName:My device, "
+                        + "iconFifeUrl:device_image_url, "
+                        + "fastPairStrings:FastPairStrings[tapToPairWithAccount=message 1, "
+                        + "tapToPairWithoutAccount=message 2, "
+                        + "initialPairingDescription=message 3 My device, "
+                        + "pairingFinishedCompanionAppInstalled=message 4, "
+                        + "pairingFinishedCompanionAppNotInstalled=message 5, "
+                        + "subsequentPairingDescription=message 6, "
+                        + "retroactivePairingDescription=message 7, "
+                        + "waitAppLaunchDescription=message 8, "
+                        + "pairingFailDescription=message 9]]");
+
         FastPairStrings strings = item.getFastPairStrings();
 
         assertThat(DataUtils.toString(strings))
