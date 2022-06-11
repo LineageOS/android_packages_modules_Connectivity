@@ -64,7 +64,6 @@ java_defaults {
         ":framework-connectivity-sources",
         ":net-utils-framework-common-srcs",
         ":framework-connectivity-api-shared-srcs",
-        ":framework-connectivity-javastream-protos",
     ],
     aidl: {
         generate_get_transaction_name: true,
@@ -90,6 +89,7 @@ java_defaults {
         "modules-utils-backgroundthread",
         "modules-utils-build",
         "modules-utils-preconditions",
+        "framework-connectivity-javastream-protos",
     ],
     libs: [
         "app-compat-annotations",
@@ -197,28 +197,16 @@ filegroup {
     visibility: ["//frameworks/base"],
 }
 
-gensrcs {
+java_library {
     name: "framework-connectivity-javastream-protos",
-    depfile: true,
-
-    tools: [
-        "aprotoc",
-        "protoc-gen-javastream",
-        "soong_zip",
+    proto: {
+        type: "stream",
+    },
+    srcs: [":framework-connectivity-protos"],
+    installable: false,
+    sdk_version: "module_current",
+    min_sdk_version: "30",
+    apex_available: [
+        "com.android.tethering",
     ],
-
-    cmd: "mkdir -p $(genDir)/$(in) " +
-        "&& $(location aprotoc) " +
-        "  --plugin=$(location protoc-gen-javastream) " +
-        "  --dependency_out=$(depfile) " +
-        "  --javastream_out=$(genDir)/$(in) " +
-        "  -Iexternal/protobuf/src " +
-        "  -I . " +
-        "  $(in) " +
-        "&& $(location soong_zip) -jar -o $(out) -C $(genDir)/$(in) -D $(genDir)/$(in)",
-
-    srcs: [
-        ":framework-connectivity-protos",
-    ],
-    output_extension: "srcjar",
 }
