@@ -596,7 +596,6 @@ public class ClatCoordinator {
         try {
             mNetd.interfaceSetEnableIPv6(tunIface, false /* enabled */);
         } catch (RemoteException | ServiceSpecificException e) {
-            maybeCleanUp(tunFd, readSock6, writeSock6);
             Log.e(TAG, "Disable IPv6 on " + tunIface + " failed: " + e);
         }
 
