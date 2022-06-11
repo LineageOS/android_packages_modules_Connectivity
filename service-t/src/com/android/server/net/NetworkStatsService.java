@@ -76,8 +76,10 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
+import android.content.res.Resources;
 import android.database.ContentObserver;
 import android.net.ConnectivityManager;
+import android.net.ConnectivityResources;
 import android.net.DataUsageRequest;
 import android.net.INetd;
 import android.net.INetworkStatsService;
@@ -140,6 +142,7 @@ import android.util.Log;
 import android.util.SparseIntArray;
 import android.util.proto.ProtoOutputStream;
 
+import com.android.connectivity.resources.R;
 import com.android.internal.annotations.GuardedBy;
 import com.android.internal.annotations.VisibleForTesting;
 import com.android.internal.util.FileRotator;
@@ -765,6 +768,11 @@ public class NetworkStatsService extends INetworkStatsService.Stub {
                 return null;
             }
         }
+
+        /** Gets whether the build is userdebug. */
+        public boolean isDebuggable() {
+            return Build.isDebuggable();
+        }
     }
 
     /**
@@ -927,18 +935,27 @@ public class NetworkStatsService extends INetworkStatsService.Stub {
         final int targetAttempts = mDeps.getImportLegacyTargetAttempts();
         final int attempts;
         final int fallbacks;
+        final boolean runComparison;
         try {
             attempts = mImportLegacyAttemptsCounter.get();
+            // Fallbacks counter would be set to non-zero value to indicate the migration was
+            // not successful.
             fallbacks = mImportLegacyFallbacksCounter.get();
+            runComparison = shouldRunComparison();
         } catch (IOException e) {
             Log.wtf(TAG, "Failed to read counters, skip.", e);
             return;
         }
-        // If fallbacks is not zero, proceed with reading only to give signals from dogfooders.
-        // TODO(b/233752318): Remove fallbacks counter check before T formal release.
-        if (attempts >= targetAttempts && fallbacks == 0) return;
 
-        final boolean dryRunImportOnly = (attempts >= targetAttempts);
+        // If the target number of attempts are reached, don't import any data.
+        // However, if comparison is requested, still read the legacy data and compare
+        // it to the importer output. This allows OEMs to debug issues with the
+        // importer code and to collect signals from the field.
+        final boolean dryRunImportOnly =
+                fallbacks != 0 && runComparison && (attempts >= targetAttempts);
+        // Return if target attempts are reached and there is no need to dry run.
+        if (attempts >= targetAttempts && !dryRunImportOnly) return;
+
         if (dryRunImportOnly) {
             Log.i(TAG, "Starting import : only perform read");
         } else {
@@ -951,69 +968,54 @@ public class NetworkStatsService extends INetworkStatsService.Stub {
         };
 
         // Legacy directories will be created by recorders if they do not exist
-        final File legacyBaseDir = mDeps.getLegacyStatsDir();
-        final NetworkStatsRecorder[] legacyRecorders = new NetworkStatsRecorder[]{
-                buildRecorder(PREFIX_DEV, mSettings.getDevConfig(), false, legacyBaseDir),
-                buildRecorder(PREFIX_XT, mSettings.getXtConfig(), false, legacyBaseDir),
-                buildRecorder(PREFIX_UID, mSettings.getUidConfig(), false, legacyBaseDir),
-                buildRecorder(PREFIX_UID_TAG, mSettings.getUidTagConfig(), true, legacyBaseDir)
-        };
+        final NetworkStatsRecorder[] legacyRecorders;
+        if (runComparison) {
+            final File legacyBaseDir = mDeps.getLegacyStatsDir();
+            legacyRecorders = new NetworkStatsRecorder[]{
+                    buildRecorder(PREFIX_DEV, mSettings.getDevConfig(), false, legacyBaseDir),
+                    buildRecorder(PREFIX_XT, mSettings.getXtConfig(), false, legacyBaseDir),
+                    buildRecorder(PREFIX_UID, mSettings.getUidConfig(), false, legacyBaseDir),
+                    buildRecorder(PREFIX_UID_TAG, mSettings.getUidTagConfig(), true, legacyBaseDir)
+            };
+        } else {
+            legacyRecorders = null;
+        }
 
         long migrationEndTime = Long.MIN_VALUE;
-        boolean endedWithFallback = false;
         try {
             // First, read all legacy collections. This is OEM code and it can throw. Don't
             // commit any data to disk until all are read.
             for (int i = 0; i < migrations.length; i++) {
-                String errMsg = null;
-                Throwable exception = null;
                 final MigrationInfo migration = migrations[i];
 
-                // Read the collection from platform code, and using fallback method if throws.
+                // Read the collection from platform code, and set fallbacks counter if throws
+                // for better debugging.
                 try {
                     migration.collection = readPlatformCollectionForRecorder(migration.recorder);
                 } catch (Throwable e) {
-                    errMsg = "Failed to read stats from platform";
-                    exception = e;
-                }
-
-                // Also read the collection with legacy method
-                final NetworkStatsRecorder legacyRecorder = legacyRecorders[i];
-
-                final NetworkStatsCollection legacyStats;
-                try {
-                    legacyStats = legacyRecorder.getOrLoadCompleteLocked();
-                } catch (Throwable e) {
-                    Log.wtf(TAG, "Failed to read stats with legacy method for recorder " + i, e);
-                    if (exception != null) {
-                        throw exception;
+                    if (dryRunImportOnly) {
+                        Log.wtf(TAG, "Platform data read failed. ", e);
+                        return;
                     } else {
-                        // Use newer stats, since that's all that is available
-                        continue;
+                        // Data is not imported successfully, set fallbacks counter to non-zero
+                        // value to trigger dry run every later boot when the runComparison is
+                        // true, in order to make it easier to debug issues.
+                        tryIncrementLegacyFallbacksCounter();
+                        // Re-throw for error handling. This will increase attempts counter.
+                        throw e;
                     }
                 }
 
-                if (errMsg == null) {
-                    try {
-                        errMsg = compareStats(migration.collection, legacyStats);
-                    } catch (Throwable e) {
-                        errMsg = "Failed to compare migrated stats with all stats";
-                        exception = e;
+                if (runComparison) {
+                    final boolean success =
+                            compareImportedToLegacyStats(migration, legacyRecorders[i]);
+                    if (!success && !dryRunImportOnly) {
+                        tryIncrementLegacyFallbacksCounter();
                     }
-                }
-
-                if (errMsg != null) {
-                    Log.wtf(TAG, "NetworkStats import for migration " + i
-                            + " returned invalid data: " + errMsg, exception);
-                    // Fall back to legacy stats for this boot. The stats for old data will be
-                    // re-imported again on next boot until they succeed the import. This is fine
-                    // since every import clears the previous stats for the imported timespan.
-                    migration.collection = legacyStats;
-                    endedWithFallback = true;
                 }
             }
 
-            // For cases where the fallbacks is not zero but target attempts counts reached,
+            // For cases where the fallbacks are not zero but target attempts counts reached,
             // only perform reads above and return here.
             if (dryRunImportOnly) return;
 
@@ -1079,20 +1081,76 @@ public class NetworkStatsService extends INetworkStatsService.Stub {
         // Success ! No need to import again next time.
         try {
             mImportLegacyAttemptsCounter.set(targetAttempts);
-            if (endedWithFallback) {
-                Log.wtf(TAG, "Imported platform collections with legacy fallback");
-                final int fallbacksCount = mImportLegacyFallbacksCounter.get();
-                mImportLegacyFallbacksCounter.set(fallbacksCount + 1);
-            } else {
-                Log.i(TAG, "Successfully imported platform collections");
-                // The successes counter is only for debugging. Hence, the synchronization
-                // between successes counter and attempts counter are not very critical.
-                final int successCount = mImportLegacySuccessesCounter.get();
-                mImportLegacySuccessesCounter.set(successCount + 1);
-            }
+            Log.i(TAG, "Successfully imported platform collections");
+            // The successes counter is only for debugging. Hence, the synchronization
+            // between successes counter and attempts counter are not very critical.
+            final int successCount = mImportLegacySuccessesCounter.get();
+            mImportLegacySuccessesCounter.set(successCount + 1);
         } catch (IOException e) {
             Log.wtf(TAG, "Succeed but failed to update counters.", e);
         }
+    }
+
+    void tryIncrementLegacyFallbacksCounter() {
+        try {
+            final int fallbacks = mImportLegacyFallbacksCounter.get();
+            mImportLegacyFallbacksCounter.set(fallbacks + 1);
+        } catch (IOException e) {
+            Log.wtf(TAG, "Failed to update fallback counter.", e);
+        }
+    }
+
+    @VisibleForTesting
+    boolean shouldRunComparison() {
+        final ConnectivityResources resources = new ConnectivityResources(mContext);
+        // 0 if id not found.
+        Boolean overlayValue = null;
+        try {
+            switch (resources.get().getInteger(R.integer.config_netstats_validate_import)) {
+                case 1:
+                    overlayValue = Boolean.TRUE;
+                    break;
+                case 0:
+                    overlayValue = Boolean.FALSE;
+                    break;
+            }
+        } catch (Resources.NotFoundException e) {
+            // Overlay value is not defined.
+        }
+        // TODO(b/233752318): For now it is always true to collect signal from beta users.
+        //  Should change to the default behavior (true if debuggable builds) before formal release.
+        return (overlayValue != null ? overlayValue : mDeps.isDebuggable()) || true;
+    }
+
+    /**
+     * Compare imported data with the data returned by legacy recorders.
+     *
+     * @return true if the data matches, false if the data does not match or throw with exceptions.
+     */
+    private boolean compareImportedToLegacyStats(@NonNull MigrationInfo migration,
+            @NonNull NetworkStatsRecorder legacyRecorder) {
+        final NetworkStatsCollection legacyStats;
+        try {
+            legacyStats = legacyRecorder.getOrLoadCompleteLocked();
+        } catch (Throwable e) {
+            Log.wtf(TAG, "Failed to read stats with legacy method for recorder "
+                    + legacyRecorder.getCookie(), e);
+            // Cannot read data from legacy method, skip comparison.
+            return false;
+        }
+
+        // The result of comparison is only for logging.
+        try {
+            final String error = compareStats(migration.collection, legacyStats);
+            if (error != null) {
+                Log.wtf(TAG, "Unexpected comparison result for recorder "
+                        + legacyRecorder.getCookie() + ": " + error);
+            }
+        } catch (Throwable e) {
+            Log.wtf(TAG, "Failed to compare migrated stats with legacy stats for recorder "
+                    + legacyRecorder.getCookie(), e);
+        }
+        return true;
     }
 
     private static String str(NetworkStatsCollection.Key key) {
