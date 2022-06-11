@@ -386,6 +386,12 @@ int sendAndProcessNetlinkResponse(const void *req, int len) {
     return -error;
   }
 
+  if (setsockopt(fd, SOL_NETLINK, NETLINK_EXT_ACK, &on, sizeof(on))) {
+    int error = errno;
+    ALOGW("setsockopt(fd, SOL_NETLINK, NETLINK_EXT_ACK, 1): %d", error);
+    // will fail on 4.9 kernels so don't: return -error;
+  }
+
   // this is needed to get valid strace netlink parsing, it allocates the pid
   if (bind(fd, (const struct sockaddr *)&KERNEL_NLADDR,
            sizeof(KERNEL_NLADDR))) {
