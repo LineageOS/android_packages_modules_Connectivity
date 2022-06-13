@@ -74,7 +74,7 @@ private fun isDevSdkUpTo(maxInclusive: Int): Boolean {
 
 private fun getMaxTargetSdk(description: Description): Int? {
     return description.annotations.firstNotNullOfOrNull {
-        MAX_TARGET_SDK_ANNOTATION_RE.matcher(it::class.simpleName).let { m ->
+        MAX_TARGET_SDK_ANNOTATION_RE.matcher(it.annotationClass.simpleName).let { m ->
             if (m.find()) m.group(1).toIntOrNull() else null
         }
     }
