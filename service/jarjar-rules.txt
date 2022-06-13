@@ -118,6 +118,7 @@ rule androidx.collection.** com.android.server.nearby.@0
 rule androidx.core.** com.android.server.nearby.@0
 rule androidx.versionedparcelable.** com.android.server.nearby.@0
 rule com.google.common.** com.android.server.nearby.@0
+rule android.support.v4.** com.android.server.nearby.@0
 
 # Remaining are connectivity sources in com.android.server and com.android.server.connectivity:
 # TODO: move to a subpackage of com.android.connectivity (such as com.android.connectivity.server)
