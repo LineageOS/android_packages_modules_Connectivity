@@ -42,6 +42,7 @@ import android.net.dhcp.DhcpPacket;
 import android.util.ArrayMap;
 import android.util.Log;
 
+import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import com.android.net.module.util.Ipv6Utils;
@@ -88,11 +89,17 @@ public final class TetheringTester {
 
     private final ArrayMap<MacAddress, TetheredDevice> mTetheredDevices;
     private final TapPacketReader mDownstreamReader;
+    private final TapPacketReader mUpstreamReader;
 
     public TetheringTester(TapPacketReader downstream) {
+        this(downstream, null);
+    }
+
+    public TetheringTester(TapPacketReader downstream, TapPacketReader upstream) {
         if (downstream == null) fail("Downstream reader could not be NULL");
 
         mDownstreamReader = downstream;
+        mUpstreamReader = upstream;
         mTetheredDevices = new ArrayMap<>();
     }
 
@@ -170,7 +177,7 @@ public final class TetheringTester {
     }
 
     private DhcpPacket getNextDhcpPacket() throws Exception {
-        final byte[] packet = getNextMatchedPacket((p) -> {
+        final byte[] packet = getDownloadPacket((p) -> {
             // Test whether this is DHCP packet.
             try {
                 DhcpPacket.decodeFullPacket(p, p.length, DhcpPacket.ENCAP_L2);
@@ -213,7 +220,7 @@ public final class TetheringTester {
                     tethered.ipv4Addr.getAddress() /* sender IP */,
                     (short) ARP_REPLY);
             try {
-                sendPacket(arpReply);
+                sendUploadPacket(arpReply);
             } catch (Exception e) {
                 fail("Failed to reply ARP for " + tethered.ipv4Addr);
             }
@@ -227,9 +234,9 @@ public final class TetheringTester {
                 tetherMac.toByteArray() /* srcMac */, routerIp.getAddress() /* target IP */,
                 new byte[ETHER_ADDR_LEN] /* target HW address */,
                 tetherIp.getAddress() /* sender IP */, (short) ARP_REQUEST);
-        sendPacket(arpProbe);
+        sendUploadPacket(arpProbe);
 
-        final byte[] packet = getNextMatchedPacket((p) -> {
+        final byte[] packet = getDownloadPacket((p) -> {
             final ArpPacket arpPacket = parseArpPacket(p);
             if (arpPacket == null || arpPacket.opCode != ARP_REPLY) return false;
             return arpPacket.targetIp.equals(tetherIp);
@@ -252,7 +259,7 @@ public final class TetheringTester {
         // connectivity is ready. We don't extract the router mac address from RA because
         // we get the router mac address from IPv4 ARP packet. See #getRouterMacAddressFromArp.
         for (int i = 0; i < READ_RA_ATTEMPTS; i++) {
-            final byte[] raPacket = getNextMatchedPacket((p) -> {
+            final byte[] raPacket = getDownloadPacket((p) -> {
                 return isIcmpv6Type(p, true /* hasEth */, ICMPV6_ROUTER_ADVERTISEMENT);
             });
             if (raPacket != null) return;
@@ -290,13 +297,10 @@ public final class TetheringTester {
     private Inet6Address runSlaac(MacAddress srcMac, MacAddress dstMac) throws Exception {
         sendRsPacket(srcMac, dstMac);
 
-        final byte[] raPacket = getNextMatchedPacket((p) -> {
+        final byte[] raPacket = verifyPacketNotNull("Receive RA fail", getDownloadPacket(p -> {
             return isIcmpv6Type(p, true /* hasEth */, ICMPV6_ROUTER_ADVERTISEMENT);
-        });
+        }));
 
-        if (raPacket == null) {
-            fail("Could not get ra for prefix options");
-        }
         final List<PrefixInformationOption> options = getRaPrefixOptions(raPacket);
 
         for (PrefixInformationOption pio : options) {
@@ -322,7 +326,7 @@ public final class TetheringTester {
         ByteBuffer rs = Ipv6Utils.buildRsPacket(srcMac, dstMac, (Inet6Address) LINK_LOCAL,
                 IPV6_ADDR_ALL_NODES_MULTICAST, slla);
 
-        sendPacket(rs);
+        sendUploadPacket(rs);
     }
 
     private void maybeReplyNa(byte[] packet) {
@@ -347,7 +351,7 @@ public final class TetheringTester {
             ByteBuffer ns = Ipv6Utils.buildNaPacket(tethered.macAddr, tethered.routerMacAddr,
                     nsHdr.target, ipv6Hdr.srcIp, flags, nsHdr.target, tlla);
             try {
-                sendPacket(ns);
+                sendUploadPacket(ns);
             } catch (Exception e) {
                 fail("Failed to reply NA for " + tethered.ipv6Addr);
             }
@@ -380,11 +384,17 @@ public final class TetheringTester {
         return false;
     }
 
-    public void sendPacket(ByteBuffer packet) throws Exception {
+    private void sendUploadPacket(ByteBuffer packet) throws Exception {
         mDownstreamReader.sendResponse(packet);
     }
 
-    public byte[] getNextMatchedPacket(Predicate<byte[]> filter) {
+    private void sendDownloadPacket(ByteBuffer packet) throws Exception {
+        assertNotNull("Can't deal with upstream interface in local only mode", mUpstreamReader);
+
+        mUpstreamReader.sendResponse(packet);
+    }
+
+    private byte[] getDownloadPacket(Predicate<byte[]> filter) {
         byte[] packet;
         while ((packet = mDownstreamReader.poll(PACKET_READ_TIMEOUT_MS)) != null) {
             if (filter.test(packet)) return packet;
@@ -396,30 +406,34 @@ public final class TetheringTester {
         return null;
     }
 
-    public void verifyUpload(final RemoteResponder dst, final ByteBuffer packet,
-            final Predicate<byte[]> filter) throws Exception {
-        sendPacket(packet);
-        assertNotNull("Upload fail", dst.getNextMatchedPacket(filter));
+    private byte[] getUploadPacket(Predicate<byte[]> filter) {
+        assertNotNull("Can't deal with upstream interface in local only mode", mUpstreamReader);
+
+        return mUpstreamReader.poll(PACKET_READ_TIMEOUT_MS, filter);
     }
 
-    public static class RemoteResponder {
-        final TapPacketReader mUpstreamReader;
-        public RemoteResponder(TapPacketReader reader) {
-            mUpstreamReader = reader;
-        }
+    private @NonNull byte[] verifyPacketNotNull(String message, @Nullable byte[] packet) {
+        assertNotNull(message, packet);
 
-        public void sendPacket(ByteBuffer packet) throws Exception {
-            mUpstreamReader.sendResponse(packet);
-        }
+        return packet;
+    }
 
-        public byte[] getNextMatchedPacket(Predicate<byte[]> filter) throws Exception {
-            return mUpstreamReader.poll(PACKET_READ_TIMEOUT_MS, filter);
-        }
+    public byte[] testUpload(final ByteBuffer packet, final Predicate<byte[]> filter)
+            throws Exception {
+        sendUploadPacket(packet);
 
-        public void verifyDownload(final TetheringTester dst, final ByteBuffer packet,
-                final Predicate<byte[]> filter) throws Exception {
-            sendPacket(packet);
-            assertNotNull("Download fail", dst.getNextMatchedPacket(filter));
-        }
+        return getUploadPacket(filter);
+    }
+
+    public byte[] verifyUpload(final ByteBuffer packet, final Predicate<byte[]> filter)
+            throws Exception {
+        return verifyPacketNotNull("Upload fail", testUpload(packet, filter));
+    }
+
+    public byte[] verifyDownload(final ByteBuffer packet, final Predicate<byte[]> filter)
+            throws Exception {
+        sendDownloadPacket(packet);
+
+        return verifyPacketNotNull("Download fail", getDownloadPacket(filter));
     }
 }
