@@ -1477,7 +1477,7 @@ public class ConnectivityServiceTest {
                     !mMockNetworkAgent.isBypassableVpn(), mVpnType));
             updateState(NetworkInfo.DetailedState.CONNECTED, "registerAgent");
             mNetworkCapabilities.set(mMockNetworkAgent.getNetworkCapabilities());
-            mNetworkAgent = new Vpn.VpnNetworkAgentWrapper(mMockNetworkAgent.getNetworkAgent());
+            mNetworkAgent = mMockNetworkAgent.getNetworkAgent();
         }
 
         private void registerAgent(Set<UidRange> uids) throws Exception {
