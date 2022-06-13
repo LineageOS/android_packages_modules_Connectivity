@@ -20,7 +20,6 @@ import static android.net.RouteInfo.RTN_THROW;
 import static android.net.RouteInfo.RTN_UNICAST;
 import static android.net.RouteInfo.RTN_UNREACHABLE;
 
-import static com.android.testutils.DevSdkIgnoreRuleKt.SC_V2;
 import static com.android.testutils.ParcelUtils.assertParcelingIsLossless;
 import static com.android.testutils.ParcelUtils.parcelingRoundTrip;
 
@@ -53,6 +52,7 @@ import libcore.junit.util.compat.CoreCompatChangeRule.EnableCompatChanges;
 
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.RuleChain;
 import org.junit.runner.RunWith;
 
 import java.net.Inet4Address;
@@ -68,11 +68,13 @@ import java.util.Set;
 @SmallTest
 @ConnectivityModuleTest
 public class LinkPropertiesTest {
+    // Use a RuleChain to explicitly specify the order of rules. DevSdkIgnoreRule must run before
+    // PlatformCompatChange rule, because otherwise tests with that should be skipped when targeting
+    // target SDK 33 will still attempt to override compat changes (which on user builds will crash)
+    // before being skipped.
     @Rule
-    public final DevSdkIgnoreRule ignoreRule = new DevSdkIgnoreRule();
-
-    @Rule
-    public final PlatformCompatChangeRule compatChangeRule = new PlatformCompatChangeRule();
+    public final RuleChain chain = RuleChain.outerRule(
+            new DevSdkIgnoreRule()).around(new PlatformCompatChangeRule());
 
     private static final InetAddress ADDRV4 = address("75.208.6.1");
     private static final InetAddress ADDRV6 = address("2001:0db8:85a3:0000:0000:8a2e:0370:7334");
@@ -1262,7 +1264,8 @@ public class LinkPropertiesTest {
         assertFalse(lp.hasIpv4UnreachableDefaultRoute());
     }
 
-    @Test @IgnoreUpTo(Build.VERSION_CODES.S_V2)
+    @Test @IgnoreUpTo(Build.VERSION_CODES.R)
+    @CtsNetTestCasesMaxTargetSdk31(reason = "Compat change cannot be overridden when targeting T+")
     @EnableCompatChanges({LinkProperties.EXCLUDED_ROUTES})
     public void testHasExcludeRoute() {
         LinkProperties lp = new LinkProperties();
@@ -1274,7 +1277,8 @@ public class LinkPropertiesTest {
         assertTrue(lp.hasExcludeRoute());
     }
 
-    @Test @IgnoreUpTo(Build.VERSION_CODES.Q)
+    @Test @IgnoreUpTo(Build.VERSION_CODES.R)
+    @CtsNetTestCasesMaxTargetSdk31(reason = "Compat change cannot be overridden when targeting T+")
     @EnableCompatChanges({LinkProperties.EXCLUDED_ROUTES})
     public void testRouteAddWithSameKey() throws Exception {
         LinkProperties lp = new LinkProperties();
@@ -1291,7 +1295,8 @@ public class LinkPropertiesTest {
         assertEquals(2, lp.getRoutes().size());
     }
 
-    @Test @IgnoreUpTo(SC_V2)
+    @Test @IgnoreUpTo(Build.VERSION_CODES.R)
+    @CtsNetTestCasesMaxTargetSdk31(reason = "Compat change cannot be overridden when targeting T+")
     @EnableCompatChanges({LinkProperties.EXCLUDED_ROUTES})
     public void testExcludedRoutesEnabled() {
         final LinkProperties lp = new LinkProperties();
@@ -1307,8 +1312,8 @@ public class LinkPropertiesTest {
         assertEquals(3, lp.getRoutes().size());
     }
 
-    @Test @IgnoreUpTo(SC_V2)
-    @CtsNetTestCasesMaxTargetSdk31(reason = "Compat change cannot be overridden on T or above")
+    @Test @IgnoreUpTo(Build.VERSION_CODES.R)
+    @CtsNetTestCasesMaxTargetSdk31(reason = "Compat change cannot be overridden when targeting T+")
     @DisableCompatChanges({LinkProperties.EXCLUDED_ROUTES})
     public void testExcludedRoutesDisabled() {
         final LinkProperties lp = new LinkProperties();
