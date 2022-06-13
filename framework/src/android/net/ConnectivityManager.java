@@ -997,6 +997,7 @@ public class ConnectivityManager {
      * Denylist of apps that will not have network access due to OEM-specific restrictions.
      * @hide
      */
+    @SystemApi(client = MODULE_LIBRARIES)
     public static final int FIREWALL_CHAIN_OEM_DENY_1 = 7;
 
     /**
@@ -1004,6 +1005,7 @@ public class ConnectivityManager {
      * Denylist of apps that will not have network access due to OEM-specific restrictions.
      * @hide
      */
+    @SystemApi(client = MODULE_LIBRARIES)
     public static final int FIREWALL_CHAIN_OEM_DENY_2 = 8;
 
     /**
@@ -1011,6 +1013,7 @@ public class ConnectivityManager {
      * Denylist of apps that will not have network access due to OEM-specific restrictions.
      * @hide
      */
+    @SystemApi(client = MODULE_LIBRARIES)
     public static final int FIREWALL_CHAIN_OEM_DENY_3 = 9;
 
     /** @hide */

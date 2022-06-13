@@ -51,6 +51,9 @@ package android.net {
     field public static final int BLOCKED_REASON_RESTRICTED_MODE = 8; // 0x8
     field public static final int FIREWALL_CHAIN_DOZABLE = 1; // 0x1
     field public static final int FIREWALL_CHAIN_LOW_POWER_STANDBY = 5; // 0x5
+    field public static final int FIREWALL_CHAIN_OEM_DENY_1 = 7; // 0x7
+    field public static final int FIREWALL_CHAIN_OEM_DENY_2 = 8; // 0x8
+    field public static final int FIREWALL_CHAIN_OEM_DENY_3 = 9; // 0x9
     field public static final int FIREWALL_CHAIN_POWERSAVE = 3; // 0x3
     field public static final int FIREWALL_CHAIN_RESTRICTED = 4; // 0x4
     field public static final int FIREWALL_CHAIN_STANDBY = 2; // 0x2
