@@ -21,7 +21,7 @@
 
 #include <gtest/gtest.h>
 
-#define TEST_BPF_MAP
+#define BPF_MAP_MAKE_VISIBLE_FOR_TESTING
 #include "BpfHandler.h"
 
 using namespace android::bpf;  // NOLINT(google-build-using-namespace): exempted
