@@ -103,10 +103,31 @@ class BpfMap {
         return {};
     }
 
-    // Function that tries to get map from a pinned path.
-    [[clang::reinitializes]] base::Result<void> init(const char* path);
+  protected:
+    [[clang::reinitializes]] base::Result<void> init(const char* path, int fd) {
+        mMapFd.reset(fd);
+        if (mMapFd == -1) {
+            return ErrnoErrorf("Pinned map not accessible or does not exist: ({})", path);
+        }
+        if (isAtLeastKernelVersion(4, 14, 0)) {
+            // Normally we should return an error here instead of calling abort,
+            // but this cannot happen at runtime without a massive code bug (K/V type mismatch)
+            // and as such it's better to just blow the system up and let the developer fix it.
+            // Crashes are much more likely to be noticed than logs and missing functionality.
+            if (bpfGetFdKeySize(mMapFd) != sizeof(Key)) abort();
+            if (bpfGetFdValueSize(mMapFd) != sizeof(Value)) abort();
+        }
+        return {};
+    }
 
-#ifdef TEST_BPF_MAP
+  public:
+    // Function that tries to get map from a pinned path.
+    [[clang::reinitializes]] base::Result<void> init(const char* path) {
+        return init(path, mapRetrieveRW(path));
+    }
+
+
+#ifdef BPF_MAP_MAKE_VISIBLE_FOR_TESTING
     // due to Android SELinux limitations which prevent map creation by anyone besides the bpfloader
     // this should only ever be used by test code, it is equivalent to:
     //   .reset(createMap(type, keysize, valuesize, max_entries, map_flags)
@@ -210,23 +231,6 @@ class BpfMap {
 };
 
 template <class Key, class Value>
-base::Result<void> BpfMap<Key, Value>::init(const char* path) {
-    mMapFd.reset(mapRetrieveRW(path));
-    if (mMapFd == -1) {
-        return ErrnoErrorf("Pinned map not accessible or does not exist: ({})", path);
-    }
-    if (isAtLeastKernelVersion(4, 14, 0)) {
-        // Normally we should return an error here instead of calling abort,
-        // but this cannot happen at runtime without a massive code bug (K/V type mismatch)
-        // and as such it's better to just blow the system up and let the developer fix it.
-        // Crashes are much more likely to be noticed than logs and missing functionality.
-        if (bpfGetFdKeySize(mMapFd) != sizeof(Key)) abort();
-        if (bpfGetFdValueSize(mMapFd) != sizeof(Value)) abort();
-    }
-    return {};
-}
-
-template <class Key, class Value>
 base::Result<void> BpfMap<Key, Value>::iterate(
         const std::function<base::Result<void>(const Key& key, const BpfMap<Key, Value>& map)>&
                 filter) const {
@@ -292,8 +296,15 @@ base::Result<void> BpfMap<Key, Value>::iterateWithValue(
 template <class Key, class Value>
 class BpfMapRO : public BpfMap<Key, Value> {
   public:
+    BpfMapRO<Key, Value>() {};
+
     explicit BpfMapRO<Key, Value>(const char* pathname)
         : BpfMap<Key, Value>(pathname, BPF_F_RDONLY) {}
+
+    // Function that tries to get map from a pinned path.
+    [[clang::reinitializes]] base::Result<void> init(const char* path) {
+        return BpfMap<Key,Value>::init(path, mapRetrieveRO(path));
+    }
 };
 
 }  // namespace bpf
