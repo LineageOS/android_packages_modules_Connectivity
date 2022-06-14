@@ -262,7 +262,7 @@ package android.net {
     method @Deprecated public void setLegacySubtype(int, @NonNull String);
     method public void setLingerDuration(@NonNull java.time.Duration);
     method public void setTeardownDelayMillis(@IntRange(from=0, to=0x1388) int);
-    method public final void setUnderlyingNetworks(@Nullable java.util.List<android.net.Network>);
+    method public void setUnderlyingNetworks(@Nullable java.util.List<android.net.Network>);
     method public void unregister();
     method public void unregisterAfterReplacement(@IntRange(from=0, to=0x1388) int);
     field public static final int DSCP_POLICY_STATUS_DELETED = 4; // 0x4
