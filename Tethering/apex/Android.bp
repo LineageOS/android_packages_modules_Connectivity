@@ -134,11 +134,11 @@ bootclasspath_fragment {
     hidden_api: {
         max_target_r_low_priority: [
             "hiddenapi/hiddenapi-max-target-r-loprio.txt",
-        ],
+	],
         max_target_o_low_priority: [
             "hiddenapi/hiddenapi-max-target-o-low-priority.txt",
             "hiddenapi/hiddenapi-max-target-o-low-priority-tiramisu.txt",
-        ],
+	],
         unsupported: [
             "hiddenapi/hiddenapi-unsupported.txt",
             "hiddenapi/hiddenapi-unsupported-tiramisu.txt",
