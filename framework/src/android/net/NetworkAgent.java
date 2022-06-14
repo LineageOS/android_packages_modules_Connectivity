@@ -938,7 +938,7 @@ public abstract class NetworkAgent {
      * @param underlyingNetworks the new list of underlying networks.
      * @see {@link VpnService.Builder#setUnderlyingNetworks(Network[])}
      */
-    public final void setUnderlyingNetworks(
+    public void setUnderlyingNetworks(
             @SuppressLint("NullableCollection") @Nullable List<Network> underlyingNetworks) {
         final ArrayList<Network> underlyingArray = (underlyingNetworks != null)
                 ? new ArrayList<>(underlyingNetworks) : null;
