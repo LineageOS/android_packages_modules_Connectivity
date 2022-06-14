@@ -38,7 +38,7 @@
 
 #include <netdutils/MockSyscalls.h>
 
-#define TEST_BPF_MAP
+#define BPF_MAP_MAKE_VISIBLE_FOR_TESTING
 #include "TrafficController.h"
 #include "bpf/BpfUtils.h"
 #include "NetdUpdatablePublic.h"
