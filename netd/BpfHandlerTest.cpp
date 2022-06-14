@@ -65,7 +65,7 @@ class BpfHandlerTest : public ::testing::Test {
         mFakeConfigurationMap.resetMap(BPF_MAP_TYPE_HASH, 1);
         ASSERT_VALID(mFakeConfigurationMap);
 
-        mFakeUidPermissionMap.resetMap(BPF_MAP_TYPE_HASH, TEST_MAP_SIZE, 0);
+        mFakeUidPermissionMap.resetMap(BPF_MAP_TYPE_HASH, TEST_MAP_SIZE);
         ASSERT_VALID(mFakeUidPermissionMap);
 
         mBh.mCookieTagMap = mFakeCookieTagMap;
