@@ -106,7 +106,7 @@ class BpfMap {
     // Function that tries to get map from a pinned path.
     [[clang::reinitializes]] base::Result<void> init(const char* path);
 
-#ifdef TEST_BPF_MAP
+#ifdef BPF_MAP_MAKE_VISIBLE_FOR_TESTING
     // due to Android SELinux limitations which prevent map creation by anyone besides the bpfloader
     // this should only ever be used by test code, it is equivalent to:
     //   .reset(createMap(type, keysize, valuesize, max_entries, map_flags)
