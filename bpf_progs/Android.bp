@@ -25,8 +25,14 @@ cc_library_headers {
     name: "bpf_connectivity_headers",
     vendor_available: false,
     host_supported: false,
-    header_libs: ["bpf_headers"],
-    export_header_lib_headers: ["bpf_headers"],
+    header_libs: [
+        "bpf_headers",
+        "libnetdbinder_utils_headers",  // for XtBpfProgLocations.h
+    ],
+    export_header_lib_headers: [
+        "bpf_headers",
+        "libnetdbinder_utils_headers",  // for XtBpfProgLocations.h
+    ],
     export_include_dirs: ["."],
     cflags: [
         "-Wall",
@@ -37,7 +43,7 @@ cc_library_headers {
     apex_available: [
         "//apex_available:platform",
         "com.android.tethering",
-        ],
+    ],
     visibility: [
         "//packages/modules/Connectivity/netd",
         "//packages/modules/Connectivity/service",
@@ -47,7 +53,6 @@ cc_library_headers {
         "//packages/modules/Connectivity/tests/native",
         "//packages/modules/Connectivity/service-t/native/libs/libnetworkstats",
         "//packages/modules/Connectivity/tests/unit/jni",
-        "//system/netd/server",
         "//system/netd/tests",
     ],
 }
@@ -100,21 +105,22 @@ bpf {
         "-Wall",
         "-Werror",
     ],
-    include_dirs: [
-        "frameworks/libs/net/common/netd/libnetdutils/include",
-    ],
     sub_dir: "net_shared",
 }
 
 bpf {
+    // WARNING: Android T's non-updatable netd depends on 'netd' string for xt_bpf programs it loads
     name: "netd.o",
     srcs: ["netd.c"],
     cflags: [
         "-Wall",
         "-Werror",
     ],
+    // need //frameworks/libs/net/common/netd/libnetdutils/include/netdutils/UidConstants.h
+    // MIN_SYSTEM_UID, MAX_SYSTEM_UID, PER_USER_RANGE
     include_dirs: [
         "frameworks/libs/net/common/netd/libnetdutils/include",
     ],
+    // WARNING: Android T's non-updatable netd depends on 'netd_shared' string for xt_bpf programs
     sub_dir: "netd_shared",
 }
