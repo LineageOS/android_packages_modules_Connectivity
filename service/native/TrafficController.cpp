@@ -488,8 +488,6 @@ int TrafficController::toggleUidOwnerMap(ChildChain chain, bool enable) {
               oldConfigure.error().message().c_str());
         return -oldConfigure.error().code();
     }
-    Status res;
-    BpfConfig newConfiguration;
     uint32_t match;
     switch (chain) {
         case DOZABLE:
@@ -519,9 +517,9 @@ int TrafficController::toggleUidOwnerMap(ChildChain chain, bool enable) {
         default:
             return -EINVAL;
     }
-    newConfiguration =
-            enable ? (oldConfigure.value() | match) : (oldConfigure.value() & (~match));
-    res = mConfigurationMap.writeValue(key, newConfiguration, BPF_EXIST);
+    BpfConfig newConfiguration =
+            enable ? (oldConfigure.value() | match) : (oldConfigure.value() & ~match);
+    Status res = mConfigurationMap.writeValue(key, newConfiguration, BPF_EXIST);
     if (!isOk(res)) {
         ALOGE("Failed to toggleUidOwnerMap(%d): %s", chain, res.msg().c_str());
     }
