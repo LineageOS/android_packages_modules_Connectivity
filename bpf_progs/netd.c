@@ -52,25 +52,30 @@
 #define TCP_FLAG_OFF 13
 #define RST_OFFSET 2
 
-DEFINE_BPF_MAP_GRW(cookie_tag_map, HASH, uint64_t, UidTagValue, COOKIE_UID_MAP_SIZE,
-                   AID_NET_BW_ACCT)
-DEFINE_BPF_MAP_GRW(uid_counterset_map, HASH, uint32_t, uint8_t, UID_COUNTERSET_MAP_SIZE,
-                   AID_NET_BW_ACCT)
-DEFINE_BPF_MAP_GRW(app_uid_stats_map, HASH, uint32_t, StatsValue, APP_STATS_MAP_SIZE,
-                   AID_NET_BW_ACCT)
-DEFINE_BPF_MAP_GRW(stats_map_A, HASH, StatsKey, StatsValue, STATS_MAP_SIZE, AID_NET_BW_ACCT)
-DEFINE_BPF_MAP_GRW(stats_map_B, HASH, StatsKey, StatsValue, STATS_MAP_SIZE, AID_NET_BW_ACCT)
-DEFINE_BPF_MAP_GRW(iface_stats_map, HASH, uint32_t, StatsValue, IFACE_STATS_MAP_SIZE,
-                   AID_NET_BW_ACCT)
-DEFINE_BPF_MAP_GRW(configuration_map, HASH, uint32_t, uint32_t, CONFIGURATION_MAP_SIZE,
-                   AID_NET_BW_ACCT)
-DEFINE_BPF_MAP_GRW(uid_owner_map, HASH, uint32_t, UidOwnerValue, UID_OWNER_MAP_SIZE,
-                   AID_NET_BW_ACCT)
-DEFINE_BPF_MAP_GRW(uid_permission_map, HASH, uint32_t, uint8_t, UID_OWNER_MAP_SIZE, AID_NET_BW_ACCT)
+// For maps netd does not need to access
+#define DEFINE_BPF_MAP_NO_NETD(the_map, TYPE, TypeOfKey, TypeOfValue, num_entries) \
+    DEFINE_BPF_MAP_UGM(the_map, TYPE, TypeOfKey, TypeOfValue, num_entries, AID_ROOT, AID_NET_BW_ACCT, 0060)
+
+// For maps netd only needs read only access to
+#define DEFINE_BPF_MAP_RO_NETD(the_map, TYPE, TypeOfKey, TypeOfValue, num_entries) \
+    DEFINE_BPF_MAP_UGM(the_map, TYPE, TypeOfKey, TypeOfValue, num_entries, AID_ROOT, AID_NET_BW_ACCT, 0460)
+
+// For maps netd needs to be able to read and write
+#define DEFINE_BPF_MAP_RW_NETD(the_map, TYPE, TypeOfKey, TypeOfValue, num_entries) \
+    DEFINE_BPF_MAP_UGM(the_map, TYPE, TypeOfKey, TypeOfValue, num_entries, AID_ROOT, AID_NET_BW_ACCT, 0660)
+
+DEFINE_BPF_MAP_RW_NETD(cookie_tag_map, HASH, uint64_t, UidTagValue, COOKIE_UID_MAP_SIZE)
+DEFINE_BPF_MAP_NO_NETD(uid_counterset_map, HASH, uint32_t, uint8_t, UID_COUNTERSET_MAP_SIZE)
+DEFINE_BPF_MAP_NO_NETD(app_uid_stats_map, HASH, uint32_t, StatsValue, APP_STATS_MAP_SIZE)
+DEFINE_BPF_MAP_RW_NETD(stats_map_A, HASH, StatsKey, StatsValue, STATS_MAP_SIZE)
+DEFINE_BPF_MAP_RO_NETD(stats_map_B, HASH, StatsKey, StatsValue, STATS_MAP_SIZE)
+DEFINE_BPF_MAP_NO_NETD(iface_stats_map, HASH, uint32_t, StatsValue, IFACE_STATS_MAP_SIZE)
+DEFINE_BPF_MAP_RW_NETD(configuration_map, HASH, uint32_t, uint32_t, CONFIGURATION_MAP_SIZE)
+DEFINE_BPF_MAP_NO_NETD(uid_owner_map, HASH, uint32_t, UidOwnerValue, UID_OWNER_MAP_SIZE)
+DEFINE_BPF_MAP_RW_NETD(uid_permission_map, HASH, uint32_t, uint8_t, UID_OWNER_MAP_SIZE)
 
 /* never actually used from ebpf */
-DEFINE_BPF_MAP_GRW(iface_index_name_map, HASH, uint32_t, IfaceValue, IFACE_INDEX_NAME_MAP_SIZE,
-                   AID_NET_BW_ACCT)
+DEFINE_BPF_MAP_NO_NETD(iface_index_name_map, HASH, uint32_t, IfaceValue, IFACE_INDEX_NAME_MAP_SIZE)
 
 static __always_inline int is_system_uid(uint32_t uid) {
     return (uid <= MAX_SYSTEM_UID) && (uid >= MIN_SYSTEM_UID);
