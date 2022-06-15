@@ -200,6 +200,8 @@ package android.net {
     method public int describeContents();
     method @NonNull public android.os.ParcelFileDescriptor getFileDescriptor();
     method @NonNull public String getInterfaceName();
+    method @Nullable public android.net.MacAddress getMacAddress();
+    method public int getMtu();
     method public void writeToParcel(@NonNull android.os.Parcel, int);
     field @NonNull public static final android.os.Parcelable.Creator<android.net.TestNetworkInterface> CREATOR;
   }
