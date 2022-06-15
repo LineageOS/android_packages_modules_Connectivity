@@ -21,7 +21,7 @@
 
 #include <gtest/gtest.h>
 
-#define TEST_BPF_MAP
+#define BPF_MAP_MAKE_VISIBLE_FOR_TESTING
 #include "BpfHandler.h"
 
 using namespace android::bpf;  // NOLINT(google-build-using-namespace): exempted
@@ -65,7 +65,7 @@ class BpfHandlerTest : public ::testing::Test {
         mFakeConfigurationMap.resetMap(BPF_MAP_TYPE_HASH, 1);
         ASSERT_VALID(mFakeConfigurationMap);
 
-        mFakeUidPermissionMap.resetMap(BPF_MAP_TYPE_HASH, TEST_MAP_SIZE, 0);
+        mFakeUidPermissionMap.resetMap(BPF_MAP_TYPE_HASH, TEST_MAP_SIZE);
         ASSERT_VALID(mFakeUidPermissionMap);
 
         mBh.mCookieTagMap = mFakeCookieTagMap;
