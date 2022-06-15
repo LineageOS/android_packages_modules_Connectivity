@@ -28,7 +28,6 @@
 #include <linux/ipv6.h>
 #include <linux/pkt_cls.h>
 #include <linux/tcp.h>
-#include <netdutils/UidConstants.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include "bpf_net_helpers.h"
@@ -78,7 +77,9 @@ DEFINE_BPF_MAP_RW_NETD(uid_permission_map, HASH, uint32_t, uint8_t, UID_OWNER_MA
 DEFINE_BPF_MAP_NO_NETD(iface_index_name_map, HASH, uint32_t, IfaceValue, IFACE_INDEX_NAME_MAP_SIZE)
 
 static __always_inline int is_system_uid(uint32_t uid) {
-    return (uid <= MAX_SYSTEM_UID) && (uid >= MIN_SYSTEM_UID);
+    // MIN_SYSTEM_UID is AID_ROOT == 0, so uint32_t is *always* >= 0
+    // MAX_SYSTEM_UID is AID_NOBODY == 9999, while AID_APP_START == 10000
+    return (uid < AID_APP_START);
 }
 
 /*
@@ -411,7 +412,7 @@ DEFINE_BPF_PROG_KVER("cgroupsock/inet/create", AID_ROOT, AID_ROOT, inet_socket_c
      * user at install time so we only check the appId part of a request uid at
      * run time. See UserHandle#isSameApp for detail.
      */
-    uint32_t appId = (gid_uid & 0xffffffff) % PER_USER_RANGE;
+    uint32_t appId = (gid_uid & 0xffffffff) % AID_USER_OFFSET;  // == PER_USER_RANGE == 100000
     uint8_t* permissions = bpf_uid_permission_map_lookup_elem(&appId);
     if (!permissions) {
         // UID not in map. Default to just INTERNET permission.
