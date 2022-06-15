@@ -41,6 +41,7 @@
             <item type="array" name="config_ethernet_interfaces"/>
             <item type="string" name="config_ethernet_iface_regex"/>
             <item type="integer" name="config_validationFailureAfterRoamIgnoreTimeMillis" />
+            <item type="integer" name="config_netstats_validate_import" />
         </policy>
     </overlayable>
 </resources>
