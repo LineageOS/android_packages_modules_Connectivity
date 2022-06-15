@@ -120,11 +120,6 @@ bpf {
         "-Wall",
         "-Werror",
     ],
-    // need //frameworks/libs/net/common/netd/libnetdutils/include/netdutils/UidConstants.h
-    // MIN_SYSTEM_UID, MAX_SYSTEM_UID, PER_USER_RANGE
-    include_dirs: [
-        "frameworks/libs/net/common/netd/libnetdutils/include",
-    ],
     // WARNING: Android T's non-updatable netd depends on 'netd_shared' string for xt_bpf programs
     sub_dir: "netd_shared",
 }
