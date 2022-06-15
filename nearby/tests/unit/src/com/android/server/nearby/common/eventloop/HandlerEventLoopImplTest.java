@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021 The Android Open Source Project
+ * Copyright (C) 2022 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,45 +27,43 @@ import org.junit.rules.ExpectedException;
 import java.util.ArrayList;
 import java.util.List;
 
-
-public class EventLoopTest {
-    private static final String TAG = "EventLoopTest";
-
-    private final EventLoop mEventLoop = EventLoop.newInstance(TAG);
+public class HandlerEventLoopImplTest {
+    private static final String TAG = "HandlerEventLoopImplTest";
+    private final HandlerEventLoopImpl mHandlerEventLoopImpl =
+            new HandlerEventLoopImpl(TAG);
     private final List<Integer> mExecutedRunnables = new ArrayList<>();
     @Rule
     public ExpectedException thrown = ExpectedException.none();
 
     @Test
     public void remove() {
-        mEventLoop.postRunnable(new NumberedRunnable(0));
+        mHandlerEventLoopImpl.postRunnable(new NumberedRunnable(0));
         NumberedRunnable runnableToAddAndRemove = new NumberedRunnable(1);
-        mEventLoop.postRunnable(runnableToAddAndRemove);
-        mEventLoop.removeRunnable(runnableToAddAndRemove);
-        mEventLoop.postRunnable(new NumberedRunnable(2));
+        mHandlerEventLoopImpl.postRunnable(runnableToAddAndRemove);
+        mHandlerEventLoopImpl.removeRunnable(runnableToAddAndRemove);
+        mHandlerEventLoopImpl.postRunnable(new NumberedRunnable(2));
         assertThat(mExecutedRunnables).doesNotContain(1);
     }
 
     @Test
     @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void isPosted() {
-        NumberedRunnable runnable = new NumberedRunnable(0);
-        mEventLoop.postRunnableDelayed(runnable, 10 * 1000L);
-        assertThat(mEventLoop.isPosted(runnable)).isTrue();
-        mEventLoop.removeRunnable(runnable);
-        assertThat(mEventLoop.isPosted(runnable)).isFalse();
+        NumberedRunnable runnable = new HandlerEventLoopImplTest.NumberedRunnable(0);
+        mHandlerEventLoopImpl.postRunnableDelayed(runnable, 10 * 1000L);
+        assertThat(mHandlerEventLoopImpl.isPosted(runnable)).isTrue();
+        mHandlerEventLoopImpl.removeRunnable(runnable);
+        assertThat(mHandlerEventLoopImpl.isPosted(runnable)).isFalse();
 
         // Let a runnable execute, then verify that it's not posted.
-        mEventLoop.postRunnable(runnable);
-        assertThat(mEventLoop.isPosted(runnable)).isTrue();
+        mHandlerEventLoopImpl.postRunnable(runnable);
+        assertThat(mHandlerEventLoopImpl.isPosted(runnable)).isTrue();
     }
 
     @Test
     @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void postAndWaitAfterDestroy() throws InterruptedException {
-        mEventLoop.destroy();
-        mEventLoop.postAndWait(new NumberedRunnable(0));
-
+        mHandlerEventLoopImpl.destroy();
+        mHandlerEventLoopImpl.postAndWait(new HandlerEventLoopImplTest.NumberedRunnable(0));
         assertThat(mExecutedRunnables).isEmpty();
     }
 
@@ -88,7 +86,8 @@ public class EventLoopTest {
 
     @Test
     public void postEmptyQueueRunnable() {
-        mEventLoop.postEmptyQueueRunnable(new NumberedRunnable(0));
+        mHandlerEventLoopImpl.postEmptyQueueRunnable(
+                new HandlerEventLoopImplTest.NumberedRunnable(0));
         assertThat(mExecutedRunnables).isEmpty();
     }
 }

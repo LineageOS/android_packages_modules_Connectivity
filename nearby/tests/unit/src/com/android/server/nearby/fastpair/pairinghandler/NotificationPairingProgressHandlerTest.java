@@ -42,7 +42,8 @@ import java.time.Clock;
 
 import service.proto.Cache;
 import service.proto.Rpcs;
-public class PairingProgressHandlerBaseTest {
+
+public class NotificationPairingProgressHandlerTest {
     @Mock
     Locator mLocator;
     @Mock
@@ -54,10 +55,11 @@ public class PairingProgressHandlerBaseTest {
     @Mock
     FootprintsDeviceManager mFootprintsDeviceManager;
     private static final byte[] ACCOUNT_KEY = new byte[]{0x01, 0x02};
+    private static final int SUBSEQUENT_PAIR_START = 1310;
+    private static final int SUBSEQUENT_PAIR_END = 1320;
 
     @Before
     public void setup() {
-
         MockitoAnnotations.initMocks(this);
         when(mContextWrapper.getLocator()).thenReturn(mLocator);
         mLocator.overrideBindingForTest(FastPairCacheManager.class,
@@ -66,7 +68,7 @@ public class PairingProgressHandlerBaseTest {
     }
 
     @Test
-    public void createHandler_halfSheetSubsequentPairing_notificationPairingHandlerCreated() {
+    public void getPairEndEventCode() {
         DiscoveryItem discoveryItem = FakeDiscoveryItems.newFastPairDiscoveryItem(mContextWrapper);
         discoveryItem.setStoredItemForTest(
                 discoveryItem.getStoredItemForTest().toBuilder()
@@ -76,31 +78,14 @@ public class PairingProgressHandlerBaseTest {
                                         .setDeviceType(Rpcs.DeviceType.HEADPHONES).build())
                         .build());
 
-        PairingProgressHandlerBase progressHandler =
-                createProgressHandler(ACCOUNT_KEY, discoveryItem, /* isRetroactivePair= */ false);
-
-        assertThat(progressHandler).isInstanceOf(NotificationPairingProgressHandler.class);
+        NotificationPairingProgressHandler notificationPairingProgressHandler =
+                createProgressHandler(ACCOUNT_KEY, discoveryItem);
+        assertThat(notificationPairingProgressHandler
+                .getPairEndEventCode()).isEqualTo(SUBSEQUENT_PAIR_END);
     }
 
     @Test
-    public void createHandler_halfSheetInitialPairing_halfSheetPairingHandlerCreated() {
-        // No account key
-        DiscoveryItem discoveryItem = FakeDiscoveryItems.newFastPairDiscoveryItem(mContextWrapper);
-        discoveryItem.setStoredItemForTest(
-                discoveryItem.getStoredItemForTest().toBuilder()
-                        .setFastPairInformation(
-                                Cache.FastPairInformation.newBuilder()
-                                        .setDeviceType(Rpcs.DeviceType.HEADPHONES).build())
-                        .build());
-
-        PairingProgressHandlerBase progressHandler =
-                createProgressHandler(null, discoveryItem, /* isRetroactivePair= */ false);
-
-        assertThat(progressHandler).isInstanceOf(HalfSheetPairingProgressHandler.class);
-    }
-
-    @Test
-    public void skipWaitingScreenUnlock() {
+    public void getPairStartEventCode() {
         DiscoveryItem discoveryItem = FakeDiscoveryItems.newFastPairDiscoveryItem(mContextWrapper);
         discoveryItem.setStoredItemForTest(
                 discoveryItem.getStoredItemForTest().toBuilder()
@@ -110,28 +95,26 @@ public class PairingProgressHandlerBaseTest {
                                         .setDeviceType(Rpcs.DeviceType.HEADPHONES).build())
                         .build());
 
-        PairingProgressHandlerBase progressHandler =
-                createProgressHandler(ACCOUNT_KEY, discoveryItem, /* isRetroactivePair= */ false);
-        assertThat(progressHandler.skipWaitingScreenUnlock()).isFalse();
+        NotificationPairingProgressHandler notificationPairingProgressHandler =
+                createProgressHandler(ACCOUNT_KEY, discoveryItem);
+        assertThat(notificationPairingProgressHandler
+                .getPairStartEventCode()).isEqualTo(SUBSEQUENT_PAIR_START);
     }
 
-    private PairingProgressHandlerBase createProgressHandler(
-            @Nullable byte[] accountKey, DiscoveryItem fastPairItem, boolean isRetroactivePair) {
+    private NotificationPairingProgressHandler createProgressHandler(
+            @Nullable byte[] accountKey, DiscoveryItem fastPairItem) {
         FastPairNotificationManager fastPairNotificationManager =
                 new FastPairNotificationManager(mContextWrapper, fastPairItem, true);
         FastPairHalfSheetManager fastPairHalfSheetManager =
                 new FastPairHalfSheetManager(mContextWrapper);
         mLocator.overrideBindingForTest(FastPairHalfSheetManager.class, fastPairHalfSheetManager);
-        PairingProgressHandlerBase pairingProgressHandlerBase =
-                PairingProgressHandlerBase.create(
+        NotificationPairingProgressHandler mNotificationPairingProgressHandler =
+                new NotificationPairingProgressHandler(
                         mContextWrapper,
                         fastPairItem,
                         fastPairItem.getAppPackageName(),
                         accountKey,
-                        mFootprintsDeviceManager,
-                        fastPairNotificationManager,
-                        fastPairHalfSheetManager,
-                        isRetroactivePair);
-        return pairingProgressHandlerBase;
+                        fastPairNotificationManager);
+        return mNotificationPairingProgressHandler;
     }
 }
