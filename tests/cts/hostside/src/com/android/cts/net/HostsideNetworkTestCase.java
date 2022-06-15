@@ -172,7 +172,7 @@ abstract class HostsideNetworkTestCase extends DeviceTestCase implements IAbiRec
     }
 
     private static final Pattern UID_PATTERN =
-            Pattern.compile(".*userId=([0-9]+)$", Pattern.MULTILINE);
+            Pattern.compile(".*appId=([0-9]+)$", Pattern.MULTILINE);
 
     protected int getUid(String packageName) throws DeviceNotAvailableException {
         final String output = runCommand("dumpsys package " + packageName);
