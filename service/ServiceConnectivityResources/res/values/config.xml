@@ -179,4 +179,13 @@
     Only supported up to S. On T+, the Wi-Fi code should use unregisterAfterReplacement in order
     to ensure that apps see the network disconnect and reconnect. -->
     <integer translatable="false" name="config_validationFailureAfterRoamIgnoreTimeMillis">-1</integer>
+
+    <!-- Whether the network stats service should run compare on the result of
+    {@link NetworkStatsDataMigrationUtils#readPlatformCollection} and the result
+    of reading from legacy recorders. Possible values are:
+      0 = never compare,
+      1 = always compare,
+      2 = compare on debuggable builds (default value)
+      -->
+    <integer translatable="false" name="config_netstats_validate_import">2</integer>
 </resources>
