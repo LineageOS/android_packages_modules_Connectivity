@@ -913,7 +913,7 @@ public abstract class NetworkAgent {
      * Must be called by the agent when the network's {@link LinkProperties} change.
      * @param linkProperties the new LinkProperties.
      */
-    public final void sendLinkProperties(@NonNull LinkProperties linkProperties) {
+    public void sendLinkProperties(@NonNull LinkProperties linkProperties) {
         Objects.requireNonNull(linkProperties);
         final LinkProperties lp = new LinkProperties(linkProperties);
         queueOrSendMessage(reg -> reg.sendLinkProperties(lp));
@@ -1088,7 +1088,7 @@ public abstract class NetworkAgent {
      * Must be called by the agent when the network's {@link NetworkCapabilities} change.
      * @param networkCapabilities the new NetworkCapabilities.
      */
-    public final void sendNetworkCapabilities(@NonNull NetworkCapabilities networkCapabilities) {
+    public void sendNetworkCapabilities(@NonNull NetworkCapabilities networkCapabilities) {
         Objects.requireNonNull(networkCapabilities);
         mBandwidthUpdatePending.set(false);
         mLastBwRefreshTime = System.currentTimeMillis();
@@ -1102,7 +1102,7 @@ public abstract class NetworkAgent {
      *
      * @param score the new score.
      */
-    public final void sendNetworkScore(@NonNull NetworkScore score) {
+    public void sendNetworkScore(@NonNull NetworkScore score) {
         Objects.requireNonNull(score);
         queueOrSendMessage(reg -> reg.sendScore(score));
     }
@@ -1113,7 +1113,7 @@ public abstract class NetworkAgent {
      * @param score the new score, between 0 and 99.
      * deprecated use sendNetworkScore(NetworkScore) TODO : remove in S.
      */
-    public final void sendNetworkScore(@IntRange(from = 0, to = 99) int score) {
+    public void sendNetworkScore(@IntRange(from = 0, to = 99) int score) {
         sendNetworkScore(new NetworkScore.Builder().setLegacyInt(score).build());
     }
 
