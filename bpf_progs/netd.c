@@ -317,6 +317,7 @@ DEFINE_BPF_PROG("cgroupskb/egress/stats", AID_ROOT, AID_SYSTEM, bpf_cgroup_egres
     return bpf_traffic_account(skb, BPF_EGRESS);
 }
 
+// WARNING: Android T's non-updatable netd depends on the name of this program.
 DEFINE_BPF_PROG("skfilter/egress/xtbpf", AID_ROOT, AID_NET_ADMIN, xt_bpf_egress_prog)
 (struct __sk_buff* skb) {
     // Clat daemon does not generate new traffic, all its traffic is accounted for already
@@ -336,6 +337,7 @@ DEFINE_BPF_PROG("skfilter/egress/xtbpf", AID_ROOT, AID_NET_ADMIN, xt_bpf_egress_
     return BPF_MATCH;
 }
 
+// WARNING: Android T's non-updatable netd depends on the name of this program.
 DEFINE_BPF_PROG("skfilter/ingress/xtbpf", AID_ROOT, AID_NET_ADMIN, xt_bpf_ingress_prog)
 (struct __sk_buff* skb) {
     // Clat daemon traffic is not accounted by virtue of iptables raw prerouting drop rule
@@ -358,6 +360,7 @@ DEFINE_BPF_PROG("schedact/ingress/account", AID_ROOT, AID_NET_ADMIN, tc_bpf_ingr
     return TC_ACT_UNSPEC;
 }
 
+// WARNING: Android T's non-updatable netd depends on the name of this program.
 DEFINE_BPF_PROG("skfilter/allowlist/xtbpf", AID_ROOT, AID_NET_ADMIN, xt_bpf_allowlist_prog)
 (struct __sk_buff* skb) {
     uint32_t sock_uid = bpf_get_socket_uid(skb);
@@ -375,6 +378,7 @@ DEFINE_BPF_PROG("skfilter/allowlist/xtbpf", AID_ROOT, AID_NET_ADMIN, xt_bpf_allo
     return BPF_NOMATCH;
 }
 
+// WARNING: Android T's non-updatable netd depends on the name of this program.
 DEFINE_BPF_PROG("skfilter/denylist/xtbpf", AID_ROOT, AID_NET_ADMIN, xt_bpf_denylist_prog)
 (struct __sk_buff* skb) {
     uint32_t sock_uid = bpf_get_socket_uid(skb);
