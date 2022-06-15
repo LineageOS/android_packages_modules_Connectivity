@@ -20,7 +20,8 @@ import static com.google.common.truth.Truth.assertThat;
 
 import static org.mockito.Mockito.when;
 
-import androidx.annotation.Nullable;
+import android.bluetooth.BluetoothAdapter;
+import android.bluetooth.BluetoothDevice;
 
 import com.android.server.nearby.common.locator.Locator;
 import com.android.server.nearby.common.locator.LocatorContextWrapper;
@@ -51,64 +52,49 @@ public class HalfSheetPairingProgressHandlerTest {
     @Mock
     FastPairCacheManager mFastPairCacheManager;
 
+    private static final String DEFAULT_MAC_ADDRESS = "00:11:22:33:44:55";
     private static final byte[] ACCOUNT_KEY = new byte[]{0x01, 0x02};
     private static final int SUBSEQUENT_PAIR_START = 1310;
     private static final int SUBSEQUENT_PAIR_END = 1320;
+    private static HalfSheetPairingProgressHandler sHalfSheetPairingProgressHandler;
+    private static DiscoveryItem sDiscoveryItem;
+    private static BluetoothDevice sBluetoothDevice;
 
     @Before
     public void setup() {
         MockitoAnnotations.initMocks(this);
         when(mContextWrapper.getLocator()).thenReturn(mLocator);
-        mLocator.overrideBindingForTest(FastPairCacheManager.class,
-                mFastPairCacheManager);
+        mLocator.overrideBindingForTest(FastPairCacheManager.class, mFastPairCacheManager);
         mLocator.overrideBindingForTest(Clock.class, mClock);
-    }
-
-    @Test
-    public void getPairEndEventCode() {
-        DiscoveryItem discoveryItem = FakeDiscoveryItems.newFastPairDiscoveryItem(mContextWrapper);
-        discoveryItem.setStoredItemForTest(
-                discoveryItem.getStoredItemForTest().toBuilder()
+        FastPairHalfSheetManager mfastPairHalfSheetManager =
+                new FastPairHalfSheetManager(mContextWrapper);
+        mLocator.bind(FastPairHalfSheetManager.class, mfastPairHalfSheetManager);
+        sDiscoveryItem = FakeDiscoveryItems.newFastPairDiscoveryItem(mContextWrapper);
+        sDiscoveryItem.setStoredItemForTest(
+                sDiscoveryItem.getStoredItemForTest().toBuilder()
                         .setAuthenticationPublicKeySecp256R1(ByteString.copyFrom(ACCOUNT_KEY))
+                        .setMacAddress(DEFAULT_MAC_ADDRESS)
                         .setFastPairInformation(
                                 Cache.FastPairInformation.newBuilder()
                                         .setDeviceType(Rpcs.DeviceType.HEADPHONES).build())
                         .build());
+        sHalfSheetPairingProgressHandler =
+                new HalfSheetPairingProgressHandler(mContextWrapper, sDiscoveryItem,
+                        sDiscoveryItem.getAppPackageName(), ACCOUNT_KEY);
 
-        HalfSheetPairingProgressHandler halfSheetPairingProgressHandler =
-                createProgressHandler(ACCOUNT_KEY, discoveryItem);
-        assertThat(halfSheetPairingProgressHandler
+        sBluetoothDevice =
+                BluetoothAdapter.getDefaultAdapter().getRemoteDevice("00:11:22:33:44:55");
+    }
+
+    @Test
+    public void getPairEndEventCode() {
+        assertThat(sHalfSheetPairingProgressHandler
                 .getPairEndEventCode()).isEqualTo(SUBSEQUENT_PAIR_END);
     }
 
     @Test
     public void getPairStartEventCode() {
-        DiscoveryItem discoveryItem = FakeDiscoveryItems.newFastPairDiscoveryItem(mContextWrapper);
-        discoveryItem.setStoredItemForTest(
-                discoveryItem.getStoredItemForTest().toBuilder()
-                        .setAuthenticationPublicKeySecp256R1(ByteString.copyFrom(ACCOUNT_KEY))
-                        .setFastPairInformation(
-                                Cache.FastPairInformation.newBuilder()
-                                        .setDeviceType(Rpcs.DeviceType.HEADPHONES).build())
-                        .build());
-
-        HalfSheetPairingProgressHandler halfSheetPairingProgressHandler =
-                createProgressHandler(ACCOUNT_KEY, discoveryItem);
-        assertThat(halfSheetPairingProgressHandler
+        assertThat(sHalfSheetPairingProgressHandler
                 .getPairStartEventCode()).isEqualTo(SUBSEQUENT_PAIR_START);
-    }
-
-    private HalfSheetPairingProgressHandler createProgressHandler(
-            @Nullable byte[] accountKey, DiscoveryItem fastPairItem) {
-        FastPairHalfSheetManager fastPairHalfSheetManager =
-                new FastPairHalfSheetManager(mContextWrapper);
-        mLocator.overrideBindingForTest(FastPairHalfSheetManager.class, fastPairHalfSheetManager);
-        HalfSheetPairingProgressHandler mHalfSheetPairingProgressHandler =
-                new HalfSheetPairingProgressHandler(
-                        mContextWrapper,
-                        fastPairItem,
-                        fastPairItem.getAppPackageName(),
-                        accountKey);
-        return mHalfSheetPairingProgressHandler;
     }
 }

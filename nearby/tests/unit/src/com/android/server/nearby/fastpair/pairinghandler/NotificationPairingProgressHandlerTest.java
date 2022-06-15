@@ -26,7 +26,6 @@ import com.android.server.nearby.common.locator.Locator;
 import com.android.server.nearby.common.locator.LocatorContextWrapper;
 import com.android.server.nearby.fastpair.cache.DiscoveryItem;
 import com.android.server.nearby.fastpair.cache.FastPairCacheManager;
-import com.android.server.nearby.fastpair.footprint.FootprintsDeviceManager;
 import com.android.server.nearby.fastpair.halfsheet.FastPairHalfSheetManager;
 import com.android.server.nearby.fastpair.notification.FastPairNotificationManager;
 import com.android.server.nearby.fastpair.testing.FakeDiscoveryItems;
@@ -52,11 +51,12 @@ public class NotificationPairingProgressHandlerTest {
     Clock mClock;
     @Mock
     FastPairCacheManager mFastPairCacheManager;
-    @Mock
-    FootprintsDeviceManager mFootprintsDeviceManager;
+
     private static final byte[] ACCOUNT_KEY = new byte[]{0x01, 0x02};
     private static final int SUBSEQUENT_PAIR_START = 1310;
     private static final int SUBSEQUENT_PAIR_END = 1320;
+    private static DiscoveryItem sDiscoveryItem;
+    private static  NotificationPairingProgressHandler sNotificationPairingProgressHandler;
 
     @Before
     public void setup() {
@@ -65,40 +65,44 @@ public class NotificationPairingProgressHandlerTest {
         mLocator.overrideBindingForTest(FastPairCacheManager.class,
                 mFastPairCacheManager);
         mLocator.overrideBindingForTest(Clock.class, mClock);
-    }
-
-    @Test
-    public void getPairEndEventCode() {
-        DiscoveryItem discoveryItem = FakeDiscoveryItems.newFastPairDiscoveryItem(mContextWrapper);
-        discoveryItem.setStoredItemForTest(
-                discoveryItem.getStoredItemForTest().toBuilder()
+        sDiscoveryItem = FakeDiscoveryItems.newFastPairDiscoveryItem(mContextWrapper);
+        sDiscoveryItem.setStoredItemForTest(
+                sDiscoveryItem.getStoredItemForTest().toBuilder()
                         .setAuthenticationPublicKeySecp256R1(ByteString.copyFrom(ACCOUNT_KEY))
                         .setFastPairInformation(
                                 Cache.FastPairInformation.newBuilder()
                                         .setDeviceType(Rpcs.DeviceType.HEADPHONES).build())
                         .build());
+        sNotificationPairingProgressHandler = createProgressHandler(ACCOUNT_KEY, sDiscoveryItem);
+    }
 
-        NotificationPairingProgressHandler notificationPairingProgressHandler =
-                createProgressHandler(ACCOUNT_KEY, discoveryItem);
-        assertThat(notificationPairingProgressHandler
+    @Test
+    public void getPairEndEventCode() {
+        assertThat(sNotificationPairingProgressHandler
                 .getPairEndEventCode()).isEqualTo(SUBSEQUENT_PAIR_END);
     }
 
     @Test
     public void getPairStartEventCode() {
-        DiscoveryItem discoveryItem = FakeDiscoveryItems.newFastPairDiscoveryItem(mContextWrapper);
-        discoveryItem.setStoredItemForTest(
-                discoveryItem.getStoredItemForTest().toBuilder()
-                        .setAuthenticationPublicKeySecp256R1(ByteString.copyFrom(ACCOUNT_KEY))
-                        .setFastPairInformation(
-                                Cache.FastPairInformation.newBuilder()
-                                        .setDeviceType(Rpcs.DeviceType.HEADPHONES).build())
-                        .build());
-
-        NotificationPairingProgressHandler notificationPairingProgressHandler =
-                createProgressHandler(ACCOUNT_KEY, discoveryItem);
-        assertThat(notificationPairingProgressHandler
+        assertThat(sNotificationPairingProgressHandler
                 .getPairStartEventCode()).isEqualTo(SUBSEQUENT_PAIR_START);
+    }
+
+    @Test
+    public void onReadyToPair() {
+        sNotificationPairingProgressHandler.onReadyToPair();
+    }
+
+    @Test
+    public void  onPairingFailed() {
+        Throwable e = new Throwable("Pairing Failed");
+        sNotificationPairingProgressHandler.onPairingFailed(e);
+    }
+
+
+    @Test
+    public void onPairingSuccess() {
+        sNotificationPairingProgressHandler.onPairingSuccess(sDiscoveryItem.getMacAddress());
     }
 
     private NotificationPairingProgressHandler createProgressHandler(
