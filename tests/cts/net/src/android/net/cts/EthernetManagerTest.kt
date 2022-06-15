@@ -366,7 +366,6 @@ class EthernetManagerTest {
                 SystemProperties.getInt("service.adb.tcp.port", -1) > -1)
     }
 
-    @Ignore("TODO: temporarily ignore tests until prebuilts are updated")
     @Test
     fun testCallbacks_forServerModeInterfaces() {
         // do not run this test when adb might be connected over ethernet.
