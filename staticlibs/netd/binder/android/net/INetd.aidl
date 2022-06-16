@@ -569,6 +569,11 @@ interface INetd {
     */
     void clatdStop(in @utf8InCpp String ifName);
 
+    /**
+     * Packet mark that identifies non-offloaded ingress clat packets.
+     */
+    const int CLAT_MARK = 0xdeadc1a7;
+
    /**
     * Get status of IP forwarding
     *
