@@ -42,9 +42,7 @@ import java.util.Map;
 
 @RunWith(DevSdkIgnoreRunner.class)
 @SmallTest
-// TODO(b/234099453): re-enable once a newer prebuilt is available
-// @DevSdkIgnoreRule.IgnoreUpTo(Build.VERSION_CODES.R)
-@DevSdkIgnoreRule.IgnoreUpTo(Build.VERSION_CODES.CUR_DEVELOPMENT)
+@DevSdkIgnoreRule.IgnoreUpTo(Build.VERSION_CODES.R)
 public class NsdServiceInfoTest {
 
     public final static InetAddress LOCALHOST;
