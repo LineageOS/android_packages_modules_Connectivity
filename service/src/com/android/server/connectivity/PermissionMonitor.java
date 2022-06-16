@@ -23,9 +23,6 @@ import static android.Manifest.permission.NETWORK_STACK;
 import static android.Manifest.permission.UPDATE_DEVICE_STATS;
 import static android.content.pm.PackageInfo.REQUESTED_PERMISSION_GRANTED;
 import static android.content.pm.PackageManager.GET_PERMISSIONS;
-import static android.net.ConnectivityManager.FIREWALL_CHAIN_LOCKDOWN_VPN;
-import static android.net.ConnectivityManager.FIREWALL_RULE_ALLOW;
-import static android.net.ConnectivityManager.FIREWALL_RULE_DENY;
 import static android.net.ConnectivitySettingsManager.UIDS_ALLOWED_ON_RESTRICTED_NETWORKS;
 import static android.net.INetd.PERMISSION_INTERNET;
 import static android.net.INetd.PERMISSION_NETWORK;
@@ -684,8 +681,12 @@ public class PermissionMonitor {
     }
 
     private synchronized void updateLockdownUid(int uid, boolean add) {
-        if (UidRange.containsUid(mVpnLockdownUidRanges.getSet(), uid)
-                && !hasRestrictedNetworksPermission(uid)) {
+        // Apps that can use restricted networks can always bypass VPNs.
+        if (hasRestrictedNetworksPermission(uid)) {
+            return;
+        }
+
+        if (UidRange.containsUid(mVpnLockdownUidRanges.getSet(), uid)) {
             updateLockdownUidRule(uid, add);
         }
     }
@@ -1079,11 +1080,7 @@ public class PermissionMonitor {
 
     private void updateLockdownUidRule(int uid, boolean add) {
         try {
-            if (add) {
-                mBpfNetMaps.setUidRule(FIREWALL_CHAIN_LOCKDOWN_VPN, uid, FIREWALL_RULE_DENY);
-            } else {
-                mBpfNetMaps.setUidRule(FIREWALL_CHAIN_LOCKDOWN_VPN, uid, FIREWALL_RULE_ALLOW);
-            }
+            mBpfNetMaps.updateUidLockdownRule(uid, add);
         } catch (ServiceSpecificException e) {
             loge("Failed to " + (add ? "add" : "remove") + " Lockdown rule: " + e);
         }
@@ -1259,7 +1256,7 @@ public class PermissionMonitor {
         pw.println("Lockdown filtering rules:");
         pw.increaseIndent();
         for (final UidRange range : mVpnLockdownUidRanges.getSet()) {
-            pw.println("UIDs: " + range.toString());
+            pw.println("UIDs: " + range);
         }
         pw.decreaseIndent();
 

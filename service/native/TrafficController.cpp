@@ -340,8 +340,6 @@ FirewallType TrafficController::getFirewallType(ChildChain chain) {
             return ALLOWLIST;
         case LOW_POWER_STANDBY:
             return ALLOWLIST;
-        case LOCKDOWN:
-            return DENYLIST;
         case OEM_DENY_1:
             return DENYLIST;
         case OEM_DENY_2:
@@ -372,9 +370,6 @@ int TrafficController::changeUidOwnerRule(ChildChain chain, uid_t uid, FirewallR
             break;
         case LOW_POWER_STANDBY:
             res = updateOwnerMapEntry(LOW_POWER_STANDBY_MATCH, uid, rule, type);
-            break;
-        case LOCKDOWN:
-            res = updateOwnerMapEntry(LOCKDOWN_VPN_MATCH, uid, rule, type);
             break;
         case OEM_DENY_1:
             res = updateOwnerMapEntry(OEM_DENY_1_MATCH, uid, rule, type);
@@ -445,6 +440,18 @@ Status TrafficController::removeUidInterfaceRules(const std::vector<int32_t>& ui
         }
     }
     return netdutils::status::ok;
+}
+
+Status TrafficController::updateUidLockdownRule(const uid_t uid, const bool add) {
+    std::lock_guard guard(mMutex);
+
+    netdutils::Status result = add ? addRule(uid, LOCKDOWN_VPN_MATCH)
+                               : removeRule(uid, LOCKDOWN_VPN_MATCH);
+    if (!isOk(result)) {
+        ALOGW("%s Lockdown rule failed(%d): uid=%d",
+              (add ? "add": "remove"), result.code(), uid);
+    }
+    return result;
 }
 
 int TrafficController::replaceUidOwnerMap(const std::string& name, bool isAllowlist __unused,

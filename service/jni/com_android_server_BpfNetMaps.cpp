@@ -151,6 +151,12 @@ static jint native_removeUidInterfaceRules(JNIEnv* env, jobject self, jintArray 
     return (jint)status.code();
 }
 
+static jint native_updateUidLockdownRule(JNIEnv* env, jobject self, jint uid, jboolean add) {
+    Status status = mTc.updateUidLockdownRule(uid, add);
+    CHECK_LOG(status);
+    return (jint)status.code();
+}
+
 static jint native_swapActiveStatsMap(JNIEnv* env, jobject self) {
     Status status = mTc.swapActiveStatsMap();
     CHECK_LOG(status);
@@ -203,6 +209,8 @@ static const JNINativeMethod gMethods[] = {
     (void*)native_addUidInterfaceRules},
     {"native_removeUidInterfaceRules", "([I)I",
     (void*)native_removeUidInterfaceRules},
+    {"native_updateUidLockdownRule", "(IZ)I",
+    (void*)native_updateUidLockdownRule},
     {"native_swapActiveStatsMap", "()I",
     (void*)native_swapActiveStatsMap},
     {"native_setPermissionForUids", "(I[I)V",
