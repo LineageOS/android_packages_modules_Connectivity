@@ -32,10 +32,12 @@ import android.net.EthernetManager.TetheredInterfaceCallback
 import android.net.EthernetManager.TetheredInterfaceRequest
 import android.net.EthernetNetworkManagementException
 import android.net.EthernetNetworkSpecifier
+import android.net.EthernetNetworkUpdateRequest
 import android.net.InetAddresses
 import android.net.IpConfiguration
 import android.net.MacAddress
 import android.net.Network
+import android.net.NetworkCapabilities
 import android.net.NetworkCapabilities.NET_CAPABILITY_TRUSTED
 import android.net.NetworkCapabilities.TRANSPORT_ETHERNET
 import android.net.NetworkCapabilities.TRANSPORT_TEST
@@ -351,6 +353,22 @@ class EthernetManagerTest {
     private fun enableInterface(iface: EthernetTestInterface) = EthernetOutcomeReceiver().also {
         runAsShell(MANAGE_TEST_NETWORKS) {
             em.enableInterface(iface.name, handler::post, it)
+        }
+    }
+
+    private fun updateConfiguration(
+        iface: EthernetTestInterface,
+        ipConfig: IpConfiguration? = null,
+        capabilities: NetworkCapabilities? = null
+    ) = EthernetOutcomeReceiver().also {
+        runAsShell(MANAGE_TEST_NETWORKS) {
+            em.updateConfiguration(
+                iface.name,
+                EthernetNetworkUpdateRequest.Builder()
+                    .setIpConfiguration(ipConfig)
+                    .setNetworkCapabilities(capabilities).build(),
+                handler::post,
+                it)
         }
     }
 
