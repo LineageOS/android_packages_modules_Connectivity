@@ -21,7 +21,7 @@ java_library {
     sdk_version: "system_current",
     min_sdk_version: "29",
     static_libs: [
-        "netd_aidl_interface-V8-java",
+        "netd_aidl_interface-V9-java",
     ],
     apex_available: [
         "//apex_available:platform", // used from services.net
@@ -44,7 +44,7 @@ cc_library_static {
 cc_library_static {
     name: "netd_aidl_interface-lateststable-ndk",
     whole_static_libs: [
-        "netd_aidl_interface-V8-ndk",
+        "netd_aidl_interface-V9-ndk",
     ],
     apex_available: [
         "com.android.resolv",
@@ -57,18 +57,18 @@ cc_library_static {
 cc_library_static {
     name: "netd_aidl_interface-lateststable-cpp",
     whole_static_libs: [
-        "netd_aidl_interface-V8-cpp",
+        "netd_aidl_interface-V9-cpp",
     ],
 }
 
 cc_defaults {
     name: "netd_aidl_interface_lateststable_cpp_static",
-    static_libs: ["netd_aidl_interface-V8-cpp"],
+    static_libs: ["netd_aidl_interface-V9-cpp"],
 }
 
 cc_defaults {
     name: "netd_aidl_interface_lateststable_cpp_shared",
-    shared_libs: ["netd_aidl_interface-V8-cpp"],
+    shared_libs: ["netd_aidl_interface-V9-cpp"],
 }
 
 aidl_interface {
@@ -116,16 +116,46 @@ aidl_interface {
             min_sdk_version: "29",
         },
     },
-    versions: [
-        "1",
-        "2",
-        "3",
-        "4",
-        "5",
-        "6",
-        "7",
-        "8",
+    versions_with_info: [
+        {
+            version: "1",
+            imports: [],
+        },
+        {
+            version: "2",
+            imports: [],
+        },
+        {
+            version: "3",
+            imports: [],
+        },
+        {
+            version: "4",
+            imports: [],
+        },
+        {
+            version: "5",
+            imports: [],
+        },
+        {
+            version: "6",
+            imports: [],
+        },
+        {
+            version: "7",
+            imports: [],
+        },
+        {
+            version: "8",
+            imports: [],
+        },
+        {
+            version: "9",
+            imports: [],
+        },
+
     ],
+
 }
 
 java_library {
