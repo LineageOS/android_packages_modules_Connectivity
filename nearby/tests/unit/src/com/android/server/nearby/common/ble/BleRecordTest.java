@@ -238,7 +238,6 @@ public class BleRecordTest {
         BleRecord record = BleRecord.parseFromBytes(BEACON);
         BleRecord record2 = BleRecord.parseFromBytes(SAME_BEACON);
 
-
         assertThat(record).isEqualTo(record2);
 
         // Different items.

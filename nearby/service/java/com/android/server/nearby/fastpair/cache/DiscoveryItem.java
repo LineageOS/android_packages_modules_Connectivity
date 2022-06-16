@@ -28,6 +28,7 @@ import android.graphics.BitmapFactory;
 import android.text.TextUtils;
 import android.util.Log;
 
+import com.android.internal.annotations.VisibleForTesting;
 import com.android.server.nearby.common.ble.util.RangingUtils;
 import com.android.server.nearby.common.fastpair.IconUtils;
 import com.android.server.nearby.common.locator.Locator;
@@ -295,7 +296,8 @@ public class DiscoveryItem implements Comparable<DiscoveryItem> {
      * Returns the app name of discovery item.
      */
     @Nullable
-    private String getAppName() {
+    @VisibleForTesting
+    protected String getAppName() {
         return mStoredDiscoveryItem.getAppName();
     }
 
