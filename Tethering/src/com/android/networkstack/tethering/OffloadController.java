@@ -43,7 +43,6 @@ import android.net.NetworkStats;
 import android.net.NetworkStats.Entry;
 import android.net.RouteInfo;
 import android.net.netstats.provider.NetworkStatsProvider;
-import android.net.util.SharedLog;
 import android.os.Handler;
 import android.provider.Settings;
 import android.system.ErrnoException;
@@ -53,6 +52,7 @@ import android.util.Log;
 
 import com.android.internal.annotations.VisibleForTesting;
 import com.android.internal.util.IndentingPrintWriter;
+import com.android.net.module.util.SharedLog;
 import com.android.net.module.util.netlink.ConntrackMessage;
 import com.android.net.module.util.netlink.NetlinkConstants;
 import com.android.net.module.util.netlink.NetlinkSocket;
