@@ -24,6 +24,7 @@ import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothAssignedNumbers;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.le.ScanFilter;
+import android.os.Parcel;
 import android.os.ParcelUuid;
 import android.util.SparseArray;
 
@@ -545,6 +546,54 @@ public class BleFilterTest {
         BleFilter nearbyFilter = createTestFilter();
         ScanFilter osFilter = nearbyFilter.toOsFilter();
         assertFilterValuesEqual(nearbyFilter, osFilter);
+    }
+
+    @Test
+    public void describeContents() {
+        BleFilter nearbyFilter = createTestFilter();
+        assertThat(nearbyFilter.describeContents()).isEqualTo(0);
+    }
+
+    @Test
+    public void testHashCode() {
+        BleFilter nearbyFilter = createTestFilter();
+        BleFilter compareFilter = new BleFilter("BERT", "00:11:22:33:AA:BB",
+                new ParcelUuid(UUID.fromString("0000FEA0-0000-1000-8000-00805F9B34FB")),
+                new ParcelUuid(UUID.fromString("FFFFFFF-FFFF-FFF-FFFF-FFFFFFFFFFFF")),
+                ParcelUuid.fromString("0000110B-0000-1000-8000-00805F9B34FB"),
+                new byte[] {0x51, 0x64}, new byte[] {0x00, (byte) 0xFF},
+                BluetoothAssignedNumbers.GOOGLE, new byte[] {0x00, 0x10},
+                new byte[] {0x00, (byte) 0xFF});
+        assertThat(nearbyFilter.hashCode()).isEqualTo(compareFilter.hashCode());
+    }
+
+    @Test
+    public void testToString() {
+        BleFilter nearbyFilter = createTestFilter();
+        assertThat(nearbyFilter.toString()).isEqualTo("BleFilter [deviceName=BERT,"
+                + " deviceAddress=00:11:22:33:AA:BB, uuid=0000fea0-0000-1000-8000-00805f9b34fb,"
+                + " uuidMask=0fffffff-ffff-0fff-ffff-ffffffffffff,"
+                + " serviceDataUuid=0000110b-0000-1000-8000-00805f9b34fb,"
+                + " serviceData=[81, 100], serviceDataMask=[0, -1],"
+                + " manufacturerId=224, manufacturerData=[0, 16], manufacturerDataMask=[0, -1]]");
+    }
+
+    @Test
+    public void testParcel() {
+        BleFilter nearbyFilter = createTestFilter();
+        Parcel parcel = Parcel.obtain();
+        nearbyFilter.writeToParcel(parcel, 0);
+        parcel.setDataPosition(0);
+        BleFilter compareFilter = BleFilter.CREATOR.createFromParcel(
+                parcel);
+        parcel.recycle();
+        assertThat(compareFilter.getDeviceName()).isEqualTo("BERT");
+    }
+
+    @Test
+    public void testCreatorNewArray() {
+        BleFilter[] nearbyFilters  = BleFilter.CREATOR.newArray(2);
+        assertThat(nearbyFilters.length).isEqualTo(2);
     }
 
     private static boolean matches(

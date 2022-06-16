@@ -171,6 +171,23 @@ public class ScanRequestTest {
         assertThat(request.getScanFilters().get(0).getMaxPathLoss()).isEqualTo(RSSI);
     }
 
+    @Test
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
+    public void describeContents() {
+        ScanRequest request = new ScanRequest.Builder()
+                .setScanType(SCAN_TYPE_FAST_PAIR)
+                .build();
+        assertThat(request.describeContents()).isEqualTo(0);
+    }
+
+    @Test
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
+    public void testCreatorNewArray() {
+        ScanRequest[] requests =
+                ScanRequest.CREATOR.newArray(2);
+        assertThat(requests.length).isEqualTo(2);
+    }
+
     private static PresenceScanFilter getPresenceScanFilter() {
         final byte[] secretId = new byte[]{1, 2, 3, 4};
         final byte[] authenticityKey = new byte[]{0, 1, 1, 1};
