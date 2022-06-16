@@ -107,15 +107,6 @@ public class DiscoveryItem implements Comparable<DiscoveryItem> {
     }
 
     /**
-     * Sets the store discovery item mac address.
-     */
-    public void setMacAddress(String address) {
-        mStoredDiscoveryItem = mStoredDiscoveryItem.toBuilder().setMacAddress(address).build();
-
-        mFastPairCacheManager.saveDiscoveryItem(this);
-    }
-
-    /**
      * Checks if the item is expired. Expired items are those over getItemExpirationMillis() eg. 2
      * minutes
      */
