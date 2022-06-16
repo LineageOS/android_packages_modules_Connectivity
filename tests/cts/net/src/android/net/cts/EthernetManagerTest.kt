@@ -30,6 +30,7 @@ import android.net.EthernetManager.STATE_LINK_DOWN
 import android.net.EthernetManager.STATE_LINK_UP
 import android.net.EthernetManager.TetheredInterfaceCallback
 import android.net.EthernetManager.TetheredInterfaceRequest
+import android.net.EthernetNetworkManagementException
 import android.net.EthernetNetworkSpecifier
 import android.net.InetAddresses
 import android.net.IpConfiguration
@@ -45,6 +46,7 @@ import android.net.cts.EthernetManagerTest.EthernetStateListener.CallbackEntry.I
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
+import android.os.OutcomeReceiver
 import android.os.SystemProperties
 import android.platform.test.annotations.AppModeFull
 import android.util.ArraySet
@@ -227,6 +229,35 @@ class EthernetManagerTest {
         }
     }
 
+    private class EthernetOutcomeReceiver :
+        OutcomeReceiver<String, EthernetNetworkManagementException> {
+        private val result = CompletableFuture<String>()
+
+        override fun onResult(iface: String) {
+            result.complete(iface)
+        }
+
+        override fun onError(e: EthernetNetworkManagementException) {
+            result.completeExceptionally(e)
+        }
+
+        fun expectResult(expected: String) {
+            assertEquals(expected, result.get(TIMEOUT_MS, TimeUnit.MILLISECONDS))
+        }
+
+        fun expectError() {
+            // Assert that the future fails with EthernetNetworkManagementException from the
+            // completeExceptionally() call inside onUnavailable.
+            assertFailsWith(EthernetNetworkManagementException::class) {
+                try {
+                    result.get()
+                } catch (e: ExecutionException) {
+                    throw e.cause!!
+                }
+            }
+        }
+    }
+
     @Before
     fun setUp() {
         setIncludeTestInterfaces(true)
@@ -309,6 +340,18 @@ class EthernetManagerTest {
     private fun releaseRequest(cb: TestableNetworkCallback) {
         cm.unregisterNetworkCallback(cb)
         registeredCallbacks.remove(cb)
+    }
+
+    private fun disableInterface(iface: EthernetTestInterface) = EthernetOutcomeReceiver().also {
+        runAsShell(MANAGE_TEST_NETWORKS) {
+            em.disableInterface(iface.name, handler::post, it)
+        }
+    }
+
+    private fun enableInterface(iface: EthernetTestInterface) = EthernetOutcomeReceiver().also {
+        runAsShell(MANAGE_TEST_NETWORKS) {
+            em.enableInterface(iface.name, handler::post, it)
+        }
     }
 
     // NetworkRequest.Builder does not create a copy of the passed NetworkRequest, so in order to
