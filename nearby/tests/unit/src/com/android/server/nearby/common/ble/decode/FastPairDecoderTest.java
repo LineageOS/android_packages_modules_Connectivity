@@ -110,6 +110,41 @@ public class FastPairDecoderTest {
     }
 
     @Test
+    public void getBeaconIdType() {
+        assertThat(mDecoder.getBeaconIdType()).isEqualTo(1);
+    }
+
+    @Test
+    public void getCalibratedBeaconTxPower() {
+        FastPairServiceData fastPairServiceData =
+                new FastPairServiceData(LONG_MODEL_ID_HEADER, LONG_MODEL_ID);
+        assertThat(
+                mDecoder.getCalibratedBeaconTxPower(
+                        newBleRecord(fastPairServiceData.createServiceData())))
+                .isNull();
+    }
+
+    @Test
+    public void getServiceDataArray() {
+        FastPairServiceData fastPairServiceData =
+                new FastPairServiceData(LONG_MODEL_ID_HEADER, LONG_MODEL_ID);
+        assertThat(
+                mDecoder.getServiceDataArray(
+                        newBleRecord(fastPairServiceData.createServiceData())))
+                .isEqualTo(Hex.stringToBytes("101122334455667788"));
+    }
+
+    @Test
+    public void hasBloomFilter() {
+        FastPairServiceData fastPairServiceData =
+                new FastPairServiceData(LONG_MODEL_ID_HEADER, LONG_MODEL_ID);
+        assertThat(
+                mDecoder.hasBloomFilter(
+                        newBleRecord(fastPairServiceData.createServiceData())))
+                .isFalse();
+    }
+
+    @Test
     public void hasModelId_allCases() {
         // One type of the format is just the 3-byte model ID. This format has no header byte (all 3
         // service data bytes are the model ID in little endian).
@@ -206,7 +241,7 @@ public class FastPairDecoderTest {
         fastPairServiceData.mExtraFields.add(BATTERY);
         assertThat(
                 FastPairDecoder.getBatteryLevelNoNotification(
-                    fastPairServiceData.createServiceData()))
+                        fastPairServiceData.createServiceData()))
                 .isEqualTo(Hex.stringToBytes(BATTERY));
     }
 
@@ -229,7 +264,7 @@ public class FastPairDecoderTest {
         fastPairServiceData.mExtraFields.add(BATTERY);
         assertThat(
                 FastPairDecoder.getBatteryLevelNoNotification(
-                    fastPairServiceData.createServiceData()))
+                        fastPairServiceData.createServiceData()))
                 .isEqualTo(Hex.stringToBytes(BATTERY));
     }
 
@@ -243,7 +278,7 @@ public class FastPairDecoderTest {
         fastPairServiceData.mExtraFields.add(BLOOM_FILTER);
         assertThat(
                 FastPairDecoder.getBatteryLevelNoNotification(
-                    fastPairServiceData.createServiceData()))
+                        fastPairServiceData.createServiceData()))
                 .isEqualTo(Hex.stringToBytes(BATTERY));
     }
 
@@ -494,19 +529,19 @@ public class FastPairDecoderTest {
                 throw new RuntimeException("Number of headers and extra fields must match.");
             }
             byte[] serviceData =
-                Bytes.concat(
-                    mHeader == null ? new byte[0] : new byte[] {mHeader},
-                    mModelId == null ? new byte[0] : Hex.stringToBytes(mModelId));
+                    Bytes.concat(
+                            mHeader == null ? new byte[0] : new byte[] {mHeader},
+                            mModelId == null ? new byte[0] : Hex.stringToBytes(mModelId));
             for (int i = 0; i < mExtraFieldHeaders.size(); i++) {
                 serviceData =
-                    Bytes.concat(
-                        serviceData,
-                        mExtraFieldHeaders.get(i) != null
-                            ? new byte[] {mExtraFieldHeaders.get(i)}
-                            : new byte[0],
-                        mExtraFields.get(i) != null
-                            ? Hex.stringToBytes(mExtraFields.get(i))
-                            : new byte[0]);
+                        Bytes.concat(
+                                serviceData,
+                                mExtraFieldHeaders.get(i) != null
+                                        ? new byte[] {mExtraFieldHeaders.get(i)}
+                                        : new byte[0],
+                                mExtraFields.get(i) != null
+                                        ? Hex.stringToBytes(mExtraFields.get(i))
+                                        : new byte[0]);
             }
             return serviceData;
         }
