@@ -33,6 +33,8 @@ import org.junit.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
+import service.proto.Cache;
+
 /** Unit tests for {@link DiscoveryItem} */
 public class DiscoveryItemTest {
     private static final String DEFAULT_MAC_ADDRESS = "00:11:22:33:44:55";
@@ -45,6 +47,7 @@ public class DiscoveryItemTest {
             + "package=com.google.android.gms;"
             + "component=com.google.android.gms/"
             + ".nearby.discovery.service.DiscoveryService;end";
+    private static final String DISPLAY_URL = "DISPLAY_URL";
     private static final String TRIGGER_ID = "trigger.id";
     private static final String FAST_PAIR_ID = "id";
     private static final int RSSI = -80;
@@ -72,6 +75,7 @@ public class DiscoveryItemTest {
     public void testMultipleFields() {
         assertThat(mDiscoveryItem.getId()).isEqualTo(FAST_PAIR_ID);
         assertThat(mDiscoveryItem.getDescription()).isEqualTo(DEFAULT_DESCRIPITON);
+        assertThat(mDiscoveryItem.getDisplayUrl()).isEqualTo(DISPLAY_URL);
         assertThat(mDiscoveryItem.getTriggerId()).isEqualTo(TRIGGER_ID);
         assertThat(mDiscoveryItem.getMacAddress()).isEqualTo(DEFAULT_MAC_ADDRESS);
         assertThat(
@@ -82,10 +86,29 @@ public class DiscoveryItemTest {
         assertThat(mDiscoveryItem.getAppName()).isEqualTo(APP_NAME);
         assertThat(mDiscoveryItem.getRssi()).isEqualTo(RSSI);
         assertThat(mDiscoveryItem.getTxPower()).isEqualTo(TX_POWER);
+        assertThat(mDiscoveryItem.getFastPairInformation()).isNull();
+        assertThat(mDiscoveryItem.getFastPairSecretKey()).isNull();
+        assertThat(mDiscoveryItem.getIcon()).isNull();
+        assertThat(mDiscoveryItem.getIconFifeUrl()).isNotNull();
+        assertThat(mDiscoveryItem.getState()).isNotNull();
+        assertThat(mDiscoveryItem.getTitle()).isNotNull();
+        assertThat(mDiscoveryItem.isApp()).isFalse();
+        assertThat(mDiscoveryItem.isDeletable(
+                100000L, 0L)).isTrue();
+        assertThat(mDiscoveryItem.isDeviceType(Cache.NearbyType.NEARBY_CHROMECAST)).isTrue();
+        assertThat(mDiscoveryItem.isExpired(
+                100000L, 0L)).isTrue();
+        assertThat(mDiscoveryItem.isFastPair()).isTrue();
+        assertThat(mDiscoveryItem.isPendingAppInstallValid(5)).isTrue();
+        assertThat(mDiscoveryItem.isPendingAppInstallValid(5,
+                FakeDiscoveryItems.newFastPairDeviceStoredItem(FAST_PAIR_ID,  null,
+                TRIGGER_ID,  DEFAULT_MAC_ADDRESS,  "", RSSI, TX_POWER))).isTrue();
+        assertThat(mDiscoveryItem.isTypeEnabled(Cache.NearbyType.NEARBY_CHROMECAST)).isTrue();
+        assertThat(mDiscoveryItem.toString()).isNotNull();
     }
 
     @Test
-    public void isMute() {
+    public void isMuted() {
         assertThat(mDiscoveryItem.isMuted()).isFalse();
     }
 
@@ -94,6 +117,7 @@ public class DiscoveryItemTest {
         assertThat(mDiscoveryItem.isReadyForDisplay()).isFalse();
 
         // Null description should not show up.
+        mDiscoveryItem.setStoredItemForTest(DiscoveryItem.newStoredDiscoveryItem());
         mDiscoveryItem.setStoredItemForTest(
                 FakeDiscoveryItems.newFastPairDeviceStoredItem(FAST_PAIR_ID,  null,
                         TRIGGER_ID,  DEFAULT_MAC_ADDRESS,  "", RSSI, TX_POWER));
@@ -175,6 +199,14 @@ public class DiscoveryItemTest {
                 FakeDiscoveryItems.newFastPairDiscoveryItem(mLocatorContextWrapper);
         assertThat(mDiscoveryItem.equals(fastPairItem)).isTrue();
     }
+
+    @Test
+    public void testCompareTo() {
+        DiscoveryItem fastPairItem =
+                FakeDiscoveryItems.newFastPairDiscoveryItem(mLocatorContextWrapper);
+        assertThat(mDiscoveryItem.compareTo(fastPairItem)).isEqualTo(0);
+    }
+
 
     @Test
     public void testCopyOfStoredItem() {

@@ -31,6 +31,7 @@ public class FakeDiscoveryItems {
                     + "package=com.google.android.gms;"
                     + "component=com.google.android.gms/"
                     + ".nearby.discovery.service.DiscoveryService;end";
+    private static final String DISPLAY_URL = "DISPLAY_URL";
     private static final String TRIGGER_ID = "trigger.id";
     private static final String FAST_PAIR_ID = "id";
     private static final int RSSI = -80;
@@ -56,6 +57,7 @@ public class FakeDiscoveryItems {
         item.setAppName(APP_NAME);
         item.setRssi(RSSI);
         item.setTxPower(TX_POWER);
+        item.setDisplayUrl(DISPLAY_URL);
         return item.build();
     }
 
