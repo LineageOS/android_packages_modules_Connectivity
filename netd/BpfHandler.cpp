@@ -101,8 +101,6 @@ Status BpfHandler::initMaps() {
     RETURN_IF_NOT_OK(mStatsMapA.init(STATS_MAP_A_PATH));
     RETURN_IF_NOT_OK(mStatsMapB.init(STATS_MAP_B_PATH));
     RETURN_IF_NOT_OK(mConfigurationMap.init(CONFIGURATION_MAP_PATH));
-    RETURN_IF_NOT_OK(mConfigurationMap.writeValue(CURRENT_STATS_MAP_CONFIGURATION_KEY, SELECT_MAP_A,
-                                                  BPF_ANY));
     RETURN_IF_NOT_OK(mUidPermissionMap.init(UID_PERMISSION_MAP_PATH));
     ALOGI("%s successfully", __func__);
 
