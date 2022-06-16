@@ -116,7 +116,7 @@ static const int UID_OWNER_MAP_SIZE = 2000;
 /* -=-=-=-=- WARNING -=-=-=-=-
  *
  * These 4 xt_bpf program paths are actually defined by:
- *   //system/netd/include/binder_utils/XtBpfProgLocations.h
+ *   //system/netd/include/mainline/XtBpfProgLocations.h
  * which is intentionally a non-automerged location.
  *
  * They are *UNCHANGEABLE* due to being hard coded in Android T's netd binary
