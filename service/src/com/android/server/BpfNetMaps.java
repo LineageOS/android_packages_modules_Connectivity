@@ -216,6 +216,19 @@ public class BpfNetMaps {
     }
 
     /**
+     * Update lockdown rule for uid
+     *
+     * @param  uid          target uid to add/remove the rule
+     * @param  add          {@code true} to add the rule, {@code false} to remove the rule.
+     * @throws ServiceSpecificException in case of failure, with an error code indicating the
+     *                                  cause of the failure.
+     */
+    public void updateUidLockdownRule(final int uid, final boolean add) {
+        final int err = native_updateUidLockdownRule(uid, add);
+        maybeThrow(err, "Unable to update lockdown rule");
+    }
+
+    /**
      * Request netd to change the current active network stats map.
      *
      * @throws ServiceSpecificException in case of failure, with an error code indicating the
@@ -271,6 +284,7 @@ public class BpfNetMaps {
     private native int native_setUidRule(int childChain, int uid, int firewallRule);
     private native int native_addUidInterfaceRules(String ifName, int[] uids);
     private native int native_removeUidInterfaceRules(int[] uids);
+    private native int native_updateUidLockdownRule(int uid, boolean add);
     private native int native_swapActiveStatsMap();
     private native void native_setPermissionForUids(int permissions, int[] uids);
     private native void native_dump(FileDescriptor fd, boolean verbose);
