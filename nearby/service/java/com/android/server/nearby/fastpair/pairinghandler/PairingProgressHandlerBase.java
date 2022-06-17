@@ -24,6 +24,7 @@ import android.bluetooth.BluetoothDevice;
 import android.content.Context;
 import android.util.Log;
 
+import com.android.internal.annotations.VisibleForTesting;
 import com.android.server.nearby.common.bluetooth.fastpair.FastPairConnection;
 import com.android.server.nearby.common.bluetooth.fastpair.Preferences;
 import com.android.server.nearby.fastpair.cache.DiscoveryItem;
@@ -184,7 +185,8 @@ public abstract class PairingProgressHandlerBase {
                 + maskBluetoothAddress(address));
     }
 
-    private static void optInFootprintsForInitialPairing(
+    @VisibleForTesting
+    static void optInFootprintsForInitialPairing(
             FootprintsDeviceManager footprints,
             DiscoveryItem item,
             byte[] accountKey,
