@@ -98,7 +98,7 @@ class TrafficControllerTest : public ::testing::Test {
         mFakeStatsMapA.resetMap(BPF_MAP_TYPE_HASH, TEST_MAP_SIZE);
         ASSERT_VALID(mFakeStatsMapA);
 
-        mFakeConfigurationMap.resetMap(BPF_MAP_TYPE_HASH, 1);
+        mFakeConfigurationMap.resetMap(BPF_MAP_TYPE_ARRAY, CONFIGURATION_MAP_SIZE);
         ASSERT_VALID(mFakeConfigurationMap);
 
         mFakeUidOwnerMap.resetMap(BPF_MAP_TYPE_HASH, TEST_MAP_SIZE);
@@ -122,8 +122,8 @@ class TrafficControllerTest : public ::testing::Test {
         ASSERT_VALID(mTc.mConfigurationMap);
 
         // Always write to stats map A by default.
-        ASSERT_RESULT_OK(mTc.mConfigurationMap.writeValue(CURRENT_STATS_MAP_CONFIGURATION_KEY,
-                                                          SELECT_MAP_A, BPF_ANY));
+        static_assert(SELECT_MAP_A == 0);
+
         mTc.mUidOwnerMap = mFakeUidOwnerMap;
         ASSERT_VALID(mTc.mUidOwnerMap);
         mTc.mUidPermissionMap = mFakeUidPermissionMap;

@@ -190,9 +190,9 @@ typedef struct {
 STRUCT_SIZE(UidOwnerValue, 2 * 4);  // 8
 
 // Entry in the configuration map that stores which UID rules are enabled.
-#define UID_RULES_CONFIGURATION_KEY 1
+#define UID_RULES_CONFIGURATION_KEY 0
 // Entry in the configuration map that stores which stats map is currently in use.
-#define CURRENT_STATS_MAP_CONFIGURATION_KEY 2
+#define CURRENT_STATS_MAP_CONFIGURATION_KEY 1
 
 typedef struct {
     uint32_t iif;            // The input interface index
