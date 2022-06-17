@@ -17,8 +17,11 @@
 #pragma once
 // TODO: deduplicate with the constants in NetdConstants.h.
 #include <aidl/android/net/INetd.h>
+#include "clat_mark.h"
 
 using aidl::android::net::INetd;
+
+static_assert(INetd::CLAT_MARK == CLAT_MARK, "must be 0xDEADC1A7");
 
 enum FirewallRule { ALLOW = INetd::FIREWALL_RULE_ALLOW, DENY = INetd::FIREWALL_RULE_DENY };
 
