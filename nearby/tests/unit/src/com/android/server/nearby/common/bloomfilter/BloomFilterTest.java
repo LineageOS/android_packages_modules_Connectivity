@@ -21,8 +21,6 @@ import static com.google.common.primitives.Bytes.concat;
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.Truth.assertWithMessage;
 
-import junit.framework.TestCase;
-
 import org.junit.Test;
 
 import java.util.Arrays;
@@ -30,7 +28,7 @@ import java.util.Arrays;
 /**
  * Unit-tests for the {@link BloomFilter} class.
  */
-public class BloomFilterTest extends TestCase {
+public class BloomFilterTest {
     private static final int BYTE_ARRAY_LENGTH = 100;
 
     private final BloomFilter mBloomFilter =
