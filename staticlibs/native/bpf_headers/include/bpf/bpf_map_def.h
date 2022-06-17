@@ -156,7 +156,6 @@ struct bpf_map_def {
     unsigned int min_kver;
     unsigned int max_kver;
 
-#ifdef V18
     // The following fields were added in version 0.18 (T)
     //
     // These are fixed length strings, padded with null bytes
@@ -172,20 +171,13 @@ struct bpf_map_def {
 
     bool shared;  // use empty string as 'file' component of pin path - allows cross .o map sharing
     char pad0[3];  // manually pad up to 4 byte alignment, may be used for extensions in the future
-#endif
 };
 
-#ifdef V18
 _Static_assert(sizeof(((struct bpf_map_def *)0)->selinux_context) == 32, "must be 32 bytes");
 _Static_assert(sizeof(((struct bpf_map_def *)0)->pin_subdir) == 32, "must be 32 bytes");
-#endif
 
 // This needs to be updated whenever the above structure definition is expanded.
-#ifdef V18
 _Static_assert(sizeof(struct bpf_map_def) == 116, "sizeof struct bpf_map_def != 116");
-#else
-_Static_assert(sizeof(struct bpf_map_def) == 48, "sizeof struct bpf_map_def != 48");
-#endif
 _Static_assert(__alignof__(struct bpf_map_def) == 4, "__alignof__ struct bpf_map_def != 4");
 _Static_assert(_Alignof(struct bpf_map_def) == 4, "_Alignof struct bpf_map_def != 4");
 
@@ -204,23 +196,15 @@ struct bpf_prog_def {
     unsigned int bpfloader_min_ver;  // if missing, defaults to 0, ie. v0.0
     unsigned int bpfloader_max_ver;  // if missing, defaults to 0x10000, ie. v1.0
 
-#ifdef V18
     // The following fields were added in version 0.18, see description up above in bpf_map_def
     char selinux_context[BPF_SELINUX_CONTEXT_CHAR_ARRAY_SIZE];
     char pin_subdir[BPF_PIN_SUBDIR_CHAR_ARRAY_SIZE];
-#endif
 };
 
-#ifdef V18
 _Static_assert(sizeof(((struct bpf_prog_def *)0)->selinux_context) == 32, "must be 32 bytes");
 _Static_assert(sizeof(((struct bpf_prog_def *)0)->pin_subdir) == 32, "must be 32 bytes");
-#endif
 
 // This needs to be updated whenever the above structure definition is expanded.
-#ifdef V18
 _Static_assert(sizeof(struct bpf_prog_def) == 92, "sizeof struct bpf_prog_def != 92");
-#else
-_Static_assert(sizeof(struct bpf_prog_def) == 28, "sizeof struct bpf_prog_def != 28");
-#endif
 _Static_assert(__alignof__(struct bpf_prog_def) == 4, "__alignof__ struct bpf_prog_def != 4");
 _Static_assert(_Alignof(struct bpf_prog_def) == 4, "_Alignof struct bpf_prog_def != 4");
