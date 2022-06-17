@@ -17,6 +17,8 @@
 // The resulting .o needs to load on the Android T Beta 3 bpfloader
 #define BPFLOADER_MIN_VER BPFLOADER_T_BETA3_VERSION
 
+#define V18
+
 #include <bpf_helpers.h>
 #include <linux/bpf.h>
 #include <linux/if.h>
