@@ -270,6 +270,8 @@ public class EthernetTracker {
                     + ", ipConfig: " + ipConfig);
         }
 
+        // TODO: do the right thing if the interface was in server mode: either fail this operation,
+        // or take the interface out of server mode.
         final IpConfiguration localIpConfig = ipConfig == null
                 ? null : new IpConfiguration(ipConfig);
         if (ipConfig != null) {
@@ -580,8 +582,8 @@ public class EthernetTracker {
         }
         if (DBG) Log.i(TAG, "maybeTrackInterface: " + iface);
 
-        // TODO: avoid making an interface default if it has configured NetworkCapabilities.
-        if (mDefaultInterface == null) {
+        // Do not make an interface default if it has configured NetworkCapabilities.
+        if (mDefaultInterface == null && !mNetworkCapabilities.containsKey(iface)) {
             mDefaultInterface = iface;
         }
 
