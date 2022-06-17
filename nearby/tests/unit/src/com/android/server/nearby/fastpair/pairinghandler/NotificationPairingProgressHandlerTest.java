@@ -99,7 +99,6 @@ public class NotificationPairingProgressHandlerTest {
         sNotificationPairingProgressHandler.onPairingFailed(e);
     }
 
-
     @Test
     public void onPairingSuccess() {
         sNotificationPairingProgressHandler.onPairingSuccess(sDiscoveryItem.getMacAddress());
