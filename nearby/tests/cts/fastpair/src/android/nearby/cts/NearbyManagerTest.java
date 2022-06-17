@@ -158,6 +158,15 @@ public class NearbyManagerTest {
         mNearbyManager.stopBroadcast(callback);
     }
 
+    @Test
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
+    public void setFastPairScanEnabled() {
+        mNearbyManager.setFastPairScanEnabled(mContext, true);
+        assertThat(mNearbyManager.getFastPairScanEnabled(mContext)).isTrue();
+        mNearbyManager.setFastPairScanEnabled(mContext, false);
+        assertThat(mNearbyManager.getFastPairScanEnabled(mContext)).isFalse();
+    }
+
     private void enableBluetooth() {
         BluetoothManager manager = mContext.getSystemService(BluetoothManager.class);
         BluetoothAdapter bluetoothAdapter = manager.getAdapter();

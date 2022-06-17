@@ -161,4 +161,19 @@ public class PublicCredentialTest {
                         .build();
         assertThat(credentialOne.equals((Object) credentialTwo)).isFalse();
     }
+
+    @Test
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
+    public void describeContents() {
+        PublicCredential credential = mBuilder.build();
+        assertThat(credential.describeContents()).isEqualTo(0);
+    }
+
+    @Test
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
+    public void testCreatorNewArray() {
+        PublicCredential[] credentials  =
+        PublicCredential.CREATOR.newArray(2);
+        assertThat(credentials.length).isEqualTo(2);
+    }
 }
