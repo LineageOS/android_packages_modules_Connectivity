@@ -65,7 +65,6 @@ import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertTrue
 import org.junit.Assume.assumeTrue
 import org.junit.Before
-import org.junit.Ignore
 import org.junit.Test
 import org.junit.runner.RunWith
 import java.net.ServerSocket
@@ -464,7 +463,7 @@ class NsdManagerTest {
         }
     }
 
-    @Test @Ignore // TODO(b/234099453): re-enable when the prebuilt module is updated
+    @Test
     fun testNsdManager_DiscoverWithNetworkRequest() {
         // This test requires shims supporting T+ APIs (discovering on network request)
         assumeTrue(TestUtils.shouldTestTApis())
@@ -532,7 +531,7 @@ class NsdManagerTest {
         }
     }
 
-    @Test @Ignore // TODO(b/234099453): re-enable when the prebuilt module is updated
+    @Test
     fun testNsdManager_DiscoverWithNetworkRequest_NoMatchingNetwork() {
         // This test requires shims supporting T+ APIs (discovering on network request)
         assumeTrue(TestUtils.shouldTestTApis())
