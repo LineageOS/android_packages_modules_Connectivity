@@ -53,15 +53,18 @@
 
 // For maps netd does not need to access
 #define DEFINE_BPF_MAP_NO_NETD(the_map, TYPE, TypeOfKey, TypeOfValue, num_entries) \
-    DEFINE_BPF_MAP_UGM(the_map, TYPE, TypeOfKey, TypeOfValue, num_entries, AID_ROOT, AID_NET_BW_ACCT, 0060)
+    DEFINE_BPF_MAP_EXT(the_map, TYPE, TypeOfKey, TypeOfValue, num_entries, \
+                       AID_ROOT, AID_NET_BW_ACCT, 0060, "fs_bpf_net_shared", "", false)
 
 // For maps netd only needs read only access to
 #define DEFINE_BPF_MAP_RO_NETD(the_map, TYPE, TypeOfKey, TypeOfValue, num_entries) \
-    DEFINE_BPF_MAP_UGM(the_map, TYPE, TypeOfKey, TypeOfValue, num_entries, AID_ROOT, AID_NET_BW_ACCT, 0460)
+    DEFINE_BPF_MAP_EXT(the_map, TYPE, TypeOfKey, TypeOfValue, num_entries, \
+                       AID_ROOT, AID_NET_BW_ACCT, 0460, "fs_bpf_netd_readonly", "", false)
 
 // For maps netd needs to be able to read and write
 #define DEFINE_BPF_MAP_RW_NETD(the_map, TYPE, TypeOfKey, TypeOfValue, num_entries) \
-    DEFINE_BPF_MAP_UGM(the_map, TYPE, TypeOfKey, TypeOfValue, num_entries, AID_ROOT, AID_NET_BW_ACCT, 0660)
+    DEFINE_BPF_MAP_UGM(the_map, TYPE, TypeOfKey, TypeOfValue, num_entries, \
+                       AID_ROOT, AID_NET_BW_ACCT, 0660)
 
 // Bpf map arrays on creation are preinitialized to 0 and do not support deletion of a key,
 // see: kernel/bpf/arraymap.c array_map_delete_elem() returns -EINVAL (from both syscall and ebpf)
@@ -80,6 +83,20 @@ DEFINE_BPF_MAP_RW_NETD(uid_permission_map, HASH, uint32_t, uint8_t, UID_OWNER_MA
 
 /* never actually used from ebpf */
 DEFINE_BPF_MAP_NO_NETD(iface_index_name_map, HASH, uint32_t, IfaceValue, IFACE_INDEX_NAME_MAP_SIZE)
+
+// iptables xt_bpf programs need to be usable by both netd and netutils_wrappers
+#define DEFINE_XTBPF_PROG(SECTION_NAME, prog_uid, prog_gid, the_prog) \
+    DEFINE_BPF_PROG(SECTION_NAME, prog_uid, prog_gid, the_prog)
+
+// programs that need to be usable by netd, but not by netutils_wrappers
+#define DEFINE_NETD_BPF_PROG(SECTION_NAME, prog_uid, prog_gid, the_prog) \
+    DEFINE_BPF_PROG_EXT(SECTION_NAME, prog_uid, prog_gid, the_prog, \
+                        KVER_NONE, KVER_INF, false, "fs_bpf_netd_readonly", "")
+
+// programs that only need to be usable by the system server
+#define DEFINE_SYS_BPF_PROG(SECTION_NAME, prog_uid, prog_gid, the_prog) \
+    DEFINE_BPF_PROG_EXT(SECTION_NAME, prog_uid, prog_gid, the_prog, \
+                        KVER_NONE, KVER_INF, false, "fs_bpf_net_shared", "")
 
 static __always_inline int is_system_uid(uint32_t uid) {
     // MIN_SYSTEM_UID is AID_ROOT == 0, so uint32_t is *always* >= 0
@@ -327,18 +344,18 @@ static __always_inline inline int bpf_traffic_account(struct __sk_buff* skb, int
     return match;
 }
 
-DEFINE_BPF_PROG("cgroupskb/ingress/stats", AID_ROOT, AID_SYSTEM, bpf_cgroup_ingress)
+DEFINE_NETD_BPF_PROG("cgroupskb/ingress/stats", AID_ROOT, AID_SYSTEM, bpf_cgroup_ingress)
 (struct __sk_buff* skb) {
     return bpf_traffic_account(skb, BPF_INGRESS);
 }
 
-DEFINE_BPF_PROG("cgroupskb/egress/stats", AID_ROOT, AID_SYSTEM, bpf_cgroup_egress)
+DEFINE_NETD_BPF_PROG("cgroupskb/egress/stats", AID_ROOT, AID_SYSTEM, bpf_cgroup_egress)
 (struct __sk_buff* skb) {
     return bpf_traffic_account(skb, BPF_EGRESS);
 }
 
 // WARNING: Android T's non-updatable netd depends on the name of this program.
-DEFINE_BPF_PROG("skfilter/egress/xtbpf", AID_ROOT, AID_NET_ADMIN, xt_bpf_egress_prog)
+DEFINE_XTBPF_PROG("skfilter/egress/xtbpf", AID_ROOT, AID_NET_ADMIN, xt_bpf_egress_prog)
 (struct __sk_buff* skb) {
     // Clat daemon does not generate new traffic, all its traffic is accounted for already
     // on the v4-* interfaces (except for the 20 (or 28) extra bytes of IPv6 vs IPv4 overhead,
@@ -358,7 +375,7 @@ DEFINE_BPF_PROG("skfilter/egress/xtbpf", AID_ROOT, AID_NET_ADMIN, xt_bpf_egress_
 }
 
 // WARNING: Android T's non-updatable netd depends on the name of this program.
-DEFINE_BPF_PROG("skfilter/ingress/xtbpf", AID_ROOT, AID_NET_ADMIN, xt_bpf_ingress_prog)
+DEFINE_XTBPF_PROG("skfilter/ingress/xtbpf", AID_ROOT, AID_NET_ADMIN, xt_bpf_ingress_prog)
 (struct __sk_buff* skb) {
     // Clat daemon traffic is not accounted by virtue of iptables raw prerouting drop rule
     // (in clat_raw_PREROUTING chain), which triggers before this (in bw_raw_PREROUTING chain).
@@ -370,7 +387,8 @@ DEFINE_BPF_PROG("skfilter/ingress/xtbpf", AID_ROOT, AID_NET_ADMIN, xt_bpf_ingres
     return BPF_MATCH;
 }
 
-DEFINE_BPF_PROG("schedact/ingress/account", AID_ROOT, AID_NET_ADMIN, tc_bpf_ingress_account_prog)
+DEFINE_SYS_BPF_PROG("schedact/ingress/account", AID_ROOT, AID_NET_ADMIN,
+                    tc_bpf_ingress_account_prog)
 (struct __sk_buff* skb) {
     if (is_received_skb(skb)) {
         // Account for ingress traffic before tc drops it.
@@ -381,7 +399,7 @@ DEFINE_BPF_PROG("schedact/ingress/account", AID_ROOT, AID_NET_ADMIN, tc_bpf_ingr
 }
 
 // WARNING: Android T's non-updatable netd depends on the name of this program.
-DEFINE_BPF_PROG("skfilter/allowlist/xtbpf", AID_ROOT, AID_NET_ADMIN, xt_bpf_allowlist_prog)
+DEFINE_XTBPF_PROG("skfilter/allowlist/xtbpf", AID_ROOT, AID_NET_ADMIN, xt_bpf_allowlist_prog)
 (struct __sk_buff* skb) {
     uint32_t sock_uid = bpf_get_socket_uid(skb);
     if (is_system_uid(sock_uid)) return BPF_MATCH;
@@ -399,7 +417,7 @@ DEFINE_BPF_PROG("skfilter/allowlist/xtbpf", AID_ROOT, AID_NET_ADMIN, xt_bpf_allo
 }
 
 // WARNING: Android T's non-updatable netd depends on the name of this program.
-DEFINE_BPF_PROG("skfilter/denylist/xtbpf", AID_ROOT, AID_NET_ADMIN, xt_bpf_denylist_prog)
+DEFINE_XTBPF_PROG("skfilter/denylist/xtbpf", AID_ROOT, AID_NET_ADMIN, xt_bpf_denylist_prog)
 (struct __sk_buff* skb) {
     uint32_t sock_uid = bpf_get_socket_uid(skb);
     UidOwnerValue* denylistMatch = bpf_uid_owner_map_lookup_elem(&sock_uid);
@@ -407,8 +425,8 @@ DEFINE_BPF_PROG("skfilter/denylist/xtbpf", AID_ROOT, AID_NET_ADMIN, xt_bpf_denyl
     return BPF_NOMATCH;
 }
 
-DEFINE_BPF_PROG_KVER("cgroupsock/inet/create", AID_ROOT, AID_ROOT, inet_socket_create,
-                     KVER(4, 14, 0))
+DEFINE_BPF_PROG_EXT("cgroupsock/inet/create", AID_ROOT, AID_ROOT, inet_socket_create,
+                    KVER(4, 14, 0), KVER_INF, false, "fs_bpf_netd_readonly", "")
 (struct bpf_sock* sk) {
     uint64_t gid_uid = bpf_get_current_uid_gid();
     /*
