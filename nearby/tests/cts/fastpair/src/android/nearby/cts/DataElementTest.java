@@ -36,7 +36,7 @@ import java.util.Arrays;
 @RequiresApi(Build.VERSION_CODES.TIRAMISU)
 public class DataElementTest {
 
-    private static final int KEY = 1234;
+    private static final int KEY = 1;
     private static final byte[] VALUE = new byte[]{1, 1, 1, 1};
 
     @Test
@@ -77,5 +77,25 @@ public class DataElementTest {
         DataElement[] elements =
                 DataElement.CREATOR.newArray(2);
         assertThat(elements.length).isEqualTo(2);
+    }
+
+    @Test
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
+    public void testEquals() {
+        DataElement dataElement = new DataElement(KEY, VALUE);
+        DataElement dataElement2 = new DataElement(KEY, VALUE);
+
+        assertThat(dataElement.equals(dataElement2)).isTrue();
+    }
+
+    @Test
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
+    public void test_notEquals() {
+        DataElement dataElement = new DataElement(KEY, VALUE);
+        DataElement dataElement2 = new DataElement(KEY, new byte[]{1, 2, 1, 1});
+        DataElement dataElement3 = new DataElement(6, VALUE);
+
+        assertThat(dataElement.equals(dataElement2)).isFalse();
+        assertThat(dataElement.equals(dataElement3)).isFalse();
     }
 }
