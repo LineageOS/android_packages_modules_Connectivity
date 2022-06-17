@@ -16,24 +16,33 @@
 
 package com.android.server.nearby.fastpair;
 
+import static com.google.common.truth.Truth.assertThat;
+
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import android.accounts.Account;
 import android.content.Context;
 import android.nearby.FastPairDevice;
 
+import com.android.server.nearby.common.bloomfilter.BloomFilter;
 import com.android.server.nearby.common.locator.LocatorContextWrapper;
 import com.android.server.nearby.fastpair.halfsheet.FastPairHalfSheetManager;
 import com.android.server.nearby.fastpair.notification.FastPairNotificationManager;
 import com.android.server.nearby.provider.FastPairDataProvider;
+
+import com.google.common.collect.ImmutableList;
+import com.google.protobuf.ByteString;
 
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
+import service.proto.Cache;
+import service.proto.Data;
 import service.proto.Rpcs;
 
 public class FastPairAdvHandlerTest {
@@ -45,11 +54,22 @@ public class FastPairAdvHandlerTest {
     private FastPairHalfSheetManager mFastPairHalfSheetManager;
     @Mock
     private FastPairNotificationManager mFastPairNotificationManager;
+    @Mock
+    private BloomFilter mBloomFilter;
+    @Mock
+    Cache.StoredDiscoveryItem mStoredDiscoveryItem;
+    @Mock
+    Cache.StoredFastPairItem mStoredFastPairItem;
+    @Mock
+    Data.FastPairDeviceWithAccountKey mFastPairDeviceWithAccountKey;
+    private static final byte[] ACCOUNT_KEY = new byte[] {0, 1, 2};
     private static final String BLUETOOTH_ADDRESS = "AA:BB:CC:DD";
     private static final int CLOSE_RSSI = -80;
     private static final int FAR_AWAY_RSSI = -120;
     private static final int TX_POWER = -70;
     private static final byte[] INITIAL_BYTE_ARRAY = new byte[]{0x01, 0x02, 0x03};
+    private static final byte[] SALT = new byte[]{0x01};
+    private static final Account ACCOUNT = new Account("abc@google.com", "type1");
 
     LocatorContextWrapper mLocatorContextWrapper;
     FastPairAdvHandler mFastPairAdvHandler;
@@ -99,7 +119,7 @@ public class FastPairAdvHandlerTest {
     }
 
     @Test
-    public void testSubsequentBroadcast() {
+    public void testSubsequentBroadcast_notShowHalfSheet() {
         byte[] fastPairRecordWithBloomFilter =
                 new byte[]{
                         (byte) 0x02,
@@ -131,5 +151,45 @@ public class FastPairAdvHandlerTest {
         mFastPairAdvHandler.handleBroadcast(fastPairDevice);
 
         verify(mFastPairHalfSheetManager, never()).showHalfSheet(any());
+    }
+
+    @Test
+    public void testFindRecognizedDevice_bloomFilterNotContains_notFound() {
+        when(mFastPairDeviceWithAccountKey.getAccountKey())
+                .thenReturn(ByteString.copyFrom(ACCOUNT_KEY), ByteString.copyFrom(ACCOUNT_KEY));
+        when(mBloomFilter.possiblyContains(any(byte[].class))).thenReturn(false);
+
+        assertThat(FastPairAdvHandler.findRecognizedDevice(
+                ImmutableList.of(mFastPairDeviceWithAccountKey), mBloomFilter, SALT)).isNull();
+    }
+
+    @Test
+    public void testFindRecognizedDevice_bloomFilterContains_found() {
+        when(mFastPairDeviceWithAccountKey.getAccountKey())
+                .thenReturn(ByteString.copyFrom(ACCOUNT_KEY), ByteString.copyFrom(ACCOUNT_KEY));
+        when(mBloomFilter.possiblyContains(any(byte[].class))).thenReturn(true);
+
+        assertThat(FastPairAdvHandler.findRecognizedDevice(
+                ImmutableList.of(mFastPairDeviceWithAccountKey), mBloomFilter, SALT)).isNotNull();
+    }
+
+    @Test
+    public void testFindRecognizedDeviceFromCachedItem_bloomFilterNotContains_notFound() {
+        when(mStoredFastPairItem.getAccountKey())
+                .thenReturn(ByteString.copyFrom(ACCOUNT_KEY), ByteString.copyFrom(ACCOUNT_KEY));
+        when(mBloomFilter.possiblyContains(any(byte[].class))).thenReturn(false);
+
+        assertThat(FastPairAdvHandler.findRecognizedDeviceFromCachedItem(
+                ImmutableList.of(mStoredFastPairItem), mBloomFilter, SALT)).isNull();
+    }
+
+    @Test
+    public void testFindRecognizedDeviceFromCachedItem_bloomFilterContains_found() {
+        when(mStoredFastPairItem.getAccountKey())
+                .thenReturn(ByteString.copyFrom(ACCOUNT_KEY), ByteString.copyFrom(ACCOUNT_KEY));
+        when(mBloomFilter.possiblyContains(any(byte[].class))).thenReturn(true);
+
+        assertThat(FastPairAdvHandler.findRecognizedDeviceFromCachedItem(
+                ImmutableList.of(mStoredFastPairItem), mBloomFilter, SALT)).isNotNull();
     }
 }
