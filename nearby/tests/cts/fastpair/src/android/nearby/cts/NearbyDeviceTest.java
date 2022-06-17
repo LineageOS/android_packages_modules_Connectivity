@@ -56,4 +56,30 @@ public class NearbyDeviceTest {
         assertThat(fastPairDevice.getMediums()).contains(1);
         assertThat(fastPairDevice.getRssi()).isEqualTo(-60);
     }
+
+    @Test
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
+    public void testEqual() {
+        FastPairDevice fastPairDevice1 = new FastPairDevice.Builder()
+                .addMedium(NearbyDevice.Medium.BLE)
+                .setRssi(-60)
+                .build();
+        FastPairDevice fastPairDevice2 = new FastPairDevice.Builder()
+                .addMedium(NearbyDevice.Medium.BLE)
+                .setRssi(-60)
+                .build();
+        assertThat(fastPairDevice1.equals(fastPairDevice2)).isTrue();
+        assertThat(fastPairDevice1.hashCode()).isEqualTo(fastPairDevice2.hashCode());
+    }
+
+    @Test
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
+    public void testToString() {
+        FastPairDevice fastPairDevice1 = new FastPairDevice.Builder()
+                .addMedium(NearbyDevice.Medium.BLE)
+                .setRssi(-60)
+                .build();
+
+        assertThat(fastPairDevice1.toString()).isEqualTo("");
+    }
 }
