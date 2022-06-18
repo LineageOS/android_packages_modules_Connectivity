@@ -79,6 +79,7 @@ public class NetworkStatsRecorder {
 
     private final long mBucketDuration;
     private final boolean mOnlyTags;
+    private final boolean mWipeOnError;
 
     private long mPersistThresholdBytes = 2 * MB_IN_BYTES;
     private NetworkStats mLastSnapshot;
@@ -103,6 +104,7 @@ public class NetworkStatsRecorder {
         // slack to avoid overflow
         mBucketDuration = YEAR_IN_MILLIS;
         mOnlyTags = false;
+        mWipeOnError = true;
 
         mPending = null;
         mSinceBoot = new NetworkStatsCollection(mBucketDuration);
@@ -114,7 +116,8 @@ public class NetworkStatsRecorder {
      * Persisted recorder.
      */
     public NetworkStatsRecorder(FileRotator rotator, NonMonotonicObserver<String> observer,
-            DropBoxManager dropBox, String cookie, long bucketDuration, boolean onlyTags) {
+            DropBoxManager dropBox, String cookie, long bucketDuration, boolean onlyTags,
+            boolean wipeOnError) {
         mRotator = Objects.requireNonNull(rotator, "missing FileRotator");
         mObserver = Objects.requireNonNull(observer, "missing NonMonotonicObserver");
         mDropBox = Objects.requireNonNull(dropBox, "missing DropBoxManager");
@@ -122,6 +125,7 @@ public class NetworkStatsRecorder {
 
         mBucketDuration = bucketDuration;
         mOnlyTags = onlyTags;
+        mWipeOnError = wipeOnError;
 
         mPending = new NetworkStatsCollection(bucketDuration);
         mSinceBoot = new NetworkStatsCollection(bucketDuration);
@@ -593,7 +597,9 @@ public class NetworkStatsRecorder {
             }
             mDropBox.addData(TAG_NETSTATS_DUMP, os.toByteArray(), 0);
         }
-
-        mRotator.deleteAll();
+        // Delete all files if this recorder is set wipe on error.
+        if (mWipeOnError) {
+            mRotator.deleteAll();
+        }
     }
 }
