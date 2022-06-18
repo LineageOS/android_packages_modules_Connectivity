@@ -22,6 +22,7 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
+import android.os.Parcel;
 
 import org.junit.Test;
 
@@ -81,7 +82,61 @@ public class BleSightingTest {
         assertThat(sighting.getNormalizedRSSI()).isEqualTo(RSSI + defaultRssiOffset);
     }
 
-    /** Builds a BleSighting instance which will correctly match filters by device name. */
+    @Test
+    public void testFields() {
+        BleSighting sighting =
+                buildBleSighting(mBluetoothDevice1, DEVICE_NAME, TIME_EPOCH_MILLIS, RSSI);
+        assertThat(byteString(sighting.getBleRecordBytes()))
+                .isEqualTo("080964657669636531");
+        assertThat(sighting.getRssi()).isEqualTo(RSSI);
+        assertThat(sighting.getTimestampMillis()).isEqualTo(TIME_EPOCH_MILLIS);
+        assertThat(sighting.getTimestampNanos())
+                .isEqualTo(TimeUnit.MILLISECONDS.toNanos(TIME_EPOCH_MILLIS));
+        assertThat(sighting.toString()).isEqualTo(
+                "BleSighting{device=00:11:22:33:44:55,"
+                        + " bleRecord=BleRecord [advertiseFlags=-1,"
+                        + " serviceUuids=[],"
+                        + " manufacturerSpecificData={}, serviceData={},"
+                        + " txPowerLevel=-2147483648,"
+                        + " deviceName=device1],"
+                        + " rssi=1,"
+                        + " timestampNanos=123456000000}");
+    }
+
+    @Test
+    public void testParcelable() {
+        BleSighting sighting =
+                buildBleSighting(mBluetoothDevice1, DEVICE_NAME, TIME_EPOCH_MILLIS, RSSI);
+        Parcel dest = Parcel.obtain();
+        sighting.writeToParcel(dest, 0);
+        dest.setDataPosition(0);
+        BleSighting compareSighting = BleSighting.CREATOR.createFromParcel(dest);
+        assertThat(sighting.getRssi()).isEqualTo(RSSI);
+    }
+
+    @Test
+    public void testCreatorNewArray() {
+        BleSighting[]  sightings =
+                BleSighting.CREATOR.newArray(2);
+        assertThat(sightings.length).isEqualTo(2);
+    }
+
+    private static String byteString(byte[] bytes) {
+        if (bytes == null) {
+            return "[null]";
+        } else {
+            final char[] hexArray = "0123456789ABCDEF".toCharArray();
+            char[] hexChars = new char[bytes.length * 2];
+            for (int i = 0; i < bytes.length; i++) {
+                int v = bytes[i] & 0xFF;
+                hexChars[i * 2] = hexArray[v >>> 4];
+                hexChars[i * 2 + 1] = hexArray[v & 0x0F];
+            }
+            return new String(hexChars);
+        }
+    }
+
+        /** Builds a BleSighting instance which will correctly match filters by device name. */
     private static BleSighting buildBleSighting(
             BluetoothDevice bluetoothDevice, String deviceName, long timeEpochMillis, int rssi) {
         byte[] nameBytes = deviceName.getBytes(UTF_8);

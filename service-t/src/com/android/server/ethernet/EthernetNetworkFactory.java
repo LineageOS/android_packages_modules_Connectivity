@@ -488,8 +488,6 @@ public class EthernetNetworkFactory {
             if (null != capabilities) {
                 setCapabilities(capabilities);
             }
-            // Send an abort callback if a request is filed before the previous one has completed.
-            maybeSendNetworkManagementCallbackForAbort();
             // TODO: Update this logic to only do a restart if required. Although a restart may
             //  be required due to the capabilities or ipConfiguration values, not all
             //  capabilities changes require a restart.
@@ -651,6 +649,8 @@ public class EthernetNetworkFactory {
                 mIpClientCallback.awaitIpClientShutdown();
                 mIpClient = null;
             }
+            // Send an abort callback if an updateInterface request was in progress.
+            maybeSendNetworkManagementCallbackForAbort();
             mIpClientCallback = null;
 
             if (mNetworkAgent != null) {
@@ -662,7 +662,6 @@ public class EthernetNetworkFactory {
 
         public void destroy() {
             mNetworkProvider.unregisterNetworkOffer(mNetworkOfferCallback);
-            maybeSendNetworkManagementCallbackForAbort();
             stop();
             mRequests.clear();
         }
