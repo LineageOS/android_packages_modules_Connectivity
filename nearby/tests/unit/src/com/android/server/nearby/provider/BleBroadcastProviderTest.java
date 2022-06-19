@@ -78,6 +78,11 @@ public class BleBroadcastProviderTest {
                 .onStatusChanged(eq(BroadcastCallback.STATUS_FAILURE));
     }
 
+    @Test
+    public void testStop() {
+        mBleBroadcastProvider.stop();
+    }
+
     private static class TestInjector implements Injector {
 
         @Override

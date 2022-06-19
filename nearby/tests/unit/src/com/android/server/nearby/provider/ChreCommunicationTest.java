@@ -16,6 +16,8 @@
 
 package com.android.server.nearby.provider;
 
+import static com.google.common.truth.Truth.assertThat;
+
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
@@ -106,6 +108,19 @@ public class ChreCommunicationTest {
                         new byte[] {1, 2, 3});
         mChreCommunication.onMessageFromNanoApp(mClient, message);
         verify(mChreCallback).onMessageFromNanoApp(eq(message));
+
+    }
+
+    @Test
+    public void testContextHubTransactionResultToString() {
+        NanoAppMessage message =
+                NanoAppMessage.createMessageToNanoApp(
+                        ChreDiscoveryProvider.NANOAPP_ID,
+                        ChreDiscoveryProvider.NANOAPP_MESSAGE_TYPE_FILTER_RESULT,
+                        new byte[] {1, 2, 3});
+        assertThat(
+                mChreCommunication.contextHubTransactionResultToString(
+                        mClient.sendMessageToNanoApp(message))).isEqualTo("RESULT_SUCCESS");
     }
 
     @Test
