@@ -24,6 +24,7 @@ import static android.net.ConnectivityManager.FIREWALL_CHAIN_OEM_DENY_3;
 import static android.net.ConnectivityManager.FIREWALL_CHAIN_POWERSAVE;
 import static android.net.ConnectivityManager.FIREWALL_CHAIN_RESTRICTED;
 import static android.net.ConnectivityManager.FIREWALL_CHAIN_STANDBY;
+import static android.system.OsConstants.EINVAL;
 import static android.system.OsConstants.ENOENT;
 import static android.system.OsConstants.EOPNOTSUPP;
 
@@ -54,6 +55,11 @@ public class BpfNetMaps {
     // Use legacy netd for releases before T.
     private static final boolean USE_NETD = !SdkLevel.isAtLeastT();
     private static boolean sInitialized = false;
+
+    // Lock for sConfigurationMap entry for UID_RULES_CONFIGURATION_KEY.
+    // This entry is not accessed by others.
+    // BpfNetMaps acquires this lock while sequence of read, modify, and write.
+    private static final Object sUidRulesConfigBpfMapLock = new Object();
 
     private static final String CONFIGURATION_MAP_PATH =
             "/sys/fs/bpf/netd_shared/map_netd_configuration_map";
@@ -152,7 +158,7 @@ public class BpfNetMaps {
     public long getMatchByFirewallChain(final int chain) {
         final long match = FIREWALL_CHAIN_TO_MATCH.get(chain, NO_MATCH);
         if (match == NO_MATCH) {
-            throw new IllegalArgumentException("Invalid firewall chain: " + chain);
+            throw new ServiceSpecificException(EINVAL, "Invalid firewall chain: " + chain);
         }
         return match;
     }
@@ -160,6 +166,12 @@ public class BpfNetMaps {
     private void maybeThrow(final int err, final String msg) {
         if (err != 0) {
             throw new ServiceSpecificException(err, msg + ": " + Os.strerror(err));
+        }
+    }
+
+    private void throwIfUseNetd(final String msg) {
+        if (USE_NETD) {
+            throw new UnsupportedOperationException(msg);
         }
     }
 
@@ -216,12 +228,29 @@ public class BpfNetMaps {
      *
      * @param childChain target chain to enable
      * @param enable     whether to enable or disable child chain.
+     * @throws UnsupportedOperationException if called on pre-T devices.
      * @throws ServiceSpecificException in case of failure, with an error code indicating the
      *                                  cause of the failure.
      */
     public void setChildChain(final int childChain, final boolean enable) {
-        final int err = native_setChildChain(childChain, enable);
-        maybeThrow(err, "Unable to set child chain");
+        throwIfUseNetd("setChildChain is not available on pre-T devices");
+
+        final long match = getMatchByFirewallChain(childChain);
+        try {
+            synchronized (sUidRulesConfigBpfMapLock) {
+                final U32 config = sConfigurationMap.getValue(UID_RULES_CONFIGURATION_KEY);
+                if (config == null) {
+                    throw new ServiceSpecificException(ENOENT,
+                            "Unable to get firewall chain status: sConfigurationMap does not have"
+                                    + " entry for UID_RULES_CONFIGURATION_KEY");
+                }
+                final long newConfig = enable ? (config.val | match) : (config.val & (~match));
+                sConfigurationMap.updateEntry(UID_RULES_CONFIGURATION_KEY, new U32(newConfig));
+            }
+        } catch (ErrnoException e) {
+            throw new ServiceSpecificException(e.errno,
+                    "Unable to set child chain: " + Os.strerror(e.errno));
+        }
     }
 
     /**
@@ -230,15 +259,11 @@ public class BpfNetMaps {
      * @param childChain target chain
      * @return {@code true} if chain is enabled, {@code false} if chain is not enabled.
      * @throws UnsupportedOperationException if called on pre-T devices.
-     * @throws IllegalArgumentException if {@code childChain} is a invalid value.
      * @throws ServiceSpecificException in case of failure, with an error code indicating the
      *                                  cause of the failure.
      */
     public boolean getChainEnabled(final int childChain) {
-        if (USE_NETD) {
-            throw new UnsupportedOperationException("getChainEnabled is not available on pre-T"
-                    + " devices");
-        }
+        throwIfUseNetd("getChainEnabled is not available on pre-T devices");
 
         final long match = getMatchByFirewallChain(childChain);
         try {
