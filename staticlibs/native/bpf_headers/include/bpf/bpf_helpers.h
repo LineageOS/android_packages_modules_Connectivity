@@ -137,11 +137,12 @@ static int (*bpf_map_delete_elem_unsafe)(const struct bpf_map_def* map,
                 ____btf_map_##name = { }
 
 /* type safe macro to declare a map and related accessor functions */
-#define DEFINE_BPF_MAP_UGM(the_map, TYPE, TypeOfKey, TypeOfValue, num_entries, usr, grp, md)     \
+#define DEFINE_BPF_MAP_EXT(the_map, TYPE, KeyType, ValueType, num_entries, usr, grp, md,         \
+                           selinux, pindir, share)                                               \
     const struct bpf_map_def SECTION("maps") the_map = {                                         \
             .type = BPF_MAP_TYPE_##TYPE,                                                         \
-            .key_size = sizeof(TypeOfKey),                                                       \
-            .value_size = sizeof(TypeOfValue),                                                   \
+            .key_size = sizeof(KeyType),                                                         \
+            .value_size = sizeof(ValueType),                                                     \
             .max_entries = (num_entries),                                                        \
             .map_flags = 0,                                                                      \
             .uid = (usr),                                                                        \
@@ -151,34 +152,40 @@ static int (*bpf_map_delete_elem_unsafe)(const struct bpf_map_def* map,
             .bpfloader_max_ver = DEFAULT_BPFLOADER_MAX_VER,                                      \
             .min_kver = KVER_NONE,                                                               \
             .max_kver = KVER_INF,                                                                \
+            .selinux_context = selinux,                                                          \
+            .pin_subdir = pindir,                                                                \
+            .shared = share,                                                                     \
     };                                                                                           \
-    BPF_ANNOTATE_KV_PAIR(the_map, TypeOfKey, TypeOfValue);                                       \
+    BPF_ANNOTATE_KV_PAIR(the_map, KeyType, ValueType);                                           \
                                                                                                  \
-    static inline __always_inline __unused TypeOfValue* bpf_##the_map##_lookup_elem(             \
-            const TypeOfKey* k) {                                                                \
+    static inline __always_inline __unused ValueType* bpf_##the_map##_lookup_elem(               \
+            const KeyType* k) {                                                                  \
         return bpf_map_lookup_elem_unsafe(&the_map, k);                                          \
     };                                                                                           \
                                                                                                  \
     static inline __always_inline __unused int bpf_##the_map##_update_elem(                      \
-            const TypeOfKey* k, const TypeOfValue* v, unsigned long long flags) {                \
+            const KeyType* k, const ValueType* v, unsigned long long flags) {                    \
         return bpf_map_update_elem_unsafe(&the_map, k, v, flags);                                \
     };                                                                                           \
                                                                                                  \
-    static inline __always_inline __unused int bpf_##the_map##_delete_elem(const TypeOfKey* k) { \
+    static inline __always_inline __unused int bpf_##the_map##_delete_elem(const KeyType* k) {   \
         return bpf_map_delete_elem_unsafe(&the_map, k);                                          \
     };
 
-#define DEFINE_BPF_MAP(the_map, TYPE, TypeOfKey, TypeOfValue, num_entries) \
-    DEFINE_BPF_MAP_UGM(the_map, TYPE, TypeOfKey, TypeOfValue, num_entries, AID_ROOT, AID_ROOT, 0600)
+#define DEFINE_BPF_MAP_UGM(the_map, TYPE, KeyType, ValueType, num_entries, usr, grp, md) \
+    DEFINE_BPF_MAP_EXT(the_map, TYPE, KeyType, ValueType, num_entries, usr, grp, md, "", "", false)
 
-#define DEFINE_BPF_MAP_GWO(the_map, TYPE, TypeOfKey, TypeOfValue, num_entries, gid) \
-    DEFINE_BPF_MAP_UGM(the_map, TYPE, TypeOfKey, TypeOfValue, num_entries, AID_ROOT, gid, 0620)
+#define DEFINE_BPF_MAP(the_map, TYPE, KeyType, ValueType, num_entries) \
+    DEFINE_BPF_MAP_UGM(the_map, TYPE, KeyType, ValueType, num_entries, AID_ROOT, AID_ROOT, 0600)
 
-#define DEFINE_BPF_MAP_GRO(the_map, TYPE, TypeOfKey, TypeOfValue, num_entries, gid) \
-    DEFINE_BPF_MAP_UGM(the_map, TYPE, TypeOfKey, TypeOfValue, num_entries, AID_ROOT, gid, 0640)
+#define DEFINE_BPF_MAP_GWO(the_map, TYPE, KeyType, ValueType, num_entries, gid) \
+    DEFINE_BPF_MAP_UGM(the_map, TYPE, KeyType, ValueType, num_entries, AID_ROOT, gid, 0620)
 
-#define DEFINE_BPF_MAP_GRW(the_map, TYPE, TypeOfKey, TypeOfValue, num_entries, gid) \
-    DEFINE_BPF_MAP_UGM(the_map, TYPE, TypeOfKey, TypeOfValue, num_entries, AID_ROOT, gid, 0660)
+#define DEFINE_BPF_MAP_GRO(the_map, TYPE, KeyType, ValueType, num_entries, gid) \
+    DEFINE_BPF_MAP_UGM(the_map, TYPE, KeyType, ValueType, num_entries, AID_ROOT, gid, 0640)
+
+#define DEFINE_BPF_MAP_GRW(the_map, TYPE, KeyType, ValueType, num_entries, gid) \
+    DEFINE_BPF_MAP_UGM(the_map, TYPE, KeyType, ValueType, num_entries, AID_ROOT, gid, 0660)
 
 static int (*bpf_probe_read)(void* dst, int size, void* unsafe_ptr) = (void*) BPF_FUNC_probe_read;
 static int (*bpf_probe_read_str)(void* dst, int size, void* unsafe_ptr) = (void*) BPF_FUNC_probe_read_str;
@@ -191,8 +198,8 @@ static unsigned long long (*bpf_get_smp_processor_id)(void) = (void*) BPF_FUNC_g
 static long (*bpf_get_stackid)(void* ctx, void* map, uint64_t flags) = (void*) BPF_FUNC_get_stackid;
 static long (*bpf_get_current_comm)(void* buf, uint32_t buf_size) = (void*) BPF_FUNC_get_current_comm;
 
-#define DEFINE_BPF_PROG_KVER_RANGE_OPT(SECTION_NAME, prog_uid, prog_gid, the_prog, min_kv, max_kv, \
-                                       opt)                                                        \
+#define DEFINE_BPF_PROG_EXT(SECTION_NAME, prog_uid, prog_gid, the_prog, min_kv, max_kv, opt,       \
+                            selinux, pindir)                                                       \
     const struct bpf_prog_def SECTION("progs") the_prog##_def = {                                  \
             .uid = (prog_uid),                                                                     \
             .gid = (prog_gid),                                                                     \
@@ -201,9 +208,15 @@ static long (*bpf_get_current_comm)(void* buf, uint32_t buf_size) = (void*) BPF_
             .optional = (opt),                                                                     \
             .bpfloader_min_ver = DEFAULT_BPFLOADER_MIN_VER,                                        \
             .bpfloader_max_ver = DEFAULT_BPFLOADER_MAX_VER,                                        \
+            .selinux_context = selinux,                                                            \
+            .pin_subdir = pindir,                                                                  \
     };                                                                                             \
     SECTION(SECTION_NAME)                                                                          \
     int the_prog
+
+#define DEFINE_BPF_PROG_KVER_RANGE_OPT(SECTION_NAME, prog_uid, prog_gid, the_prog, min_kv, max_kv, \
+                                       opt) \
+    DEFINE_BPF_PROG_EXT(SECTION_NAME, prog_uid, prog_gid, the_prog, min_kv, max_kv, opt, "", "")
 
 // Programs (here used in the sense of functions/sections) marked optional are allowed to fail
 // to load (for example due to missing kernel patches).
