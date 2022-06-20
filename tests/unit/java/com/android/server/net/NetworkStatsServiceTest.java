@@ -2010,18 +2010,18 @@ public class NetworkStatsServiceTest extends NetworkStatsBaseTest {
     }
 
     private NetworkStatsRecorder makeTestRecorder(File directory, String prefix, Config config,
-            boolean includeTags) {
+            boolean includeTags, boolean wipeOnError) {
         final NetworkStats.NonMonotonicObserver observer =
                 mock(NetworkStats.NonMonotonicObserver.class);
         final DropBoxManager dropBox = mock(DropBoxManager.class);
         return new NetworkStatsRecorder(new FileRotator(
                 directory, prefix, config.rotateAgeMillis, config.deleteAgeMillis),
-                observer, dropBox, prefix, config.bucketDuration, includeTags);
+                observer, dropBox, prefix, config.bucketDuration, includeTags, wipeOnError);
     }
 
     private NetworkStatsCollection getLegacyCollection(String prefix, boolean includeTags) {
         final NetworkStatsRecorder recorder = makeTestRecorder(mLegacyStatsDir, prefix,
-                mSettings.getDevConfig(), includeTags);
+                mSettings.getDevConfig(), includeTags, false);
         return recorder.getOrLoadCompleteLocked();
     }
 

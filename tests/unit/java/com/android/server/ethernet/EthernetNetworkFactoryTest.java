@@ -93,6 +93,8 @@ public class EthernetNetworkFactoryTest {
     private Handler mHandler;
     private EthernetNetworkFactory mNetFactory = null;
     private IpClientCallbacks mIpClientCallbacks;
+    private NetworkOfferCallback mNetworkOfferCallback;
+    private NetworkRequest mRequestToKeepNetworkUp;
     @Mock private Context mContext;
     @Mock private Resources mResources;
     @Mock private EthernetNetworkFactory.Dependencies mDeps;
@@ -245,7 +247,9 @@ public class EthernetNetworkFactoryTest {
         ArgumentCaptor<NetworkOfferCallback> captor = ArgumentCaptor.forClass(
                 NetworkOfferCallback.class);
         verify(mNetworkProvider).registerNetworkOffer(any(), any(), any(), captor.capture());
-        captor.getValue().onNetworkNeeded(createDefaultRequest());
+        mRequestToKeepNetworkUp = createDefaultRequest();
+        mNetworkOfferCallback = captor.getValue();
+        mNetworkOfferCallback.onNetworkNeeded(mRequestToKeepNetworkUp);
 
         verifyStart(ipConfig);
         clearInvocations(mDeps);
@@ -648,6 +652,14 @@ public class EthernetNetworkFactoryTest {
 
     @DevSdkIgnoreRule.IgnoreUpTo(SC_V2) // TODO: Use to Build.VERSION_CODES.SC_V2 when available
     @Ignore("TODO: temporarily ignore tests until prebuilts are updated")
+    @Test
+    public void testUpdateInterfaceAbortsOnNetworkUneededRemovesAllRequests() throws Exception {
+        initEthernetNetworkFactory();
+        verifyNetworkManagementCallIsAbortedWhenInterrupted(
+                TEST_IFACE,
+                () -> mNetworkOfferCallback.onNetworkUnneeded(mRequestToKeepNetworkUp));
+    }
+
     @Test
     public void testUpdateInterfaceCallsListenerCorrectlyOnConcurrentRequests() throws Exception {
         initEthernetNetworkFactory();
