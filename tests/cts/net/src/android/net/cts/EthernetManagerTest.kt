@@ -56,6 +56,7 @@ import androidx.test.platform.app.InstrumentationRegistry
 import com.android.net.module.util.ArrayTrackRecord
 import com.android.net.module.util.TrackRecord
 import com.android.testutils.anyNetwork
+import com.android.testutils.ConnectivityModuleTest
 import com.android.testutils.DevSdkIgnoreRule
 import com.android.testutils.DevSdkIgnoreRunner
 import com.android.testutils.RecorderCallback.CallbackEntry.Available
@@ -97,6 +98,8 @@ private val ETH_REQUEST: NetworkRequest = NetworkRequest.Builder()
 @AppModeFull(reason = "Instant apps can't access EthernetManager")
 // EthernetManager is not updatable before T, so tests do not need to be backwards compatible.
 @RunWith(DevSdkIgnoreRunner::class)
+// This test depends on behavior introduced post-T as part of connectivity module updates
+@ConnectivityModuleTest
 @DevSdkIgnoreRule.IgnoreUpTo(Build.VERSION_CODES.S_V2)
 class EthernetManagerTest {
 
