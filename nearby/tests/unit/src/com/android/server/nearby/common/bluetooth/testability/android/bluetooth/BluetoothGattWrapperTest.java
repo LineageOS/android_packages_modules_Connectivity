@@ -170,7 +170,7 @@ public class BluetoothGattWrapperTest {
     @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void testDisconnect_callsWrapped() {
         doNothing().when(mBluetoothGatt).disconnect();
-        mBluetoothGatt.disconnect();
+        mBluetoothGattWrapper.disconnect();
         verify(mBluetoothGatt).disconnect();
     }
 
@@ -178,7 +178,7 @@ public class BluetoothGattWrapperTest {
     @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void testClose_callsWrapped() {
         doNothing().when(mBluetoothGatt).close();
-        mBluetoothGatt.close();
+        mBluetoothGattWrapper.close();
         verify(mBluetoothGatt).close();
     }
 }
