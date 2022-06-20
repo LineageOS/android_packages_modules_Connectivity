@@ -426,7 +426,6 @@ public class BpfNetMaps {
     private native int native_removeNaughtyApp(int uid);
     private native int native_addNiceApp(int uid);
     private native int native_removeNiceApp(int uid);
-    private native int native_setChildChain(int childChain, boolean enable);
     private native int native_replaceUidChain(String name, boolean isAllowlist, int[] uids);
     private native int native_setUidRule(int childChain, int uid, int firewallRule);
     private native int native_addUidInterfaceRules(String ifName, int[] uids);
