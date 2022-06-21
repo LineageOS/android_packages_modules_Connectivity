@@ -20,6 +20,7 @@ import static android.os.Build.VERSION_CODES.R;
 
 import static com.android.testutils.ContextUtils.mockService;
 import static com.android.testutils.DevSdkIgnoreRule.IgnoreUpTo;
+import static com.android.testutils.MiscAsserts.assertThrows;
 
 import static org.junit.Assert.assertNotNull;
 import static org.mockito.ArgumentMatchers.any;
@@ -74,6 +75,8 @@ public class VpnManagerServiceTest extends VpnTestBase {
     @Mock private PackageManager mPackageManager;
     private VpnManagerServiceDependencies mDeps;
     private VpnManagerService mService;
+
+    private final String mNotMyVpnPkg = "com.not.my.vpn";
 
     class VpnManagerServiceDependencies extends VpnManagerService.Dependencies {
         @Override
@@ -145,5 +148,16 @@ public class VpnManagerServiceTest extends VpnTestBase {
         // Add the package back
         mService.onPackageAdded(PKGS[0], PKG_UIDS[0], false /* isReplacing */);
         verify(mVpn, times(2)).refreshPlatformVpnAppExclusionList();
+    }
+
+    @Test
+    public void testStartVpnProfileFromDiffPackage() {
+        assertThrows(
+                SecurityException.class, () -> mService.startVpnProfile(mNotMyVpnPkg));
+    }
+
+    @Test
+    public void testStopVpnProfileFromDiffPackage() {
+        assertThrows(SecurityException.class, () -> mService.stopVpnProfile(mNotMyVpnPkg));
     }
 }
