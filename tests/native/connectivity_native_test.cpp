@@ -233,54 +233,29 @@ TEST_F(ConnectivityNativeBinderTest, UnblockAllPorts) {
 }
 
 TEST_F(ConnectivityNativeBinderTest, BlockNegativePort) {
-    int retry = 0;
-    ndk::ScopedAStatus status;
-    do {
-        status = mService->blockPortForBind(-1);
-        // TODO: find out why transaction failed is being thrown on the first attempt.
-    } while (status.getExceptionCode() == EX_TRANSACTION_FAILED && retry++ < 5);
+    ndk::ScopedAStatus status = mService->blockPortForBind(-1);
     EXPECT_EQ(EX_ILLEGAL_ARGUMENT, status.getExceptionCode());
 }
 
 TEST_F(ConnectivityNativeBinderTest, UnblockNegativePort) {
-    int retry = 0;
-    ndk::ScopedAStatus status;
-    do {
-        status = mService->unblockPortForBind(-1);
-        // TODO: find out why transaction failed is being thrown on the first attempt.
-    } while (status.getExceptionCode() == EX_TRANSACTION_FAILED && retry++ < 5);
+    ndk::ScopedAStatus status = mService->unblockPortForBind(-1);
     EXPECT_EQ(EX_ILLEGAL_ARGUMENT, status.getExceptionCode());
 }
 
 TEST_F(ConnectivityNativeBinderTest, BlockMaxPort) {
-    int retry = 0;
-    ndk::ScopedAStatus status;
-    do {
-        status = mService->blockPortForBind(65536);
-        // TODO: find out why transaction failed is being thrown on the first attempt.
-    } while (status.getExceptionCode() == EX_TRANSACTION_FAILED && retry++ < 5);
+    ndk::ScopedAStatus status = mService->blockPortForBind(65536);
     EXPECT_EQ(EX_ILLEGAL_ARGUMENT, status.getExceptionCode());
 }
 
 TEST_F(ConnectivityNativeBinderTest, UnblockMaxPort) {
-    int retry = 0;
-    ndk::ScopedAStatus status;
-    do {
-        status = mService->unblockPortForBind(65536);
-        // TODO: find out why transaction failed is being thrown on the first attempt.
-    } while (status.getExceptionCode() == EX_TRANSACTION_FAILED && retry++ < 5);
+    ndk::ScopedAStatus status = mService->unblockPortForBind(65536);
     EXPECT_EQ(EX_ILLEGAL_ARGUMENT, status.getExceptionCode());
 }
 
 TEST_F(ConnectivityNativeBinderTest, CheckPermission) {
-    int retry = 0;
     int curUid = getuid();
     EXPECT_EQ(0, seteuid(FIRST_APPLICATION_UID + 2000)) << "seteuid failed: " << strerror(errno);
-    ndk::ScopedAStatus status;
-    do {
-        status = mService->blockPortForBind(5555);
-        // TODO: find out why transaction failed is being thrown on the first attempt.
-    } while (status.getExceptionCode() == EX_TRANSACTION_FAILED && retry++ < 5);
+    ndk::ScopedAStatus status = mService->blockPortForBind(5555);
     EXPECT_EQ(EX_SECURITY, status.getExceptionCode());
     EXPECT_EQ(0, seteuid(curUid)) << "seteuid failed: " << strerror(errno);
 }
