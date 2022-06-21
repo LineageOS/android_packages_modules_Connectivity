@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-// The resulting .o needs to load on the Android T Beta 3 bpfloader v0.13+
-#define BPFLOADER_MIN_VER 13u
+// The resulting .o needs to load on the Android T Beta 3 bpfloader
+#define BPFLOADER_MIN_VER BPFLOADER_T_BETA3_VERSION
 
 #include <bpf_helpers.h>
 #include <linux/bpf.h>
