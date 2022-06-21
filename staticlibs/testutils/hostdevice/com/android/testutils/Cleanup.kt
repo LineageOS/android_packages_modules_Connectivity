@@ -90,7 +90,7 @@ inline class TryExpr<T>(val result: Result<T>) {
         if (originalException !is E) return this
         return TryExpr(try {
             Result.success(block(originalException))
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Result.failure(e)
         })
     }
