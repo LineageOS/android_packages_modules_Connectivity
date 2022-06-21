@@ -27,6 +27,7 @@ import android.hardware.location.NanoAppMessage;
 import android.hardware.location.NanoAppState;
 import android.util.Log;
 
+import com.android.internal.annotations.VisibleForTesting;
 import com.android.server.nearby.injector.ContextHubManagerAdapter;
 import com.android.server.nearby.injector.Injector;
 
@@ -172,7 +173,8 @@ public class ChreCommunication extends ContextHubClientCallback {
         mCallback.onNanoAppRestart(nanoAppId);
     }
 
-    private static String contextHubTransactionResultToString(int result) {
+    @VisibleForTesting
+    static String contextHubTransactionResultToString(int result) {
         switch (result) {
             case ContextHubTransaction.RESULT_SUCCESS:
                 return "RESULT_SUCCESS";

@@ -106,6 +106,11 @@ public class BroadcastProviderManagerTest {
     }
 
     @Test
+    public void testStopAdvertising() {
+        mBroadcastProviderManager.stopBroadcast(mBroadcastListener);
+    }
+
+    @Test
     public void testStartAdvertising_featureDisabled() throws Exception {
         DeviceConfig.setProperty(NAMESPACE_TETHERING, NEARBY_ENABLE_PRESENCE_BROADCAST_LEGACY,
                 "false", false);
