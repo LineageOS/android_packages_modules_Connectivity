@@ -1126,9 +1126,7 @@ public class NetworkStatsService extends INetworkStatsService.Stub {
         } catch (Resources.NotFoundException e) {
             // Overlay value is not defined.
         }
-        // TODO(b/233752318): For now it is always true to collect signal from beta users.
-        //  Should change to the default behavior (true if debuggable builds) before formal release.
-        return (overlayValue != null ? overlayValue : mDeps.isDebuggable()) || true;
+        return overlayValue != null ? overlayValue : mDeps.isDebuggable();
     }
 
     /**
