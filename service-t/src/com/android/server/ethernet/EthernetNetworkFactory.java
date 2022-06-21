@@ -60,7 +60,9 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * {@link NetworkProvider} that manages NetworkOffers for Ethernet networks.
+ * Class that manages NetworkOffers for Ethernet networks.
+ *
+ * TODO: this class should be merged into EthernetTracker.
  */
 public class EthernetNetworkFactory {
     private final static String TAG = EthernetNetworkFactory.class.getSimpleName();
@@ -221,11 +223,17 @@ public class EthernetNetworkFactory {
     }
 
     @VisibleForTesting(visibility = VisibleForTesting.Visibility.PACKAGE)
-    protected void removeInterface(String interfaceName) {
+    protected boolean removeInterface(String interfaceName) {
         NetworkInterfaceState iface = mTrackingInterfaces.remove(interfaceName);
         if (iface != null) {
             iface.destroy();
+            return true;
         }
+        // TODO(b/236892130): if an interface is currently in server mode, it may not be properly
+        // removed.
+        // TODO: when false is returned, do not send a STATE_ABSENT callback.
+        Log.w(TAG, interfaceName + " is not tracked and cannot be removed");
+        return false;
     }
 
     /** Returns true if state has been modified */
