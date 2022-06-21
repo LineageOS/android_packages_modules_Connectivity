@@ -477,9 +477,7 @@ public class EthernetNetworkFactory {
             if (mLinkUp) {
                 // registering a new network offer will update the existing one, not install a
                 // new one.
-                mNetworkProvider.registerNetworkOffer(getBestNetworkScore(),
-                        new NetworkCapabilities(capabilities), cmd -> mHandler.post(cmd),
-                        mNetworkOfferCallback);
+                registerNetworkOffer();
             }
         }
 
@@ -646,9 +644,7 @@ public class EthernetNetworkFactory {
                 EthernetNetworkFactory.maybeSendNetworkManagementCallback(listener, name, null);
             } else { // was down, goes up
                 // register network offer
-                mNetworkProvider.registerNetworkOffer(getBestNetworkScore(),
-                        new NetworkCapabilities(mCapabilities), (cmd) -> mHandler.post(cmd),
-                        mNetworkOfferCallback);
+                registerNetworkOffer();
             }
 
             return true;
@@ -670,6 +666,12 @@ public class EthernetNetworkFactory {
                 mNetworkAgent = null;
             }
             mLinkProperties.clear();
+        }
+
+        private void registerNetworkOffer() {
+            mNetworkProvider.registerNetworkOffer(getBestNetworkScore(),
+                    new NetworkCapabilities(mCapabilities), cmd -> mHandler.post(cmd),
+                    mNetworkOfferCallback);
         }
 
         public void destroy() {
