@@ -19,6 +19,17 @@
  *                                                                            *
  ******************************************************************************/
 
+// The actual versions of the bpfloader that shipped in various Android releases
+
+// Android P/Q/R: BpfLoader was initially part of netd,
+// this was later split out into a standalone binary, but was unversioned.
+
+// Android S / 12 (api level 31) - added 'tethering' mainline eBPF support
+#define BPFLOADER_S_VERSION 2u
+
+// Android T / 13 Beta 3 (api level 33) - added support for 'netd_shared'
+#define BPFLOADER_T_BETA3_VERSION 13u
+
 /* For mainline module use, you can #define BPFLOADER_{MIN/MAX}_VER
  * before #include "bpf_helpers.h" to change which bpfloaders will
  * process the resulting .o file.
