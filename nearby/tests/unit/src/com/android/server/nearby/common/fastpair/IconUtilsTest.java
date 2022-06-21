@@ -18,13 +18,18 @@ package com.android.server.nearby.common.fastpair;
 
 import static com.google.common.truth.Truth.assertThat;
 
+import android.content.Context;
 import android.graphics.Bitmap;
 
 import org.junit.Test;
+import org.mockito.Mock;
 
 public class IconUtilsTest {
     private static final int MIN_ICON_SIZE = 16;
     private static final int DESIRED_ICON_SIZE = 32;
+    @Mock
+    Context mContext;
+
     @Test
     public void isIconSizedCorrectly() {
         // Null bitmap is not sized correctly
@@ -50,5 +55,16 @@ public class IconUtilsTest {
         assertThat(IconUtils.isIconSizeCorrect(icon)).isTrue();
         assertThat(IconUtils.isIconSizedSmall(icon)).isFalse();
         assertThat(IconUtils.isIconSizedRegular(icon)).isTrue();
+    }
+
+    @Test
+    public void testAddWhiteCircleBackground() {
+        int minIconSize = MIN_ICON_SIZE;
+        Bitmap icon = Bitmap.createBitmap(minIconSize + 1, minIconSize + 1,
+                Bitmap.Config.ALPHA_8);
+
+        assertThat(
+                IconUtils.isIconSizeCorrect(IconUtils.addWhiteCircleBackground(mContext, icon)))
+                .isTrue();
     }
 }

@@ -134,6 +134,7 @@ public class FastPairDataProviderTest {
     @Test
     @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void testFailurePath_throwsException() throws IllegalStateException {
+        mFastPairDataProvider = FastPairDataProvider.getInstance();
         assertThrows(
                 IllegalStateException.class,
                 () -> {
