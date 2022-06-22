@@ -39,7 +39,6 @@ import com.android.testutils.DevSdkIgnoreRule;
 import com.android.testutils.DevSdkIgnoreRunner;
 
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mock;
@@ -68,7 +67,6 @@ public final class NetworkStatsRecorderTest {
                     HOUR_IN_MILLIS, false /* includeTags */, wipeOnError);
     }
 
-    @Ignore // TODO(b/234099453): re-enable as soon as prebuilts are updated.
     @Test
     public void testWipeOnError() throws Exception {
         final FileRotator rotator = mock(FileRotator.class);
