@@ -83,11 +83,4 @@ public class HandlerEventLoopImplTest {
             mExecutedRunnables.add(mId);
         }
     }
-
-    @Test
-    public void postEmptyQueueRunnable() {
-        mHandlerEventLoopImpl.postEmptyQueueRunnable(
-                new HandlerEventLoopImplTest.NumberedRunnable(0));
-        assertThat(mExecutedRunnables).isEmpty();
-    }
 }
