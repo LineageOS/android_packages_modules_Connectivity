@@ -791,7 +791,7 @@ public class PermissionMonitor {
         mAllApps.add(appId);
 
         // Log package added.
-        mPermissionUpdateLogs.log("Package add: name=" + packageName + ", uid=" + uid
+        mPermissionUpdateLogs.log("Package add: uid=" + uid
                 + ", nPerm=(" + permissionToString(permission) + "/"
                 + permissionToString(currentPermission) + ")"
                 + ", tPerm=" + permissionToString(appIdTrafficPerm));
@@ -844,7 +844,7 @@ public class PermissionMonitor {
         final int permission = highestUidNetworkPermission(uid);
 
         // Log package removed.
-        mPermissionUpdateLogs.log("Package remove: name=" + packageName + ", uid=" + uid
+        mPermissionUpdateLogs.log("Package remove: uid=" + uid
                 + ", nPerm=(" + permissionToString(permission) + "/"
                 + permissionToString(currentPermission) + ")"
                 + ", tPerm=" + permissionToString(appIdTrafficPerm));
