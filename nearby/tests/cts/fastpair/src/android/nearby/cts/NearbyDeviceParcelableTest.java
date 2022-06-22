@@ -120,7 +120,6 @@ public class NearbyDeviceParcelableTest {
         assertThat(nearbyDeviceParcelable.getAction()).isEqualTo(ACTION);
         assertThat(nearbyDeviceParcelable.getPublicCredential()).isEqualTo(publicCredential);
         assertThat(nearbyDeviceParcelable.getSalt()).isEqualTo(SALT);
-        assertThat(nearbyDeviceParcelable.getScanType()).isEqualTo(SCAN_TYPE_NEARBY_PRESENCE);
         assertThat(nearbyDeviceParcelable.getTxPower()).isEqualTo(TX_POWER);
     }
 
@@ -184,8 +183,6 @@ public class NearbyDeviceParcelableTest {
         NearbyDeviceParcelable nearbyDeviceParcelable1 = mBuilder.setBluetoothAddress(null).build();
         NearbyDeviceParcelable nearbyDeviceParcelable2 = mBuilder.setBluetoothAddress(null).build();
         assertThat(nearbyDeviceParcelable1.equals(nearbyDeviceParcelable2)).isTrue();
-        assertThat(nearbyDeviceParcelable1.hashCode())
-                .isEqualTo(nearbyDeviceParcelable2.hashCode());
     }
 
     @Test
