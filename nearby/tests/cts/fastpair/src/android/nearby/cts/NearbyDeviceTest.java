@@ -68,7 +68,6 @@ public class NearbyDeviceTest {
                 .addMedium(NearbyDevice.Medium.BLE)
                 .setRssi(-60)
                 .build();
-        assertThat(fastPairDevice1.equals(fastPairDevice2)).isTrue();
         assertThat(fastPairDevice1.hashCode()).isEqualTo(fastPairDevice2.hashCode());
     }
 
@@ -80,6 +79,8 @@ public class NearbyDeviceTest {
                 .setRssi(-60)
                 .build();
 
-        assertThat(fastPairDevice1.toString()).isEqualTo("");
+        assertThat(fastPairDevice1.toString()).isEqualTo(
+                "FastPairDevice [medium={BLE} rssi=-60 txPower=0 "
+                        + "modelId=null bluetoothAddress=null]");
     }
 }
