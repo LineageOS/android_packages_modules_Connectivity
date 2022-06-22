@@ -134,7 +134,7 @@ cc_library {
         "-Wthread-safety",
     ],
 
-    ldflags: ["-Wl,--exclude-libs=ALL,-error-limit=0"],
+    ldflags: ["-Wl,--exclude-libs=ALL,--error-limit=0"],
 }
 
 // Common defaults for compiling the actual APK.
