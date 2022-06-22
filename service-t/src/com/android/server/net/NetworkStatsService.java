@@ -1143,10 +1143,12 @@ public class NetworkStatsService extends INetworkStatsService.Stub {
             if (error != null) {
                 Log.wtf(TAG, "Unexpected comparison result for recorder "
                         + legacyRecorder.getCookie() + ": " + error);
+                return false;
             }
         } catch (Throwable e) {
             Log.wtf(TAG, "Failed to compare migrated stats with legacy stats for recorder "
                     + legacyRecorder.getCookie(), e);
+            return false;
         }
         return true;
     }
