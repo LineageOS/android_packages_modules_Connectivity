@@ -121,14 +121,14 @@ public class VpnManagerServiceTest extends VpnTestBase {
                 eq(mHandler) /* scheduler */);
         doReturn(SYSTEM_USER).when(mUserManager).getUserInfo(eq(SYSTEM_USER_ID));
         mService = new VpnManagerService(mContext, mDeps);
+
+        // Add user to create vpn in mVpn
+        mService.onUserStarted(SYSTEM_USER_ID);
+        assertNotNull(mService.mVpns.get(SYSTEM_USER_ID));
     }
 
     @Test
     public void testUpdateAppExclusionList() {
-        // Add user to create vpn in mVpn
-        mService.onUserStarted(SYSTEM_USER_ID);
-        assertNotNull(mService.mVpns.get(SYSTEM_USER_ID));
-
         // Start vpn
         mService.startVpnProfile(TEST_VPN_PKG);
         verify(mVpn).startVpnProfile(eq(TEST_VPN_PKG));
@@ -159,5 +159,17 @@ public class VpnManagerServiceTest extends VpnTestBase {
     @Test
     public void testStopVpnProfileFromDiffPackage() {
         assertThrows(SecurityException.class, () -> mService.stopVpnProfile(mNotMyVpnPkg));
+    }
+
+    @Test
+    public void testGetProvisionedVpnProfileStateFromDiffPackage() {
+        assertThrows(SecurityException.class, () ->
+                mService.getProvisionedVpnProfileState(mNotMyVpnPkg));
+    }
+
+    @Test
+    public void testGetProvisionedVpnProfileState() {
+        mService.getProvisionedVpnProfileState(TEST_VPN_PKG);
+        verify(mVpn).getProvisionedVpnProfileState(TEST_VPN_PKG);
     }
 }
