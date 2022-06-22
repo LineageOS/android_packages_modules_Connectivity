@@ -57,6 +57,7 @@ import com.android.net.module.util.ArrayTrackRecord
 import com.android.net.module.util.TrackRecord
 import com.android.testutils.anyNetwork
 import com.android.testutils.ConnectivityModuleTest
+import com.android.testutils.DeviceInfoUtils
 import com.android.testutils.DevSdkIgnoreRule
 import com.android.testutils.DevSdkIgnoreRunner
 import com.android.testutils.RecorderCallback.CallbackEntry.Available
@@ -67,6 +68,7 @@ import com.android.testutils.TestableNetworkCallback
 import com.android.testutils.runAsShell
 import com.android.testutils.waitForIdle
 import org.junit.After
+import org.junit.Assume.assumeTrue
 import org.junit.Assume.assumeFalse
 import org.junit.Before
 import org.junit.Test
@@ -629,6 +631,10 @@ class EthernetManagerTest {
 
     @Test
     fun testNetworkRequest_forInterfaceWhileTogglingCarrier() {
+        // Notice this test case fails on devices running on an older kernel version(e.g. 4.14)
+        // that might not support ioctl new argument. Only run this test on 4.19 kernel or above.
+        assumeTrue(DeviceInfoUtils.isKernelVersionAtLeast("4.19.0"))
+
         val iface = createInterface(false /* hasCarrier */)
 
         val cb = requestNetwork(ETH_REQUEST)
