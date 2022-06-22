@@ -70,12 +70,18 @@ public final class BleDiscoveryProviderTest {
         // Wait for callback to be invoked
         Thread.sleep(500);
         verify(mListener, times(1)).onNearbyDeviceDiscovered(any());
+        mBleDiscoveryProvider.getScanCallback().onScanFailed(1);
     }
 
     @Test
     public void test_stopScan() {
         mBleDiscoveryProvider.onStart();
         mBleDiscoveryProvider.onStop();
+    }
+
+    @Test
+    public void testInvalidateScanMode() {
+        mBleDiscoveryProvider.invalidateScanMode();
     }
 
     private class TestInjector implements Injector {

@@ -23,10 +23,12 @@ import static org.mockito.Mockito.when;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 
+import com.android.server.nearby.common.bluetooth.fastpair.FastPairConnection;
 import com.android.server.nearby.common.locator.Locator;
 import com.android.server.nearby.common.locator.LocatorContextWrapper;
 import com.android.server.nearby.fastpair.cache.DiscoveryItem;
 import com.android.server.nearby.fastpair.cache.FastPairCacheManager;
+import com.android.server.nearby.fastpair.footprint.FootprintsDeviceManager;
 import com.android.server.nearby.fastpair.halfsheet.FastPairHalfSheetManager;
 import com.android.server.nearby.fastpair.testing.FakeDiscoveryItems;
 
@@ -51,11 +53,16 @@ public class HalfSheetPairingProgressHandlerTest {
     Clock mClock;
     @Mock
     FastPairCacheManager mFastPairCacheManager;
+    @Mock
+    FastPairConnection mFastPairConnection;
+    @Mock
+    FootprintsDeviceManager mFootprintsDeviceManager;
 
-    private static final String DEFAULT_MAC_ADDRESS = "00:11:22:33:44:55";
+    private static final String MAC_ADDRESS = "00:11:22:33:44:55";
     private static final byte[] ACCOUNT_KEY = new byte[]{0x01, 0x02};
     private static final int SUBSEQUENT_PAIR_START = 1310;
     private static final int SUBSEQUENT_PAIR_END = 1320;
+    private static final int PASSKEY = 1234;
     private static HalfSheetPairingProgressHandler sHalfSheetPairingProgressHandler;
     private static DiscoveryItem sDiscoveryItem;
     private static BluetoothDevice sBluetoothDevice;
@@ -69,11 +76,12 @@ public class HalfSheetPairingProgressHandlerTest {
         FastPairHalfSheetManager mfastPairHalfSheetManager =
                 new FastPairHalfSheetManager(mContextWrapper);
         mLocator.bind(FastPairHalfSheetManager.class, mfastPairHalfSheetManager);
+        when(mLocator.get(FastPairHalfSheetManager.class)).thenReturn(mfastPairHalfSheetManager);
         sDiscoveryItem = FakeDiscoveryItems.newFastPairDiscoveryItem(mContextWrapper);
         sDiscoveryItem.setStoredItemForTest(
                 sDiscoveryItem.getStoredItemForTest().toBuilder()
                         .setAuthenticationPublicKeySecp256R1(ByteString.copyFrom(ACCOUNT_KEY))
-                        .setMacAddress(DEFAULT_MAC_ADDRESS)
+                        .setMacAddress(MAC_ADDRESS)
                         .setFastPairInformation(
                                 Cache.FastPairInformation.newBuilder()
                                         .setDeviceType(Rpcs.DeviceType.HEADPHONES).build())
@@ -96,5 +104,32 @@ public class HalfSheetPairingProgressHandlerTest {
     public void getPairStartEventCode() {
         assertThat(sHalfSheetPairingProgressHandler
                 .getPairStartEventCode()).isEqualTo(SUBSEQUENT_PAIR_START);
+    }
+
+    @Test
+    public void testOnHandlePasskeyConfirmation() {
+        sHalfSheetPairingProgressHandler.onHandlePasskeyConfirmation(sBluetoothDevice, PASSKEY);
+    }
+
+    @Test
+    public void testOnPairedCallbackCalled() {
+        sHalfSheetPairingProgressHandler.onPairedCallbackCalled(mFastPairConnection, ACCOUNT_KEY,
+                mFootprintsDeviceManager, MAC_ADDRESS);
+    }
+
+    @Test
+    public void testonPairingFailed() {
+        Throwable e = new Throwable("onPairingFailed");
+        sHalfSheetPairingProgressHandler.onPairingFailed(e);
+    }
+
+    @Test
+    public void testonPairingStarted() {
+        sHalfSheetPairingProgressHandler.onPairingStarted();
+    }
+
+    @Test
+    public void testonPairingSuccess() {
+        sHalfSheetPairingProgressHandler.onPairingSuccess(MAC_ADDRESS);
     }
 }
