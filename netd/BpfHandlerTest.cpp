@@ -49,7 +49,7 @@ class BpfHandlerTest : public ::testing::Test {
     BpfHandler mBh;
     BpfMap<uint64_t, UidTagValue> mFakeCookieTagMap;
     BpfMap<StatsKey, StatsValue> mFakeStatsMapA;
-    BpfMap<uint32_t, uint32_t> mFakeConfigurationMap;
+    BpfMapRO<uint32_t, uint32_t> mFakeConfigurationMap;
     BpfMap<uint32_t, uint8_t> mFakeUidPermissionMap;
 
     void SetUp() {
@@ -62,7 +62,7 @@ class BpfHandlerTest : public ::testing::Test {
         mFakeStatsMapA.resetMap(BPF_MAP_TYPE_HASH, TEST_MAP_SIZE);
         ASSERT_VALID(mFakeStatsMapA);
 
-        mFakeConfigurationMap.resetMap(BPF_MAP_TYPE_HASH, 1);
+        mFakeConfigurationMap.resetMap(BPF_MAP_TYPE_ARRAY, CONFIGURATION_MAP_SIZE);
         ASSERT_VALID(mFakeConfigurationMap);
 
         mFakeUidPermissionMap.resetMap(BPF_MAP_TYPE_HASH, TEST_MAP_SIZE, 0);
@@ -75,8 +75,8 @@ class BpfHandlerTest : public ::testing::Test {
         mBh.mConfigurationMap = mFakeConfigurationMap;
         ASSERT_VALID(mBh.mConfigurationMap);
         // Always write to stats map A by default.
-        ASSERT_RESULT_OK(mBh.mConfigurationMap.writeValue(CURRENT_STATS_MAP_CONFIGURATION_KEY,
-                                                          SELECT_MAP_A, BPF_ANY));
+        static_assert(SELECT_MAP_A == 0, "bpf map arrays are zero-initialized");
+
         mBh.mUidPermissionMap = mFakeUidPermissionMap;
         ASSERT_VALID(mBh.mUidPermissionMap);
     }
