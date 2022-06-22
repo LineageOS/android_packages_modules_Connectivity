@@ -33,6 +33,8 @@ import org.mockito.MockitoAnnotations;
 
 import java.time.Clock;
 
+import src.com.android.server.nearby.fastpair.testing.MockingLocator;
+
 public class LocatorTest {
     private Locator mLocator;
 
@@ -78,5 +80,12 @@ public class LocatorTest {
                         "Unbound type: com.android.server.nearby.fastpair.FastPairModule\n"
                         + "Searched locators:\n" + "android.app.Application ->\n"
                                 + "android.app.Application ->\n" + "android.app.Application");
+    }
+
+    @Test
+    public void getContextForTest() {
+        src.com.android.server.nearby.fastpair.testing.MockingLocator  mockingLocator =
+                new MockingLocator(ApplicationProvider.getApplicationContext(), mLocator);
+        assertThat(mockingLocator.getContextForTest()).isNotNull();
     }
 }
