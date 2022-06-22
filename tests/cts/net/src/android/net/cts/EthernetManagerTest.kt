@@ -22,6 +22,8 @@ import android.content.Context
 import android.net.ConnectivityManager
 import android.net.EthernetManager
 import android.net.EthernetManager.InterfaceStateListener
+import android.net.EthernetManager.ETHERNET_STATE_DISABLED
+import android.net.EthernetManager.ETHERNET_STATE_ENABLED
 import android.net.EthernetManager.ROLE_CLIENT
 import android.net.EthernetManager.ROLE_NONE
 import android.net.EthernetManager.ROLE_SERVER
@@ -44,6 +46,7 @@ import android.net.NetworkCapabilities.TRANSPORT_TEST
 import android.net.NetworkRequest
 import android.net.TestNetworkInterface
 import android.net.TestNetworkManager
+import android.net.cts.EthernetManagerTest.EthernetStateListener.CallbackEntry.EthernetStateChanged
 import android.net.cts.EthernetManagerTest.EthernetStateListener.CallbackEntry.InterfaceStateChanged
 import android.os.Build
 import android.os.Handler
@@ -77,6 +80,7 @@ import java.net.Inet6Address
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ExecutionException
 import java.util.concurrent.TimeUnit
+import java.util.function.IntConsumer
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
@@ -162,7 +166,7 @@ class EthernetManagerTest {
 
     private open class EthernetStateListener private constructor(
         private val history: ArrayTrackRecord<CallbackEntry>
-    ) : InterfaceStateListener,
+    ) : InterfaceStateListener, IntConsumer,
                 TrackRecord<EthernetStateListener.CallbackEntry> by history {
         constructor() : this(ArrayTrackRecord())
 
@@ -175,6 +179,8 @@ class EthernetManagerTest {
                 val role: Int,
                 val configuration: IpConfiguration?
             ) : CallbackEntry()
+
+            data class EthernetStateChanged(val state: Int) : CallbackEntry()
         }
 
         override fun onInterfaceStateChanged(
@@ -186,6 +192,10 @@ class EthernetManagerTest {
             add(InterfaceStateChanged(iface, state, role, cfg))
         }
 
+        override fun accept(state: Int) {
+            add(EthernetStateChanged(state))
+        }
+
         fun <T : CallbackEntry> expectCallback(expected: T): T {
             val event = pollForNextCallback()
             assertEquals(expected, event)
@@ -194,6 +204,10 @@ class EthernetManagerTest {
 
         fun expectCallback(iface: EthernetTestInterface, state: Int, role: Int) {
             expectCallback(createChangeEvent(iface.name, state, role))
+        }
+
+        fun expectCallback(state: Int) {
+            expectCallback(EthernetStateChanged(state))
         }
 
         fun createChangeEvent(iface: String, state: Int, role: Int) =
@@ -212,6 +226,10 @@ class EthernetManagerTest {
 
         fun eventuallyExpect(iface: EthernetTestInterface, state: Int, role: Int) {
             eventuallyExpect(iface.name, state, role)
+        }
+
+        fun eventuallyExpect(state: Int) {
+            assertNotNull(eventuallyExpect(EthernetStateChanged(state)))
         }
 
         fun assertNoCallback() {
@@ -285,11 +303,17 @@ class EthernetManagerTest {
 
     @After
     fun tearDown() {
-        setIncludeTestInterfaces(false)
+        // Reenable ethernet, so ABSENT callbacks are received.
+        setEthernetEnabled(true)
+
         for (iface in createdIfaces) {
             iface.destroy()
             ifaceListener.eventuallyExpect(iface, STATE_ABSENT, ROLE_NONE)
         }
+
+        // After test interfaces are removed, disable tracking.
+        setIncludeTestInterfaces(false)
+
         for (listener in addedListeners) {
             em.removeInterfaceStateListener(listener)
         }
@@ -393,6 +417,19 @@ class EthernetManagerTest {
                     .setNetworkCapabilities(capabilities).build(),
                 handler::post,
                 it)
+        }
+    }
+
+    private fun setEthernetEnabled(enabled: Boolean) {
+        runAsShell(NETWORK_SETTINGS) { em.setEthernetEnabled(enabled) }
+
+        val listener = EthernetStateListener()
+        em.addEthernetStateListener(handler::post, listener)
+        try {
+            listener.eventuallyExpect(
+                    if (enabled) ETHERNET_STATE_ENABLED else ETHERNET_STATE_DISABLED)
+        } finally {
+            em.removeEthernetStateListener(listener)
         }
     }
 
