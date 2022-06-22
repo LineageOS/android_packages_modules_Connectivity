@@ -3418,6 +3418,7 @@ public class ConnectivityManagerTest {
     }
 
     @Test @IgnoreUpTo(SC_V2)
+    @AppModeFull(reason = "Socket cannot bind in instant app mode")
     public void testFirewallBlocking() {
         // Following tests affect the actual state of networking on the device after the test.
         // This might cause unexpected behaviour of the device. So, we skip them for now.
