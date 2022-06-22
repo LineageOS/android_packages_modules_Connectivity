@@ -242,6 +242,7 @@ public class NetworkStatsServiceTest extends NetworkStatsBaseTest {
     private int mImportLegacyTargetAttempts = 0;
     private @Mock PersistentInt mImportLegacyAttemptsCounter;
     private @Mock PersistentInt mImportLegacySuccessesCounter;
+    private @Mock PersistentInt mImportLegacyFallbacksCounter;
 
     private class MockContext extends BroadcastInterceptingContext {
         private final Context mBaseContext;
@@ -391,6 +392,12 @@ public class NetworkStatsServiceTest extends NetworkStatsBaseTest {
             public PersistentInt createImportLegacySuccessesCounter(
                     @androidx.annotation.NonNull Path path) {
                 return mImportLegacySuccessesCounter;
+            }
+
+            @Override
+            public PersistentInt createImportLegacyFallbacksCounter(
+                    @androidx.annotation.NonNull Path path) {
+                return mImportLegacyFallbacksCounter;
             }
 
             @Override
@@ -1901,7 +1908,7 @@ public class NetworkStatsServiceTest extends NetworkStatsBaseTest {
     }
 
     private NetworkStatsCollection getLegacyCollection(String prefix, boolean includeTags) {
-        final NetworkStatsRecorder recorder = makeTestRecorder(mLegacyStatsDir, PREFIX_DEV,
+        final NetworkStatsRecorder recorder = makeTestRecorder(mLegacyStatsDir, prefix,
                 mSettings.getDevConfig(), includeTags);
         return recorder.getOrLoadCompleteLocked();
     }
