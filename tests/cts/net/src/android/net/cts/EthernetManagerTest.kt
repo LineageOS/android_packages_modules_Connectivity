@@ -74,6 +74,7 @@ import org.junit.runner.RunWith
 import java.net.Inet6Address
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ExecutionException
+import java.util.concurrent.TimeoutException
 import java.util.concurrent.TimeUnit
 import java.util.function.IntConsumer
 import kotlin.test.assertEquals
@@ -403,6 +404,21 @@ class EthernetManagerTest {
         }
     }
 
+    private fun assumeNoInterfaceForTetheringAvailable() {
+        // Interfaces that have configured NetworkCapabilities will never be used for tethering,
+        // see aosp/2123900.
+        try {
+            // assumeException does not exist.
+            requestTetheredInterface().expectOnAvailable()
+            // interface used for tethering is available, throw an assumption error.
+            assumeTrue(false)
+        } catch (e: TimeoutException) {
+            // do nothing -- the TimeoutException indicates that no interface is available for
+            // tethering.
+            releaseTetheredInterface()
+        }
+    }
+
     // TODO: this function is now used in two places (EthernetManagerTest and
     // EthernetTetheringTest), so it should be moved to testutils.
     private fun isAdbOverNetwork(): Boolean {
@@ -414,6 +430,7 @@ class EthernetManagerTest {
     @Test
     fun testCallbacks_forServerModeInterfaces() {
         // do not run this test when adb might be connected over ethernet.
+        // TODO: Consider using assumeNoInterfaceForTetheringAvailable() instead, so this runs on CF
         assumeFalse(isAdbOverNetwork())
 
         val listener = EthernetStateListener()
