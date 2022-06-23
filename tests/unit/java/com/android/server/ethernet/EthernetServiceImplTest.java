@@ -16,6 +16,7 @@
 
 package com.android.server.ethernet;
 
+import static android.net.NetworkCapabilities.TRANSPORT_ETHERNET;
 import static android.net.NetworkCapabilities.TRANSPORT_TEST;
 
 import static org.junit.Assert.assertThrows;
@@ -35,10 +36,12 @@ import android.Manifest;
 import android.annotation.NonNull;
 import android.content.Context;
 import android.content.pm.PackageManager;
+import android.net.EthernetNetworkSpecifier;
 import android.net.EthernetNetworkUpdateRequest;
 import android.net.INetworkInterfaceOutcomeReceiver;
 import android.net.IpConfiguration;
 import android.net.NetworkCapabilities;
+import android.net.StringNetworkSpecifier;
 import android.os.Build;
 import android.os.Handler;
 
@@ -56,10 +59,14 @@ import org.junit.runner.RunWith;
 @DevSdkIgnoreRule.IgnoreUpTo(Build.VERSION_CODES.S_V2)
 public class EthernetServiceImplTest {
     private static final String TEST_IFACE = "test123";
+    private static final NetworkCapabilities DEFAULT_CAPS = new NetworkCapabilities.Builder()
+            .addTransportType(TRANSPORT_ETHERNET)
+            .setNetworkSpecifier(new EthernetNetworkSpecifier(TEST_IFACE))
+            .build();
     private static final EthernetNetworkUpdateRequest UPDATE_REQUEST =
             new EthernetNetworkUpdateRequest.Builder()
                     .setIpConfiguration(new IpConfiguration())
-                    .setNetworkCapabilities(new NetworkCapabilities.Builder().build())
+                    .setNetworkCapabilities(DEFAULT_CAPS)
                     .build();
     private static final EthernetNetworkUpdateRequest UPDATE_REQUEST_WITHOUT_CAPABILITIES =
             new EthernetNetworkUpdateRequest.Builder()
@@ -67,7 +74,7 @@ public class EthernetServiceImplTest {
                     .build();
     private static final EthernetNetworkUpdateRequest UPDATE_REQUEST_WITHOUT_IP_CONFIG =
             new EthernetNetworkUpdateRequest.Builder()
-                    .setNetworkCapabilities(new NetworkCapabilities.Builder().build())
+                    .setNetworkCapabilities(DEFAULT_CAPS)
                     .build();
     private static final INetworkInterfaceOutcomeReceiver NULL_LISTENER = null;
     private EthernetServiceImpl mEthernetServiceImpl;
@@ -161,6 +168,41 @@ public class EthernetServiceImplTest {
     }
 
     @Test
+    public void testUpdateConfigurationRejectsWithInvalidSpecifierType() {
+        final StringNetworkSpecifier invalidSpecifierType = new StringNetworkSpecifier("123");
+        final EthernetNetworkUpdateRequest request =
+                new EthernetNetworkUpdateRequest.Builder()
+                        .setNetworkCapabilities(
+                                new NetworkCapabilities.Builder()
+                                        .addTransportType(TRANSPORT_ETHERNET)
+                                        .setNetworkSpecifier(invalidSpecifierType)
+                                        .build()
+                        ).build();
+        assertThrows(IllegalArgumentException.class, () -> {
+            mEthernetServiceImpl.updateConfiguration(
+                    "" /* iface */, request, null /* listener */);
+        });
+    }
+
+    @Test
+    public void testUpdateConfigurationRejectsWithInvalidSpecifierName() {
+        final String ifaceToUpdate = "eth0";
+        final String ifaceOnSpecifier = "wlan0";
+        EthernetNetworkUpdateRequest request =
+                new EthernetNetworkUpdateRequest.Builder()
+                        .setNetworkCapabilities(
+                                new NetworkCapabilities.Builder()
+                                        .addTransportType(TRANSPORT_ETHERNET)
+                                        .setNetworkSpecifier(
+                                                new EthernetNetworkSpecifier(ifaceOnSpecifier))
+                                        .build()
+                        ).build();
+        assertThrows(IllegalArgumentException.class, () -> {
+            mEthernetServiceImpl.updateConfiguration(ifaceToUpdate, request, null /* listener */);
+        });
+    }
+
+    @Test
     public void testUpdateConfigurationWithCapabilitiesWithAutomotiveFeature() {
         toggleAutomotiveFeature(false);
         mEthernetServiceImpl.updateConfiguration(TEST_IFACE, UPDATE_REQUEST_WITHOUT_CAPABILITIES,
@@ -244,6 +286,24 @@ public class EthernetServiceImplTest {
                 eq(TEST_IFACE),
                 eq(UPDATE_REQUEST.getIpConfiguration()),
                 eq(UPDATE_REQUEST.getNetworkCapabilities()), eq(NULL_LISTENER));
+    }
+
+    @Test
+    public void testUpdateConfigurationAddsSpecifierWhenNotSet() {
+        final NetworkCapabilities nc = new NetworkCapabilities.Builder()
+                .addTransportType(TRANSPORT_ETHERNET).build();
+        final EthernetNetworkUpdateRequest requestSansSpecifier =
+                new EthernetNetworkUpdateRequest.Builder()
+                        .setNetworkCapabilities(nc)
+                        .build();
+        final NetworkCapabilities ncWithSpecifier = new NetworkCapabilities(nc)
+                .setNetworkSpecifier(new EthernetNetworkSpecifier(TEST_IFACE));
+
+        mEthernetServiceImpl.updateConfiguration(TEST_IFACE, requestSansSpecifier, NULL_LISTENER);
+        verify(mEthernetTracker).updateConfiguration(
+                eq(TEST_IFACE),
+                isNull(),
+                eq(ncWithSpecifier), eq(NULL_LISTENER));
     }
 
     @Test
