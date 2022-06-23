@@ -33,4 +33,13 @@ public class CallerIdentityTest {
         assertThat(callerIdentity.toString()).isEqualTo("100/package_name[attribution_tag]");
         assertThat(callerIdentity.isSystemServer()).isFalse();
     }
+
+    @Test
+    public void testHashCode() {
+        CallerIdentity callerIdentity =
+                CallerIdentity.forTest(UID, PID, PACKAGE_NAME, ATTRIBUTION_TAG);
+        CallerIdentity callerIdentity1 =
+                CallerIdentity.forTest(UID, PID, PACKAGE_NAME, ATTRIBUTION_TAG);
+        assertThat(callerIdentity.hashCode()).isEqualTo(callerIdentity1.hashCode());
+    }
 }

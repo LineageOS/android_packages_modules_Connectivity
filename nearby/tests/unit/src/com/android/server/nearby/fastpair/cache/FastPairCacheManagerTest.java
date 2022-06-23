@@ -44,7 +44,6 @@ public class FastPairCacheManagerTest {
     private static final ByteString ACCOUNT_KEY = ByteString.copyFromUtf8("axgs");
     private static final String MAC_ADDRESS_B = "00:11:22:44";
     private static final ByteString ACCOUNT_KEY_B = ByteString.copyFromUtf8("axgb");
-    private static final String ITEM_ID = "ITEM_ID";
 
     @Mock
     DiscoveryItem mDiscoveryItem;
