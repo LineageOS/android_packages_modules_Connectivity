@@ -20,12 +20,16 @@ import static com.google.common.truth.Truth.assertThat;
 
 import static org.mockito.Mockito.when;
 
+import android.bluetooth.BluetoothManager;
+
 import androidx.annotation.Nullable;
 
+import com.android.server.nearby.common.bluetooth.fastpair.FastPairConnection;
 import com.android.server.nearby.common.locator.Locator;
 import com.android.server.nearby.common.locator.LocatorContextWrapper;
 import com.android.server.nearby.fastpair.cache.DiscoveryItem;
 import com.android.server.nearby.fastpair.cache.FastPairCacheManager;
+import com.android.server.nearby.fastpair.footprint.FootprintsDeviceManager;
 import com.android.server.nearby.fastpair.halfsheet.FastPairHalfSheetManager;
 import com.android.server.nearby.fastpair.notification.FastPairNotificationManager;
 import com.android.server.nearby.fastpair.testing.FakeDiscoveryItems;
@@ -43,6 +47,7 @@ import service.proto.Cache;
 import service.proto.Rpcs;
 
 public class NotificationPairingProgressHandlerTest {
+
     @Mock
     Locator mLocator;
     @Mock
@@ -51,7 +56,14 @@ public class NotificationPairingProgressHandlerTest {
     Clock mClock;
     @Mock
     FastPairCacheManager mFastPairCacheManager;
+    @Mock
+    FastPairConnection mFastPairConnection;
+    @Mock
+    FootprintsDeviceManager mFootprintsDeviceManager;
+    @Mock
+    android.bluetooth.BluetoothManager mBluetoothManager;
 
+    private static final String MAC_ADDRESS = "00:11:22:33:44:55";
     private static final byte[] ACCOUNT_KEY = new byte[]{0x01, 0x02};
     private static final int SUBSEQUENT_PAIR_START = 1310;
     private static final int SUBSEQUENT_PAIR_END = 1320;
@@ -61,6 +73,8 @@ public class NotificationPairingProgressHandlerTest {
     @Before
     public void setup() {
         MockitoAnnotations.initMocks(this);
+        when(mContextWrapper.getSystemService(BluetoothManager.class))
+                .thenReturn(mBluetoothManager);
         when(mContextWrapper.getLocator()).thenReturn(mLocator);
         mLocator.overrideBindingForTest(FastPairCacheManager.class,
                 mFastPairCacheManager);
@@ -91,6 +105,12 @@ public class NotificationPairingProgressHandlerTest {
     @Test
     public void onReadyToPair() {
         sNotificationPairingProgressHandler.onReadyToPair();
+    }
+
+    @Test
+    public void onPairedCallbackCalled() {
+        sNotificationPairingProgressHandler.onPairedCallbackCalled(mFastPairConnection,
+                    ACCOUNT_KEY, mFootprintsDeviceManager, MAC_ADDRESS);
     }
 
     @Test

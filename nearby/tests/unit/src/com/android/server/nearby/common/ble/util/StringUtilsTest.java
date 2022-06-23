@@ -18,9 +18,15 @@ package com.android.server.nearby.common.ble.util;
 
 import static com.google.common.truth.Truth.assertThat;
 
+import android.os.ParcelUuid;
+import android.util.SparseArray;
+
 import com.android.server.nearby.common.ble.BleRecord;
 
 import org.junit.Test;
+
+import java.util.HashMap;
+import java.util.Map;
 
 public class StringUtilsTest {
     // iBeacon (Apple) Packet 1
@@ -100,6 +106,12 @@ public class StringUtilsTest {
     @Test
     public void testToString() {
         BleRecord record = BleRecord.parseFromBytes(BEACON);
+        assertThat(StringUtils.toString((SparseArray<byte[]>) null)).isEqualTo("null");
+        assertThat(StringUtils.toString(new SparseArray<byte[]>())).isEqualTo("{}");
+        assertThat(StringUtils
+                .toString((Map<ParcelUuid, byte[]>) null)).isEqualTo("null");
+        assertThat(StringUtils
+                .toString(new HashMap<ParcelUuid, byte[]>())).isEqualTo("{}");
         assertThat(StringUtils.toString(record.getManufacturerSpecificData()))
                 .isEqualTo("{76=[2, 21, -9, -126, 109, -90, 79, -94, 78, -104, -128,"
                         + " 36, -68, 91, 113, -32, -119, 62, 68, -48, 37, 34, -77]}");
