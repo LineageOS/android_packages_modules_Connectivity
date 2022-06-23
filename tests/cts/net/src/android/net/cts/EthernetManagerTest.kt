@@ -201,12 +201,8 @@ class EthernetManagerTest {
 
         fun eventuallyExpect(expected: CallbackEntry) = events.poll(TIMEOUT_MS) { it == expected }
 
-        fun eventuallyExpect(interfaceName: String, state: Int, role: Int) {
-            assertNotNull(eventuallyExpect(createChangeEvent(interfaceName, state, role)))
-        }
-
         fun eventuallyExpect(iface: EthernetTestInterface, state: Int, role: Int) {
-            eventuallyExpect(iface.interfaceName, state, role)
+            assertNotNull(eventuallyExpect(createChangeEvent(iface.interfaceName, state, role)))
         }
 
         fun eventuallyExpect(state: Int) {
@@ -433,19 +429,25 @@ class EthernetManagerTest {
         // TODO: Consider using assumeNoInterfaceForTetheringAvailable() instead, so this runs on CF
         assumeFalse(isAdbOverNetwork())
 
+        val iface = createInterface()
+        requestTetheredInterface().expectOnAvailable()
+
         val listener = EthernetStateListener()
         addInterfaceStateListener(listener)
-
-        // it is possible that a physical interface is present, so it is not guaranteed that iface
-        // will be put into server mode. This should not matter for the test though. Calling
-        // createInterface() makes sure we have at least one interface available.
-        val iface = createInterface()
-        val cb = requestTetheredInterface()
-        val ifaceName = cb.expectOnAvailable()
-        listener.eventuallyExpect(ifaceName, STATE_LINK_UP, ROLE_SERVER)
+        // TODO(b/236895792): THIS IS A BUG! Existing server mode interfaces are not reported when
+        // an InterfaceStateListener is registered.
+        // Note: using eventuallyExpect as there may be other interfaces present.
+        // listener.eventuallyExpect(iface, STATE_LINK_UP, ROLE_SERVER)
 
         releaseTetheredInterface()
-        listener.eventuallyExpect(ifaceName, STATE_LINK_UP, ROLE_CLIENT)
+        listener.eventuallyExpect(iface, STATE_LINK_UP, ROLE_CLIENT)
+
+        requestTetheredInterface().expectOnAvailable()
+        // This should be changed to expectCallback, once b/236895792 is fixed.
+        listener.eventuallyExpect(iface, STATE_LINK_UP, ROLE_SERVER)
+
+        releaseTetheredInterface()
+        listener.expectCallback(iface, STATE_LINK_UP, ROLE_CLIENT)
     }
 
     /**
