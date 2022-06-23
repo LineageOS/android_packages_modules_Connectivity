@@ -150,8 +150,12 @@ inline int detachSingleProgram(bpf_attach_type type, const BPF_FD_TYPE prog_fd,
                                 });
 }
 
-// requires 4.14+ kernel
-
+// BPF_OBJ_GET_INFO_BY_FD requires 4.14+ kernel
+//
+// Note: some fields are only defined in newer kernels (ie. the map_info struct grows
+// over time), so we need to check that the field we're interested in is actually
+// supported/returned by the running kernel.  We do this by checking it is fully
+// within the bounds of the struct size as reported by the kernel.
 #define DEFINE_BPF_GET_FD_INFO(NAME, FIELD) \
 inline int bpfGetFd ## NAME(const BPF_FD_TYPE map_fd) { \
     struct bpf_map_info map_info = {}; \
