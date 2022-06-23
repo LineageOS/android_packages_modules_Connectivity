@@ -49,7 +49,6 @@ import android.os.Build
 import android.os.Handler
 import android.os.HandlerExecutor
 import android.os.Looper
-import android.os.SystemProperties
 import android.platform.test.annotations.AppModeFull
 import android.util.ArraySet
 import androidx.test.platform.app.InstrumentationRegistry
@@ -66,7 +65,6 @@ import com.android.testutils.TestableNetworkCallback
 import com.android.testutils.runAsShell
 import com.android.testutils.waitForIdle
 import org.junit.After
-import org.junit.Assume.assumeFalse
 import org.junit.Assume.assumeTrue
 import org.junit.Before
 import org.junit.Test
@@ -415,19 +413,10 @@ class EthernetManagerTest {
         }
     }
 
-    // TODO: this function is now used in two places (EthernetManagerTest and
-    // EthernetTetheringTest), so it should be moved to testutils.
-    private fun isAdbOverNetwork(): Boolean {
-        // If adb TCP port opened, this test may running by adb over network.
-        return (SystemProperties.getInt("persist.adb.tcp.port", -1) > -1 ||
-                SystemProperties.getInt("service.adb.tcp.port", -1) > -1)
-    }
-
     @Test
     fun testCallbacks_forServerModeInterfaces() {
-        // do not run this test when adb might be connected over ethernet.
-        // TODO: Consider using assumeNoInterfaceForTetheringAvailable() instead, so this runs on CF
-        assumeFalse(isAdbOverNetwork())
+        // do not run this test if an interface that can be used for tethering already exists.
+        assumeNoInterfaceForTetheringAvailable()
 
         val iface = createInterface()
         requestTetheredInterface().expectOnAvailable()
