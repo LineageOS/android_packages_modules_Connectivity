@@ -30,6 +30,13 @@
 // Android T / 13 Beta 3 (api level 33) - added support for 'netd_shared'
 #define BPFLOADER_T_BETA3_VERSION 13u
 
+// v0.18 added support for shared and pindir, but still ignores selinux_content
+// v0.19 added support for selinux_content along with the required selinux changes
+// and should be available starting with Android T Beta 4
+//
+// Android T / 13 (api level 33) - support for shared/selinux_context/pindir
+#define BPFLOADER_T_VERSION 19u
+
 /* For mainline module use, you can #define BPFLOADER_{MIN/MAX}_VER
  * before #include "bpf_helpers.h" to change which bpfloaders will
  * process the resulting .o file.
