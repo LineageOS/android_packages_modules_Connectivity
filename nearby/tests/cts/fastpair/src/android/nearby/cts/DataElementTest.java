@@ -63,4 +63,19 @@ public class DataElementTest {
         assertThat(elementFromParcel.getKey()).isEqualTo(KEY);
         assertThat(Arrays.equals(elementFromParcel.getValue(), VALUE)).isTrue();
     }
+
+    @Test
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
+    public void describeContents() {
+        DataElement dataElement = new DataElement(KEY, VALUE);
+        assertThat(dataElement.describeContents()).isEqualTo(0);
+    }
+
+    @Test
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
+    public void testCreatorNewArray() {
+        DataElement[] elements =
+                DataElement.CREATOR.newArray(2);
+        assertThat(elements.length).isEqualTo(2);
+    }
 }

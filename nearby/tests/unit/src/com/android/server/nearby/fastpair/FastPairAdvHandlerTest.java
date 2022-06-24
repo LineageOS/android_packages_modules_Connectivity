@@ -23,7 +23,6 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import android.accounts.Account;
 import android.content.Context;
 import android.nearby.FastPairDevice;
 
@@ -69,7 +68,6 @@ public class FastPairAdvHandlerTest {
     private static final int TX_POWER = -70;
     private static final byte[] INITIAL_BYTE_ARRAY = new byte[]{0x01, 0x02, 0x03};
     private static final byte[] SALT = new byte[]{0x01};
-    private static final Account ACCOUNT = new Account("abc@google.com", "type1");
 
     LocatorContextWrapper mLocatorContextWrapper;
     FastPairAdvHandler mFastPairAdvHandler;
