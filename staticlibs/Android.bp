@@ -232,7 +232,9 @@ java_library {
         ":net-utils-framework-common-srcs",
     ],
     sdk_version: "module_current",
+    min_sdk_version: "29",
     libs: [
+        "androidx.annotation_annotation",
         "framework-annotations-lib",
         "framework-connectivity.stubs.module_lib",
         "framework-connectivity-t.stubs.module_lib",
