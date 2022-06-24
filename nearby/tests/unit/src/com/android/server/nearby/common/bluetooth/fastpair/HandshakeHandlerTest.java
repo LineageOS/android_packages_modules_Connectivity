@@ -79,6 +79,12 @@ public class HandshakeHandlerTest {
                             + "IMmo5K1ejfD9e8b6qHsDTNzselhifi10kQ==");
     private static final String SEEKER_ADDRESS = "A1:A2:A3:A4:A5:A6";
     private static final String PROVIDER_BLE_ADDRESS = "11:22:33:44:55:66";
+    /**
+     * The random-resolvable private address (RPA) is sometimes used when advertising over BLE, to
+     * hide the static public address (otherwise, the Fast Pair device would b
+     * identifiable/trackable whenever it's BLE advertising).
+     */
+    private static final String RANDOM_PRIVATE_ADDRESS = "BB:BB:BB:BB:BB:1E";
     private static final byte[] SHARED_SECRET =
             BaseEncoding.base16().decode("0123456789ABCDEF0123456789ABCDEF");
 
@@ -327,6 +333,31 @@ public class HandshakeHandlerTest {
                         .getTimeoutMs(0))
                 .isEqualTo(Duration.ofSeconds(
                         preferences.getGattOperationTimeoutSeconds()).toMillis());
+    }
+
+    @Test
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
+    public void triggersActionOverBle_notCrash() {
+        HandshakeHandler.ActionOverBle.Builder actionOverBleBuilder =
+                new HandshakeHandler.ActionOverBle.Builder()
+                        .addFlag(
+                                Constants.FastPairService.KeyBasedPairingCharacteristic
+                                        .ActionOverBleFlag.ADDITIONAL_DATA_CHARACTERISTIC)
+                        .setVerificationData(BluetoothAddress.decode(RANDOM_PRIVATE_ADDRESS))
+                        .setAdditionalDataType(AdditionalDataType.PERSONALIZED_NAME)
+                        .setEvent(0, 0)
+                        .setEventAdditionalData(new byte[]{1})
+                        .getThis();
+        HandshakeHandler.ActionOverBle actionOverBle = actionOverBleBuilder.build();
+        assertThat(actionOverBle.getBytes().length).isEqualTo(16);
+        assertThat(
+                Arrays.equals(
+                        Arrays.copyOfRange(actionOverBle.getBytes(), 0, 12),
+                        new byte[]{
+                                (byte) 16, (byte)  -64, (byte) -69, (byte) -69,
+                                (byte) -69, (byte)  -69, (byte) -69, (byte) 30,
+                                (byte) 0, (byte) 0, (byte) 1, (byte) 1}))
+                .isTrue();
     }
 
     private GattConnectionManager createGattConnectionManager(
