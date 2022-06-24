@@ -84,6 +84,12 @@ public class BluetoothGattWrapperTest {
     }
 
     @Test
+    public void testHashCode_asExpected() {
+        assertThat(mBluetoothGattWrapper.hashCode())
+                .isEqualTo(BluetoothGattWrapper.wrap(mBluetoothGatt).hashCode());
+    }
+
+    @Test
     @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void testGetServices_callsWrapped() {
         when(mBluetoothGatt.getServices()).thenReturn(null);
