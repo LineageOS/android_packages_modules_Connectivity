@@ -1846,11 +1846,64 @@ public class VpnTest {
         startRacoon("hostname", "5.6.7.8"); // address returned by deps.resolve
     }
 
+    @Test
+    public void testStartPptp() throws Exception {
+        startPptp(true /* useMppe */);
+    }
+
+    @Test
+    public void testStartPptp_NoMppe() throws Exception {
+        startPptp(false /* useMppe */);
+    }
+
     private void assertTransportInfoMatches(NetworkCapabilities nc, int type) {
         assertNotNull(nc);
         VpnTransportInfo ti = (VpnTransportInfo) nc.getTransportInfo();
         assertNotNull(ti);
         assertEquals(type, ti.getType());
+    }
+
+    private void startPptp(boolean useMppe) throws Exception {
+        final VpnProfile profile = new VpnProfile("testProfile" /* key */);
+        profile.type = VpnProfile.TYPE_PPTP;
+        profile.name = "testProfileName";
+        profile.username = "userName";
+        profile.password = "thePassword";
+        profile.server = "192.0.2.123";
+        profile.mppe = useMppe;
+
+        doReturn(new Network[] { new Network(101) }).when(mConnectivityManager).getAllNetworks();
+        doReturn(new Network(102)).when(mConnectivityManager).registerNetworkAgent(any(), any(),
+                any(), any(), any(), any(), anyInt());
+
+        final Vpn vpn = startLegacyVpn(createVpn(primaryUser.id), profile);
+        final TestDeps deps = (TestDeps) vpn.mDeps;
+
+        // TODO: use import when this is merged in all branches and there's no merge conflict
+        com.android.testutils.Cleanup.testAndCleanup(() -> {
+            final String[] mtpdArgs = deps.mtpdArgs.get(10, TimeUnit.SECONDS);
+            final String[] argsPrefix = new String[]{
+                    EGRESS_IFACE, "pptp", profile.server, "1723", "name", profile.username,
+                    "password", profile.password, "linkname", "vpn", "refuse-eap", "nodefaultroute",
+                    "usepeerdns", "idle", "1800", "mtu", "1270", "mru", "1270"
+            };
+            assertArrayEquals(argsPrefix, Arrays.copyOf(mtpdArgs, argsPrefix.length));
+            if (useMppe) {
+                assertEquals(argsPrefix.length + 2, mtpdArgs.length);
+                assertEquals("+mppe", mtpdArgs[argsPrefix.length]);
+                assertEquals("-pap", mtpdArgs[argsPrefix.length + 1]);
+            } else {
+                assertEquals(argsPrefix.length + 1, mtpdArgs.length);
+                assertEquals("nomppe", mtpdArgs[argsPrefix.length]);
+            }
+
+            verify(mConnectivityManager, timeout(10_000)).registerNetworkAgent(any(), any(),
+                    any(), any(), any(), any(), anyInt());
+        }, () -> { // Cleanup
+                vpn.mVpnRunner.exitVpnRunner();
+                deps.getStateFile().delete(); // set to delete on exit, but this deletes it earlier
+                vpn.mVpnRunner.join(10_000); // wait for up to 10s for the runner to die and cleanup
+            });
     }
 
     public void startRacoon(final String serverAddr, final String expectedAddr)
