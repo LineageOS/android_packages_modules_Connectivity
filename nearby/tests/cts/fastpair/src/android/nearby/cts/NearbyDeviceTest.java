@@ -88,6 +88,7 @@ public class NearbyDeviceTest {
 
         assertThat(fastPairDevice1.equals(fastPairDevice1)).isTrue();
         assertThat(fastPairDevice1.equals(fastPairDevice2)).isFalse();
+        assertThat(fastPairDevice1.equals(null)).isFalse();
         assertThat(fastPairDevice1.hashCode()).isEqualTo(fastPairDevice2.hashCode());
     }
 

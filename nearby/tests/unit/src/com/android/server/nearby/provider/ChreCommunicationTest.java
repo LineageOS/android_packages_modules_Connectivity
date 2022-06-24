@@ -113,14 +113,45 @@ public class ChreCommunicationTest {
 
     @Test
     public void testContextHubTransactionResultToString() {
-        NanoAppMessage message =
-                NanoAppMessage.createMessageToNanoApp(
-                        ChreDiscoveryProvider.NANOAPP_ID,
-                        ChreDiscoveryProvider.NANOAPP_MESSAGE_TYPE_FILTER_RESULT,
-                        new byte[] {1, 2, 3});
         assertThat(
                 mChreCommunication.contextHubTransactionResultToString(
-                        mClient.sendMessageToNanoApp(message))).isEqualTo("RESULT_SUCCESS");
+                        ContextHubTransaction.RESULT_SUCCESS))
+                .isEqualTo("RESULT_SUCCESS");
+        assertThat(
+                mChreCommunication.contextHubTransactionResultToString(
+                        ContextHubTransaction.RESULT_FAILED_UNKNOWN))
+                .isEqualTo("RESULT_FAILED_UNKNOWN");
+        assertThat(
+                mChreCommunication.contextHubTransactionResultToString(
+                        ContextHubTransaction.RESULT_FAILED_BAD_PARAMS))
+                .isEqualTo("RESULT_FAILED_BAD_PARAMS");
+        assertThat(
+                mChreCommunication.contextHubTransactionResultToString(
+                        ContextHubTransaction.RESULT_FAILED_UNINITIALIZED))
+                .isEqualTo("RESULT_FAILED_UNINITIALIZED");
+        assertThat(
+                mChreCommunication.contextHubTransactionResultToString(
+                        ContextHubTransaction.RESULT_FAILED_BUSY))
+                .isEqualTo("RESULT_FAILED_BUSY");
+        assertThat(
+                mChreCommunication.contextHubTransactionResultToString(
+                        ContextHubTransaction.RESULT_FAILED_AT_HUB))
+                .isEqualTo("RESULT_FAILED_AT_HUB");
+        assertThat(
+                mChreCommunication.contextHubTransactionResultToString(
+                        ContextHubTransaction.RESULT_FAILED_TIMEOUT))
+                .isEqualTo("RESULT_FAILED_TIMEOUT");
+        assertThat(
+                mChreCommunication.contextHubTransactionResultToString(
+                        ContextHubTransaction.RESULT_FAILED_SERVICE_INTERNAL_FAILURE))
+                .isEqualTo("RESULT_FAILED_SERVICE_INTERNAL_FAILURE");
+        assertThat(
+                mChreCommunication.contextHubTransactionResultToString(
+                        ContextHubTransaction.RESULT_FAILED_HAL_UNAVAILABLE))
+                .isEqualTo("RESULT_FAILED_HAL_UNAVAILABLE");
+        assertThat(
+                mChreCommunication.contextHubTransactionResultToString(9))
+                .isEqualTo("UNKNOWN_RESULT value=9");
     }
 
     @Test
