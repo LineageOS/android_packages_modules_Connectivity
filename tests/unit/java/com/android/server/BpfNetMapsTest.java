@@ -86,11 +86,14 @@ public final class BpfNetMapsTest {
 
     @Mock INetd mNetd;
     private final BpfMap<U32, U32> mConfigurationMap = new TestBpfMap<>(U32.class, U32.class);
+    private final BpfMap<U32, UidOwnerValue> mUidOwnerMap =
+            new TestBpfMap<>(U32.class, UidOwnerValue.class);
 
     @Before
     public void setUp() throws Exception {
         MockitoAnnotations.initMocks(this);
         BpfNetMaps.setConfigurationMapForTest(mConfigurationMap);
+        BpfNetMaps.setUidOwnerMapForTest(mUidOwnerMap);
         mBpfNetMaps = new BpfNetMaps(mNetd);
     }
 
