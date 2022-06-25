@@ -67,6 +67,12 @@ public class HandlerEventLoopImplTest {
         assertThat(mExecutedRunnables).isEmpty();
     }
 
+    @Test
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
+    public void postEmptyQueueRunnable() {
+        mHandlerEventLoopImpl.postEmptyQueueRunnable(
+                new HandlerEventLoopImplTest.NumberedRunnable(0));
+    }
 
     private class NumberedRunnable extends NamedRunnable {
         private final int mId;

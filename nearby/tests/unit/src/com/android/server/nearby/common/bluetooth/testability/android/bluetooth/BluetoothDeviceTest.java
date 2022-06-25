@@ -83,6 +83,13 @@ public class BluetoothDeviceTest {
 
     @Test
     @SdkSuppress(minSdkVersion = 32, codeName = "T")
+    public void testHashCode_asExpected() {
+        assertThat(mTestabilityBluetoothDevice.hashCode())
+                .isEqualTo(BluetoothDevice.wrap(mBluetoothDevice).hashCode());
+    }
+
+    @Test
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void testConnectGattWithThreeParameters_callsWrapped() {
         when(mBluetoothDevice
                 .connectGatt(mContext, true, mTestBluetoothGattCallback.unwrap()))

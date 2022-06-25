@@ -25,7 +25,6 @@ import org.junit.Test;
 import java.nio.charset.Charset;
 
 public class FastPairBloomFilterHasherTest {
-    private static final int BYTE_ARRAY_LENGTH = 100;
     private static final Charset CHARSET = UTF_8;
     private static FastPairBloomFilterHasher sFastPairBloomFilterHasher =
             new FastPairBloomFilterHasher();

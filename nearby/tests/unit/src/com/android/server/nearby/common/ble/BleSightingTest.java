@@ -110,7 +110,6 @@ public class BleSightingTest {
         Parcel dest = Parcel.obtain();
         sighting.writeToParcel(dest, 0);
         dest.setDataPosition(0);
-        BleSighting compareSighting = BleSighting.CREATOR.createFromParcel(dest);
         assertThat(sighting.getRssi()).isEqualTo(RSSI);
     }
 
