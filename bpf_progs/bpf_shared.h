@@ -148,6 +148,7 @@ ASSERT_STRING_EQUAL(XT_BPF_DENYLIST_PROG_PATH,  BPF_NETD_PATH "prog_netd_skfilte
 
 #endif // __cplusplus
 
+// LINT.IfChange(match_type)
 enum UidOwnerMatchType {
     NO_MATCH = 0,
     HAPPY_BOX_MATCH = (1 << 0),
@@ -163,6 +164,7 @@ enum UidOwnerMatchType {
     OEM_DENY_2_MATCH = (1 << 10),
     OEM_DENY_3_MATCH = (1 << 11),
 };
+// LINT.ThenChange(packages/modules/Connectivity/service/src/com/android/server/BpfNetMaps.java)
 
 enum BpfPermissionMatch {
     BPF_PERMISSION_INTERNET = 1 << 2,
