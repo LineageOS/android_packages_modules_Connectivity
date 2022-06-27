@@ -82,13 +82,6 @@ static jint native_removeNiceApp(JNIEnv* env, jobject self, jint uid) {
   return (jint)status.code();
 }
 
-static jint native_setChildChain(JNIEnv* env, jobject self, jint childChain, jboolean enable) {
-  auto chain = static_cast<ChildChain>(childChain);
-  int res = mTc.toggleUidOwnerMap(chain, enable);
-  if (res) ALOGE("%s failed, error code = %d", __func__, res);
-  return (jint)res;
-}
-
 static jint native_replaceUidChain(JNIEnv* env, jobject self, jstring name, jboolean isAllowlist,
                                    jintArray jUids) {
     const ScopedUtfChars chainNameUtf8(env, name);
@@ -199,8 +192,6 @@ static const JNINativeMethod gMethods[] = {
     (void*)native_addNiceApp},
     {"native_removeNiceApp", "(I)I",
     (void*)native_removeNiceApp},
-    {"native_setChildChain", "(IZ)I",
-    (void*)native_setChildChain},
     {"native_replaceUidChain", "(Ljava/lang/String;Z[I)I",
     (void*)native_replaceUidChain},
     {"native_setUidRule", "(III)I",
