@@ -26,6 +26,7 @@ import static android.net.ConnectivityManager.FIREWALL_CHAIN_RESTRICTED;
 import static android.net.ConnectivityManager.FIREWALL_CHAIN_STANDBY;
 import static android.net.INetd.PERMISSION_INTERNET;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
@@ -168,7 +169,7 @@ public final class BpfNetMapsTest {
     @Test
     @IgnoreUpTo(Build.VERSION_CODES.S_V2)
     public void testGetChainEnabledInvalidChain() {
-        final Class<IllegalArgumentException> expected = IllegalArgumentException.class;
+        final Class<ServiceSpecificException> expected = ServiceSpecificException.class;
         assertThrows(expected, () -> mBpfNetMaps.getChainEnabled(-1 /* childChain */));
         assertThrows(expected, () -> mBpfNetMaps.getChainEnabled(1000 /* childChain */));
     }
@@ -186,5 +187,82 @@ public final class BpfNetMapsTest {
     public void testGetChainEnabledBeforeT() {
         assertThrows(UnsupportedOperationException.class,
                 () -> mBpfNetMaps.getChainEnabled(FIREWALL_CHAIN_DOZABLE));
+    }
+
+    private void doTestSetChildChain(final List<Integer> testChains) throws Exception {
+        long expectedMatch = 0;
+        for (final int chain: testChains) {
+            expectedMatch |= mBpfNetMaps.getMatchByFirewallChain(chain);
+        }
+
+        assertEquals(0, sConfigurationMap.getValue(UID_RULES_CONFIGURATION_KEY).val);
+
+        for (final int chain: testChains) {
+            mBpfNetMaps.setChildChain(chain, true /* enable */);
+        }
+        assertEquals(expectedMatch, sConfigurationMap.getValue(UID_RULES_CONFIGURATION_KEY).val);
+
+        for (final int chain: testChains) {
+            mBpfNetMaps.setChildChain(chain, false /* enable */);
+        }
+        assertEquals(0, sConfigurationMap.getValue(UID_RULES_CONFIGURATION_KEY).val);
+    }
+
+    private void doTestSetChildChain(final int testChain) throws Exception {
+        doTestSetChildChain(List.of(testChain));
+    }
+
+    @Test
+    @IgnoreUpTo(Build.VERSION_CODES.S_V2)
+    public void testSetChildChain() throws Exception {
+        sConfigurationMap.updateEntry(UID_RULES_CONFIGURATION_KEY, new U32(0));
+        doTestSetChildChain(FIREWALL_CHAIN_DOZABLE);
+        doTestSetChildChain(FIREWALL_CHAIN_STANDBY);
+        doTestSetChildChain(FIREWALL_CHAIN_POWERSAVE);
+        doTestSetChildChain(FIREWALL_CHAIN_RESTRICTED);
+        doTestSetChildChain(FIREWALL_CHAIN_LOW_POWER_STANDBY);
+        doTestSetChildChain(FIREWALL_CHAIN_OEM_DENY_1);
+        doTestSetChildChain(FIREWALL_CHAIN_OEM_DENY_2);
+        doTestSetChildChain(FIREWALL_CHAIN_OEM_DENY_3);
+    }
+
+    @Test
+    @IgnoreUpTo(Build.VERSION_CODES.S_V2)
+    public void testSetChildChainMultipleChain() throws Exception {
+        sConfigurationMap.updateEntry(UID_RULES_CONFIGURATION_KEY, new U32(0));
+        doTestSetChildChain(List.of(
+                FIREWALL_CHAIN_DOZABLE,
+                FIREWALL_CHAIN_STANDBY));
+        doTestSetChildChain(List.of(
+                FIREWALL_CHAIN_DOZABLE,
+                FIREWALL_CHAIN_STANDBY,
+                FIREWALL_CHAIN_POWERSAVE,
+                FIREWALL_CHAIN_RESTRICTED));
+        doTestSetChildChain(FIREWALL_CHAINS);
+    }
+
+    @Test
+    @IgnoreUpTo(Build.VERSION_CODES.S_V2)
+    public void testSetChildChainInvalidChain() {
+        final Class<ServiceSpecificException> expected = ServiceSpecificException.class;
+        assertThrows(expected,
+                () -> mBpfNetMaps.setChildChain(-1 /* childChain */, true /* enable */));
+        assertThrows(expected,
+                () -> mBpfNetMaps.setChildChain(1000 /* childChain */, true /* enable */));
+    }
+
+    @Test
+    @IgnoreUpTo(Build.VERSION_CODES.S_V2)
+    public void testSetChildChainMissingConfiguration() {
+        // sConfigurationMap does not have entry for UID_RULES_CONFIGURATION_KEY
+        assertThrows(ServiceSpecificException.class,
+                () -> mBpfNetMaps.setChildChain(FIREWALL_CHAIN_DOZABLE, true /* enable */));
+    }
+
+    @Test
+    @IgnoreAfter(Build.VERSION_CODES.S_V2)
+    public void testSetChildChainBeforeT() {
+        assertThrows(UnsupportedOperationException.class,
+                () -> mBpfNetMaps.setChildChain(FIREWALL_CHAIN_DOZABLE, true /* enable */));
     }
 }
