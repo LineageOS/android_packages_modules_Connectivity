@@ -236,6 +236,8 @@ public class TestNetworkManager {
     /**
      * Create a tap interface with or without carrier for testing purposes.
      *
+     * Note: setting carrierUp = false is not supported until kernel version 5.0.
+     *
      * @param carrierUp whether the created interface has a carrier or not.
      * @param bringUp whether to bring up the interface before returning it.
      * @hide
@@ -254,7 +256,6 @@ public class TestNetworkManager {
      * Enable / disable carrier on TestNetworkInterface
      *
      * Note: TUNSETCARRIER is not supported until kernel version 5.0.
-     * TODO: add RequiresApi annotation.
      *
      * @param iface the interface to configure.
      * @param enabled true to turn carrier on, false to turn carrier off.
