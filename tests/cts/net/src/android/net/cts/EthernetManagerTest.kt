@@ -57,7 +57,7 @@ import com.android.net.module.util.ArrayTrackRecord
 import com.android.net.module.util.TrackRecord
 import com.android.testutils.anyNetwork
 import com.android.testutils.ConnectivityModuleTest
-import com.android.testutils.DeviceInfoUtils
+import com.android.testutils.DeviceInfoUtils.isKernelVersionAtLeast
 import com.android.testutils.DevSdkIgnoreRule
 import com.android.testutils.DevSdkIgnoreRunner
 import com.android.testutils.RecorderCallback.CallbackEntry.Available
@@ -145,6 +145,8 @@ class EthernetManagerTest {
             raResponder.start()
         }
 
+        // WARNING: this function requires kernel support. Call assumeChangingCarrierSupported() at
+        // the top of your test.
         fun setCarrierEnabled(enabled: Boolean) {
             runAsShell(MANAGE_TEST_NETWORKS) {
                 tnm.setCarrierEnabled(tapInterface, enabled)
@@ -295,6 +297,9 @@ class EthernetManagerTest {
         releaseTetheredInterface()
     }
 
+    // Setting the carrier up / down relies on TUNSETCARRIER which was added in kernel version 5.0.
+    private fun assumeChangingCarrierSupported() = assumeTrue(isKernelVersionAtLeast("5.0.0"))
+
     private fun addInterfaceStateListener(listener: EthernetStateListener) {
         runAsShell(CONNECTIVITY_USE_RESTRICTED_NETWORKS) {
             em.addInterfaceStateListener(handler::post, listener)
@@ -302,6 +307,8 @@ class EthernetManagerTest {
         addedListeners.add(listener)
     }
 
+    // WARNING: setting hasCarrier to false requires kernel support. Call
+    // assumeChangingCarrierSupported() at the top of your test.
     private fun createInterface(hasCarrier: Boolean = true): EthernetTestInterface {
         val iface = EthernetTestInterface(
             context,
@@ -631,9 +638,7 @@ class EthernetManagerTest {
 
     @Test
     fun testNetworkRequest_forInterfaceWhileTogglingCarrier() {
-        // Notice this test case fails on devices running on an older kernel version(e.g. 4.14)
-        // that might not support ioctl new argument. Only run this test on 4.19 kernel or above.
-        assumeTrue(DeviceInfoUtils.isKernelVersionAtLeast("4.19.0"))
+        assumeChangingCarrierSupported()
 
         val iface = createInterface(false /* hasCarrier */)
 
