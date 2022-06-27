@@ -5903,6 +5903,7 @@ public class ConnectivityManager {
      *
      * @param chain target chain.
      * @param enable whether the chain should be enabled.
+     * @throws UnsupportedOperationException if called on pre-T devices.
      * @throws IllegalStateException if enabling or disabling the firewall chain failed.
      * @hide
      */
@@ -5926,7 +5927,6 @@ public class ConnectivityManager {
      * @param chain target chain.
      * @return {@code true} if chain is enabled, {@code false} if chain is disabled.
      * @throws UnsupportedOperationException if called on pre-T devices.
-     * @throws IllegalArgumentException if {@code chain} is a invalid value.
      * @throws ServiceSpecificException in case of failure, with an error code indicating the
      *                                  cause of the failure.
      * @hide
