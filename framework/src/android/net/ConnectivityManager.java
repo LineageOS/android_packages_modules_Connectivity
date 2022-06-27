@@ -5921,6 +5921,30 @@ public class ConnectivityManager {
     }
 
     /**
+     * Get the specified firewall chain status.
+     *
+     * @param chain target chain.
+     * @return {@code true} if chain is enabled, {@code false} if chain is disabled.
+     * @throws UnsupportedOperationException if called on pre-T devices.
+     * @throws IllegalArgumentException if {@code chain} is a invalid value.
+     * @throws ServiceSpecificException in case of failure, with an error code indicating the
+     *                                  cause of the failure.
+     * @hide
+     */
+    @RequiresPermission(anyOf = {
+            android.Manifest.permission.NETWORK_SETTINGS,
+            android.Manifest.permission.NETWORK_STACK,
+            NetworkStack.PERMISSION_MAINLINE_NETWORK_STACK
+    })
+    public boolean getFirewallChainEnabled(@FirewallChain final int chain) {
+        try {
+            return mService.getFirewallChainEnabled(chain);
+        } catch (RemoteException e) {
+            throw e.rethrowFromSystemServer();
+        }
+    }
+
+    /**
      * Replaces the contents of the specified UID-based firewall chain.
      *
      * @param chain target chain to replace.
