@@ -92,6 +92,7 @@ java_defaults {
         "framework-connectivity-javastream-protos",
     ],
     libs: [
+        "androidx.annotation_annotation",
         "app-compat-annotations",
         "framework-connectivity-t.stubs.module_lib",
         "unsupportedappusage",

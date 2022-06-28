@@ -5903,6 +5903,7 @@ public class ConnectivityManager {
      *
      * @param chain target chain.
      * @param enable whether the chain should be enabled.
+     * @throws UnsupportedOperationException if called on pre-T devices.
      * @throws IllegalStateException if enabling or disabling the firewall chain failed.
      * @hide
      */
@@ -5915,6 +5916,29 @@ public class ConnectivityManager {
     public void setFirewallChainEnabled(@FirewallChain final int chain, final boolean enable) {
         try {
             mService.setFirewallChainEnabled(chain, enable);
+        } catch (RemoteException e) {
+            throw e.rethrowFromSystemServer();
+        }
+    }
+
+    /**
+     * Get the specified firewall chain status.
+     *
+     * @param chain target chain.
+     * @return {@code true} if chain is enabled, {@code false} if chain is disabled.
+     * @throws UnsupportedOperationException if called on pre-T devices.
+     * @throws ServiceSpecificException in case of failure, with an error code indicating the
+     *                                  cause of the failure.
+     * @hide
+     */
+    @RequiresPermission(anyOf = {
+            android.Manifest.permission.NETWORK_SETTINGS,
+            android.Manifest.permission.NETWORK_STACK,
+            NetworkStack.PERMISSION_MAINLINE_NETWORK_STACK
+    })
+    public boolean getFirewallChainEnabled(@FirewallChain final int chain) {
+        try {
+            return mService.getFirewallChainEnabled(chain);
         } catch (RemoteException e) {
             throw e.rethrowFromSystemServer();
         }
