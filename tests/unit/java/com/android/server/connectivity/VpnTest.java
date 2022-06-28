@@ -92,10 +92,8 @@ import android.net.LinkProperties;
 import android.net.LocalSocket;
 import android.net.Network;
 import android.net.NetworkAgent;
-import android.net.NetworkAgentConfig;
 import android.net.NetworkCapabilities;
 import android.net.NetworkInfo.DetailedState;
-import android.net.NetworkProvider;
 import android.net.RouteInfo;
 import android.net.UidRangeParcel;
 import android.net.VpnManager;
@@ -117,7 +115,6 @@ import android.os.Build.VERSION_CODES;
 import android.os.Bundle;
 import android.os.ConditionVariable;
 import android.os.INetworkManagementService;
-import android.os.Looper;
 import android.os.ParcelFileDescriptor;
 import android.os.PowerWhitelistManager;
 import android.os.Process;
@@ -174,6 +171,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.SortedSet;
+import java.util.TreeSet;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
@@ -188,7 +187,7 @@ import java.util.stream.Stream;
  */
 @RunWith(DevSdkIgnoreRunner.class)
 @SmallTest
-@IgnoreUpTo(VERSION_CODES.S_V2)
+@IgnoreUpTo(S_V2)
 public class VpnTest extends VpnTestBase {
     private static final String TAG = "VpnTest";
 
@@ -848,14 +847,11 @@ public class VpnTest extends VpnTestBase {
 
         vpn.startVpnProfile(TEST_VPN_PKG);
         verify(mVpnProfileStore).get(eq(vpn.getProfileNameForPackage(TEST_VPN_PKG)));
-        vpn.mNetworkAgent = new NetworkAgent(mContext, Looper.getMainLooper(), TAG,
-                new NetworkCapabilities.Builder().build(), new LinkProperties(), 10 /* score */,
-                new NetworkAgentConfig.Builder().build(),
-                new NetworkProvider(mContext, Looper.getMainLooper(), TAG)) {};
+        vpn.mNetworkAgent = mMockNetworkAgent;
         return vpn;
     }
 
-    @Test @IgnoreUpTo(S_V2)
+    @Test
     public void testSetAndGetAppExclusionList() throws Exception {
         final Vpn vpn = prepareVpnForVerifyAppExclusionList();
         verify(mVpnProfileStore, never()).put(eq(PRIMARY_USER_APP_EXCLUDE_KEY), any());
@@ -869,7 +865,81 @@ public class VpnTest extends VpnTestBase {
         assertEquals(Arrays.asList(PKGS), vpn.getAppExclusionList(TEST_VPN_PKG));
     }
 
-    @Test @IgnoreUpTo(S_V2)
+    @Test
+    public void testRefreshPlatformVpnAppExclusionList_updatesExcludedUids() throws Exception {
+        final Vpn vpn = prepareVpnForVerifyAppExclusionList();
+        vpn.setAppExclusionList(TEST_VPN_PKG, Arrays.asList(PKGS));
+        verify(mMockNetworkAgent).sendNetworkCapabilities(any());
+        assertEquals(Arrays.asList(PKGS), vpn.getAppExclusionList(TEST_VPN_PKG));
+
+        reset(mMockNetworkAgent);
+
+        // Remove one of the package
+        List<Integer> newExcludedUids = toList(PKG_UIDS);
+        newExcludedUids.remove((Integer) PKG_UIDS[0]);
+        sPackages.remove(PKGS[0]);
+        vpn.refreshPlatformVpnAppExclusionList();
+
+        // List in keystore is not changed, but UID for the removed packages is no longer exempted.
+        assertEquals(Arrays.asList(PKGS), vpn.getAppExclusionList(TEST_VPN_PKG));
+        assertEquals(makeVpnUidRange(PRIMARY_USER.id, newExcludedUids),
+                vpn.mNetworkCapabilities.getUids());
+        ArgumentCaptor<NetworkCapabilities> ncCaptor =
+                ArgumentCaptor.forClass(NetworkCapabilities.class);
+        verify(mMockNetworkAgent).sendNetworkCapabilities(ncCaptor.capture());
+        assertEquals(makeVpnUidRange(PRIMARY_USER.id, newExcludedUids),
+                ncCaptor.getValue().getUids());
+
+        reset(mMockNetworkAgent);
+
+        // Add the package back
+        newExcludedUids.add(PKG_UIDS[0]);
+        sPackages.put(PKGS[0], PKG_UIDS[0]);
+        vpn.refreshPlatformVpnAppExclusionList();
+
+        // List in keystore is not changed and the uid list should be updated in the net cap.
+        assertEquals(Arrays.asList(PKGS), vpn.getAppExclusionList(TEST_VPN_PKG));
+        assertEquals(makeVpnUidRange(PRIMARY_USER.id, newExcludedUids),
+                vpn.mNetworkCapabilities.getUids());
+        verify(mMockNetworkAgent).sendNetworkCapabilities(ncCaptor.capture());
+        assertEquals(makeVpnUidRange(PRIMARY_USER.id, newExcludedUids),
+                ncCaptor.getValue().getUids());
+    }
+
+    private Set<Range<Integer>> makeVpnUidRange(int userId, List<Integer> excludedList) {
+        final SortedSet<Integer> list = new TreeSet<>();
+
+        final int userBase = userId * UserHandle.PER_USER_RANGE;
+        for (int uid : excludedList) {
+            final int applicationUid = UserHandle.getUid(userId, uid);
+            list.add(applicationUid);
+            list.add(Process.toSdkSandboxUid(applicationUid)); // Add Sdk Sandbox UID
+        }
+
+        final int minUid = userBase;
+        final int maxUid = userBase + UserHandle.PER_USER_RANGE - 1;
+        final Set<Range<Integer>> ranges = new ArraySet<>();
+
+        // Iterate the list to create the ranges between each uid.
+        int start = minUid;
+        for (int uid : list) {
+            if (uid == start) {
+                start++;
+            } else {
+                ranges.add(new Range<>(start, uid - 1));
+                start = uid + 1;
+            }
+        }
+
+        // Create the range between last uid and max uid.
+        if (start <= maxUid) {
+            ranges.add(new Range<>(start, maxUid));
+        }
+
+        return ranges;
+    }
+
+    @Test
     public void testSetAndGetAppExclusionListRestrictedUser() throws Exception {
         final Vpn vpn = prepareVpnForVerifyAppExclusionList();
         // Mock it to restricted profile
