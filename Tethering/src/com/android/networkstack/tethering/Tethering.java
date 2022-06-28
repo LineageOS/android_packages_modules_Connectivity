@@ -1406,7 +1406,9 @@ public class Tethering {
     private void enableIpServing(int tetheringType, String ifname, int ipServingMode,
             boolean isNcm) {
         ensureIpServerStarted(ifname, tetheringType, isNcm);
-        changeInterfaceState(ifname, ipServingMode);
+        if (tether(ifname, ipServingMode) != TETHER_ERROR_NO_ERROR) {
+            Log.e(TAG, "unable start tethering on iface " + ifname);
+        }
     }
 
     private void disableWifiIpServingCommon(int tetheringType, String ifname) {
@@ -1548,27 +1550,6 @@ public class Tethering {
             if (state.isNcm == forNcmFunction) {
                 ensureIpServerStopped(state.ipServer.interfaceName());
             }
-        }
-    }
-
-    private void changeInterfaceState(String ifname, int requestedState) {
-        final int result;
-        switch (requestedState) {
-            case IpServer.STATE_UNAVAILABLE:
-            case IpServer.STATE_AVAILABLE:
-                result = untether(ifname);
-                break;
-            case IpServer.STATE_TETHERED:
-            case IpServer.STATE_LOCAL_ONLY:
-                result = tether(ifname, requestedState);
-                break;
-            default:
-                Log.wtf(TAG, "Unknown interface state: " + requestedState);
-                return;
-        }
-        if (result != TETHER_ERROR_NO_ERROR) {
-            Log.e(TAG, "unable start or stop tethering on iface " + ifname);
-            return;
         }
     }
 
