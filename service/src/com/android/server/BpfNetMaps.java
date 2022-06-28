@@ -25,7 +25,6 @@ import static android.net.ConnectivityManager.FIREWALL_CHAIN_POWERSAVE;
 import static android.net.ConnectivityManager.FIREWALL_CHAIN_RESTRICTED;
 import static android.net.ConnectivityManager.FIREWALL_CHAIN_STANDBY;
 import static android.system.OsConstants.EINVAL;
-import static android.system.OsConstants.ENOENT;
 import static android.system.OsConstants.EOPNOTSUPP;
 
 import android.net.INetd;
@@ -239,11 +238,6 @@ public class BpfNetMaps {
         try {
             synchronized (sUidRulesConfigBpfMapLock) {
                 final U32 config = sConfigurationMap.getValue(UID_RULES_CONFIGURATION_KEY);
-                if (config == null) {
-                    throw new ServiceSpecificException(ENOENT,
-                            "Unable to get firewall chain status: sConfigurationMap does not have"
-                                    + " entry for UID_RULES_CONFIGURATION_KEY");
-                }
                 final long newConfig = enable ? (config.val | match) : (config.val & ~match);
                 sConfigurationMap.updateEntry(UID_RULES_CONFIGURATION_KEY, new U32(newConfig));
             }
@@ -268,11 +262,6 @@ public class BpfNetMaps {
         final long match = getMatchByFirewallChain(childChain);
         try {
             final U32 config = sConfigurationMap.getValue(UID_RULES_CONFIGURATION_KEY);
-            if (config == null) {
-                throw new ServiceSpecificException(ENOENT,
-                        "Unable to get firewall chain status: sConfigurationMap does not have"
-                                + " entry for UID_RULES_CONFIGURATION_KEY");
-            }
             return (config.val & match) != 0;
         } catch (ErrnoException e) {
             throw new ServiceSpecificException(e.errno,
