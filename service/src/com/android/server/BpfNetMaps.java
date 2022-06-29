@@ -308,10 +308,8 @@ public class BpfNetMaps {
      *                                  cause of the failure.
      */
     public void removeNiceApp(final int uid) {
-        synchronized (sUidOwnerMap) {
-            final int err = native_removeNiceApp(uid);
-            maybeThrow(err, "Unable to remove nice app");
-        }
+        throwIfPreT("removeNiceApp is not available on pre-T devices");
+        removeRule(uid, HAPPY_BOX_MATCH, "removeNiceApp");
     }
 
     /**
