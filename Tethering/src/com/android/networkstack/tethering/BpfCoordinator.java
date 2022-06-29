@@ -944,6 +944,8 @@ public class BpfCoordinator {
      * be allowed to be accessed on the handler thread.
      */
     public void dump(@NonNull IndentingPrintWriter pw) {
+        // Note that EthernetTetheringTest#isTetherConfigBpfOffloadEnabled relies on
+        // "mIsBpfEnabled" to check tethering config via dumpsys. Beware of the change if any.
         pw.println("mIsBpfEnabled: " + mIsBpfEnabled);
         pw.println("Polling " + (mPollingStarted ? "started" : "not started"));
         pw.println("Stats provider " + (mStatsProvider != null
