@@ -1360,6 +1360,31 @@ public class VpnTest extends VpnTestBase {
     }
 
     @Test
+    public void testReconnectVpnManagerVpnWithAlwaysOnEnabled() throws Exception {
+        final Vpn vpn = createVpnAndSetupUidChecks(AppOpsManager.OPSTR_ACTIVATE_PLATFORM_VPN);
+        when(mVpnProfileStore.get(vpn.getProfileNameForPackage(TEST_VPN_PKG)))
+                .thenReturn(mVpnProfile.encode());
+        vpn.startVpnProfile(TEST_VPN_PKG);
+        verifyPlatformVpnIsActivated(TEST_VPN_PKG);
+
+        // Enable VPN always-on for TEST_VPN_PKG.
+        assertTrue(vpn.setAlwaysOnPackage(TEST_VPN_PKG, false /* lockdown */,
+                null /* lockdownAllowlist */));
+
+        // Reset to verify next startVpnProfile.
+        reset(mAppOps);
+
+        vpn.stopVpnProfile(TEST_VPN_PKG);
+
+        // Reconnect the vpn with different package will cause exception.
+        assertThrows(SecurityException.class, () -> vpn.startVpnProfile(PKGS[0]));
+
+        // Reconnect the vpn again with the vpn always on package w/o exception.
+        vpn.startVpnProfile(TEST_VPN_PKG);
+        verifyPlatformVpnIsActivated(TEST_VPN_PKG);
+    }
+
+    @Test
     public void testSetPackageAuthorizationVpnService() throws Exception {
         final Vpn vpn = createVpnAndSetupUidChecks();
 
