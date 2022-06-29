@@ -85,10 +85,4 @@ public class EventLoopTest {
             mExecutedRunnables.add(mId);
         }
     }
-
-    @Test
-    public void postEmptyQueueRunnable() {
-        mEventLoop.postEmptyQueueRunnable(new NumberedRunnable(0));
-        assertThat(mExecutedRunnables).isEmpty();
-    }
 }
