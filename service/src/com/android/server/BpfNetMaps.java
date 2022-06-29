@@ -294,10 +294,8 @@ public class BpfNetMaps {
      *                                  cause of the failure.
      */
     public void addNiceApp(final int uid) {
-        synchronized (sUidOwnerMap) {
-            final int err = native_addNiceApp(uid);
-            maybeThrow(err, "Unable to add nice app");
-        }
+        throwIfPreT("addNiceApp is not available on pre-T devices");
+        addRule(uid, HAPPY_BOX_MATCH, "addNiceApp");
     }
 
     /**

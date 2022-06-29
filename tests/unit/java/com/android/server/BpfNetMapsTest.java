@@ -371,4 +371,36 @@ public final class BpfNetMapsTest {
         assertThrows(UnsupportedOperationException.class,
                 () -> mBpfNetMaps.removeNiceApp(TEST_UID));
     }
+
+    private void doTestAddNiceApp(final long iif, final long match) throws Exception {
+        if (match != NO_MATCH) {
+            mUidOwnerMap.updateEntry(new U32(TEST_UID), new UidOwnerValue(iif, match));
+        }
+
+        mBpfNetMaps.addNiceApp(TEST_UID);
+
+        checkUidOwnerValue(TEST_UID, iif, match | HAPPY_BOX_MATCH);
+    }
+
+    @Test
+    @IgnoreUpTo(Build.VERSION_CODES.S_V2)
+    public void testAddNiceApp() throws Exception {
+        doTestAddNiceApp(NO_IIF, NO_MATCH);
+
+        // Other matches are enabled
+        doTestAddNiceApp(NO_IIF, DOZABLE_MATCH | POWERSAVE_MATCH | RESTRICTED_MATCH);
+
+        // IIF_MATCH is enabled
+        doTestAddNiceApp(TEST_IF_INDEX, IIF_MATCH);
+
+        // HAPPY_BOX_MATCH is already enabled
+        doTestAddNiceApp(NO_IIF, HAPPY_BOX_MATCH | DOZABLE_MATCH);
+    }
+
+    @Test
+    @IgnoreAfter(Build.VERSION_CODES.S_V2)
+    public void testAddNiceAppBeforeT() {
+        assertThrows(UnsupportedOperationException.class,
+                () -> mBpfNetMaps.addNiceApp(TEST_UID));
+    }
 }
