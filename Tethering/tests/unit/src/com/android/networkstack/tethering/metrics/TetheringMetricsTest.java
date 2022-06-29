@@ -81,6 +81,22 @@ public final class TetheringMetricsTest {
         mTetheringMetrics = spy(new MockTetheringMetrics());
     }
 
+    private void verifyReport(DownstreamType downstream, ErrorCode error, UserType user)
+            throws Exception {
+        final NetworkTetheringReported expectedReport =
+                mStatsBuilder.setDownstreamType(downstream)
+                .setUserType(user)
+                .setUpstreamType(UpstreamType.UT_UNKNOWN)
+                .setErrorCode(error)
+                .build();
+        verify(mTetheringMetrics).write(expectedReport);
+    }
+
+    private void updateErrorAndSendReport(int downstream, int error) {
+        mTetheringMetrics.updateErrorCode(downstream, error);
+        mTetheringMetrics.sendReport(downstream);
+    }
+
     private void runDownstreamTypesTest(final Pair<Integer, DownstreamType>... testPairs)
             throws Exception {
         for (Pair<Integer, DownstreamType> testPair : testPairs) {
@@ -88,15 +104,8 @@ public final class TetheringMetricsTest {
             final DownstreamType expectedResult = testPair.second;
 
             mTetheringMetrics.createBuilder(type, TEST_CALLER_PKG);
-            mTetheringMetrics.updateErrorCode(type, TETHER_ERROR_NO_ERROR);
-            mTetheringMetrics.sendReport(type);
-            NetworkTetheringReported expectedReport =
-                    mStatsBuilder.setDownstreamType(expectedResult)
-                    .setUserType(UserType.USER_UNKNOWN)
-                    .setUpstreamType(UpstreamType.UT_UNKNOWN)
-                    .setErrorCode(ErrorCode.EC_NO_ERROR)
-                    .build();
-            verify(mTetheringMetrics).write(expectedReport);
+            updateErrorAndSendReport(type, TETHER_ERROR_NO_ERROR);
+            verifyReport(expectedResult, ErrorCode.EC_NO_ERROR, UserType.USER_UNKNOWN);
             reset(mTetheringMetrics);
         }
     }
@@ -118,15 +127,8 @@ public final class TetheringMetricsTest {
             final ErrorCode expectedResult = testPair.second;
 
             mTetheringMetrics.createBuilder(TETHERING_WIFI, TEST_CALLER_PKG);
-            mTetheringMetrics.updateErrorCode(TETHERING_WIFI, errorCode);
-            mTetheringMetrics.sendReport(TETHERING_WIFI);
-            NetworkTetheringReported expectedReport =
-                    mStatsBuilder.setDownstreamType(DownstreamType.DS_TETHERING_WIFI)
-                    .setUserType(UserType.USER_UNKNOWN)
-                    .setUpstreamType(UpstreamType.UT_UNKNOWN)
-                    .setErrorCode(expectedResult)
-                    .build();
-            verify(mTetheringMetrics).write(expectedReport);
+            updateErrorAndSendReport(TETHERING_WIFI, errorCode);
+            verifyReport(DownstreamType.DS_TETHERING_WIFI, expectedResult, UserType.USER_UNKNOWN);
             reset(mTetheringMetrics);
         }
     }
@@ -163,15 +165,8 @@ public final class TetheringMetricsTest {
             final UserType expectedResult = testPair.second;
 
             mTetheringMetrics.createBuilder(TETHERING_WIFI, callerPkg);
-            mTetheringMetrics.updateErrorCode(TETHERING_WIFI, TETHER_ERROR_NO_ERROR);
-            mTetheringMetrics.sendReport(TETHERING_WIFI);
-            NetworkTetheringReported expectedReport =
-                    mStatsBuilder.setDownstreamType(DownstreamType.DS_TETHERING_WIFI)
-                    .setUserType(expectedResult)
-                    .setUpstreamType(UpstreamType.UT_UNKNOWN)
-                    .setErrorCode(ErrorCode.EC_NO_ERROR)
-                    .build();
-            verify(mTetheringMetrics).write(expectedReport);
+            updateErrorAndSendReport(TETHERING_WIFI, TETHER_ERROR_NO_ERROR);
+            verifyReport(DownstreamType.DS_TETHERING_WIFI, ErrorCode.EC_NO_ERROR, expectedResult);
             reset(mTetheringMetrics);
         }
     }
@@ -182,5 +177,24 @@ public final class TetheringMetricsTest {
                 new Pair<>(SETTINGS_PKG, UserType.USER_SETTINGS),
                 new Pair<>(SYSTEMUI_PKG, UserType.USER_SYSTEMUI),
                 new Pair<>(GMS_PKG, UserType.USER_GMS));
+    }
+
+    @Test
+    public void testMultiBuildersCreatedBeforeSendReport() throws Exception {
+        mTetheringMetrics.createBuilder(TETHERING_WIFI, SETTINGS_PKG);
+        mTetheringMetrics.createBuilder(TETHERING_USB, SYSTEMUI_PKG);
+        mTetheringMetrics.createBuilder(TETHERING_BLUETOOTH, GMS_PKG);
+
+        updateErrorAndSendReport(TETHERING_WIFI, TETHER_ERROR_DHCPSERVER_ERROR);
+        verifyReport(DownstreamType.DS_TETHERING_WIFI, ErrorCode.EC_DHCPSERVER_ERROR,
+                UserType.USER_SETTINGS);
+
+        updateErrorAndSendReport(TETHERING_USB, TETHER_ERROR_ENABLE_FORWARDING_ERROR);
+        verifyReport(DownstreamType.DS_TETHERING_USB, ErrorCode.EC_ENABLE_FORWARDING_ERROR,
+                UserType.USER_SYSTEMUI);
+
+        updateErrorAndSendReport(TETHERING_BLUETOOTH, TETHER_ERROR_TETHER_IFACE_ERROR);
+        verifyReport(DownstreamType.DS_TETHERING_BLUETOOTH, ErrorCode.EC_TETHER_IFACE_ERROR,
+                UserType.USER_GMS);
     }
 }
