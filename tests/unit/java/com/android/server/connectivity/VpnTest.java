@@ -34,6 +34,7 @@ import static android.os.Build.VERSION_CODES.S_V2;
 import static android.os.UserHandle.PER_USER_RANGE;
 
 import static com.android.modules.utils.build.SdkLevel.isAtLeastT;
+import static com.android.testutils.Cleanup.testAndCleanup;
 import static com.android.testutils.DevSdkIgnoreRule.IgnoreUpTo;
 import static com.android.testutils.MiscAsserts.assertThrows;
 
@@ -1879,8 +1880,7 @@ public class VpnTest {
         final Vpn vpn = startLegacyVpn(createVpn(primaryUser.id), profile);
         final TestDeps deps = (TestDeps) vpn.mDeps;
 
-        // TODO: use import when this is merged in all branches and there's no merge conflict
-        com.android.testutils.Cleanup.testAndCleanup(() -> {
+        testAndCleanup(() -> {
             final String[] mtpdArgs = deps.mtpdArgs.get(10, TimeUnit.SECONDS);
             final String[] argsPrefix = new String[]{
                     EGRESS_IFACE, "pptp", profile.server, "1723", "name", profile.username,
