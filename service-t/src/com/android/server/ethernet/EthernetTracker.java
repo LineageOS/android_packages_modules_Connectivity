@@ -91,6 +91,7 @@ public class EthernetTracker {
      * if setIncludeTestInterfaces is true, any test interfaces.
      */
     private volatile String mIfaceMatch;
+
     /**
      * Track test interfaces if true, don't track otherwise.
      */

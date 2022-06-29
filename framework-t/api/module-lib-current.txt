@@ -27,6 +27,14 @@ package android.app.usage {
 
 }
 
+package android.nearby {
+
+  public final class NearbyFrameworkInitializer {
+    method public static void registerServiceWrappers();
+  }
+
+}
+
 package android.net {
 
   public final class ConnectivityFrameworkInitializerTiramisu {

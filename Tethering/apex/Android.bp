@@ -78,6 +78,7 @@ apex {
     ],
     apps: [
         "ServiceConnectivityResources",
+        "HalfSheetUX",
     ],
     prebuilts: [
         "current_sdkinfo",
@@ -134,11 +135,11 @@ bootclasspath_fragment {
     hidden_api: {
         max_target_r_low_priority: [
             "hiddenapi/hiddenapi-max-target-r-loprio.txt",
-	],
+        ],
         max_target_o_low_priority: [
             "hiddenapi/hiddenapi-max-target-o-low-priority.txt",
             "hiddenapi/hiddenapi-max-target-o-low-priority-tiramisu.txt",
-	],
+        ],
         unsupported: [
             "hiddenapi/hiddenapi-unsupported.txt",
             "hiddenapi/hiddenapi-unsupported-tiramisu.txt",
@@ -152,6 +153,7 @@ bootclasspath_fragment {
         // API.
         split_packages: [
             "android.app.usage",
+            "android.nearby",
             "android.net",
             "android.net.netstats",
             "android.net.util",
@@ -164,6 +166,7 @@ bootclasspath_fragment {
         // classes into an API surface, e.g. public, system, etc.. Doing so will
         // result in a build failure due to inconsistent flags.
         package_prefixes: [
+            "android.nearby.aidl",
             "android.net.apf",
             "android.net.connectivity",
             "android.net.netstats.provider",
