@@ -69,7 +69,6 @@ public class TetheringMetrics {
 
     /** Update Tethering stats about caller's package name and downstream type. */
     public void createBuilder(final int downstreamType, final String callerPkg) {
-        mBuilderMap.clear();
         NetworkTetheringReported.Builder statsBuilder =
                     NetworkTetheringReported.newBuilder();
         statsBuilder.setDownstreamType(downstreamTypeToEnum(downstreamType))
