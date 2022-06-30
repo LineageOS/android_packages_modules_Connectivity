@@ -45,26 +45,13 @@ import java.util.Objects;
  * The header contains:
  * version (3 bits) | 5 bit reserved for future use (RFU)
  */
-public class ExtendedAdvertisement {
+public class ExtendedAdvertisement extends Advertisement{
 
     static final int HEADER_LENGTH = 1;
 
     static final int SALT_DATA_LENGTH = 2;
 
     static final int IDENTITY_DATA_LENGTH = 16;
-
-    @BroadcastRequest.BroadcastVersion
-    private final int mVersion = BroadcastRequest.PRESENCE_VERSION_V1;
-
-    private final int mLength;
-
-    @PresenceCredential.IdentityType private final int mIdentityType;
-
-    private final byte[] mIdentity;
-
-    private final byte[] mSalt;
-
-    private final List<Integer> mActions;
 
     private final List<DataElement> mDataElements;
 
@@ -111,6 +98,7 @@ public class ExtendedAdvertisement {
     }
 
     /** Serialize an {@link ExtendedAdvertisement} object into bytes. */
+    @Override
     public byte[] toBytes() {
         ByteBuffer buffer = ByteBuffer.allocate(getLength());
 
@@ -203,33 +191,6 @@ public class ExtendedAdvertisement {
         return new ExtendedAdvertisement(identityType, identity, salt, actions, dataElements);
     }
 
-    /** Returns the version in the advertisement. */
-    @BroadcastRequest.BroadcastVersion
-    public int getVersion() {
-        return mVersion;
-    }
-
-    /** Returns the identity type in the advertisement. */
-    @PresenceCredential.IdentityType
-    public int getIdentityType() {
-        return mIdentityType;
-    }
-
-    /** Returns the identity bytes in the advertisement. */
-    public byte[] getIdentity() {
-        return mIdentity.clone();
-    }
-
-    /** Returns the salt of the advertisement. */
-    public byte[] getSalt() {
-        return mSalt.clone();
-    }
-
-    /** Returns the actions in the advertisement. */
-    public List<Integer> getActions() {
-        return new ArrayList<>(mActions);
-    }
-
     /** Returns the {@link DataElement}s in the advertisement. */
     public List<DataElement> getDataElements() {
         return new ArrayList<>(mDataElements);
@@ -244,11 +205,6 @@ public class ExtendedAdvertisement {
             }
         }
         return res;
-    }
-
-    /** Returns the length of the advertisement. */
-    public int getLength() {
-        return mLength;
     }
 
     @Override
@@ -272,6 +228,7 @@ public class ExtendedAdvertisement {
             byte[] salt,
             List<Integer> actions,
             List<DataElement> dataElements) {
+        this.mVersion = BroadcastRequest.PRESENCE_VERSION_V1;
         this.mIdentityType = identityType;
         this.mIdentity = identity;
         this.mSalt = salt;
