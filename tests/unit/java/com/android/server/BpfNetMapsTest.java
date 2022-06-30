@@ -116,7 +116,7 @@ public final class BpfNetMapsTest {
         verify(mNetd).trafficSetNetPermForUids(PERMISSION_INTERNET, TEST_UIDS);
     }
 
-    private void doTestGetChainEnabled(final List<Integer> enableChains) throws Exception {
+    private void doTestIsChainEnabled(final List<Integer> enableChains) throws Exception {
         long match = 0;
         for (final int chain: enableChains) {
             match |= mBpfNetMaps.getMatchByFirewallChain(chain);
@@ -126,67 +126,67 @@ public final class BpfNetMapsTest {
         for (final int chain: FIREWALL_CHAINS) {
             final String testCase = "EnabledChains: " + enableChains + " CheckedChain: " + chain;
             if (enableChains.contains(chain)) {
-                assertTrue("Expected getChainEnabled returns True, " + testCase,
-                        mBpfNetMaps.getChainEnabled(chain));
+                assertTrue("Expected isChainEnabled returns True, " + testCase,
+                        mBpfNetMaps.isChainEnabled(chain));
             } else {
-                assertFalse("Expected getChainEnabled returns False, " + testCase,
-                        mBpfNetMaps.getChainEnabled(chain));
+                assertFalse("Expected isChainEnabled returns False, " + testCase,
+                        mBpfNetMaps.isChainEnabled(chain));
             }
         }
     }
 
-    private void doTestGetChainEnabled(final int enableChain) throws Exception {
-        doTestGetChainEnabled(List.of(enableChain));
+    private void doTestIsChainEnabled(final int enableChain) throws Exception {
+        doTestIsChainEnabled(List.of(enableChain));
     }
 
     @Test
     @IgnoreUpTo(Build.VERSION_CODES.S_V2)
-    public void testGetChainEnabled() throws Exception {
-        doTestGetChainEnabled(FIREWALL_CHAIN_DOZABLE);
-        doTestGetChainEnabled(FIREWALL_CHAIN_STANDBY);
-        doTestGetChainEnabled(FIREWALL_CHAIN_POWERSAVE);
-        doTestGetChainEnabled(FIREWALL_CHAIN_RESTRICTED);
-        doTestGetChainEnabled(FIREWALL_CHAIN_LOW_POWER_STANDBY);
-        doTestGetChainEnabled(FIREWALL_CHAIN_OEM_DENY_1);
-        doTestGetChainEnabled(FIREWALL_CHAIN_OEM_DENY_2);
-        doTestGetChainEnabled(FIREWALL_CHAIN_OEM_DENY_3);
+    public void testIsChainEnabled() throws Exception {
+        doTestIsChainEnabled(FIREWALL_CHAIN_DOZABLE);
+        doTestIsChainEnabled(FIREWALL_CHAIN_STANDBY);
+        doTestIsChainEnabled(FIREWALL_CHAIN_POWERSAVE);
+        doTestIsChainEnabled(FIREWALL_CHAIN_RESTRICTED);
+        doTestIsChainEnabled(FIREWALL_CHAIN_LOW_POWER_STANDBY);
+        doTestIsChainEnabled(FIREWALL_CHAIN_OEM_DENY_1);
+        doTestIsChainEnabled(FIREWALL_CHAIN_OEM_DENY_2);
+        doTestIsChainEnabled(FIREWALL_CHAIN_OEM_DENY_3);
     }
 
     @Test
     @IgnoreUpTo(Build.VERSION_CODES.S_V2)
-    public void testGetChainEnabledMultipleChainEnabled() throws Exception {
-        doTestGetChainEnabled(List.of(
+    public void testIsChainEnabledMultipleChainEnabled() throws Exception {
+        doTestIsChainEnabled(List.of(
                 FIREWALL_CHAIN_DOZABLE,
                 FIREWALL_CHAIN_STANDBY));
-        doTestGetChainEnabled(List.of(
+        doTestIsChainEnabled(List.of(
                 FIREWALL_CHAIN_DOZABLE,
                 FIREWALL_CHAIN_STANDBY,
                 FIREWALL_CHAIN_POWERSAVE,
                 FIREWALL_CHAIN_RESTRICTED));
-        doTestGetChainEnabled(FIREWALL_CHAINS);
+        doTestIsChainEnabled(FIREWALL_CHAINS);
     }
 
     @Test
     @IgnoreUpTo(Build.VERSION_CODES.S_V2)
-    public void testGetChainEnabledInvalidChain() {
+    public void testIsChainEnabledInvalidChain() {
         final Class<ServiceSpecificException> expected = ServiceSpecificException.class;
-        assertThrows(expected, () -> mBpfNetMaps.getChainEnabled(-1 /* childChain */));
-        assertThrows(expected, () -> mBpfNetMaps.getChainEnabled(1000 /* childChain */));
+        assertThrows(expected, () -> mBpfNetMaps.isChainEnabled(-1 /* childChain */));
+        assertThrows(expected, () -> mBpfNetMaps.isChainEnabled(1000 /* childChain */));
     }
 
     @Test
     @IgnoreUpTo(Build.VERSION_CODES.S_V2)
-    public void testGetChainEnabledMissingConfiguration() {
+    public void testIsChainEnabledMissingConfiguration() {
         // sConfigurationMap does not have entry for UID_RULES_CONFIGURATION_KEY
         assertThrows(ServiceSpecificException.class,
-                () -> mBpfNetMaps.getChainEnabled(FIREWALL_CHAIN_DOZABLE));
+                () -> mBpfNetMaps.isChainEnabled(FIREWALL_CHAIN_DOZABLE));
     }
 
     @Test
     @IgnoreAfter(Build.VERSION_CODES.S_V2)
-    public void testGetChainEnabledBeforeT() {
+    public void testIsChainEnabledBeforeT() {
         assertThrows(UnsupportedOperationException.class,
-                () -> mBpfNetMaps.getChainEnabled(FIREWALL_CHAIN_DOZABLE));
+                () -> mBpfNetMaps.isChainEnabled(FIREWALL_CHAIN_DOZABLE));
     }
 
     private void doTestSetChildChain(final List<Integer> testChains) throws Exception {
