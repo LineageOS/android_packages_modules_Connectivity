@@ -29,6 +29,7 @@ import static android.net.INetd.PERMISSION_INTERNET;
 import static com.android.server.BpfNetMaps.DOZABLE_MATCH;
 import static com.android.server.BpfNetMaps.HAPPY_BOX_MATCH;
 import static com.android.server.BpfNetMaps.IIF_MATCH;
+import static com.android.server.BpfNetMaps.LOCKDOWN_VPN_MATCH;
 import static com.android.server.BpfNetMaps.NO_MATCH;
 import static com.android.server.BpfNetMaps.PENALTY_BOX_MATCH;
 import static com.android.server.BpfNetMaps.POWERSAVE_MATCH;
@@ -402,5 +403,59 @@ public final class BpfNetMapsTest {
     public void testAddNiceAppBeforeT() {
         assertThrows(UnsupportedOperationException.class,
                 () -> mBpfNetMaps.addNiceApp(TEST_UID));
+    }
+
+    private void doTestUpdateUidLockdownRule(final long iif, final long match, final boolean add)
+            throws Exception {
+        if (match != NO_MATCH) {
+            mUidOwnerMap.updateEntry(new U32(TEST_UID), new UidOwnerValue(iif, match));
+        }
+
+        mBpfNetMaps.updateUidLockdownRule(TEST_UID, add);
+
+        final long expectedMatch = add ? match | LOCKDOWN_VPN_MATCH : match & ~LOCKDOWN_VPN_MATCH;
+        checkUidOwnerValue(TEST_UID, iif, expectedMatch);
+    }
+
+    private static final boolean ADD = true;
+    private static final boolean REMOVE = false;
+
+    @Test
+    @IgnoreUpTo(Build.VERSION_CODES.S_V2)
+    public void testUpdateUidLockdownRuleAddLockdown() throws Exception {
+        doTestUpdateUidLockdownRule(NO_IIF, NO_MATCH, ADD);
+
+        // Other matches are enabled
+        doTestUpdateUidLockdownRule(
+                NO_IIF, DOZABLE_MATCH | POWERSAVE_MATCH | RESTRICTED_MATCH, ADD);
+
+        // IIF_MATCH is enabled
+        doTestUpdateUidLockdownRule(TEST_IF_INDEX, DOZABLE_MATCH, ADD);
+
+        // LOCKDOWN_VPN_MATCH is already enabled
+        doTestUpdateUidLockdownRule(NO_IIF, LOCKDOWN_VPN_MATCH | DOZABLE_MATCH, ADD);
+    }
+
+    @Test
+    @IgnoreUpTo(Build.VERSION_CODES.S_V2)
+    public void testUpdateUidLockdownRuleRemoveLockdown() throws Exception {
+        doTestUpdateUidLockdownRule(NO_IIF, LOCKDOWN_VPN_MATCH, REMOVE);
+
+        // LOCKDOWN_VPN_MATCH with other matches
+        doTestUpdateUidLockdownRule(
+                NO_IIF, LOCKDOWN_VPN_MATCH | POWERSAVE_MATCH | RESTRICTED_MATCH, REMOVE);
+
+        // LOCKDOWN_VPN_MATCH with IIF_MATCH
+        doTestUpdateUidLockdownRule(TEST_IF_INDEX, LOCKDOWN_VPN_MATCH | IIF_MATCH, REMOVE);
+
+        // LOCKDOWN_VPN_MATCH is not enabled
+        doTestUpdateUidLockdownRule(NO_IIF, POWERSAVE_MATCH | RESTRICTED_MATCH, REMOVE);
+    }
+
+    @Test
+    @IgnoreAfter(Build.VERSION_CODES.S_V2)
+    public void testUpdateUidLockdownRuleBeforeT() {
+        assertThrows(UnsupportedOperationException.class,
+                () -> mBpfNetMaps.updateUidLockdownRule(TEST_UID, true /* add */));
     }
 }

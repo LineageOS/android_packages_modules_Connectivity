@@ -456,9 +456,11 @@ public class BpfNetMaps {
      *                                  cause of the failure.
      */
     public void updateUidLockdownRule(final int uid, final boolean add) {
-        synchronized (sUidOwnerMap) {
-            final int err = native_updateUidLockdownRule(uid, add);
-            maybeThrow(err, "Unable to update lockdown rule");
+        throwIfPreT("updateUidLockdownRule is not available on pre-T devices");
+        if (add) {
+            addRule(uid, LOCKDOWN_VPN_MATCH, "updateUidLockdownRule");
+        } else {
+            removeRule(uid, LOCKDOWN_VPN_MATCH, "updateUidLockdownRule");
         }
     }
 
