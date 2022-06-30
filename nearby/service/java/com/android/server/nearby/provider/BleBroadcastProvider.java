@@ -16,6 +16,8 @@
 
 package com.android.server.nearby.provider;
 
+import static com.android.server.nearby.presence.PresenceConstants.PRESENCE_UUID;
+
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.le.AdvertiseCallback;
 import android.bluetooth.le.AdvertiseData;
@@ -26,7 +28,6 @@ import android.os.ParcelUuid;
 
 import com.android.server.nearby.injector.Injector;
 
-import java.util.UUID;
 import java.util.concurrent.Executor;
 
 /**
@@ -71,11 +72,11 @@ public class BleBroadcastProvider extends AdvertiseCallback {
                                 .build();
 
                 // TODO(b/230538655) Use empty data until Presence V1 protocol is implemented.
-                ParcelUuid emptyParcelUuid = new ParcelUuid(new UUID(0L, 0L));
-                byte[] emptyAdvertisementPackets = new byte[0];
                 AdvertiseData advertiseData =
                         new AdvertiseData.Builder()
-                                .addServiceData(emptyParcelUuid, emptyAdvertisementPackets).build();
+                                .addServiceData(new ParcelUuid(PRESENCE_UUID),
+                                        advertisementPackets).build();
+
                 try {
                     mBroadcastListener = listener;
                     bluetoothLeAdvertiser.startAdvertising(settings, advertiseData, this);
