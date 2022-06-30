@@ -5487,7 +5487,6 @@ public class ConnectivityService extends IConnectivityManager.Stub
     @Override
     @Deprecated
     public int getLastTetherError(String iface) {
-        enforceAccessPermission();
         final TetheringManager tm = (TetheringManager) mContext.getSystemService(
                 Context.TETHERING_SERVICE);
         return tm.getLastTetherError(iface);
@@ -5496,7 +5495,6 @@ public class ConnectivityService extends IConnectivityManager.Stub
     @Override
     @Deprecated
     public String[] getTetherableIfaces() {
-        enforceAccessPermission();
         final TetheringManager tm = (TetheringManager) mContext.getSystemService(
                 Context.TETHERING_SERVICE);
         return tm.getTetherableIfaces();
@@ -5505,7 +5503,6 @@ public class ConnectivityService extends IConnectivityManager.Stub
     @Override
     @Deprecated
     public String[] getTetheredIfaces() {
-        enforceAccessPermission();
         final TetheringManager tm = (TetheringManager) mContext.getSystemService(
                 Context.TETHERING_SERVICE);
         return tm.getTetheredIfaces();
@@ -5515,7 +5512,6 @@ public class ConnectivityService extends IConnectivityManager.Stub
     @Override
     @Deprecated
     public String[] getTetheringErroredIfaces() {
-        enforceAccessPermission();
         final TetheringManager tm = (TetheringManager) mContext.getSystemService(
                 Context.TETHERING_SERVICE);
 
@@ -5525,7 +5521,6 @@ public class ConnectivityService extends IConnectivityManager.Stub
     @Override
     @Deprecated
     public String[] getTetherableUsbRegexs() {
-        enforceAccessPermission();
         final TetheringManager tm = (TetheringManager) mContext.getSystemService(
                 Context.TETHERING_SERVICE);
 
@@ -5535,7 +5530,6 @@ public class ConnectivityService extends IConnectivityManager.Stub
     @Override
     @Deprecated
     public String[] getTetherableWifiRegexs() {
-        enforceAccessPermission();
         final TetheringManager tm = (TetheringManager) mContext.getSystemService(
                 Context.TETHERING_SERVICE);
         return tm.getTetherableWifiRegexs();
