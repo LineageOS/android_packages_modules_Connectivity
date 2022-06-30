@@ -232,7 +232,7 @@ public class VpnTest extends VpnTestBase {
     private static final int TEST_TUNNEL_RESOURCE_ID = 0x2345;
     private static final long TEST_TIMEOUT_MS = 500L;
     private static final String PRIMARY_USER_APP_EXCLUDE_KEY =
-            "VPN_APP_EXCLUDED_27_com.testvpn.vpn";
+            "VPNAPPEXCLUDED_27_com.testvpn.vpn";
     static final String PKGS_BYTES = getPackageByteString(List.of(PKGS));
     private static final Range<Integer> PRIMARY_USER_RANGE = uidRangeForUser(PRIMARY_USER.id);
 
