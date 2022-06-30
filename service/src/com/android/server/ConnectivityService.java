@@ -11401,7 +11401,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
     public boolean getFirewallChainEnabled(final int chain) {
         enforceNetworkStackOrSettingsPermission();
 
-        return mBpfNetMaps.getChainEnabled(chain);
+        return mBpfNetMaps.isChainEnabled(chain);
     }
 
     @Override
