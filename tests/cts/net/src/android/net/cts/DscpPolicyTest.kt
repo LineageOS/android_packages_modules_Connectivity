@@ -27,6 +27,8 @@ import android.net.InetAddresses
 import android.net.IpPrefix
 import android.net.LinkAddress
 import android.net.LinkProperties
+import android.net.Network
+import android.net.MacAddress
 import android.net.NetworkAgent
 import android.net.NetworkAgent.DSCP_POLICY_STATUS_DELETED
 import android.net.NetworkAgent.DSCP_POLICY_STATUS_SUCCESS
@@ -45,10 +47,13 @@ import android.net.TestNetworkInterface
 import android.net.TestNetworkManager
 import android.net.RouteInfo
 import android.os.HandlerThread
+import android.os.SystemClock
 import android.platform.test.annotations.AppModeFull
+import android.system.ErrnoException
 import android.system.Os
 import android.system.OsConstants.AF_INET
 import android.system.OsConstants.AF_INET6
+import android.system.OsConstants.ENETUNREACH
 import android.system.OsConstants.IPPROTO_UDP
 import android.system.OsConstants.SOCK_DGRAM
 import android.system.OsConstants.SOCK_NONBLOCK
@@ -56,9 +61,15 @@ import android.util.Log
 import android.util.Range
 import androidx.test.InstrumentationRegistry
 import androidx.test.runner.AndroidJUnit4
+import com.android.net.module.util.NetworkStackConstants.ETHER_TYPE_IPV4
+import com.android.net.module.util.NetworkStackConstants.ETHER_TYPE_IPV6
+import com.android.net.module.util.Struct
+import com.android.net.module.util.structs.EthernetHeader
+import com.android.testutils.ArpResponder
 import com.android.testutils.CompatUtil
 import com.android.testutils.DevSdkIgnoreRule
 import com.android.testutils.assertParcelingIsLossless
+import com.android.testutils.RouterAdvertisementResponder
 import com.android.testutils.runAsShell
 import com.android.testutils.SC_V2
 import com.android.testutils.TapPacketReader
@@ -74,7 +85,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import java.net.Inet4Address
 import java.net.Inet6Address
-import java.net.InetAddress
+import java.net.InetSocketAddress
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.util.regex.Pattern
@@ -103,10 +114,12 @@ class DscpPolicyTest {
 
     private val LOCAL_IPV4_ADDRESS = InetAddresses.parseNumericAddress("192.0.2.1")
     private val TEST_TARGET_IPV4_ADDR =
-            InetAddresses.parseNumericAddress("8.8.8.8") as Inet4Address
-    private val LOCAL_IPV6_ADDRESS = InetAddresses.parseNumericAddress("2001:db8::1")
+            InetAddresses.parseNumericAddress("203.0.113.1") as Inet4Address
     private val TEST_TARGET_IPV6_ADDR =
-            InetAddresses.parseNumericAddress("2001:4860:4860::8888") as Inet6Address
+        InetAddresses.parseNumericAddress("2001:4860:4860::8888") as Inet6Address
+    private val TEST_ROUTER_IPV6_ADDR =
+        InetAddresses.parseNumericAddress("fe80::1234") as Inet6Address
+    private val TEST_TARGET_MAC_ADDR = MacAddress.fromString("12:34:56:78:9a:bc")
 
     private val realContext = InstrumentationRegistry.getContext()
     private val cm = realContext.getSystemService(ConnectivityManager::class.java)
@@ -116,9 +129,12 @@ class DscpPolicyTest {
 
     private val handlerThread = HandlerThread(DscpPolicyTest::class.java.simpleName)
 
+    private lateinit var srcAddressV6: Inet6Address
     private lateinit var iface: TestNetworkInterface
     private lateinit var tunNetworkCallback: TestNetworkCallback
     private lateinit var reader: TapPacketReader
+    private lateinit var arpResponder: ArpResponder
+    private lateinit var raResponder: RouterAdvertisementResponder
 
     private fun getKernelVersion(): IntArray {
         // Example:
@@ -129,6 +145,7 @@ class DscpPolicyTest {
         return intArrayOf(Integer.parseInt(m.group(1)), Integer.parseInt(m.group(2)))
     }
 
+    // TODO: replace with DeviceInfoUtils#isKernelVersionAtLeast
     private fun kernelIsAtLeast(major: Int, minor: Int): Boolean {
         val version = getKernelVersion()
         return (version.get(0) > major || (version.get(0) == major && version.get(1) >= minor))
@@ -142,9 +159,10 @@ class DscpPolicyTest {
         runAsShell(MANAGE_TEST_NETWORKS) {
             val tnm = realContext.getSystemService(TestNetworkManager::class.java)
 
-            iface = tnm.createTunInterface(arrayOf(
-                    LinkAddress(LOCAL_IPV4_ADDRESS, IP4_PREFIX_LEN),
-                    LinkAddress(LOCAL_IPV6_ADDRESS, IP6_PREFIX_LEN)))
+            // Only statically configure the IPv4 address; for IPv6, use the SLAAC generated
+            // address.
+            iface = tnm.createTapInterface(true /* disableIpv6ProvisioningDelay */,
+                    arrayOf(LinkAddress(LOCAL_IPV4_ADDRESS, IP4_PREFIX_LEN)))
             assertNotNull(iface)
         }
 
@@ -154,6 +172,12 @@ class DscpPolicyTest {
                 iface.fileDescriptor.fileDescriptor,
                 MAX_PACKET_LENGTH)
         reader.startAsyncForTest()
+
+        arpResponder = ArpResponder(reader, mapOf(TEST_TARGET_IPV4_ADDR to TEST_TARGET_MAC_ADDR))
+        arpResponder.start()
+        raResponder = RouterAdvertisementResponder(reader)
+        raResponder.addRouterEntry(TEST_TARGET_MAC_ADDR, TEST_ROUTER_IPV6_ADDR)
+        raResponder.start()
     }
 
     @After
@@ -161,14 +185,17 @@ class DscpPolicyTest {
         if (!kernelIsAtLeast(5, 15)) {
             return;
         }
+        raResponder.stop()
+        arpResponder.stop()
+
         agentsToCleanUp.forEach { it.unregister() }
         callbacksToCleanUp.forEach { cm.unregisterNetworkCallback(it) }
 
         // reader.stop() cleans up tun fd
         reader.handler.post { reader.stop() }
-        if (iface.fileDescriptor.fileDescriptor != null)
-            Os.close(iface.fileDescriptor.fileDescriptor)
+        // quitSafely processes all events in the queue, except delayed messages.
         handlerThread.quitSafely()
+        handlerThread.join()
     }
 
     private fun requestNetwork(request: NetworkRequest, callback: TestableNetworkCallback) {
@@ -187,6 +214,39 @@ class DscpPolicyTest {
                     }
                 }
                 .build()
+    }
+
+    private fun waitForGlobalIpv6Address(network: Network): Inet6Address {
+        // Wait for global IPv6 address to be available
+        val sock = Os.socket(AF_INET6, SOCK_DGRAM, IPPROTO_UDP)
+        network.bindSocket(sock)
+
+        var inet6Addr: Inet6Address? = null
+        val timeout = SystemClock.elapsedRealtime() + PACKET_TIMEOUT_MS
+        while (timeout > SystemClock.elapsedRealtime()) {
+            try {
+                // Pick any arbitrary port
+                Os.connect(sock, TEST_TARGET_IPV6_ADDR, 12345)
+                val sockAddr = Os.getsockname(sock) as InetSocketAddress
+
+                // TODO: make RouterAdvertisementResponder.SLAAC_PREFIX public and use it here,
+                // or make it configurable and configure it here.
+                if (IpPrefix("2001:db8::/64").contains(sockAddr.address)) {
+                    inet6Addr = sockAddr.address as Inet6Address
+                    break
+                }
+            } catch (e: ErrnoException) {
+                // ignore ENETUNREACH -- there may not be an address available yet.
+                if (e.errno != ENETUNREACH) {
+                    Os.close(sock)
+                    throw e
+                }
+            }
+            SystemClock.sleep(10 /* ms */)
+        }
+        Os.close(sock)
+        assertNotNull(inet6Addr)
+        return inet6Addr!!
     }
 
     private fun createConnectedNetworkAgent(
@@ -211,9 +271,8 @@ class DscpPolicyTest {
         }
         val lp = LinkProperties().apply {
             addLinkAddress(LinkAddress(LOCAL_IPV4_ADDRESS, IP4_PREFIX_LEN))
-            addLinkAddress(LinkAddress(LOCAL_IPV6_ADDRESS, IP6_PREFIX_LEN))
             addRoute(RouteInfo(IpPrefix("0.0.0.0/0"), null, null))
-            addRoute(RouteInfo(InetAddress.getByName("fe80::1234")))
+            addRoute(RouteInfo(IpPrefix("::/0"), TEST_ROUTER_IPV6_ADDR))
             setInterfaceName(specifier)
         }
         val config = NetworkAgentConfig.Builder().build()
@@ -226,7 +285,9 @@ class DscpPolicyTest {
         agent.expectCallback<OnNetworkCreated>()
         agent.expectSignalStrengths(intArrayOf())
         agent.expectValidationBypassedStatus()
+
         val network = agent.network ?: fail("Expected a non-null network")
+        srcAddressV6 = waitForGlobalIpv6Address(network)
         return agent to callback
     }
 
@@ -292,7 +353,7 @@ class DscpPolicyTest {
 
         Log.e(TAG, "IP Src:" + srcIp + " dst: " + dstIp)
 
-        if ((sendV6 && srcIp == LOCAL_IPV6_ADDRESS && dstIp == TEST_TARGET_IPV6_ADDR) ||
+        if ((sendV6 && srcIp == srcAddressV6 && dstIp == TEST_TARGET_IPV6_ADDR) ||
                 (!sendV6 && srcIp == LOCAL_IPV4_ADDRESS && dstIp == TEST_TARGET_IPV4_ADDR)) {
             Log.e(TAG, "IP return true");
             return true
@@ -333,8 +394,15 @@ class DscpPolicyTest {
         // TODO: grab source port from socket in sendPacket
 
         Log.e(TAG, "find DSCP value:" + dscpValue)
-        generateSequence { reader.poll(PACKET_TIMEOUT_MS) }.forEach { packet ->
+        val packets = generateSequence { reader.poll(PACKET_TIMEOUT_MS) }
+        for (packet in packets) {
             val buffer = ByteBuffer.wrap(packet, 0, packet.size).order(ByteOrder.BIG_ENDIAN)
+            // TODO: consider using Struct.parse for all packet parsing.
+            val etherHdr = Struct.parse(EthernetHeader::class.java, buffer)
+            val expectedType = if (sendV6) ETHER_TYPE_IPV6 else ETHER_TYPE_IPV4
+            if (etherHdr.etherType != expectedType) {
+                continue
+            }
             val dscp = if (sendV6) parseV6PacketDscp(buffer) else parseV4PacketDscp(buffer)
             Log.e(TAG, "DSCP value:" + dscp)
 
@@ -420,7 +488,7 @@ class DscpPolicyTest {
         val policy2 = DscpPolicy.Builder(1, 4)
                 .setDestinationPortRange(Range(5555, 5555))
                 .setDestinationAddress(TEST_TARGET_IPV6_ADDR)
-                .setSourceAddress(LOCAL_IPV6_ADDRESS)
+                .setSourceAddress(srcAddressV6)
                 .setProtocol(IPPROTO_UDP).build()
         agent.sendAddDscpPolicy(policy2)
         agent.expectCallback<OnDscpPolicyStatusUpdated>().let {
