@@ -20,10 +20,6 @@ import static android.Manifest.permission.BIND_VPN_SERVICE;
 import static android.Manifest.permission.CONTROL_VPN;
 import static android.content.pm.PackageManager.PERMISSION_DENIED;
 import static android.content.pm.PackageManager.PERMISSION_GRANTED;
-import static android.content.pm.UserInfo.FLAG_ADMIN;
-import static android.content.pm.UserInfo.FLAG_MANAGED_PROFILE;
-import static android.content.pm.UserInfo.FLAG_PRIMARY;
-import static android.content.pm.UserInfo.FLAG_RESTRICTED;
 import static android.net.ConnectivityManager.NetworkCallback;
 import static android.net.INetd.IF_STATE_DOWN;
 import static android.net.INetd.IF_STATE_UP;
@@ -146,6 +142,7 @@ import com.android.internal.util.HexDump;
 import com.android.modules.utils.build.SdkLevel;
 import com.android.server.DeviceIdleInternal;
 import com.android.server.IpSecService;
+import com.android.server.VpnTestBase;
 import com.android.server.vcn.util.PersistableBundleUtils;
 import com.android.testutils.DevSdkIgnoreRule;
 import com.android.testutils.DevSdkIgnoreRunner;
@@ -193,27 +190,14 @@ import java.util.stream.Stream;
 @RunWith(DevSdkIgnoreRunner.class)
 @SmallTest
 @IgnoreUpTo(VERSION_CODES.S_V2)
-public class VpnTest {
+public class VpnTest extends VpnTestBase {
     private static final String TAG = "VpnTest";
 
     @Rule
     public final DevSdkIgnoreRule mIgnoreRule = new DevSdkIgnoreRule();
 
-    // Mock users
-    static final UserInfo primaryUser = new UserInfo(27, "Primary", FLAG_ADMIN | FLAG_PRIMARY);
-    static final UserInfo secondaryUser = new UserInfo(15, "Secondary", FLAG_ADMIN);
-    static final UserInfo restrictedProfileA = new UserInfo(40, "RestrictedA", FLAG_RESTRICTED);
-    static final UserInfo restrictedProfileB = new UserInfo(42, "RestrictedB", FLAG_RESTRICTED);
-    static final UserInfo managedProfileA = new UserInfo(45, "ManagedA", FLAG_MANAGED_PROFILE);
-    static {
-        restrictedProfileA.restrictedProfileParentId = primaryUser.id;
-        restrictedProfileB.restrictedProfileParentId = secondaryUser.id;
-        managedProfileA.profileGroupId = primaryUser.id;
-    }
-
     static final Network EGRESS_NETWORK = new Network(101);
     static final String EGRESS_IFACE = "wlan0";
-    static final String TEST_VPN_PKG = "com.testvpn.vpn";
     private static final String TEST_VPN_CLIENT = "2.4.6.8";
     private static final String TEST_VPN_SERVER = "1.2.3.4";
     private static final String TEST_VPN_IDENTITY = "identity";
@@ -250,23 +234,8 @@ public class VpnTest {
     private static final long TEST_TIMEOUT_MS = 500L;
     private static final String PRIMARY_USER_APP_EXCLUDE_KEY =
             "VPN_APP_EXCLUDED_27_com.testvpn.vpn";
-    /**
-     * Names and UIDs for some fake packages. Important points:
-     *  - UID is ordered increasing.
-     *  - One pair of packages have consecutive UIDs.
-     */
-    static final String[] PKGS = {"com.example", "org.example", "net.example", "web.vpn"};
     static final String PKGS_BYTES = getPackageByteString(List.of(PKGS));
-    static final int[] PKG_UIDS = {10066, 10077, 10078, 10400};
-
-    // Mock packages
-    static final Map<String, Integer> mPackages = new ArrayMap<>();
-    static {
-        for (int i = 0; i < PKGS.length; i++) {
-            mPackages.put(PKGS[i], PKG_UIDS[i]);
-        }
-    }
-    private static final Range<Integer> PRI_USER_RANGE = uidRangeForUser(primaryUser.id);
+    private static final Range<Integer> PRIMARY_USER_RANGE = uidRangeForUser(PRIMARY_USER.id);
 
     @Mock(answer = Answers.RETURNS_DEEP_STUBS) private Context mContext;
     @Mock private UserManager mUserManager;
@@ -308,7 +277,7 @@ public class VpnTest {
         mTestDeps = spy(new TestDeps());
 
         when(mContext.getPackageManager()).thenReturn(mPackageManager);
-        setMockedPackages(mPackages);
+        setMockedPackages(sPackages);
 
         when(mContext.getPackageName()).thenReturn(TEST_VPN_PKG);
         when(mContext.getOpPackageName()).thenReturn(TEST_VPN_PKG);
@@ -413,50 +382,51 @@ public class VpnTest {
 
     @Test
     public void testRestrictedProfilesAreAddedToVpn() {
-        setMockedUsers(primaryUser, secondaryUser, restrictedProfileA, restrictedProfileB);
+        setMockedUsers(PRIMARY_USER, SECONDARY_USER, RESTRICTED_PROFILE_A, RESTRICTED_PROFILE_B);
 
-        final Vpn vpn = createVpn(primaryUser.id);
+        final Vpn vpn = createVpn(PRIMARY_USER.id);
 
         // Assume the user can have restricted profiles.
         doReturn(true).when(mUserManager).canHaveRestrictedProfile();
         final Set<Range<Integer>> ranges =
-                vpn.createUserAndRestrictedProfilesRanges(primaryUser.id, null, null);
+                vpn.createUserAndRestrictedProfilesRanges(PRIMARY_USER.id, null, null);
 
-        assertEquals(rangeSet(PRI_USER_RANGE, uidRangeForUser(restrictedProfileA.id)), ranges);
+        assertEquals(rangeSet(PRIMARY_USER_RANGE, uidRangeForUser(RESTRICTED_PROFILE_A.id)),
+                 ranges);
     }
 
     @Test
     public void testManagedProfilesAreNotAddedToVpn() {
-        setMockedUsers(primaryUser, managedProfileA);
+        setMockedUsers(PRIMARY_USER, MANAGED_PROFILE_A);
 
-        final Vpn vpn = createVpn(primaryUser.id);
-        final Set<Range<Integer>> ranges = vpn.createUserAndRestrictedProfilesRanges(primaryUser.id,
-                null, null);
+        final Vpn vpn = createVpn(PRIMARY_USER.id);
+        final Set<Range<Integer>> ranges = vpn.createUserAndRestrictedProfilesRanges(
+                PRIMARY_USER.id, null, null);
 
-        assertEquals(rangeSet(PRI_USER_RANGE), ranges);
+        assertEquals(rangeSet(PRIMARY_USER_RANGE), ranges);
     }
 
     @Test
     public void testAddUserToVpnOnlyAddsOneUser() {
-        setMockedUsers(primaryUser, restrictedProfileA, managedProfileA);
+        setMockedUsers(PRIMARY_USER, RESTRICTED_PROFILE_A, MANAGED_PROFILE_A);
 
-        final Vpn vpn = createVpn(primaryUser.id);
+        final Vpn vpn = createVpn(PRIMARY_USER.id);
         final Set<Range<Integer>> ranges = new ArraySet<>();
-        vpn.addUserToRanges(ranges, primaryUser.id, null, null);
+        vpn.addUserToRanges(ranges, PRIMARY_USER.id, null, null);
 
-        assertEquals(rangeSet(PRI_USER_RANGE), ranges);
+        assertEquals(rangeSet(PRIMARY_USER_RANGE), ranges);
     }
 
     @Test
     public void testUidAllowAndDenylist() throws Exception {
-        final Vpn vpn = createVpn(primaryUser.id);
-        final Range<Integer> user = PRI_USER_RANGE;
+        final Vpn vpn = createVpn(PRIMARY_USER.id);
+        final Range<Integer> user = PRIMARY_USER_RANGE;
         final int userStart = user.getLower();
         final int userStop = user.getUpper();
         final String[] packages = {PKGS[0], PKGS[1], PKGS[2]};
 
         // Allowed list
-        final Set<Range<Integer>> allow = vpn.createUserAndRestrictedProfilesRanges(primaryUser.id,
+        final Set<Range<Integer>> allow = vpn.createUserAndRestrictedProfilesRanges(PRIMARY_USER.id,
                 Arrays.asList(packages), null /* disallowedApplications */);
         assertEquals(rangeSet(
                 uidRange(userStart + PKG_UIDS[0], userStart + PKG_UIDS[0]),
@@ -469,7 +439,7 @@ public class VpnTest {
 
         // Denied list
         final Set<Range<Integer>> disallow =
-                vpn.createUserAndRestrictedProfilesRanges(primaryUser.id,
+                vpn.createUserAndRestrictedProfilesRanges(PRIMARY_USER.id,
                         null /* allowedApplications */, Arrays.asList(packages));
         assertEquals(rangeSet(
                 uidRange(userStart, userStart + PKG_UIDS[0] - 1),
@@ -491,7 +461,7 @@ public class VpnTest {
 
     @Test
     public void testGetAlwaysAndOnGetLockDown() throws Exception {
-        final Vpn vpn = createVpn(primaryUser.id);
+        final Vpn vpn = createVpn(PRIMARY_USER.id);
 
         // Default state.
         assertFalse(vpn.getAlwaysOn());
@@ -515,8 +485,8 @@ public class VpnTest {
 
     @Test
     public void testLockdownChangingPackage() throws Exception {
-        final Vpn vpn = createVpn(primaryUser.id);
-        final Range<Integer> user = PRI_USER_RANGE;
+        final Vpn vpn = createVpn(PRIMARY_USER.id);
+        final Range<Integer> user = PRIMARY_USER_RANGE;
         final int userStart = user.getLower();
         final int userStop = user.getUpper();
         // Set always-on without lockdown.
@@ -549,8 +519,8 @@ public class VpnTest {
 
     @Test
     public void testLockdownAllowlist() throws Exception {
-        final Vpn vpn = createVpn(primaryUser.id);
-        final Range<Integer> user = PRI_USER_RANGE;
+        final Vpn vpn = createVpn(PRIMARY_USER.id);
+        final Range<Integer> user = PRIMARY_USER_RANGE;
         final int userStart = user.getLower();
         final int userStop = user.getUpper();
         // Set always-on with lockdown and allow app PKGS[2] from lockdown.
@@ -660,9 +630,9 @@ public class VpnTest {
 
     @Test
     public void testLockdownRuleRepeatability() throws Exception {
-        final Vpn vpn = createVpn(primaryUser.id);
+        final Vpn vpn = createVpn(PRIMARY_USER.id);
         final UidRangeParcel[] primaryUserRangeParcel = new UidRangeParcel[] {
-                new UidRangeParcel(PRI_USER_RANGE.getLower(), PRI_USER_RANGE.getUpper())};
+                new UidRangeParcel(PRIMARY_USER_RANGE.getLower(), PRIMARY_USER_RANGE.getUpper())};
         // Given legacy lockdown is already enabled,
         vpn.setLockdown(true);
         verify(mConnectivityManager, times(1)).setRequireVpnForUids(true,
@@ -693,9 +663,9 @@ public class VpnTest {
     @Test
     public void testLockdownRuleReversibility() throws Exception {
         doReturn(PERMISSION_GRANTED).when(mContext).checkCallingOrSelfPermission(CONTROL_VPN);
-        final Vpn vpn = createVpn(primaryUser.id);
+        final Vpn vpn = createVpn(PRIMARY_USER.id);
         final UidRangeParcel[] entireUser = {
-            new UidRangeParcel(PRI_USER_RANGE.getLower(), PRI_USER_RANGE.getUpper())
+            new UidRangeParcel(PRIMARY_USER_RANGE.getLower(), PRIMARY_USER_RANGE.getUpper())
         };
         final UidRangeParcel[] exceptPkg0 = {
             new UidRangeParcel(entireUser[0].start, entireUser[0].start + PKG_UIDS[0] - 1),
@@ -745,17 +715,17 @@ public class VpnTest {
 
     @Test
     public void testIsAlwaysOnPackageSupported() throws Exception {
-        final Vpn vpn = createVpn(primaryUser.id);
+        final Vpn vpn = createVpn(PRIMARY_USER.id);
 
         ApplicationInfo appInfo = new ApplicationInfo();
-        when(mPackageManager.getApplicationInfoAsUser(eq(PKGS[0]), anyInt(), eq(primaryUser.id)))
+        when(mPackageManager.getApplicationInfoAsUser(eq(PKGS[0]), anyInt(), eq(PRIMARY_USER.id)))
                 .thenReturn(appInfo);
 
         ServiceInfo svcInfo = new ServiceInfo();
         ResolveInfo resInfo = new ResolveInfo();
         resInfo.serviceInfo = svcInfo;
         when(mPackageManager.queryIntentServicesAsUser(any(), eq(PackageManager.GET_META_DATA),
-                eq(primaryUser.id)))
+                eq(PRIMARY_USER.id)))
                 .thenReturn(Collections.singletonList(resInfo));
 
         // null package name should return false
@@ -779,9 +749,9 @@ public class VpnTest {
 
     @Test
     public void testNotificationShownForAlwaysOnApp() throws Exception {
-        final UserHandle userHandle = UserHandle.of(primaryUser.id);
-        final Vpn vpn = createVpn(primaryUser.id);
-        setMockedUsers(primaryUser);
+        final UserHandle userHandle = UserHandle.of(PRIMARY_USER.id);
+        final Vpn vpn = createVpn(PRIMARY_USER.id);
+        setMockedUsers(PRIMARY_USER);
 
         final InOrder order = inOrder(mNotificationManager);
 
@@ -814,15 +784,15 @@ public class VpnTest {
      */
     @Test
     public void testGetProfileNameForPackage() throws Exception {
-        final Vpn vpn = createVpn(primaryUser.id);
-        setMockedUsers(primaryUser);
+        final Vpn vpn = createVpn(PRIMARY_USER.id);
+        setMockedUsers(PRIMARY_USER);
 
-        final String expected = Credentials.PLATFORM_VPN + primaryUser.id + "_" + TEST_VPN_PKG;
+        final String expected = Credentials.PLATFORM_VPN + PRIMARY_USER.id + "_" + TEST_VPN_PKG;
         assertEquals(expected, vpn.getProfileNameForPackage(TEST_VPN_PKG));
     }
 
     private Vpn createVpnAndSetupUidChecks(String... grantedOps) throws Exception {
-        return createVpnAndSetupUidChecks(primaryUser, grantedOps);
+        return createVpnAndSetupUidChecks(PRIMARY_USER, grantedOps);
     }
 
     private Vpn createVpnAndSetupUidChecks(UserInfo user, String... grantedOps) throws Exception {
@@ -895,7 +865,7 @@ public class VpnTest {
                 .put(eq(PRIMARY_USER_APP_EXCLUDE_KEY),
                      eq(HexDump.hexStringToByteArray(PKGS_BYTES)));
         assertEquals(vpn.createUserAndRestrictedProfilesRanges(
-                primaryUser.id, null, Arrays.asList(PKGS)),
+                PRIMARY_USER.id, null, Arrays.asList(PKGS)),
                 vpn.mNetworkCapabilities.getUids());
         assertEquals(Arrays.asList(PKGS), vpn.getAppExclusionList(TEST_VPN_PKG));
     }
@@ -904,7 +874,7 @@ public class VpnTest {
     public void testSetAndGetAppExclusionListRestrictedUser() throws Exception {
         final Vpn vpn = prepareVpnForVerifyAppExclusionList();
         // Mock it to restricted profile
-        when(mUserManager.getUserInfo(anyInt())).thenReturn(restrictedProfileA);
+        when(mUserManager.getUserInfo(anyInt())).thenReturn(RESTRICTED_PROFILE_A);
         // Restricted users cannot configure VPNs
         assertThrows(SecurityException.class,
                 () -> vpn.setAppExclusionList(TEST_VPN_PKG, new ArrayList<>()));
@@ -954,7 +924,7 @@ public class VpnTest {
     public void testProvisionVpnProfileRestrictedUser() throws Exception {
         final Vpn vpn =
                 createVpnAndSetupUidChecks(
-                        restrictedProfileA, AppOpsManager.OPSTR_ACTIVATE_PLATFORM_VPN);
+                        RESTRICTED_PROFILE_A, AppOpsManager.OPSTR_ACTIVATE_PLATFORM_VPN);
 
         try {
             vpn.provisionVpnProfile(TEST_VPN_PKG, mVpnProfile);
@@ -977,7 +947,7 @@ public class VpnTest {
     public void testDeleteVpnProfileRestrictedUser() throws Exception {
         final Vpn vpn =
                 createVpnAndSetupUidChecks(
-                        restrictedProfileA, AppOpsManager.OPSTR_ACTIVATE_PLATFORM_VPN);
+                        RESTRICTED_PROFILE_A, AppOpsManager.OPSTR_ACTIVATE_PLATFORM_VPN);
 
         try {
             vpn.deleteVpnProfile(TEST_VPN_PKG);
@@ -1100,7 +1070,7 @@ public class VpnTest {
     public void testStartVpnProfileRestrictedUser() throws Exception {
         final Vpn vpn =
                 createVpnAndSetupUidChecks(
-                        restrictedProfileA, AppOpsManager.OPSTR_ACTIVATE_PLATFORM_VPN);
+                        RESTRICTED_PROFILE_A, AppOpsManager.OPSTR_ACTIVATE_PLATFORM_VPN);
 
         try {
             vpn.startVpnProfile(TEST_VPN_PKG);
@@ -1113,7 +1083,7 @@ public class VpnTest {
     public void testStopVpnProfileRestrictedUser() throws Exception {
         final Vpn vpn =
                 createVpnAndSetupUidChecks(
-                        restrictedProfileA, AppOpsManager.OPSTR_ACTIVATE_PLATFORM_VPN);
+                        RESTRICTED_PROFILE_A, AppOpsManager.OPSTR_ACTIVATE_PLATFORM_VPN);
 
         try {
             vpn.stopVpnProfile(TEST_VPN_PKG);
@@ -1184,7 +1154,7 @@ public class VpnTest {
     private void verifyVpnManagerEvent(String sessionKey, String category, int errorClass,
             int errorCode, VpnProfileState... profileState) {
         final Context userContext =
-                mContext.createContextAsUser(UserHandle.of(primaryUser.id), 0 /* flags */);
+                mContext.createContextAsUser(UserHandle.of(PRIMARY_USER.id), 0 /* flags */);
         final ArgumentCaptor<Intent> intentArgumentCaptor = ArgumentCaptor.forClass(Intent.class);
 
         final int verifyTimes = (profileState == null) ? 1 : profileState.length;
@@ -1251,7 +1221,7 @@ public class VpnTest {
         assumeTrue(SdkLevel.isAtLeastT());
         // Calling setAlwaysOnPackage() needs to hold CONTROL_VPN.
         doReturn(PERMISSION_GRANTED).when(mContext).checkCallingOrSelfPermission(CONTROL_VPN);
-        final Vpn vpn = createVpn(primaryUser.id);
+        final Vpn vpn = createVpn(PRIMARY_USER.id);
         // Enable VPN always-on for PKGS[1].
         assertTrue(vpn.setAlwaysOnPackage(PKGS[1], false /* lockdown */,
                 null /* lockdownAllowlist */));
@@ -1513,7 +1483,7 @@ public class VpnTest {
     public void testStartPlatformVpnIllegalArgumentExceptionInSetup() throws Exception {
         when(mIkev2SessionCreator.createIkeSession(any(), any(), any(), any(), any(), any()))
                 .thenThrow(new IllegalArgumentException());
-        final Vpn vpn = startLegacyVpn(createVpn(primaryUser.id), mVpnProfile);
+        final Vpn vpn = startLegacyVpn(createVpn(PRIMARY_USER.id), mVpnProfile);
         final NetworkCallback cb = triggerOnAvailableAndGetCallback();
 
         verifyInterfaceSetCfgWithFlags(IF_STATE_UP);
@@ -1533,18 +1503,18 @@ public class VpnTest {
                 eq(AppOpsManager.MODE_ALLOWED));
 
         verify(mSystemServices).settingsSecurePutStringForUser(
-                eq(Settings.Secure.ALWAYS_ON_VPN_APP), eq(TEST_VPN_PKG), eq(primaryUser.id));
+                eq(Settings.Secure.ALWAYS_ON_VPN_APP), eq(TEST_VPN_PKG), eq(PRIMARY_USER.id));
         verify(mSystemServices).settingsSecurePutIntForUser(
                 eq(Settings.Secure.ALWAYS_ON_VPN_LOCKDOWN), eq(lockdownEnabled ? 1 : 0),
-                eq(primaryUser.id));
+                eq(PRIMARY_USER.id));
         verify(mSystemServices).settingsSecurePutStringForUser(
-                eq(Settings.Secure.ALWAYS_ON_VPN_LOCKDOWN_WHITELIST), eq(""), eq(primaryUser.id));
+                eq(Settings.Secure.ALWAYS_ON_VPN_LOCKDOWN_WHITELIST), eq(""), eq(PRIMARY_USER.id));
     }
 
     @Test
     public void testSetAndStartAlwaysOnVpn() throws Exception {
-        final Vpn vpn = createVpn(primaryUser.id);
-        setMockedUsers(primaryUser);
+        final Vpn vpn = createVpn(PRIMARY_USER.id);
+        setMockedUsers(PRIMARY_USER);
 
         // UID checks must return a different UID; otherwise it'll be treated as already prepared.
         final int uid = Process.myUid() + 1;
@@ -1561,7 +1531,7 @@ public class VpnTest {
     }
 
     private Vpn startLegacyVpn(final Vpn vpn, final VpnProfile vpnProfile) throws Exception {
-        setMockedUsers(primaryUser);
+        setMockedUsers(PRIMARY_USER);
 
         // Dummy egress interface
         final LinkProperties lp = new LinkProperties();
@@ -1877,7 +1847,7 @@ public class VpnTest {
         doReturn(new Network(102)).when(mConnectivityManager).registerNetworkAgent(any(), any(),
                 any(), any(), any(), any(), anyInt());
 
-        final Vpn vpn = startLegacyVpn(createVpn(primaryUser.id), profile);
+        final Vpn vpn = startLegacyVpn(createVpn(PRIMARY_USER.id), profile);
         final TestDeps deps = (TestDeps) vpn.mDeps;
 
         testAndCleanup(() -> {
@@ -1928,7 +1898,7 @@ public class VpnTest {
                     legacyRunnerReady.open();
                     return new Network(102);
                 });
-        final Vpn vpn = startLegacyVpn(createVpn(primaryUser.id), profile);
+        final Vpn vpn = startLegacyVpn(createVpn(PRIMARY_USER.id), profile);
         final TestDeps deps = (TestDeps) vpn.mDeps;
         try {
             // udppsk and 1701 are the values for TYPE_L2TP_IPSEC_PSK
