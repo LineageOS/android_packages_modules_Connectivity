@@ -477,9 +477,12 @@ public class BpfNetMaps {
             mNetd.firewallRemoveUidInterfaceRules(uids);
             return;
         }
-        synchronized (sUidOwnerMap) {
-            final int err = native_removeUidInterfaceRules(uids);
-            maybeThrow(err, "Unable to remove uid interface rules");
+        for (final int uid: uids) {
+            try {
+                removeRule(uid, IIF_MATCH, "removeUidInterfaceRules");
+            } catch (ServiceSpecificException e) {
+                Log.e(TAG, "removeRule failed uid=" + uid + ", " + e);
+            }
         }
     }
 
