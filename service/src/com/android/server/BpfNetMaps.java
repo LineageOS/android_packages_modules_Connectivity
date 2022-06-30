@@ -53,7 +53,7 @@ public class BpfNetMaps {
     private static final String TAG = "BpfNetMaps";
     private final INetd mNetd;
     // Use legacy netd for releases before T.
-    private static final boolean USE_NETD = !SdkLevel.isAtLeastT();
+    private static final boolean PRE_T = !SdkLevel.isAtLeastT();
     private static boolean sInitialized = false;
 
     // Lock for sConfigurationMap entry for UID_RULES_CONFIGURATION_KEY.
@@ -112,7 +112,7 @@ public class BpfNetMaps {
      */
     private static synchronized void ensureInitialized() {
         if (sInitialized) return;
-        if (!USE_NETD) {
+        if (!PRE_T) {
             System.loadLibrary("service-connectivity");
             native_init();
             initialize(new Dependencies());
@@ -143,7 +143,7 @@ public class BpfNetMaps {
     public BpfNetMaps() {
         this(null);
 
-        if (USE_NETD) throw new IllegalArgumentException("BpfNetMaps need to use netd before T");
+        if (PRE_T) throw new IllegalArgumentException("BpfNetMaps need to use netd before T");
     }
 
     public BpfNetMaps(final INetd netd) {
@@ -169,8 +169,8 @@ public class BpfNetMaps {
         }
     }
 
-    private void throwIfUseNetd(final String msg) {
-        if (USE_NETD) {
+    private void throwIfPreT(final String msg) {
+        if (PRE_T) {
             throw new UnsupportedOperationException(msg);
         }
     }
@@ -233,7 +233,7 @@ public class BpfNetMaps {
      *                                  cause of the failure.
      */
     public void setChildChain(final int childChain, final boolean enable) {
-        throwIfUseNetd("setChildChain is not available on pre-T devices");
+        throwIfPreT("setChildChain is not available on pre-T devices");
 
         final long match = getMatchByFirewallChain(childChain);
         try {
@@ -244,7 +244,7 @@ public class BpfNetMaps {
                             "Unable to get firewall chain status: sConfigurationMap does not have"
                                     + " entry for UID_RULES_CONFIGURATION_KEY");
                 }
-                final long newConfig = enable ? (config.val | match) : (config.val & (~match));
+                final long newConfig = enable ? (config.val | match) : (config.val & ~match);
                 sConfigurationMap.updateEntry(UID_RULES_CONFIGURATION_KEY, new U32(newConfig));
             }
         } catch (ErrnoException e) {
@@ -254,7 +254,7 @@ public class BpfNetMaps {
     }
 
     /**
-     * Get the specified firewall chain status.
+     * Get the specified firewall chain's status.
      *
      * @param childChain target chain
      * @return {@code true} if chain is enabled, {@code false} if chain is not enabled.
@@ -262,8 +262,8 @@ public class BpfNetMaps {
      * @throws ServiceSpecificException in case of failure, with an error code indicating the
      *                                  cause of the failure.
      */
-    public boolean getChainEnabled(final int childChain) {
-        throwIfUseNetd("getChainEnabled is not available on pre-T devices");
+    public boolean isChainEnabled(final int childChain) {
+        throwIfPreT("isChainEnabled is not available on pre-T devices");
 
         final long match = getMatchByFirewallChain(childChain);
         try {
@@ -334,7 +334,7 @@ public class BpfNetMaps {
      *                                  cause of the failure.
      */
     public void addUidInterfaceRules(final String ifName, final int[] uids) throws RemoteException {
-        if (USE_NETD) {
+        if (PRE_T) {
             mNetd.firewallAddUidInterfaceRules(ifName, uids);
             return;
         }
@@ -354,7 +354,7 @@ public class BpfNetMaps {
      *                                  cause of the failure.
      */
     public void removeUidInterfaceRules(final int[] uids) throws RemoteException {
-        if (USE_NETD) {
+        if (PRE_T) {
             mNetd.firewallRemoveUidInterfaceRules(uids);
             return;
         }
@@ -397,7 +397,7 @@ public class BpfNetMaps {
      * @throws RemoteException when netd has crashed.
      */
     public void setNetPermForUids(final int permissions, final int[] uids) throws RemoteException {
-        if (USE_NETD) {
+        if (PRE_T) {
             mNetd.trafficSetNetPermForUids(permissions, uids);
             return;
         }
@@ -413,7 +413,7 @@ public class BpfNetMaps {
      */
     public void dump(final FileDescriptor fd, boolean verbose)
             throws IOException, ServiceSpecificException {
-        if (USE_NETD) {
+        if (PRE_T) {
             throw new ServiceSpecificException(
                     EOPNOTSUPP, "dumpsys connectivity trafficcontroller dump not available on pre-T"
                     + " devices, use dumpsys netd trafficcontroller instead.");
