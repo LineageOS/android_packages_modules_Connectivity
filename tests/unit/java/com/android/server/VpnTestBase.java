@@ -31,7 +31,10 @@ import android.os.Process;
 import android.os.UserHandle;
 import android.util.ArrayMap;
 
+import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 /** Common variables or methods shared between VpnTest and VpnManagerServiceTest. */
 public class VpnTestBase {
@@ -86,5 +89,9 @@ public class VpnTestBase {
             }).when(mockPm).getPackageUidAsUser(anyString(), anyInt());
         } catch (Exception e) {
         }
+    }
+
+    protected List<Integer> toList(int[] arr) {
+        return Arrays.stream(arr).boxed().collect(Collectors.toList());
     }
 }
