@@ -5922,7 +5922,7 @@ public class ConnectivityManager {
     }
 
     /**
-     * Get the specified firewall chain status.
+     * Get the specified firewall chain's status.
      *
      * @param chain target chain.
      * @return {@code true} if chain is enabled, {@code false} if chain is disabled.
