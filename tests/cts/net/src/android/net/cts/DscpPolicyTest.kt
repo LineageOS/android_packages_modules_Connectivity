@@ -136,8 +136,8 @@ class DscpPolicyTest {
 
     @Before
     fun setUp() {
-        // For BPF support kernel needs to be at least 5.4.
-        assumeTrue(kernelIsAtLeast(5, 4))
+        // For BPF support kernel needs to be at least 5.15.
+        assumeTrue(kernelIsAtLeast(5, 15))
 
         runAsShell(MANAGE_TEST_NETWORKS) {
             val tnm = realContext.getSystemService(TestNetworkManager::class.java)
@@ -158,7 +158,7 @@ class DscpPolicyTest {
 
     @After
     fun tearDown() {
-        if (!kernelIsAtLeast(5, 4)) {
+        if (!kernelIsAtLeast(5, 15)) {
             return;
         }
         agentsToCleanUp.forEach { it.unregister() }
