@@ -8342,15 +8342,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
         mPendingIntentWakeLock.acquire();
         try {
             if (DBG) log("Sending " + pendingIntent);
-            final BroadcastOptions options = BroadcastOptions.makeBasic();
-            if (SdkLevel.isAtLeastT()) {
-                // Explicitly disallow the receiver from starting activities, to prevent apps from
-                // utilizing the PendingIntent as a backdoor to do this.
-                options.setPendingIntentBackgroundActivityLaunchAllowed(false);
-            }
-            pendingIntent.send(mContext, 0, intent, this /* onFinished */, null /* Handler */,
-                    null /* requiredPermission */,
-                    SdkLevel.isAtLeastT() ? options.toBundle() : null);
+            pendingIntent.send(mContext, 0, intent, this /* onFinished */, null /* Handler */);
         } catch (PendingIntent.CanceledException e) {
             if (DBG) log(pendingIntent + " was not sent, it had been canceled.");
             mPendingIntentWakeLock.release();
