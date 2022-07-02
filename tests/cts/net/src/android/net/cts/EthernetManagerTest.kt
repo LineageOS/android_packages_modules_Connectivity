@@ -49,7 +49,6 @@ import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.os.OutcomeReceiver
-import android.os.SystemProperties
 import android.platform.test.annotations.AppModeFull
 import android.util.ArraySet
 import androidx.test.platform.app.InstrumentationRegistry
@@ -69,13 +68,13 @@ import com.android.testutils.runAsShell
 import com.android.testutils.waitForIdle
 import org.junit.After
 import org.junit.Assume.assumeTrue
-import org.junit.Assume.assumeFalse
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import java.net.Inet6Address
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ExecutionException
+import java.util.concurrent.TimeoutException
 import java.util.concurrent.TimeUnit
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -206,12 +205,8 @@ class EthernetManagerTest {
 
         fun eventuallyExpect(expected: CallbackEntry) = events.poll(TIMEOUT_MS) { it == expected }
 
-        fun eventuallyExpect(interfaceName: String, state: Int, role: Int) {
-            assertNotNull(eventuallyExpect(createChangeEvent(interfaceName, state, role)))
-        }
-
         fun eventuallyExpect(iface: EthernetTestInterface, state: Int, role: Int) {
-            eventuallyExpect(iface.name, state, role)
+            assertNotNull(eventuallyExpect(createChangeEvent(iface.name, state, role)))
         }
 
         fun assertNoCallback() {
@@ -458,32 +453,45 @@ class EthernetManagerTest {
         }
     }
 
-    // TODO: this function is now used in two places (EthernetManagerTest and
-    // EthernetTetheringTest), so it should be moved to testutils.
-    private fun isAdbOverNetwork(): Boolean {
-        // If adb TCP port opened, this test may running by adb over network.
-        return (SystemProperties.getInt("persist.adb.tcp.port", -1) > -1 ||
-                SystemProperties.getInt("service.adb.tcp.port", -1) > -1)
+    private fun assumeNoInterfaceForTetheringAvailable() {
+        // Interfaces that have configured NetworkCapabilities will never be used for tethering,
+        // see aosp/2123900.
+        try {
+            // assumeException does not exist.
+            requestTetheredInterface().expectOnAvailable()
+            // interface used for tethering is available, throw an assumption error.
+            assumeTrue(false)
+        } catch (e: TimeoutException) {
+            // do nothing -- the TimeoutException indicates that no interface is available for
+            // tethering.
+            releaseTetheredInterface()
+        }
     }
 
     @Test
     fun testCallbacks_forServerModeInterfaces() {
-        // do not run this test when adb might be connected over ethernet.
-        assumeFalse(isAdbOverNetwork())
+        // do not run this test if an interface that can be used for tethering already exists.
+        assumeNoInterfaceForTetheringAvailable()
+
+        val iface = createInterface()
+        requestTetheredInterface().expectOnAvailable()
 
         val listener = EthernetStateListener()
         addInterfaceStateListener(listener)
-
-        // it is possible that a physical interface is present, so it is not guaranteed that iface
-        // will be put into server mode. This should not matter for the test though. Calling
-        // createInterface() makes sure we have at least one interface available.
-        val iface = createInterface()
-        val cb = requestTetheredInterface()
-        val ifaceName = cb.expectOnAvailable()
-        listener.eventuallyExpect(ifaceName, STATE_LINK_UP, ROLE_SERVER)
+        // TODO(b/236895792): THIS IS A BUG! Existing server mode interfaces are not reported when
+        // an InterfaceStateListener is registered.
+        // Note: using eventuallyExpect as there may be other interfaces present.
+        // listener.eventuallyExpect(iface, STATE_LINK_UP, ROLE_SERVER)
 
         releaseTetheredInterface()
-        listener.eventuallyExpect(ifaceName, STATE_LINK_UP, ROLE_CLIENT)
+        listener.eventuallyExpect(iface, STATE_LINK_UP, ROLE_CLIENT)
+
+        requestTetheredInterface().expectOnAvailable()
+        // This should be changed to expectCallback, once b/236895792 is fixed.
+        listener.eventuallyExpect(iface, STATE_LINK_UP, ROLE_SERVER)
+
+        releaseTetheredInterface()
+        listener.expectCallback(iface, STATE_LINK_UP, ROLE_CLIENT)
     }
 
     /**
@@ -650,5 +658,27 @@ class EthernetManagerTest {
 
         iface.setCarrierEnabled(false)
         cb.eventuallyExpectLost()
+    }
+
+    @Test
+    fun testRemoveInterface_whileInServerMode() {
+        assumeNoInterfaceForTetheringAvailable()
+
+        val listener = EthernetStateListener()
+        addInterfaceStateListener(listener)
+
+        val iface = createInterface()
+        val ifaceName = requestTetheredInterface().expectOnAvailable()
+
+        assertEquals(iface.name, ifaceName)
+        listener.eventuallyExpect(iface, STATE_LINK_UP, ROLE_SERVER)
+
+        removeInterface(iface)
+
+        // Note: removeInterface already verifies that a STATE_ABSENT, ROLE_NONE callback is
+        // received, but it can't hurt to explicitly check for it.
+        listener.expectCallback(iface, STATE_ABSENT, ROLE_NONE)
+        releaseTetheredInterface()
+        listener.assertNoCallback()
     }
 }
