@@ -158,6 +158,7 @@ java_library {
     static_libs: [
         // Do not add libs here if they are already included
         // in framework-connectivity
+        "connectivity-net-module-utils-bpf",
         "connectivity_native_aidl_interface-lateststable-java",
         "dnsresolver_aidl_interface-V9-java",
         "modules-utils-shell-command-handler",
