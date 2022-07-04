@@ -37,6 +37,7 @@ java_defaults {
     ],
     static_libs: [
         "androidx.annotation_annotation",
+        "connectivity-net-module-utils-bpf",
         "modules-utils-build",
         "modules-utils-statemachine",
         "networkstack-client",
