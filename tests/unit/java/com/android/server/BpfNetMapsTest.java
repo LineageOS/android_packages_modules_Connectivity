@@ -175,14 +175,6 @@ public final class BpfNetMapsTest {
     }
 
     @Test
-    @IgnoreUpTo(Build.VERSION_CODES.S_V2)
-    public void testIsChainEnabledMissingConfiguration() {
-        // sConfigurationMap does not have entry for UID_RULES_CONFIGURATION_KEY
-        assertThrows(ServiceSpecificException.class,
-                () -> mBpfNetMaps.isChainEnabled(FIREWALL_CHAIN_DOZABLE));
-    }
-
-    @Test
     @IgnoreAfter(Build.VERSION_CODES.S_V2)
     public void testIsChainEnabledBeforeT() {
         assertThrows(UnsupportedOperationException.class,
@@ -249,14 +241,6 @@ public final class BpfNetMapsTest {
                 () -> mBpfNetMaps.setChildChain(-1 /* childChain */, true /* enable */));
         assertThrows(expected,
                 () -> mBpfNetMaps.setChildChain(1000 /* childChain */, true /* enable */));
-    }
-
-    @Test
-    @IgnoreUpTo(Build.VERSION_CODES.S_V2)
-    public void testSetChildChainMissingConfiguration() {
-        // sConfigurationMap does not have entry for UID_RULES_CONFIGURATION_KEY
-        assertThrows(ServiceSpecificException.class,
-                () -> mBpfNetMaps.setChildChain(FIREWALL_CHAIN_DOZABLE, true /* enable */));
     }
 
     @Test
