@@ -525,16 +525,19 @@ public class ClatCoordinatorTest {
         coordinator.dump(ipw);
 
         final String[] dumpStrings = stringWriter.toString().split("\n");
-        assertEquals(5, dumpStrings.length);
-        assertEquals("Forwarding rules:", dumpStrings[0].trim());
+        assertEquals(6, dumpStrings.length);
+        assertEquals("CLAT tracker: iface: test0 (1000), v4iface: v4-test0 (1001), "
+                + "v4: /192.0.0.46, v6: /2001:db8:0:b11::464, pfx96: /64:ff9b::, "
+                + "pid: 10483, cookie: 27149", dumpStrings[0].trim());
+        assertEquals("Forwarding rules:", dumpStrings[1].trim());
         assertEquals("BPF ingress map: iif nat64Prefix v6Addr -> v4Addr oif",
-                dumpStrings[1].trim());
-        assertEquals("1000 /64:ff9b::/96 /2001:db8:0:b11::464 -> /192.0.0.46 1001",
                 dumpStrings[2].trim());
-        assertEquals("BPF egress map: iif v4Addr -> v6Addr nat64Prefix oif",
+        assertEquals("1000 /64:ff9b::/96 /2001:db8:0:b11::464 -> /192.0.0.46 1001",
                 dumpStrings[3].trim());
-        assertEquals("1001 /192.0.0.46 -> /2001:db8:0:b11::464 /64:ff9b::/96 1000 ether",
+        assertEquals("BPF egress map: iif v4Addr -> v6Addr nat64Prefix oif",
                 dumpStrings[4].trim());
+        assertEquals("1001 /192.0.0.46 -> /2001:db8:0:b11::464 /64:ff9b::/96 1000 ether",
+                dumpStrings[5].trim());
     }
 
     @Test
