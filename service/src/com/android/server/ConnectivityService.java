@@ -11387,39 +11387,6 @@ public class ConnectivityService extends IConnectivityManager.Stub
     public void replaceFirewallChain(final int chain, final int[] uids) {
         enforceNetworkStackOrSettingsPermission();
 
-        try {
-            switch (chain) {
-                case ConnectivityManager.FIREWALL_CHAIN_DOZABLE:
-                    mBpfNetMaps.replaceUidChain("fw_dozable", true /* isAllowList */, uids);
-                    break;
-                case ConnectivityManager.FIREWALL_CHAIN_STANDBY:
-                    mBpfNetMaps.replaceUidChain("fw_standby", false /* isAllowList */, uids);
-                    break;
-                case ConnectivityManager.FIREWALL_CHAIN_POWERSAVE:
-                    mBpfNetMaps.replaceUidChain("fw_powersave", true /* isAllowList */, uids);
-                    break;
-                case ConnectivityManager.FIREWALL_CHAIN_RESTRICTED:
-                    mBpfNetMaps.replaceUidChain("fw_restricted", true /* isAllowList */, uids);
-                    break;
-                case ConnectivityManager.FIREWALL_CHAIN_LOW_POWER_STANDBY:
-                    mBpfNetMaps.replaceUidChain("fw_low_power_standby", true /* isAllowList */,
-                            uids);
-                    break;
-                case ConnectivityManager.FIREWALL_CHAIN_OEM_DENY_1:
-                    mBpfNetMaps.replaceUidChain("fw_oem_deny_1", false /* isAllowList */, uids);
-                    break;
-                case ConnectivityManager.FIREWALL_CHAIN_OEM_DENY_2:
-                    mBpfNetMaps.replaceUidChain("fw_oem_deny_2", false /* isAllowList */, uids);
-                    break;
-                case ConnectivityManager.FIREWALL_CHAIN_OEM_DENY_3:
-                    mBpfNetMaps.replaceUidChain("fw_oem_deny_3", false /* isAllowList */, uids);
-                    break;
-                default:
-                    throw new IllegalArgumentException("replaceFirewallChain with invalid chain: "
-                            + chain);
-            }
-        } catch (ServiceSpecificException e) {
-            throw new IllegalStateException(e);
-        }
+        mBpfNetMaps.replaceUidChain(chain, uids);
     }
 }
