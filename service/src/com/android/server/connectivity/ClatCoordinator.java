@@ -347,6 +347,19 @@ public class ClatCoordinator {
                     && this.pid == that.pid
                     && this.cookie == that.cookie;
         }
+
+        @Override
+        public String toString() {
+            return "iface: " + iface
+                    + " (" + ifIndex + ")"
+                    + ", v4iface: " + v4iface
+                    + " (" + v4ifIndex + ")"
+                    + ", v4: " + v4
+                    + ", v6: " + v6
+                    + ", pfx96: " + pfx96
+                    + ", pid: " + pid
+                    + ", cookie: " + cookie;
+        }
     };
 
     @VisibleForTesting
@@ -819,9 +832,9 @@ public class ClatCoordinator {
      * @param pw print writer.
      */
     public void dump(@NonNull IndentingPrintWriter pw) {
-        // TODO: dump ClatdTracker
         // TODO: move map dump to a global place to avoid duplicate dump while there are two or
         // more IPv6 only networks.
+        pw.println("CLAT tracker: " + mClatdTracker.toString());
         pw.println("Forwarding rules:");
         pw.increaseIndent();
         dumpBpfIngress(pw);
