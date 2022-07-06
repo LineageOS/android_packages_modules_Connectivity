@@ -111,6 +111,7 @@ java_library {
     name: "net-utils-device-common-bpf",
     srcs: [
         "device/com/android/net/module/util/BpfBitmap.java",
+        "device/com/android/net/module/util/BpfDump.java",
         "device/com/android/net/module/util/BpfMap.java",
         "device/com/android/net/module/util/BpfUtils.java",
         "device/com/android/net/module/util/HexDump.java",
