@@ -6369,7 +6369,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
             if (null != satisfier) {
                 // If the old NRI was satisfied by an NAI, then it may have had an active request.
                 // The active request is necessary to figure out what callbacks to send, in
-                // particular then a network updates its capabilities.
+                // particular when a network updates its capabilities.
                 // As this code creates a new NRI with a new set of requests, figure out which of
                 // the list of requests should be the active request. It is always the first
                 // request of the list that can be satisfied by the satisfier since the order of

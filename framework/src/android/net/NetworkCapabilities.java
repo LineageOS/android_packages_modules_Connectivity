@@ -3043,7 +3043,7 @@ public final class NetworkCapabilities implements Parcelable {
          * <p>
          * This list cannot be null, but it can be empty to mean that no UID without the
          * {@link android.Manifest.permission.CONNECTIVITY_USE_RESTRICTED_NETWORKS} permission
-         * gets to access this network.
+         * can access this network.
          *
          * @param uids the list of UIDs that can always access this network
          * @return this builder
