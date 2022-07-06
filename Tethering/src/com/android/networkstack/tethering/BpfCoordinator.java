@@ -51,7 +51,6 @@ import android.system.ErrnoException;
 import android.system.OsConstants;
 import android.text.TextUtils;
 import android.util.ArraySet;
-import android.util.Base64;
 import android.util.Log;
 import android.util.SparseArray;
 
@@ -61,6 +60,7 @@ import androidx.annotation.Nullable;
 import com.android.internal.annotations.VisibleForTesting;
 import com.android.internal.util.IndentingPrintWriter;
 import com.android.modules.utils.build.SdkLevel;
+import com.android.net.module.util.BpfDump;
 import com.android.net.module.util.BpfMap;
 import com.android.net.module.util.CollectionUtils;
 import com.android.net.module.util.InterfaceParams;
@@ -124,9 +124,6 @@ public class BpfCoordinator {
     private static final String TETHER_DEV_MAP_PATH = makeMapPath("dev");
     private static final String DUMPSYS_RAWMAP_ARG_STATS = "--stats";
     private static final String DUMPSYS_RAWMAP_ARG_UPSTREAM4 = "--upstream4";
-
-    // Using "," as a separator is safe because base64 characters are [0-9a-zA-Z/=+].
-    private static final String DUMP_BASE64_DELIMITER = ",";
 
     /** The names of all the BPF counters defined in bpf_tethering.h. */
     public static final String[] sBpfCounterNames = getBpfCounterNames();
@@ -1080,18 +1077,6 @@ public class BpfCoordinator {
         }
     }
 
-    private <K extends Struct, V extends Struct> String bpfMapEntryToBase64String(
-            final K key, final V value) {
-        final byte[] keyBytes = key.writeToBytes();
-        final String keyBase64Str = Base64.encodeToString(keyBytes, Base64.DEFAULT)
-                .replace("\n", "");
-        final byte[] valueBytes = value.writeToBytes();
-        final String valueBase64Str = Base64.encodeToString(valueBytes, Base64.DEFAULT)
-                .replace("\n", "");
-
-        return keyBase64Str + DUMP_BASE64_DELIMITER + valueBase64Str;
-    }
-
     private <K extends Struct, V extends Struct> void dumpRawMap(BpfMap<K, V> map,
             IndentingPrintWriter pw) throws ErrnoException {
         if (map == null) {
@@ -1102,14 +1087,20 @@ public class BpfCoordinator {
             pw.println("No entries");
             return;
         }
-        map.forEach((k, v) -> pw.println(bpfMapEntryToBase64String(k, v)));
+        map.forEach((k, v) -> pw.println(BpfDump.toBase64EncodedString(k, v)));
     }
 
     /**
-     * Dump raw BPF map in base64 encoded strings. For test only.
-     * Only allow to dump one map path once.
-     * Format:
+     * Dump raw BPF map into the base64 encoded strings "<base64 key>,<base64 value>".
+     * Allow to dump only one map path once. For test only.
+     *
+     * Usage:
      * $ dumpsys tethering bpfRawMap --<map name>
+     *
+     * Output:
+     * <base64 encoded key #1>,<base64 encoded value #1>
+     * <base64 encoded key #2>,<base64 encoded value #2>
+     * ..
      */
     public void dumpRawMap(@NonNull IndentingPrintWriter pw, @Nullable String[] args) {
         // TODO: consider checking the arg order that <map name> is after "bpfRawMap". Probably
