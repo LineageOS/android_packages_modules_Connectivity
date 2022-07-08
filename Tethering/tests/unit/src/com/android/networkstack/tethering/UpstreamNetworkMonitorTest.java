@@ -49,7 +49,6 @@ import android.net.LinkAddress;
 import android.net.LinkProperties;
 import android.net.NetworkCapabilities;
 import android.net.NetworkRequest;
-import android.net.util.SharedLog;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.Message;
@@ -60,6 +59,7 @@ import androidx.test.runner.AndroidJUnit4;
 
 import com.android.internal.util.State;
 import com.android.internal.util.StateMachine;
+import com.android.net.module.util.SharedLog;
 import com.android.networkstack.tethering.TestConnectivityManager.NetworkRequestInfo;
 import com.android.networkstack.tethering.TestConnectivityManager.TestNetworkAgent;
 
