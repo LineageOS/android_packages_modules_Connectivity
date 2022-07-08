@@ -19,7 +19,6 @@ package com.android.networkstack.tethering.apishim.api31;
 import static android.net.netstats.provider.NetworkStatsProvider.QUOTA_UNLIMITED;
 
 import android.net.MacAddress;
-import android.net.util.SharedLog;
 import android.system.ErrnoException;
 import android.system.Os;
 import android.system.OsConstants;
@@ -31,6 +30,7 @@ import androidx.annotation.Nullable;
 
 import com.android.net.module.util.BpfMap;
 import com.android.net.module.util.IBpfMap.ThrowingBiConsumer;
+import com.android.net.module.util.SharedLog;
 import com.android.net.module.util.bpf.Tether4Key;
 import com.android.net.module.util.bpf.Tether4Value;
 import com.android.net.module.util.bpf.TetherStatsKey;

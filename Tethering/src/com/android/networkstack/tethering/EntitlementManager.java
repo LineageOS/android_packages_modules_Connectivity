@@ -43,7 +43,6 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.PackageManager;
-import android.net.util.SharedLog;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Parcel;
@@ -55,6 +54,7 @@ import android.util.SparseIntArray;
 
 import com.android.internal.annotations.VisibleForTesting;
 import com.android.modules.utils.build.SdkLevel;
+import com.android.net.module.util.SharedLog;
 
 import java.io.PrintWriter;
 import java.util.BitSet;
