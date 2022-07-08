@@ -67,7 +67,6 @@ import android.net.NetworkStats;
 import android.net.NetworkStats.Entry;
 import android.net.RouteInfo;
 import android.net.netstats.provider.NetworkStatsProvider;
-import android.net.util.SharedLog;
 import android.os.Build;
 import android.os.Handler;
 import android.os.test.TestLooper;
@@ -79,6 +78,7 @@ import androidx.test.filters.SmallTest;
 import androidx.test.runner.AndroidJUnit4;
 
 import com.android.internal.util.test.FakeSettingsProvider;
+import com.android.net.module.util.SharedLog;
 import com.android.testutils.DevSdkIgnoreRule;
 import com.android.testutils.DevSdkIgnoreRule.IgnoreUpTo;
 import com.android.testutils.TestableNetworkStatsProviderCbBinder;

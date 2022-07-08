@@ -30,7 +30,6 @@ import android.content.ContentResolver;
 import android.content.Context;
 import android.content.res.Resources;
 import android.net.TetheringConfigurationParcel;
-import android.net.util.SharedLog;
 import android.os.PersistableBundle;
 import android.provider.DeviceConfig;
 import android.provider.Settings;
@@ -42,6 +41,7 @@ import android.text.TextUtils;
 import com.android.internal.annotations.VisibleForTesting;
 import com.android.modules.utils.build.SdkLevel;
 import com.android.net.module.util.DeviceConfigUtils;
+import com.android.net.module.util.SharedLog;
 
 import java.io.PrintWriter;
 import java.util.ArrayList;
