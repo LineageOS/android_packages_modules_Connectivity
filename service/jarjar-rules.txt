@@ -92,7 +92,6 @@ rule android.net.shared.** com.android.connectivity.@0
 rule android.net.util.KeepalivePacketDataUtil* com.android.connectivity.@0
 
 # From connectivity-module-utils
-rule android.net.util.SharedLog* com.android.connectivity.@0
 rule android.net.shared.** com.android.connectivity.@0
 
 # From services-connectivity-shared-srcs
