@@ -22,7 +22,6 @@ import android.bluetooth.BluetoothPan;
 import android.content.Context;
 import android.net.INetd;
 import android.net.ip.IpServer;
-import android.net.util.SharedLog;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
@@ -32,6 +31,7 @@ import android.text.TextUtils;
 import androidx.annotation.NonNull;
 
 import com.android.internal.util.StateMachine;
+import com.android.net.module.util.SharedLog;
 import com.android.networkstack.apishim.BluetoothPanShimImpl;
 import com.android.networkstack.apishim.common.BluetoothPanShim;
 import com.android.networkstack.tethering.metrics.TetheringMetrics;
