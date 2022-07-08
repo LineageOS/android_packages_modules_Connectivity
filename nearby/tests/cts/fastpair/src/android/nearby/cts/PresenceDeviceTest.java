@@ -45,7 +45,7 @@ public class PresenceDeviceTest {
     private static final int RSSI = -40;
     private static final int MEDIUM = NearbyDevice.Medium.BLE;
     private static final String DEVICE_NAME = "testDevice";
-    private static final int KEY = 1234;
+    private static final int KEY = 3;
     private static final byte[] VALUE = new byte[]{1, 1, 1, 1};
     private static final byte[] SALT = new byte[]{2, 3};
     private static final byte[] SECRET_ID = new byte[]{11, 13};
