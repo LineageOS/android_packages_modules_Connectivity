@@ -28,7 +28,6 @@ import android.hardware.tetheroffload.control.V1_0.NatTimeoutUpdate;
 import android.hardware.tetheroffload.control.V1_0.NetworkProtocol;
 import android.hardware.tetheroffload.control.V1_0.OffloadCallbackEvent;
 import android.hardware.tetheroffload.control.V1_1.ITetheringOffloadCallback;
-import android.net.util.SharedLog;
 import android.net.util.SocketUtils;
 import android.os.Handler;
 import android.os.NativeHandle;
@@ -40,6 +39,7 @@ import android.util.Log;
 import android.util.Pair;
 
 import com.android.internal.annotations.VisibleForTesting;
+import com.android.net.module.util.SharedLog;
 import com.android.net.module.util.netlink.NetlinkSocket;
 import com.android.net.module.util.netlink.StructNfGenMsg;
 import com.android.net.module.util.netlink.StructNlMsgHdr;
