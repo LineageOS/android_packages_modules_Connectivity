@@ -18,6 +18,20 @@ package {
     default_applicable_licenses: ["Android-Apache-2.0"],
 }
 
+prebuilt_etc {
+    name: "TetheringInProcessFlag",
+    src: "in-process",
+    filename_from_src: true,
+    sub_dir: "flag",
+}
+
+prebuilt_etc {
+    name: "TetheringOutOfProcessFlag",
+    src: "out-of-process",
+    filename_from_src: true,
+    sub_dir: "flag",
+}
+
 // Defaults to enable/disable java targets which uses development APIs. "enabled" may have a
 // different value depending on the branch.
 java_defaults {
@@ -82,6 +96,7 @@ apex {
     prebuilts: [
         "current_sdkinfo",
         "privapp_allowlist_com.android.tethering",
+        "TetheringOutOfProcessFlag",
     ],
     manifest: "manifest.json",
     key: "com.android.tethering.key",
@@ -186,5 +201,10 @@ override_apex {
     apps: [
         "ServiceConnectivityResources",
         "InProcessTethering",
+    ],
+    prebuilts: [
+        "current_sdkinfo",
+        "privapp_allowlist_com.android.tethering",
+        "TetheringInProcessFlag",
     ],
 }
