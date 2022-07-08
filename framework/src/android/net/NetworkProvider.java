@@ -326,7 +326,9 @@ public class NetworkProvider {
     public void unregisterNetworkOffer(final @NonNull NetworkOfferCallback callback) {
         final NetworkOfferCallbackProxy proxy = findProxyForCallback(callback);
         if (null == proxy) return;
-        mProxies.remove(proxy);
+        synchronized (mProxies) {
+            mProxies.remove(proxy);
+        }
         mContext.getSystemService(ConnectivityManager.class).unofferNetwork(proxy);
     }
 }
