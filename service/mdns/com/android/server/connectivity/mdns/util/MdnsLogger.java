@@ -16,8 +16,9 @@
 
 package com.android.server.connectivity.mdns.util;
 
-import android.net.util.SharedLog;
 import android.text.TextUtils;
+
+import com.android.net.module.util.SharedLog;
 
 /**
  * The logger used in mDNS.
