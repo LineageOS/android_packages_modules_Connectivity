@@ -195,6 +195,24 @@ public class TestNetworkManager {
     /**
      * Create a tap interface for testing purposes
      *
+     * @param linkAddrs an array of LinkAddresses to assign to the TAP interface
+     * @return A TestNetworkInterface representing the underlying TAP interface. Close the contained
+     *     ParcelFileDescriptor to tear down the TAP interface.
+     * @hide
+     */
+    @RequiresPermission(Manifest.permission.MANAGE_TEST_NETWORKS)
+    @NonNull
+    public TestNetworkInterface createTapInterface(@NonNull LinkAddress[] linkAddrs) {
+        try {
+            return mService.createInterface(TAP, CARRIER_UP, BRING_UP, linkAddrs, null /* iface */);
+        } catch (RemoteException e) {
+            throw e.rethrowFromSystemServer();
+        }
+    }
+
+    /**
+     * Create a tap interface for testing purposes
+     *
      * @param bringUp whether to bring up the interface before returning it.
      *
      * @return A ParcelFileDescriptor of the underlying TAP interface. Close this to tear down the
