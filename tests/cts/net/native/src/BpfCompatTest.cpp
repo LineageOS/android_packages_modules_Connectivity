@@ -49,10 +49,11 @@ TEST(BpfTest, bpfStructSizeTestPreT) {
 TEST(BpfTest, bpfStructSizeTest) {
   if (android::modules::sdklevel::IsAtLeastU()) {
       doBpfStructSizeTest("/system/etc/bpf/gpuMem.o");
+      doBpfStructSizeTest("/system/etc/bpf/timeInState.o");
   } else {
       doBpfStructSizeTest("/system/etc/bpf/gpu_mem.o");
+      doBpfStructSizeTest("/system/etc/bpf/time_in_state.o");
   }
-  doBpfStructSizeTest("/system/etc/bpf/time_in_state.o");
 }
 
 int main(int argc, char **argv) {
