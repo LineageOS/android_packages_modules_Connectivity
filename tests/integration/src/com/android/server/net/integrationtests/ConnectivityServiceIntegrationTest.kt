@@ -47,6 +47,7 @@ import android.util.Log
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.android.connectivity.resources.R
+import com.android.server.BpfNetMaps
 import com.android.server.ConnectivityService
 import com.android.server.NetworkAgentWrapper
 import com.android.server.TestNetIdManager
@@ -208,6 +209,7 @@ class ConnectivityServiceIntegrationTest {
         doReturn(mock(ProxyTracker::class.java)).`when`(deps).makeProxyTracker(any(), any())
         doReturn(mock(MockableSystemProperties::class.java)).`when`(deps).systemProperties
         doReturn(TestNetIdManager()).`when`(deps).makeNetIdManager()
+        doReturn(mock(BpfNetMaps::class.java)).`when`(deps).getBpfNetMaps(any())
         doAnswer { inv ->
             object : MultinetworkPolicyTracker(inv.getArgument(0), inv.getArgument(1),
                     inv.getArgument(2)) {
