@@ -26,8 +26,16 @@ import static android.net.ConnectivityManager.FIREWALL_CHAIN_RESTRICTED;
 import static android.net.ConnectivityManager.FIREWALL_CHAIN_STANDBY;
 import static android.net.INetd.PERMISSION_INTERNET;
 
+import static com.android.server.BpfNetMaps.DOZABLE_MATCH;
+import static com.android.server.BpfNetMaps.IIF_MATCH;
+import static com.android.server.BpfNetMaps.NO_MATCH;
+import static com.android.server.BpfNetMaps.PENALTY_BOX_MATCH;
+import static com.android.server.BpfNetMaps.POWERSAVE_MATCH;
+import static com.android.server.BpfNetMaps.RESTRICTED_MATCH;
+
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assume.assumeFalse;
@@ -68,7 +76,9 @@ public final class BpfNetMapsTest {
 
     private static final int TEST_UID = 10086;
     private static final int[] TEST_UIDS = {10002, 10003};
-    private static final String IFNAME = "wlan0";
+    private static final String TEST_IF_NAME = "wlan0";
+    private static final int TEST_IF_INDEX = 7;
+    private static final int NO_IIF = 0;
     private static final String CHAINNAME = "fw_dozable";
     private static final U32 UID_RULES_CONFIGURATION_KEY = new U32(0);
     private static final List<Integer> FIREWALL_CHAINS = List.of(
@@ -86,19 +96,22 @@ public final class BpfNetMapsTest {
 
     @Mock INetd mNetd;
     private final BpfMap<U32, U32> mConfigurationMap = new TestBpfMap<>(U32.class, U32.class);
+    private final BpfMap<U32, UidOwnerValue> mUidOwnerMap =
+            new TestBpfMap<>(U32.class, UidOwnerValue.class);
 
     @Before
     public void setUp() throws Exception {
         MockitoAnnotations.initMocks(this);
         BpfNetMaps.setConfigurationMapForTest(mConfigurationMap);
+        BpfNetMaps.setUidOwnerMapForTest(mUidOwnerMap);
         mBpfNetMaps = new BpfNetMaps(mNetd);
     }
 
     @Test
     public void testBpfNetMapsBeforeT() throws Exception {
         assumeFalse(SdkLevel.isAtLeastT());
-        mBpfNetMaps.addUidInterfaceRules(IFNAME, TEST_UIDS);
-        verify(mNetd).firewallAddUidInterfaceRules(IFNAME, TEST_UIDS);
+        mBpfNetMaps.addUidInterfaceRules(TEST_IF_NAME, TEST_UIDS);
+        verify(mNetd).firewallAddUidInterfaceRules(TEST_IF_NAME, TEST_UIDS);
         mBpfNetMaps.removeUidInterfaceRules(TEST_UIDS);
         verify(mNetd).firewallRemoveUidInterfaceRules(TEST_UIDS);
         mBpfNetMaps.setNetPermForUids(PERMISSION_INTERNET, TEST_UIDS);
@@ -237,5 +250,86 @@ public final class BpfNetMapsTest {
     public void testSetChildChainBeforeT() {
         assertThrows(UnsupportedOperationException.class,
                 () -> mBpfNetMaps.setChildChain(FIREWALL_CHAIN_DOZABLE, true /* enable */));
+    }
+
+    private void checkUidOwnerValue(final long uid, final long expectedIif,
+            final long expectedMatch) throws Exception {
+        final UidOwnerValue config = mUidOwnerMap.getValue(new U32(uid));
+        if (expectedMatch == 0) {
+            assertNull(config);
+        } else {
+            assertEquals(expectedIif, config.iif);
+            assertEquals(expectedMatch, config.rule);
+        }
+    }
+
+    private void doTestRemoveNaughtyApp(final long iif, final long match) throws Exception {
+        mUidOwnerMap.updateEntry(new U32(TEST_UID), new UidOwnerValue(iif, match));
+
+        mBpfNetMaps.removeNaughtyApp(TEST_UID);
+
+        checkUidOwnerValue(TEST_UID, iif, match & ~PENALTY_BOX_MATCH);
+    }
+
+    @Test
+    @IgnoreUpTo(Build.VERSION_CODES.S_V2)
+    public void testRemoveNaughtyApp() throws Exception {
+        doTestRemoveNaughtyApp(NO_IIF, PENALTY_BOX_MATCH);
+
+        // PENALTY_BOX_MATCH with other matches
+        doTestRemoveNaughtyApp(NO_IIF, PENALTY_BOX_MATCH | DOZABLE_MATCH | POWERSAVE_MATCH);
+
+        // PENALTY_BOX_MATCH with IIF_MATCH
+        doTestRemoveNaughtyApp(TEST_IF_INDEX, PENALTY_BOX_MATCH | IIF_MATCH);
+
+        // PENALTY_BOX_MATCH is not enabled
+        doTestRemoveNaughtyApp(NO_IIF, DOZABLE_MATCH | POWERSAVE_MATCH | RESTRICTED_MATCH);
+    }
+
+    @Test
+    @IgnoreUpTo(Build.VERSION_CODES.S_V2)
+    public void testRemoveNaughtyAppMissingUid() {
+        // UidOwnerMap does not have entry for TEST_UID
+        assertThrows(ServiceSpecificException.class,
+                () -> mBpfNetMaps.removeNaughtyApp(TEST_UID));
+    }
+
+    @Test
+    @IgnoreAfter(Build.VERSION_CODES.S_V2)
+    public void testRemoveNaughtyAppBeforeT() {
+        assertThrows(UnsupportedOperationException.class,
+                () -> mBpfNetMaps.removeNaughtyApp(TEST_UID));
+    }
+
+    private void doTestAddNaughtyApp(final long iif, final long match) throws Exception {
+        if (match != NO_MATCH) {
+            mUidOwnerMap.updateEntry(new U32(TEST_UID), new UidOwnerValue(iif, match));
+        }
+
+        mBpfNetMaps.addNaughtyApp(TEST_UID);
+
+        checkUidOwnerValue(TEST_UID, iif, match | PENALTY_BOX_MATCH);
+    }
+
+    @Test
+    @IgnoreUpTo(Build.VERSION_CODES.S_V2)
+    public void testAddNaughtyApp() throws Exception {
+        doTestAddNaughtyApp(NO_IIF, NO_MATCH);
+
+        // Other matches are enabled
+        doTestAddNaughtyApp(NO_IIF, DOZABLE_MATCH | POWERSAVE_MATCH | RESTRICTED_MATCH);
+
+        // IIF_MATCH is enabled
+        doTestAddNaughtyApp(TEST_IF_INDEX, IIF_MATCH);
+
+        // PENALTY_BOX_MATCH is already enabled
+        doTestAddNaughtyApp(NO_IIF, PENALTY_BOX_MATCH | DOZABLE_MATCH);
+    }
+
+    @Test
+    @IgnoreAfter(Build.VERSION_CODES.S_V2)
+    public void testAddNaughtyAppBeforeT() {
+        assertThrows(UnsupportedOperationException.class,
+                () -> mBpfNetMaps.addNaughtyApp(TEST_UID));
     }
 }
