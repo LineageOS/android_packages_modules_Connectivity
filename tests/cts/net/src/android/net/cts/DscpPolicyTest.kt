@@ -78,6 +78,7 @@ import com.android.testutils.TestableNetworkAgent
 import com.android.testutils.TestableNetworkAgent.CallbackEntry.OnNetworkCreated
 import com.android.testutils.TestableNetworkAgent.CallbackEntry.OnDscpPolicyStatusUpdated
 import com.android.testutils.TestableNetworkCallback
+import com.android.net.module.util.IpUtils
 import org.junit.After
 import org.junit.Assume.assumeTrue
 import org.junit.Before
@@ -89,6 +90,7 @@ import java.net.Inet6Address
 import java.net.InetSocketAddress
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
+import java.util.Arrays
 import java.util.regex.Pattern
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
@@ -339,6 +341,9 @@ class DscpPolicyTest {
     }
 
     fun parseV4PacketDscp(buffer: ByteBuffer): Int {
+        // Validate checksum before parsing packet.
+        val calCheck = IpUtils.ipChecksum(buffer, Struct.getSize(EthernetHeader::class.java))
+
         val ip_ver = buffer.get()
         val tos = buffer.get()
         val length = buffer.getShort()
@@ -347,6 +352,8 @@ class DscpPolicyTest {
         val ttl = buffer.get()
         val ipType = buffer.get()
         val checksum = buffer.getShort()
+
+        assertEquals(0, calCheck, "Invalid IPv4 header checksum")
         return tos.toInt().shr(2)
     }
 
@@ -421,6 +428,7 @@ class DscpPolicyTest {
         val packets = generateSequence { reader.poll(PACKET_TIMEOUT_MS) }
         for (packet in packets) {
             val buffer = ByteBuffer.wrap(packet, 0, packet.size).order(ByteOrder.BIG_ENDIAN)
+
             // TODO: consider using Struct.parse for all packet parsing.
             val etherHdr = Struct.parse(EthernetHeader::class.java, buffer)
             val expectedType = if (sendV6) ETHER_TYPE_IPV6 else ETHER_TYPE_IPV4
@@ -464,6 +472,9 @@ class DscpPolicyTest {
             assertEquals(DSCP_POLICY_STATUS_SUCCESS, it.status)
         }
         validatePacket(agent, dscpValue = 1, dstPort = 4444)
+        // Send a second packet to validate that the stored BPF policy
+        // is correct for subsequent packets.
+        validatePacket(agent, dscpValue = 1, dstPort = 4444)
 
         agent.sendRemoveDscpPolicy(1)
         agent.expectCallback<OnDscpPolicyStatusUpdated>().let {
@@ -501,6 +512,9 @@ class DscpPolicyTest {
             assertEquals(1, it.policyId)
             assertEquals(DSCP_POLICY_STATUS_SUCCESS, it.status)
         }
+        validatePacket(agent, true, dscpValue = 1, dstPort = 4444)
+        // Send a second packet to validate that the stored BPF policy
+        // is correct for subsequent packets.
         validatePacket(agent, true, dscpValue = 1, dstPort = 4444)
 
         agent.sendRemoveDscpPolicy(1)
