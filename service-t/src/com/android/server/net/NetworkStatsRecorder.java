@@ -541,7 +541,8 @@ public class NetworkStatsRecorder {
 
     /**
      * Recover from {@link FileRotator} failure by dumping state to
-     * {@link DropBoxManager} and deleting contents.
+     * {@link DropBoxManager} and deleting contents if this recorder
+     * sets {@code mWipeOnError} to true, otherwise keep the contents.
      */
     void recoverAndDeleteData() {
         if (DUMP_BEFORE_DELETE) {
