@@ -231,4 +231,14 @@ public class VpnManagerServiceTest extends VpnTestBase {
     private void onPackageRemoved(String packageName, int uid, boolean isReplacing) {
         onPackageRemoved(packageName, UserHandle.USER_SYSTEM, uid, isReplacing);
     }
+
+    @Test
+    public void testReceiveIntentFromNonHandlerThread() {
+        assertThrows(IllegalStateException.class, () ->
+                mIntentReceiver.onReceive(mContext, buildIntent(Intent.ACTION_PACKAGE_REMOVED,
+                        PKGS[0], UserHandle.USER_SYSTEM, PKG_UIDS[0], true /* isReplacing */)));
+
+        assertThrows(IllegalStateException.class, () ->
+                mUserPresentReceiver.onReceive(mContext, new Intent(Intent.ACTION_USER_PRESENT)));
+    }
 }
