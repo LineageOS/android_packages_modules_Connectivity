@@ -85,24 +85,13 @@ public final class BpfNetMapsTest {
     private BpfNetMaps mBpfNetMaps;
 
     @Mock INetd mNetd;
-    private static final TestBpfMap<U32, U32> sConfigurationMap =
-            new TestBpfMap<>(U32.class, U32.class);
+    private final BpfMap<U32, U32> mConfigurationMap = new TestBpfMap<>(U32.class, U32.class);
 
     @Before
     public void setUp() throws Exception {
         MockitoAnnotations.initMocks(this);
+        BpfNetMaps.setConfigurationMapForTest(mConfigurationMap);
         mBpfNetMaps = new BpfNetMaps(mNetd);
-        BpfNetMaps.initialize(makeDependencies());
-        sConfigurationMap.clear();
-    }
-
-    private static BpfNetMaps.Dependencies makeDependencies() {
-        return new BpfNetMaps.Dependencies() {
-            @Override
-            public BpfMap<U32, U32> getConfigurationMap() {
-                return sConfigurationMap;
-            }
-        };
     }
 
     @Test
@@ -121,7 +110,7 @@ public final class BpfNetMapsTest {
         for (final int chain: enableChains) {
             match |= mBpfNetMaps.getMatchByFirewallChain(chain);
         }
-        sConfigurationMap.updateEntry(UID_RULES_CONFIGURATION_KEY, new U32(match));
+        mConfigurationMap.updateEntry(UID_RULES_CONFIGURATION_KEY, new U32(match));
 
         for (final int chain: FIREWALL_CHAINS) {
             final String testCase = "EnabledChains: " + enableChains + " CheckedChain: " + chain;
@@ -187,17 +176,17 @@ public final class BpfNetMapsTest {
             expectedMatch |= mBpfNetMaps.getMatchByFirewallChain(chain);
         }
 
-        assertEquals(0, sConfigurationMap.getValue(UID_RULES_CONFIGURATION_KEY).val);
+        assertEquals(0, mConfigurationMap.getValue(UID_RULES_CONFIGURATION_KEY).val);
 
         for (final int chain: testChains) {
             mBpfNetMaps.setChildChain(chain, true /* enable */);
         }
-        assertEquals(expectedMatch, sConfigurationMap.getValue(UID_RULES_CONFIGURATION_KEY).val);
+        assertEquals(expectedMatch, mConfigurationMap.getValue(UID_RULES_CONFIGURATION_KEY).val);
 
         for (final int chain: testChains) {
             mBpfNetMaps.setChildChain(chain, false /* enable */);
         }
-        assertEquals(0, sConfigurationMap.getValue(UID_RULES_CONFIGURATION_KEY).val);
+        assertEquals(0, mConfigurationMap.getValue(UID_RULES_CONFIGURATION_KEY).val);
     }
 
     private void doTestSetChildChain(final int testChain) throws Exception {
@@ -207,7 +196,7 @@ public final class BpfNetMapsTest {
     @Test
     @IgnoreUpTo(Build.VERSION_CODES.S_V2)
     public void testSetChildChain() throws Exception {
-        sConfigurationMap.updateEntry(UID_RULES_CONFIGURATION_KEY, new U32(0));
+        mConfigurationMap.updateEntry(UID_RULES_CONFIGURATION_KEY, new U32(0));
         doTestSetChildChain(FIREWALL_CHAIN_DOZABLE);
         doTestSetChildChain(FIREWALL_CHAIN_STANDBY);
         doTestSetChildChain(FIREWALL_CHAIN_POWERSAVE);
@@ -221,7 +210,7 @@ public final class BpfNetMapsTest {
     @Test
     @IgnoreUpTo(Build.VERSION_CODES.S_V2)
     public void testSetChildChainMultipleChain() throws Exception {
-        sConfigurationMap.updateEntry(UID_RULES_CONFIGURATION_KEY, new U32(0));
+        mConfigurationMap.updateEntry(UID_RULES_CONFIGURATION_KEY, new U32(0));
         doTestSetChildChain(List.of(
                 FIREWALL_CHAIN_DOZABLE,
                 FIREWALL_CHAIN_STANDBY));
