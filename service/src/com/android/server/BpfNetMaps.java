@@ -49,10 +49,16 @@ import java.io.IOException;
  * {@hide}
  */
 public class BpfNetMaps {
+    private static final boolean PRE_T = !SdkLevel.isAtLeastT();
+    static {
+        if (!PRE_T) {
+            System.loadLibrary("service-connectivity");
+        }
+    }
+
     private static final String TAG = "BpfNetMaps";
     private final INetd mNetd;
     // Use legacy netd for releases before T.
-    private static final boolean PRE_T = !SdkLevel.isAtLeastT();
     private static boolean sInitialized = false;
 
     // Lock for sConfigurationMap entry for UID_RULES_CONFIGURATION_KEY.
@@ -98,11 +104,26 @@ public class BpfNetMaps {
     }
 
     /**
-     * Only tests or BpfNetMaps#ensureInitialized can call this function.
+     * Set configurationMap for test.
      */
     @VisibleForTesting
-    public static void initialize(final Dependencies deps) {
-        sConfigurationMap = deps.getConfigurationMap();
+    public static void setConfigurationMapForTest(BpfMap<U32, U32> configurationMap) {
+        sConfigurationMap = configurationMap;
+    }
+
+    private static BpfMap<U32, U32> getConfigurationMap() {
+        try {
+            return new BpfMap<>(
+                    CONFIGURATION_MAP_PATH, BpfMap.BPF_F_RDWR, U32.class, U32.class);
+        } catch (ErrnoException e) {
+            throw new IllegalStateException("Cannot open netd configuration map", e);
+        }
+    }
+
+    private static void setBpfMaps() {
+        if (sConfigurationMap == null) {
+            sConfigurationMap = getConfigurationMap();
+        }
     }
 
     /**
@@ -111,31 +132,9 @@ public class BpfNetMaps {
      */
     private static synchronized void ensureInitialized() {
         if (sInitialized) return;
-        if (!PRE_T) {
-            System.loadLibrary("service-connectivity");
-            native_init();
-            initialize(new Dependencies());
-        }
+        setBpfMaps();
+        native_init();
         sInitialized = true;
-    }
-
-    /**
-     * Dependencies of BpfNetMaps, for injection in tests.
-     */
-    @VisibleForTesting
-    public static class Dependencies {
-        /**
-         *  Get configuration BPF map.
-         */
-        public BpfMap<U32, U32> getConfigurationMap() {
-            try {
-                return new BpfMap<>(
-                        CONFIGURATION_MAP_PATH, BpfMap.BPF_F_RDWR, U32.class, U32.class);
-            } catch (ErrnoException e) {
-                Log.e(TAG, "Cannot open netd configuration map: " + e);
-                return null;
-            }
-        }
     }
 
     /** Constructor used after T that doesn't need to use netd anymore. */
@@ -146,7 +145,9 @@ public class BpfNetMaps {
     }
 
     public BpfNetMaps(final INetd netd) {
-        ensureInitialized();
+        if (!PRE_T) {
+            ensureInitialized();
+        }
         mNetd = netd;
     }
 
