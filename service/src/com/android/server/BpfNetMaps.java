@@ -294,10 +294,8 @@ public class BpfNetMaps {
      *                                  cause of the failure.
      */
     public void addNiceApp(final int uid) {
-        synchronized (sUidOwnerMap) {
-            final int err = native_addNiceApp(uid);
-            maybeThrow(err, "Unable to add nice app");
-        }
+        throwIfPreT("addNiceApp is not available on pre-T devices");
+        addRule(uid, HAPPY_BOX_MATCH, "addNiceApp");
     }
 
     /**
@@ -308,10 +306,8 @@ public class BpfNetMaps {
      *                                  cause of the failure.
      */
     public void removeNiceApp(final int uid) {
-        synchronized (sUidOwnerMap) {
-            final int err = native_removeNiceApp(uid);
-            maybeThrow(err, "Unable to remove nice app");
-        }
+        throwIfPreT("removeNiceApp is not available on pre-T devices");
+        removeRule(uid, HAPPY_BOX_MATCH, "removeNiceApp");
     }
 
     /**
@@ -460,9 +456,11 @@ public class BpfNetMaps {
      *                                  cause of the failure.
      */
     public void updateUidLockdownRule(final int uid, final boolean add) {
-        synchronized (sUidOwnerMap) {
-            final int err = native_updateUidLockdownRule(uid, add);
-            maybeThrow(err, "Unable to update lockdown rule");
+        throwIfPreT("updateUidLockdownRule is not available on pre-T devices");
+        if (add) {
+            addRule(uid, LOCKDOWN_VPN_MATCH, "updateUidLockdownRule");
+        } else {
+            removeRule(uid, LOCKDOWN_VPN_MATCH, "updateUidLockdownRule");
         }
     }
 
