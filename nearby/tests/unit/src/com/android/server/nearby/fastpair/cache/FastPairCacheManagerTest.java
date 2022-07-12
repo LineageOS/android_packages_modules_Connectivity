@@ -85,30 +85,19 @@ public class FastPairCacheManagerTest {
     public void saveRetrieveInfo() {
         when(mDiscoveryItem.getCopyOfStoredItem()).thenReturn(mStoredDiscoveryItem);
         when(mDiscoveryItem.getTriggerId()).thenReturn(MODEL_ID);
-
-        FastPairCacheManager fastPairCacheManager = new FastPairCacheManager(mContext);
-        fastPairCacheManager.saveDiscoveryItem(mDiscoveryItem);
-        assertThat(fastPairCacheManager.getStoredDiscoveryItem(MODEL_ID).getAppName())
-                .isEqualTo(APP_NAME);
-    }
-
-    @Test
-    @SdkSuppress(minSdkVersion = 32, codeName = "T")
-    public void getAllInfo() {
-        when(mDiscoveryItem.getCopyOfStoredItem()).thenReturn(mStoredDiscoveryItem);
-        when(mDiscoveryItem.getTriggerId()).thenReturn(MODEL_ID);
         when(mDiscoveryItem2.getCopyOfStoredItem()).thenReturn(mStoredDiscoveryItem2);
         when(mDiscoveryItem2.getTriggerId()).thenReturn(MODEL_ID2);
 
         FastPairCacheManager fastPairCacheManager = new FastPairCacheManager(mContext);
         fastPairCacheManager.saveDiscoveryItem(mDiscoveryItem);
-
-        assertThat(fastPairCacheManager.getAllSavedStoreDiscoveryItem()).hasSize(2);
+        assertThat(fastPairCacheManager.getStoredDiscoveryItem(MODEL_ID).getAppName())
+                .isEqualTo(APP_NAME);
+        assertThat(fastPairCacheManager.getAllSavedStoreDiscoveryItem()).hasSize(1);
 
         fastPairCacheManager.saveDiscoveryItem(mDiscoveryItem2);
-
-        assertThat(fastPairCacheManager.getAllSavedStoreDiscoveryItem()).hasSize(3);
-
+        assertThat(fastPairCacheManager.getStoredDiscoveryItem(MODEL_ID2).getAppName())
+                .isEqualTo(APP_NAME);
+        assertThat(fastPairCacheManager.getAllSavedStoreDiscoveryItem()).hasSize(2);
         fastPairCacheManager.cleanUp();
     }
 
