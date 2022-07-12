@@ -36,5 +36,4 @@ oneway interface ITetheringEventCallback
     void onTetherStatesChanged(in TetherStatesParcel states);
     void onTetherClientsChanged(in List<TetheredClient> clients);
     void onOffloadStatusChanged(int status);
-    void onSupportedTetheringTypes(long supportedBitmap);
 }
