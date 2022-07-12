@@ -26,7 +26,7 @@ import android.net.TetherStatesParcel;
  * @hide
  */
 parcelable TetheringCallbackStartedParcel {
-    long supportedTypes;
+    boolean tetheringSupported;
     Network upstreamNetwork;
     TetheringConfigurationParcel config;
     TetherStatesParcel states;
