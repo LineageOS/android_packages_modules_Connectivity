@@ -27,14 +27,17 @@ import android.bluetooth.le.ScanRecord;
 import android.bluetooth.le.ScanResult;
 import android.bluetooth.le.ScanSettings;
 import android.content.Context;
+import android.nearby.DataElement;
 import android.nearby.NearbyDevice;
 import android.nearby.NearbyDeviceParcelable;
+import android.nearby.PresenceDevice;
 import android.nearby.ScanRequest;
 import android.os.ParcelUuid;
 import android.util.Log;
 
 import com.android.server.nearby.common.bluetooth.fastpair.Constants;
 import com.android.server.nearby.injector.Injector;
+import com.android.server.nearby.presence.ExtendedAdvertisement;
 import com.android.server.nearby.presence.PresenceConstants;
 import com.android.server.nearby.util.ForegroundThread;
 
@@ -81,7 +84,10 @@ public class BleDiscoveryProvider extends AbstractDiscoveryProvider {
                             } else {
                                 byte[] presenceData = serviceDataMap.get(PRESENCE_UUID);
                                 if (presenceData != null) {
-                                    builder.setData(serviceDataMap.get(PRESENCE_UUID));
+                                    byte[] data = serviceDataMap.get(PRESENCE_UUID);
+                                    ExtendedAdvertisement advertisement =
+                                            ExtendedAdvertisement.fromBytes(data);
+                                    builder.setPresenceDevice(getPresenceDevice(advertisement));
                                 }
                             }
                         }
@@ -100,11 +106,32 @@ public class BleDiscoveryProvider extends AbstractDiscoveryProvider {
         mInjector = injector;
     }
 
+    private static PresenceDevice getPresenceDevice(ExtendedAdvertisement advertisement) {
+        // TODO(238458326): After implementing encryption, use real data.
+        byte[] secretIdBytes = new byte[0];
+        PresenceDevice.Builder builder =
+                new PresenceDevice.Builder(
+                        String.valueOf(advertisement.hashCode()),
+                        advertisement.getSalt(),
+                        secretIdBytes,
+                        advertisement.getIdentity())
+                        .addMedium(NearbyDevice.Medium.BLE);
+        for (int i : advertisement.getActions()) {
+            builder.addExtendedProperty(new DataElement(DataElement.DataType.INTENT,
+                    new byte[]{(byte) i}));
+        }
+        return builder.build();
+    }
+
     private static List<ScanFilter> getScanFilters() {
         List<ScanFilter> scanFilterList = new ArrayList<>();
         scanFilterList.add(
                 new ScanFilter.Builder()
                         .setServiceData(FAST_PAIR_UUID, new byte[]{0}, new byte[]{0})
+                        .build());
+        scanFilterList.add(
+                new ScanFilter.Builder()
+                        .setServiceData(PRESENCE_UUID, new byte[]{0}, new byte[]{0})
                         .build());
         return scanFilterList;
     }
