@@ -232,7 +232,7 @@ public class VpnTest extends VpnTestBase {
     private static final int TEST_TUNNEL_RESOURCE_ID = 0x2345;
     private static final long TEST_TIMEOUT_MS = 500L;
     private static final String PRIMARY_USER_APP_EXCLUDE_KEY =
-            "VPN_APP_EXCLUDED_27_com.testvpn.vpn";
+            "VPNAPPEXCLUDED_27_com.testvpn.vpn";
     static final String PKGS_BYTES = getPackageByteString(List.of(PKGS));
     private static final Range<Integer> PRIMARY_USER_RANGE = uidRangeForUser(PRIMARY_USER.id);
 
@@ -1357,6 +1357,31 @@ public class VpnTest extends VpnTestBase {
                         null /* sessionKey */, false /* alwaysOn */, false /* lockdown */),
                 new VpnProfileState(VpnProfileState.STATE_DISCONNECTED,
                         null /* sessionKey */, true /* alwaysOn */, false /* lockdown */));
+    }
+
+    @Test
+    public void testReconnectVpnManagerVpnWithAlwaysOnEnabled() throws Exception {
+        final Vpn vpn = createVpnAndSetupUidChecks(AppOpsManager.OPSTR_ACTIVATE_PLATFORM_VPN);
+        when(mVpnProfileStore.get(vpn.getProfileNameForPackage(TEST_VPN_PKG)))
+                .thenReturn(mVpnProfile.encode());
+        vpn.startVpnProfile(TEST_VPN_PKG);
+        verifyPlatformVpnIsActivated(TEST_VPN_PKG);
+
+        // Enable VPN always-on for TEST_VPN_PKG.
+        assertTrue(vpn.setAlwaysOnPackage(TEST_VPN_PKG, false /* lockdown */,
+                null /* lockdownAllowlist */));
+
+        // Reset to verify next startVpnProfile.
+        reset(mAppOps);
+
+        vpn.stopVpnProfile(TEST_VPN_PKG);
+
+        // Reconnect the vpn with different package will cause exception.
+        assertThrows(SecurityException.class, () -> vpn.startVpnProfile(PKGS[0]));
+
+        // Reconnect the vpn again with the vpn always on package w/o exception.
+        vpn.startVpnProfile(TEST_VPN_PKG);
+        verifyPlatformVpnIsActivated(TEST_VPN_PKG);
     }
 
     @Test
