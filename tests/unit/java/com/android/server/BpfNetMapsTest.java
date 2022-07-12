@@ -27,7 +27,9 @@ import static android.net.ConnectivityManager.FIREWALL_CHAIN_STANDBY;
 import static android.net.INetd.PERMISSION_INTERNET;
 
 import static com.android.server.BpfNetMaps.DOZABLE_MATCH;
+import static com.android.server.BpfNetMaps.HAPPY_BOX_MATCH;
 import static com.android.server.BpfNetMaps.IIF_MATCH;
+import static com.android.server.BpfNetMaps.LOCKDOWN_VPN_MATCH;
 import static com.android.server.BpfNetMaps.NO_MATCH;
 import static com.android.server.BpfNetMaps.PENALTY_BOX_MATCH;
 import static com.android.server.BpfNetMaps.POWERSAVE_MATCH;
@@ -331,5 +333,129 @@ public final class BpfNetMapsTest {
     public void testAddNaughtyAppBeforeT() {
         assertThrows(UnsupportedOperationException.class,
                 () -> mBpfNetMaps.addNaughtyApp(TEST_UID));
+    }
+
+    private void doTestRemoveNiceApp(final long iif, final long match) throws Exception {
+        mUidOwnerMap.updateEntry(new U32(TEST_UID), new UidOwnerValue(iif, match));
+
+        mBpfNetMaps.removeNiceApp(TEST_UID);
+
+        checkUidOwnerValue(TEST_UID, iif, match & ~HAPPY_BOX_MATCH);
+    }
+
+    @Test
+    @IgnoreUpTo(Build.VERSION_CODES.S_V2)
+    public void testRemoveNiceApp() throws Exception {
+        doTestRemoveNiceApp(NO_IIF, HAPPY_BOX_MATCH);
+
+        // HAPPY_BOX_MATCH with other matches
+        doTestRemoveNiceApp(NO_IIF, HAPPY_BOX_MATCH | DOZABLE_MATCH | POWERSAVE_MATCH);
+
+        // HAPPY_BOX_MATCH with IIF_MATCH
+        doTestRemoveNiceApp(TEST_IF_INDEX, HAPPY_BOX_MATCH | IIF_MATCH);
+
+        // HAPPY_BOX_MATCH is not enabled
+        doTestRemoveNiceApp(NO_IIF, DOZABLE_MATCH | POWERSAVE_MATCH | RESTRICTED_MATCH);
+    }
+
+    @Test
+    @IgnoreUpTo(Build.VERSION_CODES.S_V2)
+    public void testRemoveNiceAppMissingUid() {
+        // UidOwnerMap does not have entry for TEST_UID
+        assertThrows(ServiceSpecificException.class,
+                () -> mBpfNetMaps.removeNiceApp(TEST_UID));
+    }
+
+    @Test
+    @IgnoreAfter(Build.VERSION_CODES.S_V2)
+    public void testRemoveNiceAppBeforeT() {
+        assertThrows(UnsupportedOperationException.class,
+                () -> mBpfNetMaps.removeNiceApp(TEST_UID));
+    }
+
+    private void doTestAddNiceApp(final long iif, final long match) throws Exception {
+        if (match != NO_MATCH) {
+            mUidOwnerMap.updateEntry(new U32(TEST_UID), new UidOwnerValue(iif, match));
+        }
+
+        mBpfNetMaps.addNiceApp(TEST_UID);
+
+        checkUidOwnerValue(TEST_UID, iif, match | HAPPY_BOX_MATCH);
+    }
+
+    @Test
+    @IgnoreUpTo(Build.VERSION_CODES.S_V2)
+    public void testAddNiceApp() throws Exception {
+        doTestAddNiceApp(NO_IIF, NO_MATCH);
+
+        // Other matches are enabled
+        doTestAddNiceApp(NO_IIF, DOZABLE_MATCH | POWERSAVE_MATCH | RESTRICTED_MATCH);
+
+        // IIF_MATCH is enabled
+        doTestAddNiceApp(TEST_IF_INDEX, IIF_MATCH);
+
+        // HAPPY_BOX_MATCH is already enabled
+        doTestAddNiceApp(NO_IIF, HAPPY_BOX_MATCH | DOZABLE_MATCH);
+    }
+
+    @Test
+    @IgnoreAfter(Build.VERSION_CODES.S_V2)
+    public void testAddNiceAppBeforeT() {
+        assertThrows(UnsupportedOperationException.class,
+                () -> mBpfNetMaps.addNiceApp(TEST_UID));
+    }
+
+    private void doTestUpdateUidLockdownRule(final long iif, final long match, final boolean add)
+            throws Exception {
+        if (match != NO_MATCH) {
+            mUidOwnerMap.updateEntry(new U32(TEST_UID), new UidOwnerValue(iif, match));
+        }
+
+        mBpfNetMaps.updateUidLockdownRule(TEST_UID, add);
+
+        final long expectedMatch = add ? match | LOCKDOWN_VPN_MATCH : match & ~LOCKDOWN_VPN_MATCH;
+        checkUidOwnerValue(TEST_UID, iif, expectedMatch);
+    }
+
+    private static final boolean ADD = true;
+    private static final boolean REMOVE = false;
+
+    @Test
+    @IgnoreUpTo(Build.VERSION_CODES.S_V2)
+    public void testUpdateUidLockdownRuleAddLockdown() throws Exception {
+        doTestUpdateUidLockdownRule(NO_IIF, NO_MATCH, ADD);
+
+        // Other matches are enabled
+        doTestUpdateUidLockdownRule(
+                NO_IIF, DOZABLE_MATCH | POWERSAVE_MATCH | RESTRICTED_MATCH, ADD);
+
+        // IIF_MATCH is enabled
+        doTestUpdateUidLockdownRule(TEST_IF_INDEX, DOZABLE_MATCH, ADD);
+
+        // LOCKDOWN_VPN_MATCH is already enabled
+        doTestUpdateUidLockdownRule(NO_IIF, LOCKDOWN_VPN_MATCH | DOZABLE_MATCH, ADD);
+    }
+
+    @Test
+    @IgnoreUpTo(Build.VERSION_CODES.S_V2)
+    public void testUpdateUidLockdownRuleRemoveLockdown() throws Exception {
+        doTestUpdateUidLockdownRule(NO_IIF, LOCKDOWN_VPN_MATCH, REMOVE);
+
+        // LOCKDOWN_VPN_MATCH with other matches
+        doTestUpdateUidLockdownRule(
+                NO_IIF, LOCKDOWN_VPN_MATCH | POWERSAVE_MATCH | RESTRICTED_MATCH, REMOVE);
+
+        // LOCKDOWN_VPN_MATCH with IIF_MATCH
+        doTestUpdateUidLockdownRule(TEST_IF_INDEX, LOCKDOWN_VPN_MATCH | IIF_MATCH, REMOVE);
+
+        // LOCKDOWN_VPN_MATCH is not enabled
+        doTestUpdateUidLockdownRule(NO_IIF, POWERSAVE_MATCH | RESTRICTED_MATCH, REMOVE);
+    }
+
+    @Test
+    @IgnoreAfter(Build.VERSION_CODES.S_V2)
+    public void testUpdateUidLockdownRuleBeforeT() {
+        assertThrows(UnsupportedOperationException.class,
+                () -> mBpfNetMaps.updateUidLockdownRule(TEST_UID, true /* add */));
     }
 }
