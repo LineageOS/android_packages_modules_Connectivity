@@ -87,7 +87,12 @@ public class BleDiscoveryProvider extends AbstractDiscoveryProvider {
                                     byte[] data = serviceDataMap.get(PRESENCE_UUID);
                                     ExtendedAdvertisement advertisement =
                                             ExtendedAdvertisement.fromBytes(data);
-                                    builder.setPresenceDevice(getPresenceDevice(advertisement));
+                                    if (advertisement == null) {
+                                        Log.w(TAG, "Failed to parse PresenceDevice from "
+                                                + "advertisement.");
+                                    } else {
+                                        builder.setPresenceDevice(getPresenceDevice(advertisement));
+                                    }
                                 }
                             }
                         }
