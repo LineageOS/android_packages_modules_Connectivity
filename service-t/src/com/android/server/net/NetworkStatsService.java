@@ -24,7 +24,6 @@ import static android.content.Intent.ACTION_SHUTDOWN;
 import static android.content.Intent.ACTION_UID_REMOVED;
 import static android.content.Intent.ACTION_USER_REMOVED;
 import static android.content.Intent.EXTRA_UID;
-import static android.content.pm.PackageManager.PERMISSION_GRANTED;
 import static android.net.NetworkCapabilities.TRANSPORT_CELLULAR;
 import static android.net.NetworkCapabilities.TRANSPORT_WIFI;
 import static android.net.NetworkStats.DEFAULT_NETWORK_ALL;
@@ -2816,24 +2815,6 @@ public class NetworkStatsService extends INetworkStatsService.Stub {
         return stats;
     }
 
-    // TODO: It is copied from ConnectivityService, consider refactor these check permission
-    //  functions to a proper util.
-    private boolean checkAnyPermissionOf(String... permissions) {
-        for (String permission : permissions) {
-            if (mContext.checkCallingOrSelfPermission(permission) == PERMISSION_GRANTED) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    private void enforceAnyPermissionOf(String... permissions) {
-        if (!checkAnyPermissionOf(permissions)) {
-            throw new SecurityException("Requires one of the following permissions: "
-                    + String.join(", ", permissions) + ".");
-        }
-    }
-
     /**
      * Registers a custom provider of {@link android.net.NetworkStats} to combine the network
      * statistics that cannot be seen by the kernel to system. To unregister, invoke the
@@ -2848,7 +2829,7 @@ public class NetworkStatsService extends INetworkStatsService.Stub {
      */
     public @NonNull INetworkStatsProviderCallback registerNetworkStatsProvider(
             @NonNull String tag, @NonNull INetworkStatsProvider provider) {
-        enforceAnyPermissionOf(NETWORK_STATS_PROVIDER,
+        PermissionUtils.enforceAnyPermissionOf(mContext, NETWORK_STATS_PROVIDER,
                 NetworkStack.PERMISSION_MAINLINE_NETWORK_STACK);
         Objects.requireNonNull(provider, "provider is null");
         Objects.requireNonNull(tag, "tag is null");
