@@ -90,6 +90,7 @@ public class PresenceScanFilterTest {
         assertThat(parcelFilter.getType()).isEqualTo(ScanRequest.SCAN_TYPE_NEARBY_PRESENCE);
         assertThat(parcelFilter.getMaxPathLoss()).isEqualTo(RSSI);
         assertThat(parcelFilter.getPresenceActions()).containsExactly(ACTION);
+        assertThat(parcelFilter.getExtendedProperties().get(0).getKey()).isEqualTo(KEY);
     }
 
     @Test
