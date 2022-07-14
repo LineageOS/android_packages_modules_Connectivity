@@ -32,7 +32,6 @@ import android.net.ITetheredInterfaceCallback;
 import android.net.IpConfiguration;
 import android.net.NetworkCapabilities;
 import android.net.NetworkSpecifier;
-import android.os.Binder;
 import android.os.Handler;
 import android.os.RemoteException;
 import android.util.Log;
@@ -188,13 +187,7 @@ public class EthernetServiceImpl extends IEthernetManager.Stub {
     @Override
     protected void dump(FileDescriptor fd, PrintWriter writer, String[] args) {
         final IndentingPrintWriter pw = new IndentingPrintWriter(writer, "  ");
-        if (mContext.checkCallingOrSelfPermission(android.Manifest.permission.DUMP)
-                != PackageManager.PERMISSION_GRANTED) {
-            pw.println("Permission Denial: can't dump EthernetService from pid="
-                    + Binder.getCallingPid()
-                    + ", uid=" + Binder.getCallingUid());
-            return;
-        }
+        if (!PermissionUtils.checkDumpPermission(mContext, TAG, pw)) return;
 
         pw.println("Current Ethernet state: ");
         pw.increaseIndent();
