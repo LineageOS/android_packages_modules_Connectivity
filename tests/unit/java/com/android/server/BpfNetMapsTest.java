@@ -41,6 +41,7 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assume.assumeFalse;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.verify;
 
 import android.net.INetd;
@@ -81,6 +82,7 @@ public final class BpfNetMapsTest {
     private static final String TEST_IF_NAME = "wlan0";
     private static final int TEST_IF_INDEX = 7;
     private static final int NO_IIF = 0;
+    private static final int NULL_IIF = 0;
     private static final String CHAINNAME = "fw_dozable";
     private static final U32 UID_RULES_CONFIGURATION_KEY = new U32(0);
     private static final List<Integer> FIREWALL_CHAINS = List.of(
@@ -97,6 +99,7 @@ public final class BpfNetMapsTest {
     private BpfNetMaps mBpfNetMaps;
 
     @Mock INetd mNetd;
+    @Mock BpfNetMaps.Dependencies mDeps;
     private final BpfMap<U32, U32> mConfigurationMap = new TestBpfMap<>(U32.class, U32.class);
     private final BpfMap<U32, UidOwnerValue> mUidOwnerMap =
             new TestBpfMap<>(U32.class, UidOwnerValue.class);
@@ -104,9 +107,10 @@ public final class BpfNetMapsTest {
     @Before
     public void setUp() throws Exception {
         MockitoAnnotations.initMocks(this);
+        doReturn(TEST_IF_INDEX).when(mDeps).getIfIndex(TEST_IF_NAME);
         BpfNetMaps.setConfigurationMapForTest(mConfigurationMap);
         BpfNetMaps.setUidOwnerMapForTest(mUidOwnerMap);
-        mBpfNetMaps = new BpfNetMaps(mNetd);
+        mBpfNetMaps = new BpfNetMaps(mNetd, mDeps);
     }
 
     @Test
@@ -457,5 +461,73 @@ public final class BpfNetMapsTest {
     public void testUpdateUidLockdownRuleBeforeT() {
         assertThrows(UnsupportedOperationException.class,
                 () -> mBpfNetMaps.updateUidLockdownRule(TEST_UID, true /* add */));
+    }
+
+    @Test
+    @IgnoreUpTo(Build.VERSION_CODES.S_V2)
+    public void testAddUidInterfaceRules() throws Exception {
+        final int uid0 = TEST_UIDS[0];
+        final int uid1 = TEST_UIDS[1];
+
+        mBpfNetMaps.addUidInterfaceRules(TEST_IF_NAME, TEST_UIDS);
+
+        checkUidOwnerValue(uid0, TEST_IF_INDEX, IIF_MATCH);
+        checkUidOwnerValue(uid1, TEST_IF_INDEX, IIF_MATCH);
+    }
+
+    @Test
+    @IgnoreUpTo(Build.VERSION_CODES.S_V2)
+    public void testAddUidInterfaceRulesWithOtherMatch() throws Exception {
+        final int uid0 = TEST_UIDS[0];
+        final int uid1 = TEST_UIDS[1];
+        final long match0 = DOZABLE_MATCH;
+        final long match1 = DOZABLE_MATCH | POWERSAVE_MATCH | RESTRICTED_MATCH;
+        mUidOwnerMap.updateEntry(new U32(uid0), new UidOwnerValue(NO_IIF, match0));
+        mUidOwnerMap.updateEntry(new U32(uid1), new UidOwnerValue(NO_IIF, match1));
+
+        mBpfNetMaps.addUidInterfaceRules(TEST_IF_NAME, TEST_UIDS);
+
+        checkUidOwnerValue(uid0, TEST_IF_INDEX, match0 | IIF_MATCH);
+        checkUidOwnerValue(uid1, TEST_IF_INDEX, match1 | IIF_MATCH);
+    }
+
+    @Test
+    @IgnoreUpTo(Build.VERSION_CODES.S_V2)
+    public void testAddUidInterfaceRulesWithExistingIifMatch() throws Exception {
+        final int uid0 = TEST_UIDS[0];
+        final int uid1 = TEST_UIDS[1];
+        final long match0 = IIF_MATCH;
+        final long match1 = IIF_MATCH | DOZABLE_MATCH | POWERSAVE_MATCH | RESTRICTED_MATCH;
+        mUidOwnerMap.updateEntry(new U32(uid0), new UidOwnerValue(TEST_IF_INDEX + 1, match0));
+        mUidOwnerMap.updateEntry(new U32(uid1), new UidOwnerValue(NULL_IIF, match1));
+
+        mBpfNetMaps.addUidInterfaceRules(TEST_IF_NAME, TEST_UIDS);
+
+        checkUidOwnerValue(uid0, TEST_IF_INDEX, match0);
+        checkUidOwnerValue(uid1, TEST_IF_INDEX, match1);
+    }
+
+    @Test
+    @IgnoreUpTo(Build.VERSION_CODES.S_V2)
+    public void testAddUidInterfaceRulesGetIfIndexFail() {
+        doReturn(0).when(mDeps).getIfIndex(TEST_IF_NAME);
+        assertThrows(ServiceSpecificException.class,
+                () -> mBpfNetMaps.addUidInterfaceRules(TEST_IF_NAME, TEST_UIDS));
+    }
+
+    @Test
+    @IgnoreUpTo(Build.VERSION_CODES.S_V2)
+    public void testAddUidInterfaceRulesWithNullInterface() throws Exception {
+        final int uid0 = TEST_UIDS[0];
+        final int uid1 = TEST_UIDS[1];
+        final long match0 = IIF_MATCH;
+        final long match1 = IIF_MATCH | DOZABLE_MATCH | POWERSAVE_MATCH | RESTRICTED_MATCH;
+        mUidOwnerMap.updateEntry(new U32(uid0), new UidOwnerValue(TEST_IF_INDEX, match0));
+        mUidOwnerMap.updateEntry(new U32(uid1), new UidOwnerValue(NULL_IIF, match1));
+
+        mBpfNetMaps.addUidInterfaceRules(null /* ifName */, TEST_UIDS);
+
+        checkUidOwnerValue(uid0, NULL_IIF, match0);
+        checkUidOwnerValue(uid1, NULL_IIF, match1);
     }
 }
