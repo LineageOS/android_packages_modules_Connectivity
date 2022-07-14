@@ -87,7 +87,8 @@ public class BroadcastProviderManager implements BleBroadcastProvider.BroadcastL
                     return;
                 }
                 mBroadcastListener = listener;
-                mBleBroadcastProvider.start(advertisement.toBytes(), this);
+                mBleBroadcastProvider.start(presenceBroadcastRequest.getVersion(),
+                        advertisement.toBytes(), this);
             });
         }
     }
