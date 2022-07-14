@@ -1312,7 +1312,26 @@ public class LinkPropertiesTest {
         assertEquals(3, lp.getRoutes().size());
     }
 
-    @Test @IgnoreUpTo(Build.VERSION_CODES.R)
+    @Test @IgnoreUpTo(Build.VERSION_CODES.R) @IgnoreAfter(Build.VERSION_CODES.S_V2)
+    @CtsNetTestCasesMaxTargetSdk31(reason = "Compat change cannot be overridden when targeting T+")
+    @DisableCompatChanges({LinkProperties.EXCLUDED_ROUTES})
+    public void testExcludedRoutesDisabled_S() {
+        final LinkProperties lp = new LinkProperties();
+        assertEquals(0, lp.getRoutes().size());
+
+        lp.addRoute(new RouteInfo(new IpPrefix(ADDRV4, 0), RTN_UNREACHABLE));
+        assertEquals(1, lp.getRoutes().size());
+
+        lp.addRoute(new RouteInfo(new IpPrefix(ADDRV6, 5), RTN_THROW));
+        // RTN_THROW routes are visible on S when added by the caller (but they are not added by
+        // the system). This is uncommon usage but was tested by CTSv12.
+        assertEquals(2, lp.getRoutes().size());
+
+        lp.addRoute(new RouteInfo(new IpPrefix(ADDRV6, 2), RTN_UNICAST));
+        assertEquals(3, lp.getRoutes().size());
+    }
+
+    @Test @IgnoreUpTo(Build.VERSION_CODES.S_V2)
     @CtsNetTestCasesMaxTargetSdk31(reason = "Compat change cannot be overridden when targeting T+")
     @DisableCompatChanges({LinkProperties.EXCLUDED_ROUTES})
     public void testExcludedRoutesDisabled() {
@@ -1320,12 +1339,12 @@ public class LinkPropertiesTest {
         assertEquals(0, lp.getRoutes().size());
 
         lp.addRoute(new RouteInfo(new IpPrefix(ADDRV4, 0), RTN_UNREACHABLE));
-        assertEquals(0, lp.getRoutes().size());
+        assertEquals(1, lp.getRoutes().size());
 
         lp.addRoute(new RouteInfo(new IpPrefix(ADDRV6, 5), RTN_THROW));
-        assertEquals(0, lp.getRoutes().size());
+        assertEquals(1, lp.getRoutes().size());
 
         lp.addRoute(new RouteInfo(new IpPrefix(ADDRV6, 2), RTN_UNICAST));
-        assertEquals(1, lp.getRoutes().size());
+        assertEquals(2, lp.getRoutes().size());
     }
 }
