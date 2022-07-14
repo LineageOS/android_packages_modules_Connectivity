@@ -47,6 +47,7 @@ java_defaults {
         "net-utils-framework-common",
         "net-utils-device-common",
         "net-utils-device-common-bpf",
+        "net-utils-device-common-ip",
         "net-utils-device-common-netlink",
         "netd-client",
         "tetheringstatsprotos",
