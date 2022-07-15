@@ -137,7 +137,7 @@ public final class DnsResolver {
          * @param answer <T> answer to the query.
          * @param rcode The response code in the DNS response.
          *
-         * {@see android.net.DnsResolver#query query()}
+         * @see android.net.DnsResolver#query query()
          */
         void onAnswer(@NonNull T answer, int rcode);
         /**
