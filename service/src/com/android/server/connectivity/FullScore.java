@@ -76,16 +76,16 @@ public class FullScore {
     public static final int POLICY_IS_VPN = 62;
 
     // This network has been selected by the user manually from settings or a 3rd party app
-    // at least once. {@see NetworkAgentConfig#explicitlySelected}.
+    // at least once. @see NetworkAgentConfig#explicitlySelected.
     /** @hide */
     public static final int POLICY_EVER_USER_SELECTED = 61;
 
     // The user has indicated in UI that this network should be used even if it doesn't
-    // validate. {@see NetworkAgentConfig#acceptUnvalidated}.
+    // validate. @see NetworkAgentConfig#acceptUnvalidated.
     /** @hide */
     public static final int POLICY_ACCEPT_UNVALIDATED = 60;
 
-    // This network is unmetered. {@see NetworkCapabilities.NET_CAPABILITY_NOT_METERED}.
+    // This network is unmetered. @see NetworkCapabilities.NET_CAPABILITY_NOT_METERED.
     /** @hide */
     public static final int POLICY_IS_UNMETERED = 59;
 
