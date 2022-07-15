@@ -126,7 +126,7 @@ import java.util.concurrent.Executor;
  * http://www.iana.org/form/ports-service. Existing services can be found at
  * http://www.iana.org/assignments/service-names-port-numbers/service-names-port-numbers.xml
  *
- * {@see NsdServiceInfo}
+ * @see NsdServiceInfo
  */
 @SystemService(Context.NSD_SERVICE)
 public final class NsdManager {

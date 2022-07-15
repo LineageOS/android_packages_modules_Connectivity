@@ -252,7 +252,7 @@ public final class NetworkAgentConfig implements Parcelable {
 
     /**
      * Whether network validation should be performed for this VPN network.
-     * {@see #isVpnValidationRequired}
+     * @see #isVpnValidationRequired
      * @hide
      */
     private boolean mVpnRequiresValidation = false;
