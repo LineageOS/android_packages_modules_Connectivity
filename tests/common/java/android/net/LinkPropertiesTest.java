@@ -1339,12 +1339,12 @@ public class LinkPropertiesTest {
         assertEquals(0, lp.getRoutes().size());
 
         lp.addRoute(new RouteInfo(new IpPrefix(ADDRV4, 0), RTN_UNREACHABLE));
-        assertEquals(1, lp.getRoutes().size());
+        assertEquals(0, lp.getRoutes().size());
 
         lp.addRoute(new RouteInfo(new IpPrefix(ADDRV6, 5), RTN_THROW));
-        assertEquals(1, lp.getRoutes().size());
+        assertEquals(0, lp.getRoutes().size());
 
         lp.addRoute(new RouteInfo(new IpPrefix(ADDRV6, 2), RTN_UNICAST));
-        assertEquals(2, lp.getRoutes().size());
+        assertEquals(1, lp.getRoutes().size());
     }
 }
