@@ -296,7 +296,7 @@ public class EntitlementManager {
      *  4th priority : Checks whether provisioning is required from RRO configuration.
      *
      * @param config
-     * @return integer {@see #TETHERING_PROVISIONING_NOT_REQUIRED,
+     * @return integer See {@link #TETHERING_PROVISIONING_NOT_REQUIRED,
      *                 #TETHERING_PROVISIONING_REQUIRED,
      *                 #TETHERING_PROVISIONING_CARRIER_UNSUPPORT}
      */
