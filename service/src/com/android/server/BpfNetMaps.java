@@ -24,6 +24,8 @@ import static android.net.ConnectivityManager.FIREWALL_CHAIN_OEM_DENY_3;
 import static android.net.ConnectivityManager.FIREWALL_CHAIN_POWERSAVE;
 import static android.net.ConnectivityManager.FIREWALL_CHAIN_RESTRICTED;
 import static android.net.ConnectivityManager.FIREWALL_CHAIN_STANDBY;
+import static android.net.ConnectivityManager.FIREWALL_RULE_ALLOW;
+import static android.net.ConnectivityManager.FIREWALL_RULE_DENY;
 import static android.system.OsConstants.EINVAL;
 import static android.system.OsConstants.ENODEV;
 import static android.system.OsConstants.ENOENT;
@@ -35,7 +37,6 @@ import android.os.ServiceSpecificException;
 import android.system.ErrnoException;
 import android.system.Os;
 import android.util.Log;
-import android.util.SparseLongArray;
 
 import com.android.internal.annotations.GuardedBy;
 import com.android.internal.annotations.VisibleForTesting;
@@ -94,22 +95,6 @@ public class BpfNetMaps {
     @VisibleForTesting public static final long OEM_DENY_2_MATCH = (1 << 10);
     @VisibleForTesting public static final long OEM_DENY_3_MATCH = (1 << 11);
     // LINT.ThenChange(packages/modules/Connectivity/bpf_progs/bpf_shared.h)
-
-    // TODO: Use Java BpfMap instead of JNI code (TrafficController) for map update.
-    // Currently, BpfNetMaps uses TrafficController for map update and TrafficController
-    // (changeUidOwnerRule and toggleUidOwnerMap) also does conversion from "firewall chain" to
-    // "match". Migrating map update from JNI to Java BpfMap will solve this duplication.
-    private static final SparseLongArray FIREWALL_CHAIN_TO_MATCH = new SparseLongArray();
-    static {
-        FIREWALL_CHAIN_TO_MATCH.put(FIREWALL_CHAIN_DOZABLE, DOZABLE_MATCH);
-        FIREWALL_CHAIN_TO_MATCH.put(FIREWALL_CHAIN_STANDBY, STANDBY_MATCH);
-        FIREWALL_CHAIN_TO_MATCH.put(FIREWALL_CHAIN_POWERSAVE, POWERSAVE_MATCH);
-        FIREWALL_CHAIN_TO_MATCH.put(FIREWALL_CHAIN_RESTRICTED, RESTRICTED_MATCH);
-        FIREWALL_CHAIN_TO_MATCH.put(FIREWALL_CHAIN_LOW_POWER_STANDBY, LOW_POWER_STANDBY_MATCH);
-        FIREWALL_CHAIN_TO_MATCH.put(FIREWALL_CHAIN_OEM_DENY_1, OEM_DENY_1_MATCH);
-        FIREWALL_CHAIN_TO_MATCH.put(FIREWALL_CHAIN_OEM_DENY_2, OEM_DENY_2_MATCH);
-        FIREWALL_CHAIN_TO_MATCH.put(FIREWALL_CHAIN_OEM_DENY_3, OEM_DENY_3_MATCH);
-    }
 
     /**
      * Set configurationMap for test.
@@ -203,11 +188,50 @@ public class BpfNetMaps {
      */
     @VisibleForTesting
     public long getMatchByFirewallChain(final int chain) {
-        final long match = FIREWALL_CHAIN_TO_MATCH.get(chain, NO_MATCH);
-        if (match == NO_MATCH) {
-            throw new ServiceSpecificException(EINVAL, "Invalid firewall chain: " + chain);
+        switch (chain) {
+            case FIREWALL_CHAIN_DOZABLE:
+                return DOZABLE_MATCH;
+            case FIREWALL_CHAIN_STANDBY:
+                return STANDBY_MATCH;
+            case FIREWALL_CHAIN_POWERSAVE:
+                return POWERSAVE_MATCH;
+            case FIREWALL_CHAIN_RESTRICTED:
+                return RESTRICTED_MATCH;
+            case FIREWALL_CHAIN_LOW_POWER_STANDBY:
+                return LOW_POWER_STANDBY_MATCH;
+            case FIREWALL_CHAIN_OEM_DENY_1:
+                return OEM_DENY_1_MATCH;
+            case FIREWALL_CHAIN_OEM_DENY_2:
+                return OEM_DENY_2_MATCH;
+            case FIREWALL_CHAIN_OEM_DENY_3:
+                return OEM_DENY_3_MATCH;
+            default:
+                throw new ServiceSpecificException(EINVAL, "Invalid firewall chain: " + chain);
         }
-        return match;
+    }
+
+    /**
+     * Get if the chain is allow list or not.
+     *
+     * ALLOWLIST means the firewall denies all by default, uids must be explicitly allowed
+     * DENYLIST means the firewall allows all by default, uids must be explicitly denyed
+     */
+    @VisibleForTesting
+    public boolean isFirewallAllowList(final int chain) {
+        switch (chain) {
+            case FIREWALL_CHAIN_DOZABLE:
+            case FIREWALL_CHAIN_POWERSAVE:
+            case FIREWALL_CHAIN_RESTRICTED:
+            case FIREWALL_CHAIN_LOW_POWER_STANDBY:
+                return true;
+            case FIREWALL_CHAIN_STANDBY:
+            case FIREWALL_CHAIN_OEM_DENY_1:
+            case FIREWALL_CHAIN_OEM_DENY_2:
+            case FIREWALL_CHAIN_OEM_DENY_3:
+                return false;
+            default:
+                throw new ServiceSpecificException(EINVAL, "Invalid firewall chain: " + chain);
+        }
     }
 
     private void maybeThrow(final int err, final String msg) {
@@ -412,9 +436,17 @@ public class BpfNetMaps {
      *                                  cause of the failure.
      */
     public void setUidRule(final int childChain, final int uid, final int firewallRule) {
-        synchronized (sUidOwnerMap) {
-            final int err = native_setUidRule(childChain, uid, firewallRule);
-            maybeThrow(err, "Unable to set uid rule");
+        throwIfPreT("setUidRule is not available on pre-T devices");
+
+        final long match = getMatchByFirewallChain(childChain);
+        final boolean isAllowList = isFirewallAllowList(childChain);
+        final boolean add = (firewallRule == FIREWALL_RULE_ALLOW && isAllowList)
+                || (firewallRule == FIREWALL_RULE_DENY && !isAllowList);
+
+        if (add) {
+            addRule(uid, match, "setUidRule");
+        } else {
+            removeRule(uid, match, "setUidRule");
         }
     }
 
