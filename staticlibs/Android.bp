@@ -37,6 +37,7 @@ java_library {
       "device/com/android/net/module/util/DeviceConfigUtils.java",
       "device/com/android/net/module/util/FdEventsReader.java",
       "device/com/android/net/module/util/HexDump.java",
+      "device/com/android/net/module/util/NetworkMonitorUtils.java",
       "device/com/android/net/module/util/PacketReader.java",
       "device/com/android/net/module/util/SharedLog.java",
       // This library is used by system modules, for which the system health impact of Kotlin
@@ -69,6 +70,7 @@ java_library {
   libs: [
       "androidx.annotation_annotation",
       "framework-annotations-lib",
+      "framework-connectivity.stubs.module_lib",
   ],
   lint: { strict_updatability_linting: true },
 }
