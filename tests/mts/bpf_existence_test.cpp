@@ -35,11 +35,6 @@ using android::modules::sdklevel::IsAtLeastR;
 using android::modules::sdklevel::IsAtLeastS;
 using android::modules::sdklevel::IsAtLeastT;
 
-// Mainline development branches lack the constant for the current development OS.
-#ifndef __ANDROID_API_T__
-#define __ANDROID_API_T__ 33
-#endif
-
 #define PLATFORM "/sys/fs/bpf/"
 #define TETHERING "/sys/fs/bpf/tethering/"
 #define PRIVATE "/sys/fs/bpf/net_private/"
