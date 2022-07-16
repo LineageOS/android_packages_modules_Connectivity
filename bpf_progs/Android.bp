@@ -92,11 +92,33 @@ bpf {
 }
 
 bpf {
+    name: "offload@btf.o",
+    srcs: ["offload@btf.c"],
+    btf: true,
+    cflags: [
+        "-Wall",
+        "-Werror",
+        "-DBTF",
+    ],
+}
+
+bpf {
     name: "test.o",
     srcs: ["test.c"],
     cflags: [
         "-Wall",
         "-Werror",
+    ],
+}
+
+bpf {
+    name: "test@btf.o",
+    srcs: ["test@btf.c"],
+    btf: true,
+    cflags: [
+        "-Wall",
+        "-Werror",
+        "-DBTF",
     ],
 }
 
