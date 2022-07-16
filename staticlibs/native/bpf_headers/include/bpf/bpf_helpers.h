@@ -37,6 +37,9 @@
 // Android T / 13 (api level 33) - support for shared/selinux_context/pindir
 #define BPFLOADER_T_VERSION 19u
 
+// BpfLoader v0.25+ support obj@ver.o files
+#define BPFLOADER_OBJ_AT_VER_VERSION 25u
+
 /* For mainline module use, you can #define BPFLOADER_{MIN/MAX}_VER
  * before #include "bpf_helpers.h" to change which bpfloaders will
  * process the resulting .o file.
