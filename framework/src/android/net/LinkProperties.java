@@ -769,16 +769,15 @@ public final class LinkProperties implements Parcelable {
             // system) will not see it in getRoutes on T+ if they do not have the compat change
             // enabled (target SDK < T); but this is expected to be rare and typically only affect
             // tests creating LinkProperties themselves (like CTS v12, which is only running on S).
-            return Collections.unmodifiableList(getNonThrowRoutes());
+            return Collections.unmodifiableList(getUnicastRoutes());
         }
     }
 
     /**
-     * Returns all the {@link RouteInfo} that are not of type {@link RouteInfo#RTN_THROW} set on
-     * this link.
+     * Returns all the {@link RouteInfo} of type {@link RouteInfo#RTN_UNICAST} set on this link.
      */
-    private @NonNull List<RouteInfo> getNonThrowRoutes() {
-        return CollectionUtils.filter(mRoutes, route -> route.getType() != RouteInfo.RTN_THROW);
+    private @NonNull List<RouteInfo> getUnicastRoutes() {
+        return CollectionUtils.filter(mRoutes, route -> route.getType() == RouteInfo.RTN_UNICAST);
     }
 
     /**
