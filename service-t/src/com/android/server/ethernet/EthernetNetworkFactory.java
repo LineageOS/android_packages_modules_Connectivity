@@ -293,7 +293,7 @@ public class EthernetNetworkFactory {
         private final Context mContext;
         private final NetworkProvider mNetworkProvider;
         private final Dependencies mDeps;
-        private final NetworkProvider.NetworkOfferCallback mNetworkOfferCallback;
+        private NetworkProvider.NetworkOfferCallback mNetworkOfferCallback;
 
         private static String sTcpBufferSizes = null;  // Lazy initialized.
 
@@ -400,8 +400,15 @@ public class EthernetNetworkFactory {
         }
 
         private class EthernetNetworkOfferCallback implements NetworkProvider.NetworkOfferCallback {
+            private boolean isStale() {
+                return this != mNetworkOfferCallback;
+            }
+
             @Override
             public void onNetworkNeeded(@NonNull NetworkRequest request) {
+                if (isStale()) {
+                    return;
+                }
                 if (DBG) {
                     Log.d(TAG, String.format("%s: onNetworkNeeded for request: %s", name, request));
                 }
@@ -416,6 +423,9 @@ public class EthernetNetworkFactory {
 
             @Override
             public void onNetworkUnneeded(@NonNull NetworkRequest request) {
+                if (isStale()) {
+                    return;
+                }
                 if (DBG) {
                     Log.d(TAG,
                             String.format("%s: onNetworkUnneeded for request: %s", name, request));
@@ -443,7 +453,6 @@ public class EthernetNetworkFactory {
             mContext = context;
             mNetworkProvider = networkProvider;
             mDeps = deps;
-            mNetworkOfferCallback = new EthernetNetworkOfferCallback();
             mHwAddress = hwAddress;
         }
 
@@ -669,13 +678,21 @@ public class EthernetNetworkFactory {
         }
 
         private void registerNetworkOffer() {
+            // If mNetworkOfferCallback is already set, it should be reused to update the existing
+            // offer.
+            if (mNetworkOfferCallback == null) {
+                mNetworkOfferCallback = new EthernetNetworkOfferCallback();
+            }
             mNetworkProvider.registerNetworkOffer(getNetworkScore(),
                     new NetworkCapabilities(mCapabilities), cmd -> mHandler.post(cmd),
                     mNetworkOfferCallback);
         }
 
-        public void unregisterNetworkOfferAndStop() {
+        private void unregisterNetworkOfferAndStop() {
             mNetworkProvider.unregisterNetworkOffer(mNetworkOfferCallback);
+            // Setting mNetworkOfferCallback to null allows the callback object to be identified
+            // as stale.
+            mNetworkOfferCallback = null;
             stop();
             mRequestIds.clear();
         }
