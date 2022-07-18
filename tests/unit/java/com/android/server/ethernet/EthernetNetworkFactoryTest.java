@@ -726,4 +726,16 @@ public class EthernetNetworkFactoryTest {
         triggerOnProvisioningSuccess();
         verifyRestart(initialIpConfig);
     }
+
+    @Test
+    public void testOnNetworkNeededOnStaleNetworkOffer() throws Exception {
+        initEthernetNetworkFactory();
+        createAndVerifyProvisionedInterface(TEST_IFACE);
+        mNetFactory.updateInterfaceLinkState(TEST_IFACE, false, null);
+        verify(mNetworkProvider).unregisterNetworkOffer(mNetworkOfferCallback);
+        // It is possible that even after a network offer is unregistered, CS still sends it
+        // onNetworkNeeded() callbacks.
+        mNetworkOfferCallback.onNetworkNeeded(createDefaultRequest());
+        verify(mIpClient, never()).startProvisioning(any());
+    }
 }
