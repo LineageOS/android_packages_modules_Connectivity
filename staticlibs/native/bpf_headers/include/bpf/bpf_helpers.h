@@ -182,20 +182,39 @@ static int (*bpf_map_delete_elem_unsafe)(const struct bpf_map_def* map,
         return bpf_map_delete_elem_unsafe(&the_map, k);                                          \
     };
 
+#ifndef DEFAULT_BPF_MAP_SELINUX_CONTEXT
+#define DEFAULT_BPF_MAP_SELINUX_CONTEXT ""
+#endif
+
+#ifndef DEFAULT_BPF_MAP_PIN_SUBDIR
+#define DEFAULT_BPF_MAP_PIN_SUBDIR ""
+#endif
+
+#ifndef DEFAULT_BPF_MAP_UID
+#define DEFAULT_BPF_MAP_UID AID_ROOT
+#elif BPFLOADER_MIN_VER < 21u
+#error "Bpf Map UID must be left at default of AID_ROOT for BpfLoader prior to v0.21"
+#endif
+
 #define DEFINE_BPF_MAP_UGM(the_map, TYPE, KeyType, ValueType, num_entries, usr, grp, md) \
-    DEFINE_BPF_MAP_EXT(the_map, TYPE, KeyType, ValueType, num_entries, usr, grp, md, "", "", false)
+    DEFINE_BPF_MAP_EXT(the_map, TYPE, KeyType, ValueType, num_entries, usr, grp, md, \
+                       DEFAULT_BPF_MAP_SELINUX_CONTEXT, DEFAULT_BPF_MAP_PIN_SUBDIR, false)
 
 #define DEFINE_BPF_MAP(the_map, TYPE, KeyType, ValueType, num_entries) \
-    DEFINE_BPF_MAP_UGM(the_map, TYPE, KeyType, ValueType, num_entries, AID_ROOT, AID_ROOT, 0600)
+    DEFINE_BPF_MAP_UGM(the_map, TYPE, KeyType, ValueType, num_entries, \
+                       DEFAULT_BPF_MAP_UID, AID_ROOT, 0600)
 
 #define DEFINE_BPF_MAP_GWO(the_map, TYPE, KeyType, ValueType, num_entries, gid) \
-    DEFINE_BPF_MAP_UGM(the_map, TYPE, KeyType, ValueType, num_entries, AID_ROOT, gid, 0620)
+    DEFINE_BPF_MAP_UGM(the_map, TYPE, KeyType, ValueType, num_entries, \
+                       DEFAULT_BPF_MAP_UID, gid, 0620)
 
 #define DEFINE_BPF_MAP_GRO(the_map, TYPE, KeyType, ValueType, num_entries, gid) \
-    DEFINE_BPF_MAP_UGM(the_map, TYPE, KeyType, ValueType, num_entries, AID_ROOT, gid, 0640)
+    DEFINE_BPF_MAP_UGM(the_map, TYPE, KeyType, ValueType, num_entries, \
+                       DEFAULT_BPF_MAP_UID, gid, 0640)
 
 #define DEFINE_BPF_MAP_GRW(the_map, TYPE, KeyType, ValueType, num_entries, gid) \
-    DEFINE_BPF_MAP_UGM(the_map, TYPE, KeyType, ValueType, num_entries, AID_ROOT, gid, 0660)
+    DEFINE_BPF_MAP_UGM(the_map, TYPE, KeyType, ValueType, num_entries, \
+                       DEFAULT_BPF_MAP_UID, gid, 0660)
 
 static int (*bpf_probe_read)(void* dst, int size, void* unsafe_ptr) = (void*) BPF_FUNC_probe_read;
 static int (*bpf_probe_read_str)(void* dst, int size, void* unsafe_ptr) = (void*) BPF_FUNC_probe_read_str;
@@ -224,9 +243,18 @@ static long (*bpf_get_current_comm)(void* buf, uint32_t buf_size) = (void*) BPF_
     SECTION(SECTION_NAME)                                                                          \
     int the_prog
 
+#ifndef DEFAULT_BPF_PROG_SELINUX_CONTEXT
+#define DEFAULT_BPF_PROG_SELINUX_CONTEXT ""
+#endif
+
+#ifndef DEFAULT_BPF_PROG_PIN_SUBDIR
+#define DEFAULT_BPF_PROG_PIN_SUBDIR ""
+#endif
+
 #define DEFINE_BPF_PROG_KVER_RANGE_OPT(SECTION_NAME, prog_uid, prog_gid, the_prog, min_kv, max_kv, \
                                        opt) \
-    DEFINE_BPF_PROG_EXT(SECTION_NAME, prog_uid, prog_gid, the_prog, min_kv, max_kv, opt, "", "")
+    DEFINE_BPF_PROG_EXT(SECTION_NAME, prog_uid, prog_gid, the_prog, min_kv, max_kv, opt, \
+                        DEFAULT_BPF_PROG_SELINUX_CONTEXT, DEFAULT_BPF_PROG_PIN_SUBDIR)
 
 // Programs (here used in the sense of functions/sections) marked optional are allowed to fail
 // to load (for example due to missing kernel patches).
