@@ -65,6 +65,7 @@ static const set<string> MAINLINE_FOR_S_PLUS = {
     TETHERING "map_offload_tether_stats_map",
     TETHERING "map_offload_tether_upstream4_map",
     TETHERING "map_offload_tether_upstream6_map",
+    TETHERING "map_test_bitmap",
     TETHERING "map_test_tether_downstream6_map",
     TETHERING "prog_offload_schedcls_tether_downstream4_ether",
     TETHERING "prog_offload_schedcls_tether_downstream4_rawip",
@@ -74,6 +75,11 @@ static const set<string> MAINLINE_FOR_S_PLUS = {
     TETHERING "prog_offload_schedcls_tether_upstream4_rawip",
     TETHERING "prog_offload_schedcls_tether_upstream6_ether",
     TETHERING "prog_offload_schedcls_tether_upstream6_rawip",
+};
+
+// Provided by *current* mainline module for S+ devices with 5.10+ kernels
+static const set<string> MAINLINE_FOR_S_5_10_PLUS = {
+    TETHERING "prog_test_xdp_drop_ipv4_udp_ether",
 };
 
 // Provided by *current* mainline module for T+ devices
@@ -146,6 +152,7 @@ void getFileLists(set<string>* expected, set<string>* unexpected) {
     DO_EXPECT(IsAtLeastR() && !IsAtLeastS(), PLATFORM_ONLY_IN_R);
 
     DO_EXPECT(IsAtLeastS(), MAINLINE_FOR_S_PLUS);
+    DO_EXPECT(IsAtLeastS() && isAtLeastKernelVersion(5, 10, 0), MAINLINE_FOR_S_5_10_PLUS);
 
     // Nothing added or removed in SCv2.
 
