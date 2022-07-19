@@ -320,14 +320,21 @@ public class EthernetNetworkFactoryTest {
     public void testUpdateInterfaceLinkStateForProvisionedInterface() throws Exception {
         initEthernetNetworkFactory();
         createAndVerifyProvisionedInterface(TEST_IFACE);
-        final TestNetworkManagementListener listener = new TestNetworkManagementListener();
+        final TestNetworkManagementListener listenerDown = new TestNetworkManagementListener();
+        final TestNetworkManagementListener listenerUp = new TestNetworkManagementListener();
 
-        final boolean ret =
-                mNetFactory.updateInterfaceLinkState(TEST_IFACE, false /* up */, listener);
+        final boolean retDown =
+                mNetFactory.updateInterfaceLinkState(TEST_IFACE, false /* up */, listenerDown);
 
-        assertTrue(ret);
+        assertTrue(retDown);
         verifyStop();
-        assertEquals(listener.expectOnResult(), TEST_IFACE);
+        assertEquals(listenerDown.expectOnResult(), TEST_IFACE);
+
+        final boolean retUp =
+                mNetFactory.updateInterfaceLinkState(TEST_IFACE, true /* up */, listenerUp);
+
+        assertTrue(retUp);
+        assertEquals(listenerUp.expectOnResult(), TEST_IFACE);
     }
 
     @Test
