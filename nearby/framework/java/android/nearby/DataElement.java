@@ -94,6 +94,17 @@ public final class DataElement implements Parcelable {
     }
 
     /**
+     * @return {@code true} if this is identity type.
+     * @hide
+     */
+    public boolean isIdentityDataType() {
+        return mKey == DataType.PRIVATE_IDENTITY
+                || mKey == DataType.TRUSTED_IDENTITY
+                || mKey == DataType.PUBLIC_IDENTITY
+                || mKey == DataType.PROVISIONED_IDENTITY;
+    }
+
+    /**
      * Constructs a {@link DataElement}.
      */
     public DataElement(int key, @NonNull byte[] value) {
