@@ -1041,7 +1041,7 @@ public final class NetworkStats implements Parcelable, Iterable<NetworkStats.Ent
      */
     public long getTotalPackets() {
         long total = 0;
-        for (int i = size-1; i >= 0; i--) {
+        for (int i = size - 1; i >= 0; i--) {
             total += rxPackets[i] + txPackets[i];
         }
         return total;
