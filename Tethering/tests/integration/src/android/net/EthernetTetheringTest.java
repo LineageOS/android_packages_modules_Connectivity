@@ -86,7 +86,6 @@ import com.android.net.module.util.bpf.TetherStatsKey;
 import com.android.net.module.util.bpf.TetherStatsValue;
 import com.android.net.module.util.structs.Ipv6Header;
 import com.android.testutils.DevSdkIgnoreRule;
-import com.android.testutils.DevSdkIgnoreRule.IgnoreAfter;
 import com.android.testutils.DevSdkIgnoreRule.IgnoreUpTo;
 import com.android.testutils.DeviceInfoUtils;
 import com.android.testutils.DumpTestUtils;
@@ -978,7 +977,7 @@ public class EthernetTetheringTest {
         return null;
     }
 
-    private void runUdp4Test(boolean usingBpf) throws Exception {
+    private void runUdp4Test(boolean verifyBpf) throws Exception {
         final TetheringTester tester = initTetheringTester(toList(TEST_IP4_ADDR),
                 toList(TEST_IP4_DNS));
         final TetheredDevice tethered = tester.createTetheredDevice(TEST_MAC, false /* hasIpv6 */);
@@ -999,7 +998,7 @@ public class EthernetTetheringTest {
         sendUploadPacketUdp(srcMac, dstMac, clientIp, remoteIp, tester, false /* is4To6 */);
         sendDownloadPacketUdp(remoteIp, tetheringUpstreamIp, tester, false /* is6To4 */);
 
-        if (usingBpf) {
+        if (verifyBpf) {
             // Send second UDP packet in original direction.
             // The BPF coordinator only offloads the ASSURED conntrack entry. The "request + reply"
             // packets can make status IPS_SEEN_REPLY to be set. Need one more packet to make
@@ -1107,12 +1106,6 @@ public class EthernetTetheringTest {
         return new TetheringTester(mDownstreamReader, mUpstreamReader);
     }
 
-    @Test
-    @IgnoreAfter(Build.VERSION_CODES.R)
-    public void testTetherUdpV4UpToR() throws Exception {
-        runUdp4Test(false /* usingBpf */);
-    }
-
     private static boolean isUdpOffloadSupportedByKernel(final String kernelVersion) {
         final KVersion current = DeviceInfoUtils.getMajorMinorSubminorVersion(kernelVersion);
         return current.isInRange(new KVersion(4, 14, 222), new KVersion(4, 19, 0))
@@ -1139,23 +1132,47 @@ public class EthernetTetheringTest {
         assertTrue(isUdpOffloadSupportedByKernel("5.10.0"));
     }
 
-    // TODO: refactor test testTetherUdpV4* into IPv4 UDP non-offload and offload tests.
-    // That can be easier to know which feature is verified from test results.
+    private static void assumeKernelSupportBpfOffloadUdpV4() {
+        final String kernelVersion = VintfRuntimeInfo.getKernelVersion();
+        assumeTrue("Kernel version " + kernelVersion + " doesn't support IPv4 UDP BPF offload",
+                isUdpOffloadSupportedByKernel(kernelVersion));
+    }
+
+    @Test
+    public void testKernelSupportBpfOffloadUdpV4() throws Exception {
+        assumeKernelSupportBpfOffloadUdpV4();
+    }
+
+    @Test
+    public void testTetherConfigBpfOffloadEnabled() throws Exception {
+        assumeTrue(isTetherConfigBpfOffloadEnabled());
+    }
+
+    /**
+     * Basic IPv4 UDP tethering test. Verify that UDP tethered packets are transferred no matter
+     * using which data path.
+     */
+    @Test
+    public void testTetherUdpV4() throws Exception {
+        runUdp4Test(false /* verifyBpf */);
+    }
+
+    /**
+     * BPF offload IPv4 UDP tethering test. Verify that UDP tethered packets are offloaded by BPF.
+     * Minimum test requirement:
+     * 1. S+ device.
+     * 2. Tethering config enables tethering BPF offload.
+     * 3. Kernel supports IPv4 UDP BPF offload. See #isUdpOffloadSupportedByKernel.
+     *
+     * TODO: consider enabling the test even tethering config disables BPF offload. See b/238288883
+     */
     @Test
     @IgnoreUpTo(Build.VERSION_CODES.R)
-    public void testTetherUdpV4AfterR() throws Exception {
-        final String kernelVersion = VintfRuntimeInfo.getKernelVersion();
-        final boolean isUdpOffloadSupported = isUdpOffloadSupportedByKernel(kernelVersion);
-        if (!isUdpOffloadSupported) {
-            Log.i(TAG, "testTetherUdpV4AfterR will skip BPF offload test for kernel "
-                    + kernelVersion);
-        }
-        final boolean isTetherConfigBpfOffloadEnabled = isTetherConfigBpfOffloadEnabled();
-        if (!isTetherConfigBpfOffloadEnabled) {
-            Log.i(TAG, "testTetherUdpV4AfterR will skip BPF offload test "
-                    + "because tethering config doesn't enable BPF offload.");
-        }
-        runUdp4Test(isUdpOffloadSupported && isTetherConfigBpfOffloadEnabled);
+    public void testTetherUdpV4_VerifyBpf() throws Exception {
+        assumeTrue("Tethering config disabled BPF offload", isTetherConfigBpfOffloadEnabled());
+        assumeKernelSupportBpfOffloadUdpV4();
+
+        runUdp4Test(true /* verifyBpf */);
     }
 
     @Nullable
