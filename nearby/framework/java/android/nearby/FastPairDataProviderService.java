@@ -20,6 +20,7 @@ import android.accounts.Account;
 import android.annotation.IntDef;
 import android.annotation.NonNull;
 import android.annotation.Nullable;
+import android.annotation.SystemApi;
 import android.app.Service;
 import android.content.Intent;
 import android.nearby.aidl.ByteArrayParcel;
@@ -58,6 +59,7 @@ import java.util.List;
  *
  * @hide
  */
+@SystemApi
 public abstract class FastPairDataProviderService extends Service {
     /**
      * The action the wrapping service should have in its intent filter to implement the
@@ -65,6 +67,7 @@ public abstract class FastPairDataProviderService extends Service {
      *
      * @hide
      */
+    @SystemApi
     public static final String ACTION_FAST_PAIR_DATA_PROVIDER =
             "android.nearby.action.FAST_PAIR_DATA_PROVIDER";
 
@@ -73,6 +76,7 @@ public abstract class FastPairDataProviderService extends Service {
      *
      * @hide
      */
+    @SystemApi
     public static final int MANAGE_REQUEST_ADD = 0;
 
     /**
@@ -80,6 +84,7 @@ public abstract class FastPairDataProviderService extends Service {
      *
      * @hide
      */
+    @SystemApi
     public static final int MANAGE_REQUEST_REMOVE = 1;
 
     /**
@@ -96,6 +101,7 @@ public abstract class FastPairDataProviderService extends Service {
      *
      * @hide
      */
+    @SystemApi
     public static final int ERROR_CODE_BAD_REQUEST = 0;
 
     /**
@@ -103,6 +109,7 @@ public abstract class FastPairDataProviderService extends Service {
      *
      * @hide
      */
+    @SystemApi
     public static final int ERROR_CODE_INTERNAL_ERROR = 1;
 
     /**
@@ -123,6 +130,7 @@ public abstract class FastPairDataProviderService extends Service {
      * @param tag TAG for on device logging.
      * @hide
      */
+    @SystemApi
     public FastPairDataProviderService(@NonNull String tag) {
         mBinder = new Service();
         mTag = tag;
@@ -139,6 +147,7 @@ public abstract class FastPairDataProviderService extends Service {
      *
      * @hide
      */
+    @SystemApi
     public interface FastPairAntispoofKeyDeviceMetadataCallback {
 
         /**
@@ -146,6 +155,7 @@ public abstract class FastPairDataProviderService extends Service {
          *
          * @hide
          */
+        @SystemApi
         void onFastPairAntispoofKeyDeviceMetadataReceived(
                 @NonNull FastPairAntispoofKeyDeviceMetadata metadata);
 
@@ -153,6 +163,7 @@ public abstract class FastPairDataProviderService extends Service {
          *
          * @hide
          */
+        @SystemApi
         void onError(@ErrorCode int code, @Nullable String message);
     }
 
@@ -161,6 +172,7 @@ public abstract class FastPairDataProviderService extends Service {
      *
      * @hide
      */
+    @SystemApi
     public interface FastPairAccountDevicesMetadataCallback {
 
         /**
@@ -168,6 +180,7 @@ public abstract class FastPairDataProviderService extends Service {
          *
          * @hide
          */
+        @SystemApi
         void onFastPairAccountDevicesMetadataReceived(
                 @NonNull Collection<FastPairAccountKeyDeviceMetadata> metadatas);
         /**
@@ -175,6 +188,7 @@ public abstract class FastPairDataProviderService extends Service {
          *
          * @hide
          */
+        @SystemApi
         void onError(@ErrorCode int code, @Nullable String message);
     }
 
@@ -183,6 +197,7 @@ public abstract class FastPairDataProviderService extends Service {
      *
      * @hide
      */
+    @SystemApi
     public interface FastPairEligibleAccountsCallback {
 
         /**
@@ -190,6 +205,7 @@ public abstract class FastPairDataProviderService extends Service {
          *
          * @hide
          */
+        @SystemApi
         void onFastPairEligibleAccountsReceived(
                 @NonNull Collection<FastPairEligibleAccount> accounts);
         /**
@@ -197,6 +213,7 @@ public abstract class FastPairDataProviderService extends Service {
          *
          * @hide
          */
+        @SystemApi
         void onError(@ErrorCode int code, @Nullable String message);
     }
 
@@ -205,6 +222,7 @@ public abstract class FastPairDataProviderService extends Service {
      *
      * @hide
      */
+    @SystemApi
     public interface FastPairManageActionCallback {
 
         /**
@@ -212,12 +230,14 @@ public abstract class FastPairDataProviderService extends Service {
          *
          * @hide
          */
+        @SystemApi
         void onSuccess();
         /**
          * Invoked in case of error.
          *
          * @hide
          */
+        @SystemApi
         void onError(@ErrorCode int code, @Nullable String message);
     }
 
@@ -227,6 +247,7 @@ public abstract class FastPairDataProviderService extends Service {
      *
      * @hide
      */
+    @SystemApi
     public abstract void onLoadFastPairAntispoofKeyDeviceMetadata(
             @NonNull FastPairAntispoofKeyDeviceMetadataRequest request,
             @NonNull FastPairAntispoofKeyDeviceMetadataCallback callback);
@@ -237,6 +258,7 @@ public abstract class FastPairDataProviderService extends Service {
      *
      * @hide
      */
+    @SystemApi
     public abstract void onLoadFastPairAccountDevicesMetadata(
             @NonNull FastPairAccountDevicesMetadataRequest request,
             @NonNull FastPairAccountDevicesMetadataCallback callback);
@@ -247,6 +269,7 @@ public abstract class FastPairDataProviderService extends Service {
      *
      * @hide
      */
+    @SystemApi
     public abstract void onLoadFastPairEligibleAccounts(
             @NonNull FastPairEligibleAccountsRequest request,
             @NonNull FastPairEligibleAccountsCallback callback);
@@ -256,6 +279,7 @@ public abstract class FastPairDataProviderService extends Service {
      *
      * @hide
      */
+    @SystemApi
     public abstract void onManageFastPairAccount(
             @NonNull FastPairManageAccountRequest request,
             @NonNull FastPairManageActionCallback callback);
@@ -265,6 +289,7 @@ public abstract class FastPairDataProviderService extends Service {
      *
      * @hide
      */
+    @SystemApi
     public abstract void onManageFastPairAccountDevice(
             @NonNull FastPairManageAccountDeviceRequest request,
             @NonNull FastPairManageActionCallback callback);
@@ -276,6 +301,7 @@ public abstract class FastPairDataProviderService extends Service {
      *
      * @hide
      */
+    @SystemApi
     public static class FastPairAntispoofKeyDeviceMetadataRequest {
 
         private final FastPairAntispoofKeyDeviceMetadataRequestParcel mMetadataRequestParcel;
@@ -295,6 +321,7 @@ public abstract class FastPairDataProviderService extends Service {
          *         time.
          * @hide
          */
+        @SystemApi
         public @NonNull byte[] getModelId() {
             return this.mMetadataRequestParcel.modelId;
         }
@@ -315,6 +342,7 @@ public abstract class FastPairDataProviderService extends Service {
      * needs to set account with a non-empty allow list.
      * @hide
      */
+    @SystemApi
     public static class FastPairAccountDevicesMetadataRequest {
 
         private final FastPairAccountDevicesMetadataRequestParcel mMetadataRequestParcel;
@@ -330,6 +358,7 @@ public abstract class FastPairDataProviderService extends Service {
          * @return a FastPair account.
          * @hide
          */
+        @SystemApi
         public @NonNull Account getAccount() {
             return this.mMetadataRequestParcel.account;
         }
@@ -344,6 +373,7 @@ public abstract class FastPairDataProviderService extends Service {
          * @return allowlist of Fast Pair devices using a collection of deviceAccountKeys.
          * @hide
          */
+        @SystemApi
         public @NonNull Collection<byte[]> getDeviceAccountKeys()  {
             if (this.mMetadataRequestParcel.deviceAccountKeys == null) {
                 return new ArrayList<byte[]>(0);
@@ -363,6 +393,7 @@ public abstract class FastPairDataProviderService extends Service {
      *
      * @hide
      */
+    @SystemApi
     public static class FastPairEligibleAccountsRequest {
         @SuppressWarnings("UnusedVariable")
         private final FastPairEligibleAccountsRequestParcel mAccountsRequestParcel;
@@ -381,6 +412,7 @@ public abstract class FastPairDataProviderService extends Service {
      *
      * @hide
      */
+    @SystemApi
     public static class FastPairManageAccountRequest {
 
         private final FastPairManageAccountRequestParcel mAccountRequestParcel;
@@ -395,6 +427,7 @@ public abstract class FastPairDataProviderService extends Service {
          *
          * @hide
          */
+        @SystemApi
         public @ManageRequestType int getRequestType() {
             return this.mAccountRequestParcel.requestType;
         }
@@ -403,6 +436,7 @@ public abstract class FastPairDataProviderService extends Service {
          *
          * @hide
          */
+        @SystemApi
         public @NonNull Account getAccount() {
             return this.mAccountRequestParcel.account;
         }
@@ -416,6 +450,7 @@ public abstract class FastPairDataProviderService extends Service {
      *
      * @hide
      */
+    @SystemApi
     public static class FastPairManageAccountDeviceRequest {
 
         private final FastPairManageAccountDeviceRequestParcel mRequestParcel;
@@ -430,6 +465,7 @@ public abstract class FastPairDataProviderService extends Service {
          *
          * @hide
          */
+        @SystemApi
         public @ManageRequestType int getRequestType() {
             return this.mRequestParcel.requestType;
         }
@@ -438,6 +474,7 @@ public abstract class FastPairDataProviderService extends Service {
          *
          * @hide
          */
+        @SystemApi
         public @NonNull Account getAccount() {
             return this.mRequestParcel.account;
         }
@@ -446,6 +483,7 @@ public abstract class FastPairDataProviderService extends Service {
          *
          * @hide
          */
+        @SystemApi
         public @NonNull FastPairAccountKeyDeviceMetadata getAccountKeyDeviceMetadata() {
             return new FastPairAccountKeyDeviceMetadata(
                     this.mRequestParcel.accountKeyDeviceMetadata);

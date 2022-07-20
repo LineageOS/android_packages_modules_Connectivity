@@ -18,6 +18,7 @@ package android.nearby;
 
 import android.annotation.NonNull;
 import android.annotation.Nullable;
+import android.annotation.SystemApi;
 import android.nearby.aidl.FastPairAccountKeyDeviceMetadataParcel;
 
 /**
@@ -25,6 +26,7 @@ import android.nearby.aidl.FastPairAccountKeyDeviceMetadataParcel;
  *
  * @hide
  */
+@SystemApi
 public class FastPairAccountKeyDeviceMetadata {
 
     FastPairAccountKeyDeviceMetadataParcel mMetadataParcel;
@@ -40,6 +42,7 @@ public class FastPairAccountKeyDeviceMetadata {
      * @return 16-byte Account Key.
      * @hide
      */
+    @SystemApi
     @Nullable
     public byte[] getDeviceAccountKey() {
         return mMetadataParcel.deviceAccountKey;
@@ -52,6 +55,7 @@ public class FastPairAccountKeyDeviceMetadata {
      * @return 32-byte Sha256 hash value.
      * @hide
      */
+    @SystemApi
     @Nullable
     public byte[] getSha256DeviceAccountKeyPublicAddress() {
         return mMetadataParcel.sha256DeviceAccountKeyPublicAddress;
@@ -62,6 +66,7 @@ public class FastPairAccountKeyDeviceMetadata {
      *
      * @hide
      */
+    @SystemApi
     @Nullable
     public FastPairDeviceMetadata getFastPairDeviceMetadata() {
         if (mMetadataParcel.metadata == null) {
@@ -75,6 +80,7 @@ public class FastPairAccountKeyDeviceMetadata {
      *
      * @hide
      */
+    @SystemApi
     @Nullable
     public FastPairDiscoveryItem getFastPairDiscoveryItem() {
         if (mMetadataParcel.discoveryItem == null) {
@@ -88,6 +94,7 @@ public class FastPairAccountKeyDeviceMetadata {
      *
      * @hide
      */
+    @SystemApi
     public static final class Builder {
 
         private final FastPairAccountKeyDeviceMetadataParcel mBuilderParcel;
@@ -97,6 +104,7 @@ public class FastPairAccountKeyDeviceMetadata {
          *
          * @hide
          */
+        @SystemApi
         public Builder() {
             mBuilderParcel = new FastPairAccountKeyDeviceMetadataParcel();
             mBuilderParcel.deviceAccountKey = null;
@@ -113,6 +121,7 @@ public class FastPairAccountKeyDeviceMetadata {
          * @return The builder, to facilitate chaining {@code builder.setXXX(..).setXXX(..)}.
          * @hide
          */
+        @SystemApi
         @NonNull
         public Builder setDeviceAccountKey(@Nullable byte[] deviceAccountKey) {
             mBuilderParcel.deviceAccountKey = deviceAccountKey;
@@ -127,6 +136,7 @@ public class FastPairAccountKeyDeviceMetadata {
          * @return The builder, to facilitate chaining {@code builder.setXXX(..).setXXX(..)}.
          * @hide
          */
+        @SystemApi
         @NonNull
         public Builder setSha256DeviceAccountKeyPublicAddress(
                 @Nullable byte[] sha256DeviceAccountKeyPublicAddress) {
@@ -143,6 +153,7 @@ public class FastPairAccountKeyDeviceMetadata {
          * @return The builder, to facilitate chaining {@code builder.setXXX(..).setXXX(..)}.
          * @hide
          */
+        @SystemApi
         @NonNull
         public Builder setFastPairDeviceMetadata(@Nullable FastPairDeviceMetadata metadata) {
             if (metadata == null) {
@@ -160,6 +171,7 @@ public class FastPairAccountKeyDeviceMetadata {
          * @return The builder, to facilitate chaining {@code builder.setXXX(..).setXXX(..)}.
          * @hide
          */
+        @SystemApi
         @NonNull
         public Builder setFastPairDiscoveryItem(@Nullable FastPairDiscoveryItem discoveryItem) {
             if (discoveryItem == null) {
@@ -175,6 +187,7 @@ public class FastPairAccountKeyDeviceMetadata {
          *
          * @hide
          */
+        @SystemApi
         @NonNull
         public FastPairAccountKeyDeviceMetadata build() {
             return new FastPairAccountKeyDeviceMetadata(mBuilderParcel);
