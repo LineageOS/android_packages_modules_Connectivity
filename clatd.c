@@ -138,7 +138,7 @@ void read_packet(int read_fd, int write_fd, int to_ipv6) {
 //     u128 tgt_ip6
 //   ICMPv6 ND options:
 //     u8 opt nr '14'; u8 length '1'; u8[6] nonce '6 random bytes'
-void send_dad(int fd, const struct in6_addr* tgt, int count) {
+void send_dad(int fd, const struct in6_addr* tgt) {
   struct {
     struct ip6_hdr ip6h;
     struct nd_neighbor_solicit ns;
@@ -168,11 +168,9 @@ void send_dad(int fd, const struct in6_addr* tgt, int count) {
     },
     .ns_opt_nr = 14,  // icmp6 option 'nonce' from RFC3971
     .ns_opt_len = 1,  // in units of 8 bytes, including option nr and len
-    .ns_opt_nonce = {  // 'opt_len' * 8 - [size of u8: opt nr] - [size of u8: opt len] = 6 bytes
-      0, 0, 'C', 'L', 'A', 'T',
-    },  // first 2 bytes filled in below with random bytes, CLAT left to ease id in tcpdump
+    .ns_opt_nonce = {},  // opt_len *8 - sizeof u8(opt_nr) - sizeof u8(opt_len) = 6 ranodmized bytes
   };
-  arc4random_buf(&dad_pkt.ns_opt_nonce, 2);
+  arc4random_buf(&dad_pkt.ns_opt_nonce, sizeof(dad_pkt.ns_opt_nonce));
 
   // 40 byte IPv6 header + 8 byte ICMPv6 header + 16 byte ipv6 target address + 8 byte nonce option
   _Static_assert(sizeof(dad_pkt) == 40 + 8 + 16 + 8, "sizeof dad packet != 72");
@@ -198,9 +196,7 @@ void send_dad(int fd, const struct in6_addr* tgt, int count) {
     .sin6_scope_id = if_nametoindex(Global_Clatd_Config.native_ipv6_interface),
   };
 
-  while (count--) {
-    sendto(fd, &dad_pkt, sizeof(dad_pkt), 0 /*flags*/, (const struct sockaddr *)&dst, sizeof(dst));
-  }
+  sendto(fd, &dad_pkt, sizeof(dad_pkt), 0 /*flags*/, (const struct sockaddr *)&dst, sizeof(dst));
 }
 
 /* function: event_loop
@@ -217,7 +213,7 @@ void event_loop(struct tun_data *tunnel) {
   // (with the other 16 chosen to guarantee checksum neutrality) this seems like a remote
   // concern...
   // TODO: actually perform true DAD
-  send_dad(tunnel->write_fd6, &Global_Clatd_Config.ipv6_local_subnet, 2);
+  send_dad(tunnel->write_fd6, &Global_Clatd_Config.ipv6_local_subnet);
 
   time_t last_interface_poll;
   struct pollfd wait_fd[] = {
