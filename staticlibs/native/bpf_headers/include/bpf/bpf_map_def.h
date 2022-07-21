@@ -143,7 +143,7 @@ struct bpf_map_def {
     //   unsigned int inner_map_idx;
     //   unsigned int numa_node;
 
-    unsigned int uid;   // uid_t
+    unsigned int zero;  // uid_t, for compat with old (buggy) bpfloader must be AID_ROOT == 0
     unsigned int gid;   // gid_t
     unsigned int mode;  // mode_t
 
@@ -171,13 +171,15 @@ struct bpf_map_def {
 
     bool shared;  // use empty string as 'file' component of pin path - allows cross .o map sharing
     char pad0[3];  // manually pad up to 4 byte alignment, may be used for extensions in the future
+
+    unsigned int uid;   // uid_t
 };
 
 _Static_assert(sizeof(((struct bpf_map_def *)0)->selinux_context) == 32, "must be 32 bytes");
 _Static_assert(sizeof(((struct bpf_map_def *)0)->pin_subdir) == 32, "must be 32 bytes");
 
 // This needs to be updated whenever the above structure definition is expanded.
-_Static_assert(sizeof(struct bpf_map_def) == 116, "sizeof struct bpf_map_def != 116");
+_Static_assert(sizeof(struct bpf_map_def) == 120, "sizeof struct bpf_map_def != 120");
 _Static_assert(__alignof__(struct bpf_map_def) == 4, "__alignof__ struct bpf_map_def != 4");
 _Static_assert(_Alignof(struct bpf_map_def) == 4, "_Alignof struct bpf_map_def != 4");
 
