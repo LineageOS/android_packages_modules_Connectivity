@@ -2809,7 +2809,7 @@ public class NetworkStatsService extends INetworkStatsService.Stub {
                     throw new IllegalStateException("invalid tethering stats " + e);
                 }
             }
-        } catch (IllegalStateException e) {
+        } catch (IllegalStateException | ServiceSpecificException e) {
             Log.wtf(TAG, "problem reading network stats", e);
         }
         return stats;
