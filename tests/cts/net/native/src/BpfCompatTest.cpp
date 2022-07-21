@@ -31,7 +31,10 @@ void doBpfStructSizeTest(const char *elfPath) {
   std::ifstream elfFile(elfPath, std::ios::in | std::ios::binary);
   ASSERT_TRUE(elfFile.is_open());
 
-  if (android::modules::sdklevel::IsAtLeastT()) {
+  if (android::modules::sdklevel::IsAtLeastU()) {
+    EXPECT_EQ(120, readSectionUint("size_of_bpf_map_def", elfFile, 0));
+    EXPECT_EQ(92, readSectionUint("size_of_bpf_prog_def", elfFile, 0));
+  } else if (android::modules::sdklevel::IsAtLeastT()) {
     EXPECT_EQ(116, readSectionUint("size_of_bpf_map_def", elfFile, 0));
     EXPECT_EQ(92, readSectionUint("size_of_bpf_prog_def", elfFile, 0));
   } else {
