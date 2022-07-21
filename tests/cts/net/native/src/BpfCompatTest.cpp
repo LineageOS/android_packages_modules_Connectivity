@@ -47,7 +47,11 @@ TEST(BpfTest, bpfStructSizeTestPreT) {
 }
 
 TEST(BpfTest, bpfStructSizeTest) {
-  doBpfStructSizeTest("/system/etc/bpf/gpu_mem.o");
+  if (android::modules::sdklevel::IsAtLeastU()) {
+      doBpfStructSizeTest("/system/etc/bpf/gpuMem.o");
+  } else {
+      doBpfStructSizeTest("/system/etc/bpf/gpu_mem.o");
+  }
   doBpfStructSizeTest("/system/etc/bpf/time_in_state.o");
 }
 
