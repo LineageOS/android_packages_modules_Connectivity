@@ -120,7 +120,7 @@ class TestNetworkService extends ITestNetworkManager.Stub {
      */
     @Override
     public TestNetworkInterface createInterface(boolean isTun, boolean hasCarrier, boolean bringUp,
-            LinkAddress[] linkAddrs, @Nullable String iface) {
+            boolean disableIpv6ProvisioningDelay, LinkAddress[] linkAddrs, @Nullable String iface) {
         enforceTestNetworkPermissions(mContext);
 
         Objects.requireNonNull(linkAddrs, "missing linkAddrs");
@@ -137,6 +137,14 @@ class TestNetworkService extends ITestNetworkManager.Stub {
         try {
             ParcelFileDescriptor tunIntf = ParcelFileDescriptor.adoptFd(
                     nativeCreateTunTap(isTun, hasCarrier, interfaceName));
+
+            // Disable DAD and remove router_solicitation_delay before assigning link addresses.
+            if (disableIpv6ProvisioningDelay) {
+                mNetd.setProcSysNet(
+                        INetd.IPV6, INetd.CONF, interfaceName, "router_solicitation_delay", "0");
+                mNetd.setProcSysNet(INetd.IPV6, INetd.CONF, interfaceName, "dad_transmits", "0");
+            }
+
             for (LinkAddress addr : linkAddrs) {
                 mNetd.interfaceAddAddress(
                         interfaceName,
