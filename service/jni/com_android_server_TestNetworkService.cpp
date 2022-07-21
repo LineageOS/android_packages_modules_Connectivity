@@ -97,6 +97,7 @@ static void setTunTapCarrierEnabled(JNIEnv* env, jclass /* clazz */, jstring
     ScopedUtfChars iface(env, jIface);
     if (!iface.c_str()) {
         jniThrowNullPointerException(env, "iface");
+        return;
     }
     setTunTapCarrierEnabledImpl(env, iface.c_str(), tunFd, enabled);
 }
