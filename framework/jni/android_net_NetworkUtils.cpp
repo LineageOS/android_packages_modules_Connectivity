@@ -232,7 +232,8 @@ static jobject android_net_utils_getTcpRepairWindow(JNIEnv *env, jobject thiz, j
         return NULL;
     }
 
-    jclass class_TcpRepairWindow = env->FindClass("android/net/TcpRepairWindow");
+    jclass class_TcpRepairWindow = env->FindClass(
+        "android/net/connectivity/android/net/TcpRepairWindow");
     jmethodID ctor = env->GetMethodID(class_TcpRepairWindow, "<init>", "(IIIIII)V");
 
     return env->NewObject(class_TcpRepairWindow, ctor, trw.snd_wl1, trw.snd_wnd, trw.max_window,
@@ -253,7 +254,7 @@ static const JNINativeMethod gNetworkUtilMethods[] = {
     { "bindSocketToNetworkHandle", "(Ljava/io/FileDescriptor;J)I", (void*) android_net_utils_bindSocketToNetworkHandle },
     { "attachDropAllBPFFilter", "(Ljava/io/FileDescriptor;)V", (void*) android_net_utils_attachDropAllBPFFilter },
     { "detachBPFFilter", "(Ljava/io/FileDescriptor;)V", (void*) android_net_utils_detachBPFFilter },
-    { "getTcpRepairWindow", "(Ljava/io/FileDescriptor;)Landroid/net/TcpRepairWindow;", (void*) android_net_utils_getTcpRepairWindow },
+    { "getTcpRepairWindow", "(Ljava/io/FileDescriptor;)Landroid/net/connectivity/android/net/TcpRepairWindow;", (void*) android_net_utils_getTcpRepairWindow },
     { "resNetworkSend", "(J[BII)Ljava/io/FileDescriptor;", (void*) android_net_utils_resNetworkSend },
     { "resNetworkQuery", "(JLjava/lang/String;III)Ljava/io/FileDescriptor;", (void*) android_net_utils_resNetworkQuery },
     { "resNetworkResult", "(Ljava/io/FileDescriptor;)Landroid/net/DnsResolver$DnsResponse;", (void*) android_net_utils_resNetworkResult },
