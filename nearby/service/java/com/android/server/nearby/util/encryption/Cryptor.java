@@ -18,7 +18,7 @@ package com.android.server.nearby.util.encryption;
 
 import androidx.annotation.Nullable;
 
-/** Interface for encryption/decryption functionality. */
+/** Class for encryption/decryption functionality. */
 public interface Cryptor {
 
     /**
@@ -30,7 +30,9 @@ public interface Cryptor {
      * @return encrypted data, {@code null} if failed to encrypt.
      */
     @Nullable
-    byte[] encrypt(byte[] data, byte[] salt, byte[] secretKeyBytes);
+    default byte[] encrypt(byte[] data, byte[] salt, byte[] secretKeyBytes) {
+        return data;
+    }
 
     /**
      * Decrypt the original data blob from the provided byte array.
@@ -41,5 +43,7 @@ public interface Cryptor {
      * @return decrypted data, {@code null} if failed to decrypt.
      */
     @Nullable
-    byte[] decrypt(byte[] encryptedData, byte[] salt, byte[] secretKeyBytes);
+    default byte[] decrypt(byte[] encryptedData, byte[] salt, byte[] secretKeyBytes) {
+        return encryptedData;
+    }
 }
