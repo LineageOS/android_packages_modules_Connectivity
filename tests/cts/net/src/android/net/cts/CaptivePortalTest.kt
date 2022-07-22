@@ -39,7 +39,6 @@ import android.net.cts.NetworkValidationTestUtil.setUrlExpirationDeviceConfig
 import android.net.cts.util.CtsNetUtils
 import com.android.net.module.util.NetworkStackConstants.TEST_CAPTIVE_PORTAL_HTTPS_URL
 import com.android.net.module.util.NetworkStackConstants.TEST_CAPTIVE_PORTAL_HTTP_URL
-import android.os.Build
 import android.platform.test.annotations.AppModeFull
 import android.provider.DeviceConfig
 import android.provider.DeviceConfig.NAMESPACE_CONNECTIVITY
@@ -47,11 +46,11 @@ import android.text.TextUtils
 import android.util.Log
 import androidx.test.platform.app.InstrumentationRegistry.getInstrumentation
 import androidx.test.runner.AndroidJUnit4
+import com.android.modules.utils.build.SdkLevel.isAtLeastR
 import com.android.testutils.RecorderCallback
 import com.android.testutils.TestHttpServer
 import com.android.testutils.TestHttpServer.Request
 import com.android.testutils.TestableNetworkCallback
-import com.android.testutils.isDevSdkInRange
 import com.android.testutils.runAsShell
 import fi.iki.elonen.NanoHTTPD.Response.Status
 import junit.framework.AssertionFailedError
@@ -196,8 +195,8 @@ class CaptivePortalTest {
             assertNotEquals(network, cm.activeNetwork, wifiDefaultMessage)
 
             val startPortalAppPermission =
-                    if (isDevSdkInRange(0, Build.VERSION_CODES.Q)) CONNECTIVITY_INTERNAL
-                    else NETWORK_SETTINGS
+                    if (isAtLeastR()) NETWORK_SETTINGS
+                    else CONNECTIVITY_INTERNAL
             runAsShell(startPortalAppPermission) { cm.startCaptivePortalApp(network) }
 
             // Expect the portal content to be fetched at some point after detecting the portal.
