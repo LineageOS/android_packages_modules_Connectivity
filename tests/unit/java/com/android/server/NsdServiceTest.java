@@ -16,6 +16,8 @@
 
 package com.android.server;
 
+import static android.net.nsd.NsdManager.FAILURE_INTERNAL_ERROR;
+
 import static libcore.junit.util.compat.CoreCompatChangeRule.DisableCompatChanges;
 import static libcore.junit.util.compat.CoreCompatChangeRule.EnableCompatChanges;
 
@@ -44,11 +46,15 @@ import android.net.InetAddresses;
 import android.net.mdns.aidl.DiscoveryInfo;
 import android.net.mdns.aidl.GetAddressInfo;
 import android.net.mdns.aidl.IMDnsEventListener;
+import android.net.mdns.aidl.RegistrationInfo;
 import android.net.mdns.aidl.ResolutionInfo;
 import android.net.nsd.INsdManagerCallback;
 import android.net.nsd.INsdServiceConnector;
 import android.net.nsd.MDnsManager;
 import android.net.nsd.NsdManager;
+import android.net.nsd.NsdManager.DiscoveryListener;
+import android.net.nsd.NsdManager.RegistrationListener;
+import android.net.nsd.NsdManager.ResolveListener;
 import android.net.nsd.NsdServiceInfo;
 import android.os.Binder;
 import android.os.Build;
@@ -226,7 +232,7 @@ public class NsdServiceTest {
         request.setPort(PORT);
 
         // Client registration request
-        NsdManager.RegistrationListener listener1 = mock(NsdManager.RegistrationListener.class);
+        final RegistrationListener listener1 = mock(RegistrationListener.class);
         client.registerService(request, PROTOCOL, listener1);
         waitForIdle();
         verify(mMockMDnsM).registerEventListener(any());
@@ -235,13 +241,13 @@ public class NsdServiceTest {
                 eq(2), eq(SERVICE_NAME), eq(SERVICE_TYPE), eq(PORT), any(), eq(IFACE_IDX_ANY));
 
         // Client discovery request
-        NsdManager.DiscoveryListener listener2 = mock(NsdManager.DiscoveryListener.class);
+        final DiscoveryListener listener2 = mock(DiscoveryListener.class);
         client.discoverServices(SERVICE_TYPE, PROTOCOL, listener2);
         waitForIdle();
         verify(mMockMDnsM).discover(3 /* id */, SERVICE_TYPE, IFACE_IDX_ANY);
 
         // Client resolve request
-        NsdManager.ResolveListener listener3 = mock(NsdManager.ResolveListener.class);
+        final ResolveListener listener3 = mock(ResolveListener.class);
         client.resolveService(request, listener3);
         waitForIdle();
         verify(mMockMDnsM).resolve(
@@ -263,7 +269,7 @@ public class NsdServiceTest {
 
         final NsdServiceInfo request = new NsdServiceInfo(SERVICE_NAME, SERVICE_TYPE);
         request.setPort(PORT);
-        NsdManager.RegistrationListener listener1 = mock(NsdManager.RegistrationListener.class);
+        final RegistrationListener listener1 = mock(RegistrationListener.class);
         client.registerService(request, PROTOCOL, listener1);
         waitForIdle();
         verify(mMockMDnsM).registerEventListener(any());
@@ -285,17 +291,22 @@ public class NsdServiceTest {
         verify(mMockMDnsM, never()).stopDaemon();
     }
 
+    private IMDnsEventListener getEventListener() {
+        final ArgumentCaptor<IMDnsEventListener> listenerCaptor =
+                ArgumentCaptor.forClass(IMDnsEventListener.class);
+        verify(mMockMDnsM).registerEventListener(listenerCaptor.capture());
+        return listenerCaptor.getValue();
+    }
+
     @Test
     public void testDiscoverOnTetheringDownstream() throws Exception {
         final NsdManager client = connectClient(mService);
         final int interfaceIdx = 123;
-        final NsdManager.DiscoveryListener discListener = mock(NsdManager.DiscoveryListener.class);
+        final DiscoveryListener discListener = mock(DiscoveryListener.class);
         client.discoverServices(SERVICE_TYPE, PROTOCOL, discListener);
         waitForIdle();
 
-        final ArgumentCaptor<IMDnsEventListener> listenerCaptor =
-                ArgumentCaptor.forClass(IMDnsEventListener.class);
-        verify(mMockMDnsM).registerEventListener(listenerCaptor.capture());
+        final IMDnsEventListener eventListener = getEventListener();
         final ArgumentCaptor<Integer> discIdCaptor = ArgumentCaptor.forClass(Integer.class);
         verify(mMockMDnsM).discover(discIdCaptor.capture(), eq(SERVICE_TYPE),
                 eq(0) /* interfaceIdx */);
@@ -311,7 +322,6 @@ public class NsdServiceTest {
                 DOMAIN_NAME,
                 interfaceIdx,
                 INetd.LOCAL_NET_ID); // LOCAL_NET_ID (99) used on tethering downstreams
-        final IMDnsEventListener eventListener = listenerCaptor.getValue();
         eventListener.onServiceDiscoveryStatus(discoveryInfo);
         waitForIdle();
 
@@ -326,7 +336,7 @@ public class NsdServiceTest {
         assertEquals(interfaceIdx, foundInfo.getInterfaceIndex());
 
         // After discovering the service, verify resolving it
-        final NsdManager.ResolveListener resolveListener = mock(NsdManager.ResolveListener.class);
+        final ResolveListener resolveListener = mock(ResolveListener.class);
         client.resolveService(foundInfo, resolveListener);
         waitForIdle();
 
@@ -376,6 +386,154 @@ public class NsdServiceTest {
         assertEquals(servicePort, resolvedService.getPort());
         assertNull(resolvedService.getNetwork());
         assertEquals(interfaceIdx, resolvedService.getInterfaceIndex());
+    }
+
+    @Test
+    public void testServiceRegistrationSuccessfulAndFailed() throws Exception {
+        final NsdManager client = connectClient(mService);
+        final NsdServiceInfo request = new NsdServiceInfo(SERVICE_NAME, SERVICE_TYPE);
+        request.setPort(PORT);
+        final RegistrationListener regListener = mock(RegistrationListener.class);
+        client.registerService(request, PROTOCOL, regListener);
+        waitForIdle();
+
+        final IMDnsEventListener eventListener = getEventListener();
+        final ArgumentCaptor<Integer> regIdCaptor = ArgumentCaptor.forClass(Integer.class);
+        verify(mMockMDnsM).registerService(regIdCaptor.capture(),
+                eq(SERVICE_NAME), eq(SERVICE_TYPE), eq(PORT), any(), eq(IFACE_IDX_ANY));
+
+        // Register service successfully.
+        final RegistrationInfo registrationInfo = new RegistrationInfo(
+                regIdCaptor.getValue(),
+                IMDnsEventListener.SERVICE_REGISTERED,
+                SERVICE_NAME,
+                SERVICE_TYPE,
+                PORT,
+                new byte[0] /* txtRecord */,
+                IFACE_IDX_ANY);
+        eventListener.onServiceRegistrationStatus(registrationInfo);
+
+        final ArgumentCaptor<NsdServiceInfo> registeredInfoCaptor =
+                ArgumentCaptor.forClass(NsdServiceInfo.class);
+        verify(regListener, timeout(TIMEOUT_MS))
+                .onServiceRegistered(registeredInfoCaptor.capture());
+        final NsdServiceInfo registeredInfo = registeredInfoCaptor.getValue();
+        assertEquals(SERVICE_NAME, registeredInfo.getServiceName());
+
+        // Fail to register service.
+        final RegistrationInfo registrationFailedInfo = new RegistrationInfo(
+                regIdCaptor.getValue(),
+                IMDnsEventListener.SERVICE_REGISTRATION_FAILED,
+                null /* serviceName */,
+                null /* registrationType */,
+                0 /* port */,
+                new byte[0] /* txtRecord */,
+                IFACE_IDX_ANY);
+        eventListener.onServiceRegistrationStatus(registrationFailedInfo);
+        verify(regListener, timeout(TIMEOUT_MS))
+                .onRegistrationFailed(any(), eq(FAILURE_INTERNAL_ERROR));
+    }
+
+    @Test
+    public void testServiceDiscoveryFailed() throws Exception {
+        final NsdManager client = connectClient(mService);
+        final DiscoveryListener discListener = mock(DiscoveryListener.class);
+        client.discoverServices(SERVICE_TYPE, PROTOCOL, discListener);
+        waitForIdle();
+
+        final IMDnsEventListener eventListener = getEventListener();
+        final ArgumentCaptor<Integer> discIdCaptor = ArgumentCaptor.forClass(Integer.class);
+        verify(mMockMDnsM).discover(discIdCaptor.capture(), eq(SERVICE_TYPE), eq(IFACE_IDX_ANY));
+        verify(discListener, timeout(TIMEOUT_MS)).onDiscoveryStarted(SERVICE_TYPE);
+
+        // Fail to discover service.
+        final DiscoveryInfo discoveryFailedInfo = new DiscoveryInfo(
+                discIdCaptor.getValue(),
+                IMDnsEventListener.SERVICE_DISCOVERY_FAILED,
+                null /* serviceName */,
+                null /* registrationType */,
+                null /* domainName */,
+                IFACE_IDX_ANY,
+                0 /* netId */);
+        eventListener.onServiceDiscoveryStatus(discoveryFailedInfo);
+        verify(discListener, timeout(TIMEOUT_MS))
+                .onStartDiscoveryFailed(SERVICE_TYPE, FAILURE_INTERNAL_ERROR);
+    }
+
+    @Test
+    public void testServiceResolutionFailed() throws Exception {
+        final NsdManager client = connectClient(mService);
+        final NsdServiceInfo request = new NsdServiceInfo(SERVICE_NAME, SERVICE_TYPE);
+        final ResolveListener resolveListener = mock(ResolveListener.class);
+        client.resolveService(request, resolveListener);
+        waitForIdle();
+
+        final IMDnsEventListener eventListener = getEventListener();
+        final ArgumentCaptor<Integer> resolvIdCaptor = ArgumentCaptor.forClass(Integer.class);
+        verify(mMockMDnsM).resolve(resolvIdCaptor.capture(), eq(SERVICE_NAME), eq(SERVICE_TYPE),
+                eq("local.") /* domain */, eq(IFACE_IDX_ANY));
+
+        // Fail to resolve service.
+        final ResolutionInfo resolutionFailedInfo = new ResolutionInfo(
+                resolvIdCaptor.getValue(),
+                IMDnsEventListener.SERVICE_RESOLUTION_FAILED,
+                null /* serviceName */,
+                null /* serviceType */,
+                null /* domain */,
+                null /* serviceFullName */,
+                null /* domainName */,
+                0 /* port */,
+                new byte[0] /* txtRecord */,
+                IFACE_IDX_ANY);
+        eventListener.onServiceResolutionStatus(resolutionFailedInfo);
+        verify(resolveListener, timeout(TIMEOUT_MS))
+                .onResolveFailed(any(), eq(FAILURE_INTERNAL_ERROR));
+    }
+
+    @Test
+    public void testGettingAddressFailed() throws Exception {
+        final NsdManager client = connectClient(mService);
+        final NsdServiceInfo request = new NsdServiceInfo(SERVICE_NAME, SERVICE_TYPE);
+        final ResolveListener resolveListener = mock(ResolveListener.class);
+        client.resolveService(request, resolveListener);
+        waitForIdle();
+
+        final IMDnsEventListener eventListener = getEventListener();
+        final ArgumentCaptor<Integer> resolvIdCaptor = ArgumentCaptor.forClass(Integer.class);
+        verify(mMockMDnsM).resolve(resolvIdCaptor.capture(), eq(SERVICE_NAME), eq(SERVICE_TYPE),
+                eq("local.") /* domain */, eq(IFACE_IDX_ANY));
+
+        // Resolve service successfully.
+        final ResolutionInfo resolutionInfo = new ResolutionInfo(
+                resolvIdCaptor.getValue(),
+                IMDnsEventListener.SERVICE_RESOLVED,
+                null /* serviceName */,
+                null /* serviceType */,
+                null /* domain */,
+                SERVICE_FULL_NAME,
+                DOMAIN_NAME,
+                PORT,
+                new byte[0] /* txtRecord */,
+                IFACE_IDX_ANY);
+        doReturn(true).when(mMockMDnsM).getServiceAddress(anyInt(), any(), anyInt());
+        eventListener.onServiceResolutionStatus(resolutionInfo);
+        waitForIdle();
+
+        final ArgumentCaptor<Integer> getAddrIdCaptor = ArgumentCaptor.forClass(Integer.class);
+        verify(mMockMDnsM).getServiceAddress(getAddrIdCaptor.capture(), eq(DOMAIN_NAME),
+                eq(IFACE_IDX_ANY));
+
+        // Fail to get service address.
+        final GetAddressInfo gettingAddrFailedInfo = new GetAddressInfo(
+                getAddrIdCaptor.getValue(),
+                IMDnsEventListener.SERVICE_GET_ADDR_FAILED,
+                null /* hostname */,
+                null /* address */,
+                IFACE_IDX_ANY,
+                0 /* netId */);
+        eventListener.onGettingServiceAddressStatus(gettingAddrFailedInfo);
+        verify(resolveListener, timeout(TIMEOUT_MS))
+                .onResolveFailed(any(), eq(FAILURE_INTERNAL_ERROR));
     }
 
     private void waitForIdle() {
