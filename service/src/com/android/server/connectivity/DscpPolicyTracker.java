@@ -52,7 +52,7 @@ public class DscpPolicyTracker {
 
     private static final String TAG = DscpPolicyTracker.class.getSimpleName();
     private static final String PROG_PATH =
-            "/sys/fs/bpf/net_shared/prog_dscpPolicy_schedcls_set_dscp";
+            "/sys/fs/bpf/net_shared/prog_dscpPolicy_schedcls_set_dscp_ether";
     // Name is "map + *.o + map_name + map". Can probably shorten this
     private static final String IPV4_POLICY_MAP_PATH = makeMapPath(
             "dscpPolicy_ipv4_dscp_policies");
@@ -212,6 +212,15 @@ public class DscpPolicyTracker {
         return DSCP_POLICY_STATUS_SUCCESS;
     }
 
+    private boolean isEthernet(String iface) {
+        try {
+            return TcUtils.isEthernet(iface);
+        } catch (IOException e) {
+            Log.e(TAG, "Failed to check ether type", e);
+        }
+        return false;
+    }
+
     /**
      * Add the provided DSCP policy to the bpf map. Attach bpf program dscpPolicy to iface
      * if not already attached. Response will be sent back to nai with status.
@@ -221,13 +230,17 @@ public class DscpPolicyTracker {
      * DSCP_POLICY_STATUS_REQUEST_DECLINED - Interface index was invalid
      */
     public void addDscpPolicy(NetworkAgentInfo nai, DscpPolicy policy) {
-        if (!mAttachedIfaces.contains(nai.linkProperties.getInterfaceName())) {
-            if (!attachProgram(nai.linkProperties.getInterfaceName())) {
-                Log.e(TAG, "Unable to attach program");
-                sendStatus(nai, policy.getPolicyId(),
-                        DSCP_POLICY_STATUS_INSUFFICIENT_PROCESSING_RESOURCES);
-                return;
-            }
+        String iface = nai.linkProperties.getInterfaceName();
+        if (!isEthernet(iface)) {
+            Log.e(TAG, "DSCP policies are not supported on raw IP interfaces.");
+            sendStatus(nai, policy.getPolicyId(), DSCP_POLICY_STATUS_REQUEST_DECLINED);
+            return;
+        }
+        if (!mAttachedIfaces.contains(iface) && !attachProgram(iface)) {
+            Log.e(TAG, "Unable to attach program");
+            sendStatus(nai, policy.getPolicyId(),
+                    DSCP_POLICY_STATUS_INSUFFICIENT_PROCESSING_RESOURCES);
+            return;
         }
 
         final int ifIndex = getIfaceIndex(nai);
@@ -314,10 +327,8 @@ public class DscpPolicyTracker {
     private boolean attachProgram(@NonNull String iface) {
         try {
             NetworkInterface netIface = NetworkInterface.getByName(iface);
-            boolean isEth = TcUtils.isEthernet(iface);
-            String path = PROG_PATH + (isEth ? "_ether" : "_raw_ip");
             TcUtils.tcFilterAddDevBpf(netIface.getIndex(), false, PRIO_DSCP, (short) ETH_P_ALL,
-                    path);
+                    PROG_PATH);
         } catch (IOException e) {
             Log.e(TAG, "Unable to attach to TC on " + iface + ": " + e);
             return false;
