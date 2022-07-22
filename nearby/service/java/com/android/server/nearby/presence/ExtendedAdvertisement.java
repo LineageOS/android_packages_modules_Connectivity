@@ -47,9 +47,9 @@ import java.util.Objects;
  */
 public class ExtendedAdvertisement extends Advertisement{
 
-    static final int HEADER_LENGTH = 1;
+    public static final int SALT_DATA_LENGTH = 2;
 
-    static final int SALT_DATA_LENGTH = 2;
+    static final int HEADER_LENGTH = 1;
 
     static final int IDENTITY_DATA_LENGTH = 16;
 

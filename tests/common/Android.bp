@@ -23,7 +23,7 @@ package {
 
 java_library {
     name: "FrameworksNetCommonTests",
-    defaults: ["framework-connectivity-test-defaults"],
+    defaults: ["framework-connectivity-internal-test-defaults"],
     srcs: [
         "java/**/*.java",
         "java/**/*.kt",
@@ -49,6 +49,7 @@ java_library {
 // jarjar stops at the first matching rule, so order of concatenation affects the output.
 genrule {
     name: "ConnectivityCoverageJarJarRules",
+    defaults: ["jarjar-rules-combine-defaults"],
     srcs: [
         "tethering-jni-jarjar-rules.txt",
         ":connectivity-jarjar-rules",
@@ -56,8 +57,6 @@ genrule {
         ":NetworkStackJarJarRules",
     ],
     out: ["jarjar-rules-connectivity-coverage.txt"],
-    // Concat files with a line break in the middle
-    cmd: "for src in $(in); do cat $${src}; echo; done > $(out)",
     visibility: ["//visibility:private"],
 }
 
@@ -84,7 +83,7 @@ android_test {
     target_sdk_version: "31",
     test_suites: ["general-tests", "mts-tethering"],
     defaults: [
-        "framework-connectivity-test-defaults",
+        "framework-connectivity-internal-test-defaults",
         "FrameworksNetTests-jni-defaults",
         "libnetworkstackutilsjni_deps",
     ],
