@@ -99,10 +99,10 @@ java_defaults {
 android_test {
     name: "CtsNetTestCasesLatestSdk",
     defaults: [
+        "ConnectivityTestsLatestSdkDefaults",
         "CtsNetTestCasesDefaults",
         "CtsNetTestCasesApiStableDefaults",
     ],
-    target_sdk_version: "33",
     test_suites: [
         "general-tests",
         "mts-dnsresolver",
