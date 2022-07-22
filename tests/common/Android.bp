@@ -21,6 +21,19 @@ package {
     default_applicable_licenses: ["Android-Apache-2.0"],
 }
 
+// The target SDK version of the "latest released SDK" CTS tests.
+// This should be updated soon after a new SDK level is finalized.
+// It is different from the target SDK version of production code (e.g., the Tethering,
+// NetworkStack, and CaptivePortalLogin APKs):
+// - The target SDK of production code influences the behaviour of the production code.
+// - The target SDK of the CTS tests validates the behaviour seen by apps that call production APIs.
+// - The behaviour seen by apps that target previous SDKs is tested by previous CTS versions
+//   (currently, CTS 10, 11, and 12).
+java_defaults {
+    name: "ConnectivityTestsLatestSdkDefaults",
+    target_sdk_version: "33",
+}
+
 java_library {
     name: "FrameworksNetCommonTests",
     defaults: ["framework-connectivity-internal-test-defaults"],
@@ -80,9 +93,9 @@ android_test {
     name: "ConnectivityCoverageTests",
     // Tethering started on SDK 30
     min_sdk_version: "30",
-    target_sdk_version: "31",
     test_suites: ["general-tests", "mts-tethering"],
     defaults: [
+        "ConnectivityTestsLatestSdkDefaults",
         "framework-connectivity-internal-test-defaults",
         "FrameworksNetTests-jni-defaults",
         "libnetworkstackutilsjni_deps",
