@@ -116,4 +116,8 @@ public class HostsideVpnTests extends HostsideNetworkTestCase {
     public void testInterleavedRoutes() throws Exception {
         runDeviceTests(TEST_PKG, TEST_PKG + ".VpnTest", "testInterleavedRoutes");
     }
+
+    public void testBlockIncomingPackets() throws Exception {
+        runDeviceTests(TEST_PKG, TEST_PKG + ".VpnTest", "testBlockIncomingPackets");
+    }
 }
