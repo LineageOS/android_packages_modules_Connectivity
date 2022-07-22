@@ -72,8 +72,8 @@ bpf {
 }
 
 bpf {
-    name: "dscp_policy.o",
-    srcs: ["dscp_policy.c"],
+    name: "dscpPolicy.o",
+    srcs: ["dscpPolicy.c"],
     btf: true,
     cflags: [
         "-Wall",
