@@ -718,4 +718,18 @@ class EthernetManagerTest {
         releaseTetheredInterface()
         listener.assertNoCallback()
     }
+
+    @Test
+    fun testEnableDisableInterface_withActiveRequest() {
+        val iface = createInterface()
+        val cb = requestNetwork(ETH_REQUEST)
+        cb.expectAvailable()
+        cb.assertNeverLost()
+
+        disableInterface(iface).expectResult(iface.name)
+        cb.eventuallyExpectLost()
+
+        enableInterface(iface).expectResult(iface.name)
+        cb.expectAvailable()
+    }
 }
