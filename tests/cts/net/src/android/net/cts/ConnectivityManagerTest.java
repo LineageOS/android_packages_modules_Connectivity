@@ -186,7 +186,6 @@ import com.android.networkstack.apishim.common.ConnectivityManagerShim;
 import com.android.testutils.CompatUtil;
 import com.android.testutils.DevSdkIgnoreRule;
 import com.android.testutils.DevSdkIgnoreRule.IgnoreUpTo;
-import com.android.testutils.DevSdkIgnoreRuleKt;
 import com.android.testutils.DeviceInfoUtils;
 import com.android.testutils.DumpTestUtils;
 import com.android.testutils.RecorderCallback.CallbackEntry;
@@ -331,11 +330,10 @@ public class ConnectivityManagerTest {
         mCtsNetUtils = new CtsNetUtils(mContext);
         mTm = mContext.getSystemService(TelephonyManager.class);
 
-        if (DevSdkIgnoreRuleKt.isDevSdkInRange(null /* minExclusive */,
-                Build.VERSION_CODES.R /* maxInclusive */)) {
-            addLegacySupportedNetworkTypes();
-        } else {
+        if (isAtLeastS()) {
             addSupportedNetworkTypes();
+        } else {
+            addLegacySupportedNetworkTypes();
         }
 
         mUiAutomation = mInstrumentation.getUiAutomation();
