@@ -17,9 +17,9 @@
 package android.net.cts
 
 import android.Manifest.permission.WRITE_DEVICE_CONFIG
-import android.net.util.NetworkStackUtils
 import android.provider.DeviceConfig
 import android.provider.DeviceConfig.NAMESPACE_CONNECTIVITY
+import com.android.net.module.util.NetworkStackConstants
 import com.android.testutils.runAsShell
 
 /**
@@ -35,41 +35,41 @@ internal object NetworkValidationTestUtil {
     @JvmStatic fun clearValidationTestUrlsDeviceConfig() {
         runAsShell(WRITE_DEVICE_CONFIG) {
             DeviceConfig.setProperty(NAMESPACE_CONNECTIVITY,
-                    NetworkStackUtils.TEST_CAPTIVE_PORTAL_HTTPS_URL, null, false)
+                    NetworkStackConstants.TEST_CAPTIVE_PORTAL_HTTPS_URL, null, false)
             DeviceConfig.setProperty(NAMESPACE_CONNECTIVITY,
-                    NetworkStackUtils.TEST_CAPTIVE_PORTAL_HTTP_URL, null, false)
+                    NetworkStackConstants.TEST_CAPTIVE_PORTAL_HTTP_URL, null, false)
             DeviceConfig.setProperty(NAMESPACE_CONNECTIVITY,
-                    NetworkStackUtils.TEST_URL_EXPIRATION_TIME, null, false)
+                    NetworkStackConstants.TEST_URL_EXPIRATION_TIME, null, false)
         }
     }
 
     /**
      * Set the test validation HTTPS URL.
      *
-     * @see NetworkStackUtils.TEST_CAPTIVE_PORTAL_HTTPS_URL
+     * @see NetworkStackConstants.TEST_CAPTIVE_PORTAL_HTTPS_URL
      */
     @JvmStatic
     fun setHttpsUrlDeviceConfig(rule: DeviceConfigRule, url: String?) =
             rule.setConfig(NAMESPACE_CONNECTIVITY,
-                NetworkStackUtils.TEST_CAPTIVE_PORTAL_HTTPS_URL, url)
+                NetworkStackConstants.TEST_CAPTIVE_PORTAL_HTTPS_URL, url)
 
     /**
      * Set the test validation HTTP URL.
      *
-     * @see NetworkStackUtils.TEST_CAPTIVE_PORTAL_HTTP_URL
+     * @see NetworkStackConstants.TEST_CAPTIVE_PORTAL_HTTP_URL
      */
     @JvmStatic
     fun setHttpUrlDeviceConfig(rule: DeviceConfigRule, url: String?) =
             rule.setConfig(NAMESPACE_CONNECTIVITY,
-                NetworkStackUtils.TEST_CAPTIVE_PORTAL_HTTP_URL, url)
+                NetworkStackConstants.TEST_CAPTIVE_PORTAL_HTTP_URL, url)
 
     /**
      * Set the test validation URL expiration.
      *
-     * @see NetworkStackUtils.TEST_URL_EXPIRATION_TIME
+     * @see NetworkStackConstants.TEST_URL_EXPIRATION_TIME
      */
     @JvmStatic
     fun setUrlExpirationDeviceConfig(rule: DeviceConfigRule, timestamp: Long?) =
             rule.setConfig(NAMESPACE_CONNECTIVITY,
-                NetworkStackUtils.TEST_URL_EXPIRATION_TIME, timestamp?.toString())
+                NetworkStackConstants.TEST_URL_EXPIRATION_TIME, timestamp?.toString())
 }

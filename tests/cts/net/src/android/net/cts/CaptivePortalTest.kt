@@ -37,8 +37,8 @@ import android.net.cts.NetworkValidationTestUtil.setHttpUrlDeviceConfig
 import android.net.cts.NetworkValidationTestUtil.setHttpsUrlDeviceConfig
 import android.net.cts.NetworkValidationTestUtil.setUrlExpirationDeviceConfig
 import android.net.cts.util.CtsNetUtils
-import android.net.util.NetworkStackUtils.TEST_CAPTIVE_PORTAL_HTTPS_URL
-import android.net.util.NetworkStackUtils.TEST_CAPTIVE_PORTAL_HTTP_URL
+import com.android.net.module.util.NetworkStackConstants.TEST_CAPTIVE_PORTAL_HTTPS_URL
+import com.android.net.module.util.NetworkStackConstants.TEST_CAPTIVE_PORTAL_HTTP_URL
 import android.os.Build
 import android.platform.test.annotations.AppModeFull
 import android.provider.DeviceConfig
