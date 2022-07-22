@@ -31,7 +31,7 @@
 #define BPFLOADER_MIN_VER BPFLOADER_T_BETA3_VERSION
 
 #include "bpf_helpers.h"
-#include "dscp_policy.h"
+#include "dscpPolicy.h"
 
 #define ECN_MASK 3
 #define IP4_OFFSET(field, header) (header + offsetof(struct iphdr, field))
