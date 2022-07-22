@@ -1399,8 +1399,8 @@ public class ConnectivityService extends IConnectivityManager.Stub
          * @param netd
          * @return BpfNetMaps implementation.
          */
-        public BpfNetMaps getBpfNetMaps(INetd netd) {
-            return new BpfNetMaps(netd);
+        public BpfNetMaps getBpfNetMaps(Context context, INetd netd) {
+            return new BpfNetMaps(context, netd);
         }
 
         /**
@@ -1529,7 +1529,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
         mProxyTracker = mDeps.makeProxyTracker(mContext, mHandler);
 
         mNetd = netd;
-        mBpfNetMaps = mDeps.getBpfNetMaps(netd);
+        mBpfNetMaps = mDeps.getBpfNetMaps(mContext, netd);
         mTelephonyManager = (TelephonyManager) mContext.getSystemService(Context.TELEPHONY_SERVICE);
         mAppOpsManager = (AppOpsManager) mContext.getSystemService(Context.APP_OPS_SERVICE);
         mLocationPermissionChecker = mDeps.makeLocationPermissionChecker(mContext);
