@@ -85,7 +85,7 @@ apex {
     bpfs: [
         "block.o",
         "clatd.o",
-        "dscp_policy.o",
+        "dscpPolicy.o",
         "netd.o",
         "offload.o",
         "offload@btf.o",
@@ -212,7 +212,7 @@ override_apex {
     bpfs: [
         "block.o",
         "clatd.o",
-        "dscp_policy.o",
+        "dscpPolicy.o",
         "netd.o",
         "offload@inprocess.o",
         "test@inprocess.o",
