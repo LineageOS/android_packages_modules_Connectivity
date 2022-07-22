@@ -47,7 +47,6 @@ import android.util.SparseArray;
 
 import com.android.internal.annotations.GuardedBy;
 import com.android.internal.annotations.VisibleForTesting;
-import com.android.net.module.util.NetdUtils;
 import com.android.net.module.util.NetworkStackConstants;
 
 import java.io.IOException;
@@ -82,6 +81,8 @@ class TestNetworkService extends ITestNetworkManager.Stub {
 
     private static native void nativeSetTunTapCarrierEnabled(@NonNull String iface, int tunFd,
             boolean enabled);
+
+    private static native void nativeBringUpInterface(String iface);
 
     @VisibleForTesting
     protected TestNetworkService(@NonNull Context context) {
@@ -153,7 +154,7 @@ class TestNetworkService extends ITestNetworkManager.Stub {
             }
 
             if (bringUp) {
-                NetdUtils.setInterfaceUp(mNetd, interfaceName);
+                nativeBringUpInterface(interfaceName);
             }
 
             return new TestNetworkInterface(tunIntf, interfaceName);
