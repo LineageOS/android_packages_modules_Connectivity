@@ -53,10 +53,12 @@ java_defaults {
 // mainline modules on release devices.
 android_test {
     name: "CtsTetheringTestLatestSdk",
-    defaults: ["CtsTetheringTestDefaults"],
+    defaults: [
+        "ConnectivityTestsLatestSdkDefaults",
+        "CtsTetheringTestDefaults",
+    ],
 
     min_sdk_version: "30",
-    target_sdk_version: "33",
 
     static_libs: [
         "TetheringIntegrationTestsLatestSdkLib",
