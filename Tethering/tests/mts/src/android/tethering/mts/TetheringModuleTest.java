@@ -15,27 +15,23 @@
  */
 package android.tethering.mts;
 
-import static android.Manifest.permission.ACCESS_WIFI_STATE;
 import static android.Manifest.permission.MANAGE_TEST_NETWORKS;
-import static android.Manifest.permission.NETWORK_SETTINGS;
 import static android.Manifest.permission.READ_DEVICE_CONFIG;
-import static android.Manifest.permission.TETHER_PRIVILEGED;
 import static android.Manifest.permission.WRITE_SETTINGS;
 import static android.net.TetheringManager.TETHERING_WIFI;
 import static android.provider.DeviceConfig.NAMESPACE_CONNECTIVITY;
 
 import static com.android.testutils.TestNetworkTrackerKt.initTestNetwork;
+import static com.android.testutils.TestPermissionUtil.runAsShell;
 
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.fail;
 
-import android.app.UiAutomation;
 import android.content.Context;
 import android.net.IpPrefix;
 import android.net.LinkAddress;
 import android.net.TetheringInterface;
-import android.net.TetheringManager;
 import android.net.cts.util.CtsTetheringUtils;
 import android.net.cts.util.CtsTetheringUtils.TestTetheringEventCallback;
 import android.provider.DeviceConfig;
@@ -46,7 +42,6 @@ import androidx.test.runner.AndroidJUnit4;
 
 import com.android.testutils.TestNetworkTracker;
 
-import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -60,24 +55,12 @@ import java.util.List;
 @RunWith(AndroidJUnit4.class)
 public class TetheringModuleTest {
     private Context mContext;
-    private TetheringManager mTm;
     private CtsTetheringUtils mCtsTetheringUtils;
-
-    private UiAutomation mUiAutomation =
-            InstrumentationRegistry.getInstrumentation().getUiAutomation();
 
     @Before
     public void setUp() throws Exception {
-        mUiAutomation.adoptShellPermissionIdentity(MANAGE_TEST_NETWORKS, NETWORK_SETTINGS,
-                WRITE_SETTINGS, READ_DEVICE_CONFIG, TETHER_PRIVILEGED, ACCESS_WIFI_STATE);
         mContext = InstrumentationRegistry.getContext();
-        mTm = mContext.getSystemService(TetheringManager.class);
         mCtsTetheringUtils = new CtsTetheringUtils(mContext);
-    }
-
-    @After
-    public void tearDown() throws Exception {
-        mUiAutomation.dropShellPermissionIdentity();
     }
 
     @Test
@@ -130,10 +113,8 @@ public class TetheringModuleTest {
 
             mCtsTetheringUtils.stopWifiTethering(tetherEventCallback);
         } finally {
-            if (tnt != null) {
-                tnt.teardown();
-            }
-            mTm.stopAllTethering();
+            teardown(tnt);
+            mCtsTetheringUtils.stopAllTethering();
             mCtsTetheringUtils.unregisterTetheringEventCallback(tetherEventCallback);
         }
     }
@@ -169,11 +150,19 @@ public class TetheringModuleTest {
     }
 
     private TestNetworkTracker setUpTestNetwork(final LinkAddress address) throws Exception {
-        return initTestNetwork(mContext, address, 10_000L /* test timeout ms*/);
+        return runAsShell(MANAGE_TEST_NETWORKS, WRITE_SETTINGS,
+                () -> initTestNetwork(mContext, address, 10_000L /* test timeout ms*/));
 
     }
 
+    private void teardown(TestNetworkTracker tracker) throws Exception {
+        if (tracker == null) return;
+
+        runAsShell(MANAGE_TEST_NETWORKS, () -> tracker.teardown());
+    }
+
     public static boolean isFeatureEnabled(final String name, final boolean defaultValue) {
-        return DeviceConfig.getBoolean(NAMESPACE_CONNECTIVITY, name, defaultValue);
+        return runAsShell(READ_DEVICE_CONFIG,
+                () -> DeviceConfig.getBoolean(NAMESPACE_CONNECTIVITY, name, defaultValue));
     }
 }

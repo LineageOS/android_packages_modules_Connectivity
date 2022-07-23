@@ -2488,13 +2488,11 @@ public class ConnectivityManagerTest {
         final CtsTetheringUtils tetherUtils = new CtsTetheringUtils(mContext);
         try {
             tetherEventCallback = tetherUtils.registerTetheringEventCallback();
-            // Adopt for NETWORK_SETTINGS permission.
-            mUiAutomation.adoptShellPermissionIdentity();
             // start tethering
             tetherEventCallback.assumeWifiTetheringSupported(mContext);
             tetherUtils.startWifiTethering(tetherEventCallback);
             // Update setting to verify the behavior.
-            mCm.setAirplaneMode(true);
+            setAirplaneMode(true);
             ConnectivitySettingsManager.setPrivateDnsMode(mContext,
                     ConnectivitySettingsManager.PRIVATE_DNS_MODE_OFF);
             ConnectivitySettingsManager.setNetworkAvoidBadWifi(mContext,
@@ -2502,7 +2500,7 @@ public class ConnectivityManagerTest {
             assertEquals(AIRPLANE_MODE_ON, Settings.Global.getInt(
                     mContext.getContentResolver(), Settings.Global.AIRPLANE_MODE_ON));
             // Verify factoryReset
-            mCm.factoryReset();
+            runAsShell(NETWORK_SETTINGS, () -> mCm.factoryReset());
             verifySettings(AIRPLANE_MODE_OFF,
                     ConnectivitySettingsManager.PRIVATE_DNS_MODE_OPPORTUNISTIC,
                     ConnectivitySettingsManager.NETWORK_AVOID_BAD_WIFI_PROMPT);
@@ -2510,15 +2508,18 @@ public class ConnectivityManagerTest {
             tetherEventCallback.expectNoTetheringActive();
         } finally {
             // Restore settings.
-            mCm.setAirplaneMode(false);
+            setAirplaneMode(false);
             ConnectivitySettingsManager.setNetworkAvoidBadWifi(mContext, curAvoidBadWifi);
             ConnectivitySettingsManager.setPrivateDnsMode(mContext, curPrivateDnsMode);
             if (tetherEventCallback != null) {
                 tetherUtils.unregisterTetheringEventCallback(tetherEventCallback);
             }
             tetherUtils.stopAllTethering();
-            mUiAutomation.dropShellPermissionIdentity();
         }
+    }
+
+    private void setAirplaneMode(boolean enable) {
+        runAsShell(NETWORK_SETTINGS, () -> mCm.setAirplaneMode(enable));
     }
 
     /**
