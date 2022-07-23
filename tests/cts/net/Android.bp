@@ -72,9 +72,9 @@ java_defaults {
 android_test {
     name: "CtsNetTestCases",
     defaults: ["CtsNetTestCasesDefaults", "ConnectivityNextEnableDefaults"],
-    // TODO: CTS should not depend on the entirety of the networkstack code.
     static_libs: [
-        "NetworkStackApiCurrentLib",
+        "DhcpPacketLib",
+        "NetworkStackApiCurrentShims",
     ],
     test_suites: [
         "cts",
@@ -86,7 +86,8 @@ java_defaults {
     name: "CtsNetTestCasesApiStableDefaults",
     // TODO: CTS should not depend on the entirety of the networkstack code.
     static_libs: [
-        "NetworkStackApiStableLib",
+        "DhcpPacketLib",
+        "NetworkStackApiStableShims",
     ],
     jni_uses_sdk_apis: true,
     min_sdk_version: "29",
@@ -98,10 +99,10 @@ java_defaults {
 android_test {
     name: "CtsNetTestCasesLatestSdk",
     defaults: [
+        "ConnectivityTestsLatestSdkDefaults",
         "CtsNetTestCasesDefaults",
         "CtsNetTestCasesApiStableDefaults",
     ],
-    target_sdk_version: "33",
     test_suites: [
         "general-tests",
         "mts-dnsresolver",

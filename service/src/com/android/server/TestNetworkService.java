@@ -47,7 +47,6 @@ import android.util.SparseArray;
 
 import com.android.internal.annotations.GuardedBy;
 import com.android.internal.annotations.VisibleForTesting;
-import com.android.net.module.util.NetdUtils;
 import com.android.net.module.util.NetworkStackConstants;
 
 import java.io.IOException;
@@ -82,6 +81,8 @@ class TestNetworkService extends ITestNetworkManager.Stub {
 
     private static native void nativeSetTunTapCarrierEnabled(@NonNull String iface, int tunFd,
             boolean enabled);
+
+    private static native void nativeBringUpInterface(String iface);
 
     @VisibleForTesting
     protected TestNetworkService(@NonNull Context context) {
@@ -120,7 +121,7 @@ class TestNetworkService extends ITestNetworkManager.Stub {
      */
     @Override
     public TestNetworkInterface createInterface(boolean isTun, boolean hasCarrier, boolean bringUp,
-            LinkAddress[] linkAddrs, @Nullable String iface) {
+            boolean disableIpv6ProvisioningDelay, LinkAddress[] linkAddrs, @Nullable String iface) {
         enforceTestNetworkPermissions(mContext);
 
         Objects.requireNonNull(linkAddrs, "missing linkAddrs");
@@ -137,6 +138,14 @@ class TestNetworkService extends ITestNetworkManager.Stub {
         try {
             ParcelFileDescriptor tunIntf = ParcelFileDescriptor.adoptFd(
                     nativeCreateTunTap(isTun, hasCarrier, interfaceName));
+
+            // Disable DAD and remove router_solicitation_delay before assigning link addresses.
+            if (disableIpv6ProvisioningDelay) {
+                mNetd.setProcSysNet(
+                        INetd.IPV6, INetd.CONF, interfaceName, "router_solicitation_delay", "0");
+                mNetd.setProcSysNet(INetd.IPV6, INetd.CONF, interfaceName, "dad_transmits", "0");
+            }
+
             for (LinkAddress addr : linkAddrs) {
                 mNetd.interfaceAddAddress(
                         interfaceName,
@@ -145,7 +154,7 @@ class TestNetworkService extends ITestNetworkManager.Stub {
             }
 
             if (bringUp) {
-                NetdUtils.setInterfaceUp(mNetd, interfaceName);
+                nativeBringUpInterface(interfaceName);
             }
 
             return new TestNetworkInterface(tunIntf, interfaceName);

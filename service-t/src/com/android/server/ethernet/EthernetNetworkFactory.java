@@ -649,13 +649,12 @@ public class EthernetNetworkFactory {
             if (!up) { // was up, goes down
                 // retract network offer and stop IpClient.
                 unregisterNetworkOfferAndStop();
-                // If only setting the interface down, send a callback to signal completion.
-                EthernetNetworkFactory.maybeSendNetworkManagementCallback(listener, name, null);
             } else { // was down, goes up
                 // register network offer
                 registerNetworkOffer();
             }
 
+            EthernetNetworkFactory.maybeSendNetworkManagementCallback(listener, name, null);
             return true;
         }
 
