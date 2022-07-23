@@ -16,11 +16,17 @@
 
 package android.net.cts.util;
 
+import static android.Manifest.permission.ACCESS_NETWORK_STATE;
+import static android.Manifest.permission.ACCESS_WIFI_STATE;
+import static android.Manifest.permission.NETWORK_SETTINGS;
+import static android.Manifest.permission.TETHER_PRIVILEGED;
 import static android.net.TetheringManager.TETHERING_WIFI;
 import static android.net.TetheringManager.TETHER_ERROR_NO_ERROR;
 import static android.net.TetheringManager.TETHER_HARDWARE_OFFLOAD_FAILED;
 import static android.net.TetheringManager.TETHER_HARDWARE_OFFLOAD_STARTED;
 import static android.net.TetheringManager.TETHER_HARDWARE_OFFLOAD_STOPPED;
+
+import static com.android.testutils.TestPermissionUtil.runAsShell;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
@@ -396,9 +402,14 @@ public final class CtsTetheringUtils {
         }
     }
 
+    private static boolean isWifiEnabled(final WifiManager wm) {
+        return runAsShell(ACCESS_WIFI_STATE, () -> wm.isWifiEnabled());
+
+    }
+
     private static void waitForWifiEnabled(final Context ctx) throws Exception {
         WifiManager wm = ctx.getSystemService(WifiManager.class);
-        if (wm.isWifiEnabled()) return;
+        if (isWifiEnabled(wm)) return;
 
         final ConditionVariable mWaiting = new ConditionVariable();
         final BroadcastReceiver receiver = new BroadcastReceiver() {
@@ -406,7 +417,7 @@ public final class CtsTetheringUtils {
             public void onReceive(Context context, Intent intent) {
                 String action = intent.getAction();
                 if (WifiManager.WIFI_STATE_CHANGED_ACTION.equals(action)) {
-                    if (wm.isWifiEnabled()) mWaiting.open();
+                    if (isWifiEnabled(wm)) mWaiting.open();
                 }
             }
         };
@@ -414,7 +425,7 @@ public final class CtsTetheringUtils {
             ctx.registerReceiver(receiver, new IntentFilter(WifiManager.WIFI_STATE_CHANGED_ACTION));
             if (!mWaiting.block(DEFAULT_TIMEOUT_MS)) {
                 assertTrue("Wifi did not become enabled after " + DEFAULT_TIMEOUT_MS + "ms",
-                        wm.isWifiEnabled());
+                        isWifiEnabled(wm));
             }
         } finally {
             ctx.unregisterReceiver(receiver);
@@ -425,14 +436,16 @@ public final class CtsTetheringUtils {
         final TestTetheringEventCallback tetherEventCallback =
                 new TestTetheringEventCallback();
 
-        mTm.registerTetheringEventCallback(c -> c.run() /* executor */, tetherEventCallback);
-        tetherEventCallback.expectCallbackStarted();
+        runAsShell(ACCESS_NETWORK_STATE, NETWORK_SETTINGS, () -> {
+            mTm.registerTetheringEventCallback(c -> c.run() /* executor */, tetherEventCallback);
+            tetherEventCallback.expectCallbackStarted();
+        });
 
         return tetherEventCallback;
     }
 
     public void unregisterTetheringEventCallback(final TestTetheringEventCallback callback) {
-        mTm.unregisterTetheringEventCallback(callback);
+        runAsShell(ACCESS_NETWORK_STATE, () -> mTm.unregisterTetheringEventCallback(callback));
     }
 
     private static List<String> getWifiTetherableInterfaceRegexps(
@@ -446,11 +459,11 @@ public final class CtsTetheringUtils {
         if (!pm.hasSystemFeature(PackageManager.FEATURE_WIFI)) return false;
         final WifiManager wm = ctx.getSystemService(WifiManager.class);
         // Wifi feature flags only work when wifi is on.
-        final boolean previousWifiEnabledState = wm.isWifiEnabled();
+        final boolean previousWifiEnabledState = isWifiEnabled(wm);
         try {
             if (!previousWifiEnabledState) SystemUtil.runShellCommand("svc wifi enable");
             waitForWifiEnabled(ctx);
-            return wm.isPortableHotspotSupported();
+            return runAsShell(ACCESS_WIFI_STATE, () -> wm.isPortableHotspotSupported());
         } finally {
             if (!previousWifiEnabledState) SystemUtil.runShellCommand("svc wifi disable");
         }
@@ -463,17 +476,20 @@ public final class CtsTetheringUtils {
         final StartTetheringCallback startTetheringCallback = new StartTetheringCallback();
         final TetheringRequest request = new TetheringRequest.Builder(TETHERING_WIFI)
                 .setShouldShowEntitlementUi(false).build();
-        mTm.startTethering(request, c -> c.run() /* executor */, startTetheringCallback);
-        startTetheringCallback.verifyTetheringStarted();
 
-        final TetheringInterface iface =
-                callback.expectTetheredInterfacesChanged(wifiRegexs, TETHERING_WIFI);
+        return runAsShell(TETHER_PRIVILEGED, () -> {
+            mTm.startTethering(request, c -> c.run() /* executor */, startTetheringCallback);
+            startTetheringCallback.verifyTetheringStarted();
 
-        callback.expectOneOfOffloadStatusChanged(
-                TETHER_HARDWARE_OFFLOAD_STARTED,
-                TETHER_HARDWARE_OFFLOAD_FAILED);
+            final TetheringInterface iface =
+                    callback.expectTetheredInterfacesChanged(wifiRegexs, TETHERING_WIFI);
 
-        return iface;
+            callback.expectOneOfOffloadStatusChanged(
+                    TETHER_HARDWARE_OFFLOAD_STARTED,
+                    TETHER_HARDWARE_OFFLOAD_FAILED);
+
+            return iface;
+        });
     }
 
     private static class StopSoftApCallback implements SoftApCallback {
@@ -501,23 +517,33 @@ public final class CtsTetheringUtils {
     public void expectSoftApDisabled() {
         final StopSoftApCallback callback = new StopSoftApCallback();
         try {
-            mWm.registerSoftApCallback(c -> c.run(), callback);
+            runAsShell(NETWORK_SETTINGS, () -> mWm.registerSoftApCallback(c -> c.run(), callback));
             // registerSoftApCallback will immediately call the callback with the current state, so
             // this callback will fire even if softAp is already disabled.
             callback.waitForSoftApStopped();
         } finally {
-            mWm.unregisterSoftApCallback(callback);
+            runAsShell(NETWORK_SETTINGS, () -> mWm.unregisterSoftApCallback(callback));
         }
     }
 
     public void stopWifiTethering(final TestTetheringEventCallback callback) {
-        mTm.stopTethering(TETHERING_WIFI);
+        runAsShell(TETHER_PRIVILEGED, () -> {
+            mTm.stopTethering(TETHERING_WIFI);
+            callback.expectNoTetheringActive();
+            callback.expectOneOfOffloadStatusChanged(TETHER_HARDWARE_OFFLOAD_STOPPED);
+        });
         expectSoftApDisabled();
-        callback.expectNoTetheringActive();
-        callback.expectOneOfOffloadStatusChanged(TETHER_HARDWARE_OFFLOAD_STOPPED);
     }
 
     public void stopAllTethering() {
-        mTm.stopAllTethering();
+        final TestTetheringEventCallback callback = registerTetheringEventCallback();
+        try {
+            runAsShell(TETHER_PRIVILEGED, () -> {
+                mTm.stopAllTethering();
+                callback.expectNoTetheringActive();
+            });
+        } finally {
+            unregisterTetheringEventCallback(callback);
+        }
     }
 }
