@@ -46,9 +46,10 @@
  *
  * While this will work outside of mainline too, there just is no point to
  * using it when the .o and the bpfloader ship in sync with each other.
+ * In which case it's just best to use the default.
  */
 #ifndef BPFLOADER_MIN_VER
-#define BPFLOADER_MIN_VER DEFAULT_BPFLOADER_MIN_VER
+#define BPFLOADER_MIN_VER COMPILE_FOR_BPFLOADER_VERSION
 #endif
 
 #ifndef BPFLOADER_MAX_VER
