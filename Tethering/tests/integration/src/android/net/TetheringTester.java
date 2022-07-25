@@ -17,6 +17,7 @@
 package android.net;
 
 import static android.net.InetAddresses.parseNumericAddress;
+import static android.system.OsConstants.IPPROTO_ICMP;
 import static android.system.OsConstants.IPPROTO_ICMPV6;
 import static android.system.OsConstants.IPPROTO_UDP;
 
@@ -57,6 +58,7 @@ import com.android.net.module.util.DnsPacket;
 import com.android.net.module.util.Ipv6Utils;
 import com.android.net.module.util.Struct;
 import com.android.net.module.util.structs.EthernetHeader;
+import com.android.net.module.util.structs.Icmpv4Header;
 import com.android.net.module.util.structs.Icmpv6Header;
 import com.android.net.module.util.structs.Ipv4Header;
 import com.android.net.module.util.structs.Ipv6Header;
@@ -268,7 +270,8 @@ public final class TetheringTester {
 
     private List<PrefixInformationOption> getRaPrefixOptions(byte[] packet) {
         ByteBuffer buf = ByteBuffer.wrap(packet);
-        if (!isExpectedIcmpv6Packet(buf, true /* hasEth */, ICMPV6_ROUTER_ADVERTISEMENT)) {
+        if (!isExpectedIcmpPacket(buf, true /* hasEth */, false /* isIpv4 */,
+                ICMPV6_ROUTER_ADVERTISEMENT)) {
             fail("Parsing RA packet fail");
         }
 
@@ -298,7 +301,8 @@ public final class TetheringTester {
         sendRsPacket(srcMac, dstMac);
 
         final byte[] raPacket = verifyPacketNotNull("Receive RA fail", getDownloadPacket(p -> {
-            return isExpectedIcmpv6Packet(p, true /* hasEth */, ICMPV6_ROUTER_ADVERTISEMENT);
+            return isExpectedIcmpPacket(p, true /* hasEth */, false /* isIpv4 */,
+                    ICMPV6_ROUTER_ADVERTISEMENT);
         }));
 
         final List<PrefixInformationOption> options = getRaPrefixOptions(raPacket);
@@ -360,20 +364,27 @@ public final class TetheringTester {
         }
     }
 
-    public static boolean isExpectedIcmpv6Packet(byte[] packet, boolean hasEth, int type) {
+    public static boolean isExpectedIcmpPacket(byte[] packet, boolean hasEth, boolean isIpv4,
+            int type) {
         final ByteBuffer buf = ByteBuffer.wrap(packet);
-        return isExpectedIcmpv6Packet(buf, hasEth, type);
+        return isExpectedIcmpPacket(buf, hasEth, isIpv4, type);
     }
 
-    private static boolean isExpectedIcmpv6Packet(ByteBuffer buf, boolean hasEth, int type) {
+    private static boolean isExpectedIcmpPacket(ByteBuffer buf, boolean hasEth, boolean isIpv4,
+            int type) {
         try {
-            if (hasEth && !hasExpectedEtherHeader(buf, false /* isIpv4 */)) return false;
+            if (hasEth && !hasExpectedEtherHeader(buf, isIpv4)) return false;
 
-            if (!hasExpectedIpHeader(buf, false /* isIpv4 */, IPPROTO_ICMPV6)) return false;
+            final int ipProto = isIpv4 ? IPPROTO_ICMP : IPPROTO_ICMPV6;
+            if (!hasExpectedIpHeader(buf, isIpv4, ipProto)) return false;
 
-            return Struct.parse(Icmpv6Header.class, buf).type == (short) type;
+            if (isIpv4) {
+                return Struct.parse(Icmpv4Header.class, buf).type == (short) type;
+            } else {
+                return Struct.parse(Icmpv6Header.class, buf).type == (short) type;
+            }
         } catch (Exception e) {
-            // Parsing packet fail means it is not icmpv6 packet.
+            // Parsing packet fail means it is not icmp packet.
         }
 
         return false;
