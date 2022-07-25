@@ -302,18 +302,5 @@ DEFINE_BPF_PROG_KVER("schedcls/set_dscp_ether", AID_ROOT, AID_SYSTEM,
     return TC_ACT_PIPE;
 }
 
-DEFINE_BPF_PROG_KVER("schedcls/set_dscp_raw_ip", AID_ROOT, AID_SYSTEM,
-                     schedcls_set_dscp_raw_ip, KVER(5, 15, 0))
-(struct __sk_buff* skb) {
-    if (skb->protocol == htons(ETH_P_IP)) {
-        match_policy(skb, true, false);
-    } else if (skb->protocol == htons(ETH_P_IPV6)) {
-        match_policy(skb, false, false);
-    }
-
-    // Always return TC_ACT_PIPE
-    return TC_ACT_PIPE;
-}
-
 LICENSE("Apache 2.0");
 CRITICAL("Connectivity");

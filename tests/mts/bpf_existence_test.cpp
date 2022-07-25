@@ -127,7 +127,6 @@ static const set<string> MAINLINE_FOR_T_5_4_PLUS = {
 // Provided by *current* mainline module for T+ devices with 5.15+ kernels
 static const set<string> MAINLINE_FOR_T_5_15_PLUS = {
     SHARED "prog_dscpPolicy_schedcls_set_dscp_ether",
-    SHARED "prog_dscpPolicy_schedcls_set_dscp_raw_ip",
 };
 
 void addAll(set<string>* a, const set<string>& b) {
