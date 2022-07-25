@@ -41,7 +41,7 @@ import javax.crypto.spec.SecretKeySpec;
 /**
  * {@link android.nearby.BroadcastRequest#PRESENCE_VERSION_V1} for encryption and decryption.
  */
-public class CryptorImpV1 implements Cryptor{
+public class CryptorImpV1 implements Cryptor {
 
     /**
      * In the form of "algorithm/mode/padding". Must be the same across broadcast and scan devices.
