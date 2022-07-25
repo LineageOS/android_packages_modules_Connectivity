@@ -48,6 +48,10 @@
 #define DEFAULT_SIZEOF_BPF_MAP_DEF 32       // v0.0 struct: enum (uint sized) + 7 uint
 #define DEFAULT_SIZEOF_BPF_PROG_DEF 20      // v0.0 struct: 4 uint + bool + 3 byte alignment pad
 
+// By default, unless otherwise specified, allow the use of features only supported by v0.28,
+// which first added working support for map uid != root
+#define COMPILE_FOR_BPFLOADER_VERSION 28u
+
 /*
  * The bpf_{map,prog}_def structures are compiled for different architectures.
  * Once by the BPF compiler for the BPF architecture, and once by a C++
