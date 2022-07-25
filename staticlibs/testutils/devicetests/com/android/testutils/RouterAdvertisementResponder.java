@@ -19,6 +19,7 @@ package com.android.testutils;
 import static android.system.OsConstants.IPPROTO_ICMPV6;
 
 import static com.android.net.module.util.NetworkStackConstants.ETHER_TYPE_IPV6;
+import static com.android.net.module.util.NetworkStackConstants.ICMPV6_ND_OPTION_SLLA;
 import static com.android.net.module.util.NetworkStackConstants.ICMPV6_ND_OPTION_TLLA;
 import static com.android.net.module.util.NetworkStackConstants.ICMPV6_NEIGHBOR_SOLICITATION;
 import static com.android.net.module.util.NetworkStackConstants.ICMPV6_ROUTER_SOLICITATION;
@@ -114,10 +115,15 @@ public class RouterAdvertisementResponder extends PacketResponder {
         return RdnssOption.build(3600/*lifetime, must be at least 120*/, DNS_SERVER);
     }
 
+    private ByteBuffer buildSllaOption(MacAddress srcMac) {
+        return LlaOption.build((byte) ICMPV6_ND_OPTION_SLLA, srcMac);
+    }
+
     private ByteBuffer buildRaPacket(MacAddress srcMac, MacAddress dstMac, Inet6Address srcIp) {
         return Ipv6Utils.buildRaPacket(srcMac, dstMac, srcIp, IPV6_ADDR_ALL_NODES_MULTICAST,
                 (byte) 0 /*M=0, O=0*/, 3600 /*lifetime*/, 0 /*reachableTime, unspecified*/,
-                0/*retransTimer, unspecified*/, buildPrefixOption(), buildRdnssOption());
+                0/*retransTimer, unspecified*/, buildPrefixOption(), buildRdnssOption(),
+                buildSllaOption(srcMac));
     }
 
     private static void sendResponse(TapPacketReader reader, ByteBuffer buffer) {
