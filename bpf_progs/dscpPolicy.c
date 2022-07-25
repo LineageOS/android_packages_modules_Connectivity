@@ -53,12 +53,12 @@ DEFINE_BPF_MAP_GRW(ipv6_socket_to_policies_map_B, HASH, uint64_t, RuleEntry, MAX
 DEFINE_BPF_MAP_GRW(ipv4_dscp_policies_map, ARRAY, uint32_t, DscpPolicy, MAX_POLICIES, AID_SYSTEM)
 DEFINE_BPF_MAP_GRW(ipv6_dscp_policies_map, ARRAY, uint32_t, DscpPolicy, MAX_POLICIES, AID_SYSTEM)
 
-static inline __always_inline void match_policy(struct __sk_buff* skb, bool ipv4, bool is_eth) {
+static inline __always_inline void match_policy(struct __sk_buff* skb, bool ipv4) {
     void* data = (void*)(long)skb->data;
     const void* data_end = (void*)(long)skb->data_end;
 
-    const int l2_header_size = is_eth ? sizeof(struct ethhdr) : 0;
-    struct ethhdr* eth = is_eth ? data : NULL;
+    const int l2_header_size = sizeof(struct ethhdr);
+    struct ethhdr* eth = data;
 
     if (data + l2_header_size > data_end) return;
 
@@ -84,7 +84,7 @@ static inline __always_inline void match_policy(struct __sk_buff* skb, bool ipv4
     uint8_t priority = 0;  // Only used for IPv6
     uint8_t flow_lbl = 0;  // Only used for IPv6
     if (ipv4) {
-        const struct iphdr* const iph = is_eth ? (void*)(eth + 1) : data;
+        const struct iphdr* const iph = (void*)(eth + 1);
         hdr_size = l2_header_size + sizeof(struct iphdr);
         // Must have ipv4 header
         if (data + hdr_size > data_end) return;
@@ -105,7 +105,7 @@ static inline __always_inline void match_policy(struct __sk_buff* skb, bool ipv4
         protocol = iph->protocol;
         tos = iph->tos;
     } else {
-        struct ipv6hdr* ip6h = is_eth ? (void*)(eth + 1) : data;
+        struct ipv6hdr* ip6h = (void*)(eth + 1);
         hdr_size = l2_header_size + sizeof(struct ipv6hdr);
         // Must have ipv6 header
         if (data + hdr_size > data_end) return;
@@ -293,9 +293,9 @@ DEFINE_BPF_PROG_KVER("schedcls/set_dscp_ether", AID_ROOT, AID_SYSTEM,
     if (skb->pkt_type != PACKET_HOST) return TC_ACT_PIPE;
 
     if (skb->protocol == htons(ETH_P_IP)) {
-        match_policy(skb, true, true);
+        match_policy(skb, true);
     } else if (skb->protocol == htons(ETH_P_IPV6)) {
-        match_policy(skb, false, true);
+        match_policy(skb, false);
     }
 
     // Always return TC_ACT_PIPE
