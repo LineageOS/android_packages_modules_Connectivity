@@ -225,11 +225,26 @@ java_defaults {
     // This library combines system server jars that have access to different bootclasspath jars.
     // Lower SDK service jars must not depend on higher SDK jars as that would let them
     // transitively depend on the wrong bootclasspath jars. Sources also cannot be added here as
-    // they would transitively depend on bootclasspath jars that may not be available.
+    // they would depend on bootclasspath jars that may not be available.
     static_libs: [
         "service-connectivity-pre-jarjar",
         "service-connectivity-tiramisu-pre-jarjar",
         "service-nearby-pre-jarjar",
+    ],
+    // The below libraries are not actually needed to build since no source is compiled
+    // (only combining prebuilt static_libs), but they are necessary so that R8 has the right
+    // references to optimize the code. Without these, there will be missing class warnings and
+    // code may be wrongly optimized.
+    // R8 runs after jarjar, so the framework-X libraries need to be the post-jarjar artifacts
+    // (.impl), if they are not just stubs, so that the name of jarjared classes match.
+    libs: [
+        "androidx.annotation_annotation",
+        "framework-annotations-lib",
+        "framework-connectivity.impl",
+        "framework-connectivity-t.impl",
+        "framework-tethering.stubs.module_lib",
+        "framework-wifi.stubs.module_lib",
+        "libprotobuf-java-nano",
     ],
     jarjar_rules: ":connectivity-jarjar-rules",
     apex_available: [
