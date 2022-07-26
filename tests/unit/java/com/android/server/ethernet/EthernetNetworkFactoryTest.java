@@ -313,7 +313,7 @@ public class EthernetNetworkFactoryTest {
 
         assertTrue(ret);
         verify(mIpClient).shutdown();
-        assertEquals(listener.expectOnResult(), TEST_IFACE);
+        assertEquals(TEST_IFACE, listener.expectOnResult());
     }
 
     @Test
@@ -328,13 +328,13 @@ public class EthernetNetworkFactoryTest {
 
         assertTrue(retDown);
         verifyStop();
-        assertEquals(listenerDown.expectOnResult(), TEST_IFACE);
+        assertEquals(TEST_IFACE, listenerDown.expectOnResult());
 
         final boolean retUp =
                 mNetFactory.updateInterfaceLinkState(TEST_IFACE, true /* up */, listenerUp);
 
         assertTrue(retUp);
-        assertEquals(listenerUp.expectOnResult(), TEST_IFACE);
+        assertEquals(TEST_IFACE, listenerUp.expectOnResult());
     }
 
     @Test
@@ -351,7 +351,7 @@ public class EthernetNetworkFactoryTest {
         verify(mDeps, never()).makeIpClient(any(), any(), any());
         verify(mDeps, never())
                 .makeEthernetNetworkAgent(any(), any(), any(), any(), any(), any(), any());
-        assertEquals(listener.expectOnResult(), TEST_IFACE);
+        assertEquals(TEST_IFACE, listener.expectOnResult());
     }
 
     @Test
@@ -616,7 +616,7 @@ public class EthernetNetworkFactoryTest {
         mNetFactory.updateInterface(TEST_IFACE, ipConfiguration, capabilities, listener);
         triggerOnProvisioningSuccess();
 
-        assertEquals(listener.expectOnResult(), TEST_IFACE);
+        assertEquals(TEST_IFACE, listener.expectOnResult());
     }
 
     @Test
@@ -662,6 +662,7 @@ public class EthernetNetworkFactoryTest {
                 });
 
         assertEquals(successfulListener.expectOnResult(), TEST_IFACE);
+        assertEquals(TEST_IFACE, successfulListener.expectOnResult());
     }
 
     private void verifyNetworkManagementCallIsAbortedWhenInterrupted(
@@ -690,7 +691,7 @@ public class EthernetNetworkFactoryTest {
         mNetFactory.updateInterface(TEST_IFACE, ipConfiguration, capabilities, listener);
         triggerOnProvisioningSuccess();
 
-        assertEquals(listener.expectOnResult(), TEST_IFACE);
+        assertEquals(TEST_IFACE, listener.expectOnResult());
         verify(mDeps).makeEthernetNetworkAgent(any(), any(),
                 eq(capabilities), any(), any(), any(), any());
         verifyRestart(ipConfiguration);
