@@ -31,6 +31,7 @@ import static android.net.NetworkStats.IFACE_ALL;
 import static android.net.NetworkStats.IFACE_VT;
 import static android.net.NetworkStats.INTERFACES_ALL;
 import static android.net.NetworkStats.METERED_ALL;
+import static android.net.NetworkStats.METERED_YES;
 import static android.net.NetworkStats.ROAMING_ALL;
 import static android.net.NetworkStats.SET_ALL;
 import static android.net.NetworkStats.SET_DEFAULT;
@@ -41,8 +42,8 @@ import static android.net.NetworkStats.TAG_ALL;
 import static android.net.NetworkStats.TAG_NONE;
 import static android.net.NetworkStats.UID_ALL;
 import static android.net.NetworkStatsHistory.FIELD_ALL;
-import static android.net.NetworkTemplate.buildTemplateMobileWildcard;
-import static android.net.NetworkTemplate.buildTemplateWifiWildcard;
+import static android.net.NetworkTemplate.MATCH_MOBILE;
+import static android.net.NetworkTemplate.MATCH_WIFI;
 import static android.net.TrafficStats.KB_IN_BYTES;
 import static android.net.TrafficStats.MB_IN_BYTES;
 import static android.net.TrafficStats.UID_TETHERING;
@@ -2359,7 +2360,7 @@ public class NetworkStatsService extends INetworkStatsService.Stub {
         NetworkStats.Entry uidTotal;
 
         // collect mobile sample
-        template = buildTemplateMobileWildcard();
+        template = new NetworkTemplate.Builder(MATCH_MOBILE).setMeteredness(METERED_YES).build();
         devTotal = mDevRecorder.getTotalSinceBootLocked(template);
         xtTotal = mXtRecorder.getTotalSinceBootLocked(template);
         uidTotal = mUidRecorder.getTotalSinceBootLocked(template);
@@ -2371,7 +2372,7 @@ public class NetworkStatsService extends INetworkStatsService.Stub {
                 currentTime);
 
         // collect wifi sample
-        template = buildTemplateWifiWildcard();
+        template = new NetworkTemplate.Builder(MATCH_WIFI).build();
         devTotal = mDevRecorder.getTotalSinceBootLocked(template);
         xtTotal = mXtRecorder.getTotalSinceBootLocked(template);
         uidTotal = mUidRecorder.getTotalSinceBootLocked(template);
