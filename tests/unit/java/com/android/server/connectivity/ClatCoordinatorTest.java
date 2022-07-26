@@ -21,6 +21,7 @@ import static android.system.OsConstants.ETH_P_IP;
 import static android.system.OsConstants.ETH_P_IPV6;
 
 import static com.android.net.module.util.NetworkStackConstants.ETHER_MTU;
+import static com.android.server.connectivity.ClatCoordinator.AID_CLAT;
 import static com.android.server.connectivity.ClatCoordinator.CLAT_MAX_MTU;
 import static com.android.server.connectivity.ClatCoordinator.EGRESS;
 import static com.android.server.connectivity.ClatCoordinator.INGRESS;
@@ -56,6 +57,8 @@ import com.android.net.module.util.bpf.ClatEgress4Key;
 import com.android.net.module.util.bpf.ClatEgress4Value;
 import com.android.net.module.util.bpf.ClatIngress6Key;
 import com.android.net.module.util.bpf.ClatIngress6Value;
+import com.android.net.module.util.bpf.CookieTagMapKey;
+import com.android.net.module.util.bpf.CookieTagMapValue;
 import com.android.testutils.DevSdkIgnoreRule;
 import com.android.testutils.DevSdkIgnoreRunner;
 import com.android.testutils.TestBpfMap;
@@ -127,11 +130,16 @@ public class ClatCoordinatorTest {
             INET6_PFX96, INET6_LOCAL6);
     private static final ClatIngress6Value INGRESS_VALUE = new ClatIngress6Value(STACKED_IFINDEX,
             INET4_LOCAL4);
+    private static final CookieTagMapKey COOKIE_TAG_KEY = new CookieTagMapKey(RAW_SOCK_COOKIE);
+    private static final CookieTagMapValue COOKIE_TAG_VALUE = new CookieTagMapValue(AID_CLAT,
+            0 /* tag, unused */);
 
     private final TestBpfMap<ClatIngress6Key, ClatIngress6Value> mIngressMap =
             spy(new TestBpfMap<>(ClatIngress6Key.class, ClatIngress6Value.class));
     private final TestBpfMap<ClatEgress4Key, ClatEgress4Value> mEgressMap =
             spy(new TestBpfMap<>(ClatEgress4Key.class, ClatEgress4Value.class));
+    private final TestBpfMap<CookieTagMapKey, CookieTagMapValue> mCookieTagMap =
+            spy(new TestBpfMap<>(CookieTagMapKey.class, CookieTagMapValue.class));
 
     @Mock private INetd mNetd;
     @Spy private TestDependencies mDeps = new TestDependencies();
@@ -313,25 +321,10 @@ public class ClatCoordinatorTest {
         }
 
         /**
-         * Tag socket as clat.
+         * Get socket cookie.
          */
-        @Override
-        public long tagSocketAsClat(@NonNull FileDescriptor sock) throws IOException {
-            if (Objects.equals(RAW_SOCK_PFD.getFileDescriptor(), sock)) {
-                return RAW_SOCK_COOKIE;
-            }
-            fail("unsupported arg: " + sock);
-            return 0;
-        }
-
-        /**
-         * Untag socket.
-         */
-        @Override
-        public void untagSocket(long cookie) throws IOException {
-            if (cookie != RAW_SOCK_COOKIE) {
-                fail("unsupported arg: " + cookie);
-            }
+        public long getSocketCookie(@NonNull FileDescriptor sock) throws IOException {
+            return RAW_SOCK_COOKIE;
         }
 
         /** Get ingress6 BPF map. */
@@ -344,6 +337,12 @@ public class ClatCoordinatorTest {
         @Override
         public IBpfMap<ClatEgress4Key, ClatEgress4Value> getBpfEgress4Map() {
             return mEgressMap;
+        }
+
+        /** Get cookie tag map */
+        @Override
+        public IBpfMap<CookieTagMapKey, CookieTagMapValue> getBpfCookieTagMap() {
+            return mCookieTagMap;
         }
 
         /** Checks if the network interface uses an ethernet L2 header. */
@@ -400,8 +399,8 @@ public class ClatCoordinatorTest {
     @Test
     public void testStartStopClatd() throws Exception {
         final ClatCoordinator coordinator = makeClatCoordinator();
-        final InOrder inOrder = inOrder(mNetd, mDeps, mIngressMap, mEgressMap);
-        clearInvocations(mNetd, mDeps, mIngressMap, mEgressMap);
+        final InOrder inOrder = inOrder(mNetd, mDeps, mIngressMap, mEgressMap, mCookieTagMap);
+        clearInvocations(mNetd, mDeps, mIngressMap, mEgressMap, mCookieTagMap);
 
         // [1] Start clatd.
         final String addr6For464xlat = coordinator.clatStart(BASE_IFACE, NETID, NAT64_IP_PREFIX);
@@ -444,8 +443,9 @@ public class ClatCoordinatorTest {
         inOrder.verify(mDeps).addAnycastSetsockopt(
                 argThat(fd -> Objects.equals(RAW_SOCK_PFD.getFileDescriptor(), fd)),
                 eq(XLAT_LOCAL_IPV6ADDR_STRING), eq(BASE_IFINDEX));
-        inOrder.verify(mDeps).tagSocketAsClat(
+        inOrder.verify(mDeps).getSocketCookie(
                 argThat(fd -> Objects.equals(RAW_SOCK_PFD.getFileDescriptor(), fd)));
+        inOrder.verify(mCookieTagMap).insertEntry(eq(COOKIE_TAG_KEY), eq(COOKIE_TAG_VALUE));
         inOrder.verify(mDeps).configurePacketSocket(
                 argThat(fd -> Objects.equals(PACKET_SOCK_PFD.getFileDescriptor(), fd)),
                 eq(XLAT_LOCAL_IPV6ADDR_STRING), eq(BASE_IFINDEX));
@@ -481,7 +481,7 @@ public class ClatCoordinatorTest {
         inOrder.verify(mIngressMap).deleteEntry(eq(INGRESS_KEY));
         inOrder.verify(mDeps).stopClatd(eq(BASE_IFACE), eq(NAT64_PREFIX_STRING),
                 eq(XLAT_LOCAL_IPV4ADDR_STRING), eq(XLAT_LOCAL_IPV6ADDR_STRING), eq(CLATD_PID));
-        inOrder.verify(mDeps).untagSocket(eq(RAW_SOCK_COOKIE));
+        inOrder.verify(mCookieTagMap).deleteEntry(eq(COOKIE_TAG_KEY));
         assertNull(coordinator.getClatdTrackerForTesting());
         inOrder.verifyNoMoreInteractions();
 
@@ -680,18 +680,6 @@ public class ClatCoordinatorTest {
     }
 
     @Test
-    public void testNotStartClatWithNativeFailureTagSocketAsClat() throws Exception {
-        class FailureDependencies extends TestDependencies {
-            @Override
-            public long tagSocketAsClat(@NonNull FileDescriptor sock) throws IOException {
-                throw new IOException();
-            }
-        }
-        checkNotStartClat(new FailureDependencies(), true /* needToCloseTunFd */,
-                true /* needToClosePacketSockFd */, true /* needToCloseRawSockFd */);
-    }
-
-    @Test
     public void testNotStartClatWithNativeFailureConfigurePacketSocket() throws Exception {
         class FailureDependencies extends TestDependencies {
             @Override
@@ -713,6 +701,30 @@ public class ClatCoordinatorTest {
                     @NonNull String pfx96, @NonNull String v4, @NonNull String v6)
                     throws IOException {
                 throw new IOException();
+            }
+        }
+        checkNotStartClat(new FailureDependencies(), true /* needToCloseTunFd */,
+                true /* needToClosePacketSockFd */, true /* needToCloseRawSockFd */);
+    }
+
+    @Test
+    public void testNotStartClatWithNativeFailureGetSocketCookie() throws Exception {
+        class FailureDependencies extends TestDependencies {
+            @Override
+            public long getSocketCookie(@NonNull FileDescriptor sock) throws IOException {
+                throw new IOException();
+            }
+        }
+        checkNotStartClat(new FailureDependencies(), true /* needToCloseTunFd */,
+                true /* needToClosePacketSockFd */, true /* needToCloseRawSockFd */);
+    }
+
+    @Test
+    public void testNotStartClatWithNullCookieTagMap() throws Exception {
+        class FailureDependencies extends TestDependencies {
+            @Override
+            public IBpfMap<CookieTagMapKey, CookieTagMapValue> getBpfCookieTagMap() {
+                return null;
             }
         }
         checkNotStartClat(new FailureDependencies(), true /* needToCloseTunFd */,

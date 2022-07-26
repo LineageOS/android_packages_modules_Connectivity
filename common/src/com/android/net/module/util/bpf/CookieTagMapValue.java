@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.android.server.net;
+package com.android.net.module.util.bpf;
 
 import com.android.net.module.util.Struct;
 import com.android.net.module.util.Struct.Field;
