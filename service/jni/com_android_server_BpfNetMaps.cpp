@@ -26,6 +26,8 @@
 #include <nativehelper/ScopedPrimitiveArray.h>
 #include <netjniutils/netjniutils.h>
 #include <net/if.h>
+#include <private/android_filesystem_config.h>
+#include <unistd.h>
 #include <vector>
 
 
@@ -48,6 +50,12 @@ namespace android {
 static void native_init(JNIEnv* env, jclass clazz) {
   Status status = mTc.start();
   CHECK_LOG(status);
+  if (!isOk(status)) {
+    uid_t uid = getuid();
+    ALOGE("BpfNetMaps jni init failure as uid=%d", uid);
+    // TODO: Fix tests to not use this jni lib, so we can unconditionally abort()
+    if (uid == AID_SYSTEM || uid == AID_NETWORK_STACK) abort();
+  }
 }
 
 static jint native_addNaughtyApp(JNIEnv* env, jobject self, jint uid) {
