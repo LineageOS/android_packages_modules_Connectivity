@@ -857,7 +857,7 @@ public class NetworkStatsServiceTest extends NetworkStatsBaseTest {
         incrementCurrentTime(MINUTE_IN_MILLIS);
         expectNetworkStatsUidDetail(new NetworkStats(getElapsedRealtime(), 1)
                 .addEntry(new NetworkStats.Entry(TEST_IFACE, UID_RED, SET_DEFAULT, TAG_NONE,
-                        12L, 18L, 14L, 1L, 0L)));
+                        METERED_NO, ROAMING_NO, DEFAULT_NETWORK_NO, 12L, 18L, 14L, 1L, 0L)));
         forcePollAndWaitForIdle();
 
         // Verify 3g templates gets stats.
@@ -872,10 +872,10 @@ public class NetworkStatsServiceTest extends NetworkStatsBaseTest {
         expectNetworkStatsUidDetail(new NetworkStats(getElapsedRealtime(), 1)
                 // Append more traffic on existing 3g stats entry.
                 .addEntry(new NetworkStats.Entry(TEST_IFACE, UID_RED, SET_DEFAULT, TAG_NONE,
-                        16L, 22L, 17L, 2L, 0L))
+                         METERED_NO, ROAMING_NO, DEFAULT_NETWORK_NO, 16L, 22L, 17L, 2L, 0L))
                 // Add entry that is new on 4g.
                 .addEntry(new NetworkStats.Entry(TEST_IFACE, UID_RED, SET_FOREGROUND, TAG_NONE,
-                        33L, 27L, 8L, 10L, 1L)));
+                        METERED_NO, ROAMING_NO, DEFAULT_NETWORK_NO, 33L, 27L, 8L, 10L, 1L)));
         forcePollAndWaitForIdle();
 
         // Verify ALL_MOBILE template gets all. 3g template counters do not increase.
@@ -892,12 +892,12 @@ public class NetworkStatsServiceTest extends NetworkStatsBaseTest {
         expectNetworkStatsUidDetail(new NetworkStats(getElapsedRealtime(), 1)
                 // Existing stats remains.
                 .addEntry(new NetworkStats.Entry(TEST_IFACE, UID_RED, SET_DEFAULT, TAG_NONE,
-                        16L, 22L, 17L, 2L, 0L))
+                        METERED_NO, ROAMING_NO, DEFAULT_NETWORK_NO, 16L, 22L, 17L, 2L, 0L))
                 .addEntry(new NetworkStats.Entry(TEST_IFACE, UID_RED, SET_FOREGROUND, TAG_NONE,
-                        33L, 27L, 8L, 10L, 1L))
+                        METERED_NO, ROAMING_NO, DEFAULT_NETWORK_NO, 33L, 27L, 8L, 10L, 1L))
                 // Add some traffic on 5g.
                 .addEntry(new NetworkStats.Entry(TEST_IFACE, UID_RED, SET_DEFAULT, TAG_NONE,
-                5L, 13L, 31L, 9L, 2L)));
+                        METERED_NO, ROAMING_NO, DEFAULT_NETWORK_NO, 5L, 13L, 31L, 9L, 2L)));
         forcePollAndWaitForIdle();
 
         // Verify ALL_MOBILE template gets all.
@@ -979,7 +979,7 @@ public class NetworkStatsServiceTest extends NetworkStatsBaseTest {
         incrementCurrentTime(MINUTE_IN_MILLIS);
         expectNetworkStatsUidDetail(new NetworkStats(getElapsedRealtime(), 1)
                 .addEntry(new NetworkStats.Entry(TEST_IFACE, UID_RED, SET_DEFAULT, TAG_NONE,
-                        36L, 41L, 24L, 96L, 0L)));
+                        METERED_NO, ROAMING_NO, DEFAULT_NETWORK_NO, 36L, 41L, 24L, 96L, 0L)));
         forcePollAndWaitForIdle();
 
         // OEM_PRIVATE network comes online.
@@ -994,7 +994,7 @@ public class NetworkStatsServiceTest extends NetworkStatsBaseTest {
         incrementCurrentTime(MINUTE_IN_MILLIS);
         expectNetworkStatsUidDetail(new NetworkStats(getElapsedRealtime(), 1)
                 .addEntry(new NetworkStats.Entry(TEST_IFACE, UID_RED, SET_DEFAULT, TAG_NONE,
-                        49L, 71L, 72L, 48L, 0L)));
+                        METERED_NO, ROAMING_NO, DEFAULT_NETWORK_NO, 49L, 71L, 72L, 48L, 0L)));
         forcePollAndWaitForIdle();
 
         // OEM_PAID + OEM_PRIVATE network comes online.
@@ -1010,7 +1010,7 @@ public class NetworkStatsServiceTest extends NetworkStatsBaseTest {
         incrementCurrentTime(MINUTE_IN_MILLIS);
         expectNetworkStatsUidDetail(new NetworkStats(getElapsedRealtime(), 1)
                 .addEntry(new NetworkStats.Entry(TEST_IFACE, UID_RED, SET_DEFAULT, TAG_NONE,
-                        57L, 86L, 83L, 93L, 0L)));
+                        METERED_NO, ROAMING_NO, DEFAULT_NETWORK_NO, 57L, 86L, 83L, 93L, 0L)));
         forcePollAndWaitForIdle();
 
         // OEM_NONE network comes online.
@@ -1024,7 +1024,7 @@ public class NetworkStatsServiceTest extends NetworkStatsBaseTest {
         incrementCurrentTime(MINUTE_IN_MILLIS);
         expectNetworkStatsUidDetail(new NetworkStats(getElapsedRealtime(), 1)
                 .addEntry(new NetworkStats.Entry(TEST_IFACE, UID_RED, SET_DEFAULT, TAG_NONE,
-                        29L, 73L, 34L, 31L, 0L)));
+                        METERED_NO, ROAMING_NO, DEFAULT_NETWORK_NO, 29L, 73L, 34L, 31L, 0L)));
         forcePollAndWaitForIdle();
 
         // Verify OEM_PAID template gets only relevant stats.
@@ -1135,7 +1135,8 @@ public class NetworkStatsServiceTest extends NetworkStatsBaseTest {
         // Increase arbitrary time which does not align to the bucket edge, create some traffic.
         incrementCurrentTime(1751000L);
         NetworkStats.Entry entry = new NetworkStats.Entry(
-                TEST_IFACE, UID_ALL, SET_DEFAULT, TAG_NONE, 50L, 5L, 51L, 1L, 3L);
+                TEST_IFACE, UID_ALL, SET_DEFAULT, TAG_NONE, METERED_NO, ROAMING_NO,
+                DEFAULT_NETWORK_NO, 50L, 5L, 51L, 1L, 3L);
         expectNetworkStatsSummary(new NetworkStats(getElapsedRealtime(), 1).insertEntry(entry));
         expectNetworkStatsUidDetail(buildEmptyStats());
         forcePollAndWaitForIdle();
@@ -1169,11 +1170,14 @@ public class NetworkStatsServiceTest extends NetworkStatsBaseTest {
                 new UnderlyingNetworkInfo[0]);
 
         NetworkStats.Entry entry1 = new NetworkStats.Entry(
-                TEST_IFACE, UID_RED, SET_DEFAULT, TAG_NONE, 50L, 5L, 50L, 5L, 0L);
+                TEST_IFACE, UID_RED, SET_DEFAULT, TAG_NONE, METERED_NO, ROAMING_NO,
+                DEFAULT_NETWORK_NO, 50L, 5L, 50L, 5L, 0L);
         NetworkStats.Entry entry2 = new NetworkStats.Entry(
-                TEST_IFACE, UID_RED, SET_DEFAULT, 0xF00D, 50L, 5L, 50L, 5L, 0L);
+                TEST_IFACE, UID_RED, SET_DEFAULT, 0xF00D, METERED_NO, ROAMING_NO,
+                DEFAULT_NETWORK_NO, 50L, 5L, 50L, 5L, 0L);
         NetworkStats.Entry entry3 = new NetworkStats.Entry(
-                TEST_IFACE, UID_BLUE, SET_DEFAULT, 0xBEEF, 1024L, 8L, 512L, 4L, 0L);
+                TEST_IFACE, UID_BLUE, SET_DEFAULT, 0xBEEF, METERED_NO, ROAMING_NO,
+                DEFAULT_NETWORK_NO, 1024L, 8L, 512L, 4L, 0L);
 
         incrementCurrentTime(HOUR_IN_MILLIS);
         expectDefaultSettings();
@@ -1681,7 +1685,7 @@ public class NetworkStatsServiceTest extends NetworkStatsBaseTest {
         incrementCurrentTime(MINUTE_IN_MILLIS);
         expectNetworkStatsUidDetail(new NetworkStats(getElapsedRealtime(), 1)
                 .addEntry(new NetworkStats.Entry(TEST_IFACE, UID_RED, SET_DEFAULT, TAG_NONE,
-                        12L, 18L, 14L, 1L, 0L)));
+                        METERED_NO, ROAMING_NO, DEFAULT_NETWORK_NO, 12L, 18L, 14L, 1L, 0L)));
         forcePollAndWaitForIdle();
 
         // Since CombineSubtypeEnabled is false by default in unit test, the generated traffic
@@ -1705,9 +1709,10 @@ public class NetworkStatsServiceTest extends NetworkStatsBaseTest {
         // Append more traffic on existing snapshot.
         expectNetworkStatsUidDetail(new NetworkStats(getElapsedRealtime(), 1)
                 .addEntry(new NetworkStats.Entry(TEST_IFACE, UID_RED, SET_DEFAULT, TAG_NONE,
-                        12L + 4L, 18L + 4L, 14L + 3L, 1L + 1L, 0L))
+                        METERED_NO, ROAMING_NO, DEFAULT_NETWORK_NO, 12L + 4L, 18L + 4L, 14L + 3L,
+                        1L + 1L, 0L))
                 .addEntry(new NetworkStats.Entry(TEST_IFACE, UID_RED, SET_FOREGROUND, TAG_NONE,
-                        35L, 29L, 7L, 11L, 1L)));
+                        METERED_NO, ROAMING_NO, DEFAULT_NETWORK_NO, 35L, 29L, 7L, 11L, 1L)));
         forcePollAndWaitForIdle();
 
         // Verify 3G counters do not increase, while template with unknown RAT type gets new
@@ -1727,9 +1732,9 @@ public class NetworkStatsServiceTest extends NetworkStatsBaseTest {
         // Append more traffic on existing snapshot.
         expectNetworkStatsUidDetail(new NetworkStats(getElapsedRealtime(), 1)
                 .addEntry(new NetworkStats.Entry(TEST_IFACE, UID_RED, SET_DEFAULT, TAG_NONE,
-                        22L, 26L, 19L, 5L, 0L))
+                        METERED_NO, ROAMING_NO, DEFAULT_NETWORK_NO, 22L, 26L, 19L, 5L, 0L))
                 .addEntry(new NetworkStats.Entry(TEST_IFACE, UID_RED, SET_FOREGROUND, TAG_NONE,
-                        35L, 29L, 7L, 11L, 1L)));
+                        METERED_NO, ROAMING_NO, DEFAULT_NETWORK_NO, 35L, 29L, 7L, 11L, 1L)));
         forcePollAndWaitForIdle();
 
         // Verify traffic is split by RAT type, no increase on template with unknown RAT type

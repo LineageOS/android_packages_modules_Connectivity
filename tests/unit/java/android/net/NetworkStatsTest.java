@@ -960,7 +960,7 @@ public class NetworkStatsTest {
 
         // Ipv4 traffic sent/received by an app on stacked interface.
         final NetworkStats.Entry appEntry = new NetworkStats.Entry(
-                v4Iface, appUid, SET_DEFAULT, TAG_NONE,
+                v4Iface, appUid, SET_DEFAULT, TAG_NONE, METERED_NO, ROAMING_NO, DEFAULT_NETWORK_NO,
                 30501490  /* rxBytes */,
                 22401 /* rxPackets */,
                 876235 /* txBytes */,
@@ -969,7 +969,8 @@ public class NetworkStatsTest {
 
         // Traffic measured for the root uid on the base interface.
         final NetworkStats.Entry rootUidEntry = new NetworkStats.Entry(
-                baseIface, rootUid, SET_DEFAULT, TAG_NONE,
+                baseIface, rootUid, SET_DEFAULT, TAG_NONE, METERED_NO, ROAMING_NO,
+                DEFAULT_NETWORK_NO,
                 163577 /* rxBytes */,
                 187 /* rxPackets */,
                 17607 /* txBytes */,
@@ -977,7 +978,8 @@ public class NetworkStatsTest {
                 0 /* operations */);
 
         final NetworkStats.Entry otherEntry = new NetworkStats.Entry(
-                otherIface, appUid, SET_DEFAULT, TAG_NONE,
+                otherIface, appUid, SET_DEFAULT, TAG_NONE, METERED_NO, ROAMING_NO,
+                DEFAULT_NETWORK_NO,
                 2600  /* rxBytes */,
                 2 /* rxPackets */,
                 3800 /* txBytes */,
@@ -993,14 +995,14 @@ public class NetworkStatsTest {
 
         assertEquals(3, stats.size());
         final NetworkStats.Entry expectedAppUid = new NetworkStats.Entry(
-                v4Iface, appUid, SET_DEFAULT, TAG_NONE,
+                v4Iface, appUid, SET_DEFAULT, TAG_NONE, METERED_NO, ROAMING_NO, DEFAULT_NETWORK_NO,
                 30949510,
                 22401,
                 1152335,
                 13805,
                 0);
         final NetworkStats.Entry expectedRootUid = new NetworkStats.Entry(
-                baseIface, 0, SET_DEFAULT, TAG_NONE,
+                baseIface, 0, SET_DEFAULT, TAG_NONE, METERED_NO, ROAMING_NO, DEFAULT_NETWORK_NO,
                 163577,
                 187,
                 17607,
@@ -1014,14 +1016,16 @@ public class NetworkStatsTest {
     @Test
     public void testApply464xlatAdjustments_noStackedIface() {
         NetworkStats.Entry firstEntry = new NetworkStats.Entry(
-                "if1", 10002, SET_DEFAULT, TAG_NONE,
+                "if1", 10002, SET_DEFAULT, TAG_NONE, METERED_NO, ROAMING_NO,
+                DEFAULT_NETWORK_NO,
                 2600  /* rxBytes */,
                 2 /* rxPackets */,
                 3800 /* txBytes */,
                 3 /* txPackets */,
                 0 /* operations */);
         NetworkStats.Entry secondEntry = new NetworkStats.Entry(
-                "if2", 10002, SET_DEFAULT, TAG_NONE,
+                "if2", 10002, SET_DEFAULT, TAG_NONE, METERED_NO, ROAMING_NO,
+                DEFAULT_NETWORK_NO,
                 5000  /* rxBytes */,
                 3 /* rxPackets */,
                 6000 /* txBytes */,
