@@ -46,6 +46,10 @@ import com.android.net.module.util.Struct.U32;
 
 import java.io.FileDescriptor;
 import java.io.IOException;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * BpfNetMaps is responsible for providing traffic controller relevant functionality.
@@ -404,25 +408,46 @@ public class BpfNetMaps {
 
     /**
      * Replaces the contents of the specified UID-based firewall chain.
+     * Enables the chain for specified uids and disables the chain for non-specified uids.
      *
-     * The chain may be an allowlist chain or a denylist chain. A denylist chain contains DROP
-     * rules for the specified UIDs and a RETURN rule at the end. An allowlist chain contains RETURN
-     * rules for the system UID range (0 to {@code UID_APP} - 1), RETURN rules for the specified
-     * UIDs, and a DROP rule at the end. The chain will be created if it does not exist.
-     *
-     * @param chainName   The name of the chain to replace.
-     * @param isAllowlist Whether this is an allowlist or denylist chain.
+     * @param chain       Target chain.
      * @param uids        The list of UIDs to allow/deny.
-     * @return 0 if the chain was successfully replaced, errno otherwise.
+     * @throws UnsupportedOperationException if called on pre-T devices.
+     * @throws IllegalArgumentException if {@code chain} is not a valid chain.
      */
-    public int replaceUidChain(final String chainName, final boolean isAllowlist,
-            final int[] uids) {
-        synchronized (sUidOwnerMap) {
-            final int err = native_replaceUidChain(chainName, isAllowlist, uids);
-            if (err != 0) {
-                Log.e(TAG, "replaceUidChain failed: " + Os.strerror(-err));
+    public void replaceUidChain(final int chain, final int[] uids) {
+        throwIfPreT("replaceUidChain is not available on pre-T devices");
+
+        final long match;
+        try {
+            match = getMatchByFirewallChain(chain);
+        } catch (ServiceSpecificException e) {
+            // Throws IllegalArgumentException to keep the behavior of
+            // ConnectivityManager#replaceFirewallChain API
+            throw new IllegalArgumentException("Invalid firewall chain: " + chain);
+        }
+        final Set<Integer> uidSet = Arrays.stream(uids).boxed().collect(Collectors.toSet());
+        final Set<Integer> uidSetToRemoveRule = new HashSet<>();
+        try {
+            synchronized (sUidOwnerMap) {
+                sUidOwnerMap.forEach((uid, config) -> {
+                    // config could be null if there is a concurrent entry deletion.
+                    // http://b/220084230.
+                    if (config != null
+                            && !uidSet.contains((int) uid.val) && (config.rule & match) != 0) {
+                        uidSetToRemoveRule.add((int) uid.val);
+                    }
+                });
+
+                for (final int uid : uidSetToRemoveRule) {
+                    removeRule(uid, match, "replaceUidChain");
+                }
+                for (final int uid : uids) {
+                    addRule(uid, match, "replaceUidChain");
+                }
             }
-            return -err;
+        } catch (ErrnoException | ServiceSpecificException e) {
+            Log.e(TAG, "replaceUidChain failed: " + e);
         }
     }
 
