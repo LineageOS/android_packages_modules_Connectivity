@@ -9596,24 +9596,23 @@ public class ConnectivityServiceTest {
         }
     }
 
-    private void doTestReplaceFirewallChain(final int chain, final String chainName,
-            final boolean allowList) {
+    private void doTestReplaceFirewallChain(final int chain) {
         final int[] uids = new int[] {1001, 1002};
         mCm.replaceFirewallChain(chain, uids);
-        verify(mBpfNetMaps).replaceUidChain(chainName, allowList, uids);
+        verify(mBpfNetMaps).replaceUidChain(chain, uids);
         reset(mBpfNetMaps);
     }
 
     @Test @IgnoreUpTo(SC_V2)
     public void testReplaceFirewallChain() {
-        doTestReplaceFirewallChain(FIREWALL_CHAIN_DOZABLE, "fw_dozable", true);
-        doTestReplaceFirewallChain(FIREWALL_CHAIN_STANDBY, "fw_standby", false);
-        doTestReplaceFirewallChain(FIREWALL_CHAIN_POWERSAVE, "fw_powersave",  true);
-        doTestReplaceFirewallChain(FIREWALL_CHAIN_RESTRICTED, "fw_restricted", true);
-        doTestReplaceFirewallChain(FIREWALL_CHAIN_LOW_POWER_STANDBY, "fw_low_power_standby", true);
-        doTestReplaceFirewallChain(FIREWALL_CHAIN_OEM_DENY_1, "fw_oem_deny_1", false);
-        doTestReplaceFirewallChain(FIREWALL_CHAIN_OEM_DENY_2, "fw_oem_deny_2", false);
-        doTestReplaceFirewallChain(FIREWALL_CHAIN_OEM_DENY_3, "fw_oem_deny_3", false);
+        doTestReplaceFirewallChain(FIREWALL_CHAIN_DOZABLE);
+        doTestReplaceFirewallChain(FIREWALL_CHAIN_STANDBY);
+        doTestReplaceFirewallChain(FIREWALL_CHAIN_POWERSAVE);
+        doTestReplaceFirewallChain(FIREWALL_CHAIN_RESTRICTED);
+        doTestReplaceFirewallChain(FIREWALL_CHAIN_LOW_POWER_STANDBY);
+        doTestReplaceFirewallChain(FIREWALL_CHAIN_OEM_DENY_1);
+        doTestReplaceFirewallChain(FIREWALL_CHAIN_OEM_DENY_2);
+        doTestReplaceFirewallChain(FIREWALL_CHAIN_OEM_DENY_3);
     }
 
     @Test @IgnoreUpTo(SC_V2)
@@ -9624,8 +9623,6 @@ public class ConnectivityServiceTest {
                 () -> mCm.setUidFirewallRule(-1 /* chain */, uid, FIREWALL_RULE_ALLOW));
         assertThrows(expected,
                 () -> mCm.setUidFirewallRule(100 /* chain */, uid, FIREWALL_RULE_ALLOW));
-        assertThrows(expected, () -> mCm.replaceFirewallChain(-1 /* chain */, new int[]{uid}));
-        assertThrows(expected, () -> mCm.replaceFirewallChain(100 /* chain */, new int[]{uid}));
     }
 
     @Test @IgnoreUpTo(SC_V2)
