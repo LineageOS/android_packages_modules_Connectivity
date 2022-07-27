@@ -36,8 +36,6 @@
 #define ECN_MASK 3
 #define IP4_OFFSET(field, header) (header + offsetof(struct iphdr, field))
 #define UPDATE_TOS(dscp, tos) (dscp << 2) | (tos & ECN_MASK)
-#define UPDATE_PRIORITY(dscp) ((dscp >> 2) + 0x60)
-#define UPDATE_FLOW_LABEL(dscp, flow_lbl) ((dscp & 0xf) << 6) + (flow_lbl >> 6)
 
 DEFINE_BPF_MAP_GRW(switch_comp_map, ARRAY, int, uint64_t, 1, AID_SYSTEM)
 
@@ -80,9 +78,8 @@ static inline __always_inline void match_policy(struct __sk_buff* skb, bool ipv4
     uint8_t protocol = 0;  // TODO: Use are reserved value? Or int (-1) and cast to uint below?
     struct in6_addr src_ip = {};
     struct in6_addr dst_ip = {};
-    uint8_t tos = 0;       // Only used for IPv4
-    uint8_t priority = 0;  // Only used for IPv6
-    uint8_t flow_lbl = 0;  // Only used for IPv6
+    uint8_t tos = 0;             // Only used for IPv4
+    uint32_t old_first_u32 = 0;  // Only used for IPv6
     if (ipv4) {
         const struct iphdr* const iph = (void*)(eth + 1);
         hdr_size = l2_header_size + sizeof(struct iphdr);
@@ -115,8 +112,7 @@ static inline __always_inline void match_policy(struct __sk_buff* skb, bool ipv4
         src_ip = ip6h->saddr;
         dst_ip = ip6h->daddr;
         protocol = ip6h->nexthdr;
-        priority = ip6h->priority;
-        flow_lbl = ip6h->flow_lbl[0];
+        old_first_u32 = *(uint32_t*)ip6h;
     }
 
     switch (protocol) {
@@ -164,10 +160,10 @@ static inline __always_inline void match_policy(struct __sk_buff* skb, bool ipv4
                                 sizeof(uint16_t));
             bpf_skb_store_bytes(skb, IP4_OFFSET(tos, l2_header_size), &newTos, sizeof(newTos), 0);
         } else {
-            uint8_t new_priority = UPDATE_PRIORITY(existing_rule->dscp_val);
-            uint8_t new_flow_label = UPDATE_FLOW_LABEL(existing_rule->dscp_val, flow_lbl);
-            bpf_skb_store_bytes(skb, 0 + l2_header_size, &new_priority, sizeof(uint8_t), 0);
-            bpf_skb_store_bytes(skb, 1 + l2_header_size, &new_flow_label, sizeof(uint8_t), 0);
+            uint32_t new_first_u32 =
+                htonl(ntohl(old_first_u32) & 0xF03FFFFF | (existing_rule->dscp_val << 22));
+            bpf_skb_store_bytes(skb, l2_header_size, &new_first_u32, sizeof(uint32_t),
+                BPF_F_RECOMPUTE_CSUM);
         }
         return;
     }
@@ -227,10 +223,7 @@ static inline __always_inline void match_policy(struct __sk_buff* skb, bool ipv4
         }
     }
 
-    uint8_t new_tos = 0;  // Can 0 be used as default forwarding value?
     uint8_t new_dscp = 0;
-    uint8_t new_priority = 0;
-    uint8_t new_flow_lbl = 0;
     if (best_score > 0) {
         DscpPolicy* policy;
         if (ipv4) {
@@ -241,12 +234,6 @@ static inline __always_inline void match_policy(struct __sk_buff* skb, bool ipv4
 
         if (policy) {
             new_dscp = policy->dscp_val;
-            if (ipv4) {
-                new_tos = UPDATE_TOS(new_dscp, tos);
-            } else {
-                new_priority = UPDATE_PRIORITY(new_dscp);
-                new_flow_lbl = UPDATE_FLOW_LABEL(new_dscp, flow_lbl);
-            }
         }
     } else
         return;
@@ -277,18 +264,20 @@ static inline __always_inline void match_policy(struct __sk_buff* skb, bool ipv4
     }
 
     // Need to store bytes after updating map or program will not load.
-    if (ipv4 && new_tos != (tos & 252)) {
+    if (ipv4) {
+        uint8_t new_tos = UPDATE_TOS(new_dscp, tos);
         bpf_l3_csum_replace(skb, IP4_OFFSET(check, l2_header_size), htons(tos), htons(new_tos), 2);
         bpf_skb_store_bytes(skb, IP4_OFFSET(tos, l2_header_size), &new_tos, sizeof(new_tos), 0);
-    } else if (!ipv4 && (new_priority != priority || new_flow_lbl != flow_lbl)) {
-        bpf_skb_store_bytes(skb, l2_header_size, &new_priority, sizeof(new_priority), 0);
-        bpf_skb_store_bytes(skb, l2_header_size + 1, &new_flow_lbl, sizeof(new_flow_lbl), 0);
+    } else {
+        uint32_t new_first_u32 = htonl(ntohl(old_first_u32) & 0xF03FFFFF | (new_dscp << 22));
+        bpf_skb_store_bytes(skb, l2_header_size, &new_first_u32, sizeof(uint32_t),
+            BPF_F_RECOMPUTE_CSUM);
     }
     return;
 }
 
-DEFINE_BPF_PROG_KVER("schedcls/set_dscp_ether", AID_ROOT, AID_SYSTEM,
-                     schedcls_set_dscp_ether, KVER(5, 15, 0))
+DEFINE_BPF_PROG_KVER("schedcls/set_dscp_ether", AID_ROOT, AID_SYSTEM, schedcls_set_dscp_ether,
+                     KVER(5, 15, 0))
 (struct __sk_buff* skb) {
     if (skb->pkt_type != PACKET_HOST) return TC_ACT_PIPE;
 
