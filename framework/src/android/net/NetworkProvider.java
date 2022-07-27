@@ -192,36 +192,21 @@ public class NetworkProvider {
     private class NetworkOfferCallbackProxy extends INetworkOfferCallback.Stub {
         @NonNull public final NetworkOfferCallback callback;
         @NonNull private final Executor mExecutor;
-        /**
-         * Boolean flag that prevents onNetworkNeeded / onNetworkUnneeded callbacks from being
-         * propagated after unregisterNetworkOffer has been called. Since unregisterNetworkOffer
-         * runs on the CS handler thread, it will not go into effect immediately.
-         */
-        private volatile boolean mIsStale;
 
         NetworkOfferCallbackProxy(@NonNull final NetworkOfferCallback callback,
                 @NonNull final Executor executor) {
             this.callback = callback;
             this.mExecutor = executor;
-            this.mIsStale = false;
         }
 
         @Override
         public void onNetworkNeeded(final @NonNull NetworkRequest request) {
-            mExecutor.execute(() -> {
-                if (!mIsStale) callback.onNetworkNeeded(request);
-            });
+            mExecutor.execute(() -> callback.onNetworkNeeded(request));
         }
 
         @Override
         public void onNetworkUnneeded(final @NonNull NetworkRequest request) {
-            mExecutor.execute(() -> {
-                if (!mIsStale) callback.onNetworkUnneeded(request);
-            });
-        }
-
-        public void markStale() {
-            mIsStale = true;
+            mExecutor.execute(() -> callback.onNetworkUnneeded(request));
         }
     }
 
@@ -334,6 +319,11 @@ public class NetworkProvider {
      * if it could beat any of them, and may be advantageous to the provider's implementation that
      * can rely on no longer receiving callbacks for a network that they can't bring up anyways.
      *
+     * Warning: This method executes asynchronously. The NetworkOfferCallback object can continue
+     * receiving onNetworkNeeded and onNetworkUnneeded callbacks even after this method has
+     * returned. In this case, it is on the caller to take appropriate steps in order to prevent
+     * bringing up a network.
+     *
      * @hide
      */
     @SystemApi
@@ -342,7 +332,6 @@ public class NetworkProvider {
         final NetworkOfferCallbackProxy proxy = findProxyForCallback(callback);
         if (null == proxy) return;
         synchronized (mProxies) {
-            proxy.markStale();
             mProxies.remove(proxy);
         }
         mContext.getSystemService(ConnectivityManager.class).unofferNetwork(proxy);

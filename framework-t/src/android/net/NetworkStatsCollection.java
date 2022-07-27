@@ -28,6 +28,10 @@ import static android.net.NetworkStats.SET_ALL;
 import static android.net.NetworkStats.SET_DEFAULT;
 import static android.net.NetworkStats.TAG_NONE;
 import static android.net.NetworkStats.UID_ALL;
+import static android.net.NetworkTemplate.MATCH_BLUETOOTH;
+import static android.net.NetworkTemplate.MATCH_ETHERNET;
+import static android.net.NetworkTemplate.MATCH_MOBILE;
+import static android.net.NetworkTemplate.MATCH_WIFI;
 import static android.net.TrafficStats.UID_REMOVED;
 import static android.text.format.DateUtils.WEEK_IN_MILLIS;
 
@@ -774,10 +778,11 @@ public class NetworkStatsCollection implements FileRotator.Reader, FileRotator.W
 
     /** @hide */
     public void dumpCheckin(PrintWriter pw, long start, long end) {
-        dumpCheckin(pw, start, end, NetworkTemplate.buildTemplateMobileWildcard(), "cell");
-        dumpCheckin(pw, start, end, NetworkTemplate.buildTemplateWifiWildcard(), "wifi");
-        dumpCheckin(pw, start, end, NetworkTemplate.buildTemplateEthernet(), "eth");
-        dumpCheckin(pw, start, end, NetworkTemplate.buildTemplateBluetooth(), "bt");
+        dumpCheckin(pw, start, end, new NetworkTemplate.Builder(MATCH_MOBILE)
+                .setMeteredness(METERED_YES).build(), "cell");
+        dumpCheckin(pw, start, end, new NetworkTemplate.Builder(MATCH_WIFI).build(), "wifi");
+        dumpCheckin(pw, start, end, new NetworkTemplate.Builder(MATCH_ETHERNET).build(), "eth");
+        dumpCheckin(pw, start, end, new NetworkTemplate.Builder(MATCH_BLUETOOTH).build(), "bt");
     }
 
     /**
