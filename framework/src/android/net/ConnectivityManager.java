@@ -5949,7 +5949,7 @@ public class ConnectivityManager {
      *
      * @param chain target chain to replace.
      * @param uids The list of UIDs to be placed into chain.
-     * @throws IllegalStateException if replacing the firewall chain failed.
+     * @throws UnsupportedOperationException if called on pre-T devices.
      * @throws IllegalArgumentException if {@code chain} is not a valid chain.
      * @hide
      */
