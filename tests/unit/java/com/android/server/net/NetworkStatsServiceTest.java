@@ -16,6 +16,7 @@
 
 package com.android.server.net;
 
+import static android.Manifest.permission.DUMP;
 import static android.Manifest.permission.READ_NETWORK_USAGE_HISTORY;
 import static android.Manifest.permission.UPDATE_DEVICE_STATS;
 import static android.app.usage.NetworkStatsManager.PREFIX_DEV;
@@ -156,7 +157,10 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
 import java.io.File;
+import java.io.FileDescriptor;
 import java.io.IOException;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Clock;
@@ -283,6 +287,7 @@ public class NetworkStatsServiceTest extends NetworkStatsBaseTest {
                 case PERMISSION_MAINLINE_NETWORK_STACK:
                 case READ_NETWORK_USAGE_HISTORY:
                 case UPDATE_DEVICE_STATS:
+                case DUMP:
                     return PERMISSION_GRANTED;
                 default:
                     return PERMISSION_DENIED;
@@ -2316,5 +2321,26 @@ public class NetworkStatsServiceTest extends NetworkStatsBaseTest {
         assertTrue(statsMapContainsUid(mStatsMapB, UID_RED));
         assertTrue(mAppUidStatsMap.containsKey(new UidStatsMapKey(UID_RED)));
         assertTrue(mUidCounterSetMap.containsKey(new U32(UID_RED)));
+    }
+
+    private void assertDumpContains(final String dump, final String message) {
+        assertTrue(String.format("dump(%s) does not contain '%s'", dump, message),
+                dump.contains(message));
+    }
+
+    private String getDump() {
+        final StringWriter sw = new StringWriter();
+        mService.dump(new FileDescriptor(), new PrintWriter(sw), new String[]{});
+        return sw.toString();
+    }
+
+    @Test
+    public void testDumpCookieTagMap() throws ErrnoException {
+        initBpfMapsWithTagData(UID_BLUE);
+
+        final String dump = getDump();
+        assertDumpContains(dump, "mCookieTagMap: OK");
+        assertDumpContains(dump, "cookie=2002 tag=0x1 uid=1002");
+        assertDumpContains(dump, "cookie=3002 tag=0x2 uid=1002");
     }
 }
