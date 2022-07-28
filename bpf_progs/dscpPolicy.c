@@ -34,8 +34,8 @@
 #include "dscpPolicy.h"
 
 #define ECN_MASK 3
-#define IP4_OFFSET(field, header) (header + offsetof(struct iphdr, field))
-#define UPDATE_TOS(dscp, tos) (dscp << 2) | (tos & ECN_MASK)
+#define IP4_OFFSET(field, header) ((header) + offsetof(struct iphdr, field))
+#define UPDATE_TOS(dscp, tos) ((dscp) << 2) | ((tos) & ECN_MASK)
 
 DEFINE_BPF_MAP_GRW(socket_policy_cache_map, HASH, uint64_t, RuleEntry, CACHE_MAP_SIZE, AID_SYSTEM)
 
@@ -125,6 +125,7 @@ static inline __always_inline void match_policy(struct __sk_buff* skb, bool ipv4
             v6_equal(dst_ip, existing_rule->dst_ip) && skb->ifindex == existing_rule->ifindex &&
         ntohs(sport) == htons(existing_rule->src_port) &&
         ntohs(dport) == htons(existing_rule->dst_port) && protocol == existing_rule->proto) {
+        if (existing_rule->dscp_val < 0) return;
         if (ipv4) {
             uint8_t newTos = UPDATE_TOS(existing_rule->dscp_val, tos);
             bpf_l3_csum_replace(skb, IP4_OFFSET(check, l2_header_size), htons(tos), htons(newTos),
@@ -140,8 +141,8 @@ static inline __always_inline void match_policy(struct __sk_buff* skb, bool ipv4
     }
 
     // Linear scan ipv4_dscp_policies_map since no stored params match skb.
-    int best_score = -1;
-    uint32_t best_match = 0;
+    int best_score = 0;
+    int8_t new_dscp = -1;
 
     for (register uint64_t i = 0; i < MAX_POLICIES; i++) {
         int score = 0;
@@ -189,25 +190,10 @@ static inline __always_inline void match_policy(struct __sk_buff* skb, bool ipv4
         }
 
         if (score > best_score && temp_mask == policy->present_fields) {
-            best_match = i;
             best_score = score;
-        }
-    }
-
-    uint8_t new_dscp = 0;
-    if (best_score > 0) {
-        DscpPolicy* policy;
-        if (ipv4) {
-            policy = bpf_ipv4_dscp_policies_map_lookup_elem(&best_match);
-        } else {
-            policy = bpf_ipv6_dscp_policies_map_lookup_elem(&best_match);
-        }
-
-        if (policy) {
             new_dscp = policy->dscp_val;
         }
-    } else
-        return;
+    }
 
     RuleEntry value = {
         .src_ip = src_ip,
@@ -219,8 +205,10 @@ static inline __always_inline void match_policy(struct __sk_buff* skb, bool ipv4
         .dscp_val = new_dscp,
     };
 
-    // Update map with new policy.
+    // Update cache with found policy.
     bpf_socket_policy_cache_map_update_elem(&cookie, &value, BPF_ANY);
+
+    if (new_dscp < 0) return;
 
     // Need to store bytes after updating map or program will not load.
     if (ipv4) {
