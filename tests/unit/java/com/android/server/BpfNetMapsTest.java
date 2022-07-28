@@ -46,6 +46,7 @@ import static org.junit.Assume.assumeFalse;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.verify;
 
+import android.content.Context;
 import android.net.INetd;
 import android.os.Build;
 import android.os.ServiceSpecificException;
@@ -102,6 +103,7 @@ public final class BpfNetMapsTest {
 
     @Mock INetd mNetd;
     @Mock BpfNetMaps.Dependencies mDeps;
+    @Mock Context mContext;
     private final BpfMap<U32, U32> mConfigurationMap = new TestBpfMap<>(U32.class, U32.class);
     private final BpfMap<U32, UidOwnerValue> mUidOwnerMap =
             new TestBpfMap<>(U32.class, UidOwnerValue.class);
@@ -110,9 +112,10 @@ public final class BpfNetMapsTest {
     public void setUp() throws Exception {
         MockitoAnnotations.initMocks(this);
         doReturn(TEST_IF_INDEX).when(mDeps).getIfIndex(TEST_IF_NAME);
+        BpfNetMaps.setEnableJavaBpfMapForTest(true /* enable */);
         BpfNetMaps.setConfigurationMapForTest(mConfigurationMap);
         BpfNetMaps.setUidOwnerMapForTest(mUidOwnerMap);
-        mBpfNetMaps = new BpfNetMaps(mNetd, mDeps);
+        mBpfNetMaps = new BpfNetMaps(mContext, mNetd, mDeps);
     }
 
     @Test
