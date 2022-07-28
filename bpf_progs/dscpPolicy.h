@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+#define CACHE_MAP_SIZE 1024
 #define MAX_POLICIES 16
 
 #define SRC_IP_MASK_FLAG     1
