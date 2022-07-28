@@ -28,6 +28,7 @@ import com.android.internal.annotations.VisibleForTesting;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
+import java.util.Arrays;
 
 import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
@@ -62,11 +63,16 @@ public class CryptorImpV1 implements Cryptor {
     /** Length of salt required by AES/GCM encryption. */
     private static final int AES_CTR_IV_SIZE = 16;
 
+    /** Length HMAC tag */
+    public static final int HMAC_TAG_SIZE = 16;
+
     // 4 16 byte arrays known by both the encryptor and decryptor.
     private static final byte[] AK_IV =
             new byte[] {12, -59, 19, 23, 96, 57, -59, 19, 117, -31, -116, -61, 86, -25, -33, -78};
     private static final byte[] ASALT_IV =
             new byte[] {111, 48, -83, -79, -10, -102, -16, 73, 43, 55, 102, -127, 58, -19, -113, 4};
+    private static final byte[] HK_IV =
+            new byte[] {12, -59, 19, 23, 96, 57, -59, 19, 117, -31, -116, -61, 86, -25, -33, -78};
 
     // Lazily instantiated when {@link #getInstance()} is called.
     @Nullable private static CryptorImpV1 sCryptor;
@@ -166,6 +172,42 @@ public class CryptorImpV1 implements Cryptor {
             Log.e(TAG, "Failed to decrypt bytes with secret key.", e);
             return null;
         }
+    }
+
+    @Override
+    @Nullable
+    public byte[] sign(byte[] data, byte[] key) {
+        return generateHmacTag(data, key);
+    }
+
+    @Override
+    public boolean verify(byte[] data, byte[] key, byte[] signature) {
+        return Arrays.equals(sign(data, key), signature);
+    }
+
+    /** Generates a 16 bytes HMAC tag. This is used for decryptor to verify if the computed HMAC tag
+     * is equal to HMAC tag in advertisement to see data integrity. */
+    @Nullable
+    private byte[] generateHmacTag(byte[] data, byte[] authenticityKey) {
+        if (data == null || authenticityKey == null) {
+            Log.e(TAG, "Not generate HMAC tag because of invalid data input.");
+            return null;
+        }
+
+        if (authenticityKey.length != AUTHENTICITY_KEY_BYTE_SIZE) {
+            Log.e(TAG, "Illegal authenticity key size");
+            return null;
+        }
+
+        // Generates a 32 bytes HMAC key from authenticity_key
+        byte[] hmacKey = computeHkdf(authenticityKey, HK_IV, AES_CTR_IV_SIZE);
+        if (hmacKey == null) {
+            Log.e(TAG, "Failed to generate HMAC key.");
+            return null;
+        }
+
+        // Generates a 16 bytes HMAC tag from authenticity_key
+        return computeHkdf(data, hmacKey, HMAC_TAG_SIZE);
     }
 
     /**
