@@ -50,7 +50,7 @@ typedef struct {
     __be16 dst_port_start;
     __be16 dst_port_end;
     uint8_t proto;
-    uint8_t dscp_val;
+    int8_t dscp_val;  // -1 none, or 0..63 DSCP value
     uint8_t present_fields;
     uint8_t pad[3];
 } DscpPolicy;
@@ -63,7 +63,7 @@ typedef struct {
     __be16 src_port;
     __be16 dst_port;
     __u8 proto;
-    __u8 dscp_val;
+    __s8 dscp_val;  // -1 none, or 0..63 DSCP value
     __u8 pad[2];
 } RuleEntry;
 STRUCT_SIZE(RuleEntry, 2 * 16 + 1 * 4 + 2 * 2 + 2 * 1 + 2);  // 44
