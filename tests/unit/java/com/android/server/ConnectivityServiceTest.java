@@ -2065,7 +2065,7 @@ public class ConnectivityServiceTest {
         }
 
         @Override
-        public BpfNetMaps getBpfNetMaps(INetd netd) {
+        public BpfNetMaps getBpfNetMaps(Context context, INetd netd) {
             return mBpfNetMaps;
         }
 

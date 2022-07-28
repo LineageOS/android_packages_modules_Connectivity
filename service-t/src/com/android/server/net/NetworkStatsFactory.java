@@ -164,7 +164,7 @@ public class NetworkStatsFactory {
     }
 
     public NetworkStatsFactory(@NonNull Context ctx) {
-        this(ctx, new File("/proc/"), true, new BpfNetMaps());
+        this(ctx, new File("/proc/"), true, new BpfNetMaps(ctx));
     }
 
     @VisibleForTesting
