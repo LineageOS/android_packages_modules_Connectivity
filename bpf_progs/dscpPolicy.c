@@ -37,16 +37,8 @@
 #define IP4_OFFSET(field, header) (header + offsetof(struct iphdr, field))
 #define UPDATE_TOS(dscp, tos) (dscp << 2) | (tos & ECN_MASK)
 
-DEFINE_BPF_MAP_GRW(switch_comp_map, ARRAY, int, uint64_t, 1, AID_SYSTEM)
-
-DEFINE_BPF_MAP_GRW(ipv4_socket_to_policies_map_A, HASH, uint64_t, RuleEntry, MAX_POLICIES,
-                   AID_SYSTEM)
-DEFINE_BPF_MAP_GRW(ipv4_socket_to_policies_map_B, HASH, uint64_t, RuleEntry, MAX_POLICIES,
-                   AID_SYSTEM)
-DEFINE_BPF_MAP_GRW(ipv6_socket_to_policies_map_A, HASH, uint64_t, RuleEntry, MAX_POLICIES,
-                   AID_SYSTEM)
-DEFINE_BPF_MAP_GRW(ipv6_socket_to_policies_map_B, HASH, uint64_t, RuleEntry, MAX_POLICIES,
-                   AID_SYSTEM)
+DEFINE_BPF_MAP_GRW(ipv4_socket_to_policies_map, HASH, uint64_t, RuleEntry, MAX_POLICIES, AID_SYSTEM)
+DEFINE_BPF_MAP_GRW(ipv6_socket_to_policies_map, HASH, uint64_t, RuleEntry, MAX_POLICIES, AID_SYSTEM)
 
 DEFINE_BPF_MAP_GRW(ipv4_dscp_policies_map, ARRAY, uint32_t, DscpPolicy, MAX_POLICIES, AID_SYSTEM)
 DEFINE_BPF_MAP_GRW(ipv6_dscp_policies_map, ARRAY, uint32_t, DscpPolicy, MAX_POLICIES, AID_SYSTEM)
@@ -60,14 +52,7 @@ static inline __always_inline void match_policy(struct __sk_buff* skb, bool ipv4
 
     if (data + l2_header_size > data_end) return;
 
-    int zero = 0;
     int hdr_size = 0;
-    uint64_t* selected_map = bpf_switch_comp_map_lookup_elem(&zero);
-
-    // use this with HASH map so map lookup only happens once policies have been added?
-    if (!selected_map) {
-        return;
-    }
 
     // used for map lookup
     uint64_t cookie = bpf_get_socket_cookie(skb);
@@ -137,17 +122,9 @@ static inline __always_inline void match_policy(struct __sk_buff* skb, bool ipv4
 
     RuleEntry* existing_rule;
     if (ipv4) {
-        if (*selected_map == MAP_A) {
-            existing_rule = bpf_ipv4_socket_to_policies_map_A_lookup_elem(&cookie);
-        } else {
-            existing_rule = bpf_ipv4_socket_to_policies_map_B_lookup_elem(&cookie);
-        }
+        existing_rule = bpf_ipv4_socket_to_policies_map_lookup_elem(&cookie);
     } else {
-        if (*selected_map == MAP_A) {
-            existing_rule = bpf_ipv6_socket_to_policies_map_A_lookup_elem(&cookie);
-        } else {
-            existing_rule = bpf_ipv6_socket_to_policies_map_B_lookup_elem(&cookie);
-        }
+        existing_rule = bpf_ipv6_socket_to_policies_map_lookup_elem(&cookie);
     }
 
     if (existing_rule && v6_equal(src_ip, existing_rule->src_ip) &&
@@ -250,17 +227,9 @@ static inline __always_inline void match_policy(struct __sk_buff* skb, bool ipv4
 
     // Update map with new policy.
     if (ipv4) {
-        if (*selected_map == MAP_A) {
-            bpf_ipv4_socket_to_policies_map_A_update_elem(&cookie, &value, BPF_ANY);
-        } else {
-            bpf_ipv4_socket_to_policies_map_B_update_elem(&cookie, &value, BPF_ANY);
-        }
+        bpf_ipv4_socket_to_policies_map_update_elem(&cookie, &value, BPF_ANY);
     } else {
-        if (*selected_map == MAP_A) {
-            bpf_ipv6_socket_to_policies_map_A_update_elem(&cookie, &value, BPF_ANY);
-        } else {
-            bpf_ipv6_socket_to_policies_map_B_update_elem(&cookie, &value, BPF_ANY);
-        }
+        bpf_ipv6_socket_to_policies_map_update_elem(&cookie, &value, BPF_ANY);
     }
 
     // Need to store bytes after updating map or program will not load.
