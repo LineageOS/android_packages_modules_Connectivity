@@ -31,9 +31,11 @@ import static android.system.OsConstants.ENODEV;
 import static android.system.OsConstants.ENOENT;
 import static android.system.OsConstants.EOPNOTSUPP;
 
+import android.content.Context;
 import android.net.INetd;
 import android.os.RemoteException;
 import android.os.ServiceSpecificException;
+import android.provider.DeviceConfig;
 import android.system.ErrnoException;
 import android.system.Os;
 import android.util.Log;
@@ -42,6 +44,7 @@ import com.android.internal.annotations.GuardedBy;
 import com.android.internal.annotations.VisibleForTesting;
 import com.android.modules.utils.build.SdkLevel;
 import com.android.net.module.util.BpfMap;
+import com.android.net.module.util.DeviceConfigUtils;
 import com.android.net.module.util.Struct.U32;
 
 import java.io.FileDescriptor;
@@ -69,6 +72,10 @@ public class BpfNetMaps {
     private final Dependencies mDeps;
     // Use legacy netd for releases before T.
     private static boolean sInitialized = false;
+
+    private static Boolean sEnableJavaBpfMap = null;
+    private static final String BPF_NET_MAPS_ENABLE_JAVA_BPF_MAP =
+            "bpf_net_maps_enable_java_bpf_map";
 
     // Lock for sConfigurationMap entry for UID_RULES_CONFIGURATION_KEY.
     // This entry is not accessed by others.
@@ -99,6 +106,14 @@ public class BpfNetMaps {
     @VisibleForTesting public static final long OEM_DENY_2_MATCH = (1 << 10);
     @VisibleForTesting public static final long OEM_DENY_3_MATCH = (1 << 11);
     // LINT.ThenChange(packages/modules/Connectivity/bpf_progs/bpf_shared.h)
+
+    /**
+     * Set sEnableJavaBpfMap for test.
+     */
+    @VisibleForTesting
+    public static void setEnableJavaBpfMapForTest(boolean enable) {
+        sEnableJavaBpfMap = enable;
+    }
 
     /**
      * Set configurationMap for test.
@@ -147,8 +162,15 @@ public class BpfNetMaps {
      * Initializes the class if it is not already initialized. This method will open maps but not
      * cause any other effects. This method may be called multiple times on any thread.
      */
-    private static synchronized void ensureInitialized() {
+    private static synchronized void ensureInitialized(final Context context) {
         if (sInitialized) return;
+        if (sEnableJavaBpfMap == null) {
+            sEnableJavaBpfMap = DeviceConfigUtils.isFeatureEnabled(context,
+                    DeviceConfig.NAMESPACE_TETHERING, BPF_NET_MAPS_ENABLE_JAVA_BPF_MAP,
+                    SdkLevel.isAtLeastU() /* defaultValue */);
+        }
+        Log.d(TAG, "BpfNetMaps is initialized with sEnableJavaBpfMap=" + sEnableJavaBpfMap);
+
         setBpfMaps();
         native_init();
         sInitialized = true;
@@ -168,20 +190,20 @@ public class BpfNetMaps {
     }
 
     /** Constructor used after T that doesn't need to use netd anymore. */
-    public BpfNetMaps() {
-        this(null);
+    public BpfNetMaps(final Context context) {
+        this(context, null);
 
         if (PRE_T) throw new IllegalArgumentException("BpfNetMaps need to use netd before T");
     }
 
-    public BpfNetMaps(final INetd netd) {
-        this(netd, new Dependencies());
+    public BpfNetMaps(final Context context, final INetd netd) {
+        this(context, netd, new Dependencies());
     }
 
     @VisibleForTesting
-    public BpfNetMaps(final INetd netd, final Dependencies deps) {
+    public BpfNetMaps(final Context context, final INetd netd, final Dependencies deps) {
         if (!PRE_T) {
-            ensureInitialized();
+            ensureInitialized(context);
         }
         mNetd = netd;
         mDeps = deps;
