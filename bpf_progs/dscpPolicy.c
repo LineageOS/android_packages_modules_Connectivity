@@ -37,8 +37,7 @@
 #define IP4_OFFSET(field, header) (header + offsetof(struct iphdr, field))
 #define UPDATE_TOS(dscp, tos) (dscp << 2) | (tos & ECN_MASK)
 
-DEFINE_BPF_MAP_GRW(ipv4_socket_to_policies_map, HASH, uint64_t, RuleEntry, MAX_POLICIES, AID_SYSTEM)
-DEFINE_BPF_MAP_GRW(ipv6_socket_to_policies_map, HASH, uint64_t, RuleEntry, MAX_POLICIES, AID_SYSTEM)
+DEFINE_BPF_MAP_GRW(socket_policy_cache_map, HASH, uint64_t, RuleEntry, CACHE_MAP_SIZE, AID_SYSTEM)
 
 DEFINE_BPF_MAP_GRW(ipv4_dscp_policies_map, ARRAY, uint32_t, DscpPolicy, MAX_POLICIES, AID_SYSTEM)
 DEFINE_BPF_MAP_GRW(ipv6_dscp_policies_map, ARRAY, uint32_t, DscpPolicy, MAX_POLICIES, AID_SYSTEM)
@@ -120,12 +119,7 @@ static inline __always_inline void match_policy(struct __sk_buff* skb, bool ipv4
             return;
     }
 
-    RuleEntry* existing_rule;
-    if (ipv4) {
-        existing_rule = bpf_ipv4_socket_to_policies_map_lookup_elem(&cookie);
-    } else {
-        existing_rule = bpf_ipv6_socket_to_policies_map_lookup_elem(&cookie);
-    }
+    RuleEntry* existing_rule = bpf_socket_policy_cache_map_lookup_elem(&cookie);
 
     if (existing_rule && v6_equal(src_ip, existing_rule->src_ip) &&
             v6_equal(dst_ip, existing_rule->dst_ip) && skb->ifindex == existing_rule->ifindex &&
@@ -226,11 +220,7 @@ static inline __always_inline void match_policy(struct __sk_buff* skb, bool ipv4
     };
 
     // Update map with new policy.
-    if (ipv4) {
-        bpf_ipv4_socket_to_policies_map_update_elem(&cookie, &value, BPF_ANY);
-    } else {
-        bpf_ipv6_socket_to_policies_map_update_elem(&cookie, &value, BPF_ANY);
-    }
+    bpf_socket_policy_cache_map_update_elem(&cookie, &value, BPF_ANY);
 
     // Need to store bytes after updating map or program will not load.
     if (ipv4) {
