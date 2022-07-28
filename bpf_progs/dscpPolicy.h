@@ -15,8 +15,6 @@
  */
 
 #define MAX_POLICIES 16
-#define MAP_A 1
-#define MAP_B 2
 
 #define SRC_IP_MASK_FLAG     1
 #define DST_IP_MASK_FLAG     2
