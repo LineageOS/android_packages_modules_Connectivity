@@ -570,8 +570,6 @@ void TrafficController::dump(int fd, bool verbose) {
     ScopedIndent indentPreBpfModule(dw);
 
     dw.blankline();
-    dw.println("mUidCounterSetMap status: %s",
-               getMapStatus(mUidCounterSetMap.getMap(), UID_COUNTERSET_MAP_PATH).c_str());
     dw.println("mAppUidStatsMap status: %s",
                getMapStatus(mAppUidStatsMap.getMap(), APP_UID_STATS_MAP_PATH).c_str());
     dw.println("mStatsMapA status: %s",
@@ -609,18 +607,6 @@ void TrafficController::dump(int fd, bool verbose) {
 
     ScopedIndent indentForMapContent(dw);
 
-    // Print UidCounterSetMap content.
-    dumpBpfMap("mUidCounterSetMap", dw, "");
-    const auto printUidInfo = [&dw](const uint32_t& key, const uint8_t& value,
-                                    const BpfMap<uint32_t, uint8_t>&) {
-        dw.println("%u %u", key, value);
-        return base::Result<void>();
-    };
-    base::Result<void> res = mUidCounterSetMap.iterateWithValue(printUidInfo);
-    if (!res.ok()) {
-        dw.println("mUidCounterSetMap print end with error: %s", res.error().message().c_str());
-    }
-
     // Print AppUidStatsMap content.
     std::string appUidStatsHeader = StringPrintf("uid rxBytes rxPackets txBytes txPackets");
     dumpBpfMap("mAppUidStatsMap:", dw, appUidStatsHeader);
@@ -630,7 +616,7 @@ void TrafficController::dump(int fd, bool verbose) {
                    value.rxPackets, value.txBytes, value.txPackets);
         return base::Result<void>();
     };
-    res = mAppUidStatsMap.iterateWithValue(printAppUidStatsInfo);
+    base::Result<void> res = mAppUidStatsMap.iterateWithValue(printAppUidStatsInfo);
     if (!res.ok()) {
         dw.println("mAppUidStatsMap print end with error: %s", res.error().message().c_str());
     }

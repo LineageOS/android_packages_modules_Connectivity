@@ -2343,4 +2343,13 @@ public class NetworkStatsServiceTest extends NetworkStatsBaseTest {
         assertDumpContains(dump, "cookie=2002 tag=0x1 uid=1002");
         assertDumpContains(dump, "cookie=3002 tag=0x2 uid=1002");
     }
+
+    @Test
+    public void testDumpUidCounterSetMap() throws ErrnoException {
+        initBpfMapsWithTagData(UID_BLUE);
+
+        final String dump = getDump();
+        assertDumpContains(dump, "mUidCounterSetMap: OK");
+        assertDumpContains(dump, "uid=1002 set=1");
+    }
 }
