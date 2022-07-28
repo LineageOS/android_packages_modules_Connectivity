@@ -68,6 +68,7 @@ import com.android.net.module.util.Struct
 import com.android.net.module.util.structs.EthernetHeader
 import com.android.testutils.ArpResponder
 import com.android.testutils.CompatUtil
+import com.android.testutils.ConnectivityModuleTest
 import com.android.testutils.DevSdkIgnoreRule
 import com.android.testutils.assertParcelingIsLossless
 import com.android.testutils.RouterAdvertisementResponder
@@ -110,6 +111,7 @@ private const val PACKET_TIMEOUT_MS = 2_000L
 
 @AppModeFull(reason = "Instant apps cannot create test networks")
 @RunWith(AndroidJUnit4::class)
+@ConnectivityModuleTest
 class DscpPolicyTest {
     @JvmField
     @Rule
