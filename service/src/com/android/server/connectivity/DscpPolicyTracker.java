@@ -185,7 +185,7 @@ public class DscpPolicyTracker {
                         new DscpPolicyValue(policy.getSourceAddress(),
                             policy.getDestinationAddress(), ifIndex,
                             policy.getSourcePort(), policy.getDestinationPortRange(),
-                            (short) policy.getProtocol(), (short) policy.getDscpValue()));
+                            (short) policy.getProtocol(), (byte) policy.getDscpValue()));
             }
 
             // Add v6 policy to mBpfDscpIpv6Policies if source and destination address
@@ -196,7 +196,7 @@ public class DscpPolicyTracker {
                         new DscpPolicyValue(policy.getSourceAddress(),
                                 policy.getDestinationAddress(), ifIndex,
                                 policy.getSourcePort(), policy.getDestinationPortRange(),
-                                (short) policy.getProtocol(), (short) policy.getDscpValue()));
+                                (short) policy.getProtocol(), (byte) policy.getDscpValue()));
             }
 
             ifacePolicies.put(policy.getPolicyId(), addIndex);

@@ -52,8 +52,8 @@ public class DscpPolicyValue extends Struct {
     @Field(order = 6, type = Type.U8)
     public final short proto;
 
-    @Field(order = 7, type = Type.U8)
-    public final short dscp;
+    @Field(order = 7, type = Type.S8)
+    public final byte dscp;
 
     @Field(order = 8, type = Type.U8, padding = 3)
     public final short mask;
@@ -100,7 +100,7 @@ public class DscpPolicyValue extends Struct {
             InetAddress.parseNumericAddress("::").getAddress();
 
     private short makeMask(final byte[] src46, final byte[] dst46, final int srcPort,
-            final int dstPortStart, final short proto, final short dscp) {
+            final int dstPortStart, final short proto, final byte dscp) {
         short mask = 0;
         if (src46 != EMPTY_ADDRESS_FIELD) {
             mask |= SRC_IP_MASK;
@@ -122,7 +122,7 @@ public class DscpPolicyValue extends Struct {
 
     private DscpPolicyValue(final InetAddress src46, final InetAddress dst46, final long ifIndex,
             final int srcPort, final int dstPortStart, final int dstPortEnd, final short proto,
-            final short dscp) {
+            final byte dscp) {
         this.src46 = toAddressField(src46);
         this.dst46 = toAddressField(dst46);
         this.ifIndex = ifIndex;
@@ -142,7 +142,7 @@ public class DscpPolicyValue extends Struct {
 
     public DscpPolicyValue(final InetAddress src46, final InetAddress dst46, final long ifIndex,
             final int srcPort, final Range<Integer> dstPort, final short proto,
-            final short dscp) {
+            final byte dscp) {
         this(src46, dst46, ifIndex, srcPort, dstPort != null ? dstPort.getLower() : -1,
                 dstPort != null ? dstPort.getUpper() : -1, proto, dscp);
     }
@@ -150,7 +150,7 @@ public class DscpPolicyValue extends Struct {
     public static final DscpPolicyValue NONE = new DscpPolicyValue(
             null /* src46 */, null /* dst46 */, 0 /* ifIndex */, -1 /* srcPort */,
             -1 /* dstPortStart */, -1 /* dstPortEnd */, (short) -1 /* proto */,
-            (short) 0 /* dscp */);
+            (byte) -1 /* dscp */);
 
     @Override
     public String toString() {
