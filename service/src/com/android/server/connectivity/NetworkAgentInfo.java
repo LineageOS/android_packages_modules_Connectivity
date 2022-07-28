@@ -181,8 +181,12 @@ public class NetworkAgentInfo implements Comparable<NetworkAgentInfo>, NetworkRa
 
     // The capabilities originally announced by the NetworkAgent, regardless of any capabilities
     // that were added or removed due to this network's underlying networks.
-    // Only set if #propagateUnderlyingCapabilities is true.
-    public @Nullable NetworkCapabilities declaredCapabilities;
+    //
+    // As the name implies, these capabilities are not sanitized and are not to
+    // be trusted. Most callers should simply use the {@link networkCapabilities}
+    // field instead, and callers who need the declared capabilities should generally
+    // pass these to {@link ConnectivityService#sanitizedCapabilitiesFromAgent} before using them.
+    public @Nullable NetworkCapabilities declaredCapabilitiesUnsanitized;
 
     // Indicates if netd has been told to create this Network. From this point on the appropriate
     // routing rules are setup and routes are added so packets can begin flowing over the Network.
