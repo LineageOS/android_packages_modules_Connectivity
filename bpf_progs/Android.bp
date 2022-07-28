@@ -51,6 +51,7 @@ cc_library_headers {
         "//packages/modules/Connectivity/Tethering",
         "//packages/modules/Connectivity/service/native",
         "//packages/modules/Connectivity/tests/native/connectivity_native_test",
+        "//packages/modules/Connectivity/tests/native/utilities",
         "//packages/modules/Connectivity/service-t/native/libs/libnetworkstats",
         "//packages/modules/Connectivity/tests/unit/jni",
         "//system/netd/tests",
