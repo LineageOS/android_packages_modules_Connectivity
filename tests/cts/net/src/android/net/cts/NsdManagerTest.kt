@@ -16,6 +16,7 @@
 package android.net.cts
 
 import android.Manifest.permission.MANAGE_TEST_NETWORKS
+import android.app.compat.CompatChanges
 import android.net.ConnectivityManager
 import android.net.ConnectivityManager.NetworkCallback
 import android.net.LinkProperties
@@ -46,6 +47,7 @@ import android.net.nsd.NsdManager.DiscoveryListener
 import android.net.nsd.NsdManager.RegistrationListener
 import android.net.nsd.NsdManager.ResolveListener
 import android.net.nsd.NsdServiceInfo
+import android.os.Build
 import android.os.Handler
 import android.os.HandlerThread
 import android.os.Process.myTid
@@ -56,17 +58,23 @@ import androidx.test.runner.AndroidJUnit4
 import com.android.net.module.util.ArrayTrackRecord
 import com.android.net.module.util.TrackRecord
 import com.android.networkstack.apishim.NsdShimImpl
+import com.android.testutils.ConnectivityModuleTest
+import com.android.testutils.DevSdkIgnoreRule
 import com.android.testutils.TestableNetworkAgent
 import com.android.testutils.TestableNetworkCallback
+import com.android.testutils.filters.CtsNetTestCasesMaxTargetSdk30
 import com.android.testutils.runAsShell
 import com.android.testutils.tryTest
 import org.junit.After
 import org.junit.Assert.assertArrayEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Assume.assumeTrue
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
+import java.io.File
 import java.net.ServerSocket
 import java.nio.charset.StandardCharsets
 import java.util.Random
@@ -89,6 +97,10 @@ private val nsdShim = NsdShimImpl.newInstance()
 @AppModeFull(reason = "Socket cannot bind in instant app mode")
 @RunWith(AndroidJUnit4::class)
 class NsdManagerTest {
+    // Rule used to filter CtsNetTestCasesMaxTargetSdkXX
+    @get:Rule
+    val ignoreRule = DevSdkIgnoreRule()
+
     private val context by lazy { InstrumentationRegistry.getInstrumentation().context }
     private val nsdManager by lazy { context.getSystemService(NsdManager::class.java) }
 
@@ -690,6 +702,30 @@ class NsdManagerTest {
         } cleanup {
             registrationRecord.expectCallback<ServiceUnregistered>()
         }
+    }
+
+    @Test @CtsNetTestCasesMaxTargetSdk30("Socket is started with the service up to target SDK 30")
+    fun testManagerCreatesLegacySocket() {
+        nsdManager // Ensure the lazy-init member is initialized, so NsdManager is created
+        val socket = File("/dev/socket/mdnsd")
+        val timeout = System.currentTimeMillis() + TIMEOUT_MS
+        while (!socket.exists() && System.currentTimeMillis() < timeout) {
+            Thread.sleep(10)
+        }
+        assertTrue("$socket was not found after $TIMEOUT_MS ms", socket.exists())
+    }
+
+    // The compat change is part of a connectivity module update that applies to T+
+    @ConnectivityModuleTest @DevSdkIgnoreRule.IgnoreUpTo(Build.VERSION_CODES.S_V2)
+    @Test @CtsNetTestCasesMaxTargetSdk30("Socket is started with the service up to target SDK 30")
+    fun testManagerCreatesLegacySocket_CompatChange() {
+        // The socket may have been already created by some other app, or some other test, in which
+        // case this test cannot verify creation. At least verify that the compat change is
+        // disabled in a process with max SDK 30; unit tests already verify that start is requested
+        // when the compat change is disabled.
+        // Note that before T the compat constant had a different int value.
+        assertFalse(CompatChanges.isChangeEnabled(
+                NsdManager.RUN_NATIVE_NSD_ONLY_IF_LEGACY_APPS_T_AND_LATER))
     }
 
     /**
