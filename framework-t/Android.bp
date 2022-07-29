@@ -142,3 +142,8 @@ java_sdk_library {
         "//packages/modules/Wifi/service/tests/wifitests",
     ],
 }
+
+platform_compat_config {
+    name: "connectivity-t-platform-compat-config",
+    src: ":framework-connectivity-t",
+}
