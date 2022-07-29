@@ -34,6 +34,17 @@ public class CryptorImpFake implements Cryptor {
         return sCryptor;
     }
 
+    @Nullable
+    @Override
+    public byte[] sign(byte[] data, byte[] key) {
+        return new byte[0];
+    }
+
+    @Override
+    public boolean verify(byte[] data, byte[] key, byte[] signature) {
+        return true;
+    }
+
     private CryptorImpFake() {
     }
 }

@@ -144,6 +144,7 @@ public class EthernetTetheringTest {
     private static final int TX_UDP_PACKET_COUNT = 123;
     private static final long WAIT_RA_TIMEOUT_MS = 2000;
 
+    private static final MacAddress TEST_MAC = MacAddress.fromString("1:2:3:4:5:6");
     private static final LinkAddress TEST_IP4_ADDR = new LinkAddress("10.0.0.1/8");
     private static final LinkAddress TEST_IP6_ADDR = new LinkAddress("2001:db8:1::101/64");
     private static final InetAddress TEST_IP4_DNS = parseNumericAddress("8.8.8.8");
@@ -151,6 +152,8 @@ public class EthernetTetheringTest {
     private static final IpPrefix TEST_NAT64PREFIX = new IpPrefix("64:ff9b::/96");
     private static final Inet6Address REMOTE_NAT64_ADDR =
             (Inet6Address) parseNumericAddress("64:ff9b::808:808");
+    private static final Inet6Address REMOTE_IP6_ADDR =
+            (Inet6Address) parseNumericAddress("2002:db8:1::515:ca");
     private static final ByteBuffer TEST_REACHABILITY_PAYLOAD =
             ByteBuffer.wrap(new byte[] { (byte) 0x55, (byte) 0xaa });
 
@@ -192,12 +195,13 @@ public class EthernetTetheringTest {
         mUiAutomation.adoptShellPermissionIdentity(
                 MANAGE_TEST_NETWORKS, NETWORK_SETTINGS, TETHER_PRIVILEGED, ACCESS_NETWORK_STATE,
                 CONNECTIVITY_USE_RESTRICTED_NETWORKS, DUMP);
-        mRunTests = mTm.isTetheringSupported() && mEm != null;
-        assumeTrue(mRunTests);
-
         mHandlerThread = new HandlerThread(getClass().getSimpleName());
         mHandlerThread.start();
         mHandler = new Handler(mHandlerThread.getLooper());
+
+        mRunTests = isEthernetTetheringSupported();
+        assumeTrue(mRunTests);
+
         mTetheredInterfaceRequester = new TetheredInterfaceRequester(mHandler, mEm);
     }
 
@@ -225,7 +229,6 @@ public class EthernetTetheringTest {
             mHandler.post(() -> reader.stop());
             mDownstreamReader = null;
         }
-        mHandlerThread.quitSafely();
         mTetheredInterfaceRequester.release();
         mEm.setIncludeTestInterfaces(false);
         maybeDeleteTestInterface();
@@ -236,6 +239,7 @@ public class EthernetTetheringTest {
         try {
             if (mRunTests) cleanUp();
         } finally {
+            mHandlerThread.quitSafely();
             mUiAutomation.dropShellPermissionIdentity();
         }
     }
@@ -408,6 +412,23 @@ public class EthernetTetheringTest {
 
         // There is nothing more we can do on a physical interface without connecting an actual
         // client, which is not possible in this test.
+    }
+
+    private boolean isEthernetTetheringSupported() throws Exception {
+        final CompletableFuture<Boolean> future = new CompletableFuture<>();
+        final TetheringEventCallback callback = new TetheringEventCallback() {
+            @Override
+            public void onSupportedTetheringTypes(Set<Integer> supportedTypes) {
+                future.complete(supportedTypes.contains(TETHERING_ETHERNET));
+            }
+        };
+
+        try {
+            mTm.registerTetheringEventCallback(mHandler::post, callback);
+            return future.get(TIMEOUT_MS, TimeUnit.MILLISECONDS);
+        } finally {
+            mTm.unregisterTetheringEventCallback(callback);
+        }
     }
 
     private static final class MyTetheringEventCallback implements TetheringEventCallback {
@@ -852,7 +873,7 @@ public class EthernetTetheringTest {
         final PacketBuilder packetBuilder = new PacketBuilder(buffer);
 
         // [1] Ethernet header
-        if (hasEther) packetBuilder.writeL2Header(srcMac, dstMac, (short) ETHER_TYPE_IPV4);
+        if (hasEther) packetBuilder.writeL2Header(srcMac, dstMac, (short) ethType);
 
         // [2] IP header
         if (ipProto == IPPROTO_IP) {
@@ -883,6 +904,54 @@ public class EthernetTetheringTest {
             @Nullable final ByteBuffer payload) throws Exception {
         return buildUdpPacket(null /* srcMac */, null /* dstMac */, srcIp, dstIp, srcPort,
                 dstPort, payload);
+    }
+
+    private boolean isAddressIpv4(@NonNull final  InetAddress srcIp,
+            @NonNull final InetAddress dstIp) {
+        if (srcIp instanceof Inet4Address && dstIp instanceof Inet4Address) return true;
+        if (srcIp instanceof Inet6Address && dstIp instanceof Inet6Address) return false;
+
+        fail("Unsupported conditions: srcIp " + srcIp + ", dstIp " + dstIp);
+        return false;  // unreachable
+    }
+
+    private void sendDownloadPacketUdp(@NonNull final InetAddress srcIp,
+            @NonNull final InetAddress dstIp, @NonNull final TetheringTester tester)
+            throws Exception {
+        final ByteBuffer testPacket = buildUdpPacket(null /* srcMac */, null /* dstMac */,
+                srcIp, dstIp, REMOTE_PORT /* srcPort */, LOCAL_PORT /* dstPort */, PAYLOAD);
+
+        tester.verifyDownload(testPacket, p -> {
+            Log.d(TAG, "Packet in downstream: " + dumpHexString(p));
+            return isExpectedUdpPacket(p, true /* hasEther */, isAddressIpv4(srcIp, dstIp),
+                PAYLOAD);
+        });
+    }
+
+    private void sendUploadPacketUdp(@NonNull final MacAddress srcMac,
+            @NonNull final MacAddress dstMac, @NonNull final InetAddress srcIp,
+            @NonNull final InetAddress dstIp, @NonNull final TetheringTester tester)
+            throws Exception {
+        final ByteBuffer testPacket = buildUdpPacket(srcMac, dstMac, srcIp, dstIp,
+                LOCAL_PORT /* srcPort */, REMOTE_PORT /* dstPort */, PAYLOAD2);
+
+        tester.verifyUpload(testPacket, p -> {
+            Log.d(TAG, "Packet in upstream: " + dumpHexString(p));
+            return isExpectedUdpPacket(p, false /* hasEther */, isAddressIpv4(srcIp, dstIp),
+                PAYLOAD2);
+        });
+    }
+
+    @Test
+    public void testTetherUdpV6() throws Exception {
+        final TetheringTester tester = initTetheringTester(toList(TEST_IP6_ADDR),
+                toList(TEST_IP6_DNS));
+        final TetheredDevice tethered = tester.createTetheredDevice(TEST_MAC, true /* hasIpv6 */);
+        sendUploadPacketUdp(tethered.macAddr, tethered.routerMacAddr,
+                tethered.ipv6Addr, REMOTE_IP6_ADDR, tester);
+        sendDownloadPacketUdp(REMOTE_IP6_ADDR, tethered.ipv6Addr, tester);
+
+        // TODO: test BPF offload maps {rule, stats}.
     }
 
     // TODO: remove ipv4 verification (is4To6 = false) once upstream connected notification race is

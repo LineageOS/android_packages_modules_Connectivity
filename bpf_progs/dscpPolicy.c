@@ -34,19 +34,10 @@
 #include "dscpPolicy.h"
 
 #define ECN_MASK 3
-#define IP4_OFFSET(field, header) (header + offsetof(struct iphdr, field))
-#define UPDATE_TOS(dscp, tos) (dscp << 2) | (tos & ECN_MASK)
+#define IP4_OFFSET(field, header) ((header) + offsetof(struct iphdr, field))
+#define UPDATE_TOS(dscp, tos) ((dscp) << 2) | ((tos) & ECN_MASK)
 
-DEFINE_BPF_MAP_GRW(switch_comp_map, ARRAY, int, uint64_t, 1, AID_SYSTEM)
-
-DEFINE_BPF_MAP_GRW(ipv4_socket_to_policies_map_A, HASH, uint64_t, RuleEntry, MAX_POLICIES,
-                   AID_SYSTEM)
-DEFINE_BPF_MAP_GRW(ipv4_socket_to_policies_map_B, HASH, uint64_t, RuleEntry, MAX_POLICIES,
-                   AID_SYSTEM)
-DEFINE_BPF_MAP_GRW(ipv6_socket_to_policies_map_A, HASH, uint64_t, RuleEntry, MAX_POLICIES,
-                   AID_SYSTEM)
-DEFINE_BPF_MAP_GRW(ipv6_socket_to_policies_map_B, HASH, uint64_t, RuleEntry, MAX_POLICIES,
-                   AID_SYSTEM)
+DEFINE_BPF_MAP_GRW(socket_policy_cache_map, HASH, uint64_t, RuleEntry, CACHE_MAP_SIZE, AID_SYSTEM)
 
 DEFINE_BPF_MAP_GRW(ipv4_dscp_policies_map, ARRAY, uint32_t, DscpPolicy, MAX_POLICIES, AID_SYSTEM)
 DEFINE_BPF_MAP_GRW(ipv6_dscp_policies_map, ARRAY, uint32_t, DscpPolicy, MAX_POLICIES, AID_SYSTEM)
@@ -60,14 +51,7 @@ static inline __always_inline void match_policy(struct __sk_buff* skb, bool ipv4
 
     if (data + l2_header_size > data_end) return;
 
-    int zero = 0;
     int hdr_size = 0;
-    uint64_t* selected_map = bpf_switch_comp_map_lookup_elem(&zero);
-
-    // use this with HASH map so map lookup only happens once policies have been added?
-    if (!selected_map) {
-        return;
-    }
 
     // used for map lookup
     uint64_t cookie = bpf_get_socket_cookie(skb);
@@ -135,25 +119,13 @@ static inline __always_inline void match_policy(struct __sk_buff* skb, bool ipv4
             return;
     }
 
-    RuleEntry* existing_rule;
-    if (ipv4) {
-        if (*selected_map == MAP_A) {
-            existing_rule = bpf_ipv4_socket_to_policies_map_A_lookup_elem(&cookie);
-        } else {
-            existing_rule = bpf_ipv4_socket_to_policies_map_B_lookup_elem(&cookie);
-        }
-    } else {
-        if (*selected_map == MAP_A) {
-            existing_rule = bpf_ipv6_socket_to_policies_map_A_lookup_elem(&cookie);
-        } else {
-            existing_rule = bpf_ipv6_socket_to_policies_map_B_lookup_elem(&cookie);
-        }
-    }
+    RuleEntry* existing_rule = bpf_socket_policy_cache_map_lookup_elem(&cookie);
 
     if (existing_rule && v6_equal(src_ip, existing_rule->src_ip) &&
             v6_equal(dst_ip, existing_rule->dst_ip) && skb->ifindex == existing_rule->ifindex &&
         ntohs(sport) == htons(existing_rule->src_port) &&
         ntohs(dport) == htons(existing_rule->dst_port) && protocol == existing_rule->proto) {
+        if (existing_rule->dscp_val < 0) return;
         if (ipv4) {
             uint8_t newTos = UPDATE_TOS(existing_rule->dscp_val, tos);
             bpf_l3_csum_replace(skb, IP4_OFFSET(check, l2_header_size), htons(tos), htons(newTos),
@@ -169,8 +141,8 @@ static inline __always_inline void match_policy(struct __sk_buff* skb, bool ipv4
     }
 
     // Linear scan ipv4_dscp_policies_map since no stored params match skb.
-    int best_score = -1;
-    uint32_t best_match = 0;
+    int best_score = 0;
+    int8_t new_dscp = -1;
 
     for (register uint64_t i = 0; i < MAX_POLICIES; i++) {
         int score = 0;
@@ -218,25 +190,10 @@ static inline __always_inline void match_policy(struct __sk_buff* skb, bool ipv4
         }
 
         if (score > best_score && temp_mask == policy->present_fields) {
-            best_match = i;
             best_score = score;
-        }
-    }
-
-    uint8_t new_dscp = 0;
-    if (best_score > 0) {
-        DscpPolicy* policy;
-        if (ipv4) {
-            policy = bpf_ipv4_dscp_policies_map_lookup_elem(&best_match);
-        } else {
-            policy = bpf_ipv6_dscp_policies_map_lookup_elem(&best_match);
-        }
-
-        if (policy) {
             new_dscp = policy->dscp_val;
         }
-    } else
-        return;
+    }
 
     RuleEntry value = {
         .src_ip = src_ip,
@@ -248,20 +205,10 @@ static inline __always_inline void match_policy(struct __sk_buff* skb, bool ipv4
         .dscp_val = new_dscp,
     };
 
-    // Update map with new policy.
-    if (ipv4) {
-        if (*selected_map == MAP_A) {
-            bpf_ipv4_socket_to_policies_map_A_update_elem(&cookie, &value, BPF_ANY);
-        } else {
-            bpf_ipv4_socket_to_policies_map_B_update_elem(&cookie, &value, BPF_ANY);
-        }
-    } else {
-        if (*selected_map == MAP_A) {
-            bpf_ipv6_socket_to_policies_map_A_update_elem(&cookie, &value, BPF_ANY);
-        } else {
-            bpf_ipv6_socket_to_policies_map_B_update_elem(&cookie, &value, BPF_ANY);
-        }
-    }
+    // Update cache with found policy.
+    bpf_socket_policy_cache_map_update_elem(&cookie, &value, BPF_ANY);
+
+    if (new_dscp < 0) return;
 
     // Need to store bytes after updating map or program will not load.
     if (ipv4) {
