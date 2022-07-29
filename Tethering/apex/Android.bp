@@ -109,7 +109,10 @@ apex {
 
     androidManifest: "AndroidManifest.xml",
 
-    compat_configs: ["connectivity-platform-compat-config"],
+    compat_configs: [
+        "connectivity-platform-compat-config",
+        "connectivity-t-platform-compat-config",
+    ],
 }
 
 apex_key {
