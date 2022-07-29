@@ -35,6 +35,7 @@ import android.net.IpPrefix;
 import android.net.LinkAddress;
 import android.net.MacAddress;
 import android.util.ArrayMap;
+import android.util.Log;
 import android.util.Pair;
 
 import com.android.net.module.util.Ipv6Utils;
@@ -130,7 +131,9 @@ public class RouterAdvertisementResponder extends PacketResponder {
         try {
             reader.sendResponse(buffer);
         } catch (IOException e) {
-            throw new RuntimeException("Failed to send buffer.");
+            // Throwing an exception here will crash the test process. Let's stick to logging, as
+            // the test will fail either way.
+            Log.e(TAG, "Failed to send buffer", e);
         }
     }
 
