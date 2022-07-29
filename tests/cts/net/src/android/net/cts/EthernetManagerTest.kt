@@ -64,6 +64,7 @@ import com.android.testutils.runAsShell
 import com.android.testutils.waitForIdle
 import org.junit.After
 import org.junit.Assume.assumeFalse
+import org.junit.Assume.assumeTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -227,15 +228,20 @@ class EthernetManagerTest {
         }
     }
 
+    private fun isEthernetSupported() = em != null
+
     @Before
     fun setUp() {
+        assumeTrue(isEthernetSupported())
         setIncludeTestInterfaces(true)
         addInterfaceStateListener(ifaceListener)
     }
 
     @After
     fun tearDown() {
+        if (!isEthernetSupported()) return
         setIncludeTestInterfaces(false)
+
         for (iface in createdIfaces) {
             iface.destroy()
             ifaceListener.eventuallyExpect(iface, STATE_ABSENT, ROLE_NONE)
