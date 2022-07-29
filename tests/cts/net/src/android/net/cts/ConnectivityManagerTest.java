@@ -189,6 +189,7 @@ import com.android.networkstack.apishim.ConstantsShim;
 import com.android.networkstack.apishim.NetworkInformationShimImpl;
 import com.android.networkstack.apishim.common.ConnectivityManagerShim;
 import com.android.testutils.CompatUtil;
+import com.android.testutils.ConnectivityModuleTest;
 import com.android.testutils.DevSdkIgnoreRule;
 import com.android.testutils.DevSdkIgnoreRule.IgnoreUpTo;
 import com.android.testutils.DeviceInfoUtils;
@@ -3358,7 +3359,7 @@ public class ConnectivityManagerTest {
         }, NETWORK_SETTINGS);
     }
 
-    @Test @IgnoreUpTo(SC_V2)
+    @Test @IgnoreUpTo(SC_V2) @ConnectivityModuleTest
     @AppModeFull(reason = "Socket cannot bind in instant app mode")
     public void testFirewallBlocking() {
         // ALLOWLIST means the firewall denies all by default, uids must be explicitly allowed
