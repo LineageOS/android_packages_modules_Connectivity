@@ -54,7 +54,7 @@ public class BluetoothClassicPairerTest {
 
         assertThat(exception)
                 .hasMessageThat()
-                .contains("BluetoothClassicPairer, createBond failed");
+                .contains("BluetoothClassicPairer, createBond");
         assertThat(mBluetoothClassicPairer.isPaired()).isFalse();
     }
 }
