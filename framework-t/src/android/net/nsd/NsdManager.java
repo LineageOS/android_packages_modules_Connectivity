@@ -139,17 +139,21 @@ public final class NsdManager {
      * The platform will only keep the daemon running as long as there are
      * any legacy apps connected.
      *
-     * After Android 12, directly communicate with native daemon might not
-     * work since the native damon won't always stay alive.
-     * Use the NSD APIs from NsdManager as the replacement is recommended.
-     * An another alternative could be bundling your own mdns solutions instead of
+     * After Android 12, direct communication with the native daemon might not work since the native
+     * daemon won't always stay alive. Using the NSD APIs from NsdManager as the replacement is
+     * recommended.
+     * Another alternative could be bundling your own mdns solutions instead of
      * depending on the system mdns native daemon.
+     *
+     * This compatibility change applies to Android 13 and later only. To toggle behavior on
+     * Android 12 and Android 12L, use RUN_NATIVE_NSD_ONLY_IF_LEGACY_APPS.
      *
      * @hide
      */
     @ChangeId
     @EnabledSince(targetSdkVersion = android.os.Build.VERSION_CODES.S)
-    public static final long RUN_NATIVE_NSD_ONLY_IF_LEGACY_APPS = 191844585L;
+    // This was a platform change ID with value 191844585L before T
+    public static final long RUN_NATIVE_NSD_ONLY_IF_LEGACY_APPS_T_AND_LATER = 235355681L;
 
     /**
      * Broadcast intent action to indicate whether network service discovery is
@@ -500,7 +504,7 @@ public final class NsdManager {
 
         // Only proactively start the daemon if the target SDK < S, otherwise the internal service
         // would automatically start/stop the native daemon as needed.
-        if (!CompatChanges.isChangeEnabled(RUN_NATIVE_NSD_ONLY_IF_LEGACY_APPS)) {
+        if (!CompatChanges.isChangeEnabled(RUN_NATIVE_NSD_ONLY_IF_LEGACY_APPS_T_AND_LATER)) {
             try {
                 mService.startDaemon();
             } catch (RemoteException e) {
