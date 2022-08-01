@@ -55,7 +55,7 @@ public class FastPairDeviceTest {
         assertThat(compareDevice.getModelId()).isEqualTo(MODEL_ID);
         assertThat(compareDevice.getBluetoothAddress()).isEqualTo(MAC_ADDRESS);
         assertThat(compareDevice.getData()).isEqualTo(DATA);
-        assertThat(compareDevice.equals(sDevice)).isFalse();
+        assertThat(compareDevice.equals(sDevice)).isTrue();
         assertThat(compareDevice.hashCode()).isEqualTo(sDevice.hashCode());
     }
 
