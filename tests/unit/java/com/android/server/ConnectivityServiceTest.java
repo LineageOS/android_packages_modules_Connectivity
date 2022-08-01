@@ -14363,7 +14363,7 @@ public class ConnectivityServiceTest {
      * Make sure per profile network preferences behave as expected for a given
      * profile network preference.
      */
-    public void testPreferenceForUserNetworkUpDownForGivenPreference(
+    public void doTestPreferenceForUserNetworkUpDownForGivenPreference(
             ProfileNetworkPreference profileNetworkPreference,
             boolean connectWorkProfileAgentAhead,
             UserHandle testHandle,
@@ -14607,7 +14607,7 @@ public class ConnectivityServiceTest {
                 new ProfileNetworkPreference.Builder();
         profileNetworkPreferenceBuilder.setPreference(PROFILE_NETWORK_PREFERENCE_ENTERPRISE);
         profileNetworkPreferenceBuilder.setPreferenceEnterpriseId(NET_ENTERPRISE_ID_1);
-        testPreferenceForUserNetworkUpDownForGivenPreference(
+        doTestPreferenceForUserNetworkUpDownForGivenPreference(
                 profileNetworkPreferenceBuilder.build(), false,
                 testHandle, mProfileDefaultNetworkCallback, null);
     }
@@ -14626,7 +14626,7 @@ public class ConnectivityServiceTest {
                 PROFILE_NETWORK_PREFERENCE_ENTERPRISE_NO_FALLBACK);
         profileNetworkPreferenceBuilder.setPreferenceEnterpriseId(NET_ENTERPRISE_ID_1);
         registerDefaultNetworkCallbacks();
-        testPreferenceForUserNetworkUpDownForGivenPreference(
+        doTestPreferenceForUserNetworkUpDownForGivenPreference(
                 profileNetworkPreferenceBuilder.build(), false,
                 testHandle, mProfileDefaultNetworkCallback, null);
     }
@@ -14647,7 +14647,7 @@ public class ConnectivityServiceTest {
                 PROFILE_NETWORK_PREFERENCE_ENTERPRISE_NO_FALLBACK);
         profileNetworkPreferenceBuilder.setPreferenceEnterpriseId(NET_ENTERPRISE_ID_1);
         registerDefaultNetworkCallbacks();
-        testPreferenceForUserNetworkUpDownForGivenPreference(
+        doTestPreferenceForUserNetworkUpDownForGivenPreference(
                 profileNetworkPreferenceBuilder.build(), true, testHandle,
                 mProfileDefaultNetworkCallback, null);
     }
@@ -14666,7 +14666,7 @@ public class ConnectivityServiceTest {
         profileNetworkPreferenceBuilder.setIncludedUids(
                 new int[]{testHandle.getUid(TEST_WORK_PROFILE_APP_UID)});
         registerDefaultNetworkCallbacks();
-        testPreferenceForUserNetworkUpDownForGivenPreference(
+        doTestPreferenceForUserNetworkUpDownForGivenPreference(
                 profileNetworkPreferenceBuilder.build(), false, testHandle,
                 mProfileDefaultNetworkCallback, null);
     }
@@ -14685,7 +14685,7 @@ public class ConnectivityServiceTest {
         profileNetworkPreferenceBuilder.setIncludedUids(
                 new int[]{testHandle.getUid(TEST_WORK_PROFILE_APP_UID_2)});
         registerDefaultNetworkCallbacks();
-        testPreferenceForUserNetworkUpDownForGivenPreference(
+        doTestPreferenceForUserNetworkUpDownForGivenPreference(
                 profileNetworkPreferenceBuilder.build(), false,
                 testHandle, mProfileDefaultNetworkCallbackAsAppUid2, null);
     }
@@ -14704,7 +14704,7 @@ public class ConnectivityServiceTest {
         profileNetworkPreferenceBuilder.setExcludedUids(
                 new int[]{testHandle.getUid(TEST_WORK_PROFILE_APP_UID_2)});
         registerDefaultNetworkCallbacks();
-        testPreferenceForUserNetworkUpDownForGivenPreference(
+        doTestPreferenceForUserNetworkUpDownForGivenPreference(
                 profileNetworkPreferenceBuilder.build(), false,
                 testHandle, mProfileDefaultNetworkCallback,
                 mProfileDefaultNetworkCallbackAsAppUid2);
@@ -14800,7 +14800,7 @@ public class ConnectivityServiceTest {
         profileNetworkPreferenceBuilder.setPreference(PROFILE_NETWORK_PREFERENCE_ENTERPRISE);
         profileNetworkPreferenceBuilder.setPreferenceEnterpriseId(NET_ENTERPRISE_ID_1);
         registerDefaultNetworkCallbacks();
-        testPreferenceForUserNetworkUpDownForGivenPreference(
+        doTestPreferenceForUserNetworkUpDownForGivenPreference(
                 profileNetworkPreferenceBuilder.build(), true,
                 testHandle, mProfileDefaultNetworkCallback,
                 null);
@@ -14820,7 +14820,7 @@ public class ConnectivityServiceTest {
                 PROFILE_NETWORK_PREFERENCE_ENTERPRISE_NO_FALLBACK);
         profileNetworkPreferenceBuilder.setPreferenceEnterpriseId(NET_ENTERPRISE_ID_1);
         registerDefaultNetworkCallbacks();
-        testPreferenceForUserNetworkUpDownForGivenPreference(
+        doTestPreferenceForUserNetworkUpDownForGivenPreference(
                 profileNetworkPreferenceBuilder.build(), true,
                 testHandle, mProfileDefaultNetworkCallback,
                 null);
@@ -14841,7 +14841,7 @@ public class ConnectivityServiceTest {
         profileNetworkPreferenceBuilder.setPreferenceEnterpriseId(
                 NET_ENTERPRISE_ID_2);
         registerDefaultNetworkCallbacks();
-        testPreferenceForUserNetworkUpDownForGivenPreference(
+        doTestPreferenceForUserNetworkUpDownForGivenPreference(
                 profileNetworkPreferenceBuilder.build(), true,
                 testHandle, mProfileDefaultNetworkCallback, null);
     }
