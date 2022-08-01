@@ -637,6 +637,7 @@ public class BpfNetMaps {
     private native int native_addNiceApp(int uid);
     @GuardedBy("sUidOwnerMap")
     private native int native_removeNiceApp(int uid);
+    private native int native_setChildChain(int childChain, boolean enable);
     @GuardedBy("sUidOwnerMap")
     private native int native_replaceUidChain(String name, boolean isAllowlist, int[] uids);
     @GuardedBy("sUidOwnerMap")
