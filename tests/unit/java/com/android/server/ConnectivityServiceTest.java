@@ -1854,6 +1854,7 @@ public class ConnectivityServiceTest {
         // getSystemService() correctly.
         mCm = new WrappedConnectivityManager(InstrumentationRegistry.getContext(), mService);
         mService.systemReadyInternal();
+        verify(mMockDnsResolver).registerUnsolicitedEventListener(any());
         mVpnManagerService = makeVpnManagerService();
         mVpnManagerService.systemReady();
         mockVpn(Process.myUid());
@@ -7256,9 +7257,6 @@ public class ConnectivityServiceTest {
     public void testBasicDnsConfigurationPushed() throws Exception {
         setPrivateDnsSettings(PRIVATE_DNS_MODE_OPPORTUNISTIC, "ignored.example.com");
 
-        // Clear any interactions that occur as a result of CS starting up.
-        reset(mMockDnsResolver);
-
         mCellNetworkAgent = new TestNetworkAgentWrapper(TRANSPORT_CELLULAR);
         waitForIdle();
         verify(mMockDnsResolver, never()).setResolverConfiguration(any());
@@ -7331,9 +7329,6 @@ public class ConnectivityServiceTest {
 
     @Test
     public void testDnsConfigurationTransTypesPushed() throws Exception {
-        // Clear any interactions that occur as a result of CS starting up.
-        reset(mMockDnsResolver);
-
         final NetworkRequest request = new NetworkRequest.Builder()
                 .clearCapabilities().addCapability(NET_CAPABILITY_INTERNET)
                 .build();
@@ -7392,9 +7387,6 @@ public class ConnectivityServiceTest {
 
     @Test
     public void testPrivateDnsSettingsChange() throws Exception {
-        // Clear any interactions that occur as a result of CS starting up.
-        reset(mMockDnsResolver);
-
         // The default on Android is opportunistic mode ("Automatic").
         setPrivateDnsSettings(PRIVATE_DNS_MODE_OPPORTUNISTIC, "ignored.example.com");
 
@@ -9845,8 +9837,6 @@ public class ConnectivityServiceTest {
         cellLp.addRoute(ipv6Default);
         cellLp.addRoute(ipv6Subnet);
         mCellNetworkAgent = new TestNetworkAgentWrapper(TRANSPORT_CELLULAR, cellLp);
-        reset(mMockDnsResolver);
-        reset(mMockNetd);
         reset(mClatCoordinator);
 
         // Connect with ipv6 link properties. Expect prefix discovery to be started.
