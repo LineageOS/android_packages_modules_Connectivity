@@ -205,6 +205,9 @@
     },
     {
       "path": "packages/modules/CaptivePortalLogin"
+    },
+    {
+      "path": "vendor/xts/gts-tests/hostsidetests/networkstack"
     }
   ]
 }
