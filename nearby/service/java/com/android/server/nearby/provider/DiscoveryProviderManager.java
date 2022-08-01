@@ -124,6 +124,12 @@ public class DiscoveryProviderManager implements AbstractDiscoveryProvider.Liste
         mInjector = injector;
     }
 
+    /** Called after boot completed. */
+    public void init() {
+        mChreDiscoveryProvider.init();
+        mChreDiscoveryProvider.getController().setListener(this);
+    }
+
     /**
      * Registers the listener in the manager and starts scan according to the requested scan mode.
      */
@@ -231,7 +237,6 @@ public class DiscoveryProviderManager implements AbstractDiscoveryProvider.Liste
     void startChreProvider() {
         Log.d(TAG, "DiscoveryProviderManager starts CHRE scanning.");
         synchronized (mLock) {
-            mChreDiscoveryProvider.getController().setListener(this);
             List<ScanFilter> scanFilters = new ArrayList();
             for (IBinder listenerBinder : mScanTypeScanListenerRecordMap.keySet()) {
                 ScanListenerRecord record = mScanTypeScanListenerRecordMap.get(listenerBinder);
