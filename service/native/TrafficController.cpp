@@ -451,6 +451,53 @@ int TrafficController::replaceUidOwnerMap(const std::string& name, bool isAllowl
     return 0;
 }
 
+int TrafficController::toggleUidOwnerMap(ChildChain chain, bool enable) {
+    std::lock_guard guard(mMutex);
+    uint32_t key = UID_RULES_CONFIGURATION_KEY;
+    auto oldConfigure = mConfigurationMap.readValue(key);
+    if (!oldConfigure.ok()) {
+        ALOGE("Cannot read the old configuration from map: %s",
+              oldConfigure.error().message().c_str());
+        return -oldConfigure.error().code();
+    }
+    uint32_t match;
+    switch (chain) {
+        case DOZABLE:
+            match = DOZABLE_MATCH;
+            break;
+        case STANDBY:
+            match = STANDBY_MATCH;
+            break;
+        case POWERSAVE:
+            match = POWERSAVE_MATCH;
+            break;
+        case RESTRICTED:
+            match = RESTRICTED_MATCH;
+            break;
+        case LOW_POWER_STANDBY:
+            match = LOW_POWER_STANDBY_MATCH;
+            break;
+        case OEM_DENY_1:
+            match = OEM_DENY_1_MATCH;
+            break;
+        case OEM_DENY_2:
+            match = OEM_DENY_2_MATCH;
+            break;
+        case OEM_DENY_3:
+            match = OEM_DENY_3_MATCH;
+            break;
+        default:
+            return -EINVAL;
+    }
+    BpfConfig newConfiguration =
+            enable ? (oldConfigure.value() | match) : (oldConfigure.value() & ~match);
+    Status res = mConfigurationMap.writeValue(key, newConfiguration, BPF_EXIST);
+    if (!isOk(res)) {
+        ALOGE("Failed to toggleUidOwnerMap(%d): %s", chain, res.msg().c_str());
+    }
+    return -res.code();
+}
+
 Status TrafficController::swapActiveStatsMap() {
     std::lock_guard guard(mMutex);
 
