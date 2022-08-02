@@ -21,6 +21,7 @@ import android.Manifest.permission.WRITE_DEVICE_CONFIG
 import android.provider.DeviceConfig
 import android.util.Log
 import com.android.modules.utils.build.SdkLevel
+import com.android.testutils.ExceptionUtils.ThrowingRunnable
 import com.android.testutils.runAsShell
 import com.android.testutils.tryTest
 import org.junit.rules.TestRule
@@ -51,7 +52,7 @@ class DeviceConfigRule @JvmOverloads constructor(
     /**
      * Actions to be run after cleanup of the config, for the current test only.
      */
-    private val currentTestCleanupActions = mutableListOf<Runnable>()
+    private val currentTestCleanupActions = mutableListOf<ThrowingRunnable>()
 
     override fun apply(base: Statement, description: Description): Statement {
         return TestValidationUrlStatement(base, description)
@@ -93,8 +94,13 @@ class DeviceConfigRule @JvmOverloads constructor(
                     originalConfig.clear()
                     usedConfig.clear()
                 } cleanup {
-                    currentTestCleanupActions.forEach { it.run() }
-                    currentTestCleanupActions.clear()
+                    // Fold all cleanup actions into cleanup steps of an empty tryTest, so they are
+                    // all run even if exceptions are thrown, and exceptions are reported properly.
+                    currentTestCleanupActions.fold(tryTest { }) {
+                        tryBlock, action -> tryBlock.cleanupStep { action.run() }
+                    }.cleanup {
+                        currentTestCleanupActions.clear()
+                    }
                 }
             }
         }
@@ -118,7 +124,7 @@ class DeviceConfigRule @JvmOverloads constructor(
     /**
      * Add an action to be run after config cleanup when the current test case ends.
      */
-    fun runAfterNextCleanup(action: Runnable) {
+    fun runAfterNextCleanup(action: ThrowingRunnable) {
         currentTestCleanupActions.add(action)
     }
 }
