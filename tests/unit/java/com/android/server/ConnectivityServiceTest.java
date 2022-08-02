@@ -2605,7 +2605,7 @@ public class ConnectivityServiceTest {
         doTestValidatedCellularOutscoresUnvalidatedWiFi(false);
     }
 
-    public void doTestValidatedCellularOutscoresUnvalidatedWiFi(
+    private void doTestValidatedCellularOutscoresUnvalidatedWiFi(
             final boolean cellRadioTimesharingCapable) throws Exception {
         mService.mCellularRadioTimesharingCapable = cellRadioTimesharingCapable;
         // Test bringing up unvalidated WiFi
@@ -2653,7 +2653,7 @@ public class ConnectivityServiceTest {
         doTestUnvalidatedWifiOutscoresUnvalidatedCellular(false);
     }
 
-    public void doTestUnvalidatedWifiOutscoresUnvalidatedCellular(
+    private void doTestUnvalidatedWifiOutscoresUnvalidatedCellular(
             final boolean cellRadioTimesharingCapable) throws Exception {
         mService.mCellularRadioTimesharingCapable = cellRadioTimesharingCapable;
         // Test bringing up unvalidated cellular.
@@ -2692,7 +2692,7 @@ public class ConnectivityServiceTest {
         doTestUnlingeringDoesNotValidate(false);
     }
 
-    public void doTestUnlingeringDoesNotValidate(
+    private void doTestUnlingeringDoesNotValidate(
             final boolean cellRadioTimesharingCapable) throws Exception {
         mService.mCellularRadioTimesharingCapable = cellRadioTimesharingCapable;
         // Test bringing up unvalidated WiFi.
@@ -2741,7 +2741,7 @@ public class ConnectivityServiceTest {
         doTestRequestMigrationToSameTransport(TRANSPORT_ETHERNET, true);
     }
 
-    public void doTestRequestMigrationToSameTransport(final int transport,
+    private void doTestRequestMigrationToSameTransport(final int transport,
             final boolean expectLingering) throws Exception {
         // To speed up tests the linger delay is very short by default in tests but this
         // test needs to make sure the delay is not incurred so a longer value is safer (it
@@ -2846,7 +2846,7 @@ public class ConnectivityServiceTest {
         doTestCellularOutscoresWeakWifi(false);
     }
 
-    public void doTestCellularOutscoresWeakWifi(
+    private void doTestCellularOutscoresWeakWifi(
             final boolean cellRadioTimesharingCapable) throws Exception {
         mService.mCellularRadioTimesharingCapable = cellRadioTimesharingCapable;
         // Test bringing up validated cellular.
@@ -2885,7 +2885,7 @@ public class ConnectivityServiceTest {
         doTestReapingNetwork(false);
     }
 
-    public void doTestReapingNetwork(
+    private void doTestReapingNetwork(
             final boolean cellRadioTimesharingCapable) throws Exception {
         mService.mCellularRadioTimesharingCapable = cellRadioTimesharingCapable;
         // Test bringing up WiFi without NET_CAPABILITY_INTERNET.
@@ -2927,7 +2927,7 @@ public class ConnectivityServiceTest {
         doTestCellularFallback(false);
     }
 
-    public void doTestCellularFallback(
+    private void doTestCellularFallback(
             final boolean cellRadioTimesharingCapable) throws Exception {
         mService.mCellularRadioTimesharingCapable = cellRadioTimesharingCapable;
         // Test bringing up validated cellular.
@@ -2978,7 +2978,7 @@ public class ConnectivityServiceTest {
         doTestWiFiFallback(false);
     }
 
-    public void doTestWiFiFallback(
+    private void doTestWiFiFallback(
             final boolean cellRadioTimesharingCapable) throws Exception {
         mService.mCellularRadioTimesharingCapable = cellRadioTimesharingCapable;
         // Test bringing up unvalidated WiFi.
@@ -14353,7 +14353,7 @@ public class ConnectivityServiceTest {
      * Make sure per profile network preferences behave as expected for a given
      * profile network preference.
      */
-    public void doTestPreferenceForUserNetworkUpDownForGivenPreference(
+    private void doTestPreferenceForUserNetworkUpDownForGivenPreference(
             ProfileNetworkPreference profileNetworkPreference,
             boolean connectWorkProfileAgentAhead,
             UserHandle testHandle,
