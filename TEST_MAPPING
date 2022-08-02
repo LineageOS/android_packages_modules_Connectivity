@@ -33,6 +33,14 @@
           "exclude-annotation": "com.android.testutils.SkipPresubmit"
         }
       ]
+    },
+    {
+      "name": "CtsNetTestCases[CaptivePortalLoginGoogle.apk+NetworkStackGoogle.apk+com.google.android.resolv.apex+com.google.android.tethering.apex]",
+      "options": [
+        {
+          "exclude-annotation": "com.android.testutils.SkipPresubmit"
+        }
+      ]
     }
   ],
   "mainline-postsubmit": [
