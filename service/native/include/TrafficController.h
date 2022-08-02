@@ -71,6 +71,8 @@ class TrafficController {
     netdutils::Status updateUidOwnerMap(const uint32_t uid,
                                         UidOwnerMatchType matchType, IptOp op) EXCLUDES(mMutex);
 
+    int toggleUidOwnerMap(ChildChain chain, bool enable) EXCLUDES(mMutex);
+
     static netdutils::StatusOr<std::unique_ptr<netdutils::NetlinkListenerInterface>>
     makeSkDestroyListener();
 
