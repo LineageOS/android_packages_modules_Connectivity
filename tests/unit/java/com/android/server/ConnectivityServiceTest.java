@@ -1858,6 +1858,7 @@ public class ConnectivityServiceTest {
         // getSystemService() correctly.
         mCm = new WrappedConnectivityManager(InstrumentationRegistry.getContext(), mService);
         mService.systemReadyInternal();
+        verify(mMockDnsResolver).registerUnsolicitedEventListener(any());
         mVpnManagerService = makeVpnManagerService();
         mVpnManagerService.systemReady();
         mockVpn(Process.myUid());
@@ -2608,7 +2609,7 @@ public class ConnectivityServiceTest {
         doTestValidatedCellularOutscoresUnvalidatedWiFi(false);
     }
 
-    public void doTestValidatedCellularOutscoresUnvalidatedWiFi(
+    private void doTestValidatedCellularOutscoresUnvalidatedWiFi(
             final boolean cellRadioTimesharingCapable) throws Exception {
         mService.mCellularRadioTimesharingCapable = cellRadioTimesharingCapable;
         // Test bringing up unvalidated WiFi
@@ -2656,7 +2657,7 @@ public class ConnectivityServiceTest {
         doTestUnvalidatedWifiOutscoresUnvalidatedCellular(false);
     }
 
-    public void doTestUnvalidatedWifiOutscoresUnvalidatedCellular(
+    private void doTestUnvalidatedWifiOutscoresUnvalidatedCellular(
             final boolean cellRadioTimesharingCapable) throws Exception {
         mService.mCellularRadioTimesharingCapable = cellRadioTimesharingCapable;
         // Test bringing up unvalidated cellular.
@@ -2695,7 +2696,7 @@ public class ConnectivityServiceTest {
         doTestUnlingeringDoesNotValidate(false);
     }
 
-    public void doTestUnlingeringDoesNotValidate(
+    private void doTestUnlingeringDoesNotValidate(
             final boolean cellRadioTimesharingCapable) throws Exception {
         mService.mCellularRadioTimesharingCapable = cellRadioTimesharingCapable;
         // Test bringing up unvalidated WiFi.
@@ -2744,7 +2745,7 @@ public class ConnectivityServiceTest {
         doTestRequestMigrationToSameTransport(TRANSPORT_ETHERNET, true);
     }
 
-    public void doTestRequestMigrationToSameTransport(final int transport,
+    private void doTestRequestMigrationToSameTransport(final int transport,
             final boolean expectLingering) throws Exception {
         // To speed up tests the linger delay is very short by default in tests but this
         // test needs to make sure the delay is not incurred so a longer value is safer (it
@@ -2849,7 +2850,7 @@ public class ConnectivityServiceTest {
         doTestCellularOutscoresWeakWifi(false);
     }
 
-    public void doTestCellularOutscoresWeakWifi(
+    private void doTestCellularOutscoresWeakWifi(
             final boolean cellRadioTimesharingCapable) throws Exception {
         mService.mCellularRadioTimesharingCapable = cellRadioTimesharingCapable;
         // Test bringing up validated cellular.
@@ -2888,7 +2889,7 @@ public class ConnectivityServiceTest {
         doTestReapingNetwork(false);
     }
 
-    public void doTestReapingNetwork(
+    private void doTestReapingNetwork(
             final boolean cellRadioTimesharingCapable) throws Exception {
         mService.mCellularRadioTimesharingCapable = cellRadioTimesharingCapable;
         // Test bringing up WiFi without NET_CAPABILITY_INTERNET.
@@ -2930,7 +2931,7 @@ public class ConnectivityServiceTest {
         doTestCellularFallback(false);
     }
 
-    public void doTestCellularFallback(
+    private void doTestCellularFallback(
             final boolean cellRadioTimesharingCapable) throws Exception {
         mService.mCellularRadioTimesharingCapable = cellRadioTimesharingCapable;
         // Test bringing up validated cellular.
@@ -2981,7 +2982,7 @@ public class ConnectivityServiceTest {
         doTestWiFiFallback(false);
     }
 
-    public void doTestWiFiFallback(
+    private void doTestWiFiFallback(
             final boolean cellRadioTimesharingCapable) throws Exception {
         mService.mCellularRadioTimesharingCapable = cellRadioTimesharingCapable;
         // Test bringing up unvalidated WiFi.
@@ -7260,9 +7261,6 @@ public class ConnectivityServiceTest {
     public void testBasicDnsConfigurationPushed() throws Exception {
         setPrivateDnsSettings(PRIVATE_DNS_MODE_OPPORTUNISTIC, "ignored.example.com");
 
-        // Clear any interactions that occur as a result of CS starting up.
-        reset(mMockDnsResolver);
-
         mCellNetworkAgent = new TestNetworkAgentWrapper(TRANSPORT_CELLULAR);
         waitForIdle();
         verify(mMockDnsResolver, never()).setResolverConfiguration(any());
@@ -7335,9 +7333,6 @@ public class ConnectivityServiceTest {
 
     @Test
     public void testDnsConfigurationTransTypesPushed() throws Exception {
-        // Clear any interactions that occur as a result of CS starting up.
-        reset(mMockDnsResolver);
-
         final NetworkRequest request = new NetworkRequest.Builder()
                 .clearCapabilities().addCapability(NET_CAPABILITY_INTERNET)
                 .build();
@@ -7396,9 +7391,6 @@ public class ConnectivityServiceTest {
 
     @Test
     public void testPrivateDnsSettingsChange() throws Exception {
-        // Clear any interactions that occur as a result of CS starting up.
-        reset(mMockDnsResolver);
-
         // The default on Android is opportunistic mode ("Automatic").
         setPrivateDnsSettings(PRIVATE_DNS_MODE_OPPORTUNISTIC, "ignored.example.com");
 
@@ -9846,8 +9838,6 @@ public class ConnectivityServiceTest {
         cellLp.addRoute(ipv6Default);
         cellLp.addRoute(ipv6Subnet);
         mCellNetworkAgent = new TestNetworkAgentWrapper(TRANSPORT_CELLULAR, cellLp);
-        reset(mMockDnsResolver);
-        reset(mMockNetd);
         reset(mClatCoordinator);
 
         // Connect with ipv6 link properties. Expect prefix discovery to be started.
@@ -14364,7 +14354,7 @@ public class ConnectivityServiceTest {
      * Make sure per profile network preferences behave as expected for a given
      * profile network preference.
      */
-    public void testPreferenceForUserNetworkUpDownForGivenPreference(
+    private void doTestPreferenceForUserNetworkUpDownForGivenPreference(
             ProfileNetworkPreference profileNetworkPreference,
             boolean connectWorkProfileAgentAhead,
             UserHandle testHandle,
@@ -14608,7 +14598,7 @@ public class ConnectivityServiceTest {
                 new ProfileNetworkPreference.Builder();
         profileNetworkPreferenceBuilder.setPreference(PROFILE_NETWORK_PREFERENCE_ENTERPRISE);
         profileNetworkPreferenceBuilder.setPreferenceEnterpriseId(NET_ENTERPRISE_ID_1);
-        testPreferenceForUserNetworkUpDownForGivenPreference(
+        doTestPreferenceForUserNetworkUpDownForGivenPreference(
                 profileNetworkPreferenceBuilder.build(), false,
                 testHandle, mProfileDefaultNetworkCallback, null);
     }
@@ -14627,7 +14617,7 @@ public class ConnectivityServiceTest {
                 PROFILE_NETWORK_PREFERENCE_ENTERPRISE_NO_FALLBACK);
         profileNetworkPreferenceBuilder.setPreferenceEnterpriseId(NET_ENTERPRISE_ID_1);
         registerDefaultNetworkCallbacks();
-        testPreferenceForUserNetworkUpDownForGivenPreference(
+        doTestPreferenceForUserNetworkUpDownForGivenPreference(
                 profileNetworkPreferenceBuilder.build(), false,
                 testHandle, mProfileDefaultNetworkCallback, null);
     }
@@ -14648,7 +14638,7 @@ public class ConnectivityServiceTest {
                 PROFILE_NETWORK_PREFERENCE_ENTERPRISE_NO_FALLBACK);
         profileNetworkPreferenceBuilder.setPreferenceEnterpriseId(NET_ENTERPRISE_ID_1);
         registerDefaultNetworkCallbacks();
-        testPreferenceForUserNetworkUpDownForGivenPreference(
+        doTestPreferenceForUserNetworkUpDownForGivenPreference(
                 profileNetworkPreferenceBuilder.build(), true, testHandle,
                 mProfileDefaultNetworkCallback, null);
     }
@@ -14667,7 +14657,7 @@ public class ConnectivityServiceTest {
         profileNetworkPreferenceBuilder.setIncludedUids(
                 new int[]{testHandle.getUid(TEST_WORK_PROFILE_APP_UID)});
         registerDefaultNetworkCallbacks();
-        testPreferenceForUserNetworkUpDownForGivenPreference(
+        doTestPreferenceForUserNetworkUpDownForGivenPreference(
                 profileNetworkPreferenceBuilder.build(), false, testHandle,
                 mProfileDefaultNetworkCallback, null);
     }
@@ -14686,7 +14676,7 @@ public class ConnectivityServiceTest {
         profileNetworkPreferenceBuilder.setIncludedUids(
                 new int[]{testHandle.getUid(TEST_WORK_PROFILE_APP_UID_2)});
         registerDefaultNetworkCallbacks();
-        testPreferenceForUserNetworkUpDownForGivenPreference(
+        doTestPreferenceForUserNetworkUpDownForGivenPreference(
                 profileNetworkPreferenceBuilder.build(), false,
                 testHandle, mProfileDefaultNetworkCallbackAsAppUid2, null);
     }
@@ -14705,7 +14695,7 @@ public class ConnectivityServiceTest {
         profileNetworkPreferenceBuilder.setExcludedUids(
                 new int[]{testHandle.getUid(TEST_WORK_PROFILE_APP_UID_2)});
         registerDefaultNetworkCallbacks();
-        testPreferenceForUserNetworkUpDownForGivenPreference(
+        doTestPreferenceForUserNetworkUpDownForGivenPreference(
                 profileNetworkPreferenceBuilder.build(), false,
                 testHandle, mProfileDefaultNetworkCallback,
                 mProfileDefaultNetworkCallbackAsAppUid2);
@@ -14801,7 +14791,7 @@ public class ConnectivityServiceTest {
         profileNetworkPreferenceBuilder.setPreference(PROFILE_NETWORK_PREFERENCE_ENTERPRISE);
         profileNetworkPreferenceBuilder.setPreferenceEnterpriseId(NET_ENTERPRISE_ID_1);
         registerDefaultNetworkCallbacks();
-        testPreferenceForUserNetworkUpDownForGivenPreference(
+        doTestPreferenceForUserNetworkUpDownForGivenPreference(
                 profileNetworkPreferenceBuilder.build(), true,
                 testHandle, mProfileDefaultNetworkCallback,
                 null);
@@ -14821,7 +14811,7 @@ public class ConnectivityServiceTest {
                 PROFILE_NETWORK_PREFERENCE_ENTERPRISE_NO_FALLBACK);
         profileNetworkPreferenceBuilder.setPreferenceEnterpriseId(NET_ENTERPRISE_ID_1);
         registerDefaultNetworkCallbacks();
-        testPreferenceForUserNetworkUpDownForGivenPreference(
+        doTestPreferenceForUserNetworkUpDownForGivenPreference(
                 profileNetworkPreferenceBuilder.build(), true,
                 testHandle, mProfileDefaultNetworkCallback,
                 null);
@@ -14842,7 +14832,7 @@ public class ConnectivityServiceTest {
         profileNetworkPreferenceBuilder.setPreferenceEnterpriseId(
                 NET_ENTERPRISE_ID_2);
         registerDefaultNetworkCallbacks();
-        testPreferenceForUserNetworkUpDownForGivenPreference(
+        doTestPreferenceForUserNetworkUpDownForGivenPreference(
                 profileNetworkPreferenceBuilder.build(), true,
                 testHandle, mProfileDefaultNetworkCallback, null);
     }
