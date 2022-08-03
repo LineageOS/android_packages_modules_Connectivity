@@ -80,6 +80,7 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import java.net.Inet6Address
+import java.util.Random
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ExecutionException
 import java.util.concurrent.TimeUnit
@@ -155,8 +156,9 @@ class EthernetManagerTest {
             val mtu = tapInterface.mtu
             packetReader = TapPacketReader(handler, tapInterface.fileDescriptor.fileDescriptor, mtu)
             raResponder = RouterAdvertisementResponder(packetReader)
-            raResponder.addRouterEntry(MacAddress.fromString("01:23:45:67:89:ab"),
-                    InetAddresses.parseNumericAddress("fe80::abcd") as Inet6Address)
+            val iidString = "fe80::${Integer.toHexString(Random().nextInt(65536))}"
+            val linklocal = InetAddresses.parseNumericAddress(iidString) as Inet6Address
+            raResponder.addRouterEntry(MacAddress.fromString("01:23:45:67:89:ab"), linklocal)
 
             packetReader.startAsyncForTest()
             raResponder.start()
