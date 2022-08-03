@@ -622,10 +622,16 @@ public class BpfNetMaps {
      */
     public void updateUidLockdownRule(final int uid, final boolean add) {
         throwIfPreT("updateUidLockdownRule is not available on pre-T devices");
-        if (add) {
-            addRule(uid, LOCKDOWN_VPN_MATCH, "updateUidLockdownRule");
+
+        if (sEnableJavaBpfMap) {
+            if (add) {
+                addRule(uid, LOCKDOWN_VPN_MATCH, "updateUidLockdownRule");
+            } else {
+                removeRule(uid, LOCKDOWN_VPN_MATCH, "updateUidLockdownRule");
+            }
         } else {
-            removeRule(uid, LOCKDOWN_VPN_MATCH, "updateUidLockdownRule");
+            final int err = native_updateUidLockdownRule(uid, add);
+            maybeThrow(err, "Unable to update lockdown rule");
         }
     }
 
@@ -689,7 +695,6 @@ public class BpfNetMaps {
     private native int native_addUidInterfaceRules(String ifName, int[] uids);
     @GuardedBy("sUidOwnerMap")
     private native int native_removeUidInterfaceRules(int[] uids);
-    @GuardedBy("sUidOwnerMap")
     private native int native_updateUidLockdownRule(int uid, boolean add);
     private native int native_swapActiveStatsMap();
     private native void native_setPermissionForUids(int permissions, int[] uids);
