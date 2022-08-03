@@ -217,25 +217,33 @@ public class DiscoveryProviderManager implements AbstractDiscoveryProvider.Liste
                     && scanRequest.getScanType() == SCAN_TYPE_NEARBY_PRESENCE) {
                 startChreProvider();
             } else {
-                startBleProvider(scanRequest);
+                startBleProvider();
             }
             return true;
         }
         return false;
     }
 
-    private void startBleProvider(ScanRequest scanRequest) {
+    private void startBleProvider() {
         if (!mBleDiscoveryProvider.getController().isStarted()) {
             Log.d(TAG, "DiscoveryProviderManager starts Ble scanning.");
-            mBleDiscoveryProvider.getController().start();
             mBleDiscoveryProvider.getController().setListener(this);
-            mBleDiscoveryProvider.getController().setProviderScanMode(scanRequest.getScanMode());
+            mBleDiscoveryProvider.getController().setProviderScanMode(mScanMode);
+            mBleDiscoveryProvider.getController().setProviderScanFilters(
+                    getPresenceScanFilters());
+            mBleDiscoveryProvider.getController().start();
         }
     }
 
     @VisibleForTesting
     void startChreProvider() {
         Log.d(TAG, "DiscoveryProviderManager starts CHRE scanning.");
+        mChreDiscoveryProvider.getController().setProviderScanFilters(getPresenceScanFilters());
+        mChreDiscoveryProvider.getController().setProviderScanMode(mScanMode);
+        mChreDiscoveryProvider.getController().start();
+    }
+
+    private List<ScanFilter> getPresenceScanFilters() {
         synchronized (mLock) {
             List<ScanFilter> scanFilters = new ArrayList();
             for (IBinder listenerBinder : mScanTypeScanListenerRecordMap.keySet()) {
@@ -248,9 +256,7 @@ public class DiscoveryProviderManager implements AbstractDiscoveryProvider.Liste
                                 .collect(Collectors.toList());
                 scanFilters.addAll(presenceFilters);
             }
-            mChreDiscoveryProvider.getController().setProviderScanFilters(scanFilters);
-            mChreDiscoveryProvider.getController().setProviderScanMode(mScanMode);
-            mChreDiscoveryProvider.getController().start();
+            return scanFilters;
         }
     }
 
