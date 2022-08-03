@@ -53,6 +53,7 @@ import static android.net.netstats.NetworkStatsDataMigrationUtils.PREFIX_UID_TAG
 import static android.net.netstats.NetworkStatsDataMigrationUtils.PREFIX_XT;
 import static android.os.Trace.TRACE_TAG_NETWORK;
 import static android.system.OsConstants.ENOENT;
+import static android.system.OsConstants.R_OK;
 import static android.telephony.SubscriptionManager.INVALID_SUBSCRIPTION_ID;
 import static android.text.format.DateUtils.DAY_IN_MILLIS;
 import static android.text.format.DateUtils.HOUR_IN_MILLIS;
@@ -130,6 +131,7 @@ import android.provider.Settings.Global;
 import android.service.NetworkInterfaceProto;
 import android.service.NetworkStatsServiceDumpProto;
 import android.system.ErrnoException;
+import android.system.Os;
 import android.telephony.PhoneStateListener;
 import android.telephony.SubscriptionPlan;
 import android.text.TextUtils;
@@ -156,6 +158,7 @@ import com.android.net.module.util.IBpfMap;
 import com.android.net.module.util.LocationPermissionChecker;
 import com.android.net.module.util.NetworkStatsUtils;
 import com.android.net.module.util.PermissionUtils;
+import com.android.net.module.util.Struct;
 import com.android.net.module.util.Struct.U32;
 import com.android.net.module.util.Struct.U8;
 import com.android.net.module.util.bpf.CookieTagMapKey;
@@ -2698,6 +2701,21 @@ public class NetworkStatsService extends INetworkStatsService.Stub {
                 mUidTagRecorder.dumpLocked(pw, fullHistory);
                 pw.decreaseIndent();
             }
+
+            pw.println();
+            pw.println("BPF map status:");
+            pw.increaseIndent();
+            dumpMapStatus(pw);
+            pw.decreaseIndent();
+            pw.println();
+
+            // Following BPF map content dump contains uid and tag regardless of the flags because
+            // following dumps are moved from TrafficController and bug report already contains this
+            // information.
+            pw.println("BPF map content:");
+            pw.increaseIndent();
+            dumpCookieTagMapLocked(pw);
+            pw.decreaseIndent();
         }
     }
 
@@ -2730,6 +2748,48 @@ public class NetworkStatsService extends INetworkStatsService.Stub {
 
             proto.end(start);
         }
+    }
+
+    private <K extends Struct, V extends Struct> String getMapStatus(
+            final IBpfMap<K, V> map, final String path) {
+        if (map != null) {
+            return "OK";
+        }
+        try {
+            Os.access(path, R_OK);
+            return "NULL(map is pinned to " + path + ")";
+        } catch (ErrnoException e) {
+            return "NULL(map is not pinned to " + path + ": " + Os.strerror(e.errno) + ")";
+        }
+    }
+
+    private void dumpMapStatus(final IndentingPrintWriter pw) {
+        pw.println("mCookieTagMap: " + getMapStatus(mCookieTagMap, COOKIE_TAG_MAP_PATH));
+    }
+
+    @GuardedBy("mStatsLock")
+    private void dumpCookieTagMapLocked(final IndentingPrintWriter pw) {
+        if (mCookieTagMap == null) {
+            return;
+        }
+        pw.println("mCookieTagMap:");
+        pw.increaseIndent();
+        try {
+            mCookieTagMap.forEach((key, value) -> {
+                // value could be null if there is a concurrent entry deletion.
+                // http://b/220084230.
+                if (value != null) {
+                    pw.println("cookie=" + key.socketCookie
+                            + " tag=0x" + Long.toHexString(value.tag)
+                            + " uid=" + value.uid);
+                } else {
+                    pw.println("Entry is deleted while dumping, iterating from first entry");
+                }
+            });
+        } catch (ErrnoException e) {
+            pw.println("mCookieTagMap dump end with error: " + Os.strerror(e.errno));
+        }
+        pw.decreaseIndent();
     }
 
     private NetworkStats readNetworkStatsSummaryDev() {

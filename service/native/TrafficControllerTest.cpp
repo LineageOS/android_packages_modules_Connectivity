@@ -791,8 +791,6 @@ TEST_F(TrafficControllerTest, TestDumpsys) {
     // ifaceIndex ifaceName tag_hex uid_int cnt_set rxBytes rxPackets txBytes txPackets
     // 999 test0 0x2a 10086 1 100 1 0 0
     std::vector<std::string> expectedLines = {
-        "mCookieTagMap:",
-        fmt::format("cookie={} tag={:#x} uid={}", TEST_COOKIE, TEST_TAG, TEST_UID),
         "mUidCounterSetMap:",
         fmt::format("{} {}", TEST_UID3, TEST_COUNTERSET),
         "mAppUidStatsMap::",  // TODO@: fix double colon
@@ -833,7 +831,6 @@ TEST_F(TrafficControllerTest, dumpsysInvalidMaps) {
             "Read value of map -1 failed: Bad file descriptor";
 
     std::vector<std::string> expectedLines = {
-        fmt::format("mCookieTagMap {}", kErrIterate),
         fmt::format("mUidCounterSetMap {}", kErrIterate),
         fmt::format("mAppUidStatsMap {}", kErrIterate),
         fmt::format("mStatsMapA {}", kErrIterate),
