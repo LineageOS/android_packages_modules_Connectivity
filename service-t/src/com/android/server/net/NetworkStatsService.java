@@ -2715,6 +2715,8 @@ public class NetworkStatsService extends INetworkStatsService.Stub {
             pw.println("BPF map content:");
             pw.increaseIndent();
             dumpCookieTagMapLocked(pw);
+            dumpUidCounterSetMapLocked(pw);
+            dumpAppUidStatsMapLocked(pw);
             pw.decreaseIndent();
         }
     }
@@ -2765,6 +2767,9 @@ public class NetworkStatsService extends INetworkStatsService.Stub {
 
     private void dumpMapStatus(final IndentingPrintWriter pw) {
         pw.println("mCookieTagMap: " + getMapStatus(mCookieTagMap, COOKIE_TAG_MAP_PATH));
+        pw.println("mUidCounterSetMap: "
+                + getMapStatus(mUidCounterSetMap, UID_COUNTERSET_MAP_PATH));
+        pw.println("mAppUidStatsMap: " + getMapStatus(mAppUidStatsMap, APP_UID_STATS_MAP_PATH));
     }
 
     @GuardedBy("mStatsLock")
@@ -2788,6 +2793,57 @@ public class NetworkStatsService extends INetworkStatsService.Stub {
             });
         } catch (ErrnoException e) {
             pw.println("mCookieTagMap dump end with error: " + Os.strerror(e.errno));
+        }
+        pw.decreaseIndent();
+    }
+
+    @GuardedBy("mStatsLock")
+    private void dumpUidCounterSetMapLocked(final IndentingPrintWriter pw) {
+        if (mUidCounterSetMap == null) {
+            return;
+        }
+        pw.println("mUidCounterSetMap:");
+        pw.increaseIndent();
+        try {
+            mUidCounterSetMap.forEach((uid, set) -> {
+                // set could be null if there is a concurrent entry deletion.
+                // http://b/220084230.
+                if (set != null) {
+                    pw.println("uid=" + uid.val + " set=" + set.val);
+                } else {
+                    pw.println("Entry is deleted while dumping, iterating from first entry");
+                }
+            });
+        } catch (ErrnoException e) {
+            pw.println("mUidCounterSetMap dump end with error: " + Os.strerror(e.errno));
+        }
+        pw.decreaseIndent();
+    }
+
+    @GuardedBy("mStatsLock")
+    private void dumpAppUidStatsMapLocked(final IndentingPrintWriter pw) {
+        if (mAppUidStatsMap == null) {
+            return;
+        }
+        pw.println("mAppUidStatsMap:");
+        pw.increaseIndent();
+        pw.println("uid rxBytes rxPackets txBytes txPackets");
+        try {
+            mAppUidStatsMap.forEach((key, value) -> {
+                // value could be null if there is a concurrent entry deletion.
+                // http://b/220084230.
+                if (value != null) {
+                    pw.println(key.uid + " "
+                            + value.rxBytes + " "
+                            + value.rxPackets + " "
+                            + value.txBytes + " "
+                            + value.txPackets);
+                } else {
+                    pw.println("Entry is deleted while dumping, iterating from first entry");
+                }
+            });
+        } catch (ErrnoException e) {
+            pw.println("mAppUidStatsMap dump end with error: " + Os.strerror(e.errno));
         }
         pw.decreaseIndent();
     }
