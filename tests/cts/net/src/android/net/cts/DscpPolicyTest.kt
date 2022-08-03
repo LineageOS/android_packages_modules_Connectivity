@@ -251,15 +251,13 @@ class DscpPolicyTest {
 
         var inet6Addr: Inet6Address? = null
         val timeout = SystemClock.elapsedRealtime() + PACKET_TIMEOUT_MS
+        val onLinkPrefix = raResponder.prefix
         while (timeout > SystemClock.elapsedRealtime()) {
             try {
                 // Pick any arbitrary port
                 Os.connect(sock, TEST_TARGET_IPV6_ADDR, 12345)
                 val sockAddr = Os.getsockname(sock) as InetSocketAddress
-
-                // TODO: make RouterAdvertisementResponder.SLAAC_PREFIX public and use it here,
-                // or make it configurable and configure it here.
-                if (IpPrefix("2001:db8::/64").contains(sockAddr.address)) {
+                if (onLinkPrefix.contains(sockAddr.address)) {
                     inet6Addr = sockAddr.address as Inet6Address
                     break
                 }
