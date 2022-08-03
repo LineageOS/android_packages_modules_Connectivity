@@ -385,11 +385,13 @@ public class NetworkNotificationManagerTest {
         doReturn(true).when(mResources).getBoolean(
                 R.bool.config_notifyNoInternetAsDialogWhenHighPriority);
 
+        final Instrumentation instr = InstrumentationRegistry.getInstrumentation();
+        UiDevice.getInstance(instr).pressHome();
+
         mManager.showNotification(TEST_NOTIF_ID, NETWORK_SWITCH, mWifiNai, mCellNai, null, false);
         // Non-"no internet" notifications are not affected
         verify(mNotificationManager).notify(eq(TEST_NOTIF_TAG), eq(NETWORK_SWITCH.eventId), any());
 
-        final Instrumentation instr = InstrumentationRegistry.getInstrumentation();
         final Context ctx = instr.getContext();
         final String testAction = "com.android.connectivity.coverage.TEST_DIALOG";
         final Intent intent = new Intent(testAction)
