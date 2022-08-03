@@ -532,15 +532,20 @@ public class BpfNetMaps {
     public void setUidRule(final int childChain, final int uid, final int firewallRule) {
         throwIfPreT("setUidRule is not available on pre-T devices");
 
-        final long match = getMatchByFirewallChain(childChain);
-        final boolean isAllowList = isFirewallAllowList(childChain);
-        final boolean add = (firewallRule == FIREWALL_RULE_ALLOW && isAllowList)
-                || (firewallRule == FIREWALL_RULE_DENY && !isAllowList);
+        if (sEnableJavaBpfMap) {
+            final long match = getMatchByFirewallChain(childChain);
+            final boolean isAllowList = isFirewallAllowList(childChain);
+            final boolean add = (firewallRule == FIREWALL_RULE_ALLOW && isAllowList)
+                    || (firewallRule == FIREWALL_RULE_DENY && !isAllowList);
 
-        if (add) {
-            addRule(uid, match, "setUidRule");
+            if (add) {
+                addRule(uid, match, "setUidRule");
+            } else {
+                removeRule(uid, match, "setUidRule");
+            }
         } else {
-            removeRule(uid, match, "setUidRule");
+            final int err = native_setUidRule(childChain, uid, firewallRule);
+            maybeThrow(err, "Unable to set uid rule");
         }
     }
 
@@ -701,7 +706,6 @@ public class BpfNetMaps {
     private native int native_setChildChain(int childChain, boolean enable);
     @GuardedBy("sUidOwnerMap")
     private native int native_replaceUidChain(String name, boolean isAllowlist, int[] uids);
-    @GuardedBy("sUidOwnerMap")
     private native int native_setUidRule(int childChain, int uid, int firewallRule);
     private native int native_addUidInterfaceRules(String ifName, int[] uids);
     private native int native_removeUidInterfaceRules(int[] uids);
