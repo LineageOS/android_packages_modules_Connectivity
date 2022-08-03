@@ -1080,7 +1080,7 @@ public class ConnectivityManager {
     /**
      * Tests if a given integer represents a valid network type.
      * @param networkType the type to be tested
-     * @return a boolean.  {@code true} if the type is valid, else {@code false}
+     * @return {@code true} if the type is valid, else {@code false}
      * @deprecated All APIs accepting a network type are deprecated. There should be no need to
      *             validate a network type.
      */
@@ -1439,9 +1439,8 @@ public class ConnectivityManager {
     }
 
     /**
-     * Returns details about the currently active default data network
-     * for a given uid.  This is for internal use only to avoid spying
-     * other apps.
+     * Returns details about the currently active default data network for a given uid.
+     * This is for privileged use only to avoid spying on other apps.
      *
      * @return a {@link NetworkInfo} object for the current default network
      *        for the given uid or {@code null} if no default network is
@@ -1465,8 +1464,7 @@ public class ConnectivityManager {
     }
 
     /**
-     * Returns connection status information about a particular
-     * network type.
+     * Returns connection status information about a particular network type.
      *
      * @param networkType integer specifying which networkType in
      *        which you're interested.
@@ -1494,8 +1492,7 @@ public class ConnectivityManager {
     }
 
     /**
-     * Returns connection status information about a particular
-     * Network.
+     * Returns connection status information about a particular Network.
      *
      * @param network {@link Network} specifying which network
      *        in which you're interested.
@@ -1521,8 +1518,7 @@ public class ConnectivityManager {
     }
 
     /**
-     * Returns connection status information about all network
-     * types supported by the device.
+     * Returns connection status information about all network types supported by the device.
      *
      * @return an array of {@link NetworkInfo} objects.  Check each
      * {@link NetworkInfo#getType} for which type each applies.
@@ -1582,8 +1578,7 @@ public class ConnectivityManager {
     }
 
     /**
-     * Returns an array of all {@link Network} currently tracked by the
-     * framework.
+     * Returns an array of all {@link Network} currently tracked by the framework.
      *
      * @deprecated This method does not provide any notification of network state changes, forcing
      *             apps to call it repeatedly. This is inefficient and prone to race conditions.
@@ -1786,7 +1781,7 @@ public class ConnectivityManager {
      * that may be relevant for other components trying to detect captive portals.
      *
      * @hide
-     * @deprecated This API returns URL which is not guaranteed to be one of the URLs used by the
+     * @deprecated This API returns a URL which is not guaranteed to be one of the URLs used by the
      *             system.
      */
     @Deprecated
@@ -2365,8 +2360,7 @@ public class ConnectivityManager {
     }
 
     /**
-     * Request that keepalives be started on a TCP socket.
-     * The socket must be established.
+     * Request that keepalives be started on a TCP socket. The socket must be established.
      *
      * @param network The {@link Network} the socket is on.
      * @param socket The socket that needs to be kept alive.
@@ -2653,7 +2647,7 @@ public class ConnectivityManager {
     }
 
     /**
-     * Check if the package is a allowed to write settings. This also accounts that such an access
+     * Check if the package is allowed to write settings. This also records that such an access
      * happened.
      *
      * @return {@code true} iff the package is allowed to write settings.
@@ -2756,7 +2750,7 @@ public class ConnectivityManager {
     }
 
     /**
-     * Attempt to tether the named interface.  This will setup a dhcp server
+     * Attempt to tether the named interface.  This will set up a dhcp server
      * on the interface, forward and NAT IP packets and forward DNS requests
      * to the best active upstream network interface.  Note that if no upstream
      * IP network interface is available, dhcp will still run and traffic will be
@@ -3265,10 +3259,10 @@ public class ConnectivityManager {
 
     /**
      * Get the last value of the entitlement check on this downstream. If the cached value is
-     * {@link #TETHER_ERROR_NO_ERROR} or showEntitlementUi argument is false, it just return the
-     * cached value. Otherwise, a UI-based entitlement check would be performed. It is not
+     * {@link #TETHER_ERROR_NO_ERROR} or showEntitlementUi argument is false, this just returns the
+     * cached value. Otherwise, a UI-based entitlement check will be performed. It is not
      * guaranteed that the UI-based entitlement check will complete in any specific time period
-     * and may in fact never complete. Any successful entitlement check the platform performs for
+     * and it may in fact never complete. Any successful entitlement check the platform performs for
      * any reason will update the cached value.
      *
      * @param type the downstream type of tethering. Must be one of
@@ -3455,12 +3449,11 @@ public class ConnectivityManager {
     }
 
     /**
-     * Returns true if the hardware supports the given network type
-     * else it returns false.  This doesn't indicate we have coverage
-     * or are authorized onto a network, just whether or not the
-     * hardware supports it.  For example a GSM phone without a SIM
-     * should still return {@code true} for mobile data, but a wifi only
-     * tablet would return {@code false}.
+     * Returns whether the hardware supports the given network type.
+     *
+     * This doesn't indicate there is coverage or such a network is available, just whether the
+     * hardware supports it. For example a GSM phone without a SIM card will return {@code true}
+     * for mobile data, but a WiFi only tablet would return {@code false}.
      *
      * @param networkType The network type we'd like to check
      * @return {@code true} if supported, else {@code false}
@@ -4826,9 +4819,8 @@ public class ConnectivityManager {
      * Unregisters a {@code NetworkCallback} and possibly releases networks originating from
      * {@link #requestNetwork(NetworkRequest, NetworkCallback)} and
      * {@link #registerNetworkCallback(NetworkRequest, NetworkCallback)} calls.
-     * If the given {@code NetworkCallback} had previously been used with
-     * {@code #requestNetwork}, any networks that had been connected to only to satisfy that request
-     * will be disconnected.
+     * If the given {@code NetworkCallback} had previously been used with {@code #requestNetwork},
+     * any networks that the device brought up only to satisfy that request will be disconnected.
      *
      * Notifications that would have triggered that {@code NetworkCallback} will immediately stop
      * triggering it as soon as this call returns.
@@ -4963,7 +4955,7 @@ public class ConnectivityManager {
     }
 
     /**
-     * Temporarily allow bad wifi to override {@code config_networkAvoidBadWifi} configuration.
+     * Temporarily allow bad Wi-Fi to override {@code config_networkAvoidBadWifi} configuration.
      *
      * @param timeMs The expired current time. The value should be set within a limited time from
      *               now.
@@ -5022,7 +5014,7 @@ public class ConnectivityManager {
     }
 
     /**
-     * Determine whether the device is configured to avoid bad wifi.
+     * Determine whether the device is configured to avoid bad Wi-Fi.
      * @hide
      */
     @SystemApi
@@ -5091,9 +5083,9 @@ public class ConnectivityManager {
      * each such operation.
      *
      * @param network The network on which the application desires to use multipath data.
-     *                If {@code null}, this method will return the a preference that will generally
+     *                If {@code null}, this method will return a preference that will generally
      *                apply to metered networks.
-     * @return a bitwise OR of zero or more of the  {@code MULTIPATH_PREFERENCE_*} constants.
+     * @return a bitwise OR of zero or more of the {@code MULTIPATH_PREFERENCE_*} constants.
      */
     @RequiresPermission(android.Manifest.permission.ACCESS_NETWORK_STATE)
     public @MultipathPreference int getMultipathPreference(@Nullable Network network) {
@@ -5206,7 +5198,7 @@ public class ConnectivityManager {
      */
     @Nullable
     public Network getBoundNetworkForProcess() {
-        // Forcing callers to call thru non-static function ensures ConnectivityManager
+        // Forcing callers to call through non-static function ensures ConnectivityManager has been
         // instantiated.
         return getProcessDefaultNetwork();
     }
@@ -5851,7 +5843,7 @@ public class ConnectivityManager {
     }
 
     /**
-     * Removes the specified UID from the list of UIds that can use use background data on metered
+     * Removes the specified UID from the list of UIDs that can use background data on metered
      * networks if background data is not restricted. The deny list takes precedence over the
      * allow list.
      *
