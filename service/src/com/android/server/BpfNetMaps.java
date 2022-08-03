@@ -401,7 +401,13 @@ public class BpfNetMaps {
      */
     public void addNiceApp(final int uid) {
         throwIfPreT("addNiceApp is not available on pre-T devices");
-        addRule(uid, HAPPY_BOX_MATCH, "addNiceApp");
+
+        if (sEnableJavaBpfMap) {
+            addRule(uid, HAPPY_BOX_MATCH, "addNiceApp");
+        } else {
+            final int err = native_addNiceApp(uid);
+            maybeThrow(err, "Unable to add nice app");
+        }
     }
 
     /**
@@ -672,7 +678,6 @@ public class BpfNetMaps {
     private static native void native_init();
     private native int native_addNaughtyApp(int uid);
     private native int native_removeNaughtyApp(int uid);
-    @GuardedBy("sUidOwnerMap")
     private native int native_addNiceApp(int uid);
     private native int native_removeNiceApp(int uid);
     private native int native_setChildChain(int childChain, boolean enable);
