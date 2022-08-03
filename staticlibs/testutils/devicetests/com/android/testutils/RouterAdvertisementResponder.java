@@ -31,7 +31,6 @@ import static com.android.net.module.util.NetworkStackConstants.PIO_FLAG_ON_LINK
 
 import android.net.InetAddresses;
 import android.net.IpPrefix;
-import android.net.LinkAddress;
 import android.net.MacAddress;
 import android.util.ArrayMap;
 import android.util.Pair;
@@ -50,6 +49,8 @@ import java.io.IOException;
 import java.net.Inet6Address;
 import java.nio.ByteBuffer;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Random;
 
 /**
  * ND (RA & NA) responder class useful for tests that require a provisioned IPv6 interface.
@@ -57,16 +58,30 @@ import java.util.Map;
  */
 public class RouterAdvertisementResponder extends PacketResponder {
     private static final String TAG = "RouterAdvertisementResponder";
-    private static final LinkAddress SLAAC_PREFIX = new LinkAddress("2001:db8::/64");
     private static final Inet6Address DNS_SERVER =
             (Inet6Address) InetAddresses.parseNumericAddress("2001:4860:4860::64");
     private final TapPacketReader mPacketReader;
     // Maps IPv6 address to MacAddress and isRouter boolean.
     private final Map<Inet6Address, Pair<MacAddress, Boolean>> mNeighborMap = new ArrayMap<>();
+    private final IpPrefix mPrefix;
 
-    public RouterAdvertisementResponder(TapPacketReader packetReader) {
+    public RouterAdvertisementResponder(TapPacketReader packetReader, IpPrefix prefix) {
         super(packetReader, RouterAdvertisementResponder::isRsOrNs, TAG);
         mPacketReader = packetReader;
+        mPrefix = Objects.requireNonNull(prefix);
+    }
+
+    public RouterAdvertisementResponder(TapPacketReader packetReader) {
+        this(packetReader, makeRandomPrefix());
+    }
+
+    private static IpPrefix makeRandomPrefix() {
+        final byte[] prefixBytes = new IpPrefix("2001:db8::/64").getAddress().getAddress();
+        final Random r = new Random();
+        for (int i = 4; i < 8; i++) {
+            prefixBytes[i] = (byte) r.nextInt();
+        }
+        return new IpPrefix(prefixBytes, 64);
     }
 
     /** Returns true if the packet is a router solicitation or neighbor solicitation message. */
@@ -103,11 +118,17 @@ public class RouterAdvertisementResponder extends PacketResponder {
         mNeighborMap.put(ip, new Pair<>(mac, false));
     }
 
+    /**
+     * @return the prefix that is announced in the Router Advertisements sent by this object.
+     */
+    public IpPrefix getPrefix() {
+        return mPrefix;
+    }
+
     private ByteBuffer buildPrefixOption() {
         return PrefixInformationOption.build(
-                new IpPrefix(SLAAC_PREFIX.getAddress(), SLAAC_PREFIX.getPrefixLength()),
-                (byte) (PIO_FLAG_ON_LINK | PIO_FLAG_AUTONOMOUS), 3600/*valid lifetime*/,
-                3600/*preferred lifetime*/);
+                mPrefix, (byte) (PIO_FLAG_ON_LINK | PIO_FLAG_AUTONOMOUS),
+                3600 /* valid lifetime */, 3600 /* preferred lifetime */);
     }
 
     private ByteBuffer buildRdnssOption() {
