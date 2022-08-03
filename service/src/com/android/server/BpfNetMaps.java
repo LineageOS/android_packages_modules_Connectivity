@@ -609,12 +609,18 @@ public class BpfNetMaps {
             mNetd.firewallRemoveUidInterfaceRules(uids);
             return;
         }
-        for (final int uid: uids) {
-            try {
-                removeRule(uid, IIF_MATCH, "removeUidInterfaceRules");
-            } catch (ServiceSpecificException e) {
-                Log.e(TAG, "removeRule failed uid=" + uid + ", " + e);
+
+        if (sEnableJavaBpfMap) {
+            for (final int uid : uids) {
+                try {
+                    removeRule(uid, IIF_MATCH, "removeUidInterfaceRules");
+                } catch (ServiceSpecificException e) {
+                    Log.e(TAG, "removeRule failed uid=" + uid + ", " + e);
+                }
             }
+        } else {
+            final int err = native_removeUidInterfaceRules(uids);
+            maybeThrow(err, "Unable to remove uid interface rules");
         }
     }
 
@@ -698,7 +704,6 @@ public class BpfNetMaps {
     @GuardedBy("sUidOwnerMap")
     private native int native_setUidRule(int childChain, int uid, int firewallRule);
     private native int native_addUidInterfaceRules(String ifName, int[] uids);
-    @GuardedBy("sUidOwnerMap")
     private native int native_removeUidInterfaceRules(int[] uids);
     private native int native_updateUidLockdownRule(int uid, boolean add);
     private native int native_swapActiveStatsMap();
