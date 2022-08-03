@@ -31,7 +31,6 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -49,6 +48,8 @@ public class PresenceDiscoveryResultTest {
     private static final byte[] PUBLIC_KEY = new byte[]{1, 1, 2, 2};
     private static final byte[] ENCRYPTED_METADATA = new byte[]{1, 2, 3, 4, 5};
     private static final byte[] METADATA_ENCRYPTION_KEY_TAG = new byte[]{1, 1, 3, 4, 5};
+    private static final byte[] META_DATA_ENCRYPTION_KEY =
+            new byte[] {-39, -55, 115, 78, -57, 40, 115, 0, -112, 86, -86, 7, -42, 68, 11, 12};
 
     private PresenceDiscoveryResult.Builder mBuilder;
     private PublicCredential mCredential;
@@ -65,6 +66,7 @@ public class PresenceDiscoveryResultTest {
                 .setSalt(SALT)
                 .setTxPower(TX_POWER)
                 .setRssi(RSSI)
+                .setEncryptedIdentityTag(METADATA_ENCRYPTION_KEY_TAG)
                 .addPresenceAction(PRESENCE_ACTION);
     }
 
@@ -90,13 +92,28 @@ public class PresenceDiscoveryResultTest {
 
     @Test
     @SdkSuppress(minSdkVersion = 32, codeName = "T")
-    public void testToDevice() {
-        PresenceDiscoveryResult discoveryResult = mBuilder.build();
-        PresenceDevice presenceDevice = discoveryResult.toPresenceDevice();
+    public void testFromDevice_presenceDeviceAvailable() {
+        NearbyDeviceParcelable.Builder builder = new NearbyDeviceParcelable.Builder();
+        PresenceDevice presenceDevice =
+                new PresenceDevice.Builder("123", SALT, SECRET_ID, META_DATA_ENCRYPTION_KEY)
+                        .addExtendedProperty(new DataElement(
+                                DATA_TYPE_INTENT, new byte[]{(byte) PRESENCE_ACTION}))
+                        .build();
+        builder.setTxPower(TX_POWER)
+                .setRssi(RSSI)
+                .setEncryptionKeyTag(METADATA_ENCRYPTION_KEY_TAG)
+                .setPresenceDevice(presenceDevice)
+                .setPublicCredential(mCredential);
 
-        assertThat(presenceDevice.getRssi()).isEqualTo(RSSI);
-        assertThat(Arrays.equals(presenceDevice.getSalt(), SALT)).isTrue();
-        assertThat(Arrays.equals(presenceDevice.getSecretId(), SECRET_ID)).isTrue();
+        PresenceDiscoveryResult discoveryResult =
+                PresenceDiscoveryResult.fromDevice(builder.build());
+        PresenceScanFilter scanFilter = new PresenceScanFilter.Builder()
+                .setMaxPathLoss(80)
+                .addPresenceAction(PRESENCE_ACTION)
+                .addCredential(mCredential)
+                .build();
+
+        assertThat(discoveryResult.matches(scanFilter)).isTrue();
     }
 
     @Test
@@ -126,4 +143,24 @@ public class PresenceDiscoveryResultTest {
         assertThat(discoveryResult.matches(scanFilter)).isTrue();
     }
 
+    @Test
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
+    public void test_notMatches() {
+        PresenceDiscoveryResult.Builder builder = new PresenceDiscoveryResult.Builder()
+                .setPublicCredential(mCredential)
+                .setSalt(SALT)
+                .setTxPower(TX_POWER)
+                .setRssi(RSSI)
+                .setEncryptedIdentityTag(new byte[]{5, 4, 3, 2, 1})
+                .addPresenceAction(PRESENCE_ACTION);
+
+        PresenceScanFilter scanFilter = new PresenceScanFilter.Builder()
+                .setMaxPathLoss(80)
+                .addPresenceAction(PRESENCE_ACTION)
+                .addCredential(mCredential)
+                .build();
+
+        PresenceDiscoveryResult discoveryResult = builder.build();
+        assertThat(discoveryResult.matches(scanFilter)).isFalse();
+    }
 }
