@@ -791,11 +791,6 @@ TEST_F(TrafficControllerTest, TestDumpsys) {
     // ifaceIndex ifaceName tag_hex uid_int cnt_set rxBytes rxPackets txBytes txPackets
     // 999 test0 0x2a 10086 1 100 1 0 0
     std::vector<std::string> expectedLines = {
-        "mUidCounterSetMap:",
-        fmt::format("{} {}", TEST_UID3, TEST_COUNTERSET),
-        "mAppUidStatsMap::",  // TODO@: fix double colon
-        "uid rxBytes rxPackets txBytes txPackets",
-        fmt::format("{} {} {} {} {}", TEST_UID, RXBYTES, RXPACKETS, TXBYTES, TXPACKETS),
         "mStatsMapA",
         "ifaceIndex ifaceName tag_hex uid_int cnt_set rxBytes rxPackets txBytes txPackets",
         fmt::format("{} {} {:#x} {} {} {} {} {} {}",
@@ -831,8 +826,6 @@ TEST_F(TrafficControllerTest, dumpsysInvalidMaps) {
             "Read value of map -1 failed: Bad file descriptor";
 
     std::vector<std::string> expectedLines = {
-        fmt::format("mUidCounterSetMap {}", kErrIterate),
-        fmt::format("mAppUidStatsMap {}", kErrIterate),
         fmt::format("mStatsMapA {}", kErrIterate),
         fmt::format("mStatsMapB {}", kErrIterate),
         fmt::format("mIfaceIndexNameMap {}", kErrIterate),
