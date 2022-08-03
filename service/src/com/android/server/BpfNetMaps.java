@@ -40,7 +40,6 @@ import android.system.ErrnoException;
 import android.system.Os;
 import android.util.Log;
 
-import com.android.internal.annotations.GuardedBy;
 import com.android.internal.annotations.VisibleForTesting;
 import com.android.modules.utils.build.SdkLevel;
 import com.android.net.module.util.BpfMap;
@@ -487,36 +486,73 @@ public class BpfNetMaps {
     public void replaceUidChain(final int chain, final int[] uids) {
         throwIfPreT("replaceUidChain is not available on pre-T devices");
 
-        final long match;
-        try {
-            match = getMatchByFirewallChain(chain);
-        } catch (ServiceSpecificException e) {
-            // Throws IllegalArgumentException to keep the behavior of
-            // ConnectivityManager#replaceFirewallChain API
-            throw new IllegalArgumentException("Invalid firewall chain: " + chain);
-        }
-        final Set<Integer> uidSet = Arrays.stream(uids).boxed().collect(Collectors.toSet());
-        final Set<Integer> uidSetToRemoveRule = new HashSet<>();
-        try {
-            synchronized (sUidOwnerMap) {
-                sUidOwnerMap.forEach((uid, config) -> {
-                    // config could be null if there is a concurrent entry deletion.
-                    // http://b/220084230.
-                    if (config != null
-                            && !uidSet.contains((int) uid.val) && (config.rule & match) != 0) {
-                        uidSetToRemoveRule.add((int) uid.val);
-                    }
-                });
-
-                for (final int uid : uidSetToRemoveRule) {
-                    removeRule(uid, match, "replaceUidChain");
-                }
-                for (final int uid : uids) {
-                    addRule(uid, match, "replaceUidChain");
-                }
+        if (sEnableJavaBpfMap) {
+            final long match;
+            try {
+                match = getMatchByFirewallChain(chain);
+            } catch (ServiceSpecificException e) {
+                // Throws IllegalArgumentException to keep the behavior of
+                // ConnectivityManager#replaceFirewallChain API
+                throw new IllegalArgumentException("Invalid firewall chain: " + chain);
             }
-        } catch (ErrnoException | ServiceSpecificException e) {
-            Log.e(TAG, "replaceUidChain failed: " + e);
+            final Set<Integer> uidSet = Arrays.stream(uids).boxed().collect(Collectors.toSet());
+            final Set<Integer> uidSetToRemoveRule = new HashSet<>();
+            try {
+                synchronized (sUidOwnerMap) {
+                    sUidOwnerMap.forEach((uid, config) -> {
+                        // config could be null if there is a concurrent entry deletion.
+                        // http://b/220084230.
+                        if (config != null
+                                && !uidSet.contains((int) uid.val) && (config.rule & match) != 0) {
+                            uidSetToRemoveRule.add((int) uid.val);
+                        }
+                    });
+
+                    for (final int uid : uidSetToRemoveRule) {
+                        removeRule(uid, match, "replaceUidChain");
+                    }
+                    for (final int uid : uids) {
+                        addRule(uid, match, "replaceUidChain");
+                    }
+                }
+            } catch (ErrnoException | ServiceSpecificException e) {
+                Log.e(TAG, "replaceUidChain failed: " + e);
+            }
+        } else {
+            final int err;
+            switch (chain) {
+                case FIREWALL_CHAIN_DOZABLE:
+                    err = native_replaceUidChain("fw_dozable", true /* isAllowList */, uids);
+                    break;
+                case FIREWALL_CHAIN_STANDBY:
+                    err = native_replaceUidChain("fw_standby", false /* isAllowList */, uids);
+                    break;
+                case FIREWALL_CHAIN_POWERSAVE:
+                    err = native_replaceUidChain("fw_powersave", true /* isAllowList */, uids);
+                    break;
+                case FIREWALL_CHAIN_RESTRICTED:
+                    err = native_replaceUidChain("fw_restricted", true /* isAllowList */, uids);
+                    break;
+                case FIREWALL_CHAIN_LOW_POWER_STANDBY:
+                    err = native_replaceUidChain(
+                            "fw_low_power_standby", true /* isAllowList */, uids);
+                    break;
+                case FIREWALL_CHAIN_OEM_DENY_1:
+                    err = native_replaceUidChain("fw_oem_deny_1", false /* isAllowList */, uids);
+                    break;
+                case FIREWALL_CHAIN_OEM_DENY_2:
+                    err = native_replaceUidChain("fw_oem_deny_2", false /* isAllowList */, uids);
+                    break;
+                case FIREWALL_CHAIN_OEM_DENY_3:
+                    err = native_replaceUidChain("fw_oem_deny_3", false /* isAllowList */, uids);
+                    break;
+                default:
+                    throw new IllegalArgumentException("replaceFirewallChain with invalid chain: "
+                            + chain);
+            }
+            if (err != 0) {
+                Log.e(TAG, "replaceUidChain failed: " + Os.strerror(-err));
+            }
         }
     }
 
@@ -704,7 +740,6 @@ public class BpfNetMaps {
     private native int native_addNiceApp(int uid);
     private native int native_removeNiceApp(int uid);
     private native int native_setChildChain(int childChain, boolean enable);
-    @GuardedBy("sUidOwnerMap")
     private native int native_replaceUidChain(String name, boolean isAllowlist, int[] uids);
     private native int native_setUidRule(int childChain, int uid, int firewallRule);
     private native int native_addUidInterfaceRules(String ifName, int[] uids);
