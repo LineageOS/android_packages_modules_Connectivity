@@ -566,24 +566,30 @@ public class BpfNetMaps {
             mNetd.firewallAddUidInterfaceRules(ifName, uids);
             return;
         }
-        // Null ifName is a wildcard to allow apps to receive packets on all interfaces and ifIndex
-        // is set to 0.
-        final int ifIndex;
-        if (ifName == null) {
-            ifIndex = 0;
+
+        if (sEnableJavaBpfMap) {
+            // Null ifName is a wildcard to allow apps to receive packets on all interfaces and
+            // ifIndex is set to 0.
+            final int ifIndex;
+            if (ifName == null) {
+                ifIndex = 0;
+            } else {
+                ifIndex = mDeps.getIfIndex(ifName);
+                if (ifIndex == 0) {
+                    throw new ServiceSpecificException(ENODEV,
+                            "Failed to get index of interface " + ifName);
+                }
+            }
+            for (final int uid : uids) {
+                try {
+                    addRule(uid, IIF_MATCH, ifIndex, "addUidInterfaceRules");
+                } catch (ServiceSpecificException e) {
+                    Log.e(TAG, "addRule failed uid=" + uid + " ifName=" + ifName + ", " + e);
+                }
+            }
         } else {
-            ifIndex = mDeps.getIfIndex(ifName);
-            if (ifIndex == 0) {
-                throw new ServiceSpecificException(ENODEV,
-                        "Failed to get index of interface " + ifName);
-            }
-        }
-        for (final int uid: uids) {
-            try {
-                addRule(uid, IIF_MATCH, ifIndex, "addUidInterfaceRules");
-            } catch (ServiceSpecificException e) {
-                Log.e(TAG, "addRule failed uid=" + uid + " ifName=" + ifName + ", " + e);
-            }
+            final int err = native_addUidInterfaceRules(ifName, uids);
+            maybeThrow(err, "Unable to add uid interface rules");
         }
     }
 
@@ -691,7 +697,6 @@ public class BpfNetMaps {
     private native int native_replaceUidChain(String name, boolean isAllowlist, int[] uids);
     @GuardedBy("sUidOwnerMap")
     private native int native_setUidRule(int childChain, int uid, int firewallRule);
-    @GuardedBy("sUidOwnerMap")
     private native int native_addUidInterfaceRules(String ifName, int[] uids);
     @GuardedBy("sUidOwnerMap")
     private native int native_removeUidInterfaceRules(int[] uids);
