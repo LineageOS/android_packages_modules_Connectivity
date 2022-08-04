@@ -430,6 +430,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Consumer;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.regex.Matcher;
@@ -926,9 +927,6 @@ public class ConnectivityServiceTest {
         private int mProbesSucceeded;
         private String mNmValidationRedirectUrl = null;
         private boolean mNmProvNotificationRequested = false;
-        private Runnable mCreatedCallback;
-        private Runnable mUnwantedCallback;
-        private Runnable mDisconnectedCallback;
 
         private final ConditionVariable mNetworkStatusReceived = new ConditionVariable();
         // Contains the redirectUrl from networkStatus(). Before reading, wait for
@@ -936,22 +934,34 @@ public class ConnectivityServiceTest {
         private String mRedirectUrl;
 
         TestNetworkAgentWrapper(int transport) throws Exception {
-            this(transport, new LinkProperties(), null /* ncTemplate */, null /* provider */);
+            this(transport, new LinkProperties(), null /* ncTemplate */, null /* provider */, null);
         }
 
         TestNetworkAgentWrapper(int transport, LinkProperties linkProperties)
                 throws Exception {
-            this(transport, linkProperties, null /* ncTemplate */, null /* provider */);
+            this(transport, linkProperties, null /* ncTemplate */, null /* provider */, null);
         }
 
         private TestNetworkAgentWrapper(int transport, LinkProperties linkProperties,
                 NetworkCapabilities ncTemplate) throws Exception {
-            this(transport, linkProperties, ncTemplate, null /* provider */);
+            this(transport, linkProperties, ncTemplate, null /* provider */, null);
         }
 
         private TestNetworkAgentWrapper(int transport, LinkProperties linkProperties,
                 NetworkCapabilities ncTemplate, NetworkProvider provider) throws Exception {
-            super(transport, linkProperties, ncTemplate, provider, mServiceContext);
+            this(transport, linkProperties, ncTemplate, provider /* provider */, null);
+        }
+
+        private TestNetworkAgentWrapper(int transport, NetworkAgentWrapper.Callbacks callbacks)
+                throws Exception {
+            this(transport, new LinkProperties(), null /* ncTemplate */, null /* provider */,
+                    callbacks);
+        }
+
+        private TestNetworkAgentWrapper(int transport, LinkProperties linkProperties,
+                NetworkCapabilities ncTemplate, NetworkProvider provider,
+                NetworkAgentWrapper.Callbacks callbacks) throws Exception {
+            super(transport, linkProperties, ncTemplate, provider, callbacks, mServiceContext);
 
             // Waits for the NetworkAgent to be registered, which includes the creation of the
             // NetworkMonitor.
@@ -972,23 +982,6 @@ public class ConnectivityServiceTest {
                 mNetworkStatusReceived.open();
             }
 
-            @Override
-            public void onNetworkCreated() {
-                super.onNetworkCreated();
-                if (mCreatedCallback != null) mCreatedCallback.run();
-            }
-
-            @Override
-            public void onNetworkUnwanted() {
-                super.onNetworkUnwanted();
-                if (mUnwantedCallback != null) mUnwantedCallback.run();
-            }
-
-            @Override
-            public void onNetworkDestroyed() {
-                super.onNetworkDestroyed();
-                if (mDisconnectedCallback != null) mDisconnectedCallback.run();
-            }
         }
 
         @Override
@@ -1217,18 +1210,6 @@ public class ConnectivityServiceTest {
             p.detectionMethod = DATA_STALL_DETECTION_METHOD;
             p.timestampMillis = DATA_STALL_TIMESTAMP;
             mNmCallbacks.notifyDataStallSuspected(p);
-        }
-
-        public void setCreatedCallback(Runnable r) {
-            mCreatedCallback = r;
-        }
-
-        public void setUnwantedCallback(Runnable r) {
-            mUnwantedCallback = r;
-        }
-
-        public void setDisconnectedCallback(Runnable r) {
-            mDisconnectedCallback = r;
         }
     }
 
@@ -3570,37 +3551,35 @@ public class ConnectivityServiceTest {
         final NetworkRequest request = new NetworkRequest.Builder()
                 .addTransportType(TRANSPORT_WIFI).build();
         final TestNetworkCallback callback = new TestNetworkCallback();
-        final AtomicReference<Network> wifiNetwork = new AtomicReference<>();
-        mWiFiNetworkAgent = new TestNetworkAgentWrapper(TRANSPORT_WIFI);
 
         // Expectations for state when various callbacks fire. These expectations run on the handler
         // thread and not on the test thread because they need to prevent the handler thread from
         // advancing while they examine state.
 
         // 1. When onCreated fires, netd has been told to create the network.
-        mWiFiNetworkAgent.setCreatedCallback(() -> {
+        final Consumer<NetworkAgent> onNetworkCreated = (agent) -> {
             eventOrder.offer("onNetworkCreated");
-            wifiNetwork.set(mWiFiNetworkAgent.getNetwork());
-            assertNotNull(wifiNetwork.get());
             try {
                 verify(mMockNetd).networkCreate(nativeNetworkConfigPhysical(
-                        wifiNetwork.get().getNetId(), INetd.PERMISSION_NONE));
+                        agent.getNetwork().getNetId(), INetd.PERMISSION_NONE));
             } catch (RemoteException impossible) {
                 fail();
             }
-        });
+        };
 
         // 2. onNetworkUnwanted isn't precisely ordered with respect to any particular events. Just
         //    check that it is fired at some point after disconnect.
-        mWiFiNetworkAgent.setUnwantedCallback(() -> eventOrder.offer("onNetworkUnwanted"));
+        final Consumer<NetworkAgent> onNetworkUnwanted = (agent) -> {
+            eventOrder.offer("onNetworkUnwanted");
+        };
 
         // 3. While the teardown timer is running, connectivity APIs report the network is gone, but
         //    netd has not yet been told to destroy it.
-        final Runnable duringTeardown = () -> {
+        final Consumer<Network> duringTeardown = (network) -> {
             eventOrder.offer("timePasses");
-            assertNull(mCm.getLinkProperties(wifiNetwork.get()));
+            assertNull(mCm.getLinkProperties(network));
             try {
-                verify(mMockNetd, never()).networkDestroy(wifiNetwork.get().getNetId());
+                verify(mMockNetd, never()).networkDestroy(network.getNetId());
             } catch (RemoteException impossible) {
                 fail();
             }
@@ -3608,15 +3587,20 @@ public class ConnectivityServiceTest {
 
         // 4. After onNetworkDisconnected is called, connectivity APIs report the network is gone,
         // and netd has been told to destroy it.
-        mWiFiNetworkAgent.setDisconnectedCallback(() -> {
+        final Consumer<NetworkAgent> onNetworkDisconnected = (agent) -> {
             eventOrder.offer("onNetworkDisconnected");
-            assertNull(mCm.getLinkProperties(wifiNetwork.get()));
+            assertNull(mCm.getLinkProperties(agent.getNetwork()));
             try {
-                verify(mMockNetd).networkDestroy(wifiNetwork.get().getNetId());
+                verify(mMockNetd).networkDestroy(agent.getNetwork().getNetId());
             } catch (RemoteException impossible) {
                 fail();
             }
-        });
+        };
+
+        final NetworkAgentWrapper.Callbacks callbacks = new NetworkAgentWrapper.Callbacks(
+                onNetworkCreated, onNetworkUnwanted, onNetworkDisconnected);
+
+        mWiFiNetworkAgent = new TestNetworkAgentWrapper(TRANSPORT_WIFI, callbacks);
 
         // Connect a network, and file a request for it after it has come up, to ensure the nascent
         // timer is cleared and the test does not have to wait for it. Filing the request after the
@@ -3638,7 +3622,7 @@ public class ConnectivityServiceTest {
         // down the network and started the teardown timer, and short enough that the lambda is
         // scheduled to run before the teardown timer.
         final Handler h = new Handler(mCsHandlerThread.getLooper());
-        h.postDelayed(duringTeardown, 150);
+        h.postDelayed(() -> duringTeardown.accept(mWiFiNetworkAgent.getNetwork()), 150);
 
         // Disconnect the network and check that events happened in the right order.
         mCm.unregisterNetworkCallback(callback);
