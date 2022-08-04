@@ -43,14 +43,9 @@ java_defaults {
         ":framework-connectivity-tiramisu-updatable-sources",
         ":framework-nearby-java-sources",
     ],
-    stub_only_libs: [
-        // Use prebuilt framework-connectivity stubs to avoid circular dependencies
-        "sdk_module-lib_current_framework-connectivity",
-    ],
     libs: [
         "unsupportedappusage",
         "app-compat-annotations",
-        "sdk_module-lib_current_framework-connectivity",
     ],
     impl_only_libs: [
         // The build system will use framework-bluetooth module_current stubs, because
@@ -104,6 +99,13 @@ java_sdk_library {
     // The jarjar rules are only so that references to jarjared utils in
     // framework-connectivity-pre-jarjar match at runtime.
     jarjar_rules: ":framework-connectivity-jarjar-rules",
+    stub_only_libs: [
+        // Use prebuilt framework-connectivity stubs to avoid circular dependencies
+        "sdk_module-lib_current_framework-connectivity",
+    ],
+    libs: [
+        "sdk_module-lib_current_framework-connectivity",
+    ],
     permitted_packages: [
         "android.app.usage",
         "android.net",
