@@ -16,6 +16,11 @@
 
 package com.android.server.nearby.fastpair.halfsheet;
 
+import static com.android.server.nearby.fastpair.blocklist.Blocklist.BlocklistState.ACTIVE;
+import static com.android.server.nearby.fastpair.blocklist.Blocklist.BlocklistState.DISMISSED;
+import static com.android.server.nearby.fastpair.blocklist.Blocklist.BlocklistState.DO_NOT_SHOW_AGAIN;
+import static com.android.server.nearby.fastpair.blocklist.Blocklist.BlocklistState.DO_NOT_SHOW_AGAIN_LONG;
+
 import static com.google.common.truth.Truth.assertThat;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -53,11 +58,15 @@ import java.util.List;
 import service.proto.Cache;
 
 public class FastPairHalfSheetManagerTest {
+    private static final String MODEL_ID = "model_id";
     private static final String BLEADDRESS = "11:22:44:66";
     private static final String NAME = "device_name";
     private static final int PASSKEY = 1234;
     private FastPairHalfSheetManager mFastPairHalfSheetManager;
     private Cache.ScanFastPairStoreItem mScanFastPairStoreItem;
+    private ResolveInfo mResolveInfo;
+    private List<ResolveInfo> mResolveInfoList;
+    private ApplicationInfo mApplicationInfo;
     @Mock private Context mContext;
     @Mock
     LocatorContextWrapper mContextWrapper;
@@ -71,9 +80,22 @@ public class FastPairHalfSheetManagerTest {
     @Before
     public void setup() {
         MockitoAnnotations.initMocks(this);
+        mLocator.overrideBindingForTest(FastPairController.class, mFastPairController);
+        mResolveInfo = new ResolveInfo();
+        mResolveInfoList = new ArrayList<>();
+        mResolveInfo.activityInfo = new ActivityInfo();
+        mApplicationInfo = new ApplicationInfo();
+        mPackageManager = mock(PackageManager.class);
+
         when(mContext.getContentResolver()).thenReturn(
                 InstrumentationRegistry.getInstrumentation().getContext().getContentResolver());
+        when(mContextWrapper.getPackageManager()).thenReturn(mPackageManager);
+        when(mContextWrapper.getLocator()).thenReturn(mLocator);
+        when(mPackageManager.queryIntentActivities(any(), anyInt())).thenReturn(mResolveInfoList);
+        when(mPackageManager.canRequestPackageInstalls()).thenReturn(false);
+
         mScanFastPairStoreItem = Cache.ScanFastPairStoreItem.newBuilder()
+                .setModelId(MODEL_ID)
                 .setAddress(BLEADDRESS)
                 .setDeviceName(NAME)
                 .build();
@@ -81,26 +103,8 @@ public class FastPairHalfSheetManagerTest {
 
     @Test
     public void verifyFastPairHalfSheetManagerBehavior() {
-        mLocator.overrideBindingForTest(FastPairController.class, mFastPairController);
-        ResolveInfo resolveInfo = new ResolveInfo();
-        List<ResolveInfo> resolveInfoList = new ArrayList<>();
-
-        mPackageManager = mock(PackageManager.class);
-        when(mContextWrapper.getPackageManager()).thenReturn(mPackageManager);
-        resolveInfo.activityInfo = new ActivityInfo();
-        ApplicationInfo applicationInfo = new ApplicationInfo();
-        applicationInfo.sourceDir = "/apex/com.android.tethering";
-        applicationInfo.packageName = "test.package";
-        resolveInfo.activityInfo.applicationInfo = applicationInfo;
-        resolveInfoList.add(resolveInfo);
-        when(mPackageManager.queryIntentActivities(any(), anyInt())).thenReturn(resolveInfoList);
-        when(mPackageManager.canRequestPackageInstalls()).thenReturn(false);
-
-        mFastPairHalfSheetManager =
-                new FastPairHalfSheetManager(mContextWrapper);
-
-        when(mContextWrapper.getLocator()).thenReturn(mLocator);
-
+        configResolveInfoList();
+        mFastPairHalfSheetManager = new FastPairHalfSheetManager(mContextWrapper);
         ArgumentCaptor<Intent> intentArgumentCaptor = ArgumentCaptor.forClass(Intent.class);
 
         mFastPairHalfSheetManager.showHalfSheet(mScanFastPairStoreItem);
@@ -111,27 +115,12 @@ public class FastPairHalfSheetManagerTest {
 
     @Test
     public void verifyFastPairHalfSheetManagerHalfSheetApkNotValidBehavior() {
-        mLocator.overrideBindingForTest(FastPairController.class, mFastPairController);
-        ResolveInfo resolveInfo = new ResolveInfo();
-        List<ResolveInfo> resolveInfoList = new ArrayList<>();
-
-        mPackageManager = mock(PackageManager.class);
-        when(mContextWrapper.getPackageManager()).thenReturn(mPackageManager);
-        resolveInfo.activityInfo = new ActivityInfo();
-        ApplicationInfo applicationInfo = new ApplicationInfo();
         // application directory is wrong
-        applicationInfo.sourceDir = "/apex/com.android.nearby";
-        applicationInfo.packageName = "test.package";
-        resolveInfo.activityInfo.applicationInfo = applicationInfo;
-        resolveInfoList.add(resolveInfo);
-        when(mPackageManager.queryIntentActivities(any(), anyInt())).thenReturn(resolveInfoList);
-        when(mPackageManager.canRequestPackageInstalls()).thenReturn(false);
-
-        mFastPairHalfSheetManager =
-                new FastPairHalfSheetManager(mContextWrapper);
-
-        when(mContextWrapper.getLocator()).thenReturn(mLocator);
-
+        mApplicationInfo.sourceDir = "/apex/com.android.nearby";
+        mApplicationInfo.packageName = "test.package";
+        mResolveInfo.activityInfo.applicationInfo = mApplicationInfo;
+        mResolveInfoList.add(mResolveInfo);
+        mFastPairHalfSheetManager = new FastPairHalfSheetManager(mContextWrapper);
         ArgumentCaptor<Intent> intentArgumentCaptor = ArgumentCaptor.forClass(Intent.class);
 
         mFastPairHalfSheetManager.showHalfSheet(mScanFastPairStoreItem);
@@ -142,15 +131,13 @@ public class FastPairHalfSheetManagerTest {
 
     @Test
     public void getHalfSheetForegroundState() {
-        mFastPairHalfSheetManager =
-                new FastPairHalfSheetManager(mContextWrapper);
+        mFastPairHalfSheetManager = new FastPairHalfSheetManager(mContextWrapper);
         assertThat(mFastPairHalfSheetManager.getHalfSheetForegroundState()).isTrue();
     }
 
     @Test
     public void testEmptyMethods() {
-        mFastPairHalfSheetManager =
-                new FastPairHalfSheetManager(mContextWrapper);
+        mFastPairHalfSheetManager = new FastPairHalfSheetManager(mContextWrapper);
         mFastPairHalfSheetManager.destroyBluetoothPairController();
         mFastPairHalfSheetManager.disableDismissRunnable();
         mFastPairHalfSheetManager.notifyPairingProcessDone(true, BLEADDRESS, null);
@@ -158,5 +145,131 @@ public class FastPairHalfSheetManagerTest {
         mFastPairHalfSheetManager.showPairingHalfSheet(null);
         mFastPairHalfSheetManager.showPairingSuccessHalfSheet(BLEADDRESS);
         mFastPairHalfSheetManager.showPasskeyConfirmation(null, PASSKEY);
+    }
+
+    @Test
+    public void showInitialPairingHalfSheetThenDismissOnce_stateDISMISSED() {
+        configResolveInfoList();
+        mFastPairHalfSheetManager = new FastPairHalfSheetManager(mContextWrapper);
+        FastPairHalfSheetBlocklist mHalfSheetBlocklist =
+                mFastPairHalfSheetManager.getHalfSheetBlocklist();
+
+        mFastPairHalfSheetManager.showHalfSheet(mScanFastPairStoreItem);
+        mFastPairHalfSheetManager.dismiss(MODEL_ID);
+
+        Integer halfSheetId = mFastPairHalfSheetManager.mModelIdMap.get(MODEL_ID);
+
+        //First time dismiss -> state: DISMISSED
+        assertThat(mHalfSheetBlocklist.get(halfSheetId).getState()).isEqualTo(DISMISSED);
+    }
+
+    @Test
+    public void showInitialPairingHalfSheetThenBan_stateDO_NOT_SHOW_AGAIN() {
+        configResolveInfoList();
+        mFastPairHalfSheetManager = new FastPairHalfSheetManager(mContextWrapper);
+        FastPairHalfSheetBlocklist mHalfSheetBlocklist =
+                mFastPairHalfSheetManager.getHalfSheetBlocklist();
+
+        mFastPairHalfSheetManager.showHalfSheet(mScanFastPairStoreItem);
+        mFastPairHalfSheetManager.dismiss(MODEL_ID);
+        mFastPairHalfSheetManager.dismiss(MODEL_ID);
+
+        Integer halfSheetId = mFastPairHalfSheetManager.mModelIdMap.get(MODEL_ID);
+
+        //First time ban -> state: DO_NOT_SHOW_AGAIN
+        assertThat(mHalfSheetBlocklist.get(halfSheetId).getState()).isEqualTo(DO_NOT_SHOW_AGAIN);
+    }
+
+    @Test
+    public void showInitialPairingHalfSheetThenBanTwice_stateDO_NOT_SHOW_AGAIN_LONG() {
+        configResolveInfoList();
+        mFastPairHalfSheetManager = new FastPairHalfSheetManager(mContextWrapper);
+        FastPairHalfSheetBlocklist mHalfSheetBlocklist =
+                mFastPairHalfSheetManager.getHalfSheetBlocklist();
+
+        mFastPairHalfSheetManager.showHalfSheet(mScanFastPairStoreItem);
+        mFastPairHalfSheetManager.dismiss(MODEL_ID);
+        mFastPairHalfSheetManager.dismiss(MODEL_ID);
+        mFastPairHalfSheetManager.dismiss(MODEL_ID);
+
+        Integer halfSheetId = mFastPairHalfSheetManager.mModelIdMap.get(MODEL_ID);
+
+        //Second time ban -> state: DO_NOT_SHOW_AGAIN
+        assertThat(mHalfSheetBlocklist.get(halfSheetId).getState())
+                .isEqualTo(DO_NOT_SHOW_AGAIN_LONG);
+    }
+
+    @Test
+    public void testResetBanSate_resetDISMISSEDtoACTIVE() {
+        configResolveInfoList();
+        mFastPairHalfSheetManager = new FastPairHalfSheetManager(mContextWrapper);
+        FastPairHalfSheetBlocklist mHalfSheetBlocklist =
+                mFastPairHalfSheetManager.getHalfSheetBlocklist();
+
+        mFastPairHalfSheetManager.showHalfSheet(mScanFastPairStoreItem);
+
+        Integer halfSheetId = mFastPairHalfSheetManager.mModelIdMap.get(MODEL_ID);
+
+        mHalfSheetBlocklist.updateState(halfSheetId, DISMISSED);
+        mFastPairHalfSheetManager.resetBanState(MODEL_ID);
+
+        assertThat(mHalfSheetBlocklist.get(halfSheetId).getState()).isEqualTo(ACTIVE);
+    }
+
+    @Test
+    public void testResetBanSate_resetDO_NOT_SHOW_AGAINtoACTIVE() {
+        configResolveInfoList();
+        mFastPairHalfSheetManager = new FastPairHalfSheetManager(mContextWrapper);
+        FastPairHalfSheetBlocklist mHalfSheetBlocklist =
+                mFastPairHalfSheetManager.getHalfSheetBlocklist();
+
+        mFastPairHalfSheetManager.showHalfSheet(mScanFastPairStoreItem);
+
+        Integer halfSheetId = mFastPairHalfSheetManager.mModelIdMap.get(MODEL_ID);
+
+        mHalfSheetBlocklist.updateState(halfSheetId, DO_NOT_SHOW_AGAIN);
+        mFastPairHalfSheetManager.resetBanState(MODEL_ID);
+
+        assertThat(mHalfSheetBlocklist.get(halfSheetId).getState()).isEqualTo(ACTIVE);
+    }
+
+    @Test
+    public void testResetBanSate_resetDO_NOT_SHOW_AGAIN_LONGtoACTIVE() {
+        configResolveInfoList();
+        mFastPairHalfSheetManager = new FastPairHalfSheetManager(mContextWrapper);
+        FastPairHalfSheetBlocklist mHalfSheetBlocklist =
+                mFastPairHalfSheetManager.getHalfSheetBlocklist();
+
+        mFastPairHalfSheetManager.showHalfSheet(mScanFastPairStoreItem);
+
+        Integer halfSheetId = mFastPairHalfSheetManager.mModelIdMap.get(MODEL_ID);
+
+        mHalfSheetBlocklist.updateState(halfSheetId, DO_NOT_SHOW_AGAIN_LONG
+        );
+        mFastPairHalfSheetManager.resetBanState(MODEL_ID);
+
+        assertThat(mHalfSheetBlocklist.get(halfSheetId).getState()).isEqualTo(ACTIVE);
+    }
+
+    @Test
+    public void testReportDonePairing() {
+        configResolveInfoList();
+        mFastPairHalfSheetManager = new FastPairHalfSheetManager(mContextWrapper);
+
+        mFastPairHalfSheetManager.showHalfSheet(mScanFastPairStoreItem);
+
+        assertThat(mFastPairHalfSheetManager.getHalfSheetBlocklist().size()).isEqualTo(1);
+
+        mFastPairHalfSheetManager
+                .reportDonePairing(mFastPairHalfSheetManager.mModelIdMap.get(MODEL_ID));
+
+        assertThat(mFastPairHalfSheetManager.getHalfSheetBlocklist().size()).isEqualTo(0);
+    }
+
+    private void configResolveInfoList() {
+        mApplicationInfo.sourceDir = "/apex/com.android.tethering";
+        mApplicationInfo.packageName = "test.package";
+        mResolveInfo.activityInfo.applicationInfo = mApplicationInfo;
+        mResolveInfoList.add(mResolveInfo);
     }
 }

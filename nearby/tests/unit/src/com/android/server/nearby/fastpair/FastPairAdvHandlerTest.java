@@ -63,6 +63,7 @@ public class FastPairAdvHandlerTest {
     Data.FastPairDeviceWithAccountKey mFastPairDeviceWithAccountKey;
     private static final byte[] ACCOUNT_KEY = new byte[] {0, 1, 2};
     private static final String BLUETOOTH_ADDRESS = "AA:BB:CC:DD";
+    private static final String MODEL_ID = "MODEL_ID";
     private static final int CLOSE_RSSI = -80;
     private static final int FAR_AWAY_RSSI = -120;
     private static final int TX_POWER = -70;
@@ -93,6 +94,7 @@ public class FastPairAdvHandlerTest {
         FastPairDevice fastPairDevice = new FastPairDevice.Builder()
                 .setData(INITIAL_BYTE_ARRAY)
                 .setBluetoothAddress(BLUETOOTH_ADDRESS)
+                .setModelId(MODEL_ID)
                 .setRssi(CLOSE_RSSI)
                 .setTxPower(TX_POWER)
                 .build();
@@ -107,6 +109,7 @@ public class FastPairAdvHandlerTest {
         FastPairDevice fastPairDevice = new FastPairDevice.Builder()
                 .setData(INITIAL_BYTE_ARRAY)
                 .setBluetoothAddress(BLUETOOTH_ADDRESS)
+                .setModelId(MODEL_ID)
                 .setRssi(FAR_AWAY_RSSI)
                 .setTxPower(TX_POWER)
                 .build();
@@ -142,6 +145,7 @@ public class FastPairAdvHandlerTest {
         FastPairDevice fastPairDevice = new FastPairDevice.Builder()
                 .setData(fastPairRecordWithBloomFilter)
                 .setBluetoothAddress(BLUETOOTH_ADDRESS)
+                .setModelId(MODEL_ID)
                 .setRssi(CLOSE_RSSI)
                 .setTxPower(TX_POWER)
                 .build();

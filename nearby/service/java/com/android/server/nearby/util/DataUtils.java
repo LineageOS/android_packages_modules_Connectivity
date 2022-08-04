@@ -38,11 +38,12 @@ public final class DataUtils {
      */
     public static ScanFastPairStoreItem toScanFastPairStoreItem(
             GetObservedDeviceResponse observedDeviceResponse,
-            @NonNull String bleAddress, @Nullable String account) {
+            @NonNull String bleAddress, @NonNull String modelId, @Nullable String account) {
         Device device = observedDeviceResponse.getDevice();
         String deviceName = device.getName();
         return ScanFastPairStoreItem.newBuilder()
                 .setAddress(bleAddress)
+                .setModelId(modelId)
                 .setActionUrl(device.getIntentUri())
                 .setDeviceName(deviceName)
                 .setIconPng(observedDeviceResponse.getImage())
