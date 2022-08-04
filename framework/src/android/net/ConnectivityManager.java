@@ -984,7 +984,16 @@ public class ConnectivityManager {
 
     /**
      * Firewall chain used for OEM-specific application restrictions.
-     * Denylist of apps that will not have network access due to OEM-specific restrictions.
+     *
+     * Denylist of apps that will not have network access due to OEM-specific restrictions. If an
+     * app UID is placed on this chain, and the chain is enabled, the app's packets will be dropped.
+     *
+     * All the {@code FIREWALL_CHAIN_OEM_DENY_x} chains are equivalent, and each one is
+     * independent of the others. The chains can be enabled and disabled independently, and apps can
+     * be added and removed from each chain independently.
+     *
+     * @see #FIREWALL_CHAIN_OEM_DENY_2
+     * @see #FIREWALL_CHAIN_OEM_DENY_3
      * @hide
      */
     @SystemApi(client = MODULE_LIBRARIES)
@@ -992,7 +1001,16 @@ public class ConnectivityManager {
 
     /**
      * Firewall chain used for OEM-specific application restrictions.
-     * Denylist of apps that will not have network access due to OEM-specific restrictions.
+     *
+     * Denylist of apps that will not have network access due to OEM-specific restrictions. If an
+     * app UID is placed on this chain, and the chain is enabled, the app's packets will be dropped.
+     *
+     * All the {@code FIREWALL_CHAIN_OEM_DENY_x} chains are equivalent, and each one is
+     * independent of the others. The chains can be enabled and disabled independently, and apps can
+     * be added and removed from each chain independently.
+     *
+     * @see #FIREWALL_CHAIN_OEM_DENY_1
+     * @see #FIREWALL_CHAIN_OEM_DENY_3
      * @hide
      */
     @SystemApi(client = MODULE_LIBRARIES)
@@ -1000,7 +1018,16 @@ public class ConnectivityManager {
 
     /**
      * Firewall chain used for OEM-specific application restrictions.
-     * Denylist of apps that will not have network access due to OEM-specific restrictions.
+     *
+     * Denylist of apps that will not have network access due to OEM-specific restrictions. If an
+     * app UID is placed on this chain, and the chain is enabled, the app's packets will be dropped.
+     *
+     * All the {@code FIREWALL_CHAIN_OEM_DENY_x} chains are equivalent, and each one is
+     * independent of the others. The chains can be enabled and disabled independently, and apps can
+     * be added and removed from each chain independently.
+     *
+     * @see #FIREWALL_CHAIN_OEM_DENY_1
+     * @see #FIREWALL_CHAIN_OEM_DENY_2
      * @hide
      */
     @SystemApi(client = MODULE_LIBRARIES)
