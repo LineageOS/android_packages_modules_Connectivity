@@ -27,12 +27,15 @@ import static android.content.Intent.EXTRA_UID;
 import static android.net.NetworkCapabilities.TRANSPORT_CELLULAR;
 import static android.net.NetworkCapabilities.TRANSPORT_WIFI;
 import static android.net.NetworkStats.DEFAULT_NETWORK_ALL;
+import static android.net.NetworkStats.DEFAULT_NETWORK_NO;
 import static android.net.NetworkStats.IFACE_ALL;
 import static android.net.NetworkStats.IFACE_VT;
 import static android.net.NetworkStats.INTERFACES_ALL;
 import static android.net.NetworkStats.METERED_ALL;
+import static android.net.NetworkStats.METERED_NO;
 import static android.net.NetworkStats.METERED_YES;
 import static android.net.NetworkStats.ROAMING_ALL;
+import static android.net.NetworkStats.ROAMING_NO;
 import static android.net.NetworkStats.SET_ALL;
 import static android.net.NetworkStats.SET_DEFAULT;
 import static android.net.NetworkStats.SET_FOREGROUND;
@@ -2922,7 +2925,8 @@ public class NetworkStatsService extends INetworkStatsService.Stub {
             for (TetherStatsParcel tetherStats : tetherStatsParcels) {
                 try {
                     stats.combineValues(new NetworkStats.Entry(tetherStats.iface, UID_TETHERING,
-                            SET_DEFAULT, TAG_NONE, tetherStats.rxBytes, tetherStats.rxPackets,
+                            SET_DEFAULT, TAG_NONE, METERED_NO, ROAMING_NO, DEFAULT_NETWORK_NO,
+                            tetherStats.rxBytes, tetherStats.rxPackets,
                             tetherStats.txBytes, tetherStats.txPackets, 0L));
                 } catch (ArrayIndexOutOfBoundsException e) {
                     throw new IllegalStateException("invalid tethering stats " + e);
