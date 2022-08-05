@@ -126,7 +126,7 @@ public class BleDiscoveryProvider extends AbstractDiscoveryProvider {
                         advertisement.getIdentity())
                         .addMedium(NearbyDevice.Medium.BLE);
         for (int i : advertisement.getActions()) {
-            builder.addExtendedProperty(new DataElement(DataElement.DataType.INTENT,
+            builder.addExtendedProperty(new DataElement(DataElement.DataType.ACTION,
                     new byte[]{(byte) i}));
         }
         for (DataElement dataElement : advertisement.getDataElements()) {

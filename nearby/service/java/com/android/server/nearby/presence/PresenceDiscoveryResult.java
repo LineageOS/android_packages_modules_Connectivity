@@ -118,13 +118,13 @@ public class PresenceDiscoveryResult {
     boolean accountKeyMatches(List<DataElement> extendedProperties) {
         Set<byte[]> accountKeys = new ArraySet<>();
         for (DataElement requestedDe : mExtendedProperties) {
-            if (requestedDe.getKey() != DataElement.DataType.ACCOUNT_KEY) {
+            if (requestedDe.getKey() != DataElement.DataType.ACCOUNT_KEY_DATA) {
                 continue;
             }
             accountKeys.add(requestedDe.getValue());
         }
         for (DataElement scannedDe : extendedProperties) {
-            if (scannedDe.getKey() != DataElement.DataType.ACCOUNT_KEY) {
+            if (scannedDe.getKey() != DataElement.DataType.ACCOUNT_KEY_DATA) {
                 continue;
             }
             // If one account key matches, then returns true.
@@ -210,7 +210,7 @@ public class PresenceDiscoveryResult {
 
         /** Adds presence {@link DataElement}s of the discovery result. */
         public Builder addExtendedProperties(DataElement dataElement) {
-            if (dataElement.getKey() == DataElement.DataType.INTENT) {
+            if (dataElement.getKey() == DataElement.DataType.ACTION) {
                 byte[] value = dataElement.getValue();
                 if (value.length == 1) {
                     addPresenceAction(Byte.toUnsignedInt(value[0]));

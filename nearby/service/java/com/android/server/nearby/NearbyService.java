@@ -54,10 +54,10 @@ import com.android.server.nearby.util.permissions.DiscoveryPermissions;
 /** Service implementing nearby functionality. */
 public class NearbyService extends INearbyManager.Stub {
     public static final String TAG = "NearbyService";
-    // Sets to true to start BLE scan frm PrsenceManager for manual testing.
+    // Sets to true to start BLE scan from PresenceManager for manual testing.
     public static final Boolean MANUAL_TEST = false;
     // Sets to true to support Mainline Test App.
-    // This will disable BLE privilege check and leagacy broadcast support.
+    // This will disable BLE privilege check and legacy broadcast support check.
     public static final Boolean SUPPORT_TEST_APP = false;
 
     private final Context mContext;

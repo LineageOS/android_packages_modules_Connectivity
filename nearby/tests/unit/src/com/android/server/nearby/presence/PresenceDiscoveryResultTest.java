@@ -37,8 +37,8 @@ import java.util.List;
  * Unit tests for {@link PresenceDiscoveryResult}.
  */
 public class PresenceDiscoveryResultTest {
-    private static final int DATA_TYPE_ACCOUNT_KEY = 1;
-    private static final int DATA_TYPE_INTENT = 9;
+    private static final int DATA_TYPE_ACCOUNT_KEY = 9;
+    private static final int DATA_TYPE_INTENT = 6;
     private static final int PRESENCE_ACTION = 123;
     private static final int TX_POWER = -1;
     private static final int RSSI = -41;

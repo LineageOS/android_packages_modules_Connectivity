@@ -129,7 +129,7 @@ public class ChreDiscoveryProvider extends AbstractDiscoveryProvider {
                 filterBuilder.addCertficate(toProtoPublicCredential(credential));
             }
             for (DataElement dataElement : presenceScanFilter.getExtendedProperties()) {
-                if (dataElement.getKey() == DataElement.DataType.ACCOUNT_KEY) {
+                if (dataElement.getKey() == DataElement.DataType.ACCOUNT_KEY_DATA) {
                     filterBuilder.addDataElement(toProtoDataElement(dataElement));
                 }
             }
@@ -256,7 +256,7 @@ public class ChreDiscoveryProvider extends AbstractDiscoveryProvider {
                                     == Blefilter.DataElement.ElementType.DE_FAST_PAIR_ACCOUNT_KEY) {
                                 presenceDeviceBuilder.addExtendedProperty(
                                         new DataElement(
-                                                DataElement.DataType.ACCOUNT_KEY,
+                                                DataElement.DataType.ACCOUNT_KEY_DATA,
                                                 element.getValue().toByteArray()));
                             }
                         }
@@ -279,7 +279,7 @@ public class ChreDiscoveryProvider extends AbstractDiscoveryProvider {
                         if (filterResult.hasIntent()) {
                             presenceDeviceBuilder.addExtendedProperty(
                                     new DataElement(
-                                            DataElement.DataType.INTENT,
+                                            DataElement.DataType.ACTION,
                                             new byte[]{(byte) filterResult.getIntent()}));
                         }
 
