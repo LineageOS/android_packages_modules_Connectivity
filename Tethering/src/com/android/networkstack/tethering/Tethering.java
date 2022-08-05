@@ -2772,7 +2772,8 @@ public class Tethering {
         // If we don't care about this type of interface, ignore.
         final int interfaceType = ifaceNameToType(iface);
         if (!checkTetherableType(interfaceType)) {
-            mLog.log(iface + " is used for " + interfaceType + " which is not tetherable");
+            mLog.log(iface + " is used for " + interfaceType + " which is not tetherable"
+                     + " (-1 == INVALID is expected on upstream interface)");
             return;
         }
 
