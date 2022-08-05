@@ -88,20 +88,28 @@ public class NetworkStatsManagerTest {
 
         Entry uid1Entry1 = new Entry("if1", uid1,
                 android.net.NetworkStats.SET_DEFAULT, android.net.NetworkStats.TAG_NONE,
+                android.net.NetworkStats.METERED_NO, android.net.NetworkStats.ROAMING_NO,
+                android.net.NetworkStats.DEFAULT_NETWORK_NO,
                 100, 10, 200, 20, 0);
 
         Entry uid1Entry2 = new Entry(
                 "if2", uid1,
                 android.net.NetworkStats.SET_DEFAULT, android.net.NetworkStats.TAG_NONE,
+                android.net.NetworkStats.METERED_NO, android.net.NetworkStats.ROAMING_NO,
+                android.net.NetworkStats.DEFAULT_NETWORK_NO,
                 100, 10, 200, 20, 0);
 
         Entry uid2Entry1 = new Entry("if1", uid2,
                 android.net.NetworkStats.SET_DEFAULT, android.net.NetworkStats.TAG_NONE,
+                android.net.NetworkStats.METERED_NO, android.net.NetworkStats.ROAMING_NO,
+                android.net.NetworkStats.DEFAULT_NETWORK_NO,
                 150, 10, 250, 20, 0);
 
         Entry uid2Entry2 = new Entry(
                 "if2", uid2,
                 android.net.NetworkStats.SET_DEFAULT, android.net.NetworkStats.TAG_NONE,
+                android.net.NetworkStats.METERED_NO, android.net.NetworkStats.ROAMING_NO,
+                android.net.NetworkStats.DEFAULT_NETWORK_NO,
                 150, 10, 250, 20, 0);
 
         NetworkStatsHistory history1 = new NetworkStatsHistory(10, 2);
