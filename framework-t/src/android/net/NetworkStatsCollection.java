@@ -309,7 +309,8 @@ public class NetworkStatsCollection implements FileRotator.Reader, FileRotator.W
             // ourselves something to scale with.
             if (entry.rxBytes == 0 || entry.txBytes == 0) {
                 combined.recordData(augmentStart, augmentEnd,
-                        new NetworkStats.Entry(1, 0, 1, 0, 0));
+                        new NetworkStats.Entry(IFACE_ALL, UID_ALL, SET_DEFAULT, TAG_NONE,
+                        METERED_NO, ROAMING_NO, DEFAULT_NETWORK_NO, 1L, 0L, 1L, 0L, 0L));
                 combined.getValues(augmentStart, augmentEnd, entry);
             }
 
