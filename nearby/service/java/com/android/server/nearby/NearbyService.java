@@ -54,7 +54,11 @@ import com.android.server.nearby.util.permissions.DiscoveryPermissions;
 /** Service implementing nearby functionality. */
 public class NearbyService extends INearbyManager.Stub {
     public static final String TAG = "NearbyService";
+    // Sets to true to start BLE scan frm PrsenceManager for manual testing.
     public static final Boolean MANUAL_TEST = false;
+    // Sets to true to support Mainline Test App.
+    // This will disable BLE privilege check and leagacy broadcast support.
+    public static final Boolean SUPPORT_TEST_APP = false;
 
     private final Context mContext;
     private Injector mInjector;
@@ -187,9 +191,11 @@ public class NearbyService extends INearbyManager.Stub {
      */
     @RequiresPermission(android.Manifest.permission.BLUETOOTH_PRIVILEGED)
     private static void enforceBluetoothPrivilegedPermission(Context context) {
-        context.enforceCallingOrSelfPermission(
-                android.Manifest.permission.BLUETOOTH_PRIVILEGED,
-                "Need BLUETOOTH PRIVILEGED permission");
+        if (!SUPPORT_TEST_APP) {
+            context.enforceCallingOrSelfPermission(
+                    android.Manifest.permission.BLUETOOTH_PRIVILEGED,
+                    "Need BLUETOOTH PRIVILEGED permission");
+        }
     }
 
     private static final class SystemInjector implements Injector {
