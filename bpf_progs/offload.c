@@ -320,50 +320,32 @@ DEFINE_BPF_PROG("schedcls/tether_upstream6_ether", TETHERING_UID, TETHERING_GID,
 //   ANDROID: net: bpf: permit redirect from ingress L3 to egress L2 devices at near max mtu
 // (the first of those has already been upstreamed)
 //
-// 5.4 kernel support was only added to Android Common Kernel in R,
-// and thus a 5.4 kernel always supports this.
+// These were added to 4.14+ Android Common Kernel in R (including the original release of ACK 5.4)
+// and there is a test in kernel/tests/net/test/bpf_test.py testSkbChangeHead()
+// and in system/netd/tests/binder_test.cpp NetdBinderTest TetherOffloadForwarding.
 //
-// Hence, these mandatory (must load successfully) implementations for 5.4+ kernels:
-DEFINE_BPF_PROG_KVER("schedcls/tether_downstream6_rawip$5_4", TETHERING_UID, TETHERING_GID,
-                     sched_cls_tether_downstream6_rawip_5_4, KVER(5, 4, 0))
+// Hence, these mandatory (must load successfully) implementations for 4.14+ kernels:
+DEFINE_BPF_PROG_KVER("schedcls/tether_downstream6_rawip$4_14", TETHERING_UID, TETHERING_GID,
+                     sched_cls_tether_downstream6_rawip_4_14, KVER(4, 14, 0))
 (struct __sk_buff* skb) {
     return do_forward6(skb, /* is_ethernet */ false, /* downstream */ true);
 }
 
-DEFINE_BPF_PROG_KVER("schedcls/tether_upstream6_rawip$5_4", TETHERING_UID, TETHERING_GID,
-                     sched_cls_tether_upstream6_rawip_5_4, KVER(5, 4, 0))
+DEFINE_BPF_PROG_KVER("schedcls/tether_upstream6_rawip$4_14", TETHERING_UID, TETHERING_GID,
+                     sched_cls_tether_upstream6_rawip_4_14, KVER(4, 14, 0))
 (struct __sk_buff* skb) {
     return do_forward6(skb, /* is_ethernet */ false, /* downstream */ false);
 }
 
-// and these identical optional (may fail to load) implementations for [4.14..5.4) patched kernels:
-DEFINE_OPTIONAL_BPF_PROG_KVER_RANGE("schedcls/tether_downstream6_rawip$4_14",
-                                    TETHERING_UID, TETHERING_GID,
-                                    sched_cls_tether_downstream6_rawip_4_14,
-                                    KVER(4, 14, 0), KVER(5, 4, 0))
-(struct __sk_buff* skb) {
-    return do_forward6(skb, /* is_ethernet */ false, /* downstream */ true);
-}
-
-DEFINE_OPTIONAL_BPF_PROG_KVER_RANGE("schedcls/tether_upstream6_rawip$4_14",
-                                    TETHERING_UID, TETHERING_GID,
-                                    sched_cls_tether_upstream6_rawip_4_14,
-                                    KVER(4, 14, 0), KVER(5, 4, 0))
-(struct __sk_buff* skb) {
-    return do_forward6(skb, /* is_ethernet */ false, /* downstream */ false);
-}
-
-// and define no-op stubs for [4.9,4.14) and unpatched [4.14,5.4) kernels.
-// (if the above real 4.14+ program loaded successfully, then bpfloader will have already pinned
-// it at the same location this one would be pinned at and will thus skip loading this stub)
+// and define no-op stubs for pre-4.14 kernels.
 DEFINE_BPF_PROG_KVER_RANGE("schedcls/tether_downstream6_rawip$stub", TETHERING_UID, TETHERING_GID,
-                           sched_cls_tether_downstream6_rawip_stub, KVER_NONE, KVER(5, 4, 0))
+                           sched_cls_tether_downstream6_rawip_stub, KVER_NONE, KVER(4, 14, 0))
 (struct __sk_buff* skb) {
     return TC_ACT_PIPE;
 }
 
 DEFINE_BPF_PROG_KVER_RANGE("schedcls/tether_upstream6_rawip$stub", TETHERING_UID, TETHERING_GID,
-                           sched_cls_tether_upstream6_rawip_stub, KVER_NONE, KVER(5, 4, 0))
+                           sched_cls_tether_upstream6_rawip_stub, KVER_NONE, KVER(4, 14, 0))
 (struct __sk_buff* skb) {
     return TC_ACT_PIPE;
 }
