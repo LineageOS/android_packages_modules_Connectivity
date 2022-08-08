@@ -425,11 +425,11 @@ public class BpfCoordinatorShimImpl
     }
 
     @Override
-    public boolean attachProgram(String iface, boolean downstream) {
+    public boolean attachProgram(String iface, boolean downstream, boolean ipv4) {
         if (!isInitialized()) return false;
 
         try {
-            BpfUtils.attachProgram(iface, downstream);
+            BpfUtils.attachProgram(iface, downstream, ipv4);
         } catch (IOException e) {
             mLog.e("Could not attach program: " + e);
             return false;
@@ -438,11 +438,11 @@ public class BpfCoordinatorShimImpl
     }
 
     @Override
-    public boolean detachProgram(String iface) {
+    public boolean detachProgram(String iface, boolean ipv4) {
         if (!isInitialized()) return false;
 
         try {
-            BpfUtils.detachProgram(iface);
+            BpfUtils.detachProgram(iface, ipv4);
         } catch (IOException e) {
             mLog.e("Could not detach program: " + e);
             return false;
