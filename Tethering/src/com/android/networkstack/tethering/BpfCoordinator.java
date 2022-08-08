@@ -895,6 +895,28 @@ public class BpfCoordinator {
         }
     }
 
+    private boolean is464XlatInterface(@NonNull String ifaceName) {
+        return ifaceName.startsWith("v4-");
+    }
+
+    private void maybeAttachProgramImpl(@NonNull String iface, boolean downstream) {
+        mBpfCoordinatorShim.attachProgram(iface, downstream, true /* ipv4 */);
+
+        // Ignore 464xlat interface because it is IPv4 only.
+        if (!is464XlatInterface(iface)) {
+            mBpfCoordinatorShim.attachProgram(iface, downstream, false /* ipv4 */);
+        }
+    }
+
+    private void maybeDetachProgramImpl(@NonNull String iface) {
+        mBpfCoordinatorShim.detachProgram(iface, true /* ipv4 */);
+
+        // Ignore 464xlat interface because it is IPv4 only.
+        if (!is464XlatInterface(iface)) {
+            mBpfCoordinatorShim.detachProgram(iface, false /* ipv4 */);
+        }
+    }
+
     /**
      * Attach BPF program
      *
@@ -913,11 +935,11 @@ public class BpfCoordinator {
         // Ex: IPv6 only interface has two forwarding pair, iface and v4-iface, on the
         // same downstream.
         if (firstUpstreamForThisDownstream) {
-            mBpfCoordinatorShim.attachProgram(intIface, UPSTREAM);
+            maybeAttachProgramImpl(intIface, UPSTREAM);
         }
         // Attach if the upstream is the first time to be used in a forwarding pair.
         if (firstDownstreamForThisUpstream) {
-            mBpfCoordinatorShim.attachProgram(extIface, DOWNSTREAM);
+            maybeAttachProgramImpl(extIface, DOWNSTREAM);
         }
     }
 
@@ -929,11 +951,11 @@ public class BpfCoordinator {
 
         // Detaching program may fail because the interface has been removed already.
         if (!isAnyForwardingPairOnDownstream(intIface)) {
-            mBpfCoordinatorShim.detachProgram(intIface);
+            maybeDetachProgramImpl(intIface);
         }
         // Detach if no more forwarding pair is using the upstream.
         if (!isAnyForwardingPairOnUpstream(extIface)) {
-            mBpfCoordinatorShim.detachProgram(extIface);
+            maybeDetachProgramImpl(extIface);
         }
     }
 
