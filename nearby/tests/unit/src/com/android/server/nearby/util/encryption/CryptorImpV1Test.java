@@ -58,12 +58,37 @@ public final class CryptorImpV1Test {
     }
 
     @Test
-    public void generateHmacTag() {
+    public void generateSign() {
         CryptorImpV1 v1Cryptor = CryptorImpV1.getInstance();
         byte[] generatedTag = v1Cryptor.sign(DATA, AUTHENTICITY_KEY);
         byte[] expectedTag = new byte[]{
                 100, 88, -104, 80, -66, 107, -38, 95, 34, 40, -56, -23, -90, 90, -87, 12};
         assertThat(generatedTag).isEqualTo(expectedTag);
+    }
+
+    @Test
+    public void test_verify() {
+        CryptorImpV1 v1Cryptor = CryptorImpV1.getInstance();
+        byte[] expectedTag = new byte[]{
+                100, 88, -104, 80, -66, 107, -38, 95, 34, 40, -56, -23, -90, 90, -87, 12};
+
+        assertThat(v1Cryptor.verify(DATA, AUTHENTICITY_KEY, expectedTag)).isTrue();
+        assertThat(v1Cryptor.verify(DATA, AUTHENTICITY_KEY, DATA)).isFalse();
+    }
+
+    @Test
+    public void test_computeHkdf() {
+        int outputSize = 16;
+        byte[] res1 = CryptorImpV1.computeHkdf(DATA, AUTHENTICITY_KEY, outputSize);
+        byte[] res2 = CryptorImpV1.computeHkdf(DATA,
+                new byte[] {-89, 88, -50, -42, -99, 57, 84, -24, 121, 1, -104, -8, -26},
+                outputSize);
+
+        assertThat(res1).hasLength(outputSize);
+        assertThat(res2).hasLength(outputSize);
+        assertThat(res1).isNotEqualTo(res2);
+        assertThat(res1)
+                .isEqualTo(CryptorImpV1.computeHkdf(DATA, AUTHENTICITY_KEY, outputSize));
     }
 
     private static byte[] getEncryptedData() {
