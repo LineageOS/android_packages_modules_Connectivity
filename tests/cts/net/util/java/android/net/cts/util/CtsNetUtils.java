@@ -16,11 +16,13 @@
 
 package android.net.cts.util;
 
+import static android.Manifest.permission.NETWORK_SETTINGS;
 import static android.net.NetworkCapabilities.NET_CAPABILITY_INTERNET;
 import static android.net.NetworkCapabilities.TRANSPORT_CELLULAR;
 import static android.net.NetworkCapabilities.TRANSPORT_TEST;
 
 import static com.android.compatibility.common.util.PropertyUtil.getFirstApiLevel;
+import static com.android.testutils.TestPermissionUtil.runAsShell;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
@@ -288,7 +290,8 @@ public final class CtsNetUtils {
         filter.addAction(ConnectivityManager.CONNECTIVITY_ACTION);
         mContext.registerReceiver(receiver, filter);
 
-        final WifiInfo wifiInfo = mWifiManager.getConnectionInfo();
+        final WifiInfo wifiInfo = runAsShell(NETWORK_SETTINGS,
+                () -> mWifiManager.getConnectionInfo());
         final boolean wasWifiConnected = wifiInfo != null && wifiInfo.getNetworkId() != -1;
         // Assert that we can establish a TCP connection on wifi.
         Socket wifiBoundSocket = null;
