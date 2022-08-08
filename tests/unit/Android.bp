@@ -154,6 +154,5 @@ android_test {
     jni_libs: [
         "libandroid_net_connectivity_com_android_net_module_util_jni",
         "libservice-connectivity",
-        "libandroid_net_connectivity_com_android_net_module_util_jni",
     ],
 }
