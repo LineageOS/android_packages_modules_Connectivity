@@ -216,7 +216,8 @@ public class CryptorImpV1 implements Cryptor {
      */
     // Based on google3/third_party/tink/java/src/main/java/com/google/crypto/tink/subtle/Hkdf.java
     @Nullable
-    private static byte[] computeHkdf(byte[] ikm, byte[] salt, int size) {
+    @VisibleForTesting
+    static byte[] computeHkdf(byte[] ikm, byte[] salt, int size) {
         Mac mac;
         try {
             mac = Mac.getInstance(HMAC_SHA256_ALGORITHM);
