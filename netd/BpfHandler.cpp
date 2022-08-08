@@ -64,6 +64,16 @@ static Status attachProgramToCgroup(const char* programPath, const unique_fd& cg
     return netdutils::status::ok;
 }
 
+static Status checkProgramAccessible(const char* programPath) {
+    unique_fd prog(retrieveProgram(programPath));
+    if (prog == -1) {
+        int ret = errno;
+        ALOGE("Failed to get program from %s: %s", programPath, strerror(ret));
+        return statusFromErrno(ret, "program retrieve failed");
+    }
+    return netdutils::status::ok;
+}
+
 static Status initPrograms(const char* cg2_path) {
     unique_fd cg_fd(open(cg2_path, O_DIRECTORY | O_RDONLY | O_CLOEXEC));
     if (cg_fd == -1) {
@@ -71,6 +81,10 @@ static Status initPrograms(const char* cg2_path) {
         ALOGE("Failed to open the cgroup directory: %s", strerror(ret));
         return statusFromErrno(ret, "Open the cgroup directory failed");
     }
+    RETURN_IF_NOT_OK(checkProgramAccessible(XT_BPF_ALLOWLIST_PROG_PATH));
+    RETURN_IF_NOT_OK(checkProgramAccessible(XT_BPF_DENYLIST_PROG_PATH));
+    RETURN_IF_NOT_OK(checkProgramAccessible(XT_BPF_EGRESS_PROG_PATH));
+    RETURN_IF_NOT_OK(checkProgramAccessible(XT_BPF_INGRESS_PROG_PATH));
     RETURN_IF_NOT_OK(attachProgramToCgroup(BPF_EGRESS_PROG_PATH, cg_fd, BPF_CGROUP_INET_EGRESS));
     RETURN_IF_NOT_OK(attachProgramToCgroup(BPF_INGRESS_PROG_PATH, cg_fd, BPF_CGROUP_INET_INGRESS));
     RETURN_IF_NOT_OK(attachProgramToCgroup(CGROUP_SOCKET_PROG_PATH, cg_fd, BPF_CGROUP_INET_SOCK_CREATE));
