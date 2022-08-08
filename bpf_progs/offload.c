@@ -864,4 +864,4 @@ DEFINE_XDP_PROG("xdp/tether_upstream_rawip",
 }
 
 LICENSE("Apache 2.0");
-CRITICAL("tethering");
+CRITICAL("Connectivity (Tethering)");
