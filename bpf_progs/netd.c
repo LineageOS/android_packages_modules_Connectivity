@@ -85,7 +85,7 @@ DEFINE_BPF_MAP_RW_NETD(uid_permission_map, HASH, uint32_t, uint8_t, UID_OWNER_MA
 DEFINE_BPF_MAP_NO_NETD(iface_index_name_map, HASH, uint32_t, IfaceValue, IFACE_INDEX_NAME_MAP_SIZE)
 
 // iptables xt_bpf programs need to be usable by both netd and netutils_wrappers
-// selinux contexts, this is because even non-xt_bpf iptables mutations are implemented as
+// selinux contexts, because even non-xt_bpf iptables mutations are implemented as
 // a full table dump, followed by an update in userspace, and then a reload into the kernel,
 // where any already in-use xt_bpf matchers are serialized as the path to the pinned
 // program (see XT_BPF_MODE_PATH_PINNED) and then the iptables binary (or rather
