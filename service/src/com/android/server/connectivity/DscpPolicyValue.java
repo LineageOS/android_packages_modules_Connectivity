@@ -43,10 +43,10 @@ public class DscpPolicyValue extends Struct {
     @Field(order = 3, type = Type.UBE16)
     public final int srcPort;
 
-    @Field(order = 4, type = Type.UBE16)
+    @Field(order = 4, type = Type.U16)
     public final int dstPortStart;
 
-    @Field(order = 5, type = Type.UBE16)
+    @Field(order = 5, type = Type.U16)
     public final int dstPortEnd;
 
     @Field(order = 6, type = Type.U8)
