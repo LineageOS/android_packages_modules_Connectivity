@@ -416,16 +416,21 @@ public class BpfNetMaps {
     public void setChildChain(final int childChain, final boolean enable) {
         throwIfPreT("setChildChain is not available on pre-T devices");
 
-        final long match = getMatchByFirewallChain(childChain);
-        try {
-            synchronized (sUidRulesConfigBpfMapLock) {
-                final U32 config = sConfigurationMap.getValue(UID_RULES_CONFIGURATION_KEY);
-                final long newConfig = enable ? (config.val | match) : (config.val & ~match);
-                sConfigurationMap.updateEntry(UID_RULES_CONFIGURATION_KEY, new U32(newConfig));
+        if (sEnableJavaBpfMap) {
+            final long match = getMatchByFirewallChain(childChain);
+            try {
+                synchronized (sUidRulesConfigBpfMapLock) {
+                    final U32 config = sConfigurationMap.getValue(UID_RULES_CONFIGURATION_KEY);
+                    final long newConfig = enable ? (config.val | match) : (config.val & ~match);
+                    sConfigurationMap.updateEntry(UID_RULES_CONFIGURATION_KEY, new U32(newConfig));
+                }
+            } catch (ErrnoException e) {
+                throw new ServiceSpecificException(e.errno,
+                        "Unable to set child chain: " + Os.strerror(e.errno));
             }
-        } catch (ErrnoException e) {
-            throw new ServiceSpecificException(e.errno,
-                    "Unable to set child chain: " + Os.strerror(e.errno));
+        } else {
+            final int err = native_setChildChain(childChain, enable);
+            maybeThrow(err, "Unable to set child chain");
         }
     }
 
