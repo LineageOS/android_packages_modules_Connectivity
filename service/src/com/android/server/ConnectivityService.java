@@ -3604,10 +3604,9 @@ public class ConnectivityService extends IConnectivityManager.Stub
 
             switch (msg.what) {
                 case NetworkAgent.EVENT_NETWORK_CAPABILITIES_CHANGED: {
-                    nai.declaredCapabilitiesUnsanitized =
-                            new NetworkCapabilities((NetworkCapabilities) arg.second);
-                    final NetworkCapabilities sanitized = sanitizedCapabilitiesFromAgent(
-                            mCarrierPrivilegeAuthenticator, nai);
+                    nai.setDeclaredCapabilities((NetworkCapabilities) arg.second);
+                    final NetworkCapabilities sanitized =
+                            nai.getDeclaredCapabilitiesSanitized(mCarrierPrivilegeAuthenticator);
                     maybeUpdateWifiRoamTimestamp(nai, sanitized);
                     updateCapabilities(nai.getCurrentScore(), nai, sanitized);
                     break;
@@ -7334,11 +7333,11 @@ public class ConnectivityService extends IConnectivityManager.Stub
         // while the network monitor is starting.
         final LinkProperties lp = new LinkProperties(nai.linkProperties);
         // Store a copy of the declared capabilities.
-        nai.declaredCapabilitiesUnsanitized = new NetworkCapabilities(nai.networkCapabilities);
+        nai.setDeclaredCapabilities(nai.networkCapabilities);
         // Make sure the LinkProperties and NetworkCapabilities reflect what the agent info said.
-        final NetworkCapabilities nc =
-                sanitizedCapabilitiesFromAgent(mCarrierPrivilegeAuthenticator, nai);
-        nai.getAndSetNetworkCapabilities(mixInCapabilities(nai, nc));
+        final NetworkCapabilities sanitized =
+                nai.getDeclaredCapabilitiesSanitized(mCarrierPrivilegeAuthenticator);
+        nai.getAndSetNetworkCapabilities(mixInCapabilities(nai, sanitized));
         processLinkPropertiesFromAgent(nai, lp);
         nai.linkProperties = lp;
 
@@ -7801,38 +7800,6 @@ public class ConnectivityService extends IConnectivityManager.Stub
         }
     }
 
-    /**
-     * Sanitize capabilities coming from a network agent.
-     *
-     * Agents have restrictions on what capabilities they can send to Connectivity. For example,
-     * they can't change the owner UID from what they declared before, and complex restrictions
-     * apply to the accessUids field.
-     * They also should not mutate immutable capabilities, although for backward-compatibility
-     * this is not enforced and limited to just a log.
-     *
-     * This method returns a sanitized copy of the passed capabilities to make sure they don't
-     * contain stuff they should not, and should generally be called by code that accesses
-     * {@link NetworkAgentInfo#declaredCapabilitiesUnsanitized}.
-     */
-    // TODO : move this to NetworkAgentInfo
-    private NetworkCapabilities sanitizedCapabilitiesFromAgent(
-            final CarrierPrivilegeAuthenticator carrierPrivilegeAuthenticator,
-            @NonNull final NetworkAgentInfo nai) {
-        final NetworkCapabilities nc = new NetworkCapabilities(nai.declaredCapabilitiesUnsanitized);
-        if (nc.hasConnectivityManagedCapability()) {
-            Log.wtf(TAG, "BUG: " + nai + " has CS-managed capability.");
-        }
-        if (nai.networkCapabilities.getOwnerUid() != nc.getOwnerUid()) {
-            Log.e(TAG, nai.toShortString() + ": ignoring attempt to change owner from "
-                    + nai.networkCapabilities.getOwnerUid() + " to " + nc.getOwnerUid());
-            nc.setOwnerUid(nai.networkCapabilities.getOwnerUid());
-        }
-        NetworkAgentInfo.restrictCapabilitiesFromNetworkAgent(nc, nai.creatorUid,
-                mContext.getPackageManager().hasSystemFeature(PackageManager.FEATURE_AUTOMOTIVE),
-                carrierPrivilegeAuthenticator);
-        return nc;
-    }
-
     /** Modifies |newNc| based on the capabilities of |underlyingNetworks| and |agentCaps|. */
     @VisibleForTesting
     void applyUnderlyingCapabilities(@Nullable Network[] underlyingNetworks,
@@ -7958,7 +7925,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
 
         if (nai.propagateUnderlyingCapabilities()) {
             applyUnderlyingCapabilities(nai.declaredUnderlyingNetworks,
-                    sanitizedCapabilitiesFromAgent(mCarrierPrivilegeAuthenticator, nai),
+                    nai.getDeclaredCapabilitiesSanitized(mCarrierPrivilegeAuthenticator),
                     newNc);
         }
 
