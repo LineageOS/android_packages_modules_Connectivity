@@ -53,8 +53,8 @@ typedef struct {
     struct in6_addr dst_ip;
     uint32_t ifindex;
     __be16 src_port;
-    __be16 dst_port_start;
-    __be16 dst_port_end;
+    uint16_t dst_port_start;
+    uint16_t dst_port_end;
     uint8_t proto;
     int8_t dscp_val;  // -1 none, or 0..63 DSCP value
     uint8_t present_fields;
