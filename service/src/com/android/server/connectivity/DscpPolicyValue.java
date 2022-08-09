@@ -61,8 +61,7 @@ public class DscpPolicyValue extends Struct {
     private static final int SRC_IP_MASK = 0x1;
     private static final int DST_IP_MASK = 0x02;
     private static final int SRC_PORT_MASK = 0x4;
-    private static final int DST_PORT_MASK = 0x8;
-    private static final int PROTO_MASK = 0x10;
+    private static final int PROTO_MASK = 0x8;
 
     private boolean ipEmpty(final byte[] ip) {
         for (int i = 0; i < ip.length; i++) {
@@ -111,9 +110,6 @@ public class DscpPolicyValue extends Struct {
         if (srcPort != -1) {
             mask |=  SRC_PORT_MASK;
         }
-        if (dstPortStart != -1 && dstPortEnd != -1) {
-            mask |=  DST_PORT_MASK;
-        }
         if (proto != -1) {
             mask |=  PROTO_MASK;
         }
@@ -131,7 +127,7 @@ public class DscpPolicyValue extends Struct {
         // If they are -1 BpfMap write will throw errors.
         this.srcPort = srcPort != -1 ? srcPort : 0;
         this.dstPortStart = dstPortStart != -1 ? dstPortStart : 0;
-        this.dstPortEnd = dstPortEnd != -1 ? dstPortEnd : 0;
+        this.dstPortEnd = dstPortEnd != -1 ? dstPortEnd : 65535;
         this.proto = proto != -1 ? proto : 0;
 
         this.dscp = dscp;
