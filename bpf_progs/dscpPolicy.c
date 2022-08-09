@@ -183,9 +183,9 @@ static inline __always_inline void match_policy(struct __sk_buff* skb, bool ipv4
             if (sport != policy->src_port) continue;
             score += 0xFFFF;
         }
-        if (ntohs(dport) < ntohs(policy->dst_port_start)) continue;
-        if (ntohs(dport) > ntohs(policy->dst_port_end)) continue;
-        score += 0xFFFF + ntohs(policy->dst_port_start) - ntohs(policy->dst_port_end);
+        if (ntohs(dport) < policy->dst_port_start) continue;
+        if (ntohs(dport) > policy->dst_port_end) continue;
+        score += 0xFFFF + policy->dst_port_start - policy->dst_port_end;
 
         if (score > best_score) {
             best_score = score;
