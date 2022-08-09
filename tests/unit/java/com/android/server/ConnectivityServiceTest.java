@@ -242,6 +242,7 @@ import android.net.ConnectivitySettingsManager;
 import android.net.ConnectivityThread;
 import android.net.DataStallReportParcelable;
 import android.net.EthernetManager;
+import android.net.EthernetNetworkSpecifier;
 import android.net.IConnectivityDiagnosticsCallback;
 import android.net.IDnsResolver;
 import android.net.INetd;
@@ -15701,6 +15702,45 @@ public class ConnectivityServiceTest {
         mWiFiNetworkAgent.setNetworkCapabilities(ncb.build(), true /* sendToCS */);
         cb.assertNoCallback(TEST_CALLBACK_TIMEOUT_MS);
         mCm.unregisterNetworkCallback(cb);
+    }
+
+    @Test
+    public void testSanitizedCapabilitiesFromAgentDoesNotMutateArgument()
+            throws Exception {
+        // This NetworkCapabilities builds an usual object to maximize the chance that this requires
+        // sanitization, so we have a high chance to detect any changes to the original.
+        final NetworkCapabilities unsanitized = new NetworkCapabilities.Builder()
+                .withoutDefaultCapabilities()
+                .addTransportType(TRANSPORT_WIFI)
+                .addCapability(NET_CAPABILITY_INTERNET)
+                .setOwnerUid(12345)
+                .setAdministratorUids(new int[] {12345, 23456, 34567})
+                .setLinkUpstreamBandwidthKbps(20)
+                .setLinkDownstreamBandwidthKbps(10)
+                .setNetworkSpecifier(new EthernetNetworkSpecifier("foobar"))
+                .setTransportInfo(new WifiInfo.Builder().setBssid("AA:AA:AA:AA:AA:AA").build())
+                .setSignalStrength(-75)
+                .setSsid("SSID1")
+                .setRequestorUid(98765)
+                .setRequestorPackageName("TestPackage")
+                .setSubscriptionIds(Collections.singleton(Process.myUid()))
+                .setUids(UidRange.toIntRanges(uidRangesForUids(
+                        UserHandle.getUid(PRIMARY_USER, 10100),
+                        UserHandle.getUid(SECONDARY_USER, 10101),
+                        UserHandle.getUid(TERTIARY_USER, 10043))))
+                .setAllowedUids(Set.of(45678, 56789, 65432))
+                .setUnderlyingNetworks(List.of(new Network(99999)))
+                .build();
+        final NetworkCapabilities copyOfUnsanitized = new NetworkCapabilities(unsanitized);
+        final NetworkInfo info = new NetworkInfo(TYPE_MOBILE, TelephonyManager.NETWORK_TYPE_LTE,
+                ConnectivityManager.getNetworkTypeName(TYPE_MOBILE),
+                TelephonyManager.getNetworkTypeName(TelephonyManager.NETWORK_TYPE_LTE));
+        final NetworkAgentInfo agent = fakeNai(unsanitized, info);
+        agent.setDeclaredCapabilities(unsanitized);
+        final NetworkCapabilities sanitized = agent.getDeclaredCapabilitiesSanitized(
+                null /* carrierPrivilegeAuthenticator */);
+        assertEquals(copyOfUnsanitized, unsanitized);
+        assertNotEquals(sanitized, unsanitized);
     }
 
     /**
