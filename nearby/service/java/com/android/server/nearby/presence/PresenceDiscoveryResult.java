@@ -26,6 +26,8 @@ import android.nearby.PublicCredential;
 import android.util.ArraySet;
 import android.util.Log;
 
+import com.android.internal.annotations.VisibleForTesting;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -97,7 +99,8 @@ public class PresenceDiscoveryResult {
         return credentials.contains(mPublicCredential);
     }
 
-    private boolean accountKeyMatches(List<DataElement> extendedProperties) {
+    @VisibleForTesting
+    boolean accountKeyMatches(List<DataElement> extendedProperties) {
         Set<byte[]> accountKeys = new ArraySet<>();
         for (DataElement requestedDe : mExtendedProperties) {
             if (requestedDe.getKey() != DataElement.DataType.ACCOUNT_KEY) {
