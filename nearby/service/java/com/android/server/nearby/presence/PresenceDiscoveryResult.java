@@ -42,14 +42,16 @@ public class PresenceDiscoveryResult {
         if (salt == null) {
             salt = new byte[0];
         }
-        return new PresenceDiscoveryResult.Builder()
-                .setTxPower(device.getTxPower())
+        PresenceDiscoveryResult.Builder builder = new PresenceDiscoveryResult.Builder();
+        builder.setTxPower(device.getTxPower())
                 .setRssi(device.getRssi())
                 .setSalt(salt)
                 .addPresenceAction(device.getAction())
-                .setPublicCredential(device.getPublicCredential())
-                .addExtendedProperties(device.getPresenceDevice().getExtendedProperties())
-                .build();
+                .setPublicCredential(device.getPublicCredential());
+        if (device.getPresenceDevice() != null) {
+            builder.addExtendedProperties(device.getPresenceDevice().getExtendedProperties());
+        }
+        return builder.build();
     }
 
     private final int mTxPower;
