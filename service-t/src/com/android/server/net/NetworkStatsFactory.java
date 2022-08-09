@@ -91,8 +91,7 @@ public class NetworkStatsFactory {
             final NetworkStats stats = new NetworkStats(SystemClock.elapsedRealtime(), 0);
             // TODO: remove both path and useBpfStats arguments.
             // The path is never used if useBpfStats is true.
-            final int ret = nativeReadNetworkStatsDetail(stats, null /* path */,
-                    limitUid, limitIfaces, limitTag, true /* useBpfStats */);
+            final int ret = nativeReadNetworkStatsDetail(stats, limitUid, limitIfaces, limitTag);
             if (ret != 0) {
                 throw new IOException("Failed to parse network stats");
             }
@@ -334,8 +333,8 @@ public class NetworkStatsFactory {
      * are expected to monotonically increase since device boot.
      */
     @VisibleForTesting
-    public static native int nativeReadNetworkStatsDetail(NetworkStats stats, String path,
-        int limitUid, String[] limitIfaces, int limitTag, boolean useBpfStats);
+    public static native int nativeReadNetworkStatsDetail(NetworkStats stats, int limitUid,
+            String[] limitIfaces, int limitTag);
 
     @VisibleForTesting
     public static native int nativeReadNetworkStatsDev(NetworkStats stats);
