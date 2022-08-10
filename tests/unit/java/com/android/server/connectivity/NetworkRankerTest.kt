@@ -33,7 +33,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import kotlin.test.assertEquals
 
-private fun score(vararg policies: Int) = FullScore(0,
+private fun score(vararg policies: Int) = FullScore(
         policies.fold(0L) { acc, e -> acc or (1L shl e) }, KEEP_CONNECTED_NONE)
 private fun caps(transport: Int) = NetworkCapabilities.Builder().addTransportType(transport).build()
 
