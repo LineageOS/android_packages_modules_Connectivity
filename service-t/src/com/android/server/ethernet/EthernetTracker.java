@@ -87,14 +87,17 @@ public class EthernetTracker {
     private static final String TEST_IFACE_REGEXP = TEST_TAP_PREFIX + "\\d+";
 
     /**
-     * Interface names we track. This is a product-dependent regular expression, plus,
-     * if setIncludeTestInterfaces is true, any test interfaces.
+     * Interface names we track. This is a product-dependent regular expression.
+     * Use isValidEthernetInterface to check if a interface name is a valid ethernet interface (this
+     * includes test interfaces if setIncludeTestInterfaces is set to true).
      */
-    private volatile String mIfaceMatch;
+    private final String mIfaceMatch;
+
     /**
      * Track test interfaces if true, don't track otherwise.
+     * Volatile is needed as getInterfaceList() does not run on the handler thread.
      */
-    private boolean mIncludeTestInterfaces = false;
+    private volatile boolean mIncludeTestInterfaces = false;
 
     /** Mapping between {iface name | mac address} -> {NetworkCapabilities} */
     private final ConcurrentHashMap<String, NetworkCapabilities> mNetworkCapabilities =
@@ -161,7 +164,7 @@ public class EthernetTracker {
         mDeps = deps;
 
         // Interface match regex.
-        updateIfaceMatchRegexp();
+        mIfaceMatch = mDeps.getInterfaceRegexFromResource(mContext);
 
         // Read default Ethernet interface configuration from resources
         final String[] interfaceConfigs = mDeps.getInterfaceConfigFromResource(context);
@@ -320,9 +323,17 @@ public class EthernetTracker {
             Log.e(TAG, "Could not get list of interfaces " + e);
             return interfaceList;
         }
-        final String ifaceMatch = mIfaceMatch;
+
+        // There is a possible race with setIncludeTestInterfaces() which can affect
+        // isValidEthernetInterface (it returns true for test interfaces if setIncludeTestInterfaces
+        // is set to true).
+        // setIncludeTestInterfaces() is only used in tests, and since getInterfaceList() does not
+        // run on the handler thread, the behavior around setIncludeTestInterfaces() is
+        // indeterminate either way. This can easily be circumvented by waiting on a callback from
+        // a test interface after calling setIncludeTestInterfaces() before calling this function.
+        // In production code, this has no effect.
         for (String iface : ifaces) {
-            if (iface.matches(ifaceMatch)) interfaceList.add(iface);
+            if (isValidEthernetInterface(iface)) interfaceList.add(iface);
         }
         return interfaceList;
     }
@@ -357,7 +368,6 @@ public class EthernetTracker {
     public void setIncludeTestInterfaces(boolean include) {
         mHandler.post(() -> {
             mIncludeTestInterfaces = include;
-            updateIfaceMatchRegexp();
             if (!include) {
                 removeTestData();
             }
@@ -569,7 +579,7 @@ public class EthernetTracker {
     }
 
     private void maybeTrackInterface(String iface) {
-        if (!iface.matches(mIfaceMatch)) {
+        if (!isValidEthernetInterface(iface)) {
             return;
         }
 
@@ -840,12 +850,8 @@ public class EthernetTracker {
         return ret;
     }
 
-    private void updateIfaceMatchRegexp() {
-        final String match = mDeps.getInterfaceRegexFromResource(mContext);
-        mIfaceMatch = mIncludeTestInterfaces
-                ? "(" + match + "|" + TEST_IFACE_REGEXP + ")"
-                : match;
-        Log.d(TAG, "Interface match regexp set to '" + mIfaceMatch + "'");
+    private boolean isValidEthernetInterface(String iface) {
+        return iface.matches(mIfaceMatch) || isValidTestInterface(iface);
     }
 
     /**
