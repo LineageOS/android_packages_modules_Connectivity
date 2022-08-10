@@ -612,6 +612,8 @@ void TrafficController::dump(int fd, bool verbose) {
     ScopedIndent indentPreBpfModule(dw);
 
     dw.blankline();
+    dw.println("mCookieTagMap status: %s",
+               getMapStatus(mCookieTagMap.getMap(), COOKIE_TAG_MAP_PATH).c_str());
     dw.println("mStatsMapA status: %s",
                getMapStatus(mStatsMapA.getMap(), STATS_MAP_A_PATH).c_str());
     dw.println("mStatsMapB status: %s",
@@ -647,6 +649,21 @@ void TrafficController::dump(int fd, bool verbose) {
 
     ScopedIndent indentForMapContent(dw);
 
+    // Print CookieTagMap content.
+    // TagSocketTest in CTS was using the output of mCookieTagMap dump.
+    // So, mCookieTagMap dump can not be removed until the previous CTS support period is over.
+    dumpBpfMap("mCookieTagMap", dw, "");
+    const auto printCookieTagInfo = [&dw](const uint64_t& key, const UidTagValue& value,
+                                          const BpfMap<uint64_t, UidTagValue>&) {
+        dw.println("cookie=%" PRIu64 " tag=0x%x uid=%u", key, value.tag, value.uid);
+        return base::Result<void>();
+    };
+    base::Result<void> res = mCookieTagMap.iterateWithValue(printCookieTagInfo);
+    if (!res.ok()) {
+        dw.println("mCookieTagMap print end with error: %s", res.error().message().c_str());
+    }
+
+
     // Print uidStatsMap content.
     std::string statsHeader = StringPrintf("ifaceIndex ifaceName tag_hex uid_int cnt_set rxBytes"
                                            " rxPackets txBytes txPackets");
@@ -663,7 +680,7 @@ void TrafficController::dump(int fd, bool verbose) {
                    value.rxPackets, value.txBytes, value.txPackets);
         return base::Result<void>();
     };
-    base::Result<void> res = mStatsMapA.iterateWithValue(printStatsInfo);
+    res = mStatsMapA.iterateWithValue(printStatsInfo);
     if (!res.ok()) {
         dw.println("mStatsMapA print end with error: %s", res.error().message().c_str());
     }
