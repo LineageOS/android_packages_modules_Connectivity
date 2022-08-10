@@ -18,6 +18,8 @@ package com.android.server.nearby.presence;
 
 import static com.google.common.truth.Truth.assertThat;
 
+import android.nearby.DataElement;
+import android.nearby.NearbyDeviceParcelable;
 import android.nearby.PresenceCredential;
 import android.nearby.PresenceDevice;
 import android.nearby.PresenceScanFilter;
@@ -28,12 +30,16 @@ import androidx.test.filters.SdkSuppress;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 
 /**
  * Unit tests for {@link PresenceDiscoveryResult}.
  */
 public class PresenceDiscoveryResultTest {
+    private static final int DATA_TYPE_ACCOUNT_KEY = 1;
+    private static final int DATA_TYPE_INTENT = 9;
     private static final int PRESENCE_ACTION = 123;
     private static final int TX_POWER = -1;
     private static final int RSSI = -41;
@@ -64,6 +70,27 @@ public class PresenceDiscoveryResultTest {
 
     @Test
     @SdkSuppress(minSdkVersion = 32, codeName = "T")
+    public void testFromDevice() {
+        NearbyDeviceParcelable.Builder builder = new NearbyDeviceParcelable.Builder();
+        builder.setTxPower(TX_POWER)
+                .setRssi(RSSI)
+                .setEncryptionKeyTag(METADATA_ENCRYPTION_KEY_TAG)
+                .setSalt(SALT)
+                .setPublicCredential(mCredential);
+
+        PresenceDiscoveryResult discoveryResult =
+                PresenceDiscoveryResult.fromDevice(builder.build());
+        PresenceScanFilter scanFilter = new PresenceScanFilter.Builder()
+                .setMaxPathLoss(80)
+                .addPresenceAction(PRESENCE_ACTION)
+                .addCredential(mCredential)
+                .build();
+
+        assertThat(discoveryResult.matches(scanFilter)).isTrue();
+    }
+
+    @Test
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void testToDevice() {
         PresenceDiscoveryResult discoveryResult = mBuilder.build();
         PresenceDevice presenceDevice = discoveryResult.toPresenceDevice();
@@ -71,6 +98,20 @@ public class PresenceDiscoveryResultTest {
         assertThat(presenceDevice.getRssi()).isEqualTo(RSSI);
         assertThat(Arrays.equals(presenceDevice.getSalt(), SALT)).isTrue();
         assertThat(Arrays.equals(presenceDevice.getSecretId(), SECRET_ID)).isTrue();
+    }
+
+    @Test
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
+    public void testAccountMatches() {
+        DataElement accountKey = new DataElement(DATA_TYPE_ACCOUNT_KEY, new byte[]{1, 2, 3, 4});
+        mBuilder.addExtendedProperties(List.of(accountKey));
+        PresenceDiscoveryResult discoveryResult = mBuilder.build();
+
+        List<DataElement> extendedProperties = new ArrayList<>();
+        extendedProperties.add(new DataElement(DATA_TYPE_ACCOUNT_KEY, new byte[]{1, 2, 3, 4}));
+        extendedProperties.add(new DataElement(DATA_TYPE_INTENT,
+                new byte[]{(byte) PRESENCE_ACTION}));
+        assertThat(discoveryResult.accountKeyMatches(extendedProperties)).isTrue();
     }
 
     @Test
