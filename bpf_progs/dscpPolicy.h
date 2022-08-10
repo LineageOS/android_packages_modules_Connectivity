@@ -65,11 +65,11 @@ STRUCT_SIZE(DscpPolicy, 2 * 16 + 4 + 3 * 2 + 3 * 1 + 3);  // 48
 typedef struct {
     struct in6_addr src_ip;
     struct in6_addr dst_ip;
-    __u32 ifindex;
+    uint32_t ifindex;
     __be16 src_port;
-    __be16 dst_port;
-    __u8 proto;
-    __s8 dscp_val;  // -1 none, or 0..63 DSCP value
-    __u8 pad[2];
+    uint16_t dst_port;
+    uint8_t proto;
+    int8_t dscp_val;  // -1 none, or 0..63 DSCP value
+    uint8_t pad[2];
 } RuleEntry;
 STRUCT_SIZE(RuleEntry, 2 * 16 + 1 * 4 + 2 * 2 + 2 * 1 + 2);  // 44

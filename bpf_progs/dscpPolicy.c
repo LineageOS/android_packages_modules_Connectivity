@@ -57,7 +57,7 @@ static inline __always_inline void match_policy(struct __sk_buff* skb, bool ipv4
     uint64_t cookie = bpf_get_socket_cookie(skb);
     if (!cookie) return;
 
-    uint16_t sport = 0;
+    __be16 sport = 0;
     uint16_t dport = 0;
     uint8_t protocol = 0;  // TODO: Use are reserved value? Or int (-1) and cast to uint below?
     struct in6_addr src_ip = {};
@@ -106,14 +106,14 @@ static inline __always_inline void match_policy(struct __sk_buff* skb, bool ipv4
             udp = data + hdr_size;
             if ((void*)(udp + 1) > data_end) return;
             sport = udp->source;
-            dport = udp->dest;
+            dport = ntohs(udp->dest);
         } break;
         case IPPROTO_TCP: {
             struct tcphdr* tcp;
             tcp = data + hdr_size;
             if ((void*)(tcp + 1) > data_end) return;
             sport = tcp->source;
-            dport = tcp->dest;
+            dport = ntohs(tcp->dest);
         } break;
         default:
             return;
@@ -183,8 +183,8 @@ static inline __always_inline void match_policy(struct __sk_buff* skb, bool ipv4
             if (sport != policy->src_port) continue;
             score += 0xFFFF;
         }
-        if (ntohs(dport) < policy->dst_port_start) continue;
-        if (ntohs(dport) > policy->dst_port_end) continue;
+        if (dport < policy->dst_port_start) continue;
+        if (dport > policy->dst_port_end) continue;
         score += 0xFFFF + policy->dst_port_start - policy->dst_port_end;
 
         if (score > best_score) {
