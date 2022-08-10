@@ -107,8 +107,13 @@ public class EthernetConfigStore {
     }
 
     private void loadConfigFileLocked(final String filepath) {
+        // readIpConfigurations can return null when the version is invalid.
         final ArrayMap<String, IpConfiguration> configs =
                 IpConfigStore.readIpConfigurations(filepath);
+        if (configs == null) {
+            Log.e(TAG, "IpConfigStore#readIpConfigurations() returned null");
+            return;
+        }
         mIpConfigurations.putAll(configs);
     }
 
