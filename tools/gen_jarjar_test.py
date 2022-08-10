@@ -31,11 +31,11 @@ import unittest
 class TestGenJarjar(unittest.TestCase):
     def test_gen_rules(self):
         args = gen_jarjar.parse_arguments([
-            "--jars", "jarjar-rules-generator-testjavalib.jar",
+            "jarjar-rules-generator-testjavalib.jar",
             "--prefix", "jarjar.prefix",
             "--output", "test-output-rules.txt",
             "--apistubs", "framework-connectivity.stubs.module_lib.jar",
-            "--unsupportedapi", "testdata/test-unsupportedappusage.txt",
+            "--unsupportedapi", ":testdata/test-unsupportedappusage.txt",
             "--excludes", "testdata/test-jarjar-excludes.txt",
         ])
         gen_jarjar.make_jarjar_rules(args)
@@ -43,6 +43,39 @@ class TestGenJarjar(unittest.TestCase):
         with open(args.output) as out:
             lines = out.readlines()
 
+        self.maxDiff = None
+        self.assertListEqual([
+            'rule android.net.IpSecTransform jarjar.prefix.@0\n',
+            'rule android.net.IpSecTransformTest jarjar.prefix.@0\n',
+            'rule android.net.IpSecTransformTest$* jarjar.prefix.@0\n',
+            'rule test.unsupportedappusage.OtherUnsupportedUsageClass jarjar.prefix.@0\n',
+            'rule test.unsupportedappusage.OtherUnsupportedUsageClassTest jarjar.prefix.@0\n',
+            'rule test.unsupportedappusage.OtherUnsupportedUsageClassTest$* jarjar.prefix.@0\n',
+            'rule test.utils.TestUtilClass jarjar.prefix.@0\n',
+            'rule test.utils.TestUtilClassTest jarjar.prefix.@0\n',
+            'rule test.utils.TestUtilClassTest$* jarjar.prefix.@0\n',
+            'rule test.utils.TestUtilClass$TestInnerClass jarjar.prefix.@0\n',
+            'rule test.utils.TestUtilClass$TestInnerClassTest jarjar.prefix.@0\n',
+            'rule test.utils.TestUtilClass$TestInnerClassTest$* jarjar.prefix.@0\n'
+        ], lines)
+
+    def test_gen_rules_repeated_args(self):
+        args = gen_jarjar.parse_arguments([
+            "jarjar-rules-generator-testjavalib.jar",
+            "--prefix", "jarjar.prefix",
+            "--output", "test-output-rules.txt",
+            "--apistubs", "framework-connectivity.stubs.module_lib.jar",
+            "--apistubs", "framework-connectivity-t.stubs.module_lib.jar",
+            "--unsupportedapi",
+            "testdata/test-unsupportedappusage.txt:testdata/test-other-unsupportedappusage.txt",
+            "--excludes", "testdata/test-jarjar-excludes.txt",
+        ])
+        gen_jarjar.make_jarjar_rules(args)
+
+        with open(args.output) as out:
+            lines = out.readlines()
+
+        self.maxDiff = None
         self.assertListEqual([
             'rule test.utils.TestUtilClass jarjar.prefix.@0\n',
             'rule test.utils.TestUtilClassTest jarjar.prefix.@0\n',

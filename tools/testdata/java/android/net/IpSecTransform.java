@@ -14,13 +14,10 @@
  * limitations under the License.
  */
 
-package test.unsupportedappusage;
+package android.net;
 
-
-import android.compat.annotation.UnsupportedAppUsage;
-
-public class TestUnsupportedAppUsageClass {
-    // The annotation is just for completeness, what matters is the unsupportedappusage.txt file
-    @UnsupportedAppUsage
-    public void testMethod() {}
+/**
+ * Test class with a name matching a public API in a secondary (framework-connectivity-t) stubs jar.
+ */
+public class IpSecTransform {
 }

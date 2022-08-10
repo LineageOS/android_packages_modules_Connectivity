@@ -48,6 +48,7 @@ genrule_defaults {
 java_library {
     name: "jarjar-rules-generator-testjavalib",
     srcs: ["testdata/java/**/*.java"],
+    libs: ["unsupportedappusage"],
     visibility: ["//visibility:private"],
 }
 
@@ -67,6 +68,17 @@ java_library {
     compile_dex: false,
 }
 
+java_library {
+    name: "framework-connectivity-t.stubs.module_lib-for-test",
+    visibility: ["//visibility:private"],
+    static_libs: [
+        "framework-connectivity-t.stubs.module_lib",
+    ],
+    // Not strictly necessary but specified as this MUST not have generate
+    // a dex jar as that will break the tests.
+    compile_dex: false,
+}
+
 python_test_host {
     name: "jarjar-rules-generator-test",
     srcs: [
@@ -75,8 +87,11 @@ python_test_host {
     ],
     data: [
         "testdata/test-jarjar-excludes.txt",
+        // two unsupportedappusage lists with different classes to test using multiple lists
         "testdata/test-unsupportedappusage.txt",
+        "testdata/test-other-unsupportedappusage.txt",
         ":framework-connectivity.stubs.module_lib-for-test",
+        ":framework-connectivity-t.stubs.module_lib-for-test",
         ":jarjar-rules-generator-testjavalib",
     ],
     main: "gen_jarjar_test.py",
