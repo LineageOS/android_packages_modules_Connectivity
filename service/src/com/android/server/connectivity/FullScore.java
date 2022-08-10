@@ -49,10 +49,6 @@ import java.util.StringJoiner;
 public class FullScore {
     private static final String TAG = FullScore.class.getSimpleName();
 
-    // This will be removed soon. Do *NOT* depend on it for any new code that is not part of
-    // a migration.
-    private final int mLegacyInt;
-
     /** @hide */
     @Retention(RetentionPolicy.SOURCE)
     @IntDef(prefix = {"POLICY_"}, value = {
@@ -146,9 +142,7 @@ public class FullScore {
 
     private final int mKeepConnectedReason;
 
-    FullScore(final int legacyInt, final long policies,
-            @KeepConnectedReason final int keepConnectedReason) {
-        mLegacyInt = legacyInt;
+    FullScore(final long policies, @KeepConnectedReason final int keepConnectedReason) {
         mPolicies = policies;
         mKeepConnectedReason = keepConnectedReason;
     }
@@ -170,7 +164,7 @@ public class FullScore {
     public static FullScore fromNetworkScore(@NonNull final NetworkScore score,
             @NonNull final NetworkCapabilities caps, @NonNull final NetworkAgentConfig config,
             final boolean everValidated, final boolean yieldToBadWiFi, final boolean destroyed) {
-        return withPolicies(score.getLegacyInt(), score.getPolicies(),
+        return withPolicies(score.getPolicies(),
                 score.getKeepConnectedReason(),
                 caps.hasCapability(NET_CAPABILITY_VALIDATED),
                 caps.hasTransport(TRANSPORT_VPN),
@@ -216,7 +210,7 @@ public class FullScore {
         // A prospective score is invincible if the legacy int in the filter is over the maximum
         // score.
         final boolean invincible = score.getLegacyInt() > NetworkRanker.LEGACY_INT_MAX;
-        return withPolicies(score.getLegacyInt(), score.getPolicies(), KEEP_CONNECTED_NONE,
+        return withPolicies(score.getPolicies(), KEEP_CONNECTED_NONE,
                 mayValidate, vpn, unmetered, everValidated, everUserSelected, acceptUnvalidated,
                 yieldToBadWiFi, destroyed, invincible);
     }
@@ -236,7 +230,7 @@ public class FullScore {
             final boolean everValidated,
             final boolean yieldToBadWifi,
             final boolean destroyed) {
-        return withPolicies(mLegacyInt, mPolicies, mKeepConnectedReason,
+        return withPolicies(mPolicies, mKeepConnectedReason,
                 caps.hasCapability(NET_CAPABILITY_VALIDATED),
                 caps.hasTransport(TRANSPORT_VPN),
                 caps.hasCapability(NET_CAPABILITY_NOT_METERED),
@@ -251,8 +245,7 @@ public class FullScore {
     // TODO : this shouldn't manage bad wifi avoidance – instead this should be done by the
     // telephony factory, so that it depends on the carrier. For now this is handled by
     // connectivity for backward compatibility.
-    private static FullScore withPolicies(@NonNull final int legacyInt,
-            final long externalPolicies,
+    private static FullScore withPolicies(final long externalPolicies,
             @KeepConnectedReason final int keepConnectedReason,
             final boolean isValidated,
             final boolean isVpn,
@@ -263,7 +256,7 @@ public class FullScore {
             final boolean yieldToBadWiFi,
             final boolean destroyed,
             final boolean invincible) {
-        return new FullScore(legacyInt, (externalPolicies & EXTERNAL_POLICIES_MASK)
+        return new FullScore((externalPolicies & EXTERNAL_POLICIES_MASK)
                 | (isValidated       ? 1L << POLICY_IS_VALIDATED : 0)
                 | (isVpn             ? 1L << POLICY_IS_VPN : 0)
                 | (isUnmetered       ? 1L << POLICY_IS_UNMETERED : 0)
@@ -280,8 +273,7 @@ public class FullScore {
      * Returns this score but with the specified yield to bad wifi policy.
      */
     public FullScore withYieldToBadWiFi(final boolean newYield) {
-        return new FullScore(mLegacyInt,
-                newYield ? mPolicies | (1L << POLICY_YIELD_TO_BAD_WIFI)
+        return new FullScore(newYield ? mPolicies | (1L << POLICY_YIELD_TO_BAD_WIFI)
                         : mPolicies & ~(1L << POLICY_YIELD_TO_BAD_WIFI),
                 mKeepConnectedReason);
     }
@@ -290,49 +282,7 @@ public class FullScore {
      * Returns this score but validated.
      */
     public FullScore asValidated() {
-        return new FullScore(mLegacyInt, mPolicies | (1L << POLICY_IS_VALIDATED),
-                mKeepConnectedReason);
-    }
-
-    /**
-     * For backward compatibility, get the legacy int.
-     * This will be removed before S is published.
-     */
-    public int getLegacyInt() {
-        return getLegacyInt(false /* pretendValidated */);
-    }
-
-    public int getLegacyIntAsValidated() {
-        return getLegacyInt(true /* pretendValidated */);
-    }
-
-    // TODO : remove these two constants
-    // Penalty applied to scores of Networks that have not been validated.
-    private static final int UNVALIDATED_SCORE_PENALTY = 40;
-
-    // Score for a network that can be used unvalidated
-    private static final int ACCEPT_UNVALIDATED_NETWORK_SCORE = 100;
-
-    private int getLegacyInt(boolean pretendValidated) {
-        // If the user has chosen this network at least once, give it the maximum score when
-        // checking to pretend it's validated, or if it doesn't need to validate because the
-        // user said to use it even if it doesn't validate.
-        // This ensures that networks that have been selected in UI are not torn down before the
-        // user gets a chance to prefer it when a higher-scoring network (e.g., Ethernet) is
-        // available.
-        if (hasPolicy(POLICY_EVER_USER_SELECTED)
-                && (hasPolicy(POLICY_ACCEPT_UNVALIDATED) || pretendValidated)) {
-            return ACCEPT_UNVALIDATED_NETWORK_SCORE;
-        }
-
-        int score = mLegacyInt;
-        // Except for VPNs, networks are subject to a penalty for not being validated.
-        // Apply the penalty unless the network is a VPN, or it's validated or pretending to be.
-        if (!hasPolicy(POLICY_IS_VALIDATED) && !pretendValidated && !hasPolicy(POLICY_IS_VPN)) {
-            score -= UNVALIDATED_SCORE_PENALTY;
-        }
-        if (score < 0) score = 0;
-        return score;
+        return new FullScore(mPolicies | (1L << POLICY_IS_VALIDATED), mKeepConnectedReason);
     }
 
     /**
@@ -350,15 +300,32 @@ public class FullScore {
         return mKeepConnectedReason;
     }
 
+    @Override
+    public boolean equals(final Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        final FullScore fullScore = (FullScore) o;
+
+        if (mPolicies != fullScore.mPolicies) return false;
+        return mKeepConnectedReason == fullScore.mKeepConnectedReason;
+    }
+
+    @Override
+    public int hashCode() {
+        return 2 * ((int) mPolicies)
+                + 3 * (int) (mPolicies >>> 32)
+                + 5 * mKeepConnectedReason;
+    }
+
     // Example output :
-    // Score(50 ; Policies : EVER_USER_SELECTED&IS_VALIDATED)
+    // Score(Policies : EVER_USER_SELECTED&IS_VALIDATED ; KeepConnected : )
     @Override
     public String toString() {
         final StringJoiner sj = new StringJoiner(
                 "&", // delimiter
-                "Score(" + mLegacyInt + " ; KeepConnected : " + mKeepConnectedReason
-                        + " ; Policies : ", // prefix
-                ")"); // suffix
+                "Score(Policies : ", // prefix
+                " ; KeepConnected : " + mKeepConnectedReason + ")"); // suffix
         for (int i = NetworkScore.MIN_AGENT_MANAGED_POLICY;
                 i <= NetworkScore.MAX_AGENT_MANAGED_POLICY; ++i) {
             if (hasPolicy(i)) sj.add(policyNameOf(i));
