@@ -164,6 +164,7 @@ java_library {
         "modules-utils-shell-command-handler",
         "net-utils-device-common",
         "net-utils-device-common-bpf",
+        "net-utils-device-common-ip",
         "net-utils-device-common-netlink",
         "net-utils-services-common",
         "netd-client",
