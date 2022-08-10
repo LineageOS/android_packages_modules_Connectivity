@@ -26,6 +26,7 @@ import static android.net.NetworkCapabilities.transportNamesOf;
 import android.annotation.NonNull;
 import android.annotation.Nullable;
 import android.content.Context;
+import android.content.pm.PackageManager;
 import android.net.CaptivePortalData;
 import android.net.DscpPolicy;
 import android.net.IDnsResolver;
@@ -184,9 +185,8 @@ public class NetworkAgentInfo implements Comparable<NetworkAgentInfo>, NetworkRa
     //
     // As the name implies, these capabilities are not sanitized and are not to
     // be trusted. Most callers should simply use the {@link networkCapabilities}
-    // field instead, and callers who need the declared capabilities should generally
-    // pass these to {@link ConnectivityService#sanitizedCapabilitiesFromAgent} before using them.
-    public @Nullable NetworkCapabilities declaredCapabilitiesUnsanitized;
+    // field instead.
+    private @Nullable NetworkCapabilities mDeclaredCapabilitiesUnsanitized;
 
     // Indicates if netd has been told to create this Network. From this point on the appropriate
     // routing rules are setup and routes are added so packets can begin flowing over the Network.
@@ -239,6 +239,53 @@ public class NetworkAgentInfo implements Comparable<NetworkAgentInfo>, NetworkRa
     // non-RFC8908 sources, such as Wi-Fi Passpoint, which can provide information such as Venue
     // URL, Terms & Conditions URL, and network friendly name.
     public CaptivePortalData networkAgentPortalData;
+
+    /**
+     * Sets the capabilities sent by the agent for later retrieval.
+     *
+     * This method does not sanitize the capabilities ; instead, use
+     * {@link #getDeclaredCapabilitiesSanitized} to retrieve a sanitized
+     * copy of the capabilities as they were passed here.
+     *
+     * This method makes a defensive copy to avoid issues where the passed object is later mutated.
+     *
+     * @param caps the caps sent by the agent
+     */
+    public void setDeclaredCapabilities(@NonNull final NetworkCapabilities caps) {
+        mDeclaredCapabilitiesUnsanitized = new NetworkCapabilities(caps);
+    }
+
+    /**
+     * Get the latest capabilities sent by the network agent, after sanitizing them.
+     *
+     * These are the capabilities as they were sent by the agent (but sanitized to conform to
+     * their restrictions). They are NOT the capabilities currently applying to this agent ;
+     * for that, use {@link #networkCapabilities}.
+     *
+     * Agents have restrictions on what capabilities they can send to Connectivity. For example,
+     * they can't change the owner UID from what they declared before, and complex restrictions
+     * apply to the allowedUids field.
+     * They also should not mutate immutable capabilities, although for backward-compatibility
+     * this is not enforced and limited to just a log.
+     *
+     * @param carrierPrivilegeAuthenticator the authenticator, to check access UIDs.
+     */
+    public NetworkCapabilities getDeclaredCapabilitiesSanitized(
+            final CarrierPrivilegeAuthenticator carrierPrivilegeAuthenticator) {
+        final NetworkCapabilities nc = new NetworkCapabilities(mDeclaredCapabilitiesUnsanitized);
+        if (nc.hasConnectivityManagedCapability()) {
+            Log.wtf(TAG, "BUG: " + this + " has CS-managed capability.");
+        }
+        if (networkCapabilities.getOwnerUid() != nc.getOwnerUid()) {
+            Log.e(TAG, toShortString() + ": ignoring attempt to change owner from "
+                    + networkCapabilities.getOwnerUid() + " to " + nc.getOwnerUid());
+            nc.setOwnerUid(networkCapabilities.getOwnerUid());
+        }
+        restrictCapabilitiesFromNetworkAgent(nc, creatorUid,
+                mContext.getPackageManager().hasSystemFeature(PackageManager.FEATURE_AUTOMOTIVE),
+                carrierPrivilegeAuthenticator);
+        return nc;
+    }
 
     // Networks are lingered when they become unneeded as a result of their NetworkRequests being
     // satisfied by a higher-scoring network. so as to allow communication to wrap up before the

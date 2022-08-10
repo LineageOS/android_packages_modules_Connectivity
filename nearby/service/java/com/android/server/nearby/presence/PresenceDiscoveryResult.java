@@ -26,6 +26,8 @@ import android.nearby.PublicCredential;
 import android.util.ArraySet;
 import android.util.Log;
 
+import com.android.internal.annotations.VisibleForTesting;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -40,14 +42,16 @@ public class PresenceDiscoveryResult {
         if (salt == null) {
             salt = new byte[0];
         }
-        return new PresenceDiscoveryResult.Builder()
-                .setTxPower(device.getTxPower())
+        PresenceDiscoveryResult.Builder builder = new PresenceDiscoveryResult.Builder();
+        builder.setTxPower(device.getTxPower())
                 .setRssi(device.getRssi())
                 .setSalt(salt)
                 .addPresenceAction(device.getAction())
-                .setPublicCredential(device.getPublicCredential())
-                .addExtendedProperties(device.getPresenceDevice().getExtendedProperties())
-                .build();
+                .setPublicCredential(device.getPublicCredential());
+        if (device.getPresenceDevice() != null) {
+            builder.addExtendedProperties(device.getPresenceDevice().getExtendedProperties());
+        }
+        return builder.build();
     }
 
     private final int mTxPower;
@@ -97,7 +101,8 @@ public class PresenceDiscoveryResult {
         return credentials.contains(mPublicCredential);
     }
 
-    private boolean accountKeyMatches(List<DataElement> extendedProperties) {
+    @VisibleForTesting
+    boolean accountKeyMatches(List<DataElement> extendedProperties) {
         Set<byte[]> accountKeys = new ArraySet<>();
         for (DataElement requestedDe : mExtendedProperties) {
             if (requestedDe.getKey() != DataElement.DataType.ACCOUNT_KEY) {
