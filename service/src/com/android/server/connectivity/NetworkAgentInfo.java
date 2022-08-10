@@ -67,6 +67,7 @@ import com.android.modules.utils.build.SdkLevel;
 import com.android.server.ConnectivityService;
 
 import java.io.PrintWriter;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -105,7 +106,7 @@ import java.util.TreeSet;
 //    for example:
 //    a. a captive portal is present, or
 //    b. a WiFi router whose Internet backhaul is down, or
-//    c. a wireless connection stops transfering packets temporarily (e.g. device is in elevator
+//    c. a wireless connection stops transferring packets temporarily (e.g. device is in elevator
 //       or tunnel) but does not disconnect from the AP/cell tower, or
 //    d. a stand-alone device offering a WiFi AP without an uplink for configuration purposes.
 // 5. registered, created, connected, validated
@@ -158,7 +159,7 @@ import java.util.TreeSet;
 // the network is no longer considered "lingering". After the linger timer expires, if the network
 // is satisfying one or more background NetworkRequests it is kept up in the background. If it is
 // not, ConnectivityService disconnects the NetworkAgent's AsyncChannel.
-public class NetworkAgentInfo implements Comparable<NetworkAgentInfo>, NetworkRanker.Scoreable {
+public class NetworkAgentInfo implements NetworkRanker.Scoreable {
 
     @NonNull public NetworkInfo networkInfo;
     // This Network object should always be used if possible, so as to encourage reuse of the
@@ -417,6 +418,8 @@ public class NetworkAgentInfo implements Comparable<NetworkAgentInfo>, NetworkRa
     private final Handler mHandler;
     private final QosCallbackTracker mQosCallbackTracker;
 
+    private final long mCreationTime;
+
     public NetworkAgentInfo(INetworkAgent na, Network net, NetworkInfo info,
             @NonNull LinkProperties lp, @NonNull NetworkCapabilities nc,
             @NonNull NetworkScore score, Context context,
@@ -449,6 +452,7 @@ public class NetworkAgentInfo implements Comparable<NetworkAgentInfo>, NetworkRa
         declaredUnderlyingNetworks = (nc.getUnderlyingNetworks() != null)
                 ? nc.getUnderlyingNetworks().toArray(new Network[0])
                 : null;
+        mCreationTime = System.currentTimeMillis();
     }
 
     private class AgentDeathMonitor implements IBinder.DeathRecipient {
@@ -1014,18 +1018,6 @@ public class NetworkAgentInfo implements Comparable<NetworkAgentInfo>, NetworkRa
         return mScore;
     }
 
-    // Get the current score for this Network.  This may be modified from what the
-    // NetworkAgent sent, as it has modifiers applied to it.
-    public int getCurrentScore() {
-        return mScore.getLegacyInt();
-    }
-
-    // Get the current score for this Network as if it was validated.  This may be modified from
-    // what the NetworkAgent sent, as it has modifiers applied to it.
-    public int getCurrentScoreAsValidated() {
-        return mScore.getLegacyIntAsValidated();
-    }
-
     /**
      * Mix-in the ConnectivityService-managed bits in the score.
      */
@@ -1330,6 +1322,7 @@ public class NetworkAgentInfo implements Comparable<NetworkAgentInfo>, NetworkRa
         return "NetworkAgentInfo{"
                 + "network{" + network + "}  handle{" + network.getNetworkHandle() + "}  ni{"
                 + networkInfo.toShortString() + "} "
+                + "created=" + Instant.ofEpochMilli(mCreationTime) + " "
                 + mScore + " "
                 + (created ? " created" : "")
                 + (destroyed ? " destroyed" : "")
@@ -1361,12 +1354,6 @@ public class NetworkAgentInfo implements Comparable<NetworkAgentInfo>, NetworkRa
     public String toShortString() {
         return "[" + network.getNetId() + " "
                 + transportNamesOf(networkCapabilities.getTransportTypes()) + "]";
-    }
-
-    // Enables sorting in descending order of score.
-    @Override
-    public int compareTo(NetworkAgentInfo other) {
-        return other.getCurrentScore() - getCurrentScore();
     }
 
     /**
