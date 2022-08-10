@@ -138,18 +138,16 @@ public class IpConnectivityMetricsTest {
     private void logDefaultNetworkEvent(long timeMs, NetworkAgentInfo nai,
             NetworkAgentInfo oldNai) {
         final Network network = (nai != null) ? nai.network() : null;
-        final int score = (nai != null) ? nai.getCurrentScore() : 0;
         final boolean validated = (nai != null) ? nai.lastValidated : false;
         final LinkProperties lp = (nai != null) ? nai.linkProperties : null;
         final NetworkCapabilities nc = (nai != null) ? nai.networkCapabilities : null;
 
         final Network prevNetwork = (oldNai != null) ? oldNai.network() : null;
-        final int prevScore = (oldNai != null) ? oldNai.getCurrentScore() : 0;
         final LinkProperties prevLp = (oldNai != null) ? oldNai.linkProperties : null;
         final NetworkCapabilities prevNc = (oldNai != null) ? oldNai.networkCapabilities : null;
 
-        mService.mDefaultNetworkMetrics.logDefaultNetworkEvent(timeMs, network, score, validated,
-                lp, nc, prevNetwork, prevScore, prevLp, prevNc);
+        mService.mDefaultNetworkMetrics.logDefaultNetworkEvent(timeMs, network, 0 /* legacyScore */,
+                validated, lp, nc, prevNetwork, 0 /* prevLegacyScore */, prevLp, prevNc);
     }
     @Test
     public void testDefaultNetworkEvents() throws Exception {
@@ -158,15 +156,15 @@ public class IpConnectivityMetricsTest {
 
         NetworkAgentInfo[][] defaultNetworks = {
             // nothing -> cell
-            {null, makeNai(100, 10, false, true, cell)},
+            {null, makeNai(100, false, true, cell)},
             // cell -> wifi
-            {makeNai(100, 50, true, true, cell), makeNai(101, 20, true, false, wifi)},
+            {makeNai(100, true, true, cell), makeNai(101, true, false, wifi)},
             // wifi -> nothing
-            {makeNai(101, 60, true, false, wifi), null},
+            {makeNai(101, true, false, wifi), null},
             // nothing -> cell
-            {null, makeNai(102, 10, true, true, cell)},
+            {null, makeNai(102, true, true, cell)},
             // cell -> wifi
-            {makeNai(102, 50, true, true, cell), makeNai(103, 20, true, false, wifi)},
+            {makeNai(102, true, true, cell), makeNai(103, true, false, wifi)},
         };
 
         long timeMs = mService.mDefaultNetworkMetrics.creationTimeMs;
@@ -204,8 +202,8 @@ public class IpConnectivityMetricsTest {
                 "  transports: 1",
                 "  default_network_event <",
                 "    default_network_duration_ms: 2002",
-                "    final_score: 50",
-                "    initial_score: 10",
+                "    final_score: 0",
+                "    initial_score: 0",
                 "    ip_support: 3",
                 "    no_default_network_duration_ms: 0",
                 "    previous_default_network_link_layer: 0",
@@ -221,8 +219,8 @@ public class IpConnectivityMetricsTest {
                 "  transports: 2",
                 "  default_network_event <",
                 "    default_network_duration_ms: 4004",
-                "    final_score: 60",
-                "    initial_score: 20",
+                "    final_score: 0",
+                "    initial_score: 0",
                 "    ip_support: 1",
                 "    no_default_network_duration_ms: 0",
                 "    previous_default_network_link_layer: 2",
@@ -255,8 +253,8 @@ public class IpConnectivityMetricsTest {
                 "  transports: 1",
                 "  default_network_event <",
                 "    default_network_duration_ms: 16016",
-                "    final_score: 50",
-                "    initial_score: 10",
+                "    final_score: 0",
+                "    initial_score: 0",
                 "    ip_support: 3",
                 "    no_default_network_duration_ms: 0",
                 "    previous_default_network_link_layer: 4",
@@ -348,8 +346,8 @@ public class IpConnectivityMetricsTest {
         long timeMs = mService.mDefaultNetworkMetrics.creationTimeMs;
         final long cell = BitUtils.packBits(new int[]{NetworkCapabilities.TRANSPORT_CELLULAR});
         final long wifi = BitUtils.packBits(new int[]{NetworkCapabilities.TRANSPORT_WIFI});
-        NetworkAgentInfo cellNai = makeNai(100, 50, false, true, cell);
-        NetworkAgentInfo wifiNai = makeNai(101, 60, true, false, wifi);
+        final NetworkAgentInfo cellNai = makeNai(100, false, true, cell);
+        final NetworkAgentInfo wifiNai = makeNai(101, true, false, wifi);
         logDefaultNetworkEvent(timeMs + 200L, cellNai, null);
         logDefaultNetworkEvent(timeMs + 300L, wifiNai, cellNai);
 
@@ -463,8 +461,8 @@ public class IpConnectivityMetricsTest {
                 "  transports: 1",
                 "  default_network_event <",
                 "    default_network_duration_ms: 100",
-                "    final_score: 50",
-                "    initial_score: 50",
+                "    final_score: 0",
+                "    initial_score: 0",
                 "    ip_support: 2",
                 "    no_default_network_duration_ms: 0",
                 "    previous_default_network_link_layer: 0",
@@ -611,10 +609,9 @@ public class IpConnectivityMetricsTest {
         mNetdListener.onWakeupEvent(prefix, uid, ether, ip, mac, srcIp, dstIp, sport, dport, now);
     }
 
-    NetworkAgentInfo makeNai(int netId, int score, boolean ipv4, boolean ipv6, long transports) {
+    NetworkAgentInfo makeNai(int netId, boolean ipv4, boolean ipv6, long transports) {
         NetworkAgentInfo nai = mock(NetworkAgentInfo.class);
         when(nai.network()).thenReturn(new Network(netId));
-        when(nai.getCurrentScore()).thenReturn(score);
         nai.linkProperties = new LinkProperties();
         nai.networkCapabilities = new NetworkCapabilities();
         nai.lastValidated = true;
