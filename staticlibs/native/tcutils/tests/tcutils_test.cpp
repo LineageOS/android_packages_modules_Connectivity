@@ -113,12 +113,9 @@ TEST(LibTcUtilsTest, AddAndDeleteBpfFilter) {
 TEST(LibTcUtilsTest, AddAndDeleteIngressPoliceFilter) {
   // TODO: this should use bpf_shared.h rather than hardcoding the path
   static constexpr char bpfProgPath[] =
-      "/sys/fs/bpf/prog_netd_schedact_ingress_account";
+      "/sys/fs/bpf/netd_shared/prog_netd_schedact_ingress_account";
   int fd = bpf::retrieveProgram(bpfProgPath);
-  if (fd == -1) {
-    // ingress policing is not supported.
-    return;
-  }
+  ASSERT_LE(3, fd);
   close(fd);
 
   const int errNOENT = isAtLeastKernelVersion(4, 19, 0) ? ENOENT : EINVAL;
