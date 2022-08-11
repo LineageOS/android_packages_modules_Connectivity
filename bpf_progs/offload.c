@@ -155,7 +155,7 @@ static inline __always_inline int do_forward6(struct __sk_buff* skb, const bool 
     if (is_ethernet && (eth->h_proto != htons(ETH_P_IPV6))) return TC_ACT_PIPE;
 
     // IP version must be 6
-    if (ip6->version != 6) TC_PUNT(INVALID_IP_VERSION);
+    if (ip6->version != 6) TC_PUNT(INVALID_IPV6_VERSION);
 
     // Cannot decrement during forward if already zero or would be zero,
     // Let the kernel's stack handle these cases and generate appropriate ICMP errors.
@@ -576,7 +576,7 @@ static inline __always_inline int do_forward4(struct __sk_buff* skb, const bool 
     if (is_ethernet && (eth->h_proto != htons(ETH_P_IP))) return TC_ACT_PIPE;
 
     // IP version must be 4
-    if (ip->version != 4) TC_PUNT(INVALID_IP_VERSION);
+    if (ip->version != 4) TC_PUNT(INVALID_IPV4_VERSION);
 
     // We cannot handle IP options, just standard 20 byte == 5 dword minimal IPv4 header
     if (ip->ihl != 5) TC_PUNT(HAS_IP_OPTIONS);
