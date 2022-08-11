@@ -82,7 +82,6 @@ public class PresenceDiscoveryResultTest {
                 PresenceDiscoveryResult.fromDevice(builder.build());
         PresenceScanFilter scanFilter = new PresenceScanFilter.Builder()
                 .setMaxPathLoss(80)
-                .addPresenceAction(PRESENCE_ACTION)
                 .addCredential(mCredential)
                 .build();
 
