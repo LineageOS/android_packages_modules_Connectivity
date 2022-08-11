@@ -1220,16 +1220,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
         public void incrementCountOrThrow(final int uid) {
             synchronized (mUidToNetworkRequestCount) {
                 final int newRequestCount = mUidToNetworkRequestCount.get(uid, 0) + 1;
-                if (newRequestCount >= mMaxCountPerUid
-                        // HACK : the system server is allowed to go over the request count limit
-                        // when it is creating requests on behalf of another app (but not itself,
-                        // so it can still detect its own request leaks). This only happens in the
-                        // per-app API flows in which case the old requests for that particular
-                        // UID will be removed soon.
-                        // TODO : with the removal of the legacy transact() method, exempting the
-                        // system server UID should no longer be necessary. Make sure this is the
-                        // case and remove this test.
-                        && (Process.myUid() == uid || Process.myUid() != Binder.getCallingUid())) {
+                if (newRequestCount >= mMaxCountPerUid) {
                     throw new ServiceSpecificException(
                             ConnectivityManager.Errors.TOO_MANY_REQUESTS,
                             "Uid " + uid + " exceeded its allotted requests limit");
@@ -10870,6 +10861,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
         removeDefaultNetworkRequestsForPreference(PREFERENCE_ORDER_PROFILE);
         addPerAppDefaultNetworkRequests(
                 createNrisFromProfileNetworkPreferences(mProfileNetworkPreferences));
+
         // Finally, rematch.
         rematchAllNetworksAndRequests();
 
