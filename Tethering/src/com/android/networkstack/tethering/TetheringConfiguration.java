@@ -652,21 +652,13 @@ public class TetheringConfiguration {
      */
     public TetheringConfigurationParcel toStableParcelable() {
         final TetheringConfigurationParcel parcel = new TetheringConfigurationParcel();
-        parcel.subId = activeDataSubId;
         parcel.tetherableUsbRegexs = tetherableUsbRegexs;
         parcel.tetherableWifiRegexs = tetherableWifiRegexs;
         parcel.tetherableBluetoothRegexs = tetherableBluetoothRegexs;
-        parcel.isDunRequired = isDunRequired;
-        parcel.chooseUpstreamAutomatically = chooseUpstreamAutomatically;
-
-        parcel.preferredUpstreamIfaceTypes = toIntArray(preferredUpstreamIfaceTypes);
-
         parcel.legacyDhcpRanges = legacyDhcpRanges;
-        parcel.defaultIPv4DNS = defaultIPv4DNS;
-        parcel.enableLegacyDhcpServer = mEnableLegacyDhcpServer;
         parcel.provisioningApp = provisioningApp;
         parcel.provisioningAppNoUi = provisioningAppNoUi;
-        parcel.provisioningCheckPeriod = provisioningCheckPeriod;
+
         return parcel;
     }
 }
