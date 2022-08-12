@@ -18,7 +18,6 @@ package com.android.server.ethernet;
 
 import static com.android.net.module.util.DeviceConfigUtils.TETHERING_MODULE_NAME;
 
-import android.annotation.Nullable;
 import android.content.ApexEnvironment;
 import android.net.IpConfiguration;
 import android.os.Environment;
@@ -47,7 +46,6 @@ public class EthernetConfigStore {
 
     private IpConfigStore mStore = new IpConfigStore();
     private final ArrayMap<String, IpConfiguration> mIpConfigurations;
-    private IpConfiguration mIpConfigurationForDefaultInterface;
     private final Object mSync = new Object();
 
     public EthernetConfigStore() {
@@ -143,10 +141,5 @@ public class EthernetConfigStore {
         synchronized (mSync) {
             return new ArrayMap<>(mIpConfigurations);
         }
-    }
-
-    @Nullable
-    public IpConfiguration getIpConfigurationForDefaultInterface() {
-        return null;
     }
 }
