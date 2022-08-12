@@ -584,6 +584,11 @@ public class EthernetTracker {
             return;
         }
 
+        if (getInterfaceMode(iface) == INTERFACE_MODE_SERVER) {
+            maybeUpdateServerModeInterfaceState(iface, true);
+            return;
+        }
+
         final String hwAddress = config.hwAddr;
 
         NetworkCapabilities nc = mNetworkCapabilities.get(iface);
@@ -596,14 +601,9 @@ public class EthernetTracker {
             }
         }
 
-        final int mode = getInterfaceMode(iface);
-        if (mode == INTERFACE_MODE_CLIENT) {
-            IpConfiguration ipConfiguration = getOrCreateIpConfiguration(iface);
-            Log.d(TAG, "Tracking interface in client mode: " + iface);
-            mFactory.addInterface(iface, hwAddress, ipConfiguration, nc);
-        } else {
-            maybeUpdateServerModeInterfaceState(iface, true);
-        }
+        IpConfiguration ipConfiguration = getOrCreateIpConfiguration(iface);
+        Log.d(TAG, "Tracking interface in client mode: " + iface);
+        mFactory.addInterface(iface, hwAddress, ipConfiguration, nc);
 
         // Note: if the interface already has link (e.g., if we crashed and got
         // restarted while it was running), we need to fake a link up notification so we
