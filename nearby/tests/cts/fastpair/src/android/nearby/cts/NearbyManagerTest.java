@@ -162,9 +162,9 @@ public class NearbyManagerTest {
     @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void setFastPairScanEnabled() {
         mNearbyManager.setFastPairScanEnabled(mContext, true);
-        assertThat(mNearbyManager.getFastPairScanEnabled(mContext)).isTrue();
+        assertThat(mNearbyManager.isFastPairScanEnabled(mContext)).isTrue();
         mNearbyManager.setFastPairScanEnabled(mContext, false);
-        assertThat(mNearbyManager.getFastPairScanEnabled(mContext)).isFalse();
+        assertThat(mNearbyManager.isFastPairScanEnabled(mContext)).isFalse();
     }
 
     private void enableBluetooth() {
