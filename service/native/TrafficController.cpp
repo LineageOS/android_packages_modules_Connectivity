@@ -614,6 +614,10 @@ void TrafficController::dump(int fd, bool verbose) {
     dw.blankline();
     dw.println("mCookieTagMap status: %s",
                getMapStatus(mCookieTagMap.getMap(), COOKIE_TAG_MAP_PATH).c_str());
+    dw.println("mUidCounterSetMap status: %s",
+               getMapStatus(mUidCounterSetMap.getMap(), UID_COUNTERSET_MAP_PATH).c_str());
+    dw.println("mAppUidStatsMap status: %s",
+               getMapStatus(mAppUidStatsMap.getMap(), APP_UID_STATS_MAP_PATH).c_str());
     dw.println("mStatsMapA status: %s",
                getMapStatus(mStatsMapA.getMap(), STATS_MAP_A_PATH).c_str());
     dw.println("mStatsMapB status: %s",
