@@ -572,17 +572,6 @@ void TrafficController::setPermissionForUids(int permission, const std::vector<u
     }
 }
 
-std::string getProgramStatus(const char *path) {
-    int ret = access(path, R_OK);
-    if (ret == 0) {
-        return StringPrintf("OK");
-    }
-    if (ret != 0 && errno == ENOENT) {
-        return StringPrintf("program is missing at: %s", path);
-    }
-    return StringPrintf("check Program %s error: %s", path, strerror(errno));
-}
-
 std::string getMapStatus(const base::unique_fd& map_fd, const char* path) {
     if (map_fd.get() < 0) {
         return StringPrintf("map fd lost");
@@ -630,19 +619,6 @@ void TrafficController::dump(int fd, bool verbose) {
                getMapStatus(mConfigurationMap.getMap(), CONFIGURATION_MAP_PATH).c_str());
     dw.println("mUidOwnerMap status: %s",
                getMapStatus(mUidOwnerMap.getMap(), UID_OWNER_MAP_PATH).c_str());
-
-    dw.blankline();
-    dw.println("Cgroup ingress program status: %s",
-               getProgramStatus(BPF_INGRESS_PROG_PATH).c_str());
-    dw.println("Cgroup egress program status: %s", getProgramStatus(BPF_EGRESS_PROG_PATH).c_str());
-    dw.println("xt_bpf ingress program status: %s",
-               getProgramStatus(XT_BPF_INGRESS_PROG_PATH).c_str());
-    dw.println("xt_bpf egress program status: %s",
-               getProgramStatus(XT_BPF_EGRESS_PROG_PATH).c_str());
-    dw.println("xt_bpf bandwidth allowlist program status: %s",
-               getProgramStatus(XT_BPF_ALLOWLIST_PROG_PATH).c_str());
-    dw.println("xt_bpf bandwidth denylist program status: %s",
-               getProgramStatus(XT_BPF_DENYLIST_PROG_PATH).c_str());
 
     if (!verbose) {
         return;
