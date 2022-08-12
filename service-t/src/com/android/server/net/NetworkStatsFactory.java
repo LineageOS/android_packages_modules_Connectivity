@@ -296,6 +296,16 @@ public class NetworkStatsFactory {
         return mTunAnd464xlatAdjustedStats.clone();
     }
 
+    /**
+     * Remove stats from {@code mPersistSnapshot} and {@code mTunAnd464xlatAdjustedStats} for the
+     * given uids.
+     */
+    public void removeUidsLocked(int[] uids) {
+        synchronized (mPersistentDataLock) {
+            mPersistSnapshot.removeUids(uids);
+            mTunAnd464xlatAdjustedStats.removeUids(uids);
+        }
+    }
 
     public void assertEquals(NetworkStats expected, NetworkStats actual) {
         if (expected.size() != actual.size()) {
