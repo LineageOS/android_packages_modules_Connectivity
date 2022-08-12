@@ -143,8 +143,6 @@ java_library {
         "src/**/*.java",
         ":framework-connectivity-shared-srcs",
         ":services-connectivity-shared-srcs",
-        // TODO: move to net-utils-device-common
-        ":connectivity-module-utils-srcs",
     ],
     libs: [
         "framework-annotations-lib",
