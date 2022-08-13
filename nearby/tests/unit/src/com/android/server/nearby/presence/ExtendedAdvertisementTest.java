@@ -56,7 +56,6 @@ public class ExtendedAdvertisementTest {
     private static final byte[] AUTHENTICITY_KEY = new byte[]{12, 13, 14};
     private static final String DEVICE_NAME = "test_device";
 
-
     private PresenceBroadcastRequest.Builder mBuilder;
     private PrivateCredential mCredential;
 
@@ -91,6 +90,41 @@ public class ExtendedAdvertisementTest {
         assertThat(originalAdvertisement.getSalt()).isEqualTo(SALT);
         assertThat(originalAdvertisement.getDataElements())
                 .containsExactly(MODE_ID_ADDRESS_ELEMENT, BLE_ADDRESS_ELEMENT);
+    }
+
+    @Test
+    public void test_createFromRequest_invalidParameter() {
+        // invalid version
+        mBuilder.setVersion(BroadcastRequest.PRESENCE_VERSION_V0);
+        assertThat(ExtendedAdvertisement.createFromRequest(mBuilder.build())).isNull();
+
+        // invalid salt
+        PresenceBroadcastRequest.Builder builder =
+                new PresenceBroadcastRequest.Builder(Collections.singletonList(MEDIUM_TYPE_BLE),
+                        new byte[]{1, 2, 3}, mCredential)
+                        .setVersion(BroadcastRequest.PRESENCE_VERSION_V1)
+                        .addAction(PRESENCE_ACTION_1);
+        assertThat(ExtendedAdvertisement.createFromRequest(builder.build())).isNull();
+
+        // invalid identity
+        PrivateCredential privateCredential =
+                new PrivateCredential.Builder(SECRET_ID,
+                        AUTHENTICITY_KEY, new byte[]{1, 2, 3, 4}, DEVICE_NAME)
+                        .setIdentityType(PresenceCredential.IDENTITY_TYPE_PRIVATE)
+                        .build();
+        PresenceBroadcastRequest.Builder builder2 =
+                new PresenceBroadcastRequest.Builder(Collections.singletonList(MEDIUM_TYPE_BLE),
+                        new byte[]{1, 2, 3}, privateCredential)
+                        .setVersion(BroadcastRequest.PRESENCE_VERSION_V1)
+                        .addAction(PRESENCE_ACTION_1);
+        assertThat(ExtendedAdvertisement.createFromRequest(builder2.build())).isNull();
+
+        // empty action
+        PresenceBroadcastRequest.Builder builder3 =
+                new PresenceBroadcastRequest.Builder(Collections.singletonList(MEDIUM_TYPE_BLE),
+                        SALT, mCredential)
+                        .setVersion(BroadcastRequest.PRESENCE_VERSION_V1);
+        assertThat(ExtendedAdvertisement.createFromRequest(builder3.build())).isNull();
     }
 
     @Test
