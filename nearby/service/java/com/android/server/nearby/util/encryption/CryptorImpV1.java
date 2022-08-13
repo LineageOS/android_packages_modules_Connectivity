@@ -188,7 +188,8 @@ public class CryptorImpV1 implements Cryptor {
     /** Generates a 16 bytes HMAC tag. This is used for decryptor to verify if the computed HMAC tag
      * is equal to HMAC tag in advertisement to see data integrity. */
     @Nullable
-    private byte[] generateHmacTag(byte[] data, byte[] authenticityKey) {
+    @VisibleForTesting
+    byte[] generateHmacTag(byte[] data, byte[] authenticityKey) {
         if (data == null || authenticityKey == null) {
             Log.e(TAG, "Not generate HMAC tag because of invalid data input.");
             return null;
