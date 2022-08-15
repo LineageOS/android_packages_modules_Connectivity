@@ -423,7 +423,6 @@ public class NetworkRequest implements Parcelable {
          *
          * @deprecated Use {@link #setNetworkSpecifier(NetworkSpecifier)} instead.
          */
-        @SuppressLint("NewApi") // TODO: b/193460475 remove once fixed
         @Deprecated
         public Builder setNetworkSpecifier(String networkSpecifier) {
             try {
@@ -440,15 +439,6 @@ public class NetworkRequest implements Parcelable {
                 } else if (mNetworkCapabilities.hasTransport(TRANSPORT_TEST)) {
                     return setNetworkSpecifier(new TestNetworkSpecifier(networkSpecifier));
                 } else {
-                    // TODO: b/193460475 remove comment once fixed
-                    // @SuppressLint("NewApi") is due to EthernetNetworkSpecifier being changed
-                    // from @SystemApi to public. EthernetNetworkSpecifier was introduced in Android
-                    // 12 as @SystemApi(client = MODULE_LIBRARIES) and made public in Android 13.
-                    // b/193460475 means in the above situation the tools will think
-                    // EthernetNetworkSpecifier didn't exist in Android 12, causing the NewApi lint
-                    // to fail. In this case, this is actually safe because this code was
-                    // modularized in Android 12, so it can't run on SDKs before Android 12 and is
-                    // therefore guaranteed to always have this class available to it.
                     return setNetworkSpecifier(new EthernetNetworkSpecifier(networkSpecifier));
                 }
             }
