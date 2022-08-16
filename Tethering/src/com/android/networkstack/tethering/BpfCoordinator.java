@@ -1060,8 +1060,11 @@ public class BpfCoordinator {
     }
 
     private void dumpIpv6ForwardingRules(@NonNull IndentingPrintWriter pw) {
+        pw.println("IPv6 Forwarding rules by downstream interface:");
+        pw.increaseIndent();
         if (mIpv6ForwardingRules.size() == 0) {
             pw.println("No IPv6 rules");
+            pw.decreaseIndent();
             return;
         }
 
@@ -1083,6 +1086,7 @@ public class BpfCoordinator {
             }
             pw.decreaseIndent();
         }
+        pw.decreaseIndent();
     }
 
     private String ipv6UpstreamRuletoString(TetherUpstream6Key key, Tether6Value value) {
