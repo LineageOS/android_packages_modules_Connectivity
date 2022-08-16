@@ -805,8 +805,7 @@ TEST_F(TrafficControllerTest, dumpsysInvalidMaps) {
             "Read value of map -1 failed: Bad file descriptor";
 
     std::vector<std::string> expectedLines = {
-        fmt::format("mCookieTagMap {}", kErrIterate),
-        fmt::format("mIfaceStatsMap {}", kErrIterate)};
+        fmt::format("mCookieTagMap {}", kErrIterate)};
     EXPECT_TRUE(expectDumpsysContains(expectedLines));
 }
 
