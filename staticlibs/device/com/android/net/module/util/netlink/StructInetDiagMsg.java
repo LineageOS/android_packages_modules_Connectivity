@@ -16,6 +16,9 @@
 
 package com.android.net.module.util.netlink;
 
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+
 import java.nio.ByteBuffer;
 
 /**
@@ -40,15 +43,28 @@ import java.nio.ByteBuffer;
  */
 public class StructInetDiagMsg {
     public static final int STRUCT_SIZE = 4 + StructInetDiagSockId.STRUCT_SIZE + 20;
+    private static final int IDIAG_SOCK_ID_OFFSET = StructNlMsgHdr.STRUCT_SIZE + 4;
     private static final int IDIAG_UID_OFFSET = StructNlMsgHdr.STRUCT_SIZE + 4
             + StructInetDiagSockId.STRUCT_SIZE + 12;
     public int idiag_uid;
+    @NonNull
+    public StructInetDiagSockId id;
 
     /**
      * Parse inet diag netlink message from buffer.
      */
-    public static StructInetDiagMsg parse(ByteBuffer byteBuffer) {
+    @Nullable
+    public static StructInetDiagMsg parse(@NonNull ByteBuffer byteBuffer) {
+        if (byteBuffer.remaining() < STRUCT_SIZE) {
+            return null;
+        }
         StructInetDiagMsg struct = new StructInetDiagMsg();
+        final byte family = byteBuffer.get();
+        byteBuffer.position(IDIAG_SOCK_ID_OFFSET);
+        struct.id = StructInetDiagSockId.parse(byteBuffer, family);
+        if (struct.id == null) {
+            return null;
+        }
         struct.idiag_uid = byteBuffer.getInt(IDIAG_UID_OFFSET);
         return struct;
     }
@@ -57,6 +73,7 @@ public class StructInetDiagMsg {
     public String toString() {
         return "StructInetDiagMsg{ "
                 + "idiag_uid{" + idiag_uid + "}, "
+                + "id{" + id + "}, "
                 + "}";
     }
 }
