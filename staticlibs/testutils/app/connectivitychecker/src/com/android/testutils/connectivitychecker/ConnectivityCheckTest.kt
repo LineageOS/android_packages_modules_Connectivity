@@ -18,10 +18,17 @@ package com.android.testutils.connectivitychecker
 
 import android.content.pm.PackageManager.FEATURE_TELEPHONY
 import android.content.pm.PackageManager.FEATURE_WIFI
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities.NET_CAPABILITY_INTERNET
+import android.net.NetworkCapabilities.TRANSPORT_CELLULAR
+import android.net.NetworkRequest
 import android.telephony.TelephonyManager
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.android.testutils.ConnectUtil
+import com.android.testutils.RecorderCallback
+import com.android.testutils.TestableNetworkCallback
+import com.android.testutils.tryTest
 import org.junit.Test
 import org.junit.runner.RunWith
 import kotlin.test.assertTrue
@@ -61,5 +68,20 @@ class ConnectivityCheckTest {
         assertTrue(tm.isDataConnectivityPossible,
             "The device is not setup with a SIM card that supports data connectivity. " +
                     commonError)
+        val cb = TestableNetworkCallback()
+        val cm = context.getSystemService(ConnectivityManager::class.java)
+                ?: fail("Could not get ConnectivityManager")
+        cm.registerNetworkCallback(
+                NetworkRequest.Builder()
+                        .addTransportType(TRANSPORT_CELLULAR)
+                        .addCapability(NET_CAPABILITY_INTERNET).build(), cb)
+        tryTest {
+            cb.eventuallyExpectOrNull<RecorderCallback.CallbackEntry.Available>()
+                    ?: fail("The device does not have mobile data available. Check that it is " +
+                            "setup with a SIM card that has a working data plan, and that the " +
+                            "APN configuration is valid.")
+        } cleanup {
+            cm.unregisterNetworkCallback(cb)
+        }
     }
 }
