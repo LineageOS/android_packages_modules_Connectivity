@@ -497,9 +497,7 @@ class EthernetManagerTest {
 
         // If an interface appears, existing callbacks see it.
         val iface2 = createInterface()
-        // TODO: fix the up/up/down/up callbacks and only send down/up. Change to expectCallback
-        // once that is fixed.
-        listener1.eventuallyExpect(iface2, STATE_LINK_DOWN, ROLE_CLIENT)
+        listener1.expectCallback(iface2, STATE_LINK_DOWN, ROLE_CLIENT)
         listener1.expectCallback(iface2, STATE_LINK_UP, ROLE_CLIENT)
 
         // Register a new listener, it should see state of all existing interfaces immediately.
