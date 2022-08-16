@@ -21,7 +21,6 @@ java_sdk_library {
     name: "framework-tethering",
     defaults: ["framework-module-defaults"],
     impl_library_visibility: [
-        "//frameworks/base/packages/Tethering:__subpackages__",
         "//packages/modules/Connectivity/Tethering:__subpackages__",
 
         // Using for test only
