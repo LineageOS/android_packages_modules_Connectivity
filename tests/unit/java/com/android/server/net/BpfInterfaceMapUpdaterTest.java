@@ -16,7 +16,13 @@
 
 package com.android.server.net;
 
+import static android.system.OsConstants.EPERM;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 import static org.mockito.Matchers.eq;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
@@ -27,6 +33,7 @@ import android.net.MacAddress;
 import android.os.Build;
 import android.os.Handler;
 import android.os.test.TestLooper;
+import android.system.ErrnoException;
 
 import androidx.test.filters.SmallTest;
 
@@ -36,6 +43,7 @@ import com.android.net.module.util.InterfaceParams;
 import com.android.net.module.util.Struct.U32;
 import com.android.testutils.DevSdkIgnoreRule;
 import com.android.testutils.DevSdkIgnoreRunner;
+import com.android.testutils.TestBpfMap;
 
 import org.junit.Before;
 import org.junit.Test;
@@ -56,7 +64,8 @@ public final class BpfInterfaceMapUpdaterTest {
     private final TestLooper mLooper = new TestLooper();
     private BaseNetdUnsolicitedEventListener mListener;
     private BpfInterfaceMapUpdater mUpdater;
-    @Mock private IBpfMap<U32, InterfaceMapValue> mBpfMap;
+    private IBpfMap<U32, InterfaceMapValue> mBpfMap =
+            spy(new TestBpfMap<>(U32.class, InterfaceMapValue.class));
     @Mock private INetd mNetd;
     @Mock private Context mContext;
 
@@ -117,5 +126,22 @@ public final class BpfInterfaceMapUpdaterTest {
         mListener.onInterfaceRemoved(TEST_INTERFACE_NAME);
         mLooper.dispatchAll();
         verifyNoMoreInteractions(mBpfMap);
+    }
+
+    @Test
+    public void testGetIfNameByIndex() throws Exception {
+        mBpfMap.updateEntry(new U32(TEST_INDEX), new InterfaceMapValue(TEST_INTERFACE_NAME));
+        assertEquals(TEST_INTERFACE_NAME, mUpdater.getIfNameByIndex(TEST_INDEX));
+    }
+
+    @Test
+    public void testGetIfNameByIndexNoEntry() {
+        assertNull(mUpdater.getIfNameByIndex(TEST_INDEX));
+    }
+
+    @Test
+    public void testGetIfNameByIndexException() throws Exception {
+        doThrow(new ErrnoException("", EPERM)).when(mBpfMap).getValue(new U32(TEST_INDEX));
+        assertNull(mUpdater.getIfNameByIndex(TEST_INDEX));
     }
 }

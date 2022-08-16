@@ -136,4 +136,19 @@ public class BpfInterfaceMapUpdater {
             mHandler.post(() -> addInterface(ifName));
         }
     }
+
+    /** get interface name by interface index from bpf map */
+    public String getIfNameByIndex(final long index) {
+        try {
+            final InterfaceMapValue value = mBpfMap.getValue(new U32(index));
+            if (value == null) {
+                Log.e(TAG, "No if name entry for index " + index);
+                return null;
+            }
+            return value.getInterfaceNameString();
+        } catch (ErrnoException e) {
+            Log.e(TAG, "Failed to get entry for index " + index + ": " + e);
+            return null;
+        }
+    }
 }
