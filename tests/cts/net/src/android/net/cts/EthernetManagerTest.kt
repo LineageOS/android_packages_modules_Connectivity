@@ -253,6 +253,12 @@ class EthernetManagerTest {
         assumeTrue(isEthernetSupported())
         setIncludeTestInterfaces(true)
         addInterfaceStateListener(ifaceListener)
+        // Handler.post() events may get processed after native fd events, so it is possible that
+        // RTM_NEWLINK (from a subsequent createInterface() call) arrives before the interface state
+        // listener is registered. This affects the callbacks and breaks the tests.
+        // setEthernetEnabled() will always wait on a callback, so it is used as a barrier to ensure
+        // proper listener registration before proceeding.
+        setEthernetEnabled(true)
     }
 
     @After
