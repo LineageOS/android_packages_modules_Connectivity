@@ -56,6 +56,7 @@ import java.util.List;
 public class TetheringModuleTest {
     private Context mContext;
     private CtsTetheringUtils mCtsTetheringUtils;
+    private final long mRestartTimeOutMs = 5_000;
 
     @Before
     public void setUp() throws Exception {
@@ -103,8 +104,20 @@ public class TetheringModuleTest {
             final List<String> wifiRegexs =
                     tetherEventCallback.getTetheringInterfaceRegexps().getTetherableWifiRegexs();
 
-            tetherEventCallback.expectTetheredInterfacesChanged(wifiRegexs, TETHERING_WIFI);
-            nif = NetworkInterface.getByName(wifiTetheringIface);
+            final TetheringInterface restartedIface =
+                    tetherEventCallback.pollTetheredInterfacesChanged(wifiRegexs, TETHERING_WIFI,
+                    mRestartTimeOutMs);
+            final TetheringInterface newIface;
+            if (restartedIface != null) {
+                newIface = restartedIface;
+            } else {
+                // Because of race inside tethering module, there is no guarantee wifi tethering
+                // would restart successfully. If tethering don't auto restarted, restarting it
+                // manually. TODO(b/242649651): remove this when tethering auto restart is reliable.
+                newIface = mCtsTetheringUtils.startWifiTethering(tetherEventCallback);
+            }
+
+            nif = NetworkInterface.getByName(newIface.getInterface());
             final LinkAddress newHotspotAddr = getFirstIpv4Address(nif);
             assertNotNull(newHotspotAddr);
 
