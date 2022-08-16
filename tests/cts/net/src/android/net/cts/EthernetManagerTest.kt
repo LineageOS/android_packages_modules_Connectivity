@@ -193,9 +193,35 @@ class EthernetManagerTest {
                 val state: Int,
                 val role: Int,
                 val configuration: IpConfiguration?
-            ) : CallbackEntry()
+            ) : CallbackEntry() {
+                override fun toString(): String {
+                    val stateString = when (state) {
+                        STATE_ABSENT -> "STATE_ABSENT"
+                        STATE_LINK_UP -> "STATE_LINK_UP"
+                        STATE_LINK_DOWN -> "STATE_LINK_DOWN"
+                        else -> state.toString()
+                    }
+                    val roleString = when (role) {
+                        ROLE_NONE -> "ROLE_NONE"
+                        ROLE_CLIENT -> "ROLE_CLIENT"
+                        ROLE_SERVER -> "ROLE_SERVER"
+                        else -> role.toString()
+                    }
+                    return ("InterfaceStateChanged(iface=$iface, state=$stateString, " +
+                            "role=$roleString, ipConfig=$configuration)")
+                }
+            }
 
-            data class EthernetStateChanged(val state: Int) : CallbackEntry()
+            data class EthernetStateChanged(val state: Int) : CallbackEntry() {
+                override fun toString(): String {
+                    val stateString = when (state) {
+                        ETHERNET_STATE_ENABLED -> "ETHERNET_STATE_ENABLED"
+                        ETHERNET_STATE_DISABLED -> "ETHERNET_STATE_DISABLED"
+                        else -> state.toString()
+                    }
+                    return "EthernetStateChanged(state=$stateString)"
+                }
+            }
         }
 
         override fun onInterfaceStateChanged(
@@ -236,11 +262,13 @@ class EthernetManagerTest {
         fun eventuallyExpect(expected: CallbackEntry) = events.poll(TIMEOUT_MS) { it == expected }
 
         fun eventuallyExpect(iface: EthernetTestInterface, state: Int, role: Int) {
-            assertNotNull(eventuallyExpect(createChangeEvent(iface.name, state, role)))
+            val event = createChangeEvent(iface.name, state, role)
+            assertNotNull(eventuallyExpect(event), "Never received expected $event")
         }
 
         fun eventuallyExpect(state: Int) {
-            assertNotNull(eventuallyExpect(EthernetStateChanged(state)))
+            val event = EthernetStateChanged(state)
+            assertNotNull(eventuallyExpect(event), "Never received expected $event")
         }
 
         fun assertNoCallback() {
