@@ -27,7 +27,7 @@ import java.util.Locale;
 import java.util.Objects;
 
 /** An mDNS "AAAA" or "A" record, which holds an IPv6 or IPv4 address. */
-// TODO(b/177655645): Resolve nullness suppression.
+// TODO(b/242631897): Resolve nullness suppression.
 @SuppressWarnings("nullness")
 @VisibleForTesting
 public class MdnsInetAddressRecord extends MdnsRecord {

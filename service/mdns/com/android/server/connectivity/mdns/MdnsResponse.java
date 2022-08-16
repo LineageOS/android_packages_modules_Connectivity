@@ -25,7 +25,7 @@ import java.util.LinkedList;
 import java.util.List;
 
 /** An mDNS response. */
-// TODO(b/177655645): Resolve nullness suppression.
+// TODO(b/242631897): Resolve nullness suppression.
 @SuppressWarnings("nullness")
 public class MdnsResponse {
     private final List<MdnsRecord> records;
