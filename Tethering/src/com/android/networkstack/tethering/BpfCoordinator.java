@@ -64,7 +64,7 @@ import com.android.net.module.util.InterfaceParams;
 import com.android.net.module.util.NetworkStackConstants;
 import com.android.net.module.util.SharedLog;
 import com.android.net.module.util.Struct;
-import com.android.net.module.util.Struct.U32;
+import com.android.net.module.util.Struct.S32;
 import com.android.net.module.util.bpf.Tether4Key;
 import com.android.net.module.util.bpf.Tether4Value;
 import com.android.net.module.util.bpf.TetherStatsKey;
@@ -1278,18 +1278,18 @@ public class BpfCoordinator {
             pw.println("No counter support");
             return;
         }
-        try (BpfMap<U32, U32> map = new BpfMap<>(TETHER_ERROR_MAP_PATH, BpfMap.BPF_F_RDONLY,
-                U32.class, U32.class)) {
+        try (BpfMap<S32, S32> map = new BpfMap<>(TETHER_ERROR_MAP_PATH, BpfMap.BPF_F_RDONLY,
+                S32.class, S32.class)) {
 
             map.forEach((k, v) -> {
                 String counterName;
                 try {
-                    counterName = sBpfCounterNames[(int) k.val];
+                    counterName = sBpfCounterNames[k.val];
                 } catch (IndexOutOfBoundsException e) {
                     // Should never happen because this code gets the counter name from the same
                     // include file as the BPF program that increments the counter.
                     Log.wtf(TAG, "Unknown tethering counter type " + k.val);
-                    counterName = Long.toString(k.val);
+                    counterName = Integer.toString(k.val);
                 }
                 if (v.val > 0) pw.println(String.format("%s: %d", counterName, v.val));
             });
