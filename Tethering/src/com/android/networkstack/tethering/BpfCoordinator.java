@@ -1112,6 +1112,36 @@ public class BpfCoordinator {
         }
     }
 
+    private String ipv6DownstreamRuleToString(TetherDownstream6Key key, Tether6Value value) {
+        final String neigh6;
+        try {
+            neigh6 = InetAddress.getByAddress(key.neigh6).getHostAddress();
+        } catch (UnknownHostException impossible) {
+            throw new AssertionError("IP address array not valid IPv6 address!");
+        }
+        return String.format("%d(%s) [%s] %s -> %d(%s) %04x [%s] [%s]",
+                key.iif, getIfName(key.iif), key.dstMac, neigh6, value.oif, getIfName(value.oif),
+                value.ethProto, value.ethSrcMac, value.ethDstMac);
+    }
+
+    private void dumpIpv6DownstreamRules(IndentingPrintWriter pw) {
+        try (BpfMap<TetherDownstream6Key, Tether6Value> map = mDeps.getBpfDownstream6Map()) {
+            if (map == null) {
+                pw.println("No IPv6 downstream");
+                return;
+            }
+            if (map.isEmpty()) {
+                pw.println("No IPv6 downstream rules");
+                return;
+            }
+            map.forEach((k, v) -> pw.println(ipv6DownstreamRuleToString(k, v)));
+        } catch (ErrnoException | IOException e) {
+            pw.println("Error dumping IPv6 downstream map: " + e);
+        }
+    }
+
+    // TODO: use dump utils with headerline and lambda which prints key and value to reduce
+    // duplicate bpf map dump code.
     private void dumpBpfForwardingRulesIpv6(IndentingPrintWriter pw) {
         pw.println("IPv6 Upstream: iif(iface) [inDstMac] -> oif(iface) etherType [outSrcMac] "
                 + "[outDstMac]");
@@ -1119,7 +1149,11 @@ public class BpfCoordinator {
         dumpIpv6UpstreamRules(pw);
         pw.decreaseIndent();
 
-        // TODO: dump downstream map.
+        pw.println("IPv6 Downstream: iif(iface) [inDstMac] neigh6 -> oif(iface) etherType "
+                + "[outSrcMac] [outDstMac]");
+        pw.increaseIndent();
+        dumpIpv6DownstreamRules(pw);
+        pw.decreaseIndent();
     }
 
     private <K extends Struct, V extends Struct> void dumpRawMap(BpfMap<K, V> map,
