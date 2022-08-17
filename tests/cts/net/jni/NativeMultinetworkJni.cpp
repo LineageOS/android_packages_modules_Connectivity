@@ -169,7 +169,7 @@ JNIEXPORT void Java_android_net_cts_MultinetworkApiTest_runResNqueryCheck(
     // V6
     fd = android_res_nquery(handle, kHostname, ns_c_in, ns_t_aaaa, 0);
     EXPECT_GE(env, fd, 0, "v6 res_nquery");
-    EXPECT_EQ(env, 0, expectAnswersValid(env, fd, AF_INET, ns_r_noerror),
+    EXPECT_EQ(env, 0, expectAnswersValid(env, fd, AF_INET6, ns_r_noerror),
             "v6 res_nquery check answers");
 }
 
