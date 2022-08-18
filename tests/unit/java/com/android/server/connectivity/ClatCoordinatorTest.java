@@ -84,10 +84,10 @@ public class ClatCoordinatorTest {
     private static final int GOOGLE_DNS_4 = 0x08080808;  // 8.8.8.8
     private static final int NETID = 42;
 
-    // The test fwmark means: PERMISSION_SYSTEM (0x2), protectedFromVpn: true,
+    // The test fwmark means: PERMISSION_NETWORK | PERMISSION_SYSTEM (0x3), protectedFromVpn: true,
     // explicitlySelected: true, netid: 42. For bit field structure definition, see union Fwmark in
     // system/netd/include/Fwmark.h
-    private static final int MARK = 0xb002a;
+    private static final int MARK = 0xf002a;
 
     private static final String XLAT_LOCAL_IPV4ADDR_STRING = "192.0.0.46";
     private static final String XLAT_LOCAL_IPV6ADDR_STRING = "2001:db8:0:b11::464";
@@ -483,10 +483,10 @@ public class ClatCoordinatorTest {
 
     @Test
     public void testGetFwmark() throws Exception {
-        assertEquals(0xb0064, ClatCoordinator.getFwmark(100));
-        assertEquals(0xb03e8, ClatCoordinator.getFwmark(1000));
-        assertEquals(0xb2710, ClatCoordinator.getFwmark(10000));
-        assertEquals(0xbffff, ClatCoordinator.getFwmark(65535));
+        assertEquals(0xf0064, ClatCoordinator.getFwmark(100));
+        assertEquals(0xf03e8, ClatCoordinator.getFwmark(1000));
+        assertEquals(0xf2710, ClatCoordinator.getFwmark(10000));
+        assertEquals(0xfffff, ClatCoordinator.getFwmark(65535));
     }
 
     @Test
