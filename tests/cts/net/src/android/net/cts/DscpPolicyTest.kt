@@ -163,8 +163,7 @@ class DscpPolicyTest {
 
             // Only statically configure the IPv4 address; for IPv6, use the SLAAC generated
             // address.
-            iface = tnm.createTapInterface(true /* disableIpv6ProvisioningDelay */,
-                    arrayOf(LinkAddress(LOCAL_IPV4_ADDRESS, IP4_PREFIX_LEN)))
+            iface = tnm.createTapInterface(arrayOf(LinkAddress(LOCAL_IPV4_ADDRESS, IP4_PREFIX_LEN)))
             assertNotNull(iface)
         }
 
@@ -224,7 +223,7 @@ class DscpPolicyTest {
         val onLinkPrefix = raResponder.prefix
         val startTime = SystemClock.elapsedRealtime()
         while (SystemClock.elapsedRealtime() - startTime < PACKET_TIMEOUT_MS) {
-            SystemClock.sleep(1 /* ms */)
+            SystemClock.sleep(50 /* ms */)
             val sock = Os.socket(AF_INET6, SOCK_DGRAM, IPPROTO_UDP)
             try {
                 network.bindSocket(sock)
