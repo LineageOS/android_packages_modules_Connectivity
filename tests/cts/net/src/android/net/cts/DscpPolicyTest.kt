@@ -297,7 +297,6 @@ class DscpPolicyTest {
         val lp = LinkProperties().apply {
             addLinkAddress(LinkAddress(LOCAL_IPV4_ADDRESS, IP4_PREFIX_LEN))
             addRoute(RouteInfo(IpPrefix("0.0.0.0/0"), null, null))
-            addRoute(RouteInfo(IpPrefix("::/0"), TEST_ROUTER_IPV6_ADDR))
             setInterfaceName(specifier)
         }
         val config = NetworkAgentConfig.Builder().build()
