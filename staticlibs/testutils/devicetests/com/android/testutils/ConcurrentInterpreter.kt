@@ -2,7 +2,6 @@ package com.android.testutils
 
 import android.os.SystemClock
 import java.util.concurrent.CyclicBarrier
-import kotlin.system.measureTimeMillis
 import kotlin.test.assertEquals
 import kotlin.test.assertFails
 import kotlin.test.assertNull
@@ -48,6 +47,9 @@ open class ConcurrentInterpreter<T>(
 ) {
     private val interpretTable: List<InterpretMatcher<T>> =
             localInterpretTable + getDefaultInstructions()
+    // The last time the thread became blocked, with base System.currentTimeMillis(). This should
+    // be set immediately before any time the thread gets blocked.
+    internal val lastBlockedTime = ThreadLocal<Long>()
 
     // Split the line into multiple statements separated by ";" and execute them. Return whatever
     // the last statement returned.
@@ -87,6 +89,7 @@ open class ConcurrentInterpreter<T>(
         threadInstructions.mapIndexed { threadIndex, instructions ->
             Thread {
                 val threadLocal = threadTransform(initial)
+                lastBlockedTime.set(System.currentTimeMillis())
                 barrier.await()
                 var lineNum = 0
                 instructions.forEach {
@@ -104,6 +107,7 @@ open class ConcurrentInterpreter<T>(
                                 callSite.lineNumber + lineNum + lineShift,
                                 callSite.className, callSite.methodName, callSite.fileName, e)
                     }
+                    lastBlockedTime.set(System.currentTimeMillis())
                     barrier.await()
                 }
             }.also { it.start() }
@@ -145,8 +149,25 @@ private fun <T> getDefaultInstructions() = listOf<InterpretMatcher<T>>(
     Regex("(.*)//.*") to { i, t, r -> i.interpret(r.strArg(1), t) },
     // Interpret "XXX time x..y" : run XXX and check it took at least x and not more than y
     Regex("""(.*)\s*time\s*(\d+)\.\.(\d+)""") to { i, t, r ->
-        val time = measureTimeMillis { i.interpret(r.strArg(1), t) }
-        assertTrue(time in r.timeArg(2)..r.timeArg(3), "$time not in ${r.timeArg(2)..r.timeArg(3)}")
+        val lateStart = System.currentTimeMillis()
+        i.interpret(r.strArg(1), t)
+        val end = System.currentTimeMillis()
+        // There is uncertainty in measuring time.
+        // It takes some (small) time for the thread to even measure the time at which it
+        // starts interpreting the instruction. It is therefore possible that thread A sleeps for
+        // n milliseconds, and B expects to have waited for at least n milliseconds, but because
+        // B started measuring after 1ms or so, B thinks it didn't wait long enough.
+        // To avoid this, when the `time` instruction tests the instruction took at least X and
+        // at most Y, it tests X against a time measured since *before* the thread blocked but
+        // Y against a time measured as late as possible. This ensures that the timer is
+        // sufficiently lenient in both directions that there are no flaky measures.
+        val minTime = end - lateStart
+        val maxTime = end - i.lastBlockedTime.get()!!
+
+        assertTrue(maxTime >= r.timeArg(2),
+                "Should have taken at least ${r.timeArg(2)} but took less than $maxTime")
+        assertTrue(minTime <= r.timeArg(3),
+                "Should have taken at most ${r.timeArg(3)} but took more than $minTime")
     },
     // Interpret "XXX = YYY" : run XXX and assert its return value is equal to YYY. "null" supported
     Regex("""(.*)\s*=\s*(null|\d+)""") to { i, t, r ->
