@@ -134,18 +134,16 @@ bool BpfHandler::hasUpdateDeviceStatsPermission(uid_t uid) {
 
 int BpfHandler::tagSocket(int sockFd, uint32_t tag, uid_t chargeUid, uid_t realUid) {
     std::lock_guard guard(mMutex);
-    if (chargeUid != realUid && !hasUpdateDeviceStatsPermission(realUid)) {
-        return -EPERM;
-    }
+    if (!mCookieTagMap.isValid()) return -EPERM;
+
+    if (chargeUid != realUid && !hasUpdateDeviceStatsPermission(realUid)) return -EPERM;
 
     // Note that tagging the socket to AID_CLAT is only implemented in JNI ClatCoordinator.
     // The process is not allowed to tag socket to AID_CLAT via tagSocket() which would cause
     // process data usage accounting to be bypassed. Tagging AID_CLAT is used for avoiding counting
     // CLAT traffic data usage twice. See packages/modules/Connectivity/service/jni/
     // com_android_server_connectivity_ClatCoordinator.cpp
-    if (chargeUid == AID_CLAT) {
-        return -EPERM;
-    }
+    if (chargeUid == AID_CLAT) return -EPERM;
 
     // The socket destroy listener only monitors on the group {INET_TCP, INET_UDP, INET6_TCP,
     // INET6_UDP}. Tagging listener unsupported socket causes that the tag can't be removed from
@@ -180,6 +178,7 @@ int BpfHandler::tagSocket(int sockFd, uint32_t tag, uid_t chargeUid, uid_t realU
 
     uint64_t sock_cookie = getSocketCookie(sockFd);
     if (sock_cookie == NONEXISTENT_COOKIE) return -errno;
+
     UidTagValue newKey = {.uid = (uint32_t)chargeUid, .tag = tag};
 
     uint32_t totalEntryCount = 0;
@@ -242,9 +241,11 @@ int BpfHandler::tagSocket(int sockFd, uint32_t tag, uid_t chargeUid, uid_t realU
 
 int BpfHandler::untagSocket(int sockFd) {
     std::lock_guard guard(mMutex);
-    uint64_t sock_cookie = getSocketCookie(sockFd);
 
+    uint64_t sock_cookie = getSocketCookie(sockFd);
     if (sock_cookie == NONEXISTENT_COOKIE) return -errno;
+
+    if (!mCookieTagMap.isValid()) return -EPERM;
     base::Result<void> res = mCookieTagMap.deleteValue(sock_cookie);
     if (!res.ok()) {
         ALOGE("Failed to untag socket: %s", strerror(res.error().code()));
