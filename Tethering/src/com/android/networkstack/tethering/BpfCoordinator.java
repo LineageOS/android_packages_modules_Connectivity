@@ -998,9 +998,9 @@ public class BpfCoordinator {
 
         pw.println("Forwarding rules:");
         pw.increaseIndent();
-        dumpIpv6UpstreamRules(pw);
-        dumpIpv6ForwardingRules(pw);
-        dumpIpv4ForwardingRules(pw);
+        dumpIpv6ForwardingRulesByDownstream(pw);
+        dumpBpfForwardingRulesIpv6(pw);
+        dumpBpfForwardingRulesIpv4(pw);
         pw.decreaseIndent();
         pw.println();
 
@@ -1059,9 +1059,12 @@ public class BpfCoordinator {
         }
     }
 
-    private void dumpIpv6ForwardingRules(@NonNull IndentingPrintWriter pw) {
+    private void dumpIpv6ForwardingRulesByDownstream(@NonNull IndentingPrintWriter pw) {
+        pw.println("IPv6 Forwarding rules by downstream interface:");
+        pw.increaseIndent();
         if (mIpv6ForwardingRules.size() == 0) {
             pw.println("No IPv6 rules");
+            pw.decreaseIndent();
             return;
         }
 
@@ -1071,22 +1074,24 @@ public class BpfCoordinator {
             // The rule downstream interface index is paired with the interface name from
             // IpServer#interfaceName. See #startIPv6, #updateIpv6ForwardingRules in IpServer.
             final String downstreamIface = ipServer.interfaceName();
-            pw.println("[" + downstreamIface + "]: iif(iface) oif(iface) v6addr srcmac dstmac");
+            pw.println("[" + downstreamIface + "]: iif(iface) oif(iface) v6addr "
+                    + "[srcmac] [dstmac]");
 
             pw.increaseIndent();
             LinkedHashMap<Inet6Address, Ipv6ForwardingRule> rules = entry.getValue();
             for (Ipv6ForwardingRule rule : rules.values()) {
                 final int upstreamIfindex = rule.upstreamIfindex;
-                pw.println(String.format("%d(%s) %d(%s) %s %s %s", upstreamIfindex,
+                pw.println(String.format("%d(%s) %d(%s) %s [%s] [%s]", upstreamIfindex,
                         mInterfaceNames.get(upstreamIfindex), rule.downstreamIfindex,
                         downstreamIface, rule.address.getHostAddress(), rule.srcMac, rule.dstMac));
             }
             pw.decreaseIndent();
         }
+        pw.decreaseIndent();
     }
 
-    private String ipv6UpstreamRuletoString(TetherUpstream6Key key, Tether6Value value) {
-        return String.format("%d(%s) %s -> %d(%s) %04x %s %s",
+    private String ipv6UpstreamRuleToString(TetherUpstream6Key key, Tether6Value value) {
+        return String.format("%d(%s) [%s] -> %d(%s) %04x [%s] [%s]",
                 key.iif, getIfName(key.iif), key.dstMac, value.oif, getIfName(value.oif),
                 value.ethProto, value.ethSrcMac, value.ethDstMac);
     }
@@ -1101,10 +1106,54 @@ public class BpfCoordinator {
                 pw.println("No IPv6 upstream rules");
                 return;
             }
-            map.forEach((k, v) -> pw.println(ipv6UpstreamRuletoString(k, v)));
+            map.forEach((k, v) -> pw.println(ipv6UpstreamRuleToString(k, v)));
         } catch (ErrnoException | IOException e) {
             pw.println("Error dumping IPv6 upstream map: " + e);
         }
+    }
+
+    private String ipv6DownstreamRuleToString(TetherDownstream6Key key, Tether6Value value) {
+        final String neigh6;
+        try {
+            neigh6 = InetAddress.getByAddress(key.neigh6).getHostAddress();
+        } catch (UnknownHostException impossible) {
+            throw new AssertionError("IP address array not valid IPv6 address!");
+        }
+        return String.format("%d(%s) [%s] %s -> %d(%s) %04x [%s] [%s]",
+                key.iif, getIfName(key.iif), key.dstMac, neigh6, value.oif, getIfName(value.oif),
+                value.ethProto, value.ethSrcMac, value.ethDstMac);
+    }
+
+    private void dumpIpv6DownstreamRules(IndentingPrintWriter pw) {
+        try (BpfMap<TetherDownstream6Key, Tether6Value> map = mDeps.getBpfDownstream6Map()) {
+            if (map == null) {
+                pw.println("No IPv6 downstream");
+                return;
+            }
+            if (map.isEmpty()) {
+                pw.println("No IPv6 downstream rules");
+                return;
+            }
+            map.forEach((k, v) -> pw.println(ipv6DownstreamRuleToString(k, v)));
+        } catch (ErrnoException | IOException e) {
+            pw.println("Error dumping IPv6 downstream map: " + e);
+        }
+    }
+
+    // TODO: use dump utils with headerline and lambda which prints key and value to reduce
+    // duplicate bpf map dump code.
+    private void dumpBpfForwardingRulesIpv6(IndentingPrintWriter pw) {
+        pw.println("IPv6 Upstream: iif(iface) [inDstMac] -> oif(iface) etherType [outSrcMac] "
+                + "[outDstMac]");
+        pw.increaseIndent();
+        dumpIpv6UpstreamRules(pw);
+        pw.decreaseIndent();
+
+        pw.println("IPv6 Downstream: iif(iface) [inDstMac] neigh6 -> oif(iface) etherType "
+                + "[outSrcMac] [outDstMac]");
+        pw.increaseIndent();
+        dumpIpv6DownstreamRules(pw);
+        pw.decreaseIndent();
     }
 
     private <K extends Struct, V extends Struct> void dumpRawMap(BpfMap<K, V> map,
@@ -1203,7 +1252,7 @@ public class BpfCoordinator {
         map.forEach((k, v) -> pw.println(ipv4RuleToString(now, downstream, k, v)));
     }
 
-    private void dumpIpv4ForwardingRules(IndentingPrintWriter pw) {
+    private void dumpBpfForwardingRulesIpv4(IndentingPrintWriter pw) {
         final long now = SystemClock.elapsedRealtimeNanos();
 
         try (BpfMap<Tether4Key, Tether4Value> upstreamMap = mDeps.getBpfUpstream4Map();
