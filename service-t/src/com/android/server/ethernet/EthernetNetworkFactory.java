@@ -196,7 +196,7 @@ public class EthernetNetworkFactory {
             @Nullable final NetworkCapabilities capabilities,
             final EthernetCallback cb) {
         if (!hasInterface(ifaceName)) {
-            maybeSendNetworkManagementCallbackForUntracked(ifaceName, cb);
+            cb.onError(ifaceName + " is not tracked by the ethernet service");
             return;
         }
 
@@ -238,7 +238,7 @@ public class EthernetNetworkFactory {
     protected boolean updateInterfaceLinkState(@NonNull final String ifaceName, final boolean up,
             final EthernetCallback cb) {
         if (!hasInterface(ifaceName)) {
-            maybeSendNetworkManagementCallbackForUntracked(ifaceName, cb);
+            cb.onError(ifaceName + " is not tracked by the ethernet service");
             return false;
         }
 
@@ -250,27 +250,9 @@ public class EthernetNetworkFactory {
         return iface.updateLinkState(up, cb);
     }
 
-    private void maybeSendNetworkManagementCallbackForUntracked(
-            String ifaceName, EthernetCallback cb) {
-        maybeSendNetworkManagementCallback(cb, null,
-                ifaceName + " can't be updated as it is not available.");
-    }
-
     @VisibleForTesting
     protected boolean hasInterface(String ifaceName) {
         return mTrackingInterfaces.containsKey(ifaceName);
-    }
-
-    private static void maybeSendNetworkManagementCallback(
-            final EthernetCallback cb,
-            @Nullable final String iface,
-            @Nullable final String msg) {
-        Objects.requireNonNull(cb, "EthernetCallback may never be null");
-        if (iface != null) {
-            cb.onResult(iface);
-        } else {
-            cb.onError(msg);
-        }
     }
 
     @VisibleForTesting
@@ -562,7 +544,7 @@ public class EthernetNetworkFactory {
                     });
             mNetworkAgent.register();
             mNetworkAgent.markConnected();
-            realizeNetworkManagementCallback(name, null);
+            mIpClientCallback.mCb.onResult(name);
         }
 
         void onIpLayerStopped(EthernetCallback cb) {
@@ -572,28 +554,10 @@ public class EthernetNetworkFactory {
             if (null == mDeps.getNetworkInterfaceByName(name)) {
                 if (DBG) Log.d(TAG, name + " is no longer available.");
                 // Send a callback in case a provisioning request was in progress.
-                maybeSendNetworkManagementCallbackForAbort();
+                mIpClientCallback.mCb.onError("IP provisioning has been aborted.");
                 return;
             }
             restart(cb);
-        }
-
-        private void maybeSendNetworkManagementCallbackForAbort() {
-            realizeNetworkManagementCallback(null, "The IP provisioning request has been aborted.");
-        }
-
-        // Must be called on the handler thread
-        private void realizeNetworkManagementCallback(@Nullable final String iface,
-                @Nullable String msg) {
-            ensureRunningOnEthernetHandlerThread();
-            if (null == mIpClientCallback) {
-                return;
-            }
-
-            EthernetNetworkFactory.maybeSendNetworkManagementCallback(
-                    mIpClientCallback.mCb, iface, msg);
-            // Only send a single callback per cb.
-            mIpClientCallback.mCb = new EthernetCallback(null /* null */);
         }
 
         private void ensureRunningOnEthernetHandlerThread() {
@@ -625,8 +589,7 @@ public class EthernetNetworkFactory {
         /** Returns true if state has been modified */
         boolean updateLinkState(final boolean up, final EthernetCallback cb) {
             if (mLinkUp == up)  {
-                EthernetNetworkFactory.maybeSendNetworkManagementCallback(cb, null,
-                        "No changes with requested link state " + up + " for " + name);
+                cb.onError("No changes with requested link state " + up + " for " + name);
                 return false;
             }
             mLinkUp = up;
@@ -639,7 +602,7 @@ public class EthernetNetworkFactory {
                 registerNetworkOffer();
             }
 
-            EthernetNetworkFactory.maybeSendNetworkManagementCallback(cb, name, null);
+            cb.onResult(name);
             return true;
         }
 
@@ -651,8 +614,10 @@ public class EthernetNetworkFactory {
                 mIpClient = null;
             }
             // Send an abort callback if an updateInterface request was in progress.
-            maybeSendNetworkManagementCallbackForAbort();
-            mIpClientCallback = null;
+            if (mIpClientCallback != null) {
+                mIpClientCallback.mCb.onError("IP provisioning has been aborted.");
+                mIpClientCallback = null;
+            }
 
             if (mNetworkAgent != null) {
                 mNetworkAgent.unregister();
