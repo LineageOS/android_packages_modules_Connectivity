@@ -59,7 +59,8 @@ static void setTunTapCarrierEnabledImpl(JNIEnv* env, const char* iface, int tunF
     }
 }
 
-static int createTunTapImpl(JNIEnv* env, bool isTun, bool hasCarrier, const char* iface) {
+static int createTunTapImpl(JNIEnv* env, bool isTun, bool hasCarrier, bool setIffMulticast,
+                            const char* iface) {
     base::unique_fd tun(open("/dev/tun", O_RDWR | O_NONBLOCK));
     ifreq ifr{};
 
@@ -76,8 +77,8 @@ static int createTunTapImpl(JNIEnv* env, bool isTun, bool hasCarrier, const char
         setTunTapCarrierEnabledImpl(env, iface, tun.get(), hasCarrier);
     }
 
-    // Mark TAP interfaces as supporting multicast
-    if (!isTun) {
+    // Mark some TAP interfaces as supporting multicast
+    if (setIffMulticast && !isTun) {
         base::unique_fd inet6CtrlSock(socket(AF_INET6, SOCK_DGRAM, 0));
         ifr.ifr_flags = IFF_MULTICAST;
 
@@ -122,14 +123,14 @@ static void setTunTapCarrierEnabled(JNIEnv* env, jclass /* clazz */, jstring
 }
 
 static jint createTunTap(JNIEnv* env, jclass /* clazz */, jboolean isTun,
-                             jboolean hasCarrier, jstring jIface) {
+                             jboolean hasCarrier, jboolean setIffMulticast, jstring jIface) {
     ScopedUtfChars iface(env, jIface);
     if (!iface.c_str()) {
         jniThrowNullPointerException(env, "iface");
         return -1;
     }
 
-    return createTunTapImpl(env, isTun, hasCarrier, iface.c_str());
+    return createTunTapImpl(env, isTun, hasCarrier, setIffMulticast, iface.c_str());
 }
 
 static void bringUpInterface(JNIEnv* env, jclass /* clazz */, jstring jIface) {
@@ -145,7 +146,7 @@ static void bringUpInterface(JNIEnv* env, jclass /* clazz */, jstring jIface) {
 
 static const JNINativeMethod gMethods[] = {
     {"nativeSetTunTapCarrierEnabled", "(Ljava/lang/String;IZ)V", (void*)setTunTapCarrierEnabled},
-    {"nativeCreateTunTap", "(ZZLjava/lang/String;)I", (void*)createTunTap},
+    {"nativeCreateTunTap", "(ZZZLjava/lang/String;)I", (void*)createTunTap},
     {"nativeBringUpInterface", "(Ljava/lang/String;)V", (void*)bringUpInterface},
 };
 
