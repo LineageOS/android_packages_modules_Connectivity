@@ -64,7 +64,7 @@ import com.android.net.module.util.InterfaceParams;
 import com.android.net.module.util.NetworkStackConstants;
 import com.android.net.module.util.SharedLog;
 import com.android.net.module.util.Struct;
-import com.android.net.module.util.Struct.U32;
+import com.android.net.module.util.Struct.S32;
 import com.android.net.module.util.bpf.Tether4Key;
 import com.android.net.module.util.bpf.Tether4Value;
 import com.android.net.module.util.bpf.TetherStatsKey;
@@ -575,7 +575,7 @@ public class BpfCoordinator {
             if (!mBpfCoordinatorShim.startUpstreamIpv6Forwarding(downstream, upstream, rule.srcMac,
                     NULL_MAC_ADDRESS, NULL_MAC_ADDRESS, NetworkStackConstants.ETHER_MTU)) {
                 mLog.e("Failed to enable upstream IPv6 forwarding from "
-                        + mInterfaceNames.get(downstream) + " to " + mInterfaceNames.get(upstream));
+                        + getIfName(downstream) + " to " + getIfName(upstream));
             }
         }
 
@@ -616,7 +616,7 @@ public class BpfCoordinator {
             if (!mBpfCoordinatorShim.stopUpstreamIpv6Forwarding(downstream, upstream,
                     rule.srcMac)) {
                 mLog.e("Failed to disable upstream IPv6 forwarding from "
-                        + mInterfaceNames.get(downstream) + " to " + mInterfaceNames.get(upstream));
+                        + getIfName(downstream) + " to " + getIfName(upstream));
             }
         }
 
@@ -960,8 +960,12 @@ public class BpfCoordinator {
     }
 
     // TODO: make mInterfaceNames accessible to the shim and move this code to there.
-    private String getIfName(long ifindex) {
-        return mInterfaceNames.get((int) ifindex, Long.toString(ifindex));
+    // This function should only be used for logging/dump purposes.
+    private String getIfName(int ifindex) {
+        // TODO: return something more useful on lookup failure
+        // likely use the 'iface_index_name_map' bpf map and/or if_nametoindex
+        // perhaps should even check that all 3 match if available.
+        return mInterfaceNames.get(ifindex, Integer.toString(ifindex));
     }
 
     /**
@@ -1038,8 +1042,8 @@ public class BpfCoordinator {
         for (int i = 0; i < mStats.size(); i++) {
             final int upstreamIfindex = mStats.keyAt(i);
             final ForwardedStats stats = mStats.get(upstreamIfindex);
-            pw.println(String.format("%d(%s) - %s", upstreamIfindex, mInterfaceNames.get(
-                    upstreamIfindex), stats.toString()));
+            pw.println(String.format("%d(%s) - %s", upstreamIfindex, getIfName(upstreamIfindex),
+                    stats.toString()));
         }
     }
     private void dumpBpfStats(@NonNull IndentingPrintWriter pw) {
@@ -1082,8 +1086,9 @@ public class BpfCoordinator {
             for (Ipv6ForwardingRule rule : rules.values()) {
                 final int upstreamIfindex = rule.upstreamIfindex;
                 pw.println(String.format("%d(%s) %d(%s) %s [%s] [%s]", upstreamIfindex,
-                        mInterfaceNames.get(upstreamIfindex), rule.downstreamIfindex,
-                        downstreamIface, rule.address.getHostAddress(), rule.srcMac, rule.dstMac));
+                        getIfName(upstreamIfindex), rule.downstreamIfindex,
+                        getIfName(rule.downstreamIfindex), rule.address.getHostAddress(),
+                        rule.srcMac, rule.dstMac));
             }
             pw.decreaseIndent();
         }
@@ -1278,18 +1283,18 @@ public class BpfCoordinator {
             pw.println("No counter support");
             return;
         }
-        try (BpfMap<U32, U32> map = new BpfMap<>(TETHER_ERROR_MAP_PATH, BpfMap.BPF_F_RDONLY,
-                U32.class, U32.class)) {
+        try (BpfMap<S32, S32> map = new BpfMap<>(TETHER_ERROR_MAP_PATH, BpfMap.BPF_F_RDONLY,
+                S32.class, S32.class)) {
 
             map.forEach((k, v) -> {
                 String counterName;
                 try {
-                    counterName = sBpfCounterNames[(int) k.val];
+                    counterName = sBpfCounterNames[k.val];
                 } catch (IndexOutOfBoundsException e) {
                     // Should never happen because this code gets the counter name from the same
                     // include file as the BPF program that increments the counter.
                     Log.wtf(TAG, "Unknown tethering counter type " + k.val);
-                    counterName = Long.toString(k.val);
+                    counterName = Integer.toString(k.val);
                 }
                 if (v.val > 0) pw.println(String.format("%s: %d", counterName, v.val));
             });
@@ -1817,8 +1822,7 @@ public class BpfCoordinator {
         // TODO: Perhaps stop the coordinator.
         boolean success = updateDataLimit(upstreamIfindex);
         if (!success) {
-            final String iface = mInterfaceNames.get(upstreamIfindex);
-            mLog.e("Setting data limit for " + iface + " failed.");
+            mLog.e("Setting data limit for " + getIfName(upstreamIfindex) + " failed.");
         }
     }
 
