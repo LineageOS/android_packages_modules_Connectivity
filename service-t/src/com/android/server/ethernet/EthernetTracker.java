@@ -622,7 +622,10 @@ public class EthernetTracker {
         // restarted while it was running), we need to fake a link up notification so we
         // start configuring it.
         if (NetdUtils.hasFlag(config, INetd.IF_FLAG_RUNNING)) {
-            updateInterfaceState(iface, true);
+            // no need to send an interface state change as this is not a true "state change". The
+            // callers (maybeTrackInterface() and setTetheringInterfaceMode()) already broadcast the
+            // state change.
+            mFactory.updateInterfaceLinkState(iface, true);
         }
     }
 
