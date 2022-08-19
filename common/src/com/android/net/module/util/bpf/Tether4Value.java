@@ -30,8 +30,8 @@ import java.util.Objects;
 
 /** Value type for downstream & upstream IPv4 forwarding maps. */
 public class Tether4Value extends Struct {
-    @Field(order = 0, type = Type.U32)
-    public final long oif;
+    @Field(order = 0, type = Type.S32)
+    public final int oif;
 
     // The ethhdr struct which is defined in uapi/linux/if_ether.h
     @Field(order = 1, type = Type.EUI48)
@@ -60,7 +60,7 @@ public class Tether4Value extends Struct {
     @Field(order = 9, type = Type.U63)
     public final long lastUsed;
 
-    public Tether4Value(final long oif, @NonNull final MacAddress ethDstMac,
+    public Tether4Value(final int oif, @NonNull final MacAddress ethDstMac,
             @NonNull final MacAddress ethSrcMac, final int ethProto, final int pmtu,
             final byte[] src46, final byte[] dst46, final int srcPort,
             final int dstPort, final long lastUsed) {
