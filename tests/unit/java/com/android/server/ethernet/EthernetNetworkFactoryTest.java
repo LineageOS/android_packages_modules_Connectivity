@@ -40,7 +40,6 @@ import android.content.res.Resources;
 import android.net.ConnectivityManager;
 import android.net.EthernetNetworkManagementException;
 import android.net.EthernetNetworkSpecifier;
-import android.net.INetworkInterfaceOutcomeReceiver;
 import android.net.IpConfiguration;
 import android.net.LinkAddress;
 import android.net.LinkProperties;
@@ -55,7 +54,6 @@ import android.net.ip.IpClientCallbacks;
 import android.net.ip.IpClientManager;
 import android.os.Build;
 import android.os.Handler;
-import android.os.IBinder;
 import android.os.Looper;
 import android.os.test.TestLooper;
 
@@ -84,7 +82,7 @@ import java.util.concurrent.TimeUnit;
 public class EthernetNetworkFactoryTest {
     private static final int TIMEOUT_MS = 2_000;
     private static final String TEST_IFACE = "test123";
-    private static final INetworkInterfaceOutcomeReceiver NULL_LISTENER = null;
+    private static final EthernetCallback NULL_CB = new EthernetCallback(null);
     private static final String IP_ADDR = "192.0.2.2/25";
     private static final LinkAddress LINK_ADDR = new LinkAddress(IP_ADDR);
     private static final String HW_ADDR = "01:02:03:04:05:06";
@@ -241,7 +239,7 @@ public class EthernetNetworkFactoryTest {
         final IpConfiguration ipConfig = createDefaultIpConfig();
         mNetFactory.addInterface(iface, HW_ADDR, ipConfig,
                 createInterfaceCapsBuilder(transportType).build());
-        assertTrue(mNetFactory.updateInterfaceLinkState(iface, true, NULL_LISTENER));
+        assertTrue(mNetFactory.updateInterfaceLinkState(iface, true, NULL_CB));
 
         ArgumentCaptor<NetworkOfferCallback> captor = ArgumentCaptor.forClass(
                 NetworkOfferCallback.class);
@@ -295,7 +293,7 @@ public class EthernetNetworkFactoryTest {
         // then calling onNetworkUnwanted.
         mNetFactory.addInterface(iface, HW_ADDR, createDefaultIpConfig(),
                 createInterfaceCapsBuilder(NetworkCapabilities.TRANSPORT_ETHERNET).build());
-        assertTrue(mNetFactory.updateInterfaceLinkState(iface, true, NULL_LISTENER));
+        assertTrue(mNetFactory.updateInterfaceLinkState(iface, true, NULL_CB));
 
         clearInvocations(mIpClient);
         clearInvocations(mNetworkAgent);
@@ -572,8 +570,12 @@ public class EthernetNetworkFactoryTest {
     }
 
     private static final class TestNetworkManagementListener
-            implements INetworkInterfaceOutcomeReceiver {
+            extends EthernetCallback {
         private final CompletableFuture<String> mResult = new CompletableFuture<>();
+
+        TestNetworkManagementListener() {
+            super(null);
+        }
 
         @Override
         public void onResult(@NonNull String iface) {
@@ -581,8 +583,8 @@ public class EthernetNetworkFactoryTest {
         }
 
         @Override
-        public void onError(@NonNull EthernetNetworkManagementException exception) {
-            mResult.completeExceptionally(exception);
+        public void onError(String msg) {
+            mResult.completeExceptionally(new EthernetNetworkManagementException(msg));
         }
 
         String expectOnResult() throws Exception {
@@ -597,11 +599,6 @@ public class EthernetNetworkFactoryTest {
                     throw e.getCause();
                 }
             });
-        }
-
-        @Override
-        public IBinder asBinder() {
-            return null;
         }
     }
 
@@ -632,7 +629,7 @@ public class EthernetNetworkFactoryTest {
         initEthernetNetworkFactory();
         verifyNetworkManagementCallIsAbortedWhenInterrupted(
                 TEST_IFACE,
-                () -> mNetFactory.updateInterfaceLinkState(TEST_IFACE, false, NULL_LISTENER));
+                () -> mNetFactory.updateInterfaceLinkState(TEST_IFACE, false, NULL_CB));
     }
 
     @Test
@@ -718,7 +715,7 @@ public class EthernetNetworkFactoryTest {
 
         final IpConfiguration initialIpConfig = createStaticIpConfig();
         mNetFactory.updateInterface(TEST_IFACE, initialIpConfig, null /*capabilities*/,
-                null /*listener*/);
+                new EthernetCallback(null /* cb */));
         triggerOnProvisioningSuccess();
         verifyRestart(initialIpConfig);
 
@@ -730,7 +727,7 @@ public class EthernetNetworkFactoryTest {
 
         // verify that sending a null ipConfig does not update the current ipConfig.
         mNetFactory.updateInterface(TEST_IFACE, null /*ipConfig*/, null /*capabilities*/,
-                null /*listener*/);
+                new EthernetCallback(null /* cb */));
         triggerOnProvisioningSuccess();
         verifyRestart(initialIpConfig);
     }
@@ -739,7 +736,7 @@ public class EthernetNetworkFactoryTest {
     public void testOnNetworkNeededOnStaleNetworkOffer() throws Exception {
         initEthernetNetworkFactory();
         createAndVerifyProvisionedInterface(TEST_IFACE);
-        mNetFactory.updateInterfaceLinkState(TEST_IFACE, false, null);
+        mNetFactory.updateInterfaceLinkState(TEST_IFACE, false, new EthernetCallback(null));
         verify(mNetworkProvider).unregisterNetworkOffer(mNetworkOfferCallback);
         // It is possible that even after a network offer is unregistered, CS still sends it
         // onNetworkNeeded() callbacks.

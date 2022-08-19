@@ -260,7 +260,7 @@ public class EthernetServiceImpl extends IEthernetManager.Stub {
     @Override
     public void updateConfiguration(@NonNull final String iface,
             @NonNull final EthernetNetworkUpdateRequest request,
-            @Nullable final INetworkInterfaceOutcomeReceiver listener) {
+            @Nullable final INetworkInterfaceOutcomeReceiver cb) {
         Objects.requireNonNull(iface);
         Objects.requireNonNull(request);
         throwIfEthernetNotStarted();
@@ -277,31 +277,31 @@ public class EthernetServiceImpl extends IEthernetManager.Stub {
         }
 
         mTracker.updateConfiguration(
-                iface, request.getIpConfiguration(), nc, listener);
+                iface, request.getIpConfiguration(), nc, new EthernetCallback(cb));
     }
 
     @Override
     public void enableInterface(@NonNull final String iface,
-            @Nullable final INetworkInterfaceOutcomeReceiver listener) {
-        Log.i(TAG, "enableInterface called with: iface=" + iface + ", listener=" + listener);
+            @Nullable final INetworkInterfaceOutcomeReceiver cb) {
+        Log.i(TAG, "enableInterface called with: iface=" + iface + ", cb=" + cb);
         Objects.requireNonNull(iface);
         throwIfEthernetNotStarted();
 
         enforceAdminPermission(iface, false, "enableInterface()");
 
-        mTracker.enableInterface(iface, listener);
+        mTracker.enableInterface(iface, new EthernetCallback(cb));
     }
 
     @Override
     public void disableInterface(@NonNull final String iface,
-            @Nullable final INetworkInterfaceOutcomeReceiver listener) {
-        Log.i(TAG, "disableInterface called with: iface=" + iface + ", listener=" + listener);
+            @Nullable final INetworkInterfaceOutcomeReceiver cb) {
+        Log.i(TAG, "disableInterface called with: iface=" + iface + ", cb=" + cb);
         Objects.requireNonNull(iface);
         throwIfEthernetNotStarted();
 
         enforceAdminPermission(iface, false, "disableInterface()");
 
-        mTracker.disableInterface(iface, listener);
+        mTracker.disableInterface(iface, new EthernetCallback(cb));
     }
 
     @Override

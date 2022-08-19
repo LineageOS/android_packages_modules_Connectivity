@@ -29,7 +29,6 @@ import android.net.ConnectivityResources;
 import android.net.EthernetManager;
 import android.net.IEthernetServiceListener;
 import android.net.INetd;
-import android.net.INetworkInterfaceOutcomeReceiver;
 import android.net.ITetheredInterfaceCallback;
 import android.net.InterfaceConfigurationParcel;
 import android.net.IpConfiguration;
@@ -335,7 +334,7 @@ public class EthernetTracker {
     protected void updateConfiguration(@NonNull final String iface,
             @Nullable final IpConfiguration ipConfig,
             @Nullable final NetworkCapabilities capabilities,
-            @Nullable final INetworkInterfaceOutcomeReceiver listener) {
+            @Nullable final EthernetCallback cb) {
         if (DBG) {
             Log.i(TAG, "updateConfiguration, iface: " + iface + ", capabilities: " + capabilities
                     + ", ipConfig: " + ipConfig);
@@ -353,21 +352,21 @@ public class EthernetTracker {
             mNetworkCapabilities.put(iface, capabilities);
         }
         mHandler.post(() -> {
-            mFactory.updateInterface(iface, localIpConfig, capabilities, listener);
+            mFactory.updateInterface(iface, localIpConfig, capabilities, cb);
             broadcastInterfaceStateChange(iface);
         });
     }
 
     @VisibleForTesting(visibility = PACKAGE)
     protected void enableInterface(@NonNull final String iface,
-            @Nullable final INetworkInterfaceOutcomeReceiver listener) {
-        mHandler.post(() -> updateInterfaceState(iface, true, listener));
+            @Nullable final EthernetCallback cb) {
+        mHandler.post(() -> updateInterfaceState(iface, true, cb));
     }
 
     @VisibleForTesting(visibility = PACKAGE)
     protected void disableInterface(@NonNull final String iface,
-            @Nullable final INetworkInterfaceOutcomeReceiver listener) {
-        mHandler.post(() -> updateInterfaceState(iface, false, listener));
+            @Nullable final EthernetCallback cb) {
+        mHandler.post(() -> updateInterfaceState(iface, false, cb));
     }
 
     IpConfiguration getIpConfiguration(String iface) {
@@ -614,14 +613,15 @@ public class EthernetTracker {
     }
 
     private void updateInterfaceState(String iface, boolean up) {
-        updateInterfaceState(iface, up, null /* listener */);
+        // TODO: pull EthernetCallbacks out of EthernetNetworkFactory.
+        updateInterfaceState(iface, up, new EthernetCallback(null /* cb */));
     }
 
     private void updateInterfaceState(@NonNull final String iface, final boolean up,
-            @Nullable final INetworkInterfaceOutcomeReceiver listener) {
+            @Nullable final EthernetCallback cb) {
         final int mode = getInterfaceMode(iface);
         final boolean factoryLinkStateUpdated = (mode == INTERFACE_MODE_CLIENT)
-                && mFactory.updateInterfaceLinkState(iface, up, listener);
+                && mFactory.updateInterfaceLinkState(iface, up, cb);
 
         if (factoryLinkStateUpdated) {
             broadcastInterfaceStateChange(iface);
