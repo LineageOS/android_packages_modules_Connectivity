@@ -270,7 +270,7 @@ public class EthernetTracker {
         }
         writeIpConfiguration(iface, ipConfiguration);
         mHandler.post(() -> {
-            mFactory.updateInterface(iface, ipConfiguration, null, null);
+            mFactory.updateInterface(iface, ipConfiguration, null);
             broadcastInterfaceStateChange(iface);
         });
     }
@@ -352,8 +352,16 @@ public class EthernetTracker {
             mNetworkCapabilities.put(iface, capabilities);
         }
         mHandler.post(() -> {
-            mFactory.updateInterface(iface, localIpConfig, capabilities, cb);
-            broadcastInterfaceStateChange(iface);
+            mFactory.updateInterface(iface, localIpConfig, capabilities);
+
+            // only broadcast state change when the ip configuration is updated.
+            if (ipConfig != null) {
+                broadcastInterfaceStateChange(iface);
+            }
+            // Always return success. Even if the interface does not currently exist, the
+            // IpConfiguration and NetworkCapabilities were saved and will be applied if an
+            // interface with the given name is ever added.
+            cb.onResult(iface);
         });
     }
 

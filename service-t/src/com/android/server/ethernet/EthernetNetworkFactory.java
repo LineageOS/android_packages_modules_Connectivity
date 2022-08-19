@@ -187,22 +187,19 @@ public class EthernetNetworkFactory {
      *                     {@code null} is passed, then the network's current
      *                     {@link NetworkCapabilities} will be used in support of existing APIs as
      *                     the public API does not allow this.
-     * @param cb a {@link EthernetCallback} to notify callers of
-     *                 completion.
      */
     @VisibleForTesting(visibility = VisibleForTesting.Visibility.PACKAGE)
     protected void updateInterface(@NonNull final String ifaceName,
             @Nullable final IpConfiguration ipConfig,
-            @Nullable final NetworkCapabilities capabilities,
-            final EthernetCallback cb) {
+            @Nullable final NetworkCapabilities capabilities) {
         if (!hasInterface(ifaceName)) {
-            cb.onError(ifaceName + " is not tracked by the ethernet service");
             return;
         }
 
         final NetworkInterfaceState iface = mTrackingInterfaces.get(ifaceName);
-        iface.updateInterface(ipConfig, capabilities, cb);
+        iface.updateInterface(ipConfig, capabilities);
         mTrackingInterfaces.put(ifaceName, iface);
+        return;
     }
 
     private static NetworkCapabilities mixInCapabilities(NetworkCapabilities nc,
@@ -303,11 +300,6 @@ public class EthernetNetworkFactory {
         private class EthernetIpClientCallback extends IpClientCallbacks {
             private final ConditionVariable mIpClientStartCv = new ConditionVariable(false);
             private final ConditionVariable mIpClientShutdownCv = new ConditionVariable(false);
-            EthernetCallback mCb;
-
-            EthernetIpClientCallback(EthernetCallback cb) {
-                mCb = cb;
-            }
 
             @Override
             public void onIpClientCreated(IIpClient ipClient) {
@@ -350,7 +342,7 @@ public class EthernetNetworkFactory {
             public void onProvisioningFailure(LinkProperties newLp) {
                 // This cannot happen due to provisioning timeout, because our timeout is 0. It can
                 // happen due to errors while provisioning or on provisioning loss.
-                handleIpEvent(() -> onIpLayerStopped(mCb));
+                handleIpEvent(() -> onIpLayerStopped());
             }
 
             @Override
@@ -462,13 +454,11 @@ public class EthernetNetworkFactory {
         }
 
         void updateInterface(@Nullable final IpConfiguration ipConfig,
-                @Nullable final NetworkCapabilities capabilities,
-                final EthernetCallback cb) {
+                @Nullable final NetworkCapabilities capabilities) {
             if (DBG) {
                 Log.d(TAG, "updateInterface, iface: " + name
                         + ", ipConfig: " + ipConfig + ", old ipConfig: " + mIpConfig
                         + ", capabilities: " + capabilities + ", old capabilities: " + mCapabilities
-                        + ", cb: " + cb
                 );
             }
 
@@ -481,7 +471,7 @@ public class EthernetNetworkFactory {
             // TODO: Update this logic to only do a restart if required. Although a restart may
             //  be required due to the capabilities or ipConfiguration values, not all
             //  capabilities changes require a restart.
-            restart(cb);
+            restart();
         }
 
         boolean isRestricted() {
@@ -489,11 +479,6 @@ public class EthernetNetworkFactory {
         }
 
         private void start() {
-            // TODO: remove EthernetCallback from this class entirely.
-            start(new EthernetCallback(null));
-        }
-
-        private void start(EthernetCallback cb) {
             if (mIpClient != null) {
                 if (DBG) Log.d(TAG, "IpClient already started");
                 return;
@@ -502,7 +487,7 @@ public class EthernetNetworkFactory {
                 Log.d(TAG, String.format("Starting Ethernet IpClient(%s)", name));
             }
 
-            mIpClientCallback = new EthernetIpClientCallback(cb);
+            mIpClientCallback = new EthernetIpClientCallback();
             mDeps.makeIpClient(mContext, name, mIpClientCallback);
             mIpClientCallback.awaitIpClientStart();
 
@@ -544,20 +529,18 @@ public class EthernetNetworkFactory {
                     });
             mNetworkAgent.register();
             mNetworkAgent.markConnected();
-            mIpClientCallback.mCb.onResult(name);
         }
 
-        void onIpLayerStopped(EthernetCallback cb) {
+        void onIpLayerStopped() {
             // There is no point in continuing if the interface is gone as stop() will be triggered
             // by removeInterface() when processed on the handler thread and start() won't
             // work for a non-existent interface.
             if (null == mDeps.getNetworkInterfaceByName(name)) {
                 if (DBG) Log.d(TAG, name + " is no longer available.");
                 // Send a callback in case a provisioning request was in progress.
-                mIpClientCallback.mCb.onError("IP provisioning has been aborted.");
                 return;
             }
-            restart(cb);
+            restart();
         }
 
         private void ensureRunningOnEthernetHandlerThread() {
@@ -613,11 +596,8 @@ public class EthernetNetworkFactory {
                 mIpClientCallback.awaitIpClientShutdown();
                 mIpClient = null;
             }
-            // Send an abort callback if an updateInterface request was in progress.
-            if (mIpClientCallback != null) {
-                mIpClientCallback.mCb.onError("IP provisioning has been aborted.");
-                mIpClientCallback = null;
-            }
+
+            mIpClientCallback = null;
 
             if (mNetworkAgent != null) {
                 mNetworkAgent.unregister();
@@ -673,14 +653,9 @@ public class EthernetNetworkFactory {
         }
 
         void restart() {
-            // TODO: remove EthernetCallback from this class entirely
-            restart(new EthernetCallback(null));
-        }
-
-        void restart(EthernetCallback cb) {
             if (DBG) Log.d(TAG, "reconnecting Ethernet");
             stop();
-            start(cb);
+            start();
         }
 
         @Override

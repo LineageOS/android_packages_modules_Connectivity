@@ -603,92 +603,15 @@ public class EthernetNetworkFactoryTest {
     }
 
     @Test
-    public void testUpdateInterfaceCallsListenerCorrectlyOnSuccess() throws Exception {
-        initEthernetNetworkFactory();
-        createAndVerifyProvisionedInterface(TEST_IFACE);
-        final NetworkCapabilities capabilities = createDefaultFilterCaps();
-        final IpConfiguration ipConfiguration = createStaticIpConfig();
-        final TestNetworkManagementListener listener = new TestNetworkManagementListener();
-
-        mNetFactory.updateInterface(TEST_IFACE, ipConfiguration, capabilities, listener);
-        triggerOnProvisioningSuccess();
-
-        assertEquals(TEST_IFACE, listener.expectOnResult());
-    }
-
-    @Test
-    public void testUpdateInterfaceAbortsOnConcurrentRemoveInterface() throws Exception {
-        initEthernetNetworkFactory();
-        verifyNetworkManagementCallIsAbortedWhenInterrupted(
-                TEST_IFACE,
-                () -> mNetFactory.removeInterface(TEST_IFACE));
-    }
-
-    @Test
-    public void testUpdateInterfaceAbortsOnConcurrentUpdateInterfaceLinkState() throws Exception {
-        initEthernetNetworkFactory();
-        verifyNetworkManagementCallIsAbortedWhenInterrupted(
-                TEST_IFACE,
-                () -> mNetFactory.updateInterfaceLinkState(TEST_IFACE, false, NULL_CB));
-    }
-
-    @Test
-    public void testUpdateInterfaceAbortsOnNetworkUneededRemovesAllRequests() throws Exception {
-        initEthernetNetworkFactory();
-        verifyNetworkManagementCallIsAbortedWhenInterrupted(
-                TEST_IFACE,
-                () -> mNetworkOfferCallback.onNetworkUnneeded(mRequestToKeepNetworkUp));
-    }
-
-    @Test
-    public void testUpdateInterfaceCallsListenerCorrectlyOnConcurrentRequests() throws Exception {
-        initEthernetNetworkFactory();
-        final NetworkCapabilities capabilities = createDefaultFilterCaps();
-        final IpConfiguration ipConfiguration = createStaticIpConfig();
-        final TestNetworkManagementListener successfulListener =
-                new TestNetworkManagementListener();
-
-        // If two calls come in before the first one completes, the first listener will be aborted
-        // and the second one will be successful.
-        verifyNetworkManagementCallIsAbortedWhenInterrupted(
-                TEST_IFACE,
-                () -> {
-                    mNetFactory.updateInterface(
-                            TEST_IFACE, ipConfiguration, capabilities, successfulListener);
-                    triggerOnProvisioningSuccess();
-                });
-
-        assertEquals(successfulListener.expectOnResult(), TEST_IFACE);
-        assertEquals(TEST_IFACE, successfulListener.expectOnResult());
-    }
-
-    private void verifyNetworkManagementCallIsAbortedWhenInterrupted(
-            @NonNull final String iface,
-            @NonNull final Runnable interruptingRunnable) throws Exception {
-        createAndVerifyProvisionedInterface(iface);
-        final NetworkCapabilities capabilities = createDefaultFilterCaps();
-        final IpConfiguration ipConfiguration = createStaticIpConfig();
-        final TestNetworkManagementListener failedListener = new TestNetworkManagementListener();
-
-        // An active update request will be aborted on interrupt prior to provisioning completion.
-        mNetFactory.updateInterface(iface, ipConfiguration, capabilities, failedListener);
-        interruptingRunnable.run();
-
-        failedListener.expectOnError();
-    }
-
-    @Test
     public void testUpdateInterfaceRestartsAgentCorrectly() throws Exception {
         initEthernetNetworkFactory();
         createAndVerifyProvisionedInterface(TEST_IFACE);
         final NetworkCapabilities capabilities = createDefaultFilterCaps();
         final IpConfiguration ipConfiguration = createStaticIpConfig();
-        final TestNetworkManagementListener listener = new TestNetworkManagementListener();
 
-        mNetFactory.updateInterface(TEST_IFACE, ipConfiguration, capabilities, listener);
+        mNetFactory.updateInterface(TEST_IFACE, ipConfiguration, capabilities);
         triggerOnProvisioningSuccess();
 
-        assertEquals(TEST_IFACE, listener.expectOnResult());
         verify(mDeps).makeEthernetNetworkAgent(any(), any(),
                 eq(capabilities), any(), any(), any(), any());
         verifyRestart(ipConfiguration);
@@ -700,12 +623,10 @@ public class EthernetNetworkFactoryTest {
         // No interface exists due to not calling createAndVerifyProvisionedInterface(...).
         final NetworkCapabilities capabilities = createDefaultFilterCaps();
         final IpConfiguration ipConfiguration = createStaticIpConfig();
-        final TestNetworkManagementListener listener = new TestNetworkManagementListener();
 
-        mNetFactory.updateInterface(TEST_IFACE, ipConfiguration, capabilities, listener);
+        mNetFactory.updateInterface(TEST_IFACE, ipConfiguration, capabilities);
 
         verifyNoStopOrStart();
-        listener.expectOnError();
     }
 
     @Test
@@ -714,8 +635,8 @@ public class EthernetNetworkFactoryTest {
         createAndVerifyProvisionedInterface(TEST_IFACE);
 
         final IpConfiguration initialIpConfig = createStaticIpConfig();
-        mNetFactory.updateInterface(TEST_IFACE, initialIpConfig, null /*capabilities*/,
-                new EthernetCallback(null /* cb */));
+        mNetFactory.updateInterface(TEST_IFACE, initialIpConfig, null /*capabilities*/);
+
         triggerOnProvisioningSuccess();
         verifyRestart(initialIpConfig);
 
@@ -726,8 +647,7 @@ public class EthernetNetworkFactoryTest {
 
 
         // verify that sending a null ipConfig does not update the current ipConfig.
-        mNetFactory.updateInterface(TEST_IFACE, null /*ipConfig*/, null /*capabilities*/,
-                new EthernetCallback(null /* cb */));
+        mNetFactory.updateInterface(TEST_IFACE, null /*ipConfig*/, null /*capabilities*/);
         triggerOnProvisioningSuccess();
         verifyRestart(initialIpConfig);
     }

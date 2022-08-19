@@ -349,7 +349,7 @@ public class EthernetTrackerTest {
         waitForIdle();
 
         verify(mFactory).updateInterface(
-                eq(TEST_IFACE), eq(ipConfig), eq(capabilities), eq(listener));
+                eq(TEST_IFACE), eq(ipConfig), eq(capabilities));
     }
 
     @Test
