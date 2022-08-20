@@ -98,7 +98,7 @@ public final class BpfMapTest {
         assertTrue(mTestMap.isEmpty());
     }
 
-    private TetherDownstream6Key createTetherDownstream6Key(long iif, String mac,
+    private TetherDownstream6Key createTetherDownstream6Key(int iif, String mac,
             String address) throws Exception {
         final MacAddress dstMac = MacAddress.fromString(mac);
         final InetAddress ipv6Address = InetAddress.getByName(address);

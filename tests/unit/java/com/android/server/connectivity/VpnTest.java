@@ -92,6 +92,7 @@ import android.net.LinkAddress;
 import android.net.LinkProperties;
 import android.net.LocalSocket;
 import android.net.Network;
+import android.net.NetworkAgentConfig;
 import android.net.NetworkCapabilities;
 import android.net.NetworkInfo.DetailedState;
 import android.net.RouteInfo;
@@ -264,6 +265,7 @@ public class VpnTest extends VpnTestBase {
         final Ikev2VpnProfile.Builder builder =
                 new Ikev2VpnProfile.Builder(TEST_VPN_SERVER, TEST_VPN_IDENTITY);
         builder.setAuthPsk(TEST_VPN_PSK);
+        builder.setBypassable(true /* isBypassable */);
         mVpnProfile = builder.build().toVpnProfile();
     }
 
@@ -1787,9 +1789,11 @@ public class VpnTest extends VpnTestBase {
         ArgumentCaptor<LinkProperties> lpCaptor = ArgumentCaptor.forClass(LinkProperties.class);
         ArgumentCaptor<NetworkCapabilities> ncCaptor =
                 ArgumentCaptor.forClass(NetworkCapabilities.class);
+        ArgumentCaptor<NetworkAgentConfig> nacCaptor =
+                ArgumentCaptor.forClass(NetworkAgentConfig.class);
         verify(mTestDeps).newNetworkAgent(
                 any(), any(), anyString(), ncCaptor.capture(), lpCaptor.capture(),
-                any(), any(), any());
+                any(), nacCaptor.capture(), any());
 
         // Check LinkProperties
         final LinkProperties lp = lpCaptor.getValue();
@@ -1810,6 +1814,9 @@ public class VpnTest extends VpnTestBase {
 
         // Check NetworkCapabilities
         assertEquals(Arrays.asList(TEST_NETWORK), ncCaptor.getValue().getUnderlyingNetworks());
+
+        // Check if allowBypass is set or not.
+        assertTrue(nacCaptor.getValue().isBypassableVpn());
 
         return new PlatformVpnSnapshot(vpn, nwCb, ikeCb, childCb);
     }
