@@ -165,6 +165,26 @@ public final class CollectionUtils {
     }
 
     /**
+     * Returns the index of the needle array in the haystack array, or -1 if it can't be found.
+     * This is a byte array equivalent of Collections.indexOfSubList().
+     */
+    public static int indexOfSubArray(@NonNull byte[] haystack, @NonNull byte[] needle) {
+        for (int i = 0; i < haystack.length - needle.length + 1; i++) {
+            boolean found = true;
+            for (int j = 0; j < needle.length; j++) {
+                if (haystack[i + j] != needle[j]) {
+                    found = false;
+                    break;
+                }
+            }
+            if (found) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    /**
      * Returns a new collection of elements that match the passed predicate.
      * @param source the elements to filter.
      * @param test the predicate to test for.
