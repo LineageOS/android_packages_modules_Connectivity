@@ -65,6 +65,7 @@ import com.android.testutils.TestableNetworkCallback
 import com.android.testutils.filters.CtsNetTestCasesMaxTargetSdk30
 import com.android.testutils.runAsShell
 import com.android.testutils.tryTest
+import com.android.testutils.waitForIdle
 import org.junit.After
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertFalse
@@ -121,6 +122,7 @@ class NsdManagerTest {
             cm.unregisterNetworkCallback(requestCb)
             agent.unregister()
             iface.fileDescriptor.close()
+            agent.waitForIdle(TIMEOUT_MS)
         }
     }
 
@@ -291,7 +293,7 @@ class NsdManagerTest {
         val agent = registerTestNetworkAgent(iface.interfaceName)
         val network = agent.network ?: fail("Registered agent should have a network")
         // The network has no INTERNET capability, so will be marked validated immediately
-        cb.expectAvailableThenValidatedCallbacks(network)
+        cb.expectAvailableThenValidatedCallbacks(network, TIMEOUT_MS)
         return TestTapNetwork(iface, cb, agent, network)
     }
 
@@ -319,6 +321,7 @@ class NsdManagerTest {
                 testNetwork2.close(cm)
             }
         }
+        handlerThread.waitForIdle(TIMEOUT_MS)
         handlerThread.quitSafely()
     }
 
