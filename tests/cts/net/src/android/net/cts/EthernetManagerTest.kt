@@ -689,6 +689,8 @@ class EthernetManagerTest {
 
         // install a listener which will later be used to verify the Lost callback
         val listenerCb = registerNetworkListener(ETH_REQUEST)
+        // assert the network is only brought up by a request.
+        listenerCb.assertNeverAvailable()
 
         val cb = requestNetwork(ETH_REQUEST)
         val network = cb.expectAvailable()
