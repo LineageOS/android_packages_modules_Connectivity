@@ -143,7 +143,7 @@ public class MdnsServiceRecord extends MdnsRecord {
         return super.equals(other)
                 && (servicePriority == otherRecord.servicePriority)
                 && (serviceWeight == otherRecord.serviceWeight)
-                && Objects.equals(serviceHost, otherRecord.serviceHost)
+                && Arrays.equals(serviceHost, otherRecord.serviceHost)
                 && (servicePort == otherRecord.servicePort);
     }
 }
