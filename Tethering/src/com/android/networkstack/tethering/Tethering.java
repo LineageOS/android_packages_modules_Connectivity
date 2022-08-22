@@ -97,6 +97,7 @@ import android.net.TetheringConfigurationParcel;
 import android.net.TetheringInterface;
 import android.net.TetheringManager.TetheringRequest;
 import android.net.TetheringRequestParcel;
+import android.net.Uri;
 import android.net.ip.IpServer;
 import android.net.wifi.WifiClient;
 import android.net.wifi.WifiManager;
@@ -343,9 +344,8 @@ public class Tethering {
                     mEntitlementMgr.reevaluateSimCardProvisioning(mConfig);
                 });
 
-        mSettingsObserver = new SettingsObserver(mHandler);
-        mContext.getContentResolver().registerContentObserver(
-                Settings.Global.getUriFor(TETHER_FORCE_USB_FUNCTIONS), false, mSettingsObserver);
+        mSettingsObserver = new SettingsObserver(mContext, mHandler);
+        mSettingsObserver.startObserve();
 
         mStateReceiver = new StateReceiver();
 
@@ -397,18 +397,42 @@ public class Tethering {
     }
 
     private class SettingsObserver extends ContentObserver {
-        SettingsObserver(Handler handler) {
+        private final Uri mForceUsbFunctions;
+        private final Uri mTetherSupported;
+        private final Context mContext;
+
+        SettingsObserver(Context ctx, Handler handler) {
             super(handler);
+            mContext = ctx;
+            mForceUsbFunctions = Settings.Global.getUriFor(TETHER_FORCE_USB_FUNCTIONS);
+            mTetherSupported = Settings.Global.getUriFor(Settings.Global.TETHER_SUPPORTED);
+        }
+
+        public void startObserve() {
+            mContext.getContentResolver().registerContentObserver(mForceUsbFunctions, false, this);
+            mContext.getContentResolver().registerContentObserver(mTetherSupported, false, this);
         }
 
         @Override
         public void onChange(boolean selfChange) {
-            mLog.i("OBSERVED Settings change");
-            final boolean isUsingNcm = mConfig.isUsingNcm();
-            updateConfiguration();
-            if (isUsingNcm != mConfig.isUsingNcm()) {
-                stopTetheringInternal(TETHERING_USB);
-                stopTetheringInternal(TETHERING_NCM);
+            Log.wtf(TAG, "Should never be reached.");
+        }
+
+        @Override
+        public void onChange(boolean selfChange, Uri uri) {
+            if (mForceUsbFunctions.equals(uri)) {
+                mLog.i("OBSERVED TETHER_FORCE_USB_FUNCTIONS settings change");
+                final boolean isUsingNcm = mConfig.isUsingNcm();
+                updateConfiguration();
+                if (isUsingNcm != mConfig.isUsingNcm()) {
+                    stopTetheringInternal(TETHERING_USB);
+                    stopTetheringInternal(TETHERING_NCM);
+                }
+            } else if (mTetherSupported.equals(uri)) {
+                mLog.i("OBSERVED TETHER_SUPPORTED settings change");
+                updateSupportedDownstreams(mConfig);
+            } else {
+                mLog.e("Unexpected settings change: " + uri);
             }
         }
     }
@@ -1322,7 +1346,9 @@ public class Tethering {
         }
 
         private void handleUserRestrictionAction() {
-            mTetheringRestriction.onUserRestrictionsChanged();
+            if (mTetheringRestriction.onUserRestrictionsChanged()) {
+                updateSupportedDownstreams(mConfig);
+            }
         }
 
         private void handleDataSaverChanged() {
@@ -1350,6 +1376,8 @@ public class Tethering {
         return getTetheredIfaces().length > 0;
     }
 
+    // TODO: Refine TetheringTest then remove UserRestrictionActionListener class and handle
+    // onUserRestrictionsChanged inside Tethering#handleUserRestrictionAction directly.
     @VisibleForTesting
     protected static class UserRestrictionActionListener {
         private final UserManager mUserMgr;
@@ -1365,7 +1393,8 @@ public class Tethering {
             mDisallowTethering = false;
         }
 
-        public void onUserRestrictionsChanged() {
+        // return whether tethering disallowed is changed.
+        public boolean onUserRestrictionsChanged() {
             // getUserRestrictions gets restriction for this process' user, which is the primary
             // user. This is fine because DISALLOW_CONFIG_TETHERING can only be set on the primary
             // user. See UserManager.DISALLOW_CONFIG_TETHERING.
@@ -1376,15 +1405,13 @@ public class Tethering {
             mDisallowTethering = newlyDisallowed;
 
             final boolean tetheringDisallowedChanged = (newlyDisallowed != prevDisallowed);
-            if (!tetheringDisallowedChanged) {
-                return;
-            }
+            if (!tetheringDisallowedChanged) return false;
 
             if (!newlyDisallowed) {
                 // Clear the restricted notification when user is allowed to have tethering
                 // function.
                 mNotificationUpdater.tetheringRestrictionLifted();
-                return;
+                return true;
             }
 
             if (mTethering.isTetheringActive()) {
@@ -1395,6 +1422,8 @@ public class Tethering {
                 // Untether from all downstreams since tethering is disallowed.
                 mTethering.untetherAll();
             }
+
+            return true;
             // TODO(b/148139325): send tetheringSupported on restriction change
         }
     }
