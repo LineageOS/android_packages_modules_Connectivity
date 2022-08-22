@@ -532,7 +532,7 @@ class EthernetManagerTest {
             it.networkSpecifier == EthernetNetworkSpecifier(name)
         }
 
-    private fun TestableNetworkCallback.expectCapabilitiesWithCapability(cap: Int) =
+    private fun TestableNetworkCallback.expectCapabilitiesWith(cap: Int) =
         expectCapabilitiesThat(anyNetwork(), TIMEOUT_MS) {
             it.hasCapability(cap)
         }
@@ -877,14 +877,14 @@ class EthernetManagerTest {
         // will be expected first before available, as part of the restart.
         cb.expectLost(network)
         cb.expectAvailable()
-        cb.expectCapabilitiesWithCapability(testCapability)
+        cb.expectCapabilitiesWith(testCapability)
         cb.expectLinkPropertiesWithLinkAddress(
                 STATIC_IP_CONFIGURATION.staticIpConfiguration.ipAddress!!)
     }
 
     @Test
     fun testUpdateConfiguration_forOnlyIpConfig() {
-        val iface: EthernetTestInterface = createInterface()
+        val iface = createInterface()
         val cb = requestNetwork(ETH_REQUEST.createCopyWithEthernetSpecifier(iface.name))
         val network = cb.expectAvailable()
         cb.assertNeverLost()
@@ -905,7 +905,7 @@ class EthernetManagerTest {
     @Ignore
     @Test
     fun testUpdateConfiguration_forOnlyCapabilities() {
-        val iface: EthernetTestInterface = createInterface()
+        val iface = createInterface()
         val cb = requestNetwork(ETH_REQUEST.createCopyWithEthernetSpecifier(iface.name))
         val network = cb.expectAvailable()
         cb.assertNeverLost()
@@ -921,6 +921,6 @@ class EthernetManagerTest {
         // will be expected first before available, as part of the restart.
         cb.expectLost(network)
         cb.expectAvailable()
-        cb.expectCapabilitiesWithCapability(testCapability)
+        cb.expectCapabilitiesWith(testCapability)
     }
 }
