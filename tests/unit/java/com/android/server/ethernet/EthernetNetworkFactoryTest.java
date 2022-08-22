@@ -20,7 +20,6 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotSame;
 import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -38,7 +37,6 @@ import android.app.test.MockAnswerUtil.AnswerWithArguments;
 import android.content.Context;
 import android.content.res.Resources;
 import android.net.ConnectivityManager;
-import android.net.EthernetNetworkManagementException;
 import android.net.EthernetNetworkSpecifier;
 import android.net.IpConfiguration;
 import android.net.LinkAddress;
@@ -72,9 +70,6 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
 import java.util.Objects;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
 
 @SmallTest
 @RunWith(DevSdkIgnoreRunner.class)
@@ -82,7 +77,6 @@ import java.util.concurrent.TimeUnit;
 public class EthernetNetworkFactoryTest {
     private static final int TIMEOUT_MS = 2_000;
     private static final String TEST_IFACE = "test123";
-    private static final EthernetCallback NULL_CB = new EthernetCallback(null);
     private static final String IP_ADDR = "192.0.2.2/25";
     private static final LinkAddress LINK_ADDR = new LinkAddress(IP_ADDR);
     private static final String HW_ADDR = "01:02:03:04:05:06";
@@ -239,7 +233,7 @@ public class EthernetNetworkFactoryTest {
         final IpConfiguration ipConfig = createDefaultIpConfig();
         mNetFactory.addInterface(iface, HW_ADDR, ipConfig,
                 createInterfaceCapsBuilder(transportType).build());
-        assertTrue(mNetFactory.updateInterfaceLinkState(iface, true, NULL_CB));
+        assertTrue(mNetFactory.updateInterfaceLinkState(iface, true));
 
         ArgumentCaptor<NetworkOfferCallback> captor = ArgumentCaptor.forClass(
                 NetworkOfferCallback.class);
@@ -293,7 +287,7 @@ public class EthernetNetworkFactoryTest {
         // then calling onNetworkUnwanted.
         mNetFactory.addInterface(iface, HW_ADDR, createDefaultIpConfig(),
                 createInterfaceCapsBuilder(NetworkCapabilities.TRANSPORT_ETHERNET).build());
-        assertTrue(mNetFactory.updateInterfaceLinkState(iface, true, NULL_CB));
+        assertTrue(mNetFactory.updateInterfaceLinkState(iface, true));
 
         clearInvocations(mIpClient);
         clearInvocations(mNetworkAgent);
@@ -303,81 +297,63 @@ public class EthernetNetworkFactoryTest {
     public void testUpdateInterfaceLinkStateForActiveProvisioningInterface() throws Exception {
         initEthernetNetworkFactory();
         createInterfaceUndergoingProvisioning(TEST_IFACE);
-        final TestNetworkManagementListener listener = new TestNetworkManagementListener();
 
         // verify that the IpClient gets shut down when interface state changes to down.
-        final boolean ret =
-                mNetFactory.updateInterfaceLinkState(TEST_IFACE, false /* up */, listener);
+        final boolean ret = mNetFactory.updateInterfaceLinkState(TEST_IFACE, false /* up */);
 
         assertTrue(ret);
         verify(mIpClient).shutdown();
-        assertEquals(TEST_IFACE, listener.expectOnResult());
     }
 
     @Test
     public void testUpdateInterfaceLinkStateForProvisionedInterface() throws Exception {
         initEthernetNetworkFactory();
         createAndVerifyProvisionedInterface(TEST_IFACE);
-        final TestNetworkManagementListener listenerDown = new TestNetworkManagementListener();
-        final TestNetworkManagementListener listenerUp = new TestNetworkManagementListener();
 
-        final boolean retDown =
-                mNetFactory.updateInterfaceLinkState(TEST_IFACE, false /* up */, listenerDown);
+        final boolean retDown = mNetFactory.updateInterfaceLinkState(TEST_IFACE, false /* up */);
 
         assertTrue(retDown);
         verifyStop();
-        assertEquals(TEST_IFACE, listenerDown.expectOnResult());
 
-        final boolean retUp =
-                mNetFactory.updateInterfaceLinkState(TEST_IFACE, true /* up */, listenerUp);
+        final boolean retUp = mNetFactory.updateInterfaceLinkState(TEST_IFACE, true /* up */);
 
         assertTrue(retUp);
-        assertEquals(TEST_IFACE, listenerUp.expectOnResult());
     }
 
     @Test
     public void testUpdateInterfaceLinkStateForUnprovisionedInterface() throws Exception {
         initEthernetNetworkFactory();
         createUnprovisionedInterface(TEST_IFACE);
-        final TestNetworkManagementListener listener = new TestNetworkManagementListener();
 
-        final boolean ret =
-                mNetFactory.updateInterfaceLinkState(TEST_IFACE, false /* up */, listener);
+        final boolean ret = mNetFactory.updateInterfaceLinkState(TEST_IFACE, false /* up */);
 
         assertTrue(ret);
         // There should not be an active IPClient or NetworkAgent.
         verify(mDeps, never()).makeIpClient(any(), any(), any());
         verify(mDeps, never())
                 .makeEthernetNetworkAgent(any(), any(), any(), any(), any(), any(), any());
-        assertEquals(TEST_IFACE, listener.expectOnResult());
     }
 
     @Test
     public void testUpdateInterfaceLinkStateForNonExistingInterface() throws Exception {
         initEthernetNetworkFactory();
-        final TestNetworkManagementListener listener = new TestNetworkManagementListener();
 
         // if interface was never added, link state cannot be updated.
-        final boolean ret =
-                mNetFactory.updateInterfaceLinkState(TEST_IFACE, true /* up */, listener);
+        final boolean ret = mNetFactory.updateInterfaceLinkState(TEST_IFACE, true /* up */);
 
         assertFalse(ret);
         verifyNoStopOrStart();
-        listener.expectOnError();
     }
 
     @Test
     public void testUpdateInterfaceLinkStateWithNoChanges() throws Exception {
         initEthernetNetworkFactory();
         createAndVerifyProvisionedInterface(TEST_IFACE);
-        final TestNetworkManagementListener listener = new TestNetworkManagementListener();
 
-        final boolean ret =
-                mNetFactory.updateInterfaceLinkState(TEST_IFACE, true /* up */, listener);
+        final boolean ret = mNetFactory.updateInterfaceLinkState(TEST_IFACE, true /* up */);
 
         assertFalse(ret);
         verifyNoStopOrStart();
-        listener.expectOnError();
     }
 
     @Test
@@ -569,39 +545,6 @@ public class EthernetNetworkFactoryTest {
         verify(mNetworkAgent).markConnected();
     }
 
-    private static final class TestNetworkManagementListener
-            extends EthernetCallback {
-        private final CompletableFuture<String> mResult = new CompletableFuture<>();
-
-        TestNetworkManagementListener() {
-            super(null);
-        }
-
-        @Override
-        public void onResult(@NonNull String iface) {
-            mResult.complete(iface);
-        }
-
-        @Override
-        public void onError(String msg) {
-            mResult.completeExceptionally(new EthernetNetworkManagementException(msg));
-        }
-
-        String expectOnResult() throws Exception {
-            return mResult.get(TIMEOUT_MS, TimeUnit.MILLISECONDS);
-        }
-
-        void expectOnError() throws Exception {
-            assertThrows(EthernetNetworkManagementException.class, () -> {
-                try {
-                    mResult.get();
-                } catch (ExecutionException e) {
-                    throw e.getCause();
-                }
-            });
-        }
-    }
-
     @Test
     public void testUpdateInterfaceRestartsAgentCorrectly() throws Exception {
         initEthernetNetworkFactory();
@@ -656,7 +599,7 @@ public class EthernetNetworkFactoryTest {
     public void testOnNetworkNeededOnStaleNetworkOffer() throws Exception {
         initEthernetNetworkFactory();
         createAndVerifyProvisionedInterface(TEST_IFACE);
-        mNetFactory.updateInterfaceLinkState(TEST_IFACE, false, new EthernetCallback(null));
+        mNetFactory.updateInterfaceLinkState(TEST_IFACE, false);
         verify(mNetworkProvider).unregisterNetworkOffer(mNetworkOfferCallback);
         // It is possible that even after a network offer is unregistered, CS still sends it
         // onNetworkNeeded() callbacks.

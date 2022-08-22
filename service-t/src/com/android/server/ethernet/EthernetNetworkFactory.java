@@ -232,10 +232,8 @@ public class EthernetNetworkFactory {
 
     /** Returns true if state has been modified */
     @VisibleForTesting(visibility = VisibleForTesting.Visibility.PACKAGE)
-    protected boolean updateInterfaceLinkState(@NonNull final String ifaceName, final boolean up,
-            final EthernetCallback cb) {
+    protected boolean updateInterfaceLinkState(@NonNull final String ifaceName, final boolean up) {
         if (!hasInterface(ifaceName)) {
-            cb.onError(ifaceName + " is not tracked by the ethernet service");
             return false;
         }
 
@@ -244,7 +242,7 @@ public class EthernetNetworkFactory {
         }
 
         NetworkInterfaceState iface = mTrackingInterfaces.get(ifaceName);
-        return iface.updateLinkState(up, cb);
+        return iface.updateLinkState(up);
     }
 
     @VisibleForTesting
@@ -570,9 +568,8 @@ public class EthernetNetworkFactory {
         }
 
         /** Returns true if state has been modified */
-        boolean updateLinkState(final boolean up, final EthernetCallback cb) {
+        boolean updateLinkState(final boolean up) {
             if (mLinkUp == up)  {
-                cb.onError("No changes with requested link state " + up + " for " + name);
                 return false;
             }
             mLinkUp = up;
@@ -585,7 +582,6 @@ public class EthernetNetworkFactory {
                 registerNetworkOffer();
             }
 
-            cb.onResult(name);
             return true;
         }
 
