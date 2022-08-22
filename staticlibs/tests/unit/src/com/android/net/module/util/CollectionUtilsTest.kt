@@ -18,6 +18,7 @@ package com.android.net.module.util
 
 import androidx.test.filters.SmallTest
 import androidx.test.runner.AndroidJUnit4
+import com.android.testutils.assertThrows
 import org.junit.Test
 import org.junit.runner.RunWith
 import kotlin.test.assertEquals
@@ -47,6 +48,21 @@ class CollectionUtilsTest {
         assertEquals(1, CollectionUtils.indexOf(listOf("AA", "BBB", "CCCC")) { it.length >= 3 })
         assertEquals(1, CollectionUtils.indexOf(listOf("AA", null, "CCCC")) { it == null })
         assertEquals(1, CollectionUtils.indexOf(listOf(null, "CCCC")) { it != null })
+    }
+
+    @Test
+    fun testIndexOfSubArray() {
+        val haystack = byteArrayOf(1, 2, 3, 4, 5)
+        assertEquals(2, CollectionUtils.indexOfSubArray(haystack, byteArrayOf(3, 4)))
+        assertEquals(3, CollectionUtils.indexOfSubArray(haystack, byteArrayOf(4, 5)))
+        assertEquals(4, CollectionUtils.indexOfSubArray(haystack, byteArrayOf(5)))
+        assertEquals(-1, CollectionUtils.indexOfSubArray(haystack, byteArrayOf(3, 2)))
+        assertEquals(0, CollectionUtils.indexOfSubArray(haystack, byteArrayOf()))
+        assertEquals(-1, CollectionUtils.indexOfSubArray(byteArrayOf(), byteArrayOf(3, 2)))
+        assertEquals(0, CollectionUtils.indexOfSubArray(byteArrayOf(), byteArrayOf()))
+        assertThrows(NullPointerException::class.java) {
+            CollectionUtils.indexOfSubArray(haystack, null)
+        }
     }
 
     @Test
