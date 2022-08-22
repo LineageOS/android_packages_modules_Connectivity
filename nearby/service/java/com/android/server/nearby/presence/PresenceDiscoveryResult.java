@@ -54,6 +54,7 @@ public class PresenceDiscoveryResult {
         if (salt == null) {
             salt = new byte[0];
         }
+
         PresenceDiscoveryResult.Builder builder = new PresenceDiscoveryResult.Builder();
         builder.setTxPower(device.getTxPower())
                 .setRssi(device.getRssi())
@@ -96,9 +97,9 @@ public class PresenceDiscoveryResult {
         if (accountKeyMatches(scanFilter.getExtendedProperties())) {
             return true;
         }
+
         return pathLossMatches(scanFilter.getMaxPathLoss())
                 && actionMatches(scanFilter.getPresenceActions())
-                && credentialMatches(scanFilter.getCredentials())
                 && identityMatches(scanFilter.getCredentials());
     }
 
@@ -111,10 +112,6 @@ public class PresenceDiscoveryResult {
             return true;
         }
         return filterActions.stream().anyMatch(mPresenceActions::contains);
-    }
-
-    private boolean credentialMatches(List<PublicCredential> credentials) {
-        return credentials.contains(mPublicCredential);
     }
 
     @VisibleForTesting
@@ -137,6 +134,7 @@ public class PresenceDiscoveryResult {
                 }
             }
         }
+
         return false;
     }
 
@@ -189,7 +187,9 @@ public class PresenceDiscoveryResult {
 
         /** Sets the public credential for the discovery result. */
         public Builder setPublicCredential(PublicCredential publicCredential) {
-            mPublicCredential = publicCredential;
+            if (publicCredential != null) {
+                mPublicCredential = publicCredential;
+            }
             return this;
         }
 

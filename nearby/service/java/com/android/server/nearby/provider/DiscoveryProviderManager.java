@@ -92,10 +92,9 @@ public class DiscoveryProviderManager implements AbstractDiscoveryProvider.Liste
                                                     scanFilter.getType()
                                                             == SCAN_TYPE_NEARBY_PRESENCE)
                                     .collect(Collectors.toList());
-                    Log.i(
-                            TAG,
-                            String.format("match with filters size: %d", presenceFilters.size()));
                     if (!presenceFilterMatches(nearbyDevice, presenceFilters)) {
+                        Log.d(TAG, "presence filter does not match for "
+                                + "the scanned Presence Device");
                         continue;
                     }
                 }

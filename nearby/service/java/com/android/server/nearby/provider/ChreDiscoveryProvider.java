@@ -125,27 +125,41 @@ public class ChreDiscoveryProvider extends AbstractDiscoveryProvider {
         for (ScanFilter scanFilter : mScanFilters) {
             PresenceScanFilter presenceScanFilter = (PresenceScanFilter) scanFilter;
             Blefilter.BleFilter.Builder filterBuilder = Blefilter.BleFilter.newBuilder();
+            for (PublicCredential credential : presenceScanFilter.getCredentials()) {
+                filterBuilder.addCertficate(toProtoPublicCredential(credential));
+            }
             for (DataElement dataElement : presenceScanFilter.getExtendedProperties()) {
                 if (dataElement.getKey() == DataElement.DataType.ACCOUNT_KEY) {
-                    Blefilter.DataElement filterDe =
-                            Blefilter.DataElement.newBuilder()
-                                    .setKey(
-                                            Blefilter.DataElement.ElementType
-                                                    .DE_FAST_PAIR_ACCOUNT_KEY)
-                                    .setValue(ByteString.copyFrom(dataElement.getValue()))
-                                    .setValueLength(FP_ACCOUNT_KEY_LENGTH)
-                                    .build();
-                    filterBuilder.addDataElement(filterDe);
+                    filterBuilder.addDataElement(toProtoDataElement(dataElement));
                 }
             }
-            Log.i(TAG, "add filter");
+            if (!presenceScanFilter.getPresenceActions().isEmpty()) {
+                filterBuilder.setIntent(presenceScanFilter.getPresenceActions().get(0));
+            }
             filtersBuilder.addFilter(filterBuilder.build());
         }
-        mFilters = filtersBuilder.build();
         if (mChreStarted) {
-            sendFilters(mFilters);
+            sendFilters(filtersBuilder.build());
             mFilters = null;
         }
+    }
+
+    private Blefilter.PublicateCertificate toProtoPublicCredential(PublicCredential credential) {
+        return Blefilter.PublicateCertificate.newBuilder()
+                        .setAuthenticityKey(ByteString.copyFrom(credential.getAuthenticityKey()))
+                        .setMetadataEncryptionKeyTag(
+                                ByteString.copyFrom(credential.getEncryptedMetadataKeyTag()))
+                        .build();
+    }
+
+    private Blefilter.DataElement toProtoDataElement(DataElement dataElement) {
+        return Blefilter.DataElement.newBuilder()
+                        .setKey(
+                                Blefilter.DataElement.ElementType
+                                        .DE_FAST_PAIR_ACCOUNT_KEY)
+                        .setValue(ByteString.copyFrom(dataElement.getValue()))
+                        .setValueLength(FP_ACCOUNT_KEY_LENGTH)
+                        .build();
     }
 
     private void sendFilters(Blefilter.BleFilters filters) {
@@ -261,6 +275,14 @@ public class ChreDiscoveryProvider extends AbstractDiscoveryProvider {
                                             filterResult.getBleServiceData().toByteArray()));
                         }
 
+                        // Add action
+                        if (filterResult.hasIntent()) {
+                            presenceDeviceBuilder.addExtendedProperty(
+                                    new DataElement(
+                                            DataElement.DataType.INTENT,
+                                            new byte[]{(byte) filterResult.getIntent()}));
+                        }
+
                         PublicCredential publicCredential =
                                 new PublicCredential.Builder(
                                                 secretId,
@@ -276,9 +298,10 @@ public class ChreDiscoveryProvider extends AbstractDiscoveryProvider {
                                         .setMedium(NearbyDevice.Medium.BLE)
                                         .setTxPower(filterResult.getTxPower())
                                         .setRssi(filterResult.getRssi())
-                                        .setAction(0)
+                                        .setAction(filterResult.getIntent())
                                         .setPublicCredential(publicCredential)
                                         .setPresenceDevice(presenceDeviceBuilder.build())
+                                        .setEncryptionKeyTag(encryptedMetaDataTag)
                                         .build();
                         mExecutor.execute(() -> mListener.onNearbyDeviceDiscovered(device));
                     }
