@@ -69,6 +69,7 @@ import com.android.testutils.DevSdkIgnoreRunner
 import com.android.testutils.DeviceInfoUtils.isKernelVersionAtLeast
 import com.android.testutils.RecorderCallback.CallbackEntry.Available
 import com.android.testutils.RecorderCallback.CallbackEntry.CapabilitiesChanged
+import com.android.testutils.RecorderCallback.CallbackEntry.LinkPropertiesChanged
 import com.android.testutils.RecorderCallback.CallbackEntry.Lost
 import com.android.testutils.RouterAdvertisementResponder
 import com.android.testutils.TapPacketReader
@@ -149,6 +150,7 @@ class EthernetManagerTest {
         private val raResponder: RouterAdvertisementResponder
         private val tnm: TestNetworkManager
         val name get() = tapInterface.interfaceName
+        val onLinkPrefix get() = raResponder.prefix
 
         init {
             tnm = runAsShell(MANAGE_TEST_NETWORKS) {
@@ -810,6 +812,19 @@ class EthernetManagerTest {
 
         iface.setCarrierEnabled(false)
         cb.eventuallyExpectLost()
+    }
+
+    // TODO: move to MTS
+    @Test
+    fun testNetworkRequest_linkPropertiesUpdate() {
+        val iface = createInterface()
+        val cb = requestNetwork(ETH_REQUEST)
+        // b/233534110: eventuallyExpect<LinkPropertiesChanged>() does not advance ReadHead
+        cb.eventuallyExpect(LinkPropertiesChanged::class, TIMEOUT_MS) {
+            it is LinkPropertiesChanged && it.lp.addresses.any {
+                address -> iface.onLinkPrefix.contains(address)
+            }
+        }
     }
 
     @Test

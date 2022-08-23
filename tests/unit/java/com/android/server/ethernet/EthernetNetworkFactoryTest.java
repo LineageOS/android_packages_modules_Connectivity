@@ -25,7 +25,6 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.ArgumentMatchers.same;
 import static org.mockito.Mockito.clearInvocations;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.never;
@@ -347,17 +346,6 @@ public class EthernetNetworkFactoryTest {
         verify(mIpClient, never()).shutdown();
         verify(mNetworkAgent, never()).unregister();
         verify(mIpClient, never()).startProvisioning(any());
-    }
-
-    @Test
-    public void testLinkPropertiesChanged() throws Exception {
-        initEthernetNetworkFactory();
-        createAndVerifyProvisionedInterface(TEST_IFACE);
-
-        LinkProperties lp = new LinkProperties();
-        mIpClientCallbacks.onLinkPropertiesChange(lp);
-        mLooper.dispatchAll();
-        verify(mNetworkAgent).sendLinkPropertiesImpl(same(lp));
     }
 
     @Test
