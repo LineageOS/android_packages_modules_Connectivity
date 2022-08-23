@@ -20,8 +20,8 @@ package com.android.testutils
 
 import androidx.test.platform.app.InstrumentationRegistry
 import com.android.modules.utils.build.SdkLevel
-import com.android.testutils.ExceptionUtils.ThrowingRunnable
-import com.android.testutils.ExceptionUtils.ThrowingSupplier
+import com.android.testutils.FunctionalUtils.ThrowingRunnable
+import com.android.testutils.FunctionalUtils.ThrowingSupplier
 
 /**
  * Run the specified [task] with the specified [permissions] obtained through shell
