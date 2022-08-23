@@ -115,7 +115,8 @@ def make_jarjar_rules(args):
             jar_classes = _list_jar_classes(jar)
             jar_classes.sort()
             for clazz in jar_classes:
-                if (_get_toplevel_class(clazz) not in excluded_classes and
+                if (not clazz.startswith(args.prefix + '.') and
+                        _get_toplevel_class(clazz) not in excluded_classes and
                         not any(r.fullmatch(clazz) for r in exclude_regexes)):
                     outfile.write(f'rule {clazz} {args.prefix}.@0\n')
                     # Also include jarjar rules for unit tests of the class, so the package matches
