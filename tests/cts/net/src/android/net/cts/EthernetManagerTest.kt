@@ -41,6 +41,7 @@ import android.net.LinkAddress
 import android.net.MacAddress
 import android.net.Network
 import android.net.NetworkCapabilities
+import android.net.NetworkCapabilities.NET_CAPABILITY_NOT_CONGESTED
 import android.net.NetworkCapabilities.NET_CAPABILITY_NOT_RESTRICTED
 import android.net.NetworkCapabilities.NET_CAPABILITY_TEMPORARILY_NOT_METERED
 import android.net.NetworkCapabilities.NET_CAPABILITY_TRUSTED
@@ -114,6 +115,10 @@ private val ETH_REQUEST: NetworkRequest = NetworkRequest.Builder()
         .addTransportType(TRANSPORT_TEST)
         .addTransportType(TRANSPORT_ETHERNET)
         .removeCapability(NET_CAPABILITY_TRUSTED)
+        .build()
+private val TEST_CAPS = NetworkCapabilities.Builder(ETH_REQUEST.networkCapabilities)
+        .addCapability(NET_CAPABILITY_TEMPORARILY_NOT_METERED)
+        .addCapability(NET_CAPABILITY_NOT_CONGESTED)
         .build()
 private val STATIC_IP_CONFIGURATION = IpConfiguration.Builder()
         .setStaticIpConfiguration(StaticIpConfiguration.Builder()
@@ -538,10 +543,12 @@ class EthernetManagerTest {
             it.networkSpecifier == EthernetNetworkSpecifier(name)
         }
 
-    private fun TestableNetworkCallback.eventuallyExpectCapabilitiesWith(cap: Int) {
+    private fun TestableNetworkCallback.eventuallyExpectCapabilities(nc: NetworkCapabilities) {
         // b/233534110: eventuallyExpect<CapabilitiesChanged>() does not advance ReadHead.
         eventuallyExpect(CapabilitiesChanged::class, TIMEOUT_MS) {
-            it is CapabilitiesChanged && it.caps.hasCapability(cap)
+            // CS may mix in additional capabilities, so NetworkCapabilities#equals cannot be used.
+            // Check if all expected capabilities are present instead.
+            it is CapabilitiesChanged && nc.capabilities.all { c -> it.caps.hasCapability(c) }
         }
     }
 
@@ -895,13 +902,8 @@ class EthernetManagerTest {
         val cb = requestNetwork(ETH_REQUEST.copyWithEthernetSpecifier(iface.name))
         val network = cb.expectAvailable()
 
-        val testCapability = NET_CAPABILITY_TEMPORARILY_NOT_METERED
-        val nc = NetworkCapabilities
-                .Builder(ETH_REQUEST.networkCapabilities)
-                .addCapability(testCapability)
-                .build()
-        updateConfiguration(iface, STATIC_IP_CONFIGURATION, nc).expectResult(iface.name)
-        cb.eventuallyExpectCapabilitiesWith(testCapability)
+        updateConfiguration(iface, STATIC_IP_CONFIGURATION, TEST_CAPS).expectResult(iface.name)
+        cb.eventuallyExpectCapabilities(TEST_CAPS)
         cb.eventuallyExpectLpForStaticConfig(STATIC_IP_CONFIGURATION.staticIpConfiguration)
     }
 
@@ -921,13 +923,8 @@ class EthernetManagerTest {
         val cb = requestNetwork(ETH_REQUEST.copyWithEthernetSpecifier(iface.name))
         val network = cb.expectAvailable()
 
-        val testCapability = NET_CAPABILITY_TEMPORARILY_NOT_METERED
-        val nc = NetworkCapabilities
-                .Builder(ETH_REQUEST.networkCapabilities)
-                .addCapability(testCapability)
-                .build()
-        updateConfiguration(iface, capabilities = nc).expectResult(iface.name)
-        cb.eventuallyExpectCapabilitiesWith(testCapability)
+        updateConfiguration(iface, capabilities = TEST_CAPS).expectResult(iface.name)
+        cb.eventuallyExpectCapabilities(TEST_CAPS)
     }
 
     @Test
@@ -974,17 +971,12 @@ class EthernetManagerTest {
 
         // Updating the IpConfiguration and NetworkCapabilities on absent interfaces is a supported
         // use case.
-        val testCapability = NET_CAPABILITY_TEMPORARILY_NOT_METERED
-        val nc = NetworkCapabilities
-                .Builder(ETH_REQUEST.networkCapabilities)
-                .addCapability(testCapability)
-                .build()
-        updateConfiguration(iface, STATIC_IP_CONFIGURATION, nc).expectResult(iface.name)
+        updateConfiguration(iface, STATIC_IP_CONFIGURATION, TEST_CAPS).expectResult(iface.name)
 
         setEthernetEnabled(true)
         val cb = requestNetwork(ETH_REQUEST)
         cb.expectAvailable()
-        cb.eventuallyExpectCapabilitiesWith(testCapability)
+        cb.eventuallyExpectCapabilities(TEST_CAPS)
         cb.eventuallyExpectLpForStaticConfig(STATIC_IP_CONFIGURATION.staticIpConfiguration)
     }
 }
