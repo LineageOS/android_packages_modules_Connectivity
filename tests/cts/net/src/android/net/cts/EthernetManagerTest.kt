@@ -538,17 +538,23 @@ class EthernetManagerTest {
             it.networkSpecifier == EthernetNetworkSpecifier(name)
         }
 
-    private fun TestableNetworkCallback.expectCapabilitiesWith(cap: Int) =
-        expectCapabilitiesThat(anyNetwork(), TIMEOUT_MS) {
-            it.hasCapability(cap)
+    private fun TestableNetworkCallback.eventuallyExpectCapabilitiesWith(cap: Int) {
+        // b/233534110: eventuallyExpect<CapabilitiesChanged>() does not advance ReadHead.
+        eventuallyExpect(CapabilitiesChanged::class, TIMEOUT_MS) {
+            it is CapabilitiesChanged && it.caps.hasCapability(cap)
         }
+    }
 
-    private fun TestableNetworkCallback.expectLinkPropertiesWithLinkAddress(addr: LinkAddress) =
-        expectLinkPropertiesThat(anyNetwork(), TIMEOUT_MS) {
-            // LinkAddress.equals isn't possible as the system changes the LinkAddress.flags value.
-            // any() must be used since the interface may also have a link-local address.
-            it.linkAddresses.any { x -> x.isSameAddressAs(addr) }
+    private fun TestableNetworkCallback.eventuallyExpectLpForStaticConfig(
+        config: StaticIpConfiguration
+    ) {
+        // b/233534110: eventuallyExpect<LinkPropertiesChanged>() does not advance ReadHead.
+        eventuallyExpect(LinkPropertiesChanged::class, TIMEOUT_MS) {
+            it is LinkPropertiesChanged && it.lp.linkAddresses.any { la ->
+                la.isSameAddressAs(config.ipAddress)
+            }
         }
+    }
 
     @Test
     fun testCallbacks() {
@@ -888,7 +894,6 @@ class EthernetManagerTest {
         val iface = createInterface()
         val cb = requestNetwork(ETH_REQUEST.copyWithEthernetSpecifier(iface.name))
         val network = cb.expectAvailable()
-        cb.assertNeverLost()
 
         val testCapability = NET_CAPABILITY_TEMPORARILY_NOT_METERED
         val nc = NetworkCapabilities
@@ -896,14 +901,8 @@ class EthernetManagerTest {
                 .addCapability(testCapability)
                 .build()
         updateConfiguration(iface, STATIC_IP_CONFIGURATION, nc).expectResult(iface.name)
-
-        // UpdateConfiguration() currently does a restarts on the ethernet interface therefore lost
-        // will be expected first before available, as part of the restart.
-        cb.expectLost(network)
-        cb.expectAvailable()
-        cb.expectCapabilitiesWith(testCapability)
-        cb.expectLinkPropertiesWithLinkAddress(
-                STATIC_IP_CONFIGURATION.staticIpConfiguration.ipAddress!!)
+        cb.eventuallyExpectCapabilitiesWith(testCapability)
+        cb.eventuallyExpectLpForStaticConfig(STATIC_IP_CONFIGURATION.staticIpConfiguration)
     }
 
     @Test
@@ -911,17 +910,9 @@ class EthernetManagerTest {
         val iface = createInterface()
         val cb = requestNetwork(ETH_REQUEST.copyWithEthernetSpecifier(iface.name))
         val network = cb.expectAvailable()
-        cb.assertNeverLost()
 
         updateConfiguration(iface, STATIC_IP_CONFIGURATION).expectResult(iface.name)
-
-        // UpdateConfiguration() currently does a restarts on the ethernet interface therefore lost
-        // will be expected first before available, as part of the restart.
-        cb.expectLost(network)
-        cb.expectAvailable()
-        cb.expectCallback<CapabilitiesChanged>()
-        cb.expectLinkPropertiesWithLinkAddress(
-                STATIC_IP_CONFIGURATION.staticIpConfiguration.ipAddress!!)
+        cb.eventuallyExpectLpForStaticConfig(STATIC_IP_CONFIGURATION.staticIpConfiguration)
     }
 
     @Test
@@ -929,7 +920,6 @@ class EthernetManagerTest {
         val iface = createInterface()
         val cb = requestNetwork(ETH_REQUEST.copyWithEthernetSpecifier(iface.name))
         val network = cb.expectAvailable()
-        cb.assertNeverLost()
 
         val testCapability = NET_CAPABILITY_TEMPORARILY_NOT_METERED
         val nc = NetworkCapabilities
@@ -937,12 +927,7 @@ class EthernetManagerTest {
                 .addCapability(testCapability)
                 .build()
         updateConfiguration(iface, capabilities = nc).expectResult(iface.name)
-
-        // UpdateConfiguration() currently does a restarts on the ethernet interface therefore lost
-        // will be expected first before available, as part of the restart.
-        cb.expectLost(network)
-        cb.expectAvailable()
-        cb.expectCapabilitiesWith(testCapability)
+        cb.eventuallyExpectCapabilitiesWith(testCapability)
     }
 
     @Test
