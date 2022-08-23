@@ -21,7 +21,7 @@ import android.Manifest.permission.WRITE_DEVICE_CONFIG
 import android.provider.DeviceConfig
 import android.util.Log
 import com.android.modules.utils.build.SdkLevel
-import com.android.testutils.ExceptionUtils.ThrowingRunnable
+import com.android.testutils.FunctionalUtils.ThrowingRunnable
 import com.android.testutils.runAsShell
 import com.android.testutils.tryTest
 import org.junit.rules.TestRule
