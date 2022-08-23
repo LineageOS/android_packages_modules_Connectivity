@@ -30,6 +30,7 @@ import service.proto.Rpcs.GetObservedDeviceResponse;
 
 public final class DataUtilsTest {
     private static final String BLUETOOTH_ADDRESS = "00:11:22:33:FF:EE";
+    private static final String MODEL_ID = "model_id";
     private static final String APP_PACKAGE = "test_package";
     private static final String APP_ACTION_URL =
             "intent:#Intent;action=cto_be_set%3AACTION_MAGIC_PAIR;"
@@ -65,7 +66,7 @@ public final class DataUtilsTest {
     @Test
     public void test_toScanFastPairStoreItem_withAccount() {
         Cache.ScanFastPairStoreItem item = DataUtils.toScanFastPairStoreItem(
-                createObservedDeviceResponse(), BLUETOOTH_ADDRESS, ACCOUNT);
+                createObservedDeviceResponse(), BLUETOOTH_ADDRESS, MODEL_ID, ACCOUNT);
         assertThat(item.getAddress()).isEqualTo(BLUETOOTH_ADDRESS);
         assertThat(item.getActionUrl()).isEqualTo(APP_ACTION_URL);
         assertThat(item.getDeviceName()).isEqualTo(DEVICE_NAME);
@@ -97,7 +98,7 @@ public final class DataUtilsTest {
     @Test
     public void test_toScanFastPairStoreItem_withoutAccount() {
         Cache.ScanFastPairStoreItem item = DataUtils.toScanFastPairStoreItem(
-                createObservedDeviceResponse(), BLUETOOTH_ADDRESS, /* account= */ null);
+                createObservedDeviceResponse(), BLUETOOTH_ADDRESS, MODEL_ID, /* account= */ null);
         FastPairStrings strings = item.getFastPairStrings();
         assertThat(strings.getInitialPairingDescription())
                 .isEqualTo(MESSAGE_INIT_NOTIFY_DESCRIPTION_NO_ACCOUNT);
@@ -106,7 +107,7 @@ public final class DataUtilsTest {
     @Test
     public void test_toString() {
         Cache.ScanFastPairStoreItem item = DataUtils.toScanFastPairStoreItem(
-                createObservedDeviceResponse(), BLUETOOTH_ADDRESS, ACCOUNT);
+                createObservedDeviceResponse(), BLUETOOTH_ADDRESS, MODEL_ID, ACCOUNT);
 
         assertThat(DataUtils.toString(item))
                 .isEqualTo("ScanFastPairStoreItem=[address:00:11:22:33:FF:EE, "

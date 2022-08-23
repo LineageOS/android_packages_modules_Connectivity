@@ -235,7 +235,8 @@ public class DevicePairingFragment extends HalfSheetModuleFragment implements
                 ((HalfSheetActivity) getActivity()).onCancelClicked());
         mSettingsButton.setOnClickListener(v -> onSettingsClicked());
         mSetupButton.setOnClickListener(v -> onSetupClick());
-
+        // TODO: Add Listener to info button to open the info page ,
+        // and reset the half-sheet ban state to active
         return rootView;
     }
 

@@ -19,6 +19,7 @@ package com.android.nearby.halfsheet;
 import static com.android.nearby.halfsheet.fragment.DevicePairingFragment.APP_LAUNCH_FRAGMENT_TYPE;
 import static com.android.server.nearby.common.bluetooth.fastpair.FastPairConstants.EXTRA_MODEL_ID;
 import static com.android.server.nearby.common.fastpair.service.UserActionHandlerBase.EXTRA_MAC_ADDRESS;
+import static com.android.server.nearby.fastpair.Constant.ACTION_FAST_PAIR_HALF_SHEET_BAN_STATE_RESET;
 import static com.android.server.nearby.fastpair.Constant.ACTION_FAST_PAIR_HALF_SHEET_CANCEL;
 import static com.android.server.nearby.fastpair.Constant.DEVICE_PAIRING_FRAGMENT_TYPE;
 import static com.android.server.nearby.fastpair.Constant.EXTRA_HALF_SHEET_INFO;
@@ -205,29 +206,47 @@ public class HalfSheetActivity extends FragmentActivity {
         finish();
     }
 
+
+    /**
+     * Changes the half sheet ban state to active.
+     * Sometimes users leave half sheet to go to fast pair info page,
+     * we do not want the behavior to be counted as dismiss.
+     */
+    public void sendBanStateResetBroadcast() {
+        if (mScanFastPairStoreItem == null) {
+            return;
+        }
+        BroadcastUtils.sendBroadcast(
+                this,
+                new Intent(ACTION_FAST_PAIR_HALF_SHEET_BAN_STATE_RESET)
+                        .putExtra(EXTRA_MODEL_ID, mScanFastPairStoreItem.getModelId()
+                                .toLowerCase(Locale.ROOT)));
+    }
+
     private void sendHalfSheetCancelBroadcast() {
         BroadcastUtils.sendBroadcast(
                 this,
                 new Intent(ACTION_HALF_SHEET_FOREGROUND_STATE)
                         .putExtra(EXTRA_HALF_SHEET_FOREGROUND, false));
-        if (mScanFastPairStoreItem != null) {
-            BroadcastUtils.sendBroadcast(
-                    this,
-                    new Intent(ACTION_FAST_PAIR_HALF_SHEET_CANCEL)
-                            .putExtra(EXTRA_MODEL_ID,
-                                    mScanFastPairStoreItem.getModelId().toLowerCase(Locale.ROOT))
-                            .putExtra(EXTRA_HALF_SHEET_TYPE,
-                                    getIntent().getStringExtra(EXTRA_HALF_SHEET_TYPE))
-                            .putExtra(
-                                    EXTRA_HALF_SHEET_IS_SUBSEQUENT_PAIR,
-                                    getIntent().getBooleanExtra(EXTRA_HALF_SHEET_IS_SUBSEQUENT_PAIR,
-                                            false))
-                            .putExtra(
-                                    EXTRA_HALF_SHEET_IS_RETROACTIVE,
-                                    getIntent().getBooleanExtra(EXTRA_HALF_SHEET_IS_RETROACTIVE,
-                                            false))
-                            .putExtra(EXTRA_MAC_ADDRESS, mScanFastPairStoreItem.getAddress()));
+        if (mScanFastPairStoreItem == null) {
+            return;
         }
+        BroadcastUtils.sendBroadcast(
+                this,
+                new Intent(ACTION_FAST_PAIR_HALF_SHEET_CANCEL)
+                        .putExtra(EXTRA_MODEL_ID,
+                                mScanFastPairStoreItem.getModelId().toLowerCase(Locale.ROOT))
+                        .putExtra(EXTRA_HALF_SHEET_TYPE,
+                                getIntent().getStringExtra(EXTRA_HALF_SHEET_TYPE))
+                        .putExtra(
+                                EXTRA_HALF_SHEET_IS_SUBSEQUENT_PAIR,
+                                getIntent().getBooleanExtra(EXTRA_HALF_SHEET_IS_SUBSEQUENT_PAIR,
+                                        false))
+                        .putExtra(
+                                EXTRA_HALF_SHEET_IS_RETROACTIVE,
+                                getIntent().getBooleanExtra(EXTRA_HALF_SHEET_IS_RETROACTIVE,
+                                        false))
+                        .putExtra(EXTRA_MAC_ADDRESS, mScanFastPairStoreItem.getAddress()));
     }
 
     @Override
