@@ -30,7 +30,7 @@ import java.util.concurrent.TimeUnit;
  * Abstract base class for mDNS records. Stores the header fields and provides methods for reading
  * the record from and writing it to a packet.
  */
-// TODO(b/177655645): Resolve nullness suppression.
+// TODO(b/242631897): Resolve nullness suppression.
 @SuppressWarnings("nullness")
 public abstract class MdnsRecord {
     public static final int TYPE_A = 0x0001;
