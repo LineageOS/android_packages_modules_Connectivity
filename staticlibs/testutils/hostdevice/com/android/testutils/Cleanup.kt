@@ -18,8 +18,8 @@
 
 package com.android.testutils
 
-import com.android.testutils.ExceptionUtils.ThrowingRunnable
-import com.android.testutils.ExceptionUtils.ThrowingSupplier
+import com.android.testutils.FunctionalUtils.ThrowingRunnable
+import com.android.testutils.FunctionalUtils.ThrowingSupplier
 import javax.annotation.CheckReturnValue
 
 /**
