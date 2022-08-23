@@ -32,7 +32,7 @@ import java.util.List;
  *
  * @see MulticastSocket for javadoc of each public method.
  */
-// TODO(b/177655645): Resolve nullness suppression.
+// TODO(b/242631897): Resolve nullness suppression.
 @SuppressWarnings("nullness")
 public class MdnsSocket {
     private static final InetSocketAddress MULTICAST_IPV4_ADDRESS =
