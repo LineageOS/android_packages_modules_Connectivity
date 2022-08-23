@@ -962,4 +962,29 @@ class EthernetManagerTest {
         // With the test process UID allowed, binding to a restricted network should be successful.
         Socket().use { socket -> updatedNetwork.bindSocket(socket) }
     }
+
+    // TODO: consider only having this test in MTS as it makes use of the fact that
+    // setEthernetEnabled(false) untracks all interfaces. This behavior is an implementation detail
+    // and may change in the future.
+    @Test
+    fun testUpdateConfiguration_onUntrackedInterface() {
+        assumeFalse(isAdbOverEthernet())
+        val iface = createInterface()
+        setEthernetEnabled(false)
+
+        // Updating the IpConfiguration and NetworkCapabilities on absent interfaces is a supported
+        // use case.
+        val testCapability = NET_CAPABILITY_TEMPORARILY_NOT_METERED
+        val nc = NetworkCapabilities
+                .Builder(ETH_REQUEST.networkCapabilities)
+                .addCapability(testCapability)
+                .build()
+        updateConfiguration(iface, STATIC_IP_CONFIGURATION, nc).expectResult(iface.name)
+
+        setEthernetEnabled(true)
+        val cb = requestNetwork(ETH_REQUEST)
+        cb.expectAvailable()
+        cb.eventuallyExpectCapabilitiesWith(testCapability)
+        cb.eventuallyExpectLpForStaticConfig(STATIC_IP_CONFIGURATION.staticIpConfiguration)
+    }
 }
