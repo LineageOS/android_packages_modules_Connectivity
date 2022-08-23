@@ -26,6 +26,7 @@ import static android.Manifest.permission.NETWORK_SETTINGS;
 import static android.Manifest.permission.NETWORK_SETUP_WIZARD;
 import static android.Manifest.permission.NETWORK_STACK;
 import static android.Manifest.permission.READ_DEVICE_CONFIG;
+import static android.Manifest.permission.TETHER_PRIVILEGED;
 import static android.content.pm.PackageManager.FEATURE_BLUETOOTH;
 import static android.content.pm.PackageManager.FEATURE_ETHERNET;
 import static android.content.pm.PackageManager.FEATURE_TELEPHONY;
@@ -2488,15 +2489,24 @@ public class ConnectivityManagerTest {
                 ConnectivitySettingsManager.getNetworkAvoidBadWifi(mContext);
         final int curPrivateDnsMode = ConnectivitySettingsManager.getPrivateDnsMode(mContext);
 
-        TestTetheringEventCallback tetherEventCallback = null;
         final CtsTetheringUtils tetherUtils = new CtsTetheringUtils(mContext);
+        final TestTetheringEventCallback tetherEventCallback =
+                tetherUtils.registerTetheringEventCallback();
         try {
-            tetherEventCallback = tetherUtils.registerTetheringEventCallback();
-            // start tethering
             tetherEventCallback.assumeWifiTetheringSupported(mContext);
-            tetherUtils.startWifiTethering(tetherEventCallback);
+
+            final TestableNetworkCallback wifiCb = new TestableNetworkCallback();
+            mCtsNetUtils.ensureWifiConnected();
+            registerCallbackAndWaitForAvailable(makeWifiNetworkRequest(), wifiCb);
             // Update setting to verify the behavior.
             setAirplaneMode(true);
+            // Verify wifi lost to make sure airplane mode takes effect. This could
+            // prevent the race condition between airplane mode enabled and the followed
+            // up wifi tethering enabled.
+            waitForLost(wifiCb);
+            // start wifi tethering
+            tetherUtils.startWifiTethering(tetherEventCallback);
+
             ConnectivitySettingsManager.setPrivateDnsMode(mContext,
                     ConnectivitySettingsManager.PRIVATE_DNS_MODE_OFF);
             ConnectivitySettingsManager.setNetworkAvoidBadWifi(mContext,
@@ -2504,20 +2514,19 @@ public class ConnectivityManagerTest {
             assertEquals(AIRPLANE_MODE_ON, Settings.Global.getInt(
                     mContext.getContentResolver(), Settings.Global.AIRPLANE_MODE_ON));
             // Verify factoryReset
-            runAsShell(NETWORK_SETTINGS, () -> mCm.factoryReset());
+            runAsShell(NETWORK_SETTINGS, TETHER_PRIVILEGED, () -> {
+                mCm.factoryReset();
+                tetherEventCallback.expectNoTetheringActive();
+            });
             verifySettings(AIRPLANE_MODE_OFF,
                     ConnectivitySettingsManager.PRIVATE_DNS_MODE_OPPORTUNISTIC,
                     ConnectivitySettingsManager.NETWORK_AVOID_BAD_WIFI_PROMPT);
-
-            tetherEventCallback.expectNoTetheringActive();
         } finally {
             // Restore settings.
             setAirplaneMode(false);
             ConnectivitySettingsManager.setNetworkAvoidBadWifi(mContext, curAvoidBadWifi);
             ConnectivitySettingsManager.setPrivateDnsMode(mContext, curPrivateDnsMode);
-            if (tetherEventCallback != null) {
-                tetherUtils.unregisterTetheringEventCallback(tetherEventCallback);
-            }
+            tetherUtils.unregisterTetheringEventCallback(tetherEventCallback);
             tetherUtils.stopAllTethering();
         }
     }
