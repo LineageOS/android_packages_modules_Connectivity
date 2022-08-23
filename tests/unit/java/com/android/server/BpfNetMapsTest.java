@@ -30,6 +30,7 @@ import static android.net.INetd.PERMISSION_INTERNET;
 import static android.net.INetd.PERMISSION_NONE;
 import static android.net.INetd.PERMISSION_UNINSTALLED;
 import static android.net.INetd.PERMISSION_UPDATE_DEVICE_STATS;
+import static android.system.OsConstants.EPERM;
 
 import static com.android.server.BpfNetMaps.DOZABLE_MATCH;
 import static com.android.server.BpfNetMaps.HAPPY_BOX_MATCH;
@@ -92,6 +93,7 @@ public final class BpfNetMapsTest {
     private static final int NULL_IIF = 0;
     private static final String CHAINNAME = "fw_dozable";
     private static final U32 UID_RULES_CONFIGURATION_KEY = new U32(0);
+    private static final U32 CURRENT_STATS_MAP_CONFIGURATION_KEY = new U32(1);
     private static final List<Integer> FIREWALL_CHAINS = List.of(
             FIREWALL_CHAIN_DOZABLE,
             FIREWALL_CHAIN_STANDBY,
@@ -102,6 +104,9 @@ public final class BpfNetMapsTest {
             FIREWALL_CHAIN_OEM_DENY_2,
             FIREWALL_CHAIN_OEM_DENY_3
     );
+
+    private static final long STATS_SELECT_MAP_A = 0;
+    private static final long STATS_SELECT_MAP_B = 1;
 
     private BpfNetMaps mBpfNetMaps;
 
@@ -117,6 +122,7 @@ public final class BpfNetMapsTest {
     public void setUp() throws Exception {
         MockitoAnnotations.initMocks(this);
         doReturn(TEST_IF_INDEX).when(mDeps).getIfIndex(TEST_IF_NAME);
+        doReturn(0).when(mDeps).synchronizeKernelRCU();
         BpfNetMaps.setEnableJavaBpfMapForTest(true /* enable */);
         BpfNetMaps.setConfigurationMapForTest(mConfigurationMap);
         BpfNetMaps.setUidOwnerMapForTest(mUidOwnerMap);
@@ -845,5 +851,30 @@ public final class BpfNetMapsTest {
         mBpfNetMaps.setNetPermForUids(PERMISSION_UNINSTALLED, TEST_UIDS);
         assertNull(mUidPermissionMap.getValue(new U32(uid0)));
         assertNull(mUidPermissionMap.getValue(new U32(uid1)));
+    }
+
+    @Test
+    @IgnoreUpTo(Build.VERSION_CODES.S_V2)
+    public void testSwapActiveStatsMap() throws Exception {
+        mConfigurationMap.updateEntry(
+                CURRENT_STATS_MAP_CONFIGURATION_KEY, new U32(STATS_SELECT_MAP_A));
+
+        mBpfNetMaps.swapActiveStatsMap();
+        assertEquals(STATS_SELECT_MAP_B,
+                mConfigurationMap.getValue(CURRENT_STATS_MAP_CONFIGURATION_KEY).val);
+
+        mBpfNetMaps.swapActiveStatsMap();
+        assertEquals(STATS_SELECT_MAP_A,
+                mConfigurationMap.getValue(CURRENT_STATS_MAP_CONFIGURATION_KEY).val);
+    }
+
+    @Test
+    @IgnoreUpTo(Build.VERSION_CODES.S_V2)
+    public void testSwapActiveStatsMapSynchronizeKernelRCUFail() throws Exception {
+        doReturn(EPERM).when(mDeps).synchronizeKernelRCU();
+        mConfigurationMap.updateEntry(
+                CURRENT_STATS_MAP_CONFIGURATION_KEY, new U32(STATS_SELECT_MAP_A));
+
+        assertThrows(ServiceSpecificException.class, () -> mBpfNetMaps.swapActiveStatsMap());
     }
 }
