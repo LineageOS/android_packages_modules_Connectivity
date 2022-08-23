@@ -46,7 +46,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  *
  * <p>See https://tools.ietf.org/html/rfc6763 (namely sections 4 and 5).
  */
-// TODO(b/177655645): Resolve nullness suppression.
+// TODO(b/242631897): Resolve nullness suppression.
 @SuppressWarnings("nullness")
 public class MdnsSocketClient {
 
