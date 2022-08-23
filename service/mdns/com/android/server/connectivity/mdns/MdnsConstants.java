@@ -27,7 +27,7 @@ import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 
 /** mDNS-related constants. */
-// TODO(b/177655645): Resolve nullness suppression.
+// TODO(b/242631897): Resolve nullness suppression.
 @SuppressWarnings("nullness")
 @VisibleForTesting
 public final class MdnsConstants {
