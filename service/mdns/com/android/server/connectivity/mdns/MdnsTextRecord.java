@@ -25,7 +25,7 @@ import java.util.List;
 import java.util.Objects;
 
 /** An mDNS "TXT" record, which contains a list of text strings. */
-// TODO(b/177655645): Resolve nullness suppression.
+// TODO(b/242631897): Resolve nullness suppression.
 @SuppressWarnings("nullness")
 @VisibleForTesting
 public class MdnsTextRecord extends MdnsRecord {
