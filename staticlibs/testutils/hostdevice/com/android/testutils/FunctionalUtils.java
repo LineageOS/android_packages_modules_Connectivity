@@ -21,7 +21,7 @@ import java.util.function.Supplier;
 /**
  * A class grouping some utilities to deal with exceptions.
  */
-public class ExceptionUtils {
+public class FunctionalUtils {
     /**
      * Like a Consumer, but declared to throw an exception.
      * @param <T>
@@ -78,5 +78,22 @@ public class ExceptionUtils {
             } catch (Exception e) {
             }
         };
+    }
+
+    // Java has Function<T, R> and BiFunction<T, U, V> but nothing for higher-arity functions.
+    // Function3 is what Kotlin and Scala use (they also have higher-arity variants, with
+    // FunctionN taking N arguments, as the JVM does not have variadic formal parameters)
+    /**
+     * A function with three arguments.
+     * @param <TArg1> Type of the first argument
+     * @param <TArg2> Type of the second argument
+     * @param <TArg3> Type of the third argument
+     * @param <TResult> Type of the return value
+     */
+    public interface Function3<TArg1, TArg2, TArg3, TResult> {
+        /**
+         * Apply the function to the arguments
+         */
+        TResult apply(TArg1 a1, TArg2 a2, TArg3 a3);
     }
 }
