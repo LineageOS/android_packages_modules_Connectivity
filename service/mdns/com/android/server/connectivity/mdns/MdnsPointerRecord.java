@@ -22,7 +22,7 @@ import java.io.IOException;
 import java.util.Arrays;
 
 /** An mDNS "PTR" record, which holds a name (the "pointer"). */
-// TODO(b/177655645): Resolve nullness suppression.
+// TODO(b/242631897): Resolve nullness suppression.
 @SuppressWarnings("nullness")
 @VisibleForTesting
 public class MdnsPointerRecord extends MdnsRecord {
