@@ -122,6 +122,7 @@ import android.provider.Settings;
 import android.system.ErrnoException;
 import android.telephony.TelephonyManager;
 import android.util.ArrayMap;
+import android.util.Pair;
 
 import androidx.annotation.Nullable;
 import androidx.test.InstrumentationRegistry;
@@ -130,8 +131,10 @@ import androidx.test.filters.SmallTest;
 import com.android.connectivity.resources.R;
 import com.android.internal.util.FileRotator;
 import com.android.internal.util.test.BroadcastInterceptingContext;
+import com.android.net.module.util.BpfDump;
 import com.android.net.module.util.IBpfMap;
 import com.android.net.module.util.LocationPermissionChecker;
+import com.android.net.module.util.Struct;
 import com.android.net.module.util.Struct.U32;
 import com.android.net.module.util.Struct.U8;
 import com.android.net.module.util.bpf.CookieTagMapKey;
@@ -168,6 +171,7 @@ import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.time.temporal.ChronoUnit;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -211,6 +215,11 @@ public class NetworkStatsServiceTest extends NetworkStatsBaseTest {
 
     private static final long WAIT_TIMEOUT = 2 * 1000;  // 2 secs
     private static final int INVALID_TYPE = -1;
+
+    private static final String DUMPSYS_BPF_RAW_MAP = "--bpfRawMap";
+    private static final String DUMPSYS_COOKIE_TAG_MAP = "--cookieTagMap";
+    private static final String LINE_DELIMITER = "\\n";
+
 
     private long mElapsedRealtime;
 
@@ -2333,10 +2342,25 @@ public class NetworkStatsServiceTest extends NetworkStatsBaseTest {
                 dump.contains(message));
     }
 
-    private String getDump() {
+    private String getDump(final String[] args) {
         final StringWriter sw = new StringWriter();
-        mService.dump(new FileDescriptor(), new PrintWriter(sw), new String[]{});
+        mService.dump(new FileDescriptor(), new PrintWriter(sw), args);
         return sw.toString();
+    }
+
+    private String getDump() {
+        return getDump(new String[]{});
+    }
+
+    private <K extends Struct, V extends Struct> Map<K, V> parseBpfRawMap(
+            Class<K> keyClass, Class<V> valueClass, String dumpStr) {
+        final HashMap<K, V> map = new HashMap<>();
+        for (final String line : dumpStr.split(LINE_DELIMITER)) {
+            final Pair<K, V> keyValue =
+                    BpfDump.fromBase64EncodedString(keyClass, valueClass, line.trim());
+            map.put(keyValue.first, keyValue.second);
+        }
+        return map;
     }
 
     @Test
@@ -2347,6 +2371,23 @@ public class NetworkStatsServiceTest extends NetworkStatsBaseTest {
         assertDumpContains(dump, "mCookieTagMap: OK");
         assertDumpContains(dump, "cookie=2002 tag=0x1 uid=1002");
         assertDumpContains(dump, "cookie=3002 tag=0x2 uid=1002");
+    }
+
+    @Test
+    public void testDumpCookieTagMapBpfRawMap() throws ErrnoException {
+        initBpfMapsWithTagData(UID_BLUE);
+
+        final String dump = getDump(new String[]{DUMPSYS_BPF_RAW_MAP, DUMPSYS_COOKIE_TAG_MAP});
+        Map<CookieTagMapKey, CookieTagMapValue> cookieTagMap = parseBpfRawMap(
+                CookieTagMapKey.class, CookieTagMapValue.class, dump);
+
+        final CookieTagMapValue val1 = cookieTagMap.get(new CookieTagMapKey(2002));
+        assertEquals(1, val1.tag);
+        assertEquals(1002, val1.uid);
+
+        final CookieTagMapValue val2 = cookieTagMap.get(new CookieTagMapKey(3002));
+        assertEquals(2, val2.tag);
+        assertEquals(1002, val2.uid);
     }
 
     @Test
