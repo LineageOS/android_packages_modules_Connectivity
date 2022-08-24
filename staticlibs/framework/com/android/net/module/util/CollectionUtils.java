@@ -22,6 +22,7 @@ import android.util.SparseArray;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
 import java.util.Objects;
 import java.util.function.Predicate;
 
@@ -239,4 +240,38 @@ public final class CollectionUtils {
         return haystack.containsAll(needles);
     }
 
+    /**
+     * Returns the first item of a collection that matches the predicate.
+     * @param haystack The collection to search.
+     * @param condition The predicate to match.
+     * @param <T> The type of element in the collection.
+     * @return The first element matching the predicate, or null if none.
+     */
+    @Nullable
+    public static <T> T findFirst(Collection<T> haystack, Predicate<? super T> condition) {
+        for (T needle : haystack) {
+            if (condition.test(needle)) return needle;
+        }
+        return null;
+    }
+
+    /**
+     * Returns the last item of a List that matches the predicate.
+     * @param haystack The List to search.
+     * @param condition The predicate to match.
+     * @param <T> The type of element in the list.
+     * @return The last element matching the predicate, or null if none.
+     */
+    // There is no way to reverse iterate a Collection in Java (e.g. the collection may
+    // be a single-linked list), so implementing this on Collection is necessarily very
+    // wasteful (store and reverse a copy, test all elements, or recurse to the end of the
+    // list to test on the up path and possibly blow the call stack)
+    @Nullable
+    public static <T> T findLast(List<T> haystack, Predicate<? super T> condition) {
+        for (int i = haystack.size() - 1; i >= 0; --i) {
+            final T needle = haystack.get(i);
+            if (condition.test(needle)) return needle;
+        }
+        return null;
+    }
 }
