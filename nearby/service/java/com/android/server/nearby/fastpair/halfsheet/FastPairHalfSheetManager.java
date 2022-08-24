@@ -23,6 +23,8 @@ import static com.android.server.nearby.fastpair.Constant.EXTRA_HALF_SHEET_INFO;
 import static com.android.server.nearby.fastpair.Constant.EXTRA_HALF_SHEET_TYPE;
 import static com.android.server.nearby.fastpair.FastPairManager.ACTION_RESOURCES_APK;
 
+import android.annotation.UiThread;
+import android.app.KeyguardManager;
 import android.bluetooth.BluetoothDevice;
 import android.content.ComponentName;
 import android.content.Context;
@@ -35,14 +37,24 @@ import android.nearby.PairStatusMetadata;
 import android.os.Bundle;
 import android.os.UserHandle;
 import android.util.Log;
+import android.util.LruCache;
 
 import com.android.internal.annotations.VisibleForTesting;
+import com.android.server.nearby.common.eventloop.Annotations;
+import com.android.server.nearby.common.eventloop.EventLoop;
+import com.android.server.nearby.common.eventloop.NamedRunnable;
+import com.android.server.nearby.common.locator.Locator;
 import com.android.server.nearby.common.locator.LocatorContextWrapper;
 import com.android.server.nearby.fastpair.FastPairController;
+import com.android.server.nearby.fastpair.blocklist.Blocklist;
 import com.android.server.nearby.fastpair.cache.DiscoveryItem;
 import com.android.server.nearby.util.Environment;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 import service.proto.Cache;
@@ -55,20 +67,51 @@ public class FastPairHalfSheetManager {
     private static final String HALF_SHEET_CLASS_NAME =
             "com.android.nearby.halfsheet.HalfSheetActivity";
     private static final String TAG = "FPHalfSheetManager";
+    public static final String ACTION_HALF_SHEET_STATUS_CHANGE =
+            "com.android.nearby.halfsheet.ACTION_HALF_SHEET_STATUS_CHANGE";
+    public static final String FINISHED_STATE = "FINISHED_STATE";
+    // The timeout to ban half sheet after user trigger the ban logic odd number of time: 5 mins
+    private static final int DURATION_RESURFACE_HALFSHEET_FIRST_DISMISS_MILLI_SECONDS = 300000;
+    @VisibleForTesting static final String DISMISS_HALFSHEET_RUNNABLE_NAME = "DismissHalfSheet";
+
+    static final int HALFSHEET_ID_SEED = "new_fast_pair_half_sheet".hashCode();
 
     private String mHalfSheetApkPkgName;
     private final LocatorContextWrapper mLocatorContextWrapper;
+    private final AtomicInteger mNotificationIds = new AtomicInteger(HALFSHEET_ID_SEED);
+    private FastPairHalfSheetBlocklist mHalfSheetBlocklist;
+    // Todo: Make "16" a flag, which can be updated from the server side.
+    final LruCache<String, Integer> mModelIdMap = new LruCache<>(16);
+    HalfSheetDismissState mHalfSheetDismissState = HalfSheetDismissState.ACTIVE;
+    // Ban count map track the number of ban happens to certain model id
+    // If the model id is baned by the odd number of time it is banned for 5 mins
+    // if the model id is banned even number of time ban 24 hours.
+    private final Map<Integer, Integer> mBanCountMap = new HashMap<>();
 
     FastPairUiServiceImpl mFastPairUiService;
+    private NamedRunnable mDismissRunnable;
+
+    /**
+     * Half sheet state default is active. If user dismiss half sheet once controller will mark half
+     * sheet as dismiss state. If user dismiss half sheet twice controller will mark half sheet as
+     * ban state for certain period of time.
+     */
+    enum HalfSheetDismissState {
+        ACTIVE,
+        DISMISS,
+        BAN
+    }
 
     public FastPairHalfSheetManager(Context context) {
         this(new LocatorContextWrapper(context));
+        mHalfSheetBlocklist = new FastPairHalfSheetBlocklist();
     }
 
     @VisibleForTesting
     FastPairHalfSheetManager(LocatorContextWrapper locatorContextWrapper) {
         mLocatorContextWrapper = locatorContextWrapper;
         mFastPairUiService = new FastPairUiServiceImpl();
+        mHalfSheetBlocklist = new FastPairHalfSheetBlocklist();
     }
 
     /**
@@ -76,6 +119,24 @@ public class FastPairHalfSheetManager {
      * app can't get the correct component name.
      */
     public void showHalfSheet(Cache.ScanFastPairStoreItem scanFastPairStoreItem) {
+        String modelId = scanFastPairStoreItem.getModelId().toLowerCase(Locale.ROOT);
+        if (modelId == null) {
+            Log.d(TAG, "model id not found");
+            return;
+        }
+
+        synchronized (mModelIdMap) {
+            if (mModelIdMap.get(modelId) == null) {
+                mModelIdMap.put(modelId, createNewHalfSheetId());
+            }
+        }
+        int halfSheetId = mModelIdMap.get(modelId);
+
+        if (!allowedToShowShowHalfSheet(halfSheetId)) {
+            Log.d(TAG, "Not allow to show initial Half sheet");
+            return;
+        }
+
         try {
             if (mLocatorContextWrapper != null) {
                 String packageName = getHalfSheetApkPkgName();
@@ -97,10 +158,13 @@ public class FastPairHalfSheetManager {
                                         .setComponent(new ComponentName(packageName,
                                                 HALF_SHEET_CLASS_NAME)),
                                 UserHandle.CURRENT);
+                mHalfSheetBlocklist.updateState(halfSheetId, Blocklist.BlocklistState.ACTIVE);
             }
         } catch (IllegalStateException e) {
             Log.e(TAG, "Can't resolve package that contains half sheet");
         }
+        Log.d(TAG, "show initial half sheet.");
+        // TODO: Half Sheet will fade away when the headphone does not broadcast
     }
 
     /**
@@ -154,9 +218,84 @@ public class FastPairHalfSheetManager {
     }
 
     /**
-     * Removes dismiss runnable.
+     * Removes dismiss half sheet runnable. When half sheet shows, there is timer for half sheet to
+     * dismiss. But when user is pairing, half sheet should not dismiss.
+     * So this function disable the runnable.
      */
     public void disableDismissRunnable() {
+        if (mDismissRunnable == null) {
+            return;
+        }
+        Log.d(TAG, "remove dismiss runnable");
+        Locator.get(mLocatorContextWrapper, EventLoop.class).removeRunnable(mDismissRunnable);
+    }
+
+    /**
+     * When user first click back button or click the empty space in half sheet the half sheet will
+     * be banned for certain short period of time for that device model id. When user click cancel
+     * or dismiss half sheet for the second time the half sheet related item should be added to
+     * blocklist so the half sheet will not show again to interrupt user.
+     *
+     * @param modelId half sheet display item modelId.
+     */
+    @Annotations.EventThread
+    public void dismiss(String modelId) {
+        Log.d(TAG, "HalfSheetManager report dismiss device modelId: " + modelId);
+        Integer halfSheetId = mModelIdMap.get(modelId);
+        if (mDismissRunnable != null
+                && Locator.get(mLocatorContextWrapper, EventLoop.class)
+                          .isPosted(mDismissRunnable)) {
+            disableDismissRunnable();
+        }
+        if (halfSheetId != null) {
+            Log.d(TAG, "id: " + halfSheetId + " half sheet is dismissed");
+            boolean isDontShowAgain =
+                    !mHalfSheetBlocklist.updateState(halfSheetId,
+                            Blocklist.BlocklistState.DISMISSED);
+            if (isDontShowAgain) {
+                if (!mBanCountMap.containsKey(halfSheetId)) {
+                    mBanCountMap.put(halfSheetId, 0);
+                }
+                int dismissCountTrack = mBanCountMap.get(halfSheetId) + 1;
+                mBanCountMap.put(halfSheetId, dismissCountTrack);
+                if (dismissCountTrack % 2 == 1) {
+                    Log.d(TAG, "id: " + halfSheetId + " half sheet is short time banned");
+                    mHalfSheetBlocklist.forceUpdateState(halfSheetId,
+                            Blocklist.BlocklistState.DO_NOT_SHOW_AGAIN);
+                } else {
+                    Log.d(TAG, "id: " + halfSheetId +  " half sheet is long time banned");
+                    mHalfSheetBlocklist.updateState(halfSheetId,
+                            Blocklist.BlocklistState.DO_NOT_SHOW_AGAIN_LONG);
+                }
+            }
+        }
+    }
+
+    /**
+     * Changes the half sheet ban state to active.
+     */
+    @UiThread
+    public void resetBanState(String modelId) {
+        Log.d(TAG, "HalfSheetManager reset device ban state modelId: " + modelId);
+        Integer halfSheetId = mModelIdMap.get(modelId);
+        if (halfSheetId == null) {
+            Log.d(TAG, "halfSheetId not found.");
+            return;
+        }
+        mHalfSheetBlocklist.resetBlockState(halfSheetId);
+    }
+
+    /**
+     * When the device pairing finished should remove the suppression for the model id
+     * so the user canntry twice if the user want to.
+     */
+    public void reportDonePairing(int halfSheetId) {
+        mHalfSheetBlocklist.removeBlocklist(halfSheetId);
+    }
+
+    @VisibleForTesting
+    public FastPairHalfSheetBlocklist getHalfSheetBlocklist() {
+        return mHalfSheetBlocklist;
     }
 
     /**
@@ -166,9 +305,37 @@ public class FastPairHalfSheetManager {
     }
 
     /**
-     * Notify manager the pairing has finished.
+     * Notifies manager the pairing has finished.
      */
     public void notifyPairingProcessDone(boolean success, String address, DiscoveryItem item) {
+    }
+
+    private boolean allowedToShowShowHalfSheet(int halfSheetId) {
+        // Half Sheet will not show when the screen is locked so disable half sheet
+        KeyguardManager keyguardManager =
+                mLocatorContextWrapper.getSystemService(KeyguardManager.class);
+        if (keyguardManager != null && keyguardManager.isKeyguardLocked()) {
+            Log.d(TAG, "device is locked");
+            return false;
+        }
+
+        // Check whether the blocklist state has expired
+        if (mHalfSheetBlocklist.isStateExpired(halfSheetId)) {
+            mHalfSheetBlocklist.removeBlocklist(halfSheetId);
+            mBanCountMap.remove(halfSheetId);
+        }
+
+        // Half Sheet will not show when the model id is banned
+        if (mHalfSheetBlocklist.isBlocklisted(
+                halfSheetId, DURATION_RESURFACE_HALFSHEET_FIRST_DISMISS_MILLI_SECONDS)) {
+            Log.d(TAG, "id: " + halfSheetId + " is blocked");
+            return false;
+        }
+        return true;
+    }
+
+    private Integer createNewHalfSheetId() {
+        return mNotificationIds.getAndIncrement();
     }
 
     /**

@@ -24,7 +24,7 @@ import java.util.Locale;
 import java.util.Objects;
 
 /** An mDNS "SRV" record, which contains service information. */
-// TODO(b/177655645): Resolve nullness suppression.
+// TODO(b/242631897): Resolve nullness suppression.
 @SuppressWarnings("nullness")
 @VisibleForTesting
 public class MdnsServiceRecord extends MdnsRecord {
@@ -143,7 +143,7 @@ public class MdnsServiceRecord extends MdnsRecord {
         return super.equals(other)
                 && (servicePriority == otherRecord.servicePriority)
                 && (serviceWeight == otherRecord.serviceWeight)
-                && Objects.equals(serviceHost, otherRecord.serviceHost)
+                && Arrays.equals(serviceHost, otherRecord.serviceHost)
                 && (servicePort == otherRecord.servicePort);
     }
 }

@@ -159,7 +159,7 @@ import static com.android.testutils.ConcurrentUtils.durationOf;
 import static com.android.testutils.DevSdkIgnoreRule.IgnoreAfter;
 import static com.android.testutils.DevSdkIgnoreRule.IgnoreUpTo;
 import static com.android.testutils.DevSdkIgnoreRuleKt.SC_V2;
-import static com.android.testutils.ExceptionUtils.ignoreExceptions;
+import static com.android.testutils.FunctionalUtils.ignoreExceptions;
 import static com.android.testutils.HandlerUtils.waitForIdleSerialExecutor;
 import static com.android.testutils.MiscAsserts.assertContainsAll;
 import static com.android.testutils.MiscAsserts.assertContainsExactly;
@@ -378,7 +378,9 @@ import com.android.server.connectivity.VpnProfileStore;
 import com.android.server.net.NetworkPinner;
 import com.android.testutils.DevSdkIgnoreRule;
 import com.android.testutils.DevSdkIgnoreRunner;
-import com.android.testutils.ExceptionUtils;
+import com.android.testutils.FunctionalUtils.Function3;
+import com.android.testutils.FunctionalUtils.ThrowingConsumer;
+import com.android.testutils.FunctionalUtils.ThrowingRunnable;
 import com.android.testutils.HandlerUtils;
 import com.android.testutils.RecorderCallback.CallbackEntry;
 import com.android.testutils.TestableNetworkCallback;
@@ -744,7 +746,7 @@ public class ConnectivityServiceTest {
         }
 
         private int checkMockedPermission(String permission, int pid, int uid,
-                Supplier<Integer> ifAbsent) {
+                Function3<String, Integer, Integer, Integer> ifAbsent /* perm, uid, pid -> int */) {
             final Integer granted = mMockedPermissions.get(permission + "," + pid + "," + uid);
             if (null != granted) {
                 return granted;
@@ -753,27 +755,27 @@ public class ConnectivityServiceTest {
             if (null != allGranted) {
                 return allGranted;
             }
-            return ifAbsent.get();
+            return ifAbsent.apply(permission, pid, uid);
         }
 
         @Override
         public int checkPermission(String permission, int pid, int uid) {
             return checkMockedPermission(permission, pid, uid,
-                    () -> super.checkPermission(permission, pid, uid));
+                    (perm, p, u) -> super.checkPermission(perm, p, u));
         }
 
         @Override
         public int checkCallingOrSelfPermission(String permission) {
             return checkMockedPermission(permission, Process.myPid(), Process.myUid(),
-                    () -> super.checkCallingOrSelfPermission(permission));
+                    (perm, p, u) -> super.checkCallingOrSelfPermission(perm));
         }
 
         @Override
         public void enforceCallingOrSelfPermission(String permission, String message) {
             final Integer granted = checkMockedPermission(permission,
                     Process.myPid(), Process.myUid(),
-                    () -> {
-                        super.enforceCallingOrSelfPermission(permission, message);
+                    (perm, p, u) -> {
+                        super.enforceCallingOrSelfPermission(perm, message);
                         // enforce will crash if the permission is not granted
                         return PERMISSION_GRANTED;
                     });
@@ -786,7 +788,7 @@ public class ConnectivityServiceTest {
         /**
          * Mock checks for the specified permission, and have them behave as per {@code granted}.
          *
-         * This will apply across the board no matter what the checked UID and PID are.
+         * This will apply to all calls no matter what the checked UID and PID are.
          *
          * <p>Passing null reverts to default behavior, which does a real permission check on the
          * test package.
@@ -1718,11 +1720,7 @@ public class ConnectivityServiceTest {
         });
     }
 
-    private interface ExceptionalRunnable {
-        void run() throws Exception;
-    }
-
-    private void withPermission(String permission, ExceptionalRunnable r) throws Exception {
+    private void withPermission(String permission, ThrowingRunnable r) throws Exception {
         try {
             mServiceContext.setPermission(permission, PERMISSION_GRANTED);
             r.run();
@@ -1731,7 +1729,7 @@ public class ConnectivityServiceTest {
         }
     }
 
-    private void withPermission(String permission, int pid, int uid, ExceptionalRunnable r)
+    private void withPermission(String permission, int pid, int uid, ThrowingRunnable r)
             throws Exception {
         try {
             mServiceContext.setPermission(permission, pid, uid, PERMISSION_GRANTED);
@@ -6200,7 +6198,7 @@ public class ConnectivityServiceTest {
     }
 
     // Helper method to prepare the executor and run test
-    private void runTestWithSerialExecutors(ExceptionUtils.ThrowingConsumer<Executor> functor)
+    private void runTestWithSerialExecutors(ThrowingConsumer<Executor> functor)
             throws Exception {
         final ExecutorService executorSingleThread = Executors.newSingleThreadExecutor();
         final Executor executorInline = (Runnable r) -> r.run();
@@ -15752,7 +15750,7 @@ public class ConnectivityServiceTest {
         final UserHandle testHandle = setupEnterpriseNetwork();
         final TestOnCompleteListener listener = new TestOnCompleteListener();
         // Leave one request available so the profile preference can be set.
-        testRequestCountLimits(1 /* countToLeaveAvailable */, () -> {
+        withRequestCountersAcquired(1 /* countToLeaveAvailable */, () -> {
             withPermission(NetworkStack.PERMISSION_MAINLINE_NETWORK_STACK,
                     Process.myPid(), Process.myUid(), () -> {
                         // Set initially to test the limit prior to having existing requests.
@@ -15766,7 +15764,7 @@ public class ConnectivityServiceTest {
             final int otherAppUid = UserHandle.getUid(TEST_WORK_PROFILE_USER_ID,
                     UserHandle.getAppId(Process.myUid() + 1));
             final int remainingCount = ConnectivityService.MAX_NETWORK_REQUESTS_PER_UID
-                    - mService.mNetworkRequestCounter.mUidToNetworkRequestCount.get(otherAppUid)
+                    - mService.mNetworkRequestCounter.get(otherAppUid)
                     - 1;
             final NetworkCallback[] callbacks = new NetworkCallback[remainingCount];
             doAsUid(otherAppUid, () -> {
@@ -15801,7 +15799,7 @@ public class ConnectivityServiceTest {
         @OemNetworkPreferences.OemNetworkPreference final int networkPref =
                 OEM_NETWORK_PREFERENCE_OEM_PRIVATE_ONLY;
         // Leave one request available so the OEM preference can be set.
-        testRequestCountLimits(1 /* countToLeaveAvailable */, () ->
+        withRequestCountersAcquired(1 /* countToLeaveAvailable */, () ->
                 withPermission(NetworkStack.PERMISSION_MAINLINE_NETWORK_STACK, () -> {
                     // Set initially to test the limit prior to having existing requests.
                     final TestOemListenerCallback listener = new TestOemListenerCallback();
@@ -15816,12 +15814,11 @@ public class ConnectivityServiceTest {
                 }));
     }
 
-    private void testRequestCountLimits(final int countToLeaveAvailable,
-            @NonNull final ExceptionalRunnable r) throws Exception {
+    private void withRequestCountersAcquired(final int countToLeaveAvailable,
+            @NonNull final ThrowingRunnable r) throws Exception {
         final ArraySet<TestNetworkCallback> callbacks = new ArraySet<>();
         try {
-            final int requestCount = mService.mSystemNetworkRequestCounter
-                    .mUidToNetworkRequestCount.get(Process.myUid());
+            final int requestCount = mService.mSystemNetworkRequestCounter.get(Process.myUid());
             // The limit is hit when total requests = limit - 1, and exceeded with a crash when
             // total requests >= limit.
             final int countToFile =
@@ -15834,8 +15831,7 @@ public class ConnectivityServiceTest {
                     callbacks.add(cb);
                 }
                 assertEquals(MAX_NETWORK_REQUESTS_PER_SYSTEM_UID - 1 - countToLeaveAvailable,
-                        mService.mSystemNetworkRequestCounter
-                              .mUidToNetworkRequestCount.get(Process.myUid()));
+                        mService.mSystemNetworkRequestCounter.get(Process.myUid()));
             });
             // Code to run to check if it triggers a max request count limit error.
             r.run();
@@ -16084,7 +16080,7 @@ public class ConnectivityServiceTest {
         ConnectivitySettingsManager.setMobileDataPreferredUids(mServiceContext,
                 Set.of(PRIMARY_USER_HANDLE.getUid(TEST_PACKAGE_UID)));
         // Leave one request available so MDO preference set up above can be set.
-        testRequestCountLimits(1 /* countToLeaveAvailable */, () ->
+        withRequestCountersAcquired(1 /* countToLeaveAvailable */, () ->
                 withPermission(NetworkStack.PERMISSION_MAINLINE_NETWORK_STACK,
                         Process.myPid(), Process.myUid(), () -> {
                             // Set initially to test the limit prior to having existing requests.

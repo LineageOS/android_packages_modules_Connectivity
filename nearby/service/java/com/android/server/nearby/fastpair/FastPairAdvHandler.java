@@ -111,7 +111,7 @@ public class FastPairAdvHandler {
                 }
                 Locator.get(mContext, FastPairHalfSheetManager.class).showHalfSheet(
                         DataUtils.toScanFastPairStoreItem(
-                                response, mBleAddress,
+                                response, mBleAddress, Hex.bytesToStringLowercase(model),
                                 accountList.isEmpty() ? null : accountList.get(0).name));
             } catch (IllegalStateException e) {
                 Log.e(TAG, "OEM does not construct fast pair data proxy correctly");
