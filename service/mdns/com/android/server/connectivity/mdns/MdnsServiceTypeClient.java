@@ -39,7 +39,7 @@ import java.util.concurrent.TimeUnit;
  * Instance of this class sends and receives mDNS packets of a given service type and invoke
  * registered {@link MdnsServiceBrowserListener} instances.
  */
-// TODO(b/177655645): Resolve nullness suppression.
+// TODO(b/242631897): Resolve nullness suppression.
 @SuppressWarnings("nullness")
 public class MdnsServiceTypeClient {
 

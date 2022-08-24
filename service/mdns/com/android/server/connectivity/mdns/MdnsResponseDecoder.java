@@ -30,7 +30,7 @@ import java.util.LinkedList;
 import java.util.List;
 
 /** A class that decodes mDNS responses from UDP packets. */
-// TODO(b/177655645): Resolve nullness suppression.
+// TODO(b/242631897): Resolve nullness suppression.
 @SuppressWarnings("nullness")
 public class MdnsResponseDecoder {
 

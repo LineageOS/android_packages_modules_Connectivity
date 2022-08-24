@@ -38,7 +38,7 @@ import androidx.test.filters.SmallTest;
 
 import com.android.testutils.DevSdkIgnoreRule;
 import com.android.testutils.DevSdkIgnoreRunner;
-import com.android.testutils.ExceptionUtils;
+import com.android.testutils.FunctionalUtils.ThrowingConsumer;
 
 import org.junit.Before;
 import org.junit.Rule;
@@ -396,7 +396,7 @@ public class NsdManagerTest {
         }
     }
 
-    int getRequestKey(ExceptionUtils.ThrowingConsumer<ArgumentCaptor<Integer>> verifier)
+    int getRequestKey(ThrowingConsumer<ArgumentCaptor<Integer>> verifier)
             throws Exception {
         final ArgumentCaptor<Integer> captor = ArgumentCaptor.forClass(Integer.class);
         verifier.accept(captor);
