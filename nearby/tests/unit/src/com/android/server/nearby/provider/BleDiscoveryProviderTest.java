@@ -18,6 +18,8 @@ package com.android.server.nearby.provider;
 
 import static android.bluetooth.le.ScanSettings.CALLBACK_TYPE_ALL_MATCHES;
 
+import static com.google.common.truth.Truth.assertThat;
+
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -30,6 +32,9 @@ import android.bluetooth.BluetoothManager;
 import android.bluetooth.le.ScanRecord;
 import android.bluetooth.le.ScanResult;
 import android.content.Context;
+import android.nearby.PresenceScanFilter;
+import android.nearby.PublicCredential;
+import android.nearby.ScanFilter;
 
 import androidx.test.platform.app.InstrumentationRegistry;
 
@@ -42,6 +47,8 @@ import org.mockito.Mock;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.List;
 
 public final class BleDiscoveryProviderTest {
 
@@ -77,6 +84,17 @@ public final class BleDiscoveryProviderTest {
     public void test_stopScan() {
         mBleDiscoveryProvider.onStart();
         mBleDiscoveryProvider.onStop();
+    }
+
+    @Test
+    public void test_stopScan_filersReset() {
+        List<ScanFilter> filterList = new ArrayList<>();
+        filterList.add(getSanFilter());
+
+        mBleDiscoveryProvider.getController().setProviderScanFilters(filterList);
+        mBleDiscoveryProvider.onStart();
+        mBleDiscoveryProvider.onStop();
+        assertThat(mBleDiscoveryProvider.mScanFilters).isEmpty();
     }
 
     @Test
@@ -130,5 +148,23 @@ public final class BleDiscoveryProviderTest {
                 | InvocationTargetException e) {
             return null;
         }
+    }
+
+    private static PresenceScanFilter getSanFilter() {
+        return new PresenceScanFilter.Builder()
+                .setMaxPathLoss(70)
+                .addCredential(getPublicCredential())
+                .addPresenceAction(124)
+                .build();
+    }
+
+    private static PublicCredential getPublicCredential() {
+        return new PublicCredential.Builder(
+                new byte[]{1, 2},
+                new byte[]{1, 2},
+                new byte[]{1, 2},
+                new byte[]{1, 2},
+                new byte[]{1, 2})
+                .build();
     }
 }
