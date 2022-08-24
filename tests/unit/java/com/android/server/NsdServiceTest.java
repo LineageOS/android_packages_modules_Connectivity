@@ -536,6 +536,25 @@ public class NsdServiceTest {
                 .onResolveFailed(any(), eq(FAILURE_INTERNAL_ERROR));
     }
 
+    @Test
+    public void testNoCrashWhenProcessResolutionAfterBinderDied() throws Exception {
+        final NsdManager client = connectClient(mService);
+        final INsdManagerCallback cb = getCallback();
+        final IBinder.DeathRecipient deathRecipient = verifyLinkToDeath(cb);
+        deathRecipient.binderDied();
+
+        final NsdServiceInfo request = new NsdServiceInfo(SERVICE_NAME, SERVICE_TYPE);
+        final ResolveListener resolveListener = mock(ResolveListener.class);
+        client.resolveService(request, resolveListener);
+        waitForIdle();
+
+        verify(mMockMDnsM, never()).registerEventListener(any());
+        verify(mMockMDnsM, never()).startDaemon();
+        verify(mMockMDnsM, never()).resolve(anyInt() /* id */, anyString() /* serviceName */,
+                anyString() /* registrationType */, anyString() /* domain */,
+                anyInt()/* interfaceIdx */);
+    }
+
     private void waitForIdle() {
         HandlerUtils.waitForIdle(mHandler, TIMEOUT_MS);
     }

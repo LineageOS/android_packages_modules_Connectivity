@@ -295,6 +295,13 @@ public class NsdService extends INsdManager.Stub {
                         if (DBG) Log.d(TAG, "Discover services");
                         args = (ListenerArgs) msg.obj;
                         clientInfo = mClients.get(args.connector);
+                        // If the binder death notification for a INsdManagerCallback was received
+                        // before any calls are received by NsdService, the clientInfo would be
+                        // cleared and cause NPE. Add a null check here to prevent this corner case.
+                        if (clientInfo == null) {
+                            Log.e(TAG, "Unknown connector in discovery");
+                            break;
+                        }
 
                         if (requestLimitReached(clientInfo)) {
                             clientInfo.onDiscoverServicesFailed(
@@ -321,6 +328,13 @@ public class NsdService extends INsdManager.Stub {
                         if (DBG) Log.d(TAG, "Stop service discovery");
                         args = (ListenerArgs) msg.obj;
                         clientInfo = mClients.get(args.connector);
+                        // If the binder death notification for a INsdManagerCallback was received
+                        // before any calls are received by NsdService, the clientInfo would be
+                        // cleared and cause NPE. Add a null check here to prevent this corner case.
+                        if (clientInfo == null) {
+                            Log.e(TAG, "Unknown connector in stop discovery");
+                            break;
+                        }
 
                         try {
                             id = clientInfo.mClientIds.get(clientId);
@@ -341,6 +355,14 @@ public class NsdService extends INsdManager.Stub {
                         if (DBG) Log.d(TAG, "Register service");
                         args = (ListenerArgs) msg.obj;
                         clientInfo = mClients.get(args.connector);
+                        // If the binder death notification for a INsdManagerCallback was received
+                        // before any calls are received by NsdService, the clientInfo would be
+                        // cleared and cause NPE. Add a null check here to prevent this corner case.
+                        if (clientInfo == null) {
+                            Log.e(TAG, "Unknown connector in registration");
+                            break;
+                        }
+
                         if (requestLimitReached(clientInfo)) {
                             clientInfo.onRegisterServiceFailed(
                                     clientId, NsdManager.FAILURE_MAX_LIMIT);
@@ -363,6 +385,9 @@ public class NsdService extends INsdManager.Stub {
                         if (DBG) Log.d(TAG, "unregister service");
                         args = (ListenerArgs) msg.obj;
                         clientInfo = mClients.get(args.connector);
+                        // If the binder death notification for a INsdManagerCallback was received
+                        // before any calls are received by NsdService, the clientInfo would be
+                        // cleared and cause NPE. Add a null check here to prevent this corner case.
                         if (clientInfo == null) {
                             Log.e(TAG, "Unknown connector in unregistration");
                             break;
@@ -380,6 +405,13 @@ public class NsdService extends INsdManager.Stub {
                         if (DBG) Log.d(TAG, "Resolve service");
                         args = (ListenerArgs) msg.obj;
                         clientInfo = mClients.get(args.connector);
+                        // If the binder death notification for a INsdManagerCallback was received
+                        // before any calls are received by NsdService, the clientInfo would be
+                        // cleared and cause NPE. Add a null check here to prevent this corner case.
+                        if (clientInfo == null) {
+                            Log.e(TAG, "Unknown connector in resolution");
+                            break;
+                        }
 
                         if (clientInfo.mResolvedService != null) {
                             clientInfo.onResolveServiceFailed(
