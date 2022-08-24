@@ -39,7 +39,6 @@ import android.content.Context;
 import android.net.EthernetManager;
 import android.net.IEthernetServiceListener;
 import android.net.INetd;
-import android.net.INetworkInterfaceOutcomeReceiver;
 import android.net.InetAddresses;
 import android.net.InterfaceConfigurationParcel;
 import android.net.IpConfiguration;
@@ -76,7 +75,7 @@ public class EthernetTrackerTest {
     private static final String TEST_IFACE = "test123";
     private static final int TIMEOUT_MS = 1_000;
     private static final String THREAD_NAME = "EthernetServiceThread";
-    private static final INetworkInterfaceOutcomeReceiver NULL_LISTENER = null;
+    private static final EthernetCallback NULL_CB = new EthernetCallback(null);
     private EthernetTracker tracker;
     private HandlerThread mHandlerThread;
     @Mock private Context mContext;
@@ -88,7 +87,7 @@ public class EthernetTrackerTest {
     public void setUp() throws RemoteException {
         MockitoAnnotations.initMocks(this);
         initMockResources();
-        when(mFactory.updateInterfaceLinkState(anyString(), anyBoolean(), any())).thenReturn(false);
+        when(mFactory.updateInterfaceLinkState(anyString(), anyBoolean())).thenReturn(false);
         when(mNetd.interfaceGetList()).thenReturn(new String[0]);
         mHandlerThread = new HandlerThread(THREAD_NAME);
         mHandlerThread.start();
@@ -344,31 +343,29 @@ public class EthernetTrackerTest {
                 new StaticIpConfiguration.Builder().setIpAddress(linkAddr).build();
         final IpConfiguration ipConfig =
                 new IpConfiguration.Builder().setStaticIpConfiguration(staticIpConfig).build();
-        final INetworkInterfaceOutcomeReceiver listener = null;
+        final EthernetCallback listener = new EthernetCallback(null);
 
         tracker.updateConfiguration(TEST_IFACE, ipConfig, capabilities, listener);
         waitForIdle();
 
         verify(mFactory).updateInterface(
-                eq(TEST_IFACE), eq(ipConfig), eq(capabilities), eq(listener));
+                eq(TEST_IFACE), eq(ipConfig), eq(capabilities));
     }
 
     @Test
     public void testEnableInterfaceCorrectlyCallsFactory() {
-        tracker.enableInterface(TEST_IFACE, NULL_LISTENER);
+        tracker.enableInterface(TEST_IFACE, NULL_CB);
         waitForIdle();
 
-        verify(mFactory).updateInterfaceLinkState(eq(TEST_IFACE), eq(true /* up */),
-                eq(NULL_LISTENER));
+        verify(mFactory).updateInterfaceLinkState(eq(TEST_IFACE), eq(true /* up */));
     }
 
     @Test
     public void testDisableInterfaceCorrectlyCallsFactory() {
-        tracker.disableInterface(TEST_IFACE, NULL_LISTENER);
+        tracker.disableInterface(TEST_IFACE, NULL_CB);
         waitForIdle();
 
-        verify(mFactory).updateInterfaceLinkState(eq(TEST_IFACE), eq(false /* up */),
-                eq(NULL_LISTENER));
+        verify(mFactory).updateInterfaceLinkState(eq(TEST_IFACE), eq(false /* up */));
     }
 
     @Test
