@@ -57,10 +57,6 @@ public final class DataUtilsTest {
     private static final String MESSAGE_RETROACTIVE_PAIR_DESCRIPTION = "message 7";
     private static final String MESSAGE_WAIT_LAUNCH_COMPANION_APP_DESCRIPTION = "message 8";
     private static final String MESSAGE_FAIL_CONNECT_DESCRIPTION = "message 9";
-    private static final String MESSAGE_FAST_PAIR_TV_CONNECT_DEVICE_NO_ACCOUNT_DESCRIPTION =
-            "message 10";
-    private static final String MESSAGE_ASSISTANT_HALF_SHEET_DESCRIPTION = "message 11";
-    private static final String MESSAGE_ASSISTANT_NOTIFICATION_DESCRIPTION = "message 12";
 
     @Test
     public void test_toScanFastPairStoreItem_withAccount() {
