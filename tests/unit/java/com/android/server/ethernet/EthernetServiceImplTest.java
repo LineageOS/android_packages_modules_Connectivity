@@ -21,6 +21,7 @@ import static android.net.NetworkCapabilities.TRANSPORT_TEST;
 
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.fail;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
@@ -209,7 +210,8 @@ public class EthernetServiceImplTest {
                 NULL_LISTENER);
         verify(mEthernetTracker).updateConfiguration(eq(TEST_IFACE),
                 eq(UPDATE_REQUEST_WITHOUT_CAPABILITIES.getIpConfiguration()),
-                eq(UPDATE_REQUEST_WITHOUT_CAPABILITIES.getNetworkCapabilities()), isNull());
+                eq(UPDATE_REQUEST_WITHOUT_CAPABILITIES.getNetworkCapabilities()),
+                any(EthernetCallback.class));
     }
 
     private void denyManageEthPermission() {
@@ -285,7 +287,8 @@ public class EthernetServiceImplTest {
         verify(mEthernetTracker).updateConfiguration(
                 eq(TEST_IFACE),
                 eq(UPDATE_REQUEST.getIpConfiguration()),
-                eq(UPDATE_REQUEST.getNetworkCapabilities()), eq(NULL_LISTENER));
+                eq(UPDATE_REQUEST.getNetworkCapabilities()),
+                any(EthernetCallback.class));
     }
 
     @Test
@@ -303,19 +306,20 @@ public class EthernetServiceImplTest {
         verify(mEthernetTracker).updateConfiguration(
                 eq(TEST_IFACE),
                 isNull(),
-                eq(ncWithSpecifier), eq(NULL_LISTENER));
+                eq(ncWithSpecifier), any(EthernetCallback.class));
     }
 
     @Test
     public void testEnableInterface() {
         mEthernetServiceImpl.enableInterface(TEST_IFACE, NULL_LISTENER);
-        verify(mEthernetTracker).enableInterface(eq(TEST_IFACE), eq(NULL_LISTENER));
+        verify(mEthernetTracker).enableInterface(eq(TEST_IFACE),
+                any(EthernetCallback.class));
     }
 
     @Test
     public void testDisableInterface() {
         mEthernetServiceImpl.disableInterface(TEST_IFACE, NULL_LISTENER);
-        verify(mEthernetTracker).disableInterface(eq(TEST_IFACE), eq(NULL_LISTENER));
+        verify(mEthernetTracker).disableInterface(eq(TEST_IFACE), any(EthernetCallback.class));
     }
 
     @Test
@@ -328,7 +332,7 @@ public class EthernetServiceImplTest {
         mEthernetServiceImpl.updateConfiguration(TEST_IFACE, request, NULL_LISTENER);
         verify(mEthernetTracker).updateConfiguration(eq(TEST_IFACE),
                 eq(request.getIpConfiguration()),
-                eq(request.getNetworkCapabilities()), isNull());
+                eq(request.getNetworkCapabilities()), any(EthernetCallback.class));
     }
 
     @Test
@@ -337,7 +341,8 @@ public class EthernetServiceImplTest {
                 NULL_LISTENER);
         verify(mEthernetTracker).updateConfiguration(eq(TEST_IFACE),
                 eq(UPDATE_REQUEST_WITHOUT_IP_CONFIG.getIpConfiguration()),
-                eq(UPDATE_REQUEST_WITHOUT_IP_CONFIG.getNetworkCapabilities()), isNull());
+                eq(UPDATE_REQUEST_WITHOUT_IP_CONFIG.getNetworkCapabilities()),
+                any(EthernetCallback.class));
     }
 
     @Test
@@ -369,7 +374,7 @@ public class EthernetServiceImplTest {
         verify(mEthernetTracker).updateConfiguration(
                 eq(TEST_IFACE),
                 eq(request.getIpConfiguration()),
-                eq(request.getNetworkCapabilities()), eq(NULL_LISTENER));
+                eq(request.getNetworkCapabilities()), any(EthernetCallback.class));
     }
 
     @Test
@@ -379,7 +384,8 @@ public class EthernetServiceImplTest {
         denyManageEthPermission();
 
         mEthernetServiceImpl.enableInterface(TEST_IFACE, NULL_LISTENER);
-        verify(mEthernetTracker).enableInterface(eq(TEST_IFACE), eq(NULL_LISTENER));
+        verify(mEthernetTracker).enableInterface(eq(TEST_IFACE),
+                any(EthernetCallback.class));
     }
 
     @Test
@@ -389,7 +395,8 @@ public class EthernetServiceImplTest {
         denyManageEthPermission();
 
         mEthernetServiceImpl.disableInterface(TEST_IFACE, NULL_LISTENER);
-        verify(mEthernetTracker).disableInterface(eq(TEST_IFACE), eq(NULL_LISTENER));
+        verify(mEthernetTracker).disableInterface(eq(TEST_IFACE),
+                any(EthernetCallback.class));
     }
 
     private void denyPermissions(String... permissions) {
