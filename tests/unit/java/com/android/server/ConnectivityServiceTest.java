@@ -35,7 +35,6 @@ import static android.content.Intent.ACTION_PACKAGE_REMOVED;
 import static android.content.Intent.ACTION_PACKAGE_REPLACED;
 import static android.content.Intent.ACTION_USER_ADDED;
 import static android.content.Intent.ACTION_USER_REMOVED;
-import static android.content.Intent.ACTION_USER_UNLOCKED;
 import static android.content.pm.PackageInfo.REQUESTED_PERMISSION_GRANTED;
 import static android.content.pm.PackageManager.FEATURE_ETHERNET;
 import static android.content.pm.PackageManager.FEATURE_WIFI;
@@ -375,6 +374,7 @@ import com.android.server.connectivity.QosCallbackTracker;
 import com.android.server.connectivity.UidRangeUtils;
 import com.android.server.connectivity.Vpn;
 import com.android.server.connectivity.VpnProfileStore;
+import com.android.server.net.LockdownVpnTracker;
 import com.android.server.net.NetworkPinner;
 import com.android.testutils.DevSdkIgnoreRule;
 import com.android.testutils.DevSdkIgnoreRunner;
@@ -522,7 +522,6 @@ public class ConnectivityServiceTest {
 
     private MockContext mServiceContext;
     private HandlerThread mCsHandlerThread;
-    private HandlerThread mVMSHandlerThread;
     private ConnectivityServiceDependencies mDeps;
     private ConnectivityService mService;
     private WrappedConnectivityManager mCm;
@@ -538,7 +537,6 @@ public class ConnectivityServiceTest {
     private TestNetIdManager mNetIdManager;
     private QosCallbackMockHelper mQosCallbackMockHelper;
     private QosCallbackTracker mQosCallbackTracker;
-    private VpnManagerService mVpnManagerService;
     private TestNetworkCallback mDefaultNetworkCallback;
     private TestNetworkCallback mSystemDefaultNetworkCallback;
     private TestNetworkCallback mProfileDefaultNetworkCallback;
@@ -1586,32 +1584,6 @@ public class ConnectivityServiceTest {
         return ranges.stream().map(r -> new UidRangeParcel(r, r)).toArray(UidRangeParcel[]::new);
     }
 
-    private VpnManagerService makeVpnManagerService() {
-        final VpnManagerService.Dependencies deps = new VpnManagerService.Dependencies() {
-            public int getCallingUid() {
-                return mDeps.getCallingUid();
-            }
-
-            public HandlerThread makeHandlerThread() {
-                return mVMSHandlerThread;
-            }
-
-            @Override
-            public VpnProfileStore getVpnProfileStore() {
-                return mVpnProfileStore;
-            }
-
-            public INetd getNetd() {
-                return mMockNetd;
-            }
-
-            public INetworkManagementService getINetworkManagementService() {
-                return mNetworkManagementService;
-            }
-        };
-        return new VpnManagerService(mServiceContext, deps);
-    }
-
     private void assertVpnTransportInfo(NetworkCapabilities nc, int type) {
         assertNotNull(nc);
         final TransportInfo ti = nc.getTransportInfo();
@@ -1623,17 +1595,12 @@ public class ConnectivityServiceTest {
 
     private void processBroadcast(Intent intent) {
         mServiceContext.sendBroadcast(intent);
-        HandlerUtils.waitForIdle(mVMSHandlerThread, TIMEOUT_MS);
         waitForIdle();
     }
 
     private void mockVpn(int uid) {
-        synchronized (mVpnManagerService.mVpns) {
-            int userId = UserHandle.getUserId(uid);
-            mMockVpn = new MockVpn(userId);
-            // Every running user always has a Vpn in the mVpns array, even if no VPN is running.
-            mVpnManagerService.mVpns.put(userId, mMockVpn);
-        }
+        int userId = UserHandle.getUserId(uid);
+        mMockVpn = new MockVpn(userId);
     }
 
     private void mockUidNetworkingBlocked() {
@@ -1810,7 +1777,6 @@ public class ConnectivityServiceTest {
         initAlarmManager(mAlarmManager, mAlarmManagerThread.getThreadHandler());
 
         mCsHandlerThread = new HandlerThread("TestConnectivityService");
-        mVMSHandlerThread = new HandlerThread("TestVpnManagerService");
         mProxyTracker = new ProxyTracker(mServiceContext, mock(Handler.class),
                 16 /* EVENT_PROXY_HAS_CHANGED */);
 
@@ -1839,8 +1805,7 @@ public class ConnectivityServiceTest {
         mCm = new WrappedConnectivityManager(InstrumentationRegistry.getContext(), mService);
         mService.systemReadyInternal();
         verify(mMockDnsResolver).registerUnsolicitedEventListener(any());
-        mVpnManagerService = makeVpnManagerService();
-        mVpnManagerService.systemReady();
+
         mockVpn(Process.myUid());
         mCm.bindProcessToNetwork(null);
         mQosCallbackTracker = mock(QosCallbackTracker.class);
@@ -8463,12 +8428,8 @@ public class ConnectivityServiceTest {
         doReturn(UserHandle.getUid(RESTRICTED_USER, VPN_UID)).when(mPackageManager)
                 .getPackageUidAsUser(ALWAYS_ON_PACKAGE, RESTRICTED_USER);
 
-        final Intent addedIntent = new Intent(ACTION_USER_ADDED);
-        addedIntent.putExtra(Intent.EXTRA_USER, UserHandle.of(RESTRICTED_USER));
-        addedIntent.putExtra(Intent.EXTRA_USER_HANDLE, RESTRICTED_USER);
-
-        // Send a USER_ADDED broadcast for it.
-        processBroadcast(addedIntent);
+        // New user added
+        mMockVpn.onUserAdded(RESTRICTED_USER);
 
         // Expect that the VPN UID ranges contain both |uid| and the UID range for the newly-added
         // restricted user.
@@ -8492,11 +8453,8 @@ public class ConnectivityServiceTest {
                 && caps.hasTransport(TRANSPORT_VPN)
                 && !caps.hasTransport(TRANSPORT_WIFI));
 
-        // Send a USER_REMOVED broadcast and expect to lose the UID range for the restricted user.
-        final Intent removedIntent = new Intent(ACTION_USER_REMOVED);
-        removedIntent.putExtra(Intent.EXTRA_USER, UserHandle.of(RESTRICTED_USER));
-        removedIntent.putExtra(Intent.EXTRA_USER_HANDLE, RESTRICTED_USER);
-        processBroadcast(removedIntent);
+        // User removed and expect to lose the UID range for the restricted user.
+        mMockVpn.onUserRemoved(RESTRICTED_USER);
 
         // Expect that the VPN gains the UID range for the restricted user, and that the capability
         // change made just before that (i.e., loss of TRANSPORT_WIFI) is preserved.
@@ -8549,6 +8507,7 @@ public class ConnectivityServiceTest {
         doReturn(asList(PRIMARY_USER_INFO, RESTRICTED_USER_INFO)).when(mUserManager)
                 .getAliveUsers();
         // TODO: check that VPN app within restricted profile still has access, etc.
+        mMockVpn.onUserAdded(RESTRICTED_USER);
         final Intent addedIntent = new Intent(ACTION_USER_ADDED);
         addedIntent.putExtra(Intent.EXTRA_USER, UserHandle.of(RESTRICTED_USER));
         addedIntent.putExtra(Intent.EXTRA_USER_HANDLE, RESTRICTED_USER);
@@ -8560,6 +8519,7 @@ public class ConnectivityServiceTest {
         doReturn(asList(PRIMARY_USER_INFO)).when(mUserManager).getAliveUsers();
 
         // Send a USER_REMOVED broadcast and expect to lose the UID range for the restricted user.
+        mMockVpn.onUserRemoved(RESTRICTED_USER);
         final Intent removedIntent = new Intent(ACTION_USER_REMOVED);
         removedIntent.putExtra(Intent.EXTRA_USER, UserHandle.of(RESTRICTED_USER));
         removedIntent.putExtra(Intent.EXTRA_USER_HANDLE, RESTRICTED_USER);
@@ -9255,7 +9215,7 @@ public class ConnectivityServiceTest {
         doAsUid(Process.SYSTEM_UID, () -> mCm.unregisterNetworkCallback(perUidCb));
     }
 
-    private void setupLegacyLockdownVpn() {
+    private VpnProfile setupLegacyLockdownVpn() {
         final String profileName = "testVpnProfile";
         final byte[] profileTag = profileName.getBytes(StandardCharsets.UTF_8);
         doReturn(profileTag).when(mVpnProfileStore).get(Credentials.LOCKDOWN_VPN);
@@ -9267,6 +9227,8 @@ public class ConnectivityServiceTest {
         profile.type = VpnProfile.TYPE_IPSEC_XAUTH_PSK;
         final byte[] encodedProfile = profile.encode();
         doReturn(encodedProfile).when(mVpnProfileStore).get(Credentials.VPN + profileName);
+
+        return profile;
     }
 
     private void establishLegacyLockdownVpn(Network underlying) throws Exception {
@@ -9299,21 +9261,28 @@ public class ConnectivityServiceTest {
                 new Handler(ConnectivityThread.getInstanceLooper()));
 
         // Pretend lockdown VPN was configured.
-        setupLegacyLockdownVpn();
+        final VpnProfile profile = setupLegacyLockdownVpn();
 
         // LockdownVpnTracker disables the Vpn teardown code and enables lockdown.
         // Check the VPN's state before it does so.
         assertTrue(mMockVpn.getEnableTeardown());
         assertFalse(mMockVpn.getLockdown());
 
-        // Send a USER_UNLOCKED broadcast so CS starts LockdownVpnTracker.
-        final int userId = UserHandle.getUserId(Process.myUid());
-        final Intent addedIntent = new Intent(ACTION_USER_UNLOCKED);
-        addedIntent.putExtra(Intent.EXTRA_USER, UserHandle.of(userId));
-        addedIntent.putExtra(Intent.EXTRA_USER_HANDLE, userId);
-        processBroadcast(addedIntent);
+        // VMSHandlerThread was used inside VpnManagerService and taken into LockDownVpnTracker.
+        // VpnManagerService was decoupled from this test but this handlerThread is still required
+        // in LockDownVpnTracker. Keep it until LockDownVpnTracker related verification is moved to
+        // its own test.
+        final HandlerThread VMSHandlerThread = new HandlerThread("TestVpnManagerService");
+        VMSHandlerThread.start();
 
+        // LockdownVpnTracker is created from VpnManagerService but VpnManagerService is decoupled
+        // from ConnectivityServiceTest. Create it directly to simulate LockdownVpnTracker is
+        // created.
+        // TODO: move LockdownVpnTracker related tests to its own test.
         // Lockdown VPN disables teardown and enables lockdown.
+        final LockdownVpnTracker lockdownVpnTracker = new LockdownVpnTracker(mServiceContext,
+                VMSHandlerThread.getThreadHandler(), mMockVpn, profile);
+        lockdownVpnTracker.init();
         assertFalse(mMockVpn.getEnableTeardown());
         assertTrue(mMockVpn.getLockdown());
 
@@ -9483,6 +9452,8 @@ public class ConnectivityServiceTest {
         mMockVpn.expectStopVpnRunnerPrivileged();
         callback.expectCallback(CallbackEntry.LOST, mMockVpn);
         b2.expectBroadcast();
+
+        VMSHandlerThread.quitSafely();
     }
 
     @Test @IgnoreUpTo(Build.VERSION_CODES.S_V2)
