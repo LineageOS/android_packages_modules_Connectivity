@@ -306,14 +306,18 @@ class EthernetManagerTest {
         }
     }
 
+    private fun isEthernetSupported() = em != null
+
     @Before
     fun setUp() {
+        assumeTrue(isEthernetSupported())
         setIncludeTestInterfaces(true)
         addInterfaceStateListener(ifaceListener)
     }
 
     @After
     fun tearDown() {
+        if (!isEthernetSupported()) return
         // Reenable ethernet, so ABSENT callbacks are received.
         setEthernetEnabled(true)
 
