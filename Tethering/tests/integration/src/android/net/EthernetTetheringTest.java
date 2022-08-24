@@ -24,7 +24,9 @@ import static android.net.InetAddresses.parseNumericAddress;
 import static android.net.TetheringManager.CONNECTIVITY_SCOPE_GLOBAL;
 import static android.net.TetheringManager.CONNECTIVITY_SCOPE_LOCAL;
 import static android.net.TetheringManager.TETHERING_ETHERNET;
+import static android.net.TetheringTester.TestDnsPacket;
 import static android.net.TetheringTester.isExpectedIcmpv6Packet;
+import static android.net.TetheringTester.isExpectedUdpDnsPacket;
 import static android.net.TetheringTester.isExpectedUdpPacket;
 import static android.system.OsConstants.IPPROTO_IP;
 import static android.system.OsConstants.IPPROTO_IPV6;
@@ -81,7 +83,9 @@ import com.android.net.module.util.bpf.Tether4Key;
 import com.android.net.module.util.bpf.Tether4Value;
 import com.android.net.module.util.bpf.TetherStatsKey;
 import com.android.net.module.util.bpf.TetherStatsValue;
+import com.android.net.module.util.structs.Ipv4Header;
 import com.android.net.module.util.structs.Ipv6Header;
+import com.android.net.module.util.structs.UdpHeader;
 import com.android.testutils.DevSdkIgnoreRule;
 import com.android.testutils.DevSdkIgnoreRule.IgnoreUpTo;
 import com.android.testutils.DeviceInfoUtils;
@@ -156,6 +160,8 @@ public class EthernetTetheringTest {
     private static final ByteBuffer TEST_REACHABILITY_PAYLOAD =
             ByteBuffer.wrap(new byte[] { (byte) 0x55, (byte) 0xaa });
 
+    private static final short DNS_PORT = 53;
+
     private static final String DUMPSYS_TETHERING_RAWMAP_ARG = "bpfRawMap";
     private static final String DUMPSYS_RAWMAP_ARG_STATS = "--stats";
     private static final String DUMPSYS_RAWMAP_ARG_UPSTREAM4 = "--upstream4";
@@ -164,6 +170,66 @@ public class EthernetTetheringTest {
     // version=6, traffic class=0x0, flowlabel=0x0;
     private static final int VERSION_TRAFFICCLASS_FLOWLABEL = 0x60000000;
     private static final short HOP_LIMIT = 0x40;
+
+    // TODO: use class DnsPacket to build DNS query and reply message once DnsPacket supports
+    // building packet for given arguments.
+    private static final ByteBuffer DNS_QUERY = ByteBuffer.wrap(new byte[] {
+            // scapy.DNS(
+            //   id=0xbeef,
+            //   qr=0,
+            //   qd=scapy.DNSQR(qname="hello.example.com"))
+            //
+            /* Header */
+            (byte) 0xbe, (byte) 0xef, /* Transaction ID: 0xbeef */
+            (byte) 0x01, (byte) 0x00, /* Flags: rd */
+            (byte) 0x00, (byte) 0x01, /* Questions: 1 */
+            (byte) 0x00, (byte) 0x00, /* Answer RRs: 0 */
+            (byte) 0x00, (byte) 0x00, /* Authority RRs: 0 */
+            (byte) 0x00, (byte) 0x00, /* Additional RRs: 0 */
+            /* Queries */
+            (byte) 0x05, (byte) 0x68, (byte) 0x65, (byte) 0x6c,
+            (byte) 0x6c, (byte) 0x6f, (byte) 0x07, (byte) 0x65,
+            (byte) 0x78, (byte) 0x61, (byte) 0x6d, (byte) 0x70,
+            (byte) 0x6c, (byte) 0x65, (byte) 0x03, (byte) 0x63,
+            (byte) 0x6f, (byte) 0x6d, (byte) 0x00, /* Name: hello.example.com */
+            (byte) 0x00, (byte) 0x01,              /* Type: A */
+            (byte) 0x00, (byte) 0x01               /* Class: IN */
+    });
+
+    private static final byte[] DNS_REPLY = new byte[] {
+            // scapy.DNS(
+            //   id=0,
+            //   qr=1,
+            //   qd=scapy.DNSQR(qname="hello.example.com"),
+            //   an=scapy.DNSRR(rrname="hello.example.com", rdata='1.2.3.4'))
+            //
+            /* Header */
+            (byte) 0x00, (byte) 0x00, /* Transaction ID: 0x0, must be updated by dns query id */
+            (byte) 0x81, (byte) 0x00, /* Flags: qr rd */
+            (byte) 0x00, (byte) 0x01, /* Questions: 1 */
+            (byte) 0x00, (byte) 0x01, /* Answer RRs: 1 */
+            (byte) 0x00, (byte) 0x00, /* Authority RRs: 0 */
+            (byte) 0x00, (byte) 0x00, /* Additional RRs: 0 */
+            /* Queries */
+            (byte) 0x05, (byte) 0x68, (byte) 0x65, (byte) 0x6c,
+            (byte) 0x6c, (byte) 0x6f, (byte) 0x07, (byte) 0x65,
+            (byte) 0x78, (byte) 0x61, (byte) 0x6d, (byte) 0x70,
+            (byte) 0x6c, (byte) 0x65, (byte) 0x03, (byte) 0x63,
+            (byte) 0x6f, (byte) 0x6d, (byte) 0x00,              /* Name: hello.example.com */
+            (byte) 0x00, (byte) 0x01,                           /* Type: A */
+            (byte) 0x00, (byte) 0x01,                           /* Class: IN */
+            /* Answers */
+            (byte) 0x05, (byte) 0x68, (byte) 0x65, (byte) 0x6c,
+            (byte) 0x6c, (byte) 0x6f, (byte) 0x07, (byte) 0x65,
+            (byte) 0x78, (byte) 0x61, (byte) 0x6d, (byte) 0x70,
+            (byte) 0x6c, (byte) 0x65, (byte) 0x03, (byte) 0x63,
+            (byte) 0x6f, (byte) 0x6d, (byte) 0x00,              /* Name: hello.example.com */
+            (byte) 0x00, (byte) 0x01,                           /* Type: A */
+            (byte) 0x00, (byte) 0x01,                           /* Class: IN */
+            (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, /* Time to live: 0 */
+            (byte) 0x00, (byte) 0x04,                           /* Data length: 4 */
+            (byte) 0x01, (byte) 0x02, (byte) 0x03, (byte) 0x04  /* Address: 1.2.3.4 */
+    };
 
     private final Context mContext = InstrumentationRegistry.getContext();
     private final EthernetManager mEm = mContext.getSystemService(EthernetManager.class);
@@ -1369,6 +1435,94 @@ public class EthernetTetheringTest {
     @IgnoreUpTo(Build.VERSION_CODES.R)
     public void testTetherClatUdp() throws Exception {
         runClatUdpTest();
+    }
+
+    @NonNull
+    private ByteBuffer buildDnsReplyMessageById(short id) {
+        byte[] replyMessage = Arrays.copyOf(DNS_REPLY, DNS_REPLY.length);
+        // Assign transaction id of reply message pattern with a given DNS transaction id.
+        replyMessage[0] = (byte) ((id >> 8) & 0xff);
+        replyMessage[1] = (byte) (id & 0xff);
+        Log.d(TAG, "Built DNS reply: " + dumpHexString(replyMessage));
+
+        return ByteBuffer.wrap(replyMessage);
+    }
+
+    @NonNull
+    private void sendDownloadPacketDnsV4(@NonNull final Inet4Address srcIp,
+            @NonNull final Inet4Address dstIp, short srcPort, short dstPort, short dnsId,
+            @NonNull final TetheringTester tester) throws Exception {
+        // DNS response transaction id must be copied from DNS query. Used by the requester
+        // to match up replies to outstanding queries. See RFC 1035 section 4.1.1.
+        final ByteBuffer dnsReplyMessage = buildDnsReplyMessageById(dnsId);
+        final ByteBuffer testPacket = buildUdpPacket((InetAddress) srcIp,
+                (InetAddress) dstIp, srcPort, dstPort, dnsReplyMessage);
+
+        tester.verifyDownload(testPacket, p -> {
+            Log.d(TAG, "Packet in downstream: " + dumpHexString(p));
+            return isExpectedUdpDnsPacket(p, true /* hasEther */, true /* isIpv4 */,
+                    dnsReplyMessage);
+        });
+    }
+
+    // Send IPv4 UDP DNS packet and return the forwarded DNS packet on upstream.
+    @NonNull
+    private byte[] sendUploadPacketDnsV4(@NonNull final MacAddress srcMac,
+            @NonNull final MacAddress dstMac, @NonNull final Inet4Address srcIp,
+            @NonNull final Inet4Address dstIp, short srcPort, short dstPort,
+            @NonNull final TetheringTester tester) throws Exception {
+        final ByteBuffer testPacket = buildUdpPacket(srcMac, dstMac, srcIp, dstIp,
+                srcPort, dstPort, DNS_QUERY);
+
+        return tester.verifyUpload(testPacket, p -> {
+            Log.d(TAG, "Packet in upstream: " + dumpHexString(p));
+            return isExpectedUdpDnsPacket(p, false /* hasEther */, true /* isIpv4 */,
+                    DNS_QUERY);
+        });
+    }
+
+    @Test
+    public void testTetherUdpV4Dns() throws Exception {
+        final TetheringTester tester = initTetheringTester(toList(TEST_IP4_ADDR),
+                toList(TEST_IP4_DNS));
+        final TetheredDevice tethered = tester.createTetheredDevice(TEST_MAC, false /* hasIpv6 */);
+
+        // TODO: remove the connectivity verification for upstream connected notification race.
+        // See the same reason in runUdp4Test().
+        probeV4TetheringConnectivity(tester, tethered, false /* is4To6 */);
+
+        // [1] Send DNS query.
+        // tethered device --> downstream --> dnsmasq forwarding --> upstream --> DNS server
+        //
+        // Need to extract DNS transaction id and source port from dnsmasq forwarded DNS query
+        // packet. dnsmasq forwarding creats new query which means UDP source port and DNS
+        // transaction id are changed from original sent DNS query. See forward_query() in
+        // external/dnsmasq/src/forward.c. Note that #TetheringTester.isExpectedUdpDnsPacket
+        // guarantees that |forwardedQueryPacket| is a valid DNS packet. So we can parse it as DNS
+        // packet.
+        final MacAddress srcMac = tethered.macAddr;
+        final MacAddress dstMac = tethered.routerMacAddr;
+        final Inet4Address clientIp = tethered.ipv4Addr;
+        final Inet4Address gatewayIp = tethered.ipv4Gatway;
+        final byte[] forwardedQueryPacket = sendUploadPacketDnsV4(srcMac, dstMac, clientIp,
+                gatewayIp, LOCAL_PORT, DNS_PORT, tester);
+        final ByteBuffer buf = ByteBuffer.wrap(forwardedQueryPacket);
+        Struct.parse(Ipv4Header.class, buf);
+        final UdpHeader udpHeader = Struct.parse(UdpHeader.class, buf);
+        final TestDnsPacket dnsQuery = TestDnsPacket.getTestDnsPacket(buf);
+        assertNotNull(dnsQuery);
+        Log.d(TAG, "Forwarded UDP source port: " + udpHeader.srcPort + ", DNS query id: "
+                + dnsQuery.getHeader().id);
+
+        // [2] Send DNS reply.
+        // DNS server --> upstream --> dnsmasq forwarding --> downstream --> tethered device
+        //
+        // DNS reply transaction id must be copied from DNS query. Used by the requester to match
+        // up replies to outstanding queries. See RFC 1035 section 4.1.1.
+        final Inet4Address remoteIp = (Inet4Address) TEST_IP4_DNS;
+        final Inet4Address tetheringUpstreamIp = (Inet4Address) TEST_IP4_ADDR.getAddress();
+        sendDownloadPacketDnsV4(remoteIp, tetheringUpstreamIp, DNS_PORT,
+                (short) udpHeader.srcPort, (short) dnsQuery.getHeader().id, tester);
     }
 
     private <T> List<T> toList(T... array) {
