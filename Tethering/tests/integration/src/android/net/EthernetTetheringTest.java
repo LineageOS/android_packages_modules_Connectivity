@@ -30,7 +30,6 @@ import static android.system.OsConstants.IPPROTO_IP;
 import static android.system.OsConstants.IPPROTO_IPV6;
 import static android.system.OsConstants.IPPROTO_UDP;
 
-import static com.android.net.module.util.BpfDump.BASE64_DELIMITER;
 import static com.android.net.module.util.ConnectivityUtils.isIPv6ULA;
 import static com.android.net.module.util.HexDump.dumpHexString;
 import static com.android.net.module.util.NetworkStackConstants.ETHER_TYPE_IPV4;
@@ -65,8 +64,6 @@ import android.os.HandlerThread;
 import android.os.SystemClock;
 import android.os.SystemProperties;
 import android.os.VintfRuntimeInfo;
-import android.text.TextUtils;
-import android.util.Base64;
 import android.util.Log;
 import android.util.Pair;
 
@@ -76,6 +73,7 @@ import androidx.test.InstrumentationRegistry;
 import androidx.test.filters.MediumTest;
 import androidx.test.runner.AndroidJUnit4;
 
+import com.android.net.module.util.BpfDump;
 import com.android.net.module.util.Ipv6Utils;
 import com.android.net.module.util.PacketBuilder;
 import com.android.net.module.util.Struct;
@@ -106,7 +104,6 @@ import java.net.InterfaceAddress;
 import java.net.NetworkInterface;
 import java.net.SocketException;
 import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
@@ -1273,32 +1270,6 @@ public class EthernetTetheringTest {
         runUdp4Test(true /* verifyBpf */);
     }
 
-    @Nullable
-    private <K extends Struct, V extends Struct> Pair<K, V> parseMapKeyValue(
-            Class<K> keyClass, Class<V> valueClass, @NonNull String dumpStr) {
-        Log.w(TAG, "Parsing string: " + dumpStr);
-
-        String[] keyValueStrs = dumpStr.split(BASE64_DELIMITER);
-        if (keyValueStrs.length != 2 /* key + value */) {
-            fail("The length is " + keyValueStrs.length + " but expect 2. "
-                    + "Split string(s): " + TextUtils.join(",", keyValueStrs));
-        }
-
-        final byte[] keyBytes = Base64.decode(keyValueStrs[0], Base64.DEFAULT);
-        Log.d(TAG, "keyBytes: " + dumpHexString(keyBytes));
-        final ByteBuffer keyByteBuffer = ByteBuffer.wrap(keyBytes);
-        keyByteBuffer.order(ByteOrder.nativeOrder());
-        final K k = Struct.parse(keyClass, keyByteBuffer);
-
-        final byte[] valueBytes = Base64.decode(keyValueStrs[1], Base64.DEFAULT);
-        Log.d(TAG, "valueBytes: " + dumpHexString(valueBytes));
-        final ByteBuffer valueByteBuffer = ByteBuffer.wrap(valueBytes);
-        valueByteBuffer.order(ByteOrder.nativeOrder());
-        final V v = Struct.parse(valueClass, valueByteBuffer);
-
-        return new Pair<>(k, v);
-    }
-
     @NonNull
     private <K extends Struct, V extends Struct> HashMap<K, V> dumpAndParseRawMap(
             Class<K> keyClass, Class<V> valueClass, @NonNull String mapArg)
@@ -1309,7 +1280,8 @@ public class EthernetTetheringTest {
         final HashMap<K, V> map = new HashMap<>();
 
         for (final String line : rawMapStr.split(LINE_DELIMITER)) {
-            final Pair<K, V> rule = parseMapKeyValue(keyClass, valueClass, line.trim());
+            final Pair<K, V> rule =
+                    BpfDump.fromBase64EncodedString(keyClass, valueClass, line.trim());
             map.put(rule.first, rule.second);
         }
         return map;

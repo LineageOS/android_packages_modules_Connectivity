@@ -154,6 +154,7 @@ import com.android.internal.util.FileRotator;
 import com.android.net.module.util.BaseNetdUnsolicitedEventListener;
 import com.android.net.module.util.BestClock;
 import com.android.net.module.util.BinderUtils;
+import com.android.net.module.util.BpfDump;
 import com.android.net.module.util.BpfMap;
 import com.android.net.module.util.CollectionUtils;
 import com.android.net.module.util.DeviceConfigUtils;
@@ -2532,6 +2533,7 @@ public class NetworkStatsService extends INetworkStatsService.Stub {
         // usage: dumpsys netstats --full --uid --tag --poll --checkin
         final boolean poll = argSet.contains("--poll") || argSet.contains("poll");
         final boolean checkin = argSet.contains("--checkin");
+        final boolean bpfRawMap = argSet.contains("--bpfRawMap");
         final boolean fullHistory = argSet.contains("--full") || argSet.contains("full");
         final boolean includeUid = argSet.contains("--uid") || argSet.contains("detail");
         final boolean includeTag = argSet.contains("--tag") || argSet.contains("detail");
@@ -2570,6 +2572,11 @@ public class NetworkStatsService extends INetworkStatsService.Stub {
                     pw.println("tag");
                     mUidTagRecorder.dumpCheckin(rawWriter, start, end);
                 }
+                return;
+            }
+
+            if (bpfRawMap) {
+                dumpRawMapLocked(pw, args);
                 return;
             }
 
@@ -2741,6 +2748,38 @@ public class NetworkStatsService extends INetworkStatsService.Stub {
                 NetworkStatsServiceDumpProto.UID_TAG_STATS);
 
         proto.flush();
+    }
+
+    private <K extends Struct, V extends Struct> void dumpRawMap(IBpfMap<K, V> map,
+            IndentingPrintWriter pw) throws ErrnoException {
+        if (map == null) {
+            pw.println("Map is null");
+            return;
+        }
+        if (map.isEmpty()) {
+            pw.println("No entries");
+            return;
+        }
+        // If there is a concurrent entry deletion, value could be null. http://b/220084230.
+        // Also, map.forEach could restart iteration from the beginning and dump could contain
+        // duplicated entries. User of this dump needs to take care of the duplicated entries.
+        map.forEach((k, v) -> {
+            if (v != null) {
+                pw.println(BpfDump.toBase64EncodedString(k, v));
+            }
+        });
+    }
+
+    @GuardedBy("mStatsLock")
+    private void dumpRawMapLocked(final IndentingPrintWriter pw, final String[] args) {
+        if (CollectionUtils.contains(args, "--cookieTagMap")) {
+            try {
+                dumpRawMap(mCookieTagMap, pw);
+            } catch (ErrnoException e) {
+                pw.println("Error dumping cookieTag map: " + e);
+            }
+            return;
+        }
     }
 
     private static void dumpInterfaces(ProtoOutputStream proto, long tag,
