@@ -23,6 +23,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -47,6 +48,7 @@ import android.net.metrics.RaEvent;
 import android.net.metrics.ValidationProbeEvent;
 import android.os.Build;
 import android.os.Parcelable;
+import android.os.SystemClock;
 import android.system.OsConstants;
 import android.test.suitebuilder.annotation.SmallTest;
 import android.util.Base64;
@@ -138,7 +140,7 @@ public class IpConnectivityMetricsTest {
     private void logDefaultNetworkEvent(long timeMs, NetworkAgentInfo nai,
             NetworkAgentInfo oldNai) {
         final Network network = (nai != null) ? nai.network() : null;
-        final boolean validated = (nai != null) ? nai.lastValidated : false;
+        final boolean validated = (nai != null) ? nai.isValidated() : false;
         final LinkProperties lp = (nai != null) ? nai.linkProperties : null;
         final NetworkCapabilities nc = (nai != null) ? nai.networkCapabilities : null;
 
@@ -614,7 +616,10 @@ public class IpConnectivityMetricsTest {
         when(nai.network()).thenReturn(new Network(netId));
         nai.linkProperties = new LinkProperties();
         nai.networkCapabilities = new NetworkCapabilities();
-        nai.lastValidated = true;
+        nai.setValidated(true);
+        doReturn(true).when(nai).isValidated();
+        doReturn(SystemClock.elapsedRealtime()).when(nai).getFirstValidationTime();
+        doReturn(SystemClock.elapsedRealtime()).when(nai).getCurrentValidationTime();
         for (int t : BitUtils.unpackBits(transports)) {
             nai.networkCapabilities.addTransportType(t);
         }
@@ -628,8 +633,6 @@ public class IpConnectivityMetricsTest {
         }
         return nai;
     }
-
-
 
     static void verifySerialization(String want, String output) {
         try {
