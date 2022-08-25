@@ -578,8 +578,14 @@ public class EthernetTracker {
         // Bring up the interface so we get link status indications.
         try {
             PermissionUtils.enforceNetworkStackPermission(mContext);
-            NetdUtils.setInterfaceUp(mNetd, iface);
+            // Read the flags before attempting to bring up the interface. If the interface is
+            // already running an UP event is created after adding the interface.
             config = NetdUtils.getInterfaceConfigParcel(mNetd, iface);
+            if (NetdUtils.hasFlag(config, INetd.IF_STATE_DOWN)) {
+                // As a side-effect, NetdUtils#setInterfaceUp() also clears the interface's IPv4
+                // address and readds it which *could* lead to unexpected behavior in the future.
+                NetdUtils.setInterfaceUp(mNetd, iface);
+            }
         } catch (IllegalStateException e) {
             // Either the system is crashing or the interface has disappeared. Just ignore the
             // error; we haven't modified any state because we only do that if our calls succeed.
@@ -615,7 +621,7 @@ public class EthernetTracker {
         // Note: if the interface already has link (e.g., if we crashed and got
         // restarted while it was running), we need to fake a link up notification so we
         // start configuring it.
-        if (NetdUtils.hasFlag(config, "running")) {
+        if (NetdUtils.hasFlag(config, INetd.IF_FLAG_RUNNING)) {
             updateInterfaceState(iface, true);
         }
     }
