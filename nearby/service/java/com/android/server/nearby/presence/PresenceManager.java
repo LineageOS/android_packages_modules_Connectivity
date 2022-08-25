@@ -94,7 +94,8 @@ public class PresenceManager {
                                         .addCredential(publicCredential)
                                         .addPresenceAction(1)
                                         .addExtendedProperty(new DataElement(
-                                                DataElement.DataType.ACCOUNT_KEY, new byte[16]))
+                                                DataElement.DataType.ACCOUNT_KEY_DATA,
+                                                new byte[16]))
                                         .build();
                         ScanRequest scanRequest =
                                 new ScanRequest.Builder()

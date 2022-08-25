@@ -42,7 +42,6 @@ public final class DataElement implements Parcelable {
     /** @hide */
     @IntDef({
             DataType.BLE_SERVICE_DATA,
-            DataType.ACCOUNT_KEY,
             DataType.BLE_ADDRESS,
             DataType.SALT,
             DataType.PRIVATE_IDENTITY,
@@ -50,27 +49,28 @@ public final class DataElement implements Parcelable {
             DataType.PUBLIC_IDENTITY,
             DataType.PROVISIONED_IDENTITY,
             DataType.TX_POWER,
-            DataType.INTENT,
+            DataType.ACTION,
             DataType.MODEL_ID,
-            DataType.FINDER_EPHEMERAL_IDENTIFIER,
+            DataType.EDDYSTONE_EPHEMERAL_IDENTIFIER,
+            DataType.ACCOUNT_KEY_DATA,
             DataType.CONNECTION_STATUS,
             DataType.BATTERY
     })
     public @interface DataType {
-        int BLE_SERVICE_DATA = 0;
-        int ACCOUNT_KEY = 1;
-        int BLE_ADDRESS = 2;
-        int SALT = 3;
-        int PRIVATE_IDENTITY = 4;
-        int TRUSTED_IDENTITY = 5;
-        int PUBLIC_IDENTITY = 6;
-        int PROVISIONED_IDENTITY = 7;
-        int TX_POWER = 8;
-        int INTENT = 9;
-        int MODEL_ID = 10;
-        int FINDER_EPHEMERAL_IDENTIFIER = 11;
-        int CONNECTION_STATUS = 12;
-        int BATTERY = 13;
+        int BLE_SERVICE_DATA = 100;
+        int BLE_ADDRESS = 101;
+        int SALT = 0;
+        int PRIVATE_IDENTITY = 1;
+        int TRUSTED_IDENTITY = 2;
+        int PUBLIC_IDENTITY = 3;
+        int PROVISIONED_IDENTITY = 4;
+        int TX_POWER = 5;
+        int ACTION = 6;
+        int MODEL_ID = 7;
+        int EDDYSTONE_EPHEMERAL_IDENTIFIER = 8;
+        int ACCOUNT_KEY_DATA = 9;
+        int CONNECTION_STATUS = 10;
+        int BATTERY = 11;
     }
 
     /**
@@ -78,7 +78,7 @@ public final class DataElement implements Parcelable {
      */
     public static boolean isValidType(int type) {
         return type == DataType.BLE_SERVICE_DATA
-                || type == DataType.ACCOUNT_KEY
+                || type == DataType.ACCOUNT_KEY_DATA
                 || type == DataType.BLE_ADDRESS
                 || type == DataType.SALT
                 || type == DataType.PRIVATE_IDENTITY
@@ -86,9 +86,9 @@ public final class DataElement implements Parcelable {
                 || type == DataType.PUBLIC_IDENTITY
                 || type == DataType.PROVISIONED_IDENTITY
                 || type == DataType.TX_POWER
-                || type == DataType.INTENT
+                || type == DataType.ACTION
                 || type == DataType.MODEL_ID
-                || type == DataType.FINDER_EPHEMERAL_IDENTIFIER
+                || type == DataType.EDDYSTONE_EPHEMERAL_IDENTIFIER
                 || type == DataType.CONNECTION_STATUS
                 || type == DataType.BATTERY;
     }

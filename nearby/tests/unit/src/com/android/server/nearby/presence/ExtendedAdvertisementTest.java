@@ -38,9 +38,9 @@ import java.util.List;
 
 public class ExtendedAdvertisementTest {
     private static final int IDENTITY_TYPE = PresenceCredential.IDENTITY_TYPE_PRIVATE;
-    private static final int DATA_TYPE_MODEL_ID = 10;
-    private static final int DATA_TYPE_BLE_ADDRESS = 2;
-    private static final int DATA_TYPE_PUBLIC_IDENTITY = 6;
+    private static final int DATA_TYPE_MODEL_ID = 7;
+    private static final int DATA_TYPE_BLE_ADDRESS = 101;
+    private static final int DATA_TYPE_PUBLIC_IDENTITY = 3;
     private static final byte[] MODE_ID_DATA =
             new byte[]{2, 1, 30, 2, 10, -16, 6, 22, 44, -2, -86, -69, -52};
     private static final byte[] BLE_ADDRESS = new byte[]{124, 4, 56, 60, 120, -29, -90};
@@ -114,7 +114,7 @@ public class ExtendedAdvertisementTest {
                 .containsExactly(PRESENCE_ACTION_1, PRESENCE_ACTION_2);
         assertThat(originalAdvertisement.getIdentity()).isEqualTo(IDENTITY);
         assertThat(originalAdvertisement.getIdentityType()).isEqualTo(IDENTITY_TYPE);
-        assertThat(originalAdvertisement.getLength()).isEqualTo(65);
+        assertThat(originalAdvertisement.getLength()).isEqualTo(66);
         assertThat(originalAdvertisement.getVersion()).isEqualTo(
                 BroadcastRequest.PRESENCE_VERSION_V1);
         assertThat(originalAdvertisement.getSalt()).isEqualTo(SALT);
@@ -136,7 +136,7 @@ public class ExtendedAdvertisementTest {
                 .containsExactly(PRESENCE_ACTION_1, PRESENCE_ACTION_2);
         assertThat(newAdvertisement.getIdentity()).isEqualTo(IDENTITY);
         assertThat(newAdvertisement.getIdentityType()).isEqualTo(IDENTITY_TYPE);
-        assertThat(newAdvertisement.getLength()).isEqualTo(65);
+        assertThat(newAdvertisement.getLength()).isEqualTo(66);
         assertThat(newAdvertisement.getVersion()).isEqualTo(
                 BroadcastRequest.PRESENCE_VERSION_V1);
         assertThat(newAdvertisement.getSalt()).isEqualTo(SALT);
@@ -195,7 +195,7 @@ public class ExtendedAdvertisementTest {
                 .containsExactly(PRESENCE_ACTION_1, PRESENCE_ACTION_2);
         assertThat(adv.getIdentity()).isEqualTo(IDENTITY);
         assertThat(adv.getIdentityType()).isEqualTo(IDENTITY_TYPE);
-        assertThat(adv.getLength()).isEqualTo(65);
+        assertThat(adv.getLength()).isEqualTo(66);
         assertThat(adv.getVersion()).isEqualTo(
                 BroadcastRequest.PRESENCE_VERSION_V1);
         assertThat(adv.getSalt()).isEqualTo(SALT);
@@ -207,7 +207,7 @@ public class ExtendedAdvertisementTest {
     public void test_toString() {
         ExtendedAdvertisement adv = ExtendedAdvertisement.createFromRequest(mBuilder.build());
         assertThat(adv.toString()).isEqualTo("ExtendedAdvertisement:"
-                + "<VERSION: 1, length: 65, dataElementCount: 2, identityType: 1, "
+                + "<VERSION: 1, length: 66, dataElementCount: 2, identityType: 1, "
                 + "identity: [1, 2, 3, 4, 1, 2, 3, 4, 1, 2, 3, 4, 1, 2, 3, 4], salt: [2, 3],"
                 + " actions: [1, 2]>");
     }
@@ -223,31 +223,31 @@ public class ExtendedAdvertisementTest {
     }
 
     private static byte[] getExtendedAdvertisementByteArray() {
-        ByteBuffer buffer = ByteBuffer.allocate(65);
+        ByteBuffer buffer = ByteBuffer.allocate(66);
         buffer.put((byte) 0b00100000); // Header V1
-        buffer.put((byte) 0b00100011); // Salt header: length 2, type 3
+        buffer.put((byte) 0b00100000); // Salt header: length 2, type 0
         // Salt data
         buffer.put(SALT);
-        // Identity header: length 16, type 4
-        buffer.put(new byte[]{(byte) 0b10010000, (byte) 0b00000100});
+        // Identity header: length 16, type 1 (private identity)
+        buffer.put(new byte[]{(byte) 0b10010000, (byte) 0b00000001});
         // Identity data
         buffer.put(CryptorImpIdentityV1.getInstance().encrypt(IDENTITY, SALT, AUTHENTICITY_KEY));
 
-        ByteBuffer deBuffer = ByteBuffer.allocate(27);
-        // Action1 header: length 1, type 9
-        deBuffer.put(new byte[]{(byte) 0b00011001});
+        ByteBuffer deBuffer = ByteBuffer.allocate(28);
+        // Action1 header: length 1, type 6
+        deBuffer.put(new byte[]{(byte) 0b00010110});
         // Action1 data
         deBuffer.put((byte) PRESENCE_ACTION_1);
-        // Action2 header: length 1, type 9
-        deBuffer.put(new byte[]{(byte) 0b00011001});
+        // Action2 header: length 1, type 6
+        deBuffer.put(new byte[]{(byte) 0b00010110});
         // Action2 data
         deBuffer.put((byte) PRESENCE_ACTION_2);
-        // Ble address header: length 7, type 2
-        deBuffer.put((byte) 0b01110010);
+        // Ble address header: length 7, type 102
+        deBuffer.put(new byte[]{(byte) 0b10000111, (byte) 0b01100101});
         // Ble address data
         deBuffer.put(BLE_ADDRESS);
-        // model id header: length 13, type 10
-        deBuffer.put(new byte[]{(byte) 0b10001101, (byte) 0b00001010});
+        // model id header: length 13, type 7
+        deBuffer.put(new byte[]{(byte) 0b10001101, (byte) 0b00000111});
         // model id data
         deBuffer.put(MODE_ID_DATA);
 
