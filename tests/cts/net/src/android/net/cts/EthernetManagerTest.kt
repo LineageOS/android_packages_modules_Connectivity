@@ -68,7 +68,6 @@ import com.android.testutils.RecorderCallback.CallbackEntry.Available
 import com.android.testutils.RecorderCallback.CallbackEntry.CapabilitiesChanged
 import com.android.testutils.RecorderCallback.CallbackEntry.Lost
 import com.android.testutils.RouterAdvertisementResponder
-import com.android.testutils.SkipPresubmit
 import com.android.testutils.TapPacketReader
 import com.android.testutils.TestableNetworkCallback
 import com.android.testutils.anyNetwork
@@ -119,7 +118,6 @@ private val STATIC_IP_CONFIGURATION = IpConfiguration.Builder()
 @RunWith(DevSdkIgnoreRunner::class)
 // This test depends on behavior introduced post-T as part of connectivity module updates
 @ConnectivityModuleTest
-@SkipPresubmit(reason = "Flaky: b/240323229; remove annotation after fixing")
 @DevSdkIgnoreRule.IgnoreUpTo(Build.VERSION_CODES.S_V2)
 class EthernetManagerTest {
 
