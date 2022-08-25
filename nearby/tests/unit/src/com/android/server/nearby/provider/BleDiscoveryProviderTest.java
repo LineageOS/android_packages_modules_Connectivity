@@ -32,6 +32,7 @@ import android.bluetooth.BluetoothManager;
 import android.bluetooth.le.ScanRecord;
 import android.bluetooth.le.ScanResult;
 import android.content.Context;
+import android.hardware.location.ContextHubManager;
 import android.nearby.PresenceScanFilter;
 import android.nearby.PublicCredential;
 import android.nearby.ScanFilter;
@@ -109,7 +110,7 @@ public final class BleDiscoveryProviderTest {
         }
 
         @Override
-        public ContextHubManagerAdapter getContextHubManagerAdapter() {
+        public ContextHubManager getContextHubManager() {
             return null;
         }
 
