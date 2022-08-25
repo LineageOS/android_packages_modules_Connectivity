@@ -211,6 +211,7 @@ import android.os.BatteryStatsManager;
 import android.os.Binder;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.ConditionVariable;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.IBinder;
@@ -3040,7 +3041,11 @@ public class ConnectivityService extends IConnectivityManager.Stub
         // Calling PermissionMonitor#startMonitoring() in systemReadyInternal() and the
         // MultipathPolicyTracker.start() is called in NetworkPolicyManagerService#systemReady()
         // to ensure the tracking will be initialized correctly.
-        mPermissionMonitor.startMonitoring();
+        final ConditionVariable startMonitoringDone = new ConditionVariable();
+        mHandler.post(() -> {
+            mPermissionMonitor.startMonitoring();
+            startMonitoringDone.open();
+        });
         mProxyTracker.loadGlobalProxy();
         registerDnsResolverUnsolicitedEventListener();
 
@@ -3067,6 +3072,11 @@ public class ConnectivityService extends IConnectivityManager.Stub
         if (SdkLevel.isAtLeastT()) {
             mBpfNetMaps.setPullAtomCallback(mContext);
         }
+        // Wait PermissionMonitor to finish the permission update. Then MultipathPolicyTracker won't
+        // have permission problem. While CV#block() is unbounded in time and can in principle block
+        // forever, this replaces a synchronous call to PermissionMonitor#startMonitoring, which
+        // could have blocked forever too.
+        startMonitoringDone.block();
     }
 
     /**
