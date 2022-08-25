@@ -1213,13 +1213,13 @@ public class PermissionMonitor {
 
     /** Should only be used by unit tests */
     @VisibleForTesting
-    public Set<UidRange> getVpnInterfaceUidRanges(String iface) {
+    public synchronized Set<UidRange> getVpnInterfaceUidRanges(String iface) {
         return mVpnInterfaceUidRanges.get(iface);
     }
 
     /** Should only be used by unit tests */
     @VisibleForTesting
-    public Set<UidRange> getVpnLockdownUidRanges() {
+    synchronized Set<UidRange> getVpnLockdownUidRanges() {
         return mVpnLockdownUidRanges.getSet();
     }
 
@@ -1295,8 +1295,10 @@ public class PermissionMonitor {
         pw.println();
         pw.println("Lockdown filtering rules:");
         pw.increaseIndent();
-        for (final UidRange range : mVpnLockdownUidRanges.getSet()) {
-            pw.println("UIDs: " + range);
+        synchronized (this) {
+            for (final UidRange range : mVpnLockdownUidRanges.getSet()) {
+                pw.println("UIDs: " + range);
+            }
         }
         pw.decreaseIndent();
 
