@@ -306,14 +306,18 @@ class EthernetManagerTest {
         }
     }
 
+    private fun isEthernetSupported() = em != null
+
     @Before
     fun setUp() {
+        assumeTrue(isEthernetSupported())
         setIncludeTestInterfaces(true)
         addInterfaceStateListener(ifaceListener)
     }
 
     @After
     fun tearDown() {
+        if (!isEthernetSupported()) return
         // Reenable ethernet, so ABSENT callbacks are received.
         setEthernetEnabled(true)
 
@@ -778,7 +782,7 @@ class EthernetManagerTest {
                 .Builder(ETH_REQUEST.networkCapabilities)
                 .addCapability(testCapability)
                 .build()
-        updateConfiguration(iface, STATIC_IP_CONFIGURATION, nc)
+        updateConfiguration(iface, STATIC_IP_CONFIGURATION, nc).expectResult(iface.name)
 
         // UpdateConfiguration() currently does a restarts on the ethernet interface therefore lost
         // will be expected first before available, as part of the restart.
@@ -796,7 +800,7 @@ class EthernetManagerTest {
         val network = cb.expectAvailable()
         cb.assertNeverLost()
 
-        updateConfiguration(iface, STATIC_IP_CONFIGURATION)
+        updateConfiguration(iface, STATIC_IP_CONFIGURATION).expectResult(iface.name)
 
         // UpdateConfiguration() currently does a restarts on the ethernet interface therefore lost
         // will be expected first before available, as part of the restart.
@@ -819,7 +823,7 @@ class EthernetManagerTest {
                 .Builder(ETH_REQUEST.networkCapabilities)
                 .addCapability(testCapability)
                 .build()
-        updateConfiguration(iface, capabilities = nc)
+        updateConfiguration(iface, capabilities = nc).expectResult(iface.name)
 
         // UpdateConfiguration() currently does a restarts on the ethernet interface therefore lost
         // will be expected first before available, as part of the restart.
