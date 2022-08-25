@@ -230,7 +230,7 @@ public class ExtendedAdvertisement extends Advertisement{
             dataElementArrayIndex += deHeaderArray.length;
 
             @DataElement.DataType int type = Objects.requireNonNull(deHeader).getDataType();
-            if (type == DataElement.DataType.INTENT) {
+            if (type == DataElement.DataType.ACTION) {
                 if (deHeader.getDataLength() != 1) {
                     Log.v(TAG, "Action id should only 1 byte.");
                     return null;
@@ -321,7 +321,7 @@ public class ExtendedAdvertisement extends Advertisement{
         List<Byte> dataElementBytes = new ArrayList<>();
         // Intents
         for (int action : mActions) {
-            DataElement actionElement = new DataElement(DataElement.DataType.INTENT,
+            DataElement actionElement = new DataElement(DataElement.DataType.ACTION,
                     new byte[] {(byte) action});
             byte[] intentByteArray =
                     ExtendedAdvertisementUtils.convertDataElementToBytes(actionElement);
