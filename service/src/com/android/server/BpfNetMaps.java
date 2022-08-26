@@ -551,9 +551,11 @@ public class BpfNetMaps {
                 synchronized (sUidOwnerMap) {
                     sUidOwnerMap.forEach((uid, config) -> {
                         // config could be null if there is a concurrent entry deletion.
-                        // http://b/220084230.
-                        if (config != null
-                                && !uidSet.contains((int) uid.val) && (config.rule & match) != 0) {
+                        // http://b/220084230. But sUidOwnerMap update must be done while holding a
+                        // lock, so this should not happen.
+                        if (config == null) {
+                            Log.wtf(TAG, "sUidOwnerMap entry was deleted while holding a lock");
+                        } else if (!uidSet.contains((int) uid.val) && (config.rule & match) != 0) {
                             uidSetToRemoveRule.add((int) uid.val);
                         }
                     });
