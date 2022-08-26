@@ -278,26 +278,26 @@ public class EthernetTetheringTest {
             mUpstreamReader = null;
         }
 
-        runAsShell(TETHER_PRIVILEGED, () -> {
-            mTm.stopTethering(TETHERING_ETHERNET);
-            // Binder call is an async call. Need to hold the shell permission until tethering
-            // stopped. This helps to avoid the test become flaky.
-            if (mTetheringEventCallback != null) {
-                mTetheringEventCallback.awaitInterfaceUntethered();
-                mTetheringEventCallback.unregister();
-                mTetheringEventCallback = null;
-            }
-        });
         if (mDownstreamReader != null) {
             TapPacketReader reader = mDownstreamReader;
             mHandler.post(() -> reader.stop());
             mDownstreamReader = null;
         }
-        runAsShell(NETWORK_SETTINGS, () -> {
-            mTetheredInterfaceRequester.release();
-        });
-        setIncludeTestInterfaces(false);
+
+        // To avoid flaky which caused by the next test started but the previous interface is not
+        // untracked from EthernetTracker yet. Just delete the test interface without explicitly
+        // calling TetheringManager#stopTethering could let EthernetTracker untrack the test
+        // interface from server mode before tethering stopped. Thus, awaitInterfaceUntethered
+        // could not only make sure tethering is stopped but also guarantee the test interface is
+        // untracked from EthernetTracker.
         maybeDeleteTestInterface();
+        if (mTetheringEventCallback != null) {
+            mTetheringEventCallback.awaitInterfaceUntethered();
+            mTetheringEventCallback.unregister();
+            mTetheringEventCallback = null;
+        }
+        runAsShell(NETWORK_SETTINGS, () -> mTetheredInterfaceRequester.release());
+        setIncludeTestInterfaces(false);
     }
 
     @After
