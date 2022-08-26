@@ -23,7 +23,13 @@ import android.nearby.BroadcastRequest;
 import android.nearby.DataElement;
 import android.nearby.PresenceBroadcastRequest;
 import android.nearby.PresenceCredential;
+import android.nearby.PublicCredential;
 import android.util.Log;
+
+import com.android.server.nearby.util.encryption.Cryptor;
+import com.android.server.nearby.util.encryption.CryptorImpFake;
+import com.android.server.nearby.util.encryption.CryptorImpIdentityV1;
+import com.android.server.nearby.util.encryption.CryptorImpV1;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -55,9 +61,13 @@ public class ExtendedAdvertisement extends Advertisement{
 
     private final List<DataElement> mDataElements;
 
+    private final byte[] mAuthenticityKey;
+
     // All Data Elements including salt and identity.
     // Each list item (byte array) is a Data Element (with its header).
     private final List<byte[]> mCompleteDataElementsBytes;
+    // Signature generated from data elements.
+    private final byte[] mHmacTag;
 
     /**
      * Creates an {@link ExtendedAdvertisement} from a Presence Broadcast Request.
@@ -77,6 +87,7 @@ public class ExtendedAdvertisement extends Advertisement{
         }
 
         byte[] identity = request.getCredential().getMetadataEncryptionKey();
+        byte[] authenticityKey = request.getCredential().getAuthenticityKey();
         if (identity.length != IDENTITY_DATA_LENGTH) {
             Log.v(TAG, "Identity does not match correct length");
             return null;
@@ -93,22 +104,44 @@ public class ExtendedAdvertisement extends Advertisement{
                 request.getCredential().getIdentityType(),
                 identity,
                 salt,
+                authenticityKey,
                 actions,
                 dataElements);
     }
 
-    /** Serialize an {@link ExtendedAdvertisement} object into bytes. */
-    @Override
+    /** Serialize an {@link ExtendedAdvertisement} object into bytes with {@link DataElement}s */
+    @Nullable
     public byte[] toBytes() {
         ByteBuffer buffer = ByteBuffer.allocate(getLength());
 
         // Header
         buffer.put(ExtendedAdvertisementUtils.constructHeader(getVersion()));
 
+        // Salt
+        buffer.put(mCompleteDataElementsBytes.get(0));
+
+        // Identity
+        buffer.put(mCompleteDataElementsBytes.get(1));
+
+        List<Byte> rawDataBytes = new ArrayList<>();
         // Data Elements (Already includes salt and identity)
-        for (byte[] dataElement : mCompleteDataElementsBytes) {
-            buffer.put(dataElement);
+        for (int i = 2; i < mCompleteDataElementsBytes.size(); i++) {
+            byte[] dataElementBytes = mCompleteDataElementsBytes.get(i);
+            for (Byte b : dataElementBytes) {
+                rawDataBytes.add(b);
+            }
         }
+
+        byte[] dataElements = new byte[rawDataBytes.size()];
+        for (int i = 0; i < rawDataBytes.size(); i++) {
+            dataElements[i] = rawDataBytes.get(i);
+        }
+
+        buffer.put(
+                getCryptor(/* encrypt= */ true).encrypt(dataElements, getSalt(), mAuthenticityKey));
+
+        buffer.put(mHmacTag);
+
         return buffer.array();
     }
 
@@ -116,13 +149,15 @@ public class ExtendedAdvertisement extends Advertisement{
      * {@code null} when there is something when parsing.
      */
     @Nullable
-    public static ExtendedAdvertisement fromBytes(byte[] bytes) {
+    public static ExtendedAdvertisement fromBytes(byte[] bytes, PublicCredential publicCredential) {
         @BroadcastRequest.BroadcastVersion
         int version = ExtendedAdvertisementUtils.getVersion(bytes);
         if (version != PresenceBroadcastRequest.PRESENCE_VERSION_V1) {
-            Log.v(TAG, "ExtendedAdvertisement is used in V1 only.");
+            Log.v(TAG, "ExtendedAdvertisement is used in V1 only and version is " + version);
             return null;
         }
+
+        byte[] authenticityKey = publicCredential.getAuthenticityKey();
 
         int index = HEADER_LENGTH;
         // Salt
@@ -142,9 +177,8 @@ public class ExtendedAdvertisement extends Advertisement{
         byte[] identityHeaderArray = ExtendedAdvertisementUtils.getDataElementHeader(bytes, index);
         DataElementHeader identityHeader =
                 DataElementHeader.fromBytes(version, identityHeaderArray);
-        if (identityHeader == null || identityHeader.getDataLength() != IDENTITY_DATA_LENGTH) {
-            Log.v(TAG, "The second element has to be identity and the length should be "
-                    + IDENTITY_DATA_LENGTH + " bytes.");
+        if (identityHeader == null) {
+            Log.v(TAG, "The second element has to be identity.");
             return null;
         }
         index += identityHeaderArray.length;
@@ -154,26 +188,54 @@ public class ExtendedAdvertisement extends Advertisement{
             Log.v(TAG, "The identity type is unknown.");
             return null;
         }
-        byte[] identity = new byte[identityHeader.getDataLength()];
+        byte[] encryptedIdentity = new byte[identityHeader.getDataLength()];
         for (int i = 0; i < identityHeader.getDataLength(); i++) {
-            identity[i] = bytes[index++];
+            encryptedIdentity[i] = bytes[index++];
+        }
+        byte[] identity =
+                CryptorImpIdentityV1
+                        .getInstance().decrypt(encryptedIdentity, salt, authenticityKey);
+
+        Cryptor cryptor = getCryptor(/* encrypt= */ true);
+        byte[] encryptedDataElements =
+                new byte[bytes.length - index - cryptor.getSignatureLength()];
+        // Decrypt other data elements
+        System.arraycopy(bytes, index, encryptedDataElements, 0, encryptedDataElements.length);
+        byte[] decryptedDataElements =
+                cryptor.decrypt(encryptedDataElements, salt, authenticityKey);
+        if (decryptedDataElements == null) {
+            return null;
         }
 
+        // Verify the computed HMAC tag is equal to HMAC tag in advertisement
+        if (cryptor.getSignatureLength() > 0) {
+            byte[] expectedHmacTag = new byte[cryptor.getSignatureLength()];
+            System.arraycopy(
+                    bytes, bytes.length - cryptor.getSignatureLength(),
+                    expectedHmacTag, 0, cryptor.getSignatureLength());
+            if (!cryptor.verify(decryptedDataElements, authenticityKey, expectedHmacTag)) {
+                Log.e(TAG, "HMAC tags not match.");
+                return null;
+            }
+        }
+
+        int dataElementArrayIndex = 0;
         // Other Data Elements
         List<Integer> actions = new ArrayList<>();
         List<DataElement> dataElements = new ArrayList<>();
-        while (index < bytes.length) {
-            byte[] deHeaderArray = ExtendedAdvertisementUtils.getDataElementHeader(bytes, index);
+        while (dataElementArrayIndex < decryptedDataElements.length) {
+            byte[] deHeaderArray = ExtendedAdvertisementUtils
+                    .getDataElementHeader(decryptedDataElements, dataElementArrayIndex);
             DataElementHeader deHeader = DataElementHeader.fromBytes(version, deHeaderArray);
-            index += deHeaderArray.length;
+            dataElementArrayIndex += deHeaderArray.length;
 
             @DataElement.DataType int type = Objects.requireNonNull(deHeader).getDataType();
-            if (type == DataElement.DataType.INTENT) {
+            if (type == DataElement.DataType.ACTION) {
                 if (deHeader.getDataLength() != 1) {
                     Log.v(TAG, "Action id should only 1 byte.");
                     return null;
                 }
-                actions.add((int) bytes[index++]);
+                actions.add((int) decryptedDataElements[dataElementArrayIndex++]);
             } else {
                 if (isSaltOrIdentity(type)) {
                     Log.v(TAG, "Type " + type + " is duplicated. There should be only one salt"
@@ -182,13 +244,14 @@ public class ExtendedAdvertisement extends Advertisement{
                 }
                 byte[] deData = new byte[deHeader.getDataLength()];
                 for (int i = 0; i < deHeader.getDataLength(); i++) {
-                    deData[i] = bytes[index++];
+                    deData[i] = decryptedDataElements[dataElementArrayIndex++];
                 }
                 dataElements.add(new DataElement(type, deData));
             }
         }
 
-        return new ExtendedAdvertisement(identityType, identity, salt, actions, dataElements);
+        return new ExtendedAdvertisement(identityType, identity, salt, authenticityKey, actions,
+                dataElements);
     }
 
     /** Returns the {@link DataElement}s in the advertisement. */
@@ -226,12 +289,14 @@ public class ExtendedAdvertisement extends Advertisement{
             @PresenceCredential.IdentityType int identityType,
             byte[] identity,
             byte[] salt,
+            byte[] authenticityKey,
             List<Integer> actions,
             List<DataElement> dataElements) {
         this.mVersion = BroadcastRequest.PRESENCE_VERSION_V1;
         this.mIdentityType = identityType;
         this.mIdentity = identity;
         this.mSalt = salt;
+        this.mAuthenticityKey = authenticityKey;
         this.mActions = actions;
         this.mDataElements = dataElements;
         this.mCompleteDataElementsBytes = new ArrayList<>();
@@ -245,28 +310,49 @@ public class ExtendedAdvertisement extends Advertisement{
         length += saltByteArray.length;
 
         // Identity
-        DataElement identityElement = new DataElement(toDataType(identityType), identity);
+        byte[] encryptedIdentity =
+                CryptorImpIdentityV1.getInstance().encrypt(identity, salt, authenticityKey);
+        DataElement identityElement = new DataElement(toDataType(identityType), encryptedIdentity);
         byte[] identityByteArray =
                 ExtendedAdvertisementUtils.convertDataElementToBytes(identityElement);
         mCompleteDataElementsBytes.add(identityByteArray);
         length += identityByteArray.length;
 
+        List<Byte> dataElementBytes = new ArrayList<>();
         // Intents
         for (int action : mActions) {
-            DataElement actionElement = new DataElement(DataElement.DataType.INTENT,
+            DataElement actionElement = new DataElement(DataElement.DataType.ACTION,
                     new byte[] {(byte) action});
             byte[] intentByteArray =
                     ExtendedAdvertisementUtils.convertDataElementToBytes(actionElement);
             mCompleteDataElementsBytes.add(intentByteArray);
-            length += intentByteArray.length;
+            for (Byte b : intentByteArray) {
+                dataElementBytes.add(b);
+            }
         }
 
         // Data Elements (Extended properties)
         for (DataElement dataElement : mDataElements) {
             byte[] deByteArray = ExtendedAdvertisementUtils.convertDataElementToBytes(dataElement);
             mCompleteDataElementsBytes.add(deByteArray);
-            length += deByteArray.length;
+            for (Byte b : deByteArray) {
+                dataElementBytes.add(b);
+            }
         }
+
+        byte[] data = new byte[dataElementBytes.size()];
+        for (int i = 0; i < dataElementBytes.size(); i++) {
+            data[i] = dataElementBytes.get(i);
+        }
+        Cryptor cryptor = getCryptor(/* encrypt= */ true);
+        byte[] encryptedDeBytes = cryptor.encrypt(data, salt, authenticityKey);
+
+        length += encryptedDeBytes.length;
+
+        // Signature
+        byte[] hmacTag = Objects.requireNonNull(cryptor.sign(data, authenticityKey));
+        mHmacTag = hmacTag;
+        length += hmacTag.length;
 
         this.mLength = length;
     }
@@ -310,5 +396,14 @@ public class ExtendedAdvertisement extends Advertisement{
                 || type == DataElement.DataType.TRUSTED_IDENTITY
                 || type == DataElement.DataType.PROVISIONED_IDENTITY
                 || type == DataElement.DataType.PUBLIC_IDENTITY;
+    }
+
+    private static Cryptor getCryptor(boolean encrypt) {
+        if (encrypt) {
+            Log.d(TAG, "get V1 Cryptor");
+            return CryptorImpV1.getInstance();
+        }
+        Log.d(TAG, "get fake Cryptor");
+        return CryptorImpFake.getInstance();
     }
 }
