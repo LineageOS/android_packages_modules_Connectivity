@@ -86,7 +86,7 @@ import java.util.function.Predicate;
  */
 public final class TetheringTester {
     private static final String TAG = TetheringTester.class.getSimpleName();
-    private static final int PACKET_READ_TIMEOUT_MS = 100;
+    private static final int PACKET_READ_TIMEOUT_MS = 500;
     private static final int DHCP_DISCOVER_ATTEMPTS = 10;
     private static final int READ_RA_ATTEMPTS = 10;
     private static final byte[] DHCP_REQUESTED_PARAMS = new byte[] {
