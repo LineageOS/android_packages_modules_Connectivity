@@ -40,6 +40,7 @@ import android.os.ServiceSpecificException;
 import android.provider.DeviceConfig;
 import android.system.ErrnoException;
 import android.system.Os;
+import android.util.ArraySet;
 import android.util.Log;
 
 import com.android.internal.annotations.VisibleForTesting;
@@ -51,10 +52,7 @@ import com.android.net.module.util.Struct.U8;
 
 import java.io.FileDescriptor;
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.HashSet;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 /**
  * BpfNetMaps is responsible for providing traffic controller relevant functionality.
@@ -518,6 +516,14 @@ public class BpfNetMaps {
         }
     }
 
+    private Set<Integer> asSet(final int[] uids) {
+        final Set<Integer> uidSet = new ArraySet<>();
+        for (final int uid: uids) {
+            uidSet.add(uid);
+        }
+        return uidSet;
+    }
+
     /**
      * Replaces the contents of the specified UID-based firewall chain.
      * Enables the chain for specified uids and disables the chain for non-specified uids.
@@ -539,15 +545,17 @@ public class BpfNetMaps {
                 // ConnectivityManager#replaceFirewallChain API
                 throw new IllegalArgumentException("Invalid firewall chain: " + chain);
             }
-            final Set<Integer> uidSet = Arrays.stream(uids).boxed().collect(Collectors.toSet());
-            final Set<Integer> uidSetToRemoveRule = new HashSet<>();
+            final Set<Integer> uidSet = asSet(uids);
+            final Set<Integer> uidSetToRemoveRule = new ArraySet<>();
             try {
                 synchronized (sUidOwnerMap) {
                     sUidOwnerMap.forEach((uid, config) -> {
                         // config could be null if there is a concurrent entry deletion.
-                        // http://b/220084230.
-                        if (config != null
-                                && !uidSet.contains((int) uid.val) && (config.rule & match) != 0) {
+                        // http://b/220084230. But sUidOwnerMap update must be done while holding a
+                        // lock, so this should not happen.
+                        if (config == null) {
+                            Log.wtf(TAG, "sUidOwnerMap entry was deleted while holding a lock");
+                        } else if (!uidSet.contains((int) uid.val) && (config.rule & match) != 0) {
                             uidSetToRemoveRule.add((int) uid.val);
                         }
                     });
