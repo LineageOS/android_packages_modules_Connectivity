@@ -983,14 +983,13 @@ public class NetworkAgentInfo implements NetworkRanker.Scoreable {
 
     // Does this network satisfy request?
     public boolean satisfies(NetworkRequest request) {
-        return created &&
-                request.networkCapabilities.satisfiedByNetworkCapabilities(networkCapabilities);
+        return everConnected
+                && request.networkCapabilities.satisfiedByNetworkCapabilities(networkCapabilities);
     }
 
     public boolean satisfiesImmutableCapabilitiesOf(NetworkRequest request) {
-        return created &&
-                request.networkCapabilities.satisfiedByImmutableNetworkCapabilities(
-                        networkCapabilities);
+        return everConnected && request.networkCapabilities.satisfiedByImmutableNetworkCapabilities(
+                networkCapabilities);
     }
 
     /** Whether this network is a VPN. */
