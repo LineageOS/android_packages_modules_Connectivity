@@ -19,7 +19,10 @@ package android.net
 import android.app.usage.NetworkStatsManager.NETWORK_TYPE_5G_NSA
 import android.content.Context
 import android.net.ConnectivityManager.TYPE_MOBILE
+import android.net.ConnectivityManager.TYPE_TEST
 import android.net.ConnectivityManager.TYPE_WIFI
+import android.net.NetworkCapabilities.TRANSPORT_TEST
+import android.net.NetworkCapabilities.TRANSPORT_WIFI
 import android.net.NetworkIdentity.OEM_NONE
 import android.net.NetworkIdentity.OEM_PAID
 import android.net.NetworkIdentity.OEM_PRIVATE
@@ -31,6 +34,7 @@ import android.net.NetworkStats.METERED_YES
 import android.net.NetworkStats.ROAMING_ALL
 import android.net.NetworkTemplate.MATCH_MOBILE
 import android.net.NetworkTemplate.MATCH_MOBILE_WILDCARD
+import android.net.NetworkTemplate.MATCH_TEST
 import android.net.NetworkTemplate.MATCH_WIFI
 import android.net.NetworkTemplate.MATCH_WIFI_WILDCARD
 import android.net.NetworkTemplate.NETWORK_TYPE_ALL
@@ -97,6 +101,14 @@ class NetworkTemplateTest {
                     (oemManaged and OEM_PAID) == OEM_PAID)
             setCapability(NetworkCapabilities.NET_CAPABILITY_OEM_PRIVATE,
                     (oemManaged and OEM_PRIVATE) == OEM_PRIVATE)
+            if (type == TYPE_TEST) {
+                wifiKey?.let { TestNetworkSpecifier(it) }?.let {
+                    // Must have a single non-test transport specified to use setNetworkSpecifier.
+                    // Put an arbitrary transport type which is not used in this test.
+                    addTransportType(TRANSPORT_TEST)
+                    addTransportType(TRANSPORT_WIFI)
+                    setNetworkSpecifier(it) }
+            }
             setTransportInfo(mockWifiInfo)
         }
         return NetworkStateSnapshot(mock(Network::class.java), caps, lp, subscriberId, type)
@@ -230,6 +242,32 @@ class NetworkTemplateTest {
         // Verify that the different type does not match.
         templateMobileWildcard.assertDoesNotMatch(identWifiImsi1Key1)
         templateMobileNullImsiWithRatType.assertDoesNotMatch(identWifiImsi1Key1)
+    }
+
+    @Test
+    fun testTestNetworkTemplateMatches() {
+        val templateTestKey1 = NetworkTemplate.Builder(MATCH_TEST)
+            .setWifiNetworkKeys(setOf(TEST_WIFI_KEY1)).build()
+        val templateTestKey2 = NetworkTemplate.Builder(MATCH_TEST)
+            .setWifiNetworkKeys(setOf(TEST_WIFI_KEY2)).build()
+        val templateTestAll = NetworkTemplate.Builder(MATCH_TEST).build()
+
+        val stateWifiKey1 = buildNetworkState(TYPE_WIFI, null /* subscriberId */, TEST_WIFI_KEY1,
+            OEM_NONE, true /* metered */)
+        val stateTestKey1 = buildNetworkState(TYPE_TEST, null /* subscriberId */, TEST_WIFI_KEY1,
+            OEM_NONE, true /* metered */)
+        val identWifi1 = buildNetworkIdentity(mockContext, stateWifiKey1,
+            false /* defaultNetwork */, NetworkTemplate.NETWORK_TYPE_ALL)
+        val identTest1 = buildNetworkIdentity(mockContext, stateTestKey1,
+            false /* defaultNetwork */, NETWORK_TYPE_ALL)
+
+        // Verify that the template matches corresponding type and the subscriberId.
+        templateTestKey1.assertDoesNotMatch(identWifi1)
+        templateTestKey1.assertMatches(identTest1)
+        templateTestKey2.assertDoesNotMatch(identWifi1)
+        templateTestKey2.assertDoesNotMatch(identTest1)
+        templateTestAll.assertDoesNotMatch(identWifi1)
+        templateTestAll.assertMatches(identTest1)
     }
 
     @Test
