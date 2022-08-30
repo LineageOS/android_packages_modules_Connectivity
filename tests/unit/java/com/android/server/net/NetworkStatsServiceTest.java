@@ -85,7 +85,6 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
 
 import android.annotation.NonNull;
 import android.app.AlarmManager;
@@ -336,9 +335,9 @@ public class NetworkStatsServiceTest extends NetworkStatsBaseTest {
 
         final Context context = InstrumentationRegistry.getContext();
         mServiceContext = new MockContext(context);
-        when(mLocationPermissionChecker.checkCallersLocationPermission(
-                any(), any(), anyInt(), anyBoolean(), any())).thenReturn(true);
-        when(sWifiInfo.getNetworkKey()).thenReturn(TEST_WIFI_NETWORK_KEY);
+        doReturn(true).when(mLocationPermissionChecker).checkCallersLocationPermission(
+                any(), any(), anyInt(), anyBoolean(), any());
+        doReturn(TEST_WIFI_NETWORK_KEY).when(sWifiInfo).getNetworkKey();
         mStatsDir = TestIoUtils.createTemporaryDirectory(getClass().getSimpleName());
         mLegacyStatsDir = TestIoUtils.createTemporaryDirectory(
                 getClass().getSimpleName() + "-legacy");
@@ -1070,8 +1069,8 @@ public class NetworkStatsServiceTest extends NetworkStatsBaseTest {
 
     // TODO: support per IMSI state
     private void setMobileRatTypeAndWaitForIdle(int ratType) {
-        when(mNetworkStatsSubscriptionsMonitor.getRatTypeForSubscriberId(anyString()))
-                .thenReturn(ratType);
+        doReturn(ratType).when(mNetworkStatsSubscriptionsMonitor)
+                .getRatTypeForSubscriberId(anyString());
         mService.handleOnCollapsedRatTypeChanged();
         HandlerUtils.waitForIdle(mHandlerThread, WAIT_TIMEOUT);
     }
@@ -1478,8 +1477,8 @@ public class NetworkStatsServiceTest extends NetworkStatsBaseTest {
         mUsageCallback.expectOnThresholdReached(request);
 
         // Allow binder to disconnect
-        when(mUsageCallbackBinder.unlinkToDeath(any(IBinder.DeathRecipient.class), anyInt()))
-                .thenReturn(true);
+        doReturn(true).when(mUsageCallbackBinder)
+                .unlinkToDeath(any(IBinder.DeathRecipient.class), anyInt());
 
         // Unregister request
         mService.unregisterUsageRequest(request);
@@ -1661,7 +1660,7 @@ public class NetworkStatsServiceTest extends NetworkStatsBaseTest {
     }
 
     private void setCombineSubtypeEnabled(boolean enable) {
-        when(mSettings.getCombineSubtypeEnabled()).thenReturn(enable);
+        doReturn(enable).when(mSettings).getCombineSubtypeEnabled();
         mHandler.post(() -> mContentObserver.onChange(false, Settings.Global
                     .getUriFor(Settings.Global.NETSTATS_COMBINE_SUBTYPE_ENABLED)));
         waitForIdle();
@@ -1821,8 +1820,8 @@ public class NetworkStatsServiceTest extends NetworkStatsBaseTest {
      */
     @Test
     public void testEnforceTemplateLocationPermission() throws Exception {
-        when(mLocationPermissionChecker.checkCallersLocationPermission(
-                any(), any(), anyInt(), anyBoolean(), any())).thenReturn(false);
+        doReturn(false).when(mLocationPermissionChecker)
+                .checkCallersLocationPermission(any(), any(), anyInt(), anyBoolean(), any());
         initWifiStats(buildWifiState(true, TEST_IFACE, IMSI_1));
         assertThrows(SecurityException.class, () ->
                 assertNetworkTotal(sTemplateWifi, 0L, 0L, 0L, 0L, 0));
@@ -1830,8 +1829,8 @@ public class NetworkStatsServiceTest extends NetworkStatsBaseTest {
         assertNetworkTotal(sTemplateCarrierWifi1, 0L, 0L, 0L, 0L, 0);
         assertNetworkTotal(sTemplateImsi1, 0L, 0L, 0L, 0L, 0);
 
-        when(mLocationPermissionChecker.checkCallersLocationPermission(
-                any(), any(), anyInt(), anyBoolean(), any())).thenReturn(true);
+        doReturn(true).when(mLocationPermissionChecker)
+                .checkCallersLocationPermission(any(), any(), anyInt(), anyBoolean(), any());
         assertNetworkTotal(sTemplateCarrierWifi1, 0L, 0L, 0L, 0L, 0);
         assertNetworkTotal(sTemplateWifi, 0L, 0L, 0L, 0L, 0);
         assertNetworkTotal(sTemplateImsi1, 0L, 0L, 0L, 0L, 0);
@@ -2106,11 +2105,11 @@ public class NetworkStatsServiceTest extends NetworkStatsBaseTest {
     }
 
     private void mockNetworkStatsSummaryDev(NetworkStats summary) throws Exception {
-        when(mStatsFactory.readNetworkStatsSummaryDev()).thenReturn(summary);
+        doReturn(summary).when(mStatsFactory).readNetworkStatsSummaryDev();
     }
 
     private void mockNetworkStatsSummaryXt(NetworkStats summary) throws Exception {
-        when(mStatsFactory.readNetworkStatsSummaryXt()).thenReturn(summary);
+        doReturn(summary).when(mStatsFactory).readNetworkStatsSummaryXt();
     }
 
     private void mockNetworkStatsUidDetail(NetworkStats detail) throws Exception {
@@ -2120,11 +2119,11 @@ public class NetworkStatsServiceTest extends NetworkStatsBaseTest {
 
     private void mockNetworkStatsUidDetail(NetworkStats detail,
             TetherStatsParcel[] tetherStatsParcels) throws Exception {
-        when(mStatsFactory.readNetworkStatsDetail(UID_ALL, INTERFACES_ALL, TAG_ALL))
-                .thenReturn(detail);
+        doReturn(detail).when(mStatsFactory)
+                .readNetworkStatsDetail(UID_ALL, INTERFACES_ALL, TAG_ALL);
 
         // also include tethering details, since they are folded into UID
-        when(mNetd.tetherGetStats()).thenReturn(tetherStatsParcels);
+        doReturn(tetherStatsParcels).when(mNetd).tetherGetStats();
     }
 
     private void mockDefaultSettings() throws Exception {
@@ -2132,22 +2131,22 @@ public class NetworkStatsServiceTest extends NetworkStatsBaseTest {
     }
 
     private void mockSettings(long bucketDuration, long deleteAge) throws Exception {
-        when(mSettings.getPollInterval()).thenReturn(HOUR_IN_MILLIS);
-        when(mSettings.getPollDelay()).thenReturn(0L);
-        when(mSettings.getSampleEnabled()).thenReturn(true);
-        when(mSettings.getCombineSubtypeEnabled()).thenReturn(false);
+        doReturn(HOUR_IN_MILLIS).when(mSettings).getPollInterval();
+        doReturn(0L).when(mSettings).getPollDelay();
+        doReturn(true).when(mSettings).getSampleEnabled();
+        doReturn(false).when(mSettings).getCombineSubtypeEnabled();
 
         final Config config = new Config(bucketDuration, deleteAge, deleteAge);
-        when(mSettings.getDevConfig()).thenReturn(config);
-        when(mSettings.getXtConfig()).thenReturn(config);
-        when(mSettings.getUidConfig()).thenReturn(config);
-        when(mSettings.getUidTagConfig()).thenReturn(config);
+        doReturn(config).when(mSettings).getDevConfig();
+        doReturn(config).when(mSettings).getXtConfig();
+        doReturn(config).when(mSettings).getUidConfig();
+        doReturn(config).when(mSettings).getUidTagConfig();
 
-        when(mSettings.getGlobalAlertBytes(anyLong())).thenReturn(MB_IN_BYTES);
-        when(mSettings.getDevPersistBytes(anyLong())).thenReturn(MB_IN_BYTES);
-        when(mSettings.getXtPersistBytes(anyLong())).thenReturn(MB_IN_BYTES);
-        when(mSettings.getUidPersistBytes(anyLong())).thenReturn(MB_IN_BYTES);
-        when(mSettings.getUidTagPersistBytes(anyLong())).thenReturn(MB_IN_BYTES);
+        doReturn(MB_IN_BYTES).when(mSettings).getGlobalAlertBytes(anyLong());
+        doReturn(MB_IN_BYTES).when(mSettings).getDevPersistBytes(anyLong());
+        doReturn(MB_IN_BYTES).when(mSettings).getXtPersistBytes(anyLong());
+        doReturn(MB_IN_BYTES).when(mSettings).getUidPersistBytes(anyLong());
+        doReturn(MB_IN_BYTES).when(mSettings).getUidTagPersistBytes(anyLong());
     }
 
     private void assertStatsFilesExist(boolean exist) {
