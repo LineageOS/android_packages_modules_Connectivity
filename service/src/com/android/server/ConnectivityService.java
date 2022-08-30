@@ -6923,6 +6923,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
 
     @Override
     public void unofferNetwork(@NonNull final INetworkOfferCallback callback) {
+        Objects.requireNonNull(callback);
         mHandler.sendMessage(mHandler.obtainMessage(EVENT_UNREGISTER_NETWORK_OFFER, callback));
     }
 
@@ -7470,9 +7471,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
             notifyIfacesChangedForNetworkStats();
             networkAgent.networkMonitor().notifyLinkPropertiesChanged(
                     new LinkProperties(newLp, true /* parcelSensitiveFields */));
-            if (networkAgent.everConnected) {
-                notifyNetworkCallbacks(networkAgent, ConnectivityManager.CALLBACK_IP_CHANGED);
-            }
+            notifyNetworkCallbacks(networkAgent, ConnectivityManager.CALLBACK_IP_CHANGED);
         }
 
         mKeepaliveTracker.handleCheckKeepalivesStillValid(networkAgent);
@@ -8732,9 +8731,6 @@ public class ConnectivityService extends IConnectivityManager.Stub
         // Gather the list of all relevant agents.
         final ArrayList<NetworkAgentInfo> nais = new ArrayList<>();
         for (final NetworkAgentInfo nai : mNetworkAgentInfos) {
-            if (!nai.everConnected) {
-                continue;
-            }
             nais.add(nai);
         }
 
@@ -8858,7 +8854,6 @@ public class ConnectivityService extends IConnectivityManager.Stub
         }
 
         for (final NetworkAgentInfo nai : nais) {
-            if (!nai.everConnected) continue;
             final boolean oldBackground = oldBgNetworks.contains(nai);
             // Process listen requests and update capabilities if the background state has
             // changed for this network. For consistency with previous behavior, send onLost
@@ -9451,7 +9446,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
             }
         }
         for (NetworkAgentInfo nai : mNetworkAgentInfos) {
-            if (nai.everConnected && (activeNetIds.contains(nai.network().netId) || nai.isVPN())) {
+            if (activeNetIds.contains(nai.network().netId) || nai.isVPN()) {
                 defaultNetworks.add(nai.network);
             }
         }
