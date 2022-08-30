@@ -118,7 +118,7 @@ public class DiscoveryProviderManager implements AbstractDiscoveryProvider.Liste
         Executor executor = Executors.newSingleThreadExecutor();
         mChreDiscoveryProvider =
                 new ChreDiscoveryProvider(
-                        mContext, new ChreCommunication(injector, executor), executor);
+                        mContext, new ChreCommunication(injector, mContext, executor), executor);
         mScanTypeScanListenerRecordMap = new HashMap<>();
         mInjector = injector;
     }

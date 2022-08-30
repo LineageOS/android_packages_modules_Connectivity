@@ -169,7 +169,7 @@ public class NearbyService extends INearbyManager.Stub {
                     // The nearby service must be functioning after this boot phase.
                     ((SystemInjector) mInjector).initializeBluetoothAdapter();
                     // Initialize ContextManager for CHRE scan.
-                    ((SystemInjector) mInjector).initializeContextHubManagerAdapter();
+                    ((SystemInjector) mInjector).initializeContextHubManager();
                 }
                 mProviderManager.init();
                 mContext.registerReceiver(
@@ -201,7 +201,7 @@ public class NearbyService extends INearbyManager.Stub {
     private static final class SystemInjector implements Injector {
         private final Context mContext;
         @Nullable private BluetoothAdapter mBluetoothAdapter;
-        @Nullable private ContextHubManagerAdapter mContextHubManagerAdapter;
+        @Nullable private ContextHubManager mContextHubManager;
         @Nullable private AppOpsManager mAppOpsManager;
 
         SystemInjector(Context context) {
@@ -216,8 +216,8 @@ public class NearbyService extends INearbyManager.Stub {
 
         @Override
         @Nullable
-        public ContextHubManagerAdapter getContextHubManagerAdapter() {
-            return mContextHubManagerAdapter;
+        public ContextHubManager getContextHubManager() {
+            return mContextHubManager;
         }
 
         @Override
@@ -237,15 +237,11 @@ public class NearbyService extends INearbyManager.Stub {
             mBluetoothAdapter = manager.getAdapter();
         }
 
-        synchronized void initializeContextHubManagerAdapter() {
-            if (mContextHubManagerAdapter != null) {
+        synchronized void initializeContextHubManager() {
+            if (mContextHubManager != null) {
                 return;
             }
-            ContextHubManager manager = mContext.getSystemService(ContextHubManager.class);
-            if (manager == null) {
-                return;
-            }
-            mContextHubManagerAdapter = new ContextHubManagerAdapter(manager);
+            mContextHubManager = mContext.getSystemService(ContextHubManager.class);
         }
 
         synchronized void initializeAppOpsManager() {
