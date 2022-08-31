@@ -140,6 +140,10 @@ public class HalfSheetActivity extends FragmentActivity {
     @Override
     protected void onStart() {
         super.onStart();
+        BroadcastUtils.sendBroadcast(
+                this,
+                new Intent(ACTION_HALF_SHEET_FOREGROUND_STATE)
+                        .putExtra(EXTRA_HALF_SHEET_FOREGROUND, true));
     }
 
     @Override

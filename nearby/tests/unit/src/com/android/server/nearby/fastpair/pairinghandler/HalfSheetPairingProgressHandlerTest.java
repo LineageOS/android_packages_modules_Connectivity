@@ -66,6 +66,7 @@ public class HalfSheetPairingProgressHandlerTest {
     private static HalfSheetPairingProgressHandler sHalfSheetPairingProgressHandler;
     private static DiscoveryItem sDiscoveryItem;
     private static BluetoothDevice sBluetoothDevice;
+    private static FastPairHalfSheetManager sFastPairHalfSheetManager;
 
     @Before
     public void setup() {
@@ -73,10 +74,9 @@ public class HalfSheetPairingProgressHandlerTest {
         when(mContextWrapper.getLocator()).thenReturn(mLocator);
         mLocator.overrideBindingForTest(FastPairCacheManager.class, mFastPairCacheManager);
         mLocator.overrideBindingForTest(Clock.class, mClock);
-        FastPairHalfSheetManager mfastPairHalfSheetManager =
-                new FastPairHalfSheetManager(mContextWrapper);
-        mLocator.bind(FastPairHalfSheetManager.class, mfastPairHalfSheetManager);
-        when(mLocator.get(FastPairHalfSheetManager.class)).thenReturn(mfastPairHalfSheetManager);
+        sFastPairHalfSheetManager = new FastPairHalfSheetManager(mContextWrapper);
+        mLocator.bind(FastPairHalfSheetManager.class, sFastPairHalfSheetManager);
+        when(mLocator.get(FastPairHalfSheetManager.class)).thenReturn(sFastPairHalfSheetManager);
         sDiscoveryItem = FakeDiscoveryItems.newFastPairDiscoveryItem(mContextWrapper);
         sDiscoveryItem.setStoredItemForTest(
                 sDiscoveryItem.getStoredItemForTest().toBuilder()
@@ -126,6 +126,7 @@ public class HalfSheetPairingProgressHandlerTest {
     @Test
     public void testonPairingStarted() {
         sHalfSheetPairingProgressHandler.onPairingStarted();
+        assertThat(sFastPairHalfSheetManager.isActivePairing()).isTrue();
     }
 
     @Test
