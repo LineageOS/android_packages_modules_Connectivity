@@ -29,6 +29,7 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.pm.PackageManager;
 import android.hardware.location.ContextHubManager;
 import android.nearby.BroadcastRequestParcelable;
 import android.nearby.IBroadcastListener;
@@ -41,7 +42,6 @@ import android.util.Log;
 import com.android.internal.annotations.VisibleForTesting;
 import com.android.server.nearby.common.locator.LocatorContextWrapper;
 import com.android.server.nearby.fastpair.FastPairManager;
-import com.android.server.nearby.injector.ContextHubManagerAdapter;
 import com.android.server.nearby.injector.Injector;
 import com.android.server.nearby.presence.PresenceManager;
 import com.android.server.nearby.provider.BroadcastProviderManager;
@@ -165,6 +165,7 @@ public class NearbyService extends INearbyManager.Stub {
                 FastPairDataProvider.init(mContext);
                 break;
             case PHASE_BOOT_COMPLETED:
+                // mInjector needs to be initialized before mProviderManager.
                 if (mInjector instanceof SystemInjector) {
                     // The nearby service must be functioning after this boot phase.
                     ((SystemInjector) mInjector).initializeBluetoothAdapter();
@@ -241,7 +242,9 @@ public class NearbyService extends INearbyManager.Stub {
             if (mContextHubManager != null) {
                 return;
             }
-            mContextHubManager = mContext.getSystemService(ContextHubManager.class);
+            if (mContext.getPackageManager().hasSystemFeature(PackageManager.FEATURE_CONTEXT_HUB)) {
+                mContextHubManager = mContext.getSystemService(ContextHubManager.class);
+            }
         }
 
         synchronized void initializeAppOpsManager() {

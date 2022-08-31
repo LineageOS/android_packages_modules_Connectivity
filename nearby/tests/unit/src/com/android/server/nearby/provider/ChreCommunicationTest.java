@@ -31,7 +31,6 @@ import android.hardware.location.ContextHubTransaction;
 import android.hardware.location.NanoAppMessage;
 import android.hardware.location.NanoAppState;
 
-import com.android.server.nearby.injector.ContextHubManagerAdapter;
 import com.android.server.nearby.injector.Injector;
 
 import org.junit.Before;
