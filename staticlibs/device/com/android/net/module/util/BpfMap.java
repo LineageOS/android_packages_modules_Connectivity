@@ -24,9 +24,6 @@ import android.util.Pair;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.annotation.VisibleForTesting;
-
-import com.android.net.module.util.Struct;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -98,22 +95,6 @@ public class BpfMap<K extends Struct, V extends Struct> implements IBpfMap<K, V>
     public BpfMap(@NonNull final String path, final int flag, final Class<K> key,
             final Class<V> value) throws ErrnoException, NullPointerException {
         mMapFd = cachedBpfFdGet(path, flag);
-        mKeyClass = key;
-        mValueClass = value;
-        mKeySize = Struct.getSize(key);
-        mValueSize = Struct.getSize(value);
-    }
-
-     /**
-     * Constructor for testing only.
-     * The derived class implements an internal mocked map. It need to implement all functions
-     * which are related with the native BPF map because the BPF map handler is not initialized.
-     * See BpfCoordinatorTest#TestBpfMap.
-     * TODO: remove once TestBpfMap derive from IBpfMap.
-     */
-    @VisibleForTesting
-    protected BpfMap(final Class<K> key, final Class<V> value) {
-        mMapFd = null;  // unused
         mKeyClass = key;
         mValueClass = value;
         mKeySize = Struct.getSize(key);
