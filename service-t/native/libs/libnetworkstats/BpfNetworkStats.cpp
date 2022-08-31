@@ -40,10 +40,6 @@ namespace bpf {
 
 using base::Result;
 
-// The target map for stats reading should be the inactive map, which is opposite
-// from the config value.
-static constexpr char const* STATS_MAP_PATH[] = {STATS_MAP_B_PATH, STATS_MAP_A_PATH};
-
 int bpfGetUidStatsInternal(uid_t uid, Stats* stats,
                            const BpfMap<uint32_t, StatsValue>& appUidStatsMap) {
     auto statsEntry = appUidStatsMap.readValue(uid);
@@ -171,30 +167,42 @@ int parseBpfNetworkStatsDetail(std::vector<stats_line>* lines,
                                int limitUid) {
     static BpfMapRO<uint32_t, IfaceValue> ifaceIndexNameMap(IFACE_INDEX_NAME_MAP_PATH);
     static BpfMapRO<uint32_t, uint32_t> configurationMap(CONFIGURATION_MAP_PATH);
+    static BpfMap<StatsKey, StatsValue> statsMapA(STATS_MAP_A_PATH);
+    static BpfMap<StatsKey, StatsValue> statsMapB(STATS_MAP_B_PATH);
     auto configuration = configurationMap.readValue(CURRENT_STATS_MAP_CONFIGURATION_KEY);
     if (!configuration.ok()) {
         ALOGE("Cannot read the old configuration from map: %s",
               configuration.error().message().c_str());
         return -configuration.error().code();
     }
-    if (configuration.value() != SELECT_MAP_A && configuration.value() != SELECT_MAP_B) {
+    // The target map for stats reading should be the inactive map, which is opposite
+    // from the config value.
+    BpfMap<StatsKey, StatsValue> *inactiveStatsMap;
+    switch (configuration.value()) {
+      case SELECT_MAP_A:
+        inactiveStatsMap = &statsMapB;
+        break;
+      case SELECT_MAP_B:
+        inactiveStatsMap = &statsMapA;
+        break;
+      default:
         ALOGE("%s unknown configuration value: %d", __func__, configuration.value());
         return -EINVAL;
     }
-    const char* statsMapPath = STATS_MAP_PATH[configuration.value()];
-    // TODO: fix this to not constantly reopen the bpf map
-    BpfMap<StatsKey, StatsValue> statsMap(statsMapPath);
 
     // It is safe to read and clear the old map now since the
     // networkStatsFactory should call netd to swap the map in advance already.
-    int ret = parseBpfNetworkStatsDetailInternal(lines, limitIfaces, limitTag, limitUid, statsMap,
-                                                 ifaceIndexNameMap);
+    // TODO: the above comment feels like it may be obsolete / out of date,
+    // since we no longer swap the map via netd binder rpc - though we do
+    // still swap it.
+    int ret = parseBpfNetworkStatsDetailInternal(lines, limitIfaces, limitTag, limitUid,
+                                                 *inactiveStatsMap, ifaceIndexNameMap);
     if (ret) {
         ALOGE("parse detail network stats failed: %s", strerror(errno));
         return ret;
     }
 
-    Result<void> res = statsMap.clear();
+    Result<void> res = inactiveStatsMap->clear();
     if (!res.ok()) {
         ALOGE("Clean up current stats map failed: %s", strerror(res.error().code()));
         return -res.error().code();
