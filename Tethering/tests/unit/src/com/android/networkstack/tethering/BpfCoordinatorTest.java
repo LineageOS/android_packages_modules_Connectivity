@@ -94,8 +94,8 @@ import androidx.test.filters.SmallTest;
 import androidx.test.runner.AndroidJUnit4;
 
 import com.android.dx.mockito.inline.extended.ExtendedMockito;
-import com.android.net.module.util.BpfMap;
 import com.android.net.module.util.CollectionUtils;
+import com.android.net.module.util.IBpfMap;
 import com.android.net.module.util.InterfaceParams;
 import com.android.net.module.util.NetworkStackConstants;
 import com.android.net.module.util.SharedLog;
@@ -362,9 +362,9 @@ public class BpfCoordinatorTest {
     @Mock private IpServer mIpServer2;
     @Mock private TetheringConfiguration mTetherConfig;
     @Mock private ConntrackMonitor mConntrackMonitor;
-    @Mock private BpfMap<TetherDownstream6Key, Tether6Value> mBpfDownstream6Map;
-    @Mock private BpfMap<TetherUpstream6Key, Tether6Value> mBpfUpstream6Map;
-    @Mock private BpfMap<TetherDevKey, TetherDevValue> mBpfDevMap;
+    @Mock private IBpfMap<TetherDownstream6Key, Tether6Value> mBpfDownstream6Map;
+    @Mock private IBpfMap<TetherUpstream6Key, Tether6Value> mBpfUpstream6Map;
+    @Mock private IBpfMap<TetherDevKey, TetherDevValue> mBpfDevMap;
 
     // Late init since methods must be called by the thread that created this object.
     private TestableNetworkStatsProviderCbBinder mTetherStatsProviderCb;
@@ -379,13 +379,13 @@ public class BpfCoordinatorTest {
     private final ArgumentCaptor<ArrayList> mStringArrayCaptor =
             ArgumentCaptor.forClass(ArrayList.class);
     private final TestLooper mTestLooper = new TestLooper();
-    private final BpfMap<Tether4Key, Tether4Value> mBpfDownstream4Map =
+    private final IBpfMap<Tether4Key, Tether4Value> mBpfDownstream4Map =
             spy(new TestBpfMap<>(Tether4Key.class, Tether4Value.class));
-    private final BpfMap<Tether4Key, Tether4Value> mBpfUpstream4Map =
+    private final IBpfMap<Tether4Key, Tether4Value> mBpfUpstream4Map =
             spy(new TestBpfMap<>(Tether4Key.class, Tether4Value.class));
-    private final TestBpfMap<TetherStatsKey, TetherStatsValue> mBpfStatsMap =
+    private final IBpfMap<TetherStatsKey, TetherStatsValue> mBpfStatsMap =
             spy(new TestBpfMap<>(TetherStatsKey.class, TetherStatsValue.class));
-    private final TestBpfMap<TetherLimitKey, TetherLimitValue> mBpfLimitMap =
+    private final IBpfMap<TetherLimitKey, TetherLimitValue> mBpfLimitMap =
             spy(new TestBpfMap<>(TetherLimitKey.class, TetherLimitValue.class));
     private BpfCoordinator.Dependencies mDeps =
             spy(new BpfCoordinator.Dependencies() {
@@ -424,37 +424,37 @@ public class BpfCoordinatorTest {
                     }
 
                     @Nullable
-                    public BpfMap<Tether4Key, Tether4Value> getBpfDownstream4Map() {
+                    public IBpfMap<Tether4Key, Tether4Value> getBpfDownstream4Map() {
                         return mBpfDownstream4Map;
                     }
 
                     @Nullable
-                    public BpfMap<Tether4Key, Tether4Value> getBpfUpstream4Map() {
+                    public IBpfMap<Tether4Key, Tether4Value> getBpfUpstream4Map() {
                         return mBpfUpstream4Map;
                     }
 
                     @Nullable
-                    public BpfMap<TetherDownstream6Key, Tether6Value> getBpfDownstream6Map() {
+                    public IBpfMap<TetherDownstream6Key, Tether6Value> getBpfDownstream6Map() {
                         return mBpfDownstream6Map;
                     }
 
                     @Nullable
-                    public BpfMap<TetherUpstream6Key, Tether6Value> getBpfUpstream6Map() {
+                    public IBpfMap<TetherUpstream6Key, Tether6Value> getBpfUpstream6Map() {
                         return mBpfUpstream6Map;
                     }
 
                     @Nullable
-                    public BpfMap<TetherStatsKey, TetherStatsValue> getBpfStatsMap() {
+                    public IBpfMap<TetherStatsKey, TetherStatsValue> getBpfStatsMap() {
                         return mBpfStatsMap;
                     }
 
                     @Nullable
-                    public BpfMap<TetherLimitKey, TetherLimitValue> getBpfLimitMap() {
+                    public IBpfMap<TetherLimitKey, TetherLimitValue> getBpfLimitMap() {
                         return mBpfLimitMap;
                     }
 
                     @Nullable
-                    public BpfMap<TetherDevKey, TetherDevValue> getBpfDevMap() {
+                    public IBpfMap<TetherDevKey, TetherDevValue> getBpfDevMap() {
                         return mBpfDevMap;
                     }
             });
