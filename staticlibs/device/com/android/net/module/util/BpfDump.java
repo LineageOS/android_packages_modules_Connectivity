@@ -15,13 +15,17 @@
  */
 package com.android.net.module.util;
 
+import android.system.ErrnoException;
+import android.system.Os;
 import android.util.Base64;
 import android.util.Pair;
 
 import androidx.annotation.NonNull;
 
+import java.io.PrintWriter;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.util.function.BiFunction;
 
 /**
  * The classes and the methods for BPF dump utilization.
@@ -72,6 +76,38 @@ public class BpfDump {
         final K k = parseStruct(keyClass, keyValueStrs[0]);
         final V v = parseStruct(valueClass, keyValueStrs[1]);
         return new Pair<>(k, v);
+    }
+
+    /**
+     * Dump the BpfMap name and entries
+     */
+    public static <K extends Struct, V extends Struct> void dumpMap(IBpfMap<K, V> map,
+            PrintWriter pw, String mapName, BiFunction<K, V, String> entryToString) {
+        dumpMap(map, pw, mapName, "" /* header */, entryToString);
+    }
+
+    /**
+     * Dump the BpfMap name, header, and entries
+     */
+    public static <K extends Struct, V extends Struct> void dumpMap(IBpfMap<K, V> map,
+            PrintWriter pw, String mapName, String header, BiFunction<K, V, String> entryToString) {
+        pw.println(mapName + ":");
+        if (!header.isEmpty()) {
+            pw.println("  " + header);
+        }
+        try {
+            map.forEach((key, value) -> {
+                // Value could be null if there is a concurrent entry deletion.
+                // http://b/220084230.
+                if (value != null) {
+                    pw.println("  " + entryToString.apply(key, value));
+                } else {
+                    pw.println("Entry is deleted while dumping, iterating from first entry");
+                }
+            });
+        } catch (ErrnoException e) {
+            pw.println("Map dump end with error: " + Os.strerror(e.errno));
+        }
     }
 
     // TODO: add a helper to dump bpf map content with the map name, the header line
