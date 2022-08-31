@@ -19,6 +19,7 @@ import android.system.ErrnoException;
 
 import androidx.annotation.NonNull;
 
+import java.io.IOException;
 import java.util.NoSuchElementException;
 
 /**
@@ -74,4 +75,8 @@ public interface IBpfMap<K extends Struct, V extends Struct> extends AutoCloseab
 
     /** Clears the map. */
     void clear() throws ErrnoException;
+
+    /** Close for AutoCloseable. */
+    @Override
+    void close() throws IOException;
 }
