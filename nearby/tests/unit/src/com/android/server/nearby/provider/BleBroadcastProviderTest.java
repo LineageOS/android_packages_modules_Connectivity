@@ -33,7 +33,6 @@ import android.nearby.BroadcastRequest;
 
 import androidx.test.core.app.ApplicationProvider;
 
-import com.android.server.nearby.injector.ContextHubManagerAdapter;
 import com.android.server.nearby.injector.Injector;
 
 import com.google.common.util.concurrent.MoreExecutors;
