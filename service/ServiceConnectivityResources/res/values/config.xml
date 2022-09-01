@@ -78,6 +78,27 @@
          Settings.Global.NETWORK_AVOID_BAD_WIFI. This is the default value of that setting. -->
     <integer translatable="false" name="config_networkAvoidBadWifi">1</integer>
 
+    <!-- Whether the device should actively prefer bad wifi to good cell on Android 12/13.
+
+         This setting only makes sense if the system is configured not to avoid bad wifis
+         (config_networkAvoidBadWifi=0 and Settings.Global.NETWORK_AVOID_BAD_WIFI=IGNORE
+         or PROMPT), otherwise it's not used.
+
+         On Android 12 and 13, if this is 0, when ranking a bad wifi that never validated against
+         validated mobile data, the system will prefer mobile data. It will prefer wifi if wifi
+         loses validation later. This is the default behavior up to Android 13.
+         This behavior avoids the device losing internet access when walking past a wifi network
+         with no internet access.
+
+         If this is 1, then in the same scenario, the system will prefer mobile data until the wifi
+         completes its first validation attempt (or the attempt times out), and after that it
+         will prefer the wifi even if it doesn't provide internet access, unless there is a captive
+         portal on that wifi.
+
+         On Android 14 and above, the behavior is always like 1, regardless of the value of this
+         setting. -->
+    <integer translatable="false" name="config_activelyPreferBadWifi">1</integer>
+
     <!-- Array of ConnectivityManager.TYPE_xxxx constants for networks that may only
          be controlled by systemOrSignature apps.  -->
     <integer-array translatable="false" name="config_protectedNetworks">
