@@ -2819,24 +2819,10 @@ public class NetworkStatsService extends INetworkStatsService.Stub {
         if (mCookieTagMap == null) {
             return;
         }
-        pw.println("mCookieTagMap:");
-        pw.increaseIndent();
-        try {
-            mCookieTagMap.forEach((key, value) -> {
-                // value could be null if there is a concurrent entry deletion.
-                // http://b/220084230.
-                if (value != null) {
-                    pw.println("cookie=" + key.socketCookie
-                            + " tag=0x" + Long.toHexString(value.tag)
-                            + " uid=" + value.uid);
-                } else {
-                    pw.println("Entry is deleted while dumping, iterating from first entry");
-                }
-            });
-        } catch (ErrnoException e) {
-            pw.println("mCookieTagMap dump end with error: " + Os.strerror(e.errno));
-        }
-        pw.decreaseIndent();
+        BpfDump.dumpMap(mCookieTagMap, pw, "mCookieTagMap",
+                (key, value) -> "cookie=" + key.socketCookie
+                        + " tag=0x" + Long.toHexString(value.tag)
+                        + " uid=" + value.uid);
     }
 
     @GuardedBy("mStatsLock")
@@ -2844,22 +2830,8 @@ public class NetworkStatsService extends INetworkStatsService.Stub {
         if (mUidCounterSetMap == null) {
             return;
         }
-        pw.println("mUidCounterSetMap:");
-        pw.increaseIndent();
-        try {
-            mUidCounterSetMap.forEach((uid, set) -> {
-                // set could be null if there is a concurrent entry deletion.
-                // http://b/220084230.
-                if (set != null) {
-                    pw.println("uid=" + uid.val + " set=" + set.val);
-                } else {
-                    pw.println("Entry is deleted while dumping, iterating from first entry");
-                }
-            });
-        } catch (ErrnoException e) {
-            pw.println("mUidCounterSetMap dump end with error: " + Os.strerror(e.errno));
-        }
-        pw.decreaseIndent();
+        BpfDump.dumpMap(mUidCounterSetMap, pw, "mUidCounterSetMap",
+                (uid, set) -> "uid=" + uid.val + " set=" + set.val);
     }
 
     @GuardedBy("mStatsLock")
@@ -2867,27 +2839,13 @@ public class NetworkStatsService extends INetworkStatsService.Stub {
         if (mAppUidStatsMap == null) {
             return;
         }
-        pw.println("mAppUidStatsMap:");
-        pw.increaseIndent();
-        pw.println("uid rxBytes rxPackets txBytes txPackets");
-        try {
-            mAppUidStatsMap.forEach((key, value) -> {
-                // value could be null if there is a concurrent entry deletion.
-                // http://b/220084230.
-                if (value != null) {
-                    pw.println(key.uid + " "
-                            + value.rxBytes + " "
-                            + value.rxPackets + " "
-                            + value.txBytes + " "
-                            + value.txPackets);
-                } else {
-                    pw.println("Entry is deleted while dumping, iterating from first entry");
-                }
-            });
-        } catch (ErrnoException e) {
-            pw.println("mAppUidStatsMap dump end with error: " + Os.strerror(e.errno));
-        }
-        pw.decreaseIndent();
+        BpfDump.dumpMap(mAppUidStatsMap, pw, "mAppUidStatsMap",
+                "uid rxBytes rxPackets txBytes txPackets",
+                (key, value) -> key.uid + " "
+                        + value.rxBytes + " "
+                        + value.rxPackets + " "
+                        + value.txBytes + " "
+                        + value.txPackets);
     }
 
     private NetworkStats readNetworkStatsSummaryDev() {
