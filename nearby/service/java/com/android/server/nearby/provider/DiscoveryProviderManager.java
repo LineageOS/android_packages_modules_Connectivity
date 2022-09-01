@@ -125,7 +125,9 @@ public class DiscoveryProviderManager implements AbstractDiscoveryProvider.Liste
 
     /** Called after boot completed. */
     public void init() {
-        mChreDiscoveryProvider.init();
+        if (mInjector.getContextHubManager() != null) {
+            mChreDiscoveryProvider.init();
+        }
         mChreDiscoveryProvider.getController().setListener(this);
     }
 
