@@ -53,7 +53,6 @@ class BpfHandlerTest : public ::testing::Test {
     BpfMap<uint32_t, uint8_t> mFakeUidPermissionMap;
 
     void SetUp() {
-        std::lock_guard guard(mBh.mMutex);
         ASSERT_EQ(0, setrlimitForTest());
 
         mFakeCookieTagMap.resetMap(BPF_MAP_TYPE_HASH, TEST_MAP_SIZE);
