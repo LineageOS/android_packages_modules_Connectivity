@@ -46,4 +46,9 @@ public class Constant {
     public static final String DEVICE_PAIRING_FRAGMENT_TYPE = "DEVICE_PAIRING";
     public static final String EXTRA_HALF_SHEET_FOREGROUND =
             "com.android.nearby.halfsheet.EXTRA_HALF_SHEET_FOREGROUND";
+
+    // Content url for help page about Fast Pair in half sheet.
+    // Todo(b/246007000): Add a flag to set up content url of the help page.
+    public static final String FAST_PAIR_HALF_SHEET_HELP_URL =
+            "https://support.google.com/android/answer/9075925";
 }

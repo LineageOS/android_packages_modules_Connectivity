@@ -33,6 +33,7 @@ import static com.android.nearby.halfsheet.fragment.HalfSheetModuleFragment.Half
 import static com.android.server.nearby.fastpair.Constant.EXTRA_BINDER;
 import static com.android.server.nearby.fastpair.Constant.EXTRA_BUNDLE;
 import static com.android.server.nearby.fastpair.Constant.EXTRA_HALF_SHEET_INFO;
+import static com.android.server.nearby.fastpair.Constant.FAST_PAIR_HALF_SHEET_HELP_URL;
 
 import android.bluetooth.BluetoothDevice;
 import android.content.Intent;
@@ -61,6 +62,7 @@ import com.android.nearby.halfsheet.FastPairUiServiceClient;
 import com.android.nearby.halfsheet.HalfSheetActivity;
 import com.android.nearby.halfsheet.R;
 import com.android.nearby.halfsheet.utils.FastPairUtils;
+import com.android.nearby.halfsheet.utils.HelpUtils;
 import com.android.nearby.halfsheet.utils.IconUtils;
 
 import com.google.protobuf.InvalidProtocolBufferException;
@@ -230,13 +232,12 @@ public class DevicePairingFragment extends HalfSheetModuleFragment implements
         if (icon != null) {
             mImage.setImageBitmap(icon);
         }
-        mConnectButton.setOnClickListener(v -> onConnectClick());
+        mConnectButton.setOnClickListener(v -> onConnectClicked());
         mCancelButton.setOnClickListener(v ->
                 ((HalfSheetActivity) getActivity()).onCancelClicked());
         mSettingsButton.setOnClickListener(v -> onSettingsClicked());
-        mSetupButton.setOnClickListener(v -> onSetupClick());
-        // TODO: Add Listener to info button to open the info page ,
-        // and reset the half-sheet ban state to active
+        mSetupButton.setOnClickListener(v -> onSetupClicked());
+        mInfoIconButton.setOnClickListener(v -> onHelpClicked());
         return rootView;
     }
 
@@ -267,7 +268,7 @@ public class DevicePairingFragment extends HalfSheetModuleFragment implements
         startActivity(new Intent(Settings.ACTION_BLUETOOTH_SETTINGS));
     }
 
-    private void onSetupClick() {
+    private void onSetupClicked() {
         String companionApp =
                 FastPairUtils.getCompanionAppFromActionUrl(mScanFastPairStoreItem.getActionUrl());
         Intent intent =
@@ -285,7 +286,7 @@ public class DevicePairingFragment extends HalfSheetModuleFragment implements
         }
     }
 
-    private void onConnectClick() {
+    private void onConnectClicked() {
         if (mScanFastPairStoreItem == null) {
             Log.w(TAG, "No pairing related information in half sheet");
             return;
@@ -302,6 +303,12 @@ public class DevicePairingFragment extends HalfSheetModuleFragment implements
                         .setData(FastPairUtils.convertFrom(mScanFastPairStoreItem)
                                 .toByteArray())
                         .build());
+    }
+
+    private void onHelpClicked() {
+        HelpUtils.showHelpPage(getContext(), FAST_PAIR_HALF_SHEET_HELP_URL);
+        ((HalfSheetActivity) getActivity()).sendBanStateResetBroadcast();
+        getActivity().finish();
     }
 
     // Receives callback from service.
