@@ -3040,6 +3040,11 @@ public class ConnectivityService extends IConnectivityManager.Stub
         if (!ConnectivitySettingsManager.getMobileDataPreferredUids(mContext).isEmpty()) {
             updateMobileDataPreferredUids();
         }
+
+        // On T+ devices, register callback for statsd to pull NETWORK_BPF_MAP_INFO atom
+        if (SdkLevel.isAtLeastT()) {
+            mBpfNetMaps.setPullAtomCallback(mContext);
+        }
     }
 
     /**
