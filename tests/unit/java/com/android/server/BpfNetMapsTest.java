@@ -58,7 +58,7 @@ import android.os.ServiceSpecificException;
 import androidx.test.filters.SmallTest;
 
 import com.android.modules.utils.build.SdkLevel;
-import com.android.net.module.util.BpfMap;
+import com.android.net.module.util.IBpfMap;
 import com.android.net.module.util.Struct.U32;
 import com.android.net.module.util.Struct.U8;
 import com.android.testutils.DevSdkIgnoreRule;
@@ -113,10 +113,10 @@ public final class BpfNetMapsTest {
     @Mock INetd mNetd;
     @Mock BpfNetMaps.Dependencies mDeps;
     @Mock Context mContext;
-    private final BpfMap<U32, U32> mConfigurationMap = new TestBpfMap<>(U32.class, U32.class);
-    private final BpfMap<U32, UidOwnerValue> mUidOwnerMap =
+    private final IBpfMap<U32, U32> mConfigurationMap = new TestBpfMap<>(U32.class, U32.class);
+    private final IBpfMap<U32, UidOwnerValue> mUidOwnerMap =
             new TestBpfMap<>(U32.class, UidOwnerValue.class);
-    private final BpfMap<U32, U8> mUidPermissionMap = new TestBpfMap<>(U32.class, U8.class);
+    private final IBpfMap<U32, U8> mUidPermissionMap = new TestBpfMap<>(U32.class, U8.class);
 
     @Before
     public void setUp() throws Exception {
