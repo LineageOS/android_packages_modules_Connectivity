@@ -27,6 +27,7 @@ import static android.net.ipsec.ike.SaProposal.PSEUDORANDOM_FUNCTION_AES128_XCBC
 import android.net.InetAddresses;
 import android.net.ipsec.ike.ChildSaProposal;
 import android.net.ipsec.ike.IkeFqdnIdentification;
+import android.net.ipsec.ike.IkeIdentification;
 import android.net.ipsec.ike.IkeIpv4AddrIdentification;
 import android.net.ipsec.ike.IkeIpv6AddrIdentification;
 import android.net.ipsec.ike.IkeSaProposal;
@@ -57,6 +58,11 @@ public class IkeSessionTestUtils {
     }
 
     private static IkeSessionParams getTestIkeSessionParams(boolean testIpv6) {
+        return getTestIkeSessionParams(testIpv6, new IkeFqdnIdentification(TEST_IDENTITY));
+    }
+
+    public static IkeSessionParams getTestIkeSessionParams(boolean testIpv6,
+            IkeIdentification identification) {
         final String testServer = testIpv6 ? TEST_SERVER_ADDR_V6 : TEST_SERVER_ADDR_V4;
         final InetAddress addr = InetAddresses.parseNumericAddress(testServer);
         final IkeSessionParams.Builder ikeOptionsBuilder =
