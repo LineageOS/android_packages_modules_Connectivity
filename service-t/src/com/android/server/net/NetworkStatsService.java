@@ -162,11 +162,13 @@ import com.android.net.module.util.IBpfMap;
 import com.android.net.module.util.LocationPermissionChecker;
 import com.android.net.module.util.NetworkStatsUtils;
 import com.android.net.module.util.PermissionUtils;
+import com.android.net.module.util.SharedLog;
 import com.android.net.module.util.Struct;
 import com.android.net.module.util.Struct.U32;
 import com.android.net.module.util.Struct.U8;
 import com.android.net.module.util.bpf.CookieTagMapKey;
 import com.android.net.module.util.bpf.CookieTagMapValue;
+import com.android.server.BpfNetMaps;
 
 import java.io.File;
 import java.io.FileDescriptor;
@@ -454,6 +456,9 @@ public class NetworkStatsService extends INetworkStatsService.Stub {
     @NonNull
     private final BpfInterfaceMapUpdater mInterfaceMapUpdater;
 
+    @Nullable
+    private final SkDestroyListener mSkDestroyListener;
+
     private static @NonNull Clock getDefaultClock() {
         return new BestClock(ZoneOffset.UTC, SystemClock.currentNetworkTimeClock(),
                 Clock.systemUTC());
@@ -587,6 +592,18 @@ public class NetworkStatsService extends INetworkStatsService.Stub {
         mStatsMapA = mDeps.getStatsMapA();
         mStatsMapB = mDeps.getStatsMapB();
         mAppUidStatsMap = mDeps.getAppUidStatsMap();
+
+        // TODO: Remove bpfNetMaps creation and always start SkDestroyListener
+        // Following code is for the experiment to verify the SkDestroyListener refactoring. Based
+        // on the experiment flag, BpfNetMaps starts C SkDestroyListener (existing code) or
+        // NetworkStatsService starts Java SkDestroyListener (new code).
+        final BpfNetMaps bpfNetMaps = mDeps.makeBpfNetMaps(mContext);
+        if (bpfNetMaps.isSkDestroyListenerRunning()) {
+            mSkDestroyListener = null;
+        } else {
+            mSkDestroyListener = mDeps.makeSkDestroyListener(mCookieTagMap, mHandler);
+            mHandler.post(mSkDestroyListener::start);
+        }
     }
 
     /**
@@ -781,6 +798,17 @@ public class NetworkStatsService extends INetworkStatsService.Stub {
         /** Gets whether the build is userdebug. */
         public boolean isDebuggable() {
             return Build.isDebuggable();
+        }
+
+        /** Create a new BpfNetMaps. */
+        public BpfNetMaps makeBpfNetMaps(Context ctx) {
+            return new BpfNetMaps(ctx);
+        }
+
+        /** Create a new SkDestroyListener. */
+        public SkDestroyListener makeSkDestroyListener(
+                IBpfMap<CookieTagMapKey, CookieTagMapValue> cookieTagMap, Handler handler) {
+            return new SkDestroyListener(cookieTagMap, handler, new SharedLog(TAG));
         }
     }
 
