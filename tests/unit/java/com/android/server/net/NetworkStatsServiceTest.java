@@ -86,6 +86,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -176,6 +177,7 @@ import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -2069,6 +2071,59 @@ public class NetworkStatsServiceTest extends NetworkStatsBaseTest {
                 assertShouldRunComparison(isDebuggable, isDebuggable);
             }
         }
+    }
+
+    @Test
+    public void testStatsFactoryRemoveUids() throws Exception {
+        // pretend that network comes online
+        mockDefaultSettings();
+        NetworkStateSnapshot[] states = new NetworkStateSnapshot[] {buildWifiState()};
+        mockNetworkStatsSummary(buildEmptyStats());
+        mockNetworkStatsUidDetail(buildEmptyStats());
+
+        mService.notifyNetworkStatus(NETWORKS_WIFI, states, getActiveIface(states),
+                new UnderlyingNetworkInfo[0]);
+
+        // Create some traffic
+        incrementCurrentTime(HOUR_IN_MILLIS);
+        mockDefaultSettings();
+        final NetworkStats stats = new NetworkStats(getElapsedRealtime(), 1)
+                .insertEntry(TEST_IFACE, UID_RED, SET_DEFAULT, TAG_NONE, 16L, 1L, 16L, 1L, 0L)
+                .insertEntry(TEST_IFACE, UID_BLUE, SET_DEFAULT, TAG_NONE,
+                        4096L, 258L, 512L, 32L, 0L)
+                .insertEntry(TEST_IFACE, UID_GREEN, SET_DEFAULT, TAG_NONE, 64L, 3L, 1024L, 8L, 0L);
+        mockNetworkStatsUidDetail(stats);
+
+        forcePollAndWaitForIdle();
+
+        // Verify service recorded history
+        assertUidTotal(sTemplateWifi, UID_RED, 16L, 1L, 16L, 1L, 0);
+        assertUidTotal(sTemplateWifi, UID_BLUE, 4096L, 258L, 512L, 32L, 0);
+        assertUidTotal(sTemplateWifi, UID_GREEN, 64L, 3L, 1024L, 8L, 0);
+
+        // Simulate that the apps are removed.
+        final Intent intentBlue = new Intent(ACTION_UID_REMOVED);
+        intentBlue.putExtra(EXTRA_UID, UID_BLUE);
+        mServiceContext.sendBroadcast(intentBlue);
+
+        final Intent intentRed = new Intent(ACTION_UID_REMOVED);
+        intentRed.putExtra(EXTRA_UID, UID_RED);
+        mServiceContext.sendBroadcast(intentRed);
+
+        final int[] removedUids = {UID_BLUE, UID_RED};
+
+        final ArgumentCaptor<int[]> removedUidsCaptor = ArgumentCaptor.forClass(int[].class);
+        verify(mStatsFactory, times(2)).removeUidsLocked(removedUidsCaptor.capture());
+        final List<int[]> captureRemovedUids = removedUidsCaptor.getAllValues();
+        // Simulate that the stats are removed in NetworkStatsFactory.
+        if (captureRemovedUids.contains(removedUids)) {
+            stats.removeUids(removedUids);
+        }
+
+        // Verify the stats of the removed uid is removed.
+        assertUidTotal(sTemplateWifi, UID_RED, 0L, 0L, 0L, 0L, 0);
+        assertUidTotal(sTemplateWifi, UID_BLUE, 0L, 0L, 0L, 0L, 0);
+        assertUidTotal(sTemplateWifi, UID_GREEN, 64L, 3L, 1024L, 8L, 0);
     }
 
     private void assertShouldRunComparison(boolean expected, boolean isDebuggable) {
