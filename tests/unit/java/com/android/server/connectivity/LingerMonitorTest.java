@@ -272,9 +272,8 @@ public class LingerMonitorTest {
     public void testIgnoreNeverValidatedNetworks() {
         setNotificationType(LingerMonitor.NOTIFY_TYPE_TOAST);
         setNotificationSwitch(transition(WIFI, CELLULAR));
-        NetworkAgentInfo from = wifiNai(100);
+        NetworkAgentInfo from = wifiNai(100, false /* setEverValidated */);
         NetworkAgentInfo to = cellNai(101);
-        from.everValidated = false;
 
         mMonitor.noteLingerDefaultNetwork(from, to);
         verifyNoNotifications();
@@ -286,7 +285,7 @@ public class LingerMonitorTest {
         setNotificationSwitch(transition(WIFI, CELLULAR));
         NetworkAgentInfo from = wifiNai(100);
         NetworkAgentInfo to = cellNai(101);
-        from.lastValidated = true;
+        from.setValidated(true);
 
         mMonitor.noteLingerDefaultNetwork(from, to);
         verifyNoNotifications();
@@ -363,7 +362,8 @@ public class LingerMonitorTest {
                 eq(NotificationType.NETWORK_SWITCH), eq(from), eq(to), any(), eq(true));
     }
 
-    NetworkAgentInfo nai(int netId, int transport, int networkType, String networkTypeName) {
+    NetworkAgentInfo nai(int netId, int transport, int networkType, String networkTypeName,
+            boolean setEverValidated) {
         NetworkInfo info = new NetworkInfo(networkType, 0, networkTypeName, "");
         NetworkCapabilities caps = new NetworkCapabilities();
         caps.addCapability(0);
@@ -373,18 +373,32 @@ public class LingerMonitorTest {
                 mCtx, null, new NetworkAgentConfig.Builder().build(), mConnService, mNetd,
                 mDnsResolver, NetworkProvider.ID_NONE, Binder.getCallingUid(), TEST_LINGER_DELAY_MS,
                 mQosCallbackTracker, new ConnectivityService.Dependencies());
-        nai.everValidated = true;
+        if (setEverValidated) {
+            // As tests in this class deal with testing lingering, most tests are interested
+            // in networks that can be lingered, and therefore must have validated in the past.
+            // Thus, pretend the network validated once, then became invalidated.
+            nai.setValidated(true);
+            nai.setValidated(false);
+        }
         return nai;
     }
 
     NetworkAgentInfo wifiNai(int netId) {
+        return wifiNai(netId, true /* setEverValidated */);
+    }
+
+    NetworkAgentInfo wifiNai(int netId, boolean setEverValidated) {
         return nai(netId, NetworkCapabilities.TRANSPORT_WIFI,
-                ConnectivityManager.TYPE_WIFI, WIFI);
+                ConnectivityManager.TYPE_WIFI, WIFI, setEverValidated);
     }
 
     NetworkAgentInfo cellNai(int netId) {
+        return cellNai(netId, true /* setEverValidated */);
+    }
+
+    NetworkAgentInfo cellNai(int netId, boolean setEverValidated) {
         return nai(netId, NetworkCapabilities.TRANSPORT_CELLULAR,
-                ConnectivityManager.TYPE_MOBILE, CELLULAR);
+                ConnectivityManager.TYPE_MOBILE, CELLULAR, setEverValidated);
     }
 
     public static class TestableLingerMonitor extends LingerMonitor {
