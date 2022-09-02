@@ -803,14 +803,11 @@ TEST_F(TrafficControllerTest, dumpsysInvalidMaps) {
             "Bad file descriptor";
     const std::string kErrReadRulesConfig = "read ownerMatch configure failed with error: "
             "Read value of map -1 failed: Bad file descriptor";
-    const std::string kErrReadStatsMapConfig = "read stats map configure failed with error: "
-            "Read value of map -1 failed: Bad file descriptor";
 
     std::vector<std::string> expectedLines = {
         fmt::format("mCookieTagMap {}", kErrIterate),
         fmt::format("mIfaceStatsMap {}", kErrIterate),
-        fmt::format("mConfigurationMap {}", kErrReadRulesConfig),
-        fmt::format("mConfigurationMap {}", kErrReadStatsMapConfig)};
+        fmt::format("mConfigurationMap {}", kErrReadRulesConfig)};
     EXPECT_TRUE(expectDumpsysContains(expectedLines));
 }
 

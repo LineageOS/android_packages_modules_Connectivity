@@ -677,26 +677,6 @@ void TrafficController::dump(int fd, bool verbose) {
         dw.println("mConfigurationMap read ownerMatch configure failed with error: %s",
                    configuration.error().message().c_str());
     }
-
-    key = CURRENT_STATS_MAP_CONFIGURATION_KEY;
-    configuration = mConfigurationMap.readValue(key);
-    if (configuration.ok()) {
-        const char* statsMapDescription = "???";
-        switch (configuration.value()) {
-            case SELECT_MAP_A:
-                statsMapDescription = "SELECT_MAP_A";
-                break;
-            case SELECT_MAP_B:
-                statsMapDescription = "SELECT_MAP_B";
-                break;
-                // No default clause, so if we ever add a third map, this code will fail to build.
-        }
-        dw.println("current statsMap configuration: %d %s", configuration.value(),
-                   statsMapDescription);
-    } else {
-        dw.println("mConfigurationMap read stats map configure failed with error: %s",
-                   configuration.error().message().c_str());
-    }
 }
 
 }  // namespace net
