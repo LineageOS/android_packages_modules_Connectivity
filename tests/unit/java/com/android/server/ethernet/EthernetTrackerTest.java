@@ -87,8 +87,8 @@ public class EthernetTrackerTest {
     public void setUp() throws RemoteException {
         MockitoAnnotations.initMocks(this);
         initMockResources();
-        when(mFactory.updateInterfaceLinkState(anyString(), anyBoolean())).thenReturn(false);
-        when(mNetd.interfaceGetList()).thenReturn(new String[0]);
+        doReturn(false).when(mFactory).updateInterfaceLinkState(anyString(), anyBoolean());
+        doReturn(new String[0]).when(mNetd).interfaceGetList();
         mHandlerThread = new HandlerThread(THREAD_NAME);
         mHandlerThread.start();
         tracker = new EthernetTracker(mContext, mHandlerThread.getThreadHandler(), mFactory, mNetd,
@@ -101,8 +101,8 @@ public class EthernetTrackerTest {
     }
 
     private void initMockResources() {
-        when(mDeps.getInterfaceRegexFromResource(eq(mContext))).thenReturn("");
-        when(mDeps.getInterfaceConfigFromResource(eq(mContext))).thenReturn(new String[0]);
+        doReturn("").when(mDeps).getInterfaceRegexFromResource(eq(mContext));
+        doReturn(new String[0]).when(mDeps).getInterfaceConfigFromResource(eq(mContext));
     }
 
     private void waitForIdle() {
