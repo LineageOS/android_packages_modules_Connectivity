@@ -25,6 +25,7 @@ import static android.net.NetworkStats.ROAMING_NO;
 import static android.net.NetworkStats.SET_ALL;
 import static android.net.NetworkStats.SET_DEFAULT;
 import static android.net.NetworkStats.SET_FOREGROUND;
+import static android.net.NetworkStats.TAG_ALL;
 import static android.net.NetworkStats.TAG_NONE;
 import static android.net.NetworkStats.UID_ALL;
 
@@ -89,6 +90,7 @@ public class NetworkStatsFactoryTest extends NetworkStatsBaseTest {
         // related to networkStatsFactory is compiled to a minimal native library and loaded here.
         System.loadLibrary("networkstatsfactorytestjni");
         doReturn(mBpfNetMaps).when(mDeps).createBpfNetMaps(any());
+
         mFactory = new NetworkStatsFactory(mContext, mDeps);
         mFactory.updateUnderlyingNetworkInfos(new UnderlyingNetworkInfo[0]);
     }
@@ -460,6 +462,46 @@ public class NetworkStatsFactoryTest extends NetworkStatsBaseTest {
         assertStatsEntry(stats, "lo", 0, SET_DEFAULT, 0x0, 1288L, 1288L);
 
         assertNoStatsEntry(stats, "wlan0", 1029, SET_DEFAULT, 0x0);
+    }
+
+    @Test
+    public void testRemoveUidsStats() throws Exception {
+        final NetworkStats stats = new NetworkStats(SystemClock.elapsedRealtime(), 1)
+                .insertEntry(TEST_IFACE, UID_RED, SET_DEFAULT, TAG_NONE, 16L, 1L, 16L, 1L, 0L)
+                .insertEntry(TEST_IFACE, UID_BLUE, SET_DEFAULT, TAG_NONE,
+                        256L, 16L, 512L, 32L, 0L)
+                .insertEntry(TEST_IFACE, UID_GREEN, SET_DEFAULT, TAG_NONE, 64L, 3L, 1024L, 8L, 0L);
+
+        doReturn(stats).when(mDeps).getNetworkStatsDetail(anyInt(), any(),
+                anyInt());
+
+        final String[] ifaces = new String[]{TEST_IFACE};
+        final NetworkStats res = mFactory.readNetworkStatsDetail(UID_ALL, ifaces, TAG_ALL);
+
+        // Verify that the result of the mocked stats are expected.
+        assertValues(res, TEST_IFACE, UID_RED, 16L, 1L, 16L, 1L);
+        assertValues(res, TEST_IFACE, UID_BLUE, 256L, 16L, 512L, 32L);
+        assertValues(res, TEST_IFACE, UID_GREEN, 64L, 3L, 1024L, 8L);
+
+        // Assume the apps were removed.
+        final int[] removedUids = new int[]{UID_RED, UID_BLUE};
+        mFactory.removeUidsLocked(removedUids);
+
+        // Return empty stats for reading the result of removing uids stats later.
+        doReturn(buildEmptyStats()).when(mDeps).getNetworkStatsDetail(anyInt(), any(),
+                anyInt());
+
+        final NetworkStats removedUidsStats =
+                mFactory.readNetworkStatsDetail(UID_ALL, ifaces, TAG_ALL);
+
+        // Verify that the stats of the removed uids were removed.
+        assertValues(removedUidsStats, TEST_IFACE, UID_RED, 0L, 0L, 0L, 0L);
+        assertValues(removedUidsStats, TEST_IFACE, UID_BLUE, 0L, 0L, 0L, 0L);
+        assertValues(removedUidsStats, TEST_IFACE, UID_GREEN, 64L, 3L, 1024L, 8L);
+    }
+
+    private NetworkStats buildEmptyStats() {
+        return new NetworkStats(SystemClock.elapsedRealtime(), 0);
     }
 
     private NetworkStats parseNetworkStatsFromGoldenSample(int resourceId, int initialSize,
