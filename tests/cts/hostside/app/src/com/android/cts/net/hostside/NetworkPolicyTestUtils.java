@@ -116,6 +116,7 @@ public class NetworkPolicyTestUtils {
             return false;
         }
         if (mDataSaverSupported == null) {
+            setRestrictBackgroundInternal(false);
             assertMyRestrictBackgroundStatus(RESTRICT_BACKGROUND_STATUS_DISABLED);
             try {
                 setRestrictBackgroundInternal(true);
