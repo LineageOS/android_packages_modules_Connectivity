@@ -2469,13 +2469,13 @@ public class NetworkStatsService extends INetworkStatsService.Stub {
         mUidRecorder.removeUidsLocked(uids);
         mUidTagRecorder.removeUidsLocked(uids);
 
+        mStatsFactory.removeUidsLocked(uids);
         // Clear kernel stats associated with UID
         for (int uid : uids) {
             deleteKernelTagData(uid);
         }
-
-       // TODO: Remove the UID's entries from mOpenSessionCallsPerUid and
-       // mOpenSessionCallsPerCaller
+        // TODO: Remove the UID's entries from mOpenSessionCallsPerUid and
+        // mOpenSessionCallsPerCaller
     }
 
     /**
