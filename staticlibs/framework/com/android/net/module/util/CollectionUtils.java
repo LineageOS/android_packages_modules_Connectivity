@@ -99,7 +99,8 @@ public final class CollectionUtils {
      * @return The index of the first element that matches the predicate, or -1 if none.
      */
     @Nullable
-    public static <T> int indexOf(@NonNull Collection<T> elem, @NonNull Predicate<T> predicate) {
+    public static <T> int indexOf(@NonNull final Collection<T> elem,
+            @NonNull final Predicate<? super T> predicate) {
         int idx = 0;
         for (final T e : elem) {
             if (predicate.test(e)) return idx;
@@ -222,7 +223,8 @@ public final class CollectionUtils {
      * @param <T> type of elements
      * @return true if |haystack| contains any of the |needles|, false otherwise
      */
-    public static <T> boolean containsAny(Collection<T> haystack, Collection<? extends T> needles) {
+    public static <T> boolean containsAny(@NonNull final Collection<T> haystack,
+            @NonNull final Collection<? extends T> needles) {
         for (T needle : needles) {
             if (haystack.contains(needle)) return true;
         }
@@ -236,7 +238,8 @@ public final class CollectionUtils {
      * @param <T> type of elements
      * @return true if |haystack| contains all of the |needles|, false otherwise
      */
-    public static <T> boolean containsAll(Collection<T> haystack, Collection<? extends T> needles) {
+    public static <T> boolean containsAll(@NonNull final Collection<T> haystack,
+            @NonNull final Collection<? extends T> needles) {
         return haystack.containsAll(needles);
     }
 
@@ -248,7 +251,8 @@ public final class CollectionUtils {
      * @return The first element matching the predicate, or null if none.
      */
     @Nullable
-    public static <T> T findFirst(Collection<T> haystack, Predicate<? super T> condition) {
+    public static <T> T findFirst(@NonNull final Collection<T> haystack,
+            @NonNull final Predicate<? super T> condition) {
         for (T needle : haystack) {
             if (condition.test(needle)) return needle;
         }
@@ -267,11 +271,24 @@ public final class CollectionUtils {
     // wasteful (store and reverse a copy, test all elements, or recurse to the end of the
     // list to test on the up path and possibly blow the call stack)
     @Nullable
-    public static <T> T findLast(List<T> haystack, Predicate<? super T> condition) {
+    public static <T> T findLast(@NonNull final List<T> haystack,
+            @NonNull final Predicate<? super T> condition) {
         for (int i = haystack.size() - 1; i >= 0; --i) {
             final T needle = haystack.get(i);
             if (condition.test(needle)) return needle;
         }
         return null;
+    }
+
+    /**
+     * Returns whether a collection contains an element matching a condition
+     * @param haystack The collection to search.
+     * @param condition The predicate to match.
+     * @param <T> The type of element in the collection.
+     * @return Whether the collection contains any element matching the condition.
+     */
+    public static <T> boolean contains(@NonNull final Collection<T> haystack,
+            @NonNull final Predicate<? super T> condition) {
+        return -1 != indexOf(haystack, condition);
     }
 }

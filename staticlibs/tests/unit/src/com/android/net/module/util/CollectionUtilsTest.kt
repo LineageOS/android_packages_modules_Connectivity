@@ -94,6 +94,12 @@ class CollectionUtilsTest {
         assertTrue(CollectionUtils.contains(arrayOf("A", "B", "C"), "C"))
         assertFalse(CollectionUtils.contains(arrayOf("A", "B", "C"), "D"))
         assertFalse(CollectionUtils.contains(null, "A"))
+
+        val list = listOf("A", "B", "Ab", "C", "D", "E", "A", "E")
+        assertTrue(CollectionUtils.contains(list) { it.length == 2 })
+        assertFalse(CollectionUtils.contains(list) { it.length < 1 })
+        assertTrue(CollectionUtils.contains(list) { it > "A" })
+        assertFalse(CollectionUtils.contains(list) { it > "F" })
     }
 
     @Test
