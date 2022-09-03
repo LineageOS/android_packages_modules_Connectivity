@@ -30,7 +30,6 @@ import android.hardware.location.NanoAppState;
 import android.util.Log;
 
 import com.android.internal.annotations.VisibleForTesting;
-import com.android.server.nearby.injector.ContextHubManagerAdapter;
 import com.android.server.nearby.injector.Injector;
 
 import com.google.common.base.Preconditions;
