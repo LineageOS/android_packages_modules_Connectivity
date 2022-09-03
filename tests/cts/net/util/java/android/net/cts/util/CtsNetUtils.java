@@ -357,7 +357,7 @@ public final class CtsNetUtils {
 
     public Network connectToCell() throws InterruptedException {
         if (cellConnectAttempted()) {
-            throw new IllegalStateException("Already connected");
+            mCm.unregisterNetworkCallback(mCellNetworkCallback);
         }
         NetworkRequest cellRequest = new NetworkRequest.Builder()
                 .addTransportType(TRANSPORT_CELLULAR)
