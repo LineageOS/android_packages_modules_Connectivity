@@ -29,7 +29,6 @@ import static android.net.ipsec.ike.IkeSessionConfiguration.EXTENSION_TYPE_MOBIK
 import static android.os.Build.VERSION_CODES.S_V2;
 import static android.os.UserHandle.PER_USER_RANGE;
 
-import static com.android.modules.utils.build.SdkLevel.isAtLeastT;
 import static com.android.testutils.Cleanup.testAndCleanup;
 import static com.android.testutils.DevSdkIgnoreRule.IgnoreUpTo;
 import static com.android.testutils.MiscAsserts.assertThrows;
@@ -41,7 +40,6 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-import static org.junit.Assume.assumeTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyInt;
@@ -136,7 +134,6 @@ import com.android.internal.net.LegacyVpnInfo;
 import com.android.internal.net.VpnConfig;
 import com.android.internal.net.VpnProfile;
 import com.android.internal.util.HexDump;
-import com.android.modules.utils.build.SdkLevel;
 import com.android.server.DeviceIdleInternal;
 import com.android.server.IpSecService;
 import com.android.server.VpnTestBase;
@@ -341,7 +338,7 @@ public class VpnTest extends VpnTestBase {
 
     @After
     public void tearDown() throws Exception {
-        doReturn(PERMISSION_DENIED).when(mContext).checkCallingOrSelfPermission(CONTROL_VPN);
+        doReturn(PERMISSION_DENIED).when(mContext).checkCallingOrSelfPermission(any());
     }
 
     private <T> void mockService(Class<T> clazz, String name, T service) {
@@ -695,7 +692,6 @@ public class VpnTest extends VpnTestBase {
     @Test
     public void testPrepare_throwSecurityExceptionWhenGivenPackageDoesNotBelongToTheCaller()
             throws Exception {
-        assumeTrue(isAtLeastT());
         final Vpn vpn = createVpnAndSetupUidChecks();
         assertThrows(SecurityException.class,
                 () -> vpn.prepare("com.not.vpn.owner", null, VpnManager.TYPE_VPN_SERVICE));
@@ -1165,7 +1161,6 @@ public class VpnTest extends VpnTestBase {
 
     @Test
     public void testStartOpAndFinishOpWillBeCalledWhenPlatformVpnIsOnAndOff() throws Exception {
-        assumeTrue(SdkLevel.isAtLeastT());
         final Vpn vpn = createVpnAndSetupUidChecks(AppOpsManager.OPSTR_ACTIVATE_PLATFORM_VPN);
         when(mVpnProfileStore.get(vpn.getProfileNameForPackage(TEST_VPN_PKG)))
                 .thenReturn(mVpnProfile.encode());
@@ -1191,7 +1186,6 @@ public class VpnTest extends VpnTestBase {
 
     @Test
     public void testStartOpWithSeamlessHandover() throws Exception {
-        assumeTrue(SdkLevel.isAtLeastT());
         final Vpn vpn = createVpnAndSetupUidChecks(AppOpsManager.OPSTR_ACTIVATE_VPN);
         assertTrue(vpn.prepare(TEST_VPN_PKG, null, VpnManager.TYPE_VPN_SERVICE));
         final VpnConfig config = new VpnConfig();
@@ -1223,7 +1217,7 @@ public class VpnTest extends VpnTestBase {
     }
 
     private void verifyVpnManagerEvent(String sessionKey, String category, int errorClass,
-            int errorCode, VpnProfileState... profileState) {
+            int errorCode, String[] packageName, VpnProfileState... profileState) {
         final Context userContext =
                 mContext.createContextAsUser(UserHandle.of(PRIMARY_USER.id), 0 /* flags */);
         final ArgumentCaptor<Intent> intentArgumentCaptor = ArgumentCaptor.forClass(Intent.class);
@@ -1233,9 +1227,11 @@ public class VpnTest extends VpnTestBase {
 
         for (int i = 0; i < verifyTimes; i++) {
             final Intent intent = intentArgumentCaptor.getAllValues().get(i);
+            assertEquals(packageName[i], intent.getPackage());
             assertEquals(sessionKey, intent.getStringExtra(VpnManager.EXTRA_SESSION_KEY));
             final Set<String> categories = intent.getCategories();
             assertTrue(categories.contains(category));
+            assertEquals(1, categories.size());
             assertEquals(errorClass,
                     intent.getIntExtra(VpnManager.EXTRA_ERROR_CLASS, -1 /* defaultValue */));
             assertEquals(errorCode,
@@ -1248,9 +1244,21 @@ public class VpnTest extends VpnTestBase {
         reset(userContext);
     }
 
+    private void verifyDeactivatedByUser(String sessionKey, String[] packageName) {
+        // CATEGORY_EVENT_DEACTIVATED_BY_USER is not an error event, so both of errorClass and
+        // errorCode won't be set.
+        verifyVpnManagerEvent(sessionKey, VpnManager.CATEGORY_EVENT_DEACTIVATED_BY_USER,
+                -1 /* errorClass */, -1 /* errorCode */, packageName, null /* profileState */);
+    }
+
+    private void verifyAlwaysOnStateChanged(String[] packageName, VpnProfileState... profileState) {
+        verifyVpnManagerEvent(null /* sessionKey */,
+                VpnManager.CATEGORY_EVENT_ALWAYS_ON_STATE_CHANGED, -1 /* errorClass */,
+                -1 /* errorCode */, packageName, profileState);
+    }
+
     @Test
     public void testVpnManagerEventForUserDeactivated() throws Exception {
-        assumeTrue(SdkLevel.isAtLeastT());
         // For security reasons, Vpn#prepare() will check that oldPackage and newPackage are either
         // null or the package of the caller. This test will call Vpn#prepare() to pretend the old
         // VPN is replaced by a new one. But only Settings can change to some other packages, and
@@ -1268,10 +1276,7 @@ public class VpnTest extends VpnTestBase {
         verifyPlatformVpnIsDeactivated(TEST_VPN_PKG);
         verifyPowerSaveTempWhitelistApp(TEST_VPN_PKG);
         reset(mDeviceIdleInternal);
-        // CATEGORY_EVENT_DEACTIVATED_BY_USER is not an error event, so both of errorClass and
-        // errorCode won't be set.
-        verifyVpnManagerEvent(sessionKey1, VpnManager.CATEGORY_EVENT_DEACTIVATED_BY_USER,
-                -1 /* errorClass */, -1 /* errorCode */, null /* profileState */);
+        verifyDeactivatedByUser(sessionKey1, new String[] {TEST_VPN_PKG});
         reset(mAppOps);
 
         // Test the case that the user chooses another vpn and the original one is replaced.
@@ -1281,15 +1286,11 @@ public class VpnTest extends VpnTestBase {
         verifyPlatformVpnIsDeactivated(TEST_VPN_PKG);
         verifyPowerSaveTempWhitelistApp(TEST_VPN_PKG);
         reset(mDeviceIdleInternal);
-        // CATEGORY_EVENT_DEACTIVATED_BY_USER is not an error event, so both of errorClass and
-        // errorCode won't be set.
-        verifyVpnManagerEvent(sessionKey2, VpnManager.CATEGORY_EVENT_DEACTIVATED_BY_USER,
-                -1 /* errorClass */, -1 /* errorCode */, null /* profileState */);
+        verifyDeactivatedByUser(sessionKey2, new String[] {TEST_VPN_PKG});
     }
 
     @Test
     public void testVpnManagerEventForAlwaysOnChanged() throws Exception {
-        assumeTrue(SdkLevel.isAtLeastT());
         // Calling setAlwaysOnPackage() needs to hold CONTROL_VPN.
         doReturn(PERMISSION_GRANTED).when(mContext).checkCallingOrSelfPermission(CONTROL_VPN);
         final Vpn vpn = createVpn(PRIMARY_USER.id);
@@ -1298,9 +1299,8 @@ public class VpnTest extends VpnTestBase {
                 null /* lockdownAllowlist */));
         verifyPowerSaveTempWhitelistApp(PKGS[1]);
         reset(mDeviceIdleInternal);
-        verifyVpnManagerEvent(null /* sessionKey */,
-                VpnManager.CATEGORY_EVENT_ALWAYS_ON_STATE_CHANGED, -1 /* errorClass */,
-                -1 /* errorCode */, new VpnProfileState(VpnProfileState.STATE_DISCONNECTED,
+        verifyAlwaysOnStateChanged(new String[] {PKGS[1]},
+                new VpnProfileState(VpnProfileState.STATE_DISCONNECTED,
                         null /* sessionKey */, true /* alwaysOn */, false /* lockdown */));
 
         // Enable VPN lockdown for PKGS[1].
@@ -1308,9 +1308,8 @@ public class VpnTest extends VpnTestBase {
                 null /* lockdownAllowlist */));
         verifyPowerSaveTempWhitelistApp(PKGS[1]);
         reset(mDeviceIdleInternal);
-        verifyVpnManagerEvent(null /* sessionKey */,
-                VpnManager.CATEGORY_EVENT_ALWAYS_ON_STATE_CHANGED, -1 /* errorClass */,
-                -1 /* errorCode */, new VpnProfileState(VpnProfileState.STATE_DISCONNECTED,
+        verifyAlwaysOnStateChanged(new String[] {PKGS[1]},
+                new VpnProfileState(VpnProfileState.STATE_DISCONNECTED,
                         null /* sessionKey */, true /* alwaysOn */, true /* lockdown */));
 
         // Disable VPN lockdown for PKGS[1].
@@ -1318,9 +1317,8 @@ public class VpnTest extends VpnTestBase {
                 null /* lockdownAllowlist */));
         verifyPowerSaveTempWhitelistApp(PKGS[1]);
         reset(mDeviceIdleInternal);
-        verifyVpnManagerEvent(null /* sessionKey */,
-                VpnManager.CATEGORY_EVENT_ALWAYS_ON_STATE_CHANGED, -1 /* errorClass */,
-                -1 /* errorCode */, new VpnProfileState(VpnProfileState.STATE_DISCONNECTED,
+        verifyAlwaysOnStateChanged(new String[] {PKGS[1]},
+                new VpnProfileState(VpnProfileState.STATE_DISCONNECTED,
                         null /* sessionKey */, true /* alwaysOn */, false /* lockdown */));
 
         // Disable VPN always-on.
@@ -1328,9 +1326,8 @@ public class VpnTest extends VpnTestBase {
                 null /* lockdownAllowlist */));
         verifyPowerSaveTempWhitelistApp(PKGS[1]);
         reset(mDeviceIdleInternal);
-        verifyVpnManagerEvent(null /* sessionKey */,
-                VpnManager.CATEGORY_EVENT_ALWAYS_ON_STATE_CHANGED, -1 /* errorClass */,
-                -1 /* errorCode */, new VpnProfileState(VpnProfileState.STATE_DISCONNECTED,
+        verifyAlwaysOnStateChanged(new String[] {PKGS[1]},
+                new VpnProfileState(VpnProfileState.STATE_DISCONNECTED,
                         null /* sessionKey */, false /* alwaysOn */, false /* lockdown */));
 
         // Enable VPN always-on for PKGS[1] again.
@@ -1338,9 +1335,8 @@ public class VpnTest extends VpnTestBase {
                 null /* lockdownAllowlist */));
         verifyPowerSaveTempWhitelistApp(PKGS[1]);
         reset(mDeviceIdleInternal);
-        verifyVpnManagerEvent(null /* sessionKey */,
-                VpnManager.CATEGORY_EVENT_ALWAYS_ON_STATE_CHANGED, -1 /* errorClass */,
-                -1 /* errorCode */, new VpnProfileState(VpnProfileState.STATE_DISCONNECTED,
+        verifyAlwaysOnStateChanged(new String[] {PKGS[1]},
+                new VpnProfileState(VpnProfileState.STATE_DISCONNECTED,
                         null /* sessionKey */, true /* alwaysOn */, false /* lockdown */));
 
         // Enable VPN always-on for PKGS[2].
@@ -1352,9 +1348,8 @@ public class VpnTest extends VpnTestBase {
         // Pass 2 VpnProfileState objects to verifyVpnManagerEvent(), the first one is sent to
         // PKGS[1] to notify PKGS[1] that the VPN always-on is disabled, the second one is sent to
         // PKGS[2] to notify PKGS[2] that the VPN always-on is enabled.
-        verifyVpnManagerEvent(null /* sessionKey */,
-                VpnManager.CATEGORY_EVENT_ALWAYS_ON_STATE_CHANGED, -1 /* errorClass */,
-                -1 /* errorCode */, new VpnProfileState(VpnProfileState.STATE_DISCONNECTED,
+        verifyAlwaysOnStateChanged(new String[] {PKGS[1], PKGS[2]},
+                new VpnProfileState(VpnProfileState.STATE_DISCONNECTED,
                         null /* sessionKey */, false /* alwaysOn */, false /* lockdown */),
                 new VpnProfileState(VpnProfileState.STATE_DISCONNECTED,
                         null /* sessionKey */, true /* alwaysOn */, false /* lockdown */));
@@ -1476,7 +1471,8 @@ public class VpnTest extends VpnTestBase {
 
         verifyPowerSaveTempWhitelistApp(TEST_VPN_PKG);
         reset(mDeviceIdleInternal);
-        verifyVpnManagerEvent(sessionKey, category, errorType, errorCode, null /* profileState */);
+        verifyVpnManagerEvent(sessionKey, category, errorType, errorCode,
+                new String[] {TEST_VPN_PKG}, null /* profileState */);
         if (errorType == VpnManager.ERROR_CLASS_NOT_RECOVERABLE) {
             verify(mConnectivityManager, timeout(TEST_TIMEOUT_MS))
                     .unregisterNetworkCallback(eq(cb));
