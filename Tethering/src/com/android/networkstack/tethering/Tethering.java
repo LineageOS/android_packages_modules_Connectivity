@@ -1975,10 +1975,6 @@ public class Tethering {
                 return;
             }
 
-            if (arg1 == UpstreamNetworkMonitor.NOTIFY_TEST_NETWORK_AVAILABLE) {
-                chooseUpstreamType(false);
-            }
-
             if (ns == null || !pertainsToCurrentUpstream(ns)) {
                 // TODO: In future, this is where upstream evaluation and selection
                 // could be handled for notifications which include sufficient data.
