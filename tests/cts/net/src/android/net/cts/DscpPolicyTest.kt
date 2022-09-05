@@ -43,9 +43,10 @@ import android.net.NetworkCapabilities.NET_CAPABILITY_NOT_VPN
 import android.net.NetworkCapabilities.NET_CAPABILITY_TRUSTED
 import android.net.NetworkCapabilities.TRANSPORT_TEST
 import android.net.NetworkRequest
+import android.net.RouteInfo
 import android.net.TestNetworkInterface
 import android.net.TestNetworkManager
-import android.net.RouteInfo
+import android.os.Build
 import android.os.HandlerThread
 import android.os.SystemClock
 import android.platform.test.annotations.AppModeFull
@@ -161,8 +162,27 @@ class DscpPolicyTest {
 
             // Only statically configure the IPv4 address; for IPv6, use the SLAAC generated
             // address.
-            iface = tnm.createTapInterface(true /* disableIpv6ProvisioningDelay */,
-                    arrayOf(LinkAddress(LOCAL_IPV4_ADDRESS, IP4_PREFIX_LEN)))
+            iface = try {
+                // createTapInterface(LinkAddress[]) only exists on T devices using a recent
+                // connectivity module
+                val addresses = arrayOf(LinkAddress(LOCAL_IPV4_ADDRESS, IP4_PREFIX_LEN))
+                TestNetworkManager::class.java.getMethod("createTapInterface",
+                        Boolean::class.javaPrimitiveType, Array<LinkAddress>::class.java)
+                    .invoke(tnm,
+                        true /* disableIpv6ProvisioningDelay */, addresses) as TestNetworkInterface
+            } catch (e: NoSuchMethodException) {
+                if (Build.VERSION.SDK_INT > Build.VERSION_CODES.TIRAMISU) throw e
+                // The DSCP policy feature does not work on T without an updated module, because
+                // without change ID Ib40d4575455f34a8970eca8751b590319e2ee1ad which fixes checksum
+                // calculation for non-TUN interfaces, the device would send packets with wrong
+                // checksums.
+                // The feature only worked on TUN interfaces because they have an empty L2 header,
+                // and this is what the old test tested, but is not actually useful.
+                // Here this is a T device using an old module, so just skip the test.
+                assumeTrue("Known-broken DscpPolicy implementation used by this device", false);
+                // Unreachable, but necessary for this branch to return Nothing
+                throw e
+            }
             assertNotNull(iface)
         }
 
@@ -184,6 +204,10 @@ class DscpPolicyTest {
     fun tearDown() {
         if (!kernelIsAtLeast(5, 15)) {
             return;
+        }
+        if (!this::iface.isInitialized) {
+            // Test was skipped or crashed in setUp
+            return
         }
         raResponder.stop()
         arpResponder.stop()
