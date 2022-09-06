@@ -283,4 +283,13 @@ public class DeviceConfigUtilsTest {
         doThrow(new Resources.NotFoundException()).when(mResources).getBoolean(someResId);
         assertFalse(DeviceConfigUtils.getResBooleanConfig(mContext, someResId, false));
     }
+
+    @Test
+    public void testGetResIntegerConfig() {
+        final int someResId = 1234;
+        doReturn(2097).when(mResources).getInteger(someResId);
+        assertEquals(2097, DeviceConfigUtils.getResIntegerConfig(mContext, someResId, 2098));
+        doThrow(new Resources.NotFoundException()).when(mResources).getInteger(someResId);
+        assertEquals(2098, DeviceConfigUtils.getResIntegerConfig(mContext, someResId, 2098));
+    }
 }
