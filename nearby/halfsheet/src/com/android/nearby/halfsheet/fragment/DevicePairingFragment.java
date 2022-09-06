@@ -104,6 +104,7 @@ public class DevicePairingFragment extends HalfSheetModuleFragment implements
     // Holds the new text while we transition between the two.
     private static final int TAG_PENDING_TEXT = R.id.toolbar_title;
     public static final String APP_LAUNCH_FRAGMENT_TYPE = "APP_LAUNCH";
+    private static final String RESULT_FAIL = "RESULT_FAIL";
 
     private static final String ARG_SETUP_BUTTON_CLICKED = "SETUP_BUTTON_CLICKED";
     private static final String ARG_PAIRING_RESULT = "PAIRING_RESULT";
@@ -182,6 +183,11 @@ public class DevicePairingFragment extends HalfSheetModuleFragment implements
             mFastPairUiServiceClient =
                     new FastPairUiServiceClient(getContext(), mBundle.getBinder(EXTRA_BINDER));
             mFastPairUiServiceClient.registerHalfSheetStateCallBack(this);
+        }
+        if (args.containsKey(EXTRA_HALF_SHEET_CONTENT)) {
+            if (RESULT_FAIL.equals(args.getString(EXTRA_HALF_SHEET_CONTENT))) {
+                mPairStatus = PairStatusMetadata.Status.FAIL;
+            }
         }
         if (args.containsKey(ARG_FRAGMENT_STATE)) {
             mFragmentState = (HalfSheetFragmentState) args.getSerializable(ARG_FRAGMENT_STATE);
