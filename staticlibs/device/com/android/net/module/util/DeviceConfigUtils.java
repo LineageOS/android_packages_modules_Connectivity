@@ -259,4 +259,17 @@ public final class DeviceConfigUtils {
             return defaultValue;
         }
     }
+
+    /**
+     * Gets int config from resources.
+     */
+    public static int getResIntegerConfig(@NonNull final Context context,
+            @BoolRes int configResource, final int defaultValue) {
+        final Resources res = context.getResources();
+        try {
+            return res.getInteger(configResource);
+        } catch (Resources.NotFoundException e) {
+            return defaultValue;
+        }
+    }
 }
