@@ -118,6 +118,18 @@ int extractIpAddressAnswers(uint8_t* buf, size_t bufLen, int family) {
             // If there is no valid answer, test will fail.
             continue;
         }
+
+        const int rtype = ns_rr_type(rr);
+        if (family == AF_INET) {
+            // If there is no expected address type, test will fail.
+            if (rtype != ns_t_a) continue;
+        } else if (family == AF_INET6) {
+            // If there is no expected address type, test will fail.
+            if (rtype != ns_t_aaaa) continue;
+        } else {
+            return -EAFNOSUPPORT;
+        }
+
         const uint8_t* rdata = ns_rr_rdata(rr);
         char buffer[INET6_ADDRSTRLEN];
         if (inet_ntop(family, (const char*) rdata, buffer, sizeof(buffer)) == NULL) {
