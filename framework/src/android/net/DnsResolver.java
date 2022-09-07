@@ -71,12 +71,14 @@ public final class DnsResolver {
 
     @IntDef(prefix = { "TYPE_" },  value = {
             TYPE_A,
-            TYPE_AAAA
+            TYPE_AAAA,
+            TYPE_CNAME
     })
     @Retention(RetentionPolicy.SOURCE)
     @interface QueryType {}
     public static final int TYPE_A = 1;
     public static final int TYPE_AAAA = 28;
+    public static final int TYPE_CNAME = 5;
 
     @IntDef(prefix = { "FLAG_" }, value = {
             FLAG_EMPTY,
