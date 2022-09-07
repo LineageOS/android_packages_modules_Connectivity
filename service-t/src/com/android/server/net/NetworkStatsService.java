@@ -1293,7 +1293,7 @@ public class NetworkStatsService extends INetworkStatsService.Stub {
             mNetd.bandwidthSetGlobalAlert(mGlobalAlertBytes);
         } catch (IllegalStateException e) {
             Log.w(TAG, "problem registering for global alert: " + e);
-        } catch (RemoteException e) {
+        } catch (RemoteException | ServiceSpecificException e) {
             // ignored; service lives in system_server
         }
         invokeForAllStatsProviderCallbacks((cb) -> cb.mProvider.onSetAlert(mGlobalAlertBytes));
