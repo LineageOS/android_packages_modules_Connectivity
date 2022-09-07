@@ -188,6 +188,7 @@ package android.net {
     field public static final int FLAG_NO_RETRY = 1; // 0x1
     field public static final int TYPE_A = 1; // 0x1
     field public static final int TYPE_AAAA = 28; // 0x1c
+    field public static final int TYPE_CNAME = 5; // 0x5
   }
 
   public static interface DnsResolver.Callback<T> {
