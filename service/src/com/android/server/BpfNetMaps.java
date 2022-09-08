@@ -50,6 +50,8 @@ import com.android.net.module.util.DeviceConfigUtils;
 import com.android.net.module.util.IBpfMap;
 import com.android.net.module.util.Struct.U32;
 import com.android.net.module.util.Struct.U8;
+import com.android.net.module.util.bpf.CookieTagMapKey;
+import com.android.net.module.util.bpf.CookieTagMapValue;
 
 import java.io.FileDescriptor;
 import java.io.IOException;
@@ -94,6 +96,8 @@ public class BpfNetMaps {
             "/sys/fs/bpf/netd_shared/map_netd_uid_owner_map";
     private static final String UID_PERMISSION_MAP_PATH =
             "/sys/fs/bpf/netd_shared/map_netd_uid_permission_map";
+    private static final String COOKIE_TAG_MAP_PATH =
+            "/sys/fs/bpf/netd_shared/map_netd_cookie_tag_map";
     private static final U32 UID_RULES_CONFIGURATION_KEY = new U32(0);
     private static final U32 CURRENT_STATS_MAP_CONFIGURATION_KEY = new U32(1);
     private static final long UID_RULES_DEFAULT_CONFIGURATION = 0;
@@ -104,6 +108,7 @@ public class BpfNetMaps {
     // BpfMap for UID_OWNER_MAP_PATH. This map is not accessed by others.
     private static IBpfMap<U32, UidOwnerValue> sUidOwnerMap = null;
     private static IBpfMap<U32, U8> sUidPermissionMap = null;
+    private static IBpfMap<CookieTagMapKey, CookieTagMapValue> sCookieTagMap = null;
 
     // LINT.IfChange(match_type)
     @VisibleForTesting public static final long NO_MATCH = 0;
@@ -153,6 +158,15 @@ public class BpfNetMaps {
         sUidPermissionMap = uidPermissionMap;
     }
 
+    /**
+     * Set cookieTagMap for test.
+     */
+    @VisibleForTesting
+    public static void setCookieTagMapForTest(
+            IBpfMap<CookieTagMapKey, CookieTagMapValue> cookieTagMap) {
+        sCookieTagMap = cookieTagMap;
+    }
+
     private static IBpfMap<U32, U32> getConfigurationMap() {
         try {
             return new BpfMap<>(
@@ -177,6 +191,15 @@ public class BpfNetMaps {
                     UID_PERMISSION_MAP_PATH, BpfMap.BPF_F_RDWR, U32.class, U8.class);
         } catch (ErrnoException e) {
             throw new IllegalStateException("Cannot open uid permission map", e);
+        }
+    }
+
+    private static IBpfMap<CookieTagMapKey, CookieTagMapValue> getCookieTagMap() {
+        try {
+            return new BpfMap<>(COOKIE_TAG_MAP_PATH, BpfMap.BPF_F_RDWR,
+                    CookieTagMapKey.class, CookieTagMapValue.class);
+        } catch (ErrnoException e) {
+            throw new IllegalStateException("Cannot open cookie tag map", e);
         }
     }
 
@@ -208,6 +231,10 @@ public class BpfNetMaps {
 
         if (sUidPermissionMap == null) {
             sUidPermissionMap = getUidPermissionMap();
+        }
+
+        if (sCookieTagMap == null) {
+            sCookieTagMap = getCookieTagMap();
         }
     }
 
