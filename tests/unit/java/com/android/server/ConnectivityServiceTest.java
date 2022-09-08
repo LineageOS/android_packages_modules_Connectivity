@@ -3539,7 +3539,7 @@ public class ConnectivityServiceTest {
      **/
     private int expectUnvalidationCheckWillNotify(TestNetworkAgentWrapper agent,
             NotificationType type) {
-        mService.scheduleUnvalidatedPrompt(agent.getNetwork(), 0 /* delayMs */);
+        mService.scheduleEvaluationTimeout(agent.getNetwork(), 0 /* delayMs */);
         waitForIdle();
         return expectNotification(agent, type);
     }
@@ -3561,7 +3561,7 @@ public class ConnectivityServiceTest {
      * @return the notification ID.
      **/
     private void expectUnvalidationCheckWillNotNotify(TestNetworkAgentWrapper agent) {
-        mService.scheduleUnvalidatedPrompt(agent.getNetwork(), 0 /*delayMs */);
+        mService.scheduleEvaluationTimeout(agent.getNetwork(), 0 /*delayMs */);
         waitForIdle();
         verify(mNotificationManager, never()).notifyAsUser(anyString(), anyInt(), any(), any());
     }
@@ -3782,6 +3782,63 @@ public class ConnectivityServiceTest {
 
         callback.expectCallback(CallbackEntry.LOST, mWiFiNetworkAgent);
         callback.expectCallback(CallbackEntry.LOST, mCellNetworkAgent);
+    }
+
+    private void doTestFirstEvaluation(
+            @NonNull final Consumer<TestNetworkAgentWrapper> doConnect,
+            final boolean waitForSecondCaps,
+            final boolean evaluatedByValidation)
+            throws Exception {
+        final NetworkRequest request = new NetworkRequest.Builder()
+                .addTransportType(TRANSPORT_WIFI)
+                .build();
+        TestNetworkCallback callback = new TestNetworkCallback();
+        mCm.registerNetworkCallback(request, callback);
+
+        mWiFiNetworkAgent = new TestNetworkAgentWrapper(TRANSPORT_WIFI);
+        doConnect.accept(mWiFiNetworkAgent);
+        // Expect the available callbacks, but don't require specific values for their arguments
+        // since this method doesn't know how the network was connected.
+        callback.expectCallback(CallbackEntry.AVAILABLE, mWiFiNetworkAgent);
+        callback.expectCallback(CallbackEntry.NETWORK_CAPS_UPDATED, mWiFiNetworkAgent);
+        callback.expectCallback(CallbackEntry.LINK_PROPERTIES_CHANGED, mWiFiNetworkAgent);
+        callback.expectCallback(CallbackEntry.BLOCKED_STATUS, mWiFiNetworkAgent);
+        if (waitForSecondCaps) {
+            // This is necessary because of b/245893397, the same bug that happens where we use
+            // expectAvailableDoubleValidatedCallbacks.
+            callback.expectCallback(CallbackEntry.NETWORK_CAPS_UPDATED, mWiFiNetworkAgent);
+        }
+        final NetworkAgentInfo nai =
+                mService.getNetworkAgentInfoForNetwork(mWiFiNetworkAgent.getNetwork());
+        final long firstEvaluation = nai.getFirstEvaluationConcludedTime();
+        if (evaluatedByValidation) {
+            assertNotEquals(0L, firstEvaluation);
+        } else {
+            assertEquals(0L, firstEvaluation);
+        }
+        mService.scheduleEvaluationTimeout(mWiFiNetworkAgent.getNetwork(), 0L /* timeout */);
+        waitForIdle();
+        if (evaluatedByValidation) {
+            assertEquals(firstEvaluation, nai.getFirstEvaluationConcludedTime());
+        } else {
+            assertNotEquals(0L, nai.getFirstEvaluationConcludedTime());
+        }
+        mWiFiNetworkAgent.disconnect();
+        callback.expectCallback(CallbackEntry.LOST, mWiFiNetworkAgent);
+
+        mCm.unregisterNetworkCallback(callback);
+    }
+
+    @Test
+    public void testEverEvaluated() throws Exception {
+        doTestFirstEvaluation(naw -> naw.connect(true /* validated */),
+                true /* waitForSecondCaps */, true /* immediatelyEvaluated */);
+        doTestFirstEvaluation(naw -> naw.connectWithPartialConnectivity(),
+                true /* waitForSecondCaps */, true /* immediatelyEvaluated */);
+        doTestFirstEvaluation(naw -> naw.connectWithCaptivePortal(TEST_REDIRECT_URL, false),
+                true /* waitForSecondCaps */, true /* immediatelyEvaluated */);
+        doTestFirstEvaluation(naw -> naw.connect(false /* validated */),
+                false /* waitForSecondCaps */, false /* immediatelyEvaluated */);
     }
 
     private void tryNetworkFactoryRequests(int capability) throws Exception {
