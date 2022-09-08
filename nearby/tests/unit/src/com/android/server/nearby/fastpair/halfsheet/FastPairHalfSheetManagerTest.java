@@ -16,11 +16,14 @@
 
 package com.android.server.nearby.fastpair.halfsheet;
 
+import static com.android.server.nearby.fastpair.Constant.EXTRA_HALF_SHEET_CONTENT;
 import static com.android.server.nearby.fastpair.blocklist.Blocklist.BlocklistState.ACTIVE;
 import static com.android.server.nearby.fastpair.blocklist.Blocklist.BlocklistState.DISMISSED;
 import static com.android.server.nearby.fastpair.blocklist.Blocklist.BlocklistState.DO_NOT_SHOW_AGAIN;
 import static com.android.server.nearby.fastpair.blocklist.Blocklist.BlocklistState.DO_NOT_SHOW_AGAIN_LONG;
 import static com.android.server.nearby.fastpair.halfsheet.FastPairHalfSheetManager.DISMISS_HALFSHEET_RUNNABLE_NAME;
+import static com.android.server.nearby.fastpair.halfsheet.FastPairHalfSheetManager.RESULT_FAIL;
+import static com.android.server.nearby.fastpair.halfsheet.FastPairHalfSheetManager.SHOW_TOAST_RUNNABLE_NAME;
 
 import static com.google.common.truth.Truth.assertThat;
 
@@ -42,6 +45,7 @@ import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
 import android.nearby.FastPairStatusCallback;
+import android.nearby.PairStatusMetadata;
 import android.os.UserHandle;
 
 import androidx.test.platform.app.InstrumentationRegistry;
@@ -68,6 +72,8 @@ public class FastPairHalfSheetManagerTest {
     private static final String BLEADDRESS = "11:22:44:66";
     private static final String NAME = "device_name";
     private static final int PASSKEY = 1234;
+    private static final int SUCCESS = 1001;
+    private static final int FAIL = 1002;
     private FastPairHalfSheetManager mFastPairHalfSheetManager;
     private Cache.ScanFastPairStoreItem mScanFastPairStoreItem;
     private ResolveInfo mResolveInfo;
@@ -86,8 +92,6 @@ public class FastPairHalfSheetManagerTest {
     EventLoop mEventLoop;
     @Mock
     FastPairStatusCallback mFastPairStatusCallback;
-    @Mock
-    FastPairUiServiceImpl mFastPairUiService;
 
     @Before
     public void setup() {
@@ -313,7 +317,7 @@ public class FastPairHalfSheetManagerTest {
         verifyInitialPairingNameRunnablePostedTimes(1);
 
         mFastPairHalfSheetManager.showHalfSheet(testItem);
-        // When half sheet shown and receive broadcast from a same address,
+        // When half sheet shown and receives broadcast from the same address,
         // DO NOT request start-activity to avoid unnecessary memory usage,
         // Just reset the auto dismiss timeout for the new request
         verifyHalfSheetActivityIntent(1);
@@ -337,8 +341,8 @@ public class FastPairHalfSheetManagerTest {
         verifyInitialPairingNameRunnablePostedTimes(1);
 
         mFastPairHalfSheetManager.showHalfSheet(testItem);
-        // When half sheet shown and receive broadcast from a same model id with different address,
-        // DO NOT rest the auto dismiss timeout. No action is required.
+        // When half sheet shown and receives broadcast from the same model id
+        // but with different address, DO NOT rest the auto dismiss timeout. No action is required.
         verifyHalfSheetActivityIntent(1);
         verifyInitialPairingNameRunnablePostedTimes(1);
     }
@@ -360,7 +364,7 @@ public class FastPairHalfSheetManagerTest {
         verifyHalfSheetActivityIntent(1);
 
         mFastPairHalfSheetManager.showHalfSheet(testItem);
-        // When half sheet shown and receive broadcast from a different model id,
+        // When half sheet shown and receives broadcast from a different model id,
         // the new request should be ignored. No action is required.
         verifyHalfSheetActivityIntent(1);
         verifyInitialPairingNameRunnablePostedTimes(1);
@@ -369,14 +373,90 @@ public class FastPairHalfSheetManagerTest {
     @Test
     public void testReportActivelyPairing() {
         configResolveInfoList();
-        mFastPairHalfSheetManager =
-                new FastPairHalfSheetManager(mContextWrapper);
+        mFastPairHalfSheetManager = new FastPairHalfSheetManager(mContextWrapper);
 
         assertThat(mFastPairHalfSheetManager.isActivePairing()).isFalse();
 
         mFastPairHalfSheetManager.reportActivelyPairing();
 
         assertThat(mFastPairHalfSheetManager.isActivePairing()).isTrue();
+    }
+
+    @Test
+    public void showPairingSuccessHalfSheetHalfSheetActivityActive_ChangeUIToShowSuccessInfo() {
+        configResolveInfoList();
+        mFastPairHalfSheetManager = new FastPairHalfSheetManager(mContextWrapper);
+        mFastPairHalfSheetManager.mFastPairUiService
+                .setFastPairStatusCallback(mFastPairStatusCallback);
+
+        mFastPairHalfSheetManager.showHalfSheet(mScanFastPairStoreItem);
+        mFastPairHalfSheetManager.showPairingSuccessHalfSheet(BLEADDRESS);
+
+        verifyFastPairStatusCallback(1, SUCCESS);
+        assertThat(mFastPairHalfSheetManager.isActivePairing()).isFalse();
+    }
+
+    @Test
+    public void showPairingSuccessHalfSheetHalfSheetActivityNotActive_showToast() {
+        configResolveInfoList();
+        mFastPairHalfSheetManager = new FastPairHalfSheetManager(mContextWrapper);
+
+        mFastPairHalfSheetManager.showHalfSheet(mScanFastPairStoreItem);
+        mFastPairHalfSheetManager.setHalfSheetForeground(false);
+        mFastPairHalfSheetManager.showPairingSuccessHalfSheet(BLEADDRESS);
+
+        ArgumentCaptor<NamedRunnable> captor = ArgumentCaptor.forClass(NamedRunnable.class);
+
+        verify(mEventLoop).postRunnable(captor.capture());
+        assertThat(
+                captor.getAllValues().stream()
+                        .filter(r -> r.name.equals(SHOW_TOAST_RUNNABLE_NAME))
+                        .count())
+                .isEqualTo(1);
+        assertThat(mFastPairHalfSheetManager.isActivePairing()).isFalse();
+    }
+
+    @Test
+    public void showPairingFailedHalfSheetHalfSheetActivityActive_ChangeUIToShowFailedInfo() {
+        configResolveInfoList();
+        mFastPairHalfSheetManager = new FastPairHalfSheetManager(mContextWrapper);
+        mFastPairHalfSheetManager.mFastPairUiService
+                .setFastPairStatusCallback(mFastPairStatusCallback);
+
+        mFastPairHalfSheetManager.showHalfSheet(mScanFastPairStoreItem);
+        mFastPairHalfSheetManager.showPairingFailed();
+
+        verifyFastPairStatusCallback(1, FAIL);
+        assertThat(mFastPairHalfSheetManager.isActivePairing()).isFalse();
+    }
+
+    @Test
+    public void showPairingFailedHalfSheetActivityNotActive_StartHalfSheetToShowFailedInfo() {
+        configResolveInfoList();
+        mFastPairHalfSheetManager = new FastPairHalfSheetManager(mContextWrapper);
+        FastPairHalfSheetBlocklist mHalfSheetBlocklist =
+                mFastPairHalfSheetManager.getHalfSheetBlocklist();
+
+        mFastPairHalfSheetManager.showHalfSheet(mScanFastPairStoreItem);
+        mFastPairHalfSheetManager.setHalfSheetForeground(false);
+        mFastPairHalfSheetManager.showPairingFailed();
+
+        ArgumentCaptor<Intent> captor = ArgumentCaptor.forClass(Intent.class);
+        Integer halfSheetId = mFastPairHalfSheetManager.mModelIdMap.get(MODEL_ID);
+
+        verify(mContextWrapper, times(2))
+                .startActivityAsUser(captor.capture(), eq(UserHandle.CURRENT));
+        assertThat(
+                captor.getAllValues().stream()
+                        .filter(r ->
+                            r.getStringExtra(EXTRA_HALF_SHEET_CONTENT) != null
+                                    && r.getStringExtra(EXTRA_HALF_SHEET_CONTENT)
+                                    .equals(RESULT_FAIL))
+
+                        .count())
+                .isEqualTo(1);
+        assertThat(mFastPairHalfSheetManager.isActivePairing()).isFalse();
+        assertThat(mHalfSheetBlocklist.get(halfSheetId).getState()).isEqualTo(ACTIVE);
     }
 
     private void verifyInitialPairingNameRunnablePostedTimes(int times) {
@@ -398,6 +478,17 @@ public class FastPairHalfSheetManagerTest {
         assertThat(
                 captor.getAllValues().stream()
                         .filter(r -> r.getAction().equals("android.nearby.SHOW_HALFSHEET"))
+                        .count())
+                .isEqualTo(times);
+    }
+
+    private void verifyFastPairStatusCallback(int times, int status) {
+        ArgumentCaptor<PairStatusMetadata> captor =
+                ArgumentCaptor.forClass(PairStatusMetadata.class);
+        verify(mFastPairStatusCallback, times(times)).onPairUpdate(any(), captor.capture());
+        assertThat(
+                captor.getAllValues().stream()
+                        .filter(r -> r.getStatus() == status)
                         .count())
                 .isEqualTo(times);
     }

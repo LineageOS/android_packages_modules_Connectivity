@@ -43,6 +43,8 @@ public class Constant {
             "com.android.nearby.halfsheet.HALF_SHEET";
     public static final String EXTRA_HALF_SHEET_TYPE =
             "com.android.nearby.halfsheet.HALF_SHEET_TYPE";
+    public static final String EXTRA_HALF_SHEET_CONTENT =
+            "com.android.nearby.halfsheet.HALF_SHEET_CONTENT";
     public static final String DEVICE_PAIRING_FRAGMENT_TYPE = "DEVICE_PAIRING";
     public static final String EXTRA_HALF_SHEET_FOREGROUND =
             "com.android.nearby.halfsheet.EXTRA_HALF_SHEET_FOREGROUND";

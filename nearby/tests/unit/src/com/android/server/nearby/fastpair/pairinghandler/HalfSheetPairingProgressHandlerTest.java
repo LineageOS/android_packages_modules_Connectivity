@@ -24,6 +24,7 @@ import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 
 import com.android.server.nearby.common.bluetooth.fastpair.FastPairConnection;
+import com.android.server.nearby.common.eventloop.EventLoop;
 import com.android.server.nearby.common.locator.Locator;
 import com.android.server.nearby.common.locator.LocatorContextWrapper;
 import com.android.server.nearby.fastpair.cache.DiscoveryItem;
@@ -57,6 +58,8 @@ public class HalfSheetPairingProgressHandlerTest {
     FastPairConnection mFastPairConnection;
     @Mock
     FootprintsDeviceManager mFootprintsDeviceManager;
+    @Mock
+    EventLoop mEventLoop;
 
     private static final String MAC_ADDRESS = "00:11:22:33:44:55";
     private static final byte[] ACCOUNT_KEY = new byte[]{0x01, 0x02};
@@ -77,6 +80,7 @@ public class HalfSheetPairingProgressHandlerTest {
         sFastPairHalfSheetManager = new FastPairHalfSheetManager(mContextWrapper);
         mLocator.bind(FastPairHalfSheetManager.class, sFastPairHalfSheetManager);
         when(mLocator.get(FastPairHalfSheetManager.class)).thenReturn(sFastPairHalfSheetManager);
+        when(mLocator.get(EventLoop.class)).thenReturn(mEventLoop);
         sDiscoveryItem = FakeDiscoveryItems.newFastPairDiscoveryItem(mContextWrapper);
         sDiscoveryItem.setStoredItemForTest(
                 sDiscoveryItem.getStoredItemForTest().toBuilder()
