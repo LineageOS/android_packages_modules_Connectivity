@@ -26,8 +26,9 @@ import static android.net.NetworkScore.POLICY_YIELD_TO_BAD_WIFI;
 
 import static com.android.net.module.util.CollectionUtils.filter;
 import static com.android.server.connectivity.FullScore.POLICY_ACCEPT_UNVALIDATED;
+import static com.android.server.connectivity.FullScore.POLICY_AVOIDED_WHEN_UNVALIDATED;
 import static com.android.server.connectivity.FullScore.POLICY_EVER_USER_SELECTED;
-import static com.android.server.connectivity.FullScore.POLICY_EVER_VALIDATED_NOT_AVOIDED_WHEN_BAD;
+import static com.android.server.connectivity.FullScore.POLICY_EVER_VALIDATED;
 import static com.android.server.connectivity.FullScore.POLICY_IS_DESTROYED;
 import static com.android.server.connectivity.FullScore.POLICY_IS_INVINCIBLE;
 import static com.android.server.connectivity.FullScore.POLICY_IS_VALIDATED;
@@ -104,7 +105,9 @@ public class NetworkRanker {
     }
 
     private <T extends Scoreable> boolean isBadWiFi(@NonNull final T candidate) {
-        return candidate.getScore().hasPolicy(POLICY_EVER_VALIDATED_NOT_AVOIDED_WHEN_BAD)
+        final FullScore score = candidate.getScore();
+        return score.hasPolicy(POLICY_EVER_VALIDATED)
+                && !score.hasPolicy(POLICY_AVOIDED_WHEN_UNVALIDATED)
                 && candidate.getCapsNoCopy().hasTransport(TRANSPORT_WIFI);
     }
 

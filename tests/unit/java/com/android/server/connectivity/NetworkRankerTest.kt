@@ -25,7 +25,8 @@ import android.net.NetworkScore.POLICY_TRANSPORT_PRIMARY
 import android.net.NetworkScore.POLICY_YIELD_TO_BAD_WIFI
 import android.os.Build
 import androidx.test.filters.SmallTest
-import com.android.server.connectivity.FullScore.POLICY_EVER_VALIDATED_NOT_AVOIDED_WHEN_BAD
+import com.android.server.connectivity.FullScore.POLICY_AVOIDED_WHEN_UNVALIDATED
+import com.android.server.connectivity.FullScore.POLICY_EVER_VALIDATED
 import com.android.server.connectivity.FullScore.POLICY_IS_VALIDATED
 import com.android.testutils.DevSdkIgnoreRule
 import com.android.testutils.DevSdkIgnoreRunner
@@ -61,8 +62,7 @@ class NetworkRankerTest {
     @Test
     fun testYieldToBadWiFiOneCellOneBadWiFi() {
         // Bad wifi wins against yielding validated cell
-        val winner = TestScore(score(POLICY_EVER_VALIDATED_NOT_AVOIDED_WHEN_BAD),
-                caps(TRANSPORT_WIFI))
+        val winner = TestScore(score(POLICY_EVER_VALIDATED), caps(TRANSPORT_WIFI))
         val scores = listOf(
                 winner,
                 TestScore(score(POLICY_YIELD_TO_BAD_WIFI, POLICY_IS_VALIDATED),
@@ -72,14 +72,26 @@ class NetworkRankerTest {
     }
 
     @Test
+    fun testYieldToBadWifiAvoidUnvalidated() {
+        // Bad wifi avoided when unvalidated loses against yielding validated cell
+        val winner = TestScore(score(POLICY_YIELD_TO_BAD_WIFI, POLICY_IS_VALIDATED),
+                caps(TRANSPORT_CELLULAR))
+        val scores = listOf(
+                winner,
+                TestScore(score(POLICY_EVER_VALIDATED, POLICY_AVOIDED_WHEN_UNVALIDATED),
+                        caps(TRANSPORT_WIFI))
+        )
+        assertEquals(winner, mRanker.getBestNetworkByPolicy(scores, null))
+    }
+
+    @Test
     fun testYieldToBadWiFiOneCellTwoBadWiFi() {
         // Bad wifi wins against yielding validated cell. Prefer the one that's primary.
-        val winner = TestScore(score(POLICY_EVER_VALIDATED_NOT_AVOIDED_WHEN_BAD,
+        val winner = TestScore(score(POLICY_EVER_VALIDATED,
                 POLICY_TRANSPORT_PRIMARY), caps(TRANSPORT_WIFI))
         val scores = listOf(
                 winner,
-                TestScore(score(POLICY_EVER_VALIDATED_NOT_AVOIDED_WHEN_BAD),
-                        caps(TRANSPORT_WIFI)),
+                TestScore(score(POLICY_EVER_VALIDATED), caps(TRANSPORT_WIFI)),
                 TestScore(score(POLICY_YIELD_TO_BAD_WIFI, POLICY_IS_VALIDATED),
                         caps(TRANSPORT_CELLULAR))
         )
@@ -90,8 +102,7 @@ class NetworkRankerTest {
     fun testYieldToBadWiFiOneCellTwoBadWiFiOneNotAvoided() {
         // Bad wifi ever validated wins against bad wifi that never was validated (or was
         // avoided when bad).
-        val winner = TestScore(score(POLICY_EVER_VALIDATED_NOT_AVOIDED_WHEN_BAD),
-                caps(TRANSPORT_WIFI))
+        val winner = TestScore(score(POLICY_EVER_VALIDATED), caps(TRANSPORT_WIFI))
         val scores = listOf(
                 winner,
                 TestScore(score(), caps(TRANSPORT_WIFI)),
@@ -104,12 +115,12 @@ class NetworkRankerTest {
     @Test
     fun testYieldToBadWiFiOneCellOneBadWiFiOneGoodWiFi() {
         // Good wifi wins
-        val winner = TestScore(score(POLICY_EVER_VALIDATED_NOT_AVOIDED_WHEN_BAD,
-                POLICY_IS_VALIDATED), caps(TRANSPORT_WIFI))
+        val winner = TestScore(score(POLICY_EVER_VALIDATED, POLICY_IS_VALIDATED),
+                caps(TRANSPORT_WIFI))
         val scores = listOf(
                 winner,
-                TestScore(score(POLICY_EVER_VALIDATED_NOT_AVOIDED_WHEN_BAD,
-                        POLICY_TRANSPORT_PRIMARY), caps(TRANSPORT_WIFI)),
+                TestScore(score(POLICY_EVER_VALIDATED, POLICY_TRANSPORT_PRIMARY),
+                        caps(TRANSPORT_WIFI)),
                 TestScore(score(POLICY_YIELD_TO_BAD_WIFI, POLICY_IS_VALIDATED),
                         caps(TRANSPORT_CELLULAR))
         )
@@ -122,8 +133,8 @@ class NetworkRankerTest {
         val winner = TestScore(score(POLICY_IS_VALIDATED), caps(TRANSPORT_CELLULAR))
         val scores = listOf(
                 winner,
-                TestScore(score(POLICY_EVER_VALIDATED_NOT_AVOIDED_WHEN_BAD,
-                        POLICY_TRANSPORT_PRIMARY), caps(TRANSPORT_WIFI)),
+                TestScore(score(POLICY_EVER_VALIDATED, POLICY_TRANSPORT_PRIMARY),
+                        caps(TRANSPORT_WIFI)),
                 TestScore(score(POLICY_YIELD_TO_BAD_WIFI, POLICY_IS_VALIDATED),
                         caps(TRANSPORT_CELLULAR))
         )
@@ -136,8 +147,8 @@ class NetworkRankerTest {
         val winner = TestScore(score(POLICY_IS_VALIDATED), caps(TRANSPORT_WIFI))
         val scores = listOf(
                 winner,
-                TestScore(score(POLICY_EVER_VALIDATED_NOT_AVOIDED_WHEN_BAD,
-                        POLICY_TRANSPORT_PRIMARY), caps(TRANSPORT_WIFI)),
+                TestScore(score(POLICY_EVER_VALIDATED, POLICY_TRANSPORT_PRIMARY),
+                        caps(TRANSPORT_WIFI)),
                 TestScore(score(POLICY_IS_VALIDATED), caps(TRANSPORT_CELLULAR)),
                 TestScore(score(POLICY_YIELD_TO_BAD_WIFI, POLICY_IS_VALIDATED),
                         caps(TRANSPORT_CELLULAR))
@@ -164,8 +175,7 @@ class NetworkRankerTest {
                 caps(TRANSPORT_CELLULAR))
         val scores = listOf(
                 winner,
-                TestScore(score(POLICY_EVER_VALIDATED_NOT_AVOIDED_WHEN_BAD,
-                        POLICY_EXITING), caps(TRANSPORT_WIFI))
+                TestScore(score(POLICY_EVER_VALIDATED, POLICY_EXITING), caps(TRANSPORT_WIFI))
         )
         assertEquals(winner, mRanker.getBestNetworkByPolicy(scores, null))
     }
