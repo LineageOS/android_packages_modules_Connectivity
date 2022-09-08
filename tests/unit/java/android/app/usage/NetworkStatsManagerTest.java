@@ -16,7 +16,16 @@
 
 package android.app.usage;
 
+import static android.net.ConnectivityManager.TYPE_MOBILE;
+import static android.net.ConnectivityManager.TYPE_WIFI;
+import static android.net.NetworkStats.DEFAULT_NETWORK_NO;
+import static android.net.NetworkStats.METERED_NO;
 import static android.net.NetworkStats.METERED_YES;
+import static android.net.NetworkStats.ROAMING_NO;
+import static android.net.NetworkStats.SET_ALL;
+import static android.net.NetworkStats.SET_DEFAULT;
+import static android.net.NetworkStats.TAG_NONE;
+import static android.net.NetworkStatsHistory.FIELD_ALL;
 import static android.net.NetworkTemplate.MATCH_MOBILE;
 import static android.net.NetworkTemplate.MATCH_WIFI;
 
@@ -34,7 +43,6 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import android.net.ConnectivityManager;
 import android.net.INetworkStatsService;
 import android.net.INetworkStatsSession;
 import android.net.NetworkStats.Entry;
@@ -86,31 +94,17 @@ public class NetworkStatsManagerTest {
         final int uid2 = 10002;
         final int uid3 = 10003;
 
-        Entry uid1Entry1 = new Entry("if1", uid1,
-                android.net.NetworkStats.SET_DEFAULT, android.net.NetworkStats.TAG_NONE,
-                android.net.NetworkStats.METERED_NO, android.net.NetworkStats.ROAMING_NO,
-                android.net.NetworkStats.DEFAULT_NETWORK_NO,
-                100, 10, 200, 20, 0);
+        Entry uid1Entry1 = new Entry("if1", uid1, SET_DEFAULT, TAG_NONE, METERED_NO, ROAMING_NO,
+                DEFAULT_NETWORK_NO, 100, 10, 200, 20, 0);
 
-        Entry uid1Entry2 = new Entry(
-                "if2", uid1,
-                android.net.NetworkStats.SET_DEFAULT, android.net.NetworkStats.TAG_NONE,
-                android.net.NetworkStats.METERED_NO, android.net.NetworkStats.ROAMING_NO,
-                android.net.NetworkStats.DEFAULT_NETWORK_NO,
-                100, 10, 200, 20, 0);
+        Entry uid1Entry2 = new Entry("if2", uid1, SET_DEFAULT, TAG_NONE, METERED_NO, ROAMING_NO,
+                DEFAULT_NETWORK_NO, 100, 10, 200, 20, 0);
 
-        Entry uid2Entry1 = new Entry("if1", uid2,
-                android.net.NetworkStats.SET_DEFAULT, android.net.NetworkStats.TAG_NONE,
-                android.net.NetworkStats.METERED_NO, android.net.NetworkStats.ROAMING_NO,
-                android.net.NetworkStats.DEFAULT_NETWORK_NO,
-                150, 10, 250, 20, 0);
+        Entry uid2Entry1 = new Entry("if1", uid2, SET_DEFAULT, TAG_NONE, METERED_NO, ROAMING_NO,
+                DEFAULT_NETWORK_NO, 150, 10, 250, 20, 0);
 
-        Entry uid2Entry2 = new Entry(
-                "if2", uid2,
-                android.net.NetworkStats.SET_DEFAULT, android.net.NetworkStats.TAG_NONE,
-                android.net.NetworkStats.METERED_NO, android.net.NetworkStats.ROAMING_NO,
-                android.net.NetworkStats.DEFAULT_NETWORK_NO,
-                150, 10, 250, 20, 0);
+        Entry uid2Entry2 = new Entry("if2", uid2, SET_DEFAULT, TAG_NONE, METERED_NO, ROAMING_NO,
+                DEFAULT_NETWORK_NO, 150, 10, 250, 20, 0);
 
         NetworkStatsHistory history1 = new NetworkStatsHistory(10, 2);
         history1.recordData(10, 20, uid1Entry1);
@@ -125,9 +119,8 @@ public class NetworkStatsManagerTest {
         when(mStatsSession.getRelevantUids()).thenReturn(new int[] { uid1, uid2, uid3 });
 
         when(mStatsSession.getHistoryIntervalForUid(any(NetworkTemplate.class),
-                eq(uid1), eq(android.net.NetworkStats.SET_ALL),
-                eq(android.net.NetworkStats.TAG_NONE),
-                eq(NetworkStatsHistory.FIELD_ALL), eq(startTime), eq(endTime)))
+                eq(uid1), eq(SET_ALL), eq(TAG_NONE),
+                eq(FIELD_ALL), eq(startTime), eq(endTime)))
                 .then((InvocationOnMock inv) -> {
                     NetworkTemplate template = inv.getArgument(0);
                     assertEquals(MATCH_MOBILE_ALL, template.getMatchRule());
@@ -136,9 +129,8 @@ public class NetworkStatsManagerTest {
                 });
 
         when(mStatsSession.getHistoryIntervalForUid(any(NetworkTemplate.class),
-                eq(uid2), eq(android.net.NetworkStats.SET_ALL),
-                eq(android.net.NetworkStats.TAG_NONE),
-                eq(NetworkStatsHistory.FIELD_ALL), eq(startTime), eq(endTime)))
+                eq(uid2), eq(SET_ALL), eq(TAG_NONE),
+                eq(FIELD_ALL), eq(startTime), eq(endTime)))
                 .then((InvocationOnMock inv) -> {
                     NetworkTemplate template = inv.getArgument(0);
                     assertEquals(MATCH_MOBILE_ALL, template.getMatchRule());
@@ -148,7 +140,7 @@ public class NetworkStatsManagerTest {
 
 
         NetworkStats stats = mManager.queryDetails(
-                ConnectivityManager.TYPE_MOBILE, TEST_SUBSCRIBER_ID, startTime, endTime);
+                TYPE_MOBILE, TEST_SUBSCRIBER_ID, startTime, endTime);
 
         NetworkStats.Bucket bucket = new NetworkStats.Bucket();
 
@@ -202,35 +194,34 @@ public class NetworkStatsManagerTest {
 
         verify(mStatsSession, times(1)).getHistoryIntervalForUid(
                 eq(expectedTemplate),
-                eq(uid1), eq(android.net.NetworkStats.SET_ALL),
-                eq(android.net.NetworkStats.TAG_NONE),
-                eq(NetworkStatsHistory.FIELD_ALL), eq(startTime), eq(endTime));
+                eq(uid1), eq(SET_ALL),
+                eq(TAG_NONE),
+                eq(FIELD_ALL), eq(startTime), eq(endTime));
 
         verify(mStatsSession, times(1)).getHistoryIntervalForUid(
                 eq(expectedTemplate),
-                eq(uid2), eq(android.net.NetworkStats.SET_ALL),
-                eq(android.net.NetworkStats.TAG_NONE),
-                eq(NetworkStatsHistory.FIELD_ALL), eq(startTime), eq(endTime));
+                eq(uid2), eq(SET_ALL),
+                eq(TAG_NONE),
+                eq(FIELD_ALL), eq(startTime), eq(endTime));
 
         assertFalse(stats.hasNextBucket());
     }
 
     @Test
     public void testNetworkTemplateWhenRunningQueryDetails_NoSubscriberId() throws RemoteException {
-        runQueryDetailsAndCheckTemplate(ConnectivityManager.TYPE_MOBILE,
-                null /* subscriberId */, new NetworkTemplate.Builder(MATCH_MOBILE)
-                        .setMeteredness(METERED_YES).build());
-        runQueryDetailsAndCheckTemplate(ConnectivityManager.TYPE_WIFI,
-                "" /* subscriberId */, new NetworkTemplate.Builder(MATCH_WIFI).build());
-        runQueryDetailsAndCheckTemplate(ConnectivityManager.TYPE_WIFI,
-                null /* subscriberId */, new NetworkTemplate.Builder(MATCH_WIFI).build());
+        runQueryDetailsAndCheckTemplate(TYPE_MOBILE, null /* subscriberId */,
+                new NetworkTemplate.Builder(MATCH_MOBILE).setMeteredness(METERED_YES).build());
+        runQueryDetailsAndCheckTemplate(TYPE_WIFI, "" /* subscriberId */,
+                new NetworkTemplate.Builder(MATCH_WIFI).build());
+        runQueryDetailsAndCheckTemplate(TYPE_WIFI, null /* subscriberId */,
+                new NetworkTemplate.Builder(MATCH_WIFI).build());
     }
 
     @Test
     public void testNetworkTemplateWhenRunningQueryDetails_MergedCarrierWifi()
             throws RemoteException {
-        runQueryDetailsAndCheckTemplate(ConnectivityManager.TYPE_WIFI,
-                TEST_SUBSCRIBER_ID, new NetworkTemplate.Builder(MATCH_WIFI)
+        runQueryDetailsAndCheckTemplate(TYPE_WIFI, TEST_SUBSCRIBER_ID,
+                new NetworkTemplate.Builder(MATCH_WIFI)
                         .setSubscriberIds(Set.of(TEST_SUBSCRIBER_ID)).build());
     }
 
@@ -244,7 +235,7 @@ public class NetworkStatsManagerTest {
         when(mStatsSession.getTaggedSummaryForAllUid(any(NetworkTemplate.class),
                 anyLong(), anyLong()))
                 .thenReturn(new android.net.NetworkStats(0, 0));
-        final NetworkTemplate template = new NetworkTemplate.Builder(NetworkTemplate.MATCH_MOBILE)
+        final NetworkTemplate template = new NetworkTemplate.Builder(MATCH_MOBILE)
                 .setMeteredness(NetworkStats.Bucket.METERED_YES).build();
         NetworkStats stats = mManager.queryTaggedSummary(template, startTime, endTime);
 
@@ -265,12 +256,12 @@ public class NetworkStatsManagerTest {
         when(mStatsSession.getHistoryIntervalForNetwork(any(NetworkTemplate.class),
                 anyInt(), anyLong(), anyLong()))
                 .thenReturn(new NetworkStatsHistory(10, 0));
-        final NetworkTemplate template = new NetworkTemplate.Builder(NetworkTemplate.MATCH_MOBILE)
+        final NetworkTemplate template = new NetworkTemplate.Builder(MATCH_MOBILE)
                 .setMeteredness(NetworkStats.Bucket.METERED_YES).build();
         NetworkStats stats = mManager.queryDetailsForDevice(template, startTime, endTime);
 
         verify(mStatsSession, times(1)).getHistoryIntervalForNetwork(
-                eq(template), eq(NetworkStatsHistory.FIELD_ALL), eq(startTime), eq(endTime));
+                eq(template), eq(FIELD_ALL), eq(startTime), eq(endTime));
 
         assertFalse(stats.hasNextBucket());
     }
