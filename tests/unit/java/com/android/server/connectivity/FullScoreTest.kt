@@ -66,7 +66,8 @@ class FullScoreTest {
             if (vpn) addTransportType(NetworkCapabilities.TRANSPORT_VPN)
             if (validated) addCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
         }.build()
-        return mixInScore(nc, nac, validated, false /* yieldToBadWifi */, destroyed)
+        return mixInScore(nc, nac, validated, false /* avoidUnvalidated */,
+                false /* yieldToBadWifi */, destroyed)
     }
 
     private val TAG = this::class.simpleName

@@ -970,8 +970,8 @@ public class NetworkAgentInfo implements NetworkRanker.Scoreable {
             @NonNull final NetworkCapabilities nc) {
         final NetworkCapabilities oldNc = networkCapabilities;
         networkCapabilities = nc;
-        mScore = mScore.mixInScore(networkCapabilities, networkAgentConfig, everValidatedForYield(),
-                yieldToBadWiFi(), isDestroyed());
+        mScore = mScore.mixInScore(networkCapabilities, networkAgentConfig, everValidated(),
+                0L != getAvoidUnvalidated(), yieldToBadWiFi(), isDestroyed());
         final NetworkMonitorManager nm = mNetworkMonitor;
         if (nm != null) {
             nm.notifyNetworkCapabilitiesChanged(nc);
@@ -1174,7 +1174,7 @@ public class NetworkAgentInfo implements NetworkRanker.Scoreable {
      */
     public void setScore(final NetworkScore score) {
         mScore = FullScore.fromNetworkScore(score, networkCapabilities, networkAgentConfig,
-                everValidatedForYield(), yieldToBadWiFi(), isDestroyed());
+                everValidated(), 0L == getAvoidUnvalidated(), yieldToBadWiFi(), isDestroyed());
     }
 
     /**
@@ -1184,11 +1184,7 @@ public class NetworkAgentInfo implements NetworkRanker.Scoreable {
      */
     public void updateScoreForNetworkAgentUpdate() {
         mScore = mScore.mixInScore(networkCapabilities, networkAgentConfig,
-                everValidatedForYield(), yieldToBadWiFi(), isDestroyed());
-    }
-
-    private boolean everValidatedForYield() {
-        return everValidated() && 0L == mAvoidUnvalidated;
+                everValidated(), 0L != getAvoidUnvalidated(), yieldToBadWiFi(), isDestroyed());
     }
 
     /**
