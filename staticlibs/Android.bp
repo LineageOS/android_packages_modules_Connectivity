@@ -96,10 +96,7 @@ java_library {
     visibility: [
         "//packages/services/Iwlan:__subpackages__",
     ],
-    libs: [
-        "framework-annotations-lib",
-        "framework-connectivity.stubs.module_lib",
-    ],
+    libs: ["framework-annotations-lib"],
 }
 
 filegroup {
