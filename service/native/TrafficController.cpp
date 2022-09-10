@@ -181,8 +181,12 @@ Status TrafficController::initMaps() {
     return netdutils::status::ok;
 }
 
-Status TrafficController::start() {
+Status TrafficController::start(bool startSkDestroyListener) {
     RETURN_IF_NOT_OK(initMaps());
+
+    if (!startSkDestroyListener) {
+        return netdutils::status::ok;
+    }
 
     auto result = makeSkDestroyListener();
     if (!isOk(result)) {
