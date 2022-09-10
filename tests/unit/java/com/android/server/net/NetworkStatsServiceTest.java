@@ -143,6 +143,7 @@ import com.android.net.module.util.Struct.U32;
 import com.android.net.module.util.Struct.U8;
 import com.android.net.module.util.bpf.CookieTagMapKey;
 import com.android.net.module.util.bpf.CookieTagMapValue;
+import com.android.server.BpfNetMaps;
 import com.android.server.net.NetworkStatsService.AlertObserver;
 import com.android.server.net.NetworkStatsService.NetworkStatsSettings;
 import com.android.server.net.NetworkStatsService.NetworkStatsSettings.Config;
@@ -249,6 +250,10 @@ public class NetworkStatsServiceTest extends NetworkStatsBaseTest {
     @Mock
     private LocationPermissionChecker mLocationPermissionChecker;
     private TestBpfMap<U32, U8> mUidCounterSetMap = spy(new TestBpfMap<>(U32.class, U8.class));
+    @Mock
+    private BpfNetMaps mBpfNetMaps;
+    @Mock
+    private SkDestroyListener mSkDestroyListener;
 
     private TestBpfMap<CookieTagMapKey, CookieTagMapValue> mCookieTagMap = new TestBpfMap<>(
             CookieTagMapKey.class, CookieTagMapValue.class);
@@ -500,6 +505,17 @@ public class NetworkStatsServiceTest extends NetworkStatsBaseTest {
             @Override
             public boolean isDebuggable() {
                 return mIsDebuggable == Boolean.TRUE;
+            }
+
+            @Override
+            public BpfNetMaps makeBpfNetMaps(Context ctx) {
+                return mBpfNetMaps;
+            }
+
+            @Override
+            public SkDestroyListener makeSkDestroyListener(
+                    IBpfMap<CookieTagMapKey, CookieTagMapValue> cookieTagMap, Handler handler) {
+                return mSkDestroyListener;
             }
         };
     }
