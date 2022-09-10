@@ -106,7 +106,7 @@ public class StructInetDiagSockId {
             byteBuffer.get(srcAddrByte);
             byteBuffer.get(dstAddrByte);
         } else {
-            Log.e(TAG, "Invalid address family: " + family);
+            Log.wtf(TAG, "Invalid address family: " + family);
             return null;
         }
 
@@ -118,7 +118,7 @@ public class StructInetDiagSockId {
         } catch (UnknownHostException e) {
             // Should not happen. UnknownHostException is thrown only if addr byte array is of
             // illegal length.
-            Log.e(TAG, "Failed to parse address: " + e);
+            Log.wtf(TAG, "Failed to parse address: " + e);
             return null;
         }
 

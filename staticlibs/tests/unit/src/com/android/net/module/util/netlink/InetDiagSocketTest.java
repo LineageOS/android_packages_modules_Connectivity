@@ -31,6 +31,8 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
+import android.net.InetAddresses;
+
 import androidx.test.filters.SmallTest;
 import androidx.test.runner.AndroidJUnit4;
 
@@ -235,10 +237,10 @@ public class InetDiagSocketTest {
                 // inet_diag_sockid
                 "a817" +     // idiag_sport = 43031
                 "960f" +     // idiag_dport = 38415
-                "fe8000000000000086c9b2fffe6aed4b" + // idiag_src = fe80::86c9:b2ff:fe6a:ed4b
-                "00000000000000000000ffff08080808" + // idiag_dst = 8.8.8.8
-                "00000000" + // idiag_if
-                "ffffffffffffffff" + // idiag_cookie = INET_DIAG_NOCOOKIE
+                "20010db8000000000000000000000001" + // idiag_src = 2001:db8::1
+                "20010db8000000000000000000000002" + // idiag_dst = 2001:db8::2
+                "07000000" + // idiag_if = 7
+                "5800000000000000" + // idiag_cookie = 88
             "00000000" +     // idiag_expires
             "00000000" +     // idiag_rqueue
             "00000000" +     // idiag_wqueue
@@ -256,7 +258,16 @@ public class InetDiagSocketTest {
 
         assertTrue(msg instanceof InetDiagMessage);
         final InetDiagMessage inetDiagMsg = (InetDiagMessage) msg;
-        assertEquals(10147, inetDiagMsg.mStructInetDiagMsg.idiag_uid);
+        assertEquals(10147, inetDiagMsg.inetDiagMsg.idiag_uid);
+        final StructInetDiagSockId sockId = inetDiagMsg.inetDiagMsg.id;
+        assertEquals(43031, sockId.locSocketAddress.getPort());
+        assertEquals(InetAddresses.parseNumericAddress("2001:db8::1"),
+                sockId.locSocketAddress.getAddress());
+        assertEquals(38415, sockId.remSocketAddress.getPort());
+        assertEquals(InetAddresses.parseNumericAddress("2001:db8::2"),
+                sockId.remSocketAddress.getAddress());
+        assertEquals(7, sockId.ifIndex);
+        assertEquals(88, sockId.cookie);
 
         final StructNlMsgHdr hdr = inetDiagMsg.getHeader();
         assertNotNull(hdr);
