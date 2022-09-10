@@ -259,7 +259,7 @@ public class BpfNetMaps {
         Log.d(TAG, "BpfNetMaps is initialized with sEnableJavaBpfMap=" + sEnableJavaBpfMap);
 
         initBpfMaps();
-        native_init();
+        native_init(true /* startSkDestroyListener */);
         sInitialized = true;
     }
 
@@ -919,7 +919,7 @@ public class BpfNetMaps {
         native_dump(fd, verbose);
     }
 
-    private static native void native_init();
+    private static native void native_init(boolean startSkDestroyListener);
     private native int native_addNaughtyApp(int uid);
     private native int native_removeNaughtyApp(int uid);
     private native int native_addNiceApp(int uid);
