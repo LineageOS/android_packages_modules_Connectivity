@@ -71,14 +71,12 @@ public final class DnsResolver {
 
     @IntDef(prefix = { "TYPE_" },  value = {
             TYPE_A,
-            TYPE_AAAA,
-            TYPE_CNAME
+            TYPE_AAAA
     })
     @Retention(RetentionPolicy.SOURCE)
     @interface QueryType {}
     public static final int TYPE_A = 1;
     public static final int TYPE_AAAA = 28;
-    public static final int TYPE_CNAME = 5;
 
     @IntDef(prefix = { "FLAG_" }, value = {
             FLAG_EMPTY,
@@ -544,7 +542,7 @@ public final class DnsResolver {
 
         DnsAddressAnswer(@NonNull byte[] data) throws ParseException {
             super(data);
-            if ((mHeader.getFlags() & (1 << 15)) == 0) {
+            if ((mHeader.flags & (1 << 15)) == 0) {
                 throw new ParseException("Not an answer packet");
             }
             if (mHeader.getRecordCount(QDSECTION) == 0) {
