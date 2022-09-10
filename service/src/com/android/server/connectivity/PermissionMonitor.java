@@ -526,7 +526,6 @@ public class PermissionMonitor {
         // TODO : remove carryover package check in the future(b/31479477). All apps should just
         //  request the appropriate permission for their use case since android Q.
         return isCarryoverPackage(app.applicationInfo)
-                || isUidAllowedOnRestrictedNetworks(app.applicationInfo)
                 || hasPermission(app, PERMISSION_MAINLINE_NETWORK_STACK)
                 || hasPermission(app, NETWORK_STACK)
                 || hasPermission(app, CONNECTIVITY_USE_RESTRICTED_NETWORKS);
