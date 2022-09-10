@@ -116,6 +116,10 @@ public class EthernetConfigStore {
     }
 
     public void write(String iface, IpConfiguration config) {
+        final File directory = new File(APEX_IP_CONFIG_FILE_PATH);
+        if (!directory.exists()) {
+            directory.mkdirs();
+        }
         write(iface, config, APEX_IP_CONFIG_FILE_PATH + CONFIG_FILE);
     }
 

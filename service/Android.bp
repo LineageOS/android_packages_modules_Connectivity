@@ -143,6 +143,7 @@ java_library {
         "src/**/*.java",
         ":framework-connectivity-shared-srcs",
         ":services-connectivity-shared-srcs",
+        ":statslog-connectivity-java-gen",
     ],
     libs: [
         "framework-annotations-lib",
@@ -152,6 +153,7 @@ java_library {
         "framework-wifi.stubs.module_lib",
         "unsupportedappusage",
         "ServiceConnectivityResources",
+        "framework-statsd.stubs.module_lib",
     ],
     static_libs: [
         // Do not add libs here if they are already included
@@ -331,4 +333,11 @@ java_genrule {
         "--excludes $(location jarjar-excludes.txt) " +
         "--output $(out)",
     visibility: ["//visibility:private"],
+}
+
+genrule {
+  name: "statslog-connectivity-java-gen",
+  tools: ["stats-log-api-gen"],
+  cmd: "$(location stats-log-api-gen) --java $(out) --module connectivity --javaPackage com.android.server --javaClass ConnectivityStatsLog",
+  out: ["com/android/server/ConnectivityStatsLog.java"],
 }
