@@ -259,8 +259,12 @@ public class BpfNetMaps {
         Log.d(TAG, "BpfNetMaps is initialized with sEnableJavaBpfMap=" + sEnableJavaBpfMap);
 
         initBpfMaps();
-        native_init(true /* startSkDestroyListener */);
+        native_init(!sEnableJavaBpfMap /* startSkDestroyListener */);
         sInitialized = true;
+    }
+
+    public boolean isSkDestroyListenerRunning() {
+        return !sEnableJavaBpfMap;
     }
 
     /**
