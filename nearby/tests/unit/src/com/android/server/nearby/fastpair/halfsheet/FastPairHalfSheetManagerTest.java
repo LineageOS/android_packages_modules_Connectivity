@@ -69,7 +69,9 @@ import service.proto.Cache;
 
 public class FastPairHalfSheetManagerTest {
     private static final String MODEL_ID = "model_id";
-    private static final String BLEADDRESS = "11:22:44:66";
+    private static final String BLE_ADDRESS = "11:22:44:66";
+    private static final String MODEL_ID_1 = "model_id_1";
+    private static final String BLE_ADDRESS_1 = "99:99:99:99";
     private static final String NAME = "device_name";
     private static final int PASSKEY = 1234;
     private static final int SUCCESS = 1001;
@@ -115,7 +117,7 @@ public class FastPairHalfSheetManagerTest {
 
         mScanFastPairStoreItem = Cache.ScanFastPairStoreItem.newBuilder()
                 .setModelId(MODEL_ID)
-                .setAddress(BLEADDRESS)
+                .setAddress(BLE_ADDRESS)
                 .setDeviceName(NAME)
                 .build();
     }
@@ -163,10 +165,10 @@ public class FastPairHalfSheetManagerTest {
     public void testEmptyMethods() {
         mFastPairHalfSheetManager = new FastPairHalfSheetManager(mContextWrapper);
         mFastPairHalfSheetManager.destroyBluetoothPairController();
-        mFastPairHalfSheetManager.notifyPairingProcessDone(true, BLEADDRESS, null);
+        mFastPairHalfSheetManager.notifyPairingProcessDone(true, BLE_ADDRESS, null);
         mFastPairHalfSheetManager.showPairingFailed();
         mFastPairHalfSheetManager.showPairingHalfSheet(null);
-        mFastPairHalfSheetManager.showPairingSuccessHalfSheet(BLEADDRESS);
+        mFastPairHalfSheetManager.showPairingSuccessHalfSheet(BLE_ADDRESS);
         mFastPairHalfSheetManager.showPasskeyConfirmation(null, PASSKEY);
     }
 
@@ -304,7 +306,7 @@ public class FastPairHalfSheetManagerTest {
     public void showInitialPairingHalfSheet_whenUiShownAndItemWithTheSameAddress() {
         Cache.ScanFastPairStoreItem testItem = Cache.ScanFastPairStoreItem.newBuilder()
                 .setModelId(MODEL_ID)
-                .setAddress(BLEADDRESS)
+                .setAddress(BLE_ADDRESS)
                 .setDeviceName(NAME)
                 .build();
         configResolveInfoList();
@@ -328,7 +330,7 @@ public class FastPairHalfSheetManagerTest {
     public void showInitialPairingHalfSheet_whenUiShowAndItemWithDifferentAddressSameModelId() {
         Cache.ScanFastPairStoreItem testItem = Cache.ScanFastPairStoreItem.newBuilder()
                 .setModelId(MODEL_ID)
-                .setAddress("99:99:99:99:99:99")
+                .setAddress(BLE_ADDRESS_1)
                 .setDeviceName(NAME)
                 .build();
         configResolveInfoList();
@@ -350,8 +352,8 @@ public class FastPairHalfSheetManagerTest {
     @Test
     public void showInitialPairingHalfSheet_whenUiShowAndItemWithDifferentModelId() {
         Cache.ScanFastPairStoreItem testItem = Cache.ScanFastPairStoreItem.newBuilder()
-                .setModelId("0000C")
-                .setAddress("99:99:99:99:99:99")
+                .setModelId(MODEL_ID_1)
+                .setAddress(BLE_ADDRESS_1)
                 .setDeviceName(NAME)
                 .build();
         configResolveInfoList();
@@ -368,6 +370,70 @@ public class FastPairHalfSheetManagerTest {
         // the new request should be ignored. No action is required.
         verifyHalfSheetActivityIntent(1);
         verifyInitialPairingNameRunnablePostedTimes(1);
+    }
+
+    @Test
+    public void showInitialPairingHalfSheet_whenUiNotShownAndIsPairingWithTheSameAddress() {
+        Cache.ScanFastPairStoreItem testItem = Cache.ScanFastPairStoreItem.newBuilder()
+                .setModelId(MODEL_ID)
+                .setAddress(BLE_ADDRESS)
+                .setDeviceName(NAME)
+                .build();
+        configResolveInfoList();
+        mFastPairHalfSheetManager =
+                new FastPairHalfSheetManager(mContextWrapper);
+
+        mFastPairHalfSheetManager.showHalfSheet(mScanFastPairStoreItem);
+        mFastPairHalfSheetManager.setHalfSheetForeground(/* state= */ false);
+        mFastPairHalfSheetManager.setIsActivePairing(true);
+        mFastPairHalfSheetManager.showHalfSheet(testItem);
+
+        // If the half sheet is not in foreground but the system is still pairing the same device,
+        // mark as duplicate request and skip.
+        verifyHalfSheetActivityIntent(1);
+        verifyInitialPairingNameRunnablePostedTimes(1);
+    }
+
+    @Test
+    public void showInitialPairingHalfSheet_whenUiNotShownAndIsPairingWithADifferentAddress() {
+        Cache.ScanFastPairStoreItem testItem = Cache.ScanFastPairStoreItem.newBuilder()
+                .setModelId(MODEL_ID_1)
+                .setAddress(BLE_ADDRESS_1)
+                .setDeviceName(NAME)
+                .build();
+        configResolveInfoList();
+        mFastPairHalfSheetManager =
+                new FastPairHalfSheetManager(mContextWrapper);
+
+        mFastPairHalfSheetManager.showHalfSheet(mScanFastPairStoreItem);
+        mFastPairHalfSheetManager.setHalfSheetForeground(/* state= */ false);
+        mFastPairHalfSheetManager.setIsActivePairing(true);
+        mFastPairHalfSheetManager.showHalfSheet(testItem);
+
+        // shouldShowHalfSheet
+        verifyHalfSheetActivityIntent(2);
+        verifyInitialPairingNameRunnablePostedTimes(2);
+    }
+
+    @Test
+    public void showInitialPairingHalfSheet_whenUiNotShownAndIsNotPairingWithTheSameAddress() {
+        Cache.ScanFastPairStoreItem testItem = Cache.ScanFastPairStoreItem.newBuilder()
+                .setModelId(MODEL_ID)
+                .setAddress(BLE_ADDRESS)
+                .setDeviceName(NAME)
+                .build();
+        configResolveInfoList();
+        mFastPairHalfSheetManager =
+                new FastPairHalfSheetManager(mContextWrapper);
+
+        mFastPairHalfSheetManager.showHalfSheet(mScanFastPairStoreItem);
+        mFastPairHalfSheetManager.setHalfSheetForeground(/* state= */ false);
+        mFastPairHalfSheetManager.setIsActivePairing(false);
+        mFastPairHalfSheetManager.showHalfSheet(testItem);
+
+        // shouldShowHalfSheet
+        verifyHalfSheetActivityIntent(2);
+        verifyInitialPairingNameRunnablePostedTimes(2);
     }
 
     @Test
@@ -390,7 +456,7 @@ public class FastPairHalfSheetManagerTest {
                 .setFastPairStatusCallback(mFastPairStatusCallback);
 
         mFastPairHalfSheetManager.showHalfSheet(mScanFastPairStoreItem);
-        mFastPairHalfSheetManager.showPairingSuccessHalfSheet(BLEADDRESS);
+        mFastPairHalfSheetManager.showPairingSuccessHalfSheet(BLE_ADDRESS);
 
         verifyFastPairStatusCallback(1, SUCCESS);
         assertThat(mFastPairHalfSheetManager.isActivePairing()).isFalse();
@@ -403,7 +469,7 @@ public class FastPairHalfSheetManagerTest {
 
         mFastPairHalfSheetManager.showHalfSheet(mScanFastPairStoreItem);
         mFastPairHalfSheetManager.setHalfSheetForeground(false);
-        mFastPairHalfSheetManager.showPairingSuccessHalfSheet(BLEADDRESS);
+        mFastPairHalfSheetManager.showPairingSuccessHalfSheet(BLE_ADDRESS);
 
         ArgumentCaptor<NamedRunnable> captor = ArgumentCaptor.forClass(NamedRunnable.class);
 
