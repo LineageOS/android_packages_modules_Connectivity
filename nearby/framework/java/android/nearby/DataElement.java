@@ -109,7 +109,6 @@ public final class DataElement implements Parcelable {
      */
     public DataElement(int key, @NonNull byte[] value) {
         Preconditions.checkArgument(value != null, "value cannot be null");
-        Preconditions.checkArgument(isValidType(key), "key should one of DataElement.DataType");
         mKey = key;
         mValue = value;
     }
