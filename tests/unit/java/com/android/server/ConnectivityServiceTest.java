@@ -15594,11 +15594,19 @@ public class ConnectivityServiceTest {
         mServiceContext.setPermission(NETWORK_FACTORY, PERMISSION_GRANTED);
         mServiceContext.setPermission(MANAGE_TEST_NETWORKS, PERMISSION_GRANTED);
 
-        // In this test the automotive feature will be enabled.
-        mockHasSystemFeature(PackageManager.FEATURE_AUTOMOTIVE, true);
+        // Has automotive feature.
+        validateAutomotiveEthernetAllowedUids(true);
+
+        // No automotive feature.
+        validateAutomotiveEthernetAllowedUids(false);
+    }
+
+    private void validateAutomotiveEthernetAllowedUids(final boolean hasAutomotiveFeature)
+            throws Exception {
+        mockHasSystemFeature(PackageManager.FEATURE_AUTOMOTIVE, hasAutomotiveFeature);
 
         // Simulate a restricted ethernet network.
-        final NetworkCapabilities.Builder agentNetCaps = new NetworkCapabilities.Builder()
+        final NetworkCapabilities.Builder ncb = new NetworkCapabilities.Builder()
                 .addTransportType(TRANSPORT_ETHERNET)
                 .addCapability(NET_CAPABILITY_INTERNET)
                 .addCapability(NET_CAPABILITY_NOT_SUSPENDED)
@@ -15606,8 +15614,34 @@ public class ConnectivityServiceTest {
                 .removeCapability(NET_CAPABILITY_NOT_RESTRICTED);
 
         mEthernetNetworkAgent = new TestNetworkAgentWrapper(TRANSPORT_ETHERNET,
-                new LinkProperties(), agentNetCaps.build());
-        validateAllowedUids(mEthernetNetworkAgent, TRANSPORT_ETHERNET, agentNetCaps, true);
+                new LinkProperties(), ncb.build());
+
+        final ArraySet<Integer> serviceUidSet = new ArraySet<>();
+        serviceUidSet.add(TEST_PACKAGE_UID);
+
+        final TestNetworkCallback cb = new TestNetworkCallback();
+
+        mCm.requestNetwork(new NetworkRequest.Builder()
+                .addTransportType(TRANSPORT_ETHERNET)
+                .removeCapability(NET_CAPABILITY_NOT_RESTRICTED)
+                .build(), cb);
+        mEthernetNetworkAgent.connect(true);
+        cb.expectAvailableThenValidatedCallbacks(mEthernetNetworkAgent);
+
+        // Cell gets to set the service UID as access UID
+        ncb.setAllowedUids(serviceUidSet);
+        mEthernetNetworkAgent.setNetworkCapabilities(ncb.build(), true /* sendToCS */);
+        if (SdkLevel.isAtLeastT() && hasAutomotiveFeature) {
+            cb.expectCapabilitiesThat(mEthernetNetworkAgent,
+                    caps -> caps.getAllowedUids().equals(serviceUidSet));
+        } else {
+            // S and no automotive feature must ignore access UIDs.
+            cb.assertNoCallback(TEST_CALLBACK_TIMEOUT_MS);
+        }
+
+        mEthernetNetworkAgent.disconnect();
+        cb.expectCallback(CallbackEntry.LOST, mEthernetNetworkAgent);
+        mCm.unregisterNetworkCallback(cb);
     }
 
     @Test
@@ -15621,7 +15655,7 @@ public class ConnectivityServiceTest {
 
         // Simulate a restricted telephony network. The telephony factory is entitled to set
         // the access UID to the service package on any of its restricted networks.
-        final NetworkCapabilities.Builder agentNetCaps = new NetworkCapabilities.Builder()
+        final NetworkCapabilities.Builder ncb = new NetworkCapabilities.Builder()
                 .addTransportType(TRANSPORT_CELLULAR)
                 .addCapability(NET_CAPABILITY_INTERNET)
                 .addCapability(NET_CAPABILITY_NOT_SUSPENDED)
@@ -15630,13 +15664,8 @@ public class ConnectivityServiceTest {
                 .setNetworkSpecifier(new TelephonyNetworkSpecifier(1 /* subid */));
 
         mCellNetworkAgent = new TestNetworkAgentWrapper(TRANSPORT_CELLULAR,
-                new LinkProperties(), agentNetCaps.build());
-        validateAllowedUids(mCellNetworkAgent, TRANSPORT_CELLULAR, agentNetCaps, false);
-    }
+                new LinkProperties(), ncb.build());
 
-    private void validateAllowedUids(final TestNetworkAgentWrapper testAgent,
-            @NetworkCapabilities.Transport final int transportUnderTest,
-            final NetworkCapabilities.Builder ncb, final boolean forAutomotive) throws Exception {
         final ArraySet<Integer> serviceUidSet = new ArraySet<>();
         serviceUidSet.add(TEST_PACKAGE_UID);
         final ArraySet<Integer> nonServiceUidSet = new ArraySet<>();
@@ -15647,34 +15676,28 @@ public class ConnectivityServiceTest {
 
         final TestNetworkCallback cb = new TestNetworkCallback();
 
-        /* Test setting UIDs */
         // Cell gets to set the service UID as access UID
         mCm.requestNetwork(new NetworkRequest.Builder()
-                .addTransportType(transportUnderTest)
+                .addTransportType(TRANSPORT_CELLULAR)
                 .removeCapability(NET_CAPABILITY_NOT_RESTRICTED)
                 .build(), cb);
-        testAgent.connect(true);
-        cb.expectAvailableThenValidatedCallbacks(testAgent);
+        mCellNetworkAgent.connect(true);
+        cb.expectAvailableThenValidatedCallbacks(mCellNetworkAgent);
         ncb.setAllowedUids(serviceUidSet);
-        testAgent.setNetworkCapabilities(ncb.build(), true /* sendToCS */);
+        mCellNetworkAgent.setNetworkCapabilities(ncb.build(), true /* sendToCS */);
         if (SdkLevel.isAtLeastT()) {
-            cb.expectCapabilitiesThat(testAgent,
+            cb.expectCapabilitiesThat(mCellNetworkAgent,
                     caps -> caps.getAllowedUids().equals(serviceUidSet));
         } else {
             // S must ignore access UIDs.
             cb.assertNoCallback(TEST_CALLBACK_TIMEOUT_MS);
         }
 
-        /* Test setting UIDs is rejected when expected */
-        if (forAutomotive) {
-            mockHasSystemFeature(PackageManager.FEATURE_AUTOMOTIVE, false);
-        }
-
         // ...but not to some other UID. Rejection sets UIDs to the empty set
         ncb.setAllowedUids(nonServiceUidSet);
-        testAgent.setNetworkCapabilities(ncb.build(), true /* sendToCS */);
+        mCellNetworkAgent.setNetworkCapabilities(ncb.build(), true /* sendToCS */);
         if (SdkLevel.isAtLeastT()) {
-            cb.expectCapabilitiesThat(testAgent,
+            cb.expectCapabilitiesThat(mCellNetworkAgent,
                     caps -> caps.getAllowedUids().isEmpty());
         } else {
             // S must ignore access UIDs.
@@ -15683,18 +15706,18 @@ public class ConnectivityServiceTest {
 
         // ...and also not to multiple UIDs even including the service UID
         ncb.setAllowedUids(serviceUidSetPlus);
-        testAgent.setNetworkCapabilities(ncb.build(), true /* sendToCS */);
+        mCellNetworkAgent.setNetworkCapabilities(ncb.build(), true /* sendToCS */);
         cb.assertNoCallback(TEST_CALLBACK_TIMEOUT_MS);
 
-        testAgent.disconnect();
-        cb.expectCallback(CallbackEntry.LOST, testAgent);
+        mCellNetworkAgent.disconnect();
+        cb.expectCallback(CallbackEntry.LOST, mCellNetworkAgent);
         mCm.unregisterNetworkCallback(cb);
 
         // Must be unset before touching the transports, because remove and add transport types
         // check the specifier on the builder immediately, contradicting normal builder semantics
         // TODO : fix the builder
         ncb.setNetworkSpecifier(null);
-        ncb.removeTransportType(transportUnderTest);
+        ncb.removeTransportType(TRANSPORT_CELLULAR);
         ncb.addTransportType(TRANSPORT_WIFI);
         // Wifi does not get to set access UID, even to the correct UID
         mCm.requestNetwork(new NetworkRequest.Builder()
