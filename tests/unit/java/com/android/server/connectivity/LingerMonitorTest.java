@@ -21,6 +21,7 @@ import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.anyBoolean;
 import static org.mockito.Mockito.anyInt;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.reset;
@@ -30,6 +31,7 @@ import static org.mockito.Mockito.when;
 
 import android.app.PendingIntent;
 import android.content.Context;
+import android.content.pm.PackageManager;
 import android.content.res.Resources;
 import android.net.ConnectivityManager;
 import android.net.ConnectivityResources;
@@ -85,12 +87,14 @@ public class LingerMonitorTest {
     @Mock NetworkNotificationManager mNotifier;
     @Mock Resources mResources;
     @Mock QosCallbackTracker mQosCallbackTracker;
+    @Mock PackageManager mPackageManager;
 
     @Before
     public void setUp() {
         MockitoAnnotations.initMocks(this);
         when(mCtx.getResources()).thenReturn(mResources);
         when(mCtx.getPackageName()).thenReturn("com.android.server.connectivity");
+        doReturn(mPackageManager).when(mCtx).getPackageManager();
         ConnectivityResources.setResourcesContextForTest(mCtx);
 
         mMonitor = new TestableLingerMonitor(mCtx, mNotifier, HIGH_DAILY_LIMIT, HIGH_RATE_LIMIT);
