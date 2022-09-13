@@ -804,6 +804,26 @@ class EthernetManagerTest {
     }
 
     @Test
+    fun testEnableDisableInterface_withoutStateChange() {
+        val iface = createInterface()
+        // Interface is already enabled, so enableInterface() should return success
+        enableInterface(iface).expectResult(iface.name)
+
+        disableInterface(iface).expectResult(iface.name)
+        // Interface is already disabled, so disableInterface() should return success.
+        disableInterface(iface).expectResult(iface.name)
+    }
+
+    @Test
+    fun testEnableDisableInterface_withMissingInterface() {
+        val iface = createInterface()
+        removeInterface(iface)
+        // Interface does not exist, enable/disableInterface() should both return an error.
+        enableInterface(iface).expectError()
+        disableInterface(iface).expectError()
+    }
+
+    @Test
     fun testUpdateConfiguration_forBothIpConfigAndCapabilities() {
         val iface = createInterface()
         val cb = requestNetwork(ETH_REQUEST.createCopyWithEthernetSpecifier(iface.name))
