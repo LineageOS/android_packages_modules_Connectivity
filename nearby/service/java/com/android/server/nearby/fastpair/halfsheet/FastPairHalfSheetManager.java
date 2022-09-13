@@ -154,6 +154,15 @@ public class FastPairHalfSheetManager {
         if (mIsHalfSheetForeground) {
             updateForegroundHalfSheet(scanFastPairStoreItem);
             return;
+        } else {
+            // If the half sheet is not in foreground but the system is still pairing
+            // with the same device, mark as duplicate request and skip.
+            if (mCurrentScanFastPairStoreItem != null && mIsActivePairing
+                    && mCurrentScanFastPairStoreItem.getAddress().toLowerCase(Locale.ROOT)
+                    .equals(scanFastPairStoreItem.getAddress().toLowerCase(Locale.ROOT))) {
+                Log.d(TAG, "Same device is pairing.");
+                return;
+            }
         }
 
         try {
@@ -501,6 +510,12 @@ public class FastPairHalfSheetManager {
     @VisibleForTesting
     public boolean isActivePairing() {
         return mIsActivePairing;
+    }
+
+    /** Sets fast pair to be active pairing or not, used for testing. */
+    @VisibleForTesting
+    public void setIsActivePairing(boolean isActivePairing) {
+        mIsActivePairing = isActivePairing;
     }
 
     /**
