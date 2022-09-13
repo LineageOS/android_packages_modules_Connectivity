@@ -5238,6 +5238,16 @@ public class ConnectivityService extends IConnectivityManager.Stub
             // network was found not to have Internet access.
             nai.updateScoreForNetworkAgentUpdate();
             rematchAllNetworksAndRequests();
+
+            // Also, if this is WiFi and it should be preferred actively, now is the time to
+            // prompt the user that they walked past and connected to a bad WiFi.
+            if (nai.networkCapabilities.hasTransport(TRANSPORT_WIFI)
+                    && !avoidBadWifi()
+                    && activelyPreferBadWifi()) {
+                // The notification will be removed if the network validates or disconnects.
+                showNetworkNotification(nai, NotificationType.LOST_INTERNET);
+                return;
+            }
         }
 
         if (!shouldPromptUnvalidated(nai)) return;
