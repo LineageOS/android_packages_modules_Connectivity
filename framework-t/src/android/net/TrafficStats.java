@@ -239,8 +239,7 @@ public class TrafficStats {
 
     private static class SocketTagger extends dalvik.system.SocketTagger {
 
-        // TODO: set to false
-        private static final boolean LOGD = true;
+        private static final boolean LOGD = false;
 
         SocketTagger() {
         }
