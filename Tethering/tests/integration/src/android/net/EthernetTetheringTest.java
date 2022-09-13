@@ -16,6 +16,7 @@
 
 package android.net;
 
+import static android.Manifest.permission.CONNECTIVITY_USE_RESTRICTED_NETWORKS;
 import static android.Manifest.permission.DUMP;
 import static android.Manifest.permission.MANAGE_TEST_NETWORKS;
 import static android.Manifest.permission.NETWORK_SETTINGS;
@@ -75,6 +76,7 @@ import androidx.test.InstrumentationRegistry;
 import androidx.test.filters.MediumTest;
 import androidx.test.runner.AndroidJUnit4;
 
+import com.android.modules.utils.build.SdkLevel;
 import com.android.net.module.util.BpfDump;
 import com.android.net.module.util.Ipv6Utils;
 import com.android.net.module.util.PacketBuilder;
@@ -314,6 +316,13 @@ public class EthernetTetheringTest {
     }
 
     private boolean isInterfaceForTetheringAvailable() throws Exception {
+        // Before T, all ethernet interfaces could be used for server mode. Instead of
+        // waiting timeout, just checking whether the system currently has any
+        // ethernet interface is more reliable.
+        if (!SdkLevel.isAtLeastT()) {
+            return runAsShell(CONNECTIVITY_USE_RESTRICTED_NETWORKS, () -> mEm.isAvailable());
+        }
+
         // If previous test case doesn't release tethering interface successfully, the other tests
         // after that test may be skipped as unexcepted.
         // TODO: figure out a better way to check default tethering interface existenion.
