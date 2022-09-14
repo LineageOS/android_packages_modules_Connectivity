@@ -2741,6 +2741,12 @@ public class NetworkStatsService extends INetworkStatsService.Stub {
             }
 
             pw.println();
+            pw.println("InterfaceMapUpdater:");
+            pw.increaseIndent();
+            mInterfaceMapUpdater.dump(pw);
+            pw.decreaseIndent();
+
+            pw.println();
             pw.println("BPF map status:");
             pw.increaseIndent();
             dumpMapStatus(pw);
