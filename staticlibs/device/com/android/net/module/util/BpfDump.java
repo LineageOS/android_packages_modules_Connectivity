@@ -15,6 +15,8 @@
  */
 package com.android.net.module.util;
 
+import static android.system.OsConstants.R_OK;
+
 import android.system.ErrnoException;
 import android.system.Os;
 import android.util.Base64;
@@ -107,6 +109,24 @@ public class BpfDump {
             });
         } catch (ErrnoException e) {
             pw.println("Map dump end with error: " + Os.strerror(e.errno));
+        }
+    }
+
+    /**
+     * Dump the BpfMap status
+     */
+    public static <K extends Struct, V extends Struct> void dumpMapStatus(IBpfMap<K, V> map,
+            PrintWriter pw, String mapName, String path) {
+        if (map != null) {
+            pw.println(mapName + ": OK");
+            return;
+        }
+        try {
+            Os.access(path, R_OK);
+            pw.println(mapName + ": NULL(map is pinned to " + path + ")");
+        } catch (ErrnoException e) {
+            pw.println(mapName + ": NULL(map is not pinned to " + path + ": "
+                    + Os.strerror(e.errno) + ")");
         }
     }
 
