@@ -2741,6 +2741,12 @@ public class NetworkStatsService extends INetworkStatsService.Stub {
             }
 
             pw.println();
+            pw.println("InterfaceMapUpdater:");
+            pw.increaseIndent();
+            mInterfaceMapUpdater.dump(pw);
+            pw.decreaseIndent();
+
+            pw.println();
             pw.println("BPF map status:");
             pw.increaseIndent();
             dumpMapStatus(pw);
@@ -2755,6 +2761,8 @@ public class NetworkStatsService extends INetworkStatsService.Stub {
             dumpCookieTagMapLocked(pw);
             dumpUidCounterSetMapLocked(pw);
             dumpAppUidStatsMapLocked(pw);
+            dumpStatsMapLocked(mStatsMapA, pw, "mStatsMapA");
+            dumpStatsMapLocked(mStatsMapB, pw, "mStatsMapB");
             pw.decreaseIndent();
         }
     }
@@ -2840,6 +2848,8 @@ public class NetworkStatsService extends INetworkStatsService.Stub {
         pw.println("mUidCounterSetMap: "
                 + getMapStatus(mUidCounterSetMap, UID_COUNTERSET_MAP_PATH));
         pw.println("mAppUidStatsMap: " + getMapStatus(mAppUidStatsMap, APP_UID_STATS_MAP_PATH));
+        pw.println("mStatsMapA: " + getMapStatus(mStatsMapA, STATS_MAP_A_PATH));
+        pw.println("mStatsMapB: " + getMapStatus(mStatsMapB, STATS_MAP_B_PATH));
     }
 
     @GuardedBy("mStatsLock")
@@ -2874,6 +2884,30 @@ public class NetworkStatsService extends INetworkStatsService.Stub {
                         + value.rxPackets + " "
                         + value.txBytes + " "
                         + value.txPackets);
+    }
+
+    @GuardedBy("mStatsLock")
+    private void dumpStatsMapLocked(final IBpfMap<StatsMapKey, StatsMapValue> statsMap,
+            final IndentingPrintWriter pw, final String mapName) {
+        if (statsMap == null) {
+            return;
+        }
+
+        BpfDump.dumpMap(statsMap, pw, mapName,
+                "ifaceIndex ifaceName tag_hex uid_int cnt_set rxBytes rxPackets txBytes txPackets",
+                (key, value) -> {
+                    final long ifIndex = key.ifaceIndex;
+                    final String ifName = mInterfaceMapUpdater.getIfNameByIndex(ifIndex);
+                    return ifIndex + " "
+                            + (ifName != null ? ifName : "unknown") + " "
+                            + "0x" + Long.toHexString(key.tag) + " "
+                            + key.uid + " "
+                            + key.counterSet + " "
+                            + value.rxBytes + " "
+                            + value.rxPackets + " "
+                            + value.txBytes + " "
+                            + value.txPackets;
+                });
     }
 
     private NetworkStats readNetworkStatsSummaryDev() {
