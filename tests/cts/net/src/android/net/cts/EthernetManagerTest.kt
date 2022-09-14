@@ -312,10 +312,12 @@ class EthernetManagerTest {
         private val result = CompletableFuture<String>()
 
         override fun onResult(iface: String) {
+            assertFalse(result.isDone())
             result.complete(iface)
         }
 
         override fun onError(e: EthernetNetworkManagementException) {
+            assertFalse(result.isDone())
             result.completeExceptionally(e)
         }
 
