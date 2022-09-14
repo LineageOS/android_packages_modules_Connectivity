@@ -60,7 +60,6 @@ constexpr uid_t TEST_UID3 = 98765;
 constexpr uint32_t TEST_TAG = 42;
 constexpr uint32_t TEST_COUNTERSET = 1;
 constexpr int TEST_COOKIE = 1;
-constexpr char TEST_IFNAME[] = "test0";
 constexpr int TEST_IFINDEX = 999;
 constexpr int RXPACKETS = 1;
 constexpr int RXBYTES = 100;
@@ -794,11 +793,6 @@ TEST_F(TrafficControllerTest, TestDumpsys) {
         "mCookieTagMap:",
         fmt::format("cookie={} tag={:#x} uid={}", TEST_COOKIE, TEST_TAG, TEST_UID)};
 
-    populateFakeIfaceIndexName(TEST_IFNAME, TEST_IFINDEX);
-    expectedLines.emplace_back("mIfaceIndexNameMap:");
-    expectedLines.emplace_back(fmt::format("ifaceIndex={} ifaceName={}",
-                                           TEST_IFINDEX, TEST_IFNAME));
-
     ASSERT_TRUE(isOk(updateUidOwnerMaps({TEST_UID}, HAPPY_BOX_MATCH,
                                         TrafficController::IptOpInsert)));
     expectedLines.emplace_back("mUidOwnerMap:");
@@ -824,7 +818,6 @@ TEST_F(TrafficControllerTest, dumpsysInvalidMaps) {
 
     std::vector<std::string> expectedLines = {
         fmt::format("mCookieTagMap {}", kErrIterate),
-        fmt::format("mIfaceIndexNameMap {}", kErrIterate),
         fmt::format("mIfaceStatsMap {}", kErrIterate),
         fmt::format("mConfigurationMap {}", kErrReadRulesConfig),
         fmt::format("mConfigurationMap {}", kErrReadStatsMapConfig),

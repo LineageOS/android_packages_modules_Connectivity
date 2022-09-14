@@ -22,10 +22,12 @@ import android.os.IBinder;
 import android.os.RemoteException;
 import android.os.ServiceSpecificException;
 import android.system.ErrnoException;
+import android.util.IndentingPrintWriter;
 import android.util.Log;
 
 import com.android.internal.annotations.VisibleForTesting;
 import com.android.net.module.util.BaseNetdUnsolicitedEventListener;
+import com.android.net.module.util.BpfDump;
 import com.android.net.module.util.BpfMap;
 import com.android.net.module.util.IBpfMap;
 import com.android.net.module.util.InterfaceParams;
@@ -150,5 +152,23 @@ public class BpfInterfaceMapUpdater {
             Log.e(TAG, "Failed to get entry for index " + index + ": " + e);
             return null;
         }
+    }
+
+    /**
+     * Dump BPF map
+     *
+     * @param pw print writer
+     */
+    public void dump(final IndentingPrintWriter pw) {
+        pw.println("BPF map status:");
+        pw.increaseIndent();
+        BpfDump.dumpMapStatus(mBpfMap, pw, "IfaceIndexNameMap", IFACE_INDEX_NAME_MAP_PATH);
+        pw.decreaseIndent();
+        pw.println("BPF map content:");
+        pw.increaseIndent();
+        BpfDump.dumpMap(mBpfMap, pw, "IfaceIndexNameMap",
+                (key, value) -> "ifaceIndex=" + key.val
+                        + " ifaceName=" + value.getInterfaceNameString());
+        pw.decreaseIndent();
     }
 }
