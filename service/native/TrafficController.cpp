@@ -647,19 +647,6 @@ void TrafficController::dump(int fd, bool verbose) {
         dw.println("mCookieTagMap print end with error: %s", res.error().message().c_str());
     }
 
-    // Print ifaceIndexToNameMap content.
-    dumpBpfMap("mIfaceIndexNameMap", dw, "");
-    const auto printIfaceNameInfo = [&dw](const uint32_t& key, const IfaceValue& value,
-                                          const BpfMap<uint32_t, IfaceValue>&) {
-        const char* ifname = value.name;
-        dw.println("ifaceIndex=%u ifaceName=%s", key, ifname);
-        return base::Result<void>();
-    };
-    res = mIfaceIndexNameMap.iterateWithValue(printIfaceNameInfo);
-    if (!res.ok()) {
-        dw.println("mIfaceIndexNameMap print end with error: %s", res.error().message().c_str());
-    }
-
     // Print ifaceStatsMap content
     std::string ifaceStatsHeader = StringPrintf("ifaceIndex ifaceName rxBytes rxPackets txBytes"
                                                 " txPackets");
