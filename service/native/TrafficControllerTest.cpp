@@ -792,12 +792,7 @@ TEST_F(TrafficControllerTest, TestDumpsys) {
     // 999 test0 0x2a 10086 1 100 1 0 0
     std::vector<std::string> expectedLines = {
         "mCookieTagMap:",
-        fmt::format("cookie={} tag={:#x} uid={}", TEST_COOKIE, TEST_TAG, TEST_UID),
-        "mStatsMapA",
-        "ifaceIndex ifaceName tag_hex uid_int cnt_set rxBytes rxPackets txBytes txPackets",
-        fmt::format("{} {} {:#x} {} {} {} {} {} {}",
-                    TEST_IFINDEX, TEST_IFNAME, TEST_TAG, TEST_UID, TEST_COUNTERSET, RXBYTES,
-                    RXPACKETS, TXBYTES, TXPACKETS)};
+        fmt::format("cookie={} tag={:#x} uid={}", TEST_COOKIE, TEST_TAG, TEST_UID)};
 
     populateFakeIfaceIndexName(TEST_IFNAME, TEST_IFINDEX);
     expectedLines.emplace_back("mIfaceIndexNameMap:");
@@ -829,8 +824,6 @@ TEST_F(TrafficControllerTest, dumpsysInvalidMaps) {
 
     std::vector<std::string> expectedLines = {
         fmt::format("mCookieTagMap {}", kErrIterate),
-        fmt::format("mStatsMapA {}", kErrIterate),
-        fmt::format("mStatsMapB {}", kErrIterate),
         fmt::format("mIfaceIndexNameMap {}", kErrIterate),
         fmt::format("mIfaceStatsMap {}", kErrIterate),
         fmt::format("mConfigurationMap {}", kErrReadRulesConfig),
