@@ -257,7 +257,14 @@ public class DevicePairingFragment extends HalfSheetModuleFragment implements
     public void onStart() {
         super.onStart();
         Log.v(TAG, "onStart: invalidate states");
-        invalidateState();
+        // If the fragmentState is not NOT_STARTED, it is because the fragment was just resumed from
+        // configuration change (e.g. rotating the screen or half-sheet resurface). Let's recover
+        // the UI directly.
+        if (mFragmentState != NOT_STARTED) {
+            setState(mFragmentState);
+        } else {
+            invalidateState();
+        }
     }
 
     @Override
@@ -482,8 +489,7 @@ public class DevicePairingFragment extends HalfSheetModuleFragment implements
             case FAILED:
                 return mScanFastPairStoreItem.getFastPairStrings().getPairingFailDescription();
             case PAIRED_UNLAUNCHABLE:
-                getString(R.string.fast_pair_device_ready);
-            // fall through
+                return getString(R.string.fast_pair_device_ready);
             case FOUND_DEVICE:
             case NOT_STARTED:
                 return mScanFastPairStoreItem.getFastPairStrings().getInitialPairingDescription();
