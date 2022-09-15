@@ -449,36 +449,6 @@ public class UpstreamNetworkMonitorTest {
     }
 
     @Test
-    public void testGetCurrentPreferredUpstream_TestNetworkPreferred() throws Exception {
-        mUNM.startTrackDefaultNetwork(mEntitleMgr);
-        mUNM.startObserveAllNetworks();
-        mUNM.setUpstreamConfig(true /* autoUpstream */, false /* dunRequired */);
-        mUNM.setTryCell(true);
-        mUNM.setPreferTestNetworks(true);
-
-        // [1] Mobile connects, DUN not required -> mobile selected.
-        final TestNetworkAgent cellAgent = new TestNetworkAgent(mCM, CELL_CAPABILITIES);
-        cellAgent.fakeConnect();
-        mCM.makeDefaultNetwork(cellAgent);
-        mLooper.dispatchAll();
-        assertEquals(cellAgent.networkId, mUNM.getCurrentPreferredUpstream().network);
-        assertEquals(0, mCM.mRequested.size());
-
-        // [2] Test network connects -> test network selected.
-        final TestNetworkAgent testAgent =
-                TestNetworkAgent.buildTestNetworkAgentForTestNetwork(mCM);
-        testAgent.fakeConnect();
-        mLooper.dispatchAll();
-        assertEquals(testAgent.networkId, mUNM.getCurrentPreferredUpstream().network);
-        assertEquals(0, mCM.mRequested.size());
-
-        // [3] Disable test networks preferred -> mobile selected.
-        mUNM.setPreferTestNetworks(false);
-        assertEquals(cellAgent.networkId, mUNM.getCurrentPreferredUpstream().network);
-        assertEquals(0, mCM.mRequested.size());
-    }
-
-    @Test
     public void testLocalPrefixes() throws Exception {
         mUNM.startTrackDefaultNetwork(mEntitleMgr);
         mUNM.startObserveAllNetworks();

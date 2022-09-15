@@ -19,7 +19,6 @@ package com.android.networkstack.tethering;
 import static android.net.NetworkCapabilities.NET_CAPABILITY_DUN;
 import static android.net.NetworkCapabilities.NET_CAPABILITY_INTERNET;
 import static android.net.NetworkCapabilities.TRANSPORT_CELLULAR;
-import static android.net.NetworkCapabilities.TRANSPORT_TEST;
 
 import static com.android.networkstack.apishim.common.ShimUtils.isAtLeastS;
 
@@ -328,28 +327,6 @@ public class TestConnectivityManager extends ConnectivityManager {
             networkCapabilities = state.networkCapabilities;
             linkProperties = state.linkProperties;
             this.legacyType = toLegacyType(networkCapabilities);
-        }
-
-        // Used for test network only because ConnectivityManager.networkCapabilitiesForType
-        // doesn't support "TRANSPORT_TEST -> TYPE_TEST" in #matchesLegacyType. Beware of
-        // satisfiedByNetworkCapabilities doesn't check on new |networkCapabilities| as
-        // #matchesLegacyType.
-        // TODO: refactor when tethering no longer uses CONNECTIVITY_ACTION.
-        private TestNetworkAgent(TestConnectivityManager cm) {
-            this.cm = cm;
-            networkId = new Network(cm.getNetworkId());
-            networkCapabilities = new NetworkCapabilities.Builder()
-                    .addTransportType(TRANSPORT_TEST)
-                    .addCapability(NET_CAPABILITY_INTERNET)
-                    .build();
-            linkProperties = new LinkProperties();
-            legacyType = TYPE_TEST;
-        }
-
-        // TODO: refactor when tethering no longer uses CONNECTIVITY_ACTION.
-        public static TestNetworkAgent buildTestNetworkAgentForTestNetwork(
-                TestConnectivityManager cm) {
-            return new TestNetworkAgent(cm);
         }
 
         private static int toLegacyType(NetworkCapabilities nc) {
