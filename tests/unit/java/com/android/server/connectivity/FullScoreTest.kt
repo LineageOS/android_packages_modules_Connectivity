@@ -29,6 +29,7 @@ import androidx.test.filters.SmallTest
 import com.android.server.connectivity.FullScore.MAX_CS_MANAGED_POLICY
 import com.android.server.connectivity.FullScore.MIN_CS_MANAGED_POLICY
 import com.android.server.connectivity.FullScore.POLICY_ACCEPT_UNVALIDATED
+import com.android.server.connectivity.FullScore.POLICY_EVER_EVALUATED
 import com.android.server.connectivity.FullScore.POLICY_EVER_USER_SELECTED
 import com.android.server.connectivity.FullScore.POLICY_IS_DESTROYED
 import com.android.server.connectivity.FullScore.POLICY_IS_UNMETERED
@@ -56,6 +57,7 @@ class FullScoreTest {
         vpn: Boolean = false,
         onceChosen: Boolean = false,
         acceptUnvalidated: Boolean = false,
+        everEvaluated: Boolean = true,
         destroyed: Boolean = false
     ): FullScore {
         val nac = NetworkAgentConfig.Builder().apply {
@@ -67,7 +69,7 @@ class FullScoreTest {
             if (validated) addCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
         }.build()
         return mixInScore(nc, nac, validated, false /* avoidUnvalidated */,
-                false /* yieldToBadWifi */, destroyed)
+                false /* yieldToBadWifi */, everEvaluated, destroyed)
     }
 
     private val TAG = this::class.simpleName
@@ -123,6 +125,7 @@ class FullScoreTest {
         assertTrue(ns.withPolicies(onceChosen = true).hasPolicy(POLICY_EVER_USER_SELECTED))
         assertTrue(ns.withPolicies(acceptUnvalidated = true).hasPolicy(POLICY_ACCEPT_UNVALIDATED))
         assertTrue(ns.withPolicies(destroyed = true).hasPolicy(POLICY_IS_DESTROYED))
+        assertTrue(ns.withPolicies(everEvaluated = true).hasPolicy(POLICY_EVER_EVALUATED))
     }
 
     @Test
