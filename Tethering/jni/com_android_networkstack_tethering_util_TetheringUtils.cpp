@@ -49,8 +49,10 @@ static void com_android_networkstack_tethering_util_setupIcmpFilter(JNIEnv *env,
         BPF_STMT(BPF_LD  | BPF_B   | BPF_ABS,  kICMPv6TypeOffset),
         BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K,    type, 0, 1),
 
-        // Accept or reject.
+        // Accept.
         BPF_STMT(BPF_RET | BPF_K,              0xffff),
+
+        // Reject.
         BPF_STMT(BPF_RET | BPF_K,              0)
     };
 
