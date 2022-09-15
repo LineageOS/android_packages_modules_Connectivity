@@ -309,7 +309,7 @@ java_genrule {
     ],
     out: ["service_connectivity_jarjar_rules.txt"],
     cmd: "$(location jarjar-rules-generator) " +
-        "--jars $(location :service-connectivity-pre-jarjar{.jar}) " +
+        "$(location :service-connectivity-pre-jarjar{.jar}) " +
         "$(location :service-connectivity-tiramisu-pre-jarjar{.jar}) " +
         "--prefix android.net.connectivity " +
         "--excludes $(location jarjar-excludes.txt) " +
@@ -328,7 +328,7 @@ java_genrule {
     ],
     out: ["service_nearby_jarjar_rules.txt"],
     cmd: "$(location jarjar-rules-generator) " +
-        "--jars $(location :service-nearby-pre-jarjar{.jar}) " +
+        "$(location :service-nearby-pre-jarjar{.jar}) " +
         "--prefix com.android.server.nearby " +
         "--excludes $(location jarjar-excludes.txt) " +
         "--output $(out)",
