@@ -353,22 +353,6 @@ public class EthernetTrackerTest {
     }
 
     @Test
-    public void testEnableInterfaceCorrectlyCallsFactory() {
-        tracker.enableInterface(TEST_IFACE, NULL_CB);
-        waitForIdle();
-
-        verify(mFactory).updateInterfaceLinkState(eq(TEST_IFACE), eq(true /* up */));
-    }
-
-    @Test
-    public void testDisableInterfaceCorrectlyCallsFactory() {
-        tracker.disableInterface(TEST_IFACE, NULL_CB);
-        waitForIdle();
-
-        verify(mFactory).updateInterfaceLinkState(eq(TEST_IFACE), eq(false /* up */));
-    }
-
-    @Test
     public void testIsValidTestInterfaceIsFalseWhenTestInterfacesAreNotIncluded() {
         final String validIfaceName = TEST_TAP_PREFIX + "123";
         tracker.setIncludeTestInterfaces(false);
