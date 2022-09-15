@@ -1022,6 +1022,8 @@ public class BpfNetMaps {
         }
         mDeps.nativeDump(fd, verbose);
 
+        pw.println();
+        pw.println("sEnableJavaBpfMap: " + sEnableJavaBpfMap);
         if (verbose) {
             pw.println();
             pw.println("BPF map content:");
