@@ -1434,7 +1434,7 @@ public class VpnTest extends VpnTestBase {
         final ArgumentCaptor<NetworkCallback> networkCallbackCaptor =
                 ArgumentCaptor.forClass(NetworkCallback.class);
         verify(mConnectivityManager, timeout(TEST_TIMEOUT_MS))
-                .requestNetwork(any(), networkCallbackCaptor.capture());
+                .registerSystemDefaultNetworkCallback(networkCallbackCaptor.capture(), any());
 
         // onAvailable() will trigger onDefaultNetworkChanged(), so NetdUtils#setInterfaceUp will be
         // invoked. Set the return value of INetd#interfaceGetCfg to prevent NullPointerException.
