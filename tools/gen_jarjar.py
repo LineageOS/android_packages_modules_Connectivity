@@ -28,8 +28,8 @@ from zipfile import ZipFile
 def parse_arguments(argv):
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        '--jars', nargs='+',
-        help='Path to pre-jarjar JAR. Can be followed by multiple space-separated paths.')
+        'jars', nargs='+',
+        help='Path to pre-jarjar JAR. Multiple jars can be specified.')
     parser.add_argument(
         '--prefix', required=True,
         help='Package prefix to use for jarjared classes, '
@@ -37,18 +37,17 @@ def parse_arguments(argv):
     parser.add_argument(
         '--output', required=True, help='Path to output jarjar rules file.')
     parser.add_argument(
-        '--apistubs', nargs='*', default=[],
-        help='Path to API stubs jar. Classes that are API will not be jarjared. Can be followed by '
-             'multiple space-separated paths.')
+        '--apistubs', action='append', default=[],
+        help='Path to API stubs jar. Classes that are API will not be jarjared. Can be repeated to '
+             'specify multiple jars.')
     parser.add_argument(
-        '--unsupportedapi', nargs='*', default=[],
-        help='Path to UnsupportedAppUsage hidden API .txt lists. '
-             'Classes that have UnsupportedAppUsage API will not be jarjared. Can be followed by '
-             'multiple space-separated paths.')
+        '--unsupportedapi',
+        help='Column(:)-separated paths to UnsupportedAppUsage hidden API .txt lists. '
+             'Classes that have UnsupportedAppUsage API will not be jarjared.')
     parser.add_argument(
-        '--excludes', nargs='*', default=[],
-        help='Path to files listing classes that should not be jarjared. Can be followed by '
-             'multiple space-separated paths. '
+        '--excludes', action='append', default=[],
+        help='Path to files listing classes that should not be jarjared. Can be repeated to '
+             'specify multiple files.'
              'Each file should contain one full-match regex per line. Empty lines or lines '
              'starting with "#" are ignored.')
     return parser.parse_args(argv)
@@ -103,8 +102,10 @@ def make_jarjar_rules(args):
     for apistubs_file in args.apistubs:
         excluded_classes.update(_list_toplevel_jar_classes(apistubs_file))
 
-    for unsupportedapi_file in args.unsupportedapi:
-        excluded_classes.update(_list_hiddenapi_classes(unsupportedapi_file))
+    unsupportedapi_files = (args.unsupportedapi and args.unsupportedapi.split(':')) or []
+    for unsupportedapi_file in unsupportedapi_files:
+        if unsupportedapi_file:
+            excluded_classes.update(_list_hiddenapi_classes(unsupportedapi_file))
 
     exclude_regexes = []
     for exclude_file in args.excludes:
