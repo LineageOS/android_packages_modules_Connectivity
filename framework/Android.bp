@@ -228,12 +228,13 @@ java_genrule {
     ],
     out: ["framework_connectivity_jarjar_rules.txt"],
     cmd: "$(location jarjar-rules-generator) " +
-        "--jars $(location :framework-connectivity-pre-jarjar{.jar}) " +
+        "$(location :framework-connectivity-pre-jarjar{.jar}) " +
         "$(location :framework-connectivity-t-pre-jarjar{.jar}) " +
         "--prefix android.net.connectivity " +
         "--apistubs $(location :framework-connectivity.stubs.module_lib{.jar}) " +
-        "$(location :framework-connectivity-t.stubs.module_lib{.jar}) " +
-        "--unsupportedapi $(locations :connectivity-hiddenapi-files) " +
+        "--apistubs $(location :framework-connectivity-t.stubs.module_lib{.jar}) " +
+        // Make a ":"-separated list. There will be an extra ":" but empty items are ignored.
+        "--unsupportedapi $$(printf ':%s' $(locations :connectivity-hiddenapi-files)) " +
         "--excludes $(location jarjar-excludes.txt) " +
         "--output $(out)",
     visibility: [
