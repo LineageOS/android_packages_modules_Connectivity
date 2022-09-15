@@ -16580,11 +16580,9 @@ public class ConnectivityServiceTest {
         assertThrows(NullPointerException.class, () -> mService.unofferNetwork(null));
     }
 
-    @Test
-    public void testIgnoreValidationAfterRoamDisabled() throws Exception {
+    public void doTestIgnoreValidationAfterRoam(final boolean enabled) throws Exception {
         assumeFalse(SdkLevel.isAtLeastT());
-        // testIgnoreValidationAfterRoam off
-        doReturn(-1).when(mResources)
+        doReturn(enabled ? 5000 : -1).when(mResources)
                 .getInteger(R.integer.config_validationFailureAfterRoamIgnoreTimeMillis);
 
         mCellNetworkAgent = new TestNetworkAgentWrapper(TRANSPORT_CELLULAR);
@@ -16609,46 +16607,17 @@ public class ConnectivityServiceTest {
         registerDefaultNetworkCallbacks();
         mDefaultNetworkCallback.expectAvailableCallbacksValidated(mWiFiNetworkAgent);
 
-        // Wi-Fi roaming from wifiNc1 to wifiNc2.
+        // Wi-Fi roaming from wifiNc1 to wifiNc2, and Wi-Fi becomes invalid. If validation
+        // failures after roam are not ignored, this will cause cell to become the default network.
+        // If they are ignored, this will not cause a switch until later.
         mWiFiNetworkAgent.setNetworkCapabilities(wifiNc2, true);
-        mWiFiNetworkAgent.setNetworkInvalid(false);
+        mWiFiNetworkAgent.setNetworkInvalid(false /* isStrictMode */);
         mCm.reportNetworkConnectivity(mWiFiNetworkAgent.getNetwork(), false);
-        mDefaultNetworkCallback.expectAvailableCallbacksValidated(mCellNetworkAgent);
-    }
 
-    @Test
-    public void testIgnoreValidationAfterRoamEnabled() throws Exception {
-        assumeFalse(SdkLevel.isAtLeastT());
-        // testIgnoreValidationAfterRoam on
-        doReturn(5000).when(mResources)
-                .getInteger(R.integer.config_validationFailureAfterRoamIgnoreTimeMillis);
-
-        mCellNetworkAgent = new TestNetworkAgentWrapper(TRANSPORT_CELLULAR);
-        mCellNetworkAgent.connect(true);
-        NetworkCapabilities wifiNc1 = new NetworkCapabilities()
-                .addTransportType(TRANSPORT_WIFI)
-                .setTransportInfo(new WifiInfo.Builder().setBssid("AA:AA:AA:AA:AA:AA").build());
-        NetworkCapabilities wifiNc2 = new NetworkCapabilities()
-                .addTransportType(TRANSPORT_WIFI)
-                .setTransportInfo(new WifiInfo.Builder().setBssid("BB:BB:BB:BB:BB:BB").build());
-        final LinkProperties wifiLp = new LinkProperties();
-        wifiLp.setInterfaceName(WIFI_IFNAME);
-        mWiFiNetworkAgent = new TestNetworkAgentWrapper(TRANSPORT_WIFI, wifiLp, wifiNc1);
-        mWiFiNetworkAgent.connect(true);
-
-        // The default network will be switching to Wi-Fi Network.
-        final TestNetworkCallback wifiNetworkCallback = new TestNetworkCallback();
-        final NetworkRequest wifiRequest = new NetworkRequest.Builder()
-                .addTransportType(TRANSPORT_WIFI).build();
-        mCm.registerNetworkCallback(wifiRequest, wifiNetworkCallback);
-        wifiNetworkCallback.expectAvailableCallbacksValidated(mWiFiNetworkAgent);
-        registerDefaultNetworkCallbacks();
-        mDefaultNetworkCallback.expectAvailableCallbacksValidated(mWiFiNetworkAgent);
-
-        // Wi-Fi roaming from wifiNc1 to wifiNc2.
-        mWiFiNetworkAgent.setNetworkCapabilities(wifiNc2, true);
-        mWiFiNetworkAgent.setNetworkInvalid(false);
-        mCm.reportNetworkConnectivity(mWiFiNetworkAgent.getNetwork(), false);
+        if (!enabled) {
+            mDefaultNetworkCallback.expectAvailableCallbacksValidated(mCellNetworkAgent);
+            return;
+        }
 
         // Network validation failed, but the result will be ignored.
         assertTrue(mCm.getNetworkCapabilities(mWiFiNetworkAgent.getNetwork()).hasCapability(
@@ -16665,6 +16634,15 @@ public class ConnectivityServiceTest {
         waitForValidationBlock.block(150);
         mCm.reportNetworkConnectivity(mWiFiNetworkAgent.getNetwork(), false);
         mDefaultNetworkCallback.expectAvailableCallbacksValidated(mCellNetworkAgent);
+    }
+
+    @Test
+    public void testIgnoreValidationAfterRoamDisabled() throws Exception {
+        doTestIgnoreValidationAfterRoam(false /* enabled */);
+    }
+    @Test
+    public void testIgnoreValidationAfterRoamEnabled() throws Exception {
+        doTestIgnoreValidationAfterRoam(true /* enabled */);
     }
 
     @Test
