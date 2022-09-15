@@ -365,7 +365,6 @@ import com.android.server.ConnectivityServiceTest.ConnectivityServiceDependencie
 import com.android.server.connectivity.CarrierPrivilegeAuthenticator;
 import com.android.server.connectivity.ClatCoordinator;
 import com.android.server.connectivity.ConnectivityFlags;
-import com.android.server.connectivity.MockableSystemProperties;
 import com.android.server.connectivity.Nat464Xlat;
 import com.android.server.connectivity.NetworkAgentInfo;
 import com.android.server.connectivity.NetworkNotificationManager;
@@ -1846,18 +1845,9 @@ public class ConnectivityServiceTest {
 
     class ConnectivityServiceDependencies extends ConnectivityService.Dependencies {
         final ConnectivityResources mConnRes;
-        @Mock final MockableSystemProperties mSystemProperties;
 
         ConnectivityServiceDependencies(final Context mockResContext) {
-            mSystemProperties = mock(MockableSystemProperties.class);
-            doReturn(false).when(mSystemProperties).getBoolean("ro.radio.noril", false);
-
             mConnRes = new ConnectivityResources(mockResContext);
-        }
-
-        @Override
-        public MockableSystemProperties getSystemProperties() {
-            return mSystemProperties;
         }
 
         @Override
