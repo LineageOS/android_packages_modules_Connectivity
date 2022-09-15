@@ -165,7 +165,6 @@ import android.os.MessageQueue;
 import android.os.Process;
 import android.os.ServiceManager;
 import android.os.SystemClock;
-import android.os.SystemProperties;
 import android.os.UserHandle;
 import android.os.VintfRuntimeInfo;
 import android.platform.test.annotations.AppModeFull;
@@ -353,7 +352,8 @@ public class ConnectivityManagerTest {
         // Get com.android.internal.R.array.networkAttributes
         int resId = mContext.getResources().getIdentifier("networkAttributes", "array", "android");
         String[] naStrings = mContext.getResources().getStringArray(resId);
-        boolean wifiOnly = SystemProperties.getBoolean("ro.radio.noril", false);
+        boolean wifiOnly = mPackageManager.hasSystemFeature(FEATURE_WIFI)
+                && !mPackageManager.hasSystemFeature(FEATURE_TELEPHONY);
         for (String naString : naStrings) {
             try {
                 final String[] splitConfig = naString.split(",");
