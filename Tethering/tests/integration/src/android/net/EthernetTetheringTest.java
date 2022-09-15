@@ -1594,7 +1594,7 @@ public class EthernetTetheringTest {
         final TestDnsPacket dnsQuery = TestDnsPacket.getTestDnsPacket(buf);
         assertNotNull(dnsQuery);
         Log.d(TAG, "Forwarded UDP source port: " + udpHeader.srcPort + ", DNS query id: "
-                + dnsQuery.getHeader().id);
+                + dnsQuery.getHeader().getId());
 
         // [2] Send DNS reply.
         // DNS server --> upstream --> dnsmasq forwarding --> downstream --> tethered device
@@ -1604,7 +1604,7 @@ public class EthernetTetheringTest {
         final Inet4Address remoteIp = (Inet4Address) TEST_IP4_DNS;
         final Inet4Address tetheringUpstreamIp = (Inet4Address) TEST_IP4_ADDR.getAddress();
         sendDownloadPacketDnsV4(remoteIp, tetheringUpstreamIp, DNS_PORT,
-                (short) udpHeader.srcPort, (short) dnsQuery.getHeader().id, tester);
+                (short) udpHeader.srcPort, (short) dnsQuery.getHeader().getId(), tester);
     }
 
     private <T> List<T> toList(T... array) {
