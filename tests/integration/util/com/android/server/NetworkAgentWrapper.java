@@ -269,6 +269,7 @@ public class NetworkAgentWrapper implements TestableNetworkCallback.HasNetwork {
         mNetworkAgent.sendNetworkScore(score);
     }
 
+    // TODO : remove adjustScore and replace with the appropriate exiting flags.
     public void adjustScore(int change) {
         final int newLegacyScore = mScore.getLegacyInt() + change;
         final NetworkScore.Builder builder = new NetworkScore.Builder()
