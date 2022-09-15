@@ -4949,11 +4949,16 @@ public class ConnectivityService extends IConnectivityManager.Stub
         }
     }
 
-    private void scheduleUnvalidatedPrompt(NetworkAgentInfo nai) {
-        if (VDBG) log("scheduleUnvalidatedPrompt " + nai.network);
+    private void scheduleUnvalidatedPrompt(@NonNull final Network network) {
+        scheduleUnvalidatedPrompt(network, PROMPT_UNVALIDATED_DELAY_MS);
+    }
+
+    /** Schedule unvalidated prompt for testing */
+    @VisibleForTesting
+    public void scheduleUnvalidatedPrompt(@NonNull final Network network, final long delayMs) {
+        if (VDBG) log("scheduleUnvalidatedPrompt " + network);
         mHandler.sendMessageDelayed(
-                mHandler.obtainMessage(EVENT_PROMPT_UNVALIDATED, nai.network),
-                PROMPT_UNVALIDATED_DELAY_MS);
+                mHandler.obtainMessage(EVENT_PROMPT_UNVALIDATED, network), delayMs);
     }
 
     @Override
@@ -9208,7 +9213,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
                 networkAgent.networkMonitor().notifyNetworkConnected(params.linkProperties,
                         params.networkCapabilities);
             }
-            scheduleUnvalidatedPrompt(networkAgent);
+            scheduleUnvalidatedPrompt(networkAgent.network);
 
             // Whether a particular NetworkRequest listen should cause signal strength thresholds to
             // be communicated to a particular NetworkAgent depends only on the network's immutable,
