@@ -85,13 +85,23 @@ public class FullScore {
     /** @hide */
     public static final int POLICY_IS_INVINCIBLE = 56;
 
+    // This network has undergone initial validation.
+    //
+    // The stack considers that any result finding some working connectivity (valid, partial,
+    // captive portal) is an initial validation. Negative result (not valid), however, is not
+    // considered initial validation until {@link ConnectivityService#PROMPT_UNVALIDATED_DELAY_MS}
+    // have elapsed. This is because some networks may spuriously fail for a short time immediately
+    // after associating. If no positive result is found after the timeout has elapsed, then
+    // the network has been evaluated once.
+    public static final int POLICY_EVER_EVALUATED = 55;
+
     // The network agent has communicated that this network no longer functions, and the underlying
     // native network has been destroyed. The network will still be reported to clients as connected
     // until a timeout expires, the agent disconnects, or the network no longer satisfies requests.
     // This network should lose to an identical network that has not been destroyed, but should
     // otherwise be scored exactly the same.
     /** @hide */
-    public static final int POLICY_IS_DESTROYED = 55;
+    public static final int POLICY_IS_DESTROYED = 54;
 
     // To help iterate when printing
     @VisibleForTesting
@@ -144,6 +154,7 @@ public class FullScore {
      * @param everValidated whether this network has ever validated
      * @param avoidUnvalidated whether the user said in UI to avoid this network when unvalidated
      * @param yieldToBadWiFi whether this network yields to a previously validated wifi gone bad
+     * @param everEvaluated whether this network ever evaluated at least once
      * @param destroyed whether this network has been destroyed pending a replacement connecting
      * @return a FullScore that is appropriate to use for ranking.
      */
@@ -153,7 +164,7 @@ public class FullScore {
     public static FullScore fromNetworkScore(@NonNull final NetworkScore score,
             @NonNull final NetworkCapabilities caps, @NonNull final NetworkAgentConfig config,
             final boolean everValidated, final boolean avoidUnvalidated,
-            final boolean yieldToBadWiFi, final boolean destroyed) {
+            final boolean yieldToBadWiFi, final boolean everEvaluated, final boolean destroyed) {
         return withPolicies(score.getPolicies(),
                 score.getKeepConnectedReason(),
                 caps.hasCapability(NET_CAPABILITY_VALIDATED),
@@ -164,6 +175,7 @@ public class FullScore {
                 caps.hasCapability(NET_CAPABILITY_NOT_METERED),
                 yieldToBadWiFi,
                 false /* invincible */, // only prospective scores can be invincible
+                everEvaluated,
                 destroyed);
     }
 
@@ -198,15 +210,17 @@ public class FullScore {
         // Prospective scores are always unmetered, because unmetered networks are stronger
         // than metered networks, and it's not known in advance whether the network is metered.
         final boolean unmetered = true;
-        // A network can only be destroyed once it has connected.
-        final boolean destroyed = false;
         // A prospective score is invincible if the legacy int in the filter is over the maximum
         // score.
         final boolean invincible = score.getLegacyInt() > NetworkRanker.LEGACY_INT_MAX;
+        // A prospective network will eventually be evaluated.
+        final boolean everEvaluated = true;
+        // A network can only be destroyed once it has connected.
+        final boolean destroyed = false;
         return withPolicies(score.getPolicies(), KEEP_CONNECTED_NONE,
-                mayValidate, everValidated, vpn, everUserSelected, acceptUnvalidated,
-                avoidUnvalidated, unmetered,
-                yieldToBadWiFi, invincible, destroyed);
+                mayValidate, everValidated, vpn, everUserSelected,
+                acceptUnvalidated, avoidUnvalidated, unmetered, yieldToBadWiFi,
+                invincible, everEvaluated, destroyed);
     }
 
     /**
@@ -224,6 +238,7 @@ public class FullScore {
             final boolean everValidated,
             final boolean avoidUnvalidated,
             final boolean yieldToBadWifi,
+            final boolean everEvaluated,
             final boolean destroyed) {
         return withPolicies(mPolicies, mKeepConnectedReason,
                 caps.hasCapability(NET_CAPABILITY_VALIDATED),
@@ -234,6 +249,7 @@ public class FullScore {
                 caps.hasCapability(NET_CAPABILITY_NOT_METERED),
                 yieldToBadWifi,
                 false /* invincible */, // only prospective scores can be invincible
+                everEvaluated,
                 destroyed);
     }
 
@@ -251,6 +267,7 @@ public class FullScore {
             final boolean isUnmetered,
             final boolean yieldToBadWiFi,
             final boolean invincible,
+            final boolean everEvaluated,
             final boolean destroyed) {
         return new FullScore((externalPolicies & EXTERNAL_POLICIES_MASK)
                 | (isValidated       ? 1L << POLICY_IS_VALIDATED : 0)
@@ -262,6 +279,7 @@ public class FullScore {
                 | (isUnmetered       ? 1L << POLICY_IS_UNMETERED : 0)
                 | (yieldToBadWiFi    ? 1L << POLICY_YIELD_TO_BAD_WIFI : 0)
                 | (invincible        ? 1L << POLICY_IS_INVINCIBLE : 0)
+                | (everEvaluated     ? 1L << POLICY_EVER_EVALUATED : 0)
                 | (destroyed         ? 1L << POLICY_IS_DESTROYED : 0),
                 keepConnectedReason);
     }
