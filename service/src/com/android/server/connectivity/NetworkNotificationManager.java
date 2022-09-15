@@ -394,8 +394,9 @@ public class NetworkNotificationManager {
         Toast.makeText(mContext, text, Toast.LENGTH_LONG).show();
     }
 
-    @VisibleForTesting
-    static String tagFor(int id) {
+    /** Get the logging tag for a notification ID */
+    @VisibleForTesting(visibility = VisibleForTesting.Visibility.PRIVATE)
+    public static String tagFor(int id) {
         return String.format("ConnectivityNotification:%d", id);
     }
 
