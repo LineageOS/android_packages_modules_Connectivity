@@ -48,8 +48,8 @@ public class FastPairHalfSheetBlocklist extends LruCache<Integer, BlocklistEleme
     private static final int FAST_PAIR_HALF_SHEET_DISMISS_COOL_DOWN_MILLIS = 2000;
     // The timeout to ban half sheet after user trigger the ban logic even number of time : 1 day
     private static final int DURATION_RESURFACE_HALFSHEET_EVEN_NUMBER_BAN_MILLI_SECONDS = 86400000;
-    // Timeout for DISMISSED entries in the blocklist to expire : 6 seconds
-    private static final int FAST_PAIR_BLOCKLIST_DISMISSED_HALF_SHEET_TIMEOUT_MILLIS = 6000;
+    // Timeout for DISMISSED entries in the blocklist to expire : 1 min
+    private static final int FAST_PAIR_BLOCKLIST_DISMISSED_HALF_SHEET_TIMEOUT_MILLIS = 60000;
     // The timeout for entries in the blocklist to expire : 1 day
     private static final int STATE_EXPIRATION_MILLI_SECONDS = 86400000;
     private long mEndTimeBanAllItems;
