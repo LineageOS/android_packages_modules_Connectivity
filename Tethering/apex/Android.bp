@@ -128,7 +128,10 @@ android_app_certificate {
 
 filegroup {
     name: "connectivity-hiddenapi-files",
-    srcs: ["hiddenapi/*.txt"],
+    srcs: [
+        ":connectivity-t-hiddenapi-files",
+        "hiddenapi/*.txt",
+    ],
     visibility: ["//packages/modules/Connectivity:__subpackages__"],
 }
 
@@ -159,16 +162,11 @@ bootclasspath_fragment {
     // Additional hidden API flag files to override the defaults. This must only be
     // modified by the Soong or platform compat team.
     hidden_api: {
-        max_target_r_low_priority: [
-            "hiddenapi/hiddenapi-max-target-r-loprio.txt",
-        ],
         max_target_o_low_priority: [
             "hiddenapi/hiddenapi-max-target-o-low-priority.txt",
-            "hiddenapi/hiddenapi-max-target-o-low-priority-tiramisu.txt",
         ],
         unsupported: [
             "hiddenapi/hiddenapi-unsupported.txt",
-            "hiddenapi/hiddenapi-unsupported-tiramisu.txt",
         ],
 
         // The following packages contain classes from other modules on the
