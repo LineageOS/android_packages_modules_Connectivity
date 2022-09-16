@@ -47,34 +47,4 @@ public class TetherStatsValue extends Struct {
         this.txBytes = txBytes;
         this.txErrors = txErrors;
     }
-
-    // TODO: remove equals, hashCode and toString once aosp/1536721 is merged.
-    @Override
-    public boolean equals(Object obj) {
-        if (this == obj) return true;
-
-        if (!(obj instanceof TetherStatsValue)) return false;
-
-        final TetherStatsValue that = (TetherStatsValue) obj;
-
-        return rxPackets == that.rxPackets
-                && rxBytes == that.rxBytes
-                && rxErrors == that.rxErrors
-                && txPackets == that.txPackets
-                && txBytes == that.txBytes
-                && txErrors == that.txErrors;
-    }
-
-    @Override
-    public int hashCode() {
-        return Long.hashCode(rxPackets) ^ Long.hashCode(rxBytes) ^ Long.hashCode(rxErrors)
-                ^ Long.hashCode(txPackets) ^ Long.hashCode(txBytes) ^ Long.hashCode(txErrors);
-    }
-
-    @Override
-    public String toString() {
-        return String.format("rxPackets: %s, rxBytes: %s, rxErrors: %s, txPackets: %s, "
-                + "txBytes: %s, txErrors: %s", rxPackets, rxBytes, rxErrors, txPackets,
-                txBytes, txErrors);
-    }
 }
