@@ -75,6 +75,12 @@ java_defaults {
     ],
 }
 
+filegroup {
+    name: "connectivity-t-hiddenapi-files",
+    srcs: ["hiddenapi/*.txt"],
+    visibility: ["//packages/modules/Connectivity:__subpackages__"],
+}
+
 java_library {
     name: "framework-connectivity-t-pre-jarjar",
     defaults: ["framework-connectivity-t-defaults"],
@@ -114,6 +120,19 @@ java_sdk_library {
         "com.android.connectivity",
         "com.android.nearby",
     ],
+
+    hidden_api: {
+        max_target_o_low_priority: [
+            "hiddenapi/hiddenapi-max-target-o-low-priority-tiramisu.txt",
+        ],
+        max_target_r_low_priority: [
+            "hiddenapi/hiddenapi-max-target-r-loprio.txt",
+        ],
+        unsupported: [
+            "hiddenapi/hiddenapi-unsupported-tiramisu.txt",
+        ],
+    },
+
     impl_library_visibility: [
         "//packages/modules/Connectivity/Tethering/apex",
         // In preparation for future move

@@ -22,11 +22,13 @@ import static com.android.server.nearby.fastpair.Constant.EXTRA_BUNDLE;
 import static com.android.server.nearby.fastpair.Constant.EXTRA_HALF_SHEET_CONTENT;
 import static com.android.server.nearby.fastpair.Constant.EXTRA_HALF_SHEET_INFO;
 import static com.android.server.nearby.fastpair.Constant.EXTRA_HALF_SHEET_TYPE;
+import static com.android.server.nearby.fastpair.Constant.FAST_PAIR_HALF_SHEET_HELP_URL;
 import static com.android.server.nearby.fastpair.FastPairManager.ACTION_RESOURCES_APK;
 
 import static java.util.concurrent.TimeUnit.SECONDS;
 
 import android.annotation.UiThread;
+import android.app.ActivityManager;
 import android.app.KeyguardManager;
 import android.bluetooth.BluetoothDevice;
 import android.content.ComponentName;
@@ -144,7 +146,7 @@ public class FastPairHalfSheetManager {
         }
         int halfSheetId = mModelIdMap.get(modelId);
 
-        if (!allowedToShowShowHalfSheet(halfSheetId)) {
+        if (!allowedToShowHalfSheet(halfSheetId)) {
             Log.d(TAG, "Not allow to show initial Half sheet");
             return;
         }
@@ -462,7 +464,7 @@ public class FastPairHalfSheetManager {
         mIsHalfSheetForeground = false;
     }
 
-    private boolean allowedToShowShowHalfSheet(int halfSheetId) {
+    private boolean allowedToShowHalfSheet(int halfSheetId) {
         // Half Sheet will not show when the screen is locked so disable half sheet
         KeyguardManager keyguardManager =
                 mLocatorContextWrapper.getSystemService(KeyguardManager.class);
@@ -483,7 +485,36 @@ public class FastPairHalfSheetManager {
             Log.d(TAG, "id: " + halfSheetId + " is blocked");
             return false;
         }
-        return true;
+        return  !isHelpPageForeground();
+    }
+
+    /**
+    * Checks if the user already open the info page, return true to suppress half sheet.
+    * ActivityManager#getRunningTasks to get the most recent task and check the baseIntent's
+    * url to see if we should suppress half sheet.
+    */
+    private boolean isHelpPageForeground() {
+        ActivityManager activityManager =
+                mLocatorContextWrapper.getSystemService(ActivityManager.class);
+        if (activityManager == null) {
+            Log.d(TAG, "ActivityManager is null");
+            return false;
+        }
+        try {
+            List<ActivityManager.RunningTaskInfo> taskInfos = activityManager.getRunningTasks(1);
+            if (taskInfos.isEmpty()) {
+                Log.d(TAG, "Empty running tasks");
+                return false;
+            }
+            String url = taskInfos.get(0).baseIntent.getDataString();
+            Log.d(TAG, "Info page url:" + url);
+            if (FAST_PAIR_HALF_SHEET_HELP_URL.equals(url)) {
+                return true;
+            }
+        } catch (SecurityException e) {
+            Log.d(TAG, "Unable to get running tasks");
+        }
+        return false;
     }
 
     /** Report actively pairing when the Fast Pair starts. */
