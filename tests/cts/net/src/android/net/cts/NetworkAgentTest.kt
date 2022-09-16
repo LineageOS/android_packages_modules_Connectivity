@@ -332,6 +332,28 @@ class NetworkAgentTest {
         mFakeConnectivityService.connect(it.registerForTest(Network(FAKE_NET_ID)))
     }
 
+    fun assertLinkPropertiesEventually(
+        n: Network,
+        description: String,
+        condition: (LinkProperties?) -> Boolean
+    ): LinkProperties? {
+        val deadline = SystemClock.elapsedRealtime() + DEFAULT_TIMEOUT_MS
+        do {
+            val lp = mCM.getLinkProperties(n)
+            if (condition(lp)) return lp
+            SystemClock.sleep(10 /* ms */)
+        } while (SystemClock.elapsedRealtime() < deadline)
+        fail("Network $n LinkProperties did not $description after $DEFAULT_TIMEOUT_MS ms")
+    }
+
+    fun assertLinkPropertiesEventuallyNotNull(n: Network) {
+        assertLinkPropertiesEventually(n, "become non-null") { it != null }
+    }
+
+    fun assertLinkPropertiesEventuallyNull(n: Network) {
+        assertLinkPropertiesEventually(n, "become null") { it == null }
+    }
+
     @Test
     fun testSetSubtypeNameAndExtraInfoByAgentConfig() {
         val subtypeLTE = TelephonyManager.NETWORK_TYPE_LTE
@@ -1232,8 +1254,40 @@ class NetworkAgentTest {
         agent5.expectCallback<OnNetworkDestroyed>()
         agent5.expectCallback<OnNetworkUnwanted>()
 
+        // If unregisterAfterReplacement is called before markConnected, the network disconnects.
+        val specifier6 = UUID.randomUUID().toString()
+        val callback = TestableNetworkCallback()
+        requestNetwork(makeTestNetworkRequest(specifier = specifier6), callback)
+        val agent6 = createNetworkAgent(specifier = specifier6)
+        val network6 = agent6.register()
+        // No callbacks are sent, so check the LinkProperties to see if the network has connected.
+        assertLinkPropertiesEventuallyNotNull(agent6.network!!)
+
+        // unregisterAfterReplacement tears down the network immediately.
+        // Approximately check that this is the case by picking an unregister timeout that's longer
+        // than the timeout of the expectCallback<OnNetworkUnwanted> below.
+        // TODO: consider adding configurable timeouts to TestableNetworkAgent expectations.
+        val timeoutMs = agent6.DEFAULT_TIMEOUT_MS.toInt() + 1_000
+        agent6.unregisterAfterReplacement(timeoutMs)
+        agent6.expectCallback<OnNetworkUnwanted>()
+        if (!SdkLevel.isAtLeastT()) {
+            // Before T, onNetworkDestroyed is called even if the network was never created.
+            agent6.expectCallback<OnNetworkDestroyed>()
+        }
+        // Poll for LinkProperties becoming null, because when onNetworkUnwanted is called, the
+        // network has not yet been removed from the CS data structures.
+        assertLinkPropertiesEventuallyNull(agent6.network!!)
+        assertFalse(mCM.getAllNetworks().contains(agent6.network!!))
+
+        // After unregisterAfterReplacement is called, the network is no longer usable and
+        // markConnected has no effect.
+        agent6.markConnected()
+        agent6.assertNoCallback()
+        assertNull(mCM.getLinkProperties(agent6.network!!))
+        matchAllCallback.assertNoCallback(200 /* timeoutMs */)
+
         // If wifi is replaced within the timeout, the device does not switch to cellular.
-        val (cellAgent, cellNetwork) = connectNetwork(TRANSPORT_CELLULAR)
+        val (_, cellNetwork) = connectNetwork(TRANSPORT_CELLULAR)
         testCallback.expectAvailableThenValidatedCallbacks(cellNetwork)
         matchAllCallback.expectAvailableThenValidatedCallbacks(cellNetwork)
 
