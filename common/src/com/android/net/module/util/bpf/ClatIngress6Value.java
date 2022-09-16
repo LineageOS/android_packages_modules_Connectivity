@@ -24,13 +24,13 @@ import java.net.Inet4Address;
 
 /** Value type for clat ingress IPv6 maps. */
 public class ClatIngress6Value extends Struct {
-    @Field(order = 0, type = Type.U32)
-    public final long oif; // The output interface to redirect to (0 means don't redirect)
+    @Field(order = 0, type = Type.S32)
+    public final int oif; // The output interface to redirect to (0 means don't redirect)
 
     @Field(order = 1, type = Type.Ipv4Address)
     public final Inet4Address local4; // The destination IPv4 address
 
-    public ClatIngress6Value(final long oif, final Inet4Address local4) {
+    public ClatIngress6Value(final int oif, final Inet4Address local4) {
         this.oif = oif;
         this.local4 = local4;
     }
