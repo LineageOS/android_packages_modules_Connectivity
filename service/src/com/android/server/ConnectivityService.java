@@ -5083,8 +5083,14 @@ public class ConnectivityService extends IConnectivityManager.Stub
     private void updateAvoidBadWifi() {
         ensureRunningOnConnectivityServiceThread();
         // Agent info scores and offer scores depend on whether cells yields to bad wifi.
+        final boolean avoidBadWifi = avoidBadWifi();
         for (final NetworkAgentInfo nai : mNetworkAgentInfos) {
             nai.updateScoreForNetworkAgentUpdate();
+            if (avoidBadWifi) {
+                // If the device is now avoiding bad wifi, remove notifications that might have
+                // been put up when the device didn't.
+                mNotifier.clearNotification(nai.network.getNetId(), NotificationType.LOST_INTERNET);
+            }
         }
         // UpdateOfferScore will update mNetworkOffers inline, so make a copy first.
         final ArrayList<NetworkOfferInfo> offersToUpdate = new ArrayList<>(mNetworkOffers);
