@@ -42,7 +42,7 @@ import androidx.test.filters.SmallTest;
 import com.android.net.module.util.BaseNetdUnsolicitedEventListener;
 import com.android.net.module.util.IBpfMap;
 import com.android.net.module.util.InterfaceParams;
-import com.android.net.module.util.Struct.U32;
+import com.android.net.module.util.Struct.S32;
 import com.android.testutils.DevSdkIgnoreRule;
 import com.android.testutils.DevSdkIgnoreRunner;
 import com.android.testutils.TestBpfMap;
@@ -69,14 +69,14 @@ public final class BpfInterfaceMapUpdaterTest {
     private final TestLooper mLooper = new TestLooper();
     private BaseNetdUnsolicitedEventListener mListener;
     private BpfInterfaceMapUpdater mUpdater;
-    private IBpfMap<U32, InterfaceMapValue> mBpfMap =
-            spy(new TestBpfMap<>(U32.class, InterfaceMapValue.class));
+    private IBpfMap<S32, InterfaceMapValue> mBpfMap =
+            spy(new TestBpfMap<>(S32.class, InterfaceMapValue.class));
     @Mock private INetd mNetd;
     @Mock private Context mContext;
 
     private class TestDependencies extends BpfInterfaceMapUpdater.Dependencies {
         @Override
-        public IBpfMap<U32, InterfaceMapValue> getInterfaceMap() {
+        public IBpfMap<S32, InterfaceMapValue> getInterfaceMap() {
             return mBpfMap;
         }
 
@@ -114,7 +114,7 @@ public final class BpfInterfaceMapUpdaterTest {
                 ArgumentCaptor.forClass(BaseNetdUnsolicitedEventListener.class);
         verify(mNetd).registerUnsolicitedEventListener(listenerCaptor.capture());
         mListener = listenerCaptor.getValue();
-        verify(mBpfMap).updateEntry(eq(new U32(TEST_INDEX)),
+        verify(mBpfMap).updateEntry(eq(new S32(TEST_INDEX)),
                 eq(new InterfaceMapValue(TEST_INTERFACE_NAME)));
     }
 
@@ -124,7 +124,7 @@ public final class BpfInterfaceMapUpdaterTest {
 
         mListener.onInterfaceAdded(TEST_INTERFACE_NAME2);
         mLooper.dispatchAll();
-        verify(mBpfMap).updateEntry(eq(new U32(TEST_INDEX2)),
+        verify(mBpfMap).updateEntry(eq(new S32(TEST_INDEX2)),
                 eq(new InterfaceMapValue(TEST_INTERFACE_NAME2)));
 
         // Check that when onInterfaceRemoved is called, nothing happens.
@@ -135,7 +135,7 @@ public final class BpfInterfaceMapUpdaterTest {
 
     @Test
     public void testGetIfNameByIndex() throws Exception {
-        mBpfMap.updateEntry(new U32(TEST_INDEX), new InterfaceMapValue(TEST_INTERFACE_NAME));
+        mBpfMap.updateEntry(new S32(TEST_INDEX), new InterfaceMapValue(TEST_INTERFACE_NAME));
         assertEquals(TEST_INTERFACE_NAME, mUpdater.getIfNameByIndex(TEST_INDEX));
     }
 
@@ -146,7 +146,7 @@ public final class BpfInterfaceMapUpdaterTest {
 
     @Test
     public void testGetIfNameByIndexException() throws Exception {
-        doThrow(new ErrnoException("", EPERM)).when(mBpfMap).getValue(new U32(TEST_INDEX));
+        doThrow(new ErrnoException("", EPERM)).when(mBpfMap).getValue(new S32(TEST_INDEX));
         assertNull(mUpdater.getIfNameByIndex(TEST_INDEX));
     }
 
@@ -163,8 +163,8 @@ public final class BpfInterfaceMapUpdaterTest {
 
     @Test
     public void testDump() throws ErrnoException {
-        mBpfMap.updateEntry(new U32(TEST_INDEX), new InterfaceMapValue(TEST_INTERFACE_NAME));
-        mBpfMap.updateEntry(new U32(TEST_INDEX2), new InterfaceMapValue(TEST_INTERFACE_NAME2));
+        mBpfMap.updateEntry(new S32(TEST_INDEX), new InterfaceMapValue(TEST_INTERFACE_NAME));
+        mBpfMap.updateEntry(new S32(TEST_INDEX2), new InterfaceMapValue(TEST_INTERFACE_NAME2));
 
         final String dump = getDump();
         assertDumpContains(dump, "IfaceIndexNameMap: OK");
