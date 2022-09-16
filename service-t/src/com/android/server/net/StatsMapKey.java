@@ -33,11 +33,11 @@ public class StatsMapKey extends Struct {
     @Field(order = 2, type = Type.U32)
     public final long counterSet;
 
-    @Field(order = 3, type = Type.U32)
-    public final long ifaceIndex;
+    @Field(order = 3, type = Type.S32)
+    public final int ifaceIndex;
 
     public StatsMapKey(final long uid, final long tag, final long counterSet,
-            final long ifaceIndex) {
+            final int ifaceIndex) {
         this.uid = uid;
         this.tag = tag;
         this.counterSet = counterSet;
