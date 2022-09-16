@@ -236,7 +236,7 @@ public class NetlinkSocketTest {
         @Field(order = 3, type = Type.U8)
         public short scope;
 
-        @Field(order = 4, type = Type.U32)
-        public long index;
+        @Field(order = 4, type = Type.S32)
+        public int index;
     }
 }
