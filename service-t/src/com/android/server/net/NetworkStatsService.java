@@ -2896,9 +2896,8 @@ public class NetworkStatsService extends INetworkStatsService.Stub {
         BpfDump.dumpMap(statsMap, pw, mapName,
                 "ifaceIndex ifaceName tag_hex uid_int cnt_set rxBytes rxPackets txBytes txPackets",
                 (key, value) -> {
-                    final long ifIndex = key.ifaceIndex;
-                    final String ifName = mInterfaceMapUpdater.getIfNameByIndex(ifIndex);
-                    return ifIndex + " "
+                    final String ifName = mInterfaceMapUpdater.getIfNameByIndex(key.ifaceIndex);
+                    return key.ifaceIndex + " "
                             + (ifName != null ? ifName : "unknown") + " "
                             + "0x" + Long.toHexString(key.tag) + " "
                             + key.uid + " "
