@@ -37,8 +37,8 @@ public class DscpPolicyValue extends Struct {
     @Field(order = 1, type = Type.ByteArray, arraysize = 16)
     public final byte[] dst46;
 
-    @Field(order = 2, type = Type.U32)
-    public final long ifIndex;
+    @Field(order = 2, type = Type.S32)
+    public final int ifIndex;
 
     @Field(order = 3, type = Type.UBE16)
     public final int srcPort;
@@ -116,7 +116,7 @@ public class DscpPolicyValue extends Struct {
         return mask;
     }
 
-    private DscpPolicyValue(final InetAddress src46, final InetAddress dst46, final long ifIndex,
+    private DscpPolicyValue(final InetAddress src46, final InetAddress dst46, final int ifIndex,
             final int srcPort, final int dstPortStart, final int dstPortEnd, final short proto,
             final byte dscp) {
         this.src46 = toAddressField(src46);
@@ -136,7 +136,7 @@ public class DscpPolicyValue extends Struct {
         this.mask = makeMask(this.src46, this.dst46, srcPort, dstPortStart, proto, dscp);
     }
 
-    public DscpPolicyValue(final InetAddress src46, final InetAddress dst46, final long ifIndex,
+    public DscpPolicyValue(final InetAddress src46, final InetAddress dst46, final int ifIndex,
             final int srcPort, final Range<Integer> dstPort, final short proto,
             final byte dscp) {
         this(src46, dst46, ifIndex, srcPort, dstPort != null ? dstPort.getLower() : -1,
