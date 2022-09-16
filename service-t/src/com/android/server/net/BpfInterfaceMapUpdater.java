@@ -31,7 +31,7 @@ import com.android.net.module.util.BpfDump;
 import com.android.net.module.util.BpfMap;
 import com.android.net.module.util.IBpfMap;
 import com.android.net.module.util.InterfaceParams;
-import com.android.net.module.util.Struct.U32;
+import com.android.net.module.util.Struct.S32;
 
 /**
  * Monitor interface added (without removed) and right interface name and its index to bpf map.
@@ -41,7 +41,7 @@ public class BpfInterfaceMapUpdater {
     // This is current path but may be changed soon.
     private static final String IFACE_INDEX_NAME_MAP_PATH =
             "/sys/fs/bpf/netd_shared/map_netd_iface_index_name_map";
-    private final IBpfMap<U32, InterfaceMapValue> mBpfMap;
+    private final IBpfMap<S32, InterfaceMapValue> mBpfMap;
     private final INetd mNetd;
     private final Handler mHandler;
     private final Dependencies mDeps;
@@ -64,10 +64,10 @@ public class BpfInterfaceMapUpdater {
     @VisibleForTesting
     public static class Dependencies {
         /** Create BpfMap for updating interface and index mapping. */
-        public IBpfMap<U32, InterfaceMapValue> getInterfaceMap() {
+        public IBpfMap<S32, InterfaceMapValue> getInterfaceMap() {
             try {
                 return new BpfMap<>(IFACE_INDEX_NAME_MAP_PATH, BpfMap.BPF_F_RDWR,
-                    U32.class, InterfaceMapValue.class);
+                    S32.class, InterfaceMapValue.class);
             } catch (ErrnoException e) {
                 Log.e(TAG, "Cannot create interface map: " + e);
                 return null;
@@ -126,7 +126,7 @@ public class BpfInterfaceMapUpdater {
         }
 
         try {
-            mBpfMap.updateEntry(new U32(iface.index), new InterfaceMapValue(ifaceName));
+            mBpfMap.updateEntry(new S32(iface.index), new InterfaceMapValue(ifaceName));
         } catch (ErrnoException e) {
             Log.e(TAG, "Unable to update entry for " + ifaceName + ", " + e);
         }
@@ -140,9 +140,9 @@ public class BpfInterfaceMapUpdater {
     }
 
     /** get interface name by interface index from bpf map */
-    public String getIfNameByIndex(final long index) {
+    public String getIfNameByIndex(final int index) {
         try {
-            final InterfaceMapValue value = mBpfMap.getValue(new U32(index));
+            final InterfaceMapValue value = mBpfMap.getValue(new S32(index));
             if (value == null) {
                 Log.e(TAG, "No if name entry for index " + index);
                 return null;
