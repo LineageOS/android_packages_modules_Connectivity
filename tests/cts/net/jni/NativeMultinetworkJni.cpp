@@ -118,6 +118,18 @@ int extractIpAddressAnswers(uint8_t* buf, size_t bufLen, int family) {
             // If there is no valid answer, test will fail.
             continue;
         }
+
+        const int rtype = ns_rr_type(rr);
+        if (family == AF_INET) {
+            // If there is no expected address type, test will fail.
+            if (rtype != ns_t_a) continue;
+        } else if (family == AF_INET6) {
+            // If there is no expected address type, test will fail.
+            if (rtype != ns_t_aaaa) continue;
+        } else {
+            return -EAFNOSUPPORT;
+        }
+
         const uint8_t* rdata = ns_rr_rdata(rr);
         char buffer[INET6_ADDRSTRLEN];
         if (inet_ntop(family, (const char*) rdata, buffer, sizeof(buffer)) == NULL) {
@@ -169,7 +181,7 @@ JNIEXPORT void Java_android_net_cts_MultinetworkApiTest_runResNqueryCheck(
     // V6
     fd = android_res_nquery(handle, kHostname, ns_c_in, ns_t_aaaa, 0);
     EXPECT_GE(env, fd, 0, "v6 res_nquery");
-    EXPECT_EQ(env, 0, expectAnswersValid(env, fd, AF_INET, ns_r_noerror),
+    EXPECT_EQ(env, 0, expectAnswersValid(env, fd, AF_INET6, ns_r_noerror),
             "v6 res_nquery check answers");
 }
 
