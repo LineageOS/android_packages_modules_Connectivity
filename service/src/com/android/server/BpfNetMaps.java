@@ -413,7 +413,7 @@ public class BpfNetMaps {
         }
     }
 
-    private void addRule(final int uid, final long match, final long iif, final String caller) {
+    private void addRule(final int uid, final long match, final int iif, final String caller) {
         if (match != IIF_MATCH && iif != 0) {
             throw new ServiceSpecificException(EINVAL,
                     "Non-interface match must have zero interface index");
