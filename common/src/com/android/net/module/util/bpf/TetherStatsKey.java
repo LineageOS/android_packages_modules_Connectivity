@@ -28,26 +28,4 @@ public class TetherStatsKey extends Struct {
     public TetherStatsKey(final long ifindex) {
         this.ifindex = ifindex;
     }
-
-    // TODO: remove equals, hashCode and toString once aosp/1536721 is merged.
-    @Override
-    public boolean equals(Object obj) {
-        if (this == obj) return true;
-
-        if (!(obj instanceof TetherStatsKey)) return false;
-
-        final TetherStatsKey that = (TetherStatsKey) obj;
-
-        return ifindex == that.ifindex;
-    }
-
-    @Override
-    public int hashCode() {
-        return Long.hashCode(ifindex);
-    }
-
-    @Override
-    public String toString() {
-        return String.format("ifindex: %d", ifindex);
-    }
 }
