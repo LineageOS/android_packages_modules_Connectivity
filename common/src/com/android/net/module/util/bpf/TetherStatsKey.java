@@ -22,10 +22,10 @@ import com.android.net.module.util.Struct.Type;
 
 /** The key of BpfMap which is used for tethering stats. */
 public class TetherStatsKey extends Struct {
-    @Field(order = 0, type = Type.U32)
-    public final long ifindex;  // upstream interface index
+    @Field(order = 0, type = Type.S32)
+    public final int ifindex;  // upstream interface index
 
-    public TetherStatsKey(final long ifindex) {
+    public TetherStatsKey(final int ifindex) {
         this.ifindex = ifindex;
     }
 }
