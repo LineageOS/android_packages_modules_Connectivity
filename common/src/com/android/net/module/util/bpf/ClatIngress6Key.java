@@ -24,8 +24,8 @@ import java.net.Inet6Address;
 
 /** Key type for clat ingress IPv6 maps. */
 public class ClatIngress6Key extends Struct {
-    @Field(order = 0, type = Type.U32)
-    public final long iif; // The input interface index
+    @Field(order = 0, type = Type.S32)
+    public final int iif; // The input interface index
 
     @Field(order = 1, type = Type.Ipv6Address)
     public final Inet6Address pfx96; // The source /96 nat64 prefix, bottom 32 bits must be 0
@@ -33,7 +33,7 @@ public class ClatIngress6Key extends Struct {
     @Field(order = 2, type = Type.Ipv6Address)
     public final Inet6Address local6; // The full 128-bits of the destination IPv6 address
 
-    public ClatIngress6Key(final long iif, final Inet6Address pfx96, final Inet6Address local6) {
+    public ClatIngress6Key(final int iif, final Inet6Address pfx96, final Inet6Address local6) {
         this.iif = iif;
         this.pfx96 = pfx96;
         this.local6 = local6;
