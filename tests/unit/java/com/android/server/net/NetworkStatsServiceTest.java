@@ -139,7 +139,7 @@ import com.android.net.module.util.BpfDump;
 import com.android.net.module.util.IBpfMap;
 import com.android.net.module.util.LocationPermissionChecker;
 import com.android.net.module.util.Struct;
-import com.android.net.module.util.Struct.U32;
+import com.android.net.module.util.Struct.S32;
 import com.android.net.module.util.Struct.U8;
 import com.android.net.module.util.bpf.CookieTagMapKey;
 import com.android.net.module.util.bpf.CookieTagMapValue;
@@ -249,7 +249,7 @@ public class NetworkStatsServiceTest extends NetworkStatsBaseTest {
     private HandlerThread mHandlerThread;
     @Mock
     private LocationPermissionChecker mLocationPermissionChecker;
-    private TestBpfMap<U32, U8> mUidCounterSetMap = spy(new TestBpfMap<>(U32.class, U8.class));
+    private TestBpfMap<S32, U8> mUidCounterSetMap = spy(new TestBpfMap<>(S32.class, U8.class));
     @Mock
     private BpfNetMaps mBpfNetMaps;
     @Mock
@@ -478,7 +478,7 @@ public class NetworkStatsServiceTest extends NetworkStatsBaseTest {
             }
 
             @Override
-            public IBpfMap<U32, U8> getUidCounterSetMap() {
+            public IBpfMap<S32, U8> getUidCounterSetMap() {
                 return mUidCounterSetMap;
             }
 
@@ -646,7 +646,7 @@ public class NetworkStatsServiceTest extends NetworkStatsBaseTest {
         mService.incrementOperationCount(UID_RED, 0xFAAD, 4);
         mService.noteUidForeground(UID_RED, true);
         verify(mUidCounterSetMap).updateEntry(
-                eq(new U32(UID_RED)), eq(new U8((short) SET_FOREGROUND)));
+                eq(new S32(UID_RED)), eq(new U8((short) SET_FOREGROUND)));
         mService.incrementOperationCount(UID_RED, 0xFAAD, 6);
 
         forcePollAndWaitForIdle();
@@ -1311,7 +1311,7 @@ public class NetworkStatsServiceTest extends NetworkStatsBaseTest {
                 .insertEntry(TEST_IFACE, UID_RED, SET_FOREGROUND, 0xFAAD, 1L, 1L, 1L, 1L, 0L));
         mService.noteUidForeground(UID_RED, true);
         verify(mUidCounterSetMap).updateEntry(
-                eq(new U32(UID_RED)), eq(new U8((short) SET_FOREGROUND)));
+                eq(new S32(UID_RED)), eq(new U8((short) SET_FOREGROUND)));
         mService.incrementOperationCount(UID_RED, 0xFAAD, 1);
 
         forcePollAndWaitForIdle();
@@ -1927,7 +1927,7 @@ public class NetworkStatsServiceTest extends NetworkStatsBaseTest {
         mService.incrementOperationCount(UID_RED, 0xFAAD, 4);
         mService.noteUidForeground(UID_RED, true);
         verify(mUidCounterSetMap).updateEntry(
-                eq(new U32(UID_RED)), eq(new U8((short) SET_FOREGROUND)));
+                eq(new S32(UID_RED)), eq(new U8((short) SET_FOREGROUND)));
         mService.incrementOperationCount(UID_RED, 0xFAAD, 6);
 
         forcePollAndWaitForIdle();
@@ -2424,13 +2424,13 @@ public class NetworkStatsServiceTest extends NetworkStatsBaseTest {
 
         mAppUidStatsMap.insertEntry(new UidStatsMapKey(uid), new StatsMapValue(10, 10000, 6, 6000));
 
-        mUidCounterSetMap.insertEntry(new U32(uid), new U8((short) 1));
+        mUidCounterSetMap.insertEntry(new S32(uid), new U8((short) 1));
 
         assertTrue(cookieTagMapContainsUid(uid));
         assertTrue(statsMapContainsUid(mStatsMapA, uid));
         assertTrue(statsMapContainsUid(mStatsMapB, uid));
         assertTrue(mAppUidStatsMap.containsKey(new UidStatsMapKey(uid)));
-        assertTrue(mUidCounterSetMap.containsKey(new U32(uid)));
+        assertTrue(mUidCounterSetMap.containsKey(new S32(uid)));
     }
 
     @Test
@@ -2447,14 +2447,14 @@ public class NetworkStatsServiceTest extends NetworkStatsBaseTest {
         assertFalse(statsMapContainsUid(mStatsMapA, UID_BLUE));
         assertFalse(statsMapContainsUid(mStatsMapB, UID_BLUE));
         assertFalse(mAppUidStatsMap.containsKey(new UidStatsMapKey(UID_BLUE)));
-        assertFalse(mUidCounterSetMap.containsKey(new U32(UID_BLUE)));
+        assertFalse(mUidCounterSetMap.containsKey(new S32(UID_BLUE)));
 
         // assert that UID_RED related tag data is still in the maps.
         assertTrue(cookieTagMapContainsUid(UID_RED));
         assertTrue(statsMapContainsUid(mStatsMapA, UID_RED));
         assertTrue(statsMapContainsUid(mStatsMapB, UID_RED));
         assertTrue(mAppUidStatsMap.containsKey(new UidStatsMapKey(UID_RED)));
-        assertTrue(mUidCounterSetMap.containsKey(new U32(UID_RED)));
+        assertTrue(mUidCounterSetMap.containsKey(new S32(UID_RED)));
     }
 
     private void assertDumpContains(final String dump, final String message) {
