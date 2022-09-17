@@ -292,7 +292,7 @@ public final class BpfNetMapsTest {
                 () -> mBpfNetMaps.setChildChain(FIREWALL_CHAIN_DOZABLE, true /* enable */));
     }
 
-    private void checkUidOwnerValue(final long uid, final long expectedIif,
+    private void checkUidOwnerValue(final long uid, final int expectedIif,
             final long expectedMatch) throws Exception {
         final UidOwnerValue config = mUidOwnerMap.getValue(new U32(uid));
         if (expectedMatch == 0) {
@@ -303,7 +303,7 @@ public final class BpfNetMapsTest {
         }
     }
 
-    private void doTestRemoveNaughtyApp(final long iif, final long match) throws Exception {
+    private void doTestRemoveNaughtyApp(final int iif, final long match) throws Exception {
         mUidOwnerMap.updateEntry(new U32(TEST_UID), new UidOwnerValue(iif, match));
 
         mBpfNetMaps.removeNaughtyApp(TEST_UID);
@@ -341,7 +341,7 @@ public final class BpfNetMapsTest {
                 () -> mBpfNetMaps.removeNaughtyApp(TEST_UID));
     }
 
-    private void doTestAddNaughtyApp(final long iif, final long match) throws Exception {
+    private void doTestAddNaughtyApp(final int iif, final long match) throws Exception {
         if (match != NO_MATCH) {
             mUidOwnerMap.updateEntry(new U32(TEST_UID), new UidOwnerValue(iif, match));
         }
@@ -373,7 +373,7 @@ public final class BpfNetMapsTest {
                 () -> mBpfNetMaps.addNaughtyApp(TEST_UID));
     }
 
-    private void doTestRemoveNiceApp(final long iif, final long match) throws Exception {
+    private void doTestRemoveNiceApp(final int iif, final long match) throws Exception {
         mUidOwnerMap.updateEntry(new U32(TEST_UID), new UidOwnerValue(iif, match));
 
         mBpfNetMaps.removeNiceApp(TEST_UID);
@@ -411,7 +411,7 @@ public final class BpfNetMapsTest {
                 () -> mBpfNetMaps.removeNiceApp(TEST_UID));
     }
 
-    private void doTestAddNiceApp(final long iif, final long match) throws Exception {
+    private void doTestAddNiceApp(final int iif, final long match) throws Exception {
         if (match != NO_MATCH) {
             mUidOwnerMap.updateEntry(new U32(TEST_UID), new UidOwnerValue(iif, match));
         }
@@ -443,7 +443,7 @@ public final class BpfNetMapsTest {
                 () -> mBpfNetMaps.addNiceApp(TEST_UID));
     }
 
-    private void doTestUpdateUidLockdownRule(final long iif, final long match, final boolean add)
+    private void doTestUpdateUidLockdownRule(final int iif, final long match, final boolean add)
             throws Exception {
         if (match != NO_MATCH) {
             mUidOwnerMap.updateEntry(new U32(TEST_UID), new UidOwnerValue(iif, match));
@@ -565,8 +565,8 @@ public final class BpfNetMapsTest {
         checkUidOwnerValue(uid1, NULL_IIF, match1);
     }
 
-    private void doTestRemoveUidInterfaceRules(final long iif0, final long match0,
-            final long iif1, final long match1) throws Exception {
+    private void doTestRemoveUidInterfaceRules(final int iif0, final long match0,
+            final int iif1, final long match1) throws Exception {
         final int uid0 = TEST_UIDS[0];
         final int uid1 = TEST_UIDS[1];
         mUidOwnerMap.updateEntry(new U32(uid0), new UidOwnerValue(iif0, match0));

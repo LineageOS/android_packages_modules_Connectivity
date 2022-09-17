@@ -24,8 +24,8 @@ import java.net.Inet6Address;
 
 /** Value type for clat egress IPv4 maps. */
 public class ClatEgress4Value extends Struct {
-    @Field(order = 0, type = Type.U32)
-    public final long oif; // The output interface to redirect to
+    @Field(order = 0, type = Type.S32)
+    public final int oif; // The output interface to redirect to
 
     @Field(order = 1, type = Type.Ipv6Address)
     public final Inet6Address local6; // The full 128-bits of the source IPv6 address
@@ -36,7 +36,7 @@ public class ClatEgress4Value extends Struct {
     @Field(order = 3, type = Type.U8, padding = 3)
     public final short oifIsEthernet; // Whether the output interface requires ethernet header
 
-    public ClatEgress4Value(final long oif, final Inet6Address local6, final Inet6Address pfx96,
+    public ClatEgress4Value(final int oif, final Inet6Address local6, final Inet6Address pfx96,
             final short oifIsEthernet) {
         this.oif = oif;
         this.local6 = local6;
