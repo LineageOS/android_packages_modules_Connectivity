@@ -21,14 +21,14 @@ import com.android.net.module.util.Struct;
 /** Value type for per uid traffic control configuration map  */
 public class UidOwnerValue extends Struct {
     // Allowed interface index. Only applicable if IIF_MATCH is set in the rule bitmask below.
-    @Field(order = 0, type = Type.U32)
-    public final long iif;
+    @Field(order = 0, type = Type.S32)
+    public final int iif;
 
     // A bitmask of match type.
     @Field(order = 1, type = Type.U32)
     public final long rule;
 
-    public UidOwnerValue(final long iif, final long rule) {
+    public UidOwnerValue(final int iif, final long rule) {
         this.iif = iif;
         this.rule = rule;
     }
