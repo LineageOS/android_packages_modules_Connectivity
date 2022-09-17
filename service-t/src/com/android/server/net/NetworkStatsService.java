@@ -164,7 +164,7 @@ import com.android.net.module.util.NetworkStatsUtils;
 import com.android.net.module.util.PermissionUtils;
 import com.android.net.module.util.SharedLog;
 import com.android.net.module.util.Struct;
-import com.android.net.module.util.Struct.U32;
+import com.android.net.module.util.Struct.S32;
 import com.android.net.module.util.Struct.U8;
 import com.android.net.module.util.bpf.CookieTagMapKey;
 import com.android.net.module.util.bpf.CookieTagMapValue;
@@ -408,7 +408,7 @@ public class NetworkStatsService extends INetworkStatsService.Stub {
      * mActiveUidCounterSet to avoid accessing kernel too frequently.
      */
     private SparseIntArray mActiveUidCounterSet = new SparseIntArray();
-    private final IBpfMap<U32, U8> mUidCounterSetMap;
+    private final IBpfMap<S32, U8> mUidCounterSetMap;
     private final IBpfMap<CookieTagMapKey, CookieTagMapValue> mCookieTagMap;
     private final IBpfMap<StatsMapKey, StatsMapValue> mStatsMapA;
     private final IBpfMap<StatsMapKey, StatsMapValue> mStatsMapB;
@@ -741,10 +741,10 @@ public class NetworkStatsService extends INetworkStatsService.Stub {
         }
 
         /** Get counter sets map for each UID. */
-        public IBpfMap<U32, U8> getUidCounterSetMap() {
+        public IBpfMap<S32, U8> getUidCounterSetMap() {
             try {
-                return new BpfMap<U32, U8>(UID_COUNTERSET_MAP_PATH, BpfMap.BPF_F_RDWR,
-                        U32.class, U8.class);
+                return new BpfMap<S32, U8>(UID_COUNTERSET_MAP_PATH, BpfMap.BPF_F_RDWR,
+                        S32.class, U8.class);
             } catch (ErrnoException e) {
                 Log.wtf(TAG, "Cannot open uid counter set map: " + e);
                 return null;
@@ -1747,7 +1747,7 @@ public class NetworkStatsService extends INetworkStatsService.Stub {
 
         if (set == SET_DEFAULT) {
             try {
-                mUidCounterSetMap.deleteEntry(new U32(uid));
+                mUidCounterSetMap.deleteEntry(new S32(uid));
             } catch (ErrnoException e) {
                 Log.w(TAG, "UidCounterSetMap.deleteEntry(" + uid + ") failed with errno: " + e);
             }
@@ -1755,7 +1755,7 @@ public class NetworkStatsService extends INetworkStatsService.Stub {
         }
 
         try {
-            mUidCounterSetMap.updateEntry(new U32(uid), new U8((short) set));
+            mUidCounterSetMap.updateEntry(new S32(uid), new U8((short) set));
         } catch (ErrnoException e) {
             Log.w(TAG, "UidCounterSetMap.updateEntry(" + uid + ", " + set
                     + ") failed with errno: " + e);
@@ -2472,7 +2472,7 @@ public class NetworkStatsService extends INetworkStatsService.Stub {
         deleteStatsMapTagData(mStatsMapB, uid);
 
         try {
-            mUidCounterSetMap.deleteEntry(new U32(uid));
+            mUidCounterSetMap.deleteEntry(new S32(uid));
         } catch (ErrnoException e) {
             logErrorIfNotErrNoent(e, "Failed to delete tag data from uid counter set map");
         }
