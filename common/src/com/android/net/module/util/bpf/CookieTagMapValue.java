@@ -24,13 +24,13 @@ import com.android.net.module.util.Struct.Type;
  * Value for cookie tag map.
  */
 public class CookieTagMapValue extends Struct {
-    @Field(order = 0, type = Type.U32)
-    public final long uid;
+    @Field(order = 0, type = Type.S32)
+    public final int uid;
 
     @Field(order = 1, type = Type.U32)
     public final long tag;
 
-    public CookieTagMapValue(final long uid, final long tag) {
+    public CookieTagMapValue(final int uid, final long tag) {
         this.uid = uid;
         this.tag = tag;
     }
