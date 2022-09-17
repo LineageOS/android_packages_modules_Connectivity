@@ -61,6 +61,7 @@ import android.util.Log;
 import android.util.Pair;
 import android.util.SparseArray;
 
+import com.android.internal.annotations.VisibleForTesting;
 import com.android.internal.util.IndentingPrintWriter;
 import com.android.internal.util.WakeupMessage;
 import com.android.modules.utils.build.SdkLevel;
@@ -397,6 +398,12 @@ public class NetworkAgentInfo implements NetworkRanker.Scoreable {
         if (0L != mFirstEvaluationConcludedTime) return false;
         mFirstEvaluationConcludedTime = SystemClock.elapsedRealtime();
         return true;
+    }
+
+    /** When this network ever concluded its first evaluation, or 0 if this never happened. */
+    @VisibleForTesting
+    public long getFirstEvaluationConcludedTime() {
+        return mFirstEvaluationConcludedTime;
     }
 
     // Delay between when the network is disconnected and when the native network is destroyed.
