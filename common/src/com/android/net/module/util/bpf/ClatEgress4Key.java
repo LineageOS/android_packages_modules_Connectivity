@@ -24,13 +24,13 @@ import java.net.Inet4Address;
 
 /** Key type for clat egress IPv4 maps. */
 public class ClatEgress4Key extends Struct {
-    @Field(order = 0, type = Type.U32)
-    public final long iif; // The input interface index
+    @Field(order = 0, type = Type.S32)
+    public final int iif; // The input interface index
 
     @Field(order = 1, type = Type.Ipv4Address)
     public final Inet4Address local4; // The source IPv4 address
 
-    public ClatEgress4Key(final long iif, final Inet4Address local4) {
+    public ClatEgress4Key(final int iif, final Inet4Address local4) {
         this.iif = iif;
         this.local4 = local4;
     }
