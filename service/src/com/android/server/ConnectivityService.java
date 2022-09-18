@@ -3350,17 +3350,6 @@ public class ConnectivityService extends IConnectivityManager.Stub
         pw.increaseIndent();
         mNetworkActivityTracker.dump(pw);
         pw.decreaseIndent();
-
-        // pre-T is logged by netd.
-        if (SdkLevel.isAtLeastT()) {
-            pw.println();
-            pw.println("BPF programs & maps:");
-            pw.increaseIndent();
-            // Flush is required. Otherwise, the traces in fd can interleave with traces in pw.
-            pw.flush();
-            dumpTrafficController(pw, fd, /*verbose=*/ true);
-            pw.decreaseIndent();
-        }
     }
 
     private void dumpNetworks(IndentingPrintWriter pw) {
