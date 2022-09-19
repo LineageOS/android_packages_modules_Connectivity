@@ -39,7 +39,7 @@ public class IpUtils {
 
     /**
      * Performs an IP checksum (used in IP header and across UDP
-     * payload) on the specified portion of a ByteBuffer.  The seed
+     * payload) or ICMP checksum on the specified portion of a ByteBuffer.  The seed
      * allows the checksum to commence with a specified value.
      */
     private static int checksum(ByteBuffer buf, int seed, int start, int end) {
@@ -142,6 +142,14 @@ public class IpUtils {
     public static short tcpChecksum(ByteBuffer buf, int ipOffset, int transportOffset,
             int transportLen) {
         return transportChecksum(buf, IPPROTO_TCP, ipOffset, transportOffset, transportLen);
+    }
+
+    /**
+     * Calculate the ICMP checksum for an ICMPv4 packet.
+     */
+    public static short icmpChecksum(ByteBuffer buf, int transportOffset, int transportLen) {
+        // ICMP checksum doesn't include pseudo-header. See RFC 792.
+        return (short) checksum(buf, 0, transportOffset, transportOffset + transportLen);
     }
 
     /**
