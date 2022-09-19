@@ -1815,9 +1815,17 @@ public class EthernetTetheringTest {
 
     private void sendDownloadPacketTcp(@NonNull final InetAddress srcIp,
             @NonNull final InetAddress dstIp, short seq, short ack, byte tcpFlags,
-            @NonNull final ByteBuffer payload, @NonNull final TetheringTester tester)
-            throws Exception {
-        final boolean isIpv4 = isAddressIpv4(srcIp, dstIp);
+            @NonNull final ByteBuffer payload, @NonNull final TetheringTester tester,
+            boolean is6To4) throws Exception {
+        if (is6To4) {
+            assertFalse("CLAT download test must sends IPv6 packet", isAddressIpv4(srcIp, dstIp));
+        }
+
+        // Expected received TCP packet IP protocol. While testing CLAT (is6To4 = true), the packet
+        // on downstream must be IPv4. Otherwise, the IP protocol of test packet is the same on
+        // both downstream and upstream.
+        final boolean isIpv4 = is6To4 ? true : isAddressIpv4(srcIp, dstIp);
+
         final ByteBuffer testPacket = buildTcpPacket(null /* srcMac */, null /* dstMac */,
                 srcIp, dstIp, REMOTE_PORT /* srcPort */, LOCAL_PORT /* dstPort */, seq, ack,
                 tcpFlags, payload);
@@ -1831,9 +1839,17 @@ public class EthernetTetheringTest {
     private void sendUploadPacketTcp(@NonNull final MacAddress srcMac,
             @NonNull final MacAddress dstMac, @NonNull final InetAddress srcIp,
             @NonNull final InetAddress dstIp, short seq, short ack, byte tcpFlags,
-            @NonNull final ByteBuffer payload, @NonNull final TetheringTester tester)
-            throws Exception {
-        final boolean isIpv4 = isAddressIpv4(srcIp, dstIp);
+            @NonNull final ByteBuffer payload, @NonNull final TetheringTester tester,
+            boolean is4To6) throws Exception {
+        if (is4To6) {
+            assertTrue("CLAT upload test must sends IPv4 packet", isAddressIpv4(srcIp, dstIp));
+        }
+
+        // Expected received TCP packet IP protocol. While testing CLAT (is4To6 = true), the packet
+        // on upstream must be IPv6. Otherwise, the IP protocol of test packet is the same on
+        // both downstream and upstream.
+        final boolean isIpv4 = is4To6 ? false : isAddressIpv4(srcIp, dstIp);
+
         final ByteBuffer testPacket = buildTcpPacket(srcMac, dstMac, srcIp, dstIp,
                 LOCAL_PORT /* srcPort */, REMOTE_PORT /* dstPort */, seq, ack, tcpFlags,
                 payload);
@@ -1848,7 +1864,7 @@ public class EthernetTetheringTest {
             @NonNull final MacAddress uploadSrcMac, @NonNull final MacAddress uploadDstMac,
             @NonNull final InetAddress uploadSrcIp, @NonNull final InetAddress uploadDstIp,
             @NonNull final InetAddress downloadSrcIp, @NonNull final InetAddress downloadDstIp,
-            @NonNull final TetheringTester tester) throws Exception {
+            @NonNull final TetheringTester tester, boolean isClat) throws Exception {
         // Three way handshake and data transfer.
         //
         // Server (base seq = 2000)                                  Client (base seq = 1000)
@@ -1875,25 +1891,28 @@ public class EthernetTetheringTest {
         // [1] [UPLOAD] [SYN]: SEQ = 1000
         sendUploadPacketTcp(uploadSrcMac, uploadDstMac, uploadSrcIp, uploadDstIp,
                 (short) 1000 /* seq */, (short) 0 /* ack */, TCPHDR_SYN, EMPTY_PAYLOAD,
-                tester);
+                tester, isClat /* is4To6 */);
 
         // [2] [DONWLOAD] [SYN + ACK]: SEQ = 2000, ACK = 1001
         sendDownloadPacketTcp(downloadSrcIp, downloadDstIp, (short) 2000 /* seq */,
                 (short) 1001 /* ack */, (byte) ((TCPHDR_SYN | TCPHDR_ACK) & 0xff), EMPTY_PAYLOAD,
-                tester);
+                tester, isClat /* is6To4 */);
 
         // [3] [UPLOAD] [ACK]: SEQ = 1001, ACK = 2001
         sendUploadPacketTcp(uploadSrcMac, uploadDstMac, uploadSrcIp, uploadDstIp,
-                (short) 1001 /* seq */, (short) 2001 /* ack */, TCPHDR_ACK, EMPTY_PAYLOAD, tester);
+                (short) 1001 /* seq */, (short) 2001 /* ack */, TCPHDR_ACK, EMPTY_PAYLOAD, tester,
+                isClat /* is4To6 */);
 
         // [4] [UPLOAD] [ACK]: SEQ = 1001, ACK = 2001, 2 byte payload
         sendUploadPacketTcp(uploadSrcMac, uploadDstMac, uploadSrcIp, uploadDstIp,
                 (short) 1001 /* seq */, (short) 2001 /* ack */, TCPHDR_ACK, TX_PAYLOAD,
-                tester);
+                tester, isClat /* is4To6 */);
 
         // [5] [DONWLOAD] [ACK]: SEQ = 2001, ACK = 1003, 2 byte payload
         sendDownloadPacketTcp(downloadSrcIp, downloadDstIp, (short) 2001 /* seq */,
-                (short) 1003 /* ack */, TCPHDR_ACK, RX_PAYLOAD, tester);
+                (short) 1003 /* ack */, TCPHDR_ACK, RX_PAYLOAD, tester, isClat /* is6To4 */);
+
+        // TODO: test BPF offload maps.
     }
 
     @Test
@@ -1909,7 +1928,7 @@ public class EthernetTetheringTest {
         runTcpTest(tethered.macAddr /* uploadSrcMac */, tethered.routerMacAddr /* uploadDstMac */,
                 tethered.ipv4Addr /* uploadSrcIp */, REMOTE_IP4_ADDR /* uploadDstIp */,
                 REMOTE_IP4_ADDR /* downloadSrcIp */, TEST_IP4_ADDR.getAddress() /* downloadDstIp */,
-                tester);
+                tester, false /* isClat */);
     }
 
     @Test
@@ -1921,7 +1940,23 @@ public class EthernetTetheringTest {
         runTcpTest(tethered.macAddr /* uploadSrcMac */, tethered.routerMacAddr /* uploadDstMac */,
                 tethered.ipv6Addr /* uploadSrcIp */, REMOTE_IP6_ADDR /* uploadDstIp */,
                 REMOTE_IP6_ADDR /* downloadSrcIp */, tethered.ipv6Addr /* downloadDstIp */,
-                tester);
+                tester, false /* isClat */);
+    }
+
+    @Test
+    public void testTetherClatTcp() throws Exception {
+        // CLAT only starts on IPv6 only network.
+        final TetheringTester tester = initTetheringTester(toList(TEST_IP6_ADDR),
+                toList(TEST_IP6_DNS));
+        final TetheredDevice tethered = tester.createTetheredDevice(TEST_MAC, true /* hasIpv6 */);
+
+        // Get CLAT IPv6 address.
+        final Inet6Address clatIp6 = getClatIpv6Address(tester, tethered);
+
+        runTcpTest(tethered.macAddr /* uploadSrcMac */, tethered.routerMacAddr /* uploadDstMac */,
+                tethered.ipv4Addr /* uploadSrcIp */, REMOTE_IP4_ADDR /* uploadDstIp */,
+                REMOTE_NAT64_ADDR /* downloadSrcIp */, clatIp6 /* downloadDstIp */,
+                tester, true /* isClat */);
     }
 
     private <T> List<T> toList(T... array) {
