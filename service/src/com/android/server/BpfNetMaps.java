@@ -106,13 +106,13 @@ public class BpfNetMaps {
             "/sys/fs/bpf/netd_shared/map_netd_uid_permission_map";
     private static final String COOKIE_TAG_MAP_PATH =
             "/sys/fs/bpf/netd_shared/map_netd_cookie_tag_map";
-    private static final U32 UID_RULES_CONFIGURATION_KEY = new U32(0);
-    private static final U32 CURRENT_STATS_MAP_CONFIGURATION_KEY = new U32(1);
+    private static final S32 UID_RULES_CONFIGURATION_KEY = new S32(0);
+    private static final S32 CURRENT_STATS_MAP_CONFIGURATION_KEY = new S32(1);
     private static final long UID_RULES_DEFAULT_CONFIGURATION = 0;
     private static final long STATS_SELECT_MAP_A = 0;
     private static final long STATS_SELECT_MAP_B = 1;
 
-    private static IBpfMap<U32, U32> sConfigurationMap = null;
+    private static IBpfMap<S32, U32> sConfigurationMap = null;
     // BpfMap for UID_OWNER_MAP_PATH. This map is not accessed by others.
     private static IBpfMap<S32, UidOwnerValue> sUidOwnerMap = null;
     private static IBpfMap<S32, U8> sUidPermissionMap = null;
@@ -146,7 +146,7 @@ public class BpfNetMaps {
      * Set configurationMap for test.
      */
     @VisibleForTesting
-    public static void setConfigurationMapForTest(IBpfMap<U32, U32> configurationMap) {
+    public static void setConfigurationMapForTest(IBpfMap<S32, U32> configurationMap) {
         sConfigurationMap = configurationMap;
     }
 
@@ -175,10 +175,10 @@ public class BpfNetMaps {
         sCookieTagMap = cookieTagMap;
     }
 
-    private static IBpfMap<U32, U32> getConfigurationMap() {
+    private static IBpfMap<S32, U32> getConfigurationMap() {
         try {
             return new BpfMap<>(
-                    CONFIGURATION_MAP_PATH, BpfMap.BPF_F_RDWR, U32.class, U32.class);
+                    CONFIGURATION_MAP_PATH, BpfMap.BPF_F_RDWR, S32.class, U32.class);
         } catch (ErrnoException e) {
             throw new IllegalStateException("Cannot open netd configuration map", e);
         }
