@@ -127,6 +127,14 @@ public final class NetworkStackConstants {
             (Inet6Address) InetAddresses.parseNumericAddress("ff02::3");
 
     /**
+     * ICMP constants.
+     *
+     * See also:
+     *     - https://tools.ietf.org/html/rfc792
+     */
+    public static final int ICMP_CHECKSUM_OFFSET = 2;
+
+    /**
      * ICMPv6 constants.
      *
      * See also:
