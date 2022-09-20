@@ -27,14 +27,6 @@ python_binary_host {
         "gen_jarjar.py",
     ],
     main: "gen_jarjar.py",
-    version: {
-        py2: {
-            enabled: false,
-        },
-        py3: {
-            enabled: true,
-        },
-    },
     visibility: ["//packages/modules/Connectivity:__subpackages__"],
 }
 
@@ -95,12 +87,4 @@ python_test_host {
         ":jarjar-rules-generator-testjavalib",
     ],
     main: "gen_jarjar_test.py",
-    version: {
-        py2: {
-            enabled: false,
-        },
-        py3: {
-            enabled: true,
-        },
-    },
 }
