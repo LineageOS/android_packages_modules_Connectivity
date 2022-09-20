@@ -17,7 +17,9 @@
 package android.net;
 
 import static android.net.InetAddresses.parseNumericAddress;
+import static android.system.OsConstants.IPPROTO_ICMP;
 import static android.system.OsConstants.IPPROTO_ICMPV6;
+import static android.system.OsConstants.IPPROTO_TCP;
 import static android.system.OsConstants.IPPROTO_UDP;
 
 import static com.android.net.module.util.DnsPacket.ANSECTION;
@@ -39,6 +41,7 @@ import static com.android.net.module.util.NetworkStackConstants.ICMPV6_ROUTER_AD
 import static com.android.net.module.util.NetworkStackConstants.IPV6_ADDR_ALL_NODES_MULTICAST;
 import static com.android.net.module.util.NetworkStackConstants.NEIGHBOR_ADVERTISEMENT_FLAG_OVERRIDE;
 import static com.android.net.module.util.NetworkStackConstants.NEIGHBOR_ADVERTISEMENT_FLAG_SOLICITED;
+import static com.android.net.module.util.NetworkStackConstants.TCPHDR_SYN;
 
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.fail;
@@ -57,6 +60,7 @@ import com.android.net.module.util.DnsPacket;
 import com.android.net.module.util.Ipv6Utils;
 import com.android.net.module.util.Struct;
 import com.android.net.module.util.structs.EthernetHeader;
+import com.android.net.module.util.structs.Icmpv4Header;
 import com.android.net.module.util.structs.Icmpv6Header;
 import com.android.net.module.util.structs.Ipv4Header;
 import com.android.net.module.util.structs.Ipv6Header;
@@ -64,6 +68,7 @@ import com.android.net.module.util.structs.LlaOption;
 import com.android.net.module.util.structs.NsHeader;
 import com.android.net.module.util.structs.PrefixInformationOption;
 import com.android.net.module.util.structs.RaHeader;
+import com.android.net.module.util.structs.TcpHeader;
 import com.android.net.module.util.structs.UdpHeader;
 import com.android.networkstack.arp.ArpPacket;
 import com.android.testutils.TapPacketReader;
@@ -268,7 +273,8 @@ public final class TetheringTester {
 
     private List<PrefixInformationOption> getRaPrefixOptions(byte[] packet) {
         ByteBuffer buf = ByteBuffer.wrap(packet);
-        if (!isExpectedIcmpv6Packet(buf, true /* hasEth */, ICMPV6_ROUTER_ADVERTISEMENT)) {
+        if (!isExpectedIcmpPacket(buf, true /* hasEth */, false /* isIpv4 */,
+                ICMPV6_ROUTER_ADVERTISEMENT)) {
             fail("Parsing RA packet fail");
         }
 
@@ -298,7 +304,8 @@ public final class TetheringTester {
         sendRsPacket(srcMac, dstMac);
 
         final byte[] raPacket = verifyPacketNotNull("Receive RA fail", getDownloadPacket(p -> {
-            return isExpectedIcmpv6Packet(p, true /* hasEth */, ICMPV6_ROUTER_ADVERTISEMENT);
+            return isExpectedIcmpPacket(p, true /* hasEth */, false /* isIpv4 */,
+                    ICMPV6_ROUTER_ADVERTISEMENT);
         }));
 
         final List<PrefixInformationOption> options = getRaPrefixOptions(raPacket);
@@ -360,20 +367,27 @@ public final class TetheringTester {
         }
     }
 
-    public static boolean isExpectedIcmpv6Packet(byte[] packet, boolean hasEth, int type) {
+    public static boolean isExpectedIcmpPacket(byte[] packet, boolean hasEth, boolean isIpv4,
+            int type) {
         final ByteBuffer buf = ByteBuffer.wrap(packet);
-        return isExpectedIcmpv6Packet(buf, hasEth, type);
+        return isExpectedIcmpPacket(buf, hasEth, isIpv4, type);
     }
 
-    private static boolean isExpectedIcmpv6Packet(ByteBuffer buf, boolean hasEth, int type) {
+    private static boolean isExpectedIcmpPacket(ByteBuffer buf, boolean hasEth, boolean isIpv4,
+            int type) {
         try {
-            if (hasEth && !hasExpectedEtherHeader(buf, false /* isIpv4 */)) return false;
+            if (hasEth && !hasExpectedEtherHeader(buf, isIpv4)) return false;
 
-            if (!hasExpectedIpHeader(buf, false /* isIpv4 */, IPPROTO_ICMPV6)) return false;
+            final int ipProto = isIpv4 ? IPPROTO_ICMP : IPPROTO_ICMPV6;
+            if (!hasExpectedIpHeader(buf, isIpv4, ipProto)) return false;
 
-            return Struct.parse(Icmpv6Header.class, buf).type == (short) type;
+            if (isIpv4) {
+                return Struct.parse(Icmpv4Header.class, buf).type == (short) type;
+            } else {
+                return Struct.parse(Icmpv6Header.class, buf).type == (short) type;
+            }
         } catch (Exception e) {
-            // Parsing packet fail means it is not icmpv6 packet.
+            // Parsing packet fail means it is not icmp packet.
         }
 
         return false;
@@ -576,6 +590,42 @@ public final class TetheringTester {
         // Ignore checking {Authority, Additional} sections because they are not tested
         // in EthernetTetheringTest.
         return true;
+    }
+
+
+    private static boolean isTcpSynPacket(@NonNull final TcpHeader tcpHeader) {
+        return (tcpHeader.dataOffsetAndControlBits & TCPHDR_SYN) != 0;
+    }
+
+    public static boolean isExpectedTcpPacket(@NonNull final byte[] rawPacket, boolean hasEth,
+            boolean isIpv4, int seq, @NonNull final ByteBuffer payload) {
+        final ByteBuffer buf = ByteBuffer.wrap(rawPacket);
+        try {
+            if (hasEth && !hasExpectedEtherHeader(buf, isIpv4)) return false;
+
+            if (!hasExpectedIpHeader(buf, isIpv4, IPPROTO_TCP)) return false;
+
+            final TcpHeader tcpHeader = Struct.parse(TcpHeader.class, buf);
+            if (tcpHeader.seq != seq) return false;
+
+            // Don't try to parse the payload if it is a TCP SYN segment because additional TCP
+            // option MSS may be added in the SYN segment. Currently, TetherController uses
+            // iptables to limit downstream MSS for IPv4. The additional TCP options will be
+            // misunderstood as payload because parsing TCP options are not supported by class
+            // TcpHeader for now. See TetherController::setupIptablesHooks.
+            // TODO: remove once TcpHeader supports parsing TCP options.
+            if (isTcpSynPacket(tcpHeader)) {
+                Log.d(TAG, "Found SYN segment. Ignore parsing the remaining part of packet.");
+                return true;
+            }
+
+            if (payload.limit() != buf.remaining()) return false;
+            return Arrays.equals(getRemaining(buf), getRemaining(payload.asReadOnlyBuffer()));
+        } catch (Exception e) {
+            // Parsing packet fail means it is not tcp packet.
+        }
+
+        return false;
     }
 
     private void sendUploadPacket(ByteBuffer packet) throws Exception {
