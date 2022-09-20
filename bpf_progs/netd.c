@@ -217,6 +217,23 @@ static __always_inline BpfConfig getConfig(uint32_t configKey) {
     return *config;
 }
 
+// Must be __always_inline or the call from inet_socket_create will crash-reboot the system
+static __always_inline inline int bpf_owner_restricted_match(uint32_t uid) {
+    if (is_system_uid(uid)) return BPF_PASS;
+
+    const BpfConfig enabledRules = getConfig(UID_RULES_CONFIGURATION_KEY);
+
+    if (enabledRules & RESTRICTED_MATCH) {
+        const UidOwnerValue* uidEntry = bpf_uid_owner_map_lookup_elem(&uid);
+        const uint32_t uidRules = uidEntry ? uidEntry->rule : 0;
+
+        if (!(uidRules & RESTRICTED_MATCH)) {
+            return BPF_DROP;
+        }
+    }
+    return BPF_PASS;
+}
+
 static inline int bpf_owner_match(struct __sk_buff* skb, uint32_t uid, int direction) {
     if (skip_owner_match(skb)) return BPF_PASS;
 
@@ -428,22 +445,21 @@ DEFINE_XTBPF_PROG("skfilter/denylist/xtbpf", AID_ROOT, AID_NET_ADMIN, xt_bpf_den
 DEFINE_BPF_PROG_EXT("cgroupsock/inet/create", AID_ROOT, AID_ROOT, inet_socket_create,
                     KVER(4, 14, 0), KVER_INF, false, "fs_bpf_netd_readonly", "")
 (struct bpf_sock* sk) {
-    uint64_t gid_uid = bpf_get_current_uid_gid();
+    uint32_t uid = (bpf_get_current_uid_gid() & 0xffffffff);
     /*
      * A given app is guaranteed to have the same app ID in all the profiles in
      * which it is installed, and install permission is granted to app for all
      * user at install time so we only check the appId part of a request uid at
      * run time. See UserHandle#isSameApp for detail.
      */
-    uint32_t appId = (gid_uid & 0xffffffff) % AID_USER_OFFSET;  // == PER_USER_RANGE == 100000
+    uint32_t appId = uid % AID_USER_OFFSET;  // == PER_USER_RANGE == 100000
     uint8_t* permissions = bpf_uid_permission_map_lookup_elem(&appId);
-    if (!permissions) {
-        // UID not in map. Default to just INTERNET permission.
-        return 1;
+    // If UID is in map but missing BPF_PERMISSION_INTERNET, app has no INTERNET permission.
+    if (permissions && ((*permissions & BPF_PERMISSION_INTERNET) != BPF_PERMISSION_INTERNET)) {
+        return BPF_DROP;
     }
-
-    // A return value of 1 means allow, everything else means deny.
-    return (*permissions & BPF_PERMISSION_INTERNET) == BPF_PERMISSION_INTERNET;
+    // Only allow if uid is not restricted.
+    return bpf_owner_restricted_match(uid);
 }
 
 LICENSE("Apache 2.0");
