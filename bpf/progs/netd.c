@@ -784,6 +784,21 @@ function bool ingress_should_discard(const SkbIpPacketData* const packet,
     return true;  // disallowed interface
 }
 
+function int bpf_owner_firewall_match(uint32_t uid) {
+    if (is_system_uid(uid)) return PASS;
+
+    const BpfConfig enabledRules = getConfig(UID_RULES_CONFIGURATION_KEY);
+    const UidOwnerValue* uidEntry = bpf_uid_owner_map_lookup_elem(&uid);
+    const uint32_t uidRules = uidEntry ? uidEntry->rule : 0;
+
+    if (enabledRules & (FIREWALL_DROP_IF_SET | FIREWALL_DROP_IF_UNSET)
+            & (uidRules ^ FIREWALL_DROP_IF_UNSET)) {
+        return DROP;
+    }
+
+    return PASS;
+}
+
 function int bpf_owner_match(const SkbIpPacketData* const packet,
                              struct __sk_buff* skb,
                              uint32_t uid,
@@ -1145,9 +1160,7 @@ DEFINE_XTBPF_PROG(skfilter, denylist_xtbpf)
     return XTBPF_NOMATCH;
 }
 
-function uint8_t get_app_permissions() {
-    uint64_t gid_uid = bpf_get_current_uid_gid();
-    uint32_t uid = (gid_uid & 0xffffffff);
+function uint8_t get_app_permissions(uint32_t uid) {
     /*
      * A given app is guaranteed to have the same app ID in all the profiles
      * in which it is installed, and install permission is granted to app
@@ -1181,7 +1194,12 @@ function int inet_socket_create(struct bpf_sock* sk, const struct kver_uint kver
                    ? BPF_DISALLOW
                    : BPF_ALLOW;
     } else {
-        return (get_app_permissions() & BPF_PERMISSION_INTERNET) ? BPF_ALLOW : BPF_DISALLOW;
+        uint32_t uid = (gid_uid & 0xffffffff);
+        if (get_app_permissions(uid) & BPF_PERMISSION_INTERNET) {
+            return bpf_owner_firewall_match(uid) == PASS ? BPF_ALLOW : BPF_DISALLOW;
+        } else {
+            return BPF_DISALLOW;
+        }
     }
 }
 
