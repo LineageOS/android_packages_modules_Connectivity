@@ -386,6 +386,9 @@ STRUCT_SIZE(SkbIpPacketData, 16 + 16 + 2 + 2 + 1 + 1 + 1 + 1); // 40
 #define DROP_IF_UNSET (DOZABLE_MATCH | POWERSAVE_MATCH | RESTRICTED_MATCH \
                         | LOW_POWER_STANDBY_MATCH | BACKGROUND_MATCH)
 
+#define FIREWALL_DROP_IF_SET (OEM_DENY_1_MATCH)
+#define FIREWALL_DROP_IF_UNSET (RESTRICTED_MATCH)
+
 // Warning: funky bit-wise arithmetic: in parallel, for all DROP_IF_SET/UNSET rules
 // check whether the rules are globally enabled, and if so whether the rules are
 // set/unset for the specific uid.  DROP if that is the case for ANY of the rules.
