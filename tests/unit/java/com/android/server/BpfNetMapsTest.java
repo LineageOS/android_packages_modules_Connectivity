@@ -66,6 +66,7 @@ import androidx.test.filters.SmallTest;
 
 import com.android.modules.utils.build.SdkLevel;
 import com.android.net.module.util.IBpfMap;
+import com.android.net.module.util.Struct.S32;
 import com.android.net.module.util.Struct.U32;
 import com.android.net.module.util.Struct.U8;
 import com.android.net.module.util.bpf.CookieTagMapKey;
@@ -102,8 +103,8 @@ public final class BpfNetMapsTest {
     private static final int NO_IIF = 0;
     private static final int NULL_IIF = 0;
     private static final String CHAINNAME = "fw_dozable";
-    private static final U32 UID_RULES_CONFIGURATION_KEY = new U32(0);
-    private static final U32 CURRENT_STATS_MAP_CONFIGURATION_KEY = new U32(1);
+    private static final S32 UID_RULES_CONFIGURATION_KEY = new S32(0);
+    private static final S32 CURRENT_STATS_MAP_CONFIGURATION_KEY = new S32(1);
     private static final List<Integer> FIREWALL_CHAINS = List.of(
             FIREWALL_CHAIN_DOZABLE,
             FIREWALL_CHAIN_STANDBY,
@@ -123,10 +124,10 @@ public final class BpfNetMapsTest {
     @Mock INetd mNetd;
     @Mock BpfNetMaps.Dependencies mDeps;
     @Mock Context mContext;
-    private final IBpfMap<U32, U32> mConfigurationMap = new TestBpfMap<>(U32.class, U32.class);
-    private final IBpfMap<U32, UidOwnerValue> mUidOwnerMap =
-            new TestBpfMap<>(U32.class, UidOwnerValue.class);
-    private final IBpfMap<U32, U8> mUidPermissionMap = new TestBpfMap<>(U32.class, U8.class);
+    private final IBpfMap<S32, U32> mConfigurationMap = new TestBpfMap<>(S32.class, U32.class);
+    private final IBpfMap<S32, UidOwnerValue> mUidOwnerMap =
+            new TestBpfMap<>(S32.class, UidOwnerValue.class);
+    private final IBpfMap<S32, U8> mUidPermissionMap = new TestBpfMap<>(S32.class, U8.class);
     private final IBpfMap<CookieTagMapKey, CookieTagMapValue> mCookieTagMap =
             spy(new TestBpfMap<>(CookieTagMapKey.class, CookieTagMapValue.class));
 
@@ -292,9 +293,9 @@ public final class BpfNetMapsTest {
                 () -> mBpfNetMaps.setChildChain(FIREWALL_CHAIN_DOZABLE, true /* enable */));
     }
 
-    private void checkUidOwnerValue(final long uid, final int expectedIif,
+    private void checkUidOwnerValue(final int uid, final int expectedIif,
             final long expectedMatch) throws Exception {
-        final UidOwnerValue config = mUidOwnerMap.getValue(new U32(uid));
+        final UidOwnerValue config = mUidOwnerMap.getValue(new S32(uid));
         if (expectedMatch == 0) {
             assertNull(config);
         } else {
@@ -304,7 +305,7 @@ public final class BpfNetMapsTest {
     }
 
     private void doTestRemoveNaughtyApp(final int iif, final long match) throws Exception {
-        mUidOwnerMap.updateEntry(new U32(TEST_UID), new UidOwnerValue(iif, match));
+        mUidOwnerMap.updateEntry(new S32(TEST_UID), new UidOwnerValue(iif, match));
 
         mBpfNetMaps.removeNaughtyApp(TEST_UID);
 
@@ -343,7 +344,7 @@ public final class BpfNetMapsTest {
 
     private void doTestAddNaughtyApp(final int iif, final long match) throws Exception {
         if (match != NO_MATCH) {
-            mUidOwnerMap.updateEntry(new U32(TEST_UID), new UidOwnerValue(iif, match));
+            mUidOwnerMap.updateEntry(new S32(TEST_UID), new UidOwnerValue(iif, match));
         }
 
         mBpfNetMaps.addNaughtyApp(TEST_UID);
@@ -374,7 +375,7 @@ public final class BpfNetMapsTest {
     }
 
     private void doTestRemoveNiceApp(final int iif, final long match) throws Exception {
-        mUidOwnerMap.updateEntry(new U32(TEST_UID), new UidOwnerValue(iif, match));
+        mUidOwnerMap.updateEntry(new S32(TEST_UID), new UidOwnerValue(iif, match));
 
         mBpfNetMaps.removeNiceApp(TEST_UID);
 
@@ -413,7 +414,7 @@ public final class BpfNetMapsTest {
 
     private void doTestAddNiceApp(final int iif, final long match) throws Exception {
         if (match != NO_MATCH) {
-            mUidOwnerMap.updateEntry(new U32(TEST_UID), new UidOwnerValue(iif, match));
+            mUidOwnerMap.updateEntry(new S32(TEST_UID), new UidOwnerValue(iif, match));
         }
 
         mBpfNetMaps.addNiceApp(TEST_UID);
@@ -446,7 +447,7 @@ public final class BpfNetMapsTest {
     private void doTestUpdateUidLockdownRule(final int iif, final long match, final boolean add)
             throws Exception {
         if (match != NO_MATCH) {
-            mUidOwnerMap.updateEntry(new U32(TEST_UID), new UidOwnerValue(iif, match));
+            mUidOwnerMap.updateEntry(new S32(TEST_UID), new UidOwnerValue(iif, match));
         }
 
         mBpfNetMaps.updateUidLockdownRule(TEST_UID, add);
@@ -516,8 +517,8 @@ public final class BpfNetMapsTest {
         final int uid1 = TEST_UIDS[1];
         final long match0 = DOZABLE_MATCH;
         final long match1 = DOZABLE_MATCH | POWERSAVE_MATCH | RESTRICTED_MATCH;
-        mUidOwnerMap.updateEntry(new U32(uid0), new UidOwnerValue(NO_IIF, match0));
-        mUidOwnerMap.updateEntry(new U32(uid1), new UidOwnerValue(NO_IIF, match1));
+        mUidOwnerMap.updateEntry(new S32(uid0), new UidOwnerValue(NO_IIF, match0));
+        mUidOwnerMap.updateEntry(new S32(uid1), new UidOwnerValue(NO_IIF, match1));
 
         mBpfNetMaps.addUidInterfaceRules(TEST_IF_NAME, TEST_UIDS);
 
@@ -532,8 +533,8 @@ public final class BpfNetMapsTest {
         final int uid1 = TEST_UIDS[1];
         final long match0 = IIF_MATCH;
         final long match1 = IIF_MATCH | DOZABLE_MATCH | POWERSAVE_MATCH | RESTRICTED_MATCH;
-        mUidOwnerMap.updateEntry(new U32(uid0), new UidOwnerValue(TEST_IF_INDEX + 1, match0));
-        mUidOwnerMap.updateEntry(new U32(uid1), new UidOwnerValue(NULL_IIF, match1));
+        mUidOwnerMap.updateEntry(new S32(uid0), new UidOwnerValue(TEST_IF_INDEX + 1, match0));
+        mUidOwnerMap.updateEntry(new S32(uid1), new UidOwnerValue(NULL_IIF, match1));
 
         mBpfNetMaps.addUidInterfaceRules(TEST_IF_NAME, TEST_UIDS);
 
@@ -556,8 +557,8 @@ public final class BpfNetMapsTest {
         final int uid1 = TEST_UIDS[1];
         final long match0 = IIF_MATCH;
         final long match1 = IIF_MATCH | DOZABLE_MATCH | POWERSAVE_MATCH | RESTRICTED_MATCH;
-        mUidOwnerMap.updateEntry(new U32(uid0), new UidOwnerValue(TEST_IF_INDEX, match0));
-        mUidOwnerMap.updateEntry(new U32(uid1), new UidOwnerValue(NULL_IIF, match1));
+        mUidOwnerMap.updateEntry(new S32(uid0), new UidOwnerValue(TEST_IF_INDEX, match0));
+        mUidOwnerMap.updateEntry(new S32(uid1), new UidOwnerValue(NULL_IIF, match1));
 
         mBpfNetMaps.addUidInterfaceRules(null /* ifName */, TEST_UIDS);
 
@@ -569,8 +570,8 @@ public final class BpfNetMapsTest {
             final int iif1, final long match1) throws Exception {
         final int uid0 = TEST_UIDS[0];
         final int uid1 = TEST_UIDS[1];
-        mUidOwnerMap.updateEntry(new U32(uid0), new UidOwnerValue(iif0, match0));
-        mUidOwnerMap.updateEntry(new U32(uid1), new UidOwnerValue(iif1, match1));
+        mUidOwnerMap.updateEntry(new S32(uid0), new UidOwnerValue(iif0, match0));
+        mUidOwnerMap.updateEntry(new S32(uid1), new UidOwnerValue(iif1, match1));
 
         mBpfNetMaps.removeUidInterfaceRules(TEST_UIDS);
 
@@ -593,7 +594,7 @@ public final class BpfNetMapsTest {
     }
 
     private void doTestSetUidRule(final List<Integer> testChains) throws Exception {
-        mUidOwnerMap.updateEntry(new U32(TEST_UID), new UidOwnerValue(TEST_IF_INDEX, IIF_MATCH));
+        mUidOwnerMap.updateEntry(new S32(TEST_UID), new UidOwnerValue(TEST_IF_INDEX, IIF_MATCH));
 
         for (final int chain: testChains) {
             final int ruleToAddMatch = mBpfNetMaps.isFirewallAllowList(chain)
@@ -697,8 +698,8 @@ public final class BpfNetMapsTest {
         final int uid1 = TEST_UIDS[1];
         final long match0 = POWERSAVE_MATCH;
         final long match1 = POWERSAVE_MATCH | RESTRICTED_MATCH;
-        mUidOwnerMap.updateEntry(new U32(uid0), new UidOwnerValue(NO_IIF, match0));
-        mUidOwnerMap.updateEntry(new U32(uid1), new UidOwnerValue(NO_IIF, match1));
+        mUidOwnerMap.updateEntry(new S32(uid0), new UidOwnerValue(NO_IIF, match0));
+        mUidOwnerMap.updateEntry(new S32(uid1), new UidOwnerValue(NO_IIF, match1));
 
         mBpfNetMaps.replaceUidChain(FIREWALL_CHAIN_DOZABLE, new int[]{uid1});
 
@@ -713,8 +714,8 @@ public final class BpfNetMapsTest {
         final int uid1 = TEST_UIDS[1];
         final long match0 = IIF_MATCH;
         final long match1 = IIF_MATCH | POWERSAVE_MATCH | RESTRICTED_MATCH;
-        mUidOwnerMap.updateEntry(new U32(uid0), new UidOwnerValue(TEST_IF_INDEX, match0));
-        mUidOwnerMap.updateEntry(new U32(uid1), new UidOwnerValue(NULL_IIF, match1));
+        mUidOwnerMap.updateEntry(new S32(uid0), new UidOwnerValue(TEST_IF_INDEX, match0));
+        mUidOwnerMap.updateEntry(new S32(uid1), new UidOwnerValue(NULL_IIF, match1));
 
         mBpfNetMaps.replaceUidChain(FIREWALL_CHAIN_DOZABLE, TEST_UIDS);
 
@@ -729,8 +730,8 @@ public final class BpfNetMapsTest {
         final int uid1 = TEST_UIDS[1];
         final long match0 = IIF_MATCH | DOZABLE_MATCH;
         final long match1 = IIF_MATCH | POWERSAVE_MATCH | RESTRICTED_MATCH;
-        mUidOwnerMap.updateEntry(new U32(uid0), new UidOwnerValue(TEST_IF_INDEX, match0));
-        mUidOwnerMap.updateEntry(new U32(uid1), new UidOwnerValue(NULL_IIF, match1));
+        mUidOwnerMap.updateEntry(new S32(uid0), new UidOwnerValue(TEST_IF_INDEX, match0));
+        mUidOwnerMap.updateEntry(new S32(uid1), new UidOwnerValue(NULL_IIF, match1));
 
         mBpfNetMaps.replaceUidChain(FIREWALL_CHAIN_DOZABLE, new int[]{uid1});
 
@@ -768,8 +769,8 @@ public final class BpfNetMapsTest {
 
         final int uid0 = TEST_UIDS[0];
         final int uid1 = TEST_UIDS[1];
-        assertEquals(PERMISSION_UPDATE_DEVICE_STATS, mUidPermissionMap.getValue(new U32(uid0)).val);
-        assertEquals(PERMISSION_UPDATE_DEVICE_STATS, mUidPermissionMap.getValue(new U32(uid1)).val);
+        assertEquals(PERMISSION_UPDATE_DEVICE_STATS, mUidPermissionMap.getValue(new S32(uid0)).val);
+        assertEquals(PERMISSION_UPDATE_DEVICE_STATS, mUidPermissionMap.getValue(new S32(uid1)).val);
     }
 
     @Test
@@ -780,8 +781,8 @@ public final class BpfNetMapsTest {
 
         final int uid0 = TEST_UIDS[0];
         final int uid1 = TEST_UIDS[1];
-        assertEquals(permission, mUidPermissionMap.getValue(new U32(uid0)).val);
-        assertEquals(permission, mUidPermissionMap.getValue(new U32(uid1)).val);
+        assertEquals(permission, mUidPermissionMap.getValue(new S32(uid0)).val);
+        assertEquals(permission, mUidPermissionMap.getValue(new S32(uid1)).val);
     }
 
     @Test
@@ -792,8 +793,8 @@ public final class BpfNetMapsTest {
         mBpfNetMaps.setNetPermForUids(PERMISSION_INTERNET, TEST_UIDS);
         mBpfNetMaps.setNetPermForUids(PERMISSION_NONE, new int[]{uid0});
 
-        assertEquals(PERMISSION_NONE, mUidPermissionMap.getValue(new U32(uid0)).val);
-        assertNull(mUidPermissionMap.getValue(new U32(uid1)));
+        assertEquals(PERMISSION_NONE, mUidPermissionMap.getValue(new S32(uid0)).val);
+        assertNull(mUidPermissionMap.getValue(new S32(uid1)));
     }
 
     @Test
@@ -804,8 +805,8 @@ public final class BpfNetMapsTest {
         mBpfNetMaps.setNetPermForUids(PERMISSION_UPDATE_DEVICE_STATS, TEST_UIDS);
         mBpfNetMaps.setNetPermForUids(PERMISSION_NONE, new int[]{uid0});
 
-        assertEquals(PERMISSION_NONE, mUidPermissionMap.getValue(new U32(uid0)).val);
-        assertEquals(PERMISSION_UPDATE_DEVICE_STATS, mUidPermissionMap.getValue(new U32(uid1)).val);
+        assertEquals(PERMISSION_NONE, mUidPermissionMap.getValue(new S32(uid0)).val);
+        assertEquals(PERMISSION_UPDATE_DEVICE_STATS, mUidPermissionMap.getValue(new S32(uid1)).val);
     }
 
     @Test
@@ -817,8 +818,8 @@ public final class BpfNetMapsTest {
         mBpfNetMaps.setNetPermForUids(permission, TEST_UIDS);
         mBpfNetMaps.setNetPermForUids(PERMISSION_NONE, new int[]{uid0});
 
-        assertEquals(PERMISSION_NONE, mUidPermissionMap.getValue(new U32(uid0)).val);
-        assertEquals(permission, mUidPermissionMap.getValue(new U32(uid1)).val);
+        assertEquals(PERMISSION_NONE, mUidPermissionMap.getValue(new S32(uid0)).val);
+        assertEquals(permission, mUidPermissionMap.getValue(new S32(uid1)).val);
     }
 
     @Test
@@ -830,8 +831,8 @@ public final class BpfNetMapsTest {
         mBpfNetMaps.setNetPermForUids(permission, TEST_UIDS);
         mBpfNetMaps.setNetPermForUids(PERMISSION_UNINSTALLED, new int[]{uid0});
 
-        assertNull(mUidPermissionMap.getValue(new U32(uid0)));
-        assertEquals(permission, mUidPermissionMap.getValue(new U32(uid1)).val);
+        assertNull(mUidPermissionMap.getValue(new S32(uid0)));
+        assertEquals(permission, mUidPermissionMap.getValue(new S32(uid1)).val);
     }
 
     @Test
@@ -842,28 +843,28 @@ public final class BpfNetMapsTest {
         final int permission = PERMISSION_INTERNET | PERMISSION_UPDATE_DEVICE_STATS;
 
         mBpfNetMaps.setNetPermForUids(permission, TEST_UIDS);
-        assertEquals(permission, mUidPermissionMap.getValue(new U32(uid0)).val);
-        assertEquals(permission, mUidPermissionMap.getValue(new U32(uid1)).val);
+        assertEquals(permission, mUidPermissionMap.getValue(new S32(uid0)).val);
+        assertEquals(permission, mUidPermissionMap.getValue(new S32(uid1)).val);
 
         mBpfNetMaps.setNetPermForUids(permission, TEST_UIDS);
-        assertEquals(permission, mUidPermissionMap.getValue(new U32(uid0)).val);
-        assertEquals(permission, mUidPermissionMap.getValue(new U32(uid1)).val);
+        assertEquals(permission, mUidPermissionMap.getValue(new S32(uid0)).val);
+        assertEquals(permission, mUidPermissionMap.getValue(new S32(uid1)).val);
 
         mBpfNetMaps.setNetPermForUids(PERMISSION_NONE, TEST_UIDS);
-        assertEquals(PERMISSION_NONE, mUidPermissionMap.getValue(new U32(uid0)).val);
-        assertEquals(PERMISSION_NONE, mUidPermissionMap.getValue(new U32(uid1)).val);
+        assertEquals(PERMISSION_NONE, mUidPermissionMap.getValue(new S32(uid0)).val);
+        assertEquals(PERMISSION_NONE, mUidPermissionMap.getValue(new S32(uid1)).val);
 
         mBpfNetMaps.setNetPermForUids(PERMISSION_NONE, TEST_UIDS);
-        assertEquals(PERMISSION_NONE, mUidPermissionMap.getValue(new U32(uid0)).val);
-        assertEquals(PERMISSION_NONE, mUidPermissionMap.getValue(new U32(uid1)).val);
+        assertEquals(PERMISSION_NONE, mUidPermissionMap.getValue(new S32(uid0)).val);
+        assertEquals(PERMISSION_NONE, mUidPermissionMap.getValue(new S32(uid1)).val);
 
         mBpfNetMaps.setNetPermForUids(PERMISSION_UNINSTALLED, TEST_UIDS);
-        assertNull(mUidPermissionMap.getValue(new U32(uid0)));
-        assertNull(mUidPermissionMap.getValue(new U32(uid1)));
+        assertNull(mUidPermissionMap.getValue(new S32(uid0)));
+        assertNull(mUidPermissionMap.getValue(new S32(uid1)));
 
         mBpfNetMaps.setNetPermForUids(PERMISSION_UNINSTALLED, TEST_UIDS);
-        assertNull(mUidPermissionMap.getValue(new U32(uid0)));
-        assertNull(mUidPermissionMap.getValue(new U32(uid1)));
+        assertNull(mUidPermissionMap.getValue(new S32(uid0)));
+        assertNull(mUidPermissionMap.getValue(new S32(uid1)));
     }
 
     @Test
@@ -898,13 +899,13 @@ public final class BpfNetMapsTest {
         mCookieTagMap.updateEntry(new CookieTagMapKey(0), new CookieTagMapValue(0, 0));
 
         // mUidOwnerMap has 2 entries
-        mUidOwnerMap.updateEntry(new U32(0), new UidOwnerValue(0, 0));
-        mUidOwnerMap.updateEntry(new U32(1), new UidOwnerValue(0, 0));
+        mUidOwnerMap.updateEntry(new S32(0), new UidOwnerValue(0, 0));
+        mUidOwnerMap.updateEntry(new S32(1), new UidOwnerValue(0, 0));
 
         // mUidPermissionMap has 3 entries
-        mUidPermissionMap.updateEntry(new U32(0), new U8((short) 0));
-        mUidPermissionMap.updateEntry(new U32(1), new U8((short) 0));
-        mUidPermissionMap.updateEntry(new U32(2), new U8((short) 0));
+        mUidPermissionMap.updateEntry(new S32(0), new U8((short) 0));
+        mUidPermissionMap.updateEntry(new S32(1), new U8((short) 0));
+        mUidPermissionMap.updateEntry(new S32(2), new U8((short) 0));
 
         final int ret = mBpfNetMaps.pullBpfMapInfoAtom(NETWORK_BPF_MAP_INFO, new ArrayList<>());
         assertEquals(StatsManager.PULL_SUCCESS, ret);
