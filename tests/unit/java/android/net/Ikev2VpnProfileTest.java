@@ -18,6 +18,7 @@ package android.net;
 
 import static android.net.cts.util.IkeSessionTestUtils.CHILD_PARAMS;
 import static android.net.cts.util.IkeSessionTestUtils.IKE_PARAMS_V6;
+import static android.net.cts.util.IkeSessionTestUtils.getTestIkeSessionParams;
 
 import static com.android.testutils.DevSdkIgnoreRuleKt.SC_V2;
 
@@ -28,6 +29,7 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
+import android.net.ipsec.ike.IkeKeyIdIdentification;
 import android.net.ipsec.ike.IkeTunnelConnectionParams;
 import android.os.Build;
 import android.test.mock.MockContext;
@@ -443,6 +445,40 @@ public class Ikev2VpnProfileTest {
         final Ikev2VpnProfile ikeProfile = builder.build();
 
         assertEquals(ikeProfile, Ikev2VpnProfile.fromVpnProfile(ikeProfile.toVpnProfile()));
+    }
+
+    @Test
+    public void testBuildWithIkeTunConnParamsConvertToVpnProfile() throws Exception {
+        // Special keyId that contains delimiter character of VpnProfile
+        final byte[] keyId = "foo\0bar".getBytes();
+        final IkeTunnelConnectionParams tunnelParams = new IkeTunnelConnectionParams(
+                getTestIkeSessionParams(true /* testIpv6 */, new IkeKeyIdIdentification(keyId)),
+                CHILD_PARAMS);
+        final Ikev2VpnProfile ikev2VpnProfile = new Ikev2VpnProfile.Builder(tunnelParams).build();
+        final VpnProfile vpnProfile = ikev2VpnProfile.toVpnProfile();
+
+        assertEquals(VpnProfile.TYPE_IKEV2_FROM_IKE_TUN_CONN_PARAMS, vpnProfile.type);
+
+        // Username, password, server, ipsecIdentifier, ipsecCaCert, ipsecSecret, ipsecUserCert and
+        // getAllowedAlgorithms should not be set if IkeTunnelConnectionParams is set.
+        assertEquals("", vpnProfile.server);
+        assertEquals("", vpnProfile.ipsecIdentifier);
+        assertEquals("", vpnProfile.username);
+        assertEquals("", vpnProfile.password);
+        assertEquals("", vpnProfile.ipsecCaCert);
+        assertEquals("", vpnProfile.ipsecSecret);
+        assertEquals("", vpnProfile.ipsecUserCert);
+        assertEquals(0, vpnProfile.getAllowedAlgorithms().size());
+
+        // IkeTunnelConnectionParams should stay the same.
+        assertEquals(tunnelParams, vpnProfile.ikeTunConnParams);
+
+        // Convert to disk-stable format and then back to Ikev2VpnProfile should be the same.
+        final VpnProfile decodedVpnProfile =
+                VpnProfile.decode(vpnProfile.key, vpnProfile.encode());
+        final Ikev2VpnProfile convertedIkev2VpnProfile =
+                Ikev2VpnProfile.fromVpnProfile(decodedVpnProfile);
+        assertEquals(ikev2VpnProfile, convertedIkev2VpnProfile);
     }
 
     @Test
