@@ -1943,7 +1943,9 @@ public class EthernetTetheringTest {
                 tester, false /* isClat */);
     }
 
+    // TODO: support R device. See b/234727688.
     @Test
+    @IgnoreUpTo(Build.VERSION_CODES.R)
     public void testTetherClatTcp() throws Exception {
         // CLAT only starts on IPv6 only network.
         final TetheringTester tester = initTetheringTester(toList(TEST_IP6_ADDR),
