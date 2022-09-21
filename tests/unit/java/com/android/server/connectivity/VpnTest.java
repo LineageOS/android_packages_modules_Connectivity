@@ -944,12 +944,15 @@ public class VpnTest extends VpnTestBase {
     @Test
     public void testSetAndGetAppExclusionListRestrictedUser() throws Exception {
         final Vpn vpn = prepareVpnForVerifyAppExclusionList();
+
         // Mock it to restricted profile
         when(mUserManager.getUserInfo(anyInt())).thenReturn(RESTRICTED_PROFILE_A);
+
         // Restricted users cannot configure VPNs
         assertThrows(SecurityException.class,
                 () -> vpn.setAppExclusionList(TEST_VPN_PKG, new ArrayList<>()));
-        assertThrows(SecurityException.class, () -> vpn.getAppExclusionList(TEST_VPN_PKG));
+
+        assertEquals(Arrays.asList(PKGS), vpn.getAppExclusionList(TEST_VPN_PKG));
     }
 
     @Test
