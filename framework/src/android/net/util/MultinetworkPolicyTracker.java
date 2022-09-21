@@ -109,8 +109,6 @@ public class MultinetworkPolicyTracker {
         this(ctx, handler, null);
     }
 
-    // TODO: Set the mini sdk to 31 and remove @TargetApi annotation when b/205923322 is addressed.
-    @TargetApi(Build.VERSION_CODES.S)
     public MultinetworkPolicyTracker(Context ctx, Handler handler, Runnable avoidBadWifiCallback) {
         mContext = ctx;
         mResources = new ConnectivityResources(ctx);
@@ -128,13 +126,12 @@ public class MultinetworkPolicyTracker {
             }
         };
 
-        ctx.getSystemService(TelephonyManager.class).registerTelephonyCallback(
-                new HandlerExecutor(handler), new ActiveDataSubscriptionIdListener());
-
         updateAvoidBadWifi();
         updateMeteredMultipathPreference();
     }
 
+    // TODO: Set the mini sdk to 31 and remove @TargetApi annotation when b/205923322 is addressed.
+    @TargetApi(Build.VERSION_CODES.S)
     public void start() {
         for (Uri uri : mSettingsUris) {
             mResolver.registerContentObserver(uri, false, mSettingObserver);
@@ -144,6 +141,9 @@ public class MultinetworkPolicyTracker {
         intentFilter.addAction(Intent.ACTION_CONFIGURATION_CHANGED);
         mContext.registerReceiverForAllUsers(mBroadcastReceiver, intentFilter,
                 null /* broadcastPermission */, mHandler);
+
+        mContext.getSystemService(TelephonyManager.class).registerTelephonyCallback(
+                new HandlerExecutor(mHandler), new ActiveDataSubscriptionIdListener());
 
         reevaluate();
     }
