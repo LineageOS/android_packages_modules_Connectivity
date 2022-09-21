@@ -271,6 +271,7 @@ public class IpServerTest {
                 mTestAddress);
     }
 
+    @SuppressWarnings("DoNotCall") // Ignore warning for synchronous to call to Thread.run()
     private void setUpDhcpServer() throws Exception {
         doAnswer(inv -> {
             final IDhcpServerCallbacks cb = inv.getArgument(2);
