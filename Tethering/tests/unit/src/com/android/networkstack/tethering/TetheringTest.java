@@ -399,6 +399,7 @@ public class TetheringTest {
                     MacAddress.ALL_ZEROS_ADDRESS);
         }
 
+        @SuppressWarnings("DoNotCall") // Ignore warning for synchronous to call to Thread.run()
         @Override
         public void makeDhcpServer(String ifName, DhcpServingParamsParcel params,
                 DhcpServerCallbacks cb) {
