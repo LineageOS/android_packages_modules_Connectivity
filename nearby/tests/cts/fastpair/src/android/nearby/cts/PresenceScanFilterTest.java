@@ -48,7 +48,7 @@ public class PresenceScanFilterTest {
     private static final byte[] PUBLIC_KEY = new byte[]{1, 1, 2, 2};
     private static final byte[] ENCRYPTED_METADATA = new byte[]{1, 2, 3, 4, 5};
     private static final byte[] METADATA_ENCRYPTION_KEY_TAG = new byte[]{1, 1, 3, 4, 5};
-    private static final int KEY = 1234;
+    private static final int KEY = 3;
     private static final byte[] VALUE = new byte[]{1, 1, 1, 1};
 
 
