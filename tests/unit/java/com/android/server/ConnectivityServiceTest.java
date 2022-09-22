@@ -4329,10 +4329,11 @@ public class ConnectivityServiceTest {
 
     @Test
     public void testCaptivePortalOnPartialConnectivity() throws Exception {
-        final TestNetworkCallback captivePortalCallback = new TestNetworkCallback();
-        final NetworkRequest captivePortalRequest = new NetworkRequest.Builder()
-                .addCapability(NET_CAPABILITY_CAPTIVE_PORTAL).build();
-        mCm.registerNetworkCallback(captivePortalRequest, captivePortalCallback);
+        final TestNetworkCallback wifiCallback = new TestNetworkCallback();
+        final NetworkRequest wifiRequest = new NetworkRequest.Builder()
+                .addTransportType(TRANSPORT_WIFI)
+                .build();
+        mCm.registerNetworkCallback(wifiRequest, wifiCallback);
 
         final TestNetworkCallback validatedCallback = new TestNetworkCallback();
         final NetworkRequest validatedRequest = new NetworkRequest.Builder()
@@ -4344,8 +4345,13 @@ public class ConnectivityServiceTest {
         mWiFiNetworkAgent = new TestNetworkAgentWrapper(TRANSPORT_WIFI);
         String redirectUrl = "http://android.com/path";
         mWiFiNetworkAgent.connectWithCaptivePortal(redirectUrl, false /* isStrictMode */);
-        captivePortalCallback.expectAvailableCallbacksUnvalidated(mWiFiNetworkAgent);
+        wifiCallback.expectAvailableCallbacksUnvalidated(mWiFiNetworkAgent);
         assertEquals(mWiFiNetworkAgent.waitForRedirectUrl(), redirectUrl);
+
+        // This is necessary because of b/245893397, the same bug that happens where we use
+        // expectAvailableDoubleValidatedCallbacks.
+        // TODO : fix b/245893397 and remove this.
+        wifiCallback.expectCapabilitiesWith(NET_CAPABILITY_CAPTIVE_PORTAL, mWiFiNetworkAgent);
 
         // Check that startCaptivePortalApp sends the expected command to NetworkMonitor.
         mCm.startCaptivePortalApp(mWiFiNetworkAgent.getNetwork());
@@ -4353,12 +4359,14 @@ public class ConnectivityServiceTest {
                 .launchCaptivePortalApp();
 
         // Report that the captive portal is dismissed with partial connectivity, and check that
-        // callbacks are fired.
+        // callbacks are fired with PARTIAL and without CAPTIVE_PORTAL.
         mWiFiNetworkAgent.setNetworkPartial();
         mCm.reportNetworkConnectivity(mWiFiNetworkAgent.getNetwork(), true);
         waitForIdle();
-        captivePortalCallback.expectCapabilitiesWith(NET_CAPABILITY_PARTIAL_CONNECTIVITY,
-                mWiFiNetworkAgent);
+        wifiCallback.expectCapabilitiesThat(
+                mWiFiNetworkAgent, nc ->
+                nc.hasCapability(NET_CAPABILITY_PARTIAL_CONNECTIVITY)
+                && !nc.hasCapability(NET_CAPABILITY_CAPTIVE_PORTAL));
 
         // Report partial connectivity is accepted.
         mWiFiNetworkAgent.setNetworkPartialValid(false /* isStrictMode */);
@@ -4366,13 +4374,12 @@ public class ConnectivityServiceTest {
                 false /* always */);
         waitForIdle();
         mCm.reportNetworkConnectivity(mWiFiNetworkAgent.getNetwork(), true);
-        captivePortalCallback.expectCallback(CallbackEntry.LOST, mWiFiNetworkAgent);
+        wifiCallback.expectCapabilitiesWith(NET_CAPABILITY_VALIDATED, mWiFiNetworkAgent);
         validatedCallback.expectAvailableCallbacksValidated(mWiFiNetworkAgent);
-        NetworkCapabilities nc =
-                validatedCallback.expectCapabilitiesWith(NET_CAPABILITY_PARTIAL_CONNECTIVITY,
+        validatedCallback.expectCapabilitiesWith(NET_CAPABILITY_PARTIAL_CONNECTIVITY,
                 mWiFiNetworkAgent);
 
-        mCm.unregisterNetworkCallback(captivePortalCallback);
+        mCm.unregisterNetworkCallback(wifiCallback);
         mCm.unregisterNetworkCallback(validatedCallback);
     }
 
@@ -4455,6 +4462,11 @@ public class ConnectivityServiceTest {
         mCm.reportNetworkConnectivity(wifiNetwork, false);
         captivePortalCallback.expectAvailableCallbacksUnvalidated(mWiFiNetworkAgent);
         validatedCallback.expectCallback(CallbackEntry.LOST, mWiFiNetworkAgent);
+        // This is necessary because of b/245893397, the same bug that happens where we use
+        // expectAvailableDoubleValidatedCallbacks.
+        // TODO : fix b/245893397 and remove this.
+        captivePortalCallback.expectCallback(CallbackEntry.NETWORK_CAPS_UPDATED,
+                mWiFiNetworkAgent);
 
         // Check that startCaptivePortalApp sends the expected command to NetworkMonitor.
         mCm.startCaptivePortalApp(wifiNetwork);
