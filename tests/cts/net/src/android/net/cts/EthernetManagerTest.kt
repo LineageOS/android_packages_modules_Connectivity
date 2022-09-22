@@ -78,7 +78,6 @@ import org.junit.After
 import org.junit.Assume.assumeFalse
 import org.junit.Assume.assumeTrue
 import org.junit.Before
-import org.junit.Ignore
 import org.junit.Test
 import org.junit.runner.RunWith
 import java.net.Inet6Address
@@ -900,9 +899,6 @@ class EthernetManagerTest {
                 STATIC_IP_CONFIGURATION.staticIpConfiguration.ipAddress!!)
     }
 
-    // TODO(b/240323229): This test is currently flaky due to a race between IpClient restarting and
-    // NetworkAgent tearing down the routes. This problem is exacerbated by disabling RS delay.
-    @Ignore
     @Test
     fun testUpdateConfiguration_forOnlyCapabilities() {
         val iface = createInterface()
