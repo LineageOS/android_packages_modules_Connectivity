@@ -69,7 +69,6 @@ import com.android.testutils.RecorderCallback.CallbackEntry.Available
 import com.android.testutils.RecorderCallback.CallbackEntry.CapabilitiesChanged
 import com.android.testutils.RecorderCallback.CallbackEntry.Lost
 import com.android.testutils.RouterAdvertisementResponder
-import com.android.testutils.SkipPresubmit
 import com.android.testutils.TapPacketReader
 import com.android.testutils.TestableNetworkCallback
 import com.android.testutils.anyNetwork
@@ -98,11 +97,11 @@ import kotlin.test.assertTrue
 import kotlin.test.fail
 
 private const val TAG = "EthernetManagerTest"
-private const val TIMEOUT_MS = 1000L
+private const val TIMEOUT_MS = 2000L
 // Timeout used to confirm no callbacks matching given criteria are received. Must be long enough to
 // process all callbacks including ip provisioning when using the updateConfiguration API.
 // Note that increasing this timeout increases the test duration.
-private const val NO_CALLBACK_TIMEOUT_MS = 200L
+private const val NO_CALLBACK_TIMEOUT_MS = 500L
 
 private val DEFAULT_IP_CONFIGURATION = IpConfiguration(IpConfiguration.IpAssignment.DHCP,
         IpConfiguration.ProxySettings.NONE, null, null)
@@ -121,7 +120,6 @@ private val STATIC_IP_CONFIGURATION = IpConfiguration.Builder()
 @RunWith(DevSdkIgnoreRunner::class)
 // This test depends on behavior introduced post-T as part of connectivity module updates
 @ConnectivityModuleTest
-@SkipPresubmit(reason = "Flaky: b/240323229; remove annotation after fixing")
 @DevSdkIgnoreRule.IgnoreUpTo(Build.VERSION_CODES.S_V2)
 class EthernetManagerTest {
 
@@ -153,9 +151,11 @@ class EthernetManagerTest {
                 context.getSystemService(TestNetworkManager::class.java)
             }
             tapInterface = runAsShell(MANAGE_TEST_NETWORKS) {
-                // setting RS delay to 0 and disabling DAD speeds up tests.
-                tnm.createTapInterface(hasCarrier, false /* bringUp */,
-                        true /* disableIpv6ProvisioningDelay */)
+                // Configuring a tun/tap interface always enables the carrier. If hasCarrier is
+                // false, it is subsequently disabled. This means that the interface may briefly get
+                // link. With IPv6 provisioning delays (RS delay and DAD) disabled, this can cause
+                // tests that expect no network to come up when hasCarrier is false to become flaky.
+                tnm.createTapInterface(hasCarrier, false /* bringUp */)
             }
             val mtu = tapInterface.mtu
             packetReader = TapPacketReader(handler, tapInterface.fileDescriptor.fileDescriptor, mtu)
