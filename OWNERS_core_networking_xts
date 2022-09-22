@@ -8,4 +8,4 @@ reminv@google.com #{LAST_RESORT_SUGGESTION}
 
 # Only temporary ownership to improve ethernet code quality (b/236280707)
 # TODO: remove by 12/31/2022
-per-file EthernetManagerTest.java = prohr@google.com #{LAST_RESORT_SUGGESTION}
+per-file EthernetManagerTest.kt = prohr@google.com #{LAST_RESORT_SUGGESTION}
