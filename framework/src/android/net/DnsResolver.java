@@ -542,7 +542,7 @@ public final class DnsResolver {
 
         DnsAddressAnswer(@NonNull byte[] data) throws ParseException {
             super(data);
-            if ((mHeader.flags & (1 << 15)) == 0) {
+            if ((mHeader.getFlags() & (1 << 15)) == 0) {
                 throw new ParseException("Not an answer packet");
             }
             if (mHeader.getRecordCount(QDSECTION) == 0) {
