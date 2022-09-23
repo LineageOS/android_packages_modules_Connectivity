@@ -26,6 +26,7 @@ import android.net.ConnectivitySettingsManager.NETWORK_AVOID_BAD_WIFI
 import android.net.ConnectivitySettingsManager.NETWORK_METERED_MULTIPATH_PREFERENCE
 import android.net.util.MultinetworkPolicyTracker.ActiveDataSubscriptionIdListener
 import android.os.Build
+import android.os.Handler
 import android.provider.Settings
 import android.telephony.SubscriptionInfo
 import android.telephony.SubscriptionManager
@@ -40,6 +41,7 @@ import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
+import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.mockito.ArgumentCaptor
@@ -48,6 +50,7 @@ import org.mockito.ArgumentMatchers.argThat
 import org.mockito.ArgumentMatchers.eq
 import org.mockito.Mockito.any
 import org.mockito.Mockito.doCallRealMethod
+import org.mockito.Mockito.doNothing
 import org.mockito.Mockito.doReturn
 import org.mockito.Mockito.mock
 import org.mockito.Mockito.times
@@ -90,13 +93,19 @@ class MultinetworkPolicyTrackerTest {
         Settings.Global.putString(resolver, NETWORK_AVOID_BAD_WIFI, "1")
         ConnectivityResources.setResourcesContextForTest(it)
     }
-    private val tracker = MultinetworkPolicyTracker(context, null /* handler */)
+    private val handler = mock(Handler::class.java)
+    private val tracker = MultinetworkPolicyTracker(context, handler)
 
     private fun assertMultipathPreference(preference: Int) {
         Settings.Global.putString(resolver, NETWORK_METERED_MULTIPATH_PREFERENCE,
                 preference.toString())
         tracker.updateMeteredMultipathPreference()
         assertEquals(preference, tracker.meteredMultipathPreference)
+    }
+
+    @Before
+    fun setUp() {
+        tracker.start()
     }
 
     @After
