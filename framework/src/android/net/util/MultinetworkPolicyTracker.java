@@ -39,6 +39,7 @@ import android.telephony.TelephonyManager;
 import android.util.Log;
 
 import com.android.internal.annotations.VisibleForTesting;
+import com.android.modules.utils.build.SdkLevel;
 
 import java.util.Arrays;
 import java.util.List;
@@ -78,6 +79,29 @@ public class MultinetworkPolicyTracker {
     private volatile int mMeteredMultipathPreference;
     private int mActiveSubId = SubscriptionManager.INVALID_SUBSCRIPTION_ID;
     private volatile long mTestAllowBadWifiUntilMs = 0;
+
+    /**
+     * Whether to prefer bad wifi to a network that yields to bad wifis, even if it never validated
+     *
+     * This setting only makes sense if the system is configured not to avoid bad wifis, i.e.
+     * if mAvoidBadWifi is true. If it's not, then no network ever yields to bad wifis
+     * ({@see FullScore#POLICY_YIELD_TO_BAD_WIFI}) and this setting has therefore no effect.
+     *
+     * If this is false, when ranking a bad wifi that never validated against cell data (or any
+     * network that yields to bad wifis), the ranker will prefer cell data. It will prefer wifi
+     * if wifi loses validation later. This behavior avoids the device losing internet access when
+     * walking past a wifi network with no internet access.
+     * This is the default behavior up to Android T, but it can be overridden through an overlay
+     * to behave like below.
+     *
+     * If this is true, then in the same scenario, the ranker will prefer cell data until
+     * the wifi completes its first validation attempt (or the attempt times out after
+     * ConnectivityService#PROMPT_UNVALIDATED_DELAY_MS), then it will prefer the wifi even if it
+     * doesn't provide internet access, unless there is a captive portal on that wifi.
+     * This is the behavior in U and above.
+     */
+    // TODO : implement the behavior.
+    private boolean mActivelyPreferBadWifi;
 
     // Mainline module can't use internal HandlerExecutor, so add an identical executor here.
     private static class HandlerExecutor implements Executor {
@@ -158,6 +182,10 @@ public class MultinetworkPolicyTracker {
         return mAvoidBadWifi;
     }
 
+    public boolean getActivelyPreferBadWifi() {
+        return mActivelyPreferBadWifi;
+    }
+
     // TODO: move this to MultipathPolicyTracker.
     public int getMeteredMultipathPreference() {
         return mMeteredMultipathPreference;
@@ -177,6 +205,29 @@ public class MultinetworkPolicyTracker {
         final int id = mResources.get().getIdentifier("config_networkAvoidBadWifi",
                 "integer", mResources.getResourcesContext().getPackageName());
         return (getResourcesForActiveSubId().getInteger(id) == 0);
+    }
+
+    /**
+     * Whether the device config prefers bad wifi actively, when it doesn't avoid them
+     *
+     * This is only relevant when the device is configured not to avoid bad wifis. In this
+     * case, "actively" preferring a bad wifi means that the device will switch to a bad
+     * wifi it just connected to, as long as it's not a captive portal.
+     *
+     * On U and above this always returns true. On T and below it reads a configuration option.
+     */
+    public boolean configActivelyPrefersBadWifi() {
+        // See the definition of config_activelyPreferBadWifi for a description of its meaning.
+        // On U and above, the config is ignored, and bad wifi is always actively preferred.
+        if (SdkLevel.isAtLeastU()) return true;
+        // TODO: use R.integer.config_activelyPreferBadWifi directly
+        final int id = mResources.get().getIdentifier("config_activelyPreferBadWifi",
+                "integer", mResources.getResourcesContext().getPackageName());
+        // On T and below, 1 means to actively prefer bad wifi, 0 means not to prefer
+        // bad wifi (only stay stuck on it if already on there). This implementation treats
+        // any non-0 value like 1, on the assumption that anybody setting it non-zero wants
+        // the newer behavior.
+        return 0 != getResourcesForActiveSubId().getInteger(id);
     }
 
     /**
@@ -224,9 +275,13 @@ public class MultinetworkPolicyTracker {
 
     public boolean updateAvoidBadWifi() {
         final boolean settingAvoidBadWifi = "1".equals(getAvoidBadWifiSetting());
-        final boolean prev = mAvoidBadWifi;
+        final boolean prevAvoid = mAvoidBadWifi;
         mAvoidBadWifi = settingAvoidBadWifi || !configRestrictsAvoidBadWifi();
-        return mAvoidBadWifi != prev;
+
+        final boolean prevActive = mActivelyPreferBadWifi;
+        mActivelyPreferBadWifi = configActivelyPrefersBadWifi();
+
+        return mAvoidBadWifi != prevAvoid || mActivelyPreferBadWifi != prevActive;
     }
 
     /**
