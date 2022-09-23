@@ -1838,7 +1838,10 @@ public class ConnectivityServiceTest {
                 .getIdentifier(eq("network_switch_type_name"), eq("array"), any());
         doReturn(R.integer.config_networkAvoidBadWifi).when(mResources)
                 .getIdentifier(eq("config_networkAvoidBadWifi"), eq("integer"), any());
+        doReturn(R.integer.config_activelyPreferBadWifi).when(mResources)
+                .getIdentifier(eq("config_activelyPreferBadWifi"), eq("integer"), any());
         doReturn(1).when(mResources).getInteger(R.integer.config_networkAvoidBadWifi);
+        doReturn(0).when(mResources).getInteger(R.integer.config_activelyPreferBadWifi);
         doReturn(true).when(mResources)
                 .getBoolean(R.bool.config_cellular_radio_timesharing_capable);
     }
@@ -5618,6 +5621,24 @@ public class ConnectivityServiceTest {
 
         doReturn(0).when(mResources).getInteger(R.integer.config_networkAvoidBadWifi);
         testAvoidBadWifiConfig_controlledBySettings();
+    }
+
+    @Test
+    public void testActivelyPreferBadWifiSetting() throws Exception {
+        doReturn(1).when(mResources).getInteger(R.integer.config_activelyPreferBadWifi);
+        mPolicyTracker.reevaluate();
+        waitForIdle();
+        assertTrue(mService.mNetworkRanker.getConfiguration().activelyPreferBadWifi());
+
+        doReturn(0).when(mResources).getInteger(R.integer.config_activelyPreferBadWifi);
+        mPolicyTracker.reevaluate();
+        waitForIdle();
+        if (SdkLevel.isAtLeastU()) {
+            // U+ ignore the setting and always actively prefers bad wifi
+            assertTrue(mService.mNetworkRanker.getConfiguration().activelyPreferBadWifi());
+        } else {
+            assertFalse(mService.mNetworkRanker.getConfiguration().activelyPreferBadWifi());
+        }
     }
 
     @Test
