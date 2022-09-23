@@ -357,7 +357,10 @@ public class ConnectivityService extends IConnectivityManager.Stub
     // of connectivity (valid, partial, captive portal). If none has been detected after this
     // delay, the stack considers this network bad, which may affect how it's handled in ranking
     // according to config_networkAvoidBadWifi.
-    private static final int INITIAL_EVALUATION_TIMEOUT_MS = 20 * 1000;
+    // Timeout in case the "actively prefer bad wifi" feature is on
+    private static final int ACTIVELY_PREFER_BAD_WIFI_INITIAL_TIMEOUT_MS = 20 * 1000;
+    // Timeout in case the "actively prefer bad wifi" feature is off
+    private static final int DONT_ACTIVELY_PREFER_BAD_WIFI_INITIAL_TIMEOUT_MS = 8 * 1000;
 
     // Default to 30s linger time-out, and 5s for nascent network. Modifiable only for testing.
     private static final String LINGER_DELAY_PROPERTY = "persist.netmon.linger";
@@ -783,7 +786,8 @@ public class ConnectivityService extends IConnectivityManager.Stub
     final ConnectivityDiagnosticsHandler mConnectivityDiagnosticsHandler;
 
     private final DnsManager mDnsManager;
-    private final NetworkRanker mNetworkRanker;
+    @VisibleForTesting
+    final NetworkRanker mNetworkRanker;
 
     private boolean mSystemReady;
     private Intent mInitialBroadcast;
@@ -1417,7 +1421,6 @@ public class ConnectivityService extends IConnectivityManager.Stub
                 new RequestInfoPerUidCounter(MAX_NETWORK_REQUESTS_PER_SYSTEM_UID - 1);
 
         mMetricsLog = logger;
-        mNetworkRanker = new NetworkRanker();
         final NetworkRequest defaultInternetRequest = createDefaultRequest();
         mDefaultRequest = new NetworkRequestInfo(
                 Process.myUid(), defaultInternetRequest, null,
@@ -1538,6 +1541,9 @@ public class ConnectivityService extends IConnectivityManager.Stub
 
         mMultinetworkPolicyTracker = mDeps.makeMultinetworkPolicyTracker(
                 mContext, mHandler, () -> updateAvoidBadWifi());
+        mNetworkRanker =
+                new NetworkRanker(new NetworkRanker.Configuration(activelyPreferBadWifi()));
+
         mMultinetworkPolicyTracker.start();
 
         mDnsManager = new DnsManager(mContext, mDnsResolver);
@@ -3797,6 +3803,11 @@ public class ConnectivityService extends IConnectivityManager.Stub
             // the first time this ever happened.
             final boolean someConnectivity = (valid || partial || captive);
             final boolean becameEvaluated = someConnectivity && nai.setEvaluated();
+            // Because of b/245893397, if the score is updated when updateCapabilities is called,
+            // any callback that receives onAvailable for that rematch receives an extra caps
+            // callback. To prevent that, update the score in the agent so the updates below won't
+            // see an update to both caps and score at the same time.
+            // TODO : fix b/245893397 and remove this.
             if (becameEvaluated) nai.updateScoreForNetworkAgentUpdate();
 
             if (!valid && shouldIgnoreValidationFailureAfterRoam(nai)) {
@@ -5050,6 +5061,10 @@ public class ConnectivityService extends IConnectivityManager.Stub
         return mMultinetworkPolicyTracker.getAvoidBadWifi();
     }
 
+    private boolean activelyPreferBadWifi() {
+        return mMultinetworkPolicyTracker.getActivelyPreferBadWifi();
+    }
+
     /**
      * Return whether the device should maintain continuous, working connectivity by switching away
      * from WiFi networks having no connectivity.
@@ -5073,6 +5088,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
         for (final NetworkOfferInfo noi : offersToUpdate) {
             updateOfferScore(noi.offer);
         }
+        mNetworkRanker.setConfiguration(new NetworkRanker.Configuration(activelyPreferBadWifi()));
         rematchAllNetworksAndRequests();
     }
 
@@ -5088,6 +5104,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
         pw.println("Bad Wi-Fi avoidance: " + avoidBadWifi());
         pw.increaseIndent();
         pw.println("Config restrict:   " + configRestrict);
+        pw.println("Actively prefer:   " + activelyPreferBadWifi());
 
         final String value = mMultinetworkPolicyTracker.getAvoidBadWifiSetting();
         String description;
@@ -9225,7 +9242,10 @@ public class ConnectivityService extends IConnectivityManager.Stub
                 networkAgent.networkMonitor().notifyNetworkConnected(params.linkProperties,
                         params.networkCapabilities);
             }
-            scheduleEvaluationTimeout(networkAgent.network, INITIAL_EVALUATION_TIMEOUT_MS);
+            final long delay = activelyPreferBadWifi()
+                    ? ACTIVELY_PREFER_BAD_WIFI_INITIAL_TIMEOUT_MS
+                    : DONT_ACTIVELY_PREFER_BAD_WIFI_INITIAL_TIMEOUT_MS;
+            scheduleEvaluationTimeout(networkAgent.network, delay);
 
             // Whether a particular NetworkRequest listen should cause signal strength thresholds to
             // be communicated to a particular NetworkAgent depends only on the network's immutable,
