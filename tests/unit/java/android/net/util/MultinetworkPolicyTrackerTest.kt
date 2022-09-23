@@ -35,6 +35,7 @@ import android.test.mock.MockContentResolver
 import androidx.test.filters.SmallTest
 import com.android.connectivity.resources.R
 import com.android.internal.util.test.FakeSettingsProvider
+import com.android.modules.utils.build.SdkLevel
 import com.android.testutils.DevSdkIgnoreRule
 import com.android.testutils.DevSdkIgnoreRunner
 import org.junit.After
@@ -50,7 +51,6 @@ import org.mockito.ArgumentMatchers.argThat
 import org.mockito.ArgumentMatchers.eq
 import org.mockito.Mockito.any
 import org.mockito.Mockito.doCallRealMethod
-import org.mockito.Mockito.doNothing
 import org.mockito.Mockito.doReturn
 import org.mockito.Mockito.mock
 import org.mockito.Mockito.times
@@ -69,7 +69,10 @@ class MultinetworkPolicyTrackerTest {
     private val resources = mock(Resources::class.java).also {
         doReturn(R.integer.config_networkAvoidBadWifi).`when`(it).getIdentifier(
                 eq("config_networkAvoidBadWifi"), eq("integer"), any())
+        doReturn(R.integer.config_activelyPreferBadWifi).`when`(it).getIdentifier(
+                eq("config_activelyPreferBadWifi"), eq("integer"), any())
         doReturn(0).`when`(it).getInteger(R.integer.config_networkAvoidBadWifi)
+        doReturn(0).`when`(it).getInteger(R.integer.config_activelyPreferBadWifi)
     }
     private val telephonyManager = mock(TelephonyManager::class.java)
     private val subscriptionManager = mock(SubscriptionManager::class.java).also {
@@ -122,6 +125,7 @@ class MultinetworkPolicyTrackerTest {
 
     @Test
     fun testUpdateAvoidBadWifi() {
+        doReturn(0).`when`(resources).getInteger(R.integer.config_activelyPreferBadWifi)
         Settings.Global.putString(resolver, NETWORK_AVOID_BAD_WIFI, "0")
         assertTrue(tracker.updateAvoidBadWifi())
         assertFalse(tracker.avoidBadWifi)
@@ -129,6 +133,24 @@ class MultinetworkPolicyTrackerTest {
         doReturn(1).`when`(resources).getInteger(R.integer.config_networkAvoidBadWifi)
         assertTrue(tracker.updateAvoidBadWifi())
         assertTrue(tracker.avoidBadWifi)
+
+        if (SdkLevel.isAtLeastU()) {
+            // On U+, the system always prefers bad wifi.
+            assertTrue(tracker.activelyPreferBadWifi)
+        } else {
+            assertFalse(tracker.activelyPreferBadWifi)
+        }
+
+        doReturn(1).`when`(resources).getInteger(R.integer.config_activelyPreferBadWifi)
+        if (SdkLevel.isAtLeastU()) {
+            // On U+, this didn't change the setting
+            assertFalse(tracker.updateAvoidBadWifi())
+        } else {
+            // On T-, this must have changed the setting
+            assertTrue(tracker.updateAvoidBadWifi())
+        }
+        // In all cases, now the system actively prefers bad wifi
+        assertTrue(tracker.activelyPreferBadWifi)
     }
 
     @Test
