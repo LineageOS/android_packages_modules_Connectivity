@@ -38,19 +38,42 @@ import android.annotation.NonNull;
 import android.annotation.Nullable;
 import android.net.NetworkCapabilities;
 import android.net.NetworkRequest;
+import android.net.util.MultinetworkPolicyTracker;
 
+import com.android.internal.annotations.VisibleForTesting;
 import com.android.net.module.util.CollectionUtils;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
+import java.util.Objects;
 import java.util.function.Predicate;
 
 /**
  * A class that knows how to find the best network matching a request out of a list of networks.
  */
 public class NetworkRanker {
+    /**
+     * Home for all configurations of NetworkRanker
+     */
+    public static final class Configuration {
+        private final boolean mActivelyPreferBadWifi;
+
+        public Configuration(final boolean activelyPreferBadWifi) {
+            this.mActivelyPreferBadWifi = activelyPreferBadWifi;
+        }
+
+        /**
+         * @see MultinetworkPolicyTracker#getActivelyPreferBadWifi()
+         */
+        // TODO : implement the behavior.
+        public boolean activelyPreferBadWifi() {
+            return mActivelyPreferBadWifi;
+        }
+    }
+    @NonNull private volatile Configuration mConf;
+
     // Historically the legacy ints have been 0~100 in principle (though the highest score in
     // AOSP has always been 90). This is relied on by VPNs that send a legacy score of 101.
     public static final int LEGACY_INT_MAX = 100;
@@ -65,7 +88,22 @@ public class NetworkRanker {
         NetworkCapabilities getCapsNoCopy();
     }
 
-    public NetworkRanker() { }
+    public NetworkRanker(@NonNull final Configuration conf) {
+        // Because mConf is volatile, the only way it could be seen null would be an access to it
+        // on some other thread during this constructor. But this is not possible because mConf is
+        // private and `this` doesn't escape this constructor.
+        setConfiguration(conf);
+    }
+
+    public void setConfiguration(@NonNull final Configuration conf) {
+        mConf = Objects.requireNonNull(conf);
+    }
+
+    // There shouldn't be a use case outside of testing
+    @VisibleForTesting
+    public Configuration getConfiguration() {
+        return mConf;
+    }
 
     /**
      * Find the best network satisfying this request among the list of passed networks.
