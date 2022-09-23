@@ -622,31 +622,32 @@ public class EthernetTracker {
         // restarted while it was running), we need to fake a link up notification so we
         // start configuring it.
         if (NetdUtils.hasFlag(config, INetd.IF_FLAG_RUNNING)) {
-            updateInterfaceState(iface, true);
+            // no need to send an interface state change as this is not a true "state change". The
+            // callers (maybeTrackInterface() and setTetheringInterfaceMode()) already broadcast the
+            // state change.
+            mFactory.updateInterfaceLinkState(iface, true);
         }
     }
 
     private void updateInterfaceState(String iface, boolean up) {
-        // TODO: pull EthernetCallbacks out of EthernetNetworkFactory.
         updateInterfaceState(iface, up, new EthernetCallback(null /* cb */));
     }
 
-    private void updateInterfaceState(@NonNull final String iface, final boolean up,
-            @Nullable final EthernetCallback cb) {
+    // TODO(b/225315248): enable/disableInterface() should not affect link state.
+    private void updateInterfaceState(String iface, boolean up, EthernetCallback cb) {
         final int mode = getInterfaceMode(iface);
-        final boolean factoryLinkStateUpdated = (mode == INTERFACE_MODE_CLIENT)
-                && mFactory.updateInterfaceLinkState(iface, up);
-
-        if (factoryLinkStateUpdated) {
-            broadcastInterfaceStateChange(iface);
-            cb.onResult(iface);
-        } else {
-            // The interface may already be in the correct state. While usually this should not be
-            // an error, since updateInterfaceState is used in setInterfaceEnabled() /
-            // setInterfaceDisabled() it has to be reported as such.
-            // It is also possible that the interface disappeared or is in server mode.
+        if (mode == INTERFACE_MODE_SERVER || !mFactory.hasInterface(iface)) {
+            // The interface is in server mode or is not tracked.
             cb.onError("Failed to set link state " + (up ? "up" : "down") + " for " + iface);
+            return;
         }
+
+        if (mFactory.updateInterfaceLinkState(iface, up)) {
+            broadcastInterfaceStateChange(iface);
+        }
+        // If updateInterfaceLinkState returns false, the interface is already in the correct state.
+        // Always return success.
+        cb.onResult(iface);
     }
 
     private void maybeUpdateServerModeInterfaceState(String iface, boolean available) {
