@@ -42,7 +42,8 @@ private fun caps(transport: Int) = NetworkCapabilities.Builder().addTransportTyp
 @RunWith(DevSdkIgnoreRunner::class)
 @DevSdkIgnoreRule.IgnoreUpTo(Build.VERSION_CODES.R)
 class NetworkRankerTest {
-    private val mRanker = NetworkRanker()
+    private val mRanker = NetworkRanker(NetworkRanker.Configuration(
+            false /* activelyPreferBadWifi */))
 
     private class TestScore(private val sc: FullScore, private val nc: NetworkCapabilities)
             : NetworkRanker.Scoreable {
