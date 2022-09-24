@@ -63,32 +63,6 @@ public class NearbyDeviceParcelableTest {
                         .setData(SCAN_DATA);
     }
 
-    /** Verify toString returns expected string. */
-    @Test
-    @SdkSuppress(minSdkVersion = 33, codeName = "T")
-    public void testToString() {
-        PublicCredential publicCredential =
-                new PublicCredential.Builder(
-                        new byte[] {1},
-                        new byte[] {2},
-                        new byte[] {3},
-                        new byte[] {4},
-                        new byte[] {5})
-                        .build();
-        NearbyDeviceParcelable nearbyDeviceParcelable =
-                mBuilder.setFastPairModelId(null)
-                        .setData(null)
-                        .setPublicCredential(publicCredential)
-                        .build();
-
-        assertThat(nearbyDeviceParcelable.toString())
-                .isEqualTo(
-                        "NearbyDeviceParcelable[scanType=2, name=testDevice, medium=BLE, "
-                                + "txPower=0, rssi=-60, action=0, bluetoothAddress="
-                                + BLUETOOTH_ADDRESS
-                                + ", fastPairModelId=null, data=null, salt=null]");
-    }
-
     @Test
     @SdkSuppress(minSdkVersion = 33, codeName = "T")
     public void testNullFields() {
