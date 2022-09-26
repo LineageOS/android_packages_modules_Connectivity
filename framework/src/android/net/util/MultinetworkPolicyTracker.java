@@ -100,7 +100,6 @@ public class MultinetworkPolicyTracker {
      * doesn't provide internet access, unless there is a captive portal on that wifi.
      * This is the behavior in U and above.
      */
-    // TODO : implement the behavior.
     private boolean mActivelyPreferBadWifi;
 
     // Mainline module can't use internal HandlerExecutor, so add an identical executor here.
