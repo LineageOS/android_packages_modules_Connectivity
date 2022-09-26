@@ -29,6 +29,7 @@ import static android.Manifest.permission.NETWORK_FACTORY;
 import static android.Manifest.permission.NETWORK_SETTINGS;
 import static android.Manifest.permission.NETWORK_STACK;
 import static android.Manifest.permission.PACKET_KEEPALIVE_OFFLOAD;
+import static android.Manifest.permission.READ_DEVICE_CONFIG;
 import static android.app.PendingIntent.FLAG_IMMUTABLE;
 import static android.content.Intent.ACTION_PACKAGE_ADDED;
 import static android.content.Intent.ACTION_PACKAGE_REMOVED;
@@ -3529,10 +3530,14 @@ public class ConnectivityServiceTest {
 
     /** Expects the specified notification and returns the notification ID. */
     private int expectNotification(TestNetworkAgentWrapper agent, NotificationType type) {
-        verify(mNotificationManager).notify(
+        verify(mNotificationManager, timeout(TIMEOUT_MS)).notify(
                 eq(NetworkNotificationManager.tagFor(agent.getNetwork().netId)),
                 eq(type.eventId), any());
         return type.eventId;
+    }
+
+    private void expectNoNotification(@NonNull final TestNetworkAgentWrapper agent) {
+        verify(mNotificationManager, never()).notifyAsUser(anyString(), anyInt(), any(), any());
     }
 
     /**
@@ -3553,9 +3558,9 @@ public class ConnectivityServiceTest {
      * This generally happens when the network disconnects or when the newtwork validates. During
      * normal usage the notification is also cleared by the system when the notification is tapped.
      */
-    private void expectClearNotification(TestNetworkAgentWrapper agent, int expectedId) {
-        verify(mNotificationManager).cancel(
-                eq(NetworkNotificationManager.tagFor(agent.getNetwork().netId)), eq(expectedId));
+    private void expectClearNotification(TestNetworkAgentWrapper agent, NotificationType type) {
+        verify(mNotificationManager, timeout(TIMEOUT_MS)).cancel(
+                eq(NetworkNotificationManager.tagFor(agent.getNetwork().netId)), eq(type.eventId));
     }
 
     /**
@@ -3566,13 +3571,13 @@ public class ConnectivityServiceTest {
     private void expectUnvalidationCheckWillNotNotify(TestNetworkAgentWrapper agent) {
         mService.scheduleEvaluationTimeout(agent.getNetwork(), 0 /*delayMs */);
         waitForIdle();
-        verify(mNotificationManager, never()).notifyAsUser(anyString(), anyInt(), any(), any());
+        expectNoNotification(agent);
     }
 
     private void expectDisconnectAndClearNotifications(TestNetworkCallback callback,
-            TestNetworkAgentWrapper agent, int id) {
+            TestNetworkAgentWrapper agent, NotificationType type) {
         callback.expectCallback(CallbackEntry.LOST, agent);
-        expectClearNotification(agent, id);
+        expectClearNotification(agent, type);
     }
 
     private NativeNetworkConfig nativeNetworkConfigPhysical(int netId, int permission) {
@@ -3716,7 +3721,7 @@ public class ConnectivityServiceTest {
         // Disconnect wifi, and then reconnect, again with explicitlySelected=true.
         mWiFiNetworkAgent.disconnect();
         expectDisconnectAndClearNotifications(callback, mWiFiNetworkAgent,
-                NotificationType.NO_INTERNET.eventId);
+                NotificationType.NO_INTERNET);
 
         mWiFiNetworkAgent = new TestNetworkAgentWrapper(TRANSPORT_WIFI);
         mWiFiNetworkAgent.explicitlySelected(true, false);
@@ -3730,7 +3735,7 @@ public class ConnectivityServiceTest {
         // network to disconnect.
         mCm.setAcceptUnvalidated(mWiFiNetworkAgent.getNetwork(), false, false);
         expectDisconnectAndClearNotifications(callback, mWiFiNetworkAgent,
-                NotificationType.NO_INTERNET.eventId);
+                NotificationType.NO_INTERNET);
         reset(mNotificationManager);
 
         // Reconnect, again with explicitlySelected=true, but this time validate.
@@ -4230,7 +4235,7 @@ public class ConnectivityServiceTest {
         assertEquals(mWiFiNetworkAgent.getNetwork(), mCm.getActiveNetwork());
 
         // Once the network validates, the notification disappears.
-        expectClearNotification(mWiFiNetworkAgent, NotificationType.PARTIAL_CONNECTIVITY.eventId);
+        expectClearNotification(mWiFiNetworkAgent, NotificationType.PARTIAL_CONNECTIVITY);
 
         // Disconnect and reconnect wifi with partial connectivity again.
         mWiFiNetworkAgent.disconnect();
@@ -4253,7 +4258,7 @@ public class ConnectivityServiceTest {
         mCm.setAcceptPartialConnectivity(mWiFiNetworkAgent.getNetwork(), false /* accept */,
                 false /* always */);
         callback.expectCallback(CallbackEntry.LOST, mWiFiNetworkAgent);
-        expectClearNotification(mWiFiNetworkAgent, NotificationType.PARTIAL_CONNECTIVITY.eventId);
+        expectClearNotification(mWiFiNetworkAgent, NotificationType.PARTIAL_CONNECTIVITY);
         reset(mNotificationManager);
 
         // If the user accepted partial connectivity before, and the device connects to that network
@@ -4329,10 +4334,11 @@ public class ConnectivityServiceTest {
 
     @Test
     public void testCaptivePortalOnPartialConnectivity() throws Exception {
-        final TestNetworkCallback captivePortalCallback = new TestNetworkCallback();
-        final NetworkRequest captivePortalRequest = new NetworkRequest.Builder()
-                .addCapability(NET_CAPABILITY_CAPTIVE_PORTAL).build();
-        mCm.registerNetworkCallback(captivePortalRequest, captivePortalCallback);
+        final TestNetworkCallback wifiCallback = new TestNetworkCallback();
+        final NetworkRequest wifiRequest = new NetworkRequest.Builder()
+                .addTransportType(TRANSPORT_WIFI)
+                .build();
+        mCm.registerNetworkCallback(wifiRequest, wifiCallback);
 
         final TestNetworkCallback validatedCallback = new TestNetworkCallback();
         final NetworkRequest validatedRequest = new NetworkRequest.Builder()
@@ -4344,8 +4350,13 @@ public class ConnectivityServiceTest {
         mWiFiNetworkAgent = new TestNetworkAgentWrapper(TRANSPORT_WIFI);
         String redirectUrl = "http://android.com/path";
         mWiFiNetworkAgent.connectWithCaptivePortal(redirectUrl, false /* isStrictMode */);
-        captivePortalCallback.expectAvailableCallbacksUnvalidated(mWiFiNetworkAgent);
+        wifiCallback.expectAvailableCallbacksUnvalidated(mWiFiNetworkAgent);
         assertEquals(mWiFiNetworkAgent.waitForRedirectUrl(), redirectUrl);
+
+        // This is necessary because of b/245893397, the same bug that happens where we use
+        // expectAvailableDoubleValidatedCallbacks.
+        // TODO : fix b/245893397 and remove this.
+        wifiCallback.expectCapabilitiesWith(NET_CAPABILITY_CAPTIVE_PORTAL, mWiFiNetworkAgent);
 
         // Check that startCaptivePortalApp sends the expected command to NetworkMonitor.
         mCm.startCaptivePortalApp(mWiFiNetworkAgent.getNetwork());
@@ -4353,12 +4364,14 @@ public class ConnectivityServiceTest {
                 .launchCaptivePortalApp();
 
         // Report that the captive portal is dismissed with partial connectivity, and check that
-        // callbacks are fired.
+        // callbacks are fired with PARTIAL and without CAPTIVE_PORTAL.
         mWiFiNetworkAgent.setNetworkPartial();
         mCm.reportNetworkConnectivity(mWiFiNetworkAgent.getNetwork(), true);
         waitForIdle();
-        captivePortalCallback.expectCapabilitiesWith(NET_CAPABILITY_PARTIAL_CONNECTIVITY,
-                mWiFiNetworkAgent);
+        wifiCallback.expectCapabilitiesThat(
+                mWiFiNetworkAgent, nc ->
+                nc.hasCapability(NET_CAPABILITY_PARTIAL_CONNECTIVITY)
+                && !nc.hasCapability(NET_CAPABILITY_CAPTIVE_PORTAL));
 
         // Report partial connectivity is accepted.
         mWiFiNetworkAgent.setNetworkPartialValid(false /* isStrictMode */);
@@ -4366,13 +4379,12 @@ public class ConnectivityServiceTest {
                 false /* always */);
         waitForIdle();
         mCm.reportNetworkConnectivity(mWiFiNetworkAgent.getNetwork(), true);
-        captivePortalCallback.expectCallback(CallbackEntry.LOST, mWiFiNetworkAgent);
+        wifiCallback.expectCapabilitiesWith(NET_CAPABILITY_VALIDATED, mWiFiNetworkAgent);
         validatedCallback.expectAvailableCallbacksValidated(mWiFiNetworkAgent);
-        NetworkCapabilities nc =
-                validatedCallback.expectCapabilitiesWith(NET_CAPABILITY_PARTIAL_CONNECTIVITY,
+        validatedCallback.expectCapabilitiesWith(NET_CAPABILITY_PARTIAL_CONNECTIVITY,
                 mWiFiNetworkAgent);
 
-        mCm.unregisterNetworkCallback(captivePortalCallback);
+        mCm.unregisterNetworkCallback(wifiCallback);
         mCm.unregisterNetworkCallback(validatedCallback);
     }
 
@@ -4455,6 +4467,11 @@ public class ConnectivityServiceTest {
         mCm.reportNetworkConnectivity(wifiNetwork, false);
         captivePortalCallback.expectAvailableCallbacksUnvalidated(mWiFiNetworkAgent);
         validatedCallback.expectCallback(CallbackEntry.LOST, mWiFiNetworkAgent);
+        // This is necessary because of b/245893397, the same bug that happens where we use
+        // expectAvailableDoubleValidatedCallbacks.
+        // TODO : fix b/245893397 and remove this.
+        captivePortalCallback.expectCallback(CallbackEntry.NETWORK_CAPS_UPDATED,
+                mWiFiNetworkAgent);
 
         // Check that startCaptivePortalApp sends the expected command to NetworkMonitor.
         mCm.startCaptivePortalApp(wifiNetwork);
@@ -5758,6 +5775,56 @@ public class ConnectivityServiceTest {
         wifiCallback.assertNoCallback();
     }
 
+    public void doTestPreferBadWifi(final boolean preferBadWifi) throws Exception {
+        // Pretend we're on a carrier that restricts switching away from bad wifi, and
+        // depending on the parameter one that may indeed prefer bad wifi.
+        doReturn(0).when(mResources).getInteger(R.integer.config_networkAvoidBadWifi);
+        doReturn(preferBadWifi ? 1 : 0).when(mResources)
+                .getInteger(R.integer.config_activelyPreferBadWifi);
+        mPolicyTracker.reevaluate();
+
+        registerDefaultNetworkCallbacks();
+        final NetworkRequest wifiRequest = new NetworkRequest.Builder()
+                .clearCapabilities()
+                .addTransportType(TRANSPORT_WIFI)
+                .build();
+        final TestableNetworkCallback wifiCallback = new TestableNetworkCallback();
+        mCm.registerNetworkCallback(wifiRequest, wifiCallback);
+
+        // Bring up validated cell and unvalidated wifi.
+        mCellNetworkAgent = new TestNetworkAgentWrapper(TRANSPORT_CELLULAR);
+        mCellNetworkAgent.connect(true);
+        mDefaultNetworkCallback.expectAvailableThenValidatedCallbacks(mCellNetworkAgent);
+
+        mWiFiNetworkAgent = new TestNetworkAgentWrapper(TRANSPORT_WIFI);
+        mWiFiNetworkAgent.connect(false);
+        wifiCallback.expectAvailableCallbacksUnvalidated(mWiFiNetworkAgent);
+
+        if (preferBadWifi) {
+            expectUnvalidationCheckWillNotify(mWiFiNetworkAgent, NotificationType.LOST_INTERNET);
+            mDefaultNetworkCallback.expectAvailableCallbacksUnvalidated(mWiFiNetworkAgent);
+        } else {
+            expectUnvalidationCheckWillNotNotify(mWiFiNetworkAgent);
+            mDefaultNetworkCallback.assertNoCallback();
+        }
+    }
+
+    @Test
+    public void testPreferBadWifi_doNotPrefer() throws Exception {
+        // Starting with U this mode is no longer supported and can't actually be tested
+        assumeFalse(SdkLevel.isAtLeastU());
+        runAsShell(READ_DEVICE_CONFIG, () -> {
+            doTestPreferBadWifi(false /* preferBadWifi */);
+        });
+    }
+
+    @Test
+    public void testPreferBadWifi_doPrefer() throws Exception {
+        runAsShell(READ_DEVICE_CONFIG, () -> {
+            doTestPreferBadWifi(true /* preferBadWifi */);
+        });
+    }
+
     @Test
     public void testAvoidBadWifi() throws Exception {
         final ContentResolver cr = mServiceContext.getContentResolver();
@@ -5781,7 +5848,8 @@ public class ConnectivityServiceTest {
         TestNetworkCallback validatedWifiCallback = new TestNetworkCallback();
         mCm.registerNetworkCallback(validatedWifiRequest, validatedWifiCallback);
 
-        Settings.Global.putInt(cr, ConnectivitySettingsManager.NETWORK_AVOID_BAD_WIFI, 0);
+        // Prompt mode, so notifications can be tested
+        Settings.Global.putString(cr, ConnectivitySettingsManager.NETWORK_AVOID_BAD_WIFI, null);
         mPolicyTracker.reevaluate();
 
         // Bring up validated cell.
@@ -5803,6 +5871,7 @@ public class ConnectivityServiceTest {
         mCm.reportNetworkConnectivity(wifiNetwork, false);
         defaultCallback.expectCapabilitiesWithout(NET_CAPABILITY_VALIDATED, mWiFiNetworkAgent);
         validatedWifiCallback.expectCallback(CallbackEntry.LOST, mWiFiNetworkAgent);
+        expectNotification(mWiFiNetworkAgent, NotificationType.LOST_INTERNET);
 
         // Because avoid bad wifi is off, we don't switch to cellular.
         defaultCallback.assertNoCallback();
@@ -5818,14 +5887,20 @@ public class ConnectivityServiceTest {
         mPolicyTracker.reevaluate();
         defaultCallback.expectAvailableCallbacksValidated(mCellNetworkAgent);
         assertEquals(mCm.getActiveNetwork(), cellNetwork);
+        expectClearNotification(mWiFiNetworkAgent, NotificationType.LOST_INTERNET);
 
         // Switch back to a restrictive carrier.
         doReturn(0).when(mResources).getInteger(R.integer.config_networkAvoidBadWifi);
         mPolicyTracker.reevaluate();
         defaultCallback.expectAvailableCallbacksUnvalidated(mWiFiNetworkAgent);
         assertEquals(mCm.getActiveNetwork(), wifiNetwork);
+        // A notification was already shown for this very network.
+        expectNoNotification(mWiFiNetworkAgent);
 
         // Simulate the user selecting "switch" on the dialog, and check that we switch to cell.
+        // In principle this is a little bit unrealistic because the switch to a less restrictive
+        // carrier above should have remove the notification but this doesn't matter for the
+        // purposes of this test.
         mCm.setAvoidUnvalidated(wifiNetwork);
         defaultCallback.expectAvailableCallbacksValidated(mCellNetworkAgent);
         assertFalse(mCm.getNetworkCapabilities(wifiNetwork).hasCapability(
@@ -5847,6 +5922,7 @@ public class ConnectivityServiceTest {
         mCm.reportNetworkConnectivity(wifiNetwork, false);
         defaultCallback.expectCapabilitiesWithout(NET_CAPABILITY_VALIDATED, mWiFiNetworkAgent);
         validatedWifiCallback.expectCallback(CallbackEntry.LOST, mWiFiNetworkAgent);
+        expectNotification(mWiFiNetworkAgent, NotificationType.LOST_INTERNET);
 
         // Simulate the user selecting "switch" and checking the don't ask again checkbox.
         Settings.Global.putInt(cr, ConnectivitySettingsManager.NETWORK_AVOID_BAD_WIFI, 1);
@@ -5859,6 +5935,7 @@ public class ConnectivityServiceTest {
         assertTrue(mCm.getNetworkCapabilities(cellNetwork).hasCapability(
                 NET_CAPABILITY_VALIDATED));
         assertEquals(mCm.getActiveNetwork(), cellNetwork);
+        expectClearNotification(mWiFiNetworkAgent, NotificationType.LOST_INTERNET);
 
         // Simulate the user turning the cellular fallback setting off and then on.
         // We switch to wifi and then to cell.
@@ -5866,6 +5943,9 @@ public class ConnectivityServiceTest {
         mPolicyTracker.reevaluate();
         defaultCallback.expectAvailableCallbacksUnvalidated(mWiFiNetworkAgent);
         assertEquals(mCm.getActiveNetwork(), wifiNetwork);
+        // Notification is cleared again because CS doesn't particularly remember that it has
+        // cleared it before, and if it hasn't cleared it before then it should do so now.
+        expectClearNotification(mWiFiNetworkAgent, NotificationType.LOST_INTERNET);
         Settings.Global.putInt(cr, ConnectivitySettingsManager.NETWORK_AVOID_BAD_WIFI, 1);
         mPolicyTracker.reevaluate();
         defaultCallback.expectAvailableCallbacksValidated(mCellNetworkAgent);
@@ -5876,6 +5956,8 @@ public class ConnectivityServiceTest {
         defaultCallback.expectCallback(CallbackEntry.LOST, mCellNetworkAgent);
         defaultCallback.expectAvailableCallbacksUnvalidated(mWiFiNetworkAgent);
         validatedWifiCallback.assertNoCallback();
+        // Notification is cleared yet again because the device switched to wifi.
+        expectClearNotification(mWiFiNetworkAgent, NotificationType.LOST_INTERNET);
 
         mCm.unregisterNetworkCallback(cellNetworkCallback);
         mCm.unregisterNetworkCallback(validatedWifiCallback);
@@ -12979,6 +13061,12 @@ public class ConnectivityServiceTest {
         if (null != mTestPackageDefaultNetworkCallback2) {
             mCm.unregisterNetworkCallback(mTestPackageDefaultNetworkCallback2);
         }
+        mSystemDefaultNetworkCallback = null;
+        mDefaultNetworkCallback = null;
+        mProfileDefaultNetworkCallback = null;
+        mTestPackageDefaultNetworkCallback = null;
+        mProfileDefaultNetworkCallbackAsAppUid2 = null;
+        mTestPackageDefaultNetworkCallback2 = null;
     }
 
     private void setupMultipleDefaultNetworksForOemNetworkPreferenceNotCurrentUidTest(
