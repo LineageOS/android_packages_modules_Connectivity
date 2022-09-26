@@ -16,13 +16,14 @@
 
 package com.android.server.nearby.fastpair.halfsheet;
 
-import static com.android.server.nearby.fastpair.Constant.DEVICE_PAIRING_FRAGMENT_TYPE;
-import static com.android.server.nearby.fastpair.Constant.EXTRA_BINDER;
-import static com.android.server.nearby.fastpair.Constant.EXTRA_BUNDLE;
-import static com.android.server.nearby.fastpair.Constant.EXTRA_HALF_SHEET_CONTENT;
-import static com.android.server.nearby.fastpair.Constant.EXTRA_HALF_SHEET_INFO;
-import static com.android.server.nearby.fastpair.Constant.EXTRA_HALF_SHEET_TYPE;
-import static com.android.server.nearby.fastpair.Constant.FAST_PAIR_HALF_SHEET_HELP_URL;
+import static com.android.nearby.halfsheet.constants.Constant.DEVICE_PAIRING_FRAGMENT_TYPE;
+import static com.android.nearby.halfsheet.constants.Constant.EXTRA_BINDER;
+import static com.android.nearby.halfsheet.constants.Constant.EXTRA_BUNDLE;
+import static com.android.nearby.halfsheet.constants.Constant.EXTRA_HALF_SHEET_CONTENT;
+import static com.android.nearby.halfsheet.constants.Constant.EXTRA_HALF_SHEET_INFO;
+import static com.android.nearby.halfsheet.constants.Constant.EXTRA_HALF_SHEET_TYPE;
+import static com.android.nearby.halfsheet.constants.Constant.FAST_PAIR_HALF_SHEET_HELP_URL;
+import static com.android.nearby.halfsheet.constants.Constant.RESULT_FAIL;
 import static com.android.server.nearby.fastpair.FastPairManager.ACTION_RESOURCES_APK;
 
 import static java.util.concurrent.TimeUnit.SECONDS;
@@ -46,6 +47,7 @@ import android.util.LruCache;
 import android.widget.Toast;
 
 import com.android.internal.annotations.VisibleForTesting;
+import com.android.nearby.halfsheet.R;
 import com.android.server.nearby.common.eventloop.Annotations;
 import com.android.server.nearby.common.eventloop.EventLoop;
 import com.android.server.nearby.common.eventloop.NamedRunnable;
@@ -73,10 +75,7 @@ public class FastPairHalfSheetManager {
     private static final String HALF_SHEET_CLASS_NAME =
             "com.android.nearby.halfsheet.HalfSheetActivity";
     private static final String TAG = "FPHalfSheetManager";
-    public static final String ACTION_HALF_SHEET_STATUS_CHANGE =
-            "com.android.nearby.halfsheet.ACTION_HALF_SHEET_STATUS_CHANGE";
     public static final String FINISHED_STATE = "FINISHED_STATE";
-    @VisibleForTesting static final String RESULT_FAIL = "RESULT_FAIL";
     @VisibleForTesting static final String DISMISS_HALFSHEET_RUNNABLE_NAME = "DismissHalfSheet";
     @VisibleForTesting static final String SHOW_TOAST_RUNNABLE_NAME = "SuccessPairingToast";
 
@@ -298,9 +297,19 @@ public class FastPairHalfSheetManager {
                             new NamedRunnable(SHOW_TOAST_RUNNABLE_NAME) {
                                 @Override
                                 public void run() {
-                                    //Todo(b/244185052): change hardcode string to string resources
-                                    Toast.makeText(mLocatorContextWrapper, "Device connected",
-                                                    Toast.LENGTH_LONG).show();
+                                    try {
+                                        Toast.makeText(mLocatorContextWrapper,
+                                                mLocatorContextWrapper
+                                                        .getPackageManager()
+                                                        .getResourcesForApplication(
+                                                                getHalfSheetApkPkgName())
+                                                        .getString(R.string.fast_pair_device_ready),
+                                                Toast.LENGTH_LONG).show();
+                                    } catch (PackageManager.NameNotFoundException e) {
+                                        Log.d(TAG, "showPairingSuccess fail:"
+                                                + " package name cannot be found ");
+                                        e.printStackTrace();
+                                    }
                                 }
                             });
         }

@@ -30,27 +30,4 @@ public class Constant {
      * Tag for Fast Pair service related logs.
      */
     public static final String TAG = "FastPairService";
-
-    public static final String EXTRA_BINDER = "com.android.server.nearby.fastpair.BINDER";
-    public static final String EXTRA_BUNDLE = "com.android.server.nearby.fastpair.BUNDLE_EXTRA";
-    public static final String ACTION_FAST_PAIR_HALF_SHEET_CANCEL =
-            "com.android.nearby.ACTION_FAST_PAIR_HALF_SHEET_CANCEL";
-    public static final String ACTION_FAST_PAIR_HALF_SHEET_BAN_STATE_RESET =
-            "com.android.nearby.ACTION_FAST_PAIR_BAN_STATE_RESET";
-    public static final String ACTION_HALF_SHEET_FOREGROUND_STATE =
-            "com.android.nearby.halfsheet.ACTION_HALF_SHEET_FOREGROUND_STATE";
-    public static final String EXTRA_HALF_SHEET_INFO =
-            "com.android.nearby.halfsheet.HALF_SHEET";
-    public static final String EXTRA_HALF_SHEET_TYPE =
-            "com.android.nearby.halfsheet.HALF_SHEET_TYPE";
-    public static final String EXTRA_HALF_SHEET_CONTENT =
-            "com.android.nearby.halfsheet.HALF_SHEET_CONTENT";
-    public static final String DEVICE_PAIRING_FRAGMENT_TYPE = "DEVICE_PAIRING";
-    public static final String EXTRA_HALF_SHEET_FOREGROUND =
-            "com.android.nearby.halfsheet.EXTRA_HALF_SHEET_FOREGROUND";
-
-    // Content url for help page about Fast Pair in half sheet.
-    // Todo(b/246007000): Add a flag to set up content url of the help page.
-    public static final String FAST_PAIR_HALF_SHEET_HELP_URL =
-            "https://support.google.com/android/answer/9075925";
 }

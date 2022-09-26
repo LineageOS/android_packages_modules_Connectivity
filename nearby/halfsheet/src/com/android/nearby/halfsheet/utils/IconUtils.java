@@ -16,7 +16,7 @@
 
 package com.android.nearby.halfsheet.utils;
 
-import static com.android.nearby.halfsheet.HalfSheetActivity.TAG;
+import static com.android.nearby.halfsheet.constants.Constant.TAG;
 
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
