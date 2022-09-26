@@ -16,6 +16,7 @@
 
 package com.android.server.connectivity;
 
+import static android.net.NetworkCapabilities.NET_CAPABILITY_CAPTIVE_PORTAL;
 import static android.net.NetworkCapabilities.TRANSPORT_BLUETOOTH;
 import static android.net.NetworkCapabilities.TRANSPORT_CELLULAR;
 import static android.net.NetworkCapabilities.TRANSPORT_ETHERNET;
@@ -27,6 +28,7 @@ import static android.net.NetworkScore.POLICY_YIELD_TO_BAD_WIFI;
 import static com.android.net.module.util.CollectionUtils.filter;
 import static com.android.server.connectivity.FullScore.POLICY_ACCEPT_UNVALIDATED;
 import static com.android.server.connectivity.FullScore.POLICY_AVOIDED_WHEN_UNVALIDATED;
+import static com.android.server.connectivity.FullScore.POLICY_EVER_EVALUATED;
 import static com.android.server.connectivity.FullScore.POLICY_EVER_USER_SELECTED;
 import static com.android.server.connectivity.FullScore.POLICY_EVER_VALIDATED;
 import static com.android.server.connectivity.FullScore.POLICY_IS_DESTROYED;
@@ -67,7 +69,6 @@ public class NetworkRanker {
         /**
          * @see MultinetworkPolicyTracker#getActivelyPreferBadWifi()
          */
-        // TODO : implement the behavior.
         public boolean activelyPreferBadWifi() {
             return mActivelyPreferBadWifi;
         }
@@ -142,11 +143,42 @@ public class NetworkRanker {
         }
     }
 
-    private <T extends Scoreable> boolean isBadWiFi(@NonNull final T candidate) {
+    /**
+     * Returns whether the wifi passed as an argument is a preferred network to yielding cell.
+     *
+     * When comparing bad wifi to cell with POLICY_YIELD_TO_BAD_WIFI, it may be necessary to
+     * know if a particular bad wifi is preferred to such a cell network. This method computes
+     * and returns this.
+     *
+     * @param candidate a bad wifi to evaluate
+     * @return whether this candidate is preferred to cell with POLICY_YIELD_TO_BAD_WIFI
+     */
+    private <T extends Scoreable> boolean isPreferredBadWiFi(@NonNull final T candidate) {
         final FullScore score = candidate.getScore();
-        return score.hasPolicy(POLICY_EVER_VALIDATED)
-                && !score.hasPolicy(POLICY_AVOIDED_WHEN_UNVALIDATED)
-                && candidate.getCapsNoCopy().hasTransport(TRANSPORT_WIFI);
+        final NetworkCapabilities caps = candidate.getCapsNoCopy();
+
+        // Whatever the policy, only WiFis can be preferred bad WiFis.
+        if (!caps.hasTransport(TRANSPORT_WIFI)) return false;
+        // Validated networks aren't bad networks, so a fortiori can't be preferred bad WiFis.
+        if (score.hasPolicy(POLICY_IS_VALIDATED)) return false;
+        // A WiFi that the user explicitly wanted to avoid in UI is never a preferred bad WiFi.
+        if (score.hasPolicy(POLICY_AVOIDED_WHEN_UNVALIDATED)) return false;
+
+        if (mConf.activelyPreferBadWifi()) {
+            // If a network is still evaluating, don't prefer it.
+            if (!score.hasPolicy(POLICY_EVER_EVALUATED)) return false;
+
+            // If a network is not a captive portal, then prefer it.
+            if (!caps.hasCapability(NET_CAPABILITY_CAPTIVE_PORTAL)) return true;
+
+            // If it's a captive portal, prefer it if it previously validated but is no longer
+            // validated (i.e., the user logged in in the past, but later the portal closed).
+            return score.hasPolicy(POLICY_EVER_VALIDATED);
+        } else {
+            // Under the original "prefer bad WiFi" policy, only networks that have ever validated
+            // are preferred.
+            return score.hasPolicy(POLICY_EVER_VALIDATED);
+        }
     }
 
     /**
@@ -169,7 +201,7 @@ public class NetworkRanker {
             // No network with the policy : do nothing.
             return;
         }
-        if (!CollectionUtils.any(rejected, n -> isBadWiFi(n))) {
+        if (!CollectionUtils.any(rejected, n -> isPreferredBadWiFi(n))) {
             // No bad WiFi : do nothing.
             return;
         }
@@ -179,7 +211,7 @@ public class NetworkRanker {
             // wifis by the following policies (e.g. exiting).
             final ArrayList<T> acceptedYielders = new ArrayList<>(accepted);
             final ArrayList<T> rejectedWithBadWiFis = new ArrayList<>(rejected);
-            partitionInto(rejectedWithBadWiFis, n -> isBadWiFi(n), accepted, rejected);
+            partitionInto(rejectedWithBadWiFis, n -> isPreferredBadWiFi(n), accepted, rejected);
             accepted.addAll(acceptedYielders);
             return;
         }
