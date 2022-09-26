@@ -1170,10 +1170,11 @@ public class ConnectivityServiceTest {
         void setNetworkPartialValid(boolean isStrictMode) {
             setNetworkPartial();
             mNmValidationResult |= NETWORK_VALIDATION_RESULT_VALID;
+            mNmValidationRedirectUrl = null;
             int probesCompleted = NETWORK_VALIDATION_PROBE_DNS | NETWORK_VALIDATION_PROBE_HTTPS
                     | NETWORK_VALIDATION_PROBE_HTTP;
             int probesSucceeded = NETWORK_VALIDATION_PROBE_DNS | NETWORK_VALIDATION_PROBE_HTTP;
-            // Suppose the partial network cannot pass the private DNS validation as well, so only
+            // Assume the partial network cannot pass the private DNS validation as well, so only
             // add NETWORK_VALIDATION_PROBE_DNS in probesCompleted but not probesSucceeded.
             if (isStrictMode) {
                 probesCompleted |= NETWORK_VALIDATION_PROBE_PRIVDNS;
