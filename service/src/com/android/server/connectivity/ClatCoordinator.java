@@ -595,13 +595,17 @@ public class ClatCoordinator {
         Log.i(TAG, "untag socket cookie " + cookie);
     }
 
+    private boolean isStarted() {
+        return mClatdTracker != null;
+    }
+
     /**
      * Start clatd for a given interface and NAT64 prefix.
      */
     public String clatStart(final String iface, final int netId,
             @NonNull final IpPrefix nat64Prefix)
             throws IOException {
-        if (mClatdTracker != null) {
+        if (isStarted()) {
             throw new IOException("Clatd is already running on " + mClatdTracker.iface
                     + " (pid " + mClatdTracker.pid + ")");
         }
@@ -833,7 +837,7 @@ public class ClatCoordinator {
      * Stop clatd
      */
     public void clatStop() throws IOException {
-        if (mClatdTracker == null) {
+        if (!isStarted()) {
             throw new IOException("Clatd has not started");
         }
         Log.i(TAG, "Stopping clatd pid=" + mClatdTracker.pid + " on " + mClatdTracker.iface);
@@ -902,12 +906,16 @@ public class ClatCoordinator {
     public void dump(@NonNull IndentingPrintWriter pw) {
         // TODO: move map dump to a global place to avoid duplicate dump while there are two or
         // more IPv6 only networks.
-        pw.println("CLAT tracker: " + mClatdTracker.toString());
-        pw.println("Forwarding rules:");
-        pw.increaseIndent();
-        dumpBpfIngress(pw);
-        dumpBpfEgress(pw);
-        pw.decreaseIndent();
+        if (isStarted()) {
+            pw.println("CLAT tracker: " + mClatdTracker.toString());
+            pw.println("Forwarding rules:");
+            pw.increaseIndent();
+            dumpBpfIngress(pw);
+            dumpBpfEgress(pw);
+            pw.decreaseIndent();
+        } else {
+            pw.println("<not started>");
+        }
         pw.println();
     }
 
