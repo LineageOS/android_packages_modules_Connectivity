@@ -586,6 +586,14 @@ public class EthernetNetworkFactory {
         }
 
         private void stop() {
+            // Unregister NetworkAgent before stopping IpClient, so destroyNativeNetwork (which
+            // deletes routes) hopefully happens before stop() finishes execution. Otherwise, it may
+            // delete the new routes when IpClient gets restarted.
+            if (mNetworkAgent != null) {
+                mNetworkAgent.unregister();
+                mNetworkAgent = null;
+            }
+
             // Invalidate all previous start requests
             if (mIpClient != null) {
                 mIpClient.shutdown();
@@ -595,10 +603,6 @@ public class EthernetNetworkFactory {
 
             mIpClientCallback = null;
 
-            if (mNetworkAgent != null) {
-                mNetworkAgent.unregister();
-                mNetworkAgent = null;
-            }
             mLinkProperties.clear();
         }
 
