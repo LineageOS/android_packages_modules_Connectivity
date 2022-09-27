@@ -223,6 +223,9 @@ java_defaults {
     name: "service-connectivity-defaults",
     sdk_version: "system_server_current",
     min_sdk_version: "30",
+    defaults: [
+        "standalone-system-server-module-optimize-defaults",
+    ],
     // This library combines system server jars that have access to different bootclasspath jars.
     // Lower SDK service jars must not depend on higher SDK jars as that would let them
     // transitively depend on the wrong bootclasspath jars. Sources also cannot be added here as
@@ -252,8 +255,6 @@ java_defaults {
         "com.android.tethering",
     ],
     optimize: {
-        enabled: true,
-        shrink: true,
         proguard_flags_files: ["proguard.flags"],
     },
     lint: { strict_updatability_linting: true },
