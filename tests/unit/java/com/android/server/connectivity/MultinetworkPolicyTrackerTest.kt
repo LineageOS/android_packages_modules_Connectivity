@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package android.net.util
+package com.android.server.connectivity
 
 import android.content.Context
 import android.content.res.Resources
@@ -24,7 +24,7 @@ import android.net.ConnectivityManager.MULTIPATH_PREFERENCE_RELIABILITY
 import android.net.ConnectivityResources
 import android.net.ConnectivitySettingsManager.NETWORK_AVOID_BAD_WIFI
 import android.net.ConnectivitySettingsManager.NETWORK_METERED_MULTIPATH_PREFERENCE
-import android.net.util.MultinetworkPolicyTracker.ActiveDataSubscriptionIdListener
+import com.android.server.connectivity.MultinetworkPolicyTracker.ActiveDataSubscriptionIdListener
 import android.os.Build
 import android.os.Handler
 import android.provider.Settings
@@ -60,7 +60,7 @@ import org.mockito.Mockito.verify
  * Tests for [MultinetworkPolicyTracker].
  *
  * Build, install and run with:
- * atest android.net.util.MultinetworkPolicyTrackerTest
+ * atest FrameworksNetTest:MultinetworkPolicyTrackerTest
  */
 @RunWith(DevSdkIgnoreRunner::class)
 @SmallTest

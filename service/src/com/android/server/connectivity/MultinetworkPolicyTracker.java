@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package android.net.util;
+package com.android.server.connectivity;
 
 import static android.net.ConnectivitySettingsManager.NETWORK_AVOID_BAD_WIFI;
 import static android.net.ConnectivitySettingsManager.NETWORK_METERED_MULTIPATH_PREFERENCE;
