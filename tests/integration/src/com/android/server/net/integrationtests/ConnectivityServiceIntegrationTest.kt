@@ -37,7 +37,7 @@ import android.net.NetworkRequest
 import android.net.TestNetworkStackClient
 import android.net.Uri
 import android.net.metrics.IpConnectivityLog
-import android.net.util.MultinetworkPolicyTracker
+import com.android.server.connectivity.MultinetworkPolicyTracker
 import android.os.ConditionVariable
 import android.os.IBinder
 import android.os.SystemConfigManager
