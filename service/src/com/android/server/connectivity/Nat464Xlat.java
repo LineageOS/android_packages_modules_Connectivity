@@ -540,6 +540,9 @@ public class Nat464Xlat {
      */
     public void dump(IndentingPrintWriter pw) {
         if (SdkLevel.isAtLeastT()) {
+            // Dump ClatCoordinator information while clatd has been started but not running. The
+            // reason is that it helps to have more information if clatd is started but the
+            // v4-* interface doesn't bring up. See #isStarted, #isRunning.
             if (isStarted()) {
                 pw.println("ClatCoordinator:");
                 pw.increaseIndent();
