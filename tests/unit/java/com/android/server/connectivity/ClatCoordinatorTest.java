@@ -516,28 +516,38 @@ public class ClatCoordinatorTest {
         assertEquals(65508, ClatCoordinator.adjustMtu(CLAT_MAX_MTU + 1 /* over maximum mtu */));
     }
 
-    @Test
-    public void testDump() throws Exception {
-        final ClatCoordinator coordinator = makeClatCoordinator();
+    private void verifyDump(final ClatCoordinator coordinator, boolean clatStarted) {
         final StringWriter stringWriter = new StringWriter();
         final IndentingPrintWriter ipw = new IndentingPrintWriter(stringWriter, " ");
-        coordinator.clatStart(BASE_IFACE, NETID, NAT64_IP_PREFIX);
         coordinator.dump(ipw);
 
         final String[] dumpStrings = stringWriter.toString().split("\n");
-        assertEquals(6, dumpStrings.length);
-        assertEquals("CLAT tracker: iface: test0 (1000), v4iface: v4-test0 (1001), "
-                + "v4: /192.0.0.46, v6: /2001:db8:0:b11::464, pfx96: /64:ff9b::, "
-                + "pid: 10483, cookie: 27149", dumpStrings[0].trim());
-        assertEquals("Forwarding rules:", dumpStrings[1].trim());
-        assertEquals("BPF ingress map: iif nat64Prefix v6Addr -> v4Addr oif",
-                dumpStrings[2].trim());
-        assertEquals("1000 /64:ff9b::/96 /2001:db8:0:b11::464 -> /192.0.0.46 1001",
-                dumpStrings[3].trim());
-        assertEquals("BPF egress map: iif v4Addr -> v6Addr nat64Prefix oif",
-                dumpStrings[4].trim());
-        assertEquals("1001 /192.0.0.46 -> /2001:db8:0:b11::464 /64:ff9b::/96 1000 ether",
-                dumpStrings[5].trim());
+        if (clatStarted) {
+            assertEquals(6, dumpStrings.length);
+            assertEquals("CLAT tracker: iface: test0 (1000), v4iface: v4-test0 (1001), "
+                    + "v4: /192.0.0.46, v6: /2001:db8:0:b11::464, pfx96: /64:ff9b::, "
+                    + "pid: 10483, cookie: 27149", dumpStrings[0].trim());
+            assertEquals("Forwarding rules:", dumpStrings[1].trim());
+            assertEquals("BPF ingress map: iif nat64Prefix v6Addr -> v4Addr oif",
+                    dumpStrings[2].trim());
+            assertEquals("1000 /64:ff9b::/96 /2001:db8:0:b11::464 -> /192.0.0.46 1001",
+                    dumpStrings[3].trim());
+            assertEquals("BPF egress map: iif v4Addr -> v6Addr nat64Prefix oif",
+                    dumpStrings[4].trim());
+            assertEquals("1001 /192.0.0.46 -> /2001:db8:0:b11::464 /64:ff9b::/96 1000 ether",
+                    dumpStrings[5].trim());
+        } else {
+            assertEquals(1, dumpStrings.length);
+            assertEquals("<not started>", dumpStrings[0].trim());
+        }
+    }
+
+    @Test
+    public void testDump() throws Exception {
+        final ClatCoordinator coordinator = makeClatCoordinator();
+        verifyDump(coordinator, false /* clatStarted */);
+        coordinator.clatStart(BASE_IFACE, NETID, NAT64_IP_PREFIX);
+        verifyDump(coordinator, true /* clatStarted */);
     }
 
     @Test
@@ -548,25 +558,18 @@ public class ClatCoordinatorTest {
                 () -> coordinator.clatStart(BASE_IFACE, NETID, invalidPrefix));
     }
 
-    private void assertStartClat(final TestDependencies deps) throws Exception {
-        final ClatCoordinator coordinator = new ClatCoordinator(deps);
-        assertNotNull(coordinator.clatStart(BASE_IFACE, NETID, NAT64_IP_PREFIX));
-    }
-
-    private void assertNotStartClat(final TestDependencies deps) {
-        // Expect that the injection function of TestDependencies causes clatStart() failed.
-        final ClatCoordinator coordinator = new ClatCoordinator(deps);
-        assertThrows(IOException.class,
-                () -> coordinator.clatStart(BASE_IFACE, NETID, NAT64_IP_PREFIX));
-    }
-
     private void checkNotStartClat(final TestDependencies deps, final boolean needToCloseTunFd,
             final boolean needToClosePacketSockFd, final boolean needToCloseRawSockFd)
             throws Exception {
-        // [1] Expect that modified TestDependencies can't start clatd.
-        // Use precise check to make sure that there is no unexpected file descriptor closing.
         clearInvocations(TUN_PFD, RAW_SOCK_PFD, PACKET_SOCK_PFD);
-        assertNotStartClat(deps);
+
+        // [1] Expect that modified TestDependencies can't start clatd.
+        // Expect that the injection function of TestDependencies causes clatStart() failed.
+        final ClatCoordinator coordinatorWithBrokenDeps = new ClatCoordinator(deps);
+        assertThrows(IOException.class,
+                () -> coordinatorWithBrokenDeps.clatStart(BASE_IFACE, NETID, NAT64_IP_PREFIX));
+
+        // Use precise check to make sure that there is no unexpected file descriptor closing.
         if (needToCloseTunFd) {
             verify(TUN_PFD).close();
         } else {
@@ -583,10 +586,15 @@ public class ClatCoordinatorTest {
             verify(RAW_SOCK_PFD, never()).close();
         }
 
+        // Check that dump doesn't crash after any clat starting failure.
+        verifyDump(coordinatorWithBrokenDeps, false /* clatStarted */);
+
         // [2] Expect that unmodified TestDependencies can start clatd.
         // Used to make sure that the above modified TestDependencies has really broken the
         // clatd starting.
-        assertStartClat(new TestDependencies());
+        final ClatCoordinator coordinatorWithDefaultDeps = new ClatCoordinator(
+                new TestDependencies());
+        assertNotNull(coordinatorWithDefaultDeps.clatStart(BASE_IFACE, NETID, NAT64_IP_PREFIX));
     }
 
     // The following testNotStartClat* tests verifies bunches of code for unwinding the
