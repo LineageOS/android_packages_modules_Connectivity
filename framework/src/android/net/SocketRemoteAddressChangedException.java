@@ -16,13 +16,18 @@
 
 package android.net;
 
+import android.annotation.SystemApi;
+
+import com.android.internal.annotations.VisibleForTesting;
+
 /**
  * Thrown when the local address of the socket has changed.
  *
  * @hide
  */
+@SystemApi
 public class SocketRemoteAddressChangedException extends Exception {
-    /** @hide */
+    @VisibleForTesting
     public SocketRemoteAddressChangedException() {
         super("The remote address of the socket changed");
     }
