@@ -1838,10 +1838,6 @@ public class ConnectivityServiceTest {
                 .getIdentifier(eq("config_networkSupportedKeepaliveCount"), eq("array"), any());
         doReturn(R.array.network_switch_type_name).when(mResources)
                 .getIdentifier(eq("network_switch_type_name"), eq("array"), any());
-        doReturn(R.integer.config_networkAvoidBadWifi).when(mResources)
-                .getIdentifier(eq("config_networkAvoidBadWifi"), eq("integer"), any());
-        doReturn(R.integer.config_activelyPreferBadWifi).when(mResources)
-                .getIdentifier(eq("config_activelyPreferBadWifi"), eq("integer"), any());
         doReturn(1).when(mResources).getInteger(R.integer.config_networkAvoidBadWifi);
         doReturn(0).when(mResources).getInteger(R.integer.config_activelyPreferBadWifi);
         doReturn(true).when(mResources)
