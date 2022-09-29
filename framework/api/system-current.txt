@@ -433,6 +433,7 @@ package android.net {
   public abstract class QosFilter {
     method @NonNull public abstract android.net.Network getNetwork();
     method public abstract boolean matchesLocalAddress(@NonNull java.net.InetAddress, int, int);
+    method public boolean matchesProtocol(int);
     method public abstract boolean matchesRemoteAddress(@NonNull java.net.InetAddress, int, int);
   }
 
@@ -453,6 +454,7 @@ package android.net {
 
   public final class QosSocketInfo implements android.os.Parcelable {
     ctor public QosSocketInfo(@NonNull android.net.Network, @NonNull java.net.Socket) throws java.io.IOException;
+    ctor public QosSocketInfo(@NonNull android.net.Network, @NonNull java.net.DatagramSocket) throws java.io.IOException;
     method public int describeContents();
     method @NonNull public java.net.InetSocketAddress getLocalSocketAddress();
     method @NonNull public android.net.Network getNetwork();
@@ -478,6 +480,14 @@ package android.net {
 
   public class SocketNotBoundException extends java.lang.Exception {
     ctor public SocketNotBoundException();
+  }
+
+  public class SocketNotConnectedException extends java.lang.Exception {
+    ctor public SocketNotConnectedException();
+  }
+
+  public class SocketRemoteAddressChangedException extends java.lang.Exception {
+    ctor public SocketRemoteAddressChangedException();
   }
 
   public final class StaticIpConfiguration implements android.os.Parcelable {
