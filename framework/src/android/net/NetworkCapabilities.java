@@ -185,8 +185,16 @@ public final class NetworkCapabilities implements Parcelable {
             NET_ENTERPRISE_ID_4,
             NET_ENTERPRISE_ID_5,
     })
-
     public @interface EnterpriseId {
+    }
+
+    private static final int ALL_VALID_ENTERPRISE_IDS;
+    static {
+        int enterpriseIds = 0;
+        for (int i = NET_ENTERPRISE_ID_1; i <= NET_ENTERPRISE_ID_5; ++i) {
+            enterpriseIds |= 1 << i;
+        }
+        ALL_VALID_ENTERPRISE_IDS = enterpriseIds;
     }
 
     /**
@@ -621,6 +629,15 @@ public final class NetworkCapabilities implements Parcelable {
 
     private static final int MIN_NET_CAPABILITY = NET_CAPABILITY_MMS;
     private static final int MAX_NET_CAPABILITY = NET_CAPABILITY_PRIORITIZE_BANDWIDTH;
+
+    private static final int ALL_VALID_CAPABILITIES;
+    static {
+        int caps = 0;
+        for (int i = MIN_NET_CAPABILITY; i <= MAX_NET_CAPABILITY; ++i) {
+            caps |= 1 << i;
+        }
+        ALL_VALID_CAPABILITIES = caps;
+    }
 
     /**
      * Network capabilities that are expected to be mutable, i.e., can change while a particular
@@ -1145,6 +1162,15 @@ public final class NetworkCapabilities implements Parcelable {
     public static final int MIN_TRANSPORT = TRANSPORT_CELLULAR;
     /** @hide */
     public static final int MAX_TRANSPORT = TRANSPORT_USB;
+
+    private static final int ALL_VALID_TRANSPORTS;
+    static {
+        int transports = 0;
+        for (int i = MIN_TRANSPORT; i <= MAX_TRANSPORT; ++i) {
+            transports |= 1 << i;
+        }
+        ALL_VALID_TRANSPORTS = transports;
+    }
 
     /** @hide */
     public static boolean isValidTransport(@Transport int transportType) {
@@ -2114,9 +2140,9 @@ public final class NetworkCapabilities implements Parcelable {
 
     @Override
     public void writeToParcel(Parcel dest, int flags) {
-        dest.writeLong(mNetworkCapabilities);
-        dest.writeLong(mForbiddenNetworkCapabilities);
-        dest.writeLong(mTransportTypes);
+        dest.writeLong(mNetworkCapabilities & ALL_VALID_CAPABILITIES);
+        dest.writeLong(mForbiddenNetworkCapabilities & ALL_VALID_CAPABILITIES);
+        dest.writeLong(mTransportTypes & ALL_VALID_TRANSPORTS);
         dest.writeInt(mLinkUpBandwidthKbps);
         dest.writeInt(mLinkDownBandwidthKbps);
         dest.writeParcelable((Parcelable) mNetworkSpecifier, flags);
@@ -2132,7 +2158,7 @@ public final class NetworkCapabilities implements Parcelable {
         dest.writeString(mRequestorPackageName);
         dest.writeIntArray(CollectionUtils.toIntArray(mSubIds));
         dest.writeTypedList(mUnderlyingNetworks);
-        dest.writeInt(mEnterpriseId);
+        dest.writeInt(mEnterpriseId & ALL_VALID_ENTERPRISE_IDS);
     }
 
     public static final @android.annotation.NonNull Creator<NetworkCapabilities> CREATOR =
@@ -2140,10 +2166,10 @@ public final class NetworkCapabilities implements Parcelable {
             @Override
             public NetworkCapabilities createFromParcel(Parcel in) {
                 NetworkCapabilities netCap = new NetworkCapabilities();
-
-                netCap.mNetworkCapabilities = in.readLong();
-                netCap.mForbiddenNetworkCapabilities = in.readLong();
-                netCap.mTransportTypes = in.readLong();
+                // Validate the unparceled data, in case the parceling party was malicious.
+                netCap.mNetworkCapabilities = in.readLong() & ALL_VALID_CAPABILITIES;
+                netCap.mForbiddenNetworkCapabilities = in.readLong() & ALL_VALID_CAPABILITIES;
+                netCap.mTransportTypes = in.readLong() & ALL_VALID_TRANSPORTS;
                 netCap.mLinkUpBandwidthKbps = in.readInt();
                 netCap.mLinkDownBandwidthKbps = in.readInt();
                 netCap.mNetworkSpecifier = in.readParcelable(null);
@@ -2167,7 +2193,7 @@ public final class NetworkCapabilities implements Parcelable {
                     netCap.mSubIds.add(subIdInts[i]);
                 }
                 netCap.setUnderlyingNetworks(in.createTypedArrayList(Network.CREATOR));
-                netCap.mEnterpriseId = in.readInt();
+                netCap.mEnterpriseId = in.readInt() & ALL_VALID_ENTERPRISE_IDS;
                 return netCap;
             }
             @Override
