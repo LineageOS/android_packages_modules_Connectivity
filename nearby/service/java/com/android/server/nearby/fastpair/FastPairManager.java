@@ -16,11 +16,11 @@
 
 package com.android.server.nearby.fastpair;
 
-import static com.android.server.nearby.common.bluetooth.fastpair.FastPairConstants.EXTRA_MODEL_ID;
-import static com.android.server.nearby.fastpair.Constant.ACTION_FAST_PAIR_HALF_SHEET_BAN_STATE_RESET;
-import static com.android.server.nearby.fastpair.Constant.ACTION_FAST_PAIR_HALF_SHEET_CANCEL;
-import static com.android.server.nearby.fastpair.Constant.ACTION_HALF_SHEET_FOREGROUND_STATE;
-import static com.android.server.nearby.fastpair.Constant.EXTRA_HALF_SHEET_FOREGROUND;
+import static com.android.nearby.halfsheet.constants.Constant.ACTION_FAST_PAIR_HALF_SHEET_BAN_STATE_RESET;
+import static com.android.nearby.halfsheet.constants.Constant.ACTION_FAST_PAIR_HALF_SHEET_CANCEL;
+import static com.android.nearby.halfsheet.constants.Constant.ACTION_HALF_SHEET_FOREGROUND_STATE;
+import static com.android.nearby.halfsheet.constants.Constant.EXTRA_HALF_SHEET_FOREGROUND;
+import static com.android.nearby.halfsheet.constants.FastPairConstants.EXTRA_MODEL_ID;
 import static com.android.server.nearby.fastpair.Constant.TAG;
 
 import android.annotation.Nullable;

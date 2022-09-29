@@ -17,23 +17,24 @@ package com.android.nearby.halfsheet.fragment;
 
 import static android.text.TextUtils.isEmpty;
 
-import static com.android.nearby.halfsheet.HalfSheetActivity.ARG_FRAGMENT_STATE;
-import static com.android.nearby.halfsheet.HalfSheetActivity.EXTRA_DESCRIPTION;
-import static com.android.nearby.halfsheet.HalfSheetActivity.EXTRA_HALF_SHEET_ACCOUNT_NAME;
-import static com.android.nearby.halfsheet.HalfSheetActivity.EXTRA_HALF_SHEET_CONTENT;
-import static com.android.nearby.halfsheet.HalfSheetActivity.EXTRA_HALF_SHEET_ID;
-import static com.android.nearby.halfsheet.HalfSheetActivity.EXTRA_TITLE;
-import static com.android.nearby.halfsheet.HalfSheetActivity.TAG;
+import static com.android.nearby.halfsheet.constants.Constant.ARG_FRAGMENT_STATE;
+import static com.android.nearby.halfsheet.constants.Constant.EXTRA_BINDER;
+import static com.android.nearby.halfsheet.constants.Constant.EXTRA_BUNDLE;
+import static com.android.nearby.halfsheet.constants.Constant.EXTRA_DESCRIPTION;
+import static com.android.nearby.halfsheet.constants.Constant.EXTRA_HALF_SHEET_ACCOUNT_NAME;
+import static com.android.nearby.halfsheet.constants.Constant.EXTRA_HALF_SHEET_CONTENT;
+import static com.android.nearby.halfsheet.constants.Constant.EXTRA_HALF_SHEET_ID;
+import static com.android.nearby.halfsheet.constants.Constant.EXTRA_HALF_SHEET_INFO;
+import static com.android.nearby.halfsheet.constants.Constant.EXTRA_TITLE;
+import static com.android.nearby.halfsheet.constants.Constant.FAST_PAIR_HALF_SHEET_HELP_URL;
+import static com.android.nearby.halfsheet.constants.Constant.RESULT_FAIL;
+import static com.android.nearby.halfsheet.constants.Constant.TAG;
 import static com.android.nearby.halfsheet.fragment.HalfSheetModuleFragment.HalfSheetFragmentState.FAILED;
 import static com.android.nearby.halfsheet.fragment.HalfSheetModuleFragment.HalfSheetFragmentState.FOUND_DEVICE;
 import static com.android.nearby.halfsheet.fragment.HalfSheetModuleFragment.HalfSheetFragmentState.NOT_STARTED;
 import static com.android.nearby.halfsheet.fragment.HalfSheetModuleFragment.HalfSheetFragmentState.PAIRED_LAUNCHABLE;
 import static com.android.nearby.halfsheet.fragment.HalfSheetModuleFragment.HalfSheetFragmentState.PAIRED_UNLAUNCHABLE;
 import static com.android.nearby.halfsheet.fragment.HalfSheetModuleFragment.HalfSheetFragmentState.PAIRING;
-import static com.android.server.nearby.fastpair.Constant.EXTRA_BINDER;
-import static com.android.server.nearby.fastpair.Constant.EXTRA_BUNDLE;
-import static com.android.server.nearby.fastpair.Constant.EXTRA_HALF_SHEET_INFO;
-import static com.android.server.nearby.fastpair.Constant.FAST_PAIR_HALF_SHEET_HELP_URL;
 
 import android.bluetooth.BluetoothDevice;
 import android.content.Intent;
@@ -106,7 +107,6 @@ public class DevicePairingFragment extends HalfSheetModuleFragment implements
     // Holds the new text while we transition between the two.
     private static final int TAG_PENDING_TEXT = R.id.toolbar_title;
     public static final String APP_LAUNCH_FRAGMENT_TYPE = "APP_LAUNCH";
-    private static final String RESULT_FAIL = "RESULT_FAIL";
 
     private static final String ARG_SETUP_BUTTON_CLICKED = "SETUP_BUTTON_CLICKED";
     private static final String ARG_PAIRING_RESULT = "PAIRING_RESULT";
