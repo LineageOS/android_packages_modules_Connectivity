@@ -97,10 +97,15 @@ public abstract class QosFilter {
      * Determines whether or not the parameter will be matched with this filter.
      *
      * @param protocol the protocol such as TCP or UDP included in IP packet filter set of a QoS
-     *                 flow assigned on {@link Network}.
+     *                 flow assigned on {@link Network}. Only {@code IPPROTO_TCP} and {@code
+     *                 IPPROTO_UDP} currently supported.
      * @return whether the parameters match the socket type of the filter
-     * @hide
      */
-    public abstract boolean matchesProtocol(int protocol);
+    // Since this method is added in U, it's required to be default method for binary compatibility
+    // with existing @SystemApi.
+    // IPPROTO_* are not compile-time constants, so they are not annotated with @IntDef.
+    public boolean matchesProtocol(int protocol) {
+        return false;
+    }
 }
 
