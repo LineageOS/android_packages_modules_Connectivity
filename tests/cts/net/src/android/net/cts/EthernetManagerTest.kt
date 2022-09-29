@@ -798,7 +798,10 @@ class EthernetManagerTest {
         val iface = createInterface(false /* hasCarrier */)
 
         val cb = requestNetwork(ETH_REQUEST)
-        cb.assertNeverAvailable()
+        // TUNSETCARRIER races with the bring up code, so the network *can* become available despite
+        // it being "created with no carrier".
+        // TODO(b/249611919): re-enable assertion once kernel supports IFF_NO_CARRIER.
+        // cb.assertNeverAvailable()
 
         iface.setCarrierEnabled(true)
         cb.expectAvailable()
