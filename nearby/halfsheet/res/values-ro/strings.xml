@@ -23,7 +23,7 @@
     <string name="fast_pair_title_fail" msgid="5677174346601290232">"Nu s-a putut conecta"</string>
     <string name="paring_action_done" msgid="6888875159174470731">"Gata"</string>
     <string name="paring_action_save" msgid="6259357442067880136">"Salvează"</string>
-    <string name="paring_action_connect" msgid="4801102939608129181">"Conectați"</string>
+    <string name="paring_action_connect" msgid="4801102939608129181">"Conectează"</string>
     <string name="paring_action_launch" msgid="8940808384126591230">"Configurează"</string>
     <string name="paring_action_settings" msgid="424875657242864302">"Setări"</string>
 </resources>
