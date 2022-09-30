@@ -558,6 +558,13 @@ public class EthernetNetworkFactory {
 
         void updateNeighborLostEvent(String logMsg) {
             Log.i(TAG, "updateNeighborLostEvent " + logMsg);
+            if (mIpConfig.getIpAssignment() == IpAssignment.STATIC) {
+                // Ignore NUD failures for static IP configurations, where restarting the IpClient
+                // will not fix connectivity.
+                // In this scenario, NetworkMonitor will not verify the network, so it will
+                // eventually be torn down.
+                return;
+            }
             // Reachability lost will be seen only if the gateway is not reachable.
             // Since ethernet FW doesn't have the mechanism to scan for new networks
             // like WiFi, simply restart.
