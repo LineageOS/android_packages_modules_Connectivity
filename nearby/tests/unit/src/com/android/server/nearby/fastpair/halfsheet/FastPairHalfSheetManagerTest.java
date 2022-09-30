@@ -16,13 +16,11 @@
 
 package com.android.server.nearby.fastpair.halfsheet;
 
-import static com.android.server.nearby.fastpair.Constant.EXTRA_HALF_SHEET_CONTENT;
 import static com.android.server.nearby.fastpair.blocklist.Blocklist.BlocklistState.ACTIVE;
 import static com.android.server.nearby.fastpair.blocklist.Blocklist.BlocklistState.DISMISSED;
 import static com.android.server.nearby.fastpair.blocklist.Blocklist.BlocklistState.DO_NOT_SHOW_AGAIN;
 import static com.android.server.nearby.fastpair.blocklist.Blocklist.BlocklistState.DO_NOT_SHOW_AGAIN_LONG;
 import static com.android.server.nearby.fastpair.halfsheet.FastPairHalfSheetManager.DISMISS_HALFSHEET_RUNNABLE_NAME;
-import static com.android.server.nearby.fastpair.halfsheet.FastPairHalfSheetManager.RESULT_FAIL;
 import static com.android.server.nearby.fastpair.halfsheet.FastPairHalfSheetManager.SHOW_TOAST_RUNNABLE_NAME;
 
 import static com.google.common.truth.Truth.assertThat;
@@ -76,6 +74,9 @@ public class FastPairHalfSheetManagerTest {
     private static final int PASSKEY = 1234;
     private static final int SUCCESS = 1001;
     private static final int FAIL = 1002;
+    private static final String EXTRA_HALF_SHEET_CONTENT =
+            "com.android.nearby.halfsheet.HALF_SHEET_CONTENT";
+    private static final String RESULT_FAIL = "RESULT_FAIL";
     private FastPairHalfSheetManager mFastPairHalfSheetManager;
     private Cache.ScanFastPairStoreItem mScanFastPairStoreItem;
     private ResolveInfo mResolveInfo;

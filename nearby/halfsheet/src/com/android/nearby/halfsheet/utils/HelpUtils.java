@@ -16,6 +16,8 @@
 
 package com.android.nearby.halfsheet.utils;
 
+import static com.android.nearby.halfsheet.constants.Constant.TAG;
+
 import static java.util.Objects.requireNonNull;
 
 import android.content.ActivityNotFoundException;
@@ -23,8 +25,6 @@ import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
 import android.util.Log;
-
-import com.android.nearby.halfsheet.HalfSheetActivity;
 
 /**
  * Util class for launching help page in Fast Pair.
@@ -40,7 +40,7 @@ public class HelpUtils {
         try {
             context.startActivity(createHelpPageIntent(url));
         } catch (ActivityNotFoundException e) {
-            Log.w(HalfSheetActivity.TAG, "Failed to find activity for url " + url, e);
+            Log.w(TAG, "Failed to find activity for url " + url, e);
         }
     }
 

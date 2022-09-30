@@ -51,5 +51,7 @@ java_library {
     static_libs: [
         "modules-utils-preconditions",
     ],
-    visibility: ["//packages/modules/Connectivity/nearby/tests:__subpackages__"],
+    visibility: [
+    "//packages/modules/Connectivity/nearby/tests:__subpackages__",
+    "//packages/modules/Connectivity/nearby/halfsheet:__subpackages__"],
 }
