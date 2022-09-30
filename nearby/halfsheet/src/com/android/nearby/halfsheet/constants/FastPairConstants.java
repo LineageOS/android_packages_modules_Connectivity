@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021 The Android Open Source Project
+ * Copyright (C) 2022 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,18 +14,13 @@
  * limitations under the License.
  */
 
-package com.android.server.nearby.fastpair;
+package com.android.nearby.halfsheet.constants;
 
-import com.android.nearby.halfsheet.constants.UserActionHandlerBase;
+/** Constants to share with other team. */
+public class FastPairConstants {
+    private static final String PACKAGE_NAME = "com.android.server.nearby";
+    public static final String PREFIX = PACKAGE_NAME + ".common.bluetooth.fastpair.";
 
-/**
- * User action handler class.
- */
-public class UserActionHandler extends UserActionHandlerBase {
-
-    public static final String EXTRA_DISCOVERY_ITEM = PREFIX + "EXTRA_DISCOVERY_ITEM";
-    public static final String EXTRA_FAST_PAIR_SECRET = PREFIX + "EXTRA_FAST_PAIR_SECRET";
-
-    public static final String EXTRA_PRIVATE_BLE_ADDRESS =
-            ACTION_PREFIX + "EXTRA_PRIVATE_BLE_ADDRESS";
+    /** MODEL_ID item name for extended intent field. */
+    public static final String EXTRA_MODEL_ID = PREFIX + "MODEL_ID";
 }
