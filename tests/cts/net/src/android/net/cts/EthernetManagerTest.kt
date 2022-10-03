@@ -65,7 +65,6 @@ import com.android.testutils.waitForIdle
 import org.junit.After
 import org.junit.Assume.assumeFalse
 import org.junit.Before
-import org.junit.Ignore
 import org.junit.Test
 import org.junit.runner.RunWith
 import java.net.Inet6Address
@@ -321,7 +320,6 @@ class EthernetManagerTest {
     private fun TestableNetworkCallback.assertNotLost(n: Network? = null) =
         assertNoCallbackThat() { it is Lost && (n?.equals(it.network) ?: true) }
 
-    @Ignore("TODO: temporarily ignore tests until prebuilts are updated")
     @Test
     fun testCallbacks() {
         // If an interface exists when the callback is registered, it is reported on registration.
@@ -411,7 +409,6 @@ class EthernetManagerTest {
         listener.assertNoCallback()
     }
 
-    @Ignore("TODO: temporarily ignore tests until prebuilts are updated")
     @Test
     fun testGetInterfaceList() {
         setIncludeTestInterfaces(true)
@@ -434,7 +431,6 @@ class EthernetManagerTest {
         removeInterface(iface2)
     }
 
-    @Ignore("TODO: temporarily ignore tests until prebuilts are updated")
     @Test
     fun testNetworkRequest_withSingleExistingInterface() {
         setIncludeTestInterfaces(true)
@@ -453,7 +449,6 @@ class EthernetManagerTest {
         listenerCb.eventuallyExpectLost(network)
     }
 
-    @Ignore("TODO: temporarily ignore tests until prebuilts are updated")
     @Test
     fun testNetworkRequest_beforeSingleInterfaceIsUp() {
         setIncludeTestInterfaces(true)
@@ -472,7 +467,6 @@ class EthernetManagerTest {
         releaseNetwork(cb)
     }
 
-    @Ignore("TODO: temporarily ignore tests until prebuilts are updated")
     @Test
     fun testNetworkRequest_withMultipleInterfaces() {
         setIncludeTestInterfaces(true)
@@ -495,7 +489,6 @@ class EthernetManagerTest {
         releaseNetwork(cb)
     }
 
-    @Ignore("TODO: temporarily ignore tests until prebuilts are updated")
     @Test
     fun testNetworkRequest_withInterfaceBeingReplaced() {
         setIncludeTestInterfaces(true)
@@ -516,7 +509,6 @@ class EthernetManagerTest {
         releaseNetwork(cb)
     }
 
-    @Ignore("TODO: temporarily ignore tests until prebuilts are updated")
     @Test
     fun testNetworkRequest_withMultipleInterfacesAndRequests() {
         setIncludeTestInterfaces(true)

@@ -45,7 +45,6 @@ import androidx.test.filters.SmallTest;
 import androidx.test.runner.AndroidJUnit4;
 
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mock;
@@ -94,7 +93,6 @@ public class EthernetServiceImplTest {
         doReturn(shouldTrack).when(mEthernetTracker).isTrackingInterface(iface);
     }
 
-    @Ignore("TODO: temporarily ignore tests until prebuilts are updated")
     @Test
     public void testSetConfigurationRejectsWhenEthNotStarted() {
         mEthernetServiceImpl.mStarted.set(false);
@@ -103,7 +101,6 @@ public class EthernetServiceImplTest {
         });
     }
 
-    @Ignore("TODO: temporarily ignore tests until prebuilts are updated")
     @Test
     public void testUpdateConfigurationRejectsWhenEthNotStarted() {
         mEthernetServiceImpl.mStarted.set(false);
@@ -113,7 +110,6 @@ public class EthernetServiceImplTest {
         });
     }
 
-    @Ignore("TODO: temporarily ignore tests until prebuilts are updated")
     @Test
     public void testConnectNetworkRejectsWhenEthNotStarted() {
         mEthernetServiceImpl.mStarted.set(false);
@@ -122,7 +118,6 @@ public class EthernetServiceImplTest {
         });
     }
 
-    @Ignore("TODO: temporarily ignore tests until prebuilts are updated")
     @Test
     public void testDisconnectNetworkRejectsWhenEthNotStarted() {
         mEthernetServiceImpl.mStarted.set(false);
@@ -131,7 +126,6 @@ public class EthernetServiceImplTest {
         });
     }
 
-    @Ignore("TODO: temporarily ignore tests until prebuilts are updated")
     @Test
     public void testUpdateConfigurationRejectsNullIface() {
         assertThrows(NullPointerException.class, () -> {
@@ -139,7 +133,6 @@ public class EthernetServiceImplTest {
         });
     }
 
-    @Ignore("TODO: temporarily ignore tests until prebuilts are updated")
     @Test
     public void testConnectNetworkRejectsNullIface() {
         assertThrows(NullPointerException.class, () -> {
@@ -147,7 +140,6 @@ public class EthernetServiceImplTest {
         });
     }
 
-    @Ignore("TODO: temporarily ignore tests until prebuilts are updated")
     @Test
     public void testDisconnectNetworkRejectsNullIface() {
         assertThrows(NullPointerException.class, () -> {
@@ -155,7 +147,6 @@ public class EthernetServiceImplTest {
         });
     }
 
-    @Ignore("TODO: temporarily ignore tests until prebuilts are updated")
     @Test
     public void testUpdateConfigurationWithCapabilitiesRejectsWithoutAutomotiveFeature() {
         toggleAutomotiveFeature(false);
@@ -164,7 +155,6 @@ public class EthernetServiceImplTest {
         });
     }
 
-    @Ignore("TODO: temporarily ignore tests until prebuilts are updated")
     @Test
     public void testUpdateConfigurationWithCapabilitiesWithAutomotiveFeature() {
         toggleAutomotiveFeature(false);
@@ -175,7 +165,6 @@ public class EthernetServiceImplTest {
                 eq(UPDATE_REQUEST_WITHOUT_CAPABILITIES.getNetworkCapabilities()), isNull());
     }
 
-    @Ignore("TODO: temporarily ignore tests until prebuilts are updated")
     @Test
     public void testConnectNetworkRejectsWithoutAutomotiveFeature() {
         toggleAutomotiveFeature(false);
@@ -184,7 +173,6 @@ public class EthernetServiceImplTest {
         });
     }
 
-    @Ignore("TODO: temporarily ignore tests until prebuilts are updated")
     @Test
     public void testDisconnectNetworkRejectsWithoutAutomotiveFeature() {
         toggleAutomotiveFeature(false);
@@ -205,7 +193,6 @@ public class EthernetServiceImplTest {
                         eq(Manifest.permission.MANAGE_TEST_NETWORKS), anyString());
     }
 
-    @Ignore("TODO: temporarily ignore tests until prebuilts are updated")
     @Test
     public void testUpdateConfigurationRejectsWithoutManageEthPermission() {
         denyManageEthPermission();
@@ -214,7 +201,6 @@ public class EthernetServiceImplTest {
         });
     }
 
-    @Ignore("TODO: temporarily ignore tests until prebuilts are updated")
     @Test
     public void testConnectNetworkRejectsWithoutManageEthPermission() {
         denyManageEthPermission();
@@ -223,7 +209,6 @@ public class EthernetServiceImplTest {
         });
     }
 
-    @Ignore("TODO: temporarily ignore tests until prebuilts are updated")
     @Test
     public void testDisconnectNetworkRejectsWithoutManageEthPermission() {
         denyManageEthPermission();
@@ -236,7 +221,6 @@ public class EthernetServiceImplTest {
         when(mEthernetTracker.isValidTestInterface(eq(TEST_IFACE))).thenReturn(true);
     }
 
-    @Ignore("TODO: temporarily ignore tests until prebuilts are updated")
     @Test
     public void testUpdateConfigurationRejectsTestRequestWithoutTestPermission() {
         enableTestInterface();
@@ -246,7 +230,6 @@ public class EthernetServiceImplTest {
         });
     }
 
-    @Ignore("TODO: temporarily ignore tests until prebuilts are updated")
     @Test
     public void testConnectNetworkRejectsTestRequestWithoutTestPermission() {
         enableTestInterface();
@@ -256,7 +239,6 @@ public class EthernetServiceImplTest {
         });
     }
 
-    @Ignore("TODO: temporarily ignore tests until prebuilts are updated")
     @Test
     public void testDisconnectNetworkRejectsTestRequestWithoutTestPermission() {
         enableTestInterface();
@@ -266,7 +248,6 @@ public class EthernetServiceImplTest {
         });
     }
 
-    @Ignore("TODO: temporarily ignore tests until prebuilts are updated")
     @Test
     public void testUpdateConfiguration() {
         mEthernetServiceImpl.updateConfiguration(TEST_IFACE, UPDATE_REQUEST, NULL_LISTENER);
@@ -276,21 +257,18 @@ public class EthernetServiceImplTest {
                 eq(UPDATE_REQUEST.getNetworkCapabilities()), eq(NULL_LISTENER));
     }
 
-    @Ignore("TODO: temporarily ignore tests until prebuilts are updated")
     @Test
     public void testConnectNetwork() {
         mEthernetServiceImpl.connectNetwork(TEST_IFACE, NULL_LISTENER);
         verify(mEthernetTracker).connectNetwork(eq(TEST_IFACE), eq(NULL_LISTENER));
     }
 
-    @Ignore("TODO: temporarily ignore tests until prebuilts are updated")
     @Test
     public void testDisconnectNetwork() {
         mEthernetServiceImpl.disconnectNetwork(TEST_IFACE, NULL_LISTENER);
         verify(mEthernetTracker).disconnectNetwork(eq(TEST_IFACE), eq(NULL_LISTENER));
     }
 
-    @Ignore("TODO: temporarily ignore tests until prebuilts are updated")
     @Test
     public void testUpdateConfigurationAcceptsTestRequestWithNullCapabilities() {
         enableTestInterface();
@@ -304,7 +282,6 @@ public class EthernetServiceImplTest {
                 eq(request.getNetworkCapabilities()), isNull());
     }
 
-    @Ignore("TODO: temporarily ignore tests until prebuilts are updated")
     @Test
     public void testUpdateConfigurationAcceptsRequestWithNullIpConfiguration() {
         mEthernetServiceImpl.updateConfiguration(TEST_IFACE, UPDATE_REQUEST_WITHOUT_IP_CONFIG,
@@ -314,7 +291,6 @@ public class EthernetServiceImplTest {
                 eq(UPDATE_REQUEST_WITHOUT_IP_CONFIG.getNetworkCapabilities()), isNull());
     }
 
-    @Ignore("TODO: temporarily ignore tests until prebuilts are updated")
     @Test
     public void testUpdateConfigurationRejectsInvalidTestRequest() {
         enableTestInterface();
@@ -333,7 +309,6 @@ public class EthernetServiceImplTest {
                 .setNetworkCapabilities(nc).build();
     }
 
-    @Ignore("TODO: temporarily ignore tests until prebuilts are updated")
     @Test
     public void testUpdateConfigurationForTestRequestDoesNotRequireAutoOrEthernetPermission() {
         enableTestInterface();
@@ -348,7 +323,6 @@ public class EthernetServiceImplTest {
                 eq(request.getNetworkCapabilities()), eq(NULL_LISTENER));
     }
 
-    @Ignore("TODO: temporarily ignore tests until prebuilts are updated")
     @Test
     public void testConnectNetworkForTestRequestDoesNotRequireAutoOrNetPermission() {
         enableTestInterface();
@@ -359,7 +333,6 @@ public class EthernetServiceImplTest {
         verify(mEthernetTracker).connectNetwork(eq(TEST_IFACE), eq(NULL_LISTENER));
     }
 
-    @Ignore("TODO: temporarily ignore tests until prebuilts are updated")
     @Test
     public void testDisconnectNetworkForTestRequestDoesNotRequireAutoOrNetPermission() {
         enableTestInterface();
@@ -377,7 +350,6 @@ public class EthernetServiceImplTest {
         }
     }
 
-    @Ignore("TODO: temporarily ignore tests until prebuilts are updated")
     @Test
     public void testSetEthernetEnabled() {
         denyPermissions(android.net.NetworkStack.PERMISSION_MAINLINE_NETWORK_STACK);
