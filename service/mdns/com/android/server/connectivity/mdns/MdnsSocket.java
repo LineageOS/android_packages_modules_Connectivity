@@ -19,11 +19,13 @@ package com.android.server.connectivity.mdns;
 import android.annotation.NonNull;
 
 import com.android.internal.annotations.VisibleForTesting;
+import com.android.server.connectivity.mdns.util.MdnsLogger;
 
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.InetSocketAddress;
 import java.net.MulticastSocket;
+import java.net.SocketException;
 import java.util.List;
 
 /**
@@ -35,6 +37,9 @@ import java.util.List;
 // TODO(b/242631897): Resolve nullness suppression.
 @SuppressWarnings("nullness")
 public class MdnsSocket {
+    private static final MdnsLogger LOGGER = new MdnsLogger("MdnsSocket");
+
+    static final int INTERFACE_INDEX_UNSPECIFIED = -1;
     private static final InetSocketAddress MULTICAST_IPV4_ADDRESS =
             new InetSocketAddress(MdnsConstants.getMdnsIPv4Address(), MdnsConstants.MDNS_PORT);
     private static final InetSocketAddress MULTICAST_IPV6_ADDRESS =
@@ -101,6 +106,19 @@ public class MdnsSocket {
         // This is a race with the use of the file descriptor (b/27403984).
         multicastSocket.close();
         multicastNetworkInterfaceProvider.stopWatchingConnectivityChanges();
+    }
+
+    /**
+     * Returns the index of the network interface that this socket is bound to. If the interface
+     * cannot be determined, returns -1.
+     */
+    public int getInterfaceIndex() {
+        try {
+            return multicastSocket.getNetworkInterface().getIndex();
+        } catch (SocketException e) {
+            LOGGER.e("Failed to retrieve interface index for socket.", e);
+            return -1;
+        }
     }
 
     @VisibleForTesting

@@ -106,9 +106,9 @@ public class MdnsResponseDecoderTests {
             + "63616C0000018001000000780004C0A8010A000001800100000078"
             + "0004C0A8010A00000000000000");
 
-    private static final String DUMMY_CAST_SERVICE_NAME = "_googlecast";
-    private static final String[] DUMMY_CAST_SERVICE_TYPE =
-            new String[] {DUMMY_CAST_SERVICE_NAME, "_tcp", "local"};
+    private static final String CAST_SERVICE_NAME = "_googlecast";
+    private static final String[] CAST_SERVICE_TYPE =
+            new String[] {CAST_SERVICE_NAME, "_tcp", "local"};
 
     private final List<MdnsResponse> responses = new LinkedList<>();
 
@@ -116,13 +116,13 @@ public class MdnsResponseDecoderTests {
 
     @Before
     public void setUp() {
-        MdnsResponseDecoder decoder = new MdnsResponseDecoder(mClock, DUMMY_CAST_SERVICE_TYPE);
+        MdnsResponseDecoder decoder = new MdnsResponseDecoder(mClock, CAST_SERVICE_TYPE);
         assertNotNull(data);
         DatagramPacket packet = new DatagramPacket(data, data.length);
         packet.setSocketAddress(
                 new InetSocketAddress(MdnsConstants.getMdnsIPv4Address(), MdnsConstants.MDNS_PORT));
         responses.clear();
-        int errorCode = decoder.decode(packet, responses);
+        int errorCode = decoder.decode(packet, responses, MdnsSocket.INTERFACE_INDEX_UNSPECIFIED);
         assertEquals(MdnsResponseDecoder.SUCCESS, errorCode);
         assertEquals(1, responses.size());
     }
@@ -135,7 +135,7 @@ public class MdnsResponseDecoderTests {
         packet.setSocketAddress(
                 new InetSocketAddress(MdnsConstants.getMdnsIPv4Address(), MdnsConstants.MDNS_PORT));
         responses.clear();
-        int errorCode = decoder.decode(packet, responses);
+        int errorCode = decoder.decode(packet, responses, MdnsSocket.INTERFACE_INDEX_UNSPECIFIED);
         assertEquals(MdnsResponseDecoder.SUCCESS, errorCode);
         assertEquals(2, responses.size());
     }
@@ -153,7 +153,7 @@ public class MdnsResponseDecoderTests {
 
         MdnsServiceRecord serviceRecord = response.getServiceRecord();
         String serviceName = serviceRecord.getServiceName();
-        assertEquals(DUMMY_CAST_SERVICE_NAME, serviceName);
+        assertEquals(CAST_SERVICE_NAME, serviceName);
 
         String serviceInstanceName = serviceRecord.getServiceInstanceName();
         assertEquals("Johnny's Chromecast", serviceInstanceName);
@@ -187,14 +187,14 @@ public class MdnsResponseDecoderTests {
 
     @Test
     public void testDecodeIPv6AnswerPacket() throws IOException {
-        MdnsResponseDecoder decoder = new MdnsResponseDecoder(mClock, DUMMY_CAST_SERVICE_TYPE);
+        MdnsResponseDecoder decoder = new MdnsResponseDecoder(mClock, CAST_SERVICE_TYPE);
         assertNotNull(data6);
         DatagramPacket packet = new DatagramPacket(data6, data6.length);
         packet.setSocketAddress(
                 new InetSocketAddress(MdnsConstants.getMdnsIPv6Address(), MdnsConstants.MDNS_PORT));
 
         responses.clear();
-        int errorCode = decoder.decode(packet, responses);
+        int errorCode = decoder.decode(packet, responses, MdnsSocket.INTERFACE_INDEX_UNSPECIFIED);
         assertEquals(MdnsResponseDecoder.SUCCESS, errorCode);
 
         MdnsResponse response = responses.get(0);
@@ -233,5 +233,20 @@ public class MdnsResponseDecoderTests {
         response = responses.get(0);
         response.setTextRecord(null);
         assertFalse(response.isComplete());
+    }
+
+    @Test
+    public void decode_withInterfaceIndex_populatesInterfaceIndex() {
+        MdnsResponseDecoder decoder = new MdnsResponseDecoder(mClock, CAST_SERVICE_TYPE);
+        assertNotNull(data6);
+        DatagramPacket packet = new DatagramPacket(data6, data6.length);
+        packet.setSocketAddress(
+                new InetSocketAddress(MdnsConstants.getMdnsIPv6Address(), MdnsConstants.MDNS_PORT));
+
+        responses.clear();
+        int errorCode = decoder.decode(packet, responses, /* interfaceIndex= */ 10);
+        assertEquals(errorCode, MdnsResponseDecoder.SUCCESS);
+        assertEquals(responses.size(), 1);
+        assertEquals(responses.get(0).getInterfaceIndex(), 10);
     }
 }

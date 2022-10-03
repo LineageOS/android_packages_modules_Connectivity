@@ -92,9 +92,12 @@ public class MdnsResponseDecoder {
      * the responses for completeness; the caller should do that.
      *
      * @param packet The packet to read from.
+     * @param interfaceIndex the network interface index (or {@link
+     *     MdnsSocket#INTERFACE_INDEX_UNSPECIFIED} if not known) at which the packet was received
      * @return A list of mDNS responses, or null if the packet contained no appropriate responses.
      */
-    public int decode(@NonNull DatagramPacket packet, @NonNull List<MdnsResponse> responses) {
+    public int decode(@NonNull DatagramPacket packet, @NonNull List<MdnsResponse> responses,
+            int interfaceIndex) {
         MdnsPacketReader reader = new MdnsPacketReader(packet);
 
         List<MdnsRecord> records;
@@ -281,8 +284,10 @@ public class MdnsResponseDecoder {
                 MdnsResponse response = findResponseWithHostName(responses, inetRecord.getName());
                 if (inetRecord.getInet4Address() != null && response != null) {
                     response.setInet4AddressRecord(inetRecord);
+                    response.setInterfaceIndex(interfaceIndex);
                 } else if (inetRecord.getInet6Address() != null && response != null) {
                     response.setInet6AddressRecord(inetRecord);
+                    response.setInterfaceIndex(interfaceIndex);
                 }
             }
         }
