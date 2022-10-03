@@ -22,16 +22,19 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertThrows;
 
 import android.util.Log;
 
 import com.android.net.module.util.HexDump;
+import com.android.server.connectivity.mdns.MdnsServiceInfo.TextEntry;
 import com.android.testutils.DevSdkIgnoreRule;
 import com.android.testutils.DevSdkIgnoreRunner;
 
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
+import java.io.EOFException;
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.Inet4Address;
@@ -309,6 +312,14 @@ public class MdnsRecordTests {
         assertEquals("b=1234567890", strings.get(1));
         assertEquals("xyz=!@#$", strings.get(2));
 
+        List<TextEntry> entries = record.getEntries();
+        assertNotNull(entries);
+        assertEquals(3, entries.size());
+
+        assertEquals(new TextEntry("a", "hello there"), entries.get(0));
+        assertEquals(new TextEntry("b", "1234567890"), entries.get(1));
+        assertEquals(new TextEntry("xyz", "!@#$"), entries.get(2));
+
         // Encode
         MdnsPacketWriter writer = new MdnsPacketWriter(MAX_PACKET_SIZE);
         record.write(writer, record.getReceiptTime());
@@ -320,5 +331,49 @@ public class MdnsRecordTests {
         Log.d(TAG, dataOutText);
 
         assertEquals(dataInText, dataOutText);
+    }
+
+    @Test
+    public void textRecord_recordDoesNotHaveDataOfGivenLength_throwsEOFException()
+            throws Exception {
+        final byte[] dataIn = HexDump.hexStringToByteArray(
+                "0474657374000010"
+                        + "000100001194000D"
+                        + "0D613D68656C6C6F" //The TXT entry starts with length of 13, but only 12
+                        + "2074686572"); // characters are following it.
+        DatagramPacket packet = new DatagramPacket(dataIn, dataIn.length);
+        MdnsPacketReader reader = new MdnsPacketReader(packet);
+        String[] name = reader.readLabels();
+        MdnsRecord.labelsToString(name);
+        reader.readUInt16();
+
+        assertThrows(EOFException.class, () -> new MdnsTextRecord(name, reader));
+    }
+
+    @Test
+    public void textRecord_entriesIncludeNonUtf8Bytes_returnsTheSameUtf8Bytes() throws Exception {
+        final byte[] dataIn = HexDump.hexStringToByteArray(
+                "0474657374000010"
+                        + "0001000011940024"
+                        + "0D613D68656C6C6F"
+                        + "2074686572650C62"
+                        + "3D31323334353637"
+                        + "3839300878797A3D"
+                        + "FFEFDFCF");
+        DatagramPacket packet = new DatagramPacket(dataIn, dataIn.length);
+        MdnsPacketReader reader = new MdnsPacketReader(packet);
+        String[] name = reader.readLabels();
+        MdnsRecord.labelsToString(name);
+        reader.readUInt16();
+
+        MdnsTextRecord record = new MdnsTextRecord(name, reader);
+
+        List<TextEntry> entries = record.getEntries();
+        assertNotNull(entries);
+        assertEquals(3, entries.size());
+        assertEquals(new TextEntry("a", "hello there"), entries.get(0));
+        assertEquals(new TextEntry("b", "1234567890"), entries.get(1));
+        assertEquals(new TextEntry("xyz", HexDump.hexStringToByteArray("FFEFDFCF")),
+                entries.get(2));
     }
 }
