@@ -97,7 +97,7 @@
 
          On Android 14 and above, the behavior is always like 1, regardless of the value of this
          setting. -->
-    <integer translatable="false" name="config_activelyPreferBadWifi">1</integer>
+    <integer translatable="false" name="config_activelyPreferBadWifi">0</integer>
 
     <!-- Array of ConnectivityManager.TYPE_xxxx constants for networks that may only
          be controlled by systemOrSignature apps.  -->
