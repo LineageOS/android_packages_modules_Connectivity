@@ -536,6 +536,13 @@ public class BpfCoordinator {
         // TODO: Wrap conntrackMonitor stopping function into mBpfCoordinatorShim.
         if (!isUsingBpf() || !mDeps.isAtLeastS()) return;
 
+        // Ignore stopping monitoring if the monitor has never started for a given IpServer.
+        if (!mMonitoringIpServers.contains(ipServer)) {
+            mLog.e("Ignore stopping monitoring because monitoring has never started for "
+                    + ipServer.interfaceName());
+            return;
+        }
+
         mMonitoringIpServers.remove(ipServer);
 
         if (!mMonitoringIpServers.isEmpty()) return;
