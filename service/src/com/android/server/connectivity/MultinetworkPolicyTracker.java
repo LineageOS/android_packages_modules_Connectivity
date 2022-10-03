@@ -32,6 +32,7 @@ import android.net.ConnectivityResources;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Handler;
+import android.provider.DeviceConfig;
 import android.provider.Settings;
 import android.telephony.SubscriptionManager;
 import android.telephony.TelephonyCallback;
@@ -41,6 +42,7 @@ import android.util.Log;
 import com.android.connectivity.resources.R;
 import com.android.internal.annotations.VisibleForTesting;
 import com.android.modules.utils.build.SdkLevel;
+import com.android.net.module.util.DeviceConfigUtils;
 
 import java.util.Arrays;
 import java.util.List;
@@ -67,6 +69,9 @@ import java.util.concurrent.RejectedExecutionException;
 public class MultinetworkPolicyTracker {
     private static String TAG = MultinetworkPolicyTracker.class.getSimpleName();
 
+    // See Dependencies#getConfigActivelyPreferBadWifi
+    public static final String CONFIG_ACTIVELY_PREFER_BAD_WIFI = "actively_prefer_bad_wifi";
+
     private final Context mContext;
     private final ConnectivityResources mResources;
     private final Handler mHandler;
@@ -80,6 +85,43 @@ public class MultinetworkPolicyTracker {
     private volatile int mMeteredMultipathPreference;
     private int mActiveSubId = SubscriptionManager.INVALID_SUBSCRIPTION_ID;
     private volatile long mTestAllowBadWifiUntilMs = 0;
+
+    /**
+     * Dependencies for testing
+     */
+    @VisibleForTesting
+    public static class Dependencies {
+        /**
+         * @see DeviceConfigUtils#getDeviceConfigPropertyInt
+         */
+        protected int getConfigActivelyPreferBadWifi() {
+            // CONFIG_ACTIVELY_PREFER_BAD_WIFI is not a feature to be rolled out, but an override
+            // for tests and an emergency kill switch (which could force the behavior on OR off).
+            // As such it uses a -1/null/1 scheme, but features should use
+            // DeviceConfigUtils#isFeatureEnabled instead, to make sure rollbacks disable the
+            // feature before it's ready on R and before.
+            return DeviceConfig.getInt(DeviceConfig.NAMESPACE_CONNECTIVITY,
+                    CONFIG_ACTIVELY_PREFER_BAD_WIFI, 0);
+        }
+
+        /**
+         @see DeviceConfig#addOnPropertiesChangedListener
+         */
+        protected void addOnDevicePropertiesChangedListener(@NonNull final Executor executor,
+                @NonNull final DeviceConfig.OnPropertiesChangedListener listener) {
+            DeviceConfig.addOnPropertiesChangedListener(DeviceConfig.NAMESPACE_CONNECTIVITY,
+                    executor, listener);
+        }
+
+        @VisibleForTesting
+        @NonNull
+        protected Resources getResourcesForActiveSubId(
+                @NonNull final ConnectivityResources resources, final int activeSubId) {
+            return SubscriptionManager.getResourcesForSubId(
+                    resources.getResourcesContext(), activeSubId);
+        }
+    }
+    private final Dependencies mDeps;
 
     /**
      * Whether to prefer bad wifi to a network that yields to bad wifis, even if it never validated
@@ -129,15 +171,17 @@ public class MultinetworkPolicyTracker {
         }
     }
 
-    public MultinetworkPolicyTracker(Context ctx, Handler handler) {
-        this(ctx, handler, null);
+    public MultinetworkPolicyTracker(Context ctx, Handler handler, Runnable avoidBadWifiCallback) {
+        this(ctx, handler, avoidBadWifiCallback, new Dependencies());
     }
 
-    public MultinetworkPolicyTracker(Context ctx, Handler handler, Runnable avoidBadWifiCallback) {
+    public MultinetworkPolicyTracker(Context ctx, Handler handler, Runnable avoidBadWifiCallback,
+            Dependencies deps) {
         mContext = ctx;
         mResources = new ConnectivityResources(ctx);
         mHandler = handler;
         mAvoidBadWifiCallback = avoidBadWifiCallback;
+        mDeps = deps;
         mSettingsUris = Arrays.asList(
                 Settings.Global.getUriFor(NETWORK_AVOID_BAD_WIFI),
                 Settings.Global.getUriFor(NETWORK_METERED_MULTIPATH_PREFERENCE));
@@ -166,8 +210,11 @@ public class MultinetworkPolicyTracker {
         mContext.registerReceiverForAllUsers(mBroadcastReceiver, intentFilter,
                 null /* broadcastPermission */, mHandler);
 
+        final Executor handlerExecutor = new HandlerExecutor(mHandler);
         mContext.getSystemService(TelephonyManager.class).registerTelephonyCallback(
-                new HandlerExecutor(mHandler), new ActiveDataSubscriptionIdListener());
+                handlerExecutor, new ActiveDataSubscriptionIdListener());
+        mDeps.addOnDevicePropertiesChangedListener(handlerExecutor,
+                properties -> reevaluateInternal());
 
         reevaluate();
     }
@@ -201,7 +248,7 @@ public class MultinetworkPolicyTracker {
         // NETWORK_AVOID_BAD_WIFI setting.
         if (allowBadWifi) return true;
 
-        return getResourcesForActiveSubId()
+        return mDeps.getResourcesForActiveSubId(mResources, mActiveSubId)
                 .getInteger(R.integer.config_networkAvoidBadWifi) == 0;
     }
 
@@ -223,7 +270,7 @@ public class MultinetworkPolicyTracker {
         // bad wifi (only stay stuck on it if already on there). This implementation treats
         // any non-0 value like 1, on the assumption that anybody setting it non-zero wants
         // the newer behavior.
-        return 0 != getResourcesForActiveSubId()
+        return 0 != mDeps.getResourcesForActiveSubId(mResources, mActiveSubId)
                 .getInteger(R.integer.config_activelyPreferBadWifi);
     }
 
@@ -237,13 +284,6 @@ public class MultinetworkPolicyTracker {
         reevaluateInternal();
     }
 
-    @VisibleForTesting
-    @NonNull
-    protected Resources getResourcesForActiveSubId() {
-        return SubscriptionManager.getResourcesForSubId(
-                mResources.getResourcesContext(), mActiveSubId);
-    }
-
     /**
      * Whether we should display a notification when wifi becomes unvalidated.
      */
@@ -253,6 +293,29 @@ public class MultinetworkPolicyTracker {
 
     public String getAvoidBadWifiSetting() {
         return Settings.Global.getString(mResolver, NETWORK_AVOID_BAD_WIFI);
+    }
+
+    /**
+     * Returns whether device config says the device should actively prefer bad wifi.
+     *
+     * {@see #configActivelyPrefersBadWifi} for a description of what this does. This device
+     * config overrides that config overlay.
+     *
+     * @return True on Android U and above.
+     *         True if device config says to actively prefer bad wifi.
+     *         False if device config says not to actively prefer bad wifi.
+     *         null if device config doesn't have an opinion (then fall back on the resource).
+     */
+    public Boolean deviceConfigActivelyPreferBadWifi() {
+        if (SdkLevel.isAtLeastU()) return true;
+        switch (mDeps.getConfigActivelyPreferBadWifi()) {
+            case 1:
+                return Boolean.TRUE;
+            case -1:
+                return Boolean.FALSE;
+            default:
+                return null;
+        }
     }
 
     @VisibleForTesting
@@ -276,7 +339,12 @@ public class MultinetworkPolicyTracker {
         mAvoidBadWifi = settingAvoidBadWifi || !configRestrictsAvoidBadWifi();
 
         final boolean prevActive = mActivelyPreferBadWifi;
-        mActivelyPreferBadWifi = configActivelyPrefersBadWifi();
+        final Boolean deviceConfigPreferBadWifi = deviceConfigActivelyPreferBadWifi();
+        if (null == deviceConfigPreferBadWifi) {
+            mActivelyPreferBadWifi = configActivelyPrefersBadWifi();
+        } else {
+            mActivelyPreferBadWifi = deviceConfigPreferBadWifi;
+        }
 
         return mAvoidBadWifi != prevAvoid || mActivelyPreferBadWifi != prevActive;
     }
@@ -285,10 +353,8 @@ public class MultinetworkPolicyTracker {
      * The default (device and carrier-dependent) value for metered multipath preference.
      */
     public int configMeteredMultipathPreference() {
-        // TODO: use R.integer.config_networkMeteredMultipathPreference directly
-        final int id = mResources.get().getIdentifier("config_networkMeteredMultipathPreference",
-                "integer", mResources.getResourcesContext().getPackageName());
-        return mResources.get().getInteger(id);
+        return mDeps.getResourcesForActiveSubId(mResources, mActiveSubId)
+                .getInteger(R.integer.config_networkMeteredMultipathPreference);
     }
 
     public void updateMeteredMultipathPreference() {

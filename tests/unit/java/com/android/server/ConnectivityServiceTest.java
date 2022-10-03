@@ -29,7 +29,6 @@ import static android.Manifest.permission.NETWORK_FACTORY;
 import static android.Manifest.permission.NETWORK_SETTINGS;
 import static android.Manifest.permission.NETWORK_STACK;
 import static android.Manifest.permission.PACKET_KEEPALIVE_OFFLOAD;
-import static android.Manifest.permission.READ_DEVICE_CONFIG;
 import static android.app.PendingIntent.FLAG_IMMUTABLE;
 import static android.content.Intent.ACTION_PACKAGE_ADDED;
 import static android.content.Intent.ACTION_PACKAGE_REMOVED;
@@ -366,6 +365,7 @@ import com.android.server.connectivity.CarrierPrivilegeAuthenticator;
 import com.android.server.connectivity.ClatCoordinator;
 import com.android.server.connectivity.ConnectivityFlags;
 import com.android.server.connectivity.MultinetworkPolicyTracker;
+import com.android.server.connectivity.MultinetworkPolicyTrackerTestDependencies;
 import com.android.server.connectivity.Nat464Xlat;
 import com.android.server.connectivity.NetworkAgentInfo;
 import com.android.server.connectivity.NetworkNotificationManager;
@@ -1634,12 +1634,7 @@ public class ConnectivityServiceTest {
         volatile int mConfigMeteredMultipathPreference;
 
         WrappedMultinetworkPolicyTracker(Context c, Handler h, Runnable r) {
-            super(c, h, r);
-        }
-
-        @Override
-        protected Resources getResourcesForActiveSubId() {
-            return mResources;
+            super(c, h, r, new MultinetworkPolicyTrackerTestDependencies(mResources));
         }
 
         @Override
@@ -5810,16 +5805,12 @@ public class ConnectivityServiceTest {
     public void testPreferBadWifi_doNotPrefer() throws Exception {
         // Starting with U this mode is no longer supported and can't actually be tested
         assumeFalse(SdkLevel.isAtLeastU());
-        runAsShell(READ_DEVICE_CONFIG, () -> {
-            doTestPreferBadWifi(false /* preferBadWifi */);
-        });
+        doTestPreferBadWifi(false /* preferBadWifi */);
     }
 
     @Test
     public void testPreferBadWifi_doPrefer() throws Exception {
-        runAsShell(READ_DEVICE_CONFIG, () -> {
-            doTestPreferBadWifi(true /* preferBadWifi */);
-        });
+        doTestPreferBadWifi(true /* preferBadWifi */);
     }
 
     @Test
