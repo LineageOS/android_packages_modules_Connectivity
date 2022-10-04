@@ -1208,7 +1208,7 @@ public class NetworkAgentInfo implements NetworkRanker.Scoreable {
      */
     public void setScore(final NetworkScore score) {
         mScore = FullScore.fromNetworkScore(score, networkCapabilities, networkAgentConfig,
-                everValidated(), 0L == getAvoidUnvalidated(), yieldToBadWiFi(),
+                everValidated(), 0L != getAvoidUnvalidated(), yieldToBadWiFi(),
                 0L != mFirstEvaluationConcludedTime, isDestroyed());
     }
 
