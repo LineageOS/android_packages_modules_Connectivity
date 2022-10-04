@@ -211,10 +211,15 @@ class ConnectivityServiceIntegrationTest {
         doReturn(TestNetIdManager()).`when`(deps).makeNetIdManager()
         doReturn(mock(BpfNetMaps::class.java)).`when`(deps).getBpfNetMaps(any(), any())
         doAnswer { inv ->
-            object : MultinetworkPolicyTracker(inv.getArgument(0), inv.getArgument(1),
-                    inv.getArgument(2)) {
-                override fun getResourcesForActiveSubId() = resources
-            }
+            MultinetworkPolicyTracker(inv.getArgument(0),
+                    inv.getArgument(1),
+                    inv.getArgument(2),
+                    object : MultinetworkPolicyTracker.Dependencies() {
+                        override fun getResourcesForActiveSubId(
+                            connResources: ConnectivityResources,
+                            activeSubId: Int
+                        ) = resources
+                    })
         }.`when`(deps).makeMultinetworkPolicyTracker(any(), any(), any())
         return deps
     }
