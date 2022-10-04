@@ -168,16 +168,22 @@ open class RecorderCallback private constructor(
     }
 }
 
-private const val DEFAULT_TIMEOUT = 200L // ms
+private const val DEFAULT_TIMEOUT = 30_000L // ms
+private const val DEFAULT_NO_CALLBACK_TIMEOUT = 200L // ms
 
 open class TestableNetworkCallback private constructor(
     src: TestableNetworkCallback?,
-    val defaultTimeoutMs: Long = DEFAULT_TIMEOUT
+    val defaultTimeoutMs: Long = DEFAULT_TIMEOUT,
+    val defaultNoCallbackTimeoutMs: Long = DEFAULT_NO_CALLBACK_TIMEOUT
 ) : RecorderCallback(src) {
     @JvmOverloads
-    constructor(timeoutMs: Long = DEFAULT_TIMEOUT): this(null, timeoutMs)
+    constructor(
+        timeoutMs: Long = DEFAULT_TIMEOUT,
+        noCallbackTimeoutMs: Long = DEFAULT_NO_CALLBACK_TIMEOUT
+    ): this(null, timeoutMs, noCallbackTimeoutMs)
 
-    fun createLinkedCopy() = TestableNetworkCallback(this, defaultTimeoutMs)
+    fun createLinkedCopy() = TestableNetworkCallback(
+            this, defaultTimeoutMs, defaultNoCallbackTimeoutMs)
 
     // The last available network, or null if any network was lost since the last call to
     // onAvailable. TODO : fix this by fixing the tests that rely on this behavior
@@ -194,7 +200,7 @@ open class TestableNetworkCallback private constructor(
     // Make open for use in ConnectivityServiceTest which is the only one knowing its handlers.
     // TODO : remove the necessity to overload this, remove the open qualifier, and give a
     // default argument to assertNoCallback instead, possibly with @JvmOverloads if necessary.
-    open fun assertNoCallback() = assertNoCallback(defaultTimeoutMs)
+    open fun assertNoCallback() = assertNoCallback(defaultNoCallbackTimeoutMs)
 
     fun assertNoCallback(timeoutMs: Long) {
         val cb = history.poll(timeoutMs)
@@ -202,7 +208,7 @@ open class TestableNetworkCallback private constructor(
     }
 
     fun assertNoCallbackThat(
-        timeoutMs: Long = defaultTimeoutMs,
+        timeoutMs: Long = defaultNoCallbackTimeoutMs,
         valid: (CallbackEntry) -> Boolean
     ) {
         val cb = history.poll(timeoutMs) { valid(it) }.let {
