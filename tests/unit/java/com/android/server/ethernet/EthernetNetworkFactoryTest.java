@@ -25,7 +25,6 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.ArgumentMatchers.same;
 import static org.mockito.Mockito.clearInvocations;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.never;
@@ -306,50 +305,10 @@ public class EthernetNetworkFactoryTest {
     }
 
     @Test
-    public void testUpdateInterfaceLinkStateForProvisionedInterface() throws Exception {
-        initEthernetNetworkFactory();
-        createAndVerifyProvisionedInterface(TEST_IFACE);
-
-        final boolean retDown = mNetFactory.updateInterfaceLinkState(TEST_IFACE, false /* up */);
-
-        assertTrue(retDown);
-        verifyStop();
-
-        final boolean retUp = mNetFactory.updateInterfaceLinkState(TEST_IFACE, true /* up */);
-
-        assertTrue(retUp);
-    }
-
-    @Test
-    public void testUpdateInterfaceLinkStateForUnprovisionedInterface() throws Exception {
-        initEthernetNetworkFactory();
-        createUnprovisionedInterface(TEST_IFACE);
-
-        final boolean ret = mNetFactory.updateInterfaceLinkState(TEST_IFACE, false /* up */);
-
-        assertTrue(ret);
-        // There should not be an active IPClient or NetworkAgent.
-        verify(mDeps, never()).makeIpClient(any(), any(), any());
-        verify(mDeps, never())
-                .makeEthernetNetworkAgent(any(), any(), any(), any(), any(), any(), any());
-    }
-
-    @Test
     public void testUpdateInterfaceLinkStateForNonExistingInterface() throws Exception {
         initEthernetNetworkFactory();
 
         // if interface was never added, link state cannot be updated.
-        final boolean ret = mNetFactory.updateInterfaceLinkState(TEST_IFACE, true /* up */);
-
-        assertFalse(ret);
-        verifyNoStopOrStart();
-    }
-
-    @Test
-    public void testUpdateInterfaceLinkStateWithNoChanges() throws Exception {
-        initEthernetNetworkFactory();
-        createAndVerifyProvisionedInterface(TEST_IFACE);
-
         final boolean ret = mNetFactory.updateInterfaceLinkState(TEST_IFACE, true /* up */);
 
         assertFalse(ret);
@@ -387,17 +346,6 @@ public class EthernetNetworkFactoryTest {
         verify(mIpClient, never()).shutdown();
         verify(mNetworkAgent, never()).unregister();
         verify(mIpClient, never()).startProvisioning(any());
-    }
-
-    @Test
-    public void testLinkPropertiesChanged() throws Exception {
-        initEthernetNetworkFactory();
-        createAndVerifyProvisionedInterface(TEST_IFACE);
-
-        LinkProperties lp = new LinkProperties();
-        mIpClientCallbacks.onLinkPropertiesChange(lp);
-        mLooper.dispatchAll();
-        verify(mNetworkAgent).sendLinkPropertiesImpl(same(lp));
     }
 
     @Test
