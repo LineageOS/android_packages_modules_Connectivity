@@ -27,7 +27,9 @@ import static android.net.ConnectivityManager.FIREWALL_CHAIN_STANDBY;
 import static android.net.ConnectivityManager.FIREWALL_RULE_ALLOW;
 import static android.net.ConnectivityManager.FIREWALL_RULE_DENY;
 import static android.net.INetd.PERMISSION_INTERNET;
+import static android.net.INetd.PERMISSION_NONE;
 import static android.net.INetd.PERMISSION_UNINSTALLED;
+import static android.net.INetd.PERMISSION_UPDATE_DEVICE_STATS;
 import static android.system.OsConstants.EINVAL;
 import static android.system.OsConstants.ENODEV;
 import static android.system.OsConstants.ENOENT;
@@ -44,12 +46,15 @@ import android.provider.DeviceConfig;
 import android.system.ErrnoException;
 import android.system.Os;
 import android.util.ArraySet;
+import android.util.IndentingPrintWriter;
 import android.util.Log;
+import android.util.Pair;
 import android.util.StatsEvent;
 
 import com.android.internal.annotations.VisibleForTesting;
 import com.android.modules.utils.BackgroundThread;
 import com.android.modules.utils.build.SdkLevel;
+import com.android.net.module.util.BpfDump;
 import com.android.net.module.util.BpfMap;
 import com.android.net.module.util.DeviceConfigUtils;
 import com.android.net.module.util.IBpfMap;
@@ -62,8 +67,10 @@ import com.android.net.module.util.bpf.CookieTagMapValue;
 
 import java.io.FileDescriptor;
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
+import java.util.StringJoiner;
 
 /**
  * BpfNetMaps is responsible for providing traffic controller relevant functionality.
@@ -133,6 +140,11 @@ public class BpfNetMaps {
     @VisibleForTesting public static final long OEM_DENY_2_MATCH = (1 << 10);
     @VisibleForTesting public static final long OEM_DENY_3_MATCH = (1 << 11);
     // LINT.ThenChange(packages/modules/Connectivity/bpf_progs/bpf_shared.h)
+
+    private static final List<Pair<Integer, String>> PERMISSION_LIST = Arrays.asList(
+            Pair.create(PERMISSION_INTERNET, "PERMISSION_INTERNET"),
+            Pair.create(PERMISSION_UPDATE_DEVICE_STATS, "PERMISSION_UPDATE_DEVICE_STATS")
+    );
 
     /**
      * Set sEnableJavaBpfMap for test.
@@ -914,14 +926,40 @@ public class BpfNetMaps {
         return StatsManager.PULL_SUCCESS;
     }
 
+    private String permissionToString(int permissionMask) {
+        if (permissionMask == PERMISSION_NONE) {
+            return "PERMISSION_NONE";
+        }
+        if (permissionMask == PERMISSION_UNINSTALLED) {
+            // PERMISSION_UNINSTALLED should never appear in the map
+            return "PERMISSION_UNINSTALLED error!";
+        }
+
+        final StringJoiner sj = new StringJoiner(" ");
+        for (Pair<Integer, String> permission: PERMISSION_LIST) {
+            final int permissionFlag = permission.first;
+            final String permissionName = permission.second;
+            if ((permissionMask & permissionFlag) != 0) {
+                sj.add(permissionName);
+                permissionMask &= ~permissionFlag;
+            }
+        }
+        if (permissionMask != 0) {
+            sj.add("PERMISSION_UNKNOWN(" + permissionMask + ")");
+        }
+        return sj.toString();
+    }
+
     /**
      * Dump BPF maps
      *
+     * @param pw print writer
      * @param fd file descriptor to output
+     * @param verbose verbose dump flag, if true dump the BpfMap contents
      * @throws IOException when file descriptor is invalid.
      * @throws ServiceSpecificException when the method is called on an unsupported device.
      */
-    public void dump(final FileDescriptor fd, boolean verbose)
+    public void dump(final IndentingPrintWriter pw, final FileDescriptor fd, boolean verbose)
             throws IOException, ServiceSpecificException {
         if (PRE_T) {
             throw new ServiceSpecificException(
@@ -929,6 +967,11 @@ public class BpfNetMaps {
                     + " devices, use dumpsys netd trafficcontroller instead.");
         }
         mDeps.nativeDump(fd, verbose);
+
+        if (verbose) {
+            BpfDump.dumpMap(sUidPermissionMap, pw, "sUidPermissionMap",
+                    (uid, permission) -> uid.val + " " + permissionToString(permission.val));
+        }
     }
 
     private static native void native_init(boolean startSkDestroyListener);
