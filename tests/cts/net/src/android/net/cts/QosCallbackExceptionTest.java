@@ -29,6 +29,7 @@ import android.net.SocketNotConnectedException;
 import android.net.SocketRemoteAddressChangedException;
 import android.os.Build;
 
+import com.android.testutils.ConnectivityModuleTest;
 import com.android.testutils.DevSdkIgnoreRule.IgnoreUpTo;
 import com.android.testutils.DevSdkIgnoreRunner;
 
@@ -37,6 +38,7 @@ import org.junit.runner.RunWith;
 
 @RunWith(DevSdkIgnoreRunner.class)
 @IgnoreUpTo(Build.VERSION_CODES.R)
+@ConnectivityModuleTest
 public class QosCallbackExceptionTest {
     private static final String ERROR_MESSAGE = "Test Error Message";
 
