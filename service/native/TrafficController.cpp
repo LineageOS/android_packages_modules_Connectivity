@@ -717,21 +717,6 @@ void TrafficController::dump(int fd, bool verbose) {
     if (!res.ok()) {
         dw.println("mUidOwnerMap print end with error: %s", res.error().message().c_str());
     }
-    dumpBpfMap("mUidPermissionMap", dw, "");
-    const auto printUidPermissionInfo = [&dw](const uint32_t& key, const int& value,
-                                              const BpfMap<uint32_t, uint8_t>&) {
-        dw.println("%u %s", key, UidPermissionTypeToString(value).c_str());
-        return base::Result<void>();
-    };
-    res = mUidPermissionMap.iterateWithValue(printUidPermissionInfo);
-    if (!res.ok()) {
-        dw.println("mUidPermissionMap print end with error: %s", res.error().message().c_str());
-    }
-
-    dumpBpfMap("mPrivilegedUser", dw, "");
-    for (uid_t uid : mPrivilegedUser) {
-        dw.println("%u ALLOW_UPDATE_DEVICE_STATS", (uint32_t)uid);
-    }
 }
 
 }  // namespace net
