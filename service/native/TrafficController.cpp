@@ -697,26 +697,6 @@ void TrafficController::dump(int fd, bool verbose) {
         dw.println("mConfigurationMap read stats map configure failed with error: %s",
                    configuration.error().message().c_str());
     }
-    dumpBpfMap("mUidOwnerMap", dw, "");
-    const auto printUidMatchInfo = [&dw, this](const uint32_t& key, const UidOwnerValue& value,
-                                               const BpfMap<uint32_t, UidOwnerValue>&) {
-        if (value.rule & IIF_MATCH) {
-            auto ifname = mIfaceIndexNameMap.readValue(value.iif);
-            if (ifname.ok()) {
-                dw.println("%u %s %s", key, uidMatchTypeToString(value.rule).c_str(),
-                           ifname.value().name);
-            } else {
-                dw.println("%u %s %u", key, uidMatchTypeToString(value.rule).c_str(), value.iif);
-            }
-        } else {
-            dw.println("%u %s", key, uidMatchTypeToString(value.rule).c_str());
-        }
-        return base::Result<void>();
-    };
-    res = mUidOwnerMap.iterateWithValue(printUidMatchInfo);
-    if (!res.ok()) {
-        dw.println("mUidOwnerMap print end with error: %s", res.error().message().c_str());
-    }
 }
 
 }  // namespace net
