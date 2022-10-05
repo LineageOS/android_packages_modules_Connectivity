@@ -667,16 +667,6 @@ void TrafficController::dump(int fd, bool verbose) {
     }
 
     dw.blankline();
-
-    uint32_t key = UID_RULES_CONFIGURATION_KEY;
-    auto configuration = mConfigurationMap.readValue(key);
-    if (configuration.ok()) {
-        dw.println("current ownerMatch configuration: %d%s", configuration.value(),
-                   uidMatchTypeToString(configuration.value()).c_str());
-    } else {
-        dw.println("mConfigurationMap read ownerMatch configure failed with error: %s",
-                   configuration.error().message().c_str());
-    }
 }
 
 }  // namespace net

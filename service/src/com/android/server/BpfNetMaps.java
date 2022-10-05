@@ -984,6 +984,15 @@ public class BpfNetMaps {
         return sj.toString();
     }
 
+    private void dumpOwnerMatchConfig(final IndentingPrintWriter pw) {
+        try {
+            final long match = sConfigurationMap.getValue(UID_RULES_CONFIGURATION_KEY).val;
+            pw.println("current ownerMatch configuration: " + match + " " + matchToString(match));
+        } catch (ErrnoException e) {
+            pw.println("Failed to read ownerMatch configuration: " + e);
+        }
+    }
+
     private void dumpCurrentStatsMapConfig(final IndentingPrintWriter pw) {
         try {
             final long config = sConfigurationMap.getValue(CURRENT_STATS_MAP_CONFIGURATION_KEY).val;
@@ -1014,6 +1023,7 @@ public class BpfNetMaps {
         mDeps.nativeDump(fd, verbose);
 
         if (verbose) {
+            dumpOwnerMatchConfig(pw);
             dumpCurrentStatsMapConfig(pw);
             pw.println();
 
