@@ -146,6 +146,8 @@ public final class BpfNetMapsTest {
         doReturn(0).when(mDeps).synchronizeKernelRCU();
         BpfNetMaps.setEnableJavaBpfMapForTest(true /* enable */);
         BpfNetMaps.setConfigurationMapForTest(mConfigurationMap);
+        mConfigurationMap.updateEntry(
+                CURRENT_STATS_MAP_CONFIGURATION_KEY, new U32(STATS_SELECT_MAP_A));
         BpfNetMaps.setUidOwnerMapForTest(mUidOwnerMap);
         BpfNetMaps.setUidPermissionMapForTest(mUidPermissionMap);
         BpfNetMaps.setCookieTagMapForTest(mCookieTagMap);
@@ -1016,5 +1018,17 @@ public final class BpfNetMapsTest {
         doTestDumpUidOwnerMap(invalid_match, "UNKNOWN_MATCH(" + invalid_match + ")");
         doTestDumpUidOwnerMap(DOZABLE_MATCH | invalid_match,
                 "DOZABLE_MATCH UNKNOWN_MATCH(" + invalid_match + ")");
+    }
+
+    @Test
+    @IgnoreUpTo(Build.VERSION_CODES.S_V2)
+    public void testDumpCurrentStatsMapConfig() throws Exception {
+        mConfigurationMap.updateEntry(
+                CURRENT_STATS_MAP_CONFIGURATION_KEY, new U32(STATS_SELECT_MAP_A));
+        assertDumpContains(getDump(), "current statsMap configuration: 0 SELECT_MAP_A");
+
+        mConfigurationMap.updateEntry(
+                CURRENT_STATS_MAP_CONFIGURATION_KEY, new U32(STATS_SELECT_MAP_B));
+        assertDumpContains(getDump(), "current statsMap configuration: 1 SELECT_MAP_B");
     }
 }
