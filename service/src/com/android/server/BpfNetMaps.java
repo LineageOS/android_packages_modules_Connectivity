@@ -984,6 +984,17 @@ public class BpfNetMaps {
         return sj.toString();
     }
 
+    private void dumpCurrentStatsMapConfig(final IndentingPrintWriter pw) {
+        try {
+            final long config = sConfigurationMap.getValue(CURRENT_STATS_MAP_CONFIGURATION_KEY).val;
+            final String currentStatsMap =
+                    (config == STATS_SELECT_MAP_A) ? "SELECT_MAP_A" : "SELECT_MAP_B";
+            pw.println("current statsMap configuration: " + config + " " + currentStatsMap);
+        } catch (ErrnoException e) {
+            pw.println("Falied to read current statsMap configuration: " + e);
+        }
+    }
+
     /**
      * Dump BPF maps
      *
@@ -1003,6 +1014,9 @@ public class BpfNetMaps {
         mDeps.nativeDump(fd, verbose);
 
         if (verbose) {
+            dumpCurrentStatsMapConfig(pw);
+            pw.println();
+
             BpfDump.dumpMap(sUidOwnerMap, pw, "sUidOwnerMap",
                     (uid, match) -> {
                         if ((match.rule & IIF_MATCH) != 0) {
