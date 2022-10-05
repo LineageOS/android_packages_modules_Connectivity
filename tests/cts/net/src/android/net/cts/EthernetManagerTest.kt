@@ -979,4 +979,23 @@ class EthernetManagerTest {
         cb.eventuallyExpectCapabilities(TEST_CAPS)
         cb.eventuallyExpectLpForStaticConfig(STATIC_IP_CONFIGURATION.staticIpConfiguration)
     }
+
+    @Test
+    fun testUpdateConfiguration_withLinkDown() {
+        assumeChangingCarrierSupported()
+        // createInterface without carrier is racy, so create it and then remove carrier.
+        val iface = createInterface()
+        val cb = requestNetwork(ETH_REQUEST)
+        cb.expectAvailable()
+
+        iface.setCarrierEnabled(false)
+        cb.eventuallyExpectLost()
+
+        updateConfiguration(iface, STATIC_IP_CONFIGURATION, TEST_CAPS).expectResult(iface.name)
+        cb.assertNoCallback()
+
+        iface.setCarrierEnabled(true)
+        cb.eventuallyExpectCapabilities(TEST_CAPS)
+        cb.eventuallyExpectLpForStaticConfig(STATIC_IP_CONFIGURATION.staticIpConfiguration)
+    }
 }
