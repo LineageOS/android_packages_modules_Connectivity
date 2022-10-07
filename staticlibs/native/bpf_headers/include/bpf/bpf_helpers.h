@@ -138,6 +138,10 @@ static int (*bpf_map_update_elem_unsafe)(const struct bpf_map_def* map, const vo
 static int (*bpf_map_delete_elem_unsafe)(const struct bpf_map_def* map,
                                          const void* key) = (void*)BPF_FUNC_map_delete_elem;
 
+static int (*bpf_for_each_map_elem)(const struct bpf_map_def* map, void *callback_fn,
+                                    void *callback_ctx, unsigned long long flags) = (void*)
+        BPF_FUNC_for_each_map_elem;
+
 #define BPF_ANNOTATE_KV_PAIR(name, type_key, type_val)  \
         struct ____btf_map_##name {                     \
                 type_key key;                           \
