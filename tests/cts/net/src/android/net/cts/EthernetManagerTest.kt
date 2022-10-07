@@ -381,7 +381,10 @@ class EthernetManagerTest {
         setIncludeTestInterfaces(false)
 
         for (listener in addedListeners) {
+            // Even if a given listener was not registered as both an interface and ethernet state
+            // listener, calling remove is safe.
             em.removeInterfaceStateListener(listener)
+            em.removeEthernetStateListener(listener)
         }
         registeredCallbacks.forEach { cm.unregisterNetworkCallback(it) }
         releaseTetheredInterface()
@@ -406,6 +409,11 @@ class EthernetManagerTest {
         runAsShell(CONNECTIVITY_USE_RESTRICTED_NETWORKS) {
             em.addInterfaceStateListener(handler::post, listener)
         }
+        addedListeners.add(listener)
+    }
+
+    private fun addEthernetStateListener(listener: EthernetStateListener) {
+        em.addEthernetStateListener(handler::post, listener)
         addedListeners.add(listener)
     }
 
@@ -503,13 +511,8 @@ class EthernetManagerTest {
         runAsShell(NETWORK_SETTINGS) { em.setEthernetEnabled(enabled) }
 
         val listener = EthernetStateListener()
-        em.addEthernetStateListener(handler::post, listener)
-        try {
-            listener.eventuallyExpect(
-                    if (enabled) ETHERNET_STATE_ENABLED else ETHERNET_STATE_DISABLED)
-        } finally {
-            em.removeEthernetStateListener(listener)
-        }
+        addEthernetStateListener(listener)
+        listener.eventuallyExpect(if (enabled) ETHERNET_STATE_ENABLED else ETHERNET_STATE_DISABLED)
     }
 
     // NetworkRequest.Builder does not create a copy of the passed NetworkRequest, so in order to
@@ -976,6 +979,25 @@ class EthernetManagerTest {
         setEthernetEnabled(true)
         val cb = requestNetwork(ETH_REQUEST)
         cb.expectAvailable()
+        cb.eventuallyExpectCapabilities(TEST_CAPS)
+        cb.eventuallyExpectLpForStaticConfig(STATIC_IP_CONFIGURATION.staticIpConfiguration)
+    }
+
+    @Test
+    fun testUpdateConfiguration_withLinkDown() {
+        assumeChangingCarrierSupported()
+        // createInterface without carrier is racy, so create it and then remove carrier.
+        val iface = createInterface()
+        val cb = requestNetwork(ETH_REQUEST)
+        cb.expectAvailable()
+
+        iface.setCarrierEnabled(false)
+        cb.eventuallyExpectLost()
+
+        updateConfiguration(iface, STATIC_IP_CONFIGURATION, TEST_CAPS).expectResult(iface.name)
+        cb.assertNoCallback()
+
+        iface.setCarrierEnabled(true)
         cb.eventuallyExpectCapabilities(TEST_CAPS)
         cb.eventuallyExpectLpForStaticConfig(STATIC_IP_CONFIGURATION.staticIpConfiguration)
     }
