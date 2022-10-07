@@ -7435,7 +7435,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
     }
 
     private void updateLinkProperties(NetworkAgentInfo networkAgent, @NonNull LinkProperties newLp,
-            @NonNull LinkProperties oldLp) {
+            @Nullable LinkProperties oldLp) {
         int netId = networkAgent.network.getNetId();
 
         // The NetworkAgent does not know whether clatd is running on its network or not, or whether
@@ -7487,7 +7487,13 @@ public class ConnectivityService extends IConnectivityManager.Stub
             }
             // Start or stop DNS64 detection and 464xlat according to network state.
             networkAgent.clatd.update();
-            notifyIfacesChangedForNetworkStats();
+            // Notify NSS when relevant events happened. Currently, NSS only cares about
+            // interface changed to update clat interfaces accounting.
+            final boolean interfacesChanged = oldLp == null
+                    || !Objects.equals(newLp.getAllInterfaceNames(), oldLp.getAllInterfaceNames());
+            if (interfacesChanged) {
+                notifyIfacesChangedForNetworkStats();
+            }
             networkAgent.networkMonitor().notifyLinkPropertiesChanged(
                     new LinkProperties(newLp, true /* parcelSensitiveFields */));
             notifyNetworkCallbacks(networkAgent, ConnectivityManager.CALLBACK_IP_CHANGED);
@@ -8246,7 +8252,8 @@ public class ConnectivityService extends IConnectivityManager.Stub
         }
     }
 
-    public void handleUpdateLinkProperties(NetworkAgentInfo nai, LinkProperties newLp) {
+    public void handleUpdateLinkProperties(@NonNull NetworkAgentInfo nai,
+            @NonNull LinkProperties newLp) {
         ensureRunningOnConnectivityServiceThread();
 
         if (!mNetworkAgentInfos.contains(nai)) {
