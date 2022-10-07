@@ -263,7 +263,8 @@ public class NetworkStatsServiceTest extends NetworkStatsBaseTest {
             StatsMapValue.class);
     private TestBpfMap<UidStatsMapKey, StatsMapValue> mAppUidStatsMap = new TestBpfMap<>(
             UidStatsMapKey.class, StatsMapValue.class);
-
+    private TestBpfMap<S32, StatsMapValue> mIfaceStatsMap = new TestBpfMap<>(
+            S32.class, StatsMapValue.class);
     private NetworkStatsService mService;
     private INetworkStatsSession mSession;
     private AlertObserver mAlertObserver;
@@ -500,6 +501,11 @@ public class NetworkStatsServiceTest extends NetworkStatsBaseTest {
             @Override
             public IBpfMap<UidStatsMapKey, StatsMapValue> getAppUidStatsMap() {
                 return mAppUidStatsMap;
+            }
+
+            @Override
+            public IBpfMap<S32, StatsMapValue> getIfaceStatsMap() {
+                return mIfaceStatsMap;
             }
 
             @Override
@@ -2551,5 +2557,26 @@ public class NetworkStatsServiceTest extends NetworkStatsBaseTest {
     public void testDumpStatsMapUnknownInterface() throws ErrnoException {
         doReturn(null).when(mBpfInterfaceMapUpdater).getIfNameByIndex(10 /* index */);
         doTestDumpStatsMap("unknown");
+    }
+
+    void doTestDumpIfaceStatsMap(final String expectedIfaceName) throws Exception {
+        mIfaceStatsMap.insertEntry(new S32(10), new StatsMapValue(3, 3000, 3, 3000));
+
+        final String dump = getDump();
+        assertDumpContains(dump, "mIfaceStatsMap: OK");
+        assertDumpContains(dump, "ifaceIndex ifaceName rxBytes rxPackets txBytes txPackets");
+        assertDumpContains(dump, "10 " + expectedIfaceName + " 3000 3 3000 3");
+    }
+
+    @Test
+    public void testDumpIfaceStatsMap() throws Exception {
+        doReturn("wlan0").when(mBpfInterfaceMapUpdater).getIfNameByIndex(10 /* index */);
+        doTestDumpIfaceStatsMap("wlan0");
+    }
+
+    @Test
+    public void testDumpIfaceStatsMapUnknownInterface() throws Exception {
+        doReturn(null).when(mBpfInterfaceMapUpdater).getIfNameByIndex(10 /* index */);
+        doTestDumpIfaceStatsMap("unknown");
     }
 }
