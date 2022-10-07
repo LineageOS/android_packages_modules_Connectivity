@@ -56,7 +56,6 @@ import static android.net.netstats.NetworkStatsDataMigrationUtils.PREFIX_UID_TAG
 import static android.net.netstats.NetworkStatsDataMigrationUtils.PREFIX_XT;
 import static android.os.Trace.TRACE_TAG_NETWORK;
 import static android.system.OsConstants.ENOENT;
-import static android.system.OsConstants.R_OK;
 import static android.telephony.SubscriptionManager.INVALID_SUBSCRIPTION_ID;
 import static android.text.format.DateUtils.DAY_IN_MILLIS;
 import static android.text.format.DateUtils.HOUR_IN_MILLIS;
@@ -134,7 +133,6 @@ import android.provider.Settings.Global;
 import android.service.NetworkInterfaceProto;
 import android.service.NetworkStatsServiceDumpProto;
 import android.system.ErrnoException;
-import android.system.Os;
 import android.telephony.PhoneStateListener;
 import android.telephony.SubscriptionPlan;
 import android.text.TextUtils;
@@ -2845,28 +2843,14 @@ public class NetworkStatsService extends INetworkStatsService.Stub {
         }
     }
 
-    private <K extends Struct, V extends Struct> String getMapStatus(
-            final IBpfMap<K, V> map, final String path) {
-        if (map != null) {
-            return "OK";
-        }
-        try {
-            Os.access(path, R_OK);
-            return "NULL(map is pinned to " + path + ")";
-        } catch (ErrnoException e) {
-            return "NULL(map is not pinned to " + path + ": " + Os.strerror(e.errno) + ")";
-        }
-    }
-
     private void dumpMapStatus(final IndentingPrintWriter pw) {
-        pw.println("mCookieTagMap: " + getMapStatus(mCookieTagMap, COOKIE_TAG_MAP_PATH));
-        pw.println("mUidCounterSetMap: "
-                + getMapStatus(mUidCounterSetMap, UID_COUNTERSET_MAP_PATH));
-        pw.println("mAppUidStatsMap: " + getMapStatus(mAppUidStatsMap, APP_UID_STATS_MAP_PATH));
-        pw.println("mStatsMapA: " + getMapStatus(mStatsMapA, STATS_MAP_A_PATH));
-        pw.println("mStatsMapB: " + getMapStatus(mStatsMapB, STATS_MAP_B_PATH));
+        BpfDump.dumpMapStatus(mCookieTagMap, pw, "mCookieTagMap", COOKIE_TAG_MAP_PATH);
+        BpfDump.dumpMapStatus(mUidCounterSetMap, pw, "mUidCounterSetMap", UID_COUNTERSET_MAP_PATH);
+        BpfDump.dumpMapStatus(mAppUidStatsMap, pw, "mAppUidStatsMap", APP_UID_STATS_MAP_PATH);
+        BpfDump.dumpMapStatus(mStatsMapA, pw, "mStatsMapA", STATS_MAP_A_PATH);
+        BpfDump.dumpMapStatus(mStatsMapB, pw, "mStatsMapB", STATS_MAP_B_PATH);
         // mIfaceStatsMap is always not null but dump status to be consistent with other maps.
-        pw.println("mIfaceStatsMap: " + getMapStatus(mIfaceStatsMap, IFACE_STATS_MAP_PATH));
+        BpfDump.dumpMapStatus(mIfaceStatsMap, pw, "mIfaceStatsMap", IFACE_STATS_MAP_PATH);
     }
 
     @GuardedBy("mStatsLock")
