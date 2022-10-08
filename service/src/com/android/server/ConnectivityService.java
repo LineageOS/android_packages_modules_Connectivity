@@ -1982,6 +1982,9 @@ public class ConnectivityService extends IConnectivityManager.Stub
     @Nullable
     public NetworkInfo getNetworkInfoForUid(Network network, int uid, boolean ignoreBlocked) {
         enforceAccessPermission();
+        if (uid != mDeps.getCallingUid()) {
+            enforceNetworkStackPermission(mContext);
+        }
         final NetworkAgentInfo nai = getNetworkAgentInfoForNetwork(network);
         if (nai == null) return null;
         return getFilteredNetworkInfo(nai, uid, ignoreBlocked);
