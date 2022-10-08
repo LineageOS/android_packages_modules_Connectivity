@@ -75,6 +75,8 @@ public class TetheringMetrics {
                     .setUserType(userTypeToEnum(callerPkg))
                     .setUpstreamType(UpstreamType.UT_UNKNOWN)
                     .setErrorCode(ErrorCode.EC_NO_ERROR)
+                    .setUpstreamEvents(UpstreamEvents.newBuilder())
+                    .setDurationMillis(0)
                     .build();
         mBuilderMap.put(downstreamType, statsBuilder);
     }
@@ -110,7 +112,8 @@ public class TetheringMetrics {
                 reported.getErrorCode().getNumber(),
                 reported.getDownstreamType().getNumber(),
                 reported.getUpstreamType().getNumber(),
-                reported.getUserType().getNumber());
+                reported.getUserType().getNumber(),
+                null, 0);
         if (DBG) {
             Log.d(TAG, "Write errorCode: " + reported.getErrorCode().getNumber()
                     + ", downstreamType: " + reported.getDownstreamType().getNumber()

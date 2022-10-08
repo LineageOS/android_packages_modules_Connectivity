@@ -302,9 +302,14 @@ public class EthernetTracker {
         final int state = getInterfaceState(iface);
         final int role = getInterfaceRole(iface);
         final IpConfiguration config = getIpConfigurationForCallback(iface, state);
+        final boolean isRestricted = isRestrictedInterface(iface);
         final int n = mListeners.beginBroadcast();
         for (int i = 0; i < n; i++) {
             try {
+                if (isRestricted) {
+                    final ListenerInfo info = (ListenerInfo) mListeners.getBroadcastCookie(i);
+                    if (!info.canUseRestrictedNetworks) continue;
+                }
                 mListeners.getBroadcastItem(i).onInterfaceStateChanged(iface, state, role, config);
             } catch (RemoteException e) {
                 // Do nothing here.
