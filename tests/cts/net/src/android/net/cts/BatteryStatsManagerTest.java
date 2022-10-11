@@ -21,12 +21,14 @@ import static android.content.pm.PackageManager.FEATURE_TELEPHONY;
 
 import static androidx.test.InstrumentationRegistry.getContext;
 
+import static com.android.compatibility.common.util.BatteryUtils.hasBattery;
 import static com.android.compatibility.common.util.SystemUtil.runShellCommand;
 import static com.android.testutils.MiscAsserts.assertThrows;
 import static com.android.testutils.TestPermissionUtil.runAsShell;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
+import static org.junit.Assume.assumeTrue;
 
 import android.content.Context;
 import android.content.pm.PackageManager;
@@ -97,6 +99,7 @@ public class BatteryStatsManagerTest{
     @RequiresDevice // Virtual hardware does not support wifi battery stats
     public void testReportNetworkInterfaceForTransports() throws Exception {
         try {
+            assumeTrue("Battery is not present. Ignore test.", hasBattery());
             // Simulate the device being unplugged from charging.
             executeShellCommand("cmd battery unplug");
             executeShellCommand("cmd battery set status " + BATTERY_STATUS_DISCHARGING);
