@@ -101,7 +101,7 @@ java_defaults {
     ],
     static_libs: [
         "androidx.test.rules",
-        "androidx.test.uiautomator",
+        "androidx.test.uiautomator_uiautomator",
         "bouncycastle-repackaged-unbundled",
         "core-tests-support",
         "FrameworksNetCommonTests",
