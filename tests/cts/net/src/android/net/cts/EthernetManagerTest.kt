@@ -303,8 +303,8 @@ class EthernetManagerTest {
             available.completeExceptionally(IllegalStateException("onUnavailable was called"))
         }
 
-        fun expectOnAvailable(): String {
-            return available.get(TIMEOUT_MS, TimeUnit.MILLISECONDS)
+        fun expectOnAvailable(timeout: Long = TIMEOUT_MS): String {
+            return available.get(timeout, TimeUnit.MILLISECONDS)
         }
 
         fun expectOnUnavailable() {
@@ -623,7 +623,7 @@ class EthernetManagerTest {
         // see aosp/2123900.
         try {
             // assumeException does not exist.
-            requestTetheredInterface().expectOnAvailable()
+            requestTetheredInterface().expectOnAvailable(NO_CALLBACK_TIMEOUT_MS)
             // interface used for tethering is available, throw an assumption error.
             assumeTrue(false)
         } catch (e: TimeoutException) {
