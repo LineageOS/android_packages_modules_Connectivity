@@ -2308,7 +2308,7 @@ public final class NetworkCapabilities implements Parcelable {
                 }
                 sb.append(nameFetcher.nameOf(bitPos));
             }
-            bitMask >>= 1;
+            bitMask >>>= 1;
             ++bitPos;
         }
     }
