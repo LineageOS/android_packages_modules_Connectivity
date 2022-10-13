@@ -138,6 +138,12 @@ public class PresenceDiscoveryResult {
         return false;
     }
 
+    @VisibleForTesting
+    /** Gets presence {@link DataElement}s of the discovery result. */
+    public List<DataElement> getExtendedProperties() {
+        return mExtendedProperties;
+    }
+
     private boolean identityMatches(List<PublicCredential> publicCredentials) {
         if (mEncryptedIdentityTag.length == 0) {
             return true;
