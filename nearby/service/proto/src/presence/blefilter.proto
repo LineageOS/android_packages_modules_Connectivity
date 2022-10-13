@@ -60,6 +60,8 @@ message DataElement {
   enum ElementType {
     DE_NONE = 0;
     DE_FAST_PAIR_ACCOUNT_KEY = 1;
+    DE_CONNECTION_STATUS = 10;
+    DE_BATTERY_STATUS = 11;
   }
 
   optional ElementType key = 1;
