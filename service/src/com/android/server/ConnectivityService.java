@@ -3650,8 +3650,18 @@ public class ConnectivityService extends IConnectivityManager.Stub
                     break;
                 }
                 case NetworkAgent.EVENT_UNREGISTER_AFTER_REPLACEMENT: {
-                    // If nai is not yet created, or is already destroyed, ignore.
-                    if (!shouldDestroyNativeNetwork(nai)) break;
+                    if (!nai.isCreated()) {
+                        Log.d(TAG, "unregisterAfterReplacement on uncreated " + nai.toShortString()
+                                + ", tearing down instead");
+                        teardownUnneededNetwork(nai);
+                        break;
+                    }
+
+                    if (nai.isDestroyed()) {
+                        Log.d(TAG, "unregisterAfterReplacement on destroyed " + nai.toShortString()
+                                + ", ignoring");
+                        break;
+                    }
 
                     final int timeoutMs = (int) arg.second;
                     if (timeoutMs < 0 || timeoutMs > NetworkAgent.MAX_TEARDOWN_DELAY_MS) {
