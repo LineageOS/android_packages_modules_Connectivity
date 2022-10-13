@@ -1067,6 +1067,38 @@ public class NetworkStatsTest {
         }
     }
 
+    @Test
+    public void testClearInterfaces() {
+        final NetworkStats stats = new NetworkStats(TEST_START, 1);
+        final NetworkStats.Entry entry1 = new NetworkStats.Entry(
+                "test1", 10100, SET_DEFAULT, TAG_NONE, METERED_NO, ROAMING_NO,
+                DEFAULT_NETWORK_NO, 1024L, 50L, 100L, 20L, 0L);
+
+        final NetworkStats.Entry entry2 = new NetworkStats.Entry(
+                "test2", 10101, SET_DEFAULT, 0xF0DD, METERED_NO, ROAMING_NO,
+                DEFAULT_NETWORK_NO, 51200, 25L, 101010L, 50L, 0L);
+
+        stats.insertEntry(entry1);
+        stats.insertEntry(entry2);
+
+        // Verify that the interfaces have indeed been recorded.
+        assertEquals(2, stats.size());
+        assertValues(stats, 0, "test1", 10100, SET_DEFAULT, TAG_NONE, METERED_NO,
+                ROAMING_NO, DEFAULT_NETWORK_NO, 1024L, 50L, 100L, 20L, 0L);
+        assertValues(stats, 1, "test2", 10101, SET_DEFAULT, 0xF0DD, METERED_NO,
+                ROAMING_NO, DEFAULT_NETWORK_NO, 51200, 25L, 101010L, 50L, 0L);
+
+        // Clear interfaces.
+        stats.clearInterfaces();
+
+        // Verify that the interfaces are cleared.
+        assertEquals(2, stats.size());
+        assertValues(stats, 0, null /* iface */, 10100, SET_DEFAULT, TAG_NONE, METERED_NO,
+                ROAMING_NO, DEFAULT_NETWORK_NO, 1024L, 50L, 100L, 20L, 0L);
+        assertValues(stats, 1, null /* iface */, 10101, SET_DEFAULT, 0xF0DD, METERED_NO,
+                ROAMING_NO, DEFAULT_NETWORK_NO, 51200, 25L, 101010L, 50L, 0L);
+    }
+
     private static void assertContains(NetworkStats stats,  String iface, int uid, int set,
             int tag, int metered, int roaming, int defaultNetwork, long rxBytes, long rxPackets,
             long txBytes, long txPackets, long operations) {
