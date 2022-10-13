@@ -75,7 +75,7 @@ class ConnectUtil(private val context: Context) {
                     timeoutMs = WIFI_CONNECT_TIMEOUT_MS)
 
             assertNotNull(cb, "Could not connect to a wifi access point within " +
-                    "$WIFI_CONNECT_INTERVAL_MS ms. Check that the test device has a wifi network " +
+                    "$WIFI_CONNECT_TIMEOUT_MS ms. Check that the test device has a wifi network " +
                     "configured, and that the test access point is functioning properly.")
             return cb.network
         } finally {
