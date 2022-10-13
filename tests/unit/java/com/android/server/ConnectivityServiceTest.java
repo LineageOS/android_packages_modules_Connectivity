@@ -16862,6 +16862,35 @@ public class ConnectivityServiceTest {
     }
 
     @Test
+    public void testShouldIgnoreValidationFailureAfterRoam() {
+        // Always disabled on T+.
+        assumeFalse(SdkLevel.isAtLeastT());
+
+        NetworkAgentInfo nai = fakeWifiNai(new NetworkCapabilities());
+
+        // Enabled, but never roamed.
+        doReturn(5_000).when(mResources)
+                .getInteger(R.integer.config_validationFailureAfterRoamIgnoreTimeMillis);
+        assertEquals(0, nai.lastRoamTime);
+        assertFalse(mService.shouldIgnoreValidationFailureAfterRoam(nai));
+
+        // Roamed recently.
+        nai.lastRoamTime = SystemClock.elapsedRealtime() - 500 /* ms */;
+        assertTrue(mService.shouldIgnoreValidationFailureAfterRoam(nai));
+
+        // Disabled due to invalid setting (maximum is 10 seconds).
+        doReturn(15_000).when(mResources)
+                .getInteger(R.integer.config_validationFailureAfterRoamIgnoreTimeMillis);
+        assertFalse(mService.shouldIgnoreValidationFailureAfterRoam(nai));
+
+        // Disabled.
+        doReturn(-1).when(mResources)
+                .getInteger(R.integer.config_validationFailureAfterRoamIgnoreTimeMillis);
+        assertFalse(mService.shouldIgnoreValidationFailureAfterRoam(nai));
+    }
+
+
+    @Test
     public void testLegacyTetheringApiGuardWithProperPermission() throws Exception {
         final String testIface = "test0";
         mServiceContext.setPermission(ACCESS_NETWORK_STATE, PERMISSION_DENIED);

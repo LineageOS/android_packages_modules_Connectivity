@@ -368,7 +368,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
     private static final int DEFAULT_NASCENT_DELAY_MS = 5_000;
 
     // The maximum value for the blocking validation result, in milliseconds.
-    public static final int MAX_VALIDATION_FAILURE_BLOCKING_TIME_MS = 10000;
+    public static final int MAX_VALIDATION_IGNORE_AFTER_ROAM_TIME_MS = 10000;
 
     // The maximum number of network request allowed per uid before an exception is thrown.
     @VisibleForTesting
@@ -4231,12 +4231,18 @@ public class ConnectivityService extends IConnectivityManager.Stub
         return nai.isCreated() && !nai.isDestroyed();
     }
 
-    private boolean shouldIgnoreValidationFailureAfterRoam(NetworkAgentInfo nai) {
+    @VisibleForTesting
+    boolean shouldIgnoreValidationFailureAfterRoam(NetworkAgentInfo nai) {
         // T+ devices should use unregisterAfterReplacement.
         if (SdkLevel.isAtLeastT()) return false;
+
+        // If the network never roamed, return false. The check below is not sufficient if time
+        // since boot is less than blockTimeOut, though that's extremely unlikely to happen.
+        if (nai.lastRoamTime == 0) return false;
+
         final long blockTimeOut = Long.valueOf(mResources.get().getInteger(
                 R.integer.config_validationFailureAfterRoamIgnoreTimeMillis));
-        if (blockTimeOut <= MAX_VALIDATION_FAILURE_BLOCKING_TIME_MS
+        if (blockTimeOut <= MAX_VALIDATION_IGNORE_AFTER_ROAM_TIME_MS
                 && blockTimeOut >= 0) {
             final long currentTimeMs = SystemClock.elapsedRealtime();
             long timeSinceLastRoam = currentTimeMs - nai.lastRoamTime;
@@ -9760,8 +9766,8 @@ public class ConnectivityService extends IConnectivityManager.Stub
         return ((VpnTransportInfo) ti).getType();
     }
 
-    private void maybeUpdateWifiRoamTimestamp(NetworkAgentInfo nai, NetworkCapabilities nc) {
-        if (nai == null) return;
+    private void maybeUpdateWifiRoamTimestamp(@NonNull NetworkAgentInfo nai,
+            @NonNull NetworkCapabilities nc) {
         final TransportInfo prevInfo = nai.networkCapabilities.getTransportInfo();
         final TransportInfo newInfo = nc.getTransportInfo();
         if (!(prevInfo instanceof WifiInfo) || !(newInfo instanceof WifiInfo)) {
