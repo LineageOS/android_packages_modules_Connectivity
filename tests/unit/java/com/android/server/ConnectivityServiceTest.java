@@ -16727,23 +16727,25 @@ public class ConnectivityServiceTest {
         assertThrows(NullPointerException.class, () -> mService.unofferNetwork(null));
     }
 
-    public void doTestIgnoreValidationAfterRoam(final boolean enabled) throws Exception {
-        assumeFalse(SdkLevel.isAtLeastT());
-        doReturn(enabled ? 5000 : -1).when(mResources)
+    public void doTestIgnoreValidationAfterRoam(int resValue, final boolean enabled)
+            throws Exception {
+        doReturn(resValue).when(mResources)
                 .getInteger(R.integer.config_validationFailureAfterRoamIgnoreTimeMillis);
 
+        final String bssid1 = "AA:AA:AA:AA:AA:AA";
+        final String bssid2 = "BB:BB:BB:BB:BB:BB";
         mCellNetworkAgent = new TestNetworkAgentWrapper(TRANSPORT_CELLULAR);
         mCellNetworkAgent.connect(true);
         NetworkCapabilities wifiNc1 = new NetworkCapabilities()
                 .addCapability(NET_CAPABILITY_INTERNET)
+                .addCapability(NET_CAPABILITY_NOT_VPN)
+                .addCapability(NET_CAPABILITY_NOT_RESTRICTED)
+                .addCapability(NET_CAPABILITY_TRUSTED)
                 .addCapability(NET_CAPABILITY_NOT_VCN_MANAGED)
                 .addTransportType(TRANSPORT_WIFI)
-                .setTransportInfo(new WifiInfo.Builder().setBssid("AA:AA:AA:AA:AA:AA").build());
-        NetworkCapabilities wifiNc2 = new NetworkCapabilities()
-                .addCapability(NET_CAPABILITY_INTERNET)
-                .addCapability(NET_CAPABILITY_NOT_VCN_MANAGED)
-                .addTransportType(TRANSPORT_WIFI)
-                .setTransportInfo(new WifiInfo.Builder().setBssid("BB:BB:BB:BB:BB:BB").build());
+                .setTransportInfo(new WifiInfo.Builder().setBssid(bssid1).build());
+        NetworkCapabilities wifiNc2 = new NetworkCapabilities(wifiNc1)
+                .setTransportInfo(new WifiInfo.Builder().setBssid(bssid2).build());
         final LinkProperties wifiLp = new LinkProperties();
         wifiLp.setInterfaceName(WIFI_IFNAME);
         mWiFiNetworkAgent = new TestNetworkAgentWrapper(TRANSPORT_WIFI, wifiLp, wifiNc1);
@@ -16807,6 +16809,7 @@ public class ConnectivityServiceTest {
             wifiNetworkCallback.expectCapabilitiesWithout(NET_CAPABILITY_PARTIAL_CONNECTIVITY,
                     mWiFiNetworkAgent);
         }
+        mCm.unregisterNetworkCallback(wifiNetworkCallback);
 
         // Wi-Fi roams from wifiNc1 to wifiNc2, and now becomes really invalid. If validation
         // failures after roam are not ignored, this will cause cell to become the default network.
@@ -16817,37 +16820,45 @@ public class ConnectivityServiceTest {
         mWiFiNetworkAgent.setNetworkInvalid(false /* isStrictMode */);
         mCm.reportNetworkConnectivity(mWiFiNetworkAgent.getNetwork(), false);
 
-        if (!enabled) {
+        if (enabled) {
+            // Network validation failed, but the result will be ignored.
+            assertTrue(mCm.getNetworkCapabilities(mWiFiNetworkAgent.getNetwork()).hasCapability(
+                    NET_CAPABILITY_VALIDATED));
+            mWiFiNetworkAgent.setNetworkValid(false);
+
+            // Behavior of after config_validationFailureAfterRoamIgnoreTimeMillis
+            ConditionVariable waitForValidationBlock = new ConditionVariable();
+            doReturn(50).when(mResources)
+                    .getInteger(R.integer.config_validationFailureAfterRoamIgnoreTimeMillis);
+            // Wi-Fi roaming from wifiNc2 to wifiNc1.
+            mWiFiNetworkAgent.setNetworkCapabilities(wifiNc1, true);
+            mWiFiNetworkAgent.setNetworkInvalid(false);
+            waitForValidationBlock.block(150);
+            mCm.reportNetworkConnectivity(mWiFiNetworkAgent.getNetwork(), false);
             mDefaultNetworkCallback.expectAvailableCallbacksValidated(mCellNetworkAgent);
-            return;
+        } else {
+            mDefaultNetworkCallback.expectAvailableCallbacksValidated(mCellNetworkAgent);
         }
 
-        // Network validation failed, but the result will be ignored.
-        assertTrue(mCm.getNetworkCapabilities(mWiFiNetworkAgent.getNetwork()).hasCapability(
-                NET_CAPABILITY_VALIDATED));
-        mWiFiNetworkAgent.setNetworkValid(false);
+        // Wi-Fi is still connected and would become the default network if cell were to
+        // disconnect. This assertion ensures that the switch to cellular was not caused by
+        // Wi-Fi disconnecting (e.g., because the capability change to wifiNc2 caused it
+        // to stop satisfying the default request).
+        mCellNetworkAgent.disconnect();
+        mDefaultNetworkCallback.expectCallback(CallbackEntry.LOST, mCellNetworkAgent);
+        mDefaultNetworkCallback.expectAvailableCallbacksUnvalidated(mWiFiNetworkAgent);
 
-        // Behavior of after config_validationFailureAfterRoamIgnoreTimeMillis
-        ConditionVariable waitForValidationBlock = new ConditionVariable();
-        doReturn(50).when(mResources)
-                .getInteger(R.integer.config_validationFailureAfterRoamIgnoreTimeMillis);
-        // Wi-Fi roaming from wifiNc2 to wifiNc1.
-        mWiFiNetworkAgent.setNetworkCapabilities(wifiNc1, true);
-        mWiFiNetworkAgent.setNetworkInvalid(false);
-        waitForValidationBlock.block(150);
-        mCm.reportNetworkConnectivity(mWiFiNetworkAgent.getNetwork(), false);
-        mDefaultNetworkCallback.expectAvailableCallbacksValidated(mCellNetworkAgent);
-
-        mCm.unregisterNetworkCallback(wifiNetworkCallback);
     }
 
     @Test
     public void testIgnoreValidationAfterRoamDisabled() throws Exception {
-        doTestIgnoreValidationAfterRoam(false /* enabled */);
+        doTestIgnoreValidationAfterRoam(-1, false /* enabled */);
     }
+
     @Test
     public void testIgnoreValidationAfterRoamEnabled() throws Exception {
-        doTestIgnoreValidationAfterRoam(true /* enabled */);
+        final boolean enabled = !SdkLevel.isAtLeastT();
+        doTestIgnoreValidationAfterRoam(5_000, enabled);
     }
 
     @Test
