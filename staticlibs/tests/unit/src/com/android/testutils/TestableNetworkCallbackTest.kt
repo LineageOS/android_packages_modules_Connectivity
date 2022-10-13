@@ -294,7 +294,7 @@ class TestableNetworkCallbackTest {
             net1.equals(it.network)
         }
         // No further new callback. Expect no callback.
-        assertFails { mCallback.eventuallyExpect(LINK_PROPERTIES_CHANGED) }
+        assertFails { mCallback.eventuallyExpect(LINK_PROPERTIES_CHANGED, SHORT_TIMEOUT_MS) }
 
         // Verify no predicate set.
         mCallback.onAvailable(net2)
@@ -302,7 +302,7 @@ class TestableNetworkCallbackTest {
         mCallback.onBlockedStatusChanged(net1, false)
         mCallback.eventuallyExpect(BLOCKED_STATUS) { net1.equals(it.network) }
         // Verify no callback received if the callback does not happen.
-        assertFails { mCallback.eventuallyExpect(LOSING) }
+        assertFails { mCallback.eventuallyExpect(LOSING, SHORT_TIMEOUT_MS) }
     }
 
     @Test
