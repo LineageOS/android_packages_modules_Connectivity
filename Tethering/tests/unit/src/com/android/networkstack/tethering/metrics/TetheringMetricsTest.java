@@ -88,6 +88,8 @@ public final class TetheringMetricsTest {
                 .setUserType(user)
                 .setUpstreamType(UpstreamType.UT_UNKNOWN)
                 .setErrorCode(error)
+                .setUpstreamEvents(UpstreamEvents.newBuilder())
+                .setDurationMillis(0)
                 .build();
         verify(mTetheringMetrics).write(expectedReport);
     }
