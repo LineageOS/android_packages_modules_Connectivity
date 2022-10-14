@@ -103,7 +103,10 @@ import kotlin.test.assertTrue
 import kotlin.test.fail
 
 private const val TAG = "EthernetManagerTest"
-private const val TIMEOUT_MS = 2000L
+// This timeout does not affect the test duration for passing tests. It needs to be long enough to
+// account for RS delay (and potentially the first retry interval (4s)). There have been failures
+// where the interface did not gain provisioning within the allotted timeout.
+private const val TIMEOUT_MS = 10_000L
 // Timeout used to confirm no callbacks matching given criteria are received. Must be long enough to
 // process all callbacks including ip provisioning when using the updateConfiguration API.
 // Note that increasing this timeout increases the test duration.
