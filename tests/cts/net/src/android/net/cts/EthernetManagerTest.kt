@@ -303,8 +303,8 @@ class EthernetManagerTest {
             available.completeExceptionally(IllegalStateException("onUnavailable was called"))
         }
 
-        fun expectOnAvailable(): String {
-            return available.get(TIMEOUT_MS, TimeUnit.MILLISECONDS)
+        fun expectOnAvailable(timeout: Long = TIMEOUT_MS): String {
+            return available.get(timeout, TimeUnit.MILLISECONDS)
         }
 
         fun expectOnUnavailable() {
@@ -447,14 +447,18 @@ class EthernetManagerTest {
     }
 
     private fun requestNetwork(request: NetworkRequest): TestableNetworkCallback {
-        return TestableNetworkCallback().also {
+        return TestableNetworkCallback(
+                timeoutMs = TIMEOUT_MS,
+                noCallbackTimeoutMs = NO_CALLBACK_TIMEOUT_MS).also {
             cm.requestNetwork(request, it)
             registeredCallbacks.add(it)
         }
     }
 
     private fun registerNetworkListener(request: NetworkRequest): TestableNetworkCallback {
-        return TestableNetworkCallback().also {
+        return TestableNetworkCallback(
+                timeoutMs = TIMEOUT_MS,
+                noCallbackTimeoutMs = NO_CALLBACK_TIMEOUT_MS).also {
             cm.registerNetworkCallback(request, it)
             registeredCallbacks.add(it)
         }
@@ -523,18 +527,18 @@ class EthernetManagerTest {
 
     // It can take multiple seconds for the network to become available.
     private fun TestableNetworkCallback.expectAvailable() =
-            expectCallback<Available>(anyNetwork(), 5000 /* ms timeout */).network
+            expectCallback<Available>().network
 
     private fun TestableNetworkCallback.expectLost(n: Network = anyNetwork()) =
-            expectCallback<Lost>(n, 5000 /* ms timeout */)
+            expectCallback<Lost>(n)
 
     // b/233534110: eventuallyExpect<Lost>() does not advance ReadHead, use
     // eventuallyExpect(Lost::class) instead.
     private fun TestableNetworkCallback.eventuallyExpectLost(n: Network? = null) =
-        eventuallyExpect(Lost::class, TIMEOUT_MS) { n?.equals(it.network) ?: true }
+        eventuallyExpect(Lost::class) { n?.equals(it.network) ?: true }
 
     private fun TestableNetworkCallback.assertNeverLost(n: Network? = null) =
-        assertNoCallbackThat(NO_CALLBACK_TIMEOUT_MS) {
+        assertNoCallbackThat() {
             it is Lost && (n?.equals(it.network) ?: true)
         }
 
@@ -548,7 +552,7 @@ class EthernetManagerTest {
 
     private fun TestableNetworkCallback.eventuallyExpectCapabilities(nc: NetworkCapabilities) {
         // b/233534110: eventuallyExpect<CapabilitiesChanged>() does not advance ReadHead.
-        eventuallyExpect(CapabilitiesChanged::class, TIMEOUT_MS) {
+        eventuallyExpect(CapabilitiesChanged::class) {
             // CS may mix in additional capabilities, so NetworkCapabilities#equals cannot be used.
             // Check if all expected capabilities are present instead.
             it is CapabilitiesChanged && nc.capabilities.all { c -> it.caps.hasCapability(c) }
@@ -559,7 +563,7 @@ class EthernetManagerTest {
         config: StaticIpConfiguration
     ) {
         // b/233534110: eventuallyExpect<LinkPropertiesChanged>() does not advance ReadHead.
-        eventuallyExpect(LinkPropertiesChanged::class, TIMEOUT_MS) {
+        eventuallyExpect(LinkPropertiesChanged::class) {
             it is LinkPropertiesChanged && it.lp.linkAddresses.any { la ->
                 la.isSameAddressAs(config.ipAddress)
             }
@@ -623,7 +627,7 @@ class EthernetManagerTest {
         // see aosp/2123900.
         try {
             // assumeException does not exist.
-            requestTetheredInterface().expectOnAvailable()
+            requestTetheredInterface().expectOnAvailable(NO_CALLBACK_TIMEOUT_MS)
             // interface used for tethering is available, throw an assumption error.
             assumeTrue(false)
         } catch (e: TimeoutException) {
@@ -836,7 +840,7 @@ class EthernetManagerTest {
         val iface = createInterface()
         val cb = requestNetwork(ETH_REQUEST)
         // b/233534110: eventuallyExpect<LinkPropertiesChanged>() does not advance ReadHead
-        cb.eventuallyExpect(LinkPropertiesChanged::class, TIMEOUT_MS) {
+        cb.eventuallyExpect(LinkPropertiesChanged::class) {
             it is LinkPropertiesChanged && it.lp.addresses.any {
                 address -> iface.onLinkPrefix.contains(address)
             }
