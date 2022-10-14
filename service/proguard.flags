@@ -6,3 +6,12 @@
 -keepclassmembers public class * extends **.com.android.net.module.util.Struct {
     *;
 }
+
+-keepclassmembers class com.android.server.**,android.net.**,com.android.networkstack.** {
+    static final % POLICY_*;
+    static final % NOTIFY_TYPE_*;
+    static final % TRANSPORT_*;
+    static final % CMD_*;
+    static final % EVENT_*;
+}
+
