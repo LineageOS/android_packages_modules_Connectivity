@@ -19,7 +19,7 @@ package android.net.metrics;
 import static android.net.NetworkCapabilities.TRANSPORT_CELLULAR;
 import static android.net.NetworkCapabilities.TRANSPORT_WIFI;
 
-import static com.android.net.module.util.NetworkCapabilitiesUtils.unpackBits;
+import static com.android.net.module.util.BitUtils.unpackBits;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
