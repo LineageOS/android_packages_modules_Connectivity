@@ -49,7 +49,7 @@ java_library {
         "framework-annotations-lib",
         "framework-connectivity-pre-jarjar",
         "framework-connectivity-t-pre-jarjar",
-        "framework-tethering.stubs.module_lib",
+        "framework-tethering",
         "service-connectivity-pre-jarjar",
         "service-nearby-pre-jarjar",
         "ServiceConnectivityResources",
