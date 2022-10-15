@@ -1473,6 +1473,15 @@ public class BpfCoordinator {
             // to Objects.hash() to avoid autoboxing overhead.
             return Objects.hash(upstreamIfindex, downstreamIfindex, address, srcMac, dstMac);
         }
+
+        @Override
+        public String toString() {
+            return "upstreamIfindex: " + upstreamIfindex
+                    + ", downstreamIfindex: " + downstreamIfindex
+                    + ", address: " + address.getHostAddress()
+                    + ", srcMac: " + srcMac
+                    + ", dstMac: " + dstMac;
+        }
     }
 
     /** Tethering client information class. */

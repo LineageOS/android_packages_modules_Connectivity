@@ -148,12 +148,20 @@ java_library {
     libs: [
         "framework-annotations-lib",
         "framework-connectivity-pre-jarjar",
+        // The framework-connectivity-t library is only available on T+ platforms
+        // so any calls to it must be protected with a check to ensure that it is
+        // available. The linter will detect any unprotected calls through an API
+        // but not direct calls to the implementation. So, this depends on the
+        // module lib stubs directly to ensure the linter will work correctly
+        // as depending on framework-connectivity-t would cause it to be compiled
+        // against the implementation because the two libraries are in the same
+        // APEX.
         "framework-connectivity-t.stubs.module_lib",
-        "framework-tethering.stubs.module_lib",
-        "framework-wifi.stubs.module_lib",
+        "framework-tethering",
+        "framework-wifi",
         "unsupportedappusage",
         "ServiceConnectivityResources",
-        "framework-statsd.stubs.module_lib",
+        "framework-statsd",
     ],
     static_libs: [
         // Do not add libs here if they are already included
@@ -194,7 +202,7 @@ java_library {
     libs: [
         "framework-annotations-lib",
         "framework-connectivity-pre-jarjar",
-        "framework-wifi.stubs.module_lib",
+        "framework-wifi",
         "service-connectivity-pre-jarjar",
     ],
     visibility: [
@@ -216,7 +224,9 @@ java_library {
     apex_available: [
         "com.android.tethering",
     ],
-    lint: { strict_updatability_linting: true },
+    lint: {
+        strict_updatability_linting: true,
+    },
 }
 
 java_defaults {
@@ -246,8 +256,8 @@ java_defaults {
         "framework-annotations-lib",
         "framework-connectivity.impl",
         "framework-connectivity-t.impl",
-        "framework-tethering.stubs.module_lib",
-        "framework-wifi.stubs.module_lib",
+        "framework-tethering",
+        "framework-wifi",
         "libprotobuf-java-nano",
     ],
     jarjar_rules: ":connectivity-jarjar-rules",
@@ -257,7 +267,9 @@ java_defaults {
     optimize: {
         proguard_flags_files: ["proguard.flags"],
     },
-    lint: { strict_updatability_linting: true },
+    lint: {
+        strict_updatability_linting: true,
+    },
 }
 
 // A special library created strictly for use by the tests as they need the
@@ -337,8 +349,8 @@ java_genrule {
 }
 
 genrule {
-  name: "statslog-connectivity-java-gen",
-  tools: ["stats-log-api-gen"],
-  cmd: "$(location stats-log-api-gen) --java $(out) --module connectivity --javaPackage com.android.server --javaClass ConnectivityStatsLog",
-  out: ["com/android/server/ConnectivityStatsLog.java"],
+    name: "statslog-connectivity-java-gen",
+    tools: ["stats-log-api-gen"],
+    cmd: "$(location stats-log-api-gen) --java $(out) --module connectivity --javaPackage com.android.server --javaClass ConnectivityStatsLog",
+    out: ["com/android/server/ConnectivityStatsLog.java"],
 }
