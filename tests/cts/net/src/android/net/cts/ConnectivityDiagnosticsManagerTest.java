@@ -113,7 +113,7 @@ public class ConnectivityDiagnosticsManagerTest {
     private static final int UNKNOWN_DETECTION_METHOD = 4;
     private static final int FILTERED_UNKNOWN_DETECTION_METHOD = 0;
     private static final int CARRIER_CONFIG_CHANGED_BROADCAST_TIMEOUT = 5000;
-    private static final int DELAY_FOR_ADMIN_UIDS_MILLIS = 2000;
+    private static final int DELAY_FOR_ADMIN_UIDS_MILLIS = 5000;
 
     private static final Executor INLINE_EXECUTOR = x -> x.run();
 
