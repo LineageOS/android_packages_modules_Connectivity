@@ -8008,6 +8008,10 @@ public class ConnectivityService extends IConnectivityManager.Stub
             @NonNull final NetworkCapabilities nc) {
         NetworkCapabilities newNc = mixInCapabilities(nai, nc);
         if (Objects.equals(nai.networkCapabilities, newNc)) return;
+        final String differences = newNc.describeCapsDifferencesFrom(nai.networkCapabilities);
+        if (null != differences) {
+            Log.i(TAG, "Update capabilities for net " + nai.network + " : " + differences);
+        }
         updateNetworkPermissions(nai, newNc);
         final NetworkCapabilities prevNc = nai.getAndSetNetworkCapabilities(newNc);
 
