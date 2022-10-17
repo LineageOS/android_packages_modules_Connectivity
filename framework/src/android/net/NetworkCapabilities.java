@@ -2066,6 +2066,36 @@ public final class NetworkCapabilities implements Parcelable {
     }
 
     /**
+     * Returns a short but human-readable string of updates from an older set of capabilities.
+     * @param old the old capabilities to diff from
+     * @return a string fit for logging differences, or null if no differences.
+     *         this never returns the empty string.
+     * @hide
+     */
+    @Nullable
+    public String describeCapsDifferencesFrom(@Nullable final NetworkCapabilities old) {
+        final long oldCaps = null == old ? 0 : old.mNetworkCapabilities;
+        final long changed = oldCaps ^ mNetworkCapabilities;
+        if (0 == changed) return null;
+        // If the control reaches here, there are changes (additions, removals, or both) so
+        // the code below is guaranteed to add something to the string and can't return "".
+        final long removed = oldCaps & changed;
+        final long added = mNetworkCapabilities & changed;
+        final StringBuilder sb = new StringBuilder();
+        if (0 != removed) {
+            sb.append("-");
+            appendStringRepresentationOfBitMaskToStringBuilder(sb, removed,
+                    NetworkCapabilities::capabilityNameOf, "-");
+        }
+        if (0 != added) {
+            sb.append("+");
+            appendStringRepresentationOfBitMaskToStringBuilder(sb, added,
+                    NetworkCapabilities::capabilityNameOf, "+");
+        }
+        return sb.toString();
+    }
+
+    /**
      * Checks that our requestable capabilities are the same as those of the given
      * {@code NetworkCapabilities}.
      *
