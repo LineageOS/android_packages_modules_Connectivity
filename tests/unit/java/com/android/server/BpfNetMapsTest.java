@@ -1070,4 +1070,11 @@ public final class BpfNetMapsTest {
         doTestDumpOwnerMatchConfig(DOZABLE_MATCH | invalid_match,
                 "DOZABLE_MATCH UNKNOWN_MATCH(" + invalid_match + ")");
     }
+
+    @Test
+    @IgnoreUpTo(Build.VERSION_CODES.S_V2)
+    public void testDumpCookieTagMap() throws Exception {
+        mCookieTagMap.updateEntry(new CookieTagMapKey(123), new CookieTagMapValue(456, 0x789));
+        assertDumpContains(getDump(), "cookie=123 tag=0x789 uid=456");
+    }
 }
