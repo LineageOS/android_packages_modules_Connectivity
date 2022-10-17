@@ -1022,11 +1022,25 @@ public class BpfNetMaps {
         }
         mDeps.nativeDump(fd, verbose);
 
+        pw.println();
+        pw.println("sEnableJavaBpfMap: " + sEnableJavaBpfMap);
         if (verbose) {
+            pw.println();
+            pw.println("BPF map content:");
+            pw.increaseIndent();
+
             dumpOwnerMatchConfig(pw);
             dumpCurrentStatsMapConfig(pw);
             pw.println();
 
+            // TODO: Remove CookieTagMap content dump
+            // NetworkStatsService also dumps CookieTagMap and NetworkStatsService is a right place
+            // to dump CookieTagMap. But the TagSocketTest in CTS depends on this dump so the tests
+            // need to be updated before remove the dump from BpfNetMaps.
+            BpfDump.dumpMap(sCookieTagMap, pw, "sCookieTagMap",
+                    (key, value) -> "cookie=" + key.socketCookie
+                            + " tag=0x" + Long.toHexString(value.tag)
+                            + " uid=" + value.uid);
             BpfDump.dumpMap(sUidOwnerMap, pw, "sUidOwnerMap",
                     (uid, match) -> {
                         if ((match.rule & IIF_MATCH) != 0) {
@@ -1038,6 +1052,7 @@ public class BpfNetMaps {
                     });
             BpfDump.dumpMap(sUidPermissionMap, pw, "sUidPermissionMap",
                     (uid, permission) -> uid.val + " " + permissionToString(permission.val));
+            pw.decreaseIndent();
         }
     }
 
