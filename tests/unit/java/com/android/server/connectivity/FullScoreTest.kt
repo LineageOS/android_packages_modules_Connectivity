@@ -152,4 +152,16 @@ class FullScoreTest {
         assertNotEquals(ns3, ns1)
         assertFalse(ns1.equals(ns4))
     }
+
+    @Test
+    fun testDescribeDifferences() {
+        val ns1 = FullScore((1L shl POLICY_EVER_EVALUATED) or (1L shl POLICY_IS_VALIDATED),
+                KEEP_CONNECTED_NONE)
+        val ns2 = FullScore((1L shl POLICY_IS_VALIDATED) or (1L shl POLICY_IS_VPN) or
+                (1L shl POLICY_IS_DESTROYED), KEEP_CONNECTED_NONE)
+        assertEquals("-EVER_EVALUATED+IS_DESTROYED+IS_VPN",
+                ns2.describeDifferencesFrom(ns1))
+        assertEquals("-IS_DESTROYED-IS_VPN+EVER_EVALUATED",
+                ns1.describeDifferencesFrom(ns2))
+    }
 }
