@@ -595,7 +595,7 @@ void dumpBpfMap(const std::string& mapName, DumpWriter& dw, const std::string& h
     }
 }
 
-void TrafficController::dump(int fd, bool verbose) {
+void TrafficController::dump(int fd, bool verbose __unused) {
     std::lock_guard guard(mMutex);
     DumpWriter dw(fd);
 
@@ -623,31 +623,6 @@ void TrafficController::dump(int fd, bool verbose) {
                getMapStatus(mConfigurationMap.getMap(), CONFIGURATION_MAP_PATH).c_str());
     dw.println("mUidOwnerMap status: %s",
                getMapStatus(mUidOwnerMap.getMap(), UID_OWNER_MAP_PATH).c_str());
-
-    if (!verbose) {
-        return;
-    }
-
-    dw.blankline();
-    dw.println("BPF map content:");
-
-    ScopedIndent indentForMapContent(dw);
-
-    // Print CookieTagMap content.
-    // TagSocketTest in CTS was using the output of mCookieTagMap dump.
-    // So, mCookieTagMap dump can not be removed until the previous CTS support period is over.
-    dumpBpfMap("mCookieTagMap", dw, "");
-    const auto printCookieTagInfo = [&dw](const uint64_t& key, const UidTagValue& value,
-                                          const BpfMap<uint64_t, UidTagValue>&) {
-        dw.println("cookie=%" PRIu64 " tag=0x%x uid=%u", key, value.tag, value.uid);
-        return base::Result<void>();
-    };
-    base::Result<void> res = mCookieTagMap.iterateWithValue(printCookieTagInfo);
-    if (!res.ok()) {
-        dw.println("mCookieTagMap print end with error: %s", res.error().message().c_str());
-    }
-
-    dw.blankline();
 }
 
 }  // namespace net
