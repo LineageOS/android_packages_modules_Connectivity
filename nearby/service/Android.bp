@@ -85,10 +85,10 @@ java_library {
     ],
     libs: [
         "androidx.annotation_annotation",
-        "framework-bluetooth.stubs.module_lib", // TODO(b/215722418): Change to framework-bluetooth once fixed
+        "framework-bluetooth",
         "error_prone_annotations",
         "framework-connectivity-t.impl",
-        "framework-statsd.stubs.module_lib",
+        "framework-statsd",
     ],
     static_libs: [
         "androidx.core_core",
