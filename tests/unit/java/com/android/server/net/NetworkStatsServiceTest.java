@@ -75,12 +75,14 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
+import static org.mockito.AdditionalMatchers.aryEq;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Matchers.eq;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -392,6 +394,10 @@ public class NetworkStatsServiceTest extends NetworkStatsBaseTest {
                 ArgumentCaptor.forClass(AlertObserver.class);
         verify(mNetd).registerUnsolicitedEventListener(alertObserver.capture());
         mAlertObserver = alertObserver.getValue();
+
+        // Make augmentWithStackedInterfaces returns the interfaces that was passed to it.
+        doAnswer(inv -> ((String[]) inv.getArgument(0)).clone())
+                .when(mStatsFactory).augmentWithStackedInterfaces(any());
 
         // Catch TetheringEventCallback during systemReady().
         ArgumentCaptor<TetheringManager.TetheringEventCallback> tetheringEventCbCaptor =
@@ -1239,45 +1245,73 @@ public class NetworkStatsServiceTest extends NetworkStatsBaseTest {
 
     @Test
     public void testUidStatsForTransport() throws Exception {
-        // pretend that network comes online
+        // Setup both wifi and mobile networks, and set mobile network as the default interface.
         mockDefaultSettings();
-        NetworkStateSnapshot[] states = new NetworkStateSnapshot[] {buildWifiState()};
-        mockNetworkStatsSummary(buildEmptyStats());
         mockNetworkStatsUidDetail(buildEmptyStats());
 
-        mService.notifyNetworkStatus(NETWORKS_WIFI, states, getActiveIface(states),
+        final NetworkStateSnapshot mobileState = buildStateOfTransport(
+                NetworkCapabilities.TRANSPORT_CELLULAR, TYPE_MOBILE,
+                TEST_IFACE2, IMSI_1, null /* wifiNetworkKey */,
+                false /* isTemporarilyNotMetered */, false /* isRoaming */);
+
+        final NetworkStateSnapshot[] states = new NetworkStateSnapshot[] {
+                mobileState, buildWifiState()};
+        mService.notifyNetworkStatus(NETWORKS_MOBILE, states, getActiveIface(states),
                 new UnderlyingNetworkInfo[0]);
+        setMobileRatTypeAndWaitForIdle(TelephonyManager.NETWORK_TYPE_LTE);
 
-        NetworkStats.Entry entry1 = new NetworkStats.Entry(
+        // Mock traffic on wifi network.
+        final NetworkStats.Entry entry1 = new NetworkStats.Entry(
                 TEST_IFACE, UID_RED, SET_DEFAULT, TAG_NONE, METERED_NO, ROAMING_NO,
-                DEFAULT_NETWORK_NO, 50L, 5L, 50L, 5L, 0L);
-        NetworkStats.Entry entry2 = new NetworkStats.Entry(
+                DEFAULT_NETWORK_NO, 50L, 5L, 50L, 5L, 1L);
+        final NetworkStats.Entry entry2 = new NetworkStats.Entry(
                 TEST_IFACE, UID_RED, SET_DEFAULT, 0xF00D, METERED_NO, ROAMING_NO,
-                DEFAULT_NETWORK_NO, 50L, 5L, 50L, 5L, 0L);
-        NetworkStats.Entry entry3 = new NetworkStats.Entry(
+                DEFAULT_NETWORK_NO, 50L, 5L, 50L, 5L, 1L);
+        final NetworkStats.Entry entry3 = new NetworkStats.Entry(
                 TEST_IFACE, UID_BLUE, SET_DEFAULT, 0xBEEF, METERED_NO, ROAMING_NO,
-                DEFAULT_NETWORK_NO, 1024L, 8L, 512L, 4L, 0L);
+                DEFAULT_NETWORK_NO, 1024L, 8L, 512L, 4L, 2L);
 
+        final TetherStatsParcel[] emptyTetherStats = {};
+        // The interfaces that expect to be used to query the stats.
+        final String[] wifiIfaces = {TEST_IFACE};
         incrementCurrentTime(HOUR_IN_MILLIS);
         mockDefaultSettings();
-        mockNetworkStatsSummary(buildEmptyStats());
         mockNetworkStatsUidDetail(new NetworkStats(getElapsedRealtime(), 3)
                 .insertEntry(entry1)
                 .insertEntry(entry2)
-                .insertEntry(entry3));
+                .insertEntry(entry3), emptyTetherStats, wifiIfaces);
+
+        // getUidStatsForTransport (through getNetworkStatsUidDetail) adds all operation counts
+        // with active interface, and the interface here is mobile interface, so this test makes
+        // sure these operations are not surfaced in getUidStatsForTransport if the transport
+        // doesn't match them.
         mService.incrementOperationCount(UID_RED, 0xF00D, 1);
+        final NetworkStats wifiStats = mService.getUidStatsForTransport(
+                NetworkCapabilities.TRANSPORT_WIFI);
 
-        NetworkStats stats = mService.getUidStatsForTransport(NetworkCapabilities.TRANSPORT_WIFI);
+        assertEquals(3, wifiStats.size());
+        // The iface field of the returned stats should be null because getUidStatsForTransport
+        // clears the interface fields before it returns the result.
+        assertValues(wifiStats, null /* iface */, UID_RED, SET_DEFAULT, TAG_NONE,
+                METERED_NO, ROAMING_NO, METERED_NO, 50L, 5L, 50L, 5L, 1L);
+        assertValues(wifiStats, null /* iface */, UID_RED, SET_DEFAULT, 0xF00D,
+                METERED_NO, ROAMING_NO, METERED_NO, 50L, 5L, 50L, 5L, 1L);
+        assertValues(wifiStats, null /* iface */, UID_BLUE, SET_DEFAULT, 0xBEEF,
+                METERED_NO, ROAMING_NO, METERED_NO, 1024L, 8L, 512L, 4L, 2L);
 
-        assertEquals(3, stats.size());
-        entry1.operations = 1;
-        entry1.iface = null;
-        assertEquals(entry1, stats.getValues(0, null));
-        entry2.operations = 1;
-        entry2.iface = null;
-        assertEquals(entry2, stats.getValues(1, null));
-        entry3.iface = null;
-        assertEquals(entry3, stats.getValues(2, null));
+        final String[] mobileIfaces = {TEST_IFACE2};
+        mockNetworkStatsUidDetail(buildEmptyStats(), emptyTetherStats, mobileIfaces);
+        final NetworkStats mobileStats = mService.getUidStatsForTransport(
+                NetworkCapabilities.TRANSPORT_CELLULAR);
+
+        assertEquals(2, mobileStats.size());
+        // Verify the operation count stats that caused by incrementOperationCount only appears
+        // on the mobile interface since incrementOperationCount attributes them onto the active
+        // interface.
+        assertValues(mobileStats, null /* iface */, UID_RED, SET_DEFAULT, 0xF00D,
+                METERED_NO, ROAMING_NO, DEFAULT_NETWORK_NO, 0L, 0L, 0L, 0L, 1);
+        assertValues(mobileStats, null /* iface */, UID_RED, SET_DEFAULT, TAG_NONE,
+                METERED_NO, ROAMING_NO, DEFAULT_NETWORK_NO, 0L, 0L, 0L, 0L, 1);
     }
 
     @Test
@@ -1468,7 +1502,7 @@ public class NetworkStatsServiceTest extends NetworkStatsBaseTest {
                 {buildTetherStatsParcel(TEST_IFACE, 1408L, 10L, 256L, 1L, 0)};
 
         mockNetworkStatsSummary(swIfaceStats);
-        mockNetworkStatsUidDetail(localUidStats, tetherStatsParcels);
+        mockNetworkStatsUidDetail(localUidStats, tetherStatsParcels, INTERFACES_ALL);
         forcePollAndWaitForIdle();
 
         // verify service recorded history
@@ -2235,13 +2269,14 @@ public class NetworkStatsServiceTest extends NetworkStatsBaseTest {
 
     private void mockNetworkStatsUidDetail(NetworkStats detail) throws Exception {
         final TetherStatsParcel[] tetherStatsParcels = {};
-        mockNetworkStatsUidDetail(detail, tetherStatsParcels);
+        mockNetworkStatsUidDetail(detail, tetherStatsParcels, INTERFACES_ALL);
     }
 
     private void mockNetworkStatsUidDetail(NetworkStats detail,
-            TetherStatsParcel[] tetherStatsParcels) throws Exception {
+            TetherStatsParcel[] tetherStatsParcels, String[] ifaces) throws Exception {
+
         doReturn(detail).when(mStatsFactory)
-                .readNetworkStatsDetail(UID_ALL, INTERFACES_ALL, TAG_ALL);
+                .readNetworkStatsDetail(eq(UID_ALL), aryEq(ifaces), eq(TAG_ALL));
 
         // also include tethering details, since they are folded into UID
         doReturn(tetherStatsParcels).when(mNetd).tetherGetStats();
