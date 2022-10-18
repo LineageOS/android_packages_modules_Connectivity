@@ -23,6 +23,7 @@ import static android.net.INetd.IF_STATE_UP;
 import static android.net.IpSecManager.DIRECTION_FWD;
 import static android.net.IpSecManager.DIRECTION_IN;
 import static android.net.IpSecManager.DIRECTION_OUT;
+import static android.net.IpSecManager.FEATURE_IPSEC_TUNNEL_MIGRATION;
 import static android.net.NetworkStack.PERMISSION_MAINLINE_NETWORK_STACK;
 import static android.system.OsConstants.AF_INET;
 import static android.system.OsConstants.AF_INET6;
@@ -1097,7 +1098,7 @@ public class IpSecServiceParameterizedTest {
     }
 
     @Test
-    public void testFeatureFlagVerification() throws Exception {
+    public void testFeatureFlagIpSecTunnelsVerification() throws Exception {
         when(mMockPkgMgr.hasSystemFeature(eq(PackageManager.FEATURE_IPSEC_TUNNELS)))
                 .thenReturn(false);
 
@@ -1105,6 +1106,19 @@ public class IpSecServiceParameterizedTest {
             String addr = Inet4Address.getLoopbackAddress().getHostAddress();
             mIpSecService.createTunnelInterface(
                     addr, addr, new Network(0), new Binder(), BLESSED_PACKAGE);
+            fail("Expected UnsupportedOperationException for disabled feature");
+        } catch (UnsupportedOperationException expected) {
+        }
+    }
+
+    @Test
+    @DevSdkIgnoreRule.IgnoreUpTo(Build.VERSION_CODES.TIRAMISU)
+    public void testFeatureFlagIpSecTunnelMigrationVerification() throws Exception {
+        when(mMockPkgMgr.hasSystemFeature(eq(FEATURE_IPSEC_TUNNEL_MIGRATION))).thenReturn(false);
+
+        try {
+            mIpSecService.migrateTransform(
+                    1 /* transformId */, NEW_SRC_ADDRESS, NEW_DST_ADDRESS, BLESSED_PACKAGE);
             fail("Expected UnsupportedOperationException for disabled feature");
         } catch (UnsupportedOperationException expected) {
         }
