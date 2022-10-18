@@ -43,8 +43,6 @@ object NULL_NETWORK : Network(-1)
 object ANY_NETWORK : Network(-2)
 fun anyNetwork() = ANY_NETWORK
 
-private val Int.capabilityName get() = NetworkCapabilities.capabilityNameOf(this)
-
 open class RecorderCallback private constructor(
     private val backingRecord: ArrayTrackRecord<CallbackEntry>
 ) : NetworkCallback() {
@@ -193,9 +191,26 @@ open class TestableNetworkCallback private constructor(
             else -> null
         }
 
-    fun pollForNextCallback(timeoutMs: Long = defaultTimeoutMs): CallbackEntry {
-        return history.poll(timeoutMs) ?: fail("Did not receive callback after ${timeoutMs}ms")
-    }
+    /**
+     * Get the next callback or null if timeout.
+     *
+     * With no argument, this method waits out the default timeout. To wait forever, pass
+     * Long.MAX_VALUE.
+     */
+    @JvmOverloads
+    fun poll(timeoutMs: Long = defaultTimeoutMs): CallbackEntry? = history.poll(timeoutMs)
+
+    /**
+     * Get the next callback or throw if timeout.
+     *
+     * With no argument, this method waits out the default timeout. To wait forever, pass
+     * Long.MAX_VALUE.
+     */
+    @JvmOverloads
+    fun pollOrThrow(
+        timeoutMs: Long = defaultTimeoutMs,
+        errorMsg: String = "Did not receive callback after $timeoutMs"
+    ): CallbackEntry = poll(timeoutMs) ?: fail(errorMsg)
 
     // Make open for use in ConnectivityServiceTest which is the only one knowing its handlers.
     // TODO : remove the necessity to overload this, remove the open qualifier, and give a
@@ -221,7 +236,7 @@ open class TestableNetworkCallback private constructor(
     inline fun <reified T : CallbackEntry> expectCallback(
         network: Network = ANY_NETWORK,
         timeoutMs: Long = defaultTimeoutMs
-    ): T = pollForNextCallback(timeoutMs).let {
+    ): T = pollOrThrow(timeoutMs).let {
         if (it !is T || (ANY_NETWORK !== network && it.network != network)) {
             fail("Unexpected callback : $it, expected ${T::class} with Network[$network]")
         } else {
@@ -258,7 +273,7 @@ open class TestableNetworkCallback private constructor(
     fun expectCallbackThat(
         timeoutMs: Long = defaultTimeoutMs,
         valid: (CallbackEntry) -> Boolean
-    ) = pollForNextCallback(timeoutMs).also { assertTrue(valid(it), "Unexpected callback : $it") }
+    ) = pollOrThrow(timeoutMs).also { assertTrue(valid(it), "Unexpected callback : $it") }
 
     fun expectCapabilitiesThat(
         net: Network,
@@ -392,7 +407,7 @@ open class TestableNetworkCallback private constructor(
         type: KClass<T>,
         n: Network?,
         timeoutMs: Long = defaultTimeoutMs
-    ) = pollForNextCallback(timeoutMs).also {
+    ) = pollOrThrow(timeoutMs).also {
         val network = n ?: NULL_NETWORK
         // TODO : remove this .java access if the tests ever use kotlin-reflect. At the time of
         // this writing this would be the only use of this library in the tests.
