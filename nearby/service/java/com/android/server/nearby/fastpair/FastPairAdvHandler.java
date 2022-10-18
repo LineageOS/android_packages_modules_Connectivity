@@ -53,6 +53,13 @@ public class FastPairAdvHandler {
     private boolean mIsFirst = false;
     private FastPairDataProvider mPairDataProvider;
     private static final double NEARBY_DISTANCE_THRESHOLD = 0.6;
+    // The byte, 0bLLLLTTTT, for battery length and type.
+    // Bit 0 - 3: type, 0b0011 (show UI indication) or 0b0100 (hide UI indication).
+    // Bit 4 - 7: length.
+    // Reference: https://developers.google.com/nearby/fast-pair/specifications/extensions/batterynotification
+    private static final byte SHOW_UI_INDICATION = 0b0011;
+    private static final byte HIDE_UI_INDICATION = 0b0100;
+    private static final int LENGTH_ADVERTISEMENT_TYPE_BIT = 4;
 
     /** The types about how the bloomfilter is processed. */
     public enum ProcessBloomFilterType {
@@ -131,6 +138,33 @@ public class FastPairAdvHandler {
                 Log.e(TAG, "OEM does not construct fast pair data proxy correctly");
             }
         }
+    }
+
+    // Battery advertisement format:
+    // Byte 0: Battery length and type, Bit 0 - 3: type, Bit 4 - 7: length.
+    // Byte 1 - 3: Battery values.
+    // Reference:
+    // https://developers.google.com/nearby/fast-pair/specifications/extensions/batterynotification
+    @VisibleForTesting
+    static byte[] generateBatteryData(byte[] data) {
+        byte[] batteryLevelNoNotification = FastPairDecoder.getBatteryLevelNoNotification(data);
+        boolean suppressBatteryNotification =
+                (batteryLevelNoNotification != null && batteryLevelNoNotification.length > 0);
+        byte[] batteryValues =
+                suppressBatteryNotification
+                        ? batteryLevelNoNotification
+                        : FastPairDecoder.getBatteryLevel(data);
+        if (batteryValues == null || batteryValues.length == 0) {
+            return new byte[0];
+        }
+        return concat(
+                new byte[] {
+                        (byte)
+                                (batteryValues.length << LENGTH_ADVERTISEMENT_TYPE_BIT
+                                        | (suppressBatteryNotification
+                                        ? HIDE_UI_INDICATION : SHOW_UI_INDICATION))
+                },
+                batteryValues);
     }
 
     /**

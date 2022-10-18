@@ -36,6 +36,7 @@ import static android.net.NetworkCapabilities.NET_CAPABILITY_OEM_PRIVATE;
 import static android.net.NetworkCapabilities.NET_CAPABILITY_PARTIAL_CONNECTIVITY;
 import static android.net.NetworkCapabilities.NET_CAPABILITY_PRIORITIZE_BANDWIDTH;
 import static android.net.NetworkCapabilities.NET_CAPABILITY_PRIORITIZE_LATENCY;
+import static android.net.NetworkCapabilities.NET_CAPABILITY_SUPL;
 import static android.net.NetworkCapabilities.NET_CAPABILITY_TRUSTED;
 import static android.net.NetworkCapabilities.NET_CAPABILITY_VALIDATED;
 import static android.net.NetworkCapabilities.NET_CAPABILITY_WIFI_P2P;
@@ -1369,5 +1370,24 @@ public class NetworkCapabilitiesTest {
         }
 
         assertEquals(expectedNcBuilder.build(), restrictedNc);
+    }
+
+    @Test
+    public void testDescribeCapsDifferences() throws Exception {
+        final NetworkCapabilities nc1 = new NetworkCapabilities.Builder()
+                .addCapability(NET_CAPABILITY_MMS)
+                .addCapability(NET_CAPABILITY_OEM_PAID)
+                .addCapability(NET_CAPABILITY_INTERNET)
+                .build();
+        final NetworkCapabilities nc2 = new NetworkCapabilities.Builder()
+                .addCapability(NET_CAPABILITY_CAPTIVE_PORTAL)
+                .addCapability(NET_CAPABILITY_SUPL)
+                .addCapability(NET_CAPABILITY_VALIDATED)
+                .addCapability(NET_CAPABILITY_INTERNET)
+                .build();
+        assertEquals("-MMS-OEM_PAID+SUPL+VALIDATED+CAPTIVE_PORTAL",
+                nc2.describeCapsDifferencesFrom(nc1));
+        assertEquals("-SUPL-VALIDATED-CAPTIVE_PORTAL+MMS+OEM_PAID",
+                nc1.describeCapsDifferencesFrom(nc2));
     }
 }

@@ -194,4 +194,12 @@ public class FastPairAdvHandlerTest {
         assertThat(FastPairAdvHandler.findRecognizedDeviceFromCachedItem(
                 ImmutableList.of(mStoredFastPairItem), mBloomFilter, SALT)).isNotNull();
     }
+
+    @Test
+    public void testGenerateBatteryData_correct() {
+        byte[] data = new byte[]
+                {0, -112, 96, 5, -125, 45, 35, 98, 98, 81, 13, 17, 3, 51, -28, -28, -28};
+        assertThat(FastPairAdvHandler.generateBatteryData(data))
+                .isEqualTo(new byte[]{51, -28, -28, -28});
+    }
 }
