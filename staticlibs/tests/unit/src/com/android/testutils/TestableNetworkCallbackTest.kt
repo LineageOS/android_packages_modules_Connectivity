@@ -270,14 +270,26 @@ class TestableNetworkCallbackTest {
     }
 
     @Test
-    fun testPollForNextCallback() {
-        assertFails { mCallback.pollForNextCallback(SHORT_TIMEOUT_MS) }
+    fun testPoll() {
+        assertNull(mCallback.poll(SHORT_TIMEOUT_MS))
         TNCInterpreter.interpretTestSpec(initial = mCallback, lineShift = 1,
                 threadTransform = { cb -> cb.createLinkedCopy() }, spec = """
             sleep; onAvailable(133)    | poll(2) = Available(133) time 1..4
-                                       | poll(1) fails
+                                       | poll(1) = null
             onCapabilitiesChanged(108) | poll(1) = CapabilitiesChanged(108) time 0..3
             onBlockedStatus(199)       | poll(1) = BlockedStatus(199) time 0..3
+        """)
+    }
+
+    @Test
+    fun testPollOrThrow() {
+        assertFails { mCallback.pollOrThrow(SHORT_TIMEOUT_MS) }
+        TNCInterpreter.interpretTestSpec(initial = mCallback, lineShift = 1,
+                threadTransform = { cb -> cb.createLinkedCopy() }, spec = """
+            sleep; onAvailable(133)    | pollOrThrow(2) = Available(133) time 1..4
+                                       | pollOrThrow(1) fails
+            onCapabilitiesChanged(108) | pollOrThrow(1) = CapabilitiesChanged(108) time 0..3
+            onBlockedStatus(199)       | pollOrThrow(1) = BlockedStatus(199) time 0..3
         """)
     }
 
@@ -358,9 +370,8 @@ private val interpretTable = listOf<InterpretMatcher<TestableNetworkCallback>>(
             else -> fail("Unknown callback type")
         }
     },
-    Regex("""poll\((\d+)\)""") to { i, cb, t ->
-        cb.pollForNextCallback(t.timeArg(1))
-    },
+    Regex("""poll\((\d+)\)""") to { i, cb, t -> cb.poll(t.timeArg(1)) },
+    Regex("""pollOrThrow\((\d+)\)""") to { i, cb, t -> cb.pollOrThrow(t.timeArg(1)) },
     // Interpret "eventually(Available(xx), timeout)" as calling eventuallyExpect that expects
     // CallbackEntry.AVAILABLE with netId of xx within timeout*INTERPRET_TIME_UNIT timeout, and
     // likewise for all callback types.
