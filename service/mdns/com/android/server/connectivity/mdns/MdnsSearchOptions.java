@@ -43,7 +43,7 @@ public class MdnsSearchOptions implements Parcelable {
                 @Override
                 public MdnsSearchOptions createFromParcel(Parcel source) {
                     return new MdnsSearchOptions(source.createStringArrayList(),
-                            source.readBoolean());
+                            source.readBoolean(), source.readBoolean());
                 }
 
                 @Override
@@ -55,14 +55,16 @@ public class MdnsSearchOptions implements Parcelable {
     private final List<String> subtypes;
 
     private final boolean isPassiveMode;
+    private final boolean removeExpiredService;
 
     /** Parcelable constructs for a {@link MdnsServiceInfo}. */
-    MdnsSearchOptions(List<String> subtypes, boolean isPassiveMode) {
+    MdnsSearchOptions(List<String> subtypes, boolean isPassiveMode, boolean removeExpiredService) {
         this.subtypes = new ArrayList<>();
         if (subtypes != null) {
             this.subtypes.addAll(subtypes);
         }
         this.isPassiveMode = isPassiveMode;
+        this.removeExpiredService = removeExpiredService;
     }
 
     /** Returns a {@link Builder} for {@link MdnsSearchOptions}. */
@@ -91,6 +93,11 @@ public class MdnsSearchOptions implements Parcelable {
         return isPassiveMode;
     }
 
+    /** Returns {@code true} if service will be removed after its TTL expires. */
+    public boolean removeExpiredService() {
+        return removeExpiredService;
+    }
+
     @Override
     public int describeContents() {
         return 0;
@@ -100,12 +107,14 @@ public class MdnsSearchOptions implements Parcelable {
     public void writeToParcel(Parcel out, int flags) {
         out.writeStringList(subtypes);
         out.writeBoolean(isPassiveMode);
+        out.writeBoolean(removeExpiredService);
     }
 
     /** A builder to create {@link MdnsSearchOptions}. */
     public static final class Builder {
         private final Set<String> subtypes;
         private boolean isPassiveMode = true;
+        private boolean removeExpiredService;
 
         private Builder() {
             subtypes = new ArraySet<>();
@@ -136,8 +145,7 @@ public class MdnsSearchOptions implements Parcelable {
 
         /**
          * Sets if the passive mode scan should be used. The passive mode scans less frequently in
-         * order
-         * to conserve battery and produce less network traffic.
+         * order to conserve battery and produce less network traffic.
          *
          * @param isPassiveMode If set to {@code true}, passive mode will be used. If set to {@code
          *                      false}, active mode will be used.
@@ -147,9 +155,20 @@ public class MdnsSearchOptions implements Parcelable {
             return this;
         }
 
+        /**
+         * Sets if the service should be removed after TTL.
+         *
+         * @param removeExpiredService If set to {@code true}, the service will be removed after TTL
+         */
+        public Builder setRemoveExpiredService(boolean removeExpiredService) {
+            this.removeExpiredService = removeExpiredService;
+            return this;
+        }
+
         /** Builds a {@link MdnsSearchOptions} with the arguments supplied to this builder. */
         public MdnsSearchOptions build() {
-            return new MdnsSearchOptions(new ArrayList<>(subtypes), isPassiveMode);
+            return new MdnsSearchOptions(
+                    new ArrayList<>(subtypes), isPassiveMode, removeExpiredService);
         }
     }
 }
