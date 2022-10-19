@@ -39,6 +39,7 @@ public abstract class MdnsRecord {
     public static final int TYPE_PTR = 0x000C;
     public static final int TYPE_SRV = 0x0021;
     public static final int TYPE_TXT = 0x0010;
+    public static final int TYPE_ANY = 0x00ff;
 
     private static final int FLAG_CACHE_FLUSH = 0x8000;
 
