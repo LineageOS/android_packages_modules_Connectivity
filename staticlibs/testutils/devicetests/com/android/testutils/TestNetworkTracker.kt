@@ -111,12 +111,12 @@ class TestNetworkTracker internal constructor(
     val tnm: TestNetworkManager,
     val lp: LinkProperties?,
     setupTimeoutMs: Long
-) {
+) : TestableNetworkCallback.HasNetwork {
     private val cm = context.getSystemService(ConnectivityManager::class.java)
     private val binder = Binder()
 
     private val networkCallback: NetworkCallback
-    val network: Network
+    override val network: Network
     val testIface: TestNetworkInterface
 
     init {
