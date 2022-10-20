@@ -91,8 +91,11 @@
 
 // ----- Tethering Error Counters -----
 
-DEFINE_BPF_MAP_GRW(tether_error_map, ARRAY, uint32_t, uint32_t, BPF_TETHER_ERR__MAX,
-                   TETHERING_GID)
+// Note that pre-T devices with Mediatek chipsets may have a kernel bug (bad patch
+// "[ALPS05162612] bpf: fix ubsan error") making it impossible to write to non-zero
+// offset of bpf map ARRAYs.  This file (offload.o) loads on T, but luckily this
+// array is only written by bpf code, and only read by userspace.
+DEFINE_BPF_MAP_RO(tether_error_map, ARRAY, uint32_t, uint32_t, BPF_TETHER_ERR__MAX, TETHERING_GID)
 
 #define COUNT_AND_RETURN(counter, ret) do {                     \
     uint32_t code = BPF_TETHER_ERR_ ## counter;                 \
