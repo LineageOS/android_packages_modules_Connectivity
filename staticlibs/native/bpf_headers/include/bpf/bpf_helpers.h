@@ -209,6 +209,10 @@ static int (*bpf_for_each_map_elem)(const struct bpf_map_def* map, void *callbac
     DEFINE_BPF_MAP_UGM(the_map, TYPE, KeyType, ValueType, num_entries, \
                        DEFAULT_BPF_MAP_UID, AID_ROOT, 0600)
 
+#define DEFINE_BPF_MAP_RO(the_map, TYPE, KeyType, ValueType, num_entries, gid) \
+    DEFINE_BPF_MAP_UGM(the_map, TYPE, KeyType, ValueType, num_entries, \
+                       DEFAULT_BPF_MAP_UID, gid, 0440)
+
 #define DEFINE_BPF_MAP_GWO(the_map, TYPE, KeyType, ValueType, num_entries, gid) \
     DEFINE_BPF_MAP_UGM(the_map, TYPE, KeyType, ValueType, num_entries, \
                        DEFAULT_BPF_MAP_UID, gid, 0620)
