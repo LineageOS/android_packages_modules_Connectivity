@@ -96,7 +96,8 @@ public class BleDiscoveryProvider extends AbstractDiscoveryProvider {
                             } else {
                                 byte[] presenceData = serviceDataMap.get(PRESENCE_UUID);
                                 if (presenceData != null) {
-                                    setPresenceDevice(presenceData, builder);
+                                    setPresenceDevice(presenceData, builder, deviceName,
+                                            scanResult.getRssi());
                                 }
                             }
                         }
@@ -115,7 +116,8 @@ public class BleDiscoveryProvider extends AbstractDiscoveryProvider {
         mInjector = injector;
     }
 
-    private static PresenceDevice getPresenceDevice(ExtendedAdvertisement advertisement) {
+    private static PresenceDevice getPresenceDevice(ExtendedAdvertisement advertisement,
+            String deviceName, int rssi) {
         // TODO(238458326): After implementing encryption, use real data.
         byte[] secretIdBytes = new byte[0];
         PresenceDevice.Builder builder =
@@ -124,7 +126,9 @@ public class BleDiscoveryProvider extends AbstractDiscoveryProvider {
                         advertisement.getSalt(),
                         secretIdBytes,
                         advertisement.getIdentity())
-                        .addMedium(NearbyDevice.Medium.BLE);
+                        .addMedium(NearbyDevice.Medium.BLE)
+                        .setName(deviceName)
+                        .setRssi(rssi);
         for (int i : advertisement.getActions()) {
             builder.addExtendedProperty(new DataElement(DataElement.DataType.ACTION,
                     new byte[]{(byte) i}));
@@ -247,7 +251,8 @@ public class BleDiscoveryProvider extends AbstractDiscoveryProvider {
         return mScanCallback;
     }
 
-    private void setPresenceDevice(byte[] data, NearbyDeviceParcelable.Builder builder) {
+    private void setPresenceDevice(byte[] data, NearbyDeviceParcelable.Builder builder,
+            String deviceName, int rssi) {
         for (android.nearby.ScanFilter scanFilter : mScanFilters) {
             if (scanFilter instanceof PresenceScanFilter) {
                 // Iterate all possible authenticity key and identity combinations to decrypt
@@ -262,7 +267,8 @@ public class BleDiscoveryProvider extends AbstractDiscoveryProvider {
                     if (CryptorImpIdentityV1.getInstance().verify(
                             advertisement.getIdentity(),
                             credential.getEncryptedMetadataKeyTag())) {
-                        builder.setPresenceDevice(getPresenceDevice(advertisement));
+                        builder.setPresenceDevice(getPresenceDevice(advertisement, deviceName,
+                                rssi));
                         builder.setEncryptionKeyTag(credential.getEncryptedMetadataKeyTag());
                         return;
                     }

@@ -59,4 +59,22 @@ public final class ArrayUtilsTest {
         assertThat(ArrayUtils.concatByteArrays(BYTES_ONE, BYTES_EMPTY, BYTES_TWO))
                 .isEqualTo(BYTES_ALL);
     }
+
+    @Test
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
+    public void testIsEmptyNull_returnsTrue() {
+        assertThat(ArrayUtils.isEmpty(null)).isTrue();
+    }
+
+    @Test
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
+    public void testIsEmpty_returnsTrue() {
+        assertThat(ArrayUtils.isEmpty(new byte[]{})).isTrue();
+    }
+
+    @Test
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
+    public void testIsEmpty_returnsFalse() {
+        assertThat(ArrayUtils.isEmpty(BYTES_ALL)).isFalse();
+    }
 }
