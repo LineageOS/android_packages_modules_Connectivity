@@ -13,7 +13,7 @@ import kotlin.test.assertTrue
 typealias InterpretMatcher<T> = Pair<Regex, (ConcurrentInterpreter<T>, T, MatchResult) -> Any?>
 
 // The default unit of time for interpreted tests
-val INTERPRET_TIME_UNIT = 40L // ms
+const val INTERPRET_TIME_UNIT = 60L // ms
 
 /**
  * A small interpreter for testing parallel code.
@@ -40,10 +40,7 @@ val INTERPRET_TIME_UNIT = 40L // ms
  * Some expressions already exist by default and can be used by all interpreters. Refer to
  * getDefaultInstructions() below for a list and documentation.
  */
-open class ConcurrentInterpreter<T>(
-    localInterpretTable: List<InterpretMatcher<T>>,
-    val interpretTimeUnit: Long = INTERPRET_TIME_UNIT
-) {
+open class ConcurrentInterpreter<T>(localInterpretTable: List<InterpretMatcher<T>>) {
     private val interpretTable: List<InterpretMatcher<T>> =
             localInterpretTable + getDefaultInstructions()
     // The last time the thread became blocked, with base System.currentTimeMillis(). This should
@@ -211,7 +208,7 @@ private fun <T> getDefaultInstructions() = listOf<InterpretMatcher<T>>(
     },
     // Interpret sleep. Optional argument for the count, in INTERPRET_TIME_UNIT units.
     Regex("""sleep(\((\d+)\))?""") to { i, t, r ->
-        SystemClock.sleep(if (r.strArg(2).isEmpty()) i.interpretTimeUnit else r.timeArg(2))
+        SystemClock.sleep(if (r.strArg(2).isEmpty()) INTERPRET_TIME_UNIT else r.timeArg(2))
     },
     Regex("""(.*)\s*fails""") to { i, t, r ->
         assertFails { i.interpret(r.strArg(1), t) }
