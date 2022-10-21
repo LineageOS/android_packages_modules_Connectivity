@@ -151,6 +151,23 @@ static int (*bpf_for_each_map_elem)(const struct bpf_map_def* map, void *callbac
         __attribute__ ((section(".maps." #name), used)) \
                 ____btf_map_##name = { }
 
+/* There exist buggy kernels with pre-T OS, that due to
+ * kernel patch "[ALPS05162612] bpf: fix ubsan error"
+ * do not support userspace writes into non-zero index of bpf map arrays.
+ *
+ * We use this assert to prevent us from being able to define such a map.
+ */
+
+#ifdef THIS_BPF_PROGRAM_IS_FOR_TEST_PURPOSES_ONLY
+#define BPF_MAP_ASSERT_OK(type, entries, mode)
+#elif BPFLOADER_MIN_VER >= BPFLOADER_T_BETA3_VERSION
+#define BPF_MAP_ASSERT_OK(type, entries, mode)
+#else
+#define BPF_MAP_ASSERT_OK(type, entries, mode) \
+  _Static_assert(((type) != BPF_MAP_TYPE_ARRAY) || ((entries) <= 1) || !((mode) & 0222), \
+  "Writable arrays with more than 1 element not supported on pre-T devices.")
+#endif
+
 /* type safe macro to declare a map and related accessor functions */
 #define DEFINE_BPF_MAP_EXT(the_map, TYPE, KeyType, ValueType, num_entries, usr, grp, md,         \
                            selinux, pindir, share)                                               \
@@ -171,6 +188,7 @@ static int (*bpf_for_each_map_elem)(const struct bpf_map_def* map, void *callbac
             .pin_subdir = pindir,                                                                \
             .shared = share,                                                                     \
     };                                                                                           \
+    BPF_MAP_ASSERT_OK(BPF_MAP_TYPE_##TYPE, (num_entries), (md));                                 \
     BPF_ANNOTATE_KV_PAIR(the_map, KeyType, ValueType);                                           \
                                                                                                  \
     static inline __always_inline __unused ValueType* bpf_##the_map##_lookup_elem(               \
