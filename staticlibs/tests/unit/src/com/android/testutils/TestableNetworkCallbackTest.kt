@@ -322,9 +322,9 @@ class TestableNetworkCallbackTest {
         TNCInterpreter.interpretTestSpec(initial = mCallback, lineShift = 1,
                 threadTransform = { cb -> cb.createLinkedCopy() }, spec = """
                 onAvailable(100)                   | eventually(CapabilitiesChanged(100), 1) fails
-                sleep ; onCapabilitiesChanged(100) | eventually(CapabilitiesChanged(100), 2)
+                sleep ; onCapabilitiesChanged(100) | eventually(CapabilitiesChanged(100), 3)
                 onAvailable(101) ; onBlockedStatus(101) | eventually(BlockedStatus(100), 2) fails
-                onSuspended(100) ; sleep ; onLost(100)  | eventually(Lost(100), 2)
+                onSuspended(100) ; sleep ; onLost(100)  | eventually(Lost(100), 3)
         """)
     }
 }
