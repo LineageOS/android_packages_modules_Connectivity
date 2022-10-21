@@ -158,6 +158,7 @@ public class BleBroadcastProvider extends AdvertiseCallback {
         return new AdvertisingSetParameters.Builder()
                 .setInterval(AdvertisingSetParameters.INTERVAL_MEDIUM)
                 .setTxPowerLevel(AdvertisingSetParameters.TX_POWER_MEDIUM)
+                .setIncludeTxPower(true)
                 .setConnectable(true)
                 .build();
     }
