@@ -1855,20 +1855,12 @@ public class TetheringTest {
 
         private void assertTetherConfigParcelEqual(@NonNull TetheringConfigurationParcel actual,
                 @NonNull TetheringConfigurationParcel expect) {
-            assertEquals(actual.subId, expect.subId);
             assertArrayEquals(actual.tetherableUsbRegexs, expect.tetherableUsbRegexs);
             assertArrayEquals(actual.tetherableWifiRegexs, expect.tetherableWifiRegexs);
             assertArrayEquals(actual.tetherableBluetoothRegexs, expect.tetherableBluetoothRegexs);
-            assertEquals(actual.isDunRequired, expect.isDunRequired);
-            assertEquals(actual.chooseUpstreamAutomatically, expect.chooseUpstreamAutomatically);
-            assertArrayEquals(actual.preferredUpstreamIfaceTypes,
-                    expect.preferredUpstreamIfaceTypes);
             assertArrayEquals(actual.legacyDhcpRanges, expect.legacyDhcpRanges);
-            assertArrayEquals(actual.defaultIPv4DNS, expect.defaultIPv4DNS);
-            assertEquals(actual.enableLegacyDhcpServer, expect.enableLegacyDhcpServer);
             assertArrayEquals(actual.provisioningApp, expect.provisioningApp);
             assertEquals(actual.provisioningAppNoUi, expect.provisioningAppNoUi);
-            assertEquals(actual.provisioningCheckPeriod, expect.provisioningCheckPeriod);
         }
     }
 
