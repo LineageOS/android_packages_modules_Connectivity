@@ -24,7 +24,6 @@ import static android.net.cts.util.CtsNetUtils.TestNetworkCallback;
 import static com.android.compatibility.common.util.SystemUtil.runWithShellPermissionIdentity;
 import static com.android.modules.utils.build.SdkLevel.isAtLeastT;
 import static com.android.testutils.DevSdkIgnoreRuleKt.SC_V2;
-import static com.android.testutils.TestableNetworkCallbackKt.anyNetwork;
 
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
@@ -520,8 +519,7 @@ public class Ikev2VpnTest {
                 HexDump.hexStringToByteArray(authResp));
 
         // Verify the VPN network came up
-        final Network vpnNetwork = cb.expectCallback(CallbackEntry.AVAILABLE, anyNetwork())
-                .getNetwork();
+        final Network vpnNetwork = cb.expect(CallbackEntry.AVAILABLE).getNetwork();
 
         if (testSessionKey) {
             final VpnProfileStateShim profileState = mVmShim.getProvisionedVpnProfileState();
@@ -536,8 +534,8 @@ public class Ikev2VpnTest {
                 && caps.hasCapability(NET_CAPABILITY_INTERNET)
                 && !caps.hasCapability(NET_CAPABILITY_VALIDATED)
                 && Process.myUid() == caps.getOwnerUid());
-        cb.expectCallback(CallbackEntry.LINK_PROPERTIES_CHANGED, vpnNetwork);
-        cb.expectCallback(CallbackEntry.BLOCKED_STATUS, vpnNetwork);
+        cb.expect(CallbackEntry.LINK_PROPERTIES_CHANGED, vpnNetwork);
+        cb.expect(CallbackEntry.BLOCKED_STATUS, vpnNetwork);
 
         // A VPN that requires validation is initially not validated, while one that doesn't
         // immediately validate automatically. Because this VPN can't actually access Internet,
