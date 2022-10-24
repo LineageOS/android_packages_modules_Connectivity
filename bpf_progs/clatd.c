@@ -100,7 +100,11 @@ static inline __always_inline int nat64(struct __sk_buff* skb, bool is_ethernet)
 
     if (!v) return TC_ACT_PIPE;
 
-    switch (ip6->nexthdr) {
+    __u8 proto = ip6->nexthdr;
+    __be16 ip_id = 0;
+    __be16 frag_off = htons(IP_DF);
+
+    switch (proto) {
         case IPPROTO_TCP:  // For TCP & UDP the checksum neutrality of the chosen IPv6
         case IPPROTO_UDP:  // address means there is no need to update their checksums.
         case IPPROTO_GRE:  // We do not need to bother looking at GRE/ESP headers,
@@ -125,14 +129,14 @@ static inline __always_inline int nat64(struct __sk_buff* skb, bool is_ethernet)
             .version = 4,                                                      // u4
             .ihl = sizeof(struct iphdr) / sizeof(__u32),                       // u4
             .tos = (ip6->priority << 4) + (ip6->flow_lbl[0] >> 4),             // u8
-            .tot_len = htons(ntohs(ip6->payload_len) + sizeof(struct iphdr)),  // u16
-            .id = 0,                                                           // u16
-            .frag_off = htons(IP_DF),                                          // u16
+            .tot_len = htons(ntohs(ip6->payload_len) + sizeof(struct iphdr)),  // be16
+            .id = ip_id,                                                       // be16
+            .frag_off = frag_off,                                              // be16
             .ttl = ip6->hop_limit,                                             // u8
-            .protocol = ip6->nexthdr,                                          // u8
+            .protocol = proto,                                                 // u8
             .check = 0,                                                        // u16
-            .saddr = ip6->saddr.in6_u.u6_addr32[3],                            // u32
-            .daddr = v->local4.s_addr,                                         // u32
+            .saddr = ip6->saddr.in6_u.u6_addr32[3],                            // be32
+            .daddr = v->local4.s_addr,                                         // be32
     };
 
     // Calculate the IPv4 one's complement checksum of the IPv4 header.
