@@ -38,6 +38,7 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.JUnit4
+import org.junit.Assume.assumeTrue
 import kotlin.reflect.KClass
 import kotlin.test.assertEquals
 import kotlin.test.assertFails
@@ -267,6 +268,86 @@ class TestableNetworkCallbackTest {
         // Test onAvailable won't return calls with a different callback
         mCallback.onAvailable(net)
         assertFails { mCallback.expect<BlockedStatus>(net, SHORT_TIMEOUT_MS) }
+    }
+
+    @Test
+    fun testAllExpectOverloads() {
+        // This test should never run, it only checks that all overloads exist and build
+        assumeTrue(false)
+        val hn = object : TestableNetworkCallback.HasNetwork { override val network = ANY_NETWORK }
+
+        // Method with all arguments (version that takes a Network)
+        mCallback.expect(AVAILABLE, ANY_NETWORK, 10, "error") { true }
+
+        // Java overloads omitting one argument. One line for omitting each argument, in positional
+        // order. Versions that take a Network.
+        mCallback.expect(AVAILABLE, 10, "error") { true }
+        mCallback.expect(AVAILABLE, ANY_NETWORK, "error") { true }
+        mCallback.expect(AVAILABLE, ANY_NETWORK, 10) { true }
+        mCallback.expect(AVAILABLE, ANY_NETWORK, 10, "error")
+
+        // Java overloads for omitting two arguments. One line for omitting each pair of arguments.
+        // Versions that take a Network.
+        mCallback.expect(AVAILABLE, "error") { true }
+        mCallback.expect(AVAILABLE, 10) { true }
+        mCallback.expect(AVAILABLE, 10, "error")
+        mCallback.expect(AVAILABLE, ANY_NETWORK) { true }
+        mCallback.expect(AVAILABLE, ANY_NETWORK, "error")
+        mCallback.expect(AVAILABLE, ANY_NETWORK, 10)
+
+        // Java overloads for omitting three arguments. One line for each remaining argument.
+        // Versions that take a Network.
+        mCallback.expect(AVAILABLE) { true }
+        mCallback.expect(AVAILABLE, "error")
+        mCallback.expect(AVAILABLE, 10)
+        mCallback.expect(AVAILABLE, ANY_NETWORK)
+
+        // Java overload for omitting all four arguments.
+        mCallback.expect(AVAILABLE)
+
+        // Same orders as above, but versions that take a HasNetwork. Except overloads that
+        // were already tested because they omitted the Network argument
+        mCallback.expect(AVAILABLE, hn, 10, "error") { true }
+        mCallback.expect(AVAILABLE, hn, "error") { true }
+        mCallback.expect(AVAILABLE, hn, 10) { true }
+        mCallback.expect(AVAILABLE, hn, 10, "error")
+
+        mCallback.expect(AVAILABLE, hn) { true }
+        mCallback.expect(AVAILABLE, hn, "error")
+        mCallback.expect(AVAILABLE, hn, 10)
+
+        mCallback.expect(AVAILABLE, hn)
+
+        // Same as above but for reified versions.
+        mCallback.expect<Available>(ANY_NETWORK, 10, "error") { true }
+        mCallback.expect<Available>(timeoutMs = 10, errorMsg = "error") { true }
+        mCallback.expect<Available>(network = ANY_NETWORK, errorMsg = "error") { true }
+        mCallback.expect<Available>(network = ANY_NETWORK, timeoutMs = 10) { true }
+        mCallback.expect<Available>(network = ANY_NETWORK, timeoutMs = 10, errorMsg = "error")
+
+        mCallback.expect<Available>(errorMsg = "error") { true }
+        mCallback.expect<Available>(timeoutMs = 10) { true }
+        mCallback.expect<Available>(timeoutMs = 10, errorMsg = "error")
+        mCallback.expect<Available>(network = ANY_NETWORK) { true }
+        mCallback.expect<Available>(network = ANY_NETWORK, errorMsg = "error")
+        mCallback.expect<Available>(network = ANY_NETWORK, timeoutMs = 10)
+
+        mCallback.expect<Available> { true }
+        mCallback.expect<Available>(errorMsg = "error")
+        mCallback.expect<Available>(timeoutMs = 10)
+        mCallback.expect<Available>(network = ANY_NETWORK)
+        mCallback.expect<Available>()
+
+        mCallback.expect<Available>(hn, 10, "error") { true }
+        mCallback.expect<Available>(network = hn, errorMsg = "error") { true }
+        mCallback.expect<Available>(network = hn, timeoutMs = 10) { true }
+        mCallback.expect<Available>(network = hn, timeoutMs = 10, errorMsg = "error")
+
+        mCallback.expect<Available>(network = hn) { true }
+        mCallback.expect<Available>(network = hn, errorMsg = "error")
+        mCallback.expect<Available>(network = hn, timeoutMs = 10)
+
+        mCallback.expect<Available>(network = hn)
     }
 
     @Test
