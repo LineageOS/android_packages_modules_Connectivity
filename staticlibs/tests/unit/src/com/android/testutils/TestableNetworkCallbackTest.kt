@@ -160,23 +160,23 @@ class TestableNetworkCallbackTest {
     }
 
     @Test
-    fun testExpectCallbackThat() {
+    fun testExpectWithPredicate() {
         val net = Network(193)
         val netCaps = NetworkCapabilities().addTransportType(CELLULAR)
         // Check that expecting callbackThat anything fails when no callback has been received.
-        assertFails { mCallback.expectCallbackThat(SHORT_TIMEOUT_MS) { true } }
+        assertFails { mCallback.expect<CallbackEntry>(timeoutMs = SHORT_TIMEOUT_MS) { true } }
 
         // Basic test for true and false
         mCallback.onAvailable(net)
-        mCallback.expectCallbackThat { true }
+        mCallback.expect<Available> { true }
         mCallback.onAvailable(net)
-        assertFails { mCallback.expectCallbackThat(SHORT_TIMEOUT_MS) { false } }
+        assertFails { mCallback.expect<CallbackEntry>(timeoutMs = SHORT_TIMEOUT_MS) { false } }
 
         // Try a positive and a negative case
         mCallback.onBlockedStatusChanged(net, true)
-        mCallback.expectCallbackThat { cb -> cb is BlockedStatus && cb.blocked }
+        mCallback.expect<CallbackEntry> { cb -> cb is BlockedStatus && cb.blocked }
         mCallback.onCapabilitiesChanged(net, netCaps)
-        assertFails { mCallback.expectCallbackThat(SHORT_TIMEOUT_MS) { cb ->
+        assertFails { mCallback.expect<CallbackEntry>(timeoutMs = SHORT_TIMEOUT_MS) { cb ->
             cb is CapabilitiesChanged && cb.caps.hasTransport(WIFI)
         } }
     }
@@ -251,22 +251,22 @@ class TestableNetworkCallbackTest {
     }
 
     @Test
-    fun testExpectCallback() {
+    fun testExpect() {
         val net = Network(103)
         // Test expectCallback fails when nothing was sent.
-        assertFails { mCallback.expectCallback<BlockedStatus>(net, SHORT_TIMEOUT_MS) }
+        assertFails { mCallback.expect<BlockedStatus>(net, SHORT_TIMEOUT_MS) }
 
         // Test onAvailable is seen and can be expected
         mCallback.onAvailable(net)
-        mCallback.expectCallback<Available>(net, SHORT_TIMEOUT_MS)
+        mCallback.expect<Available>(net, SHORT_TIMEOUT_MS)
 
         // Test onAvailable won't return calls with a different network
         mCallback.onAvailable(Network(106))
-        assertFails { mCallback.expectCallback<Available>(net, SHORT_TIMEOUT_MS) }
+        assertFails { mCallback.expect<Available>(net, SHORT_TIMEOUT_MS) }
 
         // Test onAvailable won't return calls with a different callback
         mCallback.onAvailable(net)
-        assertFails { mCallback.expectCallback<BlockedStatus>(net, SHORT_TIMEOUT_MS) }
+        assertFails { mCallback.expect<BlockedStatus>(net, SHORT_TIMEOUT_MS) }
     }
 
     @Test
