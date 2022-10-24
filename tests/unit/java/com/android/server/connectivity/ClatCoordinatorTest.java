@@ -202,12 +202,12 @@ public class ClatCoordinatorTest {
          */
         @Override
         public String generateIpv6Address(@NonNull String iface, @NonNull String v4,
-                @NonNull String prefix64) throws IOException {
+                @NonNull String prefix64, int mark) throws IOException {
             if (BASE_IFACE.equals(iface) && XLAT_LOCAL_IPV4ADDR_STRING.equals(v4)
                     && NAT64_PREFIX_STRING.equals(prefix64)) {
                 return XLAT_LOCAL_IPV6ADDR_STRING;
             }
-            fail("unsupported args: " + iface + ", " + v4 + ", " + prefix64);
+            fail("unsupported args: " + iface + ", " + v4 + ", " + prefix64 + ", " + mark);
             return null;
         }
 
@@ -408,7 +408,7 @@ public class ClatCoordinatorTest {
 
         // Generate a checksum-neutral IID.
         inOrder.verify(mDeps).generateIpv6Address(eq(BASE_IFACE),
-                eq(XLAT_LOCAL_IPV4ADDR_STRING), eq(NAT64_PREFIX_STRING));
+                eq(XLAT_LOCAL_IPV4ADDR_STRING), eq(NAT64_PREFIX_STRING), eq(MARK));
 
         // Open, configure and bring up the tun interface.
         inOrder.verify(mDeps).createTunInterface(eq(STACKED_IFACE));
