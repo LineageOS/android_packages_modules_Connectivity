@@ -87,7 +87,8 @@ jstring com_android_server_connectivity_ClatCoordinator_selectIpv4Address(JNIEnv
 
 // Picks a random interface ID that is checksum neutral with the IPv4 address and the NAT64 prefix.
 jstring com_android_server_connectivity_ClatCoordinator_generateIpv6Address(
-        JNIEnv* env, jobject clazz, jstring ifaceStr, jstring v4Str, jstring prefix64Str) {
+        JNIEnv* env, jobject clazz, jstring ifaceStr, jstring v4Str, jstring prefix64Str,
+        jint mark) {
     ScopedUtfChars iface(env, ifaceStr);
     ScopedUtfChars addr4(env, v4Str);
     ScopedUtfChars prefix64(env, prefix64Str);
@@ -111,7 +112,7 @@ jstring com_android_server_connectivity_ClatCoordinator_generateIpv6Address(
     }
 
     in6_addr v6;
-    if (net::clat::generateIpv6Address(iface.c_str(), v4, nat64Prefix, &v6)) {
+    if (net::clat::generateIpv6Address(iface.c_str(), v4, nat64Prefix, &v6, mark)) {
         jniThrowExceptionFmt(env, "java/io/IOException",
                              "Unable to find global source address on %s for %s", iface.c_str(),
                              prefix64.c_str());
@@ -498,7 +499,7 @@ static const JNINativeMethod gMethods[] = {
         {"native_selectIpv4Address", "(Ljava/lang/String;I)Ljava/lang/String;",
          (void*)com_android_server_connectivity_ClatCoordinator_selectIpv4Address},
         {"native_generateIpv6Address",
-         "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;",
+         "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;I)Ljava/lang/String;",
          (void*)com_android_server_connectivity_ClatCoordinator_generateIpv6Address},
         {"native_createTunInterface", "(Ljava/lang/String;)I",
          (void*)com_android_server_connectivity_ClatCoordinator_createTunInterface},

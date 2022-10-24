@@ -24,7 +24,7 @@ bool isIpv4AddressFree(in_addr_t addr);
 in_addr_t selectIpv4Address(const in_addr ip, int16_t prefixlen);
 void makeChecksumNeutral(in6_addr* v6, const in_addr v4, const in6_addr& nat64Prefix);
 int generateIpv6Address(const char* iface, const in_addr v4, const in6_addr& nat64Prefix,
-                        in6_addr* v6);
+                        in6_addr* v6, uint32_t mark);
 int detect_mtu(const struct in6_addr* plat_subnet, uint32_t plat_suffix, uint32_t mark);
 int configure_packet_socket(int sock, in6_addr* addr, int ifindex);
 

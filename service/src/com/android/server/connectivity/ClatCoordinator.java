@@ -172,8 +172,8 @@ public class ClatCoordinator {
          */
         @NonNull
         public String generateIpv6Address(@NonNull String iface, @NonNull String v4,
-                @NonNull String prefix64) throws IOException {
-            return native_generateIpv6Address(iface, v4, prefix64);
+                @NonNull String prefix64, int mark) throws IOException {
+            return native_generateIpv6Address(iface, v4, prefix64, mark);
         }
 
         /**
@@ -528,10 +528,11 @@ public class ClatCoordinator {
         }
 
         // [2] Generate a checksum-neutral IID.
+        final Integer fwmark = getFwmark(netId);
         final String pfx96Str = nat64Prefix.getAddress().getHostAddress();
         final String v6Str;
         try {
-            v6Str = mDeps.generateIpv6Address(iface, v4Str, pfx96Str);
+            v6Str = mDeps.generateIpv6Address(iface, v4Str, pfx96Str, fwmark);
         } catch (IOException e) {
             throw new IOException("no IPv6 addresses were available for clat: " + e);
         }
@@ -569,7 +570,6 @@ public class ClatCoordinator {
         }
 
         // Detect ipv4 mtu.
-        final Integer fwmark = getFwmark(netId);
         final int detectedMtu = mDeps.detectMtu(pfx96Str,
                 ByteBuffer.wrap(GOOGLE_DNS_4.getAddress()).getInt(), fwmark);
         final int mtu = adjustMtu(detectedMtu);
@@ -818,7 +818,7 @@ public class ClatCoordinator {
     private static native String native_selectIpv4Address(String v4addr, int prefixlen)
             throws IOException;
     private static native String native_generateIpv6Address(String iface, String v4,
-            String prefix64) throws IOException;
+            String prefix64, int mark) throws IOException;
     private static native int native_createTunInterface(String tuniface) throws IOException;
     private static native int native_detectMtu(String platSubnet, int platSuffix, int mark)
             throws IOException;
