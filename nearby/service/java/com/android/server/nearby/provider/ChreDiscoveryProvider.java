@@ -130,7 +130,7 @@ public class ChreDiscoveryProvider extends AbstractDiscoveryProvider {
             PresenceScanFilter presenceScanFilter = (PresenceScanFilter) scanFilter;
             Blefilter.BleFilter.Builder filterBuilder = Blefilter.BleFilter.newBuilder();
             for (PublicCredential credential : presenceScanFilter.getCredentials()) {
-                filterBuilder.addCertficate(toProtoPublicCredential(credential));
+                filterBuilder.addCertificate(toProtoPublicCredential(credential));
             }
             for (DataElement dataElement : presenceScanFilter.getExtendedProperties()) {
                 if (dataElement.getKey() == DataElement.DataType.ACCOUNT_KEY_DATA) {
@@ -149,11 +149,14 @@ public class ChreDiscoveryProvider extends AbstractDiscoveryProvider {
     }
 
     private Blefilter.PublicateCertificate toProtoPublicCredential(PublicCredential credential) {
+        Log.d(TAG, String.format("Returns a PublicCertificate with authenticity key size %d and"
+                + " encrypted metadata key tag size %d", credential.getAuthenticityKey().length,
+                credential.getEncryptedMetadataKeyTag().length));
         return Blefilter.PublicateCertificate.newBuilder()
-                        .setAuthenticityKey(ByteString.copyFrom(credential.getAuthenticityKey()))
-                        .setMetadataEncryptionKeyTag(
-                                ByteString.copyFrom(credential.getEncryptedMetadataKeyTag()))
-                        .build();
+                .setAuthenticityKey(ByteString.copyFrom(credential.getAuthenticityKey()))
+                .setMetadataEncryptionKeyTag(
+                        ByteString.copyFrom(credential.getEncryptedMetadataKeyTag()))
+                .build();
     }
 
     private Blefilter.DataElement toProtoDataElement(DataElement dataElement) {
