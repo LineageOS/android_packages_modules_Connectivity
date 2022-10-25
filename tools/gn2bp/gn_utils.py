@@ -185,10 +185,14 @@ class GnParser(object):
     target.toolchain = desc.get('toolchain', None)
     self.all_targets[gn_target_name] = target
 
+    # TODO: determine if below comment should apply for cronet builds in Android.
     # We should never have GN targets directly depend on buidtools. They
     # should hop via //gn:xxx, so we can give generators an opportunity to
     # override them.
-    assert (not gn_target_name.startswith('//buildtools'))
+    # Specifically allow targets to depend on libc++ and libunwind.
+    if not any(match in gn_target_name for match in ['libc++', 'libunwind']):
+      assert (not gn_target_name.startswith('//buildtools'))
+
 
     # Don't descend further into third_party targets. Genrators are supposed
     # to either ignore them or route to other externally-provided targets.
