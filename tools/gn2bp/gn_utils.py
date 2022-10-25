@@ -25,7 +25,6 @@ import re
 import shutil
 import subprocess
 import sys
-from compat import iteritems
 
 BUILDFLAGS_TARGET = '//gn:gen_buildflags'
 GEN_VERSION_TARGET = '//src/base:version_gen_h'
@@ -362,7 +361,7 @@ class GnParser(object):
     def __repr__(self):
       return json.dumps({
           k: (list(sorted(v)) if isinstance(v, set) else v)
-          for (k, v) in iteritems(self.__dict__)
+          for (k, v) in self.__dict__.items()
       },
                         indent=4,
                         sort_keys=True)

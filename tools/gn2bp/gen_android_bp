@@ -34,8 +34,6 @@ import sys
 
 import gn_utils
 
-from compat import itervalues
-
 ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 # Arguments for the GN output directory.
@@ -617,7 +615,7 @@ class Blueprint(object):
     self.modules[module.name] = module
 
   def to_string(self, output):
-    for m in sorted(itervalues(self.modules), key=lambda m: m.name):
+    for m in sorted(self.modules.values(), key=lambda m: m.name):
       m.to_string(output)
 
 
