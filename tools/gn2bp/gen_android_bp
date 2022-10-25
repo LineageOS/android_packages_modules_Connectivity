@@ -836,16 +836,6 @@ def create_blueprint_for_targets(gn, desc, targets):
 
   # Default settings used by all modules.
   defaults = Module('cc_defaults', defaults_module, '//gn:default_deps')
-
-  # We have to use include_dirs passing the path relative to the android tree.
-  # This is because: (i) perfetto_cc_defaults is used also by
-  # test/**/Android.bp; (ii) if we use local_include_dirs instead, paths
-  # become relative to the Android.bp that *uses* cc_defaults (not the one
-  # that defines it).s
-  defaults.include_dirs = {
-      tree_path, tree_path + '/include', tree_path + '/' + buildflags_dir,
-      tree_path + '/src/profiling/memory/include'
-  }
   defaults.cflags = [
       '-Wno-error=return-type',
       '-Wno-sign-compare',
