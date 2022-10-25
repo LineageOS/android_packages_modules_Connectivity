@@ -36,15 +36,6 @@ import gn_utils
 
 ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-# Arguments for the GN output directory.
-gn_args = ' '.join([
-    'is_debug=false',
-    'is_perfetto_build_generator=true',
-    'perfetto_build_with_android=true',
-    'target_cpu="arm"',
-    'target_os="android"',
-])
-
 # Default targets to translate to the blueprint file.
 default_targets = [
     '//:libperfetto_client_experimental',
@@ -1036,7 +1027,8 @@ def main():
       description='Generate Android.bp from a GN description.')
   parser.add_argument(
       '--desc',
-      help='GN description (e.g., gn desc out --format=json --all-toolchains "//*"'
+      help='GN description (e.g., gn desc out --format=json --all-toolchains "//*"',
+      required=True
   )
   parser.add_argument(
       '--extras',
@@ -1054,11 +1046,8 @@ def main():
       help='Targets to include in the blueprint (e.g., "//:perfetto_tests")')
   args = parser.parse_args()
 
-  if args.desc:
-    with open(args.desc) as f:
-      desc = json.load(f)
-  else:
-    desc = gn_utils.create_build_description(gn_args)
+  with open(args.desc) as f:
+    desc = json.load(f)
 
   gn = gn_utils.GnParser(desc)
   blueprint = create_blueprint_for_targets(gn, desc, args.targets or
