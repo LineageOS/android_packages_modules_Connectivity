@@ -103,6 +103,27 @@ static inline __always_inline int nat64(struct __sk_buff* skb, bool is_ethernet)
     __u8 proto = ip6->nexthdr;
     __be16 ip_id = 0;
     __be16 frag_off = htons(IP_DF);
+    __u16 tot_len = ntohs(ip6->payload_len) + sizeof(struct iphdr);  // cannot overflow, see above
+
+    if (proto == IPPROTO_FRAGMENT) {
+        // Must have (ethernet and) ipv6 header and ipv6 fragment extension header
+        if (data + l2_header_size + sizeof(*ip6) + sizeof(struct frag_hdr) > data_end)
+            return TC_ACT_PIPE;
+        const struct frag_hdr *frag = (const struct frag_hdr *)(ip6 + 1);
+        proto = frag->nexthdr;
+        // Trivial hash of 32-bit IPv6 ID field into 16-bit IPv4 field.
+        ip_id = (frag->identification) ^ (frag->identification >> 16);
+        // Conversion of 16-bit IPv6 frag offset to 16-bit IPv4 frag offset field.
+        // IPv6 is '13 bits of offset in multiples of 8' + 2 zero bits + more fragment bit
+        // IPv4 is zero bit + don't frag bit + more frag bit + '13 bits of offset in multiples of 8'
+        frag_off = ntohs(frag->frag_off);
+        frag_off = ((frag_off & 1) << 13) | (frag_off >> 3);
+        frag_off = htons(frag_off);
+        // Note that by construction tot_len is guaranteed to not underflow here
+        tot_len -= sizeof(struct frag_hdr);
+        // This is a badly formed IPv6 packet with less payload than the size of an IPv6 Frag EH
+        if (tot_len < sizeof(struct iphdr)) return TC_ACT_PIPE;
+    }
 
     switch (proto) {
         case IPPROTO_TCP:  // For TCP & UDP the checksum neutrality of the chosen IPv6
@@ -129,7 +150,7 @@ static inline __always_inline int nat64(struct __sk_buff* skb, bool is_ethernet)
             .version = 4,                                                      // u4
             .ihl = sizeof(struct iphdr) / sizeof(__u32),                       // u4
             .tos = (ip6->priority << 4) + (ip6->flow_lbl[0] >> 4),             // u8
-            .tot_len = htons(ntohs(ip6->payload_len) + sizeof(struct iphdr)),  // be16
+            .tot_len = htons(tot_len),                                         // be16
             .id = ip_id,                                                       // be16
             .frag_off = frag_off,                                              // be16
             .ttl = ip6->hop_limit,                                             // u8
@@ -185,6 +206,13 @@ static inline __always_inline int nat64(struct __sk_buff* skb, bool is_ethernet)
     // else
     //   return -ENOTSUPP;
     bpf_csum_update(skb, sum6);
+
+    if (frag_off != htons(IP_DF)) {
+        // If we're converting an IPv6 Fragment, we need to trim off 8 more bytes
+        // We're beyond recovery on error here... but hard to imagine how this could fail.
+        if (bpf_skb_adjust_room(skb, -(__s32)sizeof(struct frag_hdr), BPF_ADJ_ROOM_NET, /*flags*/0))
+            return TC_ACT_SHOT;
+    }
 
     // bpf_skb_change_proto() invalidates all pointers - reload them.
     data = (void*)(long)skb->data;
