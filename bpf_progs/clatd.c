@@ -211,11 +211,6 @@ DEFINE_BPF_PROG("schedcls/ingress6/clat_rawip", AID_ROOT, AID_SYSTEM, sched_cls_
 
 DEFINE_BPF_MAP_GRW(clat_egress4_map, HASH, ClatEgress4Key, ClatEgress4Value, 16, AID_SYSTEM)
 
-DEFINE_BPF_PROG("schedcls/egress4/clat_ether", AID_ROOT, AID_SYSTEM, sched_cls_egress4_clat_ether)
-(struct __sk_buff* skb) {
-    return TC_ACT_PIPE;
-}
-
 DEFINE_BPF_PROG("schedcls/egress4/clat_rawip", AID_ROOT, AID_SYSTEM, sched_cls_egress4_clat_rawip)
 (struct __sk_buff* skb) {
     // Must be meta-ethernet IPv4 frame
