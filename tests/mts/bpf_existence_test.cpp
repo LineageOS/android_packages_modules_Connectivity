@@ -100,7 +100,6 @@ static const set<string> MAINLINE_FOR_T_PLUS = {
     NETD "map_netd_uid_counterset_map",
     NETD "map_netd_uid_owner_map",
     NETD "map_netd_uid_permission_map",
-    SHARED "prog_clatd_schedcls_egress4_clat_ether",
     SHARED "prog_clatd_schedcls_egress4_clat_rawip",
     SHARED "prog_clatd_schedcls_ingress6_clat_ether",
     SHARED "prog_clatd_schedcls_ingress6_clat_rawip",
