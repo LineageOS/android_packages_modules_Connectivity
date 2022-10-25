@@ -338,6 +338,7 @@ class Module(object):
     self.defaults = set()
     self.cflags = set()
     self.include_dirs = set()
+    self.local_include_dirs = set()
     self.header_libs = set()
     self.required = set()
     self.tool_files = None
@@ -384,6 +385,7 @@ class Module(object):
     self._output_field(output, 'defaults')
     self._output_field(output, 'cflags')
     self._output_field(output, 'include_dirs')
+    self._output_field(output, 'local_include_dirs')
     self._output_field(output, 'header_libs')
     self._output_field(output, 'required')
     self._output_field(output, 'dist')
@@ -739,6 +741,7 @@ def create_modules_from_target(blueprint, gn, gn_target_name):
 
   if target.type in gn_utils.LINKER_UNIT_TYPES:
     module.cflags.update(_get_cflags(target))
+    module.local_include_dirs.update(gn_utils.label_to_path(it) for it in target.include_dirs)
 
   module_is_compiled = module.type not in ('genrule', 'filegroup')
   if module_is_compiled:
@@ -844,8 +847,8 @@ def create_blueprint_for_targets(gn, desc, targets):
       '-fvisibility=hidden',
       '-O2',
   ]
-
   blueprint.add_module(defaults)
+
   for target in targets:
     create_modules_from_target(blueprint, gn, target)
   return blueprint
