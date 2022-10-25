@@ -429,11 +429,9 @@ class Module(object):
     self.include_dirs = set()
     self.header_libs = set()
     self.required = set()
-    self.user_debug_flag = False
     self.tool_files = None
     self.android = Target('android')
     self.host = Target('host')
-    self.lto = None
     self.stl = None
     self.dist = dict()
     self.strip = dict()
@@ -499,22 +497,6 @@ class Module(object):
         output.append('    %s' % line)
       output.append('    },')
 
-    if self.user_debug_flag:
-      output.append('    product_variables: {')
-      output.append('        debuggable: {')
-      output.append(
-          '            cflags: ["-DPERFETTO_BUILD_WITH_ANDROID_USERDEBUG"],')
-      output.append('        },')
-      output.append('    },')
-    if self.lto is not None:
-      output.append('    target: {')
-      output.append('        android: {')
-      output.append('            lto: {')
-      output.append('                thin: %s,' %
-                    'true' if self.lto else 'false')
-      output.append('            },')
-      output.append('        },')
-      output.append('    },')
     output.append('}')
     output.append('')
 
@@ -961,8 +943,6 @@ def create_blueprint_for_targets(gn, desc, targets):
       '-fvisibility=hidden',
       '-O2',
   ]
-  defaults.user_debug_flag = True
-  defaults.lto = True
 
   blueprint.add_module(defaults)
   for target in targets:
