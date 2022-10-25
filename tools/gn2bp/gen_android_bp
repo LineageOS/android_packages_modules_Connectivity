@@ -46,10 +46,6 @@ target_host_supported = [
     # TODO: remove if this is not useful for the cronet build.
 ]
 
-target_vendor_available = [
-    '//:libperfetto_client_experimental',
-]
-
 # Proto target groups which will be made public.
 proto_groups = {
     # TODO: remove if this is not used for the cronet build.
@@ -842,7 +838,6 @@ def create_modules_from_target(blueprint, gn, gn_target_name):
 
   blueprint.add_module(module)
   module.host_supported = (name_without_toolchain in target_host_supported)
-  module.vendor_available = (name_without_toolchain in target_vendor_available)
   module.init_rc = target_initrc.get(target.name, [])
   module.srcs.update(
       gn_utils.label_to_path(src)
