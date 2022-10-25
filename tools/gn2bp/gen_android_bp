@@ -1109,10 +1109,6 @@ def main():
     # Text files should have a trailing EOL.
     f.write('\n')
 
-  # Generate the perfetto_build_flags.h file.
-  out_files.append(os.path.join(buildflags_dir, 'perfetto_build_flags.h.swp'))
-  gn_utils.gen_buildflags(gn_args, out_files[-1])
-
   return 0
 
 
