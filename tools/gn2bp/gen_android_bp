@@ -36,44 +36,6 @@ import gn_utils
 
 ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-# Default targets to translate to the blueprint file.
-default_targets = [
-    '//:libperfetto_client_experimental',
-    '//:libperfetto',
-    '//:perfetto_integrationtests',
-    '//:perfetto_unittests',
-    '//protos/perfetto/trace:perfetto_trace_protos',
-    '//src/android_internal:libperfetto_android_internal',
-    '//src/perfetto_cmd:perfetto',
-    '//src/perfetto_cmd:trigger_perfetto',
-    '//src/profiling/memory:heapprofd_client',
-    '//src/profiling/memory:heapprofd_client_api',
-    '//src/profiling/memory:heapprofd_api_noop',
-    '//src/profiling/memory:heapprofd',
-    '//src/profiling/memory:heapprofd_standalone_client',
-    '//src/profiling/perf:traced_perf',
-    '//src/traced/probes:traced_probes',
-    '//src/traced/service:traced',
-    '//src/trace_processor:trace_processor_shell',
-    '//test/cts:perfetto_cts_deps',
-    '//test/cts:perfetto_cts_jni_deps',
-    '//test:perfetto_gtest_logcat_printer',
-    '//test/vts:perfetto_vts_deps',
-]
-
-# Host targets
-ipc_plugin = '//src/ipc/protoc_plugin:ipc_plugin(%s)' % gn_utils.HOST_TOOLCHAIN
-protozero_plugin = '//src/protozero/protoc_plugin:protozero_plugin(%s)' % (
-    gn_utils.HOST_TOOLCHAIN)
-cppgen_plugin = '//src/protozero/protoc_plugin:cppgen_plugin(%s)' % (
-    gn_utils.HOST_TOOLCHAIN)
-
-default_targets += [
-    '//src/traceconv:traceconv(%s)' % gn_utils.HOST_TOOLCHAIN,
-    protozero_plugin,
-    ipc_plugin,
-]
-
 # Defines a custom init_rc argument to be applied to the corresponding output
 # blueprint target.
 target_initrc = {
@@ -613,9 +575,6 @@ def label_to_module_name(label):
   # its name and return just the target name. This is so tools like
   # "traceconv" stay as such in the Android tree.
   label_without_toolchain = gn_utils.label_without_toolchain(label)
-  if label in default_targets or label_without_toolchain in default_targets:
-    return label_without_toolchain.split(':')[-1]
-
   module = re.sub(r'^//:?', '', label_without_toolchain)
   module = re.sub(r'[^a-zA-Z0-9_]', '_', module)
   if not module.startswith(module_prefix):
@@ -1043,23 +1002,17 @@ def main():
   parser.add_argument(
       'targets',
       nargs=argparse.REMAINDER,
-      help='Targets to include in the blueprint (e.g., "//:perfetto_tests")')
+      help='Targets to include in the blueprint (e.g., "//:perfetto_tests")'
+  )
   args = parser.parse_args()
 
   with open(args.desc) as f:
     desc = json.load(f)
 
   gn = gn_utils.GnParser(desc)
-  blueprint = create_blueprint_for_targets(gn, desc, args.targets or
-                                           default_targets)
+  blueprint = create_blueprint_for_targets(gn, desc, args.targets)
   project_root = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))
   tool_name = os.path.relpath(os.path.abspath(__file__), project_root)
-
-  # TODO(primiano): enable this on Android after the TODO in
-  # perfetto_component.gni is fixed.
-  # Check for ODR violations
-  # for target_name in default_targets:
-  # checker = gn_utils.ODRChecker(gn, target_name)
 
   # Add any proto groups to the blueprint.
   for l_name, t_names in proto_groups.items():
