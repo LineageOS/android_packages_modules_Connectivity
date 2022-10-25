@@ -150,7 +150,7 @@ def compute_source_dependencies(out, system_buildtools=False):
 def label_to_path(label):
   """Turn a GN output label (e.g., //some_dir/file.cc) into a path."""
   assert label.startswith('//')
-  return label[2:]
+  return label[2:] or "./"
 
 
 def label_without_toolchain(label):
