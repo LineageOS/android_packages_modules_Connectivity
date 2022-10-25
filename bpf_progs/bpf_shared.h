@@ -95,13 +95,13 @@ typedef struct {
 
 // 'static' - otherwise these constants end up in .rodata in the resulting .o post compilation
 static const int COOKIE_UID_MAP_SIZE = 10000;
-static const int UID_COUNTERSET_MAP_SIZE = 2000;
+static const int UID_COUNTERSET_MAP_SIZE = 4000;
 static const int APP_STATS_MAP_SIZE = 10000;
 static const int STATS_MAP_SIZE = 5000;
 static const int IFACE_INDEX_NAME_MAP_SIZE = 1000;
 static const int IFACE_STATS_MAP_SIZE = 1000;
 static const int CONFIGURATION_MAP_SIZE = 2;
-static const int UID_OWNER_MAP_SIZE = 2000;
+static const int UID_OWNER_MAP_SIZE = 4000;
 
 #ifdef __cplusplus
 
