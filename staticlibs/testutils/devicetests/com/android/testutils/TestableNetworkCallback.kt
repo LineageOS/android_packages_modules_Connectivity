@@ -212,10 +212,11 @@ open class TestableNetworkCallback private constructor(
     ): CallbackEntry = poll(timeoutMs) ?: fail(errorMsg)
 
     /*****
-     * AssertNextIs family of methods.
+     * expect family of methods.
      * These methods fetch the next callback and assert it matches the conditions : type,
      * passed predicate. If no callback is received within the timeout, these methods fail.
      */
+    @JvmOverloads
     fun <T : CallbackEntry> expect(
         type: KClass<T>,
         network: Network = ANY_NETWORK,
@@ -226,6 +227,7 @@ open class TestableNetworkCallback private constructor(
         test(it as? T ?: fail("Expected callback ${type.simpleName}, got $it"))
     } as T
 
+    @JvmOverloads
     fun <T : CallbackEntry> expect(
         type: KClass<T>,
         network: HasNetwork,
@@ -269,7 +271,7 @@ open class TestableNetworkCallback private constructor(
         type: KClass<T>,
         network: Network,
         timeoutMs: Long,
-        test: (T) -> Boolean = { true }
+        test: (T) -> Boolean
     ) = expect(type, network, timeoutMs, null, test)
 
     @JvmOverloads
@@ -277,7 +279,7 @@ open class TestableNetworkCallback private constructor(
         type: KClass<T>,
         network: HasNetwork,
         timeoutMs: Long,
-        test: (T) -> Boolean = { true }
+        test: (T) -> Boolean
     ) = expect(type, network.network, timeoutMs, null, test)
 
     // Without |network| or |timeout|
@@ -301,21 +303,21 @@ open class TestableNetworkCallback private constructor(
     fun <T : CallbackEntry> expect(
         type: KClass<T>,
         network: Network,
-        test: (T) -> Boolean = { true }
+        test: (T) -> Boolean
     ) = expect(type, network, defaultTimeoutMs, null, test)
 
     @JvmOverloads
     fun <T : CallbackEntry> expect(
         type: KClass<T>,
         network: HasNetwork,
-        test: (T) -> Boolean = { true }
+        test: (T) -> Boolean
     ) = expect(type, network.network, defaultTimeoutMs, null, test)
 
     // Without |network| or |timeout| or |errorMsg|
     @JvmOverloads
     fun <T : CallbackEntry> expect(
         type: KClass<T>,
-        test: (T) -> Boolean = { true }
+        test: (T) -> Boolean
     ) = expect(type, ANY_NETWORK, defaultTimeoutMs, null, test)
 
     // Kotlin reified versions. Don't call methods above, or the predicate would need to be noinline
