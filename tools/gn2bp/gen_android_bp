@@ -39,9 +39,7 @@ ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 # Defines a custom init_rc argument to be applied to the corresponding output
 # blueprint target.
 target_initrc = {
-    '//src/traced/service:traced': {'perfetto.rc'},
-    '//src/profiling/memory:heapprofd': {'heapprofd.rc'},
-    '//src/profiling/perf:traced_perf': {'traced_perf.rc'},
+    # TODO: this can probably be removed.
 }
 
 target_host_supported = [
