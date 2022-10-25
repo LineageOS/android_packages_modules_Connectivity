@@ -403,7 +403,7 @@ class NetworkAgentTest {
     fun testConnectAndUnregister() {
         val (agent, callback) = createConnectedNetworkAgent()
         unregister(agent)
-        callback.expectCallback<Lost>(agent.network!!)
+        callback.expect<Lost>(agent.network!!)
         assertFailsWith<IllegalStateException>("Must not be able to register an agent twice") {
             agent.register()
         }
@@ -454,7 +454,7 @@ class NetworkAgentTest {
             agent.sendNetworkCapabilities(nc)
             callbacks[0].expectCapabilitiesThat(agent.network!!) { it.signalStrength == 55 }
             callbacks[1].expectCapabilitiesThat(agent.network!!) { it.signalStrength == 55 }
-            callbacks[2].expectCallback<Lost>(agent.network!!)
+            callbacks[2].expect<Lost>(agent.network!!)
         }
         callbacks.forEach {
             mCM.unregisterNetworkCallback(it)
@@ -532,12 +532,12 @@ class NetworkAgentTest {
         agent.markConnected()
 
         // Make sure the UIDs have been ignored.
-        callback.expectCallback<Available>(agent.network!!)
+        callback.expect<Available>(agent.network!!)
         callback.expectCapabilitiesThat(agent.network!!) {
             it.allowedUids.isEmpty() && !it.hasCapability(NET_CAPABILITY_VALIDATED)
         }
-        callback.expectCallback<LinkPropertiesChanged>(agent.network!!)
-        callback.expectCallback<BlockedStatus>(agent.network!!)
+        callback.expect<LinkPropertiesChanged>(agent.network!!)
+        callback.expect<BlockedStatus>(agent.network!!)
         callback.expectCapabilitiesThat(agent.network!!) {
             it.allowedUids.isEmpty() && it.hasCapability(NET_CAPABILITY_VALIDATED)
         }
@@ -577,7 +577,7 @@ class NetworkAgentTest {
                 .setLegacyInt(WORSE_NETWORK_SCORE)
                 .setExiting(true)
                 .build())
-        callback.expectCallback<Available>(agent2.network!!)
+        callback.expect<Available>(agent2.network!!)
 
         // tearDown() will unregister the requests and agents
     }
@@ -661,7 +661,7 @@ class NetworkAgentTest {
         }
 
         unregister(agent)
-        callback.expectCallback<Lost>(agent.network!!)
+        callback.expect<Lost>(agent.network!!)
     }
 
     private fun unregister(agent: TestableNetworkAgent) {
@@ -834,14 +834,14 @@ class NetworkAgentTest {
         agentStronger.register()
         agentStronger.markConnected()
         commonCallback.expectAvailableCallbacks(agentStronger.network!!)
-        callbackWeaker.expectCallback<Losing>(agentWeaker.network!!)
+        callbackWeaker.expect<Losing>(agentWeaker.network!!)
         val expectedRemainingLingerDuration = lingerStart +
                 NetworkAgent.MIN_LINGER_TIMER_MS.toLong() - SystemClock.elapsedRealtime()
         // If the available callback is too late. The remaining duration will be reduced.
         assertTrue(expectedRemainingLingerDuration > 0,
                 "expected remaining linger duration is $expectedRemainingLingerDuration")
         callbackWeaker.assertNoCallback(expectedRemainingLingerDuration)
-        callbackWeaker.expectCallback<Lost>(agentWeaker.network!!)
+        callbackWeaker.expect<Lost>(agentWeaker.network!!)
     }
 
     @Test
@@ -908,7 +908,7 @@ class NetworkAgentTest {
         bestMatchingCb.assertNoCallback()
         agent1.unregister()
         agentsToCleanUp.remove(agent1)
-        bestMatchingCb.expectCallback<Lost>(agent1.network!!)
+        bestMatchingCb.expect<Lost>(agent1.network!!)
 
         // tearDown() will unregister the requests and agents
     }
@@ -1222,7 +1222,7 @@ class NetworkAgentTest {
         // testCallback will not see any events. agent2 is be torn down because it has no requests.
         val (agent2, network2) = connectNetwork()
         matchAllCallback.expectAvailableThenValidatedCallbacks(network2)
-        matchAllCallback.expectCallback<Lost>(network2)
+        matchAllCallback.expect<Lost>(network2)
         agent2.expectCallback<OnNetworkUnwanted>()
         agent2.expectCallback<OnNetworkDestroyed>()
         assertNull(mCM.getLinkProperties(network2))
@@ -1250,7 +1250,7 @@ class NetworkAgentTest {
 
         // As soon as the replacement arrives, network1 is disconnected.
         // Check that this happens before the replacement timeout (5 seconds) fires.
-        matchAllCallback.expectCallback<Lost>(network1, 2_000 /* timeoutMs */)
+        matchAllCallback.expect<Lost>(network1, 2_000 /* timeoutMs */)
         agent1.expectCallback<OnNetworkUnwanted>()
 
         // Test lingering:
@@ -1263,19 +1263,19 @@ class NetworkAgentTest {
         val network4 = agent4.network!!
         matchAllCallback.expectAvailableThenValidatedCallbacks(network4)
         agent4.sendNetworkScore(NetworkScore.Builder().setTransportPrimary(true).build())
-        matchAllCallback.expectCallback<Losing>(network3)
+        matchAllCallback.expect<Losing>(network3)
         testCallback.expectAvailableCallbacks(network4, validated = true)
         mCM.unregisterNetworkCallback(agent4callback)
         agent3.unregisterAfterReplacement(5_000)
         agent3.expectCallback<OnNetworkUnwanted>()
-        matchAllCallback.expectCallback<Lost>(network3, 1000L)
+        matchAllCallback.expect<Lost>(network3, 1000L)
         agent3.expectCallback<OnNetworkDestroyed>()
 
         // Now mark network4 awaiting replacement with a low timeout, and check that if no
         // replacement arrives, it is torn down.
         agent4.unregisterAfterReplacement(100 /* timeoutMillis */)
-        matchAllCallback.expectCallback<Lost>(network4, 1000L /* timeoutMs */)
-        testCallback.expectCallback<Lost>(network4, 1000L /* timeoutMs */)
+        matchAllCallback.expect<Lost>(network4, 1000L /* timeoutMs */)
+        testCallback.expect<Lost>(network4, 1000L /* timeoutMs */)
         agent4.expectCallback<OnNetworkDestroyed>()
         agent4.expectCallback<OnNetworkUnwanted>()
 
@@ -1286,8 +1286,8 @@ class NetworkAgentTest {
         testCallback.expectAvailableThenValidatedCallbacks(network5)
         agent5.unregisterAfterReplacement(5_000 /* timeoutMillis */)
         agent5.unregister()
-        matchAllCallback.expectCallback<Lost>(network5, 1000L /* timeoutMs */)
-        testCallback.expectCallback<Lost>(network5, 1000L /* timeoutMs */)
+        matchAllCallback.expect<Lost>(network5, 1000L /* timeoutMs */)
+        testCallback.expect<Lost>(network5, 1000L /* timeoutMs */)
         agent5.expectCallback<OnNetworkDestroyed>()
         agent5.expectCallback<OnNetworkUnwanted>()
 
@@ -1334,7 +1334,7 @@ class NetworkAgentTest {
             it.hasCapability(NET_CAPABILITY_VALIDATED)
         }
         matchAllCallback.expectAvailableCallbacks(wifiNetwork, validated = false)
-        matchAllCallback.expectCallback<Losing>(cellNetwork)
+        matchAllCallback.expect<Losing>(cellNetwork)
         matchAllCallback.expectCapabilitiesThat(wifiNetwork) {
             it.hasCapability(NET_CAPABILITY_VALIDATED)
         }
@@ -1363,7 +1363,7 @@ class NetworkAgentTest {
         val (newWifiAgent, newWifiNetwork) = connectNetwork(TRANSPORT_WIFI)
         testCallback.expectAvailableCallbacks(newWifiNetwork, validated = true)
         matchAllCallback.expectAvailableThenValidatedCallbacks(newWifiNetwork)
-        matchAllCallback.expectCallback<Lost>(wifiNetwork)
+        matchAllCallback.expect<Lost>(wifiNetwork)
         wifiAgent.expectCallback<OnNetworkUnwanted>()
     }
 
@@ -1382,7 +1382,7 @@ class NetworkAgentTest {
         // lost callback should be sent still.
         agent.markConnected()
         agent.unregister()
-        callback.expectCallback<Available>(agent.network!!)
+        callback.expect<Available>(agent.network!!)
         callback.eventuallyExpect<Lost> { it.network == agent.network }
     }
 }
