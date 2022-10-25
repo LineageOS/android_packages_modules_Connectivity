@@ -1035,10 +1035,6 @@ def main():
   parser = argparse.ArgumentParser(
       description='Generate Android.bp from a GN description.')
   parser.add_argument(
-      '--check-only',
-      help='Don\'t keep the generated files',
-      action='store_true')
-  parser.add_argument(
       '--desc',
       help='GN description (e.g., gn desc out --format=json --all-toolchains "//*"'
   )
@@ -1117,8 +1113,7 @@ def main():
   out_files.append(os.path.join(buildflags_dir, 'perfetto_build_flags.h.swp'))
   gn_utils.gen_buildflags(gn_args, out_files[-1])
 
-  # Either check the contents or move the files to their final destination.
-  return gn_utils.check_or_commit_generated_files(out_files, args.check_only)
+  return 0
 
 
 if __name__ == '__main__':
