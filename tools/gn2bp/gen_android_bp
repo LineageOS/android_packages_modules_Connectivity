@@ -101,99 +101,10 @@ cflag_allowlist = r'^-DPERFETTO.*$'
 # Compiler defines which are passed through to the blueprint.
 define_allowlist = r'^(GOOGLE_PROTO.*)|(ZLIB_.*)|(USE_MMAP)|(HAVE_HIDDEN)$'
 
-# The directory where the generated perfetto_build_flags.h will be copied into.
-buildflags_dir = 'include/perfetto/base/build_configs/android_tree'
-
-
-def enumerate_data_deps():
-  with open(os.path.join(ROOT_DIR, 'tools', 'test_data.txt')) as f:
-    lines = f.readlines()
-  for line in (line.strip() for line in lines if not line.startswith('#')):
-    assert os.path.exists(line), 'file %s should exist' % line
-    if line.startswith('test/data/'):
-      # Skip test data files that require GCS. They are only for benchmarks.
-      # We don't run benchmarks in the android tree.
-      continue
-    if line.endswith('/.'):
-      yield line[:-1] + '**/*'
-    else:
-      yield line
-
-
 # Additional arguments to apply to Android.bp rules.
 additional_args = {
-    'heapprofd_client_api': [
-        ('static_libs', {'libasync_safe'}),
-        # heapprofd_client_api MUST NOT have global constructors. Because it
-        # is loaded in an __attribute__((constructor)) of libc, we cannot
-        # guarantee that the global constructors get run before it is used.
-        ('cflags', {'-Wglobal-constructors', '-Werror=global-constructors'}),
-        ('version_script', 'src/profiling/memory/heapprofd_client_api.map.txt'),
-        ('stubs', {
-            'versions': ['S'],
-            'symbol_file': 'src/profiling/memory/heapprofd_client_api.map.txt',
-        }),
-        ('export_include_dirs', {'src/profiling/memory/include'}),
-    ],
-    'heapprofd_api_noop': [
-        ('version_script', 'src/profiling/memory/heapprofd_client_api.map.txt'),
-        ('stubs', {
-            'versions': ['S'],
-            'symbol_file': 'src/profiling/memory/heapprofd_client_api.map.txt',
-        }),
-        ('export_include_dirs', {'src/profiling/memory/include'}),
-    ],
-    'heapprofd_client': [
-        ('include_dirs', {'bionic/libc'}),
-        ('static_libs', {'libasync_safe'}),
-    ],
-    'heapprofd_standalone_client': [
-        ('static_libs', {'libasync_safe'}),
-        ('version_script', 'src/profiling/memory/heapprofd_client_api.map.txt'),
-        ('export_include_dirs', {'src/profiling/memory/include'}),
-        ('stl', 'libc++_static'),
-    ],
-#    'perfetto_unittests': [
-#        ('data', set(enumerate_data_deps())),
-#        ('include_dirs', {'bionic/libc/kernel'}),
-#    ],
-    'perfetto_integrationtests': [
-        ('test_suites', {'general-tests'}),
-        ('test_config', 'PerfettoIntegrationTests.xml'),
-    ],
-    'traced_probes': [('required', {
-        'libperfetto_android_internal', 'trigger_perfetto', 'traced_perf',
-        'mm_events'
-    }),],
-    'libperfetto_android_internal': [('static_libs', {'libhealthhalutils'}),],
-    'trace_processor_shell': [
-        ('strip', {
-            'all': True
-        }),
-        ('host', {
-            'stl': 'libc++_static',
-            'dist': {
-                'targets': ['sdk_repo']
-            },
-        }),
-    ],
-    'libperfetto_client_experimental': [
-        ('apex_available', {
-            '//apex_available:platform', 'com.android.art',
-            'com.android.art.debug'
-        }),
-        ('min_sdk_version', 'S'),
-        ('shared_libs', {'liblog'}),
-        ('export_include_dirs', {'include', buildflags_dir}),
-    ],
-    'perfetto_trace_protos': [
-        ('apex_available', {
-            '//apex_available:platform', 'com.android.art',
-            'com.android.art.debug'
-        }),
-        ('min_sdk_version', 'S'),
-    ],
-    'libperfetto': [('export_include_dirs', {'include', buildflags_dir}),],
+    # TODO: remove if this is not useful for the cronet build.
+    # Consider using additional_args for overriding the genrule cmd property for gn actions.
 }
 
 
