@@ -127,12 +127,6 @@ static inline bool isAtLeastKernelVersion(unsigned major, unsigned minor, unsign
             GTEST_SKIP() << "Skip: bpf is not supported.";  \
     } while (0)
 
-#define SKIP_IF_EXTENDED_BPF_NOT_SUPPORTED                               \
-    do {                                                                 \
-        if (!android::bpf::isAtLeastKernelVersion(4, 14, 0))             \
-            GTEST_SKIP() << "Skip: extended bpf feature not supported."; \
-    } while (0)
-
 #define SKIP_IF_XDP_NOT_SUPPORTED                           \
     do {                                                    \
         if (!android::bpf::isAtLeastKernelVersion(5, 9, 0)) \
