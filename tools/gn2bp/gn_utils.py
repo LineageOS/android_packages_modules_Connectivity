@@ -98,7 +98,7 @@ class GnParser(object):
       self.name = name  # e.g. //src/ipc:ipc
 
       VALID_TYPES = ('static_library', 'shared_library', 'executable', 'group',
-                     'action', 'source_set', 'proto_library')
+                     'action', 'source_set', 'proto_library', 'copy', 'action_foreach')
       assert (type in VALID_TYPES)
       self.type = type
       self.testonly = False
@@ -215,7 +215,7 @@ class GnParser(object):
     elif target.type in LINKER_UNIT_TYPES:
       self.linker_units[gn_target_name] = target
       target.sources.update(desc.get('sources', []))
-    elif target.type == 'action':
+    elif target.type in ['action', 'action_foreach']:
       self.actions[gn_target_name] = target
       target.inputs.update(desc.get('inputs', []))
       target.sources.update(desc.get('sources', []))
@@ -225,6 +225,9 @@ class GnParser(object):
       # Args are typically relative to the root build dir (../../xxx)
       # because root build dir is typically out/xxx/).
       target.args = [re.sub('^../../', '//', x) for x in desc['args']]
+    elif target.type == 'copy':
+      # TODO: copy rules are not currently implemented.
+      self.actions[gn_target_name] = target
 
     # Default for 'public' is //* - all headers in 'sources' are public.
     # TODO(primiano): if a 'public' section is specified (even if empty), then
@@ -255,7 +258,7 @@ class GnParser(object):
         target.update(dep)  # Bubble up source set's cflags/ldflags etc.
       elif dep.type == 'group':
         target.update(dep)  # Bubble up groups's cflags/ldflags etc.
-      elif dep.type == 'action':
+      elif dep.type in ['action', 'action_foreach', 'copy']:
         if proto_target_type is None:
           target.deps.add(dep_name)
       elif dep.type in LINKER_UNIT_TYPES:
