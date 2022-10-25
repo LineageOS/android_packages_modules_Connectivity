@@ -126,9 +126,18 @@ void makeChecksumNeutral(in6_addr* v6, const in_addr v4, const in6_addr& nat64Pr
 
 // Picks a random interface ID that is checksum neutral with the IPv4 address and the NAT64 prefix.
 int generateIpv6Address(const char* iface, const in_addr v4, const in6_addr& nat64Prefix,
-                        in6_addr* v6) {
+                        in6_addr* v6, uint32_t mark) {
     int s = socket(AF_INET6, SOCK_DGRAM | SOCK_CLOEXEC, 0);
     if (s == -1) return -errno;
+
+    // Socket's mark affects routing decisions (network selection)
+    // An fwmark is necessary for clat to bypass the VPN during initialization.
+    if ((mark != MARK_UNSET) && setsockopt(s, SOL_SOCKET, SO_MARK, &mark, sizeof(mark))) {
+        int ret = errno;
+        ALOGE("setsockopt(SOL_SOCKET, SO_MARK) failed: %s", strerror(errno));
+        close(s);
+        return -ret;
+    }
 
     if (setsockopt(s, SOL_SOCKET, SO_BINDTODEVICE, iface, strlen(iface) + 1) == -1) {
         close(s);
