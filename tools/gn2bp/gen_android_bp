@@ -52,7 +52,7 @@ proto_groups = {
 }
 
 # All module names are prefixed with this string to avoid collisions.
-module_prefix = 'perfetto_'
+module_prefix = 'cronet_aml_'
 
 # Shared libraries which are directly translated to Android system equivalents.
 shared_library_allowlist = [
