@@ -292,6 +292,8 @@ public class NearbyManager {
         Objects.requireNonNull(context);
         Settings.Secure.putInt(
                 context.getContentResolver(), FAST_PAIR_SCAN_ENABLED, enable ? 1 : 0);
+        Log.v(TAG, String.format(
+                "successfully %s Fast Pair scan", enable ? "enables" : "disables"));
     }
 
     private static class ScanListenerTransport extends IScanListener.Stub {
