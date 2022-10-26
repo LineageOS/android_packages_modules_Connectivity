@@ -110,7 +110,8 @@ public class MdnsServiceTypeClient {
                 port,
                 ipv4Address,
                 ipv6Address,
-                response.getTextRecord().getStrings());
+                response.getTextRecord().getStrings(),
+                response.getTextRecord().getEntries());
     }
 
     /**
