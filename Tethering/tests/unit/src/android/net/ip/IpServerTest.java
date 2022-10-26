@@ -99,6 +99,7 @@ import com.android.net.module.util.BpfMap;
 import com.android.net.module.util.InterfaceParams;
 import com.android.net.module.util.NetworkStackConstants;
 import com.android.net.module.util.SharedLog;
+import com.android.net.module.util.Struct.S32;
 import com.android.net.module.util.bpf.Tether4Key;
 import com.android.net.module.util.bpf.Tether4Value;
 import com.android.net.module.util.bpf.TetherStatsKey;
@@ -197,6 +198,7 @@ public class IpServerTest {
     @Mock private BpfMap<TetherStatsKey, TetherStatsValue> mBpfStatsMap;
     @Mock private BpfMap<TetherLimitKey, TetherLimitValue> mBpfLimitMap;
     @Mock private BpfMap<TetherDevKey, TetherDevValue> mBpfDevMap;
+    @Mock private BpfMap<S32, S32> mBpfErrorMap;
 
     @Captor private ArgumentCaptor<DhcpServingParamsParcel> mDhcpParamsCaptor;
 
@@ -359,6 +361,11 @@ public class IpServerTest {
                     @Nullable
                     public BpfMap<TetherDevKey, TetherDevValue> getBpfDevMap() {
                         return mBpfDevMap;
+                    }
+
+                    @Nullable
+                    public BpfMap<S32, S32> getBpfErrorMap() {
+                        return mBpfErrorMap;
                     }
                 };
         mBpfCoordinator = spy(new BpfCoordinator(mBpfDeps));

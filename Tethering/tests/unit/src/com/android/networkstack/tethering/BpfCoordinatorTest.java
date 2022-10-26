@@ -99,6 +99,7 @@ import com.android.net.module.util.IBpfMap;
 import com.android.net.module.util.InterfaceParams;
 import com.android.net.module.util.NetworkStackConstants;
 import com.android.net.module.util.SharedLog;
+import com.android.net.module.util.Struct.S32;
 import com.android.net.module.util.bpf.Tether4Key;
 import com.android.net.module.util.bpf.Tether4Value;
 import com.android.net.module.util.bpf.TetherStatsKey;
@@ -365,6 +366,7 @@ public class BpfCoordinatorTest {
     @Mock private IBpfMap<TetherDownstream6Key, Tether6Value> mBpfDownstream6Map;
     @Mock private IBpfMap<TetherUpstream6Key, Tether6Value> mBpfUpstream6Map;
     @Mock private IBpfMap<TetherDevKey, TetherDevValue> mBpfDevMap;
+    @Mock private IBpfMap<S32, S32> mBpfErrorMap;
 
     // Late init since methods must be called by the thread that created this object.
     private TestableNetworkStatsProviderCbBinder mTetherStatsProviderCb;
@@ -456,6 +458,11 @@ public class BpfCoordinatorTest {
                     @Nullable
                     public IBpfMap<TetherDevKey, TetherDevValue> getBpfDevMap() {
                         return mBpfDevMap;
+                    }
+
+                    @Nullable
+                    public IBpfMap<S32, S32> getBpfErrorMap() {
+                        return mBpfErrorMap;
                     }
             });
 
