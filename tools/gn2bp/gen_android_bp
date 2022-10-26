@@ -815,6 +815,12 @@ def create_modules_from_target(blueprint, gn, gn_target_name):
     if dep_name.startswith('//buildtools'):
       continue
 
+    # |builtin_deps| override GN deps with Android-specific ones. See the
+    # config in the top of this file.
+    if gn_utils.label_without_toolchain(dep_name) in builtin_deps:
+      builtin_deps[gn_utils.label_without_toolchain(dep_name)](module)
+      continue
+
     # Ignore the dependency on the gen_buildflags genrule. That is run
     # separately in this generator and the generated file is copied over
     # into the repo (see usage of |buildflags_dir| in this script).
@@ -827,11 +833,6 @@ def create_modules_from_target(blueprint, gn, gn_target_name):
     if not module_is_compiled:
       continue
 
-    # |builtin_deps| override GN deps with Android-specific ones. See the
-    # config in the top of this file.
-    if gn_utils.label_without_toolchain(dep_name) in builtin_deps:
-      builtin_deps[gn_utils.label_without_toolchain(dep_name)](module)
-      continue
 
     # Don't recurse in any other //gn dep if not handled by builtin_deps.
     if dep_name.startswith('//gn:'):
