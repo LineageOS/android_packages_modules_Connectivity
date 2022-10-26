@@ -20,6 +20,7 @@ import android.os.VintfRuntimeInfo;
 import android.text.TextUtils;
 import android.util.Pair;
 
+import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -128,7 +129,7 @@ public class DeviceInfoUtils {
         final Pair<Integer, Integer> v1 = getMajorMinorVersion(s1);
         final Pair<Integer, Integer> v2 = getMajorMinorVersion(s2);
 
-        if (v1.first == v2.first) {
+        if (Objects.equals(v1.first, v2.first)) {
             return Integer.compare(v1.second, v2.second);
         } else {
             return Integer.compare(v1.first, v2.first);
