@@ -16,7 +16,10 @@
 
 package com.android.server.connectivity.mdns;
 
+import android.annotation.Nullable;
 import android.util.SparseArray;
+
+import com.android.server.connectivity.mdns.MdnsServiceInfo.TextEntry;
 
 import java.io.EOFException;
 import java.io.IOException;
@@ -193,6 +196,16 @@ public class MdnsPacketReader {
         String val = new String(buf, pos, len, MdnsConstants.getUtf8Charset());
         pos += len;
         return val;
+    }
+
+    @Nullable
+    public TextEntry readTextEntry() throws EOFException {
+        int len = readUInt8();
+        checkRemaining(len);
+        byte[] bytes = new byte[len];
+        System.arraycopy(buf, pos, bytes, 0, bytes.length);
+        pos += len;
+        return TextEntry.fromBytes(bytes);
     }
 
     /**

@@ -16,6 +16,8 @@
 
 package com.android.server.connectivity.mdns;
 
+import com.android.server.connectivity.mdns.MdnsServiceInfo.TextEntry;
+
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.SocketAddress;
@@ -145,6 +147,12 @@ public class MdnsPacketWriter {
         byte[] utf8 = value.getBytes(MdnsConstants.getUtf8Charset());
         writeUInt8(utf8.length);
         writeBytes(utf8);
+    }
+
+    public void writeTextEntry(TextEntry textEntry) throws IOException {
+        byte[] bytes = textEntry.toBytes();
+        writeUInt8(bytes.length);
+        writeBytes(bytes);
     }
 
     /**
