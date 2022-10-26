@@ -28,6 +28,7 @@
 import argparse
 import collections
 import json
+import logging as log
 import os
 import re
 import sys
@@ -711,6 +712,7 @@ def create_modules_from_target(blueprint, gn, gn_target_name):
   if bp_module_name in blueprint.modules:
     return blueprint.modules[bp_module_name]
   target = gn.get_target(gn_target_name)
+  log.info('create modules for %s (%s)', target.name, target.type)
 
   name_without_toolchain = gn_utils.label_without_toolchain(target.name)
   if target.type == 'executable':
@@ -896,11 +898,20 @@ def main():
       default=os.path.join(gn_utils.repo_root(), 'Android.bp'),
   )
   parser.add_argument(
+      '-v',
+      '--verbose',
+      help='Print debug logs.',
+      action='store_true',
+  )
+  parser.add_argument(
       'targets',
       nargs=argparse.REMAINDER,
       help='Targets to include in the blueprint (e.g., "//:perfetto_tests")'
   )
   args = parser.parse_args()
+
+  if args.verbose:
+    log.basicConfig(format='%(levelname)s:%(funcName)s:%(message)s', level=log.DEBUG)
 
   with open(args.desc) as f:
     desc = json.load(f)
