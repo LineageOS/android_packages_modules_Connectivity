@@ -98,9 +98,6 @@ android_protobuf_src = 'external/protobuf/src'
 # Compiler flags which are passed through to the blueprint.
 cflag_allowlist = r'^-DPERFETTO.*$'
 
-# Compiler defines which are passed through to the blueprint.
-define_allowlist = r'^(GOOGLE_PROTO.*)|(ZLIB_.*)|(USE_MMAP)|(HAVE_HIDDEN)$'
-
 # Additional arguments to apply to Android.bp rules.
 additional_args = {
     # TODO: remove if this is not useful for the cronet build.
@@ -673,9 +670,8 @@ def create_proto_group_modules(blueprint, gn, module_name, target_names):
 
 def _get_cflags(target):
   cflags = {flag for flag in target.cflags if re.match(cflag_allowlist, flag)}
-  cflags |= set("-D%s" % define
-                for define in target.defines
-                if re.match(define_allowlist, define))
+  # Consider proper allowlist or denylist if needed
+  cflags |= set("-D%s" % define.replace("\"", "\\\"") for define in target.defines)
   return cflags
 
 
