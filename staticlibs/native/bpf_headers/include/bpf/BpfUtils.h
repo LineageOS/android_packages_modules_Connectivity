@@ -121,11 +121,10 @@ static inline bool isAtLeastKernelVersion(unsigned major, unsigned minor, unsign
             GTEST_SKIP() << "Skip: bpf is not supported.";  \
     } while (0)
 
-#define SKIP_IF_EXTENDED_BPF_NOT_SUPPORTED                               \
-    do {                                                                 \
-        if (!android::bpf::isAtLeastKernelVersion(4, 14, 0))             \
-            GTEST_SKIP() << "Skip: extended bpf feature not supported."; \
-    } while (0)
+// Only used by tm-mainline-prod's system/netd/tests/bpf_base_test.cpp
+// but platform and platform tests aren't expected to build/work in tm-mainline-prod
+// so we can just trivialize this
+#define SKIP_IF_EXTENDED_BPF_NOT_SUPPORTED
 
 #define SKIP_IF_XDP_NOT_SUPPORTED                           \
     do {                                                    \
