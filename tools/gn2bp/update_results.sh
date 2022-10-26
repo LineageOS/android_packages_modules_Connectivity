@@ -1,0 +1,19 @@
+#!/bin/bash
+
+# This script is expected to run after gen_android_bp is modified.
+#
+#   ./update_result.sh desc.json
+#
+# TARGETS contains targets which are supported by gen_android_bp and
+# this script generates Android.bp.swp from TARGETS.
+# This makes it easy to realize unintended impact/degression on
+# previously supported targets.
+
+set -eux
+
+TARGETS=(
+  "//third_party/zlib:zlib"
+)
+
+BASEDIR=$(dirname "$0")
+$BASEDIR/gen_android_bp --desc $1 --out $BASEDIR/Android.bp ${TARGETS[@]}
