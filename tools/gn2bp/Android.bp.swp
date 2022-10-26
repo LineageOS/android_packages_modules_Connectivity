@@ -35,6 +35,50 @@ filegroup {
     ],
 }
 
+// GN: //third_party/libevent:libevent
+cc_library_static {
+    name: "cronet_aml_third_party_libevent_libevent",
+    srcs: [
+        "third_party/libevent/buffer.c",
+        "third_party/libevent/epoll.c",
+        "third_party/libevent/evbuffer.c",
+        "third_party/libevent/evdns.c",
+        "third_party/libevent/event.c",
+        "third_party/libevent/event_tagging.c",
+        "third_party/libevent/evrpc.c",
+        "third_party/libevent/evutil.c",
+        "third_party/libevent/http.c",
+        "third_party/libevent/log.c",
+        "third_party/libevent/poll.c",
+        "third_party/libevent/select.c",
+        "third_party/libevent/signal.c",
+        "third_party/libevent/strlcpy.c",
+    ],
+    defaults: [
+        "cronet_aml_defaults",
+    ],
+    cflags: [
+        "-DANDROID",
+        "-DANDROID_NDK_VERSION_ROLL=r23_1",
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8189-g97196a2d-1\"",
+        "-DCR_LIBCXX_REVISION=166132d607a5b33487d523bd9cc2ba9176ddffef",
+        "-DDCHECK_ALWAYS_ON=1",
+        "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
+        "-DHAVE_CONFIG_H",
+        "-DHAVE_SYS_UIO_H",
+        "-D_DEBUG",
+        "-D_GNU_SOURCE",
+        "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
+        "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
+    ],
+    local_include_dirs: [
+        "./",
+        "buildtools/third_party/libc++/",
+        "out/test/gen/",
+        "third_party/libevent/android/",
+    ],
+}
+
 // GN: //third_party/zlib:zlib
 cc_library_static {
     name: "cronet_aml_third_party_zlib_zlib",
@@ -61,8 +105,20 @@ cc_library_static {
         "cronet_aml_defaults",
     ],
     cflags: [
+        "-DANDROID",
+        "-DANDROID_NDK_VERSION_ROLL=r23_1",
+        "-DCPU_NO_SIMD",
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8189-g97196a2d-1\"",
+        "-DCR_LIBCXX_REVISION=166132d607a5b33487d523bd9cc2ba9176ddffef",
+        "-DDCHECK_ALWAYS_ON=1",
+        "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
+        "-DHAVE_SYS_UIO_H",
         "-DZLIB_DEBUG",
         "-DZLIB_IMPLEMENTATION",
+        "-D_DEBUG",
+        "-D_GNU_SOURCE",
+        "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
+        "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
     ],
     local_include_dirs: [
         "./",
