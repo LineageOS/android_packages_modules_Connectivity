@@ -808,23 +808,10 @@ def create_modules_from_target(blueprint, gn, gn_target_name):
   # dep_name is an unmangled GN target name (e.g. //foo:bar(toolchain)).
   all_deps = target.deps | target.source_set_deps | target.transitive_proto_deps
   for dep_name in all_deps:
-    # If the dependency refers to a library which we can replace with an
-    # Android equivalent, stop recursing and patch the dependency in.
-    # Don't recurse into //buildtools, builtin_deps are intercepted at
-    # the //gn:xxx level.
-    if dep_name.startswith('//buildtools'):
-      continue
-
     # |builtin_deps| override GN deps with Android-specific ones. See the
     # config in the top of this file.
     if gn_utils.label_without_toolchain(dep_name) in builtin_deps:
       builtin_deps[gn_utils.label_without_toolchain(dep_name)](module)
-      continue
-
-    # Ignore the dependency on the gen_buildflags genrule. That is run
-    # separately in this generator and the generated file is copied over
-    # into the repo (see usage of |buildflags_dir| in this script).
-    if dep_name.startswith(gn_utils.BUILDFLAGS_TARGET):
       continue
 
     dep_module = create_modules_from_target(blueprint, gn, dep_name)
