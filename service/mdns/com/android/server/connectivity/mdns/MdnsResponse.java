@@ -35,6 +35,7 @@ public class MdnsResponse {
     private MdnsInetAddressRecord inet4AddressRecord;
     private MdnsInetAddressRecord inet6AddressRecord;
     private long lastUpdateTime;
+    private int interfaceIndex = MdnsSocket.INTERFACE_INDEX_UNSPECIFIED;
 
     /** Constructs a new, empty response. */
     public MdnsResponse(long now) {
@@ -203,6 +204,21 @@ public class MdnsResponse {
         return true;
     }
 
+    /**
+     * Updates the index of the network interface at which this response was received. Can be set to
+     * {@link MdnsSocket#INTERFACE_INDEX_UNSPECIFIED} if unset.
+     */
+    public synchronized void setInterfaceIndex(int interfaceIndex) {
+        this.interfaceIndex = interfaceIndex;
+    }
+
+    /**
+     * Returns the index of the network interface at which this response was received. Can be set to
+     * {@link MdnsSocket#INTERFACE_INDEX_UNSPECIFIED} if unset.
+     */
+    public synchronized int getInterfaceIndex() {
+        return interfaceIndex;
+    }
 
     /** Gets the IPv6 address record. */
     public synchronized MdnsInetAddressRecord getInet6AddressRecord() {

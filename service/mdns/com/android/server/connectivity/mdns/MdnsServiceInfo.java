@@ -57,7 +57,8 @@ public class MdnsServiceInfo implements Parcelable {
                             source.readString(),
                             source.readString(),
                             source.createStringArrayList(),
-                            source.createTypedArrayList(TextEntry.CREATOR));
+                            source.createTypedArrayList(TextEntry.CREATOR),
+                            source.readInt());
                 }
 
                 @Override
@@ -76,6 +77,7 @@ public class MdnsServiceInfo implements Parcelable {
     final List<String> textStrings;
     @Nullable
     final List<TextEntry> textEntries;
+    private final int interfaceIndex;
 
     private final Map<String, byte[]> attributes;
 
@@ -98,7 +100,32 @@ public class MdnsServiceInfo implements Parcelable {
                 ipv4Address,
                 ipv6Address,
                 textStrings,
-                /* textEntries= */ null);
+                /* textEntries= */ null,
+                /* interfaceIndex= */ -1);
+    }
+
+    /** Constructs a {@link MdnsServiceInfo} object with default values. */
+    public MdnsServiceInfo(
+            String serviceInstanceName,
+            String[] serviceType,
+            List<String> subtypes,
+            String[] hostName,
+            int port,
+            String ipv4Address,
+            String ipv6Address,
+            List<String> textStrings,
+            @Nullable List<TextEntry> textEntries) {
+        this(
+                serviceInstanceName,
+                serviceType,
+                subtypes,
+                hostName,
+                port,
+                ipv4Address,
+                ipv6Address,
+                textStrings,
+                textEntries,
+                /* interfaceIndex= */ -1);
     }
 
     /**
@@ -115,7 +142,8 @@ public class MdnsServiceInfo implements Parcelable {
             String ipv4Address,
             String ipv6Address,
             List<String> textStrings,
-            @Nullable List<TextEntry> textEntries) {
+            @Nullable List<TextEntry> textEntries,
+            int interfaceIndex) {
         this.serviceInstanceName = serviceInstanceName;
         this.serviceType = serviceType;
         this.subtypes = new ArrayList<>();
@@ -149,6 +177,7 @@ public class MdnsServiceInfo implements Parcelable {
             }
         }
         this.attributes = Collections.unmodifiableMap(attributes);
+        this.interfaceIndex = interfaceIndex;
     }
 
     private static List<TextEntry> parseTextStrings(List<String> textStrings) {
@@ -206,6 +235,14 @@ public class MdnsServiceInfo implements Parcelable {
     }
 
     /**
+     * Returns the index of the network interface at which this response was received, or -1 if the
+     * index is not known.
+     */
+    public int getInterfaceIndex() {
+        return interfaceIndex;
+    }
+
+    /**
      * Returns attribute value for {@code key} as a UTF-8 string. It's the caller who must make sure
      * that the value of {@code key} is indeed a UTF-8 string. {@code null} will be returned if no
      * attribute value exists for {@code key}.
@@ -253,6 +290,7 @@ public class MdnsServiceInfo implements Parcelable {
         out.writeString(ipv6Address);
         out.writeStringList(textStrings);
         out.writeTypedList(textEntries);
+        out.writeInt(interfaceIndex);
     }
 
     @Override

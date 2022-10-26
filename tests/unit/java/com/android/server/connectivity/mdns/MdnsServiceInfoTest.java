@@ -116,6 +116,40 @@ public class MdnsServiceInfoTest {
     }
 
     @Test
+    public void getInterfaceIndex_constructorWithDefaultValues_returnsMinusOne() {
+        MdnsServiceInfo info =
+                new MdnsServiceInfo(
+                        "my-mdns-service",
+                        new String[] {"_googlecast", "_tcp"},
+                        List.of(),
+                        new String[] {"my-host", "local"},
+                        12345,
+                        "192.168.1.1",
+                        "2001::1",
+                        List.of());
+
+        assertEquals(info.getInterfaceIndex(), -1);
+    }
+
+    @Test
+    public void getInterfaceIndex_constructorWithInterfaceIndex_returnsProvidedIndex() {
+        MdnsServiceInfo info =
+                new MdnsServiceInfo(
+                        "my-mdns-service",
+                        new String[] {"_googlecast", "_tcp"},
+                        List.of(),
+                        new String[] {"my-host", "local"},
+                        12345,
+                        "192.168.1.1",
+                        "2001::1",
+                        List.of(),
+                        /* textEntries= */ null,
+                        /* interfaceIndex= */ 20);
+
+        assertEquals(info.getInterfaceIndex(), 20);
+    }
+
+    @Test
     public void parcelable_canBeParceledAndUnparceled() {
         Parcel parcel = Parcel.obtain();
         MdnsServiceInfo beforeParcel =
