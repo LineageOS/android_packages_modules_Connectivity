@@ -202,7 +202,8 @@ TEST_F(ClatUtils, GenerateIpv6AddressFailWithUlaSocketAddress) {
     in6_addr v6;
     EXPECT_EQ(1, inet_pton(AF_INET6, "::", &v6));  // initialize as zero
 
-    EXPECT_EQ(-ENETUNREACH, generateIpv6Address(tun.name().c_str(), v4, nat64Prefix, &v6));
+    // 0u is MARK_UNSET
+    EXPECT_EQ(-ENETUNREACH, generateIpv6Address(tun.name().c_str(), v4, nat64Prefix, &v6, 0u));
     EXPECT_TRUE(IN6_IS_ADDR_ULA(&v6));
 
     tun.destroy();
