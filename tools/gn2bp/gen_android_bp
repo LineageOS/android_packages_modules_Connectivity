@@ -338,7 +338,7 @@ class Module(object):
     self.local_include_dirs = set()
     self.header_libs = set()
     self.required = set()
-    self.tool_files = None
+    self.tool_files = []
     self.android = Target('android')
     self.host = Target('host')
     self.stl = None
