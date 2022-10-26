@@ -25,7 +25,6 @@ import re
 import shutil
 import subprocess
 import sys
-from compat import iteritems
 
 BUILDFLAGS_TARGET = '//gn:gen_buildflags'
 GEN_VERSION_TARGET = '//src/base:version_gen_h'
@@ -151,7 +150,7 @@ def compute_source_dependencies(out, system_buildtools=False):
 def label_to_path(label):
   """Turn a GN output label (e.g., //some_dir/file.cc) into a path."""
   assert label.startswith('//')
-  return label[2:]
+  return label[2:] or "./"
 
 
 def label_without_toolchain(label):
@@ -362,7 +361,7 @@ class GnParser(object):
     def __repr__(self):
       return json.dumps({
           k: (list(sorted(v)) if isinstance(v, set) else v)
-          for (k, v) in iteritems(self.__dict__)
+          for (k, v) in self.__dict__.items()
       },
                         indent=4,
                         sort_keys=True)
