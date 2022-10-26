@@ -401,7 +401,8 @@ public class MdnsServiceTypeClientTests {
                         ipV4Address,
                         5353,
                         Collections.singletonList("ABCDE"),
-                        Collections.emptyMap());
+                        Collections.emptyMap(),
+                        /* interfaceIndex= */ 20);
         client.processResponse(initialResponse);
 
         // Process a second response with a different port and updated text attributes.
@@ -411,7 +412,8 @@ public class MdnsServiceTypeClientTests {
                         ipV4Address,
                         5354,
                         Collections.singletonList("ABCDE"),
-                        Collections.singletonMap("key", "value"));
+                        Collections.singletonMap("key", "value"),
+                        /* interfaceIndex= */ 20);
         client.processResponse(secondResponse);
 
         // Verify onServiceFound was called once for the initial response.
@@ -422,6 +424,7 @@ public class MdnsServiceTypeClientTests {
         assertEquals(initialServiceInfo.getPort(), 5353);
         assertEquals(initialServiceInfo.getSubtypes(), Collections.singletonList("ABCDE"));
         assertNull(initialServiceInfo.getAttributeByKey("key"));
+        assertEquals(initialServiceInfo.getInterfaceIndex(), 20);
 
         // Verify onServiceUpdated was called once for the second response.
         verify(mockListenerOne).onServiceUpdated(serviceInfoCaptor.capture());
@@ -432,6 +435,7 @@ public class MdnsServiceTypeClientTests {
         assertTrue(updatedServiceInfo.hasSubtypes());
         assertEquals(updatedServiceInfo.getSubtypes(), Collections.singletonList("ABCDE"));
         assertEquals(updatedServiceInfo.getAttributeByKey("key"), "value");
+        assertEquals(updatedServiceInfo.getInterfaceIndex(), 20);
     }
 
     @Test
@@ -446,7 +450,8 @@ public class MdnsServiceTypeClientTests {
                         ipV6Address,
                         5353,
                         Collections.singletonList("ABCDE"),
-                        Collections.emptyMap());
+                        Collections.emptyMap(),
+                        /* interfaceIndex= */ 20);
         client.processResponse(initialResponse);
 
         // Process a second response with a different port and updated text attributes.
@@ -456,7 +461,8 @@ public class MdnsServiceTypeClientTests {
                         ipV6Address,
                         5354,
                         Collections.singletonList("ABCDE"),
-                        Collections.singletonMap("key", "value"));
+                        Collections.singletonMap("key", "value"),
+                        /* interfaceIndex= */ 20);
         client.processResponse(secondResponse);
 
         System.out.println("secondResponses ip"
@@ -470,6 +476,7 @@ public class MdnsServiceTypeClientTests {
         assertEquals(initialServiceInfo.getPort(), 5353);
         assertEquals(initialServiceInfo.getSubtypes(), Collections.singletonList("ABCDE"));
         assertNull(initialServiceInfo.getAttributeByKey("key"));
+        assertEquals(initialServiceInfo.getInterfaceIndex(), 20);
 
         // Verify onServiceUpdated was called once for the second response.
         verify(mockListenerOne).onServiceUpdated(serviceInfoCaptor.capture());
@@ -480,6 +487,7 @@ public class MdnsServiceTypeClientTests {
         assertTrue(updatedServiceInfo.hasSubtypes());
         assertEquals(updatedServiceInfo.getSubtypes(), Collections.singletonList("ABCDE"));
         assertEquals(updatedServiceInfo.getAttributeByKey("key"), "value");
+        assertEquals(updatedServiceInfo.getInterfaceIndex(), 20);
     }
 
     @Test
@@ -727,13 +735,25 @@ public class MdnsServiceTypeClientTests {
         }
     }
 
-    // Creates a complete mDNS response.
     private MdnsResponse createResponse(
             @NonNull String serviceInstanceName,
             @NonNull String host,
             int port,
             @NonNull List<String> subtypes,
             @NonNull Map<String, String> textAttributes)
+            throws Exception {
+        return createResponse(serviceInstanceName, host, port, subtypes, textAttributes,
+                /* interfaceIndex= */ -1);
+    }
+
+    // Creates a complete mDNS response.
+    private MdnsResponse createResponse(
+            @NonNull String serviceInstanceName,
+            @NonNull String host,
+            int port,
+            @NonNull List<String> subtypes,
+            @NonNull Map<String, String> textAttributes,
+            int interfaceIndex)
             throws Exception {
         String[] hostName = new String[]{"hostname"};
         MdnsServiceRecord serviceRecord = mock(MdnsServiceRecord.class);
@@ -747,10 +767,12 @@ public class MdnsServiceTypeClientTests {
             when(inetAddressRecord.getInet6Address())
                     .thenReturn((Inet6Address) Inet6Address.getByName(host));
             response.setInet6AddressRecord(inetAddressRecord);
+            response.setInterfaceIndex(interfaceIndex);
         } else {
             when(inetAddressRecord.getInet4Address())
                     .thenReturn((Inet4Address) Inet4Address.getByName(host));
             response.setInet4AddressRecord(inetAddressRecord);
+            response.setInterfaceIndex(interfaceIndex);
         }
 
         MdnsTextRecord textRecord = mock(MdnsTextRecord.class);
