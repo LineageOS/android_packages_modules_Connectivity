@@ -22,7 +22,6 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/capability.h>
 #include <unistd.h>
 
 #include "clatd.h"

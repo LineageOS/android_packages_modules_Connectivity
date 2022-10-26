@@ -36,7 +36,6 @@
 #include <linux/if_packet.h>
 #include <linux/if_tun.h>
 #include <net/if.h>
-#include <sys/capability.h>
 #include <sys/uio.h>
 
 #include "clatd.h"
