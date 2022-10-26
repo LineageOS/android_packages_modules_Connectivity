@@ -671,10 +671,11 @@ def create_proto_group_modules(blueprint, gn, module_name, target_names):
 def create_action_module(blueprint, target):
   bp_module_name = label_to_module_name(target.name)
   module = Module('genrule', bp_module_name, target.name)
-  module.tool_files = [target.script]
+  script = gn_utils.label_to_path(target.script)
+  module.tool_files = [script]
 
   arg_string = ' '.join(target.args)
-  module.cmd = '%s %s' % (target.script, arg_string)
+  module.cmd = '$(location %s) %s' % (script, arg_string)
 
   # TODO: is this correct?
   module.tool_files.extend(':' + label_to_module_name(it) for it in target.deps)
