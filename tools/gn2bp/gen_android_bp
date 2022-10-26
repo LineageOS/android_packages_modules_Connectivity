@@ -745,6 +745,12 @@ def create_modules_from_target(blueprint, gn, gn_target_name):
       module = create_gen_version_module(blueprint, target, bp_module_name)
     else:
       module = create_action_module(blueprint, target)
+  elif target.type == 'copy':
+    # TODO: careful now! copy targets are not supported yet, but this will stop
+    # traversing the dependency tree. For //base:base, this is not a big
+    # problem as libicu contains the only copy target which happens to be a
+    # leaf node.
+    return None
   else:
     raise Error('Unknown target %s (%s)' % (target.name, target.type))
 
