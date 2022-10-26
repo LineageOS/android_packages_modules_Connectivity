@@ -32,8 +32,11 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
+
 import android.annotation.NonNull;
 
+import com.android.server.connectivity.mdns.MdnsServiceInfo.TextEntry;
 import com.android.server.connectivity.mdns.MdnsServiceTypeClient.QueryTaskConfig;
 import com.android.testutils.DevSdkIgnoreRule;
 import com.android.testutils.DevSdkIgnoreRunner;
@@ -53,7 +56,6 @@ import java.net.DatagramPacket;
 import java.net.Inet4Address;
 import java.net.Inet6Address;
 import java.net.SocketAddress;
-import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -495,7 +497,7 @@ public class MdnsServiceTypeClientTests {
     }
 
     @Test
-    public void reportExistingServiceToNewlyRegisteredListeners() throws UnknownHostException {
+    public void reportExistingServiceToNewlyRegisteredListeners() throws Exception {
         // Process the initial response.
         MdnsResponse initialResponse =
                 createResponse(
@@ -732,7 +734,7 @@ public class MdnsServiceTypeClientTests {
             int port,
             @NonNull List<String> subtypes,
             @NonNull Map<String, String> textAttributes)
-            throws UnknownHostException {
+            throws Exception {
         String[] hostName = new String[]{"hostname"};
         MdnsServiceRecord serviceRecord = mock(MdnsServiceRecord.class);
         when(serviceRecord.getServiceHost()).thenReturn(hostName);
@@ -753,10 +755,13 @@ public class MdnsServiceTypeClientTests {
 
         MdnsTextRecord textRecord = mock(MdnsTextRecord.class);
         List<String> textStrings = new ArrayList<>();
+        List<TextEntry> textEntries = new ArrayList<>();
         for (Map.Entry<String, String> kv : textAttributes.entrySet()) {
             textStrings.add(kv.getKey() + "=" + kv.getValue());
+            textEntries.add(new TextEntry(kv.getKey(), kv.getValue().getBytes(UTF_8)));
         }
         when(textRecord.getStrings()).thenReturn(textStrings);
+        when(textRecord.getEntries()).thenReturn(textEntries);
 
         response.setServiceRecord(serviceRecord);
         response.setTextRecord(textRecord);
