@@ -7236,6 +7236,15 @@ public class ConnectivityServiceTest {
         expectNotifyNetworkStatus(onlyCell(), onlyCell(), MOBILE_IFNAME);
         reset(mStatsManager);
 
+        // Verify change fields other than interfaces does not trigger a notification to NSS.
+        cellLp.addLinkAddress(new LinkAddress("192.0.2.4/24"));
+        cellLp.addRoute(new RouteInfo((IpPrefix) null, InetAddress.getByName("192.0.2.4"),
+                MOBILE_IFNAME));
+        cellLp.setDnsServers(List.of(InetAddress.getAllByName("8.8.8.8")));
+        mCellNetworkAgent.sendLinkProperties(cellLp);
+        verifyNoMoreInteractions(mStatsManager);
+        reset(mStatsManager);
+
         // Default network switch should update ifaces.
         mWiFiNetworkAgent.connect(false);
         mWiFiNetworkAgent.sendLinkProperties(wifiLp);
