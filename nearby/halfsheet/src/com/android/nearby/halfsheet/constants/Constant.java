@@ -57,6 +57,7 @@ public class Constant {
             "com.android.nearby.ACTION_FAST_PAIR_HALF_SHEET_CANCEL";
     public static final String ACTION_FAST_PAIR_HALF_SHEET_BAN_STATE_RESET =
             "com.android.nearby.ACTION_FAST_PAIR_BAN_STATE_RESET";
+    public static final String ACTION_RESOURCES_APK = "android.nearby.SHOW_HALFSHEET";
 
     public static final String RESULT_FAIL = "RESULT_FAIL";
     public static final String ARG_FRAGMENT_STATE = "ARG_FRAGMENT_STATE";

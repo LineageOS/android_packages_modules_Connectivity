@@ -94,7 +94,6 @@ public class FastPairManager {
 
     /** A notification ID which should be dismissed */
     public static final String EXTRA_NOTIFICATION_ID = ACTION_PREFIX + "EXTRA_NOTIFICATION_ID";
-    public static final String ACTION_RESOURCES_APK = "android.nearby.SHOW_HALFSHEET";
 
     private static Executor sFastPairExecutor;
 

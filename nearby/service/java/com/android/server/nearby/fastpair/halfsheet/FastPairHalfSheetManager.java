@@ -24,7 +24,6 @@ import static com.android.nearby.halfsheet.constants.Constant.EXTRA_HALF_SHEET_I
 import static com.android.nearby.halfsheet.constants.Constant.EXTRA_HALF_SHEET_TYPE;
 import static com.android.nearby.halfsheet.constants.Constant.FAST_PAIR_HALF_SHEET_HELP_URL;
 import static com.android.nearby.halfsheet.constants.Constant.RESULT_FAIL;
-import static com.android.server.nearby.fastpair.FastPairManager.ACTION_RESOURCES_APK;
 
 import static java.util.concurrent.TimeUnit.SECONDS;
 
@@ -36,7 +35,6 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
-import android.content.pm.ResolveInfo;
 import android.nearby.FastPairDevice;
 import android.nearby.FastPairStatusCallback;
 import android.nearby.PairStatusMetadata;
@@ -54,16 +52,15 @@ import com.android.server.nearby.common.eventloop.NamedRunnable;
 import com.android.server.nearby.common.locator.Locator;
 import com.android.server.nearby.common.locator.LocatorContextWrapper;
 import com.android.server.nearby.fastpair.FastPairController;
+import com.android.server.nearby.fastpair.PackageUtils;
 import com.android.server.nearby.fastpair.blocklist.Blocklist;
 import com.android.server.nearby.fastpair.cache.DiscoveryItem;
-import com.android.server.nearby.util.Environment;
 
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.Collectors;
 
 import service.proto.Cache;
 
@@ -563,39 +560,12 @@ public class FastPairHalfSheetManager {
      * getHalfSheetApkPkgName may invoke PackageManager multiple times and it does not have
      * race condition check. Since there is no lock for mHalfSheetApkPkgName.
      */
-    String getHalfSheetApkPkgName() {
+    private String getHalfSheetApkPkgName() {
         if (mHalfSheetApkPkgName != null) {
             return mHalfSheetApkPkgName;
         }
-        List<ResolveInfo> resolveInfos = mLocatorContextWrapper
-                .getPackageManager().queryIntentActivities(
-                        new Intent(ACTION_RESOURCES_APK),
-                        PackageManager.MATCH_SYSTEM_ONLY);
-
-        // remove apps that don't live in the nearby apex
-        resolveInfos.removeIf(info ->
-                !Environment.isAppInNearbyApex(info.activityInfo.applicationInfo));
-
-        if (resolveInfos.isEmpty()) {
-            // Resource APK not loaded yet, print a stack trace to see where this is called from
-            Log.e("FastPairManager", "Attempted to fetch resources before halfsheet "
-                            + " APK is installed or package manager can't resolve correctly!",
-                    new IllegalStateException());
-            return null;
-        }
-
-        if (resolveInfos.size() > 1) {
-            // multiple apps found, log a warning, but continue
-            Log.w("FastPairManager", "Found > 1 APK that can resolve halfsheet APK intent: "
-                    + resolveInfos.stream()
-                    .map(info -> info.activityInfo.applicationInfo.packageName)
-                    .collect(Collectors.joining(", ")));
-        }
-
-        // Assume the first ResolveInfo is the one we're looking for
-        ResolveInfo info = resolveInfos.get(0);
-        mHalfSheetApkPkgName = info.activityInfo.applicationInfo.packageName;
-        Log.i("FastPairManager", "Found halfsheet APK at: " + mHalfSheetApkPkgName);
+        mHalfSheetApkPkgName = PackageUtils.getHalfSheetApkPkgName(mLocatorContextWrapper);
+        Log.v(TAG, "Found halfsheet APK at: " + mHalfSheetApkPkgName);
         return mHalfSheetApkPkgName;
     }
 }
