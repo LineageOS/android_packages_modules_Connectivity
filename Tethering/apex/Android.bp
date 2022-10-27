@@ -54,7 +54,7 @@ apex {
     name: "com.android.tethering",
     defaults: [
         "ConnectivityApexDefaults",
-        "r-launched-dcla-enabled-apex-module",
+        "r-launched-apex-module",
     ],
     compile_multilib: "both",
     bootclasspath_fragments: [
