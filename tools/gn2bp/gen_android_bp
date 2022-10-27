@@ -838,11 +838,6 @@ def create_modules_from_target(blueprint, gn, gn_target_name):
     if not module_is_compiled:
       continue
 
-
-    # Don't recurse in any other //gn dep if not handled by builtin_deps.
-    if dep_name.startswith('//gn:'):
-      continue
-
     if dep_module is None:
       continue
     if dep_module.type == 'cc_library_shared':
