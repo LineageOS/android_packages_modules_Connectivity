@@ -339,7 +339,7 @@ class Module(object):
     self.local_include_dirs = set()
     self.header_libs = set()
     self.required = set()
-    self.tool_files = []
+    self.tool_files = set()
     self.android = Target('android')
     self.host = Target('host')
     self.stl = None
@@ -598,9 +598,7 @@ def create_proto_modules(blueprint, gn, target):
 def create_amalgamated_sql_metrics_module(blueprint, target):
   bp_module_name = label_to_module_name(target.name)
   module = Module('genrule', bp_module_name, target.name)
-  module.tool_files = [
-      'tools/gen_amalgamated_sql_metrics.py',
-  ]
+  module.tool_files.add('tools/gen_amalgamated_sql_metrics.py')
   module.cmd = ' '.join([
       '$(location tools/gen_amalgamated_sql_metrics.py)',
       '--cpp_out=$(out)',
@@ -616,9 +614,7 @@ def create_amalgamated_sql_metrics_module(blueprint, target):
 def create_cc_proto_descriptor_module(blueprint, target):
   bp_module_name = label_to_module_name(target.name)
   module = Module('genrule', bp_module_name, target.name)
-  module.tool_files = [
-      'tools/gen_cc_proto_descriptor.py',
-  ]
+  module.tool_files.add('tools/gen_cc_proto_descriptor.py')
   module.cmd = ' '.join([
       '$(location tools/gen_cc_proto_descriptor.py)', '--gen_dir=$(genDir)',
       '--cpp_out=$(out)', '$(in)'
@@ -639,7 +635,7 @@ def create_gen_version_module(blueprint, target, bp_module_name):
   module = Module('genrule', bp_module_name, gn_utils.GEN_VERSION_TARGET)
   script_path = gn_utils.label_to_path(target.script)
   module.genrule_headers.add(bp_module_name)
-  module.tool_files = [script_path]
+  module.tool_files.add(script_path)
   module.out.update(target.outputs)
   module.srcs.update(gn_utils.label_to_path(src) for src in target.inputs)
   module.cmd = ' '.join([
@@ -672,7 +668,7 @@ def create_action_module(blueprint, target):
   bp_module_name = label_to_module_name(target.name)
   module = Module('genrule', bp_module_name, target.name)
   script = gn_utils.label_to_path(target.script)
-  module.tool_files = [script]
+  module.tool_files.add(script)
 
   # Handle passing parameters via response file by piping them into the script
   # and reading them from /dev/stdin.
