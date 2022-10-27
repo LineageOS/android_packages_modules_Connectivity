@@ -664,6 +664,7 @@ def create_proto_group_modules(blueprint, gn, module_name, target_names):
 
   blueprint.add_module(module)
 
+
 def create_action_module(blueprint, target):
   bp_module_name = label_to_module_name(target.name)
   module = Module('genrule', bp_module_name, target.name)
@@ -688,10 +689,14 @@ def create_action_module(blueprint, target):
   if all(os.path.splitext(it)[1] == '.h' for it in target.outputs):
     module.genrule_headers.add(bp_module_name)
 
-  # For gn actions, sources and inputs are treated equally.
-  # TODO: there should be a label_to_path function that takes a set / list.
-  module.srcs.update(gn_utils.label_to_path(it) for it in target.inputs)
-  module.srcs.update(gn_utils.label_to_path(it) for it in target.sources)
+  # gn treats inputs and sources for actions equally.
+  # soong only supports source files inside srcs, non-source files are added as
+  # tool_files dependency.
+  for it in target.sources or target.inputs:
+    if is_supported_source_file(it):
+      module.srcs.add(gn_utils.label_to_path(it))
+    else:
+      module.tool_files.add(gn_utils.label_to_path(it))
 
   # Actions using template "action_with_pydeps" also put script inside inputs.
   # TODO: it might make sense to filter inputs inside GnParser.
