@@ -25,7 +25,6 @@ import re
 import shutil
 import subprocess
 import sys
-from compat import iteritems
 
 BUILDFLAGS_TARGET = '//gn:gen_buildflags'
 GEN_VERSION_TARGET = '//src/base:version_gen_h'
@@ -40,118 +39,16 @@ ODR_VIOLATION_IGNORE_TARGETS = {
 }
 
 
-def _check_command_output(cmd, cwd):
-  try:
-    output = subprocess.check_output(cmd, stderr=subprocess.STDOUT, cwd=cwd)
-  except subprocess.CalledProcessError as e:
-    print(
-        'Command "{}" failed in {}:'.format(' '.join(cmd), cwd),
-        file=sys.stderr)
-    print(e.output.decode(), file=sys.stderr)
-    sys.exit(1)
-  else:
-    return output.decode()
-
-
 def repo_root():
   """Returns an absolute path to the repository root."""
   return os.path.join(
       os.path.realpath(os.path.dirname(__file__)), os.path.pardir)
 
 
-def _tool_path(name, system_buildtools=False):
-  # Pass-through to use name if the caller requests to use the system
-  # toolchain.
-  if system_buildtools:
-    return [name]
-  wrapper = os.path.abspath(
-      os.path.join(repo_root(), 'tools', 'run_buildtools_binary.py'))
-  return ['python3', wrapper, name]
-
-
-def prepare_out_directory(gn_args,
-                          name,
-                          root=repo_root(),
-                          system_buildtools=False):
-  """Creates the JSON build description by running GN.
-
-    Returns (path, desc) where |path| is the location of the output directory
-    and |desc| is the JSON build description.
-    """
-  out = os.path.join(root, 'out', name)
-  try:
-    os.makedirs(out)
-  except OSError as e:
-    if e.errno != errno.EEXIST:
-      raise
-  _check_command_output(
-      _tool_path('gn', system_buildtools) +
-      ['gen', out, '--args=%s' % gn_args],
-      cwd=repo_root())
-  return out
-
-
-def load_build_description(out, system_buildtools=False):
-  """Creates the JSON build description by running GN."""
-  desc = _check_command_output(
-      _tool_path('gn', system_buildtools) +
-      ['desc', out, '--format=json', '--all-toolchains', '//*'],
-      cwd=repo_root())
-  return json.loads(desc)
-
-
-def create_build_description(gn_args, root=repo_root()):
-  """Prepares a GN out directory and loads the build description from it.
-
-    The temporary out directory is automatically deleted.
-    """
-  out = prepare_out_directory(gn_args, 'tmp.gn_utils', root=root)
-  try:
-    return load_build_description(out)
-  finally:
-    shutil.rmtree(out)
-
-
-def build_targets(out, targets, quiet=False, system_buildtools=False):
-  """Runs ninja to build a list of GN targets in the given out directory.
-
-    Compiling these targets is required so that we can include any generated
-    source files in the amalgamated result.
-    """
-  targets = [t.replace('//', '') for t in targets]
-  with open(os.devnull, 'w') as devnull:
-    stdout = devnull if quiet else None
-    cmd = _tool_path('ninja', system_buildtools) + targets
-    subprocess.check_call(cmd, cwd=os.path.abspath(out), stdout=stdout)
-
-
-def compute_source_dependencies(out, system_buildtools=False):
-  """For each source file, computes a set of headers it depends on."""
-  ninja_deps = _check_command_output(
-      _tool_path('ninja', system_buildtools) + ['-t', 'deps'], cwd=out)
-  deps = {}
-  current_source = None
-  for line in ninja_deps.split('\n'):
-    filename = os.path.relpath(os.path.join(out, line.strip()), repo_root())
-    if not line or line[0] != ' ':
-      current_source = None
-      continue
-    elif not current_source:
-      # We're assuming the source file is always listed before the
-      # headers.
-      assert os.path.splitext(line)[1] in ['.c', '.cc', '.cpp', '.S']
-      current_source = filename
-      deps[current_source] = []
-    else:
-      assert current_source
-      deps[current_source].append(filename)
-  return deps
-
-
 def label_to_path(label):
   """Turn a GN output label (e.g., //some_dir/file.cc) into a path."""
   assert label.startswith('//')
-  return label[2:]
+  return label[2:] or "./"
 
 
 def label_without_toolchain(label):
@@ -171,115 +68,6 @@ def label_to_target_name_with_path(label):
   name = re.sub(r'^//:?', '', label)
   name = re.sub(r'[^a-zA-Z0-9_]', '_', name)
   return name
-
-
-def gen_buildflags(gn_args, target_file):
-  """Generates the perfetto_build_flags.h for the given config.
-
-    target_file: the path, relative to the repo root, where the generated
-        buildflag header will be copied into.
-    """
-  tmp_out = prepare_out_directory(gn_args, 'tmp.gen_buildflags')
-  build_targets(tmp_out, [BUILDFLAGS_TARGET], quiet=True)
-  src = os.path.join(tmp_out, 'gen', 'build_config', 'perfetto_build_flags.h')
-  shutil.copy(src, os.path.join(repo_root(), target_file))
-  shutil.rmtree(tmp_out)
-
-
-def check_or_commit_generated_files(tmp_files, check):
-  """Checks that gen files are unchanged or renames them to the final location
-
-    Takes in input a list of 'xxx.swp' files that have been written.
-    If check == False, it renames xxx.swp -> xxx.
-    If check == True, it just checks that the contents of 'xxx.swp' == 'xxx'.
-    Returns 0 if no diff was detected, 1 otherwise (to be used as exit code).
-    """
-  res = 0
-  for tmp_file in tmp_files:
-    assert (tmp_file.endswith('.swp'))
-    target_file = os.path.relpath(tmp_file[:-4])
-    if check:
-      if not filecmp.cmp(tmp_file, target_file):
-        sys.stderr.write('%s needs to be regenerated\n' % target_file)
-        res = 1
-      os.unlink(tmp_file)
-    else:
-      os.rename(tmp_file, target_file)
-  return res
-
-
-class ODRChecker(object):
-  """Detects ODR violations in linker units
-
-  When we turn GN source sets into Soong & Bazel file groups, there is the risk
-  to create ODR violations by including the same file group into different
-  linker unit (this is because other build systems don't have a concept
-  equivalent to GN's source_set). This class navigates the transitive
-  dependencies (mostly static libraries) of a target and detects if multiple
-  paths end up including the same file group. This is to avoid situations like:
-
-  traced.exe -> base(file group)
-  traced.exe -> libperfetto(static lib) -> base(file group)
-  """
-
-  def __init__(self, gn, target_name):
-    self.gn = gn
-    self.root = gn.get_target(target_name)
-    self.source_sets = collections.defaultdict(set)
-    self.deps_visited = set()
-    self.source_set_hdr_only = {}
-
-    self._visit(target_name)
-    num_violations = 0
-    if target_name in ODR_VIOLATION_IGNORE_TARGETS:
-      return
-    for sset, paths in self.source_sets.items():
-      if self.is_header_only(sset):
-        continue
-      if len(paths) != 1:
-        num_violations += 1
-        print(
-            'ODR violation in target %s, multiple paths include %s:\n  %s' %
-            (target_name, sset, '\n  '.join(paths)),
-            file=sys.stderr)
-    if num_violations > 0:
-      raise Exception('%d ODR violations detected. Build generation aborted' %
-                      num_violations)
-
-  def _visit(self, target_name, parent_path=''):
-    target = self.gn.get_target(target_name)
-    path = ((parent_path + ' > ') if parent_path else '') + target_name
-    if not target:
-      raise Exception('Cannot find target %s' % target_name)
-    for ssdep in target.source_set_deps:
-      name_and_path = '%s (via %s)' % (target_name, path)
-      self.source_sets[ssdep].add(name_and_path)
-    deps = set(target.deps).union(
-        target.transitive_proto_deps) - self.deps_visited
-    for dep_name in deps:
-      dep = self.gn.get_target(dep_name)
-      if dep.type == 'executable':
-        continue  # Execs are strong boundaries and don't cause ODR violations.
-      # static_library dependencies should reset the path. It doesn't matter if
-      # we get to a source file via:
-      # source_set1 > static_lib > source.cc OR
-      # source_set1 > source_set2 > static_lib > source.cc
-      # This is NOT an ODR violation because source.cc is linked from the same
-      # static library
-      next_parent_path = path if dep.type != 'static_library' else ''
-      self.deps_visited.add(dep_name)
-      self._visit(dep_name, next_parent_path)
-
-  def is_header_only(self, source_set_name):
-    cached = self.source_set_hdr_only.get(source_set_name)
-    if cached is not None:
-      return cached
-    target = self.gn.get_target(source_set_name)
-    if target.type != 'source_set':
-      raise TypeError('%s is not a source_set' % source_set_name)
-    res = all(src.endswith('.h') for src in target.sources)
-    self.source_set_hdr_only[source_set_name] = res
-    return res
 
 
 class GnParser(object):
@@ -362,7 +150,7 @@ class GnParser(object):
     def __repr__(self):
       return json.dumps({
           k: (list(sorted(v)) if isinstance(v, set) else v)
-          for (k, v) in iteritems(self.__dict__)
+          for (k, v) in self.__dict__.items()
       },
                         indent=4,
                         sort_keys=True)

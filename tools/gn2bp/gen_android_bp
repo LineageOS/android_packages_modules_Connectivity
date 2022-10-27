@@ -34,87 +34,25 @@ import sys
 
 import gn_utils
 
-from compat import itervalues
-
 ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-
-# Arguments for the GN output directory.
-gn_args = ' '.join([
-    'is_debug=false',
-    'is_perfetto_build_generator=true',
-    'perfetto_build_with_android=true',
-    'target_cpu="arm"',
-    'target_os="android"',
-])
-
-# Default targets to translate to the blueprint file.
-default_targets = [
-    '//:libperfetto_client_experimental',
-    '//:libperfetto',
-    '//:perfetto_integrationtests',
-    '//:perfetto_unittests',
-    '//protos/perfetto/trace:perfetto_trace_protos',
-    '//src/android_internal:libperfetto_android_internal',
-    '//src/perfetto_cmd:perfetto',
-    '//src/perfetto_cmd:trigger_perfetto',
-    '//src/profiling/memory:heapprofd_client',
-    '//src/profiling/memory:heapprofd_client_api',
-    '//src/profiling/memory:heapprofd_api_noop',
-    '//src/profiling/memory:heapprofd',
-    '//src/profiling/memory:heapprofd_standalone_client',
-    '//src/profiling/perf:traced_perf',
-    '//src/traced/probes:traced_probes',
-    '//src/traced/service:traced',
-    '//src/trace_processor:trace_processor_shell',
-    '//test/cts:perfetto_cts_deps',
-    '//test/cts:perfetto_cts_jni_deps',
-    '//test:perfetto_gtest_logcat_printer',
-    '//test/vts:perfetto_vts_deps',
-]
-
-# Host targets
-ipc_plugin = '//src/ipc/protoc_plugin:ipc_plugin(%s)' % gn_utils.HOST_TOOLCHAIN
-protozero_plugin = '//src/protozero/protoc_plugin:protozero_plugin(%s)' % (
-    gn_utils.HOST_TOOLCHAIN)
-cppgen_plugin = '//src/protozero/protoc_plugin:cppgen_plugin(%s)' % (
-    gn_utils.HOST_TOOLCHAIN)
-
-default_targets += [
-    '//src/traceconv:traceconv(%s)' % gn_utils.HOST_TOOLCHAIN,
-    protozero_plugin,
-    ipc_plugin,
-]
 
 # Defines a custom init_rc argument to be applied to the corresponding output
 # blueprint target.
 target_initrc = {
-    '//src/traced/service:traced': {'perfetto.rc'},
-    '//src/profiling/memory:heapprofd': {'heapprofd.rc'},
-    '//src/profiling/perf:traced_perf': {'traced_perf.rc'},
+    # TODO: this can probably be removed.
 }
 
 target_host_supported = [
-    '//:libperfetto',
-    '//:libperfetto_client_experimental',
-    '//protos/perfetto/trace:perfetto_trace_protos',
-    '//src/trace_processor:demangle',
-    '//src/trace_processor:trace_processor_shell',
-]
-
-target_vendor_available = [
-    '//:libperfetto_client_experimental',
+    # TODO: remove if this is not useful for the cronet build.
 ]
 
 # Proto target groups which will be made public.
 proto_groups = {
-    'trace': [
-        '//protos/perfetto/trace:non_minimal_source_set',
-        '//protos/perfetto/trace:minimal_source_set'
-    ],
+    # TODO: remove if this is not used for the cronet build.
 }
 
 # All module names are prefixed with this string to avoid collisions.
-module_prefix = 'perfetto_'
+module_prefix = 'cronet_aml_'
 
 # Shared libraries which are directly translated to Android system equivalents.
 shared_library_allowlist = [
@@ -160,102 +98,10 @@ android_protobuf_src = 'external/protobuf/src'
 # Compiler flags which are passed through to the blueprint.
 cflag_allowlist = r'^-DPERFETTO.*$'
 
-# Compiler defines which are passed through to the blueprint.
-define_allowlist = r'^(GOOGLE_PROTO.*)|(ZLIB_.*)|(USE_MMAP)|(HAVE_HIDDEN)$'
-
-# The directory where the generated perfetto_build_flags.h will be copied into.
-buildflags_dir = 'include/perfetto/base/build_configs/android_tree'
-
-
-def enumerate_data_deps():
-  with open(os.path.join(ROOT_DIR, 'tools', 'test_data.txt')) as f:
-    lines = f.readlines()
-  for line in (line.strip() for line in lines if not line.startswith('#')):
-    assert os.path.exists(line), 'file %s should exist' % line
-    if line.startswith('test/data/'):
-      # Skip test data files that require GCS. They are only for benchmarks.
-      # We don't run benchmarks in the android tree.
-      continue
-    if line.endswith('/.'):
-      yield line[:-1] + '**/*'
-    else:
-      yield line
-
-
 # Additional arguments to apply to Android.bp rules.
 additional_args = {
-    'heapprofd_client_api': [
-        ('static_libs', {'libasync_safe'}),
-        # heapprofd_client_api MUST NOT have global constructors. Because it
-        # is loaded in an __attribute__((constructor)) of libc, we cannot
-        # guarantee that the global constructors get run before it is used.
-        ('cflags', {'-Wglobal-constructors', '-Werror=global-constructors'}),
-        ('version_script', 'src/profiling/memory/heapprofd_client_api.map.txt'),
-        ('stubs', {
-            'versions': ['S'],
-            'symbol_file': 'src/profiling/memory/heapprofd_client_api.map.txt',
-        }),
-        ('export_include_dirs', {'src/profiling/memory/include'}),
-    ],
-    'heapprofd_api_noop': [
-        ('version_script', 'src/profiling/memory/heapprofd_client_api.map.txt'),
-        ('stubs', {
-            'versions': ['S'],
-            'symbol_file': 'src/profiling/memory/heapprofd_client_api.map.txt',
-        }),
-        ('export_include_dirs', {'src/profiling/memory/include'}),
-    ],
-    'heapprofd_client': [
-        ('include_dirs', {'bionic/libc'}),
-        ('static_libs', {'libasync_safe'}),
-    ],
-    'heapprofd_standalone_client': [
-        ('static_libs', {'libasync_safe'}),
-        ('version_script', 'src/profiling/memory/heapprofd_client_api.map.txt'),
-        ('export_include_dirs', {'src/profiling/memory/include'}),
-        ('stl', 'libc++_static'),
-    ],
-#    'perfetto_unittests': [
-#        ('data', set(enumerate_data_deps())),
-#        ('include_dirs', {'bionic/libc/kernel'}),
-#    ],
-    'perfetto_integrationtests': [
-        ('test_suites', {'general-tests'}),
-        ('test_config', 'PerfettoIntegrationTests.xml'),
-    ],
-    'traced_probes': [('required', {
-        'libperfetto_android_internal', 'trigger_perfetto', 'traced_perf',
-        'mm_events'
-    }),],
-    'libperfetto_android_internal': [('static_libs', {'libhealthhalutils'}),],
-    'trace_processor_shell': [
-        ('strip', {
-            'all': True
-        }),
-        ('host', {
-            'stl': 'libc++_static',
-            'dist': {
-                'targets': ['sdk_repo']
-            },
-        }),
-    ],
-    'libperfetto_client_experimental': [
-        ('apex_available', {
-            '//apex_available:platform', 'com.android.art',
-            'com.android.art.debug'
-        }),
-        ('min_sdk_version', 'S'),
-        ('shared_libs', {'liblog'}),
-        ('export_include_dirs', {'include', buildflags_dir}),
-    ],
-    'perfetto_trace_protos': [
-        ('apex_available', {
-            '//apex_available:platform', 'com.android.art',
-            'com.android.art.debug'
-        }),
-        ('min_sdk_version', 'S'),
-    ],
-    'libperfetto': [('export_include_dirs', {'include', buildflags_dir}),],
+    # TODO: remove if this is not useful for the cronet build.
+    # Consider using additional_args for overriding the genrule cmd property for gn actions.
 }
 
 
@@ -489,13 +335,12 @@ class Module(object):
     self.defaults = set()
     self.cflags = set()
     self.include_dirs = set()
+    self.local_include_dirs = set()
     self.header_libs = set()
     self.required = set()
-    self.user_debug_flag = False
     self.tool_files = None
     self.android = Target('android')
     self.host = Target('host')
-    self.lto = None
     self.stl = None
     self.dist = dict()
     self.strip = dict()
@@ -537,6 +382,7 @@ class Module(object):
     self._output_field(output, 'defaults')
     self._output_field(output, 'cflags')
     self._output_field(output, 'include_dirs')
+    self._output_field(output, 'local_include_dirs')
     self._output_field(output, 'header_libs')
     self._output_field(output, 'required')
     self._output_field(output, 'dist')
@@ -561,22 +407,6 @@ class Module(object):
         output.append('    %s' % line)
       output.append('    },')
 
-    if self.user_debug_flag:
-      output.append('    product_variables: {')
-      output.append('        debuggable: {')
-      output.append(
-          '            cflags: ["-DPERFETTO_BUILD_WITH_ANDROID_USERDEBUG"],')
-      output.append('        },')
-      output.append('    },')
-    if self.lto is not None:
-      output.append('    target: {')
-      output.append('        android: {')
-      output.append('            lto: {')
-      output.append('                thin: %s,' %
-                    'true' if self.lto else 'false')
-      output.append('            },')
-      output.append('        },')
-      output.append('    },')
     output.append('}')
     output.append('')
 
@@ -617,7 +447,7 @@ class Blueprint(object):
     self.modules[module.name] = module
 
   def to_string(self, output):
-    for m in sorted(itervalues(self.modules), key=lambda m: m.name):
+    for m in sorted(self.modules.values(), key=lambda m: m.name):
       m.to_string(output)
 
 
@@ -627,9 +457,6 @@ def label_to_module_name(label):
   # its name and return just the target name. This is so tools like
   # "traceconv" stay as such in the Android tree.
   label_without_toolchain = gn_utils.label_without_toolchain(label)
-  if label in default_targets or label_without_toolchain in default_targets:
-    return label_without_toolchain.split(':')[-1]
-
   module = re.sub(r'^//:?', '', label_without_toolchain)
   module = re.sub(r'[^a-zA-Z0-9_]', '_', module)
   if not module.startswith(module_prefix):
@@ -843,9 +670,8 @@ def create_proto_group_modules(blueprint, gn, module_name, target_names):
 
 def _get_cflags(target):
   cflags = {flag for flag in target.cflags if re.match(cflag_allowlist, flag)}
-  cflags |= set("-D%s" % define
-                for define in target.defines
-                if re.match(define_allowlist, define))
+  # Consider proper allowlist or denylist if needed
+  cflags |= set("-D%s" % define.replace("\"", "\\\"") for define in target.defines)
   return cflags
 
 
@@ -903,7 +729,6 @@ def create_modules_from_target(blueprint, gn, gn_target_name):
 
   blueprint.add_module(module)
   module.host_supported = (name_without_toolchain in target_host_supported)
-  module.vendor_available = (name_without_toolchain in target_vendor_available)
   module.init_rc = target_initrc.get(target.name, [])
   module.srcs.update(
       gn_utils.label_to_path(src)
@@ -912,6 +737,7 @@ def create_modules_from_target(blueprint, gn, gn_target_name):
 
   if target.type in gn_utils.LINKER_UNIT_TYPES:
     module.cflags.update(_get_cflags(target))
+    module.local_include_dirs.update(gn_utils.label_to_path(it) for it in target.include_dirs)
 
   module_is_compiled = module.type not in ('genrule', 'filegroup')
   if module_is_compiled:
@@ -1009,16 +835,6 @@ def create_blueprint_for_targets(gn, desc, targets):
 
   # Default settings used by all modules.
   defaults = Module('cc_defaults', defaults_module, '//gn:default_deps')
-
-  # We have to use include_dirs passing the path relative to the android tree.
-  # This is because: (i) perfetto_cc_defaults is used also by
-  # test/**/Android.bp; (ii) if we use local_include_dirs instead, paths
-  # become relative to the Android.bp that *uses* cc_defaults (not the one
-  # that defines it).s
-  defaults.include_dirs = {
-      tree_path, tree_path + '/include', tree_path + '/' + buildflags_dir,
-      tree_path + '/src/profiling/memory/include'
-  }
   defaults.cflags = [
       '-Wno-error=return-type',
       '-Wno-sign-compare',
@@ -1027,10 +843,8 @@ def create_blueprint_for_targets(gn, desc, targets):
       '-fvisibility=hidden',
       '-O2',
   ]
-  defaults.user_debug_flag = True
-  defaults.lto = True
-
   blueprint.add_module(defaults)
+
   for target in targets:
     create_modules_from_target(blueprint, gn, target)
   return blueprint
@@ -1040,12 +854,9 @@ def main():
   parser = argparse.ArgumentParser(
       description='Generate Android.bp from a GN description.')
   parser.add_argument(
-      '--check-only',
-      help='Don\'t keep the generated files',
-      action='store_true')
-  parser.add_argument(
       '--desc',
-      help='GN description (e.g., gn desc out --format=json --all-toolchains "//*"'
+      help='GN description (e.g., gn desc out --format=json --all-toolchains "//*"',
+      required=True
   )
   parser.add_argument(
       '--extras',
@@ -1060,33 +871,24 @@ def main():
   parser.add_argument(
       'targets',
       nargs=argparse.REMAINDER,
-      help='Targets to include in the blueprint (e.g., "//:perfetto_tests")')
+      help='Targets to include in the blueprint (e.g., "//:perfetto_tests")'
+  )
   args = parser.parse_args()
 
-  if args.desc:
-    with open(args.desc) as f:
-      desc = json.load(f)
-  else:
-    desc = gn_utils.create_build_description(gn_args)
+  with open(args.desc) as f:
+    desc = json.load(f)
 
   gn = gn_utils.GnParser(desc)
-  blueprint = create_blueprint_for_targets(gn, desc, args.targets or
-                                           default_targets)
+  blueprint = create_blueprint_for_targets(gn, desc, args.targets)
   project_root = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))
   tool_name = os.path.relpath(os.path.abspath(__file__), project_root)
-
-  # TODO(primiano): enable this on Android after the TODO in
-  # perfetto_component.gni is fixed.
-  # Check for ODR violations
-  # for target_name in default_targets:
-  # checker = gn_utils.ODRChecker(gn, target_name)
 
   # Add any proto groups to the blueprint.
   for l_name, t_names in proto_groups.items():
     create_proto_group_modules(blueprint, gn, l_name, t_names)
 
   output = [
-      """// Copyright (C) 2017 The Android Open Source Project
+      """// Copyright (C) 2022 The Android Open Source Project
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -1104,9 +906,10 @@ def main():
 """ % (tool_name)
   ]
   blueprint.to_string(output)
-  with open(args.extras, 'r') as r:
-    for line in r:
-      output.append(line.rstrip("\n\r"))
+  if os.path.exists(args.extras):
+    with open(args.extras, 'r') as r:
+      for line in r:
+        output.append(line.rstrip("\n\r"))
 
   out_files = []
 
@@ -1117,12 +920,7 @@ def main():
     # Text files should have a trailing EOL.
     f.write('\n')
 
-  # Generate the perfetto_build_flags.h file.
-  out_files.append(os.path.join(buildflags_dir, 'perfetto_build_flags.h.swp'))
-  gn_utils.gen_buildflags(gn_args, out_files[-1])
-
-  # Either check the contents or move the files to their final destination.
-  return gn_utils.check_or_commit_generated_files(out_files, args.check_only)
+  return 0
 
 
 if __name__ == '__main__':
