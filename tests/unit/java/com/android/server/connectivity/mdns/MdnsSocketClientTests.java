@@ -501,8 +501,7 @@ public class MdnsSocketClientTests {
         //MdnsConfigsFlagsImpl.allowNetworkInterfaceIndexPropagation.override(true);
 
         when(mockMulticastSocket.getInterfaceIndex()).thenReturn(21);
-        mdnsClient =
-                new MdnsSocketClient(mContext, mockMulticastLock) {
+        mdnsClient = new MdnsSocketClient(mContext, mockMulticastLock) {
                     @Override
                     MdnsSocket createMdnsSocket(int port) {
                         if (port == MdnsConstants.MDNS_PORT) {
@@ -525,8 +524,7 @@ public class MdnsSocketClientTests {
         //MdnsConfigsFlagsImpl.allowNetworkInterfaceIndexPropagation.override(false);
 
         when(mockMulticastSocket.getInterfaceIndex()).thenReturn(21);
-        mdnsClient =
-                new MdnsSocketClient(mContext, mockMulticastLock) {
+        mdnsClient = new MdnsSocketClient(mContext, mockMulticastLock) {
                     @Override
                     MdnsSocket createMdnsSocket(int port) {
                         if (port == MdnsConstants.MDNS_PORT) {

@@ -147,7 +147,8 @@ public class MulticastNetworkInterfaceProvider {
         return connectivityMonitor.getAvailableNetwork();
     }
 
-    private boolean canScanOnInterface(@Nullable NetworkInterfaceWrapper networkInterface) {
+    /*** Check whether given network interface can support mdns */
+    public static boolean canScanOnInterface(@Nullable NetworkInterfaceWrapper networkInterface) {
         try {
             if ((networkInterface == null)
                     || networkInterface.isLoopback()
@@ -166,7 +167,7 @@ public class MulticastNetworkInterfaceProvider {
         return false;
     }
 
-    private boolean hasInet4Address(@NonNull NetworkInterfaceWrapper networkInterface) {
+    private static boolean hasInet4Address(@NonNull NetworkInterfaceWrapper networkInterface) {
         for (InterfaceAddress ifAddr : networkInterface.getInterfaceAddresses()) {
             if (ifAddr.getAddress() instanceof Inet4Address) {
                 return true;
@@ -175,7 +176,7 @@ public class MulticastNetworkInterfaceProvider {
         return false;
     }
 
-    private boolean hasInet6Address(@NonNull NetworkInterfaceWrapper networkInterface) {
+    private static boolean hasInet6Address(@NonNull NetworkInterfaceWrapper networkInterface) {
         for (InterfaceAddress ifAddr : networkInterface.getInterfaceAddresses()) {
             if (ifAddr.getAddress() instanceof Inet6Address) {
                 return true;
