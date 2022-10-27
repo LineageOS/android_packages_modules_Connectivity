@@ -18,6 +18,7 @@ package com.android.server.connectivity.mdns;
 
 import static com.android.testutils.DevSdkIgnoreRuleKt.SC_V2;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
@@ -25,6 +26,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -45,6 +47,7 @@ import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
@@ -489,5 +492,59 @@ public class MdnsSocketClientTests {
         assertFalse(mdnsClient.receivedMulticastResponse);
         assertFalse(mdnsClient.receivedUnicastResponse);
         assertFalse(mdnsClient.cannotReceiveMulticastResponse.get());
+    }
+
+    @Test
+    public void startDiscovery_andPropagateInterfaceIndex_includesInterfaceIndex()
+            throws Exception {
+        //MdnsConfigsFlagsImpl.allowNetworkInterfaceIndexPropagation.override(true);
+
+        when(mockMulticastSocket.getInterfaceIndex()).thenReturn(21);
+        mdnsClient =
+                new MdnsSocketClient(mContext, mockMulticastLock) {
+                    @Override
+                    MdnsSocket createMdnsSocket(int port) {
+                        if (port == MdnsConstants.MDNS_PORT) {
+                            return mockMulticastSocket;
+                        }
+                        return mockUnicastSocket;
+                    }
+                };
+        mdnsClient.setCallback(mockCallback);
+        mdnsClient.startDiscovery();
+
+        ArgumentCaptor<MdnsResponse> mdnsResponseCaptor =
+                ArgumentCaptor.forClass(MdnsResponse.class);
+        verify(mockCallback, timeout(TIMEOUT).atLeast(1))
+                .onResponseReceived(mdnsResponseCaptor.capture());
+        assertEquals(21, mdnsResponseCaptor.getValue().getInterfaceIndex());
+    }
+
+    @Test
+    @Ignore("MdnsConfigs is not configurable currently.")
+    public void startDiscovery_andDoNotPropagateInterfaceIndex_doesNotIncludeInterfaceIndex()
+            throws Exception {
+        //MdnsConfigsFlagsImpl.allowNetworkInterfaceIndexPropagation.override(false);
+
+        when(mockMulticastSocket.getInterfaceIndex()).thenReturn(21);
+        mdnsClient =
+                new MdnsSocketClient(mContext, mockMulticastLock) {
+                    @Override
+                    MdnsSocket createMdnsSocket(int port) {
+                        if (port == MdnsConstants.MDNS_PORT) {
+                            return mockMulticastSocket;
+                        }
+                        return mockUnicastSocket;
+                    }
+                };
+        mdnsClient.setCallback(mockCallback);
+        mdnsClient.startDiscovery();
+
+        ArgumentCaptor<MdnsResponse> mdnsResponseCaptor =
+                ArgumentCaptor.forClass(MdnsResponse.class);
+        verify(mockMulticastSocket, never()).getInterfaceIndex();
+        verify(mockCallback, timeout(TIMEOUT).atLeast(1))
+                .onResponseReceived(mdnsResponseCaptor.capture());
+        assertEquals(-1, mdnsResponseCaptor.getValue().getInterfaceIndex());
     }
 }

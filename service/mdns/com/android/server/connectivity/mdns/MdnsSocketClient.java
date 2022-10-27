@@ -79,6 +79,8 @@ public class MdnsSocketClient {
     private final boolean checkMulticastResponse = MdnsConfigs.checkMulticastResponse();
     private final long checkMulticastResponseIntervalMs =
             MdnsConfigs.checkMulticastResponseIntervalMs();
+    private final boolean propagateInterfaceIndex =
+            MdnsConfigs.allowNetworkInterfaceIndexPropagation();
     private final Object socketLock = new Object();
     private final Object timerObject = new Object();
     // If multicast response was received in the current session. The value is reset in the
@@ -382,7 +384,12 @@ public class MdnsSocketClient {
 
                 if (!shouldStopSocketLoop) {
                     String responseType = socket == multicastSocket ? MULTICAST_TYPE : UNICAST_TYPE;
-                    processResponsePacket(packet, responseType);
+                    processResponsePacket(
+                            packet,
+                            responseType,
+                            /* interfaceIndex= */ (socket == null || !propagateInterfaceIndex)
+                                    ? MdnsSocket.INTERFACE_INDEX_UNSPECIFIED
+                                    : socket.getInterfaceIndex());
                 }
             } catch (IOException e) {
                 if (!shouldStopSocketLoop) {
@@ -393,12 +400,12 @@ public class MdnsSocketClient {
         LOGGER.log("Receive thread stopped.");
     }
 
-    private int processResponsePacket(@NonNull DatagramPacket packet, String responseType)
-            throws IOException {
+    private int processResponsePacket(
+            @NonNull DatagramPacket packet, String responseType, int interfaceIndex) {
         int packetNumber = ++receivedPacketNumber;
 
         List<MdnsResponse> responses = new LinkedList<>();
-        int errorCode = responseDecoder.decode(packet, responses);
+        int errorCode = responseDecoder.decode(packet, responses, interfaceIndex);
         if (errorCode == MdnsResponseDecoder.SUCCESS) {
             if (responseType.equals(MULTICAST_TYPE)) {
                 receivedMulticastResponse = true;
@@ -414,7 +421,8 @@ public class MdnsSocketClient {
             }
             for (MdnsResponse response : responses) {
                 String serviceInstanceName = response.getServiceInstanceName();
-                LOGGER.log("mDNS %s response received: %s", responseType, serviceInstanceName);
+                LOGGER.log("mDNS %s response received: %s at ifIndex %d", responseType,
+                        serviceInstanceName, interfaceIndex);
                 if (callback != null) {
                     callback.onResponseReceived(response);
                 }

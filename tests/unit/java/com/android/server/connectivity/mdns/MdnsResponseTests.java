@@ -222,6 +222,19 @@ public class MdnsResponseTests {
     }
 
     @Test
+    public void getInterfaceIndex_returnsDefaultValue() {
+        MdnsResponse response = new MdnsResponse(/* now= */ 0);
+        assertEquals(response.getInterfaceIndex(), -1);
+    }
+
+    @Test
+    public void getInterfaceIndex_afterSet_returnsValue() {
+        MdnsResponse response = new MdnsResponse(/* now= */ 0);
+        response.setInterfaceIndex(5);
+        assertEquals(response.getInterfaceIndex(), 5);
+    }
+
+    @Test
     public void mergeRecordsFrom_indicates_change_on_ipv4_address() throws IOException {
         MdnsResponse response = makeMdnsResponse(
                 0,
