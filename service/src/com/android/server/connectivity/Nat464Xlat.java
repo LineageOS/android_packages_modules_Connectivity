@@ -22,6 +22,7 @@ import static android.net.NetworkCapabilities.TRANSPORT_TEST;
 import static com.android.net.module.util.CollectionUtils.contains;
 
 import android.annotation.NonNull;
+import android.annotation.Nullable;
 import android.net.ConnectivityManager;
 import android.net.IDnsResolver;
 import android.net.INetd;
@@ -420,7 +421,7 @@ public class Nat464Xlat {
      * This is necessary because the LinkProperties in mNetwork come from the transport layer, which
      * has no idea that 464xlat is running on top of it.
      */
-    public void fixupLinkProperties(@NonNull LinkProperties oldLp, @NonNull LinkProperties lp) {
+    public void fixupLinkProperties(@Nullable LinkProperties oldLp, @NonNull LinkProperties lp) {
         // This must be done even if clatd is not running, because otherwise shouldStartClat would
         // never return true.
         lp.setNat64Prefix(selectNat64Prefix());
@@ -433,6 +434,8 @@ public class Nat464Xlat {
         }
 
         Log.d(TAG, "clatd running, updating NAI for " + mIface);
+        // oldLp can't be null here since shouldStartClat checks null LinkProperties to start clat.
+        // Thus, the status won't pass isRunning check if the oldLp is null.
         for (LinkProperties stacked: oldLp.getStackedLinks()) {
             if (Objects.equals(mIface, stacked.getInterfaceName())) {
                 lp.addStackedLink(stacked);
