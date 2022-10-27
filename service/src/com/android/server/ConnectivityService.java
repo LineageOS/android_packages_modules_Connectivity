@@ -7525,7 +7525,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
         forEachNetworkAgentInfo(vpnNai -> {
             if (!vpnNai.isVPN()) return;
             updateVpnFiltering(vpnNai.linkProperties, vpnNai.linkProperties, vpnNai,
-                    oldDelegateBypassUids, newDelegateBypassUids);
+                    oldDelegateBypassUids, newDelegateBypassUids, false);
         });
     }
 
@@ -8795,6 +8795,12 @@ public class ConnectivityService extends IConnectivityManager.Stub
             final boolean curMetered = nai.networkCapabilities.isMetered();
             maybeNotifyNetworkBlocked(nai, curMetered, curMetered,
                     mVpnBlockedUidRanges, newVpnBlockedUidRanges);
+
+            if (nai.isVPN()) {
+                Set<Integer> delegateBypassUids = getAllCaptivePortalDelegateUids();
+                updateVpnFiltering(nai.linkProperties, nai.linkProperties, nai, delegateBypassUids,
+                        delegateBypassUids, true /* force */);
+            }
         });
 
         mVpnBlockedUidRanges = newVpnBlockedUidRanges;
@@ -11048,13 +11054,19 @@ public class ConnectivityService extends IConnectivityManager.Stub
         // the LinkProperties for the network are accurate.
         networkAgent.clatd.fixupLinkProperties(oldLp, newLp);
 
-        updateInterfaces(newLp, oldLp, netId, networkAgent);
+        final boolean anyIfaceChanges =
+                updateInterfaces(newLp, oldLp, netId, networkAgent);
+
+        // If any interface names changed, ensure VPN filtering is updated so that ingress filtering
+        // uses the most up-to-date allowed interface.
+        final boolean shouldForceUpdateVpnFiltering = networkAgent.isVPN() && anyIfaceChanges;
 
         // update filtering rules, need to happen after the interface update so netd knows about the
         // new interface (the interface name -> index map becomes initialized)
         if (networkAgent.isVPN()) {
             Set<Integer> delegateBypassUids = getAllCaptivePortalDelegateUids();
-            updateVpnFiltering(newLp, oldLp, networkAgent, delegateBypassUids, delegateBypassUids);
+            updateVpnFiltering(newLp, oldLp, networkAgent, delegateBypassUids, delegateBypassUids,
+                    shouldForceUpdateVpnFiltering);
         }
 
         updateIngressToVpnAddressFiltering(newLp, oldLp, networkAgent);
@@ -11365,7 +11377,8 @@ public class ConnectivityService extends IConnectivityManager.Stub
         }
     }
 
-    private void updateInterfaces(final @NonNull LinkProperties newLp,
+    /** Return whether there were any added or removed interface names. */
+    private boolean updateInterfaces(final @NonNull LinkProperties newLp,
             final @Nullable LinkProperties oldLp, final int netId,
             final @NonNull NetworkAgentInfo nai) {
         final CompareResult<String> interfaceDiff = new CompareResult<>(
@@ -11410,6 +11423,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
                 mBpfNetMaps.removeLocalNetHostAllowlistForInterface(ifIndex);
             }
         }
+        return !(interfaceDiff.added.isEmpty() && interfaceDiff.removed.isEmpty());
     }
 
     private boolean shouldApplyLnp(@Nullable LinkProperties lp, boolean hasGlobalProxy) {
@@ -11916,7 +11930,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
 
     private void updateVpnFiltering(@NonNull LinkProperties newLp, @Nullable LinkProperties oldLp,
             @NonNull NetworkAgentInfo nai, Set<Integer> oldDelegateBypassUids,
-            Set<Integer> newDelegateBypassUids) {
+            Set<Integer> newDelegateBypassUids, boolean force) {
         final String oldIface = getVpnIsolationInterface(nai, nai.networkCapabilities, oldLp);
         final String newIface = getVpnIsolationInterface(nai, nai.networkCapabilities, newLp);
         final boolean wasFiltering = requiresVpnAllowRule(nai, oldLp, oldIface);
@@ -11927,7 +11941,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
             return;
         }
 
-        if (Objects.equals(oldIface, newIface) && (wasFiltering == needsFiltering)
+        if (!force && Objects.equals(oldIface, newIface) && (wasFiltering == needsFiltering)
                 && oldDelegateBypassUids.equals(newDelegateBypassUids)) {
             // Nothing changed.
             return;
@@ -11946,10 +11960,14 @@ public class ConnectivityService extends IConnectivityManager.Stub
         if (wasFiltering) {
             mPermissionMonitor.onVpnUidRangesRemoved(oldIface, ranges, vpnAppUid,
                     oldDelegateBypassUids);
+            mPermissionMonitor.updateVpnLockdownUidInterfaceRules(oldLp.getInterfaceName(), ranges,
+                    vpnAppUid, oldDelegateBypassUids, false /* add */);
         }
         if (needsFiltering) {
             mPermissionMonitor.onVpnUidRangesAdded(newIface, ranges, vpnAppUid,
                     newDelegateBypassUids);
+            mPermissionMonitor.updateVpnLockdownUidInterfaceRules(newLp.getInterfaceName(), ranges,
+                    vpnAppUid, newDelegateBypassUids, true /* add */);
         }
     }
 
@@ -12708,10 +12726,16 @@ public class ConnectivityService extends IConnectivityManager.Stub
             if (wasFiltering && !prevRanges.isEmpty()) {
                 mPermissionMonitor.onVpnUidRangesRemoved(oldIface, prevRanges,
                         prevNc.getOwnerUid(), getAllCaptivePortalDelegateUids());
+                mPermissionMonitor.updateVpnLockdownUidInterfaceRules(
+                        nai.linkProperties.getInterfaceName(), prevRanges, prevNc.getOwnerUid(),
+                        getAllCaptivePortalDelegateUids(), false /* add */);
             }
             if (shouldFilter && !newRanges.isEmpty()) {
                 mPermissionMonitor.onVpnUidRangesAdded(newIface, newRanges, newNc.getOwnerUid(),
                         getAllCaptivePortalDelegateUids());
+                mPermissionMonitor.updateVpnLockdownUidInterfaceRules(
+                        nai.linkProperties.getInterfaceName(), newRanges, newNc.getOwnerUid(),
+                        getAllCaptivePortalDelegateUids(), true /* add */);
             }
         } catch (Exception e) {
             // Never crash!

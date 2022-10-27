@@ -1458,6 +1458,7 @@ public class PermissionMonitor {
         final Set<UidRange> filteredRangesToAdd = getFilteredUidRanges(
                 rangesToAdd, vpnAppUid, delegatedBypassUids);
         removeBypassingUids(changedUids, vpnAppUid, delegatedBypassUids);
+        removeVpnLockdownUids(iface, changedUids);
         updateVpnUidsInterfaceRules(iface, changedUids, true /* add */);
         if (mVpnInterfaceUidRanges.containsKey(iface)) {
             mVpnInterfaceUidRanges.get(iface).addAll(filteredRangesToAdd);
@@ -1482,6 +1483,7 @@ public class PermissionMonitor {
         final Set<UidRange> filteredRangesToRemove = getFilteredUidRanges(
                 rangesToRemove, vpnAppUid, delegatedBypassUids);
         removeBypassingUids(changedUids, vpnAppUid, delegatedBypassUids);
+        removeVpnLockdownUids(iface, changedUids);
         updateVpnUidsInterfaceRules(iface, changedUids, false /* add */);
         Set<UidRange> existingRanges = mVpnInterfaceUidRanges.getOrDefault(iface, null);
         if (existingRanges == null) {
@@ -1491,6 +1493,28 @@ public class PermissionMonitor {
         existingRanges.removeAll(filteredRangesToRemove);
         if (existingRanges.size() == 0) {
             mVpnInterfaceUidRanges.remove(iface);
+        }
+    }
+
+    /**
+     * Called when a set of UID ranges are added/removed from an active VPN network and when
+     * UID ranges under VPN Lockdown are updated
+     *
+     * @param iface The VPN network's interface name. Null iface indicates that the interface is not
+     *              available.
+     * @param rangesToModify Existing UID ranges to be modified on the VPN network
+     * @param add {@code true} to add the UID rules, {@code false} to remove them.
+     * @param vpnAppUid The uid of the VPN app
+     */
+    public synchronized void updateVpnLockdownUidInterfaceRules(@Nullable String iface,
+            Set<UidRange> rangesToModify, int vpnAppUid, Set<Integer> delegatedBypassUids,
+            boolean add) {
+        if (iface != null) {
+            Set<Integer> uidsToModify = intersectUids(rangesToModify, mAllApps);
+            removeBypassingUids(uidsToModify, vpnAppUid, delegatedBypassUids);
+            Set<Integer> vpnLockdownUids = intersectUids(mVpnLockdownUidRanges.getSet(), mAllApps);
+            uidsToModify.retainAll(vpnLockdownUids);
+            updateVpnUidsInterfaceRules(iface, uidsToModify, add);
         }
     }
 
@@ -1582,6 +1606,18 @@ public class PermissionMonitor {
         uids.remove(vpnAppUid);
         uids.removeAll(delegateBypassUids);
         uids.removeIf(this::hasRestrictedNetworksPermission);
+    }
+
+    /**
+     * Remove all apps which are under VPN Lockdown from the list of uids
+     *
+     * @param iface The interface name of the active VPN connection
+     * @param uids The list of uids to operate on
+     */
+    private void removeVpnLockdownUids(@Nullable String iface, Set<Integer> uids) {
+        if (iface == null) {
+            uids.removeAll(intersectUids(mVpnLockdownUidRanges.getSet(), mAllApps));
+        }
     }
 
     /**
