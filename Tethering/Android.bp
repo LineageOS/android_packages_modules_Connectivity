@@ -21,8 +21,12 @@ package {
 java_defaults {
     name: "TetheringApiLevel",
     sdk_version: "module_current",
-    target_sdk_version: "33",
     min_sdk_version: "30",
+}
+
+java_defaults {
+    name: "TetheringReleaseTargetSdk",
+    target_sdk_version: "33",
 }
 
 java_defaults {
@@ -81,7 +85,8 @@ android_library {
     defaults: [
         "ConnectivityNextEnableDefaults",
         "TetheringAndroidLibraryDefaults",
-        "TetheringApiLevel"
+        "TetheringApiLevel",
+        "TetheringReleaseTargetSdk"
     ],
     static_libs: [
         "NetworkStackApiCurrentShims",
@@ -94,7 +99,8 @@ android_library {
     name: "TetheringApiStableLib",
     defaults: [
         "TetheringAndroidLibraryDefaults",
-        "TetheringApiLevel"
+        "TetheringApiLevel",
+        "TetheringReleaseTargetSdk"
     ],
     static_libs: [
         "NetworkStackApiStableShims",
@@ -180,7 +186,12 @@ java_defaults {
 // Non-updatable tethering running in the system server process for devices not using the module
 android_app {
     name: "InProcessTethering",
-    defaults: ["TetheringAppDefaults", "TetheringApiLevel", "ConnectivityNextEnableDefaults"],
+    defaults: [
+        "TetheringAppDefaults",
+        "TetheringApiLevel",
+        "ConnectivityNextEnableDefaults",
+        "TetheringReleaseTargetSdk"
+    ],
     static_libs: ["TetheringApiCurrentLib"],
     certificate: "platform",
     manifest: "AndroidManifest_InProcess.xml",
