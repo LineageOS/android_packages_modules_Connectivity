@@ -671,6 +671,11 @@ def create_action_module(blueprint, target):
   script = gn_utils.label_to_path(target.script)
   module.tool_files.add(script)
 
+  # Replace arg by {$out} if possible
+  if len(target.outputs) == 1:
+    out = list(target.outputs)[0]
+    target.args = ['$(out)' if arg == out else arg for arg in target.args]
+
   # Handle passing parameters via response file by piping them into the script
   # and reading them from /dev/stdin.
   response_file = '{{response_file_name}}'
