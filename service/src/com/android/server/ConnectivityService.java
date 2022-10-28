@@ -2800,6 +2800,13 @@ public class ConnectivityService extends IConnectivityManager.Stub
                 NetworkStack.PERMISSION_MAINLINE_NETWORK_STACK);
     }
 
+    private void enforceSettingsOrUseRestrictedNetworksPermission() {
+        enforceAnyPermissionOf(mContext,
+                android.Manifest.permission.NETWORK_SETTINGS,
+                NetworkStack.PERMISSION_MAINLINE_NETWORK_STACK,
+                Manifest.permission.CONNECTIVITY_USE_RESTRICTED_NETWORKS);
+    }
+
     private void enforceNetworkFactoryPermission() {
         // TODO: Check for the BLUETOOTH_STACK permission once that is in the API surface.
         if (UserHandle.getAppId(getCallingUid()) == Process.BLUETOOTH_UID) return;
@@ -6592,7 +6599,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
                 enforceAccessPermission();
                 break;
             case TRACK_SYSTEM_DEFAULT:
-                enforceSettingsPermission();
+                enforceSettingsOrUseRestrictedNetworksPermission();
                 networkCapabilities = new NetworkCapabilities(defaultNc);
                 break;
             case BACKGROUND_REQUEST:
