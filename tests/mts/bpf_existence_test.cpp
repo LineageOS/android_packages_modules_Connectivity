@@ -105,12 +105,16 @@ static const set<string> MAINLINE_FOR_T_PLUS = {
     SHARED "prog_clatd_schedcls_ingress6_clat_rawip",
     NETD "prog_netd_cgroupskb_egress_stats",
     NETD "prog_netd_cgroupskb_ingress_stats",
-    NETD "prog_netd_cgroupsock_inet_create",
     NETD "prog_netd_schedact_ingress_account",
     NETD "prog_netd_skfilter_allowlist_xtbpf",
     NETD "prog_netd_skfilter_denylist_xtbpf",
     NETD "prog_netd_skfilter_egress_xtbpf",
     NETD "prog_netd_skfilter_ingress_xtbpf",
+};
+
+// Provided by *current* mainline module for T+ devices with 4.14+ kernels
+static const set<string> MAINLINE_FOR_T_4_14_PLUS = {
+    NETD "prog_netd_cgroupsock_inet_create",
 };
 
 // Provided by *current* mainline module for T+ devices with 5.4+ kernels
@@ -151,6 +155,7 @@ void getFileLists(set<string>* expected, set<string>* unexpected) {
     // Nothing added or removed in SCv2.
 
     DO_EXPECT(IsAtLeastT(), MAINLINE_FOR_T_PLUS);
+    DO_EXPECT(IsAtLeastT() && isAtLeastKernelVersion(4, 14, 0), MAINLINE_FOR_T_4_14_PLUS);
     DO_EXPECT(IsAtLeastT() && isAtLeastKernelVersion(5, 4, 0), MAINLINE_FOR_T_5_4_PLUS);
     DO_EXPECT(IsAtLeastT() && isAtLeastKernelVersion(5, 15, 0), MAINLINE_FOR_T_5_15_PLUS);
 }
