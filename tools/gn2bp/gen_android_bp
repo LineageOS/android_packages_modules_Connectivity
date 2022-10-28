@@ -664,12 +664,27 @@ def create_proto_group_modules(blueprint, gn, module_name, target_names):
 
   blueprint.add_module(module)
 
+# There may be a better way to do target specific modification
+# Target specific modification before create_action_module
+def pre_create_action_module(target):
+  if target.script == "//build/write_buildflag_header.py":
+    # write_buildflag_header.py writes result to args.genDir/args.output
+    # So, override args.genDir by '.' so that args.output=$(out) works
+    for i in range(len(target.args)-1):
+      if target.args[i] == '--gen-dir':
+        target.args[i+1] = '.'
+        break
 
 def create_action_module(blueprint, target):
   bp_module_name = label_to_module_name(target.name)
   module = Module('genrule', bp_module_name, target.name)
   script = gn_utils.label_to_path(target.script)
   module.tool_files.add(script)
+
+  # Replace arg by {$out} if possible
+  if len(target.outputs) == 1:
+    out = list(target.outputs)[0]
+    target.args = ['$(out)' if arg == out or arg == 'gen/' + out else arg for arg in target.args]
 
   # Handle passing parameters via response file by piping them into the script
   # and reading them from /dev/stdin.
@@ -765,6 +780,7 @@ def create_modules_from_target(blueprint, gn, gn_target_name):
         name_without_toolchain == gn_utils.GEN_VERSION_TARGET:
       module = create_gen_version_module(blueprint, target, bp_module_name)
     else:
+      pre_create_action_module(target)
       module = create_action_module(blueprint, target)
   elif target.type == 'copy':
     # TODO: careful now! copy targets are not supported yet, but this will stop
