@@ -93,6 +93,7 @@ import android.net.LinkAddress;
 import android.net.LinkProperties;
 import android.net.LocalSocket;
 import android.net.Network;
+import android.net.NetworkAgent;
 import android.net.NetworkAgentConfig;
 import android.net.NetworkCapabilities;
 import android.net.NetworkInfo.DetailedState;
@@ -1744,7 +1745,7 @@ public class VpnTest extends VpnTestBase {
             throws Exception {
         doReturn(mMockNetworkAgent).when(mTestDeps)
                 .newNetworkAgent(
-                        any(), any(), anyString(), any(), any(), any(), any(), any());
+                        any(), any(), anyString(), any(), any(), any(), any(), any(), any());
 
         final Vpn vpn = createVpnAndSetupUidChecks(AppOpsManager.OPSTR_ACTIVATE_PLATFORM_VPN);
         when(mVpnProfileStore.get(vpn.getProfileNameForPackage(TEST_VPN_PKG)))
@@ -1774,7 +1775,7 @@ public class VpnTest extends VpnTestBase {
                 ArgumentCaptor.forClass(NetworkAgentConfig.class);
         verify(mTestDeps).newNetworkAgent(
                 any(), any(), anyString(), ncCaptor.capture(), lpCaptor.capture(),
-                any(), nacCaptor.capture(), any());
+                any(), nacCaptor.capture(), any(), any());
 
         // Check LinkProperties
         final LinkProperties lp = lpCaptor.getValue();
@@ -1968,7 +1969,7 @@ public class VpnTest extends VpnTestBase {
     }
 
     @Test
-    public void testDataStallInIkev2VpnMobikeEnabled() throws Exception {
+    public void testDataStallInIkev2VpnRecoveredByMobike() throws Exception {
         final PlatformVpnSnapshot vpnSnapShot = verifySetupPlatformVpn(
                 createIkeConfig(createIkeConnectInfo(), true /* isMobikeEnabled */));
 
@@ -1980,6 +1981,64 @@ public class VpnTest extends VpnTestBase {
 
         // Verify MOBIKE is triggered
         verifyMobikeTriggered(vpnSnapShot.vpn.mNetworkCapabilities.getUnderlyingNetworks());
+
+        // Expect to skip other data stall event if MOBIKE was started.
+        reset(mIkeSessionWrapper);
+        connectivityDiagCallback.onDataStallSuspected(report);
+        verify(mIkeSessionWrapper, never()).setNetwork(any());
+
+        reset(mIkev2SessionCreator);
+
+        // Send validation status update.
+        // Recovered and get network validated. It should not trigger the ike session reset.
+        ((Vpn.IkeV2VpnRunner) vpnSnapShot.vpn.mVpnRunner).onValidationStatus(
+                NetworkAgent.VALIDATION_STATUS_VALID);
+        verify(mIkev2SessionCreator, never()).createIkeSession(
+                any(), any(), any(), any(), any(), any());
+
+        // Send invalid result to verify no ike session reset since the data stall suspected
+        // variables(timer counter and boolean) was reset.
+        ((Vpn.IkeV2VpnRunner) vpnSnapShot.vpn.mVpnRunner).onValidationStatus(
+                NetworkAgent.VALIDATION_STATUS_NOT_VALID);
+        final ArgumentCaptor<Runnable> runnableCaptor = ArgumentCaptor.forClass(Runnable.class);
+        verify(mExecutor).schedule(runnableCaptor.capture(), anyLong(), any());
+        runnableCaptor.getValue().run();
+        verify(mIkev2SessionCreator, never()).createIkeSession(
+                any(), any(), any(), any(), any(), any());
+    }
+
+    @Test
+    public void testDataStallInIkev2VpnNotRecoveredByMobike() throws Exception {
+        final PlatformVpnSnapshot vpnSnapShot = verifySetupPlatformVpn(
+                createIkeConfig(createIkeConnectInfo(), true /* isMobikeEnabled */));
+
+        final ConnectivityDiagnosticsCallback connectivityDiagCallback =
+                getConnectivityDiagCallback();
+
+        doReturn(TEST_NETWORK).when(mMockNetworkAgent).getNetwork();
+        final DataStallReport report = createDataStallReport();
+        connectivityDiagCallback.onDataStallSuspected(report);
+
+        verifyMobikeTriggered(vpnSnapShot.vpn.mNetworkCapabilities.getUnderlyingNetworks());
+
+        reset(mIkev2SessionCreator);
+
+        // Send validation status update should result in ike session reset.
+        ((Vpn.IkeV2VpnRunner) vpnSnapShot.vpn.mVpnRunner).onValidationStatus(
+                NetworkAgent.VALIDATION_STATUS_NOT_VALID);
+
+        // Verify reset is scheduled and run.
+        final ArgumentCaptor<Runnable> runnableCaptor = ArgumentCaptor.forClass(Runnable.class);
+        verify(mExecutor).schedule(runnableCaptor.capture(), anyLong(), any());
+
+        // Another invalid status reported should not trigger other scheduled recovery.
+        reset(mExecutor);
+        ((Vpn.IkeV2VpnRunner) vpnSnapShot.vpn.mVpnRunner).onValidationStatus(
+                NetworkAgent.VALIDATION_STATUS_NOT_VALID);
+        verify(mExecutor, never()).schedule(runnableCaptor.capture(), anyLong(), any());
+
+        runnableCaptor.getValue().run();
+        verify(mIkev2SessionCreator).createIkeSession(any(), any(), any(), any(), any(), any());
     }
 
     @Test
