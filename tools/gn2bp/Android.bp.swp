@@ -268,9 +268,9 @@ genrule {
          "--output_dir " +
          "gen/jni_headers/base/android_runtime_jni_headers " +
          "--includes " +
-         "//../../../../base/android/jni_generator/jni_generator_helper.h " +
+         "../../../../../../base/android/jni_generator/jni_generator_helper.h " +
          "--jar_file " +
-         "//third_party/android_sdk/public/platforms/android-33/android.jar " +
+         "../../third_party/android_sdk/public/platforms/android-33/android.jar " +
          "--output_name " +
          "Runnable_jni.h " +
          "--output_name " +
@@ -1016,7 +1016,7 @@ genrule {
          "--output_dir " +
          "gen/jni_headers/base/base_jni_headers " +
          "--includes " +
-         "//../../../../base/android/jni_generator/jni_generator_helper.h " +
+         "../../../../../../base/android/jni_generator/jni_generator_helper.h " +
          "--use_proxy_hash " +
          "--output_name " +
          "ApkAssets_jni.h " +
