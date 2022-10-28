@@ -24,6 +24,7 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.never;
@@ -513,11 +514,8 @@ public class MdnsSocketClientTests {
         mdnsClient.setCallback(mockCallback);
         mdnsClient.startDiscovery();
 
-        ArgumentCaptor<MdnsResponse> mdnsResponseCaptor =
-                ArgumentCaptor.forClass(MdnsResponse.class);
-        verify(mockCallback, timeout(TIMEOUT).atLeast(1))
-                .onResponseReceived(mdnsResponseCaptor.capture());
-        assertEquals(21, mdnsResponseCaptor.getValue().getInterfaceIndex());
+        verify(mockCallback, timeout(TIMEOUT).atLeastOnce())
+                .onResponseReceived(argThat(response -> response.getInterfaceIndex() == 21));
     }
 
     @Test
