@@ -29,6 +29,20 @@ $ cd packages/modules/Nearby
 $ aidegen .
 # This will launch Intellij project for Nearby module.
 ```
+Note, the setup above may fail to index classes defined in proto, such
+that all classes defined in proto shows red in IDE and cannot be auto-completed.
+To fix, you can mannually add jar files generated from proto to the class path
+as below.  First, find the jar file of presence proto with
+```sh
+ls $ANDROID_BUILD_TOP/out/soong/.intermediates/packages/modules/Connectivity/nearby/service/proto/presence-lite-protos/android_common/combined/presence-lite-protos.jar
+```
+Then, add the jar in IDE as below.
+1. Menu: File > Project Structure
+2. Select Modules at the left panel and select the Dependencies tab.
+3. Select the + icon and select 1 JARs or Directories option.
+4. Select the JAR file found above.
+5. Click the OK button.
+6. Restart the IDE to index.
 
 ## Build and Install
 
