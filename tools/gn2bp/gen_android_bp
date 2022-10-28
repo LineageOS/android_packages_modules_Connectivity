@@ -339,7 +339,7 @@ class Module(object):
     self.local_include_dirs = set()
     self.header_libs = set()
     self.required = set()
-    self.tool_files = []
+    self.tool_files = set()
     self.android = Target('android')
     self.host = Target('host')
     self.stl = None
@@ -467,7 +467,7 @@ def label_to_module_name(label):
 
 def is_supported_source_file(name):
   """Returns True if |name| can appear in a 'srcs' list."""
-  return os.path.splitext(name)[1] in ['.c', '.cc', '.proto']
+  return os.path.splitext(name)[1] in ['.c', '.cc', '.java', '.proto']
 
 
 def create_proto_modules(blueprint, gn, target):
@@ -598,9 +598,7 @@ def create_proto_modules(blueprint, gn, target):
 def create_amalgamated_sql_metrics_module(blueprint, target):
   bp_module_name = label_to_module_name(target.name)
   module = Module('genrule', bp_module_name, target.name)
-  module.tool_files = [
-      'tools/gen_amalgamated_sql_metrics.py',
-  ]
+  module.tool_files.add('tools/gen_amalgamated_sql_metrics.py')
   module.cmd = ' '.join([
       '$(location tools/gen_amalgamated_sql_metrics.py)',
       '--cpp_out=$(out)',
@@ -616,9 +614,7 @@ def create_amalgamated_sql_metrics_module(blueprint, target):
 def create_cc_proto_descriptor_module(blueprint, target):
   bp_module_name = label_to_module_name(target.name)
   module = Module('genrule', bp_module_name, target.name)
-  module.tool_files = [
-      'tools/gen_cc_proto_descriptor.py',
-  ]
+  module.tool_files.add('tools/gen_cc_proto_descriptor.py')
   module.cmd = ' '.join([
       '$(location tools/gen_cc_proto_descriptor.py)', '--gen_dir=$(genDir)',
       '--cpp_out=$(out)', '$(in)'
@@ -639,7 +635,7 @@ def create_gen_version_module(blueprint, target, bp_module_name):
   module = Module('genrule', bp_module_name, gn_utils.GEN_VERSION_TARGET)
   script_path = gn_utils.label_to_path(target.script)
   module.genrule_headers.add(bp_module_name)
-  module.tool_files = [script_path]
+  module.tool_files.add(script_path)
   module.out.update(target.outputs)
   module.srcs.update(gn_utils.label_to_path(src) for src in target.inputs)
   module.cmd = ' '.join([
@@ -668,22 +664,39 @@ def create_proto_group_modules(blueprint, gn, module_name, target_names):
 
   blueprint.add_module(module)
 
+
 def create_action_module(blueprint, target):
   bp_module_name = label_to_module_name(target.name)
   module = Module('genrule', bp_module_name, target.name)
   script = gn_utils.label_to_path(target.script)
-  module.tool_files = [script]
+  module.tool_files.add(script)
+
+  # Handle passing parameters via response file by piping them into the script
+  # and reading them from /dev/stdin.
+  response_file = '{{response_file_name}}'
+  use_response_file = response_file in target.args
+  if use_response_file:
+    # Replace {{response_file_contents}} with /dev/stdin
+    target.args = ['/dev/stdin' if it == response_file else it for it in target.args]
 
   arg_string = ' '.join(target.args)
   module.cmd = '$(location %s) %s' % (script, arg_string)
 
+  if use_response_file:
+    # Pipe response file contents into script
+    module.cmd = 'echo \'%s\' | %s' % (target.response_file_contents, module.cmd)
+
   if all(os.path.splitext(it)[1] == '.h' for it in target.outputs):
     module.genrule_headers.add(bp_module_name)
 
-  # For gn actions, sources and inputs are treated equally.
-  # TODO: there should be a label_to_path function that takes a set / list.
-  module.srcs.update(gn_utils.label_to_path(it) for it in target.inputs)
-  module.srcs.update(gn_utils.label_to_path(it) for it in target.sources)
+  # gn treats inputs and sources for actions equally.
+  # soong only supports source files inside srcs, non-source files are added as
+  # tool_files dependency.
+  for it in target.sources or target.inputs:
+    if is_supported_source_file(it):
+      module.srcs.add(gn_utils.label_to_path(it))
+    else:
+      module.tool_files.add(gn_utils.label_to_path(it))
 
   # Actions using template "action_with_pydeps" also put script inside inputs.
   # TODO: it might make sense to filter inputs inside GnParser.
@@ -824,11 +837,6 @@ def create_modules_from_target(blueprint, gn, gn_target_name):
 
     # For filegroups and genrule, recurse but don't apply the deps.
     if not module_is_compiled:
-      continue
-
-
-    # Don't recurse in any other //gn dep if not handled by builtin_deps.
-    if dep_name.startswith('//gn:'):
       continue
 
     if dep_module is None:
