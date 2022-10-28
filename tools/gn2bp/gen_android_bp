@@ -684,7 +684,7 @@ def create_action_module(blueprint, target):
   # Replace arg by {$out} if possible
   if len(target.outputs) == 1:
     out = list(target.outputs)[0]
-    target.args = ['$(out)' if arg == out else arg for arg in target.args]
+    target.args = ['$(out)' if arg == out or arg == 'gen/' + out else arg for arg in target.args]
 
   # Handle passing parameters via response file by piping them into the script
   # and reading them from /dev/stdin.

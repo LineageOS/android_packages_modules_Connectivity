@@ -53,6 +53,18 @@ cc_library_static {
     ],
 }
 
+// GN: //base:build_date
+genrule {
+    name: "cronet_aml_base_build_date",
+    cmd: "$(location build/write_build_date_header.py) $(out) 1664686800",
+    out: [
+        "base/generated_build_date.h",
+    ],
+    tool_files: [
+        "build/write_build_date_header.py",
+    ],
+}
+
 // GN: //build:buildflag_header_h
 filegroup {
     name: "cronet_aml_build_buildflag_header_h",
