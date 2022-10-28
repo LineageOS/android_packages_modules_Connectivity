@@ -2,7 +2,7 @@
 
 # This script is expected to run after gen_android_bp is modified.
 #
-#   ./update_result.sh desc.json
+#   ./update_result.sh
 #
 # TARGETS contains targets which are supported by gen_android_bp and
 # this script generates Android.bp.swp from TARGETS.
@@ -14,7 +14,9 @@ set -eux
 TARGETS=(
   "//third_party/zlib:zlib"
   "//third_party/libevent:libevent"
+  "//base:base_static"
+  "//base:build_date"
 )
 
 BASEDIR=$(dirname "$0")
-$BASEDIR/gen_android_bp --desc $1 --out $BASEDIR/Android.bp ${TARGETS[@]}
+$BASEDIR/gen_android_bp --desc $BASEDIR/desc.json --out $BASEDIR/Android.bp ${TARGETS[@]}
