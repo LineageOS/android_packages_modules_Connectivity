@@ -87,7 +87,16 @@ static Status initPrograms(const char* cg2_path) {
     RETURN_IF_NOT_OK(checkProgramAccessible(XT_BPF_INGRESS_PROG_PATH));
     RETURN_IF_NOT_OK(attachProgramToCgroup(BPF_EGRESS_PROG_PATH, cg_fd, BPF_CGROUP_INET_EGRESS));
     RETURN_IF_NOT_OK(attachProgramToCgroup(BPF_INGRESS_PROG_PATH, cg_fd, BPF_CGROUP_INET_INGRESS));
-    RETURN_IF_NOT_OK(attachProgramToCgroup(CGROUP_SOCKET_PROG_PATH, cg_fd, BPF_CGROUP_INET_SOCK_CREATE));
+
+    // For the devices that support cgroup socket filter, the socket filter
+    // should be loaded successfully by bpfloader. So we attach the filter to
+    // cgroup if the program is pinned properly.
+    // TODO: delete the if statement once all devices should support cgroup
+    // socket filter (ie. the minimum kernel version required is 4.14).
+    if (!access(CGROUP_SOCKET_PROG_PATH, F_OK)) {
+        RETURN_IF_NOT_OK(
+                attachProgramToCgroup(CGROUP_SOCKET_PROG_PATH, cg_fd, BPF_CGROUP_INET_SOCK_CREATE));
+    }
     return netdutils::status::ok;
 }
 

@@ -222,7 +222,7 @@ public class ClatCoordinatorTest {
         public String generateIpv6Address(@NonNull String iface, @NonNull String v4,
                 @NonNull String prefix64, int mark) throws IOException {
             if (BASE_IFACE.equals(iface) && XLAT_LOCAL_IPV4ADDR_STRING.equals(v4)
-                    && NAT64_PREFIX_STRING.equals(prefix64)) {
+                    && NAT64_PREFIX_STRING.equals(prefix64) && MARK == mark) {
                 return XLAT_LOCAL_IPV6ADDR_STRING;
             }
             fail("unsupported args: " + iface + ", " + v4 + ", " + prefix64 + ", " + mark);
