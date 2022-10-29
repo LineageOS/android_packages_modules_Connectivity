@@ -249,7 +249,7 @@ public class ChreCommunication extends ContextHubClientCallback {
                         return;
                     }
                 }
-                Log.e(
+                Log.i(
                         TAG,
                         String.format(
                                 "Didn't find the nanoapp on contexthub: %s",

@@ -92,9 +92,6 @@ public class ChreDiscoveryProvider extends AbstractDiscoveryProvider {
     /** Initialize the CHRE discovery provider. */
     public void init() {
         mChreCommunication.start(mChreCallback, Collections.singleton(NANOAPP_ID));
-        mIntentFilter.addAction(Intent.ACTION_SCREEN_ON);
-        mIntentFilter.addAction(Intent.ACTION_SCREEN_OFF);
-        mContext.registerReceiver(mScreenBroadcastReceiver, mIntentFilter);
     }
 
     @Override
@@ -195,6 +192,9 @@ public class ChreDiscoveryProvider extends AbstractDiscoveryProvider {
             if (success) {
                 synchronized (ChreDiscoveryProvider.this) {
                     Log.i(TAG, "CHRE communication started");
+                    mIntentFilter.addAction(Intent.ACTION_SCREEN_ON);
+                    mIntentFilter.addAction(Intent.ACTION_SCREEN_OFF);
+                    mContext.registerReceiver(mScreenBroadcastReceiver, mIntentFilter);
                     mChreStarted = true;
                     if (mFilters != null) {
                         sendFilters(mFilters);
