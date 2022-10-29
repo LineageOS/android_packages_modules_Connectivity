@@ -120,6 +120,7 @@ class GnParser(object):
       self.outputs = set()
       self.script = None
       self.args = []
+      self.response_file_contents = None
 
       # These variables are propagated up when encountering a dependency
       # on a source_set target.
@@ -168,6 +169,13 @@ class GnParser(object):
     self.source_sets = {}
     self.actions = {}
     self.proto_libs = {}
+
+  def _get_response_file_contents(self, action_desc):
+    contents = ' '.join(action_desc.get('response_file_contents', []))
+    # escape both single and double quotes.
+    contents.replace('"', '\"')
+    contents.replace("'", '\'')
+    return contents
 
   def get_target(self, gn_target_name):
     """Returns a Target object from the fully qualified GN target name.
@@ -225,6 +233,7 @@ class GnParser(object):
       # Args are typically relative to the root build dir (../../xxx)
       # because root build dir is typically out/xxx/).
       target.args = [re.sub('^../../', '//', x) for x in desc['args']]
+      target.response_file_contents = self._get_response_file_contents(desc)
     elif target.type == 'copy':
       # TODO: copy rules are not currently implemented.
       self.actions[gn_target_name] = target
