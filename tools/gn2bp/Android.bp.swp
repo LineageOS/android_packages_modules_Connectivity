@@ -219,6 +219,7 @@ cc_library_static {
     header_libs: [
         "jni_headers",
     ],
+    cpp_std: "c++20",
 }
 
 // GN: //base/allocator/partition_allocator:partition_alloc_buildflags
@@ -968,6 +969,7 @@ cc_library_static {
     header_libs: [
         "jni_headers",
     ],
+    cpp_std: "c++20",
 }
 
 // GN: //base:base_jni_headers
@@ -1274,6 +1276,7 @@ cc_library_static {
     header_libs: [
         "jni_headers",
     ],
+    cpp_std: "c++20",
 }
 
 // GN: //base:build_date
@@ -1595,6 +1598,7 @@ cc_library_static {
     header_libs: [
         "jni_headers",
     ],
+    cpp_std: "c++20",
 }
 
 // GN: //base/third_party/dynamic_annotations:dynamic_annotations
@@ -1629,6 +1633,7 @@ cc_library_static {
     header_libs: [
         "jni_headers",
     ],
+    cpp_std: "c++20",
 }
 
 // GN: //base:tracing_buildflags
@@ -2822,6 +2827,7 @@ cc_library_static {
     header_libs: [
         "jni_headers",
     ],
+    cpp_std: "c++20",
 }
 
 // GN: //third_party/boringssl:boringssl_asm
@@ -2880,6 +2886,7 @@ cc_library_static {
     header_libs: [
         "jni_headers",
     ],
+    cpp_std: "c++20",
 }
 
 // GN: //third_party/icu:icuuc_private
@@ -2931,6 +2938,7 @@ cc_library_static {
     header_libs: [
         "jni_headers",
     ],
+    cpp_std: "c++20",
 }
 
 // GN: //third_party/icu:icuuc_public
@@ -2985,6 +2993,7 @@ cc_library_static {
     header_libs: [
         "jni_headers",
     ],
+    cpp_std: "c++20",
 }
 
 // GN: //third_party/modp_b64:modp_b64
@@ -3021,5 +3030,6 @@ cc_library_static {
     header_libs: [
         "jni_headers",
     ],
+    cpp_std: "c++20",
 }
 
