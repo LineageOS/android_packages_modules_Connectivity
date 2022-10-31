@@ -269,7 +269,7 @@ genrule {
          "--prev_output_dir " +
          "gen/base/android_runtime_jni_headers " +
          "--output_dir " +
-         "gen/jni_headers/base/android_runtime_jni_headers " +
+         "$(genDir)/jni_headers/base/android_runtime_jni_headers " +
          "--includes " +
          "../../../../../../base/android/jni_generator/jni_generator_helper.h " +
          "--jar_file " +
@@ -1020,7 +1020,7 @@ genrule {
          "--prev_output_dir " +
          "gen/base/base_jni_headers " +
          "--output_dir " +
-         "gen/jni_headers/base/base_jni_headers " +
+         "$(genDir)/jni_headers/base/base_jni_headers " +
          "--includes " +
          "../../../../../../base/android/jni_generator/jni_generator_helper.h " +
          "--use_proxy_hash " +

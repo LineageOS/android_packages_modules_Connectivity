@@ -682,8 +682,8 @@ def pre_create_action_module(target):
 
   elif target.script == '//base/android/jni_generator/jni_generator.py':
     for i, val in enumerate(target.args):
-      if val == '--output_file':
-        # replace --output_file gen/... with --output_file $(genDir)/...
+      if val == '--output_dir':
+        # replace --output_dir gen/... with --output_dir $(genDir)/...
         target.args[i + 1] = re.sub('^gen', '$(genDir)', target.args[i + 1])
       if val == '--input_file':
         # --input_file supports both .class specifiers or source files as arguments.
