@@ -1099,85 +1099,85 @@ genrule {
          "--output_name " +
          "TaskRunnerImpl_jni.h " +
          "--input_file " +
-         "../../base/android/java/src/org/chromium/base/ApkAssets.java " +
+         "$(location base/android/java/src/org/chromium/base/ApkAssets.java) " +
          "--input_file " +
-         "../../base/android/java/src/org/chromium/base/ApplicationStatus.java " +
+         "$(location base/android/java/src/org/chromium/base/ApplicationStatus.java) " +
          "--input_file " +
-         "../../base/android/java/src/org/chromium/base/BaseFeatureList.java " +
+         "$(location base/android/java/src/org/chromium/base/BaseFeatureList.java) " +
          "--input_file " +
-         "../../base/android/java/src/org/chromium/base/BuildInfo.java " +
+         "$(location base/android/java/src/org/chromium/base/BuildInfo.java) " +
          "--input_file " +
-         "../../base/android/java/src/org/chromium/base/BundleUtils.java " +
+         "$(location base/android/java/src/org/chromium/base/BundleUtils.java) " +
          "--input_file " +
-         "../../base/android/java/src/org/chromium/base/Callback.java " +
+         "$(location base/android/java/src/org/chromium/base/Callback.java) " +
          "--input_file " +
-         "../../base/android/java/src/org/chromium/base/CommandLine.java " +
+         "$(location base/android/java/src/org/chromium/base/CommandLine.java) " +
          "--input_file " +
-         "../../base/android/java/src/org/chromium/base/ContentUriUtils.java " +
+         "$(location base/android/java/src/org/chromium/base/ContentUriUtils.java) " +
          "--input_file " +
-         "../../base/android/java/src/org/chromium/base/CpuFeatures.java " +
+         "$(location base/android/java/src/org/chromium/base/CpuFeatures.java) " +
          "--input_file " +
-         "../../base/android/java/src/org/chromium/base/EarlyTraceEvent.java " +
+         "$(location base/android/java/src/org/chromium/base/EarlyTraceEvent.java) " +
          "--input_file " +
-         "../../base/android/java/src/org/chromium/base/EventLog.java " +
+         "$(location base/android/java/src/org/chromium/base/EventLog.java) " +
          "--input_file " +
-         "../../base/android/java/src/org/chromium/base/FeatureList.java " +
+         "$(location base/android/java/src/org/chromium/base/FeatureList.java) " +
          "--input_file " +
-         "../../base/android/java/src/org/chromium/base/Features.java " +
+         "$(location base/android/java/src/org/chromium/base/Features.java) " +
          "--input_file " +
-         "../../base/android/java/src/org/chromium/base/FieldTrialList.java " +
+         "$(location base/android/java/src/org/chromium/base/FieldTrialList.java) " +
          "--input_file " +
-         "../../base/android/java/src/org/chromium/base/FileUtils.java " +
+         "$(location base/android/java/src/org/chromium/base/FileUtils.java) " +
          "--input_file " +
-         "../../base/android/java/src/org/chromium/base/ImportantFileWriterAndroid.java " +
+         "$(location base/android/java/src/org/chromium/base/ImportantFileWriterAndroid.java) " +
          "--input_file " +
-         "../../base/android/java/src/org/chromium/base/IntStringCallback.java " +
+         "$(location base/android/java/src/org/chromium/base/IntStringCallback.java) " +
          "--input_file " +
-         "../../base/android/java/src/org/chromium/base/JNIUtils.java " +
+         "$(location base/android/java/src/org/chromium/base/JNIUtils.java) " +
          "--input_file " +
-         "../../base/android/java/src/org/chromium/base/JavaExceptionReporter.java " +
+         "$(location base/android/java/src/org/chromium/base/JavaExceptionReporter.java) " +
          "--input_file " +
-         "../../base/android/java/src/org/chromium/base/JavaHandlerThread.java " +
+         "$(location base/android/java/src/org/chromium/base/JavaHandlerThread.java) " +
          "--input_file " +
-         "../../base/android/java/src/org/chromium/base/LocaleUtils.java " +
+         "$(location base/android/java/src/org/chromium/base/LocaleUtils.java) " +
          "--input_file " +
-         "../../base/android/java/src/org/chromium/base/MemoryPressureListener.java " +
+         "$(location base/android/java/src/org/chromium/base/MemoryPressureListener.java) " +
          "--input_file " +
-         "../../base/android/java/src/org/chromium/base/PathService.java " +
+         "$(location base/android/java/src/org/chromium/base/PathService.java) " +
          "--input_file " +
-         "../../base/android/java/src/org/chromium/base/PathUtils.java " +
+         "$(location base/android/java/src/org/chromium/base/PathUtils.java) " +
          "--input_file " +
-         "../../base/android/java/src/org/chromium/base/PowerMonitor.java " +
+         "$(location base/android/java/src/org/chromium/base/PowerMonitor.java) " +
          "--input_file " +
-         "../../base/android/java/src/org/chromium/base/RadioUtils.java " +
+         "$(location base/android/java/src/org/chromium/base/RadioUtils.java) " +
          "--input_file " +
-         "../../base/android/java/src/org/chromium/base/SysUtils.java " +
+         "$(location base/android/java/src/org/chromium/base/SysUtils.java) " +
          "--input_file " +
-         "../../base/android/java/src/org/chromium/base/ThreadUtils.java " +
+         "$(location base/android/java/src/org/chromium/base/ThreadUtils.java) " +
          "--input_file " +
-         "../../base/android/java/src/org/chromium/base/TimezoneUtils.java " +
+         "$(location base/android/java/src/org/chromium/base/TimezoneUtils.java) " +
          "--input_file " +
-         "../../base/android/java/src/org/chromium/base/TraceEvent.java " +
+         "$(location base/android/java/src/org/chromium/base/TraceEvent.java) " +
          "--input_file " +
-         "../../base/android/java/src/org/chromium/base/UnguessableToken.java " +
+         "$(location base/android/java/src/org/chromium/base/UnguessableToken.java) " +
          "--input_file " +
-         "../../base/android/java/src/org/chromium/base/jank_tracker/JankMetricUMARecorder.java " +
+         "$(location base/android/java/src/org/chromium/base/jank_tracker/JankMetricUMARecorder.java) " +
          "--input_file " +
-         "../../base/android/java/src/org/chromium/base/library_loader/LibraryLoader.java " +
+         "$(location base/android/java/src/org/chromium/base/library_loader/LibraryLoader.java) " +
          "--input_file " +
-         "../../base/android/java/src/org/chromium/base/library_loader/LibraryPrefetcher.java " +
+         "$(location base/android/java/src/org/chromium/base/library_loader/LibraryPrefetcher.java) " +
          "--input_file " +
-         "../../base/android/java/src/org/chromium/base/memory/JavaHeapDumpGenerator.java " +
+         "$(location base/android/java/src/org/chromium/base/memory/JavaHeapDumpGenerator.java) " +
          "--input_file " +
-         "../../base/android/java/src/org/chromium/base/metrics/NativeUmaRecorder.java " +
+         "$(location base/android/java/src/org/chromium/base/metrics/NativeUmaRecorder.java) " +
          "--input_file " +
-         "../../base/android/java/src/org/chromium/base/metrics/StatisticsRecorderAndroid.java " +
+         "$(location base/android/java/src/org/chromium/base/metrics/StatisticsRecorderAndroid.java) " +
          "--input_file " +
-         "../../base/android/java/src/org/chromium/base/process_launcher/ChildProcessService.java " +
+         "$(location base/android/java/src/org/chromium/base/process_launcher/ChildProcessService.java) " +
          "--input_file " +
-         "../../base/android/java/src/org/chromium/base/task/PostTask.java " +
+         "$(location base/android/java/src/org/chromium/base/task/PostTask.java) " +
          "--input_file " +
-         "../../base/android/java/src/org/chromium/base/task/TaskRunnerImpl.java",
+         "$(location base/android/java/src/org/chromium/base/task/TaskRunnerImpl.java)",
     out: [
         "jni_headers/base/base_jni_headers/ApkAssets_jni.h",
         "jni_headers/base/base_jni_headers/ApplicationStatus_jni.h",
