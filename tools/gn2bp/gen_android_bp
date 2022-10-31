@@ -670,9 +670,9 @@ def pre_create_action_module(target):
   if target.script == "//build/write_buildflag_header.py":
     # write_buildflag_header.py writes result to args.genDir/args.output
     # So, override args.genDir by '.' so that args.output=$(out) works
-    for i in range(len(target.args)-1):
-      if target.args[i] == '--gen-dir':
-        target.args[i+1] = '.'
+    for i, val in enumerate(target.args):
+      if val == '--gen-dir':
+        target.args[i + 1] = '.'
         break
 
 def create_action_module(blueprint, target):
