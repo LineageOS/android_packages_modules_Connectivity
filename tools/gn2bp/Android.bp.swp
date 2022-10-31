@@ -216,6 +216,9 @@ cc_library_static {
         "out/test/gen/",
         "third_party/android_ndk/sources/android/cpufeatures/",
     ],
+    header_libs: [
+        "jni_headers",
+    ],
 }
 
 // GN: //base/allocator/partition_allocator:partition_alloc_buildflags
@@ -962,6 +965,9 @@ cc_library_static {
         "third_party/icu/source/common/",
         "third_party/icu/source/i18n/",
     ],
+    header_libs: [
+        "jni_headers",
+    ],
 }
 
 // GN: //base:base_jni_headers
@@ -1264,6 +1270,9 @@ cc_library_static {
         "./",
         "buildtools/third_party/libc++/",
         "out/test/gen/",
+    ],
+    header_libs: [
+        "jni_headers",
     ],
 }
 
@@ -1583,6 +1592,9 @@ cc_library_static {
         "buildtools/third_party/libc++/",
         "out/test/gen/",
     ],
+    header_libs: [
+        "jni_headers",
+    ],
 }
 
 // GN: //base/third_party/dynamic_annotations:dynamic_annotations
@@ -1613,6 +1625,9 @@ cc_library_static {
         "./",
         "buildtools/third_party/libc++/",
         "out/test/gen/",
+    ],
+    header_libs: [
+        "jni_headers",
     ],
 }
 
@@ -2804,6 +2819,9 @@ cc_library_static {
         "out/test/gen/",
         "third_party/boringssl/src/include/",
     ],
+    header_libs: [
+        "jni_headers",
+    ],
 }
 
 // GN: //third_party/boringssl:boringssl_asm
@@ -2859,6 +2877,9 @@ cc_library_static {
         "third_party/icu/source/common/",
         "third_party/icu/source/i18n/",
     ],
+    header_libs: [
+        "jni_headers",
+    ],
 }
 
 // GN: //third_party/icu:icuuc_private
@@ -2906,6 +2927,9 @@ cc_library_static {
         "out/test/gen/",
         "third_party/icu/source/common/",
         "third_party/icu/source/i18n/",
+    ],
+    header_libs: [
+        "jni_headers",
     ],
 }
 
@@ -2958,6 +2982,9 @@ cc_library_static {
         "out/test/gen/",
         "third_party/libevent/android/",
     ],
+    header_libs: [
+        "jni_headers",
+    ],
 }
 
 // GN: //third_party/modp_b64:modp_b64
@@ -2990,6 +3017,9 @@ cc_library_static {
         "./",
         "buildtools/third_party/libc++/",
         "out/test/gen/",
+    ],
+    header_libs: [
+        "jni_headers",
     ],
 }
 

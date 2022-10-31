@@ -824,6 +824,12 @@ def create_modules_from_target(blueprint, gn, gn_target_name):
 
   if target.type in gn_utils.LINKER_UNIT_TYPES:
     module.cflags.update(_get_cflags(target))
+    # HACK! We may have to link against chromium's sysroot instead, but this
+    # seems to work for //base:base.
+    # TODO: implement proper cflag parsing.
+    for flag in target.cflags:
+      if '--sysroot=' in flag:
+        module.header_libs.add('jni_headers')
     module.local_include_dirs.update(gn_utils.label_to_path(it) for it in target.include_dirs)
 
   module_is_compiled = module.type not in ('genrule', 'filegroup')
