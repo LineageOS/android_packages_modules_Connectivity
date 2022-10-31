@@ -667,6 +667,11 @@ def create_proto_group_modules(blueprint, gn, module_name, target_names):
 # There may be a better way to do target specific modification
 # Target specific modification before create_action_module
 def pre_create_action_module(target):
+  # Convert ['--param=value'] to ['--param', 'value'] for consistency.
+  # TODO: we may want to only do this for python scripts arguments. If argparse
+  # is used, this transformation is safe.
+  target.args = [str for it in target.args for str in it.split('=')]
+
   if target.script == "//build/write_buildflag_header.py":
     # write_buildflag_header.py writes result to args.genDir/args.output
     # So, override args.genDir by '.' so that args.output=$(out) works
@@ -694,12 +699,14 @@ def create_action_module(blueprint, target):
     # Replace {{response_file_contents}} with /dev/stdin
     target.args = ['/dev/stdin' if it == response_file else it for it in target.args]
 
-  arg_string = ' '.join(target.args)
+  # put all args on a new line for better diffs.
+  NEWLINE = ' " +\n         "'
+  arg_string = NEWLINE.join(target.args)
   module.cmd = '$(location %s) %s' % (script, arg_string)
 
   if use_response_file:
     # Pipe response file contents into script
-    module.cmd = 'echo \'%s\' | %s' % (target.response_file_contents, module.cmd)
+    module.cmd = 'echo \'%s\' |%s%s' % (target.response_file_contents, NEWLINE, module.cmd)
 
   if all(os.path.splitext(it)[1] == '.h' for it in target.outputs):
     module.genrule_headers.add(bp_module_name)
