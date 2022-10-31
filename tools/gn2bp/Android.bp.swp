@@ -1739,6 +1739,7 @@ cc_defaults {
     cflags: [
         "-O2",
         "-Wno-error=return-type",
+        "-Wno-missing-field-initializers",
         "-Wno-non-virtual-dtor",
         "-Wno-sign-compare",
         "-Wno-sign-promo",
