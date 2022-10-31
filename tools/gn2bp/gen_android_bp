@@ -680,6 +680,22 @@ def pre_create_action_module(target):
         target.args[i + 1] = '.'
         break
 
+  elif target.script == '//base/android/jni_generator/jni_generator.py':
+    for i, val in enumerate(target.args):
+      if val == '--output_file':
+        # replace --output_file gen/... with --output_file $(genDir)/...
+        target.args[i + 1] = re.sub('^gen', '$(genDir)', target.args[i + 1])
+      if val == '--input_file':
+        # --input_file supports both .class specifiers or source files as arguments.
+        # Only source files need to be wrapped inside a $(location <label>) tag.
+        if re.match('.*\.class$', target.args[i + 1]):
+          continue
+        # replace --input_file ../../... with --input_file $(location ...)
+        # TODO: put inside function
+        filename = re.sub('^\.\./\.\./', '', target.args[i + 1])
+        target.args[i + 1] = '$(location %s)' % filename
+
+
 def create_action_module(blueprint, target):
   bp_module_name = label_to_module_name(target.name)
   module = Module('genrule', bp_module_name, target.name)
