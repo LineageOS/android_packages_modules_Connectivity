@@ -690,8 +690,8 @@ def create_action_module(blueprint, target):
     module.genrule_header_libs.add('jni_headers')
     for i, val in enumerate(target.args):
       if val == '--output_dir':
-        # replace --output_dir gen/... with --output_dir $(genDir)/...
-        target.args[i + 1] = re.sub('^gen', '$(genDir)', target.args[i + 1])
+        # replace --output_dir gen/jni_headers/... with --output_dir $(genDir)/...
+        target.args[i + 1] = re.sub('^gen/jni_headers', '$(genDir)', target.args[i + 1])
       if val == '--input_file':
         # --input_file supports both .class specifiers or source files as arguments.
         # Only source files need to be wrapped inside a $(location <label>) tag.
@@ -701,6 +701,8 @@ def create_action_module(blueprint, target):
         # TODO: put inside function
         filename = re.sub('^\.\./\.\./', '', target.args[i + 1])
         target.args[i + 1] = '$(location %s)' % filename
+    # fix target.output directory to match #include statements.
+    target.outputs = [re.sub('^jni_headers/', '', out) for out in target.outputs]
 
   script = gn_utils.label_to_path(target.script)
   module.tool_files.add(script)

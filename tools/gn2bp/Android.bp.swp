@@ -268,7 +268,7 @@ genrule {
          "--prev_output_dir " +
          "gen/base/android_runtime_jni_headers " +
          "--output_dir " +
-         "$(genDir)/jni_headers/base/android_runtime_jni_headers " +
+         "$(genDir)/base/android_runtime_jni_headers " +
          "--includes " +
          "../../../../../../base/android/jni_generator/jni_generator_helper.h " +
          "--jar_file " +
@@ -282,8 +282,8 @@ genrule {
          "--input_file " +
          "java/lang/Runtime.class",
     out: [
-        "jni_headers/base/android_runtime_jni_headers/Runnable_jni.h",
-        "jni_headers/base/android_runtime_jni_headers/Runtime_jni.h",
+        "base/android_runtime_jni_headers/Runnable_jni.h",
+        "base/android_runtime_jni_headers/Runtime_jni.h",
     ],
     tool_files: [
         "base/android/jni_generator/jni_generator.py",
@@ -1020,7 +1020,7 @@ genrule {
          "--prev_output_dir " +
          "gen/base/base_jni_headers " +
          "--output_dir " +
-         "$(genDir)/jni_headers/base/base_jni_headers " +
+         "$(genDir)/base/base_jni_headers " +
          "--includes " +
          "../../../../../../base/android/jni_generator/jni_generator_helper.h " +
          "--use_proxy_hash " +
@@ -1185,46 +1185,46 @@ genrule {
          "--input_file " +
          "$(location base/android/java/src/org/chromium/base/task/TaskRunnerImpl.java)",
     out: [
-        "jni_headers/base/base_jni_headers/ApkAssets_jni.h",
-        "jni_headers/base/base_jni_headers/ApplicationStatus_jni.h",
-        "jni_headers/base/base_jni_headers/BaseFeatureList_jni.h",
-        "jni_headers/base/base_jni_headers/BuildInfo_jni.h",
-        "jni_headers/base/base_jni_headers/BundleUtils_jni.h",
-        "jni_headers/base/base_jni_headers/Callback_jni.h",
-        "jni_headers/base/base_jni_headers/ChildProcessService_jni.h",
-        "jni_headers/base/base_jni_headers/CommandLine_jni.h",
-        "jni_headers/base/base_jni_headers/ContentUriUtils_jni.h",
-        "jni_headers/base/base_jni_headers/CpuFeatures_jni.h",
-        "jni_headers/base/base_jni_headers/EarlyTraceEvent_jni.h",
-        "jni_headers/base/base_jni_headers/EventLog_jni.h",
-        "jni_headers/base/base_jni_headers/FeatureList_jni.h",
-        "jni_headers/base/base_jni_headers/Features_jni.h",
-        "jni_headers/base/base_jni_headers/FieldTrialList_jni.h",
-        "jni_headers/base/base_jni_headers/FileUtils_jni.h",
-        "jni_headers/base/base_jni_headers/ImportantFileWriterAndroid_jni.h",
-        "jni_headers/base/base_jni_headers/IntStringCallback_jni.h",
-        "jni_headers/base/base_jni_headers/JNIUtils_jni.h",
-        "jni_headers/base/base_jni_headers/JankMetricUMARecorder_jni.h",
-        "jni_headers/base/base_jni_headers/JavaExceptionReporter_jni.h",
-        "jni_headers/base/base_jni_headers/JavaHandlerThread_jni.h",
-        "jni_headers/base/base_jni_headers/JavaHeapDumpGenerator_jni.h",
-        "jni_headers/base/base_jni_headers/LibraryLoader_jni.h",
-        "jni_headers/base/base_jni_headers/LibraryPrefetcher_jni.h",
-        "jni_headers/base/base_jni_headers/LocaleUtils_jni.h",
-        "jni_headers/base/base_jni_headers/MemoryPressureListener_jni.h",
-        "jni_headers/base/base_jni_headers/NativeUmaRecorder_jni.h",
-        "jni_headers/base/base_jni_headers/PathService_jni.h",
-        "jni_headers/base/base_jni_headers/PathUtils_jni.h",
-        "jni_headers/base/base_jni_headers/PostTask_jni.h",
-        "jni_headers/base/base_jni_headers/PowerMonitor_jni.h",
-        "jni_headers/base/base_jni_headers/RadioUtils_jni.h",
-        "jni_headers/base/base_jni_headers/StatisticsRecorderAndroid_jni.h",
-        "jni_headers/base/base_jni_headers/SysUtils_jni.h",
-        "jni_headers/base/base_jni_headers/TaskRunnerImpl_jni.h",
-        "jni_headers/base/base_jni_headers/ThreadUtils_jni.h",
-        "jni_headers/base/base_jni_headers/TimezoneUtils_jni.h",
-        "jni_headers/base/base_jni_headers/TraceEvent_jni.h",
-        "jni_headers/base/base_jni_headers/UnguessableToken_jni.h",
+        "base/base_jni_headers/ApkAssets_jni.h",
+        "base/base_jni_headers/ApplicationStatus_jni.h",
+        "base/base_jni_headers/BaseFeatureList_jni.h",
+        "base/base_jni_headers/BuildInfo_jni.h",
+        "base/base_jni_headers/BundleUtils_jni.h",
+        "base/base_jni_headers/Callback_jni.h",
+        "base/base_jni_headers/ChildProcessService_jni.h",
+        "base/base_jni_headers/CommandLine_jni.h",
+        "base/base_jni_headers/ContentUriUtils_jni.h",
+        "base/base_jni_headers/CpuFeatures_jni.h",
+        "base/base_jni_headers/EarlyTraceEvent_jni.h",
+        "base/base_jni_headers/EventLog_jni.h",
+        "base/base_jni_headers/FeatureList_jni.h",
+        "base/base_jni_headers/Features_jni.h",
+        "base/base_jni_headers/FieldTrialList_jni.h",
+        "base/base_jni_headers/FileUtils_jni.h",
+        "base/base_jni_headers/ImportantFileWriterAndroid_jni.h",
+        "base/base_jni_headers/IntStringCallback_jni.h",
+        "base/base_jni_headers/JNIUtils_jni.h",
+        "base/base_jni_headers/JankMetricUMARecorder_jni.h",
+        "base/base_jni_headers/JavaExceptionReporter_jni.h",
+        "base/base_jni_headers/JavaHandlerThread_jni.h",
+        "base/base_jni_headers/JavaHeapDumpGenerator_jni.h",
+        "base/base_jni_headers/LibraryLoader_jni.h",
+        "base/base_jni_headers/LibraryPrefetcher_jni.h",
+        "base/base_jni_headers/LocaleUtils_jni.h",
+        "base/base_jni_headers/MemoryPressureListener_jni.h",
+        "base/base_jni_headers/NativeUmaRecorder_jni.h",
+        "base/base_jni_headers/PathService_jni.h",
+        "base/base_jni_headers/PathUtils_jni.h",
+        "base/base_jni_headers/PostTask_jni.h",
+        "base/base_jni_headers/PowerMonitor_jni.h",
+        "base/base_jni_headers/RadioUtils_jni.h",
+        "base/base_jni_headers/StatisticsRecorderAndroid_jni.h",
+        "base/base_jni_headers/SysUtils_jni.h",
+        "base/base_jni_headers/TaskRunnerImpl_jni.h",
+        "base/base_jni_headers/ThreadUtils_jni.h",
+        "base/base_jni_headers/TimezoneUtils_jni.h",
+        "base/base_jni_headers/TraceEvent_jni.h",
+        "base/base_jni_headers/UnguessableToken_jni.h",
     ],
     tool_files: [
         "base/android/jni_generator/jni_generator.py",
