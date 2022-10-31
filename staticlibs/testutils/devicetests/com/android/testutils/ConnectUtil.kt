@@ -63,6 +63,7 @@ class ConnectUtil(private val context: Context) {
 
         try {
             val connInfo = wifiManager.connectionInfo
+            Log.d(TAG, "connInfo=" + connInfo)
             if (connInfo == null || connInfo.networkId == -1) {
                 clearWifiBlocklist()
                 val pfd = getInstrumentation().uiAutomation.executeShellCommand("svc wifi enable")
