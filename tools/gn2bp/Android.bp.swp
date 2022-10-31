@@ -213,6 +213,8 @@ cc_library_static {
     local_include_dirs: [
         "./",
         "buildtools/third_party/libc++/",
+        "buildtools/third_party/libc++/trunk/include",
+        "buildtools/third_party/libc++abi/trunk/include",
         "third_party/android_ndk/sources/android/cpufeatures/",
     ],
     cpp_std: "c++20",
@@ -954,6 +956,8 @@ cc_library_static {
     local_include_dirs: [
         "./",
         "buildtools/third_party/libc++/",
+        "buildtools/third_party/libc++/trunk/include",
+        "buildtools/third_party/libc++abi/trunk/include",
         "third_party/abseil-cpp/",
         "third_party/android_ndk/sources/android/cpufeatures/",
         "third_party/boringssl/src/include/",
@@ -1265,6 +1269,8 @@ cc_library_static {
     local_include_dirs: [
         "./",
         "buildtools/third_party/libc++/",
+        "buildtools/third_party/libc++/trunk/include",
+        "buildtools/third_party/libc++abi/trunk/include",
     ],
     cpp_std: "c++20",
 }
@@ -1583,6 +1589,8 @@ cc_library_static {
     local_include_dirs: [
         "./",
         "buildtools/third_party/libc++/",
+        "buildtools/third_party/libc++/trunk/include",
+        "buildtools/third_party/libc++abi/trunk/include",
     ],
     cpp_std: "c++20",
 }
@@ -1614,6 +1622,8 @@ cc_library_static {
     local_include_dirs: [
         "./",
         "buildtools/third_party/libc++/",
+        "buildtools/third_party/libc++/trunk/include",
+        "buildtools/third_party/libc++abi/trunk/include",
     ],
     cpp_std: "c++20",
 }
@@ -1735,6 +1745,7 @@ cc_defaults {
         "-Wno-unused-parameter",
         "-fvisibility=hidden",
     ],
+    stl: "none",
 }
 
 // GN: //third_party/abseil-cpp:absl
@@ -2804,6 +2815,8 @@ cc_library_static {
     local_include_dirs: [
         "./",
         "buildtools/third_party/libc++/",
+        "buildtools/third_party/libc++/trunk/include",
+        "buildtools/third_party/libc++abi/trunk/include",
         "third_party/boringssl/src/include/",
     ],
     cpp_std: "c++20",
@@ -2858,6 +2871,8 @@ cc_library_static {
     local_include_dirs: [
         "./",
         "buildtools/third_party/libc++/",
+        "buildtools/third_party/libc++/trunk/include",
+        "buildtools/third_party/libc++abi/trunk/include",
         "third_party/icu/source/common/",
         "third_party/icu/source/i18n/",
     ],
@@ -2906,6 +2921,8 @@ cc_library_static {
     local_include_dirs: [
         "./",
         "buildtools/third_party/libc++/",
+        "buildtools/third_party/libc++/trunk/include",
+        "buildtools/third_party/libc++abi/trunk/include",
         "third_party/icu/source/common/",
         "third_party/icu/source/i18n/",
     ],
@@ -2958,6 +2975,8 @@ cc_library_static {
     local_include_dirs: [
         "./",
         "buildtools/third_party/libc++/",
+        "buildtools/third_party/libc++/trunk/include",
+        "buildtools/third_party/libc++abi/trunk/include",
         "third_party/libevent/android/",
     ],
     cpp_std: "c++20",
@@ -2992,6 +3011,8 @@ cc_library_static {
     local_include_dirs: [
         "./",
         "buildtools/third_party/libc++/",
+        "buildtools/third_party/libc++/trunk/include",
+        "buildtools/third_party/libc++abi/trunk/include",
     ],
     cpp_std: "c++20",
 }

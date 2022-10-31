@@ -830,6 +830,8 @@ def create_modules_from_target(blueprint, gn, gn_target_name):
     for flag in target.cflags:
       if '-std=' in flag:
         module.cpp_std = flag[len('-std='):]
+      if '-isystem' in flag:
+        module.local_include_dirs.add(flag[len('-isystem../../'):])
 
     # Adding local_include_dirs is necessary due to source_sets / filegroups
     # which do not properly propagate include directories.
@@ -929,6 +931,7 @@ def create_blueprint_for_targets(gn, desc, targets):
       '-fvisibility=hidden',
       '-O2',
   ]
+  defaults.stl = 'none'
   blueprint.add_module(defaults)
 
   for target in targets:
