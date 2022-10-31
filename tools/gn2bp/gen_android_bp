@@ -666,9 +666,10 @@ def create_proto_group_modules(blueprint, gn, module_name, target_names):
 
   blueprint.add_module(module)
 
-# There may be a better way to do target specific modification
-# Target specific modification before create_action_module
-def pre_create_action_module(target):
+def create_action_module(blueprint, target):
+  bp_module_name = label_to_module_name(target.name)
+  module = Module('genrule', bp_module_name, target.name)
+
   # Convert ['--param=value'] to ['--param', 'value'] for consistency.
   # TODO: we may want to only do this for python scripts arguments. If argparse
   # is used, this transformation is safe.
@@ -697,10 +698,6 @@ def pre_create_action_module(target):
         filename = re.sub('^\.\./\.\./', '', target.args[i + 1])
         target.args[i + 1] = '$(location %s)' % filename
 
-
-def create_action_module(blueprint, target):
-  bp_module_name = label_to_module_name(target.name)
-  module = Module('genrule', bp_module_name, target.name)
   script = gn_utils.label_to_path(target.script)
   module.tool_files.add(script)
 
@@ -805,7 +802,6 @@ def create_modules_from_target(blueprint, gn, gn_target_name):
         name_without_toolchain == gn_utils.GEN_VERSION_TARGET:
       module = create_gen_version_module(blueprint, target, bp_module_name)
     else:
-      pre_create_action_module(target)
       module = create_action_module(blueprint, target)
   elif target.type == 'copy':
     # TODO: careful now! copy targets are not supported yet, but this will stop
