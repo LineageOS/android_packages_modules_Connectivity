@@ -17,7 +17,6 @@
 package com.android.net.module.util;
 
 import android.annotation.NonNull;
-import android.annotation.Nullable;
 
 /**
  * Byte utility functions.
@@ -32,7 +31,7 @@ public class ByteUtils {
      * @return the least index {@code i} for which {@code array[i] == target}, or {@code -1} if no
      *     such index exists.
      */
-    public static int indexOf(@NonNull byte[] array, @Nullable byte target) {
+    public static int indexOf(@NonNull byte[] array, byte target) {
         return indexOf(array, target, 0, array.length);
     }
 
