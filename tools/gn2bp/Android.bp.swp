@@ -17,7 +17,7 @@
 // GN: //base/allocator:buildflags
 genrule {
     name: "cronet_aml_base_allocator_buildflags",
-    cmd: "echo '--flags USE_PARTITION_ALLOC=false USE_ALLOCATOR_SHIM=true USE_PARTITION_ALLOC_AS_MALLOC=false USE_BACKUP_REF_PTR=false USE_ASAN_BACKUP_REF_PTR=false USE_PARTITION_ALLOC_AS_GWP_ASAN_STORE=false USE_MTE_CHECKED_PTR=false FORCE_ENABLE_RAW_PTR_EXCLUSION=false' | " +
+    cmd: "echo '--flags USE_PARTITION_ALLOC=\"false\" USE_ALLOCATOR_SHIM=\"true\" USE_PARTITION_ALLOC_AS_MALLOC=\"false\" USE_BACKUP_REF_PTR=\"false\" USE_ASAN_BACKUP_REF_PTR=\"false\" USE_PARTITION_ALLOC_AS_GWP_ASAN_STORE=\"false\" USE_MTE_CHECKED_PTR=\"false\" FORCE_ENABLE_RAW_PTR_EXCLUSION=\"false\"' | " +
          "$(location build/write_buildflag_header.py) --output " +
          "$(out) " +
          "--rulename " +
@@ -37,7 +37,7 @@ genrule {
 // GN: //base/allocator/partition_allocator:chromecast_buildflags
 genrule {
     name: "cronet_aml_base_allocator_partition_allocator_chromecast_buildflags",
-    cmd: "echo '--flags PA_IS_CAST_ANDROID=false PA_IS_CASTOS=false' | " +
+    cmd: "echo '--flags PA_IS_CAST_ANDROID=\"false\" PA_IS_CASTOS=\"false\"' | " +
          "$(location build/write_buildflag_header.py) --output " +
          "$(out) " +
          "--rulename " +
@@ -57,7 +57,7 @@ genrule {
 // GN: //base/allocator/partition_allocator:chromeos_buildflags
 genrule {
     name: "cronet_aml_base_allocator_partition_allocator_chromeos_buildflags",
-    cmd: "echo '--flags PA_IS_CHROMEOS_ASH=false' | " +
+    cmd: "echo '--flags PA_IS_CHROMEOS_ASH=\"false\"' | " +
          "$(location build/write_buildflag_header.py) --output " +
          "$(out) " +
          "--rulename " +
@@ -77,7 +77,7 @@ genrule {
 // GN: //base/allocator/partition_allocator:debugging_buildflags
 genrule {
     name: "cronet_aml_base_allocator_partition_allocator_debugging_buildflags",
-    cmd: "echo '--flags PA_DCHECK_IS_ON=true PA_EXPENSIVE_DCHECKS_ARE_ON=true PA_DCHECK_IS_CONFIGURABLE=false' | " +
+    cmd: "echo '--flags PA_DCHECK_IS_ON=\"true\" PA_EXPENSIVE_DCHECKS_ARE_ON=\"true\" PA_DCHECK_IS_CONFIGURABLE=\"false\"' | " +
          "$(location build/write_buildflag_header.py) --output " +
          "$(out) " +
          "--rulename " +
@@ -97,7 +97,7 @@ genrule {
 // GN: //base/allocator/partition_allocator:logging_buildflags
 genrule {
     name: "cronet_aml_base_allocator_partition_allocator_logging_buildflags",
-    cmd: "echo '--flags PA_ENABLE_LOG_ERROR_NOT_REACHED=false' | " +
+    cmd: "echo '--flags PA_ENABLE_LOG_ERROR_NOT_REACHED=\"false\"' | " +
          "$(location build/write_buildflag_header.py) --output " +
          "$(out) " +
          "--rulename " +
@@ -221,7 +221,7 @@ cc_library_static {
 // GN: //base/allocator/partition_allocator:partition_alloc_buildflags
 genrule {
     name: "cronet_aml_base_allocator_partition_allocator_partition_alloc_buildflags",
-    cmd: "echo '--flags ENABLE_PARTITION_ALLOC_AS_MALLOC_SUPPORT=true ENABLE_BACKUP_REF_PTR_SUPPORT=true ENABLE_BACKUP_REF_PTR_SLOW_CHECKS=false ENABLE_DANGLING_RAW_PTR_CHECKS=false PUT_REF_COUNT_IN_PREVIOUS_SLOT=true ENABLE_GWP_ASAN_SUPPORT=true ENABLE_MTE_CHECKED_PTR_SUPPORT=false RECORD_ALLOC_INFO=false USE_FREESLOT_BITMAP=false GLUE_CORE_POOLS=false ENABLE_SHADOW_METADATA_FOR_64_BITS_POINTERS=false STARSCAN=true PA_USE_BASE_TRACING=true ENABLE_PKEYS=false' | " +
+    cmd: "echo '--flags ENABLE_PARTITION_ALLOC_AS_MALLOC_SUPPORT=\"true\" ENABLE_BACKUP_REF_PTR_SUPPORT=\"true\" ENABLE_BACKUP_REF_PTR_SLOW_CHECKS=\"false\" ENABLE_DANGLING_RAW_PTR_CHECKS=\"false\" PUT_REF_COUNT_IN_PREVIOUS_SLOT=\"true\" ENABLE_GWP_ASAN_SUPPORT=\"true\" ENABLE_MTE_CHECKED_PTR_SUPPORT=\"false\" RECORD_ALLOC_INFO=\"false\" USE_FREESLOT_BITMAP=\"false\" GLUE_CORE_POOLS=\"false\" ENABLE_SHADOW_METADATA_FOR_64_BITS_POINTERS=\"false\" STARSCAN=\"true\" PA_USE_BASE_TRACING=\"true\" ENABLE_PKEYS=\"false\"' | " +
          "$(location build/write_buildflag_header.py) --output " +
          "$(out) " +
          "--rulename " +
@@ -241,7 +241,7 @@ genrule {
 // GN: //base:anchor_functions_buildflags
 genrule {
     name: "cronet_aml_base_anchor_functions_buildflags",
-    cmd: "echo '--flags USE_LLD=true SUPPORTS_CODE_ORDERING=true' | " +
+    cmd: "echo '--flags USE_LLD=\"true\" SUPPORTS_CODE_ORDERING=\"true\"' | " +
          "$(location build/write_buildflag_header.py) --output " +
          "$(out) " +
          "--rulename " +
@@ -1283,7 +1283,7 @@ genrule {
 // GN: //base:cfi_buildflags
 genrule {
     name: "cronet_aml_base_cfi_buildflags",
-    cmd: "echo '--flags CFI_CAST_CHECK=false && false CFI_DIAG=false && false CFI_ICALL_CHECK=false && false CFI_ENFORCEMENT_TRAP=false && !false CFI_ENFORCEMENT_DIAGNOSTIC=false && false && !false' | " +
+    cmd: "echo '--flags CFI_CAST_CHECK=\"false && false\" CFI_DIAG=\"false && false\" CFI_ICALL_CHECK=\"false && false\" CFI_ENFORCEMENT_TRAP=\"false && !false\" CFI_ENFORCEMENT_DIAGNOSTIC=\"false && false && !false\"' | " +
          "$(location build/write_buildflag_header.py) --output " +
          "$(out) " +
          "--rulename " +
@@ -1303,7 +1303,7 @@ genrule {
 // GN: //base:clang_profiling_buildflags
 genrule {
     name: "cronet_aml_base_clang_profiling_buildflags",
-    cmd: "echo '--flags CLANG_PROFILING=false CLANG_PROFILING_INSIDE_SANDBOX=false USE_CLANG_COVERAGE=false' | " +
+    cmd: "echo '--flags CLANG_PROFILING=\"false\" CLANG_PROFILING_INSIDE_SANDBOX=\"false\" USE_CLANG_COVERAGE=\"false\"' | " +
          "$(location build/write_buildflag_header.py) --output " +
          "$(out) " +
          "--rulename " +
@@ -1323,7 +1323,7 @@ genrule {
 // GN: //base:debugging_buildflags
 genrule {
     name: "cronet_aml_base_debugging_buildflags",
-    cmd: "echo '--flags DCHECK_IS_CONFIGURABLE=false ENABLE_LOCATION_SOURCE=true ENABLE_PROFILING=false CAN_UNWIND_WITH_FRAME_POINTERS=false UNSAFE_DEVELOPER_BUILD=true CAN_UNWIND_WITH_CFI_TABLE=true EXCLUDE_UNWIND_TABLES=false ENABLE_GDBINIT_WARNING=true ENABLE_LLDBINIT_WARNING=false EXPENSIVE_DCHECKS_ARE_ON=true ENABLE_STACK_TRACE_LINE_NUMBERS=false' | " +
+    cmd: "echo '--flags DCHECK_IS_CONFIGURABLE=\"false\" ENABLE_LOCATION_SOURCE=\"true\" ENABLE_PROFILING=\"false\" CAN_UNWIND_WITH_FRAME_POINTERS=\"false\" UNSAFE_DEVELOPER_BUILD=\"true\" CAN_UNWIND_WITH_CFI_TABLE=\"true\" EXCLUDE_UNWIND_TABLES=\"false\" ENABLE_GDBINIT_WARNING=\"true\" ENABLE_LLDBINIT_WARNING=\"false\" EXPENSIVE_DCHECKS_ARE_ON=\"true\" ENABLE_STACK_TRACE_LINE_NUMBERS=\"false\"' | " +
          "$(location build/write_buildflag_header.py) --output " +
          "$(out) " +
          "--rulename " +
@@ -1343,7 +1343,7 @@ genrule {
 // GN: //base:feature_list_buildflags
 genrule {
     name: "cronet_aml_base_feature_list_buildflags",
-    cmd: "echo '--flags ENABLE_BANNED_BASE_FEATURE_PREFIX=false' | " +
+    cmd: "echo '--flags ENABLE_BANNED_BASE_FEATURE_PREFIX=\"false\"' | " +
          "$(location build/write_buildflag_header.py) --output " +
          "$(out) " +
          "--rulename " +
@@ -1363,7 +1363,7 @@ genrule {
 // GN: //base:ios_cronet_buildflags
 genrule {
     name: "cronet_aml_base_ios_cronet_buildflags",
-    cmd: "echo '--flags CRONET_BUILD=false' | " +
+    cmd: "echo '--flags CRONET_BUILD=\"false\"' | " +
          "$(location build/write_buildflag_header.py) --output " +
          "$(out) " +
          "--rulename " +
@@ -1383,7 +1383,7 @@ genrule {
 // GN: //base:logging_buildflags
 genrule {
     name: "cronet_aml_base_logging_buildflags",
-    cmd: "echo '--flags ENABLE_LOG_ERROR_NOT_REACHED=false USE_RUNTIME_VLOG=true' | " +
+    cmd: "echo '--flags ENABLE_LOG_ERROR_NOT_REACHED=\"false\" USE_RUNTIME_VLOG=\"true\"' | " +
          "$(location build/write_buildflag_header.py) --output " +
          "$(out) " +
          "--rulename " +
@@ -1403,7 +1403,7 @@ genrule {
 // GN: //base:message_pump_buildflags
 genrule {
     name: "cronet_aml_base_message_pump_buildflags",
-    cmd: "echo '--flags ENABLE_MESSAGE_PUMP_EPOLL=true' | " +
+    cmd: "echo '--flags ENABLE_MESSAGE_PUMP_EPOLL=\"true\"' | " +
          "$(location build/write_buildflag_header.py) --output " +
          "$(out) " +
          "--rulename " +
@@ -1428,7 +1428,7 @@ filegroup {
 // GN: //base:orderfile_buildflags
 genrule {
     name: "cronet_aml_base_orderfile_buildflags",
-    cmd: "echo '--flags DEVTOOLS_INSTRUMENTATION_DUMPING=false ORDERFILE_INSTRUMENTATION=false' | " +
+    cmd: "echo '--flags DEVTOOLS_INSTRUMENTATION_DUMPING=\"false\" ORDERFILE_INSTRUMENTATION=\"false\"' | " +
          "$(location build/write_buildflag_header.py) --output " +
          "$(out) " +
          "--rulename " +
@@ -1448,7 +1448,7 @@ genrule {
 // GN: //base:parsing_buildflags
 genrule {
     name: "cronet_aml_base_parsing_buildflags",
-    cmd: "echo '--flags BUILD_RUST_JSON_PARSER=false' | " +
+    cmd: "echo '--flags BUILD_RUST_JSON_PARSER=\"false\"' | " +
          "$(location build/write_buildflag_header.py) --output " +
          "$(out) " +
          "--rulename " +
@@ -1468,7 +1468,7 @@ genrule {
 // GN: //base:power_monitor_buildflags
 genrule {
     name: "cronet_aml_base_power_monitor_buildflags",
-    cmd: "echo '--flags HAS_BATTERY_LEVEL_PROVIDER_IMPL=false' | " +
+    cmd: "echo '--flags HAS_BATTERY_LEVEL_PROVIDER_IMPL=\"false\"' | " +
          "$(location build/write_buildflag_header.py) --output " +
          "$(out) " +
          "--rulename " +
@@ -1488,7 +1488,7 @@ genrule {
 // GN: //base:profiler_buildflags
 genrule {
     name: "cronet_aml_base_profiler_buildflags",
-    cmd: "echo '--flags ENABLE_ARM_CFI_TABLE=true IOS_STACK_PROFILER_ENABLED=true USE_ANDROID_UNWINDER_V2=true' | " +
+    cmd: "echo '--flags ENABLE_ARM_CFI_TABLE=\"true\" IOS_STACK_PROFILER_ENABLED=\"true\" USE_ANDROID_UNWINDER_V2=\"true\"' | " +
          "$(location build/write_buildflag_header.py) --output " +
          "$(out) " +
          "--rulename " +
@@ -1508,7 +1508,7 @@ genrule {
 // GN: //base:sanitizer_buildflags
 genrule {
     name: "cronet_aml_base_sanitizer_buildflags",
-    cmd: "echo '--flags IS_HWASAN=false USING_SANITIZER=false' | " +
+    cmd: "echo '--flags IS_HWASAN=\"false\" USING_SANITIZER=\"false\"' | " +
          "$(location build/write_buildflag_header.py) --output " +
          "$(out) " +
          "--rulename " +
@@ -1528,7 +1528,7 @@ genrule {
 // GN: //base:synchronization_buildflags
 genrule {
     name: "cronet_aml_base_synchronization_buildflags",
-    cmd: "echo '--flags ENABLE_MUTEX_PRIORITY_INHERITANCE=false' | " +
+    cmd: "echo '--flags ENABLE_MUTEX_PRIORITY_INHERITANCE=\"false\"' | " +
          "$(location build/write_buildflag_header.py) --output " +
          "$(out) " +
          "--rulename " +
@@ -1619,7 +1619,7 @@ cc_library_static {
 // GN: //base:tracing_buildflags
 genrule {
     name: "cronet_aml_base_tracing_buildflags",
-    cmd: "echo '--flags ENABLE_BASE_TRACING=false USE_PERFETTO_CLIENT_LIBRARY=false OPTIONAL_TRACE_EVENTS_ENABLED=false' | " +
+    cmd: "echo '--flags ENABLE_BASE_TRACING=\"false\" USE_PERFETTO_CLIENT_LIBRARY=\"false\" OPTIONAL_TRACE_EVENTS_ENABLED=\"false\"' | " +
          "$(location build/write_buildflag_header.py) --output " +
          "$(out) " +
          "--rulename " +
@@ -1639,7 +1639,7 @@ genrule {
 // GN: //build:branding_buildflags
 genrule {
     name: "cronet_aml_build_branding_buildflags",
-    cmd: "echo '--flags CHROMIUM_BRANDING=1 GOOGLE_CHROME_BRANDING=0' | " +
+    cmd: "echo '--flags CHROMIUM_BRANDING=\"1\" GOOGLE_CHROME_BRANDING=\"0\"' | " +
          "$(location build/write_buildflag_header.py) --output " +
          "$(out) " +
          "--rulename " +
@@ -1664,7 +1664,7 @@ filegroup {
 // GN: //build:chromecast_buildflags
 genrule {
     name: "cronet_aml_build_chromecast_buildflags",
-    cmd: "echo '--flags IS_CASTOS=false IS_CAST_ANDROID=false ENABLE_CAST_RECEIVER=false IS_CHROMECAST=false' | " +
+    cmd: "echo '--flags IS_CASTOS=\"false\" IS_CAST_ANDROID=\"false\" ENABLE_CAST_RECEIVER=\"false\" IS_CHROMECAST=\"false\"' | " +
          "$(location build/write_buildflag_header.py) --output " +
          "$(out) " +
          "--rulename " +
@@ -1684,7 +1684,7 @@ genrule {
 // GN: //build:chromeos_buildflags
 genrule {
     name: "cronet_aml_build_chromeos_buildflags",
-    cmd: "echo '--flags IS_CHROMEOS_DEVICE=false IS_CHROMEOS_LACROS=false IS_CHROMEOS_ASH=false IS_CHROMEOS_WITH_HW_DETAILS=false IS_REVEN=false' | " +
+    cmd: "echo '--flags IS_CHROMEOS_DEVICE=\"false\" IS_CHROMEOS_LACROS=\"false\" IS_CHROMEOS_ASH=\"false\" IS_CHROMEOS_WITH_HW_DETAILS=\"false\" IS_REVEN=\"false\"' | " +
          "$(location build/write_buildflag_header.py) --output " +
          "$(out) " +
          "--rulename " +
@@ -1704,7 +1704,7 @@ genrule {
 // GN: //build/config/compiler:compiler_buildflags
 genrule {
     name: "cronet_aml_build_config_compiler_compiler_buildflags",
-    cmd: "echo '--flags CLANG_PGO=0 SYMBOL_LEVEL=1' | " +
+    cmd: "echo '--flags CLANG_PGO=\"0\" SYMBOL_LEVEL=\"1\"' | " +
          "$(location build/write_buildflag_header.py) --output " +
          "$(out) " +
          "--rulename " +
