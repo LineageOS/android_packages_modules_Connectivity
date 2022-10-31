@@ -922,6 +922,7 @@ def create_blueprint_for_targets(gn, desc, targets):
   defaults = Module('cc_defaults', defaults_module, '//gn:default_deps')
   defaults.cflags = [
       '-Wno-error=return-type',
+      '-Wno-non-virtual-dtor',
       '-Wno-sign-compare',
       '-Wno-sign-promo',
       '-Wno-unused-parameter',
