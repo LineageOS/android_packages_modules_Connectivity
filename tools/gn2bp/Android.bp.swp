@@ -265,14 +265,14 @@ genrule {
     name: "cronet_aml_base_android_runtime_jni_headers",
     cmd: "$(location base/android/jni_generator/jni_generator.py) --ptr_type " +
          "long " +
-         "--prev_output_dir " +
-         "gen/base/android_runtime_jni_headers " +
+         " " +
+         " " +
          "--output_dir " +
          "$(genDir)/base/android_runtime_jni_headers " +
          "--includes " +
          "base/android/jni_generator/jni_generator_helper.h " +
          "--jar_file " +
-         "../../third_party/android_sdk/public/platforms/android-33/android.jar " +
+         "$(location third_party/android_sdk/public/platforms/android-33/android.jar) " +
          "--output_name " +
          "Runnable_jni.h " +
          "--output_name " +
@@ -280,7 +280,9 @@ genrule {
          "--input_file " +
          "java/lang/Runnable.class " +
          "--input_file " +
-         "java/lang/Runtime.class",
+         "java/lang/Runtime.class " +
+         "--javap " +
+         "$$(find out/.path -name javap)",
     out: [
         "base/android_runtime_jni_headers/Runnable_jni.h",
         "base/android_runtime_jni_headers/Runtime_jni.h",
@@ -1017,8 +1019,8 @@ genrule {
     ],
     cmd: "$(location base/android/jni_generator/jni_generator.py) --ptr_type " +
          "long " +
-         "--prev_output_dir " +
-         "gen/base/base_jni_headers " +
+         " " +
+         " " +
          "--output_dir " +
          "$(genDir)/base/base_jni_headers " +
          "--includes " +

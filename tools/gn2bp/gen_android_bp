@@ -688,6 +688,7 @@ def create_action_module(blueprint, target):
     # chromium builds against a prebuilt ndk that contains the jni_headers, so
     # a dependency is never explicitly created.
     module.genrule_header_libs.add('jni_headers')
+    needs_javap = False
     for i, val in enumerate(target.args):
       if val == '--output_dir':
         # replace --output_dir gen/jni_headers/... with --output_dir $(genDir)/...
@@ -704,6 +705,19 @@ def create_action_module(blueprint, target):
       if val == '--includes' and 'jni_generator_helper' in target.args[i + 1]:
         # delete all leading ../
         target.args[i + 1] = re.sub('^(\.\./)+', '', target.args[i + 1])
+      if val == '--prev_output_dir':
+        # this is not needed for aosp builds.
+        target.args[i] = ''
+        target.args[i + 1] = ''
+      if val == '--jar_file':
+        # delete leading ../../ and add path to javap
+        filename = re.sub('^\.\./\.\./', '', target.args[i + 1])
+        target.args[i + 1] = '$(location %s)' % filename
+        needs_javap = True
+
+    if needs_javap:
+      target.args.append('--javap')
+      target.args.append('$$(find out/.path -name javap)')
     # fix target.output directory to match #include statements.
     target.outputs = [re.sub('^jni_headers/', '', out) for out in target.outputs]
 
