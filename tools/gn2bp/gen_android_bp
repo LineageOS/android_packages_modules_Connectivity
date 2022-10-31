@@ -701,6 +701,9 @@ def create_action_module(blueprint, target):
         # TODO: put inside function
         filename = re.sub('^\.\./\.\./', '', target.args[i + 1])
         target.args[i + 1] = '$(location %s)' % filename
+      if val == '--includes' and 'jni_generator_helper' in target.args[i + 1]:
+        # delete all leading ../
+        target.args[i + 1] = re.sub('^(\.\./)+', '', target.args[i + 1])
     # fix target.output directory to match #include statements.
     target.outputs = [re.sub('^jni_headers/', '', out) for out in target.outputs]
 
