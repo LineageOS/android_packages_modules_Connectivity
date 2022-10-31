@@ -213,7 +213,6 @@ cc_library_static {
     local_include_dirs: [
         "./",
         "buildtools/third_party/libc++/",
-        "out/test/gen/",
         "third_party/android_ndk/sources/android/cpufeatures/",
     ],
     cpp_std: "c++20",
@@ -955,8 +954,6 @@ cc_library_static {
     local_include_dirs: [
         "./",
         "buildtools/third_party/libc++/",
-        "out/test/gen/",
-        "out/test/gen/jni_headers/",
         "third_party/abseil-cpp/",
         "third_party/android_ndk/sources/android/cpufeatures/",
         "third_party/boringssl/src/include/",
@@ -1268,7 +1265,6 @@ cc_library_static {
     local_include_dirs: [
         "./",
         "buildtools/third_party/libc++/",
-        "out/test/gen/",
     ],
     cpp_std: "c++20",
 }
@@ -1587,7 +1583,6 @@ cc_library_static {
     local_include_dirs: [
         "./",
         "buildtools/third_party/libc++/",
-        "out/test/gen/",
     ],
     cpp_std: "c++20",
 }
@@ -1619,7 +1614,6 @@ cc_library_static {
     local_include_dirs: [
         "./",
         "buildtools/third_party/libc++/",
-        "out/test/gen/",
     ],
     cpp_std: "c++20",
 }
@@ -2809,7 +2803,6 @@ cc_library_static {
     local_include_dirs: [
         "./",
         "buildtools/third_party/libc++/",
-        "out/test/gen/",
         "third_party/boringssl/src/include/",
     ],
     cpp_std: "c++20",
@@ -2864,7 +2857,6 @@ cc_library_static {
     local_include_dirs: [
         "./",
         "buildtools/third_party/libc++/",
-        "out/test/gen/",
         "third_party/icu/source/common/",
         "third_party/icu/source/i18n/",
     ],
@@ -2913,7 +2905,6 @@ cc_library_static {
     local_include_dirs: [
         "./",
         "buildtools/third_party/libc++/",
-        "out/test/gen/",
         "third_party/icu/source/common/",
         "third_party/icu/source/i18n/",
     ],
@@ -2966,7 +2957,6 @@ cc_library_static {
     local_include_dirs: [
         "./",
         "buildtools/third_party/libc++/",
-        "out/test/gen/",
         "third_party/libevent/android/",
     ],
     cpp_std: "c++20",
@@ -3001,7 +2991,6 @@ cc_library_static {
     local_include_dirs: [
         "./",
         "buildtools/third_party/libc++/",
-        "out/test/gen/",
     ],
     cpp_std: "c++20",
 }
