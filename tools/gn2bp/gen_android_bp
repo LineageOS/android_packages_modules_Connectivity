@@ -918,6 +918,18 @@ def create_modules_from_target(blueprint, gn, gn_target_name):
 
     dep_module = create_modules_from_target(blueprint, gn, dep_name)
 
+    # TODO: Proper dependency check for genrule.
+    # Currently, only propagating genrule dependencies.
+    # Also, currently, all the dependencies are propagated upwards.
+    # in gn, public_deps should be propagated but deps should not.
+    # Not sure this information is available in the desc.json.
+    # Following rule works for adding android_runtime_jni_headers to base:base.
+    # If this doesn't work for other target, hardcoding for specific target
+    # might be better.
+    if module.type == "genrule" and dep_module.type == "genrule":
+        module.genrule_headers.add(dep_module.name)
+        module.genrule_headers.update(dep_module.genrule_headers)
+
     # For filegroups and genrule, recurse but don't apply the deps.
     if not module_is_compiled:
       continue
