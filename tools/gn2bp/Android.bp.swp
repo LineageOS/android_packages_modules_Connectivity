@@ -959,10 +959,10 @@ cc_library_static {
         "buildtools/third_party/libc++abi/trunk/include",
         "third_party/abseil-cpp/",
         "third_party/android_ndk/sources/android/cpufeatures/",
-        "third_party/android_ndk/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include",
         "third_party/boringssl/src/include/",
         "third_party/icu/source/common/",
         "third_party/icu/source/i18n/",
+        "third_party/android_ndk/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include",
     ],
     header_libs: [
         "jni_headers",
@@ -2821,8 +2821,8 @@ cc_library_static {
         "buildtools/third_party/libc++/",
         "buildtools/third_party/libc++/trunk/include",
         "buildtools/third_party/libc++abi/trunk/include",
-        "third_party/android_ndk/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include",
         "third_party/boringssl/src/include/",
+        "third_party/android_ndk/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include",
     ],
     cpp_std: "c++20",
 }
@@ -2878,9 +2878,9 @@ cc_library_static {
         "buildtools/third_party/libc++/",
         "buildtools/third_party/libc++/trunk/include",
         "buildtools/third_party/libc++abi/trunk/include",
-        "third_party/android_ndk/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include",
         "third_party/icu/source/common/",
         "third_party/icu/source/i18n/",
+        "third_party/android_ndk/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include",
     ],
     cpp_std: "c++20",
 }
@@ -2929,9 +2929,9 @@ cc_library_static {
         "buildtools/third_party/libc++/",
         "buildtools/third_party/libc++/trunk/include",
         "buildtools/third_party/libc++abi/trunk/include",
-        "third_party/android_ndk/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include",
         "third_party/icu/source/common/",
         "third_party/icu/source/i18n/",
+        "third_party/android_ndk/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include",
     ],
     cpp_std: "c++20",
 }
@@ -2984,8 +2984,8 @@ cc_library_static {
         "buildtools/third_party/libc++/",
         "buildtools/third_party/libc++/trunk/include",
         "buildtools/third_party/libc++abi/trunk/include",
-        "third_party/android_ndk/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include",
         "third_party/libevent/android/",
+        "third_party/android_ndk/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include",
     ],
     cpp_std: "c++20",
 }
