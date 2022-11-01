@@ -1396,24 +1396,24 @@ genrule {
     name: "cronet_aml_base_jni_java__build_config_crbug_908819",
     cmd: "$(location build/android/gyp/write_build_config.py) --type " +
          "java_library " +
-         "--depfile " +
-         "gen/base/jni_java__build_config_crbug_908819.d " +
+         " " +
+         " " +
          "--deps-configs " +
-         "[\"gen/build/android/build_java.build_config.json\", \"gen/third_party/android_sdk/android_sdk_java.build_config.json\"] " +
+         "[\"$(location build/android/build_java.build_config.json)\", \"$(location third_party/android_sdk/android_sdk_java.build_config.json)\"] " +
          "--public-deps-configs " +
          "[] " +
          "--build-config " +
-         "gen/base/jni_java.build_config.json " +
+         "$(genDir)/base/jni_java.build_config.json " +
          "--gn-target " +
          "//base:jni_java " +
          "--device-jar-path " +
-         "obj/base/jni_java.processed.jar " +
+         "$(location base/jni_java.processed.jar) " +
          "--host-jar-path " +
-         "lib.java/base/jni_java.jar " +
+         "$(location lib.java/base/jni_java.jar) " +
          "--unprocessed-jar-path " +
-         "obj/base/jni_java.processed.jar " +
+         "$(location base/jni_java.processed.jar) " +
          "--interface-jar-path " +
-         "obj/base/jni_java.turbine.jar " +
+         "$(location base/jni_java.turbine.jar) " +
          "--dex-path " +
          "obj/base/jni_java.dex.jar " +
          "--supports-android " +
@@ -2076,37 +2076,38 @@ genrule {
     name: "cronet_aml_build_android_build_java__build_config_crbug_908819",
     cmd: "$(location build/android/gyp/write_build_config.py) --type " +
          "java_library " +
-         "--depfile " +
-         "gen/build/android/build_java__build_config_crbug_908819.d " +
+         " " +
+         " " +
          "--deps-configs " +
-         "[\"gen/third_party/android_sdk/android_sdk_java.build_config.json\"] " +
+         "[\"$(location third_party/android_sdk/android_sdk_java.build_config.json)\"] " +
          "--public-deps-configs " +
          "[] " +
          "--build-config " +
-         "gen/build/android/build_java.build_config.json " +
+         "$(genDir)/build/android/build_java.build_config.json " +
          "--gn-target " +
          "//build/android:build_java " +
          "--device-jar-path " +
-         "obj/build/android/build_java.processed.jar " +
+         "$(location build/android/build_java.processed.jar) " +
          "--host-jar-path " +
-         "lib.java/build/android/build_java.jar " +
+         "$(location lib.java/build/android/build_java.jar) " +
          "--unprocessed-jar-path " +
-         "obj/build/android/build_java.javac.jar " +
+         "$(location build/android/build_java.javac.jar) " +
          "--interface-jar-path " +
-         "obj/build/android/build_java.turbine.jar " +
+         "$(location build/android/build_java.turbine.jar) " +
          "--dex-path " +
          "obj/build/android/build_java.dex.jar " +
          "--supports-android " +
          "--java-sources-file " +
          "gen/build/android/build_java.sources " +
          "--bundled-srcjars " +
-         "[\"gen/build/android/build_config_gen.srcjar\", \"gen/build/android/native_libraries_gen.srcjar\"] " +
+         "[\"$(location build/android/build_config_gen.srcjar)\", \"$(location build/android/native_libraries_gen.srcjar)\"] " +
          "--proguard-configs " +
-         "[\"../../build/android/chromium_annotations.flags\"]",
+         "[$(location build/android/chromium_annotations.flags)]",
     out: [
         "build/android/build_java.build_config.json",
     ],
     tool_files: [
+        "build/android/chromium_annotations.flags",
         "build/android/gyp/util/__init__.py",
         "build/android/gyp/util/build_utils.py",
         "build/android/gyp/util/resource_utils.py",
@@ -2499,14 +2500,14 @@ genrule {
     name: "cronet_aml_build_android_bytecode_bytecode_processor__build_config_crbug_908819",
     cmd: "$(location build/android/gyp/write_build_config.py) --type " +
          "java_binary " +
-         "--depfile " +
-         "gen/build/android/bytecode/bytecode_processor__build_config_crbug_908819.d " +
+         " " +
+         " " +
          "--deps-configs " +
-         "[\"gen/build/android/bytecode/bytecode_processor_java.build_config.json\"] " +
+         "[\"$(location build/android/bytecode/bytecode_processor_java.build_config.json)\"] " +
          "--public-deps-configs " +
          "[] " +
          "--build-config " +
-         "gen/build/android/bytecode/bytecode_processor.build_config.json " +
+         "$(genDir)/build/android/bytecode/bytecode_processor.build_config.json " +
          "--gn-target " +
          "//build/android/bytecode:bytecode_processor " +
          "--bundled-srcjars " +
@@ -2574,22 +2575,22 @@ genrule {
     name: "cronet_aml_build_android_bytecode_bytecode_processor_java__build_config_crbug_908819",
     cmd: "$(location build/android/gyp/write_build_config.py) --type " +
          "java_library " +
-         "--depfile " +
-         "gen/build/android/bytecode/bytecode_processor_java__build_config_crbug_908819.d " +
+         " " +
+         " " +
          "--deps-configs " +
-         "[\"gen/third_party/android_deps/org_ow2_asm_asm_java.build_config.json\", \"gen/third_party/android_deps/org_ow2_asm_asm_util_java.build_config.json\"] " +
+         "[\"$(location third_party/android_deps/org_ow2_asm_asm_java.build_config.json)\", \"$(location third_party/android_deps/org_ow2_asm_asm_util_java.build_config.json)\"] " +
          "--public-deps-configs " +
          "[] " +
          "--build-config " +
-         "gen/build/android/bytecode/bytecode_processor_java.build_config.json " +
+         "$(genDir)/build/android/bytecode/bytecode_processor_java.build_config.json " +
          "--gn-target " +
          "//build/android/bytecode:bytecode_processor_java " +
          "--host-jar-path " +
-         "lib.java/build/android/bytecode/bytecode_processor_java.jar " +
+         "$(location lib.java/build/android/bytecode/bytecode_processor_java.jar) " +
          "--unprocessed-jar-path " +
-         "obj/build/android/bytecode/bytecode_processor_java.javac.jar " +
+         "$(location build/android/bytecode/bytecode_processor_java.javac.jar) " +
          "--interface-jar-path " +
-         "obj/build/android/bytecode/bytecode_processor_java.turbine.jar " +
+         "$(location build/android/bytecode/bytecode_processor_java.turbine.jar) " +
          "--java-sources-file " +
          "gen/build/android/bytecode/bytecode_processor_java.sources " +
          "--bundled-srcjars " +
@@ -5798,14 +5799,14 @@ genrule {
     name: "cronet_aml_third_party_android_deps_auto_service_processor__build_config_crbug_908819",
     cmd: "$(location build/android/gyp/write_build_config.py) --type " +
          "java_annotation_processor " +
-         "--depfile " +
-         "gen/third_party/android_deps/auto_service_processor__build_config_crbug_908819.d " +
+         " " +
+         " " +
          "--deps-configs " +
-         "[\"gen/third_party/android_deps/com_google_auto_service_auto_service_java.build_config.json\"] " +
+         "[\"$(location third_party/android_deps/com_google_auto_service_auto_service_java.build_config.json)\"] " +
          "--public-deps-configs " +
          "[] " +
          "--build-config " +
-         "gen/third_party/android_deps/auto_service_processor.build_config.json " +
+         "$(genDir)/third_party/android_deps/auto_service_processor.build_config.json " +
          "--gn-target " +
          "//third_party/android_deps:auto_service_processor " +
          "--non-chromium-code " +
@@ -5852,23 +5853,23 @@ genrule {
     name: "cronet_aml_third_party_android_deps_com_github_ben_manes_caffeine_caffeine_java__build_config_crbug_908819",
     cmd: "$(location build/android/gyp/write_build_config.py) --type " +
          "java_library " +
-         "--depfile " +
-         "gen/third_party/android_deps/com_github_ben_manes_caffeine_caffeine_java__build_config_crbug_908819.d " +
+         " " +
+         " " +
          "--deps-configs " +
-         "[\"gen/third_party/android_deps/com_google_errorprone_error_prone_annotations_java.build_config.json\", \"gen/third_party/android_deps/org_checkerframework_checker_qual_java.build_config.json\"] " +
+         "[\"$(location third_party/android_deps/com_google_errorprone_error_prone_annotations_java.build_config.json)\", \"$(location third_party/android_deps/org_checkerframework_checker_qual_java.build_config.json)\"] " +
          "--public-deps-configs " +
          "[] " +
          "--build-config " +
-         "gen/third_party/android_deps/com_github_ben_manes_caffeine_caffeine_java.build_config.json " +
+         "$(genDir)/third_party/android_deps/com_github_ben_manes_caffeine_caffeine_java.build_config.json " +
          "--gn-target " +
          "//third_party/android_deps:com_github_ben_manes_caffeine_caffeine_java " +
          "--non-chromium-code " +
          "--host-jar-path " +
-         "lib.java/third_party/android_deps/com_github_ben_manes_caffeine_caffeine.jar " +
+         "$(location lib.java/third_party/android_deps/com_github_ben_manes_caffeine_caffeine.jar) " +
          "--unprocessed-jar-path " +
-         "../../third_party/android_deps/libs/com_github_ben_manes_caffeine_caffeine/caffeine-2.8.8.jar " +
+         "$(location ../../third_party/android_deps/libs/com_github_ben_manes_caffeine_caffeine/caffeine-2.8.8.jar) " +
          "--interface-jar-path " +
-         "obj/third_party/android_deps/com_github_ben_manes_caffeine_caffeine.ijar.jar " +
+         "$(location third_party/android_deps/com_github_ben_manes_caffeine_caffeine.ijar.jar) " +
          "--is-prebuilt " +
          "--bundled-srcjars " +
          "[]",
@@ -5953,23 +5954,23 @@ genrule {
     name: "cronet_aml_third_party_android_deps_com_github_kevinstern_software_and_algorithms_java__build_config_crbug_908819",
     cmd: "$(location build/android/gyp/write_build_config.py) --type " +
          "java_library " +
-         "--depfile " +
-         "gen/third_party/android_deps/com_github_kevinstern_software_and_algorithms_java__build_config_crbug_908819.d " +
+         " " +
+         " " +
          "--deps-configs " +
          "[] " +
          "--public-deps-configs " +
          "[] " +
          "--build-config " +
-         "gen/third_party/android_deps/com_github_kevinstern_software_and_algorithms_java.build_config.json " +
+         "$(genDir)/third_party/android_deps/com_github_kevinstern_software_and_algorithms_java.build_config.json " +
          "--gn-target " +
          "//third_party/android_deps:com_github_kevinstern_software_and_algorithms_java " +
          "--non-chromium-code " +
          "--host-jar-path " +
-         "lib.java/third_party/android_deps/com_github_kevinstern_software_and_algorithms.jar " +
+         "$(location lib.java/third_party/android_deps/com_github_kevinstern_software_and_algorithms.jar) " +
          "--unprocessed-jar-path " +
-         "../../third_party/android_deps/libs/com_github_kevinstern_software_and_algorithms/software-and-algorithms-1.0.jar " +
+         "$(location ../../third_party/android_deps/libs/com_github_kevinstern_software_and_algorithms/software-and-algorithms-1.0.jar) " +
          "--interface-jar-path " +
-         "obj/third_party/android_deps/com_github_kevinstern_software_and_algorithms.ijar.jar " +
+         "$(location third_party/android_deps/com_github_kevinstern_software_and_algorithms.ijar.jar) " +
          "--is-prebuilt " +
          "--bundled-srcjars " +
          "[]",
@@ -6054,23 +6055,23 @@ genrule {
     name: "cronet_aml_third_party_android_deps_com_google_auto_auto_common_java__build_config_crbug_908819",
     cmd: "$(location build/android/gyp/write_build_config.py) --type " +
          "java_library " +
-         "--depfile " +
-         "gen/third_party/android_deps/com_google_auto_auto_common_java__build_config_crbug_908819.d " +
+         " " +
+         " " +
          "--deps-configs " +
-         "[\"gen/third_party/android_deps/com_google_guava_guava_java.build_config.json\"] " +
+         "[\"$(location third_party/android_deps/com_google_guava_guava_java.build_config.json)\"] " +
          "--public-deps-configs " +
          "[] " +
          "--build-config " +
-         "gen/third_party/android_deps/com_google_auto_auto_common_java.build_config.json " +
+         "$(genDir)/third_party/android_deps/com_google_auto_auto_common_java.build_config.json " +
          "--gn-target " +
          "//third_party/android_deps:com_google_auto_auto_common_java " +
          "--non-chromium-code " +
          "--host-jar-path " +
-         "lib.java/third_party/android_deps/com_google_auto_auto_common.jar " +
+         "$(location lib.java/third_party/android_deps/com_google_auto_auto_common.jar) " +
          "--unprocessed-jar-path " +
-         "../../third_party/android_deps/libs/com_google_auto_auto_common/auto-common-1.2.1.jar " +
+         "$(location ../../third_party/android_deps/libs/com_google_auto_auto_common/auto-common-1.2.1.jar) " +
          "--interface-jar-path " +
-         "obj/third_party/android_deps/com_google_auto_auto_common.ijar.jar " +
+         "$(location third_party/android_deps/com_google_auto_auto_common.ijar.jar) " +
          "--is-prebuilt " +
          "--bundled-srcjars " +
          "[]",
@@ -6155,23 +6156,23 @@ genrule {
     name: "cronet_aml_third_party_android_deps_com_google_auto_service_auto_service_annotations_java__build_config_crbug_908819",
     cmd: "$(location build/android/gyp/write_build_config.py) --type " +
          "java_library " +
-         "--depfile " +
-         "gen/third_party/android_deps/com_google_auto_service_auto_service_annotations_java__build_config_crbug_908819.d " +
+         " " +
+         " " +
          "--deps-configs " +
          "[] " +
          "--public-deps-configs " +
          "[] " +
          "--build-config " +
-         "gen/third_party/android_deps/com_google_auto_service_auto_service_annotations_java.build_config.json " +
+         "$(genDir)/third_party/android_deps/com_google_auto_service_auto_service_annotations_java.build_config.json " +
          "--gn-target " +
          "//third_party/android_deps:com_google_auto_service_auto_service_annotations_java " +
          "--non-chromium-code " +
          "--host-jar-path " +
-         "lib.java/third_party/android_deps/com_google_auto_service_auto_service_annotations.jar " +
+         "$(location lib.java/third_party/android_deps/com_google_auto_service_auto_service_annotations.jar) " +
          "--unprocessed-jar-path " +
-         "../../third_party/android_deps/libs/com_google_auto_service_auto_service_annotations/auto-service-annotations-1.0-rc6.jar " +
+         "$(location ../../third_party/android_deps/libs/com_google_auto_service_auto_service_annotations/auto-service-annotations-1.0-rc6.jar) " +
          "--interface-jar-path " +
-         "obj/third_party/android_deps/com_google_auto_service_auto_service_annotations.ijar.jar " +
+         "$(location third_party/android_deps/com_google_auto_service_auto_service_annotations.ijar.jar) " +
          "--is-prebuilt " +
          "--bundled-srcjars " +
          "[]",
@@ -6256,23 +6257,23 @@ genrule {
     name: "cronet_aml_third_party_android_deps_com_google_auto_service_auto_service_java__build_config_crbug_908819",
     cmd: "$(location build/android/gyp/write_build_config.py) --type " +
          "java_library " +
-         "--depfile " +
-         "gen/third_party/android_deps/com_google_auto_service_auto_service_java__build_config_crbug_908819.d " +
+         " " +
+         " " +
          "--deps-configs " +
-         "[\"gen/third_party/android_deps/com_google_auto_auto_common_java.build_config.json\", \"gen/third_party/android_deps/com_google_auto_service_auto_service_annotations_java.build_config.json\", \"gen/third_party/android_deps/com_google_guava_guava_java.build_config.json\"] " +
+         "[\"$(location third_party/android_deps/com_google_auto_auto_common_java.build_config.json)\", \"$(location third_party/android_deps/com_google_auto_service_auto_service_annotations_java.build_config.json)\", \"$(location third_party/android_deps/com_google_guava_guava_java.build_config.json)\"] " +
          "--public-deps-configs " +
          "[] " +
          "--build-config " +
-         "gen/third_party/android_deps/com_google_auto_service_auto_service_java.build_config.json " +
+         "$(genDir)/third_party/android_deps/com_google_auto_service_auto_service_java.build_config.json " +
          "--gn-target " +
          "//third_party/android_deps:com_google_auto_service_auto_service_java " +
          "--non-chromium-code " +
          "--host-jar-path " +
-         "lib.java/third_party/android_deps/com_google_auto_service_auto_service.jar " +
+         "$(location lib.java/third_party/android_deps/com_google_auto_service_auto_service.jar) " +
          "--unprocessed-jar-path " +
-         "../../third_party/android_deps/libs/com_google_auto_service_auto_service/auto-service-1.0-rc6.jar " +
+         "$(location ../../third_party/android_deps/libs/com_google_auto_service_auto_service/auto-service-1.0-rc6.jar) " +
          "--interface-jar-path " +
-         "obj/third_party/android_deps/com_google_auto_service_auto_service.ijar.jar " +
+         "$(location third_party/android_deps/com_google_auto_service_auto_service.ijar.jar) " +
          "--is-prebuilt " +
          "--bundled-srcjars " +
          "[]",
@@ -6338,23 +6339,23 @@ genrule {
     name: "cronet_aml_third_party_android_deps_com_google_auto_value_auto_value_annotations_java__build_config_crbug_908819",
     cmd: "$(location build/android/gyp/write_build_config.py) --type " +
          "java_library " +
-         "--depfile " +
-         "gen/third_party/android_deps/com_google_auto_value_auto_value_annotations_java__build_config_crbug_908819.d " +
+         " " +
+         " " +
          "--deps-configs " +
          "[] " +
          "--public-deps-configs " +
          "[] " +
          "--build-config " +
-         "gen/third_party/android_deps/com_google_auto_value_auto_value_annotations_java.build_config.json " +
+         "$(genDir)/third_party/android_deps/com_google_auto_value_auto_value_annotations_java.build_config.json " +
          "--gn-target " +
          "//third_party/android_deps:com_google_auto_value_auto_value_annotations_java " +
          "--non-chromium-code " +
          "--host-jar-path " +
-         "lib.java/third_party/android_deps/com_google_auto_value_auto_value_annotations.jar " +
+         "$(location lib.java/third_party/android_deps/com_google_auto_value_auto_value_annotations.jar) " +
          "--unprocessed-jar-path " +
-         "../../third_party/android_deps/libs/com_google_auto_value_auto_value_annotations/auto-value-annotations-1.9.jar " +
+         "$(location ../../third_party/android_deps/libs/com_google_auto_value_auto_value_annotations/auto-value-annotations-1.9.jar) " +
          "--interface-jar-path " +
-         "obj/third_party/android_deps/com_google_auto_value_auto_value_annotations.ijar.jar " +
+         "$(location third_party/android_deps/com_google_auto_value_auto_value_annotations.ijar.jar) " +
          "--is-prebuilt " +
          "--bundled-srcjars " +
          "[]",
@@ -6439,25 +6440,25 @@ genrule {
     name: "cronet_aml_third_party_android_deps_com_google_code_findbugs_jsr305_java__build_config_crbug_908819",
     cmd: "$(location build/android/gyp/write_build_config.py) --type " +
          "java_library " +
-         "--depfile " +
-         "gen/third_party/android_deps/com_google_code_findbugs_jsr305_java__build_config_crbug_908819.d " +
+         " " +
+         " " +
          "--deps-configs " +
-         "[\"gen/third_party/android_sdk/android_sdk_java.build_config.json\"] " +
+         "[\"$(location third_party/android_sdk/android_sdk_java.build_config.json)\"] " +
          "--public-deps-configs " +
          "[] " +
          "--build-config " +
-         "gen/third_party/android_deps/com_google_code_findbugs_jsr305_java.build_config.json " +
+         "$(genDir)/third_party/android_deps/com_google_code_findbugs_jsr305_java.build_config.json " +
          "--gn-target " +
          "//third_party/android_deps:com_google_code_findbugs_jsr305_java " +
          "--non-chromium-code " +
          "--device-jar-path " +
-         "../../third_party/android_deps/libs/com_google_code_findbugs_jsr305/jsr305-3.0.2.jar " +
+         "$(location ../../third_party/android_deps/libs/com_google_code_findbugs_jsr305/jsr305-3.0.2.jar) " +
          "--host-jar-path " +
-         "lib.java/third_party/android_deps/com_google_code_findbugs_jsr305.jar " +
+         "$(location lib.java/third_party/android_deps/com_google_code_findbugs_jsr305.jar) " +
          "--unprocessed-jar-path " +
-         "../../third_party/android_deps/libs/com_google_code_findbugs_jsr305/jsr305-3.0.2.jar " +
+         "$(location ../../third_party/android_deps/libs/com_google_code_findbugs_jsr305/jsr305-3.0.2.jar) " +
          "--interface-jar-path " +
-         "obj/third_party/android_deps/com_google_code_findbugs_jsr305.ijar.jar " +
+         "$(location third_party/android_deps/com_google_code_findbugs_jsr305.ijar.jar) " +
          "--dex-path " +
          "obj/third_party/android_deps/com_google_code_findbugs_jsr305_java.dex.jar " +
          "--supports-android " +
@@ -6545,23 +6546,23 @@ genrule {
     name: "cronet_aml_third_party_android_deps_com_google_errorprone_error_prone_annotation_java__build_config_crbug_908819",
     cmd: "$(location build/android/gyp/write_build_config.py) --type " +
          "java_library " +
-         "--depfile " +
-         "gen/third_party/android_deps/com_google_errorprone_error_prone_annotation_java__build_config_crbug_908819.d " +
+         " " +
+         " " +
          "--deps-configs " +
-         "[\"gen/third_party/android_deps/com_google_guava_guava_java.build_config.json\"] " +
+         "[\"$(location third_party/android_deps/com_google_guava_guava_java.build_config.json)\"] " +
          "--public-deps-configs " +
          "[] " +
          "--build-config " +
-         "gen/third_party/android_deps/com_google_errorprone_error_prone_annotation_java.build_config.json " +
+         "$(genDir)/third_party/android_deps/com_google_errorprone_error_prone_annotation_java.build_config.json " +
          "--gn-target " +
          "//third_party/android_deps:com_google_errorprone_error_prone_annotation_java " +
          "--non-chromium-code " +
          "--host-jar-path " +
-         "lib.java/third_party/android_deps/com_google_errorprone_error_prone_annotation.jar " +
+         "$(location lib.java/third_party/android_deps/com_google_errorprone_error_prone_annotation.jar) " +
          "--unprocessed-jar-path " +
-         "../../third_party/android_deps/libs/com_google_errorprone_error_prone_annotation/error_prone_annotation-2.11.0.jar " +
+         "$(location ../../third_party/android_deps/libs/com_google_errorprone_error_prone_annotation/error_prone_annotation-2.11.0.jar) " +
          "--interface-jar-path " +
-         "obj/third_party/android_deps/com_google_errorprone_error_prone_annotation.ijar.jar " +
+         "$(location third_party/android_deps/com_google_errorprone_error_prone_annotation.ijar.jar) " +
          "--is-prebuilt " +
          "--bundled-srcjars " +
          "[]",
@@ -6646,25 +6647,25 @@ genrule {
     name: "cronet_aml_third_party_android_deps_com_google_errorprone_error_prone_annotations_java__build_config_crbug_908819",
     cmd: "$(location build/android/gyp/write_build_config.py) --type " +
          "java_library " +
-         "--depfile " +
-         "gen/third_party/android_deps/com_google_errorprone_error_prone_annotations_java__build_config_crbug_908819.d " +
+         " " +
+         " " +
          "--deps-configs " +
-         "[\"gen/third_party/android_sdk/android_sdk_java.build_config.json\"] " +
+         "[\"$(location third_party/android_sdk/android_sdk_java.build_config.json)\"] " +
          "--public-deps-configs " +
          "[] " +
          "--build-config " +
-         "gen/third_party/android_deps/com_google_errorprone_error_prone_annotations_java.build_config.json " +
+         "$(genDir)/third_party/android_deps/com_google_errorprone_error_prone_annotations_java.build_config.json " +
          "--gn-target " +
          "//third_party/android_deps:com_google_errorprone_error_prone_annotations_java " +
          "--non-chromium-code " +
          "--device-jar-path " +
-         "../../third_party/android_deps/libs/com_google_errorprone_error_prone_annotations/error_prone_annotations-2.14.0.jar " +
+         "$(location ../../third_party/android_deps/libs/com_google_errorprone_error_prone_annotations/error_prone_annotations-2.14.0.jar) " +
          "--host-jar-path " +
-         "lib.java/third_party/android_deps/com_google_errorprone_error_prone_annotations.jar " +
+         "$(location lib.java/third_party/android_deps/com_google_errorprone_error_prone_annotations.jar) " +
          "--unprocessed-jar-path " +
-         "../../third_party/android_deps/libs/com_google_errorprone_error_prone_annotations/error_prone_annotations-2.14.0.jar " +
+         "$(location ../../third_party/android_deps/libs/com_google_errorprone_error_prone_annotations/error_prone_annotations-2.14.0.jar) " +
          "--interface-jar-path " +
-         "obj/third_party/android_deps/com_google_errorprone_error_prone_annotations.ijar.jar " +
+         "$(location third_party/android_deps/com_google_errorprone_error_prone_annotations.ijar.jar) " +
          "--dex-path " +
          "obj/third_party/android_deps/com_google_errorprone_error_prone_annotations_java.dex.jar " +
          "--supports-android " +
@@ -6752,23 +6753,23 @@ genrule {
     name: "cronet_aml_third_party_android_deps_com_google_errorprone_error_prone_check_api_java__build_config_crbug_908819",
     cmd: "$(location build/android/gyp/write_build_config.py) --type " +
          "java_library " +
-         "--depfile " +
-         "gen/third_party/android_deps/com_google_errorprone_error_prone_check_api_java__build_config_crbug_908819.d " +
+         " " +
+         " " +
          "--deps-configs " +
-         "[\"gen/third_party/android_deps/com_github_ben_manes_caffeine_caffeine_java.build_config.json\", \"gen/third_party/android_deps/com_github_kevinstern_software_and_algorithms_java.build_config.json\", \"gen/third_party/android_deps/com_google_auto_value_auto_value_annotations_java.build_config.json\", \"gen/third_party/android_deps/com_google_code_findbugs_jsr305_java.build_config.json\", \"gen/third_party/android_deps/com_google_errorprone_error_prone_annotation_java.build_config.json\", \"gen/third_party/android_deps/com_google_errorprone_error_prone_annotations_java.build_config.json\", \"gen/third_party/android_deps/io_github_java_diff_utils_java_diff_utils_java.build_config.json\", \"gen/third_party/android_deps/org_checkerframework_dataflow_errorprone_java.build_config.json\"] " +
+         "[\"$(location third_party/android_deps/com_github_ben_manes_caffeine_caffeine_java.build_config.json)\", \"$(location third_party/android_deps/com_github_kevinstern_software_and_algorithms_java.build_config.json)\", \"$(location third_party/android_deps/com_google_auto_value_auto_value_annotations_java.build_config.json)\", \"$(location third_party/android_deps/com_google_code_findbugs_jsr305_java.build_config.json)\", \"$(location third_party/android_deps/com_google_errorprone_error_prone_annotation_java.build_config.json)\", \"$(location third_party/android_deps/com_google_errorprone_error_prone_annotations_java.build_config.json)\", \"$(location third_party/android_deps/io_github_java_diff_utils_java_diff_utils_java.build_config.json)\", \"$(location third_party/android_deps/org_checkerframework_dataflow_errorprone_java.build_config.json)\"] " +
          "--public-deps-configs " +
          "[] " +
          "--build-config " +
-         "gen/third_party/android_deps/com_google_errorprone_error_prone_check_api_java.build_config.json " +
+         "$(genDir)/third_party/android_deps/com_google_errorprone_error_prone_check_api_java.build_config.json " +
          "--gn-target " +
          "//third_party/android_deps:com_google_errorprone_error_prone_check_api_java " +
          "--non-chromium-code " +
          "--host-jar-path " +
-         "lib.java/third_party/android_deps/com_google_errorprone_error_prone_check_api.jar " +
+         "$(location lib.java/third_party/android_deps/com_google_errorprone_error_prone_check_api.jar) " +
          "--unprocessed-jar-path " +
-         "../../third_party/android_deps/libs/com_google_errorprone_error_prone_check_api/error_prone_check_api-2.11.0.jar " +
+         "$(location ../../third_party/android_deps/libs/com_google_errorprone_error_prone_check_api/error_prone_check_api-2.11.0.jar) " +
          "--interface-jar-path " +
-         "obj/third_party/android_deps/com_google_errorprone_error_prone_check_api.ijar.jar " +
+         "$(location third_party/android_deps/com_google_errorprone_error_prone_check_api.ijar.jar) " +
          "--is-prebuilt " +
          "--bundled-srcjars " +
          "[]",
@@ -6853,23 +6854,23 @@ genrule {
     name: "cronet_aml_third_party_android_deps_com_google_errorprone_error_prone_core_java__build_config_crbug_908819",
     cmd: "$(location build/android/gyp/write_build_config.py) --type " +
          "java_library " +
-         "--depfile " +
-         "gen/third_party/android_deps/com_google_errorprone_error_prone_core_java__build_config_crbug_908819.d " +
+         " " +
+         " " +
          "--deps-configs " +
-         "[\"gen/third_party/android_deps/com_google_auto_auto_common_java.build_config.json\", \"gen/third_party/android_deps/com_google_auto_service_auto_service_annotations_java.build_config.json\", \"gen/third_party/android_deps/com_google_auto_value_auto_value_annotations_java.build_config.json\", \"gen/third_party/android_deps/com_google_code_findbugs_jsr305_java.build_config.json\", \"gen/third_party/android_deps/com_google_errorprone_error_prone_annotation_java.build_config.json\", \"gen/third_party/android_deps/com_google_errorprone_error_prone_annotations_java.build_config.json\", \"gen/third_party/android_deps/com_google_errorprone_error_prone_check_api_java.build_config.json\", \"gen/third_party/android_deps/com_google_errorprone_error_prone_type_annotations_java.build_config.json\", \"gen/third_party/android_deps/com_google_guava_guava_java.build_config.json\", \"gen/third_party/android_deps/com_google_protobuf_protobuf_java_java.build_config.json\", \"gen/third_party/android_deps/org_checkerframework_dataflow_errorprone_java.build_config.json\", \"gen/third_party/android_deps/org_pcollections_pcollections_java.build_config.json\"] " +
+         "[\"$(location third_party/android_deps/com_google_auto_auto_common_java.build_config.json)\", \"$(location third_party/android_deps/com_google_auto_service_auto_service_annotations_java.build_config.json)\", \"$(location third_party/android_deps/com_google_auto_value_auto_value_annotations_java.build_config.json)\", \"$(location third_party/android_deps/com_google_code_findbugs_jsr305_java.build_config.json)\", \"$(location third_party/android_deps/com_google_errorprone_error_prone_annotation_java.build_config.json)\", \"$(location third_party/android_deps/com_google_errorprone_error_prone_annotations_java.build_config.json)\", \"$(location third_party/android_deps/com_google_errorprone_error_prone_check_api_java.build_config.json)\", \"$(location third_party/android_deps/com_google_errorprone_error_prone_type_annotations_java.build_config.json)\", \"$(location third_party/android_deps/com_google_guava_guava_java.build_config.json)\", \"$(location third_party/android_deps/com_google_protobuf_protobuf_java_java.build_config.json)\", \"$(location third_party/android_deps/org_checkerframework_dataflow_errorprone_java.build_config.json)\", \"$(location third_party/android_deps/org_pcollections_pcollections_java.build_config.json)\"] " +
          "--public-deps-configs " +
          "[] " +
          "--build-config " +
-         "gen/third_party/android_deps/com_google_errorprone_error_prone_core_java.build_config.json " +
+         "$(genDir)/third_party/android_deps/com_google_errorprone_error_prone_core_java.build_config.json " +
          "--gn-target " +
          "//third_party/android_deps:com_google_errorprone_error_prone_core_java " +
          "--non-chromium-code " +
          "--host-jar-path " +
-         "lib.java/third_party/android_deps/com_google_errorprone_error_prone_core.jar " +
+         "$(location lib.java/third_party/android_deps/com_google_errorprone_error_prone_core.jar) " +
          "--unprocessed-jar-path " +
-         "../../third_party/android_deps/libs/com_google_errorprone_error_prone_core/error_prone_core-2.11.0.jar " +
+         "$(location ../../third_party/android_deps/libs/com_google_errorprone_error_prone_core/error_prone_core-2.11.0.jar) " +
          "--interface-jar-path " +
-         "obj/third_party/android_deps/com_google_errorprone_error_prone_core.ijar.jar " +
+         "$(location third_party/android_deps/com_google_errorprone_error_prone_core.ijar.jar) " +
          "--is-prebuilt " +
          "--bundled-srcjars " +
          "[]",
@@ -6954,23 +6955,23 @@ genrule {
     name: "cronet_aml_third_party_android_deps_com_google_errorprone_error_prone_type_annotations_java__build_config_crbug_908819",
     cmd: "$(location build/android/gyp/write_build_config.py) --type " +
          "java_library " +
-         "--depfile " +
-         "gen/third_party/android_deps/com_google_errorprone_error_prone_type_annotations_java__build_config_crbug_908819.d " +
+         " " +
+         " " +
          "--deps-configs " +
          "[] " +
          "--public-deps-configs " +
          "[] " +
          "--build-config " +
-         "gen/third_party/android_deps/com_google_errorprone_error_prone_type_annotations_java.build_config.json " +
+         "$(genDir)/third_party/android_deps/com_google_errorprone_error_prone_type_annotations_java.build_config.json " +
          "--gn-target " +
          "//third_party/android_deps:com_google_errorprone_error_prone_type_annotations_java " +
          "--non-chromium-code " +
          "--host-jar-path " +
-         "lib.java/third_party/android_deps/com_google_errorprone_error_prone_type_annotations.jar " +
+         "$(location lib.java/third_party/android_deps/com_google_errorprone_error_prone_type_annotations.jar) " +
          "--unprocessed-jar-path " +
-         "../../third_party/android_deps/libs/com_google_errorprone_error_prone_type_annotations/error_prone_type_annotations-2.11.0.jar " +
+         "$(location ../../third_party/android_deps/libs/com_google_errorprone_error_prone_type_annotations/error_prone_type_annotations-2.11.0.jar) " +
          "--interface-jar-path " +
-         "obj/third_party/android_deps/com_google_errorprone_error_prone_type_annotations.ijar.jar " +
+         "$(location third_party/android_deps/com_google_errorprone_error_prone_type_annotations.ijar.jar) " +
          "--is-prebuilt " +
          "--bundled-srcjars " +
          "[]",
@@ -7055,23 +7056,23 @@ genrule {
     name: "cronet_aml_third_party_android_deps_com_google_errorprone_javac_java__build_config_crbug_908819",
     cmd: "$(location build/android/gyp/write_build_config.py) --type " +
          "java_library " +
-         "--depfile " +
-         "gen/third_party/android_deps/com_google_errorprone_javac_java__build_config_crbug_908819.d " +
+         " " +
+         " " +
          "--deps-configs " +
          "[] " +
          "--public-deps-configs " +
          "[] " +
          "--build-config " +
-         "gen/third_party/android_deps/com_google_errorprone_javac_java.build_config.json " +
+         "$(genDir)/third_party/android_deps/com_google_errorprone_javac_java.build_config.json " +
          "--gn-target " +
          "//third_party/android_deps:com_google_errorprone_javac_java " +
          "--non-chromium-code " +
          "--host-jar-path " +
-         "lib.java/third_party/android_deps/com_google_errorprone_javac.jar " +
+         "$(location lib.java/third_party/android_deps/com_google_errorprone_javac.jar) " +
          "--unprocessed-jar-path " +
-         "../../third_party/android_deps/libs/com_google_errorprone_javac/javac-9+181-r4173-1.jar " +
+         "$(location ../../third_party/android_deps/libs/com_google_errorprone_javac/javac-9+181-r4173-1.jar) " +
          "--interface-jar-path " +
-         "obj/third_party/android_deps/com_google_errorprone_javac.ijar.jar " +
+         "$(location third_party/android_deps/com_google_errorprone_javac.ijar.jar) " +
          "--is-prebuilt " +
          "--bundled-srcjars " +
          "[]",
@@ -7156,25 +7157,25 @@ genrule {
     name: "cronet_aml_third_party_android_deps_com_google_guava_failureaccess_java__build_config_crbug_908819",
     cmd: "$(location build/android/gyp/write_build_config.py) --type " +
          "java_library " +
-         "--depfile " +
-         "gen/third_party/android_deps/com_google_guava_failureaccess_java__build_config_crbug_908819.d " +
+         " " +
+         " " +
          "--deps-configs " +
-         "[\"gen/third_party/android_sdk/android_sdk_java.build_config.json\"] " +
+         "[\"$(location third_party/android_sdk/android_sdk_java.build_config.json)\"] " +
          "--public-deps-configs " +
          "[] " +
          "--build-config " +
-         "gen/third_party/android_deps/com_google_guava_failureaccess_java.build_config.json " +
+         "$(genDir)/third_party/android_deps/com_google_guava_failureaccess_java.build_config.json " +
          "--gn-target " +
          "//third_party/android_deps:com_google_guava_failureaccess_java " +
          "--non-chromium-code " +
          "--device-jar-path " +
-         "../../third_party/android_deps/libs/com_google_guava_failureaccess/failureaccess-1.0.1.jar " +
+         "$(location ../../third_party/android_deps/libs/com_google_guava_failureaccess/failureaccess-1.0.1.jar) " +
          "--host-jar-path " +
-         "lib.java/third_party/android_deps/com_google_guava_failureaccess.jar " +
+         "$(location lib.java/third_party/android_deps/com_google_guava_failureaccess.jar) " +
          "--unprocessed-jar-path " +
-         "../../third_party/android_deps/libs/com_google_guava_failureaccess/failureaccess-1.0.1.jar " +
+         "$(location ../../third_party/android_deps/libs/com_google_guava_failureaccess/failureaccess-1.0.1.jar) " +
          "--interface-jar-path " +
-         "obj/third_party/android_deps/com_google_guava_failureaccess.ijar.jar " +
+         "$(location third_party/android_deps/com_google_guava_failureaccess.ijar.jar) " +
          "--dex-path " +
          "obj/third_party/android_deps/com_google_guava_failureaccess_java.dex.jar " +
          "--supports-android " +
@@ -7262,23 +7263,23 @@ genrule {
     name: "cronet_aml_third_party_android_deps_com_google_guava_guava_java__build_config_crbug_908819",
     cmd: "$(location build/android/gyp/write_build_config.py) --type " +
          "java_library " +
-         "--depfile " +
-         "gen/third_party/android_deps/com_google_guava_guava_java__build_config_crbug_908819.d " +
+         " " +
+         " " +
          "--deps-configs " +
-         "[\"gen/third_party/android_deps/com_google_code_findbugs_jsr305_java.build_config.json\", \"gen/third_party/android_deps/com_google_errorprone_error_prone_annotations_java.build_config.json\", \"gen/third_party/android_deps/com_google_guava_failureaccess_java.build_config.json\", \"gen/third_party/android_deps/com_google_guava_listenablefuture_java.build_config.json\", \"gen/third_party/android_deps/com_google_j2objc_j2objc_annotations_java.build_config.json\", \"gen/third_party/android_deps/org_checkerframework_checker_qual_java.build_config.json\", \"gen/third_party/android_deps/com_google_guava_listenablefuture_java.build_config.json\"] " +
+         "[\"$(location third_party/android_deps/com_google_code_findbugs_jsr305_java.build_config.json)\", \"$(location third_party/android_deps/com_google_errorprone_error_prone_annotations_java.build_config.json)\", \"$(location third_party/android_deps/com_google_guava_failureaccess_java.build_config.json)\", \"$(location third_party/android_deps/com_google_guava_listenablefuture_java.build_config.json)\", \"$(location third_party/android_deps/com_google_j2objc_j2objc_annotations_java.build_config.json)\", \"$(location third_party/android_deps/org_checkerframework_checker_qual_java.build_config.json)\", \"$(location third_party/android_deps/com_google_guava_listenablefuture_java.build_config.json)\"] " +
          "--public-deps-configs " +
          "[] " +
          "--build-config " +
-         "gen/third_party/android_deps/com_google_guava_guava_java.build_config.json " +
+         "$(genDir)/third_party/android_deps/com_google_guava_guava_java.build_config.json " +
          "--gn-target " +
          "//third_party/android_deps:com_google_guava_guava_java " +
          "--non-chromium-code " +
          "--host-jar-path " +
-         "lib.java/third_party/android_deps/com_google_guava_guava.jar " +
+         "$(location lib.java/third_party/android_deps/com_google_guava_guava.jar) " +
          "--unprocessed-jar-path " +
-         "../../third_party/android_deps/libs/com_google_guava_guava/guava-31.0.1-jre.jar " +
+         "$(location ../../third_party/android_deps/libs/com_google_guava_guava/guava-31.0.1-jre.jar) " +
          "--interface-jar-path " +
-         "obj/third_party/android_deps/com_google_guava_guava.ijar.jar " +
+         "$(location third_party/android_deps/com_google_guava_guava.ijar.jar) " +
          "--is-prebuilt " +
          "--bundled-srcjars " +
          "[]",
@@ -7363,25 +7364,25 @@ genrule {
     name: "cronet_aml_third_party_android_deps_com_google_guava_listenablefuture_java__build_config_crbug_908819",
     cmd: "$(location build/android/gyp/write_build_config.py) --type " +
          "java_library " +
-         "--depfile " +
-         "gen/third_party/android_deps/com_google_guava_listenablefuture_java__build_config_crbug_908819.d " +
+         " " +
+         " " +
          "--deps-configs " +
-         "[\"gen/third_party/android_sdk/android_sdk_java.build_config.json\"] " +
+         "[\"$(location third_party/android_sdk/android_sdk_java.build_config.json)\"] " +
          "--public-deps-configs " +
          "[] " +
          "--build-config " +
-         "gen/third_party/android_deps/com_google_guava_listenablefuture_java.build_config.json " +
+         "$(genDir)/third_party/android_deps/com_google_guava_listenablefuture_java.build_config.json " +
          "--gn-target " +
          "//third_party/android_deps:com_google_guava_listenablefuture_java " +
          "--non-chromium-code " +
          "--device-jar-path " +
-         "../../third_party/android_deps/libs/com_google_guava_listenablefuture/listenablefuture-1.0.jar " +
+         "$(location ../../third_party/android_deps/libs/com_google_guava_listenablefuture/listenablefuture-1.0.jar) " +
          "--host-jar-path " +
-         "lib.java/third_party/android_deps/com_google_guava_listenablefuture.jar " +
+         "$(location lib.java/third_party/android_deps/com_google_guava_listenablefuture.jar) " +
          "--unprocessed-jar-path " +
-         "../../third_party/android_deps/libs/com_google_guava_listenablefuture/listenablefuture-1.0.jar " +
+         "$(location ../../third_party/android_deps/libs/com_google_guava_listenablefuture/listenablefuture-1.0.jar) " +
          "--interface-jar-path " +
-         "obj/third_party/android_deps/com_google_guava_listenablefuture.ijar.jar " +
+         "$(location third_party/android_deps/com_google_guava_listenablefuture.ijar.jar) " +
          "--dex-path " +
          "obj/third_party/android_deps/com_google_guava_listenablefuture_java.dex.jar " +
          "--supports-android " +
@@ -7469,25 +7470,25 @@ genrule {
     name: "cronet_aml_third_party_android_deps_com_google_j2objc_j2objc_annotations_java__build_config_crbug_908819",
     cmd: "$(location build/android/gyp/write_build_config.py) --type " +
          "java_library " +
-         "--depfile " +
-         "gen/third_party/android_deps/com_google_j2objc_j2objc_annotations_java__build_config_crbug_908819.d " +
+         " " +
+         " " +
          "--deps-configs " +
-         "[\"gen/third_party/android_sdk/android_sdk_java.build_config.json\"] " +
+         "[\"$(location third_party/android_sdk/android_sdk_java.build_config.json)\"] " +
          "--public-deps-configs " +
          "[] " +
          "--build-config " +
-         "gen/third_party/android_deps/com_google_j2objc_j2objc_annotations_java.build_config.json " +
+         "$(genDir)/third_party/android_deps/com_google_j2objc_j2objc_annotations_java.build_config.json " +
          "--gn-target " +
          "//third_party/android_deps:com_google_j2objc_j2objc_annotations_java " +
          "--non-chromium-code " +
          "--device-jar-path " +
-         "../../third_party/android_deps/libs/com_google_j2objc_j2objc_annotations/j2objc-annotations-1.3.jar " +
+         "$(location ../../third_party/android_deps/libs/com_google_j2objc_j2objc_annotations/j2objc-annotations-1.3.jar) " +
          "--host-jar-path " +
-         "lib.java/third_party/android_deps/com_google_j2objc_j2objc_annotations.jar " +
+         "$(location lib.java/third_party/android_deps/com_google_j2objc_j2objc_annotations.jar) " +
          "--unprocessed-jar-path " +
-         "../../third_party/android_deps/libs/com_google_j2objc_j2objc_annotations/j2objc-annotations-1.3.jar " +
+         "$(location ../../third_party/android_deps/libs/com_google_j2objc_j2objc_annotations/j2objc-annotations-1.3.jar) " +
          "--interface-jar-path " +
-         "obj/third_party/android_deps/com_google_j2objc_j2objc_annotations.ijar.jar " +
+         "$(location third_party/android_deps/com_google_j2objc_j2objc_annotations.ijar.jar) " +
          "--dex-path " +
          "obj/third_party/android_deps/com_google_j2objc_j2objc_annotations_java.dex.jar " +
          "--supports-android " +
@@ -7575,23 +7576,23 @@ genrule {
     name: "cronet_aml_third_party_android_deps_com_google_protobuf_protobuf_java_java__build_config_crbug_908819",
     cmd: "$(location build/android/gyp/write_build_config.py) --type " +
          "java_library " +
-         "--depfile " +
-         "gen/third_party/android_deps/com_google_protobuf_protobuf_java_java__build_config_crbug_908819.d " +
+         " " +
+         " " +
          "--deps-configs " +
          "[] " +
          "--public-deps-configs " +
          "[] " +
          "--build-config " +
-         "gen/third_party/android_deps/com_google_protobuf_protobuf_java_java.build_config.json " +
+         "$(genDir)/third_party/android_deps/com_google_protobuf_protobuf_java_java.build_config.json " +
          "--gn-target " +
          "//third_party/android_deps:com_google_protobuf_protobuf_java_java " +
          "--non-chromium-code " +
          "--host-jar-path " +
-         "lib.java/third_party/android_deps/com_google_protobuf_protobuf_java.jar " +
+         "$(location lib.java/third_party/android_deps/com_google_protobuf_protobuf_java.jar) " +
          "--unprocessed-jar-path " +
-         "../../third_party/android_deps/libs/com_google_protobuf_protobuf_java/protobuf-java-3.19.2.jar " +
+         "$(location ../../third_party/android_deps/libs/com_google_protobuf_protobuf_java/protobuf-java-3.19.2.jar) " +
          "--interface-jar-path " +
-         "obj/third_party/android_deps/com_google_protobuf_protobuf_java.ijar.jar " +
+         "$(location third_party/android_deps/com_google_protobuf_protobuf_java.ijar.jar) " +
          "--is-prebuilt " +
          "--bundled-srcjars " +
          "[]",
@@ -7676,23 +7677,23 @@ genrule {
     name: "cronet_aml_third_party_android_deps_io_github_java_diff_utils_java_diff_utils_java__build_config_crbug_908819",
     cmd: "$(location build/android/gyp/write_build_config.py) --type " +
          "java_library " +
-         "--depfile " +
-         "gen/third_party/android_deps/io_github_java_diff_utils_java_diff_utils_java__build_config_crbug_908819.d " +
+         " " +
+         " " +
          "--deps-configs " +
-         "[\"gen/third_party/android_deps/org_eclipse_jgit_org_eclipse_jgit_java.build_config.json\"] " +
+         "[\"$(location third_party/android_deps/org_eclipse_jgit_org_eclipse_jgit_java.build_config.json)\"] " +
          "--public-deps-configs " +
          "[] " +
          "--build-config " +
-         "gen/third_party/android_deps/io_github_java_diff_utils_java_diff_utils_java.build_config.json " +
+         "$(genDir)/third_party/android_deps/io_github_java_diff_utils_java_diff_utils_java.build_config.json " +
          "--gn-target " +
          "//third_party/android_deps:io_github_java_diff_utils_java_diff_utils_java " +
          "--non-chromium-code " +
          "--host-jar-path " +
-         "lib.java/third_party/android_deps/io_github_java_diff_utils_java_diff_utils.jar " +
+         "$(location lib.java/third_party/android_deps/io_github_java_diff_utils_java_diff_utils.jar) " +
          "--unprocessed-jar-path " +
-         "../../third_party/android_deps/libs/io_github_java_diff_utils_java_diff_utils/java-diff-utils-4.0.jar " +
+         "$(location ../../third_party/android_deps/libs/io_github_java_diff_utils_java_diff_utils/java-diff-utils-4.0.jar) " +
          "--interface-jar-path " +
-         "obj/third_party/android_deps/io_github_java_diff_utils_java_diff_utils.ijar.jar " +
+         "$(location third_party/android_deps/io_github_java_diff_utils_java_diff_utils.ijar.jar) " +
          "--is-prebuilt " +
          "--bundled-srcjars " +
          "[]",
@@ -7777,25 +7778,25 @@ genrule {
     name: "cronet_aml_third_party_android_deps_org_checkerframework_checker_qual_java__build_config_crbug_908819",
     cmd: "$(location build/android/gyp/write_build_config.py) --type " +
          "java_library " +
-         "--depfile " +
-         "gen/third_party/android_deps/org_checkerframework_checker_qual_java__build_config_crbug_908819.d " +
+         " " +
+         " " +
          "--deps-configs " +
-         "[\"gen/third_party/android_sdk/android_sdk_java.build_config.json\"] " +
+         "[\"$(location third_party/android_sdk/android_sdk_java.build_config.json)\"] " +
          "--public-deps-configs " +
          "[] " +
          "--build-config " +
-         "gen/third_party/android_deps/org_checkerframework_checker_qual_java.build_config.json " +
+         "$(genDir)/third_party/android_deps/org_checkerframework_checker_qual_java.build_config.json " +
          "--gn-target " +
          "//third_party/android_deps:org_checkerframework_checker_qual_java " +
          "--non-chromium-code " +
          "--device-jar-path " +
-         "../../third_party/android_deps/libs/org_checkerframework_checker_qual/checker-qual-3.25.0.jar " +
+         "$(location ../../third_party/android_deps/libs/org_checkerframework_checker_qual/checker-qual-3.25.0.jar) " +
          "--host-jar-path " +
-         "lib.java/third_party/android_deps/org_checkerframework_checker_qual.jar " +
+         "$(location lib.java/third_party/android_deps/org_checkerframework_checker_qual.jar) " +
          "--unprocessed-jar-path " +
-         "../../third_party/android_deps/libs/org_checkerframework_checker_qual/checker-qual-3.25.0.jar " +
+         "$(location ../../third_party/android_deps/libs/org_checkerframework_checker_qual/checker-qual-3.25.0.jar) " +
          "--interface-jar-path " +
-         "obj/third_party/android_deps/org_checkerframework_checker_qual.ijar.jar " +
+         "$(location third_party/android_deps/org_checkerframework_checker_qual.ijar.jar) " +
          "--dex-path " +
          "obj/third_party/android_deps/org_checkerframework_checker_qual_java.dex.jar " +
          "--supports-android " +
@@ -7883,23 +7884,23 @@ genrule {
     name: "cronet_aml_third_party_android_deps_org_checkerframework_dataflow_errorprone_java__build_config_crbug_908819",
     cmd: "$(location build/android/gyp/write_build_config.py) --type " +
          "java_library " +
-         "--depfile " +
-         "gen/third_party/android_deps/org_checkerframework_dataflow_errorprone_java__build_config_crbug_908819.d " +
+         " " +
+         " " +
          "--deps-configs " +
          "[] " +
          "--public-deps-configs " +
          "[] " +
          "--build-config " +
-         "gen/third_party/android_deps/org_checkerframework_dataflow_errorprone_java.build_config.json " +
+         "$(genDir)/third_party/android_deps/org_checkerframework_dataflow_errorprone_java.build_config.json " +
          "--gn-target " +
          "//third_party/android_deps:org_checkerframework_dataflow_errorprone_java " +
          "--non-chromium-code " +
          "--host-jar-path " +
-         "lib.java/third_party/android_deps/org_checkerframework_dataflow_errorprone.jar " +
+         "$(location lib.java/third_party/android_deps/org_checkerframework_dataflow_errorprone.jar) " +
          "--unprocessed-jar-path " +
-         "../../third_party/android_deps/libs/org_checkerframework_dataflow_errorprone/dataflow-errorprone-3.15.0.jar " +
+         "$(location ../../third_party/android_deps/libs/org_checkerframework_dataflow_errorprone/dataflow-errorprone-3.15.0.jar) " +
          "--interface-jar-path " +
-         "obj/third_party/android_deps/org_checkerframework_dataflow_errorprone.ijar.jar " +
+         "$(location third_party/android_deps/org_checkerframework_dataflow_errorprone.ijar.jar) " +
          "--is-prebuilt " +
          "--bundled-srcjars " +
          "[]",
@@ -7984,23 +7985,23 @@ genrule {
     name: "cronet_aml_third_party_android_deps_org_eclipse_jgit_org_eclipse_jgit_java__build_config_crbug_908819",
     cmd: "$(location build/android/gyp/write_build_config.py) --type " +
          "java_library " +
-         "--depfile " +
-         "gen/third_party/android_deps/org_eclipse_jgit_org_eclipse_jgit_java__build_config_crbug_908819.d " +
+         " " +
+         " " +
          "--deps-configs " +
          "[] " +
          "--public-deps-configs " +
          "[] " +
          "--build-config " +
-         "gen/third_party/android_deps/org_eclipse_jgit_org_eclipse_jgit_java.build_config.json " +
+         "$(genDir)/third_party/android_deps/org_eclipse_jgit_org_eclipse_jgit_java.build_config.json " +
          "--gn-target " +
          "//third_party/android_deps:org_eclipse_jgit_org_eclipse_jgit_java " +
          "--non-chromium-code " +
          "--host-jar-path " +
-         "lib.java/third_party/android_deps/org_eclipse_jgit_org_eclipse_jgit.jar " +
+         "$(location lib.java/third_party/android_deps/org_eclipse_jgit_org_eclipse_jgit.jar) " +
          "--unprocessed-jar-path " +
-         "../../third_party/android_deps/libs/org_eclipse_jgit_org_eclipse_jgit/org.eclipse.jgit-4.4.1.201607150455-r.jar " +
+         "$(location ../../third_party/android_deps/libs/org_eclipse_jgit_org_eclipse_jgit/org.eclipse.jgit-4.4.1.201607150455-r.jar) " +
          "--interface-jar-path " +
-         "obj/third_party/android_deps/org_eclipse_jgit_org_eclipse_jgit.ijar.jar " +
+         "$(location third_party/android_deps/org_eclipse_jgit_org_eclipse_jgit.ijar.jar) " +
          "--is-prebuilt " +
          "--bundled-srcjars " +
          "[]",
@@ -8085,23 +8086,23 @@ genrule {
     name: "cronet_aml_third_party_android_deps_org_ow2_asm_asm_analysis_java__build_config_crbug_908819",
     cmd: "$(location build/android/gyp/write_build_config.py) --type " +
          "java_library " +
-         "--depfile " +
-         "gen/third_party/android_deps/org_ow2_asm_asm_analysis_java__build_config_crbug_908819.d " +
+         " " +
+         " " +
          "--deps-configs " +
-         "[\"gen/third_party/android_deps/org_ow2_asm_asm_tree_java.build_config.json\"] " +
+         "[\"$(location third_party/android_deps/org_ow2_asm_asm_tree_java.build_config.json)\"] " +
          "--public-deps-configs " +
          "[] " +
          "--build-config " +
-         "gen/third_party/android_deps/org_ow2_asm_asm_analysis_java.build_config.json " +
+         "$(genDir)/third_party/android_deps/org_ow2_asm_asm_analysis_java.build_config.json " +
          "--gn-target " +
          "//third_party/android_deps:org_ow2_asm_asm_analysis_java " +
          "--non-chromium-code " +
          "--host-jar-path " +
-         "lib.java/third_party/android_deps/org_ow2_asm_asm_analysis.jar " +
+         "$(location lib.java/third_party/android_deps/org_ow2_asm_asm_analysis.jar) " +
          "--unprocessed-jar-path " +
-         "../../third_party/android_deps/libs/org_ow2_asm_asm_analysis/asm-analysis-9.2.jar " +
+         "$(location ../../third_party/android_deps/libs/org_ow2_asm_asm_analysis/asm-analysis-9.2.jar) " +
          "--interface-jar-path " +
-         "obj/third_party/android_deps/org_ow2_asm_asm_analysis.ijar.jar " +
+         "$(location third_party/android_deps/org_ow2_asm_asm_analysis.ijar.jar) " +
          "--is-prebuilt " +
          "--bundled-srcjars " +
          "[]",
@@ -8186,23 +8187,23 @@ genrule {
     name: "cronet_aml_third_party_android_deps_org_ow2_asm_asm_java__build_config_crbug_908819",
     cmd: "$(location build/android/gyp/write_build_config.py) --type " +
          "java_library " +
-         "--depfile " +
-         "gen/third_party/android_deps/org_ow2_asm_asm_java__build_config_crbug_908819.d " +
+         " " +
+         " " +
          "--deps-configs " +
          "[] " +
          "--public-deps-configs " +
          "[] " +
          "--build-config " +
-         "gen/third_party/android_deps/org_ow2_asm_asm_java.build_config.json " +
+         "$(genDir)/third_party/android_deps/org_ow2_asm_asm_java.build_config.json " +
          "--gn-target " +
          "//third_party/android_deps:org_ow2_asm_asm_java " +
          "--non-chromium-code " +
          "--host-jar-path " +
-         "lib.java/third_party/android_deps/org_ow2_asm_asm.jar " +
+         "$(location lib.java/third_party/android_deps/org_ow2_asm_asm.jar) " +
          "--unprocessed-jar-path " +
-         "../../third_party/android_deps/libs/org_ow2_asm_asm/asm-9.2.jar " +
+         "$(location ../../third_party/android_deps/libs/org_ow2_asm_asm/asm-9.2.jar) " +
          "--interface-jar-path " +
-         "obj/third_party/android_deps/org_ow2_asm_asm.ijar.jar " +
+         "$(location third_party/android_deps/org_ow2_asm_asm.ijar.jar) " +
          "--is-prebuilt " +
          "--bundled-srcjars " +
          "[]",
@@ -8287,23 +8288,23 @@ genrule {
     name: "cronet_aml_third_party_android_deps_org_ow2_asm_asm_tree_java__build_config_crbug_908819",
     cmd: "$(location build/android/gyp/write_build_config.py) --type " +
          "java_library " +
-         "--depfile " +
-         "gen/third_party/android_deps/org_ow2_asm_asm_tree_java__build_config_crbug_908819.d " +
+         " " +
+         " " +
          "--deps-configs " +
-         "[\"gen/third_party/android_deps/org_ow2_asm_asm_java.build_config.json\"] " +
+         "[\"$(location third_party/android_deps/org_ow2_asm_asm_java.build_config.json)\"] " +
          "--public-deps-configs " +
          "[] " +
          "--build-config " +
-         "gen/third_party/android_deps/org_ow2_asm_asm_tree_java.build_config.json " +
+         "$(genDir)/third_party/android_deps/org_ow2_asm_asm_tree_java.build_config.json " +
          "--gn-target " +
          "//third_party/android_deps:org_ow2_asm_asm_tree_java " +
          "--non-chromium-code " +
          "--host-jar-path " +
-         "lib.java/third_party/android_deps/org_ow2_asm_asm_tree.jar " +
+         "$(location lib.java/third_party/android_deps/org_ow2_asm_asm_tree.jar) " +
          "--unprocessed-jar-path " +
-         "../../third_party/android_deps/libs/org_ow2_asm_asm_tree/asm-tree-9.2.jar " +
+         "$(location ../../third_party/android_deps/libs/org_ow2_asm_asm_tree/asm-tree-9.2.jar) " +
          "--interface-jar-path " +
-         "obj/third_party/android_deps/org_ow2_asm_asm_tree.ijar.jar " +
+         "$(location third_party/android_deps/org_ow2_asm_asm_tree.ijar.jar) " +
          "--is-prebuilt " +
          "--bundled-srcjars " +
          "[]",
@@ -8388,23 +8389,23 @@ genrule {
     name: "cronet_aml_third_party_android_deps_org_ow2_asm_asm_util_java__build_config_crbug_908819",
     cmd: "$(location build/android/gyp/write_build_config.py) --type " +
          "java_library " +
-         "--depfile " +
-         "gen/third_party/android_deps/org_ow2_asm_asm_util_java__build_config_crbug_908819.d " +
+         " " +
+         " " +
          "--deps-configs " +
-         "[\"gen/third_party/android_deps/org_ow2_asm_asm_analysis_java.build_config.json\", \"gen/third_party/android_deps/org_ow2_asm_asm_java.build_config.json\", \"gen/third_party/android_deps/org_ow2_asm_asm_tree_java.build_config.json\"] " +
+         "[\"$(location third_party/android_deps/org_ow2_asm_asm_analysis_java.build_config.json)\", \"$(location third_party/android_deps/org_ow2_asm_asm_java.build_config.json)\", \"$(location third_party/android_deps/org_ow2_asm_asm_tree_java.build_config.json)\"] " +
          "--public-deps-configs " +
          "[] " +
          "--build-config " +
-         "gen/third_party/android_deps/org_ow2_asm_asm_util_java.build_config.json " +
+         "$(genDir)/third_party/android_deps/org_ow2_asm_asm_util_java.build_config.json " +
          "--gn-target " +
          "//third_party/android_deps:org_ow2_asm_asm_util_java " +
          "--non-chromium-code " +
          "--host-jar-path " +
-         "lib.java/third_party/android_deps/org_ow2_asm_asm_util.jar " +
+         "$(location lib.java/third_party/android_deps/org_ow2_asm_asm_util.jar) " +
          "--unprocessed-jar-path " +
-         "../../third_party/android_deps/libs/org_ow2_asm_asm_util/asm-util-9.2.jar " +
+         "$(location ../../third_party/android_deps/libs/org_ow2_asm_asm_util/asm-util-9.2.jar) " +
          "--interface-jar-path " +
-         "obj/third_party/android_deps/org_ow2_asm_asm_util.ijar.jar " +
+         "$(location third_party/android_deps/org_ow2_asm_asm_util.ijar.jar) " +
          "--is-prebuilt " +
          "--bundled-srcjars " +
          "[]",
@@ -8489,23 +8490,23 @@ genrule {
     name: "cronet_aml_third_party_android_deps_org_pcollections_pcollections_java__build_config_crbug_908819",
     cmd: "$(location build/android/gyp/write_build_config.py) --type " +
          "java_library " +
-         "--depfile " +
-         "gen/third_party/android_deps/org_pcollections_pcollections_java__build_config_crbug_908819.d " +
+         " " +
+         " " +
          "--deps-configs " +
          "[] " +
          "--public-deps-configs " +
          "[] " +
          "--build-config " +
-         "gen/third_party/android_deps/org_pcollections_pcollections_java.build_config.json " +
+         "$(genDir)/third_party/android_deps/org_pcollections_pcollections_java.build_config.json " +
          "--gn-target " +
          "//third_party/android_deps:org_pcollections_pcollections_java " +
          "--non-chromium-code " +
          "--host-jar-path " +
-         "lib.java/third_party/android_deps/org_pcollections_pcollections.jar " +
+         "$(location lib.java/third_party/android_deps/org_pcollections_pcollections.jar) " +
          "--unprocessed-jar-path " +
-         "../../third_party/android_deps/libs/org_pcollections_pcollections/pcollections-3.1.4.jar " +
+         "$(location ../../third_party/android_deps/libs/org_pcollections_pcollections/pcollections-3.1.4.jar) " +
          "--interface-jar-path " +
-         "obj/third_party/android_deps/org_pcollections_pcollections.ijar.jar " +
+         "$(location third_party/android_deps/org_pcollections_pcollections.ijar.jar) " +
          "--is-prebuilt " +
          "--bundled-srcjars " +
          "[]",
@@ -8598,21 +8599,21 @@ genrule {
     name: "cronet_aml_third_party_android_sdk_android_sdk_java__build_config_crbug_908819",
     cmd: "$(location build/android/gyp/write_build_config.py) --type " +
          "system_java_library " +
-         "--depfile " +
-         "gen/third_party/android_sdk/android_sdk_java__build_config_crbug_908819.d " +
+         " " +
+         " " +
          "--deps-configs " +
          "[] " +
          "--public-deps-configs " +
          "[] " +
          "--build-config " +
-         "gen/third_party/android_sdk/android_sdk_java.build_config.json " +
+         "$(genDir)/third_party/android_sdk/android_sdk_java.build_config.json " +
          "--gn-target " +
          "//third_party/android_sdk:android_sdk_java " +
          "--non-chromium-code " +
          "--unprocessed-jar-path " +
-         "../../third_party/android_sdk/public/platforms/android-33/android.jar " +
+         "$(location ../../third_party/android_sdk/public/platforms/android-33/android.jar) " +
          "--interface-jar-path " +
-         "obj/third_party/android_sdk/android.ijar.jar " +
+         "$(location third_party/android_sdk/android.ijar.jar) " +
          "--supports-android " +
          "--is-prebuilt " +
          "--bundled-srcjars " +
@@ -9834,22 +9835,22 @@ genrule {
     name: "cronet_aml_tools_android_errorprone_plugin_errorprone_plugin__build_config_crbug_908819",
     cmd: "$(location build/android/gyp/write_build_config.py) --type " +
          "java_binary " +
-         "--depfile " +
-         "gen/tools/android/errorprone_plugin/errorprone_plugin__build_config_crbug_908819.d " +
+         " " +
+         " " +
          "--deps-configs " +
-         "[\"gen/third_party/android_deps/com_google_auto_service_auto_service_annotations_java.build_config.json\", \"gen/third_party/android_deps/com_google_errorprone_error_prone_annotation_java.build_config.json\", \"gen/third_party/android_deps/com_google_errorprone_error_prone_check_api_java.build_config.json\", \"gen/third_party/android_deps/com_google_errorprone_error_prone_core_java.build_config.json\", \"gen/third_party/android_deps/com_google_errorprone_javac_java.build_config.json\"] " +
+         "[\"$(location third_party/android_deps/com_google_auto_service_auto_service_annotations_java.build_config.json)\", \"$(location third_party/android_deps/com_google_errorprone_error_prone_annotation_java.build_config.json)\", \"$(location third_party/android_deps/com_google_errorprone_error_prone_check_api_java.build_config.json)\", \"$(location third_party/android_deps/com_google_errorprone_error_prone_core_java.build_config.json)\", \"$(location third_party/android_deps/com_google_errorprone_javac_java.build_config.json)\"] " +
          "--public-deps-configs " +
          "[] " +
          "--build-config " +
-         "gen/tools/android/errorprone_plugin/errorprone_plugin.build_config.json " +
+         "$(genDir)/tools/android/errorprone_plugin/errorprone_plugin.build_config.json " +
          "--gn-target " +
          "//tools/android/errorprone_plugin:errorprone_plugin " +
          "--host-jar-path " +
-         "lib.java/tools/android/errorprone_plugin/errorprone_plugin.jar " +
+         "$(location lib.java/tools/android/errorprone_plugin/errorprone_plugin.jar) " +
          "--unprocessed-jar-path " +
-         "obj/tools/android/errorprone_plugin/errorprone_plugin.javac.jar " +
+         "$(location tools/android/errorprone_plugin/errorprone_plugin.javac.jar) " +
          "--interface-jar-path " +
-         "obj/tools/android/errorprone_plugin/errorprone_plugin.turbine.jar " +
+         "$(location tools/android/errorprone_plugin/errorprone_plugin.turbine.jar) " +
          "--annotation-processor-configs " +
          "[\"gen/third_party/android_deps/auto_service_processor.build_config.json\"] " +
          "--java-sources-file " +
@@ -10456,24 +10457,24 @@ genrule {
     name: "cronet_aml_url_url_java__build_config_crbug_908819",
     cmd: "$(location build/android/gyp/write_build_config.py) --type " +
          "java_library " +
-         "--depfile " +
-         "gen/url/url_java__build_config_crbug_908819.d " +
+         " " +
+         " " +
          "--deps-configs " +
-         "[\"gen/base/jni_java.build_config.json\", \"gen/third_party/android_sdk/android_sdk_java.build_config.json\"] " +
+         "[\"$(location base/jni_java.build_config.json)\", \"$(location third_party/android_sdk/android_sdk_java.build_config.json)\"] " +
          "--public-deps-configs " +
          "[] " +
          "--build-config " +
-         "gen/url/url_java.build_config.json " +
+         "$(genDir)/url/url_java.build_config.json " +
          "--gn-target " +
          "//url:url_java " +
          "--device-jar-path " +
-         "obj/url/url_java.processed.jar " +
+         "$(location url/url_java.processed.jar) " +
          "--host-jar-path " +
-         "lib.java/url/url_java.jar " +
+         "$(location lib.java/url/url_java.jar) " +
          "--unprocessed-jar-path " +
-         "obj/url/url_java.javac.jar " +
+         "$(location url/url_java.javac.jar) " +
          "--interface-jar-path " +
-         "obj/url/url_java.turbine.jar " +
+         "$(location url/url_java.turbine.jar) " +
          "--dex-path " +
          "obj/url/url_java.dex.jar " +
          "--supports-android " +
