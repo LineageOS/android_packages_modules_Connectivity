@@ -12,10 +12,7 @@
 set -eux
 
 TARGETS=(
-  "//third_party/zlib:zlib"
-  "//third_party/libevent:libevent"
-  "//base:base_static"
-  "//base:build_date"
+  "//base:base"
 )
 
 BASEDIR=$(dirname "$0")

@@ -3092,7 +3092,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
      * Reads the network specific MTU size from resources.
      * and set it on it's iface.
      */
-    private void updateMtu(LinkProperties newLp, LinkProperties oldLp) {
+    private void updateMtu(@NonNull LinkProperties newLp, @Nullable LinkProperties oldLp) {
         final String iface = newLp.getInterfaceName();
         final int mtu = newLp.getMtu();
         if (oldLp == null && mtu == 0) {
@@ -3125,7 +3125,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
     @VisibleForTesting
     protected static final String DEFAULT_TCP_BUFFER_SIZES = "4096,87380,110208,4096,16384,110208";
 
-    private void updateTcpBufferSizes(String tcpBufferSizes) {
+    private void updateTcpBufferSizes(@Nullable String tcpBufferSizes) {
         String[] values = null;
         if (tcpBufferSizes != null) {
             values = tcpBufferSizes.split(",");
@@ -5762,7 +5762,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
         return mProxyTracker.getGlobalProxy();
     }
 
-    private void handleApplyDefaultProxy(ProxyInfo proxy) {
+    private void handleApplyDefaultProxy(@Nullable ProxyInfo proxy) {
         if (proxy != null && TextUtils.isEmpty(proxy.getHost())
                 && Uri.EMPTY.equals(proxy.getPacFileUrl())) {
             proxy = null;
@@ -5774,8 +5774,8 @@ public class ConnectivityService extends IConnectivityManager.Stub
     // when any network changes proxy.
     // TODO: Remove usage of broadcast extras as they are deprecated and not applicable in a
     // multi-network world where an app might be bound to a non-default network.
-    private void updateProxy(LinkProperties newLp, LinkProperties oldLp) {
-        ProxyInfo newProxyInfo = newLp == null ? null : newLp.getHttpProxy();
+    private void updateProxy(@NonNull LinkProperties newLp, @Nullable LinkProperties oldLp) {
+        ProxyInfo newProxyInfo = newLp.getHttpProxy();
         ProxyInfo oldProxyInfo = oldLp == null ? null : oldLp.getHttpProxy();
 
         if (!ProxyTracker.proxyInfoEqual(newProxyInfo, oldProxyInfo)) {
@@ -7645,12 +7645,11 @@ public class ConnectivityService extends IConnectivityManager.Stub
 
     }
 
-    private void updateInterfaces(final @Nullable LinkProperties newLp,
+    private void updateInterfaces(final @NonNull LinkProperties newLp,
             final @Nullable LinkProperties oldLp, final int netId,
             final @NonNull NetworkCapabilities caps) {
         final CompareResult<String> interfaceDiff = new CompareResult<>(
-                oldLp != null ? oldLp.getAllInterfaceNames() : null,
-                newLp != null ? newLp.getAllInterfaceNames() : null);
+                oldLp != null ? oldLp.getAllInterfaceNames() : null, newLp.getAllInterfaceNames());
         if (!interfaceDiff.added.isEmpty()) {
             for (final String iface : interfaceDiff.added) {
                 try {
@@ -7711,12 +7710,13 @@ public class ConnectivityService extends IConnectivityManager.Stub
      * Have netd update routes from oldLp to newLp.
      * @return true if routes changed between oldLp and newLp
      */
-    private boolean updateRoutes(LinkProperties newLp, LinkProperties oldLp, int netId) {
+    private boolean updateRoutes(@NonNull LinkProperties newLp, @Nullable LinkProperties oldLp,
+            int netId) {
         // compare the route diff to determine which routes have been updated
         final CompareOrUpdateResult<RouteInfo.RouteKey, RouteInfo> routeDiff =
                 new CompareOrUpdateResult<>(
                         oldLp != null ? oldLp.getAllRoutes() : null,
-                        newLp != null ? newLp.getAllRoutes() : null,
+                        newLp.getAllRoutes(),
                         (r) -> r.getRouteKey());
 
         // add routes before removing old in case it helps with continuous connectivity
@@ -7766,7 +7766,8 @@ public class ConnectivityService extends IConnectivityManager.Stub
                 || !routeDiff.updated.isEmpty();
     }
 
-    private void updateDnses(LinkProperties newLp, LinkProperties oldLp, int netId) {
+    private void updateDnses(@NonNull LinkProperties newLp, @Nullable LinkProperties oldLp,
+            int netId) {
         if (oldLp != null && newLp.isIdenticalDnses(oldLp)) {
             return;  // no updating necessary
         }
@@ -7783,8 +7784,8 @@ public class ConnectivityService extends IConnectivityManager.Stub
         }
     }
 
-    private void updateVpnFiltering(LinkProperties newLp, LinkProperties oldLp,
-            NetworkAgentInfo nai) {
+    private void updateVpnFiltering(@NonNull LinkProperties newLp, @Nullable LinkProperties oldLp,
+            @NonNull NetworkAgentInfo nai) {
         final String oldIface = getVpnIsolationInterface(nai, nai.networkCapabilities, oldLp);
         final String newIface = getVpnIsolationInterface(nai, nai.networkCapabilities, newLp);
         final boolean wasFiltering = requiresVpnAllowRule(nai, oldLp, oldIface);

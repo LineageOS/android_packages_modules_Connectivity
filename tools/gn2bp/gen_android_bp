@@ -667,13 +667,34 @@ def create_proto_group_modules(blueprint, gn, module_name, target_names):
 # There may be a better way to do target specific modification
 # Target specific modification before create_action_module
 def pre_create_action_module(target):
+  # Convert ['--param=value'] to ['--param', 'value'] for consistency.
+  # TODO: we may want to only do this for python scripts arguments. If argparse
+  # is used, this transformation is safe.
+  target.args = [str for it in target.args for str in it.split('=')]
+
   if target.script == "//build/write_buildflag_header.py":
     # write_buildflag_header.py writes result to args.genDir/args.output
     # So, override args.genDir by '.' so that args.output=$(out) works
-    for i in range(len(target.args)-1):
-      if target.args[i] == '--gen-dir':
-        target.args[i+1] = '.'
+    for i, val in enumerate(target.args):
+      if val == '--gen-dir':
+        target.args[i + 1] = '.'
         break
+
+  elif target.script == '//base/android/jni_generator/jni_generator.py':
+    for i, val in enumerate(target.args):
+      if val == '--output_dir':
+        # replace --output_dir gen/... with --output_dir $(genDir)/...
+        target.args[i + 1] = re.sub('^gen', '$(genDir)', target.args[i + 1])
+      if val == '--input_file':
+        # --input_file supports both .class specifiers or source files as arguments.
+        # Only source files need to be wrapped inside a $(location <label>) tag.
+        if re.match('.*\.class$', target.args[i + 1]):
+          continue
+        # replace --input_file ../../... with --input_file $(location ...)
+        # TODO: put inside function
+        filename = re.sub('^\.\./\.\./', '', target.args[i + 1])
+        target.args[i + 1] = '$(location %s)' % filename
+
 
 def create_action_module(blueprint, target):
   bp_module_name = label_to_module_name(target.name)
@@ -694,12 +715,14 @@ def create_action_module(blueprint, target):
     # Replace {{response_file_contents}} with /dev/stdin
     target.args = ['/dev/stdin' if it == response_file else it for it in target.args]
 
-  arg_string = ' '.join(target.args)
+  # put all args on a new line for better diffs.
+  NEWLINE = ' " +\n         "'
+  arg_string = NEWLINE.join(target.args)
   module.cmd = '$(location %s) %s' % (script, arg_string)
 
   if use_response_file:
     # Pipe response file contents into script
-    module.cmd = 'echo \'%s\' | %s' % (target.response_file_contents, module.cmd)
+    module.cmd = 'echo \'%s\' |%s%s' % (target.response_file_contents, NEWLINE, module.cmd)
 
   if all(os.path.splitext(it)[1] == '.h' for it in target.outputs):
     module.genrule_headers.add(bp_module_name)
@@ -801,6 +824,12 @@ def create_modules_from_target(blueprint, gn, gn_target_name):
 
   if target.type in gn_utils.LINKER_UNIT_TYPES:
     module.cflags.update(_get_cflags(target))
+    # HACK! We may have to link against chromium's sysroot instead, but this
+    # seems to work for //base:base.
+    # TODO: implement proper cflag parsing.
+    for flag in target.cflags:
+      if '--sysroot=' in flag:
+        module.header_libs.add('jni_headers')
     module.local_include_dirs.update(gn_utils.label_to_path(it) for it in target.include_dirs)
 
   module_is_compiled = module.type not in ('genrule', 'filegroup')
