@@ -213,12 +213,11 @@ cc_library_static {
     local_include_dirs: [
         "./",
         "buildtools/third_party/libc++/",
-        "out/test/gen/",
+        "buildtools/third_party/libc++/trunk/include",
+        "buildtools/third_party/libc++abi/trunk/include",
         "third_party/android_ndk/sources/android/cpufeatures/",
     ],
-    header_libs: [
-        "jni_headers",
-    ],
+    cpp_std: "c++20",
 }
 
 // GN: //base/allocator/partition_allocator:partition_alloc_buildflags
@@ -266,14 +265,14 @@ genrule {
     name: "cronet_aml_base_android_runtime_jni_headers",
     cmd: "$(location base/android/jni_generator/jni_generator.py) --ptr_type " +
          "long " +
-         "--prev_output_dir " +
-         "gen/base/android_runtime_jni_headers " +
+         " " +
+         " " +
          "--output_dir " +
-         "$(genDir)/jni_headers/base/android_runtime_jni_headers " +
+         "$(genDir)/base/android_runtime_jni_headers " +
          "--includes " +
-         "../../../../../../base/android/jni_generator/jni_generator_helper.h " +
+         "base/android/jni_generator/jni_generator_helper.h " +
          "--jar_file " +
-         "../../third_party/android_sdk/public/platforms/android-33/android.jar " +
+         "$(location third_party/android_sdk/public/platforms/android-33/android.jar) " +
          "--output_name " +
          "Runnable_jni.h " +
          "--output_name " +
@@ -281,10 +280,12 @@ genrule {
          "--input_file " +
          "java/lang/Runnable.class " +
          "--input_file " +
-         "java/lang/Runtime.class",
+         "java/lang/Runtime.class " +
+         "--javap " +
+         "$$(find out/.path -name javap)",
     out: [
-        "jni_headers/base/android_runtime_jni_headers/Runnable_jni.h",
-        "jni_headers/base/android_runtime_jni_headers/Runtime_jni.h",
+        "base/android_runtime_jni_headers/Runnable_jni.h",
+        "base/android_runtime_jni_headers/Runtime_jni.h",
     ],
     tool_files: [
         "base/android/jni_generator/jni_generator.py",
@@ -957,8 +958,8 @@ cc_library_static {
     local_include_dirs: [
         "./",
         "buildtools/third_party/libc++/",
-        "out/test/gen/",
-        "out/test/gen/jni_headers/",
+        "buildtools/third_party/libc++/trunk/include",
+        "buildtools/third_party/libc++abi/trunk/include",
         "third_party/abseil-cpp/",
         "third_party/android_ndk/sources/android/cpufeatures/",
         "third_party/boringssl/src/include/",
@@ -968,6 +969,7 @@ cc_library_static {
     header_libs: [
         "jni_headers",
     ],
+    cpp_std: "c++20",
 }
 
 // GN: //base:base_jni_headers
@@ -1017,12 +1019,12 @@ genrule {
     ],
     cmd: "$(location base/android/jni_generator/jni_generator.py) --ptr_type " +
          "long " +
-         "--prev_output_dir " +
-         "gen/base/base_jni_headers " +
+         " " +
+         " " +
          "--output_dir " +
-         "$(genDir)/jni_headers/base/base_jni_headers " +
+         "$(genDir)/base/base_jni_headers " +
          "--includes " +
-         "../../../../../../base/android/jni_generator/jni_generator_helper.h " +
+         "base/android/jni_generator/jni_generator_helper.h " +
          "--use_proxy_hash " +
          "--output_name " +
          "ApkAssets_jni.h " +
@@ -1185,46 +1187,46 @@ genrule {
          "--input_file " +
          "$(location base/android/java/src/org/chromium/base/task/TaskRunnerImpl.java)",
     out: [
-        "jni_headers/base/base_jni_headers/ApkAssets_jni.h",
-        "jni_headers/base/base_jni_headers/ApplicationStatus_jni.h",
-        "jni_headers/base/base_jni_headers/BaseFeatureList_jni.h",
-        "jni_headers/base/base_jni_headers/BuildInfo_jni.h",
-        "jni_headers/base/base_jni_headers/BundleUtils_jni.h",
-        "jni_headers/base/base_jni_headers/Callback_jni.h",
-        "jni_headers/base/base_jni_headers/ChildProcessService_jni.h",
-        "jni_headers/base/base_jni_headers/CommandLine_jni.h",
-        "jni_headers/base/base_jni_headers/ContentUriUtils_jni.h",
-        "jni_headers/base/base_jni_headers/CpuFeatures_jni.h",
-        "jni_headers/base/base_jni_headers/EarlyTraceEvent_jni.h",
-        "jni_headers/base/base_jni_headers/EventLog_jni.h",
-        "jni_headers/base/base_jni_headers/FeatureList_jni.h",
-        "jni_headers/base/base_jni_headers/Features_jni.h",
-        "jni_headers/base/base_jni_headers/FieldTrialList_jni.h",
-        "jni_headers/base/base_jni_headers/FileUtils_jni.h",
-        "jni_headers/base/base_jni_headers/ImportantFileWriterAndroid_jni.h",
-        "jni_headers/base/base_jni_headers/IntStringCallback_jni.h",
-        "jni_headers/base/base_jni_headers/JNIUtils_jni.h",
-        "jni_headers/base/base_jni_headers/JankMetricUMARecorder_jni.h",
-        "jni_headers/base/base_jni_headers/JavaExceptionReporter_jni.h",
-        "jni_headers/base/base_jni_headers/JavaHandlerThread_jni.h",
-        "jni_headers/base/base_jni_headers/JavaHeapDumpGenerator_jni.h",
-        "jni_headers/base/base_jni_headers/LibraryLoader_jni.h",
-        "jni_headers/base/base_jni_headers/LibraryPrefetcher_jni.h",
-        "jni_headers/base/base_jni_headers/LocaleUtils_jni.h",
-        "jni_headers/base/base_jni_headers/MemoryPressureListener_jni.h",
-        "jni_headers/base/base_jni_headers/NativeUmaRecorder_jni.h",
-        "jni_headers/base/base_jni_headers/PathService_jni.h",
-        "jni_headers/base/base_jni_headers/PathUtils_jni.h",
-        "jni_headers/base/base_jni_headers/PostTask_jni.h",
-        "jni_headers/base/base_jni_headers/PowerMonitor_jni.h",
-        "jni_headers/base/base_jni_headers/RadioUtils_jni.h",
-        "jni_headers/base/base_jni_headers/StatisticsRecorderAndroid_jni.h",
-        "jni_headers/base/base_jni_headers/SysUtils_jni.h",
-        "jni_headers/base/base_jni_headers/TaskRunnerImpl_jni.h",
-        "jni_headers/base/base_jni_headers/ThreadUtils_jni.h",
-        "jni_headers/base/base_jni_headers/TimezoneUtils_jni.h",
-        "jni_headers/base/base_jni_headers/TraceEvent_jni.h",
-        "jni_headers/base/base_jni_headers/UnguessableToken_jni.h",
+        "base/base_jni_headers/ApkAssets_jni.h",
+        "base/base_jni_headers/ApplicationStatus_jni.h",
+        "base/base_jni_headers/BaseFeatureList_jni.h",
+        "base/base_jni_headers/BuildInfo_jni.h",
+        "base/base_jni_headers/BundleUtils_jni.h",
+        "base/base_jni_headers/Callback_jni.h",
+        "base/base_jni_headers/ChildProcessService_jni.h",
+        "base/base_jni_headers/CommandLine_jni.h",
+        "base/base_jni_headers/ContentUriUtils_jni.h",
+        "base/base_jni_headers/CpuFeatures_jni.h",
+        "base/base_jni_headers/EarlyTraceEvent_jni.h",
+        "base/base_jni_headers/EventLog_jni.h",
+        "base/base_jni_headers/FeatureList_jni.h",
+        "base/base_jni_headers/Features_jni.h",
+        "base/base_jni_headers/FieldTrialList_jni.h",
+        "base/base_jni_headers/FileUtils_jni.h",
+        "base/base_jni_headers/ImportantFileWriterAndroid_jni.h",
+        "base/base_jni_headers/IntStringCallback_jni.h",
+        "base/base_jni_headers/JNIUtils_jni.h",
+        "base/base_jni_headers/JankMetricUMARecorder_jni.h",
+        "base/base_jni_headers/JavaExceptionReporter_jni.h",
+        "base/base_jni_headers/JavaHandlerThread_jni.h",
+        "base/base_jni_headers/JavaHeapDumpGenerator_jni.h",
+        "base/base_jni_headers/LibraryLoader_jni.h",
+        "base/base_jni_headers/LibraryPrefetcher_jni.h",
+        "base/base_jni_headers/LocaleUtils_jni.h",
+        "base/base_jni_headers/MemoryPressureListener_jni.h",
+        "base/base_jni_headers/NativeUmaRecorder_jni.h",
+        "base/base_jni_headers/PathService_jni.h",
+        "base/base_jni_headers/PathUtils_jni.h",
+        "base/base_jni_headers/PostTask_jni.h",
+        "base/base_jni_headers/PowerMonitor_jni.h",
+        "base/base_jni_headers/RadioUtils_jni.h",
+        "base/base_jni_headers/StatisticsRecorderAndroid_jni.h",
+        "base/base_jni_headers/SysUtils_jni.h",
+        "base/base_jni_headers/TaskRunnerImpl_jni.h",
+        "base/base_jni_headers/ThreadUtils_jni.h",
+        "base/base_jni_headers/TimezoneUtils_jni.h",
+        "base/base_jni_headers/TraceEvent_jni.h",
+        "base/base_jni_headers/UnguessableToken_jni.h",
     ],
     tool_files: [
         "base/android/jni_generator/jni_generator.py",
@@ -1269,11 +1271,10 @@ cc_library_static {
     local_include_dirs: [
         "./",
         "buildtools/third_party/libc++/",
-        "out/test/gen/",
+        "buildtools/third_party/libc++/trunk/include",
+        "buildtools/third_party/libc++abi/trunk/include",
     ],
-    header_libs: [
-        "jni_headers",
-    ],
+    cpp_std: "c++20",
 }
 
 // GN: //base:build_date
@@ -1590,11 +1591,10 @@ cc_library_static {
     local_include_dirs: [
         "./",
         "buildtools/third_party/libc++/",
-        "out/test/gen/",
+        "buildtools/third_party/libc++/trunk/include",
+        "buildtools/third_party/libc++abi/trunk/include",
     ],
-    header_libs: [
-        "jni_headers",
-    ],
+    cpp_std: "c++20",
 }
 
 // GN: //base/third_party/dynamic_annotations:dynamic_annotations
@@ -1624,11 +1624,10 @@ cc_library_static {
     local_include_dirs: [
         "./",
         "buildtools/third_party/libc++/",
-        "out/test/gen/",
+        "buildtools/third_party/libc++/trunk/include",
+        "buildtools/third_party/libc++abi/trunk/include",
     ],
-    header_libs: [
-        "jni_headers",
-    ],
+    cpp_std: "c++20",
 }
 
 // GN: //base:tracing_buildflags
@@ -1742,11 +1741,14 @@ cc_defaults {
     cflags: [
         "-O2",
         "-Wno-error=return-type",
+        "-Wno-missing-field-initializers",
+        "-Wno-non-virtual-dtor",
         "-Wno-sign-compare",
         "-Wno-sign-promo",
         "-Wno-unused-parameter",
         "-fvisibility=hidden",
     ],
+    stl: "none",
 }
 
 // GN: //third_party/abseil-cpp:absl
@@ -2816,12 +2818,11 @@ cc_library_static {
     local_include_dirs: [
         "./",
         "buildtools/third_party/libc++/",
-        "out/test/gen/",
+        "buildtools/third_party/libc++/trunk/include",
+        "buildtools/third_party/libc++abi/trunk/include",
         "third_party/boringssl/src/include/",
     ],
-    header_libs: [
-        "jni_headers",
-    ],
+    cpp_std: "c++20",
 }
 
 // GN: //third_party/boringssl:boringssl_asm
@@ -2873,13 +2874,12 @@ cc_library_static {
     local_include_dirs: [
         "./",
         "buildtools/third_party/libc++/",
-        "out/test/gen/",
+        "buildtools/third_party/libc++/trunk/include",
+        "buildtools/third_party/libc++abi/trunk/include",
         "third_party/icu/source/common/",
         "third_party/icu/source/i18n/",
     ],
-    header_libs: [
-        "jni_headers",
-    ],
+    cpp_std: "c++20",
 }
 
 // GN: //third_party/icu:icuuc_private
@@ -2924,13 +2924,12 @@ cc_library_static {
     local_include_dirs: [
         "./",
         "buildtools/third_party/libc++/",
-        "out/test/gen/",
+        "buildtools/third_party/libc++/trunk/include",
+        "buildtools/third_party/libc++abi/trunk/include",
         "third_party/icu/source/common/",
         "third_party/icu/source/i18n/",
     ],
-    header_libs: [
-        "jni_headers",
-    ],
+    cpp_std: "c++20",
 }
 
 // GN: //third_party/icu:icuuc_public
@@ -2979,12 +2978,11 @@ cc_library_static {
     local_include_dirs: [
         "./",
         "buildtools/third_party/libc++/",
-        "out/test/gen/",
+        "buildtools/third_party/libc++/trunk/include",
+        "buildtools/third_party/libc++abi/trunk/include",
         "third_party/libevent/android/",
     ],
-    header_libs: [
-        "jni_headers",
-    ],
+    cpp_std: "c++20",
 }
 
 // GN: //third_party/modp_b64:modp_b64
@@ -3016,10 +3014,9 @@ cc_library_static {
     local_include_dirs: [
         "./",
         "buildtools/third_party/libc++/",
-        "out/test/gen/",
+        "buildtools/third_party/libc++/trunk/include",
+        "buildtools/third_party/libc++abi/trunk/include",
     ],
-    header_libs: [
-        "jni_headers",
-    ],
+    cpp_std: "c++20",
 }
 
