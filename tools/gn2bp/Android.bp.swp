@@ -167,7 +167,7 @@ cc_library_static {
         "base/allocator/partition_allocator/starscan/pcscan_internal.cc",
         "base/allocator/partition_allocator/starscan/pcscan_scheduling.cc",
         "base/allocator/partition_allocator/starscan/snapshot.cc",
-        "base/allocator/partition_allocator/starscan/stack/asm/arm/push_registers_asm.cc",
+        "base/allocator/partition_allocator/starscan/stack/asm/x64/push_registers_asm.cc",
         "base/allocator/partition_allocator/starscan/stack/stack.cc",
         "base/allocator/partition_allocator/starscan/stats_collector.cc",
         "base/allocator/partition_allocator/starscan/write_protector.cc",
@@ -464,7 +464,7 @@ cc_library_static {
         "base/android/path_utils.cc",
         "base/android/radio_utils.cc",
         "base/android/reached_addresses_bitset.cc",
-        "base/android/reached_code_profiler.cc",
+        "base/android/reached_code_profiler_stub.cc",
         "base/android/remove_stale_data.cc",
         "base/android/scoped_hardware_buffer_fence_sync.cc",
         "base/android/scoped_hardware_buffer_handle.cc",
@@ -659,9 +659,6 @@ cc_library_static {
         "base/process/process_metrics_posix.cc",
         "base/process/process_posix.cc",
         "base/profiler/arm_cfi_table.cc",
-        "base/profiler/chrome_unwind_info_android.cc",
-        "base/profiler/chrome_unwinder_android.cc",
-        "base/profiler/chrome_unwinder_android_v2.cc",
         "base/profiler/frame.cc",
         "base/profiler/metadata_recorder.cc",
         "base/profiler/module_cache.cc",
@@ -841,7 +838,6 @@ cc_library_static {
         "base/timer/timer.cc",
         "base/timer/wall_clock_timer.cc",
         "base/token.cc",
-        "base/trace_event/cfi_backtrace_android.cc",
         "base/trace_event/heap_profiler_allocation_context.cc",
         "base/trace_event/heap_profiler_allocation_context_tracker.cc",
         "base/trace_event/memory_allocator_dump_guid.cc",
@@ -1333,7 +1329,7 @@ genrule {
 // GN: //base:debugging_buildflags
 genrule {
     name: "cronet_aml_base_debugging_buildflags",
-    cmd: "echo '--flags DCHECK_IS_CONFIGURABLE=\"false\" ENABLE_LOCATION_SOURCE=\"true\" ENABLE_PROFILING=\"false\" CAN_UNWIND_WITH_FRAME_POINTERS=\"false\" UNSAFE_DEVELOPER_BUILD=\"true\" CAN_UNWIND_WITH_CFI_TABLE=\"true\" EXCLUDE_UNWIND_TABLES=\"false\" ENABLE_GDBINIT_WARNING=\"true\" ENABLE_LLDBINIT_WARNING=\"false\" EXPENSIVE_DCHECKS_ARE_ON=\"true\" ENABLE_STACK_TRACE_LINE_NUMBERS=\"false\"' | " +
+    cmd: "echo '--flags DCHECK_IS_CONFIGURABLE=\"false\" ENABLE_LOCATION_SOURCE=\"true\" ENABLE_PROFILING=\"false\" CAN_UNWIND_WITH_FRAME_POINTERS=\"false\" UNSAFE_DEVELOPER_BUILD=\"true\" CAN_UNWIND_WITH_CFI_TABLE=\"false\" EXCLUDE_UNWIND_TABLES=\"false\" ENABLE_GDBINIT_WARNING=\"true\" ENABLE_LLDBINIT_WARNING=\"false\" EXPENSIVE_DCHECKS_ARE_ON=\"true\" ENABLE_STACK_TRACE_LINE_NUMBERS=\"false\"' | " +
          "$(location build/write_buildflag_header.py) --output " +
          "$(out) " +
          "--rulename " +
@@ -1498,7 +1494,7 @@ genrule {
 // GN: //base:profiler_buildflags
 genrule {
     name: "cronet_aml_base_profiler_buildflags",
-    cmd: "echo '--flags ENABLE_ARM_CFI_TABLE=\"true\" IOS_STACK_PROFILER_ENABLED=\"true\" USE_ANDROID_UNWINDER_V2=\"true\"' | " +
+    cmd: "echo '--flags ENABLE_ARM_CFI_TABLE=\"false\" IOS_STACK_PROFILER_ENABLED=\"true\" USE_ANDROID_UNWINDER_V2=\"true\"' | " +
          "$(location build/write_buildflag_header.py) --output " +
          "$(out) " +
          "--rulename " +
