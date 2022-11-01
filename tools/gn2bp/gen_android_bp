@@ -336,7 +336,7 @@ class Module(object):
     self.defaults = set()
     self.cflags = set()
     self.include_dirs = set()
-    self.local_include_dirs = set()
+    self.local_include_dirs = []
     self.header_libs = set()
     self.required = set()
     self.tool_files = set()
@@ -385,7 +385,7 @@ class Module(object):
     self._output_field(output, 'defaults')
     self._output_field(output, 'cflags')
     self._output_field(output, 'include_dirs')
-    self._output_field(output, 'local_include_dirs')
+    self._output_field(output, 'local_include_dirs', sort=False)
     self._output_field(output, 'header_libs')
     self._output_field(output, 'required')
     self._output_field(output, 'dist')
@@ -843,6 +843,7 @@ def create_modules_from_target(blueprint, gn, gn_target_name):
       for src in target.sources
       if is_supported_source_file(src))
 
+  local_include_dirs_set = set()
   if target.type in gn_utils.LINKER_UNIT_TYPES:
     module.cflags.update(_get_cflags(target))
     # TODO: implement proper cflag parsing.
@@ -850,18 +851,24 @@ def create_modules_from_target(blueprint, gn, gn_target_name):
       if '-std=' in flag:
         module.cpp_std = flag[len('-std='):]
       if '-isystem' in flag:
-        module.local_include_dirs.add(flag[len('-isystem../../'):])
-      if '--sysroot' in flag:
-        module.local_include_dirs.add(flag[len('--sysroot=../../'):] + "/usr/include")
+        local_include_dirs_set.add(flag[len('-isystem../../'):])
 
     # Adding local_include_dirs is necessary due to source_sets / filegroups
     # which do not properly propagate include directories.
     # Filter any directory inside //out as a) this directory does not exist for
     # aosp / soong builds and b) the include directory should already be
     # configured via library dependency.
-    module.local_include_dirs.update([gn_utils.label_to_path(d)
+    local_include_dirs_set.update([gn_utils.label_to_path(d)
                                       for d in target.include_dirs
                                       if not re.match('^//out/.*', d)])
+    module.local_include_dirs = sorted(list(local_include_dirs_set))
+
+    # Order matters for some targets. For example, base/time/time_exploded_icu.cc
+    # in //base:base needs to have sysroot include after icu/source/common
+    # include. So adding sysroot include at the end.
+    for flag in target.cflags:
+      if '--sysroot' in flag:
+        module.local_include_dirs.append(flag[len('--sysroot=../../'):] + "/usr/include")
 
   module_is_compiled = module.type not in ('genrule', 'filegroup')
   if module_is_compiled:
