@@ -682,7 +682,11 @@ def create_action_module(blueprint, target):
     for i, val in enumerate(target.args):
       if val == '--gen-dir':
         target.args[i + 1] = '.'
-        break
+      elif val == '--output':
+        target.args[i + 1] = '$(out)'
+
+  elif target.script == '//build/write_build_date_header.py':
+    target.args[0] = '$(out)'
 
   elif target.script == '//base/android/jni_generator/jni_generator.py':
     # chromium builds against a prebuilt ndk that contains the jni_headers, so
@@ -723,11 +727,6 @@ def create_action_module(blueprint, target):
 
   script = gn_utils.label_to_path(target.script)
   module.tool_files.add(script)
-
-  # Replace arg by {$out} if possible
-  if len(target.outputs) == 1:
-    out = list(target.outputs)[0]
-    target.args = ['$(out)' if arg == out or arg == 'gen/' + out else arg for arg in target.args]
 
   # Handle passing parameters via response file by piping them into the script
   # and reading them from /dev/stdin.
