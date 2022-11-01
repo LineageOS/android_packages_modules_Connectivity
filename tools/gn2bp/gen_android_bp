@@ -736,6 +736,12 @@ def create_action_module(blueprint, target):
     # Replace {{response_file_contents}} with /dev/stdin
     target.args = ['/dev/stdin' if it == response_file else it for it in target.args]
 
+  # escape " and \$ in target.args.
+  # once all actions are properly implemented, this may not be necessary anymore.
+  # TODO: is this the right place to do this?
+  target.args = [arg.replace('"', r'\"') for arg in target.args]
+  target.args = [arg.replace(r'\$', r'\\$') for arg in target.args]
+
   # put all args on a new line for better diffs.
   NEWLINE = ' " +\n         "'
   arg_string = NEWLINE.join(target.args)

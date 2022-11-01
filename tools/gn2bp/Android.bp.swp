@@ -1399,7 +1399,7 @@ genrule {
          "--depfile " +
          "gen/base/jni_java__build_config_crbug_908819.d " +
          "--deps-configs " +
-         "["gen/build/android/build_java.build_config.json", "gen/third_party/android_sdk/android_sdk_java.build_config.json"] " +
+         "[\"gen/build/android/build_java.build_config.json\", \"gen/third_party/android_sdk/android_sdk_java.build_config.json\"] " +
          "--public-deps-configs " +
          "[] " +
          "--build-config " +
@@ -1479,13 +1479,13 @@ genrule {
          "--jar-path " +
          "obj/base/jni_java.processed.jar " +
          "--java-srcjars " +
-         "["gen/base/jni_java.generated.srcjar"] " +
+         "[\"gen/base/jni_java.generated.srcjar\"] " +
          "--target-name " +
          "//base:jni_java__compile_java " +
          "--header-jar " +
          "obj/base/jni_java.turbine.jar " +
          "--classpath " +
-         "["obj/base/jni_java.turbine.jar"] " +
+         "[\"obj/base/jni_java.turbine.jar\"] " +
          "--classpath " +
          "@FileArg(gen/base/jni_java.build_config.json:deps_info:javac_full_interface_classpath) " +
          "--chromium-code " +
@@ -1548,7 +1548,7 @@ genrule {
          "obj/base/jni_java__dex " +
          "--library " +
          "--class-inputs " +
-         "["obj/base/jni_java.processed.jar"] " +
+         "[\"obj/base/jni_java.processed.jar\"] " +
          "--desugar " +
          "--desugar-jdk-libs-json " +
          "../../third_party/r8/desugar_jdk_libs.json " +
@@ -1604,13 +1604,13 @@ genrule {
          "--jar-path " +
          "obj/base/jni_java__errorprone.errorprone.stamp " +
          "--java-srcjars " +
-         "["gen/base/jni_java.generated.srcjar"] " +
+         "[\"gen/base/jni_java.generated.srcjar\"] " +
          "--target-name " +
          "//base:jni_java__errorprone " +
          "--header-jar " +
          "obj/base/jni_java.turbine.jar " +
          "--classpath " +
-         "["obj/base/jni_java.turbine.jar"] " +
+         "[\"obj/base/jni_java.turbine.jar\"] " +
          "--classpath " +
          "@FileArg(gen/base/jni_java.build_config.json:deps_info:javac_full_interface_classpath) " +
          "--chromium-code " +
@@ -2056,7 +2056,7 @@ genrule {
 genrule {
     name: "cronet_aml_build_android_build_config_gen",
     cmd: "$(location build/android/gyp/gcc_preprocess.py) --include-dirs " +
-         "["../../", "gen"] " +
+         "[\"../../\", \"gen\"] " +
          "--output " +
          "gen/build/android/build_config_gen.srcjar " +
          "--define " +
@@ -2079,7 +2079,7 @@ genrule {
          "--depfile " +
          "gen/build/android/build_java__build_config_crbug_908819.d " +
          "--deps-configs " +
-         "["gen/third_party/android_sdk/android_sdk_java.build_config.json"] " +
+         "[\"gen/third_party/android_sdk/android_sdk_java.build_config.json\"] " +
          "--public-deps-configs " +
          "[] " +
          "--build-config " +
@@ -2100,9 +2100,9 @@ genrule {
          "--java-sources-file " +
          "gen/build/android/build_java.sources " +
          "--bundled-srcjars " +
-         "["gen/build/android/build_config_gen.srcjar", "gen/build/android/native_libraries_gen.srcjar"] " +
+         "[\"gen/build/android/build_config_gen.srcjar\", \"gen/build/android/native_libraries_gen.srcjar\"] " +
          "--proguard-configs " +
-         "["../../build/android/chromium_annotations.flags"]",
+         "[\"../../build/android/chromium_annotations.flags\"]",
     out: [
         "build/android/build_java.build_config.json",
     ],
@@ -2157,19 +2157,19 @@ genrule {
          "--jar-path " +
          "obj/build/android/build_java.javac.jar " +
          "--java-srcjars " +
-         "["gen/build/android/build_config_gen.srcjar", "gen/build/android/native_libraries_gen.srcjar", "gen/build/android/build_java.generated.srcjar"] " +
+         "[\"gen/build/android/build_config_gen.srcjar\", \"gen/build/android/native_libraries_gen.srcjar\", \"gen/build/android/build_java.generated.srcjar\"] " +
          "--target-name " +
          "//build/android:build_java__compile_java " +
          "--header-jar " +
          "obj/build/android/build_java.turbine.jar " +
          "--classpath " +
-         "["obj/build/android/build_java.turbine.jar"] " +
+         "[\"obj/build/android/build_java.turbine.jar\"] " +
          "--classpath " +
          "@FileArg(gen/build/android/build_java.build_config.json:deps_info:javac_full_interface_classpath) " +
          "--chromium-code " +
          "1 " +
          "--jar-info-exclude-globs " +
-         "["*/build/BuildConfig.class", "*/NativeLibraries.class"] " +
+         "[\"*/build/BuildConfig.class\", \"*/NativeLibraries.class\"] " +
          "@gen/build/android/build_java.sources",
     out: [
         "//out/test/obj/build/android/build_java.javac.jar",
@@ -2230,7 +2230,7 @@ genrule {
          "obj/build/android/build_java__dex " +
          "--library " +
          "--class-inputs " +
-         "["obj/build/android/build_java.processed.jar"] " +
+         "[\"obj/build/android/build_java.processed.jar\"] " +
          "--desugar " +
          "--desugar-jdk-libs-json " +
          "../../third_party/r8/desugar_jdk_libs.json " +
@@ -2283,19 +2283,19 @@ genrule {
          "--jar-path " +
          "obj/build/android/build_java__errorprone.errorprone.stamp " +
          "--java-srcjars " +
-         "["gen/build/android/build_java.generated.srcjar"] " +
+         "[\"gen/build/android/build_java.generated.srcjar\"] " +
          "--target-name " +
          "//build/android:build_java__errorprone " +
          "--header-jar " +
          "obj/build/android/build_java.turbine.jar " +
          "--classpath " +
-         "["obj/build/android/build_java.turbine.jar"] " +
+         "[\"obj/build/android/build_java.turbine.jar\"] " +
          "--classpath " +
          "@FileArg(gen/build/android/build_java.build_config.json:deps_info:javac_full_interface_classpath) " +
          "--chromium-code " +
          "1 " +
          "--jar-info-exclude-globs " +
-         "["*/build/BuildConfig.class", "*/NativeLibraries.class"] " +
+         "[\"*/build/BuildConfig.class\", \"*/NativeLibraries.class\"] " +
          "--processorpath " +
          "@FileArg(gen/tools/android/errorprone_plugin/errorprone_plugin.build_config.json:deps_info:host_classpath) " +
          "--enable-errorprone " +
@@ -2359,7 +2359,7 @@ genrule {
          "--jar-path " +
          "obj/build/android/build_java.turbine.jar " +
          "--java-srcjars " +
-         "["gen/build/android/build_config_gen.srcjar", "gen/build/android/native_libraries_gen.srcjar"] " +
+         "[\"gen/build/android/build_config_gen.srcjar\", \"gen/build/android/native_libraries_gen.srcjar\"] " +
          "--target-name " +
          "//build/android:build_java__header " +
          "--classpath " +
@@ -2375,7 +2375,7 @@ genrule {
          "--chromium-code " +
          "1 " +
          "--jar-info-exclude-globs " +
-         "["*/build/BuildConfig.class", "*/NativeLibraries.class"] " +
+         "[\"*/build/BuildConfig.class\", \"*/NativeLibraries.class\"] " +
          "@gen/build/android/build_java.sources",
     out: [
         "//out/test/obj/build/android/build_java.turbine.jar",
@@ -2422,7 +2422,7 @@ genrule {
          "--output " +
          "lib.java/build/android/build_java.jar " +
          "--exclude-globs " +
-         "["*/build/BuildConfig.class", "*/NativeLibraries.class"] " +
+         "[\"*/build/BuildConfig.class\", \"*/NativeLibraries.class\"] " +
          "--include-globs " +
          "[]",
     out: [
@@ -2445,7 +2445,7 @@ genrule {
          "--output " +
          "obj/build/android/build_java.processed.jar " +
          "--exclude-globs " +
-         "["*/build/BuildConfig.class", "*/NativeLibraries.class"] " +
+         "[\"*/build/BuildConfig.class\", \"*/NativeLibraries.class\"] " +
          "--include-globs " +
          "[]",
     out: [
@@ -2502,7 +2502,7 @@ genrule {
          "--depfile " +
          "gen/build/android/bytecode/bytecode_processor__build_config_crbug_908819.d " +
          "--deps-configs " +
-         "["gen/build/android/bytecode/bytecode_processor_java.build_config.json"] " +
+         "[\"gen/build/android/bytecode/bytecode_processor_java.build_config.json\"] " +
          "--public-deps-configs " +
          "[] " +
          "--build-config " +
@@ -2577,7 +2577,7 @@ genrule {
          "--depfile " +
          "gen/build/android/bytecode/bytecode_processor_java__build_config_crbug_908819.d " +
          "--deps-configs " +
-         "["gen/third_party/android_deps/org_ow2_asm_asm_java.build_config.json", "gen/third_party/android_deps/org_ow2_asm_asm_util_java.build_config.json"] " +
+         "[\"gen/third_party/android_deps/org_ow2_asm_asm_java.build_config.json\", \"gen/third_party/android_deps/org_ow2_asm_asm_util_java.build_config.json\"] " +
          "--public-deps-configs " +
          "[] " +
          "--build-config " +
@@ -2643,13 +2643,13 @@ genrule {
          "--jar-path " +
          "obj/build/android/bytecode/bytecode_processor_java.javac.jar " +
          "--java-srcjars " +
-         "["gen/build/android/bytecode/bytecode_processor_java.generated.srcjar"] " +
+         "[\"gen/build/android/bytecode/bytecode_processor_java.generated.srcjar\"] " +
          "--target-name " +
          "//build/android/bytecode:bytecode_processor_java__compile_java " +
          "--header-jar " +
          "obj/build/android/bytecode/bytecode_processor_java.turbine.jar " +
          "--classpath " +
-         "["obj/build/android/bytecode/bytecode_processor_java.turbine.jar"] " +
+         "[\"obj/build/android/bytecode/bytecode_processor_java.turbine.jar\"] " +
          "--classpath " +
          "@FileArg(gen/build/android/bytecode/bytecode_processor_java.build_config.json:deps_info:javac_full_interface_classpath) " +
          "--chromium-code " +
@@ -2710,13 +2710,13 @@ genrule {
          "--jar-path " +
          "obj/build/android/bytecode/bytecode_processor_java__errorprone.errorprone.stamp " +
          "--java-srcjars " +
-         "["gen/build/android/bytecode/bytecode_processor_java.generated.srcjar"] " +
+         "[\"gen/build/android/bytecode/bytecode_processor_java.generated.srcjar\"] " +
          "--target-name " +
          "//build/android/bytecode:bytecode_processor_java__errorprone " +
          "--header-jar " +
          "obj/build/android/bytecode/bytecode_processor_java.turbine.jar " +
          "--classpath " +
-         "["obj/build/android/bytecode/bytecode_processor_java.turbine.jar"] " +
+         "[\"obj/build/android/bytecode/bytecode_processor_java.turbine.jar\"] " +
          "--classpath " +
          "@FileArg(gen/build/android/bytecode/bytecode_processor_java.build_config.json:deps_info:javac_full_interface_classpath) " +
          "--chromium-code " +
@@ -5801,7 +5801,7 @@ genrule {
          "--depfile " +
          "gen/third_party/android_deps/auto_service_processor__build_config_crbug_908819.d " +
          "--deps-configs " +
-         "["gen/third_party/android_deps/com_google_auto_service_auto_service_java.build_config.json"] " +
+         "[\"gen/third_party/android_deps/com_google_auto_service_auto_service_java.build_config.json\"] " +
          "--public-deps-configs " +
          "[] " +
          "--build-config " +
@@ -5855,7 +5855,7 @@ genrule {
          "--depfile " +
          "gen/third_party/android_deps/com_github_ben_manes_caffeine_caffeine_java__build_config_crbug_908819.d " +
          "--deps-configs " +
-         "["gen/third_party/android_deps/com_google_errorprone_error_prone_annotations_java.build_config.json", "gen/third_party/android_deps/org_checkerframework_checker_qual_java.build_config.json"] " +
+         "[\"gen/third_party/android_deps/com_google_errorprone_error_prone_annotations_java.build_config.json\", \"gen/third_party/android_deps/org_checkerframework_checker_qual_java.build_config.json\"] " +
          "--public-deps-configs " +
          "[] " +
          "--build-config " +
@@ -6057,7 +6057,7 @@ genrule {
          "--depfile " +
          "gen/third_party/android_deps/com_google_auto_auto_common_java__build_config_crbug_908819.d " +
          "--deps-configs " +
-         "["gen/third_party/android_deps/com_google_guava_guava_java.build_config.json"] " +
+         "[\"gen/third_party/android_deps/com_google_guava_guava_java.build_config.json\"] " +
          "--public-deps-configs " +
          "[] " +
          "--build-config " +
@@ -6259,7 +6259,7 @@ genrule {
          "--depfile " +
          "gen/third_party/android_deps/com_google_auto_service_auto_service_java__build_config_crbug_908819.d " +
          "--deps-configs " +
-         "["gen/third_party/android_deps/com_google_auto_auto_common_java.build_config.json", "gen/third_party/android_deps/com_google_auto_service_auto_service_annotations_java.build_config.json", "gen/third_party/android_deps/com_google_guava_guava_java.build_config.json"] " +
+         "[\"gen/third_party/android_deps/com_google_auto_auto_common_java.build_config.json\", \"gen/third_party/android_deps/com_google_auto_service_auto_service_annotations_java.build_config.json\", \"gen/third_party/android_deps/com_google_guava_guava_java.build_config.json\"] " +
          "--public-deps-configs " +
          "[] " +
          "--build-config " +
@@ -6442,7 +6442,7 @@ genrule {
          "--depfile " +
          "gen/third_party/android_deps/com_google_code_findbugs_jsr305_java__build_config_crbug_908819.d " +
          "--deps-configs " +
-         "["gen/third_party/android_sdk/android_sdk_java.build_config.json"] " +
+         "[\"gen/third_party/android_sdk/android_sdk_java.build_config.json\"] " +
          "--public-deps-configs " +
          "[] " +
          "--build-config " +
@@ -6548,7 +6548,7 @@ genrule {
          "--depfile " +
          "gen/third_party/android_deps/com_google_errorprone_error_prone_annotation_java__build_config_crbug_908819.d " +
          "--deps-configs " +
-         "["gen/third_party/android_deps/com_google_guava_guava_java.build_config.json"] " +
+         "[\"gen/third_party/android_deps/com_google_guava_guava_java.build_config.json\"] " +
          "--public-deps-configs " +
          "[] " +
          "--build-config " +
@@ -6649,7 +6649,7 @@ genrule {
          "--depfile " +
          "gen/third_party/android_deps/com_google_errorprone_error_prone_annotations_java__build_config_crbug_908819.d " +
          "--deps-configs " +
-         "["gen/third_party/android_sdk/android_sdk_java.build_config.json"] " +
+         "[\"gen/third_party/android_sdk/android_sdk_java.build_config.json\"] " +
          "--public-deps-configs " +
          "[] " +
          "--build-config " +
@@ -6755,7 +6755,7 @@ genrule {
          "--depfile " +
          "gen/third_party/android_deps/com_google_errorprone_error_prone_check_api_java__build_config_crbug_908819.d " +
          "--deps-configs " +
-         "["gen/third_party/android_deps/com_github_ben_manes_caffeine_caffeine_java.build_config.json", "gen/third_party/android_deps/com_github_kevinstern_software_and_algorithms_java.build_config.json", "gen/third_party/android_deps/com_google_auto_value_auto_value_annotations_java.build_config.json", "gen/third_party/android_deps/com_google_code_findbugs_jsr305_java.build_config.json", "gen/third_party/android_deps/com_google_errorprone_error_prone_annotation_java.build_config.json", "gen/third_party/android_deps/com_google_errorprone_error_prone_annotations_java.build_config.json", "gen/third_party/android_deps/io_github_java_diff_utils_java_diff_utils_java.build_config.json", "gen/third_party/android_deps/org_checkerframework_dataflow_errorprone_java.build_config.json"] " +
+         "[\"gen/third_party/android_deps/com_github_ben_manes_caffeine_caffeine_java.build_config.json\", \"gen/third_party/android_deps/com_github_kevinstern_software_and_algorithms_java.build_config.json\", \"gen/third_party/android_deps/com_google_auto_value_auto_value_annotations_java.build_config.json\", \"gen/third_party/android_deps/com_google_code_findbugs_jsr305_java.build_config.json\", \"gen/third_party/android_deps/com_google_errorprone_error_prone_annotation_java.build_config.json\", \"gen/third_party/android_deps/com_google_errorprone_error_prone_annotations_java.build_config.json\", \"gen/third_party/android_deps/io_github_java_diff_utils_java_diff_utils_java.build_config.json\", \"gen/third_party/android_deps/org_checkerframework_dataflow_errorprone_java.build_config.json\"] " +
          "--public-deps-configs " +
          "[] " +
          "--build-config " +
@@ -6856,7 +6856,7 @@ genrule {
          "--depfile " +
          "gen/third_party/android_deps/com_google_errorprone_error_prone_core_java__build_config_crbug_908819.d " +
          "--deps-configs " +
-         "["gen/third_party/android_deps/com_google_auto_auto_common_java.build_config.json", "gen/third_party/android_deps/com_google_auto_service_auto_service_annotations_java.build_config.json", "gen/third_party/android_deps/com_google_auto_value_auto_value_annotations_java.build_config.json", "gen/third_party/android_deps/com_google_code_findbugs_jsr305_java.build_config.json", "gen/third_party/android_deps/com_google_errorprone_error_prone_annotation_java.build_config.json", "gen/third_party/android_deps/com_google_errorprone_error_prone_annotations_java.build_config.json", "gen/third_party/android_deps/com_google_errorprone_error_prone_check_api_java.build_config.json", "gen/third_party/android_deps/com_google_errorprone_error_prone_type_annotations_java.build_config.json", "gen/third_party/android_deps/com_google_guava_guava_java.build_config.json", "gen/third_party/android_deps/com_google_protobuf_protobuf_java_java.build_config.json", "gen/third_party/android_deps/org_checkerframework_dataflow_errorprone_java.build_config.json", "gen/third_party/android_deps/org_pcollections_pcollections_java.build_config.json"] " +
+         "[\"gen/third_party/android_deps/com_google_auto_auto_common_java.build_config.json\", \"gen/third_party/android_deps/com_google_auto_service_auto_service_annotations_java.build_config.json\", \"gen/third_party/android_deps/com_google_auto_value_auto_value_annotations_java.build_config.json\", \"gen/third_party/android_deps/com_google_code_findbugs_jsr305_java.build_config.json\", \"gen/third_party/android_deps/com_google_errorprone_error_prone_annotation_java.build_config.json\", \"gen/third_party/android_deps/com_google_errorprone_error_prone_annotations_java.build_config.json\", \"gen/third_party/android_deps/com_google_errorprone_error_prone_check_api_java.build_config.json\", \"gen/third_party/android_deps/com_google_errorprone_error_prone_type_annotations_java.build_config.json\", \"gen/third_party/android_deps/com_google_guava_guava_java.build_config.json\", \"gen/third_party/android_deps/com_google_protobuf_protobuf_java_java.build_config.json\", \"gen/third_party/android_deps/org_checkerframework_dataflow_errorprone_java.build_config.json\", \"gen/third_party/android_deps/org_pcollections_pcollections_java.build_config.json\"] " +
          "--public-deps-configs " +
          "[] " +
          "--build-config " +
@@ -7159,7 +7159,7 @@ genrule {
          "--depfile " +
          "gen/third_party/android_deps/com_google_guava_failureaccess_java__build_config_crbug_908819.d " +
          "--deps-configs " +
-         "["gen/third_party/android_sdk/android_sdk_java.build_config.json"] " +
+         "[\"gen/third_party/android_sdk/android_sdk_java.build_config.json\"] " +
          "--public-deps-configs " +
          "[] " +
          "--build-config " +
@@ -7265,7 +7265,7 @@ genrule {
          "--depfile " +
          "gen/third_party/android_deps/com_google_guava_guava_java__build_config_crbug_908819.d " +
          "--deps-configs " +
-         "["gen/third_party/android_deps/com_google_code_findbugs_jsr305_java.build_config.json", "gen/third_party/android_deps/com_google_errorprone_error_prone_annotations_java.build_config.json", "gen/third_party/android_deps/com_google_guava_failureaccess_java.build_config.json", "gen/third_party/android_deps/com_google_guava_listenablefuture_java.build_config.json", "gen/third_party/android_deps/com_google_j2objc_j2objc_annotations_java.build_config.json", "gen/third_party/android_deps/org_checkerframework_checker_qual_java.build_config.json", "gen/third_party/android_deps/com_google_guava_listenablefuture_java.build_config.json"] " +
+         "[\"gen/third_party/android_deps/com_google_code_findbugs_jsr305_java.build_config.json\", \"gen/third_party/android_deps/com_google_errorprone_error_prone_annotations_java.build_config.json\", \"gen/third_party/android_deps/com_google_guava_failureaccess_java.build_config.json\", \"gen/third_party/android_deps/com_google_guava_listenablefuture_java.build_config.json\", \"gen/third_party/android_deps/com_google_j2objc_j2objc_annotations_java.build_config.json\", \"gen/third_party/android_deps/org_checkerframework_checker_qual_java.build_config.json\", \"gen/third_party/android_deps/com_google_guava_listenablefuture_java.build_config.json\"] " +
          "--public-deps-configs " +
          "[] " +
          "--build-config " +
@@ -7343,7 +7343,7 @@ genrule {
          "--output " +
          "lib.java/third_party/android_deps/com_google_guava_guava.jar " +
          "--exclude-globs " +
-         "["*/ListenableFuture.class"] " +
+         "[\"*/ListenableFuture.class\"] " +
          "--include-globs " +
          "[]",
     out: [
@@ -7366,7 +7366,7 @@ genrule {
          "--depfile " +
          "gen/third_party/android_deps/com_google_guava_listenablefuture_java__build_config_crbug_908819.d " +
          "--deps-configs " +
-         "["gen/third_party/android_sdk/android_sdk_java.build_config.json"] " +
+         "[\"gen/third_party/android_sdk/android_sdk_java.build_config.json\"] " +
          "--public-deps-configs " +
          "[] " +
          "--build-config " +
@@ -7472,7 +7472,7 @@ genrule {
          "--depfile " +
          "gen/third_party/android_deps/com_google_j2objc_j2objc_annotations_java__build_config_crbug_908819.d " +
          "--deps-configs " +
-         "["gen/third_party/android_sdk/android_sdk_java.build_config.json"] " +
+         "[\"gen/third_party/android_sdk/android_sdk_java.build_config.json\"] " +
          "--public-deps-configs " +
          "[] " +
          "--build-config " +
@@ -7679,7 +7679,7 @@ genrule {
          "--depfile " +
          "gen/third_party/android_deps/io_github_java_diff_utils_java_diff_utils_java__build_config_crbug_908819.d " +
          "--deps-configs " +
-         "["gen/third_party/android_deps/org_eclipse_jgit_org_eclipse_jgit_java.build_config.json"] " +
+         "[\"gen/third_party/android_deps/org_eclipse_jgit_org_eclipse_jgit_java.build_config.json\"] " +
          "--public-deps-configs " +
          "[] " +
          "--build-config " +
@@ -7780,7 +7780,7 @@ genrule {
          "--depfile " +
          "gen/third_party/android_deps/org_checkerframework_checker_qual_java__build_config_crbug_908819.d " +
          "--deps-configs " +
-         "["gen/third_party/android_sdk/android_sdk_java.build_config.json"] " +
+         "[\"gen/third_party/android_sdk/android_sdk_java.build_config.json\"] " +
          "--public-deps-configs " +
          "[] " +
          "--build-config " +
@@ -8088,7 +8088,7 @@ genrule {
          "--depfile " +
          "gen/third_party/android_deps/org_ow2_asm_asm_analysis_java__build_config_crbug_908819.d " +
          "--deps-configs " +
-         "["gen/third_party/android_deps/org_ow2_asm_asm_tree_java.build_config.json"] " +
+         "[\"gen/third_party/android_deps/org_ow2_asm_asm_tree_java.build_config.json\"] " +
          "--public-deps-configs " +
          "[] " +
          "--build-config " +
@@ -8290,7 +8290,7 @@ genrule {
          "--depfile " +
          "gen/third_party/android_deps/org_ow2_asm_asm_tree_java__build_config_crbug_908819.d " +
          "--deps-configs " +
-         "["gen/third_party/android_deps/org_ow2_asm_asm_java.build_config.json"] " +
+         "[\"gen/third_party/android_deps/org_ow2_asm_asm_java.build_config.json\"] " +
          "--public-deps-configs " +
          "[] " +
          "--build-config " +
@@ -8391,7 +8391,7 @@ genrule {
          "--depfile " +
          "gen/third_party/android_deps/org_ow2_asm_asm_util_java__build_config_crbug_908819.d " +
          "--deps-configs " +
-         "["gen/third_party/android_deps/org_ow2_asm_asm_analysis_java.build_config.json", "gen/third_party/android_deps/org_ow2_asm_asm_java.build_config.json", "gen/third_party/android_deps/org_ow2_asm_asm_tree_java.build_config.json"] " +
+         "[\"gen/third_party/android_deps/org_ow2_asm_asm_analysis_java.build_config.json\", \"gen/third_party/android_deps/org_ow2_asm_asm_java.build_config.json\", \"gen/third_party/android_deps/org_ow2_asm_asm_tree_java.build_config.json\"] " +
          "--public-deps-configs " +
          "[] " +
          "--build-config " +
@@ -9837,7 +9837,7 @@ genrule {
          "--depfile " +
          "gen/tools/android/errorprone_plugin/errorprone_plugin__build_config_crbug_908819.d " +
          "--deps-configs " +
-         "["gen/third_party/android_deps/com_google_auto_service_auto_service_annotations_java.build_config.json", "gen/third_party/android_deps/com_google_errorprone_error_prone_annotation_java.build_config.json", "gen/third_party/android_deps/com_google_errorprone_error_prone_check_api_java.build_config.json", "gen/third_party/android_deps/com_google_errorprone_error_prone_core_java.build_config.json", "gen/third_party/android_deps/com_google_errorprone_javac_java.build_config.json"] " +
+         "[\"gen/third_party/android_deps/com_google_auto_service_auto_service_annotations_java.build_config.json\", \"gen/third_party/android_deps/com_google_errorprone_error_prone_annotation_java.build_config.json\", \"gen/third_party/android_deps/com_google_errorprone_error_prone_check_api_java.build_config.json\", \"gen/third_party/android_deps/com_google_errorprone_error_prone_core_java.build_config.json\", \"gen/third_party/android_deps/com_google_errorprone_javac_java.build_config.json\"] " +
          "--public-deps-configs " +
          "[] " +
          "--build-config " +
@@ -9851,7 +9851,7 @@ genrule {
          "--interface-jar-path " +
          "obj/tools/android/errorprone_plugin/errorprone_plugin.turbine.jar " +
          "--annotation-processor-configs " +
-         "["gen/third_party/android_deps/auto_service_processor.build_config.json"] " +
+         "[\"gen/third_party/android_deps/auto_service_processor.build_config.json\"] " +
          "--java-sources-file " +
          "gen/tools/android/errorprone_plugin/errorprone_plugin.sources " +
          "--bundled-srcjars " +
@@ -9912,13 +9912,13 @@ genrule {
          "--jar-path " +
          "obj/tools/android/errorprone_plugin/errorprone_plugin.javac.jar " +
          "--java-srcjars " +
-         "["gen/tools/android/errorprone_plugin/errorprone_plugin.generated.srcjar"] " +
+         "[\"gen/tools/android/errorprone_plugin/errorprone_plugin.generated.srcjar\"] " +
          "--target-name " +
          "//tools/android/errorprone_plugin:errorprone_plugin__compile_java " +
          "--header-jar " +
          "obj/tools/android/errorprone_plugin/errorprone_plugin.turbine.jar " +
          "--classpath " +
-         "["obj/tools/android/errorprone_plugin/errorprone_plugin.turbine.jar"] " +
+         "[\"obj/tools/android/errorprone_plugin/errorprone_plugin.turbine.jar\"] " +
          "--classpath " +
          "@FileArg(gen/tools/android/errorprone_plugin/errorprone_plugin.build_config.json:deps_info:javac_full_interface_classpath) " +
          "--chromium-code " +
@@ -10459,7 +10459,7 @@ genrule {
          "--depfile " +
          "gen/url/url_java__build_config_crbug_908819.d " +
          "--deps-configs " +
-         "["gen/base/jni_java.build_config.json", "gen/third_party/android_sdk/android_sdk_java.build_config.json"] " +
+         "[\"gen/base/jni_java.build_config.json\", \"gen/third_party/android_sdk/android_sdk_java.build_config.json\"] " +
          "--public-deps-configs " +
          "[] " +
          "--build-config " +
@@ -10529,7 +10529,7 @@ genrule {
          "--jar-path " +
          "obj/url/url_java.javac.jar " +
          "--java-srcjars " +
-         "["gen/url/url_java.generated.srcjar"] " +
+         "[\"gen/url/url_java.generated.srcjar\"] " +
          "--target-name " +
          "//url:url_java__compile_java " +
          "--classpath " +
@@ -10537,13 +10537,13 @@ genrule {
          "--header-jar " +
          "obj/url/url_java.turbine.jar " +
          "--classpath " +
-         "["obj/url/url_java.turbine.jar"] " +
+         "[\"obj/url/url_java.turbine.jar\"] " +
          "--classpath " +
          "@FileArg(gen/url/url_java.build_config.json:deps_info:javac_full_interface_classpath) " +
          "--chromium-code " +
          "1 " +
          "--jar-info-exclude-globs " +
-         "["*/R.class", "*/R\$*.class", "*/Manifest.class", "*/Manifest\$*.class", "*/GEN_JNI.class"] " +
+         "[\"*/R.class\", \"*/R\\$*.class\", \"*/Manifest.class\", \"*/Manifest\\$*.class\", \"*/GEN_JNI.class\"] " +
          "@gen/url/url_java.sources",
     out: [
         "//out/test/obj/url/url_java.javac.jar",
@@ -10602,7 +10602,7 @@ genrule {
          "obj/url/url_java__dex " +
          "--library " +
          "--class-inputs " +
-         "["obj/url/url_java.processed.jar"] " +
+         "[\"obj/url/url_java.processed.jar\"] " +
          "--desugar " +
          "--desugar-jdk-libs-json " +
          "../../third_party/r8/desugar_jdk_libs.json " +
@@ -10648,7 +10648,7 @@ genrule {
          "--jar-path " +
          "obj/url/url_java__errorprone.errorprone.stamp " +
          "--java-srcjars " +
-         "["gen/url/url_java.generated.srcjar"] " +
+         "[\"gen/url/url_java.generated.srcjar\"] " +
          "--target-name " +
          "//url:url_java__errorprone " +
          "--classpath " +
@@ -10656,13 +10656,13 @@ genrule {
          "--header-jar " +
          "obj/url/url_java.turbine.jar " +
          "--classpath " +
-         "["obj/url/url_java.turbine.jar"] " +
+         "[\"obj/url/url_java.turbine.jar\"] " +
          "--classpath " +
          "@FileArg(gen/url/url_java.build_config.json:deps_info:javac_full_interface_classpath) " +
          "--chromium-code " +
          "1 " +
          "--jar-info-exclude-globs " +
-         "["*/R.class", "*/R\$*.class", "*/Manifest.class", "*/Manifest\$*.class", "*/GEN_JNI.class"] " +
+         "[\"*/R.class\", \"*/R\\$*.class\", \"*/Manifest.class\", \"*/Manifest\\$*.class\", \"*/GEN_JNI.class\"] " +
          "--processorpath " +
          "@FileArg(gen/tools/android/errorprone_plugin/errorprone_plugin.build_config.json:deps_info:host_classpath) " +
          "--enable-errorprone " +
@@ -10737,7 +10737,7 @@ genrule {
          "--chromium-code " +
          "1 " +
          "--jar-info-exclude-globs " +
-         "["*/R.class", "*/R\$*.class", "*/Manifest.class", "*/Manifest\$*.class", "*/GEN_JNI.class"] " +
+         "[\"*/R.class\", \"*/R\\$*.class\", \"*/Manifest.class\", \"*/Manifest\\$*.class\", \"*/GEN_JNI.class\"] " +
          "@gen/url/url_java.sources",
     out: [
         "//out/test/obj/url/url_java.turbine.jar",
@@ -10782,7 +10782,7 @@ genrule {
          "--output " +
          "obj/url/url_java.processed.jar " +
          "--exclude-globs " +
-         "["*/R.class", "*/R\$*.class", "*/Manifest.class", "*/Manifest\$*.class", "*/GEN_JNI.class"] " +
+         "[\"*/R.class\", \"*/R\\$*.class\", \"*/Manifest.class\", \"*/Manifest\\$*.class\", \"*/GEN_JNI.class\"] " +
          "--include-globs " +
          "[]",
     out: [
