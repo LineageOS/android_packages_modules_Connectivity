@@ -16,6 +16,28 @@ package {
     default_applicable_licenses: ["Android-Apache-2.0"],
 }
 
+// CronetApexDefaults uses apex_defaults cronet_apex_defaults specifies. cronet_apex_defaults
+// could be "CronetApexDefaultsEnabled" or "CronetApexDefaultsDisabled" depending on the branch.
+cronet_apex_defaults = "CronetApexDefaultsEnabled"
+// This is a placeholder comment to avoid merge conflicts
+// as cronet_apex_defaults may have different values
+// depending on the branch
+
+apex_defaults {
+    name: "CronetApexDefaults",
+    defaults: [cronet_apex_defaults],
+}
+
+apex_defaults {
+    name: "CronetApexDefaultsEnabled",
+    jni_libs: ["libcronet.80.0.3986.0"],
+    java_libs: ["org.chromium.net.cronet"],
+}
+
+apex_defaults {
+    name: "CronetApexDefaultsDisabled",
+}
+
 apex_defaults {
     name: "com.android.cronet-defaults",
     compile_multilib: "both",
