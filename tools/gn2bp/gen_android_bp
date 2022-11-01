@@ -697,7 +697,7 @@ def create_action_module(blueprint, target):
       if val == '--output_dir':
         # replace --output_dir gen/jni_headers/... with --output_dir $(genDir)/...
         target.args[i + 1] = re.sub('^gen/jni_headers', '$(genDir)', target.args[i + 1])
-      if val == '--input_file':
+      elif val == '--input_file':
         # --input_file supports both .class specifiers or source files as arguments.
         # Only source files need to be wrapped inside a $(location <label>) tag.
         if re.match('.*\.class$', target.args[i + 1]):
@@ -706,14 +706,14 @@ def create_action_module(blueprint, target):
         # TODO: put inside function
         filename = re.sub('^\.\./\.\./', '', target.args[i + 1])
         target.args[i + 1] = '$(location %s)' % filename
-      if val == '--includes' and 'jni_generator_helper' in target.args[i + 1]:
+      elif val == '--includes' and 'jni_generator_helper' in target.args[i + 1]:
         # delete all leading ../
         target.args[i + 1] = re.sub('^(\.\./)+', '', target.args[i + 1])
-      if val == '--prev_output_dir':
+      elif val == '--prev_output_dir':
         # this is not needed for aosp builds.
         target.args[i] = ''
         target.args[i + 1] = ''
-      if val == '--jar_file':
+      elif val == '--jar_file':
         # delete leading ../../ and add path to javap
         filename = re.sub('^\.\./\.\./', '', target.args[i + 1])
         target.args[i + 1] = '$(location %s)' % filename
