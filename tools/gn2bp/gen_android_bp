@@ -343,6 +343,7 @@ class Module(object):
     self.android = Target('android')
     self.host = Target('host')
     self.stl = None
+    self.cpp_std = None
     self.dist = dict()
     self.strip = dict()
     self.data = set()
@@ -354,6 +355,7 @@ class Module(object):
     self.genrule_headers = set()
     self.genrule_srcs = set()
     self.genrule_shared_libs = set()
+    self.genrule_header_libs = set()
     self.version_script = None
     self.test_suites = set()
     self.test_config = None
@@ -391,6 +393,7 @@ class Module(object):
     self._output_field(output, 'tool_files')
     self._output_field(output, 'data')
     self._output_field(output, 'stl')
+    self._output_field(output, 'cpp_std')
     self._output_field(output, 'apex_available')
     self._output_field(output, 'min_sdk_version')
     self._output_field(output, 'version_script')
@@ -664,9 +667,10 @@ def create_proto_group_modules(blueprint, gn, module_name, target_names):
 
   blueprint.add_module(module)
 
-# There may be a better way to do target specific modification
-# Target specific modification before create_action_module
-def pre_create_action_module(target):
+def create_action_module(blueprint, target):
+  bp_module_name = label_to_module_name(target.name)
+  module = Module('genrule', bp_module_name, target.name)
+
   # Convert ['--param=value'] to ['--param', 'value'] for consistency.
   # TODO: we may want to only do this for python scripts arguments. If argparse
   # is used, this transformation is safe.
@@ -681,10 +685,14 @@ def pre_create_action_module(target):
         break
 
   elif target.script == '//base/android/jni_generator/jni_generator.py':
+    # chromium builds against a prebuilt ndk that contains the jni_headers, so
+    # a dependency is never explicitly created.
+    module.genrule_header_libs.add('jni_headers')
+    needs_javap = False
     for i, val in enumerate(target.args):
       if val == '--output_dir':
-        # replace --output_dir gen/... with --output_dir $(genDir)/...
-        target.args[i + 1] = re.sub('^gen', '$(genDir)', target.args[i + 1])
+        # replace --output_dir gen/jni_headers/... with --output_dir $(genDir)/...
+        target.args[i + 1] = re.sub('^gen/jni_headers', '$(genDir)', target.args[i + 1])
       if val == '--input_file':
         # --input_file supports both .class specifiers or source files as arguments.
         # Only source files need to be wrapped inside a $(location <label>) tag.
@@ -694,11 +702,25 @@ def pre_create_action_module(target):
         # TODO: put inside function
         filename = re.sub('^\.\./\.\./', '', target.args[i + 1])
         target.args[i + 1] = '$(location %s)' % filename
+      if val == '--includes' and 'jni_generator_helper' in target.args[i + 1]:
+        # delete all leading ../
+        target.args[i + 1] = re.sub('^(\.\./)+', '', target.args[i + 1])
+      if val == '--prev_output_dir':
+        # this is not needed for aosp builds.
+        target.args[i] = ''
+        target.args[i + 1] = ''
+      if val == '--jar_file':
+        # delete leading ../../ and add path to javap
+        filename = re.sub('^\.\./\.\./', '', target.args[i + 1])
+        target.args[i + 1] = '$(location %s)' % filename
+        needs_javap = True
 
+    if needs_javap:
+      target.args.append('--javap')
+      target.args.append('$$(find out/.path -name javap)')
+    # fix target.output directory to match #include statements.
+    target.outputs = [re.sub('^jni_headers/', '', out) for out in target.outputs]
 
-def create_action_module(blueprint, target):
-  bp_module_name = label_to_module_name(target.name)
-  module = Module('genrule', bp_module_name, target.name)
   script = gn_utils.label_to_path(target.script)
   module.tool_files.add(script)
 
@@ -803,7 +825,6 @@ def create_modules_from_target(blueprint, gn, gn_target_name):
         name_without_toolchain == gn_utils.GEN_VERSION_TARGET:
       module = create_gen_version_module(blueprint, target, bp_module_name)
     else:
-      pre_create_action_module(target)
       module = create_action_module(blueprint, target)
   elif target.type == 'copy':
     # TODO: careful now! copy targets are not supported yet, but this will stop
@@ -824,13 +845,21 @@ def create_modules_from_target(blueprint, gn, gn_target_name):
 
   if target.type in gn_utils.LINKER_UNIT_TYPES:
     module.cflags.update(_get_cflags(target))
-    # HACK! We may have to link against chromium's sysroot instead, but this
-    # seems to work for //base:base.
     # TODO: implement proper cflag parsing.
     for flag in target.cflags:
-      if '--sysroot=' in flag:
-        module.header_libs.add('jni_headers')
-    module.local_include_dirs.update(gn_utils.label_to_path(it) for it in target.include_dirs)
+      if '-std=' in flag:
+        module.cpp_std = flag[len('-std='):]
+      if '-isystem' in flag:
+        module.local_include_dirs.add(flag[len('-isystem../../'):])
+
+    # Adding local_include_dirs is necessary due to source_sets / filegroups
+    # which do not properly propagate include directories.
+    # Filter any directory inside //out as a) this directory does not exist for
+    # aosp / soong builds and b) the include directory should already be
+    # configured via library dependency.
+    module.local_include_dirs.update([gn_utils.label_to_path(d)
+                                      for d in target.include_dirs
+                                      if not re.match('^//out/.*', d)])
 
   module_is_compiled = module.type not in ('genrule', 'filegroup')
   if module_is_compiled:
@@ -896,6 +925,7 @@ def create_modules_from_target(blueprint, gn, gn_target_name):
       module.generated_headers.update(dep_module.genrule_headers)
       module.srcs.update(dep_module.genrule_srcs)
       module.shared_libs.update(dep_module.genrule_shared_libs)
+      module.header_libs.update(dep_module.genrule_header_libs)
     elif dep_module.type == 'cc_binary':
       continue  # Ignore executables deps (used by cmdline integration tests).
     else:
@@ -913,12 +943,15 @@ def create_blueprint_for_targets(gn, desc, targets):
   defaults = Module('cc_defaults', defaults_module, '//gn:default_deps')
   defaults.cflags = [
       '-Wno-error=return-type',
+      '-Wno-non-virtual-dtor',
+      '-Wno-missing-field-initializers',
       '-Wno-sign-compare',
       '-Wno-sign-promo',
       '-Wno-unused-parameter',
       '-fvisibility=hidden',
       '-O2',
   ]
+  defaults.stl = 'none'
   blueprint.add_module(defaults)
 
   for target in targets:
