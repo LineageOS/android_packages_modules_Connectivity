@@ -31,6 +31,7 @@ import static android.net.ipsec.ike.IkeSessionConfiguration.EXTENSION_TYPE_MOBIK
 import static android.os.Build.VERSION_CODES.S_V2;
 import static android.os.UserHandle.PER_USER_RANGE;
 
+import static com.android.net.module.util.NetworkStackConstants.IPV6_MIN_MTU;
 import static com.android.testutils.Cleanup.testAndCleanup;
 import static com.android.testutils.DevSdkIgnoreRule.IgnoreUpTo;
 import static com.android.testutils.MiscAsserts.assertThrows;
@@ -205,6 +206,7 @@ public class VpnTest extends VpnTestBase {
     private static final byte[] TEST_VPN_PSK = "psk".getBytes();
 
     private static final int IP4_PREFIX_LEN = 32;
+    private static final int IP6_PREFIX_LEN = 64;
     private static final int MIN_PORT = 0;
     private static final int MAX_PORT = 65535;
 
@@ -218,15 +220,28 @@ public class VpnTest extends VpnTestBase {
             InetAddresses.parseNumericAddress("192.0.2.201");
     private static final InetAddress TEST_VPN_INTERNAL_IP =
             InetAddresses.parseNumericAddress("198.51.100.10");
+    private static final InetAddress TEST_VPN_INTERNAL_IP6 =
+            InetAddresses.parseNumericAddress("2001:db8::1");
     private static final InetAddress TEST_VPN_INTERNAL_DNS =
             InetAddresses.parseNumericAddress("8.8.8.8");
+    private static final InetAddress TEST_VPN_INTERNAL_DNS6 =
+            InetAddresses.parseNumericAddress("2001:4860:4860::8888");
 
     private static final IkeTrafficSelector IN_TS =
             new IkeTrafficSelector(MIN_PORT, MAX_PORT, TEST_VPN_INTERNAL_IP, TEST_VPN_INTERNAL_IP);
+    private static final IkeTrafficSelector IN_TS6 =
+            new IkeTrafficSelector(
+                    MIN_PORT, MAX_PORT, TEST_VPN_INTERNAL_IP6, TEST_VPN_INTERNAL_IP6);
     private static final IkeTrafficSelector OUT_TS =
             new IkeTrafficSelector(MIN_PORT, MAX_PORT,
                     InetAddresses.parseNumericAddress("0.0.0.0"),
                     InetAddresses.parseNumericAddress("255.255.255.255"));
+    private static final IkeTrafficSelector OUT_TS6 =
+            new IkeTrafficSelector(
+                    MIN_PORT,
+                    MAX_PORT,
+                    InetAddresses.parseNumericAddress("::"),
+                    InetAddresses.parseNumericAddress("ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff"));
 
     private static final Network TEST_NETWORK = new Network(Integer.MAX_VALUE);
     private static final Network TEST_NETWORK_2 = new Network(Integer.MAX_VALUE - 1);
@@ -278,6 +293,10 @@ public class VpnTest extends VpnTestBase {
 
         mIpSecManager = new IpSecManager(mContext, mIpSecService);
         mTestDeps = spy(new TestDeps());
+        doReturn(IPV6_MIN_MTU)
+                .when(mTestDeps)
+                .calculateVpnMtu(any(), anyInt(), anyInt(), anyBoolean());
+        doReturn(1500).when(mTestDeps).getJavaNetworkInterfaceMtu(any(), anyInt());
 
         when(mContext.getPackageManager()).thenReturn(mPackageManager);
         setMockedPackages(sPackages);
@@ -316,6 +335,8 @@ public class VpnTest extends VpnTestBase {
                         IpSecManager.Status.OK, TEST_TUNNEL_RESOURCE_ID, TEST_IFACE_NAME);
         when(mIpSecService.createTunnelInterface(any(), any(), any(), any(), any()))
                 .thenReturn(tunnelResp);
+        doReturn(new LinkProperties()).when(mConnectivityManager).getLinkProperties(any());
+
         // The unit test should know what kind of permission it needs and set the permission by
         // itself, so set the default value of Context#checkCallingOrSelfPermission to
         // PERMISSION_DENIED.
@@ -1694,9 +1715,12 @@ public class VpnTest extends VpnTestBase {
     }
 
     private ChildSessionConfiguration createChildConfig() {
-        return new ChildSessionConfiguration.Builder(Arrays.asList(IN_TS), Arrays.asList(OUT_TS))
+        return new ChildSessionConfiguration.Builder(
+                        Arrays.asList(IN_TS, IN_TS6), Arrays.asList(OUT_TS, OUT_TS6))
                 .addInternalAddress(new LinkAddress(TEST_VPN_INTERNAL_IP, IP4_PREFIX_LEN))
+                .addInternalAddress(new LinkAddress(TEST_VPN_INTERNAL_IP6, IP6_PREFIX_LEN))
                 .addInternalDnsServer(TEST_VPN_INTERNAL_DNS)
+                .addInternalDnsServer(TEST_VPN_INTERNAL_DNS6)
                 .build();
     }
 
@@ -1743,6 +1767,16 @@ public class VpnTest extends VpnTestBase {
 
     private PlatformVpnSnapshot verifySetupPlatformVpn(IkeSessionConfiguration ikeConfig)
             throws Exception {
+        return verifySetupPlatformVpn(ikeConfig, true);
+    }
+
+    private PlatformVpnSnapshot verifySetupPlatformVpn(
+            IkeSessionConfiguration ikeConfig, boolean mtuSupportsIpv6) throws Exception {
+        if (!mtuSupportsIpv6) {
+            doReturn(IPV6_MIN_MTU - 1).when(mTestDeps).calculateVpnMtu(any(), anyInt(), anyInt(),
+                    anyBoolean());
+        }
+
         doReturn(mMockNetworkAgent).when(mTestDeps)
                 .newNetworkAgent(
                         any(), any(), anyString(), any(), any(), any(), any(), any(), any());
@@ -1779,20 +1813,40 @@ public class VpnTest extends VpnTestBase {
 
         // Check LinkProperties
         final LinkProperties lp = lpCaptor.getValue();
-        final List<RouteInfo> expectedRoutes = Arrays.asList(
-                new RouteInfo(new IpPrefix(Inet4Address.ANY, 0), null /*gateway*/,
-                        TEST_IFACE_NAME, RouteInfo.RTN_UNICAST),
-                new RouteInfo(new IpPrefix(Inet6Address.ANY, 0), null /*gateway*/,
-                        TEST_IFACE_NAME, RTN_UNREACHABLE));
-        assertEquals(expectedRoutes, lp.getRoutes());
-
-        // Check internal addresses
+        final List<RouteInfo> expectedRoutes =
+                new ArrayList<>(
+                        Arrays.asList(
+                                new RouteInfo(
+                                        new IpPrefix(Inet4Address.ANY, 0),
+                                        null /* gateway */,
+                                        TEST_IFACE_NAME,
+                                        RouteInfo.RTN_UNICAST)));
         final List<LinkAddress> expectedAddresses =
-                Arrays.asList(new LinkAddress(TEST_VPN_INTERNAL_IP, IP4_PREFIX_LEN));
-        assertEquals(expectedAddresses, lp.getLinkAddresses());
+                new ArrayList<>(
+                        Arrays.asList(new LinkAddress(TEST_VPN_INTERNAL_IP, IP4_PREFIX_LEN)));
+        final List<InetAddress> expectedDns = new ArrayList<>(Arrays.asList(TEST_VPN_INTERNAL_DNS));
 
-        // Check internal DNS
-        assertEquals(Arrays.asList(TEST_VPN_INTERNAL_DNS), lp.getDnsServers());
+        if (mtuSupportsIpv6) {
+            expectedRoutes.add(
+                    new RouteInfo(
+                            new IpPrefix(Inet6Address.ANY, 0),
+                            null /* gateway */,
+                            TEST_IFACE_NAME,
+                            RouteInfo.RTN_UNICAST));
+            expectedAddresses.add(new LinkAddress(TEST_VPN_INTERNAL_IP6, IP6_PREFIX_LEN));
+            expectedDns.add(TEST_VPN_INTERNAL_DNS6);
+        } else {
+            expectedRoutes.add(
+                    new RouteInfo(
+                            new IpPrefix(Inet6Address.ANY, 0),
+                            null /* gateway */,
+                            TEST_IFACE_NAME,
+                            RTN_UNREACHABLE));
+        }
+
+        assertEquals(expectedRoutes, lp.getRoutes());
+        assertEquals(expectedAddresses, lp.getLinkAddresses());
+        assertEquals(expectedDns, lp.getDnsServers());
 
         // Check NetworkCapabilities
         assertEquals(Arrays.asList(TEST_NETWORK), ncCaptor.getValue().getUnderlyingNetworks());
@@ -1811,9 +1865,22 @@ public class VpnTest extends VpnTestBase {
     }
 
     @Test
+    public void testStartPlatformVpn_mtuDoesNotSupportIpv6() throws Exception {
+        final PlatformVpnSnapshot vpnSnapShot =
+                verifySetupPlatformVpn(
+                        createIkeConfig(createIkeConnectInfo(), true /* isMobikeEnabled */),
+                        false /* mtuSupportsIpv6 */);
+        vpnSnapShot.vpn.mVpnRunner.exitVpnRunner();
+    }
+
+    @Test
     public void testStartPlatformVpnMobility_mobikeEnabled() throws Exception {
         final PlatformVpnSnapshot vpnSnapShot = verifySetupPlatformVpn(
                 createIkeConfig(createIkeConnectInfo(), true /* isMobikeEnabled */));
+
+        // Set new MTU on a different network
+        final int newMtu = IPV6_MIN_MTU + 1;
+        doReturn(newMtu).when(mTestDeps).calculateVpnMtu(any(), anyInt(), anyInt(), anyBoolean());
 
         // Mock network loss and verify a cleanup task is scheduled
         vpnSnapShot.nwCb.onLost(TEST_NETWORK);
@@ -1843,6 +1910,61 @@ public class VpnTest extends VpnTestBase {
                 vpnSnapShot.vpn.mNetworkCapabilities.getUnderlyingNetworks());
         verify(mMockNetworkAgent)
                 .doSetUnderlyingNetworks(Collections.singletonList(TEST_NETWORK_2));
+        verify(mMockNetworkAgent).doSendLinkProperties(argThat(lp -> lp.getMtu() == newMtu));
+        verify(mMockNetworkAgent, never()).unregister();
+
+        vpnSnapShot.vpn.mVpnRunner.exitVpnRunner();
+    }
+
+    @Test
+    public void testStartPlatformVpnMobility_mobikeEnabledMtuDoesNotSupportIpv6() throws Exception {
+        final PlatformVpnSnapshot vpnSnapShot =
+                verifySetupPlatformVpn(
+                        createIkeConfig(createIkeConnectInfo(), true /* isMobikeEnabled */));
+
+        // Set MTU below 1280
+        final int newMtu = IPV6_MIN_MTU - 1;
+        doReturn(newMtu).when(mTestDeps).calculateVpnMtu(any(), anyInt(), anyInt(), anyBoolean());
+
+        // Mock new network available & MOBIKE procedures
+        vpnSnapShot.nwCb.onAvailable(TEST_NETWORK_2);
+        vpnSnapShot.ikeCb.onIkeSessionConnectionInfoChanged(createIkeConnectInfo_2());
+        vpnSnapShot.childCb.onIpSecTransformsMigrated(
+                createIpSecTransform(), createIpSecTransform());
+
+        // Verify removal of IPv6 addresses and routes triggers a network agent restart
+        final ArgumentCaptor<LinkProperties> lpCaptor =
+                ArgumentCaptor.forClass(LinkProperties.class);
+        verify(mTestDeps, times(2))
+                .newNetworkAgent(any(), any(), anyString(), any(), lpCaptor.capture(), any(), any(),
+                        any(), any());
+        verify(mMockNetworkAgent).unregister();
+        // mMockNetworkAgent is an old NetworkAgent, so it won't update LinkProperties after
+        // unregistering.
+        verify(mMockNetworkAgent, never()).doSendLinkProperties(any());
+
+        final LinkProperties lp = lpCaptor.getValue();
+
+        for (LinkAddress addr : lp.getLinkAddresses()) {
+            if (addr.isIpv6()) {
+                fail("IPv6 address found on VPN with MTU < IPv6 minimum MTU");
+            }
+        }
+
+        for (InetAddress dnsAddr : lp.getDnsServers()) {
+            if (dnsAddr instanceof Inet6Address) {
+                fail("IPv6 DNS server found on VPN with MTU < IPv6 minimum MTU");
+            }
+        }
+
+        for (RouteInfo routeInfo : lp.getRoutes()) {
+            if (routeInfo.getDestinationLinkAddress().isIpv6()
+                    && !routeInfo.isIPv6UnreachableDefault()) {
+                fail("IPv6 route found on VPN with MTU < IPv6 minimum MTU");
+            }
+        }
+
+        assertEquals(newMtu, lp.getMtu());
 
         vpnSnapShot.vpn.mVpnRunner.exitVpnRunner();
     }
