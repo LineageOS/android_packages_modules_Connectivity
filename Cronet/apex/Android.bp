@@ -18,7 +18,7 @@ package {
 
 // CronetApexDefaults uses apex_defaults cronet_apex_defaults specifies. cronet_apex_defaults
 // could be "CronetApexDefaultsEnabled" or "CronetApexDefaultsDisabled" depending on the branch.
-cronet_apex_defaults = "CronetApexDefaultsEnabled"
+cronet_apex_defaults = "CronetApexDefaultsDisabled"
 // This is a placeholder comment to avoid merge conflicts
 // as cronet_apex_defaults may have different values
 // depending on the branch
