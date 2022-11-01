@@ -851,6 +851,8 @@ def create_modules_from_target(blueprint, gn, gn_target_name):
         module.cpp_std = flag[len('-std='):]
       if '-isystem' in flag:
         module.local_include_dirs.add(flag[len('-isystem../../'):])
+      if '--sysroot' in flag:
+        module.local_include_dirs.add(flag[len('--sysroot=../../'):] + "/usr/include")
 
     # Adding local_include_dirs is necessary due to source_sets / filegroups
     # which do not properly propagate include directories.
