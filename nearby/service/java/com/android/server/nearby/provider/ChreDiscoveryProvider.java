@@ -269,12 +269,25 @@ public class ChreDiscoveryProvider extends AbstractDiscoveryProvider {
                                             DataElement.DataType.BLE_ADDRESS,
                                             filterResult.getBluetoothAddress().toByteArray()));
                         }
+                        // BlE TX Power appended to Data Element.
+                        if (filterResult.hasTxPower()) {
+                            presenceDeviceBuilder.addExtendedProperty(
+                                    new DataElement(
+                                            DataElement.DataType.TX_POWER,
+                                            new byte[]{(byte) filterResult.getTxPower()}));
+                        }
                         // BLE Service data appended to Data Elements.
                         if (filterResult.hasBleServiceData()) {
+                            // Retrieves the length of the service data from the first byte,
+                            // and then skips the first byte and returns data[1 .. dataLength)
+                            // as the DataElement value.
+                            int dataLength = Byte.toUnsignedInt(
+                                    filterResult.getBleServiceData().byteAt(0));
                             presenceDeviceBuilder.addExtendedProperty(
                                     new DataElement(
                                             DataElement.DataType.BLE_SERVICE_DATA,
-                                            filterResult.getBleServiceData().toByteArray()));
+                                            filterResult.getBleServiceData()
+                                                    .substring(1, 1 + dataLength).toByteArray()));
                         }
                         // Add action
                         if (filterResult.hasIntent()) {

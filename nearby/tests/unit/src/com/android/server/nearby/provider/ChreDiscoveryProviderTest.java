@@ -55,6 +55,10 @@ public class ChreDiscoveryProviderTest {
 
     private static final int DATA_TYPE_CONNECTION_STATUS_KEY = 10;
     private static final int DATA_TYPE_BATTERY_KEY = 11;
+    private static final int DATA_TYPE_TX_POWER_KEY = 5;
+    private static final int DATA_TYPE_BLUETOOTH_ADDR_KEY = 101;
+    private static final int DATA_TYPE_FP_ACCOUNT_KEY = 9;
+    private static final int DATA_TYPE_BLE_SERVICE_DATA_KEY = 100;
 
     private ChreDiscoveryProvider mChreDiscoveryProvider;
 
@@ -111,10 +115,23 @@ public class ChreDiscoveryProviderTest {
     public void testOnNearbyDeviceDiscoveredWithDataElements() {
         final byte [] connectionStatus = new byte[] {1, 2, 3};
         final byte [] batteryStatus = new byte[] {4, 5, 6};
+        final byte [] txPower = new byte[] {2};
+        final byte [] bluetoothAddr = new byte[] {1, 2, 3, 4, 5, 6};
+        final byte [] fastPairAccountKey = new byte[16];
+        // First byte is length of service data, padding zeros should be thrown away.
+        final byte [] bleServiceData = new byte[] {5, 1, 2, 3, 4, 5, 0, 0, 0, 0};
+
         final List<DataElement> expectedExtendedProperties = new ArrayList<>();
         expectedExtendedProperties.add(new DataElement(DATA_TYPE_CONNECTION_STATUS_KEY,
                 connectionStatus));
         expectedExtendedProperties.add(new DataElement(DATA_TYPE_BATTERY_KEY, batteryStatus));
+        expectedExtendedProperties.add(new DataElement(DATA_TYPE_TX_POWER_KEY, txPower));
+        expectedExtendedProperties.add(
+                new DataElement(DATA_TYPE_BLUETOOTH_ADDR_KEY, bluetoothAddr));
+        expectedExtendedProperties.add(
+                new DataElement(DATA_TYPE_FP_ACCOUNT_KEY, fastPairAccountKey));
+        expectedExtendedProperties.add(
+                new DataElement(DATA_TYPE_BLE_SERVICE_DATA_KEY, new byte[] {1, 2, 3, 4, 5}));
 
         Blefilter.PublicCredential credential =
                 Blefilter.PublicCredential.newBuilder()
@@ -128,6 +145,8 @@ public class ChreDiscoveryProviderTest {
                 Blefilter.BleFilterResult.newBuilder()
                         .setTxPower(2)
                         .setRssi(1)
+                        .setBluetoothAddress(ByteString.copyFrom(bluetoothAddr))
+                        .setBleServiceData(ByteString.copyFrom(bleServiceData))
                         .setPublicCredential(credential)
                         .addDataElement(Blefilter.DataElement.newBuilder()
                                 .setKey(
@@ -142,6 +161,13 @@ public class ChreDiscoveryProviderTest {
                                                 .DE_BATTERY_STATUS)
                                 .setValue(ByteString.copyFrom(batteryStatus))
                                 .setValueLength(batteryStatus.length)
+                        )
+                        .addDataElement(Blefilter.DataElement.newBuilder()
+                                .setKey(
+                                        Blefilter.DataElement.ElementType
+                                                .DE_FAST_PAIR_ACCOUNT_KEY)
+                                .setValue(ByteString.copyFrom(fastPairAccountKey))
+                                .setValueLength(fastPairAccountKey.length)
                         )
                         .build();
         Blefilter.BleFilterResults results =
@@ -160,7 +186,7 @@ public class ChreDiscoveryProviderTest {
 
         List<DataElement> extendedProperties = PresenceDiscoveryResult
                 .fromDevice(mNearbyDevice.getValue()).getExtendedProperties();
-        assertThat(expectedExtendedProperties.equals(extendedProperties)).isTrue();
+        assertThat(extendedProperties).containsExactlyElementsIn(expectedExtendedProperties);
     }
 
     private static class InLineExecutor implements Executor {
