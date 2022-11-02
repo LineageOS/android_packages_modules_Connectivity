@@ -488,4 +488,4 @@ public final class IpSecAlgorithm implements Parcelable {
                 && Arrays.equals(lhs.mKey, rhs.mKey)
                 && lhs.mTruncLenBits == rhs.mTruncLenBits);
     }
-};
+}

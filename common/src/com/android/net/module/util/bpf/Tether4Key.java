@@ -75,7 +75,7 @@ public class Tether4Key extends Struct {
                     Inet4Address.getByAddress(src4), Inet4Address.getByAddress(dst4),
                     Short.toUnsignedInt((short) srcPort), Short.toUnsignedInt((short) dstPort));
         } catch (UnknownHostException | IllegalArgumentException e) {
-            return String.format("Invalid IP address", e);
+            return "Invalid IP address" + e;
         }
     }
 }
