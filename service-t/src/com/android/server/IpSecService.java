@@ -859,6 +859,13 @@ public class IpSecService extends IIpSecService.Stub {
                             mIkey,
                             0xffffffff,
                             mIfId);
+                    mNetd.ipSecDeleteSecurityPolicy(
+                            mUid,
+                            selAddrFamily,
+                            IpSecManager.DIRECTION_FWD,
+                            mIkey,
+                            0xffffffff,
+                            mIfId);
                 }
             } catch (ServiceSpecificException | RemoteException e) {
                 Log.e(

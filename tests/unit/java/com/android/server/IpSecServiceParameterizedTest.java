@@ -748,6 +748,13 @@ public class IpSecServiceParameterizedTest {
         // Verify quota and RefcountedResource objects cleaned up
         assertEquals(0, userRecord.mTunnelQuotaTracker.mCurrent);
         verify(mMockNetd).ipSecRemoveTunnelInterface(eq(createTunnelResp.interfaceName));
+
+        for (int direction : new int[] {DIRECTION_OUT, DIRECTION_IN, DIRECTION_FWD}) {
+            verify(mMockNetd, times(ADDRESS_FAMILIES.length))
+                    .ipSecDeleteSecurityPolicy(
+                            anyInt(), anyInt(), eq(direction), anyInt(), anyInt(), anyInt());
+        }
+
         try {
             userRecord.mTunnelInterfaceRecords.getRefcountedResourceOrThrow(
                     createTunnelResp.resourceId);
