@@ -4974,9 +4974,6 @@ public class ConnectivityServiceTest {
 
     @Test
     public void testRegisterDefaultNetworkCallback() throws Exception {
-        // NETWORK_SETTINGS is necessary to call registerSystemDefaultNetworkCallback.
-        mServiceContext.setPermission(NETWORK_SETTINGS, PERMISSION_GRANTED);
-
         final TestNetworkCallback defaultNetworkCallback = new TestNetworkCallback();
         mCm.registerDefaultNetworkCallback(defaultNetworkCallback);
         defaultNetworkCallback.assertNoCallback();
@@ -8077,9 +8074,6 @@ public class ConnectivityServiceTest {
 
     @Test
     public void testVpnNetworkActive() throws Exception {
-        // NETWORK_SETTINGS is necessary to call registerSystemDefaultNetworkCallback.
-        mServiceContext.setPermission(NETWORK_SETTINGS, PERMISSION_GRANTED);
-
         final int uid = Process.myUid();
 
         final TestNetworkCallback genericNetworkCallback = new TestNetworkCallback();
@@ -9423,8 +9417,6 @@ public class ConnectivityServiceTest {
     public void testLegacyLockdownVpn() throws Exception {
         mServiceContext.setPermission(
                 Manifest.permission.CONTROL_VPN, PERMISSION_GRANTED);
-        // For LockdownVpnTracker to call registerSystemDefaultNetworkCallback.
-        mServiceContext.setPermission(NETWORK_SETTINGS, PERMISSION_GRANTED);
 
         final NetworkRequest request = new NetworkRequest.Builder().clearCapabilities().build();
         final TestNetworkCallback callback = new TestNetworkCallback();
@@ -12924,8 +12916,6 @@ public class ConnectivityServiceTest {
             throw new IllegalStateException("Default network callbacks already registered");
         }
 
-        // Using Manifest.permission.NETWORK_SETTINGS for registerSystemDefaultNetworkCallback()
-        mServiceContext.setPermission(NETWORK_SETTINGS, PERMISSION_GRANTED);
         mSystemDefaultNetworkCallback = new TestNetworkCallback();
         mDefaultNetworkCallback = new TestNetworkCallback();
         mProfileDefaultNetworkCallback = new TestNetworkCallback();
