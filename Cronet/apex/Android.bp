@@ -31,37 +31,18 @@ apex_defaults {
 apex_defaults {
     name: "CronetApexDefaultsEnabled",
     jni_libs: ["libcronet.80.0.3986.0"],
-    java_libs: ["org.chromium.net.cronet"],
+    java_libs: ["framework-cronet"],
 }
 
 apex_defaults {
     name: "CronetApexDefaultsDisabled",
 }
 
-apex_defaults {
-    name: "com.android.cronet-defaults",
-    compile_multilib: "both",
-    jni_libs: ["libcronet.80.0.3986.0"],
-    java_libs: ["org.chromium.net.cronet"],
-    key: "com.android.cronet.key",
-    certificate: ":com.android.cronet.certificate",
-    updatable: false,
-    generate_hashtree: false,
-
-    // Use a custom AndroidManifest.xml used for API targeting.
-    androidManifest: ":cronet-manifest.xml",
-}
-
-filegroup {
-    name: "cronet-manifest.xml",
-    srcs: [
-        "AndroidManifest.xml",
-    ],
-}
-
+// TODO: Remove cronet apex after com.android.cronet is removed from PRODUCT_PACKAGES
 apex {
     name: "com.android.cronet",
-    defaults: ["com.android.cronet-defaults"],
+    key: "com.android.cronet.key",
+    updatable: false,
     manifest: "manifest.json",
 }
 
@@ -69,9 +50,4 @@ apex_key {
     name: "com.android.cronet.key",
     public_key: "com.android.cronet.avbpubkey",
     private_key: "com.android.cronet.pem",
-}
-
-android_app_certificate {
-     name: "com.android.cronet.certificate",
-     certificate: "com.android.cronet",
 }
