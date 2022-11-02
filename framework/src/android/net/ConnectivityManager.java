@@ -4080,7 +4080,7 @@ public class ConnectivityManager {
         }
     }
 
-    private class CallbackHandler extends Handler {
+    private static class CallbackHandler extends Handler {
         private static final String TAG = "ConnectivityManager.CallbackHandler";
         private static final boolean DBG = false;
 
@@ -4095,7 +4095,10 @@ public class ConnectivityManager {
         @Override
         public void handleMessage(Message message) {
             if (message.what == EXPIRE_LEGACY_REQUEST) {
-                expireRequest((NetworkCapabilities) message.obj, message.arg1);
+                // the sInstance can't be null because to send this message a ConnectivityManager
+                // instance must have been created prior to creating the thread on which this
+                // Handler is running.
+                sInstance.expireRequest((NetworkCapabilities) message.obj, message.arg1);
                 return;
             }
 
