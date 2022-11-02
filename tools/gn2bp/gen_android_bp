@@ -808,6 +808,10 @@ def create_action_module(blueprint, target):
         # wrap filename in \"$(location filename)\"
         args = ['$(location %s)' % arg for arg in args]
         target.args[i + 1] = '[%s]' % ', '.join(args)
+  elif target.script == "//build/android/gyp/write_native_libraries_java.py":
+    for i, val in enumerate(target.args):
+      if val == '--output':
+        target.args[i + 1] = '$(out)'
 
   script = gn_utils.label_to_path(target.script)
   module.tool_files.add(script)
