@@ -12,7 +12,7 @@
 set -eux
 
 TARGETS=(
-  "//base:base"
+  "//net:net"
 )
 
 BASEDIR=$(dirname "$0")
