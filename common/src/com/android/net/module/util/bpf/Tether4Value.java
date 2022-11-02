@@ -91,7 +91,7 @@ public class Tether4Value extends Struct {
                     Short.toUnsignedInt((short) srcPort), Short.toUnsignedInt((short) dstPort),
                     lastUsed);
         } catch (UnknownHostException | IllegalArgumentException e) {
-            return String.format("Invalid IP address", e);
+            return "Invalid IP address" + e;
         }
     }
 }

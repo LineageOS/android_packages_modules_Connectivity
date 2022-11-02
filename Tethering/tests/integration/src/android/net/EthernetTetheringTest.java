@@ -76,7 +76,7 @@ import android.net.TetheringManager.StartTetheringCallback;
 import android.net.TetheringManager.TetheringEventCallback;
 import android.net.TetheringManager.TetheringRequest;
 import android.net.TetheringTester.TetheredDevice;
-import android.net.cts.util.CtsNetUtils;;
+import android.net.cts.util.CtsNetUtils;
 import android.os.Build;
 import android.os.Handler;
 import android.os.HandlerThread;
