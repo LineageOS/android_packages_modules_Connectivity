@@ -16909,7 +16909,7 @@ public class ConnectivityServiceTest {
         // Wi-Fi disconnecting (e.g., because the capability change to wifiNc2 caused it
         // to stop satisfying the default request).
         mCellNetworkAgent.disconnect();
-        mDefaultNetworkCallback.expectCallback(CallbackEntry.LOST, mCellNetworkAgent);
+        mDefaultNetworkCallback.expect(CallbackEntry.LOST, mCellNetworkAgent);
         mDefaultNetworkCallback.expectAvailableCallbacksUnvalidated(mWiFiNetworkAgent);
 
     }
