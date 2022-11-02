@@ -10092,11 +10092,11 @@ genrule {
 // GN: //tools/grit:grit_sources
 genrule {
     name: "cronet_aml_tools_grit_grit_sources",
-    cmd: "$(location tools/grit/stamp_grit_sources.py) ../../tools/grit " +
-         "obj/tools/grit/grit_sources.script.stamp " +
-         "obj/tools/grit/grit_sources.d",
+    cmd: "python $(location tools/grit/stamp_grit_sources.py) `dirname $(location tools/grit/grit.py)` " +
+         "$(out) " +
+         "$(genDir)/grit_sources.d",
     out: [
-        "//out/test/obj/tools/grit/grit_sources.script.stamp",
+        "out/test/obj/tools/grit/grit_sources.script.stamp",
     ],
     tool_files: [
         "tools/grit/grit.py",

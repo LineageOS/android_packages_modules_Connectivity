@@ -812,6 +812,16 @@ def create_action_module(blueprint, target):
     for i, val in enumerate(target.args):
       if val == '--output':
         target.args[i + 1] = '$(out)'
+  elif target.script == "//tools/grit/stamp_grit_sources.py":
+    target.outputs = [re.sub('^\/\/', '', out) for out in target.outputs]
+    # Directory that contains grit scripts
+    target.args[0] = '`dirname $(location tools/grit/grit.py)`'
+    # Path to the stamp file
+    target.args[1] = '$(out)'
+    # Script tries to create args[2] file but this is not in the output.
+    # Specifying file under $(genDir) so that parent directory exists.
+    # If this file is used by other module, we may need to add this file to the outputs.
+    target.args[2] = '$(genDir)/' + target.args[2].split('/')[-1]
 
   script = gn_utils.label_to_path(target.script)
   module.tool_files.add(script)
@@ -860,6 +870,9 @@ def create_action_module(blueprint, target):
 
   if target.name == "//build/android:build_config_gen":
     module = override_build_config_gen(module)
+  elif target.script == "//tools/grit/stamp_grit_sources.py":
+    # stamp_grit_sources.py is not executable
+    module.cmd = "python " + module.cmd
 
   blueprint.add_module(module)
   return module
