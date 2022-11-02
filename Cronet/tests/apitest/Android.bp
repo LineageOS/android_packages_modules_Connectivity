@@ -31,13 +31,13 @@ java_library {
         "android.test.base",
         "android.test.mock",
         "androidx.annotation_annotation",
-        "org.chromium.net.cronet.stubs",
+        "framework-cronet",
     ],
 }
 
 android_test {
     name: "CronetApiTest",
-    platform_apis: true,
+    sdk_version: "test_current",
     test_suites: ["device-tests"],
     certificate: "platform",
     static_libs: [
