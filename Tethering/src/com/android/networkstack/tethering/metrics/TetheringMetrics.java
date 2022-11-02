@@ -76,8 +76,7 @@ public class TetheringMetrics {
                     .setUpstreamType(UpstreamType.UT_UNKNOWN)
                     .setErrorCode(ErrorCode.EC_NO_ERROR)
                     .setUpstreamEvents(UpstreamEvents.newBuilder())
-                    .setDurationMillis(0)
-                    .build();
+                    .setDurationMillis(0);
         mBuilderMap.put(downstreamType, statsBuilder);
     }
 
