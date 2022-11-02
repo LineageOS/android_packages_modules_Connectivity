@@ -2055,19 +2055,27 @@ genrule {
 // GN: //build/android:build_config_gen
 genrule {
     name: "cronet_aml_build_android_build_config_gen",
-    cmd: "$(location build/android/gyp/gcc_preprocess.py) --include-dirs " +
-         "[\"../../\", \"gen\"] " +
-         "--output " +
-         "gen/build/android/build_config_gen.srcjar " +
-         "--define " +
-         "_ENABLE_ASSERTS " +
-         "../../build/android/java/templates/BuildConfig.template",
+    tools: [
+        "soong_zip",
+    ],
+    cmd: "echo " +
+         "\"package org.chromium.build;\n " +
+         "public class BuildConfig {\n " +
+         "public static boolean IS_MULTIDEX_ENABLED ;\n " +
+         "public static boolean ENABLE_ASSERTS = true;\n " +
+         "public static boolean IS_UBSAN ;\n " +
+         "public static boolean IS_CHROME_BRANDED ;\n " +
+         "public static int R_STRING_PRODUCT_VERSION ;\n " +
+         "public static int MIN_SDK_VERSION = 1;\n " +
+         "public static boolean BUNDLES_SUPPORTED ;\n " +
+         "public static boolean IS_INCREMENTAL_INSTALL ;\n " +
+         "public static boolean ISOLATED_SPLITS_ENABLED ;\n " +
+         "public static boolean IS_FOR_TEST ;\n " +
+         "}\n\" " +
+         "> $(genDir)/BuildConfig.java && " +
+         "$(location soong_zip) -o $(out) -srcjar -f $(genDir)/BuildConfig.java",
     out: [
         "build/android/build_config_gen.srcjar",
-    ],
-    tool_files: [
-        "build/android/gyp/gcc_preprocess.py",
-        "build/android/java/templates/BuildConfig.template",
     ],
 }
 
