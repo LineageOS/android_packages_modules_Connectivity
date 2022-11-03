@@ -899,7 +899,7 @@ public class ClatCoordinator {
     }
 
     /**
-     * Dump the cordinator information.
+     * Dump the coordinator information.
      *
      * @param pw print writer.
      */
@@ -907,7 +907,7 @@ public class ClatCoordinator {
         // TODO: move map dump to a global place to avoid duplicate dump while there are two or
         // more IPv6 only networks.
         if (isStarted()) {
-            pw.println("CLAT tracker: " + mClatdTracker.toString());
+            pw.println("CLAT tracker: " + mClatdTracker);
             pw.println("Forwarding rules:");
             pw.increaseIndent();
             dumpBpfIngress(pw);
