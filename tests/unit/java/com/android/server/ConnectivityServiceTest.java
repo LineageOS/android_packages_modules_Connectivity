@@ -2689,7 +2689,7 @@ public class ConnectivityServiceTest {
         final TestNetworkCallback generalCb = new TestNetworkCallback();
         final TestNetworkCallback defaultCb = new TestNetworkCallback();
         mCm.registerNetworkCallback(
-                new NetworkRequest.Builder().addTransportType(transport | transport).build(),
+                new NetworkRequest.Builder().addTransportType(transport).build(),
                 generalCb);
         mCm.registerDefaultNetworkCallback(defaultCb);
 
@@ -4755,6 +4755,81 @@ public class ConnectivityServiceTest {
         return new NetworkRequest.Builder().addTransportType(TRANSPORT_WIFI);
     }
 
+    // A NetworkSpecifier subclass that matches all networks but must not be visible to apps.
+    static class ConfidentialMatchAllNetworkSpecifier extends NetworkSpecifier implements
+            Parcelable {
+        public static final Parcelable.Creator<ConfidentialMatchAllNetworkSpecifier> CREATOR =
+                new Parcelable.Creator<ConfidentialMatchAllNetworkSpecifier>() {
+                    public ConfidentialMatchAllNetworkSpecifier createFromParcel(Parcel in) {
+                        return new ConfidentialMatchAllNetworkSpecifier();
+                    }
+
+                    public ConfidentialMatchAllNetworkSpecifier[] newArray(int size) {
+                        return new ConfidentialMatchAllNetworkSpecifier[size];
+                    }
+                };
+        @Override
+        public boolean canBeSatisfiedBy(NetworkSpecifier other) {
+            return true;
+        }
+
+        @Override
+        public int describeContents() {
+            return 0;
+        }
+
+        @Override
+        public void writeToParcel(Parcel dest, int flags) {}
+
+        @Override
+        public NetworkSpecifier redact() {
+            return null;
+        }
+    }
+
+    // A network specifier that matches either another LocalNetworkSpecifier with the same
+    // string or a ConfidentialMatchAllNetworkSpecifier, and can be passed to apps as is.
+    static class LocalStringNetworkSpecifier extends NetworkSpecifier implements Parcelable {
+        public static final Parcelable.Creator<LocalStringNetworkSpecifier> CREATOR =
+                new Parcelable.Creator<LocalStringNetworkSpecifier>() {
+                    public LocalStringNetworkSpecifier createFromParcel(Parcel in) {
+                        return new LocalStringNetworkSpecifier(in);
+                    }
+
+                    public LocalStringNetworkSpecifier[] newArray(int size) {
+                        return new LocalStringNetworkSpecifier[size];
+                    }
+                };
+        private String mString;
+
+        LocalStringNetworkSpecifier(String string) {
+            mString = string;
+        }
+
+        LocalStringNetworkSpecifier(Parcel in) {
+            mString = in.readString();
+        }
+
+        @Override
+        public boolean canBeSatisfiedBy(NetworkSpecifier other) {
+            if (other instanceof LocalStringNetworkSpecifier) {
+                return TextUtils.equals(mString,
+                        ((LocalStringNetworkSpecifier) other).mString);
+            }
+            if (other instanceof ConfidentialMatchAllNetworkSpecifier) return true;
+            return false;
+        }
+
+        @Override
+        public int describeContents() {
+            return 0;
+        }
+        @Override
+        public void writeToParcel(Parcel dest, int flags) {
+            dest.writeString(mString);
+        }
+    }
+
     /**
      * Verify request matching behavior with network specifiers.
      *
@@ -4764,56 +4839,6 @@ public class ConnectivityServiceTest {
      */
     @Test
     public void testNetworkSpecifier() throws Exception {
-        // A NetworkSpecifier subclass that matches all networks but must not be visible to apps.
-        class ConfidentialMatchAllNetworkSpecifier extends NetworkSpecifier implements
-                Parcelable {
-            @Override
-            public boolean canBeSatisfiedBy(NetworkSpecifier other) {
-                return true;
-            }
-
-            @Override
-            public int describeContents() {
-                return 0;
-            }
-
-            @Override
-            public void writeToParcel(Parcel dest, int flags) {}
-
-            @Override
-            public NetworkSpecifier redact() {
-                return null;
-            }
-        }
-
-        // A network specifier that matches either another LocalNetworkSpecifier with the same
-        // string or a ConfidentialMatchAllNetworkSpecifier, and can be passed to apps as is.
-        class LocalStringNetworkSpecifier extends NetworkSpecifier implements Parcelable {
-            private String mString;
-
-            LocalStringNetworkSpecifier(String string) {
-                mString = string;
-            }
-
-            @Override
-            public boolean canBeSatisfiedBy(NetworkSpecifier other) {
-                if (other instanceof LocalStringNetworkSpecifier) {
-                    return TextUtils.equals(mString,
-                            ((LocalStringNetworkSpecifier) other).mString);
-                }
-                if (other instanceof ConfidentialMatchAllNetworkSpecifier) return true;
-                return false;
-            }
-
-            @Override
-            public int describeContents() {
-                return 0;
-            }
-            @Override
-            public void writeToParcel(Parcel dest, int flags) {}
-        }
-
-
         NetworkRequest rEmpty1 = newWifiRequestBuilder().build();
         NetworkRequest rEmpty2 = newWifiRequestBuilder().setNetworkSpecifier((String) null).build();
         NetworkRequest rEmpty3 = newWifiRequestBuilder().setNetworkSpecifier("").build();
@@ -4897,6 +4922,29 @@ public class ConnectivityServiceTest {
         return mContext.getAttributionTag();
     }
 
+    static class NonParcelableSpecifier extends NetworkSpecifier {
+        @Override
+        public boolean canBeSatisfiedBy(NetworkSpecifier other) {
+            return false;
+        }
+    }
+    static class ParcelableSpecifier extends NonParcelableSpecifier implements Parcelable {
+        public static final Parcelable.Creator<NonParcelableSpecifier> CREATOR =
+                new Parcelable.Creator<NonParcelableSpecifier>() {
+                    public NonParcelableSpecifier createFromParcel(Parcel in) {
+                        return new NonParcelableSpecifier();
+                    }
+
+                    public NonParcelableSpecifier[] newArray(int size) {
+                        return new NonParcelableSpecifier[size];
+                    }
+                };
+        @Override public int describeContents() {
+            return 0;
+        }
+        @Override public void writeToParcel(Parcel p, int flags) {}
+    }
+
     @Test
     public void testInvalidNetworkSpecifier() {
         assertThrows(IllegalArgumentException.class, () -> {
@@ -4913,17 +4961,6 @@ public class ConnectivityServiceTest {
                     ConnectivityManager.TYPE_WIFI, NetworkCallback.FLAG_NONE,
                     mContext.getPackageName(), getAttributionTag());
         });
-
-        class NonParcelableSpecifier extends NetworkSpecifier {
-            @Override
-            public boolean canBeSatisfiedBy(NetworkSpecifier other) {
-                return false;
-            }
-        };
-        class ParcelableSpecifier extends NonParcelableSpecifier implements Parcelable {
-            @Override public int describeContents() { return 0; }
-            @Override public void writeToParcel(Parcel p, int flags) {}
-        }
 
         final NetworkRequest.Builder builder =
                 new NetworkRequest.Builder().addTransportType(TRANSPORT_ETHERNET);
@@ -16909,7 +16946,7 @@ public class ConnectivityServiceTest {
         // Wi-Fi disconnecting (e.g., because the capability change to wifiNc2 caused it
         // to stop satisfying the default request).
         mCellNetworkAgent.disconnect();
-        mDefaultNetworkCallback.expectCallback(CallbackEntry.LOST, mCellNetworkAgent);
+        mDefaultNetworkCallback.expect(CallbackEntry.LOST, mCellNetworkAgent);
         mDefaultNetworkCallback.expectAvailableCallbacksUnvalidated(mWiFiNetworkAgent);
 
     }

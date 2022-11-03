@@ -138,6 +138,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.Map;
 
 @RunWith(AndroidJUnit4.class)
 @SmallTest
@@ -195,13 +196,11 @@ public class BpfCoordinatorTest {
             UPSTREAM_IFACE2, UPSTREAM_IFINDEX2, MacAddress.fromString("44:55:66:00:00:0c"),
             NetworkStackConstants.ETHER_MTU);
 
-    private static final HashMap<Integer, UpstreamInformation> UPSTREAM_INFORMATIONS =
-            new HashMap<Integer, UpstreamInformation>() {{
-                    put(UPSTREAM_IFINDEX, new UpstreamInformation(UPSTREAM_IFACE_PARAMS,
-                            PUBLIC_ADDR, NetworkCapabilities.TRANSPORT_CELLULAR, TEST_NET_ID));
-                    put(UPSTREAM_IFINDEX2, new UpstreamInformation(UPSTREAM_IFACE_PARAMS2,
-                            PUBLIC_ADDR2, NetworkCapabilities.TRANSPORT_WIFI, TEST_NET_ID2));
-            }};
+    private static final Map<Integer, UpstreamInformation> UPSTREAM_INFORMATIONS = Map.of(
+            UPSTREAM_IFINDEX, new UpstreamInformation(UPSTREAM_IFACE_PARAMS,
+                    PUBLIC_ADDR, NetworkCapabilities.TRANSPORT_CELLULAR, TEST_NET_ID),
+            UPSTREAM_IFINDEX2, new UpstreamInformation(UPSTREAM_IFACE_PARAMS2,
+                    PUBLIC_ADDR2, NetworkCapabilities.TRANSPORT_WIFI, TEST_NET_ID2));
 
     private static final ClientInfo CLIENT_INFO_A = new ClientInfo(DOWNSTREAM_IFINDEX,
             DOWNSTREAM_MAC, PRIVATE_ADDR, MAC_A);
