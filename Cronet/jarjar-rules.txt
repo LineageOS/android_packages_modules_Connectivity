@@ -1,0 +1,3 @@
+rule androidx.** com.android.cronet.@0
+rule android.support.** com.android.cronet.@0
+
