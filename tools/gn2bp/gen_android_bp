@@ -871,6 +871,8 @@ def create_action_module(blueprint, target):
         # Adjusting path for net_quic_proto_gen
         if target.name == "//net/third_party/quiche:net_quic_proto_gen":
           target.args[i + 1] += '/../../../../'
+      elif val == '--cc-out-dir':
+        target.args[i + 1] = re.sub('^gen', '$(genDir)', target.args[i + 1])
 
   script = gn_utils.label_to_path(target.script)
   module.tool_files.add(script)
