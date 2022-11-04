@@ -4202,6 +4202,7 @@ cc_library_static {
 genrule {
     name: "cronet_aml_net_net_nqe_proto_gen",
     srcs: [
+        "net/base/net_export.h",
         "net/nqe/proto/network_id_proto.proto",
     ],
     tools: [
@@ -4218,7 +4219,7 @@ genrule {
          "dllexport_decl=NET_EXPORT_PRIVATE: " +
          " " +
          "--include " +
-         "net/base/net_export.h " +
+         "$(location net/base/net_export.h) " +
          "--py-out-dir " +
          "pyproto/net/nqe/proto",
     out: [
@@ -4424,6 +4425,7 @@ cc_library_static {
 genrule {
     name: "cronet_aml_net_third_party_quiche_net_quic_proto_gen",
     srcs: [
+        "base/component_export.h",
         "net/third_party/quiche/src/quiche/quic/core/proto/cached_network_parameters.proto",
         "net/third_party/quiche/src/quiche/quic/core/proto/crypto_server_config.proto",
         "net/third_party/quiche/src/quiche/quic/core/proto/source_address_token.proto",
@@ -4444,7 +4446,7 @@ genrule {
          "dllexport_decl=COMPONENT_EXPORT(QUICHE): " +
          " " +
          "--include " +
-         "base/component_export.h " +
+         "$(location base/component_export.h) " +
          "--py-out-dir " +
          "pyproto/net/third_party/quiche/src",
     out: [
@@ -4516,6 +4518,7 @@ cc_library_static {
 genrule {
     name: "cronet_aml_net_third_party_quiche_net_quic_test_tools_proto_gen",
     srcs: [
+        "net/base/net_export.h",
         "net/third_party/quiche/src/quiche/quic/test_tools/send_algorithm_test_result.proto",
     ],
     tools: [
@@ -4532,7 +4535,7 @@ genrule {
          "dllexport_decl=NET_EXPORT_PRIVATE: " +
          " " +
          "--include " +
-         "net/base/net_export.h " +
+         "$(location net/base/net_export.h) " +
          "--py-out-dir " +
          "pyproto/net/third_party/quiche/src/quiche/quic/test_tools",
     out: [
