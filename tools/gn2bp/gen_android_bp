@@ -706,7 +706,7 @@ def create_action_foreach_modules(blueprint, target):
   So each source file will generate an output whose name is the {source_name-reversed-inc.cc}
   """
   new_args = []
-  for i, src in enumerate(target.sources):
+  for i, src in enumerate(sorted(target.sources)):
     # don't add script arg for the first source -- create_action_module
     # already does this.
     if i != 0:
