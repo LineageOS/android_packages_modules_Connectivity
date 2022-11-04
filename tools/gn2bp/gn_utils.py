@@ -291,6 +291,11 @@ class GnParser(object):
           target.deps.add(dep_name)
       elif dep.type in LINKER_UNIT_TYPES:
         target.deps.add(dep_name)
+      elif dep.type == 'java_group':
+        # Explicitly break dependency chain when a java_group is added.
+        # Java sources are collected and eventually compiled as one large
+        # java_library.
+        pass
 
     return target
 
