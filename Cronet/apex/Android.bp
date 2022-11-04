@@ -30,7 +30,7 @@ apex_defaults {
 
 apex_defaults {
     name: "CronetApexDefaultsEnabled",
-    jni_libs: ["libcronet.80.0.3986.0"],
+    jni_libs: ["libcronet.107.0.5284.2"],
     java_libs: ["framework-cronet"],
     arch: {
         riscv64: {
