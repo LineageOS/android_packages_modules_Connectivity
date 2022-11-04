@@ -221,6 +221,8 @@ builtin_deps = {
         enable_uapi_headers,
     '//src/profiling/memory:bionic_libc_platform_headers_on_android':
         enable_bionic_libc_platform_headers_on_android,
+    '//third_party/protobuf:protoc':
+      lambda x: None,
 }
 
 # ----------------------------------------------------------------------------
