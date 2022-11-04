@@ -52,7 +52,6 @@ import android.util.ArraySet;
 import com.android.internal.annotations.VisibleForTesting;
 import com.android.net.module.util.CollectionUtils;
 import com.android.net.module.util.NetworkIdentityUtils;
-import com.android.net.module.util.NetworkStatsUtils;
 
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
@@ -280,23 +279,21 @@ public final class NetworkTemplate implements Parcelable {
     private final int mRoaming;
     private final int mDefaultNetwork;
     private final int mRatType;
-    /**
-     * The subscriber Id match rule defines how the template should match networks with
-     * specific subscriberId(s). See NetworkTemplate#SUBSCRIBER_ID_MATCH_RULE_* for more detail.
-     */
-    private final int mSubscriberIdMatchRule;
 
     // Bitfield containing OEM network properties{@code NetworkIdentity#OEM_*}.
     private final int mOemManaged;
 
-    private static void checkValidSubscriberIdMatchRule(int matchRule, int subscriberIdMatchRule) {
+    private static void checkValidMatchSubscriberIds(int matchRule, String[] matchSubscriberIds) {
         switch (matchRule) {
             case MATCH_MOBILE:
             case MATCH_CARRIER:
                 // MOBILE and CARRIER templates must always specify a subscriber ID.
-                if (subscriberIdMatchRule == NetworkStatsUtils.SUBSCRIBER_ID_MATCH_RULE_ALL) {
-                    throw new IllegalArgumentException("Invalid SubscriberIdMatchRule "
-                            + "on match rule: " + getMatchRuleName(matchRule));
+                if (matchSubscriberIds.length == 0) {
+                    throw new IllegalArgumentException("checkValidMatchSubscriberIds with empty"
+                            + " list of ids for rule" + getMatchRuleName(matchRule));
+                } else if (CollectionUtils.contains(matchSubscriberIds, null)) {
+                    throw new IllegalArgumentException("checkValidMatchSubscriberIds list of ids"
+                            + " may not contain null for rule " + getMatchRuleName(matchRule));
                 }
                 return;
             default:
@@ -312,28 +309,21 @@ public final class NetworkTemplate implements Parcelable {
     @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.TIRAMISU,
             publicAlternatives = "Use {@code Builder} instead.")
     public NetworkTemplate(int matchRule, String subscriberId, String wifiNetworkKey) {
-        this(matchRule, subscriberId, new String[] { subscriberId }, wifiNetworkKey);
-    }
-
-    /** @hide */
-    public NetworkTemplate(int matchRule, String subscriberId, String[] matchSubscriberIds,
-            String wifiNetworkKey) {
         // Older versions used to only match MATCH_MOBILE and MATCH_MOBILE_WILDCARD templates
         // to metered networks. It is now possible to match mobile with any meteredness, but
         // in order to preserve backward compatibility of @UnsupportedAppUsage methods, this
         //constructor passes METERED_YES for these types.
-        this(matchRule, subscriberId, matchSubscriberIds,
+        this(matchRule, subscriberId, new String[] { subscriberId },
                 wifiNetworkKey != null ? new String[] { wifiNetworkKey } : new String[0],
                 (matchRule == MATCH_MOBILE || matchRule == MATCH_MOBILE_WILDCARD
                         || matchRule == MATCH_CARRIER) ? METERED_YES : METERED_ALL,
-                ROAMING_ALL, DEFAULT_NETWORK_ALL, NETWORK_TYPE_ALL,
-                OEM_MANAGED_ALL, NetworkStatsUtils.SUBSCRIBER_ID_MATCH_RULE_EXACT);
+                ROAMING_ALL, DEFAULT_NETWORK_ALL, NETWORK_TYPE_ALL, OEM_MANAGED_ALL);
     }
 
     /** @hide */
     public NetworkTemplate(int matchRule, String subscriberId, String[] matchSubscriberIds,
             String[] matchWifiNetworkKeys, int metered, int roaming,
-            int defaultNetwork, int ratType, int oemManaged, int subscriberIdMatchRule) {
+            int defaultNetwork, int ratType, int oemManaged) {
         Objects.requireNonNull(matchWifiNetworkKeys);
         Objects.requireNonNull(matchSubscriberIds);
         mMatchRule = matchRule;
@@ -345,8 +335,7 @@ public final class NetworkTemplate implements Parcelable {
         mDefaultNetwork = defaultNetwork;
         mRatType = ratType;
         mOemManaged = oemManaged;
-        mSubscriberIdMatchRule = subscriberIdMatchRule;
-        checkValidSubscriberIdMatchRule(matchRule, subscriberIdMatchRule);
+        checkValidMatchSubscriberIds(matchRule, matchSubscriberIds);
         if (!isKnownMatchRule(matchRule)) {
             throw new IllegalArgumentException("Unknown network template rule " + matchRule
                     + " will not match any identity.");
@@ -363,7 +352,6 @@ public final class NetworkTemplate implements Parcelable {
         mDefaultNetwork = in.readInt();
         mRatType = in.readInt();
         mOemManaged = in.readInt();
-        mSubscriberIdMatchRule = in.readInt();
     }
 
     @Override
@@ -377,7 +365,6 @@ public final class NetworkTemplate implements Parcelable {
         dest.writeInt(mDefaultNetwork);
         dest.writeInt(mRatType);
         dest.writeInt(mOemManaged);
-        dest.writeInt(mSubscriberIdMatchRule);
     }
 
     @Override
@@ -414,15 +401,13 @@ public final class NetworkTemplate implements Parcelable {
         if (mOemManaged != OEM_MANAGED_ALL) {
             builder.append(", oemManaged=").append(getOemManagedNames(mOemManaged));
         }
-        builder.append(", subscriberIdMatchRule=")
-                .append(subscriberIdMatchRuleToString(mSubscriberIdMatchRule));
         return builder.toString();
     }
 
     @Override
     public int hashCode() {
         return Objects.hash(mMatchRule, mSubscriberId, Arrays.hashCode(mMatchWifiNetworkKeys),
-                mMetered, mRoaming, mDefaultNetwork, mRatType, mOemManaged, mSubscriberIdMatchRule);
+                mMetered, mRoaming, mDefaultNetwork, mRatType, mOemManaged);
     }
 
     @Override
@@ -436,21 +421,9 @@ public final class NetworkTemplate implements Parcelable {
                     && mDefaultNetwork == other.mDefaultNetwork
                     && mRatType == other.mRatType
                     && mOemManaged == other.mOemManaged
-                    && mSubscriberIdMatchRule == other.mSubscriberIdMatchRule
                     && Arrays.equals(mMatchWifiNetworkKeys, other.mMatchWifiNetworkKeys);
         }
         return false;
-    }
-
-    private static String subscriberIdMatchRuleToString(int rule) {
-        switch (rule) {
-            case NetworkStatsUtils.SUBSCRIBER_ID_MATCH_RULE_EXACT:
-                return "EXACT_MATCH";
-            case NetworkStatsUtils.SUBSCRIBER_ID_MATCH_RULE_ALL:
-                return "ALL";
-            default:
-                return "Unknown rule " + rule;
-        }
     }
 
     /** @hide */
@@ -627,13 +600,13 @@ public final class NetworkTemplate implements Parcelable {
 
     /**
      * Check if this template matches {@code subscriberId}. Returns true if this
-     * template was created with {@code SUBSCRIBER_ID_MATCH_RULE_ALL}, or with a
-     * {@code mMatchSubscriberIds} array that contains {@code subscriberId}.
+     * template was created with a {@code mMatchSubscriberIds} array that contains
+     * {@code subscriberId} or if {@code mMatchSubscriberIds} is empty.
      *
      * @hide
      */
     public boolean matchesSubscriberId(@Nullable String subscriberId) {
-        return mSubscriberIdMatchRule == NetworkStatsUtils.SUBSCRIBER_ID_MATCH_RULE_ALL
+        return mMatchSubscriberIds.length == 0
                 || CollectionUtils.contains(mMatchSubscriberIds, subscriberId);
     }
 
@@ -812,7 +785,11 @@ public final class NetworkTemplate implements Parcelable {
             // could handle incompatible subscriberIds. See b/217805241.
             return new NetworkTemplate(template.mMatchRule, merged[0], merged,
                     CollectionUtils.isEmpty(matchWifiNetworkKeys)
-                            ? null : matchWifiNetworkKeys[0]);
+                            ? new String[0] : new String[] { matchWifiNetworkKeys[0] },
+                    (template.mMatchRule == MATCH_MOBILE
+                            || template.mMatchRule == MATCH_MOBILE_WILDCARD
+                            || template.mMatchRule == MATCH_CARRIER) ? METERED_YES : METERED_ALL,
+                    ROAMING_ALL, DEFAULT_NETWORK_ALL, NETWORK_TYPE_ALL, OEM_MANAGED_ALL);
         }
 
         return template;
@@ -1024,14 +1001,11 @@ public final class NetworkTemplate implements Parcelable {
         @NonNull
         public NetworkTemplate build() {
             assertRequestableParameters();
-            final int subscriberIdMatchRule = mMatchSubscriberIds.isEmpty()
-                    ? NetworkStatsUtils.SUBSCRIBER_ID_MATCH_RULE_ALL
-                    : NetworkStatsUtils.SUBSCRIBER_ID_MATCH_RULE_EXACT;
             return new NetworkTemplate(getWildcardDeducedMatchRule(),
                     mMatchSubscriberIds.isEmpty() ? null : mMatchSubscriberIds.iterator().next(),
                     mMatchSubscriberIds.toArray(new String[0]),
                     mMatchWifiNetworkKeys.toArray(new String[0]), mMetered, mRoaming,
-                    mDefaultNetwork, mRatType, mOemManaged, subscriberIdMatchRule);
+                    mDefaultNetwork, mRatType, mOemManaged);
         }
     }
 }

@@ -19,8 +19,8 @@ package android.net.netstats
 import android.net.NetworkStats.DEFAULT_NETWORK_ALL
 import android.net.NetworkStats.METERED_ALL
 import android.net.NetworkStats.METERED_YES
-import android.net.NetworkStats.ROAMING_YES
 import android.net.NetworkStats.ROAMING_ALL
+import android.net.NetworkStats.ROAMING_YES
 import android.net.NetworkTemplate
 import android.net.NetworkTemplate.MATCH_BLUETOOTH
 import android.net.NetworkTemplate.MATCH_CARRIER
@@ -33,8 +33,6 @@ import android.net.NetworkTemplate.MATCH_WIFI_WILDCARD
 import android.net.NetworkTemplate.NETWORK_TYPE_ALL
 import android.net.NetworkTemplate.OEM_MANAGED_ALL
 import android.telephony.TelephonyManager
-import com.android.net.module.util.NetworkStatsUtils.SUBSCRIBER_ID_MATCH_RULE_ALL
-import com.android.net.module.util.NetworkStatsUtils.SUBSCRIBER_ID_MATCH_RULE_EXACT
 import com.android.testutils.ConnectivityModuleTest
 import com.android.testutils.DevSdkIgnoreRule
 import com.android.testutils.SC_V2
@@ -80,7 +78,7 @@ class NetworkTemplateTest {
                         val expectedTemplate = NetworkTemplate(matchRule, TEST_IMSI1,
                                 arrayOf(TEST_IMSI1), emptyArray<String>(), METERED_YES,
                                 ROAMING_ALL, DEFAULT_NETWORK_ALL, NETWORK_TYPE_ALL,
-                                OEM_MANAGED_ALL, SUBSCRIBER_ID_MATCH_RULE_EXACT)
+                                OEM_MANAGED_ALL)
                         assertEquals(expectedTemplate, it)
                     }
         }
@@ -93,7 +91,7 @@ class NetworkTemplateTest {
                         val expectedTemplate = NetworkTemplate(matchRule, TEST_IMSI1,
                                 arrayOf(TEST_IMSI1), emptyArray<String>(), METERED_YES,
                                 ROAMING_YES, DEFAULT_NETWORK_ALL, NETWORK_TYPE_ALL,
-                                OEM_MANAGED_ALL, SUBSCRIBER_ID_MATCH_RULE_EXACT)
+                                OEM_MANAGED_ALL)
                         assertEquals(expectedTemplate, it)
                     }
         }
@@ -109,7 +107,7 @@ class NetworkTemplateTest {
             val expectedTemplate = NetworkTemplate(MATCH_MOBILE_WILDCARD, null /*subscriberId*/,
                     emptyArray<String>() /*subscriberIds*/, emptyArray<String>(),
                     METERED_YES, ROAMING_ALL, DEFAULT_NETWORK_ALL, NETWORK_TYPE_ALL,
-                    OEM_MANAGED_ALL, SUBSCRIBER_ID_MATCH_RULE_ALL)
+                    OEM_MANAGED_ALL)
             assertEquals(expectedTemplate, it)
         }
 
@@ -121,7 +119,7 @@ class NetworkTemplateTest {
                     val expectedTemplate = NetworkTemplate(MATCH_MOBILE, TEST_IMSI1,
                             arrayOf(TEST_IMSI1), emptyArray<String>(), METERED_YES,
                             ROAMING_ALL, DEFAULT_NETWORK_ALL, TelephonyManager.NETWORK_TYPE_UMTS,
-                            OEM_MANAGED_ALL, SUBSCRIBER_ID_MATCH_RULE_EXACT)
+                            OEM_MANAGED_ALL)
                     assertEquals(expectedTemplate, it)
                 }
 
@@ -131,7 +129,7 @@ class NetworkTemplateTest {
             val expectedTemplate = NetworkTemplate(MATCH_WIFI_WILDCARD, null /*subscriberId*/,
                     emptyArray<String>() /*subscriberIds*/, emptyArray<String>(),
                     METERED_ALL, ROAMING_ALL, DEFAULT_NETWORK_ALL, NETWORK_TYPE_ALL,
-                    OEM_MANAGED_ALL, SUBSCRIBER_ID_MATCH_RULE_ALL)
+                    OEM_MANAGED_ALL)
             assertEquals(expectedTemplate, it)
         }
 
@@ -141,7 +139,7 @@ class NetworkTemplateTest {
             val expectedTemplate = NetworkTemplate(MATCH_WIFI, null /*subscriberId*/,
                     emptyArray<String>() /*subscriberIds*/, arrayOf(TEST_WIFI_KEY1),
                     METERED_ALL, ROAMING_ALL, DEFAULT_NETWORK_ALL, NETWORK_TYPE_ALL,
-                    OEM_MANAGED_ALL, SUBSCRIBER_ID_MATCH_RULE_ALL)
+                    OEM_MANAGED_ALL)
             assertEquals(expectedTemplate, it)
         }
 
@@ -152,7 +150,7 @@ class NetworkTemplateTest {
                     val expectedTemplate = NetworkTemplate(MATCH_WIFI, TEST_IMSI1,
                             arrayOf(TEST_IMSI1), arrayOf(TEST_WIFI_KEY1),
                             METERED_ALL, ROAMING_ALL, DEFAULT_NETWORK_ALL, NETWORK_TYPE_ALL,
-                            OEM_MANAGED_ALL, SUBSCRIBER_ID_MATCH_RULE_EXACT)
+                            OEM_MANAGED_ALL)
                     assertEquals(expectedTemplate, it)
                 }
 
@@ -163,7 +161,7 @@ class NetworkTemplateTest {
                 val expectedTemplate = NetworkTemplate(matchRule, null /*subscriberId*/,
                         emptyArray<String>() /*subscriberIds*/, emptyArray<String>(),
                         METERED_ALL, ROAMING_ALL, DEFAULT_NETWORK_ALL, NETWORK_TYPE_ALL,
-                        OEM_MANAGED_ALL, SUBSCRIBER_ID_MATCH_RULE_ALL)
+                        OEM_MANAGED_ALL)
                 assertEquals(expectedTemplate, it)
             }
         }
@@ -198,7 +196,7 @@ class NetworkTemplateTest {
             val expectedTemplate = NetworkTemplate(MATCH_WIFI_WILDCARD, null /*subscriberId*/,
                     emptyArray<String>() /*subscriberIds*/, emptyArray<String>(),
                     METERED_ALL, ROAMING_ALL, DEFAULT_NETWORK_ALL, NETWORK_TYPE_ALL,
-                    OEM_MANAGED_ALL, SUBSCRIBER_ID_MATCH_RULE_ALL)
+                    OEM_MANAGED_ALL)
             assertEquals(expectedTemplate, it)
         }
     }
