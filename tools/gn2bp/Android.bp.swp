@@ -3220,7 +3220,7 @@ genrule {
          "--protoc " +
          "$(location aprotoc) " +
          "--proto-in-dir " +
-         "../../net/cert " +
+         "`dirname $(location net/cert/root_store.proto)` " +
          "--cc-out-dir " +
          "clang_x64/gen/net/cert/root_store_proto_full/ " +
          "--py-out-dir " +
@@ -3430,7 +3430,7 @@ genrule {
          "--protoc " +
          "$(location aprotoc) " +
          "--proto-in-dir " +
-         "../../net/base " +
+         "`dirname $(location net/base/isolation_info.proto)` " +
          "--cc-out-dir " +
          "gen/net/base " +
          "--py-out-dir " +
@@ -4211,7 +4211,7 @@ genrule {
          "--protoc " +
          "$(location aprotoc) " +
          "--proto-in-dir " +
-         "../../net/nqe/proto " +
+         "`dirname $(location net/nqe/proto/network_id_proto.proto)` " +
          "--cc-out-dir " +
          "gen/net/nqe/proto " +
          "--cc-options " +
@@ -4437,7 +4437,7 @@ genrule {
          "--protoc " +
          "$(location aprotoc) " +
          "--proto-in-dir " +
-         "../../net/third_party/quiche/src " +
+         "`dirname $(location net/third_party/quiche/src/quiche/quic/core/proto/cached_network_parameters.proto)`/../../../../ " +
          "--cc-out-dir " +
          "gen/net/third_party/quiche/src " +
          "--cc-options " +
@@ -4525,7 +4525,7 @@ genrule {
          "--protoc " +
          "$(location aprotoc) " +
          "--proto-in-dir " +
-         "../../net/third_party/quiche/src/quiche/quic/test_tools " +
+         "`dirname $(location net/third_party/quiche/src/quiche/quic/test_tools/send_algorithm_test_result.proto)` " +
          "--cc-out-dir " +
          "gen/net/third_party/quiche/src/quiche/quic/test_tools " +
          "--cc-options " +
