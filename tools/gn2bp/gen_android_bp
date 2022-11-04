@@ -873,6 +873,10 @@ def create_action_module(blueprint, target):
           target.args[i + 1] += '/../../../../'
       elif val == '--cc-out-dir':
         target.args[i + 1] = re.sub('^gen', '$(genDir)', target.args[i + 1])
+      elif val == 'dllexport_decl':
+        # Needs to be dllexport_decl=value format
+        target.args[i] += '=' + target.args[i+1]
+        target.args[i+1] = ''
 
   script = gn_utils.label_to_path(target.script)
   module.tool_files.add(script)

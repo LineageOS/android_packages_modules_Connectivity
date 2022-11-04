@@ -4215,8 +4215,8 @@ genrule {
          "--cc-out-dir " +
          "$(genDir)/net/nqe/proto " +
          "--cc-options " +
-         "dllexport_decl " +
-         "NET_EXPORT_PRIVATE: " +
+         "dllexport_decl=NET_EXPORT_PRIVATE: " +
+         " " +
          "--include " +
          "net/base/net_export.h " +
          "--py-out-dir " +
@@ -4441,8 +4441,8 @@ genrule {
          "--cc-out-dir " +
          "$(genDir)/net/third_party/quiche/src " +
          "--cc-options " +
-         "dllexport_decl " +
-         "COMPONENT_EXPORT(QUICHE): " +
+         "dllexport_decl=COMPONENT_EXPORT(QUICHE): " +
+         " " +
          "--include " +
          "base/component_export.h " +
          "--py-out-dir " +
@@ -4529,8 +4529,8 @@ genrule {
          "--cc-out-dir " +
          "$(genDir)/net/third_party/quiche/src/quiche/quic/test_tools " +
          "--cc-options " +
-         "dllexport_decl " +
-         "NET_EXPORT_PRIVATE: " +
+         "dllexport_decl=NET_EXPORT_PRIVATE: " +
+         " " +
          "--include " +
          "net/base/net_export.h " +
          "--py-out-dir " +
