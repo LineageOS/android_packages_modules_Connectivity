@@ -3213,9 +3213,12 @@ genrule {
     srcs: [
         "net/cert/root_store.proto",
     ],
+    tools: [
+        "aprotoc",
+    ],
     cmd: "$(location tools/protoc_wrapper/protoc_wrapper.py) root_store.proto " +
          "--protoc " +
-         "./clang_x64/protoc " +
+         "$(location aprotoc) " +
          "--proto-in-dir " +
          "../../net/cert " +
          "--cc-out-dir " +
@@ -3420,9 +3423,12 @@ genrule {
     srcs: [
         "net/base/isolation_info.proto",
     ],
+    tools: [
+        "aprotoc",
+    ],
     cmd: "$(location tools/protoc_wrapper/protoc_wrapper.py) isolation_info.proto " +
          "--protoc " +
-         "./clang_x64/protoc " +
+         "$(location aprotoc) " +
          "--proto-in-dir " +
          "../../net/base " +
          "--cc-out-dir " +
@@ -4198,9 +4204,12 @@ genrule {
     srcs: [
         "net/nqe/proto/network_id_proto.proto",
     ],
+    tools: [
+        "aprotoc",
+    ],
     cmd: "$(location tools/protoc_wrapper/protoc_wrapper.py) network_id_proto.proto " +
          "--protoc " +
-         "./clang_x64/protoc " +
+         "$(location aprotoc) " +
          "--proto-in-dir " +
          "../../net/nqe/proto " +
          "--cc-out-dir " +
@@ -4419,11 +4428,14 @@ genrule {
         "net/third_party/quiche/src/quiche/quic/core/proto/crypto_server_config.proto",
         "net/third_party/quiche/src/quiche/quic/core/proto/source_address_token.proto",
     ],
+    tools: [
+        "aprotoc",
+    ],
     cmd: "$(location tools/protoc_wrapper/protoc_wrapper.py) quiche/quic/core/proto/cached_network_parameters.proto " +
          "quiche/quic/core/proto/crypto_server_config.proto " +
          "quiche/quic/core/proto/source_address_token.proto " +
          "--protoc " +
-         "./clang_x64/protoc " +
+         "$(location aprotoc) " +
          "--proto-in-dir " +
          "../../net/third_party/quiche/src " +
          "--cc-out-dir " +
@@ -4506,9 +4518,12 @@ genrule {
     srcs: [
         "net/third_party/quiche/src/quiche/quic/test_tools/send_algorithm_test_result.proto",
     ],
+    tools: [
+        "aprotoc",
+    ],
     cmd: "$(location tools/protoc_wrapper/protoc_wrapper.py) send_algorithm_test_result.proto " +
          "--protoc " +
-         "./clang_x64/protoc " +
+         "$(location aprotoc) " +
          "--proto-in-dir " +
          "../../net/third_party/quiche/src/quiche/quic/test_tools " +
          "--cc-out-dir " +

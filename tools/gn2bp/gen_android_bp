@@ -856,6 +856,12 @@ def create_action_module(blueprint, target):
     # Specifying file under $(genDir) so that parent directory exists.
     # If this file is used by other module, we may need to add this file to the outputs.
     target.args[2] = '$(genDir)/' + target.args[2].split('/')[-1]
+  elif target.script == "//tools/protoc_wrapper/protoc_wrapper.py":
+    # Use protoc in the android
+    module.tools.add("aprotoc")
+    for i, val in enumerate(target.args):
+      if val == '--protoc':
+        target.args[i + 1] = '$(location aprotoc)'
 
   script = gn_utils.label_to_path(target.script)
   module.tool_files.add(script)
