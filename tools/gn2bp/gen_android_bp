@@ -883,6 +883,8 @@ def create_action_module(blueprint, target):
         # So, for now, adding specific for this target.
         module.srcs.add(target.args[i+1])
         target.args[i + 1] = '$(location %s)' % target.args[i + 1]
+      elif val == "--py-out-dir":
+        target.args[i + 1] = '$(genDir)/' + target.args[i + 1]
 
   script = gn_utils.label_to_path(target.script)
   module.tool_files.add(script)

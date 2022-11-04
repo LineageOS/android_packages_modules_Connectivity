@@ -3224,7 +3224,7 @@ genrule {
          "--cc-out-dir " +
          "clang_x64/gen/net/cert/root_store_proto_full/ " +
          "--py-out-dir " +
-         "clang_x64/pyproto/net/cert/root_store_proto_full/",
+         "$(genDir)/clang_x64/pyproto/net/cert/root_store_proto_full/",
     out: [
         "//out/test/clang_x64/pyproto/net/cert/root_store_proto_full/root_store_pb2.py",
         "net/cert/root_store_proto_full/root_store.pb.cc",
@@ -3434,7 +3434,7 @@ genrule {
          "--cc-out-dir " +
          "$(genDir)/net/base " +
          "--py-out-dir " +
-         "pyproto/net/base",
+         "$(genDir)/pyproto/net/base",
     out: [
         "//out/test/pyproto/net/base/isolation_info_pb2.py",
         "net/base/isolation_info.pb.cc",
@@ -4221,7 +4221,7 @@ genrule {
          "--include " +
          "$(location net/base/net_export.h) " +
          "--py-out-dir " +
-         "pyproto/net/nqe/proto",
+         "$(genDir)/pyproto/net/nqe/proto",
     out: [
         "//out/test/pyproto/net/nqe/proto/network_id_proto_pb2.py",
         "net/nqe/proto/network_id_proto.pb.cc",
@@ -4448,7 +4448,7 @@ genrule {
          "--include " +
          "$(location base/component_export.h) " +
          "--py-out-dir " +
-         "pyproto/net/third_party/quiche/src",
+         "$(genDir)/pyproto/net/third_party/quiche/src",
     out: [
         "//out/test/pyproto/net/third_party/quiche/src/quiche/quic/core/proto/cached_network_parameters_pb2.py",
         "//out/test/pyproto/net/third_party/quiche/src/quiche/quic/core/proto/crypto_server_config_pb2.py",
@@ -4537,7 +4537,7 @@ genrule {
          "--include " +
          "$(location net/base/net_export.h) " +
          "--py-out-dir " +
-         "pyproto/net/third_party/quiche/src/quiche/quic/test_tools",
+         "$(genDir)/pyproto/net/third_party/quiche/src/quiche/quic/test_tools",
     out: [
         "//out/test/pyproto/net/third_party/quiche/src/quiche/quic/test_tools/send_algorithm_test_result_pb2.py",
         "net/third_party/quiche/src/quiche/quic/test_tools/send_algorithm_test_result.pb.cc",
