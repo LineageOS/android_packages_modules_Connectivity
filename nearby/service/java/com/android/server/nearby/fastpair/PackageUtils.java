@@ -18,6 +18,7 @@ package com.android.server.nearby.fastpair;
 
 import static com.android.nearby.halfsheet.constants.Constant.ACTION_RESOURCES_APK;
 
+import android.annotation.Nullable;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
@@ -37,6 +38,7 @@ public class PackageUtils {
     /**
      * Gets the package name of HalfSheet.apk
      */
+    @Nullable
     public static String getHalfSheetApkPkgName(Context context) {
         List<ResolveInfo> resolveInfos = context
                 .getPackageManager().queryIntentActivities(
