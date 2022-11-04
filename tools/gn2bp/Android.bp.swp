@@ -3226,7 +3226,7 @@ genrule {
          "--py-out-dir " +
          "$(genDir)/clang_x64/pyproto/net/cert/root_store_proto_full/",
     out: [
-        "//out/test/clang_x64/pyproto/net/cert/root_store_proto_full/root_store_pb2.py",
+        "clang_x64/pyproto/net/cert/root_store_proto_full/root_store_pb2.py",
         "net/cert/root_store_proto_full/root_store.pb.cc",
         "net/cert/root_store_proto_full/root_store.pb.h",
     ],
@@ -3436,9 +3436,9 @@ genrule {
          "--py-out-dir " +
          "$(genDir)/pyproto/net/base",
     out: [
-        "//out/test/pyproto/net/base/isolation_info_pb2.py",
         "net/base/isolation_info.pb.cc",
         "net/base/isolation_info.pb.h",
+        "pyproto/net/base/isolation_info_pb2.py",
     ],
     tool_files: [
         "tools/protoc_wrapper/protoc_wrapper.py",
@@ -4223,9 +4223,9 @@ genrule {
          "--py-out-dir " +
          "$(genDir)/pyproto/net/nqe/proto",
     out: [
-        "//out/test/pyproto/net/nqe/proto/network_id_proto_pb2.py",
         "net/nqe/proto/network_id_proto.pb.cc",
         "net/nqe/proto/network_id_proto.pb.h",
+        "pyproto/net/nqe/proto/network_id_proto_pb2.py",
     ],
     tool_files: [
         "tools/protoc_wrapper/protoc_wrapper.py",
@@ -4450,15 +4450,15 @@ genrule {
          "--py-out-dir " +
          "$(genDir)/pyproto/net/third_party/quiche/src",
     out: [
-        "//out/test/pyproto/net/third_party/quiche/src/quiche/quic/core/proto/cached_network_parameters_pb2.py",
-        "//out/test/pyproto/net/third_party/quiche/src/quiche/quic/core/proto/crypto_server_config_pb2.py",
-        "//out/test/pyproto/net/third_party/quiche/src/quiche/quic/core/proto/source_address_token_pb2.py",
         "net/third_party/quiche/src/quiche/quic/core/proto/cached_network_parameters.pb.cc",
         "net/third_party/quiche/src/quiche/quic/core/proto/cached_network_parameters.pb.h",
         "net/third_party/quiche/src/quiche/quic/core/proto/crypto_server_config.pb.cc",
         "net/third_party/quiche/src/quiche/quic/core/proto/crypto_server_config.pb.h",
         "net/third_party/quiche/src/quiche/quic/core/proto/source_address_token.pb.cc",
         "net/third_party/quiche/src/quiche/quic/core/proto/source_address_token.pb.h",
+        "pyproto/net/third_party/quiche/src/quiche/quic/core/proto/cached_network_parameters_pb2.py",
+        "pyproto/net/third_party/quiche/src/quiche/quic/core/proto/crypto_server_config_pb2.py",
+        "pyproto/net/third_party/quiche/src/quiche/quic/core/proto/source_address_token_pb2.py",
     ],
     tool_files: [
         "tools/protoc_wrapper/protoc_wrapper.py",
@@ -4539,9 +4539,9 @@ genrule {
          "--py-out-dir " +
          "$(genDir)/pyproto/net/third_party/quiche/src/quiche/quic/test_tools",
     out: [
-        "//out/test/pyproto/net/third_party/quiche/src/quiche/quic/test_tools/send_algorithm_test_result_pb2.py",
         "net/third_party/quiche/src/quiche/quic/test_tools/send_algorithm_test_result.pb.cc",
         "net/third_party/quiche/src/quiche/quic/test_tools/send_algorithm_test_result.pb.h",
+        "pyproto/net/third_party/quiche/src/quiche/quic/test_tools/send_algorithm_test_result_pb2.py",
     ],
     tool_files: [
         "tools/protoc_wrapper/protoc_wrapper.py",

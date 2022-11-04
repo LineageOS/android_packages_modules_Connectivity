@@ -859,6 +859,7 @@ def create_action_module(blueprint, target):
   elif target.script == "//tools/protoc_wrapper/protoc_wrapper.py":
     # Use protoc in the android
     module.tools.add("aprotoc")
+    target.outputs = [re.sub('^//out/test/', '', out) for out in target.outputs]
     for i, val in enumerate(target.args):
       if val == '--protoc':
         target.args[i + 1] = '$(location aprotoc)'
