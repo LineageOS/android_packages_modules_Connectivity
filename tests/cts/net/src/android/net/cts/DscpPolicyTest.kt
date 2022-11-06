@@ -105,6 +105,7 @@ private val instrumentation: Instrumentation
 
 private const val TAG = "DscpPolicyTest"
 private const val PACKET_TIMEOUT_MS = 2_000L
+private const val IPV6_ADDRESS_WAIT_TIME_MS = 10_000L
 
 @AppModeFull(reason = "Instant apps cannot create test networks")
 @RunWith(AndroidJUnit4::class)
@@ -222,7 +223,7 @@ class DscpPolicyTest {
         var inet6Addr: Inet6Address? = null
         val onLinkPrefix = raResponder.prefix
         val startTime = SystemClock.elapsedRealtime()
-        while (SystemClock.elapsedRealtime() - startTime < PACKET_TIMEOUT_MS) {
+        while (SystemClock.elapsedRealtime() - startTime < IPV6_ADDRESS_WAIT_TIME_MS) {
             SystemClock.sleep(50 /* ms */)
             val sock = Os.socket(AF_INET6, SOCK_DGRAM, IPPROTO_UDP)
             try {
