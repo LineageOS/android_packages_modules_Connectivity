@@ -2029,11 +2029,11 @@ genrule {
          "--proto-in-dir " +
          "`dirname $(location net/cert/root_store.proto)` " +
          "--cc-out-dir " +
-         "clang_x64/gen/net/cert/root_store_proto_full/ " +
+         "$(genDir) " +
          " " +
          "",
     out: [
-        "net/cert/root_store_proto_full/root_store.pb.cc",
+        "root_store.pb.cc",
     ],
     tool_files: [
         "tools/protoc_wrapper/protoc_wrapper.py",
@@ -2055,11 +2055,11 @@ genrule {
          "--proto-in-dir " +
          "`dirname $(location net/cert/root_store.proto)` " +
          "--cc-out-dir " +
-         "clang_x64/gen/net/cert/root_store_proto_full/ " +
+         "$(genDir) " +
          " " +
          "",
     out: [
-        "net/cert/root_store_proto_full/root_store.pb.h",
+        "root_store.pb.h",
     ],
     tool_files: [
         "tools/protoc_wrapper/protoc_wrapper.py",
@@ -2269,11 +2269,11 @@ genrule {
          "--proto-in-dir " +
          "`dirname $(location net/base/isolation_info.proto)` " +
          "--cc-out-dir " +
-         "$(genDir)/net/base " +
+         "$(genDir) " +
          " " +
          "",
     out: [
-        "net/base/isolation_info.pb.cc",
+        "isolation_info.pb.cc",
     ],
     tool_files: [
         "tools/protoc_wrapper/protoc_wrapper.py",
@@ -2295,11 +2295,11 @@ genrule {
          "--proto-in-dir " +
          "`dirname $(location net/base/isolation_info.proto)` " +
          "--cc-out-dir " +
-         "$(genDir)/net/base " +
+         "$(genDir) " +
          " " +
          "",
     out: [
-        "net/base/isolation_info.pb.h",
+        "isolation_info.pb.h",
     ],
     tool_files: [
         "tools/protoc_wrapper/protoc_wrapper.py",
@@ -3081,7 +3081,7 @@ genrule {
          "--proto-in-dir " +
          "`dirname $(location net/nqe/proto/network_id_proto.proto)` " +
          "--cc-out-dir " +
-         "$(genDir)/net/nqe/proto " +
+         "$(genDir) " +
          "--cc-options " +
          "dllexport_decl=NET_EXPORT_PRIVATE: " +
          " " +
@@ -3090,7 +3090,7 @@ genrule {
          " " +
          "",
     out: [
-        "net/nqe/proto/network_id_proto.pb.cc",
+        "network_id_proto.pb.cc",
     ],
     tool_files: [
         "tools/protoc_wrapper/protoc_wrapper.py",
@@ -3113,7 +3113,7 @@ genrule {
          "--proto-in-dir " +
          "`dirname $(location net/nqe/proto/network_id_proto.proto)` " +
          "--cc-out-dir " +
-         "$(genDir)/net/nqe/proto " +
+         "$(genDir) " +
          "--cc-options " +
          "dllexport_decl=NET_EXPORT_PRIVATE: " +
          " " +
@@ -3122,7 +3122,7 @@ genrule {
          " " +
          "",
     out: [
-        "net/nqe/proto/network_id_proto.pb.h",
+        "network_id_proto.pb.h",
     ],
     tool_files: [
         "tools/protoc_wrapper/protoc_wrapper.py",
@@ -3342,7 +3342,7 @@ genrule {
          "--proto-in-dir " +
          "`dirname $(location net/third_party/quiche/src/quiche/quic/core/proto/cached_network_parameters.proto)`/../../../../ " +
          "--cc-out-dir " +
-         "$(genDir)/net/third_party/quiche/src " +
+         "$(genDir) " +
          "--cc-options " +
          "dllexport_decl=COMPONENT_EXPORT(QUICHE): " +
          " " +
@@ -3351,9 +3351,9 @@ genrule {
          " " +
          "",
     out: [
-        "net/third_party/quiche/src/quiche/quic/core/proto/cached_network_parameters.pb.cc",
-        "net/third_party/quiche/src/quiche/quic/core/proto/crypto_server_config.pb.cc",
-        "net/third_party/quiche/src/quiche/quic/core/proto/source_address_token.pb.cc",
+        "cached_network_parameters.pb.cc",
+        "crypto_server_config.pb.cc",
+        "source_address_token.pb.cc",
     ],
     tool_files: [
         "tools/protoc_wrapper/protoc_wrapper.py",
@@ -3380,7 +3380,7 @@ genrule {
          "--proto-in-dir " +
          "`dirname $(location net/third_party/quiche/src/quiche/quic/core/proto/cached_network_parameters.proto)`/../../../../ " +
          "--cc-out-dir " +
-         "$(genDir)/net/third_party/quiche/src " +
+         "$(genDir) " +
          "--cc-options " +
          "dllexport_decl=COMPONENT_EXPORT(QUICHE): " +
          " " +
@@ -3389,9 +3389,9 @@ genrule {
          " " +
          "",
     out: [
-        "net/third_party/quiche/src/quiche/quic/core/proto/cached_network_parameters.pb.h",
-        "net/third_party/quiche/src/quiche/quic/core/proto/crypto_server_config.pb.h",
-        "net/third_party/quiche/src/quiche/quic/core/proto/source_address_token.pb.h",
+        "cached_network_parameters.pb.h",
+        "crypto_server_config.pb.h",
+        "source_address_token.pb.h",
     ],
     tool_files: [
         "tools/protoc_wrapper/protoc_wrapper.py",
@@ -3469,7 +3469,7 @@ genrule {
          "--proto-in-dir " +
          "`dirname $(location net/third_party/quiche/src/quiche/quic/test_tools/send_algorithm_test_result.proto)` " +
          "--cc-out-dir " +
-         "$(genDir)/net/third_party/quiche/src/quiche/quic/test_tools " +
+         "$(genDir) " +
          "--cc-options " +
          "dllexport_decl=NET_EXPORT_PRIVATE: " +
          " " +
@@ -3478,7 +3478,7 @@ genrule {
          " " +
          "",
     out: [
-        "net/third_party/quiche/src/quiche/quic/test_tools/send_algorithm_test_result.pb.cc",
+        "send_algorithm_test_result.pb.cc",
     ],
     tool_files: [
         "tools/protoc_wrapper/protoc_wrapper.py",
@@ -3501,7 +3501,7 @@ genrule {
          "--proto-in-dir " +
          "`dirname $(location net/third_party/quiche/src/quiche/quic/test_tools/send_algorithm_test_result.proto)` " +
          "--cc-out-dir " +
-         "$(genDir)/net/third_party/quiche/src/quiche/quic/test_tools " +
+         "$(genDir) " +
          "--cc-options " +
          "dllexport_decl=NET_EXPORT_PRIVATE: " +
          " " +
@@ -3510,7 +3510,7 @@ genrule {
          " " +
          "",
     out: [
-        "net/third_party/quiche/src/quiche/quic/test_tools/send_algorithm_test_result.pb.h",
+        "send_algorithm_test_result.pb.h",
     ],
     tool_files: [
         "tools/protoc_wrapper/protoc_wrapper.py",

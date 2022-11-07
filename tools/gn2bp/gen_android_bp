@@ -860,7 +860,7 @@ def create_action_module(blueprint, target):
   elif target.script == "//tools/protoc_wrapper/protoc_wrapper.py":
     # Use protoc in the android
     module.tools.add("aprotoc")
-    target.outputs = [re.sub('^//out/test/', '', out) for out in target.outputs]
+    target.outputs = [os.path.basename(out) for out in target.outputs]
     for i, val in enumerate(target.args):
       if val == '--protoc':
         target.args[i + 1] = '$(location aprotoc)'
@@ -874,7 +874,7 @@ def create_action_module(blueprint, target):
         if target.name == "//net/third_party/quiche:net_quic_proto_gen":
           target.args[i + 1] += '/../../../../'
       elif val == '--cc-out-dir':
-        target.args[i + 1] = re.sub('^gen', '$(genDir)', target.args[i + 1])
+        target.args[i + 1] = '$(genDir)'
       elif val == 'dllexport_decl':
         # Needs to be dllexport_decl=value format
         target.args[i] += '=' + target.args[i+1]
