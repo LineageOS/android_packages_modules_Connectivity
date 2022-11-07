@@ -1861,6 +1861,34 @@ filegroup {
     name: "cronet_aml_ipc_param_traits",
 }
 
+// GN: //gn:java
+java_library {
+    name: "cronet_aml_java",
+    srcs: [
+        "//base/android/java/src/org/chromium/base/JniException.java",
+        "//base/android/java/src/org/chromium/base/JniStaticTestMocker.java",
+        "//base/android/java/src/org/chromium/base/NativeLibraryLoadedStatus.java",
+        "//base/android/java/src/org/chromium/base/annotations/AccessedByNative.java",
+        "//base/android/java/src/org/chromium/base/annotations/CalledByNative.java",
+        "//base/android/java/src/org/chromium/base/annotations/CalledByNativeForTesting.java",
+        "//base/android/java/src/org/chromium/base/annotations/CalledByNativeUnchecked.java",
+        "//base/android/java/src/org/chromium/base/annotations/JNIAdditionalImport.java",
+        "//base/android/java/src/org/chromium/base/annotations/JNINamespace.java",
+        "//base/android/java/src/org/chromium/base/annotations/JniIgnoreNatives.java",
+        "//base/android/java/src/org/chromium/base/annotations/NativeClassQualifiedName.java",
+        "//base/android/java/src/org/chromium/base/annotations/NativeMethods.java",
+        "//build/android/java/src/org/chromium/build/annotations/AlwaysInline.java",
+        "//build/android/java/src/org/chromium/build/annotations/CheckDiscard.java",
+        "//build/android/java/src/org/chromium/build/annotations/DoNotClassMerge.java",
+        "//build/android/java/src/org/chromium/build/annotations/DoNotInline.java",
+        "//build/android/java/src/org/chromium/build/annotations/IdentifierNameString.java",
+        "//build/android/java/src/org/chromium/build/annotations/MainDex.java",
+        "//build/android/java/src/org/chromium/build/annotations/MockedInTests.java",
+        "//build/android/java/src/org/chromium/build/annotations/UsedByReflection.java",
+        "//url/android/java/src/org/chromium/url/IDNStringUtil.java",
+    ],
+}
+
 // GN: //net/base/registry_controlled_domains:registry_controlled_domains
 genrule {
     name: "cronet_aml_net_base_registry_controlled_domains_registry_controlled_domains",
