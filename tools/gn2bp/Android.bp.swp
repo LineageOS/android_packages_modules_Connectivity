@@ -1969,6 +1969,12 @@ cc_library_static {
     static_libs: [
         "cronet_aml_third_party_protobuf_protobuf_full",
     ],
+    generated_headers: [
+        "cronet_aml_net_cert_root_store_proto_full_gen_headers",
+    ],
+    export_generated_headers: [
+        "cronet_aml_net_cert_root_store_proto_full_gen_headers",
+    ],
     defaults: [
         "cronet_aml_defaults",
     ],
@@ -2027,8 +2033,32 @@ genrule {
          "--py-out-dir " +
          "$(genDir)/clang_x64/pyproto/net/cert/root_store_proto_full/",
     out: [
-        "clang_x64/pyproto/net/cert/root_store_proto_full/root_store_pb2.py",
         "net/cert/root_store_proto_full/root_store.pb.cc",
+    ],
+    tool_files: [
+        "tools/protoc_wrapper/protoc_wrapper.py",
+    ],
+}
+
+// GN: //net/cert:root_store_proto_full_gen
+genrule {
+    name: "cronet_aml_net_cert_root_store_proto_full_gen_headers",
+    srcs: [
+        "net/cert/root_store.proto",
+    ],
+    tools: [
+        "aprotoc",
+    ],
+    cmd: "$(location tools/protoc_wrapper/protoc_wrapper.py) root_store.proto " +
+         "--protoc " +
+         "$(location aprotoc) " +
+         "--proto-in-dir " +
+         "`dirname $(location net/cert/root_store.proto)` " +
+         "--cc-out-dir " +
+         "clang_x64/gen/net/cert/root_store_proto_full/ " +
+         "--py-out-dir " +
+         "$(genDir)/clang_x64/pyproto/net/cert/root_store_proto_full/",
+    out: [
         "net/cert/root_store_proto_full/root_store.pb.h",
     ],
     tool_files: [
@@ -2183,6 +2213,12 @@ cc_library_static {
     static_libs: [
         "cronet_aml_third_party_protobuf_protobuf_lite",
     ],
+    generated_headers: [
+        "cronet_aml_net_isolation_info_proto_gen_headers",
+    ],
+    export_generated_headers: [
+        "cronet_aml_net_isolation_info_proto_gen_headers",
+    ],
     defaults: [
         "cronet_aml_defaults",
     ],
@@ -2238,8 +2274,32 @@ genrule {
          "$(genDir)/pyproto/net/base",
     out: [
         "net/base/isolation_info.pb.cc",
+    ],
+    tool_files: [
+        "tools/protoc_wrapper/protoc_wrapper.py",
+    ],
+}
+
+// GN: //net:isolation_info_proto_gen
+genrule {
+    name: "cronet_aml_net_isolation_info_proto_gen_headers",
+    srcs: [
+        "net/base/isolation_info.proto",
+    ],
+    tools: [
+        "aprotoc",
+    ],
+    cmd: "$(location tools/protoc_wrapper/protoc_wrapper.py) isolation_info.proto " +
+         "--protoc " +
+         "$(location aprotoc) " +
+         "--proto-in-dir " +
+         "`dirname $(location net/base/isolation_info.proto)` " +
+         "--cc-out-dir " +
+         "$(genDir)/net/base " +
+         "--py-out-dir " +
+         "$(genDir)/pyproto/net/base",
+    out: [
         "net/base/isolation_info.pb.h",
-        "pyproto/net/base/isolation_info_pb2.py",
     ],
     tool_files: [
         "tools/protoc_wrapper/protoc_wrapper.py",
@@ -2963,6 +3023,12 @@ cc_library_static {
     static_libs: [
         "cronet_aml_third_party_protobuf_protobuf_lite",
     ],
+    generated_headers: [
+        "cronet_aml_net_net_nqe_proto_gen_headers",
+    ],
+    export_generated_headers: [
+        "cronet_aml_net_net_nqe_proto_gen_headers",
+    ],
     defaults: [
         "cronet_aml_defaults",
     ],
@@ -3025,8 +3091,38 @@ genrule {
          "$(genDir)/pyproto/net/nqe/proto",
     out: [
         "net/nqe/proto/network_id_proto.pb.cc",
+    ],
+    tool_files: [
+        "tools/protoc_wrapper/protoc_wrapper.py",
+    ],
+}
+
+// GN: //net:net_nqe_proto_gen
+genrule {
+    name: "cronet_aml_net_net_nqe_proto_gen_headers",
+    srcs: [
+        "net/base/net_export.h",
+        "net/nqe/proto/network_id_proto.proto",
+    ],
+    tools: [
+        "aprotoc",
+    ],
+    cmd: "$(location tools/protoc_wrapper/protoc_wrapper.py) network_id_proto.proto " +
+         "--protoc " +
+         "$(location aprotoc) " +
+         "--proto-in-dir " +
+         "`dirname $(location net/nqe/proto/network_id_proto.proto)` " +
+         "--cc-out-dir " +
+         "$(genDir)/net/nqe/proto " +
+         "--cc-options " +
+         "dllexport_decl=NET_EXPORT_PRIVATE: " +
+         " " +
+         "--include " +
+         "$(location net/base/net_export.h) " +
+         "--py-out-dir " +
+         "$(genDir)/pyproto/net/nqe/proto",
+    out: [
         "net/nqe/proto/network_id_proto.pb.h",
-        "pyproto/net/nqe/proto/network_id_proto_pb2.py",
     ],
     tool_files: [
         "tools/protoc_wrapper/protoc_wrapper.py",
@@ -3184,6 +3280,12 @@ cc_library_static {
         "cronet_aml_base_base",
         "cronet_aml_third_party_protobuf_protobuf_lite",
     ],
+    generated_headers: [
+        "cronet_aml_net_third_party_quiche_net_quic_proto_gen_headers",
+    ],
+    export_generated_headers: [
+        "cronet_aml_net_third_party_quiche_net_quic_proto_gen_headers",
+    ],
     defaults: [
         "cronet_aml_defaults",
     ],
@@ -3252,14 +3354,46 @@ genrule {
          "$(genDir)/pyproto/net/third_party/quiche/src",
     out: [
         "net/third_party/quiche/src/quiche/quic/core/proto/cached_network_parameters.pb.cc",
-        "net/third_party/quiche/src/quiche/quic/core/proto/cached_network_parameters.pb.h",
         "net/third_party/quiche/src/quiche/quic/core/proto/crypto_server_config.pb.cc",
-        "net/third_party/quiche/src/quiche/quic/core/proto/crypto_server_config.pb.h",
         "net/third_party/quiche/src/quiche/quic/core/proto/source_address_token.pb.cc",
+    ],
+    tool_files: [
+        "tools/protoc_wrapper/protoc_wrapper.py",
+    ],
+}
+
+// GN: //net/third_party/quiche:net_quic_proto_gen
+genrule {
+    name: "cronet_aml_net_third_party_quiche_net_quic_proto_gen_headers",
+    srcs: [
+        "base/component_export.h",
+        "net/third_party/quiche/src/quiche/quic/core/proto/cached_network_parameters.proto",
+        "net/third_party/quiche/src/quiche/quic/core/proto/crypto_server_config.proto",
+        "net/third_party/quiche/src/quiche/quic/core/proto/source_address_token.proto",
+    ],
+    tools: [
+        "aprotoc",
+    ],
+    cmd: "$(location tools/protoc_wrapper/protoc_wrapper.py) quiche/quic/core/proto/cached_network_parameters.proto " +
+         "quiche/quic/core/proto/crypto_server_config.proto " +
+         "quiche/quic/core/proto/source_address_token.proto " +
+         "--protoc " +
+         "$(location aprotoc) " +
+         "--proto-in-dir " +
+         "`dirname $(location net/third_party/quiche/src/quiche/quic/core/proto/cached_network_parameters.proto)`/../../../../ " +
+         "--cc-out-dir " +
+         "$(genDir)/net/third_party/quiche/src " +
+         "--cc-options " +
+         "dllexport_decl=COMPONENT_EXPORT(QUICHE): " +
+         " " +
+         "--include " +
+         "$(location base/component_export.h) " +
+         "--py-out-dir " +
+         "$(genDir)/pyproto/net/third_party/quiche/src",
+    out: [
+        "net/third_party/quiche/src/quiche/quic/core/proto/cached_network_parameters.pb.h",
+        "net/third_party/quiche/src/quiche/quic/core/proto/crypto_server_config.pb.h",
         "net/third_party/quiche/src/quiche/quic/core/proto/source_address_token.pb.h",
-        "pyproto/net/third_party/quiche/src/quiche/quic/core/proto/cached_network_parameters_pb2.py",
-        "pyproto/net/third_party/quiche/src/quiche/quic/core/proto/crypto_server_config_pb2.py",
-        "pyproto/net/third_party/quiche/src/quiche/quic/core/proto/source_address_token_pb2.py",
     ],
     tool_files: [
         "tools/protoc_wrapper/protoc_wrapper.py",
@@ -3278,6 +3412,12 @@ cc_library_static {
     ],
     static_libs: [
         "cronet_aml_third_party_protobuf_protobuf_lite",
+    ],
+    generated_headers: [
+        "cronet_aml_net_third_party_quiche_net_quic_test_tools_proto_gen_headers",
+    ],
+    export_generated_headers: [
+        "cronet_aml_net_third_party_quiche_net_quic_test_tools_proto_gen_headers",
     ],
     defaults: [
         "cronet_aml_defaults",
@@ -3341,8 +3481,38 @@ genrule {
          "$(genDir)/pyproto/net/third_party/quiche/src/quiche/quic/test_tools",
     out: [
         "net/third_party/quiche/src/quiche/quic/test_tools/send_algorithm_test_result.pb.cc",
+    ],
+    tool_files: [
+        "tools/protoc_wrapper/protoc_wrapper.py",
+    ],
+}
+
+// GN: //net/third_party/quiche:net_quic_test_tools_proto_gen
+genrule {
+    name: "cronet_aml_net_third_party_quiche_net_quic_test_tools_proto_gen_headers",
+    srcs: [
+        "net/base/net_export.h",
+        "net/third_party/quiche/src/quiche/quic/test_tools/send_algorithm_test_result.proto",
+    ],
+    tools: [
+        "aprotoc",
+    ],
+    cmd: "$(location tools/protoc_wrapper/protoc_wrapper.py) send_algorithm_test_result.proto " +
+         "--protoc " +
+         "$(location aprotoc) " +
+         "--proto-in-dir " +
+         "`dirname $(location net/third_party/quiche/src/quiche/quic/test_tools/send_algorithm_test_result.proto)` " +
+         "--cc-out-dir " +
+         "$(genDir)/net/third_party/quiche/src/quiche/quic/test_tools " +
+         "--cc-options " +
+         "dllexport_decl=NET_EXPORT_PRIVATE: " +
+         " " +
+         "--include " +
+         "$(location net/base/net_export.h) " +
+         "--py-out-dir " +
+         "$(genDir)/pyproto/net/third_party/quiche/src/quiche/quic/test_tools",
+    out: [
         "net/third_party/quiche/src/quiche/quic/test_tools/send_algorithm_test_result.pb.h",
-        "pyproto/net/third_party/quiche/src/quiche/quic/test_tools/send_algorithm_test_result_pb2.py",
     ],
     tool_files: [
         "tools/protoc_wrapper/protoc_wrapper.py",

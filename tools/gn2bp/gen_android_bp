@@ -32,6 +32,7 @@ import logging as log
 import os
 import re
 import sys
+import copy
 
 import gn_utils
 
@@ -937,6 +938,15 @@ def create_action_module(blueprint, target):
   elif target.script == "//tools/grit/stamp_grit_sources.py":
     # stamp_grit_sources.py is not executable
     module.cmd = "python " + module.cmd
+  elif target.script == "//tools/protoc_wrapper/protoc_wrapper.py":
+    # Split module to source module and header module.
+    # Source module has the .cc files and header module has the .h files in the out.
+    header_module = copy.deepcopy(module)
+    header_module.name += "_headers"
+    header_module.out = [file for file in header_module.out if os.path.splitext(file)[1] == '.h']
+    module.out = [file for file in module.out if os.path.splitext(file)[1] == '.cc']
+    module.genrule_headers.add(header_module.name)
+    blueprint.add_module(header_module)
 
   blueprint.add_module(module)
   return module
