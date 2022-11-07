@@ -1750,30 +1750,10 @@ filegroup {
     name: "cronet_aml_buildtools_third_party_libc__abi_libc__abi",
 }
 
-// GN: //components/nacl/common:buildflags
-genrule {
-    name: "cronet_aml_components_nacl_common_buildflags",
-    cmd: "echo '--flags ENABLE_NACL=\"true\" IS_MINIMAL_TOOLCHAIN=\"false\"' | " +
-         "$(location build/write_buildflag_header.py) --output " +
-         "$(out) " +
-         "--rulename " +
-         "//components/nacl/common:buildflags " +
-         "--gen-dir " +
-         ". " +
-         "--definitions " +
-         "/dev/stdin",
-    out: [
-        "components/nacl/common/buildflags.h",
-    ],
-    tool_files: [
-        "build/write_buildflag_header.py",
-    ],
-}
-
 // GN: //crypto:buildflags
 genrule {
     name: "cronet_aml_crypto_buildflags",
-    cmd: "echo '--flags USE_NSS_CERTS=\"true\"' | " +
+    cmd: "echo '--flags USE_NSS_CERTS=\"false\"' | " +
          "$(location build/write_buildflag_header.py) --output " +
          "$(out) " +
          "--rulename " +
@@ -1801,8 +1781,6 @@ cc_library_static {
         "crypto/encryptor.cc",
         "crypto/hkdf.cc",
         "crypto/hmac.cc",
-        "crypto/nss_key_util.cc",
-        "crypto/nss_util.cc",
         "crypto/openssl_util.cc",
         "crypto/p224_spake.cc",
         "crypto/random.cc",
@@ -1816,39 +1794,35 @@ cc_library_static {
         "crypto/unexportable_key.cc",
         "crypto/unexportable_key_metrics.cc",
     ],
+    shared_libs: [
+        "libandroid",
+        "liblog",
+    ],
     static_libs: [
         "cronet_aml_base_base",
         "cronet_aml_base_third_party_dynamic_annotations_dynamic_annotations",
         "cronet_aml_third_party_boringssl_boringssl",
     ],
     generated_headers: [
-        "cronet_aml_build_chromeos_buildflags",
-        "cronet_aml_components_nacl_common_buildflags",
         "cronet_aml_crypto_buildflags",
     ],
     export_generated_headers: [
-        "cronet_aml_build_chromeos_buildflags",
-        "cronet_aml_components_nacl_common_buildflags",
         "cronet_aml_crypto_buildflags",
     ],
     defaults: [
         "cronet_aml_defaults",
     ],
     cflags: [
+        "-DANDROID",
+        "-DANDROID_NDK_VERSION_ROLL=r23_1",
         "-DCRYPTO_IMPLEMENTATION",
         "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
         "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
-        "-DCR_SYSROOT_KEY=20220331T153654Z-0",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
-        "-DUSE_AURA=1",
-        "-DUSE_OZONE=1",
-        "-DUSE_UDEV",
+        "-DHAVE_SYS_UIO_H",
         "-D_DEBUG",
-        "-D_FILE_OFFSET_BITS=64",
         "-D_GNU_SOURCE",
-        "-D_LARGEFILE64_SOURCE",
-        "-D_LARGEFILE_SOURCE",
         "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
         "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
@@ -1858,14 +1832,12 @@ cc_library_static {
     ],
     local_include_dirs: [
         "./",
-        "build/linux/debian_bullseye_amd64-sysroot/usr/include/nspr",
-        "build/linux/debian_bullseye_amd64-sysroot/usr/include/nss",
         "buildtools/third_party/libc++/",
         "buildtools/third_party/libc++/trunk/include",
         "buildtools/third_party/libc++abi/trunk/include",
         "third_party/abseil-cpp/",
         "third_party/boringssl/src/include/",
-        "build/linux/debian_bullseye_amd64-sysroot/usr/include",
+        "third_party/android_ndk/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include",
     ],
     cpp_std: "c++20",
 }
@@ -3174,14 +3146,14 @@ filegroup {
 genrule {
     name: "cronet_aml_net_net_resources_grit",
     cmd: "$(location tools/grit/grit.py) -i " +
-         "../../net/base/net_resources.grd " +
+         "$(location net/base/net_resources.grd) " +
          "build " +
          "-o " +
-         "gen/net " +
+         "$(genDir)/net " +
          "--depdir " +
          ". " +
-         "--depfile " +
-         "gen/net/net_resources_grit.d " +
+         "  " +
+         "  " +
          "--write-only-new " +
          "1 " +
          "--depend-on-stamp " +
@@ -3246,6 +3218,8 @@ genrule {
         "net/base/net_resources.grd",
         "out/test/gen/tools/gritsettings/default_resource_ids",
         "out/test/obj/net/net_resources_expected_outputs.txt",
+        "third_party/six/src/six.py",
+        "tools/grit/**/*.py",
         "tools/grit/grit.py",
     ],
 }
@@ -5694,6 +5668,7 @@ cc_library_static {
 cc_library_static {
     name: "cronet_aml_third_party_zlib_zlib",
     srcs: [
+        ":cronet_aml_third_party_android_ndk_cpu_features",
         ":cronet_aml_third_party_zlib_zlib_adler32_simd",
         ":cronet_aml_third_party_zlib_zlib_common_headers",
         ":cronet_aml_third_party_zlib_zlib_crc32_simd",
@@ -5720,26 +5695,22 @@ cc_library_static {
     ],
     cflags: [
         "-DADLER32_SIMD_SSSE3",
+        "-DANDROID",
+        "-DANDROID_NDK_VERSION_ROLL=r23_1",
         "-DCRC32_SIMD_SSE42_PCLMUL",
         "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
         "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
-        "-DCR_SYSROOT_KEY=20220331T153654Z-0",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDEFLATE_SLIDE_HASH_SSE2",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
+        "-DHAVE_SYS_UIO_H",
         "-DINFLATE_CHUNK_READ_64LE",
         "-DINFLATE_CHUNK_SIMD_SSE2",
-        "-DUSE_AURA=1",
-        "-DUSE_OZONE=1",
-        "-DUSE_UDEV",
         "-DX86_NOT_WINDOWS",
         "-DZLIB_DEBUG",
         "-DZLIB_IMPLEMENTATION",
         "-D_DEBUG",
-        "-D_FILE_OFFSET_BITS=64",
         "-D_GNU_SOURCE",
-        "-D_LARGEFILE64_SOURCE",
-        "-D_LARGEFILE_SOURCE",
         "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
         "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
@@ -5752,8 +5723,9 @@ cc_library_static {
         "buildtools/third_party/libc++/",
         "buildtools/third_party/libc++/trunk/include",
         "buildtools/third_party/libc++abi/trunk/include",
+        "third_party/android_ndk/sources/android/cpufeatures/",
         "third_party/zlib/",
-        "build/linux/debian_bullseye_amd64-sysroot/usr/include",
+        "third_party/android_ndk/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include",
     ],
     cpp_std: "c++20",
 }
@@ -5814,16 +5786,18 @@ genrule {
     name: "cronet_aml_tools_gritsettings_default_resource_ids",
     cmd: "$(location tools/grit/grit.py) update_resource_ids " +
          "-o " +
-         "gen/tools/gritsettings/default_resource_ids " +
+         "$(location tools/gritsettings/default_resource_ids) " +
          "--add-header " +
-         "--depfile " +
-         "gen/tools/gritsettings/default_resource_ids.d " +
+         "  " +
+         "  " +
          "--input " +
-         "../../tools/gritsettings/resource_ids.spec",
+         "$(location tools/gritsettings/resource_ids.spec)",
     out: [
         "tools/gritsettings/default_resource_ids",
     ],
     tool_files: [
+        "third_party/six/src/six.py",
+        "tools/grit/**/*.py",
         "tools/grit/grit.py",
         "tools/gritsettings/resource_ids.spec",
     ],

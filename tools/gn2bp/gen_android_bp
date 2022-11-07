@@ -857,6 +857,36 @@ def create_action_module(blueprint, target):
     # Specifying file under $(genDir) so that parent directory exists.
     # If this file is used by other module, we may need to add this file to the outputs.
     target.args[2] = '$(genDir)/' + target.args[2].split('/')[-1]
+  elif target.script == "//tools/grit/grit.py":
+    for i, val in enumerate(target.args):
+      if val == '-i':
+        # Delete leading ../..
+        filename = re.sub('^\.\./\.\./', '', target.args[i + 1])
+        target.args[i + 1] = '$(location %s)' % filename
+      elif val == '-o':
+        filename = re.sub('^gen/', '', target.args[i + 1])
+        if filename == "net":
+          # This is a directory not a file
+          target.args[i + 1] = '$(genDir)/net'
+        else:
+          # This is an output fil
+          target.args[i + 1] = '$(location %s)' % filename
+      elif val == '--depfile':
+        # The depfile is replaced by adding /tools/**/*.py to the tools_files
+        # This is basically just globbing all the needed sources by hardcoding.
+        module.tool_files.update([
+            "tools/grit/**/*.py",
+            "third_party/six/src/six.py" # This is not picked up by default. Must be added
+        ])
+
+        # Delete the depfile argument
+        target.args[i] = ' '
+        target.args[i + 1] = ' '
+      elif val == '--input':
+        # Delete leading ../..
+        filename = re.sub('^\.\./\.\./', '', target.args[i + 1])
+        # This is an output file so use $(location %s)
+        target.args[i + 1] = '$(location %s)' % filename
   elif target.script == "//tools/protoc_wrapper/protoc_wrapper.py":
     # Use protoc in the android
     module.tools.add("aprotoc")
