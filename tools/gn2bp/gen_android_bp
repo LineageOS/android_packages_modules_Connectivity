@@ -950,6 +950,10 @@ def create_action_module(blueprint, target):
     module.genrule_headers.add(header_module.name)
     module.genrule_srcs.add(':' + module.name)
     blueprint.add_module(header_module)
+  elif target.script == "//base/android/jni_generator/jni_generator.py":
+    # android_jar.classes should be part of the tools as it list implicit classes
+    # for the script to generate JNI headers.
+    module.tool_files.add("base/android/jni_generator/android_jar.classes")
 
   blueprint.add_module(module)
   return module
