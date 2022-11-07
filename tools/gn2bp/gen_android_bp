@@ -948,6 +948,7 @@ def create_action_module(blueprint, target):
     header_module.out = [file for file in header_module.out if os.path.splitext(file)[1] == '.h']
     module.out = [file for file in module.out if os.path.splitext(file)[1] == '.cc']
     module.genrule_headers.add(header_module.name)
+    module.genrule_srcs.add(':' + module.name)
     blueprint.add_module(header_module)
 
   blueprint.add_module(module)

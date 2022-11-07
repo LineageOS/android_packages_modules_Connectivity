@@ -1963,6 +1963,9 @@ genrule {
 // GN: //net/cert:root_store_proto_full
 cc_library_static {
     name: "cronet_aml_net_cert_root_store_proto_full",
+    srcs: [
+        ":cronet_aml_net_cert_root_store_proto_full_gen",
+    ],
     static_libs: [
         "cronet_aml_third_party_protobuf_protobuf_full",
     ],
@@ -2201,6 +2204,9 @@ genrule {
 // GN: //net:isolation_info_proto
 cc_library_static {
     name: "cronet_aml_net_isolation_info_proto",
+    srcs: [
+        ":cronet_aml_net_isolation_info_proto_gen",
+    ],
     shared_libs: [
         "liblog",
     ],
@@ -3009,6 +3015,7 @@ cc_library_static {
     name: "cronet_aml_net_net_nqe_proto",
     srcs: [
         ":cronet_aml_net_net_export_header",
+        ":cronet_aml_net_net_nqe_proto_gen",
     ],
     shared_libs: [
         "liblog",
@@ -3260,6 +3267,9 @@ cc_library_static {
 // GN: //net/third_party/quiche:net_quic_proto
 cc_library_static {
     name: "cronet_aml_net_third_party_quiche_net_quic_proto",
+    srcs: [
+        ":cronet_aml_net_third_party_quiche_net_quic_proto_gen",
+    ],
     shared_libs: [
         "libandroid",
         "liblog",
@@ -3393,6 +3403,7 @@ cc_library_static {
     name: "cronet_aml_net_third_party_quiche_net_quic_test_tools_proto",
     srcs: [
         ":cronet_aml_net_net_export_header",
+        ":cronet_aml_net_third_party_quiche_net_quic_test_tools_proto_gen",
     ],
     shared_libs: [
         "liblog",
