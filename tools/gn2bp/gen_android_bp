@@ -886,7 +886,9 @@ def create_action_module(blueprint, target):
         module.srcs.add(target.args[i+1])
         target.args[i + 1] = '$(location %s)' % target.args[i + 1]
       elif val == "--py-out-dir":
-        target.args[i + 1] = '$(genDir)/' + target.args[i + 1]
+        # pb2.py files are not used by others.
+        target.args[i] = ''
+        target.args[i + 1] = ''
 
   script = gn_utils.label_to_path(target.script)
   module.tool_files.add(script)

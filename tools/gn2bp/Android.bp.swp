@@ -2030,8 +2030,8 @@ genrule {
          "`dirname $(location net/cert/root_store.proto)` " +
          "--cc-out-dir " +
          "clang_x64/gen/net/cert/root_store_proto_full/ " +
-         "--py-out-dir " +
-         "$(genDir)/clang_x64/pyproto/net/cert/root_store_proto_full/",
+         " " +
+         "",
     out: [
         "net/cert/root_store_proto_full/root_store.pb.cc",
     ],
@@ -2056,8 +2056,8 @@ genrule {
          "`dirname $(location net/cert/root_store.proto)` " +
          "--cc-out-dir " +
          "clang_x64/gen/net/cert/root_store_proto_full/ " +
-         "--py-out-dir " +
-         "$(genDir)/clang_x64/pyproto/net/cert/root_store_proto_full/",
+         " " +
+         "",
     out: [
         "net/cert/root_store_proto_full/root_store.pb.h",
     ],
@@ -2270,8 +2270,8 @@ genrule {
          "`dirname $(location net/base/isolation_info.proto)` " +
          "--cc-out-dir " +
          "$(genDir)/net/base " +
-         "--py-out-dir " +
-         "$(genDir)/pyproto/net/base",
+         " " +
+         "",
     out: [
         "net/base/isolation_info.pb.cc",
     ],
@@ -2296,8 +2296,8 @@ genrule {
          "`dirname $(location net/base/isolation_info.proto)` " +
          "--cc-out-dir " +
          "$(genDir)/net/base " +
-         "--py-out-dir " +
-         "$(genDir)/pyproto/net/base",
+         " " +
+         "",
     out: [
         "net/base/isolation_info.pb.h",
     ],
@@ -3087,8 +3087,8 @@ genrule {
          " " +
          "--include " +
          "$(location net/base/net_export.h) " +
-         "--py-out-dir " +
-         "$(genDir)/pyproto/net/nqe/proto",
+         " " +
+         "",
     out: [
         "net/nqe/proto/network_id_proto.pb.cc",
     ],
@@ -3119,8 +3119,8 @@ genrule {
          " " +
          "--include " +
          "$(location net/base/net_export.h) " +
-         "--py-out-dir " +
-         "$(genDir)/pyproto/net/nqe/proto",
+         " " +
+         "",
     out: [
         "net/nqe/proto/network_id_proto.pb.h",
     ],
@@ -3350,8 +3350,8 @@ genrule {
          " " +
          "--include " +
          "$(location base/component_export.h) " +
-         "--py-out-dir " +
-         "$(genDir)/pyproto/net/third_party/quiche/src",
+         " " +
+         "",
     out: [
         "net/third_party/quiche/src/quiche/quic/core/proto/cached_network_parameters.pb.cc",
         "net/third_party/quiche/src/quiche/quic/core/proto/crypto_server_config.pb.cc",
@@ -3388,8 +3388,8 @@ genrule {
          " " +
          "--include " +
          "$(location base/component_export.h) " +
-         "--py-out-dir " +
-         "$(genDir)/pyproto/net/third_party/quiche/src",
+         " " +
+         "",
     out: [
         "net/third_party/quiche/src/quiche/quic/core/proto/cached_network_parameters.pb.h",
         "net/third_party/quiche/src/quiche/quic/core/proto/crypto_server_config.pb.h",
@@ -3477,8 +3477,8 @@ genrule {
          " " +
          "--include " +
          "$(location net/base/net_export.h) " +
-         "--py-out-dir " +
-         "$(genDir)/pyproto/net/third_party/quiche/src/quiche/quic/test_tools",
+         " " +
+         "",
     out: [
         "net/third_party/quiche/src/quiche/quic/test_tools/send_algorithm_test_result.pb.cc",
     ],
@@ -3509,8 +3509,8 @@ genrule {
          " " +
          "--include " +
          "$(location net/base/net_export.h) " +
-         "--py-out-dir " +
-         "$(genDir)/pyproto/net/third_party/quiche/src/quiche/quic/test_tools",
+         " " +
+         "",
     out: [
         "net/third_party/quiche/src/quiche/quic/test_tools/send_algorithm_test_result.pb.h",
     ],
