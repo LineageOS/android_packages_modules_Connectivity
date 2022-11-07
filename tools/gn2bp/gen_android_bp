@@ -907,7 +907,7 @@ def create_action_module(blueprint, target):
         target.args[i + 1] = '$(genDir)'
       elif val == 'dllexport_decl':
         # Needs to be dllexport_decl=value format
-        target.args[i] += '=' + target.args[i+1]
+        target.args[i] = '%s=\'%s\'' % (target.args[i], target.args[i + 1])
         target.args[i+1] = ''
       elif val == '--include':
         # This file can be got from filegroup this target depends on, but currently we don't add .h
