@@ -133,9 +133,7 @@ public final class ApfCapabilities implements Parcelable {
     public static boolean getApfDrop8023Frames() {
         // TODO: deprecate/remove this method (now unused in the platform), as the resource was
         // moved to NetworkStack.
-        final Resources systemRes = Resources.getSystem();
-        final int id = systemRes.getIdentifier("config_apfDrop802_3Frames", "bool", "android");
-        return systemRes.getBoolean(id);
+        return true;
     }
 
     /**
@@ -144,8 +142,6 @@ public final class ApfCapabilities implements Parcelable {
     public static @NonNull int[] getApfEtherTypeBlackList() {
         // TODO: deprecate/remove this method (now unused in the platform), as the resource was
         // moved to NetworkStack.
-        final Resources systemRes = Resources.getSystem();
-        final int id = systemRes.getIdentifier("config_apfEthTypeBlackList", "array", "android");
-        return systemRes.getIntArray(id);
+        return new int[] { 0x88a2, 0x88a4, 0x88b8, 0x88cd, 0x88e3 };
     }
 }
