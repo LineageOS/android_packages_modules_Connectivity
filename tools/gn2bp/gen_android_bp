@@ -857,6 +857,36 @@ def create_action_module(blueprint, target):
     # Specifying file under $(genDir) so that parent directory exists.
     # If this file is used by other module, we may need to add this file to the outputs.
     target.args[2] = '$(genDir)/' + target.args[2].split('/')[-1]
+  elif target.script == "//tools/grit/grit.py":
+    for i, val in enumerate(target.args):
+      if val == '-i':
+        # Delete leading ../..
+        filename = re.sub('^\.\./\.\./', '', target.args[i + 1])
+        target.args[i + 1] = '$(location %s)' % filename
+      elif val == '-o':
+        filename = re.sub('^gen/', '', target.args[i + 1])
+        if filename == "net":
+          # This is a directory not a file
+          target.args[i + 1] = '$(genDir)/net'
+        else:
+          # This is an output fil
+          target.args[i + 1] = '$(location %s)' % filename
+      elif val == '--depfile':
+        # The depfile is replaced by adding /tools/**/*.py to the tools_files
+        # This is basically just globbing all the needed sources by hardcoding.
+        module.tool_files.update([
+            "tools/grit/**/*.py",
+            "third_party/six/src/six.py" # This is not picked up by default. Must be added
+        ])
+
+        # Delete the depfile argument
+        target.args[i] = ' '
+        target.args[i + 1] = ' '
+      elif val == '--input':
+        # Delete leading ../..
+        filename = re.sub('^\.\./\.\./', '', target.args[i + 1])
+        # This is an output file so use $(location %s)
+        target.args[i + 1] = '$(location %s)' % filename
   elif target.script == "//tools/protoc_wrapper/protoc_wrapper.py":
     # Use protoc in the android
     module.tools.add("aprotoc")
@@ -877,7 +907,7 @@ def create_action_module(blueprint, target):
         target.args[i + 1] = '$(genDir)'
       elif val == 'dllexport_decl':
         # Needs to be dllexport_decl=value format
-        target.args[i] += '=' + target.args[i+1]
+        target.args[i] = '%s=\'%s\'' % (target.args[i], target.args[i + 1])
         target.args[i+1] = ''
       elif val == '--include':
         # This file can be got from filegroup this target depends on, but currently we don't add .h
@@ -950,6 +980,10 @@ def create_action_module(blueprint, target):
     module.genrule_headers.add(header_module.name)
     module.genrule_srcs.add(':' + module.name)
     blueprint.add_module(header_module)
+  elif target.script == "//base/android/jni_generator/jni_generator.py":
+    # android_jar.classes should be part of the tools as it list implicit classes
+    # for the script to generate JNI headers.
+    module.tool_files.add("base/android/jni_generator/android_jar.classes")
 
   blueprint.add_module(module)
   return module
@@ -1147,7 +1181,7 @@ def create_modules_from_target(blueprint, gn, gn_target_name):
 def create_java_module(blueprint, gn):
   bp_module_name = module_prefix + 'java'
   module = Module('java_library', bp_module_name, '//gn:java')
-  module.srcs.update(gn.java_sources)
+  module.srcs.update([gn_utils.label_to_path(source) for source in gn.java_sources])
   blueprint.add_module(module)
 
 def create_blueprint_for_targets(gn, desc, targets):
