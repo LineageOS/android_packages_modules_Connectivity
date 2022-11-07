@@ -175,6 +175,22 @@ public class PermissionMonitor {
                 final String[] pkgList =
                         intent.getStringArrayExtra(Intent.EXTRA_CHANGED_PACKAGE_LIST);
                 onExternalApplicationsAvailable(pkgList);
+            } else if (Intent.ACTION_USER_ADDED.equals(action)) {
+                final UserHandle user = intent.getParcelableExtra(Intent.EXTRA_USER);
+                // User should be filled for below intents, check the existence.
+                if (user == null) {
+                    Log.wtf(TAG, action + " broadcast without EXTRA_USER");
+                    return;
+                }
+                onUserAdded(user);
+            } else if (Intent.ACTION_USER_REMOVED.equals(action)) {
+                final UserHandle user = intent.getParcelableExtra(Intent.EXTRA_USER);
+                // User should be filled for below intents, check the existence.
+                if (user == null) {
+                    Log.wtf(TAG, action + " broadcast without EXTRA_USER");
+                    return;
+                }
+                onUserRemoved(user);
             } else {
                 Log.wtf(TAG, "received unexpected intent: " + action);
             }
@@ -408,6 +424,14 @@ public class PermissionMonitor {
                 mIntentReceiver, externalIntentFilter, null /* broadcastPermission */,
                 null /* scheduler */);
 
+        // Listen for user add/remove.
+        final IntentFilter userIntentFilter = new IntentFilter();
+        userIntentFilter.addAction(Intent.ACTION_USER_ADDED);
+        userIntentFilter.addAction(Intent.ACTION_USER_REMOVED);
+        userAllContext.registerReceiver(
+                mIntentReceiver, userIntentFilter, null /* broadcastPermission */,
+                null /* scheduler */);
+
         // Register UIDS_ALLOWED_ON_RESTRICTED_NETWORKS setting observer
         mDeps.registerContentObserver(
                 userAllContext,
@@ -547,7 +571,8 @@ public class PermissionMonitor {
      *
      * @hide
      */
-    public synchronized void onUserAdded(@NonNull UserHandle user) {
+    @VisibleForTesting
+    synchronized void onUserAdded(@NonNull UserHandle user) {
         mUsers.add(user);
 
         final List<PackageInfo> apps = getInstalledPackagesAsUser(user);
@@ -578,7 +603,8 @@ public class PermissionMonitor {
      *
      * @hide
      */
-    public synchronized void onUserRemoved(@NonNull UserHandle user) {
+    @VisibleForTesting
+    synchronized void onUserRemoved(@NonNull UserHandle user) {
         mUsers.remove(user);
 
         // Remove uids network permissions that belongs to the user.
