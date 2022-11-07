@@ -170,6 +170,7 @@ class GnParser(object):
     self.source_sets = {}
     self.actions = {}
     self.proto_libs = {}
+    self.java_sources = set()
 
   def _get_response_file_contents(self, action_desc):
     # response_file_contents are formatted as:
@@ -291,6 +292,23 @@ class GnParser(object):
           target.deps.add(dep_name)
       elif dep.type in LINKER_UNIT_TYPES:
         target.deps.add(dep_name)
+      elif dep.type == 'java_group':
+        # Explicitly break dependency chain when a java_group is added.
+        # Java sources are collected and eventually compiled as one large
+        # java_library.
+        pass
+
+      # Collect java sources. Java sources are kept inside the __compile_java target.
+      # This target can be used for both host and target compilation; only add
+      # the sources if they are destined for the target (i.e. they are a
+      # dependency of the __dex target)
+      # Note: this skips prebuilt java dependencies. These will have to be
+      # added manually when building the jar.
+      if re.match('.*__dex$', target.name):
+        if re.match('.*__compile_java$', dep.name):
+          log.debug('Adding java sources for %s', dep.name)
+          java_srcs = [src for src in dep.inputs if os.path.splitext(src)[1] == '.java']
+          self.java_sources.update(java_srcs)
 
     return target
 

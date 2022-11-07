@@ -1131,6 +1131,11 @@ def create_modules_from_target(blueprint, gn, gn_target_name):
 
   return module
 
+def create_java_module(blueprint, gn):
+  bp_module_name = module_prefix + 'java'
+  module = Module('java_library', bp_module_name, '//gn:java')
+  module.srcs.update(gn.java_sources)
+  blueprint.add_module(module)
 
 def create_blueprint_for_targets(gn, desc, targets):
   """Generate a blueprint for a list of GN targets."""
@@ -1153,6 +1158,8 @@ def create_blueprint_for_targets(gn, desc, targets):
 
   for target in targets:
     create_modules_from_target(blueprint, gn, target)
+
+  create_java_module(blueprint, gn)
   return blueprint
 
 
