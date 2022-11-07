@@ -758,7 +758,8 @@ public class PermissionMonitor {
      *
      * @hide
      */
-    public synchronized void onPackageAdded(@NonNull final String packageName, final int uid) {
+    @VisibleForTesting
+    synchronized void onPackageAdded(@NonNull final String packageName, final int uid) {
         // Update uid permission.
         updateAppIdTrafficPermission(uid);
         // Get the appId permission from all users then send the latest permission to netd.
@@ -821,7 +822,8 @@ public class PermissionMonitor {
      *
      * @hide
      */
-    public synchronized void onPackageRemoved(@NonNull final String packageName, final int uid) {
+    @VisibleForTesting
+    synchronized void onPackageRemoved(@NonNull final String packageName, final int uid) {
         // Update uid permission.
         updateAppIdTrafficPermission(uid);
         // Get the appId permission from all users then send the latest permission to netd.
