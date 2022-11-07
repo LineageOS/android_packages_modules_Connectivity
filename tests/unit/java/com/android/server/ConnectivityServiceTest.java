@@ -3477,7 +3477,12 @@ public class ConnectivityServiceTest {
             final int uid, final String packageName) throws Exception {
         doReturn(buildPackageInfo(true /* hasSystemPermission */, uid)).when(mPackageManager)
                 .getPackageInfo(eq(packageName), eq(GET_PERMISSIONS));
-        mService.mPermissionMonitor.onPackageAdded(packageName, uid);
+
+        // Send a broadcast indicating a package was installed.
+        final Intent addedIntent = new Intent(ACTION_PACKAGE_ADDED);
+        addedIntent.putExtra(Intent.EXTRA_UID, uid);
+        addedIntent.setData(Uri.parse("package:" + packageName));
+        processBroadcast(addedIntent);
     }
 
     @Test
