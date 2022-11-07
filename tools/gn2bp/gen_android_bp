@@ -32,6 +32,7 @@ import logging as log
 import os
 import re
 import sys
+import copy
 
 import gn_utils
 
@@ -859,7 +860,7 @@ def create_action_module(blueprint, target):
   elif target.script == "//tools/protoc_wrapper/protoc_wrapper.py":
     # Use protoc in the android
     module.tools.add("aprotoc")
-    target.outputs = [re.sub('^//out/test/', '', out) for out in target.outputs]
+    target.outputs = [os.path.basename(out) for out in target.outputs]
     for i, val in enumerate(target.args):
       if val == '--protoc':
         target.args[i + 1] = '$(location aprotoc)'
@@ -873,7 +874,7 @@ def create_action_module(blueprint, target):
         if target.name == "//net/third_party/quiche:net_quic_proto_gen":
           target.args[i + 1] += '/../../../../'
       elif val == '--cc-out-dir':
-        target.args[i + 1] = re.sub('^gen', '$(genDir)', target.args[i + 1])
+        target.args[i + 1] = '$(genDir)'
       elif val == 'dllexport_decl':
         # Needs to be dllexport_decl=value format
         target.args[i] += '=' + target.args[i+1]
@@ -885,7 +886,9 @@ def create_action_module(blueprint, target):
         module.srcs.add(target.args[i+1])
         target.args[i + 1] = '$(location %s)' % target.args[i + 1]
       elif val == "--py-out-dir":
-        target.args[i + 1] = '$(genDir)/' + target.args[i + 1]
+        # pb2.py files are not used by others.
+        target.args[i] = ''
+        target.args[i + 1] = ''
 
   script = gn_utils.label_to_path(target.script)
   module.tool_files.add(script)
@@ -937,6 +940,16 @@ def create_action_module(blueprint, target):
   elif target.script == "//tools/grit/stamp_grit_sources.py":
     # stamp_grit_sources.py is not executable
     module.cmd = "python " + module.cmd
+  elif target.script == "//tools/protoc_wrapper/protoc_wrapper.py":
+    # Split module to source module and header module.
+    # Source module has the .cc files and header module has the .h files in the out.
+    header_module = copy.deepcopy(module)
+    header_module.name += "_headers"
+    header_module.out = [file for file in header_module.out if os.path.splitext(file)[1] == '.h']
+    module.out = [file for file in module.out if os.path.splitext(file)[1] == '.cc']
+    module.genrule_headers.add(header_module.name)
+    module.genrule_srcs.add(':' + module.name)
+    blueprint.add_module(header_module)
 
   blueprint.add_module(module)
   return module
@@ -1017,7 +1030,7 @@ def create_modules_from_target(blueprint, gn, gn_target_name):
   module.srcs.update(
       gn_utils.label_to_path(src)
       for src in target.sources
-      if is_supported_source_file(src))
+      if is_supported_source_file(src) and not src.startswith("//out/test"))
 
   local_include_dirs_set = set()
   if target.type in gn_utils.LINKER_UNIT_TYPES:
