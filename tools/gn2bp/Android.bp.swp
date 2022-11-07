@@ -289,6 +289,7 @@ genrule {
         "base/android_runtime_jni_headers/Runtime_jni.h",
     ],
     tool_files: [
+        "base/android/jni_generator/android_jar.classes",
         "base/android/jni_generator/jni_generator.py",
         "build/android/gyp/util/__init__.py",
         "build/android/gyp/util/build_utils.py",
@@ -1229,6 +1230,7 @@ genrule {
         "base/base_jni_headers/UnguessableToken_jni.h",
     ],
     tool_files: [
+        "base/android/jni_generator/android_jar.classes",
         "base/android/jni_generator/jni_generator.py",
         "build/android/gyp/util/__init__.py",
         "build/android/gyp/util/build_utils.py",
@@ -1865,27 +1867,27 @@ filegroup {
 java_library {
     name: "cronet_aml_java",
     srcs: [
-        "//base/android/java/src/org/chromium/base/JniException.java",
-        "//base/android/java/src/org/chromium/base/JniStaticTestMocker.java",
-        "//base/android/java/src/org/chromium/base/NativeLibraryLoadedStatus.java",
-        "//base/android/java/src/org/chromium/base/annotations/AccessedByNative.java",
-        "//base/android/java/src/org/chromium/base/annotations/CalledByNative.java",
-        "//base/android/java/src/org/chromium/base/annotations/CalledByNativeForTesting.java",
-        "//base/android/java/src/org/chromium/base/annotations/CalledByNativeUnchecked.java",
-        "//base/android/java/src/org/chromium/base/annotations/JNIAdditionalImport.java",
-        "//base/android/java/src/org/chromium/base/annotations/JNINamespace.java",
-        "//base/android/java/src/org/chromium/base/annotations/JniIgnoreNatives.java",
-        "//base/android/java/src/org/chromium/base/annotations/NativeClassQualifiedName.java",
-        "//base/android/java/src/org/chromium/base/annotations/NativeMethods.java",
-        "//build/android/java/src/org/chromium/build/annotations/AlwaysInline.java",
-        "//build/android/java/src/org/chromium/build/annotations/CheckDiscard.java",
-        "//build/android/java/src/org/chromium/build/annotations/DoNotClassMerge.java",
-        "//build/android/java/src/org/chromium/build/annotations/DoNotInline.java",
-        "//build/android/java/src/org/chromium/build/annotations/IdentifierNameString.java",
-        "//build/android/java/src/org/chromium/build/annotations/MainDex.java",
-        "//build/android/java/src/org/chromium/build/annotations/MockedInTests.java",
-        "//build/android/java/src/org/chromium/build/annotations/UsedByReflection.java",
-        "//url/android/java/src/org/chromium/url/IDNStringUtil.java",
+        "base/android/java/src/org/chromium/base/JniException.java",
+        "base/android/java/src/org/chromium/base/JniStaticTestMocker.java",
+        "base/android/java/src/org/chromium/base/NativeLibraryLoadedStatus.java",
+        "base/android/java/src/org/chromium/base/annotations/AccessedByNative.java",
+        "base/android/java/src/org/chromium/base/annotations/CalledByNative.java",
+        "base/android/java/src/org/chromium/base/annotations/CalledByNativeForTesting.java",
+        "base/android/java/src/org/chromium/base/annotations/CalledByNativeUnchecked.java",
+        "base/android/java/src/org/chromium/base/annotations/JNIAdditionalImport.java",
+        "base/android/java/src/org/chromium/base/annotations/JNINamespace.java",
+        "base/android/java/src/org/chromium/base/annotations/JniIgnoreNatives.java",
+        "base/android/java/src/org/chromium/base/annotations/NativeClassQualifiedName.java",
+        "base/android/java/src/org/chromium/base/annotations/NativeMethods.java",
+        "build/android/java/src/org/chromium/build/annotations/AlwaysInline.java",
+        "build/android/java/src/org/chromium/build/annotations/CheckDiscard.java",
+        "build/android/java/src/org/chromium/build/annotations/DoNotClassMerge.java",
+        "build/android/java/src/org/chromium/build/annotations/DoNotInline.java",
+        "build/android/java/src/org/chromium/build/annotations/IdentifierNameString.java",
+        "build/android/java/src/org/chromium/build/annotations/MainDex.java",
+        "build/android/java/src/org/chromium/build/annotations/MockedInTests.java",
+        "build/android/java/src/org/chromium/build/annotations/UsedByReflection.java",
+        "url/android/java/src/org/chromium/url/IDNStringUtil.java",
     ],
 }
 
@@ -3003,6 +3005,7 @@ genrule {
         "net/net_jni_headers/X509Util_jni.h",
     ],
     tool_files: [
+        "base/android/jni_generator/android_jar.classes",
         "base/android/jni_generator/jni_generator.py",
         "build/android/gyp/util/__init__.py",
         "build/android/gyp/util/build_utils.py",
@@ -3083,7 +3086,7 @@ genrule {
          "--cc-out-dir " +
          "$(genDir) " +
          "--cc-options " +
-         "dllexport_decl=NET_EXPORT_PRIVATE: " +
+         "dllexport_decl='NET_EXPORT_PRIVATE:' " +
          " " +
          "--include " +
          "$(location net/base/net_export.h) " +
@@ -3115,7 +3118,7 @@ genrule {
          "--cc-out-dir " +
          "$(genDir) " +
          "--cc-options " +
-         "dllexport_decl=NET_EXPORT_PRIVATE: " +
+         "dllexport_decl='NET_EXPORT_PRIVATE:' " +
          " " +
          "--include " +
          "$(location net/base/net_export.h) " +
@@ -3143,14 +3146,14 @@ filegroup {
 genrule {
     name: "cronet_aml_net_net_resources_grit",
     cmd: "$(location tools/grit/grit.py) -i " +
-         "../../net/base/net_resources.grd " +
+         "$(location net/base/net_resources.grd) " +
          "build " +
          "-o " +
-         "gen/net " +
+         "$(genDir)/net " +
          "--depdir " +
          ". " +
-         "--depfile " +
-         "gen/net/net_resources_grit.d " +
+         "  " +
+         "  " +
          "--write-only-new " +
          "1 " +
          "--depend-on-stamp " +
@@ -3215,6 +3218,8 @@ genrule {
         "net/base/net_resources.grd",
         "out/test/gen/tools/gritsettings/default_resource_ids",
         "out/test/obj/net/net_resources_expected_outputs.txt",
+        "third_party/six/src/six.py",
+        "tools/grit/**/*.py",
         "tools/grit/grit.py",
     ],
 }
@@ -3344,7 +3349,7 @@ genrule {
          "--cc-out-dir " +
          "$(genDir) " +
          "--cc-options " +
-         "dllexport_decl=COMPONENT_EXPORT(QUICHE): " +
+         "dllexport_decl='COMPONENT_EXPORT(QUICHE):' " +
          " " +
          "--include " +
          "$(location base/component_export.h) " +
@@ -3382,7 +3387,7 @@ genrule {
          "--cc-out-dir " +
          "$(genDir) " +
          "--cc-options " +
-         "dllexport_decl=COMPONENT_EXPORT(QUICHE): " +
+         "dllexport_decl='COMPONENT_EXPORT(QUICHE):' " +
          " " +
          "--include " +
          "$(location base/component_export.h) " +
@@ -3471,7 +3476,7 @@ genrule {
          "--cc-out-dir " +
          "$(genDir) " +
          "--cc-options " +
-         "dllexport_decl=NET_EXPORT_PRIVATE: " +
+         "dllexport_decl='NET_EXPORT_PRIVATE:' " +
          " " +
          "--include " +
          "$(location net/base/net_export.h) " +
@@ -3503,7 +3508,7 @@ genrule {
          "--cc-out-dir " +
          "$(genDir) " +
          "--cc-options " +
-         "dllexport_decl=NET_EXPORT_PRIVATE: " +
+         "dllexport_decl='NET_EXPORT_PRIVATE:' " +
          " " +
          "--include " +
          "$(location net/base/net_export.h) " +
@@ -5781,16 +5786,18 @@ genrule {
     name: "cronet_aml_tools_gritsettings_default_resource_ids",
     cmd: "$(location tools/grit/grit.py) update_resource_ids " +
          "-o " +
-         "gen/tools/gritsettings/default_resource_ids " +
+         "$(location tools/gritsettings/default_resource_ids) " +
          "--add-header " +
-         "--depfile " +
-         "gen/tools/gritsettings/default_resource_ids.d " +
+         "  " +
+         "  " +
          "--input " +
-         "../../tools/gritsettings/resource_ids.spec",
+         "$(location tools/gritsettings/resource_ids.spec)",
     out: [
         "tools/gritsettings/default_resource_ids",
     ],
     tool_files: [
+        "third_party/six/src/six.py",
+        "tools/grit/**/*.py",
         "tools/grit/grit.py",
         "tools/gritsettings/resource_ids.spec",
     ],
@@ -5931,6 +5938,7 @@ genrule {
         "url/url_jni_headers/Origin_jni.h",
     ],
     tool_files: [
+        "base/android/jni_generator/android_jar.classes",
         "base/android/jni_generator/jni_generator.py",
         "build/android/gyp/util/__init__.py",
         "build/android/gyp/util/build_utils.py",
