@@ -1963,9 +1963,6 @@ genrule {
 // GN: //net/cert:root_store_proto_full
 cc_library_static {
     name: "cronet_aml_net_cert_root_store_proto_full",
-    srcs: [
-        "out/test/clang_x64/gen/net/cert/root_store_proto_full/root_store.pb.cc",
-    ],
     static_libs: [
         "cronet_aml_third_party_protobuf_protobuf_full",
     ],
@@ -2204,9 +2201,6 @@ genrule {
 // GN: //net:isolation_info_proto
 cc_library_static {
     name: "cronet_aml_net_isolation_info_proto",
-    srcs: [
-        "out/test/gen/net/base/isolation_info.pb.cc",
-    ],
     shared_libs: [
         "liblog",
     ],
@@ -3015,7 +3009,6 @@ cc_library_static {
     name: "cronet_aml_net_net_nqe_proto",
     srcs: [
         ":cronet_aml_net_net_export_header",
-        "out/test/gen/net/nqe/proto/network_id_proto.pb.cc",
     ],
     shared_libs: [
         "liblog",
@@ -3267,11 +3260,6 @@ cc_library_static {
 // GN: //net/third_party/quiche:net_quic_proto
 cc_library_static {
     name: "cronet_aml_net_third_party_quiche_net_quic_proto",
-    srcs: [
-        "out/test/gen/net/third_party/quiche/src/quiche/quic/core/proto/cached_network_parameters.pb.cc",
-        "out/test/gen/net/third_party/quiche/src/quiche/quic/core/proto/crypto_server_config.pb.cc",
-        "out/test/gen/net/third_party/quiche/src/quiche/quic/core/proto/source_address_token.pb.cc",
-    ],
     shared_libs: [
         "libandroid",
         "liblog",
@@ -3405,7 +3393,6 @@ cc_library_static {
     name: "cronet_aml_net_third_party_quiche_net_quic_test_tools_proto",
     srcs: [
         ":cronet_aml_net_net_export_header",
-        "out/test/gen/net/third_party/quiche/src/quiche/quic/test_tools/send_algorithm_test_result.pb.cc",
     ],
     shared_libs: [
         "liblog",

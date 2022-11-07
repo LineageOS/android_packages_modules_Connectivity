@@ -1029,7 +1029,7 @@ def create_modules_from_target(blueprint, gn, gn_target_name):
   module.srcs.update(
       gn_utils.label_to_path(src)
       for src in target.sources
-      if is_supported_source_file(src))
+      if is_supported_source_file(src) and not src.startswith("//out/test"))
 
   local_include_dirs_set = set()
   if target.type in gn_utils.LINKER_UNIT_TYPES:
