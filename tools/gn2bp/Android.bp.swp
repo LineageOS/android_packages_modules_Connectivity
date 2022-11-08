@@ -1920,7 +1920,7 @@ genrule {
     tools: [
         "aprotoc",
     ],
-    cmd: "mkdir -p $(genDir)/external/chromium_org/ && $(location aprotoc) --proto_path=external/chromium_org --cpp_out=lite=true:$(genDir)/external/chromium_org/ $(in)",
+    cmd: "mkdir -p $(genDir)/external/chromium_org/net/cert/ && $(location aprotoc) --proto_path=external/chromium_org/net/cert --cpp_out=lite=true:$(genDir)/external/chromium_org/net/cert/ $(in)",
     out: [
         "external/chromium_org/net/cert/root_store.pb.cc",
     ],
@@ -1935,7 +1935,7 @@ genrule {
     tools: [
         "aprotoc",
     ],
-    cmd: "mkdir -p $(genDir)/external/chromium_org/ && $(location aprotoc) --proto_path=external/chromium_org --cpp_out=lite=true:$(genDir)/external/chromium_org/ $(in)",
+    cmd: "mkdir -p $(genDir)/external/chromium_org/net/cert/ && $(location aprotoc) --proto_path=external/chromium_org/net/cert --cpp_out=lite=true:$(genDir)/external/chromium_org/net/cert/ $(in)",
     out: [
         "external/chromium_org/net/cert/root_store.pb.h",
     ],
@@ -2089,7 +2089,7 @@ genrule {
     tools: [
         "aprotoc",
     ],
-    cmd: "mkdir -p $(genDir)/external/chromium_org/ && $(location aprotoc) --proto_path=external/chromium_org --cpp_out=lite=true:$(genDir)/external/chromium_org/ $(in)",
+    cmd: "mkdir -p $(genDir)/external/chromium_org/net/base/ && $(location aprotoc) --proto_path=external/chromium_org/net/base --cpp_out=lite=true:$(genDir)/external/chromium_org/net/base/ $(in)",
     out: [
         "external/chromium_org/net/base/isolation_info.pb.cc",
     ],
@@ -2104,7 +2104,7 @@ genrule {
     tools: [
         "aprotoc",
     ],
-    cmd: "mkdir -p $(genDir)/external/chromium_org/ && $(location aprotoc) --proto_path=external/chromium_org --cpp_out=lite=true:$(genDir)/external/chromium_org/ $(in)",
+    cmd: "mkdir -p $(genDir)/external/chromium_org/net/base/ && $(location aprotoc) --proto_path=external/chromium_org/net/base --cpp_out=lite=true:$(genDir)/external/chromium_org/net/base/ $(in)",
     out: [
         "external/chromium_org/net/base/isolation_info.pb.h",
     ],
@@ -2830,7 +2830,7 @@ genrule {
     tools: [
         "aprotoc",
     ],
-    cmd: "mkdir -p $(genDir)/external/chromium_org/ && $(location aprotoc) --proto_path=external/chromium_org --cpp_out=lite=true:$(genDir)/external/chromium_org/ $(in)",
+    cmd: "mkdir -p $(genDir)/external/chromium_org/net/nqe/proto/ && $(location aprotoc) --proto_path=external/chromium_org/net/nqe/proto --cpp_out=lite=true:$(genDir)/external/chromium_org/net/nqe/proto/ $(in)",
     out: [
         "external/chromium_org/net/nqe/proto/network_id_proto.pb.cc",
     ],
@@ -2845,7 +2845,7 @@ genrule {
     tools: [
         "aprotoc",
     ],
-    cmd: "mkdir -p $(genDir)/external/chromium_org/ && $(location aprotoc) --proto_path=external/chromium_org --cpp_out=lite=true:$(genDir)/external/chromium_org/ $(in)",
+    cmd: "mkdir -p $(genDir)/external/chromium_org/net/nqe/proto/ && $(location aprotoc) --proto_path=external/chromium_org/net/nqe/proto --cpp_out=lite=true:$(genDir)/external/chromium_org/net/nqe/proto/ $(in)",
     out: [
         "external/chromium_org/net/nqe/proto/network_id_proto.pb.h",
     ],
@@ -2916,7 +2916,7 @@ genrule {
     tools: [
         "aprotoc",
     ],
-    cmd: "mkdir -p $(genDir)/external/chromium_org/ && $(location aprotoc) --proto_path=external/chromium_org --cpp_out=lite=true:$(genDir)/external/chromium_org/ $(in)",
+    cmd: "mkdir -p $(genDir)/external/chromium_org/net/third_party/quiche/src/ && $(location aprotoc) --proto_path=external/chromium_org/net/third_party/quiche/src --cpp_out=lite=true:$(genDir)/external/chromium_org/net/third_party/quiche/src/ $(in)",
     out: [
         "external/chromium_org/net/third_party/quiche/src/quiche/quic/core/proto/cached_network_parameters.pb.cc",
         "external/chromium_org/net/third_party/quiche/src/quiche/quic/core/proto/crypto_server_config.pb.cc",
@@ -2935,7 +2935,7 @@ genrule {
     tools: [
         "aprotoc",
     ],
-    cmd: "mkdir -p $(genDir)/external/chromium_org/ && $(location aprotoc) --proto_path=external/chromium_org --cpp_out=lite=true:$(genDir)/external/chromium_org/ $(in)",
+    cmd: "mkdir -p $(genDir)/external/chromium_org/net/third_party/quiche/src/ && $(location aprotoc) --proto_path=external/chromium_org/net/third_party/quiche/src --cpp_out=lite=true:$(genDir)/external/chromium_org/net/third_party/quiche/src/ $(in)",
     out: [
         "external/chromium_org/net/third_party/quiche/src/quiche/quic/core/proto/cached_network_parameters.pb.h",
         "external/chromium_org/net/third_party/quiche/src/quiche/quic/core/proto/crypto_server_config.pb.h",
@@ -2956,7 +2956,7 @@ genrule {
     tools: [
         "aprotoc",
     ],
-    cmd: "mkdir -p $(genDir)/external/chromium_org/ && $(location aprotoc) --proto_path=external/chromium_org --cpp_out=lite=true:$(genDir)/external/chromium_org/ $(in)",
+    cmd: "mkdir -p $(genDir)/external/chromium_org/net/third_party/quiche/src/quiche/quic/test_tools/ && $(location aprotoc) --proto_path=external/chromium_org/net/third_party/quiche/src/quiche/quic/test_tools --cpp_out=lite=true:$(genDir)/external/chromium_org/net/third_party/quiche/src/quiche/quic/test_tools/ $(in)",
     out: [
         "external/chromium_org/net/third_party/quiche/src/quiche/quic/test_tools/send_algorithm_test_result.pb.cc",
     ],
@@ -2971,7 +2971,7 @@ genrule {
     tools: [
         "aprotoc",
     ],
-    cmd: "mkdir -p $(genDir)/external/chromium_org/ && $(location aprotoc) --proto_path=external/chromium_org --cpp_out=lite=true:$(genDir)/external/chromium_org/ $(in)",
+    cmd: "mkdir -p $(genDir)/external/chromium_org/net/third_party/quiche/src/quiche/quic/test_tools/ && $(location aprotoc) --proto_path=external/chromium_org/net/third_party/quiche/src/quiche/quic/test_tools --cpp_out=lite=true:$(genDir)/external/chromium_org/net/third_party/quiche/src/quiche/quic/test_tools/ $(in)",
     out: [
         "external/chromium_org/net/third_party/quiche/src/quiche/quic/test_tools/send_algorithm_test_result.pb.h",
     ],

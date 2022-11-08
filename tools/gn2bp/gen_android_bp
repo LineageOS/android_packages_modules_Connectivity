@@ -494,13 +494,13 @@ def create_proto_modules(blueprint, gn, target):
   assert (target.type == 'proto_library')
 
   tools = {'aprotoc'}
-  cpp_out_dir = '$(genDir)/%s/' % tree_path
+  cpp_out_dir = '$(genDir)/%s/%s/' % (tree_path, target.proto_in_dir)
   target_module_name = label_to_module_name(target.name)
 
   # In GN builds the proto path is always relative to the output directory
   # (out/tmp.xxx).
   cmd = ['mkdir -p %s &&' % cpp_out_dir, '$(location aprotoc)']
-  cmd += ['--proto_path=%s' % tree_path]
+  cmd += ['--proto_path=%s/%s' % (tree_path, target.proto_in_dir)]
 
   if buildtools_protobuf_src in target.proto_paths:
     cmd += ['--proto_path=%s' % android_protobuf_src]
