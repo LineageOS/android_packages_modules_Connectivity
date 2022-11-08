@@ -6101,14 +6101,12 @@ public class ConnectivityService extends IConnectivityManager.Stub
     }
 
     private void onUserAdded(@NonNull final UserHandle user) {
-        mPermissionMonitor.onUserAdded(user);
         if (mOemNetworkPreferences.getNetworkPreferences().size() > 0) {
             handleSetOemNetworkPreference(mOemNetworkPreferences, null);
         }
     }
 
     private void onUserRemoved(@NonNull final UserHandle user) {
-        mPermissionMonitor.onUserRemoved(user);
         // If there was a network preference for this user, remove it.
         handleSetProfileNetworkPreference(
                 List.of(new ProfileNetworkPreferenceList.Preference(user, null, true)),
