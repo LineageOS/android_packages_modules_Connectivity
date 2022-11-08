@@ -499,7 +499,7 @@ def create_proto_modules(blueprint, gn, target):
 
   # In GN builds the proto path is always relative to the output directory
   # (out/tmp.xxx).
-  cmd = ['mkdir -p %s &&' % cpp_out_dir, '$(location aprotoc)']
+  cmd = ['$(location aprotoc)']
   cmd += ['--proto_path=%s/%s' % (tree_path, target.proto_in_dir)]
 
   if buildtools_protobuf_src in target.proto_paths:
