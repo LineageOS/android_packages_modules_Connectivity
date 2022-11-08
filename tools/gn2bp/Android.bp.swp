@@ -1963,60 +1963,6 @@ genrule {
 }
 
 // GN: //net/cert:root_store_proto_full
-cc_library_static {
-    name: "cronet_aml_net_cert_root_store_proto_full",
-    srcs: [
-        ":cronet_aml_net_cert_root_store_proto_full_gen",
-    ],
-    static_libs: [
-        "cronet_aml_third_party_protobuf_protobuf_full",
-    ],
-    generated_headers: [
-        "cronet_aml_net_cert_root_store_proto_full_gen_headers",
-    ],
-    export_generated_headers: [
-        "cronet_aml_net_cert_root_store_proto_full_gen_headers",
-    ],
-    defaults: [
-        "cronet_aml_defaults",
-    ],
-    cflags: [
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
-        "-DCR_SYSROOT_KEY=20220331T153654Z-0",
-        "-DDCHECK_ALWAYS_ON=1",
-        "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
-        "-DGOOGLE_PROTOBUF_INTERNAL_DONATE_STEAL_INLINE=0",
-        "-DGOOGLE_PROTOBUF_NO_RTTI",
-        "-DGOOGLE_PROTOBUF_NO_STATIC_INITIALIZER",
-        "-DHAVE_PTHREAD",
-        "-DUSE_AURA=1",
-        "-DUSE_OZONE=1",
-        "-DUSE_UDEV",
-        "-D_DEBUG",
-        "-D_FILE_OFFSET_BITS=64",
-        "-D_GNU_SOURCE",
-        "-D_LARGEFILE64_SOURCE",
-        "-D_LARGEFILE_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
-        "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
-        "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D__STDC_CONSTANT_MACROS",
-        "-D__STDC_FORMAT_MACROS",
-    ],
-    local_include_dirs: [
-        "./",
-        "buildtools/third_party/libc++/",
-        "buildtools/third_party/libc++/trunk/include",
-        "buildtools/third_party/libc++abi/trunk/include",
-        "third_party/protobuf/src/",
-        "build/linux/debian_bullseye_amd64-sysroot/usr/include",
-    ],
-    cpp_std: "c++20",
-}
-
-// GN: //net/cert:root_store_proto_full_gen
 genrule {
     name: "cronet_aml_net_cert_root_store_proto_full_gen",
     srcs: [
@@ -2025,24 +1971,13 @@ genrule {
     tools: [
         "aprotoc",
     ],
-    cmd: "$(location tools/protoc_wrapper/protoc_wrapper.py) root_store.proto " +
-         "--protoc " +
-         "$(location aprotoc) " +
-         "--proto-in-dir " +
-         "external/chromium_org/net/cert " +
-         "--cc-out-dir " +
-         "$(genDir) " +
-         " " +
-         "",
+    cmd: "mkdir -p $(genDir)/external/chromium_org/ && $(location aprotoc) --proto_path=external/chromium_org --cpp_out=lite=true:$(genDir)/external/chromium_org/ $(in)",
     out: [
-        "root_store.pb.cc",
-    ],
-    tool_files: [
-        "tools/protoc_wrapper/protoc_wrapper.py",
+        "external/chromium_org/net/cert/root_store.pb.cc",
     ],
 }
 
-// GN: //net/cert:root_store_proto_full_gen
+// GN: //net/cert:root_store_proto_full
 genrule {
     name: "cronet_aml_net_cert_root_store_proto_full_gen_headers",
     srcs: [
@@ -2051,20 +1986,13 @@ genrule {
     tools: [
         "aprotoc",
     ],
-    cmd: "$(location tools/protoc_wrapper/protoc_wrapper.py) root_store.proto " +
-         "--protoc " +
-         "$(location aprotoc) " +
-         "--proto-in-dir " +
-         "external/chromium_org/net/cert " +
-         "--cc-out-dir " +
-         "$(genDir) " +
-         " " +
-         "",
+    cmd: "mkdir -p $(genDir)/external/chromium_org/ && $(location aprotoc) --proto_path=external/chromium_org --cpp_out=lite=true:$(genDir)/external/chromium_org/ $(in)",
     out: [
-        "root_store.pb.h",
+        "external/chromium_org/net/cert/root_store.pb.h",
     ],
-    tool_files: [
-        "tools/protoc_wrapper/protoc_wrapper.py",
+    export_include_dirs: [
+        ".",
+        "protos",
     ],
 }
 
@@ -2204,59 +2132,6 @@ genrule {
 }
 
 // GN: //net:isolation_info_proto
-cc_library_static {
-    name: "cronet_aml_net_isolation_info_proto",
-    srcs: [
-        ":cronet_aml_net_isolation_info_proto_gen",
-    ],
-    shared_libs: [
-        "liblog",
-    ],
-    static_libs: [
-        "cronet_aml_third_party_protobuf_protobuf_lite",
-    ],
-    generated_headers: [
-        "cronet_aml_net_isolation_info_proto_gen_headers",
-    ],
-    export_generated_headers: [
-        "cronet_aml_net_isolation_info_proto_gen_headers",
-    ],
-    defaults: [
-        "cronet_aml_defaults",
-    ],
-    cflags: [
-        "-DANDROID",
-        "-DANDROID_NDK_VERSION_ROLL=r23_1",
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
-        "-DDCHECK_ALWAYS_ON=1",
-        "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
-        "-DGOOGLE_PROTOBUF_INTERNAL_DONATE_STEAL_INLINE=0",
-        "-DGOOGLE_PROTOBUF_NO_RTTI",
-        "-DGOOGLE_PROTOBUF_NO_STATIC_INITIALIZER",
-        "-DHAVE_PTHREAD",
-        "-DHAVE_SYS_UIO_H",
-        "-D_DEBUG",
-        "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
-        "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
-        "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D__STDC_CONSTANT_MACROS",
-        "-D__STDC_FORMAT_MACROS",
-    ],
-    local_include_dirs: [
-        "./",
-        "buildtools/third_party/libc++/",
-        "buildtools/third_party/libc++/trunk/include",
-        "buildtools/third_party/libc++abi/trunk/include",
-        "third_party/protobuf/src/",
-        "third_party/android_ndk/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include",
-    ],
-    cpp_std: "c++20",
-}
-
-// GN: //net:isolation_info_proto_gen
 genrule {
     name: "cronet_aml_net_isolation_info_proto_gen",
     srcs: [
@@ -2265,24 +2140,13 @@ genrule {
     tools: [
         "aprotoc",
     ],
-    cmd: "$(location tools/protoc_wrapper/protoc_wrapper.py) isolation_info.proto " +
-         "--protoc " +
-         "$(location aprotoc) " +
-         "--proto-in-dir " +
-         "external/chromium_org/net/base " +
-         "--cc-out-dir " +
-         "$(genDir) " +
-         " " +
-         "",
+    cmd: "mkdir -p $(genDir)/external/chromium_org/ && $(location aprotoc) --proto_path=external/chromium_org --cpp_out=lite=true:$(genDir)/external/chromium_org/ $(in)",
     out: [
-        "isolation_info.pb.cc",
-    ],
-    tool_files: [
-        "tools/protoc_wrapper/protoc_wrapper.py",
+        "external/chromium_org/net/base/isolation_info.pb.cc",
     ],
 }
 
-// GN: //net:isolation_info_proto_gen
+// GN: //net:isolation_info_proto
 genrule {
     name: "cronet_aml_net_isolation_info_proto_gen_headers",
     srcs: [
@@ -2291,20 +2155,13 @@ genrule {
     tools: [
         "aprotoc",
     ],
-    cmd: "$(location tools/protoc_wrapper/protoc_wrapper.py) isolation_info.proto " +
-         "--protoc " +
-         "$(location aprotoc) " +
-         "--proto-in-dir " +
-         "external/chromium_org/net/base " +
-         "--cc-out-dir " +
-         "$(genDir) " +
-         " " +
-         "",
+    cmd: "mkdir -p $(genDir)/external/chromium_org/ && $(location aprotoc) --proto_path=external/chromium_org --cpp_out=lite=true:$(genDir)/external/chromium_org/ $(in)",
     out: [
-        "isolation_info.pb.h",
+        "external/chromium_org/net/base/isolation_info.pb.h",
     ],
-    tool_files: [
-        "tools/protoc_wrapper/protoc_wrapper.py",
+    export_include_dirs: [
+        ".",
+        "protos",
     ],
 }
 
@@ -2320,10 +2177,13 @@ cc_library_static {
         ":cronet_aml_net_dns_mdns_client",
         ":cronet_aml_net_dns_public_public",
         ":cronet_aml_net_http_transport_security_state_generated_files",
+        ":cronet_aml_net_isolation_info_proto_gen",
         ":cronet_aml_net_net_deps",
         ":cronet_aml_net_net_export_header",
+        ":cronet_aml_net_net_nqe_proto_gen",
         ":cronet_aml_net_net_public_deps",
         ":cronet_aml_net_net_resources",
+        ":cronet_aml_net_third_party_quiche_net_quic_test_tools_proto_gen",
         ":cronet_aml_net_traffic_annotation_traffic_annotation",
         "net/android/android_http_util.cc",
         "net/android/cert_verify_result_android.cc",
@@ -2812,15 +2672,13 @@ cc_library_static {
     shared_libs: [
         "libandroid",
         "liblog",
+        "libprotobuf-cpp-lite",
     ],
     static_libs: [
         "cronet_aml_base_base",
         "cronet_aml_base_third_party_dynamic_annotations_dynamic_annotations",
         "cronet_aml_crypto_crypto",
-        "cronet_aml_net_isolation_info_proto",
-        "cronet_aml_net_net_nqe_proto",
         "cronet_aml_net_preload_decoder",
-        "cronet_aml_net_third_party_quiche_net_quic_test_tools_proto",
         "cronet_aml_net_third_party_quiche_quiche",
         "cronet_aml_net_uri_template",
         "cronet_aml_third_party_boringssl_boringssl",
@@ -2836,7 +2694,10 @@ cc_library_static {
         "cronet_aml_build_chromeos_buildflags",
         "cronet_aml_net_buildflags",
         "cronet_aml_net_ios_cronet_buildflags",
+        "cronet_aml_net_isolation_info_proto_gen_headers",
         "cronet_aml_net_net_jni_headers",
+        "cronet_aml_net_net_nqe_proto_gen_headers",
+        "cronet_aml_net_third_party_quiche_net_quic_test_tools_proto_gen_headers",
         "cronet_aml_tools_grit_grit_sources",
         "cronet_aml_tools_gritsettings_default_resource_ids",
         "cronet_aml_url_buildflags",
@@ -2848,7 +2709,10 @@ cc_library_static {
         "cronet_aml_build_chromeos_buildflags",
         "cronet_aml_net_buildflags",
         "cronet_aml_net_ios_cronet_buildflags",
+        "cronet_aml_net_isolation_info_proto_gen_headers",
         "cronet_aml_net_net_jni_headers",
+        "cronet_aml_net_net_nqe_proto_gen_headers",
+        "cronet_aml_net_third_party_quiche_net_quic_test_tools_proto_gen_headers",
         "cronet_aml_tools_grit_grit_sources",
         "cronet_aml_tools_gritsettings_default_resource_ids",
         "cronet_aml_url_buildflags",
@@ -3014,121 +2878,36 @@ genrule {
 }
 
 // GN: //net:net_nqe_proto
-cc_library_static {
-    name: "cronet_aml_net_net_nqe_proto",
-    srcs: [
-        ":cronet_aml_net_net_export_header",
-        ":cronet_aml_net_net_nqe_proto_gen",
-    ],
-    shared_libs: [
-        "liblog",
-    ],
-    static_libs: [
-        "cronet_aml_third_party_protobuf_protobuf_lite",
-    ],
-    generated_headers: [
-        "cronet_aml_net_net_nqe_proto_gen_headers",
-    ],
-    export_generated_headers: [
-        "cronet_aml_net_net_nqe_proto_gen_headers",
-    ],
-    defaults: [
-        "cronet_aml_defaults",
-    ],
-    cflags: [
-        "-DANDROID",
-        "-DANDROID_NDK_VERSION_ROLL=r23_1",
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
-        "-DDCHECK_ALWAYS_ON=1",
-        "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
-        "-DGOOGLE_PROTOBUF_INTERNAL_DONATE_STEAL_INLINE=0",
-        "-DGOOGLE_PROTOBUF_NO_RTTI",
-        "-DGOOGLE_PROTOBUF_NO_STATIC_INITIALIZER",
-        "-DHAVE_PTHREAD",
-        "-DHAVE_SYS_UIO_H",
-        "-DNET_IMPLEMENTATION",
-        "-D_DEBUG",
-        "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
-        "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
-        "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D__STDC_CONSTANT_MACROS",
-        "-D__STDC_FORMAT_MACROS",
-    ],
-    local_include_dirs: [
-        "./",
-        "buildtools/third_party/libc++/",
-        "buildtools/third_party/libc++/trunk/include",
-        "buildtools/third_party/libc++abi/trunk/include",
-        "third_party/protobuf/src/",
-        "third_party/android_ndk/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include",
-    ],
-    cpp_std: "c++20",
-}
-
-// GN: //net:net_nqe_proto_gen
 genrule {
     name: "cronet_aml_net_net_nqe_proto_gen",
     srcs: [
-        "net/base/net_export.h",
         "net/nqe/proto/network_id_proto.proto",
     ],
     tools: [
         "aprotoc",
     ],
-    cmd: "$(location tools/protoc_wrapper/protoc_wrapper.py) network_id_proto.proto " +
-         "--protoc " +
-         "$(location aprotoc) " +
-         "--proto-in-dir " +
-         "external/chromium_org/net/nqe/proto " +
-         "--cc-out-dir " +
-         "$(genDir) " +
-         "--cc-options " +
-         "dllexport_decl='NET_EXPORT_PRIVATE:' " +
-         " " +
-         "--include " +
-         "$(location net/base/net_export.h) " +
-         " " +
-         "",
+    cmd: "mkdir -p $(genDir)/external/chromium_org/ && $(location aprotoc) --proto_path=external/chromium_org --cpp_out=lite=true:$(genDir)/external/chromium_org/ $(in)",
     out: [
-        "network_id_proto.pb.cc",
-    ],
-    tool_files: [
-        "tools/protoc_wrapper/protoc_wrapper.py",
+        "external/chromium_org/net/nqe/proto/network_id_proto.pb.cc",
     ],
 }
 
-// GN: //net:net_nqe_proto_gen
+// GN: //net:net_nqe_proto
 genrule {
     name: "cronet_aml_net_net_nqe_proto_gen_headers",
     srcs: [
-        "net/base/net_export.h",
         "net/nqe/proto/network_id_proto.proto",
     ],
     tools: [
         "aprotoc",
     ],
-    cmd: "$(location tools/protoc_wrapper/protoc_wrapper.py) network_id_proto.proto " +
-         "--protoc " +
-         "$(location aprotoc) " +
-         "--proto-in-dir " +
-         "external/chromium_org/net/nqe/proto " +
-         "--cc-out-dir " +
-         "$(genDir) " +
-         "--cc-options " +
-         "dllexport_decl='NET_EXPORT_PRIVATE:' " +
-         " " +
-         "--include " +
-         "$(location net/base/net_export.h) " +
-         " " +
-         "",
+    cmd: "mkdir -p $(genDir)/external/chromium_org/ && $(location aprotoc) --proto_path=external/chromium_org --cpp_out=lite=true:$(genDir)/external/chromium_org/ $(in)",
     out: [
-        "network_id_proto.pb.h",
+        "external/chromium_org/net/nqe/proto/network_id_proto.pb.h",
     ],
-    tool_files: [
-        "tools/protoc_wrapper/protoc_wrapper.py",
+    export_include_dirs: [
+        ".",
+        "protos",
     ],
 }
 
@@ -3270,68 +3049,9 @@ cc_library_static {
 }
 
 // GN: //net/third_party/quiche:net_quic_proto
-cc_library_static {
-    name: "cronet_aml_net_third_party_quiche_net_quic_proto",
-    srcs: [
-        ":cronet_aml_net_third_party_quiche_net_quic_proto_gen",
-    ],
-    shared_libs: [
-        "libandroid",
-        "liblog",
-    ],
-    static_libs: [
-        "cronet_aml_base_base",
-        "cronet_aml_third_party_protobuf_protobuf_lite",
-    ],
-    generated_headers: [
-        "cronet_aml_net_third_party_quiche_net_quic_proto_gen_headers",
-    ],
-    export_generated_headers: [
-        "cronet_aml_net_third_party_quiche_net_quic_proto_gen_headers",
-    ],
-    defaults: [
-        "cronet_aml_defaults",
-    ],
-    cflags: [
-        "-DANDROID",
-        "-DANDROID_NDK_VERSION_ROLL=r23_1",
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
-        "-DDCHECK_ALWAYS_ON=1",
-        "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
-        "-DGOOGLE_PROTOBUF_INTERNAL_DONATE_STEAL_INLINE=0",
-        "-DGOOGLE_PROTOBUF_NO_RTTI",
-        "-DGOOGLE_PROTOBUF_NO_STATIC_INITIALIZER",
-        "-DHAVE_PTHREAD",
-        "-DHAVE_SYS_UIO_H",
-        "-DIS_QUICHE_IMPL",
-        "-D_DEBUG",
-        "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
-        "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
-        "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D__STDC_CONSTANT_MACROS",
-        "-D__STDC_FORMAT_MACROS",
-    ],
-    local_include_dirs: [
-        "./",
-        "buildtools/third_party/libc++/",
-        "buildtools/third_party/libc++/trunk/include",
-        "buildtools/third_party/libc++abi/trunk/include",
-        "third_party/abseil-cpp/",
-        "third_party/boringssl/src/include/",
-        "third_party/protobuf/src/",
-        "third_party/android_ndk/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include",
-    ],
-    cpp_std: "c++20",
-}
-
-// GN: //net/third_party/quiche:net_quic_proto_gen
 genrule {
     name: "cronet_aml_net_third_party_quiche_net_quic_proto_gen",
     srcs: [
-        "base/component_export.h",
         "net/third_party/quiche/src/quiche/quic/core/proto/cached_network_parameters.proto",
         "net/third_party/quiche/src/quiche/quic/core/proto/crypto_server_config.proto",
         "net/third_party/quiche/src/quiche/quic/core/proto/source_address_token.proto",
@@ -3339,37 +3059,18 @@ genrule {
     tools: [
         "aprotoc",
     ],
-    cmd: "$(location tools/protoc_wrapper/protoc_wrapper.py) quiche/quic/core/proto/cached_network_parameters.proto " +
-         "quiche/quic/core/proto/crypto_server_config.proto " +
-         "quiche/quic/core/proto/source_address_token.proto " +
-         "--protoc " +
-         "$(location aprotoc) " +
-         "--proto-in-dir " +
-         "external/chromium_org/net/third_party/quiche/src " +
-         "--cc-out-dir " +
-         "$(genDir) " +
-         "--cc-options " +
-         "dllexport_decl='COMPONENT_EXPORT(QUICHE):' " +
-         " " +
-         "--include " +
-         "$(location base/component_export.h) " +
-         " " +
-         "",
+    cmd: "mkdir -p $(genDir)/external/chromium_org/ && $(location aprotoc) --proto_path=external/chromium_org --cpp_out=lite=true:$(genDir)/external/chromium_org/ $(in)",
     out: [
-        "cached_network_parameters.pb.cc",
-        "crypto_server_config.pb.cc",
-        "source_address_token.pb.cc",
-    ],
-    tool_files: [
-        "tools/protoc_wrapper/protoc_wrapper.py",
+        "external/chromium_org/net/third_party/quiche/src/quiche/quic/core/proto/cached_network_parameters.pb.cc",
+        "external/chromium_org/net/third_party/quiche/src/quiche/quic/core/proto/crypto_server_config.pb.cc",
+        "external/chromium_org/net/third_party/quiche/src/quiche/quic/core/proto/source_address_token.pb.cc",
     ],
 }
 
-// GN: //net/third_party/quiche:net_quic_proto_gen
+// GN: //net/third_party/quiche:net_quic_proto
 genrule {
     name: "cronet_aml_net_third_party_quiche_net_quic_proto_gen_headers",
     srcs: [
-        "base/component_export.h",
         "net/third_party/quiche/src/quiche/quic/core/proto/cached_network_parameters.proto",
         "net/third_party/quiche/src/quiche/quic/core/proto/crypto_server_config.proto",
         "net/third_party/quiche/src/quiche/quic/core/proto/source_address_token.proto",
@@ -3377,148 +3078,49 @@ genrule {
     tools: [
         "aprotoc",
     ],
-    cmd: "$(location tools/protoc_wrapper/protoc_wrapper.py) quiche/quic/core/proto/cached_network_parameters.proto " +
-         "quiche/quic/core/proto/crypto_server_config.proto " +
-         "quiche/quic/core/proto/source_address_token.proto " +
-         "--protoc " +
-         "$(location aprotoc) " +
-         "--proto-in-dir " +
-         "external/chromium_org/net/third_party/quiche/src " +
-         "--cc-out-dir " +
-         "$(genDir) " +
-         "--cc-options " +
-         "dllexport_decl='COMPONENT_EXPORT(QUICHE):' " +
-         " " +
-         "--include " +
-         "$(location base/component_export.h) " +
-         " " +
-         "",
+    cmd: "mkdir -p $(genDir)/external/chromium_org/ && $(location aprotoc) --proto_path=external/chromium_org --cpp_out=lite=true:$(genDir)/external/chromium_org/ $(in)",
     out: [
-        "cached_network_parameters.pb.h",
-        "crypto_server_config.pb.h",
-        "source_address_token.pb.h",
+        "external/chromium_org/net/third_party/quiche/src/quiche/quic/core/proto/cached_network_parameters.pb.h",
+        "external/chromium_org/net/third_party/quiche/src/quiche/quic/core/proto/crypto_server_config.pb.h",
+        "external/chromium_org/net/third_party/quiche/src/quiche/quic/core/proto/source_address_token.pb.h",
     ],
-    tool_files: [
-        "tools/protoc_wrapper/protoc_wrapper.py",
+    export_include_dirs: [
+        ".",
+        "protos",
     ],
 }
 
 // GN: //net/third_party/quiche:net_quic_test_tools_proto
-cc_library_static {
-    name: "cronet_aml_net_third_party_quiche_net_quic_test_tools_proto",
-    srcs: [
-        ":cronet_aml_net_net_export_header",
-        ":cronet_aml_net_third_party_quiche_net_quic_test_tools_proto_gen",
-    ],
-    shared_libs: [
-        "liblog",
-    ],
-    static_libs: [
-        "cronet_aml_third_party_protobuf_protobuf_lite",
-    ],
-    generated_headers: [
-        "cronet_aml_net_third_party_quiche_net_quic_test_tools_proto_gen_headers",
-    ],
-    export_generated_headers: [
-        "cronet_aml_net_third_party_quiche_net_quic_test_tools_proto_gen_headers",
-    ],
-    defaults: [
-        "cronet_aml_defaults",
-    ],
-    cflags: [
-        "-DANDROID",
-        "-DANDROID_NDK_VERSION_ROLL=r23_1",
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
-        "-DDCHECK_ALWAYS_ON=1",
-        "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
-        "-DGOOGLE_PROTOBUF_INTERNAL_DONATE_STEAL_INLINE=0",
-        "-DGOOGLE_PROTOBUF_NO_RTTI",
-        "-DGOOGLE_PROTOBUF_NO_STATIC_INITIALIZER",
-        "-DHAVE_PTHREAD",
-        "-DHAVE_SYS_UIO_H",
-        "-DNET_IMPLEMENTATION",
-        "-D_DEBUG",
-        "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
-        "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
-        "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D__STDC_CONSTANT_MACROS",
-        "-D__STDC_FORMAT_MACROS",
-    ],
-    local_include_dirs: [
-        "./",
-        "buildtools/third_party/libc++/",
-        "buildtools/third_party/libc++/trunk/include",
-        "buildtools/third_party/libc++abi/trunk/include",
-        "third_party/protobuf/src/",
-        "third_party/android_ndk/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include",
-    ],
-    cpp_std: "c++20",
-}
-
-// GN: //net/third_party/quiche:net_quic_test_tools_proto_gen
 genrule {
     name: "cronet_aml_net_third_party_quiche_net_quic_test_tools_proto_gen",
     srcs: [
-        "net/base/net_export.h",
         "net/third_party/quiche/src/quiche/quic/test_tools/send_algorithm_test_result.proto",
     ],
     tools: [
         "aprotoc",
     ],
-    cmd: "$(location tools/protoc_wrapper/protoc_wrapper.py) send_algorithm_test_result.proto " +
-         "--protoc " +
-         "$(location aprotoc) " +
-         "--proto-in-dir " +
-         "external/chromium_org/net/third_party/quiche/src/quiche/quic/test_tools " +
-         "--cc-out-dir " +
-         "$(genDir) " +
-         "--cc-options " +
-         "dllexport_decl='NET_EXPORT_PRIVATE:' " +
-         " " +
-         "--include " +
-         "$(location net/base/net_export.h) " +
-         " " +
-         "",
+    cmd: "mkdir -p $(genDir)/external/chromium_org/ && $(location aprotoc) --proto_path=external/chromium_org --cpp_out=lite=true:$(genDir)/external/chromium_org/ $(in)",
     out: [
-        "send_algorithm_test_result.pb.cc",
-    ],
-    tool_files: [
-        "tools/protoc_wrapper/protoc_wrapper.py",
+        "external/chromium_org/net/third_party/quiche/src/quiche/quic/test_tools/send_algorithm_test_result.pb.cc",
     ],
 }
 
-// GN: //net/third_party/quiche:net_quic_test_tools_proto_gen
+// GN: //net/third_party/quiche:net_quic_test_tools_proto
 genrule {
     name: "cronet_aml_net_third_party_quiche_net_quic_test_tools_proto_gen_headers",
     srcs: [
-        "net/base/net_export.h",
         "net/third_party/quiche/src/quiche/quic/test_tools/send_algorithm_test_result.proto",
     ],
     tools: [
         "aprotoc",
     ],
-    cmd: "$(location tools/protoc_wrapper/protoc_wrapper.py) send_algorithm_test_result.proto " +
-         "--protoc " +
-         "$(location aprotoc) " +
-         "--proto-in-dir " +
-         "external/chromium_org/net/third_party/quiche/src/quiche/quic/test_tools " +
-         "--cc-out-dir " +
-         "$(genDir) " +
-         "--cc-options " +
-         "dllexport_decl='NET_EXPORT_PRIVATE:' " +
-         " " +
-         "--include " +
-         "$(location net/base/net_export.h) " +
-         " " +
-         "",
+    cmd: "mkdir -p $(genDir)/external/chromium_org/ && $(location aprotoc) --proto_path=external/chromium_org --cpp_out=lite=true:$(genDir)/external/chromium_org/ $(in)",
     out: [
-        "send_algorithm_test_result.pb.h",
+        "external/chromium_org/net/third_party/quiche/src/quiche/quic/test_tools/send_algorithm_test_result.pb.h",
     ],
-    tool_files: [
-        "tools/protoc_wrapper/protoc_wrapper.py",
+    export_include_dirs: [
+        ".",
+        "protos",
     ],
 }
 
@@ -3526,6 +3128,7 @@ genrule {
 cc_library_static {
     name: "cronet_aml_net_third_party_quiche_quiche",
     srcs: [
+        ":cronet_aml_net_third_party_quiche_net_quic_proto_gen",
         ":cronet_aml_third_party_abseil_cpp_absl",
         ":cronet_aml_third_party_abseil_cpp_absl_algorithm_algorithm",
         ":cronet_aml_third_party_abseil_cpp_absl_algorithm_container",
@@ -3920,10 +3523,10 @@ cc_library_static {
     shared_libs: [
         "libandroid",
         "liblog",
+        "libprotobuf-cpp-lite",
     ],
     static_libs: [
         "cronet_aml_base_base",
-        "cronet_aml_net_third_party_quiche_net_quic_proto",
         "cronet_aml_net_uri_template",
         "cronet_aml_third_party_boringssl_boringssl",
         "cronet_aml_third_party_protobuf_protobuf_lite",
@@ -3932,9 +3535,11 @@ cc_library_static {
     ],
     generated_headers: [
         "cronet_aml_build_chromeos_buildflags",
+        "cronet_aml_net_third_party_quiche_net_quic_proto_gen_headers",
     ],
     export_generated_headers: [
         "cronet_aml_build_chromeos_buildflags",
+        "cronet_aml_net_third_party_quiche_net_quic_proto_gen_headers",
     ],
     defaults: [
         "cronet_aml_defaults",
@@ -3985,13 +3590,19 @@ cc_binary {
     srcs: [
         ":cronet_aml_buildtools_third_party_libc___libc__",
         ":cronet_aml_buildtools_third_party_libc__abi_libc__abi",
+        ":cronet_aml_net_cert_root_store_proto_full_gen",
         "net/tools/root_store_tool/root_store_tool.cc",
+    ],
+    shared_libs: [
+        "libprotobuf-cpp-lite",
     ],
     static_libs: [
         "cronet_aml_base_base",
         "cronet_aml_crypto_crypto",
-        "cronet_aml_net_cert_root_store_proto_full",
         "cronet_aml_third_party_boringssl_boringssl",
+    ],
+    generated_headers: [
+        "cronet_aml_net_cert_root_store_proto_full_gen_headers",
     ],
     defaults: [
         "cronet_aml_defaults",

@@ -353,10 +353,10 @@ class GnParser(object):
     gen_desc = self.gn_desc_.get('%s_gen%s' % (name, toolchain))
     if gen_desc is None or gen_desc['type'] != 'action':
       return None, None
-    args = gen_desc.get('args', [])
-    if '/protoc' not in args[0]:
+    if gen_desc['script'] != '//tools/protoc_wrapper/protoc_wrapper.py':
       return None, None
     plugin = 'proto'
+    args = gen_desc.get('args', [])
     for arg in (arg for arg in args if arg.startswith('--plugin=')):
       # |arg| at this point looks like:
       #  --plugin=protoc-gen-plugin=gcc_like_host/protozero_plugin
