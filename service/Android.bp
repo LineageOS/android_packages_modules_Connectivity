@@ -179,7 +179,6 @@ java_library {
         "networkstack-client",
         "PlatformProperties",
         "service-connectivity-protos",
-        "service-connectivity-stats-protos",
         "NetworkStackApiStableShims",
     ],
     apex_available: [
@@ -289,20 +288,6 @@ java_library {
     name: "service-connectivity",
     defaults: ["service-connectivity-defaults"],
     installable: true,
-}
-
-java_library_static {
-    name: "service-connectivity-stats-protos",
-    sdk_version: "system_current",
-    min_sdk_version: "30",
-    proto: {
-        type: "lite",
-    },
-    srcs: [
-        "src/com/android/metrics/stats.proto",
-    ],
-    static_libs: ["ConnectivityServiceprotos"],
-    apex_available: ["com.android.tethering"],
 }
 
 genrule {

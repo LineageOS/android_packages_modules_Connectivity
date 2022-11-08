@@ -2944,8 +2944,7 @@ public class ConnectivityServiceTest {
 
     @Test
     public void testRequiresValidation() {
-        assertTrue(NetworkMonitorUtils.isValidationRequired(false /* isDunValidationRequired */,
-                false /* isVpnValidationRequired */,
+        assertTrue(NetworkMonitorUtils.isValidationRequired(false /* isVpnValidationRequired */,
                 mCm.getDefaultRequest().networkCapabilities));
     }
 
@@ -8315,7 +8314,6 @@ public class ConnectivityServiceTest {
         // VPN networks do not satisfy the default request and are automatically validated
         // by NetworkMonitor
         assertFalse(NetworkMonitorUtils.isValidationRequired(
-                false /* isDunValidationRequired */,
                 NetworkAgentConfigShimImpl.newInstance(mMockVpn.getNetworkAgentConfig())
                         .isVpnValidationRequired(),
                 mMockVpn.getAgent().getNetworkCapabilities()));
@@ -8468,7 +8466,6 @@ public class ConnectivityServiceTest {
         assertTrue(nc.hasCapability(NET_CAPABILITY_INTERNET));
 
         assertFalse(NetworkMonitorUtils.isValidationRequired(
-                false /* isDunValidationRequired */,
                 NetworkAgentConfigShimImpl.newInstance(mMockVpn.getNetworkAgentConfig())
                         .isVpnValidationRequired(),
                 mMockVpn.getAgent().getNetworkCapabilities()));

@@ -3088,57 +3088,6 @@ filegroup {
     name: "cronet_aml_ipc_param_traits",
 }
 
-// GN: //net/base/registry_controlled_domains:registry_controlled_domains
-genrule {
-    name: "cronet_aml_net_base_registry_controlled_domains_registry_controlled_domains",
-    cmd: "$(location net/tools/dafsa/make_dafsa.py) --reverse " +
-         "$(location net/base/registry_controlled_domains/effective_tld_names.gperf) " +
-         "$(location net/base/registry_controlled_domains/effective_tld_names-reversed-inc.cc) " +
-         "&& python3 $(location net/tools/dafsa/make_dafsa.py) " +
-         "--reverse " +
-         "$(location net/base/registry_controlled_domains/effective_tld_names_unittest1.gperf) " +
-         "$(location net/base/registry_controlled_domains/effective_tld_names_unittest1-reversed-inc.cc) " +
-         "&& python3 $(location net/tools/dafsa/make_dafsa.py) " +
-         "--reverse " +
-         "$(location net/base/registry_controlled_domains/effective_tld_names_unittest2.gperf) " +
-         "$(location net/base/registry_controlled_domains/effective_tld_names_unittest2-reversed-inc.cc) " +
-         "&& python3 $(location net/tools/dafsa/make_dafsa.py) " +
-         "--reverse " +
-         "$(location net/base/registry_controlled_domains/effective_tld_names_unittest3.gperf) " +
-         "$(location net/base/registry_controlled_domains/effective_tld_names_unittest3-reversed-inc.cc) " +
-         "&& python3 $(location net/tools/dafsa/make_dafsa.py) " +
-         "--reverse " +
-         "$(location net/base/registry_controlled_domains/effective_tld_names_unittest4.gperf) " +
-         "$(location net/base/registry_controlled_domains/effective_tld_names_unittest4-reversed-inc.cc) " +
-         "&& python3 $(location net/tools/dafsa/make_dafsa.py) " +
-         "--reverse " +
-         "$(location net/base/registry_controlled_domains/effective_tld_names_unittest5.gperf) " +
-         "$(location net/base/registry_controlled_domains/effective_tld_names_unittest5-reversed-inc.cc) " +
-         "&& python3 $(location net/tools/dafsa/make_dafsa.py) " +
-         "--reverse " +
-         "$(location net/base/registry_controlled_domains/effective_tld_names_unittest6.gperf) " +
-         "$(location net/base/registry_controlled_domains/effective_tld_names_unittest6-reversed-inc.cc)",
-    out: [
-        "net/base/registry_controlled_domains/effective_tld_names-reversed-inc.cc",
-        "net/base/registry_controlled_domains/effective_tld_names_unittest1-reversed-inc.cc",
-        "net/base/registry_controlled_domains/effective_tld_names_unittest2-reversed-inc.cc",
-        "net/base/registry_controlled_domains/effective_tld_names_unittest3-reversed-inc.cc",
-        "net/base/registry_controlled_domains/effective_tld_names_unittest4-reversed-inc.cc",
-        "net/base/registry_controlled_domains/effective_tld_names_unittest5-reversed-inc.cc",
-        "net/base/registry_controlled_domains/effective_tld_names_unittest6-reversed-inc.cc",
-    ],
-    tool_files: [
-        "net/base/registry_controlled_domains/effective_tld_names.gperf",
-        "net/base/registry_controlled_domains/effective_tld_names_unittest1.gperf",
-        "net/base/registry_controlled_domains/effective_tld_names_unittest2.gperf",
-        "net/base/registry_controlled_domains/effective_tld_names_unittest3.gperf",
-        "net/base/registry_controlled_domains/effective_tld_names_unittest4.gperf",
-        "net/base/registry_controlled_domains/effective_tld_names_unittest5.gperf",
-        "net/base/registry_controlled_domains/effective_tld_names_unittest6.gperf",
-        "net/tools/dafsa/make_dafsa.py",
-    ],
-}
-
 // GN: //net:buildflags
 genrule {
     name: "cronet_aml_net_buildflags",
@@ -3213,20 +3162,17 @@ genrule {
     srcs: [
         "net/cert/root_store.proto",
     ],
-    tools: [
-        "aprotoc",
-    ],
     cmd: "$(location tools/protoc_wrapper/protoc_wrapper.py) root_store.proto " +
          "--protoc " +
-         "$(location aprotoc) " +
+         "./clang_x64/protoc " +
          "--proto-in-dir " +
-         "`dirname $(location net/cert/root_store.proto)` " +
+         "../../net/cert " +
          "--cc-out-dir " +
          "clang_x64/gen/net/cert/root_store_proto_full/ " +
          "--py-out-dir " +
-         "$(genDir)/clang_x64/pyproto/net/cert/root_store_proto_full/",
+         "clang_x64/pyproto/net/cert/root_store_proto_full/",
     out: [
-        "clang_x64/pyproto/net/cert/root_store_proto_full/root_store_pb2.py",
+        "//out/test/clang_x64/pyproto/net/cert/root_store_proto_full/root_store_pb2.py",
         "net/cert/root_store_proto_full/root_store.pb.cc",
         "net/cert/root_store_proto_full/root_store.pb.h",
     ],
@@ -3423,22 +3369,19 @@ genrule {
     srcs: [
         "net/base/isolation_info.proto",
     ],
-    tools: [
-        "aprotoc",
-    ],
     cmd: "$(location tools/protoc_wrapper/protoc_wrapper.py) isolation_info.proto " +
          "--protoc " +
-         "$(location aprotoc) " +
+         "./clang_x64/protoc " +
          "--proto-in-dir " +
-         "`dirname $(location net/base/isolation_info.proto)` " +
+         "../../net/base " +
          "--cc-out-dir " +
-         "$(genDir)/net/base " +
+         "gen/net/base " +
          "--py-out-dir " +
-         "$(genDir)/pyproto/net/base",
+         "pyproto/net/base",
     out: [
+        "//out/test/pyproto/net/base/isolation_info_pb2.py",
         "net/base/isolation_info.pb.cc",
         "net/base/isolation_info.pb.h",
-        "pyproto/net/base/isolation_info_pb2.py",
     ],
     tool_files: [
         "tools/protoc_wrapper/protoc_wrapper.py",
@@ -4202,30 +4145,26 @@ cc_library_static {
 genrule {
     name: "cronet_aml_net_net_nqe_proto_gen",
     srcs: [
-        "net/base/net_export.h",
         "net/nqe/proto/network_id_proto.proto",
-    ],
-    tools: [
-        "aprotoc",
     ],
     cmd: "$(location tools/protoc_wrapper/protoc_wrapper.py) network_id_proto.proto " +
          "--protoc " +
-         "$(location aprotoc) " +
+         "./clang_x64/protoc " +
          "--proto-in-dir " +
-         "`dirname $(location net/nqe/proto/network_id_proto.proto)` " +
+         "../../net/nqe/proto " +
          "--cc-out-dir " +
-         "$(genDir)/net/nqe/proto " +
+         "gen/net/nqe/proto " +
          "--cc-options " +
-         "dllexport_decl=NET_EXPORT_PRIVATE: " +
-         " " +
+         "dllexport_decl " +
+         "NET_EXPORT_PRIVATE: " +
          "--include " +
-         "$(location net/base/net_export.h) " +
+         "net/base/net_export.h " +
          "--py-out-dir " +
-         "$(genDir)/pyproto/net/nqe/proto",
+         "pyproto/net/nqe/proto",
     out: [
+        "//out/test/pyproto/net/nqe/proto/network_id_proto_pb2.py",
         "net/nqe/proto/network_id_proto.pb.cc",
         "net/nqe/proto/network_id_proto.pb.h",
-        "pyproto/net/nqe/proto/network_id_proto_pb2.py",
     ],
     tool_files: [
         "tools/protoc_wrapper/protoc_wrapper.py",
@@ -4425,40 +4364,36 @@ cc_library_static {
 genrule {
     name: "cronet_aml_net_third_party_quiche_net_quic_proto_gen",
     srcs: [
-        "base/component_export.h",
         "net/third_party/quiche/src/quiche/quic/core/proto/cached_network_parameters.proto",
         "net/third_party/quiche/src/quiche/quic/core/proto/crypto_server_config.proto",
         "net/third_party/quiche/src/quiche/quic/core/proto/source_address_token.proto",
-    ],
-    tools: [
-        "aprotoc",
     ],
     cmd: "$(location tools/protoc_wrapper/protoc_wrapper.py) quiche/quic/core/proto/cached_network_parameters.proto " +
          "quiche/quic/core/proto/crypto_server_config.proto " +
          "quiche/quic/core/proto/source_address_token.proto " +
          "--protoc " +
-         "$(location aprotoc) " +
+         "./clang_x64/protoc " +
          "--proto-in-dir " +
-         "`dirname $(location net/third_party/quiche/src/quiche/quic/core/proto/cached_network_parameters.proto)`/../../../../ " +
+         "../../net/third_party/quiche/src " +
          "--cc-out-dir " +
-         "$(genDir)/net/third_party/quiche/src " +
+         "gen/net/third_party/quiche/src " +
          "--cc-options " +
-         "dllexport_decl=COMPONENT_EXPORT(QUICHE): " +
-         " " +
+         "dllexport_decl " +
+         "COMPONENT_EXPORT(QUICHE): " +
          "--include " +
-         "$(location base/component_export.h) " +
+         "base/component_export.h " +
          "--py-out-dir " +
-         "$(genDir)/pyproto/net/third_party/quiche/src",
+         "pyproto/net/third_party/quiche/src",
     out: [
+        "//out/test/pyproto/net/third_party/quiche/src/quiche/quic/core/proto/cached_network_parameters_pb2.py",
+        "//out/test/pyproto/net/third_party/quiche/src/quiche/quic/core/proto/crypto_server_config_pb2.py",
+        "//out/test/pyproto/net/third_party/quiche/src/quiche/quic/core/proto/source_address_token_pb2.py",
         "net/third_party/quiche/src/quiche/quic/core/proto/cached_network_parameters.pb.cc",
         "net/third_party/quiche/src/quiche/quic/core/proto/cached_network_parameters.pb.h",
         "net/third_party/quiche/src/quiche/quic/core/proto/crypto_server_config.pb.cc",
         "net/third_party/quiche/src/quiche/quic/core/proto/crypto_server_config.pb.h",
         "net/third_party/quiche/src/quiche/quic/core/proto/source_address_token.pb.cc",
         "net/third_party/quiche/src/quiche/quic/core/proto/source_address_token.pb.h",
-        "pyproto/net/third_party/quiche/src/quiche/quic/core/proto/cached_network_parameters_pb2.py",
-        "pyproto/net/third_party/quiche/src/quiche/quic/core/proto/crypto_server_config_pb2.py",
-        "pyproto/net/third_party/quiche/src/quiche/quic/core/proto/source_address_token_pb2.py",
     ],
     tool_files: [
         "tools/protoc_wrapper/protoc_wrapper.py",
@@ -4518,30 +4453,26 @@ cc_library_static {
 genrule {
     name: "cronet_aml_net_third_party_quiche_net_quic_test_tools_proto_gen",
     srcs: [
-        "net/base/net_export.h",
         "net/third_party/quiche/src/quiche/quic/test_tools/send_algorithm_test_result.proto",
-    ],
-    tools: [
-        "aprotoc",
     ],
     cmd: "$(location tools/protoc_wrapper/protoc_wrapper.py) send_algorithm_test_result.proto " +
          "--protoc " +
-         "$(location aprotoc) " +
+         "./clang_x64/protoc " +
          "--proto-in-dir " +
-         "`dirname $(location net/third_party/quiche/src/quiche/quic/test_tools/send_algorithm_test_result.proto)` " +
+         "../../net/third_party/quiche/src/quiche/quic/test_tools " +
          "--cc-out-dir " +
-         "$(genDir)/net/third_party/quiche/src/quiche/quic/test_tools " +
+         "gen/net/third_party/quiche/src/quiche/quic/test_tools " +
          "--cc-options " +
-         "dllexport_decl=NET_EXPORT_PRIVATE: " +
-         " " +
+         "dllexport_decl " +
+         "NET_EXPORT_PRIVATE: " +
          "--include " +
-         "$(location net/base/net_export.h) " +
+         "net/base/net_export.h " +
          "--py-out-dir " +
-         "$(genDir)/pyproto/net/third_party/quiche/src/quiche/quic/test_tools",
+         "pyproto/net/third_party/quiche/src/quiche/quic/test_tools",
     out: [
+        "//out/test/pyproto/net/third_party/quiche/src/quiche/quic/test_tools/send_algorithm_test_result_pb2.py",
         "net/third_party/quiche/src/quiche/quic/test_tools/send_algorithm_test_result.pb.cc",
         "net/third_party/quiche/src/quiche/quic/test_tools/send_algorithm_test_result.pb.h",
-        "pyproto/net/third_party/quiche/src/quiche/quic/test_tools/send_algorithm_test_result_pb2.py",
     ],
     tool_files: [
         "tools/protoc_wrapper/protoc_wrapper.py",
@@ -9615,6 +9546,190 @@ cc_library_static {
         "buildtools/third_party/libc++abi/trunk/include",
         "third_party/protobuf/src/",
         "third_party/android_ndk/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include",
+    ],
+    cpp_std: "c++20",
+}
+
+// GN: //third_party/protobuf:protoc
+cc_binary {
+    name: "cronet_aml_third_party_protobuf_protoc",
+    srcs: [
+        ":cronet_aml_buildtools_third_party_libc___libc__",
+        ":cronet_aml_buildtools_third_party_libc__abi_libc__abi",
+        "third_party/protobuf/src/google/protobuf/compiler/main.cc",
+    ],
+    static_libs: [
+        "cronet_aml_third_party_protobuf_protoc_lib",
+    ],
+    defaults: [
+        "cronet_aml_defaults",
+    ],
+    cflags: [
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
+        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_SYSROOT_KEY=20220331T153654Z-0",
+        "-DDCHECK_ALWAYS_ON=1",
+        "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
+        "-DGOOGLE_PROTOBUF_INTERNAL_DONATE_STEAL_INLINE=0",
+        "-DGOOGLE_PROTOBUF_NO_RTTI",
+        "-DGOOGLE_PROTOBUF_NO_STATIC_INITIALIZER",
+        "-DHAVE_PTHREAD",
+        "-DLIBCXXABI_SILENT_TERMINATE",
+        "-DLIBCXX_BUILDING_LIBCXXABI",
+        "-DUSE_AURA=1",
+        "-DUSE_OZONE=1",
+        "-DUSE_UDEV",
+        "-D_DEBUG",
+        "-D_FILE_OFFSET_BITS=64",
+        "-D_GNU_SOURCE",
+        "-D_LARGEFILE64_SOURCE",
+        "-D_LARGEFILE_SOURCE",
+        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
+        "-D_LIBCPP_BUILDING_LIBRARY",
+        "-D_LIBCPP_CONSTINIT=constinit",
+        "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
+        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
+        "-D_LIBCPP_OVERRIDABLE_FUNC_VIS=__attribute__((__visibility__(\"default\")))",
+        "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
+    ],
+    local_include_dirs: [
+        "./",
+        "buildtools/third_party/libc++/",
+        "buildtools/third_party/libc++/trunk/include",
+        "buildtools/third_party/libc++/trunk/src/",
+        "buildtools/third_party/libc++abi/trunk/include",
+        "third_party/protobuf/src/",
+        "build/linux/debian_bullseye_amd64-sysroot/usr/include",
+    ],
+    cpp_std: "c++20",
+}
+
+// GN: //third_party/protobuf:protoc_lib
+cc_library_static {
+    name: "cronet_aml_third_party_protobuf_protoc_lib",
+    srcs: [
+        "third_party/protobuf/src/google/protobuf/compiler/code_generator.cc",
+        "third_party/protobuf/src/google/protobuf/compiler/command_line_interface.cc",
+        "third_party/protobuf/src/google/protobuf/compiler/cpp/cpp_enum.cc",
+        "third_party/protobuf/src/google/protobuf/compiler/cpp/cpp_enum_field.cc",
+        "third_party/protobuf/src/google/protobuf/compiler/cpp/cpp_extension.cc",
+        "third_party/protobuf/src/google/protobuf/compiler/cpp/cpp_field.cc",
+        "third_party/protobuf/src/google/protobuf/compiler/cpp/cpp_file.cc",
+        "third_party/protobuf/src/google/protobuf/compiler/cpp/cpp_generator.cc",
+        "third_party/protobuf/src/google/protobuf/compiler/cpp/cpp_helpers.cc",
+        "third_party/protobuf/src/google/protobuf/compiler/cpp/cpp_map_field.cc",
+        "third_party/protobuf/src/google/protobuf/compiler/cpp/cpp_message.cc",
+        "third_party/protobuf/src/google/protobuf/compiler/cpp/cpp_message_field.cc",
+        "third_party/protobuf/src/google/protobuf/compiler/cpp/cpp_padding_optimizer.cc",
+        "third_party/protobuf/src/google/protobuf/compiler/cpp/cpp_parse_function_generator.cc",
+        "third_party/protobuf/src/google/protobuf/compiler/cpp/cpp_primitive_field.cc",
+        "third_party/protobuf/src/google/protobuf/compiler/cpp/cpp_service.cc",
+        "third_party/protobuf/src/google/protobuf/compiler/cpp/cpp_string_field.cc",
+        "third_party/protobuf/src/google/protobuf/compiler/csharp/csharp_doc_comment.cc",
+        "third_party/protobuf/src/google/protobuf/compiler/csharp/csharp_enum.cc",
+        "third_party/protobuf/src/google/protobuf/compiler/csharp/csharp_enum_field.cc",
+        "third_party/protobuf/src/google/protobuf/compiler/csharp/csharp_field_base.cc",
+        "third_party/protobuf/src/google/protobuf/compiler/csharp/csharp_generator.cc",
+        "third_party/protobuf/src/google/protobuf/compiler/csharp/csharp_helpers.cc",
+        "third_party/protobuf/src/google/protobuf/compiler/csharp/csharp_map_field.cc",
+        "third_party/protobuf/src/google/protobuf/compiler/csharp/csharp_message.cc",
+        "third_party/protobuf/src/google/protobuf/compiler/csharp/csharp_message_field.cc",
+        "third_party/protobuf/src/google/protobuf/compiler/csharp/csharp_primitive_field.cc",
+        "third_party/protobuf/src/google/protobuf/compiler/csharp/csharp_reflection_class.cc",
+        "third_party/protobuf/src/google/protobuf/compiler/csharp/csharp_repeated_enum_field.cc",
+        "third_party/protobuf/src/google/protobuf/compiler/csharp/csharp_repeated_message_field.cc",
+        "third_party/protobuf/src/google/protobuf/compiler/csharp/csharp_repeated_primitive_field.cc",
+        "third_party/protobuf/src/google/protobuf/compiler/csharp/csharp_source_generator_base.cc",
+        "third_party/protobuf/src/google/protobuf/compiler/csharp/csharp_wrapper_field.cc",
+        "third_party/protobuf/src/google/protobuf/compiler/java/java_context.cc",
+        "third_party/protobuf/src/google/protobuf/compiler/java/java_doc_comment.cc",
+        "third_party/protobuf/src/google/protobuf/compiler/java/java_enum.cc",
+        "third_party/protobuf/src/google/protobuf/compiler/java/java_enum_field.cc",
+        "third_party/protobuf/src/google/protobuf/compiler/java/java_enum_field_lite.cc",
+        "third_party/protobuf/src/google/protobuf/compiler/java/java_enum_lite.cc",
+        "third_party/protobuf/src/google/protobuf/compiler/java/java_extension.cc",
+        "third_party/protobuf/src/google/protobuf/compiler/java/java_extension_lite.cc",
+        "third_party/protobuf/src/google/protobuf/compiler/java/java_field.cc",
+        "third_party/protobuf/src/google/protobuf/compiler/java/java_file.cc",
+        "third_party/protobuf/src/google/protobuf/compiler/java/java_generator.cc",
+        "third_party/protobuf/src/google/protobuf/compiler/java/java_generator_factory.cc",
+        "third_party/protobuf/src/google/protobuf/compiler/java/java_helpers.cc",
+        "third_party/protobuf/src/google/protobuf/compiler/java/java_kotlin_generator.cc",
+        "third_party/protobuf/src/google/protobuf/compiler/java/java_map_field.cc",
+        "third_party/protobuf/src/google/protobuf/compiler/java/java_map_field_lite.cc",
+        "third_party/protobuf/src/google/protobuf/compiler/java/java_message.cc",
+        "third_party/protobuf/src/google/protobuf/compiler/java/java_message_builder.cc",
+        "third_party/protobuf/src/google/protobuf/compiler/java/java_message_builder_lite.cc",
+        "third_party/protobuf/src/google/protobuf/compiler/java/java_message_field.cc",
+        "third_party/protobuf/src/google/protobuf/compiler/java/java_message_field_lite.cc",
+        "third_party/protobuf/src/google/protobuf/compiler/java/java_message_lite.cc",
+        "third_party/protobuf/src/google/protobuf/compiler/java/java_name_resolver.cc",
+        "third_party/protobuf/src/google/protobuf/compiler/java/java_primitive_field.cc",
+        "third_party/protobuf/src/google/protobuf/compiler/java/java_primitive_field_lite.cc",
+        "third_party/protobuf/src/google/protobuf/compiler/java/java_service.cc",
+        "third_party/protobuf/src/google/protobuf/compiler/java/java_shared_code_generator.cc",
+        "third_party/protobuf/src/google/protobuf/compiler/java/java_string_field.cc",
+        "third_party/protobuf/src/google/protobuf/compiler/java/java_string_field_lite.cc",
+        "third_party/protobuf/src/google/protobuf/compiler/js/js_generator.cc",
+        "third_party/protobuf/src/google/protobuf/compiler/js/well_known_types_embed.cc",
+        "third_party/protobuf/src/google/protobuf/compiler/objectivec/objectivec_enum.cc",
+        "third_party/protobuf/src/google/protobuf/compiler/objectivec/objectivec_enum_field.cc",
+        "third_party/protobuf/src/google/protobuf/compiler/objectivec/objectivec_extension.cc",
+        "third_party/protobuf/src/google/protobuf/compiler/objectivec/objectivec_field.cc",
+        "third_party/protobuf/src/google/protobuf/compiler/objectivec/objectivec_file.cc",
+        "third_party/protobuf/src/google/protobuf/compiler/objectivec/objectivec_generator.cc",
+        "third_party/protobuf/src/google/protobuf/compiler/objectivec/objectivec_helpers.cc",
+        "third_party/protobuf/src/google/protobuf/compiler/objectivec/objectivec_map_field.cc",
+        "third_party/protobuf/src/google/protobuf/compiler/objectivec/objectivec_message.cc",
+        "third_party/protobuf/src/google/protobuf/compiler/objectivec/objectivec_message_field.cc",
+        "third_party/protobuf/src/google/protobuf/compiler/objectivec/objectivec_oneof.cc",
+        "third_party/protobuf/src/google/protobuf/compiler/objectivec/objectivec_primitive_field.cc",
+        "third_party/protobuf/src/google/protobuf/compiler/php/php_generator.cc",
+        "third_party/protobuf/src/google/protobuf/compiler/plugin.cc",
+        "third_party/protobuf/src/google/protobuf/compiler/plugin.pb.cc",
+        "third_party/protobuf/src/google/protobuf/compiler/python/python_generator.cc",
+        "third_party/protobuf/src/google/protobuf/compiler/python/python_helpers.cc",
+        "third_party/protobuf/src/google/protobuf/compiler/python/python_pyi_generator.cc",
+        "third_party/protobuf/src/google/protobuf/compiler/ruby/ruby_generator.cc",
+        "third_party/protobuf/src/google/protobuf/compiler/subprocess.cc",
+        "third_party/protobuf/src/google/protobuf/compiler/zip_writer.cc",
+    ],
+    static_libs: [
+        "cronet_aml_third_party_protobuf_protobuf_full",
+    ],
+    defaults: [
+        "cronet_aml_defaults",
+    ],
+    cflags: [
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
+        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_SYSROOT_KEY=20220331T153654Z-0",
+        "-DDCHECK_ALWAYS_ON=1",
+        "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
+        "-DGOOGLE_PROTOBUF_INTERNAL_DONATE_STEAL_INLINE=0",
+        "-DGOOGLE_PROTOBUF_NO_RTTI",
+        "-DGOOGLE_PROTOBUF_NO_STATIC_INITIALIZER",
+        "-DHAVE_PTHREAD",
+        "-DUSE_AURA=1",
+        "-DUSE_OZONE=1",
+        "-DUSE_UDEV",
+        "-D_DEBUG",
+        "-D_FILE_OFFSET_BITS=64",
+        "-D_GNU_SOURCE",
+        "-D_LARGEFILE64_SOURCE",
+        "-D_LARGEFILE_SOURCE",
+        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
+        "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
+        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
+        "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
+    ],
+    local_include_dirs: [
+        "./",
+        "buildtools/third_party/libc++/",
+        "buildtools/third_party/libc++/trunk/include",
+        "buildtools/third_party/libc++abi/trunk/include",
+        "third_party/protobuf/src/",
+        "build/linux/debian_bullseye_amd64-sysroot/usr/include",
     ],
     cpp_std: "c++20",
 }
