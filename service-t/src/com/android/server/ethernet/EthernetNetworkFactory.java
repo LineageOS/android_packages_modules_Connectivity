@@ -269,10 +269,10 @@ public class EthernetNetworkFactory {
         private final Set<Integer> mRequestIds = new ArraySet<>();
 
         private volatile @Nullable IpClientManager mIpClient;
-        private @NonNull NetworkCapabilities mCapabilities;
+        private NetworkCapabilities mCapabilities;
         private @Nullable EthernetIpClientCallback mIpClientCallback;
         private @Nullable EthernetNetworkAgent mNetworkAgent;
-        private @Nullable IpConfiguration mIpConfig;
+        private IpConfiguration mIpConfig;
 
         /**
          * A map of TRANSPORT_* types to legacy transport types available for each type an ethernet
