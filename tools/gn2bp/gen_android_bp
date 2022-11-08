@@ -887,35 +887,6 @@ def create_action_module(blueprint, target):
         filename = re.sub('^\.\./\.\./', '', target.args[i + 1])
         # This is an output file so use $(location %s)
         target.args[i + 1] = '$(location %s)' % filename
-  elif target.script == "//tools/protoc_wrapper/protoc_wrapper.py":
-    # Use protoc in the android
-    module.tools.add("aprotoc")
-    target.outputs = [os.path.basename(out) for out in target.outputs]
-    for i, val in enumerate(target.args):
-      if val == '--protoc':
-        target.args[i + 1] = '$(location aprotoc)'
-      elif val == '--proto-in-dir':
-        # --proto-in-dir is a relative directory from Android croot.
-        # TODO: deleting the leading ../../ is a very common operation -- put
-        # it in a function.
-        proto_path = re.sub('^\.\./\.\./', '', target.args[i + 1])
-        target.args[i + 1] = tree_path + '/' + proto_path
-      elif val == '--cc-out-dir':
-        target.args[i + 1] = '$(genDir)'
-      elif val == 'dllexport_decl':
-        # Needs to be dllexport_decl=value format
-        target.args[i] = '%s=\'%s\'' % (target.args[i], target.args[i + 1])
-        target.args[i+1] = ''
-      elif val == '--include':
-        # This file can be got from filegroup this target depends on, but currently we don't add .h
-        # files to the srcs. So far this is the only case .h files need to be added to the srcs.
-        # So, for now, adding specific for this target.
-        module.srcs.add(target.args[i+1])
-        target.args[i + 1] = '$(location %s)' % target.args[i + 1]
-      elif val == "--py-out-dir":
-        # pb2.py files are not used by others.
-        target.args[i] = ''
-        target.args[i + 1] = ''
 
   script = gn_utils.label_to_path(target.script)
   module.tool_files.add(script)
@@ -967,16 +938,6 @@ def create_action_module(blueprint, target):
   elif target.script == "//tools/grit/stamp_grit_sources.py":
     # stamp_grit_sources.py is not executable
     module.cmd = "python " + module.cmd
-  elif target.script == "//tools/protoc_wrapper/protoc_wrapper.py":
-    # Split module to source module and header module.
-    # Source module has the .cc files and header module has the .h files in the out.
-    header_module = copy.deepcopy(module)
-    header_module.name += "_headers"
-    header_module.out = [file for file in header_module.out if os.path.splitext(file)[1] == '.h']
-    module.out = [file for file in module.out if os.path.splitext(file)[1] == '.cc']
-    module.genrule_headers.add(header_module.name)
-    module.genrule_srcs.add(':' + module.name)
-    blueprint.add_module(header_module)
   elif target.script == "//base/android/jni_generator/jni_generator.py":
     # android_jar.classes should be part of the tools as it list implicit classes
     # for the script to generate JNI headers.
