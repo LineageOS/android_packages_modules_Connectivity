@@ -1891,57 +1891,6 @@ java_library {
     ],
 }
 
-// GN: //net/base/registry_controlled_domains:registry_controlled_domains
-genrule {
-    name: "cronet_aml_net_base_registry_controlled_domains_registry_controlled_domains",
-    cmd: "$(location net/tools/dafsa/make_dafsa.py) --reverse " +
-         "$(location net/base/registry_controlled_domains/effective_tld_names.gperf) " +
-         "$(location net/base/registry_controlled_domains/effective_tld_names-reversed-inc.cc) " +
-         "&& python3 $(location net/tools/dafsa/make_dafsa.py) " +
-         "--reverse " +
-         "$(location net/base/registry_controlled_domains/effective_tld_names_unittest1.gperf) " +
-         "$(location net/base/registry_controlled_domains/effective_tld_names_unittest1-reversed-inc.cc) " +
-         "&& python3 $(location net/tools/dafsa/make_dafsa.py) " +
-         "--reverse " +
-         "$(location net/base/registry_controlled_domains/effective_tld_names_unittest2.gperf) " +
-         "$(location net/base/registry_controlled_domains/effective_tld_names_unittest2-reversed-inc.cc) " +
-         "&& python3 $(location net/tools/dafsa/make_dafsa.py) " +
-         "--reverse " +
-         "$(location net/base/registry_controlled_domains/effective_tld_names_unittest3.gperf) " +
-         "$(location net/base/registry_controlled_domains/effective_tld_names_unittest3-reversed-inc.cc) " +
-         "&& python3 $(location net/tools/dafsa/make_dafsa.py) " +
-         "--reverse " +
-         "$(location net/base/registry_controlled_domains/effective_tld_names_unittest4.gperf) " +
-         "$(location net/base/registry_controlled_domains/effective_tld_names_unittest4-reversed-inc.cc) " +
-         "&& python3 $(location net/tools/dafsa/make_dafsa.py) " +
-         "--reverse " +
-         "$(location net/base/registry_controlled_domains/effective_tld_names_unittest5.gperf) " +
-         "$(location net/base/registry_controlled_domains/effective_tld_names_unittest5-reversed-inc.cc) " +
-         "&& python3 $(location net/tools/dafsa/make_dafsa.py) " +
-         "--reverse " +
-         "$(location net/base/registry_controlled_domains/effective_tld_names_unittest6.gperf) " +
-         "$(location net/base/registry_controlled_domains/effective_tld_names_unittest6-reversed-inc.cc)",
-    out: [
-        "net/base/registry_controlled_domains/effective_tld_names-reversed-inc.cc",
-        "net/base/registry_controlled_domains/effective_tld_names_unittest1-reversed-inc.cc",
-        "net/base/registry_controlled_domains/effective_tld_names_unittest2-reversed-inc.cc",
-        "net/base/registry_controlled_domains/effective_tld_names_unittest3-reversed-inc.cc",
-        "net/base/registry_controlled_domains/effective_tld_names_unittest4-reversed-inc.cc",
-        "net/base/registry_controlled_domains/effective_tld_names_unittest5-reversed-inc.cc",
-        "net/base/registry_controlled_domains/effective_tld_names_unittest6-reversed-inc.cc",
-    ],
-    tool_files: [
-        "net/base/registry_controlled_domains/effective_tld_names.gperf",
-        "net/base/registry_controlled_domains/effective_tld_names_unittest1.gperf",
-        "net/base/registry_controlled_domains/effective_tld_names_unittest2.gperf",
-        "net/base/registry_controlled_domains/effective_tld_names_unittest3.gperf",
-        "net/base/registry_controlled_domains/effective_tld_names_unittest4.gperf",
-        "net/base/registry_controlled_domains/effective_tld_names_unittest5.gperf",
-        "net/base/registry_controlled_domains/effective_tld_names_unittest6.gperf",
-        "net/tools/dafsa/make_dafsa.py",
-    ],
-}
-
 // GN: //net:buildflags
 genrule {
     name: "cronet_aml_net_buildflags",
@@ -2182,7 +2131,6 @@ cc_library_static {
         ":cronet_aml_net_net_export_header",
         ":cronet_aml_net_net_nqe_proto_gen",
         ":cronet_aml_net_net_public_deps",
-        ":cronet_aml_net_net_resources",
         ":cronet_aml_net_third_party_quiche_net_quic_test_tools_proto_gen",
         ":cronet_aml_net_traffic_annotation_traffic_annotation",
         "net/android/android_http_util.cc",
@@ -2698,8 +2646,6 @@ cc_library_static {
         "cronet_aml_net_net_jni_headers",
         "cronet_aml_net_net_nqe_proto_gen_headers",
         "cronet_aml_net_third_party_quiche_net_quic_test_tools_proto_gen_headers",
-        "cronet_aml_tools_grit_grit_sources",
-        "cronet_aml_tools_gritsettings_default_resource_ids",
         "cronet_aml_url_buildflags",
     ],
     export_generated_headers: [
@@ -2713,8 +2659,6 @@ cc_library_static {
         "cronet_aml_net_net_jni_headers",
         "cronet_aml_net_net_nqe_proto_gen_headers",
         "cronet_aml_net_third_party_quiche_net_quic_test_tools_proto_gen_headers",
-        "cronet_aml_tools_grit_grit_sources",
-        "cronet_aml_tools_gritsettings_default_resource_ids",
         "cronet_aml_url_buildflags",
     ],
     defaults: [
@@ -2914,93 +2858,6 @@ genrule {
 // GN: //net:net_public_deps
 filegroup {
     name: "cronet_aml_net_net_public_deps",
-}
-
-// GN: //net:net_resources
-filegroup {
-    name: "cronet_aml_net_net_resources",
-}
-
-// GN: //net:net_resources_grit
-genrule {
-    name: "cronet_aml_net_net_resources_grit",
-    cmd: "$(location tools/grit/grit.py) -i " +
-         "$(location net/base/net_resources.grd) " +
-         "build " +
-         "-o " +
-         "$(genDir)/net " +
-         "--depdir " +
-         ". " +
-         "  " +
-         "  " +
-         "--write-only-new " +
-         "1 " +
-         "--depend-on-stamp " +
-         "-D " +
-         "DEVTOOLS_GRD_PATH " +
-         "gen/third_party/devtools-frontend/src/front_end/devtools_resources " +
-         "-D " +
-         "SHARED_INTERMEDIATE_DIR " +
-         "gen " +
-         "-D " +
-         "_google_chrome " +
-         "false " +
-         "-D " +
-         "_google_chrome_for_testing " +
-         "false " +
-         "-D " +
-         "chromeos_ash " +
-         "false " +
-         "-D " +
-         "chromeos_lacros " +
-         "false " +
-         "-D " +
-         "reven " +
-         "false " +
-         "-D " +
-         "toolkit_views " +
-         "false " +
-         "-D " +
-         "use_aura " +
-         "false " +
-         "-D " +
-         "use_ozone " +
-         "false " +
-         "-D " +
-         "use_titlecase " +
-         "false " +
-         "-E " +
-         "root_gen_dir " +
-         "gen " +
-         "-E " +
-         "root_src_dir " +
-         "../../ " +
-         "-E " +
-         "CHROMIUM_BUILD " +
-         "chromium " +
-         "-E " +
-         "ANDROID_JAVA_TAGGED_ONLY " +
-         "true " +
-         "-t " +
-         "android " +
-         "-f " +
-         "gen/tools/gritsettings/default_resource_ids " +
-         "--assert-file-list " +
-         "obj/net/net_resources_expected_outputs.txt",
-    out: [
-        "net/grit/net_resources.h",
-        "net/net_resources.pak",
-        "net/net_resources.pak.info",
-        "net/net_resources_grit.d.stamp",
-    ],
-    tool_files: [
-        "net/base/net_resources.grd",
-        "out/test/gen/tools/gritsettings/default_resource_ids",
-        "out/test/obj/net/net_resources_expected_outputs.txt",
-        "third_party/six/src/six.py",
-        "tools/grit/**/*.py",
-        "tools/grit/grit.py",
-    ],
 }
 
 // GN: //net:preload_decoder
@@ -5375,43 +5232,6 @@ filegroup {
 // GN: //third_party/zlib:zlib_slide_hash_simd
 filegroup {
     name: "cronet_aml_third_party_zlib_zlib_slide_hash_simd",
-}
-
-// GN: //tools/grit:grit_sources
-genrule {
-    name: "cronet_aml_tools_grit_grit_sources",
-    cmd: "python $(location tools/grit/stamp_grit_sources.py) `dirname $(location tools/grit/grit.py)` " +
-         "$(out) " +
-         "$(genDir)/grit_sources.d",
-    out: [
-        "out/test/obj/tools/grit/grit_sources.script.stamp",
-    ],
-    tool_files: [
-        "tools/grit/grit.py",
-        "tools/grit/stamp_grit_sources.py",
-    ],
-}
-
-// GN: //tools/gritsettings:default_resource_ids
-genrule {
-    name: "cronet_aml_tools_gritsettings_default_resource_ids",
-    cmd: "$(location tools/grit/grit.py) update_resource_ids " +
-         "-o " +
-         "$(location tools/gritsettings/default_resource_ids) " +
-         "--add-header " +
-         "  " +
-         "  " +
-         "--input " +
-         "$(location tools/gritsettings/resource_ids.spec)",
-    out: [
-        "tools/gritsettings/default_resource_ids",
-    ],
-    tool_files: [
-        "third_party/six/src/six.py",
-        "tools/grit/**/*.py",
-        "tools/grit/grit.py",
-        "tools/gritsettings/resource_ids.spec",
-    ],
 }
 
 // GN: //url:buildflags
