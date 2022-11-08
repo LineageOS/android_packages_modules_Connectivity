@@ -2943,6 +2943,7 @@ genrule {
     ],
     export_include_dirs: [
         ".",
+        "net/third_party/quiche/src",
         "protos",
     ],
 }
