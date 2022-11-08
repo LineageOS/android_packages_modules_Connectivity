@@ -2029,7 +2029,7 @@ genrule {
          "--protoc " +
          "$(location aprotoc) " +
          "--proto-in-dir " +
-         "`dirname $(location net/cert/root_store.proto)` " +
+         "external/chromium_org/net/cert " +
          "--cc-out-dir " +
          "$(genDir) " +
          " " +
@@ -2055,7 +2055,7 @@ genrule {
          "--protoc " +
          "$(location aprotoc) " +
          "--proto-in-dir " +
-         "`dirname $(location net/cert/root_store.proto)` " +
+         "external/chromium_org/net/cert " +
          "--cc-out-dir " +
          "$(genDir) " +
          " " +
@@ -2269,7 +2269,7 @@ genrule {
          "--protoc " +
          "$(location aprotoc) " +
          "--proto-in-dir " +
-         "`dirname $(location net/base/isolation_info.proto)` " +
+         "external/chromium_org/net/base " +
          "--cc-out-dir " +
          "$(genDir) " +
          " " +
@@ -2295,7 +2295,7 @@ genrule {
          "--protoc " +
          "$(location aprotoc) " +
          "--proto-in-dir " +
-         "`dirname $(location net/base/isolation_info.proto)` " +
+         "external/chromium_org/net/base " +
          "--cc-out-dir " +
          "$(genDir) " +
          " " +
@@ -3082,7 +3082,7 @@ genrule {
          "--protoc " +
          "$(location aprotoc) " +
          "--proto-in-dir " +
-         "`dirname $(location net/nqe/proto/network_id_proto.proto)` " +
+         "external/chromium_org/net/nqe/proto " +
          "--cc-out-dir " +
          "$(genDir) " +
          "--cc-options " +
@@ -3114,7 +3114,7 @@ genrule {
          "--protoc " +
          "$(location aprotoc) " +
          "--proto-in-dir " +
-         "`dirname $(location net/nqe/proto/network_id_proto.proto)` " +
+         "external/chromium_org/net/nqe/proto " +
          "--cc-out-dir " +
          "$(genDir) " +
          "--cc-options " +
@@ -3345,7 +3345,7 @@ genrule {
          "--protoc " +
          "$(location aprotoc) " +
          "--proto-in-dir " +
-         "`dirname $(location net/third_party/quiche/src/quiche/quic/core/proto/cached_network_parameters.proto)`/../../../../ " +
+         "external/chromium_org/net/third_party/quiche/src " +
          "--cc-out-dir " +
          "$(genDir) " +
          "--cc-options " +
@@ -3383,7 +3383,7 @@ genrule {
          "--protoc " +
          "$(location aprotoc) " +
          "--proto-in-dir " +
-         "`dirname $(location net/third_party/quiche/src/quiche/quic/core/proto/cached_network_parameters.proto)`/../../../../ " +
+         "external/chromium_org/net/third_party/quiche/src " +
          "--cc-out-dir " +
          "$(genDir) " +
          "--cc-options " +
@@ -3472,7 +3472,7 @@ genrule {
          "--protoc " +
          "$(location aprotoc) " +
          "--proto-in-dir " +
-         "`dirname $(location net/third_party/quiche/src/quiche/quic/test_tools/send_algorithm_test_result.proto)` " +
+         "external/chromium_org/net/third_party/quiche/src/quiche/quic/test_tools " +
          "--cc-out-dir " +
          "$(genDir) " +
          "--cc-options " +
@@ -3504,7 +3504,7 @@ genrule {
          "--protoc " +
          "$(location aprotoc) " +
          "--proto-in-dir " +
-         "`dirname $(location net/third_party/quiche/src/quiche/quic/test_tools/send_algorithm_test_result.proto)` " +
+         "external/chromium_org/net/third_party/quiche/src/quiche/quic/test_tools " +
          "--cc-out-dir " +
          "$(genDir) " +
          "--cc-options " +
