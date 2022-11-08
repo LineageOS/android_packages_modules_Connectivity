@@ -89,7 +89,7 @@ static_library_allowlist = [
 defaults_module = module_prefix + 'defaults'
 
 # Location of the project in the Android source tree.
-tree_path = 'external/perfetto'
+tree_path = 'external/chromium_org'
 
 # Path for the protobuf sources in the standalone build.
 buildtools_protobuf_src = '//buildtools/protobuf/src'
@@ -895,14 +895,11 @@ def create_action_module(blueprint, target):
       if val == '--protoc':
         target.args[i + 1] = '$(location aprotoc)'
       elif val == '--proto-in-dir':
-        # Proto files in the cmd is relative path from --proto-in-dir
-        # Proto files are specified as filenames without directory except net_quic_proto_gen
-        # So getting directory from source file
-        proto_file = gn_utils.label_to_path(sorted(list(target.sources))[0])
-        target.args[i + 1] = '`dirname $(location %s)`' % proto_file
-        # Adjusting path for net_quic_proto_gen
-        if target.name == "//net/third_party/quiche:net_quic_proto_gen":
-          target.args[i + 1] += '/../../../../'
+        # --proto-in-dir is a relative directory from Android croot.
+        # TODO: deleting the leading ../../ is a very common operation -- put
+        # it in a function.
+        proto_path = re.sub('^\.\./\.\./', '', target.args[i + 1])
+        target.args[i + 1] = tree_path + '/' + proto_path
       elif val == '--cc-out-dir':
         target.args[i + 1] = '$(genDir)'
       elif val == 'dllexport_decl':
