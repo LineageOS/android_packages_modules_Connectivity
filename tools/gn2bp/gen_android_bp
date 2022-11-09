@@ -119,12 +119,13 @@ def enable_protobuf_full(module):
   elif module.host_supported:
     module.host.static_libs.add('libprotobuf-cpp-full')
     module.android.shared_libs.add('libprotobuf-cpp-full')
-  else:
+  elif module.type not in ['genrule', 'filegroup']:
     module.shared_libs.add('libprotobuf-cpp-full')
 
 
 def enable_protobuf_lite(module):
-  module.shared_libs.add('libprotobuf-cpp-lite')
+  if module.type not in ['genrule', 'filegroup']:
+    module.shared_libs.add('libprotobuf-cpp-lite')
 
 
 def enable_protoc_lib(module):
@@ -199,18 +200,10 @@ builtin_deps = {
         lambda x: None,
     '//gn:gtest_main':
         lambda x: None,
-    '//gn:protoc':
-        lambda x: None,
     '//gn:gtest_and_gmock':
         enable_gtest_and_gmock,
     '//gn:libunwind':
         enable_libunwind,
-    '//gn:protobuf_full':
-        enable_protobuf_full,
-    '//gn:protobuf_lite':
-        enable_protobuf_lite,
-    '//gn:protoc_lib':
-        enable_protoc_lib,
     '//gn:libunwindstack':
         enable_libunwindstack,
     '//gn:sqlite':
@@ -223,6 +216,12 @@ builtin_deps = {
         enable_bionic_libc_platform_headers_on_android,
     '//third_party/protobuf:protoc':
       lambda x: None,
+    '//third_party/protobuf:protobuf_full':
+        enable_protobuf_full,
+    '//third_party/protobuf:protobuf_lite':
+        enable_protobuf_lite,
+    '//third_party/protobuf:protoc_lib':
+        enable_protoc_lib,
 }
 
 # ----------------------------------------------------------------------------
