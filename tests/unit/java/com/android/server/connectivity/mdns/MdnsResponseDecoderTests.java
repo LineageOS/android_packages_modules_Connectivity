@@ -26,11 +26,14 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
 
+import android.net.InetAddresses;
+
 import com.android.net.module.util.HexDump;
 import com.android.testutils.DevSdkIgnoreRule;
 import com.android.testutils.DevSdkIgnoreRunner;
 
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
@@ -106,9 +109,49 @@ public class MdnsResponseDecoderTests {
             + "63616C0000018001000000780004C0A8010A000001800100000078"
             + "0004C0A8010A00000000000000");
 
+    // Expected to contain two SRV records which point to the same hostname.
+    private static final byte[] matterDuplicateHostname = HexDump.hexStringToByteArray(
+            "00008000000000080000000A095F7365727669636573075F646E732D73"
+            + "64045F756470056C6F63616C00000C000100000078000F075F6D61"
+            + "74746572045F746370C023C00C000C000100000078001A125F4943"
+            + "324639453337374632454139463430045F737562C034C034000C00"
+            + "0100000078002421433246394533373746324541394634302D3030"
+            + "3030303030304534443041334641C034C04F000C00010000007800"
+            + "02C075C00C000C0001000000780002C034C00C000C000100000078"
+            + "0015125F4941413035363731333439334135343144C062C034000C"
+            + "000100000078002421414130353637313334393341353431442D30"
+            + "303030303030304331324446303344C034C0C1000C000100000078"
+            + "0002C0E2C075002100010000007800150000000015A40C33433631"
+            + "3035304338394638C023C07500100001000011940015084352493D"
+            + "35303030074352413D33303003543D31C126001C00010000007800"
+            + "10FE800000000000003E6105FFFE0C89F8C126001C000100000078"
+            + "00102605A601A84657003E6105FFFE0C89F8C12600010001000000"
+            + "780004C0A8018AC0E2002100010000007800080000000015A4C126"
+            + "C0E200100001000011940015084352493D35303030074352413D33"
+            + "303003543D31C126001C0001000000780010FE800000000000003E"
+            + "6105FFFE0C89F8C126001C00010000007800102605A601A8465700"
+            + "3E6105FFFE0C89F8C12600010001000000780004C0A8018A313035"
+            + "304338394638C02300010001000000780004C0A8018AC0A0001000"
+            + "0100001194003A0E56503D36353532312B3332373639084352493D"
+            + "35303030074352413D33303003543D3106443D3236353704434D3D"
+            + "320550483D33360350493D21433246394533373746324541394634"
+            + "302D30303030303030304534443041334641C0F700210001000000"
+            + "7800150000000015A40C334336313035304338394638C023214332"
+            + "46394533373746324541394634302D303030303030303045344430"
+            + "41334641C0F700100001000011940015084352493D353030300743"
+            + "52413D33303003543D310C334336313035304338394638C023001C"
+            + "0001000000780010FE800000000000003E6105FFFE0C89F80C3343"
+            + "36313035304338394638C023001C00010000007800102605A601A8"
+            + "4657003E6105FFFE0C89F80C334336313035304338394638C02300"
+            + "010001000000780004C0A8018A0000000000000000000000000000"
+            + "000000");
+
     private static final String CAST_SERVICE_NAME = "_googlecast";
     private static final String[] CAST_SERVICE_TYPE =
             new String[] {CAST_SERVICE_NAME, "_tcp", "local"};
+    private static final String MATTER_SERVICE_NAME = "_matter";
+    private static final String[] MATTER_SERVICE_TYPE =
+            new String[] {MATTER_SERVICE_NAME, "_tcp", "local"};
 
     private final List<MdnsResponse> responses = new LinkedList<>();
 
@@ -248,5 +291,63 @@ public class MdnsResponseDecoderTests {
         assertEquals(errorCode, MdnsResponseDecoder.SUCCESS);
         assertEquals(responses.size(), 1);
         assertEquals(responses.get(0).getInterfaceIndex(), 10);
+    }
+
+    @Test
+    public void decode_singleHostname_multipleSrvRecords_flagEnabled_multipleCompleteResponses() {
+        //MdnsScannerConfigsFlagsImpl.allowMultipleSrvRecordsPerHost.override(true);
+        MdnsResponseDecoder decoder = new MdnsResponseDecoder(mClock, MATTER_SERVICE_TYPE);
+        assertNotNull(matterDuplicateHostname);
+
+        DatagramPacket packet =
+                new DatagramPacket(matterDuplicateHostname, matterDuplicateHostname.length);
+
+        packet.setSocketAddress(
+                new InetSocketAddress(MdnsConstants.getMdnsIPv6Address(), MdnsConstants.MDNS_PORT));
+
+        responses.clear();
+        int errorCode = decoder.decode(packet, responses, /* interfaceIndex= */ 0);
+        assertEquals(MdnsResponseDecoder.SUCCESS, errorCode);
+
+        // This should emit two records:
+        assertEquals(2, responses.size());
+
+        MdnsResponse response1 = responses.get(0);
+        MdnsResponse response2 = responses.get(0);
+
+        // Both of which are complete:
+        assertTrue(response1.isComplete());
+        assertTrue(response2.isComplete());
+
+        // And should both have the same IPv6 address:
+        assertEquals(InetAddresses.parseNumericAddress("2605:a601:a846:5700:3e61:5ff:fe0c:89f8"),
+                response1.getInet6AddressRecord().getInet6Address());
+        assertEquals(InetAddresses.parseNumericAddress("2605:a601:a846:5700:3e61:5ff:fe0c:89f8"),
+                response2.getInet6AddressRecord().getInet6Address());
+    }
+
+    @Test
+    @Ignore("MdnsConfigs is not configurable currently.")
+    public void decode_singleHostname_multipleSrvRecords_flagDisabled_singleCompleteResponse() {
+        //MdnsScannerConfigsFlagsImpl.allowMultipleSrvRecordsPerHost.override(false);
+        MdnsResponseDecoder decoder = new MdnsResponseDecoder(mClock, MATTER_SERVICE_TYPE);
+        assertNotNull(matterDuplicateHostname);
+
+        DatagramPacket packet =
+                new DatagramPacket(matterDuplicateHostname, matterDuplicateHostname.length);
+
+        packet.setSocketAddress(
+                new InetSocketAddress(MdnsConstants.getMdnsIPv6Address(), MdnsConstants.MDNS_PORT));
+
+        responses.clear();
+        int errorCode = decoder.decode(packet, responses, /* interfaceIndex= */ 0);
+        assertEquals(MdnsResponseDecoder.SUCCESS, errorCode);
+
+        // This should emit only two records:
+        assertEquals(2, responses.size());
+
+        // But only the first is complete:
+        assertTrue(responses.get(0).isComplete());
+        assertFalse(responses.get(1).isComplete());
     }
 }
