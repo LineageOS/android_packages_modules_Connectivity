@@ -903,6 +903,12 @@ def create_action_module(blueprint, target):
     # This script generates .cc files but source (registry_controlled_domain.cc) in the target that
     # depends on this target includes .cc file this script generates.
     module.genrule_headers.add(module.name)
+  elif target.script == "//build/util/version.py":
+    for i, val in enumerate(target.args):
+      if val.startswith('../../'):
+        filename = re.sub('^\.\./\.\./', '', val)
+        target.args[i] = '$(location %s)' % filename
+
 
   script = gn_utils.label_to_path(target.script)
   module.tool_files.add(script)

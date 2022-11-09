@@ -2608,13 +2608,13 @@ filegroup {
 genrule {
     name: "cronet_aml_components_cronet_cronet_version_header_action",
     cmd: "$(location build/util/version.py) -f " +
-         "../../chrome/VERSION " +
+         "$(location chrome/VERSION) " +
          "-e " +
          "VERSION_FULL " +
          "\"%s.%s.%s.%s\" % (MAJOR,MINOR,BUILD,PATCH) " +
          "-o " +
          "gen/components/cronet/version.h " +
-         "../../components/cronet/version.h.in",
+         "$(location components/cronet/version.h.in)",
     out: [
         "components/cronet/version.h",
     ],
