@@ -14,62 +14,81 @@
  * limitations under the License.
  */
 
-#include <aidl/android/net/connectivity/aidl/ConnectivityNative.h>
 #include <android/binder_manager.h>
 #include <android/binder_process.h>
 #include <android-modules-utils/sdk_level.h>
 #include <cutils/misc.h>  // FIRST_APPLICATION_UID
+#include <dlfcn.h>
 #include <gtest/gtest.h>
 #include <netinet/in.h>
 
 #include "bpf/BpfUtils.h"
 
-using aidl::android::net::connectivity::aidl::IConnectivityNative;
+typedef int (*GetPortsBlockedForBind)(in_port_t*, size_t*);
+GetPortsBlockedForBind getPortsBlockedForBind;
+typedef int (*BlockPortForBind)(in_port_t);
+BlockPortForBind blockPortForBind;
+typedef int (*UnblockPortForBind)(in_port_t);
+UnblockPortForBind unblockPortForBind;
+typedef int (*UnblockAllPortsForBind)();
+UnblockAllPortsForBind unblockAllPortsForBind;
 
 class ConnectivityNativeBinderTest : public ::testing::Test {
   public:
-    std::vector<int32_t> mActualBlockedPorts;
-
-    ConnectivityNativeBinderTest() {
-        AIBinder* binder = AServiceManager_getService("connectivity_native");
-        ndk::SpAIBinder sBinder = ndk::SpAIBinder(binder);
-        mService = aidl::android::net::connectivity::aidl::IConnectivityNative::fromBinder(sBinder);
-    }
+    in_port_t mActualBlockedPorts[65535];
+    size_t mActualBlockedPortsCount = 65535;
+    bool restoreBlockedPorts;
 
     void SetUp() override {
-        // Skip test case if not on T.
-        if (!android::modules::sdklevel::IsAtLeastT()) GTEST_SKIP() <<
+        restoreBlockedPorts = false;
+        // Skip test case if not on U.
+        if (!android::modules::sdklevel::IsAtLeastU()) GTEST_SKIP() <<
                 "Should be at least T device.";
 
         // Skip test case if not on 5.4 kernel which is required by bpf prog.
         if (!android::bpf::isAtLeastKernelVersion(5, 4, 0)) GTEST_SKIP() <<
                 "Kernel should be at least 5.4.";
 
-        ASSERT_NE(nullptr, mService.get());
+        // Necessary to use dlopen/dlsym since the lib is only available on U and there
+        // is no Sdk34ModuleController in tradefed yet.
+        // TODO: link against the library directly and add Sdk34ModuleController to
+        // AndroidTest.txml when available.
+        void* nativeLib = dlopen("libcom.android.tethering.connectivity_native.so", RTLD_NOW);
+        ASSERT_NE(nullptr, nativeLib);
+        getPortsBlockedForBind = reinterpret_cast<GetPortsBlockedForBind>(
+                dlsym(nativeLib, "AConnectivityNative_getPortsBlockedForBind"));
+        ASSERT_NE(nullptr, getPortsBlockedForBind);
+        blockPortForBind = reinterpret_cast<BlockPortForBind>(
+                dlsym(nativeLib, "AConnectivityNative_blockPortForBind"));
+        ASSERT_NE(nullptr, blockPortForBind);
+        unblockPortForBind = reinterpret_cast<UnblockPortForBind>(
+                dlsym(nativeLib, "AConnectivityNative_unblockPortForBind"));
+        ASSERT_NE(nullptr, unblockPortForBind);
+        unblockAllPortsForBind = reinterpret_cast<UnblockAllPortsForBind>(
+                dlsym(nativeLib, "AConnectivityNative_unblockAllPortsForBind"));
+        ASSERT_NE(nullptr, unblockAllPortsForBind);
 
         // If there are already ports being blocked on device unblockAllPortsForBind() store
         // the currently blocked ports and add them back at the end of the test. Do this for
         // every test case so additional test cases do not forget to add ports back.
-        ndk::ScopedAStatus status = mService->getPortsBlockedForBind(&mActualBlockedPorts);
-        EXPECT_TRUE(status.isOk()) << status.getDescription ();
-
+        int err = getPortsBlockedForBind(mActualBlockedPorts, &mActualBlockedPortsCount);
+        EXPECT_EQ(err, 0);
+        restoreBlockedPorts = true;
     }
 
     void TearDown() override {
-        ndk::ScopedAStatus status;
-        if (mActualBlockedPorts.size() > 0) {
-            for (int i : mActualBlockedPorts) {
-                mService->blockPortForBind(i);
-                EXPECT_TRUE(status.isOk()) << status.getDescription ();
+        int err;
+        if (mActualBlockedPortsCount > 0 && restoreBlockedPorts) {
+            for (int i=0; i < mActualBlockedPortsCount; i++) {
+                err = blockPortForBind(mActualBlockedPorts[i]);
+                EXPECT_EQ(err, 0);
             }
         }
     }
 
   protected:
-    std::shared_ptr<IConnectivityNative> mService;
-
     void runSocketTest (sa_family_t family, const int type, bool blockPort) {
-        ndk::ScopedAStatus status;
+        int err;
         in_port_t port = 0;
         int sock, sock2;
         // Open two sockets with SO_REUSEADDR and expect they can both bind to port.
@@ -79,16 +98,16 @@ class ConnectivityNativeBinderTest : public ::testing::Test {
         int blockedPort = 0;
         if (blockPort) {
             blockedPort = ntohs(port);
-            status = mService->blockPortForBind(blockedPort);
-            EXPECT_TRUE(status.isOk()) << status.getDescription ();
+            err = blockPortForBind(blockedPort);
+            EXPECT_EQ(err, 0);
         }
 
         int sock3 = openSocket(&port, family, type, blockPort /* expectBindFail */);
 
         if (blockPort) {
             EXPECT_EQ(-1, sock3);
-            status = mService->unblockPortForBind(blockedPort);
-            EXPECT_TRUE(status.isOk()) << status.getDescription ();
+            err = unblockPortForBind(blockedPort);
+            EXPECT_EQ(err, 0);
         } else {
             EXPECT_NE(-1, sock3);
         }
@@ -177,110 +196,74 @@ TEST_F(ConnectivityNativeBinderTest, BlockPort6Tcp) {
 }
 
 TEST_F(ConnectivityNativeBinderTest, BlockPortTwice) {
-    ndk::ScopedAStatus status = mService->blockPortForBind(5555);
-    EXPECT_TRUE(status.isOk()) << status.getDescription ();
-    status = mService->blockPortForBind(5555);
-    EXPECT_TRUE(status.isOk()) << status.getDescription ();
-    status = mService->unblockPortForBind(5555);
-    EXPECT_TRUE(status.isOk()) << status.getDescription ();
+    int err = blockPortForBind(5555);
+    EXPECT_EQ(err, 0);
+    err = blockPortForBind(5555);
+    EXPECT_EQ(err, 0);
+    err = unblockPortForBind(5555);
+    EXPECT_EQ(err, 0);
 }
 
 TEST_F(ConnectivityNativeBinderTest, GetBlockedPorts) {
-    ndk::ScopedAStatus status;
-    std::vector<int> blockedPorts{1, 100, 1220, 1333, 2700, 5555, 5600, 65000};
-    for (int i : blockedPorts) {
-        status = mService->blockPortForBind(i);
-        EXPECT_TRUE(status.isOk()) << status.getDescription ();
+    int err;
+    in_port_t blockedPorts[8] = {1, 100, 1220, 1333, 2700, 5555, 5600, 65000};
+
+    if (mActualBlockedPortsCount > 0) {
+        err = unblockAllPortsForBind();
     }
-    std::vector<int32_t> actualBlockedPorts;
-    status = mService->getPortsBlockedForBind(&actualBlockedPorts);
-    EXPECT_TRUE(status.isOk()) << status.getDescription ();
-    EXPECT_FALSE(actualBlockedPorts.empty());
-    EXPECT_EQ(blockedPorts, actualBlockedPorts);
+
+    for (int i : blockedPorts) {
+        err = blockPortForBind(i);
+        EXPECT_EQ(err, 0);
+    }
+    size_t actualBlockedPortsCount = 8;
+    in_port_t actualBlockedPorts[actualBlockedPortsCount];
+    err = getPortsBlockedForBind((in_port_t*) actualBlockedPorts, &actualBlockedPortsCount);
+    EXPECT_EQ(err, 0);
+    EXPECT_NE(actualBlockedPortsCount, 0);
+    for (int i=0; i < actualBlockedPortsCount; i++) {
+        EXPECT_EQ(blockedPorts[i], actualBlockedPorts[i]);
+    }
 
     // Remove the ports we added.
-    status = mService->unblockAllPortsForBind();
-    EXPECT_TRUE(status.isOk()) << status.getDescription ();
-    status = mService->getPortsBlockedForBind(&actualBlockedPorts);
-    EXPECT_TRUE(status.isOk()) << status.getDescription ();
-    EXPECT_TRUE(actualBlockedPorts.empty());
+    err = unblockAllPortsForBind();
+    EXPECT_EQ(err, 0);
+    err = getPortsBlockedForBind(actualBlockedPorts, &actualBlockedPortsCount);
+    EXPECT_EQ(err, 0);
+    EXPECT_EQ(actualBlockedPortsCount, 0);
 }
 
 TEST_F(ConnectivityNativeBinderTest, UnblockAllPorts) {
-    ndk::ScopedAStatus status;
-    std::vector<int> blockedPorts{1, 100, 1220, 1333, 2700, 5555, 5600, 65000};
+    int err;
+    in_port_t blockedPorts[8] = {1, 100, 1220, 1333, 2700, 5555, 5600, 65000};
 
-    if (mActualBlockedPorts.size() > 0) {
-        status = mService->unblockAllPortsForBind();
+    if (mActualBlockedPortsCount > 0) {
+        err = unblockAllPortsForBind();
     }
 
     for (int i : blockedPorts) {
-        status = mService->blockPortForBind(i);
-        EXPECT_TRUE(status.isOk()) << status.getDescription ();
+        err = blockPortForBind(i);
+        EXPECT_EQ(err, 0);
     }
 
-    std::vector<int32_t> actualBlockedPorts;
-    status = mService->getPortsBlockedForBind(&actualBlockedPorts);
-    EXPECT_TRUE(status.isOk()) << status.getDescription ();
-    EXPECT_FALSE(actualBlockedPorts.empty());
+    size_t actualBlockedPortsCount = 8;
+    in_port_t actualBlockedPorts[actualBlockedPortsCount];
+    err = getPortsBlockedForBind((in_port_t*) actualBlockedPorts, &actualBlockedPortsCount);
+    EXPECT_EQ(err, 0);
+    EXPECT_EQ(actualBlockedPortsCount, 8);
 
-    status = mService->unblockAllPortsForBind();
-    EXPECT_TRUE(status.isOk()) << status.getDescription ();
-    status = mService->getPortsBlockedForBind(&actualBlockedPorts);
-    EXPECT_TRUE(status.isOk()) << status.getDescription ();
-    EXPECT_TRUE(actualBlockedPorts.empty());
+    err = unblockAllPortsForBind();
+    EXPECT_EQ(err, 0);
+    err = getPortsBlockedForBind((in_port_t*) actualBlockedPorts, &actualBlockedPortsCount);
+    EXPECT_EQ(err, 0);
+    EXPECT_EQ(actualBlockedPortsCount, 0);
     // If mActualBlockedPorts is not empty, ports will be added back in teardown.
 }
 
-TEST_F(ConnectivityNativeBinderTest, BlockNegativePort) {
-    int retry = 0;
-    ndk::ScopedAStatus status;
-    do {
-        status = mService->blockPortForBind(-1);
-        // TODO: find out why transaction failed is being thrown on the first attempt.
-    } while (status.getExceptionCode() == EX_TRANSACTION_FAILED && retry++ < 5);
-    EXPECT_EQ(EX_ILLEGAL_ARGUMENT, status.getExceptionCode());
-}
-
-TEST_F(ConnectivityNativeBinderTest, UnblockNegativePort) {
-    int retry = 0;
-    ndk::ScopedAStatus status;
-    do {
-        status = mService->unblockPortForBind(-1);
-        // TODO: find out why transaction failed is being thrown on the first attempt.
-    } while (status.getExceptionCode() == EX_TRANSACTION_FAILED && retry++ < 5);
-    EXPECT_EQ(EX_ILLEGAL_ARGUMENT, status.getExceptionCode());
-}
-
-TEST_F(ConnectivityNativeBinderTest, BlockMaxPort) {
-    int retry = 0;
-    ndk::ScopedAStatus status;
-    do {
-        status = mService->blockPortForBind(65536);
-        // TODO: find out why transaction failed is being thrown on the first attempt.
-    } while (status.getExceptionCode() == EX_TRANSACTION_FAILED && retry++ < 5);
-    EXPECT_EQ(EX_ILLEGAL_ARGUMENT, status.getExceptionCode());
-}
-
-TEST_F(ConnectivityNativeBinderTest, UnblockMaxPort) {
-    int retry = 0;
-    ndk::ScopedAStatus status;
-    do {
-        status = mService->unblockPortForBind(65536);
-        // TODO: find out why transaction failed is being thrown on the first attempt.
-    } while (status.getExceptionCode() == EX_TRANSACTION_FAILED && retry++ < 5);
-    EXPECT_EQ(EX_ILLEGAL_ARGUMENT, status.getExceptionCode());
-}
-
 TEST_F(ConnectivityNativeBinderTest, CheckPermission) {
-    int retry = 0;
     int curUid = getuid();
     EXPECT_EQ(0, seteuid(FIRST_APPLICATION_UID + 2000)) << "seteuid failed: " << strerror(errno);
-    ndk::ScopedAStatus status;
-    do {
-        status = mService->blockPortForBind(5555);
-        // TODO: find out why transaction failed is being thrown on the first attempt.
-    } while (status.getExceptionCode() == EX_TRANSACTION_FAILED && retry++ < 5);
-    EXPECT_EQ(EX_SECURITY, status.getExceptionCode());
+    int err = blockPortForBind((in_port_t) 5555);
+    EXPECT_EQ(EPERM, err);
     EXPECT_EQ(0, seteuid(curUid)) << "seteuid failed: " << strerror(errno);
 }

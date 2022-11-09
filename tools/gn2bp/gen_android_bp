@@ -32,6 +32,7 @@ import logging as log
 import os
 import re
 import sys
+import copy
 
 import gn_utils
 
@@ -221,6 +222,8 @@ builtin_deps = {
         enable_uapi_headers,
     '//src/profiling/memory:bionic_libc_platform_headers_on_android':
         enable_bionic_libc_platform_headers_on_android,
+    '//third_party/protobuf:protoc':
+      lambda x: None,
 }
 
 # ----------------------------------------------------------------------------
@@ -697,6 +700,38 @@ def override_build_config_gen(module):
   module.cmd = NEWLINE.join(cmd)
   return module
 
+def create_action_foreach_modules(blueprint, target):
+  """ The following assumes that rebase_path exists in the args.
+  The args of an action_foreach contains hints about which output files are generated
+  by which source files.
+  This is copied directly from the args
+  "gen/net/base/registry_controlled_domains/{{source_name_part}}-reversed-inc.cc"
+  So each source file will generate an output whose name is the {source_name-reversed-inc.cc}
+  """
+  new_args = []
+  for i, src in enumerate(sorted(target.sources)):
+    # don't add script arg for the first source -- create_action_module
+    # already does this.
+    if i != 0:
+      new_args.append('&& python3 $(location %s)' %
+                   gn_utils.label_to_path(target.script))
+    for arg in target.args:
+      if '{{source}}' in arg:
+        new_args.append('$(location %s)' % (gn_utils.label_to_path(src)))
+      elif '{{source_name_part}}' in arg:
+        source_name_part = src.split("/")[-1] # Get the file name only
+        source_name_part = source_name_part.split(".")[0] # Remove the extension (Ex: .cc)
+        file_name = arg.replace('{{source_name_part}}', source_name_part).split("/")[-1]
+        # file_name represent the output file name. But we need the whole path
+        # This can be found from target.outputs.
+        for out in target.outputs:
+          if out.endswith(file_name):
+            new_args.append('$(location %s)' % out)
+      else:
+        new_args.append(arg)
+
+  target.args = new_args
+  return create_action_module(blueprint, target)
 
 def create_action_module(blueprint, target):
   bp_module_name = label_to_module_name(target.name)
@@ -822,6 +857,68 @@ def create_action_module(blueprint, target):
     # Specifying file under $(genDir) so that parent directory exists.
     # If this file is used by other module, we may need to add this file to the outputs.
     target.args[2] = '$(genDir)/' + target.args[2].split('/')[-1]
+  elif target.script == "//tools/grit/grit.py":
+    for i, val in enumerate(target.args):
+      if val == '-i':
+        # Delete leading ../..
+        filename = re.sub('^\.\./\.\./', '', target.args[i + 1])
+        target.args[i + 1] = '$(location %s)' % filename
+      elif val == '-o':
+        filename = re.sub('^gen/', '', target.args[i + 1])
+        if filename == "net":
+          # This is a directory not a file
+          target.args[i + 1] = '$(genDir)/net'
+        else:
+          # This is an output fil
+          target.args[i + 1] = '$(location %s)' % filename
+      elif val == '--depfile':
+        # The depfile is replaced by adding /tools/**/*.py to the tools_files
+        # This is basically just globbing all the needed sources by hardcoding.
+        module.tool_files.update([
+            "tools/grit/**/*.py",
+            "third_party/six/src/six.py" # This is not picked up by default. Must be added
+        ])
+
+        # Delete the depfile argument
+        target.args[i] = ' '
+        target.args[i + 1] = ' '
+      elif val == '--input':
+        # Delete leading ../..
+        filename = re.sub('^\.\./\.\./', '', target.args[i + 1])
+        # This is an output file so use $(location %s)
+        target.args[i + 1] = '$(location %s)' % filename
+  elif target.script == "//tools/protoc_wrapper/protoc_wrapper.py":
+    # Use protoc in the android
+    module.tools.add("aprotoc")
+    target.outputs = [os.path.basename(out) for out in target.outputs]
+    for i, val in enumerate(target.args):
+      if val == '--protoc':
+        target.args[i + 1] = '$(location aprotoc)'
+      elif val == '--proto-in-dir':
+        # Proto files in the cmd is relative path from --proto-in-dir
+        # Proto files are specified as filenames without directory except net_quic_proto_gen
+        # So getting directory from source file
+        proto_file = gn_utils.label_to_path(sorted(list(target.sources))[0])
+        target.args[i + 1] = '`dirname $(location %s)`' % proto_file
+        # Adjusting path for net_quic_proto_gen
+        if target.name == "//net/third_party/quiche:net_quic_proto_gen":
+          target.args[i + 1] += '/../../../../'
+      elif val == '--cc-out-dir':
+        target.args[i + 1] = '$(genDir)'
+      elif val == 'dllexport_decl':
+        # Needs to be dllexport_decl=value format
+        target.args[i] = '%s=\'%s\'' % (target.args[i], target.args[i + 1])
+        target.args[i+1] = ''
+      elif val == '--include':
+        # This file can be got from filegroup this target depends on, but currently we don't add .h
+        # files to the srcs. So far this is the only case .h files need to be added to the srcs.
+        # So, for now, adding specific for this target.
+        module.srcs.add(target.args[i+1])
+        target.args[i + 1] = '$(location %s)' % target.args[i + 1]
+      elif val == "--py-out-dir":
+        # pb2.py files are not used by others.
+        target.args[i] = ''
+        target.args[i + 1] = ''
 
   script = gn_utils.label_to_path(target.script)
   module.tool_files.add(script)
@@ -873,6 +970,20 @@ def create_action_module(blueprint, target):
   elif target.script == "//tools/grit/stamp_grit_sources.py":
     # stamp_grit_sources.py is not executable
     module.cmd = "python " + module.cmd
+  elif target.script == "//tools/protoc_wrapper/protoc_wrapper.py":
+    # Split module to source module and header module.
+    # Source module has the .cc files and header module has the .h files in the out.
+    header_module = copy.deepcopy(module)
+    header_module.name += "_headers"
+    header_module.out = [file for file in header_module.out if os.path.splitext(file)[1] == '.h']
+    module.out = [file for file in module.out if os.path.splitext(file)[1] == '.cc']
+    module.genrule_headers.add(header_module.name)
+    module.genrule_srcs.add(':' + module.name)
+    blueprint.add_module(header_module)
+  elif target.script == "//base/android/jni_generator/jni_generator.py":
+    # android_jar.classes should be part of the tools as it list implicit classes
+    # for the script to generate JNI headers.
+    module.tool_files.add("base/android/jni_generator/android_jar.classes")
 
   blueprint.add_module(module)
   return module
@@ -937,8 +1048,7 @@ def create_modules_from_target(blueprint, gn, gn_target_name):
     else:
       module = create_action_module(blueprint, target)
   elif target.type == 'action_foreach':
-    return None
-      # Add basic support for action_foreach
+    module = create_action_foreach_modules(blueprint, target)
   elif target.type == 'copy':
     # TODO: careful now! copy targets are not supported yet, but this will stop
     # traversing the dependency tree. For //base:base, this is not a big
@@ -954,7 +1064,7 @@ def create_modules_from_target(blueprint, gn, gn_target_name):
   module.srcs.update(
       gn_utils.label_to_path(src)
       for src in target.sources
-      if is_supported_source_file(src))
+      if is_supported_source_file(src) and not src.startswith("//out/test"))
 
   local_include_dirs_set = set()
   if target.type in gn_utils.LINKER_UNIT_TYPES:
@@ -1068,6 +1178,11 @@ def create_modules_from_target(blueprint, gn, gn_target_name):
 
   return module
 
+def create_java_module(blueprint, gn):
+  bp_module_name = module_prefix + 'java'
+  module = Module('java_library', bp_module_name, '//gn:java')
+  module.srcs.update([gn_utils.label_to_path(source) for source in gn.java_sources])
+  blueprint.add_module(module)
 
 def create_blueprint_for_targets(gn, desc, targets):
   """Generate a blueprint for a list of GN targets."""
@@ -1090,6 +1205,8 @@ def create_blueprint_for_targets(gn, desc, targets):
 
   for target in targets:
     create_modules_from_target(blueprint, gn, target)
+
+  create_java_module(blueprint, gn)
   return blueprint
 
 

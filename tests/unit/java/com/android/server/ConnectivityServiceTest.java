@@ -2944,7 +2944,8 @@ public class ConnectivityServiceTest {
 
     @Test
     public void testRequiresValidation() {
-        assertTrue(NetworkMonitorUtils.isValidationRequired(false /* isVpnValidationRequired */,
+        assertTrue(NetworkMonitorUtils.isValidationRequired(false /* isDunValidationRequired */,
+                false /* isVpnValidationRequired */,
                 mCm.getDefaultRequest().networkCapabilities));
     }
 
@@ -3476,7 +3477,12 @@ public class ConnectivityServiceTest {
             final int uid, final String packageName) throws Exception {
         doReturn(buildPackageInfo(true /* hasSystemPermission */, uid)).when(mPackageManager)
                 .getPackageInfo(eq(packageName), eq(GET_PERMISSIONS));
-        mService.mPermissionMonitor.onPackageAdded(packageName, uid);
+
+        // Send a broadcast indicating a package was installed.
+        final Intent addedIntent = new Intent(ACTION_PACKAGE_ADDED);
+        addedIntent.putExtra(Intent.EXTRA_UID, uid);
+        addedIntent.setData(Uri.parse("package:" + packageName));
+        processBroadcast(addedIntent);
     }
 
     @Test
@@ -8314,6 +8320,7 @@ public class ConnectivityServiceTest {
         // VPN networks do not satisfy the default request and are automatically validated
         // by NetworkMonitor
         assertFalse(NetworkMonitorUtils.isValidationRequired(
+                false /* isDunValidationRequired */,
                 NetworkAgentConfigShimImpl.newInstance(mMockVpn.getNetworkAgentConfig())
                         .isVpnValidationRequired(),
                 mMockVpn.getAgent().getNetworkCapabilities()));
@@ -8466,6 +8473,7 @@ public class ConnectivityServiceTest {
         assertTrue(nc.hasCapability(NET_CAPABILITY_INTERNET));
 
         assertFalse(NetworkMonitorUtils.isValidationRequired(
+                false /* isDunValidationRequired */,
                 NetworkAgentConfigShimImpl.newInstance(mMockVpn.getNetworkAgentConfig())
                         .isVpnValidationRequired(),
                 mMockVpn.getAgent().getNetworkCapabilities()));
