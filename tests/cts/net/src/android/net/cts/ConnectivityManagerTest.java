@@ -1047,11 +1047,21 @@ public class ConnectivityManagerTest {
         final TestNetworkCallback bestMatchingCallback = new TestNetworkCallback();
         final Handler h = new Handler(Looper.getMainLooper());
         if (TestUtils.shouldTestSApis()) {
+            assertThrows(SecurityException.class, () ->
+                    registerSystemDefaultNetworkCallback(systemDefaultCallback, h));
             runWithShellPermissionIdentity(() -> {
                 registerSystemDefaultNetworkCallback(systemDefaultCallback, h);
                 registerDefaultNetworkCallbackForUid(Process.myUid(), perUidCallback, h);
             }, NETWORK_SETTINGS);
             registerBestMatchingNetworkCallback(makeDefaultRequest(), bestMatchingCallback, h);
+        }
+        if (TestUtils.shouldTestTApis()) {
+            // Verify registerSystemDefaultNetworkCallback can be accessed via
+            // CONNECTIVITY_USE_RESTRICTED_NETWORKS permission.
+            final TestNetworkCallback systemDefaultCallback2 = new TestNetworkCallback();
+            runWithShellPermissionIdentity(() ->
+                    registerSystemDefaultNetworkCallback(systemDefaultCallback2, h),
+                    CONNECTIVITY_USE_RESTRICTED_NETWORKS);
         }
 
         Network wifiNetwork = null;
