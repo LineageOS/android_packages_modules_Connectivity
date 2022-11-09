@@ -12,7 +12,7 @@
 set -eux
 
 TARGETS=(
-  "//net:net"
+  "//components/cronet/android:cronet"
 )
 
 BASEDIR=$(dirname "$0")
