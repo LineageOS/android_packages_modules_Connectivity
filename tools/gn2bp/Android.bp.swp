@@ -1941,6 +1941,7 @@ genrule {
     ],
     export_include_dirs: [
         ".",
+        "net/cert",
         "protos",
     ],
 }
@@ -2110,6 +2111,7 @@ genrule {
     ],
     export_include_dirs: [
         ".",
+        "net/base",
         "protos",
     ],
 }
@@ -2851,6 +2853,7 @@ genrule {
     ],
     export_include_dirs: [
         ".",
+        "net/nqe/proto",
         "protos",
     ],
 }
@@ -2978,6 +2981,7 @@ genrule {
     ],
     export_include_dirs: [
         ".",
+        "net/third_party/quiche/src/quiche/quic/test_tools",
         "protos",
     ],
 }
