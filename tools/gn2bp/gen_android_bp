@@ -89,7 +89,7 @@ static_library_allowlist = [
 defaults_module = module_prefix + 'defaults'
 
 # Location of the project in the Android source tree.
-tree_path = 'external/perfetto'
+tree_path = 'external/chromium_org'
 
 # Path for the protobuf sources in the standalone build.
 buildtools_protobuf_src = '//buildtools/protobuf/src'
@@ -494,13 +494,13 @@ def create_proto_modules(blueprint, gn, target):
   assert (target.type == 'proto_library')
 
   tools = {'aprotoc'}
-  cpp_out_dir = '$(genDir)/%s/' % tree_path
+  cpp_out_dir = '$(genDir)/%s/%s/' % (tree_path, target.proto_in_dir)
   target_module_name = label_to_module_name(target.name)
 
   # In GN builds the proto path is always relative to the output directory
   # (out/tmp.xxx).
-  cmd = ['mkdir -p %s &&' % cpp_out_dir, '$(location aprotoc)']
-  cmd += ['--proto_path=%s' % tree_path]
+  cmd = ['$(location aprotoc)']
+  cmd += ['--proto_path=%s/%s' % (tree_path, target.proto_in_dir)]
 
   if buildtools_protobuf_src in target.proto_paths:
     cmd += ['--proto_path=%s' % android_protobuf_src]
@@ -590,6 +590,9 @@ def create_proto_modules(blueprint, gn, target):
   header_module.cmd = source_module.cmd
   source_module.tools = tools
   header_module.tools = tools
+  if header_module.name == "cronet_aml_net_third_party_quiche_net_quic_proto_gen_headers":
+    # This is needed for cached_network_parameters_proto.h
+    header_module.export_include_dirs.add("net/third_party/quiche/src")
 
   for sfx in suffixes:
     source_module.out.update('%s/%s' %
@@ -887,38 +890,6 @@ def create_action_module(blueprint, target):
         filename = re.sub('^\.\./\.\./', '', target.args[i + 1])
         # This is an output file so use $(location %s)
         target.args[i + 1] = '$(location %s)' % filename
-  elif target.script == "//tools/protoc_wrapper/protoc_wrapper.py":
-    # Use protoc in the android
-    module.tools.add("aprotoc")
-    target.outputs = [os.path.basename(out) for out in target.outputs]
-    for i, val in enumerate(target.args):
-      if val == '--protoc':
-        target.args[i + 1] = '$(location aprotoc)'
-      elif val == '--proto-in-dir':
-        # Proto files in the cmd is relative path from --proto-in-dir
-        # Proto files are specified as filenames without directory except net_quic_proto_gen
-        # So getting directory from source file
-        proto_file = gn_utils.label_to_path(sorted(list(target.sources))[0])
-        target.args[i + 1] = '`dirname $(location %s)`' % proto_file
-        # Adjusting path for net_quic_proto_gen
-        if target.name == "//net/third_party/quiche:net_quic_proto_gen":
-          target.args[i + 1] += '/../../../../'
-      elif val == '--cc-out-dir':
-        target.args[i + 1] = '$(genDir)'
-      elif val == 'dllexport_decl':
-        # Needs to be dllexport_decl=value format
-        target.args[i] = '%s=\'%s\'' % (target.args[i], target.args[i + 1])
-        target.args[i+1] = ''
-      elif val == '--include':
-        # This file can be got from filegroup this target depends on, but currently we don't add .h
-        # files to the srcs. So far this is the only case .h files need to be added to the srcs.
-        # So, for now, adding specific for this target.
-        module.srcs.add(target.args[i+1])
-        target.args[i + 1] = '$(location %s)' % target.args[i + 1]
-      elif val == "--py-out-dir":
-        # pb2.py files are not used by others.
-        target.args[i] = ''
-        target.args[i + 1] = ''
 
   script = gn_utils.label_to_path(target.script)
   module.tool_files.add(script)
@@ -970,16 +941,6 @@ def create_action_module(blueprint, target):
   elif target.script == "//tools/grit/stamp_grit_sources.py":
     # stamp_grit_sources.py is not executable
     module.cmd = "python " + module.cmd
-  elif target.script == "//tools/protoc_wrapper/protoc_wrapper.py":
-    # Split module to source module and header module.
-    # Source module has the .cc files and header module has the .h files in the out.
-    header_module = copy.deepcopy(module)
-    header_module.name += "_headers"
-    header_module.out = [file for file in header_module.out if os.path.splitext(file)[1] == '.h']
-    module.out = [file for file in module.out if os.path.splitext(file)[1] == '.cc']
-    module.genrule_headers.add(header_module.name)
-    module.genrule_srcs.add(':' + module.name)
-    blueprint.add_module(header_module)
   elif target.script == "//base/android/jni_generator/jni_generator.py":
     # android_jar.classes should be part of the tools as it list implicit classes
     # for the script to generate JNI headers.
@@ -1131,7 +1092,10 @@ def create_modules_from_target(blueprint, gn, gn_target_name):
                   (type(add_val), key))
 
   # dep_name is an unmangled GN target name (e.g. //foo:bar(toolchain)).
-  all_deps = target.deps | target.source_set_deps | target.transitive_proto_deps
+  # Currently, only one module is generated from target even target has multiple toolchains.
+  # And module is generated based on the first visited target.
+  # Sort deps before iteration to make result deterministic.
+  all_deps = sorted(target.deps | target.source_set_deps | target.transitive_proto_deps)
   for dep_name in all_deps:
     # |builtin_deps| override GN deps with Android-specific ones. See the
     # config in the top of this file.
