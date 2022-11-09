@@ -803,6 +803,12 @@ def create_action_module(blueprint, target):
     # fix target.output directory to match #include statements.
     target.outputs = [re.sub('^jni_headers/', '', out) for out in target.outputs]
 
+  elif target.script == '//base/android/jni_generator/jni_registration_generator.py':
+    # jni_registration_generator.py pulls in some config dependencies that we
+    # do not handle. Remove them.
+    # TODO: find a better way to do this.
+    target.deps.clear()
+
   elif target.script == '//build/android/gyp/write_build_config.py':
     for i, val in enumerate(target.args):
       if val == '--depfile':
