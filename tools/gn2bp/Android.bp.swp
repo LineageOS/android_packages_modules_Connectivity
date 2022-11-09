@@ -2613,7 +2613,7 @@ genrule {
          "VERSION_FULL='\"%s.%s.%s.%s\" % (MAJOR,MINOR,BUILD,PATCH)' " +
          " " +
          "-o " +
-         "gen/components/cronet/version.h " +
+         "$(out) " +
          "$(location components/cronet/version.h.in)",
     out: [
         "components/cronet/version.h",
