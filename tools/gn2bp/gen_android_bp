@@ -899,6 +899,23 @@ def create_action_module(blueprint, target):
         filename = re.sub('^\.\./\.\./', '', target.args[i + 1])
         # This is an output file so use $(location %s)
         target.args[i + 1] = '$(location %s)' % filename
+  elif target.script == "//net/tools/dafsa/make_dafsa.py":
+    # This script generates .cc files but source (registry_controlled_domain.cc) in the target that
+    # depends on this target includes .cc file this script generates.
+    module.genrule_headers.add(module.name)
+  elif target.script == "//build/util/version.py":
+    # android_chrome_version.py is not specified in anywhere but version.py imports this file
+    module.tool_files.add('build/util/android_chrome_version.py')
+    for i, val in enumerate(target.args):
+      if val.startswith('../../'):
+        filename = re.sub('^\.\./\.\./', '', val)
+        target.args[i] = '$(location %s)' % filename
+      elif val == '-e':
+        # arg for -e EVAL option should be passed in -e PATCH_HI=int(PATCH)//256 format.
+        target.args[i + 1] = '%s=\'%s\'' % (target.args[i + 1], target.args[i + 2])
+        target.args[i + 2] = ''
+      elif val == '-o':
+        target.args[i + 1] = '$(out)'
 
   script = gn_utils.label_to_path(target.script)
   module.tool_files.add(script)
