@@ -1149,6 +1149,7 @@ def create_blueprint_for_targets(gn, desc, targets):
   defaults.cflags = [
       '-Wno-error=return-type',
       '-Wno-non-virtual-dtor',
+      '-Wno-macro-redefined',
       '-Wno-missing-field-initializers',
       '-Wno-sign-compare',
       '-Wno-sign-promo',
