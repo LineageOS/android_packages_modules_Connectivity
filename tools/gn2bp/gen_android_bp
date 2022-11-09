@@ -103,6 +103,9 @@ cflag_allowlist = r'^-DPERFETTO.*$'
 # Additional arguments to apply to Android.bp rules.
 additional_args = {
     # TODO: remove if not needed.
+    'cronet_aml_net_net': [
+        ('export_static_lib_headers', {'cronet_aml_net_third_party_quiche_quiche'}),
+    ]
 }
 
 
@@ -344,6 +347,7 @@ class Module(object):
     self.export_include_dirs = set()
     self.generated_headers = set()
     self.export_generated_headers = set()
+    self.export_static_lib_headers = set()
     self.defaults = set()
     self.cflags = set()
     self.include_dirs = set()
@@ -393,6 +397,7 @@ class Module(object):
     self._output_field(output, 'export_include_dirs')
     self._output_field(output, 'generated_headers')
     self._output_field(output, 'export_generated_headers')
+    self._output_field(output, 'export_static_lib_headers')
     self._output_field(output, 'defaults')
     self._output_field(output, 'cflags')
     self._output_field(output, 'include_dirs')
