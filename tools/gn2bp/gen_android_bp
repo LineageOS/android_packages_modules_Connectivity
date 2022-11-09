@@ -102,8 +102,10 @@ cflag_allowlist = r'^-DPERFETTO.*$'
 
 # Additional arguments to apply to Android.bp rules.
 additional_args = {
-    # TODO: remove if this is not useful for the cronet build.
-    # Consider using additional_args for overriding the genrule cmd property for gn actions.
+    'cronet_aml_net_third_party_quiche_net_quic_proto_gen_headers': [
+        # This is needed for cached_network_parameters_proto.h
+        ('export_include_dirs', {'net/third_party/quiche/src'}),
+    ],
 }
 
 
@@ -590,9 +592,6 @@ def create_proto_modules(blueprint, gn, target):
   header_module.cmd = source_module.cmd
   source_module.tools = tools
   header_module.tools = tools
-  if header_module.name == "cronet_aml_net_third_party_quiche_net_quic_proto_gen_headers":
-    # This is needed for cached_network_parameters_proto.h
-    header_module.export_include_dirs.add("net/third_party/quiche/src")
 
   for sfx in suffixes:
     source_module.out.update('%s/%s' %
