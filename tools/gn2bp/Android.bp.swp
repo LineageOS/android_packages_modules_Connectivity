@@ -2610,8 +2610,8 @@ genrule {
     cmd: "$(location build/util/version.py) -f " +
          "$(location chrome/VERSION) " +
          "-e " +
-         "VERSION_FULL " +
-         "\"%s.%s.%s.%s\" % (MAJOR,MINOR,BUILD,PATCH) " +
+         "VERSION_FULL='\"%s.%s.%s.%s\" % (MAJOR,MINOR,BUILD,PATCH)' " +
+         " " +
          "-o " +
          "gen/components/cronet/version.h " +
          "$(location components/cronet/version.h.in)",
