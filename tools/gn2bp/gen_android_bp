@@ -904,6 +904,8 @@ def create_action_module(blueprint, target):
     # depends on this target includes .cc file this script generates.
     module.genrule_headers.add(module.name)
   elif target.script == "//build/util/version.py":
+    # android_chrome_version.py is not specified in anywhere but version.py imports this file
+    module.tool_files.add('build/util/android_chrome_version.py')
     for i, val in enumerate(target.args):
       if val.startswith('../../'):
         filename = re.sub('^\.\./\.\./', '', val)

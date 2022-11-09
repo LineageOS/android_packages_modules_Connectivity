@@ -2620,6 +2620,7 @@ genrule {
     ],
     tool_files: [
         "build/util/LASTCHANGE",
+        "build/util/android_chrome_version.py",
         "build/util/version.py",
         "chrome/VERSION",
         "components/cronet/version.h.in",
