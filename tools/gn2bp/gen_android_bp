@@ -102,8 +102,7 @@ cflag_allowlist = r'^-DPERFETTO.*$'
 
 # Additional arguments to apply to Android.bp rules.
 additional_args = {
-    # TODO: remove if this is not useful for the cronet build.
-    # Consider using additional_args for overriding the genrule cmd property for gn actions.
+    # TODO: remove if not needed.
 }
 
 
@@ -114,21 +113,32 @@ def enable_gtest_and_gmock(module):
     module.whole_static_libs.add('perfetto_gtest_logcat_printer')
 
 
+def remove_local_protobuf_include(module):
+  # remove all third_party/protobuf includes as they conflict with libprotobuf
+  # in Android.
+  module.local_include_dirs = [it for it in module.local_include_dirs
+                               if not it.startswith('third_party/protobuf')]
+
+
 def enable_protobuf_full(module):
+  remove_local_protobuf_include(module)
   if module.type == 'cc_binary_host':
     module.static_libs.add('libprotobuf-cpp-full')
   elif module.host_supported:
     module.host.static_libs.add('libprotobuf-cpp-full')
     module.android.shared_libs.add('libprotobuf-cpp-full')
-  else:
+  elif module.type not in ['genrule', 'filegroup']:
     module.shared_libs.add('libprotobuf-cpp-full')
 
 
 def enable_protobuf_lite(module):
-  module.shared_libs.add('libprotobuf-cpp-lite')
+  remove_local_protobuf_include(module)
+  if module.type not in ['genrule', 'filegroup']:
+    module.shared_libs.add('libprotobuf-cpp-lite')
 
 
 def enable_protoc_lib(module):
+  remove_local_protobuf_include(module)
   if module.type == 'cc_binary_host':
     module.static_libs.add('libprotoc')
   else:
@@ -200,18 +210,10 @@ builtin_deps = {
         lambda x: None,
     '//gn:gtest_main':
         lambda x: None,
-    '//gn:protoc':
-        lambda x: None,
     '//gn:gtest_and_gmock':
         enable_gtest_and_gmock,
     '//gn:libunwind':
         enable_libunwind,
-    '//gn:protobuf_full':
-        enable_protobuf_full,
-    '//gn:protobuf_lite':
-        enable_protobuf_lite,
-    '//gn:protoc_lib':
-        enable_protoc_lib,
     '//gn:libunwindstack':
         enable_libunwindstack,
     '//gn:sqlite':
@@ -224,6 +226,12 @@ builtin_deps = {
         enable_bionic_libc_platform_headers_on_android,
     '//third_party/protobuf:protoc':
       lambda x: None,
+    '//third_party/protobuf:protobuf_full':
+        enable_protobuf_full,
+    '//third_party/protobuf:protobuf_lite':
+        enable_protobuf_lite,
+    '//third_party/protobuf:protoc_lib':
+        enable_protoc_lib,
 }
 
 # ----------------------------------------------------------------------------
@@ -556,6 +564,10 @@ def create_proto_modules(blueprint, gn, target):
   # to still do the old #include "perfetto/..." rather than
   # #include "protos/perfetto/...".
   header_module.export_include_dirs = {'.', 'protos'}
+  # Since the .cc file and .h get created by a different gerule target, they
+  # are not put in the same intermediate path, so local includes do not work
+  # without explictily exporting the include dir.
+  header_module.export_include_dirs.add(target.proto_in_dir)
 
   source_module.genrule_srcs.add(':' + source_module.name)
   source_module.genrule_headers.add(header_module.name)
@@ -590,9 +602,6 @@ def create_proto_modules(blueprint, gn, target):
   header_module.cmd = source_module.cmd
   source_module.tools = tools
   header_module.tools = tools
-  if header_module.name == "cronet_aml_net_third_party_quiche_net_quic_proto_gen_headers":
-    # This is needed for cached_network_parameters_proto.h
-    header_module.export_include_dirs.add("net/third_party/quiche/src")
 
   for sfx in suffixes:
     source_module.out.update('%s/%s' %
@@ -890,6 +899,23 @@ def create_action_module(blueprint, target):
         filename = re.sub('^\.\./\.\./', '', target.args[i + 1])
         # This is an output file so use $(location %s)
         target.args[i + 1] = '$(location %s)' % filename
+  elif target.script == "//net/tools/dafsa/make_dafsa.py":
+    # This script generates .cc files but source (registry_controlled_domain.cc) in the target that
+    # depends on this target includes .cc file this script generates.
+    module.genrule_headers.add(module.name)
+  elif target.script == "//build/util/version.py":
+    # android_chrome_version.py is not specified in anywhere but version.py imports this file
+    module.tool_files.add('build/util/android_chrome_version.py')
+    for i, val in enumerate(target.args):
+      if val.startswith('../../'):
+        filename = re.sub('^\.\./\.\./', '', val)
+        target.args[i] = '$(location %s)' % filename
+      elif val == '-e':
+        # arg for -e EVAL option should be passed in -e PATCH_HI=int(PATCH)//256 format.
+        target.args[i + 1] = '%s=\'%s\'' % (target.args[i + 1], target.args[i + 2])
+        target.args[i + 2] = ''
+      elif val == '-o':
+        target.args[i + 1] = '$(out)'
 
   script = gn_utils.label_to_path(target.script)
   module.tool_files.add(script)
@@ -1074,23 +1100,6 @@ def create_modules_from_target(blueprint, gn, gn_target_name):
   if module.type == 'cc_library_static':
     module.export_generated_headers = module.generated_headers
 
-  # Merge in additional hardcoded arguments.
-  for key, add_val in additional_args.get(module.name, []):
-    curr = getattr(module, key)
-    if add_val and isinstance(add_val, set) and isinstance(curr, set):
-      curr.update(add_val)
-    elif isinstance(add_val, str) and (not curr or isinstance(curr, str)):
-      setattr(module, key, add_val)
-    elif isinstance(add_val, bool) and (not curr or isinstance(curr, bool)):
-      setattr(module, key, add_val)
-    elif isinstance(add_val, dict) and isinstance(curr, dict):
-      curr.update(add_val)
-    elif isinstance(add_val, dict) and isinstance(curr, Target):
-      curr.__dict__.update(add_val)
-    else:
-      raise Error('Unimplemented type %r of additional_args: %r' %
-                  (type(add_val), key))
-
   # dep_name is an unmangled GN target name (e.g. //foo:bar(toolchain)).
   # Currently, only one module is generated from target even target has multiple toolchains.
   # And module is generated based on the first visited target.
@@ -1157,6 +1166,7 @@ def create_blueprint_for_targets(gn, desc, targets):
   defaults.cflags = [
       '-Wno-error=return-type',
       '-Wno-non-virtual-dtor',
+      '-Wno-macro-redefined',
       '-Wno-missing-field-initializers',
       '-Wno-sign-compare',
       '-Wno-sign-promo',
@@ -1171,6 +1181,25 @@ def create_blueprint_for_targets(gn, desc, targets):
     create_modules_from_target(blueprint, gn, target)
 
   create_java_module(blueprint, gn)
+
+  # Merge in additional hardcoded arguments.
+  for module in blueprint.modules.values():
+    for key, add_val in additional_args.get(module.name, []):
+      curr = getattr(module, key)
+      if add_val and isinstance(add_val, set) and isinstance(curr, set):
+        curr.update(add_val)
+      elif isinstance(add_val, str) and (not curr or isinstance(curr, str)):
+        setattr(module, key, add_val)
+      elif isinstance(add_val, bool) and (not curr or isinstance(curr, bool)):
+        setattr(module, key, add_val)
+      elif isinstance(add_val, dict) and isinstance(curr, dict):
+        curr.update(add_val)
+      elif isinstance(add_val, dict) and isinstance(curr, Target):
+        curr.__dict__.update(add_val)
+      else:
+        raise Error('Unimplemented type %r of additional_args: %r' %
+                    (type(add_val), key))
+
   return blueprint
 
 
