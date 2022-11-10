@@ -952,7 +952,7 @@ def create_action_module(blueprint, target):
     # Pipe response file contents into script
     module.cmd = 'echo \'%s\' |%s%s' % (target.response_file_contents, NEWLINE, module.cmd)
 
-  if all(os.path.splitext(it)[1] == '.h' for it in target.outputs):
+  if any(os.path.splitext(it)[1] == '.h' for it in target.outputs):
     module.genrule_headers.add(bp_module_name)
 
   # gn treats inputs and sources for actions equally.
