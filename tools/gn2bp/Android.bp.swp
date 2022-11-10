@@ -1963,12 +1963,17 @@ genrule {
         "build/android/java/src/org/chromium/build/annotations/UsedByReflection.java",
         "url/android/java/src/org/chromium/url/IDNStringUtil.java",
     ],
-    cmd: "$(location base/android/jni_generator/jni_registration_generator.py) --srcjar-path " +
+    cmd: "current_dir=`basename \\`pwd\\``; " +
+         "for f in $(in); " +
+         "do " +
+         "echo \"../$$current_dir/$$f\" >> $(genDir)/java.sources; " +
+         "done; " +
+         "$(location base/android/jni_generator/jni_registration_generator.py) --srcjar-path " +
          "$(genDir)/components/cronet/android/cronet_jni_registration.srcjar " +
          "--depfile " +
          "$(genDir)/components/cronet/android/cronet_jni_registration.d " +
          "--sources-files " +
-         "@FileArg(gen/components/cronet/android/cronet_impl_native_base_java.build_config.json:deps_info:jni:all_source) " +
+         "$(genDir)/java.sources " +
          "--include_test_only " +
          "--use_proxy_hash " +
          "--header-path " +

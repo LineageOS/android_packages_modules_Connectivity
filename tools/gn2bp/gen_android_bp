@@ -816,6 +816,8 @@ def create_action_module(blueprint, target):
     for i, val in enumerate(target.args):
       if val in ['--depfile', '--srcjar-path', '--header-path']:
         target.args[i + 1] = re.sub('^gen', '$(genDir)', target.args[i + 1])
+      if val == '--sources-files':
+        target.args[i + 1] = '$(genDir)/java.sources'
 
   elif target.script == '//build/android/gyp/write_build_config.py':
     for i, val in enumerate(target.args):
@@ -985,6 +987,18 @@ def create_action_module(blueprint, target):
     # android_jar.classes should be part of the tools as it list implicit classes
     # for the script to generate JNI headers.
     module.tool_files.add("base/android/jni_generator/android_jar.classes")
+  elif target.script == '//base/android/jni_generator/jni_registration_generator.py':
+    # Path in the original sources file does not work in genrule.
+    # So creating sources file in cmd based on the srcs of this target.
+    # Adding ../$(current_dir)/ to the head because jni_registration_generator.py uses the files
+    # whose path startswith(..)
+    commands = ["current_dir=`basename \\\`pwd\\\``;",
+                "for f in $(in);",
+                "do",
+                "echo \\\"../$$current_dir/$$f\\\" >> $(genDir)/java.sources;",
+                "done;",
+                module.cmd]
+    module.cmd = NEWLINE.join(commands)
 
   blueprint.add_module(module)
   return module
