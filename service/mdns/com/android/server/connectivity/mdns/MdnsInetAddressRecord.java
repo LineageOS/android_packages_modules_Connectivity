@@ -16,6 +16,8 @@
 
 package com.android.server.connectivity.mdns;
 
+import android.annotation.Nullable;
+
 import com.android.internal.annotations.VisibleForTesting;
 
 import java.io.IOException;
@@ -27,12 +29,10 @@ import java.util.Locale;
 import java.util.Objects;
 
 /** An mDNS "AAAA" or "A" record, which holds an IPv6 or IPv4 address. */
-// TODO(b/242631897): Resolve nullness suppression.
-@SuppressWarnings("nullness")
 @VisibleForTesting
 public class MdnsInetAddressRecord extends MdnsRecord {
-    private Inet6Address inet6Address;
-    private Inet4Address inet4Address;
+    @Nullable private Inet6Address inet6Address;
+    @Nullable private Inet4Address inet4Address;
 
     /**
      * Constructs the {@link MdnsRecord}
@@ -47,11 +47,13 @@ public class MdnsInetAddressRecord extends MdnsRecord {
     }
 
     /** Returns the IPv6 address. */
+    @Nullable
     public Inet6Address getInet6Address() {
         return inet6Address;
     }
 
     /** Returns the IPv4 address. */
+    @Nullable
     public Inet4Address getInet4Address() {
         return inet4Address;
     }
@@ -113,7 +115,7 @@ public class MdnsInetAddressRecord extends MdnsRecord {
     }
 
     @Override
-    public boolean equals(Object other) {
+    public boolean equals(@Nullable Object other) {
         if (this == other) {
             return true;
         }
