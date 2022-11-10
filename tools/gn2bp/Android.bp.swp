@@ -2334,6 +2334,7 @@ cc_defaults {
     name: "cronet_aml_defaults",
     cflags: [
         "-O2",
+        "-Wno-deprecated-non-prototype",
         "-Wno-error=return-type",
         "-Wno-macro-redefined",
         "-Wno-missing-field-initializers",
