@@ -1986,7 +1986,6 @@ genrule {
         "build/android/gyp/util/__init__.py",
         "build/android/gyp/util/build_utils.py",
         "build/gn_helpers.py",
-        "out/test/gen/components/cronet/android/cronet_impl_native_base_java.build_config.json",
     ],
 }
 
