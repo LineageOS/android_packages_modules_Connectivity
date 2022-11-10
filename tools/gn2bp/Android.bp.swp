@@ -1821,6 +1821,7 @@ cc_library_shared {
         "cronet_aml_build_chromeos_buildflags",
         "cronet_aml_components_cronet_android_buildflags",
         "cronet_aml_components_cronet_android_cronet_jni_headers",
+        "cronet_aml_components_cronet_android_cronet_jni_registration",
         "cronet_aml_components_cronet_cronet_buildflags",
         "cronet_aml_components_cronet_cronet_version_header_action",
         "cronet_aml_third_party_metrics_proto_metrics_proto_gen_headers",
