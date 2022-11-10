@@ -818,6 +818,11 @@ def create_action_module(blueprint, target):
         target.args[i + 1] = re.sub('^gen', '$(genDir)', target.args[i + 1])
       if val == '--sources-files':
         target.args[i + 1] = '$(genDir)/java.sources'
+      elif val == '--sources-exclusions':
+        # update_jni_registration_module removes them from the srcs of the module
+        # It might be better to remove sources by '--sources-exclusions'
+        target.args[i] = ''
+        target.args[i + 1] = ''
 
   elif target.script == '//build/android/gyp/write_build_config.py':
     for i, val in enumerate(target.args):
@@ -1195,8 +1200,17 @@ def create_java_module(blueprint, gn):
 def update_jni_registration_module(blueprint, gn):
   bp_module_name = label_to_module_name('//components/cronet/android:cronet_jni_registration')
   module = blueprint.modules[bp_module_name]
+
+  # TODO: deny list is in the arg of jni_registration_generator.py. Should not be hardcoded
+  deny_list = [
+    '//base/android/java/src/org/chromium/base/library_loader/LibraryLoader.java',
+    '//base/android/java/src/org/chromium/base/library_loader/LibraryPrefetcher.java',
+    '//base/android/java/src/org/chromium/base/process_launcher/ChildProcessService.java',
+    '//base/android/java/src/org/chromium/base/SysUtils.java']
+
   # TODO: java_sources might not contain all the required java files
-  module.srcs.update([gn_utils.label_to_path(source) for source in gn.java_sources])
+  module.srcs.update([gn_utils.label_to_path(source)
+                      for source in gn.java_sources if source not in deny_list])
 
 def create_blueprint_for_targets(gn, desc, targets):
   """Generate a blueprint for a list of GN targets."""

@@ -1979,8 +1979,8 @@ genrule {
          "--header-path " +
          "$(genDir)/components/cronet/android/cronet_jni_registration.h " +
          "--manual_jni_registration " +
-         "--sources-exclusions " +
-         "[\"../../base/android/java/src/org/chromium/base/library_loader/LibraryLoader.java\", \"../../base/android/java/src/org/chromium/base/library_loader/LibraryPrefetcher.java\", \"../../base/android/java/src/org/chromium/base/process_launcher/ChildProcessService.java\", \"../../base/android/java/src/org/chromium/base/SysUtils.java\"]",
+         " " +
+         "",
     out: [
         "components/cronet/android/cronet_jni_registration.h",
         "components/cronet/android/cronet_jni_registration.srcjar",
