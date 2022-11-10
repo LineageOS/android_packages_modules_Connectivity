@@ -1175,6 +1175,12 @@ def create_java_module(blueprint, gn):
   module.srcs.update([gn_utils.label_to_path(source) for source in gn.java_sources])
   blueprint.add_module(module)
 
+def update_jni_registration_module(blueprint, gn):
+  bp_module_name = label_to_module_name('//components/cronet/android:cronet_jni_registration')
+  module = blueprint.modules[bp_module_name]
+  # TODO: java_sources might not contain all the required java files
+  module.srcs.update([gn_utils.label_to_path(source) for source in gn.java_sources])
+
 def create_blueprint_for_targets(gn, desc, targets):
   """Generate a blueprint for a list of GN targets."""
   blueprint = Blueprint()
@@ -1199,6 +1205,7 @@ def create_blueprint_for_targets(gn, desc, targets):
     create_modules_from_target(blueprint, gn, target)
 
   create_java_module(blueprint, gn)
+  update_jni_registration_module(blueprint, gn)
 
   # Merge in additional hardcoded arguments.
   for module in blueprint.modules.values():
