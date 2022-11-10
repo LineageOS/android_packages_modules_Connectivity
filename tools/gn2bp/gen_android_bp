@@ -113,6 +113,12 @@ additional_args = {
             'cronet_aml_net_third_party_quiche_quiche',
             'cronet_aml_crypto_crypto',
         }),
+        ('whole_static_libs', {
+            'cronet_aml_net_third_party_quiche_quiche',
+            'cronet_aml_base_base',
+            "cronet_aml_crypto_crypto",
+            "cronet_aml_third_party_boringssl_boringssl",
+        }),
     ]
 }
 
