@@ -812,6 +812,7 @@ def create_action_module(blueprint, target):
     # TODO: find a better way to do this.
     target.deps.clear()
 
+    target.inputs = [file for file in target.inputs if not file.startswith('//out/')]
     for i, val in enumerate(target.args):
       if val in ['--depfile', '--srcjar-path', '--header-path']:
         target.args[i + 1] = re.sub('^gen', '$(genDir)', target.args[i + 1])
