@@ -2348,8 +2348,9 @@ public class ConnectivityManagerTest {
             super.expectAvailableCallbacks(network, false /* suspended */, true /* validated */,
                     BLOCKED_REASON_NONE, NETWORK_CALLBACK_TIMEOUT_MS);
         }
-        public void expectBlockedStatusCallback(Network network, int blockedStatus) {
-            super.expectBlockedStatusCallback(blockedStatus, network, NETWORK_CALLBACK_TIMEOUT_MS);
+        public void eventuallyExpectBlockedStatusCallback(Network network, int blockedStatus) {
+            super.eventuallyExpect(CallbackEntry.BLOCKED_STATUS_INT, NETWORK_CALLBACK_TIMEOUT_MS,
+                    (it) -> it.getNetwork().equals(network) && it.getBlocked() == blockedStatus);
         }
         public void onBlockedStatusChanged(Network network, int blockedReasons) {
             getHistory().add(new CallbackEntry.BlockedStatusInt(network, blockedReasons));
@@ -2394,12 +2395,14 @@ public class ConnectivityManagerTest {
         final Range<Integer> otherUidRange = new Range<>(otherUid, otherUid);
 
         setRequireVpnForUids(true, List.of(myUidRange));
-        myUidCallback.expectBlockedStatusCallback(defaultNetwork, BLOCKED_REASON_LOCKDOWN_VPN);
+        myUidCallback.eventuallyExpectBlockedStatusCallback(defaultNetwork,
+                BLOCKED_REASON_LOCKDOWN_VPN);
         otherUidCallback.assertNoBlockedStatusCallback();
 
         setRequireVpnForUids(true, List.of(myUidRange, otherUidRange));
         myUidCallback.assertNoBlockedStatusCallback();
-        otherUidCallback.expectBlockedStatusCallback(defaultNetwork, BLOCKED_REASON_LOCKDOWN_VPN);
+        otherUidCallback.eventuallyExpectBlockedStatusCallback(defaultNetwork,
+                BLOCKED_REASON_LOCKDOWN_VPN);
 
         // setRequireVpnForUids does no deduplication or refcounting. Removing myUidRange does not
         // unblock myUid because it was added to the blocked ranges twice.
@@ -2408,8 +2411,8 @@ public class ConnectivityManagerTest {
         otherUidCallback.assertNoBlockedStatusCallback();
 
         setRequireVpnForUids(false, List.of(myUidRange, otherUidRange));
-        myUidCallback.expectBlockedStatusCallback(defaultNetwork, BLOCKED_REASON_NONE);
-        otherUidCallback.expectBlockedStatusCallback(defaultNetwork, BLOCKED_REASON_NONE);
+        myUidCallback.eventuallyExpectBlockedStatusCallback(defaultNetwork, BLOCKED_REASON_NONE);
+        otherUidCallback.eventuallyExpectBlockedStatusCallback(defaultNetwork, BLOCKED_REASON_NONE);
 
         myUidCallback.assertNoBlockedStatusCallback();
         otherUidCallback.assertNoBlockedStatusCallback();
