@@ -16,6 +16,8 @@
 
 package com.android.server.connectivity.mdns;
 
+import android.annotation.Nullable;
+
 import com.android.internal.annotations.VisibleForTesting;
 
 import java.io.IOException;
@@ -24,8 +26,6 @@ import java.util.Locale;
 import java.util.Objects;
 
 /** An mDNS "SRV" record, which contains service information. */
-// TODO(b/242631897): Resolve nullness suppression.
-@SuppressWarnings("nullness")
 @VisibleForTesting
 public class MdnsServiceRecord extends MdnsRecord {
     public static final int PROTO_NONE = 0;
@@ -131,7 +131,7 @@ public class MdnsServiceRecord extends MdnsRecord {
     }
 
     @Override
-    public boolean equals(Object other) {
+    public boolean equals(@Nullable Object other) {
         if (this == other) {
             return true;
         }
