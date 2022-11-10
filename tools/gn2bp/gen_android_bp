@@ -1008,7 +1008,7 @@ def create_action_module(blueprint, target):
 
     # .h file jni_registration_generator.py generates has #define with directory name.
     # With the genrule env that contains "." which is invalid. So replace that at the end of cmd.
-    commands.append(";sed -i -e 's/OUT_SOONG_.TEMP/OUT_SOONG_DOTTEMP/g' ")
+    commands.append(";sed -i -e 's/OUT_SOONG_.TEMP_SBOX_.*_OUT/GEN/g' ")
     commands.append("$(genDir)/components/cronet/android/cronet_jni_registration.h")
     module.cmd = NEWLINE.join(commands)
 
