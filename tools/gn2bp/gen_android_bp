@@ -119,6 +119,14 @@ additional_args = {
             "cronet_aml_crypto_crypto",
             "cronet_aml_third_party_boringssl_boringssl",
         }),
+    ],
+    'cronet_aml_components_cronet_android_cronet': [
+        ('rtti', True),
+        ('cppflags', {
+            # TODO: figure out if there is no way around this and if this is
+            # allowed for platform code.
+            "-fexceptions",
+        })
     ]
 }
 
@@ -379,6 +387,8 @@ class Module(object):
     self.test_suites = set()
     self.test_config = None
     self.stubs = {}
+    self.cppflags = set()
+    self.rtti = False
 
   def to_string(self, output):
     if self.comment:
@@ -421,6 +431,9 @@ class Module(object):
     self._output_field(output, 'test_config')
     self._output_field(output, 'stubs')
     self._output_field(output, 'proto')
+    self._output_field(output, 'cppflags')
+    if self.rtti:
+      self._output_field(output, 'rtti')
 
     target_out = []
     self._output_field(target_out, 'android')
