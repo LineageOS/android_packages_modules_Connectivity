@@ -84,6 +84,11 @@ static_library_allowlist = [
     'statslog_perfetto',
 ]
 
+# Include directories that will be removed from all targets.
+local_include_dirs_denylist = [
+    'third_party/protobuf/src/',
+]
+
 # Name of the module which settings such as compiler flags for all other
 # modules.
 defaults_module = module_prefix + 'defaults'
@@ -116,15 +121,7 @@ def enable_gtest_and_gmock(module):
     module.whole_static_libs.add('perfetto_gtest_logcat_printer')
 
 
-def remove_local_protobuf_include(module):
-  # remove all third_party/protobuf includes as they conflict with libprotobuf
-  # in Android.
-  module.local_include_dirs = [it for it in module.local_include_dirs
-                               if not it.startswith('third_party/protobuf')]
-
-
 def enable_protobuf_full(module):
-  remove_local_protobuf_include(module)
   if module.type == 'cc_binary_host':
     module.static_libs.add('libprotobuf-cpp-full')
   elif module.host_supported:
@@ -135,13 +132,11 @@ def enable_protobuf_full(module):
 
 
 def enable_protobuf_lite(module):
-  remove_local_protobuf_include(module)
   if module.type not in ['genrule', 'filegroup']:
     module.shared_libs.add('libprotobuf-cpp-lite')
 
 
 def enable_protoc_lib(module):
-  remove_local_protobuf_include(module)
   if module.type == 'cc_binary_host':
     module.static_libs.add('libprotoc')
   else:
@@ -1106,6 +1101,11 @@ def create_modules_from_target(blueprint, gn, gn_target_name):
         module.add_android_shared_lib(android_lib)
       if lib in static_library_allowlist:
         module.add_android_static_lib(android_lib)
+
+    # Remove prohibited include directories
+    module.local_include_dirs = [d for d in module.local_include_dirs
+                                 if d not in local_include_dirs_denylist]
+
 
   # If the module is a static library, export all the generated headers.
   if module.type == 'cc_library_static':
