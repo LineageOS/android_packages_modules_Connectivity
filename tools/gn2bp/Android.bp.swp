@@ -1961,6 +1961,7 @@ genrule {
         "build/android/java/src/org/chromium/build/annotations/MainDex.java",
         "build/android/java/src/org/chromium/build/annotations/MockedInTests.java",
         "build/android/java/src/org/chromium/build/annotations/UsedByReflection.java",
+        "components/cronet/android/java/src/org/chromium/net/impl/CronetUrlRequest.java",
         "url/android/java/src/org/chromium/url/IDNStringUtil.java",
     ],
     cmd: "current_dir=`basename \\`pwd\\``; " +

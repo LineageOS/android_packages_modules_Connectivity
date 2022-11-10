@@ -1212,6 +1212,14 @@ def update_jni_registration_module(blueprint, gn):
   module.srcs.update([gn_utils.label_to_path(source)
                       for source in gn.java_sources if source not in deny_list])
 
+  # TODO: Remove hardcoded file addition to srcs
+  # jni_registration_generator.py generates empty .h file if native methods are not found in the
+  # java files. But android:cronet depends on `RegisterNonMainDexNatives` which is in the template
+  # of .h file. To make script generate non empty .h file, adding java file which contains native
+  # method. Once all the required java files are added to the srcs, this can be removed.
+  module.srcs.update([
+    "components/cronet/android/java/src/org/chromium/net/impl/CronetUrlRequest.java"])
+
 def create_blueprint_for_targets(gn, desc, targets):
   """Generate a blueprint for a list of GN targets."""
   blueprint = Blueprint()
