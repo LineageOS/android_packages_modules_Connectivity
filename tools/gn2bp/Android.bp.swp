@@ -3176,6 +3176,12 @@ cc_library_static {
         "cronet_aml_third_party_zlib_zlib",
         "cronet_aml_url_url",
     ],
+    whole_static_libs: [
+        "cronet_aml_base_base",
+        "cronet_aml_crypto_crypto",
+        "cronet_aml_net_third_party_quiche_quiche",
+        "cronet_aml_third_party_boringssl_boringssl",
+    ],
     generated_headers: [
         "cronet_aml_base_debugging_buildflags",
         "cronet_aml_base_logging_buildflags",
