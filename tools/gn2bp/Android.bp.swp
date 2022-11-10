@@ -1941,15 +1941,15 @@ genrule {
 genrule {
     name: "cronet_aml_components_cronet_android_cronet_jni_registration",
     cmd: "$(location base/android/jni_generator/jni_registration_generator.py) --srcjar-path " +
-         "gen/components/cronet/android/cronet_jni_registration.srcjar " +
+         "$(genDir)/components/cronet/android/cronet_jni_registration.srcjar " +
          "--depfile " +
-         "gen/components/cronet/android/cronet_jni_registration.d " +
+         "$(genDir)/components/cronet/android/cronet_jni_registration.d " +
          "--sources-files " +
          "@FileArg(gen/components/cronet/android/cronet_impl_native_base_java.build_config.json:deps_info:jni:all_source) " +
          "--include_test_only " +
          "--use_proxy_hash " +
          "--header-path " +
-         "gen/components/cronet/android/cronet_jni_registration.h " +
+         "$(genDir)/components/cronet/android/cronet_jni_registration.h " +
          "--manual_jni_registration " +
          "--sources-exclusions " +
          "[\"../../base/android/java/src/org/chromium/base/library_loader/LibraryLoader.java\", \"../../base/android/java/src/org/chromium/base/library_loader/LibraryPrefetcher.java\", \"../../base/android/java/src/org/chromium/base/process_launcher/ChildProcessService.java\", \"../../base/android/java/src/org/chromium/base/SysUtils.java\"]",
