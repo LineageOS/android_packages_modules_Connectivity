@@ -16,14 +16,14 @@
 
 package com.android.server.connectivity.mdns;
 
+import android.annotation.Nullable;
+
 import com.android.internal.annotations.VisibleForTesting;
 
 import java.io.IOException;
 import java.util.Arrays;
 
 /** An mDNS "PTR" record, which holds a name (the "pointer"). */
-// TODO(b/242631897): Resolve nullness suppression.
-@SuppressWarnings("nullness")
 @VisibleForTesting
 public class MdnsPointerRecord extends MdnsRecord {
     private String[] pointer;
@@ -66,7 +66,7 @@ public class MdnsPointerRecord extends MdnsRecord {
     }
 
     @Override
-    public boolean equals(Object other) {
+    public boolean equals(@Nullable Object other) {
         if (this == other) {
             return true;
         }
