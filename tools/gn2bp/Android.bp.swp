@@ -1981,7 +1981,9 @@ genrule {
          "$(genDir)/components/cronet/android/cronet_jni_registration.h " +
          "--manual_jni_registration " +
          " " +
-         "",
+         " " +
+         ";sed -i -e 's/OUT_SOONG_.TEMP/OUT_SOONG_DOTTEMP/g'  " +
+         "$(genDir)/components/cronet/android/cronet_jni_registration.h",
     out: [
         "components/cronet/android/cronet_jni_registration.h",
         "components/cronet/android/cronet_jni_registration.srcjar",
