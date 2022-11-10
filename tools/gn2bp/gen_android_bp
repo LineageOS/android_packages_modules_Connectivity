@@ -988,6 +988,8 @@ def create_action_module(blueprint, target):
     # for the script to generate JNI headers.
     module.tool_files.add("base/android/jni_generator/android_jar.classes")
   elif target.script == '//base/android/jni_generator/jni_registration_generator.py':
+    # jni_registration_generator.py doesn't work with python2
+    module.cmd = "python3 " + module.cmd
     # Path in the original sources file does not work in genrule.
     # So creating sources file in cmd based on the srcs of this target.
     # Adding ../$(current_dir)/ to the head because jni_registration_generator.py uses the files
