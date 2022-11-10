@@ -195,8 +195,8 @@ public class FastPairManager {
         mIntentFilter.addAction(ACTION_FAST_PAIR_HALF_SHEET_BAN_STATE_RESET);
         mIntentFilter.addAction(ACTION_HALF_SHEET_FOREGROUND_STATE);
 
-        mLocatorContextWrapper.getContext()
-                .registerReceiver(mScreenBroadcastReceiver, mIntentFilter);
+        mLocatorContextWrapper.getContext().registerReceiver(mScreenBroadcastReceiver,
+                mIntentFilter, Context.RECEIVER_EXPORTED);
 
         Locator.getFromContextWrapper(mLocatorContextWrapper, FastPairCacheManager.class);
         // Default false for now.
