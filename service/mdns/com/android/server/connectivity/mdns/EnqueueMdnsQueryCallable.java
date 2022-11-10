@@ -17,6 +17,7 @@
 package com.android.server.connectivity.mdns;
 
 import android.annotation.NonNull;
+import android.annotation.Nullable;
 import android.text.TextUtils;
 import android.util.Pair;
 
@@ -38,8 +39,6 @@ import java.util.concurrent.Callable;
  * and the list of the subtypes in the query as a {@link Pair}. If a query is failed to build, or if
  * it can not be enqueued, then call to {@link #call()} returns {@code null}.
  */
-// TODO(b/242631897): Resolve nullness suppression.
-@SuppressWarnings("nullness")
 public class EnqueueMdnsQueryCallable implements Callable<Pair<Integer, List<String>>> {
 
     private static final String TAG = "MdnsQueryCallable";
@@ -81,7 +80,10 @@ public class EnqueueMdnsQueryCallable implements Callable<Pair<Integer, List<Str
         this.transactionId = transactionId;
     }
 
+    // Incompatible return type for override of Callable#call().
+    @SuppressWarnings("nullness:override.return.invalid")
     @Override
+    @Nullable
     public Pair<Integer, List<String>> call() {
         try {
             MdnsSocketClient requestSender = weakRequestSender.get();

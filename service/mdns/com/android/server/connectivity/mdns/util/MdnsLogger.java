@@ -16,6 +16,7 @@
 
 package com.android.server.connectivity.mdns.util;
 
+import android.annotation.Nullable;
 import android.text.TextUtils;
 
 import com.android.net.module.util.SharedLog;
@@ -40,7 +41,7 @@ public class MdnsLogger {
         mLog.log(message);
     }
 
-    public void log(String message, Object... args) {
+    public void log(String message, @Nullable Object... args) {
         mLog.log(message + " ; " + TextUtils.join(" ; ", args));
     }
 
