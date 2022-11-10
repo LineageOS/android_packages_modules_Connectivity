@@ -109,7 +109,10 @@ cflag_allowlist = r'^-DPERFETTO.*$'
 additional_args = {
     # TODO: remove if not needed.
     'cronet_aml_net_net': [
-        ('export_static_lib_headers', {'cronet_aml_net_third_party_quiche_quiche'}),
+        ('export_static_lib_headers', {
+            'cronet_aml_net_third_party_quiche_quiche',
+            'cronet_aml_crypto_crypto',
+        }),
     ]
 }
 
