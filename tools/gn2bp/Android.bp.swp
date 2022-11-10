@@ -3173,6 +3173,7 @@ cc_library_static {
         "cronet_aml_url_buildflags",
     ],
     export_static_lib_headers: [
+        "cronet_aml_crypto_crypto",
         "cronet_aml_net_third_party_quiche_quiche",
     ],
     defaults: [
