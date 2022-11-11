@@ -118,6 +118,9 @@ additional_args = {
             'cronet_aml_net_third_party_quiche_quiche',
             'cronet_aml_crypto_crypto',
         }),
+        # When a code is compiled under rtti(cronet) that depends on another code(net)
+        # that doesn't depend on rtti. undefined symbol: typeinfo 'class' errors appears.
+        ('rtti', True), # go/undefined-symbol-typeinfo
         ('whole_static_libs', {
             'cronet_aml_net_third_party_quiche_quiche',
             'cronet_aml_base_base',
@@ -132,7 +135,7 @@ additional_args = {
             # allowed for platform code.
             "-fexceptions",
         })
-    ]
+    ],
 }
 
 
