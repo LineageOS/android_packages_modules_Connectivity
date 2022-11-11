@@ -343,32 +343,6 @@ open class TestableNetworkCallback private constructor(
         test: (T) -> Boolean = { true }
     ) = expect(network.network, timeoutMs, errorMsg, test)
 
-    // TODO : remove all expectCallback and expectCallbackThat methods after all callers have been
-    // migrated to expect().
-    inline fun <reified T : CallbackEntry> expectCallback(
-        network: Network = ANY_NETWORK,
-        timeoutMs: Long = defaultTimeoutMs
-    ): T = expect(network, timeoutMs)
-
-    @JvmOverloads
-    open fun <T : CallbackEntry> expectCallback(
-        type: KClass<T>,
-        n: Network?,
-        timeoutMs: Long = defaultTimeoutMs
-    ) = expect(type, n ?: ANY_NETWORK, timeoutMs)
-
-    @JvmOverloads
-    open fun <T : CallbackEntry> expectCallback(
-        type: KClass<T>,
-        n: HasNetwork?,
-        timeoutMs: Long = defaultTimeoutMs
-    ) = expect(type, n?.network ?: ANY_NETWORK, timeoutMs)
-
-    fun expectCallbackThat(
-        timeoutMs: Long = defaultTimeoutMs,
-        valid: (CallbackEntry) -> Boolean
-    ) = expect(timeoutMs = timeoutMs, test = valid)
-
     // Make open for use in ConnectivityServiceTest which is the only one knowing its handlers.
     // TODO : remove the necessity to overload this, remove the open qualifier, and give a
     // default argument to assertNoCallback instead, possibly with @JvmOverloads if necessary.
