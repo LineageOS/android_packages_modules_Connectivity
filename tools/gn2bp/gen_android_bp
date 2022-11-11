@@ -1235,6 +1235,9 @@ def create_java_module(blueprint, gn):
 
 def update_jni_registration_module(blueprint, gn):
   bp_module_name = label_to_module_name('//components/cronet/android:cronet_jni_registration')
+  if bp_module_name not in blueprint.modules:
+    # To support building targets that might not create the cronet_jni_registration.
+    return
   module = blueprint.modules[bp_module_name]
 
   # TODO: deny list is in the arg of jni_registration_generator.py. Should not be hardcoded
