@@ -1113,6 +1113,9 @@ def create_modules_from_target(blueprint, gn, gn_target_name):
     # problem as libicu contains the only copy target which happens to be a
     # leaf node.
     return None
+  elif target.type == 'java_group':
+    # Java targets are handled outside of create_modules_from_target.
+    return None
   else:
     raise Error('Unknown target %s (%s)' % (target.name, target.type))
 
