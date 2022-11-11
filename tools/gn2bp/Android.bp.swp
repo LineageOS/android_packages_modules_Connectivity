@@ -1944,6 +1944,12 @@ cc_library_shared {
         "jni_headers",
     ],
     cpp_std: "c++20",
+    linker_scripts: [
+        "base/android/library_loader/anchor_functions.lds",
+    ],
+    cppflags: [
+        "-fexceptions",
+    ],
     rtti: true,
 }
 
@@ -4124,6 +4130,9 @@ cc_binary {
         "build/linux/debian_bullseye_amd64-sysroot/usr/include",
     ],
     cpp_std: "c++20",
+    cppflags: [
+        "-fexceptions",
+    ],
     rtti: true,
 }
 

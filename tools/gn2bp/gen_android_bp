@@ -113,6 +113,11 @@ cflag_allowlist = r'^-DPERFETTO.*$'
 # Additional arguments to apply to Android.bp rules.
 additional_args = {
     # TODO: remove if not needed.
+    'cronet_aml_components_cronet_android_cronet': [
+        ('linker_scripts', {
+            'base/android/library_loader/anchor_functions.lds',
+        }),
+    ],
     'cronet_aml_net_net': [
         ('export_static_lib_headers', {
             'cronet_aml_net_third_party_quiche_quiche',
@@ -384,6 +389,7 @@ class Module(object):
     self.apex_available = set()
     self.min_sdk_version = None
     self.proto = dict()
+    self.linker_scripts = set()
     # The genrule_XXX below are properties that must to be propagated back
     # on the module(s) that depend on the genrule.
     self.genrule_headers = set()
@@ -438,6 +444,7 @@ class Module(object):
     self._output_field(output, 'test_config')
     self._output_field(output, 'stubs')
     self._output_field(output, 'proto')
+    self._output_field(output, 'linker_scripts')
     self._output_field(output, 'cppflags')
     if self.rtti:
       self._output_field(output, 'rtti')
