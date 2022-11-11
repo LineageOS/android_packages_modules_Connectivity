@@ -38,6 +38,7 @@ import static androidx.test.platform.app.InstrumentationRegistry.getInstrumentat
 import static com.android.compatibility.common.util.SystemUtil.runWithShellPermissionIdentity;
 import static com.android.networkstack.apishim.ConstantsShim.BLOCKED_REASON_LOCKDOWN_VPN;
 import static com.android.networkstack.apishim.ConstantsShim.BLOCKED_REASON_NONE;
+import static com.android.networkstack.apishim.ConstantsShim.RECEIVER_EXPORTED;
 import static com.android.testutils.Cleanup.testAndCleanup;
 import static com.android.testutils.DevSdkIgnoreRuleKt.SC_V2;
 
@@ -1550,8 +1551,9 @@ public class VpnTest {
         final DownloadManager dm = context.getSystemService(DownloadManager.class);
         final DownloadCompleteReceiver receiver = new DownloadCompleteReceiver();
         try {
+            final int flags = SdkLevel.isAtLeastT() ? RECEIVER_EXPORTED : 0;
             context.registerReceiver(receiver,
-                    new IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE));
+                    new IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE), flags);
 
             // Enqueue a request and check only one download.
             final long id = dm.enqueue(new Request(
