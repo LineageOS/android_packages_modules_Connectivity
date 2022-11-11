@@ -4127,6 +4127,7 @@ cc_binary {
         "build/linux/debian_bullseye_amd64-sysroot/usr/include",
     ],
     cpp_std: "c++20",
+    rtti: true,
 }
 
 // GN: //net/traffic_annotation:traffic_annotation
@@ -5330,6 +5331,7 @@ cc_library_static {
         "third_party/android_ndk/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include",
     ],
     cpp_std: "c++20",
+    rtti: true,
 }
 
 // GN: //third_party/icu:icuuc_private
@@ -5580,6 +5582,7 @@ cc_library_static {
         "third_party/android_ndk/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include",
     ],
     cpp_std: "c++20",
+    rtti: true,
 }
 
 // GN: //third_party/icu:icuuc_public
