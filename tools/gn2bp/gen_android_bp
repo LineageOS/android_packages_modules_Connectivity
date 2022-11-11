@@ -128,13 +128,6 @@ additional_args = {
             "libssl",
         }),
     ],
-    'cronet_aml_components_cronet_android_cronet': [
-        ('cppflags', {
-            # TODO: figure out if there is no way around this and if this is
-            # allowed for platform code.
-            "-fexceptions",
-        })
-    ],
 }
 
 
@@ -1140,6 +1133,9 @@ def create_modules_from_target(blueprint, gn, gn_target_name):
         local_include_dirs_set.add(flag[len('-isystem../../'):])
       if '-frtti' in flag:
         module.rtti = True
+      if '-fexceptions' in flag:
+        module.cppflags.add('-fexceptions')
+
 
     # Adding local_include_dirs is necessary due to source_sets / filegroups
     # which do not properly propagate include directories.

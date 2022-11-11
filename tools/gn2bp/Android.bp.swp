@@ -1944,9 +1944,6 @@ cc_library_shared {
         "jni_headers",
     ],
     cpp_std: "c++20",
-    cppflags: [
-        "-fexceptions",
-    ],
     rtti: true,
 }
 
