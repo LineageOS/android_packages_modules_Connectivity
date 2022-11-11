@@ -117,7 +117,7 @@ additional_args = {
             'cronet_aml_net_third_party_quiche_quiche',
             'cronet_aml_base_base',
             "cronet_aml_crypto_crypto",
-            "cronet_aml_third_party_boringssl_boringssl",
+            "libssl",
         }),
     ],
     'cronet_aml_components_cronet_android_cronet': [
@@ -218,6 +218,11 @@ def enable_bionic_libc_platform_headers_on_android(module):
   module.header_libs.add('bionic_libc_platform_headers')
 
 
+def enable_boringssl(module):
+  if module.type not in ['genrule', 'filegroup']:
+    module.static_libs.add('libssl')
+
+
 # Android equivalents for third-party libraries that the upstream project
 # depends on.
 builtin_deps = {
@@ -247,6 +252,8 @@ builtin_deps = {
         enable_protobuf_lite,
     '//third_party/protobuf:protoc_lib':
         enable_protoc_lib,
+    '//third_party/boringssl:boringssl':
+        enable_boringssl,
 }
 
 # ----------------------------------------------------------------------------
