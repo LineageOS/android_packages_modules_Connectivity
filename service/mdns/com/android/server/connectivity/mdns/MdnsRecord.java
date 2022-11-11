@@ -16,6 +16,10 @@
 
 package com.android.server.connectivity.mdns;
 
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
+import static java.util.concurrent.TimeUnit.SECONDS;
+
+import android.annotation.Nullable;
 import android.os.SystemClock;
 import android.text.TextUtils;
 
@@ -24,14 +28,11 @@ import com.android.internal.annotations.VisibleForTesting;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Objects;
-import java.util.concurrent.TimeUnit;
 
 /**
  * Abstract base class for mDNS records. Stores the header fields and provides methods for reading
  * the record from and writing it to a packet.
  */
-// TODO(b/242631897): Resolve nullness suppression.
-@SuppressWarnings("nullness")
 public abstract class MdnsRecord {
     public static final int TYPE_A = 0x0001;
     public static final int TYPE_AAAA = 0x001C;
@@ -59,11 +60,14 @@ public abstract class MdnsRecord {
      * @param reader The reader to read the record from.
      * @throws IOException If an error occurs while reading the packet.
      */
+    // call to readData(com.android.server.connectivity.mdns.MdnsPacketReader) not allowed on given
+    // receiver.
+    @SuppressWarnings("nullness:method.invocation.invalid")
     protected MdnsRecord(String[] name, int type, MdnsPacketReader reader) throws IOException {
         this.name = name;
         this.type = type;
         cls = reader.readUInt16();
-        ttlMillis = TimeUnit.SECONDS.toMillis(reader.readUInt32());
+        ttlMillis = SECONDS.toMillis(reader.readUInt32());
         int dataLength = reader.readUInt16();
 
         receiptTimeMillis = SystemClock.elapsedRealtime();
@@ -157,7 +161,7 @@ public abstract class MdnsRecord {
         writer.writeUInt16(type);
         writer.writeUInt16(cls);
 
-        writer.writeUInt32(TimeUnit.MILLISECONDS.toSeconds(getRemainingTTL(now)));
+        writer.writeUInt32(MILLISECONDS.toSeconds(getRemainingTTL(now)));
 
         int dataLengthPos = writer.getWritePosition();
         writer.writeUInt16(0); // data length
@@ -194,7 +198,7 @@ public abstract class MdnsRecord {
     }
 
     @Override
-    public boolean equals(Object other) {
+    public boolean equals(@Nullable Object other) {
         if (!(other instanceof MdnsRecord)) {
             return false;
         }
@@ -231,7 +235,7 @@ public abstract class MdnsRecord {
         }
 
         @Override
-        public boolean equals(Object other) {
+        public boolean equals(@Nullable Object other) {
             if (this == other) {
                 return true;
             }

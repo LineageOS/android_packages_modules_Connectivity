@@ -21,43 +21,38 @@ package com.android.nearby.halfsheet.constants;
  */
 public class Constant {
     public static final String TAG = "FastPairHalfSheet";
+    private static final String PREFIX = "com.android.nearby.halfsheet.";
 
     // Intent extra
     public static final String EXTRA_BINDER = "com.android.server.nearby.fastpair.BINDER";
     public static final String EXTRA_BUNDLE = "com.android.server.nearby.fastpair.BUNDLE_EXTRA";
 
-    public static final String EXTRA_TITLE =
-            "com.android.nearby.halfsheet.HALF_SHEET_TITLE";
-    public static final String EXTRA_DESCRIPTION =
-            "com.android.nearby.halfsheet.HALF_SHEET_DESCRIPTION";
-    public static final String EXTRA_HALF_SHEET_ID =
-            "com.android.nearby.halfsheet.HALF_SHEET_ID";
-    public static final String EXTRA_HALF_SHEET_INFO =
-            "com.android.nearby.halfsheet.HALF_SHEET";
-    public static final String EXTRA_HALF_SHEET_TYPE =
-            "com.android.nearby.halfsheet.HALF_SHEET_TYPE";
-    public static final String EXTRA_HALF_SHEET_ACCOUNT_NAME =
-            "com.android.nearby.halfsheet.HALF_SHEET_ACCOUNT_NAME";
-    public static final String EXTRA_HALF_SHEET_CONTENT =
-            "com.android.nearby.halfsheet.HALF_SHEET_CONTENT";
-
+    public static final String EXTRA_TITLE = PREFIX + "HALF_SHEET_TITLE";
+    public static final String EXTRA_DESCRIPTION = PREFIX + "HALF_SHEET_DESCRIPTION";
+    public static final String EXTRA_HALF_SHEET_ID = PREFIX + "HALF_SHEET_ID";
+    public static final String EXTRA_HALF_SHEET_INFO = PREFIX + "HALF_SHEET";
+    public static final String EXTRA_HALF_SHEET_TYPE = PREFIX + "HALF_SHEET_TYPE";
+    public static final String EXTRA_HALF_SHEET_ACCOUNT_NAME = PREFIX + "HALF_SHEET_ACCOUNT_NAME";
+    public static final String EXTRA_HALF_SHEET_CONTENT = PREFIX + "HALF_SHEET_CONTENT";
     public static final String EXTRA_HALF_SHEET_FOREGROUND =
-            "com.android.nearby.halfsheet.EXTRA_HALF_SHEET_FOREGROUND";
+            PREFIX + "EXTRA_HALF_SHEET_FOREGROUND";
     public static final String EXTRA_HALF_SHEET_IS_RETROACTIVE =
-            "com.android.nearby.halfsheet.HALF_SHEET_IS_RETROACTIVE";
+            PREFIX + "HALF_SHEET_IS_RETROACTIVE";
     public static final String EXTRA_HALF_SHEET_IS_SUBSEQUENT_PAIR =
-            "com.android.nearby.halfsheet.HALF_SHEET_IS_SUBSEQUENT_PAIR";
+            PREFIX + "HALF_SHEET_IS_SUBSEQUENT_PAIR";
     public static final String EXTRA_HALF_SHEET_PAIRING_RESURFACE =
-            "com.android.nearby.halfsheet.EXTRA_HALF_SHEET_PAIRING_RESURFACE";
+            PREFIX + "EXTRA_HALF_SHEET_PAIRING_RESURFACE";
 
     // Intent Actions
     public static final String ACTION_HALF_SHEET_FOREGROUND_STATE =
-            "com.android.nearby.halfsheet.ACTION_HALF_SHEET_FOREGROUND_STATE";
+            PREFIX + "ACTION_HALF_SHEET_FOREGROUND_STATE";
     public static final String ACTION_FAST_PAIR_HALF_SHEET_CANCEL =
             "com.android.nearby.ACTION_FAST_PAIR_HALF_SHEET_CANCEL";
     public static final String ACTION_FAST_PAIR_HALF_SHEET_BAN_STATE_RESET =
             "com.android.nearby.ACTION_FAST_PAIR_BAN_STATE_RESET";
-    public static final String ACTION_RESOURCES_APK = "android.nearby.SHOW_HALFSHEET";
+    public static final String ACTION_RESOURCES_APK =
+            "android.nearby.SHOW_HALFSHEET";
+    public static final String ACTION_FAST_PAIR = PREFIX + "ACTION_MAGIC_PAIR";
 
     public static final String RESULT_FAIL = "RESULT_FAIL";
     public static final String ARG_FRAGMENT_STATE = "ARG_FRAGMENT_STATE";

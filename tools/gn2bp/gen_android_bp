@@ -84,6 +84,11 @@ static_library_allowlist = [
     'statslog_perfetto',
 ]
 
+# Include directories that will be removed from all targets.
+local_include_dirs_denylist = [
+    'third_party/protobuf/src/',
+]
+
 # Name of the module which settings such as compiler flags for all other
 # modules.
 defaults_module = module_prefix + 'defaults'
@@ -103,6 +108,18 @@ cflag_allowlist = r'^-DPERFETTO.*$'
 # Additional arguments to apply to Android.bp rules.
 additional_args = {
     # TODO: remove if not needed.
+    'cronet_aml_net_net': [
+        ('export_static_lib_headers', {
+            'cronet_aml_net_third_party_quiche_quiche',
+            'cronet_aml_crypto_crypto',
+        }),
+        ('whole_static_libs', {
+            'cronet_aml_net_third_party_quiche_quiche',
+            'cronet_aml_base_base',
+            "cronet_aml_crypto_crypto",
+            "cronet_aml_third_party_boringssl_boringssl",
+        }),
+    ]
 }
 
 
@@ -113,15 +130,7 @@ def enable_gtest_and_gmock(module):
     module.whole_static_libs.add('perfetto_gtest_logcat_printer')
 
 
-def remove_local_protobuf_include(module):
-  # remove all third_party/protobuf includes as they conflict with libprotobuf
-  # in Android.
-  module.local_include_dirs = [it for it in module.local_include_dirs
-                               if not it.startswith('third_party/protobuf')]
-
-
 def enable_protobuf_full(module):
-  remove_local_protobuf_include(module)
   if module.type == 'cc_binary_host':
     module.static_libs.add('libprotobuf-cpp-full')
   elif module.host_supported:
@@ -132,13 +141,11 @@ def enable_protobuf_full(module):
 
 
 def enable_protobuf_lite(module):
-  remove_local_protobuf_include(module)
   if module.type not in ['genrule', 'filegroup']:
     module.shared_libs.add('libprotobuf-cpp-lite')
 
 
 def enable_protoc_lib(module):
-  remove_local_protobuf_include(module)
   if module.type == 'cc_binary_host':
     module.static_libs.add('libprotoc')
   else:
@@ -344,6 +351,7 @@ class Module(object):
     self.export_include_dirs = set()
     self.generated_headers = set()
     self.export_generated_headers = set()
+    self.export_static_lib_headers = set()
     self.defaults = set()
     self.cflags = set()
     self.include_dirs = set()
@@ -393,6 +401,7 @@ class Module(object):
     self._output_field(output, 'export_include_dirs')
     self._output_field(output, 'generated_headers')
     self._output_field(output, 'export_generated_headers')
+    self._output_field(output, 'export_static_lib_headers')
     self._output_field(output, 'defaults')
     self._output_field(output, 'cflags')
     self._output_field(output, 'include_dirs')
@@ -803,6 +812,24 @@ def create_action_module(blueprint, target):
     # fix target.output directory to match #include statements.
     target.outputs = [re.sub('^jni_headers/', '', out) for out in target.outputs]
 
+  elif target.script == '//base/android/jni_generator/jni_registration_generator.py':
+    # jni_registration_generator.py pulls in some config dependencies that we
+    # do not handle. Remove them.
+    # TODO: find a better way to do this.
+    target.deps.clear()
+
+    target.inputs = [file for file in target.inputs if not file.startswith('//out/')]
+    for i, val in enumerate(target.args):
+      if val in ['--depfile', '--srcjar-path', '--header-path']:
+        target.args[i + 1] = re.sub('^gen', '$(genDir)', target.args[i + 1])
+      if val == '--sources-files':
+        target.args[i + 1] = '$(genDir)/java.sources'
+      elif val == '--sources-exclusions':
+        # update_jni_registration_module removes them from the srcs of the module
+        # It might be better to remove sources by '--sources-exclusions'
+        target.args[i] = ''
+        target.args[i + 1] = ''
+
   elif target.script == '//build/android/gyp/write_build_config.py':
     for i, val in enumerate(target.args):
       if val == '--depfile':
@@ -943,7 +970,7 @@ def create_action_module(blueprint, target):
     # Pipe response file contents into script
     module.cmd = 'echo \'%s\' |%s%s' % (target.response_file_contents, NEWLINE, module.cmd)
 
-  if all(os.path.splitext(it)[1] == '.h' for it in target.outputs):
+  if any(os.path.splitext(it)[1] == '.h' for it in target.outputs):
     module.genrule_headers.add(bp_module_name)
 
   # gn treats inputs and sources for actions equally.
@@ -971,6 +998,25 @@ def create_action_module(blueprint, target):
     # android_jar.classes should be part of the tools as it list implicit classes
     # for the script to generate JNI headers.
     module.tool_files.add("base/android/jni_generator/android_jar.classes")
+  elif target.script == '//base/android/jni_generator/jni_registration_generator.py':
+    # jni_registration_generator.py doesn't work with python2
+    module.cmd = "python3 " + module.cmd
+    # Path in the original sources file does not work in genrule.
+    # So creating sources file in cmd based on the srcs of this target.
+    # Adding ../$(current_dir)/ to the head because jni_registration_generator.py uses the files
+    # whose path startswith(..)
+    commands = ["current_dir=`basename \\\`pwd\\\``;",
+                "for f in $(in);",
+                "do",
+                "echo \\\"../$$current_dir/$$f\\\" >> $(genDir)/java.sources;",
+                "done;",
+                module.cmd]
+
+    # .h file jni_registration_generator.py generates has #define with directory name.
+    # With the genrule env that contains "." which is invalid. So replace that at the end of cmd.
+    commands.append(";sed -i -e 's/OUT_SOONG_.TEMP_SBOX_.*_OUT/GEN/g' ")
+    commands.append("$(genDir)/components/cronet/android/cronet_jni_registration.h")
+    module.cmd = NEWLINE.join(commands)
 
   blueprint.add_module(module)
   return module
@@ -1096,6 +1142,11 @@ def create_modules_from_target(blueprint, gn, gn_target_name):
       if lib in static_library_allowlist:
         module.add_android_static_lib(android_lib)
 
+    # Remove prohibited include directories
+    module.local_include_dirs = [d for d in module.local_include_dirs
+                                 if d not in local_include_dirs_denylist]
+
+
   # If the module is a static library, export all the generated headers.
   if module.type == 'cc_library_static':
     module.export_generated_headers = module.generated_headers
@@ -1157,6 +1208,29 @@ def create_java_module(blueprint, gn):
   module.srcs.update([gn_utils.label_to_path(source) for source in gn.java_sources])
   blueprint.add_module(module)
 
+def update_jni_registration_module(blueprint, gn):
+  bp_module_name = label_to_module_name('//components/cronet/android:cronet_jni_registration')
+  module = blueprint.modules[bp_module_name]
+
+  # TODO: deny list is in the arg of jni_registration_generator.py. Should not be hardcoded
+  deny_list = [
+    '//base/android/java/src/org/chromium/base/library_loader/LibraryLoader.java',
+    '//base/android/java/src/org/chromium/base/library_loader/LibraryPrefetcher.java',
+    '//base/android/java/src/org/chromium/base/process_launcher/ChildProcessService.java',
+    '//base/android/java/src/org/chromium/base/SysUtils.java']
+
+  # TODO: java_sources might not contain all the required java files
+  module.srcs.update([gn_utils.label_to_path(source)
+                      for source in gn.java_sources if source not in deny_list])
+
+  # TODO: Remove hardcoded file addition to srcs
+  # jni_registration_generator.py generates empty .h file if native methods are not found in the
+  # java files. But android:cronet depends on `RegisterNonMainDexNatives` which is in the template
+  # of .h file. To make script generate non empty .h file, adding java file which contains native
+  # method. Once all the required java files are added to the srcs, this can be removed.
+  module.srcs.update([
+    "components/cronet/android/java/src/org/chromium/net/impl/CronetUrlRequest.java"])
+
 def create_blueprint_for_targets(gn, desc, targets):
   """Generate a blueprint for a list of GN targets."""
   blueprint = Blueprint()
@@ -1171,6 +1245,7 @@ def create_blueprint_for_targets(gn, desc, targets):
       '-Wno-sign-compare',
       '-Wno-sign-promo',
       '-Wno-unused-parameter',
+      '-Wno-deprecated-non-prototype', # needed for zlib
       '-fvisibility=hidden',
       '-O2',
   ]
@@ -1181,6 +1256,7 @@ def create_blueprint_for_targets(gn, desc, targets):
     create_modules_from_target(blueprint, gn, target)
 
   create_java_module(blueprint, gn)
+  update_jni_registration_module(blueprint, gn)
 
   # Merge in additional hardcoded arguments.
   for module in blueprint.modules.values():

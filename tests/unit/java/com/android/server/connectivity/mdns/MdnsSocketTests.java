@@ -53,7 +53,7 @@ public class MdnsSocketTests {
     private SocketAddress socketIPv4Address;
     private SocketAddress socketIPv6Address;
 
-    private byte[] data = new byte[25];
+    private final byte[] data = new byte[25];
     private final DatagramPacket datagramPacket = new DatagramPacket(data, data.length);
     private NetworkInterface networkInterface;
 
@@ -74,14 +74,8 @@ public class MdnsSocketTests {
     }
 
     @Test
-    public void testMdnsSocket() throws IOException {
-        mdnsSocket =
-                new MdnsSocket(mockMulticastNetworkInterfaceProvider, MdnsConstants.MDNS_PORT) {
-                    @Override
-                    MulticastSocket createMulticastSocket(int port) throws IOException {
-                        return mockMulticastSocket;
-                    }
-                };
+    public void mdnsSocket_basicFunctionality() throws IOException {
+        mdnsSocket = new MdnsSocket(mockMulticastNetworkInterfaceProvider, mockMulticastSocket);
         mdnsSocket.send(datagramPacket);
         verify(mockMulticastSocket).setNetworkInterface(networkInterface);
         verify(mockMulticastSocket).send(datagramPacket);
@@ -100,20 +94,14 @@ public class MdnsSocketTests {
     }
 
     @Test
-    public void testIPv6OnlyNetwork_IPv6Enabled() throws IOException {
+    public void ipv6OnlyNetwork_ipv6Enabled() throws IOException {
         // Have mockMulticastNetworkInterfaceProvider send back an IPv6Only networkInterfaceWrapper
         networkInterface = createEmptyNetworkInterface();
         when(mockNetworkInterfaceWrapper.getNetworkInterface()).thenReturn(networkInterface);
         when(mockMulticastNetworkInterfaceProvider.getMulticastNetworkInterfaces())
                 .thenReturn(Collections.singletonList(mockNetworkInterfaceWrapper));
 
-        mdnsSocket =
-                new MdnsSocket(mockMulticastNetworkInterfaceProvider, MdnsConstants.MDNS_PORT) {
-                    @Override
-                    MulticastSocket createMulticastSocket(int port) throws IOException {
-                        return mockMulticastSocket;
-                    }
-                };
+        mdnsSocket = new MdnsSocket(mockMulticastNetworkInterfaceProvider, mockMulticastSocket);
 
         when(mockMulticastNetworkInterfaceProvider.isOnIpV6OnlyNetwork(
                 Collections.singletonList(mockNetworkInterfaceWrapper)))
@@ -130,20 +118,14 @@ public class MdnsSocketTests {
     }
 
     @Test
-    public void testIPv6OnlyNetwork_IPv6Toggle() throws IOException {
+    public void ipv6OnlyNetwork_ipv6Toggle() throws IOException {
         // Have mockMulticastNetworkInterfaceProvider send back a networkInterfaceWrapper
         networkInterface = createEmptyNetworkInterface();
         when(mockNetworkInterfaceWrapper.getNetworkInterface()).thenReturn(networkInterface);
         when(mockMulticastNetworkInterfaceProvider.getMulticastNetworkInterfaces())
                 .thenReturn(Collections.singletonList(mockNetworkInterfaceWrapper));
 
-        mdnsSocket =
-                new MdnsSocket(mockMulticastNetworkInterfaceProvider, MdnsConstants.MDNS_PORT) {
-                    @Override
-                    MulticastSocket createMulticastSocket(int port) throws IOException {
-                        return mockMulticastSocket;
-                    }
-                };
+        mdnsSocket = new MdnsSocket(mockMulticastNetworkInterfaceProvider, mockMulticastSocket);
 
         when(mockMulticastNetworkInterfaceProvider.isOnIpV6OnlyNetwork(
                 Collections.singletonList(mockNetworkInterfaceWrapper)))
