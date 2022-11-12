@@ -34,6 +34,7 @@ import static android.net.TetheringManager.TETHER_ERROR_NO_ERROR;
 import static android.net.TetheringManager.TETHER_ERROR_PROVISIONING_FAILED;
 
 import static com.android.networkstack.apishim.ConstantsShim.ACTION_TETHER_UNSUPPORTED_CARRIER_UI;
+import static com.android.networkstack.apishim.ConstantsShim.RECEIVER_NOT_EXPORTED;
 
 import android.app.AlarmManager;
 import android.app.PendingIntent;
@@ -119,8 +120,13 @@ public class EntitlementManager {
         mEntitlementCacheValue = new SparseIntArray();
         mPermissionChangeCallback = callback;
         mHandler = h;
-        mContext.registerReceiver(mReceiver, new IntentFilter(ACTION_PROVISIONING_ALARM),
-                null, mHandler);
+        if (SdkLevel.isAtLeastU()) {
+            mContext.registerReceiver(mReceiver, new IntentFilter(ACTION_PROVISIONING_ALARM),
+                    null, mHandler, RECEIVER_NOT_EXPORTED);
+        } else {
+            mContext.registerReceiver(mReceiver, new IntentFilter(ACTION_PROVISIONING_ALARM),
+                    null, mHandler);
+        }
         mSilentProvisioningService = ComponentName.unflattenFromString(
                 mContext.getResources().getString(R.string.config_wifi_tether_enable));
     }
