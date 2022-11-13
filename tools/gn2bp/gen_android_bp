@@ -38,6 +38,11 @@ import gn_utils
 
 ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
+# Default targets to translate to the blueprint file.
+default_targets = [
+    '//components/cronet/android:cronet',
+]
+
 # Defines a custom init_rc argument to be applied to the corresponding output
 # blueprint target.
 target_initrc = {
@@ -113,13 +118,24 @@ additional_args = {
             'cronet_aml_net_third_party_quiche_quiche',
             'cronet_aml_crypto_crypto',
         }),
+        # When a code is compiled under rtti(cronet) that depends on another code(net)
+        # that doesn't depend on rtti. undefined symbol: typeinfo 'class' errors appears.
+        ('rtti', True), # go/undefined-symbol-typeinfo
         ('whole_static_libs', {
             'cronet_aml_net_third_party_quiche_quiche',
             'cronet_aml_base_base',
             "cronet_aml_crypto_crypto",
-            "cronet_aml_third_party_boringssl_boringssl",
+            "libssl",
         }),
-    ]
+    ],
+    'cronet_aml_components_cronet_android_cronet': [
+        ('rtti', True),
+        ('cppflags', {
+            # TODO: figure out if there is no way around this and if this is
+            # allowed for platform code.
+            "-fexceptions",
+        })
+    ],
 }
 
 
@@ -210,6 +226,11 @@ def enable_bionic_libc_platform_headers_on_android(module):
   module.header_libs.add('bionic_libc_platform_headers')
 
 
+def enable_boringssl(module):
+  if module.type not in ['genrule', 'filegroup']:
+    module.static_libs.add('libssl')
+
+
 # Android equivalents for third-party libraries that the upstream project
 # depends on.
 builtin_deps = {
@@ -239,6 +260,8 @@ builtin_deps = {
         enable_protobuf_lite,
     '//third_party/protobuf:protoc_lib':
         enable_protoc_lib,
+    '//third_party/boringssl:boringssl':
+        enable_boringssl,
 }
 
 # ----------------------------------------------------------------------------
@@ -379,6 +402,8 @@ class Module(object):
     self.test_suites = set()
     self.test_config = None
     self.stubs = {}
+    self.cppflags = set()
+    self.rtti = False
 
   def to_string(self, output):
     if self.comment:
@@ -421,6 +446,9 @@ class Module(object):
     self._output_field(output, 'test_config')
     self._output_field(output, 'stubs')
     self._output_field(output, 'proto')
+    self._output_field(output, 'cppflags')
+    if self.rtti:
+      self._output_field(output, 'rtti')
 
     target_out = []
     self._output_field(target_out, 'android')
@@ -490,7 +518,7 @@ def label_to_module_name(label):
 
 def is_supported_source_file(name):
   """Returns True if |name| can appear in a 'srcs' list."""
-  return os.path.splitext(name)[1] in ['.c', '.cc', '.java', '.proto']
+  return os.path.splitext(name)[1] in ['.c', '.cc', '.cpp', '.java', '.proto', '.S']
 
 
 def create_proto_modules(blueprint, gn, target):
@@ -1088,6 +1116,9 @@ def create_modules_from_target(blueprint, gn, gn_target_name):
     # problem as libicu contains the only copy target which happens to be a
     # leaf node.
     return None
+  elif target.type == 'java_group':
+    # Java targets are handled outside of create_modules_from_target.
+    return None
   else:
     raise Error('Unknown target %s (%s)' % (target.name, target.type))
 
@@ -1210,6 +1241,9 @@ def create_java_module(blueprint, gn):
 
 def update_jni_registration_module(blueprint, gn):
   bp_module_name = label_to_module_name('//components/cronet/android:cronet_jni_registration')
+  if bp_module_name not in blueprint.modules:
+    # To support building targets that might not create the cronet_jni_registration.
+    return
   module = blueprint.modules[bp_module_name]
 
   # TODO: deny list is in the arg of jni_registration_generator.py. Should not be hardcoded
@@ -1317,7 +1351,7 @@ def main():
     desc = json.load(f)
 
   gn = gn_utils.GnParser(desc)
-  blueprint = create_blueprint_for_targets(gn, desc, args.targets)
+  blueprint = create_blueprint_for_targets(gn, desc, args.targets or default_targets)
   project_root = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))
   tool_name = os.path.relpath(os.path.abspath(__file__), project_root)
 
