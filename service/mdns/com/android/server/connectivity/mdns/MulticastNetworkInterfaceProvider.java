@@ -19,6 +19,7 @@ package com.android.server.connectivity.mdns;
 import android.annotation.NonNull;
 import android.annotation.Nullable;
 import android.content.Context;
+import android.net.Network;
 
 import com.android.internal.annotations.VisibleForTesting;
 import com.android.server.connectivity.mdns.util.MdnsLogger;
@@ -56,7 +57,7 @@ public class MulticastNetworkInterfaceProvider {
                 context, this::onConnectivityChanged);
     }
 
-    private void onConnectivityChanged() {
+    private synchronized void onConnectivityChanged() {
         connectivityChanged = true;
     }
 
@@ -139,6 +140,11 @@ public class MulticastNetworkInterfaceProvider {
         }
 
         return networkInterfaceWrappers;
+    }
+
+    @Nullable
+    public Network getAvailableNetwork() {
+        return connectivityMonitor.getAvailableNetwork();
     }
 
     private boolean canScanOnInterface(@Nullable NetworkInterfaceWrapper networkInterface) {

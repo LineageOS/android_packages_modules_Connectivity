@@ -16,6 +16,7 @@
 
 package com.android.server.connectivity.mdns;
 
+import android.annotation.Nullable;
 import android.annotation.TargetApi;
 import android.content.Context;
 import android.net.ConnectivityManager;
@@ -37,6 +38,7 @@ public class ConnectivityMonitorWithConnectivityManager implements ConnectivityM
     // TODO(b/71901993): Ideally we shouldn't need this flag. However we still don't have clues why
     // the receiver is unregistered twice yet.
     private boolean isCallbackRegistered = false;
+    private Network lastAvailableNetwork = null;
 
     @SuppressWarnings({"nullness:assignment", "nullness:method.invocation"})
     @TargetApi(Build.VERSION_CODES.LOLLIPOP)
@@ -50,6 +52,7 @@ public class ConnectivityMonitorWithConnectivityManager implements ConnectivityM
                     @Override
                     public void onAvailable(Network network) {
                         LOGGER.log("network available.");
+                        lastAvailableNetwork = network;
                         notifyConnectivityChange();
                     }
 
@@ -102,5 +105,11 @@ public class ConnectivityMonitorWithConnectivityManager implements ConnectivityM
 
         connectivityManager.unregisterNetworkCallback(networkCallback);
         isCallbackRegistered = false;
+    }
+
+    @Override
+    @Nullable
+    public Network getAvailableNetwork() {
+        return lastAvailableNetwork;
     }
 }

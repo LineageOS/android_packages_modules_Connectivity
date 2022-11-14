@@ -130,7 +130,8 @@ public class MdnsServiceTypeClient {
                 ipv6Address,
                 textStrings,
                 textEntries,
-                response.getInterfaceIndex());
+                response.getInterfaceIndex(),
+                response.getNetwork());
     }
 
     /**

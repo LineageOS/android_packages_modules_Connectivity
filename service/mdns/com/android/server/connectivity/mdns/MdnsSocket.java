@@ -17,6 +17,8 @@
 package com.android.server.connectivity.mdns;
 
 import android.annotation.NonNull;
+import android.annotation.Nullable;
+import android.net.Network;
 
 import com.android.internal.annotations.VisibleForTesting;
 import com.android.server.connectivity.mdns.util.MdnsLogger;
@@ -123,6 +125,14 @@ public class MdnsSocket {
             LOGGER.e("Failed to retrieve interface index for socket.", e);
             return -1;
         }
+    }
+
+    /**
+     * Returns the available network that this socket is used to, or null if the network is unknown.
+     */
+    @Nullable
+    public Network getNetwork() {
+        return multicastNetworkInterfaceProvider.getAvailableNetwork();
     }
 
     public boolean isOnIPv6OnlyNetwork() {
