@@ -376,8 +376,17 @@ open class TestableNetworkCallback private constructor(
     fun <T : CallbackEntry> eventuallyExpect(
         type: KClass<T>,
         timeoutMs: Long = defaultTimeoutMs,
-        predicate: (T: CallbackEntry) -> Boolean = { true }
-    ) = history.poll(timeoutMs) { type.java.isInstance(it) && predicate(it) }.also {
+        predicate: (cb: T) -> Boolean = { true }
+    ) = history.poll(timeoutMs) { type.java.isInstance(it) && predicate(it as T) }.also {
+        assertNotNull(it, "Callback ${type.java} not received within ${timeoutMs}ms")
+    } as T
+
+    fun <T : CallbackEntry> eventuallyExpect(
+        type: KClass<T>,
+        timeoutMs: Long = defaultTimeoutMs,
+        from: Int = mark,
+        predicate: (cb: T) -> Boolean = { true }
+    ) = history.poll(timeoutMs, from) { type.java.isInstance(it) && predicate(it as T) }.also {
         assertNotNull(it, "Callback ${type.java} not received within ${timeoutMs}ms")
     } as T
 
