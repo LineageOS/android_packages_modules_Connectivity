@@ -1635,6 +1635,131 @@ cc_library_static {
     cpp_std: "c++20",
 }
 
+// GN: //base/third_party/symbolize:symbolize
+cc_library_static {
+    name: "cronet_aml_base_third_party_symbolize_symbolize",
+    srcs: [
+        "base/third_party/symbolize/demangle.cc",
+        "base/third_party/symbolize/symbolize.cc",
+    ],
+    defaults: [
+        "cronet_aml_defaults",
+    ],
+    cflags: [
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
+        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_SYSROOT_KEY=20220331T153654Z-0",
+        "-DDCHECK_ALWAYS_ON=1",
+        "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
+        "-DGLOG_EXPORT=",
+        "-DUSE_AURA=1",
+        "-DUSE_OZONE=1",
+        "-DUSE_UDEV",
+        "-D_DEBUG",
+        "-D_FILE_OFFSET_BITS=64",
+        "-D_GNU_SOURCE",
+        "-D_LARGEFILE64_SOURCE",
+        "-D_LARGEFILE_SOURCE",
+        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
+        "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
+        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
+        "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
+    ],
+    local_include_dirs: [
+        "./",
+        "buildtools/third_party/libc++/",
+        "buildtools/third_party/libc++/trunk/include",
+        "buildtools/third_party/libc++abi/trunk/include",
+        "build/linux/debian_bullseye_amd64-sysroot/usr/include",
+    ],
+    cpp_std: "c++20",
+}
+
+// GN: //base/third_party/xdg_mime:xdg_mime
+cc_library_static {
+    name: "cronet_aml_base_third_party_xdg_mime_xdg_mime",
+    srcs: [
+        "base/third_party/xdg_mime/xdgmime.c",
+        "base/third_party/xdg_mime/xdgmimealias.c",
+        "base/third_party/xdg_mime/xdgmimecache.c",
+        "base/third_party/xdg_mime/xdgmimeglob.c",
+        "base/third_party/xdg_mime/xdgmimeicon.c",
+        "base/third_party/xdg_mime/xdgmimeint.c",
+        "base/third_party/xdg_mime/xdgmimemagic.c",
+        "base/third_party/xdg_mime/xdgmimeparent.c",
+    ],
+    defaults: [
+        "cronet_aml_defaults",
+    ],
+    cflags: [
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
+        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_SYSROOT_KEY=20220331T153654Z-0",
+        "-DDCHECK_ALWAYS_ON=1",
+        "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
+        "-DUSE_AURA=1",
+        "-DUSE_OZONE=1",
+        "-DUSE_UDEV",
+        "-D_DEBUG",
+        "-D_FILE_OFFSET_BITS=64",
+        "-D_GNU_SOURCE",
+        "-D_LARGEFILE64_SOURCE",
+        "-D_LARGEFILE_SOURCE",
+        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
+        "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
+        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
+        "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
+    ],
+    local_include_dirs: [
+        "./",
+        "buildtools/third_party/libc++/",
+        "buildtools/third_party/libc++/trunk/include",
+        "buildtools/third_party/libc++abi/trunk/include",
+        "build/linux/debian_bullseye_amd64-sysroot/usr/include",
+    ],
+    cpp_std: "c++20",
+}
+
+// GN: //base/third_party/xdg_user_dirs:xdg_user_dirs
+cc_library_static {
+    name: "cronet_aml_base_third_party_xdg_user_dirs_xdg_user_dirs",
+    srcs: [
+        "base/third_party/xdg_user_dirs/xdg_user_dir_lookup.cc",
+    ],
+    defaults: [
+        "cronet_aml_defaults",
+    ],
+    cflags: [
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
+        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_SYSROOT_KEY=20220331T153654Z-0",
+        "-DDCHECK_ALWAYS_ON=1",
+        "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
+        "-DUSE_AURA=1",
+        "-DUSE_OZONE=1",
+        "-DUSE_UDEV",
+        "-D_DEBUG",
+        "-D_FILE_OFFSET_BITS=64",
+        "-D_GNU_SOURCE",
+        "-D_LARGEFILE64_SOURCE",
+        "-D_LARGEFILE_SOURCE",
+        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
+        "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
+        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
+        "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
+        "-D__STDC_CONSTANT_MACROS",
+        "-D__STDC_FORMAT_MACROS",
+    ],
+    local_include_dirs: [
+        "./",
+        "buildtools/third_party/libc++/",
+        "buildtools/third_party/libc++/trunk/include",
+        "buildtools/third_party/libc++abi/trunk/include",
+        "build/linux/debian_bullseye_amd64-sysroot/usr/include",
+    ],
+    cpp_std: "c++20",
+}
+
 // GN: //base:tracing_buildflags
 genrule {
     name: "cronet_aml_base_tracing_buildflags",
@@ -1872,12 +1997,22 @@ cc_library_shared {
         "libprotobuf-cpp-lite",
     ],
     static_libs: [
+        "cronet_aml_base_allocator_partition_allocator_partition_alloc",
         "cronet_aml_base_base",
+        "cronet_aml_base_base_static",
+        "cronet_aml_base_third_party_double_conversion_double_conversion",
         "cronet_aml_base_third_party_dynamic_annotations_dynamic_annotations",
         "cronet_aml_components_prefs_prefs",
         "cronet_aml_net_net",
+        "cronet_aml_net_third_party_quiche_quiche",
+        "cronet_aml_net_uri_template",
+        "cronet_aml_third_party_icu_icui18n",
+        "cronet_aml_third_party_icu_icuuc_private",
+        "cronet_aml_third_party_libevent_libevent",
+        "cronet_aml_third_party_modp_b64_modp_b64",
         "cronet_aml_third_party_zlib_zlib",
         "cronet_aml_url_url",
+        "libssl",
     ],
     generated_headers: [
         "cronet_aml_base_debugging_buildflags",
@@ -1944,6 +2079,9 @@ cc_library_shared {
         "jni_headers",
     ],
     cpp_std: "c++20",
+    linker_scripts: [
+        "base/android/library_loader/anchor_functions.lds",
+    ],
     cppflags: [
         "-fexceptions",
     ],
@@ -2255,7 +2393,16 @@ cc_library_static {
         "liblog",
     ],
     static_libs: [
+        "cronet_aml_base_allocator_partition_allocator_partition_alloc",
         "cronet_aml_base_base",
+        "cronet_aml_base_base_static",
+        "cronet_aml_base_third_party_double_conversion_double_conversion",
+        "cronet_aml_base_third_party_dynamic_annotations_dynamic_annotations",
+        "cronet_aml_third_party_icu_icui18n",
+        "cronet_aml_third_party_icu_icuuc_private",
+        "cronet_aml_third_party_libevent_libevent",
+        "cronet_aml_third_party_modp_b64_modp_b64",
+        "libssl",
     ],
     generated_headers: [
         "cronet_aml_base_debugging_buildflags",
@@ -2354,8 +2501,15 @@ cc_library_static {
         "liblog",
     ],
     static_libs: [
+        "cronet_aml_base_allocator_partition_allocator_partition_alloc",
         "cronet_aml_base_base",
+        "cronet_aml_base_base_static",
+        "cronet_aml_base_third_party_double_conversion_double_conversion",
         "cronet_aml_base_third_party_dynamic_annotations_dynamic_annotations",
+        "cronet_aml_third_party_icu_icui18n",
+        "cronet_aml_third_party_icu_icuuc_private",
+        "cronet_aml_third_party_libevent_libevent",
+        "cronet_aml_third_party_modp_b64_modp_b64",
         "libssl",
     ],
     generated_headers: [
@@ -2401,6 +2555,7 @@ cc_library_static {
 cc_defaults {
     name: "cronet_aml_defaults",
     cflags: [
+        "-DGOOGLE_PROTOBUF_NO_RTTI",
         "-O2",
         "-Wno-deprecated-non-prototype",
         "-Wno-error=return-type",
@@ -3233,21 +3388,23 @@ cc_library_static {
         "libprotobuf-cpp-lite",
     ],
     static_libs: [
+        "cronet_aml_base_allocator_partition_allocator_partition_alloc",
         "cronet_aml_base_base",
+        "cronet_aml_base_base_static",
+        "cronet_aml_base_third_party_double_conversion_double_conversion",
         "cronet_aml_base_third_party_dynamic_annotations_dynamic_annotations",
         "cronet_aml_crypto_crypto",
         "cronet_aml_net_preload_decoder",
         "cronet_aml_net_third_party_quiche_quiche",
         "cronet_aml_net_uri_template",
+        "cronet_aml_third_party_brotli_common",
         "cronet_aml_third_party_brotli_dec",
+        "cronet_aml_third_party_icu_icui18n",
+        "cronet_aml_third_party_icu_icuuc_private",
+        "cronet_aml_third_party_libevent_libevent",
+        "cronet_aml_third_party_modp_b64_modp_b64",
         "cronet_aml_third_party_zlib_zlib",
         "cronet_aml_url_url",
-        "libssl",
-    ],
-    whole_static_libs: [
-        "cronet_aml_base_base",
-        "cronet_aml_crypto_crypto",
-        "cronet_aml_net_third_party_quiche_quiche",
         "libssl",
     ],
     generated_headers: [
@@ -3493,7 +3650,16 @@ cc_library_static {
         "liblog",
     ],
     static_libs: [
+        "cronet_aml_base_allocator_partition_allocator_partition_alloc",
         "cronet_aml_base_base",
+        "cronet_aml_base_base_static",
+        "cronet_aml_base_third_party_double_conversion_double_conversion",
+        "cronet_aml_base_third_party_dynamic_annotations_dynamic_annotations",
+        "cronet_aml_third_party_icu_icui18n",
+        "cronet_aml_third_party_icu_icuuc_private",
+        "cronet_aml_third_party_libevent_libevent",
+        "cronet_aml_third_party_modp_b64_modp_b64",
+        "libssl",
     ],
     defaults: [
         "cronet_aml_defaults",
@@ -4007,8 +4173,16 @@ cc_library_static {
         "libprotobuf-cpp-lite",
     ],
     static_libs: [
+        "cronet_aml_base_allocator_partition_allocator_partition_alloc",
         "cronet_aml_base_base",
+        "cronet_aml_base_base_static",
+        "cronet_aml_base_third_party_double_conversion_double_conversion",
+        "cronet_aml_base_third_party_dynamic_annotations_dynamic_annotations",
         "cronet_aml_net_uri_template",
+        "cronet_aml_third_party_icu_icui18n",
+        "cronet_aml_third_party_icu_icuuc_private",
+        "cronet_aml_third_party_libevent_libevent",
+        "cronet_aml_third_party_modp_b64_modp_b64",
         "cronet_aml_third_party_zlib_zlib",
         "cronet_aml_url_url",
         "libssl",
@@ -4076,8 +4250,19 @@ cc_binary {
         "libprotobuf-cpp-lite",
     ],
     static_libs: [
+        "cronet_aml_base_allocator_partition_allocator_partition_alloc",
         "cronet_aml_base_base",
+        "cronet_aml_base_base_static",
+        "cronet_aml_base_third_party_double_conversion_double_conversion",
+        "cronet_aml_base_third_party_dynamic_annotations_dynamic_annotations",
+        "cronet_aml_base_third_party_symbolize_symbolize",
+        "cronet_aml_base_third_party_xdg_mime_xdg_mime",
+        "cronet_aml_base_third_party_xdg_user_dirs_xdg_user_dirs",
         "cronet_aml_crypto_crypto",
+        "cronet_aml_third_party_icu_icui18n",
+        "cronet_aml_third_party_icu_icuuc_private",
+        "cronet_aml_third_party_libevent_libevent",
+        "cronet_aml_third_party_modp_b64_modp_b64",
         "libssl",
     ],
     generated_headers: [
@@ -4127,6 +4312,10 @@ cc_binary {
         "build/linux/debian_bullseye_amd64-sysroot/usr/include",
     ],
     cpp_std: "c++20",
+    cppflags: [
+        "-fexceptions",
+    ],
+    rtti: true,
 }
 
 // GN: //net/traffic_annotation:traffic_annotation
@@ -4148,7 +4337,16 @@ cc_library_static {
         "liblog",
     ],
     static_libs: [
+        "cronet_aml_base_allocator_partition_allocator_partition_alloc",
         "cronet_aml_base_base",
+        "cronet_aml_base_base_static",
+        "cronet_aml_base_third_party_double_conversion_double_conversion",
+        "cronet_aml_base_third_party_dynamic_annotations_dynamic_annotations",
+        "cronet_aml_third_party_icu_icui18n",
+        "cronet_aml_third_party_icu_icuuc_private",
+        "cronet_aml_third_party_libevent_libevent",
+        "cronet_aml_third_party_modp_b64_modp_b64",
+        "libssl",
     ],
     defaults: [
         "cronet_aml_defaults",
@@ -5330,6 +5528,7 @@ cc_library_static {
         "third_party/android_ndk/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include",
     ],
     cpp_std: "c++20",
+    rtti: true,
 }
 
 // GN: //third_party/icu:icuuc_private
@@ -5580,6 +5779,7 @@ cc_library_static {
         "third_party/android_ndk/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include",
     ],
     cpp_std: "c++20",
+    rtti: true,
 }
 
 // GN: //third_party/icu:icuuc_public
@@ -5966,8 +6166,16 @@ cc_library_static {
         "liblog",
     ],
     static_libs: [
+        "cronet_aml_base_allocator_partition_allocator_partition_alloc",
         "cronet_aml_base_base",
+        "cronet_aml_base_base_static",
+        "cronet_aml_base_third_party_double_conversion_double_conversion",
         "cronet_aml_base_third_party_dynamic_annotations_dynamic_annotations",
+        "cronet_aml_third_party_icu_icui18n",
+        "cronet_aml_third_party_icu_icuuc_private",
+        "cronet_aml_third_party_libevent_libevent",
+        "cronet_aml_third_party_modp_b64_modp_b64",
+        "libssl",
     ],
     generated_headers: [
         "cronet_aml_base_debugging_buildflags",

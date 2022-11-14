@@ -135,6 +135,7 @@ class GnParser(object):
       self.source_set_deps = set()  # Transitive set of source_set deps.
       self.proto_deps = set()
       self.transitive_proto_deps = set()
+      self.transitive_static_libs_deps = set()
 
       # Deps on //gn:xxx have this flag set to True. These dependencies
       # are special because they pull third_party code from buildtools/.
@@ -299,6 +300,13 @@ class GnParser(object):
         # Java sources are collected and eventually compiled as one large
         # java_library.
         pass
+
+      if dep.type == 'static_library':
+        # Bubble up static_libs. Necessary, since soong does not propagate
+        # static_libs up the build tree.
+        target.transitive_static_libs_deps.add(dep_name)
+        target.transitive_static_libs_deps.update(dep.transitive_static_libs_deps)
+        target.deps.update(target.transitive_static_libs_deps)
 
       # Collect java sources. Java sources are kept inside the __compile_java target.
       # This target can be used for both host and target compilation; only add
