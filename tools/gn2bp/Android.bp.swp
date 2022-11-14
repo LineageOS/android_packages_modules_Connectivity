@@ -5548,6 +5548,26 @@ filegroup {
     ],
 }
 
+// GN: //third_party/boringssl:boringssl_asm
+filegroup {
+    name: "cronet_aml_third_party_boringssl_boringssl_asm_x86",
+    srcs: [
+        "third_party/boringssl/linux-x86/crypto/chacha/chacha-x86.S",
+        "third_party/boringssl/linux-x86/crypto/fipsmodule/aesni-x86.S",
+        "third_party/boringssl/linux-x86/crypto/fipsmodule/bn-586.S",
+        "third_party/boringssl/linux-x86/crypto/fipsmodule/co-586.S",
+        "third_party/boringssl/linux-x86/crypto/fipsmodule/ghash-ssse3-x86.S",
+        "third_party/boringssl/linux-x86/crypto/fipsmodule/ghash-x86.S",
+        "third_party/boringssl/linux-x86/crypto/fipsmodule/md5-586.S",
+        "third_party/boringssl/linux-x86/crypto/fipsmodule/sha1-586.S",
+        "third_party/boringssl/linux-x86/crypto/fipsmodule/sha256-586.S",
+        "third_party/boringssl/linux-x86/crypto/fipsmodule/sha512-586.S",
+        "third_party/boringssl/linux-x86/crypto/fipsmodule/vpaes-x86.S",
+        "third_party/boringssl/linux-x86/crypto/fipsmodule/x86-mont.S",
+        "third_party/boringssl/linux-x86/crypto/test/trampoline-x86.S",
+    ],
+}
+
 // GN: //third_party/boringssl/src/third_party/fiat:fiat_license
 filegroup {
     name: "cronet_aml_third_party_boringssl_src_third_party_fiat_fiat_license",

@@ -499,6 +499,11 @@ def label_to_module_name(label):
   label_without_toolchain = gn_utils.label_without_toolchain(label)
   module = re.sub(r'^//:?', '', label_without_toolchain)
   module = re.sub(r'[^a-zA-Z0-9_]', '_', module)
+
+  # If it's required to support multi toolchain for more targets, it's better to avoid hardcoding.
+  if label == "//third_party/boringssl:boringssl_asm(//build/toolchain/android:android_clang_x86)":
+    module += "_x86"
+
   if not module.startswith(module_prefix):
     return module_prefix + module
   return module
@@ -1296,6 +1301,13 @@ def create_blueprint_for_targets(gn, desc, targets):
 
   for target in targets:
     create_modules_from_target(blueprint, gn, target)
+
+  # Currently, multi tool chain is not supported for all targets and create_modules_from_target can
+  # not reach to this target by following the dependency.
+  # So it's required to specify explicitly.
+  create_modules_from_target(blueprint, gn,
+                             "//third_party/boringssl:boringssl_asm" +
+                             "(//build/toolchain/android:android_clang_x86)")
 
   create_java_module(blueprint, gn)
   update_jni_registration_module(blueprint, gn)
