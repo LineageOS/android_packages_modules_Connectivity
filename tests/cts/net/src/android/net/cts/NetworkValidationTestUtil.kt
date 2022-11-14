@@ -20,6 +20,7 @@ import android.Manifest.permission.WRITE_DEVICE_CONFIG
 import android.provider.DeviceConfig
 import android.provider.DeviceConfig.NAMESPACE_CONNECTIVITY
 import com.android.net.module.util.NetworkStackConstants
+import com.android.testutils.DeviceConfigRule
 import com.android.testutils.runAsShell
 
 /**
@@ -27,7 +28,6 @@ import com.android.testutils.runAsShell
  */
 internal object NetworkValidationTestUtil {
     val TAG = NetworkValidationTestUtil::class.simpleName
-    const val TIMEOUT_MS = 20_000L
 
     /**
      * Clear the test network validation URLs.
