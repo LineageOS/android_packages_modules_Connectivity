@@ -1295,6 +1295,7 @@ def create_blueprint_for_targets(gn, desc, targets):
       '-Wno-deprecated-non-prototype', # needed for zlib
       '-fvisibility=hidden',
       '-Wno-ambiguous-reversed-operator', # needed for icui18n
+      '-Wno-unreachable-code-loop-increment', # needed for icui18n
       '-O2',
   ]
   defaults.stl = 'none'

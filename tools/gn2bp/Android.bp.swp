@@ -2628,6 +2628,7 @@ cc_defaults {
         "-Wno-non-virtual-dtor",
         "-Wno-sign-compare",
         "-Wno-sign-promo",
+        "-Wno-unreachable-code-loop-increment",
         "-Wno-unused-parameter",
         "-fvisibility=hidden",
     ],
