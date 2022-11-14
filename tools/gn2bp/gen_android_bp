@@ -217,11 +217,6 @@ def enable_bionic_libc_platform_headers_on_android(module):
   module.header_libs.add('bionic_libc_platform_headers')
 
 
-def enable_boringssl(module):
-  if module.type not in ['genrule', 'filegroup']:
-    module.static_libs.add('libssl')
-
-
 # Android equivalents for third-party libraries that the upstream project
 # depends on.
 builtin_deps = {
@@ -251,8 +246,6 @@ builtin_deps = {
         enable_protobuf_lite,
     '//third_party/protobuf:protoc_lib':
         enable_protoc_lib,
-    '//third_party/boringssl:boringssl':
-        enable_boringssl,
 }
 
 # ----------------------------------------------------------------------------
