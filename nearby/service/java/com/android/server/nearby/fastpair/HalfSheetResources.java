@@ -106,6 +106,13 @@ public class HalfSheetResources {
     }
 
     /**
+     * Gets the {@code String} with given resource Id and formatted arguments.
+     */
+    public String getString(@StringRes int id, Object... formatArgs) {
+        return get().getString(id, formatArgs);
+    }
+
+    /**
      * Gets the {@link Drawable} with given resource Id.
      */
     public Drawable getDrawable(@DrawableRes int id) {

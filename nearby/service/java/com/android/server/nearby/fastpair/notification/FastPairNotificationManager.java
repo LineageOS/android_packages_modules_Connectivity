@@ -27,6 +27,11 @@ import com.android.server.nearby.fastpair.cache.DiscoveryItem;
  */
 public class FastPairNotificationManager {
 
+    // These channels are rebranded string because they are migrated from different channel ID they
+    // should not be changed.
+    // Channel ID for channel "Devices within reach".
+    static final String DEVICES_WITHIN_REACH_CHANNEL_ID = "DEVICES_WITHIN_REACH_REBRANDED";
+
     /**
      * FastPair notification manager that handle notification ui for fast pair.
      */
