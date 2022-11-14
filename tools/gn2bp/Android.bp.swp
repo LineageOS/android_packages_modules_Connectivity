@@ -2620,6 +2620,7 @@ cc_defaults {
     cflags: [
         "-DGOOGLE_PROTOBUF_NO_RTTI",
         "-O2",
+        "-Wno-ambiguous-reversed-operator",
         "-Wno-deprecated-non-prototype",
         "-Wno-error=return-type",
         "-Wno-macro-redefined",
