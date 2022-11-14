@@ -47,6 +47,7 @@ import android.util.Log
 import androidx.test.platform.app.InstrumentationRegistry.getInstrumentation
 import androidx.test.runner.AndroidJUnit4
 import com.android.modules.utils.build.SdkLevel.isAtLeastR
+import com.android.testutils.DeviceConfigRule
 import com.android.testutils.RecorderCallback
 import com.android.testutils.TestHttpServer
 import com.android.testutils.TestHttpServer.Request
