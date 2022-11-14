@@ -1240,6 +1240,13 @@ def create_modules_from_target(blueprint, gn, gn_target_name):
     module.arch['x86'] = {'srcs': x86_srcs}
     module.arch['x86_64'] = {'srcs': module.srcs.copy()}
     module.srcs.clear()
+  elif module.name == "cronet_aml_third_party_boringssl_boringssl":
+    x86_srcs = module.srcs.copy()
+    x86_srcs.remove(":cronet_aml_third_party_boringssl_boringssl_asm")
+    x86_srcs.add(":cronet_aml_third_party_boringssl_boringssl_asm_x86")
+    module.arch['x86'] = {'srcs': x86_srcs}
+    module.arch['x86_64'] = {'srcs': module.srcs.copy()}
+    module.srcs.clear()
 
   return module
 
