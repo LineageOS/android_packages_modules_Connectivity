@@ -113,6 +113,11 @@ cflag_allowlist = r'^-DPERFETTO.*$'
 # Additional arguments to apply to Android.bp rules.
 additional_args = {
     # TODO: remove if not needed.
+    'cronet_aml_components_cronet_android_cronet': [
+        ('linker_scripts', {
+            'base/android/library_loader/anchor_functions.lds',
+        }),
+    ],
     'cronet_aml_net_net': [
         ('export_static_lib_headers', {
             'cronet_aml_net_third_party_quiche_quiche',
@@ -121,20 +126,6 @@ additional_args = {
         # When a code is compiled under rtti(cronet) that depends on another code(net)
         # that doesn't depend on rtti. undefined symbol: typeinfo 'class' errors appears.
         ('rtti', True), # go/undefined-symbol-typeinfo
-        ('whole_static_libs', {
-            'cronet_aml_net_third_party_quiche_quiche',
-            'cronet_aml_base_base',
-            "cronet_aml_crypto_crypto",
-            "libssl",
-        }),
-    ],
-    'cronet_aml_components_cronet_android_cronet': [
-        ('rtti', True),
-        ('cppflags', {
-            # TODO: figure out if there is no way around this and if this is
-            # allowed for platform code.
-            "-fexceptions",
-        })
     ],
 }
 
@@ -392,6 +383,7 @@ class Module(object):
     self.apex_available = set()
     self.min_sdk_version = None
     self.proto = dict()
+    self.linker_scripts = set()
     # The genrule_XXX below are properties that must to be propagated back
     # on the module(s) that depend on the genrule.
     self.genrule_headers = set()
@@ -446,6 +438,7 @@ class Module(object):
     self._output_field(output, 'test_config')
     self._output_field(output, 'stubs')
     self._output_field(output, 'proto')
+    self._output_field(output, 'linker_scripts')
     self._output_field(output, 'cppflags')
     if self.rtti:
       self._output_field(output, 'rtti')
@@ -1139,6 +1132,11 @@ def create_modules_from_target(blueprint, gn, gn_target_name):
         module.cpp_std = flag[len('-std='):]
       if '-isystem' in flag:
         local_include_dirs_set.add(flag[len('-isystem../../'):])
+      if '-frtti' in flag:
+        module.rtti = True
+      if '-fexceptions' in flag:
+        module.cppflags.add('-fexceptions')
+
 
     # Adding local_include_dirs is necessary due to source_sets / filegroups
     # which do not properly propagate include directories.
@@ -1272,6 +1270,7 @@ def create_blueprint_for_targets(gn, desc, targets):
   # Default settings used by all modules.
   defaults = Module('cc_defaults', defaults_module, '//gn:default_deps')
   defaults.cflags = [
+      '-DGOOGLE_PROTOBUF_NO_RTTI',
       '-Wno-error=return-type',
       '-Wno-non-virtual-dtor',
       '-Wno-macro-redefined',
