@@ -232,7 +232,7 @@ class GnParser(object):
       target.is_third_party_dep_ = True
       return target
 
-    proto_target_type, proto_desc = self.get_proto_target_type(gn_desc, target)
+    proto_target_type, proto_desc = self.get_proto_target_type(gn_desc, gn_target_name)
     if proto_target_type is not None:
       self.proto_libs[target.name] = target
       target.type = 'proto_library'
@@ -345,7 +345,7 @@ class GnParser(object):
     args = proto_desc.get('args')
     return re.sub('^\.\./\.\./', '', args[args.index('--proto-in-dir') + 1])
 
-  def get_proto_target_type(self, gn_desc, target):
+  def get_proto_target_type(self, gn_desc, gn_target_name):
     """ Checks if the target is a proto library and return the plugin.
 
         Returns:
@@ -355,13 +355,13 @@ class GnParser(object):
             json desc of the target with the .proto sources (_gen target for
             non-descriptor types or the target itself for descriptor type).
         """
-    parts = target.name.split('(', 1)
+    parts = gn_target_name.split('(', 1)
     name = parts[0]
     toolchain = '(' + parts[1] if len(parts) > 1 else ''
 
     # Descriptor targets don't have a _gen target; instead we look for the
     # characteristic flag in the args of the target itself.
-    desc = gn_desc.get(target.name)
+    desc = gn_desc.get(gn_target_name)
     if '--descriptor_set_out' in desc.get('args', []):
       return 'descriptor', desc
 
