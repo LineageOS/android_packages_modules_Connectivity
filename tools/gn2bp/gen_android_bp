@@ -1237,7 +1237,7 @@ def create_modules_from_target(blueprint, gn, gn_target_name):
   # need arch condition. So, for now, hardcoding arch condition
   if module.name == "cronet_aml_base_allocator_partition_allocator_partition_alloc":
     x86_srcs = module.srcs.copy()
-    x86_srcs.remove(
+    x86_srcs.discard(
       "base/allocator/partition_allocator/starscan/stack/asm/x64/push_registers_asm.cc")
     x86_srcs.add("base/allocator/partition_allocator/starscan/stack/asm/x86/push_registers_asm.cc")
     module.arch['x86'] = {'srcs': x86_srcs}
