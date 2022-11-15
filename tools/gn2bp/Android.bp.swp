@@ -3487,6 +3487,7 @@ cc_library_static {
         "cronet_aml_third_party_modp_b64_modp_b64",
         "cronet_aml_third_party_zlib_zlib",
         "cronet_aml_url_url",
+        "libprotobuf-cpp-lite",
     ],
     generated_headers: [
         "cronet_aml_base_debugging_buildflags",
@@ -4267,6 +4268,7 @@ cc_library_static {
         "cronet_aml_third_party_modp_b64_modp_b64",
         "cronet_aml_third_party_zlib_zlib",
         "cronet_aml_url_url",
+        "libprotobuf-cpp-lite",
     ],
     generated_headers: [
         "cronet_aml_build_chromeos_buildflags",

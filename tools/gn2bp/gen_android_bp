@@ -138,25 +138,18 @@ def enable_gtest_and_gmock(module):
 
 
 def enable_protobuf_full(module):
-  if module.type == 'cc_binary_host':
+  if module.type not in ['genrule', 'filegroup']:
     module.static_libs.add('libprotobuf-cpp-full')
-  elif module.host_supported:
-    module.host.static_libs.add('libprotobuf-cpp-full')
-    module.android.shared_libs.add('libprotobuf-cpp-full')
-  elif module.type not in ['genrule', 'filegroup']:
-    module.shared_libs.add('libprotobuf-cpp-full')
 
 
 def enable_protobuf_lite(module):
   if module.type not in ['genrule', 'filegroup']:
-    module.shared_libs.add('libprotobuf-cpp-lite')
+    module.static_libs.add('libprotobuf-cpp-lite')
 
 
 def enable_protoc_lib(module):
-  if module.type == 'cc_binary_host':
+  if module.type not in ['genrule', 'filegroup']:
     module.static_libs.add('libprotoc')
-  elif module.type not in ['genrule', 'filegroup']:
-    module.shared_libs.add('libprotoc')
 
 
 def enable_libunwindstack(module):
