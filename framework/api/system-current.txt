@@ -511,6 +511,15 @@ package android.net {
     field @NonNull public static final android.os.Parcelable.Creator<android.net.TcpKeepalivePacketData> CREATOR;
   }
 
+  public final class VpnTransportInfo implements android.os.Parcelable android.net.TransportInfo {
+    ctor public VpnTransportInfo(int, @Nullable String, boolean);
+    method public int describeContents();
+    method public boolean getBypassable();
+    method public int getType();
+    method public void writeToParcel(@NonNull android.os.Parcel, int);
+    field @NonNull public static final android.os.Parcelable.Creator<android.net.VpnTransportInfo> CREATOR;
+  }
+
 }
 
 package android.net.apf {
