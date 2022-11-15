@@ -165,8 +165,7 @@ class GnParser(object):
                   'libs', 'proto_paths'):
         self.__dict__[key].update(other.__dict__.get(key, []))
 
-  def __init__(self, gn_desc):
-    self.gn_desc_ = gn_desc
+  def __init__(self):
     self.all_targets = {}
     self.linker_units = {}  # Executables, shared or static libraries.
     self.source_sets = {}
@@ -202,7 +201,7 @@ class GnParser(object):
       """
     return self.all_targets[gn_target_name]
 
-  def parse_gn_desc(self, gn_target_name):
+  def parse_gn_desc(self, gn_desc, gn_target_name):
     """Parses a gn desc tree and resolves all target dependencies.
 
         It bubbles up variables from source_set dependencies as described in the
@@ -212,7 +211,7 @@ class GnParser(object):
     if target is not None:
       return target  # Target already processed.
 
-    desc = self.gn_desc_[gn_target_name]
+    desc = gn_desc[gn_target_name]
     target = GnParser.Target(gn_target_name, desc['type'])
     target.testonly = desc.get('testonly', False)
     target.toolchain = desc.get('toolchain', None)
@@ -233,7 +232,7 @@ class GnParser(object):
       target.is_third_party_dep_ = True
       return target
 
-    proto_target_type, proto_desc = self.get_proto_target_type(target)
+    proto_target_type, proto_desc = self.get_proto_target_type(gn_desc, target)
     if proto_target_type is not None:
       self.proto_libs[target.name] = target
       target.type = 'proto_library'
@@ -283,7 +282,7 @@ class GnParser(object):
 
     # Recurse in dependencies.
     for dep_name in desc.get('deps', []):
-      dep = self.parse_gn_desc(dep_name)
+      dep = self.parse_gn_desc(gn_desc, dep_name)
       if dep.is_third_party_dep_:
         target.deps.add(dep_name)
       elif dep.type == 'proto_library':
@@ -346,7 +345,7 @@ class GnParser(object):
     args = proto_desc.get('args')
     return re.sub('^\.\./\.\./', '', args[args.index('--proto-in-dir') + 1])
 
-  def get_proto_target_type(self, target):
+  def get_proto_target_type(self, gn_desc, target):
     """ Checks if the target is a proto library and return the plugin.
 
         Returns:
@@ -362,7 +361,7 @@ class GnParser(object):
 
     # Descriptor targets don't have a _gen target; instead we look for the
     # characteristic flag in the args of the target itself.
-    desc = self.gn_desc_.get(target.name)
+    desc = gn_desc.get(target.name)
     if '--descriptor_set_out' in desc.get('args', []):
       return 'descriptor', desc
 
@@ -374,7 +373,7 @@ class GnParser(object):
 
     # In all other cases, we want to look at the _gen target as that has the
     # important information.
-    gen_desc = self.gn_desc_.get('%s_gen%s' % (name, toolchain))
+    gen_desc = gn_desc.get('%s_gen%s' % (name, toolchain))
     if gen_desc is None or gen_desc['type'] != 'action':
       return None, None
     if gen_desc['script'] != '//tools/protoc_wrapper/protoc_wrapper.py':

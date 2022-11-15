@@ -1317,7 +1317,7 @@ def create_blueprint_for_targets(gn, desc, targets):
   # So it's required to specify explicitly.
   boringssl_gn_target_name = ('//third_party/boringssl:boringssl_asm' +
                              '(//build/toolchain/android:android_clang_x86)')
-  gn.parse_gn_desc(boringssl_gn_target_name)
+  gn.parse_gn_desc(desc, boringssl_gn_target_name)
   create_modules_from_target(blueprint, gn, boringssl_gn_target_name)
 
   create_java_module(blueprint, gn)
@@ -1381,12 +1381,12 @@ def main():
   with open(args.desc) as f:
     desc = json.load(f)
 
-  gn = gn_utils.GnParser(desc)
+  gn = gn_utils.GnParser()
   targets = args.targets or default_targets
   for target in targets:
     # TODO: pass desc to parse_gn_desc() to support parsing multiple desc files
     # for different target architectures.
-    gn.parse_gn_desc(target)
+    gn.parse_gn_desc(desc, target)
   blueprint = create_blueprint_for_targets(gn, desc, targets)
   project_root = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))
   tool_name = os.path.relpath(os.path.abspath(__file__), project_root)
