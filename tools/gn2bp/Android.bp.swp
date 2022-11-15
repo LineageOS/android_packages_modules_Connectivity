@@ -139,13 +139,20 @@ cc_library_static {
         "-DANDROID_NDK_VERSION_ROLL=r23_1",
         "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
         "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_SYSROOT_KEY=20220331T153654Z-0",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DHAVE_SYS_UIO_H",
         "-DIS_PARTITION_ALLOC_IMPL",
         "-DPA_PCSCAN_STACK_SUPPORTED",
+        "-DUSE_AURA=1",
+        "-DUSE_OZONE=1",
+        "-DUSE_UDEV",
         "-D_DEBUG",
+        "-D_FILE_OFFSET_BITS=64",
         "-D_GNU_SOURCE",
+        "-D_LARGEFILE64_SOURCE",
+        "-D_LARGEFILE_SOURCE",
         "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
         "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
@@ -160,6 +167,8 @@ cc_library_static {
         "buildtools/third_party/libc++abi/trunk/include",
         "third_party/android_ndk/sources/android/cpufeatures/",
         "third_party/android_ndk/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include",
+        "build/linux/debian_bullseye_amd64-sysroot/usr/include/x86_64-linux-gnu",
+        "build/linux/debian_bullseye_amd64-sysroot/usr/include",
     ],
     cpp_std: "c++20",
     arch: {
@@ -287,7 +296,7 @@ cc_library_static {
 // GN: //base/allocator/partition_allocator:partition_alloc_buildflags
 genrule {
     name: "cronet_aml_base_allocator_partition_allocator_partition_alloc_buildflags",
-    cmd: "echo '--flags ENABLE_PARTITION_ALLOC_AS_MALLOC_SUPPORT=\"true\" ENABLE_BACKUP_REF_PTR_SUPPORT=\"true\" ENABLE_BACKUP_REF_PTR_SLOW_CHECKS=\"false\" ENABLE_DANGLING_RAW_PTR_CHECKS=\"false\" PUT_REF_COUNT_IN_PREVIOUS_SLOT=\"true\" ENABLE_GWP_ASAN_SUPPORT=\"true\" ENABLE_MTE_CHECKED_PTR_SUPPORT=\"false\" RECORD_ALLOC_INFO=\"false\" USE_FREESLOT_BITMAP=\"false\" GLUE_CORE_POOLS=\"false\" ENABLE_SHADOW_METADATA_FOR_64_BITS_POINTERS=\"false\" STARSCAN=\"true\" PA_USE_BASE_TRACING=\"true\" ENABLE_PKEYS=\"false\"' | " +
+    cmd: "echo '--flags ENABLE_PARTITION_ALLOC_AS_MALLOC_SUPPORT=\"true\" ENABLE_BACKUP_REF_PTR_SUPPORT=\"true\" ENABLE_BACKUP_REF_PTR_SLOW_CHECKS=\"false\" ENABLE_DANGLING_RAW_PTR_CHECKS=\"false\" PUT_REF_COUNT_IN_PREVIOUS_SLOT=\"true\" ENABLE_GWP_ASAN_SUPPORT=\"true\" ENABLE_MTE_CHECKED_PTR_SUPPORT=\"false\" RECORD_ALLOC_INFO=\"false\" USE_FREESLOT_BITMAP=\"false\" GLUE_CORE_POOLS=\"false\" ENABLE_SHADOW_METADATA_FOR_64_BITS_POINTERS=\"false\" STARSCAN=\"true\" PA_USE_BASE_TRACING=\"true\" ENABLE_PKEYS=\"true\"' | " +
          "$(location build/write_buildflag_header.py) --output " +
          "$(out) " +
          "--rulename " +
@@ -307,7 +316,7 @@ genrule {
 // GN: //base:anchor_functions_buildflags
 genrule {
     name: "cronet_aml_base_anchor_functions_buildflags",
-    cmd: "echo '--flags USE_LLD=\"true\" SUPPORTS_CODE_ORDERING=\"true\"' | " +
+    cmd: "echo '--flags USE_LLD=\"true\" SUPPORTS_CODE_ORDERING=\"false\"' | " +
          "$(location build/write_buildflag_header.py) --output " +
          "$(out) " +
          "--rulename " +
@@ -485,6 +494,7 @@ cc_library_static {
         "base/allocator/dispatcher/internal/dispatch_data.cc",
         "base/allocator/dispatcher/reentry_guard.cc",
         "base/allocator/partition_allocator/shim/allocator_shim.cc",
+        "base/allocator/partition_allocator/shim/allocator_shim_default_dispatch_to_glibc.cc",
         "base/allocator/partition_allocator/shim/allocator_shim_default_dispatch_to_linker_wrapped_symbols.cc",
         "base/android/android_hardware_buffer_compat.cc",
         "base/android/android_image_reader_compat.cc",
@@ -548,6 +558,7 @@ cc_library_static {
         "base/base64url.cc",
         "base/base_paths.cc",
         "base/base_paths_android.cc",
+        "base/base_paths_posix.cc",
         "base/big_endian.cc",
         "base/build_time.cc",
         "base/callback_list.cc",
@@ -575,6 +586,7 @@ cc_library_static {
         "base/debug/profiler.cc",
         "base/debug/stack_trace.cc",
         "base/debug/stack_trace_android.cc",
+        "base/debug/stack_trace_posix.cc",
         "base/debug/task_trace.cc",
         "base/environment.cc",
         "base/feature_list.cc",
@@ -593,6 +605,7 @@ cc_library_static {
         "base/files/file_tracing.cc",
         "base/files/file_util.cc",
         "base/files/file_util_android.cc",
+        "base/files/file_util_linux.cc",
         "base/files/file_util_posix.cc",
         "base/files/important_file_writer.cc",
         "base/files/important_file_writer_cleaner.cc",
@@ -601,6 +614,7 @@ cc_library_static {
         "base/files/safe_base_name.cc",
         "base/files/scoped_file.cc",
         "base/files/scoped_file_android.cc",
+        "base/files/scoped_file_linux.cc",
         "base/files/scoped_temp_dir.cc",
         "base/functional/callback_helpers.cc",
         "base/functional/callback_internal.cc",
@@ -633,8 +647,10 @@ cc_library_static {
         "base/memory/page_size_posix.cc",
         "base/memory/platform_shared_memory_handle.cc",
         "base/memory/platform_shared_memory_mapper_android.cc",
+        "base/memory/platform_shared_memory_mapper_posix.cc",
         "base/memory/platform_shared_memory_region.cc",
         "base/memory/platform_shared_memory_region_android.cc",
+        "base/memory/platform_shared_memory_region_posix.cc",
         "base/memory/raw_ptr.cc",
         "base/memory/raw_ptr_asan_bound_arg_tracker.cc",
         "base/memory/raw_ptr_asan_service.cc",
@@ -682,6 +698,8 @@ cc_library_static {
         "base/metrics/user_metrics.cc",
         "base/native_library.cc",
         "base/native_library_posix.cc",
+        "base/nix/mime_util_xdg.cc",
+        "base/nix/xdg_util.cc",
         "base/observer_list_internal.cc",
         "base/observer_list_threadsafe.cc",
         "base/observer_list_types.cc",
@@ -701,6 +719,7 @@ cc_library_static {
         "base/power_monitor/power_monitor.cc",
         "base/power_monitor/power_monitor_device_source.cc",
         "base/power_monitor/power_monitor_device_source_android.cc",
+        "base/power_monitor/power_monitor_device_source_stub.cc",
         "base/power_monitor/power_monitor_features.cc",
         "base/power_monitor/power_monitor_source.cc",
         "base/power_monitor/sampling_event_source.cc",
@@ -719,6 +738,7 @@ cc_library_static {
         "base/process/process_handle_posix.cc",
         "base/process/process_iterator.cc",
         "base/process/process_iterator_linux.cc",
+        "base/process/process_linux.cc",
         "base/process/process_metrics.cc",
         "base/process/process_metrics_linux.cc",
         "base/process/process_metrics_posix.cc",
@@ -738,6 +758,7 @@ cc_library_static {
         "base/profiler/stack_sampler.cc",
         "base/profiler/stack_sampler_android.cc",
         "base/profiler/stack_sampler_impl.cc",
+        "base/profiler/stack_sampler_posix.cc",
         "base/profiler/stack_sampling_profiler.cc",
         "base/profiler/thread_delegate_posix.cc",
         "base/profiler/unwinder.cc",
@@ -753,6 +774,7 @@ cc_library_static {
         "base/sequence_checker.cc",
         "base/sequence_checker_impl.cc",
         "base/sequence_token.cc",
+        "base/stack_canary_linux.cc",
         "base/strings/abseil_string_conversions.cc",
         "base/strings/abseil_string_number_conversions.cc",
         "base/strings/escape.cc",
@@ -864,6 +886,7 @@ cc_library_static {
         "base/threading/platform_thread.cc",
         "base/threading/platform_thread_android.cc",
         "base/threading/platform_thread_internal_posix.cc",
+        "base/threading/platform_thread_linux.cc",
         "base/threading/platform_thread_posix.cc",
         "base/threading/platform_thread_ref.cc",
         "base/threading/post_task_and_reply_impl.cc",
@@ -923,6 +946,9 @@ cc_library_static {
         "cronet_aml_base_base_static",
         "cronet_aml_base_third_party_double_conversion_double_conversion",
         "cronet_aml_base_third_party_dynamic_annotations_dynamic_annotations",
+        "cronet_aml_base_third_party_symbolize_symbolize",
+        "cronet_aml_base_third_party_xdg_mime_xdg_mime",
+        "cronet_aml_base_third_party_xdg_user_dirs_xdg_user_dirs",
         "cronet_aml_third_party_boringssl_boringssl",
         "cronet_aml_third_party_icu_icui18n",
         "cronet_aml_third_party_icu_icuuc_private",
@@ -999,18 +1025,27 @@ cc_library_static {
         "-DBASE_IMPLEMENTATION",
         "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
         "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_SYSROOT_KEY=20220331T153654Z-0",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
+        "-DGLOG_EXPORT=",
         "-DHAVE_SYS_UIO_H",
         "-DICU_UTIL_DATA_IMPL=ICU_UTIL_DATA_FILE",
+        "-DUSE_AURA=1",
         "-DUSE_CHROMIUM_ICU=1",
+        "-DUSE_OZONE=1",
+        "-DUSE_SYMBOLIZE",
+        "-DUSE_UDEV",
         "-DU_ENABLE_DYLOAD=0",
         "-DU_ENABLE_RESOURCE_TRACING=0",
         "-DU_ENABLE_TRACING=1",
         "-DU_STATIC_IMPLEMENTATION",
         "-DU_USING_ICU_NAMESPACE=0",
         "-D_DEBUG",
+        "-D_FILE_OFFSET_BITS=64",
         "-D_GNU_SOURCE",
+        "-D_LARGEFILE64_SOURCE",
+        "-D_LARGEFILE_SOURCE",
         "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
         "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
@@ -1029,6 +1064,8 @@ cc_library_static {
         "third_party/icu/source/common/",
         "third_party/icu/source/i18n/",
         "third_party/android_ndk/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include",
+        "build/linux/debian_bullseye_amd64-sysroot/usr/include/x86_64-linux-gnu",
+        "build/linux/debian_bullseye_amd64-sysroot/usr/include",
     ],
     header_libs: [
         "jni_headers",
@@ -1321,11 +1358,18 @@ cc_library_static {
         "-DANDROID_NDK_VERSION_ROLL=r23_1",
         "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
         "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_SYSROOT_KEY=20220331T153654Z-0",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DHAVE_SYS_UIO_H",
+        "-DUSE_AURA=1",
+        "-DUSE_OZONE=1",
+        "-DUSE_UDEV",
         "-D_DEBUG",
+        "-D_FILE_OFFSET_BITS=64",
         "-D_GNU_SOURCE",
+        "-D_LARGEFILE64_SOURCE",
+        "-D_LARGEFILE_SOURCE",
         "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
         "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
@@ -1339,6 +1383,8 @@ cc_library_static {
         "buildtools/third_party/libc++/trunk/include",
         "buildtools/third_party/libc++abi/trunk/include",
         "third_party/android_ndk/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include",
+        "build/linux/debian_bullseye_amd64-sysroot/usr/include/x86_64-linux-gnu",
+        "build/linux/debian_bullseye_amd64-sysroot/usr/include",
     ],
     cpp_std: "c++20",
 }
@@ -1399,7 +1445,7 @@ genrule {
 // GN: //base:debugging_buildflags
 genrule {
     name: "cronet_aml_base_debugging_buildflags",
-    cmd: "echo '--flags DCHECK_IS_CONFIGURABLE=\"false\" ENABLE_LOCATION_SOURCE=\"true\" ENABLE_PROFILING=\"false\" CAN_UNWIND_WITH_FRAME_POINTERS=\"false\" UNSAFE_DEVELOPER_BUILD=\"true\" CAN_UNWIND_WITH_CFI_TABLE=\"false\" EXCLUDE_UNWIND_TABLES=\"false\" ENABLE_GDBINIT_WARNING=\"true\" ENABLE_LLDBINIT_WARNING=\"false\" EXPENSIVE_DCHECKS_ARE_ON=\"true\" ENABLE_STACK_TRACE_LINE_NUMBERS=\"false\"' | " +
+    cmd: "echo '--flags DCHECK_IS_CONFIGURABLE=\"false\" ENABLE_LOCATION_SOURCE=\"true\" ENABLE_PROFILING=\"false\" CAN_UNWIND_WITH_FRAME_POINTERS=\"true\" UNSAFE_DEVELOPER_BUILD=\"true\" CAN_UNWIND_WITH_CFI_TABLE=\"false\" EXCLUDE_UNWIND_TABLES=\"false\" ENABLE_GDBINIT_WARNING=\"true\" ENABLE_LLDBINIT_WARNING=\"false\" EXPENSIVE_DCHECKS_ARE_ON=\"true\" ENABLE_STACK_TRACE_LINE_NUMBERS=\"false\"' | " +
          "$(location build/write_buildflag_header.py) --output " +
          "$(out) " +
          "--rulename " +
@@ -1642,11 +1688,18 @@ cc_library_static {
         "-DANDROID_NDK_VERSION_ROLL=r23_1",
         "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
         "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_SYSROOT_KEY=20220331T153654Z-0",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DHAVE_SYS_UIO_H",
+        "-DUSE_AURA=1",
+        "-DUSE_OZONE=1",
+        "-DUSE_UDEV",
         "-D_DEBUG",
+        "-D_FILE_OFFSET_BITS=64",
         "-D_GNU_SOURCE",
+        "-D_LARGEFILE64_SOURCE",
+        "-D_LARGEFILE_SOURCE",
         "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
         "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
@@ -1660,6 +1713,8 @@ cc_library_static {
         "buildtools/third_party/libc++/trunk/include",
         "buildtools/third_party/libc++abi/trunk/include",
         "third_party/android_ndk/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include",
+        "build/linux/debian_bullseye_amd64-sysroot/usr/include/x86_64-linux-gnu",
+        "build/linux/debian_bullseye_amd64-sysroot/usr/include",
     ],
     cpp_std: "c++20",
 }
@@ -1678,11 +1733,18 @@ cc_library_static {
         "-DANDROID_NDK_VERSION_ROLL=r23_1",
         "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
         "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_SYSROOT_KEY=20220331T153654Z-0",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DHAVE_SYS_UIO_H",
+        "-DUSE_AURA=1",
+        "-DUSE_OZONE=1",
+        "-DUSE_UDEV",
         "-D_DEBUG",
+        "-D_FILE_OFFSET_BITS=64",
         "-D_GNU_SOURCE",
+        "-D_LARGEFILE64_SOURCE",
+        "-D_LARGEFILE_SOURCE",
         "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
         "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
@@ -1694,6 +1756,139 @@ cc_library_static {
         "buildtools/third_party/libc++/trunk/include",
         "buildtools/third_party/libc++abi/trunk/include",
         "third_party/android_ndk/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include",
+        "build/linux/debian_bullseye_amd64-sysroot/usr/include/x86_64-linux-gnu",
+        "build/linux/debian_bullseye_amd64-sysroot/usr/include",
+    ],
+    cpp_std: "c++20",
+}
+
+// GN: //base/third_party/symbolize:symbolize
+cc_library_static {
+    name: "cronet_aml_base_third_party_symbolize_symbolize",
+    srcs: [
+        "base/third_party/symbolize/demangle.cc",
+        "base/third_party/symbolize/symbolize.cc",
+    ],
+    defaults: [
+        "cronet_aml_defaults",
+    ],
+    cflags: [
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
+        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_SYSROOT_KEY=20220331T153654Z-0",
+        "-DDCHECK_ALWAYS_ON=1",
+        "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
+        "-DGLOG_EXPORT=",
+        "-DUSE_AURA=1",
+        "-DUSE_OZONE=1",
+        "-DUSE_UDEV",
+        "-D_DEBUG",
+        "-D_FILE_OFFSET_BITS=64",
+        "-D_GNU_SOURCE",
+        "-D_LARGEFILE64_SOURCE",
+        "-D_LARGEFILE_SOURCE",
+        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
+        "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
+        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
+        "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
+        "-UANDROID",
+    ],
+    local_include_dirs: [
+        "./",
+        "buildtools/third_party/libc++/",
+        "buildtools/third_party/libc++/trunk/include",
+        "buildtools/third_party/libc++abi/trunk/include",
+        "build/linux/debian_bullseye_amd64-sysroot/usr/include/x86_64-linux-gnu",
+        "build/linux/debian_bullseye_amd64-sysroot/usr/include",
+    ],
+    cpp_std: "c++20",
+}
+
+// GN: //base/third_party/xdg_mime:xdg_mime
+cc_library_static {
+    name: "cronet_aml_base_third_party_xdg_mime_xdg_mime",
+    srcs: [
+        "base/third_party/xdg_mime/xdgmime.c",
+        "base/third_party/xdg_mime/xdgmimealias.c",
+        "base/third_party/xdg_mime/xdgmimecache.c",
+        "base/third_party/xdg_mime/xdgmimeglob.c",
+        "base/third_party/xdg_mime/xdgmimeicon.c",
+        "base/third_party/xdg_mime/xdgmimeint.c",
+        "base/third_party/xdg_mime/xdgmimemagic.c",
+        "base/third_party/xdg_mime/xdgmimeparent.c",
+    ],
+    defaults: [
+        "cronet_aml_defaults",
+    ],
+    cflags: [
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
+        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_SYSROOT_KEY=20220331T153654Z-0",
+        "-DDCHECK_ALWAYS_ON=1",
+        "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
+        "-DUSE_AURA=1",
+        "-DUSE_OZONE=1",
+        "-DUSE_UDEV",
+        "-D_DEBUG",
+        "-D_FILE_OFFSET_BITS=64",
+        "-D_GNU_SOURCE",
+        "-D_LARGEFILE64_SOURCE",
+        "-D_LARGEFILE_SOURCE",
+        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
+        "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
+        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
+        "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
+        "-UANDROID",
+    ],
+    local_include_dirs: [
+        "./",
+        "buildtools/third_party/libc++/",
+        "buildtools/third_party/libc++/trunk/include",
+        "buildtools/third_party/libc++abi/trunk/include",
+        "build/linux/debian_bullseye_amd64-sysroot/usr/include/x86_64-linux-gnu",
+        "build/linux/debian_bullseye_amd64-sysroot/usr/include",
+    ],
+    cpp_std: "c++20",
+}
+
+// GN: //base/third_party/xdg_user_dirs:xdg_user_dirs
+cc_library_static {
+    name: "cronet_aml_base_third_party_xdg_user_dirs_xdg_user_dirs",
+    srcs: [
+        "base/third_party/xdg_user_dirs/xdg_user_dir_lookup.cc",
+    ],
+    defaults: [
+        "cronet_aml_defaults",
+    ],
+    cflags: [
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
+        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_SYSROOT_KEY=20220331T153654Z-0",
+        "-DDCHECK_ALWAYS_ON=1",
+        "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
+        "-DUSE_AURA=1",
+        "-DUSE_OZONE=1",
+        "-DUSE_UDEV",
+        "-D_DEBUG",
+        "-D_FILE_OFFSET_BITS=64",
+        "-D_GNU_SOURCE",
+        "-D_LARGEFILE64_SOURCE",
+        "-D_LARGEFILE_SOURCE",
+        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
+        "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
+        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
+        "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
+        "-D__STDC_CONSTANT_MACROS",
+        "-D__STDC_FORMAT_MACROS",
+        "-UANDROID",
+    ],
+    local_include_dirs: [
+        "./",
+        "buildtools/third_party/libc++/",
+        "buildtools/third_party/libc++/trunk/include",
+        "buildtools/third_party/libc++abi/trunk/include",
+        "build/linux/debian_bullseye_amd64-sysroot/usr/include/x86_64-linux-gnu",
+        "build/linux/debian_bullseye_amd64-sysroot/usr/include",
     ],
     cpp_std: "c++20",
 }
@@ -1701,7 +1896,7 @@ cc_library_static {
 // GN: //base:tracing_buildflags
 genrule {
     name: "cronet_aml_base_tracing_buildflags",
-    cmd: "echo '--flags ENABLE_BASE_TRACING=\"false\" USE_PERFETTO_CLIENT_LIBRARY=\"false\" OPTIONAL_TRACE_EVENTS_ENABLED=\"false\"' | " +
+    cmd: "echo '--flags ENABLE_BASE_TRACING=\"false\" USE_PERFETTO_CLIENT_LIBRARY=\"false\" OPTIONAL_TRACE_EVENTS_ENABLED=\"true\"' | " +
          "$(location build/write_buildflag_header.py) --output " +
          "$(out) " +
          "--rulename " +
@@ -1786,7 +1981,7 @@ genrule {
 // GN: //build/config/compiler:compiler_buildflags
 genrule {
     name: "cronet_aml_build_config_compiler_compiler_buildflags",
-    cmd: "echo '--flags CLANG_PGO=\"0\" SYMBOL_LEVEL=\"1\"' | " +
+    cmd: "echo '--flags CLANG_PGO=\"0\" SYMBOL_LEVEL=\"2\"' | " +
          "$(location build/write_buildflag_header.py) --output " +
          "$(out) " +
          "--rulename " +
@@ -1860,6 +2055,7 @@ filegroup {
         "buildtools/third_party/libc++abi/trunk/src/abort_message.cpp",
         "buildtools/third_party/libc++abi/trunk/src/cxa_aux_runtime.cpp",
         "buildtools/third_party/libc++abi/trunk/src/cxa_default_handlers.cpp",
+        "buildtools/third_party/libc++abi/trunk/src/cxa_demangle.cpp",
         "buildtools/third_party/libc++abi/trunk/src/cxa_exception.cpp",
         "buildtools/third_party/libc++abi/trunk/src/cxa_exception_storage.cpp",
         "buildtools/third_party/libc++abi/trunk/src/cxa_guard.cpp",
@@ -1940,6 +2136,9 @@ cc_library_shared {
         "cronet_aml_base_base_static",
         "cronet_aml_base_third_party_double_conversion_double_conversion",
         "cronet_aml_base_third_party_dynamic_annotations_dynamic_annotations",
+        "cronet_aml_base_third_party_symbolize_symbolize",
+        "cronet_aml_base_third_party_xdg_mime_xdg_mime",
+        "cronet_aml_base_third_party_xdg_user_dirs_xdg_user_dirs",
         "cronet_aml_components_prefs_prefs",
         "cronet_aml_crypto_crypto",
         "cronet_aml_net_net",
@@ -2273,6 +2472,26 @@ filegroup {
     ],
 }
 
+// GN: //components/nacl/common:buildflags
+genrule {
+    name: "cronet_aml_components_nacl_common_buildflags",
+    cmd: "echo '--flags ENABLE_NACL=\"true\" IS_MINIMAL_TOOLCHAIN=\"false\"' | " +
+         "$(location build/write_buildflag_header.py) --output " +
+         "$(out) " +
+         "--rulename " +
+         "//components/nacl/common:buildflags " +
+         "--gen-dir " +
+         ". " +
+         "--definitions " +
+         "/dev/stdin",
+    out: [
+        "components/nacl/common/buildflags.h",
+    ],
+    tool_files: [
+        "build/write_buildflag_header.py",
+    ],
+}
+
 // GN: //components/prefs/android:jni_headers
 genrule {
     name: "cronet_aml_components_prefs_android_jni_headers",
@@ -2397,7 +2616,7 @@ cc_library_static {
 // GN: //crypto:buildflags
 genrule {
     name: "cronet_aml_crypto_buildflags",
-    cmd: "echo '--flags USE_NSS_CERTS=\"false\"' | " +
+    cmd: "echo '--flags USE_NSS_CERTS=\"true\"' | " +
          "$(location build/write_buildflag_header.py) --output " +
          "$(out) " +
          "--rulename " +
@@ -2425,6 +2644,8 @@ cc_library_static {
         "crypto/encryptor.cc",
         "crypto/hkdf.cc",
         "crypto/hmac.cc",
+        "crypto/nss_key_util.cc",
+        "crypto/nss_util.cc",
         "crypto/openssl_util.cc",
         "crypto/p224_spake.cc",
         "crypto/random.cc",
@@ -2448,6 +2669,9 @@ cc_library_static {
         "cronet_aml_base_base_static",
         "cronet_aml_base_third_party_double_conversion_double_conversion",
         "cronet_aml_base_third_party_dynamic_annotations_dynamic_annotations",
+        "cronet_aml_base_third_party_symbolize_symbolize",
+        "cronet_aml_base_third_party_xdg_mime_xdg_mime",
+        "cronet_aml_base_third_party_xdg_user_dirs_xdg_user_dirs",
         "cronet_aml_third_party_boringssl_boringssl",
         "cronet_aml_third_party_icu_icui18n",
         "cronet_aml_third_party_icu_icuuc_private",
@@ -2455,9 +2679,13 @@ cc_library_static {
         "cronet_aml_third_party_modp_b64_modp_b64",
     ],
     generated_headers: [
+        "cronet_aml_build_chromeos_buildflags",
+        "cronet_aml_components_nacl_common_buildflags",
         "cronet_aml_crypto_buildflags",
     ],
     export_generated_headers: [
+        "cronet_aml_build_chromeos_buildflags",
+        "cronet_aml_components_nacl_common_buildflags",
         "cronet_aml_crypto_buildflags",
     ],
     defaults: [
@@ -2469,11 +2697,18 @@ cc_library_static {
         "-DCRYPTO_IMPLEMENTATION",
         "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
         "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_SYSROOT_KEY=20220331T153654Z-0",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DHAVE_SYS_UIO_H",
+        "-DUSE_AURA=1",
+        "-DUSE_OZONE=1",
+        "-DUSE_UDEV",
         "-D_DEBUG",
+        "-D_FILE_OFFSET_BITS=64",
         "-D_GNU_SOURCE",
+        "-D_LARGEFILE64_SOURCE",
+        "-D_LARGEFILE_SOURCE",
         "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
         "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
@@ -2483,12 +2718,16 @@ cc_library_static {
     ],
     local_include_dirs: [
         "./",
+        "build/linux/debian_bullseye_amd64-sysroot/usr/include/nspr",
+        "build/linux/debian_bullseye_amd64-sysroot/usr/include/nss",
         "buildtools/third_party/libc++/",
         "buildtools/third_party/libc++/trunk/include",
         "buildtools/third_party/libc++abi/trunk/include",
         "third_party/abseil-cpp/",
         "third_party/boringssl/src/include/",
         "third_party/android_ndk/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include",
+        "build/linux/debian_bullseye_amd64-sysroot/usr/include/x86_64-linux-gnu",
+        "build/linux/debian_bullseye_amd64-sysroot/usr/include",
     ],
     cpp_std: "c++20",
 }
@@ -3302,6 +3541,9 @@ cc_library_static {
         "cronet_aml_base_base_static",
         "cronet_aml_base_third_party_double_conversion_double_conversion",
         "cronet_aml_base_third_party_dynamic_annotations_dynamic_annotations",
+        "cronet_aml_base_third_party_symbolize_symbolize",
+        "cronet_aml_base_third_party_xdg_mime_xdg_mime",
+        "cronet_aml_base_third_party_xdg_user_dirs_xdg_user_dirs",
         "cronet_aml_crypto_crypto",
         "cronet_aml_net_preload_decoder",
         "cronet_aml_net_third_party_quiche_quiche",
@@ -4992,12 +5234,19 @@ cc_library_static {
         "-DBORINGSSL_NO_STATIC_INITIALIZER",
         "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
         "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_SYSROOT_KEY=20220331T153654Z-0",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DHAVE_SYS_UIO_H",
         "-DOPENSSL_SMALL",
+        "-DUSE_AURA=1",
+        "-DUSE_OZONE=1",
+        "-DUSE_UDEV",
         "-D_DEBUG",
+        "-D_FILE_OFFSET_BITS=64",
         "-D_GNU_SOURCE",
+        "-D_LARGEFILE64_SOURCE",
+        "-D_LARGEFILE_SOURCE",
         "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
         "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
@@ -5012,6 +5261,8 @@ cc_library_static {
         "buildtools/third_party/libc++abi/trunk/include",
         "third_party/boringssl/src/include/",
         "third_party/android_ndk/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include",
+        "build/linux/debian_bullseye_amd64-sysroot/usr/include/x86_64-linux-gnu",
+        "build/linux/debian_bullseye_amd64-sysroot/usr/include",
     ],
     cpp_std: "c++20",
     arch: {
@@ -5593,6 +5844,19 @@ filegroup {
 filegroup {
     name: "cronet_aml_third_party_boringssl_boringssl_asm_x86",
     srcs: [
+        "third_party/boringssl/linux-x86/crypto/chacha/chacha-x86.S",
+        "third_party/boringssl/linux-x86/crypto/fipsmodule/aesni-x86.S",
+        "third_party/boringssl/linux-x86/crypto/fipsmodule/bn-586.S",
+        "third_party/boringssl/linux-x86/crypto/fipsmodule/co-586.S",
+        "third_party/boringssl/linux-x86/crypto/fipsmodule/ghash-ssse3-x86.S",
+        "third_party/boringssl/linux-x86/crypto/fipsmodule/ghash-x86.S",
+        "third_party/boringssl/linux-x86/crypto/fipsmodule/md5-586.S",
+        "third_party/boringssl/linux-x86/crypto/fipsmodule/sha1-586.S",
+        "third_party/boringssl/linux-x86/crypto/fipsmodule/sha256-586.S",
+        "third_party/boringssl/linux-x86/crypto/fipsmodule/sha512-586.S",
+        "third_party/boringssl/linux-x86/crypto/fipsmodule/vpaes-x86.S",
+        "third_party/boringssl/linux-x86/crypto/fipsmodule/x86-mont.S",
+        "third_party/boringssl/linux-x86/crypto/test/trampoline-x86.S",
         "third_party/boringssl/linux-x86_64/crypto/chacha/chacha-x86_64.S",
         "third_party/boringssl/linux-x86_64/crypto/cipher_extra/aes128gcmsiv-x86_64.S",
         "third_party/boringssl/linux-x86_64/crypto/cipher_extra/chacha20_poly1305_x86_64.S",
@@ -5969,6 +6233,7 @@ cc_library_static {
         "-DANDROID_NDK_VERSION_ROLL=r23_1",
         "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
         "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_SYSROOT_KEY=20220331T153654Z-0",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DHAVE_DLOPEN=0",
@@ -5976,7 +6241,10 @@ cc_library_static {
         "-DICU_UTIL_DATA_IMPL=ICU_UTIL_DATA_FILE",
         "-DUCONFIG_ONLY_HTML_CONVERSION=1",
         "-DUCONFIG_USE_WINDOWS_LCID_MAPPING_API=0",
+        "-DUSE_AURA=1",
         "-DUSE_CHROMIUM_ICU=1",
+        "-DUSE_OZONE=1",
+        "-DUSE_UDEV",
         "-DU_CHARSET_IS_UTF8=1",
         "-DU_ENABLE_DYLOAD=0",
         "-DU_ENABLE_RESOURCE_TRACING=0",
@@ -5985,7 +6253,10 @@ cc_library_static {
         "-DU_STATIC_IMPLEMENTATION",
         "-DU_USING_ICU_NAMESPACE=0",
         "-D_DEBUG",
+        "-D_FILE_OFFSET_BITS=64",
         "-D_GNU_SOURCE",
+        "-D_LARGEFILE64_SOURCE",
+        "-D_LARGEFILE_SOURCE",
         "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
         "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
@@ -5999,6 +6270,8 @@ cc_library_static {
         "third_party/icu/source/common/",
         "third_party/icu/source/i18n/",
         "third_party/android_ndk/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include",
+        "build/linux/debian_bullseye_amd64-sysroot/usr/include/x86_64-linux-gnu",
+        "build/linux/debian_bullseye_amd64-sysroot/usr/include",
     ],
     cpp_std: "c++20",
     rtti: true,
@@ -6217,6 +6490,7 @@ cc_library_static {
         "-DANDROID_NDK_VERSION_ROLL=r23_1",
         "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
         "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_SYSROOT_KEY=20220331T153654Z-0",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DHAVE_DLOPEN=0",
@@ -6224,7 +6498,10 @@ cc_library_static {
         "-DICU_UTIL_DATA_IMPL=ICU_UTIL_DATA_FILE",
         "-DUCONFIG_ONLY_HTML_CONVERSION=1",
         "-DUCONFIG_USE_WINDOWS_LCID_MAPPING_API=0",
+        "-DUSE_AURA=1",
         "-DUSE_CHROMIUM_ICU=1",
+        "-DUSE_OZONE=1",
+        "-DUSE_UDEV",
         "-DU_CHARSET_IS_UTF8=1",
         "-DU_COMMON_IMPLEMENTATION",
         "-DU_ENABLE_DYLOAD=0",
@@ -6234,7 +6511,10 @@ cc_library_static {
         "-DU_STATIC_IMPLEMENTATION",
         "-DU_USING_ICU_NAMESPACE=0",
         "-D_DEBUG",
+        "-D_FILE_OFFSET_BITS=64",
         "-D_GNU_SOURCE",
+        "-D_LARGEFILE64_SOURCE",
+        "-D_LARGEFILE_SOURCE",
         "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
         "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
@@ -6250,6 +6530,8 @@ cc_library_static {
         "third_party/icu/source/common/",
         "third_party/icu/source/i18n/",
         "third_party/android_ndk/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include",
+        "build/linux/debian_bullseye_amd64-sysroot/usr/include/x86_64-linux-gnu",
+        "build/linux/debian_bullseye_amd64-sysroot/usr/include",
     ],
     cpp_std: "c++20",
     rtti: true,
@@ -6287,12 +6569,19 @@ cc_library_static {
         "-DANDROID_NDK_VERSION_ROLL=r23_1",
         "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
         "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_SYSROOT_KEY=20220331T153654Z-0",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DHAVE_CONFIG_H",
         "-DHAVE_SYS_UIO_H",
+        "-DUSE_AURA=1",
+        "-DUSE_OZONE=1",
+        "-DUSE_UDEV",
         "-D_DEBUG",
+        "-D_FILE_OFFSET_BITS=64",
         "-D_GNU_SOURCE",
+        "-D_LARGEFILE64_SOURCE",
+        "-D_LARGEFILE_SOURCE",
         "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
         "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
@@ -6304,7 +6593,10 @@ cc_library_static {
         "buildtools/third_party/libc++/trunk/include",
         "buildtools/third_party/libc++abi/trunk/include",
         "third_party/libevent/android/",
+        "third_party/libevent/linux/",
         "third_party/android_ndk/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include",
+        "build/linux/debian_bullseye_amd64-sysroot/usr/include/x86_64-linux-gnu",
+        "build/linux/debian_bullseye_amd64-sysroot/usr/include",
     ],
     cpp_std: "c++20",
 }
@@ -6462,11 +6754,18 @@ cc_library_static {
         "-DANDROID_NDK_VERSION_ROLL=r23_1",
         "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
         "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_SYSROOT_KEY=20220331T153654Z-0",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DHAVE_SYS_UIO_H",
+        "-DUSE_AURA=1",
+        "-DUSE_OZONE=1",
+        "-DUSE_UDEV",
         "-D_DEBUG",
+        "-D_FILE_OFFSET_BITS=64",
         "-D_GNU_SOURCE",
+        "-D_LARGEFILE64_SOURCE",
+        "-D_LARGEFILE_SOURCE",
         "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
         "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
@@ -6480,6 +6779,8 @@ cc_library_static {
         "buildtools/third_party/libc++/trunk/include",
         "buildtools/third_party/libc++abi/trunk/include",
         "third_party/android_ndk/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include",
+        "build/linux/debian_bullseye_amd64-sysroot/usr/include/x86_64-linux-gnu",
+        "build/linux/debian_bullseye_amd64-sysroot/usr/include",
     ],
     cpp_std: "c++20",
 }
@@ -6488,6 +6789,7 @@ cc_library_static {
 cc_library_static {
     name: "cronet_aml_third_party_zlib_zlib",
     srcs: [
+        ":cronet_aml_third_party_android_ndk_cpu_features",
         ":cronet_aml_third_party_zlib_zlib_adler32_simd",
         ":cronet_aml_third_party_zlib_zlib_common_headers",
         ":cronet_aml_third_party_zlib_zlib_crc32_simd",
@@ -6514,6 +6816,8 @@ cc_library_static {
     ],
     cflags: [
         "-DADLER32_SIMD_SSSE3",
+        "-DANDROID",
+        "-DANDROID_NDK_VERSION_ROLL=r23_1",
         "-DCRC32_SIMD_SSE42_PCLMUL",
         "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
         "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
@@ -6521,6 +6825,7 @@ cc_library_static {
         "-DDCHECK_ALWAYS_ON=1",
         "-DDEFLATE_SLIDE_HASH_SSE2",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
+        "-DHAVE_SYS_UIO_H",
         "-DINFLATE_CHUNK_READ_64LE",
         "-DINFLATE_CHUNK_SIMD_SSE2",
         "-DUSE_AURA=1",
@@ -6540,14 +6845,15 @@ cc_library_static {
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
         "-D__STDC_CONSTANT_MACROS",
         "-D__STDC_FORMAT_MACROS",
-        "-UANDROID",
     ],
     local_include_dirs: [
         "./",
         "buildtools/third_party/libc++/",
         "buildtools/third_party/libc++/trunk/include",
         "buildtools/third_party/libc++abi/trunk/include",
+        "third_party/android_ndk/sources/android/cpufeatures/",
         "third_party/zlib/",
+        "third_party/android_ndk/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include",
         "build/linux/debian_bullseye_amd64-sysroot/usr/include/x86_64-linux-gnu",
         "build/linux/debian_bullseye_amd64-sysroot/usr/include",
     ],
