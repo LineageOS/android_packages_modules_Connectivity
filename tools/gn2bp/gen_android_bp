@@ -155,7 +155,7 @@ def enable_protobuf_lite(module):
 def enable_protoc_lib(module):
   if module.type == 'cc_binary_host':
     module.static_libs.add('libprotoc')
-  else:
+  elif module.type not in ['genrule', 'filegroup']:
     module.shared_libs.add('libprotoc')
 
 
