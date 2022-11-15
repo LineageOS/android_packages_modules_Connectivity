@@ -22,6 +22,7 @@ import com.android.testutils.assertThrows
 import org.junit.Test
 import org.junit.runner.RunWith
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertSame
@@ -132,5 +133,53 @@ class CollectionUtilsTest {
         assertSame(CollectionUtils.findLast(listMulti) { it == "B" }, listMulti[1])
         assertSame(CollectionUtils.findLast(listMulti) { it == "E" }, listMulti[7])
         assertNull(CollectionUtils.findLast(listMulti) { it == "F" })
+    }
+
+    @Test
+    fun testMap() {
+        val listAE = listOf("A", "B", "C", "D", "E", null)
+        assertEquals(listAE.map { "-$it-" }, CollectionUtils.map(listAE) { "-$it-" })
+    }
+
+    @Test
+    fun testZip() {
+        val listAE = listOf("A", "B", "C", "D", "E")
+        val list15 = listOf(1, 2, 3, 4, 5)
+        // Normal #zip returns kotlin.Pair, not android.util.Pair
+        assertEquals(list15.zip(listAE).map { android.util.Pair(it.first, it.second) },
+                CollectionUtils.zip(list15, listAE))
+        val listNull = listOf("A", null, "B", "C", "D")
+        assertEquals(list15.zip(listNull).map { android.util.Pair(it.first, it.second) },
+                CollectionUtils.zip(list15, listNull))
+        assertEquals(emptyList<android.util.Pair<Int, Int>>(),
+                CollectionUtils.zip(emptyList<Int>(), emptyList<Int>()))
+        assertFailsWith<IllegalArgumentException> {
+            // Different size
+            CollectionUtils.zip(listOf(1, 2), list15)
+        }
+    }
+
+    @Test
+    fun testAssoc() {
+        val listADA = listOf("A", "B", "C", "D", "A")
+        val list15 = listOf(1, 2, 3, 4, 5)
+        assertEquals(list15.zip(listADA).toMap(), CollectionUtils.assoc(list15, listADA))
+
+        // Null key is fine
+        val assoc = CollectionUtils.assoc(listOf(1, 2, null), listOf("A", "B", "C"))
+        assertEquals("C", assoc[null])
+
+        assertFailsWith<IllegalArgumentException> {
+            // Same key multiple times
+            CollectionUtils.assoc(listOf("A", "B", "A"), listOf(1, 2, 3))
+        }
+        assertFailsWith<IllegalArgumentException> {
+            // Same key multiple times, but it's null
+            CollectionUtils.assoc(listOf(null, "B", null), listOf(1, 2, 3))
+        }
+        assertFailsWith<IllegalArgumentException> {
+            // Different size
+            CollectionUtils.assoc(listOf(1, 2), list15)
+        }
     }
 }
