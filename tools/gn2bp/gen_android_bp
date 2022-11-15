@@ -1048,6 +1048,11 @@ def _get_cflags(target):
   cflags = {flag for flag in target.cflags if re.match(cflag_allowlist, flag)}
   # Consider proper allowlist or denylist if needed
   cflags |= set("-D%s" % define.replace("\"", "\\\"") for define in target.defines)
+  # -DANDROID is added by default but target.defines contain -DANDROID if it's required.
+  # So adding -UANDROID to cancel default -DANDROID if it's not specified.
+  # This is needed for some targets(e.g. symbolize)
+  if "ANDROID" not in target.defines:
+    cflags.add("-UANDROID")
   return cflags
 
 

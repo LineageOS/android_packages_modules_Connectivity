@@ -1727,6 +1727,7 @@ cc_library_static {
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
         "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
+        "-UANDROID",
     ],
     local_include_dirs: [
         "./",
@@ -1773,6 +1774,7 @@ cc_library_static {
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
         "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
+        "-UANDROID",
     ],
     local_include_dirs: [
         "./",
@@ -1814,6 +1816,7 @@ cc_library_static {
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
         "-D__STDC_CONSTANT_MACROS",
         "-D__STDC_FORMAT_MACROS",
+        "-UANDROID",
     ],
     local_include_dirs: [
         "./",
@@ -4379,6 +4382,7 @@ cc_binary {
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
         "-D__STDC_CONSTANT_MACROS",
         "-D__STDC_FORMAT_MACROS",
+        "-UANDROID",
     ],
     local_include_dirs: [
         "./",
@@ -6783,6 +6787,7 @@ cc_library_static {
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
         "-D__STDC_CONSTANT_MACROS",
         "-D__STDC_FORMAT_MACROS",
+        "-UANDROID",
     ],
     local_include_dirs: [
         "./",
