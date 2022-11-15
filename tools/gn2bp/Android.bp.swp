@@ -2752,41 +2752,6 @@ genrule {
     ],
 }
 
-// GN: //net/cert:root_store_proto_full
-genrule {
-    name: "cronet_aml_net_cert_root_store_proto_full_gen",
-    srcs: [
-        "net/cert/root_store.proto",
-    ],
-    tools: [
-        "aprotoc",
-    ],
-    cmd: "$(location aprotoc) --proto_path=external/chromium_org/net/cert --cpp_out=lite=true:$(genDir)/external/chromium_org/net/cert/ $(in)",
-    out: [
-        "external/chromium_org/net/cert/root_store.pb.cc",
-    ],
-}
-
-// GN: //net/cert:root_store_proto_full
-genrule {
-    name: "cronet_aml_net_cert_root_store_proto_full_gen_headers",
-    srcs: [
-        "net/cert/root_store.proto",
-    ],
-    tools: [
-        "aprotoc",
-    ],
-    cmd: "$(location aprotoc) --proto_path=external/chromium_org/net/cert --cpp_out=lite=true:$(genDir)/external/chromium_org/net/cert/ $(in)",
-    out: [
-        "external/chromium_org/net/cert/root_store.pb.h",
-    ],
-    export_include_dirs: [
-        ".",
-        "net/cert",
-        "protos",
-    ],
-}
-
 // GN: //net:constants
 filegroup {
     name: "cronet_aml_net_constants",
@@ -4318,90 +4283,6 @@ cc_library_static {
         "third_party/android_ndk/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include",
     ],
     cpp_std: "c++20",
-}
-
-// GN: //net/tools/root_store_tool:root_store_tool
-cc_binary {
-    name: "cronet_aml_net_tools_root_store_tool_root_store_tool",
-    srcs: [
-        ":cronet_aml_buildtools_third_party_libc___libc__",
-        ":cronet_aml_buildtools_third_party_libc__abi_libc__abi",
-        ":cronet_aml_net_cert_root_store_proto_full_gen",
-        "net/tools/root_store_tool/root_store_tool.cc",
-    ],
-    shared_libs: [
-        "libprotobuf-cpp-lite",
-    ],
-    static_libs: [
-        "cronet_aml_base_allocator_partition_allocator_partition_alloc",
-        "cronet_aml_base_base",
-        "cronet_aml_base_base_static",
-        "cronet_aml_base_third_party_double_conversion_double_conversion",
-        "cronet_aml_base_third_party_dynamic_annotations_dynamic_annotations",
-        "cronet_aml_base_third_party_symbolize_symbolize",
-        "cronet_aml_base_third_party_xdg_mime_xdg_mime",
-        "cronet_aml_base_third_party_xdg_user_dirs_xdg_user_dirs",
-        "cronet_aml_crypto_crypto",
-        "cronet_aml_third_party_boringssl_boringssl",
-        "cronet_aml_third_party_icu_icui18n",
-        "cronet_aml_third_party_icu_icuuc_private",
-        "cronet_aml_third_party_libevent_libevent",
-        "cronet_aml_third_party_modp_b64_modp_b64",
-        "cronet_aml_third_party_zlib_zlib",
-    ],
-    generated_headers: [
-        "cronet_aml_net_cert_root_store_proto_full_gen_headers",
-    ],
-    defaults: [
-        "cronet_aml_defaults",
-    ],
-    cflags: [
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
-        "-DCR_SYSROOT_KEY=20220331T153654Z-0",
-        "-DDCHECK_ALWAYS_ON=1",
-        "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
-        "-DGOOGLE_PROTOBUF_INTERNAL_DONATE_STEAL_INLINE=0",
-        "-DGOOGLE_PROTOBUF_NO_RTTI",
-        "-DGOOGLE_PROTOBUF_NO_STATIC_INITIALIZER",
-        "-DHAVE_PTHREAD",
-        "-DLIBCXXABI_SILENT_TERMINATE",
-        "-DLIBCXX_BUILDING_LIBCXXABI",
-        "-DUSE_AURA=1",
-        "-DUSE_OZONE=1",
-        "-DUSE_UDEV",
-        "-D_DEBUG",
-        "-D_FILE_OFFSET_BITS=64",
-        "-D_GNU_SOURCE",
-        "-D_LARGEFILE64_SOURCE",
-        "-D_LARGEFILE_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
-        "-D_LIBCPP_BUILDING_LIBRARY",
-        "-D_LIBCPP_CONSTINIT=constinit",
-        "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
-        "-D_LIBCPP_OVERRIDABLE_FUNC_VIS=__attribute__((__visibility__(\"default\")))",
-        "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D__STDC_CONSTANT_MACROS",
-        "-D__STDC_FORMAT_MACROS",
-        "-UANDROID",
-    ],
-    local_include_dirs: [
-        "./",
-        "buildtools/third_party/libc++/",
-        "buildtools/third_party/libc++/trunk/include",
-        "buildtools/third_party/libc++/trunk/src/",
-        "buildtools/third_party/libc++abi/trunk/include",
-        "third_party/abseil-cpp/",
-        "third_party/boringssl/src/include/",
-        "build/linux/debian_bullseye_amd64-sysroot/usr/include/x86_64-linux-gnu",
-        "build/linux/debian_bullseye_amd64-sysroot/usr/include",
-    ],
-    cpp_std: "c++20",
-    cppflags: [
-        "-fexceptions",
-    ],
-    rtti: true,
 }
 
 // GN: //net/traffic_annotation:traffic_annotation
