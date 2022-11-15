@@ -283,8 +283,9 @@ class GnParser(object):
     target.include_dirs.update(desc.get('include_dirs', []))
 
     # Recurse in dependencies.
-    for dep_name in desc.get('deps', []):
-      dep = self.parse_gn_desc(gn_desc, dep_name)
+    for gn_dep_name in desc.get('deps', []):
+      dep = self.parse_gn_desc(gn_desc, gn_dep_name)
+      dep_name = label_without_toolchain(gn_dep_name)
       if dep.is_third_party_dep_:
         target.deps.add(dep_name)
       elif dep.type == 'proto_library':
