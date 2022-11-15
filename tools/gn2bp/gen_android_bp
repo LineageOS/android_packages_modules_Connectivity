@@ -113,6 +113,11 @@ cflag_allowlist = r'^-DPERFETTO.*$'
 # Additional arguments to apply to Android.bp rules.
 additional_args = {
     # TODO: remove if not needed.
+    'cronet_aml_components_cronet_android_cronet': [
+        ('linker_scripts', {
+            'base/android/library_loader/anchor_functions.lds',
+        }),
+    ],
     'cronet_aml_net_net': [
         ('export_static_lib_headers', {
             'cronet_aml_net_third_party_quiche_quiche',
@@ -121,20 +126,6 @@ additional_args = {
         # When a code is compiled under rtti(cronet) that depends on another code(net)
         # that doesn't depend on rtti. undefined symbol: typeinfo 'class' errors appears.
         ('rtti', True), # go/undefined-symbol-typeinfo
-        ('whole_static_libs', {
-            'cronet_aml_net_third_party_quiche_quiche',
-            'cronet_aml_base_base',
-            "cronet_aml_crypto_crypto",
-            "libssl",
-        }),
-    ],
-    'cronet_aml_components_cronet_android_cronet': [
-        ('rtti', True),
-        ('cppflags', {
-            # TODO: figure out if there is no way around this and if this is
-            # allowed for platform code.
-            "-fexceptions",
-        })
     ],
 }
 
@@ -226,11 +217,6 @@ def enable_bionic_libc_platform_headers_on_android(module):
   module.header_libs.add('bionic_libc_platform_headers')
 
 
-def enable_boringssl(module):
-  if module.type not in ['genrule', 'filegroup']:
-    module.static_libs.add('libssl')
-
-
 # Android equivalents for third-party libraries that the upstream project
 # depends on.
 builtin_deps = {
@@ -260,8 +246,6 @@ builtin_deps = {
         enable_protobuf_lite,
     '//third_party/protobuf:protoc_lib':
         enable_protoc_lib,
-    '//third_party/boringssl:boringssl':
-        enable_boringssl,
 }
 
 # ----------------------------------------------------------------------------
@@ -392,6 +376,7 @@ class Module(object):
     self.apex_available = set()
     self.min_sdk_version = None
     self.proto = dict()
+    self.linker_scripts = set()
     # The genrule_XXX below are properties that must to be propagated back
     # on the module(s) that depend on the genrule.
     self.genrule_headers = set()
@@ -404,6 +389,7 @@ class Module(object):
     self.stubs = {}
     self.cppflags = set()
     self.rtti = False
+    self.arch = dict()
 
   def to_string(self, output):
     if self.comment:
@@ -446,9 +432,11 @@ class Module(object):
     self._output_field(output, 'test_config')
     self._output_field(output, 'stubs')
     self._output_field(output, 'proto')
+    self._output_field(output, 'linker_scripts')
     self._output_field(output, 'cppflags')
     if self.rtti:
       self._output_field(output, 'rtti')
+    self._output_field(output, 'arch')
 
     target_out = []
     self._output_field(target_out, 'android')
@@ -511,6 +499,11 @@ def label_to_module_name(label):
   label_without_toolchain = gn_utils.label_without_toolchain(label)
   module = re.sub(r'^//:?', '', label_without_toolchain)
   module = re.sub(r'[^a-zA-Z0-9_]', '_', module)
+
+  # If it's required to support multi toolchain for more targets, it's better to avoid hardcoding.
+  if label == "//third_party/boringssl:boringssl_asm(//build/toolchain/android:android_clang_x86)":
+    module += "_x86"
+
   if not module.startswith(module_prefix):
     return module_prefix + module
   return module
@@ -1139,6 +1132,11 @@ def create_modules_from_target(blueprint, gn, gn_target_name):
         module.cpp_std = flag[len('-std='):]
       if '-isystem' in flag:
         local_include_dirs_set.add(flag[len('-isystem../../'):])
+      if '-frtti' in flag:
+        module.rtti = True
+      if '-fexceptions' in flag:
+        module.cppflags.add('-fexceptions')
+
 
     # Adding local_include_dirs is necessary due to source_sets / filegroups
     # which do not properly propagate include directories.
@@ -1231,6 +1229,25 @@ def create_modules_from_target(blueprint, gn, gn_target_name):
       raise Error('Unknown dep %s (%s) for target %s' %
                   (dep_module.name, dep_module.type, module.name))
 
+  # TODO: support arch difference in generic way
+  # Currently, it is expected that only a couple of modules (e.g. partition_alloc, boringssl)
+  # need arch condition. So, for now, hardcoding arch condition
+  if module.name == "cronet_aml_base_allocator_partition_allocator_partition_alloc":
+    x86_srcs = module.srcs.copy()
+    x86_srcs.remove(
+      "base/allocator/partition_allocator/starscan/stack/asm/x64/push_registers_asm.cc")
+    x86_srcs.add("base/allocator/partition_allocator/starscan/stack/asm/x86/push_registers_asm.cc")
+    module.arch['x86'] = {'srcs': x86_srcs}
+    module.arch['x86_64'] = {'srcs': module.srcs.copy()}
+    module.srcs.clear()
+  elif module.name == "cronet_aml_third_party_boringssl_boringssl":
+    x86_srcs = module.srcs.copy()
+    x86_srcs.remove(":cronet_aml_third_party_boringssl_boringssl_asm")
+    x86_srcs.add(":cronet_aml_third_party_boringssl_boringssl_asm_x86")
+    module.arch['x86'] = {'srcs': x86_srcs}
+    module.arch['x86_64'] = {'srcs': module.srcs.copy()}
+    module.srcs.clear()
+
   return module
 
 def create_java_module(blueprint, gn):
@@ -1272,6 +1289,7 @@ def create_blueprint_for_targets(gn, desc, targets):
   # Default settings used by all modules.
   defaults = Module('cc_defaults', defaults_module, '//gn:default_deps')
   defaults.cflags = [
+      '-DGOOGLE_PROTOBUF_NO_RTTI',
       '-Wno-error=return-type',
       '-Wno-non-virtual-dtor',
       '-Wno-macro-redefined',
@@ -1281,6 +1299,8 @@ def create_blueprint_for_targets(gn, desc, targets):
       '-Wno-unused-parameter',
       '-Wno-deprecated-non-prototype', # needed for zlib
       '-fvisibility=hidden',
+      '-Wno-ambiguous-reversed-operator', # needed for icui18n
+      '-Wno-unreachable-code-loop-increment', # needed for icui18n
       '-O2',
   ]
   defaults.stl = 'none'
@@ -1288,6 +1308,13 @@ def create_blueprint_for_targets(gn, desc, targets):
 
   for target in targets:
     create_modules_from_target(blueprint, gn, target)
+
+  # Currently, multi tool chain is not supported for all targets and create_modules_from_target can
+  # not reach to this target by following the dependency.
+  # So it's required to specify explicitly.
+  create_modules_from_target(blueprint, gn,
+                             "//third_party/boringssl:boringssl_asm" +
+                             "(//build/toolchain/android:android_clang_x86)")
 
   create_java_module(blueprint, gn)
   update_jni_registration_module(blueprint, gn)

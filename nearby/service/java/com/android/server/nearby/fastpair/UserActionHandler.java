@@ -23,7 +23,7 @@ import com.android.nearby.halfsheet.constants.UserActionHandlerBase;
  */
 public class UserActionHandler extends UserActionHandlerBase {
 
-    public static final String EXTRA_DISCOVERY_ITEM = PREFIX + "EXTRA_DISCOVERY_ITEM";
+    public static final String EXTRA_ITEM_ID = PREFIX + "EXTRA_DISCOVERY_ITEM";
     public static final String EXTRA_FAST_PAIR_SECRET = PREFIX + "EXTRA_FAST_PAIR_SECRET";
 
     public static final String EXTRA_PRIVATE_BLE_ADDRESS =
