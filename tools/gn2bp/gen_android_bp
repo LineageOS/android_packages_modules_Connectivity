@@ -1153,7 +1153,10 @@ def create_modules_from_target(blueprint, gn, gn_target_name):
     # include. So adding sysroot include at the end.
     for flag in target.cflags:
       if '--sysroot' in flag:
-        module.local_include_dirs.append(flag[len('--sysroot=../../'):] + "/usr/include")
+        sysroot = flag[len('--sysroot=../../'):]
+        if sysroot == "build/linux/debian_bullseye_amd64-sysroot":
+          module.local_include_dirs.append(sysroot + "/usr/include/x86_64-linux-gnu")
+        module.local_include_dirs.append(sysroot + "/usr/include")
 
   module_is_compiled = module.type not in ('genrule', 'filegroup')
   if module_is_compiled:
