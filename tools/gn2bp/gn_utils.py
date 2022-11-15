@@ -94,6 +94,12 @@ class GnParser(object):
         Maked properties are propagated up the dependency chain when a
         source_set dependency is encountered.
         """
+    class Arch():
+      """Architecture-dependent properties
+        """
+      def __init__(self):
+        self.sources = set()
+
 
     def __init__(self, name, type):
       self.name = name  # e.g. //src/ipc:ipc
@@ -143,6 +149,8 @@ class GnParser(object):
       # this flag is used to stop the recursion and create an empty
       # placeholder target once we hit //gn:protoc or similar.
       self.is_third_party_dep_ = False
+
+      self.arch = dict()
 
     def __lt__(self, other):
       if isinstance(other, self.__class__):
@@ -211,14 +219,20 @@ class GnParser(object):
     # multiple archs.
     target_name = label_without_toolchain(gn_target_name)
     target = self.all_targets.get(target_name)
-    if target is not None:
+    desc = gn_desc[gn_target_name]
+    # TODO: get arch from toolchain
+    arch = 'x86_64'
+    if target is None:
+      target = GnParser.Target(target_name, desc['type'])
+      self.all_targets[target_name] = target
+
+    if arch not in target.arch:
+      target.arch[arch] = GnParser.Target.Arch()
+    else:
       return target  # Target already processed.
 
-    desc = gn_desc[gn_target_name]
-    target = GnParser.Target(target_name, desc['type'])
     target.testonly = desc.get('testonly', False)
     target.toolchain = desc.get('toolchain', None)
-    self.all_targets[target_name] = target
 
     proto_target_type, proto_desc = self.get_proto_target_type(gn_desc, gn_target_name)
     if proto_target_type is not None:
