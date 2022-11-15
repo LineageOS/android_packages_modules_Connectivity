@@ -195,9 +195,15 @@ class GnParser(object):
     # TODO: There are some other possible variations we might need to support.
     return target.type == 'group' and re.match('.*_java$', target.name)
 
-
   def get_target(self, gn_target_name):
     """Returns a Target object from the fully qualified GN target name.
+
+      get_target() requires that parse_gn_desc() has already been called.
+      """
+    return self.all_targets[gn_target_name]
+
+  def parse_gn_desc(self, gn_target_name):
+    """Parses a gn desc tree and resolves all target dependencies.
 
         It bubbles up variables from source_set dependencies as described in the
         class-level comments.
@@ -277,7 +283,7 @@ class GnParser(object):
 
     # Recurse in dependencies.
     for dep_name in desc.get('deps', []):
-      dep = self.get_target(dep_name)
+      dep = self.parse_gn_desc(dep_name)
       if dep.is_third_party_dep_:
         target.deps.add(dep_name)
       elif dep.type == 'proto_library':
