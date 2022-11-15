@@ -199,7 +199,7 @@ class GnParser(object):
 
       get_target() requires that parse_gn_desc() has already been called.
       """
-    return self.all_targets[gn_target_name]
+    return self.all_targets[label_without_toolchain(gn_target_name)]
 
   def parse_gn_desc(self, gn_desc, gn_target_name):
     """Parses a gn desc tree and resolves all target dependencies.
@@ -207,15 +207,18 @@ class GnParser(object):
         It bubbles up variables from source_set dependencies as described in the
         class-level comments.
         """
-    target = self.all_targets.get(gn_target_name)
+    # Use name without toolchain for targets to support targets built for
+    # multiple archs.
+    target_name = label_without_toolchain(gn_target_name)
+    target = self.all_targets.get(target_name)
     if target is not None:
       return target  # Target already processed.
 
     desc = gn_desc[gn_target_name]
-    target = GnParser.Target(gn_target_name, desc['type'])
+    target = GnParser.Target(target_name, desc['type'])
     target.testonly = desc.get('testonly', False)
     target.toolchain = desc.get('toolchain', None)
-    self.all_targets[gn_target_name] = target
+    self.all_targets[target_name] = target
 
     proto_target_type, proto_desc = self.get_proto_target_type(gn_desc, gn_target_name)
     if proto_target_type is not None:
