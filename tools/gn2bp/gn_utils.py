@@ -224,13 +224,13 @@ class GnParser(object):
 
   def _get_arch(self, toolchain):
     if toolchain == '//build/toolchain/android:android_clang_x86':
-      return 'x86'
+      return 'android_x86'
     elif toolchain == '//build/toolchain/android:android_clang_x64':
-      return 'x86_64'
+      return 'android_x86_64'
     elif toolchain == '//build/toolchain/android:android_clang_arm':
-      return 'arm'
+      return 'android_arm'
     elif toolchain == '//build/toolchain/android:android_clang_arm64':
-      return 'arm64'
+      return 'android_arm64'
     else:
       return 'host'
 
