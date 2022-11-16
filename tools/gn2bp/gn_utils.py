@@ -150,6 +150,9 @@ class GnParser(object):
       # placeholder target once we hit //gn:protoc or similar.
       self.is_third_party_dep_ = False
 
+      # TODO: come up with a better way to only run this once.
+      # is_finalized tracks whether finalize() was called on this target.
+      self.is_finalized = False
       self.arch = dict()
 
     def __lt__(self, other):
@@ -172,6 +175,27 @@ class GnParser(object):
                   'source_set_deps', 'proto_deps', 'transitive_proto_deps',
                   'libs', 'proto_paths'):
         self.__dict__[key].update(other.__dict__.get(key, []))
+
+    def finalize(self):
+      """Move common properties out of arch-dependent subobjects to Target object.
+
+        TODO: find a better name for this function.
+        """
+      if self.is_finalized:
+        return
+      self.is_finalized = True
+
+      # TODO: temporary hack until sources are collected on a per arch basis.
+      if self.sources:
+        return
+
+      # Target contains the intersection of arch-dependent properties
+      self.sources = set.intersection(*[arch.sources for arch in self.arch.values()])
+
+      # Deduplicate arch-dependent properties
+      for arch in self.arch.keys():
+        self.arch[arch].sources -= self.sources
+
 
   def __init__(self):
     self.all_targets = {}
@@ -222,6 +246,10 @@ class GnParser(object):
 
       get_target() requires that parse_gn_desc() has already been called.
       """
+    # Run this every time as parse_gn_desc can be called at any time.
+    for target in self.all_targets.values():
+      target.finalize()
+
     return self.all_targets[label_without_toolchain(gn_target_name)]
 
   def parse_gn_desc(self, gn_desc, gn_target_name):
