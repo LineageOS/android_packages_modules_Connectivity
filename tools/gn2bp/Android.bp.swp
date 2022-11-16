@@ -167,9 +167,9 @@ cc_library_static {
         "buildtools/third_party/libc++/trunk/include",
         "buildtools/third_party/libc++abi/trunk/include",
         "third_party/android_ndk/sources/android/cpufeatures/",
+        "third_party/android_ndk/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include",
         "build/linux/debian_bullseye_amd64-sysroot/usr/include/x86_64-linux-gnu",
         "build/linux/debian_bullseye_amd64-sysroot/usr/include",
-        "third_party/android_ndk/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include",
     ],
     cpp_std: "c++20",
     arch: {
@@ -968,9 +968,9 @@ cc_library_static {
         "third_party/boringssl/src/include/",
         "third_party/icu/source/common/",
         "third_party/icu/source/i18n/",
+        "third_party/android_ndk/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include",
         "build/linux/debian_bullseye_amd64-sysroot/usr/include/x86_64-linux-gnu",
         "build/linux/debian_bullseye_amd64-sysroot/usr/include",
-        "third_party/android_ndk/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include",
     ],
     header_libs: [
         "jni_headers",
@@ -1296,9 +1296,9 @@ cc_library_static {
         "buildtools/third_party/libc++/",
         "buildtools/third_party/libc++/trunk/include",
         "buildtools/third_party/libc++abi/trunk/include",
+        "third_party/android_ndk/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include",
         "build/linux/debian_bullseye_amd64-sysroot/usr/include/x86_64-linux-gnu",
         "build/linux/debian_bullseye_amd64-sysroot/usr/include",
-        "third_party/android_ndk/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include",
     ],
     cpp_std: "c++20",
 }
@@ -1627,9 +1627,9 @@ cc_library_static {
         "buildtools/third_party/libc++/",
         "buildtools/third_party/libc++/trunk/include",
         "buildtools/third_party/libc++abi/trunk/include",
+        "third_party/android_ndk/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include",
         "build/linux/debian_bullseye_amd64-sysroot/usr/include/x86_64-linux-gnu",
         "build/linux/debian_bullseye_amd64-sysroot/usr/include",
-        "third_party/android_ndk/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include",
     ],
     cpp_std: "c++20",
 }
@@ -1671,9 +1671,9 @@ cc_library_static {
         "buildtools/third_party/libc++/",
         "buildtools/third_party/libc++/trunk/include",
         "buildtools/third_party/libc++abi/trunk/include",
+        "third_party/android_ndk/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include",
         "build/linux/debian_bullseye_amd64-sysroot/usr/include/x86_64-linux-gnu",
         "build/linux/debian_bullseye_amd64-sysroot/usr/include",
-        "third_party/android_ndk/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include",
     ],
     cpp_std: "c++20",
 }
@@ -2640,9 +2640,9 @@ cc_library_static {
         "buildtools/third_party/libc++abi/trunk/include",
         "third_party/abseil-cpp/",
         "third_party/boringssl/src/include/",
+        "third_party/android_ndk/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include",
         "build/linux/debian_bullseye_amd64-sysroot/usr/include/x86_64-linux-gnu",
         "build/linux/debian_bullseye_amd64-sysroot/usr/include",
-        "third_party/android_ndk/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include",
     ],
     cpp_std: "c++20",
     target: {
@@ -5184,9 +5184,9 @@ cc_library_static {
         "buildtools/third_party/libc++/trunk/include",
         "buildtools/third_party/libc++abi/trunk/include",
         "third_party/boringssl/src/include/",
+        "third_party/android_ndk/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include",
         "build/linux/debian_bullseye_amd64-sysroot/usr/include/x86_64-linux-gnu",
         "build/linux/debian_bullseye_amd64-sysroot/usr/include",
-        "third_party/android_ndk/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include",
     ],
     cpp_std: "c++20",
     arch: {
@@ -5764,9 +5764,9 @@ filegroup {
     ],
 }
 
-// GN: //third_party/boringssl:boringssl_asm
+// GN: //third_party/boringssl:boringssl_asm(//build/toolchain/android:android_clang_x86)
 filegroup {
-    name: "cronet_aml_third_party_boringssl_boringssl_asm_x86",
+    name: "cronet_aml_third_party_boringssl_boringssl_asm___build_toolchain_android_android_clang_x86__x86",
     srcs: [
         "third_party/boringssl/linux-x86_64/crypto/chacha/chacha-x86_64.S",
         "third_party/boringssl/linux-x86_64/crypto/cipher_extra/aes128gcmsiv-x86_64.S",
@@ -6181,9 +6181,9 @@ cc_library_static {
         "buildtools/third_party/libc++abi/trunk/include",
         "third_party/icu/source/common/",
         "third_party/icu/source/i18n/",
+        "third_party/android_ndk/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include",
         "build/linux/debian_bullseye_amd64-sysroot/usr/include/x86_64-linux-gnu",
         "build/linux/debian_bullseye_amd64-sysroot/usr/include",
-        "third_party/android_ndk/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include",
     ],
     cpp_std: "c++20",
     rtti: true,
@@ -6442,9 +6442,9 @@ cc_library_static {
         "buildtools/third_party/libc++abi/trunk/include",
         "third_party/icu/source/common/",
         "third_party/icu/source/i18n/",
+        "third_party/android_ndk/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include",
         "build/linux/debian_bullseye_amd64-sysroot/usr/include/x86_64-linux-gnu",
         "build/linux/debian_bullseye_amd64-sysroot/usr/include",
-        "third_party/android_ndk/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include",
     ],
     cpp_std: "c++20",
     rtti: true,
@@ -6508,9 +6508,9 @@ cc_library_static {
         "buildtools/third_party/libc++abi/trunk/include",
         "third_party/libevent/android/",
         "third_party/libevent/linux/",
+        "third_party/android_ndk/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include",
         "build/linux/debian_bullseye_amd64-sysroot/usr/include/x86_64-linux-gnu",
         "build/linux/debian_bullseye_amd64-sysroot/usr/include",
-        "third_party/android_ndk/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include",
     ],
     cpp_std: "c++20",
 }
@@ -6693,9 +6693,9 @@ cc_library_static {
         "buildtools/third_party/libc++/",
         "buildtools/third_party/libc++/trunk/include",
         "buildtools/third_party/libc++abi/trunk/include",
+        "third_party/android_ndk/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include",
         "build/linux/debian_bullseye_amd64-sysroot/usr/include/x86_64-linux-gnu",
         "build/linux/debian_bullseye_amd64-sysroot/usr/include",
-        "third_party/android_ndk/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include",
     ],
     cpp_std: "c++20",
 }
@@ -6769,9 +6769,9 @@ cc_library_static {
         "buildtools/third_party/libc++abi/trunk/include",
         "third_party/android_ndk/sources/android/cpufeatures/",
         "third_party/zlib/",
+        "third_party/android_ndk/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include",
         "build/linux/debian_bullseye_amd64-sysroot/usr/include/x86_64-linux-gnu",
         "build/linux/debian_bullseye_amd64-sysroot/usr/include",
-        "third_party/android_ndk/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include",
     ],
     cpp_std: "c++20",
 }

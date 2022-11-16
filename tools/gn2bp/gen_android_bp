@@ -339,7 +339,7 @@ class Module(object):
     self.gn_target = gn_target
     self.name = name
     self.srcs = set()
-    self.comment = 'GN: ' + gn_utils.label_without_toolchain(gn_target)
+    self.comment = 'GN: ' + gn_target
     self.shared_libs = set()
     self.static_libs = set()
     self.whole_static_libs = set()
@@ -491,11 +491,7 @@ class Blueprint(object):
 
 def label_to_module_name(label):
   """Turn a GN label (e.g., //:perfetto_tests) into a module name."""
-  # If the label is explicibly listed in the default target list, don't prefix
-  # its name and return just the target name. This is so tools like
-  # "traceconv" stay as such in the Android tree.
-  label_without_toolchain = gn_utils.label_without_toolchain(label)
-  module = re.sub(r'^//:?', '', label_without_toolchain)
+  module = re.sub(r'^//:?', '', label)
   module = re.sub(r'[^a-zA-Z0-9_]', '_', module)
 
   # If it's required to support multi toolchain for more targets, it's better to avoid hardcoding.
@@ -1071,7 +1067,6 @@ def create_modules_from_target(blueprint, gn, gn_target_name):
   target = gn.get_target(gn_target_name)
   log.info('create modules for %s (%s)', target.name, target.type)
 
-  name_without_toolchain = gn_utils.label_without_toolchain(target.name)
   if target.type == 'executable':
     if target.testonly:
       module_type = 'cc_test'
@@ -1096,10 +1091,10 @@ def create_modules_from_target(blueprint, gn, gn_target_name):
   elif target.type == 'action':
     if 'gen_amalgamated_sql_metrics' in target.name:
       module = create_amalgamated_sql_metrics_module(blueprint, target)
-    elif re.match('.*gen_cc_.*_descriptor$', name_without_toolchain):
+    elif re.match('.*gen_cc_.*_descriptor$', target.name):
       module = create_cc_proto_descriptor_module(blueprint, target)
     elif target.type == 'action' and \
-        name_without_toolchain == gn_utils.GEN_VERSION_TARGET:
+        target.name == gn_utils.GEN_VERSION_TARGET:
       module = create_gen_version_module(blueprint, target, bp_module_name)
     else:
       module = create_action_module(blueprint, target)
@@ -1195,8 +1190,8 @@ def create_modules_from_target(blueprint, gn, gn_target_name):
   for dep_name in all_deps:
     # |builtin_deps| override GN deps with Android-specific ones. See the
     # config in the top of this file.
-    if gn_utils.label_without_toolchain(dep_name) in builtin_deps:
-      builtin_deps[gn_utils.label_without_toolchain(dep_name)](module)
+    if dep_name in builtin_deps:
+      builtin_deps[dep_name](module)
       continue
 
     dep_module = create_modules_from_target(blueprint, gn, dep_name)
