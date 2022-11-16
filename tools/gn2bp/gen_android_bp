@@ -137,21 +137,6 @@ def enable_gtest_and_gmock(module):
     module.whole_static_libs.add('perfetto_gtest_logcat_printer')
 
 
-def enable_protobuf_full(module):
-  if module.type not in ['genrule', 'filegroup']:
-    module.static_libs.add('libprotobuf-cpp-full')
-
-
-def enable_protobuf_lite(module):
-  if module.type not in ['genrule', 'filegroup']:
-    module.static_libs.add('libprotobuf-cpp-lite')
-
-
-def enable_protoc_lib(module):
-  if module.type not in ['genrule', 'filegroup']:
-    module.static_libs.add('libprotoc')
-
-
 def enable_libunwindstack(module):
   if module.name != 'heapprofd_standalone_client':
     module.shared_libs.add('libunwindstack')
@@ -233,14 +218,6 @@ builtin_deps = {
         lambda x: None,
     '//src/profiling/memory:bionic_libc_platform_headers_on_android':
         enable_bionic_libc_platform_headers_on_android,
-    '//third_party/protobuf:protoc':
-        lambda x: None,
-    '//third_party/protobuf:protobuf_full':
-        enable_protobuf_full,
-    '//third_party/protobuf:protobuf_lite':
-        enable_protobuf_lite,
-    '//third_party/protobuf:protoc_lib':
-        enable_protoc_lib,
 }
 
 # ----------------------------------------------------------------------------
