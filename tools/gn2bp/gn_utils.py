@@ -29,8 +29,6 @@ import sys
 
 BUILDFLAGS_TARGET = '//gn:gen_buildflags'
 GEN_VERSION_TARGET = '//src/base:version_gen_h'
-TARGET_TOOLCHAIN = '//gn/standalone/toolchain:gcc_like_host'
-HOST_TOOLCHAIN = '//gn/standalone/toolchain:gcc_like_host'
 LINKER_UNIT_TYPES = ('executable', 'shared_library', 'static_library')
 
 # TODO(primiano): investigate these, they require further componentization.
@@ -155,6 +153,12 @@ class GnParser(object):
       self.is_finalized = False
       self.arch = dict()
 
+    def host_supported(self):
+      return 'host' in self.arch
+
+    def device_supported(self):
+      return any([name.startswith('android') for name in self.arch.keys()])
+
     def __lt__(self, other):
       if isinstance(other, self.__class__):
         return self.name < other.name
@@ -223,17 +227,14 @@ class GnParser(object):
     return target.type == 'group' and re.match('.*_java$', target.name)
 
   def _get_arch(self, toolchain):
-    if toolchain is None:
-      # TODO: throw an exception instead of defaulting to x86_64.
-      return 'x86_64'
-    elif toolchain == '//build/toolchain/android:android_clang_x86':
-      return 'x86'
+    if toolchain == '//build/toolchain/android:android_clang_x86':
+      return 'android_x86'
     elif toolchain == '//build/toolchain/android:android_clang_x64':
-      return 'x86_64'
+      return 'android_x86_64'
     elif toolchain == '//build/toolchain/android:android_clang_arm':
-      return 'arm'
+      return 'android_arm'
     elif toolchain == '//build/toolchain/android:android_clang_arm64':
-      return 'arm64'
+      return 'android_arm64'
     else:
       return 'host'
 
@@ -259,7 +260,7 @@ class GnParser(object):
     target_name = label_without_toolchain(gn_target_name)
     target = self.all_targets.get(target_name)
     desc = gn_desc[gn_target_name]
-    arch = self._get_arch(desc.get('toolchain', None))
+    arch = self._get_arch(desc['toolchain'])
     if target is None:
       target = GnParser.Target(target_name, desc['type'])
       self.all_targets[target_name] = target
@@ -270,8 +271,6 @@ class GnParser(object):
       return target  # Target already processed.
 
     target.testonly = desc.get('testonly', False)
-    # TODO: remove toolchain from Target object
-    target.toolchain = desc.get('toolchain', None)
 
     proto_target_type, proto_desc = self.get_proto_target_type(gn_desc, gn_target_name)
     if proto_target_type is not None:
