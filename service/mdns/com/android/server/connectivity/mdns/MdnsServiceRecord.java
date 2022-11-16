@@ -39,7 +39,23 @@ public class MdnsServiceRecord extends MdnsRecord {
     private String[] serviceHost;
 
     public MdnsServiceRecord(String[] name, MdnsPacketReader reader) throws IOException {
-        super(name, TYPE_SRV, reader);
+        this(name, reader, false);
+    }
+
+    public MdnsServiceRecord(String[] name, MdnsPacketReader reader, boolean isQuestion)
+            throws IOException {
+        super(name, TYPE_SRV, reader, isQuestion);
+    }
+
+    public MdnsServiceRecord(String[] name, long receiptTimeMillis, boolean cacheFlush,
+                    long ttlMillis, int servicePriority, int serviceWeight, int servicePort,
+                    String[] serviceHost) {
+        super(name, TYPE_SRV, MdnsConstants.QCLASS_INTERNET, receiptTimeMillis, cacheFlush,
+                ttlMillis);
+        this.servicePriority = servicePriority;
+        this.serviceWeight = serviceWeight;
+        this.servicePort = servicePort;
+        this.serviceHost = serviceHost;
     }
 
     /** Returns the service's port number. */
