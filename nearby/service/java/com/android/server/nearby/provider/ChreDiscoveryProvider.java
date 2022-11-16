@@ -73,9 +73,10 @@ public class ChreDiscoveryProvider extends AbstractDiscoveryProvider {
             new BroadcastReceiver() {
                 @Override
                 public void onReceive(Context context, Intent intent) {
-                    Log.d(TAG, "[ChreDiscoveryProvider] update nanoapp screen status.");
-                    Boolean screenOn =
-                            intent.getAction().equals(Intent.ACTION_SCREEN_ON) ? true : false;
+                    Boolean screenOn = intent.getAction().equals(Intent.ACTION_SCREEN_ON)
+                            || intent.getAction().equals(Intent.ACTION_USER_PRESENT);
+                    Log.d(TAG, String.format(
+                            "[ChreDiscoveryProvider] update nanoapp screen status: %B", screenOn));
                     sendScreenUpdate(screenOn);
                 }
             };
@@ -193,6 +194,7 @@ public class ChreDiscoveryProvider extends AbstractDiscoveryProvider {
                 synchronized (ChreDiscoveryProvider.this) {
                     Log.i(TAG, "CHRE communication started");
                     mIntentFilter.addAction(Intent.ACTION_SCREEN_ON);
+                    mIntentFilter.addAction(Intent.ACTION_USER_PRESENT);
                     mIntentFilter.addAction(Intent.ACTION_SCREEN_OFF);
                     mContext.registerReceiver(mScreenBroadcastReceiver, mIntentFilter);
                     mChreStarted = true;
