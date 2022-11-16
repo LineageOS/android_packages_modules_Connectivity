@@ -371,15 +371,9 @@ public class EthernetTracker {
     }
 
     @VisibleForTesting(visibility = PACKAGE)
-    protected void enableInterface(@NonNull final String iface,
+    protected void setInterfaceEnabled(@NonNull final String iface, boolean enabled,
             @Nullable final EthernetCallback cb) {
-        mHandler.post(() -> updateInterfaceState(iface, true, cb));
-    }
-
-    @VisibleForTesting(visibility = PACKAGE)
-    protected void disableInterface(@NonNull final String iface,
-            @Nullable final EthernetCallback cb) {
-        mHandler.post(() -> updateInterfaceState(iface, false, cb));
+        mHandler.post(() -> updateInterfaceState(iface, enabled, cb));
     }
 
     IpConfiguration getIpConfiguration(String iface) {
