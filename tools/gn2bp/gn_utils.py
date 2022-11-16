@@ -271,8 +271,6 @@ class GnParser(object):
       return target  # Target already processed.
 
     target.testonly = desc.get('testonly', False)
-    # TODO: remove toolchain from Target object
-    target.toolchain = desc.get('toolchain', None)
 
     proto_target_type, proto_desc = self.get_proto_target_type(gn_desc, gn_target_name)
     if proto_target_type is not None:
