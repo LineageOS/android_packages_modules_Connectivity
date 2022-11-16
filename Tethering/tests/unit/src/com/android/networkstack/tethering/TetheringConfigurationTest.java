@@ -545,7 +545,8 @@ public class TetheringConfigurationTest {
         assertTrue(testCfg.shouldEnableWifiP2pDedicatedIp());
     }
 
-    @Test
+    // The config only works on T-
+    @Test @IgnoreAfter(Build.VERSION_CODES.TIRAMISU)
     public void testChooseUpstreamAutomatically() throws Exception {
         when(mResources.getBoolean(R.bool.config_tether_upstream_automatic))
                 .thenReturn(true);
@@ -554,6 +555,20 @@ public class TetheringConfigurationTest {
         when(mResources.getBoolean(R.bool.config_tether_upstream_automatic))
                 .thenReturn(false);
         assertChooseUpstreamAutomaticallyIs(false);
+    }
+
+    // The automatic mode is always enabled on U+
+    @Test @IgnoreUpTo(Build.VERSION_CODES.TIRAMISU)
+    public void testChooseUpstreamAutomaticallyAfterT() throws Exception {
+        // Expect that automatic mode is always enabled no matter what
+        // config_tether_upstream_automatic is.
+        when(mResources.getBoolean(R.bool.config_tether_upstream_automatic))
+                .thenReturn(true);
+        assertChooseUpstreamAutomaticallyIs(true);
+
+        when(mResources.getBoolean(R.bool.config_tether_upstream_automatic))
+                .thenReturn(false);
+        assertChooseUpstreamAutomaticallyIs(true);
     }
 
     // The flag override only works on R-
@@ -574,12 +589,32 @@ public class TetheringConfigurationTest {
         assertChooseUpstreamAutomaticallyIs(false);
     }
 
-    @Test @IgnoreUpTo(Build.VERSION_CODES.R)
-    public void testChooseUpstreamAutomatically_FlagOverrideAfterR() throws Exception {
+    @Test @IgnoreUpTo(Build.VERSION_CODES.R) @IgnoreAfter(Build.VERSION_CODES.TIRAMISU)
+    public void testChooseUpstreamAutomatically_FlagOverrideOnSAndT() throws Exception {
         when(mResources.getBoolean(R.bool.config_tether_upstream_automatic))
                 .thenReturn(false);
         setTetherForceUpstreamAutomaticFlagVersion(TEST_PACKAGE_VERSION - 1);
         assertChooseUpstreamAutomaticallyIs(false);
+    }
+
+    // The automatic mode is always enabled on U+
+    @Test @IgnoreUpTo(Build.VERSION_CODES.TIRAMISU)
+    public void testChooseUpstreamAutomatically_FlagOverrideAfterT() throws Exception {
+        // Expect that automatic mode is always enabled no matter what
+        // TETHER_FORCE_UPSTREAM_AUTOMATIC_VERSION is.
+        when(mResources.getBoolean(R.bool.config_tether_upstream_automatic))
+                .thenReturn(false);
+        setTetherForceUpstreamAutomaticFlagVersion(TEST_PACKAGE_VERSION - 1);
+        assertTrue(DeviceConfigUtils.isFeatureEnabled(mMockContext, NAMESPACE_CONNECTIVITY,
+                TetheringConfiguration.TETHER_FORCE_UPSTREAM_AUTOMATIC_VERSION, APEX_NAME, false));
+
+        assertChooseUpstreamAutomaticallyIs(true);
+
+        setTetherForceUpstreamAutomaticFlagVersion(0L);
+        assertChooseUpstreamAutomaticallyIs(true);
+
+        setTetherForceUpstreamAutomaticFlagVersion(Long.MAX_VALUE);
+        assertChooseUpstreamAutomaticallyIs(true);
     }
 
     private void setTetherForceUpstreamAutomaticFlagVersion(Long version) {
