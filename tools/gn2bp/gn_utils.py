@@ -223,10 +223,7 @@ class GnParser(object):
     return target.type == 'group' and re.match('.*_java$', target.name)
 
   def _get_arch(self, toolchain):
-    if toolchain is None:
-      # TODO: throw an exception instead of defaulting to x86_64.
-      return 'x86_64'
-    elif toolchain == '//build/toolchain/android:android_clang_x86':
+    if toolchain == '//build/toolchain/android:android_clang_x86':
       return 'x86'
     elif toolchain == '//build/toolchain/android:android_clang_x64':
       return 'x86_64'
@@ -259,7 +256,7 @@ class GnParser(object):
     target_name = label_without_toolchain(gn_target_name)
     target = self.all_targets.get(target_name)
     desc = gn_desc[gn_target_name]
-    arch = self._get_arch(desc.get('toolchain', None))
+    arch = self._get_arch(desc['toolchain'])
     if target is None:
       target = GnParser.Target(target_name, desc['type'])
       self.all_targets[target_name] = target
