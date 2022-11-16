@@ -280,6 +280,7 @@ class GnParser(object):
       target.proto_paths.update(self.get_proto_paths(proto_desc))
       target.proto_exports.update(self.get_proto_exports(proto_desc))
       target.proto_in_dir = self.get_proto_in_dir(proto_desc)
+      target.deps.update(proto_desc.get('deps', []))
       target.arch[arch].sources.update(proto_desc.get('sources', []))
       assert (all(x.endswith('.proto') for x in target.arch[arch].sources))
     elif target.type == 'source_set':
@@ -350,9 +351,7 @@ class GnParser(object):
       if dep.type == 'static_library':
         # Bubble up static_libs. Necessary, since soong does not propagate
         # static_libs up the build tree.
-        # Protobuf dependencies are handled separately.
-        if '//third_party/protobuf' not in dep_name:
-          target.transitive_static_libs_deps.add(dep_name)
+        target.transitive_static_libs_deps.add(dep_name)
 
       target.transitive_static_libs_deps.update(dep.transitive_static_libs_deps)
       target.deps.update(target.transitive_static_libs_deps)
