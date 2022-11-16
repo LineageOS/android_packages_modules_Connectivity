@@ -91,7 +91,6 @@ static_library_allowlist = [
 
 # Include directories that will be removed from all targets.
 local_include_dirs_denylist = [
-    'third_party/protobuf/src/',
 ]
 
 # Name of the module which settings such as compiler flags for all other
