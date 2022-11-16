@@ -117,6 +117,7 @@ genrule {
 // GN: //base/allocator/partition_allocator:partition_alloc
 cc_library_static {
     name: "cronet_aml_base_allocator_partition_allocator_partition_alloc",
+    host_supported: true,
     generated_headers: [
         "cronet_aml_base_allocator_partition_allocator_chromecast_buildflags",
         "cronet_aml_base_allocator_partition_allocator_chromeos_buildflags",
@@ -844,10 +845,6 @@ cc_library_static {
         "base/version.cc",
         "base/vlog.cc",
     ],
-    shared_libs: [
-        "libandroid",
-        "liblog",
-    ],
     static_libs: [
         "cronet_aml_base_allocator_partition_allocator_partition_alloc",
         "cronet_aml_base_base_static",
@@ -862,6 +859,7 @@ cc_library_static {
         "cronet_aml_third_party_libevent_libevent",
         "cronet_aml_third_party_modp_b64_modp_b64",
     ],
+    host_supported: true,
     generated_headers: [
         "cronet_aml_base_allocator_buildflags",
         "cronet_aml_base_allocator_partition_allocator_chromecast_buildflags",
@@ -978,6 +976,14 @@ cc_library_static {
         "jni_headers",
     ],
     cpp_std: "c++20",
+    target: {
+        android: {
+            shared_libs: [
+                "libandroid",
+                "liblog",
+            ],
+        },
+    },
 }
 
 // GN: //base:base_jni_headers
@@ -1251,6 +1257,7 @@ cc_library_static {
     srcs: [
         "base/base_switches.cc",
     ],
+    host_supported: true,
     generated_headers: [
         "cronet_aml_build_chromeos_buildflags",
     ],
@@ -1587,6 +1594,7 @@ cc_library_static {
         "base/third_party/double_conversion/double-conversion/string-to-double.cc",
         "base/third_party/double_conversion/double-conversion/strtod.cc",
     ],
+    host_supported: true,
     defaults: [
         "cronet_aml_defaults",
     ],
@@ -1632,6 +1640,7 @@ cc_library_static {
     srcs: [
         "base/third_party/dynamic_annotations/dynamic_annotations.c",
     ],
+    host_supported: true,
     defaults: [
         "cronet_aml_defaults",
     ],
@@ -1676,6 +1685,8 @@ cc_library_static {
         "base/third_party/symbolize/demangle.cc",
         "base/third_party/symbolize/symbolize.cc",
     ],
+    host_supported: true,
+    device_supported: false,
     defaults: [
         "cronet_aml_defaults",
     ],
@@ -1724,6 +1735,8 @@ cc_library_static {
         "base/third_party/xdg_mime/xdgmimemagic.c",
         "base/third_party/xdg_mime/xdgmimeparent.c",
     ],
+    host_supported: true,
+    device_supported: false,
     defaults: [
         "cronet_aml_defaults",
     ],
@@ -1764,6 +1777,8 @@ cc_library_static {
     srcs: [
         "base/third_party/xdg_user_dirs/xdg_user_dir_lookup.cc",
     ],
+    host_supported: true,
+    device_supported: false,
     defaults: [
         "cronet_aml_defaults",
     ],
@@ -2562,10 +2577,6 @@ cc_library_static {
         "crypto/unexportable_key.cc",
         "crypto/unexportable_key_metrics.cc",
     ],
-    shared_libs: [
-        "libandroid",
-        "liblog",
-    ],
     static_libs: [
         "cronet_aml_base_allocator_partition_allocator_partition_alloc",
         "cronet_aml_base_base",
@@ -2581,6 +2592,7 @@ cc_library_static {
         "cronet_aml_third_party_libevent_libevent",
         "cronet_aml_third_party_modp_b64_modp_b64",
     ],
+    host_supported: true,
     generated_headers: [
         "cronet_aml_build_chromeos_buildflags",
         "cronet_aml_components_nacl_common_buildflags",
@@ -2633,6 +2645,14 @@ cc_library_static {
         "third_party/android_ndk/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include",
     ],
     cpp_std: "c++20",
+    target: {
+        android: {
+            shared_libs: [
+                "libandroid",
+                "liblog",
+            ],
+        },
+    },
 }
 
 // GN: //gn:default_deps
@@ -5126,6 +5146,7 @@ filegroup {
 // GN: //third_party/boringssl:boringssl
 cc_library_static {
     name: "cronet_aml_third_party_boringssl_boringssl",
+    host_supported: true,
     defaults: [
         "cronet_aml_defaults",
     ],
@@ -6115,6 +6136,7 @@ cc_library_static {
     static_libs: [
         "cronet_aml_third_party_icu_icuuc_private",
     ],
+    host_supported: true,
     defaults: [
         "cronet_aml_defaults",
     ],
@@ -6372,6 +6394,7 @@ cc_library_static {
         "third_party/icu/source/common/wintz.cpp",
         "third_party/icu/source/stubdata/stubdata.cpp",
     ],
+    host_supported: true,
     defaults: [
         "cronet_aml_defaults",
     ],
@@ -6451,6 +6474,7 @@ cc_library_static {
         "third_party/libevent/signal.c",
         "third_party/libevent/strlcpy.c",
     ],
+    host_supported: true,
     defaults: [
         "cronet_aml_defaults",
     ],
@@ -6636,6 +6660,7 @@ cc_library_static {
     srcs: [
         "third_party/modp_b64/modp_b64.cc",
     ],
+    host_supported: true,
     defaults: [
         "cronet_aml_defaults",
     ],
@@ -6701,6 +6726,7 @@ cc_library_static {
         "third_party/zlib/uncompr.c",
         "third_party/zlib/zutil.c",
     ],
+    host_supported: true,
     defaults: [
         "cronet_aml_defaults",
     ],

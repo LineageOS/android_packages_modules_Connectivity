@@ -29,8 +29,6 @@ import sys
 
 BUILDFLAGS_TARGET = '//gn:gen_buildflags'
 GEN_VERSION_TARGET = '//src/base:version_gen_h'
-TARGET_TOOLCHAIN = '//gn/standalone/toolchain:gcc_like_host'
-HOST_TOOLCHAIN = '//gn/standalone/toolchain:gcc_like_host'
 LINKER_UNIT_TYPES = ('executable', 'shared_library', 'static_library')
 
 # TODO(primiano): investigate these, they require further componentization.
@@ -154,6 +152,12 @@ class GnParser(object):
       # is_finalized tracks whether finalize() was called on this target.
       self.is_finalized = False
       self.arch = dict()
+
+    def host_supported(self):
+      return 'host' in self.arch
+
+    def device_supported(self):
+      return any([name.startswith('android') for name in self.arch.keys()])
 
     def __lt__(self, other):
       if isinstance(other, self.__class__):
