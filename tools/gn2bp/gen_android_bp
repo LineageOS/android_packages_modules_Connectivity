@@ -138,25 +138,18 @@ def enable_gtest_and_gmock(module):
 
 
 def enable_protobuf_full(module):
-  if module.type == 'cc_binary_host':
+  if module.type not in ['genrule', 'filegroup']:
     module.static_libs.add('libprotobuf-cpp-full')
-  elif module.host_supported:
-    module.host.static_libs.add('libprotobuf-cpp-full')
-    module.android.shared_libs.add('libprotobuf-cpp-full')
-  elif module.type not in ['genrule', 'filegroup']:
-    module.shared_libs.add('libprotobuf-cpp-full')
 
 
 def enable_protobuf_lite(module):
   if module.type not in ['genrule', 'filegroup']:
-    module.shared_libs.add('libprotobuf-cpp-lite')
+    module.static_libs.add('libprotobuf-cpp-lite')
 
 
 def enable_protoc_lib(module):
-  if module.type == 'cc_binary_host':
+  if module.type not in ['genrule', 'filegroup']:
     module.static_libs.add('libprotoc')
-  elif module.type not in ['genrule', 'filegroup']:
-    module.shared_libs.add('libprotoc')
 
 
 def enable_libunwindstack(module):
@@ -236,10 +229,12 @@ builtin_deps = {
         enable_zlib,
     '//gn:bionic_kernel_uapi_headers':
         enable_uapi_headers,
+    '//net/tools/root_store_tool:root_store_tool':
+        lambda x: None,
     '//src/profiling/memory:bionic_libc_platform_headers_on_android':
         enable_bionic_libc_platform_headers_on_android,
     '//third_party/protobuf:protoc':
-      lambda x: None,
+        lambda x: None,
     '//third_party/protobuf:protobuf_full':
         enable_protobuf_full,
     '//third_party/protobuf:protobuf_lite':
@@ -1242,7 +1237,7 @@ def create_modules_from_target(blueprint, gn, gn_target_name):
   # need arch condition. So, for now, hardcoding arch condition
   if module.name == "cronet_aml_base_allocator_partition_allocator_partition_alloc":
     x86_srcs = module.srcs.copy()
-    x86_srcs.remove(
+    x86_srcs.discard(
       "base/allocator/partition_allocator/starscan/stack/asm/x64/push_registers_asm.cc")
     x86_srcs.add("base/allocator/partition_allocator/starscan/stack/asm/x86/push_registers_asm.cc")
     module.arch['x86'] = {'srcs': x86_srcs}
@@ -1320,9 +1315,10 @@ def create_blueprint_for_targets(gn, desc, targets):
   # Currently, multi tool chain is not supported for all targets and create_modules_from_target can
   # not reach to this target by following the dependency.
   # So it's required to specify explicitly.
-  create_modules_from_target(blueprint, gn,
-                             "//third_party/boringssl:boringssl_asm" +
-                             "(//build/toolchain/android:android_clang_x86)")
+  boringssl_gn_target_name = ('//third_party/boringssl:boringssl_asm' +
+                             '(//build/toolchain/android:android_clang_x86)')
+  gn.parse_gn_desc(desc, boringssl_gn_target_name)
+  create_modules_from_target(blueprint, gn, boringssl_gn_target_name)
 
   create_java_module(blueprint, gn)
   update_jni_registration_module(blueprint, gn)
@@ -1385,8 +1381,13 @@ def main():
   with open(args.desc) as f:
     desc = json.load(f)
 
-  gn = gn_utils.GnParser(desc)
-  blueprint = create_blueprint_for_targets(gn, desc, args.targets or default_targets)
+  gn = gn_utils.GnParser()
+  targets = args.targets or default_targets
+  for target in targets:
+    # TODO: pass desc to parse_gn_desc() to support parsing multiple desc files
+    # for different target architectures.
+    gn.parse_gn_desc(desc, target)
+  blueprint = create_blueprint_for_targets(gn, desc, targets)
   project_root = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))
   tool_name = os.path.relpath(os.path.abspath(__file__), project_root)
 
