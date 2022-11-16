@@ -347,6 +347,7 @@ class Module(object):
     self.tools = set()
     self.cmd = None
     self.host_supported = False
+    self.device_supported = True
     self.vendor_available = False
     self.init_rc = set()
     self.out = set()
@@ -400,6 +401,8 @@ class Module(object):
     self._output_field(output, 'cmd', sort=False)
     if self.host_supported:
       self._output_field(output, 'host_supported')
+    if not self.device_supported:
+      self._output_field(output, 'device_supported')
     if self.vendor_available:
       self._output_field(output, 'vendor_available')
     self._output_field(output, 'init_rc')
