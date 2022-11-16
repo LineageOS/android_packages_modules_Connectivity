@@ -107,7 +107,8 @@ buildtools_protobuf_src = '//buildtools/protobuf/src'
 android_protobuf_src = 'external/protobuf/src'
 
 # Compiler flags which are passed through to the blueprint.
-cflag_allowlist = r'^-DPERFETTO.*$'
+cflag_allowlist = [
+]
 
 # Additional arguments to apply to Android.bp rules.
 additional_args = {
@@ -1017,7 +1018,7 @@ def create_action_module(blueprint, target):
 
 
 def _get_cflags(target):
-  cflags = {flag for flag in target.cflags if re.match(cflag_allowlist, flag)}
+  cflags = {flag for flag in target.cflags if flag in cflag_allowlist}
   # Consider proper allowlist or denylist if needed
   cflags |= set("-D%s" % define.replace("\"", "\\\"") for define in target.defines)
   # -DANDROID is added by default but target.defines contain -DANDROID if it's required.
