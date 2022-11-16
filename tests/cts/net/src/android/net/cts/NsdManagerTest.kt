@@ -88,7 +88,6 @@ import kotlin.test.assertTrue
 import kotlin.test.fail
 
 private const val TAG = "NsdManagerTest"
-private const val SERVICE_TYPE = "_nmt._tcp"
 private const val TIMEOUT_MS = 2000L
 private const val NO_CALLBACK_TIMEOUT_MS = 200L
 // Registration may take a long time if there are devices with the same hostname on the network,
@@ -112,6 +111,7 @@ class NsdManagerTest {
 
     private val cm by lazy { context.getSystemService(ConnectivityManager::class.java) }
     private val serviceName = "NsdTest%09d".format(Random().nextInt(1_000_000_000))
+    private val serviceType = "_nmt%09d._tcp".format(Random().nextInt(1_000_000_000))
     private val handlerThread = HandlerThread(NsdManagerTest::class.java.simpleName)
 
     private lateinit var testNetwork1: TestTapNetwork
@@ -334,7 +334,7 @@ class NsdManagerTest {
     @Test
     fun testNsdManager() {
         val si = NsdServiceInfo()
-        si.serviceType = SERVICE_TYPE
+        si.serviceType = serviceType
         si.serviceName = serviceName
         // Test binary data with various bytes
         val testByteArray = byteArrayOf(-128, 127, 2, 1, 0, 1, 2)
@@ -384,7 +384,7 @@ class NsdManagerTest {
 
         val discoveryRecord = NsdDiscoveryRecord()
         // Test discovering without an Executor
-        nsdManager.discoverServices(SERVICE_TYPE, NsdManager.PROTOCOL_DNS_SD, discoveryRecord)
+        nsdManager.discoverServices(serviceType, NsdManager.PROTOCOL_DNS_SD, discoveryRecord)
 
         // Expect discovery started
         discoveryRecord.expectCallback<DiscoveryStarted>()
@@ -424,7 +424,7 @@ class NsdManagerTest {
 
         // Register service again to see if NsdManager can discover it
         val si2 = NsdServiceInfo()
-        si2.serviceType = SERVICE_TYPE
+        si2.serviceType = serviceType
         si2.serviceName = serviceName
         si2.port = localPort
         val registrationRecord2 = NsdRegistrationRecord()
@@ -458,7 +458,7 @@ class NsdManagerTest {
         assumeTrue(TestUtils.shouldTestTApis())
 
         val si = NsdServiceInfo()
-        si.serviceType = SERVICE_TYPE
+        si.serviceType = serviceType
         si.serviceName = this.serviceName
         si.port = 12345 // Test won't try to connect so port does not matter
 
@@ -467,7 +467,7 @@ class NsdManagerTest {
 
         tryTest {
             val discoveryRecord = NsdDiscoveryRecord()
-            nsdShim.discoverServices(nsdManager, SERVICE_TYPE, NsdManager.PROTOCOL_DNS_SD,
+            nsdShim.discoverServices(nsdManager, serviceType, NsdManager.PROTOCOL_DNS_SD,
                     testNetwork1.network, Executor { it.run() }, discoveryRecord)
 
             val foundInfo = discoveryRecord.waitForServiceDiscovered(
@@ -492,7 +492,7 @@ class NsdManagerTest {
         assumeTrue(TestUtils.shouldTestTApis())
 
         val si = NsdServiceInfo()
-        si.serviceType = SERVICE_TYPE
+        si.serviceType = serviceType
         si.serviceName = this.serviceName
         si.port = 12345 // Test won't try to connect so port does not matter
 
@@ -505,7 +505,7 @@ class NsdManagerTest {
 
         tryTest {
             val specifier = TestNetworkSpecifier(testNetwork1.iface.interfaceName)
-            nsdShim.discoverServices(nsdManager, SERVICE_TYPE, NsdManager.PROTOCOL_DNS_SD,
+            nsdShim.discoverServices(nsdManager, serviceType, NsdManager.PROTOCOL_DNS_SD,
                     NetworkRequest.Builder()
                             .removeCapability(NET_CAPABILITY_TRUSTED)
                             .addTransportType(TRANSPORT_TEST)
@@ -514,7 +514,7 @@ class NsdManagerTest {
                     executor, discoveryRecord)
 
             val discoveryStarted = discoveryRecord.expectCallback<DiscoveryStarted>()
-            assertEquals(SERVICE_TYPE, discoveryStarted.serviceType)
+            assertEquals(serviceType, discoveryStarted.serviceType)
 
             val serviceDiscovered = discoveryRecord.expectCallback<ServiceFound>()
             assertEquals(registeredInfo1.serviceName, serviceDiscovered.serviceInfo.serviceName)
@@ -560,7 +560,7 @@ class NsdManagerTest {
         assumeTrue(TestUtils.shouldTestTApis())
 
         val si = NsdServiceInfo()
-        si.serviceType = SERVICE_TYPE
+        si.serviceType = serviceType
         si.serviceName = this.serviceName
         si.port = 12345 // Test won't try to connect so port does not matter
 
@@ -571,7 +571,7 @@ class NsdManagerTest {
         val specifier = TestNetworkSpecifier(testNetwork1.iface.interfaceName)
 
         tryTest {
-            nsdShim.discoverServices(nsdManager, SERVICE_TYPE, NsdManager.PROTOCOL_DNS_SD,
+            nsdShim.discoverServices(nsdManager, serviceType, NsdManager.PROTOCOL_DNS_SD,
                     NetworkRequest.Builder()
                             .removeCapability(NET_CAPABILITY_TRUSTED)
                             .addTransportType(TRANSPORT_TEST)
@@ -593,7 +593,7 @@ class NsdManagerTest {
         assumeTrue(TestUtils.shouldTestTApis())
 
         val si = NsdServiceInfo()
-        si.serviceType = SERVICE_TYPE
+        si.serviceType = serviceType
         si.serviceName = this.serviceName
         si.port = 12345 // Test won't try to connect so port does not matter
 
@@ -603,7 +603,7 @@ class NsdManagerTest {
             val resolveRecord = NsdResolveRecord()
 
             val discoveryRecord = NsdDiscoveryRecord()
-            nsdManager.discoverServices(SERVICE_TYPE, NsdManager.PROTOCOL_DNS_SD, discoveryRecord)
+            nsdManager.discoverServices(serviceType, NsdManager.PROTOCOL_DNS_SD, discoveryRecord)
 
             val foundInfo1 = discoveryRecord.waitForServiceDiscovered(
                     serviceName, testNetwork1.network)
@@ -618,7 +618,7 @@ class NsdManagerTest {
             val cb = resolveRecord.expectCallback<ServiceResolved>()
             cb.serviceInfo.let {
                 // Resolved service type has leading dot
-                assertEquals(".$SERVICE_TYPE", it.serviceType)
+                assertEquals(".$serviceType", it.serviceType)
                 assertEquals(registeredInfo.serviceName, it.serviceName)
                 assertEquals(si.port, it.port)
                 assertEquals(testNetwork1.network, nsdShim.getNetwork(it))
@@ -637,7 +637,7 @@ class NsdManagerTest {
         assumeTrue(TestUtils.shouldTestTApis())
 
         val si = NsdServiceInfo()
-        si.serviceType = SERVICE_TYPE
+        si.serviceType = serviceType
         si.serviceName = this.serviceName
         si.network = testNetwork1.network
         si.port = 12345 // Test won't try to connect so port does not matter
@@ -651,7 +651,7 @@ class NsdManagerTest {
 
         tryTest {
             // Discover service on testNetwork1.
-            nsdShim.discoverServices(nsdManager, SERVICE_TYPE, NsdManager.PROTOCOL_DNS_SD,
+            nsdShim.discoverServices(nsdManager, serviceType, NsdManager.PROTOCOL_DNS_SD,
                 testNetwork1.network, Executor { it.run() }, discoveryRecord)
             // Expect that service is found on testNetwork1
             val foundInfo = discoveryRecord.waitForServiceDiscovered(
@@ -659,14 +659,14 @@ class NsdManagerTest {
             assertEquals(testNetwork1.network, nsdShim.getNetwork(foundInfo))
 
             // Discover service on testNetwork2.
-            nsdShim.discoverServices(nsdManager, SERVICE_TYPE, NsdManager.PROTOCOL_DNS_SD,
+            nsdShim.discoverServices(nsdManager, serviceType, NsdManager.PROTOCOL_DNS_SD,
                 testNetwork2.network, Executor { it.run() }, discoveryRecord2)
             // Expect that discovery is started then no other callbacks.
             discoveryRecord2.expectCallback<DiscoveryStarted>()
             discoveryRecord2.assertNoCallback()
 
             // Discover service on all networks (not specify any network).
-            nsdShim.discoverServices(nsdManager, SERVICE_TYPE, NsdManager.PROTOCOL_DNS_SD,
+            nsdShim.discoverServices(nsdManager, serviceType, NsdManager.PROTOCOL_DNS_SD,
                 null as Network? /* network */, Executor { it.run() }, discoveryRecord3)
             // Expect that service is found on testNetwork1
             val foundInfo3 = discoveryRecord3.waitForServiceDiscovered(
@@ -684,7 +684,7 @@ class NsdManagerTest {
     fun testNsdManager_RegisterServiceNameWithNonStandardCharacters() {
         val serviceNames = "^Nsd.Test|Non-#AsCiI\\Characters&\\ufffe テスト 測試"
         val si = NsdServiceInfo().apply {
-            serviceType = SERVICE_TYPE
+            serviceType = this@NsdManagerTest.serviceType
             serviceName = serviceNames
             port = 12345 // Test won't try to connect so port does not matter
         }
@@ -698,7 +698,7 @@ class NsdManagerTest {
             // Discover that service name.
             val discoveryRecord = NsdDiscoveryRecord()
             nsdManager.discoverServices(
-                SERVICE_TYPE, NsdManager.PROTOCOL_DNS_SD, discoveryRecord
+                serviceType, NsdManager.PROTOCOL_DNS_SD, discoveryRecord
             )
             val foundInfo = discoveryRecord.waitForServiceDiscovered(serviceNames)
 
