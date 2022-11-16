@@ -351,9 +351,7 @@ class GnParser(object):
       if dep.type == 'static_library':
         # Bubble up static_libs. Necessary, since soong does not propagate
         # static_libs up the build tree.
-        # Protobuf dependencies are handled separately.
-        if '//third_party/protobuf' not in dep_name:
-          target.transitive_static_libs_deps.add(dep_name)
+        target.transitive_static_libs_deps.add(dep_name)
 
       target.transitive_static_libs_deps.update(dep.transitive_static_libs_deps)
       target.deps.update(target.transitive_static_libs_deps)
