@@ -19,10 +19,13 @@ package android.net;
 import static android.net.NetworkCapabilities.REDACT_FOR_NETWORK_SETTINGS;
 import static android.net.NetworkCapabilities.REDACT_NONE;
 
+import static com.android.testutils.MiscAsserts.assertThrows;
 import static com.android.testutils.ParcelUtils.assertParcelSane;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertTrue;
 
 import android.os.Build;
 
@@ -31,6 +34,7 @@ import androidx.test.filters.SmallTest;
 import com.android.testutils.DevSdkIgnoreRule;
 import com.android.testutils.DevSdkIgnoreRunner;
 
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
@@ -38,36 +42,67 @@ import org.junit.runner.RunWith;
 @SmallTest
 @DevSdkIgnoreRule.IgnoreUpTo(Build.VERSION_CODES.R)
 public class VpnTransportInfoTest {
+    @Rule
+    public final DevSdkIgnoreRule ignoreRule = new DevSdkIgnoreRule();
 
     @Test
     public void testParceling() {
-        VpnTransportInfo v = new VpnTransportInfo(VpnManager.TYPE_VPN_PLATFORM, "12345");
-        assertParcelSane(v, 2 /* fieldCount */);
+        final VpnTransportInfo v = new VpnTransportInfo(VpnManager.TYPE_VPN_PLATFORM, "12345");
+        assertParcelSane(v, 3 /* fieldCount */);
+
+        final VpnTransportInfo v2 =
+                new VpnTransportInfo(VpnManager.TYPE_VPN_PLATFORM, "12345", true);
+        assertParcelSane(v2, 3 /* fieldCount */);
     }
 
     @Test
     public void testEqualsAndHashCode() {
         String session1 = "12345";
         String session2 = "6789";
-        VpnTransportInfo v11 = new VpnTransportInfo(VpnManager.TYPE_VPN_PLATFORM, session1);
-        VpnTransportInfo v12 = new VpnTransportInfo(VpnManager.TYPE_VPN_SERVICE, session1);
-        VpnTransportInfo v13 = new VpnTransportInfo(VpnManager.TYPE_VPN_PLATFORM, session1);
-        VpnTransportInfo v14 = new VpnTransportInfo(VpnManager.TYPE_VPN_LEGACY, session1);
-        VpnTransportInfo v15 = new VpnTransportInfo(VpnManager.TYPE_VPN_OEM, session1);
-        VpnTransportInfo v21 = new VpnTransportInfo(VpnManager.TYPE_VPN_LEGACY, session2);
+        final VpnTransportInfo v11 = new VpnTransportInfo(VpnManager.TYPE_VPN_PLATFORM, session1);
+        final VpnTransportInfo v12 = new VpnTransportInfo(VpnManager.TYPE_VPN_SERVICE, session1);
+        final VpnTransportInfo v13 = new VpnTransportInfo(VpnManager.TYPE_VPN_PLATFORM, session1);
+        final VpnTransportInfo v14 = new VpnTransportInfo(VpnManager.TYPE_VPN_LEGACY, session1);
+        final VpnTransportInfo v15 = new VpnTransportInfo(VpnManager.TYPE_VPN_OEM, session1);
+        final VpnTransportInfo v16 = new VpnTransportInfo(VpnManager.TYPE_VPN_OEM, session1, true);
+        final VpnTransportInfo v17 = new VpnTransportInfo(VpnManager.TYPE_VPN_OEM, session1, true);
+        final VpnTransportInfo v21 = new VpnTransportInfo(VpnManager.TYPE_VPN_LEGACY, session2);
 
-        VpnTransportInfo v31 = v11.makeCopy(REDACT_FOR_NETWORK_SETTINGS);
-        VpnTransportInfo v32 = v13.makeCopy(REDACT_FOR_NETWORK_SETTINGS);
+        final VpnTransportInfo v31 = v11.makeCopy(REDACT_FOR_NETWORK_SETTINGS);
+        final VpnTransportInfo v32 = v13.makeCopy(REDACT_FOR_NETWORK_SETTINGS);
+        final VpnTransportInfo v33 = v16.makeCopy(REDACT_FOR_NETWORK_SETTINGS);
+        final VpnTransportInfo v34 = v17.makeCopy(REDACT_FOR_NETWORK_SETTINGS);
 
         assertNotEquals(v11, v12);
         assertNotEquals(v13, v14);
         assertNotEquals(v14, v15);
         assertNotEquals(v14, v21);
+        assertNotEquals(v15, v16);
 
         assertEquals(v11, v13);
         assertEquals(v31, v32);
+        assertEquals(v33, v34);
         assertEquals(v11.hashCode(), v13.hashCode());
+        assertEquals(v16.hashCode(), v17.hashCode());
         assertEquals(REDACT_FOR_NETWORK_SETTINGS, v32.getApplicableRedactions());
         assertEquals(session1, v15.makeCopy(REDACT_NONE).getSessionId());
+    }
+
+    @DevSdkIgnoreRule.IgnoreAfter(Build.VERSION_CODES.TIRAMISU)
+    @Test
+    public void testGetBypassable_beforeU() {
+        final VpnTransportInfo v = new VpnTransportInfo(VpnManager.TYPE_VPN_PLATFORM, "12345");
+        assertThrows(UnsupportedOperationException.class, () -> v.getBypassable());
+    }
+
+    @DevSdkIgnoreRule.IgnoreUpTo(Build.VERSION_CODES.TIRAMISU)
+    @Test
+    public void testGetBypassable_afterU() {
+        final VpnTransportInfo v = new VpnTransportInfo(VpnManager.TYPE_VPN_PLATFORM, "12345");
+        assertFalse(v.getBypassable());
+
+        final VpnTransportInfo v2 =
+                new VpnTransportInfo(VpnManager.TYPE_VPN_PLATFORM, "12345", true);
+        assertTrue(v2.getBypassable());
     }
 }
