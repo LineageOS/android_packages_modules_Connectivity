@@ -1853,6 +1853,7 @@ public class VpnTest extends VpnTestBase {
 
         // Check if allowBypass is set or not.
         assertTrue(nacCaptor.getValue().isBypassableVpn());
+        assertTrue(((VpnTransportInfo) ncCaptor.getValue().getTransportInfo()).getBypassable());
 
         return new PlatformVpnSnapshot(vpn, nwCb, ikeCb, childCb);
     }
