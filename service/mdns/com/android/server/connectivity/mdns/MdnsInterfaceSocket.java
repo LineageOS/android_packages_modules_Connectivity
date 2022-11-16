@@ -22,10 +22,15 @@ import static com.android.server.connectivity.mdns.MdnsSocket.MULTICAST_IPV6_ADD
 import android.annotation.NonNull;
 import android.net.LinkAddress;
 import android.net.util.SocketUtils;
+import android.os.Handler;
+import android.os.Looper;
 import android.os.ParcelFileDescriptor;
 import android.system.ErrnoException;
+import android.system.Os;
+import android.system.OsConstants;
 import android.util.Log;
 
+import java.io.FileDescriptor;
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.InetSocketAddress;
@@ -41,15 +46,19 @@ import java.util.List;
  * otherwise.
  *
  * @see MulticastSocket for javadoc of each public method.
+ * @see MulticastSocket for javadoc of each public method.
  */
 public class MdnsInterfaceSocket {
     private static final String TAG = MdnsInterfaceSocket.class.getSimpleName();
     @NonNull private final MulticastSocket mMulticastSocket;
     @NonNull private final NetworkInterface mNetworkInterface;
+    @NonNull private final MulticastPacketReader mPacketReader;
+    @NonNull private final ParcelFileDescriptor mFileDescriptor;
     private boolean mJoinedIpv4 = false;
     private boolean mJoinedIpv6 = false;
 
-    public MdnsInterfaceSocket(@NonNull NetworkInterface networkInterface, int port)
+    public MdnsInterfaceSocket(@NonNull NetworkInterface networkInterface, int port,
+            @NonNull Looper looper, @NonNull byte[] packetReadBuffer)
             throws IOException {
         mNetworkInterface = networkInterface;
         mMulticastSocket = new MulticastSocket(port);
@@ -58,11 +67,19 @@ public class MdnsInterfaceSocket {
         mMulticastSocket.setNetworkInterface(networkInterface);
 
         // Bind socket to the interface for receiving from that interface only.
-        try (ParcelFileDescriptor pfd = ParcelFileDescriptor.fromDatagramSocket(mMulticastSocket)) {
-            SocketUtils.bindSocketToInterface(pfd.getFileDescriptor(), mNetworkInterface.getName());
+        mFileDescriptor = ParcelFileDescriptor.fromDatagramSocket(mMulticastSocket);
+        try {
+            final FileDescriptor fd = mFileDescriptor.getFileDescriptor();
+            final int flags = Os.fcntlInt(fd, OsConstants.F_GETFL, 0);
+            Os.fcntlInt(fd, OsConstants.F_SETFL, flags | OsConstants.SOCK_NONBLOCK);
+            SocketUtils.bindSocketToInterface(fd, mNetworkInterface.getName());
         } catch (ErrnoException e) {
             throw new IOException("Error setting socket options", e);
         }
+
+        mPacketReader = new MulticastPacketReader(networkInterface.getName(), mFileDescriptor,
+                new Handler(looper), packetReadBuffer);
+        mPacketReader.start();
     }
 
     /**
@@ -74,23 +91,14 @@ public class MdnsInterfaceSocket {
         mMulticastSocket.send(packet);
     }
 
-    /**
-     * Receives a datagram packet from this socket.
-     *
-     * <p>This method could be used on any thread.
-     */
-    public void receive(@NonNull DatagramPacket packet) throws IOException {
-        mMulticastSocket.receive(packet);
-    }
-
-    private boolean hasIpv4Address(List<LinkAddress> addresses) {
+    private static boolean hasIpv4Address(@NonNull List<LinkAddress> addresses) {
         for (LinkAddress address : addresses) {
             if (address.isIpv4()) return true;
         }
         return false;
     }
 
-    private boolean hasIpv6Address(List<LinkAddress> addresses) {
+    private static boolean hasIpv6Address(@NonNull List<LinkAddress> addresses) {
         for (LinkAddress address : addresses) {
             if (address.isIpv6()) return true;
         }
@@ -103,7 +111,7 @@ public class MdnsInterfaceSocket {
         maybeJoinIpv6(addresses);
     }
 
-    private boolean joinGroup(InetSocketAddress multicastAddress) {
+    private boolean joinGroup(@NonNull InetSocketAddress multicastAddress) {
         try {
             mMulticastSocket.joinGroup(multicastAddress, mNetworkInterface);
             return true;
@@ -114,7 +122,7 @@ public class MdnsInterfaceSocket {
         }
     }
 
-    private void maybeJoinIpv4(List<LinkAddress> addresses) {
+    private void maybeJoinIpv4(@NonNull List<LinkAddress> addresses) {
         final boolean hasAddr = hasIpv4Address(addresses);
         if (!mJoinedIpv4 && hasAddr) {
             mJoinedIpv4 = joinGroup(MULTICAST_IPV4_ADDRESS);
@@ -124,7 +132,7 @@ public class MdnsInterfaceSocket {
         }
     }
 
-    private void maybeJoinIpv6(List<LinkAddress> addresses) {
+    private void maybeJoinIpv6(@NonNull List<LinkAddress> addresses) {
         final boolean hasAddr = hasIpv6Address(addresses);
         if (!mJoinedIpv6 && hasAddr) {
             mJoinedIpv6 = joinGroup(MULTICAST_IPV6_ADDRESS);
@@ -134,23 +142,23 @@ public class MdnsInterfaceSocket {
         }
     }
 
-    /*** Destroy this socket by leaving all joined multicast groups and closing this socket. */
+    /*** Destroy the socket */
     public void destroy() {
-        if (mJoinedIpv4) {
-            try {
-                mMulticastSocket.leaveGroup(MULTICAST_IPV4_ADDRESS, mNetworkInterface);
-            } catch (IOException e) {
-                Log.e(TAG, "Error leaving IPv4 group for " + mNetworkInterface, e);
-            }
-        }
-        if (mJoinedIpv6) {
-            try {
-                mMulticastSocket.leaveGroup(MULTICAST_IPV6_ADDRESS, mNetworkInterface);
-            } catch (IOException e) {
-                Log.e(TAG, "Error leaving IPv4 group for " + mNetworkInterface, e);
-            }
+        mPacketReader.stop();
+        try {
+            mFileDescriptor.close();
+        } catch (IOException e) {
+            Log.e(TAG, "Close file descriptor failed.");
         }
         mMulticastSocket.close();
+    }
+
+    /**
+     * Add a handler to receive callbacks when reads the packet from socket. If the handler is
+     * already set, this is a no-op.
+     */
+    public void addPacketHandler(@NonNull MulticastPacketReader.PacketHandler handler) {
+        mPacketReader.addPacketHandler(handler);
     }
 
     /**

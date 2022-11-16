@@ -101,7 +101,24 @@ public class MdnsResponseDecoder {
      */
     public int decode(@NonNull DatagramPacket packet, @NonNull List<MdnsResponse> responses,
             int interfaceIndex, @Nullable Network network) {
-        MdnsPacketReader reader = new MdnsPacketReader(packet);
+        return decode(packet.getData(), packet.getLength(), responses, interfaceIndex, network);
+    }
+
+    /**
+     * Decodes all mDNS responses for the desired service type from a packet. The class does not
+     * check
+     * the responses for completeness; the caller should do that.
+     *
+     * @param recvbuf The received data buffer to read from.
+     * @param length The length of received data buffer.
+     * @param interfaceIndex the network interface index (or {@link
+     *     MdnsSocket#INTERFACE_INDEX_UNSPECIFIED} if not known) at which the packet was received
+     * @param network the network at which the packet was received, or null if it is unknown.
+     * @return A list of mDNS responses, or null if the packet contained no appropriate responses.
+     */
+    public int decode(@NonNull byte[] recvbuf, int length, @NonNull List<MdnsResponse> responses,
+            int interfaceIndex, @Nullable Network network) {
+        MdnsPacketReader reader = new MdnsPacketReader(recvbuf, length);
 
         List<MdnsRecord> records;
         try {
