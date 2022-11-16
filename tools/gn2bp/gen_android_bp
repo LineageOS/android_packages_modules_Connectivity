@@ -108,6 +108,10 @@ android_protobuf_src = 'external/protobuf/src'
 
 # Compiler flags which are passed through to the blueprint.
 cflag_allowlist = [
+  # needed for zlib:zlib
+  "-mpclmul",
+  # needed for zlib:zlib
+  "-mssse3",
 ]
 
 # Additional arguments to apply to Android.bp rules.
