@@ -94,6 +94,12 @@ class GnParser(object):
         Maked properties are propagated up the dependency chain when a
         source_set dependency is encountered.
         """
+    class Arch():
+      """Architecture-dependent properties
+        """
+      def __init__(self):
+        self.sources = set()
+
 
     def __init__(self, name, type):
       self.name = name  # e.g. //src/ipc:ipc
@@ -144,6 +150,11 @@ class GnParser(object):
       # placeholder target once we hit //gn:protoc or similar.
       self.is_third_party_dep_ = False
 
+      # TODO: come up with a better way to only run this once.
+      # is_finalized tracks whether finalize() was called on this target.
+      self.is_finalized = False
+      self.arch = dict()
+
     def __lt__(self, other):
       if isinstance(other, self.__class__):
         return self.name < other.name
@@ -165,8 +176,24 @@ class GnParser(object):
                   'libs', 'proto_paths'):
         self.__dict__[key].update(other.__dict__.get(key, []))
 
-  def __init__(self, gn_desc):
-    self.gn_desc_ = gn_desc
+    def finalize(self):
+      """Move common properties out of arch-dependent subobjects to Target object.
+
+        TODO: find a better name for this function.
+        """
+      if self.is_finalized:
+        return
+      self.is_finalized = True
+
+      # Target contains the intersection of arch-dependent properties
+      self.sources = set.intersection(*[arch.sources for arch in self.arch.values()])
+
+      # Deduplicate arch-dependent properties
+      for arch in self.arch.keys():
+        self.arch[arch].sources -= self.sources
+
+
+  def __init__(self):
     self.all_targets = {}
     self.linker_units = {}  # Executables, shared or static libraries.
     self.source_sets = {}
@@ -195,39 +222,58 @@ class GnParser(object):
     # TODO: There are some other possible variations we might need to support.
     return target.type == 'group' and re.match('.*_java$', target.name)
 
+  def _get_arch(self, toolchain):
+    if toolchain is None:
+      # TODO: throw an exception instead of defaulting to x86_64.
+      return 'x86_64'
+    elif toolchain == '//build/toolchain/android:android_clang_x86':
+      return 'x86'
+    elif toolchain == '//build/toolchain/android:android_clang_x64':
+      return 'x86_64'
+    elif toolchain == '//build/toolchain/android:android_clang_arm':
+      return 'arm'
+    elif toolchain == '//build/toolchain/android:android_clang_arm64':
+      return 'arm64'
+    else:
+      return 'host'
 
   def get_target(self, gn_target_name):
     """Returns a Target object from the fully qualified GN target name.
 
+      get_target() requires that parse_gn_desc() has already been called.
+      """
+    # Run this every time as parse_gn_desc can be called at any time.
+    for target in self.all_targets.values():
+      target.finalize()
+
+    return self.all_targets[label_without_toolchain(gn_target_name)]
+
+  def parse_gn_desc(self, gn_desc, gn_target_name):
+    """Parses a gn desc tree and resolves all target dependencies.
+
         It bubbles up variables from source_set dependencies as described in the
         class-level comments.
         """
-    target = self.all_targets.get(gn_target_name)
-    if target is not None:
+    # Use name without toolchain for targets to support targets built for
+    # multiple archs.
+    target_name = label_without_toolchain(gn_target_name)
+    target = self.all_targets.get(target_name)
+    desc = gn_desc[gn_target_name]
+    arch = self._get_arch(desc.get('toolchain', None))
+    if target is None:
+      target = GnParser.Target(target_name, desc['type'])
+      self.all_targets[target_name] = target
+
+    if arch not in target.arch:
+      target.arch[arch] = GnParser.Target.Arch()
+    else:
       return target  # Target already processed.
 
-    desc = self.gn_desc_[gn_target_name]
-    target = GnParser.Target(gn_target_name, desc['type'])
     target.testonly = desc.get('testonly', False)
+    # TODO: remove toolchain from Target object
     target.toolchain = desc.get('toolchain', None)
-    self.all_targets[gn_target_name] = target
 
-    # TODO: determine if below comment should apply for cronet builds in Android.
-    # We should never have GN targets directly depend on buidtools. They
-    # should hop via //gn:xxx, so we can give generators an opportunity to
-    # override them.
-    # Specifically allow targets to depend on libc++ and libunwind.
-    if not any(match in gn_target_name for match in ['libc++', 'libunwind']):
-      assert (not gn_target_name.startswith('//buildtools'))
-
-
-    # Don't descend further into third_party targets. Genrators are supposed
-    # to either ignore them or route to other externally-provided targets.
-    if gn_target_name.startswith('//gn'):
-      target.is_third_party_dep_ = True
-      return target
-
-    proto_target_type, proto_desc = self.get_proto_target_type(target)
+    proto_target_type, proto_desc = self.get_proto_target_type(gn_desc, gn_target_name)
     if proto_target_type is not None:
       self.proto_libs[target.name] = target
       target.type = 'proto_library'
@@ -235,18 +281,18 @@ class GnParser(object):
       target.proto_paths.update(self.get_proto_paths(proto_desc))
       target.proto_exports.update(self.get_proto_exports(proto_desc))
       target.proto_in_dir = self.get_proto_in_dir(proto_desc)
-      target.sources.update(proto_desc.get('sources', []))
-      assert (all(x.endswith('.proto') for x in target.sources))
+      target.arch[arch].sources.update(proto_desc.get('sources', []))
+      assert (all(x.endswith('.proto') for x in target.arch[arch].sources))
     elif target.type == 'source_set':
       self.source_sets[gn_target_name] = target
-      target.sources.update(desc.get('sources', []))
+      target.arch[arch].sources.update(desc.get('sources', []))
     elif target.type in LINKER_UNIT_TYPES:
       self.linker_units[gn_target_name] = target
-      target.sources.update(desc.get('sources', []))
+      target.arch[arch].sources.update(desc.get('sources', []))
     elif target.type in ['action', 'action_foreach']:
       self.actions[gn_target_name] = target
       target.inputs.update(desc.get('inputs', []))
-      target.sources.update(desc.get('sources', []))
+      target.arch[arch].sources.update(desc.get('sources', []))
       outs = [re.sub('^//out/.+?/gen/', '', x) for x in desc['outputs']]
       target.outputs.update(outs)
       target.script = desc['script']
@@ -276,8 +322,9 @@ class GnParser(object):
     target.include_dirs.update(desc.get('include_dirs', []))
 
     # Recurse in dependencies.
-    for dep_name in desc.get('deps', []):
-      dep = self.get_target(dep_name)
+    for gn_dep_name in desc.get('deps', []):
+      dep = self.parse_gn_desc(gn_desc, gn_dep_name)
+      dep_name = label_without_toolchain(gn_dep_name)
       if dep.is_third_party_dep_:
         target.deps.add(dep_name)
       elif dep.type == 'proto_library':
@@ -340,7 +387,7 @@ class GnParser(object):
     args = proto_desc.get('args')
     return re.sub('^\.\./\.\./', '', args[args.index('--proto-in-dir') + 1])
 
-  def get_proto_target_type(self, target):
+  def get_proto_target_type(self, gn_desc, gn_target_name):
     """ Checks if the target is a proto library and return the plugin.
 
         Returns:
@@ -350,13 +397,13 @@ class GnParser(object):
             json desc of the target with the .proto sources (_gen target for
             non-descriptor types or the target itself for descriptor type).
         """
-    parts = target.name.split('(', 1)
+    parts = gn_target_name.split('(', 1)
     name = parts[0]
     toolchain = '(' + parts[1] if len(parts) > 1 else ''
 
     # Descriptor targets don't have a _gen target; instead we look for the
     # characteristic flag in the args of the target itself.
-    desc = self.gn_desc_.get(target.name)
+    desc = gn_desc.get(gn_target_name)
     if '--descriptor_set_out' in desc.get('args', []):
       return 'descriptor', desc
 
@@ -368,7 +415,7 @@ class GnParser(object):
 
     # In all other cases, we want to look at the _gen target as that has the
     # important information.
-    gen_desc = self.gn_desc_.get('%s_gen%s' % (name, toolchain))
+    gen_desc = gn_desc.get('%s_gen%s' % (name, toolchain))
     if gen_desc is None or gen_desc['type'] != 'action':
       return None, None
     if gen_desc['script'] != '//tools/protoc_wrapper/protoc_wrapper.py':
