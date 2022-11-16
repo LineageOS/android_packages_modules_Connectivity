@@ -185,10 +185,6 @@ class GnParser(object):
         return
       self.is_finalized = True
 
-      # TODO: temporary hack until sources are collected on a per arch basis.
-      if self.sources:
-        return
-
       # Target contains the intersection of arch-dependent properties
       self.sources = set.intersection(*[arch.sources for arch in self.arch.values()])
 
@@ -285,18 +281,18 @@ class GnParser(object):
       target.proto_paths.update(self.get_proto_paths(proto_desc))
       target.proto_exports.update(self.get_proto_exports(proto_desc))
       target.proto_in_dir = self.get_proto_in_dir(proto_desc)
-      target.sources.update(proto_desc.get('sources', []))
-      assert (all(x.endswith('.proto') for x in target.sources))
+      target.arch[arch].sources.update(proto_desc.get('sources', []))
+      assert (all(x.endswith('.proto') for x in target.arch[arch].sources))
     elif target.type == 'source_set':
       self.source_sets[gn_target_name] = target
-      target.sources.update(desc.get('sources', []))
+      target.arch[arch].sources.update(desc.get('sources', []))
     elif target.type in LINKER_UNIT_TYPES:
       self.linker_units[gn_target_name] = target
-      target.sources.update(desc.get('sources', []))
+      target.arch[arch].sources.update(desc.get('sources', []))
     elif target.type in ['action', 'action_foreach']:
       self.actions[gn_target_name] = target
       target.inputs.update(desc.get('inputs', []))
-      target.sources.update(desc.get('sources', []))
+      target.arch[arch].sources.update(desc.get('sources', []))
       outs = [re.sub('^//out/.+?/gen/', '', x) for x in desc['outputs']]
       target.outputs.update(outs)
       target.script = desc['script']
