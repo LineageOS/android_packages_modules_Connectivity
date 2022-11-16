@@ -501,13 +501,15 @@ def create_proto_modules(blueprint, gn, target):
     """
   assert (target.type == 'proto_library')
 
-  tools = {'aprotoc'}
+  protoc_gn_target_name = "//third_party/protobuf:protoc(//build/toolchain/linux:clang_x64)"
+  protoc_module_name = label_to_module_name(protoc_gn_target_name)
+  tools = {protoc_module_name}
   cpp_out_dir = '$(genDir)/%s/%s/' % (tree_path, target.proto_in_dir)
   target_module_name = label_to_module_name(target.name)
 
   # In GN builds the proto path is always relative to the output directory
   # (out/tmp.xxx).
-  cmd = ['$(location aprotoc)']
+  cmd = ['$(location %s)' % protoc_module_name]
   cmd += ['--proto_path=%s/%s' % (tree_path, target.proto_in_dir)]
 
   if buildtools_protobuf_src in target.proto_paths:
