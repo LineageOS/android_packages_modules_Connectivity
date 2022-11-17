@@ -377,6 +377,9 @@ class Module(object):
     value = getattr(self, name)
     return write_blueprint_key_value(output, name, value, sort)
 
+  def is_compiled(self):
+    return self.type not in ('genrule', 'filegroup', 'cc_defaults')
+
 
 class Blueprint(object):
   """In-memory representation of an Android.bp file."""
@@ -990,7 +993,7 @@ def create_modules_from_target(blueprint, gn, gn_target_name):
   elif target.type == 'shared_library':
     module = Module('cc_library_shared', bp_module_name, gn_target_name)
   elif target.type == 'source_set':
-    module = Module('filegroup', bp_module_name, gn_target_name)
+    module = Module('cc_defaults', bp_module_name, gn_target_name)
   elif target.type == 'group':
     # "group" targets are resolved recursively by gn_utils.get_target().
     # There's nothing we need to do at this level for them.
@@ -1070,8 +1073,7 @@ def create_modules_from_target(blueprint, gn, gn_target_name):
           module.local_include_dirs.append(sysroot + "/usr/include/x86_64-linux-gnu")
         module.local_include_dirs.append(sysroot + "/usr/include")
 
-  module_is_compiled = module.type not in ('genrule', 'filegroup')
-  if module_is_compiled:
+  if module.is_compiled():
     module.host_supported = target.host_supported()
     module.device_supported = target.device_supported()
 
@@ -1124,8 +1126,9 @@ def create_modules_from_target(blueprint, gn, gn_target_name):
         module.genrule_headers.add(dep_module.name)
         module.genrule_headers.update(dep_module.genrule_headers)
 
-    # For filegroups and genrule, recurse but don't apply the deps.
-    if not module_is_compiled:
+    # For cc_defaults, filegroups, and genrule, recurse but don't apply the
+    # deps.
+    if not module.is_compiled():
       continue
 
     if dep_module is None:
@@ -1134,8 +1137,8 @@ def create_modules_from_target(blueprint, gn, gn_target_name):
       module.shared_libs.add(dep_module.name)
     elif dep_module.type == 'cc_library_static':
       module.static_libs.add(dep_module.name)
-    elif dep_module.type == 'filegroup':
-      module.srcs.add(':' + dep_module.name)
+    elif dep_module.type == 'cc_defaults':
+      module.defaults.append(dep_module.name)
     elif dep_module.type == 'genrule':
       module.generated_headers.update(dep_module.genrule_headers)
       module.srcs.update(dep_module.genrule_srcs)
@@ -1160,7 +1163,7 @@ def create_modules_from_target(blueprint, gn, gn_target_name):
     module.srcs.clear()
   elif module.name == "cronet_aml_third_party_boringssl_boringssl":
     x86_srcs = module.srcs.copy()
-    x86_srcs.remove(":cronet_aml_third_party_boringssl_boringssl_asm")
+    x86_srcs.discard(":cronet_aml_third_party_boringssl_boringssl_asm")
     x86_srcs.add(":cronet_aml_third_party_boringssl_boringssl_asm_x86")
     module.arch['x86'] = {'srcs': x86_srcs}
     module.arch['x86_64'] = {'srcs': module.srcs.copy()}
