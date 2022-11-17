@@ -1160,6 +1160,17 @@ def create_modules_from_target(blueprint, gn, gn_target_name):
       raise Error('Unknown dep %s (%s) for target %s' %
                   (dep_module.name, dep_module.type, module.name))
 
+  for arch_name, arch in target.arch.items():
+    for dep_name in arch.deps:
+      dep_module = create_modules_from_target(blueprint, gn, dep_name)
+      # Arch-specific dependencies currently only include cc_library_static.
+      # Revisit this approach once we need to support more target types.
+      if dep_module.type == 'cc_library_static':
+        module.target[arch_name].static_libs.add(dep_module.name)
+      else:
+        raise Error('Unsupported arch-specific dependency %s of target %s with type %s' %
+                    (dep_module.name, target.name, dep_module.type))
+
   return module
 
 def create_java_module(blueprint, gn):
