@@ -291,7 +291,6 @@ class Module(object):
     self.stubs = {}
     self.cppflags = set()
     self.rtti = False
-    self.arch = dict()
 
   def to_string(self, output):
     if self.comment:
@@ -340,7 +339,6 @@ class Module(object):
     self._output_field(output, 'cppflags')
     if self.rtti:
       self._output_field(output, 'rtti')
-    self._output_field(output, 'arch')
 
     target_out = []
     for arch, target in sorted(self.target.items()):
@@ -405,10 +403,6 @@ def label_to_module_name(label):
   """Turn a GN label (e.g., //:perfetto_tests) into a module name."""
   module = re.sub(r'^//:?', '', label)
   module = re.sub(r'[^a-zA-Z0-9_]', '_', module)
-
-  # If it's required to support multi toolchain for more targets, it's better to avoid hardcoding.
-  if label == "//third_party/boringssl:boringssl_asm(//build/toolchain/android:android_clang_x86)":
-    module += "_x86"
 
   if not module.startswith(module_prefix):
     return module_prefix + module
@@ -1152,25 +1146,6 @@ def create_modules_from_target(blueprint, gn, gn_target_name):
       raise Error('Unknown dep %s (%s) for target %s' %
                   (dep_module.name, dep_module.type, module.name))
 
-  # TODO: support arch difference in generic way
-  # Currently, it is expected that only a couple of modules (e.g. partition_alloc, boringssl)
-  # need arch condition. So, for now, hardcoding arch condition
-  if module.name == "cronet_aml_base_allocator_partition_allocator_partition_alloc":
-    x86_srcs = module.srcs.copy()
-    x86_srcs.discard(
-      "base/allocator/partition_allocator/starscan/stack/asm/x64/push_registers_asm.cc")
-    x86_srcs.add("base/allocator/partition_allocator/starscan/stack/asm/x86/push_registers_asm.cc")
-    module.arch['x86'] = {'srcs': x86_srcs}
-    module.arch['x86_64'] = {'srcs': module.srcs.copy()}
-    module.srcs.clear()
-  elif module.name == "cronet_aml_third_party_boringssl_boringssl":
-    x86_srcs = module.srcs.copy()
-    x86_srcs.discard(":cronet_aml_third_party_boringssl_boringssl_asm")
-    x86_srcs.add(":cronet_aml_third_party_boringssl_boringssl_asm_x86")
-    module.arch['x86'] = {'srcs': x86_srcs}
-    module.arch['x86_64'] = {'srcs': module.srcs.copy()}
-    module.srcs.clear()
-
   return module
 
 def create_java_module(blueprint, gn):
@@ -1231,14 +1206,6 @@ def create_blueprint_for_targets(gn, desc, targets):
 
   for target in targets:
     create_modules_from_target(blueprint, gn, target)
-
-  # Currently, multi tool chain is not supported for all targets and create_modules_from_target can
-  # not reach to this target by following the dependency.
-  # So it's required to specify explicitly.
-  boringssl_gn_target_name = ('//third_party/boringssl:boringssl_asm' +
-                             '(//build/toolchain/android:android_clang_x86)')
-  gn.parse_gn_desc(desc, boringssl_gn_target_name)
-  create_modules_from_target(blueprint, gn, boringssl_gn_target_name)
 
   create_java_module(blueprint, gn)
   update_jni_registration_module(blueprint, gn)
