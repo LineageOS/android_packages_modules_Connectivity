@@ -1030,6 +1030,11 @@ def create_modules_from_target(blueprint, gn, gn_target_name):
       for src in target.sources
       if is_supported_source_file(src) and not src.startswith("//out/test"))
 
+  # Add arch-specific properties
+  for arch_name, arch in target.arch.items():
+    module.target[arch_name].srcs.update(gn_utils.label_to_path(src)
+                                         for src in arch.sources)
+
   local_include_dirs_set = set()
   if target.type in gn_utils.LINKER_UNIT_TYPES:
     module.cflags.update(_get_cflags(target))
