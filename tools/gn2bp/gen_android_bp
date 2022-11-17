@@ -265,6 +265,10 @@ class Module(object):
     # example: { 'android_x86': Target('android_x86')
     self.target = dict()
     self.target['android'] = Target('android')
+    self.target['android_x86'] = Target('android_x86')
+    self.target['android_x86_64'] = Target('android_x86_64')
+    self.target['android_arm'] = Target('android_arm')
+    self.target['android_arm64'] = Target('android_arm64')
     self.target['host'] = Target('host')
     self.stl = None
     self.cpp_std = None
