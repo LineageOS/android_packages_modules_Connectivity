@@ -97,6 +97,9 @@ class GnParser(object):
         """
       def __init__(self):
         self.sources = set()
+        self.cflags = set()
+        self.defines = set()
+        self.include_dirs = set()
 
 
     def __init__(self, name, type):
@@ -174,11 +177,15 @@ class GnParser(object):
                         indent=4,
                         sort_keys=True)
 
-    def update(self, other):
+    def update(self, other, arch):
       for key in ('cflags', 'defines', 'deps', 'include_dirs', 'ldflags',
                   'source_set_deps', 'proto_deps', 'transitive_proto_deps',
                   'libs', 'proto_paths'):
         self.__dict__[key].update(other.__dict__.get(key, []))
+
+      for key_in_arch in ('cflags', 'defines', 'include_dirs'):
+        self.arch[arch].__dict__[key_in_arch].update(
+          other.arch[arch].__dict__.get(key_in_arch, []))
 
     def finalize(self):
       """Move common properties out of arch-dependent subobjects to Target object.
@@ -191,11 +198,16 @@ class GnParser(object):
 
       # Target contains the intersection of arch-dependent properties
       self.sources = set.intersection(*[arch.sources for arch in self.arch.values()])
+      self.cflags = set.intersection(*[arch.cflags for arch in self.arch.values()])
+      self.defines = set.intersection(*[arch.defines for arch in self.arch.values()])
+      self.include_dirs = set.intersection(*[arch.include_dirs for arch in self.arch.values()])
 
       # Deduplicate arch-dependent properties
       for arch in self.arch.keys():
         self.arch[arch].sources -= self.sources
-
+        self.arch[arch].cflags -= self.cflags
+        self.arch[arch].defines -= self.defines
+        self.arch[arch].include_dirs -= self.include_dirs
 
   def __init__(self):
     self.all_targets = {}
@@ -317,11 +329,11 @@ class GnParser(object):
     public_headers = [x for x in desc.get('public', []) if x != '*']
     target.public_headers.update(public_headers)
 
-    target.cflags.update(desc.get('cflags', []) + desc.get('cflags_cc', []))
+    target.arch[arch].cflags.update(desc.get('cflags', []) + desc.get('cflags_cc', []))
     target.libs.update(desc.get('libs', []))
     target.ldflags.update(desc.get('ldflags', []))
-    target.defines.update(desc.get('defines', []))
-    target.include_dirs.update(desc.get('include_dirs', []))
+    target.arch[arch].defines.update(desc.get('defines', []))
+    target.arch[arch].include_dirs.update(desc.get('include_dirs', []))
 
     # Recurse in dependencies.
     for gn_dep_name in desc.get('deps', []):
@@ -335,9 +347,9 @@ class GnParser(object):
         target.transitive_proto_deps.update(dep.transitive_proto_deps)
       elif dep.type == 'source_set':
         target.source_set_deps.add(dep.name)
-        target.update(dep)  # Bubble up source set's cflags/ldflags etc.
+        target.update(dep, arch)  # Bubble up source set's cflags/ldflags etc.
       elif dep.type == 'group':
-        target.update(dep)  # Bubble up groups's cflags/ldflags etc.
+        target.update(dep, arch)  # Bubble up groups's cflags/ldflags etc.
       elif dep.type in ['action', 'action_foreach', 'copy']:
         if proto_target_type is None:
           target.deps.add(dep.name)
