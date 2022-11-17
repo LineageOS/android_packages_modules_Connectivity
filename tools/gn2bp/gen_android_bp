@@ -91,7 +91,6 @@ static_library_allowlist = [
 
 # Include directories that will be removed from all targets.
 local_include_dirs_denylist = [
-    'third_party/protobuf/src/',
 ]
 
 # Name of the module which settings such as compiler flags for all other
@@ -108,7 +107,12 @@ buildtools_protobuf_src = '//buildtools/protobuf/src'
 android_protobuf_src = 'external/protobuf/src'
 
 # Compiler flags which are passed through to the blueprint.
-cflag_allowlist = r'^-DPERFETTO.*$'
+cflag_allowlist = [
+  # needed for zlib:zlib
+  "-mpclmul",
+  # needed for zlib:zlib
+  "-mssse3",
+]
 
 # Additional arguments to apply to Android.bp rules.
 additional_args = {
@@ -129,123 +133,11 @@ additional_args = {
     ],
 }
 
-
-def enable_gtest_and_gmock(module):
-  module.static_libs.add('libgmock')
-  module.static_libs.add('libgtest')
-  if module.name != 'perfetto_gtest_logcat_printer':
-    module.whole_static_libs.add('perfetto_gtest_logcat_printer')
-
-
-def enable_protobuf_full(module):
-  if module.type == 'cc_binary_host':
-    module.static_libs.add('libprotobuf-cpp-full')
-  elif module.host_supported:
-    module.host.static_libs.add('libprotobuf-cpp-full')
-    module.android.shared_libs.add('libprotobuf-cpp-full')
-  elif module.type not in ['genrule', 'filegroup']:
-    module.shared_libs.add('libprotobuf-cpp-full')
-
-
-def enable_protobuf_lite(module):
-  if module.type not in ['genrule', 'filegroup']:
-    module.shared_libs.add('libprotobuf-cpp-lite')
-
-
-def enable_protoc_lib(module):
-  if module.type == 'cc_binary_host':
-    module.static_libs.add('libprotoc')
-  elif module.type not in ['genrule', 'filegroup']:
-    module.shared_libs.add('libprotoc')
-
-
-def enable_libunwindstack(module):
-  if module.name != 'heapprofd_standalone_client':
-    module.shared_libs.add('libunwindstack')
-    module.shared_libs.add('libprocinfo')
-    module.shared_libs.add('libbase')
-  else:
-    module.static_libs.add('libunwindstack')
-    module.static_libs.add('libprocinfo')
-    module.static_libs.add('libbase')
-    module.static_libs.add('liblzma')
-    module.static_libs.add('libdexfile_support')
-    module.runtime_libs.add('libdexfile')  # libdexfile_support dependency
-
-
-def enable_libunwind(module):
-  # libunwind is disabled on Darwin so we cannot depend on it.
-  pass
-
-
-def enable_sqlite(module):
-  if module.type == 'cc_binary_host':
-    module.static_libs.add('libsqlite')
-    module.static_libs.add('sqlite_ext_percentile')
-  elif module.host_supported:
-    # Copy what the sqlite3 command line tool does.
-    module.android.shared_libs.add('libsqlite')
-    module.android.shared_libs.add('libicu')
-    module.android.shared_libs.add('liblog')
-    module.android.shared_libs.add('libutils')
-    module.android.static_libs.add('sqlite_ext_percentile')
-    module.host.static_libs.add('libsqlite')
-    module.host.static_libs.add('sqlite_ext_percentile')
-  else:
-    module.shared_libs.add('libsqlite')
-    module.shared_libs.add('libicu')
-    module.shared_libs.add('liblog')
-    module.shared_libs.add('libutils')
-    module.static_libs.add('sqlite_ext_percentile')
-
-
-def enable_zlib(module):
-  if module.type == 'cc_binary_host':
-    module.static_libs.add('libz')
-  elif module.host_supported:
-    module.android.shared_libs.add('libz')
-    module.host.static_libs.add('libz')
-  else:
-    module.shared_libs.add('libz')
-
-
-def enable_uapi_headers(module):
-  module.include_dirs.add('bionic/libc/kernel')
-
-
-def enable_bionic_libc_platform_headers_on_android(module):
-  module.header_libs.add('bionic_libc_platform_headers')
-
-
 # Android equivalents for third-party libraries that the upstream project
 # depends on.
 builtin_deps = {
-    '//gn:default_deps':
+    '//net/tools/root_store_tool:root_store_tool':
         lambda x: None,
-    '//gn:gtest_main':
-        lambda x: None,
-    '//gn:gtest_and_gmock':
-        enable_gtest_and_gmock,
-    '//gn:libunwind':
-        enable_libunwind,
-    '//gn:libunwindstack':
-        enable_libunwindstack,
-    '//gn:sqlite':
-        enable_sqlite,
-    '//gn:zlib':
-        enable_zlib,
-    '//gn:bionic_kernel_uapi_headers':
-        enable_uapi_headers,
-    '//src/profiling/memory:bionic_libc_platform_headers_on_android':
-        enable_bionic_libc_platform_headers_on_android,
-    '//third_party/protobuf:protoc':
-      lambda x: None,
-    '//third_party/protobuf:protobuf_full':
-        enable_protobuf_full,
-    '//third_party/protobuf:protobuf_lite':
-        enable_protobuf_lite,
-    '//third_party/protobuf:protoc_lib':
-        enable_protoc_lib,
 }
 
 # ----------------------------------------------------------------------------
@@ -344,7 +236,7 @@ class Module(object):
     self.gn_target = gn_target
     self.name = name
     self.srcs = set()
-    self.comment = 'GN: ' + gn_utils.label_without_toolchain(gn_target)
+    self.comment = 'GN: ' + gn_target
     self.shared_libs = set()
     self.static_libs = set()
     self.whole_static_libs = set()
@@ -352,6 +244,7 @@ class Module(object):
     self.tools = set()
     self.cmd = None
     self.host_supported = False
+    self.device_supported = True
     self.vendor_available = False
     self.init_rc = set()
     self.out = set()
@@ -405,6 +298,8 @@ class Module(object):
     self._output_field(output, 'cmd', sort=False)
     if self.host_supported:
       self._output_field(output, 'host_supported')
+    if not self.device_supported:
+      self._output_field(output, 'device_supported')
     if self.vendor_available:
       self._output_field(output, 'vendor_available')
     self._output_field(output, 'init_rc')
@@ -493,11 +388,7 @@ class Blueprint(object):
 
 def label_to_module_name(label):
   """Turn a GN label (e.g., //:perfetto_tests) into a module name."""
-  # If the label is explicibly listed in the default target list, don't prefix
-  # its name and return just the target name. This is so tools like
-  # "traceconv" stay as such in the Android tree.
-  label_without_toolchain = gn_utils.label_without_toolchain(label)
-  module = re.sub(r'^//:?', '', label_without_toolchain)
+  module = re.sub(r'^//:?', '', label)
   module = re.sub(r'[^a-zA-Z0-9_]', '_', module)
 
   # If it's required to support multi toolchain for more targets, it's better to avoid hardcoding.
@@ -531,13 +422,15 @@ def create_proto_modules(blueprint, gn, target):
     """
   assert (target.type == 'proto_library')
 
-  tools = {'aprotoc'}
+  protoc_gn_target_name = "//third_party/protobuf:protoc(//build/toolchain/linux:clang_x64)"
+  protoc_module_name = label_to_module_name(protoc_gn_target_name)
+  tools = {protoc_module_name}
   cpp_out_dir = '$(genDir)/%s/%s/' % (tree_path, target.proto_in_dir)
   target_module_name = label_to_module_name(target.name)
 
   # In GN builds the proto path is always relative to the output directory
   # (out/tmp.xxx).
-  cmd = ['$(location aprotoc)']
+  cmd = ['$(location %s)' % protoc_module_name]
   cmd += ['--proto_path=%s/%s' % (tree_path, target.proto_in_dir)]
 
   if buildtools_protobuf_src in target.proto_paths:
@@ -1045,7 +938,7 @@ def create_action_module(blueprint, target):
 
 
 def _get_cflags(target):
-  cflags = {flag for flag in target.cflags if re.match(cflag_allowlist, flag)}
+  cflags = {flag for flag in target.cflags if flag in cflag_allowlist}
   # Consider proper allowlist or denylist if needed
   cflags |= set("-D%s" % define.replace("\"", "\\\"") for define in target.defines)
   # -DANDROID is added by default but target.defines contain -DANDROID if it's required.
@@ -1073,13 +966,11 @@ def create_modules_from_target(blueprint, gn, gn_target_name):
   target = gn.get_target(gn_target_name)
   log.info('create modules for %s (%s)', target.name, target.type)
 
-  name_without_toolchain = gn_utils.label_without_toolchain(target.name)
   if target.type == 'executable':
-    if target.toolchain == gn_utils.HOST_TOOLCHAIN:
-      module_type = 'cc_binary_host'
-    elif target.testonly:
+    if target.testonly:
       module_type = 'cc_test'
     else:
+      # Can be used for both host and device targets.
       module_type = 'cc_binary'
     module = Module(module_type, bp_module_name, gn_target_name)
   elif target.type == 'static_library':
@@ -1099,10 +990,10 @@ def create_modules_from_target(blueprint, gn, gn_target_name):
   elif target.type == 'action':
     if 'gen_amalgamated_sql_metrics' in target.name:
       module = create_amalgamated_sql_metrics_module(blueprint, target)
-    elif re.match('.*gen_cc_.*_descriptor$', name_without_toolchain):
+    elif re.match('.*gen_cc_.*_descriptor$', target.name):
       module = create_cc_proto_descriptor_module(blueprint, target)
     elif target.type == 'action' and \
-        name_without_toolchain == gn_utils.GEN_VERSION_TARGET:
+        target.name == gn_utils.GEN_VERSION_TARGET:
       module = create_gen_version_module(blueprint, target, bp_module_name)
     else:
       module = create_action_module(blueprint, target)
@@ -1121,7 +1012,6 @@ def create_modules_from_target(blueprint, gn, gn_target_name):
     raise Error('Unknown target %s (%s)' % (target.name, target.type))
 
   blueprint.add_module(module)
-  module.host_supported = (name_without_toolchain in target_host_supported)
   module.init_rc = target_initrc.get(target.name, [])
   module.srcs.update(
       gn_utils.label_to_path(src)
@@ -1165,6 +1055,9 @@ def create_modules_from_target(blueprint, gn, gn_target_name):
 
   module_is_compiled = module.type not in ('genrule', 'filegroup')
   if module_is_compiled:
+    module.host_supported = target.host_supported()
+    module.device_supported = target.device_supported()
+
     # Don't try to inject library/source dependencies into genrules or
     # filegroups because they are not compiled in the traditional sense.
     module.defaults = [defaults_module]
@@ -1196,8 +1089,8 @@ def create_modules_from_target(blueprint, gn, gn_target_name):
   for dep_name in all_deps:
     # |builtin_deps| override GN deps with Android-specific ones. See the
     # config in the top of this file.
-    if gn_utils.label_without_toolchain(dep_name) in builtin_deps:
-      builtin_deps[gn_utils.label_without_toolchain(dep_name)](module)
+    if dep_name in builtin_deps:
+      builtin_deps[dep_name](module)
       continue
 
     dep_module = create_modules_from_target(blueprint, gn, dep_name)
@@ -1242,7 +1135,7 @@ def create_modules_from_target(blueprint, gn, gn_target_name):
   # need arch condition. So, for now, hardcoding arch condition
   if module.name == "cronet_aml_base_allocator_partition_allocator_partition_alloc":
     x86_srcs = module.srcs.copy()
-    x86_srcs.remove(
+    x86_srcs.discard(
       "base/allocator/partition_allocator/starscan/stack/asm/x64/push_registers_asm.cc")
     x86_srcs.add("base/allocator/partition_allocator/starscan/stack/asm/x86/push_registers_asm.cc")
     module.arch['x86'] = {'srcs': x86_srcs}
@@ -1320,9 +1213,10 @@ def create_blueprint_for_targets(gn, desc, targets):
   # Currently, multi tool chain is not supported for all targets and create_modules_from_target can
   # not reach to this target by following the dependency.
   # So it's required to specify explicitly.
-  create_modules_from_target(blueprint, gn,
-                             "//third_party/boringssl:boringssl_asm" +
-                             "(//build/toolchain/android:android_clang_x86)")
+  boringssl_gn_target_name = ('//third_party/boringssl:boringssl_asm' +
+                             '(//build/toolchain/android:android_clang_x86)')
+  gn.parse_gn_desc(desc, boringssl_gn_target_name)
+  create_modules_from_target(blueprint, gn, boringssl_gn_target_name)
 
   create_java_module(blueprint, gn)
   update_jni_registration_module(blueprint, gn)
@@ -1385,8 +1279,13 @@ def main():
   with open(args.desc) as f:
     desc = json.load(f)
 
-  gn = gn_utils.GnParser(desc)
-  blueprint = create_blueprint_for_targets(gn, desc, args.targets or default_targets)
+  gn = gn_utils.GnParser()
+  targets = args.targets or default_targets
+  for target in targets:
+    # TODO: pass desc to parse_gn_desc() to support parsing multiple desc files
+    # for different target architectures.
+    gn.parse_gn_desc(desc, target)
+  blueprint = create_blueprint_for_targets(gn, desc, targets)
   project_root = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))
   tool_name = os.path.relpath(os.path.abspath(__file__), project_root)
 

@@ -289,7 +289,7 @@ public class EthernetServiceImpl extends IEthernetManager.Stub {
 
         enforceAdminPermission(iface, false, "enableInterface()");
 
-        mTracker.enableInterface(iface, new EthernetCallback(cb));
+        mTracker.setInterfaceEnabled(iface, true /* enabled */, new EthernetCallback(cb));
     }
 
     @Override
@@ -301,7 +301,7 @@ public class EthernetServiceImpl extends IEthernetManager.Stub {
 
         enforceAdminPermission(iface, false, "disableInterface()");
 
-        mTracker.disableInterface(iface, new EthernetCallback(cb));
+        mTracker.setInterfaceEnabled(iface, false /* enabled */, new EthernetCallback(cb));
     }
 
     @Override

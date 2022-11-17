@@ -312,14 +312,15 @@ public class EthernetServiceImplTest {
     @Test
     public void testEnableInterface() {
         mEthernetServiceImpl.enableInterface(TEST_IFACE, NULL_LISTENER);
-        verify(mEthernetTracker).enableInterface(eq(TEST_IFACE),
+        verify(mEthernetTracker).setInterfaceEnabled(eq(TEST_IFACE), eq(true),
                 any(EthernetCallback.class));
     }
 
     @Test
     public void testDisableInterface() {
         mEthernetServiceImpl.disableInterface(TEST_IFACE, NULL_LISTENER);
-        verify(mEthernetTracker).disableInterface(eq(TEST_IFACE), any(EthernetCallback.class));
+        verify(mEthernetTracker).setInterfaceEnabled(eq(TEST_IFACE), eq(false),
+                any(EthernetCallback.class));
     }
 
     @Test
@@ -384,7 +385,7 @@ public class EthernetServiceImplTest {
         denyManageEthPermission();
 
         mEthernetServiceImpl.enableInterface(TEST_IFACE, NULL_LISTENER);
-        verify(mEthernetTracker).enableInterface(eq(TEST_IFACE),
+        verify(mEthernetTracker).setInterfaceEnabled(eq(TEST_IFACE), eq(true),
                 any(EthernetCallback.class));
     }
 
@@ -395,7 +396,7 @@ public class EthernetServiceImplTest {
         denyManageEthPermission();
 
         mEthernetServiceImpl.disableInterface(TEST_IFACE, NULL_LISTENER);
-        verify(mEthernetTracker).disableInterface(eq(TEST_IFACE),
+        verify(mEthernetTracker).setInterfaceEnabled(eq(TEST_IFACE), eq(false),
                 any(EthernetCallback.class));
     }
 

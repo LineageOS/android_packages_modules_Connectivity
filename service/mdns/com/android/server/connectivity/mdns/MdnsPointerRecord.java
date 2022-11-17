@@ -29,7 +29,19 @@ public class MdnsPointerRecord extends MdnsRecord {
     private String[] pointer;
 
     public MdnsPointerRecord(String[] name, MdnsPacketReader reader) throws IOException {
-        super(name, TYPE_PTR, reader);
+        this(name, reader, false);
+    }
+
+    public MdnsPointerRecord(String[] name, MdnsPacketReader reader, boolean isQuestion)
+            throws IOException {
+        super(name, TYPE_PTR, reader, isQuestion);
+    }
+
+    public MdnsPointerRecord(String[] name, long receiptTimeMillis, boolean cacheFlush,
+                    long ttlMillis, String[] pointer) {
+        super(name, TYPE_PTR, MdnsConstants.QCLASS_INTERNET, receiptTimeMillis, cacheFlush,
+                ttlMillis);
+        this.pointer = pointer;
     }
 
     /** Returns the pointer as an array of labels. */
