@@ -190,12 +190,7 @@ public class MdnsPacketWriter {
             }
             writePointer(suffixPointer);
         } else {
-            int[] offsets = new int[labels.length];
-            for (int i = 0; i < labels.length; ++i) {
-                offsets[i] = getWritePosition();
-                writeString(labels[i]);
-            }
-            writeUInt8(0); // NUL terminator
+            int[] offsets = writeLabelsNoCompression(labels);
 
             // Add entries to the label dictionary for each suffix of the label list, including
             // the whole list itself.
@@ -205,6 +200,21 @@ public class MdnsPacketWriter {
                 labelDictionary.put(offsets[i], value);
             }
         }
+    }
+
+    /**
+     * Write a series a labels, without using name compression.
+     *
+     * @return The offsets where each label was written to.
+     */
+    public int[] writeLabelsNoCompression(String[] labels) throws IOException {
+        int[] offsets = new int[labels.length];
+        for (int i = 0; i < labels.length; ++i) {
+            offsets[i] = getWritePosition();
+            writeString(labels[i]);
+        }
+        writeUInt8(0); // NUL terminator
+        return offsets;
     }
 
     /** Returns the number of bytes that can still be written. */
