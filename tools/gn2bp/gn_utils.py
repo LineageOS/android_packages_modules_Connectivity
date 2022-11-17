@@ -100,6 +100,8 @@ class GnParser(object):
         self.cflags = set()
         self.defines = set()
         self.include_dirs = set()
+        self.deps = set()
+        self.transitive_static_libs_deps = set()
 
 
     def __init__(self, name, type):
@@ -142,7 +144,6 @@ class GnParser(object):
       self.source_set_deps = set()  # Transitive set of source_set deps.
       self.proto_deps = set()
       self.transitive_proto_deps = set()
-      self.transitive_static_libs_deps = set()
 
       # TODO: come up with a better way to only run this once.
       # is_finalized tracks whether finalize() was called on this target.
@@ -194,6 +195,7 @@ class GnParser(object):
       self.cflags = set.intersection(*[arch.cflags for arch in self.arch.values()])
       self.defines = set.intersection(*[arch.defines for arch in self.arch.values()])
       self.include_dirs = set.intersection(*[arch.include_dirs for arch in self.arch.values()])
+      self.deps.update(set.intersection(*[arch.deps for arch in self.arch.values()]))
 
       # Deduplicate arch-dependent properties
       for arch in self.arch.keys():
@@ -201,6 +203,8 @@ class GnParser(object):
         self.arch[arch].cflags -= self.cflags
         self.arch[arch].defines -= self.defines
         self.arch[arch].include_dirs -= self.include_dirs
+        self.arch[arch].deps -= self.deps
+
 
   def __init__(self):
     self.all_targets = {}
@@ -345,7 +349,7 @@ class GnParser(object):
         if proto_target_type is None:
           target.deps.add(dep.name)
       elif dep.type in LINKER_UNIT_TYPES:
-        target.deps.add(dep.name)
+        target.arch[arch].deps.add(dep.name)
       elif dep.type == 'java_group':
         # Explicitly break dependency chain when a java_group is added.
         # Java sources are collected and eventually compiled as one large
@@ -355,10 +359,12 @@ class GnParser(object):
       if dep.type == 'static_library':
         # Bubble up static_libs. Necessary, since soong does not propagate
         # static_libs up the build tree.
-        target.transitive_static_libs_deps.add(dep.name)
+        target.arch[arch].transitive_static_libs_deps.add(dep.name)
 
-      target.transitive_static_libs_deps.update(dep.transitive_static_libs_deps)
-      target.deps.update(target.transitive_static_libs_deps)
+      if arch in dep.arch:
+        target.arch[arch].transitive_static_libs_deps.update(
+            dep.arch[arch].transitive_static_libs_deps)
+        target.arch[arch].deps.update(target.arch[arch].transitive_static_libs_deps)
 
       # Collect java sources. Java sources are kept inside the __compile_java target.
       # This target can be used for both host and target compilation; only add
