@@ -343,7 +343,7 @@ class Module(object):
     self._output_field(output, 'arch')
 
     target_out = []
-    for arch, target in self.target.items():
+    for arch, target in sorted(self.target.items()):
       # _output_field calls getattr(self, arch).
       setattr(self, arch, target)
       self._output_field(target_out, arch)
