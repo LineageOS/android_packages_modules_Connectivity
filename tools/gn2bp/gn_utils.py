@@ -98,6 +98,7 @@ class GnParser(object):
       def __init__(self):
         self.sources = set()
         self.cflags = set()
+        self.defines = set()
 
 
     def __init__(self, name, type):
@@ -181,7 +182,7 @@ class GnParser(object):
                   'libs', 'proto_paths'):
         self.__dict__[key].update(other.__dict__.get(key, []))
 
-      for key_in_arch in ('cflags',):
+      for key_in_arch in ('cflags', 'defines'):
         self.arch[arch].__dict__[key_in_arch].update(
           other.arch[arch].__dict__.get(key_in_arch, []))
 
@@ -204,6 +205,10 @@ class GnParser(object):
       # TODO: Keep cflags per arch
       for arch_value in self.arch.values():
         self.cflags = self.cflags.union(arch_value.cflags)
+
+      # TODO: Keep defines per arch
+      for arch_value in self.arch.values():
+        self.defines = self.defines.union(arch_value.defines)
 
 
   def __init__(self):
@@ -329,7 +334,7 @@ class GnParser(object):
     target.arch[arch].cflags.update(desc.get('cflags', []) + desc.get('cflags_cc', []))
     target.libs.update(desc.get('libs', []))
     target.ldflags.update(desc.get('ldflags', []))
-    target.defines.update(desc.get('defines', []))
+    target.arch[arch].defines.update(desc.get('defines', []))
     target.include_dirs.update(desc.get('include_dirs', []))
 
     # Recurse in dependencies.
