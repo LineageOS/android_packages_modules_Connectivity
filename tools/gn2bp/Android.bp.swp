@@ -1026,6 +1026,11 @@ cc_library_static {
                 "base/stack_canary_linux.cc",
                 "base/threading/platform_thread_linux.cc",
             ],
+            static_libs: [
+                "cronet_aml_base_third_party_symbolize_symbolize",
+                "cronet_aml_base_third_party_xdg_mime_xdg_mime",
+                "cronet_aml_base_third_party_xdg_user_dirs_xdg_user_dirs",
+            ],
             cflags: [
                 "-DCR_SYSROOT_KEY=20220331T153654Z-0",
                 "-DGLOG_EXPORT=",
@@ -1777,6 +1782,140 @@ cc_library_static {
             ],
         },
     },
+}
+
+// GN: //base/third_party/symbolize:symbolize
+cc_library_static {
+    name: "cronet_aml_base_third_party_symbolize_symbolize",
+    srcs: [
+        "base/third_party/symbolize/demangle.cc",
+        "base/third_party/symbolize/symbolize.cc",
+    ],
+    host_supported: true,
+    device_supported: false,
+    defaults: [
+        "cronet_aml_defaults",
+    ],
+    cflags: [
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
+        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_SYSROOT_KEY=20220331T153654Z-0",
+        "-DDCHECK_ALWAYS_ON=1",
+        "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
+        "-DGLOG_EXPORT=",
+        "-DUSE_AURA=1",
+        "-DUSE_OZONE=1",
+        "-DUSE_UDEV",
+        "-D_DEBUG",
+        "-D_FILE_OFFSET_BITS=64",
+        "-D_GNU_SOURCE",
+        "-D_LARGEFILE64_SOURCE",
+        "-D_LARGEFILE_SOURCE",
+        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
+        "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
+        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
+        "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
+    ],
+    local_include_dirs: [
+        "./",
+        "buildtools/third_party/libc++/",
+        "buildtools/third_party/libc++/trunk/include",
+        "buildtools/third_party/libc++abi/trunk/include",
+        "build/linux/debian_bullseye_amd64-sysroot/usr/include/x86_64-linux-gnu",
+        "build/linux/debian_bullseye_amd64-sysroot/usr/include",
+    ],
+    cpp_std: "c++20",
+}
+
+// GN: //base/third_party/xdg_mime:xdg_mime
+cc_library_static {
+    name: "cronet_aml_base_third_party_xdg_mime_xdg_mime",
+    srcs: [
+        "base/third_party/xdg_mime/xdgmime.c",
+        "base/third_party/xdg_mime/xdgmimealias.c",
+        "base/third_party/xdg_mime/xdgmimecache.c",
+        "base/third_party/xdg_mime/xdgmimeglob.c",
+        "base/third_party/xdg_mime/xdgmimeicon.c",
+        "base/third_party/xdg_mime/xdgmimeint.c",
+        "base/third_party/xdg_mime/xdgmimemagic.c",
+        "base/third_party/xdg_mime/xdgmimeparent.c",
+    ],
+    host_supported: true,
+    device_supported: false,
+    defaults: [
+        "cronet_aml_defaults",
+    ],
+    cflags: [
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
+        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_SYSROOT_KEY=20220331T153654Z-0",
+        "-DDCHECK_ALWAYS_ON=1",
+        "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
+        "-DUSE_AURA=1",
+        "-DUSE_OZONE=1",
+        "-DUSE_UDEV",
+        "-D_DEBUG",
+        "-D_FILE_OFFSET_BITS=64",
+        "-D_GNU_SOURCE",
+        "-D_LARGEFILE64_SOURCE",
+        "-D_LARGEFILE_SOURCE",
+        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
+        "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
+        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
+        "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
+    ],
+    local_include_dirs: [
+        "./",
+        "buildtools/third_party/libc++/",
+        "buildtools/third_party/libc++/trunk/include",
+        "buildtools/third_party/libc++abi/trunk/include",
+        "build/linux/debian_bullseye_amd64-sysroot/usr/include/x86_64-linux-gnu",
+        "build/linux/debian_bullseye_amd64-sysroot/usr/include",
+    ],
+    cpp_std: "c++20",
+}
+
+// GN: //base/third_party/xdg_user_dirs:xdg_user_dirs
+cc_library_static {
+    name: "cronet_aml_base_third_party_xdg_user_dirs_xdg_user_dirs",
+    srcs: [
+        "base/third_party/xdg_user_dirs/xdg_user_dir_lookup.cc",
+    ],
+    host_supported: true,
+    device_supported: false,
+    defaults: [
+        "cronet_aml_defaults",
+    ],
+    cflags: [
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
+        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_SYSROOT_KEY=20220331T153654Z-0",
+        "-DDCHECK_ALWAYS_ON=1",
+        "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
+        "-DUSE_AURA=1",
+        "-DUSE_OZONE=1",
+        "-DUSE_UDEV",
+        "-D_DEBUG",
+        "-D_FILE_OFFSET_BITS=64",
+        "-D_GNU_SOURCE",
+        "-D_LARGEFILE64_SOURCE",
+        "-D_LARGEFILE_SOURCE",
+        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
+        "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
+        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
+        "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
+        "-D__STDC_CONSTANT_MACROS",
+        "-D__STDC_FORMAT_MACROS",
+    ],
+    local_include_dirs: [
+        "./",
+        "buildtools/third_party/libc++/",
+        "buildtools/third_party/libc++/trunk/include",
+        "buildtools/third_party/libc++abi/trunk/include",
+        "build/linux/debian_bullseye_amd64-sysroot/usr/include/x86_64-linux-gnu",
+        "build/linux/debian_bullseye_amd64-sysroot/usr/include",
+    ],
+    cpp_std: "c++20",
 }
 
 // GN: //base:tracing_buildflags
@@ -2623,6 +2762,11 @@ cc_library_static {
             srcs: [
                 "crypto/nss_key_util.cc",
                 "crypto/nss_util.cc",
+            ],
+            static_libs: [
+                "cronet_aml_base_third_party_symbolize_symbolize",
+                "cronet_aml_base_third_party_xdg_mime_xdg_mime",
+                "cronet_aml_base_third_party_xdg_user_dirs_xdg_user_dirs",
             ],
             cflags: [
                 "-DCR_SYSROOT_KEY=20220331T153654Z-0",
