@@ -194,8 +194,13 @@ public class TetheringConfiguration {
 
         isDunRequired = checkDunRequired(ctx);
 
-        final boolean forceAutomaticUpstream = !SdkLevel.isAtLeastS()
-                && isConnectivityFeatureEnabled(ctx, TETHER_FORCE_UPSTREAM_AUTOMATIC_VERSION);
+        // Here is how automatic mode enable/disable support on different Android version:
+        // - R   : can be enabled/disabled by resource config_tether_upstream_automatic.
+        //         but can be force-enabled by flag TETHER_FORCE_UPSTREAM_AUTOMATIC_VERSION.
+        // - S, T: can be enabled/disabled by resource config_tether_upstream_automatic.
+        // - U+  : automatic mode only.
+        final boolean forceAutomaticUpstream = SdkLevel.isAtLeastU() || (!SdkLevel.isAtLeastS()
+                && isConnectivityFeatureEnabled(ctx, TETHER_FORCE_UPSTREAM_AUTOMATIC_VERSION));
         chooseUpstreamAutomatically = forceAutomaticUpstream || getResourceBoolean(
                 res, R.bool.config_tether_upstream_automatic, false /** defaultValue */);
         preferredUpstreamIfaceTypes = getUpstreamIfaceTypes(res, isDunRequired);

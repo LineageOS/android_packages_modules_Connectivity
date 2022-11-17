@@ -33,7 +33,19 @@ public class MdnsTextRecord extends MdnsRecord {
     private List<TextEntry> entries;
 
     public MdnsTextRecord(String[] name, MdnsPacketReader reader) throws IOException {
-        super(name, TYPE_TXT, reader);
+        this(name, reader, false);
+    }
+
+    public MdnsTextRecord(String[] name, MdnsPacketReader reader, boolean isQuestion)
+            throws IOException {
+        super(name, TYPE_TXT, reader, isQuestion);
+    }
+
+    public MdnsTextRecord(String[] name, long receiptTimeMillis, boolean cacheFlush, long ttlMillis,
+            List<TextEntry> entries) {
+        super(name, TYPE_TXT, MdnsConstants.QCLASS_INTERNET, receiptTimeMillis, cacheFlush,
+                ttlMillis);
+        this.entries = entries;
     }
 
     /** Returns the list of strings. */

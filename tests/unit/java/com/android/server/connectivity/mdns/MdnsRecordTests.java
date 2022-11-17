@@ -79,14 +79,7 @@ public class MdnsRecordTests {
         Inet4Address addr = record.getInet4Address();
         assertEquals("/10.1.2.3", addr.toString());
 
-        // Encode
-        MdnsPacketWriter writer = new MdnsPacketWriter(MAX_PACKET_SIZE);
-        record.write(writer, record.getReceiptTime());
-
-        packet = writer.getPacket(MULTICAST_IPV4_ADDRESS);
-        byte[] dataOut = packet.getData();
-
-        String dataOutText = HexDump.dumpHexString(dataOut, 0, packet.getLength());
+        String dataOutText = toHex(record);
         Log.d(TAG, dataOutText);
 
         assertEquals(dataInText, dataOutText);
@@ -123,14 +116,7 @@ public class MdnsRecordTests {
         Inet6Address addr = record.getInet6Address();
         assertEquals("/aabb:ccdd:1122:3344:a0b0:c0d0:1020:3040", addr.toString());
 
-        // Encode
-        MdnsPacketWriter writer = new MdnsPacketWriter(MAX_PACKET_SIZE);
-        record.write(writer, record.getReceiptTime());
-
-        packet = writer.getPacket(MULTICAST_IPV6_ADDRESS);
-        byte[] dataOut = packet.getData();
-
-        String dataOutText = HexDump.dumpHexString(dataOut, 0, packet.getLength());
+        String dataOutText = toHex(record);
         Log.d(TAG, dataOutText);
 
         assertEquals(dataInText, dataOutText);
@@ -167,14 +153,7 @@ public class MdnsRecordTests {
         Inet4Address addr = record.getInet4Address();
         assertEquals("/16.32.48.64", addr.toString());
 
-        // Encode
-        MdnsPacketWriter writer = new MdnsPacketWriter(MAX_PACKET_SIZE);
-        record.write(writer, record.getReceiptTime());
-
-        packet = writer.getPacket(MULTICAST_IPV4_ADDRESS);
-        byte[] dataOut = packet.getData();
-
-        String dataOutText = HexDump.dumpHexString(dataOut, 0, packet.getLength());
+        String dataOutText = toHex(record);
         Log.d(TAG, dataOutText);
 
         final byte[] expectedDataIn =
@@ -215,14 +194,7 @@ public class MdnsRecordTests {
         assertFalse(record.hasSubtype());
         assertNull(record.getSubtype());
 
-        // Encode
-        MdnsPacketWriter writer = new MdnsPacketWriter(MAX_PACKET_SIZE);
-        record.write(writer, record.getReceiptTime());
-
-        packet = writer.getPacket(MULTICAST_IPV4_ADDRESS);
-        byte[] dataOut = packet.getData();
-
-        String dataOutText = HexDump.dumpHexString(dataOut, 0, packet.getLength());
+        String dataOutText = toHex(record);
         Log.d(TAG, dataOutText);
 
         assertEquals(dataInText, dataOutText);
@@ -263,14 +235,35 @@ public class MdnsRecordTests {
         assertEquals(1, record.getServicePriority());
         assertEquals(255, record.getServiceWeight());
 
-        // Encode
-        MdnsPacketWriter writer = new MdnsPacketWriter(MAX_PACKET_SIZE);
-        record.write(writer, record.getReceiptTime());
+        String dataOutText = toHex(record);
+        Log.d(TAG, dataOutText);
 
-        packet = writer.getPacket(MULTICAST_IPV4_ADDRESS);
-        byte[] dataOut = packet.getData();
+        assertEquals(dataInText, dataOutText);
+    }
 
-        String dataOutText = HexDump.dumpHexString(dataOut, 0, packet.getLength());
+    @Test
+    public void testAnyRecord() throws IOException {
+        final byte[] dataIn = HexDump.hexStringToByteArray(
+                "047465737407616E64726F696403636F6D0000FF0001000000000000");
+        assertNotNull(dataIn);
+        String dataInText = HexDump.dumpHexString(dataIn, 0, dataIn.length);
+
+        // Decode
+        DatagramPacket packet = new DatagramPacket(dataIn, dataIn.length);
+        MdnsPacketReader reader = new MdnsPacketReader(packet);
+
+        String[] name = reader.readLabels();
+        assertNotNull(name);
+        assertEquals(3, name.length);
+        String fqdn = MdnsRecord.labelsToString(name);
+        assertEquals("test.android.com", fqdn);
+
+        int type = reader.readUInt16();
+        assertEquals(MdnsRecord.TYPE_ANY, type);
+
+        MdnsAnyRecord record = new MdnsAnyRecord(name, reader);
+
+        String dataOutText = toHex(record);
         Log.d(TAG, dataOutText);
 
         assertEquals(dataInText, dataOutText);
@@ -320,17 +313,21 @@ public class MdnsRecordTests {
         assertEquals(new TextEntry("b", "1234567890"), entries.get(1));
         assertEquals(new TextEntry("xyz", "!@#$"), entries.get(2));
 
-        // Encode
-        MdnsPacketWriter writer = new MdnsPacketWriter(MAX_PACKET_SIZE);
-        record.write(writer, record.getReceiptTime());
-
-        packet = writer.getPacket(MULTICAST_IPV4_ADDRESS);
-        byte[] dataOut = packet.getData();
-
-        String dataOutText = HexDump.dumpHexString(dataOut, 0, packet.getLength());
+        String dataOutText = toHex(record);
         Log.d(TAG, dataOutText);
 
         assertEquals(dataInText, dataOutText);
+    }
+
+    private static String toHex(MdnsRecord record) throws IOException {
+        MdnsPacketWriter writer = new MdnsPacketWriter(MAX_PACKET_SIZE);
+        record.write(writer, record.getReceiptTime());
+
+        // The address does not matter as only the data is used
+        final DatagramPacket packet = writer.getPacket(MULTICAST_IPV4_ADDRESS);
+        final byte[] dataOut = packet.getData();
+
+        return HexDump.dumpHexString(dataOut, 0, packet.getLength());
     }
 
     @Test
