@@ -144,13 +144,6 @@ class GnParser(object):
       self.transitive_proto_deps = set()
       self.transitive_static_libs_deps = set()
 
-      # Deps on //gn:xxx have this flag set to True. These dependencies
-      # are special because they pull third_party code from buildtools/.
-      # We don't want to keep recursing into //buildtools in generators,
-      # this flag is used to stop the recursion and create an empty
-      # placeholder target once we hit //gn:protoc or similar.
-      self.is_third_party_dep_ = False
-
       # TODO: come up with a better way to only run this once.
       # is_finalized tracks whether finalize() was called on this target.
       self.is_finalized = False
@@ -338,9 +331,7 @@ class GnParser(object):
     # Recurse in dependencies.
     for gn_dep_name in desc.get('deps', []):
       dep = self.parse_gn_desc(gn_desc, gn_dep_name)
-      if dep.is_third_party_dep_:
-        target.deps.add(dep.name)
-      elif dep.type == 'proto_library':
+      if dep.type == 'proto_library':
         target.proto_deps.add(dep.name)
         target.transitive_proto_deps.add(dep.name)
         target.proto_paths.update(dep.proto_paths)
