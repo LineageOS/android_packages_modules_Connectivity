@@ -198,22 +198,16 @@ class GnParser(object):
 
       # Target contains the intersection of arch-dependent properties
       self.sources = set.intersection(*[arch.sources for arch in self.arch.values()])
+      self.cflags = set.intersection(*[arch.cflags for arch in self.arch.values()])
+      self.defines = set.intersection(*[arch.defines for arch in self.arch.values()])
+      self.include_dirs = set.intersection(*[arch.include_dirs for arch in self.arch.values()])
 
       # Deduplicate arch-dependent properties
       for arch in self.arch.keys():
         self.arch[arch].sources -= self.sources
-
-      # TODO: Keep cflags per arch
-      for arch_value in self.arch.values():
-        self.cflags = self.cflags.union(arch_value.cflags)
-
-      # TODO: Keep defines per arch
-      for arch_value in self.arch.values():
-        self.defines = self.defines.union(arch_value.defines)
-
-      # TODO: Keep include_dirs per arch
-      for arch_value in self.arch.values():
-        self.include_dirs = self.include_dirs.union(arch_value.include_dirs)
+        self.arch[arch].cflags -= self.cflags
+        self.arch[arch].defines -= self.defines
+        self.arch[arch].include_dirs -= self.include_dirs
 
   def __init__(self):
     self.all_targets = {}

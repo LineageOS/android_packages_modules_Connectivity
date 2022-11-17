@@ -957,8 +957,9 @@ def _get_cflags(cflags, defines):
   # -DANDROID is added by default but target.defines contain -DANDROID if it's required.
   # So adding -UANDROID to cancel default -DANDROID if it's not specified.
   # This is needed for some targets(e.g. symbolize)
-  if "ANDROID" not in defines:
-    cflags.add("-UANDROID")
+  # TODO: Set -UANDROID considering common define
+  # if "ANDROID" not in defines:
+  #   cflags.add("-UANDROID")
   return cflags
 
 def set_module_flags(module, cflags, defines):
@@ -1077,6 +1078,10 @@ def create_modules_from_target(blueprint, gn, gn_target_name):
   if target.type in gn_utils.LINKER_UNIT_TYPES:
     set_module_flags(module, target.cflags, target.defines)
     set_module_include_dirs(module, target.cflags, target.include_dirs)
+    # TODO: set_module_xxx is confusing, apply similar function to module and target in better way.
+    for arch_name, arch in target.arch.items():
+      set_module_flags(module.target[arch_name], arch.cflags, arch.defines)
+      set_module_include_dirs(module.target[arch_name], arch.cflags, arch.include_dirs)
 
   if module.is_compiled():
     module.host_supported = target.host_supported()
