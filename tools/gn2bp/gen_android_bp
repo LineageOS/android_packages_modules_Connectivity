@@ -377,6 +377,9 @@ class Module(object):
     value = getattr(self, name)
     return write_blueprint_key_value(output, name, value, sort)
 
+  def is_compiled(self):
+    return self.type not in ('genrule', 'filegroup', 'cc_defaults')
+
 
 class Blueprint(object):
   """In-memory representation of an Android.bp file."""
@@ -1070,8 +1073,7 @@ def create_modules_from_target(blueprint, gn, gn_target_name):
           module.local_include_dirs.append(sysroot + "/usr/include/x86_64-linux-gnu")
         module.local_include_dirs.append(sysroot + "/usr/include")
 
-  module_is_compiled = module.type not in ('genrule', 'filegroup')
-  if module_is_compiled:
+  if module.is_compiled():
     module.host_supported = target.host_supported()
     module.device_supported = target.device_supported()
 
@@ -1124,8 +1126,9 @@ def create_modules_from_target(blueprint, gn, gn_target_name):
         module.genrule_headers.add(dep_module.name)
         module.genrule_headers.update(dep_module.genrule_headers)
 
-    # For filegroups and genrule, recurse but don't apply the deps.
-    if not module_is_compiled:
+    # For cc_defaults, filegroups, and genrule, recurse but don't apply the
+    # deps.
+    if not module.is_compiled():
       continue
 
     if dep_module is None:
