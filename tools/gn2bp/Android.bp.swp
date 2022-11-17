@@ -995,30 +995,6 @@ cc_library_static {
                 "liblog",
             ],
         },
-        host: {
-            srcs: [
-                "base/allocator/partition_allocator/shim/allocator_shim_default_dispatch_to_glibc.cc",
-                "base/allocator/partition_allocator/shim/allocator_shim_override_glibc_weak_symbols.h",
-                "base/allocator/partition_allocator/shim/allocator_shim_override_libc_symbols.h",
-                "base/base_paths_posix.cc",
-                "base/debug/stack_trace_posix.cc",
-                "base/files/dir_reader_linux.h",
-                "base/files/file_util_linux.cc",
-                "base/files/scoped_file_linux.cc",
-                "base/memory/platform_shared_memory_mapper_posix.cc",
-                "base/memory/platform_shared_memory_region_posix.cc",
-                "base/nix/mime_util_xdg.cc",
-                "base/nix/mime_util_xdg.h",
-                "base/nix/xdg_util.cc",
-                "base/nix/xdg_util.h",
-                "base/power_monitor/power_monitor_device_source_stub.cc",
-                "base/process/process_linux.cc",
-                "base/profiler/stack_sampler_posix.cc",
-                "base/stack_canary_linux.cc",
-                "base/stack_canary_linux.h",
-                "base/threading/platform_thread_linux.cc",
-            ],
-        },
         android_x86_64: {
             srcs: [
                 "base/allocator/partition_allocator/shim/allocator_shim_default_dispatch_to_linker_wrapped_symbols.cc",
@@ -1144,6 +1120,30 @@ cc_library_static {
                 "base/system/sys_info_android.cc",
                 "base/threading/platform_thread_android.cc",
                 "base/time/time_android.cc",
+            ],
+        },
+        host: {
+            srcs: [
+                "base/allocator/partition_allocator/shim/allocator_shim_default_dispatch_to_glibc.cc",
+                "base/allocator/partition_allocator/shim/allocator_shim_override_glibc_weak_symbols.h",
+                "base/allocator/partition_allocator/shim/allocator_shim_override_libc_symbols.h",
+                "base/base_paths_posix.cc",
+                "base/debug/stack_trace_posix.cc",
+                "base/files/dir_reader_linux.h",
+                "base/files/file_util_linux.cc",
+                "base/files/scoped_file_linux.cc",
+                "base/memory/platform_shared_memory_mapper_posix.cc",
+                "base/memory/platform_shared_memory_region_posix.cc",
+                "base/nix/mime_util_xdg.cc",
+                "base/nix/mime_util_xdg.h",
+                "base/nix/xdg_util.cc",
+                "base/nix/xdg_util.h",
+                "base/power_monitor/power_monitor_device_source_stub.cc",
+                "base/process/process_linux.cc",
+                "base/profiler/stack_sampler_posix.cc",
+                "base/stack_canary_linux.cc",
+                "base/stack_canary_linux.h",
+                "base/threading/platform_thread_linux.cc",
             ],
         },
     },
@@ -2154,14 +2154,14 @@ filegroup {
         "buildtools/third_party/libc++abi/trunk/src/stdlib_typeinfo.cpp",
     ],
     target: {
-        host: {
-            srcs: [
-                "buildtools/third_party/libc++abi/trunk/src/cxa_demangle.cpp",
-            ],
-        },
         android_x86_64: {
             srcs: [
                 "buildtools/third_party/libc++abi/cxa_demangle_stub.cc",
+            ],
+        },
+        host: {
+            srcs: [
+                "buildtools/third_party/libc++abi/trunk/src/cxa_demangle.cpp",
             ],
         },
     },
@@ -6728,16 +6728,16 @@ cc_library_static {
     ],
     cpp_std: "c++20",
     target: {
-        host: {
-            srcs: [
-                "third_party/libevent/linux/config.h",
-                "third_party/libevent/linux/event-config.h",
-            ],
-        },
         android_x86_64: {
             srcs: [
                 "third_party/libevent/android/config.h",
                 "third_party/libevent/android/event-config.h",
+            ],
+        },
+        host: {
+            srcs: [
+                "third_party/libevent/linux/config.h",
+                "third_party/libevent/linux/event-config.h",
             ],
         },
     },
