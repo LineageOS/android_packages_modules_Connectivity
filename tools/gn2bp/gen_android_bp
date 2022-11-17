@@ -993,7 +993,7 @@ def create_modules_from_target(blueprint, gn, gn_target_name):
   elif target.type == 'shared_library':
     module = Module('cc_library_shared', bp_module_name, gn_target_name)
   elif target.type == 'source_set':
-    module = Module('filegroup', bp_module_name, gn_target_name)
+    module = Module('cc_defaults', bp_module_name, gn_target_name)
   elif target.type == 'group':
     # "group" targets are resolved recursively by gn_utils.get_target().
     # There's nothing we need to do at this level for them.
@@ -1137,8 +1137,8 @@ def create_modules_from_target(blueprint, gn, gn_target_name):
       module.shared_libs.add(dep_module.name)
     elif dep_module.type == 'cc_library_static':
       module.static_libs.add(dep_module.name)
-    elif dep_module.type == 'filegroup':
-      module.srcs.add(':' + dep_module.name)
+    elif dep_module.type == 'cc_defaults':
+      module.defaults.append(dep_module.name)
     elif dep_module.type == 'genrule':
       module.generated_headers.update(dep_module.genrule_headers)
       module.srcs.update(dep_module.genrule_srcs)
