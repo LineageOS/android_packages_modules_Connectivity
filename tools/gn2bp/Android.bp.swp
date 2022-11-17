@@ -7136,9 +7136,9 @@ cc_library_static {
     cpp_std: "c++20",
 }
 
-// GN: //third_party/protobuf:protoc(//build/toolchain/linux:clang_x64)
+// GN: //third_party/protobuf:protoc
 cc_binary {
-    name: "cronet_aml_third_party_protobuf_protoc___build_toolchain_linux_clang_x64_",
+    name: "cronet_aml_third_party_protobuf_protoc",
     srcs: [
         ":cronet_aml_buildtools_third_party_libc___libc__",
         ":cronet_aml_buildtools_third_party_libc__abi_libc__abi",

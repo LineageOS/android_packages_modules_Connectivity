@@ -280,7 +280,9 @@ class GnParser(object):
       target.proto_paths.update(self.get_proto_paths(proto_desc))
       target.proto_exports.update(self.get_proto_exports(proto_desc))
       target.proto_in_dir = self.get_proto_in_dir(proto_desc)
-      target.deps.update(proto_desc.get('deps', []))
+      for gn_proto_deps_name in proto_desc.get('deps', []):
+        dep = self.parse_gn_desc(gn_desc, gn_proto_deps_name)
+        target.deps.add(dep.name)
       target.arch[arch].sources.update(proto_desc.get('sources', []))
       assert (all(x.endswith('.proto') for x in target.arch[arch].sources))
     elif target.type == 'source_set':
