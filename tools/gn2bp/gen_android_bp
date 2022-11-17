@@ -207,6 +207,8 @@ class Target(object):
     self.dist = dict()
     self.strip = dict()
     self.stl = None
+    self.cppflags = set()
+    self.local_include_dirs = []
 
   def to_string(self, output):
     nested_out = []
@@ -218,6 +220,8 @@ class Target(object):
     self._output_field(nested_out, 'stl')
     self._output_field(nested_out, 'dist')
     self._output_field(nested_out, 'strip')
+    self._output_field(nested_out, 'cppflags')
+    self._output_field(nested_out, 'local_include_dirs')
 
     if nested_out:
       output.append('    %s: {' % self.name)
