@@ -70,6 +70,7 @@ java_library {
   libs: [
       "androidx.annotation_annotation",
       "framework-annotations-lib",
+      "framework-configinfrastructure",
       "framework-connectivity.stubs.module_lib",
   ],
   lint: { strict_updatability_linting: true },
