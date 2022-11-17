@@ -1066,7 +1066,7 @@ def create_modules_from_target(blueprint, gn, gn_target_name):
     # Order matters for some targets. For example, base/time/time_exploded_icu.cc
     # in //base:base needs to have sysroot include after icu/source/common
     # include. So adding sysroot include at the end.
-    for flag in target.cflags:
+    for flag in sorted(target.cflags):
       if '--sysroot' in flag:
         sysroot = flag[len('--sysroot=../../'):]
         if sysroot == "build/linux/debian_bullseye_amd64-sysroot":
