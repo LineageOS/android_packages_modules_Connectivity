@@ -199,6 +199,7 @@ class Target(object):
 
   def __init__(self, name):
     self.name = name
+    self.srcs = set()
     self.shared_libs = set()
     self.static_libs = set()
     self.whole_static_libs = set()
@@ -209,6 +210,7 @@ class Target(object):
 
   def to_string(self, output):
     nested_out = []
+    self._output_field(nested_out, 'srcs')
     self._output_field(nested_out, 'shared_libs')
     self._output_field(nested_out, 'static_libs')
     self._output_field(nested_out, 'whole_static_libs')
