@@ -437,7 +437,7 @@ def create_proto_modules(blueprint, gn, target):
     """
   assert (target.type == 'proto_library')
 
-  protoc_gn_target_name = "//third_party/protobuf:protoc(//build/toolchain/linux:clang_x64)"
+  protoc_gn_target_name = gn.get_target('//third_party/protobuf:protoc').name
   protoc_module_name = label_to_module_name(protoc_gn_target_name)
   tools = {protoc_module_name}
   cpp_out_dir = '$(genDir)/%s/%s/' % (tree_path, target.proto_in_dir)
