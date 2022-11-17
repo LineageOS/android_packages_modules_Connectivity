@@ -259,8 +259,11 @@ class Module(object):
     self.header_libs = set()
     self.required = set()
     self.tool_files = set()
-    self.android = Target('android')
-    self.host = Target('host')
+    # target contains a dict of Targets indexed by os_arch.
+    # example: { 'android_x86': Target('android_x86')
+    self.target = dict()
+    self.target['android'] = Target('android')
+    self.target['host'] = Target('host')
     self.stl = None
     self.cpp_std = None
     self.dist = dict()
@@ -334,8 +337,11 @@ class Module(object):
     self._output_field(output, 'arch')
 
     target_out = []
-    self._output_field(target_out, 'android')
-    self._output_field(target_out, 'host')
+    for arch, target in self.target.items():
+      # _output_field calls getattr(self, arch).
+      setattr(self, arch, target)
+      self._output_field(target_out, arch)
+
     if target_out:
       output.append('    target: {')
       for line in target_out:
@@ -349,7 +355,7 @@ class Module(object):
     if self.type == 'cc_binary_host':
       raise Exception('Adding Android static lib for host tool is unsupported')
     elif self.host_supported:
-      self.android.static_libs.add(lib)
+      self.target['android'].static_libs.add(lib)
     else:
       self.static_libs.add(lib)
 
@@ -357,7 +363,7 @@ class Module(object):
     if self.type == 'cc_binary_host':
       raise Exception('Adding Android shared lib for host tool is unsupported')
     elif self.host_supported:
-      self.android.shared_libs.add(lib)
+      self.target['android'].shared_libs.add(lib)
     else:
       self.shared_libs.add(lib)
 
