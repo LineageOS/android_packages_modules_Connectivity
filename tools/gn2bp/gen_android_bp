@@ -946,17 +946,27 @@ def create_action_module(blueprint, target):
 
 
 
-def _get_cflags(target):
-  cflags = {flag for flag in target.cflags if flag in cflag_allowlist}
+def _get_cflags(cflags, defines):
+  cflags = {flag for flag in cflags if flag in cflag_allowlist}
   # Consider proper allowlist or denylist if needed
-  cflags |= set("-D%s" % define.replace("\"", "\\\"") for define in target.defines)
+  cflags |= set("-D%s" % define.replace("\"", "\\\"") for define in defines)
   # -DANDROID is added by default but target.defines contain -DANDROID if it's required.
   # So adding -UANDROID to cancel default -DANDROID if it's not specified.
   # This is needed for some targets(e.g. symbolize)
-  if "ANDROID" not in target.defines:
+  if "ANDROID" not in defines:
     cflags.add("-UANDROID")
   return cflags
 
+def set_module_flags(module, cflags, defines):
+  module.cflags.update(_get_cflags(cflags, defines))
+  # TODO: implement proper cflag parsing.
+  for flag in cflags:
+    if '-std=' in flag:
+      module.cpp_std = flag[len('-std='):]
+    if '-frtti' in flag:
+      module.rtti = True
+    if '-fexceptions' in flag:
+      module.cppflags.add('-fexceptions')
 
 def create_modules_from_target(blueprint, gn, gn_target_name):
   """Generate module(s) for a given GN target.
@@ -1036,18 +1046,10 @@ def create_modules_from_target(blueprint, gn, gn_target_name):
 
   local_include_dirs_set = set()
   if target.type in gn_utils.LINKER_UNIT_TYPES:
-    module.cflags.update(_get_cflags(target))
-    # TODO: implement proper cflag parsing.
+    set_module_flags(module, target.cflags, target.defines)
     for flag in target.cflags:
-      if '-std=' in flag:
-        module.cpp_std = flag[len('-std='):]
       if '-isystem' in flag:
         local_include_dirs_set.add(flag[len('-isystem../../'):])
-      if '-frtti' in flag:
-        module.rtti = True
-      if '-fexceptions' in flag:
-        module.cppflags.add('-fexceptions')
-
 
     # Adding local_include_dirs is necessary due to source_sets / filegroups
     # which do not properly propagate include directories.
