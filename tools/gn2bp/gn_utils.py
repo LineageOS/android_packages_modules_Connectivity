@@ -99,6 +99,7 @@ class GnParser(object):
         self.sources = set()
         self.cflags = set()
         self.defines = set()
+        self.include_dirs = set()
 
 
     def __init__(self, name, type):
@@ -182,7 +183,7 @@ class GnParser(object):
                   'libs', 'proto_paths'):
         self.__dict__[key].update(other.__dict__.get(key, []))
 
-      for key_in_arch in ('cflags', 'defines'):
+      for key_in_arch in ('cflags', 'defines', 'include_dirs'):
         self.arch[arch].__dict__[key_in_arch].update(
           other.arch[arch].__dict__.get(key_in_arch, []))
 
@@ -210,6 +211,9 @@ class GnParser(object):
       for arch_value in self.arch.values():
         self.defines = self.defines.union(arch_value.defines)
 
+      # TODO: Keep include_dirs per arch
+      for arch_value in self.arch.values():
+        self.include_dirs = self.include_dirs.union(arch_value.include_dirs)
 
   def __init__(self):
     self.all_targets = {}
@@ -335,7 +339,7 @@ class GnParser(object):
     target.libs.update(desc.get('libs', []))
     target.ldflags.update(desc.get('ldflags', []))
     target.arch[arch].defines.update(desc.get('defines', []))
-    target.include_dirs.update(desc.get('include_dirs', []))
+    target.arch[arch].include_dirs.update(desc.get('include_dirs', []))
 
     # Recurse in dependencies.
     for gn_dep_name in desc.get('deps', []):

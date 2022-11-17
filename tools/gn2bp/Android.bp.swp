@@ -6731,7 +6731,6 @@ cc_binary {
         "buildtools/third_party/libc++/trunk/include",
         "buildtools/third_party/libc++/trunk/src/",
         "buildtools/third_party/libc++abi/trunk/include",
-        "buildtools/third_party/libunwind/trunk/include/",
         "third_party/protobuf/src/",
         "build/linux/debian_bullseye_amd64-sysroot/usr/include/x86_64-linux-gnu",
         "build/linux/debian_bullseye_amd64-sysroot/usr/include",
