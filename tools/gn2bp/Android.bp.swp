@@ -6739,7 +6739,6 @@ cc_binary {
         "third_party/protobuf/src/",
         "build/linux/debian_bullseye_amd64-sysroot/usr/include/x86_64-linux-gnu",
         "build/linux/debian_bullseye_amd64-sysroot/usr/include",
-        "third_party/android_ndk/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include",
     ],
     cpp_std: "c++20",
     cppflags: [
