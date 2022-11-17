@@ -280,7 +280,9 @@ class GnParser(object):
       target.proto_paths.update(self.get_proto_paths(proto_desc))
       target.proto_exports.update(self.get_proto_exports(proto_desc))
       target.proto_in_dir = self.get_proto_in_dir(proto_desc)
-      target.deps.update(proto_desc.get('deps', []))
+      for gn_proto_deps_name in proto_desc.get('deps', []):
+        dep = self.parse_gn_desc(gn_desc, gn_proto_deps_name)
+        target.deps.add(dep.name)
       target.arch[arch].sources.update(proto_desc.get('sources', []))
       assert (all(x.endswith('.proto') for x in target.arch[arch].sources))
     elif target.type == 'source_set':
@@ -324,24 +326,23 @@ class GnParser(object):
     # Recurse in dependencies.
     for gn_dep_name in desc.get('deps', []):
       dep = self.parse_gn_desc(gn_desc, gn_dep_name)
-      dep_name = label_without_toolchain(gn_dep_name)
       if dep.is_third_party_dep_:
-        target.deps.add(dep_name)
+        target.deps.add(dep.name)
       elif dep.type == 'proto_library':
-        target.proto_deps.add(dep_name)
-        target.transitive_proto_deps.add(dep_name)
+        target.proto_deps.add(dep.name)
+        target.transitive_proto_deps.add(dep.name)
         target.proto_paths.update(dep.proto_paths)
         target.transitive_proto_deps.update(dep.transitive_proto_deps)
       elif dep.type == 'source_set':
-        target.source_set_deps.add(dep_name)
+        target.source_set_deps.add(dep.name)
         target.update(dep)  # Bubble up source set's cflags/ldflags etc.
       elif dep.type == 'group':
         target.update(dep)  # Bubble up groups's cflags/ldflags etc.
       elif dep.type in ['action', 'action_foreach', 'copy']:
         if proto_target_type is None:
-          target.deps.add(dep_name)
+          target.deps.add(dep.name)
       elif dep.type in LINKER_UNIT_TYPES:
-        target.deps.add(dep_name)
+        target.deps.add(dep.name)
       elif dep.type == 'java_group':
         # Explicitly break dependency chain when a java_group is added.
         # Java sources are collected and eventually compiled as one large
@@ -351,7 +352,7 @@ class GnParser(object):
       if dep.type == 'static_library':
         # Bubble up static_libs. Necessary, since soong does not propagate
         # static_libs up the build tree.
-        target.transitive_static_libs_deps.add(dep_name)
+        target.transitive_static_libs_deps.add(dep.name)
 
       target.transitive_static_libs_deps.update(dep.transitive_static_libs_deps)
       target.deps.update(target.transitive_static_libs_deps)
