@@ -931,6 +931,7 @@ cc_library_static {
     ],
     header_libs: [
         "jni_headers",
+        "media_ndk_headers",
     ],
     cpp_std: "c++20",
     target: {
@@ -3377,24 +3378,6 @@ cc_defaults {
         "-fvisibility=hidden",
     ],
     stl: "none",
-    target: {
-        android_x86: {
-            export_system_include_dirs: [
-                "build/linux/debian_bullseye_i386-sysroot/usr/include",
-            ],
-        },
-        android_x86_64: {
-            export_system_include_dirs: [
-                "build/linux/debian_bullseye_amd64-sysroot/usr/include",
-                "build/linux/debian_bullseye_amd64-sysroot/usr/include/x86_64-linux-gnu",
-            ],
-        },
-        host: {
-            export_system_include_dirs: [
-                "third_party/android_ndk/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include",
-            ],
-        },
-    },
 }
 
 // GN: //ipc:param_traits
