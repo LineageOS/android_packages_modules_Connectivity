@@ -311,6 +311,8 @@ public class ConnectivityDiagnosticsManagerTest {
         // callback.
         waitForBroadcastIdle(DELAY_FOR_BROADCAST_IDLE);
 
+        Thread.sleep(5_000);
+
         // TODO(b/217559768): Receiving carrier config change and immediately checking carrier
         //  privileges is racy, as the CP status is updated after receiving the same signal. Move
         //  the CP check after sleep to temporarily reduce the flakiness. This will soon be fixed
