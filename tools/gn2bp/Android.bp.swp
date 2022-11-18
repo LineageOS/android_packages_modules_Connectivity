@@ -162,7 +162,6 @@ cc_library_static {
         "base/allocator/partition_allocator/starscan/pcscan_internal.cc",
         "base/allocator/partition_allocator/starscan/pcscan_scheduling.cc",
         "base/allocator/partition_allocator/starscan/snapshot.cc",
-        "base/allocator/partition_allocator/starscan/stack/asm/x64/push_registers_asm.cc",
         "base/allocator/partition_allocator/starscan/stack/stack.cc",
         "base/allocator/partition_allocator/starscan/stats_collector.cc",
         "base/allocator/partition_allocator/starscan/write_protector.cc",
@@ -212,12 +211,30 @@ cc_library_static {
     ],
     cpp_std: "c++20",
     target: {
+        android_x86: {
+            srcs: [
+                "base/allocator/partition_allocator/partition_alloc_base/files/file_path.cc",
+                "base/allocator/partition_allocator/partition_alloc_base/native_library.cc",
+                "base/allocator/partition_allocator/partition_alloc_base/native_library_posix.cc",
+                "base/allocator/partition_allocator/partition_alloc_base/time/time_android.cc",
+                "base/allocator/partition_allocator/starscan/stack/asm/x86/push_registers_asm.cc",
+            ],
+            cflags: [
+                "-DANDROID",
+                "-DANDROID_NDK_VERSION_ROLL=r23_1",
+                "-DHAVE_SYS_UIO_H",
+            ],
+            local_include_dirs: [
+                "third_party/android_ndk/sources/android/cpufeatures/",
+            ],
+        },
         android_x86_64: {
             srcs: [
                 "base/allocator/partition_allocator/partition_alloc_base/files/file_path.cc",
                 "base/allocator/partition_allocator/partition_alloc_base/native_library.cc",
                 "base/allocator/partition_allocator/partition_alloc_base/native_library_posix.cc",
                 "base/allocator/partition_allocator/partition_alloc_base/time/time_android.cc",
+                "base/allocator/partition_allocator/starscan/stack/asm/x64/push_registers_asm.cc",
             ],
             cflags: [
                 "-DANDROID",
@@ -229,6 +246,9 @@ cc_library_static {
             ],
         },
         host: {
+            srcs: [
+                "base/allocator/partition_allocator/starscan/stack/asm/x64/push_registers_asm.cc",
+            ],
             cflags: [
                 "-DCR_SYSROOT_KEY=20220331T153654Z-0",
                 "-DUSE_AURA=1",
@@ -245,7 +265,7 @@ cc_library_static {
 // GN: //base/allocator/partition_allocator:partition_alloc_buildflags
 genrule {
     name: "cronet_aml_base_allocator_partition_allocator_partition_alloc_buildflags",
-    cmd: "echo '--flags ENABLE_PARTITION_ALLOC_AS_MALLOC_SUPPORT=\"true\" ENABLE_BACKUP_REF_PTR_SUPPORT=\"true\" ENABLE_BACKUP_REF_PTR_SLOW_CHECKS=\"false\" ENABLE_DANGLING_RAW_PTR_CHECKS=\"false\" PUT_REF_COUNT_IN_PREVIOUS_SLOT=\"true\" ENABLE_GWP_ASAN_SUPPORT=\"true\" ENABLE_MTE_CHECKED_PTR_SUPPORT=\"false\" RECORD_ALLOC_INFO=\"false\" USE_FREESLOT_BITMAP=\"false\" GLUE_CORE_POOLS=\"false\" ENABLE_SHADOW_METADATA_FOR_64_BITS_POINTERS=\"false\" STARSCAN=\"true\" PA_USE_BASE_TRACING=\"true\" ENABLE_PKEYS=\"true\"' | " +
+    cmd: "echo '--flags ENABLE_PARTITION_ALLOC_AS_MALLOC_SUPPORT=\"true\" ENABLE_BACKUP_REF_PTR_SUPPORT=\"true\" ENABLE_BACKUP_REF_PTR_SLOW_CHECKS=\"false\" ENABLE_DANGLING_RAW_PTR_CHECKS=\"false\" PUT_REF_COUNT_IN_PREVIOUS_SLOT=\"true\" ENABLE_GWP_ASAN_SUPPORT=\"true\" ENABLE_MTE_CHECKED_PTR_SUPPORT=\"false\" RECORD_ALLOC_INFO=\"false\" USE_FREESLOT_BITMAP=\"false\" GLUE_CORE_POOLS=\"false\" ENABLE_SHADOW_METADATA_FOR_64_BITS_POINTERS=\"false\" STARSCAN=\"true\" PA_USE_BASE_TRACING=\"true\" ENABLE_PKEYS=\"false\"' | " +
          "$(location build/write_buildflag_header.py) --output " +
          "$(out) " +
          "--rulename " +
@@ -265,7 +285,7 @@ genrule {
 // GN: //base:anchor_functions_buildflags
 genrule {
     name: "cronet_aml_base_anchor_functions_buildflags",
-    cmd: "echo '--flags USE_LLD=\"true\" SUPPORTS_CODE_ORDERING=\"false\"' | " +
+    cmd: "echo '--flags USE_LLD=\"true\" SUPPORTS_CODE_ORDERING=\"true\"' | " +
          "$(location build/write_buildflag_header.py) --output " +
          "$(out) " +
          "--rulename " +
@@ -920,6 +940,89 @@ cc_library_static {
                 "liblog",
             ],
         },
+        android_x86: {
+            srcs: [
+                "base/allocator/partition_allocator/shim/allocator_shim_default_dispatch_to_linker_wrapped_symbols.cc",
+                "base/android/android_hardware_buffer_compat.cc",
+                "base/android/android_image_reader_compat.cc",
+                "base/android/apk_assets.cc",
+                "base/android/application_status_listener.cc",
+                "base/android/base_feature_list.cc",
+                "base/android/base_features.cc",
+                "base/android/base_jni_onload.cc",
+                "base/android/build_info.cc",
+                "base/android/bundle_utils.cc",
+                "base/android/callback_android.cc",
+                "base/android/child_process_service.cc",
+                "base/android/command_line_android.cc",
+                "base/android/content_uri_utils.cc",
+                "base/android/cpu_features.cc",
+                "base/android/early_trace_event_binding.cc",
+                "base/android/event_log.cc",
+                "base/android/feature_list_jni.cc",
+                "base/android/features_jni.cc",
+                "base/android/field_trial_list.cc",
+                "base/android/important_file_writer_android.cc",
+                "base/android/int_string_callback.cc",
+                "base/android/jank_metric_uma_recorder.cc",
+                "base/android/java_exception_reporter.cc",
+                "base/android/java_handler_thread.cc",
+                "base/android/java_heap_dump_generator.cc",
+                "base/android/java_runtime.cc",
+                "base/android/jni_android.cc",
+                "base/android/jni_array.cc",
+                "base/android/jni_registrar.cc",
+                "base/android/jni_string.cc",
+                "base/android/jni_utils.cc",
+                "base/android/jni_weak_ref.cc",
+                "base/android/library_loader/anchor_functions.cc",
+                "base/android/library_loader/library_loader_hooks.cc",
+                "base/android/library_loader/library_prefetcher.cc",
+                "base/android/library_loader/library_prefetcher_hooks.cc",
+                "base/android/locale_utils.cc",
+                "base/android/memory_pressure_listener_android.cc",
+                "base/android/native_uma_recorder.cc",
+                "base/android/path_service_android.cc",
+                "base/android/path_utils.cc",
+                "base/android/radio_utils.cc",
+                "base/android/reached_addresses_bitset.cc",
+                "base/android/reached_code_profiler_stub.cc",
+                "base/android/remove_stale_data.cc",
+                "base/android/scoped_hardware_buffer_fence_sync.cc",
+                "base/android/scoped_hardware_buffer_handle.cc",
+                "base/android/scoped_java_ref.cc",
+                "base/android/statistics_recorder_android.cc",
+                "base/android/sys_utils.cc",
+                "base/android/task_scheduler/post_task_android.cc",
+                "base/android/task_scheduler/task_runner_android.cc",
+                "base/android/thread_instruction_count.cc",
+                "base/android/timezone_utils.cc",
+                "base/android/trace_event_binding.cc",
+                "base/android/unguessable_token_android.cc",
+                "base/base_paths_android.cc",
+                "base/debug/stack_trace_android.cc",
+                "base/files/file_util_android.cc",
+                "base/files/scoped_file_android.cc",
+                "base/memory/platform_shared_memory_mapper_android.cc",
+                "base/memory/platform_shared_memory_region_android.cc",
+                "base/message_loop/message_pump_android.cc",
+                "base/os_compat_android.cc",
+                "base/power_monitor/power_monitor_device_source_android.cc",
+                "base/process/process_android.cc",
+                "base/profiler/stack_sampler_android.cc",
+                "base/system/sys_info_android.cc",
+                "base/threading/platform_thread_android.cc",
+                "base/time/time_android.cc",
+            ],
+            cflags: [
+                "-DANDROID",
+                "-DANDROID_NDK_VERSION_ROLL=r23_1",
+                "-DHAVE_SYS_UIO_H",
+            ],
+            local_include_dirs: [
+                "third_party/android_ndk/sources/android/cpufeatures/",
+            ],
+        },
         android_x86_64: {
             srcs: [
                 "base/allocator/partition_allocator/shim/allocator_shim_default_dispatch_to_linker_wrapped_symbols.cc",
@@ -1343,6 +1446,13 @@ cc_library_static {
     ],
     cpp_std: "c++20",
     target: {
+        android_x86: {
+            cflags: [
+                "-DANDROID",
+                "-DANDROID_NDK_VERSION_ROLL=r23_1",
+                "-DHAVE_SYS_UIO_H",
+            ],
+        },
         android_x86_64: {
             cflags: [
                 "-DANDROID",
@@ -1681,6 +1791,13 @@ cc_library_static {
     ],
     cpp_std: "c++20",
     target: {
+        android_x86: {
+            cflags: [
+                "-DANDROID",
+                "-DANDROID_NDK_VERSION_ROLL=r23_1",
+                "-DHAVE_SYS_UIO_H",
+            ],
+        },
         android_x86_64: {
             cflags: [
                 "-DANDROID",
@@ -1732,6 +1849,13 @@ cc_library_static {
     ],
     cpp_std: "c++20",
     target: {
+        android_x86: {
+            cflags: [
+                "-DANDROID",
+                "-DANDROID_NDK_VERSION_ROLL=r23_1",
+                "-DHAVE_SYS_UIO_H",
+            ],
+        },
         android_x86_64: {
             cflags: [
                 "-DANDROID",
@@ -1884,7 +2008,7 @@ cc_library_static {
 // GN: //base:tracing_buildflags
 genrule {
     name: "cronet_aml_base_tracing_buildflags",
-    cmd: "echo '--flags ENABLE_BASE_TRACING=\"false\" USE_PERFETTO_CLIENT_LIBRARY=\"false\" OPTIONAL_TRACE_EVENTS_ENABLED=\"true\"' | " +
+    cmd: "echo '--flags ENABLE_BASE_TRACING=\"false\" USE_PERFETTO_CLIENT_LIBRARY=\"false\" OPTIONAL_TRACE_EVENTS_ENABLED=\"false\"' | " +
          "$(location build/write_buildflag_header.py) --output " +
          "$(out) " +
          "--rulename " +
@@ -1969,7 +2093,7 @@ genrule {
 // GN: //build/config/compiler:compiler_buildflags
 genrule {
     name: "cronet_aml_build_config_compiler_compiler_buildflags",
-    cmd: "echo '--flags CLANG_PGO=\"0\" SYMBOL_LEVEL=\"2\"' | " +
+    cmd: "echo '--flags CLANG_PGO=\"0\" SYMBOL_LEVEL=\"1\"' | " +
          "$(location build/write_buildflag_header.py) --output " +
          "$(out) " +
          "--rulename " +
@@ -2057,6 +2181,11 @@ cc_defaults {
         "buildtools/third_party/libc++abi/trunk/src/stdlib_typeinfo.cpp",
     ],
     target: {
+        android_x86: {
+            srcs: [
+                "buildtools/third_party/libc++abi/cxa_demangle_stub.cc",
+            ],
+        },
         android_x86_64: {
             srcs: [
                 "buildtools/third_party/libc++abi/cxa_demangle_stub.cc",
@@ -2611,7 +2740,7 @@ cc_library_static {
 // GN: //crypto:buildflags
 genrule {
     name: "cronet_aml_crypto_buildflags",
-    cmd: "echo '--flags USE_NSS_CERTS=\"true\"' | " +
+    cmd: "echo '--flags USE_NSS_CERTS=\"false\"' | " +
          "$(location build/write_buildflag_header.py) --output " +
          "$(out) " +
          "--rulename " +
@@ -2707,6 +2836,13 @@ cc_library_static {
             shared_libs: [
                 "libandroid",
                 "liblog",
+            ],
+        },
+        android_x86: {
+            cflags: [
+                "-DANDROID",
+                "-DANDROID_NDK_VERSION_ROLL=r23_1",
+                "-DHAVE_SYS_UIO_H",
             ],
         },
         android_x86_64: {
@@ -2869,7 +3005,7 @@ genrule {
 // GN: //net:buildflags
 genrule {
     name: "cronet_aml_net_buildflags",
-    cmd: "echo '--flags POSIX_BYPASS_MMAP=\"true\" DISABLE_FILE_SUPPORT=\"true\" ENABLE_MDNS=\"false\" ENABLE_REPORTING=\"true\" ENABLE_WEBSOCKETS=\"false\" INCLUDE_TRANSPORT_SECURITY_STATE_PRELOAD_LIST=\"false\" USE_KERBEROS=\"true\" USE_EXTERNAL_GSSAPI=\"false\" TRIAL_COMPARISON_CERT_VERIFIER_SUPPORTED=\"false\" CHROME_ROOT_STORE_SUPPORTED=\"false\"' | " +
+    cmd: "echo '--flags POSIX_BYPASS_MMAP=\"false\" DISABLE_FILE_SUPPORT=\"true\" ENABLE_MDNS=\"false\" ENABLE_REPORTING=\"true\" ENABLE_WEBSOCKETS=\"false\" INCLUDE_TRANSPORT_SECURITY_STATE_PRELOAD_LIST=\"false\" USE_KERBEROS=\"true\" USE_EXTERNAL_GSSAPI=\"false\" TRIAL_COMPARISON_CERT_VERIFIER_SUPPORTED=\"false\" CHROME_ROOT_STORE_SUPPORTED=\"false\"' | " +
          "$(location build/write_buildflag_header.py) --output " +
          "$(out) " +
          "--rulename " +
@@ -3251,7 +3387,6 @@ cc_library_static {
         "net/disk_cache/blockfile/in_flight_backend_io.cc",
         "net/disk_cache/blockfile/in_flight_io.cc",
         "net/disk_cache/blockfile/mapped_file.cc",
-        "net/disk_cache/blockfile/mapped_file_bypass_mmap_posix.cc",
         "net/disk_cache/blockfile/rankings.cc",
         "net/disk_cache/blockfile/sparse_control.cc",
         "net/disk_cache/blockfile/stats.cc",
@@ -3662,6 +3797,18 @@ cc_library_static {
     ],
     cpp_std: "c++20",
     rtti: true,
+    target: {
+        android_x86: {
+            srcs: [
+                "net/disk_cache/blockfile/mapped_file_posix.cc",
+            ],
+        },
+        android_x86_64: {
+            srcs: [
+                "net/disk_cache/blockfile/mapped_file_bypass_mmap_posix.cc",
+            ],
+        },
+    },
 }
 
 // GN: //net:net_deps
@@ -5548,6 +5695,13 @@ cc_library_static {
     ],
     cpp_std: "c++20",
     target: {
+        android_x86: {
+            cflags: [
+                "-DANDROID",
+                "-DANDROID_NDK_VERSION_ROLL=r23_1",
+                "-DHAVE_SYS_UIO_H",
+            ],
+        },
         android_x86_64: {
             cflags: [
                 "-DANDROID",
@@ -5572,28 +5726,73 @@ cc_library_static {
 // GN: //third_party/boringssl:boringssl_asm
 cc_defaults {
     name: "cronet_aml_third_party_boringssl_boringssl_asm",
-    srcs: [
-        "third_party/boringssl/linux-x86_64/crypto/chacha/chacha-x86_64.S",
-        "third_party/boringssl/linux-x86_64/crypto/cipher_extra/aes128gcmsiv-x86_64.S",
-        "third_party/boringssl/linux-x86_64/crypto/cipher_extra/chacha20_poly1305_x86_64.S",
-        "third_party/boringssl/linux-x86_64/crypto/fipsmodule/aesni-gcm-x86_64.S",
-        "third_party/boringssl/linux-x86_64/crypto/fipsmodule/aesni-x86_64.S",
-        "third_party/boringssl/linux-x86_64/crypto/fipsmodule/ghash-ssse3-x86_64.S",
-        "third_party/boringssl/linux-x86_64/crypto/fipsmodule/ghash-x86_64.S",
-        "third_party/boringssl/linux-x86_64/crypto/fipsmodule/md5-x86_64.S",
-        "third_party/boringssl/linux-x86_64/crypto/fipsmodule/p256-x86_64-asm.S",
-        "third_party/boringssl/linux-x86_64/crypto/fipsmodule/p256_beeu-x86_64-asm.S",
-        "third_party/boringssl/linux-x86_64/crypto/fipsmodule/rdrand-x86_64.S",
-        "third_party/boringssl/linux-x86_64/crypto/fipsmodule/rsaz-avx2.S",
-        "third_party/boringssl/linux-x86_64/crypto/fipsmodule/sha1-x86_64.S",
-        "third_party/boringssl/linux-x86_64/crypto/fipsmodule/sha256-x86_64.S",
-        "third_party/boringssl/linux-x86_64/crypto/fipsmodule/sha512-x86_64.S",
-        "third_party/boringssl/linux-x86_64/crypto/fipsmodule/vpaes-x86_64.S",
-        "third_party/boringssl/linux-x86_64/crypto/fipsmodule/x86_64-mont.S",
-        "third_party/boringssl/linux-x86_64/crypto/fipsmodule/x86_64-mont5.S",
-        "third_party/boringssl/linux-x86_64/crypto/test/trampoline-x86_64.S",
-        "third_party/boringssl/src/crypto/hrss/asm/poly_rq_mul.S",
-    ],
+    target: {
+        android_x86: {
+            srcs: [
+                "third_party/boringssl/linux-x86/crypto/chacha/chacha-x86.S",
+                "third_party/boringssl/linux-x86/crypto/fipsmodule/aesni-x86.S",
+                "third_party/boringssl/linux-x86/crypto/fipsmodule/bn-586.S",
+                "third_party/boringssl/linux-x86/crypto/fipsmodule/co-586.S",
+                "third_party/boringssl/linux-x86/crypto/fipsmodule/ghash-ssse3-x86.S",
+                "third_party/boringssl/linux-x86/crypto/fipsmodule/ghash-x86.S",
+                "third_party/boringssl/linux-x86/crypto/fipsmodule/md5-586.S",
+                "third_party/boringssl/linux-x86/crypto/fipsmodule/sha1-586.S",
+                "third_party/boringssl/linux-x86/crypto/fipsmodule/sha256-586.S",
+                "third_party/boringssl/linux-x86/crypto/fipsmodule/sha512-586.S",
+                "third_party/boringssl/linux-x86/crypto/fipsmodule/vpaes-x86.S",
+                "third_party/boringssl/linux-x86/crypto/fipsmodule/x86-mont.S",
+                "third_party/boringssl/linux-x86/crypto/test/trampoline-x86.S",
+            ],
+        },
+        android_x86_64: {
+            srcs: [
+                "third_party/boringssl/linux-x86_64/crypto/chacha/chacha-x86_64.S",
+                "third_party/boringssl/linux-x86_64/crypto/cipher_extra/aes128gcmsiv-x86_64.S",
+                "third_party/boringssl/linux-x86_64/crypto/cipher_extra/chacha20_poly1305_x86_64.S",
+                "third_party/boringssl/linux-x86_64/crypto/fipsmodule/aesni-gcm-x86_64.S",
+                "third_party/boringssl/linux-x86_64/crypto/fipsmodule/aesni-x86_64.S",
+                "third_party/boringssl/linux-x86_64/crypto/fipsmodule/ghash-ssse3-x86_64.S",
+                "third_party/boringssl/linux-x86_64/crypto/fipsmodule/ghash-x86_64.S",
+                "third_party/boringssl/linux-x86_64/crypto/fipsmodule/md5-x86_64.S",
+                "third_party/boringssl/linux-x86_64/crypto/fipsmodule/p256-x86_64-asm.S",
+                "third_party/boringssl/linux-x86_64/crypto/fipsmodule/p256_beeu-x86_64-asm.S",
+                "third_party/boringssl/linux-x86_64/crypto/fipsmodule/rdrand-x86_64.S",
+                "third_party/boringssl/linux-x86_64/crypto/fipsmodule/rsaz-avx2.S",
+                "third_party/boringssl/linux-x86_64/crypto/fipsmodule/sha1-x86_64.S",
+                "third_party/boringssl/linux-x86_64/crypto/fipsmodule/sha256-x86_64.S",
+                "third_party/boringssl/linux-x86_64/crypto/fipsmodule/sha512-x86_64.S",
+                "third_party/boringssl/linux-x86_64/crypto/fipsmodule/vpaes-x86_64.S",
+                "third_party/boringssl/linux-x86_64/crypto/fipsmodule/x86_64-mont.S",
+                "third_party/boringssl/linux-x86_64/crypto/fipsmodule/x86_64-mont5.S",
+                "third_party/boringssl/linux-x86_64/crypto/test/trampoline-x86_64.S",
+                "third_party/boringssl/src/crypto/hrss/asm/poly_rq_mul.S",
+            ],
+        },
+        host: {
+            srcs: [
+                "third_party/boringssl/linux-x86_64/crypto/chacha/chacha-x86_64.S",
+                "third_party/boringssl/linux-x86_64/crypto/cipher_extra/aes128gcmsiv-x86_64.S",
+                "third_party/boringssl/linux-x86_64/crypto/cipher_extra/chacha20_poly1305_x86_64.S",
+                "third_party/boringssl/linux-x86_64/crypto/fipsmodule/aesni-gcm-x86_64.S",
+                "third_party/boringssl/linux-x86_64/crypto/fipsmodule/aesni-x86_64.S",
+                "third_party/boringssl/linux-x86_64/crypto/fipsmodule/ghash-ssse3-x86_64.S",
+                "third_party/boringssl/linux-x86_64/crypto/fipsmodule/ghash-x86_64.S",
+                "third_party/boringssl/linux-x86_64/crypto/fipsmodule/md5-x86_64.S",
+                "third_party/boringssl/linux-x86_64/crypto/fipsmodule/p256-x86_64-asm.S",
+                "third_party/boringssl/linux-x86_64/crypto/fipsmodule/p256_beeu-x86_64-asm.S",
+                "third_party/boringssl/linux-x86_64/crypto/fipsmodule/rdrand-x86_64.S",
+                "third_party/boringssl/linux-x86_64/crypto/fipsmodule/rsaz-avx2.S",
+                "third_party/boringssl/linux-x86_64/crypto/fipsmodule/sha1-x86_64.S",
+                "third_party/boringssl/linux-x86_64/crypto/fipsmodule/sha256-x86_64.S",
+                "third_party/boringssl/linux-x86_64/crypto/fipsmodule/sha512-x86_64.S",
+                "third_party/boringssl/linux-x86_64/crypto/fipsmodule/vpaes-x86_64.S",
+                "third_party/boringssl/linux-x86_64/crypto/fipsmodule/x86_64-mont.S",
+                "third_party/boringssl/linux-x86_64/crypto/fipsmodule/x86_64-mont5.S",
+                "third_party/boringssl/linux-x86_64/crypto/test/trampoline-x86_64.S",
+                "third_party/boringssl/src/crypto/hrss/asm/poly_rq_mul.S",
+            ],
+        },
+    },
 }
 
 // GN: //third_party/boringssl/src/third_party/fiat:fiat_license
@@ -5978,6 +6177,13 @@ cc_library_static {
     cpp_std: "c++20",
     rtti: true,
     target: {
+        android_x86: {
+            cflags: [
+                "-DANDROID",
+                "-DANDROID_NDK_VERSION_ROLL=r23_1",
+                "-DHAVE_SYS_UIO_H",
+            ],
+        },
         android_x86_64: {
             cflags: [
                 "-DANDROID",
@@ -6246,6 +6452,13 @@ cc_library_static {
     cpp_std: "c++20",
     rtti: true,
     target: {
+        android_x86: {
+            cflags: [
+                "-DANDROID",
+                "-DANDROID_NDK_VERSION_ROLL=r23_1",
+                "-DHAVE_SYS_UIO_H",
+            ],
+        },
         android_x86_64: {
             cflags: [
                 "-DANDROID",
@@ -6316,6 +6529,16 @@ cc_library_static {
     ],
     cpp_std: "c++20",
     target: {
+        android_x86: {
+            cflags: [
+                "-DANDROID",
+                "-DANDROID_NDK_VERSION_ROLL=r23_1",
+                "-DHAVE_SYS_UIO_H",
+            ],
+            local_include_dirs: [
+                "third_party/libevent/android/",
+            ],
+        },
         android_x86_64: {
             cflags: [
                 "-DANDROID",
@@ -6514,6 +6737,13 @@ cc_library_static {
     ],
     cpp_std: "c++20",
     target: {
+        android_x86: {
+            cflags: [
+                "-DANDROID",
+                "-DANDROID_NDK_VERSION_ROLL=r23_1",
+                "-DHAVE_SYS_UIO_H",
+            ],
+        },
         android_x86_64: {
             cflags: [
                 "-DANDROID",
@@ -6971,7 +7201,6 @@ cc_library_static {
         "-DDCHECK_ALWAYS_ON=1",
         "-DDEFLATE_SLIDE_HASH_SSE2",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
-        "-DINFLATE_CHUNK_READ_64LE",
         "-DINFLATE_CHUNK_SIMD_SSE2",
         "-DX86_NOT_WINDOWS",
         "-DZLIB_DEBUG",
@@ -6996,7 +7225,7 @@ cc_library_static {
     ],
     cpp_std: "c++20",
     target: {
-        android_x86_64: {
+        android_x86: {
             cflags: [
                 "-DANDROID",
                 "-DANDROID_NDK_VERSION_ROLL=r23_1",
@@ -7006,9 +7235,21 @@ cc_library_static {
                 "third_party/android_ndk/sources/android/cpufeatures/",
             ],
         },
+        android_x86_64: {
+            cflags: [
+                "-DANDROID",
+                "-DANDROID_NDK_VERSION_ROLL=r23_1",
+                "-DHAVE_SYS_UIO_H",
+                "-DINFLATE_CHUNK_READ_64LE",
+            ],
+            local_include_dirs: [
+                "third_party/android_ndk/sources/android/cpufeatures/",
+            ],
+        },
         host: {
             cflags: [
                 "-DCR_SYSROOT_KEY=20220331T153654Z-0",
+                "-DINFLATE_CHUNK_READ_64LE",
                 "-DUSE_AURA=1",
                 "-DUSE_OZONE=1",
                 "-DUSE_UDEV",
