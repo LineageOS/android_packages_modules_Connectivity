@@ -1267,8 +1267,10 @@ def main():
       description='Generate Android.bp from a GN description.')
   parser.add_argument(
       '--desc',
-      help='GN description (e.g., gn desc out --format=json --all-toolchains "//*"',
-      required=True
+      help='GN description (e.g., gn desc out --format=json --all-toolchains "//*".' +
+           'You can specify multiple --desc options for different target_cpu',
+      required=True,
+      action='append'
   )
   parser.add_argument(
       '--extras',
@@ -1296,15 +1298,13 @@ def main():
   if args.verbose:
     log.basicConfig(format='%(levelname)s:%(funcName)s:%(message)s', level=log.DEBUG)
 
-  with open(args.desc) as f:
-    desc = json.load(f)
-
-  gn = gn_utils.GnParser()
   targets = args.targets or default_targets
-  for target in targets:
-    # TODO: pass desc to parse_gn_desc() to support parsing multiple desc files
-    # for different target architectures.
-    gn.parse_gn_desc(desc, target)
+  gn = gn_utils.GnParser()
+  for desc_file in args.desc:
+    with open(desc_file) as f:
+      desc = json.load(f)
+    for target in targets:
+      gn.parse_gn_desc(desc, target)
   blueprint = create_blueprint_for_targets(gn, targets)
   project_root = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))
   tool_name = os.path.relpath(os.path.abspath(__file__), project_root)
