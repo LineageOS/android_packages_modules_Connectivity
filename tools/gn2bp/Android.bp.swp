@@ -202,7 +202,6 @@ cc_library_static {
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
         "-D__STDC_CONSTANT_MACROS",
         "-D__STDC_FORMAT_MACROS",
-        "-UANDROID",
     ],
     local_include_dirs: [
         "./",
@@ -258,7 +257,6 @@ cc_library_static {
                 "-D_FILE_OFFSET_BITS=64",
                 "-D_LARGEFILE64_SOURCE",
                 "-D_LARGEFILE_SOURCE",
-                "-UANDROID",
             ],
         },
     },
@@ -920,7 +918,6 @@ cc_library_static {
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
         "-D__STDC_CONSTANT_MACROS",
         "-D__STDC_FORMAT_MACROS",
-        "-UANDROID",
     ],
     local_include_dirs: [
         "./",
@@ -1142,7 +1139,6 @@ cc_library_static {
                 "-D_FILE_OFFSET_BITS=64",
                 "-D_LARGEFILE64_SOURCE",
                 "-D_LARGEFILE_SOURCE",
-                "-UANDROID",
             ],
         },
     },
@@ -1442,7 +1438,6 @@ cc_library_static {
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
         "-D__STDC_CONSTANT_MACROS",
         "-D__STDC_FORMAT_MACROS",
-        "-UANDROID",
     ],
     local_include_dirs: [
         "./",
@@ -1475,7 +1470,6 @@ cc_library_static {
                 "-D_FILE_OFFSET_BITS=64",
                 "-D_LARGEFILE64_SOURCE",
                 "-D_LARGEFILE_SOURCE",
-                "-UANDROID",
             ],
         },
     },
@@ -1789,7 +1783,6 @@ cc_library_static {
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
         "-D__STDC_CONSTANT_MACROS",
         "-D__STDC_FORMAT_MACROS",
-        "-UANDROID",
     ],
     local_include_dirs: [
         "./",
@@ -1822,7 +1815,6 @@ cc_library_static {
                 "-D_FILE_OFFSET_BITS=64",
                 "-D_LARGEFILE64_SOURCE",
                 "-D_LARGEFILE_SOURCE",
-                "-UANDROID",
             ],
         },
     },
@@ -1849,7 +1841,6 @@ cc_library_static {
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
         "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-UANDROID",
     ],
     local_include_dirs: [
         "./",
@@ -1882,7 +1873,6 @@ cc_library_static {
                 "-D_FILE_OFFSET_BITS=64",
                 "-D_LARGEFILE64_SOURCE",
                 "-D_LARGEFILE_SOURCE",
-                "-UANDROID",
             ],
         },
     },
@@ -1919,7 +1909,6 @@ cc_library_static {
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
         "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-UANDROID",
     ],
     local_include_dirs: [
         "./",
@@ -1928,13 +1917,6 @@ cc_library_static {
         "buildtools/third_party/libc++abi/trunk/include",
     ],
     cpp_std: "c++20",
-    target: {
-        host: {
-            cflags: [
-                "-UANDROID",
-            ],
-        },
-    },
 }
 
 // GN: //base/third_party/xdg_mime:xdg_mime
@@ -1973,7 +1955,6 @@ cc_library_static {
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
         "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-UANDROID",
     ],
     local_include_dirs: [
         "./",
@@ -1982,13 +1963,6 @@ cc_library_static {
         "buildtools/third_party/libc++abi/trunk/include",
     ],
     cpp_std: "c++20",
-    target: {
-        host: {
-            cflags: [
-                "-UANDROID",
-            ],
-        },
-    },
 }
 
 // GN: //base/third_party/xdg_user_dirs:xdg_user_dirs
@@ -2022,7 +1996,6 @@ cc_library_static {
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
         "-D__STDC_CONSTANT_MACROS",
         "-D__STDC_FORMAT_MACROS",
-        "-UANDROID",
     ],
     local_include_dirs: [
         "./",
@@ -2031,13 +2004,6 @@ cc_library_static {
         "buildtools/third_party/libc++abi/trunk/include",
     ],
     cpp_std: "c++20",
-    target: {
-        host: {
-            cflags: [
-                "-UANDROID",
-            ],
-        },
-    },
 }
 
 // GN: //base:tracing_buildflags
@@ -2528,18 +2494,6 @@ cc_library_shared {
         "-fexceptions",
     ],
     rtti: true,
-    target: {
-        android_x86: {
-            cflags: [
-                "-UANDROID",
-            ],
-        },
-        android_x86_64: {
-            cflags: [
-                "-UANDROID",
-            ],
-        },
-    },
 }
 
 // GN: //components/cronet/android:cronet_jni_headers
@@ -3261,18 +3215,6 @@ cc_library_static {
         "jni_headers",
     ],
     cpp_std: "c++20",
-    target: {
-        android_x86: {
-            cflags: [
-                "-UANDROID",
-            ],
-        },
-        android_x86_64: {
-            cflags: [
-                "-UANDROID",
-            ],
-        },
-    },
 }
 
 // GN: //crypto:buildflags
@@ -3359,7 +3301,6 @@ cc_library_static {
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
         "-D__STDC_CONSTANT_MACROS",
         "-D__STDC_FORMAT_MACROS",
-        "-UANDROID",
     ],
     local_include_dirs: [
         "./",
@@ -3409,7 +3350,6 @@ cc_library_static {
                 "-D_FILE_OFFSET_BITS=64",
                 "-D_LARGEFILE64_SOURCE",
                 "-D_LARGEFILE_SOURCE",
-                "-UANDROID",
             ],
             local_include_dirs: [
                 "build/linux/debian_bullseye_amd64-sysroot/usr/include/nspr",
@@ -3438,6 +3378,13 @@ cc_defaults {
         "-fvisibility=hidden",
     ],
     stl: "none",
+    target: {
+        host: {
+            cflags: [
+                "-UANDROID",
+            ],
+        },
+    },
 }
 
 // GN: //ipc:param_traits
@@ -4742,16 +4689,10 @@ cc_library_static {
             srcs: [
                 "net/disk_cache/blockfile/mapped_file_posix.cc",
             ],
-            cflags: [
-                "-UANDROID",
-            ],
         },
         android_x86_64: {
             srcs: [
                 "net/disk_cache/blockfile/mapped_file_bypass_mmap_posix.cc",
-            ],
-            cflags: [
-                "-UANDROID",
             ],
         },
     },
@@ -5043,18 +4984,6 @@ cc_library_static {
         "third_party/boringssl/src/include/",
     ],
     cpp_std: "c++20",
-    target: {
-        android_x86: {
-            cflags: [
-                "-UANDROID",
-            ],
-        },
-        android_x86_64: {
-            cflags: [
-                "-UANDROID",
-            ],
-        },
-    },
 }
 
 // GN: //net/third_party/quiche:net_quic_proto
@@ -5600,18 +5529,6 @@ cc_library_static {
         "third_party/zlib/",
     ],
     cpp_std: "c++20",
-    target: {
-        android_x86: {
-            cflags: [
-                "-UANDROID",
-            ],
-        },
-        android_x86_64: {
-            cflags: [
-                "-UANDROID",
-            ],
-        },
-    },
 }
 
 // GN: //net/traffic_annotation:traffic_annotation
@@ -5707,18 +5624,6 @@ cc_library_static {
         "third_party/boringssl/src/include/",
     ],
     cpp_std: "c++20",
-    target: {
-        android_x86: {
-            cflags: [
-                "-UANDROID",
-            ],
-        },
-        android_x86_64: {
-            cflags: [
-                "-UANDROID",
-            ],
-        },
-    },
 }
 
 // GN: //third_party/abseil-cpp:absl
@@ -7568,7 +7473,6 @@ cc_library_static {
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
         "-D__STDC_CONSTANT_MACROS",
         "-D__STDC_FORMAT_MACROS",
-        "-UANDROID",
     ],
     local_include_dirs: [
         "./",
@@ -7602,7 +7506,6 @@ cc_library_static {
                 "-D_FILE_OFFSET_BITS=64",
                 "-D_LARGEFILE64_SOURCE",
                 "-D_LARGEFILE_SOURCE",
-                "-UANDROID",
             ],
         },
     },
@@ -7725,18 +7628,6 @@ cc_library_static {
         "third_party/brotli/include/",
     ],
     cpp_std: "c++20",
-    target: {
-        android_x86: {
-            cflags: [
-                "-UANDROID",
-            ],
-        },
-        android_x86_64: {
-            cflags: [
-                "-UANDROID",
-            ],
-        },
-    },
 }
 
 // GN: //third_party/brotli:dec
@@ -7780,18 +7671,6 @@ cc_library_static {
         "third_party/brotli/include/",
     ],
     cpp_std: "c++20",
-    target: {
-        android_x86: {
-            cflags: [
-                "-UANDROID",
-            ],
-        },
-        android_x86_64: {
-            cflags: [
-                "-UANDROID",
-            ],
-        },
-    },
 }
 
 // GN: //third_party/brotli:headers
@@ -8074,7 +7953,6 @@ cc_library_static {
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
         "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-UANDROID",
     ],
     local_include_dirs: [
         "./",
@@ -8110,7 +7988,6 @@ cc_library_static {
                 "-D_FILE_OFFSET_BITS=64",
                 "-D_LARGEFILE64_SOURCE",
                 "-D_LARGEFILE_SOURCE",
-                "-UANDROID",
             ],
         },
     },
@@ -8351,7 +8228,6 @@ cc_library_static {
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
         "-D__STDC_CONSTANT_MACROS",
         "-D__STDC_FORMAT_MACROS",
-        "-UANDROID",
     ],
     local_include_dirs: [
         "./",
@@ -8387,7 +8263,6 @@ cc_library_static {
                 "-D_FILE_OFFSET_BITS=64",
                 "-D_LARGEFILE64_SOURCE",
                 "-D_LARGEFILE_SOURCE",
-                "-UANDROID",
             ],
         },
     },
@@ -8433,7 +8308,6 @@ cc_library_static {
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
         "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-UANDROID",
     ],
     local_include_dirs: [
         "./",
@@ -8472,7 +8346,6 @@ cc_library_static {
                 "-D_FILE_OFFSET_BITS=64",
                 "-D_LARGEFILE64_SOURCE",
                 "-D_LARGEFILE_SOURCE",
-                "-UANDROID",
             ],
             local_include_dirs: [
                 "third_party/libevent/linux/",
@@ -8643,7 +8516,6 @@ cc_library_static {
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
         "-D__STDC_CONSTANT_MACROS",
         "-D__STDC_FORMAT_MACROS",
-        "-UANDROID",
     ],
     local_include_dirs: [
         "./",
@@ -8676,7 +8548,6 @@ cc_library_static {
                 "-D_FILE_OFFSET_BITS=64",
                 "-D_LARGEFILE64_SOURCE",
                 "-D_LARGEFILE_SOURCE",
-                "-UANDROID",
             ],
         },
     },
@@ -8802,7 +8673,6 @@ cc_library_static {
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
         "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-UANDROID",
     ],
     local_include_dirs: [
         "./",
@@ -8813,13 +8683,6 @@ cc_library_static {
         "third_party/zlib/",
     ],
     cpp_std: "c++20",
-    target: {
-        host: {
-            cflags: [
-                "-UANDROID",
-            ],
-        },
-    },
 }
 
 // GN: //third_party/protobuf:protobuf_lite
@@ -8892,18 +8755,6 @@ cc_library_static {
         "third_party/protobuf/src/",
     ],
     cpp_std: "c++20",
-    target: {
-        android_x86: {
-            cflags: [
-                "-UANDROID",
-            ],
-        },
-        android_x86_64: {
-            cflags: [
-                "-UANDROID",
-            ],
-        },
-    },
 }
 
 // GN: //third_party/protobuf:protoc
@@ -8952,7 +8803,6 @@ cc_binary {
         "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCPP_OVERRIDABLE_FUNC_VIS=__attribute__((__visibility__(\"default\")))",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-UANDROID",
     ],
     local_include_dirs: [
         "./",
@@ -8967,13 +8817,6 @@ cc_binary {
         "-fexceptions",
     ],
     rtti: true,
-    target: {
-        host: {
-            cflags: [
-                "-UANDROID",
-            ],
-        },
-    },
 }
 
 // GN: //third_party/protobuf:protoc_lib
@@ -9097,7 +8940,6 @@ cc_library_static {
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
         "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-UANDROID",
     ],
     local_include_dirs: [
         "./",
@@ -9107,13 +8949,6 @@ cc_library_static {
         "third_party/protobuf/src/",
     ],
     cpp_std: "c++20",
-    target: {
-        host: {
-            cflags: [
-                "-UANDROID",
-            ],
-        },
-    },
 }
 
 // GN: //third_party/zlib:zlib
@@ -9166,7 +9001,6 @@ cc_library_static {
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
         "-D__STDC_CONSTANT_MACROS",
         "-D__STDC_FORMAT_MACROS",
-        "-UANDROID",
         "-mpclmul",
         "-mssse3",
     ],
@@ -9210,7 +9044,6 @@ cc_library_static {
                 "-D_FILE_OFFSET_BITS=64",
                 "-D_LARGEFILE64_SOURCE",
                 "-D_LARGEFILE_SOURCE",
-                "-UANDROID",
             ],
         },
     },
@@ -9409,18 +9242,6 @@ cc_library_static {
         "jni_headers",
     ],
     cpp_std: "c++20",
-    target: {
-        android_x86: {
-            cflags: [
-                "-UANDROID",
-            ],
-        },
-        android_x86_64: {
-            cflags: [
-                "-UANDROID",
-            ],
-        },
-    },
 }
 
 // GN: //url:url_jni_headers

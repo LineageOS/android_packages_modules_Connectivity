@@ -959,12 +959,6 @@ def _get_cflags(cflags, defines):
   cflags = {flag for flag in cflags if flag in cflag_allowlist}
   # Consider proper allowlist or denylist if needed
   cflags |= set("-D%s" % define.replace("\"", "\\\"") for define in defines)
-  # -DANDROID is added by default but target.defines contain -DANDROID if it's required.
-  # So adding -UANDROID to cancel default -DANDROID if it's not specified.
-  # This is needed for some targets(e.g. symbolize)
-  # TODO: Set -UANDROID considering common define
-  if "ANDROID" not in defines:
-    cflags.add("-UANDROID")
   return cflags
 
 def set_module_flags(module, cflags, defines):
@@ -1221,6 +1215,14 @@ def create_blueprint_for_targets(gn, targets):
       '-Wno-ambiguous-reversed-operator', # needed for icui18n
       '-Wno-unreachable-code-loop-increment', # needed for icui18n
       '-O2',
+  ]
+  defaults.target['host'].cflags = [
+      # -DANDROID is added by default but target.defines contain -DANDROID if
+      # it's required.  So adding -UANDROID to cancel default -DANDROID if it's
+      # not specified.
+      # Note: -DANDROID is not consistently applied across the chromium code
+      # base, so it is removed unconditionally for host targets.
+      '-UANDROID',
   ]
   defaults.stl = 'none'
   blueprint.add_module(defaults)
