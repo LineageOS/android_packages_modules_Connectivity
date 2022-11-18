@@ -132,7 +132,7 @@ additional_args = {
         ('rtti', True), # go/undefined-symbol-typeinfo
     ],
     'cronet_aml_base_base': [
-        ('header_libs', set(["media_ndk_headers"])),
+        ('header_libs', {"media_ndk_headers"}),
     ],
 }
 
@@ -963,8 +963,8 @@ def _get_cflags(cflags, defines):
   # So adding -UANDROID to cancel default -DANDROID if it's not specified.
   # This is needed for some targets(e.g. symbolize)
   # TODO: Set -UANDROID considering common define
-  # if "ANDROID" not in defines:
-  #   cflags.add("-UANDROID")
+  if "ANDROID" not in defines:
+    cflags.add("-UANDROID")
   return cflags
 
 def set_module_flags(module, cflags, defines):
