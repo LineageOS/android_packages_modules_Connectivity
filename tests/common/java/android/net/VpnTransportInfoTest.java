@@ -20,7 +20,7 @@ import static android.net.NetworkCapabilities.REDACT_FOR_NETWORK_SETTINGS;
 import static android.net.NetworkCapabilities.REDACT_NONE;
 
 import static com.android.testutils.MiscAsserts.assertThrows;
-import static com.android.testutils.ParcelUtils.assertParcelSane;
+import static com.android.testutils.ParcelUtils.assertParcelingIsLossless;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -31,6 +31,7 @@ import android.os.Build;
 
 import androidx.test.filters.SmallTest;
 
+import com.android.testutils.ConnectivityModuleTest;
 import com.android.testutils.DevSdkIgnoreRule;
 import com.android.testutils.DevSdkIgnoreRunner;
 
@@ -41,6 +42,7 @@ import org.junit.runner.RunWith;
 @RunWith(DevSdkIgnoreRunner.class)
 @SmallTest
 @DevSdkIgnoreRule.IgnoreUpTo(Build.VERSION_CODES.R)
+@ConnectivityModuleTest
 public class VpnTransportInfoTest {
     @Rule
     public final DevSdkIgnoreRule ignoreRule = new DevSdkIgnoreRule();
@@ -48,11 +50,11 @@ public class VpnTransportInfoTest {
     @Test
     public void testParceling() {
         final VpnTransportInfo v = new VpnTransportInfo(VpnManager.TYPE_VPN_PLATFORM, "12345");
-        assertParcelSane(v, 3 /* fieldCount */);
+        assertParcelingIsLossless(v);
 
         final VpnTransportInfo v2 =
                 new VpnTransportInfo(VpnManager.TYPE_VPN_PLATFORM, "12345", true);
-        assertParcelSane(v2, 3 /* fieldCount */);
+        assertParcelingIsLossless(v2);
     }
 
     @Test
