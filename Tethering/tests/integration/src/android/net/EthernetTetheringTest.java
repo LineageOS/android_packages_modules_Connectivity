@@ -556,23 +556,6 @@ public class EthernetTetheringTest {
         // client, which is not possible in this test.
     }
 
-    private boolean isEthernetTetheringSupported() throws Exception {
-        final CompletableFuture<Boolean> future = new CompletableFuture<>();
-        final TetheringEventCallback callback = new TetheringEventCallback() {
-            @Override
-            public void onSupportedTetheringTypes(Set<Integer> supportedTypes) {
-                future.complete(supportedTypes.contains(TETHERING_ETHERNET));
-            }
-        };
-
-        try {
-            mTm.registerTetheringEventCallback(mHandler::post, callback);
-            return future.get(TIMEOUT_MS, TimeUnit.MILLISECONDS);
-        } finally {
-            mTm.unregisterTetheringEventCallback(callback);
-        }
-    }
-
     private static final class MyTetheringEventCallback implements TetheringEventCallback {
         private final TetheringManager mTm;
         private final CountDownLatch mTetheringStartedLatch = new CountDownLatch(1);

@@ -97,6 +97,11 @@ class GnParser(object):
         """
       def __init__(self):
         self.sources = set()
+        self.cflags = set()
+        self.defines = set()
+        self.include_dirs = set()
+        self.deps = set()
+        self.transitive_static_libs_deps = set()
 
 
     def __init__(self, name, type):
@@ -139,14 +144,6 @@ class GnParser(object):
       self.source_set_deps = set()  # Transitive set of source_set deps.
       self.proto_deps = set()
       self.transitive_proto_deps = set()
-      self.transitive_static_libs_deps = set()
-
-      # Deps on //gn:xxx have this flag set to True. These dependencies
-      # are special because they pull third_party code from buildtools/.
-      # We don't want to keep recursing into //buildtools in generators,
-      # this flag is used to stop the recursion and create an empty
-      # placeholder target once we hit //gn:protoc or similar.
-      self.is_third_party_dep_ = False
 
       # TODO: come up with a better way to only run this once.
       # is_finalized tracks whether finalize() was called on this target.
@@ -174,11 +171,15 @@ class GnParser(object):
                         indent=4,
                         sort_keys=True)
 
-    def update(self, other):
+    def update(self, other, arch):
       for key in ('cflags', 'defines', 'deps', 'include_dirs', 'ldflags',
                   'source_set_deps', 'proto_deps', 'transitive_proto_deps',
                   'libs', 'proto_paths'):
         self.__dict__[key].update(other.__dict__.get(key, []))
+
+      for key_in_arch in ('cflags', 'defines', 'include_dirs'):
+        self.arch[arch].__dict__[key_in_arch].update(
+          other.arch[arch].__dict__.get(key_in_arch, []))
 
     def finalize(self):
       """Move common properties out of arch-dependent subobjects to Target object.
@@ -191,10 +192,18 @@ class GnParser(object):
 
       # Target contains the intersection of arch-dependent properties
       self.sources = set.intersection(*[arch.sources for arch in self.arch.values()])
+      self.cflags = set.intersection(*[arch.cflags for arch in self.arch.values()])
+      self.defines = set.intersection(*[arch.defines for arch in self.arch.values()])
+      self.include_dirs = set.intersection(*[arch.include_dirs for arch in self.arch.values()])
+      self.deps.update(set.intersection(*[arch.deps for arch in self.arch.values()]))
 
       # Deduplicate arch-dependent properties
       for arch in self.arch.keys():
         self.arch[arch].sources -= self.sources
+        self.arch[arch].cflags -= self.cflags
+        self.arch[arch].defines -= self.defines
+        self.arch[arch].include_dirs -= self.include_dirs
+        self.arch[arch].deps -= self.deps
 
 
   def __init__(self):
@@ -280,7 +289,9 @@ class GnParser(object):
       target.proto_paths.update(self.get_proto_paths(proto_desc))
       target.proto_exports.update(self.get_proto_exports(proto_desc))
       target.proto_in_dir = self.get_proto_in_dir(proto_desc)
-      target.deps.update(proto_desc.get('deps', []))
+      for gn_proto_deps_name in proto_desc.get('deps', []):
+        dep = self.parse_gn_desc(gn_desc, gn_proto_deps_name)
+        target.deps.add(dep.name)
       target.arch[arch].sources.update(proto_desc.get('sources', []))
       assert (all(x.endswith('.proto') for x in target.arch[arch].sources))
     elif target.type == 'source_set':
@@ -315,33 +326,30 @@ class GnParser(object):
     public_headers = [x for x in desc.get('public', []) if x != '*']
     target.public_headers.update(public_headers)
 
-    target.cflags.update(desc.get('cflags', []) + desc.get('cflags_cc', []))
+    target.arch[arch].cflags.update(desc.get('cflags', []) + desc.get('cflags_cc', []))
     target.libs.update(desc.get('libs', []))
     target.ldflags.update(desc.get('ldflags', []))
-    target.defines.update(desc.get('defines', []))
-    target.include_dirs.update(desc.get('include_dirs', []))
+    target.arch[arch].defines.update(desc.get('defines', []))
+    target.arch[arch].include_dirs.update(desc.get('include_dirs', []))
 
     # Recurse in dependencies.
     for gn_dep_name in desc.get('deps', []):
       dep = self.parse_gn_desc(gn_desc, gn_dep_name)
-      dep_name = label_without_toolchain(gn_dep_name)
-      if dep.is_third_party_dep_:
-        target.deps.add(dep_name)
-      elif dep.type == 'proto_library':
-        target.proto_deps.add(dep_name)
-        target.transitive_proto_deps.add(dep_name)
+      if dep.type == 'proto_library':
+        target.proto_deps.add(dep.name)
+        target.transitive_proto_deps.add(dep.name)
         target.proto_paths.update(dep.proto_paths)
         target.transitive_proto_deps.update(dep.transitive_proto_deps)
       elif dep.type == 'source_set':
-        target.source_set_deps.add(dep_name)
-        target.update(dep)  # Bubble up source set's cflags/ldflags etc.
+        target.source_set_deps.add(dep.name)
+        target.update(dep, arch)  # Bubble up source set's cflags/ldflags etc.
       elif dep.type == 'group':
-        target.update(dep)  # Bubble up groups's cflags/ldflags etc.
+        target.update(dep, arch)  # Bubble up groups's cflags/ldflags etc.
       elif dep.type in ['action', 'action_foreach', 'copy']:
         if proto_target_type is None:
-          target.deps.add(dep_name)
+          target.deps.add(dep.name)
       elif dep.type in LINKER_UNIT_TYPES:
-        target.deps.add(dep_name)
+        target.arch[arch].deps.add(dep.name)
       elif dep.type == 'java_group':
         # Explicitly break dependency chain when a java_group is added.
         # Java sources are collected and eventually compiled as one large
@@ -351,10 +359,12 @@ class GnParser(object):
       if dep.type == 'static_library':
         # Bubble up static_libs. Necessary, since soong does not propagate
         # static_libs up the build tree.
-        target.transitive_static_libs_deps.add(dep_name)
+        target.arch[arch].transitive_static_libs_deps.add(dep.name)
 
-      target.transitive_static_libs_deps.update(dep.transitive_static_libs_deps)
-      target.deps.update(target.transitive_static_libs_deps)
+      if arch in dep.arch:
+        target.arch[arch].transitive_static_libs_deps.update(
+            dep.arch[arch].transitive_static_libs_deps)
+        target.arch[arch].deps.update(target.arch[arch].transitive_static_libs_deps)
 
       # Collect java sources. Java sources are kept inside the __compile_java target.
       # This target can be used for both host and target compilation; only add

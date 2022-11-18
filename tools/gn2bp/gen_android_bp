@@ -199,6 +199,7 @@ class Target(object):
 
   def __init__(self, name):
     self.name = name
+    self.srcs = set()
     self.shared_libs = set()
     self.static_libs = set()
     self.whole_static_libs = set()
@@ -206,9 +207,12 @@ class Target(object):
     self.dist = dict()
     self.strip = dict()
     self.stl = None
+    self.cppflags = set()
+    self.local_include_dirs = []
 
   def to_string(self, output):
     nested_out = []
+    self._output_field(nested_out, 'srcs')
     self._output_field(nested_out, 'shared_libs')
     self._output_field(nested_out, 'static_libs')
     self._output_field(nested_out, 'whole_static_libs')
@@ -216,6 +220,8 @@ class Target(object):
     self._output_field(nested_out, 'stl')
     self._output_field(nested_out, 'dist')
     self._output_field(nested_out, 'strip')
+    self._output_field(nested_out, 'cppflags')
+    self._output_field(nested_out, 'local_include_dirs')
 
     if nested_out:
       output.append('    %s: {' % self.name)
@@ -259,8 +265,15 @@ class Module(object):
     self.header_libs = set()
     self.required = set()
     self.tool_files = set()
-    self.android = Target('android')
-    self.host = Target('host')
+    # target contains a dict of Targets indexed by os_arch.
+    # example: { 'android_x86': Target('android_x86')
+    self.target = dict()
+    self.target['android'] = Target('android')
+    self.target['android_x86'] = Target('android_x86')
+    self.target['android_x86_64'] = Target('android_x86_64')
+    self.target['android_arm'] = Target('android_arm')
+    self.target['android_arm64'] = Target('android_arm64')
+    self.target['host'] = Target('host')
     self.stl = None
     self.cpp_std = None
     self.dist = dict()
@@ -282,7 +295,6 @@ class Module(object):
     self.stubs = {}
     self.cppflags = set()
     self.rtti = False
-    self.arch = dict()
 
   def to_string(self, output):
     if self.comment:
@@ -331,11 +343,13 @@ class Module(object):
     self._output_field(output, 'cppflags')
     if self.rtti:
       self._output_field(output, 'rtti')
-    self._output_field(output, 'arch')
 
     target_out = []
-    self._output_field(target_out, 'android')
-    self._output_field(target_out, 'host')
+    for arch, target in sorted(self.target.items()):
+      # _output_field calls getattr(self, arch).
+      setattr(self, arch, target)
+      self._output_field(target_out, arch)
+
     if target_out:
       output.append('    target: {')
       for line in target_out:
@@ -349,7 +363,7 @@ class Module(object):
     if self.type == 'cc_binary_host':
       raise Exception('Adding Android static lib for host tool is unsupported')
     elif self.host_supported:
-      self.android.static_libs.add(lib)
+      self.target['android'].static_libs.add(lib)
     else:
       self.static_libs.add(lib)
 
@@ -357,13 +371,16 @@ class Module(object):
     if self.type == 'cc_binary_host':
       raise Exception('Adding Android shared lib for host tool is unsupported')
     elif self.host_supported:
-      self.android.shared_libs.add(lib)
+      self.target['android'].shared_libs.add(lib)
     else:
       self.shared_libs.add(lib)
 
   def _output_field(self, output, name, sort=True):
     value = getattr(self, name)
     return write_blueprint_key_value(output, name, value, sort)
+
+  def is_compiled(self):
+    return self.type not in ('genrule', 'filegroup', 'cc_defaults')
 
 
 class Blueprint(object):
@@ -390,10 +407,6 @@ def label_to_module_name(label):
   """Turn a GN label (e.g., //:perfetto_tests) into a module name."""
   module = re.sub(r'^//:?', '', label)
   module = re.sub(r'[^a-zA-Z0-9_]', '_', module)
-
-  # If it's required to support multi toolchain for more targets, it's better to avoid hardcoding.
-  if label == "//third_party/boringssl:boringssl_asm(//build/toolchain/android:android_clang_x86)":
-    module += "_x86"
 
   if not module.startswith(module_prefix):
     return module_prefix + module
@@ -422,7 +435,7 @@ def create_proto_modules(blueprint, gn, target):
     """
   assert (target.type == 'proto_library')
 
-  protoc_gn_target_name = "//third_party/protobuf:protoc(//build/toolchain/linux:clang_x64)"
+  protoc_gn_target_name = gn.get_target('//third_party/protobuf:protoc').name
   protoc_module_name = label_to_module_name(protoc_gn_target_name)
   tools = {protoc_module_name}
   cpp_out_dir = '$(genDir)/%s/%s/' % (tree_path, target.proto_in_dir)
@@ -937,17 +950,54 @@ def create_action_module(blueprint, target):
 
 
 
-def _get_cflags(target):
-  cflags = {flag for flag in target.cflags if flag in cflag_allowlist}
+def _get_cflags(cflags, defines):
+  cflags = {flag for flag in cflags if flag in cflag_allowlist}
   # Consider proper allowlist or denylist if needed
-  cflags |= set("-D%s" % define.replace("\"", "\\\"") for define in target.defines)
+  cflags |= set("-D%s" % define.replace("\"", "\\\"") for define in defines)
   # -DANDROID is added by default but target.defines contain -DANDROID if it's required.
   # So adding -UANDROID to cancel default -DANDROID if it's not specified.
   # This is needed for some targets(e.g. symbolize)
-  if "ANDROID" not in target.defines:
-    cflags.add("-UANDROID")
+  # TODO: Set -UANDROID considering common define
+  # if "ANDROID" not in defines:
+  #   cflags.add("-UANDROID")
   return cflags
 
+def set_module_flags(module, cflags, defines):
+  module.cflags.update(_get_cflags(cflags, defines))
+  # TODO: implement proper cflag parsing.
+  for flag in cflags:
+    if '-std=' in flag:
+      module.cpp_std = flag[len('-std='):]
+    if '-frtti' in flag:
+      module.rtti = True
+    if '-fexceptions' in flag:
+      module.cppflags.add('-fexceptions')
+
+def set_module_include_dirs(module, cflags, include_dirs):
+  local_include_dirs_set = set()
+  for flag in cflags:
+    if '-isystem' in flag:
+      local_include_dirs_set.add(flag[len('-isystem../../'):])
+
+  # Adding local_include_dirs is necessary due to source_sets / filegroups
+  # which do not properly propagate include directories.
+  # Filter any directory inside //out as a) this directory does not exist for
+  # aosp / soong builds and b) the include directory should already be
+  # configured via library dependency.
+  local_include_dirs_set.update([gn_utils.label_to_path(d)
+                                 for d in include_dirs
+                                 if not re.match('^//out/.*', d)])
+  module.local_include_dirs = sorted(list(local_include_dirs_set))
+
+  # Order matters for some targets. For example, base/time/time_exploded_icu.cc
+  # in //base:base needs to have sysroot include after icu/source/common
+  # include. So adding sysroot include at the end.
+  for flag in sorted(cflags):
+    if '--sysroot' in flag:
+      sysroot = flag[len('--sysroot=../../'):]
+      if sysroot == "build/linux/debian_bullseye_amd64-sysroot":
+        module.local_include_dirs.append(sysroot + "/usr/include/x86_64-linux-gnu")
+      module.local_include_dirs.append(sysroot + "/usr/include")
 
 def create_modules_from_target(blueprint, gn, gn_target_name):
   """Generate module(s) for a given GN target.
@@ -978,7 +1028,7 @@ def create_modules_from_target(blueprint, gn, gn_target_name):
   elif target.type == 'shared_library':
     module = Module('cc_library_shared', bp_module_name, gn_target_name)
   elif target.type == 'source_set':
-    module = Module('filegroup', bp_module_name, gn_target_name)
+    module = Module('cc_defaults', bp_module_name, gn_target_name)
   elif target.type == 'group':
     # "group" targets are resolved recursively by gn_utils.get_target().
     # There's nothing we need to do at this level for them.
@@ -1018,43 +1068,22 @@ def create_modules_from_target(blueprint, gn, gn_target_name):
       for src in target.sources
       if is_supported_source_file(src) and not src.startswith("//out/test"))
 
-  local_include_dirs_set = set()
+  # Add arch-specific properties
+  for arch_name, arch in target.arch.items():
+    module.target[arch_name].srcs.update(
+      gn_utils.label_to_path(src)
+      for src in arch.sources
+      if is_supported_source_file(src) and not src.startswith("//out/test"))
+
   if target.type in gn_utils.LINKER_UNIT_TYPES:
-    module.cflags.update(_get_cflags(target))
-    # TODO: implement proper cflag parsing.
-    for flag in target.cflags:
-      if '-std=' in flag:
-        module.cpp_std = flag[len('-std='):]
-      if '-isystem' in flag:
-        local_include_dirs_set.add(flag[len('-isystem../../'):])
-      if '-frtti' in flag:
-        module.rtti = True
-      if '-fexceptions' in flag:
-        module.cppflags.add('-fexceptions')
+    set_module_flags(module, target.cflags, target.defines)
+    set_module_include_dirs(module, target.cflags, target.include_dirs)
+    # TODO: set_module_xxx is confusing, apply similar function to module and target in better way.
+    for arch_name, arch in target.arch.items():
+      set_module_flags(module.target[arch_name], arch.cflags, arch.defines)
+      set_module_include_dirs(module.target[arch_name], arch.cflags, arch.include_dirs)
 
-
-    # Adding local_include_dirs is necessary due to source_sets / filegroups
-    # which do not properly propagate include directories.
-    # Filter any directory inside //out as a) this directory does not exist for
-    # aosp / soong builds and b) the include directory should already be
-    # configured via library dependency.
-    local_include_dirs_set.update([gn_utils.label_to_path(d)
-                                      for d in target.include_dirs
-                                      if not re.match('^//out/.*', d)])
-    module.local_include_dirs = sorted(list(local_include_dirs_set))
-
-    # Order matters for some targets. For example, base/time/time_exploded_icu.cc
-    # in //base:base needs to have sysroot include after icu/source/common
-    # include. So adding sysroot include at the end.
-    for flag in target.cflags:
-      if '--sysroot' in flag:
-        sysroot = flag[len('--sysroot=../../'):]
-        if sysroot == "build/linux/debian_bullseye_amd64-sysroot":
-          module.local_include_dirs.append(sysroot + "/usr/include/x86_64-linux-gnu")
-        module.local_include_dirs.append(sysroot + "/usr/include")
-
-  module_is_compiled = module.type not in ('genrule', 'filegroup')
-  if module_is_compiled:
+  if module.is_compiled():
     module.host_supported = target.host_supported()
     module.device_supported = target.device_supported()
 
@@ -1107,8 +1136,9 @@ def create_modules_from_target(blueprint, gn, gn_target_name):
         module.genrule_headers.add(dep_module.name)
         module.genrule_headers.update(dep_module.genrule_headers)
 
-    # For filegroups and genrule, recurse but don't apply the deps.
-    if not module_is_compiled:
+    # For cc_defaults, filegroups, and genrule, recurse but don't apply the
+    # deps.
+    if not module.is_compiled():
       continue
 
     if dep_module is None:
@@ -1117,8 +1147,8 @@ def create_modules_from_target(blueprint, gn, gn_target_name):
       module.shared_libs.add(dep_module.name)
     elif dep_module.type == 'cc_library_static':
       module.static_libs.add(dep_module.name)
-    elif dep_module.type == 'filegroup':
-      module.srcs.add(':' + dep_module.name)
+    elif dep_module.type == 'cc_defaults':
+      module.defaults.append(dep_module.name)
     elif dep_module.type == 'genrule':
       module.generated_headers.update(dep_module.genrule_headers)
       module.srcs.update(dep_module.genrule_srcs)
@@ -1130,24 +1160,16 @@ def create_modules_from_target(blueprint, gn, gn_target_name):
       raise Error('Unknown dep %s (%s) for target %s' %
                   (dep_module.name, dep_module.type, module.name))
 
-  # TODO: support arch difference in generic way
-  # Currently, it is expected that only a couple of modules (e.g. partition_alloc, boringssl)
-  # need arch condition. So, for now, hardcoding arch condition
-  if module.name == "cronet_aml_base_allocator_partition_allocator_partition_alloc":
-    x86_srcs = module.srcs.copy()
-    x86_srcs.discard(
-      "base/allocator/partition_allocator/starscan/stack/asm/x64/push_registers_asm.cc")
-    x86_srcs.add("base/allocator/partition_allocator/starscan/stack/asm/x86/push_registers_asm.cc")
-    module.arch['x86'] = {'srcs': x86_srcs}
-    module.arch['x86_64'] = {'srcs': module.srcs.copy()}
-    module.srcs.clear()
-  elif module.name == "cronet_aml_third_party_boringssl_boringssl":
-    x86_srcs = module.srcs.copy()
-    x86_srcs.remove(":cronet_aml_third_party_boringssl_boringssl_asm")
-    x86_srcs.add(":cronet_aml_third_party_boringssl_boringssl_asm_x86")
-    module.arch['x86'] = {'srcs': x86_srcs}
-    module.arch['x86_64'] = {'srcs': module.srcs.copy()}
-    module.srcs.clear()
+  for arch_name, arch in target.arch.items():
+    for dep_name in arch.deps:
+      dep_module = create_modules_from_target(blueprint, gn, dep_name)
+      # Arch-specific dependencies currently only include cc_library_static.
+      # Revisit this approach once we need to support more target types.
+      if dep_module.type == 'cc_library_static':
+        module.target[arch_name].static_libs.add(dep_module.name)
+      else:
+        raise Error('Unsupported arch-specific dependency %s of target %s with type %s' %
+                    (dep_module.name, target.name, dep_module.type))
 
   return module
 
@@ -1209,14 +1231,6 @@ def create_blueprint_for_targets(gn, desc, targets):
 
   for target in targets:
     create_modules_from_target(blueprint, gn, target)
-
-  # Currently, multi tool chain is not supported for all targets and create_modules_from_target can
-  # not reach to this target by following the dependency.
-  # So it's required to specify explicitly.
-  boringssl_gn_target_name = ('//third_party/boringssl:boringssl_asm' +
-                             '(//build/toolchain/android:android_clang_x86)')
-  gn.parse_gn_desc(desc, boringssl_gn_target_name)
-  create_modules_from_target(blueprint, gn, boringssl_gn_target_name)
 
   create_java_module(blueprint, gn)
   update_jni_registration_module(blueprint, gn)
