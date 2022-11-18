@@ -2113,87 +2113,213 @@ genrule {
 // GN: //buildtools/third_party/libc++:libc++
 cc_defaults {
     name: "cronet_aml_buildtools_third_party_libc___libc__",
-    srcs: [
-        "buildtools/third_party/libc++/trunk/src/algorithm.cpp",
-        "buildtools/third_party/libc++/trunk/src/any.cpp",
-        "buildtools/third_party/libc++/trunk/src/atomic.cpp",
-        "buildtools/third_party/libc++/trunk/src/barrier.cpp",
-        "buildtools/third_party/libc++/trunk/src/bind.cpp",
-        "buildtools/third_party/libc++/trunk/src/charconv.cpp",
-        "buildtools/third_party/libc++/trunk/src/chrono.cpp",
-        "buildtools/third_party/libc++/trunk/src/condition_variable.cpp",
-        "buildtools/third_party/libc++/trunk/src/condition_variable_destructor.cpp",
-        "buildtools/third_party/libc++/trunk/src/exception.cpp",
-        "buildtools/third_party/libc++/trunk/src/format.cpp",
-        "buildtools/third_party/libc++/trunk/src/functional.cpp",
-        "buildtools/third_party/libc++/trunk/src/future.cpp",
-        "buildtools/third_party/libc++/trunk/src/hash.cpp",
-        "buildtools/third_party/libc++/trunk/src/ios.cpp",
-        "buildtools/third_party/libc++/trunk/src/ios.instantiations.cpp",
-        "buildtools/third_party/libc++/trunk/src/iostream.cpp",
-        "buildtools/third_party/libc++/trunk/src/legacy_pointer_safety.cpp",
-        "buildtools/third_party/libc++/trunk/src/locale.cpp",
-        "buildtools/third_party/libc++/trunk/src/memory.cpp",
-        "buildtools/third_party/libc++/trunk/src/mutex.cpp",
-        "buildtools/third_party/libc++/trunk/src/mutex_destructor.cpp",
-        "buildtools/third_party/libc++/trunk/src/new.cpp",
-        "buildtools/third_party/libc++/trunk/src/optional.cpp",
-        "buildtools/third_party/libc++/trunk/src/random.cpp",
-        "buildtools/third_party/libc++/trunk/src/random_shuffle.cpp",
-        "buildtools/third_party/libc++/trunk/src/regex.cpp",
-        "buildtools/third_party/libc++/trunk/src/ryu/d2fixed.cpp",
-        "buildtools/third_party/libc++/trunk/src/ryu/d2s.cpp",
-        "buildtools/third_party/libc++/trunk/src/ryu/f2s.cpp",
-        "buildtools/third_party/libc++/trunk/src/shared_mutex.cpp",
-        "buildtools/third_party/libc++/trunk/src/stdexcept.cpp",
-        "buildtools/third_party/libc++/trunk/src/string.cpp",
-        "buildtools/third_party/libc++/trunk/src/strstream.cpp",
-        "buildtools/third_party/libc++/trunk/src/system_error.cpp",
-        "buildtools/third_party/libc++/trunk/src/thread.cpp",
-        "buildtools/third_party/libc++/trunk/src/typeinfo.cpp",
-        "buildtools/third_party/libc++/trunk/src/utility.cpp",
-        "buildtools/third_party/libc++/trunk/src/valarray.cpp",
-        "buildtools/third_party/libc++/trunk/src/variant.cpp",
-        "buildtools/third_party/libc++/trunk/src/vector.cpp",
-        "buildtools/third_party/libc++/trunk/src/verbose_abort.cpp",
-    ],
+    target: {
+        android_x86: {
+            srcs: [
+                "buildtools/third_party/libc++/trunk/src/algorithm.cpp",
+                "buildtools/third_party/libc++/trunk/src/any.cpp",
+                "buildtools/third_party/libc++/trunk/src/atomic.cpp",
+                "buildtools/third_party/libc++/trunk/src/barrier.cpp",
+                "buildtools/third_party/libc++/trunk/src/bind.cpp",
+                "buildtools/third_party/libc++/trunk/src/charconv.cpp",
+                "buildtools/third_party/libc++/trunk/src/chrono.cpp",
+                "buildtools/third_party/libc++/trunk/src/condition_variable.cpp",
+                "buildtools/third_party/libc++/trunk/src/condition_variable_destructor.cpp",
+                "buildtools/third_party/libc++/trunk/src/exception.cpp",
+                "buildtools/third_party/libc++/trunk/src/format.cpp",
+                "buildtools/third_party/libc++/trunk/src/functional.cpp",
+                "buildtools/third_party/libc++/trunk/src/future.cpp",
+                "buildtools/third_party/libc++/trunk/src/hash.cpp",
+                "buildtools/third_party/libc++/trunk/src/ios.cpp",
+                "buildtools/third_party/libc++/trunk/src/ios.instantiations.cpp",
+                "buildtools/third_party/libc++/trunk/src/iostream.cpp",
+                "buildtools/third_party/libc++/trunk/src/legacy_pointer_safety.cpp",
+                "buildtools/third_party/libc++/trunk/src/locale.cpp",
+                "buildtools/third_party/libc++/trunk/src/memory.cpp",
+                "buildtools/third_party/libc++/trunk/src/mutex.cpp",
+                "buildtools/third_party/libc++/trunk/src/mutex_destructor.cpp",
+                "buildtools/third_party/libc++/trunk/src/new.cpp",
+                "buildtools/third_party/libc++/trunk/src/optional.cpp",
+                "buildtools/third_party/libc++/trunk/src/random.cpp",
+                "buildtools/third_party/libc++/trunk/src/random_shuffle.cpp",
+                "buildtools/third_party/libc++/trunk/src/regex.cpp",
+                "buildtools/third_party/libc++/trunk/src/ryu/d2fixed.cpp",
+                "buildtools/third_party/libc++/trunk/src/ryu/d2s.cpp",
+                "buildtools/third_party/libc++/trunk/src/ryu/f2s.cpp",
+                "buildtools/third_party/libc++/trunk/src/shared_mutex.cpp",
+                "buildtools/third_party/libc++/trunk/src/stdexcept.cpp",
+                "buildtools/third_party/libc++/trunk/src/string.cpp",
+                "buildtools/third_party/libc++/trunk/src/strstream.cpp",
+                "buildtools/third_party/libc++/trunk/src/system_error.cpp",
+                "buildtools/third_party/libc++/trunk/src/thread.cpp",
+                "buildtools/third_party/libc++/trunk/src/typeinfo.cpp",
+                "buildtools/third_party/libc++/trunk/src/utility.cpp",
+                "buildtools/third_party/libc++/trunk/src/valarray.cpp",
+                "buildtools/third_party/libc++/trunk/src/variant.cpp",
+                "buildtools/third_party/libc++/trunk/src/vector.cpp",
+                "buildtools/third_party/libc++/trunk/src/verbose_abort.cpp",
+            ],
+        },
+        android_x86_64: {
+            srcs: [
+                "buildtools/third_party/libc++/trunk/src/algorithm.cpp",
+                "buildtools/third_party/libc++/trunk/src/any.cpp",
+                "buildtools/third_party/libc++/trunk/src/atomic.cpp",
+                "buildtools/third_party/libc++/trunk/src/barrier.cpp",
+                "buildtools/third_party/libc++/trunk/src/bind.cpp",
+                "buildtools/third_party/libc++/trunk/src/charconv.cpp",
+                "buildtools/third_party/libc++/trunk/src/chrono.cpp",
+                "buildtools/third_party/libc++/trunk/src/condition_variable.cpp",
+                "buildtools/third_party/libc++/trunk/src/condition_variable_destructor.cpp",
+                "buildtools/third_party/libc++/trunk/src/exception.cpp",
+                "buildtools/third_party/libc++/trunk/src/format.cpp",
+                "buildtools/third_party/libc++/trunk/src/functional.cpp",
+                "buildtools/third_party/libc++/trunk/src/future.cpp",
+                "buildtools/third_party/libc++/trunk/src/hash.cpp",
+                "buildtools/third_party/libc++/trunk/src/ios.cpp",
+                "buildtools/third_party/libc++/trunk/src/ios.instantiations.cpp",
+                "buildtools/third_party/libc++/trunk/src/iostream.cpp",
+                "buildtools/third_party/libc++/trunk/src/legacy_pointer_safety.cpp",
+                "buildtools/third_party/libc++/trunk/src/locale.cpp",
+                "buildtools/third_party/libc++/trunk/src/memory.cpp",
+                "buildtools/third_party/libc++/trunk/src/mutex.cpp",
+                "buildtools/third_party/libc++/trunk/src/mutex_destructor.cpp",
+                "buildtools/third_party/libc++/trunk/src/new.cpp",
+                "buildtools/third_party/libc++/trunk/src/optional.cpp",
+                "buildtools/third_party/libc++/trunk/src/random.cpp",
+                "buildtools/third_party/libc++/trunk/src/random_shuffle.cpp",
+                "buildtools/third_party/libc++/trunk/src/regex.cpp",
+                "buildtools/third_party/libc++/trunk/src/ryu/d2fixed.cpp",
+                "buildtools/third_party/libc++/trunk/src/ryu/d2s.cpp",
+                "buildtools/third_party/libc++/trunk/src/ryu/f2s.cpp",
+                "buildtools/third_party/libc++/trunk/src/shared_mutex.cpp",
+                "buildtools/third_party/libc++/trunk/src/stdexcept.cpp",
+                "buildtools/third_party/libc++/trunk/src/string.cpp",
+                "buildtools/third_party/libc++/trunk/src/strstream.cpp",
+                "buildtools/third_party/libc++/trunk/src/system_error.cpp",
+                "buildtools/third_party/libc++/trunk/src/thread.cpp",
+                "buildtools/third_party/libc++/trunk/src/typeinfo.cpp",
+                "buildtools/third_party/libc++/trunk/src/utility.cpp",
+                "buildtools/third_party/libc++/trunk/src/valarray.cpp",
+                "buildtools/third_party/libc++/trunk/src/variant.cpp",
+                "buildtools/third_party/libc++/trunk/src/vector.cpp",
+                "buildtools/third_party/libc++/trunk/src/verbose_abort.cpp",
+            ],
+        },
+        host: {
+            srcs: [
+                "buildtools/third_party/libc++/trunk/src/algorithm.cpp",
+                "buildtools/third_party/libc++/trunk/src/any.cpp",
+                "buildtools/third_party/libc++/trunk/src/atomic.cpp",
+                "buildtools/third_party/libc++/trunk/src/barrier.cpp",
+                "buildtools/third_party/libc++/trunk/src/bind.cpp",
+                "buildtools/third_party/libc++/trunk/src/charconv.cpp",
+                "buildtools/third_party/libc++/trunk/src/chrono.cpp",
+                "buildtools/third_party/libc++/trunk/src/condition_variable.cpp",
+                "buildtools/third_party/libc++/trunk/src/condition_variable_destructor.cpp",
+                "buildtools/third_party/libc++/trunk/src/exception.cpp",
+                "buildtools/third_party/libc++/trunk/src/format.cpp",
+                "buildtools/third_party/libc++/trunk/src/functional.cpp",
+                "buildtools/third_party/libc++/trunk/src/future.cpp",
+                "buildtools/third_party/libc++/trunk/src/hash.cpp",
+                "buildtools/third_party/libc++/trunk/src/ios.cpp",
+                "buildtools/third_party/libc++/trunk/src/ios.instantiations.cpp",
+                "buildtools/third_party/libc++/trunk/src/iostream.cpp",
+                "buildtools/third_party/libc++/trunk/src/legacy_pointer_safety.cpp",
+                "buildtools/third_party/libc++/trunk/src/locale.cpp",
+                "buildtools/third_party/libc++/trunk/src/memory.cpp",
+                "buildtools/third_party/libc++/trunk/src/mutex.cpp",
+                "buildtools/third_party/libc++/trunk/src/mutex_destructor.cpp",
+                "buildtools/third_party/libc++/trunk/src/new.cpp",
+                "buildtools/third_party/libc++/trunk/src/optional.cpp",
+                "buildtools/third_party/libc++/trunk/src/random.cpp",
+                "buildtools/third_party/libc++/trunk/src/random_shuffle.cpp",
+                "buildtools/third_party/libc++/trunk/src/regex.cpp",
+                "buildtools/third_party/libc++/trunk/src/ryu/d2fixed.cpp",
+                "buildtools/third_party/libc++/trunk/src/ryu/d2s.cpp",
+                "buildtools/third_party/libc++/trunk/src/ryu/f2s.cpp",
+                "buildtools/third_party/libc++/trunk/src/shared_mutex.cpp",
+                "buildtools/third_party/libc++/trunk/src/stdexcept.cpp",
+                "buildtools/third_party/libc++/trunk/src/string.cpp",
+                "buildtools/third_party/libc++/trunk/src/strstream.cpp",
+                "buildtools/third_party/libc++/trunk/src/system_error.cpp",
+                "buildtools/third_party/libc++/trunk/src/thread.cpp",
+                "buildtools/third_party/libc++/trunk/src/typeinfo.cpp",
+                "buildtools/third_party/libc++/trunk/src/utility.cpp",
+                "buildtools/third_party/libc++/trunk/src/valarray.cpp",
+                "buildtools/third_party/libc++/trunk/src/variant.cpp",
+                "buildtools/third_party/libc++/trunk/src/vector.cpp",
+                "buildtools/third_party/libc++/trunk/src/verbose_abort.cpp",
+            ],
+        },
+    },
 }
 
 // GN: //buildtools/third_party/libc++abi:libc++abi
 cc_defaults {
     name: "cronet_aml_buildtools_third_party_libc__abi_libc__abi",
-    srcs: [
-        "buildtools/third_party/libc++abi/trunk/src/abort_message.cpp",
-        "buildtools/third_party/libc++abi/trunk/src/cxa_aux_runtime.cpp",
-        "buildtools/third_party/libc++abi/trunk/src/cxa_default_handlers.cpp",
-        "buildtools/third_party/libc++abi/trunk/src/cxa_exception.cpp",
-        "buildtools/third_party/libc++abi/trunk/src/cxa_exception_storage.cpp",
-        "buildtools/third_party/libc++abi/trunk/src/cxa_guard.cpp",
-        "buildtools/third_party/libc++abi/trunk/src/cxa_handlers.cpp",
-        "buildtools/third_party/libc++abi/trunk/src/cxa_personality.cpp",
-        "buildtools/third_party/libc++abi/trunk/src/cxa_thread_atexit.cpp",
-        "buildtools/third_party/libc++abi/trunk/src/cxa_vector.cpp",
-        "buildtools/third_party/libc++abi/trunk/src/cxa_virtual.cpp",
-        "buildtools/third_party/libc++abi/trunk/src/fallback_malloc.cpp",
-        "buildtools/third_party/libc++abi/trunk/src/private_typeinfo.cpp",
-        "buildtools/third_party/libc++abi/trunk/src/stdlib_exception.cpp",
-        "buildtools/third_party/libc++abi/trunk/src/stdlib_stdexcept.cpp",
-        "buildtools/third_party/libc++abi/trunk/src/stdlib_typeinfo.cpp",
-    ],
     target: {
         android_x86: {
             srcs: [
                 "buildtools/third_party/libc++abi/cxa_demangle_stub.cc",
+                "buildtools/third_party/libc++abi/trunk/src/abort_message.cpp",
+                "buildtools/third_party/libc++abi/trunk/src/cxa_aux_runtime.cpp",
+                "buildtools/third_party/libc++abi/trunk/src/cxa_default_handlers.cpp",
+                "buildtools/third_party/libc++abi/trunk/src/cxa_exception.cpp",
+                "buildtools/third_party/libc++abi/trunk/src/cxa_exception_storage.cpp",
+                "buildtools/third_party/libc++abi/trunk/src/cxa_guard.cpp",
+                "buildtools/third_party/libc++abi/trunk/src/cxa_handlers.cpp",
+                "buildtools/third_party/libc++abi/trunk/src/cxa_personality.cpp",
+                "buildtools/third_party/libc++abi/trunk/src/cxa_thread_atexit.cpp",
+                "buildtools/third_party/libc++abi/trunk/src/cxa_vector.cpp",
+                "buildtools/third_party/libc++abi/trunk/src/cxa_virtual.cpp",
+                "buildtools/third_party/libc++abi/trunk/src/fallback_malloc.cpp",
+                "buildtools/third_party/libc++abi/trunk/src/private_typeinfo.cpp",
+                "buildtools/third_party/libc++abi/trunk/src/stdlib_exception.cpp",
+                "buildtools/third_party/libc++abi/trunk/src/stdlib_stdexcept.cpp",
+                "buildtools/third_party/libc++abi/trunk/src/stdlib_typeinfo.cpp",
             ],
         },
         android_x86_64: {
             srcs: [
                 "buildtools/third_party/libc++abi/cxa_demangle_stub.cc",
+                "buildtools/third_party/libc++abi/trunk/src/abort_message.cpp",
+                "buildtools/third_party/libc++abi/trunk/src/cxa_aux_runtime.cpp",
+                "buildtools/third_party/libc++abi/trunk/src/cxa_default_handlers.cpp",
+                "buildtools/third_party/libc++abi/trunk/src/cxa_exception.cpp",
+                "buildtools/third_party/libc++abi/trunk/src/cxa_exception_storage.cpp",
+                "buildtools/third_party/libc++abi/trunk/src/cxa_guard.cpp",
+                "buildtools/third_party/libc++abi/trunk/src/cxa_handlers.cpp",
+                "buildtools/third_party/libc++abi/trunk/src/cxa_personality.cpp",
+                "buildtools/third_party/libc++abi/trunk/src/cxa_thread_atexit.cpp",
+                "buildtools/third_party/libc++abi/trunk/src/cxa_vector.cpp",
+                "buildtools/third_party/libc++abi/trunk/src/cxa_virtual.cpp",
+                "buildtools/third_party/libc++abi/trunk/src/fallback_malloc.cpp",
+                "buildtools/third_party/libc++abi/trunk/src/private_typeinfo.cpp",
+                "buildtools/third_party/libc++abi/trunk/src/stdlib_exception.cpp",
+                "buildtools/third_party/libc++abi/trunk/src/stdlib_stdexcept.cpp",
+                "buildtools/third_party/libc++abi/trunk/src/stdlib_typeinfo.cpp",
             ],
         },
         host: {
             srcs: [
+                "buildtools/third_party/libc++abi/trunk/src/abort_message.cpp",
+                "buildtools/third_party/libc++abi/trunk/src/cxa_aux_runtime.cpp",
+                "buildtools/third_party/libc++abi/trunk/src/cxa_default_handlers.cpp",
                 "buildtools/third_party/libc++abi/trunk/src/cxa_demangle.cpp",
+                "buildtools/third_party/libc++abi/trunk/src/cxa_exception.cpp",
+                "buildtools/third_party/libc++abi/trunk/src/cxa_exception_storage.cpp",
+                "buildtools/third_party/libc++abi/trunk/src/cxa_guard.cpp",
+                "buildtools/third_party/libc++abi/trunk/src/cxa_handlers.cpp",
+                "buildtools/third_party/libc++abi/trunk/src/cxa_personality.cpp",
+                "buildtools/third_party/libc++abi/trunk/src/cxa_thread_atexit.cpp",
+                "buildtools/third_party/libc++abi/trunk/src/cxa_vector.cpp",
+                "buildtools/third_party/libc++abi/trunk/src/cxa_virtual.cpp",
+                "buildtools/third_party/libc++abi/trunk/src/fallback_malloc.cpp",
+                "buildtools/third_party/libc++abi/trunk/src/private_typeinfo.cpp",
+                "buildtools/third_party/libc++abi/trunk/src/stdlib_exception.cpp",
+                "buildtools/third_party/libc++abi/trunk/src/stdlib_stdexcept.cpp",
+                "buildtools/third_party/libc++abi/trunk/src/stdlib_typeinfo.cpp",
             ],
         },
     },
@@ -2202,15 +2328,30 @@ cc_defaults {
 // GN: //buildtools/third_party/libunwind:libunwind
 cc_defaults {
     name: "cronet_aml_buildtools_third_party_libunwind_libunwind",
-    srcs: [
-        "buildtools/third_party/libunwind/trunk/src/Unwind-EHABI.cpp",
-        "buildtools/third_party/libunwind/trunk/src/Unwind-sjlj.c",
-        "buildtools/third_party/libunwind/trunk/src/UnwindLevel1-gcc-ext.c",
-        "buildtools/third_party/libunwind/trunk/src/UnwindLevel1.c",
-        "buildtools/third_party/libunwind/trunk/src/UnwindRegistersRestore.S",
-        "buildtools/third_party/libunwind/trunk/src/UnwindRegistersSave.S",
-        "buildtools/third_party/libunwind/trunk/src/libunwind.cpp",
-    ],
+    target: {
+        android_x86: {
+            srcs: [
+                "buildtools/third_party/libunwind/trunk/src/Unwind-EHABI.cpp",
+                "buildtools/third_party/libunwind/trunk/src/Unwind-sjlj.c",
+                "buildtools/third_party/libunwind/trunk/src/UnwindLevel1-gcc-ext.c",
+                "buildtools/third_party/libunwind/trunk/src/UnwindLevel1.c",
+                "buildtools/third_party/libunwind/trunk/src/UnwindRegistersRestore.S",
+                "buildtools/third_party/libunwind/trunk/src/UnwindRegistersSave.S",
+                "buildtools/third_party/libunwind/trunk/src/libunwind.cpp",
+            ],
+        },
+        android_x86_64: {
+            srcs: [
+                "buildtools/third_party/libunwind/trunk/src/Unwind-EHABI.cpp",
+                "buildtools/third_party/libunwind/trunk/src/Unwind-sjlj.c",
+                "buildtools/third_party/libunwind/trunk/src/UnwindLevel1-gcc-ext.c",
+                "buildtools/third_party/libunwind/trunk/src/UnwindLevel1.c",
+                "buildtools/third_party/libunwind/trunk/src/UnwindRegistersRestore.S",
+                "buildtools/third_party/libunwind/trunk/src/UnwindRegistersSave.S",
+                "buildtools/third_party/libunwind/trunk/src/libunwind.cpp",
+            ],
+        },
+    },
 }
 
 // GN: //components/cronet/android:buildflags
@@ -2472,15 +2613,76 @@ genrule {
 // GN: //components/cronet/android:cronet_static
 cc_defaults {
     name: "cronet_aml_components_cronet_android_cronet_static",
-    srcs: [
-        "components/cronet/android/cronet_bidirectional_stream_adapter.cc",
-        "components/cronet/android/cronet_context_adapter.cc",
-        "components/cronet/android/cronet_library_loader.cc",
-        "components/cronet/android/cronet_upload_data_stream_adapter.cc",
-        "components/cronet/android/cronet_url_request_adapter.cc",
-        "components/cronet/android/io_buffer_with_byte_buffer.cc",
-        "components/cronet/android/url_request_error.cc",
-    ],
+    target: {
+        android_x86: {
+            srcs: [
+                "components/cronet/android/cronet_bidirectional_stream_adapter.cc",
+                "components/cronet/android/cronet_context_adapter.cc",
+                "components/cronet/android/cronet_library_loader.cc",
+                "components/cronet/android/cronet_upload_data_stream_adapter.cc",
+                "components/cronet/android/cronet_url_request_adapter.cc",
+                "components/cronet/android/io_buffer_with_byte_buffer.cc",
+                "components/cronet/android/url_request_error.cc",
+            ],
+            static_libs: [
+                "cronet_aml_base_allocator_partition_allocator_partition_alloc",
+                "cronet_aml_base_base",
+                "cronet_aml_base_base_static",
+                "cronet_aml_base_third_party_double_conversion_double_conversion",
+                "cronet_aml_base_third_party_dynamic_annotations_dynamic_annotations",
+                "cronet_aml_components_prefs_prefs",
+                "cronet_aml_crypto_crypto",
+                "cronet_aml_net_net",
+                "cronet_aml_net_preload_decoder",
+                "cronet_aml_net_third_party_quiche_quiche",
+                "cronet_aml_net_uri_template",
+                "cronet_aml_third_party_boringssl_boringssl",
+                "cronet_aml_third_party_brotli_common",
+                "cronet_aml_third_party_brotli_dec",
+                "cronet_aml_third_party_icu_icui18n",
+                "cronet_aml_third_party_icu_icuuc_private",
+                "cronet_aml_third_party_libevent_libevent",
+                "cronet_aml_third_party_modp_b64_modp_b64",
+                "cronet_aml_third_party_protobuf_protobuf_lite",
+                "cronet_aml_third_party_zlib_zlib",
+                "cronet_aml_url_url",
+            ],
+        },
+        android_x86_64: {
+            srcs: [
+                "components/cronet/android/cronet_bidirectional_stream_adapter.cc",
+                "components/cronet/android/cronet_context_adapter.cc",
+                "components/cronet/android/cronet_library_loader.cc",
+                "components/cronet/android/cronet_upload_data_stream_adapter.cc",
+                "components/cronet/android/cronet_url_request_adapter.cc",
+                "components/cronet/android/io_buffer_with_byte_buffer.cc",
+                "components/cronet/android/url_request_error.cc",
+            ],
+            static_libs: [
+                "cronet_aml_base_allocator_partition_allocator_partition_alloc",
+                "cronet_aml_base_base",
+                "cronet_aml_base_base_static",
+                "cronet_aml_base_third_party_double_conversion_double_conversion",
+                "cronet_aml_base_third_party_dynamic_annotations_dynamic_annotations",
+                "cronet_aml_components_prefs_prefs",
+                "cronet_aml_crypto_crypto",
+                "cronet_aml_net_net",
+                "cronet_aml_net_preload_decoder",
+                "cronet_aml_net_third_party_quiche_quiche",
+                "cronet_aml_net_uri_template",
+                "cronet_aml_third_party_boringssl_boringssl",
+                "cronet_aml_third_party_brotli_common",
+                "cronet_aml_third_party_brotli_dec",
+                "cronet_aml_third_party_icu_icui18n",
+                "cronet_aml_third_party_icu_icuuc_private",
+                "cronet_aml_third_party_libevent_libevent",
+                "cronet_aml_third_party_modp_b64_modp_b64",
+                "cronet_aml_third_party_protobuf_protobuf_lite",
+                "cronet_aml_third_party_zlib_zlib",
+                "cronet_aml_url_url",
+            ],
+        },
+    },
 }
 
 // GN: //components/cronet:cronet_buildflags
@@ -2506,15 +2708,76 @@ genrule {
 // GN: //components/cronet:cronet_common
 cc_defaults {
     name: "cronet_aml_components_cronet_cronet_common",
-    srcs: [
-        "components/cronet/cronet_context.cc",
-        "components/cronet/cronet_prefs_manager.cc",
-        "components/cronet/cronet_upload_data_stream.cc",
-        "components/cronet/cronet_url_request.cc",
-        "components/cronet/host_cache_persistence_manager.cc",
-        "components/cronet/stale_host_resolver.cc",
-        "components/cronet/url_request_context_config.cc",
-    ],
+    target: {
+        android_x86: {
+            srcs: [
+                "components/cronet/cronet_context.cc",
+                "components/cronet/cronet_prefs_manager.cc",
+                "components/cronet/cronet_upload_data_stream.cc",
+                "components/cronet/cronet_url_request.cc",
+                "components/cronet/host_cache_persistence_manager.cc",
+                "components/cronet/stale_host_resolver.cc",
+                "components/cronet/url_request_context_config.cc",
+            ],
+            static_libs: [
+                "cronet_aml_base_allocator_partition_allocator_partition_alloc",
+                "cronet_aml_base_base",
+                "cronet_aml_base_base_static",
+                "cronet_aml_base_third_party_double_conversion_double_conversion",
+                "cronet_aml_base_third_party_dynamic_annotations_dynamic_annotations",
+                "cronet_aml_components_prefs_prefs",
+                "cronet_aml_crypto_crypto",
+                "cronet_aml_net_net",
+                "cronet_aml_net_preload_decoder",
+                "cronet_aml_net_third_party_quiche_quiche",
+                "cronet_aml_net_uri_template",
+                "cronet_aml_third_party_boringssl_boringssl",
+                "cronet_aml_third_party_brotli_common",
+                "cronet_aml_third_party_brotli_dec",
+                "cronet_aml_third_party_icu_icui18n",
+                "cronet_aml_third_party_icu_icuuc_private",
+                "cronet_aml_third_party_libevent_libevent",
+                "cronet_aml_third_party_modp_b64_modp_b64",
+                "cronet_aml_third_party_protobuf_protobuf_lite",
+                "cronet_aml_third_party_zlib_zlib",
+                "cronet_aml_url_url",
+            ],
+        },
+        android_x86_64: {
+            srcs: [
+                "components/cronet/cronet_context.cc",
+                "components/cronet/cronet_prefs_manager.cc",
+                "components/cronet/cronet_upload_data_stream.cc",
+                "components/cronet/cronet_url_request.cc",
+                "components/cronet/host_cache_persistence_manager.cc",
+                "components/cronet/stale_host_resolver.cc",
+                "components/cronet/url_request_context_config.cc",
+            ],
+            static_libs: [
+                "cronet_aml_base_allocator_partition_allocator_partition_alloc",
+                "cronet_aml_base_base",
+                "cronet_aml_base_base_static",
+                "cronet_aml_base_third_party_double_conversion_double_conversion",
+                "cronet_aml_base_third_party_dynamic_annotations_dynamic_annotations",
+                "cronet_aml_components_prefs_prefs",
+                "cronet_aml_crypto_crypto",
+                "cronet_aml_net_net",
+                "cronet_aml_net_preload_decoder",
+                "cronet_aml_net_third_party_quiche_quiche",
+                "cronet_aml_net_uri_template",
+                "cronet_aml_third_party_boringssl_boringssl",
+                "cronet_aml_third_party_brotli_common",
+                "cronet_aml_third_party_brotli_dec",
+                "cronet_aml_third_party_icu_icui18n",
+                "cronet_aml_third_party_icu_icuuc_private",
+                "cronet_aml_third_party_libevent_libevent",
+                "cronet_aml_third_party_modp_b64_modp_b64",
+                "cronet_aml_third_party_protobuf_protobuf_lite",
+                "cronet_aml_third_party_zlib_zlib",
+                "cronet_aml_url_url",
+            ],
+        },
+    },
 }
 
 // GN: //components/cronet:cronet_version_header
@@ -2548,39 +2811,219 @@ genrule {
 // GN: //components/cronet:metrics_util
 cc_defaults {
     name: "cronet_aml_components_cronet_metrics_util",
-    srcs: [
-        "components/cronet/metrics_util.cc",
-    ],
+    target: {
+        android_x86: {
+            srcs: [
+                "components/cronet/metrics_util.cc",
+            ],
+            static_libs: [
+                "cronet_aml_base_allocator_partition_allocator_partition_alloc",
+                "cronet_aml_base_base",
+                "cronet_aml_base_base_static",
+                "cronet_aml_base_third_party_double_conversion_double_conversion",
+                "cronet_aml_base_third_party_dynamic_annotations_dynamic_annotations",
+                "cronet_aml_third_party_boringssl_boringssl",
+                "cronet_aml_third_party_icu_icui18n",
+                "cronet_aml_third_party_icu_icuuc_private",
+                "cronet_aml_third_party_libevent_libevent",
+                "cronet_aml_third_party_modp_b64_modp_b64",
+            ],
+        },
+        android_x86_64: {
+            srcs: [
+                "components/cronet/metrics_util.cc",
+            ],
+            static_libs: [
+                "cronet_aml_base_allocator_partition_allocator_partition_alloc",
+                "cronet_aml_base_base",
+                "cronet_aml_base_base_static",
+                "cronet_aml_base_third_party_double_conversion_double_conversion",
+                "cronet_aml_base_third_party_dynamic_annotations_dynamic_annotations",
+                "cronet_aml_third_party_boringssl_boringssl",
+                "cronet_aml_third_party_icu_icui18n",
+                "cronet_aml_third_party_icu_icuuc_private",
+                "cronet_aml_third_party_libevent_libevent",
+                "cronet_aml_third_party_modp_b64_modp_b64",
+            ],
+        },
+    },
 }
 
 // GN: //components/cronet/native:cronet_native_headers
 cc_defaults {
     name: "cronet_aml_components_cronet_native_cronet_native_headers",
+    target: {
+        android_x86: {
+            static_libs: [
+                "cronet_aml_base_allocator_partition_allocator_partition_alloc",
+                "cronet_aml_base_base",
+                "cronet_aml_base_base_static",
+                "cronet_aml_base_third_party_double_conversion_double_conversion",
+                "cronet_aml_base_third_party_dynamic_annotations_dynamic_annotations",
+                "cronet_aml_third_party_boringssl_boringssl",
+                "cronet_aml_third_party_icu_icui18n",
+                "cronet_aml_third_party_icu_icuuc_private",
+                "cronet_aml_third_party_libevent_libevent",
+                "cronet_aml_third_party_modp_b64_modp_b64",
+            ],
+        },
+        android_x86_64: {
+            static_libs: [
+                "cronet_aml_base_allocator_partition_allocator_partition_alloc",
+                "cronet_aml_base_base",
+                "cronet_aml_base_base_static",
+                "cronet_aml_base_third_party_double_conversion_double_conversion",
+                "cronet_aml_base_third_party_dynamic_annotations_dynamic_annotations",
+                "cronet_aml_third_party_boringssl_boringssl",
+                "cronet_aml_third_party_icu_icui18n",
+                "cronet_aml_third_party_icu_icuuc_private",
+                "cronet_aml_third_party_libevent_libevent",
+                "cronet_aml_third_party_modp_b64_modp_b64",
+            ],
+        },
+    },
 }
 
 // GN: //components/cronet/native:cronet_native_impl
 cc_defaults {
     name: "cronet_aml_components_cronet_native_cronet_native_impl",
-    srcs: [
-        "components/cronet/native/buffer.cc",
-        "components/cronet/native/engine.cc",
-        "components/cronet/native/generated/cronet.idl_impl_interface.cc",
-        "components/cronet/native/generated/cronet.idl_impl_struct.cc",
-        "components/cronet/native/io_buffer_with_cronet_buffer.cc",
-        "components/cronet/native/native_metrics_util.cc",
-        "components/cronet/native/runnables.cc",
-        "components/cronet/native/upload_data_sink.cc",
-        "components/cronet/native/url_request.cc",
-    ],
+    target: {
+        android_x86: {
+            srcs: [
+                "components/cronet/native/buffer.cc",
+                "components/cronet/native/engine.cc",
+                "components/cronet/native/generated/cronet.idl_impl_interface.cc",
+                "components/cronet/native/generated/cronet.idl_impl_struct.cc",
+                "components/cronet/native/io_buffer_with_cronet_buffer.cc",
+                "components/cronet/native/native_metrics_util.cc",
+                "components/cronet/native/runnables.cc",
+                "components/cronet/native/upload_data_sink.cc",
+                "components/cronet/native/url_request.cc",
+            ],
+            static_libs: [
+                "cronet_aml_base_allocator_partition_allocator_partition_alloc",
+                "cronet_aml_base_base",
+                "cronet_aml_base_base_static",
+                "cronet_aml_base_third_party_double_conversion_double_conversion",
+                "cronet_aml_base_third_party_dynamic_annotations_dynamic_annotations",
+                "cronet_aml_components_prefs_prefs",
+                "cronet_aml_crypto_crypto",
+                "cronet_aml_net_net",
+                "cronet_aml_net_preload_decoder",
+                "cronet_aml_net_third_party_quiche_quiche",
+                "cronet_aml_net_uri_template",
+                "cronet_aml_third_party_boringssl_boringssl",
+                "cronet_aml_third_party_brotli_common",
+                "cronet_aml_third_party_brotli_dec",
+                "cronet_aml_third_party_icu_icui18n",
+                "cronet_aml_third_party_icu_icuuc_private",
+                "cronet_aml_third_party_libevent_libevent",
+                "cronet_aml_third_party_modp_b64_modp_b64",
+                "cronet_aml_third_party_protobuf_protobuf_lite",
+                "cronet_aml_third_party_zlib_zlib",
+                "cronet_aml_url_url",
+            ],
+        },
+        android_x86_64: {
+            srcs: [
+                "components/cronet/native/buffer.cc",
+                "components/cronet/native/engine.cc",
+                "components/cronet/native/generated/cronet.idl_impl_interface.cc",
+                "components/cronet/native/generated/cronet.idl_impl_struct.cc",
+                "components/cronet/native/io_buffer_with_cronet_buffer.cc",
+                "components/cronet/native/native_metrics_util.cc",
+                "components/cronet/native/runnables.cc",
+                "components/cronet/native/upload_data_sink.cc",
+                "components/cronet/native/url_request.cc",
+            ],
+            static_libs: [
+                "cronet_aml_base_allocator_partition_allocator_partition_alloc",
+                "cronet_aml_base_base",
+                "cronet_aml_base_base_static",
+                "cronet_aml_base_third_party_double_conversion_double_conversion",
+                "cronet_aml_base_third_party_dynamic_annotations_dynamic_annotations",
+                "cronet_aml_components_prefs_prefs",
+                "cronet_aml_crypto_crypto",
+                "cronet_aml_net_net",
+                "cronet_aml_net_preload_decoder",
+                "cronet_aml_net_third_party_quiche_quiche",
+                "cronet_aml_net_uri_template",
+                "cronet_aml_third_party_boringssl_boringssl",
+                "cronet_aml_third_party_brotli_common",
+                "cronet_aml_third_party_brotli_dec",
+                "cronet_aml_third_party_icu_icui18n",
+                "cronet_aml_third_party_icu_icuuc_private",
+                "cronet_aml_third_party_libevent_libevent",
+                "cronet_aml_third_party_modp_b64_modp_b64",
+                "cronet_aml_third_party_protobuf_protobuf_lite",
+                "cronet_aml_third_party_zlib_zlib",
+                "cronet_aml_url_url",
+            ],
+        },
+    },
 }
 
 // GN: //components/grpc_support:grpc_support
 cc_defaults {
     name: "cronet_aml_components_grpc_support_grpc_support",
-    srcs: [
-        "components/grpc_support/bidirectional_stream.cc",
-        "components/grpc_support/bidirectional_stream_c.cc",
-    ],
+    target: {
+        android_x86: {
+            srcs: [
+                "components/grpc_support/bidirectional_stream.cc",
+                "components/grpc_support/bidirectional_stream_c.cc",
+            ],
+            static_libs: [
+                "cronet_aml_base_allocator_partition_allocator_partition_alloc",
+                "cronet_aml_base_base",
+                "cronet_aml_base_base_static",
+                "cronet_aml_base_third_party_double_conversion_double_conversion",
+                "cronet_aml_base_third_party_dynamic_annotations_dynamic_annotations",
+                "cronet_aml_crypto_crypto",
+                "cronet_aml_net_net",
+                "cronet_aml_net_preload_decoder",
+                "cronet_aml_net_third_party_quiche_quiche",
+                "cronet_aml_net_uri_template",
+                "cronet_aml_third_party_boringssl_boringssl",
+                "cronet_aml_third_party_brotli_common",
+                "cronet_aml_third_party_brotli_dec",
+                "cronet_aml_third_party_icu_icui18n",
+                "cronet_aml_third_party_icu_icuuc_private",
+                "cronet_aml_third_party_libevent_libevent",
+                "cronet_aml_third_party_modp_b64_modp_b64",
+                "cronet_aml_third_party_protobuf_protobuf_lite",
+                "cronet_aml_third_party_zlib_zlib",
+                "cronet_aml_url_url",
+            ],
+        },
+        android_x86_64: {
+            srcs: [
+                "components/grpc_support/bidirectional_stream.cc",
+                "components/grpc_support/bidirectional_stream_c.cc",
+            ],
+            static_libs: [
+                "cronet_aml_base_allocator_partition_allocator_partition_alloc",
+                "cronet_aml_base_base",
+                "cronet_aml_base_base_static",
+                "cronet_aml_base_third_party_double_conversion_double_conversion",
+                "cronet_aml_base_third_party_dynamic_annotations_dynamic_annotations",
+                "cronet_aml_crypto_crypto",
+                "cronet_aml_net_net",
+                "cronet_aml_net_preload_decoder",
+                "cronet_aml_net_third_party_quiche_quiche",
+                "cronet_aml_net_uri_template",
+                "cronet_aml_third_party_boringssl_boringssl",
+                "cronet_aml_third_party_brotli_common",
+                "cronet_aml_third_party_brotli_dec",
+                "cronet_aml_third_party_icu_icui18n",
+                "cronet_aml_third_party_icu_icuuc_private",
+                "cronet_aml_third_party_libevent_libevent",
+                "cronet_aml_third_party_modp_b64_modp_b64",
+                "cronet_aml_third_party_protobuf_protobuf_lite",
+                "cronet_aml_third_party_zlib_zlib",
+                "cronet_aml_url_url",
+            ],
+        },
+    },
 }
 
 // GN: //components/grpc_support:headers
@@ -2591,10 +3034,46 @@ cc_defaults {
 // GN: //components/metrics:library_support
 cc_defaults {
     name: "cronet_aml_components_metrics_library_support",
-    srcs: [
-        "components/metrics/histogram_encoder.cc",
-        "components/metrics/library_support/histogram_manager.cc",
-    ],
+    target: {
+        android_x86: {
+            srcs: [
+                "components/metrics/histogram_encoder.cc",
+                "components/metrics/library_support/histogram_manager.cc",
+            ],
+            static_libs: [
+                "cronet_aml_base_allocator_partition_allocator_partition_alloc",
+                "cronet_aml_base_base",
+                "cronet_aml_base_base_static",
+                "cronet_aml_base_third_party_double_conversion_double_conversion",
+                "cronet_aml_base_third_party_dynamic_annotations_dynamic_annotations",
+                "cronet_aml_third_party_boringssl_boringssl",
+                "cronet_aml_third_party_icu_icui18n",
+                "cronet_aml_third_party_icu_icuuc_private",
+                "cronet_aml_third_party_libevent_libevent",
+                "cronet_aml_third_party_modp_b64_modp_b64",
+                "cronet_aml_third_party_protobuf_protobuf_lite",
+            ],
+        },
+        android_x86_64: {
+            srcs: [
+                "components/metrics/histogram_encoder.cc",
+                "components/metrics/library_support/histogram_manager.cc",
+            ],
+            static_libs: [
+                "cronet_aml_base_allocator_partition_allocator_partition_alloc",
+                "cronet_aml_base_base",
+                "cronet_aml_base_base_static",
+                "cronet_aml_base_third_party_double_conversion_double_conversion",
+                "cronet_aml_base_third_party_dynamic_annotations_dynamic_annotations",
+                "cronet_aml_third_party_boringssl_boringssl",
+                "cronet_aml_third_party_icu_icui18n",
+                "cronet_aml_third_party_icu_icuuc_private",
+                "cronet_aml_third_party_libevent_libevent",
+                "cronet_aml_third_party_modp_b64_modp_b64",
+                "cronet_aml_third_party_protobuf_protobuf_lite",
+            ],
+        },
+    },
 }
 
 // GN: //components/nacl/common:buildflags
@@ -3025,6 +3504,36 @@ genrule {
 // GN: //net:constants
 cc_defaults {
     name: "cronet_aml_net_constants",
+    target: {
+        android_x86: {
+            static_libs: [
+                "cronet_aml_base_allocator_partition_allocator_partition_alloc",
+                "cronet_aml_base_base",
+                "cronet_aml_base_base_static",
+                "cronet_aml_base_third_party_double_conversion_double_conversion",
+                "cronet_aml_base_third_party_dynamic_annotations_dynamic_annotations",
+                "cronet_aml_third_party_boringssl_boringssl",
+                "cronet_aml_third_party_icu_icui18n",
+                "cronet_aml_third_party_icu_icuuc_private",
+                "cronet_aml_third_party_libevent_libevent",
+                "cronet_aml_third_party_modp_b64_modp_b64",
+            ],
+        },
+        android_x86_64: {
+            static_libs: [
+                "cronet_aml_base_allocator_partition_allocator_partition_alloc",
+                "cronet_aml_base_base",
+                "cronet_aml_base_base_static",
+                "cronet_aml_base_third_party_double_conversion_double_conversion",
+                "cronet_aml_base_third_party_dynamic_annotations_dynamic_annotations",
+                "cronet_aml_third_party_boringssl_boringssl",
+                "cronet_aml_third_party_icu_icui18n",
+                "cronet_aml_third_party_icu_icuuc_private",
+                "cronet_aml_third_party_libevent_libevent",
+                "cronet_aml_third_party_modp_b64_modp_b64",
+            ],
+        },
+    },
 }
 
 // GN: //net/data/ssl/chrome_root_store:gen_root_store_inc
@@ -3053,88 +3562,476 @@ genrule {
 // GN: //net/dns:dns
 cc_defaults {
     name: "cronet_aml_net_dns_dns",
-    srcs: [
-        "net/dns/address_info.cc",
-        "net/dns/address_sorter_posix.cc",
-        "net/dns/context_host_resolver.cc",
-        "net/dns/dns_alias_utility.cc",
-        "net/dns/dns_client.cc",
-        "net/dns/dns_config.cc",
-        "net/dns/dns_config_service.cc",
-        "net/dns/dns_config_service_android.cc",
-        "net/dns/dns_hosts.cc",
-        "net/dns/dns_query.cc",
-        "net/dns/dns_reloader.cc",
-        "net/dns/dns_response.cc",
-        "net/dns/dns_response_result_extractor.cc",
-        "net/dns/dns_server_iterator.cc",
-        "net/dns/dns_session.cc",
-        "net/dns/dns_transaction.cc",
-        "net/dns/dns_udp_tracker.cc",
-        "net/dns/dns_util.cc",
-        "net/dns/host_cache.cc",
-        "net/dns/host_resolver.cc",
-        "net/dns/host_resolver_manager.cc",
-        "net/dns/host_resolver_mdns_listener_impl.cc",
-        "net/dns/host_resolver_mdns_task.cc",
-        "net/dns/host_resolver_nat64_task.cc",
-        "net/dns/host_resolver_proc.cc",
-        "net/dns/host_resolver_system_task.cc",
-        "net/dns/https_record_rdata.cc",
-        "net/dns/httpssvc_metrics.cc",
-        "net/dns/mapped_host_resolver.cc",
-        "net/dns/nsswitch_reader.cc",
-        "net/dns/opt_record_rdata.cc",
-        "net/dns/record_parsed.cc",
-        "net/dns/record_rdata.cc",
-        "net/dns/resolve_context.cc",
-        "net/dns/serial_worker.cc",
-        "net/dns/system_dns_config_change_notifier.cc",
-        "net/dns/test_dns_config_service.cc",
-    ],
+    target: {
+        android_x86: {
+            srcs: [
+                "net/dns/address_info.cc",
+                "net/dns/address_sorter_posix.cc",
+                "net/dns/context_host_resolver.cc",
+                "net/dns/dns_alias_utility.cc",
+                "net/dns/dns_client.cc",
+                "net/dns/dns_config.cc",
+                "net/dns/dns_config_service.cc",
+                "net/dns/dns_config_service_android.cc",
+                "net/dns/dns_hosts.cc",
+                "net/dns/dns_query.cc",
+                "net/dns/dns_reloader.cc",
+                "net/dns/dns_response.cc",
+                "net/dns/dns_response_result_extractor.cc",
+                "net/dns/dns_server_iterator.cc",
+                "net/dns/dns_session.cc",
+                "net/dns/dns_transaction.cc",
+                "net/dns/dns_udp_tracker.cc",
+                "net/dns/dns_util.cc",
+                "net/dns/host_cache.cc",
+                "net/dns/host_resolver.cc",
+                "net/dns/host_resolver_manager.cc",
+                "net/dns/host_resolver_mdns_listener_impl.cc",
+                "net/dns/host_resolver_mdns_task.cc",
+                "net/dns/host_resolver_nat64_task.cc",
+                "net/dns/host_resolver_proc.cc",
+                "net/dns/host_resolver_system_task.cc",
+                "net/dns/https_record_rdata.cc",
+                "net/dns/httpssvc_metrics.cc",
+                "net/dns/mapped_host_resolver.cc",
+                "net/dns/nsswitch_reader.cc",
+                "net/dns/opt_record_rdata.cc",
+                "net/dns/record_parsed.cc",
+                "net/dns/record_rdata.cc",
+                "net/dns/resolve_context.cc",
+                "net/dns/serial_worker.cc",
+                "net/dns/system_dns_config_change_notifier.cc",
+                "net/dns/test_dns_config_service.cc",
+            ],
+            static_libs: [
+                "cronet_aml_base_allocator_partition_allocator_partition_alloc",
+                "cronet_aml_base_base",
+                "cronet_aml_base_base_static",
+                "cronet_aml_base_third_party_double_conversion_double_conversion",
+                "cronet_aml_base_third_party_dynamic_annotations_dynamic_annotations",
+                "cronet_aml_crypto_crypto",
+                "cronet_aml_net_preload_decoder",
+                "cronet_aml_net_third_party_quiche_quiche",
+                "cronet_aml_net_uri_template",
+                "cronet_aml_third_party_boringssl_boringssl",
+                "cronet_aml_third_party_brotli_common",
+                "cronet_aml_third_party_brotli_dec",
+                "cronet_aml_third_party_icu_icui18n",
+                "cronet_aml_third_party_icu_icuuc_private",
+                "cronet_aml_third_party_libevent_libevent",
+                "cronet_aml_third_party_modp_b64_modp_b64",
+                "cronet_aml_third_party_protobuf_protobuf_lite",
+                "cronet_aml_third_party_zlib_zlib",
+                "cronet_aml_url_url",
+            ],
+        },
+        android_x86_64: {
+            srcs: [
+                "net/dns/address_info.cc",
+                "net/dns/address_sorter_posix.cc",
+                "net/dns/context_host_resolver.cc",
+                "net/dns/dns_alias_utility.cc",
+                "net/dns/dns_client.cc",
+                "net/dns/dns_config.cc",
+                "net/dns/dns_config_service.cc",
+                "net/dns/dns_config_service_android.cc",
+                "net/dns/dns_hosts.cc",
+                "net/dns/dns_query.cc",
+                "net/dns/dns_reloader.cc",
+                "net/dns/dns_response.cc",
+                "net/dns/dns_response_result_extractor.cc",
+                "net/dns/dns_server_iterator.cc",
+                "net/dns/dns_session.cc",
+                "net/dns/dns_transaction.cc",
+                "net/dns/dns_udp_tracker.cc",
+                "net/dns/dns_util.cc",
+                "net/dns/host_cache.cc",
+                "net/dns/host_resolver.cc",
+                "net/dns/host_resolver_manager.cc",
+                "net/dns/host_resolver_mdns_listener_impl.cc",
+                "net/dns/host_resolver_mdns_task.cc",
+                "net/dns/host_resolver_nat64_task.cc",
+                "net/dns/host_resolver_proc.cc",
+                "net/dns/host_resolver_system_task.cc",
+                "net/dns/https_record_rdata.cc",
+                "net/dns/httpssvc_metrics.cc",
+                "net/dns/mapped_host_resolver.cc",
+                "net/dns/nsswitch_reader.cc",
+                "net/dns/opt_record_rdata.cc",
+                "net/dns/record_parsed.cc",
+                "net/dns/record_rdata.cc",
+                "net/dns/resolve_context.cc",
+                "net/dns/serial_worker.cc",
+                "net/dns/system_dns_config_change_notifier.cc",
+                "net/dns/test_dns_config_service.cc",
+            ],
+            static_libs: [
+                "cronet_aml_base_allocator_partition_allocator_partition_alloc",
+                "cronet_aml_base_base",
+                "cronet_aml_base_base_static",
+                "cronet_aml_base_third_party_double_conversion_double_conversion",
+                "cronet_aml_base_third_party_dynamic_annotations_dynamic_annotations",
+                "cronet_aml_crypto_crypto",
+                "cronet_aml_net_preload_decoder",
+                "cronet_aml_net_third_party_quiche_quiche",
+                "cronet_aml_net_uri_template",
+                "cronet_aml_third_party_boringssl_boringssl",
+                "cronet_aml_third_party_brotli_common",
+                "cronet_aml_third_party_brotli_dec",
+                "cronet_aml_third_party_icu_icui18n",
+                "cronet_aml_third_party_icu_icuuc_private",
+                "cronet_aml_third_party_libevent_libevent",
+                "cronet_aml_third_party_modp_b64_modp_b64",
+                "cronet_aml_third_party_protobuf_protobuf_lite",
+                "cronet_aml_third_party_zlib_zlib",
+                "cronet_aml_url_url",
+            ],
+        },
+    },
 }
 
 // GN: //net/dns:dns_client
 cc_defaults {
     name: "cronet_aml_net_dns_dns_client",
+    target: {
+        android_x86: {
+            static_libs: [
+                "cronet_aml_base_allocator_partition_allocator_partition_alloc",
+                "cronet_aml_base_base",
+                "cronet_aml_base_base_static",
+                "cronet_aml_base_third_party_double_conversion_double_conversion",
+                "cronet_aml_base_third_party_dynamic_annotations_dynamic_annotations",
+                "cronet_aml_crypto_crypto",
+                "cronet_aml_net_preload_decoder",
+                "cronet_aml_net_third_party_quiche_quiche",
+                "cronet_aml_net_uri_template",
+                "cronet_aml_third_party_boringssl_boringssl",
+                "cronet_aml_third_party_brotli_common",
+                "cronet_aml_third_party_brotli_dec",
+                "cronet_aml_third_party_icu_icui18n",
+                "cronet_aml_third_party_icu_icuuc_private",
+                "cronet_aml_third_party_libevent_libevent",
+                "cronet_aml_third_party_modp_b64_modp_b64",
+                "cronet_aml_third_party_protobuf_protobuf_lite",
+                "cronet_aml_third_party_zlib_zlib",
+                "cronet_aml_url_url",
+            ],
+        },
+        android_x86_64: {
+            static_libs: [
+                "cronet_aml_base_allocator_partition_allocator_partition_alloc",
+                "cronet_aml_base_base",
+                "cronet_aml_base_base_static",
+                "cronet_aml_base_third_party_double_conversion_double_conversion",
+                "cronet_aml_base_third_party_dynamic_annotations_dynamic_annotations",
+                "cronet_aml_crypto_crypto",
+                "cronet_aml_net_preload_decoder",
+                "cronet_aml_net_third_party_quiche_quiche",
+                "cronet_aml_net_uri_template",
+                "cronet_aml_third_party_boringssl_boringssl",
+                "cronet_aml_third_party_brotli_common",
+                "cronet_aml_third_party_brotli_dec",
+                "cronet_aml_third_party_icu_icui18n",
+                "cronet_aml_third_party_icu_icuuc_private",
+                "cronet_aml_third_party_libevent_libevent",
+                "cronet_aml_third_party_modp_b64_modp_b64",
+                "cronet_aml_third_party_protobuf_protobuf_lite",
+                "cronet_aml_third_party_zlib_zlib",
+                "cronet_aml_url_url",
+            ],
+        },
+    },
 }
 
 // GN: //net/dns:host_resolver
 cc_defaults {
     name: "cronet_aml_net_dns_host_resolver",
+    target: {
+        android_x86: {
+            static_libs: [
+                "cronet_aml_base_allocator_partition_allocator_partition_alloc",
+                "cronet_aml_base_base",
+                "cronet_aml_base_base_static",
+                "cronet_aml_base_third_party_double_conversion_double_conversion",
+                "cronet_aml_base_third_party_dynamic_annotations_dynamic_annotations",
+                "cronet_aml_crypto_crypto",
+                "cronet_aml_net_preload_decoder",
+                "cronet_aml_net_third_party_quiche_quiche",
+                "cronet_aml_net_uri_template",
+                "cronet_aml_third_party_boringssl_boringssl",
+                "cronet_aml_third_party_brotli_common",
+                "cronet_aml_third_party_brotli_dec",
+                "cronet_aml_third_party_icu_icui18n",
+                "cronet_aml_third_party_icu_icuuc_private",
+                "cronet_aml_third_party_libevent_libevent",
+                "cronet_aml_third_party_modp_b64_modp_b64",
+                "cronet_aml_third_party_protobuf_protobuf_lite",
+                "cronet_aml_third_party_zlib_zlib",
+                "cronet_aml_url_url",
+            ],
+        },
+        android_x86_64: {
+            static_libs: [
+                "cronet_aml_base_allocator_partition_allocator_partition_alloc",
+                "cronet_aml_base_base",
+                "cronet_aml_base_base_static",
+                "cronet_aml_base_third_party_double_conversion_double_conversion",
+                "cronet_aml_base_third_party_dynamic_annotations_dynamic_annotations",
+                "cronet_aml_crypto_crypto",
+                "cronet_aml_net_preload_decoder",
+                "cronet_aml_net_third_party_quiche_quiche",
+                "cronet_aml_net_uri_template",
+                "cronet_aml_third_party_boringssl_boringssl",
+                "cronet_aml_third_party_brotli_common",
+                "cronet_aml_third_party_brotli_dec",
+                "cronet_aml_third_party_icu_icui18n",
+                "cronet_aml_third_party_icu_icuuc_private",
+                "cronet_aml_third_party_libevent_libevent",
+                "cronet_aml_third_party_modp_b64_modp_b64",
+                "cronet_aml_third_party_protobuf_protobuf_lite",
+                "cronet_aml_third_party_zlib_zlib",
+                "cronet_aml_url_url",
+            ],
+        },
+    },
 }
 
 // GN: //net/dns:host_resolver_manager
 cc_defaults {
     name: "cronet_aml_net_dns_host_resolver_manager",
+    target: {
+        android_x86: {
+            static_libs: [
+                "cronet_aml_base_allocator_partition_allocator_partition_alloc",
+                "cronet_aml_base_base",
+                "cronet_aml_base_base_static",
+                "cronet_aml_base_third_party_double_conversion_double_conversion",
+                "cronet_aml_base_third_party_dynamic_annotations_dynamic_annotations",
+                "cronet_aml_crypto_crypto",
+                "cronet_aml_net_preload_decoder",
+                "cronet_aml_net_third_party_quiche_quiche",
+                "cronet_aml_net_uri_template",
+                "cronet_aml_third_party_boringssl_boringssl",
+                "cronet_aml_third_party_brotli_common",
+                "cronet_aml_third_party_brotli_dec",
+                "cronet_aml_third_party_icu_icui18n",
+                "cronet_aml_third_party_icu_icuuc_private",
+                "cronet_aml_third_party_libevent_libevent",
+                "cronet_aml_third_party_modp_b64_modp_b64",
+                "cronet_aml_third_party_protobuf_protobuf_lite",
+                "cronet_aml_third_party_zlib_zlib",
+                "cronet_aml_url_url",
+            ],
+        },
+        android_x86_64: {
+            static_libs: [
+                "cronet_aml_base_allocator_partition_allocator_partition_alloc",
+                "cronet_aml_base_base",
+                "cronet_aml_base_base_static",
+                "cronet_aml_base_third_party_double_conversion_double_conversion",
+                "cronet_aml_base_third_party_dynamic_annotations_dynamic_annotations",
+                "cronet_aml_crypto_crypto",
+                "cronet_aml_net_preload_decoder",
+                "cronet_aml_net_third_party_quiche_quiche",
+                "cronet_aml_net_uri_template",
+                "cronet_aml_third_party_boringssl_boringssl",
+                "cronet_aml_third_party_brotli_common",
+                "cronet_aml_third_party_brotli_dec",
+                "cronet_aml_third_party_icu_icui18n",
+                "cronet_aml_third_party_icu_icuuc_private",
+                "cronet_aml_third_party_libevent_libevent",
+                "cronet_aml_third_party_modp_b64_modp_b64",
+                "cronet_aml_third_party_protobuf_protobuf_lite",
+                "cronet_aml_third_party_zlib_zlib",
+                "cronet_aml_url_url",
+            ],
+        },
+    },
 }
 
 // GN: //net/dns:mdns_client
 cc_defaults {
     name: "cronet_aml_net_dns_mdns_client",
+    target: {
+        android_x86: {
+            static_libs: [
+                "cronet_aml_base_allocator_partition_allocator_partition_alloc",
+                "cronet_aml_base_base",
+                "cronet_aml_base_base_static",
+                "cronet_aml_base_third_party_double_conversion_double_conversion",
+                "cronet_aml_base_third_party_dynamic_annotations_dynamic_annotations",
+                "cronet_aml_crypto_crypto",
+                "cronet_aml_net_preload_decoder",
+                "cronet_aml_net_third_party_quiche_quiche",
+                "cronet_aml_net_uri_template",
+                "cronet_aml_third_party_boringssl_boringssl",
+                "cronet_aml_third_party_brotli_common",
+                "cronet_aml_third_party_brotli_dec",
+                "cronet_aml_third_party_icu_icui18n",
+                "cronet_aml_third_party_icu_icuuc_private",
+                "cronet_aml_third_party_libevent_libevent",
+                "cronet_aml_third_party_modp_b64_modp_b64",
+                "cronet_aml_third_party_protobuf_protobuf_lite",
+                "cronet_aml_third_party_zlib_zlib",
+                "cronet_aml_url_url",
+            ],
+        },
+        android_x86_64: {
+            static_libs: [
+                "cronet_aml_base_allocator_partition_allocator_partition_alloc",
+                "cronet_aml_base_base",
+                "cronet_aml_base_base_static",
+                "cronet_aml_base_third_party_double_conversion_double_conversion",
+                "cronet_aml_base_third_party_dynamic_annotations_dynamic_annotations",
+                "cronet_aml_crypto_crypto",
+                "cronet_aml_net_preload_decoder",
+                "cronet_aml_net_third_party_quiche_quiche",
+                "cronet_aml_net_uri_template",
+                "cronet_aml_third_party_boringssl_boringssl",
+                "cronet_aml_third_party_brotli_common",
+                "cronet_aml_third_party_brotli_dec",
+                "cronet_aml_third_party_icu_icui18n",
+                "cronet_aml_third_party_icu_icuuc_private",
+                "cronet_aml_third_party_libevent_libevent",
+                "cronet_aml_third_party_modp_b64_modp_b64",
+                "cronet_aml_third_party_protobuf_protobuf_lite",
+                "cronet_aml_third_party_zlib_zlib",
+                "cronet_aml_url_url",
+            ],
+        },
+    },
 }
 
 // GN: //net/dns/public:public
 cc_defaults {
     name: "cronet_aml_net_dns_public_public",
-    srcs: [
-        "net/dns/public/dns_config_overrides.cc",
-        "net/dns/public/dns_over_https_config.cc",
-        "net/dns/public/dns_over_https_server_config.cc",
-        "net/dns/public/dns_query_type.cc",
-        "net/dns/public/doh_provider_entry.cc",
-        "net/dns/public/host_resolver_results.cc",
-        "net/dns/public/resolve_error_info.cc",
-        "net/dns/public/util.cc",
-    ],
+    target: {
+        android_x86: {
+            srcs: [
+                "net/dns/public/dns_config_overrides.cc",
+                "net/dns/public/dns_over_https_config.cc",
+                "net/dns/public/dns_over_https_server_config.cc",
+                "net/dns/public/dns_query_type.cc",
+                "net/dns/public/doh_provider_entry.cc",
+                "net/dns/public/host_resolver_results.cc",
+                "net/dns/public/resolve_error_info.cc",
+                "net/dns/public/util.cc",
+            ],
+            static_libs: [
+                "cronet_aml_base_allocator_partition_allocator_partition_alloc",
+                "cronet_aml_base_base",
+                "cronet_aml_base_base_static",
+                "cronet_aml_base_third_party_double_conversion_double_conversion",
+                "cronet_aml_base_third_party_dynamic_annotations_dynamic_annotations",
+                "cronet_aml_crypto_crypto",
+                "cronet_aml_net_preload_decoder",
+                "cronet_aml_net_third_party_quiche_quiche",
+                "cronet_aml_net_uri_template",
+                "cronet_aml_third_party_boringssl_boringssl",
+                "cronet_aml_third_party_brotli_common",
+                "cronet_aml_third_party_brotli_dec",
+                "cronet_aml_third_party_icu_icui18n",
+                "cronet_aml_third_party_icu_icuuc_private",
+                "cronet_aml_third_party_libevent_libevent",
+                "cronet_aml_third_party_modp_b64_modp_b64",
+                "cronet_aml_third_party_protobuf_protobuf_lite",
+                "cronet_aml_third_party_zlib_zlib",
+                "cronet_aml_url_url",
+            ],
+        },
+        android_x86_64: {
+            srcs: [
+                "net/dns/public/dns_config_overrides.cc",
+                "net/dns/public/dns_over_https_config.cc",
+                "net/dns/public/dns_over_https_server_config.cc",
+                "net/dns/public/dns_query_type.cc",
+                "net/dns/public/doh_provider_entry.cc",
+                "net/dns/public/host_resolver_results.cc",
+                "net/dns/public/resolve_error_info.cc",
+                "net/dns/public/util.cc",
+            ],
+            static_libs: [
+                "cronet_aml_base_allocator_partition_allocator_partition_alloc",
+                "cronet_aml_base_base",
+                "cronet_aml_base_base_static",
+                "cronet_aml_base_third_party_double_conversion_double_conversion",
+                "cronet_aml_base_third_party_dynamic_annotations_dynamic_annotations",
+                "cronet_aml_crypto_crypto",
+                "cronet_aml_net_preload_decoder",
+                "cronet_aml_net_third_party_quiche_quiche",
+                "cronet_aml_net_uri_template",
+                "cronet_aml_third_party_boringssl_boringssl",
+                "cronet_aml_third_party_brotli_common",
+                "cronet_aml_third_party_brotli_dec",
+                "cronet_aml_third_party_icu_icui18n",
+                "cronet_aml_third_party_icu_icuuc_private",
+                "cronet_aml_third_party_libevent_libevent",
+                "cronet_aml_third_party_modp_b64_modp_b64",
+                "cronet_aml_third_party_protobuf_protobuf_lite",
+                "cronet_aml_third_party_zlib_zlib",
+                "cronet_aml_url_url",
+            ],
+        },
+    },
 }
 
 // GN: //net/http:transport_security_state_generated_files
 cc_defaults {
     name: "cronet_aml_net_http_transport_security_state_generated_files",
-    srcs: [
-        "net/http/transport_security_state.cc",
-    ],
+    target: {
+        android_x86: {
+            srcs: [
+                "net/http/transport_security_state.cc",
+            ],
+            static_libs: [
+                "cronet_aml_base_allocator_partition_allocator_partition_alloc",
+                "cronet_aml_base_base",
+                "cronet_aml_base_base_static",
+                "cronet_aml_base_third_party_double_conversion_double_conversion",
+                "cronet_aml_base_third_party_dynamic_annotations_dynamic_annotations",
+                "cronet_aml_crypto_crypto",
+                "cronet_aml_net_preload_decoder",
+                "cronet_aml_net_third_party_quiche_quiche",
+                "cronet_aml_net_uri_template",
+                "cronet_aml_third_party_boringssl_boringssl",
+                "cronet_aml_third_party_brotli_common",
+                "cronet_aml_third_party_brotli_dec",
+                "cronet_aml_third_party_icu_icui18n",
+                "cronet_aml_third_party_icu_icuuc_private",
+                "cronet_aml_third_party_libevent_libevent",
+                "cronet_aml_third_party_modp_b64_modp_b64",
+                "cronet_aml_third_party_protobuf_protobuf_lite",
+                "cronet_aml_third_party_zlib_zlib",
+                "cronet_aml_url_url",
+            ],
+        },
+        android_x86_64: {
+            srcs: [
+                "net/http/transport_security_state.cc",
+            ],
+            static_libs: [
+                "cronet_aml_base_allocator_partition_allocator_partition_alloc",
+                "cronet_aml_base_base",
+                "cronet_aml_base_base_static",
+                "cronet_aml_base_third_party_double_conversion_double_conversion",
+                "cronet_aml_base_third_party_dynamic_annotations_dynamic_annotations",
+                "cronet_aml_crypto_crypto",
+                "cronet_aml_net_preload_decoder",
+                "cronet_aml_net_third_party_quiche_quiche",
+                "cronet_aml_net_uri_template",
+                "cronet_aml_third_party_boringssl_boringssl",
+                "cronet_aml_third_party_brotli_common",
+                "cronet_aml_third_party_brotli_dec",
+                "cronet_aml_third_party_icu_icui18n",
+                "cronet_aml_third_party_icu_icuuc_private",
+                "cronet_aml_third_party_libevent_libevent",
+                "cronet_aml_third_party_modp_b64_modp_b64",
+                "cronet_aml_third_party_protobuf_protobuf_lite",
+                "cronet_aml_third_party_zlib_zlib",
+                "cronet_aml_url_url",
+            ],
+        },
+    },
 }
 
 // GN: //net:ios_cronet_buildflags
@@ -3814,6 +4711,46 @@ cc_library_static {
 // GN: //net:net_deps
 cc_defaults {
     name: "cronet_aml_net_net_deps",
+    target: {
+        android_x86: {
+            static_libs: [
+                "cronet_aml_base_allocator_partition_allocator_partition_alloc",
+                "cronet_aml_base_base",
+                "cronet_aml_base_base_static",
+                "cronet_aml_base_third_party_double_conversion_double_conversion",
+                "cronet_aml_base_third_party_dynamic_annotations_dynamic_annotations",
+                "cronet_aml_net_preload_decoder",
+                "cronet_aml_third_party_boringssl_boringssl",
+                "cronet_aml_third_party_brotli_common",
+                "cronet_aml_third_party_brotli_dec",
+                "cronet_aml_third_party_icu_icui18n",
+                "cronet_aml_third_party_icu_icuuc_private",
+                "cronet_aml_third_party_libevent_libevent",
+                "cronet_aml_third_party_modp_b64_modp_b64",
+                "cronet_aml_third_party_protobuf_protobuf_lite",
+                "cronet_aml_third_party_zlib_zlib",
+            ],
+        },
+        android_x86_64: {
+            static_libs: [
+                "cronet_aml_base_allocator_partition_allocator_partition_alloc",
+                "cronet_aml_base_base",
+                "cronet_aml_base_base_static",
+                "cronet_aml_base_third_party_double_conversion_double_conversion",
+                "cronet_aml_base_third_party_dynamic_annotations_dynamic_annotations",
+                "cronet_aml_net_preload_decoder",
+                "cronet_aml_third_party_boringssl_boringssl",
+                "cronet_aml_third_party_brotli_common",
+                "cronet_aml_third_party_brotli_dec",
+                "cronet_aml_third_party_icu_icui18n",
+                "cronet_aml_third_party_icu_icuuc_private",
+                "cronet_aml_third_party_libevent_libevent",
+                "cronet_aml_third_party_modp_b64_modp_b64",
+                "cronet_aml_third_party_protobuf_protobuf_lite",
+                "cronet_aml_third_party_zlib_zlib",
+            ],
+        },
+    },
 }
 
 // GN: //net:net_export_header
@@ -3962,6 +4899,48 @@ genrule {
 // GN: //net:net_public_deps
 cc_defaults {
     name: "cronet_aml_net_net_public_deps",
+    target: {
+        android_x86: {
+            static_libs: [
+                "cronet_aml_base_allocator_partition_allocator_partition_alloc",
+                "cronet_aml_base_base",
+                "cronet_aml_base_base_static",
+                "cronet_aml_base_third_party_double_conversion_double_conversion",
+                "cronet_aml_base_third_party_dynamic_annotations_dynamic_annotations",
+                "cronet_aml_crypto_crypto",
+                "cronet_aml_net_third_party_quiche_quiche",
+                "cronet_aml_net_uri_template",
+                "cronet_aml_third_party_boringssl_boringssl",
+                "cronet_aml_third_party_icu_icui18n",
+                "cronet_aml_third_party_icu_icuuc_private",
+                "cronet_aml_third_party_libevent_libevent",
+                "cronet_aml_third_party_modp_b64_modp_b64",
+                "cronet_aml_third_party_protobuf_protobuf_lite",
+                "cronet_aml_third_party_zlib_zlib",
+                "cronet_aml_url_url",
+            ],
+        },
+        android_x86_64: {
+            static_libs: [
+                "cronet_aml_base_allocator_partition_allocator_partition_alloc",
+                "cronet_aml_base_base",
+                "cronet_aml_base_base_static",
+                "cronet_aml_base_third_party_double_conversion_double_conversion",
+                "cronet_aml_base_third_party_dynamic_annotations_dynamic_annotations",
+                "cronet_aml_crypto_crypto",
+                "cronet_aml_net_third_party_quiche_quiche",
+                "cronet_aml_net_uri_template",
+                "cronet_aml_third_party_boringssl_boringssl",
+                "cronet_aml_third_party_icu_icui18n",
+                "cronet_aml_third_party_icu_icuuc_private",
+                "cronet_aml_third_party_libevent_libevent",
+                "cronet_aml_third_party_modp_b64_modp_b64",
+                "cronet_aml_third_party_protobuf_protobuf_lite",
+                "cronet_aml_third_party_zlib_zlib",
+                "cronet_aml_url_url",
+            ],
+        },
+    },
 }
 
 // GN: //net:preload_decoder
@@ -4565,9 +5544,42 @@ cc_library_static {
 // GN: //net/traffic_annotation:traffic_annotation
 cc_defaults {
     name: "cronet_aml_net_traffic_annotation_traffic_annotation",
-    srcs: [
-        "net/traffic_annotation/network_traffic_annotation_android.cc",
-    ],
+    target: {
+        android_x86: {
+            srcs: [
+                "net/traffic_annotation/network_traffic_annotation_android.cc",
+            ],
+            static_libs: [
+                "cronet_aml_base_allocator_partition_allocator_partition_alloc",
+                "cronet_aml_base_base",
+                "cronet_aml_base_base_static",
+                "cronet_aml_base_third_party_double_conversion_double_conversion",
+                "cronet_aml_base_third_party_dynamic_annotations_dynamic_annotations",
+                "cronet_aml_third_party_boringssl_boringssl",
+                "cronet_aml_third_party_icu_icui18n",
+                "cronet_aml_third_party_icu_icuuc_private",
+                "cronet_aml_third_party_libevent_libevent",
+                "cronet_aml_third_party_modp_b64_modp_b64",
+            ],
+        },
+        android_x86_64: {
+            srcs: [
+                "net/traffic_annotation/network_traffic_annotation_android.cc",
+            ],
+            static_libs: [
+                "cronet_aml_base_allocator_partition_allocator_partition_alloc",
+                "cronet_aml_base_base",
+                "cronet_aml_base_base_static",
+                "cronet_aml_base_third_party_double_conversion_double_conversion",
+                "cronet_aml_base_third_party_dynamic_annotations_dynamic_annotations",
+                "cronet_aml_third_party_boringssl_boringssl",
+                "cronet_aml_third_party_icu_icui18n",
+                "cronet_aml_third_party_icu_icuuc_private",
+                "cronet_aml_third_party_libevent_libevent",
+                "cronet_aml_third_party_modp_b64_modp_b64",
+            ],
+        },
+    },
 }
 
 // GN: //net:uri_template
@@ -4647,13 +5659,35 @@ cc_defaults {
 // GN: //third_party/abseil-cpp/absl/base:base
 cc_defaults {
     name: "cronet_aml_third_party_abseil_cpp_absl_base_base",
-    srcs: [
-        "third_party/abseil-cpp/absl/base/internal/cycleclock.cc",
-        "third_party/abseil-cpp/absl/base/internal/spinlock.cc",
-        "third_party/abseil-cpp/absl/base/internal/sysinfo.cc",
-        "third_party/abseil-cpp/absl/base/internal/thread_identity.cc",
-        "third_party/abseil-cpp/absl/base/internal/unscaledcycleclock.cc",
-    ],
+    target: {
+        android_x86: {
+            srcs: [
+                "third_party/abseil-cpp/absl/base/internal/cycleclock.cc",
+                "third_party/abseil-cpp/absl/base/internal/spinlock.cc",
+                "third_party/abseil-cpp/absl/base/internal/sysinfo.cc",
+                "third_party/abseil-cpp/absl/base/internal/thread_identity.cc",
+                "third_party/abseil-cpp/absl/base/internal/unscaledcycleclock.cc",
+            ],
+        },
+        android_x86_64: {
+            srcs: [
+                "third_party/abseil-cpp/absl/base/internal/cycleclock.cc",
+                "third_party/abseil-cpp/absl/base/internal/spinlock.cc",
+                "third_party/abseil-cpp/absl/base/internal/sysinfo.cc",
+                "third_party/abseil-cpp/absl/base/internal/thread_identity.cc",
+                "third_party/abseil-cpp/absl/base/internal/unscaledcycleclock.cc",
+            ],
+        },
+        host: {
+            srcs: [
+                "third_party/abseil-cpp/absl/base/internal/cycleclock.cc",
+                "third_party/abseil-cpp/absl/base/internal/spinlock.cc",
+                "third_party/abseil-cpp/absl/base/internal/sysinfo.cc",
+                "third_party/abseil-cpp/absl/base/internal/thread_identity.cc",
+                "third_party/abseil-cpp/absl/base/internal/unscaledcycleclock.cc",
+            ],
+        },
+    },
 }
 
 // GN: //third_party/abseil-cpp/absl/base:base_internal
@@ -4699,17 +5733,45 @@ cc_defaults {
 // GN: //third_party/abseil-cpp/absl/base:log_severity
 cc_defaults {
     name: "cronet_aml_third_party_abseil_cpp_absl_base_log_severity",
-    srcs: [
-        "third_party/abseil-cpp/absl/base/log_severity.cc",
-    ],
+    target: {
+        android_x86: {
+            srcs: [
+                "third_party/abseil-cpp/absl/base/log_severity.cc",
+            ],
+        },
+        android_x86_64: {
+            srcs: [
+                "third_party/abseil-cpp/absl/base/log_severity.cc",
+            ],
+        },
+        host: {
+            srcs: [
+                "third_party/abseil-cpp/absl/base/log_severity.cc",
+            ],
+        },
+    },
 }
 
 // GN: //third_party/abseil-cpp/absl/base:malloc_internal
 cc_defaults {
     name: "cronet_aml_third_party_abseil_cpp_absl_base_malloc_internal",
-    srcs: [
-        "third_party/abseil-cpp/absl/base/internal/low_level_alloc.cc",
-    ],
+    target: {
+        android_x86: {
+            srcs: [
+                "third_party/abseil-cpp/absl/base/internal/low_level_alloc.cc",
+            ],
+        },
+        android_x86_64: {
+            srcs: [
+                "third_party/abseil-cpp/absl/base/internal/low_level_alloc.cc",
+            ],
+        },
+        host: {
+            srcs: [
+                "third_party/abseil-cpp/absl/base/internal/low_level_alloc.cc",
+            ],
+        },
+    },
 }
 
 // GN: //third_party/abseil-cpp/absl/base:prefetch
@@ -4720,33 +5782,89 @@ cc_defaults {
 // GN: //third_party/abseil-cpp/absl/base:raw_logging_internal
 cc_defaults {
     name: "cronet_aml_third_party_abseil_cpp_absl_base_raw_logging_internal",
-    srcs: [
-        "third_party/abseil-cpp/absl/base/internal/raw_logging.cc",
-    ],
+    target: {
+        android_x86: {
+            srcs: [
+                "third_party/abseil-cpp/absl/base/internal/raw_logging.cc",
+            ],
+        },
+        android_x86_64: {
+            srcs: [
+                "third_party/abseil-cpp/absl/base/internal/raw_logging.cc",
+            ],
+        },
+        host: {
+            srcs: [
+                "third_party/abseil-cpp/absl/base/internal/raw_logging.cc",
+            ],
+        },
+    },
 }
 
 // GN: //third_party/abseil-cpp/absl/base:spinlock_wait
 cc_defaults {
     name: "cronet_aml_third_party_abseil_cpp_absl_base_spinlock_wait",
-    srcs: [
-        "third_party/abseil-cpp/absl/base/internal/spinlock_wait.cc",
-    ],
+    target: {
+        android_x86: {
+            srcs: [
+                "third_party/abseil-cpp/absl/base/internal/spinlock_wait.cc",
+            ],
+        },
+        android_x86_64: {
+            srcs: [
+                "third_party/abseil-cpp/absl/base/internal/spinlock_wait.cc",
+            ],
+        },
+        host: {
+            srcs: [
+                "third_party/abseil-cpp/absl/base/internal/spinlock_wait.cc",
+            ],
+        },
+    },
 }
 
 // GN: //third_party/abseil-cpp/absl/base:strerror
 cc_defaults {
     name: "cronet_aml_third_party_abseil_cpp_absl_base_strerror",
-    srcs: [
-        "third_party/abseil-cpp/absl/base/internal/strerror.cc",
-    ],
+    target: {
+        android_x86: {
+            srcs: [
+                "third_party/abseil-cpp/absl/base/internal/strerror.cc",
+            ],
+        },
+        android_x86_64: {
+            srcs: [
+                "third_party/abseil-cpp/absl/base/internal/strerror.cc",
+            ],
+        },
+        host: {
+            srcs: [
+                "third_party/abseil-cpp/absl/base/internal/strerror.cc",
+            ],
+        },
+    },
 }
 
 // GN: //third_party/abseil-cpp/absl/base:throw_delegate
 cc_defaults {
     name: "cronet_aml_third_party_abseil_cpp_absl_base_throw_delegate",
-    srcs: [
-        "third_party/abseil-cpp/absl/base/internal/throw_delegate.cc",
-    ],
+    target: {
+        android_x86: {
+            srcs: [
+                "third_party/abseil-cpp/absl/base/internal/throw_delegate.cc",
+            ],
+        },
+        android_x86_64: {
+            srcs: [
+                "third_party/abseil-cpp/absl/base/internal/throw_delegate.cc",
+            ],
+        },
+        host: {
+            srcs: [
+                "third_party/abseil-cpp/absl/base/internal/throw_delegate.cc",
+            ],
+        },
+    },
 }
 
 // GN: //third_party/abseil-cpp/absl/cleanup:cleanup
@@ -4817,10 +5935,26 @@ cc_defaults {
 // GN: //third_party/abseil-cpp/absl/container:hashtablez_sampler
 cc_defaults {
     name: "cronet_aml_third_party_abseil_cpp_absl_container_hashtablez_sampler",
-    srcs: [
-        "third_party/abseil-cpp/absl/container/internal/hashtablez_sampler.cc",
-        "third_party/abseil-cpp/absl/container/internal/hashtablez_sampler_force_weak_definition.cc",
-    ],
+    target: {
+        android_x86: {
+            srcs: [
+                "third_party/abseil-cpp/absl/container/internal/hashtablez_sampler.cc",
+                "third_party/abseil-cpp/absl/container/internal/hashtablez_sampler_force_weak_definition.cc",
+            ],
+        },
+        android_x86_64: {
+            srcs: [
+                "third_party/abseil-cpp/absl/container/internal/hashtablez_sampler.cc",
+                "third_party/abseil-cpp/absl/container/internal/hashtablez_sampler_force_weak_definition.cc",
+            ],
+        },
+        host: {
+            srcs: [
+                "third_party/abseil-cpp/absl/container/internal/hashtablez_sampler.cc",
+                "third_party/abseil-cpp/absl/container/internal/hashtablez_sampler_force_weak_definition.cc",
+            ],
+        },
+    },
 }
 
 // GN: //third_party/abseil-cpp/absl/container:inlined_vector
@@ -4861,59 +5995,161 @@ cc_defaults {
 // GN: //third_party/abseil-cpp/absl/container:raw_hash_set
 cc_defaults {
     name: "cronet_aml_third_party_abseil_cpp_absl_container_raw_hash_set",
-    srcs: [
-        "third_party/abseil-cpp/absl/container/internal/raw_hash_set.cc",
-    ],
+    target: {
+        android_x86: {
+            srcs: [
+                "third_party/abseil-cpp/absl/container/internal/raw_hash_set.cc",
+            ],
+        },
+        android_x86_64: {
+            srcs: [
+                "third_party/abseil-cpp/absl/container/internal/raw_hash_set.cc",
+            ],
+        },
+        host: {
+            srcs: [
+                "third_party/abseil-cpp/absl/container/internal/raw_hash_set.cc",
+            ],
+        },
+    },
 }
 
 // GN: //third_party/abseil-cpp/absl/debugging:debugging_internal
 cc_defaults {
     name: "cronet_aml_third_party_abseil_cpp_absl_debugging_debugging_internal",
-    srcs: [
-        "third_party/abseil-cpp/absl/debugging/internal/address_is_readable.cc",
-        "third_party/abseil-cpp/absl/debugging/internal/elf_mem_image.cc",
-        "third_party/abseil-cpp/absl/debugging/internal/vdso_support.cc",
-    ],
+    target: {
+        android_x86: {
+            srcs: [
+                "third_party/abseil-cpp/absl/debugging/internal/address_is_readable.cc",
+                "third_party/abseil-cpp/absl/debugging/internal/elf_mem_image.cc",
+                "third_party/abseil-cpp/absl/debugging/internal/vdso_support.cc",
+            ],
+        },
+        android_x86_64: {
+            srcs: [
+                "third_party/abseil-cpp/absl/debugging/internal/address_is_readable.cc",
+                "third_party/abseil-cpp/absl/debugging/internal/elf_mem_image.cc",
+                "third_party/abseil-cpp/absl/debugging/internal/vdso_support.cc",
+            ],
+        },
+        host: {
+            srcs: [
+                "third_party/abseil-cpp/absl/debugging/internal/address_is_readable.cc",
+                "third_party/abseil-cpp/absl/debugging/internal/elf_mem_image.cc",
+                "third_party/abseil-cpp/absl/debugging/internal/vdso_support.cc",
+            ],
+        },
+    },
 }
 
 // GN: //third_party/abseil-cpp/absl/debugging:demangle_internal
 cc_defaults {
     name: "cronet_aml_third_party_abseil_cpp_absl_debugging_demangle_internal",
-    srcs: [
-        "third_party/abseil-cpp/absl/debugging/internal/demangle.cc",
-    ],
+    target: {
+        android_x86: {
+            srcs: [
+                "third_party/abseil-cpp/absl/debugging/internal/demangle.cc",
+            ],
+        },
+        android_x86_64: {
+            srcs: [
+                "third_party/abseil-cpp/absl/debugging/internal/demangle.cc",
+            ],
+        },
+        host: {
+            srcs: [
+                "third_party/abseil-cpp/absl/debugging/internal/demangle.cc",
+            ],
+        },
+    },
 }
 
 // GN: //third_party/abseil-cpp/absl/debugging:examine_stack
 cc_defaults {
     name: "cronet_aml_third_party_abseil_cpp_absl_debugging_examine_stack",
-    srcs: [
-        "third_party/abseil-cpp/absl/debugging/internal/examine_stack.cc",
-    ],
+    target: {
+        android_x86: {
+            srcs: [
+                "third_party/abseil-cpp/absl/debugging/internal/examine_stack.cc",
+            ],
+        },
+        android_x86_64: {
+            srcs: [
+                "third_party/abseil-cpp/absl/debugging/internal/examine_stack.cc",
+            ],
+        },
+        host: {
+            srcs: [
+                "third_party/abseil-cpp/absl/debugging/internal/examine_stack.cc",
+            ],
+        },
+    },
 }
 
 // GN: //third_party/abseil-cpp/absl/debugging:failure_signal_handler
 cc_defaults {
     name: "cronet_aml_third_party_abseil_cpp_absl_debugging_failure_signal_handler",
-    srcs: [
-        "third_party/abseil-cpp/absl/debugging/failure_signal_handler.cc",
-    ],
+    target: {
+        android_x86: {
+            srcs: [
+                "third_party/abseil-cpp/absl/debugging/failure_signal_handler.cc",
+            ],
+        },
+        android_x86_64: {
+            srcs: [
+                "third_party/abseil-cpp/absl/debugging/failure_signal_handler.cc",
+            ],
+        },
+        host: {
+            srcs: [
+                "third_party/abseil-cpp/absl/debugging/failure_signal_handler.cc",
+            ],
+        },
+    },
 }
 
 // GN: //third_party/abseil-cpp/absl/debugging:stacktrace
 cc_defaults {
     name: "cronet_aml_third_party_abseil_cpp_absl_debugging_stacktrace",
-    srcs: [
-        "third_party/abseil-cpp/absl/debugging/stacktrace.cc",
-    ],
+    target: {
+        android_x86: {
+            srcs: [
+                "third_party/abseil-cpp/absl/debugging/stacktrace.cc",
+            ],
+        },
+        android_x86_64: {
+            srcs: [
+                "third_party/abseil-cpp/absl/debugging/stacktrace.cc",
+            ],
+        },
+        host: {
+            srcs: [
+                "third_party/abseil-cpp/absl/debugging/stacktrace.cc",
+            ],
+        },
+    },
 }
 
 // GN: //third_party/abseil-cpp/absl/debugging:symbolize
 cc_defaults {
     name: "cronet_aml_third_party_abseil_cpp_absl_debugging_symbolize",
-    srcs: [
-        "third_party/abseil-cpp/absl/debugging/symbolize.cc",
-    ],
+    target: {
+        android_x86: {
+            srcs: [
+                "third_party/abseil-cpp/absl/debugging/symbolize.cc",
+            ],
+        },
+        android_x86_64: {
+            srcs: [
+                "third_party/abseil-cpp/absl/debugging/symbolize.cc",
+            ],
+        },
+        host: {
+            srcs: [
+                "third_party/abseil-cpp/absl/debugging/symbolize.cc",
+            ],
+        },
+    },
 }
 
 // GN: //third_party/abseil-cpp/absl/functional:any_invocable
@@ -4934,25 +6170,67 @@ cc_defaults {
 // GN: //third_party/abseil-cpp/absl/hash:city
 cc_defaults {
     name: "cronet_aml_third_party_abseil_cpp_absl_hash_city",
-    srcs: [
-        "third_party/abseil-cpp/absl/hash/internal/city.cc",
-    ],
+    target: {
+        android_x86: {
+            srcs: [
+                "third_party/abseil-cpp/absl/hash/internal/city.cc",
+            ],
+        },
+        android_x86_64: {
+            srcs: [
+                "third_party/abseil-cpp/absl/hash/internal/city.cc",
+            ],
+        },
+        host: {
+            srcs: [
+                "third_party/abseil-cpp/absl/hash/internal/city.cc",
+            ],
+        },
+    },
 }
 
 // GN: //third_party/abseil-cpp/absl/hash:hash
 cc_defaults {
     name: "cronet_aml_third_party_abseil_cpp_absl_hash_hash",
-    srcs: [
-        "third_party/abseil-cpp/absl/hash/internal/hash.cc",
-    ],
+    target: {
+        android_x86: {
+            srcs: [
+                "third_party/abseil-cpp/absl/hash/internal/hash.cc",
+            ],
+        },
+        android_x86_64: {
+            srcs: [
+                "third_party/abseil-cpp/absl/hash/internal/hash.cc",
+            ],
+        },
+        host: {
+            srcs: [
+                "third_party/abseil-cpp/absl/hash/internal/hash.cc",
+            ],
+        },
+    },
 }
 
 // GN: //third_party/abseil-cpp/absl/hash:low_level_hash
 cc_defaults {
     name: "cronet_aml_third_party_abseil_cpp_absl_hash_low_level_hash",
-    srcs: [
-        "third_party/abseil-cpp/absl/hash/internal/low_level_hash.cc",
-    ],
+    target: {
+        android_x86: {
+            srcs: [
+                "third_party/abseil-cpp/absl/hash/internal/low_level_hash.cc",
+            ],
+        },
+        android_x86_64: {
+            srcs: [
+                "third_party/abseil-cpp/absl/hash/internal/low_level_hash.cc",
+            ],
+        },
+        host: {
+            srcs: [
+                "third_party/abseil-cpp/absl/hash/internal/low_level_hash.cc",
+            ],
+        },
+    },
 }
 
 // GN: //third_party/abseil-cpp/absl/memory:memory
@@ -4973,9 +6251,23 @@ cc_defaults {
 // GN: //third_party/abseil-cpp/absl/numeric:int128
 cc_defaults {
     name: "cronet_aml_third_party_abseil_cpp_absl_numeric_int128",
-    srcs: [
-        "third_party/abseil-cpp/absl/numeric/int128.cc",
-    ],
+    target: {
+        android_x86: {
+            srcs: [
+                "third_party/abseil-cpp/absl/numeric/int128.cc",
+            ],
+        },
+        android_x86_64: {
+            srcs: [
+                "third_party/abseil-cpp/absl/numeric/int128.cc",
+            ],
+        },
+        host: {
+            srcs: [
+                "third_party/abseil-cpp/absl/numeric/int128.cc",
+            ],
+        },
+    },
 }
 
 // GN: //third_party/abseil-cpp/absl/numeric:representation
@@ -4986,9 +6278,23 @@ cc_defaults {
 // GN: //third_party/abseil-cpp/absl/profiling:exponential_biased
 cc_defaults {
     name: "cronet_aml_third_party_abseil_cpp_absl_profiling_exponential_biased",
-    srcs: [
-        "third_party/abseil-cpp/absl/profiling/internal/exponential_biased.cc",
-    ],
+    target: {
+        android_x86: {
+            srcs: [
+                "third_party/abseil-cpp/absl/profiling/internal/exponential_biased.cc",
+            ],
+        },
+        android_x86_64: {
+            srcs: [
+                "third_party/abseil-cpp/absl/profiling/internal/exponential_biased.cc",
+            ],
+        },
+        host: {
+            srcs: [
+                "third_party/abseil-cpp/absl/profiling/internal/exponential_biased.cc",
+            ],
+        },
+    },
 }
 
 // GN: //third_party/abseil-cpp/absl/profiling:sample_recorder
@@ -4999,10 +6305,26 @@ cc_defaults {
 // GN: //third_party/abseil-cpp/absl/random:distributions
 cc_defaults {
     name: "cronet_aml_third_party_abseil_cpp_absl_random_distributions",
-    srcs: [
-        "third_party/abseil-cpp/absl/random/discrete_distribution.cc",
-        "third_party/abseil-cpp/absl/random/gaussian_distribution.cc",
-    ],
+    target: {
+        android_x86: {
+            srcs: [
+                "third_party/abseil-cpp/absl/random/discrete_distribution.cc",
+                "third_party/abseil-cpp/absl/random/gaussian_distribution.cc",
+            ],
+        },
+        android_x86_64: {
+            srcs: [
+                "third_party/abseil-cpp/absl/random/discrete_distribution.cc",
+                "third_party/abseil-cpp/absl/random/gaussian_distribution.cc",
+            ],
+        },
+        host: {
+            srcs: [
+                "third_party/abseil-cpp/absl/random/discrete_distribution.cc",
+                "third_party/abseil-cpp/absl/random/gaussian_distribution.cc",
+            ],
+        },
+    },
 }
 
 // GN: //third_party/abseil-cpp/absl/random/internal:distribution_caller
@@ -5043,25 +6365,67 @@ cc_defaults {
 // GN: //third_party/abseil-cpp/absl/random/internal:platform
 cc_defaults {
     name: "cronet_aml_third_party_abseil_cpp_absl_random_internal_platform",
-    srcs: [
-        "third_party/abseil-cpp/absl/random/internal/randen_round_keys.cc",
-    ],
+    target: {
+        android_x86: {
+            srcs: [
+                "third_party/abseil-cpp/absl/random/internal/randen_round_keys.cc",
+            ],
+        },
+        android_x86_64: {
+            srcs: [
+                "third_party/abseil-cpp/absl/random/internal/randen_round_keys.cc",
+            ],
+        },
+        host: {
+            srcs: [
+                "third_party/abseil-cpp/absl/random/internal/randen_round_keys.cc",
+            ],
+        },
+    },
 }
 
 // GN: //third_party/abseil-cpp/absl/random/internal:pool_urbg
 cc_defaults {
     name: "cronet_aml_third_party_abseil_cpp_absl_random_internal_pool_urbg",
-    srcs: [
-        "third_party/abseil-cpp/absl/random/internal/pool_urbg.cc",
-    ],
+    target: {
+        android_x86: {
+            srcs: [
+                "third_party/abseil-cpp/absl/random/internal/pool_urbg.cc",
+            ],
+        },
+        android_x86_64: {
+            srcs: [
+                "third_party/abseil-cpp/absl/random/internal/pool_urbg.cc",
+            ],
+        },
+        host: {
+            srcs: [
+                "third_party/abseil-cpp/absl/random/internal/pool_urbg.cc",
+            ],
+        },
+    },
 }
 
 // GN: //third_party/abseil-cpp/absl/random/internal:randen
 cc_defaults {
     name: "cronet_aml_third_party_abseil_cpp_absl_random_internal_randen",
-    srcs: [
-        "third_party/abseil-cpp/absl/random/internal/randen.cc",
-    ],
+    target: {
+        android_x86: {
+            srcs: [
+                "third_party/abseil-cpp/absl/random/internal/randen.cc",
+            ],
+        },
+        android_x86_64: {
+            srcs: [
+                "third_party/abseil-cpp/absl/random/internal/randen.cc",
+            ],
+        },
+        host: {
+            srcs: [
+                "third_party/abseil-cpp/absl/random/internal/randen.cc",
+            ],
+        },
+    },
 }
 
 // GN: //third_party/abseil-cpp/absl/random/internal:randen_engine
@@ -5072,25 +6436,67 @@ cc_defaults {
 // GN: //third_party/abseil-cpp/absl/random/internal:randen_hwaes
 cc_defaults {
     name: "cronet_aml_third_party_abseil_cpp_absl_random_internal_randen_hwaes",
-    srcs: [
-        "third_party/abseil-cpp/absl/random/internal/randen_detect.cc",
-    ],
+    target: {
+        android_x86: {
+            srcs: [
+                "third_party/abseil-cpp/absl/random/internal/randen_detect.cc",
+            ],
+        },
+        android_x86_64: {
+            srcs: [
+                "third_party/abseil-cpp/absl/random/internal/randen_detect.cc",
+            ],
+        },
+        host: {
+            srcs: [
+                "third_party/abseil-cpp/absl/random/internal/randen_detect.cc",
+            ],
+        },
+    },
 }
 
 // GN: //third_party/abseil-cpp/absl/random/internal:randen_hwaes_impl
 cc_defaults {
     name: "cronet_aml_third_party_abseil_cpp_absl_random_internal_randen_hwaes_impl",
-    srcs: [
-        "third_party/abseil-cpp/absl/random/internal/randen_hwaes.cc",
-    ],
+    target: {
+        android_x86: {
+            srcs: [
+                "third_party/abseil-cpp/absl/random/internal/randen_hwaes.cc",
+            ],
+        },
+        android_x86_64: {
+            srcs: [
+                "third_party/abseil-cpp/absl/random/internal/randen_hwaes.cc",
+            ],
+        },
+        host: {
+            srcs: [
+                "third_party/abseil-cpp/absl/random/internal/randen_hwaes.cc",
+            ],
+        },
+    },
 }
 
 // GN: //third_party/abseil-cpp/absl/random/internal:randen_slow
 cc_defaults {
     name: "cronet_aml_third_party_abseil_cpp_absl_random_internal_randen_slow",
-    srcs: [
-        "third_party/abseil-cpp/absl/random/internal/randen_slow.cc",
-    ],
+    target: {
+        android_x86: {
+            srcs: [
+                "third_party/abseil-cpp/absl/random/internal/randen_slow.cc",
+            ],
+        },
+        android_x86_64: {
+            srcs: [
+                "third_party/abseil-cpp/absl/random/internal/randen_slow.cc",
+            ],
+        },
+        host: {
+            srcs: [
+                "third_party/abseil-cpp/absl/random/internal/randen_slow.cc",
+            ],
+        },
+    },
 }
 
 // GN: //third_party/abseil-cpp/absl/random/internal:salted_seed_seq
@@ -5101,9 +6507,23 @@ cc_defaults {
 // GN: //third_party/abseil-cpp/absl/random/internal:seed_material
 cc_defaults {
     name: "cronet_aml_third_party_abseil_cpp_absl_random_internal_seed_material",
-    srcs: [
-        "third_party/abseil-cpp/absl/random/internal/seed_material.cc",
-    ],
+    target: {
+        android_x86: {
+            srcs: [
+                "third_party/abseil-cpp/absl/random/internal/seed_material.cc",
+            ],
+        },
+        android_x86_64: {
+            srcs: [
+                "third_party/abseil-cpp/absl/random/internal/seed_material.cc",
+            ],
+        },
+        host: {
+            srcs: [
+                "third_party/abseil-cpp/absl/random/internal/seed_material.cc",
+            ],
+        },
+    },
 }
 
 // GN: //third_party/abseil-cpp/absl/random/internal:traits
@@ -5129,82 +6549,226 @@ cc_defaults {
 // GN: //third_party/abseil-cpp/absl/random:seed_gen_exception
 cc_defaults {
     name: "cronet_aml_third_party_abseil_cpp_absl_random_seed_gen_exception",
-    srcs: [
-        "third_party/abseil-cpp/absl/random/seed_gen_exception.cc",
-    ],
+    target: {
+        android_x86: {
+            srcs: [
+                "third_party/abseil-cpp/absl/random/seed_gen_exception.cc",
+            ],
+        },
+        android_x86_64: {
+            srcs: [
+                "third_party/abseil-cpp/absl/random/seed_gen_exception.cc",
+            ],
+        },
+        host: {
+            srcs: [
+                "third_party/abseil-cpp/absl/random/seed_gen_exception.cc",
+            ],
+        },
+    },
 }
 
 // GN: //third_party/abseil-cpp/absl/random:seed_sequences
 cc_defaults {
     name: "cronet_aml_third_party_abseil_cpp_absl_random_seed_sequences",
-    srcs: [
-        "third_party/abseil-cpp/absl/random/seed_sequences.cc",
-    ],
+    target: {
+        android_x86: {
+            srcs: [
+                "third_party/abseil-cpp/absl/random/seed_sequences.cc",
+            ],
+        },
+        android_x86_64: {
+            srcs: [
+                "third_party/abseil-cpp/absl/random/seed_sequences.cc",
+            ],
+        },
+        host: {
+            srcs: [
+                "third_party/abseil-cpp/absl/random/seed_sequences.cc",
+            ],
+        },
+    },
 }
 
 // GN: //third_party/abseil-cpp/absl/status:status
 cc_defaults {
     name: "cronet_aml_third_party_abseil_cpp_absl_status_status",
-    srcs: [
-        "third_party/abseil-cpp/absl/status/status.cc",
-        "third_party/abseil-cpp/absl/status/status_payload_printer.cc",
-    ],
+    target: {
+        android_x86: {
+            srcs: [
+                "third_party/abseil-cpp/absl/status/status.cc",
+                "third_party/abseil-cpp/absl/status/status_payload_printer.cc",
+            ],
+        },
+        android_x86_64: {
+            srcs: [
+                "third_party/abseil-cpp/absl/status/status.cc",
+                "third_party/abseil-cpp/absl/status/status_payload_printer.cc",
+            ],
+        },
+        host: {
+            srcs: [
+                "third_party/abseil-cpp/absl/status/status.cc",
+                "third_party/abseil-cpp/absl/status/status_payload_printer.cc",
+            ],
+        },
+    },
 }
 
 // GN: //third_party/abseil-cpp/absl/status:statusor
 cc_defaults {
     name: "cronet_aml_third_party_abseil_cpp_absl_status_statusor",
-    srcs: [
-        "third_party/abseil-cpp/absl/status/statusor.cc",
-    ],
+    target: {
+        android_x86: {
+            srcs: [
+                "third_party/abseil-cpp/absl/status/statusor.cc",
+            ],
+        },
+        android_x86_64: {
+            srcs: [
+                "third_party/abseil-cpp/absl/status/statusor.cc",
+            ],
+        },
+        host: {
+            srcs: [
+                "third_party/abseil-cpp/absl/status/statusor.cc",
+            ],
+        },
+    },
 }
 
 // GN: //third_party/abseil-cpp/absl/strings:cord
 cc_defaults {
     name: "cronet_aml_third_party_abseil_cpp_absl_strings_cord",
-    srcs: [
-        "third_party/abseil-cpp/absl/strings/cord.cc",
-        "third_party/abseil-cpp/absl/strings/cord_analysis.cc",
-        "third_party/abseil-cpp/absl/strings/cord_buffer.cc",
-    ],
+    target: {
+        android_x86: {
+            srcs: [
+                "third_party/abseil-cpp/absl/strings/cord.cc",
+                "third_party/abseil-cpp/absl/strings/cord_analysis.cc",
+                "third_party/abseil-cpp/absl/strings/cord_buffer.cc",
+            ],
+        },
+        android_x86_64: {
+            srcs: [
+                "third_party/abseil-cpp/absl/strings/cord.cc",
+                "third_party/abseil-cpp/absl/strings/cord_analysis.cc",
+                "third_party/abseil-cpp/absl/strings/cord_buffer.cc",
+            ],
+        },
+        host: {
+            srcs: [
+                "third_party/abseil-cpp/absl/strings/cord.cc",
+                "third_party/abseil-cpp/absl/strings/cord_analysis.cc",
+                "third_party/abseil-cpp/absl/strings/cord_buffer.cc",
+            ],
+        },
+    },
 }
 
 // GN: //third_party/abseil-cpp/absl/strings:cord_internal
 cc_defaults {
     name: "cronet_aml_third_party_abseil_cpp_absl_strings_cord_internal",
-    srcs: [
-        "third_party/abseil-cpp/absl/strings/internal/cord_internal.cc",
-        "third_party/abseil-cpp/absl/strings/internal/cord_rep_btree.cc",
-        "third_party/abseil-cpp/absl/strings/internal/cord_rep_btree_navigator.cc",
-        "third_party/abseil-cpp/absl/strings/internal/cord_rep_btree_reader.cc",
-        "third_party/abseil-cpp/absl/strings/internal/cord_rep_consume.cc",
-        "third_party/abseil-cpp/absl/strings/internal/cord_rep_crc.cc",
-        "third_party/abseil-cpp/absl/strings/internal/cord_rep_ring.cc",
-    ],
+    target: {
+        android_x86: {
+            srcs: [
+                "third_party/abseil-cpp/absl/strings/internal/cord_internal.cc",
+                "third_party/abseil-cpp/absl/strings/internal/cord_rep_btree.cc",
+                "third_party/abseil-cpp/absl/strings/internal/cord_rep_btree_navigator.cc",
+                "third_party/abseil-cpp/absl/strings/internal/cord_rep_btree_reader.cc",
+                "third_party/abseil-cpp/absl/strings/internal/cord_rep_consume.cc",
+                "third_party/abseil-cpp/absl/strings/internal/cord_rep_crc.cc",
+                "third_party/abseil-cpp/absl/strings/internal/cord_rep_ring.cc",
+            ],
+        },
+        android_x86_64: {
+            srcs: [
+                "third_party/abseil-cpp/absl/strings/internal/cord_internal.cc",
+                "third_party/abseil-cpp/absl/strings/internal/cord_rep_btree.cc",
+                "third_party/abseil-cpp/absl/strings/internal/cord_rep_btree_navigator.cc",
+                "third_party/abseil-cpp/absl/strings/internal/cord_rep_btree_reader.cc",
+                "third_party/abseil-cpp/absl/strings/internal/cord_rep_consume.cc",
+                "third_party/abseil-cpp/absl/strings/internal/cord_rep_crc.cc",
+                "third_party/abseil-cpp/absl/strings/internal/cord_rep_ring.cc",
+            ],
+        },
+        host: {
+            srcs: [
+                "third_party/abseil-cpp/absl/strings/internal/cord_internal.cc",
+                "third_party/abseil-cpp/absl/strings/internal/cord_rep_btree.cc",
+                "third_party/abseil-cpp/absl/strings/internal/cord_rep_btree_navigator.cc",
+                "third_party/abseil-cpp/absl/strings/internal/cord_rep_btree_reader.cc",
+                "third_party/abseil-cpp/absl/strings/internal/cord_rep_consume.cc",
+                "third_party/abseil-cpp/absl/strings/internal/cord_rep_crc.cc",
+                "third_party/abseil-cpp/absl/strings/internal/cord_rep_ring.cc",
+            ],
+        },
+    },
 }
 
 // GN: //third_party/abseil-cpp/absl/strings:cordz_functions
 cc_defaults {
     name: "cronet_aml_third_party_abseil_cpp_absl_strings_cordz_functions",
-    srcs: [
-        "third_party/abseil-cpp/absl/strings/internal/cordz_functions.cc",
-    ],
+    target: {
+        android_x86: {
+            srcs: [
+                "third_party/abseil-cpp/absl/strings/internal/cordz_functions.cc",
+            ],
+        },
+        android_x86_64: {
+            srcs: [
+                "third_party/abseil-cpp/absl/strings/internal/cordz_functions.cc",
+            ],
+        },
+        host: {
+            srcs: [
+                "third_party/abseil-cpp/absl/strings/internal/cordz_functions.cc",
+            ],
+        },
+    },
 }
 
 // GN: //third_party/abseil-cpp/absl/strings:cordz_handle
 cc_defaults {
     name: "cronet_aml_third_party_abseil_cpp_absl_strings_cordz_handle",
-    srcs: [
-        "third_party/abseil-cpp/absl/strings/internal/cordz_handle.cc",
-    ],
+    target: {
+        android_x86: {
+            srcs: [
+                "third_party/abseil-cpp/absl/strings/internal/cordz_handle.cc",
+            ],
+        },
+        android_x86_64: {
+            srcs: [
+                "third_party/abseil-cpp/absl/strings/internal/cordz_handle.cc",
+            ],
+        },
+        host: {
+            srcs: [
+                "third_party/abseil-cpp/absl/strings/internal/cordz_handle.cc",
+            ],
+        },
+    },
 }
 
 // GN: //third_party/abseil-cpp/absl/strings:cordz_info
 cc_defaults {
     name: "cronet_aml_third_party_abseil_cpp_absl_strings_cordz_info",
-    srcs: [
-        "third_party/abseil-cpp/absl/strings/internal/cordz_info.cc",
-    ],
+    target: {
+        android_x86: {
+            srcs: [
+                "third_party/abseil-cpp/absl/strings/internal/cordz_info.cc",
+            ],
+        },
+        android_x86_64: {
+            srcs: [
+                "third_party/abseil-cpp/absl/strings/internal/cordz_info.cc",
+            ],
+        },
+        host: {
+            srcs: [
+                "third_party/abseil-cpp/absl/strings/internal/cordz_info.cc",
+            ],
+        },
+    },
 }
 
 // GN: //third_party/abseil-cpp/absl/strings:cordz_statistics
@@ -5225,11 +6789,29 @@ cc_defaults {
 // GN: //third_party/abseil-cpp/absl/strings:internal
 cc_defaults {
     name: "cronet_aml_third_party_abseil_cpp_absl_strings_internal",
-    srcs: [
-        "third_party/abseil-cpp/absl/strings/internal/escaping.cc",
-        "third_party/abseil-cpp/absl/strings/internal/ostringstream.cc",
-        "third_party/abseil-cpp/absl/strings/internal/utf8.cc",
-    ],
+    target: {
+        android_x86: {
+            srcs: [
+                "third_party/abseil-cpp/absl/strings/internal/escaping.cc",
+                "third_party/abseil-cpp/absl/strings/internal/ostringstream.cc",
+                "third_party/abseil-cpp/absl/strings/internal/utf8.cc",
+            ],
+        },
+        android_x86_64: {
+            srcs: [
+                "third_party/abseil-cpp/absl/strings/internal/escaping.cc",
+                "third_party/abseil-cpp/absl/strings/internal/ostringstream.cc",
+                "third_party/abseil-cpp/absl/strings/internal/utf8.cc",
+            ],
+        },
+        host: {
+            srcs: [
+                "third_party/abseil-cpp/absl/strings/internal/escaping.cc",
+                "third_party/abseil-cpp/absl/strings/internal/ostringstream.cc",
+                "third_party/abseil-cpp/absl/strings/internal/utf8.cc",
+            ],
+        },
+    },
 }
 
 // GN: //third_party/abseil-cpp/absl/strings:str_format
@@ -5240,43 +6822,121 @@ cc_defaults {
 // GN: //third_party/abseil-cpp/absl/strings:str_format_internal
 cc_defaults {
     name: "cronet_aml_third_party_abseil_cpp_absl_strings_str_format_internal",
-    srcs: [
-        "third_party/abseil-cpp/absl/strings/internal/str_format/arg.cc",
-        "third_party/abseil-cpp/absl/strings/internal/str_format/bind.cc",
-        "third_party/abseil-cpp/absl/strings/internal/str_format/extension.cc",
-        "third_party/abseil-cpp/absl/strings/internal/str_format/float_conversion.cc",
-        "third_party/abseil-cpp/absl/strings/internal/str_format/output.cc",
-        "third_party/abseil-cpp/absl/strings/internal/str_format/parser.cc",
-    ],
+    target: {
+        android_x86: {
+            srcs: [
+                "third_party/abseil-cpp/absl/strings/internal/str_format/arg.cc",
+                "third_party/abseil-cpp/absl/strings/internal/str_format/bind.cc",
+                "third_party/abseil-cpp/absl/strings/internal/str_format/extension.cc",
+                "third_party/abseil-cpp/absl/strings/internal/str_format/float_conversion.cc",
+                "third_party/abseil-cpp/absl/strings/internal/str_format/output.cc",
+                "third_party/abseil-cpp/absl/strings/internal/str_format/parser.cc",
+            ],
+        },
+        android_x86_64: {
+            srcs: [
+                "third_party/abseil-cpp/absl/strings/internal/str_format/arg.cc",
+                "third_party/abseil-cpp/absl/strings/internal/str_format/bind.cc",
+                "third_party/abseil-cpp/absl/strings/internal/str_format/extension.cc",
+                "third_party/abseil-cpp/absl/strings/internal/str_format/float_conversion.cc",
+                "third_party/abseil-cpp/absl/strings/internal/str_format/output.cc",
+                "third_party/abseil-cpp/absl/strings/internal/str_format/parser.cc",
+            ],
+        },
+        host: {
+            srcs: [
+                "third_party/abseil-cpp/absl/strings/internal/str_format/arg.cc",
+                "third_party/abseil-cpp/absl/strings/internal/str_format/bind.cc",
+                "third_party/abseil-cpp/absl/strings/internal/str_format/extension.cc",
+                "third_party/abseil-cpp/absl/strings/internal/str_format/float_conversion.cc",
+                "third_party/abseil-cpp/absl/strings/internal/str_format/output.cc",
+                "third_party/abseil-cpp/absl/strings/internal/str_format/parser.cc",
+            ],
+        },
+    },
 }
 
 // GN: //third_party/abseil-cpp/absl/strings:strings
 cc_defaults {
     name: "cronet_aml_third_party_abseil_cpp_absl_strings_strings",
-    srcs: [
-        "third_party/abseil-cpp/absl/strings/ascii.cc",
-        "third_party/abseil-cpp/absl/strings/charconv.cc",
-        "third_party/abseil-cpp/absl/strings/escaping.cc",
-        "third_party/abseil-cpp/absl/strings/internal/charconv_bigint.cc",
-        "third_party/abseil-cpp/absl/strings/internal/charconv_parse.cc",
-        "third_party/abseil-cpp/absl/strings/internal/damerau_levenshtein_distance.cc",
-        "third_party/abseil-cpp/absl/strings/internal/memutil.cc",
-        "third_party/abseil-cpp/absl/strings/match.cc",
-        "third_party/abseil-cpp/absl/strings/numbers.cc",
-        "third_party/abseil-cpp/absl/strings/str_cat.cc",
-        "third_party/abseil-cpp/absl/strings/str_replace.cc",
-        "third_party/abseil-cpp/absl/strings/str_split.cc",
-        "third_party/abseil-cpp/absl/strings/string_view.cc",
-        "third_party/abseil-cpp/absl/strings/substitute.cc",
-    ],
+    target: {
+        android_x86: {
+            srcs: [
+                "third_party/abseil-cpp/absl/strings/ascii.cc",
+                "third_party/abseil-cpp/absl/strings/charconv.cc",
+                "third_party/abseil-cpp/absl/strings/escaping.cc",
+                "third_party/abseil-cpp/absl/strings/internal/charconv_bigint.cc",
+                "third_party/abseil-cpp/absl/strings/internal/charconv_parse.cc",
+                "third_party/abseil-cpp/absl/strings/internal/damerau_levenshtein_distance.cc",
+                "third_party/abseil-cpp/absl/strings/internal/memutil.cc",
+                "third_party/abseil-cpp/absl/strings/match.cc",
+                "third_party/abseil-cpp/absl/strings/numbers.cc",
+                "third_party/abseil-cpp/absl/strings/str_cat.cc",
+                "third_party/abseil-cpp/absl/strings/str_replace.cc",
+                "third_party/abseil-cpp/absl/strings/str_split.cc",
+                "third_party/abseil-cpp/absl/strings/string_view.cc",
+                "third_party/abseil-cpp/absl/strings/substitute.cc",
+            ],
+        },
+        android_x86_64: {
+            srcs: [
+                "third_party/abseil-cpp/absl/strings/ascii.cc",
+                "third_party/abseil-cpp/absl/strings/charconv.cc",
+                "third_party/abseil-cpp/absl/strings/escaping.cc",
+                "third_party/abseil-cpp/absl/strings/internal/charconv_bigint.cc",
+                "third_party/abseil-cpp/absl/strings/internal/charconv_parse.cc",
+                "third_party/abseil-cpp/absl/strings/internal/damerau_levenshtein_distance.cc",
+                "third_party/abseil-cpp/absl/strings/internal/memutil.cc",
+                "third_party/abseil-cpp/absl/strings/match.cc",
+                "third_party/abseil-cpp/absl/strings/numbers.cc",
+                "third_party/abseil-cpp/absl/strings/str_cat.cc",
+                "third_party/abseil-cpp/absl/strings/str_replace.cc",
+                "third_party/abseil-cpp/absl/strings/str_split.cc",
+                "third_party/abseil-cpp/absl/strings/string_view.cc",
+                "third_party/abseil-cpp/absl/strings/substitute.cc",
+            ],
+        },
+        host: {
+            srcs: [
+                "third_party/abseil-cpp/absl/strings/ascii.cc",
+                "third_party/abseil-cpp/absl/strings/charconv.cc",
+                "third_party/abseil-cpp/absl/strings/escaping.cc",
+                "third_party/abseil-cpp/absl/strings/internal/charconv_bigint.cc",
+                "third_party/abseil-cpp/absl/strings/internal/charconv_parse.cc",
+                "third_party/abseil-cpp/absl/strings/internal/damerau_levenshtein_distance.cc",
+                "third_party/abseil-cpp/absl/strings/internal/memutil.cc",
+                "third_party/abseil-cpp/absl/strings/match.cc",
+                "third_party/abseil-cpp/absl/strings/numbers.cc",
+                "third_party/abseil-cpp/absl/strings/str_cat.cc",
+                "third_party/abseil-cpp/absl/strings/str_replace.cc",
+                "third_party/abseil-cpp/absl/strings/str_split.cc",
+                "third_party/abseil-cpp/absl/strings/string_view.cc",
+                "third_party/abseil-cpp/absl/strings/substitute.cc",
+            ],
+        },
+    },
 }
 
 // GN: //third_party/abseil-cpp/absl/synchronization:graphcycles_internal
 cc_defaults {
     name: "cronet_aml_third_party_abseil_cpp_absl_synchronization_graphcycles_internal",
-    srcs: [
-        "third_party/abseil-cpp/absl/synchronization/internal/graphcycles.cc",
-    ],
+    target: {
+        android_x86: {
+            srcs: [
+                "third_party/abseil-cpp/absl/synchronization/internal/graphcycles.cc",
+            ],
+        },
+        android_x86_64: {
+            srcs: [
+                "third_party/abseil-cpp/absl/synchronization/internal/graphcycles.cc",
+            ],
+        },
+        host: {
+            srcs: [
+                "third_party/abseil-cpp/absl/synchronization/internal/graphcycles.cc",
+            ],
+        },
+    },
 }
 
 // GN: //third_party/abseil-cpp/absl/synchronization:kernel_timeout_internal
@@ -5287,67 +6947,187 @@ cc_defaults {
 // GN: //third_party/abseil-cpp/absl/synchronization:synchronization
 cc_defaults {
     name: "cronet_aml_third_party_abseil_cpp_absl_synchronization_synchronization",
-    srcs: [
-        "third_party/abseil-cpp/absl/synchronization/barrier.cc",
-        "third_party/abseil-cpp/absl/synchronization/blocking_counter.cc",
-        "third_party/abseil-cpp/absl/synchronization/internal/create_thread_identity.cc",
-        "third_party/abseil-cpp/absl/synchronization/internal/per_thread_sem.cc",
-        "third_party/abseil-cpp/absl/synchronization/internal/waiter.cc",
-        "third_party/abseil-cpp/absl/synchronization/mutex.cc",
-        "third_party/abseil-cpp/absl/synchronization/notification.cc",
-    ],
+    target: {
+        android_x86: {
+            srcs: [
+                "third_party/abseil-cpp/absl/synchronization/barrier.cc",
+                "third_party/abseil-cpp/absl/synchronization/blocking_counter.cc",
+                "third_party/abseil-cpp/absl/synchronization/internal/create_thread_identity.cc",
+                "third_party/abseil-cpp/absl/synchronization/internal/per_thread_sem.cc",
+                "third_party/abseil-cpp/absl/synchronization/internal/waiter.cc",
+                "third_party/abseil-cpp/absl/synchronization/mutex.cc",
+                "third_party/abseil-cpp/absl/synchronization/notification.cc",
+            ],
+        },
+        android_x86_64: {
+            srcs: [
+                "third_party/abseil-cpp/absl/synchronization/barrier.cc",
+                "third_party/abseil-cpp/absl/synchronization/blocking_counter.cc",
+                "third_party/abseil-cpp/absl/synchronization/internal/create_thread_identity.cc",
+                "third_party/abseil-cpp/absl/synchronization/internal/per_thread_sem.cc",
+                "third_party/abseil-cpp/absl/synchronization/internal/waiter.cc",
+                "third_party/abseil-cpp/absl/synchronization/mutex.cc",
+                "third_party/abseil-cpp/absl/synchronization/notification.cc",
+            ],
+        },
+        host: {
+            srcs: [
+                "third_party/abseil-cpp/absl/synchronization/barrier.cc",
+                "third_party/abseil-cpp/absl/synchronization/blocking_counter.cc",
+                "third_party/abseil-cpp/absl/synchronization/internal/create_thread_identity.cc",
+                "third_party/abseil-cpp/absl/synchronization/internal/per_thread_sem.cc",
+                "third_party/abseil-cpp/absl/synchronization/internal/waiter.cc",
+                "third_party/abseil-cpp/absl/synchronization/mutex.cc",
+                "third_party/abseil-cpp/absl/synchronization/notification.cc",
+            ],
+        },
+    },
 }
 
 // GN: //third_party/abseil-cpp/absl/time/internal/cctz:civil_time
 cc_defaults {
     name: "cronet_aml_third_party_abseil_cpp_absl_time_internal_cctz_civil_time",
-    srcs: [
-        "third_party/abseil-cpp/absl/time/internal/cctz/src/civil_time_detail.cc",
-    ],
+    target: {
+        android_x86: {
+            srcs: [
+                "third_party/abseil-cpp/absl/time/internal/cctz/src/civil_time_detail.cc",
+            ],
+        },
+        android_x86_64: {
+            srcs: [
+                "third_party/abseil-cpp/absl/time/internal/cctz/src/civil_time_detail.cc",
+            ],
+        },
+        host: {
+            srcs: [
+                "third_party/abseil-cpp/absl/time/internal/cctz/src/civil_time_detail.cc",
+            ],
+        },
+    },
 }
 
 // GN: //third_party/abseil-cpp/absl/time/internal/cctz:time_zone
 cc_defaults {
     name: "cronet_aml_third_party_abseil_cpp_absl_time_internal_cctz_time_zone",
-    srcs: [
-        "third_party/abseil-cpp/absl/time/internal/cctz/src/time_zone_fixed.cc",
-        "third_party/abseil-cpp/absl/time/internal/cctz/src/time_zone_format.cc",
-        "third_party/abseil-cpp/absl/time/internal/cctz/src/time_zone_if.cc",
-        "third_party/abseil-cpp/absl/time/internal/cctz/src/time_zone_impl.cc",
-        "third_party/abseil-cpp/absl/time/internal/cctz/src/time_zone_info.cc",
-        "third_party/abseil-cpp/absl/time/internal/cctz/src/time_zone_libc.cc",
-        "third_party/abseil-cpp/absl/time/internal/cctz/src/time_zone_lookup.cc",
-        "third_party/abseil-cpp/absl/time/internal/cctz/src/time_zone_posix.cc",
-        "third_party/abseil-cpp/absl/time/internal/cctz/src/zone_info_source.cc",
-    ],
+    target: {
+        android_x86: {
+            srcs: [
+                "third_party/abseil-cpp/absl/time/internal/cctz/src/time_zone_fixed.cc",
+                "third_party/abseil-cpp/absl/time/internal/cctz/src/time_zone_format.cc",
+                "third_party/abseil-cpp/absl/time/internal/cctz/src/time_zone_if.cc",
+                "third_party/abseil-cpp/absl/time/internal/cctz/src/time_zone_impl.cc",
+                "third_party/abseil-cpp/absl/time/internal/cctz/src/time_zone_info.cc",
+                "third_party/abseil-cpp/absl/time/internal/cctz/src/time_zone_libc.cc",
+                "third_party/abseil-cpp/absl/time/internal/cctz/src/time_zone_lookup.cc",
+                "third_party/abseil-cpp/absl/time/internal/cctz/src/time_zone_posix.cc",
+                "third_party/abseil-cpp/absl/time/internal/cctz/src/zone_info_source.cc",
+            ],
+        },
+        android_x86_64: {
+            srcs: [
+                "third_party/abseil-cpp/absl/time/internal/cctz/src/time_zone_fixed.cc",
+                "third_party/abseil-cpp/absl/time/internal/cctz/src/time_zone_format.cc",
+                "third_party/abseil-cpp/absl/time/internal/cctz/src/time_zone_if.cc",
+                "third_party/abseil-cpp/absl/time/internal/cctz/src/time_zone_impl.cc",
+                "third_party/abseil-cpp/absl/time/internal/cctz/src/time_zone_info.cc",
+                "third_party/abseil-cpp/absl/time/internal/cctz/src/time_zone_libc.cc",
+                "third_party/abseil-cpp/absl/time/internal/cctz/src/time_zone_lookup.cc",
+                "third_party/abseil-cpp/absl/time/internal/cctz/src/time_zone_posix.cc",
+                "third_party/abseil-cpp/absl/time/internal/cctz/src/zone_info_source.cc",
+            ],
+        },
+        host: {
+            srcs: [
+                "third_party/abseil-cpp/absl/time/internal/cctz/src/time_zone_fixed.cc",
+                "third_party/abseil-cpp/absl/time/internal/cctz/src/time_zone_format.cc",
+                "third_party/abseil-cpp/absl/time/internal/cctz/src/time_zone_if.cc",
+                "third_party/abseil-cpp/absl/time/internal/cctz/src/time_zone_impl.cc",
+                "third_party/abseil-cpp/absl/time/internal/cctz/src/time_zone_info.cc",
+                "third_party/abseil-cpp/absl/time/internal/cctz/src/time_zone_libc.cc",
+                "third_party/abseil-cpp/absl/time/internal/cctz/src/time_zone_lookup.cc",
+                "third_party/abseil-cpp/absl/time/internal/cctz/src/time_zone_posix.cc",
+                "third_party/abseil-cpp/absl/time/internal/cctz/src/zone_info_source.cc",
+            ],
+        },
+    },
 }
 
 // GN: //third_party/abseil-cpp/absl/time:time
 cc_defaults {
     name: "cronet_aml_third_party_abseil_cpp_absl_time_time",
-    srcs: [
-        "third_party/abseil-cpp/absl/time/civil_time.cc",
-        "third_party/abseil-cpp/absl/time/clock.cc",
-        "third_party/abseil-cpp/absl/time/duration.cc",
-        "third_party/abseil-cpp/absl/time/format.cc",
-        "third_party/abseil-cpp/absl/time/time.cc",
-    ],
+    target: {
+        android_x86: {
+            srcs: [
+                "third_party/abseil-cpp/absl/time/civil_time.cc",
+                "third_party/abseil-cpp/absl/time/clock.cc",
+                "third_party/abseil-cpp/absl/time/duration.cc",
+                "third_party/abseil-cpp/absl/time/format.cc",
+                "third_party/abseil-cpp/absl/time/time.cc",
+            ],
+        },
+        android_x86_64: {
+            srcs: [
+                "third_party/abseil-cpp/absl/time/civil_time.cc",
+                "third_party/abseil-cpp/absl/time/clock.cc",
+                "third_party/abseil-cpp/absl/time/duration.cc",
+                "third_party/abseil-cpp/absl/time/format.cc",
+                "third_party/abseil-cpp/absl/time/time.cc",
+            ],
+        },
+        host: {
+            srcs: [
+                "third_party/abseil-cpp/absl/time/civil_time.cc",
+                "third_party/abseil-cpp/absl/time/clock.cc",
+                "third_party/abseil-cpp/absl/time/duration.cc",
+                "third_party/abseil-cpp/absl/time/format.cc",
+                "third_party/abseil-cpp/absl/time/time.cc",
+            ],
+        },
+    },
 }
 
 // GN: //third_party/abseil-cpp/absl/types:bad_optional_access
 cc_defaults {
     name: "cronet_aml_third_party_abseil_cpp_absl_types_bad_optional_access",
-    srcs: [
-        "third_party/abseil-cpp/absl/types/bad_optional_access.cc",
-    ],
+    target: {
+        android_x86: {
+            srcs: [
+                "third_party/abseil-cpp/absl/types/bad_optional_access.cc",
+            ],
+        },
+        android_x86_64: {
+            srcs: [
+                "third_party/abseil-cpp/absl/types/bad_optional_access.cc",
+            ],
+        },
+        host: {
+            srcs: [
+                "third_party/abseil-cpp/absl/types/bad_optional_access.cc",
+            ],
+        },
+    },
 }
 
 // GN: //third_party/abseil-cpp/absl/types:bad_variant_access
 cc_defaults {
     name: "cronet_aml_third_party_abseil_cpp_absl_types_bad_variant_access",
-    srcs: [
-        "third_party/abseil-cpp/absl/types/bad_variant_access.cc",
-    ],
+    target: {
+        android_x86: {
+            srcs: [
+                "third_party/abseil-cpp/absl/types/bad_variant_access.cc",
+            ],
+        },
+        android_x86_64: {
+            srcs: [
+                "third_party/abseil-cpp/absl/types/bad_variant_access.cc",
+            ],
+        },
+        host: {
+            srcs: [
+                "third_party/abseil-cpp/absl/types/bad_variant_access.cc",
+            ],
+        },
+    },
 }
 
 // GN: //third_party/abseil-cpp/absl/types:compare
@@ -5378,17 +7158,35 @@ cc_defaults {
 // GN: //third_party/android_ndk:cpu_features
 cc_defaults {
     name: "cronet_aml_third_party_android_ndk_cpu_features",
-    srcs: [
-        "third_party/android_ndk/sources/android/cpufeatures/cpu-features.c",
-    ],
+    target: {
+        android_x86: {
+            srcs: [
+                "third_party/android_ndk/sources/android/cpufeatures/cpu-features.c",
+            ],
+        },
+        android_x86_64: {
+            srcs: [
+                "third_party/android_ndk/sources/android/cpufeatures/cpu-features.c",
+            ],
+        },
+    },
 }
 
 // GN: //third_party/ashmem:ashmem
 cc_defaults {
     name: "cronet_aml_third_party_ashmem_ashmem",
-    srcs: [
-        "third_party/ashmem/ashmem-dev.c",
-    ],
+    target: {
+        android_x86: {
+            srcs: [
+                "third_party/ashmem/ashmem-dev.c",
+            ],
+        },
+        android_x86_64: {
+            srcs: [
+                "third_party/ashmem/ashmem-dev.c",
+            ],
+        },
+    },
 }
 
 // GN: //third_party/boringssl:boringssl
@@ -7264,9 +9062,23 @@ cc_library_static {
 // GN: //third_party/zlib:zlib_adler32_simd
 cc_defaults {
     name: "cronet_aml_third_party_zlib_zlib_adler32_simd",
-    srcs: [
-        "third_party/zlib/adler32_simd.c",
-    ],
+    target: {
+        android_x86: {
+            srcs: [
+                "third_party/zlib/adler32_simd.c",
+            ],
+        },
+        android_x86_64: {
+            srcs: [
+                "third_party/zlib/adler32_simd.c",
+            ],
+        },
+        host: {
+            srcs: [
+                "third_party/zlib/adler32_simd.c",
+            ],
+        },
+    },
 }
 
 // GN: //third_party/zlib:zlib_common_headers
@@ -7277,19 +9089,51 @@ cc_defaults {
 // GN: //third_party/zlib:zlib_crc32_simd
 cc_defaults {
     name: "cronet_aml_third_party_zlib_zlib_crc32_simd",
-    srcs: [
-        "third_party/zlib/crc32_simd.c",
-        "third_party/zlib/crc_folding.c",
-    ],
+    target: {
+        android_x86: {
+            srcs: [
+                "third_party/zlib/crc32_simd.c",
+                "third_party/zlib/crc_folding.c",
+            ],
+        },
+        android_x86_64: {
+            srcs: [
+                "third_party/zlib/crc32_simd.c",
+                "third_party/zlib/crc_folding.c",
+            ],
+        },
+        host: {
+            srcs: [
+                "third_party/zlib/crc32_simd.c",
+                "third_party/zlib/crc_folding.c",
+            ],
+        },
+    },
 }
 
 // GN: //third_party/zlib:zlib_inflate_chunk_simd
 cc_defaults {
     name: "cronet_aml_third_party_zlib_zlib_inflate_chunk_simd",
-    srcs: [
-        "third_party/zlib/contrib/optimizations/inffast_chunk.c",
-        "third_party/zlib/contrib/optimizations/inflate.c",
-    ],
+    target: {
+        android_x86: {
+            srcs: [
+                "third_party/zlib/contrib/optimizations/inffast_chunk.c",
+                "third_party/zlib/contrib/optimizations/inflate.c",
+            ],
+        },
+        android_x86_64: {
+            srcs: [
+                "third_party/zlib/contrib/optimizations/inffast_chunk.c",
+                "third_party/zlib/contrib/optimizations/inflate.c",
+            ],
+        },
+        host: {
+            srcs: [
+                "third_party/zlib/contrib/optimizations/inffast_chunk.c",
+                "third_party/zlib/contrib/optimizations/inflate.c",
+            ],
+        },
+    },
 }
 
 // GN: //third_party/zlib:zlib_slide_hash_simd
