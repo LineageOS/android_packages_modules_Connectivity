@@ -209,6 +209,7 @@ class Target(object):
     self.stl = None
     self.cppflags = set()
     self.local_include_dirs = []
+    self.export_system_include_dirs = set()
 
   def to_string(self, output):
     nested_out = []
@@ -222,6 +223,7 @@ class Target(object):
     self._output_field(nested_out, 'strip')
     self._output_field(nested_out, 'cppflags')
     self._output_field(nested_out, 'local_include_dirs')
+    self._output_field(nested_out, 'export_system_include_dirs')
 
     if nested_out:
       output.append('    %s: {' % self.name)
@@ -989,15 +991,6 @@ def set_module_include_dirs(module, cflags, include_dirs):
                                  if not re.match('^//out/.*', d)])
   module.local_include_dirs = sorted(list(local_include_dirs_set))
 
-  # Order matters for some targets. For example, base/time/time_exploded_icu.cc
-  # in //base:base needs to have sysroot include after icu/source/common
-  # include. So adding sysroot include at the end.
-  for flag in sorted(cflags):
-    if '--sysroot' in flag:
-      sysroot = flag[len('--sysroot=../../'):]
-      if sysroot == "build/linux/debian_bullseye_amd64-sysroot":
-        module.local_include_dirs.append(sysroot + "/usr/include/x86_64-linux-gnu")
-      module.local_include_dirs.append(sysroot + "/usr/include")
 
 def create_modules_from_target(blueprint, gn, gn_target_name):
   """Generate module(s) for a given GN target.
@@ -1225,6 +1218,19 @@ def create_blueprint_for_targets(gn, desc, targets):
       '-Wno-ambiguous-reversed-operator', # needed for icui18n
       '-Wno-unreachable-code-loop-increment', # needed for icui18n
       '-O2',
+  ]
+  # TODO: can we get these from somewhere else?
+  # TODO: what to do for arm?
+  defaults.target['android_x86'].export_system_include_dirs = [
+      'build/linux/debian_bullseye_i386-sysroot/usr/include',
+  ]
+  defaults.target['android_x86_64'].export_system_include_dirs = [
+      'build/linux/debian_bullseye_amd64-sysroot/usr/include',
+      'build/linux/debian_bullseye_amd64-sysroot/usr/include/x86_64-linux-gnu',
+  ]
+  defaults.target['host'].export_system_include_dirs = [
+      # TODO: do we need this?
+      'third_party/android_ndk/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include',
   ]
   defaults.stl = 'none'
   blueprint.add_module(defaults)
