@@ -131,6 +131,9 @@ additional_args = {
         # that doesn't depend on rtti. undefined symbol: typeinfo 'class' errors appears.
         ('rtti', True), # go/undefined-symbol-typeinfo
     ],
+    'cronet_aml_base_base': [
+        ('header_libs', set(["media_ndk_headers"])),
+    ],
 }
 
 # Android equivalents for third-party libraries that the upstream project
@@ -1218,19 +1221,6 @@ def create_blueprint_for_targets(gn, targets):
       '-Wno-ambiguous-reversed-operator', # needed for icui18n
       '-Wno-unreachable-code-loop-increment', # needed for icui18n
       '-O2',
-  ]
-  # TODO: can we get these from somewhere else?
-  # TODO: what to do for arm?
-  defaults.target['android_x86'].export_system_include_dirs = [
-      'build/linux/debian_bullseye_i386-sysroot/usr/include',
-  ]
-  defaults.target['android_x86_64'].export_system_include_dirs = [
-      'build/linux/debian_bullseye_amd64-sysroot/usr/include',
-      'build/linux/debian_bullseye_amd64-sysroot/usr/include/x86_64-linux-gnu',
-  ]
-  defaults.target['host'].export_system_include_dirs = [
-      # TODO: do we need this?
-      'third_party/android_ndk/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include',
   ]
   defaults.stl = 'none'
   blueprint.add_module(defaults)
