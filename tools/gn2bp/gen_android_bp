@@ -1198,7 +1198,7 @@ def update_jni_registration_module(blueprint, gn):
   module.srcs.update([
     "components/cronet/android/java/src/org/chromium/net/impl/CronetUrlRequest.java"])
 
-def create_blueprint_for_targets(gn, desc, targets):
+def create_blueprint_for_targets(gn, targets):
   """Generate a blueprint for a list of GN targets."""
   blueprint = Blueprint()
 
@@ -1305,7 +1305,7 @@ def main():
     # TODO: pass desc to parse_gn_desc() to support parsing multiple desc files
     # for different target architectures.
     gn.parse_gn_desc(desc, target)
-  blueprint = create_blueprint_for_targets(gn, desc, targets)
+  blueprint = create_blueprint_for_targets(gn, targets)
   project_root = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))
   tool_name = os.path.relpath(os.path.abspath(__file__), project_root)
 
