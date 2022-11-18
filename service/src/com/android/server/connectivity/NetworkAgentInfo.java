@@ -23,6 +23,7 @@ import static android.net.NetworkCapabilities.NET_CAPABILITY_NOT_RESTRICTED;
 import static android.net.NetworkCapabilities.TRANSPORT_CELLULAR;
 import static android.net.NetworkCapabilities.TRANSPORT_ETHERNET;
 import static android.net.NetworkCapabilities.TRANSPORT_TEST;
+import static android.net.NetworkCapabilities.TRANSPORT_WIFI;
 import static android.net.NetworkCapabilities.transportNamesOf;
 
 import android.annotation.NonNull;
@@ -1591,10 +1592,11 @@ public class NetworkAgentInfo implements NetworkRanker.Scoreable {
             return false;
         }
 
-        // Factories that make cell networks can allow the UID for the carrier service package.
+        // Factories that make cell/wifi networks can allow the UID for the carrier service package.
         // This can only work in T where there is support for CarrierPrivilegeAuthenticator
         if (null != carrierPrivilegeAuthenticator
-                && nc.hasSingleTransportBesidesTest(TRANSPORT_CELLULAR)
+                && (nc.hasSingleTransportBesidesTest(TRANSPORT_CELLULAR)
+                        || nc.hasSingleTransportBesidesTest(TRANSPORT_WIFI))
                 && (1 == nc.getAllowedUidsNoCopy().size())
                 && (carrierPrivilegeAuthenticator.hasCarrierPrivilegeForNetworkCapabilities(
                         nc.getAllowedUidsNoCopy().valueAt(0), nc))) {
