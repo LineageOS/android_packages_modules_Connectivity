@@ -190,6 +190,12 @@ class GnParser(object):
         return
       self.is_finalized = True
 
+      # There are targets that depend on source_set only in specific arch.
+      # Currently, source_set is converted to cc_defaults and defaults can not be target specific
+      # So, skip extracting common part and keep all data for each arch
+      if self.type == 'source_set':
+        return
+
       # Target contains the intersection of arch-dependent properties
       self.sources = set.intersection(*[arch.sources for arch in self.arch.values()])
       self.cflags = set.intersection(*[arch.cflags for arch in self.arch.values()])

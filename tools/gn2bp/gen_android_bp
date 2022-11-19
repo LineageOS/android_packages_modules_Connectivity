@@ -131,6 +131,9 @@ additional_args = {
         # that doesn't depend on rtti. undefined symbol: typeinfo 'class' errors appears.
         ('rtti', True), # go/undefined-symbol-typeinfo
     ],
+    'cronet_aml_base_base': [
+        ('header_libs', {"media_ndk_headers"}),
+    ],
 }
 
 # Android equivalents for third-party libraries that the upstream project
@@ -209,6 +212,7 @@ class Target(object):
     self.stl = None
     self.cppflags = set()
     self.local_include_dirs = []
+    self.export_system_include_dirs = set()
 
   def to_string(self, output):
     nested_out = []
@@ -222,6 +226,7 @@ class Target(object):
     self._output_field(nested_out, 'strip')
     self._output_field(nested_out, 'cppflags')
     self._output_field(nested_out, 'local_include_dirs')
+    self._output_field(nested_out, 'export_system_include_dirs')
 
     if nested_out:
       output.append('    %s: {' % self.name)
@@ -958,8 +963,8 @@ def _get_cflags(cflags, defines):
   # So adding -UANDROID to cancel default -DANDROID if it's not specified.
   # This is needed for some targets(e.g. symbolize)
   # TODO: Set -UANDROID considering common define
-  # if "ANDROID" not in defines:
-  #   cflags.add("-UANDROID")
+  if "ANDROID" not in defines:
+    cflags.add("-UANDROID")
   return cflags
 
 def set_module_flags(module, cflags, defines):
@@ -989,15 +994,6 @@ def set_module_include_dirs(module, cflags, include_dirs):
                                  if not re.match('^//out/.*', d)])
   module.local_include_dirs = sorted(list(local_include_dirs_set))
 
-  # Order matters for some targets. For example, base/time/time_exploded_icu.cc
-  # in //base:base needs to have sysroot include after icu/source/common
-  # include. So adding sysroot include at the end.
-  for flag in sorted(cflags):
-    if '--sysroot' in flag:
-      sysroot = flag[len('--sysroot=../../'):]
-      if sysroot == "build/linux/debian_bullseye_amd64-sysroot":
-        module.local_include_dirs.append(sysroot + "/usr/include/x86_64-linux-gnu")
-      module.local_include_dirs.append(sysroot + "/usr/include")
 
 def create_modules_from_target(blueprint, gn, gn_target_name):
   """Generate module(s) for a given GN target.
@@ -1205,7 +1201,7 @@ def update_jni_registration_module(blueprint, gn):
   module.srcs.update([
     "components/cronet/android/java/src/org/chromium/net/impl/CronetUrlRequest.java"])
 
-def create_blueprint_for_targets(gn, desc, targets):
+def create_blueprint_for_targets(gn, targets):
   """Generate a blueprint for a list of GN targets."""
   blueprint = Blueprint()
 
@@ -1261,8 +1257,10 @@ def main():
       description='Generate Android.bp from a GN description.')
   parser.add_argument(
       '--desc',
-      help='GN description (e.g., gn desc out --format=json --all-toolchains "//*"',
-      required=True
+      help='GN description (e.g., gn desc out --format=json --all-toolchains "//*".' +
+           'You can specify multiple --desc options for different target_cpu',
+      required=True,
+      action='append'
   )
   parser.add_argument(
       '--extras',
@@ -1290,16 +1288,14 @@ def main():
   if args.verbose:
     log.basicConfig(format='%(levelname)s:%(funcName)s:%(message)s', level=log.DEBUG)
 
-  with open(args.desc) as f:
-    desc = json.load(f)
-
-  gn = gn_utils.GnParser()
   targets = args.targets or default_targets
-  for target in targets:
-    # TODO: pass desc to parse_gn_desc() to support parsing multiple desc files
-    # for different target architectures.
-    gn.parse_gn_desc(desc, target)
-  blueprint = create_blueprint_for_targets(gn, desc, targets)
+  gn = gn_utils.GnParser()
+  for desc_file in args.desc:
+    with open(desc_file) as f:
+      desc = json.load(f)
+    for target in targets:
+      gn.parse_gn_desc(desc, target)
+  blueprint = create_blueprint_for_targets(gn, targets)
   project_root = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))
   tool_name = os.path.relpath(os.path.abspath(__file__), project_root)
 
