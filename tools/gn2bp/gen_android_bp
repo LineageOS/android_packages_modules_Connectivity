@@ -1163,13 +1163,7 @@ def create_java_module(blueprint, gn):
   module.srcs.update([gn_utils.label_to_path(source) for source in gn.java_sources])
   blueprint.add_module(module)
 
-def update_jni_registration_module(blueprint, gn):
-  bp_module_name = label_to_module_name('//components/cronet/android:cronet_jni_registration')
-  if bp_module_name not in blueprint.modules:
-    # To support building targets that might not create the cronet_jni_registration.
-    return
-  module = blueprint.modules[bp_module_name]
-
+def update_jni_registration_module(module, gn):
   # TODO: deny list is in the arg of jni_registration_generator.py. Should not be hardcoded
   deny_list = [
     '//base/android/java/src/org/chromium/base/library_loader/LibraryLoader.java',
@@ -1231,7 +1225,9 @@ def create_blueprint_for_targets(gn, targets):
     create_modules_from_target(blueprint, gn, target)
 
   create_java_module(blueprint, gn)
-  update_jni_registration_module(blueprint, gn)
+  for module in blueprint.modules.values():
+    if 'cronet_jni_registration' in module.name:
+      update_jni_registration_module(module, gn)
 
   # Merge in additional hardcoded arguments.
   for module in blueprint.modules.values():
