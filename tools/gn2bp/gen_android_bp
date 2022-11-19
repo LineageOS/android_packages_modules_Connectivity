@@ -131,9 +131,6 @@ additional_args = {
         # that doesn't depend on rtti. undefined symbol: typeinfo 'class' errors appears.
         ('rtti', True), # go/undefined-symbol-typeinfo
     ],
-    'cronet_aml_base_base': [
-        ('header_libs', {"media_ndk_headers"}),
-    ],
 }
 
 # Android equivalents for third-party libraries that the upstream project
@@ -206,6 +203,7 @@ class Target(object):
     self.shared_libs = set()
     self.static_libs = set()
     self.whole_static_libs = set()
+    self.header_libs = set()
     self.cflags = set()
     self.dist = dict()
     self.strip = dict()
@@ -220,6 +218,7 @@ class Target(object):
     self._output_field(nested_out, 'shared_libs')
     self._output_field(nested_out, 'static_libs')
     self._output_field(nested_out, 'whole_static_libs')
+    self._output_field(nested_out, 'header_libs')
     self._output_field(nested_out, 'cflags')
     self._output_field(nested_out, 'stl')
     self._output_field(nested_out, 'dist')
@@ -1215,6 +1214,12 @@ def create_blueprint_for_targets(gn, targets):
       '-Wno-ambiguous-reversed-operator', # needed for icui18n
       '-Wno-unreachable-code-loop-increment', # needed for icui18n
       '-O2',
+  ]
+  # Chromium builds do not add a dependency for headers found inside the
+  # sysroot, so they are added globally via defaults.
+  defaults.target['android'].header_libs = [
+      'media_ndk_headers',
+      'jni_headers',
   ]
   defaults.target['host'].cflags = [
       # -DANDROID is added by default but target.defines contain -DANDROID if

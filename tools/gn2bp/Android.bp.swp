@@ -931,7 +931,6 @@ cc_library_static {
     ],
     header_libs: [
         "jni_headers",
-        "media_ndk_headers",
     ],
     cpp_std: "c++20",
     target: {
@@ -3379,6 +3378,12 @@ cc_defaults {
     ],
     stl: "none",
     target: {
+        android: {
+            header_libs: [
+                "jni_headers",
+                "media_ndk_headers",
+            ],
+        },
         host: {
             cflags: [
                 "-UANDROID",
