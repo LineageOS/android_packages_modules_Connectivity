@@ -707,9 +707,6 @@ def create_action_module(blueprint, target):
     target.args[0] = '$(out)'
 
   elif target.script == '//base/android/jni_generator/jni_generator.py':
-    # chromium builds against a prebuilt ndk that contains the jni_headers, so
-    # a dependency is never explicitly created.
-    module.genrule_header_libs.add('jni_headers')
     needs_javap = False
     for i, val in enumerate(target.args):
       if val == '--output_dir':
