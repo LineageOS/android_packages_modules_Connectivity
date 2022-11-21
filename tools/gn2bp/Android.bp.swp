@@ -5081,9 +5081,60 @@ java_library {
     name: "cronet_aml_java",
 }
 
-// GN: //net/base/registry_controlled_domains:registry_controlled_domains
+// GN: //net/base/registry_controlled_domains:registry_controlled_domains__android_x86
 genrule {
-    name: "cronet_aml_net_base_registry_controlled_domains_registry_controlled_domains",
+    name: "cronet_aml_net_base_registry_controlled_domains_registry_controlled_domains__android_x86",
+    cmd: "$(location net/tools/dafsa/make_dafsa.py) --reverse " +
+         "$(location net/base/registry_controlled_domains/effective_tld_names.gperf) " +
+         "$(location net/base/registry_controlled_domains/effective_tld_names-reversed-inc.cc) " +
+         "&& python3 $(location net/tools/dafsa/make_dafsa.py) " +
+         "--reverse " +
+         "$(location net/base/registry_controlled_domains/effective_tld_names_unittest1.gperf) " +
+         "$(location net/base/registry_controlled_domains/effective_tld_names_unittest1-reversed-inc.cc) " +
+         "&& python3 $(location net/tools/dafsa/make_dafsa.py) " +
+         "--reverse " +
+         "$(location net/base/registry_controlled_domains/effective_tld_names_unittest2.gperf) " +
+         "$(location net/base/registry_controlled_domains/effective_tld_names_unittest2-reversed-inc.cc) " +
+         "&& python3 $(location net/tools/dafsa/make_dafsa.py) " +
+         "--reverse " +
+         "$(location net/base/registry_controlled_domains/effective_tld_names_unittest3.gperf) " +
+         "$(location net/base/registry_controlled_domains/effective_tld_names_unittest3-reversed-inc.cc) " +
+         "&& python3 $(location net/tools/dafsa/make_dafsa.py) " +
+         "--reverse " +
+         "$(location net/base/registry_controlled_domains/effective_tld_names_unittest4.gperf) " +
+         "$(location net/base/registry_controlled_domains/effective_tld_names_unittest4-reversed-inc.cc) " +
+         "&& python3 $(location net/tools/dafsa/make_dafsa.py) " +
+         "--reverse " +
+         "$(location net/base/registry_controlled_domains/effective_tld_names_unittest5.gperf) " +
+         "$(location net/base/registry_controlled_domains/effective_tld_names_unittest5-reversed-inc.cc) " +
+         "&& python3 $(location net/tools/dafsa/make_dafsa.py) " +
+         "--reverse " +
+         "$(location net/base/registry_controlled_domains/effective_tld_names_unittest6.gperf) " +
+         "$(location net/base/registry_controlled_domains/effective_tld_names_unittest6-reversed-inc.cc)",
+    out: [
+        "net/base/registry_controlled_domains/effective_tld_names-reversed-inc.cc",
+        "net/base/registry_controlled_domains/effective_tld_names_unittest1-reversed-inc.cc",
+        "net/base/registry_controlled_domains/effective_tld_names_unittest2-reversed-inc.cc",
+        "net/base/registry_controlled_domains/effective_tld_names_unittest3-reversed-inc.cc",
+        "net/base/registry_controlled_domains/effective_tld_names_unittest4-reversed-inc.cc",
+        "net/base/registry_controlled_domains/effective_tld_names_unittest5-reversed-inc.cc",
+        "net/base/registry_controlled_domains/effective_tld_names_unittest6-reversed-inc.cc",
+    ],
+    tool_files: [
+        "net/base/registry_controlled_domains/effective_tld_names.gperf",
+        "net/base/registry_controlled_domains/effective_tld_names_unittest1.gperf",
+        "net/base/registry_controlled_domains/effective_tld_names_unittest2.gperf",
+        "net/base/registry_controlled_domains/effective_tld_names_unittest3.gperf",
+        "net/base/registry_controlled_domains/effective_tld_names_unittest4.gperf",
+        "net/base/registry_controlled_domains/effective_tld_names_unittest5.gperf",
+        "net/base/registry_controlled_domains/effective_tld_names_unittest6.gperf",
+        "net/tools/dafsa/make_dafsa.py",
+    ],
+}
+
+// GN: //net/base/registry_controlled_domains:registry_controlled_domains__android_x86_64
+genrule {
+    name: "cronet_aml_net_base_registry_controlled_domains_registry_controlled_domains__android_x86_64",
     cmd: "$(location net/tools/dafsa/make_dafsa.py) --reverse " +
          "$(location net/base/registry_controlled_domains/effective_tld_names.gperf) " +
          "$(location net/base/registry_controlled_domains/effective_tld_names-reversed-inc.cc) " +
@@ -6328,7 +6379,8 @@ cc_library_static {
         "cronet_aml_build_branding_buildflags__android_x86_64",
         "cronet_aml_build_chromeos_buildflags__android_x86",
         "cronet_aml_build_chromeos_buildflags__android_x86_64",
-        "cronet_aml_net_base_registry_controlled_domains_registry_controlled_domains",
+        "cronet_aml_net_base_registry_controlled_domains_registry_controlled_domains__android_x86",
+        "cronet_aml_net_base_registry_controlled_domains_registry_controlled_domains__android_x86_64",
         "cronet_aml_net_buildflags__android_x86",
         "cronet_aml_net_buildflags__android_x86_64",
         "cronet_aml_net_ios_cronet_buildflags__android_x86",
@@ -6350,7 +6402,8 @@ cc_library_static {
         "cronet_aml_build_branding_buildflags__android_x86_64",
         "cronet_aml_build_chromeos_buildflags__android_x86",
         "cronet_aml_build_chromeos_buildflags__android_x86_64",
-        "cronet_aml_net_base_registry_controlled_domains_registry_controlled_domains",
+        "cronet_aml_net_base_registry_controlled_domains_registry_controlled_domains__android_x86",
+        "cronet_aml_net_base_registry_controlled_domains_registry_controlled_domains__android_x86_64",
         "cronet_aml_net_buildflags__android_x86",
         "cronet_aml_net_buildflags__android_x86_64",
         "cronet_aml_net_ios_cronet_buildflags__android_x86",
