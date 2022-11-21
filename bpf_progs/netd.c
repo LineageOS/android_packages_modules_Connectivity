@@ -198,6 +198,7 @@ static __always_inline inline int bpf_skb_load_bytes_net(const struct __sk_buff*
 }
 
 static __always_inline inline bool skip_owner_match(struct __sk_buff* skb, bool is_4_19) {
+    uint32_t flag = 0;
     if (skb->protocol == htons(ETH_P_IP)) {
         uint8_t proto;
         // no need to check for success, proto will be zeroed if bpf_skb_load_bytes_net() fails
@@ -211,24 +212,22 @@ static __always_inline inline bool skip_owner_match(struct __sk_buff* skb, bool 
         // field will also fail, and that failure we already handle correctly
         // (we also don't check that ihl in [0x45,0x4F] nor that ipv4 header checksum is correct)
         (void)bpf_skb_load_bytes_net(skb, IPPROTO_IHL_OFF, &ihl, sizeof(ihl), is_4_19);
-        uint32_t flag;
         // if the read below fails, we'll just assume no TCP flags are set, which is fine.
         (void)bpf_skb_load_bytes_net(skb, (ihl & 0xF) * 4 + TCP_FLAG32_OFF,
                                      &flag, sizeof(flag), is_4_19);
-        return flag & TCP_FLAG_RST;  // false on read failure
     } else if (skb->protocol == htons(ETH_P_IPV6)) {
         uint8_t proto;
         // no need to check for success, proto will be zeroed if bpf_skb_load_bytes_net() fails
         (void)bpf_skb_load_bytes_net(skb, IPV6_PROTO_OFF, &proto, sizeof(proto), is_4_19);
         if (proto == IPPROTO_ESP) return true;
         if (proto != IPPROTO_TCP) return false;  // handles read failure above
-        uint32_t flag;
         // if the read below fails, we'll just assume no TCP flags are set, which is fine.
         (void)bpf_skb_load_bytes_net(skb, sizeof(struct ipv6hdr) + TCP_FLAG32_OFF,
                                      &flag, sizeof(flag), is_4_19);
-        return flag & TCP_FLAG_RST;  // false on read failure
+    } else {
+        return false;
     }
-    return false;
+    return flag & TCP_FLAG_RST;  // false on read failure
 }
 
 static __always_inline inline BpfConfig getConfig(uint32_t configKey) {
