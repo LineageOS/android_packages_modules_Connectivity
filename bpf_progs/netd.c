@@ -79,6 +79,9 @@
 // only valid indexes are [0..CONFIGURATION_MAP_SIZE-1]
 DEFINE_BPF_MAP_RO_NETD(configuration_map, ARRAY, uint32_t, uint32_t, CONFIGURATION_MAP_SIZE)
 
+// TODO: consider whether we can merge some of these maps
+// for example it might be possible to merge 2 or 3 of:
+//   uid_counterset_map + uid_owner_map + uid_permission_map
 DEFINE_BPF_MAP_RW_NETD(cookie_tag_map, HASH, uint64_t, UidTagValue, COOKIE_UID_MAP_SIZE)
 DEFINE_BPF_MAP_NO_NETD(uid_counterset_map, HASH, uint32_t, uint8_t, UID_COUNTERSET_MAP_SIZE)
 DEFINE_BPF_MAP_NO_NETD(app_uid_stats_map, HASH, uint32_t, StatsValue, APP_STATS_MAP_SIZE)
