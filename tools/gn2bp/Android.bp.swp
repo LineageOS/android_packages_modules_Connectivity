@@ -5103,6 +5103,7 @@ cc_defaults {
         "-Wno-macro-redefined",
         "-Wno-missing-field-initializers",
         "-Wno-non-virtual-dtor",
+        "-Wno-null-pointer-subtraction",
         "-Wno-sign-compare",
         "-Wno-sign-promo",
         "-Wno-unreachable-code-loop-increment",
