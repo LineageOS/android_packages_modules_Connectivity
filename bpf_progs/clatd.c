@@ -111,8 +111,8 @@ static inline __always_inline int nat64(struct __sk_buff* skb, bool is_ethernet)
             return TC_ACT_PIPE;
         const struct frag_hdr *frag = (const struct frag_hdr *)(ip6 + 1);
         proto = frag->nexthdr;
-        // Trivial hash of 32-bit IPv6 ID field into 16-bit IPv4 field.
-        ip_id = (frag->identification) ^ (frag->identification >> 16);
+        // Per RFC6145 use bottom 16-bits of 32-bit IPv6 ID field for 16-bit IPv4 field.
+        ip_id = frag->identification;
         // Conversion of 16-bit IPv6 frag offset to 16-bit IPv4 frag offset field.
         // IPv6 is '13 bits of offset in multiples of 8' + 2 zero bits + more fragment bit
         // IPv4 is zero bit + don't frag bit + more frag bit + '13 bits of offset in multiples of 8'
