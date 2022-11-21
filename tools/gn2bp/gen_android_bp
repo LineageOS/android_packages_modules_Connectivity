@@ -131,9 +131,6 @@ additional_args = {
         # that doesn't depend on rtti. undefined symbol: typeinfo 'class' errors appears.
         ('rtti', True), # go/undefined-symbol-typeinfo
     ],
-    'cronet_aml_base_base': [
-        ('header_libs', {"media_ndk_headers"}),
-    ],
 }
 
 # Android equivalents for third-party libraries that the upstream project
@@ -206,12 +203,13 @@ class Target(object):
     self.shared_libs = set()
     self.static_libs = set()
     self.whole_static_libs = set()
+    self.header_libs = set()
     self.cflags = set()
     self.dist = dict()
     self.strip = dict()
     self.stl = None
     self.cppflags = set()
-    self.local_include_dirs = []
+    self.local_include_dirs = set()
     self.export_system_include_dirs = set()
 
   def to_string(self, output):
@@ -220,6 +218,7 @@ class Target(object):
     self._output_field(nested_out, 'shared_libs')
     self._output_field(nested_out, 'static_libs')
     self._output_field(nested_out, 'whole_static_libs')
+    self._output_field(nested_out, 'header_libs')
     self._output_field(nested_out, 'cflags')
     self._output_field(nested_out, 'stl')
     self._output_field(nested_out, 'dist')
@@ -266,7 +265,7 @@ class Module(object):
     self.defaults = set()
     self.cflags = set()
     self.include_dirs = set()
-    self.local_include_dirs = []
+    self.local_include_dirs = set()
     self.header_libs = set()
     self.required = set()
     self.tool_files = set()
@@ -328,7 +327,7 @@ class Module(object):
     self._output_field(output, 'defaults')
     self._output_field(output, 'cflags')
     self._output_field(output, 'include_dirs')
-    self._output_field(output, 'local_include_dirs', sort=False)
+    self._output_field(output, 'local_include_dirs')
     self._output_field(output, 'header_libs')
     self._output_field(output, 'required')
     self._output_field(output, 'dist')
@@ -708,9 +707,6 @@ def create_action_module(blueprint, target):
     target.args[0] = '$(out)'
 
   elif target.script == '//base/android/jni_generator/jni_generator.py':
-    # chromium builds against a prebuilt ndk that contains the jni_headers, so
-    # a dependency is never explicitly created.
-    module.genrule_header_libs.add('jni_headers')
     needs_javap = False
     for i, val in enumerate(target.args):
       if val == '--output_dir':
@@ -959,12 +955,6 @@ def _get_cflags(cflags, defines):
   cflags = {flag for flag in cflags if flag in cflag_allowlist}
   # Consider proper allowlist or denylist if needed
   cflags |= set("-D%s" % define.replace("\"", "\\\"") for define in defines)
-  # -DANDROID is added by default but target.defines contain -DANDROID if it's required.
-  # So adding -UANDROID to cancel default -DANDROID if it's not specified.
-  # This is needed for some targets(e.g. symbolize)
-  # TODO: Set -UANDROID considering common define
-  if "ANDROID" not in defines:
-    cflags.add("-UANDROID")
   return cflags
 
 def set_module_flags(module, cflags, defines):
@@ -979,20 +969,18 @@ def set_module_flags(module, cflags, defines):
       module.cppflags.add('-fexceptions')
 
 def set_module_include_dirs(module, cflags, include_dirs):
-  local_include_dirs_set = set()
   for flag in cflags:
     if '-isystem' in flag:
-      local_include_dirs_set.add(flag[len('-isystem../../'):])
+      module.local_include_dirs.add(flag[len('-isystem../../'):])
 
   # Adding local_include_dirs is necessary due to source_sets / filegroups
   # which do not properly propagate include directories.
   # Filter any directory inside //out as a) this directory does not exist for
   # aosp / soong builds and b) the include directory should already be
   # configured via library dependency.
-  local_include_dirs_set.update([gn_utils.label_to_path(d)
+  module.local_include_dirs.update([gn_utils.label_to_path(d)
                                  for d in include_dirs
                                  if not re.match('^//out/.*', d)])
-  module.local_include_dirs = sorted(list(local_include_dirs_set))
 
 
 def create_modules_from_target(blueprint, gn, gn_target_name):
@@ -1175,13 +1163,7 @@ def create_java_module(blueprint, gn):
   module.srcs.update([gn_utils.label_to_path(source) for source in gn.java_sources])
   blueprint.add_module(module)
 
-def update_jni_registration_module(blueprint, gn):
-  bp_module_name = label_to_module_name('//components/cronet/android:cronet_jni_registration')
-  if bp_module_name not in blueprint.modules:
-    # To support building targets that might not create the cronet_jni_registration.
-    return
-  module = blueprint.modules[bp_module_name]
-
+def update_jni_registration_module(module, gn):
   # TODO: deny list is in the arg of jni_registration_generator.py. Should not be hardcoded
   deny_list = [
     '//base/android/java/src/org/chromium/base/library_loader/LibraryLoader.java',
@@ -1222,6 +1204,20 @@ def create_blueprint_for_targets(gn, targets):
       '-Wno-unreachable-code-loop-increment', # needed for icui18n
       '-O2',
   ]
+  # Chromium builds do not add a dependency for headers found inside the
+  # sysroot, so they are added globally via defaults.
+  defaults.target['android'].header_libs = [
+      'media_ndk_headers',
+      'jni_headers',
+  ]
+  defaults.target['host'].cflags = [
+      # -DANDROID is added by default but target.defines contain -DANDROID if
+      # it's required.  So adding -UANDROID to cancel default -DANDROID if it's
+      # not specified.
+      # Note: -DANDROID is not consistently applied across the chromium code
+      # base, so it is removed unconditionally for host targets.
+      '-UANDROID',
+  ]
   defaults.stl = 'none'
   blueprint.add_module(defaults)
 
@@ -1229,7 +1225,9 @@ def create_blueprint_for_targets(gn, targets):
     create_modules_from_target(blueprint, gn, target)
 
   create_java_module(blueprint, gn)
-  update_jni_registration_module(blueprint, gn)
+  for module in blueprint.modules.values():
+    if 'cronet_jni_registration' in module.name:
+      update_jni_registration_module(module, gn)
 
   # Merge in additional hardcoded arguments.
   for module in blueprint.modules.values():
