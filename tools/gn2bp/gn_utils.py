@@ -399,7 +399,8 @@ class GnParser(object):
       if re.match(DEX_REGEX, target.name):
         if re.match(COMPILE_JAVA_REGEX, dep.name):
           log.debug('Adding java sources for %s', dep.name)
-          java_srcs = [src for src in dep.inputs if os.path.splitext(src)[1] == '.java']
+          java_srcs = [src for src in dep.inputs
+                       if os.path.splitext(src)[1] == '.java' and not src.startswith("//out/test/gen/")]
           self.java_sources.update(java_srcs)
 
     return target
