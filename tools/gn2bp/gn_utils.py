@@ -144,6 +144,7 @@ class GnParser(object):
       self.source_set_deps = set()  # Transitive set of source_set deps.
       self.proto_deps = set()
       self.transitive_proto_deps = set()
+      self.rtti = False
 
       # TODO: come up with a better way to only run this once.
       # is_finalized tracks whether finalize() was called on this target.
@@ -346,7 +347,10 @@ class GnParser(object):
     target.ldflags.update(desc.get('ldflags', []))
     target.arch[arch].defines.update(desc.get('defines', []))
     target.arch[arch].include_dirs.update(desc.get('include_dirs', []))
-
+    if "-frtti" in target.arch[arch].cflags:
+      target.rtti = True
+      if target.type == "source_set":
+        target.type = "static_library"
     # Recurse in dependencies.
     for gn_dep_name in desc.get('deps', []):
       dep = self.parse_gn_desc(gn_desc, gn_dep_name)
@@ -357,6 +361,9 @@ class GnParser(object):
         target.transitive_proto_deps.update(dep.transitive_proto_deps)
       elif dep.type == 'source_set':
         target.source_set_deps.add(dep.name)
+        if "-frtti" in target.arch[arch].cflags:
+          # This must not be propagated upward as it effects all of the dependencies
+          target.arch[arch].cflags -= {"-frtti"}
         target.update(dep, arch)  # Bubble up source set's cflags/ldflags etc.
       elif dep.type == 'group':
         target.update(dep, arch)  # Bubble up groups's cflags/ldflags etc.
