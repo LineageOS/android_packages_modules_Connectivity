@@ -280,7 +280,8 @@ class GnParser(object):
     # Action modules can differ depending on the target architecture, yet
     # genrule's do not allow to overload cmd per target OS / arch.  Create a
     # separate action for every architecture.
-    if type_ == 'action':
+    # Cover both action and action_foreach
+    if type_.startswith('action'):
       target_name += '__' + arch
 
     target = self.all_targets.get(target_name)
