@@ -273,11 +273,19 @@ class GnParser(object):
     # Use name without toolchain for targets to support targets built for
     # multiple archs.
     target_name = label_without_toolchain(gn_target_name)
-    target = self.all_targets.get(target_name)
     desc = gn_desc[gn_target_name]
+    type_ = desc['type']
     arch = self._get_arch(desc['toolchain'])
+
+    # Action modules can differ depending on the target architecture, yet
+    # genrule's do not allow to overload cmd per target OS / arch.  Create a
+    # separate action for every architecture.
+    if type_ == 'action':
+      target_name += '__' + arch
+
+    target = self.all_targets.get(target_name)
     if target is None:
-      target = GnParser.Target(target_name, desc['type'])
+      target = GnParser.Target(target_name, type_)
       self.all_targets[target_name] = target
 
     if arch not in target.arch:
