@@ -36,8 +36,9 @@ ODR_VIOLATION_IGNORE_TARGETS = {
     '//test/cts:perfetto_cts_deps',
     '//:perfetto_integrationtests',
 }
-
-
+ARCH_REGEX = r'(android_x86_64|android_x86|android_arm|android_arm64|host)'
+DEX_REGEX = '.*__dex__%s$' % ARCH_REGEX
+COMPILE_JAVA_REGEX = '.*__compile_java__%s$' % ARCH_REGEX
 def repo_root():
   """Returns an absolute path to the repository root."""
   return os.path.join(
@@ -376,6 +377,7 @@ class GnParser(object):
         # Explicitly break dependency chain when a java_group is added.
         # Java sources are collected and eventually compiled as one large
         # java_library.
+        #print(dep.name, target.deps)
         pass
 
       if dep.type == 'static_library':
@@ -394,8 +396,8 @@ class GnParser(object):
       # dependency of the __dex target)
       # Note: this skips prebuilt java dependencies. These will have to be
       # added manually when building the jar.
-      if re.match('.*__dex$', target.name):
-        if re.match('.*__compile_java$', dep.name):
+      if re.match(DEX_REGEX, target.name):
+        if re.match(COMPILE_JAVA_REGEX, dep.name):
           log.debug('Adding java sources for %s', dep.name)
           java_srcs = [src for src in dep.inputs if os.path.splitext(src)[1] == '.java']
           self.java_sources.update(java_srcs)
