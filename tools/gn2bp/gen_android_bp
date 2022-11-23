@@ -127,9 +127,6 @@ additional_args = {
             'cronet_aml_net_third_party_quiche_quiche',
             'cronet_aml_crypto_crypto',
         }),
-        # When a code is compiled under rtti(cronet) that depends on another code(net)
-        # that doesn't depend on rtti. undefined symbol: typeinfo 'class' errors appears.
-        ('rtti', True), # go/undefined-symbol-typeinfo
     ],
 }
 
@@ -967,8 +964,6 @@ def set_module_flags(module, cflags, defines):
   for flag in cflags:
     if '-std=' in flag:
       module.cpp_std = flag[len('-std='):]
-    if '-frtti' in flag:
-      module.rtti = True
     if '-fexceptions' in flag:
       module.cppflags.add('-fexceptions')
 
@@ -1071,6 +1066,8 @@ def create_modules_from_target(blueprint, gn, gn_target_name):
       gn_utils.label_to_path(src)
       for src in arch.sources
       if is_supported_source_file(src) and not src.startswith("//out/test"))
+
+  module.rtti = target.rtti
 
   if target.type in gn_utils.LINKER_UNIT_TYPES:
     set_module_flags(module, target.cflags, target.defines)
