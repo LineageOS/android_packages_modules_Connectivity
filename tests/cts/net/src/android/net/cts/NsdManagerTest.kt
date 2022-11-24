@@ -91,6 +91,11 @@ private const val TAG = "NsdManagerTest"
 private const val SERVICE_TYPE = "_nmt._tcp"
 private const val TIMEOUT_MS = 2000L
 private const val NO_CALLBACK_TIMEOUT_MS = 200L
+// Registration may take a long time if there are devices with the same hostname on the network,
+// as the device needs to try another name and probe again. This is especially true since when using
+// mdnsresponder the usual hostname is "Android", and on conflict "Android-2", "Android-3", ... are
+// tried sequentially
+private const val REGISTRATION_TIMEOUT_MS = 10_000L
 private const val DBG = false
 
 private val nsdShim = NsdShimImpl.newInstance()
@@ -143,13 +148,14 @@ class NsdManagerTest {
         }
 
         inline fun <reified V : NsdEvent> expectCallbackEventually(
+            timeoutMs: Long = TIMEOUT_MS,
             crossinline predicate: (V) -> Boolean = { true }
-        ): V = nextEvents.poll(TIMEOUT_MS) { e -> e is V && predicate(e) } as V?
-                ?: fail("Callback for ${V::class.java.simpleName} not seen after $TIMEOUT_MS ms")
+        ): V = nextEvents.poll(timeoutMs) { e -> e is V && predicate(e) } as V?
+                ?: fail("Callback for ${V::class.java.simpleName} not seen after $timeoutMs ms")
 
-        inline fun <reified V : NsdEvent> expectCallback(): V {
-            val nextEvent = nextEvents.poll(TIMEOUT_MS)
-            assertNotNull(nextEvent, "No callback received after $TIMEOUT_MS ms")
+        inline fun <reified V : NsdEvent> expectCallback(timeoutMs: Long = TIMEOUT_MS): V {
+            val nextEvent = nextEvents.poll(timeoutMs)
+            assertNotNull(nextEvent, "No callback received after $timeoutMs ms")
             assertTrue(nextEvent is V, "Expected ${V::class.java.simpleName} but got " +
                     nextEvent.javaClass.simpleName)
             return nextEvent
@@ -373,7 +379,8 @@ class NsdManagerTest {
         val registrationRecord = NsdRegistrationRecord()
         // Test registering without an Executor
         nsdManager.registerService(si, NsdManager.PROTOCOL_DNS_SD, registrationRecord)
-        val registeredInfo = registrationRecord.expectCallback<ServiceRegistered>().serviceInfo
+        val registeredInfo = registrationRecord.expectCallback<ServiceRegistered>(
+                REGISTRATION_TIMEOUT_MS).serviceInfo
 
         val discoveryRecord = NsdDiscoveryRecord()
         // Test discovering without an Executor
@@ -422,7 +429,8 @@ class NsdManagerTest {
         si2.port = localPort
         val registrationRecord2 = NsdRegistrationRecord()
         nsdManager.registerService(si2, NsdManager.PROTOCOL_DNS_SD, registrationRecord2)
-        val registeredInfo2 = registrationRecord2.expectCallback<ServiceRegistered>().serviceInfo
+        val registeredInfo2 = registrationRecord2.expectCallback<ServiceRegistered>(
+                REGISTRATION_TIMEOUT_MS).serviceInfo
 
         // Expect a service record to be discovered (and filter the ones
         // that are unrelated to this test)
@@ -684,7 +692,7 @@ class NsdManagerTest {
         // Register the service name which contains non-standard characters.
         val registrationRecord = NsdRegistrationRecord()
         nsdManager.registerService(si, NsdManager.PROTOCOL_DNS_SD, registrationRecord)
-        registrationRecord.expectCallback<ServiceRegistered>()
+        registrationRecord.expectCallback<ServiceRegistered>(REGISTRATION_TIMEOUT_MS)
 
         tryTest {
             // Discover that service name.
@@ -742,7 +750,7 @@ class NsdManagerTest {
         nsdShim.registerService(nsdManager, si, NsdManager.PROTOCOL_DNS_SD, executor, record)
         // We may not always get the name that we tried to register;
         // This events tells us the name that was registered.
-        val cb = record.expectCallback<ServiceRegistered>()
+        val cb = record.expectCallback<ServiceRegistered>(REGISTRATION_TIMEOUT_MS)
         return cb.serviceInfo
     }
 
