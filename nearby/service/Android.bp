@@ -87,6 +87,7 @@ java_library {
         "androidx.annotation_annotation",
         "framework-bluetooth",
         "error_prone_annotations",
+        "framework-configinfrastructure",
         "framework-connectivity-t.impl",
         "framework-statsd",
     ],
