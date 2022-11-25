@@ -326,7 +326,7 @@ open class TestableNetworkCallback private constructor(
         timeoutMs: Long = defaultTimeoutMs,
         errorMsg: String? = null,
         test: (T) -> Boolean = { true }
-    ) = pollOrThrow(timeoutMs).also {
+    ) = pollOrThrow(timeoutMs, "Did not receive ${T::class.simpleName} after ${timeoutMs}ms").also {
         if (it !is T) fail("Expected callback ${T::class.simpleName}, got $it")
         if (ANY_NETWORK !== network && it.network != network) {
             fail("Expected network $network for callback : $it")
