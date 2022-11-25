@@ -34,6 +34,7 @@ java_defaults {
     // Libraries not including Tethering's own framework-tethering (different flavors of that one
     // are needed depending on the build rule)
     libs: [
+        "framework-configinfrastructure",
         "framework-connectivity.stubs.module_lib",
         "framework-connectivity-t.stubs.module_lib",
         "framework-statsd.stubs.module_lib",
