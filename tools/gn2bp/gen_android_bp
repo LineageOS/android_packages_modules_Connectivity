@@ -623,36 +623,6 @@ def create_proto_group_modules(blueprint, gn, module_name, target_names):
 
   blueprint.add_module(module)
 
-# HACK: Need to support build_cofig_gen flexibly instead of hardcoding
-# build_config_gen generates srcjar by executing gcc via gcc_preprocess.py but gcc is not
-# available in genrule sandbox. Also gcc path is not configurable.
-# Under the //net:net, gcc_preprocess.py is only used for build_config_gen.
-# So, for now, hardcoding BuildConfig.java and generates srcjar by soong_zip.
-def override_build_config_gen(module):
-  module.tool_files.clear()
-  module.tools.add("soong_zip")
-  cmd = [
-    "echo",
-    "\\\"package org.chromium.build;\\n",
-    "public class BuildConfig {\\n",
-    "public static boolean IS_MULTIDEX_ENABLED ;\\n",
-    "public static boolean ENABLE_ASSERTS = true;\\n",
-    "public static boolean IS_UBSAN ;\\n",
-    "public static boolean IS_CHROME_BRANDED ;\\n",
-    "public static int R_STRING_PRODUCT_VERSION ;\\n",
-    "public static int MIN_SDK_VERSION = 1;\\n",
-    "public static boolean BUNDLES_SUPPORTED ;\\n",
-    "public static boolean IS_INCREMENTAL_INSTALL ;\\n",
-    "public static boolean ISOLATED_SPLITS_ENABLED ;\\n",
-    "public static boolean IS_FOR_TEST ;\\n",
-    "}\\n\\\"",
-    "> $(genDir)/BuildConfig.java &&",
-    "$(location soong_zip) -o $(out) -srcjar -f $(genDir)/BuildConfig.java"
-  ]
-  NEWLINE = ' " +\n         "'
-  module.cmd = NEWLINE.join(cmd)
-  return module
-
 def create_action_foreach_modules(blueprint, target):
   """ The following assumes that rebase_path exists in the args.
   The args of an action_foreach contains hints about which output files are generated
@@ -918,9 +888,7 @@ def create_action_module(blueprint, target):
 
   module.out.update(target.outputs)
 
-  if target.name == "//build/android:build_config_gen":
-    module = override_build_config_gen(module)
-  elif target.script == "//tools/grit/stamp_grit_sources.py":
+  if target.script == "//tools/grit/stamp_grit_sources.py":
     # stamp_grit_sources.py is not executable
     module.cmd = "python " + module.cmd
   elif target.script == "//base/android/jni_generator/jni_generator.py":
