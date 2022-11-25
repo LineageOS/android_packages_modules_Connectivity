@@ -41,6 +41,7 @@ ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 # Default targets to translate to the blueprint file.
 default_targets = [
     '//components/cronet/android:cronet',
+    '//components/cronet:cronet_package',
 ]
 
 # Defines a custom init_rc argument to be applied to the corresponding output
