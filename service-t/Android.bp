@@ -47,6 +47,7 @@ java_library {
     ],
     libs: [
         "framework-annotations-lib",
+        "framework-configinfrastructure",
         "framework-connectivity-pre-jarjar",
         "framework-connectivity-t-pre-jarjar",
         "framework-tethering",
