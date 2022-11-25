@@ -728,11 +728,6 @@ def create_action_module(blueprint, target):
         # It might be better to remove sources by '--sources-exclusions'
         target.args[i] = ''
         target.args[i + 1] = ''
-
-  elif target.script == "//build/android/gyp/write_native_libraries_java.py":
-    for i, val in enumerate(target.args):
-      if val == '--output':
-        target.args[i + 1] = '$(out)'
   elif target.script == "//net/tools/dafsa/make_dafsa.py":
     # This script generates .cc files but source (registry_controlled_domain.cc) in the target that
     # depends on this target includes .cc file this script generates.
