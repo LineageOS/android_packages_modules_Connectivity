@@ -16,6 +16,23 @@
       "message": "Keep in mind it is not something we have merged in lineage before. We have always allowed apps to continue creating sockets when restricted and it is Sam\u0027s preference to keep it this way (reason why I did not port it here before).",
       "revId": "f533759a47f94890a94c0ddd7a7064f8ce2d20af",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "32009980_007e69ba",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 1
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 4550
+      },
+      "writtenOn": "2022-11-25T23:29:37Z",
+      "side": 1,
+      "message": "This needs the netd patch to work which we currently don\u0027t have forked",
+      "revId": "f533759a47f94890a94c0ddd7a7064f8ce2d20af",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
     }
   ]
 }
