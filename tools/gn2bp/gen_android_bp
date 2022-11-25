@@ -41,6 +41,7 @@ ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 # Default targets to translate to the blueprint file.
 default_targets = [
     '//components/cronet/android:cronet',
+    '//components/cronet:cronet_package',
 ]
 
 # Defines a custom init_rc argument to be applied to the corresponding output
@@ -554,57 +555,6 @@ def create_proto_modules(blueprint, gn, target):
   return source_module
 
 
-def create_amalgamated_sql_metrics_module(blueprint, target):
-  bp_module_name = label_to_module_name(target.name)
-  module = Module('genrule', bp_module_name, target.name)
-  module.tool_files.add('tools/gen_amalgamated_sql_metrics.py')
-  module.cmd = ' '.join([
-      '$(location tools/gen_amalgamated_sql_metrics.py)',
-      '--cpp_out=$(out)',
-      '$(in)',
-  ])
-  module.genrule_headers.add(module.name)
-  module.out.update(target.outputs)
-  module.srcs.update(gn_utils.label_to_path(src) for src in target.inputs)
-  blueprint.add_module(module)
-  return module
-
-
-def create_cc_proto_descriptor_module(blueprint, target):
-  bp_module_name = label_to_module_name(target.name)
-  module = Module('genrule', bp_module_name, target.name)
-  module.tool_files.add('tools/gen_cc_proto_descriptor.py')
-  module.cmd = ' '.join([
-      '$(location tools/gen_cc_proto_descriptor.py)', '--gen_dir=$(genDir)',
-      '--cpp_out=$(out)', '$(in)'
-  ])
-  module.genrule_headers.add(module.name)
-  module.srcs.update(
-      ':' + label_to_module_name(dep) for dep in target.proto_deps)
-  module.srcs.update(
-      gn_utils.label_to_path(src)
-      for src in target.inputs
-      if "tmp.gn_utils" not in src)
-  module.out.update(target.outputs)
-  blueprint.add_module(module)
-  return module
-
-
-def create_gen_version_module(blueprint, target, bp_module_name):
-  module = Module('genrule', bp_module_name, gn_utils.GEN_VERSION_TARGET)
-  script_path = gn_utils.label_to_path(target.script)
-  module.genrule_headers.add(bp_module_name)
-  module.tool_files.add(script_path)
-  module.out.update(target.outputs)
-  module.srcs.update(gn_utils.label_to_path(src) for src in target.inputs)
-  module.cmd = ' '.join([
-      'python3 $(location %s)' % script_path, '--no_git',
-      '--changelog=$(location CHANGELOG)', '--cpp_out=$(out)'
-  ])
-  blueprint.add_module(module)
-  return module
-
-
 def create_proto_group_modules(blueprint, gn, module_name, target_names):
   # TODO(lalitm): today, we're only adding a Java lite module because that's
   # the only one used in practice. In the future, if we need other target types
@@ -622,36 +572,6 @@ def create_proto_group_modules(blueprint, gn, module_name, target_names):
       module.srcs.update(gn_utils.label_to_path(src) for src in dep.sources)
 
   blueprint.add_module(module)
-
-# HACK: Need to support build_cofig_gen flexibly instead of hardcoding
-# build_config_gen generates srcjar by executing gcc via gcc_preprocess.py but gcc is not
-# available in genrule sandbox. Also gcc path is not configurable.
-# Under the //net:net, gcc_preprocess.py is only used for build_config_gen.
-# So, for now, hardcoding BuildConfig.java and generates srcjar by soong_zip.
-def override_build_config_gen(module):
-  module.tool_files.clear()
-  module.tools.add("soong_zip")
-  cmd = [
-    "echo",
-    "\\\"package org.chromium.build;\\n",
-    "public class BuildConfig {\\n",
-    "public static boolean IS_MULTIDEX_ENABLED ;\\n",
-    "public static boolean ENABLE_ASSERTS = true;\\n",
-    "public static boolean IS_UBSAN ;\\n",
-    "public static boolean IS_CHROME_BRANDED ;\\n",
-    "public static int R_STRING_PRODUCT_VERSION ;\\n",
-    "public static int MIN_SDK_VERSION = 1;\\n",
-    "public static boolean BUNDLES_SUPPORTED ;\\n",
-    "public static boolean IS_INCREMENTAL_INSTALL ;\\n",
-    "public static boolean ISOLATED_SPLITS_ENABLED ;\\n",
-    "public static boolean IS_FOR_TEST ;\\n",
-    "}\\n\\\"",
-    "> $(genDir)/BuildConfig.java &&",
-    "$(location soong_zip) -o $(out) -srcjar -f $(genDir)/BuildConfig.java"
-  ]
-  NEWLINE = ' " +\n         "'
-  module.cmd = NEWLINE.join(cmd)
-  return module
 
 def create_action_foreach_modules(blueprint, target):
   """ The following assumes that rebase_path exists in the args.
@@ -758,103 +678,6 @@ def create_action_module(blueprint, target):
         # It might be better to remove sources by '--sources-exclusions'
         target.args[i] = ''
         target.args[i + 1] = ''
-
-  elif target.script == '//build/android/gyp/write_build_config.py':
-    for i, val in enumerate(target.args):
-      if val == '--depfile':
-        # Depfile is not used, so no need to generate it.
-        target.args[i] = ''
-        target.args[i + 1] = ''
-      elif val in ['--deps-configs', '--bundled-srcjars']:
-        args = target.args[i + 1]
-        if args == '[]':
-          continue
-        # strip surrounding [] and split by ", "
-        args = args.strip('[]').split(', ')
-        # strip surrounding ""
-        args = [arg.strip('"') for arg in args]
-        # remove leading gen/
-        args = [re.sub('^gen/', '', arg) for arg in args]
-        # wrap filename in \"$(location filename)\"
-        args = ['\"$(location %s)\"' % arg for arg in args]
-        # join args with ", " and wrap in []
-        target.args[i + 1] = '[%s]' % ', '.join(args)
-
-      elif val == '--public-deps-configs':
-        # TODO: implement.
-        pass
-
-      elif val == '--build-config':
-        # json output of this script
-        target.args[i + 1] = re.sub('^gen', '$(genDir)', target.args[i + 1])
-
-      elif val in ['--unprocessed-jar-path', '--interface-jar-path',
-                   '--device-jar-path', '--host-jar-path']:
-        # jar path can be within sources (../../) or output generated by
-        # another genrule (obj/)
-        filename = re.sub('^\.\./\.\./', '', target.args[i + 1])
-        filename = re.sub('^obj/', '', target.args[i + 1])
-        target.args[i + 1] = '$(location %s)' % filename
-
-      elif val == '--proguard-configs':
-        args = target.args[i + 1]
-        if args == '[]':
-          continue
-        # TODO: consider adding helpers to deal with argument lists
-        # strip surrounding [] and split by ", ", then strip surrounding ""
-        args = args.strip('[]').split(', ')
-        args = [arg.strip('"') for arg in args]
-        # remove leading ../../
-        args = [re.sub('^\.\./\.\./', '', arg) for arg in args]
-        # add dependency on proguard config file, so a $(location) wrapper can be used.
-        module.tool_files.update(args)
-        # wrap filename in \"$(location filename)\"
-        args = ['$(location %s)' % arg for arg in args]
-        target.args[i + 1] = '[%s]' % ', '.join(args)
-  elif target.script == "//build/android/gyp/write_native_libraries_java.py":
-    for i, val in enumerate(target.args):
-      if val == '--output':
-        target.args[i + 1] = '$(out)'
-  elif target.script == "//tools/grit/stamp_grit_sources.py":
-    target.outputs = [re.sub('^\/\/', '', out) for out in target.outputs]
-    # Directory that contains grit scripts
-    target.args[0] = '`dirname $(location tools/grit/grit.py)`'
-    # Path to the stamp file
-    target.args[1] = '$(out)'
-    # Script tries to create args[2] file but this is not in the output.
-    # Specifying file under $(genDir) so that parent directory exists.
-    # If this file is used by other module, we may need to add this file to the outputs.
-    target.args[2] = '$(genDir)/' + target.args[2].split('/')[-1]
-  elif target.script == "//tools/grit/grit.py":
-    for i, val in enumerate(target.args):
-      if val == '-i':
-        # Delete leading ../..
-        filename = re.sub('^\.\./\.\./', '', target.args[i + 1])
-        target.args[i + 1] = '$(location %s)' % filename
-      elif val == '-o':
-        filename = re.sub('^gen/', '', target.args[i + 1])
-        if filename == "net":
-          # This is a directory not a file
-          target.args[i + 1] = '$(genDir)/net'
-        else:
-          # This is an output fil
-          target.args[i + 1] = '$(location %s)' % filename
-      elif val == '--depfile':
-        # The depfile is replaced by adding /tools/**/*.py to the tools_files
-        # This is basically just globbing all the needed sources by hardcoding.
-        module.tool_files.update([
-            "tools/grit/**/*.py",
-            "third_party/six/src/six.py" # This is not picked up by default. Must be added
-        ])
-
-        # Delete the depfile argument
-        target.args[i] = ' '
-        target.args[i + 1] = ' '
-      elif val == '--input':
-        # Delete leading ../..
-        filename = re.sub('^\.\./\.\./', '', target.args[i + 1])
-        # This is an output file so use $(location %s)
-        target.args[i + 1] = '$(location %s)' % filename
   elif target.script == "//net/tools/dafsa/make_dafsa.py":
     # This script generates .cc files but source (registry_controlled_domain.cc) in the target that
     # depends on this target includes .cc file this script generates.
@@ -918,12 +741,7 @@ def create_action_module(blueprint, target):
 
   module.out.update(target.outputs)
 
-  if target.name == "//build/android:build_config_gen":
-    module = override_build_config_gen(module)
-  elif target.script == "//tools/grit/stamp_grit_sources.py":
-    # stamp_grit_sources.py is not executable
-    module.cmd = "python " + module.cmd
-  elif target.script == "//base/android/jni_generator/jni_generator.py":
+  if target.script == "//base/android/jni_generator/jni_generator.py":
     # android_jar.classes should be part of the tools as it list implicit classes
     # for the script to generate JNI headers.
     module.tool_files.add("base/android/jni_generator/android_jar.classes")
@@ -1030,15 +848,7 @@ def create_modules_from_target(blueprint, gn, gn_target_name):
     if module is None:
       return None
   elif target.type == 'action':
-    if 'gen_amalgamated_sql_metrics' in target.name:
-      module = create_amalgamated_sql_metrics_module(blueprint, target)
-    elif re.match('.*gen_cc_.*_descriptor$', target.name):
-      module = create_cc_proto_descriptor_module(blueprint, target)
-    elif target.type == 'action' and \
-        target.name == gn_utils.GEN_VERSION_TARGET:
-      module = create_gen_version_module(blueprint, target, bp_module_name)
-    else:
-      module = create_action_module(blueprint, target)
+    module = create_action_module(blueprint, target)
   elif target.type == 'action_foreach':
     module = create_action_foreach_modules(blueprint, target)
   elif target.type == 'copy':
