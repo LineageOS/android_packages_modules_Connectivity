@@ -1146,9 +1146,6 @@ public class IpServer extends StateMachine {
                 case CMD_INTERFACE_DOWN:
                     transitionTo(mUnavailableState);
                     break;
-                case CMD_IPV6_TETHER_UPDATE:
-                    updateUpstreamIPv6LinkProperties((LinkProperties) message.obj, message.arg1);
-                    break;
                 default:
                     return NOT_HANDLED;
             }
