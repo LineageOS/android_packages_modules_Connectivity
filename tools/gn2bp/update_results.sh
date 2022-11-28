@@ -12,4 +12,4 @@
 set -eux
 
 BASEDIR=$(dirname "$0")
-$BASEDIR/gen_android_bp --desc $BASEDIR/desc_x64.json --desc $BASEDIR/desc_x86.json --out $BASEDIR/Android.bp
+$BASEDIR/gen_android_bp --desc $BASEDIR/desc_x64.json --desc $BASEDIR/desc_x86.json --desc $BASEDIR/desc_arm.json --out $BASEDIR/Android.bp
