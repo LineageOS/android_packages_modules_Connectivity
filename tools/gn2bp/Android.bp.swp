@@ -641,6 +641,7 @@ cc_library_static {
                 "-DANDROID",
                 "-DANDROID_NDK_VERSION_ROLL=r23_1",
                 "-DHAVE_SYS_UIO_H",
+                "-march=armv8-a+memtag",
             ],
             local_include_dirs: [
                 "third_party/android_ndk/sources/android/cpufeatures/",
