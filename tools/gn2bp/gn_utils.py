@@ -69,6 +69,8 @@ def label_to_target_name_with_path(label):
   name = re.sub(r'[^a-zA-Z0-9_]', '_', name)
   return name
 
+def _is_java_source(src):
+  return os.path.splitext(src)[1] == '.java' and not src.startswith("//out/test/gen/")
 
 class GnParser(object):
   """A parser with some cleverness for GN json desc files
@@ -399,8 +401,7 @@ class GnParser(object):
       if re.match(DEX_REGEX, target.name):
         if re.match(COMPILE_JAVA_REGEX, dep.name):
           log.debug('Adding java sources for %s', dep.name)
-          java_srcs = [src for src in dep.inputs
-                       if os.path.splitext(src)[1] == '.java' and not src.startswith("//out/test/gen/")]
+          java_srcs = [src for src in dep.inputs if _is_java_source(src)]
           self.java_sources.update(java_srcs)
 
     return target
