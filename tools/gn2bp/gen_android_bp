@@ -903,6 +903,12 @@ def create_modules_from_target(blueprint, gn, gn_target_name):
     # TODO: set_module_xxx is confusing, apply similar function to module and target in better way.
     for arch_name, arch in target.arch.items():
       set_module_flags(module.target[arch_name], arch.cflags, arch.defines)
+      # -Xclang -target-feature -Xclang +mte are used to enable MTE (Memory Tagging Extensions).
+      # Flags which does not start with '-' could not be in the cflags so enabling MTE by
+      # -march and -mcpu Feature Modifiers. MTE is only available on arm64. This is needed for
+      # building //base/allocator/partition_allocator:partition_alloc for arm64.
+      if '+mte' in arch.cflags and arch_name == 'android_arm64':
+        module.target[arch_name].cflags.add('-march=armv8-a+memtag')
       set_module_include_dirs(module.target[arch_name], arch.cflags, arch.include_dirs)
 
   if module.is_compiled():
