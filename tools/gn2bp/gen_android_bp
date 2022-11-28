@@ -390,7 +390,10 @@ class Module(object):
     return write_blueprint_key_value(output, name, value, sort)
 
   def is_compiled(self):
-    return self.type not in ('genrule', 'filegroup', 'cc_defaults')
+    return self.type not in ('filegroup', 'cc_defaults')
+
+  def is_genrule(self):
+    return self.type == "cc_genrule"
 
   def has_input_files(self):
     for target in self.target.values():
@@ -485,7 +488,7 @@ def create_proto_modules(blueprint, gn, target):
     cmd += ['--descriptor_set_out=$(out)']
     cmd += ['$(in)']
 
-    descriptor_module = Module('genrule', target_module_name, target.name)
+    descriptor_module = Module('cc_genrule', target_module_name, target.name)
     descriptor_module.cmd = ' '.join(cmd)
     descriptor_module.out = [out]
     descriptor_module.tools = tools
@@ -508,12 +511,12 @@ def create_proto_modules(blueprint, gn, target):
   # source files in 'srcs' and headers in 'generated_headers' -- and it's not
   # valid to generate .h files from a source dependency and vice versa.
   source_module_name = target_module_name + '_gen'
-  source_module = Module('genrule', source_module_name, target.name)
+  source_module = Module('cc_genrule', source_module_name, target.name)
   blueprint.add_module(source_module)
   source_module.srcs.update(
       gn_utils.label_to_path(src) for src in target.sources)
 
-  header_module = Module('genrule', source_module_name + '_headers',
+  header_module = Module('cc_genrule', source_module_name + '_headers',
                          target.name)
   blueprint.add_module(header_module)
   header_module.srcs = set(source_module.srcs)
@@ -626,7 +629,7 @@ def create_action_foreach_modules(blueprint, target):
 
 def create_action_module(blueprint, target):
   bp_module_name = label_to_module_name(target.name)
-  module = Module('genrule', bp_module_name, target.name)
+  module = Module('cc_genrule', bp_module_name, target.name)
 
   # Convert ['--param=value'] to ['--param', 'value'] for consistency.
   # TODO: we may want to only do this for python scripts arguments. If argparse
@@ -911,7 +914,13 @@ def create_modules_from_target(blueprint, gn, gn_target_name):
         module.target[arch_name].cflags.add('-march=armv8-a+memtag')
       set_module_include_dirs(module.target[arch_name], arch.cflags, arch.include_dirs)
 
-  if module.is_compiled():
+  if module.is_genrule():
+    # cc_genrule is compiled but it's never used to actually compile c++ files
+    # so there is no need to add flags/include_dirs and other compilation args.
+    module.host_supported = target.host_supported()
+    module.device_supported = target.device_supported()
+
+  if module.is_compiled() and not module.is_genrule():
     module.host_supported = target.host_supported()
     module.device_supported = target.device_supported()
 
@@ -932,6 +941,10 @@ def create_modules_from_target(blueprint, gn, gn_target_name):
     # Remove prohibited include directories
     module.local_include_dirs = [d for d in module.local_include_dirs
                                  if d not in local_include_dirs_denylist]
+
+  # If the module is a static library, export all the generated headers.
+  if module.type == 'cc_library_static':
+    module.export_generated_headers = module.generated_headers
 
   # dep_name is an unmangled GN target name (e.g. //foo:bar(toolchain)).
   # Currently, only one module is generated from target even target has multiple toolchains.
@@ -957,14 +970,15 @@ def create_modules_from_target(blueprint, gn, gn_target_name):
     # Following rule works for adding android_runtime_jni_headers to base:base.
     # If this doesn't work for other target, hardcoding for specific target
     # might be better.
-    if module.type == "genrule" and dep_module.type == "genrule":
-        module.genrule_headers.add(dep_module.name)
-        module.genrule_headers.update(dep_module.genrule_headers)
+    if module.is_genrule() and dep_module.is_genrule():
+      module.genrule_headers.add(dep_module.name)
+      module.genrule_headers.update(dep_module.genrule_headers)
 
     # For filegroups, and genrule, recurse but don't apply the
     # deps.
-    if not module.is_compiled():
+    if not module.is_compiled() or module.is_genrule():
       continue
+
     if dep_module.type == 'cc_library_shared':
       module.shared_libs.add(dep_module.name)
     elif dep_module.type == 'cc_library_static':
@@ -978,15 +992,14 @@ def create_modules_from_target(blueprint, gn, gn_target_name):
           module.srcs.add(":" + dep_module.name)
         module.merge_key('export_generated_headers', dep_module,
                          target.arch.keys(), 'generated_headers')
-    elif dep_module.type == 'genrule':
-      for arch_name, arch in target.arch.items():
-        if dep_module.name.endswith(arch_name):
-          add_genrule_per_arch(module.target[arch_name], dep_module, module.type)
-      if dep_module.name.endswith("_gen"):
-        module.srcs.update(dep_module.genrule_srcs)
-        module.generated_headers.update(dep_module.genrule_headers)
-        if module.type != "cc_object":
-          module.export_generated_headers.update(dep_module.genrule_headers)
+    elif dep_module.type == 'cc_genrule':
+      module.merge_key('generated_headers', dep_module, [], 'genrule_headers')
+      module.merge_key('srcs', dep_module, [], 'genrule_srcs')
+      module.merge_key('shared_libs', dep_module, [], 'genrule_shared_libs')
+      module.merge_key('header_libs', dep_module, [], 'genrule_header_libs')
+      if module.type not in ["cc_object"]:
+        module.merge_key('export_generated_headers', dep_module, [],
+                         'genrule_headers')
     elif dep_module.type == 'cc_binary':
       continue  # Ignore executables deps (used by cmdline integration tests).
     else:
@@ -1000,6 +1013,15 @@ def create_modules_from_target(blueprint, gn, gn_target_name):
       # Revisit this approach once we need to support more target types.
       if dep_module.type == 'cc_library_static':
         module.target[arch_name].static_libs.add(dep_module.name)
+      elif dep_module.type == 'cc_genrule':
+        if dep_module.name.endswith(arch_name):
+          module.target[arch_name].generated_headers.update(dep_module.genrule_headers)
+          module.target[arch_name].srcs.update(dep_module.genrule_srcs)
+          module.target[arch_name].shared_libs.update(dep_module.genrule_shared_libs)
+          module.target[arch_name].header_libs.update(dep_module.genrule_header_libs)
+          if module.type not in ["cc_object"]:
+            module.target[arch_name].export_generated_headers.update(
+              dep_module.genrule_headers)
       else:
         raise Error('Unsupported arch-specific dependency %s of target %s with type %s' %
                     (dep_module.name, target.name, dep_module.type))
