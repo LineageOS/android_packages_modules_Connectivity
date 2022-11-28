@@ -1183,6 +1183,8 @@ def create_java_module(blueprint, gn):
   bp_module_name = module_prefix + 'java'
   module = Module('java_library', bp_module_name, '//gn:java')
   module.srcs.update([gn_utils.label_to_path(source) for source in gn.java_sources])
+  for dep in gn.java_actions:
+    create_modules_from_target(blueprint, gn, dep)
   blueprint.add_module(module)
 
 def update_jni_registration_module(module, gn):
