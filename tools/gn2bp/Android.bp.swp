@@ -34,6 +34,26 @@ genrule {
     ],
 }
 
+// GN: //base/allocator:buildflags__android_arm64
+genrule {
+    name: "cronet_aml_base_allocator_buildflags__android_arm64",
+    cmd: "echo '--flags USE_PARTITION_ALLOC=\"false\" USE_ALLOCATOR_SHIM=\"true\" USE_PARTITION_ALLOC_AS_MALLOC=\"false\" USE_BACKUP_REF_PTR=\"false\" USE_ASAN_BACKUP_REF_PTR=\"false\" USE_PARTITION_ALLOC_AS_GWP_ASAN_STORE=\"false\" USE_MTE_CHECKED_PTR=\"false\" FORCE_ENABLE_RAW_PTR_EXCLUSION=\"false\"' | " +
+         "$(location build/write_buildflag_header.py) --output " +
+         "$(out) " +
+         "--rulename " +
+         "//base/allocator:buildflags " +
+         "--gen-dir " +
+         ". " +
+         "--definitions " +
+         "/dev/stdin",
+    out: [
+        "base/allocator/buildflags.h",
+    ],
+    tool_files: [
+        "build/write_buildflag_header.py",
+    ],
+}
+
 // GN: //base/allocator:buildflags__android_x86
 genrule {
     name: "cronet_aml_base_allocator_buildflags__android_x86",
@@ -97,6 +117,26 @@ genrule {
 // GN: //base/allocator/partition_allocator:chromecast_buildflags__android_arm
 genrule {
     name: "cronet_aml_base_allocator_partition_allocator_chromecast_buildflags__android_arm",
+    cmd: "echo '--flags PA_IS_CAST_ANDROID=\"false\" PA_IS_CASTOS=\"false\"' | " +
+         "$(location build/write_buildflag_header.py) --output " +
+         "$(out) " +
+         "--rulename " +
+         "//base/allocator/partition_allocator:chromecast_buildflags " +
+         "--gen-dir " +
+         ". " +
+         "--definitions " +
+         "/dev/stdin",
+    out: [
+        "base/allocator/partition_allocator/chromecast_buildflags.h",
+    ],
+    tool_files: [
+        "build/write_buildflag_header.py",
+    ],
+}
+
+// GN: //base/allocator/partition_allocator:chromecast_buildflags__android_arm64
+genrule {
+    name: "cronet_aml_base_allocator_partition_allocator_chromecast_buildflags__android_arm64",
     cmd: "echo '--flags PA_IS_CAST_ANDROID=\"false\" PA_IS_CASTOS=\"false\"' | " +
          "$(location build/write_buildflag_header.py) --output " +
          "$(out) " +
@@ -194,6 +234,26 @@ genrule {
     ],
 }
 
+// GN: //base/allocator/partition_allocator:chromeos_buildflags__android_arm64
+genrule {
+    name: "cronet_aml_base_allocator_partition_allocator_chromeos_buildflags__android_arm64",
+    cmd: "echo '--flags PA_IS_CHROMEOS_ASH=\"false\"' | " +
+         "$(location build/write_buildflag_header.py) --output " +
+         "$(out) " +
+         "--rulename " +
+         "//base/allocator/partition_allocator:chromeos_buildflags " +
+         "--gen-dir " +
+         ". " +
+         "--definitions " +
+         "/dev/stdin",
+    out: [
+        "base/allocator/partition_allocator/chromeos_buildflags.h",
+    ],
+    tool_files: [
+        "build/write_buildflag_header.py",
+    ],
+}
+
 // GN: //base/allocator/partition_allocator:chromeos_buildflags__android_x86
 genrule {
     name: "cronet_aml_base_allocator_partition_allocator_chromeos_buildflags__android_x86",
@@ -274,6 +334,26 @@ genrule {
     ],
 }
 
+// GN: //base/allocator/partition_allocator:debugging_buildflags__android_arm64
+genrule {
+    name: "cronet_aml_base_allocator_partition_allocator_debugging_buildflags__android_arm64",
+    cmd: "echo '--flags PA_DCHECK_IS_ON=\"true\" PA_EXPENSIVE_DCHECKS_ARE_ON=\"true\" PA_DCHECK_IS_CONFIGURABLE=\"false\"' | " +
+         "$(location build/write_buildflag_header.py) --output " +
+         "$(out) " +
+         "--rulename " +
+         "//base/allocator/partition_allocator:debugging_buildflags " +
+         "--gen-dir " +
+         ". " +
+         "--definitions " +
+         "/dev/stdin",
+    out: [
+        "base/allocator/partition_allocator/partition_alloc_base/debug/debugging_buildflags.h",
+    ],
+    tool_files: [
+        "build/write_buildflag_header.py",
+    ],
+}
+
 // GN: //base/allocator/partition_allocator:debugging_buildflags__android_x86
 genrule {
     name: "cronet_aml_base_allocator_partition_allocator_debugging_buildflags__android_x86",
@@ -337,6 +417,26 @@ genrule {
 // GN: //base/allocator/partition_allocator:logging_buildflags__android_arm
 genrule {
     name: "cronet_aml_base_allocator_partition_allocator_logging_buildflags__android_arm",
+    cmd: "echo '--flags PA_ENABLE_LOG_ERROR_NOT_REACHED=\"false\"' | " +
+         "$(location build/write_buildflag_header.py) --output " +
+         "$(out) " +
+         "--rulename " +
+         "//base/allocator/partition_allocator:logging_buildflags " +
+         "--gen-dir " +
+         ". " +
+         "--definitions " +
+         "/dev/stdin",
+    out: [
+        "base/allocator/partition_allocator/logging_buildflags.h",
+    ],
+    tool_files: [
+        "build/write_buildflag_header.py",
+    ],
+}
+
+// GN: //base/allocator/partition_allocator:logging_buildflags__android_arm64
+genrule {
+    name: "cronet_aml_base_allocator_partition_allocator_logging_buildflags__android_arm64",
     cmd: "echo '--flags PA_ENABLE_LOG_ERROR_NOT_REACHED=\"false\"' | " +
          "$(location build/write_buildflag_header.py) --output " +
          "$(out) " +
@@ -528,6 +628,38 @@ cc_library_static {
                 "cronet_aml_base_allocator_partition_allocator_partition_alloc_buildflags__android_arm",
             ],
         },
+        android_arm64: {
+            srcs: [
+                ":cronet_aml_third_party_android_ndk_cpu_features",
+                "base/allocator/partition_allocator/partition_alloc_base/files/file_path.cc",
+                "base/allocator/partition_allocator/partition_alloc_base/native_library.cc",
+                "base/allocator/partition_allocator/partition_alloc_base/native_library_posix.cc",
+                "base/allocator/partition_allocator/partition_alloc_base/time/time_android.cc",
+                "base/allocator/partition_allocator/starscan/stack/asm/arm64/push_registers_asm.cc",
+            ],
+            cflags: [
+                "-DANDROID",
+                "-DANDROID_NDK_VERSION_ROLL=r23_1",
+                "-DHAVE_SYS_UIO_H",
+            ],
+            local_include_dirs: [
+                "third_party/android_ndk/sources/android/cpufeatures/",
+            ],
+            generated_headers: [
+                "cronet_aml_base_allocator_partition_allocator_chromecast_buildflags__android_arm64",
+                "cronet_aml_base_allocator_partition_allocator_chromeos_buildflags__android_arm64",
+                "cronet_aml_base_allocator_partition_allocator_debugging_buildflags__android_arm64",
+                "cronet_aml_base_allocator_partition_allocator_logging_buildflags__android_arm64",
+                "cronet_aml_base_allocator_partition_allocator_partition_alloc_buildflags__android_arm64",
+            ],
+            export_generated_headers: [
+                "cronet_aml_base_allocator_partition_allocator_chromecast_buildflags__android_arm64",
+                "cronet_aml_base_allocator_partition_allocator_chromeos_buildflags__android_arm64",
+                "cronet_aml_base_allocator_partition_allocator_debugging_buildflags__android_arm64",
+                "cronet_aml_base_allocator_partition_allocator_logging_buildflags__android_arm64",
+                "cronet_aml_base_allocator_partition_allocator_partition_alloc_buildflags__android_arm64",
+            ],
+        },
         android_x86: {
             srcs: [
                 ":cronet_aml_third_party_android_ndk_cpu_features",
@@ -646,6 +778,26 @@ genrule {
     ],
 }
 
+// GN: //base/allocator/partition_allocator:partition_alloc_buildflags__android_arm64
+genrule {
+    name: "cronet_aml_base_allocator_partition_allocator_partition_alloc_buildflags__android_arm64",
+    cmd: "echo '--flags ENABLE_PARTITION_ALLOC_AS_MALLOC_SUPPORT=\"true\" ENABLE_BACKUP_REF_PTR_SUPPORT=\"true\" ENABLE_BACKUP_REF_PTR_SLOW_CHECKS=\"false\" ENABLE_DANGLING_RAW_PTR_CHECKS=\"false\" PUT_REF_COUNT_IN_PREVIOUS_SLOT=\"true\" ENABLE_GWP_ASAN_SUPPORT=\"true\" ENABLE_MTE_CHECKED_PTR_SUPPORT=\"false\" RECORD_ALLOC_INFO=\"false\" USE_FREESLOT_BITMAP=\"false\" GLUE_CORE_POOLS=\"false\" ENABLE_SHADOW_METADATA_FOR_64_BITS_POINTERS=\"false\" STARSCAN=\"true\" PA_USE_BASE_TRACING=\"true\" ENABLE_PKEYS=\"false\"' | " +
+         "$(location build/write_buildflag_header.py) --output " +
+         "$(out) " +
+         "--rulename " +
+         "//base/allocator/partition_allocator:partition_alloc_buildflags " +
+         "--gen-dir " +
+         ". " +
+         "--definitions " +
+         "/dev/stdin",
+    out: [
+        "base/allocator/partition_allocator/partition_alloc_buildflags.h",
+    ],
+    tool_files: [
+        "build/write_buildflag_header.py",
+    ],
+}
+
 // GN: //base/allocator/partition_allocator:partition_alloc_buildflags__android_x86
 genrule {
     name: "cronet_aml_base_allocator_partition_allocator_partition_alloc_buildflags__android_x86",
@@ -726,6 +878,26 @@ genrule {
     ],
 }
 
+// GN: //base:anchor_functions_buildflags__android_arm64
+genrule {
+    name: "cronet_aml_base_anchor_functions_buildflags__android_arm64",
+    cmd: "echo '--flags USE_LLD=\"true\" SUPPORTS_CODE_ORDERING=\"true\"' | " +
+         "$(location build/write_buildflag_header.py) --output " +
+         "$(out) " +
+         "--rulename " +
+         "//base:anchor_functions_buildflags " +
+         "--gen-dir " +
+         ". " +
+         "--definitions " +
+         "/dev/stdin",
+    out: [
+        "base/android/library_loader/anchor_functions_buildflags.h",
+    ],
+    tool_files: [
+        "build/write_buildflag_header.py",
+    ],
+}
+
 // GN: //base:anchor_functions_buildflags__android_x86
 genrule {
     name: "cronet_aml_base_anchor_functions_buildflags__android_x86",
@@ -789,6 +961,43 @@ genrule {
 // GN: //base:android_runtime_jni_headers__android_arm
 genrule {
     name: "cronet_aml_base_android_runtime_jni_headers__android_arm",
+    cmd: "$(location base/android/jni_generator/jni_generator.py) --ptr_type " +
+         "long " +
+         " " +
+         " " +
+         "--output_dir " +
+         "$(genDir)/base/android_runtime_jni_headers " +
+         "--includes " +
+         "base/android/jni_generator/jni_generator_helper.h " +
+         "--jar_file " +
+         "$(location third_party/android_sdk/public/platforms/android-33/android.jar) " +
+         "--output_name " +
+         "Runnable_jni.h " +
+         "--output_name " +
+         "Runtime_jni.h " +
+         "--input_file " +
+         "java/lang/Runnable.class " +
+         "--input_file " +
+         "java/lang/Runtime.class " +
+         "--javap " +
+         "$$(find out/.path -name javap)",
+    out: [
+        "base/android_runtime_jni_headers/Runnable_jni.h",
+        "base/android_runtime_jni_headers/Runtime_jni.h",
+    ],
+    tool_files: [
+        "base/android/jni_generator/android_jar.classes",
+        "base/android/jni_generator/jni_generator.py",
+        "build/android/gyp/util/__init__.py",
+        "build/android/gyp/util/build_utils.py",
+        "build/gn_helpers.py",
+        "third_party/android_sdk/public/platforms/android-33/android.jar",
+    ],
+}
+
+// GN: //base:android_runtime_jni_headers__android_arm64
+genrule {
+    name: "cronet_aml_base_android_runtime_jni_headers__android_arm64",
     cmd: "$(location base/android/jni_generator/jni_generator.py) --ptr_type " +
          "long " +
          " " +
@@ -1516,6 +1725,151 @@ cc_library_static {
                 "cronet_aml_build_config_compiler_compiler_buildflags__android_arm",
             ],
         },
+        android_arm64: {
+            srcs: [
+                ":cronet_aml_third_party_android_ndk_cpu_features",
+                ":cronet_aml_third_party_ashmem_ashmem",
+                "base/allocator/partition_allocator/shim/allocator_shim_default_dispatch_to_linker_wrapped_symbols.cc",
+                "base/android/android_hardware_buffer_compat.cc",
+                "base/android/android_image_reader_compat.cc",
+                "base/android/apk_assets.cc",
+                "base/android/application_status_listener.cc",
+                "base/android/base_feature_list.cc",
+                "base/android/base_features.cc",
+                "base/android/base_jni_onload.cc",
+                "base/android/build_info.cc",
+                "base/android/bundle_utils.cc",
+                "base/android/callback_android.cc",
+                "base/android/child_process_service.cc",
+                "base/android/command_line_android.cc",
+                "base/android/content_uri_utils.cc",
+                "base/android/cpu_features.cc",
+                "base/android/early_trace_event_binding.cc",
+                "base/android/event_log.cc",
+                "base/android/feature_list_jni.cc",
+                "base/android/features_jni.cc",
+                "base/android/field_trial_list.cc",
+                "base/android/important_file_writer_android.cc",
+                "base/android/int_string_callback.cc",
+                "base/android/jank_metric_uma_recorder.cc",
+                "base/android/java_exception_reporter.cc",
+                "base/android/java_handler_thread.cc",
+                "base/android/java_heap_dump_generator.cc",
+                "base/android/java_runtime.cc",
+                "base/android/jni_android.cc",
+                "base/android/jni_array.cc",
+                "base/android/jni_registrar.cc",
+                "base/android/jni_string.cc",
+                "base/android/jni_utils.cc",
+                "base/android/jni_weak_ref.cc",
+                "base/android/library_loader/anchor_functions.cc",
+                "base/android/library_loader/library_loader_hooks.cc",
+                "base/android/library_loader/library_prefetcher.cc",
+                "base/android/library_loader/library_prefetcher_hooks.cc",
+                "base/android/locale_utils.cc",
+                "base/android/memory_pressure_listener_android.cc",
+                "base/android/native_uma_recorder.cc",
+                "base/android/path_service_android.cc",
+                "base/android/path_utils.cc",
+                "base/android/radio_utils.cc",
+                "base/android/reached_addresses_bitset.cc",
+                "base/android/reached_code_profiler.cc",
+                "base/android/remove_stale_data.cc",
+                "base/android/scoped_hardware_buffer_fence_sync.cc",
+                "base/android/scoped_hardware_buffer_handle.cc",
+                "base/android/scoped_java_ref.cc",
+                "base/android/statistics_recorder_android.cc",
+                "base/android/sys_utils.cc",
+                "base/android/task_scheduler/post_task_android.cc",
+                "base/android/task_scheduler/task_runner_android.cc",
+                "base/android/thread_instruction_count.cc",
+                "base/android/timezone_utils.cc",
+                "base/android/trace_event_binding.cc",
+                "base/android/unguessable_token_android.cc",
+                "base/base_paths_android.cc",
+                "base/debug/stack_trace_android.cc",
+                "base/files/file_util_android.cc",
+                "base/files/scoped_file_android.cc",
+                "base/memory/platform_shared_memory_mapper_android.cc",
+                "base/memory/platform_shared_memory_region_android.cc",
+                "base/message_loop/message_pump_android.cc",
+                "base/os_compat_android.cc",
+                "base/power_monitor/power_monitor_device_source_android.cc",
+                "base/process/process_android.cc",
+                "base/profiler/stack_sampler_android.cc",
+                "base/system/sys_info_android.cc",
+                "base/threading/platform_thread_android.cc",
+                "base/time/time_android.cc",
+            ],
+            cflags: [
+                "-DANDROID",
+                "-DANDROID_NDK_VERSION_ROLL=r23_1",
+                "-DHAVE_SYS_UIO_H",
+            ],
+            local_include_dirs: [
+                "third_party/android_ndk/sources/android/cpufeatures/",
+            ],
+            generated_headers: [
+                "cronet_aml_base_allocator_buildflags__android_arm64",
+                "cronet_aml_base_allocator_partition_allocator_chromecast_buildflags__android_arm64",
+                "cronet_aml_base_allocator_partition_allocator_chromeos_buildflags__android_arm64",
+                "cronet_aml_base_allocator_partition_allocator_debugging_buildflags__android_arm64",
+                "cronet_aml_base_allocator_partition_allocator_logging_buildflags__android_arm64",
+                "cronet_aml_base_allocator_partition_allocator_partition_alloc_buildflags__android_arm64",
+                "cronet_aml_base_anchor_functions_buildflags__android_arm64",
+                "cronet_aml_base_android_runtime_jni_headers__android_arm64",
+                "cronet_aml_base_base_jni_headers__android_arm64",
+                "cronet_aml_base_build_date__android_arm64",
+                "cronet_aml_base_cfi_buildflags__android_arm64",
+                "cronet_aml_base_clang_profiling_buildflags__android_arm64",
+                "cronet_aml_base_debugging_buildflags__android_arm64",
+                "cronet_aml_base_feature_list_buildflags__android_arm64",
+                "cronet_aml_base_ios_cronet_buildflags__android_arm64",
+                "cronet_aml_base_logging_buildflags__android_arm64",
+                "cronet_aml_base_message_pump_buildflags__android_arm64",
+                "cronet_aml_base_orderfile_buildflags__android_arm64",
+                "cronet_aml_base_parsing_buildflags__android_arm64",
+                "cronet_aml_base_power_monitor_buildflags__android_arm64",
+                "cronet_aml_base_profiler_buildflags__android_arm64",
+                "cronet_aml_base_sanitizer_buildflags__android_arm64",
+                "cronet_aml_base_synchronization_buildflags__android_arm64",
+                "cronet_aml_base_tracing_buildflags__android_arm64",
+                "cronet_aml_build_branding_buildflags__android_arm64",
+                "cronet_aml_build_chromecast_buildflags__android_arm64",
+                "cronet_aml_build_chromeos_buildflags__android_arm64",
+                "cronet_aml_build_config_compiler_compiler_buildflags__android_arm64",
+            ],
+            export_generated_headers: [
+                "cronet_aml_base_allocator_buildflags__android_arm64",
+                "cronet_aml_base_allocator_partition_allocator_chromecast_buildflags__android_arm64",
+                "cronet_aml_base_allocator_partition_allocator_chromeos_buildflags__android_arm64",
+                "cronet_aml_base_allocator_partition_allocator_debugging_buildflags__android_arm64",
+                "cronet_aml_base_allocator_partition_allocator_logging_buildflags__android_arm64",
+                "cronet_aml_base_allocator_partition_allocator_partition_alloc_buildflags__android_arm64",
+                "cronet_aml_base_anchor_functions_buildflags__android_arm64",
+                "cronet_aml_base_android_runtime_jni_headers__android_arm64",
+                "cronet_aml_base_base_jni_headers__android_arm64",
+                "cronet_aml_base_build_date__android_arm64",
+                "cronet_aml_base_cfi_buildflags__android_arm64",
+                "cronet_aml_base_clang_profiling_buildflags__android_arm64",
+                "cronet_aml_base_debugging_buildflags__android_arm64",
+                "cronet_aml_base_feature_list_buildflags__android_arm64",
+                "cronet_aml_base_ios_cronet_buildflags__android_arm64",
+                "cronet_aml_base_logging_buildflags__android_arm64",
+                "cronet_aml_base_message_pump_buildflags__android_arm64",
+                "cronet_aml_base_orderfile_buildflags__android_arm64",
+                "cronet_aml_base_parsing_buildflags__android_arm64",
+                "cronet_aml_base_power_monitor_buildflags__android_arm64",
+                "cronet_aml_base_profiler_buildflags__android_arm64",
+                "cronet_aml_base_sanitizer_buildflags__android_arm64",
+                "cronet_aml_base_synchronization_buildflags__android_arm64",
+                "cronet_aml_base_tracing_buildflags__android_arm64",
+                "cronet_aml_build_branding_buildflags__android_arm64",
+                "cronet_aml_build_chromecast_buildflags__android_arm64",
+                "cronet_aml_build_chromeos_buildflags__android_arm64",
+                "cronet_aml_build_config_compiler_compiler_buildflags__android_arm64",
+            ],
+        },
         android_x86: {
             srcs: [
                 ":cronet_aml_third_party_android_ndk_cpu_features",
@@ -1905,6 +2259,271 @@ cc_library_static {
 // GN: //base:base_jni_headers__android_arm
 genrule {
     name: "cronet_aml_base_base_jni_headers__android_arm",
+    srcs: [
+        "base/android/java/src/org/chromium/base/ApkAssets.java",
+        "base/android/java/src/org/chromium/base/ApplicationStatus.java",
+        "base/android/java/src/org/chromium/base/BaseFeatureList.java",
+        "base/android/java/src/org/chromium/base/BuildInfo.java",
+        "base/android/java/src/org/chromium/base/BundleUtils.java",
+        "base/android/java/src/org/chromium/base/Callback.java",
+        "base/android/java/src/org/chromium/base/CommandLine.java",
+        "base/android/java/src/org/chromium/base/ContentUriUtils.java",
+        "base/android/java/src/org/chromium/base/CpuFeatures.java",
+        "base/android/java/src/org/chromium/base/EarlyTraceEvent.java",
+        "base/android/java/src/org/chromium/base/EventLog.java",
+        "base/android/java/src/org/chromium/base/FeatureList.java",
+        "base/android/java/src/org/chromium/base/Features.java",
+        "base/android/java/src/org/chromium/base/FieldTrialList.java",
+        "base/android/java/src/org/chromium/base/FileUtils.java",
+        "base/android/java/src/org/chromium/base/ImportantFileWriterAndroid.java",
+        "base/android/java/src/org/chromium/base/IntStringCallback.java",
+        "base/android/java/src/org/chromium/base/JNIUtils.java",
+        "base/android/java/src/org/chromium/base/JavaExceptionReporter.java",
+        "base/android/java/src/org/chromium/base/JavaHandlerThread.java",
+        "base/android/java/src/org/chromium/base/LocaleUtils.java",
+        "base/android/java/src/org/chromium/base/MemoryPressureListener.java",
+        "base/android/java/src/org/chromium/base/PathService.java",
+        "base/android/java/src/org/chromium/base/PathUtils.java",
+        "base/android/java/src/org/chromium/base/PowerMonitor.java",
+        "base/android/java/src/org/chromium/base/RadioUtils.java",
+        "base/android/java/src/org/chromium/base/SysUtils.java",
+        "base/android/java/src/org/chromium/base/ThreadUtils.java",
+        "base/android/java/src/org/chromium/base/TimezoneUtils.java",
+        "base/android/java/src/org/chromium/base/TraceEvent.java",
+        "base/android/java/src/org/chromium/base/UnguessableToken.java",
+        "base/android/java/src/org/chromium/base/jank_tracker/JankMetricUMARecorder.java",
+        "base/android/java/src/org/chromium/base/library_loader/LibraryLoader.java",
+        "base/android/java/src/org/chromium/base/library_loader/LibraryPrefetcher.java",
+        "base/android/java/src/org/chromium/base/memory/JavaHeapDumpGenerator.java",
+        "base/android/java/src/org/chromium/base/metrics/NativeUmaRecorder.java",
+        "base/android/java/src/org/chromium/base/metrics/StatisticsRecorderAndroid.java",
+        "base/android/java/src/org/chromium/base/process_launcher/ChildProcessService.java",
+        "base/android/java/src/org/chromium/base/task/PostTask.java",
+        "base/android/java/src/org/chromium/base/task/TaskRunnerImpl.java",
+    ],
+    cmd: "$(location base/android/jni_generator/jni_generator.py) --ptr_type " +
+         "long " +
+         " " +
+         " " +
+         "--output_dir " +
+         "$(genDir)/base/base_jni_headers " +
+         "--includes " +
+         "base/android/jni_generator/jni_generator_helper.h " +
+         "--use_proxy_hash " +
+         "--output_name " +
+         "ApkAssets_jni.h " +
+         "--output_name " +
+         "ApplicationStatus_jni.h " +
+         "--output_name " +
+         "BaseFeatureList_jni.h " +
+         "--output_name " +
+         "BuildInfo_jni.h " +
+         "--output_name " +
+         "BundleUtils_jni.h " +
+         "--output_name " +
+         "Callback_jni.h " +
+         "--output_name " +
+         "CommandLine_jni.h " +
+         "--output_name " +
+         "ContentUriUtils_jni.h " +
+         "--output_name " +
+         "CpuFeatures_jni.h " +
+         "--output_name " +
+         "EarlyTraceEvent_jni.h " +
+         "--output_name " +
+         "EventLog_jni.h " +
+         "--output_name " +
+         "FeatureList_jni.h " +
+         "--output_name " +
+         "Features_jni.h " +
+         "--output_name " +
+         "FieldTrialList_jni.h " +
+         "--output_name " +
+         "FileUtils_jni.h " +
+         "--output_name " +
+         "ImportantFileWriterAndroid_jni.h " +
+         "--output_name " +
+         "IntStringCallback_jni.h " +
+         "--output_name " +
+         "JNIUtils_jni.h " +
+         "--output_name " +
+         "JavaExceptionReporter_jni.h " +
+         "--output_name " +
+         "JavaHandlerThread_jni.h " +
+         "--output_name " +
+         "LocaleUtils_jni.h " +
+         "--output_name " +
+         "MemoryPressureListener_jni.h " +
+         "--output_name " +
+         "PathService_jni.h " +
+         "--output_name " +
+         "PathUtils_jni.h " +
+         "--output_name " +
+         "PowerMonitor_jni.h " +
+         "--output_name " +
+         "RadioUtils_jni.h " +
+         "--output_name " +
+         "SysUtils_jni.h " +
+         "--output_name " +
+         "ThreadUtils_jni.h " +
+         "--output_name " +
+         "TimezoneUtils_jni.h " +
+         "--output_name " +
+         "TraceEvent_jni.h " +
+         "--output_name " +
+         "UnguessableToken_jni.h " +
+         "--output_name " +
+         "JankMetricUMARecorder_jni.h " +
+         "--output_name " +
+         "LibraryLoader_jni.h " +
+         "--output_name " +
+         "LibraryPrefetcher_jni.h " +
+         "--output_name " +
+         "JavaHeapDumpGenerator_jni.h " +
+         "--output_name " +
+         "NativeUmaRecorder_jni.h " +
+         "--output_name " +
+         "StatisticsRecorderAndroid_jni.h " +
+         "--output_name " +
+         "ChildProcessService_jni.h " +
+         "--output_name " +
+         "PostTask_jni.h " +
+         "--output_name " +
+         "TaskRunnerImpl_jni.h " +
+         "--input_file " +
+         "$(location base/android/java/src/org/chromium/base/ApkAssets.java) " +
+         "--input_file " +
+         "$(location base/android/java/src/org/chromium/base/ApplicationStatus.java) " +
+         "--input_file " +
+         "$(location base/android/java/src/org/chromium/base/BaseFeatureList.java) " +
+         "--input_file " +
+         "$(location base/android/java/src/org/chromium/base/BuildInfo.java) " +
+         "--input_file " +
+         "$(location base/android/java/src/org/chromium/base/BundleUtils.java) " +
+         "--input_file " +
+         "$(location base/android/java/src/org/chromium/base/Callback.java) " +
+         "--input_file " +
+         "$(location base/android/java/src/org/chromium/base/CommandLine.java) " +
+         "--input_file " +
+         "$(location base/android/java/src/org/chromium/base/ContentUriUtils.java) " +
+         "--input_file " +
+         "$(location base/android/java/src/org/chromium/base/CpuFeatures.java) " +
+         "--input_file " +
+         "$(location base/android/java/src/org/chromium/base/EarlyTraceEvent.java) " +
+         "--input_file " +
+         "$(location base/android/java/src/org/chromium/base/EventLog.java) " +
+         "--input_file " +
+         "$(location base/android/java/src/org/chromium/base/FeatureList.java) " +
+         "--input_file " +
+         "$(location base/android/java/src/org/chromium/base/Features.java) " +
+         "--input_file " +
+         "$(location base/android/java/src/org/chromium/base/FieldTrialList.java) " +
+         "--input_file " +
+         "$(location base/android/java/src/org/chromium/base/FileUtils.java) " +
+         "--input_file " +
+         "$(location base/android/java/src/org/chromium/base/ImportantFileWriterAndroid.java) " +
+         "--input_file " +
+         "$(location base/android/java/src/org/chromium/base/IntStringCallback.java) " +
+         "--input_file " +
+         "$(location base/android/java/src/org/chromium/base/JNIUtils.java) " +
+         "--input_file " +
+         "$(location base/android/java/src/org/chromium/base/JavaExceptionReporter.java) " +
+         "--input_file " +
+         "$(location base/android/java/src/org/chromium/base/JavaHandlerThread.java) " +
+         "--input_file " +
+         "$(location base/android/java/src/org/chromium/base/LocaleUtils.java) " +
+         "--input_file " +
+         "$(location base/android/java/src/org/chromium/base/MemoryPressureListener.java) " +
+         "--input_file " +
+         "$(location base/android/java/src/org/chromium/base/PathService.java) " +
+         "--input_file " +
+         "$(location base/android/java/src/org/chromium/base/PathUtils.java) " +
+         "--input_file " +
+         "$(location base/android/java/src/org/chromium/base/PowerMonitor.java) " +
+         "--input_file " +
+         "$(location base/android/java/src/org/chromium/base/RadioUtils.java) " +
+         "--input_file " +
+         "$(location base/android/java/src/org/chromium/base/SysUtils.java) " +
+         "--input_file " +
+         "$(location base/android/java/src/org/chromium/base/ThreadUtils.java) " +
+         "--input_file " +
+         "$(location base/android/java/src/org/chromium/base/TimezoneUtils.java) " +
+         "--input_file " +
+         "$(location base/android/java/src/org/chromium/base/TraceEvent.java) " +
+         "--input_file " +
+         "$(location base/android/java/src/org/chromium/base/UnguessableToken.java) " +
+         "--input_file " +
+         "$(location base/android/java/src/org/chromium/base/jank_tracker/JankMetricUMARecorder.java) " +
+         "--input_file " +
+         "$(location base/android/java/src/org/chromium/base/library_loader/LibraryLoader.java) " +
+         "--input_file " +
+         "$(location base/android/java/src/org/chromium/base/library_loader/LibraryPrefetcher.java) " +
+         "--input_file " +
+         "$(location base/android/java/src/org/chromium/base/memory/JavaHeapDumpGenerator.java) " +
+         "--input_file " +
+         "$(location base/android/java/src/org/chromium/base/metrics/NativeUmaRecorder.java) " +
+         "--input_file " +
+         "$(location base/android/java/src/org/chromium/base/metrics/StatisticsRecorderAndroid.java) " +
+         "--input_file " +
+         "$(location base/android/java/src/org/chromium/base/process_launcher/ChildProcessService.java) " +
+         "--input_file " +
+         "$(location base/android/java/src/org/chromium/base/task/PostTask.java) " +
+         "--input_file " +
+         "$(location base/android/java/src/org/chromium/base/task/TaskRunnerImpl.java)",
+    out: [
+        "base/base_jni_headers/ApkAssets_jni.h",
+        "base/base_jni_headers/ApplicationStatus_jni.h",
+        "base/base_jni_headers/BaseFeatureList_jni.h",
+        "base/base_jni_headers/BuildInfo_jni.h",
+        "base/base_jni_headers/BundleUtils_jni.h",
+        "base/base_jni_headers/Callback_jni.h",
+        "base/base_jni_headers/ChildProcessService_jni.h",
+        "base/base_jni_headers/CommandLine_jni.h",
+        "base/base_jni_headers/ContentUriUtils_jni.h",
+        "base/base_jni_headers/CpuFeatures_jni.h",
+        "base/base_jni_headers/EarlyTraceEvent_jni.h",
+        "base/base_jni_headers/EventLog_jni.h",
+        "base/base_jni_headers/FeatureList_jni.h",
+        "base/base_jni_headers/Features_jni.h",
+        "base/base_jni_headers/FieldTrialList_jni.h",
+        "base/base_jni_headers/FileUtils_jni.h",
+        "base/base_jni_headers/ImportantFileWriterAndroid_jni.h",
+        "base/base_jni_headers/IntStringCallback_jni.h",
+        "base/base_jni_headers/JNIUtils_jni.h",
+        "base/base_jni_headers/JankMetricUMARecorder_jni.h",
+        "base/base_jni_headers/JavaExceptionReporter_jni.h",
+        "base/base_jni_headers/JavaHandlerThread_jni.h",
+        "base/base_jni_headers/JavaHeapDumpGenerator_jni.h",
+        "base/base_jni_headers/LibraryLoader_jni.h",
+        "base/base_jni_headers/LibraryPrefetcher_jni.h",
+        "base/base_jni_headers/LocaleUtils_jni.h",
+        "base/base_jni_headers/MemoryPressureListener_jni.h",
+        "base/base_jni_headers/NativeUmaRecorder_jni.h",
+        "base/base_jni_headers/PathService_jni.h",
+        "base/base_jni_headers/PathUtils_jni.h",
+        "base/base_jni_headers/PostTask_jni.h",
+        "base/base_jni_headers/PowerMonitor_jni.h",
+        "base/base_jni_headers/RadioUtils_jni.h",
+        "base/base_jni_headers/StatisticsRecorderAndroid_jni.h",
+        "base/base_jni_headers/SysUtils_jni.h",
+        "base/base_jni_headers/TaskRunnerImpl_jni.h",
+        "base/base_jni_headers/ThreadUtils_jni.h",
+        "base/base_jni_headers/TimezoneUtils_jni.h",
+        "base/base_jni_headers/TraceEvent_jni.h",
+        "base/base_jni_headers/UnguessableToken_jni.h",
+    ],
+    tool_files: [
+        "base/android/jni_generator/android_jar.classes",
+        "base/android/jni_generator/jni_generator.py",
+        "build/android/gyp/util/__init__.py",
+        "build/android/gyp/util/build_utils.py",
+        "build/gn_helpers.py",
+    ],
+}
+
+// GN: //base:base_jni_headers__android_arm64
+genrule {
+    name: "cronet_aml_base_base_jni_headers__android_arm64",
     srcs: [
         "base/android/java/src/org/chromium/base/ApkAssets.java",
         "base/android/java/src/org/chromium/base/ApplicationStatus.java",
@@ -2742,6 +3361,19 @@ cc_library_static {
                 "cronet_aml_build_chromeos_buildflags__android_arm",
             ],
         },
+        android_arm64: {
+            cflags: [
+                "-DANDROID",
+                "-DANDROID_NDK_VERSION_ROLL=r23_1",
+                "-DHAVE_SYS_UIO_H",
+            ],
+            generated_headers: [
+                "cronet_aml_build_chromeos_buildflags__android_arm64",
+            ],
+            export_generated_headers: [
+                "cronet_aml_build_chromeos_buildflags__android_arm64",
+            ],
+        },
         android_x86: {
             cflags: [
                 "-DANDROID",
@@ -2804,6 +3436,19 @@ genrule {
     ],
 }
 
+// GN: //base:build_date__android_arm64
+genrule {
+    name: "cronet_aml_base_build_date__android_arm64",
+    cmd: "$(location build/write_build_date_header.py) $(out) " +
+         "1664686800",
+    out: [
+        "base/generated_build_date.h",
+    ],
+    tool_files: [
+        "build/write_build_date_header.py",
+    ],
+}
+
 // GN: //base:build_date__android_x86
 genrule {
     name: "cronet_aml_base_build_date__android_x86",
@@ -2846,6 +3491,26 @@ genrule {
 // GN: //base:cfi_buildflags__android_arm
 genrule {
     name: "cronet_aml_base_cfi_buildflags__android_arm",
+    cmd: "echo '--flags CFI_CAST_CHECK=\"false && false\" CFI_DIAG=\"false && false\" CFI_ICALL_CHECK=\"false && false\" CFI_ENFORCEMENT_TRAP=\"false && !false\" CFI_ENFORCEMENT_DIAGNOSTIC=\"false && false && !false\"' | " +
+         "$(location build/write_buildflag_header.py) --output " +
+         "$(out) " +
+         "--rulename " +
+         "//base:cfi_buildflags " +
+         "--gen-dir " +
+         ". " +
+         "--definitions " +
+         "/dev/stdin",
+    out: [
+        "base/cfi_buildflags.h",
+    ],
+    tool_files: [
+        "build/write_buildflag_header.py",
+    ],
+}
+
+// GN: //base:cfi_buildflags__android_arm64
+genrule {
+    name: "cronet_aml_base_cfi_buildflags__android_arm64",
     cmd: "echo '--flags CFI_CAST_CHECK=\"false && false\" CFI_DIAG=\"false && false\" CFI_ICALL_CHECK=\"false && false\" CFI_ENFORCEMENT_TRAP=\"false && !false\" CFI_ENFORCEMENT_DIAGNOSTIC=\"false && false && !false\"' | " +
          "$(location build/write_buildflag_header.py) --output " +
          "$(out) " +
@@ -2943,6 +3608,26 @@ genrule {
     ],
 }
 
+// GN: //base:clang_profiling_buildflags__android_arm64
+genrule {
+    name: "cronet_aml_base_clang_profiling_buildflags__android_arm64",
+    cmd: "echo '--flags CLANG_PROFILING=\"false\" CLANG_PROFILING_INSIDE_SANDBOX=\"false\" USE_CLANG_COVERAGE=\"false\"' | " +
+         "$(location build/write_buildflag_header.py) --output " +
+         "$(out) " +
+         "--rulename " +
+         "//base:clang_profiling_buildflags " +
+         "--gen-dir " +
+         ". " +
+         "--definitions " +
+         "/dev/stdin",
+    out: [
+        "base/clang_profiling_buildflags.h",
+    ],
+    tool_files: [
+        "build/write_buildflag_header.py",
+    ],
+}
+
 // GN: //base:clang_profiling_buildflags__android_x86
 genrule {
     name: "cronet_aml_base_clang_profiling_buildflags__android_x86",
@@ -3023,6 +3708,26 @@ genrule {
     ],
 }
 
+// GN: //base:debugging_buildflags__android_arm64
+genrule {
+    name: "cronet_aml_base_debugging_buildflags__android_arm64",
+    cmd: "echo '--flags DCHECK_IS_CONFIGURABLE=\"false\" ENABLE_LOCATION_SOURCE=\"true\" ENABLE_PROFILING=\"false\" CAN_UNWIND_WITH_FRAME_POINTERS=\"true\" UNSAFE_DEVELOPER_BUILD=\"true\" CAN_UNWIND_WITH_CFI_TABLE=\"false\" EXCLUDE_UNWIND_TABLES=\"false\" ENABLE_GDBINIT_WARNING=\"true\" ENABLE_LLDBINIT_WARNING=\"false\" EXPENSIVE_DCHECKS_ARE_ON=\"true\" ENABLE_STACK_TRACE_LINE_NUMBERS=\"false\"' | " +
+         "$(location build/write_buildflag_header.py) --output " +
+         "$(out) " +
+         "--rulename " +
+         "//base:debugging_buildflags " +
+         "--gen-dir " +
+         ". " +
+         "--definitions " +
+         "/dev/stdin",
+    out: [
+        "base/debug/debugging_buildflags.h",
+    ],
+    tool_files: [
+        "build/write_buildflag_header.py",
+    ],
+}
+
 // GN: //base:debugging_buildflags__android_x86
 genrule {
     name: "cronet_aml_base_debugging_buildflags__android_x86",
@@ -3086,6 +3791,26 @@ genrule {
 // GN: //base:feature_list_buildflags__android_arm
 genrule {
     name: "cronet_aml_base_feature_list_buildflags__android_arm",
+    cmd: "echo '--flags ENABLE_BANNED_BASE_FEATURE_PREFIX=\"false\"' | " +
+         "$(location build/write_buildflag_header.py) --output " +
+         "$(out) " +
+         "--rulename " +
+         "//base:feature_list_buildflags " +
+         "--gen-dir " +
+         ". " +
+         "--definitions " +
+         "/dev/stdin",
+    out: [
+        "base/feature_list_buildflags.h",
+    ],
+    tool_files: [
+        "build/write_buildflag_header.py",
+    ],
+}
+
+// GN: //base:feature_list_buildflags__android_arm64
+genrule {
+    name: "cronet_aml_base_feature_list_buildflags__android_arm64",
     cmd: "echo '--flags ENABLE_BANNED_BASE_FEATURE_PREFIX=\"false\"' | " +
          "$(location build/write_buildflag_header.py) --output " +
          "$(out) " +
@@ -3183,6 +3908,26 @@ genrule {
     ],
 }
 
+// GN: //base:ios_cronet_buildflags__android_arm64
+genrule {
+    name: "cronet_aml_base_ios_cronet_buildflags__android_arm64",
+    cmd: "echo '--flags CRONET_BUILD=\"false\"' | " +
+         "$(location build/write_buildflag_header.py) --output " +
+         "$(out) " +
+         "--rulename " +
+         "//base:ios_cronet_buildflags " +
+         "--gen-dir " +
+         ". " +
+         "--definitions " +
+         "/dev/stdin",
+    out: [
+        "base/message_loop/ios_cronet_buildflags.h",
+    ],
+    tool_files: [
+        "build/write_buildflag_header.py",
+    ],
+}
+
 // GN: //base:ios_cronet_buildflags__android_x86
 genrule {
     name: "cronet_aml_base_ios_cronet_buildflags__android_x86",
@@ -3263,6 +4008,26 @@ genrule {
     ],
 }
 
+// GN: //base:logging_buildflags__android_arm64
+genrule {
+    name: "cronet_aml_base_logging_buildflags__android_arm64",
+    cmd: "echo '--flags ENABLE_LOG_ERROR_NOT_REACHED=\"false\" USE_RUNTIME_VLOG=\"true\"' | " +
+         "$(location build/write_buildflag_header.py) --output " +
+         "$(out) " +
+         "--rulename " +
+         "//base:logging_buildflags " +
+         "--gen-dir " +
+         ". " +
+         "--definitions " +
+         "/dev/stdin",
+    out: [
+        "base/logging_buildflags.h",
+    ],
+    tool_files: [
+        "build/write_buildflag_header.py",
+    ],
+}
+
 // GN: //base:logging_buildflags__android_x86
 genrule {
     name: "cronet_aml_base_logging_buildflags__android_x86",
@@ -3326,6 +4091,26 @@ genrule {
 // GN: //base:message_pump_buildflags__android_arm
 genrule {
     name: "cronet_aml_base_message_pump_buildflags__android_arm",
+    cmd: "echo '--flags ENABLE_MESSAGE_PUMP_EPOLL=\"true\"' | " +
+         "$(location build/write_buildflag_header.py) --output " +
+         "$(out) " +
+         "--rulename " +
+         "//base:message_pump_buildflags " +
+         "--gen-dir " +
+         ". " +
+         "--definitions " +
+         "/dev/stdin",
+    out: [
+        "base/message_loop/message_pump_buildflags.h",
+    ],
+    tool_files: [
+        "build/write_buildflag_header.py",
+    ],
+}
+
+// GN: //base:message_pump_buildflags__android_arm64
+genrule {
+    name: "cronet_aml_base_message_pump_buildflags__android_arm64",
     cmd: "echo '--flags ENABLE_MESSAGE_PUMP_EPOLL=\"true\"' | " +
          "$(location build/write_buildflag_header.py) --output " +
          "$(out) " +
@@ -3439,6 +4224,13 @@ cc_object {
                 "-DHAVE_SYS_UIO_H",
             ],
         },
+        android_arm64: {
+            cflags: [
+                "-DANDROID",
+                "-DANDROID_NDK_VERSION_ROLL=r23_1",
+                "-DHAVE_SYS_UIO_H",
+            ],
+        },
         android_x86: {
             cflags: [
                 "-DANDROID",
@@ -3473,6 +4265,26 @@ cc_object {
 // GN: //base:orderfile_buildflags__android_arm
 genrule {
     name: "cronet_aml_base_orderfile_buildflags__android_arm",
+    cmd: "echo '--flags DEVTOOLS_INSTRUMENTATION_DUMPING=\"false\" ORDERFILE_INSTRUMENTATION=\"false\"' | " +
+         "$(location build/write_buildflag_header.py) --output " +
+         "$(out) " +
+         "--rulename " +
+         "//base:orderfile_buildflags " +
+         "--gen-dir " +
+         ". " +
+         "--definitions " +
+         "/dev/stdin",
+    out: [
+        "base/android/orderfile/orderfile_buildflags.h",
+    ],
+    tool_files: [
+        "build/write_buildflag_header.py",
+    ],
+}
+
+// GN: //base:orderfile_buildflags__android_arm64
+genrule {
+    name: "cronet_aml_base_orderfile_buildflags__android_arm64",
     cmd: "echo '--flags DEVTOOLS_INSTRUMENTATION_DUMPING=\"false\" ORDERFILE_INSTRUMENTATION=\"false\"' | " +
          "$(location build/write_buildflag_header.py) --output " +
          "$(out) " +
@@ -3570,6 +4382,26 @@ genrule {
     ],
 }
 
+// GN: //base:parsing_buildflags__android_arm64
+genrule {
+    name: "cronet_aml_base_parsing_buildflags__android_arm64",
+    cmd: "echo '--flags BUILD_RUST_JSON_PARSER=\"false\"' | " +
+         "$(location build/write_buildflag_header.py) --output " +
+         "$(out) " +
+         "--rulename " +
+         "//base:parsing_buildflags " +
+         "--gen-dir " +
+         ". " +
+         "--definitions " +
+         "/dev/stdin",
+    out: [
+        "base/parsing_buildflags.h",
+    ],
+    tool_files: [
+        "build/write_buildflag_header.py",
+    ],
+}
+
 // GN: //base:parsing_buildflags__android_x86
 genrule {
     name: "cronet_aml_base_parsing_buildflags__android_x86",
@@ -3633,6 +4465,26 @@ genrule {
 // GN: //base:power_monitor_buildflags__android_arm
 genrule {
     name: "cronet_aml_base_power_monitor_buildflags__android_arm",
+    cmd: "echo '--flags HAS_BATTERY_LEVEL_PROVIDER_IMPL=\"false\"' | " +
+         "$(location build/write_buildflag_header.py) --output " +
+         "$(out) " +
+         "--rulename " +
+         "//base:power_monitor_buildflags " +
+         "--gen-dir " +
+         ". " +
+         "--definitions " +
+         "/dev/stdin",
+    out: [
+        "base/power_monitor/power_monitor_buildflags.h",
+    ],
+    tool_files: [
+        "build/write_buildflag_header.py",
+    ],
+}
+
+// GN: //base:power_monitor_buildflags__android_arm64
+genrule {
+    name: "cronet_aml_base_power_monitor_buildflags__android_arm64",
     cmd: "echo '--flags HAS_BATTERY_LEVEL_PROVIDER_IMPL=\"false\"' | " +
          "$(location build/write_buildflag_header.py) --output " +
          "$(out) " +
@@ -3730,6 +4582,26 @@ genrule {
     ],
 }
 
+// GN: //base:profiler_buildflags__android_arm64
+genrule {
+    name: "cronet_aml_base_profiler_buildflags__android_arm64",
+    cmd: "echo '--flags ENABLE_ARM_CFI_TABLE=\"false\" IOS_STACK_PROFILER_ENABLED=\"true\" USE_ANDROID_UNWINDER_V2=\"true\"' | " +
+         "$(location build/write_buildflag_header.py) --output " +
+         "$(out) " +
+         "--rulename " +
+         "//base:profiler_buildflags " +
+         "--gen-dir " +
+         ". " +
+         "--definitions " +
+         "/dev/stdin",
+    out: [
+        "base/profiler/profiler_buildflags.h",
+    ],
+    tool_files: [
+        "build/write_buildflag_header.py",
+    ],
+}
+
 // GN: //base:profiler_buildflags__android_x86
 genrule {
     name: "cronet_aml_base_profiler_buildflags__android_x86",
@@ -3810,6 +4682,26 @@ genrule {
     ],
 }
 
+// GN: //base:sanitizer_buildflags__android_arm64
+genrule {
+    name: "cronet_aml_base_sanitizer_buildflags__android_arm64",
+    cmd: "echo '--flags IS_HWASAN=\"false\" USING_SANITIZER=\"false\"' | " +
+         "$(location build/write_buildflag_header.py) --output " +
+         "$(out) " +
+         "--rulename " +
+         "//base:sanitizer_buildflags " +
+         "--gen-dir " +
+         ". " +
+         "--definitions " +
+         "/dev/stdin",
+    out: [
+        "base/sanitizer_buildflags.h",
+    ],
+    tool_files: [
+        "build/write_buildflag_header.py",
+    ],
+}
+
 // GN: //base:sanitizer_buildflags__android_x86
 genrule {
     name: "cronet_aml_base_sanitizer_buildflags__android_x86",
@@ -3873,6 +4765,26 @@ genrule {
 // GN: //base:synchronization_buildflags__android_arm
 genrule {
     name: "cronet_aml_base_synchronization_buildflags__android_arm",
+    cmd: "echo '--flags ENABLE_MUTEX_PRIORITY_INHERITANCE=\"false\"' | " +
+         "$(location build/write_buildflag_header.py) --output " +
+         "$(out) " +
+         "--rulename " +
+         "//base:synchronization_buildflags " +
+         "--gen-dir " +
+         ". " +
+         "--definitions " +
+         "/dev/stdin",
+    out: [
+        "base/synchronization/synchronization_buildflags.h",
+    ],
+    tool_files: [
+        "build/write_buildflag_header.py",
+    ],
+}
+
+// GN: //base:synchronization_buildflags__android_arm64
+genrule {
+    name: "cronet_aml_base_synchronization_buildflags__android_arm64",
     cmd: "echo '--flags ENABLE_MUTEX_PRIORITY_INHERITANCE=\"false\"' | " +
          "$(location build/write_buildflag_header.py) --output " +
          "$(out) " +
@@ -3996,6 +4908,13 @@ cc_library_static {
                 "-DHAVE_SYS_UIO_H",
             ],
         },
+        android_arm64: {
+            cflags: [
+                "-DANDROID",
+                "-DANDROID_NDK_VERSION_ROLL=r23_1",
+                "-DHAVE_SYS_UIO_H",
+            ],
+        },
         android_x86: {
             cflags: [
                 "-DANDROID",
@@ -4058,6 +4977,13 @@ cc_library_static {
     cpp_std: "c++20",
     target: {
         android_arm: {
+            cflags: [
+                "-DANDROID",
+                "-DANDROID_NDK_VERSION_ROLL=r23_1",
+                "-DHAVE_SYS_UIO_H",
+            ],
+        },
+        android_arm64: {
             cflags: [
                 "-DANDROID",
                 "-DANDROID_NDK_VERSION_ROLL=r23_1",
@@ -4246,6 +5172,26 @@ genrule {
     ],
 }
 
+// GN: //base:tracing_buildflags__android_arm64
+genrule {
+    name: "cronet_aml_base_tracing_buildflags__android_arm64",
+    cmd: "echo '--flags ENABLE_BASE_TRACING=\"false\" USE_PERFETTO_CLIENT_LIBRARY=\"false\" OPTIONAL_TRACE_EVENTS_ENABLED=\"false\"' | " +
+         "$(location build/write_buildflag_header.py) --output " +
+         "$(out) " +
+         "--rulename " +
+         "//base:tracing_buildflags " +
+         "--gen-dir " +
+         ". " +
+         "--definitions " +
+         "/dev/stdin",
+    out: [
+        "base/tracing_buildflags.h",
+    ],
+    tool_files: [
+        "build/write_buildflag_header.py",
+    ],
+}
+
 // GN: //base:tracing_buildflags__android_x86
 genrule {
     name: "cronet_aml_base_tracing_buildflags__android_x86",
@@ -4309,6 +5255,26 @@ genrule {
 // GN: //build:branding_buildflags__android_arm
 genrule {
     name: "cronet_aml_build_branding_buildflags__android_arm",
+    cmd: "echo '--flags CHROMIUM_BRANDING=\"1\" GOOGLE_CHROME_BRANDING=\"0\"' | " +
+         "$(location build/write_buildflag_header.py) --output " +
+         "$(out) " +
+         "--rulename " +
+         "//build:branding_buildflags " +
+         "--gen-dir " +
+         ". " +
+         "--definitions " +
+         "/dev/stdin",
+    out: [
+        "build/branding_buildflags.h",
+    ],
+    tool_files: [
+        "build/write_buildflag_header.py",
+    ],
+}
+
+// GN: //build:branding_buildflags__android_arm64
+genrule {
+    name: "cronet_aml_build_branding_buildflags__android_arm64",
     cmd: "echo '--flags CHROMIUM_BRANDING=\"1\" GOOGLE_CHROME_BRANDING=\"0\"' | " +
          "$(location build/write_buildflag_header.py) --output " +
          "$(out) " +
@@ -4422,6 +5388,13 @@ cc_object {
                 "-DHAVE_SYS_UIO_H",
             ],
         },
+        android_arm64: {
+            cflags: [
+                "-DANDROID",
+                "-DANDROID_NDK_VERSION_ROLL=r23_1",
+                "-DHAVE_SYS_UIO_H",
+            ],
+        },
         android_x86: {
             cflags: [
                 "-DANDROID",
@@ -4456,6 +5429,26 @@ cc_object {
 // GN: //build:chromecast_buildflags__android_arm
 genrule {
     name: "cronet_aml_build_chromecast_buildflags__android_arm",
+    cmd: "echo '--flags IS_CASTOS=\"false\" IS_CAST_ANDROID=\"false\" ENABLE_CAST_RECEIVER=\"false\" IS_CHROMECAST=\"false\"' | " +
+         "$(location build/write_buildflag_header.py) --output " +
+         "$(out) " +
+         "--rulename " +
+         "//build:chromecast_buildflags " +
+         "--gen-dir " +
+         ". " +
+         "--definitions " +
+         "/dev/stdin",
+    out: [
+        "build/chromecast_buildflags.h",
+    ],
+    tool_files: [
+        "build/write_buildflag_header.py",
+    ],
+}
+
+// GN: //build:chromecast_buildflags__android_arm64
+genrule {
+    name: "cronet_aml_build_chromecast_buildflags__android_arm64",
     cmd: "echo '--flags IS_CASTOS=\"false\" IS_CAST_ANDROID=\"false\" ENABLE_CAST_RECEIVER=\"false\" IS_CHROMECAST=\"false\"' | " +
          "$(location build/write_buildflag_header.py) --output " +
          "$(out) " +
@@ -4553,6 +5546,26 @@ genrule {
     ],
 }
 
+// GN: //build:chromeos_buildflags__android_arm64
+genrule {
+    name: "cronet_aml_build_chromeos_buildflags__android_arm64",
+    cmd: "echo '--flags IS_CHROMEOS_DEVICE=\"false\" IS_CHROMEOS_LACROS=\"false\" IS_CHROMEOS_ASH=\"false\" IS_CHROMEOS_WITH_HW_DETAILS=\"false\" IS_REVEN=\"false\"' | " +
+         "$(location build/write_buildflag_header.py) --output " +
+         "$(out) " +
+         "--rulename " +
+         "//build:chromeos_buildflags " +
+         "--gen-dir " +
+         ". " +
+         "--definitions " +
+         "/dev/stdin",
+    out: [
+        "build/chromeos_buildflags.h",
+    ],
+    tool_files: [
+        "build/write_buildflag_header.py",
+    ],
+}
+
 // GN: //build:chromeos_buildflags__android_x86
 genrule {
     name: "cronet_aml_build_chromeos_buildflags__android_x86",
@@ -4616,6 +5629,26 @@ genrule {
 // GN: //build/config/compiler:compiler_buildflags__android_arm
 genrule {
     name: "cronet_aml_build_config_compiler_compiler_buildflags__android_arm",
+    cmd: "echo '--flags CLANG_PGO=\"0\" SYMBOL_LEVEL=\"1\"' | " +
+         "$(location build/write_buildflag_header.py) --output " +
+         "$(out) " +
+         "--rulename " +
+         "//build/config/compiler:compiler_buildflags " +
+         "--gen-dir " +
+         ". " +
+         "--definitions " +
+         "/dev/stdin",
+    out: [
+        "build/config/compiler/compiler_buildflags.h",
+    ],
+    tool_files: [
+        "build/write_buildflag_header.py",
+    ],
+}
+
+// GN: //build/config/compiler:compiler_buildflags__android_arm64
+genrule {
+    name: "cronet_aml_build_config_compiler_compiler_buildflags__android_arm64",
     cmd: "echo '--flags CLANG_PGO=\"0\" SYMBOL_LEVEL=\"1\"' | " +
          "$(location build/write_buildflag_header.py) --output " +
          "$(out) " +
@@ -4779,6 +5812,13 @@ cc_object {
                 "-DHAVE_SYS_UIO_H",
             ],
         },
+        android_arm64: {
+            cflags: [
+                "-DANDROID",
+                "-DANDROID_NDK_VERSION_ROLL=r23_1",
+                "-DHAVE_SYS_UIO_H",
+            ],
+        },
         android_x86: {
             cflags: [
                 "-DANDROID",
@@ -4864,6 +5904,16 @@ cc_object {
     rtti: true,
     target: {
         android_arm: {
+            srcs: [
+                "buildtools/third_party/libc++abi/cxa_demangle_stub.cc",
+            ],
+            cflags: [
+                "-DANDROID",
+                "-DANDROID_NDK_VERSION_ROLL=r23_1",
+                "-DHAVE_SYS_UIO_H",
+            ],
+        },
+        android_arm64: {
             srcs: [
                 "buildtools/third_party/libc++abi/cxa_demangle_stub.cc",
             ],
@@ -4974,6 +6024,26 @@ cc_object {
 // GN: //components/cronet/android:buildflags__android_arm
 genrule {
     name: "cronet_aml_components_cronet_android_buildflags__android_arm",
+    cmd: "echo '--flags INTEGRATED_MODE=\"false\"' | " +
+         "$(location build/write_buildflag_header.py) --output " +
+         "$(out) " +
+         "--rulename " +
+         "//components/cronet/android:buildflags " +
+         "--gen-dir " +
+         ". " +
+         "--definitions " +
+         "/dev/stdin",
+    out: [
+        "components/cronet/android/buildflags.h",
+    ],
+    tool_files: [
+        "build/write_buildflag_header.py",
+    ],
+}
+
+// GN: //components/cronet/android:buildflags__android_arm64
+genrule {
+    name: "cronet_aml_components_cronet_android_buildflags__android_arm64",
     cmd: "echo '--flags INTEGRATED_MODE=\"false\"' | " +
          "$(location build/write_buildflag_header.py) --output " +
          "$(out) " +
@@ -5144,6 +6214,30 @@ cc_library_shared {
                 "cronet_aml_url_buildflags__android_arm",
             ],
         },
+        android_arm64: {
+            generated_headers: [
+                "cronet_aml_base_debugging_buildflags__android_arm64",
+                "cronet_aml_base_logging_buildflags__android_arm64",
+                "cronet_aml_build_chromeos_buildflags__android_arm64",
+                "cronet_aml_components_cronet_android_buildflags__android_arm64",
+                "cronet_aml_components_cronet_android_cronet_jni_headers__android_arm64",
+                "cronet_aml_components_cronet_android_cronet_jni_registration__android_arm64",
+                "cronet_aml_components_cronet_cronet_buildflags__android_arm64",
+                "cronet_aml_components_cronet_cronet_version_header_action__android_arm64",
+                "cronet_aml_url_buildflags__android_arm64",
+            ],
+            export_generated_headers: [
+                "cronet_aml_base_debugging_buildflags__android_arm64",
+                "cronet_aml_base_logging_buildflags__android_arm64",
+                "cronet_aml_build_chromeos_buildflags__android_arm64",
+                "cronet_aml_components_cronet_android_buildflags__android_arm64",
+                "cronet_aml_components_cronet_android_cronet_jni_headers__android_arm64",
+                "cronet_aml_components_cronet_android_cronet_jni_registration__android_arm64",
+                "cronet_aml_components_cronet_cronet_buildflags__android_arm64",
+                "cronet_aml_components_cronet_cronet_version_header_action__android_arm64",
+                "cronet_aml_url_buildflags__android_arm64",
+            ],
+        },
         android_x86: {
             cflags: [
                 "-msse3",
@@ -5204,6 +6298,61 @@ cc_library_shared {
 // GN: //components/cronet/android:cronet_jni_headers__android_arm
 genrule {
     name: "cronet_aml_components_cronet_android_cronet_jni_headers__android_arm",
+    srcs: [
+        "components/cronet/android/java/src/org/chromium/net/impl/CronetBidirectionalStream.java",
+        "components/cronet/android/java/src/org/chromium/net/impl/CronetLibraryLoader.java",
+        "components/cronet/android/java/src/org/chromium/net/impl/CronetUploadDataStream.java",
+        "components/cronet/android/java/src/org/chromium/net/impl/CronetUrlRequest.java",
+        "components/cronet/android/java/src/org/chromium/net/impl/CronetUrlRequestContext.java",
+    ],
+    cmd: "$(location base/android/jni_generator/jni_generator.py) --ptr_type " +
+         "long " +
+         " " +
+         " " +
+         "--output_dir " +
+         "$(genDir)/components/cronet/android/cronet_jni_headers " +
+         "--includes " +
+         "base/android/jni_generator/jni_generator_helper.h " +
+         "--use_proxy_hash " +
+         "--output_name " +
+         "CronetBidirectionalStream_jni.h " +
+         "--output_name " +
+         "CronetLibraryLoader_jni.h " +
+         "--output_name " +
+         "CronetUploadDataStream_jni.h " +
+         "--output_name " +
+         "CronetUrlRequest_jni.h " +
+         "--output_name " +
+         "CronetUrlRequestContext_jni.h " +
+         "--input_file " +
+         "$(location components/cronet/android/java/src/org/chromium/net/impl/CronetBidirectionalStream.java) " +
+         "--input_file " +
+         "$(location components/cronet/android/java/src/org/chromium/net/impl/CronetLibraryLoader.java) " +
+         "--input_file " +
+         "$(location components/cronet/android/java/src/org/chromium/net/impl/CronetUploadDataStream.java) " +
+         "--input_file " +
+         "$(location components/cronet/android/java/src/org/chromium/net/impl/CronetUrlRequest.java) " +
+         "--input_file " +
+         "$(location components/cronet/android/java/src/org/chromium/net/impl/CronetUrlRequestContext.java)",
+    out: [
+        "components/cronet/android/cronet_jni_headers/CronetBidirectionalStream_jni.h",
+        "components/cronet/android/cronet_jni_headers/CronetLibraryLoader_jni.h",
+        "components/cronet/android/cronet_jni_headers/CronetUploadDataStream_jni.h",
+        "components/cronet/android/cronet_jni_headers/CronetUrlRequestContext_jni.h",
+        "components/cronet/android/cronet_jni_headers/CronetUrlRequest_jni.h",
+    ],
+    tool_files: [
+        "base/android/jni_generator/android_jar.classes",
+        "base/android/jni_generator/jni_generator.py",
+        "build/android/gyp/util/__init__.py",
+        "build/android/gyp/util/build_utils.py",
+        "build/gn_helpers.py",
+    ],
+}
+
+// GN: //components/cronet/android:cronet_jni_headers__android_arm64
+genrule {
+    name: "cronet_aml_components_cronet_android_cronet_jni_headers__android_arm64",
     srcs: [
         "components/cronet/android/java/src/org/chromium/net/impl/CronetBidirectionalStream.java",
         "components/cronet/android/java/src/org/chromium/net/impl/CronetLibraryLoader.java",
@@ -5369,6 +6518,314 @@ genrule {
 // GN: //components/cronet/android:cronet_jni_registration__android_arm
 genrule {
     name: "cronet_aml_components_cronet_android_cronet_jni_registration__android_arm",
+    srcs: [
+        "base/android/java/src/org/chromium/base/ActivityState.java",
+        "base/android/java/src/org/chromium/base/ApiCompatibilityUtils.java",
+        "base/android/java/src/org/chromium/base/ApkAssets.java",
+        "base/android/java/src/org/chromium/base/ApplicationStatus.java",
+        "base/android/java/src/org/chromium/base/BaseFeatureList.java",
+        "base/android/java/src/org/chromium/base/BuildInfo.java",
+        "base/android/java/src/org/chromium/base/BundleUtils.java",
+        "base/android/java/src/org/chromium/base/ByteArrayGenerator.java",
+        "base/android/java/src/org/chromium/base/Callback.java",
+        "base/android/java/src/org/chromium/base/CallbackController.java",
+        "base/android/java/src/org/chromium/base/CollectionUtil.java",
+        "base/android/java/src/org/chromium/base/CommandLine.java",
+        "base/android/java/src/org/chromium/base/CommandLineInitUtil.java",
+        "base/android/java/src/org/chromium/base/Consumer.java",
+        "base/android/java/src/org/chromium/base/ContentUriUtils.java",
+        "base/android/java/src/org/chromium/base/ContextUtils.java",
+        "base/android/java/src/org/chromium/base/CpuFeatures.java",
+        "base/android/java/src/org/chromium/base/DiscardableReferencePool.java",
+        "base/android/java/src/org/chromium/base/EarlyTraceEvent.java",
+        "base/android/java/src/org/chromium/base/EventLog.java",
+        "base/android/java/src/org/chromium/base/FeatureList.java",
+        "base/android/java/src/org/chromium/base/Features.java",
+        "base/android/java/src/org/chromium/base/FieldTrialList.java",
+        "base/android/java/src/org/chromium/base/FileUtils.java",
+        "base/android/java/src/org/chromium/base/Function.java",
+        "base/android/java/src/org/chromium/base/ImportantFileWriterAndroid.java",
+        "base/android/java/src/org/chromium/base/IntStringCallback.java",
+        "base/android/java/src/org/chromium/base/IntentUtils.java",
+        "base/android/java/src/org/chromium/base/JNIUtils.java",
+        "base/android/java/src/org/chromium/base/JavaExceptionReporter.java",
+        "base/android/java/src/org/chromium/base/JavaHandlerThread.java",
+        "base/android/java/src/org/chromium/base/JniException.java",
+        "base/android/java/src/org/chromium/base/JniStaticTestMocker.java",
+        "base/android/java/src/org/chromium/base/LifetimeAssert.java",
+        "base/android/java/src/org/chromium/base/LocaleUtils.java",
+        "base/android/java/src/org/chromium/base/Log.java",
+        "base/android/java/src/org/chromium/base/MathUtils.java",
+        "base/android/java/src/org/chromium/base/MemoryPressureListener.java",
+        "base/android/java/src/org/chromium/base/NativeLibraryLoadedStatus.java",
+        "base/android/java/src/org/chromium/base/ObserverList.java",
+        "base/android/java/src/org/chromium/base/PackageManagerUtils.java",
+        "base/android/java/src/org/chromium/base/PackageUtils.java",
+        "base/android/java/src/org/chromium/base/PathService.java",
+        "base/android/java/src/org/chromium/base/PathUtils.java",
+        "base/android/java/src/org/chromium/base/PiiElider.java",
+        "base/android/java/src/org/chromium/base/PowerMonitor.java",
+        "base/android/java/src/org/chromium/base/PowerMonitorForQ.java",
+        "base/android/java/src/org/chromium/base/Predicate.java",
+        "base/android/java/src/org/chromium/base/Promise.java",
+        "base/android/java/src/org/chromium/base/RadioUtils.java",
+        "base/android/java/src/org/chromium/base/StreamUtil.java",
+        "base/android/java/src/org/chromium/base/StrictModeContext.java",
+        "base/android/java/src/org/chromium/base/ThreadUtils.java",
+        "base/android/java/src/org/chromium/base/TimeUtils.java",
+        "base/android/java/src/org/chromium/base/TimezoneUtils.java",
+        "base/android/java/src/org/chromium/base/TraceEvent.java",
+        "base/android/java/src/org/chromium/base/UnguessableToken.java",
+        "base/android/java/src/org/chromium/base/UnownedUserData.java",
+        "base/android/java/src/org/chromium/base/UnownedUserDataHost.java",
+        "base/android/java/src/org/chromium/base/UnownedUserDataKey.java",
+        "base/android/java/src/org/chromium/base/UserData.java",
+        "base/android/java/src/org/chromium/base/UserDataHost.java",
+        "base/android/java/src/org/chromium/base/WrappedClassLoader.java",
+        "base/android/java/src/org/chromium/base/annotations/AccessedByNative.java",
+        "base/android/java/src/org/chromium/base/annotations/CalledByNative.java",
+        "base/android/java/src/org/chromium/base/annotations/CalledByNativeForTesting.java",
+        "base/android/java/src/org/chromium/base/annotations/CalledByNativeUnchecked.java",
+        "base/android/java/src/org/chromium/base/annotations/JNIAdditionalImport.java",
+        "base/android/java/src/org/chromium/base/annotations/JNINamespace.java",
+        "base/android/java/src/org/chromium/base/annotations/JniIgnoreNatives.java",
+        "base/android/java/src/org/chromium/base/annotations/NativeClassQualifiedName.java",
+        "base/android/java/src/org/chromium/base/annotations/NativeMethods.java",
+        "base/android/java/src/org/chromium/base/compat/ApiHelperForM.java",
+        "base/android/java/src/org/chromium/base/compat/ApiHelperForN.java",
+        "base/android/java/src/org/chromium/base/compat/ApiHelperForO.java",
+        "base/android/java/src/org/chromium/base/compat/ApiHelperForOMR1.java",
+        "base/android/java/src/org/chromium/base/compat/ApiHelperForP.java",
+        "base/android/java/src/org/chromium/base/compat/ApiHelperForQ.java",
+        "base/android/java/src/org/chromium/base/compat/ApiHelperForR.java",
+        "base/android/java/src/org/chromium/base/compat/ApiHelperForS.java",
+        "base/android/java/src/org/chromium/base/jank_tracker/DummyJankTracker.java",
+        "base/android/java/src/org/chromium/base/jank_tracker/FrameMetrics.java",
+        "base/android/java/src/org/chromium/base/jank_tracker/FrameMetricsListener.java",
+        "base/android/java/src/org/chromium/base/jank_tracker/FrameMetricsStore.java",
+        "base/android/java/src/org/chromium/base/jank_tracker/JankActivityTracker.java",
+        "base/android/java/src/org/chromium/base/jank_tracker/JankMetricCalculator.java",
+        "base/android/java/src/org/chromium/base/jank_tracker/JankMetricUMARecorder.java",
+        "base/android/java/src/org/chromium/base/jank_tracker/JankMetrics.java",
+        "base/android/java/src/org/chromium/base/jank_tracker/JankReportingRunnable.java",
+        "base/android/java/src/org/chromium/base/jank_tracker/JankReportingScheduler.java",
+        "base/android/java/src/org/chromium/base/jank_tracker/JankScenario.java",
+        "base/android/java/src/org/chromium/base/jank_tracker/JankTracker.java",
+        "base/android/java/src/org/chromium/base/jank_tracker/JankTrackerImpl.java",
+        "base/android/java/src/org/chromium/base/library_loader/LegacyLinker.java",
+        "base/android/java/src/org/chromium/base/library_loader/Linker.java",
+        "base/android/java/src/org/chromium/base/library_loader/LinkerJni.java",
+        "base/android/java/src/org/chromium/base/library_loader/LoaderErrors.java",
+        "base/android/java/src/org/chromium/base/library_loader/ModernLinker.java",
+        "base/android/java/src/org/chromium/base/library_loader/ModernLinkerJni.java",
+        "base/android/java/src/org/chromium/base/library_loader/NativeLibraryPreloader.java",
+        "base/android/java/src/org/chromium/base/library_loader/ProcessInitException.java",
+        "base/android/java/src/org/chromium/base/lifetime/DestroyChecker.java",
+        "base/android/java/src/org/chromium/base/lifetime/Destroyable.java",
+        "base/android/java/src/org/chromium/base/memory/JavaHeapDumpGenerator.java",
+        "base/android/java/src/org/chromium/base/memory/MemoryPressureCallback.java",
+        "base/android/java/src/org/chromium/base/memory/MemoryPressureMonitor.java",
+        "base/android/java/src/org/chromium/base/memory/MemoryPressureUma.java",
+        "base/android/java/src/org/chromium/base/memory/MemoryPurgeManager.java",
+        "base/android/java/src/org/chromium/base/metrics/CachingUmaRecorder.java",
+        "base/android/java/src/org/chromium/base/metrics/NativeUmaRecorder.java",
+        "base/android/java/src/org/chromium/base/metrics/NoopUmaRecorder.java",
+        "base/android/java/src/org/chromium/base/metrics/RecordHistogram.java",
+        "base/android/java/src/org/chromium/base/metrics/RecordUserAction.java",
+        "base/android/java/src/org/chromium/base/metrics/ScopedSysTraceEvent.java",
+        "base/android/java/src/org/chromium/base/metrics/StatisticsRecorderAndroid.java",
+        "base/android/java/src/org/chromium/base/metrics/TimingMetric.java",
+        "base/android/java/src/org/chromium/base/metrics/UmaRecorder.java",
+        "base/android/java/src/org/chromium/base/metrics/UmaRecorderHolder.java",
+        "base/android/java/src/org/chromium/base/multidex/ChromiumMultiDexInstaller.java",
+        "base/android/java/src/org/chromium/base/process_launcher/BindService.java",
+        "base/android/java/src/org/chromium/base/process_launcher/ChildConnectionAllocator.java",
+        "base/android/java/src/org/chromium/base/process_launcher/ChildProcessConnection.java",
+        "base/android/java/src/org/chromium/base/process_launcher/ChildProcessConstants.java",
+        "base/android/java/src/org/chromium/base/process_launcher/ChildProcessLauncher.java",
+        "base/android/java/src/org/chromium/base/process_launcher/ChildProcessServiceDelegate.java",
+        "base/android/java/src/org/chromium/base/process_launcher/ChildServiceConnection.java",
+        "base/android/java/src/org/chromium/base/process_launcher/ChildServiceConnectionDelegate.java",
+        "base/android/java/src/org/chromium/base/process_launcher/ChildServiceConnectionFactory.java",
+        "base/android/java/src/org/chromium/base/process_launcher/ChildServiceConnectionImpl.java",
+        "base/android/java/src/org/chromium/base/process_launcher/FileDescriptorInfo.java",
+        "base/android/java/src/org/chromium/base/supplier/BooleanSupplier.java",
+        "base/android/java/src/org/chromium/base/supplier/DestroyableObservableSupplier.java",
+        "base/android/java/src/org/chromium/base/supplier/ObservableSupplier.java",
+        "base/android/java/src/org/chromium/base/supplier/ObservableSupplierImpl.java",
+        "base/android/java/src/org/chromium/base/supplier/OneShotCallback.java",
+        "base/android/java/src/org/chromium/base/supplier/OneshotSupplier.java",
+        "base/android/java/src/org/chromium/base/supplier/OneshotSupplierImpl.java",
+        "base/android/java/src/org/chromium/base/supplier/Supplier.java",
+        "base/android/java/src/org/chromium/base/supplier/UnownedUserDataSupplier.java",
+        "base/android/java/src/org/chromium/base/task/AsyncTask.java",
+        "base/android/java/src/org/chromium/base/task/BackgroundOnlyAsyncTask.java",
+        "base/android/java/src/org/chromium/base/task/ChainedTasks.java",
+        "base/android/java/src/org/chromium/base/task/ChoreographerTaskRunner.java",
+        "base/android/java/src/org/chromium/base/task/ChromeThreadPoolExecutor.java",
+        "base/android/java/src/org/chromium/base/task/DefaultTaskExecutor.java",
+        "base/android/java/src/org/chromium/base/task/PostTask.java",
+        "base/android/java/src/org/chromium/base/task/SequencedTaskRunner.java",
+        "base/android/java/src/org/chromium/base/task/SequencedTaskRunnerImpl.java",
+        "base/android/java/src/org/chromium/base/task/SerialExecutor.java",
+        "base/android/java/src/org/chromium/base/task/SingleThreadTaskRunner.java",
+        "base/android/java/src/org/chromium/base/task/SingleThreadTaskRunnerImpl.java",
+        "base/android/java/src/org/chromium/base/task/TaskExecutor.java",
+        "base/android/java/src/org/chromium/base/task/TaskRunner.java",
+        "base/android/java/src/org/chromium/base/task/TaskRunnerImpl.java",
+        "base/android/java/src/org/chromium/base/task/TaskTraits.java",
+        "base/android/java/src/org/chromium/base/task/TaskTraitsExtensionDescriptor.java",
+        "build/android/java/src/org/chromium/build/annotations/AlwaysInline.java",
+        "build/android/java/src/org/chromium/build/annotations/CheckDiscard.java",
+        "build/android/java/src/org/chromium/build/annotations/DoNotClassMerge.java",
+        "build/android/java/src/org/chromium/build/annotations/DoNotInline.java",
+        "build/android/java/src/org/chromium/build/annotations/IdentifierNameString.java",
+        "build/android/java/src/org/chromium/build/annotations/MainDex.java",
+        "build/android/java/src/org/chromium/build/annotations/MockedInTests.java",
+        "build/android/java/src/org/chromium/build/annotations/UsedByReflection.java",
+        "components/cronet/android/api/src/org/chromium/net/BidirectionalStream.java",
+        "components/cronet/android/api/src/org/chromium/net/CallbackException.java",
+        "components/cronet/android/api/src/org/chromium/net/CronetEngine.java",
+        "components/cronet/android/api/src/org/chromium/net/CronetException.java",
+        "components/cronet/android/api/src/org/chromium/net/CronetProvider.java",
+        "components/cronet/android/api/src/org/chromium/net/ExperimentalBidirectionalStream.java",
+        "components/cronet/android/api/src/org/chromium/net/ExperimentalCronetEngine.java",
+        "components/cronet/android/api/src/org/chromium/net/ExperimentalUrlRequest.java",
+        "components/cronet/android/api/src/org/chromium/net/ICronetEngineBuilder.java",
+        "components/cronet/android/api/src/org/chromium/net/InlineExecutionProhibitedException.java",
+        "components/cronet/android/api/src/org/chromium/net/NetworkException.java",
+        "components/cronet/android/api/src/org/chromium/net/NetworkQualityRttListener.java",
+        "components/cronet/android/api/src/org/chromium/net/NetworkQualityThroughputListener.java",
+        "components/cronet/android/api/src/org/chromium/net/QuicException.java",
+        "components/cronet/android/api/src/org/chromium/net/RequestFinishedInfo.java",
+        "components/cronet/android/api/src/org/chromium/net/UploadDataProvider.java",
+        "components/cronet/android/api/src/org/chromium/net/UploadDataProviders.java",
+        "components/cronet/android/api/src/org/chromium/net/UploadDataSink.java",
+        "components/cronet/android/api/src/org/chromium/net/UrlRequest.java",
+        "components/cronet/android/api/src/org/chromium/net/UrlResponseInfo.java",
+        "components/cronet/android/api/src/org/chromium/net/apihelpers/ByteArrayCronetCallback.java",
+        "components/cronet/android/api/src/org/chromium/net/apihelpers/ContentTypeParametersParser.java",
+        "components/cronet/android/api/src/org/chromium/net/apihelpers/CronetRequestCompletionListener.java",
+        "components/cronet/android/api/src/org/chromium/net/apihelpers/CronetResponse.java",
+        "components/cronet/android/api/src/org/chromium/net/apihelpers/ImplicitFlowControlCallback.java",
+        "components/cronet/android/api/src/org/chromium/net/apihelpers/InMemoryTransformCronetCallback.java",
+        "components/cronet/android/api/src/org/chromium/net/apihelpers/JsonCronetCallback.java",
+        "components/cronet/android/api/src/org/chromium/net/apihelpers/RedirectHandler.java",
+        "components/cronet/android/api/src/org/chromium/net/apihelpers/RedirectHandlers.java",
+        "components/cronet/android/api/src/org/chromium/net/apihelpers/StringCronetCallback.java",
+        "components/cronet/android/api/src/org/chromium/net/apihelpers/UploadDataProviders.java",
+        "components/cronet/android/api/src/org/chromium/net/apihelpers/UrlRequestCallbacks.java",
+        "components/cronet/android/fake/java/org/chromium/net/test/FakeCronetController.java",
+        "components/cronet/android/fake/java/org/chromium/net/test/FakeCronetEngine.java",
+        "components/cronet/android/fake/java/org/chromium/net/test/FakeCronetProvider.java",
+        "components/cronet/android/fake/java/org/chromium/net/test/FakeUrlRequest.java",
+        "components/cronet/android/fake/java/org/chromium/net/test/FakeUrlResponse.java",
+        "components/cronet/android/fake/java/org/chromium/net/test/ResponseMatcher.java",
+        "components/cronet/android/fake/java/org/chromium/net/test/UrlResponseMatcher.java",
+        "components/cronet/android/java/src/org/chromium/net/impl/BidirectionalStreamBuilderImpl.java",
+        "components/cronet/android/java/src/org/chromium/net/impl/BidirectionalStreamNetworkException.java",
+        "components/cronet/android/java/src/org/chromium/net/impl/CallbackExceptionImpl.java",
+        "components/cronet/android/java/src/org/chromium/net/impl/CronetBidirectionalStream.java",
+        "components/cronet/android/java/src/org/chromium/net/impl/CronetEngineBase.java",
+        "components/cronet/android/java/src/org/chromium/net/impl/CronetEngineBuilderImpl.java",
+        "components/cronet/android/java/src/org/chromium/net/impl/CronetExceptionImpl.java",
+        "components/cronet/android/java/src/org/chromium/net/impl/CronetLibraryLoader.java",
+        "components/cronet/android/java/src/org/chromium/net/impl/CronetLogger.java",
+        "components/cronet/android/java/src/org/chromium/net/impl/CronetLoggerFactory.java",
+        "components/cronet/android/java/src/org/chromium/net/impl/CronetManifest.java",
+        "components/cronet/android/java/src/org/chromium/net/impl/CronetMetrics.java",
+        "components/cronet/android/java/src/org/chromium/net/impl/CronetUploadDataStream.java",
+        "components/cronet/android/java/src/org/chromium/net/impl/CronetUrlRequest.java",
+        "components/cronet/android/java/src/org/chromium/net/impl/CronetUrlRequestContext.java",
+        "components/cronet/android/java/src/org/chromium/net/impl/InputStreamChannel.java",
+        "components/cronet/android/java/src/org/chromium/net/impl/JavaCronetEngine.java",
+        "components/cronet/android/java/src/org/chromium/net/impl/JavaCronetEngineBuilderImpl.java",
+        "components/cronet/android/java/src/org/chromium/net/impl/JavaCronetProvider.java",
+        "components/cronet/android/java/src/org/chromium/net/impl/JavaUploadDataSinkBase.java",
+        "components/cronet/android/java/src/org/chromium/net/impl/JavaUrlRequest.java",
+        "components/cronet/android/java/src/org/chromium/net/impl/JavaUrlRequestUtils.java",
+        "components/cronet/android/java/src/org/chromium/net/impl/NativeCronetEngineBuilderImpl.java",
+        "components/cronet/android/java/src/org/chromium/net/impl/NativeCronetEngineBuilderWithLibraryLoaderImpl.java",
+        "components/cronet/android/java/src/org/chromium/net/impl/NativeCronetProvider.java",
+        "components/cronet/android/java/src/org/chromium/net/impl/NetworkExceptionImpl.java",
+        "components/cronet/android/java/src/org/chromium/net/impl/NoOpLogger.java",
+        "components/cronet/android/java/src/org/chromium/net/impl/Preconditions.java",
+        "components/cronet/android/java/src/org/chromium/net/impl/QuicExceptionImpl.java",
+        "components/cronet/android/java/src/org/chromium/net/impl/RequestFinishedInfoImpl.java",
+        "components/cronet/android/java/src/org/chromium/net/impl/UrlRequestBase.java",
+        "components/cronet/android/java/src/org/chromium/net/impl/UrlRequestBuilderImpl.java",
+        "components/cronet/android/java/src/org/chromium/net/impl/UrlResponseInfoImpl.java",
+        "components/cronet/android/java/src/org/chromium/net/impl/UserAgent.java",
+        "components/cronet/android/java/src/org/chromium/net/impl/VersionSafeCallbacks.java",
+        "components/cronet/android/java/src/org/chromium/net/urlconnection/CronetBufferedOutputStream.java",
+        "components/cronet/android/java/src/org/chromium/net/urlconnection/CronetChunkedOutputStream.java",
+        "components/cronet/android/java/src/org/chromium/net/urlconnection/CronetFixedModeOutputStream.java",
+        "components/cronet/android/java/src/org/chromium/net/urlconnection/CronetHttpURLConnection.java",
+        "components/cronet/android/java/src/org/chromium/net/urlconnection/CronetHttpURLStreamHandler.java",
+        "components/cronet/android/java/src/org/chromium/net/urlconnection/CronetInputStream.java",
+        "components/cronet/android/java/src/org/chromium/net/urlconnection/CronetOutputStream.java",
+        "components/cronet/android/java/src/org/chromium/net/urlconnection/CronetURLStreamHandlerFactory.java",
+        "components/cronet/android/java/src/org/chromium/net/urlconnection/MessageLoop.java",
+        "net/android/java/src/org/chromium/net/AndroidCertVerifyResult.java",
+        "net/android/java/src/org/chromium/net/AndroidKeyStore.java",
+        "net/android/java/src/org/chromium/net/AndroidNetworkLibrary.java",
+        "net/android/java/src/org/chromium/net/AndroidTrafficStats.java",
+        "net/android/java/src/org/chromium/net/ChromiumNetworkAdapter.java",
+        "net/android/java/src/org/chromium/net/DnsStatus.java",
+        "net/android/java/src/org/chromium/net/GURLUtils.java",
+        "net/android/java/src/org/chromium/net/HttpNegotiateAuthenticator.java",
+        "net/android/java/src/org/chromium/net/HttpNegotiateConstants.java",
+        "net/android/java/src/org/chromium/net/HttpUtil.java",
+        "net/android/java/src/org/chromium/net/MimeTypeFilter.java",
+        "net/android/java/src/org/chromium/net/NetStringUtil.java",
+        "net/android/java/src/org/chromium/net/NetworkActiveNotifier.java",
+        "net/android/java/src/org/chromium/net/NetworkChangeNotifier.java",
+        "net/android/java/src/org/chromium/net/NetworkChangeNotifierAutoDetect.java",
+        "net/android/java/src/org/chromium/net/NetworkTrafficAnnotationTag.java",
+        "net/android/java/src/org/chromium/net/ProxyBroadcastReceiver.java",
+        "net/android/java/src/org/chromium/net/ProxyChangeListener.java",
+        "net/android/java/src/org/chromium/net/RegistrationPolicyAlwaysRegister.java",
+        "net/android/java/src/org/chromium/net/RegistrationPolicyApplicationStatus.java",
+        "net/android/java/src/org/chromium/net/ThreadStatsUid.java",
+        "net/android/java/src/org/chromium/net/X509Util.java",
+        "url/android/java/src/org/chromium/url/IDNStringUtil.java",
+    ],
+    cmd: "current_dir=`basename \\`pwd\\``; " +
+         "for f in $(in); " +
+         "do " +
+         "echo \"../$$current_dir/$$f\" >> $(genDir)/java.sources; " +
+         "done; " +
+         "python3 $(location base/android/jni_generator/jni_registration_generator.py) --srcjar-path " +
+         "$(genDir)/components/cronet/android/cronet_jni_registration.srcjar " +
+         "--depfile " +
+         "$(genDir)/components/cronet/android/cronet_jni_registration.d " +
+         "--sources-files " +
+         "$(genDir)/java.sources " +
+         "--include_test_only " +
+         "--use_proxy_hash " +
+         "--header-path " +
+         "$(genDir)/components/cronet/android/cronet_jni_registration.h " +
+         "--manual_jni_registration " +
+         " " +
+         " " +
+         ";sed -i -e 's/OUT_SOONG_.TEMP_SBOX_.*_OUT/GEN/g'  " +
+         "$(genDir)/components/cronet/android/cronet_jni_registration.h",
+    out: [
+        "components/cronet/android/cronet_jni_registration.h",
+        "components/cronet/android/cronet_jni_registration.srcjar",
+    ],
+    tool_files: [
+        "base/android/jni_generator/jni_generator.py",
+        "base/android/jni_generator/jni_registration_generator.py",
+        "build/android/gyp/util/__init__.py",
+        "build/android/gyp/util/build_utils.py",
+        "build/gn_helpers.py",
+    ],
+}
+
+// GN: //components/cronet/android:cronet_jni_registration__android_arm64
+genrule {
+    name: "cronet_aml_components_cronet_android_cronet_jni_registration__android_arm64",
     srcs: [
         "base/android/java/src/org/chromium/base/ActivityState.java",
         "base/android/java/src/org/chromium/base/ApiCompatibilityUtils.java",
@@ -6387,6 +7844,19 @@ cc_object {
                 "cronet_aml_url_buildflags__android_arm",
             ],
         },
+        android_arm64: {
+            generated_headers: [
+                "cronet_aml_base_debugging_buildflags__android_arm64",
+                "cronet_aml_base_logging_buildflags__android_arm64",
+                "cronet_aml_build_chromeos_buildflags__android_arm64",
+                "cronet_aml_components_cronet_android_buildflags__android_arm64",
+                "cronet_aml_components_cronet_android_cronet_jni_headers__android_arm64",
+                "cronet_aml_components_cronet_android_cronet_jni_registration__android_arm64",
+                "cronet_aml_components_cronet_cronet_buildflags__android_arm64",
+                "cronet_aml_components_cronet_cronet_version_header_action__android_arm64",
+                "cronet_aml_url_buildflags__android_arm64",
+            ],
+        },
         android_x86: {
             cflags: [
                 "-msse3",
@@ -6425,6 +7895,26 @@ cc_object {
 // GN: //components/cronet:cronet_buildflags__android_arm
 genrule {
     name: "cronet_aml_components_cronet_cronet_buildflags__android_arm",
+    cmd: "echo '--flags DISABLE_HISTOGRAM_SUPPORT=\"false\"' | " +
+         "$(location build/write_buildflag_header.py) --output " +
+         "$(out) " +
+         "--rulename " +
+         "//components/cronet:cronet_buildflags " +
+         "--gen-dir " +
+         ". " +
+         "--definitions " +
+         "/dev/stdin",
+    out: [
+        "components/cronet/cronet_buildflags.h",
+    ],
+    tool_files: [
+        "build/write_buildflag_header.py",
+    ],
+}
+
+// GN: //components/cronet:cronet_buildflags__android_arm64
+genrule {
+    name: "cronet_aml_components_cronet_cronet_buildflags__android_arm64",
     cmd: "echo '--flags DISABLE_HISTOGRAM_SUPPORT=\"false\"' | " +
          "$(location build/write_buildflag_header.py) --output " +
          "$(out) " +
@@ -6568,6 +8058,12 @@ cc_object {
                 "cronet_aml_components_cronet_cronet_version_header_action__android_arm",
             ],
         },
+        android_arm64: {
+            generated_headers: [
+                "cronet_aml_components_cronet_cronet_buildflags__android_arm64",
+                "cronet_aml_components_cronet_cronet_version_header_action__android_arm64",
+            ],
+        },
         android_x86: {
             cflags: [
                 "-msse3",
@@ -6625,6 +8121,11 @@ cc_object {
                 "cronet_aml_components_cronet_cronet_version_header_action__android_arm",
             ],
         },
+        android_arm64: {
+            generated_headers: [
+                "cronet_aml_components_cronet_cronet_version_header_action__android_arm64",
+            ],
+        },
         android_x86: {
             cflags: [
                 "-msse3",
@@ -6647,6 +8148,29 @@ cc_object {
 // GN: //components/cronet:cronet_version_header_action__android_arm
 genrule {
     name: "cronet_aml_components_cronet_cronet_version_header_action__android_arm",
+    cmd: "$(location build/util/version.py) -f " +
+         "$(location chrome/VERSION) " +
+         "-e " +
+         "VERSION_FULL='\"%s.%s.%s.%s\" % (MAJOR,MINOR,BUILD,PATCH)' " +
+         " " +
+         "-o " +
+         "$(out) " +
+         "$(location components/cronet/version.h.in)",
+    out: [
+        "components/cronet/version.h",
+    ],
+    tool_files: [
+        "build/util/LASTCHANGE",
+        "build/util/android_chrome_version.py",
+        "build/util/version.py",
+        "chrome/VERSION",
+        "components/cronet/version.h.in",
+    ],
+}
+
+// GN: //components/cronet:cronet_version_header_action__android_arm64
+genrule {
+    name: "cronet_aml_components_cronet_cronet_version_header_action__android_arm64",
     cmd: "$(location build/util/version.py) -f " +
          "$(location chrome/VERSION) " +
          "-e " +
@@ -6934,6 +8458,12 @@ cc_object {
                 "cronet_aml_components_cronet_cronet_version_header_action__android_arm",
             ],
         },
+        android_arm64: {
+            generated_headers: [
+                "cronet_aml_components_cronet_cronet_buildflags__android_arm64",
+                "cronet_aml_components_cronet_cronet_version_header_action__android_arm64",
+            ],
+        },
         android_x86: {
             cflags: [
                 "-msse3",
@@ -7210,6 +8740,37 @@ genrule {
     ],
 }
 
+// GN: //components/prefs/android:jni_headers__android_arm64
+genrule {
+    name: "cronet_aml_components_prefs_android_jni_headers__android_arm64",
+    srcs: [
+        "components/prefs/android/java/src/org/chromium/components/prefs/PrefService.java",
+    ],
+    cmd: "$(location base/android/jni_generator/jni_generator.py) --ptr_type " +
+         "long " +
+         " " +
+         " " +
+         "--output_dir " +
+         "$(genDir)/components/prefs/android/jni_headers " +
+         "--includes " +
+         "base/android/jni_generator/jni_generator_helper.h " +
+         "--use_proxy_hash " +
+         "--output_name " +
+         "PrefService_jni.h " +
+         "--input_file " +
+         "$(location components/prefs/android/java/src/org/chromium/components/prefs/PrefService.java)",
+    out: [
+        "components/prefs/android/jni_headers/PrefService_jni.h",
+    ],
+    tool_files: [
+        "base/android/jni_generator/android_jar.classes",
+        "base/android/jni_generator/jni_generator.py",
+        "build/android/gyp/util/__init__.py",
+        "build/android/gyp/util/build_utils.py",
+        "build/gn_helpers.py",
+    ],
+}
+
 // GN: //components/prefs/android:jni_headers__android_x86
 genrule {
     name: "cronet_aml_components_prefs_android_jni_headers__android_x86",
@@ -7359,6 +8920,20 @@ cc_library_static {
                 "cronet_aml_components_prefs_android_jni_headers__android_arm",
             ],
         },
+        android_arm64: {
+            generated_headers: [
+                "cronet_aml_base_debugging_buildflags__android_arm64",
+                "cronet_aml_base_logging_buildflags__android_arm64",
+                "cronet_aml_build_chromeos_buildflags__android_arm64",
+                "cronet_aml_components_prefs_android_jni_headers__android_arm64",
+            ],
+            export_generated_headers: [
+                "cronet_aml_base_debugging_buildflags__android_arm64",
+                "cronet_aml_base_logging_buildflags__android_arm64",
+                "cronet_aml_build_chromeos_buildflags__android_arm64",
+                "cronet_aml_components_prefs_android_jni_headers__android_arm64",
+            ],
+        },
         android_x86: {
             cflags: [
                 "-msse3",
@@ -7399,6 +8974,26 @@ cc_library_static {
 // GN: //crypto:buildflags__android_arm
 genrule {
     name: "cronet_aml_crypto_buildflags__android_arm",
+    cmd: "echo '--flags USE_NSS_CERTS=\"false\"' | " +
+         "$(location build/write_buildflag_header.py) --output " +
+         "$(out) " +
+         "--rulename " +
+         "//crypto:buildflags " +
+         "--gen-dir " +
+         ". " +
+         "--definitions " +
+         "/dev/stdin",
+    out: [
+        "crypto/crypto_buildflags.h",
+    ],
+    tool_files: [
+        "build/write_buildflag_header.py",
+    ],
+}
+
+// GN: //crypto:buildflags__android_arm64
+genrule {
+    name: "cronet_aml_crypto_buildflags__android_arm64",
     cmd: "echo '--flags USE_NSS_CERTS=\"false\"' | " +
          "$(location build/write_buildflag_header.py) --output " +
          "$(out) " +
@@ -7558,6 +9153,19 @@ cc_library_static {
             ],
             export_generated_headers: [
                 "cronet_aml_crypto_buildflags__android_arm",
+            ],
+        },
+        android_arm64: {
+            cflags: [
+                "-DANDROID",
+                "-DANDROID_NDK_VERSION_ROLL=r23_1",
+                "-DHAVE_SYS_UIO_H",
+            ],
+            generated_headers: [
+                "cronet_aml_crypto_buildflags__android_arm64",
+            ],
+            export_generated_headers: [
+                "cronet_aml_crypto_buildflags__android_arm64",
             ],
         },
         android_x86: {
@@ -8038,6 +9646,57 @@ genrule {
     ],
 }
 
+// GN: //net/base/registry_controlled_domains:registry_controlled_domains__android_arm64
+genrule {
+    name: "cronet_aml_net_base_registry_controlled_domains_registry_controlled_domains__android_arm64",
+    cmd: "$(location net/tools/dafsa/make_dafsa.py) --reverse " +
+         "$(location net/base/registry_controlled_domains/effective_tld_names.gperf) " +
+         "$(location net/base/registry_controlled_domains/effective_tld_names-reversed-inc.cc) " +
+         "&& python3 $(location net/tools/dafsa/make_dafsa.py) " +
+         "--reverse " +
+         "$(location net/base/registry_controlled_domains/effective_tld_names_unittest1.gperf) " +
+         "$(location net/base/registry_controlled_domains/effective_tld_names_unittest1-reversed-inc.cc) " +
+         "&& python3 $(location net/tools/dafsa/make_dafsa.py) " +
+         "--reverse " +
+         "$(location net/base/registry_controlled_domains/effective_tld_names_unittest2.gperf) " +
+         "$(location net/base/registry_controlled_domains/effective_tld_names_unittest2-reversed-inc.cc) " +
+         "&& python3 $(location net/tools/dafsa/make_dafsa.py) " +
+         "--reverse " +
+         "$(location net/base/registry_controlled_domains/effective_tld_names_unittest3.gperf) " +
+         "$(location net/base/registry_controlled_domains/effective_tld_names_unittest3-reversed-inc.cc) " +
+         "&& python3 $(location net/tools/dafsa/make_dafsa.py) " +
+         "--reverse " +
+         "$(location net/base/registry_controlled_domains/effective_tld_names_unittest4.gperf) " +
+         "$(location net/base/registry_controlled_domains/effective_tld_names_unittest4-reversed-inc.cc) " +
+         "&& python3 $(location net/tools/dafsa/make_dafsa.py) " +
+         "--reverse " +
+         "$(location net/base/registry_controlled_domains/effective_tld_names_unittest5.gperf) " +
+         "$(location net/base/registry_controlled_domains/effective_tld_names_unittest5-reversed-inc.cc) " +
+         "&& python3 $(location net/tools/dafsa/make_dafsa.py) " +
+         "--reverse " +
+         "$(location net/base/registry_controlled_domains/effective_tld_names_unittest6.gperf) " +
+         "$(location net/base/registry_controlled_domains/effective_tld_names_unittest6-reversed-inc.cc)",
+    out: [
+        "net/base/registry_controlled_domains/effective_tld_names-reversed-inc.cc",
+        "net/base/registry_controlled_domains/effective_tld_names_unittest1-reversed-inc.cc",
+        "net/base/registry_controlled_domains/effective_tld_names_unittest2-reversed-inc.cc",
+        "net/base/registry_controlled_domains/effective_tld_names_unittest3-reversed-inc.cc",
+        "net/base/registry_controlled_domains/effective_tld_names_unittest4-reversed-inc.cc",
+        "net/base/registry_controlled_domains/effective_tld_names_unittest5-reversed-inc.cc",
+        "net/base/registry_controlled_domains/effective_tld_names_unittest6-reversed-inc.cc",
+    ],
+    tool_files: [
+        "net/base/registry_controlled_domains/effective_tld_names.gperf",
+        "net/base/registry_controlled_domains/effective_tld_names_unittest1.gperf",
+        "net/base/registry_controlled_domains/effective_tld_names_unittest2.gperf",
+        "net/base/registry_controlled_domains/effective_tld_names_unittest3.gperf",
+        "net/base/registry_controlled_domains/effective_tld_names_unittest4.gperf",
+        "net/base/registry_controlled_domains/effective_tld_names_unittest5.gperf",
+        "net/base/registry_controlled_domains/effective_tld_names_unittest6.gperf",
+        "net/tools/dafsa/make_dafsa.py",
+    ],
+}
+
 // GN: //net/base/registry_controlled_domains:registry_controlled_domains__android_x86
 genrule {
     name: "cronet_aml_net_base_registry_controlled_domains_registry_controlled_domains__android_x86",
@@ -8160,6 +9819,26 @@ genrule {
     ],
 }
 
+// GN: //net:buildflags__android_arm64
+genrule {
+    name: "cronet_aml_net_buildflags__android_arm64",
+    cmd: "echo '--flags POSIX_BYPASS_MMAP=\"true\" DISABLE_FILE_SUPPORT=\"true\" ENABLE_MDNS=\"false\" ENABLE_REPORTING=\"true\" ENABLE_WEBSOCKETS=\"false\" INCLUDE_TRANSPORT_SECURITY_STATE_PRELOAD_LIST=\"false\" USE_KERBEROS=\"true\" USE_EXTERNAL_GSSAPI=\"false\" TRIAL_COMPARISON_CERT_VERIFIER_SUPPORTED=\"false\" CHROME_ROOT_STORE_SUPPORTED=\"false\"' | " +
+         "$(location build/write_buildflag_header.py) --output " +
+         "$(out) " +
+         "--rulename " +
+         "//net:buildflags " +
+         "--gen-dir " +
+         ". " +
+         "--definitions " +
+         "/dev/stdin",
+    out: [
+        "net/net_buildflags.h",
+    ],
+    tool_files: [
+        "build/write_buildflag_header.py",
+    ],
+}
+
 // GN: //net:buildflags__android_x86
 genrule {
     name: "cronet_aml_net_buildflags__android_x86",
@@ -8265,6 +9944,29 @@ cc_object {
 // GN: //net/data/ssl/chrome_root_store:gen_root_store_inc__android_arm
 genrule {
     name: "cronet_aml_net_data_ssl_chrome_root_store_gen_root_store_inc__android_arm",
+    cmd: "$(location build/gn_run_binary.py) clang_x64/root_store_tool " +
+         "--root-store " +
+         "../../net/data/ssl/chrome_root_store/root_store.textproto " +
+         "--certs " +
+         "../../net/data/ssl/chrome_root_store/root_store.certs " +
+         "--write-cpp-root-store " +
+         "gen/net/data/ssl/chrome_root_store/chrome-root-store-inc.cc " +
+         "--write-cpp-ev-roots " +
+         "gen/net/data/ssl/chrome_root_store/chrome-ev-roots-inc.cc",
+    out: [
+        "net/data/ssl/chrome_root_store/chrome-ev-roots-inc.cc",
+        "net/data/ssl/chrome_root_store/chrome-root-store-inc.cc",
+    ],
+    tool_files: [
+        "build/gn_run_binary.py",
+        "net/data/ssl/chrome_root_store/root_store.certs",
+        "net/data/ssl/chrome_root_store/root_store.textproto",
+    ],
+}
+
+// GN: //net/data/ssl/chrome_root_store:gen_root_store_inc__android_arm64
+genrule {
+    name: "cronet_aml_net_data_ssl_chrome_root_store_gen_root_store_inc__android_arm64",
     cmd: "$(location build/gn_run_binary.py) clang_x64/root_store_tool " +
          "--root-store " +
          "../../net/data/ssl/chrome_root_store/root_store.textproto " +
@@ -8456,6 +10158,17 @@ cc_object {
                 "cronet_aml_url_buildflags__android_arm",
             ],
         },
+        android_arm64: {
+            generated_headers: [
+                "cronet_aml_base_debugging_buildflags__android_arm64",
+                "cronet_aml_base_logging_buildflags__android_arm64",
+                "cronet_aml_build_chromeos_buildflags__android_arm64",
+                "cronet_aml_net_base_registry_controlled_domains_registry_controlled_domains__android_arm64",
+                "cronet_aml_net_buildflags__android_arm64",
+                "cronet_aml_net_net_jni_headers__android_arm64",
+                "cronet_aml_url_buildflags__android_arm64",
+            ],
+        },
         android_x86: {
             cflags: [
                 "-msse3",
@@ -8571,6 +10284,17 @@ cc_object {
                 "cronet_aml_net_buildflags__android_arm",
                 "cronet_aml_net_net_jni_headers__android_arm",
                 "cronet_aml_url_buildflags__android_arm",
+            ],
+        },
+        android_arm64: {
+            generated_headers: [
+                "cronet_aml_base_debugging_buildflags__android_arm64",
+                "cronet_aml_base_logging_buildflags__android_arm64",
+                "cronet_aml_build_chromeos_buildflags__android_arm64",
+                "cronet_aml_net_base_registry_controlled_domains_registry_controlled_domains__android_arm64",
+                "cronet_aml_net_buildflags__android_arm64",
+                "cronet_aml_net_net_jni_headers__android_arm64",
+                "cronet_aml_url_buildflags__android_arm64",
             ],
         },
         android_x86: {
@@ -8690,6 +10414,17 @@ cc_object {
                 "cronet_aml_url_buildflags__android_arm",
             ],
         },
+        android_arm64: {
+            generated_headers: [
+                "cronet_aml_base_debugging_buildflags__android_arm64",
+                "cronet_aml_base_logging_buildflags__android_arm64",
+                "cronet_aml_build_chromeos_buildflags__android_arm64",
+                "cronet_aml_net_base_registry_controlled_domains_registry_controlled_domains__android_arm64",
+                "cronet_aml_net_buildflags__android_arm64",
+                "cronet_aml_net_net_jni_headers__android_arm64",
+                "cronet_aml_url_buildflags__android_arm64",
+            ],
+        },
         android_x86: {
             cflags: [
                 "-msse3",
@@ -8807,6 +10542,17 @@ cc_object {
                 "cronet_aml_url_buildflags__android_arm",
             ],
         },
+        android_arm64: {
+            generated_headers: [
+                "cronet_aml_base_debugging_buildflags__android_arm64",
+                "cronet_aml_base_logging_buildflags__android_arm64",
+                "cronet_aml_build_chromeos_buildflags__android_arm64",
+                "cronet_aml_net_base_registry_controlled_domains_registry_controlled_domains__android_arm64",
+                "cronet_aml_net_buildflags__android_arm64",
+                "cronet_aml_net_net_jni_headers__android_arm64",
+                "cronet_aml_url_buildflags__android_arm64",
+            ],
+        },
         android_x86: {
             cflags: [
                 "-msse3",
@@ -8922,6 +10668,17 @@ cc_object {
                 "cronet_aml_net_buildflags__android_arm",
                 "cronet_aml_net_net_jni_headers__android_arm",
                 "cronet_aml_url_buildflags__android_arm",
+            ],
+        },
+        android_arm64: {
+            generated_headers: [
+                "cronet_aml_base_debugging_buildflags__android_arm64",
+                "cronet_aml_base_logging_buildflags__android_arm64",
+                "cronet_aml_build_chromeos_buildflags__android_arm64",
+                "cronet_aml_net_base_registry_controlled_domains_registry_controlled_domains__android_arm64",
+                "cronet_aml_net_buildflags__android_arm64",
+                "cronet_aml_net_net_jni_headers__android_arm64",
+                "cronet_aml_url_buildflags__android_arm64",
             ],
         },
         android_x86: {
@@ -9051,6 +10808,17 @@ cc_object {
                 "cronet_aml_url_buildflags__android_arm",
             ],
         },
+        android_arm64: {
+            generated_headers: [
+                "cronet_aml_base_debugging_buildflags__android_arm64",
+                "cronet_aml_base_logging_buildflags__android_arm64",
+                "cronet_aml_build_chromeos_buildflags__android_arm64",
+                "cronet_aml_net_base_registry_controlled_domains_registry_controlled_domains__android_arm64",
+                "cronet_aml_net_buildflags__android_arm64",
+                "cronet_aml_net_net_jni_headers__android_arm64",
+                "cronet_aml_url_buildflags__android_arm64",
+            ],
+        },
         android_x86: {
             cflags: [
                 "-msse3",
@@ -9172,6 +10940,18 @@ cc_object {
                 "cronet_aml_url_buildflags__android_arm",
             ],
         },
+        android_arm64: {
+            generated_headers: [
+                "cronet_aml_base_debugging_buildflags__android_arm64",
+                "cronet_aml_base_logging_buildflags__android_arm64",
+                "cronet_aml_build_branding_buildflags__android_arm64",
+                "cronet_aml_build_chromeos_buildflags__android_arm64",
+                "cronet_aml_net_base_registry_controlled_domains_registry_controlled_domains__android_arm64",
+                "cronet_aml_net_buildflags__android_arm64",
+                "cronet_aml_net_net_jni_headers__android_arm64",
+                "cronet_aml_url_buildflags__android_arm64",
+            ],
+        },
         android_x86: {
             cflags: [
                 "-msse3",
@@ -9208,6 +10988,26 @@ cc_object {
 // GN: //net:ios_cronet_buildflags__android_arm
 genrule {
     name: "cronet_aml_net_ios_cronet_buildflags__android_arm",
+    cmd: "echo '--flags CRONET_BUILD=\"false\"' | " +
+         "$(location build/write_buildflag_header.py) --output " +
+         "$(out) " +
+         "--rulename " +
+         "//net:ios_cronet_buildflags " +
+         "--gen-dir " +
+         ". " +
+         "--definitions " +
+         "/dev/stdin",
+    out: [
+        "net/socket/ios_cronet_buildflags.h",
+    ],
+    tool_files: [
+        "build/write_buildflag_header.py",
+    ],
+}
+
+// GN: //net:ios_cronet_buildflags__android_arm64
+genrule {
+    name: "cronet_aml_net_ios_cronet_buildflags__android_arm64",
     cmd: "echo '--flags CRONET_BUILD=\"false\"' | " +
          "$(location build/write_buildflag_header.py) --output " +
          "$(out) " +
@@ -9901,6 +11701,33 @@ cc_library_static {
                 "cronet_aml_url_buildflags__android_arm",
             ],
         },
+        android_arm64: {
+            srcs: [
+                "net/disk_cache/blockfile/mapped_file_bypass_mmap_posix.cc",
+            ],
+            generated_headers: [
+                "cronet_aml_base_debugging_buildflags__android_arm64",
+                "cronet_aml_base_logging_buildflags__android_arm64",
+                "cronet_aml_build_branding_buildflags__android_arm64",
+                "cronet_aml_build_chromeos_buildflags__android_arm64",
+                "cronet_aml_net_base_registry_controlled_domains_registry_controlled_domains__android_arm64",
+                "cronet_aml_net_buildflags__android_arm64",
+                "cronet_aml_net_ios_cronet_buildflags__android_arm64",
+                "cronet_aml_net_net_jni_headers__android_arm64",
+                "cronet_aml_url_buildflags__android_arm64",
+            ],
+            export_generated_headers: [
+                "cronet_aml_base_debugging_buildflags__android_arm64",
+                "cronet_aml_base_logging_buildflags__android_arm64",
+                "cronet_aml_build_branding_buildflags__android_arm64",
+                "cronet_aml_build_chromeos_buildflags__android_arm64",
+                "cronet_aml_net_base_registry_controlled_domains_registry_controlled_domains__android_arm64",
+                "cronet_aml_net_buildflags__android_arm64",
+                "cronet_aml_net_ios_cronet_buildflags__android_arm64",
+                "cronet_aml_net_net_jni_headers__android_arm64",
+                "cronet_aml_url_buildflags__android_arm64",
+            ],
+        },
         android_x86: {
             srcs: [
                 "net/disk_cache/blockfile/mapped_file_posix.cc",
@@ -10043,6 +11870,16 @@ cc_object {
                 "cronet_aml_url_buildflags__android_arm",
             ],
         },
+        android_arm64: {
+            generated_headers: [
+                "cronet_aml_base_debugging_buildflags__android_arm64",
+                "cronet_aml_base_logging_buildflags__android_arm64",
+                "cronet_aml_build_chromeos_buildflags__android_arm64",
+                "cronet_aml_net_base_registry_controlled_domains_registry_controlled_domains__android_arm64",
+                "cronet_aml_net_net_jni_headers__android_arm64",
+                "cronet_aml_url_buildflags__android_arm64",
+            ],
+        },
         android_x86: {
             cflags: [
                 "-msse3",
@@ -10119,6 +11956,109 @@ cc_object {
 // GN: //net:net_jni_headers__android_arm
 genrule {
     name: "cronet_aml_net_net_jni_headers__android_arm",
+    srcs: [
+        "net/android/java/src/org/chromium/net/AndroidCertVerifyResult.java",
+        "net/android/java/src/org/chromium/net/AndroidKeyStore.java",
+        "net/android/java/src/org/chromium/net/AndroidNetworkLibrary.java",
+        "net/android/java/src/org/chromium/net/AndroidTrafficStats.java",
+        "net/android/java/src/org/chromium/net/DnsStatus.java",
+        "net/android/java/src/org/chromium/net/GURLUtils.java",
+        "net/android/java/src/org/chromium/net/HttpNegotiateAuthenticator.java",
+        "net/android/java/src/org/chromium/net/HttpUtil.java",
+        "net/android/java/src/org/chromium/net/NetStringUtil.java",
+        "net/android/java/src/org/chromium/net/NetworkActiveNotifier.java",
+        "net/android/java/src/org/chromium/net/NetworkChangeNotifier.java",
+        "net/android/java/src/org/chromium/net/ProxyChangeListener.java",
+        "net/android/java/src/org/chromium/net/X509Util.java",
+    ],
+    cmd: "$(location base/android/jni_generator/jni_generator.py) --ptr_type " +
+         "long " +
+         " " +
+         " " +
+         "--output_dir " +
+         "$(genDir)/net/net_jni_headers " +
+         "--includes " +
+         "base/android/jni_generator/jni_generator_helper.h " +
+         "--use_proxy_hash " +
+         "--output_name " +
+         "AndroidCertVerifyResult_jni.h " +
+         "--output_name " +
+         "AndroidKeyStore_jni.h " +
+         "--output_name " +
+         "AndroidNetworkLibrary_jni.h " +
+         "--output_name " +
+         "AndroidTrafficStats_jni.h " +
+         "--output_name " +
+         "DnsStatus_jni.h " +
+         "--output_name " +
+         "GURLUtils_jni.h " +
+         "--output_name " +
+         "HttpNegotiateAuthenticator_jni.h " +
+         "--output_name " +
+         "HttpUtil_jni.h " +
+         "--output_name " +
+         "NetStringUtil_jni.h " +
+         "--output_name " +
+         "NetworkActiveNotifier_jni.h " +
+         "--output_name " +
+         "NetworkChangeNotifier_jni.h " +
+         "--output_name " +
+         "ProxyChangeListener_jni.h " +
+         "--output_name " +
+         "X509Util_jni.h " +
+         "--input_file " +
+         "$(location net/android/java/src/org/chromium/net/AndroidCertVerifyResult.java) " +
+         "--input_file " +
+         "$(location net/android/java/src/org/chromium/net/AndroidKeyStore.java) " +
+         "--input_file " +
+         "$(location net/android/java/src/org/chromium/net/AndroidNetworkLibrary.java) " +
+         "--input_file " +
+         "$(location net/android/java/src/org/chromium/net/AndroidTrafficStats.java) " +
+         "--input_file " +
+         "$(location net/android/java/src/org/chromium/net/DnsStatus.java) " +
+         "--input_file " +
+         "$(location net/android/java/src/org/chromium/net/GURLUtils.java) " +
+         "--input_file " +
+         "$(location net/android/java/src/org/chromium/net/HttpNegotiateAuthenticator.java) " +
+         "--input_file " +
+         "$(location net/android/java/src/org/chromium/net/HttpUtil.java) " +
+         "--input_file " +
+         "$(location net/android/java/src/org/chromium/net/NetStringUtil.java) " +
+         "--input_file " +
+         "$(location net/android/java/src/org/chromium/net/NetworkActiveNotifier.java) " +
+         "--input_file " +
+         "$(location net/android/java/src/org/chromium/net/NetworkChangeNotifier.java) " +
+         "--input_file " +
+         "$(location net/android/java/src/org/chromium/net/ProxyChangeListener.java) " +
+         "--input_file " +
+         "$(location net/android/java/src/org/chromium/net/X509Util.java)",
+    out: [
+        "net/net_jni_headers/AndroidCertVerifyResult_jni.h",
+        "net/net_jni_headers/AndroidKeyStore_jni.h",
+        "net/net_jni_headers/AndroidNetworkLibrary_jni.h",
+        "net/net_jni_headers/AndroidTrafficStats_jni.h",
+        "net/net_jni_headers/DnsStatus_jni.h",
+        "net/net_jni_headers/GURLUtils_jni.h",
+        "net/net_jni_headers/HttpNegotiateAuthenticator_jni.h",
+        "net/net_jni_headers/HttpUtil_jni.h",
+        "net/net_jni_headers/NetStringUtil_jni.h",
+        "net/net_jni_headers/NetworkActiveNotifier_jni.h",
+        "net/net_jni_headers/NetworkChangeNotifier_jni.h",
+        "net/net_jni_headers/ProxyChangeListener_jni.h",
+        "net/net_jni_headers/X509Util_jni.h",
+    ],
+    tool_files: [
+        "base/android/jni_generator/android_jar.classes",
+        "base/android/jni_generator/jni_generator.py",
+        "build/android/gyp/util/__init__.py",
+        "build/android/gyp/util/build_utils.py",
+        "build/gn_helpers.py",
+    ],
+}
+
+// GN: //net:net_jni_headers__android_arm64
+genrule {
+    name: "cronet_aml_net_net_jni_headers__android_arm64",
     srcs: [
         "net/android/java/src/org/chromium/net/AndroidCertVerifyResult.java",
         "net/android/java/src/org/chromium/net/AndroidKeyStore.java",
@@ -10535,6 +12475,12 @@ cc_object {
             generated_headers: [
                 "cronet_aml_build_chromeos_buildflags__android_arm",
                 "cronet_aml_net_buildflags__android_arm",
+            ],
+        },
+        android_arm64: {
+            generated_headers: [
+                "cronet_aml_build_chromeos_buildflags__android_arm64",
+                "cronet_aml_net_buildflags__android_arm64",
             ],
         },
         android_x86: {
@@ -11107,6 +13053,14 @@ cc_library_static {
                 "cronet_aml_build_chromeos_buildflags__android_arm",
             ],
         },
+        android_arm64: {
+            generated_headers: [
+                "cronet_aml_build_chromeos_buildflags__android_arm64",
+            ],
+            export_generated_headers: [
+                "cronet_aml_build_chromeos_buildflags__android_arm64",
+            ],
+        },
         android_x86: {
             cflags: [
                 "-msse3",
@@ -11187,6 +13141,11 @@ cc_object {
         android_arm: {
             generated_headers: [
                 "cronet_aml_build_chromeos_buildflags__android_arm",
+            ],
+        },
+        android_arm64: {
+            generated_headers: [
+                "cronet_aml_build_chromeos_buildflags__android_arm64",
             ],
         },
         android_x86: {
@@ -11314,6 +13273,16 @@ cc_object {
                 "cronet_aml_build_chromeos_buildflags__android_arm",
             ],
         },
+        android_arm64: {
+            cflags: [
+                "-DANDROID",
+                "-DANDROID_NDK_VERSION_ROLL=r23_1",
+                "-DHAVE_SYS_UIO_H",
+            ],
+            generated_headers: [
+                "cronet_aml_build_chromeos_buildflags__android_arm64",
+            ],
+        },
         android_x86: {
             cflags: [
                 "-DANDROID",
@@ -11390,6 +13359,13 @@ cc_object {
                 "-DHAVE_SYS_UIO_H",
             ],
         },
+        android_arm64: {
+            cflags: [
+                "-DANDROID",
+                "-DANDROID_NDK_VERSION_ROLL=r23_1",
+                "-DHAVE_SYS_UIO_H",
+            ],
+        },
         android_x86: {
             cflags: [
                 "-DANDROID",
@@ -11457,6 +13433,13 @@ cc_object {
                 "-DHAVE_SYS_UIO_H",
             ],
         },
+        android_arm64: {
+            cflags: [
+                "-DANDROID",
+                "-DANDROID_NDK_VERSION_ROLL=r23_1",
+                "-DHAVE_SYS_UIO_H",
+            ],
+        },
         android_x86: {
             cflags: [
                 "-DANDROID",
@@ -11518,6 +13501,13 @@ cc_object {
     cpp_std: "c++20",
     target: {
         android_arm: {
+            cflags: [
+                "-DANDROID",
+                "-DANDROID_NDK_VERSION_ROLL=r23_1",
+                "-DHAVE_SYS_UIO_H",
+            ],
+        },
+        android_arm64: {
             cflags: [
                 "-DANDROID",
                 "-DANDROID_NDK_VERSION_ROLL=r23_1",
@@ -11598,6 +13588,13 @@ cc_object {
                 "-DHAVE_SYS_UIO_H",
             ],
         },
+        android_arm64: {
+            cflags: [
+                "-DANDROID",
+                "-DANDROID_NDK_VERSION_ROLL=r23_1",
+                "-DHAVE_SYS_UIO_H",
+            ],
+        },
         android_x86: {
             cflags: [
                 "-DANDROID",
@@ -11659,6 +13656,13 @@ cc_object {
     cpp_std: "c++20",
     target: {
         android_arm: {
+            cflags: [
+                "-DANDROID",
+                "-DANDROID_NDK_VERSION_ROLL=r23_1",
+                "-DHAVE_SYS_UIO_H",
+            ],
+        },
+        android_arm64: {
             cflags: [
                 "-DANDROID",
                 "-DANDROID_NDK_VERSION_ROLL=r23_1",
@@ -11732,6 +13736,13 @@ cc_object {
                 "-DHAVE_SYS_UIO_H",
             ],
         },
+        android_arm64: {
+            cflags: [
+                "-DANDROID",
+                "-DANDROID_NDK_VERSION_ROLL=r23_1",
+                "-DHAVE_SYS_UIO_H",
+            ],
+        },
         android_x86: {
             cflags: [
                 "-DANDROID",
@@ -11793,6 +13804,13 @@ cc_object {
     cpp_std: "c++20",
     target: {
         android_arm: {
+            cflags: [
+                "-DANDROID",
+                "-DANDROID_NDK_VERSION_ROLL=r23_1",
+                "-DHAVE_SYS_UIO_H",
+            ],
+        },
+        android_arm64: {
             cflags: [
                 "-DANDROID",
                 "-DANDROID_NDK_VERSION_ROLL=r23_1",
@@ -11866,6 +13884,13 @@ cc_object {
                 "-DHAVE_SYS_UIO_H",
             ],
         },
+        android_arm64: {
+            cflags: [
+                "-DANDROID",
+                "-DANDROID_NDK_VERSION_ROLL=r23_1",
+                "-DHAVE_SYS_UIO_H",
+            ],
+        },
         android_x86: {
             cflags: [
                 "-DANDROID",
@@ -11927,6 +13952,13 @@ cc_object {
     cpp_std: "c++20",
     target: {
         android_arm: {
+            cflags: [
+                "-DANDROID",
+                "-DANDROID_NDK_VERSION_ROLL=r23_1",
+                "-DHAVE_SYS_UIO_H",
+            ],
+        },
+        android_arm64: {
             cflags: [
                 "-DANDROID",
                 "-DANDROID_NDK_VERSION_ROLL=r23_1",
@@ -12000,6 +14032,13 @@ cc_object {
                 "-DHAVE_SYS_UIO_H",
             ],
         },
+        android_arm64: {
+            cflags: [
+                "-DANDROID",
+                "-DANDROID_NDK_VERSION_ROLL=r23_1",
+                "-DHAVE_SYS_UIO_H",
+            ],
+        },
         android_x86: {
             cflags: [
                 "-DANDROID",
@@ -12067,6 +14106,13 @@ cc_object {
                 "-DHAVE_SYS_UIO_H",
             ],
         },
+        android_arm64: {
+            cflags: [
+                "-DANDROID",
+                "-DANDROID_NDK_VERSION_ROLL=r23_1",
+                "-DHAVE_SYS_UIO_H",
+            ],
+        },
         android_x86: {
             cflags: [
                 "-DANDROID",
@@ -12128,6 +14174,13 @@ cc_object {
     cpp_std: "c++20",
     target: {
         android_arm: {
+            cflags: [
+                "-DANDROID",
+                "-DANDROID_NDK_VERSION_ROLL=r23_1",
+                "-DHAVE_SYS_UIO_H",
+            ],
+        },
+        android_arm64: {
             cflags: [
                 "-DANDROID",
                 "-DANDROID_NDK_VERSION_ROLL=r23_1",
@@ -12204,6 +14257,13 @@ cc_object {
                 "-DHAVE_SYS_UIO_H",
             ],
         },
+        android_arm64: {
+            cflags: [
+                "-DANDROID",
+                "-DANDROID_NDK_VERSION_ROLL=r23_1",
+                "-DHAVE_SYS_UIO_H",
+            ],
+        },
         android_x86: {
             cflags: [
                 "-DANDROID",
@@ -12274,6 +14334,13 @@ cc_object {
                 "-DHAVE_SYS_UIO_H",
             ],
         },
+        android_arm64: {
+            cflags: [
+                "-DANDROID",
+                "-DANDROID_NDK_VERSION_ROLL=r23_1",
+                "-DHAVE_SYS_UIO_H",
+            ],
+        },
         android_x86: {
             cflags: [
                 "-DANDROID",
@@ -12335,6 +14402,13 @@ cc_object {
     cpp_std: "c++20",
     target: {
         android_arm: {
+            cflags: [
+                "-DANDROID",
+                "-DANDROID_NDK_VERSION_ROLL=r23_1",
+                "-DHAVE_SYS_UIO_H",
+            ],
+        },
+        android_arm64: {
             cflags: [
                 "-DANDROID",
                 "-DANDROID_NDK_VERSION_ROLL=r23_1",
@@ -12411,6 +14485,13 @@ cc_object {
                 "-DHAVE_SYS_UIO_H",
             ],
         },
+        android_arm64: {
+            cflags: [
+                "-DANDROID",
+                "-DANDROID_NDK_VERSION_ROLL=r23_1",
+                "-DHAVE_SYS_UIO_H",
+            ],
+        },
         android_x86: {
             cflags: [
                 "-DANDROID",
@@ -12475,6 +14556,13 @@ cc_object {
     cpp_std: "c++20",
     target: {
         android_arm: {
+            cflags: [
+                "-DANDROID",
+                "-DANDROID_NDK_VERSION_ROLL=r23_1",
+                "-DHAVE_SYS_UIO_H",
+            ],
+        },
+        android_arm64: {
             cflags: [
                 "-DANDROID",
                 "-DANDROID_NDK_VERSION_ROLL=r23_1",
@@ -12551,6 +14639,13 @@ cc_object {
                 "-DHAVE_SYS_UIO_H",
             ],
         },
+        android_arm64: {
+            cflags: [
+                "-DANDROID",
+                "-DANDROID_NDK_VERSION_ROLL=r23_1",
+                "-DHAVE_SYS_UIO_H",
+            ],
+        },
         android_x86: {
             cflags: [
                 "-DANDROID",
@@ -12615,6 +14710,13 @@ cc_object {
     cpp_std: "c++20",
     target: {
         android_arm: {
+            cflags: [
+                "-DANDROID",
+                "-DANDROID_NDK_VERSION_ROLL=r23_1",
+                "-DHAVE_SYS_UIO_H",
+            ],
+        },
+        android_arm64: {
             cflags: [
                 "-DANDROID",
                 "-DANDROID_NDK_VERSION_ROLL=r23_1",
@@ -12688,6 +14790,13 @@ cc_object {
                 "-DHAVE_SYS_UIO_H",
             ],
         },
+        android_arm64: {
+            cflags: [
+                "-DANDROID",
+                "-DANDROID_NDK_VERSION_ROLL=r23_1",
+                "-DHAVE_SYS_UIO_H",
+            ],
+        },
         android_x86: {
             cflags: [
                 "-DANDROID",
@@ -12749,6 +14858,13 @@ cc_object {
     cpp_std: "c++20",
     target: {
         android_arm: {
+            cflags: [
+                "-DANDROID",
+                "-DANDROID_NDK_VERSION_ROLL=r23_1",
+                "-DHAVE_SYS_UIO_H",
+            ],
+        },
+        android_arm64: {
             cflags: [
                 "-DANDROID",
                 "-DANDROID_NDK_VERSION_ROLL=r23_1",
@@ -12822,6 +14938,13 @@ cc_object {
                 "-DHAVE_SYS_UIO_H",
             ],
         },
+        android_arm64: {
+            cflags: [
+                "-DANDROID",
+                "-DANDROID_NDK_VERSION_ROLL=r23_1",
+                "-DHAVE_SYS_UIO_H",
+            ],
+        },
         android_x86: {
             cflags: [
                 "-DANDROID",
@@ -12883,6 +15006,13 @@ cc_object {
     cpp_std: "c++20",
     target: {
         android_arm: {
+            cflags: [
+                "-DANDROID",
+                "-DANDROID_NDK_VERSION_ROLL=r23_1",
+                "-DHAVE_SYS_UIO_H",
+            ],
+        },
+        android_arm64: {
             cflags: [
                 "-DANDROID",
                 "-DANDROID_NDK_VERSION_ROLL=r23_1",
@@ -12956,6 +15086,13 @@ cc_object {
                 "-DHAVE_SYS_UIO_H",
             ],
         },
+        android_arm64: {
+            cflags: [
+                "-DANDROID",
+                "-DANDROID_NDK_VERSION_ROLL=r23_1",
+                "-DHAVE_SYS_UIO_H",
+            ],
+        },
         android_x86: {
             cflags: [
                 "-DANDROID",
@@ -13017,6 +15154,13 @@ cc_object {
     cpp_std: "c++20",
     target: {
         android_arm: {
+            cflags: [
+                "-DANDROID",
+                "-DANDROID_NDK_VERSION_ROLL=r23_1",
+                "-DHAVE_SYS_UIO_H",
+            ],
+        },
+        android_arm64: {
             cflags: [
                 "-DANDROID",
                 "-DANDROID_NDK_VERSION_ROLL=r23_1",
@@ -13090,6 +15234,13 @@ cc_object {
                 "-DHAVE_SYS_UIO_H",
             ],
         },
+        android_arm64: {
+            cflags: [
+                "-DANDROID",
+                "-DANDROID_NDK_VERSION_ROLL=r23_1",
+                "-DHAVE_SYS_UIO_H",
+            ],
+        },
         android_x86: {
             cflags: [
                 "-DANDROID",
@@ -13151,6 +15302,13 @@ cc_object {
     cpp_std: "c++20",
     target: {
         android_arm: {
+            cflags: [
+                "-DANDROID",
+                "-DANDROID_NDK_VERSION_ROLL=r23_1",
+                "-DHAVE_SYS_UIO_H",
+            ],
+        },
+        android_arm64: {
             cflags: [
                 "-DANDROID",
                 "-DANDROID_NDK_VERSION_ROLL=r23_1",
@@ -13224,6 +15382,13 @@ cc_object {
                 "-DHAVE_SYS_UIO_H",
             ],
         },
+        android_arm64: {
+            cflags: [
+                "-DANDROID",
+                "-DANDROID_NDK_VERSION_ROLL=r23_1",
+                "-DHAVE_SYS_UIO_H",
+            ],
+        },
         android_x86: {
             cflags: [
                 "-DANDROID",
@@ -13285,6 +15450,13 @@ cc_object {
     cpp_std: "c++20",
     target: {
         android_arm: {
+            cflags: [
+                "-DANDROID",
+                "-DANDROID_NDK_VERSION_ROLL=r23_1",
+                "-DHAVE_SYS_UIO_H",
+            ],
+        },
+        android_arm64: {
             cflags: [
                 "-DANDROID",
                 "-DANDROID_NDK_VERSION_ROLL=r23_1",
@@ -13358,6 +15530,13 @@ cc_object {
                 "-DHAVE_SYS_UIO_H",
             ],
         },
+        android_arm64: {
+            cflags: [
+                "-DANDROID",
+                "-DANDROID_NDK_VERSION_ROLL=r23_1",
+                "-DHAVE_SYS_UIO_H",
+            ],
+        },
         android_x86: {
             cflags: [
                 "-DANDROID",
@@ -13425,6 +15604,13 @@ cc_object {
                 "-DHAVE_SYS_UIO_H",
             ],
         },
+        android_arm64: {
+            cflags: [
+                "-DANDROID",
+                "-DANDROID_NDK_VERSION_ROLL=r23_1",
+                "-DHAVE_SYS_UIO_H",
+            ],
+        },
         android_x86: {
             cflags: [
                 "-DANDROID",
@@ -13486,6 +15672,13 @@ cc_object {
     cpp_std: "c++20",
     target: {
         android_arm: {
+            cflags: [
+                "-DANDROID",
+                "-DANDROID_NDK_VERSION_ROLL=r23_1",
+                "-DHAVE_SYS_UIO_H",
+            ],
+        },
+        android_arm64: {
             cflags: [
                 "-DANDROID",
                 "-DANDROID_NDK_VERSION_ROLL=r23_1",
@@ -13563,6 +15756,13 @@ cc_object {
                 "-DHAVE_SYS_UIO_H",
             ],
         },
+        android_arm64: {
+            cflags: [
+                "-DANDROID",
+                "-DANDROID_NDK_VERSION_ROLL=r23_1",
+                "-DHAVE_SYS_UIO_H",
+            ],
+        },
         android_x86: {
             cflags: [
                 "-DANDROID",
@@ -13624,6 +15824,13 @@ cc_object {
     cpp_std: "c++20",
     target: {
         android_arm: {
+            cflags: [
+                "-DANDROID",
+                "-DANDROID_NDK_VERSION_ROLL=r23_1",
+                "-DHAVE_SYS_UIO_H",
+            ],
+        },
+        android_arm64: {
             cflags: [
                 "-DANDROID",
                 "-DANDROID_NDK_VERSION_ROLL=r23_1",
@@ -13697,6 +15904,13 @@ cc_object {
                 "-DHAVE_SYS_UIO_H",
             ],
         },
+        android_arm64: {
+            cflags: [
+                "-DANDROID",
+                "-DANDROID_NDK_VERSION_ROLL=r23_1",
+                "-DHAVE_SYS_UIO_H",
+            ],
+        },
         android_x86: {
             cflags: [
                 "-DANDROID",
@@ -13758,6 +15972,13 @@ cc_object {
     cpp_std: "c++20",
     target: {
         android_arm: {
+            cflags: [
+                "-DANDROID",
+                "-DANDROID_NDK_VERSION_ROLL=r23_1",
+                "-DHAVE_SYS_UIO_H",
+            ],
+        },
+        android_arm64: {
             cflags: [
                 "-DANDROID",
                 "-DANDROID_NDK_VERSION_ROLL=r23_1",
@@ -13831,6 +16052,13 @@ cc_object {
                 "-DHAVE_SYS_UIO_H",
             ],
         },
+        android_arm64: {
+            cflags: [
+                "-DANDROID",
+                "-DANDROID_NDK_VERSION_ROLL=r23_1",
+                "-DHAVE_SYS_UIO_H",
+            ],
+        },
         android_x86: {
             cflags: [
                 "-DANDROID",
@@ -13892,6 +16120,13 @@ cc_object {
     cpp_std: "c++20",
     target: {
         android_arm: {
+            cflags: [
+                "-DANDROID",
+                "-DANDROID_NDK_VERSION_ROLL=r23_1",
+                "-DHAVE_SYS_UIO_H",
+            ],
+        },
+        android_arm64: {
             cflags: [
                 "-DANDROID",
                 "-DANDROID_NDK_VERSION_ROLL=r23_1",
@@ -13965,6 +16200,13 @@ cc_object {
                 "-DHAVE_SYS_UIO_H",
             ],
         },
+        android_arm64: {
+            cflags: [
+                "-DANDROID",
+                "-DANDROID_NDK_VERSION_ROLL=r23_1",
+                "-DHAVE_SYS_UIO_H",
+            ],
+        },
         android_x86: {
             cflags: [
                 "-DANDROID",
@@ -14026,6 +16268,13 @@ cc_object {
     cpp_std: "c++20",
     target: {
         android_arm: {
+            cflags: [
+                "-DANDROID",
+                "-DANDROID_NDK_VERSION_ROLL=r23_1",
+                "-DHAVE_SYS_UIO_H",
+            ],
+        },
+        android_arm64: {
             cflags: [
                 "-DANDROID",
                 "-DANDROID_NDK_VERSION_ROLL=r23_1",
@@ -14096,6 +16345,13 @@ cc_object {
     cpp_std: "c++20",
     target: {
         android_arm: {
+            cflags: [
+                "-DANDROID",
+                "-DANDROID_NDK_VERSION_ROLL=r23_1",
+                "-DHAVE_SYS_UIO_H",
+            ],
+        },
+        android_arm64: {
             cflags: [
                 "-DANDROID",
                 "-DANDROID_NDK_VERSION_ROLL=r23_1",
@@ -14174,6 +16430,13 @@ cc_object {
                 "-DHAVE_SYS_UIO_H",
             ],
         },
+        android_arm64: {
+            cflags: [
+                "-DANDROID",
+                "-DANDROID_NDK_VERSION_ROLL=r23_1",
+                "-DHAVE_SYS_UIO_H",
+            ],
+        },
         android_x86: {
             cflags: [
                 "-DANDROID",
@@ -14238,6 +16501,13 @@ cc_object {
     cpp_std: "c++20",
     target: {
         android_arm: {
+            cflags: [
+                "-DANDROID",
+                "-DANDROID_NDK_VERSION_ROLL=r23_1",
+                "-DHAVE_SYS_UIO_H",
+            ],
+        },
+        android_arm64: {
             cflags: [
                 "-DANDROID",
                 "-DANDROID_NDK_VERSION_ROLL=r23_1",
@@ -14314,6 +16584,13 @@ cc_object {
                 "-DHAVE_SYS_UIO_H",
             ],
         },
+        android_arm64: {
+            cflags: [
+                "-DANDROID",
+                "-DANDROID_NDK_VERSION_ROLL=r23_1",
+                "-DHAVE_SYS_UIO_H",
+            ],
+        },
         android_x86: {
             cflags: [
                 "-DANDROID",
@@ -14378,6 +16655,13 @@ cc_object {
     cpp_std: "c++20",
     target: {
         android_arm: {
+            cflags: [
+                "-DANDROID",
+                "-DANDROID_NDK_VERSION_ROLL=r23_1",
+                "-DHAVE_SYS_UIO_H",
+            ],
+        },
+        android_arm64: {
             cflags: [
                 "-DANDROID",
                 "-DANDROID_NDK_VERSION_ROLL=r23_1",
@@ -14454,6 +16738,13 @@ cc_object {
                 "-DHAVE_SYS_UIO_H",
             ],
         },
+        android_arm64: {
+            cflags: [
+                "-DANDROID",
+                "-DANDROID_NDK_VERSION_ROLL=r23_1",
+                "-DHAVE_SYS_UIO_H",
+            ],
+        },
         android_x86: {
             cflags: [
                 "-DANDROID",
@@ -14518,6 +16809,13 @@ cc_object {
     cpp_std: "c++20",
     target: {
         android_arm: {
+            cflags: [
+                "-DANDROID",
+                "-DANDROID_NDK_VERSION_ROLL=r23_1",
+                "-DHAVE_SYS_UIO_H",
+            ],
+        },
+        android_arm64: {
             cflags: [
                 "-DANDROID",
                 "-DANDROID_NDK_VERSION_ROLL=r23_1",
@@ -14591,6 +16889,13 @@ cc_object {
                 "-DHAVE_SYS_UIO_H",
             ],
         },
+        android_arm64: {
+            cflags: [
+                "-DANDROID",
+                "-DANDROID_NDK_VERSION_ROLL=r23_1",
+                "-DHAVE_SYS_UIO_H",
+            ],
+        },
         android_x86: {
             cflags: [
                 "-DANDROID",
@@ -14658,6 +16963,13 @@ cc_object {
                 "-DHAVE_SYS_UIO_H",
             ],
         },
+        android_arm64: {
+            cflags: [
+                "-DANDROID",
+                "-DANDROID_NDK_VERSION_ROLL=r23_1",
+                "-DHAVE_SYS_UIO_H",
+            ],
+        },
         android_x86: {
             cflags: [
                 "-DANDROID",
@@ -14719,6 +17031,13 @@ cc_object {
     cpp_std: "c++20",
     target: {
         android_arm: {
+            cflags: [
+                "-DANDROID",
+                "-DANDROID_NDK_VERSION_ROLL=r23_1",
+                "-DHAVE_SYS_UIO_H",
+            ],
+        },
+        android_arm64: {
             cflags: [
                 "-DANDROID",
                 "-DANDROID_NDK_VERSION_ROLL=r23_1",
@@ -14795,6 +17114,13 @@ cc_object {
                 "-DHAVE_SYS_UIO_H",
             ],
         },
+        android_arm64: {
+            cflags: [
+                "-DANDROID",
+                "-DANDROID_NDK_VERSION_ROLL=r23_1",
+                "-DHAVE_SYS_UIO_H",
+            ],
+        },
         android_x86: {
             cflags: [
                 "-DANDROID",
@@ -14859,6 +17185,13 @@ cc_object {
     cpp_std: "c++20",
     target: {
         android_arm: {
+            cflags: [
+                "-DANDROID",
+                "-DANDROID_NDK_VERSION_ROLL=r23_1",
+                "-DHAVE_SYS_UIO_H",
+            ],
+        },
+        android_arm64: {
             cflags: [
                 "-DANDROID",
                 "-DANDROID_NDK_VERSION_ROLL=r23_1",
@@ -14935,6 +17268,13 @@ cc_object {
                 "-DHAVE_SYS_UIO_H",
             ],
         },
+        android_arm64: {
+            cflags: [
+                "-DANDROID",
+                "-DANDROID_NDK_VERSION_ROLL=r23_1",
+                "-DHAVE_SYS_UIO_H",
+            ],
+        },
         android_x86: {
             cflags: [
                 "-DANDROID",
@@ -14996,6 +17336,13 @@ cc_object {
     cpp_std: "c++20",
     target: {
         android_arm: {
+            cflags: [
+                "-DANDROID",
+                "-DANDROID_NDK_VERSION_ROLL=r23_1",
+                "-DHAVE_SYS_UIO_H",
+            ],
+        },
+        android_arm64: {
             cflags: [
                 "-DANDROID",
                 "-DANDROID_NDK_VERSION_ROLL=r23_1",
@@ -15069,6 +17416,13 @@ cc_object {
                 "-DHAVE_SYS_UIO_H",
             ],
         },
+        android_arm64: {
+            cflags: [
+                "-DANDROID",
+                "-DANDROID_NDK_VERSION_ROLL=r23_1",
+                "-DHAVE_SYS_UIO_H",
+            ],
+        },
         android_x86: {
             cflags: [
                 "-DANDROID",
@@ -15130,6 +17484,13 @@ cc_object {
     cpp_std: "c++20",
     target: {
         android_arm: {
+            cflags: [
+                "-DANDROID",
+                "-DANDROID_NDK_VERSION_ROLL=r23_1",
+                "-DHAVE_SYS_UIO_H",
+            ],
+        },
+        android_arm64: {
             cflags: [
                 "-DANDROID",
                 "-DANDROID_NDK_VERSION_ROLL=r23_1",
@@ -15206,6 +17567,13 @@ cc_object {
                 "-DHAVE_SYS_UIO_H",
             ],
         },
+        android_arm64: {
+            cflags: [
+                "-DANDROID",
+                "-DANDROID_NDK_VERSION_ROLL=r23_1",
+                "-DHAVE_SYS_UIO_H",
+            ],
+        },
         android_x86: {
             cflags: [
                 "-DANDROID",
@@ -15267,6 +17635,13 @@ cc_object {
     cpp_std: "c++20",
     target: {
         android_arm: {
+            cflags: [
+                "-DANDROID",
+                "-DANDROID_NDK_VERSION_ROLL=r23_1",
+                "-DHAVE_SYS_UIO_H",
+            ],
+        },
+        android_arm64: {
             cflags: [
                 "-DANDROID",
                 "-DANDROID_NDK_VERSION_ROLL=r23_1",
@@ -15343,6 +17718,13 @@ cc_object {
                 "-DHAVE_SYS_UIO_H",
             ],
         },
+        android_arm64: {
+            cflags: [
+                "-DANDROID",
+                "-DANDROID_NDK_VERSION_ROLL=r23_1",
+                "-DHAVE_SYS_UIO_H",
+            ],
+        },
         android_x86: {
             cflags: [
                 "-DANDROID",
@@ -15404,6 +17786,13 @@ cc_object {
     cpp_std: "c++20",
     target: {
         android_arm: {
+            cflags: [
+                "-DANDROID",
+                "-DANDROID_NDK_VERSION_ROLL=r23_1",
+                "-DHAVE_SYS_UIO_H",
+            ],
+        },
+        android_arm64: {
             cflags: [
                 "-DANDROID",
                 "-DANDROID_NDK_VERSION_ROLL=r23_1",
@@ -15481,6 +17870,13 @@ cc_object {
                 "-DHAVE_SYS_UIO_H",
             ],
         },
+        android_arm64: {
+            cflags: [
+                "-DANDROID",
+                "-DANDROID_NDK_VERSION_ROLL=r23_1",
+                "-DHAVE_SYS_UIO_H",
+            ],
+        },
         android_x86: {
             cflags: [
                 "-DANDROID",
@@ -15542,6 +17938,13 @@ cc_object {
     cpp_std: "c++20",
     target: {
         android_arm: {
+            cflags: [
+                "-DANDROID",
+                "-DANDROID_NDK_VERSION_ROLL=r23_1",
+                "-DHAVE_SYS_UIO_H",
+            ],
+        },
+        android_arm64: {
             cflags: [
                 "-DANDROID",
                 "-DANDROID_NDK_VERSION_ROLL=r23_1",
@@ -15615,6 +18018,13 @@ cc_object {
                 "-DHAVE_SYS_UIO_H",
             ],
         },
+        android_arm64: {
+            cflags: [
+                "-DANDROID",
+                "-DANDROID_NDK_VERSION_ROLL=r23_1",
+                "-DHAVE_SYS_UIO_H",
+            ],
+        },
         android_x86: {
             cflags: [
                 "-DANDROID",
@@ -15676,6 +18086,13 @@ cc_object {
     cpp_std: "c++20",
     target: {
         android_arm: {
+            cflags: [
+                "-DANDROID",
+                "-DANDROID_NDK_VERSION_ROLL=r23_1",
+                "-DHAVE_SYS_UIO_H",
+            ],
+        },
+        android_arm64: {
             cflags: [
                 "-DANDROID",
                 "-DANDROID_NDK_VERSION_ROLL=r23_1",
@@ -15749,6 +18166,13 @@ cc_object {
                 "-DHAVE_SYS_UIO_H",
             ],
         },
+        android_arm64: {
+            cflags: [
+                "-DANDROID",
+                "-DANDROID_NDK_VERSION_ROLL=r23_1",
+                "-DHAVE_SYS_UIO_H",
+            ],
+        },
         android_x86: {
             cflags: [
                 "-DANDROID",
@@ -15810,6 +18234,13 @@ cc_object {
     cpp_std: "c++20",
     target: {
         android_arm: {
+            cflags: [
+                "-DANDROID",
+                "-DANDROID_NDK_VERSION_ROLL=r23_1",
+                "-DHAVE_SYS_UIO_H",
+            ],
+        },
+        android_arm64: {
             cflags: [
                 "-DANDROID",
                 "-DANDROID_NDK_VERSION_ROLL=r23_1",
@@ -15884,6 +18315,16 @@ cc_object {
             ],
             generated_headers: [
                 "cronet_aml_build_chromeos_buildflags__android_arm",
+            ],
+        },
+        android_arm64: {
+            cflags: [
+                "-DANDROID",
+                "-DANDROID_NDK_VERSION_ROLL=r23_1",
+                "-DHAVE_SYS_UIO_H",
+            ],
+            generated_headers: [
+                "cronet_aml_build_chromeos_buildflags__android_arm64",
             ],
         },
         android_x86: {
@@ -15962,6 +18403,13 @@ cc_object {
                 "-DHAVE_SYS_UIO_H",
             ],
         },
+        android_arm64: {
+            cflags: [
+                "-DANDROID",
+                "-DANDROID_NDK_VERSION_ROLL=r23_1",
+                "-DHAVE_SYS_UIO_H",
+            ],
+        },
         android_x86: {
             cflags: [
                 "-DANDROID",
@@ -16033,6 +18481,16 @@ cc_object {
             ],
             generated_headers: [
                 "cronet_aml_build_chromeos_buildflags__android_arm",
+            ],
+        },
+        android_arm64: {
+            cflags: [
+                "-DANDROID",
+                "-DANDROID_NDK_VERSION_ROLL=r23_1",
+                "-DHAVE_SYS_UIO_H",
+            ],
+            generated_headers: [
+                "cronet_aml_build_chromeos_buildflags__android_arm64",
             ],
         },
         android_x86: {
@@ -16117,6 +18575,16 @@ cc_object {
                 "cronet_aml_build_chromeos_buildflags__android_arm",
             ],
         },
+        android_arm64: {
+            cflags: [
+                "-DANDROID",
+                "-DANDROID_NDK_VERSION_ROLL=r23_1",
+                "-DHAVE_SYS_UIO_H",
+            ],
+            generated_headers: [
+                "cronet_aml_build_chromeos_buildflags__android_arm64",
+            ],
+        },
         android_x86: {
             cflags: [
                 "-DANDROID",
@@ -16199,6 +18667,16 @@ cc_object {
                 "cronet_aml_build_chromeos_buildflags__android_arm",
             ],
         },
+        android_arm64: {
+            cflags: [
+                "-DANDROID",
+                "-DANDROID_NDK_VERSION_ROLL=r23_1",
+                "-DHAVE_SYS_UIO_H",
+            ],
+            generated_headers: [
+                "cronet_aml_build_chromeos_buildflags__android_arm64",
+            ],
+        },
         android_x86: {
             cflags: [
                 "-DANDROID",
@@ -16276,6 +18754,16 @@ cc_object {
             ],
             generated_headers: [
                 "cronet_aml_build_chromeos_buildflags__android_arm",
+            ],
+        },
+        android_arm64: {
+            cflags: [
+                "-DANDROID",
+                "-DANDROID_NDK_VERSION_ROLL=r23_1",
+                "-DHAVE_SYS_UIO_H",
+            ],
+            generated_headers: [
+                "cronet_aml_build_chromeos_buildflags__android_arm64",
             ],
         },
         android_x86: {
@@ -16360,6 +18848,16 @@ cc_object {
                 "cronet_aml_build_chromeos_buildflags__android_arm",
             ],
         },
+        android_arm64: {
+            cflags: [
+                "-DANDROID",
+                "-DANDROID_NDK_VERSION_ROLL=r23_1",
+                "-DHAVE_SYS_UIO_H",
+            ],
+            generated_headers: [
+                "cronet_aml_build_chromeos_buildflags__android_arm64",
+            ],
+        },
         android_x86: {
             cflags: [
                 "-DANDROID",
@@ -16440,6 +18938,16 @@ cc_object {
             ],
             generated_headers: [
                 "cronet_aml_build_chromeos_buildflags__android_arm",
+            ],
+        },
+        android_arm64: {
+            cflags: [
+                "-DANDROID",
+                "-DANDROID_NDK_VERSION_ROLL=r23_1",
+                "-DHAVE_SYS_UIO_H",
+            ],
+            generated_headers: [
+                "cronet_aml_build_chromeos_buildflags__android_arm64",
             ],
         },
         android_x86: {
@@ -16524,6 +19032,16 @@ cc_object {
                 "cronet_aml_build_chromeos_buildflags__android_arm",
             ],
         },
+        android_arm64: {
+            cflags: [
+                "-DANDROID",
+                "-DANDROID_NDK_VERSION_ROLL=r23_1",
+                "-DHAVE_SYS_UIO_H",
+            ],
+            generated_headers: [
+                "cronet_aml_build_chromeos_buildflags__android_arm64",
+            ],
+        },
         android_x86: {
             cflags: [
                 "-DANDROID",
@@ -16600,6 +19118,13 @@ cc_object {
                 "-DHAVE_SYS_UIO_H",
             ],
         },
+        android_arm64: {
+            cflags: [
+                "-DANDROID",
+                "-DANDROID_NDK_VERSION_ROLL=r23_1",
+                "-DHAVE_SYS_UIO_H",
+            ],
+        },
         android_x86: {
             cflags: [
                 "-DANDROID",
@@ -16664,6 +19189,13 @@ cc_object {
     cpp_std: "c++20",
     target: {
         android_arm: {
+            cflags: [
+                "-DANDROID",
+                "-DANDROID_NDK_VERSION_ROLL=r23_1",
+                "-DHAVE_SYS_UIO_H",
+            ],
+        },
+        android_arm64: {
             cflags: [
                 "-DANDROID",
                 "-DANDROID_NDK_VERSION_ROLL=r23_1",
@@ -16737,6 +19269,13 @@ cc_object {
                 "-DHAVE_SYS_UIO_H",
             ],
         },
+        android_arm64: {
+            cflags: [
+                "-DANDROID",
+                "-DANDROID_NDK_VERSION_ROLL=r23_1",
+                "-DHAVE_SYS_UIO_H",
+            ],
+        },
         android_x86: {
             cflags: [
                 "-DANDROID",
@@ -16804,6 +19343,13 @@ cc_object {
                 "-DHAVE_SYS_UIO_H",
             ],
         },
+        android_arm64: {
+            cflags: [
+                "-DANDROID",
+                "-DANDROID_NDK_VERSION_ROLL=r23_1",
+                "-DHAVE_SYS_UIO_H",
+            ],
+        },
         android_x86: {
             cflags: [
                 "-DANDROID",
@@ -16865,6 +19411,13 @@ cc_object {
     cpp_std: "c++20",
     target: {
         android_arm: {
+            cflags: [
+                "-DANDROID",
+                "-DANDROID_NDK_VERSION_ROLL=r23_1",
+                "-DHAVE_SYS_UIO_H",
+            ],
+        },
+        android_arm64: {
             cflags: [
                 "-DANDROID",
                 "-DANDROID_NDK_VERSION_ROLL=r23_1",
@@ -16939,6 +19492,16 @@ cc_object {
             ],
             generated_headers: [
                 "cronet_aml_build_chromeos_buildflags__android_arm",
+            ],
+        },
+        android_arm64: {
+            cflags: [
+                "-DANDROID",
+                "-DANDROID_NDK_VERSION_ROLL=r23_1",
+                "-DHAVE_SYS_UIO_H",
+            ],
+            generated_headers: [
+                "cronet_aml_build_chromeos_buildflags__android_arm64",
             ],
         },
         android_x86: {
@@ -17020,6 +19583,13 @@ cc_object {
                 "-DHAVE_SYS_UIO_H",
             ],
         },
+        android_arm64: {
+            cflags: [
+                "-DANDROID",
+                "-DANDROID_NDK_VERSION_ROLL=r23_1",
+                "-DHAVE_SYS_UIO_H",
+            ],
+        },
         android_x86: {
             cflags: [
                 "-DANDROID",
@@ -17091,6 +19661,16 @@ cc_object {
             ],
             generated_headers: [
                 "cronet_aml_build_chromeos_buildflags__android_arm",
+            ],
+        },
+        android_arm64: {
+            cflags: [
+                "-DANDROID",
+                "-DANDROID_NDK_VERSION_ROLL=r23_1",
+                "-DHAVE_SYS_UIO_H",
+            ],
+            generated_headers: [
+                "cronet_aml_build_chromeos_buildflags__android_arm64",
             ],
         },
         android_x86: {
@@ -17173,6 +19753,13 @@ cc_object {
                 "-DHAVE_SYS_UIO_H",
             ],
         },
+        android_arm64: {
+            cflags: [
+                "-DANDROID",
+                "-DANDROID_NDK_VERSION_ROLL=r23_1",
+                "-DHAVE_SYS_UIO_H",
+            ],
+        },
         android_x86: {
             cflags: [
                 "-DANDROID",
@@ -17237,6 +19824,13 @@ cc_object {
     cpp_std: "c++20",
     target: {
         android_arm: {
+            cflags: [
+                "-DANDROID",
+                "-DANDROID_NDK_VERSION_ROLL=r23_1",
+                "-DHAVE_SYS_UIO_H",
+            ],
+        },
+        android_arm64: {
             cflags: [
                 "-DANDROID",
                 "-DANDROID_NDK_VERSION_ROLL=r23_1",
@@ -17309,6 +19903,13 @@ cc_object {
     cpp_std: "c++20",
     target: {
         android_arm: {
+            cflags: [
+                "-DANDROID",
+                "-DANDROID_NDK_VERSION_ROLL=r23_1",
+                "-DHAVE_SYS_UIO_H",
+            ],
+        },
+        android_arm64: {
             cflags: [
                 "-DANDROID",
                 "-DANDROID_NDK_VERSION_ROLL=r23_1",
@@ -17391,6 +19992,13 @@ cc_object {
                 "-DHAVE_SYS_UIO_H",
             ],
         },
+        android_arm64: {
+            cflags: [
+                "-DANDROID",
+                "-DANDROID_NDK_VERSION_ROLL=r23_1",
+                "-DHAVE_SYS_UIO_H",
+            ],
+        },
         android_x86: {
             cflags: [
                 "-DANDROID",
@@ -17455,6 +20063,13 @@ cc_object {
     cpp_std: "c++20",
     target: {
         android_arm: {
+            cflags: [
+                "-DANDROID",
+                "-DANDROID_NDK_VERSION_ROLL=r23_1",
+                "-DHAVE_SYS_UIO_H",
+            ],
+        },
+        android_arm64: {
             cflags: [
                 "-DANDROID",
                 "-DANDROID_NDK_VERSION_ROLL=r23_1",
@@ -17531,6 +20146,13 @@ cc_object {
                 "-DHAVE_SYS_UIO_H",
             ],
         },
+        android_arm64: {
+            cflags: [
+                "-DANDROID",
+                "-DANDROID_NDK_VERSION_ROLL=r23_1",
+                "-DHAVE_SYS_UIO_H",
+            ],
+        },
         android_x86: {
             cflags: [
                 "-DANDROID",
@@ -17595,6 +20217,13 @@ cc_object {
     cpp_std: "c++20",
     target: {
         android_arm: {
+            cflags: [
+                "-DANDROID",
+                "-DANDROID_NDK_VERSION_ROLL=r23_1",
+                "-DHAVE_SYS_UIO_H",
+            ],
+        },
+        android_arm64: {
             cflags: [
                 "-DANDROID",
                 "-DANDROID_NDK_VERSION_ROLL=r23_1",
@@ -17668,6 +20297,13 @@ cc_object {
                 "-DHAVE_SYS_UIO_H",
             ],
         },
+        android_arm64: {
+            cflags: [
+                "-DANDROID",
+                "-DANDROID_NDK_VERSION_ROLL=r23_1",
+                "-DHAVE_SYS_UIO_H",
+            ],
+        },
         android_x86: {
             cflags: [
                 "-DANDROID",
@@ -17735,6 +20371,13 @@ cc_object {
                 "-DHAVE_SYS_UIO_H",
             ],
         },
+        android_arm64: {
+            cflags: [
+                "-DANDROID",
+                "-DANDROID_NDK_VERSION_ROLL=r23_1",
+                "-DHAVE_SYS_UIO_H",
+            ],
+        },
         android_x86: {
             cflags: [
                 "-DANDROID",
@@ -17796,6 +20439,13 @@ cc_object {
     cpp_std: "c++20",
     target: {
         android_arm: {
+            cflags: [
+                "-DANDROID",
+                "-DANDROID_NDK_VERSION_ROLL=r23_1",
+                "-DHAVE_SYS_UIO_H",
+            ],
+        },
+        android_arm64: {
             cflags: [
                 "-DANDROID",
                 "-DANDROID_NDK_VERSION_ROLL=r23_1",
@@ -17874,6 +20524,13 @@ cc_object {
                 "-DHAVE_SYS_UIO_H",
             ],
         },
+        android_arm64: {
+            cflags: [
+                "-DANDROID",
+                "-DANDROID_NDK_VERSION_ROLL=r23_1",
+                "-DHAVE_SYS_UIO_H",
+            ],
+        },
         android_x86: {
             cflags: [
                 "-DANDROID",
@@ -17935,6 +20592,13 @@ cc_object {
     cpp_std: "c++20",
     target: {
         android_arm: {
+            cflags: [
+                "-DANDROID",
+                "-DANDROID_NDK_VERSION_ROLL=r23_1",
+                "-DHAVE_SYS_UIO_H",
+            ],
+        },
+        android_arm64: {
             cflags: [
                 "-DANDROID",
                 "-DANDROID_NDK_VERSION_ROLL=r23_1",
@@ -18010,6 +20674,13 @@ cc_object {
     cpp_std: "c++20",
     target: {
         android_arm: {
+            cflags: [
+                "-DANDROID",
+                "-DANDROID_NDK_VERSION_ROLL=r23_1",
+                "-DHAVE_SYS_UIO_H",
+            ],
+        },
+        android_arm64: {
             cflags: [
                 "-DANDROID",
                 "-DANDROID_NDK_VERSION_ROLL=r23_1",
@@ -18099,6 +20770,13 @@ cc_object {
                 "-DHAVE_SYS_UIO_H",
             ],
         },
+        android_arm64: {
+            cflags: [
+                "-DANDROID",
+                "-DANDROID_NDK_VERSION_ROLL=r23_1",
+                "-DHAVE_SYS_UIO_H",
+            ],
+        },
         android_x86: {
             cflags: [
                 "-DANDROID",
@@ -18169,6 +20847,13 @@ cc_object {
                 "-DHAVE_SYS_UIO_H",
             ],
         },
+        android_arm64: {
+            cflags: [
+                "-DANDROID",
+                "-DANDROID_NDK_VERSION_ROLL=r23_1",
+                "-DHAVE_SYS_UIO_H",
+            ],
+        },
         android_x86: {
             cflags: [
                 "-DANDROID",
@@ -18230,6 +20915,13 @@ cc_object {
     cpp_std: "c++20",
     target: {
         android_arm: {
+            cflags: [
+                "-DANDROID",
+                "-DANDROID_NDK_VERSION_ROLL=r23_1",
+                "-DHAVE_SYS_UIO_H",
+            ],
+        },
+        android_arm64: {
             cflags: [
                 "-DANDROID",
                 "-DANDROID_NDK_VERSION_ROLL=r23_1",
@@ -18312,6 +21004,13 @@ cc_object {
                 "-DHAVE_SYS_UIO_H",
             ],
         },
+        android_arm64: {
+            cflags: [
+                "-DANDROID",
+                "-DANDROID_NDK_VERSION_ROLL=r23_1",
+                "-DHAVE_SYS_UIO_H",
+            ],
+        },
         android_x86: {
             cflags: [
                 "-DANDROID",
@@ -18376,6 +21075,13 @@ cc_object {
     cpp_std: "c++20",
     target: {
         android_arm: {
+            cflags: [
+                "-DANDROID",
+                "-DANDROID_NDK_VERSION_ROLL=r23_1",
+                "-DHAVE_SYS_UIO_H",
+            ],
+        },
+        android_arm64: {
             cflags: [
                 "-DANDROID",
                 "-DANDROID_NDK_VERSION_ROLL=r23_1",
@@ -18460,6 +21166,13 @@ cc_object {
                 "-DHAVE_SYS_UIO_H",
             ],
         },
+        android_arm64: {
+            cflags: [
+                "-DANDROID",
+                "-DANDROID_NDK_VERSION_ROLL=r23_1",
+                "-DHAVE_SYS_UIO_H",
+            ],
+        },
         android_x86: {
             cflags: [
                 "-DANDROID",
@@ -18528,6 +21241,13 @@ cc_object {
     cpp_std: "c++20",
     target: {
         android_arm: {
+            cflags: [
+                "-DANDROID",
+                "-DANDROID_NDK_VERSION_ROLL=r23_1",
+                "-DHAVE_SYS_UIO_H",
+            ],
+        },
+        android_arm64: {
             cflags: [
                 "-DANDROID",
                 "-DANDROID_NDK_VERSION_ROLL=r23_1",
@@ -18604,6 +21324,13 @@ cc_object {
                 "-DHAVE_SYS_UIO_H",
             ],
         },
+        android_arm64: {
+            cflags: [
+                "-DANDROID",
+                "-DANDROID_NDK_VERSION_ROLL=r23_1",
+                "-DHAVE_SYS_UIO_H",
+            ],
+        },
         android_x86: {
             cflags: [
                 "-DANDROID",
@@ -18668,6 +21395,13 @@ cc_object {
     cpp_std: "c++20",
     target: {
         android_arm: {
+            cflags: [
+                "-DANDROID",
+                "-DANDROID_NDK_VERSION_ROLL=r23_1",
+                "-DHAVE_SYS_UIO_H",
+            ],
+        },
+        android_arm64: {
             cflags: [
                 "-DANDROID",
                 "-DANDROID_NDK_VERSION_ROLL=r23_1",
@@ -18741,6 +21475,13 @@ cc_object {
                 "-DHAVE_SYS_UIO_H",
             ],
         },
+        android_arm64: {
+            cflags: [
+                "-DANDROID",
+                "-DANDROID_NDK_VERSION_ROLL=r23_1",
+                "-DHAVE_SYS_UIO_H",
+            ],
+        },
         android_x86: {
             cflags: [
                 "-DANDROID",
@@ -18802,6 +21543,13 @@ cc_object {
     cpp_std: "c++20",
     target: {
         android_arm: {
+            cflags: [
+                "-DANDROID",
+                "-DANDROID_NDK_VERSION_ROLL=r23_1",
+                "-DHAVE_SYS_UIO_H",
+            ],
+        },
+        android_arm64: {
             cflags: [
                 "-DANDROID",
                 "-DANDROID_NDK_VERSION_ROLL=r23_1",
@@ -18875,6 +21623,13 @@ cc_object {
                 "-DHAVE_SYS_UIO_H",
             ],
         },
+        android_arm64: {
+            cflags: [
+                "-DANDROID",
+                "-DANDROID_NDK_VERSION_ROLL=r23_1",
+                "-DHAVE_SYS_UIO_H",
+            ],
+        },
         android_x86: {
             cflags: [
                 "-DANDROID",
@@ -18942,6 +21697,13 @@ cc_object {
                 "-DHAVE_SYS_UIO_H",
             ],
         },
+        android_arm64: {
+            cflags: [
+                "-DANDROID",
+                "-DANDROID_NDK_VERSION_ROLL=r23_1",
+                "-DHAVE_SYS_UIO_H",
+            ],
+        },
         android_x86: {
             cflags: [
                 "-DANDROID",
@@ -19003,6 +21765,13 @@ cc_object {
     cpp_std: "c++20",
     target: {
         android_arm: {
+            cflags: [
+                "-DANDROID",
+                "-DANDROID_NDK_VERSION_ROLL=r23_1",
+                "-DHAVE_SYS_UIO_H",
+            ],
+        },
+        android_arm64: {
             cflags: [
                 "-DANDROID",
                 "-DANDROID_NDK_VERSION_ROLL=r23_1",
@@ -19441,6 +22210,13 @@ cc_library_static {
                 "-DHAVE_SYS_UIO_H",
             ],
         },
+        android_arm64: {
+            cflags: [
+                "-DANDROID",
+                "-DANDROID_NDK_VERSION_ROLL=r23_1",
+                "-DHAVE_SYS_UIO_H",
+            ],
+        },
         android_x86: {
             cflags: [
                 "-DANDROID",
@@ -19517,6 +22293,28 @@ cc_object {
                 "third_party/boringssl/linux-arm/crypto/test/trampoline-armv4.S",
                 "third_party/boringssl/src/crypto/curve25519/asm/x25519-asm-arm.S",
                 "third_party/boringssl/src/crypto/poly1305/poly1305_arm_asm.S",
+            ],
+            cflags: [
+                "-DANDROID",
+                "-DANDROID_NDK_VERSION_ROLL=r23_1",
+                "-DHAVE_SYS_UIO_H",
+            ],
+        },
+        android_arm64: {
+            srcs: [
+                "third_party/boringssl/linux-aarch64/crypto/chacha/chacha-armv8.S",
+                "third_party/boringssl/linux-aarch64/crypto/cipher_extra/chacha20_poly1305_armv8.S",
+                "third_party/boringssl/linux-aarch64/crypto/fipsmodule/aesv8-armx64.S",
+                "third_party/boringssl/linux-aarch64/crypto/fipsmodule/armv8-mont.S",
+                "third_party/boringssl/linux-aarch64/crypto/fipsmodule/ghash-neon-armv8.S",
+                "third_party/boringssl/linux-aarch64/crypto/fipsmodule/ghashv8-armx64.S",
+                "third_party/boringssl/linux-aarch64/crypto/fipsmodule/p256-armv8-asm.S",
+                "third_party/boringssl/linux-aarch64/crypto/fipsmodule/p256_beeu-armv8-asm.S",
+                "third_party/boringssl/linux-aarch64/crypto/fipsmodule/sha1-armv8.S",
+                "third_party/boringssl/linux-aarch64/crypto/fipsmodule/sha256-armv8.S",
+                "third_party/boringssl/linux-aarch64/crypto/fipsmodule/sha512-armv8.S",
+                "third_party/boringssl/linux-aarch64/crypto/fipsmodule/vpaes-armv8.S",
+                "third_party/boringssl/linux-aarch64/crypto/test/trampoline-armv8.S",
             ],
             cflags: [
                 "-DANDROID",
@@ -19644,6 +22442,13 @@ cc_object {
     cpp_std: "c++20",
     target: {
         android_arm: {
+            cflags: [
+                "-DANDROID",
+                "-DANDROID_NDK_VERSION_ROLL=r23_1",
+                "-DHAVE_SYS_UIO_H",
+            ],
+        },
+        android_arm64: {
             cflags: [
                 "-DANDROID",
                 "-DANDROID_NDK_VERSION_ROLL=r23_1",
@@ -20124,6 +22929,13 @@ cc_library_static {
                 "-DHAVE_SYS_UIO_H",
             ],
         },
+        android_arm64: {
+            cflags: [
+                "-DANDROID",
+                "-DANDROID_NDK_VERSION_ROLL=r23_1",
+                "-DHAVE_SYS_UIO_H",
+            ],
+        },
         android_x86: {
             cflags: [
                 "-DANDROID",
@@ -20406,6 +23218,13 @@ cc_library_static {
                 "-DHAVE_SYS_UIO_H",
             ],
         },
+        android_arm64: {
+            cflags: [
+                "-DANDROID",
+                "-DANDROID_NDK_VERSION_ROLL=r23_1",
+                "-DHAVE_SYS_UIO_H",
+            ],
+        },
         android_x86: {
             cflags: [
                 "-DANDROID",
@@ -20467,6 +23286,13 @@ cc_object {
     cpp_std: "c++20",
     target: {
         android_arm: {
+            cflags: [
+                "-DANDROID",
+                "-DANDROID_NDK_VERSION_ROLL=r23_1",
+                "-DHAVE_SYS_UIO_H",
+            ],
+        },
+        android_arm64: {
             cflags: [
                 "-DANDROID",
                 "-DANDROID_NDK_VERSION_ROLL=r23_1",
@@ -20549,6 +23375,16 @@ cc_library_static {
     cpp_std: "c++20",
     target: {
         android_arm: {
+            cflags: [
+                "-DANDROID",
+                "-DANDROID_NDK_VERSION_ROLL=r23_1",
+                "-DHAVE_SYS_UIO_H",
+            ],
+            local_include_dirs: [
+                "third_party/libevent/android/",
+            ],
+        },
+        android_arm64: {
             cflags: [
                 "-DANDROID",
                 "-DANDROID_NDK_VERSION_ROLL=r23_1",
@@ -20770,6 +23606,13 @@ cc_library_static {
     cpp_std: "c++20",
     target: {
         android_arm: {
+            cflags: [
+                "-DANDROID",
+                "-DANDROID_NDK_VERSION_ROLL=r23_1",
+                "-DHAVE_SYS_UIO_H",
+            ],
+        },
+        android_arm64: {
             cflags: [
                 "-DANDROID",
                 "-DANDROID_NDK_VERSION_ROLL=r23_1",
@@ -21277,6 +24120,26 @@ cc_library_static {
                 "third_party/android_ndk/sources/android/cpufeatures/",
             ],
         },
+        android_arm64: {
+            srcs: [
+                ":cronet_aml_third_party_android_ndk_cpu_features",
+                ":cronet_aml_third_party_zlib_zlib_arm_crc32",
+            ],
+            cflags: [
+                "-DADLER32_SIMD_NEON",
+                "-DANDROID",
+                "-DANDROID_NDK_VERSION_ROLL=r23_1",
+                "-DARMV8_OS_ANDROID",
+                "-DCRC32_ARMV8_CRC32",
+                "-DDEFLATE_SLIDE_HASH_NEON",
+                "-DHAVE_SYS_UIO_H",
+                "-DINFLATE_CHUNK_READ_64LE",
+                "-DINFLATE_CHUNK_SIMD_NEON",
+            ],
+            local_include_dirs: [
+                "third_party/android_ndk/sources/android/cpufeatures/",
+            ],
+        },
         android_x86: {
             srcs: [
                 ":cronet_aml_third_party_android_ndk_cpu_features",
@@ -21377,6 +24240,14 @@ cc_object {
     cpp_std: "c++20",
     target: {
         android_arm: {
+            cflags: [
+                "-DADLER32_SIMD_NEON",
+                "-DANDROID",
+                "-DANDROID_NDK_VERSION_ROLL=r23_1",
+                "-DHAVE_SYS_UIO_H",
+            ],
+        },
+        android_arm64: {
             cflags: [
                 "-DADLER32_SIMD_NEON",
                 "-DANDROID",
@@ -21494,6 +24365,13 @@ cc_object {
     cpp_std: "c++20",
     target: {
         android_arm: {
+            cflags: [
+                "-DANDROID",
+                "-DANDROID_NDK_VERSION_ROLL=r23_1",
+                "-DHAVE_SYS_UIO_H",
+            ],
+        },
+        android_arm64: {
             cflags: [
                 "-DANDROID",
                 "-DANDROID_NDK_VERSION_ROLL=r23_1",
@@ -21640,6 +24518,15 @@ cc_object {
                 "-DINFLATE_CHUNK_SIMD_NEON",
             ],
         },
+        android_arm64: {
+            cflags: [
+                "-DANDROID",
+                "-DANDROID_NDK_VERSION_ROLL=r23_1",
+                "-DHAVE_SYS_UIO_H",
+                "-DINFLATE_CHUNK_READ_64LE",
+                "-DINFLATE_CHUNK_SIMD_NEON",
+            ],
+        },
         android_x86: {
             cflags: [
                 "-DANDROID",
@@ -21715,6 +24602,14 @@ cc_object {
                 "-DHAVE_SYS_UIO_H",
             ],
         },
+        android_arm64: {
+            cflags: [
+                "-DANDROID",
+                "-DANDROID_NDK_VERSION_ROLL=r23_1",
+                "-DDEFLATE_SLIDE_HASH_NEON",
+                "-DHAVE_SYS_UIO_H",
+            ],
+        },
         android_x86: {
             cflags: [
                 "-DANDROID",
@@ -21752,6 +24647,26 @@ cc_object {
 // GN: //url:buildflags__android_arm
 genrule {
     name: "cronet_aml_url_buildflags__android_arm",
+    cmd: "echo '--flags USE_PLATFORM_ICU_ALTERNATIVES=\"true\"' | " +
+         "$(location build/write_buildflag_header.py) --output " +
+         "$(out) " +
+         "--rulename " +
+         "//url:buildflags " +
+         "--gen-dir " +
+         ". " +
+         "--definitions " +
+         "/dev/stdin",
+    out: [
+        "url/buildflags.h",
+    ],
+    tool_files: [
+        "build/write_buildflag_header.py",
+    ],
+}
+
+// GN: //url:buildflags__android_arm64
+genrule {
+    name: "cronet_aml_url_buildflags__android_arm64",
     cmd: "echo '--flags USE_PLATFORM_ICU_ALTERNATIVES=\"true\"' | " +
          "$(location build/write_buildflag_header.py) --output " +
          "$(out) " +
@@ -21899,6 +24814,22 @@ cc_library_static {
                 "cronet_aml_url_url_jni_headers__android_arm",
             ],
         },
+        android_arm64: {
+            generated_headers: [
+                "cronet_aml_base_debugging_buildflags__android_arm64",
+                "cronet_aml_base_logging_buildflags__android_arm64",
+                "cronet_aml_build_chromeos_buildflags__android_arm64",
+                "cronet_aml_url_buildflags__android_arm64",
+                "cronet_aml_url_url_jni_headers__android_arm64",
+            ],
+            export_generated_headers: [
+                "cronet_aml_base_debugging_buildflags__android_arm64",
+                "cronet_aml_base_logging_buildflags__android_arm64",
+                "cronet_aml_build_chromeos_buildflags__android_arm64",
+                "cronet_aml_url_buildflags__android_arm64",
+                "cronet_aml_url_url_jni_headers__android_arm64",
+            ],
+        },
         android_x86: {
             cflags: [
                 "-msse3",
@@ -21943,6 +24874,43 @@ cc_library_static {
 // GN: //url:url_jni_headers__android_arm
 genrule {
     name: "cronet_aml_url_url_jni_headers__android_arm",
+    srcs: [
+        "url/android/java/src/org/chromium/url/IDNStringUtil.java",
+        "url/android/java/src/org/chromium/url/Origin.java",
+    ],
+    cmd: "$(location base/android/jni_generator/jni_generator.py) --ptr_type " +
+         "long " +
+         " " +
+         " " +
+         "--output_dir " +
+         "$(genDir)/url/url_jni_headers " +
+         "--includes " +
+         "base/android/jni_generator/jni_generator_helper.h " +
+         "--use_proxy_hash " +
+         "--output_name " +
+         "IDNStringUtil_jni.h " +
+         "--output_name " +
+         "Origin_jni.h " +
+         "--input_file " +
+         "$(location url/android/java/src/org/chromium/url/IDNStringUtil.java) " +
+         "--input_file " +
+         "$(location url/android/java/src/org/chromium/url/Origin.java)",
+    out: [
+        "url/url_jni_headers/IDNStringUtil_jni.h",
+        "url/url_jni_headers/Origin_jni.h",
+    ],
+    tool_files: [
+        "base/android/jni_generator/android_jar.classes",
+        "base/android/jni_generator/jni_generator.py",
+        "build/android/gyp/util/__init__.py",
+        "build/android/gyp/util/build_utils.py",
+        "build/gn_helpers.py",
+    ],
+}
+
+// GN: //url:url_jni_headers__android_arm64
+genrule {
+    name: "cronet_aml_url_url_jni_headers__android_arm64",
     srcs: [
         "url/android/java/src/org/chromium/url/IDNStringUtil.java",
         "url/android/java/src/org/chromium/url/Origin.java",
