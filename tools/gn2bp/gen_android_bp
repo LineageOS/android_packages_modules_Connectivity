@@ -113,6 +113,10 @@ cflag_allowlist = [
   "-mpclmul",
   # needed for zlib:zlib
   "-mssse3",
+  # needed for zlib:zlib
+  "-msse3",
+  # needed for zlib:zlib
+  "-msse4.2",
 ]
 
 # Additional arguments to apply to Android.bp rules.
@@ -388,6 +392,20 @@ class Module(object):
   def is_compiled(self):
     return self.type not in ('genrule', 'filegroup', 'cc_defaults')
 
+  def has_input_files(self):
+    for target in self.target.values():
+      if len(target.srcs) > 0:
+        return True
+    return len(self.srcs) > 0 or any([len(target.srcs) > 0 for target in self.target.values()])
+
+  def merge_key(self, parent_key, dep_module, archs_allowed, child_key = None):
+    if not child_key:
+      child_key = parent_key
+    self.__dict__[parent_key].update(dep_module.__dict__[child_key])
+    for arch_name, arch in dep_module.target.items():
+      if arch_name in archs_allowed:
+        self.target[arch_name].__dict__[parent_key].update(
+            dep_module.target[arch_name].__dict__[child_key])
 
 class Blueprint(object):
   """In-memory representation of an Android.bp file."""
@@ -838,7 +856,7 @@ def create_modules_from_target(blueprint, gn, gn_target_name):
   elif target.type == 'shared_library':
     module = Module('cc_library_shared', bp_module_name, gn_target_name)
   elif target.type == 'source_set':
-    module = Module('cc_defaults', bp_module_name, gn_target_name)
+    module = Module('cc_object', bp_module_name, gn_target_name)
   elif target.type == 'group':
     # "group" targets are resolved recursively by gn_utils.get_target().
     # There's nothing we need to do at this level for them.
@@ -885,6 +903,12 @@ def create_modules_from_target(blueprint, gn, gn_target_name):
     # TODO: set_module_xxx is confusing, apply similar function to module and target in better way.
     for arch_name, arch in target.arch.items():
       set_module_flags(module.target[arch_name], arch.cflags, arch.defines)
+      # -Xclang -target-feature -Xclang +mte are used to enable MTE (Memory Tagging Extensions).
+      # Flags which does not start with '-' could not be in the cflags so enabling MTE by
+      # -march and -mcpu Feature Modifiers. MTE is only available on arm64. This is needed for
+      # building //base/allocator/partition_allocator:partition_alloc for arm64.
+      if '+mte' in arch.cflags and arch_name == 'android_arm64':
+        module.target[arch_name].cflags.add('-march=armv8-a+memtag')
       set_module_include_dirs(module.target[arch_name], arch.cflags, arch.include_dirs)
 
   if module.is_compiled():
@@ -923,6 +947,8 @@ def create_modules_from_target(blueprint, gn, gn_target_name):
 
     dep_module = create_modules_from_target(blueprint, gn, dep_name)
 
+    if dep_module is None:
+      continue
     # TODO: Proper dependency check for genrule.
     # Currently, only propagating genrule dependencies.
     # Also, currently, all the dependencies are propagated upwards.
@@ -935,19 +961,23 @@ def create_modules_from_target(blueprint, gn, gn_target_name):
         module.genrule_headers.add(dep_module.name)
         module.genrule_headers.update(dep_module.genrule_headers)
 
-    # For cc_defaults, filegroups, and genrule, recurse but don't apply the
+    # For filegroups, and genrule, recurse but don't apply the
     # deps.
     if not module.is_compiled():
-      continue
-
-    if dep_module is None:
       continue
     if dep_module.type == 'cc_library_shared':
       module.shared_libs.add(dep_module.name)
     elif dep_module.type == 'cc_library_static':
       module.static_libs.add(dep_module.name)
-    elif dep_module.type == 'cc_defaults':
-      module.defaults.append(dep_module.name)
+    elif dep_module.type == 'cc_object':
+      module.merge_key('generated_headers', dep_module, target.arch.keys())
+      if module.type != 'cc_object':
+        if dep_module.has_input_files():
+          # Only add it as part of srcs if the dep_module has input files otherwise
+          # this would throw an error.
+          module.srcs.add(":" + dep_module.name)
+        module.merge_key('export_generated_headers', dep_module,
+                         target.arch.keys(), 'generated_headers')
     elif dep_module.type == 'genrule':
       for arch_name, arch in target.arch.items():
         if dep_module.name.endswith(arch_name):
@@ -955,7 +985,8 @@ def create_modules_from_target(blueprint, gn, gn_target_name):
       if dep_module.name.endswith("_gen"):
         module.srcs.update(dep_module.genrule_srcs)
         module.generated_headers.update(dep_module.genrule_headers)
-        module.export_generated_headers.update(dep_module.genrule_headers)
+        if module.type != "cc_object":
+          module.export_generated_headers.update(dep_module.genrule_headers)
     elif dep_module.type == 'cc_binary':
       continue  # Ignore executables deps (used by cmdline integration tests).
     else:
@@ -972,7 +1003,19 @@ def create_modules_from_target(blueprint, gn, gn_target_name):
       else:
         raise Error('Unsupported arch-specific dependency %s of target %s with type %s' %
                     (dep_module.name, target.name, dep_module.type))
-
+    for dep_name in arch.source_set_deps:
+      dep_module = create_modules_from_target(blueprint, gn, dep_name)
+      if dep_module.type == 'cc_object':
+        if module.type != 'cc_object':
+          # We only want to bubble up cc_objects for modules that are not cc_objects
+          # otherwise they'd be recompiled and that would cause multiple symbol redefinitions.
+          if dep_module.has_input_files():
+            # Only add it as part of srcs if the dep_module has input files otherwise
+            # this would throw an error.
+            module.target[arch_name].srcs.add(":" + dep_module.name)
+      else:
+        raise Error('Unsupported arch-specific dependency %s of target %s with type %s' %
+                    (dep_module.name, target.name, dep_module.type))
   return module
 
 def create_java_module(blueprint, gn):
@@ -1014,6 +1057,7 @@ def create_blueprint_for_targets(gn, targets):
       '-Wno-ambiguous-reversed-operator', # needed for icui18n
       '-Wno-unreachable-code-loop-increment', # needed for icui18n
       '-O2',
+      '-fPIC',
   ]
   # Chromium builds do not add a dependency for headers found inside the
   # sysroot, so they are added globally via defaults.
