@@ -20,6 +20,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -45,6 +46,7 @@ import java.util.concurrent.TimeUnit;
  * Allows us to cancel, block request or throw an exception from an arbitrary step.
  */
 public class TestUrlRequestCallback extends UrlRequest.Callback {
+    private static final int TIMEOUT_MS = 12_000;
     public ArrayList<UrlResponseInfo> mRedirectResponseInfoList = new ArrayList<>();
     public ArrayList<String> mRedirectUrlList = new ArrayList<>();
     public UrlResponseInfo mResponseInfo;
@@ -155,6 +157,17 @@ public class TestUrlRequestCallback extends UrlRequest.Callback {
         });
     }
 
+    private boolean isTerminalCallback(ResponseStep step) {
+        switch (step) {
+            case ON_SUCCEEDED:
+            case ON_CANCELED:
+            case ON_FAILED:
+                return true;
+            default:
+                return false;
+        }
+    }
+
     /**
      * Create a {@link TestUrlRequestCallback} with a new single-threaded executor.
      */
@@ -197,8 +210,26 @@ public class TestUrlRequestCallback extends UrlRequest.Callback {
         mFailureType = failureType;
     }
 
-    public void blockForDone() {
-        mDone.block();
+    /**
+     * Blocks the calling thread till callback execution is done
+     *
+     * @return true if the condition was opened, false if the call returns because of the timeout.
+     */
+    public boolean blockForDone() {
+        return mDone.block(TIMEOUT_MS);
+    }
+
+    /**
+     * Waits for a terminal callback to complete execution before failing if the callback
+     * is not the expected one
+     *
+     * @param expectedStep the expected callback step
+     */
+    public void expectCallback(ResponseStep expectedStep) {
+        if (isTerminalCallback(expectedStep)) {
+            assertTrue("Did not receive terminal callback before timeout", blockForDone());
+        }
+        assertSame(expectedStep, mResponseStep);
     }
 
     /**
