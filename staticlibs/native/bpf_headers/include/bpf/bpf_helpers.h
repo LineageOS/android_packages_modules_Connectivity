@@ -137,6 +137,14 @@ static int (*bpf_map_update_elem_unsafe)(const struct bpf_map_def* map, const vo
         BPF_FUNC_map_update_elem;
 static int (*bpf_map_delete_elem_unsafe)(const struct bpf_map_def* map,
                                          const void* key) = (void*)BPF_FUNC_map_delete_elem;
+static int (*bpf_ringbuf_output_unsafe)(const struct bpf_map_def* ringbuf,
+                                        const void* data, __u64 size, __u64 flags) = (void*)
+        BPF_FUNC_ringbuf_output;
+static void* (*bpf_ringbuf_reserve_unsafe)(const struct bpf_map_def* ringbuf,
+                                           __u64 size, __u64 flags) = (void*)
+        BPF_FUNC_ringbuf_reserve;
+static void (*bpf_ringbuf_submit_unsafe)(const void* data, __u64 flags) = (void*)
+        BPF_FUNC_ringbuf_submit;
 
 #define BPF_ANNOTATE_KV_PAIR(name, type_key, type_val)  \
         struct ____btf_map_##name {                     \
@@ -146,6 +154,50 @@ static int (*bpf_map_delete_elem_unsafe)(const struct bpf_map_def* map,
         struct ____btf_map_##name                       \
         __attribute__ ((section(".maps." #name), used)) \
                 ____btf_map_##name = { }
+
+#define DEFINE_BPF_MAP_BASE(the_map, TYPE, keysize, valuesize, num_entries, \
+                            usr, grp, md, selinux, pindir, share, minkver,  \
+                            maxkver)                                        \
+  const struct bpf_map_def SECTION("maps") the_map = {                      \
+      .type = BPF_MAP_TYPE_##TYPE,                                          \
+      .key_size = (keysize),                                                \
+      .value_size = (valuesize),                                            \
+      .max_entries = (num_entries),                                         \
+      .map_flags = 0,                                                       \
+      .uid = (usr),                                                         \
+      .gid = (grp),                                                         \
+      .mode = (md),                                                         \
+      .bpfloader_min_ver = DEFAULT_BPFLOADER_MIN_VER,                       \
+      .bpfloader_max_ver = DEFAULT_BPFLOADER_MAX_VER,                       \
+      .min_kver = (minkver),                                                \
+      .max_kver = (maxkver),                                                \
+      .selinux_context = (selinux),                                         \
+      .pin_subdir = (pindir),                                               \
+      .shared = (share),                                                    \
+  };
+
+// Type safe macro to declare a ring buffer and related output functions.
+// Compatibility:
+// * BPF ring buffers are only available kernels 5.8 and above. Any program
+//   accessing the ring buffer should set a program level min_kver >= 5.8.
+// * The definition below sets a map min_kver of 5.8 which requires targeting
+//   a BPFLOADER_MIN_VER >= BPFLOADER_S_VERSION.
+#define DEFINE_BPF_RINGBUF(the_map, ValueType, size_bytes, usr, grp, md, \
+                           selinux, pindir, share)                       \
+  DEFINE_BPF_MAP_BASE(the_map, RINGBUF, 0, 0, size_bytes, usr, grp, md,  \
+                      selinux, pindir, share, KVER(5, 8, 0), KVER_INF);  \
+  static inline __always_inline __unused int bpf_##the_map##_output(    \
+      const ValueType* v) {                                              \
+    return bpf_ringbuf_output_unsafe(&the_map, v, sizeof(*v), 0);        \
+  }                                                                      \
+  static inline __always_inline __unused                                 \
+      ValueType* bpf_##the_map##_reserve() {                             \
+    return bpf_ringbuf_reserve_unsafe(&the_map, sizeof(ValueType), 0);   \
+  }                                                                      \
+  static inline __always_inline __unused void bpf_##the_map##_submit(    \
+      const ValueType* v) {                                              \
+    bpf_ringbuf_submit_unsafe(v, 0);                                     \
+  }
 
 /* There exist buggy kernels with pre-T OS, that due to
  * kernel patch "[ALPS05162612] bpf: fix ubsan error"
@@ -167,23 +219,9 @@ static int (*bpf_map_delete_elem_unsafe)(const struct bpf_map_def* map,
 /* type safe macro to declare a map and related accessor functions */
 #define DEFINE_BPF_MAP_EXT(the_map, TYPE, KeyType, ValueType, num_entries, usr, grp, md,         \
                            selinux, pindir, share)                                               \
-    const struct bpf_map_def SECTION("maps") the_map = {                                         \
-            .type = BPF_MAP_TYPE_##TYPE,                                                         \
-            .key_size = sizeof(KeyType),                                                         \
-            .value_size = sizeof(ValueType),                                                     \
-            .max_entries = (num_entries),                                                        \
-            .map_flags = 0,                                                                      \
-            .uid = (usr),                                                                        \
-            .gid = (grp),                                                                        \
-            .mode = (md),                                                                        \
-            .bpfloader_min_ver = DEFAULT_BPFLOADER_MIN_VER,                                      \
-            .bpfloader_max_ver = DEFAULT_BPFLOADER_MAX_VER,                                      \
-            .min_kver = KVER_NONE,                                                               \
-            .max_kver = KVER_INF,                                                                \
-            .selinux_context = selinux,                                                          \
-            .pin_subdir = pindir,                                                                \
-            .shared = share,                                                                     \
-    };                                                                                           \
+  DEFINE_BPF_MAP_BASE(the_map, TYPE, sizeof(KeyType), sizeof(ValueType),                         \
+                      num_entries, usr, grp, md, selinux, pindir, share,                         \
+                      KVER_NONE, KVER_INF);                                                      \
     BPF_MAP_ASSERT_OK(BPF_MAP_TYPE_##TYPE, (num_entries), (md));                                 \
     BPF_ANNOTATE_KV_PAIR(the_map, KeyType, ValueType);                                           \
                                                                                                  \
