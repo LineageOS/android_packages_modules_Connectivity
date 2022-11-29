@@ -103,6 +103,7 @@ public class NearbyManager {
         mService = service;
     }
 
+    @Nullable
     private static NearbyDevice toClientNearbyDevice(
             NearbyDeviceParcelable nearbyDeviceParcelable,
             @ScanRequest.ScanType int scanType) {
@@ -332,9 +333,9 @@ public class NearbyManager {
         public void onDiscovered(NearbyDeviceParcelable nearbyDeviceParcelable)
                 throws RemoteException {
             mExecutor.execute(() -> {
-                if (mScanCallback != null) {
-                    mScanCallback.onDiscovered(
-                            toClientNearbyDevice(nearbyDeviceParcelable, mScanType));
+                NearbyDevice nearbyDevice = toClientNearbyDevice(nearbyDeviceParcelable, mScanType);
+                if (mScanCallback != null && nearbyDevice != null) {
+                    mScanCallback.onDiscovered(nearbyDevice);
                 }
             });
         }
@@ -343,7 +344,8 @@ public class NearbyManager {
         public void onUpdated(NearbyDeviceParcelable nearbyDeviceParcelable)
                 throws RemoteException {
             mExecutor.execute(() -> {
-                if (mScanCallback != null) {
+                NearbyDevice nearbyDevice = toClientNearbyDevice(nearbyDeviceParcelable, mScanType);
+                if (mScanCallback != null && nearbyDevice != null) {
                     mScanCallback.onUpdated(
                             toClientNearbyDevice(nearbyDeviceParcelable, mScanType));
                 }
@@ -353,7 +355,8 @@ public class NearbyManager {
         @Override
         public void onLost(NearbyDeviceParcelable nearbyDeviceParcelable) throws RemoteException {
             mExecutor.execute(() -> {
-                if (mScanCallback != null) {
+                NearbyDevice nearbyDevice = toClientNearbyDevice(nearbyDeviceParcelable, mScanType);
+                if (mScanCallback != null && nearbyDevice != null) {
                     mScanCallback.onLost(
                             toClientNearbyDevice(nearbyDeviceParcelable, mScanType));
                 }
