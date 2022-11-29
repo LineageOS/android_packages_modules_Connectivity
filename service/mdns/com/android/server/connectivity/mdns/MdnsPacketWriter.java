@@ -29,7 +29,7 @@ import java.util.Map;
 public class MdnsPacketWriter {
     private static final int MDNS_POINTER_MASK = 0xC000;
     private final byte[] data;
-    private final Map<Integer, String[]> labelDictionary;
+    private final Map<Integer, String[]> labelDictionary = new HashMap<>();
     private int pos = 0;
     private int savedWritePos = -1;
 
@@ -44,7 +44,15 @@ public class MdnsPacketWriter {
         }
 
         data = new byte[maxSize];
-        labelDictionary = new HashMap<>();
+    }
+
+    /**
+     * Constructs a writer for a new packet.
+     *
+     * @param buffer The buffer to write to.
+     */
+    public MdnsPacketWriter(byte[] buffer) {
+        data = buffer;
     }
 
     /** Returns the current write position. */
