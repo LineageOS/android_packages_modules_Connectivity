@@ -94,7 +94,7 @@ public final class BleDiscoveryProviderTest {
         mBleDiscoveryProvider.getController().setProviderScanFilters(filterList);
         mBleDiscoveryProvider.onStart();
         mBleDiscoveryProvider.onStop();
-        assertThat(mBleDiscoveryProvider.mScanFilters).isEmpty();
+        assertThat(mBleDiscoveryProvider.getFiltersLocked()).isNull();
     }
 
     @Test
