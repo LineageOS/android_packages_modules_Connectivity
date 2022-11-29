@@ -2331,7 +2331,7 @@ cc_library_static {
 }
 
 // GN: //base:base_android_java_enums_srcjar
-cc_genrule {
+java_genrule {
     name: "cronet_aml_base_base_android_java_enums_srcjar",
     cmd: "$(location build/android/gyp/java_cpp_enum.py) --srcjar " +
          "gen/base/base_android_java_enums_srcjar.srcjar " +
@@ -2357,13 +2357,10 @@ cc_genrule {
         "base/task/task_traits.h",
         "build/android/gyp/java_cpp_enum.py",
     ],
-    apex_available: [
-        "com.android.tethering",
-    ],
 }
 
 // GN: //base:base_java_aidl
-cc_genrule {
+java_genrule {
     name: "cronet_aml_base_base_java_aidl",
     cmd: "$(location build/android/gyp/aidl.py) --aidl-path " +
          "../../third_party/android_sdk/public/build-tools/33.0.0/aidl " +
@@ -2384,9 +2381,6 @@ cc_genrule {
         "base/android/java/src/org/chromium/base/process_launcher/IChildProcessService.aidl",
         "base/android/java/src/org/chromium/base/process_launcher/IParentProcess.aidl",
         "build/android/gyp/aidl.py",
-    ],
-    apex_available: [
-        "com.android.tethering",
     ],
 }
 
@@ -4229,7 +4223,7 @@ cc_genrule {
 }
 
 // GN: //base:java_features_srcjar
-cc_genrule {
+java_genrule {
     name: "cronet_aml_base_java_features_srcjar",
     srcs: [
         "base/android/base_features.cc",
@@ -4250,13 +4244,10 @@ cc_genrule {
         "base/android/java/src/org/chromium/base/BaseFeatures.java.tmpl",
         "build/android/gyp/java_cpp_features.py",
     ],
-    apex_available: [
-        "com.android.tethering",
-    ],
 }
 
 // GN: //base:java_switches_srcjar
-cc_genrule {
+java_genrule {
     name: "cronet_aml_base_java_switches_srcjar",
     srcs: [
         "base/base_switches.cc",
@@ -4272,9 +4263,6 @@ cc_genrule {
     tool_files: [
         "base/android/java/src/org/chromium/base/BaseSwitches.java.tmpl",
         "build/android/gyp/java_cpp_strings.py",
-    ],
-    apex_available: [
-        "com.android.tethering",
     ],
 }
 
@@ -5696,7 +5684,7 @@ cc_genrule {
 }
 
 // GN: //build/android:build_config_gen
-cc_genrule {
+java_genrule {
     name: "cronet_aml_build_android_build_config_gen",
     cmd: "$(location build/android/gyp/gcc_preprocess.py) --include-dirs " +
          "["../../", "gen"] " +
@@ -5712,13 +5700,10 @@ cc_genrule {
         "build/android/gyp/gcc_preprocess.py",
         "build/android/java/templates/BuildConfig.template",
     ],
-    apex_available: [
-        "com.android.tethering",
-    ],
 }
 
 // GN: //build/android:native_libraries_gen
-cc_genrule {
+java_genrule {
     name: "cronet_aml_build_android_native_libraries_gen",
     cmd: "$(location build/android/gyp/write_native_libraries_java.py) --output " +
          "gen/build/android/native_libraries_gen.srcjar " +
@@ -5732,9 +5717,6 @@ cc_genrule {
         "build/android/gyp/util/build_utils.py",
         "build/android/gyp/write_native_libraries_java.py",
         "build/gn_helpers.py",
-    ],
-    apex_available: [
-        "com.android.tethering",
     ],
 }
 
@@ -7532,7 +7514,7 @@ cc_object {
 }
 
 // GN: //components/cronet/android:http_cache_type_java
-cc_genrule {
+java_genrule {
     name: "cronet_aml_components_cronet_android_http_cache_type_java",
     cmd: "$(location build/android/gyp/java_cpp_enum.py) --srcjar " +
          "gen/components/cronet/android/http_cache_type_java.srcjar " +
@@ -7544,13 +7526,10 @@ cc_genrule {
         "build/android/gyp/java_cpp_enum.py",
         "components/cronet/url_request_context_config.h",
     ],
-    apex_available: [
-        "com.android.tethering",
-    ],
 }
 
 // GN: //components/cronet/android:implementation_api_version
-cc_genrule {
+java_genrule {
     name: "cronet_aml_components_cronet_android_implementation_api_version",
     cmd: "$(location build/util/version.py) -f " +
          "$(location chrome/VERSION) " +
@@ -7571,13 +7550,10 @@ cc_genrule {
         "chrome/VERSION",
         "components/cronet/android/java/src/org/chromium/net/impl/ImplVersion.template",
     ],
-    apex_available: [
-        "com.android.tethering",
-    ],
 }
 
 // GN: //components/cronet/android:integrated_mode_state
-cc_genrule {
+java_genrule {
     name: "cronet_aml_components_cronet_android_integrated_mode_state",
     cmd: "$(location build/android/gyp/gcc_preprocess.py) --include-dirs " +
          "["../../", "gen"] " +
@@ -7591,13 +7567,10 @@ cc_genrule {
         "build/android/gyp/gcc_preprocess.py",
         "components/cronet/android/java/src/org/chromium/net/impl/IntegratedModeState.template",
     ],
-    apex_available: [
-        "com.android.tethering",
-    ],
 }
 
 // GN: //components/cronet/android:interface_api_version
-cc_genrule {
+java_genrule {
     name: "cronet_aml_components_cronet_android_interface_api_version",
     cmd: "$(location build/util/version.py) -f " +
          "$(location chrome/VERSION) " +
@@ -7618,13 +7591,10 @@ cc_genrule {
         "chrome/VERSION",
         "components/cronet/android/api/src/org/chromium/net/ApiVersion.template",
     ],
-    apex_available: [
-        "com.android.tethering",
-    ],
 }
 
 // GN: //components/cronet/android:load_states_list
-cc_genrule {
+java_genrule {
     name: "cronet_aml_components_cronet_android_load_states_list",
     cmd: "$(location build/android/gyp/gcc_preprocess.py) --include-dirs " +
          "["../../", "gen"] " +
@@ -7638,13 +7608,10 @@ cc_genrule {
         "build/android/gyp/gcc_preprocess.py",
         "components/cronet/android/java/src/org/chromium/net/impl/LoadState.template",
     ],
-    apex_available: [
-        "com.android.tethering",
-    ],
 }
 
 // GN: //components/cronet/android:net_idempotency_java
-cc_genrule {
+java_genrule {
     name: "cronet_aml_components_cronet_android_net_idempotency_java",
     cmd: "$(location build/android/gyp/java_cpp_enum.py) --srcjar " +
          "gen/components/cronet/android/net_idempotency_java.srcjar " +
@@ -7656,13 +7623,10 @@ cc_genrule {
         "build/android/gyp/java_cpp_enum.py",
         "net/base/idempotency.h",
     ],
-    apex_available: [
-        "com.android.tethering",
-    ],
 }
 
 // GN: //components/cronet/android:net_request_priority_java
-cc_genrule {
+java_genrule {
     name: "cronet_aml_components_cronet_android_net_request_priority_java",
     cmd: "$(location build/android/gyp/java_cpp_enum.py) --srcjar " +
          "gen/components/cronet/android/net_request_priority_java.srcjar " +
@@ -7674,13 +7638,10 @@ cc_genrule {
         "build/android/gyp/java_cpp_enum.py",
         "net/base/request_priority.h",
     ],
-    apex_available: [
-        "com.android.tethering",
-    ],
 }
 
 // GN: //components/cronet/android:network_quality_observation_source_java
-cc_genrule {
+java_genrule {
     name: "cronet_aml_components_cronet_android_network_quality_observation_source_java",
     cmd: "$(location build/android/gyp/java_cpp_enum.py) --srcjar " +
          "gen/components/cronet/android/network_quality_observation_source_java.srcjar " +
@@ -7692,13 +7653,10 @@ cc_genrule {
         "build/android/gyp/java_cpp_enum.py",
         "net/nqe/network_quality_observation_source.h",
     ],
-    apex_available: [
-        "com.android.tethering",
-    ],
 }
 
 // GN: //components/cronet/android:rtt_throughput_values_java
-cc_genrule {
+java_genrule {
     name: "cronet_aml_components_cronet_android_rtt_throughput_values_java",
     cmd: "$(location build/android/gyp/java_cpp_enum.py) --srcjar " +
          "gen/components/cronet/android/rtt_throughput_values_java.srcjar " +
@@ -7710,13 +7668,10 @@ cc_genrule {
         "build/android/gyp/java_cpp_enum.py",
         "net/nqe/network_quality.h",
     ],
-    apex_available: [
-        "com.android.tethering",
-    ],
 }
 
 // GN: //components/cronet/android:url_request_error_java
-cc_genrule {
+java_genrule {
     name: "cronet_aml_components_cronet_android_url_request_error_java",
     cmd: "$(location build/android/gyp/java_cpp_enum.py) --srcjar " +
          "gen/components/cronet/android/url_request_error_java.srcjar " +
@@ -7727,9 +7682,6 @@ cc_genrule {
     tool_files: [
         "build/android/gyp/java_cpp_enum.py",
         "components/cronet/android/url_request_error.h",
-    ],
-    apex_available: [
-        "com.android.tethering",
     ],
 }
 
@@ -9488,7 +9440,7 @@ java_library {
 }
 
 // GN: //net/android:net_android_java_enums_srcjar
-cc_genrule {
+java_genrule {
     name: "cronet_aml_net_android_net_android_java_enums_srcjar",
     srcs: [
         "net/android/network_change_notifier_android.cc",
@@ -9512,13 +9464,10 @@ cc_genrule {
         "net/android/keystore.h",
         "net/base/network_change_notifier.h",
     ],
-    apex_available: [
-        "com.android.tethering",
-    ],
 }
 
 // GN: //net/android:net_errors_java
-cc_genrule {
+java_genrule {
     name: "cronet_aml_net_android_net_errors_java",
     cmd: "$(location build/android/gyp/gcc_preprocess.py) --include-dirs " +
          "["../../", "gen"] " +
@@ -9531,9 +9480,6 @@ cc_genrule {
     tool_files: [
         "build/android/gyp/gcc_preprocess.py",
         "net/android/java/NetError.template",
-    ],
-    apex_available: [
-        "com.android.tethering",
     ],
 }
 
@@ -10829,7 +10775,7 @@ cc_object {
 }
 
 // GN: //net:effective_connection_type_java
-cc_genrule {
+java_genrule {
     name: "cronet_aml_net_effective_connection_type_java",
     cmd: "$(location build/android/gyp/java_cpp_enum.py) --srcjar " +
          "gen/net/effective_connection_type_java.srcjar " +
@@ -10840,9 +10786,6 @@ cc_genrule {
     tool_files: [
         "build/android/gyp/java_cpp_enum.py",
         "net/nqe/effective_connection_type.h",
-    ],
-    apex_available: [
-        "com.android.tethering",
     ],
 }
 
