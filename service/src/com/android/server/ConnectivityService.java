@@ -242,6 +242,8 @@ import android.util.Pair;
 import android.util.SparseArray;
 import android.util.SparseIntArray;
 
+import androidx.annotation.RequiresApi;
+
 import com.android.connectivity.resources.R;
 import com.android.internal.annotations.GuardedBy;
 import com.android.internal.annotations.VisibleForTesting;
@@ -262,6 +264,10 @@ import com.android.net.module.util.PerUidCounter;
 import com.android.net.module.util.PermissionUtils;
 import com.android.net.module.util.TcUtils;
 import com.android.net.module.util.netlink.InetDiagMessage;
+import com.android.networkstack.apishim.BroadcastOptionsShimImpl;
+import com.android.networkstack.apishim.ConstantsShim;
+import com.android.networkstack.apishim.common.BroadcastOptionsShim;
+import com.android.networkstack.apishim.common.UnsupportedApiLevelException;
 import com.android.server.connectivity.AutodestructReference;
 import com.android.server.connectivity.CarrierPrivilegeAuthenticator;
 import com.android.server.connectivity.ClatCoordinator;
@@ -371,6 +377,10 @@ public class ConnectivityService extends IConnectivityManager.Stub
     private static final String LINGER_DELAY_PROPERTY = "persist.netmon.linger";
     private static final int DEFAULT_LINGER_DELAY_MS = 30_000;
     private static final int DEFAULT_NASCENT_DELAY_MS = 5_000;
+
+    // Delimiter used when creating the broadcast delivery group for sending
+    // CONNECTIVITY_ACTION broadcast.
+    private static final char DELIVERY_GROUP_KEY_DELIMITER = ';';
 
     // The maximum value for the blocking validation result, in milliseconds.
     public static final int MAX_VALIDATION_IGNORE_AFTER_ROAM_TIME_MS = 10000;
@@ -1410,6 +1420,16 @@ public class ConnectivityService extends IConnectivityManager.Stub
                 loge("TcUtils.tcFilterDelDev(ifaceIndex=" + params.index
                         + ", ingress=true, PRIO_POLICE, ETH_P_ALL) failure: ", e);
             }
+        }
+
+        /**
+         * Wraps {@link BroadcastOptionsShimImpl#newInstance(BroadcastOptions)}
+         */
+        // TODO: when available in all active branches:
+        //  @RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
+        @RequiresApi(Build.VERSION_CODES.CUR_DEVELOPMENT)
+        public BroadcastOptionsShim makeBroadcastOptionsShim(BroadcastOptions options) {
+            return BroadcastOptionsShimImpl.newInstance(options);
         }
     }
 
@@ -3037,6 +3057,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
                         ConnectivityManager.EXTRA_NETWORK_INFO);
                 final BroadcastOptions opts = BroadcastOptions.makeBasic();
                 opts.setMaxManifestReceiverApiLevel(Build.VERSION_CODES.M);
+                applyMostRecentPolicyForConnectivityAction(opts, ni);
                 options = opts.toBundle();
                 intent.addFlags(Intent.FLAG_RECEIVER_VISIBLE_TO_INSTANT_APPS);
             }
@@ -3046,6 +3067,32 @@ public class ConnectivityService extends IConnectivityManager.Stub
                 Binder.restoreCallingIdentity(ident);
             }
         }
+    }
+
+    private void applyMostRecentPolicyForConnectivityAction(BroadcastOptions options,
+            NetworkInfo info) {
+        // Delivery group policy APIs are only available on U+.
+        if (!SdkLevel.isAtLeastU()) return;
+
+        final BroadcastOptionsShim optsShim = mDeps.makeBroadcastOptionsShim(options);
+        try {
+            // This allows us to discard older broadcasts still waiting to be delivered
+            // which have the same namespace and key.
+            optsShim.setDeliveryGroupPolicy(ConstantsShim.DELIVERY_GROUP_POLICY_MOST_RECENT);
+            optsShim.setDeliveryGroupMatchingKey(ConnectivityManager.CONNECTIVITY_ACTION,
+                    createDeliveryGroupKeyForConnectivityAction(info));
+        } catch (UnsupportedApiLevelException e) {
+            Log.wtf(TAG, "Using unsupported API" + e);
+        }
+    }
+
+    @VisibleForTesting
+    static String createDeliveryGroupKeyForConnectivityAction(NetworkInfo info) {
+        final StringBuilder sb = new StringBuilder();
+        sb.append(info.getType()).append(DELIVERY_GROUP_KEY_DELIMITER);
+        sb.append(info.getSubtype()).append(DELIVERY_GROUP_KEY_DELIMITER);
+        sb.append(info.getExtraInfo());
+        return sb.toString();
     }
 
     /**
