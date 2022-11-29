@@ -390,7 +390,7 @@ class Module(object):
     return write_blueprint_key_value(output, name, value, sort)
 
   def is_compiled(self):
-    return self.type not in ('filegroup', 'cc_defaults')
+    return self.type not in ('cc_genrule', 'filegroup', 'cc_defaults')
 
   def is_genrule(self):
     return self.type == "cc_genrule"
@@ -401,14 +401,28 @@ class Module(object):
         return True
     return len(self.srcs) > 0 or any([len(target.srcs) > 0 for target in self.target.values()])
 
-  def merge_key(self, parent_key, dep_module, archs_allowed, child_key = None):
-    if not child_key:
-      child_key = parent_key
-    self.__dict__[parent_key].update(dep_module.__dict__[child_key])
-    for arch_name, arch in dep_module.target.items():
-      if arch_name in archs_allowed:
-        self.target[arch_name].__dict__[parent_key].update(
-            dep_module.target[arch_name].__dict__[child_key])
+  def merge_attribute(self, key, source_module, allowed_archs, source_key = None):
+    """
+    Merges the value of the attribute `source_key` for the `dep_module` with
+    the value of the attribute `key` for this module. If the value of the
+    `source_key` is equal to None. Then `key` is used for both modules.
+
+    This merges the attribute for both non-arch and archs
+    specified in `allowed_archs`.
+    :param key: The attribute used for merging in the calling module. Also
+    used for `dep_module` if the `source_key` is None.
+    :param source_module: The module where data is propagated from.
+    :param allowed_archs: A list of archs to merge the attribute on.
+    :param source_key: if the attribute merged from the `dep_module`
+    is different from the `key`
+    """
+    if not source_key:
+      source_key = key
+    self.__dict__[key].update(source_module.__dict__[source_key])
+    for arch_name in source_module.target.keys():
+      if arch_name in allowed_archs:
+        self.target[arch_name].__dict__[key].update(
+            source_module.target[arch_name].__dict__[source_key])
 
 class Blueprint(object):
   """In-memory representation of an Android.bp file."""
@@ -914,16 +928,10 @@ def create_modules_from_target(blueprint, gn, gn_target_name):
         module.target[arch_name].cflags.add('-march=armv8-a+memtag')
       set_module_include_dirs(module.target[arch_name], arch.cflags, arch.include_dirs)
 
-  if module.is_genrule():
-    # cc_genrule is compiled but it's never used to actually compile c++ files
-    # so there is no need to add flags/include_dirs and other compilation args.
-    module.host_supported = target.host_supported()
-    module.device_supported = target.device_supported()
+  module.host_supported = target.host_supported()
+  module.device_supported = target.device_supported()
 
-  if module.is_compiled() and not module.is_genrule():
-    module.host_supported = target.host_supported()
-    module.device_supported = target.device_supported()
-
+  if module.is_compiled():
     # Don't try to inject library/source dependencies into genrules or
     # filegroups because they are not compiled in the traditional sense.
     module.defaults = [defaults_module]
@@ -984,21 +992,21 @@ def create_modules_from_target(blueprint, gn, gn_target_name):
     elif dep_module.type == 'cc_library_static':
       module.static_libs.add(dep_module.name)
     elif dep_module.type == 'cc_object':
-      module.merge_key('generated_headers', dep_module, target.arch.keys())
+      module.merge_attribute('generated_headers', dep_module, target.arch.keys())
       if module.type != 'cc_object':
         if dep_module.has_input_files():
           # Only add it as part of srcs if the dep_module has input files otherwise
           # this would throw an error.
           module.srcs.add(":" + dep_module.name)
-        module.merge_key('export_generated_headers', dep_module,
+        module.merge_attribute('export_generated_headers', dep_module,
                          target.arch.keys(), 'generated_headers')
     elif dep_module.type == 'cc_genrule':
-      module.merge_key('generated_headers', dep_module, [], 'genrule_headers')
-      module.merge_key('srcs', dep_module, [], 'genrule_srcs')
-      module.merge_key('shared_libs', dep_module, [], 'genrule_shared_libs')
-      module.merge_key('header_libs', dep_module, [], 'genrule_header_libs')
+      module.merge_attribute('generated_headers', dep_module, [], 'genrule_headers')
+      module.merge_attribute('srcs', dep_module, [], 'genrule_srcs')
+      module.merge_attribute('shared_libs', dep_module, [], 'genrule_shared_libs')
+      module.merge_attribute('header_libs', dep_module, [], 'genrule_header_libs')
       if module.type not in ["cc_object"]:
-        module.merge_key('export_generated_headers', dep_module, [],
+        module.merge_attribute('export_generated_headers', dep_module, [],
                          'genrule_headers')
     elif dep_module.type == 'cc_binary':
       continue  # Ignore executables deps (used by cmdline integration tests).
