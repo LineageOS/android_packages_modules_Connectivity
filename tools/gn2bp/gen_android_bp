@@ -618,6 +618,12 @@ def create_proto_group_modules(blueprint, gn, module_name, target_names):
 
   blueprint.add_module(module)
 
+def getSanitizer(target):
+  if target.script == "//build/write_buildflag_header.py":
+    return WriteBuildFlagHeaderSanitizer(target)
+  else:
+    return BaseActionSanitizer(target)
+
 
 class BaseActionSanitizer():
   def __init__(self, target):
@@ -667,14 +673,13 @@ class BaseActionSanitizer():
     filename = re.sub('^\.\./\.\./', '', filename)
 
   def get_args(self):
-    if self.target.script == "//build/write_buildflag_header.py":
-      # write_buildflag_header.py writes result to args.genDir/args.output
-      # So, override args.genDir by '.' so that args.output=$(out) works
-      self._set_arg_value('--gen-dir', '.')
-      self._set_arg_value('--output', '$(out)')
-
     return self.target.args
 
+class WriteBuildFlagHeaderSanitizer(BaseActionSanitizer):
+  def get_args(self):
+    self._set_arg_value('--gen-dir', '.')
+    self._set_arg_value('--output', '$(out)')
+    return super().get_args()
 
 def create_action_foreach_modules(blueprint, target):
   """ The following assumes that rebase_path exists in the args.
@@ -713,7 +718,7 @@ def create_action_module(blueprint, target):
   bp_module_name = label_to_module_name(target.name)
   module = Module('cc_genrule', bp_module_name, target.name)
 
-  sanitizer = BaseActionSanitizer(target)
+  sanitizer = getSanitizer(target)
   target.args = sanitizer.get_args()
 
   if target.script == '//build/write_build_date_header.py':
