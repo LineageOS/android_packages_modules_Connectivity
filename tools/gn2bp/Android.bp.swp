@@ -6618,6 +6618,7 @@ cc_library_shared {
     linker_scripts: [
         "base/android/library_loader/anchor_functions.lds",
     ],
+    stem: "libcronet.109.0.5386.0",
     target: {
         android_arm: {
             generated_headers: [
