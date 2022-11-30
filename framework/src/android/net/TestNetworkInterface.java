@@ -29,6 +29,9 @@ import java.net.SocketException;
 /**
  * This class is used to return the interface name, fd, MAC, and MTU of the test interface
  *
+ * TestNetworkInterfaces are created by TestNetworkService and provide a
+ * wrapper around a tun/tap interface that can be used in integration tests.
+ *
  * @hide
  */
 @SystemApi(client = SystemApi.Client.MODULE_LIBRARIES)
@@ -97,11 +100,25 @@ public final class TestNetworkInterface implements Parcelable {
         return mInterfaceName;
     }
 
+    /**
+     * Returns the tap interface MacAddress.
+     *
+     * When TestNetworkInterface wraps a tun interface, the MAC address is null.
+     *
+     * @return the tap interface MAC address or null.
+     */
     @Nullable
     public MacAddress getMacAddress() {
         return mMacAddress;
     }
 
+    /**
+     * Returns the interface MTU.
+     *
+     * MTU defaults to 1500 if an error occurs.
+     *
+     * @return MTU in bytes.
+     */
     public int getMtu() {
         return mMtu;
     }
