@@ -640,6 +640,12 @@ class ActionSanitizer():
       self.target.args.pop(i)
 
   def get_args(self):
+    if self.target.script == "//build/write_buildflag_header.py":
+      # write_buildflag_header.py writes result to args.genDir/args.output
+      # So, override args.genDir by '.' so that args.output=$(out) works
+      self._set_arg_value('--gen-dir', '.')
+      self._set_arg_value('--output', '$(out)')
+
     return self.target.args
 
 
@@ -683,16 +689,7 @@ def create_action_module(blueprint, target):
   sanitizer = ActionSanitizer(target)
   target.args = sanitizer.get_args()
 
-  if target.script == "//build/write_buildflag_header.py":
-    # write_buildflag_header.py writes result to args.genDir/args.output
-    # So, override args.genDir by '.' so that args.output=$(out) works
-    for i, val in enumerate(target.args):
-      if val == '--gen-dir':
-        target.args[i + 1] = '.'
-      elif val == '--output':
-        target.args[i + 1] = '$(out)'
-
-  elif target.script == '//build/write_build_date_header.py':
+  if target.script == '//build/write_build_date_header.py':
     target.args[0] = '$(out)'
 
   elif target.script == '//base/android/jni_generator/jni_generator.py':
