@@ -67,16 +67,13 @@ import static org.junit.Assert.fail;
 import static org.junit.Assume.assumeFalse;
 import static org.junit.Assume.assumeTrue;
 
-import android.app.UiAutomation;
 import android.content.Context;
-import android.content.pm.PackageManager;
 import android.net.EthernetManager.TetheredInterfaceCallback;
 import android.net.EthernetManager.TetheredInterfaceRequest;
 import android.net.TetheringManager.StartTetheringCallback;
 import android.net.TetheringManager.TetheringEventCallback;
 import android.net.TetheringManager.TetheringRequest;
 import android.net.TetheringTester.TetheredDevice;
-import android.net.cts.util.CtsNetUtils;
 import android.os.Build;
 import android.os.Handler;
 import android.os.HandlerThread;
@@ -88,7 +85,6 @@ import android.util.Pair;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.test.InstrumentationRegistry;
 import androidx.test.filters.MediumTest;
 import androidx.test.runner.AndroidJUnit4;
 
@@ -143,17 +139,12 @@ import java.util.concurrent.TimeoutException;
 
 @RunWith(AndroidJUnit4.class)
 @MediumTest
-public class EthernetTetheringTest {
+public class EthernetTetheringTest extends EthernetTetheringTestBase {
     @Rule
     public final DevSdkIgnoreRule mIgnoreRule = new DevSdkIgnoreRule();
 
     private static final String TAG = EthernetTetheringTest.class.getSimpleName();
-    private static final int TIMEOUT_MS = 5000;
-    // Used to check if any tethering interface is available. Choose 200ms to be request timeout
-    // because the average interface requested time on cuttlefish@acloud is around 10ms.
-    // See TetheredInterfaceRequester.getInterface, isInterfaceForTetheringAvailable.
-    private static final int AVAILABLE_TETHER_IFACE_REQUEST_TIMEOUT_MS = 200;
-    private static final int TETHER_REACHABILITY_ATTEMPTS = 20;
+
     private static final int DUMP_POLLING_MAX_RETRY = 100;
     private static final int DUMP_POLLING_INTERVAL_MS = 50;
     // Kernel treats a confirmed UDP connection which active after two seconds as stream mode.
@@ -168,34 +159,13 @@ public class EthernetTetheringTest {
     // Per TX UDP packet size: ethhdr (14) + iphdr (20) + udphdr (8) + payload (2) = 44 bytes.
     private static final int TX_UDP_PACKET_SIZE = 44;
     private static final int TX_UDP_PACKET_COUNT = 123;
-    private static final long WAIT_RA_TIMEOUT_MS = 2000;
-
-    private static final MacAddress TEST_MAC = MacAddress.fromString("1:2:3:4:5:6");
-    private static final LinkAddress TEST_IP4_ADDR = new LinkAddress("10.0.0.1/24");
-    private static final LinkAddress TEST_IP6_ADDR = new LinkAddress("2001:db8:1::101/64");
-    private static final InetAddress TEST_IP4_DNS = parseNumericAddress("8.8.8.8");
-    private static final InetAddress TEST_IP6_DNS = parseNumericAddress("2001:db8:1::888");
-    private static final IpPrefix TEST_NAT64PREFIX = new IpPrefix("64:ff9b::/96");
-    private static final Inet6Address REMOTE_NAT64_ADDR =
-            (Inet6Address) parseNumericAddress("64:ff9b::808:808");
-    private static final Inet6Address REMOTE_IP6_ADDR =
-            (Inet6Address) parseNumericAddress("2002:db8:1::515:ca");
-    private static final ByteBuffer TEST_REACHABILITY_PAYLOAD =
-            ByteBuffer.wrap(new byte[] { (byte) 0x55, (byte) 0xaa });
-    private static final ByteBuffer EMPTY_PAYLOAD = ByteBuffer.wrap(new byte[0]);
 
     private static final short DNS_PORT = 53;
-    private static final short WINDOW = (short) 0x2000;
-    private static final short URGENT_POINTER = 0;
 
     private static final String DUMPSYS_TETHERING_RAWMAP_ARG = "bpfRawMap";
     private static final String DUMPSYS_RAWMAP_ARG_STATS = "--stats";
     private static final String DUMPSYS_RAWMAP_ARG_UPSTREAM4 = "--upstream4";
     private static final String LINE_DELIMITER = "\\n";
-
-    // version=6, traffic class=0x0, flowlabel=0x0;
-    private static final int VERSION_TRAFFICCLASS_FLOWLABEL = 0x60000000;
-    private static final short HOP_LIMIT = 0x40;
 
     private static final short ICMPECHO_CODE = 0x0;
     private static final short ICMPECHO_ID = 0x0;
@@ -261,26 +231,8 @@ public class EthernetTetheringTest {
             (byte) 0x01, (byte) 0x02, (byte) 0x03, (byte) 0x04  /* Address: 1.2.3.4 */
     };
 
-    private final Context mContext = InstrumentationRegistry.getContext();
-    private final EthernetManager mEm = mContext.getSystemService(EthernetManager.class);
-    private final TetheringManager mTm = mContext.getSystemService(TetheringManager.class);
-    private final PackageManager mPackageManager = mContext.getPackageManager();
-    private final CtsNetUtils mCtsNetUtils = new CtsNetUtils(mContext);
-
-    private TestNetworkInterface mDownstreamIface;
-    private HandlerThread mHandlerThread;
-    private Handler mHandler;
-    private TapPacketReader mDownstreamReader;
-    private TapPacketReader mUpstreamReader;
-
     private TetheredInterfaceRequester mTetheredInterfaceRequester;
     private MyTetheringEventCallback mTetheringEventCallback;
-
-    private UiAutomation mUiAutomation =
-            InstrumentationRegistry.getInstrumentation().getUiAutomation();
-    private boolean mRunTests;
-
-    private TestNetworkTracker mUpstreamTracker;
 
     @Before
     public void setUp() throws Exception {
@@ -1068,22 +1020,6 @@ public class EthernetTetheringTest {
     // remote ip              public ip                           private ip
     // 8.8.8.8:443            <Upstream ip>:9876                  <TetheredDevice ip>:9876
     //
-    private static final Inet4Address REMOTE_IP4_ADDR =
-            (Inet4Address) parseNumericAddress("8.8.8.8");
-    // Used by public port and private port. Assume port 9876 has not been used yet before the
-    // testing that public port and private port are the same in the testing. Note that NAT port
-    // forwarding could be different between private port and public port.
-    // TODO: move to the start of test class.
-    private static final short LOCAL_PORT = 9876;
-    private static final short REMOTE_PORT = 433;
-    private static final byte TYPE_OF_SERVICE = 0;
-    private static final short ID = 27149;
-    private static final short FLAGS_AND_FRAGMENT_OFFSET = (short) 0x4000; // flags=DF, offset=0
-    private static final byte TIME_TO_LIVE = (byte) 0x40;
-    private static final ByteBuffer RX_PAYLOAD =
-            ByteBuffer.wrap(new byte[] { (byte) 0x12, (byte) 0x34 });
-    private static final ByteBuffer TX_PAYLOAD =
-            ByteBuffer.wrap(new byte[] { (byte) 0x56, (byte) 0x78 });
 
     private short getEthType(@NonNull final InetAddress srcIp, @NonNull final InetAddress dstIp) {
         return isAddressIpv4(srcIp, dstIp) ? (short) ETHER_TYPE_IPV4 : (short) ETHER_TYPE_IPV6;
