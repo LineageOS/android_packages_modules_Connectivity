@@ -29,6 +29,7 @@ import argparse
 import collections
 import json
 import logging as log
+import operator
 import os
 import re
 import sys
@@ -617,6 +618,64 @@ def create_proto_group_modules(blueprint, gn, module_name, target_names):
 
   blueprint.add_module(module)
 
+
+class ActionSanitizer():
+  def __init__(self, target):
+    # Just to be on the safe side, create a deep-copy.
+    self.target = copy.deepcopy(target)
+    # Convert ['--param=value'] to ['--param', 'value'] for consistency.
+    self.target.args = [str for it in target.args for str in it.split('=')]
+
+  def _has_arg(self, arg):
+    return arg in self.target.args
+
+  # Whether an arg has multiple occurences (see argparse action='append')
+  def _is_append_arg(self, arg):
+    return operator.countOf(arg, self.target.args) > 1
+
+  def _has_arg_value(self, arg):
+    # TODO: we'll probably need a set of helper functions to deal with append
+    # args as well.
+    assert(not self._is_append_arg(arg))
+    i = self.target.args.index(arg)
+    return not self.target.args[i + 1].startswith('--')
+
+  def _get_arg_value(self, arg):
+    assert(self._has_arg_value(arg))
+    i = self.target.args.index(arg)
+    return self.target.args[i + 1]
+
+  def _set_arg_value(self, arg, value):
+    assert(self._has_arg_value(arg))
+    i = self.target.args.index(arg)
+    self.target.args[i + 1] = value
+
+  def _delete_arg(self, arg):
+    assert(not self._is_append_arg(arg))
+    hasValue = self._has_arg_value(arg)
+    i = self.target.index(arg)
+    self.target.args.pop(i)
+    if hasValue:
+      self.target.args.pop(i)
+
+  # wrap filename in location tag.
+  def _location_tag(self, filename):
+    return '$(location %s)' % filename
+
+  # deletes the leading ../../
+  def _rebase_directory(self, filename):
+    filename = re.sub('^\.\./\.\./', '', filename)
+
+  def get_args(self):
+    if self.target.script == "//build/write_buildflag_header.py":
+      # write_buildflag_header.py writes result to args.genDir/args.output
+      # So, override args.genDir by '.' so that args.output=$(out) works
+      self._set_arg_value('--gen-dir', '.')
+      self._set_arg_value('--output', '$(out)')
+
+    return self.target.args
+
+
 def create_action_foreach_modules(blueprint, target):
   """ The following assumes that rebase_path exists in the args.
   The args of an action_foreach contains hints about which output files are generated
@@ -654,21 +713,10 @@ def create_action_module(blueprint, target):
   bp_module_name = label_to_module_name(target.name)
   module = Module('cc_genrule', bp_module_name, target.name)
 
-  # Convert ['--param=value'] to ['--param', 'value'] for consistency.
-  # TODO: we may want to only do this for python scripts arguments. If argparse
-  # is used, this transformation is safe.
-  target.args = [str for it in target.args for str in it.split('=')]
+  sanitizer = ActionSanitizer(target)
+  target.args = sanitizer.get_args()
 
-  if target.script == "//build/write_buildflag_header.py":
-    # write_buildflag_header.py writes result to args.genDir/args.output
-    # So, override args.genDir by '.' so that args.output=$(out) works
-    for i, val in enumerate(target.args):
-      if val == '--gen-dir':
-        target.args[i + 1] = '.'
-      elif val == '--output':
-        target.args[i + 1] = '$(out)'
-
-  elif target.script == '//build/write_build_date_header.py':
+  if target.script == '//build/write_build_date_header.py':
     target.args[0] = '$(out)'
 
   elif target.script == '//base/android/jni_generator/jni_generator.py':
