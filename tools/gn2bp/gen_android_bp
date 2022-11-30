@@ -608,6 +608,39 @@ def create_proto_group_modules(blueprint, gn, module_name, target_names):
 
   blueprint.add_module(module)
 
+
+class ActionSanitizer():
+  def __init__(self, target):
+    self.target = target
+
+  def _has_arg(self, arg):
+    return arg in self.target.args
+
+  def _has_arg_value(self, arg):
+    i = self.target.args.index(arg)
+    return not self.target.args[i + 1].startswith('--')
+
+  def _get_arg_value(self, arg):
+    i = self.target.args.index(arg)
+    return self.target.args[i + 1]
+
+  def _set_arg_value(self, arg, value):
+    assert(self._has_arg_value(arg))
+    i = self.target.args.index(arg)
+    self.target.args[i + 1] = value
+
+  def _delete_arg(self, arg):
+    hasValue = self._has_arg_value(arg)
+    i = self.target.index(arg)
+    self.target.args.pop(i)
+    if hasValue:
+      self.target.args.pop(i)
+
+  def get_args(self):
+    # TODO: implement
+    pass
+
+
 def create_action_foreach_modules(blueprint, target):
   """ The following assumes that rebase_path exists in the args.
   The args of an action_foreach contains hints about which output files are generated
