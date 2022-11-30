@@ -155,6 +155,9 @@ class GnParser(object):
       self.is_finalized = False
       self.arch = dict()
 
+      # This is used to get the name/version of libcronet
+      self.output_name = None
+
     def host_supported(self):
       return 'host' in self.arch
 
@@ -347,6 +350,7 @@ class GnParser(object):
     target.ldflags.update(desc.get('ldflags', []))
     target.arch[arch].defines.update(desc.get('defines', []))
     target.arch[arch].include_dirs.update(desc.get('include_dirs', []))
+    target.output_name = desc.get('output_name', None)
     if "-frtti" in target.arch[arch].cflags:
       target.rtti = True
 
