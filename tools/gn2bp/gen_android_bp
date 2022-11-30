@@ -633,7 +633,7 @@ class BaseActionSanitizer():
     # Just to be on the safe side, create a deep-copy.
     self.target = copy.deepcopy(target)
     # Convert ['--param=value'] to ['--param', 'value'] for consistency.
-    self.target.args = [str for it in target.args for str in it.split('=')]
+    self.target.args = [str for it in self.target.args for str in it.split('=')]
 
   def _has_arg(self, arg):
     return arg in self.target.args
