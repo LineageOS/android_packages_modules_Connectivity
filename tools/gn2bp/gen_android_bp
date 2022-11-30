@@ -611,7 +611,10 @@ def create_proto_group_modules(blueprint, gn, module_name, target_names):
 
 class ActionSanitizer():
   def __init__(self, target):
-    self.target = target
+    # Just to be on the safe side, create a deep-copy.
+    self.target = copy.deepcopy(target)
+    # Convert ['--param=value'] to ['--param', 'value'] for consistency.
+    self.target.args = [str for it in target.args for str in it.split('=')]
 
   def _has_arg(self, arg):
     return arg in self.target.args
@@ -637,8 +640,7 @@ class ActionSanitizer():
       self.target.args.pop(i)
 
   def get_args(self):
-    # TODO: implement
-    pass
+    return self.target.args
 
 
 def create_action_foreach_modules(blueprint, target):
@@ -678,10 +680,8 @@ def create_action_module(blueprint, target):
   bp_module_name = label_to_module_name(target.name)
   module = Module('cc_genrule', bp_module_name, target.name)
 
-  # Convert ['--param=value'] to ['--param', 'value'] for consistency.
-  # TODO: we may want to only do this for python scripts arguments. If argparse
-  # is used, this transformation is safe.
-  target.args = [str for it in target.args for str in it.split('=')]
+  sanitizer = ActionSanitizer(target)
+  target.args = sanitizer.get_args()
 
   if target.script == "//build/write_buildflag_header.py":
     # write_buildflag_header.py writes result to args.genDir/args.output
