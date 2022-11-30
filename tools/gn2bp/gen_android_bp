@@ -670,6 +670,10 @@ class BaseActionSanitizer():
     if hasValue:
       self.target.args.pop(i)
 
+  def _append_arg(self, arg, value):
+    self.target.args.append(arg)
+    self.target.args.append(value)
+
   # wrap filename in location tag.
   def _location_tag(self, filename):
     return '$(location %s)' % filename
