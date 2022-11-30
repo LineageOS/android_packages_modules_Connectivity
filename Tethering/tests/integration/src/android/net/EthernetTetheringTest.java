@@ -295,6 +295,30 @@ public class EthernetTetheringTest {
         mTetheredInterfaceRequester = new TetheredInterfaceRequester(mHandler, mEm);
     }
 
+    private void maybeStopTapPacketReader(final TapPacketReader tapPacketReader)
+            throws Exception {
+        if (tapPacketReader != null) {
+            TapPacketReader reader = tapPacketReader;
+            mHandler.post(() -> reader.stop());
+        }
+    }
+
+    private void maybeCloseTestInterface(final TestNetworkInterface testInterface)
+            throws Exception {
+        if (testInterface != null) {
+            testInterface.getFileDescriptor().close();
+            Log.d(TAG, "Deleted test interface " + testInterface.getInterfaceName());
+        }
+    }
+
+    private void maybeUnregisterTetheringEventCallback(final MyTetheringEventCallback callback)
+            throws Exception {
+        if (callback != null) {
+            callback.awaitInterfaceUntethered();
+            callback.unregister();
+        }
+    }
+
     private void cleanUp() throws Exception {
         setPreferTestNetworks(false);
 
@@ -310,24 +334,19 @@ public class EthernetTetheringTest {
             mUpstreamReader = null;
         }
 
-        if (mDownstreamReader != null) {
-            TapPacketReader reader = mDownstreamReader;
-            mHandler.post(() -> reader.stop());
-            mDownstreamReader = null;
-        }
-
+        maybeStopTapPacketReader(mDownstreamReader);
+        mDownstreamReader = null;
         // To avoid flaky which caused by the next test started but the previous interface is not
         // untracked from EthernetTracker yet. Just delete the test interface without explicitly
         // calling TetheringManager#stopTethering could let EthernetTracker untrack the test
         // interface from server mode before tethering stopped. Thus, awaitInterfaceUntethered
         // could not only make sure tethering is stopped but also guarantee the test interface is
         // untracked from EthernetTracker.
-        maybeDeleteTestInterface();
-        if (mTetheringEventCallback != null) {
-            mTetheringEventCallback.awaitInterfaceUntethered();
-            mTetheringEventCallback.unregister();
-            mTetheringEventCallback = null;
-        }
+        maybeCloseTestInterface(mDownstreamIface);
+        mDownstreamIface = null;
+        maybeUnregisterTetheringEventCallback(mTetheringEventCallback);
+        mTetheringEventCallback = null;
+
         runAsShell(NETWORK_SETTINGS, () -> mTetheredInterfaceRequester.release());
         setIncludeTestInterfaces(false);
     }
@@ -383,26 +402,50 @@ public class EthernetTetheringTest {
         });
     }
 
+    private String getTetheredInterface() throws Exception {
+        return mTetheredInterfaceRequester.getInterface();
+    }
+
+    private CompletableFuture<String> requestTetheredInterface() throws Exception {
+        return mTetheredInterfaceRequester.requestInterface();
+    }
+
     @Test
     public void testVirtualEthernetAlreadyExists() throws Exception {
         // This test requires manipulating packets. Skip if there is a physical Ethernet connected.
         assumeFalse(isInterfaceForTetheringAvailable());
 
-        mDownstreamIface = createTestInterface();
-        // This must be done now because as soon as setIncludeTestInterfaces(true) is called, the
-        // interface will be placed in client mode, which will delete the link-local address.
-        // At that point NetworkInterface.getByName() will cease to work on the interface, because
-        // starting in R NetworkInterface can no longer see interfaces without IP addresses.
-        int mtu = getMTU(mDownstreamIface);
+        TestNetworkInterface downstreamIface = null;
+        MyTetheringEventCallback tetheringEventCallback = null;
+        TapPacketReader downstreamReader = null;
 
-        Log.d(TAG, "Including test interfaces");
-        setIncludeTestInterfaces(true);
+        try {
+            downstreamIface = createTestInterface();
+            // This must be done now because as soon as setIncludeTestInterfaces(true) is called,
+            // the interface will be placed in client mode, which will delete the link-local
+            // address. At that point NetworkInterface.getByName() will cease to work on the
+            // interface, because starting in R NetworkInterface can no longer see interfaces
+            // without IP addresses.
+            int mtu = getMTU(downstreamIface);
 
-        final String iface = mTetheredInterfaceRequester.getInterface();
-        assertEquals("TetheredInterfaceCallback for unexpected interface",
-                mDownstreamIface.getInterfaceName(), iface);
+            Log.d(TAG, "Including test interfaces");
+            setIncludeTestInterfaces(true);
 
-        checkVirtualEthernet(mDownstreamIface, mtu);
+            final String iface = getTetheredInterface();
+            assertEquals("TetheredInterfaceCallback for unexpected interface",
+                    downstreamIface.getInterfaceName(), iface);
+
+            // Check virtual ethernet.
+            FileDescriptor fd = downstreamIface.getFileDescriptor().getFileDescriptor();
+            downstreamReader = makePacketReader(fd, mtu);
+            tetheringEventCallback = enableEthernetTethering(downstreamIface.getInterfaceName(),
+                    null /* any upstream */);
+            checkTetheredClientCallbacks(downstreamReader, tetheringEventCallback);
+        } finally {
+            maybeStopTapPacketReader(downstreamReader);
+            maybeCloseTestInterface(downstreamIface);
+            maybeUnregisterTetheringEventCallback(tetheringEventCallback);
+        }
     }
 
     @Test
@@ -410,17 +453,32 @@ public class EthernetTetheringTest {
         // This test requires manipulating packets. Skip if there is a physical Ethernet connected.
         assumeFalse(isInterfaceForTetheringAvailable());
 
-        CompletableFuture<String> futureIface = mTetheredInterfaceRequester.requestInterface();
+        CompletableFuture<String> futureIface = requestTetheredInterface();
 
         setIncludeTestInterfaces(true);
 
-        mDownstreamIface = createTestInterface();
+        TestNetworkInterface downstreamIface = null;
+        MyTetheringEventCallback tetheringEventCallback = null;
+        TapPacketReader downstreamReader = null;
 
-        final String iface = futureIface.get(TIMEOUT_MS, TimeUnit.MILLISECONDS);
-        assertEquals("TetheredInterfaceCallback for unexpected interface",
-                mDownstreamIface.getInterfaceName(), iface);
+        try {
+            downstreamIface = createTestInterface();
 
-        checkVirtualEthernet(mDownstreamIface, getMTU(mDownstreamIface));
+            final String iface = futureIface.get(TIMEOUT_MS, TimeUnit.MILLISECONDS);
+            assertEquals("TetheredInterfaceCallback for unexpected interface",
+                    downstreamIface.getInterfaceName(), iface);
+
+            // Check virtual ethernet.
+            FileDescriptor fd = downstreamIface.getFileDescriptor().getFileDescriptor();
+            downstreamReader = makePacketReader(fd, getMTU(downstreamIface));
+            tetheringEventCallback = enableEthernetTethering(downstreamIface.getInterfaceName(),
+                    null /* any upstream */);
+            checkTetheredClientCallbacks(downstreamReader, tetheringEventCallback);
+        } finally {
+            maybeStopTapPacketReader(downstreamReader);
+            maybeCloseTestInterface(downstreamIface);
+            maybeUnregisterTetheringEventCallback(tetheringEventCallback);
+        }
     }
 
     @Test
@@ -429,42 +487,51 @@ public class EthernetTetheringTest {
 
         setIncludeTestInterfaces(true);
 
-        mDownstreamIface = createTestInterface();
-
-        final String iface = mTetheredInterfaceRequester.getInterface();
-        assertEquals("TetheredInterfaceCallback for unexpected interface",
-                mDownstreamIface.getInterfaceName(), iface);
-
-        assertInvalidStaticIpv4Request(iface, null, null);
-        assertInvalidStaticIpv4Request(iface, "2001:db8::1/64", "2001:db8:2::/64");
-        assertInvalidStaticIpv4Request(iface, "192.0.2.2/28", "2001:db8:2::/28");
-        assertInvalidStaticIpv4Request(iface, "2001:db8:2::/28", "192.0.2.2/28");
-        assertInvalidStaticIpv4Request(iface, "192.0.2.2/28", null);
-        assertInvalidStaticIpv4Request(iface, null, "192.0.2.2/28");
-        assertInvalidStaticIpv4Request(iface, "192.0.2.3/27", "192.0.2.2/28");
-
-        final String localAddr = "192.0.2.3/28";
-        final String clientAddr = "192.0.2.2/28";
-        mTetheringEventCallback = enableEthernetTethering(iface,
-                requestWithStaticIpv4(localAddr, clientAddr), null /* any upstream */);
-
-        mTetheringEventCallback.awaitInterfaceTethered();
-        assertInterfaceHasIpAddress(iface, localAddr);
-
-        byte[] client1 = MacAddress.fromString("1:2:3:4:5:6").toByteArray();
-        byte[] client2 = MacAddress.fromString("a:b:c:d:e:f").toByteArray();
-
-        FileDescriptor fd = mDownstreamIface.getFileDescriptor().getFileDescriptor();
-        mDownstreamReader = makePacketReader(fd, getMTU(mDownstreamIface));
-        TetheringTester tester = new TetheringTester(mDownstreamReader);
-        DhcpResults dhcpResults = tester.runDhcp(client1);
-        assertEquals(new LinkAddress(clientAddr), dhcpResults.ipAddress);
+        TestNetworkInterface downstreamIface = null;
+        MyTetheringEventCallback tetheringEventCallback = null;
+        TapPacketReader downstreamReader = null;
 
         try {
-            tester.runDhcp(client2);
-            fail("Only one client should get an IP address");
-        } catch (TimeoutException expected) { }
+            downstreamIface = createTestInterface();
 
+            final String iface = getTetheredInterface();
+            assertEquals("TetheredInterfaceCallback for unexpected interface",
+                    downstreamIface.getInterfaceName(), iface);
+
+            assertInvalidStaticIpv4Request(iface, null, null);
+            assertInvalidStaticIpv4Request(iface, "2001:db8::1/64", "2001:db8:2::/64");
+            assertInvalidStaticIpv4Request(iface, "192.0.2.2/28", "2001:db8:2::/28");
+            assertInvalidStaticIpv4Request(iface, "2001:db8:2::/28", "192.0.2.2/28");
+            assertInvalidStaticIpv4Request(iface, "192.0.2.2/28", null);
+            assertInvalidStaticIpv4Request(iface, null, "192.0.2.2/28");
+            assertInvalidStaticIpv4Request(iface, "192.0.2.3/27", "192.0.2.2/28");
+
+            final String localAddr = "192.0.2.3/28";
+            final String clientAddr = "192.0.2.2/28";
+            tetheringEventCallback = enableEthernetTethering(iface,
+                    requestWithStaticIpv4(localAddr, clientAddr), null /* any upstream */);
+
+            tetheringEventCallback.awaitInterfaceTethered();
+            assertInterfaceHasIpAddress(iface, localAddr);
+
+            byte[] client1 = MacAddress.fromString("1:2:3:4:5:6").toByteArray();
+            byte[] client2 = MacAddress.fromString("a:b:c:d:e:f").toByteArray();
+
+            FileDescriptor fd = downstreamIface.getFileDescriptor().getFileDescriptor();
+            downstreamReader = makePacketReader(fd, getMTU(downstreamIface));
+            TetheringTester tester = new TetheringTester(downstreamReader);
+            DhcpResults dhcpResults = tester.runDhcp(client1);
+            assertEquals(new LinkAddress(clientAddr), dhcpResults.ipAddress);
+
+            try {
+                tester.runDhcp(client2);
+                fail("Only one client should get an IP address");
+            } catch (TimeoutException expected) { }
+        } finally {
+            maybeStopTapPacketReader(downstreamReader);
+            maybeCloseTestInterface(downstreamIface);
+            maybeUnregisterTetheringEventCallback(tetheringEventCallback);
+        }
     }
 
     private static void waitForRouterAdvertisement(TapPacketReader reader, String iface,
@@ -510,26 +577,36 @@ public class EthernetTetheringTest {
 
         setIncludeTestInterfaces(true);
 
-        mDownstreamIface = createTestInterface();
+        TestNetworkInterface downstreamIface = null;
+        MyTetheringEventCallback tetheringEventCallback = null;
+        TapPacketReader downstreamReader = null;
 
-        final String iface = mTetheredInterfaceRequester.getInterface();
-        assertEquals("TetheredInterfaceCallback for unexpected interface",
-                mDownstreamIface.getInterfaceName(), iface);
+        try {
+            downstreamIface = createTestInterface();
 
-        final TetheringRequest request = new TetheringRequest.Builder(TETHERING_ETHERNET)
-                .setConnectivityScope(CONNECTIVITY_SCOPE_LOCAL).build();
-        mTetheringEventCallback = enableEthernetTethering(iface, request,
-                null /* any upstream */);
-        mTetheringEventCallback.awaitInterfaceLocalOnly();
+            final String iface = getTetheredInterface();
+            assertEquals("TetheredInterfaceCallback for unexpected interface",
+                    downstreamIface.getInterfaceName(), iface);
 
-        // makePacketReader only works after tethering is started, because until then the interface
-        // does not have an IP address, and unprivileged apps cannot see interfaces without IP
-        // addresses. This shouldn't be flaky because the TAP interface will buffer all packets even
-        // before the reader is started.
-        mDownstreamReader = makePacketReader(mDownstreamIface);
+            final TetheringRequest request = new TetheringRequest.Builder(TETHERING_ETHERNET)
+                    .setConnectivityScope(CONNECTIVITY_SCOPE_LOCAL).build();
+            tetheringEventCallback = enableEthernetTethering(iface, request,
+                    null /* any upstream */);
+            tetheringEventCallback.awaitInterfaceLocalOnly();
 
-        waitForRouterAdvertisement(mDownstreamReader, iface, WAIT_RA_TIMEOUT_MS);
-        expectLocalOnlyAddresses(iface);
+            // makePacketReader only works after tethering is started, because until then the
+            // interface does not have an IP address, and unprivileged apps cannot see interfaces
+            // without IP addresses. This shouldn't be flaky because the TAP interface will buffer
+            // all packets even before the reader is started.
+            downstreamReader = makePacketReader(downstreamIface);
+
+            waitForRouterAdvertisement(downstreamReader, iface, WAIT_RA_TIMEOUT_MS);
+            expectLocalOnlyAddresses(iface);
+        } finally {
+            maybeStopTapPacketReader(downstreamReader);
+            maybeCloseTestInterface(downstreamIface);
+            maybeUnregisterTetheringEventCallback(tetheringEventCallback);
+        }
     }
 
     private boolean isAdbOverNetwork() {
@@ -546,12 +623,16 @@ public class EthernetTetheringTest {
         // from client mode to server mode. See b/160389275.
         assumeFalse(isAdbOverNetwork());
 
-        // Get an interface to use.
-        final String iface = mTetheredInterfaceRequester.getInterface();
+        MyTetheringEventCallback tetheringEventCallback = null;
+        try {
+            // Get an interface to use.
+            final String iface = getTetheredInterface();
 
-        // Enable Ethernet tethering and check that it starts.
-        mTetheringEventCallback = enableEthernetTethering(iface, null /* any upstream */);
-
+            // Enable Ethernet tethering and check that it starts.
+            tetheringEventCallback = enableEthernetTethering(iface, null /* any upstream */);
+        } finally {
+            maybeUnregisterTetheringEventCallback(tetheringEventCallback);
+        }
         // There is nothing more we can do on a physical interface without connecting an actual
         // client, which is not possible in this test.
     }
@@ -810,15 +891,8 @@ public class EthernetTetheringTest {
         return reader;
     }
 
-    private void checkVirtualEthernet(TestNetworkInterface iface, int mtu) throws Exception {
-        FileDescriptor fd = iface.getFileDescriptor().getFileDescriptor();
-        mDownstreamReader = makePacketReader(fd, mtu);
-        mTetheringEventCallback = enableEthernetTethering(iface.getInterfaceName(),
-                null /* any upstream */);
-        checkTetheredClientCallbacks(mDownstreamReader);
-    }
-
-    private void checkTetheredClientCallbacks(TapPacketReader packetReader) throws Exception {
+    private void checkTetheredClientCallbacks(final TapPacketReader packetReader,
+            final MyTetheringEventCallback tetheringEventCallback) throws Exception {
         // Create a fake client.
         byte[] clientMacAddr = new byte[6];
         new Random().nextBytes(clientMacAddr);
@@ -826,7 +900,7 @@ public class EthernetTetheringTest {
         TetheringTester tester = new TetheringTester(packetReader);
         DhcpResults dhcpResults = tester.runDhcp(clientMacAddr);
 
-        final Collection<TetheredClient> clients = mTetheringEventCallback.awaitClientConnected();
+        final Collection<TetheredClient> clients = tetheringEventCallback.awaitClientConnected();
         assertEquals(1, clients.size());
         final TetheredClient client = clients.iterator().next();
 
@@ -943,14 +1017,6 @@ public class EthernetTetheringTest {
                 tnm.createTapInterface());
         Log.d(TAG, "Created test interface " + iface.getInterfaceName());
         return iface;
-    }
-
-    private void maybeDeleteTestInterface() throws Exception {
-        if (mDownstreamIface != null) {
-            mDownstreamIface.getFileDescriptor().close();
-            Log.d(TAG, "Deleted test interface " + mDownstreamIface.getInterfaceName());
-            mDownstreamIface = null;
-        }
     }
 
     private TestNetworkTracker createTestUpstream(final List<LinkAddress> addresses,
