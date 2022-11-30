@@ -142,6 +142,9 @@ builtin_deps = {
         lambda x: None,
 }
 
+# Name of tethering apex module
+tethering_apex = "com.android.tethering"
+
 # ----------------------------------------------------------------------------
 # End of configuration.
 # ----------------------------------------------------------------------------
@@ -546,6 +549,9 @@ def create_proto_modules(blueprint, gn, target):
   # without explictily exporting the include dir.
   header_module.export_include_dirs.add(target.proto_in_dir)
 
+  # This function does not return header_module so setting apex_available attribute here.
+  header_module.apex_available.add(tethering_apex)
+
   source_module.genrule_srcs.add(':' + source_module.name)
   source_module.genrule_headers.add(header_module.name)
 
@@ -931,6 +937,9 @@ def create_modules_from_target(blueprint, gn, gn_target_name):
   module.host_supported = target.host_supported()
   module.device_supported = target.device_supported()
 
+  if module.is_genrule():
+    module.apex_available.add(tethering_apex)
+
   if module.is_compiled():
     # Don't try to inject library/source dependencies into genrules or
     # filegroups because they are not compiled in the traditional sense.
@@ -1104,6 +1113,8 @@ def create_blueprint_for_targets(gn, targets):
       '-UANDROID',
   ]
   defaults.stl = 'none'
+  defaults.min_sdk_version = 29
+  defaults.apex_available.add(tethering_apex)
   blueprint.add_module(defaults)
 
   for target in targets:
