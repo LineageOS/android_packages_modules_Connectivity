@@ -652,17 +652,26 @@ class BaseActionSanitizer():
     return self.target.args[i + 1]
 
   def _set_value_arg(self, arg, value):
+    # Fail silently
+    if not self._has_arg(arg):
+      return
     assert(self._is_value_arg(arg))
     i = self.target.args.index(arg)
     self.target.args[i + 1] = value
 
   def _update_value_arg(self, arg, func):
+    # Fail silently
+    if not self._has_arg(arg):
+      return
     self._set_value_arg(arg, func(self._get_value_arg(arg)))
 
   def _set_arg_at(self, position, value):
     self.target.args[position] = value
 
   def _delete_arg(self, arg):
+    # Fail silently
+    if not self._has_arg(arg):
+      return
     assert(not self._is_list_arg(arg))
     hasValue = self._is_value_arg(arg)
     i = self.target.index(arg)
@@ -705,8 +714,7 @@ class JniGeneratorSanitizer(BaseActionSanitizer):
   def get_args(self):
     if self._has_arg('--jar_file'):
       self._append_arg('--javap', '$$(find out/.path -name javap)')
-    if self._has_arg('--output_dir'):
-      self._update_value_arg('--output_dir', self._sanitize_dir)
+    self._update_value_arg('--output_dir', self._sanitize_dir)
     return super().get_args()
 
 
