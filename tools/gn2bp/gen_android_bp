@@ -621,6 +621,8 @@ def create_proto_group_modules(blueprint, gn, module_name, target_names):
 def getSanitizer(target):
   if target.script == "//build/write_buildflag_header.py":
     return WriteBuildFlagHeaderSanitizer(target)
+  elif target.script == "//build/write_build_date_header.py":
+    return WriteBuildDateHeaderSanitizer(target)
   else:
     return BaseActionSanitizer(target)
 
@@ -656,6 +658,10 @@ class BaseActionSanitizer():
     i = self.target.args.index(arg)
     self.target.args[i + 1] = value
 
+  def _set_arg_positional_value(self, position, value):
+    assert(position < len(self.target.args))
+    self.target.args[position] = value
+
   def _delete_arg(self, arg):
     assert(not self._is_append_arg(arg))
     hasValue = self._has_arg_value(arg)
@@ -674,6 +680,11 @@ class BaseActionSanitizer():
 
   def get_args(self):
     return self.target.args
+
+class WriteBuildDateHeaderSanitizer(BaseActionSanitizer):
+  def get_args(self):
+    self._set_arg_positional_value(0, '$(out)')
+    return super().get_args()
 
 class WriteBuildFlagHeaderSanitizer(BaseActionSanitizer):
   def get_args(self):
@@ -721,10 +732,7 @@ def create_action_module(blueprint, target):
   sanitizer = getSanitizer(target)
   target.args = sanitizer.get_args()
 
-  if target.script == '//build/write_build_date_header.py':
-    target.args[0] = '$(out)'
-
-  elif target.script == '//base/android/jni_generator/jni_generator.py':
+  if target.script == '//base/android/jni_generator/jni_generator.py':
     needs_javap = False
     for i, val in enumerate(target.args):
       if val == '--output_dir':
