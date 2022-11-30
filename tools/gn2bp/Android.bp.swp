@@ -32,6 +32,9 @@ cc_genrule {
     tool_files: [
         "build/write_buildflag_header.py",
     ],
+    apex_available: [
+        "com.android.tethering",
+    ],
 }
 
 // GN: //base/allocator:buildflags__android_arm64
@@ -51,6 +54,9 @@ cc_genrule {
     ],
     tool_files: [
         "build/write_buildflag_header.py",
+    ],
+    apex_available: [
+        "com.android.tethering",
     ],
 }
 
@@ -72,6 +78,9 @@ cc_genrule {
     tool_files: [
         "build/write_buildflag_header.py",
     ],
+    apex_available: [
+        "com.android.tethering",
+    ],
 }
 
 // GN: //base/allocator:buildflags__android_x86_64
@@ -91,6 +100,9 @@ cc_genrule {
     ],
     tool_files: [
         "build/write_buildflag_header.py",
+    ],
+    apex_available: [
+        "com.android.tethering",
     ],
 }
 
@@ -114,6 +126,9 @@ cc_genrule {
     tool_files: [
         "build/write_buildflag_header.py",
     ],
+    apex_available: [
+        "com.android.tethering",
+    ],
 }
 
 // GN: //base/allocator/partition_allocator:chromecast_buildflags__android_arm
@@ -133,6 +148,9 @@ cc_genrule {
     ],
     tool_files: [
         "build/write_buildflag_header.py",
+    ],
+    apex_available: [
+        "com.android.tethering",
     ],
 }
 
@@ -154,6 +172,9 @@ cc_genrule {
     tool_files: [
         "build/write_buildflag_header.py",
     ],
+    apex_available: [
+        "com.android.tethering",
+    ],
 }
 
 // GN: //base/allocator/partition_allocator:chromecast_buildflags__android_x86
@@ -174,6 +195,9 @@ cc_genrule {
     tool_files: [
         "build/write_buildflag_header.py",
     ],
+    apex_available: [
+        "com.android.tethering",
+    ],
 }
 
 // GN: //base/allocator/partition_allocator:chromecast_buildflags__android_x86_64
@@ -193,6 +217,9 @@ cc_genrule {
     ],
     tool_files: [
         "build/write_buildflag_header.py",
+    ],
+    apex_available: [
+        "com.android.tethering",
     ],
 }
 
@@ -216,6 +243,9 @@ cc_genrule {
     tool_files: [
         "build/write_buildflag_header.py",
     ],
+    apex_available: [
+        "com.android.tethering",
+    ],
 }
 
 // GN: //base/allocator/partition_allocator:chromeos_buildflags__android_arm
@@ -235,6 +265,9 @@ cc_genrule {
     ],
     tool_files: [
         "build/write_buildflag_header.py",
+    ],
+    apex_available: [
+        "com.android.tethering",
     ],
 }
 
@@ -256,6 +289,9 @@ cc_genrule {
     tool_files: [
         "build/write_buildflag_header.py",
     ],
+    apex_available: [
+        "com.android.tethering",
+    ],
 }
 
 // GN: //base/allocator/partition_allocator:chromeos_buildflags__android_x86
@@ -276,6 +312,9 @@ cc_genrule {
     tool_files: [
         "build/write_buildflag_header.py",
     ],
+    apex_available: [
+        "com.android.tethering",
+    ],
 }
 
 // GN: //base/allocator/partition_allocator:chromeos_buildflags__android_x86_64
@@ -295,6 +334,9 @@ cc_genrule {
     ],
     tool_files: [
         "build/write_buildflag_header.py",
+    ],
+    apex_available: [
+        "com.android.tethering",
     ],
 }
 
@@ -318,6 +360,9 @@ cc_genrule {
     tool_files: [
         "build/write_buildflag_header.py",
     ],
+    apex_available: [
+        "com.android.tethering",
+    ],
 }
 
 // GN: //base/allocator/partition_allocator:debugging_buildflags__android_arm
@@ -337,6 +382,9 @@ cc_genrule {
     ],
     tool_files: [
         "build/write_buildflag_header.py",
+    ],
+    apex_available: [
+        "com.android.tethering",
     ],
 }
 
@@ -358,6 +406,9 @@ cc_genrule {
     tool_files: [
         "build/write_buildflag_header.py",
     ],
+    apex_available: [
+        "com.android.tethering",
+    ],
 }
 
 // GN: //base/allocator/partition_allocator:debugging_buildflags__android_x86
@@ -378,6 +429,9 @@ cc_genrule {
     tool_files: [
         "build/write_buildflag_header.py",
     ],
+    apex_available: [
+        "com.android.tethering",
+    ],
 }
 
 // GN: //base/allocator/partition_allocator:debugging_buildflags__android_x86_64
@@ -397,6 +451,9 @@ cc_genrule {
     ],
     tool_files: [
         "build/write_buildflag_header.py",
+    ],
+    apex_available: [
+        "com.android.tethering",
     ],
 }
 
@@ -420,6 +477,9 @@ cc_genrule {
     tool_files: [
         "build/write_buildflag_header.py",
     ],
+    apex_available: [
+        "com.android.tethering",
+    ],
 }
 
 // GN: //base/allocator/partition_allocator:logging_buildflags__android_arm
@@ -439,6 +499,9 @@ cc_genrule {
     ],
     tool_files: [
         "build/write_buildflag_header.py",
+    ],
+    apex_available: [
+        "com.android.tethering",
     ],
 }
 
@@ -460,6 +523,9 @@ cc_genrule {
     tool_files: [
         "build/write_buildflag_header.py",
     ],
+    apex_available: [
+        "com.android.tethering",
+    ],
 }
 
 // GN: //base/allocator/partition_allocator:logging_buildflags__android_x86
@@ -480,6 +546,9 @@ cc_genrule {
     tool_files: [
         "build/write_buildflag_header.py",
     ],
+    apex_available: [
+        "com.android.tethering",
+    ],
 }
 
 // GN: //base/allocator/partition_allocator:logging_buildflags__android_x86_64
@@ -499,6 +568,9 @@ cc_genrule {
     ],
     tool_files: [
         "build/write_buildflag_header.py",
+    ],
+    apex_available: [
+        "com.android.tethering",
     ],
 }
 
@@ -521,6 +593,9 @@ cc_genrule {
     ],
     tool_files: [
         "build/write_buildflag_header.py",
+    ],
+    apex_available: [
+        "com.android.tethering",
     ],
 }
 
@@ -787,6 +862,9 @@ cc_genrule {
     tool_files: [
         "build/write_buildflag_header.py",
     ],
+    apex_available: [
+        "com.android.tethering",
+    ],
 }
 
 // GN: //base/allocator/partition_allocator:partition_alloc_buildflags__android_arm64
@@ -806,6 +884,9 @@ cc_genrule {
     ],
     tool_files: [
         "build/write_buildflag_header.py",
+    ],
+    apex_available: [
+        "com.android.tethering",
     ],
 }
 
@@ -827,6 +908,9 @@ cc_genrule {
     tool_files: [
         "build/write_buildflag_header.py",
     ],
+    apex_available: [
+        "com.android.tethering",
+    ],
 }
 
 // GN: //base/allocator/partition_allocator:partition_alloc_buildflags__android_x86_64
@@ -846,6 +930,9 @@ cc_genrule {
     ],
     tool_files: [
         "build/write_buildflag_header.py",
+    ],
+    apex_available: [
+        "com.android.tethering",
     ],
 }
 
@@ -869,6 +956,9 @@ cc_genrule {
     tool_files: [
         "build/write_buildflag_header.py",
     ],
+    apex_available: [
+        "com.android.tethering",
+    ],
 }
 
 // GN: //base:anchor_functions_buildflags__android_arm
@@ -888,6 +978,9 @@ cc_genrule {
     ],
     tool_files: [
         "build/write_buildflag_header.py",
+    ],
+    apex_available: [
+        "com.android.tethering",
     ],
 }
 
@@ -909,6 +1002,9 @@ cc_genrule {
     tool_files: [
         "build/write_buildflag_header.py",
     ],
+    apex_available: [
+        "com.android.tethering",
+    ],
 }
 
 // GN: //base:anchor_functions_buildflags__android_x86
@@ -929,6 +1025,9 @@ cc_genrule {
     tool_files: [
         "build/write_buildflag_header.py",
     ],
+    apex_available: [
+        "com.android.tethering",
+    ],
 }
 
 // GN: //base:anchor_functions_buildflags__android_x86_64
@@ -948,6 +1047,9 @@ cc_genrule {
     ],
     tool_files: [
         "build/write_buildflag_header.py",
+    ],
+    apex_available: [
+        "com.android.tethering",
     ],
 }
 
@@ -970,6 +1072,9 @@ cc_genrule {
     ],
     tool_files: [
         "build/write_buildflag_header.py",
+    ],
+    apex_available: [
+        "com.android.tethering",
     ],
 }
 
@@ -1008,6 +1113,9 @@ cc_genrule {
         "build/gn_helpers.py",
         "third_party/android_sdk/public/platforms/android-33/android.jar",
     ],
+    apex_available: [
+        "com.android.tethering",
+    ],
 }
 
 // GN: //base:android_runtime_jni_headers__android_arm64
@@ -1044,6 +1152,9 @@ cc_genrule {
         "build/android/gyp/util/build_utils.py",
         "build/gn_helpers.py",
         "third_party/android_sdk/public/platforms/android-33/android.jar",
+    ],
+    apex_available: [
+        "com.android.tethering",
     ],
 }
 
@@ -1082,6 +1193,9 @@ cc_genrule {
         "build/gn_helpers.py",
         "third_party/android_sdk/public/platforms/android-33/android.jar",
     ],
+    apex_available: [
+        "com.android.tethering",
+    ],
 }
 
 // GN: //base:android_runtime_jni_headers__android_x86_64
@@ -1118,6 +1232,9 @@ cc_genrule {
         "build/android/gyp/util/build_utils.py",
         "build/gn_helpers.py",
         "third_party/android_sdk/public/platforms/android-33/android.jar",
+    ],
+    apex_available: [
+        "com.android.tethering",
     ],
 }
 
@@ -2484,6 +2601,9 @@ cc_genrule {
         "build/android/gyp/util/build_utils.py",
         "build/gn_helpers.py",
     ],
+    apex_available: [
+        "com.android.tethering",
+    ],
 }
 
 // GN: //base:base_jni_headers__android_arm64
@@ -2748,6 +2868,9 @@ cc_genrule {
         "build/android/gyp/util/__init__.py",
         "build/android/gyp/util/build_utils.py",
         "build/gn_helpers.py",
+    ],
+    apex_available: [
+        "com.android.tethering",
     ],
 }
 
@@ -3014,6 +3137,9 @@ cc_genrule {
         "build/android/gyp/util/build_utils.py",
         "build/gn_helpers.py",
     ],
+    apex_available: [
+        "com.android.tethering",
+    ],
 }
 
 // GN: //base:base_jni_headers__android_x86_64
@@ -3279,6 +3405,9 @@ cc_genrule {
         "build/android/gyp/util/build_utils.py",
         "build/gn_helpers.py",
     ],
+    apex_available: [
+        "com.android.tethering",
+    ],
 }
 
 // GN: //base:base_static
@@ -3399,6 +3528,9 @@ cc_genrule {
     tool_files: [
         "build/write_build_date_header.py",
     ],
+    apex_available: [
+        "com.android.tethering",
+    ],
 }
 
 // GN: //base:build_date__android_arm64
@@ -3411,6 +3543,9 @@ cc_genrule {
     ],
     tool_files: [
         "build/write_build_date_header.py",
+    ],
+    apex_available: [
+        "com.android.tethering",
     ],
 }
 
@@ -3425,6 +3560,9 @@ cc_genrule {
     tool_files: [
         "build/write_build_date_header.py",
     ],
+    apex_available: [
+        "com.android.tethering",
+    ],
 }
 
 // GN: //base:build_date__android_x86_64
@@ -3437,6 +3575,9 @@ cc_genrule {
     ],
     tool_files: [
         "build/write_build_date_header.py",
+    ],
+    apex_available: [
+        "com.android.tethering",
     ],
 }
 
@@ -3452,6 +3593,9 @@ cc_genrule {
     ],
     tool_files: [
         "build/write_build_date_header.py",
+    ],
+    apex_available: [
+        "com.android.tethering",
     ],
 }
 
@@ -3473,6 +3617,9 @@ cc_genrule {
     tool_files: [
         "build/write_buildflag_header.py",
     ],
+    apex_available: [
+        "com.android.tethering",
+    ],
 }
 
 // GN: //base:cfi_buildflags__android_arm64
@@ -3492,6 +3639,9 @@ cc_genrule {
     ],
     tool_files: [
         "build/write_buildflag_header.py",
+    ],
+    apex_available: [
+        "com.android.tethering",
     ],
 }
 
@@ -3513,6 +3663,9 @@ cc_genrule {
     tool_files: [
         "build/write_buildflag_header.py",
     ],
+    apex_available: [
+        "com.android.tethering",
+    ],
 }
 
 // GN: //base:cfi_buildflags__android_x86_64
@@ -3532,6 +3685,9 @@ cc_genrule {
     ],
     tool_files: [
         "build/write_buildflag_header.py",
+    ],
+    apex_available: [
+        "com.android.tethering",
     ],
 }
 
@@ -3555,6 +3711,9 @@ cc_genrule {
     tool_files: [
         "build/write_buildflag_header.py",
     ],
+    apex_available: [
+        "com.android.tethering",
+    ],
 }
 
 // GN: //base:clang_profiling_buildflags__android_arm
@@ -3574,6 +3733,9 @@ cc_genrule {
     ],
     tool_files: [
         "build/write_buildflag_header.py",
+    ],
+    apex_available: [
+        "com.android.tethering",
     ],
 }
 
@@ -3595,6 +3757,9 @@ cc_genrule {
     tool_files: [
         "build/write_buildflag_header.py",
     ],
+    apex_available: [
+        "com.android.tethering",
+    ],
 }
 
 // GN: //base:clang_profiling_buildflags__android_x86
@@ -3615,6 +3780,9 @@ cc_genrule {
     tool_files: [
         "build/write_buildflag_header.py",
     ],
+    apex_available: [
+        "com.android.tethering",
+    ],
 }
 
 // GN: //base:clang_profiling_buildflags__android_x86_64
@@ -3634,6 +3802,9 @@ cc_genrule {
     ],
     tool_files: [
         "build/write_buildflag_header.py",
+    ],
+    apex_available: [
+        "com.android.tethering",
     ],
 }
 
@@ -3657,6 +3828,9 @@ cc_genrule {
     tool_files: [
         "build/write_buildflag_header.py",
     ],
+    apex_available: [
+        "com.android.tethering",
+    ],
 }
 
 // GN: //base:debugging_buildflags__android_arm
@@ -3676,6 +3850,9 @@ cc_genrule {
     ],
     tool_files: [
         "build/write_buildflag_header.py",
+    ],
+    apex_available: [
+        "com.android.tethering",
     ],
 }
 
@@ -3697,6 +3874,9 @@ cc_genrule {
     tool_files: [
         "build/write_buildflag_header.py",
     ],
+    apex_available: [
+        "com.android.tethering",
+    ],
 }
 
 // GN: //base:debugging_buildflags__android_x86
@@ -3717,6 +3897,9 @@ cc_genrule {
     tool_files: [
         "build/write_buildflag_header.py",
     ],
+    apex_available: [
+        "com.android.tethering",
+    ],
 }
 
 // GN: //base:debugging_buildflags__android_x86_64
@@ -3736,6 +3919,9 @@ cc_genrule {
     ],
     tool_files: [
         "build/write_buildflag_header.py",
+    ],
+    apex_available: [
+        "com.android.tethering",
     ],
 }
 
@@ -3759,6 +3945,9 @@ cc_genrule {
     tool_files: [
         "build/write_buildflag_header.py",
     ],
+    apex_available: [
+        "com.android.tethering",
+    ],
 }
 
 // GN: //base:feature_list_buildflags__android_arm
@@ -3778,6 +3967,9 @@ cc_genrule {
     ],
     tool_files: [
         "build/write_buildflag_header.py",
+    ],
+    apex_available: [
+        "com.android.tethering",
     ],
 }
 
@@ -3799,6 +3991,9 @@ cc_genrule {
     tool_files: [
         "build/write_buildflag_header.py",
     ],
+    apex_available: [
+        "com.android.tethering",
+    ],
 }
 
 // GN: //base:feature_list_buildflags__android_x86
@@ -3819,6 +4014,9 @@ cc_genrule {
     tool_files: [
         "build/write_buildflag_header.py",
     ],
+    apex_available: [
+        "com.android.tethering",
+    ],
 }
 
 // GN: //base:feature_list_buildflags__android_x86_64
@@ -3838,6 +4036,9 @@ cc_genrule {
     ],
     tool_files: [
         "build/write_buildflag_header.py",
+    ],
+    apex_available: [
+        "com.android.tethering",
     ],
 }
 
@@ -3861,6 +4062,9 @@ cc_genrule {
     tool_files: [
         "build/write_buildflag_header.py",
     ],
+    apex_available: [
+        "com.android.tethering",
+    ],
 }
 
 // GN: //base:ios_cronet_buildflags__android_arm
@@ -3880,6 +4084,9 @@ cc_genrule {
     ],
     tool_files: [
         "build/write_buildflag_header.py",
+    ],
+    apex_available: [
+        "com.android.tethering",
     ],
 }
 
@@ -3901,6 +4108,9 @@ cc_genrule {
     tool_files: [
         "build/write_buildflag_header.py",
     ],
+    apex_available: [
+        "com.android.tethering",
+    ],
 }
 
 // GN: //base:ios_cronet_buildflags__android_x86
@@ -3921,6 +4131,9 @@ cc_genrule {
     tool_files: [
         "build/write_buildflag_header.py",
     ],
+    apex_available: [
+        "com.android.tethering",
+    ],
 }
 
 // GN: //base:ios_cronet_buildflags__android_x86_64
@@ -3940,6 +4153,9 @@ cc_genrule {
     ],
     tool_files: [
         "build/write_buildflag_header.py",
+    ],
+    apex_available: [
+        "com.android.tethering",
     ],
 }
 
@@ -3963,6 +4179,9 @@ cc_genrule {
     tool_files: [
         "build/write_buildflag_header.py",
     ],
+    apex_available: [
+        "com.android.tethering",
+    ],
 }
 
 // GN: //base:logging_buildflags__android_arm
@@ -3982,6 +4201,9 @@ cc_genrule {
     ],
     tool_files: [
         "build/write_buildflag_header.py",
+    ],
+    apex_available: [
+        "com.android.tethering",
     ],
 }
 
@@ -4003,6 +4225,9 @@ cc_genrule {
     tool_files: [
         "build/write_buildflag_header.py",
     ],
+    apex_available: [
+        "com.android.tethering",
+    ],
 }
 
 // GN: //base:logging_buildflags__android_x86
@@ -4023,6 +4248,9 @@ cc_genrule {
     tool_files: [
         "build/write_buildflag_header.py",
     ],
+    apex_available: [
+        "com.android.tethering",
+    ],
 }
 
 // GN: //base:logging_buildflags__android_x86_64
@@ -4042,6 +4270,9 @@ cc_genrule {
     ],
     tool_files: [
         "build/write_buildflag_header.py",
+    ],
+    apex_available: [
+        "com.android.tethering",
     ],
 }
 
@@ -4065,6 +4296,9 @@ cc_genrule {
     tool_files: [
         "build/write_buildflag_header.py",
     ],
+    apex_available: [
+        "com.android.tethering",
+    ],
 }
 
 // GN: //base:message_pump_buildflags__android_arm
@@ -4084,6 +4318,9 @@ cc_genrule {
     ],
     tool_files: [
         "build/write_buildflag_header.py",
+    ],
+    apex_available: [
+        "com.android.tethering",
     ],
 }
 
@@ -4105,6 +4342,9 @@ cc_genrule {
     tool_files: [
         "build/write_buildflag_header.py",
     ],
+    apex_available: [
+        "com.android.tethering",
+    ],
 }
 
 // GN: //base:message_pump_buildflags__android_x86
@@ -4125,6 +4365,9 @@ cc_genrule {
     tool_files: [
         "build/write_buildflag_header.py",
     ],
+    apex_available: [
+        "com.android.tethering",
+    ],
 }
 
 // GN: //base:message_pump_buildflags__android_x86_64
@@ -4144,6 +4387,9 @@ cc_genrule {
     ],
     tool_files: [
         "build/write_buildflag_header.py",
+    ],
+    apex_available: [
+        "com.android.tethering",
     ],
 }
 
@@ -4166,6 +4412,9 @@ cc_genrule {
     ],
     tool_files: [
         "build/write_buildflag_header.py",
+    ],
+    apex_available: [
+        "com.android.tethering",
     ],
 }
 
@@ -4261,6 +4510,9 @@ cc_genrule {
     tool_files: [
         "build/write_buildflag_header.py",
     ],
+    apex_available: [
+        "com.android.tethering",
+    ],
 }
 
 // GN: //base:orderfile_buildflags__android_arm64
@@ -4280,6 +4532,9 @@ cc_genrule {
     ],
     tool_files: [
         "build/write_buildflag_header.py",
+    ],
+    apex_available: [
+        "com.android.tethering",
     ],
 }
 
@@ -4301,6 +4556,9 @@ cc_genrule {
     tool_files: [
         "build/write_buildflag_header.py",
     ],
+    apex_available: [
+        "com.android.tethering",
+    ],
 }
 
 // GN: //base:orderfile_buildflags__android_x86_64
@@ -4320,6 +4578,9 @@ cc_genrule {
     ],
     tool_files: [
         "build/write_buildflag_header.py",
+    ],
+    apex_available: [
+        "com.android.tethering",
     ],
 }
 
@@ -4343,6 +4604,9 @@ cc_genrule {
     tool_files: [
         "build/write_buildflag_header.py",
     ],
+    apex_available: [
+        "com.android.tethering",
+    ],
 }
 
 // GN: //base:parsing_buildflags__android_arm
@@ -4362,6 +4626,9 @@ cc_genrule {
     ],
     tool_files: [
         "build/write_buildflag_header.py",
+    ],
+    apex_available: [
+        "com.android.tethering",
     ],
 }
 
@@ -4383,6 +4650,9 @@ cc_genrule {
     tool_files: [
         "build/write_buildflag_header.py",
     ],
+    apex_available: [
+        "com.android.tethering",
+    ],
 }
 
 // GN: //base:parsing_buildflags__android_x86
@@ -4403,6 +4673,9 @@ cc_genrule {
     tool_files: [
         "build/write_buildflag_header.py",
     ],
+    apex_available: [
+        "com.android.tethering",
+    ],
 }
 
 // GN: //base:parsing_buildflags__android_x86_64
@@ -4422,6 +4695,9 @@ cc_genrule {
     ],
     tool_files: [
         "build/write_buildflag_header.py",
+    ],
+    apex_available: [
+        "com.android.tethering",
     ],
 }
 
@@ -4445,6 +4721,9 @@ cc_genrule {
     tool_files: [
         "build/write_buildflag_header.py",
     ],
+    apex_available: [
+        "com.android.tethering",
+    ],
 }
 
 // GN: //base:power_monitor_buildflags__android_arm
@@ -4464,6 +4743,9 @@ cc_genrule {
     ],
     tool_files: [
         "build/write_buildflag_header.py",
+    ],
+    apex_available: [
+        "com.android.tethering",
     ],
 }
 
@@ -4485,6 +4767,9 @@ cc_genrule {
     tool_files: [
         "build/write_buildflag_header.py",
     ],
+    apex_available: [
+        "com.android.tethering",
+    ],
 }
 
 // GN: //base:power_monitor_buildflags__android_x86
@@ -4505,6 +4790,9 @@ cc_genrule {
     tool_files: [
         "build/write_buildflag_header.py",
     ],
+    apex_available: [
+        "com.android.tethering",
+    ],
 }
 
 // GN: //base:power_monitor_buildflags__android_x86_64
@@ -4524,6 +4812,9 @@ cc_genrule {
     ],
     tool_files: [
         "build/write_buildflag_header.py",
+    ],
+    apex_available: [
+        "com.android.tethering",
     ],
 }
 
@@ -4547,6 +4838,9 @@ cc_genrule {
     tool_files: [
         "build/write_buildflag_header.py",
     ],
+    apex_available: [
+        "com.android.tethering",
+    ],
 }
 
 // GN: //base:profiler_buildflags__android_arm
@@ -4566,6 +4860,9 @@ cc_genrule {
     ],
     tool_files: [
         "build/write_buildflag_header.py",
+    ],
+    apex_available: [
+        "com.android.tethering",
     ],
 }
 
@@ -4587,6 +4884,9 @@ cc_genrule {
     tool_files: [
         "build/write_buildflag_header.py",
     ],
+    apex_available: [
+        "com.android.tethering",
+    ],
 }
 
 // GN: //base:profiler_buildflags__android_x86
@@ -4607,6 +4907,9 @@ cc_genrule {
     tool_files: [
         "build/write_buildflag_header.py",
     ],
+    apex_available: [
+        "com.android.tethering",
+    ],
 }
 
 // GN: //base:profiler_buildflags__android_x86_64
@@ -4626,6 +4929,9 @@ cc_genrule {
     ],
     tool_files: [
         "build/write_buildflag_header.py",
+    ],
+    apex_available: [
+        "com.android.tethering",
     ],
 }
 
@@ -4649,6 +4955,9 @@ cc_genrule {
     tool_files: [
         "build/write_buildflag_header.py",
     ],
+    apex_available: [
+        "com.android.tethering",
+    ],
 }
 
 // GN: //base:sanitizer_buildflags__android_arm
@@ -4668,6 +4977,9 @@ cc_genrule {
     ],
     tool_files: [
         "build/write_buildflag_header.py",
+    ],
+    apex_available: [
+        "com.android.tethering",
     ],
 }
 
@@ -4689,6 +5001,9 @@ cc_genrule {
     tool_files: [
         "build/write_buildflag_header.py",
     ],
+    apex_available: [
+        "com.android.tethering",
+    ],
 }
 
 // GN: //base:sanitizer_buildflags__android_x86
@@ -4709,6 +5024,9 @@ cc_genrule {
     tool_files: [
         "build/write_buildflag_header.py",
     ],
+    apex_available: [
+        "com.android.tethering",
+    ],
 }
 
 // GN: //base:sanitizer_buildflags__android_x86_64
@@ -4728,6 +5046,9 @@ cc_genrule {
     ],
     tool_files: [
         "build/write_buildflag_header.py",
+    ],
+    apex_available: [
+        "com.android.tethering",
     ],
 }
 
@@ -4751,6 +5072,9 @@ cc_genrule {
     tool_files: [
         "build/write_buildflag_header.py",
     ],
+    apex_available: [
+        "com.android.tethering",
+    ],
 }
 
 // GN: //base:synchronization_buildflags__android_arm
@@ -4770,6 +5094,9 @@ cc_genrule {
     ],
     tool_files: [
         "build/write_buildflag_header.py",
+    ],
+    apex_available: [
+        "com.android.tethering",
     ],
 }
 
@@ -4791,6 +5118,9 @@ cc_genrule {
     tool_files: [
         "build/write_buildflag_header.py",
     ],
+    apex_available: [
+        "com.android.tethering",
+    ],
 }
 
 // GN: //base:synchronization_buildflags__android_x86
@@ -4811,6 +5141,9 @@ cc_genrule {
     tool_files: [
         "build/write_buildflag_header.py",
     ],
+    apex_available: [
+        "com.android.tethering",
+    ],
 }
 
 // GN: //base:synchronization_buildflags__android_x86_64
@@ -4830,6 +5163,9 @@ cc_genrule {
     ],
     tool_files: [
         "build/write_buildflag_header.py",
+    ],
+    apex_available: [
+        "com.android.tethering",
     ],
 }
 
@@ -4852,6 +5188,9 @@ cc_genrule {
     ],
     tool_files: [
         "build/write_buildflag_header.py",
+    ],
+    apex_available: [
+        "com.android.tethering",
     ],
 }
 
@@ -5163,6 +5502,9 @@ cc_genrule {
     tool_files: [
         "build/write_buildflag_header.py",
     ],
+    apex_available: [
+        "com.android.tethering",
+    ],
 }
 
 // GN: //base:tracing_buildflags__android_arm64
@@ -5182,6 +5524,9 @@ cc_genrule {
     ],
     tool_files: [
         "build/write_buildflag_header.py",
+    ],
+    apex_available: [
+        "com.android.tethering",
     ],
 }
 
@@ -5203,6 +5548,9 @@ cc_genrule {
     tool_files: [
         "build/write_buildflag_header.py",
     ],
+    apex_available: [
+        "com.android.tethering",
+    ],
 }
 
 // GN: //base:tracing_buildflags__android_x86_64
@@ -5222,6 +5570,9 @@ cc_genrule {
     ],
     tool_files: [
         "build/write_buildflag_header.py",
+    ],
+    apex_available: [
+        "com.android.tethering",
     ],
 }
 
@@ -5245,6 +5596,9 @@ cc_genrule {
     tool_files: [
         "build/write_buildflag_header.py",
     ],
+    apex_available: [
+        "com.android.tethering",
+    ],
 }
 
 // GN: //build:branding_buildflags__android_arm
@@ -5264,6 +5618,9 @@ cc_genrule {
     ],
     tool_files: [
         "build/write_buildflag_header.py",
+    ],
+    apex_available: [
+        "com.android.tethering",
     ],
 }
 
@@ -5285,6 +5642,9 @@ cc_genrule {
     tool_files: [
         "build/write_buildflag_header.py",
     ],
+    apex_available: [
+        "com.android.tethering",
+    ],
 }
 
 // GN: //build:branding_buildflags__android_x86
@@ -5305,6 +5665,9 @@ cc_genrule {
     tool_files: [
         "build/write_buildflag_header.py",
     ],
+    apex_available: [
+        "com.android.tethering",
+    ],
 }
 
 // GN: //build:branding_buildflags__android_x86_64
@@ -5324,6 +5687,9 @@ cc_genrule {
     ],
     tool_files: [
         "build/write_buildflag_header.py",
+    ],
+    apex_available: [
+        "com.android.tethering",
     ],
 }
 
@@ -5346,6 +5712,9 @@ cc_genrule {
     ],
     tool_files: [
         "build/write_buildflag_header.py",
+    ],
+    apex_available: [
+        "com.android.tethering",
     ],
 }
 
@@ -5441,6 +5810,9 @@ cc_genrule {
     tool_files: [
         "build/write_buildflag_header.py",
     ],
+    apex_available: [
+        "com.android.tethering",
+    ],
 }
 
 // GN: //build:chromecast_buildflags__android_arm64
@@ -5460,6 +5832,9 @@ cc_genrule {
     ],
     tool_files: [
         "build/write_buildflag_header.py",
+    ],
+    apex_available: [
+        "com.android.tethering",
     ],
 }
 
@@ -5481,6 +5856,9 @@ cc_genrule {
     tool_files: [
         "build/write_buildflag_header.py",
     ],
+    apex_available: [
+        "com.android.tethering",
+    ],
 }
 
 // GN: //build:chromecast_buildflags__android_x86_64
@@ -5500,6 +5878,9 @@ cc_genrule {
     ],
     tool_files: [
         "build/write_buildflag_header.py",
+    ],
+    apex_available: [
+        "com.android.tethering",
     ],
 }
 
@@ -5523,6 +5904,9 @@ cc_genrule {
     tool_files: [
         "build/write_buildflag_header.py",
     ],
+    apex_available: [
+        "com.android.tethering",
+    ],
 }
 
 // GN: //build:chromeos_buildflags__android_arm
@@ -5542,6 +5926,9 @@ cc_genrule {
     ],
     tool_files: [
         "build/write_buildflag_header.py",
+    ],
+    apex_available: [
+        "com.android.tethering",
     ],
 }
 
@@ -5563,6 +5950,9 @@ cc_genrule {
     tool_files: [
         "build/write_buildflag_header.py",
     ],
+    apex_available: [
+        "com.android.tethering",
+    ],
 }
 
 // GN: //build:chromeos_buildflags__android_x86
@@ -5583,6 +5973,9 @@ cc_genrule {
     tool_files: [
         "build/write_buildflag_header.py",
     ],
+    apex_available: [
+        "com.android.tethering",
+    ],
 }
 
 // GN: //build:chromeos_buildflags__android_x86_64
@@ -5602,6 +5995,9 @@ cc_genrule {
     ],
     tool_files: [
         "build/write_buildflag_header.py",
+    ],
+    apex_available: [
+        "com.android.tethering",
     ],
 }
 
@@ -5625,6 +6021,9 @@ cc_genrule {
     tool_files: [
         "build/write_buildflag_header.py",
     ],
+    apex_available: [
+        "com.android.tethering",
+    ],
 }
 
 // GN: //build/config/compiler:compiler_buildflags__android_arm
@@ -5644,6 +6043,9 @@ cc_genrule {
     ],
     tool_files: [
         "build/write_buildflag_header.py",
+    ],
+    apex_available: [
+        "com.android.tethering",
     ],
 }
 
@@ -5665,6 +6067,9 @@ cc_genrule {
     tool_files: [
         "build/write_buildflag_header.py",
     ],
+    apex_available: [
+        "com.android.tethering",
+    ],
 }
 
 // GN: //build/config/compiler:compiler_buildflags__android_x86
@@ -5685,6 +6090,9 @@ cc_genrule {
     tool_files: [
         "build/write_buildflag_header.py",
     ],
+    apex_available: [
+        "com.android.tethering",
+    ],
 }
 
 // GN: //build/config/compiler:compiler_buildflags__android_x86_64
@@ -5704,6 +6112,9 @@ cc_genrule {
     ],
     tool_files: [
         "build/write_buildflag_header.py",
+    ],
+    apex_available: [
+        "com.android.tethering",
     ],
 }
 
@@ -5726,6 +6137,9 @@ cc_genrule {
     ],
     tool_files: [
         "build/write_buildflag_header.py",
+    ],
+    apex_available: [
+        "com.android.tethering",
     ],
 }
 
@@ -6042,6 +6456,9 @@ cc_genrule {
     tool_files: [
         "build/write_buildflag_header.py",
     ],
+    apex_available: [
+        "com.android.tethering",
+    ],
 }
 
 // GN: //components/cronet/android:buildflags__android_arm64
@@ -6061,6 +6478,9 @@ cc_genrule {
     ],
     tool_files: [
         "build/write_buildflag_header.py",
+    ],
+    apex_available: [
+        "com.android.tethering",
     ],
 }
 
@@ -6082,6 +6502,9 @@ cc_genrule {
     tool_files: [
         "build/write_buildflag_header.py",
     ],
+    apex_available: [
+        "com.android.tethering",
+    ],
 }
 
 // GN: //components/cronet/android:buildflags__android_x86_64
@@ -6101,6 +6524,9 @@ cc_genrule {
     ],
     tool_files: [
         "build/write_buildflag_header.py",
+    ],
+    apex_available: [
+        "com.android.tethering",
     ],
 }
 
@@ -6351,6 +6777,9 @@ cc_genrule {
         "build/android/gyp/util/build_utils.py",
         "build/gn_helpers.py",
     ],
+    apex_available: [
+        "com.android.tethering",
+    ],
 }
 
 // GN: //components/cronet/android:cronet_jni_headers__android_arm64
@@ -6405,6 +6834,9 @@ cc_genrule {
         "build/android/gyp/util/__init__.py",
         "build/android/gyp/util/build_utils.py",
         "build/gn_helpers.py",
+    ],
+    apex_available: [
+        "com.android.tethering",
     ],
 }
 
@@ -6461,6 +6893,9 @@ cc_genrule {
         "build/android/gyp/util/build_utils.py",
         "build/gn_helpers.py",
     ],
+    apex_available: [
+        "com.android.tethering",
+    ],
 }
 
 // GN: //components/cronet/android:cronet_jni_headers__android_x86_64
@@ -6515,6 +6950,9 @@ cc_genrule {
         "build/android/gyp/util/__init__.py",
         "build/android/gyp/util/build_utils.py",
         "build/gn_helpers.py",
+    ],
+    apex_available: [
+        "com.android.tethering",
     ],
 }
 
@@ -6824,6 +7262,9 @@ cc_genrule {
         "build/android/gyp/util/build_utils.py",
         "build/gn_helpers.py",
     ],
+    apex_available: [
+        "com.android.tethering",
+    ],
 }
 
 // GN: //components/cronet/android:cronet_jni_registration__android_arm64
@@ -7131,6 +7572,9 @@ cc_genrule {
         "build/android/gyp/util/__init__.py",
         "build/android/gyp/util/build_utils.py",
         "build/gn_helpers.py",
+    ],
+    apex_available: [
+        "com.android.tethering",
     ],
 }
 
@@ -7440,6 +7884,9 @@ cc_genrule {
         "build/android/gyp/util/build_utils.py",
         "build/gn_helpers.py",
     ],
+    apex_available: [
+        "com.android.tethering",
+    ],
 }
 
 // GN: //components/cronet/android:cronet_jni_registration__android_x86_64
@@ -7748,6 +8195,9 @@ cc_genrule {
         "build/android/gyp/util/build_utils.py",
         "build/gn_helpers.py",
     ],
+    apex_available: [
+        "com.android.tethering",
+    ],
 }
 
 // GN: //components/cronet/android:cronet_static
@@ -7913,6 +8363,9 @@ cc_genrule {
     tool_files: [
         "build/write_buildflag_header.py",
     ],
+    apex_available: [
+        "com.android.tethering",
+    ],
 }
 
 // GN: //components/cronet:cronet_buildflags__android_arm64
@@ -7932,6 +8385,9 @@ cc_genrule {
     ],
     tool_files: [
         "build/write_buildflag_header.py",
+    ],
+    apex_available: [
+        "com.android.tethering",
     ],
 }
 
@@ -7953,6 +8409,9 @@ cc_genrule {
     tool_files: [
         "build/write_buildflag_header.py",
     ],
+    apex_available: [
+        "com.android.tethering",
+    ],
 }
 
 // GN: //components/cronet:cronet_buildflags__android_x86_64
@@ -7972,6 +8431,9 @@ cc_genrule {
     ],
     tool_files: [
         "build/write_buildflag_header.py",
+    ],
+    apex_available: [
+        "com.android.tethering",
     ],
 }
 
@@ -8169,6 +8631,9 @@ cc_genrule {
         "chrome/VERSION",
         "components/cronet/version.h.in",
     ],
+    apex_available: [
+        "com.android.tethering",
+    ],
 }
 
 // GN: //components/cronet:cronet_version_header_action__android_arm64
@@ -8191,6 +8656,9 @@ cc_genrule {
         "build/util/version.py",
         "chrome/VERSION",
         "components/cronet/version.h.in",
+    ],
+    apex_available: [
+        "com.android.tethering",
     ],
 }
 
@@ -8215,6 +8683,9 @@ cc_genrule {
         "chrome/VERSION",
         "components/cronet/version.h.in",
     ],
+    apex_available: [
+        "com.android.tethering",
+    ],
 }
 
 // GN: //components/cronet:cronet_version_header_action__android_x86_64
@@ -8237,6 +8708,9 @@ cc_genrule {
         "build/util/version.py",
         "chrome/VERSION",
         "components/cronet/version.h.in",
+    ],
+    apex_available: [
+        "com.android.tethering",
     ],
 }
 
@@ -8713,6 +9187,9 @@ cc_genrule {
     tool_files: [
         "build/write_buildflag_header.py",
     ],
+    apex_available: [
+        "com.android.tethering",
+    ],
 }
 
 // GN: //components/prefs/android:jni_headers__android_arm
@@ -8743,6 +9220,9 @@ cc_genrule {
         "build/android/gyp/util/__init__.py",
         "build/android/gyp/util/build_utils.py",
         "build/gn_helpers.py",
+    ],
+    apex_available: [
+        "com.android.tethering",
     ],
 }
 
@@ -8775,6 +9255,9 @@ cc_genrule {
         "build/android/gyp/util/build_utils.py",
         "build/gn_helpers.py",
     ],
+    apex_available: [
+        "com.android.tethering",
+    ],
 }
 
 // GN: //components/prefs/android:jni_headers__android_x86
@@ -8806,6 +9289,9 @@ cc_genrule {
         "build/android/gyp/util/build_utils.py",
         "build/gn_helpers.py",
     ],
+    apex_available: [
+        "com.android.tethering",
+    ],
 }
 
 // GN: //components/prefs/android:jni_headers__android_x86_64
@@ -8836,6 +9322,9 @@ cc_genrule {
         "build/android/gyp/util/__init__.py",
         "build/android/gyp/util/build_utils.py",
         "build/gn_helpers.py",
+    ],
+    apex_available: [
+        "com.android.tethering",
     ],
 }
 
@@ -8995,6 +9484,9 @@ cc_genrule {
     tool_files: [
         "build/write_buildflag_header.py",
     ],
+    apex_available: [
+        "com.android.tethering",
+    ],
 }
 
 // GN: //crypto:buildflags__android_arm64
@@ -9014,6 +9506,9 @@ cc_genrule {
     ],
     tool_files: [
         "build/write_buildflag_header.py",
+    ],
+    apex_available: [
+        "com.android.tethering",
     ],
 }
 
@@ -9035,6 +9530,9 @@ cc_genrule {
     tool_files: [
         "build/write_buildflag_header.py",
     ],
+    apex_available: [
+        "com.android.tethering",
+    ],
 }
 
 // GN: //crypto:buildflags__android_x86_64
@@ -9054,6 +9552,9 @@ cc_genrule {
     ],
     tool_files: [
         "build/write_buildflag_header.py",
+    ],
+    apex_available: [
+        "com.android.tethering",
     ],
 }
 
@@ -9076,6 +9577,9 @@ cc_genrule {
     ],
     tool_files: [
         "build/write_buildflag_header.py",
+    ],
+    apex_available: [
+        "com.android.tethering",
     ],
 }
 
@@ -9263,6 +9767,10 @@ cc_defaults {
         "-fvisibility=hidden",
     ],
     stl: "none",
+    apex_available: [
+        "com.android.tethering",
+    ],
+    min_sdk_version: "29",
     target: {
         android: {
             header_libs: [
@@ -9652,6 +10160,9 @@ cc_genrule {
         "net/base/registry_controlled_domains/effective_tld_names_unittest6.gperf",
         "net/tools/dafsa/make_dafsa.py",
     ],
+    apex_available: [
+        "com.android.tethering",
+    ],
 }
 
 // GN: //net/base/registry_controlled_domains:registry_controlled_domains__android_arm64
@@ -9702,6 +10213,9 @@ cc_genrule {
         "net/base/registry_controlled_domains/effective_tld_names_unittest5.gperf",
         "net/base/registry_controlled_domains/effective_tld_names_unittest6.gperf",
         "net/tools/dafsa/make_dafsa.py",
+    ],
+    apex_available: [
+        "com.android.tethering",
     ],
 }
 
@@ -9754,6 +10268,9 @@ cc_genrule {
         "net/base/registry_controlled_domains/effective_tld_names_unittest6.gperf",
         "net/tools/dafsa/make_dafsa.py",
     ],
+    apex_available: [
+        "com.android.tethering",
+    ],
 }
 
 // GN: //net/base/registry_controlled_domains:registry_controlled_domains__android_x86_64
@@ -9805,6 +10322,9 @@ cc_genrule {
         "net/base/registry_controlled_domains/effective_tld_names_unittest6.gperf",
         "net/tools/dafsa/make_dafsa.py",
     ],
+    apex_available: [
+        "com.android.tethering",
+    ],
 }
 
 // GN: //net:buildflags__android_arm
@@ -9824,6 +10344,9 @@ cc_genrule {
     ],
     tool_files: [
         "build/write_buildflag_header.py",
+    ],
+    apex_available: [
+        "com.android.tethering",
     ],
 }
 
@@ -9845,6 +10368,9 @@ cc_genrule {
     tool_files: [
         "build/write_buildflag_header.py",
     ],
+    apex_available: [
+        "com.android.tethering",
+    ],
 }
 
 // GN: //net:buildflags__android_x86
@@ -9865,6 +10391,9 @@ cc_genrule {
     tool_files: [
         "build/write_buildflag_header.py",
     ],
+    apex_available: [
+        "com.android.tethering",
+    ],
 }
 
 // GN: //net:buildflags__android_x86_64
@@ -9884,6 +10413,9 @@ cc_genrule {
     ],
     tool_files: [
         "build/write_buildflag_header.py",
+    ],
+    apex_available: [
+        "com.android.tethering",
     ],
 }
 
@@ -9970,6 +10502,9 @@ cc_genrule {
         "net/data/ssl/chrome_root_store/root_store.certs",
         "net/data/ssl/chrome_root_store/root_store.textproto",
     ],
+    apex_available: [
+        "com.android.tethering",
+    ],
 }
 
 // GN: //net/data/ssl/chrome_root_store:gen_root_store_inc__android_arm64
@@ -9992,6 +10527,9 @@ cc_genrule {
         "build/gn_run_binary.py",
         "net/data/ssl/chrome_root_store/root_store.certs",
         "net/data/ssl/chrome_root_store/root_store.textproto",
+    ],
+    apex_available: [
+        "com.android.tethering",
     ],
 }
 
@@ -10016,6 +10554,9 @@ cc_genrule {
         "net/data/ssl/chrome_root_store/root_store.certs",
         "net/data/ssl/chrome_root_store/root_store.textproto",
     ],
+    apex_available: [
+        "com.android.tethering",
+    ],
 }
 
 // GN: //net/data/ssl/chrome_root_store:gen_root_store_inc__android_x86_64
@@ -10038,6 +10579,9 @@ cc_genrule {
         "build/gn_run_binary.py",
         "net/data/ssl/chrome_root_store/root_store.certs",
         "net/data/ssl/chrome_root_store/root_store.textproto",
+    ],
+    apex_available: [
+        "com.android.tethering",
     ],
 }
 
@@ -11011,6 +11555,9 @@ cc_genrule {
     tool_files: [
         "build/write_buildflag_header.py",
     ],
+    apex_available: [
+        "com.android.tethering",
+    ],
 }
 
 // GN: //net:ios_cronet_buildflags__android_arm64
@@ -11030,6 +11577,9 @@ cc_genrule {
     ],
     tool_files: [
         "build/write_buildflag_header.py",
+    ],
+    apex_available: [
+        "com.android.tethering",
     ],
 }
 
@@ -11051,6 +11601,9 @@ cc_genrule {
     tool_files: [
         "build/write_buildflag_header.py",
     ],
+    apex_available: [
+        "com.android.tethering",
+    ],
 }
 
 // GN: //net:ios_cronet_buildflags__android_x86_64
@@ -11071,6 +11624,9 @@ cc_genrule {
     tool_files: [
         "build/write_buildflag_header.py",
     ],
+    apex_available: [
+        "com.android.tethering",
+    ],
 }
 
 // GN: //net:isolation_info_proto
@@ -11085,6 +11641,9 @@ cc_genrule {
     cmd: "$(location cronet_aml_third_party_protobuf_protoc) --proto_path=external/chromium_org/net/base --cpp_out=lite=true:$(genDir)/external/chromium_org/net/base/ $(in)",
     out: [
         "external/chromium_org/net/base/isolation_info.pb.cc",
+    ],
+    apex_available: [
+        "com.android.tethering",
     ],
 }
 
@@ -11105,6 +11664,9 @@ cc_genrule {
         ".",
         "net/base",
         "protos",
+    ],
+    apex_available: [
+        "com.android.tethering",
     ],
 }
 
@@ -12063,6 +12625,9 @@ cc_genrule {
         "build/android/gyp/util/build_utils.py",
         "build/gn_helpers.py",
     ],
+    apex_available: [
+        "com.android.tethering",
+    ],
 }
 
 // GN: //net:net_jni_headers__android_arm64
@@ -12165,6 +12730,9 @@ cc_genrule {
         "build/android/gyp/util/__init__.py",
         "build/android/gyp/util/build_utils.py",
         "build/gn_helpers.py",
+    ],
+    apex_available: [
+        "com.android.tethering",
     ],
 }
 
@@ -12269,6 +12837,9 @@ cc_genrule {
         "build/android/gyp/util/build_utils.py",
         "build/gn_helpers.py",
     ],
+    apex_available: [
+        "com.android.tethering",
+    ],
 }
 
 // GN: //net:net_jni_headers__android_x86_64
@@ -12372,6 +12943,9 @@ cc_genrule {
         "build/android/gyp/util/build_utils.py",
         "build/gn_helpers.py",
     ],
+    apex_available: [
+        "com.android.tethering",
+    ],
 }
 
 // GN: //net:net_nqe_proto
@@ -12386,6 +12960,9 @@ cc_genrule {
     cmd: "$(location cronet_aml_third_party_protobuf_protoc) --proto_path=external/chromium_org/net/nqe/proto --cpp_out=lite=true:$(genDir)/external/chromium_org/net/nqe/proto/ $(in)",
     out: [
         "external/chromium_org/net/nqe/proto/network_id_proto.pb.cc",
+    ],
+    apex_available: [
+        "com.android.tethering",
     ],
 }
 
@@ -12406,6 +12983,9 @@ cc_genrule {
         ".",
         "net/nqe/proto",
         "protos",
+    ],
+    apex_available: [
+        "com.android.tethering",
     ],
 }
 
@@ -12596,6 +13176,9 @@ cc_genrule {
         "external/chromium_org/net/third_party/quiche/src/quiche/quic/core/proto/crypto_server_config.pb.cc",
         "external/chromium_org/net/third_party/quiche/src/quiche/quic/core/proto/source_address_token.pb.cc",
     ],
+    apex_available: [
+        "com.android.tethering",
+    ],
 }
 
 // GN: //net/third_party/quiche:net_quic_proto
@@ -12620,6 +13203,9 @@ cc_genrule {
         "net/third_party/quiche/src",
         "protos",
     ],
+    apex_available: [
+        "com.android.tethering",
+    ],
 }
 
 // GN: //net/third_party/quiche:net_quic_test_tools_proto
@@ -12634,6 +13220,9 @@ cc_genrule {
     cmd: "$(location cronet_aml_third_party_protobuf_protoc) --proto_path=external/chromium_org/net/third_party/quiche/src/quiche/quic/test_tools --cpp_out=lite=true:$(genDir)/external/chromium_org/net/third_party/quiche/src/quiche/quic/test_tools/ $(in)",
     out: [
         "external/chromium_org/net/third_party/quiche/src/quiche/quic/test_tools/send_algorithm_test_result.pb.cc",
+    ],
+    apex_available: [
+        "com.android.tethering",
     ],
 }
 
@@ -12654,6 +13243,9 @@ cc_genrule {
         ".",
         "net/third_party/quiche/src/quiche/quic/test_tools",
         "protos",
+    ],
+    apex_available: [
+        "com.android.tethering",
     ],
 }
 
@@ -23510,6 +24102,9 @@ cc_genrule {
         "external/chromium_org/third_party/metrics_proto/user_action_event.pb.cc",
         "external/chromium_org/third_party/metrics_proto/user_demographics.pb.cc",
     ],
+    apex_available: [
+        "com.android.tethering",
+    ],
 }
 
 // GN: //third_party/metrics_proto:metrics_proto
@@ -23581,6 +24176,9 @@ cc_genrule {
         ".",
         "protos",
         "third_party/metrics_proto",
+    ],
+    apex_available: [
+        "com.android.tethering",
     ],
 }
 
@@ -24673,6 +25271,9 @@ cc_genrule {
     tool_files: [
         "build/write_buildflag_header.py",
     ],
+    apex_available: [
+        "com.android.tethering",
+    ],
 }
 
 // GN: //url:buildflags__android_arm64
@@ -24692,6 +25293,9 @@ cc_genrule {
     ],
     tool_files: [
         "build/write_buildflag_header.py",
+    ],
+    apex_available: [
+        "com.android.tethering",
     ],
 }
 
@@ -24713,6 +25317,9 @@ cc_genrule {
     tool_files: [
         "build/write_buildflag_header.py",
     ],
+    apex_available: [
+        "com.android.tethering",
+    ],
 }
 
 // GN: //url:buildflags__android_x86_64
@@ -24732,6 +25339,9 @@ cc_genrule {
     ],
     tool_files: [
         "build/write_buildflag_header.py",
+    ],
+    apex_available: [
+        "com.android.tethering",
     ],
 }
 
@@ -24917,6 +25527,9 @@ cc_genrule {
         "build/android/gyp/util/build_utils.py",
         "build/gn_helpers.py",
     ],
+    apex_available: [
+        "com.android.tethering",
+    ],
 }
 
 // GN: //url:url_jni_headers__android_arm64
@@ -24953,6 +25566,9 @@ cc_genrule {
         "build/android/gyp/util/__init__.py",
         "build/android/gyp/util/build_utils.py",
         "build/gn_helpers.py",
+    ],
+    apex_available: [
+        "com.android.tethering",
     ],
 }
 
@@ -24991,6 +25607,9 @@ cc_genrule {
         "build/android/gyp/util/build_utils.py",
         "build/gn_helpers.py",
     ],
+    apex_available: [
+        "com.android.tethering",
+    ],
 }
 
 // GN: //url:url_jni_headers__android_x86_64
@@ -25027,6 +25646,9 @@ cc_genrule {
         "build/android/gyp/util/__init__.py",
         "build/android/gyp/util/build_utils.py",
         "build/gn_helpers.py",
+    ],
+    apex_available: [
+        "com.android.tethering",
     ],
 }
 
