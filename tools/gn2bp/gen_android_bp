@@ -649,6 +649,10 @@ class ActionSanitizer():
     if hasValue:
       self.target.args.pop(i)
 
+  # wrap filename in location tag.
+  def _location_tag(self, filename):
+    return '$(location %s)' % filename
+
   def get_args(self):
     if self.target.script == "//build/write_buildflag_header.py":
       # write_buildflag_header.py writes result to args.genDir/args.output
