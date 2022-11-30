@@ -653,6 +653,10 @@ class ActionSanitizer():
   def _location_tag(self, filename):
     return '$(location %s)' % filename
 
+  # deletes the leading ../../
+  def _rebase_directory(self, filename):
+    filename = re.sub('^\.\./\.\./', '', filename)
+
   def get_args(self):
     if self.target.script == "//build/write_buildflag_header.py":
       # write_buildflag_header.py writes result to args.genDir/args.output
