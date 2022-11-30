@@ -372,7 +372,6 @@ class GnParser(object):
         # Explicitly break dependency chain when a java_group is added.
         # Java sources are collected and eventually compiled as one large
         # java_library.
-        #print(dep.name, target.deps)
         pass
 
       # Source set bubble up transitive source sets but can't be combined with this
@@ -399,8 +398,6 @@ class GnParser(object):
           log.debug('Adding java sources for %s', dep.name)
           java_srcs = [src for src in dep.inputs if _is_java_source(src)]
           self.java_sources.update(java_srcs)
-    #if target.name == "//build/config:executable_deps":
-      #print(target.name, arch, target.arch[arch].source_set_deps)
     return target
 
   def get_proto_exports(self, proto_desc):
