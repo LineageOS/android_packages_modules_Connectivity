@@ -365,7 +365,7 @@ class GnParser(object):
         target.update(dep, arch)  # Bubble up groups's cflags/ldflags etc.
       elif dep.type in ['action', 'action_foreach', 'copy']:
         if proto_target_type is None:
-          target.deps.add(dep.name)
+          target.arch[arch].deps.add(dep.name)
       elif dep.type in LINKER_UNIT_TYPES:
         target.arch[arch].deps.add(dep.name)
       elif dep.type == 'java_group':
