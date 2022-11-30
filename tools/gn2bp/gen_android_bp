@@ -638,14 +638,14 @@ class BaseActionSanitizer():
   def _has_arg(self, arg):
     return arg in self.target.args
 
-  # Whether an arg has multiple occurences (see argparse action='append')
-  def _is_append_arg(self, arg):
+  # Whether an arg has multiple occurences (e.g. see argparse action='append')
+  def _is_list_arg(self, arg):
     return operator.countOf(arg, self.target.args) > 1
 
   def _has_arg_value(self, arg):
     # TODO: we'll probably need a set of helper functions to deal with append
     # args as well.
-    assert(not self._is_append_arg(arg))
+    assert(not self._is_list_arg(arg))
     i = self.target.args.index(arg)
     return not self.target.args[i + 1].startswith('--')
 
@@ -663,7 +663,7 @@ class BaseActionSanitizer():
     self.target.args[position] = value
 
   def _delete_arg(self, arg):
-    assert(not self._is_append_arg(arg))
+    assert(not self._is_list_arg(arg))
     hasValue = self._has_arg_value(arg)
     i = self.target.index(arg)
     self.target.args.pop(i)
