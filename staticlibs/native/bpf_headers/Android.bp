@@ -38,12 +38,12 @@ cc_library_headers {
     ],
 }
 
-
 cc_test {
     // TODO: Rename to bpf_map_test and modify .gcls as well.
     name: "libbpf_android_test",
     srcs: [
         "BpfMapTest.cpp",
+        "BpfRingbufTest.cpp",
     ],
     defaults: ["bpf_defaults"],
     cflags: [
