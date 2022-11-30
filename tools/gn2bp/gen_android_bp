@@ -659,8 +659,7 @@ class BaseActionSanitizer():
     i = self.target.args.index(arg)
     self.target.args[i + 1] = value
 
-  def _set_arg_positional_value(self, position, value):
-    assert(position < len(self.target.args))
+  def _set_arg_at(self, position, value):
     self.target.args[position] = value
 
   def _delete_arg(self, arg):
@@ -684,7 +683,7 @@ class BaseActionSanitizer():
 
 class WriteBuildDateHeaderSanitizer(BaseActionSanitizer):
   def get_args(self):
-    self._set_arg_positional_value(0, '$(out)')
+    self._set_arg_at(0, '$(out)')
     return super().get_args()
 
 class WriteBuildFlagHeaderSanitizer(BaseActionSanitizer):
