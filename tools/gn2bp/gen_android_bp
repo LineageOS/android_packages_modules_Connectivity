@@ -651,26 +651,28 @@ class BaseActionSanitizer():
     i = self.target.args.index(arg)
     return self.target.args[i + 1]
 
-  def _set_value_arg(self, arg, value):
-    # Fail silently
-    if not self._has_arg(arg):
+  # used to check whether a function call should cause an error when an arg is
+  # missing.
+  def _should_fail_silently(self, arg, throw_if_absent):
+    return not throw_if_absent and not self._has_arg(arg)
+
+  def _set_value_arg(self, arg, value, throw_if_absent = True):
+    if self._should_fail_silently(arg, throw_if_absent):
       return
     assert(self._is_value_arg(arg))
     i = self.target.args.index(arg)
     self.target.args[i + 1] = value
 
-  def _update_value_arg(self, arg, func):
-    # Fail silently
-    if not self._has_arg(arg):
+  def _update_value_arg(self, arg, func, throw_if_absent = True):
+    if self._should_fail_silently(arg, throw_if_absent):
       return
     self._set_value_arg(arg, func(self._get_value_arg(arg)))
 
   def _set_arg_at(self, position, value):
     self.target.args[position] = value
 
-  def _delete_arg(self, arg):
-    # Fail silently
-    if not self._has_arg(arg):
+  def _delete_arg(self, arg, throw_if_absent = True):
+    if self._should_fail_silently(arg, throw_if_absent):
       return
     assert(not self._is_list_arg(arg))
     hasValue = self._is_value_arg(arg)
@@ -712,13 +714,13 @@ class WriteBuildFlagHeaderSanitizer(BaseActionSanitizer):
 
 class JniGeneratorSanitizer(BaseActionSanitizer):
   def get_args(self):
-    self._update_value_arg('--jar_file', self._sanitize_filepath)
-    self._update_value_arg('--jar_file', self._add_location_tag)
+    self._update_value_arg('--jar_file', self._sanitize_filepath, False)
+    self._update_value_arg('--jar_file', self._add_location_tag, False)
     if self._has_arg('--jar_file'):
       self._append_arg('--javap', '$$(find out/.path -name javap)')
     self._update_value_arg('--output_dir', self._sanitize_filepath)
-    self._update_value_arg('--includes', self._sanitize_filepath)
-    self._delete_arg('--prev_output_dir')
+    self._update_value_arg('--includes', self._sanitize_filepath, False)
+    self._delete_arg('--prev_output_dir', False)
     return super().get_args()
 
 
