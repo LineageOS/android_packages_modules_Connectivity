@@ -752,6 +752,7 @@ class JniRegistrationGeneratorSanitizer(BaseActionSanitizer):
     self._update_value_arg('--depfile', self._sanitize_filepath)
     self._update_value_arg('--srcjar-path', self._sanitize_filepath)
     self._update_value_arg('--header-path', self._sanitize_filepath)
+    self._set_value_arg('--sources-files', '$(genDir)/java.sources')
     return super().get_args()
 
 def get_action_sanitizer(target):
@@ -819,9 +820,7 @@ def create_action_module(blueprint, target):
 
     target.inputs = [file for file in target.inputs if not file.startswith('//out/')]
     for i, val in enumerate(target.args):
-      if val == '--sources-files':
-        target.args[i + 1] = '$(genDir)/java.sources'
-      elif val == '--sources-exclusions':
+      if val == '--sources-exclusions':
         # update_jni_registration_module removes them from the srcs of the module
         # It might be better to remove sources by '--sources-exclusions'
         target.args[i] = ''
