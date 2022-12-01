@@ -155,6 +155,9 @@ class GnParser(object):
       self.is_finalized = False
       self.arch = dict()
 
+      # This is used to get the name/version of libcronet
+      self.output_name = None
+
     def host_supported(self):
       return 'host' in self.arch
 
@@ -347,6 +350,7 @@ class GnParser(object):
     target.ldflags.update(desc.get('ldflags', []))
     target.arch[arch].defines.update(desc.get('defines', []))
     target.arch[arch].include_dirs.update(desc.get('include_dirs', []))
+    target.output_name = desc.get('output_name', None)
     if "-frtti" in target.arch[arch].cflags:
       target.rtti = True
 
@@ -372,7 +376,6 @@ class GnParser(object):
         # Explicitly break dependency chain when a java_group is added.
         # Java sources are collected and eventually compiled as one large
         # java_library.
-        #print(dep.name, target.deps)
         pass
 
       # Source set bubble up transitive source sets but can't be combined with this
@@ -399,8 +402,6 @@ class GnParser(object):
           log.debug('Adding java sources for %s', dep.name)
           java_srcs = [src for src in dep.inputs if _is_java_source(src)]
           self.java_sources.update(java_srcs)
-    #if target.name == "//build/config:executable_deps":
-      #print(target.name, arch, target.arch[arch].source_set_deps)
     return target
 
   def get_proto_exports(self, proto_desc):
