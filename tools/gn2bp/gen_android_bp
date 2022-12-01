@@ -684,7 +684,7 @@ class BaseActionSanitizer():
     self.target.args.append(value)
 
   # wrap filename in location tag.
-  def _location_tag(self, filename):
+  def _add_location_tag(self, filename):
     return '$(location %s)' % filename
 
   # applies common directory transformation that *should* be universally applicable.
@@ -712,6 +712,8 @@ class WriteBuildFlagHeaderSanitizer(BaseActionSanitizer):
 
 class JniGeneratorSanitizer(BaseActionSanitizer):
   def get_args(self):
+    self._update_value_arg('--jar_file', self._sanitize_dir)
+    self._update_value_arg('--jar_file', self._add_location_tag)
     if self._has_arg('--jar_file'):
       self._append_arg('--javap', '$$(find out/.path -name javap)')
     self._update_value_arg('--output_dir', self._sanitize_dir)
@@ -780,10 +782,6 @@ def create_action_module(blueprint, target):
           continue
         # replace --input_file ../../... with --input_file $(location ...)
         # TODO: put inside function
-        filename = re.sub('^\.\./\.\./', '', target.args[i + 1])
-        target.args[i + 1] = '$(location %s)' % filename
-      elif val == '--jar_file':
-        # delete leading ../../ and add path to javap
         filename = re.sub('^\.\./\.\./', '', target.args[i + 1])
         target.args[i + 1] = '$(location %s)' % filename
     # fix target.output directory to match #include statements.
