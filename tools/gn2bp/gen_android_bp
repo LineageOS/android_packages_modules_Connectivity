@@ -633,7 +633,7 @@ class BaseActionSanitizer():
   def _is_list_arg(self, arg):
     return operator.countOf(arg, self.target.args) > 1
 
-  def _has_arg_value(self, arg):
+  def _is_value_arg(self, arg):
     # TODO: we'll probably need a set of helper functions to deal with append
     # args as well.
     assert(not self._is_list_arg(arg))
@@ -641,12 +641,12 @@ class BaseActionSanitizer():
     return not self.target.args[i + 1].startswith('--')
 
   def _get_arg_value(self, arg):
-    assert(self._has_arg_value(arg))
+    assert(self._is_value_arg(arg))
     i = self.target.args.index(arg)
     return self.target.args[i + 1]
 
   def _set_arg_value(self, arg, value):
-    assert(self._has_arg_value(arg))
+    assert(self._is_value_arg(arg))
     i = self.target.args.index(arg)
     self.target.args[i + 1] = value
 
@@ -655,7 +655,7 @@ class BaseActionSanitizer():
 
   def _delete_arg(self, arg):
     assert(not self._is_list_arg(arg))
-    hasValue = self._has_arg_value(arg)
+    hasValue = self._is_value_arg(arg)
     i = self.target.index(arg)
     self.target.args.pop(i)
     if hasValue:
