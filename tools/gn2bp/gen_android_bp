@@ -618,12 +618,13 @@ def create_proto_group_modules(blueprint, gn, module_name, target_names):
 
   blueprint.add_module(module)
 
-def getSanitizer(target):
+def get_action_sanitizer(target):
   if target.script == "//build/write_buildflag_header.py":
     return WriteBuildFlagHeaderSanitizer(target)
   elif target.script == "//build/write_build_date_header.py":
     return WriteBuildDateHeaderSanitizer(target)
   else:
+    # TODO: throw exception here once all script hacks have been converted.
     return BaseActionSanitizer(target)
 
 
@@ -729,7 +730,7 @@ def create_action_module(blueprint, target):
   bp_module_name = label_to_module_name(target.name)
   module = Module('cc_genrule', bp_module_name, target.name)
 
-  sanitizer = getSanitizer(target)
+  sanitizer = get_action_sanitizer(target)
   target.args = sanitizer.get_args()
 
   if target.script == '//base/android/jni_generator/jni_generator.py':
