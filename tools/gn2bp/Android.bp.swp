@@ -1083,8 +1083,6 @@ cc_genrule {
     name: "cronet_aml_base_android_runtime_jni_headers__android_arm",
     cmd: "$(location base/android/jni_generator/jni_generator.py) --ptr_type " +
          "long " +
-         " " +
-         " " +
          "--output_dir " +
          "$(genDir)/base/android_runtime_jni_headers " +
          "--includes " +
@@ -1123,8 +1121,6 @@ cc_genrule {
     name: "cronet_aml_base_android_runtime_jni_headers__android_arm64",
     cmd: "$(location base/android/jni_generator/jni_generator.py) --ptr_type " +
          "long " +
-         " " +
-         " " +
          "--output_dir " +
          "$(genDir)/base/android_runtime_jni_headers " +
          "--includes " +
@@ -1163,8 +1159,6 @@ cc_genrule {
     name: "cronet_aml_base_android_runtime_jni_headers__android_x86",
     cmd: "$(location base/android/jni_generator/jni_generator.py) --ptr_type " +
          "long " +
-         " " +
-         " " +
          "--output_dir " +
          "$(genDir)/base/android_runtime_jni_headers " +
          "--includes " +
@@ -1203,8 +1197,6 @@ cc_genrule {
     name: "cronet_aml_base_android_runtime_jni_headers__android_x86_64",
     cmd: "$(location base/android/jni_generator/jni_generator.py) --ptr_type " +
          "long " +
-         " " +
-         " " +
          "--output_dir " +
          "$(genDir)/base/android_runtime_jni_headers " +
          "--includes " +
@@ -2385,8 +2377,6 @@ cc_genrule {
     ],
     cmd: "$(location base/android/jni_generator/jni_generator.py) --ptr_type " +
          "long " +
-         " " +
-         " " +
          "--output_dir " +
          "$(genDir)/base/base_jni_headers " +
          "--includes " +
@@ -2653,8 +2643,6 @@ cc_genrule {
     ],
     cmd: "$(location base/android/jni_generator/jni_generator.py) --ptr_type " +
          "long " +
-         " " +
-         " " +
          "--output_dir " +
          "$(genDir)/base/base_jni_headers " +
          "--includes " +
@@ -2921,8 +2909,6 @@ cc_genrule {
     ],
     cmd: "$(location base/android/jni_generator/jni_generator.py) --ptr_type " +
          "long " +
-         " " +
-         " " +
          "--output_dir " +
          "$(genDir)/base/base_jni_headers " +
          "--includes " +
@@ -3189,8 +3175,6 @@ cc_genrule {
     ],
     cmd: "$(location base/android/jni_generator/jni_generator.py) --ptr_type " +
          "long " +
-         " " +
-         " " +
          "--output_dir " +
          "$(genDir)/base/base_jni_headers " +
          "--includes " +
@@ -6737,8 +6721,6 @@ cc_genrule {
     ],
     cmd: "$(location base/android/jni_generator/jni_generator.py) --ptr_type " +
          "long " +
-         " " +
-         " " +
          "--output_dir " +
          "$(genDir)/components/cronet/android/cronet_jni_headers " +
          "--includes " +
@@ -6795,8 +6777,6 @@ cc_genrule {
     ],
     cmd: "$(location base/android/jni_generator/jni_generator.py) --ptr_type " +
          "long " +
-         " " +
-         " " +
          "--output_dir " +
          "$(genDir)/components/cronet/android/cronet_jni_headers " +
          "--includes " +
@@ -6853,8 +6833,6 @@ cc_genrule {
     ],
     cmd: "$(location base/android/jni_generator/jni_generator.py) --ptr_type " +
          "long " +
-         " " +
-         " " +
          "--output_dir " +
          "$(genDir)/components/cronet/android/cronet_jni_headers " +
          "--includes " +
@@ -6911,8 +6889,6 @@ cc_genrule {
     ],
     cmd: "$(location base/android/jni_generator/jni_generator.py) --ptr_type " +
          "long " +
-         " " +
-         " " +
          "--output_dir " +
          "$(genDir)/components/cronet/android/cronet_jni_headers " +
          "--includes " +
@@ -9201,8 +9177,6 @@ cc_genrule {
     ],
     cmd: "$(location base/android/jni_generator/jni_generator.py) --ptr_type " +
          "long " +
-         " " +
-         " " +
          "--output_dir " +
          "$(genDir)/components/prefs/android/jni_headers " +
          "--includes " +
@@ -9235,8 +9209,6 @@ cc_genrule {
     ],
     cmd: "$(location base/android/jni_generator/jni_generator.py) --ptr_type " +
          "long " +
-         " " +
-         " " +
          "--output_dir " +
          "$(genDir)/components/prefs/android/jni_headers " +
          "--includes " +
@@ -9269,8 +9241,6 @@ cc_genrule {
     ],
     cmd: "$(location base/android/jni_generator/jni_generator.py) --ptr_type " +
          "long " +
-         " " +
-         " " +
          "--output_dir " +
          "$(genDir)/components/prefs/android/jni_headers " +
          "--includes " +
@@ -9303,8 +9273,6 @@ cc_genrule {
     ],
     cmd: "$(location base/android/jni_generator/jni_generator.py) --ptr_type " +
          "long " +
-         " " +
-         " " +
          "--output_dir " +
          "$(genDir)/components/prefs/android/jni_headers " +
          "--includes " +
@@ -12545,8 +12513,6 @@ cc_genrule {
     ],
     cmd: "$(location base/android/jni_generator/jni_generator.py) --ptr_type " +
          "long " +
-         " " +
-         " " +
          "--output_dir " +
          "$(genDir)/net/net_jni_headers " +
          "--includes " +
@@ -12651,8 +12617,6 @@ cc_genrule {
     ],
     cmd: "$(location base/android/jni_generator/jni_generator.py) --ptr_type " +
          "long " +
-         " " +
-         " " +
          "--output_dir " +
          "$(genDir)/net/net_jni_headers " +
          "--includes " +
@@ -12757,8 +12721,6 @@ cc_genrule {
     ],
     cmd: "$(location base/android/jni_generator/jni_generator.py) --ptr_type " +
          "long " +
-         " " +
-         " " +
          "--output_dir " +
          "$(genDir)/net/net_jni_headers " +
          "--includes " +
@@ -12863,8 +12825,6 @@ cc_genrule {
     ],
     cmd: "$(location base/android/jni_generator/jni_generator.py) --ptr_type " +
          "long " +
-         " " +
-         " " +
          "--output_dir " +
          "$(genDir)/net/net_jni_headers " +
          "--includes " +
@@ -25502,8 +25462,6 @@ cc_genrule {
     ],
     cmd: "$(location base/android/jni_generator/jni_generator.py) --ptr_type " +
          "long " +
-         " " +
-         " " +
          "--output_dir " +
          "$(genDir)/url/url_jni_headers " +
          "--includes " +
@@ -25542,8 +25500,6 @@ cc_genrule {
     ],
     cmd: "$(location base/android/jni_generator/jni_generator.py) --ptr_type " +
          "long " +
-         " " +
-         " " +
          "--output_dir " +
          "$(genDir)/url/url_jni_headers " +
          "--includes " +
@@ -25582,8 +25538,6 @@ cc_genrule {
     ],
     cmd: "$(location base/android/jni_generator/jni_generator.py) --ptr_type " +
          "long " +
-         " " +
-         " " +
          "--output_dir " +
          "$(genDir)/url/url_jni_headers " +
          "--includes " +
@@ -25622,8 +25576,6 @@ cc_genrule {
     ],
     cmd: "$(location base/android/jni_generator/jni_generator.py) --ptr_type " +
          "long " +
-         " " +
-         " " +
          "--output_dir " +
          "$(genDir)/url/url_jni_headers " +
          "--includes " +
