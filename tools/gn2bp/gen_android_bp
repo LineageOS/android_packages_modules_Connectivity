@@ -1199,7 +1199,13 @@ def create_java_module(blueprint, gn):
   module = Module('java_library', bp_module_name, '//gn:java')
   module.srcs.update([gn_utils.label_to_path(source) for source in gn.java_sources])
   for dep in gn.java_actions:
-    create_modules_from_target(blueprint, gn, dep)
+    dep_module = create_modules_from_target(blueprint, gn, dep)
+    if "cronet_jni_registration" in dep_module.name:
+      dep_module = copy.deepcopy(dep_module)
+      dep_module.name += "_java"
+      dep_module.type = 'java_genrule'
+      dep_module.out = [out for out in dep_module.out if out.endswith(".srcjar")]
+      blueprint.add_module(dep_module)
   blueprint.add_module(module)
 
 def update_jni_registration_module(module, gn):
