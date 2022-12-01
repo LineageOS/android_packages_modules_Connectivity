@@ -623,6 +623,8 @@ def get_action_sanitizer(target):
     return WriteBuildFlagHeaderSanitizer(target)
   elif target.script == "//build/write_build_date_header.py":
     return WriteBuildDateHeaderSanitizer(target)
+  elif target.script == '//base/android/jni_generator/jni_generator.py':
+    return JniGeneratorSanitizer(target)
   else:
     # TODO: throw exception here once all script hacks have been converted.
     return BaseActionSanitizer(target)
@@ -696,6 +698,13 @@ class WriteBuildFlagHeaderSanitizer(BaseActionSanitizer):
     self._set_arg_value('--output', '$(out)')
     return super().get_args()
 
+class JniGeneratorSanitizer(BaseActionSanitizer):
+  def get_args(self):
+    if self._has_arg('--jar_file'):
+      self._append_arg('--javap', '$$(find out/.path -name javap)')
+    return super().get_args()
+
+
 def create_action_foreach_modules(blueprint, target):
   """ The following assumes that rebase_path exists in the args.
   The args of an action_foreach contains hints about which output files are generated
@@ -737,7 +746,6 @@ def create_action_module(blueprint, target):
   target.args = sanitizer.get_args()
 
   if target.script == '//base/android/jni_generator/jni_generator.py':
-    needs_javap = False
     for i, val in enumerate(target.args):
       if val == '--output_dir':
         # replace --output_dir gen/jni_headers/... with --output_dir $(genDir)/...
@@ -762,11 +770,6 @@ def create_action_module(blueprint, target):
         # delete leading ../../ and add path to javap
         filename = re.sub('^\.\./\.\./', '', target.args[i + 1])
         target.args[i + 1] = '$(location %s)' % filename
-        needs_javap = True
-
-    if needs_javap:
-      target.args.append('--javap')
-      target.args.append('$$(find out/.path -name javap)')
     # fix target.output directory to match #include statements.
     target.outputs = [re.sub('^jni_headers/', '', out) for out in target.outputs]
 
