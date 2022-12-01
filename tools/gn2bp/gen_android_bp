@@ -626,6 +626,12 @@ class BaseActionSanitizer():
     # Convert ['--param=value'] to ['--param', 'value'] for consistency.
     self.target.args = [str for it in self.target.args for str in it.split('=')]
 
+  # There are three types of args:
+  # - flags (--flag)
+  # - value args (--arg value)
+  # - list args (--arg value1 --arg value2)
+  # Some functions provide special implementations for each type, while others
+  # work on all of them.
   def _has_arg(self, arg):
     return arg in self.target.args
 
@@ -640,12 +646,12 @@ class BaseActionSanitizer():
     i = self.target.args.index(arg)
     return not self.target.args[i + 1].startswith('--')
 
-  def _get_arg_value(self, arg):
+  def _get_value_arg(self, arg):
     assert(self._is_value_arg(arg))
     i = self.target.args.index(arg)
     return self.target.args[i + 1]
 
-  def _set_arg_value(self, arg, value):
+  def _set_value_arg(self, arg, value):
     assert(self._is_value_arg(arg))
     i = self.target.args.index(arg)
     self.target.args[i + 1] = value
@@ -683,8 +689,8 @@ class WriteBuildDateHeaderSanitizer(BaseActionSanitizer):
 
 class WriteBuildFlagHeaderSanitizer(BaseActionSanitizer):
   def get_args(self):
-    self._set_arg_value('--gen-dir', '.')
-    self._set_arg_value('--output', '$(out)')
+    self._set_value_arg('--gen-dir', '.')
+    self._set_value_arg('--output', '$(out)')
     return super().get_args()
 
 class JniGeneratorSanitizer(BaseActionSanitizer):
