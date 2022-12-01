@@ -691,7 +691,7 @@ class BaseActionSanitizer():
   # TODO: verify if it actually *is* universally applicable.
   def _sanitize_dir(self, filepath):
     # Careful, order matters!
-    filepath = re.sub('^\.\./\.\./', '', filepath)
+    filepath = re.sub('^(\.\./)+', '', filepath)
     filepath = re.sub('^gen/jni_headers', '$(genDir)', filepath)
     filepath = re.sub('^gen', '$(genDir)', filepath)
     return filepath
@@ -715,6 +715,7 @@ class JniGeneratorSanitizer(BaseActionSanitizer):
     if self._has_arg('--jar_file'):
       self._append_arg('--javap', '$$(find out/.path -name javap)')
     self._update_value_arg('--output_dir', self._sanitize_dir)
+    self._update_value_arg('--includes', self._sanitize_dir)
     return super().get_args()
 
 
@@ -780,9 +781,6 @@ def create_action_module(blueprint, target):
         # TODO: put inside function
         filename = re.sub('^\.\./\.\./', '', target.args[i + 1])
         target.args[i + 1] = '$(location %s)' % filename
-      elif val == '--includes' and 'jni_generator_helper' in target.args[i + 1]:
-        # delete all leading ../
-        target.args[i + 1] = re.sub('^(\.\./)+', '', target.args[i + 1])
       elif val == '--prev_output_dir':
         # this is not needed for aosp builds.
         target.args[i] = ''
