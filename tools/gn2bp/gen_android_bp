@@ -774,6 +774,8 @@ class VersionSanitizer(BaseActionSanitizer):
     # arg for -e EVAL option should be passed in -e PATCH_HI=int(PATCH)//256 format.
     index = self.target.args.index('-e')
     value = '%s=\'%s\'' % (self.target.args[index + 1], self.target.args[index + 2])
+    # escape '"' in the value
+    value = value.replace('"', r'\"')
     self._set_arg_at(index + 1, value)
     self.target.args.pop(index + 2)
 
@@ -869,12 +871,6 @@ def create_action_module(blueprint, target):
   if use_response_file:
     # Replace {{response_file_contents}} with /dev/stdin
     target.args = ['/dev/stdin' if it == response_file else it for it in target.args]
-
-  # escape " and \$ in target.args.
-  # once all actions are properly implemented, this may not be necessary anymore.
-  # TODO: is this the right place to do this?
-  target.args = [arg.replace('"', r'\"') for arg in target.args]
-  target.args = [arg.replace(r'\$', r'\\$') for arg in target.args]
 
   # put all args on a new line for better diffs.
   NEWLINE = ' " +\n         "'
