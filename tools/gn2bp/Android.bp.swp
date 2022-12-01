@@ -2334,15 +2334,15 @@ cc_library_static {
 java_genrule {
     name: "cronet_aml_base_base_android_java_enums_srcjar",
     cmd: "$(location build/android/gyp/java_cpp_enum.py) --srcjar " +
-         "gen/base/base_android_java_enums_srcjar.srcjar " +
-         "../../base/android/application_status_listener.h " +
-         "../../base/android/child_process_binding_types.h " +
-         "../../base/android/library_loader/library_loader_hooks.h " +
-         "../../base/android/linker/modern_linker_jni.h " +
-         "../../base/android/task_scheduler/task_runner_android.h " +
-         "../../base/memory/memory_pressure_listener.h " +
-         "../../base/metrics/histogram_base.h " +
-         "../../base/task/task_traits.h",
+         "$(out) " +
+         "$(location base/android/application_status_listener.h) " +
+         "$(location base/android/child_process_binding_types.h) " +
+         "$(location base/android/library_loader/library_loader_hooks.h) " +
+         "$(location base/android/linker/modern_linker_jni.h) " +
+         "$(location base/android/task_scheduler/task_runner_android.h) " +
+         "$(location base/memory/memory_pressure_listener.h) " +
+         "$(location base/metrics/histogram_base.h) " +
+         "$(location base/task/task_traits.h)",
     out: [
         "base/base_android_java_enums_srcjar.srcjar",
     ],
@@ -7517,8 +7517,8 @@ cc_object {
 java_genrule {
     name: "cronet_aml_components_cronet_android_http_cache_type_java",
     cmd: "$(location build/android/gyp/java_cpp_enum.py) --srcjar " +
-         "gen/components/cronet/android/http_cache_type_java.srcjar " +
-         "../../components/cronet/url_request_context_config.h",
+         "$(out) " +
+         "$(location components/cronet/url_request_context_config.h)",
     out: [
         "components/cronet/android/http_cache_type_java.srcjar",
     ],
@@ -7614,8 +7614,8 @@ java_genrule {
 java_genrule {
     name: "cronet_aml_components_cronet_android_net_idempotency_java",
     cmd: "$(location build/android/gyp/java_cpp_enum.py) --srcjar " +
-         "gen/components/cronet/android/net_idempotency_java.srcjar " +
-         "../../net/base/idempotency.h",
+         "$(out) " +
+         "$(location net/base/idempotency.h)",
     out: [
         "components/cronet/android/net_idempotency_java.srcjar",
     ],
@@ -7629,8 +7629,8 @@ java_genrule {
 java_genrule {
     name: "cronet_aml_components_cronet_android_net_request_priority_java",
     cmd: "$(location build/android/gyp/java_cpp_enum.py) --srcjar " +
-         "gen/components/cronet/android/net_request_priority_java.srcjar " +
-         "../../net/base/request_priority.h",
+         "$(out) " +
+         "$(location net/base/request_priority.h)",
     out: [
         "components/cronet/android/net_request_priority_java.srcjar",
     ],
@@ -7644,8 +7644,8 @@ java_genrule {
 java_genrule {
     name: "cronet_aml_components_cronet_android_network_quality_observation_source_java",
     cmd: "$(location build/android/gyp/java_cpp_enum.py) --srcjar " +
-         "gen/components/cronet/android/network_quality_observation_source_java.srcjar " +
-         "../../net/nqe/network_quality_observation_source.h",
+         "$(out) " +
+         "$(location net/nqe/network_quality_observation_source.h)",
     out: [
         "components/cronet/android/network_quality_observation_source_java.srcjar",
     ],
@@ -7659,8 +7659,8 @@ java_genrule {
 java_genrule {
     name: "cronet_aml_components_cronet_android_rtt_throughput_values_java",
     cmd: "$(location build/android/gyp/java_cpp_enum.py) --srcjar " +
-         "gen/components/cronet/android/rtt_throughput_values_java.srcjar " +
-         "../../net/nqe/network_quality.h",
+         "$(out) " +
+         "$(location net/nqe/network_quality.h)",
     out: [
         "components/cronet/android/rtt_throughput_values_java.srcjar",
     ],
@@ -7674,8 +7674,8 @@ java_genrule {
 java_genrule {
     name: "cronet_aml_components_cronet_android_url_request_error_java",
     cmd: "$(location build/android/gyp/java_cpp_enum.py) --srcjar " +
-         "gen/components/cronet/android/url_request_error_java.srcjar " +
-         "../../components/cronet/android/url_request_error.h",
+         "$(out) " +
+         "$(location components/cronet/android/url_request_error.h)",
     out: [
         "components/cronet/android/url_request_error_java.srcjar",
     ],
@@ -9448,13 +9448,13 @@ java_genrule {
         "net/socket/socket_tag.cc",
     ],
     cmd: "$(location build/android/gyp/java_cpp_enum.py) --srcjar " +
-         "gen/net/android/net_android_java_enums_srcjar.srcjar " +
-         "../../net/base/network_change_notifier.h " +
-         "../../net/socket/socket_tag.cc " +
-         "../../net/android/cert_verify_result_android.h " +
-         "../../net/android/keystore.h " +
-         "../../net/android/network_change_notifier_android.cc " +
-         "../../net/android/traffic_stats.cc",
+         "$(out) " +
+         "$(location net/base/network_change_notifier.h) " +
+         "$(location net/socket/socket_tag.cc) " +
+         "$(location net/android/cert_verify_result_android.h) " +
+         "$(location net/android/keystore.h) " +
+         "$(location net/android/network_change_notifier_android.cc) " +
+         "$(location net/android/traffic_stats.cc)",
     out: [
         "net/android/net_android_java_enums_srcjar.srcjar",
     ],
@@ -10778,8 +10778,8 @@ cc_object {
 java_genrule {
     name: "cronet_aml_net_effective_connection_type_java",
     cmd: "$(location build/android/gyp/java_cpp_enum.py) --srcjar " +
-         "gen/net/effective_connection_type_java.srcjar " +
-         "../../net/nqe/effective_connection_type.h",
+         "$(out) " +
+         "$(location net/nqe/effective_connection_type.h)",
     out: [
         "net/effective_connection_type_java.srcjar",
     ],
