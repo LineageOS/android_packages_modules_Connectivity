@@ -618,17 +618,6 @@ def create_proto_group_modules(blueprint, gn, module_name, target_names):
 
   blueprint.add_module(module)
 
-def get_action_sanitizer(target):
-  if target.script == "//build/write_buildflag_header.py":
-    return WriteBuildFlagHeaderSanitizer(target)
-  elif target.script == "//build/write_build_date_header.py":
-    return WriteBuildDateHeaderSanitizer(target)
-  elif target.script == '//base/android/jni_generator/jni_generator.py':
-    return JniGeneratorSanitizer(target)
-  else:
-    # TODO: throw exception here once all script hacks have been converted.
-    return BaseActionSanitizer(target)
-
 
 class BaseActionSanitizer():
   def __init__(self, target):
@@ -704,6 +693,17 @@ class JniGeneratorSanitizer(BaseActionSanitizer):
       self._append_arg('--javap', '$$(find out/.path -name javap)')
     return super().get_args()
 
+
+def get_action_sanitizer(target):
+  if target.script == "//build/write_buildflag_header.py":
+    return WriteBuildFlagHeaderSanitizer(target)
+  elif target.script == "//build/write_build_date_header.py":
+    return WriteBuildDateHeaderSanitizer(target)
+  elif target.script == '//base/android/jni_generator/jni_generator.py':
+    return JniGeneratorSanitizer(target)
+  else:
+    # TODO: throw exception here once all script hacks have been converted.
+    return BaseActionSanitizer(target)
 
 def create_action_foreach_modules(blueprint, target):
   """ The following assumes that rebase_path exists in the args.
