@@ -691,6 +691,7 @@ class BaseActionSanitizer():
   # TODO: verify if it actually *is* universally applicable.
   def _sanitize_filepath(self, filepath):
     # Careful, order matters!
+    # delete all leading ../
     filepath = re.sub('^(\.\./)+', '', filepath)
     filepath = re.sub('^gen/jni_headers', '$(genDir)', filepath)
     filepath = re.sub('^gen', '$(genDir)', filepath)
