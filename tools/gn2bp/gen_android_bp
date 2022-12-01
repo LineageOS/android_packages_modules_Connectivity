@@ -747,6 +747,9 @@ class JniGeneratorSanitizer(BaseActionSanitizer):
     self._update_list_arg('--input_file', self._add_location_tag_to_filepath)
     return super().get_args()
 
+class JniRegistrationGeneratorSanitizer(BaseActionSanitizer):
+  def get_args(self):
+    return super().get_args()
 
 def get_action_sanitizer(target):
   if target.script == "//build/write_buildflag_header.py":
@@ -755,6 +758,8 @@ def get_action_sanitizer(target):
     return WriteBuildDateHeaderSanitizer(target)
   elif target.script == '//base/android/jni_generator/jni_generator.py':
     return JniGeneratorSanitizer(target)
+  elif target.script == '//base/android/jni_generator/jni_registration_generator.py':
+    return JniRegistrationGeneratorSanitizer(target)
   else:
     # TODO: throw exception here once all script hacks have been converted.
     return BaseActionSanitizer(target)
