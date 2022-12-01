@@ -758,6 +758,10 @@ class JniRegistrationGeneratorSanitizer(BaseActionSanitizer):
     self._delete_value_arg('--sources-exclusions')
     return super().get_args()
 
+class VersionSanitizer(BaseActionSanitizer):
+  def get_args(self):
+    return super().get_args()
+
 def get_action_sanitizer(target):
   if target.script == "//build/write_buildflag_header.py":
     return WriteBuildFlagHeaderSanitizer(target)
@@ -767,6 +771,8 @@ def get_action_sanitizer(target):
     return JniGeneratorSanitizer(target)
   elif target.script == '//base/android/jni_generator/jni_registration_generator.py':
     return JniRegistrationGeneratorSanitizer(target)
+  elif target.script == "//build/util/version.py":
+    return VersionSanitizer(target)
   else:
     # TODO: throw exception here once all script hacks have been converted.
     return BaseActionSanitizer(target)
