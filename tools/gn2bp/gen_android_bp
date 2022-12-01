@@ -705,6 +705,8 @@ class JniGeneratorSanitizer(BaseActionSanitizer):
   def get_args(self):
     if self._has_arg('--jar_file'):
       self._append_arg('--javap', '$$(find out/.path -name javap)')
+    if self._has_arg('--output_dir'):
+      self._update_value_arg('--output_dir', self._sanitize_dir)
     return super().get_args()
 
 
@@ -761,10 +763,7 @@ def create_action_module(blueprint, target):
 
   if target.script == '//base/android/jni_generator/jni_generator.py':
     for i, val in enumerate(target.args):
-      if val == '--output_dir':
-        # replace --output_dir gen/jni_headers/... with --output_dir $(genDir)/...
-        target.args[i + 1] = re.sub('^gen/jni_headers', '$(genDir)', target.args[i + 1])
-      elif val == '--input_file':
+      if val == '--input_file':
         # --input_file supports both .class specifiers or source files as arguments.
         # Only source files need to be wrapped inside a $(location <label>) tag.
         if re.match('.*\.class$', target.args[i + 1]):
