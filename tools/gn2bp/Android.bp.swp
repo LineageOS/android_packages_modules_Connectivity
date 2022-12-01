@@ -7224,8 +7224,6 @@ cc_genrule {
          "--header-path " +
          "$(genDir)/components/cronet/android/cronet_jni_registration.h " +
          "--manual_jni_registration " +
-         " " +
-         " " +
          ";sed -i -e 's/OUT_SOONG_.TEMP_SBOX_.*_OUT/GEN/g'  " +
          "$(genDir)/components/cronet/android/cronet_jni_registration.h",
     out: [
@@ -7535,8 +7533,6 @@ cc_genrule {
          "--header-path " +
          "$(genDir)/components/cronet/android/cronet_jni_registration.h " +
          "--manual_jni_registration " +
-         " " +
-         " " +
          ";sed -i -e 's/OUT_SOONG_.TEMP_SBOX_.*_OUT/GEN/g'  " +
          "$(genDir)/components/cronet/android/cronet_jni_registration.h",
     out: [
@@ -7846,8 +7842,6 @@ cc_genrule {
          "--header-path " +
          "$(genDir)/components/cronet/android/cronet_jni_registration.h " +
          "--manual_jni_registration " +
-         " " +
-         " " +
          ";sed -i -e 's/OUT_SOONG_.TEMP_SBOX_.*_OUT/GEN/g'  " +
          "$(genDir)/components/cronet/android/cronet_jni_registration.h",
     out: [
@@ -8157,8 +8151,6 @@ cc_genrule {
          "--header-path " +
          "$(genDir)/components/cronet/android/cronet_jni_registration.h " +
          "--manual_jni_registration " +
-         " " +
-         " " +
          ";sed -i -e 's/OUT_SOONG_.TEMP_SBOX_.*_OUT/GEN/g'  " +
          "$(genDir)/components/cronet/android/cronet_jni_registration.h",
     out: [
@@ -8594,7 +8586,6 @@ cc_genrule {
          "$(location chrome/VERSION) " +
          "-e " +
          "VERSION_FULL='\"%s.%s.%s.%s\" % (MAJOR,MINOR,BUILD,PATCH)' " +
-         " " +
          "-o " +
          "$(out) " +
          "$(location components/cronet/version.h.in)",
@@ -8620,7 +8611,6 @@ cc_genrule {
          "$(location chrome/VERSION) " +
          "-e " +
          "VERSION_FULL='\"%s.%s.%s.%s\" % (MAJOR,MINOR,BUILD,PATCH)' " +
-         " " +
          "-o " +
          "$(out) " +
          "$(location components/cronet/version.h.in)",
@@ -8646,7 +8636,6 @@ cc_genrule {
          "$(location chrome/VERSION) " +
          "-e " +
          "VERSION_FULL='\"%s.%s.%s.%s\" % (MAJOR,MINOR,BUILD,PATCH)' " +
-         " " +
          "-o " +
          "$(out) " +
          "$(location components/cronet/version.h.in)",
@@ -8672,7 +8661,6 @@ cc_genrule {
          "$(location chrome/VERSION) " +
          "-e " +
          "VERSION_FULL='\"%s.%s.%s.%s\" % (MAJOR,MINOR,BUILD,PATCH)' " +
-         " " +
          "-o " +
          "$(out) " +
          "$(location components/cronet/version.h.in)",
