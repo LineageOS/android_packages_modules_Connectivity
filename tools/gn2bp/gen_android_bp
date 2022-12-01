@@ -760,6 +760,7 @@ class JniRegistrationGeneratorSanitizer(BaseActionSanitizer):
 
 class VersionSanitizer(BaseActionSanitizer):
   def get_args(self):
+    self._set_value_arg('-o', '$(out)')
     return super().get_args()
 
 def get_action_sanitizer(target):
@@ -843,8 +844,6 @@ def create_action_module(blueprint, target):
         # arg for -e EVAL option should be passed in -e PATCH_HI=int(PATCH)//256 format.
         target.args[i + 1] = '%s=\'%s\'' % (target.args[i + 1], target.args[i + 2])
         target.args[i + 2] = ''
-      elif val == '-o':
-        target.args[i + 1] = '$(out)'
 
   script = gn_utils.label_to_path(target.script)
   module.tool_files.add(script)
