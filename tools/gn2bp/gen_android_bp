@@ -630,19 +630,27 @@ class BaseActionSanitizer():
   # - flags (--flag)
   # - value args (--arg value)
   # - list args (--arg value1 --arg value2)
+  # Note that the set of list args contains the set of value args.
+  # value args must have exactly one arg value pair but list args could have one arg value pair.
+  # This is because list args with one arg value pair and value args can not be distinguished only
+  # from the desc.json
   # Some functions provide special implementations for each type, while others
   # work on all of them.
   def _has_arg(self, arg):
     return arg in self.target.args
 
-  # Whether an arg has multiple occurences (e.g. see argparse action='append')
-  def _is_list_arg(self, arg):
-    return operator.countOf(arg, self.target.args) > 1
+  def _get_arg_indices(self, target_arg):
+    return [i for i, arg in enumerate(self.target.args) if arg == target_arg]
 
+  # Whether an arg value pair appears once or more times
+  def _is_list_arg(self, arg):
+    indices = self._get_arg_indices(arg)
+    return len(indices) > 0 and all([not self.target.args[i + 1].startswith('--') for i in indices])
+
+  # Whether an arg value pair appears exactly once
   def _is_value_arg(self, arg):
-    # TODO: we'll probably need a set of helper functions to deal with append
-    # args as well.
-    assert(not self._is_list_arg(arg))
+    if operator.countOf(self.target.args, arg) != 1:
+      return False
     i = self.target.args.index(arg)
     return not self.target.args[i + 1].startswith('--')
 
