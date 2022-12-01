@@ -678,9 +678,14 @@ class BaseActionSanitizer():
   def _location_tag(self, filename):
     return '$(location %s)' % filename
 
-  # deletes the leading ../../
-  def _rebase_directory(self, filename):
-    return re.sub('^\.\./\.\./', '', filename)
+  # applies common directory transformation that *should* be universally applicable.
+  # TODO: verify if it actually *is* universally applicable.
+  def _sanitize_dir(self, filepath):
+    # Careful, order matters!
+    filepath = re.sub('^\.\./\.\./', '', filepath)
+    filepath = re.sub('^gen/jni_headers', '$(genDir)', filepath)
+    filepath = re.sub('^gen', '$(genDir)', filepath)
+    return filepath
 
   def get_args(self):
     return self.target.args
