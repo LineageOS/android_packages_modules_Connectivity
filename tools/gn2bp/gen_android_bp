@@ -846,6 +846,10 @@ def create_action_module(blueprint, target):
     # fix target.output directory to match #include statements.
     target.outputs = [re.sub('^jni_headers/', '', out) for out in target.outputs]
 
+    # android_jar.classes should be part of the tools as it list implicit classes
+    # for the script to generate JNI headers.
+    module.tool_files.add("base/android/jni_generator/android_jar.classes")
+
   elif target.script == '//base/android/jni_generator/jni_registration_generator.py':
     # jni_registration_generator.py pulls in some config dependencies that we
     # do not handle. Remove them.
@@ -900,11 +904,7 @@ def create_action_module(blueprint, target):
 
   module.out.update(target.outputs)
 
-  if target.script == "//base/android/jni_generator/jni_generator.py":
-    # android_jar.classes should be part of the tools as it list implicit classes
-    # for the script to generate JNI headers.
-    module.tool_files.add("base/android/jni_generator/android_jar.classes")
-  elif target.script == '//base/android/jni_generator/jni_registration_generator.py':
+  if target.script == '//base/android/jni_generator/jni_registration_generator.py':
     # jni_registration_generator.py doesn't work with python2
     module.cmd = "python3 " + module.cmd
     # Path in the original sources file does not work in genrule.
