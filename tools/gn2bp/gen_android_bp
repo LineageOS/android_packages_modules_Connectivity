@@ -696,6 +696,12 @@ class BaseActionSanitizer():
     self.target.args.append(arg)
     self.target.args.append(value)
 
+  def _sanitize_filepath_with_location_tag(self, arg):
+    if arg.startswith('../../'):
+      arg = self._sanitize_filepath(arg)
+      arg = self._add_location_tag(arg)
+    return arg
+
   # wrap filename in location tag.
   def _add_location_tag(self, filename):
     return '$(location %s)' % filename
@@ -760,12 +766,6 @@ class JniRegistrationGeneratorSanitizer(BaseActionSanitizer):
     return super().get_args()
 
 class VersionSanitizer(BaseActionSanitizer):
-  def _sanitize_version_filepath(self, arg):
-    if arg.startswith('../../'):
-      arg = self._sanitize_filepath(arg)
-      arg = self._add_location_tag(arg)
-    return arg
-
   def _sanitize_eval(self):
     assert (self._is_value_arg('-e'))
     # arg for -e EVAL option should be passed in -e PATCH_HI=int(PATCH)//256 format.
@@ -780,7 +780,7 @@ class VersionSanitizer(BaseActionSanitizer):
     self._set_value_arg('-o', '$(out)')
     # args for the version.py contain file path without leading --arg key. So apply sanitize
     # function for all the args.
-    self._update_all_args(self._sanitize_version_filepath)
+    self._update_all_args(self._sanitize_filepath_with_location_tag)
     self._sanitize_eval()
     return super().get_args()
 
