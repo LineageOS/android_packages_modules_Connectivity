@@ -656,6 +656,9 @@ class BaseActionSanitizer():
     i = self.target.args.index(arg)
     self.target.args[i + 1] = value
 
+  def _update_value_arg(self, arg, func):
+    self._set_value_arg(arg, func(self._get_value_arg(arg)))
+
   def _set_arg_at(self, position, value):
     self.target.args[position] = value
 
