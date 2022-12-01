@@ -769,11 +769,20 @@ class VersionSanitizer(BaseActionSanitizer):
       arg = self._add_location_tag(arg)
     return arg
 
+  def _sanitize_eval(self):
+    assert (self._is_value_arg('-e'))
+    # arg for -e EVAL option should be passed in -e PATCH_HI=int(PATCH)//256 format.
+    index = self.target.args.index('-e')
+    value = '%s=\'%s\'' % (self.target.args[index + 1], self.target.args[index + 2])
+    self._set_arg_at(index + 1, value)
+    self.target.args.pop(index + 2)
+
   def get_args(self):
     self._set_value_arg('-o', '$(out)')
     # args for the version.py contain file path without leading --arg key. So apply sanitize
     # function for all the args.
     self._update_all_args(self._sanitize_version_filepath)
+    self._sanitize_eval()
     return super().get_args()
 
 def get_action_sanitizer(target):
@@ -849,11 +858,6 @@ def create_action_module(blueprint, target):
   elif target.script == "//build/util/version.py":
     # android_chrome_version.py is not specified in anywhere but version.py imports this file
     module.tool_files.add('build/util/android_chrome_version.py')
-    for i, val in enumerate(target.args):
-      if val == '-e':
-        # arg for -e EVAL option should be passed in -e PATCH_HI=int(PATCH)//256 format.
-        target.args[i + 1] = '%s=\'%s\'' % (target.args[i + 1], target.args[i + 2])
-        target.args[i + 2] = ''
 
   script = gn_utils.label_to_path(target.script)
   module.tool_files.add(script)
