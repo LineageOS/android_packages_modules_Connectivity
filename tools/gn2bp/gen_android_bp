@@ -728,6 +728,13 @@ class WriteBuildFlagHeaderSanitizer(BaseActionSanitizer):
     return super().get_args()
 
 class JniGeneratorSanitizer(BaseActionSanitizer):
+  def _add_location_tag_to_filepath(self, arg):
+    if not arg.endswith('.class'):
+      # --input_file supports both .class specifiers or source files as arguments.
+      # Only source files need to be wrapped inside a $(location <label>) tag.
+      arg = self._add_location_tag(arg)
+    return arg
+
   def get_args(self):
     self._update_value_arg('--jar_file', self._sanitize_filepath, False)
     self._update_value_arg('--jar_file', self._add_location_tag, False)
@@ -736,6 +743,8 @@ class JniGeneratorSanitizer(BaseActionSanitizer):
     self._update_value_arg('--output_dir', self._sanitize_filepath)
     self._update_value_arg('--includes', self._sanitize_filepath, False)
     self._delete_value_arg('--prev_output_dir', False)
+    self._update_list_arg('--input_file', self._sanitize_filepath)
+    self._update_list_arg('--input_file', self._add_location_tag_to_filepath)
     return super().get_args()
 
 
@@ -791,16 +800,6 @@ def create_action_module(blueprint, target):
   target.args = sanitizer.get_args()
 
   if target.script == '//base/android/jni_generator/jni_generator.py':
-    for i, val in enumerate(target.args):
-      if val == '--input_file':
-        # --input_file supports both .class specifiers or source files as arguments.
-        # Only source files need to be wrapped inside a $(location <label>) tag.
-        if re.match('.*\.class$', target.args[i + 1]):
-          continue
-        # replace --input_file ../../... with --input_file $(location ...)
-        # TODO: put inside function
-        filename = re.sub('^\.\./\.\./', '', target.args[i + 1])
-        target.args[i + 1] = '$(location %s)' % filename
     # fix target.output directory to match #include statements.
     target.outputs = [re.sub('^jni_headers/', '', out) for out in target.outputs]
 
