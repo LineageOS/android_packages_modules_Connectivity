@@ -689,7 +689,7 @@ class BaseActionSanitizer():
 
   # applies common directory transformation that *should* be universally applicable.
   # TODO: verify if it actually *is* universally applicable.
-  def _sanitize_dir(self, filepath):
+  def _sanitize_filepath(self, filepath):
     # Careful, order matters!
     filepath = re.sub('^(\.\./)+', '', filepath)
     filepath = re.sub('^gen/jni_headers', '$(genDir)', filepath)
@@ -712,12 +712,12 @@ class WriteBuildFlagHeaderSanitizer(BaseActionSanitizer):
 
 class JniGeneratorSanitizer(BaseActionSanitizer):
   def get_args(self):
-    self._update_value_arg('--jar_file', self._sanitize_dir)
+    self._update_value_arg('--jar_file', self._sanitize_filepath)
     self._update_value_arg('--jar_file', self._add_location_tag)
     if self._has_arg('--jar_file'):
       self._append_arg('--javap', '$$(find out/.path -name javap)')
-    self._update_value_arg('--output_dir', self._sanitize_dir)
-    self._update_value_arg('--includes', self._sanitize_dir)
+    self._update_value_arg('--output_dir', self._sanitize_filepath)
+    self._update_value_arg('--includes', self._sanitize_filepath)
     self._delete_arg('--prev_output_dir')
     return super().get_args()
 
