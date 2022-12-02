@@ -831,6 +831,12 @@ class JniRegistrationGeneratorSanitizer(BaseActionSanitizer):
     commands.append("$(genDir)/components/cronet/android/cronet_jni_registration.h")
     return NEWLINE.join(commands)
 
+class JavaJniRegistrationGeneratorSanitizer(JniRegistrationGeneratorSanitizer):
+  def _sanitize_outputs(self):
+    self.target.outputs = [out for out in self.target.outputs if
+                           out.endswith(".srcjar")]
+    super()._sanitize_outputs()
+
 class VersionSanitizer(BaseActionSanitizer):
   def _sanitize_args(self):
     self._set_value_arg('-o', '$(out)')
@@ -851,7 +857,7 @@ class MakeDafsaSanitizer(BaseActionSanitizer):
     # (e.g. registry_controlled_domain.cc)
     return True
 
-def get_action_sanitizer(target):
+def get_action_sanitizer(target, type):
   if target.script == "//build/write_buildflag_header.py":
     return WriteBuildFlagHeaderSanitizer(target)
   elif target.script == "//build/write_build_date_header.py":
@@ -859,7 +865,10 @@ def get_action_sanitizer(target):
   elif target.script == '//base/android/jni_generator/jni_generator.py':
     return JniGeneratorSanitizer(target)
   elif target.script == '//base/android/jni_generator/jni_registration_generator.py':
-    return JniRegistrationGeneratorSanitizer(target)
+    if type == 'java_genrule':
+      return JavaJniRegistrationGeneratorSanitizer(target)
+    else:
+      return JniRegistrationGeneratorSanitizer(target)
   elif target.script == "//build/util/version.py":
     return VersionSanitizer(target)
   elif target.script == "//build/android/gyp/java_cpp_enum.py":
@@ -907,7 +916,7 @@ def create_action_module(blueprint, target, type):
   bp_module_name = label_to_module_name(target.name)
   module = Module(type, bp_module_name, target.name)
 
-  sanitizer = get_action_sanitizer(target)
+  sanitizer = get_action_sanitizer(target, type)
   sanitizer.sanitize()
   module.cmd = sanitizer.get_cmd()
   module.out = sanitizer.get_outputs()
