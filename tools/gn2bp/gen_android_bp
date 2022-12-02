@@ -731,6 +731,10 @@ class BaseActionSanitizer():
   def get_outputs(self):
     return self.target.outputs
 
+  # Whether this target generates header files
+  def is_header_generated(self):
+    return False
+
 class WriteBuildDateHeaderSanitizer(BaseActionSanitizer):
   def get_args(self):
     self._set_arg_at(0, '$(out)')
@@ -850,6 +854,8 @@ def create_action_module(blueprint, target, type):
   sanitizer = get_action_sanitizer(target)
   target.args = sanitizer.get_args()
   module.out = sanitizer.get_outputs()
+  if sanitizer.is_header_generated():
+    module.genrule_headers.add(module.name)
 
   if target.script == '//base/android/jni_generator/jni_generator.py':
     # android_jar.classes should be part of the tools as it list implicit classes
