@@ -52,6 +52,8 @@ ODR_VIOLATION_IGNORE_TARGETS = {
 ARCH_REGEX = r'(android_x86_64|android_x86|android_arm|android_arm64|host)'
 DEX_REGEX = '.*__dex__%s$' % ARCH_REGEX
 COMPILE_JAVA_REGEX = '.*__compile_java__%s$' % ARCH_REGEX
+RESPONSE_FILE = '{{response_file_name}}'
+
 def repo_root():
   """Returns an absolute path to the repository root."""
   return os.path.join(
