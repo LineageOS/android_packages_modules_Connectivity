@@ -903,11 +903,6 @@ def create_action_module(blueprint, target, type):
     else:
       module.tool_files.add(gn_utils.label_to_path(it))
 
-  # Actions using template "action_with_pydeps" also put script inside inputs.
-  # TODO: it might make sense to filter inputs inside GnParser.
-  if script in module.srcs:
-    module.srcs.remove(script)
-
   if target.script == '//base/android/jni_generator/jni_registration_generator.py':
     # jni_registration_generator.py doesn't work with python2
     module.cmd = "python3 " + module.cmd
