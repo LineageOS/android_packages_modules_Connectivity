@@ -137,7 +137,16 @@ public class DiscoveryProviderManager implements AbstractDiscoveryProvider.Liste
     public boolean registerScanListener(ScanRequest scanRequest, IScanListener listener,
             CallerIdentity callerIdentity) {
         synchronized (mLock) {
+            ScanListenerDeathRecipient deathRecipient = (listener != null)
+                    ? new ScanListenerDeathRecipient(listener) : null;
             IBinder listenerBinder = listener.asBinder();
+            if (listenerBinder != null && deathRecipient != null) {
+                try {
+                    listenerBinder.linkToDeath(deathRecipient, 0);
+                } catch (RemoteException e) {
+                    throw new IllegalArgumentException("Can't link to scan listener's death");
+                }
+            }
             if (mScanTypeScanListenerRecordMap.containsKey(listener.asBinder())) {
                 ScanRequest savedScanRequest =
                         mScanTypeScanListenerRecordMap.get(listenerBinder).getScanRequest();
@@ -147,7 +156,7 @@ public class DiscoveryProviderManager implements AbstractDiscoveryProvider.Liste
                 }
             }
             ScanListenerRecord scanListenerRecord =
-                    new ScanListenerRecord(scanRequest, listener, callerIdentity);
+                    new ScanListenerRecord(scanRequest, listener, callerIdentity, deathRecipient);
             mScanTypeScanListenerRecordMap.put(listenerBinder, scanListenerRecord);
 
             if (!startProviders(scanRequest)) {
@@ -179,6 +188,10 @@ public class DiscoveryProviderManager implements AbstractDiscoveryProvider.Liste
 
             ScanListenerRecord removedRecord =
                     mScanTypeScanListenerRecordMap.remove(listenerBinder);
+            ScanListenerDeathRecipient deathRecipient = removedRecord.getDeathRecipient();
+            if (listenerBinder != null && deathRecipient != null) {
+                listenerBinder.unlinkToDeath(removedRecord.getDeathRecipient(), 0);
+            }
             Log.v(TAG, "DiscoveryProviderManager unregistered scan listener.");
             NearbyMetrics.logScanStopped(removedRecord.hashCode(), removedRecord.getScanRequest());
             if (mScanTypeScanListenerRecordMap.isEmpty()) {
@@ -302,6 +315,20 @@ public class DiscoveryProviderManager implements AbstractDiscoveryProvider.Liste
         return false;
     }
 
+    class ScanListenerDeathRecipient implements IBinder.DeathRecipient {
+        public IScanListener listener;
+
+        ScanListenerDeathRecipient(IScanListener listener) {
+            this.listener = listener;
+        }
+
+        @Override
+        public void binderDied() {
+            Log.d(TAG, "Binder is dead - unregistering scan listener");
+            unregisterScanListener(listener);
+        }
+    }
+
     private static class ScanListenerRecord {
 
         private final ScanRequest mScanRequest;
@@ -310,11 +337,14 @@ public class DiscoveryProviderManager implements AbstractDiscoveryProvider.Liste
 
         private final CallerIdentity mCallerIdentity;
 
+        private final ScanListenerDeathRecipient mDeathRecipient;
+
         ScanListenerRecord(ScanRequest scanRequest, IScanListener iScanListener,
-                CallerIdentity callerIdentity) {
+                CallerIdentity callerIdentity, ScanListenerDeathRecipient deathRecipient) {
             mScanListener = iScanListener;
             mScanRequest = scanRequest;
             mCallerIdentity = callerIdentity;
+            mDeathRecipient = deathRecipient;
         }
 
         IScanListener getScanListener() {
@@ -327,6 +357,10 @@ public class DiscoveryProviderManager implements AbstractDiscoveryProvider.Liste
 
         CallerIdentity getCallerIdentity() {
             return mCallerIdentity;
+        }
+
+        ScanListenerDeathRecipient getDeathRecipient()  {
+            return mDeathRecipient;
         }
 
         @Override
