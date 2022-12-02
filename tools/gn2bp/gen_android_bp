@@ -627,10 +627,9 @@ class BaseActionSanitizer():
   # - flags (--flag)
   # - value args (--arg value)
   # - list args (--arg value1 --arg value2)
+  # value args have exactly one arg value pair and list args have one or more arg value pairs.
   # Note that the set of list args contains the set of value args.
-  # value args must have exactly one arg value pair but list args could have one arg value pair.
-  # This is because list args with one arg value pair and value args can not be distinguished only
-  # from the desc.json
+  # This is because list and value args are identical when the list args has only one arg value pair
   # Some functions provide special implementations for each type, while others
   # work on all of them.
   def _has_arg(self, arg):
