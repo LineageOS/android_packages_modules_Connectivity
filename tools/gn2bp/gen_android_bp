@@ -625,6 +625,9 @@ class BaseActionSanitizer():
     self.target = copy.deepcopy(target)
     self.target.args = self._normalize_args()
 
+  def get_name(self):
+    return label_to_module_name(self.target.name)
+
   def _normalize_args(self):
     # Convert ['--param=value'] to ['--param', 'value'] for consistency.
     # Escape quotations.
@@ -832,6 +835,9 @@ class JniRegistrationGeneratorSanitizer(BaseActionSanitizer):
     return NEWLINE.join(commands)
 
 class JavaJniRegistrationGeneratorSanitizer(JniRegistrationGeneratorSanitizer):
+  def get_name(self):
+    return label_to_module_name(self.target.name) + "__java"
+
   def _sanitize_outputs(self):
     self.target.outputs = [out for out in self.target.outputs if
                            out.endswith(".srcjar")]
@@ -913,11 +919,9 @@ def create_action_foreach_modules(blueprint, target):
   return create_action_module(blueprint, target, 'cc_genrule')
 
 def create_action_module(blueprint, target, type):
-  bp_module_name = label_to_module_name(target.name)
-  module = Module(type, bp_module_name, target.name)
-
   sanitizer = get_action_sanitizer(target, type)
   sanitizer.sanitize()
+  module = Module(type, sanitizer.get_name(), target.name)
   module.cmd = sanitizer.get_cmd()
   module.out = sanitizer.get_outputs()
   if sanitizer.is_header_generated():
