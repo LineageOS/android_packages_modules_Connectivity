@@ -762,6 +762,11 @@ class JniGeneratorSanitizer(BaseActionSanitizer):
     self._update_list_arg('--input_file', self._add_location_tag_to_filepath)
     return super().get_args()
 
+  def get_outputs(self):
+    # fix target.output directory to match #include statements.
+    self.target.outputs = {re.sub('^jni_headers/', '', out) for out in self.target.outputs}
+    return super().get_outputs()
+
 class JniRegistrationGeneratorSanitizer(BaseActionSanitizer):
   def get_args(self):
     self._update_value_arg('--depfile', self._sanitize_filepath)
@@ -847,9 +852,6 @@ def create_action_module(blueprint, target, type):
   target.outputs = sanitizer.get_outputs()
 
   if target.script == '//base/android/jni_generator/jni_generator.py':
-    # fix target.output directory to match #include statements.
-    target.outputs = {re.sub('^jni_headers/', '', out) for out in target.outputs}
-
     # android_jar.classes should be part of the tools as it list implicit classes
     # for the script to generate JNI headers.
     module.tool_files.add("base/android/jni_generator/android_jar.classes")
