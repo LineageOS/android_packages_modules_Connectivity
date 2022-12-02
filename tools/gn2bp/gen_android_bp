@@ -108,7 +108,8 @@ buildtools_protobuf_src = '//buildtools/protobuf/src'
 # Location of the protobuf src dir in the Android source tree.
 android_protobuf_src = 'external/protobuf/src'
 
-
+# put all args on a new line for better diffs.
+NEWLINE = ' " +\n         "'
 
 # Compiler flags which are passed through to the blueprint.
 cflag_allowlist = [
@@ -731,7 +732,14 @@ class BaseActionSanitizer():
     return self.target.args
 
   def get_cmd(self):
-    return ""
+    arg_string = NEWLINE.join(self.target.args)
+    cmd = '$(location %s) %s' % (
+    gn_utils.label_to_path(self.target.script), arg_string)
+
+    if self.use_response_file:
+      # Pipe response file contents into script
+      cmd = 'echo \'%s\' |%s%s' % (self.target.response_file_contents, NEWLINE, cmd)
+    return cmd
 
   def get_outputs(self):
     return self.target.outputs
@@ -884,6 +892,7 @@ def create_action_module(blueprint, target, type):
   sanitizer = get_action_sanitizer(target)
   sanitizer.sanitize()
   target.args = sanitizer.get_args()
+  module.cmd = sanitizer.get_cmd()
   module.out = sanitizer.get_outputs()
   if sanitizer.is_header_generated():
     module.genrule_headers.add(module.name)
@@ -906,15 +915,6 @@ def create_action_module(blueprint, target, type):
 
   script = gn_utils.label_to_path(target.script)
   module.tool_files.add(script)
-
-  # put all args on a new line for better diffs.
-  NEWLINE = ' " +\n         "'
-  arg_string = NEWLINE.join(target.args)
-  module.cmd = '$(location %s) %s' % (script, arg_string)
-
-  if sanitizer.use_response_file:
-    # Pipe response file contents into script
-    module.cmd = 'echo \'%s\' |%s%s' % (target.response_file_contents, NEWLINE, module.cmd)
 
   # gn treats inputs and sources for actions equally.
   # soong only supports source files inside srcs, non-source files are added as
