@@ -730,9 +730,6 @@ class BaseActionSanitizer():
   def _update_all_args(self, func):
     self.target.args = [func(arg) for arg in self.target.args]
 
-  def get_args(self):
-    return self.target.args
-
   def get_cmd(self):
     arg_string = NEWLINE.join(self.target.args)
     cmd = '$(location %s) %s' % (
@@ -912,7 +909,6 @@ def create_action_module(blueprint, target, type):
 
   sanitizer = get_action_sanitizer(target)
   sanitizer.sanitize()
-  target.args = sanitizer.get_args()
   module.cmd = sanitizer.get_cmd()
   module.out = sanitizer.get_outputs()
   if sanitizer.is_header_generated():
