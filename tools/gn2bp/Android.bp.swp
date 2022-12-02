@@ -2365,13 +2365,13 @@ java_genrule {
     cmd: "$(location build/android/gyp/aidl.py) --aidl-path " +
          "../../third_party/android_sdk/public/build-tools/33.0.0/aidl " +
          "--imports " +
-         "["../../third_party/android_sdk/public/platforms/android-33/framework.aidl"] " +
+         "[\"../../third_party/android_sdk/public/platforms/android-33/framework.aidl\"] " +
          "--srcjar " +
          "gen/base/base_java_aidl.srcjar " +
          "--depfile " +
          "gen/base/base_java_aidl.d " +
          "--includes " +
-         "["../../base/android/java/src"] " +
+         "[\"../../base/android/java/src\"] " +
          "../../base/android/java/src/org/chromium/base/process_launcher/IChildProcessService.aidl " +
          "../../base/android/java/src/org/chromium/base/process_launcher/IParentProcess.aidl",
     out: [
@@ -5687,7 +5687,7 @@ cc_genrule {
 java_genrule {
     name: "cronet_aml_build_android_build_config_gen",
     cmd: "$(location build/android/gyp/gcc_preprocess.py) --include-dirs " +
-         "["../../", "gen"] " +
+         "[\"../../\", \"gen\"] " +
          "--output " +
          "gen/build/android/build_config_gen.srcjar " +
          "--define " +
@@ -7556,7 +7556,7 @@ java_genrule {
 java_genrule {
     name: "cronet_aml_components_cronet_android_integrated_mode_state",
     cmd: "$(location build/android/gyp/gcc_preprocess.py) --include-dirs " +
-         "["../../", "gen"] " +
+         "[\"../../\", \"gen\"] " +
          "--output " +
          "gen/components/cronet/android/integrated_mode_state.srcjar " +
          "../../components/cronet/android/java/src/org/chromium/net/impl/IntegratedModeState.template",
@@ -7597,7 +7597,7 @@ java_genrule {
 java_genrule {
     name: "cronet_aml_components_cronet_android_load_states_list",
     cmd: "$(location build/android/gyp/gcc_preprocess.py) --include-dirs " +
-         "["../../", "gen"] " +
+         "[\"../../\", \"gen\"] " +
          "--output " +
          "gen/components/cronet/android/load_states_list.srcjar " +
          "../../components/cronet/android/java/src/org/chromium/net/impl/LoadState.template",
@@ -9470,7 +9470,7 @@ java_genrule {
 java_genrule {
     name: "cronet_aml_net_android_net_errors_java",
     cmd: "$(location build/android/gyp/gcc_preprocess.py) --include-dirs " +
-         "["../../", "gen"] " +
+         "[\"../../\", \"gen\"] " +
          "--output " +
          "gen/net/android/net_errors_java.srcjar " +
          "../../net/android/java/NetError.template",
