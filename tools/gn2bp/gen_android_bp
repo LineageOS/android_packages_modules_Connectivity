@@ -108,7 +108,7 @@ buildtools_protobuf_src = '//buildtools/protobuf/src'
 # Location of the protobuf src dir in the Android source tree.
 android_protobuf_src = 'external/protobuf/src'
 
-response_file = '{{response_file_name}}'
+
 
 # Compiler flags which are passed through to the blueprint.
 cflag_allowlist = [
@@ -737,11 +737,11 @@ class BaseActionSanitizer():
     # Handle passing parameters via response file by piping them into the script
     # and reading them from /dev/stdin.
 
-    self.use_response_file = response_file in self.target.args
+    self.use_response_file = gn_utils.RESPONSE_FILE in self.target.args
     if self.use_response_file:
       # Replace {{response_file_contents}} with /dev/stdin
-      self.target.args = ['/dev/stdin' if it == response_file else it for it in
-                          self.target.args]
+      self.target.args = ['/dev/stdin' if it == gn_utils.RESPONSE_FILE else it
+                          for it in self.target.args]
 
   def _sanitize_outputs(self):
     pass
