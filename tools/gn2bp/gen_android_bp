@@ -1024,15 +1024,7 @@ def create_modules_from_target(blueprint, gn, gn_target_name):
     if module is None:
       return None
   elif target.type == 'action':
-    if gn_utils.is_java_action(target.script, target.outputs) and \
-        target.name != "//components/cronet/android:cronet_jni_registration":
-      # This is a cc_genrule that generates both a c++ header file and
-      # srcjar for java. Treat it as a cc_genrule for the time being while
-      # making anothe deep copy of the module and append _java to it for
-      # the java_library.
-      module = create_action_module(blueprint, target, 'java_genrule')
-    else:
-      module = create_action_module(blueprint, target, 'cc_genrule')
+    module = create_action_module(blueprint, target, 'cc_genrule')
   elif target.type == 'action_foreach':
     module = create_action_foreach_modules(blueprint, target)
   elif target.type == 'copy':
@@ -1212,12 +1204,7 @@ def create_java_module(blueprint, gn):
   module = Module('java_library', bp_module_name, '//gn:java')
   module.srcs.update([gn_utils.label_to_path(source) for source in gn.java_sources])
   for dep in gn.java_actions:
-    dep_module = create_modules_from_target(blueprint, gn, dep)
-    if "cronet_jni_registration" in dep_module.name:
-      dep_module = copy.deepcopy(dep_module)
-      dep_module.name += "_java"
-      dep_module.type = 'java_genrule'
-      dep_module.out = [out for out in dep_module.out if out.endswith(".srcjar")]
+    dep_module = create_action_module(blueprint, gn.get_target(dep), 'java_genrule')
   blueprint.add_module(module)
 
 def update_jni_registration_module(module, gn):
