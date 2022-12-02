@@ -746,15 +746,15 @@ class BaseActionSanitizer():
     return any(os.path.splitext(it)[1] == '.h' for it in self.target.outputs)
 
 class WriteBuildDateHeaderSanitizer(BaseActionSanitizer):
-  def get_args(self):
+  def _sanitize_args(self):
     self._set_arg_at(0, '$(out)')
-    return super().get_args()
+    super()._sanitize_args()
 
 class WriteBuildFlagHeaderSanitizer(BaseActionSanitizer):
-  def get_args(self):
+  def _sanitize_args(self):
     self._set_value_arg('--gen-dir', '.')
     self._set_value_arg('--output', '$(out)')
-    return super().get_args()
+    super()._sanitize_args()
 
 class JniGeneratorSanitizer(BaseActionSanitizer):
   def _add_location_tag_to_filepath(self, arg):
@@ -764,7 +764,7 @@ class JniGeneratorSanitizer(BaseActionSanitizer):
       arg = self._add_location_tag(arg)
     return arg
 
-  def get_args(self):
+  def _sanitize_args(self):
     self._update_value_arg('--jar_file', self._sanitize_filepath, False)
     self._update_value_arg('--jar_file', self._add_location_tag, False)
     if self._has_arg('--jar_file'):
@@ -774,7 +774,7 @@ class JniGeneratorSanitizer(BaseActionSanitizer):
     self._delete_value_arg('--prev_output_dir', False)
     self._update_list_arg('--input_file', self._sanitize_filepath)
     self._update_list_arg('--input_file', self._add_location_tag_to_filepath)
-    return super().get_args()
+    super()._sanitize_args()
 
   def get_outputs(self):
     # fix target.output directory to match #include statements.
@@ -782,7 +782,7 @@ class JniGeneratorSanitizer(BaseActionSanitizer):
     return super().get_outputs()
 
 class JniRegistrationGeneratorSanitizer(BaseActionSanitizer):
-  def get_args(self):
+  def _sanitize_args(self):
     self._update_value_arg('--depfile', self._sanitize_filepath)
     self._update_value_arg('--srcjar-path', self._sanitize_filepath)
     self._update_value_arg('--header-path', self._sanitize_filepath)
@@ -790,22 +790,22 @@ class JniRegistrationGeneratorSanitizer(BaseActionSanitizer):
     # update_jni_registration_module removes them from the srcs of the module
     # It might be better to remove sources by '--sources-exclusions'
     self._delete_value_arg('--sources-exclusions')
-    return super().get_args()
+    super()._sanitize_args()
 
 class VersionSanitizer(BaseActionSanitizer):
-  def get_args(self):
+  def _sanitize_args(self):
     self._set_value_arg('-o', '$(out)')
     # args for the version.py contain file path without leading --arg key. So apply sanitize
     # function for all the args.
     self._update_all_args(self._sanitize_filepath_with_location_tag)
     self._update_value_arg('-e', lambda arg: arg.replace('"', r'\"'))
-    return super().get_args()
+    super()._sanitize_args()
 
 class JavaCppEnumSanitizer(BaseActionSanitizer):
-  def get_args(self):
+  def _sanitize_args(self):
     self._update_all_args(self._sanitize_filepath_with_location_tag)
     self._set_value_arg('--srcjar', '$(out)')
-    return super().get_args()
+    super()._sanitize_args()
 
 class MakeDafsaSanitizer(BaseActionSanitizer):
   def is_header_generated(self):
