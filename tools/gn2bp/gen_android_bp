@@ -848,7 +848,7 @@ def create_action_module(blueprint, target, type):
 
   if target.script == '//base/android/jni_generator/jni_generator.py':
     # fix target.output directory to match #include statements.
-    target.outputs = [re.sub('^jni_headers/', '', out) for out in target.outputs]
+    target.outputs = {re.sub('^jni_headers/', '', out) for out in target.outputs}
 
     # android_jar.classes should be part of the tools as it list implicit classes
     # for the script to generate JNI headers.
