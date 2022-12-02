@@ -269,6 +269,7 @@ public final class NetworkTemplate implements Parcelable {
      * Since the merge set is dynamic, it should <em>not</em> be persisted or
      * used for determining equality.
      */
+    @NonNull
     private final String[] mMatchSubscriberIds;
 
     @NonNull
@@ -334,10 +335,9 @@ public final class NetworkTemplate implements Parcelable {
             String[] matchWifiNetworkKeys, int metered, int roaming,
             int defaultNetwork, int ratType, int oemManaged, int subscriberIdMatchRule) {
         Objects.requireNonNull(matchWifiNetworkKeys);
+        Objects.requireNonNull(matchSubscriberIds);
         mMatchRule = matchRule;
         mSubscriberId = subscriberId;
-        // TODO: Check whether mMatchSubscriberIds = null or mMatchSubscriberIds = {null} when
-        // mSubscriberId is null
         mMatchSubscriberIds = matchSubscriberIds;
         mMatchWifiNetworkKeys = matchWifiNetworkKeys;
         mMetered = metered;
