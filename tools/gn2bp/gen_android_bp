@@ -108,6 +108,8 @@ buildtools_protobuf_src = '//buildtools/protobuf/src'
 # Location of the protobuf src dir in the Android source tree.
 android_protobuf_src = 'external/protobuf/src'
 
+response_file = '{{response_file_name}}'
+
 # Compiler flags which are passed through to the blueprint.
 cflag_allowlist = [
   # needed for zlib:zlib
@@ -732,7 +734,14 @@ class BaseActionSanitizer():
     return self.target.outputs
 
   def _sanitize_args(self):
-    pass
+    # Handle passing parameters via response file by piping them into the script
+    # and reading them from /dev/stdin.
+
+    self.use_response_file = response_file in self.target.args
+    if self.use_response_file:
+      # Replace {{response_file_contents}} with /dev/stdin
+      self.target.args = ['/dev/stdin' if it == response_file else it for it in
+                          self.target.args]
 
   def _sanitize_outputs(self):
     pass
@@ -895,20 +904,12 @@ def create_action_module(blueprint, target, type):
   script = gn_utils.label_to_path(target.script)
   module.tool_files.add(script)
 
-  # Handle passing parameters via response file by piping them into the script
-  # and reading them from /dev/stdin.
-  response_file = '{{response_file_name}}'
-  use_response_file = response_file in target.args
-  if use_response_file:
-    # Replace {{response_file_contents}} with /dev/stdin
-    target.args = ['/dev/stdin' if it == response_file else it for it in target.args]
-
   # put all args on a new line for better diffs.
   NEWLINE = ' " +\n         "'
   arg_string = NEWLINE.join(target.args)
   module.cmd = '$(location %s) %s' % (script, arg_string)
 
-  if use_response_file:
+  if sanitizer.use_response_file:
     # Pipe response file contents into script
     module.cmd = 'echo \'%s\' |%s%s' % (target.response_file_contents, NEWLINE, module.cmd)
 
