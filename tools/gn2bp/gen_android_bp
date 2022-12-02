@@ -627,8 +627,10 @@ class BaseActionSanitizer():
 
   def _normalize_args(self):
     # Convert ['--param=value'] to ['--param', 'value'] for consistency.
+    # Escape quotations.
     normalized_args = []
     for arg in self.target.args:
+      arg = arg.replace('"', r'\"')
       if arg.startswith('-'):
         normalized_args.extend(arg.split('='))
       else:
@@ -838,7 +840,6 @@ class VersionSanitizer(BaseActionSanitizer):
     # args for the version.py contain file path without leading --arg key. So apply sanitize
     # function for all the args.
     self._update_all_args(self._sanitize_filepath_with_location_tag)
-    self._update_value_arg('-e', lambda arg: arg.replace('"', r'\"'))
     super()._sanitize_args()
 
 class JavaCppEnumSanitizer(BaseActionSanitizer):
