@@ -1218,7 +1218,6 @@ def create_java_module(blueprint, gn):
       dep_module.name += "_java"
       dep_module.type = 'java_genrule'
       dep_module.out = [out for out in dep_module.out if out.endswith(".srcjar")]
-      blueprint.add_module(dep_module)
   blueprint.add_module(module)
 
 def update_jni_registration_module(module, gn):
