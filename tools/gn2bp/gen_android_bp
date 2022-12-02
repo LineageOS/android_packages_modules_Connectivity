@@ -626,7 +626,10 @@ class BaseActionSanitizer():
     # Convert ['--param=value'] to ['--param', 'value'] for consistency.
     normalized_args = []
     for arg in self.target.args:
-      normalized_args.extend(arg.split('='))
+      if arg.startswith('-'):
+        normalized_args.extend(arg.split('='))
+      else:
+        normalized_args.append(arg)
     return normalized_args
 
   # There are three types of args:
@@ -768,22 +771,12 @@ class JniRegistrationGeneratorSanitizer(BaseActionSanitizer):
     return super().get_args()
 
 class VersionSanitizer(BaseActionSanitizer):
-  def _sanitize_eval(self):
-    assert (self._is_value_arg('-e'))
-    # arg for -e EVAL option should be passed in -e PATCH_HI=int(PATCH)//256 format.
-    index = self.target.args.index('-e')
-    value = '%s=\'%s\'' % (self.target.args[index + 1], self.target.args[index + 2])
-    # escape '"' in the value
-    value = value.replace('"', r'\"')
-    self._set_arg_at(index + 1, value)
-    self.target.args.pop(index + 2)
-
   def get_args(self):
     self._set_value_arg('-o', '$(out)')
     # args for the version.py contain file path without leading --arg key. So apply sanitize
     # function for all the args.
     self._update_all_args(self._sanitize_filepath_with_location_tag)
-    self._sanitize_eval()
+    self._update_value_arg('-e', lambda arg: arg.replace('"', r'\"'))
     return super().get_args()
 
 class JavaCppEnumSanitizer(BaseActionSanitizer):
