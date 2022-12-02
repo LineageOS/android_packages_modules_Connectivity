@@ -44,9 +44,9 @@ public interface MdnsServiceBrowserListener {
     /**
      * Called when an mDNS service instance is no longer valid and removed.
      *
-     * @param serviceInstanceName The service instance name of the removed mDNS service.
+     * @param serviceInfo The service instance of the removed mDNS service.
      */
-    void onServiceRemoved(@NonNull String serviceInstanceName);
+    void onServiceRemoved(@NonNull MdnsServiceInfo serviceInfo);
 
     /**
      * Called when searching for mDNS service has stopped because of an error.
