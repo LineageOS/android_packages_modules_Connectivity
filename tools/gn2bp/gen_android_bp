@@ -733,7 +733,7 @@ class BaseActionSanitizer():
 
   # Whether this target generates header files
   def is_header_generated(self):
-    return False
+    return any(os.path.splitext(it)[1] == '.h' for it in self.target.outputs)
 
 class WriteBuildDateHeaderSanitizer(BaseActionSanitizer):
   def get_args(self):
@@ -900,9 +900,6 @@ def create_action_module(blueprint, target, type):
   if use_response_file:
     # Pipe response file contents into script
     module.cmd = 'echo \'%s\' |%s%s' % (target.response_file_contents, NEWLINE, module.cmd)
-
-  if any(os.path.splitext(it)[1] == '.h' for it in target.outputs):
-    module.genrule_headers.add(bp_module_name)
 
   # gn treats inputs and sources for actions equally.
   # soong only supports source files inside srcs, non-source files are added as
