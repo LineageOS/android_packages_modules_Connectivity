@@ -620,8 +620,14 @@ class BaseActionSanitizer():
   def __init__(self, target):
     # Just to be on the safe side, create a deep-copy.
     self.target = copy.deepcopy(target)
+    self.target.args = self._normalize_args()
+
+  def _normalize_args(self):
     # Convert ['--param=value'] to ['--param', 'value'] for consistency.
-    self.target.args = [str for it in self.target.args for str in it.split('=')]
+    normalized_args = []
+    for arg in self.target.args:
+      normalized_args.extend(arg.split('='))
+    return normalized_args
 
   # There are three types of args:
   # - flags (--flag)
