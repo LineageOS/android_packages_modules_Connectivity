@@ -797,6 +797,10 @@ class JavaCppEnumSanitizer(BaseActionSanitizer):
     self._set_value_arg('--srcjar', '$(out)')
     return super().get_args()
 
+class MakeDafsaSanitizer(BaseActionSanitizer):
+  def is_header_generated(self):
+    return super().is_header_generated()
+
 def get_action_sanitizer(target):
   if target.script == "//build/write_buildflag_header.py":
     return WriteBuildFlagHeaderSanitizer(target)
@@ -810,6 +814,8 @@ def get_action_sanitizer(target):
     return VersionSanitizer(target)
   elif target.script == "//build/android/gyp/java_cpp_enum.py":
     return JavaCppEnumSanitizer(target)
+  elif target.script == "//net/tools/dafsa/make_dafsa.py":
+    return MakeDafsaSanitizer(target)
   else:
     # TODO: throw exception here once all script hacks have been converted.
     return BaseActionSanitizer(target)
