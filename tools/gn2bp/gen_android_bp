@@ -654,10 +654,7 @@ class BaseActionSanitizer():
 
   # Whether an arg value pair appears exactly once
   def _is_value_arg(self, arg):
-    if operator.countOf(self.target.args, arg) != 1:
-      return False
-    i = self.target.args.index(arg)
-    return not self.target.args[i + 1].startswith('--')
+    return operator.countOf(self.target.args, arg) == 1 and self._is_list_arg(arg)
 
   def _get_value_arg(self, arg):
     assert(self._is_value_arg(arg))
