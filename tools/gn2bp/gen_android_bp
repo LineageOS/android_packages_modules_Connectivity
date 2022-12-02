@@ -812,6 +812,26 @@ class JniRegistrationGeneratorSanitizer(BaseActionSanitizer):
     self._delete_value_arg('--sources-exclusions')
     super()._sanitize_args()
 
+  def get_cmd(self):
+    # jni_registration_generator.py doesn't work with python2
+    cmd = "python3 " + super().get_cmd()
+    # Path in the original sources file does not work in genrule.
+    # So creating sources file in cmd based on the srcs of this target.
+    # Adding ../$(current_dir)/ to the head because jni_registration_generator.py uses the files
+    # whose path startswith(..)
+    commands = ["current_dir=`basename \\\`pwd\\\``;",
+                "for f in $(in);",
+                "do",
+                "echo \\\"../$$current_dir/$$f\\\" >> $(genDir)/java.sources;",
+                "done;",
+                cmd]
+
+    # .h file jni_registration_generator.py generates has #define with directory name.
+    # With the genrule env that contains "." which is invalid. So replace that at the end of cmd.
+    commands.append(";sed -i -e 's/OUT_SOONG_.TEMP_SBOX_.*_OUT/GEN/g' ")
+    commands.append("$(genDir)/components/cronet/android/cronet_jni_registration.h")
+    return NEWLINE.join(commands)
+
 class VersionSanitizer(BaseActionSanitizer):
   def _sanitize_args(self):
     self._set_value_arg('-o', '$(out)')
@@ -924,26 +944,6 @@ def create_action_module(blueprint, target, type):
       module.srcs.add(gn_utils.label_to_path(it))
     else:
       module.tool_files.add(gn_utils.label_to_path(it))
-
-  if target.script == '//base/android/jni_generator/jni_registration_generator.py':
-    # jni_registration_generator.py doesn't work with python2
-    module.cmd = "python3 " + module.cmd
-    # Path in the original sources file does not work in genrule.
-    # So creating sources file in cmd based on the srcs of this target.
-    # Adding ../$(current_dir)/ to the head because jni_registration_generator.py uses the files
-    # whose path startswith(..)
-    commands = ["current_dir=`basename \\\`pwd\\\``;",
-                "for f in $(in);",
-                "do",
-                "echo \\\"../$$current_dir/$$f\\\" >> $(genDir)/java.sources;",
-                "done;",
-                module.cmd]
-
-    # .h file jni_registration_generator.py generates has #define with directory name.
-    # With the genrule env that contains "." which is invalid. So replace that at the end of cmd.
-    commands.append(";sed -i -e 's/OUT_SOONG_.TEMP_SBOX_.*_OUT/GEN/g' ")
-    commands.append("$(genDir)/components/cronet/android/cronet_jni_registration.h")
-    module.cmd = NEWLINE.join(commands)
 
   blueprint.add_module(module)
   return module
