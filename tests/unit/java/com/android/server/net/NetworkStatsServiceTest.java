@@ -995,8 +995,8 @@ public class NetworkStatsServiceTest extends NetworkStatsBaseTest {
         forcePollAndWaitForIdle();
 
         // Verify service recorded history.
-        assertUidTotal(templateMetered5g, UID_RED, 128L, 2L, 128L, 2L, 0);
-        assertUidTotal(templateNonMetered5g, UID_RED, 256, 3L, 128L, 5L, 0);
+        assertUidTotal(templateMetered5g, UID_RED, 384L, 5L, 256L, 7L, 0);
+        assertUidTotal(templateNonMetered5g, UID_RED, 0L, 0L, 0L, 0L, 0);
     }
 
     @Test
