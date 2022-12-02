@@ -849,7 +849,7 @@ def create_action_module(blueprint, target, type):
 
   sanitizer = get_action_sanitizer(target)
   target.args = sanitizer.get_args()
-  target.outputs = sanitizer.get_outputs()
+  module.out = sanitizer.get_outputs()
 
   if target.script == '//base/android/jni_generator/jni_generator.py':
     # android_jar.classes should be part of the tools as it list implicit classes
@@ -907,8 +907,6 @@ def create_action_module(blueprint, target, type):
   # TODO: it might make sense to filter inputs inside GnParser.
   if script in module.srcs:
     module.srcs.remove(script)
-
-  module.out.update(target.outputs)
 
   if target.script == '//base/android/jni_generator/jni_registration_generator.py':
     # jni_registration_generator.py doesn't work with python2
