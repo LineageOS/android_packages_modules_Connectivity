@@ -731,6 +731,16 @@ class BaseActionSanitizer():
   def get_outputs(self):
     return self.target.outputs
 
+  def _sanitize_args(self):
+    pass
+
+  def _sanitize_outputs(self):
+    pass
+
+  def sanitize(self):
+    self._sanitize_args()
+    self._sanitize_outputs()
+
   # Whether this target generates header files
   def is_header_generated(self):
     return any(os.path.splitext(it)[1] == '.h' for it in self.target.outputs)
@@ -860,6 +870,7 @@ def create_action_module(blueprint, target, type):
   module = Module(type, bp_module_name, target.name)
 
   sanitizer = get_action_sanitizer(target)
+  sanitizer.sanitize()
   target.args = sanitizer.get_args()
   module.out = sanitizer.get_outputs()
   if sanitizer.is_header_generated():
