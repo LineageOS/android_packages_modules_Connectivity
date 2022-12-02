@@ -776,10 +776,10 @@ class JniGeneratorSanitizer(BaseActionSanitizer):
     self._update_list_arg('--input_file', self._add_location_tag_to_filepath)
     super()._sanitize_args()
 
-  def get_outputs(self):
+  def _sanitize_outputs(self):
     # fix target.output directory to match #include statements.
     self.target.outputs = {re.sub('^jni_headers/', '', out) for out in self.target.outputs}
-    return super().get_outputs()
+    super()._sanitize_outputs()
 
 class JniRegistrationGeneratorSanitizer(BaseActionSanitizer):
   def _sanitize_args(self):
