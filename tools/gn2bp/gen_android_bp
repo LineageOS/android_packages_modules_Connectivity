@@ -730,6 +730,9 @@ class BaseActionSanitizer():
   def get_args(self):
     return self.target.args
 
+  def get_cmd(self):
+    return ""
+
   def get_outputs(self):
     return self.target.outputs
 
