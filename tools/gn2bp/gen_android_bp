@@ -799,7 +799,9 @@ class JavaCppEnumSanitizer(BaseActionSanitizer):
 
 class MakeDafsaSanitizer(BaseActionSanitizer):
   def is_header_generated(self):
-    return super().is_header_generated()
+    # This script generates .cc files but they are #included by other sources
+    # (e.g. registry_controlled_domain.cc)
+    return True
 
 def get_action_sanitizer(target):
   if target.script == "//build/write_buildflag_header.py":
@@ -875,10 +877,6 @@ def create_action_module(blueprint, target, type):
     target.deps.clear()
 
     target.inputs = [file for file in target.inputs if not file.startswith('//out/')]
-  elif target.script == "//net/tools/dafsa/make_dafsa.py":
-    # This script generates .cc files but source (registry_controlled_domain.cc) in the target that
-    # depends on this target includes .cc file this script generates.
-    module.genrule_headers.add(module.name)
   elif target.script == "//build/util/version.py":
     # android_chrome_version.py is not specified in anywhere but version.py imports this file
     module.tool_files.add('build/util/android_chrome_version.py')
