@@ -17,7 +17,7 @@
 
 <resources xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
-    <string name="fast_pair_setup_in_progress" msgid="4158762239172829807">"Starting setup…"</string>
+    <string name="fast_pair_setup_in_progress" msgid="4158762239172829807">"Starting Setup…"</string>
     <string name="fast_pair_title_setup" msgid="2894360355540593246">"Set up device"</string>
     <string name="fast_pair_device_ready" msgid="2903490346082833101">"Device connected"</string>
     <string name="fast_pair_title_fail" msgid="5677174346601290232">"Couldn\'t connect"</string>
