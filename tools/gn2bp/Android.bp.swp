@@ -7841,7 +7841,7 @@ java_genrule {
          "-f " +
          "$(location build/util/LASTCHANGE) " +
          "-e " +
-         "API_LEVEL=20 " +
+         "'API_LEVEL=20' " +
          "-o " +
          "$(out) " +
          "$(location components/cronet/android/java/src/org/chromium/net/impl/ImplVersion.template)",
@@ -7882,7 +7882,7 @@ java_genrule {
          "-f " +
          "$(location build/util/LASTCHANGE) " +
          "-e " +
-         "API_LEVEL=20 " +
+         "'API_LEVEL=20' " +
          "-o " +
          "$(out) " +
          "$(location components/cronet/android/api/src/org/chromium/net/ApiVersion.template)",
@@ -8261,7 +8261,7 @@ cc_genrule {
     cmd: "$(location build/util/version.py) -f " +
          "$(location chrome/VERSION) " +
          "-e " +
-         "VERSION_FULL=\"%s.%s.%s.%s\" % (MAJOR,MINOR,BUILD,PATCH) " +
+         "'VERSION_FULL=\"%s.%s.%s.%s\" % (MAJOR,MINOR,BUILD,PATCH)' " +
          "-o " +
          "$(out) " +
          "$(location components/cronet/version.h.in)",
@@ -8286,7 +8286,7 @@ cc_genrule {
     cmd: "$(location build/util/version.py) -f " +
          "$(location chrome/VERSION) " +
          "-e " +
-         "VERSION_FULL=\"%s.%s.%s.%s\" % (MAJOR,MINOR,BUILD,PATCH) " +
+         "'VERSION_FULL=\"%s.%s.%s.%s\" % (MAJOR,MINOR,BUILD,PATCH)' " +
          "-o " +
          "$(out) " +
          "$(location components/cronet/version.h.in)",
@@ -8311,7 +8311,7 @@ cc_genrule {
     cmd: "$(location build/util/version.py) -f " +
          "$(location chrome/VERSION) " +
          "-e " +
-         "VERSION_FULL=\"%s.%s.%s.%s\" % (MAJOR,MINOR,BUILD,PATCH) " +
+         "'VERSION_FULL=\"%s.%s.%s.%s\" % (MAJOR,MINOR,BUILD,PATCH)' " +
          "-o " +
          "$(out) " +
          "$(location components/cronet/version.h.in)",
@@ -8336,7 +8336,7 @@ cc_genrule {
     cmd: "$(location build/util/version.py) -f " +
          "$(location chrome/VERSION) " +
          "-e " +
-         "VERSION_FULL=\"%s.%s.%s.%s\" % (MAJOR,MINOR,BUILD,PATCH) " +
+         "'VERSION_FULL=\"%s.%s.%s.%s\" % (MAJOR,MINOR,BUILD,PATCH)' " +
          "-o " +
          "$(out) " +
          "$(location components/cronet/version.h.in)",
