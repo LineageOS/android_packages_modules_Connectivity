@@ -38,8 +38,8 @@ import org.junit.runner.RunWith;
 import java.util.Random;
 
 @RunWith(AndroidJUnit4.class)
-public class CronetApiTest {
-    private static final String TAG = CronetApiTest.class.getSimpleName();
+public class CronetUrlRequestTest {
+    private static final String TAG = CronetUrlRequestTest.class.getSimpleName();
     private static final String HTTPS_PREFIX = "https://";
 
     private final String[] mTestDomains = {"www.google.com", "www.android.com"};
