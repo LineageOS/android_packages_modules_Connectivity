@@ -2363,36 +2363,6 @@ java_genrule {
     ],
 }
 
-// GN: //base:base_java_aidl
-java_genrule {
-    name: "cronet_aml_base_base_java_aidl",
-    cmd: "$(location build/android/gyp/aidl.py) --aidl-path " +
-         "../../third_party/android_sdk/public/build-tools/33.0.0/aidl " +
-         "--imports " +
-         "[\"../../third_party/android_sdk/public/platforms/android-33/framework.aidl\"] " +
-         "--srcjar " +
-         "gen/base/base_java_aidl.srcjar " +
-         "--depfile " +
-         "gen/base/base_java_aidl.d " +
-         "--includes " +
-         "[\"../../base/android/java/src\"] " +
-         "../../base/android/java/src/org/chromium/base/process_launcher/IChildProcessService.aidl " +
-         "../../base/android/java/src/org/chromium/base/process_launcher/IParentProcess.aidl",
-    out: [
-        "base/base_java_aidl.srcjar",
-    ],
-    tool_files: [
-        "base/android/java/src/org/chromium/base/process_launcher/IChildProcessService.aidl",
-        "base/android/java/src/org/chromium/base/process_launcher/IParentProcess.aidl",
-        "build/android/gyp/aidl.py",
-        "build/android/gyp/util/__init__.py",
-        "build/android/gyp/util/build_utils.py",
-        "build/gn_helpers.py",
-        "third_party/android_sdk/public/build-tools/33.0.0/aidl",
-        "third_party/android_sdk/public/platforms/android-33/framework.aidl",
-    ],
-}
-
 // GN: //base:base_jni_headers__android_arm
 cc_genrule {
     name: "cronet_aml_base_base_jni_headers__android_arm",
@@ -9652,6 +9622,8 @@ java_library {
         "base/android/java/src/org/chromium/base/process_launcher/ChildServiceConnectionFactory.java",
         "base/android/java/src/org/chromium/base/process_launcher/ChildServiceConnectionImpl.java",
         "base/android/java/src/org/chromium/base/process_launcher/FileDescriptorInfo.java",
+        "base/android/java/src/org/chromium/base/process_launcher/IChildProcessService.aidl",
+        "base/android/java/src/org/chromium/base/process_launcher/IParentProcess.aidl",
         "base/android/java/src/org/chromium/base/supplier/BooleanSupplier.java",
         "base/android/java/src/org/chromium/base/supplier/DestroyableObservableSupplier.java",
         "base/android/java/src/org/chromium/base/supplier/ObservableSupplier.java",
