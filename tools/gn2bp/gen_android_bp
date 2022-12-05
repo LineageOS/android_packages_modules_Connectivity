@@ -824,6 +824,13 @@ class JniGeneratorSanitizer(BaseActionSanitizer):
     self.target.outputs = {re.sub('^jni_headers/', '', out) for out in self.target.outputs}
     super()._sanitize_outputs()
 
+  def get_tool_files(self):
+    tool_files = super().get_tool_files()
+    # android_jar.classes should be part of the tools as it list implicit classes
+    # for the script to generate JNI headers.
+    tool_files.add("base/android/jni_generator/android_jar.classes")
+    return tool_files
+
 class JniRegistrationGeneratorSanitizer(BaseActionSanitizer):
   def _sanitize_inputs(self):
     self.target.inputs = [file for file in self.target.inputs if not file.startswith('//out/')]
@@ -954,12 +961,7 @@ def create_action_module(blueprint, target, type):
   module.srcs = sanitizer.get_srcs()
   module.tool_files = sanitizer.get_tool_files()
 
-  if target.script == '//base/android/jni_generator/jni_generator.py':
-    # android_jar.classes should be part of the tools as it list implicit classes
-    # for the script to generate JNI headers.
-    module.tool_files.add("base/android/jni_generator/android_jar.classes")
-
-  elif target.script == '//base/android/jni_generator/jni_registration_generator.py':
+  if target.script == '//base/android/jni_generator/jni_registration_generator.py':
     # jni_registration_generator.py pulls in some config dependencies that we
     # do not handle. Remove them.
     # TODO: find a better way to do this.
