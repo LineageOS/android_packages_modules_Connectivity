@@ -959,6 +959,7 @@ def create_action_foreach_modules(blueprint, target):
 def create_action_module(blueprint, target, type):
   sanitizer = get_action_sanitizer(target, type)
   sanitizer.sanitize()
+
   module = Module(type, sanitizer.get_name(), target.name)
   module.cmd = sanitizer.get_cmd()
   module.out = sanitizer.get_outputs()
@@ -966,12 +967,6 @@ def create_action_module(blueprint, target, type):
     module.genrule_headers.add(module.name)
   module.srcs = sanitizer.get_srcs()
   module.tool_files = sanitizer.get_tool_files()
-
-  if target.script == '//base/android/jni_generator/jni_registration_generator.py':
-    # jni_registration_generator.py pulls in some config dependencies that we
-    # do not handle. Remove them.
-    # TODO: find a better way to do this.
-    target.deps.clear()
 
   blueprint.add_module(module)
   return module
