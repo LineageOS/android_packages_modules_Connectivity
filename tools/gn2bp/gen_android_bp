@@ -746,9 +746,6 @@ class BaseActionSanitizer():
   def get_outputs(self):
     return self.target.outputs
 
-  def get_inputs(self):
-    return self.target.inputs
-
   def get_srcs(self):
     # gn treats inputs and sources for actions equally.
     # soong only supports source files inside srcs, non-source files are added as
@@ -954,7 +951,6 @@ def create_action_module(blueprint, target, type):
   module.out = sanitizer.get_outputs()
   if sanitizer.is_header_generated():
     module.genrule_headers.add(module.name)
-  target.inputs = sanitizer.get_inputs()
   module.srcs = sanitizer.get_srcs()
   module.tool_files = sanitizer.get_tool_files()
 
