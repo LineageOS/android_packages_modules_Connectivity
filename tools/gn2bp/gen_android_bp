@@ -756,6 +756,13 @@ class BaseActionSanitizer():
     files = self.target.sources.union(self.target.inputs)
     return {gn_utils.label_to_path(file) for file in files if is_supported_source_file(file)}
 
+  def get_tool_files(self):
+    # gn treats inputs and sources for actions equally.
+    # soong only supports source files inside srcs, non-source files are added as
+    # tool_files dependency.
+    files = self.target.sources.union(self.target.inputs)
+    return {gn_utils.label_to_path(file) for file in files if not is_supported_source_file(file)}
+
   def _sanitize_args(self):
     # Handle passing parameters via response file by piping them into the script
     # and reading them from /dev/stdin.
@@ -946,6 +953,7 @@ def create_action_module(blueprint, target, type):
     module.genrule_headers.add(module.name)
   target.inputs = sanitizer.get_inputs()
   module.srcs = sanitizer.get_srcs()
+  module.tool_files = sanitizer.get_tool_files()
 
   if target.script == '//base/android/jni_generator/jni_generator.py':
     # android_jar.classes should be part of the tools as it list implicit classes
@@ -963,13 +971,6 @@ def create_action_module(blueprint, target, type):
 
   script = gn_utils.label_to_path(target.script)
   module.tool_files.add(script)
-
-  # gn treats inputs and sources for actions equally.
-  # soong only supports source files inside srcs, non-source files are added as
-  # tool_files dependency.
-  for it in target.sources.union(target.inputs):
-    if not is_supported_source_file(it):
-      module.tool_files.add(gn_utils.label_to_path(it))
 
   blueprint.add_module(module)
   return module
