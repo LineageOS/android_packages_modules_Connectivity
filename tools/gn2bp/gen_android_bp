@@ -959,7 +959,7 @@ def create_action_module(blueprint, target, type):
   # gn treats inputs and sources for actions equally.
   # soong only supports source files inside srcs, non-source files are added as
   # tool_files dependency.
-  for it in target.sources or target.inputs:
+  for it in target.sources.union(target.inputs):
     if is_supported_source_file(it):
       module.srcs.add(gn_utils.label_to_path(it))
     else:
