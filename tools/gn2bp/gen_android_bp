@@ -913,6 +913,9 @@ class JavaCppStringSanitizer(BaseActionSanitizer):
     self._set_value_arg('--srcjar', '$(out)')
     super()._sanitize_args()
 
+class WriteNativeLibrariesJavaSanitizer(BaseActionSanitizer):
+  pass
+
 def get_action_sanitizer(target, type):
   if target.script == "//build/write_buildflag_header.py":
     return WriteBuildFlagHeaderSanitizer(target)
@@ -935,6 +938,8 @@ def get_action_sanitizer(target, type):
     return JavaCppFeatureSanitizer(target)
   elif target.script == '//build/android/gyp/java_cpp_strings.py':
     return JavaCppStringSanitizer(target)
+  elif target.script == '//build/android/gyp/write_native_libraries_java.py':
+    return WriteNativeLibrariesJavaSanitizer(target)
   else:
     # TODO: throw exception here once all script hacks have been converted.
     return BaseActionSanitizer(target)
