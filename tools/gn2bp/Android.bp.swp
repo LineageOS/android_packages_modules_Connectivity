@@ -2356,6 +2356,10 @@ java_genrule {
         "base/metrics/histogram_base.h",
         "base/task/task_traits.h",
         "build/android/gyp/java_cpp_enum.py",
+        "build/android/gyp/util/__init__.py",
+        "build/android/gyp/util/build_utils.py",
+        "build/android/gyp/util/java_cpp_utils.py",
+        "build/gn_helpers.py",
     ],
 }
 
@@ -2381,6 +2385,11 @@ java_genrule {
         "base/android/java/src/org/chromium/base/process_launcher/IChildProcessService.aidl",
         "base/android/java/src/org/chromium/base/process_launcher/IParentProcess.aidl",
         "build/android/gyp/aidl.py",
+        "build/android/gyp/util/__init__.py",
+        "build/android/gyp/util/build_utils.py",
+        "build/gn_helpers.py",
+        "third_party/android_sdk/public/build-tools/33.0.0/aidl",
+        "third_party/android_sdk/public/platforms/android-33/framework.aidl",
     ],
 }
 
@@ -4243,6 +4252,10 @@ java_genrule {
     tool_files: [
         "base/android/java/src/org/chromium/base/BaseFeatures.java.tmpl",
         "build/android/gyp/java_cpp_features.py",
+        "build/android/gyp/util/__init__.py",
+        "build/android/gyp/util/build_utils.py",
+        "build/android/gyp/util/java_cpp_utils.py",
+        "build/gn_helpers.py",
     ],
 }
 
@@ -4263,6 +4276,10 @@ java_genrule {
     tool_files: [
         "base/android/java/src/org/chromium/base/BaseSwitches.java.tmpl",
         "build/android/gyp/java_cpp_strings.py",
+        "build/android/gyp/util/__init__.py",
+        "build/android/gyp/util/build_utils.py",
+        "build/android/gyp/util/java_cpp_utils.py",
+        "build/gn_helpers.py",
     ],
 }
 
@@ -5698,7 +5715,10 @@ java_genrule {
     ],
     tool_files: [
         "build/android/gyp/gcc_preprocess.py",
+        "build/android/gyp/util/__init__.py",
+        "build/android/gyp/util/build_utils.py",
         "build/android/java/templates/BuildConfig.template",
+        "build/gn_helpers.py",
     ],
 }
 
@@ -7829,6 +7849,10 @@ java_genrule {
     ],
     tool_files: [
         "build/android/gyp/java_cpp_enum.py",
+        "build/android/gyp/util/__init__.py",
+        "build/android/gyp/util/build_utils.py",
+        "build/android/gyp/util/java_cpp_utils.py",
+        "build/gn_helpers.py",
         "components/cronet/url_request_context_config.h",
     ],
 }
@@ -7870,6 +7894,9 @@ java_genrule {
     ],
     tool_files: [
         "build/android/gyp/gcc_preprocess.py",
+        "build/android/gyp/util/__init__.py",
+        "build/android/gyp/util/build_utils.py",
+        "build/gn_helpers.py",
         "components/cronet/android/java/src/org/chromium/net/impl/IntegratedModeState.template",
     ],
 }
@@ -7911,7 +7938,11 @@ java_genrule {
     ],
     tool_files: [
         "build/android/gyp/gcc_preprocess.py",
+        "build/android/gyp/util/__init__.py",
+        "build/android/gyp/util/build_utils.py",
+        "build/gn_helpers.py",
         "components/cronet/android/java/src/org/chromium/net/impl/LoadState.template",
+        "net/base/load_states_list.h",
     ],
 }
 
@@ -7926,6 +7957,10 @@ java_genrule {
     ],
     tool_files: [
         "build/android/gyp/java_cpp_enum.py",
+        "build/android/gyp/util/__init__.py",
+        "build/android/gyp/util/build_utils.py",
+        "build/android/gyp/util/java_cpp_utils.py",
+        "build/gn_helpers.py",
         "net/base/idempotency.h",
     ],
 }
@@ -7941,6 +7976,10 @@ java_genrule {
     ],
     tool_files: [
         "build/android/gyp/java_cpp_enum.py",
+        "build/android/gyp/util/__init__.py",
+        "build/android/gyp/util/build_utils.py",
+        "build/android/gyp/util/java_cpp_utils.py",
+        "build/gn_helpers.py",
         "net/base/request_priority.h",
     ],
 }
@@ -7956,6 +7995,10 @@ java_genrule {
     ],
     tool_files: [
         "build/android/gyp/java_cpp_enum.py",
+        "build/android/gyp/util/__init__.py",
+        "build/android/gyp/util/build_utils.py",
+        "build/android/gyp/util/java_cpp_utils.py",
+        "build/gn_helpers.py",
         "net/nqe/network_quality_observation_source.h",
     ],
 }
@@ -7971,6 +8014,10 @@ java_genrule {
     ],
     tool_files: [
         "build/android/gyp/java_cpp_enum.py",
+        "build/android/gyp/util/__init__.py",
+        "build/android/gyp/util/build_utils.py",
+        "build/android/gyp/util/java_cpp_utils.py",
+        "build/gn_helpers.py",
         "net/nqe/network_quality.h",
     ],
 }
@@ -7986,6 +8033,10 @@ java_genrule {
     ],
     tool_files: [
         "build/android/gyp/java_cpp_enum.py",
+        "build/android/gyp/util/__init__.py",
+        "build/android/gyp/util/build_utils.py",
+        "build/android/gyp/util/java_cpp_utils.py",
+        "build/gn_helpers.py",
         "components/cronet/android/url_request_error.h",
     ],
 }
@@ -9765,6 +9816,10 @@ java_genrule {
     ],
     tool_files: [
         "build/android/gyp/java_cpp_enum.py",
+        "build/android/gyp/util/__init__.py",
+        "build/android/gyp/util/build_utils.py",
+        "build/android/gyp/util/java_cpp_utils.py",
+        "build/gn_helpers.py",
         "net/android/cert_verify_result_android.h",
         "net/android/keystore.h",
         "net/base/network_change_notifier.h",
@@ -9784,7 +9839,11 @@ java_genrule {
     ],
     tool_files: [
         "build/android/gyp/gcc_preprocess.py",
+        "build/android/gyp/util/__init__.py",
+        "build/android/gyp/util/build_utils.py",
+        "build/gn_helpers.py",
         "net/android/java/NetError.template",
+        "net/base/net_error_list.h",
     ],
 }
 
@@ -11090,6 +11149,10 @@ java_genrule {
     ],
     tool_files: [
         "build/android/gyp/java_cpp_enum.py",
+        "build/android/gyp/util/__init__.py",
+        "build/android/gyp/util/build_utils.py",
+        "build/android/gyp/util/java_cpp_utils.py",
+        "build/gn_helpers.py",
         "net/nqe/effective_connection_type.h",
     ],
 }
