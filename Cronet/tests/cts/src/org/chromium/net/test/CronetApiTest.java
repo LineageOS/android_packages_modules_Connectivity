@@ -18,41 +18,33 @@ package org.chromium.net.test;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 
 import android.content.Context;
 import android.net.ConnectivityManager;
-import android.os.Handler;
-import android.os.Looper;
 
 import androidx.annotation.NonNull;
 import androidx.test.platform.app.InstrumentationRegistry;
 import androidx.test.runner.AndroidJUnit4;
 
 import org.chromium.net.CronetEngine;
-import org.chromium.net.CronetException;
 import org.chromium.net.UrlRequest;
 import org.chromium.net.UrlResponseInfo;
+import org.chromium.net.test.util.TestUrlRequestCallback;
+import org.chromium.net.test.util.TestUrlRequestCallback.ResponseStep;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
-import java.nio.ByteBuffer;
 import java.util.Random;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.Executor;
-import java.util.concurrent.TimeUnit;
 
 @RunWith(AndroidJUnit4.class)
 public class CronetApiTest {
     private static final String TAG = CronetApiTest.class.getSimpleName();
     private static final String HTTPS_PREFIX = "https://";
-    private static final int TIMEOUT_MS = 12_000;
 
     private final String[] mTestDomains = {"www.google.com", "www.android.com"};
     @NonNull private CronetEngine mCronetEngine;
     @NonNull private ConnectivityManager mCm;
-    @NonNull private Executor mExecutor;
 
     @Before
     public void setUp() throws Exception {
@@ -64,7 +56,6 @@ public class CronetApiTest {
                 // .enableBrotli(true)
                 .enableQuic(true);
         mCronetEngine = builder.build();
-        mExecutor = new Handler(Looper.getMainLooper())::post;
     }
 
     private static void assertGreaterThan(String msg, int first, int second) {
@@ -80,60 +71,21 @@ public class CronetApiTest {
         return mTestDomains[index];
     }
 
-    private static class TestUrlRequestCallback extends UrlRequest.Callback {
-        private final CountDownLatch mLatch = new CountDownLatch(1);
-        private final String mUrl;
-
-        TestUrlRequestCallback(@NonNull String url) {
-            this.mUrl = url;
-        }
-
-        public boolean waitForAnswer() throws InterruptedException {
-            return mLatch.await(TIMEOUT_MS, TimeUnit.MILLISECONDS);
-        }
-
-        @Override
-        public void onRedirectReceived(
-                UrlRequest request, UrlResponseInfo info, String newLocationUrl) {
-            request.followRedirect();
-        }
-
-        @Override
-        public void onResponseStarted(UrlRequest request, UrlResponseInfo info) {
-            request.read(ByteBuffer.allocateDirect(32 * 1024));
-        }
-
-        @Override
-        public void onReadCompleted(
-                UrlRequest request, UrlResponseInfo info, ByteBuffer byteBuffer) {
-            byteBuffer.clear();
-            request.read(byteBuffer);
-        }
-
-        @Override
-        public void onSucceeded(UrlRequest request, UrlResponseInfo info) {
-            assertEquals(
-                    "Unexpected http status code from " + mUrl + ".",
-                    200,
-                    info.getHttpStatusCode());
-            assertGreaterThan(
-                    "Received byte from " + mUrl + " is 0.", (int) info.getReceivedByteCount(), 0);
-            mLatch.countDown();
-        }
-
-        @Override
-        public void onFailed(UrlRequest request, UrlResponseInfo info, CronetException error) {
-            fail(mUrl + error.getMessage());
-        }
-    }
-
     @Test
     public void testUrlRequestGet_CompletesSuccessfully() throws Exception {
         assertHasTestableNetworks();
         String url = HTTPS_PREFIX + getRandomDomain();
-        TestUrlRequestCallback callback = new TestUrlRequestCallback(url);
-        UrlRequest.Builder builder = mCronetEngine.newUrlRequestBuilder(url, callback, mExecutor);
+        TestUrlRequestCallback callback = new TestUrlRequestCallback();
+        UrlRequest.Builder builder = mCronetEngine.newUrlRequestBuilder(url, callback,
+                callback.getExecutor());
         builder.build().start();
-        assertTrue(url + " but not complete after " + TIMEOUT_MS + "ms.", callback.waitForAnswer());
+
+        callback.expectCallback(ResponseStep.ON_SUCCEEDED);
+
+        UrlResponseInfo info = callback.mResponseInfo;
+        assertEquals("Unexpected http status code from " + url + ".", 200,
+                info.getHttpStatusCode());
+        assertGreaterThan(
+                "Received byte from " + url + " is 0.", (int) info.getReceivedByteCount(), 0);
     }
 }
