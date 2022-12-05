@@ -429,7 +429,13 @@ class GnParser(object):
           java_srcs = [src for src in dep.inputs if _is_java_source(src)]
           self.java_sources.update(java_srcs)
       if dep.type in ["action"] and target.type == "java_group":
-        self.java_actions.add(dep.name)
+        # //base:base_java_aidl generates srcjar from .aidl files. But java_library in soong can
+        # directly have .aidl files in srcs. So adding .aidl files to the java_sources.
+        # TODO: Find a better way/place to do this.
+        if dep.name == '//base:base_java_aidl':
+          self.java_sources.update(dep.arch[arch].sources)
+        else:
+          self.java_actions.add(dep.name)
     return target
 
   def get_proto_exports(self, proto_desc):
