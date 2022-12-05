@@ -883,6 +883,12 @@ class VersionSanitizer(BaseActionSanitizer):
     self._set_value_arg('-e', "'%s'" % self._get_value_arg('-e'))
     super()._sanitize_args()
 
+  def get_tool_files(self):
+    tool_files = super().get_tool_files()
+    # android_chrome_version.py is not specified in anywhere but version.py imports this file
+    tool_files.add('build/util/android_chrome_version.py')
+    return tool_files
+
 class JavaCppEnumSanitizer(BaseActionSanitizer):
   def _sanitize_args(self):
     self._update_all_args(self._sanitize_filepath_with_location_tag)
@@ -966,9 +972,6 @@ def create_action_module(blueprint, target, type):
     # do not handle. Remove them.
     # TODO: find a better way to do this.
     target.deps.clear()
-  elif target.script == "//build/util/version.py":
-    # android_chrome_version.py is not specified in anywhere but version.py imports this file
-    module.tool_files.add('build/util/android_chrome_version.py')
 
   blueprint.add_module(module)
   return module
