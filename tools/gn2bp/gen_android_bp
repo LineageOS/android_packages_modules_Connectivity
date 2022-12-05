@@ -908,7 +908,10 @@ class JavaCppFeatureSanitizer(BaseActionSanitizer):
     super()._sanitize_args()
 
 class JavaCppStringSanitizer(BaseActionSanitizer):
-  pass
+  def _sanitize_args(self):
+    self._update_all_args(self._sanitize_filepath_with_location_tag)
+    self._set_value_arg('--srcjar', '$(out)')
+    super()._sanitize_args()
 
 def get_action_sanitizer(target, type):
   if target.script == "//build/write_buildflag_header.py":
