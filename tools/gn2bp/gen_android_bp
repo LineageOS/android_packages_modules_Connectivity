@@ -746,6 +746,9 @@ class BaseActionSanitizer():
   def get_outputs(self):
     return self.target.outputs
 
+  def get_inputs(self):
+    return self.target.inputs
+
   def _sanitize_args(self):
     # Handle passing parameters via response file by piping them into the script
     # and reading them from /dev/stdin.
@@ -759,9 +762,13 @@ class BaseActionSanitizer():
   def _sanitize_outputs(self):
     pass
 
+  def _sanitize_inputs(self):
+    pass
+
   def sanitize(self):
     self._sanitize_args()
     self._sanitize_outputs()
+    self._sanitize_inputs()
 
   # Whether this target generates header files
   def is_header_generated(self):
@@ -927,6 +934,7 @@ def create_action_module(blueprint, target, type):
   module.out = sanitizer.get_outputs()
   if sanitizer.is_header_generated():
     module.genrule_headers.add(module.name)
+  target.inputs = sanitizer.get_inputs()
 
   if target.script == '//base/android/jni_generator/jni_generator.py':
     # android_jar.classes should be part of the tools as it list implicit classes
