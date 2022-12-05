@@ -250,6 +250,7 @@ import com.android.internal.util.MessageUtils;
 import com.android.modules.utils.BasicShellCommandHandler;
 import com.android.modules.utils.build.SdkLevel;
 import com.android.net.module.util.BaseNetdUnsolicitedEventListener;
+import com.android.net.module.util.BinderUtils;
 import com.android.net.module.util.BitUtils;
 import com.android.net.module.util.CollectionUtils;
 import com.android.net.module.util.DeviceConfigUtils;
@@ -5161,7 +5162,9 @@ public class ConnectivityService extends IConnectivityManager.Stub
             description = settingValue + " (?)";
         }
         pw.println("Avoid bad wifi setting:        " + description);
-        final Boolean configValue = mMultinetworkPolicyTracker.deviceConfigActivelyPreferBadWifi();
+
+        final Boolean configValue = BinderUtils.withCleanCallingIdentity(
+                () -> mMultinetworkPolicyTracker.deviceConfigActivelyPreferBadWifi());
         if (null == configValue) {
             description = "unset";
         } else if (configValue) {
