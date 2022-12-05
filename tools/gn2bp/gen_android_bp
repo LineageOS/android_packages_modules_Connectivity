@@ -761,7 +761,10 @@ class BaseActionSanitizer():
     # soong only supports source files inside srcs, non-source files are added as
     # tool_files dependency.
     files = self.target.sources.union(self.target.inputs)
-    return {gn_utils.label_to_path(file) for file in files if not is_supported_source_file(file)}
+    tool_files = {gn_utils.label_to_path(file)
+                  for file in files if not is_supported_source_file(file)}
+    tool_files.add(gn_utils.label_to_path(self.target.script))
+    return tool_files
 
   def _sanitize_args(self):
     # Handle passing parameters via response file by piping them into the script
@@ -968,9 +971,6 @@ def create_action_module(blueprint, target, type):
   elif target.script == "//build/util/version.py":
     # android_chrome_version.py is not specified in anywhere but version.py imports this file
     module.tool_files.add('build/util/android_chrome_version.py')
-
-  script = gn_utils.label_to_path(target.script)
-  module.tool_files.add(script)
 
   blueprint.add_module(module)
   return module
