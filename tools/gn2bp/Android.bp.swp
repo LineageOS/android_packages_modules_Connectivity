@@ -4266,10 +4266,10 @@ java_genrule {
         "base/base_switches.cc",
     ],
     cmd: "$(location build/android/gyp/java_cpp_strings.py) --srcjar " +
-         "gen/base/java_switches_srcjar.srcjar " +
+         "$(out) " +
          "--template " +
-         "../../base/android/java/src/org/chromium/base/BaseSwitches.java.tmpl " +
-         "../../base/base_switches.cc",
+         "$(location base/android/java/src/org/chromium/base/BaseSwitches.java.tmpl) " +
+         "$(location base/base_switches.cc)",
     out: [
         "base/java_switches_srcjar.srcjar",
     ],
