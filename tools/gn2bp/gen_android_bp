@@ -849,6 +849,7 @@ class VersionSanitizer(BaseActionSanitizer):
     # args for the version.py contain file path without leading --arg key. So apply sanitize
     # function for all the args.
     self._update_all_args(self._sanitize_filepath_with_location_tag)
+    self._set_value_arg('-e', "'%s'" % self._get_value_arg('-e'))
     super()._sanitize_args()
 
 class JavaCppEnumSanitizer(BaseActionSanitizer):
