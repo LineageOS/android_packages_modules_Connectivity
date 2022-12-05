@@ -901,6 +901,9 @@ class MakeDafsaSanitizer(BaseActionSanitizer):
     # (e.g. registry_controlled_domain.cc)
     return True
 
+class JavaCppFeatureSanitizer(BaseActionSanitizer):
+  pass
+
 def get_action_sanitizer(target, type):
   if target.script == "//build/write_buildflag_header.py":
     return WriteBuildFlagHeaderSanitizer(target)
@@ -919,6 +922,8 @@ def get_action_sanitizer(target, type):
     return JavaCppEnumSanitizer(target)
   elif target.script == "//net/tools/dafsa/make_dafsa.py":
     return MakeDafsaSanitizer(target)
+  elif target.script == '//build/android/gyp/java_cpp_features.py':
+    return JavaCppFeatureSanitizer(target)
   else:
     # TODO: throw exception here once all script hacks have been converted.
     return BaseActionSanitizer(target)
