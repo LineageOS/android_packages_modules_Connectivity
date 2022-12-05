@@ -811,6 +811,9 @@ class JniGeneratorSanitizer(BaseActionSanitizer):
     super()._sanitize_outputs()
 
 class JniRegistrationGeneratorSanitizer(BaseActionSanitizer):
+  def _sanitize_inputs(self):
+    self.target.inputs = [file for file in self.target.inputs if not file.startswith('//out/')]
+
   def _sanitize_args(self):
     self._update_value_arg('--depfile', self._sanitize_filepath)
     self._update_value_arg('--srcjar-path', self._sanitize_filepath)
@@ -946,8 +949,6 @@ def create_action_module(blueprint, target, type):
     # do not handle. Remove them.
     # TODO: find a better way to do this.
     target.deps.clear()
-
-    target.inputs = [file for file in target.inputs if not file.startswith('//out/')]
   elif target.script == "//build/util/version.py":
     # android_chrome_version.py is not specified in anywhere but version.py imports this file
     module.tool_files.add('build/util/android_chrome_version.py')
