@@ -5726,7 +5726,7 @@ java_genrule {
 java_genrule {
     name: "cronet_aml_build_android_native_libraries_gen",
     cmd: "$(location build/android/gyp/write_native_libraries_java.py) --output " +
-         "gen/build/android/native_libraries_gen.srcjar " +
+         "$(out) " +
          "--cpu-family " +
          "CPU_FAMILY_ARM",
     out: [
