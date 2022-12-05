@@ -914,7 +914,9 @@ class JavaCppStringSanitizer(BaseActionSanitizer):
     super()._sanitize_args()
 
 class WriteNativeLibrariesJavaSanitizer(BaseActionSanitizer):
-  pass
+  def _sanitize_args(self):
+    self._set_value_arg('--output', '$(out)')
+    super()._sanitize_args()
 
 def get_action_sanitizer(target, type):
   if target.script == "//build/write_buildflag_header.py":
