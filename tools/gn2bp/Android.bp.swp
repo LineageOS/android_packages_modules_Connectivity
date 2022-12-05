@@ -4240,12 +4240,12 @@ java_genrule {
         "base/task/task_features.cc",
     ],
     cmd: "$(location build/android/gyp/java_cpp_features.py) --srcjar " +
-         "gen/base/java_features_srcjar.srcjar " +
+         "$(out) " +
          "--template " +
-         "../../base/android/java/src/org/chromium/base/BaseFeatures.java.tmpl " +
-         "../../base/android/base_features.cc " +
-         "../../base/features.cc " +
-         "../../base/task/task_features.cc",
+         "$(location base/android/java/src/org/chromium/base/BaseFeatures.java.tmpl) " +
+         "$(location base/android/base_features.cc) " +
+         "$(location base/features.cc) " +
+         "$(location base/task/task_features.cc)",
     out: [
         "base/java_features_srcjar.srcjar",
     ],
