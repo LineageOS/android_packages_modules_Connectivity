@@ -78,7 +78,7 @@ class NetworkTemplateTest {
             NetworkTemplate.Builder(matchRule).setSubscriberIds(setOf(TEST_IMSI1))
                     .setMeteredness(METERED_YES).build().let {
                         val expectedTemplate = NetworkTemplate(matchRule, TEST_IMSI1,
-                                arrayOf(TEST_IMSI1), arrayOf<String>(), METERED_YES,
+                                arrayOf(TEST_IMSI1), emptyArray<String>(), METERED_YES,
                                 ROAMING_ALL, DEFAULT_NETWORK_ALL, NETWORK_TYPE_ALL,
                                 OEM_MANAGED_ALL, SUBSCRIBER_ID_MATCH_RULE_EXACT)
                         assertEquals(expectedTemplate, it)
@@ -91,7 +91,7 @@ class NetworkTemplateTest {
             NetworkTemplate.Builder(matchRule).setSubscriberIds(setOf(TEST_IMSI1))
                     .setRoaming(ROAMING_YES).setMeteredness(METERED_YES).build().let {
                         val expectedTemplate = NetworkTemplate(matchRule, TEST_IMSI1,
-                                arrayOf(TEST_IMSI1), arrayOf<String>(), METERED_YES,
+                                arrayOf(TEST_IMSI1), emptyArray<String>(), METERED_YES,
                                 ROAMING_YES, DEFAULT_NETWORK_ALL, NETWORK_TYPE_ALL,
                                 OEM_MANAGED_ALL, SUBSCRIBER_ID_MATCH_RULE_EXACT)
                         assertEquals(expectedTemplate, it)
@@ -107,7 +107,7 @@ class NetworkTemplateTest {
         // regardless of IMSI. See buildTemplateMobileWildcard.
         NetworkTemplate.Builder(MATCH_MOBILE).setMeteredness(METERED_YES).build().let {
             val expectedTemplate = NetworkTemplate(MATCH_MOBILE_WILDCARD, null /*subscriberId*/,
-                    null /*subscriberIds*/, arrayOf<String>(),
+                    emptyArray<String>() /*subscriberIds*/, emptyArray<String>(),
                     METERED_YES, ROAMING_ALL, DEFAULT_NETWORK_ALL, NETWORK_TYPE_ALL,
                     OEM_MANAGED_ALL, SUBSCRIBER_ID_MATCH_RULE_ALL)
             assertEquals(expectedTemplate, it)
@@ -119,7 +119,7 @@ class NetworkTemplateTest {
                 .setMeteredness(METERED_YES).setRatType(TelephonyManager.NETWORK_TYPE_UMTS)
                 .build().let {
                     val expectedTemplate = NetworkTemplate(MATCH_MOBILE, TEST_IMSI1,
-                            arrayOf(TEST_IMSI1), arrayOf<String>(), METERED_YES,
+                            arrayOf(TEST_IMSI1), emptyArray<String>(), METERED_YES,
                             ROAMING_ALL, DEFAULT_NETWORK_ALL, TelephonyManager.NETWORK_TYPE_UMTS,
                             OEM_MANAGED_ALL, SUBSCRIBER_ID_MATCH_RULE_EXACT)
                     assertEquals(expectedTemplate, it)
@@ -129,7 +129,7 @@ class NetworkTemplateTest {
         // regardless of Wifi Network Key. See buildTemplateWifiWildcard and buildTemplateWifi.
         NetworkTemplate.Builder(MATCH_WIFI).build().let {
             val expectedTemplate = NetworkTemplate(MATCH_WIFI_WILDCARD, null /*subscriberId*/,
-                    null /*subscriberIds*/, arrayOf<String>(),
+                    emptyArray<String>() /*subscriberIds*/, emptyArray<String>(),
                     METERED_ALL, ROAMING_ALL, DEFAULT_NETWORK_ALL, NETWORK_TYPE_ALL,
                     OEM_MANAGED_ALL, SUBSCRIBER_ID_MATCH_RULE_ALL)
             assertEquals(expectedTemplate, it)
@@ -139,7 +139,7 @@ class NetworkTemplateTest {
         // See buildTemplateWifi(wifiNetworkKey).
         NetworkTemplate.Builder(MATCH_WIFI).setWifiNetworkKeys(setOf(TEST_WIFI_KEY1)).build().let {
             val expectedTemplate = NetworkTemplate(MATCH_WIFI, null /*subscriberId*/,
-                    null /*subscriberIds*/, arrayOf(TEST_WIFI_KEY1),
+                    emptyArray<String>() /*subscriberIds*/, arrayOf(TEST_WIFI_KEY1),
                     METERED_ALL, ROAMING_ALL, DEFAULT_NETWORK_ALL, NETWORK_TYPE_ALL,
                     OEM_MANAGED_ALL, SUBSCRIBER_ID_MATCH_RULE_ALL)
             assertEquals(expectedTemplate, it)
@@ -161,7 +161,7 @@ class NetworkTemplateTest {
         listOf(MATCH_ETHERNET, MATCH_BLUETOOTH).forEach { matchRule ->
             NetworkTemplate.Builder(matchRule).build().let {
                 val expectedTemplate = NetworkTemplate(matchRule, null /*subscriberId*/,
-                        null /*subscriberIds*/, arrayOf<String>(),
+                        emptyArray<String>() /*subscriberIds*/, emptyArray<String>(),
                         METERED_ALL, ROAMING_ALL, DEFAULT_NETWORK_ALL, NETWORK_TYPE_ALL,
                         OEM_MANAGED_ALL, SUBSCRIBER_ID_MATCH_RULE_ALL)
                 assertEquals(expectedTemplate, it)
@@ -196,7 +196,7 @@ class NetworkTemplateTest {
         // Verify template which matches wifi wildcard with the given empty key set.
         NetworkTemplate.Builder(MATCH_WIFI).setWifiNetworkKeys(setOf<String>()).build().let {
             val expectedTemplate = NetworkTemplate(MATCH_WIFI_WILDCARD, null /*subscriberId*/,
-                    arrayOf<String>() /*subscriberIds*/, arrayOf<String>(),
+                    emptyArray<String>() /*subscriberIds*/, emptyArray<String>(),
                     METERED_ALL, ROAMING_ALL, DEFAULT_NETWORK_ALL, NETWORK_TYPE_ALL,
                     OEM_MANAGED_ALL, SUBSCRIBER_ID_MATCH_RULE_ALL)
             assertEquals(expectedTemplate, it)
