@@ -124,6 +124,9 @@ static const set<string> INTRODUCED_T = {
 static const set<string> INTRODUCED_T_5_4 = {
     SHARED "prog_block_bind4_block_port",
     SHARED "prog_block_bind6_block_port",
+};
+
+static const set<string> INTRODUCED_T_5_15 = {
     SHARED "prog_dscp_policy_schedcls_set_dscp_ether",
     SHARED "prog_dscp_policy_schedcls_set_dscp_raw_ip",
 };
@@ -168,6 +171,7 @@ void getFileLists(set<string>* expected, set<string>* unexpected) {
     if (IsAtLeastT()) {
         addAll(expected, INTRODUCED_T);
         if (android::bpf::isAtLeastKernelVersion(5, 4, 0)) addAll(expected, INTRODUCED_T_5_4);
+        if (android::bpf::isAtLeastKernelVersion(5, 15, 0)) addAll(expected, INTRODUCED_T_5_15);
         removeAll(expected, REMOVED_T);
 
         addAll(unexpected, REMOVED_T);
