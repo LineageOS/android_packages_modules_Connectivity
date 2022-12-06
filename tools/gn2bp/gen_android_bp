@@ -319,6 +319,7 @@ class Module(object):
     self.compile_multilib = None
     self.aidl = dict()
     self.plugins = set()
+    self.processor_class = None
 
   def to_string(self, output):
     if self.comment:
@@ -370,6 +371,7 @@ class Module(object):
     self._output_field(output, 'compile_multilib')
     self._output_field(output, 'aidl')
     self._output_field(output, 'plugins')
+    self._output_field(output, 'processor_class')
     if self.rtti:
       self._output_field(output, 'rtti')
 
@@ -1314,7 +1316,18 @@ def create_java_jni_preprocessor(blueprint):
     # no target should ever expect to package an annotation processor.
     "build/android/java/src/org/chromium/build/annotations/CheckDiscard.java",
     "build/android/java/src/org/chromium/build/annotations/MainDex.java",
+    "base/android/java/src/org/chromium/base/JniStaticTestMocker.java",
+    "base/android/java/src/org/chromium/base/NativeLibraryLoadedStatus.java",
+    "base/android/java/src/org/chromium/base/annotations/NativeMethods.java",
+    "base/android/java/src/org/chromium/base/JniException.java",
+    ":cronet_aml_build_android_build_config_gen",
   ])
+  module.static_libs.update({
+      "javapoet",
+      "guava",
+      "auto_service_annotations",
+  })
+  module.processor_class = "org.chromium.jni_generator.JniProcessor"
   blueprint.add_module(module)
   return module
 
