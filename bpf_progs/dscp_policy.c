@@ -297,7 +297,7 @@ static inline __always_inline void match_policy(struct __sk_buff* skb, bool ipv4
 }
 
 DEFINE_BPF_PROG_KVER("schedcls/set_dscp_ether", AID_ROOT, AID_SYSTEM,
-                     schedcls_set_dscp_ether, KVER(5, 4, 0))
+                     schedcls_set_dscp_ether, KVER(5, 15, 0))
 (struct __sk_buff* skb) {
 
     if (skb->pkt_type != PACKET_HOST) return TC_ACT_PIPE;
@@ -313,7 +313,7 @@ DEFINE_BPF_PROG_KVER("schedcls/set_dscp_ether", AID_ROOT, AID_SYSTEM,
 }
 
 DEFINE_BPF_PROG_KVER("schedcls/set_dscp_raw_ip", AID_ROOT, AID_SYSTEM,
-                     schedcls_set_dscp_raw_ip, KVER(5, 4, 0))
+                     schedcls_set_dscp_raw_ip, KVER(5, 15, 0))
 (struct __sk_buff* skb) {
     if (skb->protocol == htons(ETH_P_IP)) {
         match_policy(skb, true, false);
