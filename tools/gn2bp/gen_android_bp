@@ -746,6 +746,23 @@ class BaseActionSanitizer():
   def get_outputs(self):
     return self.target.outputs
 
+  def get_srcs(self):
+    # gn treats inputs and sources for actions equally.
+    # soong only supports source files inside srcs, non-source files are added as
+    # tool_files dependency.
+    files = self.target.sources.union(self.target.inputs)
+    return {gn_utils.label_to_path(file) for file in files if is_supported_source_file(file)}
+
+  def get_tool_files(self):
+    # gn treats inputs and sources for actions equally.
+    # soong only supports source files inside srcs, non-source files are added as
+    # tool_files dependency.
+    files = self.target.sources.union(self.target.inputs)
+    tool_files = {gn_utils.label_to_path(file)
+                  for file in files if not is_supported_source_file(file)}
+    tool_files.add(gn_utils.label_to_path(self.target.script))
+    return tool_files
+
   def _sanitize_args(self):
     # Handle passing parameters via response file by piping them into the script
     # and reading them from /dev/stdin.
@@ -759,9 +776,13 @@ class BaseActionSanitizer():
   def _sanitize_outputs(self):
     pass
 
+  def _sanitize_inputs(self):
+    pass
+
   def sanitize(self):
     self._sanitize_args()
     self._sanitize_outputs()
+    self._sanitize_inputs()
 
   # Whether this target generates header files
   def is_header_generated(self):
@@ -803,7 +824,17 @@ class JniGeneratorSanitizer(BaseActionSanitizer):
     self.target.outputs = {re.sub('^jni_headers/', '', out) for out in self.target.outputs}
     super()._sanitize_outputs()
 
+  def get_tool_files(self):
+    tool_files = super().get_tool_files()
+    # android_jar.classes should be part of the tools as it list implicit classes
+    # for the script to generate JNI headers.
+    tool_files.add("base/android/jni_generator/android_jar.classes")
+    return tool_files
+
 class JniRegistrationGeneratorSanitizer(BaseActionSanitizer):
+  def _sanitize_inputs(self):
+    self.target.inputs = [file for file in self.target.inputs if not file.startswith('//out/')]
+
   def _sanitize_args(self):
     self._update_value_arg('--depfile', self._sanitize_filepath)
     self._update_value_arg('--srcjar-path', self._sanitize_filepath)
@@ -849,7 +880,14 @@ class VersionSanitizer(BaseActionSanitizer):
     # args for the version.py contain file path without leading --arg key. So apply sanitize
     # function for all the args.
     self._update_all_args(self._sanitize_filepath_with_location_tag)
+    self._set_value_arg('-e', "'%s'" % self._get_value_arg('-e'))
     super()._sanitize_args()
+
+  def get_tool_files(self):
+    tool_files = super().get_tool_files()
+    # android_chrome_version.py is not specified in anywhere but version.py imports this file
+    tool_files.add('build/util/android_chrome_version.py')
+    return tool_files
 
 class JavaCppEnumSanitizer(BaseActionSanitizer):
   def _sanitize_args(self):
@@ -862,6 +900,23 @@ class MakeDafsaSanitizer(BaseActionSanitizer):
     # This script generates .cc files but they are #included by other sources
     # (e.g. registry_controlled_domain.cc)
     return True
+
+class JavaCppFeatureSanitizer(BaseActionSanitizer):
+  def _sanitize_args(self):
+    self._update_all_args(self._sanitize_filepath_with_location_tag)
+    self._set_value_arg('--srcjar', '$(out)')
+    super()._sanitize_args()
+
+class JavaCppStringSanitizer(BaseActionSanitizer):
+  def _sanitize_args(self):
+    self._update_all_args(self._sanitize_filepath_with_location_tag)
+    self._set_value_arg('--srcjar', '$(out)')
+    super()._sanitize_args()
+
+class WriteNativeLibrariesJavaSanitizer(BaseActionSanitizer):
+  def _sanitize_args(self):
+    self._set_value_arg('--output', '$(out)')
+    super()._sanitize_args()
 
 def get_action_sanitizer(target, type):
   if target.script == "//build/write_buildflag_header.py":
@@ -881,6 +936,12 @@ def get_action_sanitizer(target, type):
     return JavaCppEnumSanitizer(target)
   elif target.script == "//net/tools/dafsa/make_dafsa.py":
     return MakeDafsaSanitizer(target)
+  elif target.script == '//build/android/gyp/java_cpp_features.py':
+    return JavaCppFeatureSanitizer(target)
+  elif target.script == '//build/android/gyp/java_cpp_strings.py':
+    return JavaCppStringSanitizer(target)
+  elif target.script == '//build/android/gyp/write_native_libraries_java.py':
+    return WriteNativeLibrariesJavaSanitizer(target)
   else:
     # TODO: throw exception here once all script hacks have been converted.
     return BaseActionSanitizer(target)
@@ -921,39 +982,14 @@ def create_action_foreach_modules(blueprint, target):
 def create_action_module(blueprint, target, type):
   sanitizer = get_action_sanitizer(target, type)
   sanitizer.sanitize()
+
   module = Module(type, sanitizer.get_name(), target.name)
   module.cmd = sanitizer.get_cmd()
   module.out = sanitizer.get_outputs()
   if sanitizer.is_header_generated():
     module.genrule_headers.add(module.name)
-
-  if target.script == '//base/android/jni_generator/jni_generator.py':
-    # android_jar.classes should be part of the tools as it list implicit classes
-    # for the script to generate JNI headers.
-    module.tool_files.add("base/android/jni_generator/android_jar.classes")
-
-  elif target.script == '//base/android/jni_generator/jni_registration_generator.py':
-    # jni_registration_generator.py pulls in some config dependencies that we
-    # do not handle. Remove them.
-    # TODO: find a better way to do this.
-    target.deps.clear()
-
-    target.inputs = [file for file in target.inputs if not file.startswith('//out/')]
-  elif target.script == "//build/util/version.py":
-    # android_chrome_version.py is not specified in anywhere but version.py imports this file
-    module.tool_files.add('build/util/android_chrome_version.py')
-
-  script = gn_utils.label_to_path(target.script)
-  module.tool_files.add(script)
-
-  # gn treats inputs and sources for actions equally.
-  # soong only supports source files inside srcs, non-source files are added as
-  # tool_files dependency.
-  for it in target.sources or target.inputs:
-    if is_supported_source_file(it):
-      module.srcs.add(gn_utils.label_to_path(it))
-    else:
-      module.tool_files.add(gn_utils.label_to_path(it))
+  module.srcs = sanitizer.get_srcs()
+  module.tool_files = sanitizer.get_tool_files()
 
   blueprint.add_module(module)
   return module
@@ -1230,7 +1266,8 @@ def update_jni_registration_module(module, gn):
 
   # TODO: java_sources might not contain all the required java files
   module.srcs.update([gn_utils.label_to_path(source)
-                      for source in gn.java_sources if source not in deny_list])
+                      for source in gn.java_sources
+                      if source.endswith('.java') and source not in deny_list])
 
 def create_blueprint_for_targets(gn, targets):
   """Generate a blueprint for a list of GN targets."""
