@@ -66,7 +66,6 @@ filegroup {
         "java/android/net/netstats/NetworkStatsDataMigrationUtilsTest.kt",
         "java/com/android/internal/net/NetworkUtilsInternalTest.java",
         "java/com/android/internal/net/VpnProfileTest.java",
-        "java/com/android/server/NetworkManagementServiceTest.java",
         "java/com/android/server/VpnManagerServiceTest.java",
         "java/com/android/server/connectivity/IpConnectivityEventBuilderTest.java",
         "java/com/android/server/connectivity/IpConnectivityMetricsTest.java",
