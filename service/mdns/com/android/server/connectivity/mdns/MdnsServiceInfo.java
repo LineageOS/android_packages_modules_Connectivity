@@ -270,7 +270,8 @@ public class MdnsServiceInfo implements Parcelable {
     public Map<String, String> getAttributes() {
         Map<String, String> map = new HashMap<>(attributes.size());
         for (Map.Entry<String, byte[]> kv : attributes.entrySet()) {
-            map.put(kv.getKey(), new String(kv.getValue(), UTF_8));
+            final byte[] value = kv.getValue();
+            map.put(kv.getKey(), value == null ? null : new String(value, UTF_8));
         }
         return Collections.unmodifiableMap(map);
     }
@@ -342,7 +343,7 @@ public class MdnsServiceInfo implements Parcelable {
             // 2. If there is no '=' in a DNS-SD TXT record string, then it is a
             // boolean attribute, simply identified as being present, with no value.
             if (delimitPos < 0) {
-                return new TextEntry(new String(textBytes, US_ASCII), "");
+                return new TextEntry(new String(textBytes, US_ASCII), (byte[]) null);
             } else if (delimitPos == 0) {
                 return null;
             }
@@ -353,13 +354,13 @@ public class MdnsServiceInfo implements Parcelable {
 
         /** Creates a new {@link TextEntry} with given key and value of a UTF-8 string. */
         public TextEntry(String key, String value) {
-            this(key, value.getBytes(UTF_8));
+            this(key, value == null ? null : value.getBytes(UTF_8));
         }
 
         /** Creates a new {@link TextEntry} with given key and value of a byte array. */
         public TextEntry(String key, byte[] value) {
             this.key = key;
-            this.value = value.clone();
+            this.value = value == null ? null : value.clone();
         }
 
         private TextEntry(Parcel in) {
@@ -372,17 +373,24 @@ public class MdnsServiceInfo implements Parcelable {
         }
 
         public byte[] getValue() {
-            return value.clone();
+            return value == null ? null : value.clone();
         }
 
         /** Converts this {@link TextEntry} instance to '=' separated byte array. */
         public byte[] toBytes() {
-            return ByteUtils.concat(key.getBytes(US_ASCII), new byte[]{'='}, value);
+            final byte[] keyBytes = key.getBytes(US_ASCII);
+            if (value == null) {
+                return keyBytes;
+            }
+            return ByteUtils.concat(keyBytes, new byte[]{'='}, value);
         }
 
         /** Converts this {@link TextEntry} instance to '=' separated string. */
         @Override
         public String toString() {
+            if (value == null) {
+                return key;
+            }
             return key + "=" + new String(value, UTF_8);
         }
 
