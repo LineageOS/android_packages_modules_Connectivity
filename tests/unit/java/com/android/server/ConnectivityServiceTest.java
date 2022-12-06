@@ -7336,11 +7336,10 @@ public class ConnectivityServiceTest {
         expectNotifyNetworkStatus(onlyCell(), onlyCell(), MOBILE_IFNAME);
         reset(mStatsManager);
 
-        // Temp metered change shouldn't update ifaces
+        // Temp metered change should update ifaces
         mCellNetworkAgent.addCapability(NET_CAPABILITY_TEMPORARILY_NOT_METERED);
         waitForIdle();
-        verify(mStatsManager, never()).notifyNetworkStatus(eq(onlyCell()),
-                any(List.class), eq(MOBILE_IFNAME), any(List.class));
+        expectNotifyNetworkStatus(onlyCell(), onlyCell(), MOBILE_IFNAME);
         reset(mStatsManager);
 
         // Congested change shouldn't update ifaces

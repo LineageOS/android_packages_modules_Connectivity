@@ -1001,7 +1001,8 @@ public class Tethering {
         if (request != null) {
             mActiveTetheringRequests.delete(type);
         }
-        tetherState.ipServer.enable(requestedState, request);
+        tetherState.ipServer.sendMessage(IpServer.CMD_TETHER_REQUESTED, requestedState, 0,
+                request);
         return TETHER_ERROR_NO_ERROR;
     }
 
@@ -1025,7 +1026,7 @@ public class Tethering {
             Log.e(TAG, "Tried to untether an inactive iface :" + iface + ", ignoring");
             return TETHER_ERROR_UNAVAIL_IFACE;
         }
-        tetherState.ipServer.unwanted();
+        tetherState.ipServer.sendMessage(IpServer.CMD_TETHER_UNREQUESTED);
         return TETHER_ERROR_NO_ERROR;
     }
 
@@ -1085,6 +1086,8 @@ public class Tethering {
         final ArrayList<TetheringInterface> localOnly = new ArrayList<>();
         final ArrayList<TetheringInterface> errored = new ArrayList<>();
         final ArrayList<Integer> lastErrors = new ArrayList<>();
+
+        final TetheringConfiguration cfg = mConfig;
 
         int downstreamTypesMask = DOWNSTREAM_NONE;
         for (int i = 0; i < mTetherStates.size(); i++) {

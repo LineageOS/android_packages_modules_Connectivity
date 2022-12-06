@@ -256,9 +256,6 @@ public class MdnsResponseDecoder {
                         response = new MdnsResponse(now);
                         responses.add(response);
                     }
-                    // Set interface index earlier because some responses have PTR record only.
-                    // Need to know every response is getting from which interface.
-                    response.setInterfaceIndex(interfaceIndex);
                     response.addPointerRecord((MdnsPointerRecord) record);
                 }
             }
@@ -289,13 +286,13 @@ public class MdnsResponseDecoder {
                     List<MdnsResponse> matchingResponses =
                             findResponsesWithHostName(responses, inetRecord.getName());
                     for (MdnsResponse response : matchingResponses) {
-                        assignInetRecord(response, inetRecord);
+                        assignInetRecord(response, inetRecord, interfaceIndex);
                     }
                 } else {
                     MdnsResponse response =
                             findResponseWithHostName(responses, inetRecord.getName());
                     if (response != null) {
-                        assignInetRecord(response, inetRecord);
+                        assignInetRecord(response, inetRecord, interfaceIndex);
                     }
                 }
             }
@@ -304,11 +301,14 @@ public class MdnsResponseDecoder {
         return SUCCESS;
     }
 
-    private static void assignInetRecord(MdnsResponse response, MdnsInetAddressRecord inetRecord) {
+    private static void assignInetRecord(
+            MdnsResponse response, MdnsInetAddressRecord inetRecord, int interfaceIndex) {
         if (inetRecord.getInet4Address() != null) {
             response.setInet4AddressRecord(inetRecord);
+            response.setInterfaceIndex(interfaceIndex);
         } else if (inetRecord.getInet6Address() != null) {
             response.setInet6AddressRecord(inetRecord);
+            response.setInterfaceIndex(interfaceIndex);
         }
     }
 

@@ -44,6 +44,7 @@ android_app {
         "com.google.android.material_material",
         "fast-pair-lite-protos",
     ],
+    plugins: ["java_api_finder"],
     manifest: "AndroidManifest.xml",
     jarjar_rules: ":nearby-jarjar-rules",
     apex_available: ["com.android.tethering",],

@@ -400,8 +400,10 @@ public class NetworkIdentity {
             setSubscriberId(snapshot.getSubscriberId());
             setRoaming(!snapshot.getNetworkCapabilities().hasCapability(
                     NetworkCapabilities.NET_CAPABILITY_NOT_ROAMING));
-            setMetered(!snapshot.getNetworkCapabilities().hasCapability(
-                    NetworkCapabilities.NET_CAPABILITY_NOT_METERED));
+            setMetered(!(snapshot.getNetworkCapabilities().hasCapability(
+                    NetworkCapabilities.NET_CAPABILITY_NOT_METERED)
+                    || snapshot.getNetworkCapabilities().hasCapability(
+                    NetworkCapabilities.NET_CAPABILITY_TEMPORARILY_NOT_METERED)));
 
             setOemManaged(getOemBitfield(snapshot.getNetworkCapabilities()));
 

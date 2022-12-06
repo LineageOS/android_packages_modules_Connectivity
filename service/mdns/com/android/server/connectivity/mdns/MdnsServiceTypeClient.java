@@ -91,12 +91,8 @@ public class MdnsServiceTypeClient {
 
     private static MdnsServiceInfo buildMdnsServiceInfoFromResponse(
             @NonNull MdnsResponse response, @NonNull String[] serviceTypeLabels) {
-        String[] hostName = null;
-        int port = 0;
-        if (response.hasServiceRecord()) {
-            hostName = response.getServiceRecord().getServiceHost();
-            port = response.getServiceRecord().getServicePort();
-        }
+        String[] hostName = response.getServiceRecord().getServiceHost();
+        int port = response.getServiceRecord().getServicePort();
 
         String ipv4Address = null;
         String ipv6Address = null;
@@ -108,16 +104,14 @@ public class MdnsServiceTypeClient {
             Inet6Address inet6Address = response.getInet6AddressRecord().getInet6Address();
             ipv6Address = (inet6Address == null) ? null : inet6Address.getHostAddress();
         }
+        if (ipv4Address == null && ipv6Address == null) {
+            throw new IllegalArgumentException(
+                    "Either ipv4Address or ipv6Address must be non-null");
+        }
         String serviceInstanceName = response.getServiceInstanceName();
         if (serviceInstanceName == null) {
             throw new IllegalStateException(
                     "mDNS response must have non-null service instance name");
-        }
-        List<String> textStrings = null;
-        List<MdnsServiceInfo.TextEntry> textEntries = null;
-        if (response.hasTextRecord()) {
-            textStrings = response.getTextRecord().getStrings();
-            textEntries = response.getTextRecord().getEntries();
         }
         // TODO: Throw an error message if response doesn't have Inet6 or Inet4 address.
         return new MdnsServiceInfo(
@@ -128,8 +122,8 @@ public class MdnsServiceTypeClient {
                 port,
                 ipv4Address,
                 ipv6Address,
-                textStrings,
-                textEntries,
+                response.getTextRecord().getStrings(),
+                response.getTextRecord().getEntries(),
                 response.getInterfaceIndex());
     }
 
@@ -252,14 +246,12 @@ public class MdnsServiceTypeClient {
     }
 
     private void onGoodbyeReceived(@Nullable String serviceInstanceName) {
-        final MdnsResponse response = instanceNameToResponse.remove(serviceInstanceName);
-        if (response == null) {
+        if (serviceInstanceName == null) {
             return;
         }
+        instanceNameToResponse.remove(serviceInstanceName);
         for (MdnsServiceBrowserListener listener : listeners) {
-            final MdnsServiceInfo serviceInfo =
-                    buildMdnsServiceInfoFromResponse(response, serviceTypeLabels);
-            listener.onServiceRemoved(serviceInfo);
+            listener.onServiceRemoved(serviceInstanceName);
         }
     }
 
@@ -433,10 +425,7 @@ public class MdnsServiceTypeClient {
                                 String serviceInstanceName =
                                         existingResponse.getServiceInstanceName();
                                 if (serviceInstanceName != null) {
-                                    final MdnsServiceInfo serviceInfo =
-                                            buildMdnsServiceInfoFromResponse(
-                                                    existingResponse, serviceTypeLabels);
-                                    listener.onServiceRemoved(serviceInfo);
+                                    listener.onServiceRemoved(serviceInstanceName);
                                 }
                             }
                         }
