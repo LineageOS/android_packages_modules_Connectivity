@@ -498,7 +498,7 @@ public class ConnectivityManagerTest {
     public void testConnectivityManagerDoesNotLeakContext() throws Exception {
         final WeakReference<Context> ref = makeConnectivityManagerAndReturnContext();
 
-        final int attempts = 100;
+        final int attempts = 600;
         final long waitIntervalMs = 50;
         for (int i = 0; i < attempts; i++) {
             forceGC();
