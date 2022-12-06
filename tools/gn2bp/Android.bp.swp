@@ -9860,6 +9860,19 @@ java_library {
             "base/android/java/src/",
         ],
     },
+    plugins: [
+        "cronet_aml_java_jni_annotation_preprocessor",
+    ],
+}
+
+// GN: //base/android/jni_generator:jni_processor
+java_plugin {
+    name: "cronet_aml_java_jni_annotation_preprocessor",
+    srcs: [
+        "base/android/jni_generator/java/src/org/chromium/jni_generator/JniProcessor.java",
+        "build/android/java/src/org/chromium/build/annotations/CheckDiscard.java",
+        "build/android/java/src/org/chromium/build/annotations/MainDex.java",
+    ],
 }
 
 // GN: //net/android:net_android_java_enums_srcjar
