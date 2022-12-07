@@ -1498,8 +1498,18 @@ public class VpnTest extends VpnTestBase {
         verify(mIkev2SessionCreator, timeout(TEST_TIMEOUT_MS))
                 .createIkeSession(any(), any(), any(), any(), captor.capture(), any());
         reset(mIkev2SessionCreator);
-        final IkeSessionCallback ikeCb = captor.getValue();
-        ikeCb.onClosedWithException(exception);
+        // For network lost case, the process should be triggered by calling onLost(), which is the
+        // same process with the real case.
+        if (errorCode == VpnManager.ERROR_CODE_NETWORK_LOST) {
+            cb.onLost(TEST_NETWORK);
+            final ArgumentCaptor<Runnable> runnableCaptor =
+                    ArgumentCaptor.forClass(Runnable.class);
+            verify(mExecutor).schedule(runnableCaptor.capture(), anyLong(), any());
+            runnableCaptor.getValue().run();
+        } else {
+            final IkeSessionCallback ikeCb = captor.getValue();
+            ikeCb.onClosedWithException(exception);
+        }
 
         verifyPowerSaveTempWhitelistApp(TEST_VPN_PKG);
         reset(mDeviceIdleInternal);
@@ -1510,14 +1520,16 @@ public class VpnTest extends VpnTestBase {
                     .unregisterNetworkCallback(eq(cb));
         } else if (errorType == VpnManager.ERROR_CLASS_RECOVERABLE) {
             int retryIndex = 0;
-            final IkeSessionCallback ikeCb2 = verifyRetryAndGetNewIkeCb(retryIndex++);
+            final IkeSessionCallback ikeCb2 = verifyRetryAndGetNewIkeCb(retryIndex++, errorCode);
 
-            ikeCb2.onClosedWithException(exception);
-            verifyRetryAndGetNewIkeCb(retryIndex++);
+            if (ikeCb2 != null) {
+                ikeCb2.onClosedWithException(exception);
+                verifyRetryAndGetNewIkeCb(retryIndex++, errorCode);
+            }
         }
     }
 
-    private IkeSessionCallback verifyRetryAndGetNewIkeCb(int retryIndex) {
+    private IkeSessionCallback verifyRetryAndGetNewIkeCb(int retryIndex, int errorCode) {
         final ArgumentCaptor<Runnable> runnableCaptor =
                 ArgumentCaptor.forClass(Runnable.class);
         final ArgumentCaptor<IkeSessionCallback> ikeCbCaptor =
@@ -1530,15 +1542,21 @@ public class VpnTest extends VpnTestBase {
         // Mock the event of firing the retry task
         runnableCaptor.getValue().run();
 
-        verify(mIkev2SessionCreator)
-                .createIkeSession(any(), any(), any(), any(), ikeCbCaptor.capture(), any());
+        // Vpn won't retry when there is no usable underlying network.
+        if (errorCode == VpnManager.ERROR_CODE_NETWORK_LOST) {
+            verify(mIkev2SessionCreator, never())
+                    .createIkeSession(any(), any(), any(), any(), ikeCbCaptor.capture(), any());
+        } else {
+            verify(mIkev2SessionCreator)
+                    .createIkeSession(any(), any(), any(), any(), ikeCbCaptor.capture(), any());
+        }
 
         // Forget the mIkev2SessionCreator#createIkeSession call and mExecutor#schedule call
         // for the next retry verification
         resetIkev2SessionCreator(mIkeSessionWrapper);
         resetExecutor(mScheduledFuture);
 
-        return ikeCbCaptor.getValue();
+        return (ikeCbCaptor.getAllValues().size() == 0) ? null : ikeCbCaptor.getValue();
     }
 
     @Test
