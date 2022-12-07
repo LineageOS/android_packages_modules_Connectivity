@@ -23,6 +23,7 @@ import static org.junit.Assert.assertTrue;
 import android.content.Context;
 import android.net.ConnectivityManager;
 import android.net.http.cts.util.CronetCtsTestServer;
+import android.net.http.cts.util.TestStatusListener;
 import android.net.http.cts.util.TestUrlRequestCallback;
 import android.net.http.cts.util.TestUrlRequestCallback.ResponseStep;
 
@@ -32,6 +33,7 @@ import androidx.test.runner.AndroidJUnit4;
 
 import org.chromium.net.CronetEngine;
 import org.chromium.net.UrlRequest;
+import org.chromium.net.UrlRequest.Status;
 import org.chromium.net.UrlResponseInfo;
 import org.junit.After;
 import org.junit.Before;
@@ -43,6 +45,7 @@ public class CronetUrlRequestTest {
     private static final String TAG = CronetUrlRequestTest.class.getSimpleName();
 
     @NonNull private CronetEngine mCronetEngine;
+    @NonNull private TestUrlRequestCallback mCallback;
     @NonNull private ConnectivityManager mCm;
     @NonNull private CronetCtsTestServer mTestServer;
 
@@ -56,6 +59,7 @@ public class CronetUrlRequestTest {
                 // .enableBrotli(true)
                 .enableQuic(true);
         mCronetEngine = builder.build();
+        mCallback = new TestUrlRequestCallback();
         mTestServer = new CronetCtsTestServer(context);
     }
 
@@ -73,21 +77,33 @@ public class CronetUrlRequestTest {
         assertNotNull("This test requires a working Internet connection", mCm.getActiveNetwork());
     }
 
+    private UrlRequest buildUrlRequest(String url) {
+        return mCronetEngine.newUrlRequestBuilder(url, mCallback, mCallback.getExecutor()).build();
+    }
+
     @Test
     public void testUrlRequestGet_CompletesSuccessfully() throws Exception {
         assertHasTestableNetworks();
         String url = mTestServer.getSuccessUrl();
-        TestUrlRequestCallback callback = new TestUrlRequestCallback();
-        UrlRequest.Builder builder =
-                mCronetEngine.newUrlRequestBuilder(url, callback, callback.getExecutor());
-        builder.build().start();
+        UrlRequest request = buildUrlRequest(url);
+        request.start();
 
-        callback.expectCallback(ResponseStep.ON_SUCCEEDED);
+        mCallback.expectCallback(ResponseStep.ON_SUCCEEDED);
 
-        UrlResponseInfo info = callback.mResponseInfo;
+        UrlResponseInfo info = mCallback.mResponseInfo;
         assertEquals(
                 "Unexpected http status code from " + url + ".", 200, info.getHttpStatusCode());
         assertGreaterThan(
                 "Received byte from " + url + " is 0.", (int) info.getReceivedByteCount(), 0);
+    }
+
+    @Test
+    public void testUrlRequestStatus_InvalidBeforeRequestStarts() throws Exception {
+        UrlRequest request = buildUrlRequest(mTestServer.getSuccessUrl());
+        // Calling before request is started should give Status.INVALID,
+        // since the native adapter is not created.
+        TestStatusListener statusListener = new TestStatusListener();
+        request.getStatus(statusListener);
+        statusListener.expectStatus(Status.INVALID);
     }
 }
