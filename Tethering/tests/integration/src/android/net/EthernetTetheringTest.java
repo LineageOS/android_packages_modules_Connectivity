@@ -85,7 +85,6 @@ import com.android.net.module.util.structs.Ipv4Header;
 import com.android.net.module.util.structs.Ipv6Header;
 import com.android.net.module.util.structs.UdpHeader;
 import com.android.testutils.DevSdkIgnoreRule;
-import com.android.testutils.DevSdkIgnoreRule.IgnoreAfter;
 import com.android.testutils.DevSdkIgnoreRule.IgnoreUpTo;
 import com.android.testutils.DeviceInfoUtils;
 import com.android.testutils.DumpTestUtils;
@@ -95,6 +94,7 @@ import com.android.testutils.TestNetworkTracker;
 
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -1062,8 +1062,7 @@ public class EthernetTetheringTest {
     }
 
     @Test
-    @IgnoreAfter(Build.VERSION_CODES.R)
-    public void testTetherUdpV4UpToR() throws Exception {
+    public void testTetherUdpV4() throws Exception {
         initializeTethering();
         runUdp4Test(new TetheringTester(mDownstreamReader), new RemoteResponder(mUpstreamReader),
                 false /* usingBpf */);
@@ -1095,10 +1094,12 @@ public class EthernetTetheringTest {
         assertTrue(isUdpOffloadSupportedByKernel("5.10.0"));
     }
 
+    // b/258637850 - this test will break with newer mainline modules on T due to support CLAT
+    // tethering offload which changes BPF map format, so it has to be suppressed in CTS for T.
+    @Ignore
     // TODO: refactor test testTetherUdpV4* into IPv4 UDP non-offload and offload tests.
     // That can be easier to know which feature is verified from test results.
     @Test
-    @IgnoreUpTo(Build.VERSION_CODES.R)
     public void testTetherUdpV4AfterR() throws Exception {
         initializeTethering();
         final String kernelVersion = VintfRuntimeInfo.getKernelVersion();
