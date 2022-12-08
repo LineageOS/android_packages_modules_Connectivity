@@ -5671,24 +5671,45 @@ cc_genrule {
 }
 
 // GN: //build/android:build_config_gen
-java_genrule {
+genrule {
     name: "cronet_aml_build_android_build_config_gen",
-    cmd: "$(location build/android/gyp/gcc_preprocess.py) --include-dirs " +
-         "[\"../../\", \"gen\"] " +
-         "--output " +
-         "gen/build/android/build_config_gen.srcjar " +
-         "--define " +
-         "_ENABLE_ASSERTS " +
-         "../../build/android/java/templates/BuildConfig.template",
-    out: [
-        "build/android/build_config_gen.srcjar",
+    srcs: [
+        ":cronet_aml_build_android_build_config_gen_preprocess",
     ],
-    tool_files: [
-        "build/android/gyp/gcc_preprocess.py",
-        "build/android/gyp/util/__init__.py",
-        "build/android/gyp/util/build_utils.py",
+    tools: [
+        "soong_zip",
+    ],
+    cmd: "cp $(in) $(genDir)/BuildConfig.java && " +
+         "$(location soong_zip) -o $(out) -srcjar -f $(genDir)/BuildConfig.java",
+    out: [
+        "BuildConfig.srcjar",
+    ],
+}
+
+// GN: //build/android:build_config_gen
+cc_object {
+    name: "cronet_aml_build_android_build_config_gen_preprocess",
+    srcs: [
+        ":cronet_aml_build_android_build_config_gen_rename",
+    ],
+    cflags: [
+        "-DANDROID",
+        "-D_ENABLE_ASSERTS",
+        "-E",
+        "-P",
+    ],
+    compile_multilib: "32",
+}
+
+// GN: //build/android:build_config_gen
+genrule {
+    name: "cronet_aml_build_android_build_config_gen_rename",
+    srcs: [
         "build/android/java/templates/BuildConfig.template",
-        "build/gn_helpers.py",
+    ],
+    cmd: "cp $(in) $(out)",
+    out: [
+        "BuildConfig.cc",
     ],
 }
 
@@ -7852,22 +7873,44 @@ java_genrule {
 }
 
 // GN: //components/cronet/android:integrated_mode_state
-java_genrule {
+genrule {
     name: "cronet_aml_components_cronet_android_integrated_mode_state",
-    cmd: "$(location build/android/gyp/gcc_preprocess.py) --include-dirs " +
-         "[\"../../\", \"gen\"] " +
-         "--output " +
-         "gen/components/cronet/android/integrated_mode_state.srcjar " +
-         "../../components/cronet/android/java/src/org/chromium/net/impl/IntegratedModeState.template",
-    out: [
-        "components/cronet/android/integrated_mode_state.srcjar",
+    srcs: [
+        ":cronet_aml_components_cronet_android_integrated_mode_state_preprocess",
     ],
-    tool_files: [
-        "build/android/gyp/gcc_preprocess.py",
-        "build/android/gyp/util/__init__.py",
-        "build/android/gyp/util/build_utils.py",
-        "build/gn_helpers.py",
+    tools: [
+        "soong_zip",
+    ],
+    cmd: "cp $(in) $(genDir)/IntegratedModeState.java && " +
+         "$(location soong_zip) -o $(out) -srcjar -f $(genDir)/IntegratedModeState.java",
+    out: [
+        "IntegratedModeState.srcjar",
+    ],
+}
+
+// GN: //components/cronet/android:integrated_mode_state
+cc_object {
+    name: "cronet_aml_components_cronet_android_integrated_mode_state_preprocess",
+    srcs: [
+        ":cronet_aml_components_cronet_android_integrated_mode_state_rename",
+    ],
+    cflags: [
+        "-DANDROID",
+        "-E",
+        "-P",
+    ],
+    compile_multilib: "32",
+}
+
+// GN: //components/cronet/android:integrated_mode_state
+genrule {
+    name: "cronet_aml_components_cronet_android_integrated_mode_state_rename",
+    srcs: [
         "components/cronet/android/java/src/org/chromium/net/impl/IntegratedModeState.template",
+    ],
+    cmd: "cp $(in) $(out)",
+    out: [
+        "IntegratedModeState.cc",
     ],
 }
 
@@ -7896,23 +7939,44 @@ java_genrule {
 }
 
 // GN: //components/cronet/android:load_states_list
-java_genrule {
+genrule {
     name: "cronet_aml_components_cronet_android_load_states_list",
-    cmd: "$(location build/android/gyp/gcc_preprocess.py) --include-dirs " +
-         "[\"../../\", \"gen\"] " +
-         "--output " +
-         "gen/components/cronet/android/load_states_list.srcjar " +
-         "../../components/cronet/android/java/src/org/chromium/net/impl/LoadState.template",
-    out: [
-        "components/cronet/android/load_states_list.srcjar",
+    srcs: [
+        ":cronet_aml_components_cronet_android_load_states_list_preprocess",
     ],
-    tool_files: [
-        "build/android/gyp/gcc_preprocess.py",
-        "build/android/gyp/util/__init__.py",
-        "build/android/gyp/util/build_utils.py",
-        "build/gn_helpers.py",
+    tools: [
+        "soong_zip",
+    ],
+    cmd: "cp $(in) $(genDir)/LoadState.java && " +
+         "$(location soong_zip) -o $(out) -srcjar -f $(genDir)/LoadState.java",
+    out: [
+        "LoadState.srcjar",
+    ],
+}
+
+// GN: //components/cronet/android:load_states_list
+cc_object {
+    name: "cronet_aml_components_cronet_android_load_states_list_preprocess",
+    srcs: [
+        ":cronet_aml_components_cronet_android_load_states_list_rename",
+    ],
+    cflags: [
+        "-DANDROID",
+        "-E",
+        "-P",
+    ],
+    compile_multilib: "32",
+}
+
+// GN: //components/cronet/android:load_states_list
+genrule {
+    name: "cronet_aml_components_cronet_android_load_states_list_rename",
+    srcs: [
         "components/cronet/android/java/src/org/chromium/net/impl/LoadState.template",
-        "net/base/load_states_list.h",
+    ],
+    cmd: "cp $(in) $(out)",
+    out: [
+        "LoadState.cc",
     ],
 }
 
@@ -9488,6 +9552,25 @@ cc_object {
 java_library {
     name: "cronet_aml_java",
     srcs: [
+        ":cronet_aml_base_base_android_java_enums_srcjar",
+        ":cronet_aml_base_java_features_srcjar",
+        ":cronet_aml_base_java_switches_srcjar",
+        ":cronet_aml_build_android_build_config_gen",
+        ":cronet_aml_build_android_native_libraries_gen",
+        ":cronet_aml_components_cronet_android_cronet_jni_registration__java",
+        ":cronet_aml_components_cronet_android_http_cache_type_java",
+        ":cronet_aml_components_cronet_android_implementation_api_version",
+        ":cronet_aml_components_cronet_android_integrated_mode_state",
+        ":cronet_aml_components_cronet_android_interface_api_version",
+        ":cronet_aml_components_cronet_android_load_states_list",
+        ":cronet_aml_components_cronet_android_net_idempotency_java",
+        ":cronet_aml_components_cronet_android_net_request_priority_java",
+        ":cronet_aml_components_cronet_android_network_quality_observation_source_java",
+        ":cronet_aml_components_cronet_android_rtt_throughput_values_java",
+        ":cronet_aml_components_cronet_android_url_request_error_java",
+        ":cronet_aml_net_android_net_android_java_enums_srcjar",
+        ":cronet_aml_net_android_net_errors_java",
+        ":cronet_aml_net_effective_connection_type_java",
         "base/android/java/src/org/chromium/base/ActivityState.java",
         "base/android/java/src/org/chromium/base/ApiCompatibilityUtils.java",
         "base/android/java/src/org/chromium/base/ApkAssets.java",
@@ -9799,23 +9882,44 @@ java_genrule {
 }
 
 // GN: //net/android:net_errors_java
-java_genrule {
+genrule {
     name: "cronet_aml_net_android_net_errors_java",
-    cmd: "$(location build/android/gyp/gcc_preprocess.py) --include-dirs " +
-         "[\"../../\", \"gen\"] " +
-         "--output " +
-         "gen/net/android/net_errors_java.srcjar " +
-         "../../net/android/java/NetError.template",
-    out: [
-        "net/android/net_errors_java.srcjar",
+    srcs: [
+        ":cronet_aml_net_android_net_errors_java_preprocess",
     ],
-    tool_files: [
-        "build/android/gyp/gcc_preprocess.py",
-        "build/android/gyp/util/__init__.py",
-        "build/android/gyp/util/build_utils.py",
-        "build/gn_helpers.py",
+    tools: [
+        "soong_zip",
+    ],
+    cmd: "cp $(in) $(genDir)/NetError.java && " +
+         "$(location soong_zip) -o $(out) -srcjar -f $(genDir)/NetError.java",
+    out: [
+        "NetError.srcjar",
+    ],
+}
+
+// GN: //net/android:net_errors_java
+cc_object {
+    name: "cronet_aml_net_android_net_errors_java_preprocess",
+    srcs: [
+        ":cronet_aml_net_android_net_errors_java_rename",
+    ],
+    cflags: [
+        "-DANDROID",
+        "-E",
+        "-P",
+    ],
+    compile_multilib: "32",
+}
+
+// GN: //net/android:net_errors_java
+genrule {
+    name: "cronet_aml_net_android_net_errors_java_rename",
+    srcs: [
         "net/android/java/NetError.template",
-        "net/base/net_error_list.h",
+    ],
+    cmd: "cp $(in) $(out)",
+    out: [
+        "NetError.cc",
     ],
 }
 
