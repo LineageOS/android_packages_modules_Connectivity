@@ -31,7 +31,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include "bpf_net_helpers.h"
-#include "bpf_shared.h"
+#include "netd.h"
 
 // This is defined for cgroup bpf filter only.
 static const int DROP = 0;

@@ -18,7 +18,8 @@
 
 #include "TrafficController.h"
 
-#include <bpf_shared.h>
+#include "netd.h"
+
 #include <jni.h>
 #include <log/log.h>
 #include <nativehelper/JNIHelp.h>
