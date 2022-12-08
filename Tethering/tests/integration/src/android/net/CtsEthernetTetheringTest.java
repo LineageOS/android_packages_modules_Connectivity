@@ -106,11 +106,11 @@ import java.util.concurrent.TimeoutException;
 
 @RunWith(AndroidJUnit4.class)
 @MediumTest
-public class EthernetTetheringTest extends EthernetTetheringTestBase {
+public class CtsEthernetTetheringTest extends EthernetTetheringTestBase {
     @Rule
     public final DevSdkIgnoreRule mIgnoreRule = new DevSdkIgnoreRule();
 
-    private static final String TAG = EthernetTetheringTest.class.getSimpleName();
+    private static final String TAG = CtsEthernetTetheringTest.class.getSimpleName();
 
     private static final int DUMP_POLLING_MAX_RETRY = 100;
     private static final int DUMP_POLLING_INTERVAL_MS = 50;
