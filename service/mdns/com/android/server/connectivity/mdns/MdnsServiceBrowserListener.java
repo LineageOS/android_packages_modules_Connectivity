@@ -28,21 +28,24 @@ import java.util.List;
 public interface MdnsServiceBrowserListener {
 
     /**
-     * Called when an mDNS service instance is found.
+     * Called when an mDNS service instance is found. This method would be called only if all
+     * service records (PTR, SRV, TXT, A or AAAA) are received .
      *
      * @param serviceInfo The found mDNS service instance.
      */
     void onServiceFound(@NonNull MdnsServiceInfo serviceInfo);
 
     /**
-     * Called when an mDNS service instance is updated.
+     * Called when an mDNS service instance is updated. This method would be called only if all
+     * service records (PTR, SRV, TXT, A or AAAA) are received before.
      *
      * @param serviceInfo The updated mDNS service instance.
      */
     void onServiceUpdated(@NonNull MdnsServiceInfo serviceInfo);
 
     /**
-     * Called when an mDNS service instance is no longer valid and removed.
+     * Called when a mDNS service instance is no longer valid and removed. This method would be
+     * called only if all service records (PTR, SRV, TXT, A or AAAA) are received before.
      *
      * @param serviceInfo The service instance of the removed mDNS service.
      */
@@ -75,4 +78,19 @@ public interface MdnsServiceBrowserListener {
      * @param errorCode            The error code, defined in {@link MdnsResponseErrorCode}.
      */
     void onFailedToParseMdnsResponse(int receivedPacketNumber, int errorCode);
+
+    /**
+     * Called when a mDNS service instance is discovered. This method would be called if the PTR
+     * record has been received.
+     *
+     * @param serviceInfo The discovered mDNS service instance.
+     */
+    void onServiceNameDiscovered(@NonNull MdnsServiceInfo serviceInfo);
+
+    /**
+     * Called when a discovered mDNS service instance is no longer valid and removed.
+     *
+     * @param serviceInfo The service instance of the removed mDNS service.
+     */
+    void onServiceNameRemoved(@NonNull MdnsServiceInfo serviceInfo);
 }

@@ -148,10 +148,11 @@ public class MdnsServiceTypeClient {
             this.searchOptions = searchOptions;
             if (listeners.add(listener)) {
                 for (MdnsResponse existingResponse : instanceNameToResponse.values()) {
+                    final MdnsServiceInfo info =
+                            buildMdnsServiceInfoFromResponse(existingResponse, serviceTypeLabels);
+                    listener.onServiceNameDiscovered(info);
                     if (existingResponse.isComplete()) {
-                        listener.onServiceFound(
-                                buildMdnsServiceInfoFromResponse(existingResponse,
-                                        serviceTypeLabels));
+                        listener.onServiceFound(info);
                     }
                 }
             }
@@ -226,6 +227,7 @@ public class MdnsServiceTypeClient {
 
         boolean newServiceFound = false;
         boolean existingServiceChanged = false;
+        boolean serviceBecomesComplete = false;
         if (currentResponse == null) {
             newServiceFound = true;
             currentResponse = response;
@@ -233,10 +235,13 @@ public class MdnsServiceTypeClient {
             if (serviceInstanceName != null) {
                 instanceNameToResponse.put(serviceInstanceName, currentResponse);
             }
-        } else if (currentResponse.mergeRecordsFrom(response)) {
-            existingServiceChanged = true;
+        } else {
+            boolean before = currentResponse.isComplete();
+            existingServiceChanged = currentResponse.mergeRecordsFrom(response);
+            boolean after = currentResponse.isComplete();
+            serviceBecomesComplete = !before && after;
         }
-        if (!currentResponse.isComplete() || (!newServiceFound && !existingServiceChanged)) {
+        if (!newServiceFound && !existingServiceChanged) {
             return;
         }
         MdnsServiceInfo serviceInfo =
@@ -244,9 +249,15 @@ public class MdnsServiceTypeClient {
 
         for (MdnsServiceBrowserListener listener : listeners) {
             if (newServiceFound) {
-                listener.onServiceFound(serviceInfo);
-            } else {
-                listener.onServiceUpdated(serviceInfo);
+                listener.onServiceNameDiscovered(serviceInfo);
+            }
+
+            if (currentResponse.isComplete()) {
+                if (newServiceFound || serviceBecomesComplete) {
+                    listener.onServiceFound(serviceInfo);
+                } else {
+                    listener.onServiceUpdated(serviceInfo);
+                }
             }
         }
     }
@@ -259,7 +270,10 @@ public class MdnsServiceTypeClient {
         for (MdnsServiceBrowserListener listener : listeners) {
             final MdnsServiceInfo serviceInfo =
                     buildMdnsServiceInfoFromResponse(response, serviceTypeLabels);
-            listener.onServiceRemoved(serviceInfo);
+            if (response.isComplete()) {
+                listener.onServiceRemoved(serviceInfo);
+            }
+            listener.onServiceNameRemoved(serviceInfo);
         }
     }
 
@@ -423,7 +437,7 @@ public class MdnsServiceTypeClient {
                     Iterator<MdnsResponse> iter = instanceNameToResponse.values().iterator();
                     while (iter.hasNext()) {
                         MdnsResponse existingResponse = iter.next();
-                        if (existingResponse.isComplete()
+                        if (existingResponse.hasServiceRecord()
                                 && existingResponse
                                 .getServiceRecord()
                                 .getRemainingTTL(SystemClock.elapsedRealtime())
@@ -436,7 +450,10 @@ public class MdnsServiceTypeClient {
                                     final MdnsServiceInfo serviceInfo =
                                             buildMdnsServiceInfoFromResponse(
                                                     existingResponse, serviceTypeLabels);
-                                    listener.onServiceRemoved(serviceInfo);
+                                    if (existingResponse.isComplete()) {
+                                        listener.onServiceRemoved(serviceInfo);
+                                    }
+                                    listener.onServiceNameRemoved(serviceInfo);
                                 }
                             }
                         }
