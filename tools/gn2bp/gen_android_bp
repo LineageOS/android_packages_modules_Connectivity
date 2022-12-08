@@ -314,6 +314,7 @@ class Module(object):
     self.rtti = False
     # Name of the output. Used for setting .so file name for libcronet
     self.stem = None
+    self.compile_multilib = None
 
   def to_string(self, output):
     if self.comment:
@@ -361,6 +362,7 @@ class Module(object):
     self._output_field(output, 'linker_scripts')
     self._output_field(output, 'cppflags')
     self._output_field(output, 'stem')
+    self._output_field(output, 'compile_multilib')
     if self.rtti:
       self._output_field(output, 'rtti')
 
