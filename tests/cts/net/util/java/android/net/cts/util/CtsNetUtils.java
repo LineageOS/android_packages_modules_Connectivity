@@ -57,6 +57,8 @@ import android.system.OsConstants;
 import android.text.TextUtils;
 import android.util.Log;
 
+import com.android.compatibility.common.util.PollingCheck;
+import com.android.compatibility.common.util.ShellIdentityUtils;
 import com.android.compatibility.common.util.SystemUtil;
 import com.android.net.module.util.ConnectivitySettingsUtils;
 import com.android.testutils.ConnectUtil;
@@ -265,6 +267,19 @@ public final class CtsNetUtils {
      */
     public void ensureWifiDisconnected(Network wifiNetworkToCheck) {
         disconnectFromWifi(wifiNetworkToCheck, false /* expectLegacyBroadcast */);
+    }
+
+    /**
+     * Disable WiFi and wait for the connection info to be cleared.
+     */
+    public void disableWifi() throws Exception {
+        SystemUtil.runShellCommand("svc wifi disable");
+        PollingCheck.check(
+                "Wifi not disconnected! Current network is not null "
+                        + mWifiManager.getConnectionInfo().getNetworkId(),
+                TimeUnit.SECONDS.toMillis(CONNECTIVITY_CHANGE_TIMEOUT_SECS),
+                () -> ShellIdentityUtils.invokeWithShellPermissions(
+                        () -> mWifiManager.getConnectionInfo().getNetworkId()) == -1);
     }
 
     /**
