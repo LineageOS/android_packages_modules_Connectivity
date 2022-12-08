@@ -478,7 +478,9 @@ public final class CtsTetheringUtils {
             waitForWifiEnabled(ctx);
             return runAsShell(ACCESS_WIFI_STATE, () -> wm.isPortableHotspotSupported());
         } finally {
-            if (!previousWifiEnabledState) SystemUtil.runShellCommand("svc wifi disable");
+            if (!previousWifiEnabledState) {
+                new CtsNetUtils(ctx).disableWifi();
+            }
         }
     }
 
