@@ -17034,4 +17034,90 @@ public class ConnectivityServiceTest {
             verify(mTetheringManager).getTetherableWifiRegexs();
         });
     }
+
+    @Test
+    public void testSendLinkPropertiesSetInterfaceMtu() throws Exception {
+        final int mtu = 1327;
+        LinkProperties lp = new LinkProperties();
+        lp.setInterfaceName(WIFI_IFNAME);
+        lp.setMtu(mtu);
+
+        mWiFiNetworkAgent = new TestNetworkAgentWrapper(TRANSPORT_WIFI);
+        mWiFiNetworkAgent.sendLinkProperties(lp);
+
+        waitForIdle();
+        verify(mMockNetd).interfaceSetMtu(eq(WIFI_IFNAME), eq(mtu));
+    }
+
+    @Test
+    public void testSendLinkPropertiesSetInterfaceMtu_DifferentMtu() throws Exception {
+        final int mtu = 1328, mtu2 = 1500;
+        LinkProperties lp = new LinkProperties();
+        lp.setInterfaceName(WIFI_IFNAME);
+        lp.setMtu(mtu);
+
+        mWiFiNetworkAgent = new TestNetworkAgentWrapper(TRANSPORT_WIFI, lp);
+
+        LinkProperties lp2 = new LinkProperties(lp);
+        lp2.setMtu(mtu2);
+
+        mWiFiNetworkAgent.sendLinkProperties(lp2);
+
+        waitForIdle();
+        verify(mMockNetd).interfaceSetMtu(eq(WIFI_IFNAME), eq(mtu2));
+    }
+
+    @Test
+    public void testSendLinkPropertiesSetInterfaceMtu_IdenticalMtuAndIface() throws Exception {
+        final int mtu = 1329;
+        LinkProperties lp = new LinkProperties();
+        lp.setInterfaceName(WIFI_IFNAME);
+        lp.setMtu(mtu);
+
+        mWiFiNetworkAgent = new TestNetworkAgentWrapper(TRANSPORT_WIFI, lp);
+        mWiFiNetworkAgent.sendLinkProperties(new LinkProperties(lp));
+
+        waitForIdle();
+        verify(mMockNetd, never()).interfaceSetMtu(eq(WIFI_IFNAME), anyInt());
+    }
+
+    @Test
+    public void testSendLinkPropertiesSetInterfaceMtu_IdenticalMtuAndNullIface() throws Exception {
+        final int mtu = 1330;
+        LinkProperties lp = new LinkProperties();
+        lp.setInterfaceName(WIFI_IFNAME);
+        lp.setMtu(mtu);
+
+        mWiFiNetworkAgent = new TestNetworkAgentWrapper(TRANSPORT_WIFI, lp);
+
+        LinkProperties lp2 = new LinkProperties();
+        assertNull(lp2.getInterfaceName());
+        lp2.setMtu(mtu);
+
+        mWiFiNetworkAgent.sendLinkProperties(new LinkProperties(lp2));
+
+        waitForIdle();
+        verify(mMockNetd, never()).interfaceSetMtu(any(), anyInt());
+    }
+
+    @Test
+    public void testSendLinkPropertiesSetInterfaceMtu_IdenticalMtuDiffIface() throws Exception {
+        final int mtu = 1331;
+        LinkProperties lp = new LinkProperties();
+        lp.setInterfaceName(WIFI_IFNAME);
+        lp.setMtu(mtu);
+
+        mWiFiNetworkAgent = new TestNetworkAgentWrapper(TRANSPORT_WIFI, lp);
+
+        final String ifaceName2 = WIFI_IFNAME + "_2";
+        LinkProperties lp2 = new LinkProperties();
+        lp2.setInterfaceName(ifaceName2);
+        lp2.setMtu(mtu);
+
+        mWiFiNetworkAgent.sendLinkProperties(new LinkProperties(lp2));
+
+        waitForIdle();
+        // TODO(b/246398088): the MTU should be set on the new interface.
+        verify(mMockNetd, never()).interfaceSetMtu(eq(ifaceName2), eq(mtu));
+    }
 }
