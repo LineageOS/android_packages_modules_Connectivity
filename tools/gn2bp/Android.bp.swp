@@ -9848,6 +9848,10 @@ java_library {
         "net/android/java/src/org/chromium/net/X509Util.java",
         "url/android/java/src/org/chromium/url/IDNStringUtil.java",
     ],
+    apex_available: [
+        "//apex_available:platform",
+        "com.android.tethering",
+    ],
     libs: [
         "android-support-multidex",
         "androidx.annotation_annotation",
