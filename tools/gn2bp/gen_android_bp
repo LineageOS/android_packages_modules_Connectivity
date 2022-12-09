@@ -663,7 +663,7 @@ def create_gcc_preprocess_modules(blueprint, target):
   # It seems this is because cc object is a module with per-architecture variants and genrule is a
   # module with default variant. For 64bit target, cc_object is built multiple times for 32/64bit
   # modes and genrule doesn't know which one to depend on.
-  preprocess_module.compile_multilib = 32
+  preprocess_module.compile_multilib = 'first'
   blueprint.add_module(preprocess_module)
 
   # Generates srcjar using soong_zip
