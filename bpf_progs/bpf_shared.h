@@ -196,32 +196,4 @@ STRUCT_SIZE(UidOwnerValue, 2 * 4);  // 8
 // Entry in the configuration map that stores which stats map is currently in use.
 #define CURRENT_STATS_MAP_CONFIGURATION_KEY 1
 
-typedef struct {
-    uint32_t iif;            // The input interface index
-    struct in6_addr pfx96;   // The source /96 nat64 prefix, bottom 32 bits must be 0
-    struct in6_addr local6;  // The full 128-bits of the destination IPv6 address
-} ClatIngress6Key;
-STRUCT_SIZE(ClatIngress6Key, 4 + 2 * 16);  // 36
-
-typedef struct {
-    uint32_t oif;           // The output interface to redirect to (0 means don't redirect)
-    struct in_addr local4;  // The destination IPv4 address
-} ClatIngress6Value;
-STRUCT_SIZE(ClatIngress6Value, 4 + 4);  // 8
-
-typedef struct {
-    uint32_t iif;           // The input interface index
-    struct in_addr local4;  // The source IPv4 address
-} ClatEgress4Key;
-STRUCT_SIZE(ClatEgress4Key, 4 + 4);  // 8
-
-typedef struct {
-    uint32_t oif;            // The output interface to redirect to
-    struct in6_addr local6;  // The full 128-bits of the source IPv6 address
-    struct in6_addr pfx96;   // The destination /96 nat64 prefix, bottom 32 bits must be 0
-    bool oifIsEthernet;      // Whether the output interface requires ethernet header
-    uint8_t pad[3];
-} ClatEgress4Value;
-STRUCT_SIZE(ClatEgress4Value, 4 + 2 * 16 + 1 + 3);  // 40
-
 #undef STRUCT_SIZE
