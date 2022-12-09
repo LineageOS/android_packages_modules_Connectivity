@@ -16,8 +16,11 @@
 
 package com.android.net.module.util.netlink;
 
+import static android.system.OsConstants.IFA_F_PERMANENT;
 import static android.system.OsConstants.NETLINK_ROUTE;
+import static android.system.OsConstants.RT_SCOPE_LINK;
 
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
@@ -31,6 +34,8 @@ import androidx.test.runner.AndroidJUnit4;
 
 import com.android.net.module.util.HexDump;
 
+import libcore.util.HexEncoding;
+
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
@@ -42,7 +47,7 @@ import java.nio.ByteOrder;
 @SmallTest
 public class RtNetlinkAddressMessageTest {
     private static final Inet6Address TEST_LINK_LOCAL =
-            (Inet6Address) InetAddresses.parseNumericAddress("fe80::2C41:5CFF:FE09:6665");
+            (Inet6Address) InetAddresses.parseNumericAddress("FE80::2C41:5CFF:FE09:6665");
 
     // An example of the full RTM_NEWADDR message.
     private static final String RTM_NEWADDR_HEX =
@@ -125,6 +130,47 @@ public class RtNetlinkAddressMessageTest {
         final NetlinkMessage msg = NetlinkMessage.parse(byteBuffer, NETLINK_ROUTE);
         // Parsing RTM_NEWADDR with truncated IFA_ADDRESS attribute returns null.
         assertNull(msg);
+    }
+
+    @Test
+    public void testCreateRtmNewAddressMessage() {
+        // Hexadecimal representation of our created packet.
+        final String expectedNewAddressHex =
+                // struct nlmsghdr
+                "48000000" +    // length = 72
+                "1400" +        // type = 20 (RTM_NEWADDR)
+                "0501" +        // flags = NLM_F_ACK | NLM_F_REQUEST | NLM_F_REPLACE
+                "01000000" +    // seqno = 1
+                "00000000" +    // pid = 0 (send to kernel)
+                // struct IfaddrMsg
+                "0A" +          // family = inet6
+                "40" +          // prefix len = 64
+                "80" +          // flags = IFA_F_PERMANENT
+                "FD" +          // scope = RT_SCOPE_LINK
+                "17000000" +    // ifindex = 23
+                // struct nlattr: IFA_ADDRESS
+                "1400" +        // len
+                "0100" +        // type
+                "FE800000000000002C415CFFFE096665" + // IP address = fe80::2C41:5cff:fe09:6665
+                // struct nlattr: IFA_CACHEINFO
+                "1400" +        // len
+                "0600" +        // type
+                "FFFFFFFF" +    // preferred = infinite
+                "FFFFFFFF" +    // valid = infinite
+                "00000000" +    // cstamp
+                "00000000" +    // tstamp
+                // struct nlattr: IFA_FLAGS
+                "0800" +        // len
+                "0800" +        // type
+                "80000000";     // flags = IFA_F_PERMANENT
+        final byte[] expectedNewAddress =
+                HexEncoding.decode(expectedNewAddressHex.toCharArray(), false);
+
+        final byte[] bytes = RtNetlinkAddressMessage.newRtmNewAddressMessage(1 /* seqno */,
+                TEST_LINK_LOCAL, (short) 64 /* prefix len */, (byte) IFA_F_PERMANENT /* flags */,
+                (byte) RT_SCOPE_LINK /* scope */, 23 /* ifindex */,
+                (long) 0xFFFFFFFF /* preferred */, (long) 0xFFFFFFFF /* valid */);
+        assertArrayEquals(expectedNewAddress, bytes);
     }
 
     @Test
